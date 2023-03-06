@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <memory>
+#include <string>
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/compute_task_node.h"
@@ -22,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/graph/transport_task_node.h"
 #include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/common/protobuf.h"
@@ -52,16 +54,19 @@ class TopoStruct {
   int32_t counter = 0;
   int32_t min_distance2overlap = -1;
   int64_t memory_increment = -1;
-  TopoStruct* next_same_node = nullptr;
   int32_t exceed_time = -1;
   int32_t min_lifetime = -1;
   int64_t memory_volume = -1;
   int32_t max_layer = -1;
+  TaskClassifier task_classifier;
+  std::string key;
   // We can have some other nodes in it for example
   // SbpNode<NdSbpSignature>* node;
   // SbpEdge<NdSbpSignature>* node;
   // Or we can omit all the pointers and leave all the useful parameters.
 
+  int32_t ComputeMinLayer(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct,
+                          std::map<std::string, std::vector<TopoStruct*>>* key2topo_structs);
   // Drop down the tributary layer
   void DropTributaryLayer(int32_t upper_bound);
 
@@ -197,6 +202,46 @@ TaskClassifier GetTaskClassifier(const TaskNode* node) {
   return TaskClassifier::kRunASAP;
 }
 
+int32_t MaxProducerMinLayer(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct,
+                            std::map<std::string, std::vector<TopoStruct*>>* key2topo_structs,
+                            TaskNode* node) {
+  int32_t max_min_layer = 0;
+  node->ForEachNodeOnInEdge([&](TaskNode* in) {
+    max_min_layer = std::max(max_min_layer, task_node2topo_struct->at(in).ComputeMinLayer(
+                                                task_node2topo_struct, key2topo_structs));
+  });
+  return max_min_layer + 1;
+}
+
+int32_t TopoStruct::ComputeMinLayer(
+    HashMap<TaskNode*, TopoStruct>* task_node2topo_struct,
+    std::map<std::string, std::vector<TopoStruct*>>* key2topo_structs) {
+  // Directly return the value if computed
+  if (min_layer > -1) { return min_layer; }
+  if (IsTransferNode(node->GetTaskType())) {
+    // Only compute the minimum layer for this transport node
+    min_layer = MaxProducerMinLayer(task_node2topo_struct, key2topo_structs, node);
+    // Generate the key to determine the same task nodes
+    // Since the key is connected with the min_layer for transport nodes
+    key = dynamic_cast<TransportTaskNode*>(node)->lbi().ShortDebugString()
+          + "MinLayer:" + std::to_string(min_layer);
+    // Gather all the task nodes with the same key
+    (*key2topo_structs)[key].push_back(this);
+  } else {
+    // Compute the minimum layer for all the nodes with the same key simultaneously
+    int32_t max_min_layer = -1;
+    for (auto& curr_topo_struct : key2topo_structs->at(key)) {
+      max_min_layer = std::max(
+          max_min_layer,
+          MaxProducerMinLayer(task_node2topo_struct, key2topo_structs, curr_topo_struct->node));
+    }
+    for (auto& curr_topo_struct : key2topo_structs->at(key)) {
+      curr_topo_struct->min_layer = max_min_layer;
+    }
+  }
+  return min_layer;
+}
+
 // Drop down the maximum layer with the minimum layer from consumer
 void TopoStruct::DropTributaryLayer(int32_t upper_bound) {
   if (upper_bound < tributary_layer || tributary_layer < 0) { tributary_layer = upper_bound; }
@@ -250,7 +295,7 @@ void TopoStruct::SpreadTrunk(HashMap<TaskNode*, TopoStruct>* task_node2topo_stru
 int32_t TopoStruct::GetMinDistance2Overlap(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
   if (min_distance2overlap >= 0) { return min_distance2overlap; }
   // if this node should be overlapped by main computation nodes
-  if (GetTaskClassifier(node) == TaskClassifier::kWaitingOverlapNode) {
+  if (task_classifier == TaskClassifier::kWaitingOverlapNode) {
     min_distance2overlap = 0;
     return min_distance2overlap;
   }
@@ -482,71 +527,31 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
 
   // Generate topological data structure for each task node
   HashMap<TaskNode*, TopoStruct> task_node2topo_struct;
-  // Determine the same nodes which should run simultaneously
-  HashMap<int32_t, HashMap<int32_t, std::map<int32_t, TopoStruct*>>>
-      task_type2machine_id2node_id2topo_structs;
-  std::map<int32_t, TopoStruct*> min_node_id2topo_struct;
-  int32_t previous_min_layer = 0;
+  // Determine the same nodes which should run simultaneously by the keys
+  std::map<std::string, std::vector<TopoStruct*>> key2topo_structs;
   task_graph->TopoForEachNode([&](TaskNode* node) {
     auto& topo_struct = task_node2topo_struct[node];
     topo_struct.node = node;
     topo_struct.ComputeMemoryIncrement();
     topo_struct.ComputeExceedTime();
-    if (node->in_edges().empty()) {
-      topo_struct.min_layer = 0;
+    // Generate the key to determine the same task nodes
+    if (IsTransferNode(node->GetTaskType())) {
+      // Deal with the key and the same task nodes later
+      return;
+      // topo_struct.key = dynamic_cast<TransportTaskNode*>(node)->lbi().ShortDebugString();
+    } else if (node->GetTaskType() == TaskType::kNormalForward) {
+      topo_struct.key = dynamic_cast<CompTaskNode*>(node)->op()->op_name();
     } else {
-      int32_t max_min_layer = 0;
-      node->ForEachNodeOnInEdge([&](TaskNode* in) {
-        max_min_layer = std::max(max_min_layer, task_node2topo_struct[in].min_layer);
-      });
-      topo_struct.min_layer = max_min_layer + 1;
-      // Deal with all the nodes with min_layer=previous_min_layer
-      if (max_min_layer >= previous_min_layer) {
-        // Using "7" to represent "and"
-        // a7b means a pair (a, b)
-        for (auto& task_type7machine_id2node_id2topo_structs :
-             task_type2machine_id2node_id2topo_structs) {
-          auto& machine_id2node_id2topo_structs = task_type7machine_id2node_id2topo_structs.second;
-          // Initializing the smallest node id for each machine
-          for (auto& machine_id7node_id2topo_structs : machine_id2node_id2topo_structs) {
-            MoveFrontBetweenMaps(machine_id7node_id2topo_structs.second, min_node_id2topo_struct);
-          }
-
-          while (!min_node_id2topo_struct.empty()) {
-            // auto* topo_struct_min_node_id = min_node_id2topo_struct.begin()->second;
-            // Store the same nodes in different machines
-            std::vector<TopoStruct*> same_nodes;
-            for (auto& min_node_id7topo_struct : min_node_id2topo_struct) {
-              auto* curr_topo_struct = min_node_id7topo_struct.second;
-              // Find out all the same nodes
-              // Stop using Visual string before we find a better key
-              // Currently we can use the topological structure and node id to decide the same nodes
-              same_nodes.push_back(curr_topo_struct);
-            }
-            // Cyclize them
-            for (int32_t i = 1; i < same_nodes.size(); i++) {
-              same_nodes[i - 1]->next_same_node = same_nodes[i];
-            }
-            (*same_nodes.rbegin())->next_same_node = same_nodes[0];
-            // Delete them and add new candidates
-            for (auto* same_node_topo_struct : same_nodes) {
-              // Erase them from min_node_id2topo_struct
-              min_node_id2topo_struct.erase(same_node_topo_struct->node->node_id());
-              // Add new candidate
-              MoveFrontBetweenMaps(
-                  machine_id2node_id2topo_structs[same_node_topo_struct->node->machine_id()],
-                  min_node_id2topo_struct);
-            }
-          }
-        }
-        // Renew the previous min_layer at the end
-        previous_min_layer = topo_struct.min_layer;
-      }
+      topo_struct.key = node->VisualStr();
     }
-    // Put the topo structure into the map, waiting for determine the same nodes
-    task_type2machine_id2node_id2topo_structs[node->GetTaskType()][node->machine_id()]
-                                             [node->node_id()] = &topo_struct;
+    // Gather all the task nodes with the same key
+    key2topo_structs[topo_struct.key].push_back(&topo_struct);
   });
+
+  // Compute all the min layer and generate the rest of the keys
+  for (auto& pair : task_node2topo_struct) {
+    pair.second.ComputeMinLayer(&task_node2topo_struct, &key2topo_structs);
+  }
 
   // Generate other parameters in the topological data structure
   FindTrunk(&task_node2topo_struct);
@@ -554,6 +559,19 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
 
   // Update sat, since sat might be changed in previous jobs
   UpdateSat(task_node2topo_struct, &sat);
+  // Decide the task classifier after updating sat
+  for (auto& pair : task_node2topo_struct) {
+    pair.second.task_classifier = GetTaskClassifier(pair.first);
+  }
+  // Check the task classifier for all the nodes with the same key
+  for (auto& pair : key2topo_structs) {
+    TaskClassifier first_task_classifier = pair.second.at(0)->task_classifier;
+    for (auto& topo_struct : pair.second) {
+      CHECK_EQ(first_task_classifier, topo_struct->task_classifier)
+          << " We have different task classifier " << first_task_classifier << " and "
+          << topo_struct->task_classifier << " for the nodes with the same key: " << pair.first;
+    }
+  }
   // Decide which node should run first
   InitDecideParameters(sat, &decide_parameters);
   VLOG(3) << "Straightening order: ";
@@ -598,30 +616,26 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   auto wait = [&](TaskNode* node) {
     TopoStruct* first_topo_struct = &task_node2topo_struct[node];
     // Check if all the same nodes are ready simultaneously
-    TopoStruct* curr_topo_struct = first_topo_struct->next_same_node;
-    while (curr_topo_struct && curr_topo_struct != first_topo_struct) {
+    for (auto& curr_topo_struct : key2topo_structs.at(first_topo_struct->key)) {
       if (curr_topo_struct->counter) { return; }
-      curr_topo_struct = curr_topo_struct->next_same_node;
     }
     // Add all the same nodes at the same time
-    curr_topo_struct = first_topo_struct;
-    auto& waiting_list = waiting_lists[GetTaskClassifier(node)];
-    while (true) {
+    auto& waiting_list = waiting_lists[first_topo_struct->task_classifier];
+    for (auto& curr_topo_struct : key2topo_structs.at(first_topo_struct->key)) {
       waiting_list.insert(curr_topo_struct);
       // Reduce counter then this node will never be added again
       // Though inserting into a map twice does not matter because of the same keys
       curr_topo_struct->counter--;
-      curr_topo_struct = curr_topo_struct->next_same_node;
-      if ((!curr_topo_struct) || (curr_topo_struct == first_topo_struct)) { break; }
     }
   };
 
   // initialization
   task_graph->ForEachNode([&](TaskNode* node) {
     int32_t count = node->in_edges().size();
-    task_node2topo_struct[node].counter = count;
+    auto& topo_struct = task_node2topo_struct[node];
+    topo_struct.counter = count;
     if (count == 0) { wait(node); }
-    remain_task_nums[GetTaskClassifier(node)]++;
+    remain_task_nums[topo_struct.task_classifier]++;
   });
 
   // Finish execution
@@ -638,16 +652,11 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
     TaskNode* first_node = (*waiting_list.begin())->node;
     int32_t execution_num = 0;
     TopoStruct* first_topo_struct = &task_node2topo_struct[first_node];
-    // Find all the same nodes in different machine
-    // They should be run simultaneously
-    TopoStruct* curr_topo_struct = first_topo_struct;
-    while (true) {
+    // Find all the same nodes in different machines which should be run simultaneously
+    for (auto& curr_topo_struct : key2topo_structs.at(first_topo_struct->key)) {
       execution_num++;
       execution_list.push_back(curr_topo_struct->node);
       waiting_list.erase(curr_topo_struct);
-      // move and maybe leave
-      curr_topo_struct = curr_topo_struct->next_same_node;
-      if ((!curr_topo_struct) || (curr_topo_struct == first_topo_struct)) { break; }
     }
     CHECK_GT(execution_num, 0) << "Error, no task nodes are moved to the execution list";
   };
