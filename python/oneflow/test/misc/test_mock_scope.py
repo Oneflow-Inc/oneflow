@@ -146,6 +146,14 @@ class TestMock(flow.unittest.TestCase):
             model = torchvision.models.resnet18(pretrained=False)
             test_case.assertEqual(len(list(model.parameters())), 62)
 
+    def test_mock_lazy_for_loop(test_case):
+        with mock.enable(lazy=True):
+            import torch
+
+            # Test no infinite loop
+            for _ in torch.not_exist:
+                pass
+
 
 # MUST use pytest to run this test
 def test_verbose(capsys):
