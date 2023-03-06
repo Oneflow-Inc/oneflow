@@ -863,8 +863,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
     CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);   // NOLINT(maybe-need-error-msg)
     CHECK_EQ_OR_RETURN(outputs->size(), 1);        // NOLINT(maybe-need-error-msg)
     CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);  // NOLINT(maybe-need-error-msg)
-    const std::shared_ptr<Tensor>& input_tensor = inputs.at(0);
-    const std::string& obn = op_expr.indexed_obns().at(0);
+    const std::shared_ptr<Tensor>& input_tensor = JUST(VectorAt(inputs, 0));
+    const std::string& obn = JUST(VectorAt(op_expr.indexed_obns(), 0));
     auto device = JUST(ctx.attrs.GetAttr<Symbol<Device>>("device"));
 
     if (input_tensor->is_local()) {
@@ -889,7 +889,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
     int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(*op_conf));
     auto blob_parallel_desc = JUST(GetSymbol<ParallelDesc>(parallel_desc_sym_id));
     for (int i = 0; i < op_expr.output_size(); ++i) {
-      const std::string& obn = op_expr.indexed_obns().at(i);
+      const std::string& obn = JUST(VectorAt(op_expr.indexed_obns(), i));
       if (!(*outputs)[i]) {
         (*outputs)[i] =
             JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true, is_local));
