@@ -22,7 +22,7 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename T, size_t N=kOpArgsReservedSize>
+template<typename T, size_t N = kOpArgsReservedSize>
 class small_vector : public llvm::SmallVector<T, N> {
   using Base = llvm::SmallVector<T, N>;
 

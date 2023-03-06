@@ -572,8 +572,8 @@ bool SupportingStreamWait(Symbol<Stream> from_stream, Symbol<Stream> to_stream) 
 }  // namespace
 
 Maybe<void> InstructionsBuilder::SoftSyncStreamBetween(
-    small_vector<intrusive::shared_ptr<LocalDepObject>>&& dependences,
-    Symbol<Stream> from_stream, Symbol<Stream> to_stream) {
+    small_vector<intrusive::shared_ptr<LocalDepObject>>&& dependences, Symbol<Stream> from_stream,
+    Symbol<Stream> to_stream) {
   CHECK(from_stream != to_stream) << "synchronization is unnecessary";
   if (SupportingStreamWait(from_stream, to_stream)) {
     JUST(StreamWait(std::move(dependences), from_stream, to_stream));
@@ -584,8 +584,8 @@ Maybe<void> InstructionsBuilder::SoftSyncStreamBetween(
 }
 
 Maybe<void> InstructionsBuilder::StreamWait(
-    small_vector<intrusive::shared_ptr<LocalDepObject>>&& dependences,
-    Symbol<Stream> from_stream, Symbol<Stream> to_stream) {
+    small_vector<intrusive::shared_ptr<LocalDepObject>>&& dependences, Symbol<Stream> from_stream,
+    Symbol<Stream> to_stream) {
   auto* from_vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(from_stream));
   auto* to_vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(to_stream));
   if (from_vm_stream->mut_thread_ctx() != to_vm_stream->mut_thread_ctx()) {
@@ -609,8 +609,7 @@ Maybe<void> InstructionsBuilder::StreamWait(
 }
 
 Maybe<void> InstructionsBuilder::RecordEvent(
-    small_vector<intrusive::shared_ptr<LocalDepObject>>&&
-        compute_local_dep_objects,
+    small_vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_objects,
     Symbol<Stream> last_used_stream) {
   DeviceType device_type = last_used_stream->device()->enum_type();
   if (!NeedSoftSync::Visit(last_used_stream->stream_type(), device_type)) {
