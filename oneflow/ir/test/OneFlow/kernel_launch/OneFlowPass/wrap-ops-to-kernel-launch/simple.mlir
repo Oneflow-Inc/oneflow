@@ -1,8 +1,9 @@
 // RUN: oneflow-opt %s \
-// RUN: -wrap-ops-to-kernel-launch="mode=cuda_graph" \
+// RUN: -wrap-ops-to-kernel-launch="mode=simple" \
 // RUN: | FileCheck %s
 
-// CHECK: func.func @wrap1
+// CHECK-NOT:  func.func @_mlir_oneflow_subgraph1
+// CHECK:  func.func @_mlir_oneflow_subgraph0
 
 module {
   oneflow.job @GraphToRun_0(%arg0: tensor<2xf32>) -> (tensor<2xsi32>, tensor<2xf32>) {

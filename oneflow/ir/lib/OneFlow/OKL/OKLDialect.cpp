@@ -54,9 +54,6 @@ void OKLDialect::initialize() {
 void registerOneFlowPasses() {
   mlir::registerAggregateComputeOpsPassPass();
   mlir::registerWrapOpsToKernelLaunchPassPass();
-  mlir::registerExtractKernelLaunchTensorPassPass();
-  mlir::registerTrimReturnAsVoidPassPass();
-  mlir::registerLowerToOKLPassPass();
 }
 
 }  // namespace okl

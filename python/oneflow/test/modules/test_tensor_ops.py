@@ -478,7 +478,7 @@ class TestTensorOps(flow.unittest.TestCase):
     def test_bincount(test_case):
         device = random_device()
         len = random(1, 100)
-        input = random_tensor(1, len, dtype=int).to(device)
+        input = random_tensor(1, len, dtype=int, low=0).to(device)
         weight = random_tensor(1, len, dtype=float).to(device)
         min_length = random(1, 100) | nothing()
         return (

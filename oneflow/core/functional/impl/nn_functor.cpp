@@ -3426,6 +3426,9 @@ class FusedGluFunctor {
                          .Output("matmul_wx")
                          .Build());
 
+    op_without_bias_ = CHECK_JUST(
+        one::OpBuilder("fused_glu").Input("x").Input("w").Output("y").Output("matmul_wx").Build());
+
     split_op_ = CHECK_JUST(one::OpBuilder("fused_glu")
                                .Input("x")
                                .Input("w")
@@ -3436,34 +3439,56 @@ class FusedGluFunctor {
                                .Output("matmul_wx")
                                .Output("matmul_vx")
                                .Build());
+
+    split_op_without_bias_ = CHECK_JUST(one::OpBuilder("fused_glu")
+                                            .Input("x")
+                                            .Input("w")
+                                            .Input("v")
+                                            .Output("y")
+                                            .Output("matmul_wx")
+                                            .Output("matmul_vx")
+                                            .Build());
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& w,
-                           const std::shared_ptr<one::Tensor>& b, const Optional<one::Tensor>& v,
-                           const Optional<one::Tensor>& c, const std::string& activation) const {
-    // check whether the user provide splited tensors
+                           const std::shared_ptr<one::Tensor>& w, const Optional<one::Tensor>& b,
+                           const Optional<one::Tensor>& v, const Optional<one::Tensor>& c,
+                           const std::string& activation) const {
+    // check whether the user provide weight tensor v
     bool is_split_mode = false;
-    if (v && c) {
+    if (v) {
       is_split_mode = true;
-    } else if (!v && !c) {
-      is_split_mode = false;
     } else {
-      return Error::RuntimeError() << "expected consistant existance of tensor v and c";
+      is_split_mode = false;
+    }
+
+    // check whether the user provide bias tensors
+    bool has_bias = false;
+    if (b) {
+      has_bias = true;
+      if (is_split_mode) {
+        CHECK_OR_RETURN(c) << "expected existance of c, when provide tensors w, v and b";
+      }
+    } else {
+      CHECK_OR_RETURN(!c) << "expected existance of b while providing c";
+      has_bias = false;
     }
 
     // obtain input shape
     const auto& x_shape = *(x->shape());
     const auto& w_shape = *(w->shape());
-    const auto& b_shape = *(b->shape());
+    std::shared_ptr<const oneflow::Shape> b_shape = nullptr;
+    if (has_bias) { b_shape = (JUST(b)->shape()); }
 
     // check number of axes of x, w and b
     CHECK_GT_OR_RETURN(x_shape.NumAxes(), 1)
         << "number of axes of \'x\' should have be greater than 1, yet get " << x_shape.NumAxes();
     CHECK_EQ_OR_RETURN(w_shape.NumAxes(), 2)
         << "number of axes of \'w\' should have be equal to 2, yet get " << w_shape.NumAxes();
-    CHECK_EQ_OR_RETURN(b_shape.NumAxes(), 1)
-        << "number of axes of \'b\' should have be equal to 1, yet get " << b_shape.NumAxes();
+    if (has_bias) {
+      CHECK_EQ_OR_RETURN(b_shape->NumAxes(), 1)
+          << "number of axes of \'b\' should have be equal to 1, yet get " << b_shape->NumAxes();
+    }
 
     // check input shapes of w and b
     size_t x_num_axes = x_shape.NumAxes();
@@ -3471,9 +3496,11 @@ class FusedGluFunctor {
         << "dimension 1 of \'w\'(" << w_shape.At(1)
         << ") is not consistant with the last dimension of \'x\'(" << x_shape.At(x_num_axes - 1)
         << ")";
-    CHECK_EQ_OR_RETURN(b_shape.At(0), w_shape.At(0))
-        << "dimension 0 of \'b\'(" << b_shape.At(0)
-        << ") is not consistant with dimension 0 of \'w\'(" << w_shape.At(0) << ")";
+    if (has_bias) {
+      CHECK_EQ_OR_RETURN(b_shape->At(0), w_shape.At(0))
+          << "dimension 0 of \'b\'(" << b_shape->At(0)
+          << ") is not consistant with dimension 0 of \'w\'(" << w_shape.At(0) << ")";
+    }
     if (!is_split_mode) {
       CHECK_EQ_OR_RETURN(w_shape.At(1) % 2, 0) << "dimension 1 of \'w\' is not divisible by 2";
     }
@@ -3481,32 +3508,47 @@ class FusedGluFunctor {
     // check both dimensions and input shapes of v and c (optional)
     if (is_split_mode) {
       const auto& v_shape = *(JUST(v)->shape());
-      const auto& c_shape = *(JUST(c)->shape());
+      std::shared_ptr<const oneflow::Shape> c_shape = NULL;
+      if (has_bias) { c_shape = (JUST(c)->shape()); }
 
       CHECK_EQ_OR_RETURN(v_shape.NumAxes(), 2)
           << "number of axes of \'v\' should have be equal to 2, yet get " << v_shape.NumAxes();
-      CHECK_EQ_OR_RETURN(c_shape.NumAxes(), 1)
-          << "number of axes of \'c\' should have be equal to 1, yet get " << c_shape.NumAxes();
+      if (has_bias) {
+        CHECK_EQ_OR_RETURN(c_shape->NumAxes(), 1)
+            << "number of axes of \'c\' should have be equal to 1, yet get " << c_shape->NumAxes();
+      }
 
       CHECK_OR_RETURN(v_shape == w_shape) << "the shape of \'v\' is not consistant with \'w\'";
-      CHECK_OR_RETURN(c_shape == b_shape) << "the shape of \'c\' is not consistant with \'b\'";
+      if (has_bias) {
+        CHECK_OR_RETURN((*c_shape) == (*b_shape))
+            << "the shape of \'c\' is not consistant with \'b\'";
+      }
     }
 
     // set activation attribute
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("activation");
-    attrs.SetAllAttrs(activation);
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("activation", "has_bias", "is_split");
+    attrs.SetAllAttrs(activation, has_bias, is_split_mode);
 
     // dispatch corresponding operator
-    if (is_split_mode) {
-      return OpInterpUtil::Dispatch<one::Tensor>(*split_op_, {x, w, b, JUST(v), JUST(c)}, attrs);
+    if (is_split_mode && has_bias) {
+      return OpInterpUtil::Dispatch<one::Tensor>(*split_op_, {x, w, JUST(b), JUST(v), JUST(c)},
+                                                 attrs);
+    } else if (!is_split_mode && has_bias) {
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, w, JUST(b)}, attrs);
+    } else if (is_split_mode && !has_bias) {
+      return OpInterpUtil::Dispatch<one::Tensor>(*split_op_without_bias_, {x, w, JUST(v)}, attrs);
+    } else if (!is_split_mode && !has_bias) {
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_without_bias_, {x, w}, attrs);
     } else {
-      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, w, b}, attrs);
+      UNIMPLEMENTED_THEN_RETURN();
     }
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_without_bias_;
   std::shared_ptr<OpExpr> split_op_;
+  std::shared_ptr<OpExpr> split_op_without_bias_;
 };
 
 class FusedScaleTrilFunctor {
@@ -4811,7 +4853,34 @@ class BatchNormBackwardElemtFunctor {
 
 class FusedMultiHeadAttentionInferenceFunctor {
  public:
-  FusedMultiHeadAttentionInferenceFunctor() {
+  FusedMultiHeadAttentionInferenceFunctor() = default;
+  Maybe<Tensor> operator()(
+      const std::shared_ptr<one::Tensor>& query, const std::shared_ptr<one::Tensor>& key,
+      const std::shared_ptr<one::Tensor>& value, const int64_t& num_heads, const bool& causal,
+      const int64_t& query_hidden_slice_start, const int64_t& query_hidden_slice_end,
+      const int64_t& key_hidden_slice_start, const int64_t& key_hidden_slice_end,
+      const int64_t& value_hidden_slice_start, const int64_t& value_hidden_slice_end,
+      const Optional<one::Tensor>& attn_bias, const int64_t& causal_diagonal_offset) const {
+    CHECK_OR_RETURN(query_hidden_slice_start == 0 && key_hidden_slice_start == 0
+                    && value_hidden_slice_start == 0 && query_hidden_slice_end == -1
+                    && key_hidden_slice_end == -1 && value_hidden_slice_end == -1)
+        << "The parameters 'query_hidden_slice_start', 'query_hidden_slice_end', "
+           "'key_hidden_slice_start', 'key_hidden_slice_end', 'value_hidden_slice_start', "
+           "'value_hidden_slice_end' have been deprecated.";
+
+    const int64_t query_hidden_size = query->shape()->At(2);
+    CHECK_EQ_OR_RETURN(query_hidden_size % num_heads, 0)
+        << "The hidden size of the query tensor should be a multiple of num_heads.";
+    const int64_t query_head_size = query_hidden_size / num_heads;
+    return functional::FusedMultiHeadAttentionInferenceV2(query, "BM(HK)", query_head_size, key,
+                                                          "BM(HK)", value, "BM(HK)", attn_bias,
+                                                          causal, causal_diagonal_offset);
+  }
+};
+
+class FusedMultiHeadAttentionInferenceV2Functor {
+ public:
+  FusedMultiHeadAttentionInferenceV2Functor() {
     op_ = CHECK_JUST(one::OpBuilder("fused_multi_head_attention_inference")
                          .Input("query")
                          .Input("key")
@@ -4826,117 +4895,161 @@ class FusedMultiHeadAttentionInferenceFunctor {
                                         .Output("out")
                                         .Build());
   }
-  Maybe<Tensor> operator()(
-      const std::shared_ptr<one::Tensor>& query, const std::shared_ptr<one::Tensor>& key,
-      const std::shared_ptr<one::Tensor>& value, const int64_t& num_heads, const bool& causal,
-      const int64_t& query_hidden_slice_start, const int64_t& query_hidden_slice_end,
-      const int64_t& key_hidden_slice_start, const int64_t& key_hidden_slice_end,
-      const int64_t& value_hidden_slice_start, const int64_t& value_hidden_slice_end,
-      const Optional<one::Tensor>& attn_bias) const {
-    CHECK_EQ_OR_RETURN(query->shape()->NumAxes(), 3)
-        << "The number of dimensions of the query tensor should be 3.";
-    CHECK_EQ_OR_RETURN(key->shape()->NumAxes(), 3)
-        << "The number of dimensions of the key tensor should be 3.";
-    CHECK_EQ_OR_RETURN(value->shape()->NumAxes(), 3)
-        << "The number of dimensions of the value tensor should be 3.";
-    const int64_t batch_size = query->shape()->At(0);
-    CHECK_EQ_OR_RETURN(key->shape()->At(0), batch_size)
-        << "The size of the first dimension of the key tensor should be the same as that of the "
-           "query tensor.";
-    CHECK_EQ_OR_RETURN(value->shape()->At(0), batch_size)
-        << "The size of the first dimension of the value tensor should be the same as that of the "
-           "query tensor.";
-    const int64_t query_seq_len = query->shape()->At(1);
-    const int64_t kv_seq_len = key->shape()->At(1);
-    CHECK_EQ_OR_RETURN(value->shape()->At(1), kv_seq_len)
-        << "The size of the second dimension of the value tensor should be the same as that of the "
-           "key tensor.";
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& query,
+                           const std::string& query_layout,
+                           const Optional<int64_t>& query_head_size,
+                           const std::shared_ptr<one::Tensor>& key, const std::string& key_layout,
+                           const std::shared_ptr<one::Tensor>& value,
+                           const std::string& value_layout, const Optional<one::Tensor>& attn_bias,
+                           const bool& causal, const int64_t& causal_diagonal_offset) const {
+    CHECK_GE_OR_RETURN(causal_diagonal_offset, 0)
+        << "The value of causal_diagonal_offset should be greater or equal to 0.";
 
-    auto CheckHiddenSize = [num_heads](const std::string& tensor_name, int64_t slice_start,
-                                       int64_t slice_end, int64_t dim_size) -> Maybe<int64_t> {
-      CHECK_GE_OR_RETURN(slice_start, 0)
-          << tensor_name
-          << "_hidden_slice_start should be greater than or equal to 0 and less than the size "
-             "of the last dimension of the query tensor.";
-      CHECK_LT_OR_RETURN(slice_start, dim_size)
-          << tensor_name
-          << "_hidden_slice_start should be greater than or equal to 0 and less than the size "
-             "of the last dimension of the query tensor.";
-      if (slice_end == -1) {
-        slice_end = dim_size;
+    const auto ParseDims = [](const std::string& name, const Shape& shape,
+                              const std::string& layout, const Optional<int64_t>& num_heads,
+                              const Optional<int64_t>& head_size, int64_t* b, int64_t* m,
+                              int64_t* h, int64_t* k) -> Maybe<void> {
+      if (shape.NumAxes() == 3) {
+        if (layout == "BM(HK)") {
+          *b = shape.At(0);
+          *m = shape.At(1);
+          const int64_t hidden_size = shape.At(2);
+          if (num_heads) {
+            const int64_t expected_h = JUST(num_heads);
+            CHECK_EQ_OR_RETURN(hidden_size % expected_h, 0);
+            *h = expected_h;
+            *k = hidden_size / expected_h;
+          } else if (head_size) {
+            const int64_t expected_k = JUST(head_size);
+            CHECK_EQ_OR_RETURN(hidden_size % expected_k, 0);
+            *h = hidden_size / expected_k;
+            *k = expected_k;
+          } else {
+            UNIMPLEMENTED_THEN_RETURN();
+          }
+        } else if (layout == "MB(HK)") {
+          *b = shape.At(1);
+          *m = shape.At(0);
+          const int64_t hidden_size = shape.At(2);
+          if (num_heads) {
+            const int64_t expected_h = JUST(num_heads);
+            CHECK_EQ_OR_RETURN(hidden_size % expected_h, 0);
+            *h = expected_h;
+            *k = hidden_size / expected_h;
+          } else if (head_size) {
+            const int64_t expected_k = JUST(head_size);
+            CHECK_EQ_OR_RETURN(hidden_size % expected_k, 0);
+            *h = hidden_size / expected_k;
+            *k = expected_k;
+          } else {
+            UNIMPLEMENTED_THEN_RETURN();
+          }
+        } else {
+          UNIMPLEMENTED_THEN_RETURN()
+              << name << "_layout should be 'BM(HK)' or 'MB(HK)' when the number of dimensions of "
+              << name << " tensor is 3.";
+        }
+      } else if (shape.NumAxes() == 4) {
+        if (layout == "BMHK") {
+          *b = shape.At(0);
+          *m = shape.At(1);
+          *h = shape.At(2);
+          *k = shape.At(3);
+        } else if (layout == "BHMK") {
+          *b = shape.At(0);
+          *m = shape.At(2);
+          *h = shape.At(1);
+          *k = shape.At(3);
+        } else {
+          UNIMPLEMENTED_THEN_RETURN()
+              << name << "_layout should be 'BMHK' or 'BHMK' when the number of dimensions of "
+              << name << " tensor is 4.";
+          ;
+        }
+        if (num_heads) {
+          const int64_t expected_h = JUST(num_heads);
+          CHECK_EQ_OR_RETURN(*h, expected_h) << "The size of dimension 'H' of " << name
+                                             << " tensor should be " << expected_h << ".";
+        }
+        if (head_size) {
+          const int64_t expected_k = JUST(head_size);
+          CHECK_EQ_OR_RETURN(*k, expected_k) << "The size of dimension 'K' of " << name
+                                             << " tensor should be " << expected_k << ".";
+        }
       } else {
-        CHECK_GT_OR_RETURN(slice_end, 0)
-            << tensor_name
-            << "_hidden_slice_end should be greater than 0 and less than or equal to the size "
-               "of the last dimension of the "
-            << tensor_name << " tensor.";
-        CHECK_LE_OR_RETURN(slice_end, dim_size)
-            << tensor_name
-            << "_hidden_slice_end should be greater than 0 and less than or equal to the size "
-               "of the last dimension of the "
-            << tensor_name << " tensor.";
-        CHECK_GT_OR_RETURN(slice_end, slice_start)
-            << tensor_name << "_hidden_slice_end should be greater than " << tensor_name
-            << "_hidden_start.";
-      }
-      const int64_t hidden_size = slice_end - slice_start;
-      CHECK_EQ_OR_RETURN(hidden_size % num_heads, 0)
-          << "The hidden size of the " << tensor_name
-          << " should be a multiple of the number of heads.";
-      return hidden_size;
+        UNIMPLEMENTED_THEN_RETURN()
+            << "The number of dimensions of the " << name << " tensor should be 3 or 4";
+      };
+      return Maybe<void>::Ok();
     };
-    const int64_t query_hidden_size = JUST(CheckHiddenSize(
-        "query", query_hidden_slice_start, query_hidden_slice_end, query->shape()->At(2)));
-    const int64_t key_hidden_size = JUST(
-        CheckHiddenSize("key", key_hidden_slice_start, key_hidden_slice_end, key->shape()->At(2)));
-    CHECK_EQ_OR_RETURN(key_hidden_size, query_hidden_size)
-        << "The hidden size of the query and key must be the same.";
-    CHECK_EQ_OR_RETURN((query_hidden_size / num_heads) % 8, 0)
-        << "The head size of query and key should be a multiple of 8.";
-    const int64_t value_hidden_size = JUST(CheckHiddenSize(
-        "value", value_hidden_slice_start, value_hidden_slice_end, value->shape()->At(2)));
-    CHECK_EQ_OR_RETURN((value_hidden_size / num_heads) % 8, 0)
-        << "The head size of value should be a multiple of 8.";
+
+    int64_t q_b = 0;
+    int64_t q_m = 0;
+    int64_t q_h = 0;
+    int64_t q_k = 0;
+    JUST(ParseDims("query", *query->shape(), query_layout, Optional<int64_t>(), query_head_size,
+                   &q_b, &q_m, &q_h, &q_k));
+    CHECK_EQ_OR_RETURN(q_k % 8, 0)
+        << "The size of dimension 'K' of the query tensor should be a multiple of 8.";
+
+    int64_t k_b = 0;
+    int64_t k_m = 0;
+    int64_t k_h = 0;
+    int64_t k_k = 0;
+    JUST(ParseDims("key", *key->shape(), key_layout, Optional<int64_t>(), q_k, &k_b, &k_m, &k_h,
+                   &k_k));
+    CHECK_EQ_OR_RETURN(k_b, q_b) << "The size of dimension 'B' of the key tensor should be the "
+                                    "same as that of the query tensor.";
+    CHECK_EQ_OR_RETURN(k_h, q_h) << "The size of dimension 'H' of the key tensor should be the "
+                                    "same as that of the query tensor.";
+
+    int64_t v_b = 0;
+    int64_t v_m = 0;
+    int64_t v_h = 0;
+    int64_t v_k = 0;
+    JUST(ParseDims("value", *value->shape(), value_layout, q_h, Optional<int64_t>(), &v_b, &v_m,
+                   &v_h, &v_k));
+    CHECK_EQ_OR_RETURN(v_b, q_b) << "The size of dimension 'B' of the value tensor should be the "
+                                    "same as that of the query tensor.";
+    CHECK_EQ_OR_RETURN(v_m, k_m) << "The size of dimension 'M' of the value tensor should be the "
+                                    "same as that of the key tensor.";
+    CHECK_EQ_OR_RETURN(v_k % 8, 0)
+        << "The size of dimension 'K' of the value tensor should be a multiple of 8.";
+
     if (attn_bias) {
       const auto attn_bias_shape = JUST(attn_bias)->shape();
       const int64_t num_attn_bias_axes = attn_bias_shape->NumAxes();
-      CHECK_GT_OR_RETURN(num_attn_bias_axes, 0)
+      CHECK_OR_RETURN(num_attn_bias_axes > 0 && num_attn_bias_axes <= 4)
           << "The number of dimensions of attn_bias should be greater than 0 and less than or "
              "equal to 4.";
-      CHECK_LE_OR_RETURN(num_attn_bias_axes, 4)
-          << "The number of dimensions of attn_bias should be greater than 0 and less than or "
-             "equal to 4.";
-      CHECK_GE_OR_RETURN(attn_bias_shape->At(num_attn_bias_axes - 1), kv_seq_len)
+      CHECK_GE_OR_RETURN(attn_bias_shape->At(num_attn_bias_axes - 1), k_m)
           << "The size of the -1 dimension of attn_bias should be greater than or equal to the "
-             "second dimension of the key tensor";
+             "dimension 'M' of the key tensor";
       CHECK_EQ_OR_RETURN(attn_bias_shape->At(num_attn_bias_axes - 1) % 8, 0)
           << "The size of the -1 dimension of attn_bias should be a multiple of 8.";
       if (num_attn_bias_axes >= 2) {
         CHECK_OR_RETURN(attn_bias_shape->At(num_attn_bias_axes - 2) == 1
-                        || attn_bias_shape->At(num_attn_bias_axes - 2) >= query_seq_len)
+                        || attn_bias_shape->At(num_attn_bias_axes - 2) >= q_m)
             << "The size of the -2 dimension of attn_bias should be greater than or equal to the "
-               "second dimension of the query tensor or equal to 1.";
+               "dimension 'M' of the query tensor or equal to 1.";
       }
       if (num_attn_bias_axes >= 3) {
         CHECK_OR_RETURN(attn_bias_shape->At(num_attn_bias_axes - 3) == 1
-                        || attn_bias_shape->At(num_attn_bias_axes - 3) == num_heads)
-            << "The size of the -3 dimension of attn_bias should be equal to num_heads or equal to "
-               "1.";
+                        || attn_bias_shape->At(num_attn_bias_axes - 3) == q_h)
+            << "The size of the -3 dimension of attn_bias should be equal to the dimension 'H' of "
+               "the query tensor or equal to 1.";
       }
       if (num_attn_bias_axes == 4) {
-        CHECK_OR_RETURN(attn_bias_shape->At(0) == 1 || attn_bias_shape->At(0) == batch_size)
-            << "The size of the -4 dimension of attn_bias should be equal to the first dimension "
-               "of the query tensor or equal to 1.";
+        CHECK_OR_RETURN(attn_bias_shape->At(0) == 1 || attn_bias_shape->At(0) == q_b)
+            << "The size of the -4 dimension of attn_bias should be equal to the dimension 'B' of "
+               "the query tensor or equal to 1.";
       }
     }
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("num_heads", "causal", "query_hidden_slice_start",
-                                                 "query_hidden_slice_end", "key_hidden_slice_start",
-                                                 "key_hidden_slice_end", "value_hidden_slice_start",
-                                                 "value_hidden_slice_end");
-    attrs.SetAllAttrs(num_heads, causal, query_hidden_slice_start, query_hidden_slice_end,
-                      key_hidden_slice_start, key_hidden_slice_end, value_hidden_slice_start,
-                      value_hidden_slice_end);
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("query_layout", "key_layout", "value_layout",
+                                       "query_head_size", "causal", "causal_diagonal_offset");
+    attrs.SetAllAttrs(query_layout, key_layout, value_layout, q_k, causal, causal_diagonal_offset);
     if (attn_bias) {
       return OpInterpUtil::Dispatch<Tensor>(*op_with_attn_bias_,
                                             {query, key, value, JUST(attn_bias)}, attrs);
@@ -5113,6 +5226,71 @@ class MultiTensorYoloV5WeightUpdateFunctor {
   std::vector<std::shared_ptr<OpExpr>> op_;
 };
 
+class FusedScaleMaskBiasSoftmaxFunctor {
+ public:
+  FusedScaleMaskBiasSoftmaxFunctor() {
+    op_with_bias_ = CHECK_JUST(one::OpBuilder("fused_scale_mask_bias_softmax")
+                                   .Input("x")
+                                   .Input("mask")
+                                   .Input("bias")
+                                   .Output("out")
+                                   .Build());
+    op_without_bias_ = CHECK_JUST(one::OpBuilder("fused_scale_mask_bias_softmax")
+                                      .Input("x")
+                                      .Input("mask")
+                                      .Output("out")
+                                      .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& mask,
+                           const Optional<one::Tensor>& bias, const float& scale,
+                           const bool& inplace = false) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "inplace");
+    attrs.SetAllAttrs(scale, inplace);
+    if (bias) {
+      if (inplace) {
+        std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+        outputs->at(0) = x;
+        JUST(OpInterpUtil::Dispatch(*op_with_bias_, {x, mask, JUST(bias)}, outputs.get(), attrs));
+        return outputs->at(0);
+      }
+      return OpInterpUtil::Dispatch<Tensor>(*op_with_bias_, {x, mask, JUST(bias)}, attrs);
+      ;
+    }
+    if (inplace) {
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = x;
+      JUST(OpInterpUtil::Dispatch(*op_without_bias_, {x, mask}, outputs.get(), attrs));
+      return outputs->at(0);
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_without_bias_, {x, mask}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_without_bias_;
+  std::shared_ptr<OpExpr> op_with_bias_;
+};
+
+class FusedScaleMaskBiasSoftmaxGradFunctor {
+ public:
+  FusedScaleMaskBiasSoftmaxGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_scale_mask_bias_softmax_grad")
+                         .Input("y")
+                         .Input("dy")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& dy, const float& scale) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale");
+    attrs.SetAllAttrs(scale);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {y, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -5238,11 +5416,15 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BatchNormBackwardReduceFunctor>("BatchNormBackwardReduce");
   m.add_functor<impl::BatchNormBackwardElemtFunctor>("BatchNormBackwardElemt");
   m.add_functor<impl::FusedMultiHeadAttentionInferenceFunctor>("FusedMultiHeadAttentionInference");
+  m.add_functor<impl::FusedMultiHeadAttentionInferenceV2Functor>(
+      "FusedMultiHeadAttentionInferenceV2");
   m.add_functor<impl::FusedFastGeluMulFunctor>("FusedFastGeluMul");
   m.add_functor<impl::FusedFastGeluMulGradFunctor>("FusedFastGeluMulGrad");
   m.add_functor<impl::GroupedMatmulBiasFunctor>("GroupedMatmulBias");
   m.add_functor<impl::GroupedMatmulFunctor>("GroupedMatmul");
   m.add_functor<impl::RMSNormFunctor>("RMSNorm");
+  m.add_functor<impl::FusedScaleMaskBiasSoftmaxFunctor>("FusedScaleMaskBiasSoftmax");
+  m.add_functor<impl::FusedScaleMaskBiasSoftmaxGradFunctor>("FusedScaleMaskBiasSoftmaxGrad");
   m.add_functor<impl::MultiTensorYoloV5WeightUpdateFunctor>("MultiTensorYoloV5WeightUpdate");
 }
 
