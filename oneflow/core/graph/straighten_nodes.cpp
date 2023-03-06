@@ -649,6 +649,29 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
     });
   };
 
+  // Find the iterator of an element in set
+  // Make sure that the element exist in the set before using this function
+  auto FindElementInSet = [&](TopoStruct* element, std::set<TopoStruct*, comp>& set) {
+    auto it = set.find(element);
+    // NOTE: In some cases, the set can not find this element
+    // Tested in machine-16:
+    // Deleting: 0x7f75041d64c0, size: 4: 0x7f75040d7390, 0x7f7504384540, 0x7f75042bc410,
+    // 0x7f75041d64c0, Find: 0x4
+    if (*it != element) {
+      for (auto it_traverse = set.begin(); it_traverse != set.end(); ++it_traverse) {
+        if (*it_traverse == element) { return it_traverse; }
+      }
+      CHECK(false) << "The element " << element << " does not exist in the set!";
+    }
+    return it;
+  };
+
+  // Since the erase function call the find function
+  // we also need to reset the erase function
+  auto EraseElementInSet = [&](TopoStruct* element, std::set<TopoStruct*, comp>& set) {
+    set.erase(FindElementInSet(element, set));
+  };
+
   // Move the first node of the waiting list to the execution list
   auto move2execution_list = [&](std::set<TopoStruct*, comp>& waiting_list,
                                  std::vector<TaskNode*>& execution_list) {
@@ -659,7 +682,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
     for (auto& curr_topo_struct : key2topo_structs.at(first_topo_struct->key)) {
       execution_num++;
       execution_list.push_back(curr_topo_struct->node);
-      waiting_list.erase(curr_topo_struct);
+      EraseElementInSet(curr_topo_struct, waiting_list);
     }
     CHECK_GT(execution_num, 0) << "Error, no task nodes are moved to the execution list";
   };
