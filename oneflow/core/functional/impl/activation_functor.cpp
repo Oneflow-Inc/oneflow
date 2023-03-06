@@ -192,13 +192,13 @@ class CeluFunctor {
 class CeluGradFunctor {
  public:
   CeluGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("celu_grad").Input("x").Input("dy").Output("dx").Build());
+    op_ = CHECK_JUST(one::OpBuilder("celu_grad").Input("y").Input("dy").Output("dx").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& y,
                            const std::shared_ptr<one::Tensor>& dy, const double& alpha) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("alpha");
     attrs.SetAllAttrs(alpha);
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {y, dy}, attrs);
   }
 
  private:

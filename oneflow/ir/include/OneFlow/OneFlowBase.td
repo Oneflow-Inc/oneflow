@@ -24,6 +24,7 @@ def OneFlow_OFRecordTensor : TensorOf<[OneFlow_OFRecordElement]>;
 def OneFlow_TensorBufferTensor : TensorOf<[OneFlow_TensorBufferElement]>;
 
 def OneFlow_Tensor : TensorOf<[AnyType]>;
+
 def SI32ArrayAttr : TypedArrayAttrBase<SI32Attr, "signed 32-bit integer array attribute"> {}
 
 def SI64ArrayAttr : TypedArrayAttrBase<SI64Attr, "signed 64-bit integer array attribute"> {}
