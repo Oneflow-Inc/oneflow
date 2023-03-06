@@ -757,6 +757,64 @@ class FusedMatmulBiasFunctor {
   std::shared_ptr<OpExpr> _without_add_to_output_op;
 };
 
+class FusedRotaryEmbeddingFunctor {
+ public:
+  FusedRotaryEmbeddingFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_rotary_embedding")
+                                            .Input("x")
+                                            .Input("cos")
+                                            .Input("sin")
+                                            .Output("out")
+                                            .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& cos,
+                           const std::shared_ptr<one::Tensor>& sin,
+                           const std::string& layout) const {
+    /*
+    x: (B, H, M, K)
+    x: (B, M, E) <=> (B, M, H, K)
+    cos: (M, K)
+    sin: (M, K)
+    */
+
+    CHECK_EQ_OR_RETURN(cos->shape()->NumAxes(), 2)
+      << Error::RuntimeError() << "The number of dimensions of cos should be equal to 2.";
+    CHECK_EQ_OR_RETURN(sin->shape()->NumAxes(), 2)
+      << Error::RuntimeError() << "The number of dimensions of sin should be equal to 2.";;
+
+    CHECK_OR_RETURN(cos->shape() == sin->shape())
+      << Error::RuntimeError() << "Each dimension of cos & sin should be the same.";;
+
+    if (layout == "BHMK") {
+        CHECK_EQ_OR_RETURN(x->shape()->NumAxes(), 4)
+          << Error::RuntimeError() << "If layout == BHMK, the number of dimensions of x should be equal to 4.";
+        CHECK_EQ_OR_RETURN(cos->shape()->At(0), x->shape()->At(2))
+          << Error::RuntimeError() << "If layout == BHMK, the 3rd dimension of x should be equal to 1st dimension of cos & sin.";
+        CHECK_EQ_OR_RETURN(cos->shape()->At(1), x->shape()->At(3))
+          << Error::RuntimeError() << "If layout == BHMK, the 4th dimension of x should be equal to 2nd dimension of cos & sin.";
+    } else if (layout == "BME") { //TODO: how am i going to know H & K from E? for now, we assume K from cos & sin is the same as x
+        CHECK_EQ_OR_RETURN(x->shape()->NumAxes(), 3)
+          << Error::RuntimeError() << "If layout == BME, the number of dimensions of x should be equal to 3.";
+        CHECK_EQ_OR_RETURN(cos->shape()->At(0), x->shape()->At(1))
+          << Error::RuntimeError() << "If layout == BME, the 2nd dimension of x should be equal to 1st dimension of cos & sin.";
+        CHECK_EQ_OR_RETURN(x->shape()->At(2) % cos->shape()->At(1), 0)
+          << Error::RuntimeError() << "If layout == BHMK, the 3rd dimension of x MOD 2st dimension of cos & sin should be 0.";
+    } else {
+        return Error::RuntimeError() << "Not Supported Layout.";
+    }
+
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("layout");
+    attrs.SetAllAttrs(layout);
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, cos, sin}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class FusedMatmulBiasAddReluDropoutFunctor {
  public:
   FusedMatmulBiasAddReluDropoutFunctor() {
@@ -5134,6 +5192,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TensorDotIntDimsFunctor>("TensorDotIntDims");
   m.add_functor<impl::FusedMLPFunctor>("FusedMLP");
   m.add_functor<impl::FusedMatmulBiasFunctor>("FusedMatmulBias");
+  m.add_functor<impl::FusedRotaryEmbeddingFunctor>("FusedRotaryEmbedding");
   m.add_functor<impl::FusedMatmulBiasAddReluDropoutFunctor>("FusedMatmulBiasAddReluDropout");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
