@@ -33,6 +33,10 @@ Maybe<uint64_t> GetRandomSeedForLazyOrGlobal(std::shared_ptr<one::Generator>& ge
                                              const Optional<Symbol<ParallelDesc>>& placement,
                                              const Optional<Symbol<NdSbp>>& nd_sbp);
 
+Maybe<uint64_t> GetRandomSeedForLazyOrGlobal(std::shared_ptr<one::Generator>& generator,
+                                             bool is_lazy,
+                                             const std::shared_ptr<one::Tensor>& input);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_USER_KERNELS_RANDOM_SEED_UTIL_H_

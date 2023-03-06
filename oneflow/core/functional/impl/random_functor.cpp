@@ -37,17 +37,9 @@ class BernoulliFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Symbol<DType>& dtype,
                            const Optional<one::Generator>& generator, const bool& inplace) const {
+    if (x->is_global()) { JUST(CheckDeviceIdsIsValid(JUST(x->parallel_desc()))); }
     auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    uint64_t random_seed = 0;
-    if (x->is_global()) {
-      JUST(CheckDeviceIdsIsValid(JUST(x->parallel_desc())));
-      random_seed = JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(),
-                                                      JUST(x->parallel_desc()), JUST(x->nd_sbp())));
-    } else {
-      random_seed =
-          JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), NullOpt, NullOpt));
-    }
-
+    uint64_t random_seed = JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
     auto& bernoulli_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "seed", "p");
     // p == -1 means bernoulli op doesn't use p to generate random number
     bernoulli_attrs.SetAllAttrs(dtype->data_type(), static_cast<int64_t>(random_seed),
@@ -87,18 +79,10 @@ class BernoulliProbFunctor {
                            const Symbol<DType>& dtype, const Optional<one::Generator>& generator,
                            const bool& inplace) const {
     CHECK_OR_THROW(p >= 0.0 && p <= 1.0) << "bernoulli expects p to be in [0, 1], but got p=" << p;
+    if (x->is_global()) { JUST(CheckDeviceIdsIsValid(JUST(x->parallel_desc()))); }
 
     auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    uint64_t random_seed = 0;
-    if (x->is_global()) {
-      JUST(CheckDeviceIdsIsValid(JUST(x->parallel_desc())));
-      random_seed = JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(),
-                                                      JUST(x->parallel_desc()), JUST(x->nd_sbp())));
-    } else {
-      random_seed =
-          JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), NullOpt, NullOpt));
-    }
-
+    uint64_t random_seed = JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
     auto& bernoulli_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "seed", "p");
     bernoulli_attrs.SetAllAttrs(dtype->data_type(), static_cast<int64_t>(random_seed), p);
 
@@ -806,17 +790,9 @@ class MultinomialFunctor {
       return result;
     }
 
+    if (x->is_global()) { JUST(CheckDeviceIdsIsValid(JUST(x->parallel_desc()))); }
     auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    uint64_t random_seed = 0;
-    if (x->is_global()) {
-      JUST(CheckDeviceIdsIsValid(JUST(x->parallel_desc())));
-      random_seed = JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(),
-                                                      JUST(x->parallel_desc()), JUST(x->nd_sbp())));
-    } else {
-      random_seed =
-          JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), NullOpt, NullOpt));
-    }
-
+    uint64_t random_seed = JUST(GetRandomSeedForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("seed", "num_samples");
     attrs.SetAllAttrs(static_cast<int64_t>(random_seed), num_samples);
 

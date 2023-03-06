@@ -77,18 +77,29 @@ Maybe<uint64_t> GetRandomSeedForLazyOrGlobal(std::shared_ptr<one::Generator>& ge
   bool is_global = placement.has_value() && nd_sbp.has_value();
   if (!is_lazy && !is_global) { return generator->current_seed(); }
 
-  auto gen_impl = JUST(generator->Get<one::CPUGeneratorImpl>(0));
-  CHECK_OR_RETURN(gen_impl) << "expect GeneratorImpl to be CPUGeneratorImpl or AutoGeneratorImpl";
-  uint64_t init_seed = gen_impl->engine()();
+  auto cpu_gen = JUST(one::DefaultCPUGenerator());
+  auto cpu_gen_impl = JUST(cpu_gen->Get<one::CPUGeneratorImpl>(0));
+  CHECK_OR_RETURN(cpu_gen_impl) << "expect a CPUGeneratorImpl";
+  uint64_t init_seed = cpu_gen_impl->engine()();
   if (is_lazy) { return init_seed; }
 
   uint64_t rank_seed = 0;
   JUST(one::functional::BroadcastSeedToAllRanks(&init_seed, /*root=*/0));
   rank_seed = JUST(
       GetRandomSeedForRank(*JUST(placement), *JUST(nd_sbp), init_seed, GlobalProcessCtx::Rank()));
-  generator = JUST(one::MakeGenerator(JUST(placement)->device_type()));
   generator->set_current_seed(rank_seed);
   return rank_seed;
+}
+
+Maybe<uint64_t> GetRandomSeedForLazyOrGlobal(std::shared_ptr<one::Generator>& generator,
+                                             bool is_lazy,
+                                             const std::shared_ptr<one::Tensor>& input) {
+  if (input->is_global()) {
+    return GetRandomSeedForLazyOrGlobal(generator, is_lazy, JUST(input->parallel_desc()),
+                                        JUST(input->nd_sbp()));
+  } else {
+    return GetRandomSeedForLazyOrGlobal(generator, is_lazy, NullOpt, NullOpt);
+  }
 }
 
 }  // namespace oneflow
