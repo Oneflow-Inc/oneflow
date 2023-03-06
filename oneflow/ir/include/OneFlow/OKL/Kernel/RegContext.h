@@ -16,8 +16,9 @@ limitations under the License.
 #ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_REGCONTEXT_H_
 #define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_KERNEL_REGCONTEXT_H_
 
-#include "OneFlow/UserOpReflection.h"
 #include "oneflow/core/framework/user_op_kernel_registry.h"
+#include "OneFlow/UserOpReflection.h"
+#include "mlir/IR/Operation.h"
 
 namespace oneflow {
 namespace okl {
