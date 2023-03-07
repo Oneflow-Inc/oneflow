@@ -577,21 +577,6 @@ Maybe<void> OpGraph::ForEachOpNode(const std::function<Maybe<void>(const OpNode&
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> OpGraph::WithSingleton(const Job* job,
-                                              const std::function<Maybe<void>()>& Callback) {
-  // new Singleton<OpGraph> and set log configs.
-  Singleton<OpGraph>::New(*job);
-  const JobDesc& job_desc = GlobalJobDesc();
-  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(*job);
-    Singleton<OpGraph>::Get()->ToDotWithFilePath(
-        "optimized_dlnet_" + std::to_string(job_desc.job_id()) + "_op_graph.dot");
-  }
-  JUST(Callback());
-  Singleton<OpGraph>::Delete();
-  return Maybe<void>::Ok();
-}
-
 std::function<bool(const OpNode* src, const OpNode* dst)> OpGraph::CreatePredicatorIsReachable()
     const {
   return MakePredicatorIsReachable();
@@ -665,4 +650,18 @@ void OpGraph::PrintSBPGraphDebugInfo() const {
     std::cout << std::endl;
   }
 }
+
+OpGraphSingletonGuard::OpGraphSingletonGuard(const Job& job) {
+  // new Singleton<OpGraph> and set log configs.
+  Singleton<OpGraph>::New(job);
+  const JobDesc& job_desc = GlobalJobDesc();
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+    TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(job);
+    Singleton<OpGraph>::Get()->ToDotWithFilePath(
+        "optimized_dlnet_" + std::to_string(job_desc.job_id()) + "_op_graph.dot");
+  }
+}
+
+OpGraphSingletonGuard::~OpGraphSingletonGuard() { Singleton<OpGraph>::Delete(); }
+
 }  // namespace oneflow

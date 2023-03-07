@@ -131,8 +131,6 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
 
   Maybe<void> Init(const Job& job);
 
-  static Maybe<void> WithSingleton(const Job* job, const std::function<Maybe<void>()>& Callback);
-
   std::function<bool(const OpNode* src, const OpNode* dst)> CreatePredicatorIsReachable() const;
   void UpdateCachedPredicatorIsReachable();
   std::function<bool(const OpNode* src, const OpNode* dst)> cached_predicator_is_reachable() const;
@@ -160,6 +158,13 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   std::list<std::string> op_names_;
   HashMap<std::string, HashSet<std::string>> producer_op_name2ctrl_consumer_op_names_;
   std::function<bool(const OpNode* src, const OpNode* dst)> cached_predicator_is_reachable_;
+};
+
+class OpGraphSingletonGuard {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(OpGraphSingletonGuard);
+  explicit OpGraphSingletonGuard(const Job& job);
+  ~OpGraphSingletonGuard();
 };
 
 }  // namespace oneflow

@@ -39,8 +39,6 @@ class RankCompiler final {
     return Compile(var_op_names, job, plan, &deallocate_ctx);
   }
 
-  Maybe<void> WithSingletonOpGraph(const Job* job, const std::function<Maybe<void>()>& Callback);
-
  private:
   std::shared_ptr<BoxingTaskGraphProto> boxing_task_graph_proto_;
   int64_t rank_;

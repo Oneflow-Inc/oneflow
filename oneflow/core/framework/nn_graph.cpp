@@ -368,64 +368,62 @@ template<void (*Loop)(size_t num, const std::function<void(size_t i)>& Callback)
 Maybe<void> NNGraph::MasterRankCompile() {
   constexpr int kWorkerStartRank = 1;
   if (GlobalProcessCtx::IsThisProcessMaster()) {
-    JUST(OpGraph::WithSingleton(&job_, [&]() -> Maybe<void> {
-      Singleton<OpGraph>::Get()->UpdateCachedPredicatorIsReachable();
-      auto boxing_task_graph =
-          JUST(BoxingTaskGraph::New(&MultiThreadLoop<std::function<void(size_t)>>));
-      // reachable collective boxing task pairs,
-      std::vector<HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>>
-          reachable_cb_pairs{GlobalProcessCtx::WorldSize()};
-      Loop(GlobalProcessCtx::WorldSize(), [&](size_t i) {
-        auto boxing_task_graph_proto = std::make_shared<BoxingTaskGraphProto>();
-        auto PickTaskNode = [&]() -> std::function<bool(TaskNode*)> {
-          if (i >= kWorkerStartRank) {
-            return [i](TaskNode* task_node) {
-              return BoxingTaskGraph::SelectTaskNodeByRank(task_node, i);
-            };
-          } else {
-            return [](TaskNode*) { return true; };
-          }
-        }();
-        boxing_task_graph->ToProto(PickTaskNode, boxing_task_graph_proto.get());
-        if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-          TeePersistentLogStream::Create("boxing_task_" + name_ + "_plan" + std::to_string(i))
-              ->Write(*boxing_task_graph_proto);
+    OpGraphSingletonGuard op_graph_guard(job_);
+    Singleton<OpGraph>::Get()->UpdateCachedPredicatorIsReachable();
+    auto boxing_task_graph =
+        JUST(BoxingTaskGraph::New(&MultiThreadLoop<std::function<void(size_t)>>));
+    // reachable collective boxing task pairs,
+    std::vector<HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>>
+        reachable_cb_pairs{GlobalProcessCtx::WorldSize()};
+    Loop(GlobalProcessCtx::WorldSize(), [&](size_t i) {
+      auto boxing_task_graph_proto = std::make_shared<BoxingTaskGraphProto>();
+      auto PickTaskNode = [&]() -> std::function<bool(TaskNode*)> {
+        if (i >= kWorkerStartRank) {
+          return [i](TaskNode* task_node) {
+            return BoxingTaskGraph::SelectTaskNodeByRank(task_node, i);
+          };
+        } else {
+          return [](TaskNode*) { return true; };
         }
-        Plan rank_plan;
-        auto* plan = (i >= kWorkerStartRank) ? &rank_plan : &plan_;
-        double start = GetCurTime();
-        // TODO(chengcheng): new memory reused by chunk
-        CHECK_JUST(
-            RankCompiler(boxing_task_graph_proto, i).Compile(variable_op_names_, &job_, plan));
-        PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names_);
-
-        PlanUtil::GenRegisterHint(plan);
-        plan->mutable_collective_boxing_plan();
-        // PlanUtil::SetForceInplaceMemBlock(plan); NOTE(chengcheng): only for ssp.
-        PlanUtil::DumpCtrlRegstInfoToPlan(plan);
-        if (i >= kWorkerStartRank /*skip master*/) {
-          // generate reachable collective boxing task pairs
-          PlanUtil::GenReachableTaskPairs(*plan, &PlanUtil::IsCollectiveBoxingTaskProto,
-                                          &reachable_cb_pairs[i]);
-          std::string plan_name = "plan:" + job_name() + ":" + std::to_string(i);
-          Singleton<CtrlClient>::Get()->PushKV(plan_name, *plan);
-        }
-      });
-      // use multi-thread to merge reachable collective boxing task pairs into
-      // (*reachable_cb_pairs)[0], which is belong to master .
-      MergeIntoFirst(&reachable_cb_pairs);
-      // TODO(chengcheng): test collective boxing for multi-job.
-      PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_, [&] {
-        return std::make_unique<RankPlanTaskGraph>(plan_, reachable_cb_pairs.at(0));
-      });
-      std::string collective_boxing_info;
-      plan_.collective_boxing_plan().SerializeToString(&collective_boxing_info);
-      for (int i = kWorkerStartRank /*skip master*/; i < GlobalProcessCtx::WorldSize(); ++i) {
-        std::string name = "collective_boxing_info:" + job_name() + ":" + std::to_string(i);
-        Singleton<CtrlClient>::Get()->PushKV(name, collective_boxing_info);
+      }();
+      boxing_task_graph->ToProto(PickTaskNode, boxing_task_graph_proto.get());
+      if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+        TeePersistentLogStream::Create("boxing_task_" + name_ + "_plan" + std::to_string(i))
+            ->Write(*boxing_task_graph_proto);
       }
-      return Maybe<void>::Ok();
-    }));
+      Plan rank_plan;
+      auto* plan = (i >= kWorkerStartRank) ? &rank_plan : &plan_;
+      double start = GetCurTime();
+      // TODO(chengcheng): new memory reused by chunk
+      CHECK_JUST(RankCompiler(boxing_task_graph_proto, i).Compile(variable_op_names_, &job_, plan));
+      PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names_);
+
+      PlanUtil::GenRegisterHint(plan);
+      plan->mutable_collective_boxing_plan();
+      // PlanUtil::SetForceInplaceMemBlock(plan); NOTE(chengcheng): only for ssp.
+      PlanUtil::DumpCtrlRegstInfoToPlan(plan);
+      if (i >= kWorkerStartRank /*skip master*/) {
+        // generate reachable collective boxing task pairs
+        PlanUtil::GenReachableTaskPairs(*plan, &PlanUtil::IsCollectiveBoxingTaskProto,
+                                        &reachable_cb_pairs[i]);
+        std::string plan_name = "plan:" + job_name() + ":" + std::to_string(i);
+        Singleton<CtrlClient>::Get()->PushKV(plan_name, *plan);
+      }
+    });
+    // use multi-thread to merge reachable collective boxing task pairs into
+    // (*reachable_cb_pairs)[0], which is belong to master .
+    MergeIntoFirst(&reachable_cb_pairs);
+    // TODO(chengcheng): test collective boxing for multi-job.
+    PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_, [&] {
+      return std::make_unique<RankPlanTaskGraph>(plan_, reachable_cb_pairs.at(0));
+    });
+    std::string collective_boxing_info;
+    plan_.collective_boxing_plan().SerializeToString(&collective_boxing_info);
+    for (int i = kWorkerStartRank /*skip master*/; i < GlobalProcessCtx::WorldSize(); ++i) {
+      std::string name = "collective_boxing_info:" + job_name() + ":" + std::to_string(i);
+      Singleton<CtrlClient>::Get()->PushKV(name, collective_boxing_info);
+    }
+    return Maybe<void>::Ok();
   } else {
     const std::string rank = std::to_string(GlobalProcessCtx::Rank());
     {
@@ -557,83 +555,81 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
   const size_t world_size = GlobalProcessCtx::WorldSize();
   MergeCommKeys(MultiThreadBroadcastFromMasterToWorkers(
       world_size, name_ + std::string(__FUNCTION__) + "_job", job_, &job_));
-  JUST(OpGraph::WithSingleton(&job_, [&]() -> Maybe<void> {
-    Singleton<OpGraph>::Get()->UpdateCachedPredicatorIsReachable();
-    size_t rank = GlobalProcessCtx::Rank();
-    auto boxing_task_graph_proto = std::make_shared<BoxingTaskGraphProto>();
+  OpGraphSingletonGuard op_graph_guard(job_);
+  Singleton<OpGraph>::Get()->UpdateCachedPredicatorIsReachable();
+  size_t rank = GlobalProcessCtx::Rank();
+  auto boxing_task_graph_proto = std::make_shared<BoxingTaskGraphProto>();
 
-    std::shared_ptr<BoxingTaskGraph> boxing_task_graph;
-    if (GlobalProcessCtx::IsThisProcessMaster()) {
-      boxing_task_graph = JUST(BoxingTaskGraph::New(&MultiThreadLoop<std::function<void(size_t)>>));
-      boxing_task_graph->ToProto([](TaskNode*) { return true; }, boxing_task_graph_proto.get());
-      if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-        TeePersistentLogStream::Create("boxing_task_" + name_ + "_plan" + std::to_string(0))
-            ->Write(*boxing_task_graph_proto);
-      }
-    }
-    const auto& PrepareWorkerBoxingTaskGraphProto = [&](BoxingTaskGraphProto* proto, int64_t i) {
-      boxing_task_graph->ToProto(
-          [i](TaskNode* task_node) { return BoxingTaskGraph::SelectTaskNodeByRank(task_node, i); },
-          proto);
-      if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-        TeePersistentLogStream::Create("boxing_task_" + name_ + "_plan" + std::to_string(i))
-            ->Write(*proto);
-      }
-    };
-    MergeCommKeys(MultiThreadPushFromMasterToWorkers(
-        name_ + std::string(__FUNCTION__) + "_boxing_task_graph", boxing_task_graph_proto.get(),
-        PrepareWorkerBoxingTaskGraphProto));
-    // async deallocate `boxing_task_graph`.
-    deallocate_ctx.Deallocate(std::move(boxing_task_graph));
-    auto* plan = &plan_;
-    double start = GetCurTime();
-    // TODO(chengcheng): new memory reused by chunk
-    CHECK_JUST(RankCompiler(boxing_task_graph_proto, rank)
-                   .Compile(variable_op_names_, &job_, plan, &deallocate_ctx));
-    // async deallocate `boxing_task_graph_proto`.
-    deallocate_ctx.Deallocate(std::move(boxing_task_graph_proto));
-    PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names_);
-
+  std::shared_ptr<BoxingTaskGraph> boxing_task_graph;
+  if (GlobalProcessCtx::IsThisProcessMaster()) {
+    boxing_task_graph = JUST(BoxingTaskGraph::New(&MultiThreadLoop<std::function<void(size_t)>>));
+    boxing_task_graph->ToProto([](TaskNode*) { return true; }, boxing_task_graph_proto.get());
     if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-      TeePersistentLogStream::Create("job_" + name_ + "_plan" + std::to_string(rank))->Write(*plan);
-      PlanUtil::ToDotFile(*plan, "job_" + name_ + "_plan" + std::to_string(rank) + ".dot");
+      TeePersistentLogStream::Create("boxing_task_" + name_ + "_plan" + std::to_string(0))
+          ->Write(*boxing_task_graph_proto);
     }
-    PlanUtil::GenRegisterHint(plan);
-    plan->mutable_collective_boxing_plan();
-    // PlanUtil::SetForceInplaceMemBlock(plan); NOTE(chengcheng): only for ssp.
-    PlanUtil::DumpCtrlRegstInfoToPlan(plan);
-    // reachable collective boxing task pairs,
-    auto reachable_cb_pairs =
-        std::make_shared<HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>>();
-    // generate reachable collective boxing task pairs
-    PlanUtil::GenReachableTaskPairs(*plan, &PlanUtil::IsCollectiveBoxingTaskProto,
-                                    reachable_cb_pairs.get());
-    {
-      // merge collective boxing task id pairs from workers.
-      IdPairs id_pairs{};
-      if (!GlobalProcessCtx::IsThisProcessMaster()) { InitIdPairs(*reachable_cb_pairs, &id_pairs); }
-      const auto& MergePairs = [&](const IdPairs& pairs) {
-        CHECK(GlobalProcessCtx::IsThisProcessMaster());
-        static std::mutex mutex;
-        std::unique_lock<std::mutex> lock(mutex);
-        MergeIdPairs(pairs, reachable_cb_pairs.get());
-      };
-      MergeCommKeys(MultiThreadPullFromWorkersToMaster(
-          name_ + std::string(__FUNCTION__) + "_reachable_cb_pairs", id_pairs, MergePairs));
+  }
+  const auto& PrepareWorkerBoxingTaskGraphProto = [&](BoxingTaskGraphProto* proto, int64_t i) {
+    boxing_task_graph->ToProto(
+        [i](TaskNode* task_node) { return BoxingTaskGraph::SelectTaskNodeByRank(task_node, i); },
+        proto);
+    if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+      TeePersistentLogStream::Create("boxing_task_" + name_ + "_plan" + std::to_string(i))
+          ->Write(*proto);
     }
-    if (GlobalProcessCtx::IsThisProcessMaster()) {
-      // TODO(chengcheng): test collective boxing for multi-job.
-      PlanUtil::GenCollectiveBoxingPlan(&deallocate_ctx, &job_, &plan_, [&] {
-        return std::make_unique<RankPlanTaskGraph>(plan_, *reachable_cb_pairs);
-      });
-    }
-    // async deallocate `boxing_task_graph_proto`.
-    deallocate_ctx.Deallocate(std::move(reachable_cb_pairs));
-    MergeCommKeys(MultiThreadBroadcastFromMasterToWorkers(
-        world_size, std::string(__FUNCTION__) + "_collective_boxing_plan",
-        plan_.collective_boxing_plan(), plan_.mutable_collective_boxing_plan()));
-    return Maybe<void>::Ok();
-  }));
+  };
+  MergeCommKeys(MultiThreadPushFromMasterToWorkers(
+      name_ + std::string(__FUNCTION__) + "_boxing_task_graph", boxing_task_graph_proto.get(),
+      PrepareWorkerBoxingTaskGraphProto));
+  // async deallocate `boxing_task_graph`.
+  deallocate_ctx.Deallocate(std::move(boxing_task_graph));
+  auto* plan = &plan_;
+  // TODO(chengcheng): new memory reused by chunk
+  CHECK_JUST(RankCompiler(boxing_task_graph_proto, rank)
+                 .Compile(variable_op_names_, &job_, plan, &deallocate_ctx));
+  // async deallocate `boxing_task_graph_proto`.
+  deallocate_ctx.Deallocate(std::move(boxing_task_graph_proto));
+  PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names_);
+
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+    TeePersistentLogStream::Create("job_" + name_ + "_plan" + std::to_string(rank))->Write(*plan);
+    PlanUtil::ToDotFile(*plan, "job_" + name_ + "_plan" + std::to_string(rank) + ".dot");
+  }
+  PlanUtil::GenRegisterHint(plan);
+  plan->mutable_collective_boxing_plan();
+  // PlanUtil::SetForceInplaceMemBlock(plan); NOTE(chengcheng): only for ssp.
+  PlanUtil::DumpCtrlRegstInfoToPlan(plan);
+  // reachable collective boxing task pairs,
+  auto reachable_cb_pairs =
+      std::make_shared<HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>>();
+  // generate reachable collective boxing task pairs
+  PlanUtil::GenReachableTaskPairs(*plan, &PlanUtil::IsCollectiveBoxingTaskProto,
+                                  reachable_cb_pairs.get());
+  {
+    // merge collective boxing task id pairs from workers.
+    IdPairs id_pairs{};
+    if (!GlobalProcessCtx::IsThisProcessMaster()) { InitIdPairs(*reachable_cb_pairs, &id_pairs); }
+    const auto& MergePairs = [&](const IdPairs& pairs) {
+      CHECK(GlobalProcessCtx::IsThisProcessMaster());
+      static std::mutex mutex;
+      std::unique_lock<std::mutex> lock(mutex);
+      MergeIdPairs(pairs, reachable_cb_pairs.get());
+    };
+    MergeCommKeys(MultiThreadPullFromWorkersToMaster(
+        name_ + std::string(__FUNCTION__) + "_reachable_cb_pairs", id_pairs, MergePairs));
+  }
+  if (GlobalProcessCtx::IsThisProcessMaster()) {
+    // TODO(chengcheng): test collective boxing for multi-job.
+    PlanUtil::GenCollectiveBoxingPlan(&deallocate_ctx, &job_, &plan_, [&] {
+      return std::make_unique<RankPlanTaskGraph>(plan_, *reachable_cb_pairs);
+    });
+  }
+  // async deallocate `boxing_task_graph_proto`.
+  deallocate_ctx.Deallocate(std::move(reachable_cb_pairs));
+  MergeCommKeys(MultiThreadBroadcastFromMasterToWorkers(
+      world_size, std::string(__FUNCTION__) + "_collective_boxing_plan",
+      plan_.collective_boxing_plan(), plan_.mutable_collective_boxing_plan()));
+
   PlanUtil::PlanMemoryLog(&plan_, name_);
   if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     PlanUtil::GenLightPlan(&plan_, name_);
