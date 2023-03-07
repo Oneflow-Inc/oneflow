@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_NN_GRAPH_H_
 #define ONEFLOW_CORE_FRAMEWORK_NN_GRAPH_H_
 
+#include <cstddef>
 #include <memory>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/nn_graph_if.h"
@@ -104,7 +105,7 @@ class NNGraph final : public NNGraphIf {
 
  private:
   Maybe<void> NaiveCompile();
-  template<void (*Loop)(size_t num, const std::function<void(size_t i)>& Callback)>
+  template<int64_t ThreadNumLimit>
   Maybe<void> MasterRankCompile();
   Maybe<void> MasterAndWorkerRanksCompile();
   Maybe<void> RegisterFreeEagerTensorsToVariableOpNames();

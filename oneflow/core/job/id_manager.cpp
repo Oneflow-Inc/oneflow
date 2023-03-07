@@ -20,8 +20,8 @@ namespace oneflow {
 
 namespace {
 
-constexpr static int kRankLimitShift = 16;
-constexpr static int kIdLimitShift = (sizeof(int64_t) * 8 - kRankLimitShift);
+constexpr static int64_t kRankLimitShift = 16;
+constexpr static int64_t kIdLimitShift = (sizeof(int64_t) * 8 - kRankLimitShift);
 static_assert(kIdLimitShift > 0, "");
 
 int64_t AddCurrentRankOffset(int64_t x) {

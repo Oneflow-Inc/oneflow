@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/task_graph.h"
+#include <cstddef>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/container_util.h"
@@ -1327,20 +1328,6 @@ Maybe<void> RankTaskGraph::InitRegstDescsConsumers() {
   return Maybe<void>::Ok();
 }
 
-bool RawSafeToAddCtrlEdgesBetween(Symbol<ParallelDesc> lhs, Symbol<ParallelDesc> rhs) {
-  if (lhs->parallel_num() != rhs->parallel_num()) { return false; }
-  if (lhs->sorted_machine_ids() != rhs->sorted_machine_ids()) { return false; }
-  for (int64_t machine_id : lhs->sorted_machine_ids()) {
-    if (lhs->sorted_dev_phy_ids(machine_id) != rhs->sorted_dev_phy_ids(machine_id)) {
-      return false;
-    }
-  }
-  return true;
-}
-
-static constexpr auto* SafeToAddCtrlEdgesBetween =
-    DECORATE(&RawSafeToAddCtrlEdgesBetween, ThreadLocal);
-
 Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names) {
   JUST(AddBoxingReletedCompTaskNodesFromProto());
   JUST(CreateAndPartiallyInitTransportTaskNodesFromProto());
@@ -1376,13 +1363,6 @@ Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names) {
             << dst->parallel_desc_sym()->data().DebugString();
         CHECK_JUST(DoRankDuty(src->parallel_desc(),
                               [&](int64_t rank) { return ConnectCtrlEdges(src, dst, rank); }));
-        // CHECK(SafeToAddCtrlEdgesBetween(src->parallel_desc(), dst->parallel_desc()))
-        //     << "\n========[src]========\n"
-        //     << src->parallel_desc().parallel_conf().DebugString() << "\n========[dst]========\n"
-        //     << dst->parallel_desc().parallel_conf().DebugString();
-        // CHECK_JUST(ForEachDutyRank(src->parallel_desc(),
-        //                            [&](int64_t rank) { return ConnectCtrlEdges(src, dst, rank);
-        //                            }));
       });
 
   if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }

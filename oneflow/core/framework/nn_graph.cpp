@@ -364,18 +364,25 @@ void MergeIntoFirst(std::vector<HashSet<T>>* data) {
 
 }  // namespace
 
-template<void (*Loop)(size_t num, const std::function<void(size_t i)>& Callback)>
+template<int64_t ThreadNumLimit>
 Maybe<void> NNGraph::MasterRankCompile() {
   constexpr int kWorkerStartRank = 1;
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     OpGraphSingletonGuard op_graph_guard(job_);
     Singleton<OpGraph>::Get()->UpdateCachedPredicatorIsReachable();
-    auto boxing_task_graph =
-        JUST(BoxingTaskGraph::New(&MultiThreadLoop<std::function<void(size_t)>>));
+    const auto& ParallelLoopForBoxing = [](size_t work_num,
+                                           const std::function<void(size_t)>& Work) {
+      MultiThreadLoop(work_num, Work, -1);
+    };
+    auto boxing_task_graph = JUST(BoxingTaskGraph::New(ParallelLoopForBoxing));
     // reachable collective boxing task pairs,
     std::vector<HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>>
         reachable_cb_pairs{GlobalProcessCtx::WorldSize()};
-    Loop(GlobalProcessCtx::WorldSize(), [&](size_t i) {
+    const auto& ParallelLoop4Compute = [](size_t work_num,
+                                          const std::function<void(size_t)>& Work) {
+      MultiThreadLoop(work_num, Work, ThreadNumLimit);
+    };
+    ParallelLoop4Compute(GlobalProcessCtx::WorldSize(), [&](size_t i) {
       auto boxing_task_graph_proto = std::make_shared<BoxingTaskGraphProto>();
       auto PickTaskNode = [&]() -> std::function<bool(TaskNode*)> {
         if (i >= kWorkerStartRank) {
@@ -393,7 +400,6 @@ Maybe<void> NNGraph::MasterRankCompile() {
       }
       Plan rank_plan;
       auto* plan = (i >= kWorkerStartRank) ? &rank_plan : &plan_;
-      double start = GetCurTime();
       // TODO(chengcheng): new memory reused by chunk
       CHECK_JUST(RankCompiler(boxing_task_graph_proto, i).Compile(variable_op_names_, &job_, plan));
       PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names_);
@@ -470,12 +476,15 @@ std::set<std::string> MultiThreadBroadcastFromMasterToWorkers(size_t world_size,
     std::mutex mtx4keys;
     std::string data;
     master_data.SerializeToString(&data);
-    FixedMultiThreadLoop(thread_num, split_num, [&](int i) {
-      std::string key = prefix + std::to_string(i);
-      Singleton<CtrlClient>::Get()->PushKV(key, data);
-      std::lock_guard<std::mutex> lock(mtx4keys);
-      CHECK(keys.insert(key).second);
-    });
+    MultiThreadLoop(
+        split_num,
+        [&](int i) {
+          std::string key = prefix + std::to_string(i);
+          Singleton<CtrlClient>::Get()->PushKV(key, data);
+          std::lock_guard<std::mutex> lock(mtx4keys);
+          CHECK(keys.insert(key).second);
+        },
+        thread_num);
   } else {
     const int64_t bs_index = bs.GetRangIndex(GlobalProcessCtx::Rank());
     std::string key = prefix + std::to_string(bs_index);
@@ -493,15 +502,18 @@ std::set<std::string> MultiThreadPullFromWorkersToMaster(const std::string& pref
   std::set<std::string> keys{};
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     std::mutex mtx4keys;
-    FixedMultiThreadLoop(thread_num, GlobalProcessCtx::WorldSize(), [&](int i) {
-      if (i < kWorkerStartRank) { return; }
-      T data;
-      std::string key = prefix + std::to_string(i);
-      Singleton<CtrlClient>::Get()->PullKV(key, &data);
-      DoEach(data);
-      std::lock_guard<std::mutex> lock(mtx4keys);
-      CHECK(keys.emplace(key).second) << "redundant pull key: " << key;
-    });
+    MultiThreadLoop(
+        GlobalProcessCtx::WorldSize(),
+        [&](int i) {
+          if (i < kWorkerStartRank) { return; }
+          T data;
+          std::string key = prefix + std::to_string(i);
+          Singleton<CtrlClient>::Get()->PullKV(key, &data);
+          DoEach(data);
+          std::lock_guard<std::mutex> lock(mtx4keys);
+          CHECK(keys.emplace(key).second) << "redundant pull key: " << key;
+        },
+        thread_num);
   } else {
     Singleton<CtrlClient>::Get()->PushKV(prefix + std::to_string(GlobalProcessCtx::Rank()), data);
   }
@@ -517,15 +529,18 @@ std::set<std::string> MultiThreadPushFromMasterToWorkers(const std::string& pref
   std::set<std::string> keys{};
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     std::mutex mtx4keys;
-    FixedMultiThreadLoop(thread_num, GlobalProcessCtx::WorldSize(), [&](int i) {
-      if (i < kWorkerStartRank) { return; }
-      T worker_data;
-      std::string key = prefix + std::to_string(i);
-      PrepareEach(&worker_data, i);
-      Singleton<CtrlClient>::Get()->PushKV(key, worker_data);
-      std::lock_guard<std::mutex> lock(mtx4keys);
-      CHECK(keys.emplace(key).second) << "redundant pull key: " << key;
-    });
+    MultiThreadLoop(
+        GlobalProcessCtx::WorldSize(),
+        [&](int i) {
+          if (i < kWorkerStartRank) { return; }
+          T worker_data;
+          std::string key = prefix + std::to_string(i);
+          PrepareEach(&worker_data, i);
+          Singleton<CtrlClient>::Get()->PushKV(key, worker_data);
+          std::lock_guard<std::mutex> lock(mtx4keys);
+          CHECK(keys.emplace(key).second) << "redundant pull key: " << key;
+        },
+        thread_num);
   } else {
     Singleton<CtrlClient>::Get()->PullKV(prefix + std::to_string(GlobalProcessCtx::Rank()), data);
   }
@@ -562,7 +577,10 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
 
   std::shared_ptr<BoxingTaskGraph> boxing_task_graph;
   if (GlobalProcessCtx::IsThisProcessMaster()) {
-    boxing_task_graph = JUST(BoxingTaskGraph::New(&MultiThreadLoop<std::function<void(size_t)>>));
+    const auto& ParallelLoop = [](size_t work_num, const std::function<void(size_t)>& Work) {
+      MultiThreadLoop(work_num, Work, -1);
+    };
+    boxing_task_graph = JUST(BoxingTaskGraph::New(ParallelLoop));
     boxing_task_graph->ToProto([](TaskNode*) { return true; }, boxing_task_graph_proto.get());
     if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("boxing_task_" + name_ + "_plan" + std::to_string(0))
@@ -690,10 +708,12 @@ Maybe<void> NNGraph::CompilePlanForRuntime() {
   struct GetCompileMethod final : public CompileModeVisitor<GetCompileMethod> {
     static CompileMethodT VisitNaive() { return &NNGraph::NaiveCompile; }
     static CompileMethodT VisitRankPerIter() {
-      return &NNGraph::MasterRankCompile<&SingleThreadLoop>;
+      // Master thread run.
+      return &NNGraph::MasterRankCompile<0>;
     }
     static CompileMethodT VisitRankPerThread() {
-      return &NNGraph::MasterRankCompile<&MultiThreadLoop<std::function<void(size_t)>>>;
+      // Multi thread run.
+      return &NNGraph::MasterRankCompile<-1>;
     }
     static CompileMethodT VisitRankPerProcess() { return &NNGraph::MasterAndWorkerRanksCompile; }
   };

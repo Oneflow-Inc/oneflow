@@ -50,38 +50,34 @@ class ThreadMgr final {
 
 void SingleThreadLoop(size_t num, const std::function<void(size_t i)>& Callback);
 
+// Use limit_thread_num to config the max thread num.
+// limit_thread_num == -1 means no limit, use the max avaliable thread num.
+// limit_thread_num == 0 means use the current thread.
 template<typename DoEachT>
-void MultiThreadLoop(size_t num, const DoEachT& DoEach) {
-  if (num == 0) { return; }
-  if (unlikely(pthread_fork::IsForkedSubProcess()) || Singleton<ThreadPool>::Get() == nullptr) {
-    SingleThreadLoop(num, DoEach);
+void MultiThreadLoop(size_t work_num, const DoEachT& DoEachWork, int64_t limit_thread_num = -1) {
+  if (work_num == 0) { return; }
+  if (unlikely(pthread_fork::IsForkedSubProcess() || Singleton<ThreadPool>::Get() == nullptr
+               || limit_thread_num == 0)) {
+    FOR_RANGE(size_t, i, 0, work_num) { DoEachWork(i); }
     return;
   }
   size_t thread_num = Singleton<ThreadPool>::Get()->thread_num();
-  thread_num = std::min(num, thread_num);
-  BalancedSplitter bs(num, thread_num);
+  if (limit_thread_num > 0) {
+    thread_num = std::min(thread_num, static_cast<size_t>(limit_thread_num));
+  }
+  thread_num = std::min(work_num, thread_num);
+  BalancedSplitter bs(work_num, thread_num);
   BlockingCounter bc(thread_num);
   FOR_RANGE(size_t, range_id, 0, thread_num) {
-    Singleton<ThreadPool>::Get()->AddWork([&bc, &bs, range_id, DoEach] {
+    Singleton<ThreadPool>::Get()->AddWork([&bc, &bs, range_id, DoEachWork] {
       size_t start = bs.At(range_id).begin();
       size_t end = bs.At(range_id).end();
-      FOR_RANGE(size_t, i, start, end) { DoEach(i); }
+      FOR_RANGE(size_t, i, start, end) { DoEachWork(i); }
       bc.Decrease();
     });
   }
   // busy loop wait.
   bc.WaitForeverUntilCntEqualZero();
-}
-
-template<typename DoEachT>
-void FixedMultiThreadLoop(size_t fixed_thread_num, size_t total_num, const DoEachT& DoEach) {
-  CHECK_GT(fixed_thread_num, 0);
-  fixed_thread_num = std::min(fixed_thread_num, total_num);
-  BalancedSplitter bs(total_num, fixed_thread_num);
-  MultiThreadLoop(fixed_thread_num, [&](size_t i) {
-    Range range = bs.At(i);
-    for (int j = range.begin(); j < range.end(); ++j) { DoEach(j); }
-  });
 }
 
 inline bool* MutIsMainThread() {
