@@ -76,28 +76,6 @@ def empty_op(
     return tensor
 
 
-def empty_strided_op(
-    size,
-    stride,
-    dtype: Optional[flow.dtype] = None,
-    device: Union[flow.device, str] = None,
-    requires_grad: bool = False,
-    pin_memory: bool = False,
-):
-    assert size is not None, "shape must not be None"
-    assert stride is not None, "stride must not be None"
-
-    tensor = flow._C.empty_strided(
-        size,
-        stride,
-        dtype=dtype,
-        device=device,
-        requires_grad=requires_grad,
-        pin_memory=pin_memory,
-    )
-    return tensor
-
-
 def empty_like_op(
     input,
     dtype: Optional[flow.dtype] = None,
