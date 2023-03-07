@@ -64,7 +64,8 @@ Pattern {
       query_head_size = GetHeadSizeFromTranpose(query_transpose),
       query_layout = attr<"\"BM(HK)\"">,
       key_layout = attr<"\"BM(HK)\"">,
-      value_layout = attr<"\"BM(HK)\"">
+      value_layout = attr<"\"BM(HK)\"">,
+      output_layout = attr<"\"BM(HK)\"">
     } -> (out_t));
   };
 }
@@ -105,7 +106,8 @@ Pattern {
       query_head_size = GetHeadSizeFromTranpose(query_permute),
       query_layout = attr<"\"BM(HK)\"">,
       key_layout = attr<"\"BM(HK)\"">,
-      value_layout = attr<"\"BM(HK)\"">
+      value_layout = attr<"\"BM(HK)\"">,
+      output_layout = attr<"\"BM(HK)\"">
     } -> (out_t));
   };
 }
