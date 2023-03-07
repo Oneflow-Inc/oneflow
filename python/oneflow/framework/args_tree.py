@@ -239,19 +239,23 @@ class ArgsTree(object):
 
         if is_output:
             for i in self._io_args[0]:
-                print(i)
-                mapped_value = map_function(i)
-                stack.append(mapped_value)
-        else:
-            for i in self._io_args:
-                print(i)
                 mapped_value = map_function(i)
                 stack.append(mapped_value)
 
-        if isinstance(self._io_args, tuple):
-            return tuple(stack)
-        elif isinstance(self._io_args, list):
-            return stack
+            if isinstance(self._io_args[0], tuple):
+                return (tuple(stack),)
+            elif isinstance(self._io_args[0], list):
+                return (stack,)
+
+        else:
+            for i in self._io_args:
+                mapped_value = map_function(i)
+                stack.append(mapped_value)
+
+            if isinstance(self._io_args, tuple):
+                return tuple(stack)
+            elif isinstance(self._io_args, list):
+                return stack
 
     def map_leaf(self, map_function: Callable):
         r"""
