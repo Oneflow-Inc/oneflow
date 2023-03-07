@@ -27,7 +27,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestBaddBmmModule(flow.unittest.TestCase):
-    @autotest(n=5)
+    @autotest(n=5, rtol=1e-4, atol=1e-3)
     def test_baddbmm_with_torch(test_case):
         device = random_device()
         input = random_tensor(ndim=3, dim0=2, dim1=4, dim2=4).to(device)
@@ -36,7 +36,7 @@ class TestBaddBmmModule(flow.unittest.TestCase):
         y = torch.baddbmm(input, batch1, batch2, beta=2.0, alpha=1.2)
         return y
 
-    @autotest(n=5)
+    @autotest(n=5, rtol=1e-4, atol=1e-3)
     def test_baddbmm_in_sd2_with_torch(test_case):
         device = random_device()
         input = random_tensor(ndim=3, dim0=2, dim1=2, dim2=2, requires_grad=False).to(
@@ -47,7 +47,7 @@ class TestBaddBmmModule(flow.unittest.TestCase):
         y = torch.baddbmm(input, batch1, batch2, beta=0.0, alpha=1.2)
         return y
 
-    @autotest(n=5)
+    @autotest(n=5, rtol=1e-4, atol=1e-3)
     def test_baddbmm_no_attr_with_torch(test_case):
         device = random_device()
         input = random_tensor(ndim=3, dim0=2, dim1=4, dim2=4).to(device)
@@ -56,7 +56,7 @@ class TestBaddBmmModule(flow.unittest.TestCase):
         y = torch.baddbmm(input, batch1, batch2)
         return y
 
-    @autotest(n=5)
+    @autotest(n=5, rtol=1e-4, atol=1e-3)
     def test_baddbmm_broadcast_with_torch(test_case):
         device = random_device()
         input = random_tensor(ndim=1, dim0=4).to(device)

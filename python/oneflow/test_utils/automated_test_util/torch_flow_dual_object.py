@@ -1321,7 +1321,7 @@ def autotest(
                     if check_allclose:
                         test_case.assertTrue(
                             check_equality(
-                                x, rtol=rtol, atol=atol, check_dtype=check_dtype
+                                x, rtol=rtol, atol=atol, check_dtype=check_dtype,
                             ),
                             x,
                         )
@@ -1356,8 +1356,8 @@ def random_tensor(
     dim2=None,
     dim3=None,
     dim4=None,
-    low=0,
-    high=1,
+    low=None,
+    high=None,
     dtype=float,
     requires_grad=True,
     pin_memory=False,

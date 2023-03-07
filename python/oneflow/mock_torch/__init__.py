@@ -199,6 +199,12 @@ class DummyModule(ModuleType):
 
     def __getitem__(self, name):
         new_name = f"{self.__name__}[{name}]"
+        if isinstance(name, int):
+            if _importer.verbose:
+                print(
+                    f'"{self.__name__}" is a dummy object, and `{new_name}` is called. Raising an IndexError to simulate an empty list.'
+                )
+            raise IndexError
         if _importer.verbose:
             print(f'"{self.__name__}" is a dummy object, and `{new_name}` is called.')
         return DummyModule(new_name)
