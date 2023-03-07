@@ -409,7 +409,6 @@ double SbpNode::EvalOutNbhCost(
 }
 
 // Compute the cost between this node and adjacent nodes with a lower order
-
 double SbpNode::EvalInNbhCost(const std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id,
                               const std::vector<int32_t>& nbh_id2order) const {
   // check if this node is in the node list
@@ -512,7 +511,6 @@ void SbpNode::NRingNeighborhood(int32_t n, std::vector<int32_t>& nbh_n_ring,
 }
 
 // Get or compute the minimum layer of this node
-
 int32_t SbpNode::GetMinLayer(
     const HashMap<std::string, SbpNode*>& op_name2sbp_node,
     const HashMap<const OpNode*, HashSet<std::string>>& op_node2mutable_op_ctrl_deps) {
