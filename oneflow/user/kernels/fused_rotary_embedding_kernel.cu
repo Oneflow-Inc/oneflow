@@ -99,7 +99,7 @@ void LaunchKernel(const T* x, const T* cos, const T* sin, T* out, const int64_t*
       kernel_sinuous_shape.at(1) = 1;
       kernel_sinuous_shape.at(2) = sinuous_shape[0];
       kernel_sinuous_shape.at(3) = sinuous_shape[1];
-    } else if (layout == "BME") {
+    } else if (layout == "BM(HK)") {
       kernel_x_shape.at(0) = x_shape[0];
       kernel_x_shape.at(1) = x_shape[1];
       kernel_x_shape.at(2) = x_shape[2] / sinuous_shape[1];

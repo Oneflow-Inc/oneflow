@@ -28,15 +28,23 @@ namespace oneflow {
     CHECK_EQ_OR_RETURN(sin_desc.shape().NumAxes(), 2);
 
     CHECK_OR_RETURN(cos_desc.shape() == sin_desc.shape());
-
-    if (layout == "BHMK") {
-        CHECK_EQ_OR_RETURN(x_desc.shape().NumAxes(), 4);
-        CHECK_EQ_OR_RETURN(cos_desc.shape().At(0), x_desc.shape().At(2));
-        CHECK_EQ_OR_RETURN(cos_desc.shape().At(1), x_desc.shape().At(3));
-    } else if (layout == "BME") { //TODO: how am i going to know H & K from E? for now, we assume K from cos & sin is the same as x
-        CHECK_EQ_OR_RETURN(x_desc.shape().NumAxes(), 3);
-        CHECK_EQ_OR_RETURN(cos_desc.shape().At(0), x_desc.shape().At(1));
-        CHECK_EQ_OR_RETURN(x_desc.shape().At(2) % cos_desc.shape().At(1), 0);
+    
+    if (x_desc.shape().NumAxes() == 3) {
+        if (layout == "BM(HK)") {
+            CHECK_EQ_OR_RETURN(cos_desc.shape().At(0), x_desc.shape().At(1));
+            CHECK_EQ_OR_RETURN(x_desc.shape().At(2) % cos_desc.shape().At(1), 0);
+        } else {
+            UNIMPLEMENTED_THEN_RETURN() << "Not Supported layout of 3-dim x, could be BM(HK)";
+        }
+    } else if (x_desc.shape().NumAxes() == 4) {
+        if (layout == "BHMK") {
+            CHECK_EQ_OR_RETURN(cos_desc.shape().At(0), x_desc.shape().At(2));
+            CHECK_EQ_OR_RETURN(cos_desc.shape().At(1), x_desc.shape().At(3));
+        } else {
+            UNIMPLEMENTED_THEN_RETURN() << "Not Supported layout of 4-dim x, could be BHMK";
+        }
+    } else {
+        UNIMPLEMENTED_THEN_RETURN() << "Not Supported num_dims of x, should be 3 or 4.";
     }
 
     ctx->SetOutputShape("out", 0, x_desc.shape());
