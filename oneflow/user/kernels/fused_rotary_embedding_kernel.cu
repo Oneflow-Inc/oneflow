@@ -87,7 +87,6 @@ void LaunchKernel(const T* x, const T* cos, const T* sin, T* out, const int64_t*
     size_t x_stride[num_dims];
     size_t sinuous_stride[num_dims];
 
-
     x_stride[num_dims-1] = 1;
     sinuous_stride[num_dims-1] = 1;
 
@@ -194,66 +193,12 @@ class FusedRotaryEmbeddingKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const std::string& layout = ctx->Attr<std::string>("layout");
 
-    const DataType data_type = out->data_type();
-    void* y_ptr = out->mut_dptr();
-
     constexpr size_t N = 4;
 
-    DimVector x_shape(N), sinuous_shape(N);
-    size_t x_stride[N];
-    size_t sinuous_stride[N];
-
-
-    x_stride[N-1] = 1;
-    sinuous_stride[N-1] = 1;
-
-    if (layout == "BHMK") {
-#pragma unloop
-      for (int i = 0; i < N; i++) {
-        x_shape.at(i) = x->shape_view().At(i);
-      }
-      sinuous_shape.at(0) = 1;
-      sinuous_shape.at(1) = 1;
-      sinuous_shape.at(2) = cos->shape_view().At(0);
-      sinuous_shape.at(3) = cos->shape_view().At(1);
-    } else if (layout == "BME") {
-      x_shape.at(0) = x->shape_view().At(0);
-      x_shape.at(1) = x->shape_view().At(1);
-      x_shape.at(2) = x->shape_view().At(2) / cos->shape_view().At(1);
-      x_shape.at(3) = cos->shape_view().At(1);
-      sinuous_shape.at(0) = 1;
-      sinuous_shape.at(1) = cos->shape_view().At(0);
-      sinuous_shape.at(2) = 1;
-      sinuous_shape.at(3) = cos->shape_view().At(1);
-    }
-
-    for (int i = N-2; i >= 0; i--) {
-      x_stride[i] = x_stride[i+1] * x_shape.at(i+1);
-      sinuous_stride[i] = sinuous_stride[i+1] * sinuous_shape.at(i+1);
-    }    
-
-    //TODO: index type should change up to the size of num_elements
-    const int32_t num_rows = x_shape.at(3);
-    int32_t num_elements = x->shape_view().Count(0, x->shape_view().NumAxes()); //TODO: because helper uses int32_t, so no size_t
-
     //TODO: hard code num_dims & seems redundant template problem...
-    struct FusedRotaryEmbeddingParam<T, N> param(reinterpret_cast<const T*>(x->dptr()), reinterpret_cast<const T*>(cos->dptr()), 
-            reinterpret_cast<const T*>(sin->dptr()), reinterpret_cast<T*>(out->mut_dptr()), num_rows, num_elements);
-
-#pragma unloop
-    for (int i = 0; i < N; i++) {
-      param.x_stride[i] = x_stride[i];
-      param.sinuous_mask[i] = (sinuous_shape.at(i) == 1) ? 0 : 1;
-      param.sinuous_stride[i] = sinuous_stride[i];
-    }
     DispatchIndex<T, N>(reinterpret_cast<const T*>(x->dptr()), reinterpret_cast<const T*>(cos->dptr()), 
             reinterpret_cast<const T*>(sin->dptr()), reinterpret_cast<T*>(out->mut_dptr()), 
             x->shape_view().data(), cos->shape_view().data(), layout);
-/*
-    FusedRotaryEmbeddingComputeKernel<T, 4, 4><<<(num_elements + blk_size - 1)/blk_size, blk_size>>>
-            (reinterpret_cast<const T*>(x->dptr()), reinterpret_cast<const T*>(cos->dptr()), 
-            reinterpret_cast<const T*>(sin->dptr()), reinterpret_cast<T*>(out->mut_dptr()),
-            num_elements, param);*/
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
