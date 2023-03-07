@@ -35,9 +35,6 @@ namespace oneflow {
 
 namespace {
 
-// We pre-store this boolean value and update it at the beginning of straighten algorithm.
-bool nccl_use_compute_stream = false;
-
 enum TaskClassifier : int {
   kWaitingOverlapNode = 0,
   kWaitingMainComputation = 1,
@@ -176,7 +173,7 @@ bool IsTransferNode(TaskType task_type) {
 }
 
 // Classifier for the set according to the task type
-TaskClassifier GetTaskClassifier(const TaskNode* node) {
+TaskClassifier GetTaskClassifier(const TaskNode* node, bool nccl_use_compute_stream) {
   // Check task.pb.h for detail
   // They are sorted according to frequency of judgement
   // frequency of judgement = the number of occurrences / the times of judgement
@@ -501,7 +498,7 @@ void InitDecideParameters(StraightenAlgorithmTag sat,
 
 // Maximum overlap number
 // While running an overlap operator, we would run some other operators simultaneously.
-int32_t MaximumOverlapNum(StraightenAlgorithmTag sat) {
+int32_t MaximumOverlapNum(StraightenAlgorithmTag sat, bool nccl_use_compute_stream) {
   if (sat == StraightenAlgorithmTag::kOverlap4CpuGpu) {
     // 10 operators on GPU is enough to cover the time for a CPU operator
     return 10;
@@ -523,8 +520,8 @@ int32_t MaximumOverlapNum(StraightenAlgorithmTag sat) {
   return 10;
 }
 
-void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task_nodes) {
-  nccl_use_compute_stream = Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream();
+void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task_nodes,
+                     bool nccl_use_compute_stream) {
   // The function for settle the order in the graph
   int64_t order_in_graph = 0;
 
@@ -564,7 +561,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   UpdateSat(task_node2topo_struct, &sat);
   // Decide the task classifier after updating sat
   for (auto& pair : task_node2topo_struct) {
-    pair.second.task_classifier = GetTaskClassifier(pair.first);
+    pair.second.task_classifier = GetTaskClassifier(pair.first, nccl_use_compute_stream);
   }
   // Check the task classifier for all the nodes with the same key
   for (auto& pair : key2topo_structs) {
@@ -709,7 +706,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   };
 
   // straightening
-  int32_t maximum_overlap_num = MaximumOverlapNum(sat);
+  int32_t maximum_overlap_num = MaximumOverlapNum(sat, nccl_use_compute_stream);
   while (true) {
     if (waiting_lists[TaskClassifier::kRunASAP].empty()) {
       if (waiting_lists[TaskClassifier::kWaitingOverlapNode].empty()) {
