@@ -290,16 +290,17 @@ set_property(TARGET LLVMSupportWithHeader PROPERTY INTERFACE_INCLUDE_DIRECTORIES
                                                    ${LLVM_INCLUDE_DIRS})
 
 list(APPEND oneflow_third_party_libs LLVMSupportWithHeader)
+
+# for stack backtrace
 find_package(BFD)
 if(BFD_FOUND)
   add_definitions(-DBACKWARD_HAS_BFD)
-  list(APPEND oneflow_third_party_libs ${BFD_LIBRARIES})
-  target_include_directories(oneflow ${BFD_INCLUDE_PATH})
+  list(APPEND oneflow_third_party_libs bfd::bfd)
 endif()
 find_package(Unwind)
 if(Unwind_FOUND)
   add_definitions(-DBACKWARD_HAS_LIBUNWIND)
-  list(APPEND oneflow_third_party_libs ${Unwind_LIBRARY})
+  list(APPEND oneflow_third_party_libs unwind::unwind)
 endif()
 
 include(op_schema)

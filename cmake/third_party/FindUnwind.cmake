@@ -45,7 +45,6 @@ find_package_handle_standard_args (Unwind
 )
 
 if (Unwind_FOUND)
-  add_definitions(-DBACKWARD_HAS_LIBUNWIND)
   if (NOT TARGET unwind::unwind)
     add_library (unwind::unwind INTERFACE IMPORTED)
 

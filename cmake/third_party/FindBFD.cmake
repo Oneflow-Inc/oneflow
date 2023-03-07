@@ -5,12 +5,11 @@
 #=== Variables ===============================================================
 # This module will set the following variables in your project:
 #
-#   BFD_INCLUDE_PATH     Location of bfd.h and libiberty.h
-#   BFD_LIBRARIES        Location of libbfd.so or libbfd.a
-#
 #   BFD_FOUND            Whether libbfd was successfully found.
+#   bfd::bfd             Cmake target for bfd
 #
 #=============================================================================
+
 include(FindPackageHandleStandardArgs)
 
 set(CMAKE_LIBRARY_PATH /lib /usr/lib /usr/local/lib)
@@ -37,7 +36,19 @@ find_package_handle_standard_args(BFD
   BFD_LIBRARIES BFD_INCLUDE_PATH IBERTY_LIBRARIES IBERTY_INCLUDE_PATH)
 
 if (BFD_FOUND)
+  if (NOT TARGET bfd::bfd)
+    add_library (bfd::bfd INTERFACE IMPORTED)
+    set_property (TARGET bfd::bfd PROPERTY
+      INTERFACE_INCLUDE_DIRECTORIES ${BFD_INCLUDE_PATH}
+    )
+    set_property (TARGET bfd::bfd PROPERTY
+      INTERFACE_LINK_LIBRARIES ${BFD_LIBRARIES}
+    )
+    set_property (TARGET bfd::bfd PROPERTY
+      IMPORTED_CONFIGURATIONS RELEASE
+    )
     SET (PNMPI_HAVE_BFD ${BFD_FOUND} CACHE INTERNAL "")
+  endif (NOT TARGET bfd::bfd)
 endif ()
 
 mark_as_advanced(
