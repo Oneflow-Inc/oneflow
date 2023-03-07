@@ -2377,14 +2377,14 @@ class ScalarLogicalXor2Functor {
   }
 };
 
+template<bool inplace>
 class ScalarBitwiseBaseFunctor {
  public:
   explicit ScalarBitwiseBaseFunctor(std::string op_name) {
     op_ = CHECK_JUST(one::OpBuilder(op_name).Input("in").Output("out").Build());
   }
   virtual ~ScalarBitwiseBaseFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar,
-                           bool inplace = 0) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
     TensorProcessor tensor_processor;
     Symbol<DType> lowest_dtype;
 
@@ -2418,16 +2418,16 @@ class ScalarBitwiseBaseFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ScalarBitwiseAndFunctor : public ScalarBitwiseBaseFunctor {
+class ScalarBitwiseAndFunctor : public ScalarBitwiseBaseFunctor<false> {
  public:
   ScalarBitwiseAndFunctor() : ScalarBitwiseBaseFunctor(/*op_name=*/"scalar_bitwise_and") {}
 };
 
-class ScalarBitwiseAndInplaceFunctor : public ScalarBitwiseBaseFunctor {
+class ScalarBitwiseAndInplaceFunctor : public ScalarBitwiseBaseFunctor<true> {
  public:
   ScalarBitwiseAndInplaceFunctor() : ScalarBitwiseBaseFunctor(/*op_name=*/"scalar_bitwise_and") {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
-    return ScalarBitwiseBaseFunctor::operator()(x, scalar, true);
+    return ScalarBitwiseBaseFunctor::operator()(x, scalar);
   }
 };
 
@@ -2438,7 +2438,7 @@ class ScalarBitwiseAnd2Functor {
   }
 };
 
-class ScalarBitwiseOrFunctor : public ScalarBitwiseBaseFunctor {
+class ScalarBitwiseOrFunctor : public ScalarBitwiseBaseFunctor<false> {
  public:
   ScalarBitwiseOrFunctor() : ScalarBitwiseBaseFunctor(/*op_name=*/"scalar_bitwise_or") {}
 };
@@ -2450,7 +2450,7 @@ class ScalarBitwiseOr2Functor {
   }
 };
 
-class ScalarBitwiseXorFunctor : public ScalarBitwiseBaseFunctor {
+class ScalarBitwiseXorFunctor : public ScalarBitwiseBaseFunctor<false> {
  public:
   ScalarBitwiseXorFunctor() : ScalarBitwiseBaseFunctor(/*op_name=*/"scalar_bitwise_xor") {}
 };
