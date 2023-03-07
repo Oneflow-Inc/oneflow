@@ -294,7 +294,6 @@ namespace {
 
 StreamId GetStreamId(const OpNode* op_node, int64_t parallel_id, TaskType task_type) {
   const ParallelDesc& parallel_desc = op_node->parallel_desc();
-  int64_t parallel_num = parallel_desc.parallel_num();
   int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
   int64_t dev_phy_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
 
@@ -331,7 +330,6 @@ CompTaskNode* GenCompTaskNode(
   int64_t parallel_num = parallel_desc.parallel_num();
   CompTaskNode* comp_task_node = NewCompTaskNode4OpNode(op_node);
   int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
-  int64_t dev_phy_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
   comp_task_node->set_machine_id(machine_id);
   comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_id);
   comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
@@ -1307,10 +1305,10 @@ Maybe<void> RankTaskGraph::DoRankDuty(const ParallelDesc& parallel_desc,
                                       const DoEachRankT& DoWithRank) {
   if (current_rank_ == 0) {
     // make sure master knows at least one op_node.
-    DoWithRank(JUST(parallel_desc.MachineId4ParallelId(0)));
+    JUST(DoWithRank(JUST(parallel_desc.MachineId4ParallelId(0))));
   } else if (parallel_desc.HasMachineId(current_rank_)) {
     // workers only care their own rank.
-    DoWithRank(current_rank_);
+    JUST(DoWithRank(current_rank_));
   } else {
     // Do nothing.
   }

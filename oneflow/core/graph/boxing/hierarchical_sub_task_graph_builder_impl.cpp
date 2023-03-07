@@ -72,8 +72,8 @@ void MergeParallelConf(const ParallelDesc& parallel_desc_0, const ParallelDesc& 
 }
 
 inline std::string NewUniqueIdGbc() {
-  // TODO(strint): Is dangerous when do multi rank plan compilation.
-  // counter need to be rank id related.
+  // Boxing task graph is built on rank 0 and broadcasted to all ranks,
+  // so the ids here are unique amonge all ranks.
   static std::atomic<int64_t> counter(0);
   static std::atomic<int64_t> curr_job_id(0);
   if (curr_job_id != GlobalJobDesc().job_id()) {
