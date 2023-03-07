@@ -100,7 +100,6 @@ Maybe<bool> EagerBlobObject::TryAllocateBlobBodyMemory(vm::Allocator* allocator)
     JUST(allocator->Allocate(&dptr, required_body_bytes));
     // reset tensor_storage_;
     const auto& Free = [allocator, required_body_bytes](char* dptr) {
-      if (IsShuttingDown()) { return; }
       allocator->Deallocate(dptr, required_body_bytes);
     };
     tensor_storage_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free),
