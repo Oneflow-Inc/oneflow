@@ -479,7 +479,7 @@ std::set<std::string> MultiThreadBroadcastFromMasterToWorkers(size_t world_size,
       CHECK(keys.insert(key).second);
     });
   } else {
-    const int64_t bs_index = bs.RecursiveBinarySearchIndex(GlobalProcessCtx::Rank());
+    const int64_t bs_index = bs.GetRangIndex(GlobalProcessCtx::Rank());
     std::string key = prefix + std::to_string(bs_index);
     Singleton<CtrlClient>::Get()->PullKV(key, worker_data);
   }

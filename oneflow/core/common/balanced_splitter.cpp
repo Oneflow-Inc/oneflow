@@ -49,27 +49,14 @@ Range BalancedSplitter::At(int64_t first_idx, int64_t last_idx) const {
   return Range(first_range.begin(), last_range.end());
 }
 
-int64_t BalancedSplitter::RecursiveBinarySearchIndex(int64_t value) const {
+int64_t BalancedSplitter::GetRangIndex(int64_t value) const {
   CHECK_GE(value, 0);
   CHECK_LT(value, total_num());
-  return RecursiveBinarySearchIndex(value, 0, split_num_);
-}
-
-int64_t BalancedSplitter::RecursiveBinarySearchIndex(int64_t value, int begin_idx,
-                                                     int end_idx) const {
-  CHECK_LT(begin_idx, end_idx);
-  if (begin_idx + 1 == end_idx) {
-    Range ret = At(begin_idx);
-    CHECK_GE(value, ret.begin());
-    CHECK_LT(value, ret.end());
-    return begin_idx;
-  }
-  int middle_idx = (begin_idx + end_idx) / 2;
-  if (value >= At(middle_idx).begin()) {
-    return RecursiveBinarySearchIndex(value, middle_idx, end_idx);
+  int64_t base_size = (base_part_size_ + 1) * base_begin_idx_;
+  if (value < base_size) {
+    return value / (base_part_size_ + 1);
   } else {
-    return RecursiveBinarySearchIndex(value, begin_idx, middle_idx);
+    return base_begin_idx_ + (value - base_size) / base_part_size_;
   }
 }
-
 }  // namespace oneflow
