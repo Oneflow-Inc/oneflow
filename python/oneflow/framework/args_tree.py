@@ -178,20 +178,6 @@ class ArgsTree(object):
 
         for node in self._io_args:
             yield node
-        # args_to_iter = self._io_args
-
-        # stack = []
-        # stack.append(iter(args_to_iter))
-        # while len(stack) > 0:
-        #     curr = next(stack[-1], None)
-        #     if curr is None:
-        #         stack.pop()
-        #         continue
-
-        #     if _is_raw_type(curr, list) or _is_raw_type(curr, tuple):
-        #         stack.append(iter(curr))
-        #     else:
-        #         yield curr
 
     def iter_named_nodes(self):
         assert self._gen_name, "Only use this if gen_name is set!"
