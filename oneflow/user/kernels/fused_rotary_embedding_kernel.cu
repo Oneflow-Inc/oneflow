@@ -40,13 +40,6 @@ struct FusedRotaryEmbeddingParam {
         x(x), cos(cos), sin(sin), out(out), num_rows(num_rows), num_elements(num_elements) {}
 };
 
-template<typename T>
-inline bool CheckPackSize(const T* x, const int32_t num_rows, const size_t pack_size) {
-  
-  bool r = (((reinterpret_cast<uintptr_t>(x) % (sizeof(T) * pack_size)) == 0) && ((num_rows % pack_size) == 0) && ((16 / sizeof(T)) >= pack_size));
-  return r;
-}
-
 template<typename T, typename IndexType, size_t pack_size, size_t num_dims>
 __global__ void FusedRotaryEmbeddingComputeKernel(FusedRotaryEmbeddingParam<T, num_dims> param) {
   const T* x = param.x;
@@ -91,12 +84,18 @@ template<typename T, typename IndexType, size_t num_dims>
 void DispatchPackSize(FusedRotaryEmbeddingParam<T, num_dims>& param) {
   const size_t blk_size = 128;
   const T* x = param.x;
+  const IndexType num_rows = param.num_rows;
 
-  if (CheckPackSize(x, param.num_rows, 8)) {
+  const auto CheckPackSize = [&](const size_t pack_size) {
+    bool r = (((reinterpret_cast<uintptr_t>(x) % (sizeof(T) * pack_size)) == 0) && ((num_rows % pack_size) == 0) && ((16 / sizeof(T)) >= pack_size));
+    return r;
+  };
+
+  if (CheckPackSize(8)) {
     param.num_elements /= 8;
     FusedRotaryEmbeddingComputeKernel<T, IndexType, 8, num_dims><<<(param.num_elements + blk_size - 1)/blk_size, blk_size>>>
       (param);
-  } else if (CheckPackSize(x, param.num_rows, 4)) {
+  } else if (CheckPackSize(4)) {
     param.num_elements /= 4;
     FusedRotaryEmbeddingComputeKernel<T, IndexType, 4, num_dims><<<(param.num_elements + blk_size - 1)/blk_size, blk_size>>>
       (param);
