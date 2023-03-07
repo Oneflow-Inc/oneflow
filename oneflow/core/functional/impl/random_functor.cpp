@@ -806,7 +806,7 @@ class MultinomialFunctor {
       // s = argmax( p / q ) where q ~ Exp(1)
       std::shared_ptr<Tensor> q =
           JUST(functional::Empty(*(x->shape()), x->dtype(), JUST(x->device()),
-                                 /*requires_grad=*/false, /*pin_memory=*/false));
+                                 /*requires_grad=*/x->requires_grad(), /*pin_memory=*/false));
       q = JUST(functional::Exponential(q, 1, generator));
       // In theory the probability to generate 0 from exponential distribution is
       // 0. However, on CUDA side there is a protection to avoid 0s, but on CPU

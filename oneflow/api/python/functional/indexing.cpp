@@ -168,7 +168,7 @@ Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
   }
   // In advanced indexing condition, index can be array object, need to handle it specially.
   if (PyArray_Check(object)) {
-    return TensorWithData(object, NullOpt, device, false, /*pin_memory=*/false);
+    return TensorWithData(object, NullOpt, device, /*requires_grad=*/false, /*pin_memory=*/false);
   }
 
   const auto& sizes = InferArraySizes(object);
