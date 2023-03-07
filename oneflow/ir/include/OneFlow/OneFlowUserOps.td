@@ -2878,17 +2878,18 @@ def OneFlow_FusedAttentionConcatPastKeyValueOp : OneFlow_BaseOp<"fused_attention
     OneFlow_Tensor:$past_key,
     OneFlow_Tensor:$past_value,
     OneFlow_Tensor:$key,
-    OneFlow_Tensor:$value,
+    OneFlow_Tensor:$value
   );
   let output = (outs
-    OneFlow_Tensor:$concated_key,
-    OneFlow_Tensor:$concated_value
+    OneFlow_Tensor:$output_key,
+    OneFlow_Tensor:$output_value
   );
   let attrs = (ins
     StrAttr:$past_key_layout,
     StrAttr:$past_value_layout,
     StrAttr:$key_layout,
-    StrAttr:$value_layout
+    StrAttr:$value_layout,
+    SI64Attr:$key_head_size
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

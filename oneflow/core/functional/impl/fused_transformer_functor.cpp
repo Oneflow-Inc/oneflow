@@ -335,14 +335,32 @@ class FusedMultiHeadAttentionInferenceV2Functor {
 
 class FusedAttentionConcatPastKeyValueFunctor {
  public:
-  FusedAttentionConcatPastKeyValueFunctor() = default;
+  FusedAttentionConcatPastKeyValueFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_attention_concat_past_key_value")
+                         .Input("past_key")
+                         .Input("past_value")
+                         .Input("key")
+                         .Input("value")
+                         .Output("output_key")
+                         .Output("output_value")
+                         .Build());
+  }
   Maybe<TensorTuple> operator()(
       const std::shared_ptr<one::Tensor>& past_key, const std::string& past_key_layout,
       const std::shared_ptr<one::Tensor>& past_value, const std::string& past_value_layout,
       const std::shared_ptr<one::Tensor>& key, const std::string& key_layout,
-      const std::shared_ptr<one::Tensor>& value, const std::string& value_layout) const {
-    UNIMPLEMENTED_THEN_RETURN();
+      const std::shared_ptr<one::Tensor>& value, const std::string& value_layout,
+      const Optional<int64_t>& key_head_size) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("past_key_layout", "past_value_layout",
+                                                 "key_layout", "value_layout", "key_head_size");
+    attrs.SetAllAttrs(past_key_layout, past_value_layout, key_layout, value_layout,
+                      JUST(key_head_size));
+    return JUST(
+        OpInterpUtil::Dispatch<TensorTuple>(*op_, {past_key, past_value, key, value}, attrs));
   }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 }  // namespace impl

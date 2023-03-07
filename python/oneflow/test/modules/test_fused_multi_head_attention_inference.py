@@ -128,6 +128,7 @@ def _test_fused_attention_concat_past_key_value(
     test_case,
     dtype,
     b,
+    past_m,
     m,
     h,
     k,
@@ -153,6 +154,7 @@ def _test_fused_attention_concat_past_key_value(
         key_layout=key_layout,
         value=_to_layout([key, key, value], key_layout, 2),
         value_layout=value_layout,
+        key_head_size=k,
     )
     concated_key = flow.cat([past_key, key], dim=1)
     concated_value = flow.cat([past_value, value], dim=1)
@@ -473,8 +475,22 @@ class TestFusedAttentionConcatPastKeyValue(flow.unittest.TestCase):
                 test_case,
                 dtype,
                 2,
-                8,
                 256,
+                1,
+                8,
+                128,
+                past_key_layout=past_key_layout,
+                past_value_layout=past_value_layout,
+                key_layout=key_layout,
+                value_layout=value_layout,
+            )
+            _test_fused_attention_concat_past_key_value(
+                test_case,
+                dtype,
+                2,
+                256,
+                8,
+                8,
                 128,
                 past_key_layout=past_key_layout,
                 past_value_layout=past_value_layout,
