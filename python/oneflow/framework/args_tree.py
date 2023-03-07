@@ -143,29 +143,31 @@ class ArgsTree(object):
         else:
             args_to_iter = self._io_args
 
-        stack = []
-        stack.append(args_to_iter)
+        stack = [iter([args_to_iter])]
         while len(stack) > 0:
-            curr = stack.pop()
-            if _is_raw_type(curr, NamedArg):
-                curr_value = curr.value()
-            else:
-                curr_value = curr
+            try:
+                curr = next(stack[-1])
+                if _is_raw_type(curr, NamedArg):
+                    curr_value = curr.value()
+                else:
+                    curr_value = curr
 
-            if _is_raw_type(curr_value, list) or _is_raw_type(curr_value, tuple):
-                children = curr_value
-            elif _is_raw_type(curr_value, dict) or _is_raw_type(
-                curr_value, OrderedDict
-            ):
-                children = list(curr_value.values())
-            else:
-                children = None
+                if _is_raw_type(curr_value, list) or _is_raw_type(curr_value, tuple):
+                    children = curr_value
+                elif _is_raw_type(curr_value, dict) or _is_raw_type(
+                    curr_value, OrderedDict
+                ):
+                    children = list(curr_value.values())
+                else:
+                    children = None
 
-            if children:
-                for child in reversed(children):
-                    stack.append(child)
+                if children:
+                    stack.append(iter(children))
 
-            yield curr
+                yield curr
+
+            except StopIteration:
+                stack.pop()
 
     def iter_tuple_nodes(self):
         r"""
