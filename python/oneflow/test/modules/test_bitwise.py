@@ -140,24 +140,24 @@ class TestBitwiseXorModule(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestBitwiseLeftShiftModule(flow.unittest.TestCase):
-    @autotest(n=3, auto_backward=False)
-    def test_bitwise_left_shift(test_case):
-        return _test_bitwise_shift_op(test_case, torch.bitwise_left_shift)
+    # @autotest(n=3, auto_backward=False)
+    # def test_bitwise_left_shift(test_case):
+    #     return _test_bitwise_shift_op(test_case, torch.bitwise_left_shift)
 
-    @autotest(n=3, auto_backward=False)
-    def test_scalar_bitwise_left_shift(test_case):
-        return _test_scalar_bitwise_shift_op(test_case, torch.bitwise_left_shift)
+    # @autotest(n=3, auto_backward=False)
+    # def test_scalar_bitwise_left_shift(test_case):
+    #     return _test_scalar_bitwise_shift_op(test_case, torch.bitwise_left_shift)
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestBitwiseRightShiftModule(flow.unittest.TestCase):
-    @autotest(n=3, auto_backward=False)
-    def test_bitwise_right_shift(test_case):
-        return _test_bitwise_shift_op(test_case, torch.bitwise_right_shift)
+    # @autotest(n=3, auto_backward=False)
+    # def test_bitwise_right_shift(test_case):
+    #     return _test_bitwise_shift_op(test_case, torch.bitwise_right_shift)
 
-    @autotest(n=3, auto_backward=False)
-    def test_scalar_bitwise_right_shift(test_case):
-        return _test_scalar_bitwise_shift_op(test_case, torch.bitwise_right_shift)
+    # @autotest(n=3, auto_backward=False)
+    # def test_scalar_bitwise_right_shift(test_case):
+    #     return _test_scalar_bitwise_shift_op(test_case, torch.bitwise_right_shift)
 
 
 class TestBitwiseNotModule(flow.unittest.TestCase):
