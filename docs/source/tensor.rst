@@ -391,6 +391,7 @@ Tensor class reference
     Tensor.broadcast_to
     Tensor.unique
     Tensor.bitwise_and
+    Tensor.bitwise_and_
     Tensor.bitwise_or
     Tensor.bitwise_xor
     Tensor.baddbmm

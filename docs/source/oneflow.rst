@@ -276,6 +276,7 @@ Pointwise Ops
     logical_or 
     logical_xor 
     bitwise_and
+    bitwise_and_
     bitwise_or
     bitwise_xor
     bitwise_not
