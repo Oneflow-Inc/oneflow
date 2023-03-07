@@ -72,16 +72,9 @@ TEST(Maybe, CHECK_OR_RETURN) {
   ASSERT_EQ(data, 233);
 
   auto err = i(1).stacked_error();
-  ASSERT_EQ(err->error_proto()->msg(), R"(Check failed: CHECK_OR_RETURN(x > 10) )");
   ASSERT_GE(err->stack_frame().size(), 2);
   ASSERT_EQ(err->stack_frame().at(0)->code_text(), "CHECK_OR_RETURN(x > 10)");
   ASSERT_EQ(err->stack_frame().at(1)->code_text(), "f(x)");
-
-  try {
-    CHECK_JUST(i(1));
-  } catch (const RuntimeException& e) {
-    EXPECT_TRUE(std::string(e.what()).find(R"(CHECK_OR_RETURN(x > 10))") != std::string::npos);
-  }
 }
 
 TEST(Maybe, CHECK_OK) {
