@@ -75,4 +75,10 @@ bool IsUserOpWithTypeName(const OperatorConf& op_conf, const std::string& op_typ
   return op_conf.has_user_conf() && op_conf.user_conf().op_type_name() == op_type_name;
 }
 
+std::string GenParallelConfKey(const ParallelConf& conf) {
+  std::string ret = conf.device_tag();
+  for (const auto& name : conf.device_name()) { ret += ("-" + name); }
+  return ret;
+}
+
 }  // namespace oneflow
