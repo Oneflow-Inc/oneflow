@@ -75,6 +75,12 @@ def _test_exp(test_case, placement, sbp, ndim):
     y = torch.exp(x)
     return y
 
+@autotest(n=1, check_graph=True)
+def _test_exp2(test_case, placement, sbp, ndim):
+    dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
+    x = random_tensor(ndim, *dim_list).to_global(placement, sbp)
+    y = torch.exp2(x)
+    return y
 
 @autotest(n=1, check_graph=True)
 def _test_rsqrt(test_case, placement, sbp, ndim):

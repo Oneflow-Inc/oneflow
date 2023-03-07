@@ -79,6 +79,7 @@ def use_deterministic_algorithms(mode, *, warn_only=False):
 
 from oneflow._C import abs
 from oneflow._C import exp
+from oneflow._C import exp2
 from oneflow._C import acos
 from oneflow._C import acos as arccos
 from oneflow._C import acosh
