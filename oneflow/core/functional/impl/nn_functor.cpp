@@ -5039,6 +5039,9 @@ class FusedMultiHeadAttentionInferenceV2Functor {
                                       "same as that of the query tensor.";
 
     } else {
+      CHECK_OR_RETURN(query_layout == "BM(H3K)" || query_layout == "MB(H3K)")
+          << "The value of query_layout should be 'BM(H3K)' or 'MB(H3K)' when the key tensor is "
+             "None.";
       key_tensor = query;
       key_tensor_layout = query_layout;
       k_b = q_b;
@@ -5064,6 +5067,10 @@ class FusedMultiHeadAttentionInferenceV2Functor {
           << "The size of dimension 'K' of the value tensor should be a multiple of 8.";
 
     } else {
+      CHECK_OR_RETURN(key_tensor_layout == "BM(H2K)" || key_tensor_layout == "MB(H2K)"
+                      || key_tensor_layout == "BM(H3K)" || key_tensor_layout == "MB(H3K)")
+          << "The value of key_layout should be 'BM(H3K)', 'MB(H3K)', 'BM(H2K)' or 'MB(H2K)' when "
+             "the value tensor is None.";
       value_tensor = key_tensor;
       value_tensor_layout = key_tensor_layout;
       v_b = k_b;
