@@ -64,9 +64,7 @@ TEST(Maybe, CHECK_OR_RETURN) {
     return 233;
   };
 
-  auto i = [&](float x) -> Maybe<int> {
-    return JUST(f(x));
-  };
+  auto i = [&](float x) -> Maybe<int> { return JUST(f(x)); };
 
   auto data = CHECK_JUST(i(20));
   ASSERT_EQ(data, 233);
