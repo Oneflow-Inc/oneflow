@@ -41,36 +41,48 @@ namespace oneflow {
                             const Optional<int64_t>& num_heads, const Optional<int64_t>& head_size,
                             int64_t* b, int64_t* m, int64_t* h, int64_t* k) -> Maybe<void> {
     if (shape.NumAxes() == 3) {
-      if (layout == "BM(HK)") {
-        *b = shape.At(0);
-        *m = shape.At(1);
-        const int64_t hidden_size = shape.At(2);
-        if (num_heads) {
-          const int64_t expected_h = JUST(num_heads);
-          CHECK_EQ_OR_RETURN(hidden_size % expected_h, 0);
-          *h = expected_h;
-          *k = hidden_size / expected_h;
-        } else if (head_size) {
-          const int64_t expected_k = JUST(head_size);
-          CHECK_EQ_OR_RETURN(hidden_size % expected_k, 0);
-          *h = hidden_size / expected_k;
-          *k = expected_k;
+      if (layout == "BM(HK)" || layout == "MB(HK)" || layout == "BM(H2K)" || layout == "MB(H2K)"
+          || layout == "BM(H3K)" || layout == "MB(H3K)") {
+        int64_t packed_n = 0;
+        if (layout == "BM(HK)") {
+          *b = shape.At(0);
+          *m = shape.At(1);
+          packed_n = 1;
+        } else if (layout == "MB(HK)") {
+          *b = shape.At(1);
+          *m = shape.At(0);
+          packed_n = 1;
+        } else if (layout == "BM(H2K)") {
+          *b = shape.At(0);
+          *m = shape.At(1);
+          packed_n = 2;
+        } else if (layout == "MB(H2K)") {
+          *b = shape.At(1);
+          *m = shape.At(0);
+          packed_n = 2;
+        } else if (layout == "BM(H3K)") {
+          *b = shape.At(0);
+          *m = shape.At(1);
+          packed_n = 3;
+        } else if (layout == "MB(H3K)") {
+          *b = shape.At(1);
+          *m = shape.At(0);
+          packed_n = 3;
         } else {
           UNIMPLEMENTED_THEN_RETURN();
         }
-      } else if (layout == "MB(HK)") {
-        *b = shape.At(1);
-        *m = shape.At(0);
         const int64_t hidden_size = shape.At(2);
         if (num_heads) {
           const int64_t expected_h = JUST(num_heads);
-          CHECK_EQ_OR_RETURN(hidden_size % expected_h, 0);
+          const int64_t packed_h = packed_n * expected_h;
+          CHECK_EQ_OR_RETURN(hidden_size % packed_h, 0);
           *h = expected_h;
-          *k = hidden_size / expected_h;
+          *k = hidden_size / packed_h;
         } else if (head_size) {
           const int64_t expected_k = JUST(head_size);
-          CHECK_EQ_OR_RETURN(hidden_size % expected_k, 0);
-          *h = hidden_size / expected_k;
+          const int64_t packed_k = packed_n * expected_k;
+          CHECK_EQ_OR_RETURN(hidden_size % packed_k, 0);
+          *h = hidden_size / packed_k;
           *k = expected_k;
         } else {
           UNIMPLEMENTED_THEN_RETURN();
@@ -88,6 +100,11 @@ namespace oneflow {
         *b = shape.At(0);
         *m = shape.At(2);
         *h = shape.At(1);
+        *k = shape.At(3);
+      } else if (layout == "MBHK") {
+        *b = shape.At(1);
+        *m = shape.At(0);
+        *h = shape.At(2);
         *k = shape.At(3);
       } else {
         UNIMPLEMENTED_THEN_RETURN();
@@ -150,8 +167,14 @@ namespace oneflow {
     CHECK_OR_RETURN(padded_attn_bias_shape.at(2) == 1 || padded_attn_bias_shape.at(2) >= q_m);
     CHECK_OR_RETURN(padded_attn_bias_shape.at(3) >= k_m);
   }
-
-  ctx->SetOutputShape("out", 0, Shape({q_b, q_m, q_h * v_k}));
+  const std::string& output_layout = ctx->Attr<std::string>("output_layout");
+  if (output_layout == "BM(HK)") {
+    ctx->SetOutputShape("out", 0, Shape({q_b, q_m, q_h * v_k}));
+  } else if (output_layout == "MB(HK)") {
+    ctx->SetOutputShape("out", 0, Shape({q_m, q_b, q_h * v_k}));
+  } else {
+    UNIMPLEMENTED_THEN_RETURN();
+  }
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedMultiHeadAttentionInferenceOp::InferPhysicalTensorDesc(
@@ -164,12 +187,16 @@ namespace oneflow {
   const std::string& query_layout = ctx->user_op_conf().attr<std::string>("query_layout");
   const std::string& key_layout = ctx->user_op_conf().attr<std::string>("key_layout");
   const std::string& value_layout = ctx->user_op_conf().attr<std::string>("value_layout");
+  const std::string& output_layout = ctx->user_op_conf().attr<std::string>("output_layout");
   int64_t num_heads = 0;
   const user_op::TensorDesc& query = ctx->LogicalTensorDesc4InputArgNameAndIndex("query", 0);
   if (query.shape().NumAxes() == 3) {
     if (query_layout == "BM(HK)" || query_layout == "MB(HK)") {
       CHECK_EQ_OR_RETURN(query.shape().At(2) % query_head_size, 0);
       num_heads = query.shape().At(2) / query_head_size;
+    } else if (query_layout == "BM(H3K)" || query_layout == "MB(H3K)") {
+      CHECK_EQ_OR_RETURN(query.shape().At(2) % (query_head_size * 3), 0);
+      num_heads = query.shape().At(2) / (query_head_size * 3);
     } else {
       UNIMPLEMENTED_THEN_RETURN();
     }
@@ -185,14 +212,14 @@ namespace oneflow {
   const bool can_hk_split = num_heads % ctx->parallel_num() == 0;
   const auto ParseSplitAxis = [ctx, can_hk_split](const std::string& layout, int64_t* b_split_axis,
                                                   int64_t* h_split_axis) -> Maybe<void> {
-    if (layout == "BM(HK)") {
+    if (layout == "BM(HK)" || layout == "BM(H2K)" || layout == "BM(H3K)") {
       *b_split_axis = 0;
       if (can_hk_split) {
         *h_split_axis = 2;
       } else {
         *h_split_axis = -1;
       }
-    } else if (layout == "MB(HK)") {
+    } else if (layout == "MB(HK)" || layout == "MB(H2K)" || layout == "MB(H3K)") {
       *b_split_axis = 1;
       if (can_hk_split) {
         *h_split_axis = 2;
@@ -205,6 +232,9 @@ namespace oneflow {
     } else if (layout == "BHMK") {
       *b_split_axis = 0;
       *h_split_axis = 1;
+    } else if (layout == "MBHK") {
+      *b_split_axis = 1;
+      *h_split_axis = 2;
     } else {
       UNIMPLEMENTED_THEN_RETURN();
     }
@@ -222,7 +252,7 @@ namespace oneflow {
   JUST(ParseSplitAxis(value_layout, &v_b_split_axis, &v_h_split_axis));
   int64_t o_b_split_axis = -1;
   int64_t o_h_split_axis = -1;
-  JUST(ParseSplitAxis("BM(HK)", &o_b_split_axis, &o_h_split_axis));
+  JUST(ParseSplitAxis(output_layout, &o_b_split_axis, &o_h_split_axis));
 
   std::vector<user_op::OpArg> attn_bias_arg;
   if (ctx->user_op_conf().has_input("attn_bias", 0)) { attn_bias_arg.emplace_back("attn_bias", 0); }
