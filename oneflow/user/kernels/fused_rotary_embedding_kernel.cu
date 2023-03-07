@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
-#include "oneflow/core/common/nd_index_offset_helper.h"
 
 namespace oneflow {
 
@@ -25,8 +24,10 @@ namespace {
 
 template<typename T, int N>
 struct FusedRotaryEmbeddingParam {
-    NdIndexOffsetHelper<T, N> x_ndIndexOffsetHelper;
-    NdIndexOffsetHelper<T, N> sinuous_ndIndexOffsetHelper;
+    const T* x;
+    const T* cos;
+    const T* sin;
+    T* out;
     const int32_t num_rows;
     int32_t num_elements;
     size_t x_stride[N];
@@ -34,10 +35,9 @@ struct FusedRotaryEmbeddingParam {
     size_t sinuous_mask[N];
 
 
-    explicit FusedRotaryEmbeddingParam(NdIndexOffsetHelper<T, N> x_ndIndexOffsetHelper, 
-      NdIndexOffsetHelper<T, N> sinuous_ndIndexOffsetHelper, const int32_t num_rows, const int32_t num_elements): 
-        x_ndIndexOffsetHelper(x_ndIndexOffsetHelper), sinuous_ndIndexOffsetHelper(sinuous_ndIndexOffsetHelper),
-        num_rows(num_rows), num_elements(num_elements) {}
+    explicit FusedRotaryEmbeddingParam(const T* x, const T* cos, const T* sin, T* out, 
+      const int32_t num_rows, const int32_t num_elements): 
+        x(x), cos(cos), sin(sin), out(out), num_rows(num_rows), num_elements(num_elements) {}
 };
 
 template<typename T>
@@ -48,8 +48,11 @@ inline bool CheckPackSize(const T* x, const int32_t num_rows, const size_t pack_
 }
 
 template<typename T, size_t pack_size, size_t num_dims>
-__global__ void FusedRotaryEmbeddingComputeKernel(const T* x, const T* cos, const T* sin, T* out,
- FusedRotaryEmbeddingParam<int32_t, num_dims> param) {
+__global__ void FusedRotaryEmbeddingComputeKernel(FusedRotaryEmbeddingParam<T, num_dims> param) {
+  const T* x = param.x;
+  const T* cos = param.cos;
+  const T* sin = param.sin;
+  T* out = param.out;
   const int32_t num_elements = param.num_elements;
   int32_t index[num_dims];
   for (int32_t offset = threadIdx.x + blockIdx.x * blockDim.x; offset < num_elements; offset += blockDim.x * gridDim.x) {
@@ -85,21 +88,22 @@ __global__ void FusedRotaryEmbeddingComputeKernel(const T* x, const T* cos, cons
 }
 
 template<typename T, size_t num_dims>
-void DispatchPackSize(const T* x, const T* cos, const T* sin, T* out, FusedRotaryEmbeddingParam<int32_t, num_dims>& param) {
+void DispatchPackSize(FusedRotaryEmbeddingParam<T, num_dims>& param) {
   const size_t blk_size = 128;
+  const T* x = param.x;
 
   if (CheckPackSize(x, param.num_rows, 8)) {
     param.num_elements /= 8;
     FusedRotaryEmbeddingComputeKernel<T, 8, num_dims><<<(param.num_elements + blk_size - 1)/blk_size, blk_size>>>
-      (x, cos, sin, out, param);
+      (param);
   } else if (CheckPackSize(x, param.num_rows, 4)) {
     param.num_elements /= 4;
     FusedRotaryEmbeddingComputeKernel<T, 4, num_dims><<<(param.num_elements + blk_size - 1)/blk_size, blk_size>>>
-      (x, cos, sin, out, param);
+      (param);
   } else {
     param.num_elements /= 2;
     FusedRotaryEmbeddingComputeKernel<T, 2, num_dims><<<(param.num_elements + blk_size - 1)/blk_size, blk_size>>>
-      (x, cos, sin, out, param);
+      (param);
   }
   
 }
@@ -164,8 +168,8 @@ class FusedRotaryEmbeddingKernel final : public user_op::OpKernel {
     int32_t num_elements = x->shape_view().Count(0, x->shape_view().NumAxes()); //TODO: because helper uses int32_t, so no size_t
 
     //TODO: hard code num_dims & seems redundant template problem...
-    struct FusedRotaryEmbeddingParam<int32_t, N> param(NdIndexOffsetHelper<int32_t, N>(x_shape.data()), 
-      NdIndexOffsetHelper<int32_t, N>(sinuous_shape.data()), num_rows, num_elements);
+    struct FusedRotaryEmbeddingParam<T, N> param(reinterpret_cast<const T*>(x->dptr()), reinterpret_cast<const T*>(cos->dptr()), 
+            reinterpret_cast<const T*>(sin->dptr()), reinterpret_cast<T*>(out->mut_dptr()), num_rows, num_elements);
 
 #pragma unloop
     for (int i = 0; i < N; i++) {
@@ -173,8 +177,7 @@ class FusedRotaryEmbeddingKernel final : public user_op::OpKernel {
       param.sinuous_mask[i] = (sinuous_shape.at(i) == 1) ? 0 : 1;
       param.sinuous_stride[i] = sinuous_stride[i];
     }
-    DispatchPackSize<T, N>(reinterpret_cast<const T*>(x->dptr()), reinterpret_cast<const T*>(cos->dptr()), 
-            reinterpret_cast<const T*>(sin->dptr()), reinterpret_cast<T*>(out->mut_dptr()), param);
+    DispatchPackSize<T, N>(param);
 /*
     FusedRotaryEmbeddingComputeKernel<T, 4, 4><<<(num_elements + blk_size - 1)/blk_size, blk_size>>>
             (reinterpret_cast<const T*>(x->dptr()), reinterpret_cast<const T*>(cos->dptr()), 
