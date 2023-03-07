@@ -108,6 +108,7 @@ limitations under the License.
 #include <vector>
 #include <exception>
 #include <iterator>
+#include <filesystem>
 
 #if defined(BACKWARD_SYSTEM_LINUX)
 
@@ -3742,16 +3743,9 @@ class Printer {
     return os;
   }
 
-  bool is_oneflow_object(const std::string& obj_absolute_filename) {
-    std::string oneflow_obj_filename = "oneflow";
-    auto pos = obj_absolute_filename.find_last_of("/");
-    if (pos != std::string::npos) {
-      return obj_absolute_filename.substr(pos + 1, obj_absolute_filename.size() - pos - 1)
-                 .find("oneflow")
-             != std::string::npos;
-    } else {
-      return obj_absolute_filename.find("oneflow") != std::string::npos;
-    }
+  bool is_oneflow_file(const std::string& filename) {
+    return std::string(std::filesystem::path(filename).filename()).find("oneflow")
+           != std::string::npos;
   }
 
   TraceResolver const& resolver() const { return _resolver; }
@@ -3792,7 +3786,7 @@ class Printer {
   }
 
   void print_trace(std::ostream& os, const ResolvedTrace& trace, Colorize& colorize) {
-    if (!is_oneflow_object(trace.object_filename)) { return; }
+    if (!is_oneflow_file(trace.object_filename)) { return; }
     // os << "#" << std::left << std::setw(2) << trace.idx << std::right;
     bool already_indented = true;
 
