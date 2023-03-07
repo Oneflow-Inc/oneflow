@@ -343,8 +343,9 @@ std::string GetFormatedSerializedError(const std::shared_ptr<StackedError>& stac
     return frame;                                                                             \
   }(__FUNCTION__))
 
-#define CHECK_OR_RETURN(expr) CHECK_OR_RETURN_INTERNAL(expr, OF_PP_STRINGIZE(CHECK_OR_RETURN(expr))) \
-    << "Check failed: (" << OF_PP_STRINGIZE(expr) << ") " << Error::kOverrideThenMergeMessage
+#define CHECK_OR_RETURN(expr)                                            \
+  CHECK_OR_RETURN_INTERNAL(expr, OF_PP_STRINGIZE(CHECK_OR_RETURN(expr))) \
+      << "Check failed: (" << OF_PP_STRINGIZE(expr) << ") " << Error::kOverrideThenMergeMessage
 
 #define CHECK_EQ_OR_RETURN(lhs, rhs)                                                      \
   CHECK_OR_RETURN_INTERNAL((lhs) == (rhs), OF_PP_STRINGIZE(CHECK_EQ_OR_RETURN(lhs, rhs))) \
