@@ -235,8 +235,9 @@ Maybe<Tensor> MakeGlobalTensorFromData(PyObject* data, const Optional<Symbol<DTy
   std::shared_ptr<Tensor> local_tensor;
   {
     GlobalMode::Guard guard(/* disable global mode */ false);
-    local_tensor = JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device, /*requires_grad=*/false,
-                                          /*pin_memory=*/false));
+    local_tensor =
+        JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device, /*requires_grad=*/false,
+                               /*pin_memory=*/false));
   }
   JUST(CopyLocalTensorFromUntypedArray(local_tensor, array));
 
