@@ -47,17 +47,17 @@ inline bool CheckPackSize(const T* x, const int32_t num_rows, const size_t pack_
   return r;
 }
 
-template<typename T, size_t pack_size, size_t num_dims>
+template<typename T, typename IndexType, size_t pack_size, size_t num_dims>
 __global__ void FusedRotaryEmbeddingComputeKernel(FusedRotaryEmbeddingParam<T, num_dims> param) {
   const T* x = param.x;
   const T* cos = param.cos;
   const T* sin = param.sin;
   T* out = param.out;
-  const int32_t num_elements = param.num_elements;
-  int32_t index[num_dims];
-  for (int32_t offset = threadIdx.x + blockIdx.x * blockDim.x; offset < num_elements; offset += blockDim.x * gridDim.x) {
+  const IndexType num_elements = param.num_elements;
+  IndexType index[num_dims];
+  for (IndexType offset = threadIdx.x + blockIdx.x * blockDim.x; offset < num_elements; offset += blockDim.x * gridDim.x) {
     using LoadPack = cuda::elementwise::Packed<T, pack_size>;
-    int32_t packed_offset = offset * pack_size;
+    IndexType packed_offset = offset * pack_size;
     const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + packed_offset);
     const LoadPack x_vec = *x_load;
 
@@ -67,7 +67,7 @@ __global__ void FusedRotaryEmbeddingComputeKernel(FusedRotaryEmbeddingParam<T, n
       packed_offset = packed_offset - index[i] * param.x_stride[i];
     }
 
-    int32_t sinuous_offset = 0;
+    IndexType sinuous_offset = 0;
 #pragma unloop
     for (int i = 0; i < num_dims; i++) {
       sinuous_offset += (index[i] * param.sinuous_mask[i] * param.sinuous_stride[i]);
@@ -87,25 +87,34 @@ __global__ void FusedRotaryEmbeddingComputeKernel(FusedRotaryEmbeddingParam<T, n
   }
 }
 
-template<typename T, size_t num_dims>
+template<typename T, typename IndexType, size_t num_dims>
 void DispatchPackSize(FusedRotaryEmbeddingParam<T, num_dims>& param) {
   const size_t blk_size = 128;
   const T* x = param.x;
 
   if (CheckPackSize(x, param.num_rows, 8)) {
     param.num_elements /= 8;
-    FusedRotaryEmbeddingComputeKernel<T, 8, num_dims><<<(param.num_elements + blk_size - 1)/blk_size, blk_size>>>
+    FusedRotaryEmbeddingComputeKernel<T, IndexType, 8, num_dims><<<(param.num_elements + blk_size - 1)/blk_size, blk_size>>>
       (param);
   } else if (CheckPackSize(x, param.num_rows, 4)) {
     param.num_elements /= 4;
-    FusedRotaryEmbeddingComputeKernel<T, 4, num_dims><<<(param.num_elements + blk_size - 1)/blk_size, blk_size>>>
+    FusedRotaryEmbeddingComputeKernel<T, IndexType, 4, num_dims><<<(param.num_elements + blk_size - 1)/blk_size, blk_size>>>
       (param);
   } else {
     param.num_elements /= 2;
-    FusedRotaryEmbeddingComputeKernel<T, 2, num_dims><<<(param.num_elements + blk_size - 1)/blk_size, blk_size>>>
+    FusedRotaryEmbeddingComputeKernel<T, IndexType, 2, num_dims><<<(param.num_elements + blk_size - 1)/blk_size, blk_size>>>
       (param);
   }
   
+}
+
+template<typename T, size_t num_dims>
+void DispatchIndex(FusedRotaryEmbeddingParam<T, num_dims>& param) {
+  if (param.num_elements < (1 << 30)) {
+    DispatchPackSize<T, int32_t, num_dims>(param);
+  } else {
+    DispatchPackSize<T, int64_t, num_dims>(param);
+  }
 }
 
 template<typename T>
@@ -177,7 +186,7 @@ class FusedRotaryEmbeddingKernel final : public user_op::OpKernel {
       param.sinuous_mask[i] = (sinuous_shape.at(i) == 1) ? 0 : 1;
       param.sinuous_stride[i] = sinuous_stride[i];
     }
-    DispatchPackSize<T, N>(param);
+    DispatchIndex<T, N>(param);
 /*
     FusedRotaryEmbeddingComputeKernel<T, 4, 4><<<(num_elements + blk_size - 1)/blk_size, blk_size>>>
             (reinterpret_cast<const T*>(x->dptr()), reinterpret_cast<const T*>(cos->dptr()), 
