@@ -308,7 +308,7 @@ class EmptyStridedFunctor {
     Symbol<DType> data_type = GetDefaultDType();
     if (dtype.has_value()) { data_type = JUST(dtype); }
     auto empty =
-        JUST(functional::Empty(Shape(shape), data_type, device, requires_grad, pin_memory));
+        JUST(functional::Empty(Shape(shape), dtype.value_or(GetDefaultDType()), device, requires_grad, pin_memory));
     CHECK_OR_RETURN(view::IsViewApplicable(empty))
         << "oneflow.empty_strided() only support in eager local mode!";
     return view::AsStrided(empty, shape, stride, 1);
