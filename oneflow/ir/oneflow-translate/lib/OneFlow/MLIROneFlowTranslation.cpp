@@ -839,11 +839,13 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
     pm.addPass(createAggregateComputeOpsPass());
 
     auto wrap_pass = createWrapOpsToKernelLaunchPass();
-    if (::oneflow::ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH", false)) {
-      (void)wrap_pass->initializeOptions("mode=cuda_graph");
-    } else {
-      (void)wrap_pass->initializeOptions("mode=simple");
-    }
+    std::string options =
+        "mode="
+        + (::oneflow::ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH", false)
+               ? wrap_mode::CUDA_GRAPH
+               : wrap_mode::SIMPLE);
+
+    (void)wrap_pass->initializeOptions(options);
     pm.addPass(std::move(wrap_pass));
   }
   pm.addPass(createCanonicalizerPass());
