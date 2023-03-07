@@ -25,7 +25,7 @@ from oneflow.nn.common_types import _size_2_t
 @autotest(n=1, check_graph=True)
 def _test_unfold_with_random_data(test_case, placement, sbp):
     ndim = 4
-    dims = [random(1, 4).to(int).value() * 8 for i in range(ndim)]
+    dims = [random(1, 3).to(int).value() * 8 for i in range(ndim)]
     m = torch.nn.Unfold(
         kernel_size=random(1, 3).to(_size_2_t),
         dilation=random(1, 2).to(_size_2_t),

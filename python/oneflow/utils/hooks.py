@@ -16,12 +16,48 @@ limitations under the License.
 # This file is mostly copied from PyTorch's torch/utils/hooks.py
 import oneflow as flow
 import oneflow.nn.modules._functions
+from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 from collections import OrderedDict
 import weakref
 import warnings
 from typing import Any
 
-__all__ = ["BackwardHook"]
+__all__ = ["BackwardHook", "RemovableHandle"]
+
+
+class RemovableHandle(object):
+    """A handle which provides the capability to remove a hook."""
+
+    id: int
+    next_id: int = 0
+
+    def __init__(self, hooks_dict: Any) -> None:
+        self.hooks_dict_ref = weakref.ref(hooks_dict)
+        self.id = RemovableHandle.next_id
+        RemovableHandle.next_id += 1
+
+    def remove(self) -> None:
+        hooks_dict = self.hooks_dict_ref()
+        if hooks_dict is not None and self.id in hooks_dict:
+            del hooks_dict[self.id]
+
+    def __getstate__(self):
+        return (self.hooks_dict_ref(), self.id)
+
+    def __setstate__(self, state) -> None:
+        if state[0] is None:
+            # create a dead reference
+            self.hooks_dict_ref = weakref.ref(OrderedDict())
+        else:
+            self.hooks_dict_ref = weakref.ref(state[0])
+        self.id = state[1]
+        RemovableHandle.next_id = max(RemovableHandle.next_id, self.id + 1)
+
+    def __enter__(self) -> "RemovableHandle":
+        return self
+
+    def __exit__(self, type: Any, value: Any, tb: Any) -> None:
+        self.remove()
 
 
 class BackwardHook(object):
@@ -50,22 +86,29 @@ class BackwardHook(object):
         for idx, val in zip(indices, values):
             res[idx] = val
 
-        return tuple(res)
+        return convert_to_tensor_tuple(res)
 
     def _unpack_none(self, indices, values):
         res = []
         for idx in indices:
             res.append(values[idx])
 
-        return tuple(res)
+        return convert_to_tensor_tuple(res)
 
     def _set_user_hook(self, grad_fn):
-        def hook(grad_input, _):
+        def fn(grad_input, _):
+            # TODO(hujiakui): in pytorch, it should raise Error.
             if self.grad_outputs is None:
-                # This happens because the gradient in your nn.Module flows to
-                # the Module's input without " passing through the Module's
-                # output, e.g. when you're doing double backward.
+                warnings.warn(
+                    "Module backward hook for grad_input is called before "
+                    "the grad_output one. This happens because the gradient "
+                    "in your nn.Module flows to the Module's input without "
+                    "passing through the Module's output. Make sure that the "
+                    "output depends on the input and that the loss is computed "
+                    "based on the output."
+                )
                 return
+
             res = self._pack_with_none(
                 self.input_tensors_index, grad_input, self.n_inputs
             )
@@ -84,11 +127,18 @@ class BackwardHook(object):
 
                 res = out
 
-            self.grad_outputs = None
+            if res is None:
+                return res
 
+            if len(res) != len(grad_input):
+                raise RuntimeError(
+                    "Backward hook returned an invalid number of grad_input, "
+                    "got {}, but expected {}".format(len(res), len(grad_input))
+                )
+            self.grad_outputs = None
             return self._unpack_none(self.input_tensors_index, res)
 
-        grad_fn.register_hook(hook)
+        grad_fn.register_hook(fn)
 
     def _apply_on_tensors(self, fn, args):
         # Can be used to apply the given function to the tensors contained in the
@@ -194,6 +244,7 @@ class BackwardHook(object):
             is_tuple = False
 
         res, output_idx = self._apply_on_tensors(fn, args)
+
         self.n_outputs = len(args)
         self.output_tensors_index = output_idx
 

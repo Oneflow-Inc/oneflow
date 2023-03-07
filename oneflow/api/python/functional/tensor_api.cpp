@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/api/python/functional/tensor_api.yaml.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
+#include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -226,17 +227,20 @@ class GlobalTensorWithShapeGenericCtorFunctor {
 class AssignLocalTensorFunctor {
  public:
   AssignLocalTensorFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("assign").Input("ref").Input("value").Build());
+    op_ = CHECK_JUST(one::OpBuilder("copy").Input("in").Output("out").Build());
   }
-  Maybe<void> operator()(const std::shared_ptr<one::Tensor>& ref,
-                         const std::shared_ptr<one::Tensor>& value) const {
-    // JUST(CheckInplaceValid(ref)); // align check to torch
-    CHECK_OR_RETURN(ref->is_local() && value->is_local())
-        << "Both ref and value must be local tensor.";
-    std::shared_ptr<one::Tensor> src = value;
-    if (ref->dtype() != src->dtype()) { src = JUST(To(src, ref->dtype(), false)); }
-    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ref, src}));
-    return Maybe<void>::Ok();
+  Maybe<void> operator()(const std::shared_ptr<one::Tensor>& y,
+                         const std::shared_ptr<one::Tensor>& x) const {
+    // JUST(CheckInplaceValid(y)); // align check to torch
+    CHECK_OR_RETURN(y->is_local() && x->is_local()) << "Both x and y must be local tensor.";
+    std::shared_ptr<one::Tensor> src = x;
+    if (y->dtype() != src->dtype()) { src = JUST(To(src, y->dtype(), false)); }
+
+    auto device = JUST(y->device());
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("device", "pin_memory");
+    attrs.SetAllAttrs(device, false);
+    TensorTuple outputs{y};
+    return OpInterpUtil::Dispatch(*op_, {x}, &outputs, attrs);
   }
 
  private:
