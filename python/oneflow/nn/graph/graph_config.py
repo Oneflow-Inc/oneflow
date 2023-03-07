@@ -34,7 +34,9 @@ class GraphConfig(object):
         self._train(False)
         # set straighten_algorithm_tag_in_task_graph with env var
         if "ONEFLOW_STRAIGHTEN_ALG" in os.environ:
-            self.proto.straighten_algorithm_tag_in_task_graph = int(os.environ["ONEFLOW_STRAIGHTEN_ALG"])
+            self.proto.straighten_algorithm_tag_in_task_graph = int(
+                os.environ["ONEFLOW_STRAIGHTEN_ALG"]
+            )
 
     def _train(self, mode: bool = True):
         if mode:
