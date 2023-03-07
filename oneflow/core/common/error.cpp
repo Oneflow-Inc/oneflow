@@ -51,7 +51,6 @@ Error&& Error::AddStackFrame(Symbol<ErrorStackFrame> error_stack_frame) {
 }
 
 Error&& Error::GetStackTrace(int64_t depth, int64_t skip_n_firsts) {
-  using namespace backward;
   backward::StackTrace st;
   st.load_here(depth);
   st.skip_n_firsts(skip_n_firsts);
