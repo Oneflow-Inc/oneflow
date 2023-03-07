@@ -131,7 +131,7 @@ class Graph(object):
         self._is_compiled = False
         # Default is local view
         self._is_global_view = False
-        # Optimize the time overhead of graph run
+        # Optimize the overhead of graph input/output process
         self._is_simple_tuple_inp = False
         self._is_simple_tuple_outp = False
 
