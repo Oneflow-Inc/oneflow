@@ -92,7 +92,6 @@ def DistributedDataParallel(
                 x.requires_grad_(requires_grad)
 
     if use_bucket:
-        module.make_contiguous_params_group()
 
         all_grad_size = sum([x.numel() for x in module.parameters()])
         if all_grad_size > 0:
@@ -112,7 +111,7 @@ def DistributedDataParallel(
             for i in range(0, len(reversed_param_list), bucket_size)
         ]
 
-        module._params_group = ContiguousParamsGroup(module._buckets)
+        module._params_group = ContiguousParamsGroup(module._buckets, module)
         module._bucket_tensors = list(
             reversed(module._params_group.grouped_parameters_grad)
         )

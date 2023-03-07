@@ -56,6 +56,7 @@ class TestDDP(flow.unittest.TestCase):
 
         x = x.to(dev_type)
         m = Mul().to(dev_type)
+        m.make_contiguous_params_group()
         m = ddp(m)
         y = m(x)
         y.sum().backward()
@@ -92,6 +93,7 @@ class TestDDP(flow.unittest.TestCase):
 
         x = x.to(dev_type)
         m = Mul().to(dev_type)
+        m.make_contiguous_params_group()
         m = ddp(m, bucket_size=3, use_bucket=use_bucket)
 
         y = m(x)
@@ -133,6 +135,7 @@ class TestDDP(flow.unittest.TestCase):
 
         x = x.to(dev_type)
         m = Model().to(dev_type)
+        m.make_contiguous_params_group()
         m = ddp(m, bucket_size=2)
         y = m(x)
         y.backward()
@@ -178,6 +181,7 @@ class TestDDP(flow.unittest.TestCase):
 
         x = x.to(dev_type)
         m = Model().to(dev_type)
+        m.make_contiguous_params_group()
         m = ddp(m, bucket_size=1)
         y = m(x)
         y.backward()
@@ -219,6 +223,7 @@ class TestDDP(flow.unittest.TestCase):
 
         x = x.to(dev_type)
         m = Model().to(dev_type)
+        m.make_contiguous_params_group()
         m = ddp(m, bucket_size=1)
         y = m(x)
         y.backward()
@@ -249,6 +254,7 @@ class TestDDP(flow.unittest.TestCase):
 
         x = x.to(dev_type)
         m = Mul().to(dev_type)
+        m.make_contiguous_params_group()
         m = ddp(m)
 
         for _ in range(2):
@@ -279,6 +285,7 @@ class TestDDP(flow.unittest.TestCase):
 
         m = CustomModule()
         m = m.to(dev_type)
+        m.make_contiguous_params_group()
         m = ddp(m)
 
         y1 = m(x)
@@ -286,6 +293,7 @@ class TestDDP(flow.unittest.TestCase):
 
         m = CustomModule()
         m = m.to(dev_type)
+        m.make_contiguous_params_group()
         m = ddp(m, broadcast_buffers=False)
 
         y3 = m(x)

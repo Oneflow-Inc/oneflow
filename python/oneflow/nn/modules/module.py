@@ -113,6 +113,7 @@ class Module(object):
         self._modules = OrderedDict()
         self._is_ddp_module = False
         self._oneflow_internal_module_tensor_applied_dict__ = None
+        self.cpg = None
 
     def __getstate__(self):
         if not self._is_ddp_module:
@@ -1005,6 +1006,9 @@ class Module(object):
         self._backward_hooks[len(self._backward_hooks)] = hook
 
     def _apply(self, fn):
+        if self.cpg is not None:
+            raise ValueError("ContiguousParamsGroup should be created after apply operations.")
+
         # A dict to store tensors that has already been applied.
         # There is no need to apply multiple times on a same tensor.
         if self._oneflow_internal_module_tensor_applied_dict__ is None:
@@ -1121,6 +1125,9 @@ class Module(object):
               (1): Linear(in_features=2, out_features=2, bias=True)
             )
         """
+        if self.cpg is not None:
+            raise ValueError("ContiguousParamsGroup should be created after apply operations.")
+
         for module in self.children():
             module.apply(fn)
         fn(self)
@@ -1363,14 +1370,18 @@ class Module(object):
         (or placement and sbp for global tensor) to form a single tensor for
         accelerating the element-wise operations of parameters' data or gradient.
 
+        .. note::
+            This method should be used strictly after all parameters have finished
+            doing apply operations, otherwise it will cause an error.
+
         Example::
 
-        >>> net = Network()
+        >>> net = Network().to(device)
         >>> net.make_contiguous_params_group()
         
         """
         self.cpg = flow.nn.utils.parameters_grouping.ContiguousParamsGroup(
-            list(self.parameters()), for_module=True
+            list(self.parameters()), self, for_module=True
         )
 
     def __repr__(self):

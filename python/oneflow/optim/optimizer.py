@@ -66,7 +66,9 @@ class ParamGroup(object):
         self._make_options_valid()
         self.contiguous_params = self._options.get("contiguous_params", False)
         if self.contiguous_params:
-            self.params_group = ContiguousParamsGroup([parameters["params"]])
+            module = self._options.get("module", None)
+            assert module is not None, "module itself is needed while building contiguous parameters."
+            self.params_group = ContiguousParamsGroup([parameters["params"]], module)
 
     def _make_options_valid(self):
         """handle the conflict between optimizer options
@@ -84,6 +86,8 @@ class ParamGroup(object):
     def __getitem__(self, key):
         if key == "contiguous_params":
             return self._options.get("contiguous_params", False)
+        if key == "module":
+            return self._options.get("module", None)
         return self._options[key]
 
     def __setitem__(self, key, value):
@@ -164,6 +168,7 @@ class Optimizer(object):
             "params_group",
             "_parameters",
             "contiguous_params",
+            "module",
         ]
 
     def add_param_group(self, param_group) -> None:
