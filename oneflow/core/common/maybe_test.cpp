@@ -71,7 +71,7 @@ TEST(Maybe, CHECK_OR_RETURN) {
 
   auto err = i(1).stacked_error();
   ASSERT_GE(err->stack_frame().size(), 2);
-  ASSERT_EQ(err->stack_frame().at(0)->code_text(), "CHECK_OR_RETURN(x > 10)");
+  ASSERT_EQ(err->stack_frame().at(0)->code_text(), "Check failed: CHECK_OR_RETURN(x > 10)");
   ASSERT_EQ(err->stack_frame().at(1)->code_text(), "f(x)");
 }
 
