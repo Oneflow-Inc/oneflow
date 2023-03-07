@@ -349,6 +349,8 @@ class TestGraphIOCheck(flow.unittest.TestCase):
                 test_case.assertTrue(graph_out is output_type)
             else:
                 test_case.assertTrue(isinstance(model_out, output_type))
+                # print(graph_out,model_out)
+                # print(type(graph_out),output_type)
                 test_case.assertTrue(isinstance(graph_out, output_type))
 
         x = np.ones((1, 10))

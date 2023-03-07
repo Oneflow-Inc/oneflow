@@ -226,7 +226,7 @@ class ArgsTree(object):
 
         return arg
 
-    def map_tuple_leaf(self, map_function: Callable):
+    def map_tuple_leaf(self, map_function: Callable, is_output=False):
         r"""
         When the type of io args is tuple or list, map the leaf of the arguments into map_function(leaf).
         """
@@ -237,9 +237,16 @@ class ArgsTree(object):
 
         stack = []
 
-        for i in self._io_args:
-            mapped_value = map_function(i)
-            stack.append(mapped_value)
+        if is_output:
+            for i in self._io_args[0]:
+                print(i)
+                mapped_value = map_function(i)
+                stack.append(mapped_value)
+        else:
+            for i in self._io_args:
+                print(i)
+                mapped_value = map_function(i)
+                stack.append(mapped_value)
 
         if isinstance(self._io_args, tuple):
             return tuple(stack)
