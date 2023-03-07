@@ -2600,6 +2600,10 @@
   signature: 'Tensor (*, Tensor query, String query_layout, Int64 query_head_size=None, Tensor key=None, String key_layout=None, Tensor value=None, String value_layout=None, Tensor attn_bias=None, String output_layout="BM(HK)", Bool causal=False, Int64 causal_diagonal_offset=0) => FusedMultiHeadAttentionInferenceV2'
   bind_python: True
 
+- name: "fused_attention_concat_past_key_value"
+  signature: 'TensorTuple (*, Tensor past_key, String past_key_layout, Tensor past_value, String past_value_layout, Tensor key, String key_layout, Tensor value, String value_layout) => FusedAttentionConcatPastKeyValue'
+  bind_python: True
+
 - name: "fused_scale_mask_bias_softmax"
   signature: 'Tensor (Tensor x, Tensor mask, Tensor bias=None, Float scale=0.35355, Bool inplace=False) => FusedScaleMaskBiasSoftmax'
   bind_python: True
