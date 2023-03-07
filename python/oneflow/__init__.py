@@ -51,6 +51,8 @@ locals()["uint8"] = oneflow._oneflow_internal.uint8
 locals()["record"] = oneflow._oneflow_internal.record
 locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
 locals()["bfloat16"] = oneflow._oneflow_internal.bfloat16
+locals()["cfloat"] = oneflow._oneflow_internal.cfloat
+locals()["cdouble"] = oneflow._oneflow_internal.cdouble
 from oneflow.version import __version__
 from oneflow.version import __git_commit__
 
