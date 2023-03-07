@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -291,7 +292,8 @@ class EmptyFunctor {
     } else {
       empty = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs));
     }
-    JUST(empty->set_requires_grad(requires_grad));
+
+    if (dtype->is_floating_point()) { JUST(empty->set_requires_grad(requires_grad)); }
     return empty;
   }
 
@@ -302,14 +304,16 @@ class EmptyFunctor {
 class EmptyStridedFunctor {
  public:
   Maybe<Tensor> operator()(const std::vector<int64_t>& shape, const std::vector<int64_t>& stride,
-                           const Symbol<DType>& dtype, const Optional<Symbol<Device>>& device,
-                           const bool requires_grad, const bool pin_memory) const {
-    std::shared_ptr<Tensor> empty =
-        JUST(functional::Empty(Shape(shape), dtype, device, requires_grad, pin_memory));
+                           const Optional<Symbol<DType>>& dtype,
+                           const Optional<Symbol<Device>>& device, const bool requires_grad,
+                           const bool pin_memory) const {
+    Symbol<DType> data_type = GetDefaultDType();
+    if (dtype.has_value()) { data_type = JUST(dtype); }
+    auto empty =
+        JUST(functional::Empty(Shape(shape), data_type, device, requires_grad, pin_memory));
     CHECK_OR_RETURN(view::IsViewApplicable(empty))
         << "oneflow.empty_strided() only support in eager local mode!";
-    empty = JUST(view::AsStrided(empty, shape, stride, 1));
-    return empty;
+    return view::AsStrided(empty, shape, stride, 1);
   }
 };
 

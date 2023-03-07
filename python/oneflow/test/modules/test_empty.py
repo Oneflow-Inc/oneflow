@@ -73,8 +73,19 @@ def _test_new_empty(test_case, shape, dtype, device, requires_grad):
 
 
 def _test_local_empty_strided(test_case, shape, stride, dtype, device, requires_grad):
-    x = flow.empty_strided(shape, stride, dtype=dtype, device=flow.device(device))
+    x = flow.empty_strided(
+        shape,
+        stride,
+        dtype=dtype,
+        device=flow.device(device),
+        requires_grad=requires_grad,
+    )
+    test_case.assertEqual(x.shape, flow.Size(shape))
     test_case.assertEqual(x.stride(), stride)
+    test_case.assertEqual(x.dtype, dtype)
+    test_case.assertEqual(x.device, flow.device(device))
+    if dtype == flow.float32:
+        test_case.assertEqual(x.requires_grad, requires_grad)
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -88,7 +99,7 @@ class TestEmptyOp(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             _test_local_empty(test_case, **arg)
             _test_new_empty(test_case, **arg)
-    
+
     def test_local_empty_strided(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(2, 3), (2, 3, 6), (2, 3, 12, 4)]
