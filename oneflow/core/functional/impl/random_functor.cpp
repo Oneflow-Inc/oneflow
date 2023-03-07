@@ -207,7 +207,8 @@ class RandFunctor {
                       static_cast<int64_t>(gen->current_seed()));
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-    OpExprInterpContext ctx(attrs, JUST(device), distribution_state);
+    OpExprInterpContext ctx(attrs, distribution_state);
+    ctx.device = device;
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
     JUST(result->set_requires_grad(requires_grad));
     return result;
@@ -488,7 +489,8 @@ class RandIntFunctor {
     attrs.SetAllAttrs(shape, low, high, dtype_val, static_cast<int64_t>(gen->current_seed()));
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-    OpExprInterpContext ctx(attrs, JUST(device), distribution_state);
+    OpExprInterpContext ctx(attrs, distribution_state);
+    ctx.device = device;
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
     JUST(result->set_requires_grad(requires_grad));
     return result;
@@ -626,7 +628,8 @@ class RandPermFunctor {
     attrs.SetAllAttrs(n, static_cast<int64_t>(gen->current_seed()));
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-    OpExprInterpContext ctx(attrs, JUST(device), distribution_state);
+    OpExprInterpContext ctx(attrs, distribution_state);
+    ctx.device = device;
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*randperm_op_, {}, ctx));
     JUST(result->set_requires_grad(requires_grad));
     return functional::Cast(result, dtype, /*pin_memory=*/false);
