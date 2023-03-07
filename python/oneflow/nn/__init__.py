@@ -15,7 +15,6 @@ limitations under the License.
 """
 from .modules import *
 from oneflow.nn.graph import Graph
-from oneflow.nn.modules.module import Module
 from oneflow.nn.modules.activation import (
     ELU,
     CELU,
@@ -180,3 +179,8 @@ from oneflow.nn.modules.rnn import (
 )
 
 from oneflow.nn.qat.conv import QatConv1d, QatConv2d, QatConv3d
+
+
+class DataParallel(Module):
+    def __init__(self):
+        raise NotImplementedError()
