@@ -126,10 +126,6 @@ def _iadd(self, other):
     return self.add_(other)
 
 
-def _sub(self, other):
-    return flow._C.sub(self, other)
-
-
 def _sub_inplace(self, other):
     return flow._C.sub(self, other, inplace=True)
 
@@ -549,7 +545,6 @@ def RegisterMethods():
     Tensor.numpy = _numpy
     Tensor.add = _add
     Tensor.add_ = _add_inplace
-    Tensor.sub = _sub
     Tensor.sub_ = _sub_inplace
     Tensor.backward = _backward
     Tensor.__str__ = _str
