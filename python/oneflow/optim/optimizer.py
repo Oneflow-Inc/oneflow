@@ -47,6 +47,11 @@ class ParamGroup(object):
                     "parameters in ParamGroup must be Tensor or ProxyTensor."
                 )
 
+        # do not hold module in options
+        module = default_options.pop("module", None)
+        if parameters.get("module", None):
+            module = parameters["module"]
+        
         self._options = deepcopy(default_options)
         # rewrite options in default_options
         for key in self._options:
@@ -54,7 +59,7 @@ class ParamGroup(object):
                 self._options[key] = parameters[key]
         # add excess keys in dict
         for key in parameters:
-            if key not in self._options and key != "params":
+            if key not in self._options and key not in ["params", "module"]:
                 self._options[key] = parameters[key]
 
         self._enable_clip_grad = False
@@ -66,7 +71,6 @@ class ParamGroup(object):
         self._make_options_valid()
         self.contiguous_params = self._options.get("contiguous_params", False)
         if self.contiguous_params:
-            module = self._options.get("module", None)
             assert module is not None, "module itself is needed while building contiguous parameters."
             self.params_group = ContiguousParamsGroup([parameters["params"]], module)
 
@@ -86,8 +90,6 @@ class ParamGroup(object):
     def __getitem__(self, key):
         if key == "contiguous_params":
             return self._options.get("contiguous_params", False)
-        if key == "module":
-            return self._options.get("module", None)
         return self._options[key]
 
     def __setitem__(self, key, value):
