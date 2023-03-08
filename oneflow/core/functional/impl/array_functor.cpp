@@ -277,6 +277,8 @@ class EmptyFunctor {
     if (GlobalMode::is_enabled()) {
       empty = JUST(functional::GlobalEmpty(shape, dtype, GetGlobalParallelDescFromDevice(device),
                                            *JUST(GetSbpList(GlobalMode::nd_sbp()))));
+      if (dtype->is_floating_point()) { JUST(empty->set_requires_grad(requires_grad)); }
+      return empty;
     }
     Symbol<Device> device_symbol = device.value_or(JUST(Device::New("cpu", 0)));
     auto& attrs =
