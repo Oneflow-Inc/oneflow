@@ -243,7 +243,8 @@ UNARY_METHOD(PyTensorObject_tanh, functional::Tanh);
 UNARY_METHOD(PyTensorObject_atanh, functional::Atanh);
 UNARY_METHOD(PyTensorObject_logical_not, functional::LogicalNot);
 UNARY_METHOD(PyTensorObject_bitwise_not, functional::BitwiseNot);
-
+UNARY_METHOD(PyTensorObject_inv, functional::Inv);
+UNARY_METHOD(PyTensorObject_trunc, functional::Trunc);
 // functions that directly pass arguments without parsing
 #define DIRECT_PASS_FUNC(func_name, bind_func)                                   \
   static PyObject* func_name(PyObject* self, PyObject* args, PyObject* kwargs) { \
@@ -1144,6 +1145,8 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"sin", PyTensorObject_sin, METH_NOARGS, NULL},
     {"sin_", PyTensorObject_sin_, METH_NOARGS, NULL},
     {"isnan", PyTensorObject_isnan, METH_NOARGS, NULL},
+    {"inverse", PyTensorObject_inv, METH_NOARGS, NULL},
+    {"trunc", PyTensorObject_trunc, METH_NOARGS, NULL},
     {"isinf", PyTensorObject_isinf, METH_NOARGS, NULL},
     {"logical_not", PyTensorObject_logical_not, METH_NOARGS, NULL},
     {"floor", PyTensorObject_floor, METH_NOARGS, NULL},
