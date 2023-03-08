@@ -37,9 +37,17 @@ Maybe<void> InferFwDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& input_desc = ctx->InputTensorDesc("input", 0);
   const user_op::TensorDesc& target_desc = ctx->InputTensorDesc("target", 0);
   CHECK_GE_OR_RETURN(DType::priority_order[input_desc.data_type()],
-                     DType::priority_order[DType::Float16()->data_type()]);
+                     DType::priority_order[DType::Float16()->data_type()])
+      << Error::RuntimeError()
+      << "The priority order of data type of <input> is expected to be larger than that of "
+      << DataType_Name(DType::Float16()->data_type()) << ", but got "
+      << DataType_Name(input_desc.data_type());
   CHECK_GE_OR_RETURN(DType::priority_order[target_desc.data_type()],
-                     DType::priority_order[DType::Float16()->data_type()]);
+                     DType::priority_order[DType::Float16()->data_type()])
+      << Error::RuntimeError()
+      << "The priority order of data type of <target> is expected to be larger than that of "
+      << DataType_Name(DType::Float16()->data_type()) << ", but got "
+      << DataType_Name(target_desc.data_type());
   ctx->SetOutputDType("out", 0, ctx->InputDType("target", 0));
 
   return Maybe<void>::Ok();
@@ -60,9 +68,17 @@ Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& input_desc = ctx->InputTensorDesc("input", 0);
   const user_op::TensorDesc& target_desc = ctx->InputTensorDesc("target", 0);
   CHECK_GE_OR_RETURN(DType::priority_order[input_desc.data_type()],
-                     DType::priority_order[DType::Float16()->data_type()]);
+                     DType::priority_order[DType::Float16()->data_type()])
+      << Error::RuntimeError()
+      << "The priority order of data type of <input> is expected to be larger than that of "
+      << DataType_Name(DType::Float16()->data_type()) << ", but got "
+      << DataType_Name(input_desc.data_type());
   CHECK_GE_OR_RETURN(DType::priority_order[target_desc.data_type()],
-                     DType::priority_order[DType::Float16()->data_type()]);
+                     DType::priority_order[DType::Float16()->data_type()])
+      << Error::RuntimeError()
+      << "The priority order of data type of <target> is expected to be larger than that of "
+      << DataType_Name(DType::Float16()->data_type()) << ", but got "
+      << DataType_Name(target_desc.data_type());
   ctx->SetOutputDType("dx", 0, ctx->InputDType("input", 0));
   return Maybe<void>::Ok();
 }
@@ -162,9 +178,17 @@ Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& input_desc = ctx->InputTensorDesc("input", 0);
   const user_op::TensorDesc& target_desc = ctx->InputTensorDesc("target", 0);
   CHECK_GE_OR_RETURN(DType::priority_order[input_desc.data_type()],
-                     DType::priority_order[DType::Float16()->data_type()]);
+                     DType::priority_order[DType::Float16()->data_type()])
+      << Error::RuntimeError()
+      << "The priority order of data type of <input> is expected to be larger than that of "
+      << DataType_Name(DType::Float16()->data_type()) << ", but got "
+      << DataType_Name(input_desc.data_type());
   CHECK_GE_OR_RETURN(DType::priority_order[target_desc.data_type()],
-                     DType::priority_order[DType::Float16()->data_type()]);
+                     DType::priority_order[DType::Float16()->data_type()])
+      << Error::RuntimeError()
+      << "The priority order of data type of <target> is expected to be larger than that of "
+      << DataType_Name(DType::Float16()->data_type()) << ", but got "
+      << DataType_Name(target_desc.data_type());
   DataType out_dtype = ctx->Attr<DataType>("out_dtype");
   if (out_dtype == DataType::kInvalidDataType) { out_dtype = target_desc.data_type(); }
   ctx->SetOutputDType("out", 0, out_dtype);

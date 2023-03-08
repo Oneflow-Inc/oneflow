@@ -26,11 +26,24 @@ namespace oneflow {
   const int64_t batch_size = log_probs.shape().At(1);
   const int64_t max_target_length = ctx->Attr<int64_t>("max_target_length");
   if (targets.shape().NumAxes() == 2) {
-    CHECK_EQ_OR_RETURN(targets.shape().At(0), batch_size);
-    CHECK_GE_OR_RETURN(targets.shape().At(1), max_target_length);
+    CHECK_EQ_OR_RETURN(targets.shape().At(0), batch_size)
+        << Error::RuntimeError()
+        << "The first dim of <targets> is expected to be equal with the batch size, but got "
+        << targets.shape().At(0) << " and " << batch_size;
+    CHECK_GE_OR_RETURN(targets.shape().At(1), max_target_length)
+        << Error::RuntimeError()
+        << "The second dim of <targets> is expected to be greater than or equal with "
+           "<max_target_length>, but got "
+        << targets.shape().At(1) << " and " << max_target_length;
   }
-  CHECK_EQ_OR_RETURN(input_lengths.shape().At(0), batch_size);
-  CHECK_EQ_OR_RETURN(target_lengths.shape().At(0), batch_size);
+  CHECK_EQ_OR_RETURN(input_lengths.shape().At(0), batch_size)
+      << Error::RuntimeError()
+      << "The first dim of <input_lengths> is expected to be equal with the batch size, but got "
+      << input_lengths.shape().At(0) << " and " << batch_size;
+  CHECK_EQ_OR_RETURN(target_lengths.shape().At(0), batch_size)
+      << Error::RuntimeError()
+      << "The first dim of <target_lengths> is expected to be equal with the batch size, but got "
+      << target_lengths.shape().At(0) << " and " << batch_size;
   CHECK_GE_OR_RETURN(ctx->Attr<int64_t>("blank"), 0);
   CHECK_LT_OR_RETURN(ctx->Attr<int64_t>("blank"), log_probs.shape().At(2));
 
@@ -70,11 +83,24 @@ namespace oneflow {
   const int64_t batch_size = log_probs.shape().At(1);
   const int64_t max_target_length = ctx->Attr<int64_t>("max_target_length");
   if (targets.shape().NumAxes() == 2) {
-    CHECK_EQ_OR_RETURN(targets.shape().At(0), batch_size);
-    CHECK_GE_OR_RETURN(targets.shape().At(1), max_target_length);
+    CHECK_EQ_OR_RETURN(targets.shape().At(0), batch_size)
+        << Error::RuntimeError()
+        << "The first dim of <targets> is expected to be equal with the batch size, but got "
+        << targets.shape().At(0) << " and " << batch_size;
+    CHECK_GE_OR_RETURN(targets.shape().At(1), max_target_length)
+        << Error::RuntimeError()
+        << "The second dim of <targets> is expected to be greater than or equal with "
+           "<max_target_length>, but got "
+        << targets.shape().At(1) << " and " << max_target_length;
   }
-  CHECK_EQ_OR_RETURN(input_lengths.shape().At(0), batch_size);
-  CHECK_EQ_OR_RETURN(target_lengths.shape().At(0), batch_size);
+  CHECK_EQ_OR_RETURN(input_lengths.shape().At(0), batch_size)
+      << Error::RuntimeError()
+      << "The first dim of <input_lengths> is expected to be equal with the batch size, but got "
+      << input_lengths.shape().At(0) << " and " << batch_size;
+  CHECK_EQ_OR_RETURN(target_lengths.shape().At(0), batch_size)
+      << Error::RuntimeError()
+      << "The first dim of <target_lengths> is expected to be equal with the batch size, but got "
+      << target_lengths.shape().At(0) << " and " << batch_size;
   CHECK_GE_OR_RETURN(ctx->Attr<int64_t>("blank"), 0);
   CHECK_LT_OR_RETURN(ctx->Attr<int64_t>("blank"), log_probs.shape().At(2));
 
@@ -109,7 +135,10 @@ namespace oneflow {
   const user_op::TensorDesc& log_probs = ctx->InputTensorDesc("log_probs", 0);
   const user_op::TensorDesc& input_lengths = ctx->InputTensorDesc("input_lengths", 0);
   const int64_t batch_size = log_probs.shape().At(1);
-  CHECK_EQ_OR_RETURN(batch_size, input_lengths.shape().At(0));
+  CHECK_EQ_OR_RETURN(batch_size, input_lengths.shape().At(0))
+      << Error::RuntimeError()
+      << "The first dim of <input_lengths> is expected to be equal with the batch size, but got "
+      << input_lengths.shape().At(0) << " and " << batch_size;
   ctx->SetOutputShape("decoded", 0, Shape({batch_size, log_probs.shape().At(0)}));
   ctx->SetOutputShape("neg_sum_logits", 0, Shape({batch_size, 1}));
   return Maybe<void>::Ok();

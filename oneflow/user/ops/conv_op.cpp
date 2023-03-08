@@ -67,8 +67,13 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
       CHECK_EQ_OR_RETURN(weight_shape.at(1) % groups, 0);
       weight_shape.at(1) = weight_shape.at(1) / groups;
     } else if (data_format == "channels_last") {
-      CHECK_LE_OR_RETURN(groups, weight_shape.at(NDims + 1));
-      CHECK_EQ_OR_RETURN(weight_shape.at(NDims + 1) % groups, 0);
+      CHECK_LE_OR_RETURN(groups, weight_shape.at(NDims + 1))
+          << Error::RuntimeError() << "The <groups> is expected to be smaller than the "
+          << NDims + 1 << "th dim of <weight>, but got " << groups << " and " << weight_shape.at(1);
+      CHECK_EQ_OR_RETURN(weight_shape.at(NDims + 1) % groups, 0)
+          << Error::RuntimeError() << "The " << NDims + 1
+          << "th dim of <weight> should be divisable by <groups>, but got"
+          << weight_shape.at(NDims + 1) << " and " << groups;
       weight_shape.at(NDims + 1) = weight_shape.at(NDims + 1) / groups;
     } else {
       UNIMPLEMENTED_THEN_RETURN();
@@ -366,16 +371,35 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
 
   CHECK_GE_OR_RETURN(num_spatial_dims, 1);
   CHECK_LE_OR_RETURN(num_spatial_dims, 3);
-  CHECK_EQ_OR_RETURN(dy.shape().NumAxes(), num_spatial_dims + 2);
-  CHECK_EQ_OR_RETURN(x.shape().NumAxes(), num_spatial_dims + 2);
+  CHECK_EQ_OR_RETURN(dy.shape().NumAxes(), num_spatial_dims + 2)
+      << Error::RuntimeError()
+      << "The number of dims of <dy> is expected to be greater than <num_spatial_dims + 2>, but "
+         "got "
+      << dy.shape().NumAxes() << " and " << num_spatial_dims + 2;
+  CHECK_EQ_OR_RETURN(x.shape().NumAxes(), num_spatial_dims + 2)
+      << Error::RuntimeError()
+      << "The number of dims of <x> is expected to be greater than <num_spatial_dims + 2>, but got "
+      << x.shape().NumAxes() << " and " << num_spatial_dims + 2;
   CHECK_GT_OR_RETURN(groups, 0);
 
   DimVector filter_diff_dim_vec;
   if (data_format == "channels_first") {
-    CHECK_LE_OR_RETURN(groups, x.shape().At(1));
-    CHECK_LE_OR_RETURN(groups, dy.shape().At(1));
-    CHECK_EQ_OR_RETURN(x.shape().At(1) % groups, 0);
-    CHECK_EQ_OR_RETURN(dy.shape().At(1) % groups, 0);
+    CHECK_LE_OR_RETURN(groups, x.shape().At(1))
+        << Error::RuntimeError()
+        << "The <groups> is expected to be less than the second dim of <x>, but got " << groups
+        << " and " << x.shape().At(1);
+    CHECK_LE_OR_RETURN(groups, dy.shape().At(1))
+        << Error::RuntimeError()
+        << "The <groups> is expected to be less than the second dim of <dy>, but got " << groups
+        << " and " << dy.shape().At(1);
+    CHECK_EQ_OR_RETURN(x.shape().At(1) % groups, 0)
+        << Error::RuntimeError()
+        << "The first dim of <x> is expected to be divisable by <groups>, but got "
+        << x.shape().At(1) << " and " << groups;
+    CHECK_EQ_OR_RETURN(dy.shape().At(1) % groups, 0)
+        << Error::RuntimeError()
+        << "The first dim of <dy> is expected to be divisable by <groups>, but got "
+        << dy.shape().At(1) << " and " << groups;
     filter_diff_dim_vec.emplace_back(dy.shape().At(1));
     filter_diff_dim_vec.emplace_back(x.shape().At(1) / groups);
     filter_diff_dim_vec.insert(filter_diff_dim_vec.end(), kernel_size.cbegin(), kernel_size.cend());
@@ -456,7 +480,11 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
 
   CHECK_GE_OR_RETURN(num_spatial_dims, 1);
   CHECK_LE_OR_RETURN(num_spatial_dims, 3);
-  CHECK_EQ_OR_RETURN(dy.shape().NumAxes(), num_spatial_dims + 2);
+  CHECK_EQ_OR_RETURN(dy.shape().NumAxes(), num_spatial_dims + 2)
+      << Error::RuntimeError()
+      << "The number of dims of <dy> is expected to be greater than <num_spatial_dims + 2>, but "
+         "got "
+      << dy.shape().NumAxes() << " and " << num_spatial_dims + 2;
   if (data_format == "channels_first") {
     bias_diff->set_shape(Shape({dy.shape().At(1)}));
   } else if (data_format == "channels_last") {

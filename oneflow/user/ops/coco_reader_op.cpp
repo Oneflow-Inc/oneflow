@@ -39,12 +39,36 @@ namespace oneflow {
 
 /* static */ Maybe<void> COCOReaderOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("image", 0);
-  CHECK_OR_RETURN(nd_sbp == ctx->NdSbp4ArgNameAndIndex("image_id", 0));
-  CHECK_OR_RETURN(nd_sbp == ctx->NdSbp4ArgNameAndIndex("image_size", 0));
-  CHECK_OR_RETURN(nd_sbp == ctx->NdSbp4ArgNameAndIndex("gt_bbox", 0));
-  CHECK_OR_RETURN(nd_sbp == ctx->NdSbp4ArgNameAndIndex("gt_label", 0));
-  CHECK_OR_RETURN(nd_sbp == ctx->NdSbp4ArgNameAndIndex("gt_segm", 0));
-  CHECK_OR_RETURN(nd_sbp == ctx->NdSbp4ArgNameAndIndex("gt_segm_index", 0));
+  CHECK_OR_RETURN(nd_sbp == ctx->NdSbp4ArgNameAndIndex("image_id", 0))
+      << Error::RuntimeError()
+      << "The nd_sbp of <image_id> is expected to be equal with that of <image>, which is "
+      << OF_PP_STRINGIZE(nd_sbp) << ", but got "
+      << OF_PP_STRINGIZE(ctx->NdSbp4ArgNameAndIndex("image_id", 0));
+  CHECK_OR_RETURN(nd_sbp == ctx->NdSbp4ArgNameAndIndex("image_size", 0))
+      << Error::RuntimeError()
+      << "The nd_sbp of <image_size> is expected to be equal with that of <image>, which is "
+      << OF_PP_STRINGIZE(nd_sbp) << ", but got "
+      << OF_PP_STRINGIZE(ctx->NdSbp4ArgNameAndIndex("image_size", 0));
+  CHECK_OR_RETURN(nd_sbp == ctx->NdSbp4ArgNameAndIndex("gt_bbox", 0))
+      << Error::RuntimeError()
+      << "The nd_sbp of <gt_bbox> is expected to be equal with that of <image>, which is "
+      << OF_PP_STRINGIZE(nd_sbp) << ", but got "
+      << OF_PP_STRINGIZE(ctx->NdSbp4ArgNameAndIndex("gt_box", 0));
+  CHECK_OR_RETURN(nd_sbp == ctx->NdSbp4ArgNameAndIndex("gt_label", 0))
+      << Error::RuntimeError()
+      << "The nd_sbp of <gt_label> is expected to be equal with that of <image>, which is "
+      << OF_PP_STRINGIZE(nd_sbp) << ", but got "
+      << OF_PP_STRINGIZE(ctx->NdSbp4ArgNameAndIndex("gt_label", 0));
+  CHECK_OR_RETURN(nd_sbp == ctx->NdSbp4ArgNameAndIndex("gt_segm", 0))
+      << Error::RuntimeError()
+      << "The nd_sbp of <gt_segm> is expected to be equal with that of <image>, which is "
+      << OF_PP_STRINGIZE(nd_sbp) << ", but got "
+      << OF_PP_STRINGIZE(ctx->NdSbp4ArgNameAndIndex("gt_segm", 0));
+  CHECK_OR_RETURN(nd_sbp == ctx->NdSbp4ArgNameAndIndex("gt_segm_index", 0))
+      << Error::RuntimeError()
+      << "The nd_sbp of <gt_segm_index> is expected to be equal with that of <image>, which is "
+      << OF_PP_STRINGIZE(nd_sbp) << ", but got "
+      << OF_PP_STRINGIZE(ctx->NdSbp4ArgNameAndIndex("gt_segm_index", 0));
 
   int64_t batch_size = ctx->Attr<int64_t>("batch_size");
   int64_t parallel_num = ctx->parallel_ctx().parallel_num();

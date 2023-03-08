@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/ops/loss_op_util.h"
@@ -47,9 +48,17 @@ Maybe<void> InferDataType_(user_op::InferContext* ctx) {
   const user_op::TensorDesc& input_desc = ctx->InputTensorDesc("input", 0);
   const user_op::TensorDesc& target_desc = ctx->InputTensorDesc("target", 0);
   CHECK_GE_OR_RETURN(DType::priority_order[input_desc.data_type()],
-                     DType::priority_order[DType::Float16()->data_type()]);
+                     DType::priority_order[DType::Float16()->data_type()])
+      << Error::RuntimeError()
+      << "The priority order of data type of <input> is expected to be larger than that of "
+      << DataType_Name(DType::Float16()->data_type()) << ", but got "
+      << DataType_Name(input_desc.data_type());
   CHECK_GE_OR_RETURN(DType::priority_order[target_desc.data_type()],
-                     DType::priority_order[DType::Float16()->data_type()]);
+                     DType::priority_order[DType::Float16()->data_type()])
+      << Error::RuntimeError()
+      << "The priority order of data type of <target> is expected to be larger than that of "
+      << DataType_Name(DType::Float16()->data_type()) << ", but got "
+      << DataType_Name(target_desc.data_type());
   if (ctx->has_input("weight", 0)) {
     const auto& weight_desc = ctx->InputTensorDesc("weight", 0);
     CHECK_EQ_OR_RETURN(weight_desc.data_type(), target_desc.data_type())
@@ -78,7 +87,8 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   if (ctx->has_input("weight", 0)) {
     const auto& weight_desc = ctx->InputTensorDesc("weight", 0);
     CHECK_EQ_OR_RETURN(weight_desc.is_dynamic(), input_desc.is_dynamic());
-    CHECK_EQ_OR_RETURN(weight_desc.shape(), input_desc.shape());
+    CHECK_EQ_OR_RETURN(weight_desc.shape(), input_desc.shape())
+        << "Weight shape should be equal to Input shape. ";
   }
   if (ctx->Attr<bool>("has_pos_weight")) {
     const auto& pos_weight_desc = ctx->InputTensorDesc("pos_weight", 0);
@@ -95,9 +105,17 @@ Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& input_desc = ctx->InputTensorDesc("input", 0);
   const user_op::TensorDesc& target_desc = ctx->InputTensorDesc("target", 0);
   CHECK_GE_OR_RETURN(DType::priority_order[input_desc.data_type()],
-                     DType::priority_order[DType::Float16()->data_type()]);
+                     DType::priority_order[DType::Float16()->data_type()])
+      << Error::RuntimeError()
+      << "The priority order of data type of <input> is expected to be larger than that of "
+      << DataType_Name(DType::Float16()->data_type()) << ", but got "
+      << DataType_Name(input_desc.data_type());
   CHECK_GE_OR_RETURN(DType::priority_order[target_desc.data_type()],
-                     DType::priority_order[DType::Float16()->data_type()]);
+                     DType::priority_order[DType::Float16()->data_type()])
+      << Error::RuntimeError()
+      << "The priority order of data type of <target> is expected to be larger than that of "
+      << DataType_Name(DType::Float16()->data_type()) << ", but got "
+      << DataType_Name(target_desc.data_type());
   if (ctx->has_input("weight", 0)) {
     const auto& weight_desc = ctx->InputTensorDesc("weight", 0);
     CHECK_EQ_OR_RETURN(weight_desc.data_type(), target_desc.data_type())

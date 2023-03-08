@@ -22,8 +22,13 @@ namespace oneflow {
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& label = ctx->InputTensorDesc("label", 0);
   user_op::TensorDesc* theta = ctx->MutOutputTensorDesc("theta", 0);
-  CHECK_EQ_OR_RETURN(label.shape().At(0), x.shape().At(0));
-  CHECK_GE_OR_RETURN(x.shape().NumAxes(), 2);
+  CHECK_EQ_OR_RETURN(label.shape().At(0), x.shape().At(0))
+      << Error::RuntimeError()
+      << "The first dim of <label> is expected to be equal with that of <x>, but got "
+      << label.shape().At(0) << " and " << x.shape().At(0);
+  CHECK_GE_OR_RETURN(x.shape().NumAxes(), 2)
+      << Error::RuntimeError() << "The number of dims of <x> is expected to be 2, but got"
+      << x.shape().NumAxes();
   ctx->SetOutputShape("y", 0, ctx->InputShape("x", 0));
   ctx->SetIsDynamic4ArgNameAndIndex("y", 0, ctx->InputIsDynamic("x", 0));
   theta->set_is_dynamic(x.is_dynamic());
@@ -69,9 +74,17 @@ namespace oneflow {
   const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
   const user_op::TensorDesc& label = ctx->InputTensorDesc("label", 0);
   const user_op::TensorDesc& theta = ctx->InputTensorDesc("theta", 0);
-  CHECK_EQ_OR_RETURN(label.shape().At(0), dy.shape().At(0));
-  CHECK_EQ_OR_RETURN(label.shape().At(0), theta.shape().At(0));
-  CHECK_GE_OR_RETURN(dy.shape().NumAxes(), 2);
+  CHECK_EQ_OR_RETURN(label.shape().At(0), dy.shape().At(0))
+      << Error::RuntimeError()
+      << "The first dim of <label> is expected to be equal with that of <dy>, but got "
+      << label.shape().At(0) << " and " << dy.shape().At(0);
+  CHECK_EQ_OR_RETURN(label.shape().At(0), theta.shape().At(0))
+      << Error::RuntimeError()
+      << "The first dim of <label> is expected to be equal with that of <theta>, but got "
+      << label.shape().At(0) << " and " << theta.shape().At(0);
+  CHECK_GE_OR_RETURN(dy.shape().NumAxes(), 2)
+      << Error::RuntimeError() << "The number of dims of <dy> is expected to be 2, but got"
+      << dy.shape().NumAxes();
   ctx->SetOutputShape("dx", 0, ctx->InputShape("dy", 0));
   ctx->SetIsDynamic4ArgNameAndIndex("dx", 0, ctx->InputIsDynamic("dy", 0));
   return Maybe<void>::Ok();

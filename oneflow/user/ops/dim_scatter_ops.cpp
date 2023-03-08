@@ -61,16 +61,25 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   FOR_RANGE(int64_t, i, 0, index_num_axes) {
     if (i == dim) continue;
     if (input) {
-      CHECK_LE_OR_RETURN(index.shape().At(i), input->shape().At(i));
+      CHECK_LE_OR_RETURN(index.shape().At(i), input->shape().At(i))
+          << Error::RuntimeError() << "The " << i
+          << "th dim of <index> is expected to be less than that of <input>, but got"
+          << index.shape().At(i) << " and " << input->shape().At(i);
     } else {
-      CHECK_LE_OR_RETURN(index.shape().At(i), like->shape().At(i));
+      CHECK_LE_OR_RETURN(index.shape().At(i), like->shape().At(i))
+          << Error::RuntimeError() << "The " << i
+          << "th dim of <index> is expected to be less than that of <like>, but got"
+          << index.shape().At(i) << " and " << like->shape().At(i);
     }
   }
 
   // check index.shape(i) <= src.shape(i)
   FOR_RANGE(int64_t, i, 0, index_num_axes) {
     if (i == dim) continue;
-    CHECK_LE_OR_RETURN(index.shape().At(i), src.shape().At(i));
+    CHECK_LE_OR_RETURN(index.shape().At(i), src.shape().At(i))
+        << Error::RuntimeError() << "The " << i
+        << "th dim of <index> is expected to be less than that of <src>, but got"
+        << index.shape().At(i) << " and " << src.shape().At(i);
   }
 
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("output", 0);
@@ -93,7 +102,10 @@ Maybe<void> InferScalarTensorDesc(user_op::InferContext* ctx) {
   // check index.shape(i) <= input/like.shape(i)
   FOR_RANGE(int64_t, i, 0, index_num_axes) {
     if (i == dim) continue;
-    CHECK_LE_OR_RETURN(index.shape().At(i), input.shape().At(i));
+    CHECK_LE_OR_RETURN(index.shape().At(i), input.shape().At(i))
+        << Error::RuntimeError() << "The " << i
+        << "th dim of <indexs> is expected to be less than that of <input>, but got"
+        << index.shape().At(i) << " and " << input.shape().At(i);
   }
 
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("output", 0);
