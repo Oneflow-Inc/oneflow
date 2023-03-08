@@ -67,7 +67,9 @@ class ParamGroup(object):
         self.contiguous_params = self._options.get("contiguous_params", False)
         if self.contiguous_params:
             module = self._options.get("module", None)
-            assert module is not None, "module itself is needed while building contiguous parameters."
+            assert (
+                module is not None
+            ), "module itself is needed while building contiguous parameters."
             self.params_group = ContiguousParamsGroup([parameters["params"]], module)
 
     def _make_options_valid(self):

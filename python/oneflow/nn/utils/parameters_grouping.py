@@ -43,10 +43,11 @@ def numel_in_bucket(tensor: Tensor):
 
 class ContiguousParamsGroup(object):
     def __init__(
-            self, params_group_list: _tensor_or_tensors, 
-            module: "flow.nn.Module",
-            for_module: bool = False,
-        ):
+        self,
+        params_group_list: _tensor_or_tensors,
+        module: "flow.nn.Module",
+        for_module: bool = False,
+    ):
         """
         The ContiguousParamsGroup is created by 2D List of Tensors,
         which indicates the Tensors in the same 1D List should be 
