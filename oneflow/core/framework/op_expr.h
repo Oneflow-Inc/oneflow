@@ -346,6 +346,9 @@ class FunctionOpExpr final : public OpExpr {
   mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };
 
+small_vector<int32_t, kOpArgsReservedSize> HostMemoryInputIds4UserOpExpr(
+    const UserOpExpr& user_op_expr);
+
 }  // namespace one
 }  // namespace oneflow
 

@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/framework/user_op_kernel_registry.h"
 #include "oneflow/core/common/registry_error.h"
+#include "oneflow/core/common/op_args_reserved_size.h"
 
 namespace oneflow {
 
@@ -64,6 +65,16 @@ struct UserOpRegisterTrigger final {
 };
 
 }  // namespace user_op
+
+Maybe<void> SetHostInput4Op(const std::string& op_type_name, const std::string& arg_name,
+                            int32_t index);
+
+bool IsHostInput4Op(const std::string& op_type_name, const std::string& arg_name, int32_t index);
+
+bool HasHostInput(const std::string& op_type_name);
+
+const small_vector<std::pair<std::string, int32_t>, kOpArgsReservedSize>& HostInputs4Op(
+    const std::string& op_type_name);
 
 }  // namespace oneflow
 

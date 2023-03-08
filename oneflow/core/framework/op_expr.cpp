@@ -855,5 +855,19 @@ Maybe<OpExprGradClosure> FunctionOpExpr::GetOrCreateOpGradClosure() const {
   return std::make_shared<OpExprGradClosure>(op_grad_func_, state_);
 }
 
+small_vector<int32_t, kOpArgsReservedSize> HostMemoryInputIds4UserOpExpr(
+    const UserOpExpr& user_op_expr) {
+  small_vector<int32_t, kOpArgsReservedSize> host_mem_input_ids;
+  const auto& indexed_input_pairs = user_op_expr.indexed_input_pairs();
+  const auto& op_type_name = user_op_expr.op_type_name();
+  for (int32_t i = 0; i < indexed_input_pairs.size(); ++i) {
+    if (IsHostInput4Op(op_type_name, indexed_input_pairs.at(i).first,
+                       indexed_input_pairs.at(i).second)) {
+      host_mem_input_ids.emplace_back(i);
+    }
+  }
+  return host_mem_input_ids;
+}
+
 }  // namespace one
 }  // namespace oneflow

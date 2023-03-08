@@ -1038,7 +1038,6 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
 #ifdef WITH_CUTLASS
     JUST(DoPass("CutlassConvTuningWarmupPass"));
 #endif  // WITH_CUTLASS
-    JUST(DoPass("InsertHostIdentityOpBeforeHostInputPass"));
     JUST(DoPass("DumpVariableInfoPass"));
   }
   JUST(DoPass("DumpBlobParallelConfPass"));

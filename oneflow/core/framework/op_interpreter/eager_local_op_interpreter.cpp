@@ -53,7 +53,9 @@ Maybe<Symbol<Device>> RawGetDefaultCpuDevice() { return Device::New("cpu"); }
 
 constexpr auto* GetDefaultCpuDevice = DECORATE(&RawGetDefaultCpuDevice, ThreadLocal);
 
-Maybe<Symbol<Device>> GetDefaultDevice(const TensorTuple& inputs, const OpExprInterpContext& ctx) {
+Maybe<Symbol<Device>> GetDefaultDevice(
+    const TensorTuple& inputs, const OpExprInterpContext& ctx,
+    const small_vector<int32_t, kOpArgsReservedSize>& filtered_ids) {
   if (inputs.empty()) {
     if (ctx.device.has_value()) {
       return JUST(ctx.device);
@@ -61,7 +63,12 @@ Maybe<Symbol<Device>> GetDefaultDevice(const TensorTuple& inputs, const OpExprIn
       return GetDefaultCpuDevice();
     }
   }
-  return JUST(inputs.at(0)->device());
+  for (int32_t i = 0; i < inputs.size(); ++i) {
+    if (std::find(filtered_ids.begin(), filtered_ids.end(), i) == filtered_ids.end()) {
+      return JUST(inputs.at(i)->device());
+    }
+  }
+  return GetDefaultCpuDevice();
 }
 
 Maybe<EagerLocalTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>& tensor) {
@@ -75,7 +82,8 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
                            TensorTuple* outputs, const OpExprInterpContext& ctx) {
   OF_PROFILER_RANGE_GUARD("NaiveInterpret");
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());  // NOLINT
-  Symbol<Device> default_device = JUST(GetDefaultDevice(inputs, ctx));
+  const auto& host_memory_input_ids = HostMemoryInputIds4UserOpExpr(user_op_expr);
+  Symbol<Device> default_device = JUST(GetDefaultDevice(inputs, ctx, host_memory_input_ids));
   const std::shared_ptr<const LocalTensorInferResult> result =
       JUST([&]() -> Maybe<const LocalTensorInferResult> {
         LocalTensorMetaInferArgs infer_args;
@@ -84,8 +92,18 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       }());
 
   vm::EagerBlobObjectList input_eager_blob_objects(inputs.size());
+  TensorTuple inputs_duplication(inputs.size());
   for (int i = 0; i < inputs.size(); i++) {
-    input_eager_blob_objects.at(i) = JUST(inputs.at(i)->eager_blob_object());
+    if (std::find(host_memory_input_ids.begin(), host_memory_input_ids.end(), i)
+        == host_memory_input_ids.end()) {
+      inputs_duplication[i] = inputs.at(i);
+    } else {
+      inputs_duplication[i] = JUST(functional::To(
+          inputs.at(i), Optional<Symbol<Device>>(JUST(GetDefaultCpuDevice())), NullOpt, false));
+    }
+  }
+  for (int i = 0; i < inputs.size(); i++) {
+    input_eager_blob_objects.at(i) = JUST(inputs_duplication.at(i)->eager_blob_object());
   }
 
   const auto& output_tensor_metas = result->output_tensor_metas();

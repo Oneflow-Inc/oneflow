@@ -37,15 +37,23 @@ limitations under the License.
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/boxing/eager_boxing_logger.h"
 #include "oneflow/core/common/cpp_attribute.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
 
 namespace {
 
-Maybe<Symbol<ParallelDesc>> GetParallelDesc(const TensorTuple& inputs,
-                                            const OpExprInterpContext& ctx) {
-  if (!inputs.empty()) { return inputs.at(0)->parallel_desc(); }
+Maybe<Symbol<ParallelDesc>> GetParallelDesc(
+    const TensorTuple& inputs, const OpExprInterpContext& ctx,
+    const small_vector<int32_t, kOpArgsReservedSize>& filtered_ids) {
+  if (!inputs.empty()) {
+    for (int32_t i = 0; i < inputs.size(); ++i) {
+      if (std::find(filtered_ids.begin(), filtered_ids.end(), i) == filtered_ids.end()) {
+        return inputs.at(i)->parallel_desc();
+      }
+    }
+  }
   return JUST(ctx.parallel_desc);
 }
 
@@ -110,7 +118,8 @@ auto* GetBoxingOutput =
 Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                       TensorTuple* outputs, const OpExprInterpContext& ctx) {
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
-  const auto& parallel_desc = JUST(GetParallelDesc(inputs, ctx));
+  const auto& host_memory_input_ids = HostMemoryInputIds4UserOpExpr(user_op_expr);
+  const auto& parallel_desc = JUST(GetParallelDesc(inputs, ctx, host_memory_input_ids));
   std::shared_ptr<const GlobalTensorInferResult> result;
   NonRecursiveMetaInfoConsistencyCheckScope scope;
   if (inputs.empty()) {
@@ -163,6 +172,12 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
         && infered_input_meta->nd_sbp() != JUST(input->nd_sbp())) {
       input = JUST(GetBoxingOutput(input, infered_input_meta->nd_sbp(),
                                    infered_input_meta->parallel_desc(), parallel_id.has_value()));
+      boxing_outputs.emplace_back(input);
+    }
+    if (std::find(host_memory_input_ids.begin(), host_memory_input_ids.end(), i)
+        != host_memory_input_ids.end()) {
+      input =
+          JUST(functional::To(input, Optional<std::string>(std::string("cpu")), NullOpt, false));
       boxing_outputs.emplace_back(input);
     }
     const auto& local_tensor = JUST(input->cur_rank_phy_tensor());
