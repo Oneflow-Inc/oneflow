@@ -274,10 +274,6 @@ def _normal(self, mean=0, std=1):
     return flow.nn.init.normal_(self, mean=mean, std=std)
 
 
-def _fill(self, value):
-    return flow._C.fill_(self, value)
-
-
 def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
     assert np_arr.dtype == flow.convert_oneflow_dtype_to_numpy_dtype(
         eager_local_tensor.dtype
@@ -563,7 +559,6 @@ def RegisterMethods():
     Tensor.xavier_uniform_ = _xavier_uniform
     Tensor.orthogonal_ = _orthogonal
     Tensor.normal_ = _normal
-    Tensor.fill_ = _fill
     Tensor.copy_ = _copy
     Tensor._meta_repr = _meta_repr
     Tensor.argsort = _argsort
