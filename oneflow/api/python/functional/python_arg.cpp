@@ -18,10 +18,12 @@ limitations under the License.
 #include "oneflow/api/python/framework/tensor.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/indexing.h"
+#include "oneflow/api/python/functional/value_types.h"
 #include "oneflow/extension/python/numpy.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/layout.h"
+#include "oneflow/core/framework/memory_format.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/tensor.h"
@@ -123,6 +125,11 @@ Symbol<DType> PythonArg::ObjectAs<Symbol<DType>>() const {
 template<>
 Symbol<Layout> PythonArg::ObjectAs<Symbol<Layout>>() const {
   return PyUnpackLayout(object_);
+}
+
+template<>
+Symbol<MemoryFormat> PythonArg::ObjectAs<Symbol<MemoryFormat>>() const {
+  return PyUnpackMemoryFormat(object_);
 }
 
 template<>
@@ -235,6 +242,8 @@ bool PythonArg::TypeCheck(ValueType type) const {
     case kTENSOR_REF: return PyTensor_Check(object_);
     case kTENSOR_TUPLE: return PyTensorTupleCheck(object_) || PyTensorSequenceCheck(object_);
     case kDTYPE: return PyDTypeCheck(object_);
+    case kLAYOUT: return PyLayoutCheck(object_);
+    case kMEMORYFORMAT: return PyMemoryFormatCheck(object_);
     case kSHAPE: return PyLongSequenceCheck(object_);
     case kGENERATOR:
     case kGENERATOR_REF: return PyGeneratorCheck(object_);

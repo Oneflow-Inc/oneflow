@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/layout.h"
+#include "oneflow/core/framework/memory_format.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/tensor.h"
@@ -153,6 +154,10 @@ Symbol<DType> PyUnpackDType(PyObject* obj);
 // Layout
 bool PyLayoutCheck(PyObject* obj);
 Symbol<Layout> PyUnpackLayout(PyObject* obj);
+
+// Memory Format
+bool PyMemoryFormatCheck(PyObject* obj);
+Symbol<MemoryFormat> PyUnpackMemoryFormat(PyObject* obj);
 
 // DType list
 bool PyDTypeSequenceCheck(PyObject* obj);
