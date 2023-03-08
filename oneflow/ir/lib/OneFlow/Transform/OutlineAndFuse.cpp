@@ -47,20 +47,6 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
   }
 };
 
-class LowerToOKLPass : public LowerToOKLPassBase<LowerToOKLPass> {
-  void getDependentDialects(DialectRegistry& registry) const override {
-    registry.insert<LLVM::LLVMDialect>();
-    registry.insert<okl::OKLDialect>();
-  }
-
-  void runOnOperation() override {
-    Operation* op = getOperation();
-    RewritePatternSet patterns(op->getContext());
-    populateLowerToOKLPasses(patterns);
-    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
-  }
-};
-
 class WrapOpsToKernelLaunchPass : public WrapOpsToKernelLaunchPassBase<WrapOpsToKernelLaunchPass> {
  public:
   WrapOpsToKernelLaunchPass() = default;
@@ -82,35 +68,6 @@ class WrapOpsToKernelLaunchPass : public WrapOpsToKernelLaunchPassBase<WrapOpsTo
   Option<std::string> wrap_ops_mode_{*this, "mode",
                                      llvm::cl::desc("the mode of this pass to wrap ops"),
                                      llvm::cl::init(wrap_mode::SIMPLE)};
-};
-
-class ExtractKernelLaunchTensorPass
-    : public ExtractKernelLaunchTensorPassBase<ExtractKernelLaunchTensorPass> {
-  void getDependentDialects(DialectRegistry& registry) const override {
-    registry.insert<oneflow::OneFlowDialect>();
-    registry.insert<okl::OKLDialect>();
-  }
-
-  void runOnOperation() override {
-    Operation* op = getOperation();
-    RewritePatternSet patterns(op->getContext());
-    populateExtractKernelLaunchTensorPasses(patterns);
-    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
-  }
-};
-
-class TrimReturnAsVoidPass : public TrimReturnAsVoidPassBase<TrimReturnAsVoidPass> {
-  void getDependentDialects(DialectRegistry& registry) const override {
-    registry.insert<oneflow::OneFlowDialect>();
-    registry.insert<okl::OKLDialect>();
-  }
-
-  void runOnOperation() override {
-    Operation* op = getOperation();
-    RewritePatternSet patterns(op->getContext());
-    populateTrimReturnAsVoidPasses(patterns);
-    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
-  }
 };
 
 class FuseIntoExistingOpPass : public FuseIntoExistingOpPassBase<FuseIntoExistingOpPass> {
@@ -249,6 +206,17 @@ class FuseForwardOpsPass : public FuseForwardOpsBase<FuseForwardOpsPass> {
   }
 };
 
+class FuseOpsWithBackwardImplPass
+    : public FuseOpsWithBackwardImplBase<FuseOpsWithBackwardImplPass> {
+  void runOnOperation() override {
+    Operation* op = getOperation();
+    RewritePatternSet patterns(op->getContext());
+    populateFuseOpsWithBackwardImplPattern(patterns);
+    rewrites::populateRewrites(patterns);
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+  }
+};
+
 class FuseNormalizationOpsPass : public FuseNormalizationOpsBase<FuseNormalizationOpsPass> {
   void runOnOperation() override {
     Operation* op = getOperation();
@@ -269,16 +237,6 @@ std::unique_ptr<Pass> createWrapOpsToKernelLaunchPass() {
   return std::make_unique<WrapOpsToKernelLaunchPass>();
 }
 
-std::unique_ptr<Pass> createExtractKernelLaunchTensorPass() {
-  return std::make_unique<ExtractKernelLaunchTensorPass>();
-}
-
-std::unique_ptr<Pass> createTrimReturnAsVoidPass() {
-  return std::make_unique<TrimReturnAsVoidPass>();
-}
-
-std::unique_ptr<mlir::Pass> createLowerToOKLPass() { return std::make_unique<LowerToOKLPass>(); }
-
 std::unique_ptr<Pass> createFuseIntoExistingOpPass() {
   return std::make_unique<FuseIntoExistingOpPass>();
 }
@@ -286,6 +244,10 @@ std::unique_ptr<Pass> createFuseIntoExistingOpPass() {
 std::unique_ptr<Pass> createGroupMatMul() { return std::make_unique<GroupMatMulPass>(); }
 
 std::unique_ptr<Pass> createFuseForwardOps() { return std::make_unique<FuseForwardOpsPass>(); }
+std::unique_ptr<Pass> createFuseOpsWithBackwardImpl() {
+  return std::make_unique<FuseOpsWithBackwardImplPass>();
+}
+
 std::unique_ptr<Pass> createFuseNormalizationOps() {
   return std::make_unique<FuseNormalizationOpsPass>();
 }

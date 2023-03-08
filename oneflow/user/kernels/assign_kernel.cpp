@@ -43,6 +43,6 @@ class AssignKernel final : public user_op::OpKernel {
 
 }  // namespace
 
-REGISTER_USER_KERNEL("assign").SetCreateFn<AssignKernel>().SetIsMatchedHob(user_op::HobTrue());
+REGISTER_USER_KERNEL("assign").SetCreateFn<AssignKernel>();
 
 }  // namespace oneflow
