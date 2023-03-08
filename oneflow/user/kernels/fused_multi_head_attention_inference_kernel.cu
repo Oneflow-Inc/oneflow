@@ -254,52 +254,74 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
     const std::string& query_layout = ctx->Attr<std::string>("query_layout");
     const std::string& key_layout = ctx->Attr<std::string>("key_layout");
     const std::string& value_layout = ctx->Attr<std::string>("value_layout");
+    const std::string& output_layout = ctx->Attr<std::string>("output_layout");
 
-    const auto ParseDims =
-        [](const ShapeView& shape, const std::string& layout, const Optional<int64_t>& num_heads,
-           const Optional<int64_t>& head_size, int64_t* b, int64_t* m, int64_t* h, int64_t* k,
-           int64_t* b_stride, int64_t* m_stride, int64_t* h_stride) -> void {
+    const auto ParseDims = [](const ShapeView& shape, const std::string& layout,
+                              const Optional<int64_t>& num_heads,
+                              const Optional<int64_t>& head_size, int64_t tensor_index, int64_t* b,
+                              int64_t* m, int64_t* h, int64_t* k, int64_t* b_stride,
+                              int64_t* m_stride, int64_t* h_stride, int64_t* offset) -> void {
       if (shape.NumAxes() == 3) {
-        if (layout == "BM(HK)") {
-          *b = shape.At(0);
-          *m = shape.At(1);
+        if (layout == "BM(HK)" || layout == "BM(H2K)" || layout == "BM(H3K)" || layout == "MB(HK)"
+            || layout == "MB(H2K)" || layout == "MB(H3K)") {
+          bool batch_first = false;
+          int64_t packed_n = 0;
+          const std::string layout_bm = layout.substr(0, 2);
+          const std::string layout_hk = layout.substr(2);
+          if (layout_bm == "BM") {
+            *b = shape.At(0);
+            *m = shape.At(1);
+            batch_first = true;
+          } else if (layout_bm == "MB") {
+            *b = shape.At(1);
+            *m = shape.At(0);
+            batch_first = false;
+          } else {
+            UNIMPLEMENTED();
+          }
+          if (layout_hk == "(HK)") {
+            packed_n = 1;
+          } else if (layout_hk == "(H2K)") {
+            packed_n = 2;
+          } else if (layout_hk == "(H3K)") {
+            packed_n = 3;
+          } else {
+            UNIMPLEMENTED();
+          }
           const int64_t hidden_size = shape.At(2);
           if (num_heads) {
             const int64_t expected_h = CHECK_JUST(num_heads);
-            CHECK_EQ(hidden_size % expected_h, 0);
+            const int64_t packed_h = packed_n * expected_h;
+            CHECK_EQ(hidden_size % packed_h, 0);
             *h = expected_h;
-            *k = hidden_size / expected_h;
+            *k = hidden_size / packed_h;
           } else if (head_size) {
             const int64_t expected_k = CHECK_JUST(head_size);
-            CHECK_EQ(hidden_size % expected_k, 0);
-            *h = hidden_size / expected_k;
+            const int64_t packed_k = packed_n * expected_k;
+            CHECK_EQ(hidden_size % packed_k, 0);
+            *h = hidden_size / packed_k;
             *k = expected_k;
           } else {
             UNIMPLEMENTED();
           }
-          *h_stride = *k;
-          *m_stride = *h_stride * *h;
-          *b_stride = *m_stride * *m;
-        } else if (layout == "MB(HK)") {
-          *b = shape.At(1);
-          *m = shape.At(0);
-          const int64_t hidden_size = shape.At(2);
-          if (num_heads) {
-            const int64_t expected_h = CHECK_JUST(num_heads);
-            CHECK_EQ(hidden_size % expected_h, 0);
-            *h = expected_h;
-            *k = hidden_size / expected_h;
-          } else if (head_size) {
-            const int64_t expected_k = CHECK_JUST(head_size);
-            CHECK_EQ(hidden_size % expected_k, 0);
-            *h = hidden_size / expected_k;
-            *k = expected_k;
+          *h_stride = *k * packed_n;
+          if (batch_first) {
+            *m_stride = *h_stride * *h;
+            *b_stride = *m_stride * *m;
+          } else {
+            *b_stride = *h_stride * *h;
+            *m_stride = *b_stride * *b;
+          }
+          if (packed_n == 1) {
+            *offset = 0;
+          } else if (packed_n == 2) {
+            CHECK_GE(tensor_index, 1);
+            *offset = (tensor_index - 1) * *k;
+          } else if (packed_n == 3) {
+            *offset = tensor_index * *k;
           } else {
             UNIMPLEMENTED();
           }
-          *h_stride = *k;
-          *b_stride = *h_stride * *h;
-          *m_stride = *b_stride * *b;
         } else {
           UNIMPLEMENTED();
         }
@@ -320,6 +342,14 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
           *m_stride = *k;
           *h_stride = *m_stride * *m;
           *b_stride = *h_stride * *h;
+        } else if (layout == "MBHK") {
+          *b = shape.At(1);
+          *m = shape.At(0);
+          *h = shape.At(2);
+          *k = shape.At(3);
+          *h_stride = *k;
+          *b_stride = *h_stride * *h;
+          *m_stride = *b_stride * *b;
         } else {
           UNIMPLEMENTED();
         }
@@ -331,6 +361,7 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
           const int64_t expected_k = CHECK_JUST(head_size);
           CHECK_EQ(*k, expected_k);
         }
+        *offset = 0;
       } else {
         UNIMPLEMENTED();
       };
@@ -343,8 +374,9 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
     int64_t q_b_stride = 0;
     int64_t q_m_stride = 0;
     int64_t q_h_stride = 0;
-    ParseDims(query->shape_view(), query_layout, Optional<int64_t>(), query_head_size, &q_b, &q_m,
-              &q_h, &q_k, &q_b_stride, &q_m_stride, &q_h_stride);
+    int64_t q_offset = 0;
+    ParseDims(query->shape_view(), query_layout, Optional<int64_t>(), query_head_size, 0, &q_b,
+              &q_m, &q_h, &q_k, &q_b_stride, &q_m_stride, &q_h_stride, &q_offset);
 
     int64_t k_b = 0;
     int64_t k_m = 0;
@@ -353,8 +385,9 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
     int64_t k_b_stride = 0;
     int64_t k_m_stride = 0;
     int64_t k_h_stride = 0;
-    ParseDims(key->shape_view(), key_layout, Optional<int64_t>(), query_head_size, &k_b, &k_m, &k_h,
-              &k_k, &k_b_stride, &k_m_stride, &k_h_stride);
+    int64_t k_offset = 0;
+    ParseDims(key->shape_view(), key_layout, Optional<int64_t>(), query_head_size, 1, &k_b, &k_m,
+              &k_h, &k_k, &k_b_stride, &k_m_stride, &k_h_stride, &k_offset);
     CHECK_EQ(k_b, q_b);
     CHECK_EQ(k_h, q_h);
 
@@ -365,14 +398,24 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
     int64_t v_b_stride = 0;
     int64_t v_m_stride = 0;
     int64_t v_h_stride = 0;
-    ParseDims(value->shape_view(), value_layout, q_h, Optional<int64_t>(), &v_b, &v_m, &v_h, &v_k,
-              &v_b_stride, &v_m_stride, &v_h_stride);
+    int64_t v_offset = 0;
+    ParseDims(value->shape_view(), value_layout, q_h, Optional<int64_t>(), 2, &v_b, &v_m, &v_h,
+              &v_k, &v_b_stride, &v_m_stride, &v_h_stride, &v_offset);
     CHECK_EQ(v_b, q_b);
     CHECK_EQ(v_m, k_m);
     CHECK_EQ(out->shape_view().NumAxes(), 3);
-    CHECK_EQ(out->shape_view().At(0), q_b);
-    CHECK_EQ(out->shape_view().At(1), q_m);
-    CHECK_EQ(out->shape_view().At(2), q_h * v_k);
+    if (output_layout == "BM(HK)") {
+      CHECK_EQ(out->shape_view().At(0), q_b);
+      CHECK_EQ(out->shape_view().At(1), q_m);
+      CHECK_EQ(out->shape_view().At(2), q_h * v_k);
+    } else if (output_layout == "MB(HK)") {
+      CHECK_EQ(q_b, 1);
+      CHECK_EQ(out->shape_view().At(0), q_m);
+      CHECK_EQ(out->shape_view().At(1), q_b);
+      CHECK_EQ(out->shape_view().At(2), q_h * v_k);
+    } else {
+      UNIMPLEMENTED();
+    }
 
     auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
 
@@ -444,9 +487,9 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
     params.v_stride_b = v_b_stride;
     params.v_stride_m = v_m_stride;
     params.v_stride_h = v_h_stride;
-    params.query_ptr = query->dptr<char>();
-    params.key_ptr = key->dptr<char>();
-    params.value_ptr = value->dptr<char>();
+    params.query_ptr = query->dptr<char>() + q_offset * GetSizeOfDataType(data_type);
+    params.key_ptr = key->dptr<char>() + k_offset * GetSizeOfDataType(data_type);
+    params.value_ptr = value->dptr<char>() + v_offset * GetSizeOfDataType(data_type);
     params.out_ptr = out->mut_dptr();
     const int64_t tmp_buffer_size = tmp->shape_view().elem_cnt();
     params.workspace = tmp->mut_dptr();
