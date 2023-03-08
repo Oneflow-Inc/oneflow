@@ -137,10 +137,12 @@ def _test_fused_attention_concat_past_key_value(
     key_layout,
     value_layout,
 ):
-    past_key = flow.randn((b, m, h, k), device="cuda", dtype=flow.float,).to(dtype)
-    past_value = flow.randn((b, m, h, k), device="cuda", dtype=flow.float,).to(dtype)
-    key = flow.randn((b, 1, h, k), device="cuda", dtype=flow.float,).to(dtype)
-    value = flow.randn((b, 1, h, k), device="cuda", dtype=flow.float,).to(dtype)
+    past_key = flow.randn((b, past_m, h, k), device="cuda", dtype=flow.float,).to(dtype)
+    past_value = flow.randn((b, past_m, h, k), device="cuda", dtype=flow.float,).to(
+        dtype
+    )
+    key = flow.randn((b, m, h, k), device="cuda", dtype=flow.float,).to(dtype)
+    value = flow.randn((b, m, h, k), device="cuda", dtype=flow.float,).to(dtype)
 
     (
         fused_concated_key,
@@ -152,7 +154,7 @@ def _test_fused_attention_concat_past_key_value(
         past_value_layout=past_value_layout,
         key=_to_layout([key, key, value], key_layout, 1),
         key_layout=key_layout,
-        value=_to_layout([key, key, value], key_layout, 2),
+        value=_to_layout([key, key, value], value_layout, 2),
         value_layout=value_layout,
         key_head_size=k,
     )
@@ -475,10 +477,10 @@ class TestFusedAttentionConcatPastKeyValue(flow.unittest.TestCase):
                 test_case,
                 dtype,
                 2,
-                256,
+                128,
                 1,
                 8,
-                128,
+                256,
                 past_key_layout=past_key_layout,
                 past_value_layout=past_value_layout,
                 key_layout=key_layout,
@@ -488,10 +490,10 @@ class TestFusedAttentionConcatPastKeyValue(flow.unittest.TestCase):
                 test_case,
                 dtype,
                 2,
-                256,
-                8,
-                8,
                 128,
+                8,
+                8,
+                256,
                 past_key_layout=past_key_layout,
                 past_value_layout=past_value_layout,
                 key_layout=key_layout,

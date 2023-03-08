@@ -382,6 +382,7 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
                  &past_v_m, &past_v_h, &past_v_k));
   CHECK_EQ_OR_RETURN(past_v_b, past_k_b);
   CHECK_EQ_OR_RETURN(past_v_m, past_k_m);
+  CHECK_EQ_OR_RETURN(past_v_k, past_k_k);
 
   const Shape& key_shape = ctx->InputShape("key", 0);
   const std::string& key_layout = ctx->Attr<std::string>("key_layout");
@@ -401,6 +402,7 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   JUST(ParseDims(value_shape, value_layout, past_k_h, Optional<int64_t>(), &v_b, &v_m, &v_h, &v_k));
   CHECK_EQ_OR_RETURN(v_b, past_k_b);
   CHECK_EQ_OR_RETURN(v_m, k_m);
+  CHECK_EQ_OR_RETURN(v_k, past_k_k);
 
   ctx->SetOutputShape(
       "output_key", 0,
