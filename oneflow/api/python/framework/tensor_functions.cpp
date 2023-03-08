@@ -794,7 +794,7 @@ static PyObject* PyTensorObject_to_global(PyObject* self, PyObject* args, PyObje
   if (tensor->is_global())
     result = PyTensorObject_global_to_global(self, args, kwargs);
   else {
-    result = PyTensorObject_local_to_global(self, args, kwargs); 
+    result = PyTensorObject_local_to_global(self, args, kwargs);
   }
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
