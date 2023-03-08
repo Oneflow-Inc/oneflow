@@ -2426,9 +2426,6 @@ class ScalarBitwiseAndFunctor : public ScalarBitwiseBaseFunctor<false> {
 class ScalarBitwiseAndInplaceFunctor : public ScalarBitwiseBaseFunctor<true> {
  public:
   ScalarBitwiseAndInplaceFunctor() : ScalarBitwiseBaseFunctor(/*op_name=*/"scalar_bitwise_and") {}
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
-    return ScalarBitwiseBaseFunctor::operator()(x, scalar);
-  }
 };
 
 class ScalarBitwiseAnd2Functor {
@@ -2441,6 +2438,11 @@ class ScalarBitwiseAnd2Functor {
 class ScalarBitwiseOrFunctor : public ScalarBitwiseBaseFunctor<false> {
  public:
   ScalarBitwiseOrFunctor() : ScalarBitwiseBaseFunctor(/*op_name=*/"scalar_bitwise_or") {}
+};
+
+class ScalarBitwiseOrInplaceFunctor : public ScalarBitwiseBaseFunctor<true> {
+ public:
+  ScalarBitwiseOrInplaceFunctor() : ScalarBitwiseBaseFunctor(/*op_name=*/"scalar_bitwise_or") {}
 };
 
 class ScalarBitwiseOr2Functor {
@@ -4237,6 +4239,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ScalarBitwiseAndInplaceFunctor, impl::ScalarBitwiseAnd2Functor>(
       "ScalarBitwiseAndInplace");
   m.add_functor<impl::ScalarBitwiseOrFunctor, impl::ScalarBitwiseOr2Functor>("ScalarBitwiseOr");
+  m.add_functor<impl::ScalarBitwiseOrInplaceFunctor, impl::ScalarBitwiseOr2Functor>(
+      "ScalarBitwiseOrInplace");
   m.add_functor<impl::ScalarBitwiseXorFunctor, impl::ScalarBitwiseXor2Functor>("ScalarBitwiseXor");
 };
 

@@ -393,5 +393,9 @@ Tensor class reference
     Tensor.bitwise_and
     Tensor.bitwise_and_
     Tensor.bitwise_or
+    Tensor.bitwise_or_
     Tensor.bitwise_xor
+    Tensor.bitwise_xor_
+    Tensor.bitwise_not
+    Tensor.bitwise_not_
     Tensor.baddbmm

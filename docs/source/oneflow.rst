@@ -278,8 +278,11 @@ Pointwise Ops
     bitwise_and
     bitwise_and_
     bitwise_or
+    bitwise_or_
     bitwise_xor
+    bitwise_xor_
     bitwise_not
+    bitwise_not_
     mish
     mul 
     neg 

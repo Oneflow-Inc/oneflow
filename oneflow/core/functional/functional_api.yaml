@@ -207,6 +207,15 @@
     ]
   bind_python: true
 
+- name: "bitwise_or_"
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => BroadcastBitwiseOrInplace",
+      "Tensor (Tensor input, Scalar other) => ScalarBitwiseOrInplace",
+      "Tensor (Scalar input, Tensor other) => ScalarBitwiseOrInplace",
+    ]
+  bind_python: true
+
 - name: "bitwise_xor"
   signature:
     [
