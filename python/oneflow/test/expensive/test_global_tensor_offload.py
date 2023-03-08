@@ -22,6 +22,7 @@ import numpy as np
 from oneflow.test_utils.automated_test_util import *
 
 import oneflow as flow
+import oneflow.nn as nn
 import oneflow.unittest
 
 # NOTE(Li Xiang): This variable controls the mem comparison method of the tensor offload test.
@@ -194,6 +195,54 @@ class TestGlobalTensorOffload(flow.unittest.TestCase):
                 elif offload_tensor_test_mem_mode == 3:
                     print("cpu mem change value:", cur_used - after_used)
                 test_case.assertEqual(before_id, after_id)
+
+    @globaltest
+    @flow.unittest.skip_unless_1n2d()
+    def test_global_param_offload_and_load(test_case):
+        def load_eager_model(model):
+            for param in model.parameters():
+                if param.is_offloaded():
+                    param.load()
+                    test_case.assertTrue(not param.is_offloaded())
+
+        def offload_eager_model(model):
+            for param in model.parameters():
+                if not param.is_offloaded():
+                    param.offload()
+                    test_case.assertTrue(param.is_offloaded())
+
+        class Model(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.n_layer = 1
+
+                layer_list = list()
+
+                for _ in range(self.n_layer):
+                    layer_list.append(nn.Linear(768, 4096))
+
+                self.layers = nn.Sequential(*layer_list)
+
+            def forward(self, x):
+                return self.layers(x)
+
+        placement = flow.placement("cuda", ranks=[0, 1])
+        model0 = Model().cuda()
+        model0.to_global(placement=placement, sbp=flow.sbp.broadcast)
+        BZ = 128
+        dataset = [flow.rand((BZ, 768), dtype=flow.float32) for _ in range(128)]
+
+        with flow.no_grad():
+            for idx, x in enumerate(dataset):
+                print(f"iter {idx} begin")
+                x = x.cuda()
+                x = x.to_global(placement=placement, sbp=flow.sbp.broadcast)
+                load_eager_model(model0)
+                y0 = model0(x)
+                offload_eager_model(model0)
+                print(f"iter {idx} end")
+                if idx == 1:
+                    break
 
 
 if __name__ == "__main__":
