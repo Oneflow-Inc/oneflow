@@ -51,7 +51,7 @@ class ParamGroup(object):
         module = default_options.pop("module", None)
         if parameters.get("module", None):
             module = parameters["module"]
-        
+
         self._options = deepcopy(default_options)
         # rewrite options in default_options
         for key in self._options:
