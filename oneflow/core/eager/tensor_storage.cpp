@@ -41,13 +41,18 @@ TensorStorage::TensorStorage(bool is_allocated_in_vm, Symbol<Device> device)
 
 Symbol<Device> TensorStorage::device() const { return device_; }
 
-void TensorStorage::_Release() {
+TensorStorage::~TensorStorage() {
   for (const auto& hook : storage_delete_hooks_) { hook(); }
+}
+
+void TensorStorage::_Release() {
   non_pod_allocator_.reset();
   blob_dptr_.reset();
 }
 
-void TensorStorage::Release() { return _Release(); }
+void TensorStorage::Release() {
+  return _Release();
+}
 
 Maybe<void> TensorStorage::init_producer_stream(Symbol<::oneflow::Stream> producer_stream) {
   CHECK_OR_RETURN(!producer_stream_.has_value());

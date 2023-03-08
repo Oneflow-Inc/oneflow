@@ -42,7 +42,7 @@ class ZeroLikeKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("zero_like").SetCreateFn<ZeroLikeKernel>().SetIsMatchedHob(user_op::HobTrue());
+REGISTER_USER_KERNEL("zero_like").SetCreateFn<ZeroLikeKernel>();
 
 }  // namespace
 

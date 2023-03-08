@@ -36,7 +36,7 @@ class TensorStorage {
   explicit TensorStorage(bool is_allocated_in_vm, Symbol<Device> device);
   OF_DISALLOW_COPY_AND_MOVE(TensorStorage);
 
-  virtual ~TensorStorage() = default;
+  virtual ~TensorStorage();
 
   bool is_allocated_in_vm() const { return is_allocated_in_vm_; }
 

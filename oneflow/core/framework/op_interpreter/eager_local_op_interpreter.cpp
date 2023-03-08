@@ -245,13 +245,20 @@ Maybe<TensorTuple> Broadcast(const TensorTuple& inputs, int64_t src_rank,
 namespace {
 
 Maybe<Tensor> GetSyncedTensorIfBroadcast(const std::shared_ptr<Tensor>& tensor,
-                                         Symbol<ParallelDesc> parallel_desc, Symbol<NdSbp> nd_sbp) {
+                                         Symbol<ParallelDesc> parallel_desc, Symbol<NdSbp> nd_sbp,
+                                         bool inplace) {
   Optional<int64_t> parallel_id;
   JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
   if (!parallel_id.has_value()) { return tensor; }
   const auto& broadcast_parallel_desc = JUST(GetBroadcastSubParallelDesc(parallel_desc, nd_sbp));
   int64_t root = JUST(broadcast_parallel_desc->MachineId4ParallelId(0));
-  return Broadcast(tensor, root, broadcast_parallel_desc, false);
+  if (broadcast_parallel_desc->parallel_num() > 1 && inplace && GlobalProcessCtx::Rank() == 0) {
+    LOG_FIRST_N(WARNING, 1)
+        << "Casting a local tensor to a global tensor with Broadcast sbp will modify the data of "
+           "input! "
+           "If you want to keep the input local tensor unchanged, please set the arg copy to True.";
+  }
+  return Broadcast(tensor, root, broadcast_parallel_desc, inplace);
 }
 
 Maybe<Shape> CalcPhysicalShape(Symbol<GlobalTensorMeta> global_tensor_meta) {
@@ -346,7 +353,9 @@ Maybe<void> EagerLocalInterpreter::ApplyImpl(const LocalToGlobalOpExpr& op_expr,
     const auto& reshaped_tensor = JUST(TryReshapeTensor(local_tensor, tensor_meta));
     std::shared_ptr<Tensor> synced_tensor = reshaped_tensor;
     if (sync_data) {
-      synced_tensor = JUST(GetSyncedTensorIfBroadcast(reshaped_tensor, parallel_desc, nd_sbp));
+      bool inplace = JUST(ctx.attrs.GetAttr<bool>("inplace_when_sync_data"));
+      synced_tensor =
+          JUST(GetSyncedTensorIfBroadcast(reshaped_tensor, parallel_desc, nd_sbp, inplace));
     }
     auto* global_tensor_impl = reinterpret_cast<EagerGlobalTensorImpl*>(global_tensor->mut_impl());
     CHECK_NOTNULL_OR_RETURN(global_tensor_impl);
