@@ -256,6 +256,7 @@ from oneflow._C import (
     bitwise_or,
     bitwise_or_,
     bitwise_xor,
+    bitwise_xor_,
     bitwise_not,
 )
 

@@ -2457,6 +2457,11 @@ class ScalarBitwiseXorFunctor : public ScalarBitwiseBaseFunctor<false> {
   ScalarBitwiseXorFunctor() : ScalarBitwiseBaseFunctor(/*op_name=*/"scalar_bitwise_xor") {}
 };
 
+class ScalarBitwiseXorInplaceFunctor : public ScalarBitwiseBaseFunctor<true> {
+ public:
+  ScalarBitwiseXorInplaceFunctor() : ScalarBitwiseBaseFunctor(/*op_name=*/"scalar_bitwise_xor") {}
+};
+
 class ScalarBitwiseXor2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
@@ -4242,6 +4247,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ScalarBitwiseOrInplaceFunctor, impl::ScalarBitwiseOr2Functor>(
       "ScalarBitwiseOrInplace");
   m.add_functor<impl::ScalarBitwiseXorFunctor, impl::ScalarBitwiseXor2Functor>("ScalarBitwiseXor");
+  m.add_functor<impl::ScalarBitwiseXorInplaceFunctor, impl::ScalarBitwiseXor2Functor>(
+      "ScalarBitwiseXorInplace");
 };
 
 }  // namespace functional
