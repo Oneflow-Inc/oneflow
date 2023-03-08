@@ -663,6 +663,12 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
     // corresponding iterator. But it is not recommended. If std::set do have problem, we may need
     // to implement our own set. Or we find out the problematic version of std and make it clear to
     // the users that we do not support that version.
+    // We may be able to reproduce the bug in the commit 0c06021c7e48d2e84d20e555e4f4dfbaf04a5e7b
+    // by running
+    // ONEFLOW_LAZY_COMPILE_MODE="rank_per_thread" ONEFLOW_TEST_DEVICE_NUM=4 python3 -m
+    // oneflow.distributed.launch --nproc_per_node 4 -m unittest discover . --failfast --verbose
+    // under the path oneflow/python/oneflow/test/graph
+    // We still need to delete the file test_alexnet_auto_parallel.py before running the command.
     return it;
   };
 
