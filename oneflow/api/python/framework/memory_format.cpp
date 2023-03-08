@@ -39,7 +39,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
             return CHECK_JUST(MemoryFormat::Get(MemoryFormatType(t)));
           }))
       .def("get", [](const int memory_format_type_enum) {
-        return CHECK_JUST(MemoryFormat::Get(static_cast<MemoryFormatType>(memory_format_type_enum)));
+        return CHECK_JUST(
+            MemoryFormat::Get(static_cast<MemoryFormatType>(memory_format_type_enum)));
       });
 
   m.attr("contiguous_format") = &CHECK_JUST(MemoryFormat::Get(MemoryFormatType::kContiguous));

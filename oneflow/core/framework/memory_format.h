@@ -26,24 +26,28 @@ enum MemoryFormatType : int {
   kPreserve,
 };
 
-#define MEMORY_FORMAT_SEQ \
-OF_PP_MAKE_TUPLE_SEQ(Contiguous) \
-OF_PP_MAKE_TUPLE_SEQ(Preserve)
+#define MEMORY_FORMAT_SEQ          \
+  OF_PP_MAKE_TUPLE_SEQ(Contiguous) \
+  OF_PP_MAKE_TUPLE_SEQ(Preserve)
 
 class MemoryFormat final {
  public:
   MemoryFormat(const MemoryFormat&) = default;
   MemoryFormat(MemoryFormat&&) = delete;
-  explicit MemoryFormat(MemoryFormatType memory_format_type) : memory_format_type_(memory_format_type) {}
+  explicit MemoryFormat(MemoryFormatType memory_format_type)
+      : memory_format_type_(memory_format_type) {}
   ~MemoryFormat() = default;
 
-  bool operator==(const MemoryFormat& other) const { return this->memory_format_type() == other.memory_format_type(); }
+  bool operator==(const MemoryFormat& other) const {
+    return this->memory_format_type() == other.memory_format_type();
+  }
 
   const std::string& name() const;
 
   MemoryFormatType memory_format_type() const { return memory_format_type_; }
   static Maybe<const Symbol<MemoryFormat>&> Get(MemoryFormatType);
-#define DECLARE_GET_MEMORY_FORMAT_TYPE_FUNCTION(memory_format_type) static const Symbol<MemoryFormat>& memory_format_type();
+#define DECLARE_GET_MEMORY_FORMAT_TYPE_FUNCTION(memory_format_type) \
+  static const Symbol<MemoryFormat>& memory_format_type();
   OF_PP_FOR_EACH_TUPLE(DECLARE_GET_MEMORY_FORMAT_TYPE_FUNCTION, MEMORY_FORMAT_SEQ)
 #undef DECLARE_GET_MEMORY_FORMAT_TYPE_FUNCTION
 
