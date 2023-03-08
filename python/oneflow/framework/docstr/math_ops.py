@@ -548,7 +548,7 @@ add_docstr(
         >>> x = flow.tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
         >>> y = flow.exp2(x)
         >>> y
-        tensor([ 2.7183,  7.3891, 20.0855], dtype=oneflow.float32)
+        tensor([2., 4., 8.], dtype=oneflow.float32)
 
     """,
 )

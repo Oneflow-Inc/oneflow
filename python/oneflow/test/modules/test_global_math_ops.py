@@ -176,6 +176,7 @@ class TestMathOps(flow.unittest.TestCase):
         ndim = random(1, 3).to(int).value()
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=ndim):
+                
                 _test_sinh(test_case, placement, sbp, ndim)
                 _test_sin(test_case, placement, sbp, ndim)
                 _test_inplace_sin(test_case, placement, sbp, ndim)
@@ -183,6 +184,7 @@ class TestMathOps(flow.unittest.TestCase):
                 _test_log(test_case, placement, sbp, ndim)
                 _test_sqrt(test_case, placement, sbp, ndim)
                 _test_exp(test_case, placement, sbp, ndim)
+                _test_exp2(test_case, placement, sbp,ndim)
                 _test_rsqrt(test_case, placement, sbp, ndim)
                 _test_square(test_case, placement, sbp, ndim)
                 _test_pow_with_scalar(test_case, placement, sbp, ndim)
