@@ -369,6 +369,9 @@ class Module(object):
         Note that only parameters and buffers of `self` or its children are
         guaranteed to exist in `state_dict`. The hooks may modify `state_dict`
         inplace or return a new one.
+
+        .. note:
+            Do not use `module.state_dict()` in _register_state_dict_hook function
         """
         handle = flow.utils.hooks.RemovableHandle(self._state_dict_hooks)
         self._state_dict_hooks[handle.id] = hook
@@ -1052,7 +1055,7 @@ class Module(object):
         if destination is None:
             destination = OrderedDict()
             destination._metadata = OrderedDict()
-        
+
         # TODO(hujiakui): add _version for nn.Module
         destination._metadata[prefix[:-1]] = local_metadata = dict(version=1)
         self._save_to_state_dict(destination, prefix, keep_vars)
