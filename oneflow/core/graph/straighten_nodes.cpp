@@ -652,9 +652,11 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
     auto it = set.find(element);
     // NOTE: In some cases, the set can not find this element
     // Tested in machine-16:
-    // Deleting: 0x7f75041d64c0, size: 4: 0x7f75040d7390, 0x7f7504384540, 0x7f75042bc410,
-    // 0x7f75041d64c0, Find: 0x4
-    if (*it != element) {
+    // Deleting: 0x7f75041d64c0, size: 4:
+    // 0x7f75041d64c0, 0x7f75040d7390, 0x7f7504384540, 0x7f75042bc410,
+    // Find: 0x4
+    // Or it may have the chance to delete multiple elements while deleting one element.
+    if (it == set.end() || *it != element) {
       for (auto it_traverse = set.begin(); it_traverse != set.end(); ++it_traverse) {
         if (*it_traverse == element) { return it_traverse; }
       }
