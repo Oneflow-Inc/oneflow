@@ -209,10 +209,6 @@ def _new_full(
 
 
 
-def _mv(self, vec):
-    return flow._C.matrix_vector_product(self, vec)
-
-
 def _argsort(self, dim=-1, descending=None):
     return flow.argsort(self, dim=dim, descending=descending)
 
@@ -600,7 +596,6 @@ def RegisterMethods():
     Tensor.new_tensor = _new_tensor
     Tensor.cumsum = _cumsum
     Tensor.cumprod = _cumprod
-    Tensor.mv = _mv
     Tensor.inverse = _inv
     Tensor.trunc = _trunc
     Tensor.cross = _cross

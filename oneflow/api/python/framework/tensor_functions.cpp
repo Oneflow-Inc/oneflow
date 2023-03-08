@@ -333,6 +333,8 @@ DIRECT_PASS_FUNC(PyTensorObject_bitwise_xor, functional::bitwise_xor)
 DIRECT_PASS_FUNC(PyTensorObject_baddbmm, functional::baddbmm)
 DIRECT_PASS_FUNC(PyTensorObject_mm, functional::mm)
 DIRECT_PASS_FUNC(PyTensorObject_sub, functional::sub)
+DIRECT_PASS_FUNC(PyTensorObject_mv, functional::matrix_vector_product)
+DIRECT_PASS_FUNC(PyTensorObject_fill, functional::fill_)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
@@ -1085,6 +1087,8 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"baddbmm", (PyCFunction)PyTensorObject_baddbmm, METH_VARARGS | METH_KEYWORDS, NULL},
     {"mm", (PyCFunction)PyTensorObject_mm, METH_VARARGS | METH_KEYWORDS, NULL},
     {"sub", (PyCFunction)PyTensorObject_sub, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"mv", (PyCFunction)PyTensorObject_mv, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"fill", (PyCFunction)PyTensorObject_fill, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},
