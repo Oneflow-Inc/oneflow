@@ -439,6 +439,7 @@ class TestFusedMultiHeadAttentionInference(flow.unittest.TestCase):
                 output_layout=output_layout,
             )
 
+
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestFusedAttentionConcatPastKeyValue(flow.unittest.TestCase):
@@ -450,16 +451,16 @@ class TestFusedAttentionConcatPastKeyValue(flow.unittest.TestCase):
             "BHMK",
             "MB(HK)",
             "BM(H3K)",
-           # "BM(H2K)",
-           # "MB(H3K)",
+            # "BM(H2K)",
+            # "MB(H3K)",
             "MB(H2K)",
         ]
 
         past_layouts = [
             "BM(HK)",
             "BMHK",
-           # "MBHK",
-           # "BHMK",
+            # "MBHK",
+            # "BHMK",
             "MB(HK)",
         ]
 
