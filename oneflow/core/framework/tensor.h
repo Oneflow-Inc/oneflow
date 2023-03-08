@@ -435,10 +435,15 @@ class ProxyTensor : public TensorIf<DerivedT> {
     return Maybe<void>::Ok();
   }
 
-  virtual Maybe<void> offload() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  virtual Maybe<void> load() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
-
-  Maybe<bool> is_offloaded() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  virtual Maybe<void> offload() override {
+    JUST(tensor_->offload());
+    return Maybe<void>::Ok();
+  }
+  virtual Maybe<void> load() override {
+    JUST(tensor_->load());
+    return Maybe<void>::Ok();
+  }
+  Maybe<bool> is_offloaded() const override { return JUST(tensor_->is_offloaded()); }
 
   virtual Maybe<LocalTensor> AsLocalTensor() override {
     if (const auto& local_tensor = std::dynamic_pointer_cast<LocalTensor>(tensor_)) {
