@@ -1082,7 +1082,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"bitwise_or", (PyCFunction)PyTensorObject_bitwise_or, METH_VARARGS | METH_KEYWORDS, NULL},
     {"bitwise_xor", (PyCFunction)PyTensorObject_bitwise_xor, METH_VARARGS | METH_KEYWORDS, NULL},
     {"baddbmm", (PyCFunction)PyTensorObject_baddbmm, METH_VARARGS | METH_KEYWORDS, NULL},
-    {"mm", (PyCFunction)PyTensorObjectmm, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"mm", (PyCFunction)PyTensorObject_mm, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},
