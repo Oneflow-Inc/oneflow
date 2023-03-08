@@ -761,11 +761,11 @@ class FusedRotaryEmbeddingFunctor {
  public:
   FusedRotaryEmbeddingFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("fused_rotary_embedding")
-                                            .Input("x")
-                                            .Input("cos")
-                                            .Input("sin")
-                                            .Output("out")
-                                            .Build());
+                         .Input("x")
+                         .Input("cos")
+                         .Input("sin")
+                         .Output("out")
+                         .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& cos,
@@ -779,28 +779,36 @@ class FusedRotaryEmbeddingFunctor {
     */
 
     CHECK_EQ_OR_RETURN(cos->shape()->NumAxes(), 2)
-      << Error::RuntimeError() << "The number of dimensions of cos should be equal to 2.";
+        << Error::RuntimeError() << "The number of dimensions of cos should be equal to 2.";
     CHECK_EQ_OR_RETURN(sin->shape()->NumAxes(), 2)
-      << Error::RuntimeError() << "The number of dimensions of sin should be equal to 2.";
+        << Error::RuntimeError() << "The number of dimensions of sin should be equal to 2.";
 
     CHECK_OR_RETURN(cos->shape() == sin->shape())
-      << Error::RuntimeError() << "Each dimension of cos & sin should be the same.";
-    
+        << Error::RuntimeError() << "Each dimension of cos & sin should be the same.";
+
     if (x->shape()->NumAxes() == 3) {
       if (layout == "BM(HK)") {
         CHECK_EQ_OR_RETURN(cos->shape()->At(0), x->shape()->At(1))
-          << Error::RuntimeError() << "If layout == BM(HK), the 2nd dimension of x should be equal to 1st dimension of cos & sin.";
+            << Error::RuntimeError()
+            << "If layout == BM(HK), the 2nd dimension of x should be equal to 1st dimension of "
+               "cos & sin.";
         CHECK_EQ_OR_RETURN(x->shape()->At(2) % cos->shape()->At(1), 0)
-          << Error::RuntimeError() << "If layout == BM(HK), the 3rd dimension of x MOD 2st dimension of cos & sin should be 0.";
+            << Error::RuntimeError()
+            << "If layout == BM(HK), the 3rd dimension of x MOD 2st dimension of cos & sin should "
+               "be 0.";
       } else {
         UNIMPLEMENTED_THEN_RETURN() << "Not Supported layout of 3-dim x, could be BM(HK)";
       }
     } else if (x->shape()->NumAxes() == 4) {
       if (layout == "BHMK") {
         CHECK_EQ_OR_RETURN(cos->shape()->At(0), x->shape()->At(2))
-          << Error::RuntimeError() << "If layout == BHMK, the 3rd dimension of x should be equal to 1st dimension of cos & sin.";
+            << Error::RuntimeError()
+            << "If layout == BHMK, the 3rd dimension of x should be equal to 1st dimension of cos "
+               "& sin.";
         CHECK_EQ_OR_RETURN(cos->shape()->At(1), x->shape()->At(3))
-          << Error::RuntimeError() << "If layout == BHMK, the 4th dimension of x should be equal to 2nd dimension of cos & sin.";
+            << Error::RuntimeError()
+            << "If layout == BHMK, the 4th dimension of x should be equal to 2nd dimension of cos "
+               "& sin.";
       } else {
         UNIMPLEMENTED_THEN_RETURN() << "Not Supported layout of 4-dim x, could be BHMK";
       }
@@ -808,8 +816,7 @@ class FusedRotaryEmbeddingFunctor {
       UNIMPLEMENTED_THEN_RETURN() << "Not Supported num_dims of x, should be 3 or 4.";
     }
 
-    auto& attrs =
-        THREAD_CACHED_MUTABLE_ATTR_MAP("layout");
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("layout");
     attrs.SetAllAttrs(layout);
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, cos, sin}, attrs);
