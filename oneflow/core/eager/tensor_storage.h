@@ -53,7 +53,6 @@ class TensorStorage {
     last_used_stream_ = last_used_stream;
   }
 
-  void _Release();
   virtual void Release();
 
   void RegisterStorageDeleteHook(const std::function<void()>& hook) {
