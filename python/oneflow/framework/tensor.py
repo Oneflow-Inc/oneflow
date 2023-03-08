@@ -212,9 +212,6 @@ def _new_full(
     )
 
 
-def _mm(self, mat2):
-    return flow._C.mm(self, mat2)
-
 
 def _mv(self, vec):
     return flow._C.matrix_vector_product(self, vec)
@@ -589,7 +586,6 @@ def RegisterMethods():
     Tensor.squeeze_ = _squeeze_inplace
     Tensor.unsqueeze_ = _unsqueeze_inplace
     Tensor.where = _where
-    Tensor.mm = _mm
     Tensor.norm = _norm
     Tensor.repeat = _repeat
     Tensor.repeat_interleave = _repeat_interleave

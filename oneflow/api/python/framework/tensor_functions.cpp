@@ -331,6 +331,7 @@ DIRECT_PASS_FUNC(PyTensorObject_bitwise_and, functional::bitwise_and)
 DIRECT_PASS_FUNC(PyTensorObject_bitwise_or, functional::bitwise_or)
 DIRECT_PASS_FUNC(PyTensorObject_bitwise_xor, functional::bitwise_xor)
 DIRECT_PASS_FUNC(PyTensorObject_baddbmm, functional::baddbmm)
+DIRECT_PASS_FUNC(PyTensorObject_mm, functional::mm)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
@@ -786,9 +787,9 @@ static PyObject* PyTensorObject_to_global(PyObject* self, PyObject* args, PyObje
   PyObject* result = NULL;
   if (tensor->is_global())
     result = PyTensorObject_global_to_global(self, args, kwargs);
-  else {
-    result = PyTensorObject_local_to_global(self, args, kwargs);
-  }
+  else { 
+    result = PyTensorObject_local_to_global(self, args, kwargs); 
+    }
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
 
@@ -1054,7 +1055,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"unbind", (PyCFunction)PyTensorObject_unbind, METH_VARARGS | METH_KEYWORDS, NULL},
     {"squeeze", (PyCFunction)PyTensorObject_squeeze, METH_VARARGS | METH_KEYWORDS, NULL},
     {"swapaxes", (PyCFunction)PyTensorObject_swapaxes, METH_VARARGS | METH_KEYWORDS, NULL},
-    {"amax", (PyCFunction)PyTensorObject_amax, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"amax", (PyCFunction)PyTensorObject_amax, METH_VARARGS | METH_KEYWORDS, NULL}, 
     {"swapdims", (PyCFunction)PyTensorObject_swapdims, METH_VARARGS | METH_KEYWORDS, NULL},
     {"unfold", (PyCFunction)PyTensorObject_unfold, METH_VARARGS | METH_KEYWORDS, NULL},
     {"unsqueeze", (PyCFunction)PyTensorObject_unsqueeze, METH_VARARGS | METH_KEYWORDS, NULL},
@@ -1081,6 +1082,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"bitwise_or", (PyCFunction)PyTensorObject_bitwise_or, METH_VARARGS | METH_KEYWORDS, NULL},
     {"bitwise_xor", (PyCFunction)PyTensorObject_bitwise_xor, METH_VARARGS | METH_KEYWORDS, NULL},
     {"baddbmm", (PyCFunction)PyTensorObject_baddbmm, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"mm", (PyCFunction)PyTensorObjectmm, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},
