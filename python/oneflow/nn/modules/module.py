@@ -1057,7 +1057,9 @@ class Module(object):
             destination._metadata = OrderedDict()
 
         # TODO(hujiakui): add _version for nn.Module
-        destination._metadata[prefix[:-1]] = local_metadata = dict(version=1)
+        local_metadata = dict(version=1)
+        if hasattr(destination, "_metadata"):
+            destination._metadata[prefix[:-1]] = local_metadata
         self._save_to_state_dict(destination, prefix, keep_vars)
         for (name, module) in self._modules.items():
             if module is not None:
