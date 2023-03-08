@@ -1052,6 +1052,9 @@ class Module(object):
         if destination is None:
             destination = OrderedDict()
             destination._metadata = OrderedDict()
+        
+        # TODO(hujiakui): add _version for nn.Module
+        destination._metadata[prefix[:-1]] = local_metadata = dict(version=1)
         self._save_to_state_dict(destination, prefix, keep_vars)
         for (name, module) in self._modules.items():
             if module is not None:
