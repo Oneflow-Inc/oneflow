@@ -328,6 +328,7 @@ DIRECT_PASS_FUNC(PyTensorObject_broadcast_to, functional::broadcast_to)
 DIRECT_PASS_FUNC(PyTensorObject_unique, functional::unique)
 DIRECT_PASS_FUNC(PyTensorObject_topk, functional::topk)
 DIRECT_PASS_FUNC(PyTensorObject_bitwise_and, functional::bitwise_and)
+DIRECT_PASS_FUNC(PyTensorObject_bitwise_and_, functional::bitwise_and_)
 DIRECT_PASS_FUNC(PyTensorObject_bitwise_or, functional::bitwise_or)
 DIRECT_PASS_FUNC(PyTensorObject_bitwise_xor, functional::bitwise_xor)
 DIRECT_PASS_FUNC(PyTensorObject_baddbmm, functional::baddbmm)
@@ -1078,6 +1079,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"unique", (PyCFunction)PyTensorObject_unique, METH_VARARGS | METH_KEYWORDS, NULL},
     {"topk", (PyCFunction)PyTensorObject_topk, METH_VARARGS | METH_KEYWORDS, NULL},
     {"bitwise_and", (PyCFunction)PyTensorObject_bitwise_and, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"bitwise_and_", (PyCFunction)PyTensorObject_bitwise_and_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"bitwise_or", (PyCFunction)PyTensorObject_bitwise_or, METH_VARARGS | METH_KEYWORDS, NULL},
     {"bitwise_xor", (PyCFunction)PyTensorObject_bitwise_xor, METH_VARARGS | METH_KEYWORDS, NULL},
     {"baddbmm", (PyCFunction)PyTensorObject_baddbmm, METH_VARARGS | METH_KEYWORDS, NULL},
