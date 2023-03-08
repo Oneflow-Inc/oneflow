@@ -62,8 +62,7 @@ class HostScalarAddByTensorKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                     \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)      \
                        && (user_op::HobDataType("scalar", 0) == GetDataType<dtype>::value) \
-                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value))     \
-      .SetHostInput("scalar", 0);
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_CUDA_ARG_SORT_KERNEL(float)
 REGISTER_CUDA_ARG_SORT_KERNEL(double)

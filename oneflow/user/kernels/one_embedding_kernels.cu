@@ -1446,7 +1446,7 @@ class OneEmbeddingFusedLookupKernel final : public user_op::OpKernel {
 
 auto SingleDeviceKernel() {
   return hob::make_custom("SingleDeviceKernel", [](const user_op::KernelRegContext& ctx) {
-    return (ctx.parallel_num() == 1);
+    return (ctx.parallel_ctx().parallel_num() == 1);
   });
 }
 

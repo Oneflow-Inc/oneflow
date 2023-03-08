@@ -38,7 +38,6 @@ class KernelRegContext {
 
   virtual DeviceType device_type() const = 0;
   virtual const ParallelContext& parallel_ctx() const = 0;
-  virtual int64_t parallel_num() const { return parallel_ctx().parallel_num(); }
   virtual const TensorDesc* TensorDesc4ArgNameAndIndex(const std::string&, int32_t) const = 0;
 
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
@@ -71,9 +70,6 @@ constexpr int kKernelPriorityOptimized = 10;
 constexpr int kKernelPriorityExperimental = 100;
 
 struct OpKernelRegistryResult {
-  OpKernelRegistryResult() : has_host_memory_input(false) {}
-  ~OpKernelRegistryResult() = default;
-
   std::string op_type_name;
 
   OpKernelCreateFn create_fn;
@@ -82,8 +78,6 @@ struct OpKernelRegistryResult {
   InplaceProposalFn inplace_proposal_fn;
   IsMatchedHob is_matched_hob;
   int32_t priority = kKernelPriorityDefault;
-  bool has_host_memory_input;
-  std::vector<std::pair<std::string, int32_t>> host_memory_inputs;
 };
 
 class OpKernelRegistry final {
@@ -107,7 +101,6 @@ class OpKernelRegistry final {
 
   OpKernelRegistry& SetCreateFn(OpKernelCreateFn fn);
   OpKernelRegistry& SetPriority(int32_t priority);
-  OpKernelRegistry& SetHostInput(const std::string& arg_name, int32_t index);
 
  private:
   OpKernelRegistryResult result_;
