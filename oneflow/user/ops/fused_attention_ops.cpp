@@ -378,8 +378,8 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   int64_t past_v_m = 0;
   int64_t past_v_h = 0;
   int64_t past_v_k = 0;
-  JUST(ParseDims(past_value_shape, past_value_layout, past_k_h, Optional<int64_t>(), &past_v_b,
-                 &past_v_m, &past_v_h, &past_v_k));
+  JUST(ParseDims(past_value_shape, past_value_layout, past_k_h, past_k_k, &past_v_b, &past_v_m,
+                 &past_v_h, &past_v_k));
   CHECK_EQ_OR_RETURN(past_v_b, past_k_b);
   CHECK_EQ_OR_RETURN(past_v_m, past_k_m);
   CHECK_EQ_OR_RETURN(past_v_k, past_k_k);
@@ -390,7 +390,7 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   int64_t k_m = 0;
   int64_t k_h = 0;
   int64_t k_k = 0;
-  JUST(ParseDims(key_shape, key_layout, past_k_h, key_head_size, &k_b, &k_m, &k_h, &k_k));
+  JUST(ParseDims(key_shape, key_layout, past_k_h, past_k_k, &k_b, &k_m, &k_h, &k_k));
   CHECK_EQ_OR_RETURN(k_b, past_k_b);
 
   const Shape& value_shape = ctx->InputShape("value", 0);
@@ -399,7 +399,7 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   int64_t v_m = 0;
   int64_t v_h = 0;
   int64_t v_k = 0;
-  JUST(ParseDims(value_shape, value_layout, past_k_h, Optional<int64_t>(), &v_b, &v_m, &v_h, &v_k));
+  JUST(ParseDims(value_shape, value_layout, past_k_h, past_k_k, &v_b, &v_m, &v_h, &v_k));
   CHECK_EQ_OR_RETURN(v_b, past_k_b);
   CHECK_EQ_OR_RETURN(v_m, k_m);
   CHECK_EQ_OR_RETURN(v_k, past_k_k);
