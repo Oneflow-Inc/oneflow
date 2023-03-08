@@ -336,6 +336,7 @@ DIRECT_PASS_FUNC(PyTensorObject_sub, functional::sub)
 DIRECT_PASS_FUNC(PyTensorObject_mv, functional::matrix_vector_product)
 DIRECT_PASS_FUNC(PyTensorObject_fill_, functional::fill_)
 DIRECT_PASS_FUNC(PyTensorObject_gather, functional::dim_gather)
+DIRECT_PASS_FUNC(PyTensorObject_repeat_interleave, functional::repeat_interleave)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
@@ -1091,6 +1092,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"mv", (PyCFunction)PyTensorObject_mv, METH_VARARGS | METH_KEYWORDS, NULL},
     {"fill_", (PyCFunction)PyTensorObject_fill_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"gather", (PyCFunction)PyTensorObject_gather, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"repeat_interleave", (PyCFunction)PyTensorObject_repeat_interleave, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},
