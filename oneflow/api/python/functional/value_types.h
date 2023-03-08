@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/dtype.h"
+#include "oneflow/core/framework/layout.h"
 
 namespace oneflow {
 class Scalar;
@@ -94,6 +95,7 @@ enum ValueType : int {
   kATTR_REF,
   kDTYPE,
   kSHAPE,
+  kLAYOUT,
   kSHAPE_MAYBE,
   kGENERATOR,
   kGENERATOR_REF,
@@ -151,6 +153,7 @@ VALUE_TYPE_OF_IMPL(one::TensorTuple, kTENSOR_TUPLE);
 VALUE_TYPE_OF_IMPL(std::shared_ptr<one::TensorTuple>, kTENSOR_TUPLE_REF);
 VALUE_TYPE_OF_IMPL(Maybe<one::TensorTuple>, kTENSOR_TUPLE_MAYBE);
 VALUE_TYPE_OF_IMPL(Symbol<DType>, kDTYPE);
+VALUE_TYPE_OF_IMPL(Symbol<Layout>, kLAYOUT);
 VALUE_TYPE_OF_IMPL(std::vector<Symbol<DType>>, kDTYPE_LIST);
 VALUE_TYPE_OF_IMPL(Shape, kSHAPE);
 VALUE_TYPE_OF_IMPL(Maybe<Shape>, kSHAPE_MAYBE);

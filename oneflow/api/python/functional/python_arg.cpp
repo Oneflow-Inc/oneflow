@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/extension/python/numpy.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/dtype.h"
+#include "oneflow/core/framework/layout.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/tensor.h"
@@ -117,6 +118,11 @@ INSTANCE_OBJECT_AS_SHARED_PTR(one::TensorTuple)
 template<>
 Symbol<DType> PythonArg::ObjectAs<Symbol<DType>>() const {
   return PyUnpackDType(object_);
+}
+
+template<>
+Symbol<Layout> PythonArg::ObjectAs<Symbol<Layout>>() const {
+  return PyUnpackLayout(object_);
 }
 
 template<>

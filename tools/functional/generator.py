@@ -50,6 +50,7 @@ types_allowed = {
     "PyObject*",
     "ShapeList",
     "DataTypeList",
+    "Layout",
 }
 
 mangled_name = {
@@ -84,6 +85,7 @@ mangled_name = {
     "PyObject*": "Pyo",
     "ShapeList": "Shl",
     "DataTypeList": "Dtl",
+    "Layout": "Lo",
 }
 
 generic_type_aliases = {
@@ -120,6 +122,7 @@ argument_type_aliases = {
     "PyObject*": "PyObject*",
     "ShapeList": "const std::vector<Shape>&",
     "DataTypeList": "const std::vector<Symbol<DType>>&",
+    "Layout": "const Symbol<Layout>&",
     **generic_type_aliases,
 }
 
@@ -148,6 +151,7 @@ optional_argument_type_aliases = {
     "PyObject*": "const Optional<PyObject*>&",
     "ShapeList": "const Optional<std::vector<Shape>>&",
     "DataTypeList": "const Optional<std::vector<Symbol<DType>>>&",
+    "Layout": "const Optional<Symbol<Layout>>&",
     **{k: "const Optional<{0}>&".format(v) for k, v in generic_type_aliases.items()},
 }
 
@@ -171,6 +175,7 @@ value_aliases = {
     "kFloat": "DType::Float()",
     "kDouble": "DType::Double()",
     "kBool": "DType::Bool()",
+    "kStrided": "Layout::Strided()",
 }
 
 
