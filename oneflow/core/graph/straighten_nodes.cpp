@@ -656,12 +656,13 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
     // 0x7f75041d64c0, 0x7f75040d7390, 0x7f7504384540, 0x7f75042bc410,
     // Find: 0x4
     // Or it may have the chance to delete multiple elements while deleting one element.
-    if (it == set.end() || *it != element) {
-      for (auto it_traverse = set.begin(); it_traverse != set.end(); ++it_traverse) {
-        if (*it_traverse == element) { return it_traverse; }
-      }
-      CHECK(false) << "The element " << element << " does not exist in the set!";
-    }
+    CHECK(it == set.end() || *it != element)
+        << " Something happens. If you make sure that the element exist in the set but you still "
+           "can not find that element, please report this issue to Oneflow Inc.";
+    // TODO: One simple resolution is to traverse all the elements in the set and find the
+    // corresponding iterator. But it is not recommended. If std::set do have problem, we may need
+    // to implement our own set. Or we find out the problematic version of std and make it clear to
+    // the users that we do not support that version.
     return it;
   };
 
