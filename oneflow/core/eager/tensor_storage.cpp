@@ -27,8 +27,11 @@ TensorStorage::TensorStorage(bool is_allocated_in_vm)
       last_used_stream_(NullOpt),
       is_allocated_in_vm_(is_allocated_in_vm) {}
 
-void TensorStorage::Release() {
+TensorStorage::~TensorStorage() {
   for (const auto& hook : storage_delete_hooks_) { hook(); }
+}
+
+void TensorStorage::Release() {
   non_pod_allocator_.reset();
   blob_dptr_.reset();
 }
