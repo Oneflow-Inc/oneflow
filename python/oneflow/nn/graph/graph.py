@@ -808,7 +808,8 @@ class Graph(object):
 
     def _compile(self, *args, **kwargs):
         if (
-            isinstance(args, (tuple, list))
+            len(args) != 0
+            and isinstance(args, (tuple, list))
             and len(kwargs) == 0
             and all(isinstance(arg, Tensor) for arg in args)
         ):
@@ -1641,9 +1642,9 @@ class Graph(object):
                     arg_value, None, io_type, arg.prefix() + "_" + arg.name(),
                 )
 
-        if self._is_simple_tuple_output:
+        if self._is_simple_tuple_output or self._is_simple_tuple_input:
             args_tree = ArgsTree(args, False)
-            out = args_tree.map_tuple_leaf(mapping_tensor_or_none, True)
+            out = args_tree.map_tuple_leaf(mapping_tensor_or_none)
             return out, kwargs
 
         args_tree = ArgsTree(
