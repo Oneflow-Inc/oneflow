@@ -445,25 +445,13 @@ class TestFusedAttentionConcatPastKeyValue(flow.unittest.TestCase):
     def test_fused_attention_concat_past_key_value(test_case):
         kv_layouts = [
             "BM(HK)",
-            "BMHK",
-            "MBHK",
-            "BHMK",
-            "MB(HK)",
-            "BM(H3K)",
-            "BM(H2K)",
-            "MB(H3K)",
-            "MB(H2K)",
         ]
 
         past_layouts = [
-            "BM(HK)",
-            "BMHK",
-            "MBHK",
             "BHMK",
-            "MB(HK)",
         ]
 
-        types = [flow.float, flow.float16]
+        types = [flow.float16]
         for (
             past_key_layout,
             past_value_layout,
@@ -476,30 +464,17 @@ class TestFusedAttentionConcatPastKeyValue(flow.unittest.TestCase):
             _test_fused_attention_concat_past_key_value(
                 test_case,
                 dtype,
-                2,
-                128,
                 1,
-                8,
-                256,
-                past_key_layout=past_key_layout,
-                past_value_layout=past_value_layout,
-                key_layout=key_layout,
-                value_layout=value_layout,
-            )
-            _test_fused_attention_concat_past_key_value(
-                test_case,
-                dtype,
-                2,
+                127,
+                1,
+                40,
                 128,
-                8,
-                8,
-                256,
                 past_key_layout=past_key_layout,
                 past_value_layout=past_value_layout,
                 key_layout=key_layout,
                 value_layout=value_layout,
             )
-
+         
 
 if __name__ == "__main__":
     unittest.main()

@@ -34,6 +34,111 @@ namespace functional {
 
 namespace impl {
 
+namespace {
+
+Maybe<void> ParseDims(const std::string& name, const Shape& shape, const std::string& layout,
+                      const Optional<int64_t>& num_heads, const Optional<int64_t>& head_size,
+                      int64_t* b, int64_t* m, int64_t* h, int64_t* k) {
+  if (shape.NumAxes() == 3) {
+    if (layout == "BM(HK)" || layout == "MB(HK)" || layout == "BM(H2K)" || layout == "MB(H2K)"
+        || layout == "BM(H3K)" || layout == "MB(H3K)") {
+      int64_t packed_n = 0;
+      if (layout == "BM(HK)") {
+        *b = shape.At(0);
+        *m = shape.At(1);
+        packed_n = 1;
+      } else if (layout == "MB(HK)") {
+        *b = shape.At(1);
+        *m = shape.At(0);
+        packed_n = 1;
+      } else if (layout == "BM(H2K)") {
+        CHECK_NE_OR_RETURN(name, "query") << "query_layout should not be 'BM(H2K)'";
+        *b = shape.At(0);
+        *m = shape.At(1);
+        packed_n = 2;
+      } else if (layout == "MB(H2K)") {
+        CHECK_NE_OR_RETURN(name, "query") << "query_layout should not be 'MB(H2K)'";
+        *b = shape.At(1);
+        *m = shape.At(0);
+        packed_n = 2;
+      } else if (layout == "BM(H3K)") {
+        *b = shape.At(0);
+        *m = shape.At(1);
+        packed_n = 3;
+      } else if (layout == "MB(H3K)") {
+        *b = shape.At(1);
+        *m = shape.At(0);
+        packed_n = 3;
+      } else {
+        UNIMPLEMENTED_THEN_RETURN();
+      }
+      const int64_t hidden_size = shape.At(2);
+      if (num_heads) {
+        const int64_t expected_h = JUST(num_heads);
+        const int64_t packed_h = packed_n * expected_h;
+        CHECK_EQ_OR_RETURN(hidden_size % packed_h, 0)
+            << "The size of the last dimension of the " << name
+            << " tensor should be a multiple of " << packed_h << ".";
+        *h = expected_h;
+        *k = hidden_size / packed_h;
+      } else if (head_size) {
+        const int64_t expected_k = JUST(head_size);
+        const int64_t packed_k = expected_k * packed_n;
+        CHECK_EQ_OR_RETURN(hidden_size % packed_k, 0)
+            << "The size of the last dimension of the " << name
+            << " tensor should be a multiple of " << packed_k << ".";
+        *h = hidden_size / packed_k;
+        *k = expected_k;
+      } else {
+        UNIMPLEMENTED_THEN_RETURN();
+      }
+    } else {
+      UNIMPLEMENTED_THEN_RETURN()
+          << name
+          << "_layout should be 'BM(HK)', 'MB(HK)', 'BM(H2K)', 'MB(H2K)', 'BM(H3K)' or "
+             "'MB(H3K)' when the number of dimensions of "
+          << name << " tensor is 3.";
+    }
+  } else if (shape.NumAxes() == 4) {
+    if (layout == "BMHK") {
+      *b = shape.At(0);
+      *m = shape.At(1);
+      *h = shape.At(2);
+      *k = shape.At(3);
+    } else if (layout == "BHMK") {
+      *b = shape.At(0);
+      *m = shape.At(2);
+      *h = shape.At(1);
+      *k = shape.At(3);
+    } else if (layout == "MBHK") {
+      *b = shape.At(1);
+      *m = shape.At(0);
+      *h = shape.At(2);
+      *k = shape.At(3);
+    } else {
+      UNIMPLEMENTED_THEN_RETURN()
+          << name << "_layout should be 'BMHK', 'BHMK' or 'MBHK' when the number of dimensions of "
+          << name << " tensor is 4.";
+    }
+    if (num_heads) {
+      const int64_t expected_h = JUST(num_heads);
+      CHECK_EQ_OR_RETURN(*h, expected_h)
+          << "The size of dimension 'H' of " << name << " tensor should be " << expected_h << ".";
+    }
+    if (head_size) {
+      const int64_t expected_k = JUST(head_size);
+      CHECK_EQ_OR_RETURN(*k, expected_k)
+          << "The size of dimension 'K' of " << name << " tensor should be " << expected_k << ".";
+    }
+  } else {
+    UNIMPLEMENTED_THEN_RETURN() << "The number of dimensions of the " << name
+                                << " tensor should be 3 or 4";
+  };
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
 class FusedMultiHeadAttentionInferenceFunctor {
  public:
   FusedMultiHeadAttentionInferenceFunctor() = default;
@@ -89,109 +194,6 @@ class FusedMultiHeadAttentionInferenceV2Functor {
                            const bool& causal, const int64_t& causal_diagonal_offset) const {
     CHECK_GE_OR_RETURN(causal_diagonal_offset, 0)
         << "The value of causal_diagonal_offset should be greater or equal to 0.";
-
-    const auto ParseDims = [](const std::string& name, const Shape& shape,
-                              const std::string& layout, const Optional<int64_t>& num_heads,
-                              const Optional<int64_t>& head_size, int64_t* b, int64_t* m,
-                              int64_t* h, int64_t* k) -> Maybe<void> {
-      if (shape.NumAxes() == 3) {
-        if (layout == "BM(HK)" || layout == "MB(HK)" || layout == "BM(H2K)" || layout == "MB(H2K)"
-            || layout == "BM(H3K)" || layout == "MB(H3K)") {
-          int64_t packed_n = 0;
-          if (layout == "BM(HK)") {
-            *b = shape.At(0);
-            *m = shape.At(1);
-            packed_n = 1;
-          } else if (layout == "MB(HK)") {
-            *b = shape.At(1);
-            *m = shape.At(0);
-            packed_n = 1;
-          } else if (layout == "BM(H2K)") {
-            CHECK_NE_OR_RETURN(name, "query") << "query_layout should not be 'BM(H2K)'";
-            *b = shape.At(0);
-            *m = shape.At(1);
-            packed_n = 2;
-          } else if (layout == "MB(H2K)") {
-            CHECK_NE_OR_RETURN(name, "query") << "query_layout should not be 'MB(H2K)'";
-            *b = shape.At(1);
-            *m = shape.At(0);
-            packed_n = 2;
-          } else if (layout == "BM(H3K)") {
-            *b = shape.At(0);
-            *m = shape.At(1);
-            packed_n = 3;
-          } else if (layout == "MB(H3K)") {
-            *b = shape.At(1);
-            *m = shape.At(0);
-            packed_n = 3;
-          } else {
-            UNIMPLEMENTED_THEN_RETURN();
-          }
-          const int64_t hidden_size = shape.At(2);
-          if (num_heads) {
-            const int64_t expected_h = JUST(num_heads);
-            const int64_t packed_h = packed_n * expected_h;
-            CHECK_EQ_OR_RETURN(hidden_size % packed_h, 0)
-                << "The size of the last dimension of the " << name
-                << " tensor should be a multiple of " << packed_h << ".";
-            *h = expected_h;
-            *k = hidden_size / packed_h;
-          } else if (head_size) {
-            const int64_t expected_k = JUST(head_size);
-            const int64_t packed_k = expected_k * packed_n;
-            CHECK_EQ_OR_RETURN(hidden_size % packed_k, 0)
-                << "The size of the last dimension of the " << name
-                << " tensor should be a multiple of " << packed_k << ".";
-            *h = hidden_size / packed_k;
-            *k = expected_k;
-          } else {
-            UNIMPLEMENTED_THEN_RETURN();
-          }
-        } else {
-          UNIMPLEMENTED_THEN_RETURN()
-              << name
-              << "_layout should be 'BM(HK)', 'MB(HK)', 'BM(H2K)', 'MB(H2K)', 'BM(H3K)' or "
-                 "'MB(H3K)' when the number of dimensions of "
-              << name << " tensor is 3.";
-        }
-      } else if (shape.NumAxes() == 4) {
-        if (layout == "BMHK") {
-          *b = shape.At(0);
-          *m = shape.At(1);
-          *h = shape.At(2);
-          *k = shape.At(3);
-        } else if (layout == "BHMK") {
-          *b = shape.At(0);
-          *m = shape.At(2);
-          *h = shape.At(1);
-          *k = shape.At(3);
-        } else if (layout == "MBHK") {
-          *b = shape.At(1);
-          *m = shape.At(0);
-          *h = shape.At(2);
-          *k = shape.At(3);
-        } else {
-          UNIMPLEMENTED_THEN_RETURN()
-              << name
-              << "_layout should be 'BMHK', 'BHMK' or 'MBHK' when the number of dimensions of "
-              << name << " tensor is 4.";
-        }
-        if (num_heads) {
-          const int64_t expected_h = JUST(num_heads);
-          CHECK_EQ_OR_RETURN(*h, expected_h) << "The size of dimension 'H' of " << name
-                                             << " tensor should be " << expected_h << ".";
-        }
-        if (head_size) {
-          const int64_t expected_k = JUST(head_size);
-          CHECK_EQ_OR_RETURN(*k, expected_k) << "The size of dimension 'K' of " << name
-                                             << " tensor should be " << expected_k << ".";
-        }
-      } else {
-        UNIMPLEMENTED_THEN_RETURN()
-            << "The number of dimensions of the " << name << " tensor should be 3 or 4";
-      };
-      return Maybe<void>::Ok();
-    };
 
     std::shared_ptr<one::Tensor> key_tensor;
     std::string key_tensor_layout;
@@ -351,10 +353,46 @@ class FusedAttentionConcatPastKeyValueFunctor {
       const std::shared_ptr<one::Tensor>& key, const std::string& key_layout,
       const std::shared_ptr<one::Tensor>& value, const std::string& value_layout,
       const Optional<int64_t>& key_head_size) const {
+    int64_t past_k_b = 0;
+    int64_t past_k_m = 0;
+    int64_t past_k_h = 0;
+    int64_t past_k_k = 0;
+    JUST(ParseDims("past_key", *past_key->shape(), past_key_layout, Optional<int64_t>(),
+                   key_head_size, &past_k_b, &past_k_m, &past_k_h, &past_k_k));
+
+    int64_t past_v_b = 0;
+    int64_t past_v_m = 0;
+    int64_t past_v_h = 0;
+    int64_t past_v_k = 0;
+    JUST(ParseDims("past_value", *past_value->shape(), past_value_layout, past_k_h, past_k_k,
+                   &past_v_b, &past_v_m, &past_v_h, &past_v_k));
+    CHECK_EQ_OR_RETURN(past_v_b, past_k_b) << "The size of dimension 'B' of the past_value tensor "
+                                              "should be the same as that of the past_key tensor.";
+    CHECK_EQ_OR_RETURN(past_v_m, past_k_m) << "The size of dimension 'M' of the past_value tensor "
+                                              "should be the same as that of the past_key tensor.";
+
+    int64_t k_b = 0;
+    int64_t k_m = 0;
+    int64_t k_h = 0;
+    int64_t k_k = 0;
+    JUST(ParseDims("key", *key->shape(), key_layout, past_k_h, past_k_k, &k_b, &k_m, &k_h, &k_k));
+    CHECK_EQ_OR_RETURN(k_b, past_k_b) << "The size of dimension 'B' of the key tensor should be "
+                                         "the same as that of the past_key tensor.";
+
+    int64_t v_b = 0;
+    int64_t v_m = 0;
+    int64_t v_h = 0;
+    int64_t v_k = 0;
+    JUST(ParseDims("value", *value->shape(), value_layout, past_k_h, past_k_k, &v_b, &v_m, &v_h,
+                   &v_k));
+    CHECK_EQ_OR_RETURN(v_b, past_k_b) << "The size of dimension 'B' of the value tensor should be "
+                                         "the same as that of the past_key tensor.";
+    CHECK_EQ_OR_RETURN(v_m, k_m) << "The size of dimension 'M' of the value tensor should be the "
+                                    "same as that of the key tensor.";
+
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("past_key_layout", "past_value_layout",
                                                  "key_layout", "value_layout", "key_head_size");
-    attrs.SetAllAttrs(past_key_layout, past_value_layout, key_layout, value_layout,
-                      JUST(key_head_size));
+    attrs.SetAllAttrs(past_key_layout, past_value_layout, key_layout, value_layout, past_k_k);
     return JUST(
         OpInterpUtil::Dispatch<TensorTuple>(*op_, {past_key, past_value, key, value}, attrs));
   }
