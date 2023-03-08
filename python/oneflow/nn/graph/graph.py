@@ -1845,7 +1845,7 @@ class Graph(object):
             # contiguous
             args_tree.map_tuple_leaf(func)
             # flatten
-            for arg in args_tree.iter_tuple_nodes():
+            for arg in args_tree.iter_nodes():
                 if isinstance(arg, Tensor):
                     flattened_args.append(arg)
                 else:

@@ -169,16 +169,6 @@ class ArgsTree(object):
             except StopIteration:
                 stack.pop()
 
-    def iter_tuple_nodes(self):
-        r"""
-        return a generator of the args tree nodes in the DFS manner. 
-        Only iterate through nodes of type tuple or list.
-        """
-        assert not self._gen_name, "Only use this if gen_name is not set!"
-
-        for node in self._io_args:
-            yield node
-
     def iter_named_nodes(self):
         assert self._gen_name, "Only use this if gen_name is set!"
         for named_node in self.iter_nodes():
