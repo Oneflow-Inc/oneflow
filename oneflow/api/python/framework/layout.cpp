@@ -46,7 +46,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
 
   py::options options;
   options.disable_function_signatures();
-
 }
 
 }  // namespace oneflow

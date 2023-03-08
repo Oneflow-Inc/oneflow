@@ -25,32 +25,30 @@ enum LayoutType : int {
   kStrided,
 };
 
-#define LAYOUT_SEQ    \
-  OF_PP_MAKE_TUPLE_SEQ(Strided)
+#define LAYOUT_SEQ OF_PP_MAKE_TUPLE_SEQ(Strided)
 
 class Layout final {
-  public:
-    Layout(const Layout&) = default;
-    Layout(Layout&&) = delete;
-    explicit Layout(LayoutType layout_type): layout_type_(layout_type) {}
-    ~Layout() = default;
+ public:
+  Layout(const Layout&) = default;
+  Layout(Layout&&) = delete;
+  explicit Layout(LayoutType layout_type) : layout_type_(layout_type) {}
+  ~Layout() = default;
 
-    bool operator==(const Layout& other) const { return this->layout_type() == other.layout_type(); }
+  bool operator==(const Layout& other) const { return this->layout_type() == other.layout_type(); }
 
-    const std::string& name() const;
+  const std::string& name() const;
 
-    LayoutType layout_type() const {return layout_type_; }
-    static Maybe<const Symbol<Layout>&> Get(LayoutType);
+  LayoutType layout_type() const { return layout_type_; }
+  static Maybe<const Symbol<Layout>&> Get(LayoutType);
 #define DECLARE_GET_LAYOUT_TYPE_FUNCTION(layout_type) static const Symbol<Layout>& layout_type();
   OF_PP_FOR_EACH_TUPLE(DECLARE_GET_LAYOUT_TYPE_FUNCTION, LAYOUT_SEQ)
 #undef DECLARE_GET_LAYOUT_TYPE_FUNCTION
 
-  private:
-   LayoutType layout_type_;
+ private:
+  LayoutType layout_type_;
 };
 
-
-} // namespace oneflow
+}  // namespace oneflow
 
 namespace std {
 

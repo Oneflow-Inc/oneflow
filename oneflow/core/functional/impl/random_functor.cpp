@@ -286,8 +286,8 @@ class RandNFunctor {
  public:
   Maybe<Tensor> operator()(const Shape& shape, const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device,
-                           const Optional<one::Generator>& generator,
-                           const bool& requires_grad, const Symbol<Layout>& layout) const {
+                           const Optional<one::Generator>& generator, const bool& requires_grad,
+                           const Symbol<Layout>& layout) const {
     if (GlobalMode::is_enabled()) {
       return JUST(functional::GlobalRandN(shape, GetGlobalParallelDescFromDevice(device),
                                           *JUST(GetSbpList(GlobalMode::nd_sbp())), dtype, generator,
@@ -488,7 +488,8 @@ class RandnLikeFunctor {
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
     return RandN(*input->shape(), dtype.value_or(input->dtype()),
-                 device.value_or(JUST(input->device())), generator, requires_grad, Layout::Strided());
+                 device.value_or(JUST(input->device())), generator, requires_grad,
+                 Layout::Strided());
   }
 };
 
