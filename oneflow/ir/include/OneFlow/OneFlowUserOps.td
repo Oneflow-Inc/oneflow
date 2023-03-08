@@ -10094,6 +10094,7 @@ def OneFlow_RReluOp : OneFlow_BaseOp<"rrelu", [NoSideEffect, DeclareOpInterfaceM
     OneFlow_Tensor:$noise_data
   );
   let attrs = (ins
+    DefaultValuedAttr<SI64Attr, "0">:$seed,
     DefaultValuedAttr<F32Attr, "0.125">:$lower,
     DefaultValuedAttr<F32Attr, "0.3333333333333333">:$upper,
     DefaultValuedAttr<BoolAttr, "false">:$training

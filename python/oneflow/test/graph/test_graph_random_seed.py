@@ -15,31 +15,70 @@ limitations under the License.
 """
 import numpy as np
 import unittest
+import inspect
+import types
 import oneflow as flow
 import oneflow.nn as nn
 import oneflow.unittest
 
+
+def _inspect_rand_op_and_args(rand_op, **kwargs):
+    if inspect.isclass(rand_op) and issubclass(rand_op, nn.Module):
+        init_method_signature = inspect.signature(rand_op.__init__)
+
+        module_init_args = dict()
+        for arg_name in list(init_method_signature.parameters.keys())[1:]:
+            if arg_name in kwargs:
+                module_init_args[arg_name] = kwargs.pop(arg_name)
+
+        module_instance = rand_op(**module_init_args)
+        return module_instance, kwargs
+
+    if isinstance(rand_op, types.BuiltinFunctionType):
+        return rand_op, kwargs
+
+    if inspect.isfunction(rand_op):
+        return rand_op, kwargs
+
+    raise ValueError(f"invalid rand_op {rand_op}, type: {type(rand_op)}")
+
+
 # y1 = rand_op1(x)
 # y2 = rand_op2(x)
 # rand_op1 and rand_op2 should have different seed in graph, lead to different result
-def _test_rand_in_graph(test_case, rand_op, *args, **kwargs):
-    if issubclass(rand_op, nn.Module):
-        rand_op1 = rand_op(*args, **kwargs)
-        rand_op2 = rand_op(*args, **kwargs)
-    else:
-        rand_op1 = rand_op
-        rand_op2 = rand_op
+def _test_rand_in_graph(test_case, rand_op, input=None, **kwargs):
+    rand_op1, kwargs1 = _inspect_rand_op_and_args(rand_op, **kwargs)
+    rand_op2, kwargs2 = _inspect_rand_op_and_args(rand_op, **kwargs)
 
-    class TestGraph(nn.Graph):
-        def build(self, x):
-            y1 = rand_op1(x)
-            y2 = rand_op2(x)
-            return y1, y2
+    if input is None:
+
+        class TestGraph(nn.Graph):
+            def build(self):
+                y1 = rand_op1(**kwargs1)
+                y2 = rand_op2(**kwargs2)
+                return y1, y2
+
+    else:
+
+        class TestGraph(nn.Graph):
+            def build(self, x):
+                x1 = x
+                x2 = x.clone()
+                y1 = rand_op1(x1, **kwargs1)
+                y2 = rand_op2(x2, **kwargs2)
+                return y1, y2
 
     graph = TestGraph()
-    input = flow.rand(2, 8)
     rand_result1, rand_result2 = graph(input)
-    test_case.assertFalse(np.allclose(rand_result1.numpy(), rand_result2.numpy()))
+    if isinstance(rand_result1, (list, tuple)):
+        rand_result1 = rand_result1[0]
+    if isinstance(rand_result2, (list, tuple)):
+        rand_result2 = rand_result2[0]
+    # print(f"\ninput:\n{input}\nrand_result1:\n{rand_result1}\nrand_result2:\n{rand_result2}")
+    test_case.assertFalse(
+        np.allclose(rand_result1.numpy(), rand_result2.numpy()),
+        f"\ninput:\n{input}\nrand_result1:\n{rand_result1}\nrand_result2:\n{rand_result2}",
+    )
 
 
 # y = rand_op(x) * w
@@ -113,8 +152,13 @@ def _test_split_rand_in_graph(test_case, device, rand_op, *args, **kwargs):
 
 
 def _test_broadcast_rand_in_graph(test_case, device, rand_op, *args, **kwargs):
+    fn_args = []
+    fn_kwargs = {}
     if issubclass(rand_op, nn.Module):
         rand_op = rand_op(*args, **kwargs)
+    else:
+        fn_args = args
+        fn_kwargs = kwargs
 
     placement = flow.placement(device, np.array(range(flow.env.get_world_size())))
 
@@ -141,7 +185,23 @@ def _test_broadcast_rand_in_graph(test_case, device, rand_op, *args, **kwargs):
 @flow.unittest.skip_unless_1n1d()
 class TestRandInGraph(oneflow.unittest.TestCase):
     def test_rand_in_graph(self):
-        _test_rand_in_graph(self, nn.Dropout, p=0.5)
+        for device in ("cpu", "cuda"):
+            x = flow.randn(4, 16).to(device)
+            _test_rand_in_graph(self, nn.Dropout, x, p=0.5)
+            _test_rand_in_graph(self, flow.bernoulli, x, p=0.5)
+            _test_rand_in_graph(self, flow._C.rrelu, x, training=True)
+            _test_rand_in_graph(self, nn.init.uniform_, x)
+
+        # test random_mask_like
+        x = flow.randn(4, 16, 128, 128).to("cuda")
+        _test_rand_in_graph(
+            self,
+            flow._C.fused_scale_tril_softmax_mask_scale,
+            x,
+            p=0.1,
+            diagonal=2,
+            tril_scale_value=-1000,
+        )
 
     def test_rand_in_checkpoint_activation_graph(self):
         _test_rand_in_checkpoint_activation_graph(self, nn.Dropout, p=0.5)
