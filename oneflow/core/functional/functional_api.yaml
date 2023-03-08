@@ -1227,6 +1227,11 @@
     "Tensor (Tensor input, Tensor batch1, Tensor batch2, *, Double beta=1.0, Double alpha=1.0) => BaddBmm"
   bind_python: True
 
+- name: "native_multi_head_attention"
+  signature:
+    "TensorTuple (Tensor query, Tensor key, Tensor value, Int64 embed_dim, Int64 num_head, Tensor qkv_weight, Tensor qkv_bias, Tensor proj_weight, Tensor proj_bias, Tensor mask=None, Bool need_weights=False, Bool average_attn_weights=False, Int64 mask_type=None) => MultiHeadAttention"
+  bind_python: True
+
 - name: "matrix_vector_product"
   signature: "Tensor (Tensor input, Tensor vec) => MatrixVectorProduct"
   bind_python: True

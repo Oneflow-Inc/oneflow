@@ -42,6 +42,7 @@ from oneflow.nn.modules.activation import (
     SiLU,
     Softsign,
     Threshold,
+    MultiheadAttention,
 )
 
 from oneflow.nn.modules.all_reduce import AllReduce

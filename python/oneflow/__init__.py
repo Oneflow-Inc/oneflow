@@ -244,6 +244,7 @@ from oneflow._C import det
 from oneflow._C import iinfo, finfo
 from oneflow._C import multinomial
 from oneflow._C import linalg_cross as cross
+from oneflow._C import native_multi_head_attention as _native_multi_head_attention
 from oneflow._C import bincount
 from oneflow._C import isclose
 from oneflow._C import allclose
