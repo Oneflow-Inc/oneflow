@@ -208,7 +208,6 @@ def _new_full(
     )
 
 
-
 def _argsort(self, dim=-1, descending=None):
     return flow.argsort(self, dim=dim, descending=descending)
 
@@ -449,7 +448,6 @@ def _cumsum(self, dim, dtype=None):
 
 def _cumprod(self, dim, dtype=None):
     return flow._C.cumprod(self, dim, dtype=dtype)
-
 
 
 def _cross(self, other, dim=None):
