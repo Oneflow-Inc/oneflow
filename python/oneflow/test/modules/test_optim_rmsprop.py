@@ -86,7 +86,9 @@ def compare_with_numpy_rmsprop(
             train_one_iter(random_grad_seq[i])
             if i == reload_state_step:
                 state_dict = rmsprop.state_dict()
-                rmsprop = flow.optim.RMSprop([m.x], contiguous_params=contiguous_params, module=m)
+                rmsprop = flow.optim.RMSprop(
+                    [m.x], contiguous_params=contiguous_params, module=m
+                )
                 rmsprop.load_state_dict(state_dict)
         return m.x
 
@@ -185,7 +187,9 @@ def compare_with_numpy_rmsprop_clip_grad(
             train_one_iter(random_grad_seq[i])
             if i == reload_state_step:
                 state_dict = rmsprop.state_dict()
-                rmsprop = flow.optim.RMSprop([m.x], contiguous_params=contiguous_params, module=m)
+                rmsprop = flow.optim.RMSprop(
+                    [m.x], contiguous_params=contiguous_params, module=m
+                )
                 if save_load_by_pickle:
                     with tempfile.NamedTemporaryFile() as f:
                         flow.save(state_dict, f.name)

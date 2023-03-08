@@ -1007,7 +1007,9 @@ class Module(object):
 
     def _apply(self, fn):
         if self.cpg is not None:
-            raise ValueError("ContiguousParamsGroup should be created after apply operations.")
+            raise ValueError(
+                "ContiguousParamsGroup should be created after apply operations."
+            )
 
         # A dict to store tensors that has already been applied.
         # There is no need to apply multiple times on a same tensor.
@@ -1126,7 +1128,9 @@ class Module(object):
             )
         """
         if self.cpg is not None:
-            raise ValueError("ContiguousParamsGroup should be created after apply operations.")
+            raise ValueError(
+                "ContiguousParamsGroup should be created after apply operations."
+            )
 
         for module in self.children():
             module.apply(fn)
