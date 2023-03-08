@@ -333,10 +333,6 @@ def _tolist(self):
     return self.numpy().tolist()
 
 
-def _gather(self, dim, index):
-    return flow._C.dim_gather(self, dim, index, False)
-
-
 def _repeat(self, *sizes):
     if len(sizes) == 1:
         new_sizes = sizes[0]
@@ -577,7 +573,6 @@ def RegisterMethods():
     Tensor.repeat_interleave = _repeat_interleave
     Tensor.tile = _tile
     Tensor.to = _to
-    Tensor.gather = _gather
     Tensor.T = property(_T)
     Tensor.masked_select = _masked_select
     Tensor.eq = _eq
