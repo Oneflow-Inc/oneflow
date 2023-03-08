@@ -250,7 +250,7 @@ class Exp2GradGradFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
                            const std::shared_ptr<Tensor>& dydx) const {
-    return  functional::ScalarMul(Scalar(std::log(2)), JUST(functional::Exp2Grad(x, dydx)));
+    return functional::ScalarMul(Scalar(std::log(2)), JUST(functional::Exp2Grad(x, dydx)));
   }
 };
 

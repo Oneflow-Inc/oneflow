@@ -132,6 +132,7 @@ class TestExp(flow.unittest.TestCase):
         y = torch.exp(x)
         return y
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestExp2(flow.unittest.TestCase):
     @autotest(n=5)
@@ -140,6 +141,7 @@ class TestExp2(flow.unittest.TestCase):
         x = random_tensor().to(device)
         y = torch.exp2(x)
         return y
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestRsqrt(flow.unittest.TestCase):

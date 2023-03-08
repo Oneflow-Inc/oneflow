@@ -200,7 +200,7 @@ PyNumberMethods PyTensorObject_as_number = {
 
 UNARY_METHOD(PyTensorObject_abs, functional::Abs);
 UNARY_METHOD(PyTensorObject_exp, functional::Exp);
-UNARY_METHOD(PyTensorObject_exp2,functional::Exp2);
+UNARY_METHOD(PyTensorObject_exp2, functional::Exp2);
 UNARY_METHOD(PyTensorObject_floor, functional::Floor);
 UNARY_METHOD(PyTensorObject_floor_, functional::Floor_);
 UNARY_METHOD(PyTensorObject_sign, functional::Sign);

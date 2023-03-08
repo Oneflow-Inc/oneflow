@@ -71,7 +71,7 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("erf_grad", ep::primitive::BinaryOp::kErfBackwardWithDyX)                \
   OF_PP_MAKE_TUPLE_SEQ("erfc_grad", ep::primitive::BinaryOp::kErfcBackwardWithDyX)              \
   OF_PP_MAKE_TUPLE_SEQ("exp_grad", ep::primitive::BinaryOp::kExpBackwardWithDyX)                \
-  OF_PP_MAKE_TUPLE_SEQ("exp2_grad", ep::primitive::BinaryOp::kExp2BackwardWithDyX)                \
+  OF_PP_MAKE_TUPLE_SEQ("exp2_grad", ep::primitive::BinaryOp::kExp2BackwardWithDyX)              \
   OF_PP_MAKE_TUPLE_SEQ("expm1_grad", ep::primitive::BinaryOp::kExpm1BackwardWithDyX)            \
   OF_PP_MAKE_TUPLE_SEQ("log_grad", ep::primitive::BinaryOp::kLogBackwardWithDyX)                \
   OF_PP_MAKE_TUPLE_SEQ("lgamma_grad", ep::primitive::BinaryOp::kLgammaBackwardWithDyX)          \

@@ -34,7 +34,7 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("erf", Erf)                           \
   OF_PP_MAKE_TUPLE_SEQ("erfc", Erfc)                         \
   OF_PP_MAKE_TUPLE_SEQ("exp", Exp)                           \
-  OF_PP_MAKE_TUPLE_SEQ("exp2", Exp2)                           \
+  OF_PP_MAKE_TUPLE_SEQ("exp2", Exp2)                         \
   OF_PP_MAKE_TUPLE_SEQ("expm1", Expm1)                       \
   OF_PP_MAKE_TUPLE_SEQ("floor", Floor)                       \
   OF_PP_MAKE_TUPLE_SEQ("lgamma", Lgamma)                     \
@@ -71,7 +71,7 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("erf", Erf)                              \
   OF_PP_MAKE_TUPLE_SEQ("erfc", Erfc)                            \
   OF_PP_MAKE_TUPLE_SEQ("exp", Exp)                              \
-  OF_PP_MAKE_TUPLE_SEQ("exp2", Exp2)                              \
+  OF_PP_MAKE_TUPLE_SEQ("exp2", Exp2)                            \
   OF_PP_MAKE_TUPLE_SEQ("expm1", Expm1)                          \
   OF_PP_MAKE_TUPLE_SEQ("log", Log)                              \
   OF_PP_MAKE_TUPLE_SEQ("lgamma", Lgamma)                        \
