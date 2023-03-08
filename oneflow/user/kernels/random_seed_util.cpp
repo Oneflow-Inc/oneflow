@@ -61,11 +61,11 @@ Maybe<uint64_t> GetRandomSeedForRank(const ParallelDesc& placement, const NdSbp&
 }
 
 Maybe<uint64_t> GetOpKernelRandomSeedInCurrentRank(const user_op::KernelInitContext* ctx,
-                                                   uint64_t init_seed) {
+                                                   uint64_t init_seed, const user_op::OpArg& arg) {
   if (ctx->parallel_ctx().parallel_num() == 1) { return init_seed; }
-  const auto& outputs = ctx->outputs();
-  CHECK_EQ(outputs.size(), 1);
-  const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex(outputs[0].first, outputs[0].second);
+  CHECK_OR_RETURN(ctx->has_output(arg.name(), arg.index()))
+      << arg.name() << "_" << arg.index() << " not exist";
+  const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex(arg.name(), arg.index());
   return GetRandomSeedForRank(ctx->parallel_desc(), nd_sbp, init_seed,
                               ctx->parallel_ctx().parallel_id());
 }
@@ -86,10 +86,12 @@ Maybe<one::Generator> GetGeneratorForLazyOrGlobal(const std::shared_ptr<one::Gen
     return new_gen;
   }
 
-  uint64_t rank_seed = 0;
-  JUST(one::functional::BroadcastSeedToAllRanks(&init_seed, /*root=*/0));
-  rank_seed = JUST(
-      GetRandomSeedForRank(*JUST(placement), *JUST(nd_sbp), init_seed, GlobalProcessCtx::Rank()));
+  uint64_t rank_seed = init_seed;
+  if (JUST(placement)->parallel_num() > 1) {
+    JUST(one::functional::BroadcastSeedToAllRanks(&init_seed, /*root=*/0));
+    rank_seed = JUST(
+        GetRandomSeedForRank(*JUST(placement), *JUST(nd_sbp), init_seed, GlobalProcessCtx::Rank()));
+  }
   new_gen->set_current_seed(rank_seed);
   return new_gen;
 }
