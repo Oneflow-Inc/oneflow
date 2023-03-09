@@ -43,9 +43,8 @@ std::string PyUnicodeToStdString(const PyObject* py_str) {
 }
 }  // namespace
 
-class PyFrame final
-    : public Frame,
-      public intrusive::EnableObjectPool<PyFrame, intrusive::kThreadUnsafeAndDisableDestruct> {
+class PyFrame final : public Frame,
+                      public intrusive::EnableObjectPool<PyFrame, intrusive::kThreadUnsafe> {
  public:
   PyFrame()
       : EnableObjectPool(),
@@ -60,6 +59,12 @@ class PyFrame final
     this->funcname = frame->f_code->co_name;
     this->cpython_frame = frame;
     this->back = std::move(back);
+  }
+  void __Delete__() {
+    this->filename = nullptr;
+    this->funcname = nullptr;
+    this->cpython_frame = nullptr;
+    this->back.Reset();
   }
   OF_DISALLOW_COPY_AND_MOVE(PyFrame);
   ~PyFrame() = default;
@@ -142,7 +147,7 @@ class PyStackGetter final : public ForeignStackGetter {
  private:
   intrusive::shared_ptr<PyFrame> current_frame_;
 
-  intrusive::ObjectPool<PyFrame, intrusive::kThreadUnsafeAndDisableDestruct> object_pool_;
+  static thread_local intrusive::ObjectPool<PyFrame, intrusive::kThreadUnsafe> object_pool_;
 
   void PushFrame(PyFrameObject* frame) {
     if (auto* f = frame->f_back) { current_frame_->lineno = PyFrame_GetLineNumber(f); }
@@ -153,6 +158,8 @@ class PyStackGetter final : public ForeignStackGetter {
     current_frame_ = current_frame_->back;
   }
 };
+
+thread_local intrusive::ObjectPool<PyFrame, intrusive::kThreadUnsafe> PyStackGetter::object_pool_;
 
 #if PY_VERSION_HEX >= 0x03090000
 PyObject* RecordAndEvalFrame(PyThreadState* tstate, PyFrameObject* frame,

@@ -18,35 +18,18 @@ limitations under the License.
 
 #include <vector>
 #include "oneflow/core/intrusive/cpp_attribute.h"
+#include "oneflow/core/intrusive/shared_ptr.h"
 
 namespace oneflow {
 namespace intrusive {
 
 enum ObjectPoolStrategey {
+  kThreadUnsafe,
   kThreadUnsafeAndDisableDestruct,
 };
 
 template<typename T, ObjectPoolStrategey object_pool_strategy>
-class ObjectPool;
-
-template<typename T, ObjectPoolStrategey object_pool_strategy>
-class EnableObjectPool {
- public:
-  EnableObjectPool() = default;
-  EnableObjectPool(const EnableObjectPool&) = default;
-  EnableObjectPool(EnableObjectPool&&) = default;
-  ~EnableObjectPool() = default;
-
-  using object_pool_type = ObjectPool<T, object_pool_strategy>;
-  object_pool_type* mut_object_pool() { return object_pool_; }
-  void set_object_pool(object_pool_type* val) { object_pool_ = val; }
-
- private:
-  object_pool_type* object_pool_;
-};
-
-template<typename T>
-class ObjectPool<T, kThreadUnsafeAndDisableDestruct> {
+class ObjectPool {
  public:
   ObjectPool() { container_.reserve(kObjectPoolInitCap); }
   ObjectPool(const ObjectPool&) = delete;
@@ -72,17 +55,36 @@ class ObjectPool<T, kThreadUnsafeAndDisableDestruct> {
 
   static void Put(void* raw_ptr) {
     T* ptr = reinterpret_cast<T*>(raw_ptr);
+    if constexpr (object_pool_strategy != kThreadUnsafeAndDisableDestruct) {
+      ptr->__Delete__();
+    }
     ptr->mut_object_pool()->container_.push_back(ptr);
   }
 
  private:
   inline void InitObjectPoolFields4Element(T* ptr) {
     ptr->set_object_pool(this);
-    ptr->mut_intrusive_ref()->set_deleter(&ObjectPool::Put);
+      ptr->mut_intrusive_ref()->set_deleter(&ObjectPool::Put);
   }
 
   static constexpr int kObjectPoolInitCap = 65536;
   std::vector<T*> container_;
+};
+
+template<typename T, ObjectPoolStrategey object_pool_strategy>
+class EnableObjectPool {
+ public:
+  EnableObjectPool() = default;
+  EnableObjectPool(const EnableObjectPool&) = default;
+  EnableObjectPool(EnableObjectPool&&) = default;
+  ~EnableObjectPool() = default;
+
+  using object_pool_type = ObjectPool<T, object_pool_strategy>;
+  object_pool_type* mut_object_pool() { return object_pool_; }
+  void set_object_pool(object_pool_type* val) { object_pool_ = val; }
+
+ private:
+  object_pool_type* object_pool_;
 };
 
 }  // namespace intrusive
