@@ -172,6 +172,13 @@ if(BUILD_CUDA)
   list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${TRT_FLASH_ATTENTION_INCLUDE_DIR})
 endif()
 
+if(BUILD_CAMBRICON)
+  add_definitions(-DWITH_CAMBRICON)
+  include(neuware)
+  list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${NEUWARE_INCLUDE_DIRS})
+  list(APPEND oneflow_third_party_libs ${NEUWARE_LIBRARIES})
+endif()
+
 if(BUILD_RDMA)
   if(UNIX)
     include(CheckIncludeFiles)
