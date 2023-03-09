@@ -2295,6 +2295,18 @@ class GridSampleFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FftFunctor {
+public:
+  FftFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fft").Input("x").Input("other").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::shared_ptr<one::Tensor>& other) const {
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, other});
+  }
+private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class NormalizationFunctor {
  public:
   NormalizationFunctor() {
@@ -5437,6 +5449,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::CtcLossFunctor>("CtcLoss");
   m.add_functor<impl::AffineGridFunctor>("AffineGrid");
   m.add_functor<impl::GridSampleFunctor>("GridSample");
+  m.add_functor<impl::FftFunctor>("Fft");
   m.add_functor<impl::NormalizationFunctor>("Normalization");
   m.add_functor<impl::NormalizationAddReluFunctor>("NormalizationAddRelu");
   m.add_functor<impl::ConstantPadFunctor>("ConstantPad");

@@ -1411,6 +1411,10 @@
   signature: "TensorTuple (Tensor doutput, Tensor input, Tensor grid, *, String interpolation_mode, String padding_mode, Bool align_corners) => GridSampleGrad"
   bind_python: False
 
+- name: "fft"
+  signature: "Tensor (Tensor x, Tensor other) => Fft"
+  bind_python: True
+
 - name: "where"
   signature:
     [
