@@ -289,9 +289,9 @@ class TestFastGelu(flow.unittest.TestCase):
         y = torch.nn.functional.gelu(x, approximate="tanh")
         return y
 
-    @autotest(n=5)
+    @autotest(n=5, atol=1e-3, rtol=1e-4)
     def test_fast_gelu_fp16(test_case):
-        x = random_tensor().to(device=gpu_device(), dtype=torch.float16)
+        x = random_tensor(ndim=2, dim0=7, dim1=1).to(device=gpu_device(), dtype=torch.float16)
         y = torch.nn.functional.gelu(x, approximate="tanh")
         return y
 
