@@ -155,9 +155,10 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
     return device_and_stream_infer_fn_;
   }
 
-  bool is_host_memory_input(int32_t index) const {
-    return std::any_of(host_memory_input_ids_.begin(), host_memory_input_ids_.end(),
-                       [index](int32_t host_mem_input_id) { return host_mem_input_id == index; });
+  bool is_host_memory_input(int32_t input_index) const {
+    return std::any_of(
+        host_memory_input_ids_.begin(), host_memory_input_ids_.end(),
+        [input_index](int32_t host_mem_input_id) { return host_mem_input_id == input_index; });
   }
 
   const small_vector<int32_t, kOpArgsReservedSize>& host_memory_input_ids() const {

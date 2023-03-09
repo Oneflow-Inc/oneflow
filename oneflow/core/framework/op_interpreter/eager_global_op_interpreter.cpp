@@ -37,7 +37,6 @@ limitations under the License.
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/boxing/eager_boxing_logger.h"
 #include "oneflow/core/common/cpp_attribute.h"
-#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {

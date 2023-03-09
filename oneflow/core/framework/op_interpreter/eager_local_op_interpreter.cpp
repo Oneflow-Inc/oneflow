@@ -56,20 +56,19 @@ constexpr auto* GetDefaultCpuDevice = DECORATE(&RawGetDefaultCpuDevice, ThreadLo
 Maybe<Symbol<Device>> GetDefaultDevice(
     const TensorTuple& inputs, const OpExprInterpContext& ctx,
     const small_vector<int32_t, kOpArgsReservedSize>& filtered_ids) {
-  if (inputs.empty()) {
-    if (ctx.device.has_value()) {
-      return JUST(ctx.device);
-    } else {
-      return GetDefaultCpuDevice();
+  if (!inputs.empty()) {
+    for (int32_t i = 0; i < inputs.size(); ++i) {
+      if (!std::any_of(filtered_ids.begin(), filtered_ids.end(),
+                       [i](int32_t filtered_id) { return filtered_id == i; })) {
+        return JUST(inputs.at(i)->device());
+      }
     }
   }
-  for (int32_t i = 0; i < inputs.size(); ++i) {
-    if (!std::any_of(filtered_ids.begin(), filtered_ids.end(),
-                     [i](int32_t filtered_id) { return filtered_id == i; })) {
-      return JUST(inputs.at(i)->device());
-    }
+  if (ctx.device.has_value()) {
+    return JUST(ctx.device);
+  } else {
+    return GetDefaultCpuDevice();
   }
-  return GetDefaultCpuDevice();
 }
 
 Maybe<EagerLocalTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>& tensor) {
