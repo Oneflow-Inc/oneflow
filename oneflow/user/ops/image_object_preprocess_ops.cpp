@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/error.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
 
@@ -63,10 +64,17 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
   const int N = bbox_desc.shape().elem_cnt();
 
   const user_op::TensorDesc& image_size_desc = ctx->InputTensorDesc("image_size", 0);
-  CHECK_EQ_OR_RETURN(image_size_desc.shape().elem_cnt(), N * 2);
+  CHECK_EQ_OR_RETURN(image_size_desc.shape().elem_cnt(), N * 2)
+      << Error::RuntimeError()
+      << "The element count of <image_size> should be equal with twice of the element count of "
+         "<bbox>, but got "
+      << image_size_desc.shape().elem_cnt() << " and " << 2 * N;
 
   const user_op::TensorDesc& flip_code_desc = ctx->InputTensorDesc("flip_code", 0);
-  CHECK_EQ_OR_RETURN(flip_code_desc.shape().elem_cnt(), N);
+  CHECK_EQ_OR_RETURN(flip_code_desc.shape().elem_cnt(), N)
+      << Error::RuntimeError()
+      << "The element count of <flip_code> should be equal with that of <bbox>, but got "
+      << flip_code_desc.shape().elem_cnt() << " and " << N;
 
   ctx->SetOutputShape("out", 0, ctx->InputShape("bbox", 0));
   ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("bbox", 0));
@@ -104,7 +112,11 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
   const int N = bbox_desc.shape().elem_cnt();
 
   const user_op::TensorDesc& scale_desc = ctx->InputTensorDesc("scale", 0);
-  CHECK_EQ_OR_RETURN(scale_desc.shape().elem_cnt(), N * 2);
+  CHECK_EQ_OR_RETURN(scale_desc.shape().elem_cnt(), N * 2)
+      << Error::RuntimeError()
+      << "The element count of <scale> should be equal with twice of the element count of <bbox>, "
+         "but got "
+      << scale_desc.shape().elem_cnt() << " and " << 2 * N;
 
   ctx->SetOutputShape("out", 0, ctx->InputShape("bbox", 0));
   ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("bbox", 0));
@@ -139,10 +151,17 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
   const int N = poly_desc.shape().elem_cnt();
 
   const user_op::TensorDesc& image_size_desc = ctx->InputTensorDesc("image_size", 0);
-  CHECK_EQ_OR_RETURN(image_size_desc.shape().elem_cnt(), N * 2);
+  CHECK_EQ_OR_RETURN(image_size_desc.shape().elem_cnt(), N * 2)
+      << Error::RuntimeError()
+      << "The element count of <image_size> should be equal with twice of the element count of "
+         "<poly>, but got "
+      << image_size_desc.shape().elem_cnt() << " and " << 2 * N;
 
   const user_op::TensorDesc& flip_code_desc = ctx->InputTensorDesc("flip_code", 0);
-  CHECK_EQ_OR_RETURN(flip_code_desc.shape().elem_cnt(), N);
+  CHECK_EQ_OR_RETURN(flip_code_desc.shape().elem_cnt(), N)
+      << Error::RuntimeError()
+      << "The element count of <flip_code> should be equal with that of <poly>, but got "
+      << flip_code_desc.shape().elem_cnt() << " and " << N;
 
   ctx->SetOutputShape("out", 0, ctx->InputShape("poly", 0));
   ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("poly", 0));
@@ -183,7 +202,11 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
   const int N = poly_desc.shape().elem_cnt();
 
   const user_op::TensorDesc& scale_desc = ctx->InputTensorDesc("scale", 0);
-  CHECK_EQ_OR_RETURN(scale_desc.shape().elem_cnt(), N * 2);
+  CHECK_EQ_OR_RETURN(scale_desc.shape().elem_cnt(), N * 2)
+      << Error::RuntimeError()
+      << "The element count of <scale> should be equal with twice of the element count of <poly>, "
+         "but got "
+      << scale_desc.shape().elem_cnt() << " and " << 2 * N;
 
   ctx->SetOutputShape("out", 0, ctx->InputShape("poly", 0));
   ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("poly", 0));
@@ -246,10 +269,17 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
 
   const user_op::TensorDesc& poly_index_desc = ctx->InputTensorDesc("poly_index", 0);
   CHECK_EQ_OR_RETURN(poly_index_desc.shape().NumAxes(), 1);
-  CHECK_EQ_OR_RETURN(poly_index_desc.shape().elem_cnt(), N);
+  CHECK_EQ_OR_RETURN(poly_index_desc.shape().elem_cnt(), N)
+      << Error::RuntimeError()
+      << "The element count of <poly_index> should be equal with that of <poly>, but got "
+      << poly_index_desc.shape().elem_cnt() << " and " << N;
 
   const user_op::TensorDesc& image_size_desc = ctx->InputTensorDesc("image_size", 0);
-  CHECK_EQ_OR_RETURN(image_size_desc.shape().elem_cnt(), N * 2);
+  CHECK_EQ_OR_RETURN(image_size_desc.shape().elem_cnt(), N * 2)
+      << Error::RuntimeError()
+      << "The element count of <image_size> should be equal with twice of the element count of "
+         "<poly>, but got "
+      << image_size_desc.shape().elem_cnt() << " and " << 2 * N;
 
   ctx->SetOutputShape("out", 0, ctx->InputShape("poly", 0));
   ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("poly", 0));

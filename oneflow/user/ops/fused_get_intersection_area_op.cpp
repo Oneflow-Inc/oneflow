@@ -57,13 +57,34 @@ Maybe<void> FusedGetIntersectionAreaOp::InferDataType(user_op::InferContext* ctx
   const user_op::TensorDesc& b2_y1 = ctx->InputTensorDesc("b2_y1", 0);
   const user_op::TensorDesc& b2_y2 = ctx->InputTensorDesc("b2_y2", 0);
 
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_x2.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_y1.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_y2.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_x1.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_x2.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_y1.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_y2.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_x2.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <b1_x2>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(b1_x2.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_y1.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <b1_y1>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(b1_y1.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_y2.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <b1_y2>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(b1_y2.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_x1.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <b2_x1>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(b2_x1.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_x2.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <b2_x2>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(b2_x2.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_y1.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <b2_y1>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(b2_y1.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_y2.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <b2_y2>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(b2_y2.data_type());
 
   user_op::TensorDesc* inter = ctx->MutOutputTensorDesc("inter", 0);
   inter->set_data_type(b1_x1.data_type());
@@ -158,14 +179,38 @@ Maybe<void> FusedGetIntersectionAreaGradOp::InferDataType(user_op::InferContext*
   const user_op::TensorDesc& b2_y2 = ctx->InputTensorDesc("b2_y2", 0);
   const user_op::TensorDesc& inter_diff = ctx->InputTensorDesc("inter_diff", 0);
 
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_x2.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_y1.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_y2.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_x1.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_x2.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_y1.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_y2.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), inter_diff.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_x2.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <b1_x2>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(b1_x2.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_y1.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <b1_y1>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(b1_y1.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_y2.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <b1_y2>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(b1_y2.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_x1.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <b2_x1>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(b2_x1.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_x2.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <b2_x2>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(b2_x2.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_y1.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <b2_y1>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(b2_y1.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_y2.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <b2_y2>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(b2_y2.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), inter_diff.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <inter_diff>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(inter_diff.data_type());
 
   user_op::TensorDesc* b1_x1_diff = ctx->MutOutputTensorDesc("b1_x1_diff", 0);
   b1_x1_diff->set_data_type(b1_x1.data_type());

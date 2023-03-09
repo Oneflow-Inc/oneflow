@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/error.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
 
@@ -45,9 +47,18 @@ Maybe<void> FusedGetCiouDiagonalAngleOp::InferDataType(user_op::InferContext* ct
   const user_op::TensorDesc& w2 = ctx->InputTensorDesc("w2", 0);
   const user_op::TensorDesc& h2 = ctx->InputTensorDesc("h2", 0);
 
-  CHECK_EQ_OR_RETURN(w1.data_type(), h1.data_type());
-  CHECK_EQ_OR_RETURN(w1.data_type(), w2.data_type());
-  CHECK_EQ_OR_RETURN(w1.data_type(), h2.data_type());
+  CHECK_EQ_OR_RETURN(w1.data_type(), h1.data_type())
+      << Error::RuntimeError()
+      << "The data type of <w1> is expected to be equal with that of <h1>, but got "
+      << DataType_Name(w1.data_type()) << " and " << DataType_Name(h1.data_type());
+  CHECK_EQ_OR_RETURN(w1.data_type(), w2.data_type())
+      << Error::RuntimeError()
+      << "The data type of <w1> is expected to be equal with that of <w2>, but got "
+      << DataType_Name(w1.data_type()) << " and " << DataType_Name(w2.data_type());
+  CHECK_EQ_OR_RETURN(w1.data_type(), h2.data_type())
+      << Error::RuntimeError()
+      << "The data type of <w1> is expected to be equal with that of <h2>, but got "
+      << DataType_Name(w1.data_type()) << " and " << DataType_Name(h2.data_type());
 
   user_op::TensorDesc* v = ctx->MutOutputTensorDesc("v", 0);
   v->set_data_type(w1.data_type());
@@ -110,10 +121,22 @@ Maybe<void> FusedGetCiouDiagonalAngleGradOp::InferDataType(user_op::InferContext
   const user_op::TensorDesc& h2 = ctx->InputTensorDesc("h2", 0);
   const user_op::TensorDesc& v_diff = ctx->InputTensorDesc("v_diff", 0);
 
-  CHECK_EQ_OR_RETURN(w1.data_type(), h1.data_type());
-  CHECK_EQ_OR_RETURN(w1.data_type(), w2.data_type());
-  CHECK_EQ_OR_RETURN(w1.data_type(), h2.data_type());
-  CHECK_EQ_OR_RETURN(w1.data_type(), v_diff.data_type());
+  CHECK_EQ_OR_RETURN(w1.data_type(), h1.data_type())
+      << Error::RuntimeError()
+      << "The data type of <w1> is expected to be equal with that of <h1>, but got "
+      << DataType_Name(w1.data_type()) << " and " << DataType_Name(h1.data_type());
+  CHECK_EQ_OR_RETURN(w1.data_type(), w2.data_type())
+      << Error::RuntimeError()
+      << "The data type of <w1> is expected to be equal with that of <w2>, but got "
+      << DataType_Name(w1.data_type()) << " and " << DataType_Name(w2.data_type());
+  CHECK_EQ_OR_RETURN(w1.data_type(), h2.data_type())
+      << Error::RuntimeError()
+      << "The data type of <w1> is expected to be equal with that of <h2>, but got "
+      << DataType_Name(w1.data_type()) << " and " << DataType_Name(h2.data_type());
+  CHECK_EQ_OR_RETURN(w1.data_type(), v_diff.data_type())
+      << Error::RuntimeError()
+      << "The data type of <w1> is expected to be equal with that of <v_diff>, but got "
+      << DataType_Name(w1.data_type()) << " and " << DataType_Name(h2.data_type());
 
   user_op::TensorDesc* w1_diff = ctx->MutOutputTensorDesc("w1_diff", 0);
   w1_diff->set_is_dynamic(w1.is_dynamic());

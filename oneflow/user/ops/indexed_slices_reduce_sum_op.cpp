@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/error.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
 
@@ -24,7 +25,10 @@ namespace oneflow {
   const user_op::TensorDesc& x_values = ctx->InputTensorDesc("x_values", 0);
   CHECK_LT_OR_RETURN(x_indices.shape().NumAxes(), x_values.shape().NumAxes());
   FOR_RANGE(int64_t, i, 0, x_indices.shape().NumAxes()) {
-    CHECK_EQ_OR_RETURN(x_indices.shape().At(i), x_values.shape().At(i));
+    CHECK_EQ_OR_RETURN(x_indices.shape().At(i), x_values.shape().At(i))
+        << Error::RuntimeError() << "The " << i
+        << "th dim of <x_indices> and <x_values> are expected to be the same, but got "
+        << x_indices.shape().At(i) << " and " << x_values.shape().At(i);
   }
 
   const int64_t n = x_indices.shape().elem_cnt();

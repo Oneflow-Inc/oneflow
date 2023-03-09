@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/error.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
 
@@ -57,13 +59,34 @@ Maybe<void> FusedCenterOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& b2_y1 = ctx->InputTensorDesc("b2_y1", 0);
   const user_op::TensorDesc& b2_y2 = ctx->InputTensorDesc("b2_y2", 0);
 
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_x2.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_y1.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_y2.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_x1.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_x2.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_y1.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_y2.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_x2.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <b1_x2>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(b1_x2.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_y1.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <b1_y1>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(b1_y1.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_y2.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <b1_y2>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(b1_y2.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_x1.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <b2_x1>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(b2_x1.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_x2.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <b2_x2>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(b2_x2.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_y1.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <b2_y1>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(b2_y1.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_y2.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <b2_y2>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(b2_y2.data_type());
 
   user_op::TensorDesc* rho = ctx->MutOutputTensorDesc("rho2", 0);
   rho->set_data_type(b1_x1.data_type());
@@ -158,14 +181,38 @@ Maybe<void> FusedCenterGradOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& b2_y2 = ctx->InputTensorDesc("b2_y2", 0);
   const user_op::TensorDesc& rho2_diff = ctx->InputTensorDesc("rho2_diff", 0);
 
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_x2.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_y1.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_y2.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_x1.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_x2.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_y1.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_y2.data_type());
-  CHECK_EQ_OR_RETURN(b1_x1.data_type(), rho2_diff.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_x2.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <b1_x2>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(b1_x2.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_y1.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <b1_y1>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(b1_y1.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b1_y2.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <b1_y2>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(b1_y2.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_x1.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <b2_x1>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(b2_x1.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_x2.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <b2_x2>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(b2_x2.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_y1.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <b2_y1>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(b2_y1.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), b2_y2.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <b2_y2>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(b2_y2.data_type());
+  CHECK_EQ_OR_RETURN(b1_x1.data_type(), rho2_diff.data_type())
+      << Error::RuntimeError()
+      << "The data type of <b1_x1> is expected to be equal with that of <rho2_diff>, but got "
+      << DataType_Name(b1_x1.data_type()) << " and " << DataType_Name(rho2_diff.data_type());
 
   user_op::TensorDesc* b1_x1_diff = ctx->MutOutputTensorDesc("b1_x1_diff", 0);
   b1_x1_diff->set_data_type(b1_x1.data_type());

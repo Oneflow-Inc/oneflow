@@ -41,10 +41,11 @@ Maybe<void> InferTensorDesc_(InferContext* ctx) {
   const TensorDesc& tensor_y = ctx->InputTensorDesc("y", 0);
 
   CHECK_EQ_OR_RETURN(tensor_x.shape().NumAxes(), tensor_y.shape().NumAxes())
-      << "Shape of tensor x and y should be same";
+      << "Tensor x and y should have same number of dims.";
 
   FOR_RANGE(int64_t, i, 0, tensor_x.shape().NumAxes()) {
-    CHECK_EQ_OR_RETURN(tensor_x.shape().At(i), tensor_y.shape().At(i));
+    CHECK_EQ_OR_RETURN(tensor_x.shape().At(i), tensor_y.shape().At(i))
+        << "The " << i << "th dim of tensor x and y are not equal.";
   }
 
   TensorDesc* tensor_dx = ctx->MutOutputTensorDesc("dx", 0);

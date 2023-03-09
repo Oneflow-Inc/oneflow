@@ -26,7 +26,10 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(b_tensor_desc.shape().NumAxes(), 1);
   CHECK_GE_OR_RETURN(bias_add_axis, 0);
   CHECK_LT_OR_RETURN(bias_add_axis, a_tensor_desc.shape().NumAxes());
-  CHECK_EQ_OR_RETURN(a_tensor_desc.shape().At(bias_add_axis), b_tensor_desc.shape().At(0));
+  CHECK_EQ_OR_RETURN(a_tensor_desc.shape().At(bias_add_axis), b_tensor_desc.shape().At(0))
+      << Error::RuntimeError() << "The" << bias_add_axis
+      << "th dim of tensor <a> is expected to be equal with the first dim of tensor <b>, but got "
+      << a_tensor_desc.shape().At(bias_add_axis) << " and " << b_tensor_desc.shape().At(0);
   ctx->SetOutputShape("out", 0, a_tensor_desc.shape());
   ctx->SetOutputIsDynamic("out", 0, a_tensor_desc.is_dynamic());
   return Maybe<void>::Ok();
@@ -66,7 +69,10 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(b_tensor_desc.shape().NumAxes(), 1);
   CHECK_GE_OR_RETURN(bias_add_axis, 0);
   CHECK_LT_OR_RETURN(bias_add_axis, a_tensor_desc.shape().NumAxes());
-  CHECK_EQ_OR_RETURN(a_tensor_desc.shape().At(bias_add_axis), b_tensor_desc.shape().At(0));
+  CHECK_EQ_OR_RETURN(a_tensor_desc.shape().At(bias_add_axis), b_tensor_desc.shape().At(0))
+      << Error::RuntimeError() << "The" << bias_add_axis
+      << "th dim of tensor <a> is expected to be equal with the first dim of tensor <b>, but got "
+      << a_tensor_desc.shape().At(bias_add_axis) << " and " << b_tensor_desc.shape().At(0);
   ctx->SetOutputShape("dx", 0, a_tensor_desc.shape());
   ctx->SetOutputIsDynamic("dx", 0, a_tensor_desc.is_dynamic());
   return Maybe<void>::Ok();
@@ -111,7 +117,10 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(b_tensor_desc.shape().NumAxes(), 1);
   CHECK_GE_OR_RETURN(bias_add_axis, 0);
   CHECK_LT_OR_RETURN(bias_add_axis, a_tensor_desc.shape().NumAxes());
-  CHECK_EQ_OR_RETURN(a_tensor_desc.shape().At(bias_add_axis), b_tensor_desc.shape().At(0));
+  CHECK_EQ_OR_RETURN(a_tensor_desc.shape().At(bias_add_axis), b_tensor_desc.shape().At(0))
+      << Error::RuntimeError() << "The" << bias_add_axis
+      << "th dim of tensor <a> is expected to be equal with the first dim of tensor <b>, but got "
+      << a_tensor_desc.shape().At(bias_add_axis) << " and " << b_tensor_desc.shape().At(0);
   CHECK_EQ_OR_RETURN(a_tensor_desc.shape(), mask_tensor_desc.shape());
   ctx->SetOutputShape("out", 0, a_tensor_desc.shape());
   ctx->SetOutputIsDynamic("out", 0, a_tensor_desc.is_dynamic());

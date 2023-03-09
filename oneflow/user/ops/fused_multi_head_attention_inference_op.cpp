@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/error.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
 
@@ -26,7 +27,10 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(key_type, query_type);
   CHECK_EQ_OR_RETURN(value_type, query_type);
   if (ctx->has_input("attn_bias", 0)) {
-    CHECK_EQ_OR_RETURN(ctx->InputDType("attn_bias", 0), query_type);
+    CHECK_EQ_OR_RETURN(ctx->InputDType("attn_bias", 0), query_type)
+        << Error::RuntimeError()
+        << "The data type of <attn_bias> is expected to be equal with that of <query>, but got "
+        << DataType_Name(ctx->InputDType("attn_bias", 0)) << " and " << DataType_Name(query_type);
   }
   ctx->SetOutputDType("out", 0, query_type);
   return Maybe<void>::Ok();

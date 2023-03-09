@@ -13,8 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/error.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/job/runtime.h"
 
 namespace oneflow {
 
@@ -55,7 +57,10 @@ namespace oneflow {
   const Shape& dy_shape = ctx->InputShape("dy", 0);
   ctx->SetOutputShape("dx", 0, dy_shape);
   ctx->SetOutputIsDynamic("dx", 0, ctx->InputIsDynamic("dy", 0));
-  CHECK_EQ_OR_RETURN(ctx->InputShape("mask", 0), dy_shape);
+  CHECK_EQ_OR_RETURN(ctx->InputShape("mask", 0), dy_shape)
+      << Error::RuntimeError()
+      << "The shape of <mask> is expected to be equal with that of <dy>, but got "
+      << OF_PP_STRINGIZE(ctx->InputShape("mask", 0)) << " and " << OF_PP_STRINGIZE(dy_shape);
   return Maybe<void>::Ok();
 }
 
