@@ -199,7 +199,6 @@ def _test_split_rand_op_in_graph(test_case, rand_op, input=None, **kwargs):
         placement = flow.placement(device, ranks)
         graph = TestGraphWithoutInput(placement)
         y_global = graph()
-        print(y_global.shape, y_global.sbp)
     else:
         x = flow.concat([input, input], dim=0)
         placement = flow.placement(input.device.type, ranks)
