@@ -48,8 +48,6 @@ class ThreadMgr final {
   std::mutex mutex4del_threads_;
 };
 
-void SingleThreadLoop(size_t num, const std::function<void(size_t i)>& Callback);
-
 // Use limit_thread_num to config the max thread num.
 // limit_thread_num == -1 means no limit, use the max avaliable thread num.
 // limit_thread_num == 0 means use the current thread.

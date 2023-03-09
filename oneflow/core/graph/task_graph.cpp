@@ -642,17 +642,8 @@ void TaskGraph::BuildCtrlRegstDescInSameChain() {
     return (node->chain_id() << 31) | (node->machine_id());
   };
   HashMap<int64_t, TaskNode*> physical_chain_id2node;
-  LOG(INFO) << "start to build ctrl.";
-  const auto& GetOpName = [](TaskNode* task) -> std::string {
-    if (task->exec_gph().node_num() != 1) { return ""; }
-    return task->exec_gph().SoleNode()->op()->op_name();
-  };
   // Note that ordered_task_nodes_'s topology order in seperation plan compile is not gerenteed,
   // So add ctrl edge with ordered_task_nodes_ in seperation plan compile may case dead lock.
-  for (auto* node : ordered_task_nodes_) {
-    LOG(INFO) << " ordered task " << node->order_in_chain() << " op " << GetOpName(node)
-              << " chain id " << GenPhysicalChainId(node);
-  }
   for (auto* node : ordered_task_nodes_) {
     if (IsConnectToTickOp(node)) { continue; }
     // NOTE(chengcheng): skip invalid chain id
@@ -667,8 +658,6 @@ void TaskGraph::BuildCtrlRegstDescInSameChain() {
       std::string ctrl_regst_name;
       bool build_ctrl_edge = src_node->BuildCtrlRegstDescIfNeed(dst_node, &ctrl_regst_name);
       if (build_ctrl_edge) {
-        LOG(INFO) << "Add ctrl edge from " << GetOpName(src_node) << " to " << GetOpName(dst_node)
-                  << " ctrl regst name " << ctrl_regst_name;
         CHECK(!ctrl_regst_name.empty());
         TaskEdge* edge = NewEdge();
         Connect<TaskNode>(src_node, edge, dst_node);
@@ -677,7 +666,6 @@ void TaskGraph::BuildCtrlRegstDescInSameChain() {
       iter->second = dst_node;
     }
   }
-  LOG(INFO) << "end to build ctrl.";
 }
 
 void TaskGraph::GetInplaceOpBlobArgList(
