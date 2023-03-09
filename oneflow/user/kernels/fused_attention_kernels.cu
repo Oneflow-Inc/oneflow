@@ -32,6 +32,116 @@ namespace user_op {
 
 namespace {
 
+void ParseDims(const ShapeView& shape, const std::string& layout,
+               const Optional<int64_t>& num_heads, const Optional<int64_t>& head_size,
+               int64_t tensor_index, int64_t* b, int64_t* m, int64_t* h, int64_t* k,
+               int64_t* b_stride, int64_t* m_stride, int64_t* h_stride, int64_t* offset) {
+  if (shape.NumAxes() == 3) {
+    if (layout == "BM(HK)" || layout == "BM(H2K)" || layout == "BM(H3K)" || layout == "MB(HK)"
+        || layout == "MB(H2K)" || layout == "MB(H3K)") {
+      bool batch_first = false;
+      int64_t packed_n = 0;
+      const std::string layout_bm = layout.substr(0, 2);
+      const std::string layout_hk = layout.substr(2);
+      if (layout_bm == "BM") {
+        *b = shape.At(0);
+        *m = shape.At(1);
+        batch_first = true;
+      } else if (layout_bm == "MB") {
+        *b = shape.At(1);
+        *m = shape.At(0);
+        batch_first = false;
+      } else {
+        UNIMPLEMENTED();
+      }
+      if (layout_hk == "(HK)") {
+        packed_n = 1;
+      } else if (layout_hk == "(H2K)") {
+        packed_n = 2;
+      } else if (layout_hk == "(H3K)") {
+        packed_n = 3;
+      } else {
+        UNIMPLEMENTED();
+      }
+      const int64_t hidden_size = shape.At(2);
+      if (num_heads) {
+        const int64_t expected_h = CHECK_JUST(num_heads);
+        const int64_t packed_h = packed_n * expected_h;
+        CHECK_EQ(hidden_size % packed_h, 0);
+        *h = expected_h;
+        *k = hidden_size / packed_h;
+      } else if (head_size) {
+        const int64_t expected_k = CHECK_JUST(head_size);
+        const int64_t packed_k = packed_n * expected_k;
+        CHECK_EQ(hidden_size % packed_k, 0);
+        *h = hidden_size / packed_k;
+        *k = expected_k;
+      } else {
+        UNIMPLEMENTED();
+      }
+      *h_stride = *k * packed_n;
+      if (batch_first) {
+        *m_stride = *h_stride * *h;
+        *b_stride = *m_stride * *m;
+      } else {
+        *b_stride = *h_stride * *h;
+        *m_stride = *b_stride * *b;
+      }
+      if (packed_n == 1) {
+        *offset = 0;
+      } else if (packed_n == 2) {
+        CHECK_GE(tensor_index, 1);
+        *offset = (tensor_index - 1) * *k;
+      } else if (packed_n == 3) {
+        *offset = tensor_index * *k;
+      } else {
+        UNIMPLEMENTED();
+      }
+    } else {
+      UNIMPLEMENTED();
+    }
+  } else if (shape.NumAxes() == 4) {
+    if (layout == "BMHK") {
+      *b = shape.At(0);
+      *m = shape.At(1);
+      *h = shape.At(2);
+      *k = shape.At(3);
+      *h_stride = *k;
+      *m_stride = *h_stride * *h;
+      *b_stride = *m_stride * *m;
+    } else if (layout == "BHMK") {
+      *b = shape.At(0);
+      *m = shape.At(2);
+      *h = shape.At(1);
+      *k = shape.At(3);
+      *m_stride = *k;
+      *h_stride = *m_stride * *m;
+      *b_stride = *h_stride * *h;
+    } else if (layout == "MBHK") {
+      *b = shape.At(1);
+      *m = shape.At(0);
+      *h = shape.At(2);
+      *k = shape.At(3);
+      *h_stride = *k;
+      *b_stride = *h_stride * *h;
+      *m_stride = *b_stride * *b;
+    } else {
+      UNIMPLEMENTED();
+    }
+    if (num_heads) {
+      const int64_t expected_h = CHECK_JUST(num_heads);
+      CHECK_EQ(*h, expected_h);
+    }
+    if (head_size) {
+      const int64_t expected_k = CHECK_JUST(head_size);
+      CHECK_EQ(*k, expected_k);
+    }
+    *offset = 0;
+  } else {
+    UNIMPLEMENTED();
+  };
+}
+
 template<typename T, int pack_size>
 struct alignas(pack_size * sizeof(T)) Pack {
   T elem[pack_size];
@@ -256,117 +366,6 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
     const std::string& value_layout = ctx->Attr<std::string>("value_layout");
     const std::string& output_layout = ctx->Attr<std::string>("output_layout");
 
-    const auto ParseDims = [](const ShapeView& shape, const std::string& layout,
-                              const Optional<int64_t>& num_heads,
-                              const Optional<int64_t>& head_size, int64_t tensor_index, int64_t* b,
-                              int64_t* m, int64_t* h, int64_t* k, int64_t* b_stride,
-                              int64_t* m_stride, int64_t* h_stride, int64_t* offset) -> void {
-      if (shape.NumAxes() == 3) {
-        if (layout == "BM(HK)" || layout == "BM(H2K)" || layout == "BM(H3K)" || layout == "MB(HK)"
-            || layout == "MB(H2K)" || layout == "MB(H3K)") {
-          bool batch_first = false;
-          int64_t packed_n = 0;
-          const std::string layout_bm = layout.substr(0, 2);
-          const std::string layout_hk = layout.substr(2);
-          if (layout_bm == "BM") {
-            *b = shape.At(0);
-            *m = shape.At(1);
-            batch_first = true;
-          } else if (layout_bm == "MB") {
-            *b = shape.At(1);
-            *m = shape.At(0);
-            batch_first = false;
-          } else {
-            UNIMPLEMENTED();
-          }
-          if (layout_hk == "(HK)") {
-            packed_n = 1;
-          } else if (layout_hk == "(H2K)") {
-            packed_n = 2;
-          } else if (layout_hk == "(H3K)") {
-            packed_n = 3;
-          } else {
-            UNIMPLEMENTED();
-          }
-          const int64_t hidden_size = shape.At(2);
-          if (num_heads) {
-            const int64_t expected_h = CHECK_JUST(num_heads);
-            const int64_t packed_h = packed_n * expected_h;
-            CHECK_EQ(hidden_size % packed_h, 0);
-            *h = expected_h;
-            *k = hidden_size / packed_h;
-          } else if (head_size) {
-            const int64_t expected_k = CHECK_JUST(head_size);
-            const int64_t packed_k = packed_n * expected_k;
-            CHECK_EQ(hidden_size % packed_k, 0);
-            *h = hidden_size / packed_k;
-            *k = expected_k;
-          } else {
-            UNIMPLEMENTED();
-          }
-          *h_stride = *k * packed_n;
-          if (batch_first) {
-            *m_stride = *h_stride * *h;
-            *b_stride = *m_stride * *m;
-          } else {
-            *b_stride = *h_stride * *h;
-            *m_stride = *b_stride * *b;
-          }
-          if (packed_n == 1) {
-            *offset = 0;
-          } else if (packed_n == 2) {
-            CHECK_GE(tensor_index, 1);
-            *offset = (tensor_index - 1) * *k;
-          } else if (packed_n == 3) {
-            *offset = tensor_index * *k;
-          } else {
-            UNIMPLEMENTED();
-          }
-        } else {
-          UNIMPLEMENTED();
-        }
-      } else if (shape.NumAxes() == 4) {
-        if (layout == "BMHK") {
-          *b = shape.At(0);
-          *m = shape.At(1);
-          *h = shape.At(2);
-          *k = shape.At(3);
-          *h_stride = *k;
-          *m_stride = *h_stride * *h;
-          *b_stride = *m_stride * *m;
-        } else if (layout == "BHMK") {
-          *b = shape.At(0);
-          *m = shape.At(2);
-          *h = shape.At(1);
-          *k = shape.At(3);
-          *m_stride = *k;
-          *h_stride = *m_stride * *m;
-          *b_stride = *h_stride * *h;
-        } else if (layout == "MBHK") {
-          *b = shape.At(1);
-          *m = shape.At(0);
-          *h = shape.At(2);
-          *k = shape.At(3);
-          *h_stride = *k;
-          *b_stride = *h_stride * *h;
-          *m_stride = *b_stride * *b;
-        } else {
-          UNIMPLEMENTED();
-        }
-        if (num_heads) {
-          const int64_t expected_h = CHECK_JUST(num_heads);
-          CHECK_EQ(*h, expected_h);
-        }
-        if (head_size) {
-          const int64_t expected_k = CHECK_JUST(head_size);
-          CHECK_EQ(*k, expected_k);
-        }
-        *offset = 0;
-      } else {
-        UNIMPLEMENTED();
-      };
-    };
-
     int64_t q_b = 0;
     int64_t q_m = 0;
     int64_t q_h = 0;
@@ -551,8 +550,6 @@ size_t InferTmpBufferSize(InferContext* ctx) {
   return buffer_size;
 }
 
-}  // namespace
-
 #define REGISTER_FUSED_MULTI_HEAD_ATTENTION_INFERENCE_KERNEL(dtype)    \
   REGISTER_USER_KERNEL("fused_multi_head_attention_inference")         \
       .SetCreateFn<FusedMultiHeadAttentionInferenceKernel>()           \
@@ -562,6 +559,281 @@ size_t InferTmpBufferSize(InferContext* ctx) {
 
 REGISTER_FUSED_MULTI_HEAD_ATTENTION_INFERENCE_KERNEL(DataType::kFloat16)
 REGISTER_FUSED_MULTI_HEAD_ATTENTION_INFERENCE_KERNEL(DataType::kFloat)
+
+template<typename Index>
+struct ConcatParam {
+  const void* past_ptr;
+  const void* ptr;
+  void* output_ptr;
+  Index past_offset;
+  Index offset;
+  Index output_offset;
+  Index past_m;
+  Index past_stride_b;
+  Index past_stride_m;
+  Index past_stride_h;
+  Index stride_b;
+  Index stride_m;
+  Index stride_h;
+  Index output_stride_b;
+  Index output_stride_m;
+  Index output_stride_h;
+  Index count;
+  Index output_khm;
+  Index output_kh;
+  Index output_k;
+};
+
+template<typename Index>
+struct BatchConcatParam {
+  ConcatParam<Index> params[2];
+};
+
+template<typename T, typename Index>
+__device__ void ConcatPastKeyValue(ConcatParam<Index> p) {
+  for (Index i = blockIdx.x * blockDim.x + threadIdx.x; i < p.count; i += blockDim.x * gridDim.x) {
+    Index b_idx = i / p.output_khm;
+    Index b_off = i - b_idx * p.output_khm;
+    Index m_idx = b_off / p.output_kh;
+    Index m_off = b_off - m_idx * p.output_kh;
+    Index h_idx = m_off / p.output_k;
+    Index k_idx = m_off - h_idx * p.output_k;
+    T v;
+    if (m_idx < p.past_m) {
+      v = reinterpret_cast<const T*>(
+          p.past_ptr)[p.past_offset + b_idx * p.past_stride_b + m_idx * p.past_stride_m
+                      + h_idx * p.past_stride_h + k_idx];
+    } else {
+      v = reinterpret_cast<const T*>(
+          p.ptr)[p.offset + b_idx * p.stride_b + (m_idx - p.past_m) * p.stride_m
+                 + h_idx * p.stride_h + k_idx];
+    }
+    reinterpret_cast<T*>(
+        p.output_ptr)[p.output_offset + b_idx * p.output_stride_b + m_idx * p.output_stride_m
+                      + h_idx * p.output_stride_h + k_idx] = v;
+  }
+}
+
+template<size_t elem_size, typename Index>
+__global__ void BatchConcatPastKeyValue(BatchConcatParam<Index> params) {
+  if (blockIdx.y == 0) {
+    ConcatPastKeyValue<std::aligned_storage<elem_size, elem_size>::type, Index>(params.params[0]);
+  } else if (blockIdx.y == 1) {
+    ConcatPastKeyValue<std::aligned_storage<elem_size, elem_size>::type, Index>(params.params[1]);
+  } else {
+    // do nothing
+  }
+}
+
+class FusedAttentionConcatPastKeyValueKernel final : public user_op::OpKernel,
+                                                     public user_op::CudaGraphSupport {
+ public:
+  FusedAttentionConcatPastKeyValueKernel() = default;
+  ~FusedAttentionConcatPastKeyValueKernel() override = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const Tensor* past_key = ctx->Tensor4ArgNameAndIndex("past_key", 0);
+    const Tensor* past_value = ctx->Tensor4ArgNameAndIndex("past_value", 0);
+    const Tensor* key = ctx->Tensor4ArgNameAndIndex("key", 0);
+    const Tensor* value = ctx->Tensor4ArgNameAndIndex("value", 0);
+    Tensor* output_key = ctx->Tensor4ArgNameAndIndex("output_key", 0);
+    Tensor* output_value = ctx->Tensor4ArgNameAndIndex("output_value", 0);
+    const DataType data_type = past_key->data_type();
+    CHECK_EQ(past_value->data_type(), data_type);
+    CHECK_EQ(key->data_type(), data_type);
+    CHECK_EQ(value->data_type(), data_type);
+    CHECK_EQ(output_key->data_type(), data_type);
+    CHECK_EQ(output_value->data_type(), data_type);
+    const int64_t size_of_data_type = GetSizeOfDataType(data_type);
+    const int64_t key_head_size = ctx->Attr<int64_t>("key_head_size");
+    const std::string& past_key_layout = ctx->Attr<std::string>("past_key_layout");
+    const std::string& past_value_layout = ctx->Attr<std::string>("past_value_layout");
+    const std::string& key_layout = ctx->Attr<std::string>("key_layout");
+    const std::string& value_layout = ctx->Attr<std::string>("value_layout");
+
+    int64_t pack_size = 16 / size_of_data_type;
+    while (key_head_size % pack_size != 0) { pack_size /= 2; }
+
+    auto ParsePackedDims =
+        [](const ShapeView& shape, const std::string& layout, const Optional<int64_t>& num_heads,
+           const Optional<int64_t>& head_size, int64_t tensor_index, int64_t* b, int64_t* m,
+           int64_t* h, int64_t* k, int64_t* b_stride, int64_t* m_stride, int64_t* h_stride,
+           int64_t* offset, int64_t pack_size) {
+          ParseDims(shape, layout, num_heads, head_size, tensor_index, b, m, h, k, b_stride,
+                    m_stride, h_stride, offset);
+          *k /= pack_size;
+          *b_stride /= pack_size;
+          *m_stride /= pack_size;
+          *h_stride /= pack_size;
+          *offset /= pack_size;
+        };
+
+    int64_t past_key_b = 0;
+    int64_t past_key_m = 0;
+    int64_t past_key_h = 0;
+    int64_t past_key_k = 0;
+    int64_t past_key_b_stride = 0;
+    int64_t past_key_m_stride = 0;
+    int64_t past_key_h_stride = 0;
+    int64_t past_key_offset = 0;
+    ParsePackedDims(past_key->shape_view(), past_key_layout, Optional<int64_t>(), key_head_size, 1,
+                    &past_key_b, &past_key_m, &past_key_h, &past_key_k, &past_key_b_stride,
+                    &past_key_m_stride, &past_key_h_stride, &past_key_offset, pack_size);
+
+    int64_t past_value_b = 0;
+    int64_t past_value_m = 0;
+    int64_t past_value_h = 0;
+    int64_t past_value_k = 0;
+    int64_t past_value_b_stride = 0;
+    int64_t past_value_m_stride = 0;
+    int64_t past_value_h_stride = 0;
+    int64_t past_value_offset = 0;
+    ParsePackedDims(past_value->shape_view(), past_value_layout, past_key_h, key_head_size, 2,
+                    &past_value_b, &past_value_m, &past_value_h, &past_value_k,
+                    &past_value_b_stride, &past_value_m_stride, &past_value_h_stride,
+                    &past_value_offset, pack_size);
+    CHECK_EQ(past_value_b, past_key_b);
+    CHECK_EQ(past_value_m, past_key_m);
+
+    int64_t key_b = 0;
+    int64_t key_m = 0;
+    int64_t key_h = 0;
+    int64_t key_k = 0;
+    int64_t key_b_stride = 0;
+    int64_t key_m_stride = 0;
+    int64_t key_h_stride = 0;
+    int64_t key_offset = 0;
+    ParsePackedDims(key->shape_view(), key_layout, past_key_h, key_head_size, 1, &key_b, &key_m,
+                    &key_h, &key_k, &key_b_stride, &key_m_stride, &key_h_stride, &key_offset,
+                    pack_size);
+    CHECK_EQ(key_b, past_value_b);
+
+    int64_t value_b = 0;
+    int64_t value_m = 0;
+    int64_t value_h = 0;
+    int64_t value_k = 0;
+    int64_t value_b_stride = 0;
+    int64_t value_m_stride = 0;
+    int64_t value_h_stride = 0;
+    int64_t value_offset = 0;
+    ParsePackedDims(value->shape_view(), value_layout, past_key_h, key_head_size, 2, &value_b,
+                    &value_m, &value_h, &value_k, &value_b_stride, &value_m_stride, &value_h_stride,
+                    &value_offset, pack_size);
+    CHECK_EQ(value_b, past_key_b);
+    CHECK_EQ(value_m, key_m);
+
+    int64_t output_key_b = 0;
+    int64_t output_key_m = 0;
+    int64_t output_key_h = 0;
+    int64_t output_key_k = 0;
+    int64_t output_key_b_stride = 0;
+    int64_t output_key_m_stride = 0;
+    int64_t output_key_h_stride = 0;
+    int64_t output_key_offset = 0;
+    ParsePackedDims(output_key->shape_view(), past_key_layout, past_key_h, key_head_size, 1,
+                    &output_key_b, &output_key_m, &output_key_h, &output_key_k,
+                    &output_key_b_stride, &output_key_m_stride, &output_key_h_stride,
+                    &output_key_offset, pack_size);
+    CHECK_EQ(output_key_b, past_key_b);
+    CHECK_EQ(output_key_m, past_key_m + key_m);
+
+    int64_t output_value_b = 0;
+    int64_t output_value_m = 0;
+    int64_t output_value_h = 0;
+    int64_t output_value_k = 0;
+    int64_t output_value_b_stride = 0;
+    int64_t output_value_m_stride = 0;
+    int64_t output_value_h_stride = 0;
+    int64_t output_value_offset = 0;
+    ParsePackedDims(output_value->shape_view(), past_value_layout, past_key_h, key_head_size, 2,
+                    &output_value_b, &output_value_m, &output_value_h, &output_value_k,
+                    &output_value_b_stride, &output_value_m_stride, &output_value_h_stride,
+                    &output_value_offset, pack_size);
+    CHECK_EQ(output_value_b, past_key_b);
+    CHECK_EQ(output_value_m, past_value_m + value_m);
+
+    int64_t max_tensor_elem = (1 << 30) * pack_size;
+    CHECK(past_key->shape_view().elem_cnt() <= max_tensor_elem
+          && past_value->shape_view().elem_cnt() <= max_tensor_elem
+          && key->shape_view().elem_cnt() <= max_tensor_elem
+          && value->shape_view().elem_cnt() <= max_tensor_elem
+          && output_key->shape_view().elem_cnt() <= max_tensor_elem
+          && output_value->shape_view().elem_cnt() <= max_tensor_elem);
+
+    int64_t count = output_key_b * output_key_m * output_key_h * output_key_k;
+    BatchConcatParam<int32_t> kv;
+
+    kv.params[0].past_ptr = past_key->dptr();
+    kv.params[0].ptr = key->dptr();
+    kv.params[0].output_ptr = output_key->mut_dptr();
+    kv.params[0].past_offset = past_key_offset;
+    kv.params[0].offset = key_offset;
+    kv.params[0].output_offset = output_key_offset;
+    kv.params[0].past_m = past_key_m;
+    kv.params[0].past_stride_b = past_key_b_stride;
+    kv.params[0].past_stride_m = past_key_m_stride;
+    kv.params[0].past_stride_h = past_key_h_stride;
+    kv.params[0].stride_b = key_b_stride;
+    kv.params[0].stride_m = key_m_stride;
+    kv.params[0].stride_h = key_h_stride;
+    kv.params[0].output_stride_b = output_key_b_stride;
+    kv.params[0].output_stride_m = output_key_m_stride;
+    kv.params[0].output_stride_h = output_key_h_stride;
+    kv.params[0].count = count;
+    kv.params[0].output_khm = output_key_k * output_key_h * output_key_m;
+    kv.params[0].output_kh = output_key_k * output_key_h;
+    kv.params[0].output_k = output_key_k;
+
+    kv.params[1].past_ptr = past_value->dptr();
+    kv.params[1].ptr = value->dptr();
+    kv.params[1].output_ptr = output_value->mut_dptr();
+    kv.params[1].past_offset = past_value_offset;
+    kv.params[1].offset = value_offset;
+    kv.params[1].output_offset = output_value_offset;
+    kv.params[1].past_m = past_value_m;
+    kv.params[1].past_stride_b = past_value_b_stride;
+    kv.params[1].past_stride_m = past_value_m_stride;
+    kv.params[1].past_stride_h = past_value_h_stride;
+    kv.params[1].stride_b = value_b_stride;
+    kv.params[1].stride_m = value_m_stride;
+    kv.params[1].stride_h = value_h_stride;
+    kv.params[1].output_stride_b = output_value_b_stride;
+    kv.params[1].output_stride_m = output_value_m_stride;
+    kv.params[1].output_stride_h = output_value_h_stride;
+    kv.params[1].count = count;
+    kv.params[1].output_khm = output_value_k * output_value_h * output_value_m;
+    kv.params[1].output_kh = output_value_k * output_value_h;
+    kv.params[1].output_k = output_value_k;
+
+    constexpr uint32_t block_size = 256;
+    const dim3 grid_size((count - 1 + block_size) / block_size, 2);
+
+    const int64_t elem_size = size_of_data_type * pack_size;
+    cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
+    if (elem_size == 16) {
+      BatchConcatPastKeyValue<16, int32_t><<<grid_size, block_size, 0, cuda_stream>>>(kv);
+    } else if (elem_size == 8) {
+      BatchConcatPastKeyValue<8, int32_t><<<grid_size, block_size, 0, cuda_stream>>>(kv);
+    } else if (elem_size == 4) {
+      BatchConcatPastKeyValue<4, int32_t><<<grid_size, block_size, 0, cuda_stream>>>(kv);
+    } else if (elem_size == 2) {
+      BatchConcatPastKeyValue<2, int32_t><<<grid_size, block_size, 0, cuda_stream>>>(kv);
+    } else if (elem_size == 1) {
+      BatchConcatPastKeyValue<1, int32_t><<<grid_size, block_size, 0, cuda_stream>>>(kv);
+    } else {
+      UNIMPLEMENTED();
+    }
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+REGISTER_USER_KERNEL("fused_attention_concat_past_key_value")
+    .SetCreateFn<FusedAttentionConcatPastKeyValueKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA));
+
+}  // namespace
 
 }  // namespace user_op
 
