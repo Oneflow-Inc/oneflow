@@ -45,9 +45,12 @@ class RtRegstDesc {
   const LogicalBlobId& GetLbiByOrdinal(int64_t ordinal) const;
   size_t TotalByteSize4AllRegst() const;
   size_t TotalMainByteSize4AllRegst() const;
+  size_t TotalBodyByteSize4AllRegst() const;
   size_t TotalSeparatedHeaderByteSize4AllRegst() const;
   size_t SeparatedHeaderByteSize4OneRegst() const;
   size_t MainByteSize4OneRegst() const;
+  size_t BodyByteSize4OneRegst() const;
+  size_t HeaderByteSize4OneRegst() const;
   const Shape& data_regst_time_shape() const;
 
   void ForEachBlobDescOffsetInOnRegst(
@@ -67,6 +70,8 @@ class RtRegstDesc {
   std::vector<LogicalBlobId> sorted_lbi_vec_;
 
   bool has_separated_header_;
+  size_t one_regst_header_size_;
+  size_t one_regst_body_size_;
 };
 
 }  // namespace oneflow

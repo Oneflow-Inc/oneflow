@@ -40,6 +40,11 @@ def is_initialized() -> bool:
     return True
 
 
+# PyTorch doesn't have torch.distributed.get_local_rank,
+# we add it for the consistency between flow.env and flow.distributed
+get_local_rank = flow.env.get_local_rank
+
+
 def get_rank(group=None) -> int:
     """Alias of `oneflow.env.get_rank()` for PyTorch compatibility.
 
@@ -188,3 +193,7 @@ def gather(
     assert group is None, "group is not supported yet"
     assert async_op is False, "async_op is not supported yet"
     return flow.comm.gather(tensor, gather_list, dst)
+
+
+def is_available():
+    return True

@@ -14,27 +14,32 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <numeric>
+
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/common/constant.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/common/cplusplus_17.h"
 
 namespace oneflow {
 
+Stride::Stride(const ShapeView& shape) {
+  const int64_t ndim = shape.NumAxes();
+  resize(ndim);
+  if (ndim > 0 && shape.elem_cnt() > 0) {
+    std::exclusive_scan(shape.rbegin(), shape.rend(), rbegin(), (int64_t)1, std::multiplies<>{});
+  } else if (ndim > 0 && shape.elem_cnt() == 0) {
+    // 0-size shape
+    small_vector<int64_t, kMaxNumDims> tmp_shape(ndim);
+    for (int64_t i = 0; i < ndim; ++i) { tmp_shape[i] = shape.At(i) > 0 ? shape.At(i) : 1; }
+    std::exclusive_scan(tmp_shape.rbegin(), tmp_shape.rend(), rbegin(), (int64_t)1,
+                        std::multiplies<>{});
+  }
+}
+
 Stride::Stride(const Shape& shape) {
   if (shape.is_initialized()) {
-    const int64_t ndim = shape.NumAxes();
-    resize(shape.NumAxes());
-    if (ndim > 0 && shape.elem_cnt() > 0) {
-      std::exclusive_scan(shape.dim_vec().rbegin(), shape.dim_vec().rend(), rbegin(), (int64_t)1,
-                          std::multiplies<>{});
-    } else if (ndim > 0 && shape.elem_cnt() == 0) {
-      // 0-size shape
-      small_vector<int64_t, kMaxNumDims> tmp_shape(ndim);
-      for (int64_t i = 0; i < ndim; ++i) { tmp_shape[i] = shape.At(i) > 0 ? shape.At(i) : 1; }
-      std::exclusive_scan(tmp_shape.rbegin(), tmp_shape.rend(), rbegin(), (int64_t)1,
-                          std::multiplies<>{});
-    }
+    ShapeView shape_view(shape);
+    new (this) Stride(shape_view);
   }
 }
 
@@ -63,6 +68,11 @@ std::string Stride::ToString() const {
 
 void Stride::ToProto(Int64ListProto* ret) const {
   *(ret->mutable_dim()) = PbRf<int64_t>(begin(), end());
+}
+
+std::ostream& operator<<(std::ostream& out, const Stride& stride) {
+  out << stride.ToString();
+  return out;
 }
 
 }  // namespace oneflow

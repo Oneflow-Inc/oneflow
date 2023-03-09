@@ -275,6 +275,10 @@ Pointwise Ops
     logical_not 
     logical_or 
     logical_xor 
+    bitwise_and
+    bitwise_or
+    bitwise_xor
+    bitwise_not
     mish
     mul 
     neg 
@@ -317,6 +321,7 @@ Reduction Ops
     min  
     mean  
     median
+    mode
     prod
     nansum
     std  

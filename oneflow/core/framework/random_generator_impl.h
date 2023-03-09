@@ -33,6 +33,17 @@ limitations under the License.
 #endif  // WITH_CUDA
 
 namespace oneflow {
+
+#ifdef WITH_CUDA
+
+namespace ep {
+
+class CudaStream;
+
+}  // namespace ep
+
+#endif  // WITH_CUDA
+
 namespace one {
 
 class Tensor;
@@ -210,21 +221,14 @@ class CPUGeneratorImpl : public DeviceGeneratorImpl {
 };
 
 #ifdef WITH_CUDA
-struct CUDAGeneratorState {
-  uint64_t dev_offset;
-  int32_t dev_counter;
-};
 
 class CUDAGeneratorImpl : public DeviceGeneratorImpl {
  public:
   explicit CUDAGeneratorImpl(uint64_t seed, int device_index);
-  virtual ~CUDAGeneratorImpl();
+  virtual ~CUDAGeneratorImpl() = default;
 
   int32_t max_block_num() const { return max_block_num_; }
   int32_t max_thread_num() const { return max_thread_num_; }
-
-  curandState* curand_states() const { return curand_states_; }
-  CUDAGeneratorState* cuda_gen_state() const { return cuda_gen_state_; }
 
   void set_current_seed(uint64_t seed) override;
 
@@ -232,23 +236,17 @@ class CUDAGeneratorImpl : public DeviceGeneratorImpl {
 
   Maybe<Tensor> GetState() const override;
   Maybe<void> SetState(const std::shared_ptr<Tensor>& tensor_state) override;
+  std::tuple<uint64_t, dim3, dim3> CalcExecutionPolicy(int64_t total_elements,
+                                                       ep::CudaStream* stream);
 
   uint64_t get_philox_offset(uint64_t increment);
 
  private:
   int32_t max_block_num_;
   int32_t max_thread_num_;
-  curandState* curand_states_;
-  CUDAGeneratorState* cuda_gen_state_;
   uint64_t philox_offset_per_thread_ = 0;
 };
 
-namespace detail {
-
-void InitCurandStates(uint64_t seed, int32_t block_num, int32_t thread_num, curandState* states,
-                      CUDAGeneratorState* cuda_gen_state);
-
-}  // namespace detail
 #endif  // WITH_CUDA
 
 class AutoGeneratorImpl : public GeneratorImpl {

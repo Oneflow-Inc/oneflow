@@ -20,6 +20,7 @@ import copy
 import os
 import warnings
 import gc
+from typing import Union
 
 import numpy as np
 import oneflow as flow
@@ -980,6 +981,16 @@ class DualObject:
                 k: v.detach() for (k, v) in oneflow_state_dict.items()
             }
             already_global = any([v.is_global for v in oneflow_state_dict.values()])
+            if is_global() and already_global:
+                for k, v in state_dict.items():
+                    if k not in oneflow_state_dict:
+                        continue
+                    of_state = oneflow_state_dict[k]
+                    if of_state.is_global:
+                        state_dict[k] = flow.tensor(
+                            v, sbp=of_state.sbp, placement=of_state.placement
+                        )
+
             oneflow.load_state_dict(state_dict, strict=False)
 
             if is_global():
@@ -1178,7 +1189,7 @@ def check_nonetype_equality(a, b, ignored1, ignored2, check_dtype=False):
 
 def autotest(
     n=20,
-    auto_backward=True,
+    auto_backward: Union[bool, str] = True,
     rtol=0.0001,
     atol=1e-05,
     check_graph=True,
@@ -1236,6 +1247,11 @@ def autotest(
                             continue
                         if auto_backward:
                             if isinstance(x.pytorch, torch_original.Tensor):
+                                if auto_backward == "auto" and (
+                                    not x.pytorch.requires_grad
+                                    or not x.oneflow.requires_grad
+                                ):
+                                    continue
                                 call_tensor_id.append(id(x.pytorch))
                                 if check_grad_use_random_data:
                                     np_arr = rng.uniform(
@@ -1305,7 +1321,7 @@ def autotest(
                     if check_allclose:
                         test_case.assertTrue(
                             check_equality(
-                                x, rtol=rtol, atol=atol, check_dtype=check_dtype
+                                x, rtol=rtol, atol=atol, check_dtype=check_dtype,
                             ),
                             x,
                         )
@@ -1340,8 +1356,8 @@ def random_tensor(
     dim2=None,
     dim3=None,
     dim4=None,
-    low=0,
-    high=1,
+    low=None,
+    high=None,
     dtype=float,
     requires_grad=True,
     pin_memory=False,
@@ -1355,6 +1371,7 @@ def random_tensor(
         .value()
         .requires_grad_(requires_grad and dtype != int)
     )
+    extra_input_tensor.append(pytorch_tensor)
     if is_global():
         flow_tensor = flow.tensor(
             pytorch_tensor.detach().cpu().numpy(),

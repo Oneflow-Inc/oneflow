@@ -443,7 +443,7 @@ class Celu : public OpExprGradFunction<CeluCaptureState> {
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->alpha = JUST(composed_attrs.GetAttr<double>("alpha"));
-    ctx->SaveTensorForBackward(inputs.at(0));
+    ctx->SaveTensorForBackward(outputs.at(0));
     return Maybe<void>::Ok();
   }
 
@@ -452,8 +452,8 @@ class Celu : public OpExprGradFunction<CeluCaptureState> {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     in_grads->resize(1);
     if (ctx->requires_grad) {
-      const auto& x = ctx->SavedTensors().at(0);
-      in_grads->at(0) = JUST(functional::CeluGrad(x, out_grads.at(0), ctx->alpha));
+      const auto& y = ctx->SavedTensors().at(0);
+      in_grads->at(0) = JUST(functional::CeluGrad(y, out_grads.at(0), ctx->alpha));
     }
     return Maybe<void>::Ok();
   }
