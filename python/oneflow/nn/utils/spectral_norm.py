@@ -26,18 +26,26 @@ class SpectralNorm:
     # Invariant before and after each forward call:
     #   u = normalize(W @ v)
     # NB: At initialization, this invariant is not enforced
-    
+
     name: str
     dim: int
     n_power_iterations: int
     eps: float
 
-    def __init__(self, name: str = 'weight', n_power_iterations: int = 1, dim: int = 0, eps: float = 1e-12) -> None:
+    def __init__(
+        self,
+        name: str = "weight",
+        n_power_iterations: int = 1,
+        dim: int = 0,
+        eps: float = 1e-12,
+    ) -> None:
         self.name = name
         self.dim = dim
         if n_power_iterations <= 0:
-            raise ValueError('Expected n_power_iterations to be positive, but '
-                             'got n_power_iterations={}'.format(n_power_iterations))
+            raise ValueError(
+                "Expected n_power_iterations to be positive, but "
+                "got n_power_iterations={}".format(n_power_iterations)
+            )
         self.n_power_iterations = n_power_iterations
         self.eps = eps
 
@@ -45,8 +53,9 @@ class SpectralNorm:
         weight_mat = weight
         if self.dim != 0:
             # permute dim to front
-            weight_mat = weight_mat.permute(self.dim,
-                                            *[d for d in range(weight_mat.dim()) if d != self.dim])
+            weight_mat = weight_mat.permute(
+                self.dim, *[d for d in range(weight_mat.dim()) if d != self.dim]
+            )
         height = weight_mat.size(0)
         return weight_mat.reshape(height, -1)
 
@@ -80,9 +89,9 @@ class SpectralNorm:
         #    GAN training: loss = D(real) - D(fake). Otherwise, engine will
         #    complain that variables needed to do backward for the first forward
         #    (i.e., the `u` and `v` vectors) are changed in the second forward.
-        weight = getattr(module, self.name + '_orig')
-        u = getattr(module, self.name + '_u')
-        v = getattr(module, self.name + '_v')
+        weight = getattr(module, self.name + "_orig")
+        u = getattr(module, self.name + "_u")
+        v = getattr(module, self.name + "_v")
         weight_mat = self.reshape_weight_to_matrix(weight)
 
         if do_power_iteration:
@@ -97,34 +106,43 @@ class SpectralNorm:
 
         sigma = flow.dot(u, flow.mv(weight_mat, v))
         weight = weight / sigma
-        setattr(module, self.name + '_u', u)
-        setattr(module, self.name + '_v', v)
+        setattr(module, self.name + "_u", u)
+        setattr(module, self.name + "_v", v)
         return weight
 
     def remove(self, module: Module) -> None:
         with flow.no_grad():
             weight = self.compute_weight(module, do_power_iteration=False)
         delattr(module, self.name)
-        delattr(module, self.name + '_u')
-        delattr(module, self.name + '_v')
-        delattr(module, self.name + '_orig')
+        delattr(module, self.name + "_u")
+        delattr(module, self.name + "_v")
+        delattr(module, self.name + "_orig")
         module.register_parameter(self.name, flow.nn.Parameter(weight.detach()))
 
     def __call__(self, module: Module, inputs: Any) -> None:
-        setattr(module, self.name, self.compute_weight(module, do_power_iteration=module.training))
-
+        setattr(
+            module,
+            self.name,
+            self.compute_weight(module, do_power_iteration=module.training),
+        )
 
     @staticmethod
-    def apply(module: Module, name: str, n_power_iterations: int, dim: int, eps: float) -> 'SpectralNorm':
+    def apply(
+        module: Module, name: str, n_power_iterations: int, dim: int, eps: float
+    ) -> "SpectralNorm":
         for k, hook in module._forward_pre_hooks.items():
             if isinstance(hook, SpectralNorm) and hook.name == name:
-                raise RuntimeError("Cannot register two spectral_norm hooks on "
-                                   "the same parameter {}".format(name))
+                raise RuntimeError(
+                    "Cannot register two spectral_norm hooks on "
+                    "the same parameter {}".format(name)
+                )
 
         fn = SpectralNorm(name, n_power_iterations, dim, eps)
         weight = module._parameters[name]
         if weight is None:
-            raise ValueError(f'`SpectralNorm` cannot be applied as parameter `{name}` is None')
+            raise ValueError(
+                f"`SpectralNorm` cannot be applied as parameter `{name}` is None"
+            )
 
         with flow.no_grad():
             weight_mat = fn.reshape_weight_to_matrix(weight)
@@ -149,14 +167,16 @@ class SpectralNorm:
         return fn
 
 
-T_module = TypeVar('T_module', bound=Module)
+T_module = TypeVar("T_module", bound=Module)
 
 
-def spectral_norm(module: T_module,
-                  name: str = 'weight',
-                  n_power_iterations: int = 1,
-                  eps: float = 1e-12,
-                  dim: Optional[int] = None) -> T_module:
+def spectral_norm(
+    module: T_module,
+    name: str = "weight",
+    n_power_iterations: int = 1,
+    eps: float = 1e-12,
+    dim: Optional[int] = None,
+) -> T_module:
     r"""Applies spectral normalization to a parameter in the given module.
 
     .. math::
@@ -208,9 +228,10 @@ def spectral_norm(module: T_module,
 
     """
     if dim is None:
-        if isinstance(module, (flow.nn.ConvTranspose1d,
-                               flow.nn.ConvTranspose2d,
-                               flow.nn.ConvTranspose3d)):
+        if isinstance(
+            module,
+            (flow.nn.ConvTranspose1d, flow.nn.ConvTranspose2d, flow.nn.ConvTranspose3d),
+        ):
             dim = 1
         else:
             dim = 0
@@ -218,7 +239,7 @@ def spectral_norm(module: T_module,
     return module
 
 
-def remove_spectral_norm(module: T_module, name: str = 'weight') -> T_module:
+def remove_spectral_norm(module: T_module, name: str = "weight") -> T_module:
     r"""Removes the spectral normalization reparameterization from a module.
 
     Args:
@@ -237,7 +258,6 @@ def remove_spectral_norm(module: T_module, name: str = 'weight') -> T_module:
             del module._forward_pre_hooks[k]
             break
     else:
-        raise ValueError("spectral_norm of '{}' not found in {}".format(
-            name, module))
+        raise ValueError("spectral_norm of '{}' not found in {}".format(name, module))
 
     return module
