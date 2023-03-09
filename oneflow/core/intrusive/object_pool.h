@@ -55,16 +55,14 @@ class ObjectPool {
 
   static void Put(void* raw_ptr) {
     T* ptr = reinterpret_cast<T*>(raw_ptr);
-    if constexpr (object_pool_strategy != kThreadUnsafeAndDisableDestruct) {
-      ptr->__Delete__();
-    }
+    if constexpr (object_pool_strategy != kThreadUnsafeAndDisableDestruct) { ptr->__Delete__(); }
     ptr->mut_object_pool()->container_.push_back(ptr);
   }
 
  private:
   inline void InitObjectPoolFields4Element(T* ptr) {
     ptr->set_object_pool(this);
-      ptr->mut_intrusive_ref()->set_deleter(&ObjectPool::Put);
+    ptr->mut_intrusive_ref()->set_deleter(&ObjectPool::Put);
   }
 
   static constexpr int kObjectPoolInitCap = 65536;
