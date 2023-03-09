@@ -21,18 +21,18 @@ limitations under the License.
 namespace oneflow {
 
 Symbol<Layout> Layout::Get(LayoutType layout_type) {
-  static HashMap<LayoutType, Symbol<Layout>> layouttype2layout{
+  static const HashMap<LayoutType, Symbol<Layout>> layout_type2layout{
 #define MAKE_ENTRY(layout_type) {OF_PP_CAT(LayoutType::k, layout_type), layout_type()},
       OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, LAYOUT_SEQ)
 #undef MAKE_ENTRY
   };
-  return CHECK_JUST(MapAt(layouttype2layout, layout_type));
+  return layout_type2layout.at(layout_type);
 }
 
 const std::string& GetLayoutTypeName(LayoutType layout_type) {
   static const HashMap<LayoutType, std::string> layout_type2name{
       {LayoutType::kStrided, "oneflow.strided"}};
-  return CHECK_JUST(MapAt(layout_type2name, layout_type));
+  return layout_type2name.at(layout_type);
 };
 
 const std::string& Layout::name() const { return GetLayoutTypeName(layout_type_); }

@@ -21,13 +21,13 @@ limitations under the License.
 namespace oneflow {
 
 Symbol<MemoryFormat> MemoryFormat::Get(MemoryFormatType memory_format_type) {
-  static HashMap<MemoryFormatType, Symbol<MemoryFormat>> memory_formattype2memory_format{
+  static const HashMap<MemoryFormatType, Symbol<MemoryFormat>> memory_format_type2memory_format{
 #define MAKE_ENTRY(memory_format_type) \
   {OF_PP_CAT(MemoryFormatType::k, memory_format_type), memory_format_type()},
       OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, MEMORY_FORMAT_SEQ)
 #undef MAKE_ENTRY
   };
-  return CHECK_JUST(MapAt(memory_formattype2memory_format, memory_format_type));
+  return memory_format_type2memory_format.at(memory_format_type);
 }
 
 const std::string& GetMemoryFormatTypeName(MemoryFormatType memory_format_type) {
@@ -35,7 +35,7 @@ const std::string& GetMemoryFormatTypeName(MemoryFormatType memory_format_type) 
       {MemoryFormatType::kContiguous, "oneflow.contiguous_format"},
       {MemoryFormatType::kPreserve, "oneflow.preserve_format"},
   };
-  return CHECK_JUST(MapAt(memory_format_type2name, memory_format_type));
+  return memory_format_type2name.at(memory_format_type);
 };
 
 const std::string& MemoryFormat::name() const {
