@@ -162,7 +162,7 @@ class GpuAsStridedGradKernel final : public user_op::OpKernel {
     const int64_t storage_offset = ctx->Attr<int64_t>("storage_offset");
 
     size_t dy_num_dims = dy->shape_view().NumAxes();
-    const int64_t* dy_dims = dy->shape_view().int64_ptr();
+    const int64_t* dy_dims = dy->shape_view().ptr();
     const size_t dx_num = dx->shape_view().Count(0);
     const size_t dy_num = dy->shape_view().Count(0);
 

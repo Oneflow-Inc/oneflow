@@ -41,10 +41,8 @@ OpaqueMemRefDescriptor CreateMemRefDescriptor(user_op::Tensor* tensor) {
   auto desc = new MemRefType();
   *desc = mlir::detail::makeStridedMemRefDescriptor<N>(
       tensor->dptr<T>(), tensor->dptr<T>(),
-      {tensor->shape_view().int64_ptr(),
-       tensor->shape_view().int64_ptr() + tensor->shape_view().NumAxes()},
-      {tensor->shape_view().int64_ptr(),
-       tensor->shape_view().int64_ptr() + tensor->shape_view().NumAxes()});
+      {tensor->shape_view().ptr(), tensor->shape_view().ptr() + tensor->shape_view().NumAxes()},
+      {tensor->shape_view().ptr(), tensor->shape_view().ptr() + tensor->shape_view().NumAxes()});
   auto deleter = [](void const* data) {
     auto p = static_cast<MemRefType const*>(data);
     delete p;
@@ -58,10 +56,8 @@ OpaqueMemRefDescriptor CreateMutMemRefDescriptor(user_op::Tensor* tensor) {
   auto desc = new MemRefType();
   *desc = mlir::detail::makeStridedMemRefDescriptor<N>(
       tensor->mut_dptr<T>(), tensor->mut_dptr<T>(),
-      {tensor->shape_view().int64_ptr(),
-       tensor->shape_view().int64_ptr() + tensor->shape_view().NumAxes()},
-      {tensor->shape_view().int64_ptr(),
-       tensor->shape_view().int64_ptr() + tensor->shape_view().NumAxes()});
+      {tensor->shape_view().ptr(), tensor->shape_view().ptr() + tensor->shape_view().NumAxes()},
+      {tensor->shape_view().ptr(), tensor->shape_view().ptr() + tensor->shape_view().NumAxes()});
   auto deleter = [](void const* data) {
     auto p = static_cast<MemRefType const*>(data);
     delete p;

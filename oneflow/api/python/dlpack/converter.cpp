@@ -195,7 +195,7 @@ Maybe<DLManagedTensor*> toDLPack(const std::shared_ptr<one::Tensor>& src) {
   atDLMTensor->tensor.dl_tensor.dtype = *dldtype;
   atDLMTensor->tensor.dl_tensor.shape =
       // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
-      const_cast<int64_t*>(src->shape()->int64_ptr());
+      const_cast<int64_t*>(src->shape()->data());
   atDLMTensor->tensor.dl_tensor.strides =
       // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
       const_cast<int64_t*>(JUST(src->stride())->data());

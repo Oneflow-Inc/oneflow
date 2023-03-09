@@ -26,8 +26,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   output_desc->set_shape(Shape({input_shape.elem_cnt(), input_shape.NumAxes()}));
   output_desc->set_is_dynamic(true);
   user_op::TensorDesc* output_size_desc = ctx->MutOutputTensorDesc("output_size", 0);
-  output_size_desc->set_shape(Shape{1});
-  CHECK_EQ_OR_RETURN(output_size_desc->shape().elem_cnt(), 1);
+  output_size_desc->set_shape(Shape({1}));
   return Maybe<void>::Ok();
 }
 
