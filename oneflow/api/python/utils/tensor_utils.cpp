@@ -176,6 +176,7 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
   // lml debug
   #include <iostream>
   std::cout << "before call empty" << std::endl;
+  std::cout << "data_type: " << np_data_type << std::endl;
   std::shared_ptr<Tensor> tensor = JUST(
       functional::Empty(shape, JUST(DType::Get(np_data_type)), device_, /*pin_memory=*/pin_memory));
   std::cout << "before copy data" << std::endl;
