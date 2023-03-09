@@ -143,8 +143,8 @@ class ArgsTree(object):
         else:
             args_to_iter = self._io_args
 
-        # NOTE(lixiang): Generator expression and iterator are used. 
-        #   This avoids generating the full list in memory and only processes the nodes that need to be processed, 
+        # NOTE(lixiang): Generator expression and iterator are used.
+        #   This avoids generating the full list in memory and only processes the nodes that need to be processed,
         #   reducing time and space consumption.
         stack = [iter([args_to_iter])]
         while len(stack) > 0:
@@ -160,7 +160,7 @@ class ArgsTree(object):
                 elif _is_raw_type(curr_value, dict) or _is_raw_type(
                     curr_value, OrderedDict
                 ):
-                    children = list(curr_value.values())
+                    children = curr_value.values()
                 else:
                     children = None
 
