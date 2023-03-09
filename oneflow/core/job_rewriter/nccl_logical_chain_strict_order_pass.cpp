@@ -50,12 +50,6 @@ class NcclLogicalChainStrictOrderPass final : public JobPass {
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
 };
 
-std::string GenParallelConfKey(const ParallelConf& conf) {
-  std::string ret = conf.device_tag();
-  for (const auto& name : conf.device_name()) { ret += ("-" + name); }
-  return ret;
-}
-
 bool IsAccOrPackOpNode(const OpNode* node) {
   const auto& op_conf = node->op().op_conf();
   return op_conf.has_user_conf()

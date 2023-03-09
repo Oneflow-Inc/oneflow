@@ -104,7 +104,9 @@ def _test_pow_with_scalar(test_case, placement, sbp, ndim):
 @autotest(n=1, auto_backward=False, check_graph=True)
 def _test_floordiv_with_scalar(test_case, placement, sbp, ndim):
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
-    x = random_tensor(ndim, *dim_list,).to_global(placement, sbp)
+    # The random value is narrowed to positive number because of the error from pytorch 1.10.0
+    # Please remove the value range striction after updating the pytorch version of ci to 1.13.
+    x = random_tensor(ndim, *dim_list, low=0, high=10).to_global(placement, sbp)
     y = random().to(float)
     z = torch.floor_divide(x, y)
     return z
@@ -145,8 +147,10 @@ def _test_acosh(test_case, placement, sbp, ndim):
 @autotest(n=1, auto_backward=False, check_graph=True)
 def _test_floordiv(test_case, placement, sbp, ndim):
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
-    x = random_tensor(ndim, *dim_list).to_global(placement, sbp)
-    y = random_tensor(ndim, *dim_list).to_global(placement, sbp)
+    # The random value is narrowed to positive number because of the error from pytorch 1.10.0
+    # Please remove the value range striction after updating the pytorch version of ci to 1.13.
+    x = random_tensor(ndim, *dim_list, low=0, high=10).to_global(placement, sbp)
+    y = random_tensor(ndim, *dim_list, low=1, high=10).to_global(placement, sbp)
     z = torch.floor_divide(x, y)
     return z
 
