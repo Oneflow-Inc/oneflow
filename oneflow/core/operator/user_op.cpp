@@ -720,7 +720,7 @@ Maybe<void> UserOp::InferInternalBlobDescs(
     BlobDesc* tmp_buffer_blob = GetBlobDesc4BnInOp(GenRepeatedBn("tmp_buffer", 0));
     CHECK_NOTNULL_OR_RETURN(tmp_buffer_blob);
     tmp_buffer_blob->set_data_type(DataType::kChar);
-    tmp_buffer_blob->set_shape(Shape({static_cast<int64_t>(tmp_size)}));
+    tmp_buffer_blob->set_shape(Shape{tmp_size});
     tmp_buffer_blob->set_stride(Stride({static_cast<int64_t>(tmp_size)}));
   }
   return Maybe<void>::Ok();
