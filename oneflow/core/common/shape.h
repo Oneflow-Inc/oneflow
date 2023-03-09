@@ -89,13 +89,9 @@ struct ConstShapeMixIn {
   // whenever possible.
   const int64_t* ptr() const { return int64_ptr(); }
 
-  const int64_t* int64_ptr() const {
-    return tp()->data();
-  }
+  const int64_t* int64_ptr() const { return tp()->data(); }
 
-  const Dim* dim_ptr() const { 
-    return &(*this->tp())[0];
-  }
+  const Dim* dim_ptr() const { return &(*this->tp())[0]; }
 
   bool all_dims_known() const;
 
@@ -125,9 +121,7 @@ struct MutShapeMixIn : public ConstShapeMixIn<T> {
 
   int64_t* int64_ptr() { return this->tp()->data(); }
 
-  Dim* dim_ptr() { 
-    return &(*this->tp())[0];
-  }
+  Dim* dim_ptr() { return &(*this->tp())[0]; }
 };
 
 class Shape final : public DimVector, public MutShapeMixIn<Shape> {

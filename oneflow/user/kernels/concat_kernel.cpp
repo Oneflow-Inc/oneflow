@@ -78,8 +78,8 @@ class ConcatKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
         std::array<int64_t, 2> src_pos_arr = {0, 0};
         std::array<int64_t, 2> extent_arr = {rows, in_cols};
         primitive->Launch(ctx->stream(), out_tensor->data_type(), 2, out_tensor->mut_dptr(),
-                          dst_shape.data(), dst_pos_arr.data(), in_tensor->dptr(),
-                          src_shape.data(), src_pos_arr.data(), extent_arr.data());
+                          dst_shape.data(), dst_pos_arr.data(), in_tensor->dptr(), src_shape.data(),
+                          src_pos_arr.data(), extent_arr.data());
       }
       out_col_offset += in_cols;
     }

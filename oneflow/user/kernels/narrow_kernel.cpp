@@ -74,9 +74,9 @@ class NarrowKernel final : public user_op::OpKernel {
     Shape src_shape = {outer_dim, narrow_dim, inner_dim};
     std::array<int64_t, 3> src_pos_vec = {0, start, 0};
     std::array<int64_t, 3> extent_vec = {outer_dim, length, inner_dim};
-    copy_nd_primitive->Launch(ctx->stream(), out->data_type(), 3, out->mut_dptr(),
-                              dst_shape.data(), dst_pos_vec.data(), in->dptr(),
-                              src_shape.data(), src_pos_vec.data(), extent_vec.data());
+    copy_nd_primitive->Launch(ctx->stream(), out->data_type(), 3, out->mut_dptr(), dst_shape.data(),
+                              dst_pos_vec.data(), in->dptr(), src_shape.data(), src_pos_vec.data(),
+                              extent_vec.data());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -117,8 +117,8 @@ class NarrowGradKernel final : public user_op::OpKernel {
     std::array<int64_t, 3> extent_vec = {outer_dim, length, inner_dim};
 
     copy_nd_primitive->Launch(ctx->stream(), dx->data_type(), 3, dst, dst_shape.data(),
-                              dst_pos_vec.data(), dy->dptr(), src_shape.data(),
-                              src_pos_vec.data(), extent_vec.data());
+                              dst_pos_vec.data(), dy->dptr(), src_shape.data(), src_pos_vec.data(),
+                              extent_vec.data());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

@@ -131,8 +131,8 @@ class ScalarReverseMathKernel final : public user_op::OpKernel {
       std::unique_ptr<ep::primitive::BroadcastElementwiseBinary> primitive =
           NewBroadcastElementwiseBinaryPrimitive(ctx, op);
       CHECK(primitive);
-      primitive->Launch(ctx->stream(), value, in->shape_view().NumAxes(),
-                        in->shape_view().ptr(), in->dptr(), out->mut_dptr());
+      primitive->Launch(ctx->stream(), value, in->shape_view().NumAxes(), in->shape_view().ptr(),
+                        in->dptr(), out->mut_dptr());
     } else {
       // For 0-d Tensor
       return;

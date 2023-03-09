@@ -117,8 +117,8 @@ void ConcatFeatures(user_op::KernelComputeContext* ctx, int64_t dst_rows, int64_
     std::array<int64_t, 2> src_pos_vec = {0, 0};
     std::array<int64_t, 2> extent_vec = {feature_rows, feature_cols};
     primitive->Launch(ctx->stream(), feature->data_type(), 2, dst_ptr, dst_shape.data(),
-                      dst_pos_vec.data(), feature->dptr<T>(), src_shape.data(),
-                      src_pos_vec.data(), extent_vec.data());
+                      dst_pos_vec.data(), feature->dptr<T>(), src_shape.data(), src_pos_vec.data(),
+                      extent_vec.data());
     out_col_offset += feature_cols;
   }
   int64_t pad_dim = dst_cols - out_col_offset;
