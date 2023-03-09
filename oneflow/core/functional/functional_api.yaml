@@ -17,7 +17,7 @@
 #   "Tensor", "TensorTuple", "Scalar", "Int", "Int32", "Int64", "Float", "Double", "String", "Bool",
 #   "ScalarList", "IntList", "Int32List", "Int64List", "FloatList", "DoubleList", "StringList",
 #   "BoolList", "DataType", "Shape", "Generator", "TensorIndex", "Device", "Placement",
-#   "Sbp", "SbpList"
+#   "Sbp", "SbpList", "Layout", "MemoryFormat",
 # }
 
 - name: "add"
@@ -2431,7 +2431,7 @@
 - name: "randn"
   signature: [
       "Tensor (Shape size, *, DataType dtype=None, Device device=None,
-      Generator generator=None, Bool requires_grad=False) => RandN",
+      Generator generator=None, Bool requires_grad=False, Layout layout=kStrided) => RandN",
       "Tensor (Shape size, *, Placement placement, SbpList sbp, DataType dtype=None,
       Generator generator=None, Bool requires_grad=False) => GlobalRandN",
     ]
@@ -2598,6 +2598,10 @@
 
 - name: "fused_multi_head_attention_inference_v2"
   signature: 'Tensor (*, Tensor query, String query_layout, Int64 query_head_size=None, Tensor key=None, String key_layout=None, Tensor value=None, String value_layout=None, Tensor attn_bias=None, String output_layout="BM(HK)", Bool causal=False, Int64 causal_diagonal_offset=0) => FusedMultiHeadAttentionInferenceV2'
+  bind_python: True
+
+- name: "fused_attention_concat_past_key_value"
+  signature: 'TensorTuple (*, Tensor past_key, String past_key_layout, Tensor past_value, String past_value_layout, Tensor key, String key_layout, Tensor value, String value_layout, Int64 key_head_size=None) => FusedAttentionConcatPastKeyValue'
   bind_python: True
 
 - name: "fused_scale_mask_bias_softmax"
@@ -3177,6 +3181,7 @@
 - name: "broadcast_to"
   signature: "Tensor (Tensor x, Shape shape) => BroadcastTo"
   bind_python: True
+
 - name: "bincount"
   signature: "Tensor (Tensor input, Tensor weights=None, Int64 minlength=None) => BinCount"
   bind_python: True
