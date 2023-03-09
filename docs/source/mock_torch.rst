@@ -1,4 +1,4 @@
-mock_torch
+oneflow.mock_torch
 ===================================
 
 OneFlow's API is aligned with PyTorch, and users can easily migrate PyTorch models to OneFlow using the `mock_torch` module.

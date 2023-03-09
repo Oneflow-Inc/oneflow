@@ -217,6 +217,16 @@ class DummyModule(ModuleType):
 
 
 class enable:
+    """
+    mock_torch.enable(lazy=None,verbose=None) -> None
+
+    Enable mock function.
+
+    Args:
+        lazy (bool, optional): When lazy=True, a false object is returned for a non-existent interface without an immediate error.
+        verbose (bool, optional): If verbose=True is set at the same time as lazy=True, it will print out which fake objects are accessed or used, making it easier to debug.
+
+    """
     def __init__(
         self,
         lazy: Optional[bool] = None,
@@ -255,6 +265,12 @@ class enable:
 
 
 class disable:
+    """
+    mock_torch.disable() -> None
+
+    Disable mock function.
+
+    """
     def __init__(self):
         self.enable = _importer.enable
         if not self.enable:
