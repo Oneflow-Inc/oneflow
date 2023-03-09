@@ -66,14 +66,15 @@ struct UserOpRegisterTrigger final {
 
 }  // namespace user_op
 
-Maybe<void> SetHostInput4Op(const std::string& op_type_name, const std::string& arg_name,
-                            int32_t index);
+Maybe<void> SetHostMemoryInput4Op(const std::string& op_type_name, const std::string& arg_name,
+                                  int32_t index);
 
-bool IsHostInput4Op(const std::string& op_type_name, const std::string& arg_name, int32_t index);
+bool IsHostMemoryInput4Op(const std::string& op_type_name, const std::string& arg_name,
+                          int32_t index);
 
-bool HasHostInput(const std::string& op_type_name);
+bool HasHostMemoryInput(const std::string& op_type_name);
 
-const small_vector<std::pair<std::string, int32_t>, kOpArgsReservedSize>& HostInputs4Op(
+const small_vector<std::pair<std::string, int32_t>, kOpArgsReservedSize>& HostMemoryInputs4Op(
     const std::string& op_type_name);
 
 }  // namespace oneflow

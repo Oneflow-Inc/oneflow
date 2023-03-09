@@ -442,9 +442,10 @@ void ForEachOpGraphNecessaryCtrlEdge(
 std::vector<LogicalBlobId> HostInputLbis4OpNode(const OpNode* op_node) {
   std::vector<LogicalBlobId> host_mem_input_lbis;
   if (op_node->op().op_conf().has_user_conf()) {
-    if (HasHostInput(op_node->op().op_conf().user_conf().op_type_name())) {
+    if (HasHostMemoryInput(op_node->op().op_conf().user_conf().op_type_name())) {
       const user_op::UserOpConfWrapper& user_op_conf_warpper(op_node->op().op_conf());
-      for (const auto& pair : HostInputs4Op(op_node->op().op_conf().user_conf().op_type_name())) {
+      for (const auto& pair :
+           HostMemoryInputs4Op(op_node->op().op_conf().user_conf().op_type_name())) {
         if (!user_op_conf_warpper.has_input(pair.first, pair.second)) { continue; }
         const LogicalBlobId& host_input_lbi =
             GenLogicalBlobId(user_op_conf_warpper.input(pair.first, pair.second));

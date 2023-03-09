@@ -153,8 +153,8 @@ GlobalOpTypeName2HostMemoryInputArgs() {
 
 }  // namespace
 
-Maybe<void> SetHostInput4Op(const std::string& op_type_name, const std::string& arg_name,
-                            int32_t index) {
+Maybe<void> SetHostMemoryInput4Op(const std::string& op_type_name, const std::string& arg_name,
+                                  int32_t index) {
   auto* op_type_name2host_memory_input_args = GlobalOpTypeName2HostMemoryInputArgs();
   auto it = op_type_name2host_memory_input_args->find(op_type_name);
   if (it == op_type_name2host_memory_input_args->end()) {
@@ -167,7 +167,8 @@ Maybe<void> SetHostInput4Op(const std::string& op_type_name, const std::string& 
   return Maybe<void>::Ok();
 }
 
-bool IsHostInput4Op(const std::string& op_type_name, const std::string& arg_name, int32_t index) {
+bool IsHostMemoryInput4Op(const std::string& op_type_name, const std::string& arg_name,
+                          int32_t index) {
   auto* op_type_name2host_memory_input_args = GlobalOpTypeName2HostMemoryInputArgs();
   auto it = op_type_name2host_memory_input_args->find(op_type_name);
   if (it == op_type_name2host_memory_input_args->end()) { return false; }
@@ -177,13 +178,13 @@ bool IsHostInput4Op(const std::string& op_type_name, const std::string& arg_name
                      });
 }
 
-bool HasHostInput(const std::string& op_type_name) {
+bool HasHostMemoryInput(const std::string& op_type_name) {
   auto* op_type_name2host_memory_input_args = GlobalOpTypeName2HostMemoryInputArgs();
   return op_type_name2host_memory_input_args->find(op_type_name)
          != op_type_name2host_memory_input_args->end();
 }
 
-const small_vector<std::pair<std::string, int32_t>, kOpArgsReservedSize>& HostInputs4Op(
+const small_vector<std::pair<std::string, int32_t>, kOpArgsReservedSize>& HostMemoryInputs4Op(
     const std::string& op_type_name) {
   static small_vector<std::pair<std::string, int32_t>, kOpArgsReservedSize>
       empty_host_memory_input_args;

@@ -105,7 +105,7 @@ GetSbpFn MakeGetSbpFn(GetSbpFn extra) {
   return DataTypeInferFn(ctx);
 }
 
-COMMAND(CHECK_JUST(SetHostInput4Op("host_scalar_add_by_tensor", "scalar", 0)));
+COMMAND(CHECK_JUST(SetHostMemoryInput4Op("host_scalar_add_by_tensor", "scalar", 0)));
 
 /*static*/ Maybe<void> ScalarSubByTensorOp::GetSbp(user_op::SbpContext* ctx) {
   return MakeGetSbpFn([](user_op::SbpContext* ctx) {

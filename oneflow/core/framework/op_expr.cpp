@@ -550,8 +550,8 @@ Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
   global_tensor_infer_cache_.reset(new GlobalTensorInferCache(self));
   const auto& indexed_input_pairs = this->indexed_input_pairs();
   for (int32_t i = 0; i < indexed_input_pairs.size(); ++i) {
-    if (IsHostInput4Op(op_type_name, indexed_input_pairs.at(i).first,
-                       indexed_input_pairs.at(i).second)) {
+    if (IsHostMemoryInput4Op(op_type_name, indexed_input_pairs.at(i).first,
+                             indexed_input_pairs.at(i).second)) {
       host_memory_input_ids_.emplace_back(i);
     }
   }
