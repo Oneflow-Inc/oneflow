@@ -67,6 +67,8 @@ HashMap<ValueType, std::string>* GetValueTypeNameMap() {
       {kOPEXPR, "opexpr"},
       {kOPEXPR_REF, "opexpr"},
       {kPY_OBJECT, "python object"},
+      {kLAYOUT, "layout"},
+      {kMEMORYFORMAT, "memory format"},
   };
   return &value_type_name_map;
 }
