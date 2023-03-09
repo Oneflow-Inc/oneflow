@@ -135,10 +135,11 @@ class TestExp(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestExp2(flow.unittest.TestCase):
-    @autotest(n=5)
+    @autotest(n=5, auto_backward="auto")
     def test_flow_exp2_with_random_data(test_case):
         device = random_device()
-        x = random_tensor().to(device)
+        x_dtype = random_dtype(["arithmetic"])
+        x = random_tensor().to(device).to(x_dtype)
         y = torch.exp2(x)
         return y
 

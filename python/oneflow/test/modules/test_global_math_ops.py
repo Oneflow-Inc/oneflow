@@ -19,7 +19,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=True)
+@autotest(n=1)
 def _test_sinh(test_case, placement, sbp, ndim):
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
     x = random_tensor(ndim, *dim_list).to_global(placement, sbp)
@@ -27,7 +27,7 @@ def _test_sinh(test_case, placement, sbp, ndim):
     return y
 
 
-@autotest(n=1, check_graph=True)
+@autotest(n=1)
 def _test_sin(test_case, placement, sbp, ndim):
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
     x = random_tensor(ndim, *dim_list).to_global(placement, sbp)
@@ -35,7 +35,7 @@ def _test_sin(test_case, placement, sbp, ndim):
     return y
 
 
-@autotest(n=1, check_graph=True)
+@autotest(n=1)
 def _test_inplace_sin(test_case, placement, sbp, ndim):
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
     x = random_tensor(ndim, *dim_list).to_global(placement, sbp)
@@ -44,7 +44,7 @@ def _test_inplace_sin(test_case, placement, sbp, ndim):
     return y
 
 
-@autotest(n=1, check_graph=True)
+@autotest(n=1)
 def _test_cos(test_case, placement, sbp, ndim):
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
     x = random_tensor(ndim, *dim_list).to_global(placement, sbp)
@@ -52,7 +52,7 @@ def _test_cos(test_case, placement, sbp, ndim):
     return y
 
 
-@autotest(n=1, check_graph=True)
+@autotest(n=1)
 def _test_log(test_case, placement, sbp, ndim):
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
     x = random_tensor(ndim, *dim_list).to_global(placement, sbp)
@@ -60,7 +60,7 @@ def _test_log(test_case, placement, sbp, ndim):
     return y
 
 
-@autotest(n=1, check_graph=True)
+@autotest(n=1)
 def _test_sqrt(test_case, placement, sbp, ndim):
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
     x = random_tensor(ndim, *dim_list).to_global(placement, sbp)
@@ -68,7 +68,7 @@ def _test_sqrt(test_case, placement, sbp, ndim):
     return y
 
 
-@autotest(n=1, check_graph=True)
+@autotest(n=1)
 def _test_exp(test_case, placement, sbp, ndim):
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
     x = random_tensor(ndim, *dim_list).to_global(placement, sbp)
@@ -76,7 +76,7 @@ def _test_exp(test_case, placement, sbp, ndim):
     return y
 
 
-@autotest(n=1, check_graph=True)
+@autotest(n=1)
 def _test_exp2(test_case, placement, sbp, ndim):
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
     x = random_tensor(ndim, *dim_list).to_global(placement, sbp)
@@ -84,7 +84,7 @@ def _test_exp2(test_case, placement, sbp, ndim):
     return y
 
 
-@autotest(n=1, check_graph=True)
+@autotest(n=1)
 def _test_rsqrt(test_case, placement, sbp, ndim):
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
     x = random_tensor(ndim, *dim_list).to_global(placement, sbp)
@@ -92,7 +92,7 @@ def _test_rsqrt(test_case, placement, sbp, ndim):
     return y
 
 
-@autotest(n=1, check_graph=True)
+@autotest(n=1)
 def _test_square(test_case, placement, sbp, ndim):
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
     x = random_tensor(ndim, *dim_list).to_global(placement, sbp)
@@ -100,7 +100,7 @@ def _test_square(test_case, placement, sbp, ndim):
     return y
 
 
-@autotest(n=1, check_graph=True)
+@autotest(n=1)
 def _test_pow_with_scalar(test_case, placement, sbp, ndim):
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
     x = random_tensor(ndim, *dim_list).to_global(placement, sbp)
@@ -109,7 +109,7 @@ def _test_pow_with_scalar(test_case, placement, sbp, ndim):
     return z
 
 
-@autotest(n=1, auto_backward=False, check_graph=True)
+@autotest(n=1, auto_backward=False)
 def _test_floordiv_with_scalar(test_case, placement, sbp, ndim):
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
     # The random value is narrowed to positive number because of the error from pytorch 1.10.0
@@ -120,7 +120,7 @@ def _test_floordiv_with_scalar(test_case, placement, sbp, ndim):
     return z
 
 
-@autotest(n=1, check_graph=True)
+@autotest(n=1)
 def _test_arccos(test_case, placement, sbp, ndim):
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
     x = random_tensor(ndim, *dim_list, low=-1, high=1).to_global(placement, sbp)
@@ -128,7 +128,7 @@ def _test_arccos(test_case, placement, sbp, ndim):
     return y
 
 
-@autotest(n=1, check_graph=True)
+@autotest(n=1)
 def _test_acos(test_case, placement, sbp, ndim):
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
     x = random_tensor(ndim, *dim_list, low=-1, high=1).to_global(placement, sbp)
@@ -136,7 +136,7 @@ def _test_acos(test_case, placement, sbp, ndim):
     return y
 
 
-@autotest(n=1, check_graph=True)
+@autotest(n=1)
 def _test_arccosh(test_case, placement, sbp, ndim):
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
     x = random_tensor(ndim, *dim_list, low=2, high=3).to_global(placement, sbp)
@@ -144,7 +144,7 @@ def _test_arccosh(test_case, placement, sbp, ndim):
     return y
 
 
-@autotest(n=1, check_graph=True)
+@autotest(n=1)
 def _test_acosh(test_case, placement, sbp, ndim):
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
     x = random_tensor(ndim, *dim_list, low=2, high=3).to_global(placement, sbp)
@@ -152,7 +152,7 @@ def _test_acosh(test_case, placement, sbp, ndim):
     return y
 
 
-@autotest(n=1, auto_backward=False, check_graph=True)
+@autotest(n=1, auto_backward=False)
 def _test_floordiv(test_case, placement, sbp, ndim):
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
     # The random value is narrowed to positive number because of the error from pytorch 1.10.0
@@ -163,7 +163,7 @@ def _test_floordiv(test_case, placement, sbp, ndim):
     return z
 
 
-@autotest(n=1, check_graph=True)
+@autotest(n=1)
 def _test_atan2(test_case, placement, sbp, ndim):
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
     x = random_tensor(ndim, *dim_list).to_global(placement, sbp)
@@ -178,7 +178,6 @@ class TestMathOps(flow.unittest.TestCase):
         ndim = random(1, 3).to(int).value()
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=ndim):
-
                 _test_sinh(test_case, placement, sbp, ndim)
                 _test_sin(test_case, placement, sbp, ndim)
                 _test_inplace_sin(test_case, placement, sbp, ndim)

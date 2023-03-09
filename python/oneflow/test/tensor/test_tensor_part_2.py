@@ -810,7 +810,7 @@ class TestTensor(flow.unittest.TestCase):
         x = random_tensor().to(device)
         return x.exp()
 
-    @autotest(n=5, auto_backward=False)
+    @autotest(n=5)
     def test_exp2_tensor_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
