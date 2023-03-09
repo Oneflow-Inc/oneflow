@@ -2864,7 +2864,8 @@ def OneFlow_FusedMultiHeadAttentionInferenceOp : OneFlow_BaseOp<"fused_multi_hea
     DefaultValuedAttr<SI64Attr, "0">:$causal_diagonal_offset,
     StrAttr:$query_layout,
     StrAttr:$key_layout,
-    StrAttr:$value_layout
+    StrAttr:$value_layout,
+    StrAttr:$output_layout
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

@@ -2602,7 +2602,7 @@
   bind_python: True
 
 - name: "fused_multi_head_attention_inference_v2"
-  signature: "Tensor (*, Tensor query, String query_layout, Int64 query_head_size=None, Tensor key, String key_layout, Tensor value, String value_layout, Tensor attn_bias=None, Bool causal=False, Int64 causal_diagonal_offset=0) => FusedMultiHeadAttentionInferenceV2"
+  signature: 'Tensor (*, Tensor query, String query_layout, Int64 query_head_size=None, Tensor key=None, String key_layout=None, Tensor value=None, String value_layout=None, Tensor attn_bias=None, String output_layout="BM(HK)", Bool causal=False, Int64 causal_diagonal_offset=0) => FusedMultiHeadAttentionInferenceV2'
   bind_python: True
 
 - name: "fused_scale_mask_bias_softmax"
