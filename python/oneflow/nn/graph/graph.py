@@ -1642,6 +1642,7 @@ class Graph(object):
                     arg_value, None, io_type, arg.prefix() + "_" + arg.name(),
                 )
 
+        # NOTE(lixiang): Reduce the overhead of traversal and parsing of io args.
         if self._is_simple_tuple_output or self._is_simple_tuple_input:
             args_tree = ArgsTree(args, False)
             out = args_tree.map_tuple_leaf(mapping_tensor_or_none)
@@ -1826,6 +1827,7 @@ class Graph(object):
                 value.contiguous_()
             return value
 
+        # NOTE(lixiang): Reduce the overhead of traversal and parsing of input args.
         if self._is_simple_tuple_input:
             args_tree.map_tuple_leaf(func)
             return
@@ -1840,6 +1842,7 @@ class Graph(object):
                 value.contiguous_()
             return value
 
+        # NOTE(lixiang): Reduce the overhead of traversal and parsing of input args.
         if self._is_simple_tuple_input:
             args_tree = ArgsTree(args, False)
             # contiguous
