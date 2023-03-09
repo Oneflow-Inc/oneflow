@@ -45,7 +45,8 @@ class NcclLogicalOpFusionPass final : public JobPass {
   }
 
   bool IsEnabled(const JobPassCtx& ctx) const {
-    return Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream();
+    return Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
+           && EnableNcclLogicalFusion();
   }
 
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
