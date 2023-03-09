@@ -233,7 +233,7 @@ class EagerBlobObject final : public user_op::Tensor,
   std::shared_ptr<const one::MutLocalTensorMeta> dynamic_local_tensor_meta_;
 };
 
-using EagerBlobObjectList = small_vector<std::shared_ptr<vm::EagerBlobObject>, kOpArgsReservedSize>;
+using EagerBlobObjectList = small_vector<std::shared_ptr<vm::EagerBlobObject>>;
 using EagerBlobObjectListPtr = std::shared_ptr<const EagerBlobObjectList>;
 
 }  // namespace vm
