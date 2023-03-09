@@ -19,7 +19,7 @@ import oneflow as flow
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.functional import normalize
 from typing import Any, Optional, TypeVar
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 
 
 class SpectralNorm:
