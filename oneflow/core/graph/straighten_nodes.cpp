@@ -656,7 +656,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
     // 0x7f75041d64c0, 0x7f75040d7390, 0x7f7504384540, 0x7f75042bc410,
     // Find: 0x4
     // Or it may have the chance to delete multiple elements while deleting one element.
-    CHECK(it == set.end() || *it != element)
+    CHECK(it != set.end() && *it == element)
         << " Something happens. If you make sure that the element exist in the set but you still "
            "can not find that element, please report this issue to Oneflow Inc.";
     // TODO: One simple resolution is to traverse all the elements in the set and find the
