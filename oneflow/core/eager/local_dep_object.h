@@ -29,7 +29,7 @@ namespace oneflow {
 // LocalDepObject helps VirtualMachineEngine building instruction edges
 using LocalDepObject = vm::Dependence;
 
-using DependenceVector = small_vector<LocalDepObject*, kOpArgsReservedSize>;
+using DependenceVector = small_vector<LocalDepObject*>;
 
 intrusive::shared_ptr<LocalDepObject> NewLocalDepObject();
 
