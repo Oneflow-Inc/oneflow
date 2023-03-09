@@ -22,29 +22,31 @@ namespace oneflow {
 
 Maybe<const Symbol<MemoryFormat>&> MemoryFormat::Get(MemoryFormatType memory_format_type) {
   static HashMap<MemoryFormatType, const Symbol<MemoryFormat>> memory_formattype2memory_format{
-#define MAKE_ENTRY(memory_format_type) {OF_PP_CAT(MemoryFormatType::k, memory_format_type), memory_format_type()},
+#define MAKE_ENTRY(memory_format_type) \
+  {OF_PP_CAT(MemoryFormatType::k, memory_format_type), memory_format_type()},
       OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, MEMORY_FORMAT_SEQ)
 #undef MAKE_ENTRY
   };
   return MapAt(memory_formattype2memory_format, memory_format_type);
 }
 
-Maybe<const std::string&> MemoryFormatTypeName4MemoryFormatType(MemoryFormatType memory_format_type) {
+Maybe<const std::string&> GetMemoryFormatTypeName(MemoryFormatType memory_format_type) {
   static const HashMap<MemoryFormatType, std::string> memory_format_type2name{
       {MemoryFormatType::kContiguous, "oneflow.contiguous_format"},
       {MemoryFormatType::kPreserve, "oneflow.preserve_format"},
-    };
+  };
   return MapAt(memory_format_type2name, memory_format_type);
 };
 
 const std::string& MemoryFormat::name() const {
-  return CHECK_JUST(MemoryFormatTypeName4MemoryFormatType(memory_format_type_));
+  return CHECK_JUST(GetMemoryFormatTypeName(memory_format_type_));
 }
 
-#define DEFINE_GET_MEMORY_FORMAT_TYPE_FUNCTION(memory_format_type)                                     \
-  const Symbol<MemoryFormat>& MemoryFormat::memory_format_type() {                                          \
-    static const auto& memory_format = SymbolOf(MemoryFormat(OF_PP_CAT(MemoryFormatType::k, memory_format_type))); \
-    return memory_format;                                                                       \
+#define DEFINE_GET_MEMORY_FORMAT_TYPE_FUNCTION(memory_format_type)                  \
+  const Symbol<MemoryFormat>& MemoryFormat::memory_format_type() {                  \
+    static const auto& memory_format =                                              \
+        SymbolOf(MemoryFormat(OF_PP_CAT(MemoryFormatType::k, memory_format_type))); \
+    return memory_format;                                                           \
   }
 OF_PP_FOR_EACH_TUPLE(DEFINE_GET_MEMORY_FORMAT_TYPE_FUNCTION, MEMORY_FORMAT_SEQ)
 #undef DEFINE_GET_MEMORY_FORMAT_TYPE_FUNCTION

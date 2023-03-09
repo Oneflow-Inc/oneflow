@@ -21,7 +21,7 @@ limitations under the License.
 
 namespace oneflow {
 
-enum LayoutType : int {
+enum class LayoutType {
   kStrided,
 };
 
