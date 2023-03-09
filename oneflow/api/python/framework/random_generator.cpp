@@ -14,10 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include <pybind11/pytypes.h>
+#include <pybind11/numpy.h>
+#include <tuple>
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/common/range.h"
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/framework/tensor.h"
+#ifdef WITH_CUDA
+#include "oneflow/core/device/cuda_util.h"
+#endif  // WITH_CUDA
 
 namespace py = pybind11;
 
@@ -27,6 +34,20 @@ Maybe<one::Generator> CreateGenerator(const std::string& device_str) {
   auto [device_name, device_index] = *JUST(ParseDeviceString(device_str));
   return one::MakeGenerator(device_name, device_index);
 }
+
+#ifdef WITH_CUDA
+std::tuple<py::object> SetDefaultGenerators(){
+  static int device_count = GetCudaDeviceCount();
+  py::array_t<one::Generator> default_cuda_generators(py::array::ShapeContainer({device_count}));
+  auto r = default_cuda_generators.mutable_unchecked<1>();
+
+  FOR_RANGE(int, device_id, 0, device_count) {
+    const auto& cuda_gen = one::DefaultCUDAGenerator(device_id);
+    r[device_id] = cuda_gen;
+  }
+  return std::make_tuple(default_cuda_generators);
+}
+#endif  // WITH_CUDA
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<one::Generator, std::shared_ptr<one::Generator>>(m, "Generator")
@@ -64,6 +85,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
     int64_t seed_val = JUST(one::functional::PyUnpackLong(seed.ptr()));
     return one::ManualSeedAllCudaGenerator(seed_val);
   });
+  m.def("default_generators", &SetDefaultGenerators);
 }
 
 }  // namespace oneflow
