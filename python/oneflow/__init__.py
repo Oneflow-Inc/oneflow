@@ -54,6 +54,13 @@ locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
 locals()["bfloat16"] = oneflow._oneflow_internal.bfloat16
 locals()["cfloat"] = oneflow._oneflow_internal.cfloat
 locals()["cdouble"] = oneflow._oneflow_internal.cdouble
+
+locals()["layout"] = oneflow._oneflow_internal.layout
+locals()["strided"] = oneflow._oneflow_internal.strided
+
+locals()["memory_format"] = oneflow._oneflow_internal.memory_format
+locals()["contiguous_format"] = oneflow._oneflow_internal.contiguous_format
+locals()["preserve_format"] = oneflow._oneflow_internal.preserve_format
 from oneflow.version import __version__
 from oneflow.version import __git_commit__
 
