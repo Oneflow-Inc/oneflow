@@ -132,6 +132,11 @@ class TestRandnModule(flow.unittest.TestCase):
             test_case.assertTrue(x.dtype == flow.float16)
             test_case.assertTrue(x.shape == flow.Size((2, 3)))
 
+    # Just check if `layout` param in api is available, there's no related implementation about it
+    # TODO(WangYi): remove this test when randn **really** supports `layout`
+    def test_randn_layout_param(test_case):
+        x = flow.randn(2, 3, layout=flow.strided)
+
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
