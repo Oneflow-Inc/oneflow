@@ -173,11 +173,16 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
   } else {
     device_ = JUST(Device::New("cpu"));
   }
+  // lml debug
+  #include <iostream>
+  std::cout << "before call empty" << std::endl;
   std::shared_ptr<Tensor> tensor = JUST(
       functional::Empty(shape, JUST(DType::Get(np_data_type)), device_, /*pin_memory=*/pin_memory));
+  std::cout << "before copy data" << std::endl;
   JUST(CopyLocalTensorFromUntypedArray(tensor, array));
 
   Py_DECREF(array);
+  std::cout << "before cast datatype" << std::endl;
   if (dtype && JUST(dtype)->data_type() != np_data_type) {
     tensor = JUST(functional::To(tensor, JUST(dtype), false));
   } else if (!dtype && !PyArray_Check(data) && tensor->dtype()->is_floating_point()
@@ -185,7 +190,9 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
     // If it not assign dtype and created from PySequence, cast tensor to default floating dtype
     tensor = JUST(functional::To(tensor, JUST(DType::Get(DataType::kFloat)), false));
   }
+  std::cout << "before set requires_grad" << std::endl;
   JUST(tensor->set_requires_grad(requires_grad));
+  std::cout << "finish construct tensor" << std::endl;
   return tensor;
 }
 

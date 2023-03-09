@@ -18,7 +18,7 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_SCALAR_H_
 
 #include <type_traits>
-
+#include <complex>
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/maybe.h"
 
@@ -27,6 +27,12 @@ namespace oneflow {
 class Scalar {
  public:
   Scalar() : Scalar(int32_t(0)) {}
+
+  template<typename T, typename std::enable_if<std::is_floating_point<T>::value, int>::type = 0>
+  Scalar(const std::complex<T>& cvalue) : cvalue_{.real = cvalue.real(), .imag = cvalue.imag()}, active_tag_(HAS_C) {}
+
+  template<typename T, typename std::enable_if<std::is_floating_point<T>::value, int>::type = 0>
+  OF_DEVICE_FUNC Scalar(const T& real, const T& imag) : cvalue_{.real = real, .imag = imag}, active_tag_(HAS_C) {}
 
   template<typename T, typename std::enable_if<std::is_same<T, bool>::value, int>::type = 0>
   OF_DEVICE_FUNC Scalar(const T& value) : value_{.b = value}, active_tag_(HAS_B) {}
@@ -51,8 +57,12 @@ class Scalar {
   }
 
   OF_DEVICE_FUNC Scalar& operator=(const Scalar& other) {
-    value_ = other.value_;
     active_tag_ = other.active_tag_;
+    if (active_tag_ == HAS_C) {
+        cvalue_ = other.cvalue_;
+    } else {
+        value_ = other.value_;
+    }
     return *this;
   }
 
@@ -77,6 +87,13 @@ class Scalar {
   bool IsFloatingPoint() const { return active_tag_ == HAS_D; }
   bool IsSigned() const { return active_tag_ == HAS_S || active_tag_ == HAS_D; }
   bool IsUnsigned() const { return active_tag_ == HAS_U; }
+  bool IsComplex() const { return active_tag_ == HAS_C; }
+  std::complex<double> ToComplex() const {
+    if (!IsComplex()) {
+      return std::complex<double>(As<double>(), 0.0);
+    }
+    return std::complex<double>(cvalue_.real, cvalue_.imag);
+  }
 
   Scalar operator+(const Scalar& other) const;
   Scalar operator-(const Scalar& other) const;
@@ -95,7 +112,11 @@ class Scalar {
     uint64_t u;
     double d;
   } value_;
-  enum { HAS_B, HAS_S, HAS_U, HAS_D, HAS_NONE } active_tag_;
+  struct CValue {
+    double real;
+    double imag;
+  } cvalue_;
+  enum { HAS_B, HAS_S, HAS_U, HAS_D, HAS_C, HAS_NONE } active_tag_;
 };
 
 }  // namespace oneflow
