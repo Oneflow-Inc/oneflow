@@ -39,8 +39,8 @@ class Layout final {
   const std::string& name() const;
 
   LayoutType layout_type() const { return layout_type_; }
-  static const Symbol<Layout> Get(LayoutType);
-#define DECLARE_GET_LAYOUT_TYPE_FUNCTION(layout_type) static const Symbol<Layout> layout_type();
+  static Symbol<Layout> Get(LayoutType);
+#define DECLARE_GET_LAYOUT_TYPE_FUNCTION(layout_type) static Symbol<Layout> layout_type();
   OF_PP_FOR_EACH_TUPLE(DECLARE_GET_LAYOUT_TYPE_FUNCTION, LAYOUT_SEQ)
 #undef DECLARE_GET_LAYOUT_TYPE_FUNCTION
 

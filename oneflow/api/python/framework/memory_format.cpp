@@ -26,13 +26,13 @@ namespace py = pybind11;
 namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  py::class_<Symbol<MemoryFormat>, std::shared_ptr<Symbol<MemoryFormat>>>(m, "memory_format")
-      .def("__str__", [](const Symbol<MemoryFormat> d) { return d->name(); })
-      .def("__repr__", [](const Symbol<MemoryFormat> d) { return d->name(); })
+  py::class_<Symbol<MemoryFormat>>(m, "memory_format")
+      .def("__str__", [](Symbol<MemoryFormat> d) { return d->name(); })
+      .def("__repr__", [](Symbol<MemoryFormat> d) { return d->name(); })
       .def(py::self == py::self)
       .def(py::hash(py::self))
       .def(py::pickle(
-          [](const Symbol<MemoryFormat> memory_format) {  // __getstate__
+          [](Symbol<MemoryFormat> memory_format) {  // __getstate__
             return static_cast<int>(memory_format->memory_format_type());
           },
           [](int t) {  // __setstate__
@@ -44,9 +44,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
 
   m.attr("contiguous_format") = MemoryFormat::Get(MemoryFormatType::kContiguous);
   m.attr("preserve_format") = MemoryFormat::Get(MemoryFormatType::kPreserve);
-
-  py::options options;
-  options.disable_function_signatures();
 }
 
 }  // namespace oneflow

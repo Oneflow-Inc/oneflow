@@ -20,8 +20,8 @@ limitations under the License.
 
 namespace oneflow {
 
-const Symbol<MemoryFormat> MemoryFormat::Get(MemoryFormatType memory_format_type) {
-  static HashMap<MemoryFormatType, const Symbol<MemoryFormat>> memory_formattype2memory_format{
+Symbol<MemoryFormat> MemoryFormat::Get(MemoryFormatType memory_format_type) {
+  static HashMap<MemoryFormatType, Symbol<MemoryFormat>> memory_formattype2memory_format{
 #define MAKE_ENTRY(memory_format_type) \
   {OF_PP_CAT(MemoryFormatType::k, memory_format_type), memory_format_type()},
       OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, MEMORY_FORMAT_SEQ)
@@ -43,7 +43,7 @@ const std::string& MemoryFormat::name() const {
 }
 
 #define DEFINE_GET_MEMORY_FORMAT_TYPE_FUNCTION(memory_format_type)                  \
-  const Symbol<MemoryFormat> MemoryFormat::memory_format_type() {                  \
+  Symbol<MemoryFormat> MemoryFormat::memory_format_type() {                  \
     static const auto& memory_format =                                              \
         SymbolOf(MemoryFormat(OF_PP_CAT(MemoryFormatType::k, memory_format_type))); \
     return memory_format;                                                           \

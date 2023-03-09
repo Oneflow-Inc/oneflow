@@ -45,9 +45,9 @@ class MemoryFormat final {
   const std::string& name() const;
 
   MemoryFormatType memory_format_type() const { return memory_format_type_; }
-  static const Symbol<MemoryFormat> Get(MemoryFormatType);
+  static Symbol<MemoryFormat> Get(MemoryFormatType);
 #define DECLARE_GET_MEMORY_FORMAT_TYPE_FUNCTION(memory_format_type) \
-  static const Symbol<MemoryFormat> memory_format_type();
+  static Symbol<MemoryFormat> memory_format_type();
   OF_PP_FOR_EACH_TUPLE(DECLARE_GET_MEMORY_FORMAT_TYPE_FUNCTION, MEMORY_FORMAT_SEQ)
 #undef DECLARE_GET_MEMORY_FORMAT_TYPE_FUNCTION
 

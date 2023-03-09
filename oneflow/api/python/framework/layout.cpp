@@ -26,13 +26,13 @@ namespace py = pybind11;
 namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  py::class_<Symbol<Layout>, std::shared_ptr<Symbol<Layout>>>(m, "layout")
-      .def("__str__", [](const Symbol<Layout> d) { return d->name(); })
-      .def("__repr__", [](const Symbol<Layout> d) { return d->name(); })
+  py::class_<Symbol<Layout>>(m, "layout")
+      .def("__str__", [](Symbol<Layout> d) { return d->name(); })
+      .def("__repr__", [](Symbol<Layout> d) { return d->name(); })
       .def(py::self == py::self)
       .def(py::hash(py::self))
       .def(py::pickle(
-          [](const Symbol<Layout> layout) {  // __getstate__
+          [](Symbol<Layout> layout) {  // __getstate__
             return static_cast<int>(layout->layout_type());
           },
           [](int t) {  // __setstate__
@@ -43,9 +43,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       });
 
   m.attr("strided") = Layout::Get(LayoutType::kStrided);
-
-  py::options options;
-  options.disable_function_signatures();
 }
 
 }  // namespace oneflow

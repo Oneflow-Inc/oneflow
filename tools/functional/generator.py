@@ -181,6 +181,7 @@ value_aliases = {
     "kBool": "DType::Bool()",
     "kStrided": "Layout::Strided()",
     "kPreserve": "MemoryFormat::Preserve()",
+    "kContiguous": "MemoryFormat::Contiguous()",
 }
 
 

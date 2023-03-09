@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/api/python/framework/tensor.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/indexing.h"
-#include "oneflow/api/python/functional/value_types.h"
 #include "oneflow/extension/python/numpy.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/dtype.h"
