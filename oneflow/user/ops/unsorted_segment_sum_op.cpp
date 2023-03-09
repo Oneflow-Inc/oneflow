@@ -141,7 +141,10 @@ namespace oneflow {
   FOR_RANGE(int64_t, i, 0, axis) { CHECK_EQ_OR_RETURN(like_shape.At(i), data_shape.At(i)); }
   CHECK_EQ_OR_RETURN(data_shape.NumAxes() - segment_ids_shape.NumAxes() + 1, like_shape.NumAxes());
   FOR_RANGE(int64_t, i, axis + 1, like_shape.NumAxes()) {
-    CHECK_EQ_OR_RETURN(like_shape.At(i), data_shape.At(i + segment_ids_shape.NumAxes() - 1));
+    CHECK_EQ_OR_RETURN(like_shape.At(i), data_shape.At(i + segment_ids_shape.NumAxes() - 1))
+        << Error::RuntimeError() << "The " << i << "th dim of <like> and "
+        << i + segment_ids_shape.NumAxes() - 1 << "th dim of <data> should be the same, but got "
+        << like_shape.At(i) << " and " << data_shape.At(i + segment_ids_shape.NumAxes() - 1);
   }
   ctx->SetOutputShape("out", 0, ctx->InputShape("like", 0));
   ctx->SetIsDynamic4ArgNameAndIndex("out", 0, ctx->InputIsDynamic("like", 0));

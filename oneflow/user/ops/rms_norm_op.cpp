@@ -84,7 +84,9 @@ namespace oneflow {
 
 /* static */ Maybe<void> RmsNormGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& shape = ctx->InputShape("dy", 0);
-  CHECK_EQ_OR_RETURN(ctx->InputShape("x", 0), shape);  // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(ctx->InputShape("x", 0), shape)
+      << Error::RuntimeError() << "The shape of <x> and <dy> should be the same, but got "
+      << OF_PP_STRINGIZE(ctx->InputShape("x", 0)) << " and " << shape;
   // No need to check weight and inv_rms legality which should be guaranteed by forward op
   ctx->SetOutputShape("dx", 0, shape);
   return Maybe<void>::Ok();
@@ -117,7 +119,9 @@ namespace oneflow {
 
 /* static */ Maybe<void> RmsNormParamGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& shape = ctx->InputShape("dy", 0);
-  CHECK_EQ_OR_RETURN(ctx->InputShape("x", 0), shape);  // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(ctx->InputShape("x", 0), shape)
+      << Error::RuntimeError() << "The shape of <x> and <dy> should be the same, but got "
+      << OF_PP_STRINGIZE(ctx->InputShape("x", 0)) << " and " << shape;
   const Shape& b_shape = ctx->InputShape("inv_rms", 0);
 
   CHECK_LE_OR_RETURN(b_shape.size(), shape.size())

@@ -27,12 +27,19 @@ Maybe<void> CheckScatterNdShape(const Shape& params_shape, const Shape& indices_
   CHECK_LE_OR_RETURN(batch_ndims, updates_shape.NumAxes());
   CHECK_LE_OR_RETURN(index_ndims, params_shape.NumAxes());
   FOR_RANGE(int64_t, i, 0, batch_ndims) {
-    CHECK_EQ_OR_RETURN(updates_shape.At(i), indices_shape.At(i));
+    CHECK_EQ_OR_RETURN(updates_shape.At(i), indices_shape.At(i))
+        << Error::RuntimeError() << "The " << i
+        << "th dim of <updates_shape> and <indices_shape> should be the same, but got "
+        << updates_shape.At(i) << " and " << indices_shape.At(i);
   }
   int64_t slice_ndims = params_shape.NumAxes() - index_ndims;
   CHECK_EQ_OR_RETURN(slice_ndims, updates_shape.NumAxes() - batch_ndims);
   FOR_RANGE(int64_t, i, 0, slice_ndims) {
-    CHECK_EQ_OR_RETURN(updates_shape.At(i + batch_ndims), params_shape.At(i + index_ndims));
+    CHECK_EQ_OR_RETURN(updates_shape.At(i + batch_ndims), params_shape.At(i + index_ndims))
+        << Error::RuntimeError() << "The " << i + batch_ndims
+        << "th dim of <updates_shape> should be equal with the " << i + index_ndims
+        << "th dim of <params_shape>, but got " << updates_shape.At(i + batch_ndims) << " and "
+        << params_shape.At(i + index_ndims);
   }
   return Maybe<void>::Ok();
 }

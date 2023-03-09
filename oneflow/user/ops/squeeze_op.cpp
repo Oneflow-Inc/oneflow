@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/error.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
 
@@ -24,8 +25,13 @@ Maybe<void> TransformNegativeAxesToPositive(const std::vector<int32_t>& axes_vec
                                             const int32_t num_axes, AxisVector* fixed_axes_vec) {
   fixed_axes_vec->resize(axes_vec.size());
   FOR_RANGE(size_t, i, 0, fixed_axes_vec->size()) {
-    CHECK_GE_OR_RETURN(axes_vec[i], -num_axes);
-    CHECK_LT_OR_RETURN(axes_vec[i], num_axes);
+    CHECK_GE_OR_RETURN(axes_vec[i], -num_axes)
+        << Error::RuntimeError() << "The " << i
+        << "th dim of <axes_vec> should be greater than or equal with " << -num_axes << ", but got "
+        << axes_vec[i];
+    CHECK_LT_OR_RETURN(axes_vec[i], num_axes)
+        << Error::RuntimeError() << "The " << i << "th dim of <axes_vec> should be less than"
+        << num_axes << ", but got " << axes_vec[i];
     fixed_axes_vec->at(i) = axes_vec[i] >= 0 ? axes_vec[i] : axes_vec[i] + num_axes;
   }
   return Maybe<void>::Ok();

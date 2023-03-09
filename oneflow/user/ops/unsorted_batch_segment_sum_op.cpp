@@ -49,7 +49,10 @@ namespace oneflow {
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
 
   FOR_RANGE(int64_t, i, 0, segment_ids.shape().NumAxes() - 1) {
-    CHECK_EQ_OR_RETURN(segment_ids.shape().At(i), data.shape().At(i));
+    CHECK_EQ_OR_RETURN(segment_ids.shape().At(i), data.shape().At(i))
+        << Error::RuntimeError() << "The " << i
+        << "th dim of <segment_ids> and <data> should be the same, but got "
+        << segment_ids.shape().At(i) << " and " << data.shape().At(i);
   }
 
   DimVector dim_vec(data.shape().dim_vec());

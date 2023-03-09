@@ -48,10 +48,16 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
     k = a.shape().At(num_axes - 2);
   }
   if (!transpose_b) {
-    CHECK_EQ_OR_RETURN(k, b.shape().At(num_axes - 2));
+    CHECK_EQ_OR_RETURN(k, b.shape().At(num_axes - 2))
+        << Error::RuntimeError() << "The " << (transpose_a ? (num_axes - 2) : (num_axes - 1))
+        << " dim of <a> is expected to be equal with " << num_axes - 2 << "th dim of b, but got "
+        << k << " and " << b.shape().At(num_axes - 2);
     n = b.shape().At(num_axes - 1);
   } else {
-    CHECK_EQ_OR_RETURN(k, b.shape().At(num_axes - 1));
+    CHECK_EQ_OR_RETURN(k, b.shape().At(num_axes - 1))
+        << Error::RuntimeError() << "The " << (transpose_a ? (num_axes - 2) : (num_axes - 1))
+        << " dim of <a> is expected to be equal with " << num_axes - 1 << "th dim of b, but got "
+        << k << " and " << b.shape().At(num_axes - 1);
     n = b.shape().At(num_axes - 2);
   }
   output.Set(num_axes - 2, m);
@@ -459,7 +465,10 @@ Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx) {
 
   CHECK_EQ_OR_RETURN(a.shape().NumAxes(), b.shape().NumAxes());
   for (int i = 0; i < a.shape().NumAxes() - 1; ++i) {
-    CHECK_EQ_OR_RETURN(a.shape().At(i), b.shape().At(i));
+    CHECK_EQ_OR_RETURN(a.shape().At(i), b.shape().At(i))
+        << Error::RuntimeError() << "The " << i
+        << "th dim of tensor <a> and <b> should be the same, but got " << a.shape().At(i) << " and "
+        << b.shape().At(i);
   }
   out->set_shape(
       Shape({a.shape().At(a.shape().NumAxes() - 1), b.shape().At(b.shape().NumAxes() - 1)}));

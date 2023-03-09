@@ -24,7 +24,10 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> TupleIdentityOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const int64_t in_size = ctx->input_size("in");
-  CHECK_EQ_OR_RETURN(ctx->output_size("out"), in_size);
+  CHECK_EQ_OR_RETURN(ctx->output_size("out"), in_size)
+      << Error::RuntimeError()
+      << "The size of <out> should be equal with the size of <in>, but got "
+      << ctx->output_size("out") << " and " << in_size;
   for (int64_t i = 0; i < in_size; ++i) {
     ctx->SetOutputShape("out", i, ctx->InputShape("in", i));
     ctx->SetIsDynamic4ArgNameAndIndex("out", i, ctx->InputIsDynamic("in", i));
@@ -36,7 +39,10 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> TupleIdentityOp::InferDataType(user_op::InferContext* ctx) {
   const int64_t in_size = ctx->input_size("in");
-  CHECK_EQ_OR_RETURN(ctx->output_size("out"), in_size);
+  CHECK_EQ_OR_RETURN(ctx->output_size("out"), in_size)
+      << Error::RuntimeError()
+      << "The size of <out> should be equal with the size of <in>, but got "
+      << ctx->output_size("out") << " and " << in_size;
   for (int64_t i = 0; i < in_size; ++i) { ctx->SetOutputDType("out", i, ctx->InputDType("in", i)); }
   return Maybe<void>::Ok();
 }

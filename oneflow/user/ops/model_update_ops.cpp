@@ -71,13 +71,20 @@ Maybe<void> CheckIndexedSlicesModelDiffDesc(const user_op::TensorDesc* model,
   const int64_t num_values_axes = model_diff_values->shape().NumAxes();
   CHECK_GE_OR_RETURN(num_values_axes, num_indices_axes);
   FOR_RANGE(int64_t, i, 0, num_indices_axes) {
-    CHECK_EQ_OR_RETURN(model_diff_values->shape().At(i), model_diff_indices->shape().At(i));
+    CHECK_EQ_OR_RETURN(model_diff_values->shape().At(i), model_diff_indices->shape().At(i))
+        << Error::RuntimeError() << "The " << i
+        << "th dim of <model_diff_values> and <model_diff_inidces> should be the same, but got "
+        << model_diff_values->shape().At(i) << " and " << model_diff_indices->shape().At(i);
   }
   const int64_t num_model_axes = model->shape().NumAxes();
   CHECK_EQ_OR_RETURN(num_model_axes, num_values_axes - num_indices_axes + 1);
   FOR_RANGE(int64_t, i, 1, num_model_axes) {
     CHECK_EQ_OR_RETURN(model->shape().At(i),
-                       model_diff_values->shape().At(num_indices_axes + i - 1));
+                       model_diff_values->shape().At(num_indices_axes + i - 1))
+        << Error::RuntimeError() << "The " << i << "th dim of <model> should be equal with the "
+        << num_indices_axes + i - 1 << "th dim of <model_diff_values>, but got "
+        << model->shape().At(i) << " and "
+        << model_diff_values->shape().At(num_indices_axes + i - 1);
   }
   return Maybe<void>::Ok();
 }
