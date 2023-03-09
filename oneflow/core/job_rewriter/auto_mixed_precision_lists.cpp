@@ -169,8 +169,6 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "concat",
                                "split_like",
                                "pad",
-                               "same_padding",
-                               "same_padding_grad",
                                "tril",
                                "slice",
                                "slice_grad",

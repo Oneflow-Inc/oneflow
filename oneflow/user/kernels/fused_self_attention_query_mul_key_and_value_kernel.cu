@@ -165,7 +165,7 @@ void TransposeGpu(ep::Stream* stream, DataType data_type, const ShapeView& in_sh
   auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(stream->device_type(),
                                                                               in_shape.NumAxes());
   CHECK(transpose);
-  transpose->Launch(stream, data_type, in_shape.NumAxes(), in_shape.int64_ptr(), in, perm.data(),
+  transpose->Launch(stream, data_type, in_shape.NumAxes(), in_shape.ptr(), in, perm.data(),
                     out);
 }
 

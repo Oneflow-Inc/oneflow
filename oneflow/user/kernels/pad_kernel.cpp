@@ -68,7 +68,7 @@ class PadKernel final : public OpKernel, public CudaGraphSupport {
     std::unique_ptr<ep::primitive::ConstantPad> pad_primitive = NewConstantPadPrimitive(ctx);
     CHECK(pad_primitive);
 
-    pad_primitive->Launch(ctx->stream(), ndims, x->shape_view().int64_ptr(), x->dptr(),
+    pad_primitive->Launch(ctx->stream(), ndims, x->shape_view().ptr(), x->dptr(),
                           padding_before.data(), padding_after.data(), value, y->mut_dptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

@@ -52,9 +52,9 @@ class WhereKernel final : public user_op::OpKernel, public user_op::CudaGraphSup
     if (out->shape_view().elem_cnt() == 0) { return; }
     auto primitive = NewPrimitive(ctx);
     CHECK(primitive);
-    primitive->Launch(ctx->stream(), cond->shape_view().size(), cond->shape_view().int64_ptr(),
-                      cond->dptr(), x->shape_view().size(), x->shape_view().int64_ptr(), x->dptr(),
-                      y->shape_view().size(), y->shape_view().int64_ptr(), y->dptr(),
+    primitive->Launch(ctx->stream(), cond->shape_view().size(), cond->shape_view().ptr(),
+                      cond->dptr(), x->shape_view().size(), x->shape_view().ptr(), x->dptr(),
+                      y->shape_view().size(), y->shape_view().ptr(), y->dptr(),
                       out->mut_dptr());
   }
 };

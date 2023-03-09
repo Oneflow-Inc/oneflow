@@ -34,7 +34,7 @@ class UnfoldOpKernelState : public OpKernelState {
                       const std::vector<int32_t>& padding, const std::vector<int32_t>& stride,
                       const std::vector<int32_t>& dilation)
       : params_(input_shape.At(0), input_shape.At(ParamType::kInputChannelDim),
-                input_shape.int64_ptr() + SDIM, kernel_size.data(), padding.data(), stride.data(),
+                input_shape.ptr() + SDIM, kernel_size.data(), padding.data(), stride.data(),
                 dilation.data()) {}
   const ParamType& params() const { return params_; }
 

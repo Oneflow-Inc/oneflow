@@ -71,8 +71,8 @@ class MathBinaryBroadcastEpKernel final : public user_op::OpKernel,
     size_t num_src1_dims = y->shape_view().NumAxes();
 
     int64_t zero_dim = 1;
-    int64_t* src0_dims = const_cast<int64_t*>(x->shape_view().int64_ptr());
-    int64_t* src1_dims = const_cast<int64_t*>(y->shape_view().int64_ptr());
+    int64_t* src0_dims = const_cast<int64_t*>(x->shape_view().ptr());
+    int64_t* src1_dims = const_cast<int64_t*>(y->shape_view().ptr());
 
     if (x_elem_cnt != 0 && y_elem_cnt != 0) {
       if (num_src0_dims == 0) {

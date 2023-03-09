@@ -119,9 +119,9 @@ class FusedScaleMaskSoftmaxKernel final : public user_op::OpKernel {
     const int64_t cols = x_shape.At(x_shape.NumAxes() - 1);
     const int64_t rows = x_shape.Count(0, x_shape.NumAxes() - 1);
     const size_t num_input_dims = x_shape.NumAxes();
-    const int64_t* input_dims = x_shape.int64_ptr();
+    const int64_t* input_dims = x_shape.ptr();
     const size_t num_mask_dims = mask_shape.NumAxes();
-    const int64_t* mask_dims = mask_shape.int64_ptr();
+    const int64_t* mask_dims = mask_shape.ptr();
     using ComputeType = typename cuda::softmax::DefaultComputeType<T>::type;
 
     size_t simplified_num_dims = 0;
@@ -174,9 +174,9 @@ class FusedScaleMaskSoftmaxGradKernel final : public user_op::OpKernel {
     const int64_t elem_cnt = dy_shape.elem_cnt();
     const int64_t cols = dy_shape.At(dy_shape.NumAxes() - 1);
     const int64_t rows = dy_shape.Count(0, dy_shape.NumAxes() - 1);
-    const int64_t* input_dims = dy_shape.int64_ptr();
+    const int64_t* input_dims = dy_shape.ptr();
     const size_t num_input_dims = dy_shape.NumAxes();
-    const int64_t* mask_dims = mask_shape.int64_ptr();
+    const int64_t* mask_dims = mask_shape.ptr();
     const size_t num_mask_dims = mask_shape.NumAxes();
 
     using ComputeType = typename cuda::softmax::DefaultComputeType<T>::type;

@@ -33,9 +33,20 @@ class ShapeView : public ArrayRef<Dim>, public ConstShapeMixIn<ShapeView> {
   ShapeView(const int64_t* start, size_t size)
       : ArrayRef<Dim>(reinterpret_cast<const Dim*>(start), size) {}
 
+  using Base = ArrayRef<Dim>;
   using ArrayRef<Dim>::ArrayRef;
 
-  const Dim* ptr() const { return data(); }
+  // NOTE(daquexian): data() returns int64_t* instead of Dim* for better
+  // compatibility with old code. It is recommended to use int64_ptr()
+  // whenever possible.
+  const int64_t* data() const {
+    CHECK(all_dims_known());
+    return reinterpret_cast<const int64_t*>(ArrayRef::data());
+  }
+  // NOTE(daquexian): ptr() returns int64_t* instead of Dim* for better
+  // compatibility with old code. It is recommended to use int64_ptr()
+  // whenever possible.
+  const int64_t* ptr() const { return data(); }
 
   void ToDimVector(DimVector* dim_vec) const;
   void ToShape(Shape* shape) const;
@@ -45,6 +56,7 @@ std::ostream& operator<<(std::ostream& out, ShapeView shape);
 
 class MutShapeView final : public MutableArrayRef<Dim>, public MutShapeMixIn<MutShapeView> {
  public:
+  using Base = MutableArrayRef<Dim>;
   using MutableArrayRef<Dim>::MutableArrayRef;
   // NOLINTNEXTLINE
   MutShapeView(Shape& shape)
@@ -52,7 +64,20 @@ class MutShapeView final : public MutableArrayRef<Dim>, public MutShapeMixIn<Mut
   MutShapeView(int64_t* start, size_t size)
       : MutableArrayRef<Dim>(reinterpret_cast<Dim*>(start), size) {}
 
-  Dim* mut_ptr() const { return data(); }
+  // NOTE(daquexian): data() returns int64_t* instead of Dim* for better
+  // compatibility with old code. It is recommended to use int64_ptr()
+  // whenever possible.
+  const int64_t* data() const {
+    CHECK(all_dims_known());
+    return reinterpret_cast<const int64_t*>(MutableArrayRef::data());
+  }
+  // NOTE(daquexian): data() returns int64_t* instead of Dim* for better
+  // compatibility with old code. It is recommended to use int64_ptr()
+  // whenever possible.
+  int64_t* data() {
+    for (Dim dim : *this) { CHECK(dim.is_known()); }
+    return reinterpret_cast<int64_t*>(MutableArrayRef::data());
+  }
 
   void set_shape(ShapeView shape);
 };

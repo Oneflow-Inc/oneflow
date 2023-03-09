@@ -131,15 +131,15 @@ void DispatchForward(cudaStream_t stream, const user_op::Tensor* x, const user_o
   int64_t bias_x_sdims[kMaxNDim];
   int64_t bias_sdims[kMaxNDim];
   const auto& bias_shape = bias->shape_view();
-  fused_softmax::SimplifyBroadcastDims(x_shape.size(), x_shape.int64_ptr(), bias_shape.size(),
-                                       bias_shape.int64_ptr(), &bias_sndim, bias_x_sdims,
+  fused_softmax::SimplifyBroadcastDims(x_shape.size(), x_shape.ptr(), bias_shape.size(),
+                                       bias_shape.ptr(), &bias_sndim, bias_x_sdims,
                                        bias_sdims);
   size_t mask_sndim = 0;
   int64_t mask_x_sdims[kMaxNDim];
   int64_t mask_sdims[kMaxNDim];
   const auto& mask_shape = mask->shape_view();
-  fused_softmax::SimplifyBroadcastDims(x_shape.size(), x_shape.int64_ptr(), mask_shape.size(),
-                                       mask_shape.int64_ptr(), &mask_sndim, mask_x_sdims,
+  fused_softmax::SimplifyBroadcastDims(x_shape.size(), x_shape.ptr(), mask_shape.size(),
+                                       mask_shape.ptr(), &mask_sndim, mask_x_sdims,
                                        mask_sdims);
 
 #define DISPATCH_BIAS_ADD_SCALE_MASK_SOFTMAX(bias_mapper, mask_mapper)                           \

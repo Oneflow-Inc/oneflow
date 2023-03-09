@@ -84,9 +84,17 @@ struct ConstShapeMixIn {
 
   bool operator==(const T& rhs) const;
 
+  // NOTE(daquexian): ptr() returns int64_t* instead of Dim* for better
+  // compatibility with old code. It is recommended to use int64_ptr()
+  // whenever possible.
+  const int64_t* ptr() const { return int64_ptr(); }
+
   const int64_t* int64_ptr() const {
-    for (Dim dim : *tp()) { CHECK(dim.is_known()); }
-    return reinterpret_cast<const int64_t*>(tp()->data());
+    return tp()->data();
+  }
+
+  const Dim* dim_ptr() const { 
+    return &(*this->tp())[0];
   }
 
   bool all_dims_known() const;
@@ -107,20 +115,25 @@ struct MutShapeMixIn : public ConstShapeMixIn<T> {
     (*this->tp())[index] = val;
   }
 
-  const int64_t* int64_ptr() const {
-    for (Dim dim : *this->tp()) { CHECK(dim.is_known()); }
-    return reinterpret_cast<const int64_t*>(this->tp()->data());
-  }
+  using ConstShapeMixIn<T>::ptr;
+  using ConstShapeMixIn<T>::int64_ptr;
+  using ConstShapeMixIn<T>::dim_ptr;
 
-  int64_t* int64_ptr() {
-    for (Dim dim : *(this->tp())) { CHECK(dim.is_known()); }
-    return reinterpret_cast<int64_t*>(this->tp()->data());
+  // NOTE(daquexian): ptr returns int64_t* instead of Dim* for better
+  // compatibility with old code. It is not recommended to use it.
+  int64_t* ptr() { return int64_ptr(); }
+
+  int64_t* int64_ptr() { return this->tp()->data(); }
+
+  Dim* dim_ptr() { 
+    return &(*this->tp())[0];
   }
 };
 
 class Shape final : public DimVector, public MutShapeMixIn<Shape> {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(Shape);
+  using Base = DimVector;
   using DimVector::DimVector;
   Shape() : is_initialized_(false) {}
   explicit Shape(const DimVector& dim_vec);
@@ -146,6 +159,21 @@ class Shape final : public DimVector, public MutShapeMixIn<Shape> {
   OVERRIDE_ADD_DATA_FUNC(resize)
 
 #undef OVERRIDE_ADD_DATA_FUNC
+
+  // NOTE(daquexian): data() returns int64_t* instead of Dim* for better
+  // compatibility with old code. It is recommended to use int64_ptr()
+  // whenever possible.
+  const int64_t* data() const {
+    CHECK(all_dims_known());
+    return reinterpret_cast<const int64_t*>(DimVector::data());
+  }
+  // NOTE(daquexian): data() returns int64_t* instead of Dim* for better
+  // compatibility with old code. It is recommended to use int64_ptr()
+  // whenever possible.
+  int64_t* data() {
+    CHECK(all_dims_known());
+    return reinterpret_cast<int64_t*>(DimVector::data());
+  }
 
   Shape& CheckNumAxesIdenticalAndAssign(ShapeView shape_view);
   Shape& LeftOnesExtendedAssign(ShapeView shape_view);

@@ -34,7 +34,7 @@ bool IsIdentity(const ShapeView& in_shape, const std::vector<int32_t>& perm) {
   int64_t simplified_src_dims[kMaxNumDims]{};
   int simplified_permutation[kMaxNumDims]{};
   ep::primitive::permute::SimplifyPermutation<kMaxNumDims>(
-      in_shape.NumAxes(), in_shape.int64_ptr(), perm.data(), &simplified_num_dims,
+      in_shape.NumAxes(), in_shape.ptr(), perm.data(), &simplified_num_dims,
       simplified_src_dims, simplified_permutation);
   for (int i = 0; i < simplified_num_dims; ++i) {
     if (simplified_permutation[i] != i) { return false; }
@@ -67,7 +67,7 @@ class TransposeKernel final : public OpKernel, public user_op::CudaGraphSupport 
     const ShapeView& in_shape = tensor_in->shape_view();
     DataType dtype = tensor_out->data_type();
     size_t num_dims = tensor_in->shape_view().NumAxes();
-    const int64_t* src_dims = in_shape.int64_ptr();
+    const int64_t* src_dims = in_shape.ptr();
 
     int64_t elem_cnt = tensor_out->shape_view().elem_cnt();
 

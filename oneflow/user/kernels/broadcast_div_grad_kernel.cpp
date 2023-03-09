@@ -46,8 +46,8 @@ class BroadcastDivGradKernel final : public user_op::OpKernel {
         z_tensor->data_type(), z_tensor->shape_view().NumAxes());
     CHECK(bcast_div);
     bcast_div->Launch(ctx->stream(), z_tensor->shape_view().NumAxes(),
-                      z_tensor->shape_view().int64_ptr(), z_tensor->dptr(),
-                      y_tensor->shape_view().NumAxes(), y_tensor->shape_view().int64_ptr(),
+                      z_tensor->shape_view().ptr(), z_tensor->dptr(),
+                      y_tensor->shape_view().NumAxes(), y_tensor->shape_view().ptr(),
                       y_tensor->dptr<T>(), tmp_buffer->mut_dptr<T>());
 
     auto bcast_mul = ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
@@ -55,8 +55,8 @@ class BroadcastDivGradKernel final : public user_op::OpKernel {
         dz_tensor->data_type(), dz_tensor->shape_view().NumAxes());
     CHECK(bcast_mul);
     bcast_mul->Launch(ctx->stream(), dz_tensor->shape_view().NumAxes(),
-                      dz_tensor->shape_view().int64_ptr(), tmp_buffer->dptr(),
-                      dz_tensor->shape_view().NumAxes(), dz_tensor->shape_view().int64_ptr(),
+                      dz_tensor->shape_view().ptr(), tmp_buffer->dptr(),
+                      dz_tensor->shape_view().NumAxes(), dz_tensor->shape_view().ptr(),
                       dz_tensor->dptr<T>(), tmp_buffer->mut_dptr<T>());
 
     NdarrayUtil<device, T>::ReduceSum(

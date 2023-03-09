@@ -66,12 +66,12 @@ class ExpandKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
       int64_t scalar_ndim = 1;
       Shape scalar_shape({scalar_ndim});
       Stride scalar_stride({scalar_ndim});
-      prim->Launch(ctx->stream(), scalar_ndim, scalar_shape.int64_ptr(), scalar_stride.data(),
-                   in->dptr(), out_shape.size(), out_shape.int64_ptr(), out->stride().data(),
+      prim->Launch(ctx->stream(), scalar_ndim, scalar_shape.data(), scalar_stride.data(),
+                   in->dptr(), out_shape.size(), out_shape.data(), out->stride().data(),
                    out->mut_dptr());
     } else {
-      prim->Launch(ctx->stream(), in_shape.size(), in_shape.int64_ptr(), in->stride().data(),
-                   in->dptr(), out_shape.size(), out_shape.int64_ptr(), out->stride().data(),
+      prim->Launch(ctx->stream(), in_shape.size(), in_shape.data(), in->stride().data(),
+                   in->dptr(), out_shape.size(), out_shape.data(), out->stride().data(),
                    out->mut_dptr());
     }
   }
