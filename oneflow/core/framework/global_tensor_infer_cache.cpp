@@ -170,7 +170,7 @@ Maybe<void> CheckInputParallelDescIdentical(
       continue;
     }
     default_parallel_desc =
-        infer_args.input_global_tensor_metas().at(i).tensor_meta()->parallel_desc();
+        JUST(VectorAt(infer_args.input_global_tensor_metas(), i)).tensor_meta()->parallel_desc();
     break;
   }
 

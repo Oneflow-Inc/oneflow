@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/framework/global_tensor_infer_cache.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/user/kernels/stateful_opkernel.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 namespace one {
@@ -550,8 +551,8 @@ Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
   global_tensor_infer_cache_.reset(new GlobalTensorInferCache(self));
   const auto& indexed_input_pairs = this->indexed_input_pairs();
   for (int32_t i = 0; i < indexed_input_pairs.size(); ++i) {
-    if (IsHostMemoryInput4Op(op_type_name, indexed_input_pairs.at(i).first,
-                             indexed_input_pairs.at(i).second)) {
+    const auto& input_pair = JUST(VectorAt(indexed_input_pairs, i));
+    if (IsHostMemoryInput4Op(op_type_name, input_pair.first, input_pair.second)) {
       host_memory_input_ids_.emplace_back(i);
     }
   }
