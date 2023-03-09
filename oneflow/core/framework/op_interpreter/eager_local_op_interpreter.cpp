@@ -64,7 +64,8 @@ Maybe<Symbol<Device>> GetDefaultDevice(
     }
   }
   for (int32_t i = 0; i < inputs.size(); ++i) {
-    if (std::find(filtered_ids.begin(), filtered_ids.end(), i) == filtered_ids.end()) {
+    if (!std::any_of(filtered_ids.begin(), filtered_ids.end(),
+                     [i](int32_t filtered_id) { return filtered_id == i; })) {
       return JUST(inputs.at(i)->device());
     }
   }
@@ -82,8 +83,8 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
                            TensorTuple* outputs, const OpExprInterpContext& ctx) {
   OF_PROFILER_RANGE_GUARD("NaiveInterpret");
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());  // NOLINT
-  const auto& host_memory_input_ids = HostMemoryInputIds4UserOpExpr(user_op_expr);
-  Symbol<Device> default_device = JUST(GetDefaultDevice(inputs, ctx, host_memory_input_ids));
+  Symbol<Device> default_device =
+      JUST(GetDefaultDevice(inputs, ctx, user_op_expr.host_memory_input_ids()));
   const std::shared_ptr<const LocalTensorInferResult> result =
       JUST([&]() -> Maybe<const LocalTensorInferResult> {
         LocalTensorMetaInferArgs infer_args;
@@ -92,18 +93,17 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       }());
 
   vm::EagerBlobObjectList input_eager_blob_objects(inputs.size());
-  TensorTuple inputs_duplication(inputs.size());
+  // expand lifetime of host_inputs to the end of this function
+  TensorTuple host_inputs;
   for (int i = 0; i < inputs.size(); i++) {
-    if (std::find(host_memory_input_ids.begin(), host_memory_input_ids.end(), i)
-        == host_memory_input_ids.end()) {
-      inputs_duplication[i] = inputs.at(i);
-    } else {
-      inputs_duplication[i] = JUST(functional::To(
+    if (user_op_expr.is_host_memory_input(i)) {
+      const auto& host_input = JUST(functional::To(
           inputs.at(i), Optional<Symbol<Device>>(JUST(GetDefaultCpuDevice())), NullOpt, false));
+      input_eager_blob_objects.at(i) = JUST(host_input->eager_blob_object());
+      host_inputs.emplace_back(host_input);
+    } else {
+      input_eager_blob_objects.at(i) = JUST(inputs.at(i)->eager_blob_object());
     }
-  }
-  for (int i = 0; i < inputs.size(); i++) {
-    input_eager_blob_objects.at(i) = JUST(inputs_duplication.at(i)->eager_blob_object());
   }
 
   const auto& output_tensor_metas = result->output_tensor_metas();

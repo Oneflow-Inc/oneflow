@@ -785,12 +785,10 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
   const std::string new_op_name = *JUST(infer_ctx->NewUniqueOpNameByFunctionalOpConf(*op_conf));
   const std::string graph_name = infer_ctx->job().job_conf().job_name();
 
-  const auto& host_memory_input_ids = HostMemoryInputIds4UserOpExpr(op_expr);
   for (int i = 0; i < inputs.size(); ++i) {
     const auto& input_tensor = inputs.at(i);
     CHECK_EQ_OR_RETURN(is_local, input_tensor->is_local());  // NOLINT(maybe-need-error-msg)
-    if (std::find(host_memory_input_ids.begin(), host_memory_input_ids.end(), i)
-        == host_memory_input_ids.end()) {
+    if (!op_expr.is_host_memory_input(i)) {
       if (is_local) {
         CHECK_OR_RETURN(device_tag == JUST(GetDeviceTagOfTensor(input_tensor)))
             << Error::RuntimeError() << "Lazy nn.Graph name: " << graph_name

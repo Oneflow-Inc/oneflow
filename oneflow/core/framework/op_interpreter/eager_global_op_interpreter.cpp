@@ -49,7 +49,8 @@ Maybe<Symbol<ParallelDesc>> GetParallelDesc(
     const small_vector<int32_t, kOpArgsReservedSize>& filtered_ids) {
   if (!inputs.empty()) {
     for (int32_t i = 0; i < inputs.size(); ++i) {
-      if (std::find(filtered_ids.begin(), filtered_ids.end(), i) == filtered_ids.end()) {
+      if (!std::any_of(filtered_ids.begin(), filtered_ids.end(),
+                       [i](int32_t filtered_id) { return filtered_id == i; })) {
         return inputs.at(i)->parallel_desc();
       }
     }
@@ -118,7 +119,7 @@ auto* GetBoxingOutput =
 Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                       TensorTuple* outputs, const OpExprInterpContext& ctx) {
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
-  const auto& host_memory_input_ids = HostMemoryInputIds4UserOpExpr(user_op_expr);
+  const auto& host_memory_input_ids = user_op_expr.host_memory_input_ids();
   const auto& parallel_desc = JUST(GetParallelDesc(inputs, ctx, host_memory_input_ids));
   std::shared_ptr<const GlobalTensorInferResult> result;
   NonRecursiveMetaInfoConsistencyCheckScope scope;
@@ -168,16 +169,16 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     const auto& infered_input_meta = result->input_tensor_metas().at(i);
     const auto& input_parallel_desc = JUST(input->parallel_desc());
     CHECK_OR_RETURN(input_parallel_desc == infered_input_meta->parallel_desc());
-    if (input_parallel_desc->parallel_num() != 1
-        && infered_input_meta->nd_sbp() != JUST(input->nd_sbp())) {
-      input = JUST(GetBoxingOutput(input, infered_input_meta->nd_sbp(),
-                                   infered_input_meta->parallel_desc(), parallel_id.has_value()));
-      boxing_outputs.emplace_back(input);
-    }
-    if (std::find(host_memory_input_ids.begin(), host_memory_input_ids.end(), i)
-        != host_memory_input_ids.end()) {
-      input =
-          JUST(functional::To(input, Optional<std::string>(std::string("cpu")), NullOpt, false));
+    bool is_host_input = user_op_expr.is_host_memory_input(i);
+    Symbol<ParallelDesc> dst_parallel_desc =
+        is_host_input
+            ? JUST(ReplaceDeviceType(infered_input_meta->parallel_desc(), DeviceType::kCPU))
+            : infered_input_meta->parallel_desc();
+    if ((input_parallel_desc->parallel_num() != 1
+         && infered_input_meta->nd_sbp() != JUST(input->nd_sbp()))
+        || input_parallel_desc->device_type() != dst_parallel_desc->device_type()) {
+      input = JUST(GetBoxingOutput(input, infered_input_meta->nd_sbp(), dst_parallel_desc,
+                                   parallel_id.has_value()));
       boxing_outputs.emplace_back(input);
     }
     const auto& local_tensor = JUST(input->cur_rank_phy_tensor());

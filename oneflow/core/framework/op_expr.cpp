@@ -531,8 +531,8 @@ UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto, const Att
       base_attrs_(base_attrs) {}
 
 Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
-  const auto* registry =
-      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_proto_.op_type_name());
+  const auto& op_type_name = op_proto_.op_type_name();
+  const auto* registry = user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
   CHECK_NOTNULL_OR_RETURN(registry);
   logical_tensor_desc_infer_fn_ = registry->logical_tensor_desc_infer_fn;
   CHECK_OR_RETURN(static_cast<bool>(logical_tensor_desc_infer_fn_))
@@ -548,6 +548,13 @@ Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
   }
   local_tensor_infer_cache_.reset(new LocalTensorInferCache(self));
   global_tensor_infer_cache_.reset(new GlobalTensorInferCache(self));
+  const auto& indexed_input_pairs = this->indexed_input_pairs();
+  for (int32_t i = 0; i < indexed_input_pairs.size(); ++i) {
+    if (IsHostInput4Op(op_type_name, indexed_input_pairs.at(i).first,
+                       indexed_input_pairs.at(i).second)) {
+      host_memory_input_ids_.emplace_back(i);
+    }
+  }
   return Maybe<void>::Ok();
 }
 
@@ -853,20 +860,6 @@ Maybe<OpExprGradClosure> FunctionOpExpr::GetOrCreateOpGradClosure() const {
     op_grad_func_.reset(new FunctionOpExprGradFunction(func_name_, backward_fn_));
   }
   return std::make_shared<OpExprGradClosure>(op_grad_func_, state_);
-}
-
-small_vector<int32_t, kOpArgsReservedSize> HostMemoryInputIds4UserOpExpr(
-    const UserOpExpr& user_op_expr) {
-  small_vector<int32_t, kOpArgsReservedSize> host_mem_input_ids;
-  const auto& indexed_input_pairs = user_op_expr.indexed_input_pairs();
-  const auto& op_type_name = user_op_expr.op_type_name();
-  for (int32_t i = 0; i < indexed_input_pairs.size(); ++i) {
-    if (IsHostInput4Op(op_type_name, indexed_input_pairs.at(i).first,
-                       indexed_input_pairs.at(i).second)) {
-      host_mem_input_ids.emplace_back(i);
-    }
-  }
-  return host_mem_input_ids;
 }
 
 }  // namespace one

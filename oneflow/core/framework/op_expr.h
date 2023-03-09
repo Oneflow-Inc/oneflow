@@ -155,6 +155,15 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
     return device_and_stream_infer_fn_;
   }
 
+  bool is_host_memory_input(int32_t index) const {
+    return std::any_of(host_memory_input_ids_.begin(), host_memory_input_ids_.end(),
+                       [index](int32_t host_mem_input_id) { return host_mem_input_id == index; });
+  }
+
+  const small_vector<int32_t, kOpArgsReservedSize>& host_memory_input_ids() const {
+    return host_memory_input_ids_;
+  }
+
   Maybe<void> InferPhysicalTensorDesc(
       const AttrMap& attrs, const std::string& device_tag,
       const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
@@ -186,6 +195,7 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
   mutable HashMap<Symbol<Stream>, std::shared_ptr<StatefulOpKernel>> stream2kernel_;
   std::shared_ptr<LocalTensorInferCache> local_tensor_infer_cache_;
   std::shared_ptr<GlobalTensorInferCache> global_tensor_infer_cache_;
+  small_vector<int32_t, kOpArgsReservedSize> host_memory_input_ids_;
 };
 
 class GlobalToGlobalOpExpr : public OpExpr {
@@ -345,9 +355,6 @@ class FunctionOpExpr final : public OpExpr {
   mutable std::shared_ptr<FunctionAutoGradCaptureState> state_;
   mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };
-
-small_vector<int32_t, kOpArgsReservedSize> HostMemoryInputIds4UserOpExpr(
-    const UserOpExpr& user_op_expr);
 
 }  // namespace one
 }  // namespace oneflow

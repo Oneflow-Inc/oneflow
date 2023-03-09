@@ -171,8 +171,10 @@ bool IsHostInput4Op(const std::string& op_type_name, const std::string& arg_name
   auto* op_type_name2host_memory_input_args = GlobalOpTypeName2HostMemoryInputArgs();
   auto it = op_type_name2host_memory_input_args->find(op_type_name);
   if (it == op_type_name2host_memory_input_args->end()) { return false; }
-  return std::find(it->second.begin(), it->second.end(), std::make_pair(arg_name, index))
-         != it->second.end();
+  return std::any_of(it->second.begin(), it->second.end(),
+                     [&arg_name, index](const std::pair<std::string, int32_t>& input_arg) {
+                       return input_arg == std::make_pair(arg_name, index);
+                     });
 }
 
 bool HasHostInput(const std::string& op_type_name) {

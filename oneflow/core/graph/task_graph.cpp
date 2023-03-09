@@ -777,8 +777,8 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
     const NdSbp& dst_nd_sbp = dst_op_node->NdSbp4Lbi(lbi);
     const ParallelDesc& src_parallel_desc = src_op_node->parallel_desc();
     const ParallelDesc& dst_parallel_desc = [&]() {
-      if (std::find(host_mem_input_lbis.begin(), host_mem_input_lbis.end(), lbi)
-          != host_mem_input_lbis.end()) {
+      if (std::any_of(host_mem_input_lbis.begin(), host_mem_input_lbis.end(),
+                      [&](const LogicalBlobId& host_mem_lbi) { return host_mem_lbi == lbi; })) {
         return *CHECK_JUST(
             ReplaceDeviceType(SymbolOf(dst_op_node->parallel_desc()), DeviceType::kCPU));
       } else {
@@ -824,8 +824,8 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne) {
   FOR_RANGE(size_t, i, 0, sorted_src_comp_tasks.size()) {
     for (const LogicalBlobId& lbi : op_edge->lbis()) {
       bool is_host_mem_input =
-          std::find(host_mem_input_lbis.begin(), host_mem_input_lbis.end(), lbi)
-          != host_mem_input_lbis.end();
+          std::any_of(host_mem_input_lbis.begin(), host_mem_input_lbis.end(),
+                      [&](const LogicalBlobId& host_mem_lbi) { return host_mem_lbi == lbi; });
       BuildTaskPath(sorted_src_comp_tasks.at(i), sorted_dst_comp_tasks.at(i), lbi,
                     is_host_mem_input);
     }
@@ -840,8 +840,8 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBroadcastToBroadcast) {
     CHECK_NOTNULL(nearest_src_node);
     for (const LogicalBlobId& lbi : op_edge->lbis()) {
       bool is_host_mem_input =
-          std::find(host_mem_input_lbis.begin(), host_mem_input_lbis.end(), lbi)
-          != host_mem_input_lbis.end();
+          std::any_of(host_mem_input_lbis.begin(), host_mem_input_lbis.end(),
+                      [&](const LogicalBlobId& host_mem_lbi) { return host_mem_lbi == lbi; });
       BuildTaskPath(nearest_src_node, dst_node, lbi, is_host_mem_input);
     }
   }
@@ -859,8 +859,8 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialInLbiConnect) {
     const auto& lbi = dst_op.BnInOp2Lbi(dst_op.input_bns().Get(i));
     if (lbis.find(lbi) != lbis.end()) {
       bool is_host_mem_input =
-          std::find(host_mem_input_lbis.begin(), host_mem_input_lbis.end(), lbi)
-          != host_mem_input_lbis.end();
+          std::any_of(host_mem_input_lbis.begin(), host_mem_input_lbis.end(),
+                      [&](const LogicalBlobId& host_mem_lbi) { return host_mem_lbi == lbi; });
       BuildTaskPath(sorted_src_comp_tasks.at(0), sorted_dst_comp_tasks.at(i), lbi,
                     is_host_mem_input);
     }
@@ -879,8 +879,8 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialOutLbiConnect) {
     const auto& lbi = src_op.BnInOp2Lbi(src_op.output_bns().Get(i));
     if (lbis.find(lbi) != lbis.end()) {
       bool is_host_mem_input =
-          std::find(host_mem_input_lbis.begin(), host_mem_input_lbis.end(), lbi)
-          != host_mem_input_lbis.end();
+          std::any_of(host_mem_input_lbis.begin(), host_mem_input_lbis.end(),
+                      [&](const LogicalBlobId& host_mem_lbi) { return host_mem_lbi == lbi; });
       BuildTaskPath(sorted_src_comp_tasks.at(i), sorted_dst_comp_tasks.at(0), lbi,
                     is_host_mem_input);
     }
