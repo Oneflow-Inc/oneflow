@@ -781,7 +781,13 @@ class MultinomialFunctor {
       return result;
     }
 
-    if (x->is_global()) { JUST(CheckDeviceIdsIsValid(JUST(x->parallel_desc()))); }
+    DeviceType input_device = DeviceType::kCPU;
+    if (x->is_global()) {
+      JUST(CheckDeviceIdsIsValid(JUST(x->parallel_desc())));
+      input_device = JUST(x->parallel_desc())->device_type();
+    } else {
+      input_device = JUST(x->device())->enum_type();
+    }
     auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("seed", "num_samples");
@@ -790,7 +796,6 @@ class MultinomialFunctor {
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     OpExprInterpContext ctx(attrs, distribution_state);
 
-    DeviceType input_device = JUST(x->device())->enum_type();
     if (input_device == DeviceType::kCPU) {
       return OpInterpUtil::Dispatch<Tensor>(*op_cpu_, {x}, ctx);
     } else {
