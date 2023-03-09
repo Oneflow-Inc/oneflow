@@ -38,7 +38,7 @@ const std::string& GetLayoutTypeName(LayoutType layout_type) {
 const std::string& Layout::name() const { return GetLayoutTypeName(layout_type_); }
 
 #define DEFINE_GET_LAYOUT_TYPE_FUNCTION(layout_type)                                     \
-  const Symbol<Layout> Layout::layout_type() {                                          \
+  const Symbol<Layout> Layout::layout_type() {                                           \
     static const auto& layout = SymbolOf(Layout(OF_PP_CAT(LayoutType::k, layout_type))); \
     return layout;                                                                       \
   }

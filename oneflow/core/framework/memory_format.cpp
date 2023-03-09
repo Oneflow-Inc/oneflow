@@ -43,7 +43,7 @@ const std::string& MemoryFormat::name() const {
 }
 
 #define DEFINE_GET_MEMORY_FORMAT_TYPE_FUNCTION(memory_format_type)                  \
-  const Symbol<MemoryFormat> MemoryFormat::memory_format_type() {                  \
+  const Symbol<MemoryFormat> MemoryFormat::memory_format_type() {                   \
     static const auto& memory_format =                                              \
         SymbolOf(MemoryFormat(OF_PP_CAT(MemoryFormatType::k, memory_format_type))); \
     return memory_format;                                                           \
