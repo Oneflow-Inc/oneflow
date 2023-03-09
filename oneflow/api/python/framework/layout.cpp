@@ -27,12 +27,12 @@ namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Symbol<Layout>, std::shared_ptr<Symbol<Layout>>>(m, "layout")
-      .def("__str__", [](const Symbol<Layout>& d) { return d->name(); })
-      .def("__repr__", [](const Symbol<Layout>& d) { return d->name(); })
+      .def("__str__", [](const Symbol<Layout> d) { return d->name(); })
+      .def("__repr__", [](const Symbol<Layout> d) { return d->name(); })
       .def(py::self == py::self)
       .def(py::hash(py::self))
       .def(py::pickle(
-          [](const Symbol<Layout>& layout) {  // __getstate__
+          [](const Symbol<Layout> layout) {  // __getstate__
             return static_cast<int>(layout->layout_type());
           },
           [](int t) {  // __setstate__
@@ -42,7 +42,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
         return Layout::Get(static_cast<LayoutType>(layout_type_enum));
       });
 
-  m.attr("strided") = &Layout::Get(LayoutType::kStrided);
+  m.attr("strided") = Layout::Get(LayoutType::kStrided);
 
   py::options options;
   options.disable_function_signatures();
