@@ -37,7 +37,7 @@ class TestReluGraph(oneflow.unittest.TestCase):
                 super(HostMemoryInputGraph, self).__init__()
 
             def build(self, x, scalar):
-                a = flow._C.host_scalar_add_by_tensor(x, scalar)
+                a = flow._C.host_scalar_add_by_tensor(x, scalar.cpu())
                 b = flow._C.host_scalar_add_by_tensor(a, scalar)
                 return a + b
 
@@ -46,7 +46,7 @@ class TestReluGraph(oneflow.unittest.TestCase):
 
         test_case.assertTrue(np.array_equal(out.numpy(), lazy_out.numpy()))
 
-        a = flow._C.host_scalar_add_by_tensor(x, scalar)
+        a = flow._C.host_scalar_add_by_tensor(x, scalar.cpu())
         b = flow._C.host_scalar_add_by_tensor(a, scalar)
         eager_out = a + b
         test_case.assertTrue(np.array_equal(out.numpy(), eager_out.numpy()))
@@ -68,7 +68,7 @@ class TestReluGraph(oneflow.unittest.TestCase):
                 super(HostMemoryInputGraph, self).__init__()
 
             def build(self, x, scalar):
-                a = flow._C.host_scalar_add_by_tensor(x, scalar)
+                a = flow._C.host_scalar_add_by_tensor(x, scalar.cpu())
                 b = flow._C.host_scalar_add_by_tensor(a, scalar)
                 return a + b
 
@@ -77,7 +77,7 @@ class TestReluGraph(oneflow.unittest.TestCase):
 
         test_case.assertTrue(np.array_equal(out.numpy(), lazy_out.numpy()))
 
-        a = flow._C.host_scalar_add_by_tensor(x, scalar)
+        a = flow._C.host_scalar_add_by_tensor(x, scalar.cpu())
         b = flow._C.host_scalar_add_by_tensor(a, scalar)
         eager_out = a + b
         test_case.assertTrue(np.array_equal(out.numpy(), eager_out.numpy()))
