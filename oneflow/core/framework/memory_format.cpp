@@ -30,16 +30,16 @@ const Symbol<MemoryFormat>& MemoryFormat::Get(MemoryFormatType memory_format_typ
   return CHECK_JUST(MapAt(memory_formattype2memory_format, memory_format_type));
 }
 
-Maybe<const std::string&> GetMemoryFormatTypeName(MemoryFormatType memory_format_type) {
+const std::string& GetMemoryFormatTypeName(MemoryFormatType memory_format_type) {
   static const HashMap<MemoryFormatType, std::string> memory_format_type2name{
       {MemoryFormatType::kContiguous, "oneflow.contiguous_format"},
       {MemoryFormatType::kPreserve, "oneflow.preserve_format"},
   };
-  return MapAt(memory_format_type2name, memory_format_type);
+  return CHECK_JUST(MapAt(memory_format_type2name, memory_format_type));
 };
 
 const std::string& MemoryFormat::name() const {
-  return CHECK_JUST(GetMemoryFormatTypeName(memory_format_type_));
+  return GetMemoryFormatTypeName(memory_format_type_);
 }
 
 #define DEFINE_GET_MEMORY_FORMAT_TYPE_FUNCTION(memory_format_type)                  \

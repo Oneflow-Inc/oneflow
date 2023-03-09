@@ -29,13 +29,13 @@ const Symbol<Layout>& Layout::Get(LayoutType layout_type) {
   return CHECK_JUST(MapAt(layouttype2layout, layout_type));
 }
 
-Maybe<const std::string&> GetLayoutTypeName(LayoutType layout_type) {
+const std::string& GetLayoutTypeName(LayoutType layout_type) {
   static const HashMap<LayoutType, std::string> layout_type2name{
       {LayoutType::kStrided, "oneflow.strided"}};
-  return MapAt(layout_type2name, layout_type);
+  return CHECK_JUST(MapAt(layout_type2name, layout_type));
 };
 
-const std::string& Layout::name() const { return CHECK_JUST(GetLayoutTypeName(layout_type_)); }
+const std::string& Layout::name() const { return GetLayoutTypeName(layout_type_); }
 
 #define DEFINE_GET_LAYOUT_TYPE_FUNCTION(layout_type)                                     \
   const Symbol<Layout>& Layout::layout_type() {                                          \
