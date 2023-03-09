@@ -17,6 +17,7 @@ limitations under the License.
 import os
 import sys
 import collections
+import warnings
 
 # https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#cuda-environment-variables
 if "CUDA_MODULE_LOADING" not in os.environ:
@@ -78,6 +79,11 @@ def is_deprecated(func_or_class):
     )
 
 
+def use_deterministic_algorithms(mode, *, warn_only=False):
+    # register a empty method
+    warnings.warn("Oneflow temporarily does not support use_deterministic_algorithms.")
+
+
 from oneflow._C import abs
 from oneflow._C import exp
 from oneflow._C import acos
@@ -97,6 +103,7 @@ from oneflow._C import sinh
 from oneflow._C import tan
 from oneflow._C import greater
 from oneflow._C import greater as gt
+from oneflow._C import greater_ as gt_
 from oneflow._C import greater_equal
 from oneflow._C import greater_equal as ge
 from oneflow._C import log
@@ -163,6 +170,7 @@ from oneflow._C import maximum
 from oneflow._C import max
 from oneflow._C import min
 from oneflow._C import median
+from oneflow._C import mode
 from oneflow._C import pow
 from oneflow._C import reduce_prod as prod
 from oneflow._C import reduce_sum as sum
@@ -239,6 +247,7 @@ from oneflow._C import isnan
 from oneflow._C import isinf
 from oneflow._C import isfinite
 from oneflow._C import inv as inverse
+from oneflow._C import det
 from oneflow._C import iinfo, finfo
 from oneflow._C import multinomial
 from oneflow._C import linalg_cross as cross
@@ -247,6 +256,8 @@ from oneflow._C import isclose
 from oneflow._C import allclose
 from oneflow._C import index_add, index_add_
 from oneflow._C import sort
+from oneflow._C import clone
+from oneflow._C import bitwise_and, bitwise_or, bitwise_xor, bitwise_not
 
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
@@ -266,13 +277,12 @@ import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_ctx
 from oneflow.framework.tensor_str import set_printoptions
 
-__oneflow_global_unique_env = env_util.GetEnv()
-session_ctx.NewDefaultSession(__oneflow_global_unique_env)
+_oneflow_global_unique_env = env_util.GetEnv()
+session_ctx.NewDefaultSession(_oneflow_global_unique_env)
 
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.autograd.graph.register_saved_tensors_hook_manager()
 oneflow._oneflow_internal.RegisterStackGetter()
-oneflow._oneflow_internal.InitDefaultGlobalTransportTokenScope()
 
 
 class ExitHook:
@@ -305,7 +315,7 @@ hook = ExitHook()
 
 
 def atexit_hook(hook):
-    __oneflow_global_unique_env.switch_to_shutting_down(hook.is_normal_exit())
+    _oneflow_global_unique_env.switch_to_shutting_down(hook.is_normal_exit())
     oneflow.framework.session_context.TryCloseDefaultSession()
 
 
@@ -459,6 +469,7 @@ from . import (
     backends,
     amp,
     hub,
+    fx,
 )
 import oneflow.utils.data
 import oneflow.framework.docstr as docstr

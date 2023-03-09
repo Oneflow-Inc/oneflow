@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
 import unittest
 import oneflow as flow
 import oneflow.unittest
@@ -74,16 +75,26 @@ class TestMock(flow.unittest.TestCase):
 
     def test_error(test_case):
         mock.enable()
-        with test_case.assertRaises(Exception) as context:
+        with test_case.assertRaises(ImportError) as context:
             from torch import noexist
+        test_case.assertTrue(
+            "cannot import name 'noexist' from 'oneflow'" in str(context.exception)
+        )
+        with test_case.assertRaises(ModuleNotFoundError) as context:
+            import torch.noexist
         test_case.assertTrue(
             "oneflow.noexist is not implemented" in str(context.exception)
         )
         mock.disable()
-        with test_case.assertRaises(Exception) as context:
+        with test_case.assertRaises(ImportError) as context:
             from torch import noexist
         test_case.assertTrue(
             "cannot import name 'noexist' from 'torch'" in str(context.exception)
+        )
+        with test_case.assertRaises(ModuleNotFoundError) as context:
+            import torch.noexist
+        test_case.assertTrue(
+            "No module named 'torch.noexist'" in str(context.exception)
         )
 
     def test_nested_with(test_case):
@@ -109,6 +120,48 @@ class TestMock(flow.unittest.TestCase):
             from test_mock_simple import f
 
             test_case.assertEqual(f(), "oneflow")
+
+    def test_env_var(test_case):
+        os.environ["ONEFLOW_DISABLE_MOCK_TORCH"] = "1"
+
+        with mock.enable():
+            import torch
+
+            test_case.assertEqual(torch.__package__, "torch")
+
+        os.environ["ONEFLOW_DISABLE_MOCK_TORCH"] = "0"
+
+    def test_dummy_obj_fallback(test_case):
+        with mock.enable(lazy=True):
+            from torch import not_exist
+
+            test_case.assertEqual(not_exist.__name__, "oneflow.not_exist")
+            x = not_exist.x
+            test_case.assertEqual(x.__name__, "oneflow.not_exist.x")
+
+    def test_mock_torchvision(test_case):
+        with mock.enable(lazy=True):
+            import torchvision
+
+            model = torchvision.models.resnet18(pretrained=False)
+            test_case.assertEqual(len(list(model.parameters())), 62)
+
+    def test_mock_lazy_for_loop(test_case):
+        with mock.enable(lazy=True):
+            import torch
+
+            # Test no infinite loop
+            for _ in torch.not_exist:
+                pass
+
+
+# MUST use pytest to run this test
+def test_verbose(capsys):
+    with mock.enable(lazy=True, verbose=True):
+        import torch.not_exist
+
+        captured = capsys.readouterr()
+        assert "oneflow.not_exist is not found in oneflow" in captured.out
 
 
 if __name__ == "__main__":

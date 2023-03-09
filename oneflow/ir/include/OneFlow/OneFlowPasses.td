@@ -28,6 +28,7 @@ def GpuCopyArgPass : Pass<"gpu-copy-arg", "func::FuncOp"> {
 def OutlineJitFunctionPass : Pass<"outline-jit-function", "ModuleOp"> {
   let summary = "move ops could be jitted to jit function";
   let constructor = "mlir::oneflow::createOutlineJitFunctionPass()";
+  let dependentDialects = ["pdl_interp::PDLInterpDialect", "pdl::PDLDialect"];
 }
 
 def AggregateComputeOpsPass : Pass<"aggregate-compute-ops", "ModuleOp"> {
@@ -38,21 +39,6 @@ def AggregateComputeOpsPass : Pass<"aggregate-compute-ops", "ModuleOp"> {
 def WrapOpsToKernelLaunchPass : Pass<"wrap-ops-to-kernel-launch", "ModuleOp"> {
   let summary = "wrap user ops with a single kernel launch op in OneFlow Job";
   let constructor = "mlir::oneflow::createWrapOpsToKernelLaunchPass()";
-}
-
-def ExtractKernelLaunchTensorPass : Pass<"extract-kernel-launch-tensor", "ModuleOp"> {
-  let summary = "extract kernel launch tensor from !okl.launcher_ctx";
-  let constructor = "mlir::oneflow::createExtractKernelLaunchTensorPass()";
-}
-
-def TrimReturnAsVoidPass : Pass<"trim-return-to-void", "ModuleOp"> {
-  let summary = "trim return types to void type";
-  let constructor = "mlir::oneflow::createTrimReturnAsVoidPass()";
-}
-
-def LowerToOKLPass : Pass<"lower-to-okl", "ModuleOp"> {
-  let summary = "lower oneflow dialect ops to okl dialect";
-  let constructor = "mlir::oneflow::createLowerToOKLPass()";
 }
 
 def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "ModuleOp"> {
@@ -126,6 +112,15 @@ def FuseForwardOps : Pass<"fuse-forward-only-ops", "ModuleOp"> {
   }];
   let constructor = "mlir::oneflow::createFuseForwardOps()";
   let dependentDialects = [];
+}
+
+def FuseOpsWithBackwardImpl : Pass<"fuse-ops-with-backward-impl", "ModuleOp"> {
+  let summary = "fuse ops with backward impl";
+  let description = [{
+    fuse ops with backward impl.
+  }];
+  let constructor = "mlir::oneflow::createFuseOpsWithBackwardImpl()";
+  let dependentDialects = ["pdl_interp::PDLInterpDialect", "pdl::PDLDialect"];
 }
 
 def FuseNormalizationOps : Pass<"fuse-normalization-ops", "ModuleOp"> {

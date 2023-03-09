@@ -39,6 +39,7 @@ rng = np.random.default_rng()
 annotation2default_generator = {}
 annotation2torch_to_flow_converter = {}
 NoneType = type(None)
+random_value_default_range = {int: (-10, 11), float: (-1, 1)}
 
 
 def data_generator(annotation):
@@ -288,8 +289,8 @@ class random_pytorch_tensor(generator):
         dim2=None,
         dim3=None,
         dim4=None,
-        low=0,
-        high=1,
+        low=None,
+        high=None,
         dtype=float,
         pin_memory=False,
     ):
@@ -337,9 +338,13 @@ class random_pytorch_tensor(generator):
         dim2 = self.dim2.value()
         dim3 = self.dim3.value()
         dim4 = self.dim4.value()
+        dtype = self.dtype.value()
         low = self.low.value()
         high = self.high.value()
-        dtype = self.dtype.value()
+        if low is None:
+            low = random_value_default_range[dtype][0]
+        if high is None:
+            high = random_value_default_range[dtype][1]
         pin_memory = self.pin_memory
 
         shape = rng.integers(low=1, high=8, size=ndim)
@@ -482,6 +487,22 @@ class all_placement(generator):
 
     def _calc_value(self):
         return self._calc_all_placement()
+
+
+class all_cpu_placement(all_placement):
+    def __init__(self):
+        super().__init__()
+
+    def _calc_device(self):
+        return ["cpu"]
+
+
+class all_cuda_placement(all_placement):
+    def __init__(self):
+        super().__init__()
+
+    def _calc_device(self):
+        return ["cuda"]
 
 
 class random_placement(all_placement):
@@ -627,6 +648,8 @@ __all__ = [
     "random_cpu_placement",
     "random_gpu_placement",
     "all_placement",
+    "all_cpu_placement",
+    "all_cuda_placement",
     "random_sbp",
     "all_sbp",
     "random",

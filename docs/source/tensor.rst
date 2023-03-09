@@ -248,6 +248,7 @@ Tensor class reference
     Tensor.get_device
     Tensor.grad_fn
     Tensor.gt
+    Tensor.gt_
     Tensor.half
     Tensor.in_top_k
     Tensor.index_select
@@ -285,6 +286,7 @@ Tensor class reference
     Tensor.min
     Tensor.minimum
     Tensor.mish
+    Tensor.mode
     Tensor.mul
     Tensor.mul_
     Tensor.nansum
@@ -388,3 +390,7 @@ Tensor class reference
     Tensor.allclose
     Tensor.broadcast_to
     Tensor.unique
+    Tensor.bitwise_and
+    Tensor.bitwise_or
+    Tensor.bitwise_xor
+    Tensor.baddbmm

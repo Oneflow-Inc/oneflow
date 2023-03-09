@@ -150,6 +150,10 @@ Scalar PyUnpackScalar(PyObject* obj) {
     return static_cast<int64_t>(PyLong_AsLongLong(obj));
   } else if (PyFloat_Check(obj)) {
     return PyFloat_AsDouble(obj);
+  } else if (PyArray_IsScalar(obj, Bool)) {
+    return obj == Py_True;
+  } else if (PyArray_IsScalar(obj, Floating)) {
+    return PyFloat_AsDouble(obj);
   }
   THROW(RuntimeError) << "The object is not scalar, but is " << Py_TYPE(obj)->tp_name;
   return 0;
@@ -159,7 +163,8 @@ Scalar PyUnpackScalar(PyObject* obj) {
 bool PyScalarTensorCheck(PyObject* obj) {
   if (!LazyMode::is_enabled() && PyTensor_Check(obj)) {
     const auto& tensor = PyTensor_Unpack(obj);
-    return tensor->shape()->size() == 0 && IsPODDataType(tensor->dtype()->data_type());
+    return tensor->shape()->size() == 0
+           && IsTriviallyCopyableDataType(tensor->dtype()->data_type());
   }
   return false;
 }

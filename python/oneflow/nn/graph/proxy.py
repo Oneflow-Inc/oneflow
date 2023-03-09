@@ -33,9 +33,9 @@ from oneflow.nn.graph.graph_block import (
 )
 from oneflow.nn.graph.util import (
     add_indent,
-    ArgsTree,
     seq_to_func_return,
 )
+from oneflow.framework.args_tree import ArgsTree
 
 
 def get_proxy_cls(item):
@@ -173,7 +173,7 @@ class ProxyModule(Proxy):
         _print_state(self._parameters)
         _print_state(self._buffers)
 
-        # NOTE: The original nn.Moudle's __call__ method is ignored, which means
+        # NOTE: The original nn.Module's __call__ method is ignored, which means
         # that hooks of nn.Modules are ignored. It is not recommended
         # to use hooks of nn.Module in nn.Graph for the moment.
         with graph_build_util.DebugScopeContext(
@@ -705,7 +705,7 @@ class ProxyModuleList(get_list(ProxyModule)):
             self.to(GraphModule)._name = name
             self.to(GraphModule)._belonged_graph = belonged_graph
             self._oneflow_internal_graphblock__set_origin(origin)
-            # MoudleList is a container without forward() method,
+            # ModuleList is a container without forward() method,
 
         elif isinstance(origin, list):
             super().__init__(origin)

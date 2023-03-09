@@ -16,17 +16,11 @@ limitations under the License.
 #ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_CONVERSION_CONVERSION_H_
 #define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_CONVERSION_CONVERSION_H_
 
-#include "OneFlow/OKL/Conversion/FetchFromLauncher.h"
 #include "OneFlow/OKL/Conversion/OKLToLLVM.h"
-#include "OneFlow/OKL/Conversion/OnlyKeepComputeOps.h"
-#include "OneFlow/OKL/Conversion/SplitIntoFuncs.h"
 #include "mlir/IR/BuiltinOps.h"
 
 namespace mlir {
 namespace okl {
-
-// convert oneflow.kernel_launch wrap function to okl dialect
-LogicalResult LowerWrapOpsToOKL(ModuleOp module);
 
 // convert okl dialect to llvm dialect
 LogicalResult LowerOKLComputeToLLVM(ModuleOp module);

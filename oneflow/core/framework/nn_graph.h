@@ -19,6 +19,7 @@ limitations under the License.
 #include <memory>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/nn_graph_if.h"
+#include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
@@ -41,12 +42,24 @@ class NNGraph final : public NNGraphIf {
         session_ctx_(session_ctx),
         runtime_inited_(false),
         is_closed_(false) {}
+  explicit NNGraph(const std::string& name, const Plan& plan, int64_t job_id,
+                   const std::shared_ptr<MultiClientSessionContext>& session_ctx)
+      : name_(name),
+        job_id_(job_id),
+        session_ctx_(session_ctx),
+        plan_(plan),
+        runtime_inited_(false),
+        is_closed_(false) {}
   OF_DISALLOW_COPY_AND_MOVE(NNGraph);
   ~NNGraph();
 
   const std::string& job_name() const override { return name_; }
   const Job& job() const { return job_; }
+  void restore_job(const Job& job) { job_ = job; }
   int64_t job_id() const { return job_id_; }
+  void restore_job_id(int64_t job_id) { job_id_ = job_id; }
+  const Plan& plan() const { return plan_; }
+  void restore_plan(const Plan& plan) { plan_ = plan; }
   const std::vector<std::string>& inputs_op_names() const override;
   const std::vector<std::string>& outputs_op_names() const override;
   const std::vector<bool>& inputs_valid() const override;
@@ -55,9 +68,6 @@ class NNGraph final : public NNGraphIf {
   const std::vector<std::string>& outputs_tensor_meta_str() const;
   int64_t variable_op_size() const;
   const std::shared_ptr<vm::EagerBlobObjectList>& var_blobs() const;
-
-  void restore_job(const Job& job) { job_ = job; }
-  void restore_job_id(int64_t job_id) { job_id_ = job_id; }
 
   Maybe<void> RegisterAdditionalVarOpNamesAndTensorsToBeLoaded(
       const std::vector<std::string>& additional_var_names,
@@ -73,8 +83,24 @@ class NNGraph final : public NNGraphIf {
       const std::vector<std::shared_ptr<one::Tensor>>& variable_tensors);
   Maybe<std::vector<std::string>> GetAdditionalVarOpNames() const;
   Maybe<std::vector<std::shared_ptr<one::Tensor>>> GetAdditionalVarOpTensors() const;
+  // After logical graph compile, some state variables should be cleaned or built.
+  Maybe<void> AlignStatesAfterLogicalGraphCompile();
+  // Add special operators into logical graph for lazy runtime.
+  Maybe<void> CompleteLogicalGraphForRuntime();
+  // Build graph with new inputs from a completed job of a shared graph.
+  Maybe<void> BuildWithNewInputFromSharedGraph(
+      const std::vector<std::string>& shared_inputs_op_names,
+      const std::vector<std::shared_ptr<one::Tensor>>& new_input_tensors,
+      const std::vector<std::string>& shared_op_names_from_ordered_original_graph,
+      const std::string& new_serialized_original_job);
+  // Generate execution plan for lazy runtime. Oneflow lazy runtime is an actor based runtime.
+  Maybe<void> CompilePlanForRuntime();
+  // Initialize lazy runtime.
+  Maybe<void> InitRuntime();
   Maybe<void> CompileAndInitRuntime();
   Maybe<void> Close();
+  const auto variable_op_name2tensor() const { return variable_op_name2tensor_; }
+  std::vector<std::shared_ptr<one::UserOpExpr>> cached_op_exprs;
 
  private:
   Maybe<void> RegisterFreeEagerTensorsToVariableOpNames();
