@@ -87,11 +87,27 @@ def _test_rand_op_in_graph(test_case, rand_op, input=None, **kwargs):
     if isinstance(rand_result2, (list, tuple)):
         rand_result2 = rand_result2[0]
 
-    # print(f"\ninput:\n{input}\nrand_result1:\n{rand_result1}\nrand_result2:\n{rand_result2}")
     test_case.assertFalse(
         np.allclose(rand_result1.numpy(), rand_result2.numpy()),
         f"\ninput:\n{input}\nrand_result1:\n{rand_result1}\nrand_result2:\n{rand_result2}",
     )
+
+
+def _get_shape_and_device_from_args(pop_device=False, **kwargs):
+    if "size" in kwargs:
+        shape = kwargs["size"]
+    elif "shape" in kwargs:
+        shape = kwargs["shape"]
+    elif "n" in kwargs:
+        shape = (kwargs["n"],)
+    else:
+        raise ValueError(f"can't parse shape from kwargs {kwargs}")
+
+    device = "cpu"
+    if "device" in kwargs:
+        device = kwargs["device"]
+
+    return shape, device
 
 
 # Test FRB (Forward Recomputation Backpropagation)
@@ -118,6 +134,8 @@ def _test_rand_op_in_FRB(test_case, rand_op, input=None, **kwargs):
                 y = self.rand_op(**kwargs) + x
             else:
                 y = self.rand_op(x, **kwargs)
+            if isinstance(y, (tuple, list)):
+                y = y[0]
             return y * weight
 
     class TestGraph(nn.Graph):
@@ -133,11 +151,10 @@ def _test_rand_op_in_FRB(test_case, rand_op, input=None, **kwargs):
             return y
 
     if input is None:
-        assert "size" in kwargs
-        assert "device" in kwargs
-        x = flow.randn(*kwargs["size"]).to(kwargs["device"])
-        weight = flow.randn(*kwargs["size"]).to(kwargs["device"])
-        model = CheckpointActivationModule(weight, True).to(kwargs["device"])
+        shape, device = _get_shape_and_device_from_args(**kwargs)
+        x = flow.randn(*shape).to(device)
+        weight = flow.randn(*shape).to(device)
+        model = CheckpointActivationModule(weight, True).to(device)
         graph = TestGraph(model)
     else:
         x = input
@@ -153,58 +170,100 @@ def _test_rand_op_in_FRB(test_case, rand_op, input=None, **kwargs):
     )
 
 
-def _test_split_rand_in_graph(test_case, device, rand_op, *args, **kwargs):
-    if issubclass(rand_op, nn.Module):
-        rand_op = rand_op(*args, **kwargs)
-
-    placement = flow.placement(device, np.array(range(flow.env.get_world_size())))
+def _test_split_rand_op_in_graph(test_case, rand_op, input=None, **kwargs):
+    rand_op, kwargs = _inspect_rand_op_and_args(rand_op, **kwargs)
 
     class TestGraph(nn.Graph):
+        def __init__(self):
+            super().__init__()
+            self.rand_op = rand_op
+
         def build(self, x):
-            y = rand_op(x)
+            x = x.to_global(sbp=flow.sbp.split(0))
+            y = self.rand_op(x, **kwargs)
             return y
 
-    x = flow.rand(2, 4)
-    x_db = flow.concat([x, x], dim=0)
-    x_global = x_db.to_global(placement=placement, sbp=flow.sbp.broadcast())
-    x_global = x_global.to_global(placement=placement, sbp=flow.sbp.split(0))
-    graph = TestGraph()
-    y_global = graph(x_global)
-    y_global = y_global.to_global(placement=placement, sbp=flow.sbp.broadcast())
+    class TestGraphWithoutInput(nn.Graph):
+        def __init__(self, placement):
+            super().__init__()
+            self.rand_op = rand_op
+            self.placement = placement
 
-    first_half = y_global[0:2, :]
-    second_half = y_global[2:, :]
+        def build(self):
+            y = self.rand_op(placement=self.placement, sbp=flow.sbp.split(0), **kwargs)
+            return y
+
+    ranks = np.array(range(flow.env.get_world_size()))
+    if input is None:
+        device = kwargs.pop("device", None)
+        placement = flow.placement(device, ranks)
+        graph = TestGraphWithoutInput(placement)
+        y_global = graph()
+        print(y_global.shape, y_global.sbp)
+    else:
+        x = flow.concat([input, input], dim=0)
+        placement = flow.placement(input.device.type, ranks)
+        # local to broadcast global
+        x_global = x.to_global(placement=placement, sbp=flow.sbp.broadcast(), copy=True)
+        graph = TestGraph()
+        y_global = graph(x_global)
+
+    if isinstance(y_global, (list, tuple)):
+        y_global = y_global[0]
+
+    y_global = y_global.to_global(placement=placement, sbp=flow.sbp.broadcast())
+    half = y_global.shape[0] // 2
+    first_half = y_global[0:half]
+    second_half = y_global[half:]
     test_case.assertFalse(np.allclose(first_half.numpy(), second_half.numpy()))
 
 
-def _test_broadcast_rand_in_graph(test_case, device, rand_op, *args, **kwargs):
-    fn_args = []
-    fn_kwargs = {}
-    if issubclass(rand_op, nn.Module):
-        rand_op = rand_op(*args, **kwargs)
-    else:
-        fn_args = args
-        fn_kwargs = kwargs
-
-    placement = flow.placement(device, np.array(range(flow.env.get_world_size())))
+def _test_broadcast_rand_op_in_graph(test_case, rand_op, input=None, **kwargs):
+    rand_op, kwargs = _inspect_rand_op_and_args(rand_op, **kwargs)
 
     class TestGraph(nn.Graph):
+        def __init__(self):
+            super().__init__()
+            self.rand_op = rand_op
+
         def build(self, x):
-            y = rand_op(x)
+            y = self.rand_op(x, **kwargs)
             return y
 
-    x = flow.rand(2, 4)
-    x_global = x.to_global(placement=placement, sbp=flow.sbp.broadcast())
-    graph = TestGraph()
-    # broadcast with shape (2, 4)
-    y = graph(x_global)
-    y_local = y.to_local()
-    # split with shape (4, 4)
-    y_global = y_local.to_global(placement=placement, sbp=flow.sbp.split(0))
-    y_global = y_global.to_global(sbp=flow.sbp.broadcast())
+    class TestGraphWithoutInput(nn.Graph):
+        def __init__(self, placement):
+            super().__init__()
+            self.rand_op = rand_op
+            self.placement = placement
 
-    first_half = y_global[0:2, :]
-    second_half = y_global[2:, :]
+        def build(self):
+            y = self.rand_op(placement=placement, sbp=flow.sbp.broadcast(), **kwargs)
+            return y
+
+    ranks = np.array(range(flow.env.get_world_size()))
+    if input is None:
+        device = kwargs.pop("device", None)
+        placement = flow.placement(device, ranks)
+        graph = TestGraphWithoutInput(placement)
+        y_global = graph()
+    else:
+        placement = flow.placement(input.device.type, ranks)
+        # local to broadcast global
+        x = input
+        x_global = x.to_global(placement=placement, sbp=flow.sbp.broadcast(), copy=True)
+        graph = TestGraph()
+        y_global = graph(x_global)
+
+    if isinstance(y_global, (list, tuple)):
+        y_local = y_global[0].to_local()
+    else:
+        y_local = y_global.to_local()
+
+    y_all_ranks = y_local.to_global(placement=placement, sbp=flow.sbp.split(0))
+    y_allgather = y_all_ranks.to_global(sbp=flow.sbp.broadcast())
+    half = y_allgather.shape[0] // 2
+    first_half = y_allgather[0:half]
+    second_half = y_allgather[half:]
     test_case.assertTrue(np.allclose(first_half.numpy(), second_half.numpy()))
 
 
@@ -221,14 +280,13 @@ class TestRandOpInGraph(oneflow.unittest.TestCase):
 
             x1 = flow.rand(4, 16, device=device)
             _test_rand_op_in_graph(
-                self, flow.multinomial, x1, num_samples=10, replacement=True
+                self, flow.multinomial, x1, num_samples=16, replacement=True
             )
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_source_rand_op(self):
         shape = (4, 16)
         for device in ("cpu", "cuda"):
-            _test_rand_op_in_graph(self, flow.rand, size=shape, device=device)
             _test_rand_op_in_graph(self, flow.rand, size=shape, device=device)
             _test_rand_op_in_graph(
                 self, flow.normal, mean=0.0, std=1.0, size=shape, device=device
@@ -264,13 +322,134 @@ class TestRandOpInFRB(oneflow.unittest.TestCase):
         for device in ("cpu", "cuda"):
             x = flow.randn(4, 16, device=device)
             _test_rand_op_in_FRB(self, nn.Dropout, x, p=0.5)
+            _test_rand_op_in_FRB(self, flow._C.rrelu, x, training=True)
+            _test_rand_op_in_FRB(self, nn.init.uniform_, x)
+            _test_rand_op_in_FRB(self, flow._C.exponential_, x)
+
+            x1 = flow.rand(4, 16, device=device)
+            _test_rand_op_in_FRB(
+                self, flow.multinomial, x1, num_samples=16, replacement=True
+            )
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_source_rand_op(self):
+        shape = (4, 16)
+        for device in ("cpu", "cuda"):
+            _test_rand_op_in_FRB(self, flow.rand, size=shape, device=device)
+            _test_rand_op_in_FRB(
+                self, flow.normal, mean=0.0, std=1.0, size=shape, device=device
+            )
+            _test_rand_op_in_FRB(
+                self, flow.randint, low=0, high=10, size=shape, device=device
+            )
+            _test_rand_op_in_FRB(self, flow.randperm, n=32, device=device)
+
+    def test_bernoulli(self):
+        x1 = flow.randn(4, 16)
+        _test_rand_op_in_FRB(self, flow.bernoulli, x1, p=0.5)
+        x2 = flow.rand(4, 16)
+        _test_rand_op_in_FRB(self, flow.bernoulli, x2)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_random_mask_like(self):
+        x = flow.randn(4, 16, 128, 128).to("cuda")
+        _test_rand_op_in_FRB(
+            self,
+            flow._C.fused_scale_tril_softmax_mask_scale,
+            x,
+            p=0.1,
+            diagonal=0,
+            tril_scale_value=-1000,
+        )
 
 
 @flow.unittest.skip_unless_1n2d()
 class TestGlobalRandInGraph(oneflow.unittest.TestCase):
-    def test_global_rand_in_graph(self):
-        _test_split_rand_in_graph(self, "cuda", nn.Dropout, p=0.5)
-        _test_broadcast_rand_in_graph(self, "cuda", nn.Dropout, p=0.5)
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_usual_rand_op_with_split(self):
+        x = flow.randn(2, 4, device="cuda")
+        _test_split_rand_op_in_graph(self, nn.Dropout, x, p=0.5)
+        _test_split_rand_op_in_graph(self, flow._C.rrelu, x, training=True)
+        _test_split_rand_op_in_graph(self, nn.init.uniform_, x)
+        _test_split_rand_op_in_graph(self, flow._C.exponential_, x)
+
+        x1 = flow.rand(2, 8, device="cuda")
+        _test_split_rand_op_in_graph(
+            self, flow.multinomial, x1, num_samples=8, replacement=True
+        )
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_usual_rand_op_with_broadcast(self):
+        x = flow.randn(2, 4, device="cuda")
+        _test_broadcast_rand_op_in_graph(self, nn.Dropout, x, p=0.5)
+        _test_broadcast_rand_op_in_graph(self, flow._C.rrelu, x, training=True)
+        _test_broadcast_rand_op_in_graph(self, nn.init.uniform_, x)
+        _test_broadcast_rand_op_in_graph(self, flow._C.exponential_, x)
+
+        x1 = flow.rand(2, 8, device="cuda")
+        _test_broadcast_rand_op_in_graph(
+            self, flow.multinomial, x1, num_samples=8, replacement=True
+        )
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_source_rand_op_with_split(self):
+        shape = (4, 4)
+        _test_split_rand_op_in_graph(self, flow.rand, size=shape, device="cuda")
+        _test_split_rand_op_in_graph(
+            self, flow.normal, mean=0.0, std=1.0, size=shape, device="cuda"
+        )
+        _test_split_rand_op_in_graph(
+            self, flow.randint, low=0, high=10, size=shape, device="cuda"
+        )
+        _test_split_rand_op_in_graph(self, flow.randperm, n=32, device="cuda")
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_source_rand_op_with_broadcast(self):
+        shape = (4, 4)
+        _test_broadcast_rand_op_in_graph(self, flow.rand, size=shape, device="cuda")
+        _test_broadcast_rand_op_in_graph(
+            self, flow.normal, mean=0.0, std=1.0, size=shape, device="cuda"
+        )
+        _test_broadcast_rand_op_in_graph(
+            self, flow.randint, low=0, high=10, size=shape, device="cuda"
+        )
+        _test_broadcast_rand_op_in_graph(self, flow.randperm, n=32, device="cuda")
+
+    def test_bernoulli_with_split(self):
+        x1 = flow.randn(2, 8)
+        _test_split_rand_op_in_graph(self, flow.bernoulli, x1, p=0.5)
+        x2 = flow.rand(2, 8)
+        _test_split_rand_op_in_graph(self, flow.bernoulli, x2)
+
+    def test_bernoulli_with_broadcast(self):
+        x1 = flow.randn(2, 8)
+        _test_broadcast_rand_op_in_graph(self, flow.bernoulli, x1, p=0.5)
+        x2 = flow.rand(2, 8)
+        _test_broadcast_rand_op_in_graph(self, flow.bernoulli, x2)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_random_mask_like_with_split(self):
+        x = flow.randn(2, 16, 64).to("cuda")
+        _test_split_rand_op_in_graph(
+            self,
+            flow._C.fused_scale_tril_softmax_mask_scale,
+            x,
+            p=0.1,
+            diagonal=0,
+            tril_scale_value=-1000,
+        )
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_random_mask_like_with_broadcast(self):
+        x = flow.randn(2, 16, 64).to("cuda")
+        _test_broadcast_rand_op_in_graph(
+            self,
+            flow._C.fused_scale_tril_softmax_mask_scale,
+            x,
+            p=0.2,
+            diagonal=1,
+            tril_scale_value=-100,
+        )
 
 
 if __name__ == "__main__":
