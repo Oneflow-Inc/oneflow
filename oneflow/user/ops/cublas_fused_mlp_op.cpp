@@ -54,12 +54,20 @@ Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
     // skip first input weight.
     const user_op::TensorDesc& weight_desc = ctx->InputTensorDesc("weights", idx);
     const user_op::TensorDesc& bias_desc = ctx->InputTensorDesc("biases", idx);
-    CHECK_EQ_OR_RETURN(weight_desc.shape().NumAxes(), 2);
-    CHECK_EQ_OR_RETURN(bias_desc.shape().NumAxes(), 1);
+    CHECK_EQ_OR_RETURN(weight_desc.shape().NumAxes(), 2)
+        << Error::RuntimeError() << "The number of dims of " << idx
+        << "th <weight> is expected to be 2, but got " << weight_desc.shape().NumAxes();
+    CHECK_EQ_OR_RETURN(bias_desc.shape().NumAxes(), 1)
+        << Error::RuntimeError() << "The number of dims of " << idx
+        << "th <bias> is expected to be 1, but got " << bias_desc.shape().NumAxes();
 
     n = weight_desc.shape().At(0);
-    CHECK_EQ_OR_RETURN(bias_desc.shape().At(0), n);
-    CHECK_EQ_OR_RETURN(weight_desc.shape().At(1), k);
+    CHECK_EQ_OR_RETURN(bias_desc.shape().At(0), n)
+        << Error::RuntimeError() << "The first dim of " << idx << "th <bias> is expected to be "
+        << n << ", but got " << bias_desc.shape().At(0);
+    CHECK_EQ_OR_RETURN(weight_desc.shape().At(1), k)
+        << Error::RuntimeError() << "The second dim of " << idx << "th <weight> is expected to be "
+        << k << ", but got " << weight_desc.shape().At(1);
 
     cublas_aux_ld = n;
     // Set Middle result shape.

@@ -35,7 +35,9 @@ namespace oneflow {
 /* static */ Maybe<void> CastToTickOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
   const NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
   const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
-  CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel_size(), parallel_hierarchy.NumAxes());
+  CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel_size(), parallel_hierarchy.NumAxes())
+      << Error::RuntimeError() << "The sbp parallel size of input tensor <in> is expected to be "
+      << parallel_hierarchy.NumAxes() << ", but got " << in_dis_hint.sbp_parallel_size();
 
   NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
   NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);

@@ -13,8 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/error.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/user/utils/error_message_util.h"
 
 namespace oneflow {
 
@@ -24,7 +26,11 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& ref_desc = ctx->InputTensorDesc("ref", 0);
   const user_op::TensorDesc& value_desc = ctx->InputTensorDesc("value", 0);
   CHECK_OR_RETURN(!ref_desc.is_dynamic());
-  CHECK_OR_RETURN(ref_desc.shape() == value_desc.shape());
+  CHECK_OR_RETURN(ref_desc.shape() == value_desc.shape())
+      << Error::RuntimeError()
+      << GetDefaultBinaryCheckErrorMsg("shape of input tensor <ref>",
+                                       "shape of input tensor <value>", ref_desc.shape(),
+                                       value_desc.shape(), "=");
   if (ctx->has_input("condition", 0)) {
     const user_op::TensorDesc& condition = ctx->InputTensorDesc("condition", 0);
     CHECK_OR_RETURN(condition.shape().NumAxes() == 1);

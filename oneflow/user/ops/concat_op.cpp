@@ -22,7 +22,11 @@ namespace oneflow {
   const user_op::TensorDesc& first_in_desc = ctx->InputTensorDesc("in", 0);
   const int64_t axis = ctx->Attr<int64_t>("axis");
   CHECK_GE_OR_RETURN(axis, 0);
-  CHECK_LT_OR_RETURN(axis, first_in_desc.shape().NumAxes());
+  CHECK_LT_OR_RETURN(axis, first_in_desc.shape().NumAxes())
+      << Error::RuntimeError()
+      << "The <axis> is expected to be smaller than the number of dims of first input tensor, but "
+         "got"
+      << axis << " and " << first_in_desc.shape().NumAxes();
   DimVector out_dim_vec = first_in_desc.shape().dim_vec();
   out_dim_vec.at(axis) = 0;
   int64_t first_axes = first_in_desc.shape().NumAxes();
@@ -52,14 +56,21 @@ namespace oneflow {
           out_dim_vec.at(axis) += in_desc.shape().At(i);
         }
       } else {
-        CHECK_EQ_OR_RETURN(in_desc.shape().At(i), out_dim_vec.at(i));
+        CHECK_EQ_OR_RETURN(in_desc.shape().At(i), out_dim_vec.at(i))
+            << Error::RuntimeError() << "The " << i
+            << "th dim of <in_desc> is expected to be equal with that of first input tensor, but "
+               "got"
+            << in_desc.shape().At(i) << " and " << out_dim_vec.at(i);
       }
     }
   }
 
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   const int64_t max_dim_size = ctx->Attr<int64_t>("max_dim_size");
-  CHECK_LE_OR_RETURN(out_dim_vec.at(axis), max_dim_size);
+  CHECK_LE_OR_RETURN(out_dim_vec.at(axis), max_dim_size)
+      << Error::RuntimeError() << "The " << axis
+      << "th dim of output tensor is expected to be smaller than the max dim size, but got "
+      << out_dim_vec.at(axis) << " and " << max_dim_size;
   if (dynamic_dim_size == 0) {
     out_desc->set_is_dynamic(false);
   } else {
