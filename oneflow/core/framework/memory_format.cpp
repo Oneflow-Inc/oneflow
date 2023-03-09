@@ -20,14 +20,14 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<const Symbol<MemoryFormat>&> MemoryFormat::Get(MemoryFormatType memory_format_type) {
+const Symbol<MemoryFormat>& MemoryFormat::Get(MemoryFormatType memory_format_type) {
   static HashMap<MemoryFormatType, const Symbol<MemoryFormat>> memory_formattype2memory_format{
 #define MAKE_ENTRY(memory_format_type) \
   {OF_PP_CAT(MemoryFormatType::k, memory_format_type), memory_format_type()},
       OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, MEMORY_FORMAT_SEQ)
 #undef MAKE_ENTRY
   };
-  return MapAt(memory_formattype2memory_format, memory_format_type);
+  return CHECK_JUST(MapAt(memory_formattype2memory_format, memory_format_type));
 }
 
 Maybe<const std::string&> GetMemoryFormatTypeName(MemoryFormatType memory_format_type) {

@@ -20,13 +20,13 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<const Symbol<Layout>&> Layout::Get(LayoutType layout_type) {
+const Symbol<Layout>& Layout::Get(LayoutType layout_type) {
   static HashMap<LayoutType, const Symbol<Layout>> layouttype2layout{
 #define MAKE_ENTRY(layout_type) {OF_PP_CAT(LayoutType::k, layout_type), layout_type()},
       OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, LAYOUT_SEQ)
 #undef MAKE_ENTRY
   };
-  return MapAt(layouttype2layout, layout_type);
+  return CHECK_JUST(MapAt(layouttype2layout, layout_type));
 }
 
 Maybe<const std::string&> GetLayoutTypeName(LayoutType layout_type) {

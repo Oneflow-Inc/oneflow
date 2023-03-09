@@ -36,15 +36,14 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
             return static_cast<int>(memory_format->memory_format_type());
           },
           [](int t) {  // __setstate__
-            return CHECK_JUST(MemoryFormat::Get(MemoryFormatType(t)));
+            return MemoryFormat::Get(MemoryFormatType(t));
           }))
       .def("get", [](const int memory_format_type_enum) {
-        return CHECK_JUST(
-            MemoryFormat::Get(static_cast<MemoryFormatType>(memory_format_type_enum)));
+        return MemoryFormat::Get(static_cast<MemoryFormatType>(memory_format_type_enum));
       });
 
-  m.attr("contiguous_format") = &CHECK_JUST(MemoryFormat::Get(MemoryFormatType::kContiguous));
-  m.attr("preserve_format") = &CHECK_JUST(MemoryFormat::Get(MemoryFormatType::kPreserve));
+  m.attr("contiguous_format") = &MemoryFormat::Get(MemoryFormatType::kContiguous);
+  m.attr("preserve_format") = &MemoryFormat::Get(MemoryFormatType::kPreserve);
 
   py::options options;
   options.disable_function_signatures();

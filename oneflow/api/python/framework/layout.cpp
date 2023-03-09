@@ -36,13 +36,13 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
             return static_cast<int>(layout->layout_type());
           },
           [](int t) {  // __setstate__
-            return CHECK_JUST(Layout::Get(LayoutType(t)));
+            return Layout::Get(LayoutType(t));
           }))
       .def("get", [](const int layout_type_enum) {
-        return CHECK_JUST(Layout::Get(static_cast<LayoutType>(layout_type_enum)));
+        return Layout::Get(static_cast<LayoutType>(layout_type_enum));
       });
 
-  m.attr("strided") = &CHECK_JUST(Layout::Get(LayoutType::kStrided));
+  m.attr("strided") = &Layout::Get(LayoutType::kStrided);
 
   py::options options;
   options.disable_function_signatures();
