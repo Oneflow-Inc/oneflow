@@ -387,7 +387,6 @@ Other Ops
     cast
     cumprod 
     cumsum 
-    decode_onerec
     diag 
     diagonal 
     einsum 
