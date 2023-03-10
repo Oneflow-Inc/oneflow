@@ -38,8 +38,9 @@ def _test_pow_grad_grad_impl(test_case):
     if random_bool().value():
         x_shape, y_shape = y_shape, x_shape
 
-    x = random_tensor(len(x_shape), *x_shape)
-    y = random_tensor(len(y_shape), *y_shape)
+    # The range limit should be removed after solving issue #9908
+    x = random_tensor(len(x_shape), *x_shape, low=0, high=1)
+    y = random_tensor(len(y_shape), *y_shape, low=0, high=1)
 
     z = torch.pow(x, y)
     _check_equal(test_case, z.pytorch, z.oneflow)

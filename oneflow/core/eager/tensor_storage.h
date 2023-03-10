@@ -30,7 +30,7 @@ class TensorStorage {
   explicit TensorStorage(bool is_allocated_in_vm);
   OF_DISALLOW_COPY_AND_MOVE(TensorStorage);
 
-  virtual ~TensorStorage() = default;
+  virtual ~TensorStorage();
 
   bool is_allocated_in_vm() const { return is_allocated_in_vm_; }
 
@@ -53,7 +53,6 @@ class TensorStorage {
     last_used_stream_ = last_used_stream;
   }
 
-  void _Release();
   virtual void Release();
 
   void RegisterStorageDeleteHook(const std::function<void()>& hook) {

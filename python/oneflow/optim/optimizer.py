@@ -252,6 +252,9 @@ class Optimizer(object):
             "contiguous_params",
         ]
 
+        self.state = dict()
+        self.defaults = dict()
+
     def add_param_group(self, param_group) -> None:
         r"""
         

@@ -1081,6 +1081,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.exp2,
+    """
+    See :func:`oneflow.exp2`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.erf,
     """
     Tensor.erf() -> Tensor
@@ -2612,5 +2619,53 @@ add_docstr(
         >>> y = flow.tensor([2, 1, 0])
         >>> x.bitwise_xor(y)
         tensor([3, 3, 3], dtype=oneflow.int64)
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.new,
+    """
+    Constructs a new tensor of the same data type and device (or placemant and sbp) as self tensor.
+
+    Any valid argument combination to the tensor constructor is accepted by this method,
+    including sizes, NumPy ndarray, Python Sequence, etc. See :func:`oneflow.Tensor` for more details.
+
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.randn(3, 2)
+        >>> x.new()
+        tensor([], dtype=oneflow.float32)
+        >>> x.new(1, 2).shape
+        oneflow.Size([1, 2])
+        >>> x.new([1, 2])
+        tensor([1., 2.], dtype=oneflow.float32)
+        >>> y = flow.randn(3, 3)
+        >>> x.new(y).shape
+        oneflow.Size([3, 3])
+
+    .. warning::
+        When y is global tensor, the invoking ``Tensor.new(y)`` will raise an error.
+        Consider use ``Tensor.new(y.size())`` to create a tensor that has
+        the same placement and sbp with Tensor and the same size with ``y``.
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.baddbmm,
+    """
+    See :func:`oneflow.baddbmm`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.randn(2, 3, 4)
+        >>> batch1 = flow.randn(2, 3, 5)
+        >>> batch2 = flow.randn(2, 5, 4)
+        >>> x.baddbmm(batch1, batch2, alpha=2, beta=2) # doctest: +SKIP
     """,
 )

@@ -233,6 +233,7 @@ Tensor class reference
     Tensor.erfinv
     Tensor.erfinv_
     Tensor.exp
+    Tensor.exp2
     Tensor.expand
     Tensor.expand_as
     Tensor.expm1
@@ -398,3 +399,4 @@ Tensor class reference
     Tensor.bitwise_and
     Tensor.bitwise_or
     Tensor.bitwise_xor
+    Tensor.baddbmm

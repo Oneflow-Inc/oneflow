@@ -17,6 +17,7 @@ limitations under the License.
 import os
 import sys
 import collections
+import warnings
 
 # https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#cuda-environment-variables
 if "CUDA_MODULE_LOADING" not in os.environ:
@@ -51,6 +52,13 @@ locals()["uint8"] = oneflow._oneflow_internal.uint8
 locals()["record"] = oneflow._oneflow_internal.record
 locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
 locals()["bfloat16"] = oneflow._oneflow_internal.bfloat16
+
+locals()["layout"] = oneflow._oneflow_internal.layout
+locals()["strided"] = oneflow._oneflow_internal.strided
+
+locals()["memory_format"] = oneflow._oneflow_internal.memory_format
+locals()["contiguous_format"] = oneflow._oneflow_internal.contiguous_format
+locals()["preserve_format"] = oneflow._oneflow_internal.preserve_format
 from oneflow.version import __version__
 from oneflow.version import __git_commit__
 
@@ -71,8 +79,14 @@ def is_deprecated(func_or_class):
     )
 
 
+def use_deterministic_algorithms(mode, *, warn_only=False):
+    # register a empty method
+    warnings.warn("Oneflow temporarily does not support use_deterministic_algorithms.")
+
+
 from oneflow._C import abs
 from oneflow._C import exp
+from oneflow._C import exp2
 from oneflow._C import acos
 from oneflow._C import acos as arccos
 from oneflow._C import acosh
