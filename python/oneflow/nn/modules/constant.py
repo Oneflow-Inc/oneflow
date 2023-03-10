@@ -117,7 +117,7 @@ def _handle_meta_args(
 ):
     if isinstance(device, str):
         device = flow.device(device)
-    if size is None or len(size) == 0:
+    if size is None:
         new_size = input.shape
     else:
         new_size = _handle_size_arg(size)
