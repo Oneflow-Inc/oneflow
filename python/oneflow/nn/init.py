@@ -49,6 +49,8 @@ def uniform_(tensor, a=0.0, b=1.0):
     """
     assert a <= b, "b must be greater than or equal to a,but got {%d} vs {%d}" % (b, a)
     with flow.no_grad():
+        if os.getenv("ONEFLOW_SKIP_RANDOM_INIT_IN_MODEL_INFERENCE") == "1":
+            return tensor
         return flow._C.uniform_(tensor, a, b)
 
 
@@ -71,6 +73,8 @@ def normal_(tensor, mean=0.0, std=1.0):
         >>> nn.init.normal_(w)
     """
     with flow.no_grad():
+        if os.getenv("ONEFLOW_SKIP_RANDOM_INIT_IN_MODEL_INFERENCE") == "1":
+            return tensor
         if tensor.is_local:
             return flow.normal(mean=mean, std=std, size=tensor.shape, out=tensor)
         else:
