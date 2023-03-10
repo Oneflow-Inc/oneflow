@@ -2827,12 +2827,12 @@ def OneFlow_FusedMultiHeadAttentionInferenceOp : OneFlow_BaseOp<"fused_multi_hea
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedAttentionConcatPastKeyValueOp : OneFlow_BaseOp<"fused_attention_concat_past_key_value", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedAttentionConcatPastKeyValueOp : OneFlow_BaseOp<"fused_attention_concat_past_key_value", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    OneFlow_Tensor:$past_key,
-    OneFlow_Tensor:$past_value,
     OneFlow_Tensor:$key,
-    OneFlow_Tensor:$value
+    OneFlow_Tensor:$value,
+    Optional<OneFlow_Tensor>:$past_key,
+    Optional<OneFlow_Tensor>:$past_value
   );
   let output = (outs
     OneFlow_Tensor:$output_key,

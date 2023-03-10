@@ -2609,7 +2609,7 @@
   bind_python: True
 
 - name: "fused_attention_concat_past_key_value"
-  signature: 'TensorTuple (*, Tensor past_key, String past_key_layout, Tensor past_value, String past_value_layout, Tensor key, String key_layout, Tensor value, String value_layout, Int64 key_head_size=None) => FusedAttentionConcatPastKeyValue'
+  signature: 'TensorTuple (*, Tensor past_key=None, String past_key_layout, Tensor past_value=None, String past_value_layout, Tensor key, String key_layout, Tensor value, String value_layout, Int64 key_head_size=None) => FusedAttentionConcatPastKeyValue'
   bind_python: True
 
 - name: "fused_scale_mask_bias_softmax"
