@@ -68,6 +68,11 @@ void MluStream::RecordEvent(Event* event) {
   OF_MLU_CHECK(cnrtPlaceNotifier(mlu_event->mlu_event(), mlu_stream_));
 }
 
+void MluStream::WaitEvent(Event* event) {
+  auto* mlu_event = static_cast<MluEvent*>(event);  // NOLINT
+  OF_MLU_CHECK(cnrtQueueWaitNotifier(mlu_stream_, mlu_event, 0));
+}
+
 Maybe<void> MluStream::GetAsyncError() {
   return Maybe<void>::Ok();
 }

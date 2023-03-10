@@ -41,6 +41,7 @@ class MluStream : public Stream {
   MluDevice* device() const override;
   Maybe<void> Sync() override;
   void RecordEvent(Event* event) override;
+  void WaitEvent(Event* event) override;
   Maybe<void> GetAsyncError() override;
 
   Maybe<void> OnExecutionContextSetup() override;
