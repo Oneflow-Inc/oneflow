@@ -14,12 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
-#include <pybind11/pytypes.h>
-#include <pybind11/numpy.h>
-#include <tuple>
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/common/range.h"
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/framework/tensor.h"
 #ifdef WITH_CUDA
