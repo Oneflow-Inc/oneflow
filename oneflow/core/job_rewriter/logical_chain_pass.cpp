@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/auto_parallel/auto_memory.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/instructions_builder.h"
@@ -70,7 +72,7 @@ bool IsBreakpointOpNode(const OpNode* node) {
 
   // TODO(chengcheng): filter ops which has special type
   // TODO(chengcheng): get stream by op type
-  if (op_conf.has_variable_conf()                                                   /* varialbe */
+  if (op_conf.has_variable_conf()                                                   /* variable */
       || IsTickOpConf(op_conf)                                                      /* tick */
       || op_conf.has_input_conf() || op_conf.has_output_conf()                      /* io */
       || op_conf.has_wait_and_send_ids_conf() || op_conf.has_callback_notify_conf() /* ctrl */
@@ -195,12 +197,6 @@ struct PlacementLogicalChainsInfo {
   std::shared_ptr<const Shape> seed_time_shape;
   PlacementLogicalChainsInfo() : seed_parallel_desc(nullptr) {}
 };
-
-std::string GenParallelConfKey(const ParallelConf& conf) {
-  std::string ret = conf.device_tag();
-  for (const auto& name : conf.device_name()) { ret += ("-" + name); }
-  return ret;
-}
 
 void InitPlacementLogicalChainsInfoFromSet(
     const std::shared_ptr<LogicalChain>& logical_chain,
@@ -483,15 +479,22 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
   HashMap<std::string, OperatorConf> mut_op_name2conf;
   // TODO(chengcheng) : better order for memory.
   std::shared_ptr<const Shape> seed_time_shape = std::make_shared<const Shape>(Shape({1, 1}));
-  op_graph.TopoForEachNodeWithCtrlEdge([&](const OpNode* node) {
-    ordered_op_nodes.emplace_back(node);
-    op_node2global_order.emplace(node, ordered_op_nodes.size() - 1);
+  if (ParseBooleanFromEnv("DISABLE_LOGICAL_STRAIGHTEN", false)) {
+    op_graph.TopoForEachNodeWithCtrlEdge(
+        [&](const OpNode* node) { ordered_op_nodes.emplace_back(node); });
+  } else {
+    auto_parallel::StraightenOpGraph(op_graph, &ordered_op_nodes);
+  }
+
+  for (int32_t global_order = 0; global_order < ordered_op_nodes.size(); global_order++) {
+    auto& node = ordered_op_nodes[global_order];
+    op_node2global_order.emplace(node, global_order);
     std::shared_ptr<const Shape> this_time_shape = GetOpNodeFastestTimeShape(node);
     if (this_time_shape->elem_cnt() > seed_time_shape->elem_cnt()) {
       seed_time_shape = this_time_shape;
     }
     mut_op_name2conf.emplace(node->op().op_name(), node->op().op_conf());
-  });
+  }
 
   VLOG(2) << " seed time shape = " << seed_time_shape->ToString();
 

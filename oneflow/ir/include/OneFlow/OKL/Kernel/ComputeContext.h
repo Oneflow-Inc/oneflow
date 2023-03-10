@@ -54,8 +54,9 @@ class ComputeContext final : public user_op::KernelComputeContext {
   KernelComputeContext* comp_ctx_;
   TmpBufferManager tmp_buffer_;
 
-  std::unordered_map<mlir::oneflow::user_op::ArgID, user_op::Tensor*> tensor_desc_{};
+  std::unordered_map<mlir::oneflow::user_op::ArgID, user_op::Tensor*> tensor_{};
 
+  user_op::Tensor* CreateTensorWithArgNameAndIndex(const std::string& arg_name, int32_t index);
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override {
     return user_op_conf().Attr4Name(attr_name);

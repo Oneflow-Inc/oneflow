@@ -241,7 +241,7 @@ void TopoStruct::SpreadTrunk(HashMap<TaskNode*, TopoStruct>* task_node2topo_stru
   node->ForEachNodeOnInEdge([&](TaskNode* in) {
     auto& topo_struct_in = task_node2topo_struct->at(in);
     if (topo_struct_in.min_layer == min_layer - 1) {
-      topo_struct_in.SpreadTributaryLayer(task_node2topo_struct);
+      topo_struct_in.SpreadTrunk(task_node2topo_struct);
     }
   });
 }
