@@ -46,14 +46,22 @@ class ObjectPool {
       InitObjectPoolFields4Element(ptr.get());
       return ptr;
     } else {
-      std::cout << "Before back, container is: ";
-      for (const auto* x : container_) { std::cout << x << ", "; }
-      std::cout << std::endl;
+      for (size_t i = 0; i < container_.size(); ++i) {
+        if (container_[i] == nullptr) {
+          std::cout << "nullptr at " << i << " before back, full size is " << container_.size()
+                    << std::endl;
+          CHECK(false);
+        }
+      }
       auto* ptr = CHECK_NOTNULL(container_.back());
       container_.pop_back();
-      std::cout << "After back, container is: ";
-      for (const auto* x : container_) { std::cout << x << ", "; }
-      std::cout << std::endl;
+      for (size_t i = 0; i < container_.size(); ++i) {
+        if (container_[i] == nullptr) {
+          std::cout << "nullptr at " << i << " after back, full size is " << container_.size()
+                    << std::endl;
+          CHECK(false);
+        }
+      }
       CHECK_NOTNULL(ptr)->__Init__(std::forward<Args>(args)...);
       InitObjectPoolFields4Element(ptr);
       return intrusive::shared_ptr<T>(ptr);
@@ -66,9 +74,13 @@ class ObjectPool {
       CHECK_NOTNULL(ptr)->__Delete__();
     }
     ptr->mut_object_pool()->container_.push_back(CHECK_NOTNULL(ptr));
-    std::cout << "After put, container is: ";
-    for (const auto* x : ptr->mut_object_pool()->container_) { std::cout << x << ", "; }
-    std::cout << std::endl;
+    for (size_t i = 0; i < ptr->mut_object_pool()->container_.size(); ++i) {
+      if (ptr->mut_object_pool()->container_[i] == nullptr) {
+        std::cout << "nullptr at " << i << " after push, full size is "
+                  << ptr->mut_object_pool()->container_.size() << std::endl;
+        CHECK(false);
+      }
+    }
   }
 
  private:
