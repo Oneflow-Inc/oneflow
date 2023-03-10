@@ -241,12 +241,12 @@ Dim PyUnpackDim(PyObject* obj) { return *detail::cast_fast<Dim*>(obj); }
 bool PyShapeItemCheck(PyObject* obj) {
   return PyLong_Check(obj) || PyIntegerScalarTensorCheck(obj) || PyDimCheck(obj);
 }
-Dim PyUnpackShapeItem(PyObject* obj) { 
-  if (PyLong_Check(obj)) { 
+Dim PyUnpackShapeItem(PyObject* obj) {
+  if (PyLong_Check(obj)) {
     return PyLong_AsLongLong(obj);
-  } else if (PyDimCheck(obj)) { 
-    return PyUnpackDim(obj); 
-  } else { 
+  } else if (PyDimCheck(obj)) {
+    return PyUnpackDim(obj);
+  } else {
     return PyUnpackIntegerScalarTensor_AsLongLong(obj);
   }
 }

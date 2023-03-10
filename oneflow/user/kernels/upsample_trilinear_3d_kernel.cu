@@ -133,13 +133,11 @@ class UpsampleTrilinear3DGPUKernel final : public user_op::OpKernel {
     const bool align_corners = ctx->Attr<bool>("align_corners");
     const int64_t elem_cnt = y_tensor->shape_view().elem_cnt();
     NdIndexOffsetHelper<int64_t, 5> in_helper(
-        x_tensor->shape_view().At(0), x_tensor->shape_view().At(1),
-        x_tensor->shape_view().At(2), x_tensor->shape_view().At(3),
-        x_tensor->shape_view().At(4));
+        x_tensor->shape_view().At(0), x_tensor->shape_view().At(1), x_tensor->shape_view().At(2),
+        x_tensor->shape_view().At(3), x_tensor->shape_view().At(4));
     NdIndexOffsetHelper<int64_t, 5> out_helper(
-        y_tensor->shape_view().At(0), y_tensor->shape_view().At(1),
-        y_tensor->shape_view().At(2), y_tensor->shape_view().At(3),
-        y_tensor->shape_view().At(4));
+        y_tensor->shape_view().At(0), y_tensor->shape_view().At(1), y_tensor->shape_view().At(2),
+        y_tensor->shape_view().At(3), y_tensor->shape_view().At(4));
 
     const int64_t in_depth = x_tensor->shape_view().At(2);
     const int64_t in_height = x_tensor->shape_view().At(3);
@@ -188,13 +186,11 @@ class UpsampleTrilinearGrad3DGPUKernel final : public user_op::OpKernel {
     const bool align_corners = ctx->Attr<bool>("align_corners");
     const int64_t elem_cnt = dy_tensor->shape_view().elem_cnt();
     NdIndexOffsetHelper<int64_t, 5> dy_helper(
-        dy_tensor->shape_view().At(0), dy_tensor->shape_view().At(1),
-        dy_tensor->shape_view().At(2), dy_tensor->shape_view().At(3),
-        dy_tensor->shape_view().At(4));
+        dy_tensor->shape_view().At(0), dy_tensor->shape_view().At(1), dy_tensor->shape_view().At(2),
+        dy_tensor->shape_view().At(3), dy_tensor->shape_view().At(4));
     NdIndexOffsetHelper<int64_t, 5> dx_helper(
-        dx_tensor->shape_view().At(0), dx_tensor->shape_view().At(1),
-        dx_tensor->shape_view().At(2), dx_tensor->shape_view().At(3),
-        dx_tensor->shape_view().At(4));
+        dx_tensor->shape_view().At(0), dx_tensor->shape_view().At(1), dx_tensor->shape_view().At(2),
+        dx_tensor->shape_view().At(3), dx_tensor->shape_view().At(4));
 
     const int64_t in_depth = dx_tensor->shape_view().At(2);
     const int64_t in_height = dx_tensor->shape_view().At(3);

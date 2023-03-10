@@ -25,7 +25,7 @@ int64_t ConstShapeMixIn<T>::elem_cnt() const {
 }
 
 template<class T>
-const Dim& ConstShapeMixIn<T>::DimAt(int64_t index) const { 
+const Dim& ConstShapeMixIn<T>::DimAt(int64_t index) const {
   if constexpr (std::is_same_v<T, Shape>) {
     return this->tp()->DimVector::operator[](index);
   } else {
