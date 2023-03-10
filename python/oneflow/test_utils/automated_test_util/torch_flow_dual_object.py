@@ -400,12 +400,13 @@ def get_functional_graph_res(
             return graph_functional_oneflow(*graph_args, **graph_kwargs)
 
     try:
+        is_global_flag = is_global()
 
         # In graph mode, when the tensor on the cpu executes the to("cpu") method, a check error will be reported.
         if oneflow.__name__ == "to" or oneflow.__name__ == "_to":
             if isinstance(oneflow_res, flow.Tensor):
                 # The global tensor needs to obtain the device type through placement.type.
-                if is_global():
+                if is_global_flag:
                     if (
                         oneflow_args and oneflow_res.placement.type == oneflow_args[0]
                     ) or (
@@ -431,18 +432,18 @@ def get_functional_graph_res(
             # nn.Graph donot deal with Parameter creation.
             test_g_res = oneflow_res
         # oneflow_args may be empty, such as dropout.
-        elif is_global() and len(oneflow_args) == 0:
+        elif is_global_flag and len(oneflow_args) == 0:
             test_g_res = oneflow_res
         # For some ops whose input parameters is int, 'int' object has no attribute 'placement'.
         elif (
-            is_global()
+            is_global_flag
             and len(oneflow_args) != 0
             and (check_oneflow_args_first_element_is_int(oneflow_args))
         ):
             test_g_res = oneflow_res
         # When doing the global op test, get_global_test_device() will be executed, and temporarily skipping the graph autotest on cpu device.
         elif (
-            is_global()
+            is_global_flag
             and oneflow.__name__ != "weight_norm"
             and (get_global_test_device(oneflow_args, oneflow_kwargs) == "cpu")
         ):
