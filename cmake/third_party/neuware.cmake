@@ -3,7 +3,7 @@
 #  NEUWARE_LIBRARIES
 
 set(NEUWARE_ROOT_DIR "" CACHE PATH "Folder contains Cambricon cntoolkit")
-set(CNCL_ROOT_DIR "" CACHE PATH "Folder Cambricon NVIDIA CNNCCL")
+set(CNCL_ROOT_DIR "" CACHE PATH "Folder Cambricon CNNCCL")
 
 find_path(NEUWARE_INCLUDE_DIRS cnrt.h PATHS ${NEUWARE_ROOT_DIR} $ENV{NEUWARE_HOME}
                                             $ENV{NEUWARE_PATH} PATH_SUFFIXES include
