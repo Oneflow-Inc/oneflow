@@ -221,10 +221,27 @@ class enable:
     mock_torch.enable(lazy=None, verbose=None) -> None
 
     Enable mock function.
+    When called, all `torch` modules are automatically replaced with `oneflow` modules at runtime without any code changes, unless `mock_torch.disable()` is called.
 
     Args:
-        lazy (bool, optional): When lazy=True, a dummy object is returned for a non-existent interface without an immediate error.
-        verbose (bool, optional): If verbose=True is set at the same time as lazy=True, it will print out which fake objects are accessed or used, making it easier to debug.
+        lazy (bool, optional): If `lazy = False`, then an error is reported immediately when an unimplemented interface is found during the import phase of the imported package. If `lazy = True`, then no error is reported when an unimplemented interface is found during the package import phase, but only when the interface is actually called in the code.
+        verbose (bool, optional): Verbose is only valid when `lazy = True`, when verbose=True, it will print out which mock objects are accessed or used, making it easier to debug.
+
+    For example: 
+
+    .. code-block:: python
+
+        import torch
+        print(torch.__file__)   # This torch is PyTorch
+
+        import oneflow as flow
+        flow.mock_torch.enable()
+
+        x = torch.zeros(2, 3)
+        print(isinstance(x, flow.Tensor)) # This torch will be OneFlow, so the output here will be True.
+
+        y = torch.zeros(2, 3)
+        print(isinstance(y, flow.Tensor)) # This torch will be PyTorch, so the output here will be False.
 
     """
     def __init__(
@@ -268,7 +285,7 @@ class disable:
     """
     mock_torch.disable() -> None
 
-    Disable mock function.
+    After you call `mock_torch.enable()`, you can call `mock_torch.disable()` to turn off the mock function when you need to use the real torch module.
 
     """
     def __init__(self):
