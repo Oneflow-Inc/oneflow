@@ -46,11 +46,17 @@ class ModuleWrapper(ModuleType):
                 return [attr for attr in dir(self.module) if not attr.startswith("_")]
             new_name = self.module.__name__ + "." + name
             if _importer.lazy:
-                if _importer.verbose:
-                    print(
-                        f"{new_name} is not found in oneflow, use dummy object as fallback."
-                    )
-                return DummyModule(new_name)
+                blacklist = ["scaled_dot_product_attention"]
+                if name in blacklist:
+                    if _importer.verbose:
+                        print(f'"{new_name}" is in blacklist, raise AttributeError')
+                    raise AttributeError(new_name + error_msg)
+                else:
+                    if _importer.verbose:
+                        print(
+                            f'"{new_name}" is not found in oneflow, use dummy object as fallback.'
+                        )
+                    return DummyModule(new_name)
             else:
                 raise AttributeError(new_name + error_msg)
         attr = getattr(self.module, name)
