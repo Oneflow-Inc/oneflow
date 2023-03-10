@@ -38,7 +38,7 @@ class CudaDeviceManager : public DeviceManager {
   size_t GetActiveDeviceIndex() override;
   void SetActiveDeviceByIndex(size_t device_index) override;
 
-  void InitDeviceContextOnce(size_t device_index) override;
+  bool IsDeviceStreamWaitEventSupported() const override { return true; }
 
  private:
   std::mutex devices_mutex_;

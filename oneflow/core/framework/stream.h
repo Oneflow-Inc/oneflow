@@ -33,7 +33,8 @@ class Stream final {
 
   bool operator==(const Stream& that) const {
     return this->device() == that.device() && this->stream_type() == that.stream_type()
-           && this->thread_uid() == that.thread_uid();
+           && this->thread_uid() == that.thread_uid()
+           && this->support_wait_event() == that.support_wait_event();
   }
   bool operator!=(const Stream& that) const { return !(*this == that); }
 
@@ -47,6 +48,7 @@ class Stream final {
   StreamType stream_type() const { return stream_type_; }
   size_t thread_uid() const { return thread_uid_; }
   size_t unique_stream_id() const { return unique_stream_id_; }
+  bool support_wait_event() const { return support_wait_event_; }
 
   static int64_t kDefaultStreamThreadUid;
 
@@ -62,6 +64,7 @@ class Stream final {
   StreamType stream_type_;
   size_t thread_uid_;
   size_t unique_stream_id_;
+  bool support_wait_event_;
 };
 
 extern Maybe<Symbol<Stream>> (*GetDefaultStreamByDevice)(Symbol<Device>);
