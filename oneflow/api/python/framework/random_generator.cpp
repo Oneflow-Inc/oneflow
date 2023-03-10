@@ -79,9 +79,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
     int64_t seed_val = JUST(one::functional::PyUnpackLong(seed.ptr()));
     return one::ManualSeedAllCudaGenerator(seed_val);
   });
-  #ifdef WITH_CUDA
+#ifdef WITH_CUDA
   m.def("default_generators", &GetDefaultGenerators);
-  #endif  // WITH_CUDA
+#endif  // WITH_CUDA
 }
 
 }  // namespace oneflow
