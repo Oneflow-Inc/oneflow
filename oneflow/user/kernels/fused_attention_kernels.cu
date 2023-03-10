@@ -712,9 +712,9 @@ class FusedAttentionConcatPastKeyValueKernel final : public user_op::OpKernel,
     int64_t past_key_h_stride = 0;
     int64_t past_key_offset = 0;
     if (past_key != nullptr) {
-      ParsePackedDims(past_key->shape_view(), past_key_layout, Optional<int64_t>(), key_head_size,
-                      1, &past_key_b, &past_key_m, &past_key_h, &past_key_k, &past_key_b_stride,
-                      &past_key_m_stride, &past_key_h_stride, &past_key_offset, pack_size);
+      ParsePackedDims(past_key->shape_view(), past_key_layout, key_h, key_head_size, 1, &past_key_b,
+                      &past_key_m, &past_key_h, &past_key_k, &past_key_b_stride, &past_key_m_stride,
+                      &past_key_h_stride, &past_key_offset, pack_size);
     }
 
     int64_t past_value_b = 0;
@@ -726,7 +726,7 @@ class FusedAttentionConcatPastKeyValueKernel final : public user_op::OpKernel,
     int64_t past_value_h_stride = 0;
     int64_t past_value_offset = 0;
     if (past_value != nullptr) {
-      ParsePackedDims(past_value->shape_view(), past_value_layout, past_key_h, key_head_size, 2,
+      ParsePackedDims(past_value->shape_view(), past_value_layout, key_h, key_head_size, 2,
                       &past_value_b, &past_value_m, &past_value_h, &past_value_k,
                       &past_value_b_stride, &past_value_m_stride, &past_value_h_stride,
                       &past_value_offset, pack_size);
@@ -742,7 +742,7 @@ class FusedAttentionConcatPastKeyValueKernel final : public user_op::OpKernel,
     int64_t output_key_m_stride = 0;
     int64_t output_key_h_stride = 0;
     int64_t output_key_offset = 0;
-    ParsePackedDims(output_key->shape_view(), past_key_layout, past_key_h, key_head_size, 1,
+    ParsePackedDims(output_key->shape_view(), past_key_layout, key_h, key_head_size, 1,
                     &output_key_b, &output_key_m, &output_key_h, &output_key_k,
                     &output_key_b_stride, &output_key_m_stride, &output_key_h_stride,
                     &output_key_offset, pack_size);
@@ -757,7 +757,7 @@ class FusedAttentionConcatPastKeyValueKernel final : public user_op::OpKernel,
     int64_t output_value_m_stride = 0;
     int64_t output_value_h_stride = 0;
     int64_t output_value_offset = 0;
-    ParsePackedDims(output_value->shape_view(), past_value_layout, past_key_h, key_head_size, 2,
+    ParsePackedDims(output_value->shape_view(), past_value_layout, key_h, key_head_size, 2,
                     &output_value_b, &output_value_m, &output_value_h, &output_value_k,
                     &output_value_b_stride, &output_value_m_stride, &output_value_h_stride,
                     &output_value_offset, pack_size);
