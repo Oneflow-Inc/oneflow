@@ -258,6 +258,7 @@ from oneflow._C import (
     bitwise_xor,
     bitwise_xor_,
     bitwise_not,
+    bitwise_not_,
 )
 
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads

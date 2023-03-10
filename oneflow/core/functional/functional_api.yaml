@@ -238,6 +238,10 @@
   signature: "Tensor (Tensor input) => BitwiseNot"
   bind_python: true
 
+- name: "bitwise_not_"
+  signature: "Tensor (Tensor input) => BitwiseNotInplace"
+  bind_python: true
+
 - name: "less"
   signature:
     [

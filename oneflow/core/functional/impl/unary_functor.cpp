@@ -154,6 +154,7 @@ OF_PP_FOR_EACH_TUPLE(FLOAT_UNARY_BWD_WITH_FILL_FUNCTORS, FLOAT_UNARY_FUNC_BWD_WI
 UNARY_ELEMENTWISE_FUNCTOR("negative", Negative, FloatUnaryFunctor)
 UNARY_ELEMENTWISE_FUNCTOR("bitwise_not", BitwiseNot, UnaryFunctor)
 
+UNARY_ELEMENTWISE_FUNCTOR("bitwise_not", BitwiseNotInplace, InplaceUnaryFunctor)
 }  // namespace impl
 
 using namespace impl;
@@ -189,6 +190,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   ADD_UNARY_FUNCTOR_WITH_DY_X(LogSigmoid, "LogSigmoid");
   m.add_functor<NegativeFunctor>("Negative");
   m.add_functor<BitwiseNotFunctor>("BitwiseNot");
+  m.add_functor<BitwiseNotInplaceFunctor>("BitwiseNotInplace");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Reciprocal, "Reciprocal");
   ADD_UNARY_FUNCTOR_WITH_DY_X(ReciprocalNoNan, "ReciprocalNoNan");
   m.add_functor<RintFunctor>("Rint");
