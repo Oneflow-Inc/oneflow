@@ -16,7 +16,6 @@ limitations under the License.
 
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowSupport.h"
-#include "llvm/Support/raw_ostream.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/maybe.h"
@@ -35,6 +34,9 @@ limitations under the License.
 #include "mlir/IR/Types.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/Parser/Parser.h"
+
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace oneflow {
 
@@ -134,6 +136,14 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
           mlir::oneflow::support::FromMLIRTypeToOFDataType(rankedTensorType.getElementType());
       if (mlir::failed(data_type)) { exit(1); }
       ctx->SetOutputDType("out", res_i, data_type.getValue());
+      llvm::SmallVector<int64_t> strides;
+      int64_t _;
+      auto mem_type =
+          mlir::MemRefType::get(rankedTensorType.getShape(), rankedTensorType.getElementType());
+      if (failed(mlir::getStridesAndOffset(mem_type, strides, _))) {
+        LOG(FATAL) << "Fail to get stride from memory type";
+      }
+      ctx->SetOutputStride("out", res_i, Stride(strides.begin(), strides.end()));
       res_i += 1;
     } else {
       std::string res_type_str = "";
