@@ -120,7 +120,7 @@ CudaDevice::~CudaDevice() {
 
 void CudaDevice::SetAsActiveDevice() { OF_CUDA_CHECK(cudaSetDevice(device_index_)); }
 
-void CudaDevice::Reset() {
+void CudaDevice::TryReset() {
   SetAsActiveDevice();
   OF_CUDA_CHECK(cudaDeviceReset());
 }
