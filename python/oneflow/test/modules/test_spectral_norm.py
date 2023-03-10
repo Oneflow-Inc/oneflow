@@ -24,13 +24,31 @@ import oneflow.nn.functional as F
 import oneflow.unittest
 
 from oneflow.test_utils.test_util import GenArgList
-
-import torch as torch_original
 from oneflow.test_utils.automated_test_util import *
 
 
-def maybe_wrap(m):
-    return m
+def maybe_wrap(m, apply_ddp):
+    if apply_ddp:
+        return flow.nn.parallel.DistributedDataParallel(m)
+    else:
+        return m
+
+
+def assert_tesnor_equal_true(test_case, tensor1, tensor2):
+    test_case.assertTrue(
+        np.allclose(
+            tensor1.cpu().detach().numpy(),
+            tensor2.cpu().detach().numpy(),
+            rtol=1e-5,
+            atol=1e-5,
+        )
+    )
+
+
+def assert_tesnor_equal_false(test_case, tensor1, tensor2):
+    test_case.assertFalse(
+        np.allclose(tensor1.cpu().detach().numpy(), tensor2.cpu().detach().numpy())
+    )
 
 
 def _test_spectral_norm_impl(test_case, device):
@@ -90,71 +108,48 @@ def _test_spectral_norm_forward(test_case, device):
 
     out_hat = F.linear(input, _weight, _bias)
     expect_out = m(input)
-    test_case.assertTrue(
-        np.allclose(expect_out.numpy(), out_hat.numpy(), rtol=1e-5, atol=1e-5)
-    )
+    assert_tesnor_equal_true(test_case, expect_out, out_hat)
 
 
-def _test_spectral_norm_training_update_and_remove(test_case, device):
-    for requires_grad in [True, False]:
-        m = nn.Linear(5, 7).to(device)
-        m.weight.requires_grad_(requires_grad)
-        m = nn.utils.spectral_norm(m)
-        wrapped_m = maybe_wrap(m)
+def _test_spectral_norm_training_update_and_remove(
+    test_case, device, requires_grad, apply_ddp
+):
+    m = nn.Linear(5, 7).to(device)
+    m.weight.requires_grad_(requires_grad)
+    m = nn.utils.spectral_norm(m)
+    wrapped_m = maybe_wrap(m, apply_ddp)
 
-        test_case.assertTrue(hasattr(m, "weight_u"))
-        u0 = m.weight_u.clone()
-        v0 = m.weight_v.clone()
+    test_case.assertTrue(hasattr(m, "weight_u"))
+    u0 = m.weight_u.clone()
+    v0 = m.weight_v.clone()
 
-        input = flow.rand((3, 5)).to(device)
-        out = wrapped_m(input)
-        test_case.assertFalse(
-            np.allclose(
-                u0.cpu().detach().numpy(), 
-                m.weight_u.cpu().detach().numpy()
-            )
-        )
-        test_case.assertFalse(
-            np.allclose(
-                v0.cpu().detach().numpy(), 
-                m.weight_v.cpu().detach().numpy()
-            )
-        )
+    input = flow.rand((3, 5)).to(device)
+    out = wrapped_m(input)
+    assert_tesnor_equal_false(test_case, u0, m.weight_u)
+    assert_tesnor_equal_false(test_case, v0, m.weight_v)
 
-        if requires_grad:
-            flow.autograd.grad(out.sum(), m.weight_orig)
+    if requires_grad:
+        flow.autograd.grad(out.sum(), m.weight_orig)
 
-        saved_u = m.weight_u.clone()
-        saved_v = m.weight_v.clone()
+    saved_u = m.weight_u.clone()
+    saved_v = m.weight_v.clone()
 
-        # need grad check
+    # remove
+    pre_remove_out = wrapped_m(input)
+    m = nn.utils.remove_spectral_norm(m)
+    assert_tesnor_equal_true(test_case, wrapped_m(input), pre_remove_out)
 
-        # remove
+    m = nn.utils.spectral_norm(m)
+    for _ in range(3):
         pre_remove_out = wrapped_m(input)
-        m = nn.utils.remove_spectral_norm(m)
-        test_case.assertTrue(
-            np.allclose(
-                wrapped_m(input).cpu().detach().numpy(), 
-                pre_remove_out.cpu().detach().numpy()
-            )
-        )
-
-        m = nn.utils.spectral_norm(m)
-        for _ in range(3):
-            pre_remove_out = wrapped_m(input)
-        m = nn.utils.remove_spectral_norm(m)
-        test_case.assertTrue(
-            np.allclose(
-                wrapped_m(input).cpu().detach().numpy(), 
-                pre_remove_out.cpu().detach().numpy()
-            )
-        )
+    m = nn.utils.remove_spectral_norm(m)
+    assert_tesnor_equal_true(test_case, wrapped_m(input), pre_remove_out)
 
 
-def _test_spectral_norm_eval_update(test_case, device):
+def _test_spectral_norm_eval_update(test_case, device, requires_grad, apply_ddp):
     m = nn.Linear(5, 7).to(device)
     m = nn.utils.spectral_norm(m)
-    wrapped_m = maybe_wrap(m)
+    wrapped_m = maybe_wrap(m, apply_ddp)
     input = flow.rand((3, 5)).to(device)
     last_train_out = wrapped_m(input)
     last_train_u = m.weight_u.clone()
@@ -164,163 +159,136 @@ def _test_spectral_norm_eval_update(test_case, device):
     wrapped_m.eval()
 
     eval_out0 = wrapped_m(input)
-    test_case.assertTrue(
-        np.allclose(
-            eval_out0.cpu().detach().numpy(), 
-            last_train_out.cpu().detach().numpy()
-        )
+    assert_tesnor_equal_true(test_case, eval_out0, last_train_out)
+    assert_tesnor_equal_true(test_case, eval_out0, wrapped_m(input))
+    assert_tesnor_equal_true(test_case, last_train_u, m.weight_u)
+    assert_tesnor_equal_true(test_case, last_train_v, m.weight_v)
+
+
+def _test_spectral_norm_load_state_dict(test_case, activate_times):
+    inp = flow.randn(2, 3)
+    # Test backward compatibility
+    m = nn.Linear(3, 5)
+    snm = nn.utils.spectral_norm(m)
+    snm.train()
+    for _ in range(activate_times):
+        snm(inp)
+
+    state_dict = deepcopy(snm.state_dict())
+    test_case.assertEqual(
+        {"weight_orig", "bias", "weight_u", "weight_v"}, set(state_dict.keys())
     )
-    test_case.assertTrue(
-        np.allclose(
-            eval_out0.cpu().detach().numpy(), 
-            wrapped_m(input).cpu().detach().numpy()
-        )
-    )
-    test_case.assertTrue(
-        np.allclose(
-            eval_out0.cpu().detach().numpy(), 
-            wrapped_m(input).cpu().detach().numpy()
-        )
-    )
-    test_case.assertTrue(
-        np.allclose(
-            last_train_u.cpu().detach().numpy(), 
-            m.weight_u.cpu().detach().numpy()
-        )
-    )
-    test_case.assertTrue(
-        np.allclose(
-            last_train_v.cpu().detach().numpy(), 
-            m.weight_v.cpu().detach().numpy()
-        )
-    )
+
+    # test that non-strict loading works
+    non_strict_state_dict = deepcopy(state_dict)
+    non_strict_state_dict["nonsense"] = "nonsense"
+    with test_case.assertRaisesRegex(
+        RuntimeError, r'Unexpected key\(s\) in state_dict: "nonsense"'
+    ):
+        snm.load_state_dict(non_strict_state_dict, strict=True)
+    snm.load_state_dict(non_strict_state_dict, strict=False)
+    del non_strict_state_dict["weight_orig"]
+    snm.load_state_dict(non_strict_state_dict, strict=False)
+    del non_strict_state_dict["weight_u"]
+    snm.load_state_dict(non_strict_state_dict, strict=False)
+    del non_strict_state_dict["weight_v"]
+    snm.load_state_dict(non_strict_state_dict, strict=False)
+    non_strict_state_dict["weight"] = snm.weight.detach().clone()  # set W as a buffer
+    snm.load_state_dict(non_strict_state_dict, strict=False)
+    del non_strict_state_dict._metadata[""]["version"]  # remove metadata info
+    snm.load_state_dict(non_strict_state_dict, strict=False)
+    del non_strict_state_dict["weight"]  # remove W buffer
+    snm.load_state_dict(non_strict_state_dict, strict=False)
+    del non_strict_state_dict["bias"]
+    snm.load_state_dict(non_strict_state_dict, strict=False)
+
+    # test that re-wrapping does not matter
+    m = nn.utils.remove_spectral_norm(snm)
+    snm = nn.utils.spectral_norm(m)
+
+    snm.load_state_dict(state_dict)
+    with flow.no_grad():
+        snm.eval()
+        out0_eval = snm(inp)
+        snm.train()
+        out1_train = snm(inp)
+        out2_train = snm(inp)
+        snm.eval()
+        out3_eval = snm(inp)
+
+    # test that re-wrapping does not matter
+    m = nn.utils.remove_spectral_norm(snm)
+    snm = nn.utils.spectral_norm(m)
+
+    snm.load_state_dict(state_dict)
+    if activate_times > 0:
+        # since in loading version None state dict, we assume that the
+        # values in the state dict have gone through at lease one
+        # forward, we only test for equivalence when activate_times > 0.
+        with flow.no_grad():
+            snm.eval()
+            assert_tesnor_equal_true(test_case, out0_eval, snm(inp))
+            snm.train()
+            assert_tesnor_equal_true(test_case, out1_train, snm(inp))
+            assert_tesnor_equal_true(test_case, out2_train, snm(inp))
+            snm.eval()
+            assert_tesnor_equal_true(test_case, out3_eval, snm(inp))
+
+    # test that re-wrapping does not matter
+    m = nn.utils.remove_spectral_norm(snm)
+    snm = nn.utils.spectral_norm(m)
+
+    # Test normal loading
+    snm.load_state_dict(state_dict)
+    with flow.no_grad():
+        snm.eval()
+        assert_tesnor_equal_true(test_case, out0_eval, snm(inp))
+        snm.train()
+        assert_tesnor_equal_true(test_case, out1_train, snm(inp))
+        assert_tesnor_equal_true(test_case, out2_train, snm(inp))
+        snm.eval()
+        assert_tesnor_equal_true(test_case, out3_eval, snm(inp))
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestSpectralNorm(flow.unittest.TestCase):
-    # @autotest(check_graph="ValidatedFalse")
-    # def test_spectral_norm_with_random_data(test_case):
-    #     device = random_device()
+    @autotest(check_graph="ValidatedFalse")
+    def test_spectral_norm_with_random_data(test_case):
+        device = random_device()
 
-    #     input = random(1, 10).to(int)
-    #     output = random(1, 10).to(int)
+        input = random(1, 10).to(int)
+        output = random(1, 10).to(int)
 
-    #     model_torch = torch.nn.Linear(output, input).to(device)
-    #     m = torch.nn.utils.spectral_norm(model_torch)
-    #     # only weight_orig should be setattr "requires_grad=True"
-    #     return m.weight_orig
+        model_torch = torch.nn.Linear(output, input).to(device)
+        m = torch.nn.utils.spectral_norm(model_torch)
+        # only weight_orig should be setattr "requires_grad=True"
+        return m.weight_orig
 
-    # @autotest()
-    # def test_spectral_norm(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["test_fun"] = [
-    #         _test_spectral_norm_impl,
-    #         _test_spectral_norm_dim,
-    #         _test_spectral_norm_forward,
-    #         _test_spectral_norm_training_update_and_remove,
-    #         _test_spectral_norm_eval_update,
-    #     ]
-    #     arg_dict["device"] = ["cpu", "cuda"]
-    #     for arg in GenArgList(arg_dict):
-    #         arg[0](test_case, *arg[1:])
-    
     @autotest()
-    def test_spectral_norm_load_state_dict(test_case):
-        inp = flow.randn(2, 3)
-        for activate_times in (0, 3):
-            # Test backward compatibility
-            # At version None -> 1: weight becomes not a buffer and v vector becomes a buffer
-            m = nn.Linear(3, 5)
-            snm = nn.utils.spectral_norm(m)
-            snm.train()
-            for _ in range(activate_times):
-                snm(inp)
+    def test_spectral_norm(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_spectral_norm_impl,
+            _test_spectral_norm_dim,
+            _test_spectral_norm_forward,
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
-            version_latest_ref_state_dict = deepcopy(snm.state_dict())
-            test_case.assertEqual({'weight_orig', 'bias', 'weight_u', 'weight_v'}, set(version_latest_ref_state_dict.keys()))
+    @autotest()
+    def test_spectral_norm_update_and_remove(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["requires_grad"] = [True, False]
+        arg_dict["apply_ddp"] = [True, False]
+        for arg in GenArgList(arg_dict):
+            _test_spectral_norm_training_update_and_remove(test_case, *arg)
+            _test_spectral_norm_eval_update(test_case, *arg)
 
-            # test that non-strict loading works
-            non_strict_state_dict = deepcopy(version_latest_ref_state_dict)
-            non_strict_state_dict['nonsense'] = 'nonsense'
-            with test_case.assertRaisesRegex(RuntimeError, r'Unexpected key\(s\) in state_dict: "nonsense"'):
-                snm.load_state_dict(non_strict_state_dict, strict=True)
-            snm.load_state_dict(non_strict_state_dict, strict=False)
-            del non_strict_state_dict['weight_orig']
-            snm.load_state_dict(non_strict_state_dict, strict=False)
-            del non_strict_state_dict['weight_u']
-            snm.load_state_dict(non_strict_state_dict, strict=False)
-            del non_strict_state_dict['weight_v']
-            snm.load_state_dict(non_strict_state_dict, strict=False)
-            non_strict_state_dict['weight'] = snm.weight.detach().clone()  # set W as a buffer
-            snm.load_state_dict(non_strict_state_dict, strict=False)
-            # del non_strict_state_dict._metadata['']['spectral_norm']       # remove metadata info
-            # snm.load_state_dict(non_strict_state_dict, strict=False)
-            del non_strict_state_dict['weight']                            # remove W buffer
-            snm.load_state_dict(non_strict_state_dict, strict=False)
-            del non_strict_state_dict['bias']
-            snm.load_state_dict(non_strict_state_dict, strict=False)
-
-            # craft a version None state_dict
-            version_none_state_dict = deepcopy(version_latest_ref_state_dict)
-            # test_case.assertIn('spectral_norm', version_none_state_dict._metadata[''])
-            # del version_none_state_dict._metadata['']['spectral_norm']       # remove metadata info
-            del version_none_state_dict['weight_v']                          # remove v vector
-            version_none_state_dict['weight'] = snm.weight.detach().clone()  # set W as a buffer
-
-            # normal state_dict
-            for version_latest_with_metadata in [True, False]:
-                version_latest_state_dict = deepcopy(version_latest_ref_state_dict)
-
-                # if not version_latest_with_metadata:
-                #     # We want to still load a user-crafted state_dict, one without metadata
-                #     del version_latest_state_dict._metadata['']['spectral_norm']
-
-                # test that re-wrapping does not matter
-                m = nn.utils.remove_spectral_norm(snm)
-                snm = nn.utils.spectral_norm(m)
-
-                snm.load_state_dict(version_latest_ref_state_dict)
-                with flow.no_grad():
-                    snm.eval()
-                    out0_eval = snm(inp)
-                    snm.train()
-                    out1_train = snm(inp)
-                    out2_train = snm(inp)
-                    snm.eval()
-                    out3_eval = snm(inp)
-
-                # test that re-wrapping does not matter
-                m = nn.utils.remove_spectral_norm(snm)
-                snm = nn.utils.spectral_norm(m)
-
-                snm.load_state_dict(version_none_state_dict)
-                # if activate_times > 0:
-                #     # since in loading version None state dict, we assume that the
-                #     # values in the state dict have gone through at lease one
-                #     # forward, we only test for equivalence when activate_times > 0.
-                #     with flow.no_grad():
-                #         snm.eval()
-                #         test_case.assertEqual(out0_eval, snm(inp))
-                #         snm.train()
-                #         test_case.assertEqual(out1_train, snm(inp))
-                #         test_case.assertEqual(out2_train, snm(inp))
-                #         snm.eval()
-                #         test_case.assertEqual(out3_eval, snm(inp))
-
-                # # test that re-wrapping does not matter
-                # m = nn.utils.remove_spectral_norm(snm)
-                # snm = nn.utils.spectral_norm(m)
-
-                # # Test normal loading
-                # snm.load_state_dict(version_latest_state_dict)
-                # with flow.no_grad():
-                #     snm.eval()
-                #     test_case.assertEqual(out0_eval, snm(inp))
-                #     snm.train()
-                #     test_case.assertEqual(out1_train, snm(inp))
-                #     test_case.assertEqual(out2_train, snm(inp))
-                #     snm.eval()
-                #     test_case.assertEqual(out3_eval, snm(inp))
+    @autotest()
+    def test_spectral_norm_update_and_remove(test_case):
+        _test_spectral_norm_load_state_dict(test_case, np.random.randint(0, 3))
 
 
 if __name__ == "__main__":

@@ -22,7 +22,7 @@ from oneflow.framework.tensor import Tensor
 
 
 class SpectralNorm:
-    _version: int = 1
+    _version: int = None
     name: str
     dim: int
     n_power_iterations: int
@@ -132,6 +132,7 @@ class SpectralNorm:
 
 T_module = TypeVar("T_module", bound=Module)
 
+
 def spectral_norm(
     module: T_module,
     name: str = "weight",
@@ -219,15 +220,15 @@ def remove_spectral_norm(module: T_module, name: str = "weight") -> T_module:
     else:
         raise ValueError("spectral_norm of '{}' not found in {}".format(name, module))
 
-    for k, hook in module._state_dict_hooks.items():
-        if isinstance(hook, SpectralNormStateDictHook) and hook.fn.name == name:
-            del module._state_dict_hooks[k]
-            break
+    # for k, hook in module._state_dict_hooks.items():
+    #     if isinstance(hook, SpectralNormStateDictHook) and hook.fn.name == name:
+    #         del module._state_dict_hooks[k]
+    #         break
 
-    for k, hook in module._load_state_dict_pre_hooks.items():
-        if isinstance(hook, SpectralNormLoadStateDictPreHook) and hook.fn.name == name:
-            del module._load_state_dict_pre_hooks[k]
-            break
+    # for k, hook in module._load_state_dict_pre_hooks.items():
+    #     if isinstance(hook, SpectralNormLoadStateDictPreHook) and hook.fn.name == name:
+    #         del module._load_state_dict_pre_hooks[k]
+    #         break
 
     return module
 
