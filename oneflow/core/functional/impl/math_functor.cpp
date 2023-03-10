@@ -1931,36 +1931,6 @@ class InvFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class MultiDotFunctor {
- public:
-  Maybe<Tensor> operator()(const TensorTuple& tensors) const {
-    CHECK_GE_OR_RETURN(tensors.size(), 2);
-    CHECK_LT_OR_RETURN(tensors.size(), kMaxInputCount);
-    for (int64_t i = 0; i < tensors.size(); ++i) {
-      const auto& input_shape = tensors[i]->shape();
-      CHECK_LE_OR_RETURN(input_shape->NumAxes(), 2)
-          << Error::RuntimeError() << "tensors' dim size should be lower equal than 2.";
-    }
-
-    TensorTuple outputs(tensors.size());
-    outputs[0] = tensors[0];
-    bool first_tensor_1d = outputs[0]->ndim() == 1;
-    if (first_tensor_1d) { outputs[0] = JUST(functional::Unsqueeze(outputs[0], /*dim=*/0)); }
-
-    for (int i = 0; i < tensors.size() - 1; i++) {
-      outputs[i + 1] = JUST(functional::MatMul(outputs[i], tensors[i + 1], /*transpose_a=*/false,
-                                               /*transpose_b=*/false, /*alpha=*/1.0));
-    }
-
-    if (first_tensor_1d) {
-      CHECK_GE_OR_RETURN(outputs[tensors.size() - 1]->ndim(), 1);
-      return JUST(
-          functional::Squeeze(outputs[tensors.size() - 1], /*dim=*/std::vector<int32_t>{0}));
-    }
-    return outputs[tensors.size() - 1];
-  }
-};
-
 class DetFunctor {
  public:
   DetFunctor() {
@@ -4204,7 +4174,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarMatrixNormFunctor, MatrixNormFunctor>("MatrixNorm");
   m.add_functor<NormFunctor, Norm2Functor>("Norm");
   m.add_functor<ScalarNormFunctor, ScalarNorm2Functor>("ScalarNorm");
-  m.add_functor<MultiDotFunctor>("MultiDot");
   m.add_functor<ClampGradFunctor>("ClampGrad");
   m.add_functor<SelectFunctor>("Select");
   m.add_functor<SelectTopNFunctor>("SelectTopN");

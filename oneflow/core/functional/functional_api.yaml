@@ -2085,6 +2085,7 @@
 
 - name: "multi_dot"
   signature: "Tensor (TensorTuple tensors) => MultiDot"
+  bind_python: True
 
 - name: "det"
   signature: "Tensor (Tensor x) => Det"

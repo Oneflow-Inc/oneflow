@@ -273,7 +273,7 @@ class TestSpectralNorm(flow.unittest.TestCase):
             _test_spectral_norm_impl,
             _test_spectral_norm_dim,
             _test_spectral_norm_forward,
-            _test_spectral_norm_load_state_dict
+            _test_spectral_norm_load_state_dict,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
