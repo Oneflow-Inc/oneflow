@@ -1067,6 +1067,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.exp2,
+    """
+    See :func:`oneflow.exp2`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.erf,
     """
     Tensor.erf() -> Tensor

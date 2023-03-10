@@ -285,6 +285,13 @@ struct UnaryFunctor<device, UnaryOp::kExp, Dst, Src> {
 };
 
 template<DeviceType device, typename Dst, typename Src>
+struct UnaryFunctor<device, UnaryOp::kExp2, Dst, Src> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return static_cast<Dst>(exp2(src)); }
+};
+
+template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kAcos, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
