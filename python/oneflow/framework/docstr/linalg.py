@@ -99,3 +99,49 @@ add_docstr(
                 [-1.2329,  1.9883,  1.0551]], dtype=oneflow.float32)
     """,
 )
+
+add_docstr(
+    oneflow.linalg.multi_dot,
+    """multi_dot(input, other, dim=None) -> Tensor
+
+    Efficiently multiplies two or more matrices by reordering the multiplications so that the fewest arithmetic operations are performed.
+    Supports inputs of float, double, cfloat and cdouble dtypes. This function does not support batched inputs.
+    Every tensor in tensors must be 2D, except for the first and last which may be 1D. If the first tensor is a 1D vector of shape (n,) it is treated as a row vector of shape (1, n), similarly if the last tensor is a 1D vector of shape (n,) it is treated as a column vector of shape (n, 1).
+    If the first and last tensors are matrices, the output will be a matrix. However, if either is a 1D vector, then the output will be a 1D vector.
+    Differences with numpy.linalg.multi_dot:
+
+    - Unlike numpy.linalg.multi_dot, the first and last tensors must either be 1D or 2D whereas NumPy allows them to be nD.
+
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.linalg.multi_dot.html
+
+    .. warning::
+        This function does not broadcast.
+
+    .. note::
+        This function is implemented by chaining :func:`oneflow.mm()` calls after computing the optimal matrix multiplication order.
+
+    Args:
+        tensors (Sequence[Tensor]): two or more tensors to multiply. The first and last tensors may be 1D or 2D. Every other tensor must be 2D.
+
+    Examples:
+
+    .. code-block:: python
+        
+        >>> import oneflow as flow
+        >>> from oneflow.linalg import multi_dot
+
+        >>> multi_dot([flow.tensor([1, 2]), flow.tensor([2, 3])])
+        tensor(8, dtype=oneflow.int64)
+        >>> multi_dot([flow.tensor([[1, 2]]), flow.tensor([2, 3])])
+        tensor([8], dtype=oneflow.int64)
+        >>> multi_dot([flow.tensor([[1, 2]]), flow.tensor([[2], [3]])])
+        tensor([[8]], dtype=oneflow.int64)
+
+        >>> A = flow.arange(2 * 3).view(2, 3)
+        >>> B = flow.arange(3 * 2).view(3, 2)
+        >>> C = flow.arange(2 * 2).view(2, 2)
+        >>> multi_dot((A, B, C))
+        tensor([[ 26,  49],
+                [ 80, 148]], dtype=oneflow.int64)
+    """,
+)

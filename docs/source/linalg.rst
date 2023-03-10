@@ -21,3 +21,4 @@ Matrix Properties
     inv
     cross
     det
+    multi_dot
