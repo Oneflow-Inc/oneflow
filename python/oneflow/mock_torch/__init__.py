@@ -223,7 +223,7 @@ class enable:
     Enable mock function.
 
     Args:
-        lazy (bool, optional): When lazy=True, a false object is returned for a non-existent interface without an immediate error.
+        lazy (bool, optional): When lazy=True, a dummy object is returned for a non-existent interface without an immediate error.
         verbose (bool, optional): If verbose=True is set at the same time as lazy=True, it will print out which fake objects are accessed or used, making it easier to debug.
 
     """
