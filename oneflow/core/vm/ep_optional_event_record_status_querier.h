@@ -21,8 +21,6 @@ limitations under the License.
 
 namespace oneflow {
 
-class DeviceCtx;
-
 namespace vm {
 
 class EpOptionalEventRecordStatusQuerier {

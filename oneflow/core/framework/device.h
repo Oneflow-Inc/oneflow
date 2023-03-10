@@ -77,6 +77,8 @@ extern Maybe<Symbol<ParallelDesc>> (*Placement4Device)(Symbol<Device> device);
 
 Maybe<std::pair<std::string, int>> ParseDeviceString(const std::string& device_str);
 
+void TryCreateEpDevice(Symbol<Device> device);
+
 }  // namespace oneflow
 
 template<>

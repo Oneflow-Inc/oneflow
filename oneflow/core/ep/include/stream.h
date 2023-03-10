@@ -37,6 +37,7 @@ class Stream {
   virtual Device* device() const = 0;
   virtual Maybe<void> Sync() = 0;
   virtual void RecordEvent(Event* event) = 0;
+  virtual void WaitEvent(Event* event) { UNIMPLEMENTED(); }
   virtual Maybe<void> GetAsyncError() { return Maybe<void>::Ok(); }
 
   virtual Maybe<void> AllocAsync(void** ptr, size_t size) { UNIMPLEMENTED_THEN_RETURN(); }
