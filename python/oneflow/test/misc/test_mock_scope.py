@@ -160,7 +160,9 @@ class TestMock(flow.unittest.TestCase):
             import torch.nn.functional as F
 
             test_case.assertFalse(hasattr(F, "scaled_dot_product_attention"))
-            test_case.assertFalse(hasattr(torch.nn.functional, "scaled_dot_product_attention"))
+            test_case.assertFalse(
+                hasattr(torch.nn.functional, "scaled_dot_product_attention")
+            )
 
 
 # MUST use pytest to run this test
