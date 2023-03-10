@@ -378,6 +378,7 @@ Tensor class reference
     Tensor.nms
     Tensor.pin_memory
     Tensor.is_pinned
+    Tensor.inverse
     Tensor.cross
     Tensor.scatter
     Tensor.scatter_
