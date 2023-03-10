@@ -54,10 +54,8 @@ if(NOT NEUWARE_CNNL_LIBRARY)
   )
 endif()
 
-
 find_path(CNCL_INCLUDE_DIR cncl.h PATHS ${CNCL_ROOT_DIR} ${NEUWARE_ROOT_DIR} $ENV{NEUWARE_HOME}
-          $ENV{NEUWARE_PATH} PATH_SUFFIXES include neuware/include)
-
+                                        $ENV{NEUWARE_PATH} PATH_SUFFIXES include neuware/include)
 
 if(NOT CNCL_INCLUDE_DIR)
   message(
@@ -75,15 +73,15 @@ find_library(
 if(NOT CNCL_LIBRARY)
   message(
     FATAL_ERROR
-      "Cambricon cncl library is not found. Please set CNCL_ROOT_DIR to specify the search path."
-  )
+      "Cambricon cncl library is not found. Please set CNCL_ROOT_DIR to specify the search path.")
 endif()
 
 if(NOT "${NEUWARE_INCLUDE_DIRS}" STREQUAL "${CNCL_INCLUDE_DIR}")
   set(NEUWARE_INCLUDE_DIRS ${NEUWARE_INCLUDE_DIRS} ${CNCL_INCLUDE_DIR})
 endif()
 
-set(NEUWARE_LIBRARIES ${NEUWARE_CNRT_LIBRARY} ${NEUWARE_CNDRV_LIBRARY} ${NEUWARE_CNNL_LIBRARY} ${CNCL_LIBRARY})
+set(NEUWARE_LIBRARIES ${NEUWARE_CNRT_LIBRARY} ${NEUWARE_CNDRV_LIBRARY} ${NEUWARE_CNNL_LIBRARY}
+                      ${CNCL_LIBRARY})
 
 message(STATUS "Cambricon: NEUWARE_INCLUDE_DIRS = ${NEUWARE_INCLUDE_DIRS}")
 message(STATUS "Cambricon: NEUWARE_LIBRARIES = ${NEUWARE_LIBRARIES}")
