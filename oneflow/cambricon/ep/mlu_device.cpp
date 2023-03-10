@@ -64,6 +64,11 @@ MluDevice::~MluDevice() {
 
 void MluDevice::SetAsActiveDevice() { OF_MLU_CHECK(cnrtSetDevice(device_index_)); }
 
+void MluDevice::TryReset() {
+  SetAsActiveDevice();
+  OF_CUDA_CHECK(cnrtDeviceReset());
+}
+
 Stream* MluDevice::CreateStream() {
   MluCurrentDeviceGuard guard(device_index_);
   return new MluStream(this);
