@@ -226,7 +226,6 @@ class enable:
         *,
         _from_cli: bool = False,
     ):
-        print("enable")
         self.enable = _importer.enable
         forcedly_disabled_by_env_var = env_var_util.parse_boolean_from_env(
             "ONEFLOW_DISABLE_MOCK_TORCH", False
