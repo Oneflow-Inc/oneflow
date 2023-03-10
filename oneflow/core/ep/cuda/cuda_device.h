@@ -34,6 +34,7 @@ class CudaDevice : public Device {
   ~CudaDevice() override;
 
   void SetAsActiveDevice() override;
+  void Reset() override;
 
   DeviceType device_type() const override { return DeviceType::kCUDA; }
   size_t device_index() const override { return device_index_; }

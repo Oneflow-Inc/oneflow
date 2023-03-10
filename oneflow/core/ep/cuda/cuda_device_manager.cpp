@@ -61,6 +61,10 @@ void CudaDeviceManager::SetActiveDeviceByIndex(size_t device_index) {
   OF_CUDA_CHECK(cudaSetDevice(static_cast<int>(device_index)));
 }
 
+void CudaDeviceManager::InitDeviceContextOnce(size_t device_index) override {
+  InitCudaContextOnce(device_index);
+}
+
 }  // namespace ep
 
 }  // namespace oneflow

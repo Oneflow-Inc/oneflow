@@ -38,6 +38,8 @@ class CpuDeviceManager : public DeviceManager {
   void SetActiveDeviceByIndex(size_t device_index) override;
   void SetDeviceNumThreads(size_t num_threads);
 
+  void InitDeviceContextOnce(size_t device_index) override {}
+
  private:
   size_t device_num_threads_;
   std::mutex device_mutex_;

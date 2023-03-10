@@ -31,30 +31,18 @@ struct hash<oneflow::DeviceType> final {
 
 namespace oneflow {
 
-inline std::string PrintAvailableDevices() {
-  std::string str("cpu");
-#ifdef WITH_CUDA
-  str += ", cuda";
-#endif
-  return str;
-}
+std::string PrintAvailableDevices();
+std::string PrintGeneratorAvailableDevices();
 
-inline std::string PrintGeneratorAvailableDevices() {
-  std::string str("cpu");
-#ifdef WITH_CUDA
-  str += ", cuda";
-#endif
-  str += ", auto";  // "auto" is a fake device type for random generator.
-  return str;
-}
+#define DEVICE_TYPE_SEQ_CPU_ONLY OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU)
 
 #if defined(WITH_CUDA)
-#define DEVICE_TYPE_SEQ                  \
-  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU) \
-  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA)
+#define DEVICE_TYPE_SEQ_CUDA OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA)
 #else
-#define DEVICE_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU)
+#define DEVICE_TYPE_SEQ_CUDA
 #endif
+
+#define DEVICE_TYPE_SEQ DEVICE_TYPE_SEQ_CPU_ONLY DEVICE_TYPE_SEQ_CUDA
 
 }  // namespace oneflow
 

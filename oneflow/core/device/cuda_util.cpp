@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
-#include "oneflow/core/device/device_context.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/vm/vm_util.h"
 
@@ -150,7 +149,7 @@ cudaError_t NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size) {
 }
 
 CudaCurrentDeviceGuard::CudaCurrentDeviceGuard(int32_t dev_id) {
-  CHECK(!pthread_fork::IsForkedSubProcess()) << pthread_fork::kOfCudaNotSupportInForkedSubProcess;
+  CHECK(!pthread_fork::IsForkedSubProcess()) << pthread_fork::kOfDeviceNotSupportInForkedSubProcess;
   OF_CUDA_CHECK(cudaGetDevice(&saved_dev_id_));
   OF_CUDA_CHECK(cudaSetDevice(dev_id));
 }

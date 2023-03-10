@@ -75,6 +75,7 @@ class CpuStream : public Stream {
   CpuDevice* device() const override;
   Maybe<void> Sync() override;
   void RecordEvent(Event* event) override;
+  void WaitEvent(Event* event) override;
 
   template<typename F>
   void ParallelFor(int64_t begin, int64_t end, const F& func) {

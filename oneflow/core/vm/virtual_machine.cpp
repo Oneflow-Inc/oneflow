@@ -244,7 +244,7 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionList* instruction_list) {
     INTRUSIVE_FOR_EACH_PTR(instruction, instruction_list) {
       const auto& device = instruction->stream().device();
       CHECK_OR_RETURN(device->enum_type() == DeviceType::kCPU)
-          << pthread_fork::kOfCudaNotSupportInForkedSubProcess;
+          << pthread_fork::kOfDeviceNotSupportInForkedSubProcess;
       JUST(instruction->Prepare());
       instruction->Compute();
     }

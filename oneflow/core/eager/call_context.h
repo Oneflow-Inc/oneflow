@@ -32,8 +32,6 @@ class GlobalTensorInferResult;
 
 }  // namespace one
 
-class DeviceCtx;
-
 namespace eager {
 
 class TmpTensor final : public user_op::Tensor {
