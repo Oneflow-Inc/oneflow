@@ -164,7 +164,6 @@ class TestDefaultGenerator(flow.unittest.TestCase):
         new_state = flow.cuda.get_rng_state()
         test_case.assertTrue(np.allclose(new_state.numpy(), state.numpy()))
 
-
     # NOTE: according to https://github.com/Oneflow-Inc/oneflow/pull/9102#discussion_r973811389
     # tensor init function fallback to `flow.default_generator.seed()`, and this test will be normal while tensor init functions reconstructed.(using op/kernel)
     # @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
