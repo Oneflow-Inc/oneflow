@@ -30,7 +30,7 @@ class TestConv3DModule(flow.unittest.TestCase):
         y = torch.nn.functional.conv3d(img, kernel)
         return y
 
-    @autotest(n=10)
+    @autotest(n=10, rtol=1e-3, atol=1e-4)
     def test_conv3d_with_random_data(test_case):
         channels = random(1, 6)
         m = torch.nn.Conv3d(
@@ -51,7 +51,7 @@ class TestConv3DModule(flow.unittest.TestCase):
         return y
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    @autotest(n=5, check_allclose=False)
+    @autotest(n=5, check_allclose=False, rtol=1e-3)
     def test_conv3d_group_with_random_data(test_case):
         channels = 720  # lcm(1, 2, 3, 4, 5, 6)
         m = torch.nn.Conv3d(

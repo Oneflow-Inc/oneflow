@@ -53,6 +53,13 @@ locals()["uint8"] = oneflow._oneflow_internal.uint8
 locals()["record"] = oneflow._oneflow_internal.record
 locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
 locals()["bfloat16"] = oneflow._oneflow_internal.bfloat16
+
+locals()["layout"] = oneflow._oneflow_internal.layout
+locals()["strided"] = oneflow._oneflow_internal.strided
+
+locals()["memory_format"] = oneflow._oneflow_internal.memory_format
+locals()["contiguous_format"] = oneflow._oneflow_internal.contiguous_format
+locals()["preserve_format"] = oneflow._oneflow_internal.preserve_format
 from oneflow.version import __version__
 from oneflow.version import __git_commit__
 
@@ -80,6 +87,7 @@ def use_deterministic_algorithms(mode, *, warn_only=False):
 
 from oneflow._C import abs
 from oneflow._C import exp
+from oneflow._C import exp2
 from oneflow._C import acos
 from oneflow._C import acos as arccos
 from oneflow._C import acosh
@@ -215,7 +223,6 @@ from oneflow._C import dim_gather as gather
 from oneflow._C import deform_conv2d
 from oneflow._C import gather_nd
 from oneflow._C import roi_align
-from oneflow._C import decode_onerec
 from oneflow._C import dot
 from oneflow._C import eye
 from oneflow._C import erfinv, erfinv_

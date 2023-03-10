@@ -214,6 +214,18 @@ SCALAR_TENSOR_UNPACK_FUNC_IMPL(PyUnpackFloatScalarTensor_AsDouble, double,
 bool PyDTypeCheck(PyObject* obj) { return detail::isinstance_fast<Symbol<DType>>(obj); }
 Symbol<DType> PyUnpackDType(PyObject* obj) { return *detail::cast_fast<Symbol<DType>*>(obj); }
 
+// Layout
+bool PyLayoutCheck(PyObject* obj) { return detail::isinstance_fast<Symbol<Layout>>(obj); }
+Symbol<Layout> PyUnpackLayout(PyObject* obj) { return *detail::cast_fast<Symbol<Layout>*>(obj); }
+
+// Memory Format
+bool PyMemoryFormatCheck(PyObject* obj) {
+  return detail::isinstance_fast<Symbol<MemoryFormat>>(obj);
+}
+Symbol<MemoryFormat> PyUnpackMemoryFormat(PyObject* obj) {
+  return *detail::cast_fast<Symbol<MemoryFormat>*>(obj);
+}
+
 // DType list
 bool PyDTypeSequenceCheck(PyObject* obj) {
   return PySequenceCheck(obj, [](PyObject* item) { return PyDTypeCheck(item); });
