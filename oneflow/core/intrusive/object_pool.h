@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_INTRUSIVE_OBJECT_POOL_H_
 #define ONEFLOW_CORE_INTRUSIVE_OBJECT_POOL_H_
 
+#include <iostream>
 #include <vector>
 #include "oneflow/core/intrusive/cpp_attribute.h"
 #include "oneflow/core/intrusive/shared_ptr.h"
@@ -45,8 +46,14 @@ class ObjectPool {
       InitObjectPoolFields4Element(ptr.get());
       return ptr;
     } else {
+      std::cout << "Before back, container is: ";
+      for (const auto* x : container_) { std::cout << x << ", "; }
+      std::cout << std::endl;
       auto* ptr = CHECK_NOTNULL(container_.back());
       container_.pop_back();
+      std::cout << "After back, container is: ";
+      for (const auto* x : container_) { std::cout << x << ", "; }
+      std::cout << std::endl;
       CHECK_NOTNULL(ptr)->__Init__(std::forward<Args>(args)...);
       InitObjectPoolFields4Element(ptr);
       return intrusive::shared_ptr<T>(ptr);
@@ -55,8 +62,13 @@ class ObjectPool {
 
   static void Put(void* raw_ptr) {
     T* ptr = CHECK_NOTNULL(reinterpret_cast<T*>(CHECK_NOTNULL(raw_ptr)));
-    if constexpr (object_pool_strategy != kThreadUnsafeAndDisableDestruct) { CHECK_NOTNULL(ptr)->__Delete__(); }
+    if constexpr (object_pool_strategy != kThreadUnsafeAndDisableDestruct) {
+      CHECK_NOTNULL(ptr)->__Delete__();
+    }
     ptr->mut_object_pool()->container_.push_back(CHECK_NOTNULL(ptr));
+    std::cout << "After put, container is: ";
+    for (const auto* x : ptr->mut_object_pool()->container_) { std::cout << x << ", "; }
+    std::cout << std::endl;
   }
 
  private:
