@@ -355,6 +355,8 @@ From the ``oneflow.nn.utils`` module
     clip_grad_value_
     weight_norm
     remove_weight_norm
+    spectral_norm
+    remove_spectral_norm
 
 Utility functions in other modules
 
