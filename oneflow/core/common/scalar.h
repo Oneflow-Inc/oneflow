@@ -31,6 +31,7 @@ class Scalar {
   template<typename T, typename std::enable_if<std::is_floating_point<T>::value, int>::type = 0>
   Scalar(const std::complex<T>& cvalue) : cvalue_{.real = cvalue.real(), .imag = cvalue.imag()}, active_tag_(HAS_C) {}
 
+  // NOTE(lml): This constructor is not used anywhere.
   template<typename T, typename std::enable_if<std::is_floating_point<T>::value, int>::type = 0>
   OF_DEVICE_FUNC Scalar(const T& real, const T& imag) : cvalue_{.real = real, .imag = imag}, active_tag_(HAS_C) {}
 
@@ -88,12 +89,6 @@ class Scalar {
   bool IsSigned() const { return active_tag_ == HAS_S || active_tag_ == HAS_D; }
   bool IsUnsigned() const { return active_tag_ == HAS_U; }
   bool IsComplex() const { return active_tag_ == HAS_C; }
-  std::complex<double> ToComplex() const {
-    if (!IsComplex()) {
-      return std::complex<double>(As<double>(), 0.0);
-    }
-    return std::complex<double>(cvalue_.real, cvalue_.imag);
-  }
 
   Scalar operator+(const Scalar& other) const;
   Scalar operator-(const Scalar& other) const;
@@ -106,6 +101,13 @@ class Scalar {
   Scalar& operator/=(const Scalar& other);
 
  private:
+  // Only used in implementation of operator +-*/ and +=-=*=/=.
+  std::complex<double> ToComplexNum() const {
+    if (!IsComplex()) {
+      return std::complex<double>(As<double>(), 0.0);
+    }
+    return std::complex<double>(cvalue_.real, cvalue_.imag);
+  }
   union Value {
     bool b;
     int64_t s;

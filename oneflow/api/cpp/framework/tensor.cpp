@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <complex>
 #include "oneflow/api/cpp/framework/tensor.h"
 #include "oneflow/api/cpp/framework/device.h"
 #include "oneflow/api/cpp/framework/dtype.h"
@@ -131,7 +130,5 @@ REGISTER_TENSOR_COPY_TO(bool)
 REGISTER_TENSOR_COPY_TO(int8_t)
 REGISTER_TENSOR_COPY_TO(int32_t)
 REGISTER_TENSOR_COPY_TO(int64_t)
-REGISTER_TENSOR_COPY_TO(std::complex<float>)
-REGISTER_TENSOR_COPY_TO(std::complex<double>)
 
 }  // namespace oneflow_api

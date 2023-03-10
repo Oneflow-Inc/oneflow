@@ -34,9 +34,7 @@ enum class DType {
   kTensorBuffer = 10,
   kBFloat16 = 11,
   kBool = 12,
-  kComplex64 = 13,
-  kComplex128 = 14,
-  kMaxDataType = 15
+  kMaxDataType = 13
 };
 
 [[nodiscard]] int32_t GetDTypeSize(DType dtype);

@@ -30,9 +30,6 @@ class EmptyKernel final : public OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     auto* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     auto dtype = out->data_type();
-    // lml debug
-    #include<iostream>
-    std::cout << "dtype in empty: " << dtype << std::endl;
 
     // None POD type need check
     if (!IsTriviallyCopyableDataType(dtype)) {

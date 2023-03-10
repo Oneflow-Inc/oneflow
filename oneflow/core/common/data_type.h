@@ -303,6 +303,7 @@ bool IsIntegralDataType(DataType data_type);
 bool IsFloatingDataType(DataType data_type);
 bool IsHalfDataType(DataType data_type);
 bool IsSupportRequireGradDataType(DataType data_type);
+// NOTE(lml): IsComplexDataType is not used anywhere.
 bool IsComplexDataType(DataType data_type);
 bool IsTriviallyCopyableDataType(DataType data_type);
 bool IsIndexDataType(DataType data_type);

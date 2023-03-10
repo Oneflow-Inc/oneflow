@@ -72,8 +72,6 @@ class TensorWithDataFunctor {
       return MakeTensorFromOtherTensor(other, dtype, device, requires_grad, pin_memory);
     } else {
       // Make tensor from python sequence or numpy array.
-      # include <iostream>
-      std::cout << "before call MakeLocalTensorFromData." << std::endl;
       return MakeLocalTensorFromData(data, dtype, device, requires_grad, pin_memory);
     }
   }

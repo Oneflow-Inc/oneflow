@@ -40,5 +40,5 @@ __all__ = [
     "LongTensor",
     "ComplexFloatTensor",
     "ComplexDoubleTensor",
-    # TODO: Add support for BFloat16Tensor
+    # TODO: Add support for BFloat16Tensor, ComplexHalfTensor
 ]
