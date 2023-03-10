@@ -1134,8 +1134,16 @@
   signature: "Tensor (Tensor x) => Exp"
   bind_python: True
 
+- name: "exp2"
+  signature: "Tensor (Tensor x) => Exp2"
+  bind_python: True 
+
 - name: "exp_grad"
   signature: "Tensor (Tensor x, Tensor dy) => ExpGrad"
+  bind_python: False
+
+- name: "exp2_grad"
+  signature: "Tensor (Tensor x, Tensor dy) => Exp2Grad"
   bind_python: False
 
 - name: "gather"
@@ -3090,6 +3098,10 @@
 
 - name: "exp_grad_grad"
   signature: "Tensor (Tensor x, Tensor dydx) =>  ExpGradGrad"
+  bind_python: False
+
+- name: "exp2_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dydx) =>  Exp2GradGrad"
   bind_python: False
 
 - name: "expm1_grad_grad"
