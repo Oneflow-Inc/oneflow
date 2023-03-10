@@ -42,6 +42,8 @@ class CudaDeviceManager : public DeviceManager {
   std::shared_ptr<RandomGenerator> CreateRandomGenerator(uint64_t seed,
                                                          size_t device_index) override;
 
+  bool IsDeviceStreamWaitEventSupported() const override { return true; }
+
  private:
   std::mutex devices_mutex_;
   std::vector<std::shared_ptr<CudaDevice>> devices_;
