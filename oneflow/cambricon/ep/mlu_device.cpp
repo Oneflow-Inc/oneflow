@@ -58,8 +58,8 @@ MluDevice::MluDevice(int device_index, DeviceManager* device_manager)
 MluDevice::~MluDevice() {
   MluCurrentDeviceGuard guard(device_index_);
   for (auto* event : events_) { delete event; }
-  OF_MLU_CHECK(topsFree(const_zeros_buffer_));
-  OF_MLU_CHECK(topsFree(const_ones_buffer_fp32_));
+  OF_MLU_CHECK(cnrtFree(const_zeros_buffer_));
+  OF_MLU_CHECK(cnrtFree(const_ones_buffer_fp32_));
 }
 
 void MluDevice::SetAsActiveDevice() { OF_MLU_CHECK(cnrtSetDevice(device_index_)); }
@@ -113,7 +113,7 @@ void MluDevice::Free(const AllocationOptions& attr, void* ptr) {
 Maybe<void> MluDevice::AllocPinned(const AllocationOptions& options, void** ptr, size_t size) {
   MluCurrentDeviceGuard guard(device_index_);
   cnrtRet_t err = NumaAwareMluMallocHost(device_index_, ptr, size);
-  if (err != topsSuccess) {
+  if (err != cnrtSuccess) {
     return Error::RuntimeError() << "MluDevice::AllocPinned error";
   } else {
     return Maybe<void>::Ok();

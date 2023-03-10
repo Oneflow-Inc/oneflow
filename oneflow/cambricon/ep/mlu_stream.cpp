@@ -65,14 +65,14 @@ Maybe<void> MluStream::Sync() {
 
 void MluStream::RecordEvent(Event* event) {
   auto* mlu_event = static_cast<MluEvent*>(event);  // NOLINT
-  OF_MLU_CHECK(topsEventRecord(mlu_event->mlu_event(), mlu_stream_));
+  OF_MLU_CHECK(cnrtPlaceNotifier(mlu_event->mlu_event(), mlu_stream_));
 }
 
 Maybe<void> MluStream::GetAsyncError() {
   return Maybe<void>::Ok();
 }
 
-topsStream_t MluStream::mlu_stream() const { return mlu_stream_; }
+cnrtQueue_t MluStream::mlu_stream() const { return mlu_stream_; }
 
 }  // namespace ep
 

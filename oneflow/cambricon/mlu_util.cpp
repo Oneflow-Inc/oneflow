@@ -29,14 +29,14 @@ namespace oneflow {
 
 namespace {
 
-std::function<topsError_t(void**, size_t)> GetMluMallocHostFn(int32_t dev) {
+std::function<cnrtRet_t(void**, size_t)> GetMluMallocHostFn(int32_t dev) {
   auto default_fn = [](void** ptr, size_t size) { return cnrtHostMalloc(ptr, size); };
   return default_fn;
 }
 
 }  // namespace
 
-topsError_t NumaAwareMluMallocHost(int32_t dev, void** ptr, size_t size) {
+cnrtRet_t NumaAwareMluMallocHost(int32_t dev, void** ptr, size_t size) {
   auto fn = GetMluMallocHostFn(dev);
   return fn(ptr, size);
 }

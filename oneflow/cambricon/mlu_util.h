@@ -30,7 +30,7 @@ namespace oneflow {
   for (cnrtRet_t _of_mlu_check_status = (condition); _of_mlu_check_status != cnrtSuccess;) \
   LOG(FATAL) << "Check failed: " #condition " : " << " (" << _of_mlu_check_status << ") "
 
-topsError_t NumaAwareMluMallocHost(int32_t dev, void** ptr, size_t size);
+cnrtRet_t NumaAwareMluMallocHost(int32_t dev, void** ptr, size_t size);
 
 class MluCurrentDeviceGuard final {
  public:
