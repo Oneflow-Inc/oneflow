@@ -50,6 +50,7 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("erf", Erf)                   \
   OF_PP_MAKE_TUPLE_SEQ("erfc", Erfc)                 \
   OF_PP_MAKE_TUPLE_SEQ("exp", Exp)                   \
+  OF_PP_MAKE_TUPLE_SEQ("exp2", Exp2)                 \
   OF_PP_MAKE_TUPLE_SEQ("expm1", Expm1)               \
   OF_PP_MAKE_TUPLE_SEQ("log", Log)                   \
   OF_PP_MAKE_TUPLE_SEQ("log2", Log2)                 \
@@ -179,6 +180,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   ADD_UNARY_FUNCTOR_WITH_DY_X(Erf, "Erf");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Erfc, "Erfc");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Exp, "Exp");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Exp2, "Exp2");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Expm1, "Expm1");
   m.add_functor<FloorFunctor>("Floor");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Lgamma, "Lgamma");
