@@ -218,7 +218,7 @@ class DummyModule(ModuleType):
 
 class enable:
     """
-    mock_torch.enable(lazy=None,verbose=None) -> None
+    mock_torch.enable(lazy=None, verbose=None) -> None
 
     Enable mock function.
 
