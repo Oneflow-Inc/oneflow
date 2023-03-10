@@ -39,6 +39,7 @@ class ModuleWrapper(ModuleType):
         self.module = module
 
     def __getattr__(self, name: str) -> Any:
+        # print(name)
         if not hasattr(self.module, name):
             if name == "__path__":
                 return None
@@ -195,6 +196,8 @@ class DummyModule(ModuleType):
             return []
         if name == "__file__":
             return None
+        if name == "__mro_entries__":
+            return lambda x : ()
         return DummyModule(self.__name__ + "." + name)
 
     def __getitem__(self, name):
@@ -224,6 +227,7 @@ class enable:
         *,
         _from_cli: bool = False,
     ):
+        print("enable")
         self.enable = _importer.enable
         forcedly_disabled_by_env_var = env_var_util.parse_boolean_from_env(
             "ONEFLOW_DISABLE_MOCK_TORCH", False
