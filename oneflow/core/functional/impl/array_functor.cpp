@@ -1795,13 +1795,19 @@ class CopyToDeviceFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("device", "pin_memory");
     attrs.SetAllAttrs(device, pin_memory);
 
-#ifdef WITH_CUDA
-    if (device->enum_type() == DeviceType::kCUDA) { InitCudaContextOnce(device->device_id()); }
-#endif
+    // Trigger the construction of device context in advance
+    if (device->enum_type() != DeviceType::kCPU) { TouchEpDevice(device); }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
+  void TouchEpDevice(Symbol<Device> device) {
+    ep::DeviceManager* device_mgr =
+        Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceManagerOrNull(device->enum_type());
+    if (!device_mgr) { return; }
+    device_mgr->GetDevice(device->device_id());
+  }
+
   std::shared_ptr<OpExpr> op_;
 };
 
