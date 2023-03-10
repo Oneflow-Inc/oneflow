@@ -45,18 +45,18 @@ class ObjectPool {
       InitObjectPoolFields4Element(ptr.get());
       return ptr;
     } else {
-      auto* ptr = container_.back();
+      auto* ptr = CHECK_NOTNULL(container_.back());
       container_.pop_back();
-      ptr->__Init__(std::forward<Args>(args)...);
+      CHECK_NOTNULL(ptr)->__Init__(std::forward<Args>(args)...);
       InitObjectPoolFields4Element(ptr);
       return intrusive::shared_ptr<T>(ptr);
     }
   }
 
   static void Put(void* raw_ptr) {
-    T* ptr = reinterpret_cast<T*>(raw_ptr);
-    if constexpr (object_pool_strategy != kThreadUnsafeAndDisableDestruct) { ptr->__Delete__(); }
-    ptr->mut_object_pool()->container_.push_back(ptr);
+    T* ptr = CHECK_NOTNULL(reinterpret_cast<T*>(CHECK_NOTNULL(raw_ptr)));
+    if constexpr (object_pool_strategy != kThreadUnsafeAndDisableDestruct) { CHECK_NOTNULL(ptr)->__Delete__(); }
+    ptr->mut_object_pool()->container_.push_back(CHECK_NOTNULL(ptr));
   }
 
  private:
