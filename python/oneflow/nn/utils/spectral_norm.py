@@ -218,7 +218,9 @@ def spectral_norm(
         of PyTorch.
 
     For example:
+    
     .. code-block:: python
+    
         >>> import oneflow as flow
         >>> m = flow.nn.utils.spectral_norm(flow.nn.Linear(20, 40))
         >>> m
@@ -247,10 +249,13 @@ def remove_spectral_norm(module: T_module, name: str = "weight") -> T_module:
         name (str, optional): name of weight parameter
 
     For Example:
+    
     .. code-block:: python
+    
         >>> import oneflow as flow
         >>> m = flow.nn.utils.spectral_norm(flow.nn.Linear(40, 10))
         >>> remove_spectral_norm(m)
+        
     """
     for k, hook in module._forward_pre_hooks.items():
         if isinstance(hook, SpectralNorm) and hook.name == name:
