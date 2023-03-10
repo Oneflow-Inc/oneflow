@@ -40,7 +40,6 @@ class DeviceManager {
   virtual size_t GetDeviceCount() = 0;
   virtual size_t GetActiveDeviceIndex() = 0;
   virtual void SetActiveDeviceByIndex(size_t device_index) = 0;
-  virtual void InitDeviceContextOnce(size_t device_index) = 0;
 };
 
 }  // namespace ep

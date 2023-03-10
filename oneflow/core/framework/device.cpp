@@ -170,7 +170,7 @@ void InitDeviceContextOnce(Symbol<Device> device) {
   ep::DeviceManager* device_mgr =
       Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceManagerOrNull(device->enum_type());
   if (!device_mgr) { return; }
-  device_mgr->InitDeviceContextOnce(device->device_id());
+  device_mgr->GetDevice(device->device_id());
 }
 
 }  // namespace oneflow
