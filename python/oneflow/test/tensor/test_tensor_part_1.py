@@ -763,6 +763,25 @@ class TestTensor(flow.unittest.TestCase):
         x.bitwise_xor_(y)
         x.bitwise_xor_(bool_tensor)
         return x
+    
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(n=5,auto_backward=False)
+    def test_bitwise_not_inplace_tensor(test_case):
+        device = random_device()
+        dims_kwargs = {
+            "ndim": 4,
+            "dim0": random(low=4, high=8).to(int),
+            "dim1": random(low=4, high=8).to(int),
+            "dim2": random(low=4, high=8).to(int),
+            "dim3": random(low=4, high=8).to(int),
+        }
+        # TODO(WangYi): oneflow doesn't support conversion between uint8 and int8
+        # So, use "index" instead of "int" in `random_dtype`
+        
+        dtype = random_dtype(["index", "bool", "unsigned"])
+        x = random_tensor(dtype=int, **dims_kwargs,).to(device).to(dtype)
+        x.bitwise_not_()
+        return x
 
     @flow.unittest.skip_unless_1n1d()
     @autotest(n=5)
