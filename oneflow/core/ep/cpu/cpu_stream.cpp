@@ -28,8 +28,6 @@ Maybe<void> CpuStream::Sync() { return Maybe<void>::Ok(); }
 
 void CpuStream::RecordEvent(Event* /*event*/) {}
 
-void CpuStream::WaitEvent(Event* event) {}
-
 Maybe<void> CpuStream::InitThreadRuntime() {
   const auto thread_runtime_type = GetStringFromEnv("OF_THREADING_RUNTIME", [] {
     if (thread::IsTbbEnabled()) { return "TBB"; }
