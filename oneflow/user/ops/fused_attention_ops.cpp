@@ -457,7 +457,7 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   if (ctx->user_op_conf().has_input("past_key", 0)) { past_key_arg.emplace_back("past_key", 0); }
   std::vector<user_op::OpArg> past_value_arg;
   if (ctx->user_op_conf().has_input("past_value", 0)) {
-    past_key_arg.emplace_back("past_value", 0);
+    past_value_arg.emplace_back("past_value", 0);
   }
   if (past_k_b_split_axis >= 0 && past_v_b_split_axis >= 0 && k_b_split_axis >= 0
       && v_b_split_axis >= 0) {
