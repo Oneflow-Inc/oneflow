@@ -1,7 +1,7 @@
 Rewrite BuildFusedBiasAddMaskScaleOpWithRate(a: Value, b: Value, mask: Value, axis: Attr, rate: Attr, dropout: Op) -> Op;
 Rewrite CopyUserOpAttrs(src: Op, dst: Op) -> Op;
 
-Rewrite GetNumHeadsFromTranpose(transpose: Op) -> Attr;
+Rewrite GetHeadSizeFromTranpose(transpose: Op) -> Attr;
 Rewrite CreateConv2dAndErasePad(x: Value, weight: Value, padding_before: Attr, data_format: Attr, conv: Op) -> Op;
 Rewrite CreatScaleTrilOp(x: Value, diagonal: Attr, floating_fill_value: Attr, integer_fill_value: Attr,
                           is_floating_fill_value: Attr, float_operand: Attr, int_operand: Attr, has_float_operand: Attr, out: Type) -> Op {
