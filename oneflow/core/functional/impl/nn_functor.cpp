@@ -886,31 +886,30 @@ class LayerNormFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class AddBiasResidualLayerNormFunctor {
+class SkipLayerNormFunctor {
  public:
-  AddBiasResidualLayerNormFunctor() {
-    size_t nb_residual;
+  SkipLayerNormFunctor() {
+    size_t nb_skip;
     std::vector<bool> bool_list = {true, false};
 
-    /* number of residual*/
-    for (nb_residual = 0; nb_residual <= 2; nb_residual++) {
+    /* number of skip */
+    for (nb_skip = 0; nb_skip <= 1; nb_skip++) {
       /* has_gamma */
       for (bool has_gamma : bool_list) {
         /* has_beta */
         for (bool has_beta : bool_list) {
-          /* has_pre_bias */
-          for (bool has_pre_bias : bool_list) {
+          /* has_bias */
+          for (bool has_bias : bool_list) {
             one::OpBuilder new_op = one::OpBuilder("layer_norm").Input("x");
             if (has_gamma) { new_op = new_op.Input("gamma"); }
             if (has_beta) { new_op = new_op.Input("beta"); }
-            if (has_pre_bias) { new_op = new_op.Input("pre_bias"); }
-            if (nb_residual >= 1) { new_op = new_op.Input("pre_residual_1"); }
-            if (nb_residual == 2) { new_op = new_op.Input("pre_residual_2"); }
+            if (has_bias) { new_op = new_op.Input("bias"); }
+            if (nb_skip >= 1) { new_op = new_op.Input("skip"); }
             new_op = new_op.Output("y").Output("mean").Output("inv_variance");
 
             std::shared_ptr<OpExpr> op_pointer = CHECK_JUST(new_op.Build());
             ops_.insert(std::pair<std::tuple<int, bool, bool, bool>, std::shared_ptr<OpExpr>>(
-                std::tuple<int, bool, bool, bool>(nb_residual, has_gamma, has_beta, has_pre_bias), op_pointer));
+                std::tuple<int, bool, bool, bool>(nb_skip, has_gamma, has_beta, has_bias), op_pointer));
           } // has_pre_bias
         } // has_beta
       } // has_gamma
@@ -920,12 +919,10 @@ class AddBiasResidualLayerNormFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const Optional<one::Tensor>& gamma,
                            const Optional<one::Tensor>& beta,
-                           const Optional<one::Tensor>& pre_bias,
-                           const Optional<one::Tensor>& pre_residual_1,
-                           const Optional<one::Tensor>& pre_residual_2,
+                           const Optional<one::Tensor>& bias,
+                           const Optional<one::Tensor>& skip,
                            const double& epsilon,
-                           const double& pre_alpha_1,
-                           const double& pre_alpha_2) const {
+                           const double& alpha) const {
     // check shape of x
     const auto& x_shape = *(x->shape());
     CHECK_GT_OR_RETURN(x_shape.NumAxes(), 1)
@@ -944,62 +941,54 @@ class AddBiasResidualLayerNormFunctor {
     // check shape of gamma, bias and pre_bias
     if (gamma) { GAMMA_BETA_BIAS_SHAPE_CHECK(gamma); }
     if (beta) { GAMMA_BETA_BIAS_SHAPE_CHECK(beta); }
-    if (pre_bias) { GAMMA_BETA_BIAS_SHAPE_CHECK(pre_bias); }
+    if (bias) { GAMMA_BETA_BIAS_SHAPE_CHECK(bias); }
 
 #undef GAMMA_BETA_BIAS_SHAPE_CHECK
 
     // check shape of residual
-    size_t nb_residual = 0;
-    if (pre_residual_1) {
-      const auto& pre_residual_1_shape = *(JUST(pre_residual_1)->shape());
-      CHECK_EQ_OR_RETURN(pre_residual_1_shape, x_shape)
-          << "shape of \'pre_residual_1\' is not the same as \'x\'";
-      nb_residual = 1;
-    }
-    if (pre_residual_2) {
-      CHECK(pre_residual_1) << "must provide pre_residual_1 while pre_residual_2 is provided";
-      const auto& pre_residual_2_shape = *(JUST(pre_residual_2)->shape());
-      CHECK_EQ_OR_RETURN(pre_residual_2_shape, x_shape)
-          << "shape of \'pre_residual_2\' is not the same as \'x\'";
-      nb_residual = 2;
+    size_t nb_skip = 0;
+    if (skip) {
+      const auto& skip_shape = *(JUST(skip)->shape());
+      CHECK_EQ_OR_RETURN(skip_shape, x_shape)
+          << "shape of \'skip\' is not the same as \'x\'";
+      nb_skip = 1;
     }
 
     // set attributes
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("epsilon", "pre_alpha_1", "pre_alpha_2");
-    attrs.SetAllAttrs(epsilon, pre_alpha_1, pre_alpha_2);
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("epsilon", "alpha");
+    attrs.SetAllAttrs(epsilon, alpha);
 
     // count number of all input tensors
     size_t nb_inputs = 1;           // count x
-    nb_inputs += nb_residual;       // count residual
+    nb_inputs += nb_skip;           // count residual
     if (gamma) nb_inputs += 1;      // count gamma
     if (beta) nb_inputs += 1;       // count beta
-    if (pre_bias) nb_inputs += 1;   // count pre_bias
+    if (bias) nb_inputs += 1;       // count bias
   
     // construct input tensor tuple
     size_t tensor_index = 1;
     TensorTuple input(nb_inputs);
     input[0] = x;
-#define ADD_TENSOR_TO_INPUT_LIST(t) \
+#define ADD_TENSOR_TO_INPUT_LIST_IF_PROVIDED(t) \
   if (t) {                          \
     input[tensor_index] = JUST(t);  \
     tensor_index += 1;              \
   }
-    ADD_TENSOR_TO_INPUT_LIST(gamma);
-    ADD_TENSOR_TO_INPUT_LIST(beta);
-    ADD_TENSOR_TO_INPUT_LIST(pre_bias);
-    ADD_TENSOR_TO_INPUT_LIST(pre_residual_1);
-    ADD_TENSOR_TO_INPUT_LIST(pre_residual_2);
-#undef ADD_TENSOR_TO_INPUT_LIST
+    ADD_TENSOR_TO_INPUT_LIST_IF_PROVIDED(gamma);
+    ADD_TENSOR_TO_INPUT_LIST_IF_PROVIDED(beta);
+    ADD_TENSOR_TO_INPUT_LIST_IF_PROVIDED(bias);
+    ADD_TENSOR_TO_INPUT_LIST_IF_PROVIDED(skip);
+#undef ADD_TENSOR_TO_INPUT_LIST_IF_PROVIDED
 
     return OpInterpUtil::Dispatch<Tensor>(
         *(ops_.find(
-                  std::tuple<int, bool, bool, bool>(nb_residual, JUST(gamma) != NULL, JUST(beta) != NULL, JUST(pre_bias) != NULL))
+                  std::tuple<int, bool, bool, bool>(nb_skip, JUST(gamma) != NULL, JUST(beta) != NULL, JUST(bias) != NULL))
               ->second),
         input, attrs);
   }
 
  private:
-  /* (nb_residual, has_gamma, has_beta, has_pre_bias) -> op */
+  /* (nb_skip, has_gamma, has_beta, has_bias) -> op */
   std::map<std::tuple<int, bool, bool, bool>, std::shared_ptr<OpExpr>> ops_;
 };
 
@@ -5253,7 +5242,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedMatmulBiasFunctor>("FusedMatmulBias");
   m.add_functor<impl::FusedMatmulBiasAddReluDropoutFunctor>("FusedMatmulBiasAddReluDropout");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
-  m.add_functor<impl::AddBiasResidualLayerNormFunctor>("AddBiasResidualLayerNorm");
+  m.add_functor<impl::SkipLayerNormFunctor>("SkipLayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
   m.add_functor<impl::GroupNormFunctor>("GroupNorm");
   m.add_functor<impl::TFAvgPool2DFunctor>("TFAvgPool2D");

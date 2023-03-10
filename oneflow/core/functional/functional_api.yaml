@@ -1462,8 +1462,8 @@
     Int64 begin_params_axis, Double epsilon) => LayerNormAffine"
   bind_python: True
 
-- name: "add_bias_residual_layer_norm"
-  signature: "Tensor (Tensor x, Tensor gamma=None, Tensor beta=None, Tensor pre_bias=None, Tensor pre_residual_1=None, Tensor pre_residual_2=None, Double epsilon=1e-5, Double pre_alpha_1=1e1, Double pre_alpha_2=1e1) => AddBiasResidualLayerNorm"
+- name: "skip_layer_norm"
+  signature: "Tensor (Tensor x, *, Tensor gamma=None, Tensor beta=None, Tensor bias=None, Tensor skip=None, Double epsilon=1e-5, Double alpha=1e1) => SkipLayerNorm"
   bind_python: True
 
 - name: "layer_norm"
