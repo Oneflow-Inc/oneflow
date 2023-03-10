@@ -66,15 +66,15 @@ class TestTensorComplex64(unittest.TestCase):
         assert np.allclose(np_b, self.np_b[1])
 
 
-# class TestTensorComplex128(TestTensorComplex64):
-# 
-#     def setUp(self):
-#         self.dtype = flow.cdouble
-#         self.np_dtype = np.complex128
-#         self.a = [1.0 + 1j, 2.0, 1j]
-#         self.np_a = np.array(self.a, dtype=self.np_dtype)
-#         self.b = [[1.0 + 1j, 2.0], [1.0, 2.0 - 1j], [-1.0, 1j]]
-#         self.np_b = np.array(self.b, dtype=self.np_dtype)
+class TestTensorComplex128(TestTensorComplex64):
+
+    def setUp(self):
+        self.dtype = flow.cdouble
+        self.np_dtype = np.complex128
+        self.a = [1.0 + 1j, 2.0, 1j]
+        self.np_a = np.array(self.a, dtype=self.np_dtype)
+        self.b = [[1.0 + 1j, 2.0], [1.0, 2.0 - 1j], [-1.0, 1j]]
+        self.np_b = np.array(self.b, dtype=self.np_dtype)
 
 
 if __name__ == "__main__":
