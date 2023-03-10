@@ -165,10 +165,12 @@ def _test_spectral_norm_eval_update(test_case, device, requires_grad, apply_ddp)
     assert_tesnor_equal_true(test_case, last_train_v, m.weight_v)
 
 
-def _test_spectral_norm_load_state_dict(test_case, activate_times):
-    inp = flow.randn(2, 3)
+def _test_spectral_norm_load_state_dict(test_case, device):
+    activate_times = random(0, 3).to(int).value()
+
+    inp = flow.randn(2, 3).to(device)
     # Test backward compatibility
-    m = nn.Linear(3, 5)
+    m = nn.Linear(3, 5).to(device)
     snm = nn.utils.spectral_norm(m)
     snm.train()
     for _ in range(activate_times):
@@ -271,6 +273,7 @@ class TestSpectralNorm(flow.unittest.TestCase):
             _test_spectral_norm_impl,
             _test_spectral_norm_dim,
             _test_spectral_norm_forward,
+            _test_spectral_norm_load_state_dict
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
@@ -285,10 +288,6 @@ class TestSpectralNorm(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_spectral_norm_training_update_and_remove(test_case, *arg)
             _test_spectral_norm_eval_update(test_case, *arg)
-
-    @autotest()
-    def test_spectral_norm_update_and_remove(test_case):
-        _test_spectral_norm_load_state_dict(test_case, np.random.randint(0, 3))
 
 
 if __name__ == "__main__":
