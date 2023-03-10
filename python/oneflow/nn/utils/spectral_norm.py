@@ -70,9 +70,6 @@ class SpectralNorm:
                     v = normalize(flow.mv(weight_mat.t(), u), dim=0, eps=self.eps)
                     u = normalize(flow.mv(weight_mat, v), dim=0, eps=self.eps)
                 if self.n_power_iterations > 0:
-                    # TODO(hujiakui): flow.contiguous_format needed
-                    # u = u.clone(memory_format=flow.contiguous_format)
-                    # v = v.clone(memory_format=flow.contiguous_format)
                     u = u.clone()
                     v = v.clone()
         setattr(module, self.name + "_u", u)
@@ -96,13 +93,6 @@ class SpectralNorm:
             self.name,
             self.compute_weight(module, do_power_iteration=module.training),
         )
-
-    def _solve_v_and_rescale(self, weight_mat, u, target_sigma):
-        v = flow.linalg.multi_dot(
-            # TODO: pinverse
-            [weight_mat.t().mm(weight_mat).pinverse(), weight_mat.t(), u.unsqueeze(1)]
-        ).squeeze(1)
-        return v.mul_(target_sigma / flow.dot(u, flow.mv(weight_mat, v)))
 
     @staticmethod
     def apply(
@@ -137,65 +127,7 @@ class SpectralNorm:
         module.register_buffer(fn.name + "_v", v)
 
         module.register_forward_pre_hook(fn)
-        module._register_state_dict_hook(SpectralNormStateDictHook(fn))
-        module._register_load_state_dict_pre_hook(SpectralNormLoadStateDictPreHook(fn))
         return fn
-
-
-class SpectralNormStateDictHook:
-    def __init__(self, fn) -> None:
-        self.fn = fn
-
-    def __call__(self, module, state_dict, prefix, local_metadata) -> None:
-        if 'spectral_norm' not in local_metadata:
-            local_metadata['spectral_norm'] = {}
-        key = self.fn.name + '.version'
-        if key in local_metadata['spectral_norm']:
-            raise RuntimeError("Unexpected key in metadata['spectral_norm']: {}".format(key))
-        local_metadata['spectral_norm'][key] = self.fn._version
-
-
-class SpectralNormLoadStateDictPreHook:
-    def __init__(self, fn) -> None:
-        self.fn = fn
-
-    # For state_dict with version None, (assuming that it has gone through at
-    # least one training forward), we have
-    #
-    #    u = normalize(W_orig @ v)
-    #    W = W_orig / sigma, where sigma = u @ W_orig @ v
-    #
-    # To compute `v`, we solve `W_orig @ x = u`, and let
-    #    v = x / (u @ W_orig @ x) * (W / W_orig).
-    def __call__(self, state_dict, prefix, local_metadata, strict,
-                 missing_keys, unexpected_keys, error_msgs) -> None:
-        fn = self.fn
-        version = local_metadata.get('spectral_norm', {}).get(fn.name + '.version', None)
-        if version is None or version < 1:
-            weight_key = prefix + fn.name
-            if version is None and all(weight_key + s in state_dict for s in ('_orig', '_u', '_v')) and \
-                    weight_key not in state_dict:
-                # Detect if it is the updated state dict and just missing metadata.
-                # This could happen if the users are crafting a state dict themselves,
-                # so we just pretend that this is the newest.
-                return
-            has_missing_keys = False
-            for suffix in ('_orig', '', '_u'):
-                key = weight_key + suffix
-                if key not in state_dict:
-                    has_missing_keys = True
-                    if strict:
-                        missing_keys.append(key)
-            if has_missing_keys:
-                return
-            with flow.no_grad():
-                weight_orig = state_dict[weight_key + '_orig']
-                weight = state_dict.pop(weight_key)
-                sigma = (weight_orig / weight).mean()
-                weight_mat = fn.reshape_weight_to_matrix(weight_orig)
-                u = state_dict[weight_key + '_u']
-                v = fn._solve_v_and_rescale(weight_mat, u, sigma)
-                state_dict[weight_key + '_v'] = v
 
 
 T_module = TypeVar("T_module", bound=Module)
