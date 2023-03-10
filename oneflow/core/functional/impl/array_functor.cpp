@@ -1730,7 +1730,7 @@ class CopyToDeviceFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("device", "pin_memory");
     attrs.SetAllAttrs(device, pin_memory);
 
-    if (device->enum_type() != DeviceType::kCPU) { InitDeviceContextOnce(device); }
+    if (device->enum_type() != DeviceType::kCPU) { TryToCreateEpDevice(device); }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 

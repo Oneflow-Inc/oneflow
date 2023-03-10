@@ -51,7 +51,6 @@ class CudaDevice : public Device {
   Maybe<void> AllocPinned(const AllocationOptions& options, void** ptr, size_t size) override;
   void FreePinned(const AllocationOptions& options, void* ptr) override;
   bool IsStreamOrderedMemoryAllocationSupported() const override;
-  bool IsStreamWaitEventSupported() const override { return true; }
 
 #if CUDA_VERSION >= 11020
   cudaMemPool_t mem_pool();

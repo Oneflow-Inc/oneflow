@@ -166,7 +166,7 @@ Maybe<std::pair<std::string, int>> ParseDeviceString(const std::string& device_s
   }
 }
 
-void InitDeviceContextOnce(Symbol<Device> device) {
+void TryToCreateEpDevice(Symbol<Device> device) {
   ep::DeviceManager* device_mgr =
       Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceManagerOrNull(device->enum_type());
   if (!device_mgr) { return; }

@@ -56,7 +56,6 @@ class Device {
   virtual Maybe<void> AllocPinned(const AllocationOptions& options, void** ptr, size_t size) = 0;
   virtual void FreePinned(const AllocationOptions& options, void* ptr) = 0;
   virtual bool IsStreamOrderedMemoryAllocationSupported() const;
-  virtual bool IsStreamWaitEventSupported() const { return false; }
 };
 
 }  // namespace ep
