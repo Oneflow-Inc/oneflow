@@ -38,7 +38,7 @@ class CpuSearchSortedKernel final : public user_op::OpKernel {
     bool is_values_scalar = values->shape_view().NumAxes() == 0;
     bool is_sequence_1d = (sorted_sequence->shape_view().NumAxes() == 1);
     K values_shape_last =
-        is_values_scalar ? 1 : values->shape_view().At(values->shape_view().NumAxes() - 1).val();
+        is_values_scalar ? 1 : values->shape_view().At(values->shape_view().NumAxes() - 1);
     K sequence_shape_last =
         sorted_sequence->shape_view().At(sorted_sequence->shape_view().NumAxes() - 1);
     FOR_RANGE(int32_t, i, 0, instance_num) {

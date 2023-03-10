@@ -31,7 +31,7 @@ static PyObject* TensorSize_repr(TensorSize* self) {
   int32_t size = PyTuple_Size((PyObject*)self);
   ss << "oneflow.Size([";
   for (int i = 0; i < size; ++i) {
-    Dim dim = one::functional::PyUnpackDim(PyTuple_GET_ITEM(self, i));
+    Dim dim = one::functional::PyUnpackShapeItem(PyTuple_GET_ITEM(self, i));
     ss << dim;
     if (++idx != size) { ss << ", "; }
   }
@@ -124,7 +124,7 @@ static PyObject* TensorSize_numel(PyObject* self, PyObject* args) {
 
 static PyObject* TensorSize_all_dims_known(PyObject* self, PyObject* args) {
   for (int i = 0; i < PyTuple_Size(self); ++i) {
-    Dim dim = one::functional::PyUnpackDim(PyTuple_GET_ITEM((TensorSize*)self, i));
+    Dim dim = one::functional::PyUnpackShapeItem(PyTuple_GET_ITEM((TensorSize*)self, i));
     if (!dim.is_known()) { Py_RETURN_FALSE; }
   }
   Py_RETURN_TRUE;

@@ -19,6 +19,10 @@ limitations under the License.
 
 namespace oneflow {
 
+const int64_t& ShapeView::At(int64_t index) const {
+  return *ArrayRef<Dim>::operator[](index).int64_ptr();
+}
+
 void ShapeView::ToDimVector(DimVector* dim_vec) const {
   dim_vec->resize(this->size());
   dim_vec->assign(this->data(), this->data() + this->size());
@@ -33,6 +37,20 @@ void ShapeView::ToShape(Shape* shape) const {
 std::ostream& operator<<(std::ostream& out, ShapeView shape) {
   out << shape.ToString();
   return out;
+}
+
+const Dim& MutShapeView::DimAt(int64_t index) const {
+  return MutableArrayRef<Dim>::operator[](index);
+}
+
+Dim& MutShapeView::DimAt(int64_t index) { return MutableArrayRef<Dim>::operator[](index); }
+
+const int64_t& MutShapeView::At(int64_t index) const {
+  return *MutableArrayRef<Dim>::operator[](index).int64_ptr();
+}
+
+int64_t& MutShapeView::At(int64_t index) {
+  return *MutableArrayRef<Dim>::operator[](index).int64_ptr();
 }
 
 void MutShapeView::set_shape(ShapeView shape) {

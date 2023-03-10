@@ -158,6 +158,7 @@ Dim PyUnpackDim(PyObject* obj);
 
 // Shape
 bool PyShapeItemCheck(PyObject* obj);
+Dim PyUnpackShapeItem(PyObject* obj);
 bool PyShapeCheck(PyObject* obj);
 Shape PyUnpackShape(PyObject* obj);
 

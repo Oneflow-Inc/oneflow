@@ -30,7 +30,7 @@ Stride::Stride(const ShapeView& shape) {
   } else if (ndim > 0 && shape.elem_cnt() == 0) {
     // 0-size shape
     small_vector<int64_t, kMaxNumDims> tmp_shape(ndim);
-    for (int64_t i = 0; i < ndim; ++i) { tmp_shape[i] = shape.At(i) > 0 ? shape.At(i).val() : 1; }
+    for (int64_t i = 0; i < ndim; ++i) { tmp_shape[i] = shape.At(i) > 0 ? shape.At(i) : 1; }
     std::exclusive_scan(tmp_shape.rbegin(), tmp_shape.rend(), rbegin(), 1, std::multiplies<>{});
   }
 }

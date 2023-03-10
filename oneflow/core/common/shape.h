@@ -39,7 +39,16 @@ class ShapeProto;
  * There are two widely used shape-related classes: Shape and ShapeView.
  * The differences are:
  * 1. Shape owns the data, and ShapeView does not.
- * 2. ShapeView is very lightweight, whose size is only 16 bytes (two int64_t).
+ * 2. ShapeView is usually used in kernels while Shape is usually used in operators,
+ *    so ShapeView::operator[] and ShapeView::At return int64_t while Shape::operator[]
+ *    and Shape::At return Dim.
+ *    ```c++
+ *    Shape shape({1, 2, 3});
+ *    ShapeView shape_view(shape);
+ *    auto x = shape[0]; // x is Dim(1)
+ *    auto y = shape_view[0]; // y is 1
+ *    ```
+ * 3. ShapeView is very lightweight, whose size is only 16 bytes (two int64_t).
  *    So it should be passed by value.
  *
  * When adding new functions accepting a shape as a parameter, please follow
@@ -64,9 +73,9 @@ template<class T>
 struct ConstShapeMixIn {
   using DimType = int64_t;
 
+  const Dim& DimAt(int64_t index) const;
   int64_t NumAxes() const { return tp()->size(); }
   int64_t elem_cnt() const;
-  Dim At(int64_t index) const;
   int64_t Count(int64_t begin_axis, int64_t end_axis) const;
   int64_t Count(int64_t begin_axis) const;
   bool Containing(ShapeView small_shape) const;
@@ -91,7 +100,7 @@ struct ConstShapeMixIn {
 
   const int64_t* int64_ptr() const { return tp()->data(); }
 
-  const Dim* dim_ptr() const { return &(*this->tp())[0]; }
+  const Dim* dim_ptr() const { return &(this->tp()->DimAt(0)); }
 
   bool all_dims_known() const;
 
@@ -111,17 +120,19 @@ struct MutShapeMixIn : public ConstShapeMixIn<T> {
     (*this->tp())[index] = val;
   }
 
+  using ConstShapeMixIn<T>::DimAt;
   using ConstShapeMixIn<T>::ptr;
   using ConstShapeMixIn<T>::int64_ptr;
   using ConstShapeMixIn<T>::dim_ptr;
 
+  Dim& DimAt(int64_t index);
   // NOTE(daquexian): ptr returns int64_t* instead of Dim* for better
   // compatibility with old code. It is not recommended to use it.
   int64_t* ptr() { return int64_ptr(); }
 
   int64_t* int64_ptr() { return this->tp()->data(); }
 
-  Dim* dim_ptr() { return &(*this->tp())[0]; }
+  Dim* dim_ptr() { return &(this->tp()->DimAt(0)); }
 };
 
 class Shape final : public DimVector, public MutShapeMixIn<Shape> {
@@ -154,6 +165,7 @@ class Shape final : public DimVector, public MutShapeMixIn<Shape> {
 
 #undef OVERRIDE_ADD_DATA_FUNC
 
+  Dim At(int64_t index) const;
   // NOTE(daquexian): data() returns int64_t* instead of Dim* for better
   // compatibility with old code. It is recommended to use int64_ptr()
   // whenever possible.

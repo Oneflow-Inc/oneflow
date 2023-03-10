@@ -83,7 +83,7 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
   bool has_bias = ctx->has_input("bias", 0);
   if (has_bias) {
     const user_op::TensorDesc& bias = ctx->InputTensorDesc("bias", 0);
-    CHECK_EQ_OR_RETURN(bias.shape(), Shape{static_cast<size_t>(filters)});
+    CHECK_EQ_OR_RETURN(bias.shape(), Shape{filters});
   }
 
   return Maybe<void>::Ok();

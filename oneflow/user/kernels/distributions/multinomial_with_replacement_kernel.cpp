@@ -80,7 +80,7 @@ class MultinomialWithReplacementCpuKernel final : public user_op::OpKernel {
     T* cum_dist_ptr = tmp_buffer->mut_dptr<T>();
 
     int64_t n_categories = x->shape_view().At(x->shape_view().NumAxes() - 1);
-    int64_t n_dist = x->shape_view().NumAxes() > 1 ? x->shape_view().At(0) : Dim(1);
+    int64_t n_dist = x->shape_view().NumAxes() > 1 ? x->shape_view().At(0) : 1;
     const int32_t num_samples = ctx->Attr<int32_t>("num_samples");
 
     int64_t self_stride_0 = x->shape_view().NumAxes() > 1 ? x->stride().at(0) : 0;

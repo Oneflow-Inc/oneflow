@@ -36,6 +36,14 @@ class ShapeView : public ArrayRef<Dim>, public ConstShapeMixIn<ShapeView> {
   using Base = ArrayRef<Dim>;
   using ArrayRef<Dim>::ArrayRef;
 
+  // NOTE(daquexian): At(int64_t index) returns int64_t instead of Dim for better
+  // compatibility with old code. It is recommended to use DimAt(int64_t index)
+  // whenever possible.
+  const int64_t& At(int64_t index) const;
+  // NOTE(daquexian): operator[](int64_t index) returns int64_t instead of Dim for better
+  // compatibility with old code. It is recommended to use DimAt(int64_t index)
+  // whenever possible.
+  const int64_t& operator[](int64_t index) const { return At(index); }
   // NOTE(daquexian): data() returns int64_t* instead of Dim* for better
   // compatibility with old code. It is recommended to use int64_ptr()
   // whenever possible.
@@ -64,6 +72,24 @@ class MutShapeView final : public MutableArrayRef<Dim>, public MutShapeMixIn<Mut
   MutShapeView(int64_t* start, size_t size)
       : MutableArrayRef<Dim>(reinterpret_cast<Dim*>(start), size) {}
 
+  const Dim& DimAt(int64_t index) const;
+  Dim& DimAt(int64_t index);
+  // NOTE(daquexian): At(int64_t index) returns int64_t instead of Dim for better
+  // compatibility with old code. It is recommended to use DimAt(int64_t index)
+  // whenever possible.
+  const int64_t& At(int64_t index) const;
+  // NOTE(daquexian): operator[](int64_t index) returns int64_t instead of Dim for better
+  // compatibility with old code. It is recommended to use DimAt(int64_t index)
+  // whenever possible.
+  const int64_t& operator[](int64_t index) const { return At(index); }
+  // NOTE(daquexian): At(int64_t index) returns int64_t instead of Dim for better
+  // compatibility with old code. It is recommended to use DimAt(int64_t index)
+  // whenever possible.
+  int64_t& At(int64_t index);
+  // NOTE(daquexian): operator[](int64_t index) returns int64_t instead of Dim for better
+  // compatibility with old code. It is recommended to use DimAt(int64_t index)
+  // whenever possible.
+  int64_t& operator[](int64_t index) { return At(index); }
   // NOTE(daquexian): data() returns int64_t* instead of Dim* for better
   // compatibility with old code. It is recommended to use int64_ptr()
   // whenever possible.
