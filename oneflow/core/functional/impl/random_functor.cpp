@@ -24,6 +24,11 @@ limitations under the License.
 #include "oneflow/user/kernels/random_seed_util.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 
+#define CHECK_OR_THROW_NEW(expr)                                                          \
+  if (!(expr))                                                                            \
+  ::oneflow::details::Throw() = ::oneflow::Error::CheckFailedError().GetStackTrace(32, 1) \
+                                << "Check failed: " << OF_PP_STRINGIZE(expr) << ": "
+
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -79,7 +84,8 @@ class BernoulliProbFunctor {
                            const bool& inplace) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-    CHECK_OR_THROW(p >= 0.0 && p <= 1.0) << "bernoulli expects p to be in [0, 1], but got p=" << p;
+    CHECK_OR_THROW_NEW(p >= 0.0 && p <= 1.0)
+        << "bernoulli expects p to be in [0, 1], but got p=" << p;
 
     auto& bernoulli_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "seed", "p");
     bernoulli_attrs.SetAllAttrs(dtype->data_type(), static_cast<int64_t>(gen->current_seed()), p);
