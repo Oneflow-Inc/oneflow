@@ -364,8 +364,8 @@ class FullLikeFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& fill_value) const {
     std::shared_ptr<Tensor> out;
     if (x->is_local()) {
-      out = JUST(
-          functional::Empty(*(x->shape()), x->dtype(), JUST(x->device()), /*requires_grad=*/false, /*pin_memory=*/false));
+      out = JUST(functional::Empty(*(x->shape()), x->dtype(), JUST(x->device()),
+                                   /*requires_grad=*/false, /*pin_memory=*/false));
     } else {
       out = JUST(functional::GlobalEmpty(*(x->shape()), x->dtype(), JUST(x->parallel_desc()),
                                          *JUST(private_details::RawGetSbpList(JUST(x->nd_sbp())))));
