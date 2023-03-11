@@ -31,8 +31,9 @@ Maybe<one::Generator> CreateGenerator(const std::string& device_str) {
   return one::MakeGenerator(device_name, device_index);
 }
 
-#ifdef WITH_CUDA
+
 py::tuple GetDefaultGenerators() {
+  #ifdef WITH_CUDA
   static int device_count = GetCudaDeviceCount();
   py::tuple default_cuda_generators(device_count);
   FOR_RANGE(int, device_id, 0, device_count) {
@@ -40,8 +41,10 @@ py::tuple GetDefaultGenerators() {
     default_cuda_generators[device_id] = py::cast(cuda_gen);
   }
   return default_cuda_generators;
+  #else
+  UNIMPLEMENTED() << "Only Support with CUDA";
+  #endif  // WITH_CUDA
 }
-#endif  // WITH_CUDA
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<one::Generator, std::shared_ptr<one::Generator>>(m, "Generator")
@@ -79,9 +82,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
     int64_t seed_val = JUST(one::functional::PyUnpackLong(seed.ptr()));
     return one::ManualSeedAllCudaGenerator(seed_val);
   });
-  #ifdef WITH_CUDA
   m.def("default_generators", &GetDefaultGenerators);
-  #endif  // WITH_CUDA
 }
 
 }  // namespace oneflow
