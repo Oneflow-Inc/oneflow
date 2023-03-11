@@ -1042,8 +1042,10 @@ class QuantileFunctor {
                            const std::shared_ptr<one::Tensor>& q, const Optional<int64_t>& dim,
                            const bool keepdim, const std::string& interpolation,
                            const bool ignore_nan) const {
-    CHECK_GT_OR_RETURN(input->nelement(), 0) << "oneflow.quantile input tensor must be non-empty";
+    CHECK_GT_OR_RETURN(input->nelement(), 0)
+        << Error::RuntimeError() << "oneflow.quantile input tensor must be non-empty";
     CHECK_LE_OR_RETURN(q->ndim(), 1)
+        << Error::RuntimeError()
         << "oneflow.quantile only support `q` tensor is a scalar or 1D tensor.";
     int64_t wrapped_dim = JUST(maybe_wrap_dim(dim.value_or(0), input->ndim()));
 
@@ -1061,12 +1063,10 @@ class QuantileFunctor {
           JUST(functional::ReduceAllWhole(JUST(functional::BroadcastLogicalAnd(
               JUST(functional::ScalarLogicalGreaterEqual(q, Scalar(0.0))),
               JUST(functional::ScalarLogicalLessEqual(q, Scalar(1.0)))))));
-      CHECK_EQ_OR_RETURN(condition->nelement(), 1);
-      CHECK_EQ_OR_RETURN(condition->dtype()->data_type(), DataType::kBool);
       CHECK_OR_RETURN(JUST(functional::Equal(
           condition,
           JUST(functional::Cast(JUST(functional::OnesLike(condition)), DType::Bool(), false)))))
-          << "oneflow.quantile q values must be in the range [0, 1]";
+          << Error::RuntimeError() << "oneflow.quantile q values must be in the range [0, 1]";
     }
 
     // calculate the shape of output
@@ -1096,7 +1096,7 @@ class QuantileFunctor {
     sorted = JUST(functional::View(sorted->contiguous(), step_shape));
 
     CHECK_LE_OR_RETURN(sorted->dim(sorted->ndim() - 1), std::pow(2, 24))
-        << "oneflow.quantile input tensor is too large";
+        << Error::RuntimeError() << "oneflow.quantile input tensor is too large";
 
     std::shared_ptr<Tensor> ranks;
 
@@ -1194,7 +1194,8 @@ class ScalarQuantileFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Scalar& q,
                            const Optional<int64_t>& dim, const bool& keepdim,
                            const std::string& interpolation, const bool& ignore_nan) const {
-    CHECK_GT_OR_RETURN(input->nelement(), 0) << "oneflow.quantile input tensor must be non-empty";
+    CHECK_GT_OR_RETURN(input->nelement(), 0)
+        << Error::RuntimeError() << "oneflow.quantile input tensor must be non-empty";
     int64_t wrapped_dim = JUST(maybe_wrap_dim(dim.value_or(0), input->ndim()));
     double qf = 0;
     if (q.IsIntegral()) {
@@ -1203,7 +1204,7 @@ class ScalarQuantileFunctor {
       qf = q.As<double>();
     }
     CHECK_OR_RETURN(qf <= 1.0 && qf >= 0.0)
-        << "oneflow.quantile q values must be in the range [0, 1]";
+        << Error::RuntimeError() << "oneflow.quantile q values must be in the range [0, 1]";
 
     // calculate the shape of output
     auto out_shape = quantile_output_shape(dim, input, q, keepdim, wrapped_dim);
@@ -1235,7 +1236,7 @@ class ScalarQuantileFunctor {
     sorted = JUST(functional::View(sorted->contiguous(), step_shape));
 
     CHECK_LE_OR_RETURN(sorted->dim(sorted->ndim() - 1), std::pow(2, 24))
-        << "oneflow.quantile input tensor is too large";
+        << Error::RuntimeError() << "oneflow.quantile input tensor is too large";
 
     std::shared_ptr<Tensor> ranks;
 
@@ -1258,8 +1259,9 @@ class ScalarQuantileFunctor {
                                 /*keepdim=*/true));
       std::shared_ptr<Tensor> tl_value;
       if (input->is_local()) {
-        tl_value = JUST(functional::Empty(*(tl_index->shape()), DType::Float(),
-                                          JUST(tl_index->device()), /*requires_grad=*/false, /*pin_memory=*/false));
+        tl_value =
+            JUST(functional::Empty(*(tl_index->shape()), DType::Float(), JUST(tl_index->device()),
+                                   /*requires_grad=*/false, /*pin_memory=*/false));
       } else {
         tl_value = JUST(functional::GlobalEmpty(
             *(tl_index->shape()), DType::Float(), JUST(tl_index->parallel_desc()),
