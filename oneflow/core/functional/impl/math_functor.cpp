@@ -1259,7 +1259,7 @@ class ScalarQuantileFunctor {
       std::shared_ptr<Tensor> tl_value;
       if (input->is_local()) {
         tl_value = JUST(functional::Empty(*(tl_index->shape()), DType::Float(),
-                                          JUST(tl_index->device()), /*pin_memory=*/false));
+                                          JUST(tl_index->device()), /*requires_grad=*/false, /*pin_memory=*/false));
       } else {
         tl_value = JUST(functional::GlobalEmpty(
             *(tl_index->shape()), DType::Float(), JUST(tl_index->parallel_desc()),
