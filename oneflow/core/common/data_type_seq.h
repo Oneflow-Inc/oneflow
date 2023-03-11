@@ -39,8 +39,8 @@ limitations under the License.
 
 #define CHAR_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(char, DataType::kChar)
 
-#define COMPLEX_DATA_TYPE_SEQ                        \
-  OF_PP_MAKE_TUPLE_SEQ(std::complex<float>, DataType::kComplex64)  \
+#define COMPLEX_DATA_TYPE_SEQ                                     \
+  OF_PP_MAKE_TUPLE_SEQ(std::complex<float>, DataType::kComplex64) \
   OF_PP_MAKE_TUPLE_SEQ(std::complex<double>, DataType::kComplex128)
 
 #define ARITHMETIC_DATA_TYPE_SEQ \

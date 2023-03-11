@@ -29,11 +29,13 @@ class Scalar {
   Scalar() : Scalar(int32_t(0)) {}
 
   template<typename T, typename std::enable_if<std::is_floating_point<T>::value, int>::type = 0>
-  Scalar(const std::complex<T>& cvalue) : cvalue_{.real = cvalue.real(), .imag = cvalue.imag()}, active_tag_(HAS_C) {}
+  Scalar(const std::complex<T>& cvalue)
+      : cvalue_{.real = cvalue.real(), .imag = cvalue.imag()}, active_tag_(HAS_C) {}
 
   // NOTE(lml): This constructor is not used anywhere.
   template<typename T, typename std::enable_if<std::is_floating_point<T>::value, int>::type = 0>
-  OF_DEVICE_FUNC Scalar(const T& real, const T& imag) : cvalue_{.real = real, .imag = imag}, active_tag_(HAS_C) {}
+  OF_DEVICE_FUNC Scalar(const T& real, const T& imag)
+      : cvalue_{.real = real, .imag = imag}, active_tag_(HAS_C) {}
 
   template<typename T, typename std::enable_if<std::is_same<T, bool>::value, int>::type = 0>
   OF_DEVICE_FUNC Scalar(const T& value) : value_{.b = value}, active_tag_(HAS_B) {}
@@ -60,9 +62,9 @@ class Scalar {
   OF_DEVICE_FUNC Scalar& operator=(const Scalar& other) {
     active_tag_ = other.active_tag_;
     if (active_tag_ == HAS_C) {
-        cvalue_ = other.cvalue_;
+      cvalue_ = other.cvalue_;
     } else {
-        value_ = other.value_;
+      value_ = other.value_;
     }
     return *this;
   }
@@ -103,9 +105,7 @@ class Scalar {
  private:
   // Only used in implementation of operator +-*/ and +=-=*=/=.
   std::complex<double> ToComplexNum() const {
-    if (!IsComplex()) {
-      return std::complex<double>(As<double>(), 0.0);
-    }
+    if (!IsComplex()) { return std::complex<double>(As<double>(), 0.0); }
     return std::complex<double>(cvalue_.real, cvalue_.imag);
   }
   union Value {
