@@ -5354,6 +5354,7 @@ def OneFlow_FusedMatmulBiasAddReluDropoutOp : OneFlow_BaseOp<"fused_matmul_bias_
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$skip_final_activation,
+    DefaultValuedAttr<SI64Attr, "0">:$seed,
     F32ArrayAttr:$dropout_rate_list
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -5604,7 +5605,8 @@ def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", [NoSideEffect, DeclareOpInterf
     OneFlow_Tensor:$mask
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$rate
+    DefaultValuedAttr<F32Attr, "0.">:$rate,
+    DefaultValuedAttr<SI64Attr, "0">:$seed
   );
   let has_check_fn = 1;
   let has_logical_tensor_desc_infer_fn = 1;
@@ -9830,9 +9832,9 @@ def OneFlow_BernoulliOp : OneFlow_BaseOp<"bernoulli", [NoSideEffect, NoGrad, Cpu
     OneFlow_Tensor:$out
   );
   let attrs = (ins
+    OneFlow_DataType:$dtype,
     DefaultValuedAttr<SI64Attr, "-1">:$seed,
-    DefaultValuedAttr<BoolAttr, "false">:$has_seed,
-    OneFlow_DataType:$dtype
+    DefaultValuedAttr<F64Attr, "0.">:$p
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -10173,6 +10175,7 @@ def OneFlow_RReluOp : OneFlow_BaseOp<"rrelu", [NoSideEffect, DeclareOpInterfaceM
     OneFlow_Tensor:$noise_data
   );
   let attrs = (ins
+    DefaultValuedAttr<SI64Attr, "0">:$seed,
     DefaultValuedAttr<F32Attr, "0.125">:$lower,
     DefaultValuedAttr<F32Attr, "0.3333333333333333">:$upper,
     DefaultValuedAttr<BoolAttr, "false">:$training
