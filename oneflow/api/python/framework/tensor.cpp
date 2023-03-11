@@ -412,8 +412,7 @@ static PyObject* PyTensorObject_item(PyObject* self, PyObject* unused) {
   switch (data_type) {
 #define CASE_SCALAR_TENSOR_TO_SCALAR(cpp_type, of_type) \
   case of_type: return ASSERT(EagerLocalTensorItem<cpp_type>(t));
-    OF_PP_FOR_EACH_TUPLE(CASE_SCALAR_TENSOR_TO_SCALAR, POD_AND_HALF_DATA_TYPE_SEQ);
-    // OF_PP_FOR_EACH_TUPLE(CASE_SCALAR_TENSOR_TO_SCALAR, POD_AND_HALF_DATA_TYPE_SEQ COMPLEX_DATA_TYPE_SEQ);
+    OF_PP_FOR_EACH_TUPLE(CASE_SCALAR_TENSOR_TO_SCALAR, POD_AND_HALF_DATA_TYPE_SEQ COMPLEX_DATA_TYPE_SEQ);
     default: {
       return PyErr_Format(PyExc_RuntimeError,
                           ("Invalid datatype " + DataType_Name(data_type)).data());
