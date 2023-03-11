@@ -83,6 +83,5 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
     return one::ManualSeedAllCudaGenerator(seed_val);
   });
   m.def("default_generators", &GetDefaultGenerators);
-}
 
 }  // namespace oneflow
