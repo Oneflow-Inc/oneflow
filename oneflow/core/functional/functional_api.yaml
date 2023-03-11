@@ -936,7 +936,11 @@
   bind_python: True
 
 - name: "empty"
-  signature: "Tensor (Shape shape, *, DataType dtype, Device device=None, Bool pin_memory=False) => Empty"
+  signature: "Tensor (Shape shape, *, DataType dtype, Device device=None, Bool requires_grad=False, Bool pin_memory=False) => Empty"
+  bind_python: True
+
+- name: "empty_strided"
+  signature: "Tensor (Int64List shape, Int64List stride, DataType dtype=None, Device device=None, Bool requires_grad=False, Bool pin_memory=False) => EmptyStrided"
   bind_python: True
 
 - name: "global_empty"
