@@ -1294,8 +1294,8 @@ class ScalarQuantileFunctor {
       values_below = JUST(functional::Lerp(values_below, values_above, weights));
     }
 
-    return view::Squeeze(
-        values_below, std::vector<int32_t>({static_cast<int32_t>(values_below->ndim() - 1)}));
+    return view::Squeeze(values_below,
+                         std::vector<int32_t>({static_cast<int32_t>(values_below->ndim() - 1)}));
   }
 
  private:
