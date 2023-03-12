@@ -228,6 +228,11 @@ class ArgsTree(object):
             elif isinstance(self._io_args, list):
                 return stack
 
+        elif self._io_args[0] is not None and not isinstance(
+            self._io_args[0][0], Tensor
+        ):
+            return self._execute_mapping(self._io_args, map_function)
+
         elif self._io_args[0] is not None:
             for i in self._io_args[0]:
                 mapped_value = map_function(i)
