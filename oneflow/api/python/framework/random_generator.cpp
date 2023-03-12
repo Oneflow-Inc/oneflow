@@ -41,7 +41,7 @@ py::tuple GetDefaultGenerators() {
   }
   return default_cuda_generators;
 #else
-  UNIMPLEMENTED() << "Only Support with CUDA";
+  return py::tuple();
 #endif  // WITH_CUDA
 }
 
