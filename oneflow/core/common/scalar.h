@@ -85,6 +85,11 @@ class Scalar {
     return As<T>();
   }
 
+  std::complex<double> ToComplexNum() const {
+    if (!IsComplex()) { return std::complex<double>(As<double>(), 0.0); }
+    return std::complex<double>(cvalue_.real, cvalue_.imag);
+  }
+
   bool IsBool() const { return active_tag_ == HAS_B; }
   bool IsIntegral() const { return active_tag_ == HAS_S || active_tag_ == HAS_U; }
   bool IsFloatingPoint() const { return active_tag_ == HAS_D; }
@@ -103,11 +108,6 @@ class Scalar {
   Scalar& operator/=(const Scalar& other);
 
  private:
-  // Only used in implementation of operator +-*/ and +=-=*=/=.
-  std::complex<double> ToComplexNum() const {
-    if (!IsComplex()) { return std::complex<double>(As<double>(), 0.0); }
-    return std::complex<double>(cvalue_.real, cvalue_.imag);
-  }
   union Value {
     bool b;
     int64_t s;
