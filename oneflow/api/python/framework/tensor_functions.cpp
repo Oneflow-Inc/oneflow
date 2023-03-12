@@ -244,6 +244,7 @@ UNARY_METHOD(PyTensorObject_tanh, functional::Tanh);
 UNARY_METHOD(PyTensorObject_atanh, functional::Atanh);
 UNARY_METHOD(PyTensorObject_logical_not, functional::LogicalNot);
 UNARY_METHOD(PyTensorObject_bitwise_not, functional::BitwiseNot);
+UNARY_METHOD(PyTensorObject_bitwise_not_, functional::BitwiseNotInplace);
 
 // functions that directly pass arguments without parsing
 #define DIRECT_PASS_FUNC(func_name, bind_func)                                   \
@@ -329,8 +330,11 @@ DIRECT_PASS_FUNC(PyTensorObject_broadcast_to, functional::broadcast_to)
 DIRECT_PASS_FUNC(PyTensorObject_unique, functional::unique)
 DIRECT_PASS_FUNC(PyTensorObject_topk, functional::topk)
 DIRECT_PASS_FUNC(PyTensorObject_bitwise_and, functional::bitwise_and)
+DIRECT_PASS_FUNC(PyTensorObject_bitwise_and_, functional::bitwise_and_)
 DIRECT_PASS_FUNC(PyTensorObject_bitwise_or, functional::bitwise_or)
+DIRECT_PASS_FUNC(PyTensorObject_bitwise_or_, functional::bitwise_or_)
 DIRECT_PASS_FUNC(PyTensorObject_bitwise_xor, functional::bitwise_xor)
+DIRECT_PASS_FUNC(PyTensorObject_bitwise_xor_, functional::bitwise_xor_)
 DIRECT_PASS_FUNC(PyTensorObject_baddbmm, functional::baddbmm)
 
 // functions that parsing at Python C api layer
@@ -1079,8 +1083,11 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"unique", (PyCFunction)PyTensorObject_unique, METH_VARARGS | METH_KEYWORDS, NULL},
     {"topk", (PyCFunction)PyTensorObject_topk, METH_VARARGS | METH_KEYWORDS, NULL},
     {"bitwise_and", (PyCFunction)PyTensorObject_bitwise_and, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"bitwise_and_", (PyCFunction)PyTensorObject_bitwise_and_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"bitwise_or", (PyCFunction)PyTensorObject_bitwise_or, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"bitwise_or_", (PyCFunction)PyTensorObject_bitwise_or_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"bitwise_xor", (PyCFunction)PyTensorObject_bitwise_xor, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"bitwise_xor_", (PyCFunction)PyTensorObject_bitwise_xor_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"baddbmm", (PyCFunction)PyTensorObject_baddbmm, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro UNARY_METHOD
@@ -1139,6 +1146,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"floor", PyTensorObject_floor, METH_NOARGS, NULL},
     {"floor_", PyTensorObject_floor_, METH_NOARGS, NULL},
     {"bitwise_not", (PyCFunction)PyTensorObject_bitwise_not, METH_NOARGS, NULL},
+    {"bitwise_not_", (PyCFunction)PyTensorObject_bitwise_not_, METH_NOARGS, NULL},
     {"reshape", (PyCFunction)PyTensorObject_reshape, METH_VARARGS | METH_KEYWORDS, NULL},
     {"reshape_as", (PyCFunction)PyTensorObject_reshape_as, METH_VARARGS | METH_KEYWORDS, NULL},
     {"view", (PyCFunction)PyTensorObject_view, METH_VARARGS | METH_KEYWORDS, NULL},

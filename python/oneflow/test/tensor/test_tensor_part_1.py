@@ -699,6 +699,91 @@ class TestTensor(flow.unittest.TestCase):
         )
         y.mul_(x)
         return y
+    
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(n=5,auto_backward=False)
+    def test_bitwise_and_inplace_tensor(test_case):
+        device = random_device()
+        dims_kwargs = {
+            "ndim": 4,
+            "dim0": random(low=4, high=8).to(int),
+            "dim1": random(low=4, high=8).to(int),
+            "dim2": random(low=4, high=8).to(int),
+            "dim3": random(low=4, high=8).to(int),
+        }
+        # TODO(WangYi): oneflow doesn't support conversion between uint8 and int8
+        # So, use "index" instead of "int" in `random_dtype`
+        
+        dtype = random_dtype(["index", "bool", "unsigned"])
+        x = random_tensor(dtype=int, **dims_kwargs,).to(device).to(dtype)
+        y = random_tensor(dtype=int, **dims_kwargs,).to(device).to(dtype)
+        bool_tensor = random_tensor(low=-1, high=1, **dims_kwargs,).to(device) > 0
+        x.bitwise_and_(y)
+        x.bitwise_and_(bool_tensor)
+        return x
+    
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(n=5,auto_backward=False)
+    def test_bitwise_or_inplace_tensor(test_case):
+        device = random_device()
+        dims_kwargs = {
+            "ndim": 4,
+            "dim0": random(low=4, high=8).to(int),
+            "dim1": random(low=4, high=8).to(int),
+            "dim2": random(low=4, high=8).to(int),
+            "dim3": random(low=4, high=8).to(int),
+        }
+        # TODO(WangYi): oneflow doesn't support conversion between uint8 and int8
+        # So, use "index" instead of "int" in `random_dtype`
+        
+        dtype = random_dtype(["index", "bool", "unsigned"])
+        x = random_tensor(dtype=int, **dims_kwargs,).to(device).to(dtype)
+        y = random_tensor(dtype=int, **dims_kwargs,).to(device).to(dtype)
+        bool_tensor = random_tensor(low=-1, high=1, **dims_kwargs,).to(device) > 0
+        x.bitwise_or_(y)
+        x.bitwise_or_(bool_tensor)
+        return x
+    
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(n=5,auto_backward=False)
+    def test_bitwise_xor_inplace_tensor(test_case):
+        device = random_device()
+        dims_kwargs = {
+            "ndim": 4,
+            "dim0": random(low=4, high=8).to(int),
+            "dim1": random(low=4, high=8).to(int),
+            "dim2": random(low=4, high=8).to(int),
+            "dim3": random(low=4, high=8).to(int),
+        }
+        # TODO(WangYi): oneflow doesn't support conversion between uint8 and int8
+        # So, use "index" instead of "int" in `random_dtype`
+        
+        dtype = random_dtype(["index", "bool", "unsigned"])
+        x = random_tensor(dtype=int, **dims_kwargs,).to(device).to(dtype)
+        y = random_tensor(dtype=int, **dims_kwargs,).to(device).to(dtype)
+        bool_tensor = random_tensor(low=-1, high=1, **dims_kwargs,).to(device) > 0
+        x.bitwise_xor_(y)
+        x.bitwise_xor_(bool_tensor)
+        return x
+    
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(n=5,auto_backward=False)
+    def test_bitwise_not_inplace_tensor(test_case):
+        device = random_device()
+        dims_kwargs = {
+            "ndim": 4,
+            "dim0": random(low=4, high=8).to(int),
+            "dim1": random(low=4, high=8).to(int),
+            "dim2": random(low=4, high=8).to(int),
+            "dim3": random(low=4, high=8).to(int),
+        }
+        # TODO(WangYi): oneflow doesn't support conversion between uint8 and int8
+        # So, use "index" instead of "int" in `random_dtype`
+        
+        dtype = random_dtype(["index", "bool", "unsigned"])
+        x = random_tensor(dtype=int, **dims_kwargs,).to(device).to(dtype)
+        x.bitwise_not_()
+        return x
 
     @flow.unittest.skip_unless_1n1d()
     @autotest(n=5)

@@ -59,8 +59,8 @@ class TestCTCLoss1n1d(flow.unittest.TestCase):
         targets = random_tensor(ndim=2, dim0=2, dim1=3, low=1, high=3, dtype=int).to(
             device_random
         )
-        input_lengths = torch.tensor([5, 5], dtype=torch.int32)
-        target_lengths = torch.tensor([3, 3], dtype=torch.int32)
+        input_lengths = torch.tensor([[5], [5]], dtype=torch.int32)
+        target_lengths = torch.tensor([[3], [3]], dtype=torch.int32)
         out = torch.nn.functional.ctc_loss(
             log_probs,
             targets,
@@ -69,7 +69,7 @@ class TestCTCLoss1n1d(flow.unittest.TestCase):
             reduction=oneof("mean", "none", "sum", nothing()),
         )
         return out
-
+    
 
 if __name__ == "__main__":
     unittest.main()

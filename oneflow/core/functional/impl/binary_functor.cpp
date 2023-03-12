@@ -532,6 +532,35 @@ class BroadcastBitwiseAndFunctor : public BinaryFunctor {
   }
 };
 
+class BroadcastBitwiseAndInplaceFunctor {
+ public:
+  BroadcastBitwiseAndInplaceFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("broadcast_bitwise_and").Input("x").Input("y").Output("z").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    auto tensor_x = x;
+    auto tensor_y = y;
+    JUST(CastDeviceForCPUScalarTensor(tensor_x, tensor_y, /*inplace=*/true));
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({tensor_x, tensor_y}).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+
+    std::shared_ptr<one::Tensor>& x_cast = input_tuple.at(0);
+    std::shared_ptr<one::Tensor>& y_cast = input_tuple.at(1);
+    JUST(CheckInplaceCastValid(x, x_cast));
+    JUST(CheckInplaceShapeCanExpandTo(*y_cast->shape(), *x_cast->shape()));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = x_cast;
+    JUST(OpInterpUtil::Dispatch(*op_, input_tuple, outputs.get()));
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class BroadcastBitwiseOrFunctor : public BinaryFunctor {
  public:
   BroadcastBitwiseOrFunctor() {
@@ -540,12 +569,70 @@ class BroadcastBitwiseOrFunctor : public BinaryFunctor {
   }
 };
 
+class BroadcastBitwiseOrInplaceFunctor : public BinaryFunctor {
+ public:
+  BroadcastBitwiseOrInplaceFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("broadcast_bitwise_or").Input("x").Input("y").Output("z").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    auto tensor_x = x;
+    auto tensor_y = y;
+    JUST(CastDeviceForCPUScalarTensor(tensor_x, tensor_y, /*inplace=*/true));
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({tensor_x, tensor_y}).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+
+    std::shared_ptr<one::Tensor>& x_cast = input_tuple.at(0);
+    std::shared_ptr<one::Tensor>& y_cast = input_tuple.at(1);
+    JUST(CheckInplaceCastValid(x, x_cast));
+    JUST(CheckInplaceShapeCanExpandTo(*y_cast->shape(), *x_cast->shape()));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = x_cast;
+    JUST(OpInterpUtil::Dispatch(*op_, input_tuple, outputs.get()));
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class BroadcastBitwiseXorFunctor : public BinaryFunctor {
  public:
   BroadcastBitwiseXorFunctor() {
     op_ = CHECK_JUST(
         one::OpBuilder("broadcast_bitwise_xor").Input("x").Input("y").Output("z").Build());
   }
+};
+
+class BroadcastBitwiseXorInplaceFunctor : public BinaryFunctor {
+ public:
+  BroadcastBitwiseXorInplaceFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("broadcast_bitwise_xor").Input("x").Input("y").Output("z").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    auto tensor_x = x;
+    auto tensor_y = y;
+    JUST(CastDeviceForCPUScalarTensor(tensor_x, tensor_y, /*inplace=*/true));
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({tensor_x, tensor_y}).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+
+    std::shared_ptr<one::Tensor>& x_cast = input_tuple.at(0);
+    std::shared_ptr<one::Tensor>& y_cast = input_tuple.at(1);
+    JUST(CheckInplaceCastValid(x, x_cast));
+    JUST(CheckInplaceShapeCanExpandTo(*y_cast->shape(), *x_cast->shape()));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = x_cast;
+    JUST(OpInterpUtil::Dispatch(*op_, input_tuple, outputs.get()));
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class BroadcastLessFunctor : public BinaryFunctor {
@@ -645,8 +732,11 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BroadcastLogicalOrFunctor>("BroadcastLogicalOr");
   m.add_functor<impl::BroadcastLogicalXorFunctor>("BroadcastLogicalXor");
   m.add_functor<impl::BroadcastBitwiseAndFunctor>("BroadcastBitwiseAnd");
+  m.add_functor<impl::BroadcastBitwiseAndInplaceFunctor>("BroadcastBitwiseAndInplace");
   m.add_functor<impl::BroadcastBitwiseOrFunctor>("BroadcastBitwiseOr");
+  m.add_functor<impl::BroadcastBitwiseOrInplaceFunctor>("BroadcastBitwiseOrInplace");
   m.add_functor<impl::BroadcastBitwiseXorFunctor>("BroadcastBitwiseXor");
+  m.add_functor<impl::BroadcastBitwiseXorInplaceFunctor>("BroadcastBitwiseXorInplace");
   m.add_functor<impl::BroadcastLessFunctor>("BroadcastLess");
   m.add_functor<impl::BroadcastLessEqualFunctor>("BroadcastLessEqual");
   m.add_functor<impl::ScalarAddByTensorFunctor>("ScalarAddByTensor");
