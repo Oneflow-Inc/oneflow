@@ -221,7 +221,7 @@ class enable:
     mock_torch.enable(lazy=None, verbose=None) -> None
 
     Enable mock function.
-    When called, all `torch` modules are automatically replaced with `oneflow` modules at runtime without any code changes, unless `mock_torch.disable()` is called.
+    When called, all `torch` modules are automatically replaced with `oneflow` modules at runtime without any code changes, until `mock_torch.disable()` is called.
 
     Args:
         lazy (bool, optional): If `lazy = False`, then an error is reported immediately when an unimplemented interface is found during the import phase of the imported package. If `lazy = True`, then no error is reported when an unimplemented interface is found during the package import phase, but only when the interface is actually called in the code.
@@ -240,6 +240,7 @@ class enable:
         x = torch.zeros(2, 3)
         print(isinstance(x, flow.Tensor)) # This torch will be OneFlow, so the output here will be True.
 
+        flow.mock_torch.disable()
         y = torch.zeros(2, 3)
         print(isinstance(y, flow.Tensor)) # This torch will be PyTorch, so the output here will be False.
 
