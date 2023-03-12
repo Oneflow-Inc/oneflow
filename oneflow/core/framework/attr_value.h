@@ -28,23 +28,23 @@ limitations under the License.
 #include "oneflow/core/common/protobuf.h"
 
 namespace std {
-    template <>
-    struct hash<std::complex<double>> {
-        size_t operator()(const std::complex<double>& c) const {
-            return std::hash<double>()(c.real()) ^ std::hash<double>()(c.imag());
-        }
-    };
-} // namespace std
+template<>
+struct hash<std::complex<double>> {
+  size_t operator()(const std::complex<double>& c) const {
+    return std::hash<double>()(c.real()) ^ std::hash<double>()(c.imag());
+  }
+};
+}  // namespace std
 
 namespace fmt {
-    template <>
-    struct formatter<std::complex<double>> : formatter<std::string_view> {
-        template <typename FormatContext>
-        auto format(const std::complex<double>& c, FormatContext& ctx) {
-            return formatter<std::string_view>::format(fmt::format("({}+{}i)", c.real(), c.imag()), ctx);
-        }
-    };
-} // namespace fmt
+template<>
+struct formatter<std::complex<double>> : formatter<std::string_view> {
+  template<typename FormatContext>
+  auto format(const std::complex<double>& c, FormatContext& ctx) {
+    return formatter<std::string_view>::format(fmt::format("({}+{}i)", c.real(), c.imag()), ctx);
+  }
+};
+}  // namespace fmt
 
 namespace oneflow {
 
@@ -61,7 +61,6 @@ namespace user_op {
   OF_PP_MAKE_TUPLE_SEQ(at_float, float, AttrType::kAtFloat)    \
   OF_PP_MAKE_TUPLE_SEQ(at_double, double, AttrType::kAtDouble) \
   OF_PP_MAKE_TUPLE_SEQ(at_string, std::string, AttrType::kAtString)
-
 
 #define ENUM_ATTR_SEQ OF_PP_MAKE_TUPLE_SEQ(at_data_type, DataType, AttrType::kAtDataType)
 
@@ -86,7 +85,8 @@ namespace user_op {
 
 #define DEVICE_ATTR_SEQ OF_PP_MAKE_TUPLE_SEQ(at_device, Symbol<Device>, AttrType::kAtDevice)
 
-#define COMPLEX_DOUBLE_ATTR_SEQ OF_PP_MAKE_TUPLE_SEQ(at_complex_double, std::complex<double>, AttrType::kAtComplexDouble)
+#define COMPLEX_DOUBLE_ATTR_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ(at_complex_double, std::complex<double>, AttrType::kAtComplexDouble)
 
 #define ATTR_SEQ        \
   BASIC_ATTR_SEQ        \

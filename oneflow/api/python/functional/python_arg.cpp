@@ -257,7 +257,11 @@ bool PythonArg::TypeCheck(ValueType type) const {
     case kDTYPE_LIST: return PyDTypeSequenceCheck(object_);
     case kSHAPE_LIST: return PyShapeSequenceCheck(object_);
     case kCOMPLEX_FLOAT:
-    case kCOMPLEX_DOUBLE: return PyComplex_Check(object_) || PyFloat_Check(object_) || PyLong_Check(object_) || numpy::PyArrayCheckComplexScalar(object_) || numpy::PyArrayCheckFloatScalar(object_) || numpy::PyArrayCheckLongScalar(object_) || PyComplexScalarTensorCheck(object_) || PyFloatScalarTensorCheck(object_) || PyIntegerScalarTensorCheck(object_);
+    case kCOMPLEX_DOUBLE:
+      return PyComplex_Check(object_) || PyFloat_Check(object_) || PyLong_Check(object_)
+             || numpy::PyArrayCheckComplexScalar(object_) || numpy::PyArrayCheckFloatScalar(object_)
+             || numpy::PyArrayCheckLongScalar(object_) || PyComplexScalarTensorCheck(object_)
+             || PyFloatScalarTensorCheck(object_) || PyIntegerScalarTensorCheck(object_);
     default: {
       THROW(RuntimeError) << "Can not check type " << ValueTypeName(type);
     }

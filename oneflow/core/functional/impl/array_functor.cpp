@@ -193,14 +193,18 @@ class GlobalConstantFunctor {
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "complex_value", "is_complex_value", "floating_value",
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "complex_value",
+                                                 "is_complex_value", "floating_value",
                                                  "is_floating_value", "integer_value", "nd_sbp");
     if (IsComplexDataType(dtype->data_type())) {
-      attrs.SetAllAttrs(shape, dtype->data_type(), value.ToComplexNum(), true, NullOpt, false, NullOpt, NullOpt);
+      attrs.SetAllAttrs(shape, dtype->data_type(), value.ToComplexNum(), true, NullOpt, false,
+                        NullOpt, NullOpt);
     } else if (IsIntegralDataType(dtype->data_type())) {
-      attrs.SetAllAttrs(shape, dtype->data_type(), NullOpt, false, NullOpt, false, value.As<int64_t>(), NullOpt);
+      attrs.SetAllAttrs(shape, dtype->data_type(), NullOpt, false, NullOpt, false,
+                        value.As<int64_t>(), NullOpt);
     } else {
-      attrs.SetAllAttrs(shape, dtype->data_type(), NullOpt, false, value.As<double>(), true, NullOpt, NullOpt);
+      attrs.SetAllAttrs(shape, dtype->data_type(), NullOpt, false, value.As<double>(), true,
+                        NullOpt, NullOpt);
     }
 
     auto dispatch_constant =
@@ -250,14 +254,18 @@ class ConstantFunctor {
                                              GetGlobalParallelDescFromDevice(device),
                                              *JUST(GetSbpList(GlobalMode::nd_sbp()))));
     }
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "complex_value", "is_complex_value", "floating_value",
-                                                 "is_floating_value", "integer_value");
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "complex_value", "is_complex_value",
+                                       "floating_value", "is_floating_value", "integer_value");
     if (IsComplexDataType(dtype->data_type())) {
-      attrs.SetAllAttrs(shape, dtype->data_type(), value.ToComplexNum(), true, NullOpt, false, NullOpt);
+      attrs.SetAllAttrs(shape, dtype->data_type(), value.ToComplexNum(), true, NullOpt, false,
+                        NullOpt);
     } else if (IsIntegralDataType(dtype->data_type())) {
-      attrs.SetAllAttrs(shape, dtype->data_type(), NullOpt, false, NullOpt, false, value.As<int64_t>());
+      attrs.SetAllAttrs(shape, dtype->data_type(), NullOpt, false, NullOpt, false,
+                        value.As<int64_t>());
     } else {
-      attrs.SetAllAttrs(shape, dtype->data_type(), NullOpt, false, value.As<double>(), true, NullOpt);
+      attrs.SetAllAttrs(shape, dtype->data_type(), NullOpt, false, value.As<double>(), true,
+                        NullOpt);
     }
     if (device.has_value()) {
       Symbol<Device> device_symbol = JUST(device);

@@ -142,7 +142,9 @@ std::shared_ptr<TensorTuple> PyUnpackTensorTuple(PyObject* obj) {
 }
 
 // Scalar
-bool PyScalarCheck(PyObject* obj) { return PyLong_Check(obj) || PyFloat_Check(obj) || PyComplex_Check(obj); }
+bool PyScalarCheck(PyObject* obj) {
+  return PyLong_Check(obj) || PyFloat_Check(obj) || PyComplex_Check(obj);
+}
 
 Scalar PyUnpackScalar(PyObject* obj) {
   if (PyBool_Check(obj)) {
@@ -217,7 +219,8 @@ SCALAR_TENSOR_UNPACK_FUNC_IMPL(PyUnpackIntegerScalarTensor_AsLongLong, long long
 SCALAR_TENSOR_UNPACK_FUNC_IMPL(PyUnpackFloatScalarTensor_AsDouble, double,
                                FLOATING_DATA_TYPE_SEQ INT_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ);
 SCALAR_TENSOR_UNPACK_FUNC_IMPL(PyUnpackComplexScalarTensor_AsCComplex, std::complex<double>,
-                               COMPLEX_DATA_TYPE_SEQ FLOATING_DATA_TYPE_SEQ INT_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ);
+                               COMPLEX_DATA_TYPE_SEQ FLOATING_DATA_TYPE_SEQ INT_DATA_TYPE_SEQ
+                                   UNSIGNED_INT_DATA_TYPE_SEQ);
 #undef SWITCH_SCALAR_TENSOR_TO_SCALAR
 #undef SCALAR_TENSOR_UNPACK_FUNC_IMPL
 

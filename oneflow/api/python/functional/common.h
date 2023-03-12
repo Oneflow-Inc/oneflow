@@ -98,7 +98,7 @@ Scalar PyUnpackScalarTensor(PyObject* obj);
 DefinePyTypeScalarTensorCheck(Bool, IsBoolDataType);         // PyBoolScalarTensorCheck
 DefinePyTypeScalarTensorCheck(Integer, IsIntegralDataType);  // PyIntegerScalarTensorCheck
 DefinePyTypeScalarTensorCheck(Float, IsFloatingDataType);    // PyFloatScalarTensorCheck
-DefinePyTypeScalarTensorCheck(Complex, IsComplexDataType);    // PyComplexScalarTensorCheck
+DefinePyTypeScalarTensorCheck(Complex, IsComplexDataType);   // PyComplexScalarTensorCheck
 #undef DefinePyTypeScalarTensorCheck
 
 bool PyUnpackBoolScalarTensor(PyObject* obj);
