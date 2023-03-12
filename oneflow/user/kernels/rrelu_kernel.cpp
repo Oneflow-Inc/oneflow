@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/user/kernels/distributions/common.h"
+#include "oneflow/user/kernels/random_seed_util.h"
 
 namespace oneflow {
 
@@ -46,6 +47,8 @@ class CpuRReluKernel final : public user_op::OpKernel {
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     const auto& generator = CHECK_JUST(one::MakeGenerator(DeviceType::kCPU));
+    generator->set_current_seed(CHECK_JUST(
+        GetOpKernelRandomSeedInCurrentRank(ctx, ctx->Attr<int64_t>("seed"), {"output", 0})));
     return std::make_shared<DistributionKernelState>(generator);
   }
 
