@@ -59,9 +59,10 @@ namespace oneflow {
   y_tensor->set_shape(y_shape);
 
   // set output shape of mean and varience
-  Shape mean_shape = x_shape;  // borrow from input shape
-  size_t mean_num_axes = x_shape.NumAxes();
-  mean_shape.Set(mean_num_axes - 1, 1);
+  DimVector mean_dim_vec;
+  mean_dim_vec.push_back(x_shape.Count(0, x_shape.NumAxes()-1));
+  Shape mean_shape(mean_dim_vec);  // borrow from input shape
+
   user_op::TensorDesc* mean_tensor = ctx->MutOutputTensorDesc("mean", 0);
   user_op::TensorDesc* varience_tensor = ctx->MutOutputTensorDesc("inv_variance", 0);
   mean_tensor->set_shape(mean_shape);

@@ -65,6 +65,12 @@ class FusedSkipLayerNorm(nn.Module):
         skip=skip, alpha=alpha, epsilon=eps)
 
 def _test_skip_layer_norm(test_case, x_shape, has_gamma, has_beta, has_bias, has_skip, eps=1e-6, alpha=1e-5, dtype=flow.float32):
+    print(x_shape)
+    print(x_shape[-1])
+
+    normalize_shape = list()
+    normalize_shape.append(x_shape[-1])
+
     np_dtype = np.float16 if dtype is flow.float16 else np.float32
     
     # generate np array
@@ -72,17 +78,17 @@ def _test_skip_layer_norm(test_case, x_shape, has_gamma, has_beta, has_bias, has
 
     flow_gamma = None
     if has_gamma:
-        np_gamma = np.random.randn(*x_shape[-1]).astype(np_dtype)
+        np_gamma = np.random.randn(*normalize_shape).astype(np_dtype)
         flow_gamma = flow.tensor(np_gamma).to(device='cuda', dtype=dtype)
     
     flow_beta = None
     if has_beta:
-        np_beta = np.random.randn(*x_shape[-1]).astype(np_dtype)
+        np_beta = np.random.randn(*normalize_shape).astype(np_dtype)
         flow_beta = flow.tensor(np_beta).to(device='cuda', dtype=dtype)
 
     flow_bias = None
     if has_bias:
-        np_bias = np.random.randn(*x_shape[-1]).astype(np_dtype)
+        np_bias = np.random.randn(*normalize_shape).astype(np_dtype)
         flow_bias = flow.tensor(np_bias).to(device='cuda', dtype=dtype)
 
     flow_skip_naive = None
@@ -116,7 +122,7 @@ class TestSkipLayerNorm(flow.unittest.TestCase):
         ]
 
         # set up test parameters
-        arg_dict["x_shape"] = [32, 1024]
+        arg_dict["x_shape"] = [[32, 1024]]
         arg_dict["has_gamma"] = [True]
         arg_dict["has_beta"] = [True]
         arg_dict["has_bias"] = [True]

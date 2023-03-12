@@ -910,10 +910,10 @@ class SkipLayerNormFunctor {
             std::shared_ptr<OpExpr> op_pointer = CHECK_JUST(new_op.Build());
             ops_.insert(std::pair<std::tuple<int, bool, bool, bool>, std::shared_ptr<OpExpr>>(
                 std::tuple<int, bool, bool, bool>(nb_skip, has_gamma, has_beta, has_bias), op_pointer));
-          } // has_pre_bias
+          } // has_bias
         } // has_beta
       } // has_gamma
-    } // number of residual
+    } // number of skip
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -931,7 +931,7 @@ class SkipLayerNormFunctor {
 #define GAMMA_BETA_BIAS_SHAPE_CHECK(tensor) \
   const auto& tensor##_shape = *(JUST(tensor)->shape()); \
   CHECK_EQ_OR_RETURN(tensor##_shape.NumAxes(), 1) \
-        << "number of axes of \'" << #tensor << "\' should have be greater than 1, yet get " \
+        << "number of axes of \'" << #tensor << "\' should have be equal to 1, yet get " \
         << tensor##_shape.NumAxes(); \
   CHECK_EQ_OR_RETURN(tensor##_shape.At(0), x_shape.At(x_shape.NumAxes() - 1)) \
         << "dimension 1 of \'" << #tensor << "\'(" << tensor##_shape.At(0) \

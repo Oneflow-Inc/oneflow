@@ -158,7 +158,7 @@ class SkipLayerNormGpuKernel final : public user_op::OpKernel, public user_op::C
         tensor##_shape = tensor->shape_view(); \
         tensor##_ptr = tensor->dptr<T>(); \
         CHECK_EQ(tensor##_shape.NumAxes(), 1) \
-            << "number of axes of \'" << #tensor << "\' should have be greater than 1, yet get " \
+            << "number of axes of \'" << #tensor << "\' should have be equal to 1, yet get " \
             << tensor##_shape.NumAxes(); \
         CHECK_EQ(tensor##_shape.At(0), x_shape.At(x_shape.NumAxes() - 1)) \
             << "dimension 1 of \'" << #tensor << "\'(" << tensor##_shape.At(0) \
