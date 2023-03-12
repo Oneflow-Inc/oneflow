@@ -26,7 +26,7 @@ struct SkipLoad {
         cuda::layer_norm::Pack<DST, N> bias_pack;
         cuda::layer_norm::Pack<DST, N> skip_pack;
         const int64_t offset = (row * row_size + col) / N;
-        const int64_t bias_offset = (row * row_size + col) / N;
+        const int64_t bias_offset = col / N;
         src_pack.storage = *(reinterpret_cast<const cuda::layer_norm::PackType<SRC, N>*>(src) + offset);
         if (bias) {
             bias_pack.storage = 
