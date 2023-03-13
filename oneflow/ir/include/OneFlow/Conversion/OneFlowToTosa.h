@@ -23,6 +23,11 @@ namespace mlir {
 
 namespace oneflow {
 
+namespace tosa_mode {
+extern const std::string CODEGEN;
+extern const std::string BACKEND;
+}  // namespace tosa_mode
+
 std::unique_ptr<mlir::Pass> createLowerOneFlowToTosaPass();
 std::unique_ptr<mlir::Pass> createConvertToSignlessForTosaPass();
 
