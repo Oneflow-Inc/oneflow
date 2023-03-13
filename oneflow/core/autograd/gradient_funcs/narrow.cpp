@@ -67,8 +67,8 @@ class Narrow : public OpExprGradFunction<NarrowCaptureState> {
       if (LazyMode::is_enabled()) {
         like = ctx->SavedTensors().at(0);
       } else if (dy->is_local()) {
-        like = JUST(
-            functional::Empty(ctx->shape, dy->dtype(), JUST(dy->device()), /*pin_memory=*/false));
+        like = JUST(functional::Empty(ctx->shape, dy->dtype(), JUST(dy->device()),
+                                      ctx->requires_grad, /*pin_memory=*/false));
       } else {
         like = JUST(
             functional::GlobalEmpty(ctx->shape, dy->dtype(), JUST(dy->parallel_desc()),
