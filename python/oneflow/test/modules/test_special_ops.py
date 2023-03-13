@@ -67,7 +67,7 @@ class TestSpecialOps(flow.unittest.TestCase):
         x = random_tensor().to(device).to(x_dtype)
         y = torch.special.expm1(x)
         return y
-    
+
     @autotest(n=5, auto_backward="auto")
     def test_flow_round_with_random_data(test_case):
         device = random_device()
@@ -88,19 +88,17 @@ class TestSpecialOps(flow.unittest.TestCase):
         num_dims = random(low=1, high=5).to(int)
         device = random_device()
         x = random_tensor(ndim=num_dims).to(device)
-        y = torch.special.log_softmax(
-            x, dim=random(low=0, high=num_dims).to(int))
+        y = torch.special.log_softmax(x, dim=random(low=0, high=num_dims).to(int))
         return y
-    
+
     @autotest(n=5, auto_backward="auto")
     def test_flow_softmax_with_random_data(test_case):
         num_dims = random(low=1, high=5).to(int)
         device = random_device()
         x = random_tensor(ndim=num_dims).to(device)
-        y = torch.special.softmax(
-            x, dim=random(low=0, high=num_dims).to(int))
+        y = torch.special.softmax(x, dim=random(low=0, high=num_dims).to(int))
         return y
-    
+
     @autotest(n=5, check_graph="auto")
     def test_flow_logsumexp_with_random_data(test_case):
         device = random_device()

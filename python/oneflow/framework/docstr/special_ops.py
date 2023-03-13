@@ -85,4 +85,3 @@ add_docstr(
     Alias for :func:`oneflow.softmax`. 
     """,
 )
-
