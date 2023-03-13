@@ -91,6 +91,7 @@ def use_deterministic_algorithms(mode, *, warn_only=False):
 
 from oneflow._C import abs
 from oneflow._C import exp
+from oneflow._C import exp2
 from oneflow._C import acos
 from oneflow._C import acos as arccos
 from oneflow._C import acosh
@@ -226,7 +227,6 @@ from oneflow._C import dim_gather as gather
 from oneflow._C import deform_conv2d
 from oneflow._C import gather_nd
 from oneflow._C import roi_align
-from oneflow._C import decode_onerec
 from oneflow._C import dot
 from oneflow._C import eye
 from oneflow._C import erfinv, erfinv_
@@ -402,6 +402,7 @@ from oneflow.nn.modules.constant import new_full_op as new_full
 from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.empty import new_empty_op as new_empty
 from oneflow.nn.modules.empty import empty_like_op as empty_like
+from oneflow._C import empty_strided
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
 from oneflow._C import movedim
 from oneflow.nn.modules.expand import expand_op as expand

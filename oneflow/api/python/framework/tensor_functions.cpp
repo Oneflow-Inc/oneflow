@@ -200,6 +200,7 @@ PyNumberMethods PyTensorObject_as_number = {
 
 UNARY_METHOD(PyTensorObject_abs, functional::Abs);
 UNARY_METHOD(PyTensorObject_exp, functional::Exp);
+UNARY_METHOD(PyTensorObject_exp2, functional::Exp2);
 UNARY_METHOD(PyTensorObject_floor, functional::Floor);
 UNARY_METHOD(PyTensorObject_floor_, functional::Floor_);
 UNARY_METHOD(PyTensorObject_sign, functional::Sign);
@@ -243,7 +244,8 @@ UNARY_METHOD(PyTensorObject_tanh, functional::Tanh);
 UNARY_METHOD(PyTensorObject_atanh, functional::Atanh);
 UNARY_METHOD(PyTensorObject_logical_not, functional::LogicalNot);
 UNARY_METHOD(PyTensorObject_bitwise_not, functional::BitwiseNot);
-
+UNARY_METHOD(PyTensorObject_inv, functional::Inv);
+UNARY_METHOD(PyTensorObject_trunc, functional::Trunc);
 // functions that directly pass arguments without parsing
 #define DIRECT_PASS_FUNC(func_name, bind_func)                                   \
   static PyObject* func_name(PyObject* self, PyObject* args, PyObject* kwargs) { \
@@ -331,6 +333,12 @@ DIRECT_PASS_FUNC(PyTensorObject_bitwise_and, functional::bitwise_and)
 DIRECT_PASS_FUNC(PyTensorObject_bitwise_or, functional::bitwise_or)
 DIRECT_PASS_FUNC(PyTensorObject_bitwise_xor, functional::bitwise_xor)
 DIRECT_PASS_FUNC(PyTensorObject_baddbmm, functional::baddbmm)
+DIRECT_PASS_FUNC(PyTensorObject_mm, functional::mm)
+DIRECT_PASS_FUNC(PyTensorObject_sub, functional::sub)
+DIRECT_PASS_FUNC(PyTensorObject_mv, functional::matrix_vector_product)
+DIRECT_PASS_FUNC(PyTensorObject_fill_, functional::fill_)
+DIRECT_PASS_FUNC(PyTensorObject_gather, functional::dim_gather)
+DIRECT_PASS_FUNC(PyTensorObject_repeat_interleave, functional::repeat_interleave)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
@@ -1081,10 +1089,18 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"bitwise_or", (PyCFunction)PyTensorObject_bitwise_or, METH_VARARGS | METH_KEYWORDS, NULL},
     {"bitwise_xor", (PyCFunction)PyTensorObject_bitwise_xor, METH_VARARGS | METH_KEYWORDS, NULL},
     {"baddbmm", (PyCFunction)PyTensorObject_baddbmm, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"mm", (PyCFunction)PyTensorObject_mm, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"sub", (PyCFunction)PyTensorObject_sub, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"mv", (PyCFunction)PyTensorObject_mv, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"fill_", (PyCFunction)PyTensorObject_fill_, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"gather", (PyCFunction)PyTensorObject_gather, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"repeat_interleave", (PyCFunction)PyTensorObject_repeat_interleave,
+     METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},
     {"exp", PyTensorObject_exp, METH_NOARGS, NULL},
+    {"exp2", PyTensorObject_exp2, METH_NOARGS, NULL},
     {"floor", PyTensorObject_floor, METH_NOARGS, NULL},
     {"floor_", PyTensorObject_floor_, METH_NOARGS, NULL},
     {"acos", PyTensorObject_acos, METH_NOARGS, NULL},
@@ -1132,6 +1148,8 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"sin", PyTensorObject_sin, METH_NOARGS, NULL},
     {"sin_", PyTensorObject_sin_, METH_NOARGS, NULL},
     {"isnan", PyTensorObject_isnan, METH_NOARGS, NULL},
+    {"inverse", PyTensorObject_inv, METH_NOARGS, NULL},
+    {"trunc", PyTensorObject_trunc, METH_NOARGS, NULL},
     {"isinf", PyTensorObject_isinf, METH_NOARGS, NULL},
     {"logical_not", PyTensorObject_logical_not, METH_NOARGS, NULL},
     {"floor", PyTensorObject_floor, METH_NOARGS, NULL},

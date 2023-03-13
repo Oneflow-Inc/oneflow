@@ -936,7 +936,11 @@
   bind_python: True
 
 - name: "empty"
-  signature: "Tensor (Shape shape, *, DataType dtype, Device device=None, Bool pin_memory=False) => Empty"
+  signature: "Tensor (Shape shape, *, DataType dtype, Device device=None, Bool requires_grad=False, Bool pin_memory=False) => Empty"
+  bind_python: True
+
+- name: "empty_strided"
+  signature: "Tensor (Int64List shape, Int64List stride, DataType dtype=None, Device device=None, Bool requires_grad=False, Bool pin_memory=False) => EmptyStrided"
   bind_python: True
 
 - name: "global_empty"
@@ -1130,8 +1134,16 @@
   signature: "Tensor (Tensor x) => Exp"
   bind_python: True
 
+- name: "exp2"
+  signature: "Tensor (Tensor x) => Exp2"
+  bind_python: True 
+
 - name: "exp_grad"
   signature: "Tensor (Tensor x, Tensor dy) => ExpGrad"
+  bind_python: False
+
+- name: "exp2_grad"
+  signature: "Tensor (Tensor x, Tensor dy) => Exp2Grad"
   bind_python: False
 
 - name: "gather"
@@ -2696,10 +2708,6 @@
   signature: "Tensor (Tensor input, Int64 dim, Tensor index) => IndexSelect"
   bind_python: True
 
-- name: "decode_onerec"
-  signature: "Tensor (Tensor input, String key, DataType dtype, Shape shape, Bool is_dynamic=False, Shape reshape=None, Shape batch_padding=None) => DecodeOneRec"
-  bind_python: True
-
 - name: "dot"
   signature: "Tensor (Tensor input, Tensor other) => Dot"
   bind_python: True
@@ -3086,6 +3094,10 @@
 
 - name: "exp_grad_grad"
   signature: "Tensor (Tensor x, Tensor dydx) =>  ExpGradGrad"
+  bind_python: False
+
+- name: "exp2_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dydx) =>  Exp2GradGrad"
   bind_python: False
 
 - name: "expm1_grad_grad"
