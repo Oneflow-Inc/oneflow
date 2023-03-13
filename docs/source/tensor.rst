@@ -232,6 +232,7 @@ Tensor class reference
     Tensor.erfinv
     Tensor.erfinv_
     Tensor.exp
+    Tensor.exp2
     Tensor.expand
     Tensor.expand_as
     Tensor.expm1
@@ -378,6 +379,7 @@ Tensor class reference
     Tensor.nms
     Tensor.pin_memory
     Tensor.is_pinned
+    Tensor.inverse
     Tensor.cross
     Tensor.scatter
     Tensor.scatter_
