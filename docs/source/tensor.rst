@@ -302,6 +302,8 @@ Tensor class reference
     Tensor.normal_
     Tensor.numel
     Tensor.numpy
+    Tensor.offload
+    Tensor.load
     Tensor.permute
     Tensor.pow
     Tensor.prod

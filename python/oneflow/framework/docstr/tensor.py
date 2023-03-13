@@ -198,6 +198,50 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.offload,
+    """
+    Tensor.offload() -> None
+
+    Transfer tensor data from GPU memory back to host (CPU) memory. If the tensor is already in host (CPU) memory, the operation does nothing and gives a warning.
+
+    Note:
+        Both global tensor and local tensor of oneflow are applicable to this operation.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+
+        >>> x = flow.tensor(np.random.randn(1024, 1024, 100), dtype=flow.float32, device=flow.device("cuda"), )
+        >>> x.offload() # Move the Tensor from the GPU to the CPU
+        >>> TODO
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.load,
+    """
+    Tensor.load() -> None
+
+    Load tensor data stored on the host (CPU) back to GPU memory. If the tensor is already in GPU memory, the operation does nothing and gives a warning.
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.is_offloaded,
+    """
+    Tensor.is_offloaded() -> bool
+
+    Determine whether the tensor has been moved to CPU memory and the CUDA device memory has been released.
+
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.new_empty,
     """
     Tensor.new_empty(*size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
