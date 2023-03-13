@@ -207,6 +207,8 @@ add_docstr(
     Note:
         Both global tensor and local tensor of oneflow are applicable to this operation.
 
+        Use with :func:`oneflow.Tensor.load` and :func:`oneflow.Tensor.is_offloaded`.        
+
     For example:
 
     .. code-block:: python
@@ -214,10 +216,35 @@ add_docstr(
         >>> import oneflow as flow
         >>> import numpy as np
 
+        >>> # local tensor
         >>> x = flow.tensor(np.random.randn(1024, 1024, 100), dtype=flow.float32, device=flow.device("cuda"), )
+        >>> before_id = id(x)
         >>> x.offload() # Move the Tensor from the GPU to the CPU
-        >>> TODO
+        >>> after_id = id(x)
+        >>> after_id == before_id
+        True
+        >>> x.is_offloaded()
+        True
+        >>> x.load() # Move the Tensor from the cpu to the gpu
+        >>> x.is_offloaded()
+        False
 
+    .. code-block:: python
+
+        >>> import oneflow as flow
+
+        >>> # global tensor
+        >>> # Run on 2 ranks respectively
+        >>> placement = flow.placement("cuda", ranks=[0, 1])
+        >>> sbp = flow.sbp.broadcast
+        >>> x = flow.randn(1024, 1024, 100, dtype=flow.float32, placement=placement, sbp=sbp) # doctest: +SKIP
+        >>> before_id = id(x) # doctest: +SKIP
+        >>> x.offload() # doctest: +SKIP
+        >>> after_id = id(x) # doctest: +SKIP
+        >>> print(after_id == before_id) # doctest: +SKIP
+        >>> print(x.is_offloaded()) # doctest: +SKIP
+        >>> x.load() # doctest: +SKIP
+        >>> print(x.is_offloaded()) # doctest: +SKIP
     """,
 )
 
