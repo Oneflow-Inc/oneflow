@@ -193,18 +193,12 @@ class GlobalConstantFunctor {
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "complex_value",
-                                                 "is_complex_value", "floating_value",
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "floating_value",
                                                  "is_floating_value", "integer_value", "nd_sbp");
-    if (IsComplexDataType(dtype->data_type())) {
-      attrs.SetAllAttrs(shape, dtype->data_type(), value.ToComplexNum(), true, NullOpt, false,
-                        NullOpt, NullOpt);
-    } else if (IsIntegralDataType(dtype->data_type())) {
-      attrs.SetAllAttrs(shape, dtype->data_type(), NullOpt, false, NullOpt, false,
-                        value.As<int64_t>(), NullOpt);
+    if (IsIntegralDataType(dtype->data_type())) {
+      attrs.SetAllAttrs(shape, dtype->data_type(), NullOpt, false, value.As<int64_t>(), NullOpt);
     } else {
-      attrs.SetAllAttrs(shape, dtype->data_type(), NullOpt, false, value.As<double>(), true,
-                        NullOpt, NullOpt);
+      attrs.SetAllAttrs(shape, dtype->data_type(), value.As<double>(), true, NullOpt, NullOpt);
     }
 
     auto dispatch_constant =
@@ -216,7 +210,7 @@ class GlobalConstantFunctor {
             nd_sbp[i] = SbpParallelToString(*sbp_tuple[i]);
           }
         }
-        attrs.SetAttr<7>(nd_sbp);
+        attrs.SetAttr<5>(nd_sbp);
       }
       const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
       return OpInterpUtil::Dispatch<Tensor>(*op_, {},
@@ -254,18 +248,12 @@ class ConstantFunctor {
                                              GetGlobalParallelDescFromDevice(device),
                                              *JUST(GetSbpList(GlobalMode::nd_sbp()))));
     }
-    auto& attrs =
-        THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "complex_value", "is_complex_value",
-                                       "floating_value", "is_floating_value", "integer_value");
-    if (IsComplexDataType(dtype->data_type())) {
-      attrs.SetAllAttrs(shape, dtype->data_type(), value.ToComplexNum(), true, NullOpt, false,
-                        NullOpt);
-    } else if (IsIntegralDataType(dtype->data_type())) {
-      attrs.SetAllAttrs(shape, dtype->data_type(), NullOpt, false, NullOpt, false,
-                        value.As<int64_t>());
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "floating_value",
+                                                 "is_floating_value", "integer_value");
+    if (IsIntegralDataType(dtype->data_type())) {
+      attrs.SetAllAttrs(shape, dtype->data_type(), NullOpt, false, value.As<int64_t>());
     } else {
-      attrs.SetAllAttrs(shape, dtype->data_type(), NullOpt, false, value.As<double>(), true,
-                        NullOpt);
+      attrs.SetAllAttrs(shape, dtype->data_type(), value.As<double>(), true, NullOpt);
     }
     if (device.has_value()) {
       Symbol<Device> device_symbol = JUST(device);
@@ -283,10 +271,14 @@ class EmptyFunctor {
  public:
   EmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
-                           const Optional<Symbol<Device>>& device, const bool pin_memory) const {
+                           const Optional<Symbol<Device>>& device, const bool requires_grad,
+                           const bool pin_memory) const {
+    std::shared_ptr<Tensor> empty;
     if (GlobalMode::is_enabled()) {
-      return JUST(functional::GlobalEmpty(shape, dtype, GetGlobalParallelDescFromDevice(device),
-                                          *JUST(GetSbpList(GlobalMode::nd_sbp()))));
+      empty = JUST(functional::GlobalEmpty(shape, dtype, GetGlobalParallelDescFromDevice(device),
+                                           *JUST(GetSbpList(GlobalMode::nd_sbp()))));
+      if (dtype->is_floating_point()) { JUST(empty->set_requires_grad(requires_grad)); }
+      return empty;
     }
     Symbol<Device> device_symbol = device.value_or(JUST(Device::New("cpu", 0)));
     auto& attrs =
@@ -295,14 +287,34 @@ class EmptyFunctor {
                       device_symbol->device_id());
     if (device.has_value()) {
       Symbol<Device> device_symbol = JUST(device);
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
+      empty =
+          JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol)));
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+      empty = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs));
     }
+
+    if (dtype->is_floating_point()) { JUST(empty->set_requires_grad(requires_grad)); }
+    return empty;
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class EmptyStridedFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::vector<int64_t>& shape, const std::vector<int64_t>& stride,
+                           const Optional<Symbol<DType>>& dtype,
+                           const Optional<Symbol<Device>>& device, const bool requires_grad,
+                           const bool pin_memory) const {
+    Symbol<DType> data_type = GetDefaultDType();
+    if (dtype.has_value()) { data_type = JUST(dtype); }
+    auto empty = JUST(functional::Empty(Shape(shape), dtype.value_or(GetDefaultDType()), device,
+                                        requires_grad, pin_memory));
+    CHECK_OR_RETURN(view::IsViewApplicable(empty))
+        << "oneflow.empty_strided() only support in eager local mode!";
+    return view::AsStrided(empty, shape, stride, 1);
+  }
 };
 
 class GlobalEmptyFunctor {
@@ -3509,9 +3521,8 @@ class PinMemoryFunctor {
         << Error::RuntimeError() << "cannot pin tensor with device: " << device->ToString()
         << ", only dense CPU tensors can be pinned.";
 
-    auto empty = JUST(functional::Empty(*shape.get(), input->dtype(), device, /*pin_memory=*/true));
-    // TODO: remove this requires_grad
-    JUST(empty->set_requires_grad(requires_grad));
+    auto empty = JUST(functional::Empty(*shape.get(), input->dtype(), device, requires_grad,
+                                        /*pin_memory=*/true));
     const int32_t ndim = input->ndim();
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("start", "stop", "step");
     if (ndim == 0) {
@@ -3963,6 +3974,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConstantFunctor>("Constant");
   m.add_functor<impl::GlobalEmptyFunctor>("GlobalEmpty");
   m.add_functor<impl::EmptyFunctor>("Empty");
+  m.add_functor<impl::EmptyStridedFunctor>("EmptyStrided");
   m.add_functor<impl::ZerosLikeFunctor>("ZerosLike");
   m.add_functor<impl::OnesLikeFunctor>("OnesLike");
   m.add_functor<impl::FlattenFunctor>("Flatten");

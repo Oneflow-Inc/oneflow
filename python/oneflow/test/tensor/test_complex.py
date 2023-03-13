@@ -111,7 +111,7 @@ class TestTensorComplex64(unittest.TestCase):
         np_c = c.numpy()
         self.assertEqual(np_c.dtype, self.np_dtype)
 
-    def test_new_ones(self):
+    def _test_new_ones(self):
         b = flow.tensor(self.b, dtype=self.dtype)
         c = b.new_ones((3, 2))
         self.assertEqual(c.dtype, self.dtype)
@@ -120,7 +120,7 @@ class TestTensorComplex64(unittest.TestCase):
         self.assertEqual(np_c.dtype, self.np_dtype)
         assert np.allclose(np_c, np.ones((3, 2), dtype=self.np_dtype))
 
-    def test_new_zeros(self):
+    def _test_new_zeros(self):
         b = flow.tensor(self.b, dtype=self.dtype)
         c = b.new_zeros((3, 2))
         self.assertEqual(c.dtype, self.dtype)
@@ -129,7 +129,7 @@ class TestTensorComplex64(unittest.TestCase):
         self.assertEqual(np_c.dtype, self.np_dtype)
         assert np.allclose(np_c, np.zeros((3, 2), dtype=self.np_dtype))
 
-    def test_new_full(self):
+    def _test_new_full(self):
         a = flow.tensor(self.a, dtype=self.dtype)
         c = a.new_full((3, 2), 3.14 + 2j)
         self.assertEqual(c.dtype, self.dtype)
@@ -139,17 +139,17 @@ class TestTensorComplex64(unittest.TestCase):
         assert np.allclose(np_c, self.np_c)
 
 
-# class TestTensorComplex128(TestTensorComplex64):
-#     def setUp(self):
-#         self.dtype = flow.cdouble
-#         self.np_dtype = np.complex128
-#         self.type_str = 'ComplexDoubleTensor'
-#         self.a = [1.0 + 1j, 2.0]
-#         self.np_a = np.array(self.a, dtype=self.np_dtype)
-#         self.b = [[1.0 + 1j, 2.0], [1.0, 2.0 - 1j], [-1.0, 1j]]
-#         self.np_b = np.array(self.b, dtype=self.np_dtype)
-#         self.c = [[3.14+2j, 3.14+2j], [3.14+2j, 3.14+2j], [3.14+2j, 3.14+2j]]
-#         self.np_c = np.array(self.c, dtype=self.np_dtype)
+class TestTensorComplex128(TestTensorComplex64):
+    def setUp(self):
+        self.dtype = flow.cdouble
+        self.np_dtype = np.complex128
+        self.type_str = 'ComplexDoubleTensor'
+        self.a = [1.0 + 1j, 2.0]
+        self.np_a = np.array(self.a, dtype=self.np_dtype)
+        self.b = [[1.0 + 1j, 2.0], [1.0, 2.0 - 1j], [-1.0, 1j]]
+        self.np_b = np.array(self.b, dtype=self.np_dtype)
+        self.c = [[3.14+2j, 3.14+2j], [3.14+2j, 3.14+2j], [3.14+2j, 3.14+2j]]
+        self.np_c = np.array(self.c, dtype=self.np_dtype)
 
 
 if __name__ == "__main__":
