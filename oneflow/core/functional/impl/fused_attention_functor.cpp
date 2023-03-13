@@ -339,66 +339,86 @@ class FusedAttentionConcatPastKeyValueFunctor {
  public:
   FusedAttentionConcatPastKeyValueFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("fused_attention_concat_past_key_value")
-                         .Input("past_key")
-                         .Input("past_value")
                          .Input("key")
                          .Input("value")
+                         .Input("past_key")
+                         .Input("past_value")
                          .Output("output_key")
                          .Output("output_value")
                          .Build());
+    op_without_past_ = CHECK_JUST(one::OpBuilder("fused_attention_concat_past_key_value")
+                                      .Input("key")
+                                      .Input("value")
+                                      .Output("output_key")
+                                      .Output("output_value")
+                                      .Build());
   }
   Maybe<TensorTuple> operator()(
-      const std::shared_ptr<one::Tensor>& past_key, const std::string& past_key_layout,
-      const std::shared_ptr<one::Tensor>& past_value, const std::string& past_value_layout,
+      const Optional<one::Tensor>& past_key, const std::string& past_key_layout,
+      const Optional<one::Tensor>& past_value, const std::string& past_value_layout,
       const std::shared_ptr<one::Tensor>& key, const std::string& key_layout,
       const std::shared_ptr<one::Tensor>& value, const std::string& value_layout,
       const Optional<int64_t>& key_head_size) const {
-    int64_t past_k_b = 0;
-    int64_t past_k_m = 0;
-    int64_t past_k_h = 0;
-    int64_t past_k_k = 0;
-    JUST(ParseDims("past_key", *past_key->shape(), past_key_layout, Optional<int64_t>(),
-                   key_head_size, &past_k_b, &past_k_m, &past_k_h, &past_k_k));
-
-    int64_t past_v_b = 0;
-    int64_t past_v_m = 0;
-    int64_t past_v_h = 0;
-    int64_t past_v_k = 0;
-    JUST(ParseDims("past_value", *past_value->shape(), past_value_layout, past_k_h, past_k_k,
-                   &past_v_b, &past_v_m, &past_v_h, &past_v_k));
-    CHECK_EQ_OR_RETURN(past_v_b, past_k_b) << "The size of dimension 'B' of the past_value tensor "
-                                              "should be the same as that of the past_key tensor.";
-    CHECK_EQ_OR_RETURN(past_v_m, past_k_m) << "The size of dimension 'M' of the past_value tensor "
-                                              "should be the same as that of the past_key tensor.";
-
     int64_t k_b = 0;
     int64_t k_m = 0;
     int64_t k_h = 0;
     int64_t k_k = 0;
-    JUST(ParseDims("key", *key->shape(), key_layout, past_k_h, past_k_k, &k_b, &k_m, &k_h, &k_k));
-    CHECK_EQ_OR_RETURN(k_b, past_k_b) << "The size of dimension 'B' of the key tensor should be "
-                                         "the same as that of the past_key tensor.";
+    JUST(ParseDims("key", *key->shape(), key_layout, Optional<int64_t>(), key_head_size, &k_b, &k_m,
+                   &k_h, &k_k));
 
     int64_t v_b = 0;
     int64_t v_m = 0;
     int64_t v_h = 0;
     int64_t v_k = 0;
-    JUST(ParseDims("value", *value->shape(), value_layout, past_k_h, past_k_k, &v_b, &v_m, &v_h,
-                   &v_k));
-    CHECK_EQ_OR_RETURN(v_b, past_k_b) << "The size of dimension 'B' of the value tensor should be "
-                                         "the same as that of the past_key tensor.";
+    JUST(ParseDims("value", *value->shape(), value_layout, k_h, k_k, &v_b, &v_m, &v_h, &v_k));
+    CHECK_EQ_OR_RETURN(v_b, k_b) << "The size of dimension 'B' of the value tensor should be "
+                                    "the same as that of the key tensor.";
     CHECK_EQ_OR_RETURN(v_m, k_m) << "The size of dimension 'M' of the value tensor should be the "
                                     "same as that of the key tensor.";
 
+    if (past_key) {
+      CHECK_OR_RETURN(past_value) << "Tensor past_key and tensor past_value should both be None or "
+                                     "both not be None at the same time.";
+      int64_t past_k_b = 0;
+      int64_t past_k_m = 0;
+      int64_t past_k_h = 0;
+      int64_t past_k_k = 0;
+      JUST(ParseDims("past_key", *JUST(past_key)->shape(), past_key_layout, k_h, k_k, &past_k_b,
+                     &past_k_m, &past_k_h, &past_k_k));
+      CHECK_EQ_OR_RETURN(past_k_b, k_b)
+          << "The size of dimension 'B' of the past_key tensor should be "
+             "the same as that of the key tensor.";
+      int64_t past_v_b = 0;
+      int64_t past_v_m = 0;
+      int64_t past_v_h = 0;
+      int64_t past_v_k = 0;
+      JUST(ParseDims("past_value", *JUST(past_value)->shape(), past_value_layout, k_h, k_k,
+                     &past_v_b, &past_v_m, &past_v_h, &past_v_k));
+      CHECK_EQ_OR_RETURN(past_v_b, k_b) << "The size of dimension 'B' of the past_value tensor "
+                                           "should be the same as that of the key tensor.";
+      CHECK_EQ_OR_RETURN(past_v_m, past_k_m)
+          << "The size of dimension 'M' of the past_value tensor "
+             "should be the same as that of the past_key tensor.";
+    } else {
+      CHECK_OR_RETURN(!past_value)
+          << "Tensor past_key and tensor past_value should both be None or "
+             "both not be None at the same time.";
+    }
+
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("past_key_layout", "past_value_layout",
                                                  "key_layout", "value_layout", "key_head_size");
-    attrs.SetAllAttrs(past_key_layout, past_value_layout, key_layout, value_layout, past_k_k);
-    return JUST(
-        OpInterpUtil::Dispatch<TensorTuple>(*op_, {past_key, past_value, key, value}, attrs));
+    attrs.SetAllAttrs(past_key_layout, past_value_layout, key_layout, value_layout, k_k);
+    if (past_key) {
+      return JUST(OpInterpUtil::Dispatch<TensorTuple>(
+          *op_, {key, value, JUST(past_key), JUST(past_value)}, attrs));
+    } else {
+      return JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_without_past_, {key, value}, attrs));
+    }
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_without_past_;
 };
 
 }  // namespace impl
