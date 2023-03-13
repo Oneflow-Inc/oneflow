@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import os
 import unittest
 import numpy as np
@@ -116,7 +131,7 @@ def _test_linear_multi_graph_share(test_case, device, with_reshape):
 
 
 @_with_new_session
-def _test_linear_multi_graph_save(return_dict, device, with_reshape, with_share):
+def _test_linear_multi_graph_save(return_dict, device, with_reshape):
     linear = flow.nn.Linear(3, 8, False)
     linear = linear.to(device)
     np_weight = np.ones((3, 8)).astype(np.float32)
@@ -139,6 +154,7 @@ def _test_linear_multi_graph_save(return_dict, device, with_reshape, with_share)
     linear_reshape = LinearReshapeModule()
 
     class LinearGraph(flow.nn.Graph):
+        @flow.nn.Graph.with_dynamic_input_shape
         def __init__(self):
             super().__init__()
             self.my_linear = linear_reshape
@@ -148,8 +164,6 @@ def _test_linear_multi_graph_save(return_dict, device, with_reshape, with_share)
 
     linear_g = LinearGraph()
     linear_g.enable_save_runtime_state_dict()
-    if with_share is True:
-        linear_g.enable_shared()
 
     input_arr = np.array(
         [
@@ -170,10 +184,6 @@ def _test_linear_multi_graph_save(return_dict, device, with_reshape, with_share)
     test_case0 = np.array_equal(of_lazy_out.numpy(), of_eager_out.numpy())
     return_dict["save0"] = test_case0
 
-    linear_g1 = LinearGraph()
-    linear_g1.enable_save_runtime_state_dict()
-    if with_share is True:
-        linear_g1.share_from(linear_g)
     input_arr1 = np.array(
         [
             [-0.94630778, -0.83378579, -0.87060891],
@@ -184,24 +194,17 @@ def _test_linear_multi_graph_save(return_dict, device, with_reshape, with_share)
         dtype=np.float32,
     )
     x1 = flow.tensor(input_arr1, device=device)
-    of_lazy_out1 = linear_g1(x1)
+    of_lazy_out1 = linear_g(x1)
     of_eager_out1 = linear_reshape(x1)
     test_case1 = np.array_equal(of_lazy_out1.numpy(), of_eager_out1.numpy())
     return_dict["save1"] = test_case1
 
-    state_dict_list = []
-    state_dict0 = linear_g.runtime_state_dict()
-    state_dict_list.append(state_dict0)
-    state_dict1 = linear_g1.runtime_state_dict()
-    state_dict_list.append(state_dict1)
-
-    return state_dict_list
+    state_dict = linear_g.runtime_state_dict()
+    return state_dict
 
 
 @_with_new_session
-def _test_linear_multi_graph_load(
-    return_dict, device, with_reshape, state_dict_list, load_with_eager, with_share
-):
+def _test_linear_multi_graph_load(return_dict, device, with_reshape, state_dict):
     linear = flow.nn.Linear(3, 8, False)
     linear = linear.to(device)
     np_weight = np.ones((3, 8)).astype(np.float32)
@@ -223,22 +226,19 @@ def _test_linear_multi_graph_load(
 
     linear_reshape = LinearReshapeModule()
 
-    if not load_with_eager:
-        linear_g = flow.nn.Graph()
-    else:
+    class LinearGraph(flow.nn.Graph):
+        @flow.nn.Graph.with_dynamic_input_shape
+        def __init__(self):
+            super().__init__()
+            self.my_linear = linear_reshape
 
-        class LinearGraph(flow.nn.Graph):
-            def __init__(self):
-                super().__init__()
-                self.my_linear = linear_reshape
+        def build(self, x):
+            return self.my_linear(x)
 
-            def build(self, x):
-                return self.my_linear(x)
-
-        linear_g = LinearGraph()
-    if with_share is True:
-        linear_g.enable_shared()
-    linear_g.load_runtime_state_dict(state_dict_list[0])
+    linear_g = LinearGraph()
+    print("====> load")
+    linear_g.load_runtime_state_dict(state_dict)
+    print("====> load finish")
 
     input_arr = np.array(
         [
@@ -257,16 +257,8 @@ def _test_linear_multi_graph_load(
     of_lazy_out = linear_g(x)
     of_eager_out = linear_reshape(x)
     test_case0 = np.array_equal(of_lazy_out.numpy(), of_eager_out.numpy())
-    return_dict["load0" + str(load_with_eager)] = test_case0
+    return_dict["load0"] = test_case0
 
-    if not load_with_eager:
-        linear_g1 = flow.nn.Graph()
-    else:
-        linear_g1 = LinearGraph()
-
-    if with_share is True:
-        linear_g1.share_from(linear_g)
-    linear_g1.load_runtime_state_dict(state_dict_list[1])
     input_arr1 = np.array(
         [
             [-0.94630778, -0.83378579, -0.87060891],
@@ -277,51 +269,40 @@ def _test_linear_multi_graph_load(
         dtype=np.float32,
     )
     x1 = flow.tensor(input_arr1, device=device)
-    of_lazy_out1 = linear_g1(x1)
+    of_lazy_out1 = linear_g(x1)
     of_eager_out1 = linear_reshape(x1)
     test_case1 = np.array_equal(of_lazy_out1.numpy(), of_eager_out1.numpy())
-    return_dict["load1" + str(load_with_eager)] = test_case1
+    return_dict["load1"] = test_case1
 
 
-def _graph_save(return_dict, filename, with_share):
-    state_dict_list = _test_linear_multi_graph_save(
-        return_dict, flow.device("cuda"), True, with_share
-    )
-    flow.save(state_dict_list, filename)
+def _graph_save(return_dict, filename):
+    state_dict = _test_linear_multi_graph_save(return_dict, flow.device("cuda"), True)
+    flow.save(state_dict, filename)
 
 
-def _graph_load(return_dict, filename, with_share):
-    state_dict_list_loaded = flow.load(filename)
+def _graph_load(return_dict, filename):
+    state_dict_loaded = flow.load(filename)
     # load with nn.Graph
     _test_linear_multi_graph_load(
-        return_dict,
-        flow.device("cuda"),
-        True,
-        state_dict_list_loaded,
-        False,
-        with_share,
-    )
-    # load with nn.Graph subinstance which has eager module
-    _test_linear_multi_graph_load(
-        return_dict, flow.device("cuda"), True, state_dict_list_loaded, True, with_share
+        return_dict, flow.device("cuda"), True, state_dict_loaded,
     )
 
 
-def _test_linear_multi_graph_save_load_gpu(test_case, with_share):
+def _test_linear_multi_graph_save_load_gpu(test_case):
     # A graph runtime state dict
     with tempfile.NamedTemporaryFile() as f:
         # Save a graph
         manager = multiprocessing.Manager()
         return_dict = manager.dict()
         save_p = multiprocessing.get_context("spawn").Process(
-            target=_graph_save, args=(return_dict, f.name, with_share)
+            target=_graph_save, args=(return_dict, f.name)
         )
         save_p.start()
         save_p.join()
 
         # Resume a graph from a graph runtime state dict
         load_p = multiprocessing.get_context("spawn").Process(
-            target=_graph_load, args=(return_dict, f.name, with_share)
+            target=_graph_load, args=(return_dict, f.name)
         )
         load_p.start()
         load_p.join()
@@ -341,11 +322,8 @@ class TestLinearMultiGraph(oneflow.unittest.TestCase):
     def test_linear_reshape_multi_graph_share_gpu(test_case):
         _test_linear_multi_graph_share(test_case, flow.device("cuda"), True)
 
-    def _test_linear_multi_graph_save_load_gpu(test_case):
-        _test_linear_multi_graph_save_load_gpu(test_case, False)
-
-    def _test_linear_multi_graph_save_load_gpu_with_share(test_case):
-        _test_linear_multi_graph_save_load_gpu(test_case, True)
+    def test_linear_multi_graph_save_load_gpu_with_share(test_case):
+        _test_linear_multi_graph_save_load_gpu(test_case)
 
 
 if __name__ == "__main__":

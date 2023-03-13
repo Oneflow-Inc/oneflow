@@ -242,7 +242,7 @@ class Graph(object):
             Donot override this function.
         """
         # For cache cache graphs with dynamic input shape.
-        if self._run_with_cache == True:            
+        if self._run_with_cache == True:
             return self._dynamic_input_graph_cache(*args, **kwargs)
 
         if not self._is_compiled:
@@ -950,6 +950,9 @@ class Graph(object):
         return (seq_to_func_return(self._eager_outputs_buffer[0], True),)
 
     def enable_save_runtime_state_dict(self, mode: bool = True):
+        if self._run_with_cache == True:
+            self._dynamic_input_graph_cache.enable_save_runtime_state_dict(mode)
+
         if mode:
             assert (
                 not self._is_compiled
@@ -961,7 +964,13 @@ class Graph(object):
 
     def runtime_state_dict(
         self, destination=None
-    ) -> Dict[str, Union[Dict[str, Tensor], str]]:
+    ) -> Union[
+        Dict[str, Union[Dict[str, Tensor], str]],
+        Dict[str, Dict[str, Union[Dict[str, Tensor], str]]],
+    ]:
+        if self._run_with_cache == True:
+            return self._dynamic_input_graph_cache.runtime_state_dict()
+
         assert (
             self._enable_save_runtime_state_dict
         ), "nn.Graph's runtime state dict can only be got when enable_save_runtime_state_dict is set with True."
@@ -1021,8 +1030,15 @@ class Graph(object):
         return destination
 
     def load_runtime_state_dict(
-        self, state_dict: Dict[str, Union[Dict[str, Tensor], str]]
+        self,
+        state_dict: Union[
+            Dict[str, Union[Dict[str, Tensor], str]],
+            Dict[str, Dict[str, Union[Dict[str, Tensor], str]]],
+        ],
     ) -> None:
+        if self._run_with_cache == True:
+            return self._dynamic_input_graph_cache.load_runtime_state_dict(state_dict)
+
         # Generate new config.
         self._name = state_dict["graph_name"]
         self._generate_config_proto()
@@ -1827,16 +1843,15 @@ class Graph(object):
             graph_init_func(self, *args, **kwargs)
             self._run_with_cache = True
             import oneflow.nn.graph.cache as cache
+
             self._dynamic_input_graph_cache = cache.GraphCache(weakref.proxy(self))
             self._cached_init_args = args
             print("+++", args)
             self._cached_init_kwargs = kwargs
             print("+++", kwargs)
-        
+
         print("====> wrap called")
         return deco_func
-
-
 
 
 if __name__ == "__main__":

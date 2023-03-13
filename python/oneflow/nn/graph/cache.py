@@ -1,55 +1,31 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import os
 import weakref
-from collections import deque
+from collections import deque, OrderedDict
+from typing import Dict, Union
 
 from oneflow.framework.args_tree import ArgsTree
 from oneflow.framework.tensor import Tensor
 import oneflow as flow
 
-class OneFlowGraph(object):
-    def __init__(self, graph_class, *args, **kwargs):
-        self.graph_ = graph_class(*args, **kwargs)
-        self.is_compiled_ = False
-        self.is_shared_from_ = False
-
-    @property
-    def is_compiled(self):
-        return self.is_compiled_
-
-    def compile(self, *args, **kwargs):
-        if self.is_compiled_:
-            return
-
-        global_class_name = self.graph_.__class__.__name__
-        compilation_time = 0
-        if self.is_shared_from_:
-            self.graph_._compile_from_shared(*args, **kwargs)
-        else:
-            self.graph_._compile(*args, **kwargs)
-
-        self.is_compiled_ = True
-
-    def load_runtime_state_dict(self, state_dict):
-        if self.is_compiled_:
-            return
-
-        global_class_name = self.graph_.__class__.__name__
-        self.graph_.load_runtime_state_dict(state_dict)
-        self.is_compiled_ = True
-
-    def share_from(self, other_graph):
-        self.graph_.share_from(other_graph.graph_)
-        self.is_shared_from_ = True
-
-    def __call__(self, *args, **kwargs):
-        if not self.is_compiled_:
-            self.compile(*args, **kwargs)
-
-        return self.graph_(*args, **kwargs)
-
 
 class LRUCache(object):
     _cnt: int = 0
+
     def __init__(self, cache_size):
         self.cache_size = cache_size
         self.queue = deque()
@@ -95,11 +71,22 @@ class LRUCache(object):
             return self.hash_map[key]
 
         return None
-    
-    def pairs(self):
+
+    def items(self):
         for (key, value) in self.hash_map.items():
             yield (key, value)
 
+
+class AvoidRecursiveCacheCall(object):
+    def __init__(self, graph) -> None:
+        self._g = graph
+        self._prev_flag = self._g._run_with_cache
+
+    def __enter__(self):
+        self._g._run_with_cache = False
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._g._run_with_cache = self._prev_flag
 
 
 class GraphCache(object):
@@ -112,68 +99,85 @@ class GraphCache(object):
 
         self._enable_shared = enable_graph_shared
 
-        self._enable_save_graph = False
+        self._enable_save = False
         self._graph_save_load_path = None
 
     def set_cache_size(self, cache_size):
         self._cache_size = cache_size
 
     def enable_shared(self, enabled=True):
-        self._enable_shared= enabled
-    
-    def enable_save_graph(self, enabled=True):
-        self._enable_save_graph = enabled
+        self._enable_shared = enabled
+
+    def enable_save_runtime_state_dict(self, enabled=True):
+        self._enable_save = enabled
 
     def __call__(self, *args, **kwargs):
         graph = self.get_graph(*args, **kwargs)
-        if graph._run_with_cache == True:
-            graph._run_with_cache = False
-            output = graph(*args, **kwargs)
-            graph._run_with_cache = True
-            return output
-        else:
+        with AvoidRecursiveCacheCall(graph):
             return graph(*args, **kwargs)
 
-    def save_graph(self, path):
-        if self.enable_save_graph_:
-            for (graph_class_name, cache) in self.cache_bucket_.items():
-                for (key, graph) in cache.pairs():
-                    state_dict = graph.graph_.runtime_state_dict()
-                    state_dict["cache_order"] = graph._oneflow_graph_cache_order
-                    state_dict["cache_key"] = key
-                    state_dict["graph_class_name"] = graph_class_name
-                    flow.save(state_dict, os.path.join(path, graph_class_name + "_" + str(hash(key))))
+    def runtime_state_dict(
+        self, destination=None
+    ) -> Dict[str, Dict[str, Union[Dict[str, Tensor], str]]]:
+        if destination is None:
+            destination = OrderedDict()
+            destination._metadata = OrderedDict()
 
-    def load_graph(self, path, graph_class2init_args=None):
-        sub_files = [ f.path for f in os.scandir(path) if f.is_file() ]
-        graph_dict = dict()
-        for sub_file in sub_files:
-            state_dict = flow.load(sub_file)
-            cache_order = state_dict["cache_order"]
-            graph_dict[cache_order] = state_dict
-        
-        for order, state_dict in sorted(graph_dict.items()):
-            graph_class_name  = state_dict["graph_class_name"]
-            cache_key = state_dict["cache_key"]
-            if graph_class_name not in self.cache_bucket_:
-                self.cache_bucket_[graph_class_name] = LRUCache(self.cache_size_)
-            compile_cache = self.cache_bucket_[graph_class_name]
-            if graph_class_name in graph_class2init_args:
-                init_args = graph_class2init_args[graph_class_name]
-                graph = OneFlowGraph(init_args[0], init_args[1])
+        if self._enable_save:
+            for (key, graph) in self._cache.items():
+                with AvoidRecursiveCacheCall(graph):
+                    state_dict = graph.runtime_state_dict()
+                state_dict["cache_order"] = graph._oneflow_graph_cache_order
+                state_dict["cache_key"] = key
+                destination[state_dict["graph_name"]] = state_dict
+        return destination
+
+    def _init_and_get_a_graph_in_cache(self, cache_key):
+        cur_is_base = False
+        if self._cache.is_empty():
+            # Has no graph yet
+            cur_is_base = True
+            graph = self._base_graph
+            print("get base", cache_key)
+        else:
+            # Create new graph from base
+            graph = self._base_graph.__class__(
+                *self._base_graph._cached_init_args,
+                **self._base_graph._cached_init_kwargs
+            )
+            graph._run_with_cache = False
+            graph._dynamic_input_graph_cache = None
+            graph._cached_init_args = None
+            graph._cached_init_kwargs = None
+            print("get new", cache_key)
+
+        if self._enable_save:
+            with AvoidRecursiveCacheCall(graph):
+                graph.enable_save_runtime_state_dict()
+        if self._enable_shared is True:
+            if cur_is_base:
+                graph.enable_shared()
             else:
-                graph = OneFlowGraph(flow.nn.Graph)
-            if self.enable_share_mem_ is True:
-                if graph_class_name in self.share_origin_:
-                    graph.share_from(self.share_origin_[graph_class_name])
-                else:
-                    self.share_origin_[graph_class_name] = graph
-                    graph.graph_.enable_shared()
+                graph.share_from(self._base_graph)
+        ret = self._cache.set(cache_key, graph)
+        assert ret is not None
+        return graph
 
-            graph.load_runtime_state_dict(state_dict)
-            ret = compile_cache.set(cache_key, graph)
-            assert ret is not None
-    
+    def load_runtime_state_dict(
+        self, state_dict: Dict[str, Dict[str, Union[Dict[str, Tensor], str]]]
+    ) -> None:
+        graph_dict = dict()
+        for _, sub_state_dict in state_dict.items():
+            cache_order = sub_state_dict["cache_order"]
+            graph_dict[cache_order] = sub_state_dict
+
+        self._cache = LRUCache(self._cache_size)
+        for _, sub_state_dict in sorted(graph_dict.items()):
+            cache_key = sub_state_dict["cache_key"]
+            graph = self._init_and_get_a_graph_in_cache(cache_key)
+            with AvoidRecursiveCacheCall(graph):
+                graph.load_runtime_state_dict(sub_state_dict)
+
     def gen_key(self, *args, **kwargs):
         flattened_shapes = []
         args_tree = ArgsTree((args, kwargs), False)
@@ -182,40 +186,16 @@ class GraphCache(object):
                 flattened_shapes.append(arg.shape)
         return tuple(flattened_shapes)
 
-
     def get_graph(self, *args, **kwargs):
         if self._cache is None:
-            self._cache =  LRUCache(self._cache_size)
+            self._cache = LRUCache(self._cache_size)
 
         cache_key = hash(self.gen_key(*args, **kwargs))
         graph = self._cache.get(cache_key)
 
         # Create graph
         if graph is None:
-            cur_is_base = False
-            if self._cache.is_empty():
-                # Has no graph yet
-                cur_is_base = True
-                graph = self._base_graph
-                print("get base", cache_key)
-            else:
-                # Create new graph from base
-                graph = self._base_graph.__class__(*self._base_graph._cached_init_args, **self._base_graph._cached_init_kwargs)
-                graph._run_with_cache = False
-                graph._dynamic_input_graph_cache = None
-                graph._cached_init_args = None
-                graph._cached_init_kwargs = None
-                print("get new", cache_key)
-            ret = self._cache.set(cache_key, graph)
-            assert ret is not None
-
-            if self._enable_save_graph:
-                graph.enable_save_runtime_state_dict()
-            if self._enable_shared is True:
-                if cur_is_base:
-                    graph.enable_shared()
-                else:
-                    graph.share_from(self._base_graph)
+            graph = self._init_and_get_a_graph_in_cache(cache_key)
         else:
             print("====> hit cache ", cache_key)
 
