@@ -404,11 +404,6 @@ def _numpy(self):
     return self.to_numpy()
 
 
-def zero_(self):
-    self.zero_()
-    return self
-
-
 def _is_consistent(self):
     raise RuntimeError(".is_consistent has been removed, please use .is_global instead")
 
