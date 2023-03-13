@@ -218,7 +218,8 @@ class ArgsTree(object):
 
         stack = []
 
-        if isinstance(self._io_args[0], Tensor):
+        # Cases handled: tuple(tensor, ...), such as input args.
+        if len(self._io_args) > 0 and isinstance(self._io_args[0], Tensor):
             for i in self._io_args:
                 mapped_value = map_function(i)
                 stack.append(mapped_value)
@@ -228,12 +229,17 @@ class ArgsTree(object):
             elif isinstance(self._io_args, list):
                 return stack
 
-        elif self._io_args[0] is not None and not isinstance(
-            self._io_args[0][0], Tensor
+        # Cases handled: tuple(tuple(tuple(tensor, ...), tuple(tensor, ...), ), etc.
+        # Do not loop optimize, and continue to execute the recursive code (`_execute_mapping`).
+        elif (
+            len(self._io_args) > 0
+            and self._io_args[0] is not None
+            and not isinstance(self._io_args[0][0], Tensor)
         ):
             return self._execute_mapping(self._io_args, map_function)
 
-        elif self._io_args[0] is not None:
+        # Cases handled: tuple(tuple(tensor, ...), ), such as the output args of return.
+        elif len(self._io_args) > 0 and self._io_args[0] is not None:
             for i in self._io_args[0]:
                 mapped_value = map_function(i)
                 stack.append(mapped_value)
