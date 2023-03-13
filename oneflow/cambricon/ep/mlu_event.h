@@ -17,13 +17,9 @@ limitations under the License.
 #define ONEFLOW_CAMBRICON_EP_MLU_EVENT_H_
 
 #include "oneflow/core/ep/include/event.h"
-
-#ifdef WITH_GCU
-
-#include "oneflow/cambricon/mlu_util.h"
+#include "oneflow/cambricon/ep/mlu_util.h"
 
 namespace oneflow {
-
 namespace ep {
 
 class MluEvent : public Event {
@@ -35,16 +31,13 @@ class MluEvent : public Event {
   Maybe<bool> QueryDone() override;
   Maybe<void> Sync() override;
 
-  cnrtNotifier_t gcu_event();
+  cnrtNotifier_t mlu_event();
 
  private:
-  cnrtNotifier_t gcu_event_;
+  cnrtNotifier_t mlu_event_;
 };
 
 }  // namespace ep
-
 }  // namespace oneflow
-
-#endif  // WITH_MLU
 
 #endif  // ONEFLOW_CAMBRICON_EP_MLU_EVENT_H_

@@ -15,10 +15,7 @@ limitations under the License.
 */
 #include "oneflow/cambricon/ep/mlu_event.h"
 
-#ifdef WITH_MLU
-
 namespace oneflow {
-
 namespace ep {
 
 MluEvent::MluEvent(unsigned int flags) : mlu_event_{} {
@@ -50,7 +47,4 @@ Maybe<void> MluEvent::Sync() {
 cnrtNotifier_t MluEvent::mlu_event() { return mlu_event_; }
 
 }  // namespace ep
-
 }  // namespace oneflow
-
-#endif  // WITH_MLU

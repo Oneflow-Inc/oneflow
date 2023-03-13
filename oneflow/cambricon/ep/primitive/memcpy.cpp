@@ -13,15 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifdef WITH_MLU
-
 #include "oneflow/core/ep/include/primitive/memcpy.h"
-#include "oneflow/cambricom/ep/mlu_stream.h"
-
-#include "oneflow/cambricon/mlu_util.h"
+#include "oneflow/cambricon/ep/mlu_stream.h"
+#include "oneflow/cambricon/ep/mlu_util.h"
 
 namespace oneflow {
-
 namespace ep {
 namespace primitive {
 
@@ -35,7 +31,6 @@ class MemcpyImpl : public Memcpy {
       case MemcpyKind::kHtoD: kind_ = cnrtMemcpyHostToDev; break;
       case MemcpyKind::kDtoH: kind_ = cnrtMemcpyDevToHost; break;
       case MemcpyKind::kDtoD: kind_ = cnrtMemcpyDevToDev; break;
-      case MemcpyKind::kHtoH: kind_ = cnrtMemcpyHostToHost; break;
       default: UNIMPLEMENTED();
     }
   }
@@ -44,10 +39,12 @@ class MemcpyImpl : public Memcpy {
   void Launch(Stream* stream, void* dst, const void* src, size_t count) override {
     if (dst == src) { return; }
     auto* mlu_stream = stream->As<MluStream>();
-    OF_MLU_CHECK(cnrtMemcpyAsync(dst, src, count, kind_, mlu_stream->mlu_stream()));
+    OF_MLU_CHECK(
+        cnrtMemcpyAsync(dst, const_cast<void*>(src), count, mlu_stream->mlu_stream(), kind_));
   }
+
  private:
-   topsMemcpyKind kind_;
+  cnrtMemTransDir_t kind_;
 };
 
 class MemcpyFactoryImpl : public MemcpyFactory {
@@ -67,7 +64,4 @@ REGISTER_PRIMITIVE_FACTORY(DeviceType::kMLU, MemcpyFactory, MemcpyFactoryImpl);
 
 }  // namespace primitive
 }  // namespace ep
-
 }  // namespace oneflow
-
-#endif // WITH_MLU

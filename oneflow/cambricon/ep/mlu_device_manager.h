@@ -18,8 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/ep/include/device_manager.h"
 
-#ifdef WITH_MLU
-
 namespace oneflow {
 namespace ep {
 
@@ -48,7 +46,5 @@ class MluDeviceManager : public DeviceManager {
 }  // namespace ep
 
 }  // namespace oneflow
-
-#endif  // WITH_MLU
 
 #endif  // ONEFLOW_COMBRICON_EP_MLU_DEVICE_MANAGER_H_

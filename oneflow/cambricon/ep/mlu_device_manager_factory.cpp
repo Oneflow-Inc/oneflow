@@ -15,12 +15,9 @@ limitations under the License.
 */
 #include "oneflow/core/ep/include/device_manager_factory.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
-#include "oneflow/combricon/ep/mlu_device_manager.h"
-
-#ifdef WITH_MLU
+#include "oneflow/cambricon/ep/mlu_device_manager.h"
 
 namespace oneflow {
-
 namespace ep {
 
 namespace {
@@ -39,7 +36,7 @@ class MluDeviceManagerFactory : public DeviceManagerFactory {
 
   std::string device_type_name() const override { return "mlu"; }
 
-  void DumpVersionInfo() const override { }
+  void DumpVersionInfo() const override {}
 };
 
 COMMAND(DeviceManagerRegistry::RegisterDeviceManagerFactory(
@@ -48,7 +45,4 @@ COMMAND(DeviceManagerRegistry::RegisterDeviceManagerFactory(
 }  // namespace
 
 }  // namespace ep
-
 }  // namespace oneflow
-
-#endif  // WITH_MLU

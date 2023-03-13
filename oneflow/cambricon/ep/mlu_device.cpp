@@ -17,11 +17,7 @@ limitations under the License.
 #include "oneflow/cambricon/ep/mlu_event.h"
 #include "oneflow/cambricon/ep/mlu_stream.h"
 
-#ifdef WITH_MLU
-
-
 namespace oneflow {
-
 namespace ep {
 
 namespace {
@@ -66,7 +62,7 @@ void MluDevice::SetAsActiveDevice() { OF_MLU_CHECK(cnrtSetDevice(device_index_))
 
 void MluDevice::TryReset() {
   SetAsActiveDevice();
-  OF_CUDA_CHECK(cnrtDeviceReset());
+  OF_MLU_CHECK(cnrtDeviceReset());
 }
 
 Stream* MluDevice::CreateStream() {
@@ -152,7 +148,4 @@ const void* MluDevice::GetConstOnes(DataType data_type, size_t n) const {
 }
 
 }  // namespace ep
-
 }  // namespace oneflow
-
-#endif  // WITH_MLU

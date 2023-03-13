@@ -13,14 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/combricon/ep/mlu_device_manager.h"
-#include "oneflow/combricon/ep/mlu_device.h"
-#include "oneflow/combricon/mlu_util.h"
-
-#ifdef WITH_MLU
+#include "oneflow/cambricon/ep/mlu_device_manager.h"
+#include "oneflow/cambricon/ep/mlu_device.h"
+#include "oneflow/cambricon/ep/mlu_util.h"
 
 namespace oneflow {
-
 namespace ep {
 
 MluDeviceManager::MluDeviceManager(DeviceManagerRegistry* registry) : registry_(registry) {}
@@ -46,7 +43,7 @@ size_t MluDeviceManager::GetDeviceCount(size_t primary_device_index) {
 }
 
 size_t MluDeviceManager::GetDeviceCount() {
-  int count = 0;
+  uint32_t count = 0;
   cnrtRet_t err = cnrtGetDeviceCount(&count);
   OF_MLU_CHECK(err);
   return count;
@@ -63,7 +60,4 @@ void MluDeviceManager::SetActiveDeviceByIndex(size_t device_index) {
 }
 
 }  // namespace ep
-
 }  // namespace oneflow
-
-#endif  // WITH_MLU

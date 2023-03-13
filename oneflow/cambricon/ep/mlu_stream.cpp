@@ -20,19 +20,14 @@ limitations under the License.
 #include "oneflow/cambricon/ep/mlu_event.h"
 #include "oneflow/cambricon/ep/mlu_device.h"
 
-#ifdef WITH_MLU
-
 namespace oneflow {
-
 namespace ep {
 
 namespace {
-
 constexpr size_t kDefaultWorkspaceSizeMb = 4;  // 4M
 }  // namespace
 
-MluStream::MluStream(MluDevice* device)
-    : device_index_(device->device_index()), device_(device) {
+MluStream::MluStream(MluDevice* device) : device_index_(device->device_index()), device_(device) {
   MluCurrentDeviceGuard guard(device_index_);
   OF_MLU_CHECK(cnrtQueueCreate(&mlu_stream_));
 }
@@ -70,17 +65,12 @@ void MluStream::RecordEvent(Event* event) {
 
 void MluStream::WaitEvent(Event* event) {
   auto* mlu_event = static_cast<MluEvent*>(event);  // NOLINT
-  OF_MLU_CHECK(cnrtQueueWaitNotifier(mlu_stream_, mlu_event, 0));
+  OF_MLU_CHECK(cnrtQueueWaitNotifier(mlu_event->mlu_event(), mlu_stream_, 0));
 }
 
-Maybe<void> MluStream::GetAsyncError() {
-  return Maybe<void>::Ok();
-}
+Maybe<void> MluStream::GetAsyncError() { return Maybe<void>::Ok(); }
 
 cnrtQueue_t MluStream::mlu_stream() const { return mlu_stream_; }
 
 }  // namespace ep
-
 }  // namespace oneflow
-
-#endif  // WITH_MLU

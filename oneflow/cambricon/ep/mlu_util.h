@@ -18,17 +18,16 @@ limitations under the License.
 
 #include "oneflow/core/common/data_type.h"
 
-#ifdef WITH_MLU
-
 #include "cnrt.h"
 #include "cndev.h"
 #include "cn_api.h"
 
 namespace oneflow {
 
-#define OF_MLU_CHECK(condition)                                                               \
+#define OF_MLU_CHECK(condition)                                                            \
   for (cnrtRet_t _of_mlu_check_status = (condition); _of_mlu_check_status != cnrtSuccess;) \
-  LOG(FATAL) << "Check failed: " #condition " : " << " (" << _of_mlu_check_status << ") "
+  LOG(FATAL) << "Check failed: " #condition " : "                                          \
+             << " (" << _of_mlu_check_status << ") "
 
 cnrtRet_t NumaAwareMluMallocHost(int32_t dev, void** ptr, size_t size);
 
@@ -54,7 +53,5 @@ void MluSynchronize(int device_id);
 void InitMluContextOnce(int device_id);
 
 }  // namespace oneflow
-
-#endif  // WITH_MLU
 
 #endif  // ONEFLOW_CAMBRICON_MLU_UTIL_H_

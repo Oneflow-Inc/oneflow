@@ -13,8 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/cambricon/ep/mlu_util.h"
+
 #include <mutex>
-#include "oneflow/core/device/gcu_util.h"
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
@@ -22,10 +23,7 @@ limitations under the License.
 #include "oneflow/core/platform/include/pthread_fork.h"
 #include "oneflow/core/vm/vm_util.h"
 
-
 namespace oneflow {
-
-#ifdef WITH_MLU
 
 namespace {
 
@@ -42,7 +40,7 @@ cnrtRet_t NumaAwareMluMallocHost(int32_t dev, void** ptr, size_t size) {
 }
 
 MluCurrentDeviceGuard::MluCurrentDeviceGuard(int32_t dev_id) {
-  CHECK(!pthread_fork::IsForkedSubProcess()) << pthread_fork::kOfMluNotSupportInForkedSubProcess;
+  CHECK(!pthread_fork::IsForkedSubProcess()) << pthread_fork::kOfDeviceNotSupportInForkedSubProcess;
   OF_MLU_CHECK(cnrtGetDevice(&saved_dev_id_));
   OF_MLU_CHECK(cnrtSetDevice(dev_id));
 }
@@ -61,25 +59,10 @@ void SetMluDeviceIndex(int device_id) { OF_MLU_CHECK(cnrtSetDevice(device_id)); 
 int GetMluDeviceIndex() { return GlobalProcessCtx::LocalRank(); }
 
 int GetMluDeviceCount() {
-  /* static */ int gcu_device_count = 0;
+  /* static */ uint32_t mlu_device_count = 0;
   MluCurrentDeviceGuard dev_guard(GetMluDeviceIndex());
-  OF_MLU_CHECK(cnrtGetDeviceCount(&gcu_device_count));
-  return gcu_device_count;
+  OF_MLU_CHECK(cnrtGetDeviceCount(&mlu_device_count));
+  return mlu_device_count;
 }
-
-static std::once_flag prop_init_flag;
-
-void InitMluContextOnce(int device_id) {
-  static int device_count = GetMluDeviceCount();
-  static std::vector<std::once_flag> init_flags = std::vector<std::once_flag>(device_count);
-  if (LazyMode::is_enabled()) { return; }
-  if (device_id == -1) { device_id = GetMluDeviceIndex(); }
-  std::call_once(init_flags[device_id], [&]() {
-    OF_MLU_CHECK(cnrtSetDevice(device_id));
-    OF_MLU_CHECK(cnrtSyncDevice());
-  });
-}
-
-#endif  // WITH_MLU
 
 }  // namespace oneflow

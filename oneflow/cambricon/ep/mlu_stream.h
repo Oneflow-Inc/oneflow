@@ -18,13 +18,9 @@ limitations under the License.
 
 #include "oneflow/core/ep/include/stream.h"
 #include "oneflow/cambricon/ep/mlu_device.h"
-
-#ifdef WITH_MLU
-
-#include "oneflow/cambricon/mlu_util.h"
+#include "oneflow/cambricon/ep/mlu_util.h"
 
 namespace oneflow {
-
 namespace ep {
 
 class MluDevice;
@@ -56,9 +52,6 @@ class MluStream : public Stream {
 };
 
 }  // namespace ep
-
 }  // namespace oneflow
-
-#endif  // WITH_MLU
 
 #endif  // ONEFLOW_CAMBRICON_EP_MLU_STREAM_H_
