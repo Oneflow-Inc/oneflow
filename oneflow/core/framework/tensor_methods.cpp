@@ -475,8 +475,10 @@ Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t dim, co
       autograd::AutoGradMode mode(create_graph);
       CHECK_EQ_OR_RETURN(out_grads.size(), 1)
           << "out grad size should be 1, but got " << out_grads.size();
-      auto like = JUST(functional::Empty(Shape(input->shape()->dim_vec()), input->dtype(),
-                                         JUST(input->device()), /*pin_memory=*/false));
+      auto like =
+          JUST(functional::Empty(Shape(input->shape()->dim_vec()), input->dtype(),
+                                 JUST(input->device()), /*requires_grad=*/input->requires_grad(),
+                                 /*pin_memory=*/false));
       in_grads->resize(1);
       (*in_grads)[0] = JUST(functional::NarrowGrad(out_grads[0], like, dim, start, length));
       return Maybe<void>::Ok();
