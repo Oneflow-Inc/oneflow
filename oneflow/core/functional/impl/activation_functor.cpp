@@ -727,9 +727,40 @@ class SoftShrinkGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FracFunctor {
+ public:
+  FracFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("frac").Input("x").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FracGradFunctor {
+ public:
+  FracGradFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("frac_grad").Input("x").Input("dy").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& dy) const {
+
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
+  m.add_functor<impl::FracFunctor>("Frac");
+  m.add_functor<impl::FracFunctor>("FracGrad");
   m.add_functor<impl::ReluFunctor>("Relu");
   m.add_functor<impl::ReluGradFunctor>("ReluGrad");
   m.add_functor<impl::PReluFunctor>("PRelu");

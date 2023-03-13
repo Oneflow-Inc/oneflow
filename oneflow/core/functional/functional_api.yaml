@@ -3245,3 +3245,11 @@
 - name: "clone"
   signature: "Tensor (Tensor input) => Clone"
   bind_python: True
+
+- name: "frac"
+  signature: "Tensor (Tensor x) => Frac"
+  bind_python: True
+
+- name: "frac_grad"
+  signature: "Tensor (Tensor x) => FracGrad"
+  bind_python: False
