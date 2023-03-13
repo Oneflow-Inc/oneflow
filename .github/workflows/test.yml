@@ -1152,7 +1152,7 @@ jobs:
         run: |
           wget https://github.com/Oneflow-Inc/llvm-project/releases/download/update-err-msg-checker/clang-tidy-15.AppImage
           wget https://raw.githubusercontent.com/oneflow-inc/llvm-project/maybe/clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py
-          chmod +x clang-tidy-14.AppImage clang-tidy-diff.py
+          chmod +x clang-tidy-15.AppImage clang-tidy-diff.py
       - name: Cache third party dir
         uses: actions/cache@v2
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
