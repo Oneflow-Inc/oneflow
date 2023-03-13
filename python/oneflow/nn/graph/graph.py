@@ -20,7 +20,7 @@ import time
 import inspect
 import weakref
 from collections import OrderedDict
-from functools import partial
+from functools import partial, wraps
 from typing import Dict, Optional, Union, List, Callable
 from google.protobuf import text_format
 from copy import deepcopy
@@ -170,6 +170,9 @@ class Graph(object):
         # For load graph from runtime states.
         self._enable_save_runtime_state_dict = False
 
+        # For run graph with dynamic shape cache
+        self._run_with_cache = False
+
     def build(self, *args, **kwargs):
         r"""The ``build()`` method must be overridden to define neural network
         computaion logic.
@@ -238,6 +241,9 @@ class Graph(object):
 
             Donot override this function.
         """
+        # For cache cache graphs with dynamic input shape.
+        if self._run_with_cache == True:            
+            return self._dynamic_input_graph_cache(*args, **kwargs)
 
         if not self._is_compiled:
             if not self._build_with_shared_graph:
@@ -1812,6 +1818,25 @@ class Graph(object):
             return value
 
         args_tree.map_leaf(func)
+
+    @staticmethod
+    def with_dynamic_input_shape(graph_init_func):
+        @wraps(graph_init_func)
+        def deco_func(self, *args, **kwargs):
+            print("====> wrapped ")
+            graph_init_func(self, *args, **kwargs)
+            self._run_with_cache = True
+            import oneflow.nn.graph.cache as cache
+            self._dynamic_input_graph_cache = cache.GraphCache(weakref.proxy(self))
+            self._cached_init_args = args
+            print("+++", args)
+            self._cached_init_kwargs = kwargs
+            print("+++", kwargs)
+        
+        print("====> wrap called")
+        return deco_func
+
+
 
 
 if __name__ == "__main__":
