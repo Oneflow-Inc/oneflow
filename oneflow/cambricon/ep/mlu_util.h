@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CAMBRICON_MLU_UTIL_H_
 #define ONEFLOW_CAMBRICON_MLU_UTIL_H_
 
+#include "oneflow/core/common/util.h"  // OF_DISALLOW_COPY_AND_MOVE
 #include "cnrt.h"
 #include "cndev.h"
 #include "cn_api.h"
