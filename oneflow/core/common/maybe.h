@@ -343,6 +343,8 @@ std::string GetFormatedSerializedError(const std::shared_ptr<StackedError>& stac
     return frame;                                                                             \
   }(__FUNCTION__))
 
+// NOTE: Please contact @daquexian if you need to modify these CHECK_(XX_)OR_RETURN macros. There
+// are some static analyzers depending on the internal implementation of them.
 #define CHECK_OR_RETURN(expr)                                            \
   CHECK_OR_RETURN_INTERNAL(expr, OF_PP_STRINGIZE(CHECK_OR_RETURN(expr))) \
       << "Check failed: (" << OF_PP_STRINGIZE(expr) << ") " << Error::kOverrideThenMergeMessage
