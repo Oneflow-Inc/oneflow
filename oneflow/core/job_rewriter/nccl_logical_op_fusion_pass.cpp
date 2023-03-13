@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #ifdef WITH_CUDA
+#include "oneflow/core/auto_parallel/auto_memory.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/nd_sbp.h"
@@ -23,11 +24,15 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/calculation_pass.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
+#include "oneflow/core/common/env_var/env_var.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/user/ops/nccl_logical_util.h"
 
 namespace oneflow {
+
+// nccl fusion bucket size 500MiB.
+DEFINE_ENV_INTEGER(ONEFLOW_GRAPH_NCCL_LOGICAL_FUSION_BUCKET_SIZE, 5e8);
 
 namespace {
 
@@ -104,9 +109,9 @@ Maybe<void> ReplaceNcclOpsWithFusionOp(std::vector<OperatorConf>* nccl_fusion_op
     dst_nd_sbp_str_list.push_back(
         NdSbpToLongString(nccl_op->NdSbp4BnInOp(nccl_op->op().SoleObn())));
     nccl_type_list.push_back(nccl_op->op().op_conf().user_conf().op_type_name());
-    CHECK_OR_RETURN(seed_placement == nccl_op->parallel_desc());
-    CHECK_EQ_OR_RETURN(has_stream_name_hint, nccl_op->op().op_conf().has_stream_name_hint());
-    CHECK_EQ_OR_RETURN(stream_name_hint, nccl_op->op().op_conf().stream_name_hint());
+    CHECK(seed_placement == nccl_op->parallel_desc());
+    CHECK_EQ(has_stream_name_hint, nccl_op->op().op_conf().has_stream_name_hint());
+    CHECK_EQ(stream_name_hint, nccl_op->op().op_conf().stream_name_hint());
     // 1. update del op
     VLOG(3) << " Del op: " << nccl_op->op().op_conf().DebugString();
     del_ops->insert(nccl_op->op().op_name());
@@ -138,23 +143,23 @@ Maybe<void> ReplaceNcclOpsWithFusionOp(std::vector<OperatorConf>* nccl_fusion_op
         GenLogicalBlobName(origin_nccl->op().BnInOp2Lbi(origin_nccl->op().SoleIbn()));
     std::string origin_nccl_output_lbn =
         GenLogicalBlobName(origin_nccl->op().BnInOp2Lbi(origin_nccl->op().SoleObn()));
-    CHECK_EQ_OR_RETURN(input_lbn, origin_nccl_input_lbn);
+    CHECK_EQ(input_lbn, origin_nccl_input_lbn);
     const OpNode* origin_consumer = origin_edge->dst_node();
     const std::string& consumer_op_name = origin_consumer->op().op_name();
     if (mut_op_name2conf->find(consumer_op_name) == mut_op_name2conf->end()) {
       mut_op_name2conf->emplace(consumer_op_name, origin_consumer->op().op_conf());
     }
-    CHECK_EQ_OR_RETURN(origin_edge->lbis().size(), 1);
+    CHECK_EQ(origin_edge->lbis().size(), 1);
     const LogicalBlobId& lbi = origin_edge->lbis().front();
     VLOG(3) << " input_lbn: " << input_lbn;
     VLOG(3) << " lbi: " << GenLogicalBlobName(lbi);
-    CHECK_EQ_OR_RETURN(origin_nccl_output_lbn, GenLogicalBlobName(lbi));
+    CHECK_EQ(origin_nccl_output_lbn, GenLogicalBlobName(lbi));
 
     // 3. update consumer op
     for (const std::string& ibn : JUST(MapAt(origin_edge->lbi2ibns(), lbi))) {
       std::string old_lbn = ReplaceInputLbnInOpCustomizedConf(
           &JUST(MapAt(*mut_op_name2conf, consumer_op_name)), ibn, output_lbn);
-      CHECK_EQ_OR_RETURN(old_lbn, origin_nccl_output_lbn);
+      CHECK_EQ(old_lbn, origin_nccl_output_lbn);
     }
 
     VLOG(3) << " Update origin consumer op from: \n [ "
@@ -162,6 +167,58 @@ Maybe<void> ReplaceNcclOpsWithFusionOp(std::vector<OperatorConf>* nccl_fusion_op
             << JUST(MapAt(*mut_op_name2conf, consumer_op_name)).DebugString() << " ] \n";
   }
   return Maybe<void>::Ok();
+}
+
+struct NcclFusionBucket {
+  std::vector<const OpNode*> nccl_ops;
+  int64_t fusion_bucket_size;
+  NcclFusionBucket() : fusion_bucket_size(0) {}
+};
+
+std::string GenNcclFusionKey(const OpNode* nccl_op) {
+  int64_t logical_chain_id = nccl_op->op().op_conf().logical_chain_id();
+  const auto& hierarchy = nccl_op->parallel_desc().hierarchy();
+  std::string fusion_key =
+      "logical_chain_id: " + std::to_string(logical_chain_id)
+      + ", device_mesh: " + hierarchy->ToString()
+      + ", comm: " + GetCommKeyFromNcclType(nccl_op->op().op_conf().user_conf().op_type_name());
+  LOG(INFO) << "ccdebuglog: fusion_key = " << fusion_key << " nccl_op: " << nccl_op->op().op_name();
+  return fusion_key;
+}
+
+int64_t GetNcclOpMemSize(const OpNode* nccl_op) {
+  const LogicalBlobId& in_lbi = nccl_op->op().BnInOp2Lbi(nccl_op->op().SoleIbn());
+  const LogicalBlobId& out_lbi = nccl_op->op().BnInOp2Lbi(nccl_op->op().SoleObn());
+  const BlobDesc& in_logical_blob_desc = nccl_op->LogicalBlobDesc4Lbi(in_lbi);
+  const BlobDesc& out_logical_blob_desc = nccl_op->LogicalBlobDesc4Lbi(out_lbi);
+  const std::shared_ptr<Shape> in_local_shape = CHECK_JUST(GetPhysicalShape(
+      in_logical_blob_desc.shape(), nccl_op->NdSbp4Lbi(in_lbi), nccl_op->parallel_desc(), 0));
+  const std::shared_ptr<Shape> out_local_shape = CHECK_JUST(GetPhysicalShape(
+      out_logical_blob_desc.shape(), nccl_op->NdSbp4Lbi(out_lbi), nccl_op->parallel_desc(), 0));
+  int64_t elem_cnt = std::max(in_local_shape->elem_cnt(), out_local_shape->elem_cnt());
+  return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(in_logical_blob_desc.data_type()));
+}
+
+void AppendOrCreatFusionBucket(std::vector<NcclFusionBucket>* buckets, const OpNode* nccl_op,
+                               const int64_t bucket_limit) {
+  const int64_t nccl_mem_size = GetNcclOpMemSize(nccl_op);
+  for (auto& fusion_bucket : *buckets) {
+    if (fusion_bucket.fusion_bucket_size + nccl_mem_size < bucket_limit) {
+      fusion_bucket.nccl_ops.push_back(nccl_op);
+      fusion_bucket.fusion_bucket_size += nccl_mem_size;
+      return;
+    }
+  }
+  buckets->push_back(NcclFusionBucket());
+  buckets->back().nccl_ops.push_back(nccl_op);
+  buckets->back().fusion_bucket_size += nccl_mem_size;
+  if (buckets->size() > 1) {
+    LOG(INFO) << " ccdebuglog: same key has " << buckets->size() << " buckets.";
+    for (int i = 0; i < buckets->size(); ++i) {
+      LOG(INFO) << " i = " << i << " , fusion_bucket_size = " << buckets->at(i).fusion_bucket_size
+                << " with nccl num : " << buckets->at(i).nccl_ops.size();
+    }
+  }
 }
 
 Maybe<void> NcclLogicalOpFusionPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
@@ -177,7 +234,16 @@ Maybe<void> NcclLogicalOpFusionPass::Apply(const OpGraph& op_graph, JobBuilder* 
       Handler(in_node);
     }
   };
-  op_graph.TopoForEachNodeWithCtrlEdge([&](const OpNode* node) {
+
+  std::vector<const OpNode*> ordered_op_nodes;
+  if (ParseBooleanFromEnv("DISABLE_LOGICAL_STRAIGHTEN", false)) {
+    op_graph.TopoForEachNodeWithCtrlEdge(
+        [&](const OpNode* node) { ordered_op_nodes.emplace_back(node); });
+  } else {
+    auto_parallel::StraightenOpGraph(op_graph, &ordered_op_nodes);
+  }
+
+  for (const OpNode* node : ordered_op_nodes) {
     int64_t nccl_depth = 0;
     ConstForEachDataAndCtrlInNode(node, [&](const OpNode* in_node) {
       auto it = op_node2nccl_depth.find(in_node);
@@ -189,7 +255,7 @@ Maybe<void> NcclLogicalOpFusionPass::Apply(const OpGraph& op_graph, JobBuilder* 
       nccl_depth2nccl_ops[nccl_depth].push_back(node);
     }
     CHECK(op_node2nccl_depth.emplace(node, nccl_depth).second);
-  });
+  }
 
   if (nccl_depth2nccl_ops.empty()) { return Maybe<void>::Ok(); }
 
@@ -199,22 +265,20 @@ Maybe<void> NcclLogicalOpFusionPass::Apply(const OpGraph& op_graph, JobBuilder* 
   std::unordered_set<std::string> del_ops;
   HashMap<std::string, OperatorConf> mut_op_name2conf;
 
+  const int64_t bucket_limit = EnvInteger<ONEFLOW_GRAPH_NCCL_LOGICAL_FUSION_BUCKET_SIZE>();
+  LOG(INFO) << "ccdebuglog: bucket_limit = " << bucket_limit;
+
   for (const auto& pair : nccl_depth2nccl_ops) {
-    HashMap<int64_t, HashMap<std::string, std::vector<const OpNode*>>> chain2comm2nccl_ops;
+    HashMap<std::string, std::vector<NcclFusionBucket>> fusion_key2nccl_buckets;
     for (const OpNode* nccl_op : pair.second) {
       CHECK_OR_RETURN(nccl_op->op().op_conf().has_logical_chain_id());
-      int64_t logical_chain_id = nccl_op->op().op_conf().logical_chain_id();
-      const auto& hierarchy = nccl_op->parallel_desc().hierarchy();
-      std::string comm_key =
-          hierarchy->ToString()
-          + GetCommKeyFromNcclType(nccl_op->op().op_conf().user_conf().op_type_name());
-      LOG(INFO) << "ccdebuglog: comm_key = " << comm_key << " nccl_op: " << nccl_op->op().op_name();
-      chain2comm2nccl_ops[logical_chain_id][comm_key].push_back(nccl_op);
+      std::string fusion_key = GenNcclFusionKey(nccl_op);
+      AppendOrCreatFusionBucket(&fusion_key2nccl_buckets[fusion_key], nccl_op, bucket_limit);
     }
-    for (const auto& chain_pair : chain2comm2nccl_ops) {
-      for (const auto& comm_pair : chain_pair.second) {
+    for (const auto& pair : fusion_key2nccl_buckets) {
+      for (const auto& fusion_bucket : pair.second) {
         JUST(ReplaceNcclOpsWithFusionOp(&nccl_fusion_ops, &nccl_fusion_op_parallel_confs, &del_ops,
-                                        &mut_op_name2conf, comm_pair.second));
+                                        &mut_op_name2conf, fusion_bucket.nccl_ops));
       }
     }
   }
