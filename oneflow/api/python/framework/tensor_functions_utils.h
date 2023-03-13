@@ -25,7 +25,6 @@ namespace one {
 
 using functional::PyObjectPtr;
 
-
 std::string PyUnpack_String(PyObject* obj) {
   CHECK_OR_THROW(PyUnicode_Check(obj)) << "PyUnpack_String(): expect a PyUnicode object";
   Py_ssize_t size = -1;
@@ -40,7 +39,7 @@ std::string PyUnpack_String(PyObject* obj) {
 // 3. raise Error for multiple arguments case, like Tensor.reshape(1, shape=(1, ))
 // 4. return empty tuple for empty arguments, like Tensor.reshape()
 PyObject* PyParseArgs(PyObject* args, PyObject* kwargs, const char* func_name,
-                        const std::string& param_name) {
+                      const std::string& param_name) {
   PyObject* args_obj = NULL;
   // Tensor.reshape(shape=(1, 2)), get (1, 2) for kwargs["shape"]
   if (kwargs != NULL) {
