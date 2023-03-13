@@ -17,6 +17,7 @@ limitations under the License.
 #include <Python.h>
 #include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/framework/size.h"
+#include "oneflow/api/python/framework/tensor_functions_utils.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
 #include "oneflow/api/python/functional/tensor_api.yaml.pybind.h"
@@ -446,14 +447,9 @@ static PyObject* PyTensorObject_matmul(PyObject* self, PyObject* args, PyObject*
 
 static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  PyObject* shape = args;
-  if (PyTuple_Size(args) == 1) {
-    PyObject* item = PyTuple_GetItem(args, 0);
-    if (!PyLong_Check(item)) { shape = item; }
-  }
-
+  PyObject* shape = PyParseArgs(args, kwargs, "reshape", "shape");
   PyObjectPtr _args = PyObjectPtr(PyTuple_Pack(2, self, shape));
-  PyObject* result = functional::reshape(NULL, _args.get(), kwargs);
+  PyObject* result = functional::reshape(NULL, _args.get(), NULL);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
   END_HANDLE_ERRORS
