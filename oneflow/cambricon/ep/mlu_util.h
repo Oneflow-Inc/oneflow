@@ -16,8 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CAMBRICON_MLU_UTIL_H_
 #define ONEFLOW_CAMBRICON_MLU_UTIL_H_
 
-#include "oneflow/core/common/data_type.h"
-
 #include "cnrt.h"
 #include "cndev.h"
 #include "cn_api.h"
@@ -49,8 +47,6 @@ int GetMluDeviceCount();
 void SetMluDeviceIndex(int device_id);
 
 void MluSynchronize(int device_id);
-
-void InitMluContextOnce(int device_id);
 
 }  // namespace oneflow
 
