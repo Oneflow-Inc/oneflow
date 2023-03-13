@@ -143,12 +143,16 @@ class TestTensorComplex128(TestTensorComplex64):
     def setUp(self):
         self.dtype = flow.cdouble
         self.np_dtype = np.complex128
-        self.type_str = 'ComplexDoubleTensor'
+        self.type_str = "ComplexDoubleTensor"
         self.a = [1.0 + 1j, 2.0]
         self.np_a = np.array(self.a, dtype=self.np_dtype)
         self.b = [[1.0 + 1j, 2.0], [1.0, 2.0 - 1j], [-1.0, 1j]]
         self.np_b = np.array(self.b, dtype=self.np_dtype)
-        self.c = [[3.14+2j, 3.14+2j], [3.14+2j, 3.14+2j], [3.14+2j, 3.14+2j]]
+        self.c = [
+            [3.14 + 2j, 3.14 + 2j],
+            [3.14 + 2j, 3.14 + 2j],
+            [3.14 + 2j, 3.14 + 2j],
+        ]
         self.np_c = np.array(self.c, dtype=self.np_dtype)
 
 
