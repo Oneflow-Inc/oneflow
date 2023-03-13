@@ -129,6 +129,7 @@ class Graph(object):
         self._variables_conf = OrderedDict()
         self._additional_variable_tobe_loaded = OrderedDict()
         self._is_compiled = False
+        self._is_user_mode = False
         # Default is local view
         self._is_global_view = False
 
@@ -852,7 +853,9 @@ class Graph(object):
                 "input", graph_build_util.build_graph_input_arg, *args, **kwargs
             )
             # Deal with module in self.build(*args)
+            self._is_user_mode = True
             outputs = self.build(*lazy_args, **lazy_kwargs)
+            self._is_user_mode = False
 
             # Always pack output to remain type of outputs
             outputs = (outputs,)
@@ -1225,7 +1228,9 @@ class Graph(object):
 
             # Deal with module in self.build(*args)
             self.__print(0, 1, self._shallow_repr() + " start building graph modules.")
+            self._is_user_mode = True
             outputs = self.build(*lazy_args, **lazy_kwargs)
+            self._is_user_mode = False
             self.__print(0, 1, self._shallow_repr() + " end building graph modules.")
 
             # Deal with outputs
