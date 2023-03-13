@@ -39,6 +39,7 @@ add_docstr(
 
 
     For example:
+
     .. code-block:: python
 
         >>> import oneflow as flow
@@ -204,6 +205,7 @@ add_docstr(
     Transfer tensor data from GPU memory back to host (CPU) memory. If the tensor is already in host (CPU) memory, the operation does nothing and gives a warning.
 
     Note:
+    
         Both global tensor and local tensor of oneflow are applicable to this operation.
 
         Use with :func:`oneflow.Tensor.load` and :func:`oneflow.Tensor.is_offloaded`.        
