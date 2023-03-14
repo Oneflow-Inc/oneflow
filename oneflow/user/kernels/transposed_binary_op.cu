@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "_deps/glog-build/glog/logging.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/framework.h"
@@ -98,7 +97,6 @@ struct LoadStore {
   OF_DEVICE_FUNCTION IndexType index2offset(IndexType index) {
     IndexType offset = 0;
     IndexType div = 0, mod = 0;
-    printf("%d %d %d,     ", offset, div, mod);
 #pragma unroll
     for (int dim = ndims_ - 1; dim >= 0 && index > 0; --dim) {
       fast_integer_math_[dim].divmod(index, &div, &mod);
