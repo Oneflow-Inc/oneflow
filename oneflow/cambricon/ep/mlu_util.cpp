@@ -65,4 +65,39 @@ int GetMluDeviceCount() {
   return mlu_device_count;
 }
 
+std::string cnnlErrorString(cnnlStatus_t status) {
+  switch (status) {
+    case CNNL_STATUS_SUCCESS: {
+      return "CNNL_STATUS_SUCCESS";
+    }
+    case CNNL_STATUS_NOT_INITIALIZED: {
+      return "CNNL_STATUS_NOT_INITIALIZED";
+    }
+    case CNNL_STATUS_ALLOC_FAILED: {
+      return "CNNL_STATUS_ALLOC_FAILED";
+    }
+    case CNNL_STATUS_BAD_PARAM: {
+      return "CNNL_STATUS_BAD_PARAM";
+    }
+    case CNNL_STATUS_INTERNAL_ERROR: {
+      return "CNNL_STATUS_INTERNAL_ERROR";
+    }
+    case CNNL_STATUS_ARCH_MISMATCH: {
+      return "CNNL_STATUS_MISMATCH";
+    }
+    case CNNL_STATUS_EXECUTION_FAILED: {
+      return "CNNL_STATUS_EXECUTION_FAILED";
+    }
+    case CNNL_STATUS_NOT_SUPPORTED: {
+      return "CNNL_STATUS_NOT_SUPPORTED";
+    }
+    case CNNL_STATUS_NUMERICAL_OVERFLOW: {
+      return "CNNL_STATUS_NUMERICAL_OVERFLOW";
+    }
+    default: {
+      return "CNNL_STATUS_UNKNOWN";
+    }
+  }
+}
+
 }  // namespace oneflow

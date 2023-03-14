@@ -44,11 +44,13 @@ class MluStream : public Stream {
   Maybe<void> OnExecutionContextTeardown() override;
 
   cnrtQueue_t mlu_stream() const;
+  cnnlHandle_t cnnl_handle() const;
 
  private:
   cnrtQueue_t mlu_stream_{};
   int device_index_;
   MluDevice* device_;
+  cnnlHandle_t cnnl_handle_;
 };
 
 }  // namespace ep

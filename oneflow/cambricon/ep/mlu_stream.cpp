@@ -30,10 +30,14 @@ constexpr size_t kDefaultWorkspaceSizeMb = 4;  // 4M
 MluStream::MluStream(MluDevice* device) : device_index_(device->device_index()), device_(device) {
   MluCurrentDeviceGuard guard(device_index_);
   OF_MLU_CHECK(cnrtQueueCreate(&mlu_stream_));
+  // handle is a pointer to cnnlContext struct that holds the Cambricon CNNL context.
+  // see:https://www.cambricon.com/docs/sdk_1.10.0/cambricon_cnnl_1.15.2/developer_guide/cnnl_api/data/datatype.html#_CPPv412cnnlHandle_t
+  OF_CNNL_CHECK(cnnlCreate(&cnnl_handle_));
 }
 
 MluStream::~MluStream() {
   MluCurrentDeviceGuard guard(device_index_);
+  OF_CNNL_CHECK(cnnlDestroy(cnnl_handle_));
   OF_MLU_CHECK(cnrtQueueSync(mlu_stream_));
   OF_MLU_CHECK(cnrtQueueDestroy(mlu_stream_));
 }
@@ -71,6 +75,8 @@ void MluStream::WaitEvent(Event* event) {
 Maybe<void> MluStream::GetAsyncError() { return Maybe<void>::Ok(); }
 
 cnrtQueue_t MluStream::mlu_stream() const { return mlu_stream_; }
+
+cnnlHandle_t MluStream::cnnl_handle() const { return cnnl_handle_; }
 
 }  // namespace ep
 }  // namespace oneflow
