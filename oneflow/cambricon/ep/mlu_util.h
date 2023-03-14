@@ -35,8 +35,6 @@ namespace oneflow {
   LOG(FATAL) << "CNNL check failed: " #condition " : "                                          \
              << " (error code:" << _cnnl_check_status << " " + std::string(cnnlGetErrorString(_cnnl_check_status)) + ") "
 
-// #define CNNL_CHECK(val) cnnlCheck((val), #val, __FILE__, __LINE__)
-
 cnrtRet_t NumaAwareMluMallocHost(int32_t dev, void** ptr, size_t size);
 
 class MluCurrentDeviceGuard final {
