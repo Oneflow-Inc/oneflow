@@ -76,7 +76,7 @@ Maybe<void> MluStream::GetAsyncError() { return Maybe<void>::Ok(); }
 
 cnrtQueue_t MluStream::mlu_stream() const { return mlu_stream_; }
 
-cnnlHandle_t MluStream::mlu_handle() const { return handle_; }
+cnnlHandle_t MluStream::cnnl_handle() const { return cnnl_handle_; }
 
 
 }  // namespace ep
