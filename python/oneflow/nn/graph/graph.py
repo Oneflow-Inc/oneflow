@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import logging
+import warnings
 import os
 import sys
 import time
@@ -982,6 +983,7 @@ class Graph(object):
             destination = OrderedDict()
             destination._metadata = OrderedDict()
 
+        destination["oneflow_version"] = oneflow.__version__
         destination["graph_name"] = self.name
         destination["job_id"] = self._job_id
 
@@ -1037,8 +1039,16 @@ class Graph(object):
         if self._run_with_cache == True:
             return self._dynamic_input_graph_cache.load_runtime_state_dict(state_dict)
 
-        # Generate new config.
         self._name = state_dict["graph_name"]
+        if "oneflow_version" not in state_dict:
+            state_dict["oneflow_version"] = "none"
+        if state_dict["oneflow_version"] != oneflow.__version__:
+            warnings.warn(
+                f"nn.Graph {self._name} WARNING: current oneflow version ({oneflow.__version__}) is loading "
+                f"runtime_state_dict from a different version ({state_dict['oneflow_version']}), "
+                "there may has compatibility problems."
+            )
+        # Generate new config.
         self._generate_config_proto()
         self._job_id = state_dict["job_id"]
         # Create a c nn graph to run with lazy runtime.
@@ -1837,18 +1847,14 @@ class Graph(object):
     def with_dynamic_input_shape(graph_init_func):
         @wraps(graph_init_func)
         def deco_func(self, *args, **kwargs):
-            print("====> wrapped ")
             graph_init_func(self, *args, **kwargs)
             self._run_with_cache = True
             import oneflow.nn.graph.cache as cache
 
             self._dynamic_input_graph_cache = cache.GraphCache(weakref.proxy(self))
             self._cached_init_args = args
-            print("+++", args)
             self._cached_init_kwargs = kwargs
-            print("+++", kwargs)
 
-        print("====> wrap called")
         return deco_func
 
 

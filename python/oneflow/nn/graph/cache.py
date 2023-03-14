@@ -131,7 +131,6 @@ class GraphCache(object):
             # Has no graph yet
             cur_is_base = True
             graph = self._base_graph
-            print("get base", cache_key)
         else:
             # Create new graph from base
             graph = self._base_graph.__class__(
@@ -142,7 +141,6 @@ class GraphCache(object):
             graph._dynamic_input_graph_cache = None
             graph._cached_init_args = None
             graph._cached_init_kwargs = None
-            print("get new", cache_key)
 
         if self._enable_shared is True:
             if cur_is_base:
@@ -186,7 +184,5 @@ class GraphCache(object):
         # Create graph
         if graph is None:
             graph = self._init_and_get_a_graph_in_cache(cache_key)
-        else:
-            print("====> hit cache ", cache_key)
 
         return graph
