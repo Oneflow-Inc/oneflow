@@ -94,19 +94,19 @@ class Adagrad(Optimizer):
         """
 
     def __init__(
-            self,
-            params: Union[Iterator[Parameter], List[Dict]],
-            lr: float = 0.001,
-            lr_decay: float = 0.0,
-            weight_decay: float = 0,
-            initial_accumulator_value: float = 0.0,
-            eps: float = 1e-10,
-            contiguous_params: bool = False,
+        self,
+        params: Union[Iterator[Parameter], List[Dict]],
+        lr: float = 0.001,
+        lr_decay: float = 0.0,
+        weight_decay: float = 0,
+        initial_accumulator_value: float = 0.0,
+        eps: float = 1e-10,
+        contiguous_params: bool = False,
     ):
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
         assert (
-                initial_accumulator_value >= 0.0
+            initial_accumulator_value >= 0.0
         ), f"Invalid initial_accumulator_value value: {initial_accumulator_value}"
         assert eps >= 0.0, f"Invalid epsilon value: {eps}"
 
@@ -182,7 +182,7 @@ class Adagrad(Optimizer):
         new_opt_confs = []
         for param_group in self.param_groups:
             assert (
-                    param_group["contiguous_params"] != True
+                param_group["contiguous_params"] != True
             ), "contiguous_params cannot be used in graph"
 
             optimizer_conf = train_conf.optimizer_conf.add()
