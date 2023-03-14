@@ -88,6 +88,7 @@ bool isSignLessTensorOrOther(Type type) {
   }
   return true;
 }
+
 bool allSignless(mlir::TypeRange types) {
   for (auto type : types) {
     if (!isSignLessTensorOrOther(type)) { return false; }
@@ -105,7 +106,7 @@ bool allSignless(FunctionType funcType) {
   return true;
 }
 
-Value CreateTransposeValue(Location& loc, ConversionPatternRewriter& rewriter, Value input,
+Value CreateTransposeValue(Location& loc, PatternRewriter& rewriter, Value input,
                            ArrayRef<int32_t> perms) {
   int perms_size = perms.size();
   auto transpose_perms = rewriter.create<tosa::ConstOp>(
@@ -124,8 +125,8 @@ RankedTensorType CreateTransposeType(ShapedType output, ArrayRef<int32_t> perms)
   return RankedTensorType::get(ranked_type, output.getElementType());
 };
 
-Value CreateBNOp(Location loc, ConversionPatternRewriter& rewriter, Value output, Value x,
-                 Value mean, Value variance, Value epsilon, Value gamma, Value beta) {
+Value CreateBNOp(Location loc, PatternRewriter& rewriter, Value output, Value x, Value mean,
+                 Value variance, Value epsilon, Value gamma, Value beta) {
   const auto output_type = output.getType();
   // sub_op = sub(input, mean)
   auto sub_op0 = rewriter.create<tosa::SubOp>(loc, output_type, x, mean);
@@ -262,7 +263,7 @@ struct VariableOpToConstLowering final : public OpConversionPattern<VariableOp> 
   int const_val_;
 };
 
-LogicalResult CastOpmatchAndRewrite(CastOp op, ConversionPatternRewriter& rewriter) {
+LogicalResult CastOpmatchAndRewrite(CastOp op, PatternRewriter& rewriter) {
   auto output = op.out().getType();
   auto input = op.in();
   rewriter.replaceOpWithNewOp<tosa::CastOp>(op, output, input);
@@ -277,7 +278,15 @@ struct CastOpLowering final : public OpConversionPattern<CastOp> {
   }
 };
 
-LogicalResult ReluOpmatchAndRewrite(ReluOp op, ConversionPatternRewriter& rewriter) {
+struct CastOpPattern : public mlir::OpRewritePattern<CastOp> {
+  explicit CastOpPattern(mlir::MLIRContext* context)
+      : OpRewritePattern<CastOp>(context, /*benefit=*/0) {}
+  mlir::LogicalResult matchAndRewrite(CastOp op, mlir::PatternRewriter& rewriter) const override {
+    return CastOpmatchAndRewrite(op, rewriter);
+  }
+};
+
+LogicalResult ReluOpmatchAndRewrite(ReluOp op, PatternRewriter& rewriter) {
   const auto floatMax = std::numeric_limits<float>::max();
   const auto intMax = std::numeric_limits<long long>::max();
 
@@ -299,8 +308,15 @@ struct ReluOpLowering final : public OpConversionPattern<ReluOp> {
   }
 };
 
-LogicalResult BroadcastAddOpmatchAndRewrite(BroadcastAddOp op,
-                                            ConversionPatternRewriter& rewriter) {
+struct ReluOpPattern : public mlir::OpRewritePattern<ReluOp> {
+  explicit ReluOpPattern(mlir::MLIRContext* context)
+      : OpRewritePattern<ReluOp>(context, /*benefit=*/0) {}
+  mlir::LogicalResult matchAndRewrite(ReluOp op, mlir::PatternRewriter& rewriter) const override {
+    return ReluOpmatchAndRewrite(op, rewriter);
+  }
+};
+
+LogicalResult BroadcastAddOpmatchAndRewrite(BroadcastAddOp op, PatternRewriter& rewriter) {
   const auto output = op.z().getType();
   auto input1 = op.x();
   auto input2 = op.y();
@@ -308,6 +324,7 @@ LogicalResult BroadcastAddOpmatchAndRewrite(BroadcastAddOp op,
   rewriter.replaceOpWithNewOp<tosa::AddOp>(op, output, input1, input2);
   return success();
 }
+
 struct BroadcastAddOpLowering final : public OpConversionPattern<BroadcastAddOp> {
  public:
   using OpConversionPattern<BroadcastAddOp>::OpConversionPattern;
@@ -317,7 +334,16 @@ struct BroadcastAddOpLowering final : public OpConversionPattern<BroadcastAddOp>
   }
 };
 
-LogicalResult Add2OpmatchAndRewrite(Add2Op op, ConversionPatternRewriter& rewriter) {
+struct BroadcastAddOpPattern : public mlir::OpRewritePattern<BroadcastAddOp> {
+  explicit BroadcastAddOpPattern(mlir::MLIRContext* context)
+      : OpRewritePattern<BroadcastAddOp>(context, /*benefit=*/0) {}
+  mlir::LogicalResult matchAndRewrite(BroadcastAddOp op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    return BroadcastAddOpmatchAndRewrite(op, rewriter);
+  }
+};
+
+LogicalResult Add2OpmatchAndRewrite(Add2Op op, PatternRewriter& rewriter) {
   const auto output = op.out().getType();
   auto input1 = op.in0();
   auto input2 = op.in1();
@@ -334,7 +360,15 @@ struct Add2OpLowering final : public OpConversionPattern<Add2Op> {
   }
 };
 
-LogicalResult AvgPool2DOpmatchAndRewrite(AvgPool2DOp op, ConversionPatternRewriter& rewriter) {
+struct Add2OpPattern : public mlir::OpRewritePattern<Add2Op> {
+  explicit Add2OpPattern(mlir::MLIRContext* context)
+      : OpRewritePattern<Add2Op>(context, /*benefit=*/0) {}
+  mlir::LogicalResult matchAndRewrite(Add2Op op, mlir::PatternRewriter& rewriter) const override {
+    return Add2OpmatchAndRewrite(op, rewriter);
+  }
+};
+
+LogicalResult AvgPool2DOpmatchAndRewrite(AvgPool2DOp op, PatternRewriter& rewriter) {
   auto get_pair_int64_from_array = [](ArrayAttr arr) -> std::pair<int64_t, int64_t> {
     return {arr.getValue()[0].cast<IntegerAttr>().getSInt(),
             arr.getValue()[1].cast<IntegerAttr>().getSInt()};
@@ -371,7 +405,16 @@ struct AvgPool2DOpLowering final : public OpConversionPattern<AvgPool2DOp> {
   }
 };
 
-LogicalResult MaxPool2DOpmatchAndRewrite(MaxPool2DOp op, ConversionPatternRewriter& rewriter) {
+struct AvgPool2DOpPattern : public mlir::OpRewritePattern<AvgPool2DOp> {
+  explicit AvgPool2DOpPattern(mlir::MLIRContext* context)
+      : OpRewritePattern<AvgPool2DOp>(context, /*benefit=*/0) {}
+  mlir::LogicalResult matchAndRewrite(AvgPool2DOp op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    return AvgPool2DOpmatchAndRewrite(op, rewriter);
+  }
+};
+
+LogicalResult MaxPool2DOpmatchAndRewrite(MaxPool2DOp op, PatternRewriter& rewriter) {
   auto get_pair_int64_from_array = [](ArrayAttr arr) -> std::pair<int64_t, int64_t> {
     return {arr.getValue()[0].cast<IntegerAttr>().getSInt(),
             arr.getValue()[1].cast<IntegerAttr>().getSInt()};
@@ -411,7 +454,16 @@ struct MaxPool2DOpLowering final : public OpConversionPattern<MaxPool2DOp> {
   }
 };
 
-LogicalResult ReshapeOpmatchAndRewrite(ReshapeOp op, ConversionPatternRewriter& rewriter) {
+struct MaxPool2DOpPattern : public mlir::OpRewritePattern<MaxPool2DOp> {
+  explicit MaxPool2DOpPattern(mlir::MLIRContext* context)
+      : OpRewritePattern<MaxPool2DOp>(context, /*benefit=*/0) {}
+  mlir::LogicalResult matchAndRewrite(MaxPool2DOp op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    return MaxPool2DOpmatchAndRewrite(op, rewriter);
+  }
+};
+
+LogicalResult ReshapeOpmatchAndRewrite(ReshapeOp op, PatternRewriter& rewriter) {
   auto output = op.out().getType();
   auto input = op.in();
   llvm::SmallVector<int64_t> new_shape;
@@ -422,6 +474,7 @@ LogicalResult ReshapeOpmatchAndRewrite(ReshapeOp op, ConversionPatternRewriter& 
                                                rewriter.getI64ArrayAttr(new_shape));
   return success();
 }
+
 struct ReshapeOpLowering final : public OpConversionPattern<ReshapeOp> {
  public:
   using OpConversionPattern<ReshapeOp>::OpConversionPattern;
@@ -431,7 +484,16 @@ struct ReshapeOpLowering final : public OpConversionPattern<ReshapeOp> {
   }
 };
 
-LogicalResult MatmulOpmatchAndRewrite(MatmulOp op, ConversionPatternRewriter& rewriter) {
+struct ReshapeOpPattern : public mlir::OpRewritePattern<ReshapeOp> {
+  explicit ReshapeOpPattern(mlir::MLIRContext* context)
+      : OpRewritePattern<ReshapeOp>(context, /*benefit=*/0) {}
+  mlir::LogicalResult matchAndRewrite(ReshapeOp op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    return ReshapeOpmatchAndRewrite(op, rewriter);
+  }
+};
+
+LogicalResult MatmulOpmatchAndRewrite(MatmulOp op, PatternRewriter& rewriter) {
   // TODO: more throw for robust in matmul shape rank
   auto loc = op.getLoc();
 
@@ -463,6 +525,7 @@ LogicalResult MatmulOpmatchAndRewrite(MatmulOp op, ConversionPatternRewriter& re
   rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(op, out_shape_type, matmul, new_shape);
   return success();
 }
+
 struct MatmulOpLowering final : public OpConversionPattern<MatmulOp> {
  public:
   using OpConversionPattern<MatmulOp>::OpConversionPattern;
@@ -472,8 +535,16 @@ struct MatmulOpLowering final : public OpConversionPattern<MatmulOp> {
   }
 };
 
+struct MatmulOpPattern : public mlir::OpRewritePattern<MatmulOp> {
+  explicit MatmulOpPattern(mlir::MLIRContext* context)
+      : OpRewritePattern<MatmulOp>(context, /*benefit=*/0) {}
+  mlir::LogicalResult matchAndRewrite(MatmulOp op, mlir::PatternRewriter& rewriter) const override {
+    return MatmulOpmatchAndRewrite(op, rewriter);
+  }
+};
+
 LogicalResult NormalizationInferenceOpmatchAndRewrite(NormalizationInferenceOp op,
-                                                      ConversionPatternRewriter& rewriter) {
+                                                      PatternRewriter& rewriter) {
   auto reshape_dim = [&](Type type, Value value) -> Value {
     RankedTensorType in_type = value.getType().dyn_cast<RankedTensorType>();
     RankedTensorType out_type = type.cast<RankedTensorType>();
@@ -502,6 +573,7 @@ LogicalResult NormalizationInferenceOpmatchAndRewrite(NormalizationInferenceOp o
   rewriter.replaceOp(op, {batch_norm});
   return success();
 }
+
 struct NormalizationInferenceOpLowering final
     : public OpConversionPattern<NormalizationInferenceOp> {
  public:
@@ -512,8 +584,16 @@ struct NormalizationInferenceOpLowering final
   }
 };
 
-LogicalResult NormalizationOpmatchAndRewrite(NormalizationOp op,
-                                             ConversionPatternRewriter& rewriter) {
+struct NormalizationInferenceOpPattern : public mlir::OpRewritePattern<NormalizationInferenceOp> {
+  explicit NormalizationInferenceOpPattern(mlir::MLIRContext* context)
+      : OpRewritePattern<NormalizationInferenceOp>(context, /*benefit=*/0) {}
+  mlir::LogicalResult matchAndRewrite(NormalizationInferenceOp op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    return NormalizationInferenceOpmatchAndRewrite(op, rewriter);
+  }
+};
+
+LogicalResult NormalizationOpmatchAndRewrite(NormalizationOp op, PatternRewriter& rewriter) {
   auto reshape_dim = [&](Type type, Value value) -> Value {
     const RankedTensorType in_type = value.getType().dyn_cast<RankedTensorType>();
     const RankedTensorType out_type = type.cast<RankedTensorType>();
@@ -550,6 +630,7 @@ LogicalResult NormalizationOpmatchAndRewrite(NormalizationOp op,
   rewriter.replaceOp(op, {batch_norm, moving_mean, moving_variance});
   return success();
 }
+
 struct NormalizationOpLowering final : public OpConversionPattern<NormalizationOp> {
  public:
   using OpConversionPattern<NormalizationOp>::OpConversionPattern;
@@ -559,7 +640,16 @@ struct NormalizationOpLowering final : public OpConversionPattern<NormalizationO
   }
 };
 
-LogicalResult Conv2DOpmatchAndRewrite(Conv2DOp op, ConversionPatternRewriter& rewriter) {
+struct NormalizationOpPattern : public mlir::OpRewritePattern<NormalizationOp> {
+  explicit NormalizationOpPattern(mlir::MLIRContext* context)
+      : OpRewritePattern<NormalizationOp>(context, /*benefit=*/0) {}
+  mlir::LogicalResult matchAndRewrite(NormalizationOp op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    return NormalizationOpmatchAndRewrite(op, rewriter);
+  }
+};
+
+LogicalResult Conv2DOpmatchAndRewrite(Conv2DOp op, PatternRewriter& rewriter) {
   auto get_pair_int64_from_array = [](ArrayAttr arr) -> std::pair<int64_t, int64_t> {
     return {arr.getValue()[0].cast<IntegerAttr>().getSInt(),
             arr.getValue()[1].cast<IntegerAttr>().getSInt()};
@@ -597,11 +687,20 @@ LogicalResult Conv2DOpmatchAndRewrite(Conv2DOp op, ConversionPatternRewriter& re
   rewriter.replaceOp(op, {res});
   return success();
 }
+
 struct Conv2DOpLowering final : public OpConversionPattern<Conv2DOp> {
  public:
   using OpConversionPattern<Conv2DOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(Conv2DOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
+    return Conv2DOpmatchAndRewrite(op, rewriter);
+  }
+};
+
+struct Conv2DOpPattern : public mlir::OpRewritePattern<Conv2DOp> {
+  explicit Conv2DOpPattern(mlir::MLIRContext* context)
+      : OpRewritePattern<Conv2DOp>(context, /*benefit=*/0) {}
+  mlir::LogicalResult matchAndRewrite(Conv2DOp op, mlir::PatternRewriter& rewriter) const override {
     return Conv2DOpmatchAndRewrite(op, rewriter);
   }
 };
@@ -639,13 +738,19 @@ std::unique_ptr<Pass> createConvertToSignlessForTosaPass() {
 void OneFlowLoweringToTosaPass::lower4Codegen() {
   Operation* op = getOperation();
   RewritePatternSet patterns(op->getContext());
-  // patterns.add<ReluOpPattern>(patterns.getContext());
-  // patterns.add<BroadcastAddOpPattern>(patterns.getContext());
-  // patterns.add<Add2nOpPattern>(patterns.getContext());
-  // , ScalarMulByTensorOpLowering, ReluOpLowering, Conv2DOpLowering,
-  //              AvgPool2DOpLowering, ReshapeOpLowering, Add2OpLowering, MaxPool2DOpLowering,
-  //              MatmulOpLowering, BroadcastAddOpLowering, NormalizationOpLowering,
-  //              NormalizationInferenceOpLowering>(patterns.getContext());
+  patterns.add<ReluOpPattern>(patterns.getContext());
+  patterns.add<CastOpPattern>(patterns.getContext());
+  patterns.add<ReluOpPattern>(patterns.getContext());
+  patterns.add<Conv2DOpPattern>(patterns.getContext());
+  patterns.add<AvgPool2DOpPattern>(patterns.getContext());
+  patterns.add<ReshapeOpPattern>(patterns.getContext());
+  patterns.add<Add2OpPattern>(patterns.getContext());
+  patterns.add<MaxPool2DOpPattern>(patterns.getContext());
+  patterns.add<MatmulOpPattern>(patterns.getContext());
+  patterns.add<BroadcastAddOpPattern>(patterns.getContext());
+  patterns.add<NormalizationOpPattern>(patterns.getContext());
+  patterns.add<NormalizationInferenceOpPattern>(patterns.getContext());
+
   (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
 }
 
