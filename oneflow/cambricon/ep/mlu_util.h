@@ -25,9 +25,17 @@ limitations under the License.
 namespace oneflow {
 
 #define OF_MLU_CHECK(condition)                                                            \
-  for (cnrtRet_t _of_mlu_check_status = (condition); _of_mlu_check_status != cnrtSuccess;) \
-  LOG(FATAL) << "Check failed: " #condition " : "                                          \
-             << " (" << _of_mlu_check_status << ") "
+  for (cnrtRet_t _cnrt_check_status = (condition); _cnrt_check_status != cnrtSuccess;) \
+  LOG(FATAL) << "CNRT check failed: " #condition " : "                                          \
+             << " (" << _cnrt_check_status << ") "
+
+
+#define OF_CNNL_CHECK(condition)                                                            \
+  for (cnnlStatus_t _cnnl_check_status = (condition); _cnnl_check_status != CNNL_STATUS_SUCCESS;) \
+  LOG(FATAL) << "CNNL check failed: " #condition " : "                                          \
+             << " (error code:" << _cnnl_check_status << " " + std::string(cnnlGetErrorString(_cnnl_check_status)) + ") "
+
+// #define CNNL_CHECK(val) cnnlCheck((val), #val, __FILE__, __LINE__)
 
 cnrtRet_t NumaAwareMluMallocHost(int32_t dev, void** ptr, size_t size);
 
@@ -49,6 +57,8 @@ int GetMluDeviceCount();
 void SetMluDeviceIndex(int device_id);
 
 void MluSynchronize(int device_id);
+
+std::string cnnlErrorString(cnnlStatus_t status);
 
 }  // namespace oneflow
 

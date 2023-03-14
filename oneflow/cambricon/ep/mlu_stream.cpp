@@ -37,7 +37,7 @@ MluStream::MluStream(MluDevice* device) : device_index_(device->device_index()),
 
 MluStream::~MluStream() {
   MluCurrentDeviceGuard guard(device_index_);
-  cnnlDestroy(cnnl_handle_);
+  OF_CNNL_CHECK(cnnlDestroy(cnnl_handle_));
   OF_MLU_CHECK(cnrtQueueSync(mlu_stream_));
   OF_MLU_CHECK(cnrtQueueDestroy(mlu_stream_));
 }
