@@ -5546,7 +5546,7 @@ def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", [NoSideEffect, NoGrad, Decla
     OneFlow_Tensor:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<ComplexDoubleAttr, "{0.0, 0.0}">:$complex_value,
+    ComplexDoubleAttr:$complex_value,
     DefaultValuedAttr<F64Attr, "0.">:$floating_value,
     DefaultValuedAttr<SI64Attr, "0">:$integer_value,
     DefaultValuedAttr<BoolAttr, "false">:$is_floating_value,
