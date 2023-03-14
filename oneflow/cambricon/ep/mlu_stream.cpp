@@ -33,6 +33,7 @@ MluStream::MluStream(MluDevice* device) : device_index_(device->device_index()),
   // handle is a pointer to cnnlContext struct that holds the Cambricon CNNL context.
   // see:https://www.cambricon.com/docs/sdk_1.10.0/cambricon_cnnl_1.15.2/developer_guide/cnnl_api/data/datatype.html#_CPPv412cnnlHandle_t
   OF_CNNL_CHECK(cnnlCreate(&cnnl_handle_));
+  OF_CNNL_CHECK(cnnlSetQueue(cnnl_handle_, mlu_stream_));
 }
 
 MluStream::~MluStream() {
