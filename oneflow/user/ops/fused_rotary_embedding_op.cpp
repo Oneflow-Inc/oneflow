@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-/* static */ Maybe<void> FusedRotaryEmbeddingOp::InferLogicalTensorDesc(
+/* static */ Maybe<void> FusedApplyRotaryEmbOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& cos_desc = ctx->InputTensorDesc("cos", 0);
@@ -52,17 +52,17 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> FusedRotaryEmbeddingOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> FusedApplyRotaryEmbOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> FusedRotaryEmbeddingOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> FusedApplyRotaryEmbOp::GetSbp(user_op::SbpContext* ctx) {
   // (b, h, s, d) elemntwise-multiply (s, d)
 
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> FusedRotaryEmbeddingOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> FusedApplyRotaryEmbOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& first_in_desc = ctx->InputTensorDesc("x", 0);
 
   for (const auto& in_arg_pair : ctx->inputs()) {

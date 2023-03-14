@@ -1208,8 +1208,8 @@
   signature: "Tensor (Tensor x, TensorTuple weights, TensorTuple biases, Bool skip_final_activation, FloatList dropout_rate_list, Generator generator=None) => FusedMatmulBiasAddReluDropout"
   bind_python: True
 
-- name: "fused_rotary_embedding"
-  signature: 'Tensor (Tensor x, Tensor cos, Tensor sin, String layout="BHMK") => FusedRotaryEmbedding'
+- name: "fused_apply_rotary_emb"
+  signature: 'Tensor (Tensor x, Tensor cos, Tensor sin, String layout="BHMK") => FusedApplyRotaryEmb'
   bind_python: True
 
 - name: "fused_relu_dropout_grad"

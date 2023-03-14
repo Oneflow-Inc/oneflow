@@ -95,7 +95,7 @@ def _test_fused_rotary_embedding(test_case, layout, dims, dtype):
     fused_cos = flow.tensor(cos, dtype=dtype, device="cuda")
     fused_sin = flow.tensor(sin, dtype=dtype, device="cuda")
 
-    fused_out = flow._C.fused_rotary_embedding(fused_x, fused_cos, fused_sin, layout)
+    fused_out = flow._C.fused_apply_rotary_emb(fused_x, fused_cos, fused_sin, layout)
 
     test_case.assertTrue(
         np.allclose(
@@ -109,9 +109,9 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
     def test_fused_rotary_embedding_op(test_case):
         args_dict = OrderedDict()
         args_dict["test_fun"] = [_test_fused_rotary_embedding]
-        args_dict["layout"] = ["BHMK"]
-        args_dict["dims"] = [(1, 1, 131072, 1024)]
-        args_dict["dtype"] = [flow.float16]
+        args_dict["layout"] = ["BM(HK)", "BHMK"]
+        args_dict["dims"] = [(1,1,3,8), (1,3,1,8), (5,7,3,16)]
+        args_dict["dtype"] = [flow.float16, flow.float32]
 
         for arg in GenArgList(args_dict):
             arg[0](test_case, *arg[1:])

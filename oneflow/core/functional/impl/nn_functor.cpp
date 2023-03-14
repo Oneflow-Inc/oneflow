@@ -757,10 +757,10 @@ class FusedMatmulBiasFunctor {
   std::shared_ptr<OpExpr> _without_add_to_output_op;
 };
 
-class FusedRotaryEmbeddingFunctor {
+class FusedApplyRotaryEmbFunctor {
  public:
-  FusedRotaryEmbeddingFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_rotary_embedding")
+  FusedApplyRotaryEmbFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_apply_rotary_emb")
                          .Input("x")
                          .Input("cos")
                          .Input("sin")
@@ -5468,7 +5468,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TensorDotIntDimsFunctor>("TensorDotIntDims");
   m.add_functor<impl::FusedMLPFunctor>("FusedMLP");
   m.add_functor<impl::FusedMatmulBiasFunctor>("FusedMatmulBias");
-  m.add_functor<impl::FusedRotaryEmbeddingFunctor>("FusedRotaryEmbedding");
+  m.add_functor<impl::FusedApplyRotaryEmbFunctor>("FusedApplyRotaryEmb");
   m.add_functor<impl::FusedMatmulBiasAddReluDropoutFunctor>("FusedMatmulBiasAddReluDropout");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");

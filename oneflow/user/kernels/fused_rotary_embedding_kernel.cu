@@ -23,7 +23,7 @@ namespace oneflow {
 namespace {
 
 template<typename T, int N>
-struct FusedRotaryEmbeddingParam {
+struct FusedApplyRotaryEmbParam {
   const T* x;
   const T* cos;
   const T* sin;
@@ -34,13 +34,13 @@ struct FusedRotaryEmbeddingParam {
   size_t sinuous_stride[N];
   size_t sinuous_mask[N];
 
-  explicit FusedRotaryEmbeddingParam(const T* x, const T* cos, const T* sin, T* out,
+  explicit FusedApplyRotaryEmbParam(const T* x, const T* cos, const T* sin, T* out,
                                      const int32_t num_rows, const int32_t num_elements)
       : x(x), cos(cos), sin(sin), out(out), num_rows(num_rows), num_elements(num_elements) {}
 };
 
 template<typename T, typename IndexType, size_t pack_size, size_t num_dims>
-__global__ void FusedRotaryEmbeddingComputeKernel(FusedRotaryEmbeddingParam<T, num_dims> param) {
+__global__ void FusedApplyRotaryEmbComputeKernel(FusedApplyRotaryEmbParam<T, num_dims> param) {
   const T* x = param.x;
   const T* cos = param.cos;
   const T* sin = param.sin;
@@ -116,7 +116,7 @@ void LaunchKernel(const T* x, const T* cos, const T* sin, T* out, const int64_t*
     sinuous_stride[i] = sinuous_stride[i + 1] * kernel_sinuous_shape.at(i + 1);
   }
 
-  struct FusedRotaryEmbeddingParam<T, num_dims> param(
+  struct FusedApplyRotaryEmbParam<T, num_dims> param(
       reinterpret_cast<const T*>(x), reinterpret_cast<const T*>(cos),
       reinterpret_cast<const T*>(sin), reinterpret_cast<T*>(out), num_rows, num_elements);
 
@@ -128,7 +128,7 @@ void LaunchKernel(const T* x, const T* cos, const T* sin, T* out, const int64_t*
   }
 
   constexpr size_t blk_size = 128;
-  FusedRotaryEmbeddingComputeKernel<T, IndexType, pack_size, num_dims>
+  FusedApplyRotaryEmbComputeKernel<T, IndexType, pack_size, num_dims>
       <<<(param.num_elements + blk_size - 1) / blk_size, blk_size>>>(param);
 }
 
@@ -180,10 +180,10 @@ void DispatchIndex(const T* x, const T* cos, const T* sin, T* out, const int64_t
 }
 
 template<typename T>
-class FusedRotaryEmbeddingKernel final : public user_op::OpKernel {
+class FusedApplyRotaryEmbKernel final : public user_op::OpKernel {
  public:
-  FusedRotaryEmbeddingKernel() = default;
-  ~FusedRotaryEmbeddingKernel() override = default;
+  FusedApplyRotaryEmbKernel() = default;
+  ~FusedApplyRotaryEmbKernel() override = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -208,16 +208,16 @@ class FusedRotaryEmbeddingKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_ROTARY_EMBEDDING_KERNEL_GPU(dtype)              \
-  REGISTER_USER_KERNEL("fused_rotary_embedding")                       \
-      .SetCreateFn<FusedRotaryEmbeddingKernel<dtype>>()                \
+#define REGISTER_FUSED_APPLY_ROTARY_EMB_GPU(dtype)              \
+  REGISTER_USER_KERNEL("fused_apply_rotary_emb")                       \
+      .SetCreateFn<FusedApplyRotaryEmbKernel<dtype>>()                \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUSED_ROTARY_EMBEDDING_KERNEL_GPU(float);
-REGISTER_FUSED_ROTARY_EMBEDDING_KERNEL_GPU(half);
+REGISTER_FUSED_APPLY_ROTARY_EMB_GPU(float);
+REGISTER_FUSED_APPLY_ROTARY_EMB_GPU(half);
 #if CUDA_VERSION >= 11000
-REGISTER_FUSED_ROTARY_EMBEDDING_KERNEL_GPU(nv_bfloat16);
+REGISTER_FUSED_APPLY_ROTARY_EMB_GPU(nv_bfloat16);
 #endif  // CUDA_VERSION >= 11000
 
 }  // namespace
