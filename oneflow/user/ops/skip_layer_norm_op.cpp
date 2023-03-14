@@ -29,15 +29,15 @@ namespace oneflow {
   CHECK_GT_OR_RETURN(x_shape.NumAxes(), 1)
       << "number of axes of \'x\' should have be greater than 1, yet get " << x_shape.NumAxes();
 
-#define GAMMA_BETA_BIAS_SHAPE_CHECK(tensor) \
-  const Shape& tensor##_shape = ctx->InputShape(#tensor, 0); \
-  CHECK_EQ_OR_RETURN(tensor##_shape.NumAxes(), 1) \
-        << "number of axes of \'" << #tensor << "\' should have be greater than 1, yet get " \
-        << tensor##_shape.NumAxes(); \
-  CHECK_EQ_OR_RETURN(tensor##_shape.At(0), x_shape.At(x_shape.NumAxes() - 1)) \
-        << "dimension 1 of \'" << #tensor << "\'(" << tensor##_shape.At(0) \
-        << ") is not consistant with the last dimension of \'x\'(" \
-        << x_shape.At(x_shape.NumAxes() - 1) << ")"; \
+#define GAMMA_BETA_BIAS_SHAPE_CHECK(tensor)                                                \
+  const Shape& tensor##_shape = ctx->InputShape(#tensor, 0);                               \
+  CHECK_EQ_OR_RETURN(tensor##_shape.NumAxes(), 1)                                          \
+      << "number of axes of \'" << #tensor << "\' should have be greater than 1, yet get " \
+      << tensor##_shape.NumAxes();                                                         \
+  CHECK_EQ_OR_RETURN(tensor##_shape.At(0), x_shape.At(x_shape.NumAxes() - 1))              \
+      << "dimension 1 of \'" << #tensor << "\'(" << tensor##_shape.At(0)                   \
+      << ") is not consistant with the last dimension of \'x\'("                           \
+      << x_shape.At(x_shape.NumAxes() - 1) << ")";
 
   // check shape of gamma, beta and bias
   if (ctx->has_input("gamma", 0)) { GAMMA_BETA_BIAS_SHAPE_CHECK(gamma); }
@@ -49,8 +49,7 @@ namespace oneflow {
   // check shape of residual
   if (ctx->has_input("skip", 0)) {
     const Shape& skip_shape = ctx->InputShape("skip", 0);
-    CHECK_EQ_OR_RETURN(skip_shape, x_shape)
-      << "shape of \'skip\' is not the same as \'x\'";
+    CHECK_EQ_OR_RETURN(skip_shape, x_shape) << "shape of \'skip\' is not the same as \'x\'";
   }
 
   // set output shape of y
@@ -60,7 +59,7 @@ namespace oneflow {
 
   // set output shape of mean and varience
   DimVector mean_dim_vec;
-  mean_dim_vec.push_back(x_shape.Count(0, x_shape.NumAxes()-1));
+  mean_dim_vec.push_back(x_shape.Count(0, x_shape.NumAxes() - 1));
   Shape mean_shape(mean_dim_vec);  // borrow from input shape
 
   user_op::TensorDesc* mean_tensor = ctx->MutOutputTensorDesc("mean", 0);
@@ -76,8 +75,7 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ auto SkipLayerNormOp::InferDataType(user_op::InferContext* ctx)
-    -> Maybe<void> {
+/* static */ auto SkipLayerNormOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
   // obtain input data types
   DataType x_dtype = ctx->InputDType("x", 0);
 
@@ -106,9 +104,16 @@ namespace oneflow {
   }
 
   // set output data type
-  ctx->SetOutputDType("y", 0, x_dtype);
-  ctx->SetOutputDType("mean", 0, x_dtype);
-  ctx->SetOutputDType("inv_variance", 0, x_dtype);
+  if(x_dtype == DataType::kFloat16){
+    ctx->SetOutputDType("y", 0, DataType::kFloat);
+    ctx->SetOutputDType("mean", 0, DataType::kFloat);
+    ctx->SetOutputDType("inv_variance", 0, DataType::kFloat);
+  } else {
+    ctx->SetOutputDType("y", 0, x_dtype);
+    ctx->SetOutputDType("mean", 0, x_dtype);
+    ctx->SetOutputDType("inv_variance", 0, x_dtype);
+  }
+  
 
   return Maybe<void>::Ok();
 }

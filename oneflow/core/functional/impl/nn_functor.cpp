@@ -900,7 +900,7 @@ class SkipLayerNormFunctor {
         for (bool has_beta : bool_list) {
           /* has_bias */
           for (bool has_bias : bool_list) {
-            one::OpBuilder new_op = one::OpBuilder("layer_norm").Input("x");
+            one::OpBuilder new_op = one::OpBuilder("skip_layer_norm").Input("x");
             if (has_gamma) { new_op = new_op.Input("gamma"); }
             if (has_beta) { new_op = new_op.Input("beta"); }
             if (has_bias) { new_op = new_op.Input("bias"); }
@@ -909,34 +909,32 @@ class SkipLayerNormFunctor {
 
             std::shared_ptr<OpExpr> op_pointer = CHECK_JUST(new_op.Build());
             ops_.insert(std::pair<std::tuple<int, bool, bool, bool>, std::shared_ptr<OpExpr>>(
-                std::tuple<int, bool, bool, bool>(nb_skip, has_gamma, has_beta, has_bias), op_pointer));
-          } // has_bias
-        } // has_beta
-      } // has_gamma
-    } // number of skip
+                std::tuple<int, bool, bool, bool>(nb_skip, has_gamma, has_beta, has_bias),
+                op_pointer));
+          }  // has_bias
+        }    // has_beta
+      }      // has_gamma
+    }        // number of skip
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const Optional<one::Tensor>& gamma,
-                           const Optional<one::Tensor>& beta,
-                           const Optional<one::Tensor>& bias,
-                           const Optional<one::Tensor>& skip,
-                           const double& epsilon,
-                           const double& alpha) const {
+                           const Optional<one::Tensor>& gamma, const Optional<one::Tensor>& beta,
+                           const Optional<one::Tensor>& bias, const Optional<one::Tensor>& skip,
+                           const double& epsilon, const double& alpha) const {
     // check shape of x
     const auto& x_shape = *(x->shape());
     CHECK_GT_OR_RETURN(x_shape.NumAxes(), 1)
         << "number of axes of \'x\' should have be greater than 1, yet get " << x_shape.NumAxes();
 
-#define GAMMA_BETA_BIAS_SHAPE_CHECK(tensor) \
-  const auto& tensor##_shape = *(JUST(tensor)->shape()); \
-  CHECK_EQ_OR_RETURN(tensor##_shape.NumAxes(), 1) \
-        << "number of axes of \'" << #tensor << "\' should have be equal to 1, yet get " \
-        << tensor##_shape.NumAxes(); \
-  CHECK_EQ_OR_RETURN(tensor##_shape.At(0), x_shape.At(x_shape.NumAxes() - 1)) \
-        << "dimension 1 of \'" << #tensor << "\'(" << tensor##_shape.At(0) \
-        << ") is not consistant with the last dimension of \'x\'(" \
-        << x_shape.At(x_shape.NumAxes() - 1) << ")"; \
+#define GAMMA_BETA_BIAS_SHAPE_CHECK(tensor)                                            \
+  const auto& tensor##_shape = *(JUST(tensor)->shape());                               \
+  CHECK_EQ_OR_RETURN(tensor##_shape.NumAxes(), 1)                                      \
+      << "number of axes of \'" << #tensor << "\' should have be equal to 1, yet get " \
+      << tensor##_shape.NumAxes();                                                     \
+  CHECK_EQ_OR_RETURN(tensor##_shape.At(0), x_shape.At(x_shape.NumAxes() - 1))          \
+      << "dimension 1 of \'" << #tensor << "\'(" << tensor##_shape.At(0)               \
+      << ") is not consistant with the last dimension of \'x\'("                       \
+      << x_shape.At(x_shape.NumAxes() - 1) << ")";
 
     // check shape of gamma, bias and pre_bias
     if (gamma) { GAMMA_BETA_BIAS_SHAPE_CHECK(gamma); }
@@ -949,8 +947,7 @@ class SkipLayerNormFunctor {
     size_t nb_skip = 0;
     if (skip) {
       const auto& skip_shape = *(JUST(skip)->shape());
-      CHECK_EQ_OR_RETURN(skip_shape, x_shape)
-          << "shape of \'skip\' is not the same as \'x\'";
+      CHECK_EQ_OR_RETURN(skip_shape, x_shape) << "shape of \'skip\' is not the same as \'x\'";
       nb_skip = 1;
     }
 
@@ -959,20 +956,20 @@ class SkipLayerNormFunctor {
     attrs.SetAllAttrs(epsilon, alpha);
 
     // count number of all input tensors
-    size_t nb_inputs = 1;           // count x
-    nb_inputs += nb_skip;           // count residual
-    if (gamma) nb_inputs += 1;      // count gamma
-    if (beta) nb_inputs += 1;       // count beta
-    if (bias) nb_inputs += 1;       // count bias
-  
+    size_t nb_inputs = 1;       // count x
+    nb_inputs += nb_skip;       // count residual
+    if (gamma) nb_inputs += 1;  // count gamma
+    if (beta) nb_inputs += 1;   // count beta
+    if (bias) nb_inputs += 1;   // count bias
+
     // construct input tensor tuple
     size_t tensor_index = 1;
     TensorTuple input(nb_inputs);
     input[0] = x;
 #define ADD_TENSOR_TO_INPUT_LIST_IF_PROVIDED(t) \
-  if (t) {                          \
-    input[tensor_index] = JUST(t);  \
-    tensor_index += 1;              \
+  if (t) {                                      \
+    input[tensor_index] = JUST(t);              \
+    tensor_index += 1;                          \
   }
     ADD_TENSOR_TO_INPUT_LIST_IF_PROVIDED(gamma);
     ADD_TENSOR_TO_INPUT_LIST_IF_PROVIDED(beta);
@@ -980,9 +977,13 @@ class SkipLayerNormFunctor {
     ADD_TENSOR_TO_INPUT_LIST_IF_PROVIDED(skip);
 #undef ADD_TENSOR_TO_INPUT_LIST_IF_PROVIDED
 
+    bool has_gamma = false, has_beta = false, has_bias = false;
+    if (gamma) { has_gamma = true; }
+    if (beta) { has_beta = true; }
+    if (bias) { has_bias = true; }
+
     return OpInterpUtil::Dispatch<Tensor>(
-        *(ops_.find(
-                  std::tuple<int, bool, bool, bool>(nb_skip, JUST(gamma) != NULL, JUST(beta) != NULL, JUST(bias) != NULL))
+        *(ops_.find(std::tuple<int, bool, bool, bool>(nb_skip, has_gamma, has_beta, has_bias))
               ->second),
         input, attrs);
   }
