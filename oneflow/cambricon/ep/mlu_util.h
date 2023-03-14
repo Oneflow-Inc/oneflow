@@ -56,7 +56,7 @@ void SetMluDeviceIndex(int device_id);
 
 void MluSynchronize(int device_id);
 
-std::string cnnlErrorString(cnnlStatus_t status);
+std::string cnnlGetErrorString(cnnlStatus_t status);
 
 }  // namespace oneflow
 

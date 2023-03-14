@@ -65,7 +65,7 @@ int GetMluDeviceCount() {
   return mlu_device_count;
 }
 
-std::string cnnlErrorString(cnnlStatus_t status) {
+std::string cnnlGetErrorString(cnnlStatus_t status) {
   switch (status) {
     default: { return "CNNL_STATUS_UNKNOWN"; }
     case CNNL_STATUS_SUCCESS: {
