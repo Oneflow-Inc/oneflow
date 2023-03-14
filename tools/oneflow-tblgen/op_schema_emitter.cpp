@@ -196,7 +196,7 @@ void OpSchemaEmitter<Target>::emitAttrs(const Record* def, json* op) const {
     if ("callee" == NS && "FlatSymbolRefAttr" == AS) { continue; }
     json attr{{"name", NS}, {"type", emitType(AS)}};
 
-    if (auto DV = A->getValueAsOptionalString("defaultValue")) { attr["default"] = DV.getValue(); }
+    if (auto DV = A->getValueAsOptionalString("defaultValue")) { attr["default"] = DV.value(); }
 
     (*op)["attrs"].push_back(attr);
   }
