@@ -459,7 +459,7 @@ Maybe<void> InplaceExpand(const std::shared_ptr<Tensor>& input, const Shape& exp
   reduce_dims.reserve(expand_shape.size());
 
   for (int i = expand_shape.size() - 1; i >= 0; --i) {
-    int64_t dim = i < lpad ? 1 : input_shape[i - lpad];
+    int64_t dim = i < lpad ? 1 : input_shape[i - lpad].val();
     if (dim == expand_shape[i]) {
       if (i >= lpad) {
         expand_stride[i] = input_stride[i - lpad];
