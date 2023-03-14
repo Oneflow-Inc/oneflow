@@ -255,6 +255,39 @@ def OneFlow_FloordivOp : OneFlow_BaseOp<"floordiv", [NoSideEffect, DeclareOpInte
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_LerpOp : OneFlow_BaseOp<"lerp", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$start,
+    OneFlow_Tensor:$end,
+    OneFlow_Tensor:$weight
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_LerpGradOp : OneFlow_BaseOp<"lerp_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$start,
+    OneFlow_Tensor:$end,
+    OneFlow_Tensor:$weight,
+    OneFlow_Tensor:$out_diff
+  );
+  let output = (outs
+    OneFlow_Tensor:$start_diff,
+    OneFlow_Tensor:$end_diff,
+    OneFlow_Tensor:$weight_diff
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_TruncdivOp : OneFlow_BaseOp<"truncdiv", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x,
@@ -988,6 +1021,7 @@ def OneFlow_BitwiseNotOp : OneFlow_BaseOp<"bitwise_not", [NoSideEffect, NoGrad, 
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
+
 
 def OneFlow_BroadcastBitwiseAndOp : OneFlow_BaseOp<"broadcast_bitwise_and", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
@@ -8852,6 +8886,48 @@ def OneFlow_ScalarSubByTensorOp : OneFlow_BaseOp<"scalar_sub_by_tensor", [NoSide
   );
   let output = (outs
     OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_ScalarLerpOp : OneFlow_BaseOp<"scalar_lerp", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$start,
+    OneFlow_Tensor:$end
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
+    DefaultValuedAttr<SI64Attr, "0">:$int_operand,
+    DefaultValuedAttr<F64Attr, "0.">:$float_operand
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+ 
+def OneFlow_ScalarLerpGradOp : OneFlow_BaseOp<"scalar_lerp_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$start,
+    OneFlow_Tensor:$end,
+    OneFlow_Tensor:$out_diff
+  );
+  let output = (outs
+    OneFlow_Tensor:$start_diff,
+    OneFlow_Tensor:$end_diff
+  );
+  let attrs = (ins
+    DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
+    DefaultValuedAttr<SI64Attr, "0">:$int_operand,
+    DefaultValuedAttr<F64Attr, "0.">:$float_operand
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
