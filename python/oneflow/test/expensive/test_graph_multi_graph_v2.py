@@ -72,7 +72,7 @@ def _test_linear_multi_graph_share(test_case, device, with_reshape):
     linear_reshape = LinearReshapeModule(linear, with_reshape)
 
     class LinearGraph(flow.nn.Graph):
-        @flow.nn.Graph.with_dynamic_input_shape
+        @flow.nn.Graph.with_dynamic_input_shape(size=4)
         def __init__(self, lin, with_r):
             super().__init__()
             self.my_linear = LinearReshapeModule(lin, with_r)
@@ -154,7 +154,7 @@ def _test_linear_multi_graph_save(return_dict, device, with_reshape):
     linear_reshape = LinearReshapeModule()
 
     class LinearGraph(flow.nn.Graph):
-        @flow.nn.Graph.with_dynamic_input_shape
+        @flow.nn.Graph.with_dynamic_input_shape()
         def __init__(self):
             super().__init__(enable_runtime_state_dict=True)
             self.my_linear = linear_reshape
@@ -226,7 +226,7 @@ def _test_linear_multi_graph_load(return_dict, device, with_reshape, state_dict)
     linear_reshape = LinearReshapeModule()
 
     class LinearGraph(flow.nn.Graph):
-        @flow.nn.Graph.with_dynamic_input_shape
+        @flow.nn.Graph.with_dynamic_input_shape(size=4)
         def __init__(self):
             super().__init__()
             self.my_linear = linear_reshape

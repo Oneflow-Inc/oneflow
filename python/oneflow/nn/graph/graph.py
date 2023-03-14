@@ -1844,18 +1844,20 @@ class Graph(object):
         args_tree.map_leaf(func)
 
     @staticmethod
-    def with_dynamic_input_shape(graph_init_func):
-        @wraps(graph_init_func)
-        def deco_func(self, *args, **kwargs):
-            graph_init_func(self, *args, **kwargs)
-            self._run_with_cache = True
-            import oneflow.nn.graph.cache as cache
+    def with_dynamic_input_shape(size: int = 10):
+        def deco_with_config(graph_init_func):
+            @wraps(graph_init_func)
+            def deco_func(self, *args, **kwargs):
+                graph_init_func(self, *args, **kwargs)
+                self._run_with_cache = True
+                import oneflow.nn.graph.cache as cache
 
-            self._dynamic_input_graph_cache = cache.GraphCache(weakref.proxy(self))
-            self._cached_init_args = args
-            self._cached_init_kwargs = kwargs
+                self._dynamic_input_graph_cache = cache.GraphCache(weakref.proxy(self), cache_size=size)
+                self._cached_init_args = args
+                self._cached_init_kwargs = kwargs
 
-        return deco_func
+            return deco_func
+        return deco_with_config
 
 
 if __name__ == "__main__":
