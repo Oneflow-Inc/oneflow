@@ -67,9 +67,6 @@ int GetMluDeviceCount() {
 
 std::string cnnlErrorString(cnnlStatus_t status) {
   switch (status) {
-    default: {
-      return "CNNL_STATUS_UNKNOWN";
-    }
     case CNNL_STATUS_SUCCESS: {
       return "CNNL_STATUS_SUCCESS";
     }
@@ -96,6 +93,9 @@ std::string cnnlErrorString(cnnlStatus_t status) {
     }
     case CNNL_STATUS_NUMERICAL_OVERFLOW: {
       return "CNNL_STATUS_NUMERICAL_OVERFLOW";
+    }
+    default: {
+      return "CNNL_STATUS_UNKNOWN";
     }
   }
 }
