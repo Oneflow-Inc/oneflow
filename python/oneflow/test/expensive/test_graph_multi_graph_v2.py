@@ -156,7 +156,7 @@ def _test_linear_multi_graph_save(return_dict, device, with_reshape):
     class LinearGraph(flow.nn.Graph):
         @flow.nn.Graph.with_dynamic_input_shape()
         def __init__(self):
-            super().__init__(enable_runtime_state_dict=True)
+            super().__init__(enable_get_runtime_state_dict=True)
             self.my_linear = linear_reshape
 
         def build(self, x):
