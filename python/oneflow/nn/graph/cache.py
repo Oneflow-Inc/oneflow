@@ -99,17 +99,11 @@ class GraphCache(object):
 
         self._enable_shared = enable_graph_shared
 
-        self._enable_save = False
-        self._graph_save_load_path = None
-
     def set_cache_size(self, cache_size):
         self._cache_size = cache_size
 
     def enable_shared(self, enabled=True):
         self._enable_shared = enabled
-
-    def enable_save_runtime_state_dict(self, enabled=True):
-        self._enable_save = enabled
 
     def __call__(self, *args, **kwargs):
         graph = self.get_graph(*args, **kwargs)
@@ -123,13 +117,12 @@ class GraphCache(object):
             destination = OrderedDict()
             destination._metadata = OrderedDict()
 
-        if self._enable_save:
-            for (key, graph) in self._cache.items():
-                with AvoidRecursiveCacheCall(graph):
-                    state_dict = graph.runtime_state_dict()
-                state_dict["cache_order"] = graph._oneflow_graph_cache_order
-                state_dict["cache_key"] = key
-                destination[state_dict["graph_name"]] = state_dict
+        for (key, graph) in self._cache.items():
+            with AvoidRecursiveCacheCall(graph):
+                state_dict = graph.runtime_state_dict()
+            state_dict["cache_order"] = graph._oneflow_graph_cache_order
+            state_dict["cache_key"] = key
+            destination[state_dict["graph_name"]] = state_dict
         return destination
 
     def _init_and_get_a_graph_in_cache(self, cache_key):
@@ -151,9 +144,6 @@ class GraphCache(object):
             graph._cached_init_kwargs = None
             print("get new", cache_key)
 
-        if self._enable_save:
-            with AvoidRecursiveCacheCall(graph):
-                graph.enable_save_runtime_state_dict()
         if self._enable_shared is True:
             if cur_is_base:
                 graph.enable_shared()

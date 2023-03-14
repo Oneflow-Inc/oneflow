@@ -103,7 +103,7 @@ class Graph(object):
     """
     _child_init_cnt = dict()
 
-    def __init__(self):
+    def __init__(self, enable_runtime_state_dict: bool = False):
         """
         Initializes internal Graph states. It MUST be called in ``__init__`` method of subclass.
 
@@ -169,6 +169,7 @@ class Graph(object):
 
         # For load graph from runtime states.
         self._enable_save_runtime_state_dict = False
+        self.enable_save_runtime_state_dict(enable_runtime_state_dict)
 
         # For run graph with dynamic shape cache
         self._run_with_cache = False
@@ -950,9 +951,6 @@ class Graph(object):
         return (seq_to_func_return(self._eager_outputs_buffer[0], True),)
 
     def enable_save_runtime_state_dict(self, mode: bool = True):
-        if self._run_with_cache == True:
-            self._dynamic_input_graph_cache.enable_save_runtime_state_dict(mode)
-
         if mode:
             assert (
                 not self._is_compiled
