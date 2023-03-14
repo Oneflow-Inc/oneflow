@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <cstdint>
+#include <cmath>
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
@@ -31,7 +32,7 @@ class CpuFracKernel final : public user_op::OpKernel {
     const int32_t elem_cnt = x->shape_view().elem_cnt();
     const T* x_ptr = x->dptr<T>();
     T* y_ptr = y->mut_dptr<T>();
-    FOR_RANGE(int32_t, i, 0, elem_cnt) { y_ptr[i] = x_ptr[i] - floor(x_ptr[i]); }
+    FOR_RANGE(int32_t, i, 0, elem_cnt) { y_ptr[i] = x_ptr[i] - std::trunc(x_ptr[i]); }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

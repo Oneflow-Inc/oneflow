@@ -15,7 +15,11 @@ limitations under the License.
 */
 
 #include <cstdint>
+#include <cmath>
+#include <valarray>
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/util/cuda_half_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
@@ -23,10 +27,13 @@ namespace oneflow {
 
 namespace {
 
+// Write ReLU Functor. 
 template<typename T>
-__global__ void FracForwardGpu(const int n,const T* x, T* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] - floor(x[i]);}
-}
+struct FracForwardGpu {
+  OF_DEVICE_FUNC T operator()(T x) const {
+    return x - std::trunc(x); 
+  }
+};
 
 }  // namespace
 
@@ -42,8 +49,9 @@ class GpuFracKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int32_t elem_cnt = x->shape_view().elem_cnt();
-    RUN_CUDA_KERNEL((FracForwardGpu<T>), ctx->stream(), elem_cnt, elem_cnt, 
-                    x->dptr<T>(), y->mut_dptr<T>());
+    // Use CUDA Elementwise Template. 
+    OF_CUDA_CHECK((cuda::elementwise::Unary(FracForwardGpu<T>(), elem_cnt, y->mut_dptr<T>(),
+                                        x->dptr<T>(), ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
