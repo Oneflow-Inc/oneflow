@@ -103,7 +103,7 @@ class FlatbufferBuilder {
   // Creates an [int32] vec with the contents of the given range.
   template<typename RangeTy>
   flatbuffers_int32_vec_ref_t createInt32Vec(RangeTy&& Range) {
-    if (llvm::empty(Range)) return 0;
+    if (std::empty(Range)) return 0;
     flatbuffers_int32_vec_start(*this);
     for (int32_t v : Range) { flatbuffers_int32_vec_push_create(*this, v); }
     return flatbuffers_int32_vec_end(*this);
@@ -112,7 +112,7 @@ class FlatbufferBuilder {
   // Creates an [int64] vec with the contents of the given range.
   template<typename RangeTy>
   flatbuffers_int64_vec_ref_t createInt64Vec(RangeTy&& Range) {
-    if (llvm::empty(Range)) return 0;
+    if (std::empty(Range)) return 0;
     flatbuffers_int64_vec_start(*this);
     for (int64_t v : Range) { flatbuffers_int64_vec_push_create(*this, v); }
     return flatbuffers_int64_vec_end(*this);

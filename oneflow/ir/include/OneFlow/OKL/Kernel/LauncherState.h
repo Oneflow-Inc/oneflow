@@ -21,7 +21,7 @@ limitations under the License.
 #include "OneFlow/OKL/Kernel/JITEngine.h"
 #include "OneFlow/OKL/Kernel/LauncherContext.h"
 #include "OneFlow/OKL/Conversion/Conversion.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 
@@ -31,7 +31,7 @@ namespace okl {
 inline mlir::DialectRegistry GetRegistry() {
   mlir::DialectRegistry registry;
   registry.insert<mlir::oneflow::OneFlowDialect, mlir::okl::OKLDialect, mlir::func::FuncDialect,
-                  mlir::arith::ArithmeticDialect, mlir::LLVM::LLVMDialect>();
+                  mlir::arith::ArithDialect, mlir::LLVM::LLVMDialect>();
   mlir::registerLLVMDialectTranslation(registry);
   return registry;
 }

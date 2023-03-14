@@ -149,12 +149,12 @@ struct GroupMatMulPattern : public mlir::OpInterfaceRewritePattern<MatMulCompati
         rewriter.create<GroupedMatmulBiasOp>(op->getLoc(), results, operands, attributes);
     if (all_bias_adds.empty()) {
       for (const auto& matmul : llvm::enumerate(all_matmuls)) {
-        matmul.value().matMulGetY().replaceAllUsesWith(grouped_matmul.ys()[matmul.index()]);
+        matmul.value().matMulGetY().replaceAllUsesWith(grouped_matmul.getYs()[matmul.index()]);
       }
     } else {
       CHECK(all_bias_adds.size() == all_matmuls.size());
       for (const auto& bias_add : llvm::enumerate(all_bias_adds)) {
-        bias_add.value().biasAddGetOut().replaceAllUsesWith(grouped_matmul.ys()[bias_add.index()]);
+        bias_add.value().biasAddGetOut().replaceAllUsesWith(grouped_matmul.getYs()[bias_add.index()]);
       }
     }
     return success();
@@ -174,9 +174,9 @@ struct GroupNormActivationPattern : public OpRewritePattern<GroupNormOp> {
   explicit GroupNormActivationPattern(MLIRContext* context)
       : OpRewritePattern<GroupNormOp>(context, /*benefit=*/1) {}
   LogicalResult matchAndRewrite(oneflow::GroupNormOp op, PatternRewriter& rewriter) const override {
-    if (op.activation() == "none") {
+    if (op.getActivation() == "none") {
       llvm::SmallVector<Operation*, 4> act_ops{};
-      for (auto& u : op.y().getUses()) {
+      for (auto& u : op.getY().getUses()) {
         if (auto act_op = dyn_cast<oneflow::SiluOp>(u.getOwner())) { act_ops.push_back(act_op); }
       }
       NamedAttrList attributes(op->getAttrs());
@@ -188,7 +188,7 @@ struct GroupNormActivationPattern : public OpRewritePattern<GroupNormOp> {
                                                       op.getOperands(), attributes);
       for (auto act : act_ops) {
         if (auto op = dyn_cast<oneflow::SiluOp>(act)) {
-          op.out().replaceAllUsesWith(gn_with_act.y());
+          op.getOut().replaceAllUsesWith(gn_with_act.getY());
         }
       }
       return success();

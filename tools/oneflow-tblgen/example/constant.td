@@ -2,7 +2,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 include "OneFlowEnums.td"
 include "OneFlowBase.td"
 
-def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     AnyType:$out
   );

@@ -48,7 +48,7 @@ def OneFlow_SystemOp : OneFlow_Op<"system", [OneFlow_IsImportCompatible]> {
 
 def F32ElementsAttr : FloatElementsAttr<32>;
 
-def OneFlow_FrozenVariableOp : OneFlow_IROp<"variable_ir", [ConstantLike, NoSideEffect]> {
+def OneFlow_FrozenVariableOp : OneFlow_IROp<"variable_ir", [ConstantLike, NoMemoryEffect]> {
   let summary = "Auxiliary variable op for constant folding, only exists in IR.";
   let arguments = (ins
     F32ElementsAttr:$value,
@@ -66,7 +66,7 @@ def OneFlow_FrozenVariableOp : OneFlow_IROp<"variable_ir", [ConstantLike, NoSide
   let hasFolder = 1;
 }
 
-def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<AlternativeOpTypeNameInterface>, DeclareOpInterfaceMethods<NCHWCompatibleInterface>]> {
+def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<AlternativeOpTypeNameInterface>, DeclareOpInterfaceMethods<NCHWCompatibleInterface>]> {
   let summary = "";
   let input = (ins
     AnyType:$in0,
@@ -147,7 +147,9 @@ def OneFlow_Job : Op<OneFlow_Dialect, "job", [FunctionOpInterface, IsolatedFromA
   let arguments = (ins
     SymbolNameAttr:$sym_name,
     TypeAttrOf<FunctionType>:$function_type,
-    OptionalAttr<StrAttr>:$sym_visibility
+    OptionalAttr<StrAttr>:$sym_visibility,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs
   );
 
   let builders = [OpBuilder<(ins
@@ -157,10 +159,6 @@ def OneFlow_Job : Op<OneFlow_Dialect, "job", [FunctionOpInterface, IsolatedFromA
   let extraClassDeclaration = [{
     bool isDeclaration() { return isExternal(); }
 
-   FunctionType getFunctionType() { return function_type(); }
-
-   TypeAttr getFunctionTypeAttr() { return function_typeAttr(); }
-
     ArrayRef<Type> getArgumentTypes() { return getFunctionType().getInputs(); }
 
     ArrayRef<Type> getResultTypes() { return getFunctionType().getResults(); }
@@ -168,7 +166,7 @@ def OneFlow_Job : Op<OneFlow_Dialect, "job", [FunctionOpInterface, IsolatedFromA
     LogicalResult verifyType() {
       auto type = getFunctionTypeAttr().getValue();
       if (!type.isa<FunctionType>())
-        return emitOpError("requires '" + getTypeAttrName() +
+        return emitOpError("requires '" + getFunctionTypeAttrName().str() +
                            "' attribute of function type");
       return success();
     }
@@ -178,7 +176,7 @@ def OneFlow_Job : Op<OneFlow_Dialect, "job", [FunctionOpInterface, IsolatedFromA
   let hasVerifier = 1;
 }
 
-def OneFlow_ReturnOp : Op<OneFlow_Dialect, "return", [NoSideEffect, HasParent<"Job">,
+def OneFlow_ReturnOp : Op<OneFlow_Dialect, "return", [NoMemoryEffect, HasParent<"Job">,
                                 MemRefsNormalizable, ReturnLike, Terminator]> {
   let summary = "return operation";
   let description = [{

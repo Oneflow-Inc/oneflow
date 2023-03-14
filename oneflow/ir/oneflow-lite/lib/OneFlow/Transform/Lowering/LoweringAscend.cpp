@@ -170,170 +170,170 @@ void AscendCompiler::addInputs(llvm::SmallVector<Value, 4>& operands) {
 void AscendCompiler::lowerOp(VariableOp op, StringRef checkpointDir) {
   auto ascendType = convertAscendType(op.data_typeAttr(), op.shapeAttr());
   llvm::SmallString<128> inputFilename;
-  llvm::sys::path::native(checkpointDir + "/" + op.op_name() + "/out", inputFilename);
+  llvm::sys::path::native(checkpointDir + "/" + op.getOpName() + "/out", inputFilename);
   std::string errorMessage;
   auto input = mlir::openInputFile(inputFilename, &errorMessage);
   if (!input) {
     llvm::errs() << errorMessage << "\n";
     exit(1);
   }
-  auto constantOp = createOp<ge::op::Const>(op.op_name());
+  auto constantOp = createOp<ge::op::Const>(op.getOpName());
   auto tensor = std::make_shared<ge::Tensor>();
   tensor->SetTensorDesc(ascendType);
   tensor->SetData(reinterpret_cast<const uint8_t*>(input->getBufferStart()),
                   input->getBufferSize());
   constantOp->set_attr_value(*tensor);
-  ascendVals[op.output()] = AscendValue(constantOp, ascendType, "y");
+  ascendVals[op.getOutput()] = AscendValue(constantOp, ascendType, "y");
 }
 
 #define SET_INPUT(op, name, value) \
   op->set_input_##name##_by_name(*(value.getOperation()), value.getComponentNameAndIndex().data())
 
 void AscendCompiler::lowerOp(Conv2DOp op) {
-  auto conv2DOp = createOp<ge::op::Conv2D>(op.op_name());
+  auto conv2DOp = createOp<ge::op::Conv2D>(op.getOpName());
   conv2DOp->set_attr_pads(convertPaddings(op.padding_before()));
-  conv2DOp->set_attr_dilations(convertDilations(op.dilation_rate()));
-  conv2DOp->set_attr_strides(convertStrides(op.strides()));
-  conv2DOp->set_attr_groups(op.groups());
+  conv2DOp->set_attr_dilations(convertDilations(op.getDilationRate()));
+  conv2DOp->set_attr_strides(convertStrides(op.getStrides()));
+  conv2DOp->set_attr_groups(op.getGroups());
   conv2DOp->set_attr_data_format(convertDataFormat(op.data_format()).data());
 
-  SET_INPUT(conv2DOp, x, getValue(op.in()));
-  SET_INPUT(conv2DOp, filter, getValue(op.weight()));
-  if (op.bias()) { SET_INPUT(conv2DOp, bias, getValue(op.bias())); }
-  auto outType = convertAscendType(op.out().getType());
+  SET_INPUT(conv2DOp, x, getValue(op.getIn()));
+  SET_INPUT(conv2DOp, filter, getValue(op.getWeight()));
+  if (op.getBias()) { SET_INPUT(conv2DOp, bias, getValue(op.getBias())); }
+  auto outType = convertAscendType(op.getOut().getType());
   conv2DOp->update_output_desc_y(outType);
 
   auto output = AscendValue(conv2DOp, outType, "y");
 
   if (op._add_to_output()) {
-    auto addOp = createOp<ge::op::AddV2>(op.op_name() + "_add_to_output");
+    auto addOp = createOp<ge::op::AddV2>(op.getOpName() + "_add_to_output");
     SET_INPUT(addOp, x1, output);
     SET_INPUT(addOp, x2, getValue(op._add_to_output()));
     addOp->update_output_desc_y(outType);
     output = AscendValue(addOp, outType, "y");
   }
-  ascendVals[op.out()] = output;
+  ascendVals[op.getOut()] = output;
 }
 
 void AscendCompiler::lowerOp(NormalizationInferenceOp op) {
-  auto batchNormOp = createOp<ge::op::BNInfer>(op.op_name());
-  batchNormOp->set_attr_epsilon(op.epsilon().convertToFloat());
+  auto batchNormOp = createOp<ge::op::BNInfer>(op.getOpName());
+  batchNormOp->set_attr_epsilon(op.getEpsilon().convertToFloat());
 
-  SET_INPUT(batchNormOp, x, getValue(op.x()));
-  SET_INPUT(batchNormOp, mean, getValue(op.moving_mean()));
-  SET_INPUT(batchNormOp, variance, getValue(op.moving_variance()));
-  SET_INPUT(batchNormOp, scale, getValue(op.gamma()));
-  SET_INPUT(batchNormOp, offset, getValue(op.beta()));
+  SET_INPUT(batchNormOp, x, getValue(op.getX()));
+  SET_INPUT(batchNormOp, mean, getValue(op.getMovingMean()));
+  SET_INPUT(batchNormOp, variance, getValue(op.getMovingVariance()));
+  SET_INPUT(batchNormOp, scale, getValue(op.getGamma()));
+  SET_INPUT(batchNormOp, offset, getValue(op.getBeta()));
 
-  auto outType = convertAscendType(op.y().getType());
+  auto outType = convertAscendType(op.getY().getType());
   batchNormOp->update_output_desc_y(outType);
 
   auto output = AscendValue(batchNormOp, outType, "y");
   if (op._add_to_output()) {
-    auto addOp = createOp<ge::op::AddV2>(op.op_name() + "_add_to_output");
+    auto addOp = createOp<ge::op::AddV2>(op.getOpName() + "_add_to_output");
     SET_INPUT(addOp, x1, output);
     SET_INPUT(addOp, x2, getValue(op._add_to_output()));
     addOp->update_output_desc_y(outType);
     output = AscendValue(addOp, outType, "y");
   }
-  ascendVals[op.y()] = output;
+  ascendVals[op.getY()] = output;
 }
 
 void AscendCompiler::lowerOp(ReluOp op) {
-  auto reluOp = createOp<ge::op::Relu>(op.op_name());
-  SET_INPUT(reluOp, x, getValue(op.x()));
-  auto outType = convertAscendType(op.y().getType());
+  auto reluOp = createOp<ge::op::Relu>(op.getOpName());
+  SET_INPUT(reluOp, x, getValue(op.getX()));
+  auto outType = convertAscendType(op.getY().getType());
   reluOp->update_output_desc_y(outType);
-  ascendVals[op.y()] = AscendValue(reluOp, outType, "y");
+  ascendVals[op.getY()] = AscendValue(reluOp, outType, "y");
 }
 
 void AscendCompiler::lowerOp(MaxPool2DOp op) {
-  auto maxPoolOp = createOp<ge::op::MaxPoolV3>(op.op_name());
-  maxPoolOp->set_attr_ksize(convertKernelSize(op.kernel_size()));
-  maxPoolOp->set_attr_pads(convertPaddings(op.padding()));
-  maxPoolOp->set_attr_strides(convertStrides(op.stride()));
+  auto maxPoolOp = createOp<ge::op::MaxPoolV3>(op.getOpName());
+  maxPoolOp->set_attr_ksize(convertKernelSize(op.getKernelSize()));
+  maxPoolOp->set_attr_pads(convertPaddings(op.getPadding()));
+  maxPoolOp->set_attr_strides(convertStrides(op.getStride()));
   maxPoolOp->set_attr_ceil_mode(op.ceil_mode());
   maxPoolOp->set_attr_padding_mode("CALCULATED");
   maxPoolOp->set_attr_global_pooling(false);
 
-  SET_INPUT(maxPoolOp, x, getValue(op.x()));
-  auto outType = convertAscendType(op.y().getType());
+  SET_INPUT(maxPoolOp, x, getValue(op.getX()));
+  auto outType = convertAscendType(op.getY().getType());
   maxPoolOp->update_output_desc_y(outType);
-  ascendVals[op.y()] = AscendValue(maxPoolOp, outType, "y");
+  ascendVals[op.getY()] = AscendValue(maxPoolOp, outType, "y");
 }
 
 void AscendCompiler::lowerOp(AvgPool2DOp op) {
-  auto avgPoolOp = createOp<ge::op::AvgPoolV2>(op.op_name());
-  avgPoolOp->set_attr_ksize(convertKernelSize(op.kernel_size()));
-  avgPoolOp->set_attr_pads(convertPaddings(op.padding()));
-  avgPoolOp->set_attr_strides(convertStrides(op.stride()));
+  auto avgPoolOp = createOp<ge::op::AvgPoolV2>(op.getOpName());
+  avgPoolOp->set_attr_ksize(convertKernelSize(op.getKernelSize()));
+  avgPoolOp->set_attr_pads(convertPaddings(op.getPadding()));
+  avgPoolOp->set_attr_strides(convertStrides(op.getStride()));
   avgPoolOp->set_attr_ceil_mode(op.ceil_mode());
   avgPoolOp->set_attr_padding_mode("CALCULATED");
   avgPoolOp->set_attr_global_pooling(false);
   avgPoolOp->set_attr_exclusive(!op.count_include_pad());
 
-  SET_INPUT(avgPoolOp, x, getValue(op.x()));
-  auto outType = convertAscendType(op.y().getType());
+  SET_INPUT(avgPoolOp, x, getValue(op.getX()));
+  auto outType = convertAscendType(op.getY().getType());
   avgPoolOp->update_output_desc_y(outType);
-  ascendVals[op.y()] = AscendValue(avgPoolOp, outType, "y");
+  ascendVals[op.getY()] = AscendValue(avgPoolOp, outType, "y");
 }
 
 void AscendCompiler::lowerOp(Add2Op op) {
-  auto addOp = createOp<ge::op::AddV2>(op.op_name());
-  SET_INPUT(addOp, x1, getValue(op.in0()));
-  SET_INPUT(addOp, x2, getValue(op.in1()));
-  auto outType = convertAscendType(op.out().getType());
+  auto addOp = createOp<ge::op::AddV2>(op.getOpName());
+  SET_INPUT(addOp, x1, getValue(op.getIn0()));
+  SET_INPUT(addOp, x2, getValue(op.getIn1()));
+  auto outType = convertAscendType(op.getOut().getType());
   addOp->update_output_desc_y(outType);
-  ascendVals[op.out()] = AscendValue(addOp, outType, "y");
+  ascendVals[op.getOut()] = AscendValue(addOp, outType, "y");
 }
 
 void AscendCompiler::lowerOp(AdaptiveAvgPool2DOp op) {
-  auto adaptiveAvgPoolOp = createOp<ge::op::AdaptiveAvgPool2d>(op.op_name());
+  auto adaptiveAvgPoolOp = createOp<ge::op::AdaptiveAvgPool2d>(op.getOpName());
   ArrayAttr output_size = op.output_size();
   assert(output_size.size() == 2);
   int64_t s0 = output_size[0].dyn_cast<IntegerAttr>().getSInt();
   int64_t s1 = output_size[1].dyn_cast<IntegerAttr>().getSInt();
   adaptiveAvgPoolOp->set_attr_output_size(ge::Operator::OpListInt({s0, s1}));
-  SET_INPUT(adaptiveAvgPoolOp, x, getValue(op.x()));
-  auto outType = convertAscendType(op.y().getType());
+  SET_INPUT(adaptiveAvgPoolOp, x, getValue(op.getX()));
+  auto outType = convertAscendType(op.getY().getType());
   adaptiveAvgPoolOp->update_output_desc_y(outType);
-  ascendVals[op.y()] = AscendValue(adaptiveAvgPoolOp, outType, "y");
+  ascendVals[op.getY()] = AscendValue(adaptiveAvgPoolOp, outType, "y");
 }
 
 void AscendCompiler::lowerOp(MatmulOp op) {
-  auto matmulOp = createOp<ge::op::MatMulV2>(op.op_name());
-  matmulOp->set_attr_transpose_x1(op.transpose_a());
-  matmulOp->set_attr_transpose_x2(op.transpose_b());
+  auto matmulOp = createOp<ge::op::MatMulV2>(op.getOpName());
+  matmulOp->set_attr_transpose_x1(op.getTransposeA());
+  matmulOp->set_attr_transpose_x2(op.getTransposeB());
 
-  SET_INPUT(matmulOp, x1, getValue(op.a()));
-  SET_INPUT(matmulOp, x2, getValue(op.b()));
-  auto outType = convertAscendType(op.out().getType());
+  SET_INPUT(matmulOp, x1, getValue(op.getA()));
+  SET_INPUT(matmulOp, x2, getValue(op.getB()));
+  auto outType = convertAscendType(op.getOut().getType());
   matmulOp->update_output_desc_y(outType);
 
   auto output = AscendValue(matmulOp, outType, "y");
   if (op._add_to_output()) {
-    auto addOp = createOp<ge::op::AddV2>(op.op_name() + "_add_to_output");
+    auto addOp = createOp<ge::op::AddV2>(op.getOpName() + "_add_to_output");
     SET_INPUT(addOp, x1, output);
     SET_INPUT(addOp, x2, getValue(op._add_to_output()));
     addOp->update_output_desc_y(outType);
     output = AscendValue(addOp, outType, "y");
   }
-  ascendVals[op.out()] = output;
+  ascendVals[op.getOut()] = output;
 }
 
 void AscendCompiler::lowerOp(BroadcastAddOp op) {
-  auto addOp = createOp<ge::op::AddV2>(op.op_name());
-  SET_INPUT(addOp, x1, getValue(op.x()));
-  SET_INPUT(addOp, x2, getValue(op.y()));
-  auto outType = convertAscendType(op.z().getType());
+  auto addOp = createOp<ge::op::AddV2>(op.getOpName());
+  SET_INPUT(addOp, x1, getValue(op.getX()));
+  SET_INPUT(addOp, x2, getValue(op.getY()));
+  auto outType = convertAscendType(op.getZ().getType());
   addOp->update_output_desc_y(outType);
-  ascendVals[op.z()] = AscendValue(addOp, outType, "y");
+  ascendVals[op.getZ()] = AscendValue(addOp, outType, "y");
 }
 
 void AscendCompiler::lowerOp(ReshapeOp op) {
   llvm::SmallVector<int64_t, 4> shape;
-  for (auto v : op.shape()) { shape.push_back(v.dyn_cast<IntegerAttr>().getSInt()); }
-  auto constantOp = createOp<ge::op::Const>(op.op_name() + "_shape");
+  for (auto v : op.getShape()) { shape.push_back(v.dyn_cast<IntegerAttr>().getSInt()); }
+  auto constantOp = createOp<ge::op::Const>(op.getOpName() + "_shape");
   auto shapeType =
       ge::TensorDesc(ge::Shape(std::vector<int64_t>{static_cast<int64_t>(shape.size())}),
                      ge::FORMAT_NCHW, ge::DT_INT64);
@@ -342,17 +342,17 @@ void AscendCompiler::lowerOp(ReshapeOp op) {
   tensor->SetData(reinterpret_cast<const uint8_t*>(shape.data()), shape.size() * sizeof(int64_t));
   constantOp->set_attr_value(*tensor);
 
-  auto reshapeOp = createOp<ge::op::Reshape>(op.op_name());
-  SET_INPUT(reshapeOp, x, getValue(op.in()));
+  auto reshapeOp = createOp<ge::op::Reshape>(op.getOpName());
+  SET_INPUT(reshapeOp, x, getValue(op.getIn()));
   SET_INPUT(reshapeOp, shape, (AscendValue(constantOp, shapeType, "y")));
 
-  auto outType = convertAscendType(op.out().getType());
+  auto outType = convertAscendType(op.getOut().getType());
   reshapeOp->update_output_desc_y(outType);
-  ascendVals[op.out()] = AscendValue(reshapeOp, outType, "y");
+  ascendVals[op.getOut()] = AscendValue(reshapeOp, outType, "y");
 }
 
 void AscendCompiler::lowerOp(func::ReturnOp op) {
-  for (auto operand : op.operands()) { results.push_back(getValue(operand)); }
+  for (auto operand : op.getOperands()) { results.push_back(getValue(operand)); }
 }
 
 #undef SET_INPUT

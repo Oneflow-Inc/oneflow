@@ -52,12 +52,12 @@ const std::vector<std::string>* GetFullKeys<OpTrait::AttrSizedResultSegments>(Us
 
 template<>
 std::vector<std::string> GetFullKeys<OpTrait::AttrSizedOperandSegments>(UserOp op) {
-  return mlir::oneflow::support::GetInputKeys(op.op_type_name().str());
+  return mlir::oneflow::support::GetInputKeys(op.getOpTypeName().str());
 }
 
 template<>
 std::vector<std::string> GetFullKeys<OpTrait::AttrSizedResultSegments>(UserOp op) {
-  return mlir::oneflow::support::GetOutputKeys(op.op_type_name().str());
+  return mlir::oneflow::support::GetOutputKeys(op.getOpTypeName().str());
 }
 
 template<>
@@ -118,12 +118,12 @@ ArrayAttr GetUserOpArgSizes(UserOp);
 
 template<>
 ArrayAttr GetUserOpArgSizes<OpTrait::AttrSizedOperandSegments>(UserOp op) {
-  return op.input_sizes();
+  return op.getInputSizes();
 }
 
 template<>
 ArrayAttr GetUserOpArgSizes<OpTrait::AttrSizedResultSegments>(UserOp op) {
-  return op.output_sizes();
+  return op.getOutputSizes();
 }
 
 template<template<typename T> class Trait>

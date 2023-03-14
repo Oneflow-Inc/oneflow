@@ -30,7 +30,7 @@ std::unique_ptr<::oneflow::BlobDesc> getBlobDescFromTensorType(TensorType tensor
   if (mlir::succeeded(data_type)) {
     auto shape_from_mlir = new ::oneflow::Shape(llvm::SmallVector<int64_t, 4>(
         {tensor_type.getShape().begin(), tensor_type.getShape().end()}));
-    return std::make_unique<::oneflow::BlobDesc>(*shape_from_mlir, data_type.getValue());
+    return std::make_unique<::oneflow::BlobDesc>(*shape_from_mlir, data_type.value());
   }
   tensor_type.dump();
   LOG(FATAL) << "fail to get BlobDesc from TensorType";

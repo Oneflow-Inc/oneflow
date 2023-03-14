@@ -122,10 +122,10 @@ LogicalResult Importer::AddUserOpInputOutputSegments(const ::oneflow::OperatorCo
   const ::oneflow::UserOpDef& op_def = support::getUserOpDef(op.user_conf().op_type_name());
   const auto UserOpOperationName = OperationName(UserOp::getOperationName(), GetMLIRContext());
   attr_vec.push_back(GetBuilder().getNamedAttr(
-      oneflow::UserOp::input_sizesAttrName(UserOpOperationName),
+      oneflow::UserOp::getInputSizesAttrName(UserOpOperationName),
       GetBuilder().getI32ArrayAttr(GetSizesFromArgs(user_conf.input(), op_def.input()))));
   attr_vec.push_back(GetBuilder().getNamedAttr(
-      oneflow::UserOp::output_sizesAttrName(UserOpOperationName),
+      oneflow::UserOp::getOutputSizesAttrName(UserOpOperationName),
       GetBuilder().getI32ArrayAttr(GetSizesFromArgs(user_conf.output(), op_def.output()))));
   auto output_lbns = GetOutputLbns(op, op_def.output());
   attr_vec.push_back(GetBuilder().getNamedAttr(
@@ -227,7 +227,7 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf&
     }
     else if (value.has_at_data_type()) {
       if (auto dt_attr = GetDataTypeAttr(GetMLIRContext(), value.at_data_type())) {
-        mlir::NamedAttribute kv = GetBuilder().getNamedAttr(name, dt_attr.getValue());
+        mlir::NamedAttribute kv = GetBuilder().getNamedAttr(name, dt_attr.value());
         attr_vec.emplace_back(kv);
       } else {
         GetModule().emitError("fail to convert op attr, key: " + name);
@@ -239,7 +239,7 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf&
           llvm::map_range(value.at_list_data_type().val(), [&](auto t) -> mlir::Attribute {
             auto dt = GetDataTypeAttr(GetMLIRContext(), static_cast<::oneflow::DataType>(t));
             CHECK(dt) << "fail to convert op attr, key: " + name;
-            return dt.getValue();
+            return dt.value();
           });
       attr_vec.emplace_back(GetBuilder().getNamedAttr(
           name, GetBuilder().getArrayAttr(llvm::to_vector<8>(dt_attr_list))));
@@ -453,7 +453,7 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
 LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf) {
   if (op->isRegistered() && !llvm::dyn_cast<oneflow::UserOp>(op)) return success();
   if (auto ctrl_ins = GetCtrlIntputOperands(op)) {
-    for (auto ctrl_in : ctrl_ins.getValue()) {
+    for (auto ctrl_in : ctrl_ins.value()) {
       op_conf.add_ctrl_in_op_name(
           OpTrait::IsOpConfCompatible<void>::getOpName(ctrl_in.getDefiningOp()).str());
     }
@@ -479,7 +479,7 @@ LogicalResult ConvertUserOpInputs(Operation* op, StringRef op_name,
     for (int32_t i = 0; i < input_size; i++) {
       if (auto result = GetDataInputOperands(op)[input_idx].dyn_cast<mlir::OpResult>()) {
         auto input_s_ptr = (*user_conf->mutable_input())[input_key].mutable_s()->Add();
-        *(input_s_ptr) = user_op::GetOutputLbn(result).getValue();
+        *(input_s_ptr) = user_op::GetOutputLbn(result).value();
         input_idx += 1;
       } else {
         op->emitError() << "fail to convert MLIR result to protobuf, name: " + op_name;
@@ -548,10 +548,10 @@ void Importer::SetOpStateLoc(const ::oneflow::OperatorConf& op_conf, OperationSt
 }
 
 LogicalResult ConvertVariableOpConf(VariableOp op, ::oneflow::OperatorConf* op_conf) {
-  op_conf->set_name(op.op_name().str());
-  op_conf->set_device_tag(op.device_tag().str());
-  if (auto scope_symbol_id = op.scope_symbol_id()) {
-    op_conf->set_scope_symbol_id(scope_symbol_id.getValue());
+  op_conf->set_name(op.getOpName().str());
+  op_conf->set_device_tag(op.getDeviceTag().str());
+  if (auto scope_symbol_id = op.getScopeSymbolId()) {
+    op_conf->set_scope_symbol_id(scope_symbol_id.value());
   }
   // TODO: process stream_name_hint
 
@@ -564,28 +564,28 @@ LogicalResult ConvertVariableOpConf(VariableOp op, ::oneflow::OperatorConf* op_c
   }
 
   if (op->hasAttr(OpTrait::TensorSource<void>::getDataTypeAttrName())) {
-    if (auto dt_mlir = op.data_type()) {
-      const auto dt = support::FromMLIRDataTypeToOFDataType(dt_mlir.getValue());
+    if (auto dt_mlir = op.getDataType()) {
+      const auto dt = support::FromMLIRDataTypeToOFDataType(dt_mlir.value());
       if (failed(dt)) { return failure(); }
-      var_op_conf->set_data_type(dt.getValue());
+      var_op_conf->set_data_type(dt.value());
     }
   }
 
-  if (op->hasAttr("model_name")) { var_op_conf->set_model_name(op.model_name().str()); }
+  if (op->hasAttr("model_name")) { var_op_conf->set_model_name(op.getModelName().str()); }
 
   if (op->hasAttr("l1_regularization")) {
     var_op_conf->mutable_regularizer()->mutable_l1_l2_conf()->set_l1(
-        op.l1_regularization().convertToFloat());
+        op.getL1Regularization().convertToFloat());
   }
 
   if (op->hasAttr("l2_regularization")) {
     var_op_conf->mutable_regularizer()->mutable_l1_l2_conf()->set_l2(
-        op.l2_regularization().convertToFloat());
+        op.getL2Regularization().convertToFloat());
   }
 
-  if (op->hasAttr("trainable")) { var_op_conf->set_trainable(op.trainable()); }
+  if (op->hasAttr("trainable")) { var_op_conf->set_trainable(op.getTrainable()); }
 
-  for (auto output : op.parallel()->getOutputs()) {
+  for (auto output : op.getParallel()->getOutputs()) {
     if (auto nd_outputs = output.dyn_cast<ArrayAttr>()) {
       for (auto nd_output : nd_outputs) {
         std::string sbp{};
@@ -603,12 +603,12 @@ LogicalResult ConvertVariableOpConf(VariableOp op, ::oneflow::OperatorConf* op_c
     op_conf->add_ctrl_in_op_name(
         OpTrait::IsOpConfCompatible<void>::getOpName(operand.getDefiningOp()).str());
   }
-  if (auto floatInit = op.float_initializer()) {
+  if (auto floatInit = op.getFloatInitializer()) {
     var_op_conf->mutable_initializer()->mutable_constant_conf()->set_value(
-        floatInit.getValue().convertToFloat());
-  } else if (auto integerInit = op.integer_initializer()) {
+        floatInit.value().convertToFloat());
+  } else if (auto integerInit = op.getIntegerInitializer()) {
     var_op_conf->mutable_initializer()->mutable_constant_int_conf()->set_value(
-        integerInit.getValue());
+        integerInit.value());
   } else {
     // empty initializer
     var_op_conf->mutable_initializer()->mutable_empty_conf();
@@ -618,10 +618,10 @@ LogicalResult ConvertVariableOpConf(VariableOp op, ::oneflow::OperatorConf* op_c
 }
 
 LogicalResult ConvertInputOpConf(InputOp op, ::oneflow::OperatorConf* op_conf) {
-  op_conf->set_name(op.op_name().str());
-  op_conf->set_device_tag(op.device_tag().str());
-  if (auto scope_symbol_id = op.scope_symbol_id()) {
-    op_conf->set_scope_symbol_id(scope_symbol_id.getValue());
+  op_conf->set_name(op.getOpName().str());
+  op_conf->set_device_tag(op.getDeviceTag().str());
+  if (auto scope_symbol_id = op.getScopeSymbolId()) {
+    op_conf->set_scope_symbol_id(scope_symbol_id.value());
   }
   // TODO: process stream_name_hint
 
@@ -634,25 +634,25 @@ LogicalResult ConvertInputOpConf(InputOp op, ::oneflow::OperatorConf* op_conf) {
   }
 
   if (op->hasAttr(OpTrait::TensorSource<void>::getDataTypeAttrName())) {
-    if (auto dt_mlir = op.data_type()) {
-      const auto dt = support::FromMLIRDataTypeToOFDataType(dt_mlir.getValue());
+    if (auto dt_mlir = op.getDataType()) {
+      const auto dt = support::FromMLIRDataTypeToOFDataType(dt_mlir.value());
       if (failed(dt)) { return failure(); }
-      input_op_conf->mutable_blob_conf()->set_data_type(dt.getValue());
+      input_op_conf->mutable_blob_conf()->set_data_type(dt.value());
     }
   }
 
   if (op->hasAttr(OpTrait::TensorSource<void>::getIsDynamicAttrName())) {
-    input_op_conf->mutable_blob_conf()->set_is_dynamic(op.is_dynamic().getValue());
+    input_op_conf->mutable_blob_conf()->set_is_dynamic(op.getIsDynamic().value());
   }
 
   if (op->hasAttr(OpTrait::TensorSource<void>::getNdSbpAttrName())) {
-    if (failed(ParseNdSbpFromAttr(op.nd_sbp()->getValue(),
+    if (failed(ParseNdSbpFromAttr(op.getNdSbp()->getValue(),
                                   input_op_conf->mutable_blob_conf()->mutable_nd_sbp()))) {
       return failure();
     }
   }
 
-  if (op->hasAttr("job_name")) { input_op_conf->set_job_name(op.job_name().getValue().str()); }
+  if (op->hasAttr("job_name")) { input_op_conf->set_job_name(op.getJobName().value().str()); }
 
   // operand 0 is block argument, others are ctrl_inputs
   for (size_t i = 1; i < op->getNumOperands(); ++i) {
@@ -664,10 +664,10 @@ LogicalResult ConvertInputOpConf(InputOp op, ::oneflow::OperatorConf* op_conf) {
 }
 
 LogicalResult ConvertOutputOpConf(OutputOp op, ::oneflow::OperatorConf* op_conf) {
-  op_conf->set_name(op.op_name().str());
-  op_conf->set_device_tag(op.device_tag().str());
-  if (auto scope_symbol_id = op.scope_symbol_id()) {
-    op_conf->set_scope_symbol_id(scope_symbol_id.getValue());
+  op_conf->set_name(op.getOpName().str());
+  op_conf->set_device_tag(op.getDeviceTag().str());
+  if (auto scope_symbol_id = op.getScopeSymbolId()) {
+    op_conf->set_scope_symbol_id(scope_symbol_id.value());
   }
   // TODO: process stream_name_hint
 
@@ -680,32 +680,32 @@ LogicalResult ConvertOutputOpConf(OutputOp op, ::oneflow::OperatorConf* op_conf)
   }
 
   if (op->hasAttr(OpTrait::TensorSource<void>::getDataTypeAttrName())) {
-    if (auto dt_mlir = op.data_type()) {
-      const auto dt = support::FromMLIRDataTypeToOFDataType(dt_mlir.getValue());
+    if (auto dt_mlir = op.getDataType()) {
+      const auto dt = support::FromMLIRDataTypeToOFDataType(dt_mlir.value());
       if (failed(dt)) { return failure(); }
-      output_op_conf->mutable_blob_conf()->set_data_type(dt.getValue());
+      output_op_conf->mutable_blob_conf()->set_data_type(dt.value());
     }
   }
 
   if (op->hasAttr(OpTrait::TensorSource<void>::getIsDynamicAttrName())) {
-    output_op_conf->mutable_blob_conf()->set_is_dynamic(op.is_dynamic().getValue());
+    output_op_conf->mutable_blob_conf()->set_is_dynamic(op.getIsDynamic().value());
   }
 
   if (op->hasAttr(OpTrait::TensorSource<void>::getNdSbpAttrName())) {
-    if (failed(ParseNdSbpFromAttr(op.nd_sbp()->getValue(),
+    if (failed(ParseNdSbpFromAttr(op.getNdSbp()->getValue(),
                                   output_op_conf->mutable_blob_conf()->mutable_nd_sbp()))) {
       return failure();
     }
   }
 
-  if (op->hasAttr("job_name")) { output_op_conf->set_job_name(op.job_name().getValue().str()); }
+  if (op->hasAttr("job_name")) { output_op_conf->set_job_name(op.getJobName().value().str()); }
 
   if (op->getNumOperands() == 0) {
     op->emitError("output op has at least one input.");
     return failure();
   }
   auto result = op->getOperand(0).dyn_cast<mlir::OpResult>();
-  auto output_lbn = user_op::GetOutputLbn(result).getValue();
+  auto output_lbn = user_op::GetOutputLbn(result).value();
   output_op_conf->set_in(output_lbn);
   for (size_t i = 1; i < op->getNumOperands(); ++i) {
     op_conf->add_ctrl_in_op_name(
