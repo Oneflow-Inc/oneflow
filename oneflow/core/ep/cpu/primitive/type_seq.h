@@ -36,8 +36,10 @@ limitations under the License.
 #define CPU_PRIMITIVE_DOUBLE_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
 #define CPU_PRIMITIVE_FLOAT16_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(float16, DataType::kFloat16)
 #define CPU_PRIMITIVE_BFLOAT16_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(bfloat16, DataType::kBFloat16)
-#define CPU_PRIMITIVE_COMPLEX64_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(std::complex<float>, DataType::kComplex64)
-#define CPU_PRIMITIVE_COMPLEX128_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(std::complex<double>, DataType::kComplex128)
+#define CPU_PRIMITIVE_COMPLEX64_TYPE_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ(std::complex<float>, DataType::kComplex64)
+#define CPU_PRIMITIVE_COMPLEX128_TYPE_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ(std::complex<double>, DataType::kComplex128)
 
 #define CPU_PRIMITIVE_ONEDNN_BOOl_TYPE_SEQ \
   OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::u8, DataType::kBool)
