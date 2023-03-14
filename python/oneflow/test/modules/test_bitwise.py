@@ -41,6 +41,44 @@ def _test_bitwise_op(test_case, op):
     bool_tensor = random_tensor(low=-1, high=1, **dims_kwargs,).to(device) > 0
     return op(op(x, y), bool_tensor)
 
+def _test_bitwise_inplace_op(test_case, op,inplace_op):
+    device = random_device()
+    dims_kwargs = {
+        "ndim": 1,
+        "dim0": random(low=4, high=8).to(int),
+        "dim1": random(low=4, high=8).to(int),
+        "dim2": random(low=4, high=8).to(int),
+        "dim3": random(low=4, high=8).to(int),
+    }
+    # TODO(WangYi): oneflow doesn't support conversion between uint8 and int8
+    # So, use "index" instead of "int" in `random_dtype`
+    dtype = random_dtype(["index", "bool", "unsigned"])
+    x = random_tensor(dtype=int, **dims_kwargs,low=0,high=2).to(device).to(dtype)
+    y = random_tensor(dtype=int, **dims_kwargs,low=0,high=2).to(device).to(dtype)
+    bool_tensor = random_tensor(low=-1, high=1, **dims_kwargs,).to(device) > 0
+    result_=op(x,y)
+    # print(result_)
+    result = op(result_,bool_tensor)
+    # print(result.pytorch.cpu().numpy())
+    
+    # print(x.oneflow.numpy(),y.pytorch.cpu().numpy())
+    x_flow = x.oneflow
+    y_flow = y.oneflow
+    bool_tensor_flow = bool_tensor.oneflow
+    inplace_op(x_flow,y_flow)
+    
+    inplace_op(x_flow,bool_tensor_flow)
+    print(x_flow.numpy())
+    print(result.pytorch.cpu().numpy())
+    import pdb
+    pdb.set_trace()
+    test_case.assertTrue(
+        np.allclose(
+            result.pytorch.cpu().numpy(),
+            x_flow.numpy(),
+        )
+    )
+
 
 def _test_scalar_bitwise(test_case, op):
     device = random_device()
@@ -74,6 +112,12 @@ class TestBitwiseAndModule(flow.unittest.TestCase):
     @autotest(n=10, auto_backward=False)
     def test_scalar_bitwise_and(test_case):
         return _test_scalar_bitwise(test_case, torch.bitwise_and,)
+
+@flow.unittest.skip_unless_1n1d()
+class TestBitwiseAndInplaceModule(flow.unittest.TestCase):
+    @autotest(n=3, auto_backward=False)
+    def test_bitwise_and_inplace(test_case):
+        return _test_bitwise_inplace_op(test_case, torch.bitwise_and,flow.bitwise_and_)
 
 
 @flow.unittest.skip_unless_1n1d()
