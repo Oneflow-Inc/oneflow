@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "fmt/core.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/tensor_util.h"
@@ -25,8 +24,11 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/user/kernels/random_mask_like_kernel.h"
 #include "oneflow/user/kernels/dropout_kernel.h"
-#include "oneflow/core/common/container_util.h"
 #include "oneflow/user/kernels/distributions/common.h"
+#include "oneflow/user/kernels/random_seed_util.h"
+
+#include "oneflow/core/common/container_util.h"
+#include "fmt/core.h"
 
 namespace oneflow {
 namespace one {
@@ -795,8 +797,6 @@ class FusedMatmulBiasAddReluDropoutFunctor {
     */
     const auto& x_shape = x->shape();
     k = x_shape->At(1);
-    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
     for (int64_t i = 0; i < weight_size; i++) {
       CHECK_GE_OR_RETURN(dropout_rate_list[i], 0.0f)
           << Error::RuntimeError() << "Dropout rate should be >= 0.0";
@@ -815,6 +815,8 @@ class FusedMatmulBiasAddReluDropoutFunctor {
       k = n;
     }
 
+    auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+
 #if CUDA_VERSION >= 11060
     DeviceType device_type{};
     if (x->is_global()) {
@@ -822,15 +824,19 @@ class FusedMatmulBiasAddReluDropoutFunctor {
     } else {
       device_type = JUST(x->device())->enum_type();
     }
-
     if ((device_type == DeviceType::kCUDA) && (weight_size <= kMaxInputCount)
         && (!ParseBooleanFromEnv("ONEFLOW_FUNCTOR_DISABLE_FUSED_MLP", false))) {
       TensorTuple input(2 * weight_size + 1);
       input[0] = x;
       std::copy(weights.begin(), weights.end(), input.begin() + 1);
       std::copy(biases.begin(), biases.end(), input.begin() + 1 + weight_size);
-      auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("skip_final_activation", "dropout_rate_list");
-      attrs.SetAllAttrs(skip_final_activation, dropout_rate_list);
+
+      gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
+      auto& attrs =
+          THREAD_CACHED_MUTABLE_ATTR_MAP("skip_final_activation", "seed", "dropout_rate_list");
+      attrs.SetAllAttrs(skip_final_activation, static_cast<int64_t>(gen->current_seed()),
+                        dropout_rate_list);
+      const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
       return OpInterpUtil::Dispatch<Tensor>(*fused_op_[weight_size], input,
                                             OpExprInterpContext(attrs, dropout_state));
     }
@@ -2816,25 +2822,27 @@ class DropoutFunctor {
       JUST(CheckInplaceValid(x));
       (*outputs)[0] = x;
     }
-    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+
+    auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
+    auto& dropout_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rate", "seed");
+    dropout_attrs.SetAllAttrs(p, static_cast<int64_t>(gen->current_seed()));
+
     const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
-    auto& dropout_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rate");
-    dropout_attrs.SetAllAttrs(p);
+    OpExprInterpContext ctx(dropout_attrs, dropout_state);
     if (addend) {
       if ((!training) || p == 0.0) {
         JUST(OpInterpUtil::Dispatch(*add_op_, {x, JUST(addend)}, outputs.get()));
       } else {
         outputs->resize(2);
-        JUST(OpInterpUtil::Dispatch(*dropout_addend_op_, {x, JUST(addend)}, outputs.get(),
-                                    OpExprInterpContext(dropout_attrs, dropout_state)));
+        JUST(OpInterpUtil::Dispatch(*dropout_addend_op_, {x, JUST(addend)}, outputs.get(), ctx));
       }
     } else {
       if (!training || p == 0.0) {
         return x;
       } else {
         outputs->resize(2);
-        JUST(OpInterpUtil::Dispatch(*dropout_op_, {x}, outputs.get(),
-                                    OpExprInterpContext(dropout_attrs, dropout_state)));
+        JUST(OpInterpUtil::Dispatch(*dropout_op_, {x}, outputs.get(), ctx));
       }
     }
     return (*outputs)[0];
@@ -2856,7 +2864,9 @@ Maybe<Tensor> MakeFeatureNoise(const std::shared_ptr<one::Tensor>& x) {
   sizes.push_back(x->shape()->At(0));
   sizes.push_back(x->shape()->At(1));
   for (int i = 2; i < ndim; i++) { sizes.push_back(1); }
-  return JUST(Empty(Shape(sizes), x->dtype(), JUST(x->device()), false));
+  return JUST(Empty(Shape(sizes), x->dtype(), JUST(x->device()),
+                    /*requires_grad=*/x->requires_grad(),
+                    /*pin_memory=*/false));
 }
 
 Maybe<Tensor> DropoutImpl(const std::shared_ptr<one::Tensor>& input, const float& p,
@@ -3280,11 +3290,11 @@ class FusedScaleTrilSoftmaxMaskScaleFunctor {
                                 const int64_t diagonal, const float tril_scale_value,
                                 const float tril_fill_value,
                                 const Optional<one::Generator>& generator) const {
-    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
     auto& random_mask_like_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rate", "seed");
     random_mask_like_attrs.SetAllAttrs(p, static_cast<int64_t>(gen->current_seed()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
-
     const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(
         *random_mask_like_op_, {x},
         OpExprInterpContext(random_mask_like_attrs, random_mask_like_state)));
@@ -3385,7 +3395,8 @@ class FusedBiasAddDropoutFunctor {
       axis_val += num_axes;
     }
     if (p > 0.0) {
-      const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+      auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+      gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), a));
       auto& random_mask_like_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rate", "seed");
       random_mask_like_attrs.SetAllAttrs(p, static_cast<int64_t>(gen->current_seed()));
       const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
@@ -3426,6 +3437,9 @@ class FusedGluFunctor {
                          .Output("matmul_wx")
                          .Build());
 
+    op_without_bias_ = CHECK_JUST(
+        one::OpBuilder("fused_glu").Input("x").Input("w").Output("y").Output("matmul_wx").Build());
+
     split_op_ = CHECK_JUST(one::OpBuilder("fused_glu")
                                .Input("x")
                                .Input("w")
@@ -3436,34 +3450,56 @@ class FusedGluFunctor {
                                .Output("matmul_wx")
                                .Output("matmul_vx")
                                .Build());
+
+    split_op_without_bias_ = CHECK_JUST(one::OpBuilder("fused_glu")
+                                            .Input("x")
+                                            .Input("w")
+                                            .Input("v")
+                                            .Output("y")
+                                            .Output("matmul_wx")
+                                            .Output("matmul_vx")
+                                            .Build());
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& w,
-                           const std::shared_ptr<one::Tensor>& b, const Optional<one::Tensor>& v,
-                           const Optional<one::Tensor>& c, const std::string& activation) const {
-    // check whether the user provide splited tensors
+                           const std::shared_ptr<one::Tensor>& w, const Optional<one::Tensor>& b,
+                           const Optional<one::Tensor>& v, const Optional<one::Tensor>& c,
+                           const std::string& activation) const {
+    // check whether the user provide weight tensor v
     bool is_split_mode = false;
-    if (v && c) {
+    if (v) {
       is_split_mode = true;
-    } else if (!v && !c) {
-      is_split_mode = false;
     } else {
-      return Error::RuntimeError() << "expected consistant existance of tensor v and c";
+      is_split_mode = false;
+    }
+
+    // check whether the user provide bias tensors
+    bool has_bias = false;
+    if (b) {
+      has_bias = true;
+      if (is_split_mode) {
+        CHECK_OR_RETURN(c) << "expected existance of c, when provide tensors w, v and b";
+      }
+    } else {
+      CHECK_OR_RETURN(!c) << "expected existance of b while providing c";
+      has_bias = false;
     }
 
     // obtain input shape
     const auto& x_shape = *(x->shape());
     const auto& w_shape = *(w->shape());
-    const auto& b_shape = *(b->shape());
+    std::shared_ptr<const oneflow::Shape> b_shape = nullptr;
+    if (has_bias) { b_shape = (JUST(b)->shape()); }
 
     // check number of axes of x, w and b
     CHECK_GT_OR_RETURN(x_shape.NumAxes(), 1)
         << "number of axes of \'x\' should have be greater than 1, yet get " << x_shape.NumAxes();
     CHECK_EQ_OR_RETURN(w_shape.NumAxes(), 2)
         << "number of axes of \'w\' should have be equal to 2, yet get " << w_shape.NumAxes();
-    CHECK_EQ_OR_RETURN(b_shape.NumAxes(), 1)
-        << "number of axes of \'b\' should have be equal to 1, yet get " << b_shape.NumAxes();
+    if (has_bias) {
+      CHECK_EQ_OR_RETURN(b_shape->NumAxes(), 1)
+          << "number of axes of \'b\' should have be equal to 1, yet get " << b_shape->NumAxes();
+    }
 
     // check input shapes of w and b
     size_t x_num_axes = x_shape.NumAxes();
@@ -3471,9 +3507,11 @@ class FusedGluFunctor {
         << "dimension 1 of \'w\'(" << w_shape.At(1)
         << ") is not consistant with the last dimension of \'x\'(" << x_shape.At(x_num_axes - 1)
         << ")";
-    CHECK_EQ_OR_RETURN(b_shape.At(0), w_shape.At(0))
-        << "dimension 0 of \'b\'(" << b_shape.At(0)
-        << ") is not consistant with dimension 0 of \'w\'(" << w_shape.At(0) << ")";
+    if (has_bias) {
+      CHECK_EQ_OR_RETURN(b_shape->At(0), w_shape.At(0))
+          << "dimension 0 of \'b\'(" << b_shape->At(0)
+          << ") is not consistant with dimension 0 of \'w\'(" << w_shape.At(0) << ")";
+    }
     if (!is_split_mode) {
       CHECK_EQ_OR_RETURN(w_shape.At(1) % 2, 0) << "dimension 1 of \'w\' is not divisible by 2";
     }
@@ -3481,32 +3519,47 @@ class FusedGluFunctor {
     // check both dimensions and input shapes of v and c (optional)
     if (is_split_mode) {
       const auto& v_shape = *(JUST(v)->shape());
-      const auto& c_shape = *(JUST(c)->shape());
+      std::shared_ptr<const oneflow::Shape> c_shape = NULL;
+      if (has_bias) { c_shape = (JUST(c)->shape()); }
 
       CHECK_EQ_OR_RETURN(v_shape.NumAxes(), 2)
           << "number of axes of \'v\' should have be equal to 2, yet get " << v_shape.NumAxes();
-      CHECK_EQ_OR_RETURN(c_shape.NumAxes(), 1)
-          << "number of axes of \'c\' should have be equal to 1, yet get " << c_shape.NumAxes();
+      if (has_bias) {
+        CHECK_EQ_OR_RETURN(c_shape->NumAxes(), 1)
+            << "number of axes of \'c\' should have be equal to 1, yet get " << c_shape->NumAxes();
+      }
 
       CHECK_OR_RETURN(v_shape == w_shape) << "the shape of \'v\' is not consistant with \'w\'";
-      CHECK_OR_RETURN(c_shape == b_shape) << "the shape of \'c\' is not consistant with \'b\'";
+      if (has_bias) {
+        CHECK_OR_RETURN((*c_shape) == (*b_shape))
+            << "the shape of \'c\' is not consistant with \'b\'";
+      }
     }
 
     // set activation attribute
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("activation");
-    attrs.SetAllAttrs(activation);
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("activation", "has_bias", "is_split");
+    attrs.SetAllAttrs(activation, has_bias, is_split_mode);
 
     // dispatch corresponding operator
-    if (is_split_mode) {
-      return OpInterpUtil::Dispatch<one::Tensor>(*split_op_, {x, w, b, JUST(v), JUST(c)}, attrs);
+    if (is_split_mode && has_bias) {
+      return OpInterpUtil::Dispatch<one::Tensor>(*split_op_, {x, w, JUST(b), JUST(v), JUST(c)},
+                                                 attrs);
+    } else if (!is_split_mode && has_bias) {
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, w, JUST(b)}, attrs);
+    } else if (is_split_mode && !has_bias) {
+      return OpInterpUtil::Dispatch<one::Tensor>(*split_op_without_bias_, {x, w, JUST(v)}, attrs);
+    } else if (!is_split_mode && !has_bias) {
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_without_bias_, {x, w}, attrs);
     } else {
-      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, w, b}, attrs);
+      UNIMPLEMENTED_THEN_RETURN();
     }
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_without_bias_;
   std::shared_ptr<OpExpr> split_op_;
+  std::shared_ptr<OpExpr> split_op_without_bias_;
 };
 
 class FusedScaleTrilFunctor {
@@ -3584,11 +3637,11 @@ class FusedScaleMaskSoftmaxDropoutFunctor {
                                 const Optional<one::Generator>& generator) const {
     float rate = p;
     if (!training) rate = 0.0;
-    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
     auto& random_mask_like_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rate", "seed");
     random_mask_like_attrs.SetAllAttrs(rate, static_cast<int64_t>(gen->current_seed()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
-
     const auto& dropout_mask = JUST(OpInterpUtil::Dispatch<Tensor>(
         *random_mask_like_op_, {x},
         OpExprInterpContext(random_mask_like_attrs, random_mask_like_state)));
@@ -3635,11 +3688,11 @@ class FusedBiasAddScaleMaskSoftmaxDropoutFunctor {
                                 const Optional<one::Generator>& generator) const {
     float rate = p;
     if (!training) rate = 0.0;
-    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
     auto& random_mask_like_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rate", "seed");
     random_mask_like_attrs.SetAllAttrs(rate, static_cast<int64_t>(gen->current_seed()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
-
     const auto& dropout_mask = JUST(OpInterpUtil::Dispatch<Tensor>(
         *random_mask_op_, {x},
         OpExprInterpContext(random_mask_like_attrs, random_mask_like_state)));
@@ -4809,147 +4862,6 @@ class BatchNormBackwardElemtFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class FusedMultiHeadAttentionInferenceFunctor {
- public:
-  FusedMultiHeadAttentionInferenceFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_multi_head_attention_inference")
-                         .Input("query")
-                         .Input("key")
-                         .Input("value")
-                         .Output("out")
-                         .Build());
-    op_with_attn_bias_ = CHECK_JUST(one::OpBuilder("fused_multi_head_attention_inference")
-                                        .Input("query")
-                                        .Input("key")
-                                        .Input("value")
-                                        .Input("attn_bias")
-                                        .Output("out")
-                                        .Build());
-  }
-  Maybe<Tensor> operator()(
-      const std::shared_ptr<one::Tensor>& query, const std::shared_ptr<one::Tensor>& key,
-      const std::shared_ptr<one::Tensor>& value, const int64_t& num_heads, const bool& causal,
-      const int64_t& query_hidden_slice_start, const int64_t& query_hidden_slice_end,
-      const int64_t& key_hidden_slice_start, const int64_t& key_hidden_slice_end,
-      const int64_t& value_hidden_slice_start, const int64_t& value_hidden_slice_end,
-      const Optional<one::Tensor>& attn_bias) const {
-    CHECK_EQ_OR_RETURN(query->shape()->NumAxes(), 3)
-        << "The number of dimensions of the query tensor should be 3.";
-    CHECK_EQ_OR_RETURN(key->shape()->NumAxes(), 3)
-        << "The number of dimensions of the key tensor should be 3.";
-    CHECK_EQ_OR_RETURN(value->shape()->NumAxes(), 3)
-        << "The number of dimensions of the value tensor should be 3.";
-    const int64_t batch_size = query->shape()->At(0);
-    CHECK_EQ_OR_RETURN(key->shape()->At(0), batch_size)
-        << "The size of the first dimension of the key tensor should be the same as that of the "
-           "query tensor.";
-    CHECK_EQ_OR_RETURN(value->shape()->At(0), batch_size)
-        << "The size of the first dimension of the value tensor should be the same as that of the "
-           "query tensor.";
-    const int64_t query_seq_len = query->shape()->At(1);
-    const int64_t kv_seq_len = key->shape()->At(1);
-    CHECK_EQ_OR_RETURN(value->shape()->At(1), kv_seq_len)
-        << "The size of the second dimension of the value tensor should be the same as that of the "
-           "key tensor.";
-
-    auto CheckHiddenSize = [num_heads](const std::string& tensor_name, int64_t slice_start,
-                                       int64_t slice_end, int64_t dim_size) -> Maybe<int64_t> {
-      CHECK_GE_OR_RETURN(slice_start, 0)
-          << tensor_name
-          << "_hidden_slice_start should be greater than or equal to 0 and less than the size "
-             "of the last dimension of the query tensor.";
-      CHECK_LT_OR_RETURN(slice_start, dim_size)
-          << tensor_name
-          << "_hidden_slice_start should be greater than or equal to 0 and less than the size "
-             "of the last dimension of the query tensor.";
-      if (slice_end == -1) {
-        slice_end = dim_size;
-      } else {
-        CHECK_GT_OR_RETURN(slice_end, 0)
-            << tensor_name
-            << "_hidden_slice_end should be greater than 0 and less than or equal to the size "
-               "of the last dimension of the "
-            << tensor_name << " tensor.";
-        CHECK_LE_OR_RETURN(slice_end, dim_size)
-            << tensor_name
-            << "_hidden_slice_end should be greater than 0 and less than or equal to the size "
-               "of the last dimension of the "
-            << tensor_name << " tensor.";
-        CHECK_GT_OR_RETURN(slice_end, slice_start)
-            << tensor_name << "_hidden_slice_end should be greater than " << tensor_name
-            << "_hidden_start.";
-      }
-      const int64_t hidden_size = slice_end - slice_start;
-      CHECK_EQ_OR_RETURN(hidden_size % num_heads, 0)
-          << "The hidden size of the " << tensor_name
-          << " should be a multiple of the number of heads.";
-      return hidden_size;
-    };
-    const int64_t query_hidden_size = JUST(CheckHiddenSize(
-        "query", query_hidden_slice_start, query_hidden_slice_end, query->shape()->At(2)));
-    const int64_t key_hidden_size = JUST(
-        CheckHiddenSize("key", key_hidden_slice_start, key_hidden_slice_end, key->shape()->At(2)));
-    CHECK_EQ_OR_RETURN(key_hidden_size, query_hidden_size)
-        << "The hidden size of the query and key must be the same.";
-    CHECK_EQ_OR_RETURN((query_hidden_size / num_heads) % 8, 0)
-        << "The head size of query and key should be a multiple of 8.";
-    const int64_t value_hidden_size = JUST(CheckHiddenSize(
-        "value", value_hidden_slice_start, value_hidden_slice_end, value->shape()->At(2)));
-    CHECK_EQ_OR_RETURN((value_hidden_size / num_heads) % 8, 0)
-        << "The head size of value should be a multiple of 8.";
-    if (attn_bias) {
-      const auto attn_bias_shape = JUST(attn_bias)->shape();
-      const int64_t num_attn_bias_axes = attn_bias_shape->NumAxes();
-      CHECK_GT_OR_RETURN(num_attn_bias_axes, 0)
-          << "The number of dimensions of attn_bias should be greater than 0 and less than or "
-             "equal to 4.";
-      CHECK_LE_OR_RETURN(num_attn_bias_axes, 4)
-          << "The number of dimensions of attn_bias should be greater than 0 and less than or "
-             "equal to 4.";
-      CHECK_GE_OR_RETURN(attn_bias_shape->At(num_attn_bias_axes - 1), kv_seq_len)
-          << "The size of the -1 dimension of attn_bias should be greater than or equal to the "
-             "second dimension of the key tensor";
-      CHECK_EQ_OR_RETURN(attn_bias_shape->At(num_attn_bias_axes - 1) % 8, 0)
-          << "The size of the -1 dimension of attn_bias should be a multiple of 8.";
-      if (num_attn_bias_axes >= 2) {
-        CHECK_OR_RETURN(attn_bias_shape->At(num_attn_bias_axes - 2) == 1
-                        || attn_bias_shape->At(num_attn_bias_axes - 2) >= query_seq_len)
-            << "The size of the -2 dimension of attn_bias should be greater than or equal to the "
-               "second dimension of the query tensor or equal to 1.";
-      }
-      if (num_attn_bias_axes >= 3) {
-        CHECK_OR_RETURN(attn_bias_shape->At(num_attn_bias_axes - 3) == 1
-                        || attn_bias_shape->At(num_attn_bias_axes - 3) == num_heads)
-            << "The size of the -3 dimension of attn_bias should be equal to num_heads or equal to "
-               "1.";
-      }
-      if (num_attn_bias_axes == 4) {
-        CHECK_OR_RETURN(attn_bias_shape->At(0) == 1 || attn_bias_shape->At(0) == batch_size)
-            << "The size of the -4 dimension of attn_bias should be equal to the first dimension "
-               "of the query tensor or equal to 1.";
-      }
-    }
-
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("num_heads", "causal", "query_hidden_slice_start",
-                                                 "query_hidden_slice_end", "key_hidden_slice_start",
-                                                 "key_hidden_slice_end", "value_hidden_slice_start",
-                                                 "value_hidden_slice_end");
-    attrs.SetAllAttrs(num_heads, causal, query_hidden_slice_start, query_hidden_slice_end,
-                      key_hidden_slice_start, key_hidden_slice_end, value_hidden_slice_start,
-                      value_hidden_slice_end);
-    if (attn_bias) {
-      return OpInterpUtil::Dispatch<Tensor>(*op_with_attn_bias_,
-                                            {query, key, value, JUST(attn_bias)}, attrs);
-    } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {query, key, value}, attrs);
-    }
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-  std::shared_ptr<OpExpr> op_with_attn_bias_;
-};
-
 class FusedFastGeluMulFunctor {
  public:
   FusedFastGeluMulFunctor() {
@@ -5113,6 +5025,71 @@ class MultiTensorYoloV5WeightUpdateFunctor {
   std::vector<std::shared_ptr<OpExpr>> op_;
 };
 
+class FusedScaleMaskBiasSoftmaxFunctor {
+ public:
+  FusedScaleMaskBiasSoftmaxFunctor() {
+    op_with_bias_ = CHECK_JUST(one::OpBuilder("fused_scale_mask_bias_softmax")
+                                   .Input("x")
+                                   .Input("mask")
+                                   .Input("bias")
+                                   .Output("out")
+                                   .Build());
+    op_without_bias_ = CHECK_JUST(one::OpBuilder("fused_scale_mask_bias_softmax")
+                                      .Input("x")
+                                      .Input("mask")
+                                      .Output("out")
+                                      .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& mask,
+                           const Optional<one::Tensor>& bias, const float& scale,
+                           const bool& inplace = false) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "inplace");
+    attrs.SetAllAttrs(scale, inplace);
+    if (bias) {
+      if (inplace) {
+        std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+        outputs->at(0) = x;
+        JUST(OpInterpUtil::Dispatch(*op_with_bias_, {x, mask, JUST(bias)}, outputs.get(), attrs));
+        return outputs->at(0);
+      }
+      return OpInterpUtil::Dispatch<Tensor>(*op_with_bias_, {x, mask, JUST(bias)}, attrs);
+      ;
+    }
+    if (inplace) {
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = x;
+      JUST(OpInterpUtil::Dispatch(*op_without_bias_, {x, mask}, outputs.get(), attrs));
+      return outputs->at(0);
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_without_bias_, {x, mask}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_without_bias_;
+  std::shared_ptr<OpExpr> op_with_bias_;
+};
+
+class FusedScaleMaskBiasSoftmaxGradFunctor {
+ public:
+  FusedScaleMaskBiasSoftmaxGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_scale_mask_bias_softmax_grad")
+                         .Input("y")
+                         .Input("dy")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& dy, const float& scale) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale");
+    attrs.SetAllAttrs(scale);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {y, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -5237,12 +5214,13 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BatchNormElemtFunctor>("BatchNormElemt");
   m.add_functor<impl::BatchNormBackwardReduceFunctor>("BatchNormBackwardReduce");
   m.add_functor<impl::BatchNormBackwardElemtFunctor>("BatchNormBackwardElemt");
-  m.add_functor<impl::FusedMultiHeadAttentionInferenceFunctor>("FusedMultiHeadAttentionInference");
   m.add_functor<impl::FusedFastGeluMulFunctor>("FusedFastGeluMul");
   m.add_functor<impl::FusedFastGeluMulGradFunctor>("FusedFastGeluMulGrad");
   m.add_functor<impl::GroupedMatmulBiasFunctor>("GroupedMatmulBias");
   m.add_functor<impl::GroupedMatmulFunctor>("GroupedMatmul");
   m.add_functor<impl::RMSNormFunctor>("RMSNorm");
+  m.add_functor<impl::FusedScaleMaskBiasSoftmaxFunctor>("FusedScaleMaskBiasSoftmax");
+  m.add_functor<impl::FusedScaleMaskBiasSoftmaxGradFunctor>("FusedScaleMaskBiasSoftmaxGrad");
   m.add_functor<impl::MultiTensorYoloV5WeightUpdateFunctor>("MultiTensorYoloV5WeightUpdate");
 }
 

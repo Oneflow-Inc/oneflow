@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "OneFlow/OKL/Kernel/WrapperContext.h"
+#include "OneFlow/OKM/passes.h"
 #include "OneFlow/Passes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -32,7 +33,10 @@ namespace oneflow {
 namespace okl {
 
 LauncherContext::LauncherContext(mlir::ModuleOp module) {
-  auto func = module.lookupSymbol(mlir::oneflow::okl_func::OKL_FUNC);
+  mlir::Operation* func;
+  module->walk([&](mlir::func::FuncOp op) {
+    if (op.getSymName().startswith(mlir::okm::func_name::OKL_GRAPH_NAME)) { func = op; }
+  });
   if (!func) { LOG(FATAL) << "Not Found okl_func in mlir ir"; }
   auto& ops = func->getRegion(0).front();
 

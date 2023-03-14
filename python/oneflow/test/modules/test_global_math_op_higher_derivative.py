@@ -157,6 +157,12 @@ class TestGlobalMathOpHigherDerivative(flow.unittest.TestCase):
                 _global_math_op_grad_grad_impl(test_case, "exp", placement, sbp)
 
     @globaltest
+    def test_global_exp2_grad_grad(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _global_math_op_grad_grad_impl(test_case, "exp2", placement, sbp)
+
+    @globaltest
     def test_global_expm1_grad_grad(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):

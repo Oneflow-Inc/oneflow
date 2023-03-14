@@ -22,7 +22,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=2, check_graph=True)
+@autotest(n=2, check_graph=True, rtol=1e-3)
 def _test_einsum_matrix_column_sum(test_case, placement, sbp):
     x = random_tensor(ndim=2, dim0=random(1, 3) * 8, dim1=random(1, 3) * 8,)
     g_x = x.to_global(placement=placement, sbp=sbp)

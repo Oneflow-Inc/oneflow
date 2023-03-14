@@ -24,6 +24,7 @@ def OneFlow_OFRecordTensor : TensorOf<[OneFlow_OFRecordElement]>;
 def OneFlow_TensorBufferTensor : TensorOf<[OneFlow_TensorBufferElement]>;
 
 def OneFlow_Tensor : TensorOf<[AnyType]>;
+
 def SI32ArrayAttr : TypedArrayAttrBase<SI32Attr, "signed 32-bit integer array attribute"> {}
 
 def SI64ArrayAttr : TypedArrayAttrBase<SI64Attr, "signed 64-bit integer array attribute"> {}
@@ -89,6 +90,7 @@ class OneFlow_BaseOp<string mnemonic, list<Trait> traits = []> :
   bit has_nd_sbp_infer_fn = 0;
   bit has_compute_complexity_fn = 0;
   bit has_get_nd_sbp_fn = 0;
+  bit has_enumerate_nd_sbp_signatures_fn = 0;
   bit has_dump_nd_sbp_signature_for_op_conf_fn = 0;
 }
 

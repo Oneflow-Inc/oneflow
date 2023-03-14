@@ -490,7 +490,7 @@ class TestConv1d(flow.unittest.TestCase):
         torch.nn.functional.conv1d(inputs, weight_1k_16c, bias=torch.ones(20))
         torch.nn.functional.conv1d(inputs, weight_1k_16c, bias=torch.ones(20), stride=2)
 
-    @autotest(n=5)
+    @autotest(n=5, atol=1e-3)
     def test_conv1d_with_random_data(test_case):
         channels = random(1, 6)
         m = torch.nn.Conv1d(

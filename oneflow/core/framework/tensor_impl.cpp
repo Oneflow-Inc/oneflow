@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/eager/local_dep_object.h"
+#include "oneflow/core/eager/tensor_storage.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -129,7 +130,7 @@ Maybe<void> EagerLocalTensorImpl::InitEagerBlobObject(
   } else {
     const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
         mem_case, local_tensor_meta, mut_local_tensor_meta, local_tensor_meta->dtype(),
-        std::make_shared<vm::InsideVmTensorStorage>(), dep_object);
+        std::make_shared<vm::TensorStorage>(true), dep_object);
     JUST(set_eager_blob_object(eager_blob_object));
   }
   return Maybe<void>::Ok();
@@ -231,7 +232,8 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
   } else {
     const auto& dtype_symbol = JUST(DType::Get(dtype));
     const auto& empty =
-        JUST(functional::Empty(*cur_rank_phy_shape, dtype_symbol, device, /*pin_memory=*/false));
+        JUST(functional::Empty(*cur_rank_phy_shape, dtype_symbol, device,
+                               /*requires_grad=*/requires_grad, /*pin_memory=*/false));
     cur_rank_phy_tensor = JUST(empty->AsLocalTensor());
     JUST(cur_rank_phy_tensor->set_requires_grad(requires_grad));
     cur_rank_phy_tensor->set_is_leaf(is_leaf);

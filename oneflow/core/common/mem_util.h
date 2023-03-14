@@ -25,6 +25,7 @@ limitations under the License.
 
 namespace oneflow {
 void ProcessMemUsage(double* vm_usage, double* resident_set);
+std::string FormatMemSize(uint64_t size);
 Maybe<double> GetCPUMemoryUsed();
 }  // namespace oneflow
 

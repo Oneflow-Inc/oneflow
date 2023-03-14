@@ -129,6 +129,7 @@ class Graph(object):
         self._variables_conf = OrderedDict()
         self._additional_variable_tobe_loaded = OrderedDict()
         self._is_compiled = False
+        self._is_user_mode = False
         # Default is local view
         self._is_global_view = False
 
@@ -852,7 +853,9 @@ class Graph(object):
                 "input", graph_build_util.build_graph_input_arg, *args, **kwargs
             )
             # Deal with module in self.build(*args)
+            self._is_user_mode = True
             outputs = self.build(*lazy_args, **lazy_kwargs)
+            self._is_user_mode = False
 
             # Always pack output to remain type of outputs
             outputs = (outputs,)
@@ -1225,7 +1228,9 @@ class Graph(object):
 
             # Deal with module in self.build(*args)
             self.__print(0, 1, self._shallow_repr() + " start building graph modules.")
+            self._is_user_mode = True
             outputs = self.build(*lazy_args, **lazy_kwargs)
+            self._is_user_mode = False
             self.__print(0, 1, self._shallow_repr() + " end building graph modules.")
 
             # Deal with outputs
@@ -1472,21 +1477,41 @@ class Graph(object):
         self.__ensure_input_tensors_contiguous(*args, **kwargs)
         try:
             flattened_eager_args = self.__flatten_io("input", *args, **kwargs)
-            outputs_tensor_tuple = self._outputs_tensor_tuple_buffer[
-                self._cur_index_of_ouputs_buffer
-            ]
-            eager_outputs = self._eager_outputs_buffer[self._cur_index_of_ouputs_buffer]
 
-            # oneflow._oneflow_internal.eager.Sync() NOTE(chengcheng): Need Sync?
-            oneflow._oneflow_internal.nn.graph.RunLazyNNGraph(
-                convert_to_tensor_tuple(flattened_eager_args),
-                outputs_tensor_tuple,
-                self._c_nn_graph,
-            )
-            # Update outputs buffer reading index
-            self._cur_index_of_ouputs_buffer += 1
-            if self._cur_index_of_ouputs_buffer >= self._outputs_buffer_size:
-                self._cur_index_of_ouputs_buffer = 0
+            if oneflow.support.env_var_util.parse_boolean_from_env(
+                "ONEFLOW_RUN_GRAPH_BY_VM", False
+            ):
+                eager_outputs = oneflow._oneflow_internal.nn.graph.RunLazyNNGraphByVM(
+                    convert_to_tensor_tuple(flattened_eager_args), self._c_nn_graph,
+                )
+            else:
+                outputs_tensor_tuple = self._outputs_tensor_tuple_buffer[
+                    self._cur_index_of_ouputs_buffer
+                ]
+                eager_outputs = self._eager_outputs_buffer[
+                    self._cur_index_of_ouputs_buffer
+                ]
+                # oneflow._oneflow_internal.eager.Sync() NOTE(chengcheng): Need Sync?
+                oneflow._oneflow_internal.nn.graph.RunLazyNNGraph(
+                    convert_to_tensor_tuple(flattened_eager_args),
+                    outputs_tensor_tuple,
+                    self._c_nn_graph,
+                )
+                # Update outputs buffer reading index
+                self._cur_index_of_ouputs_buffer += 1
+                if self._cur_index_of_ouputs_buffer >= self._outputs_buffer_size:
+                    self._cur_index_of_ouputs_buffer = 0
+
+                # Copy outputs from buffer
+                eager_outputs, _ = self.__copy_io("output", *eager_outputs)
+
+                # Make sure that last used devices of tensors in `outputs_tensor_tuple` are
+                # "critical_section".
+                # NNGraph's execution flow will be broken if `last_used_device` of `outputs_tensor_tuple`
+                # are not "critical_section".
+                oneflow._oneflow_internal.nn.graph.SoftSyncNNGraphBuffers(
+                    outputs_tensor_tuple, self._c_nn_graph
+                )
         except:
             self.__print(
                 2,
@@ -1498,16 +1523,6 @@ class Graph(object):
             )
             raise
 
-        # Copy outputs from buffer
-        eager_outputs, _ = self.__copy_io("output", *eager_outputs)
-
-        # Make sure that last used devices of tensors in `outputs_tensor_tuple` are
-        # "critical_section".
-        # NNGraph's execution flow will be broken if `last_used_device` of `outputs_tensor_tuple`
-        # are not "critical_section".
-        oneflow._oneflow_internal.nn.graph.SoftSyncNNGraphBuffers(
-            outputs_tensor_tuple, self._c_nn_graph
-        )
         # Always pack outputs to remain type of outputs
         return seq_to_func_return(eager_outputs, True)
 
