@@ -264,6 +264,7 @@ Pointwise Ops
     expm1 
     floor 
     floor_ 
+    frac
     fmod 
     gelu
     quick_gelu
