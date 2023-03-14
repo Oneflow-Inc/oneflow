@@ -92,6 +92,7 @@ class TestTensorComplex64(unittest.TestCase):
         self.assertEqual(np_a.dtype, self.np_dtype)
         assert np.allclose(np_a, self.np_a)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_tensor_cuda(self):
         a = flow.tensor(self.a, dtype=self.dtype, device="cuda")
         self.assertEqual(a.dtype, self.dtype)
