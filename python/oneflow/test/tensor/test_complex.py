@@ -111,7 +111,7 @@ class TestTensorComplex64(unittest.TestCase):
         np_c = c.numpy()
         self.assertEqual(np_c.dtype, self.np_dtype)
 
-    def _test_new_ones(self):
+    def test_new_ones(self):
         b = flow.tensor(self.b, dtype=self.dtype)
         c = b.new_ones((3, 2))
         self.assertEqual(c.dtype, self.dtype)
