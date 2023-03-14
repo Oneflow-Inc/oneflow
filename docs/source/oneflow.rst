@@ -250,6 +250,7 @@ Pointwise Ops
     arctanh 
     atan2 
     ceil 
+    ceil_
     clamp 
     clamp_min
     clamp_max
@@ -286,6 +287,7 @@ Pointwise Ops
     pow 
     reciprocal 
     round 
+    round_
     rsqrt 
     selu
     softmax
@@ -304,6 +306,9 @@ Pointwise Ops
     tanh
     trunc
     floor_divide
+    lerp
+    lerp_
+    quantile
 
 Reduction Ops
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
