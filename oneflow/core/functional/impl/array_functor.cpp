@@ -358,6 +358,23 @@ class OnesLikeFunctor : public UnaryFunctor {
   }
 };
 
+class FullLikeFunctor {
+ public:
+  FullLikeFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& fill_value) const {
+    std::shared_ptr<Tensor> out;
+    if (x->is_local()) {
+      out = JUST(functional::Empty(*(x->shape()), x->dtype(), JUST(x->device()),
+                                   /*requires_grad=*/false, /*pin_memory=*/false));
+    } else {
+      out = JUST(functional::GlobalEmpty(*(x->shape()), x->dtype(), JUST(x->parallel_desc()),
+                                         *JUST(private_details::RawGetSbpList(JUST(x->nd_sbp())))));
+    }
+    out = JUST(functional::Fill(out, fill_value));
+    return out;
+  }
+};
+
 class FlattenFunctor {
  public:
   FlattenFunctor() = default;
@@ -3977,6 +3994,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::EmptyStridedFunctor>("EmptyStrided");
   m.add_functor<impl::ZerosLikeFunctor>("ZerosLike");
   m.add_functor<impl::OnesLikeFunctor>("OnesLike");
+  m.add_functor<impl::FullLikeFunctor>("FullLike");
   m.add_functor<impl::FlattenFunctor>("Flatten");
   m.add_functor<impl::FillFunctor>("Fill");
   m.add_functor<impl::FillTensorFunctor>("FillTensor");
