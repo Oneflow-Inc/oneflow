@@ -166,6 +166,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.floor_,
+    """
+    See :func:`oneflow.floor_`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.flip,
     """
     See :func:`oneflow.flip`
@@ -564,6 +571,27 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.lerp,
+    """
+    See :func:`oneflow.lerp`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.lerp_,
+    """
+    See :func:`oneflow.lerp_`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.quantile,
+    """
+    See :func:`oneflow.quantile`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.sqrt,
     """
     See :func:`oneflow.sqrt`
@@ -837,6 +865,20 @@ add_docstr(
     oneflow.Tensor.grad_fn,
     r"""
     Return the function that created this tensor if it's ``requires_grad`` is True.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.inverse,
+    """
+    See :func:`oneflow.linalg.inv`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.trunc,
+    """
+    See :func:`oneflow.trunc`
     """,
 )
 
@@ -1241,14 +1283,6 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow.Tensor.floor_,
-    r"""
-    In-place version of :func:`oneflow.floor`
-
-    """,
-)
-
-add_docstr(
     oneflow.Tensor.normal_,
     """
     normal_(mean=0, std=1, *, generator=None) -> Tensor
@@ -1292,6 +1326,13 @@ add_docstr(
     oneflow.Tensor.round,
     """
     See :func:`oneflow.round`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.round_,
+    """
+    See :func:`oneflow.round_`
     """,
 )
 
@@ -1856,6 +1897,13 @@ add_docstr(
     oneflow.Tensor.ceil,
     """
     See :func:`oneflow.ceil`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.ceil_,
+    """
+    See :func:`oneflow.ceil_`
     """,
 )
 

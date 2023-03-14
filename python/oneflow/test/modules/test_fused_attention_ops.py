@@ -138,10 +138,16 @@ def _test_fused_attention_concat_past_key_value(
     key_layout,
     value_layout,
 ):
-    past_key = flow.randn((b, past_m, h, k), device="cuda", dtype=flow.float,).to(dtype)
-    past_value = flow.randn((b, past_m, h, k), device="cuda", dtype=flow.float,).to(
-        dtype
-    )
+    if past_m > 0:
+        past_key = flow.randn((b, past_m, h, k), device="cuda", dtype=flow.float,).to(
+            dtype
+        )
+        past_value = flow.randn((b, past_m, h, k), device="cuda", dtype=flow.float,).to(
+            dtype
+        )
+    else:
+        past_key = None
+        past_value = None
     key = flow.randn((b, m, h, k), device="cuda", dtype=flow.float,).to(dtype)
     value = flow.randn((b, m, h, k), device="cuda", dtype=flow.float,).to(dtype)
 
@@ -159,8 +165,12 @@ def _test_fused_attention_concat_past_key_value(
         value_layout=value_layout,
         key_head_size=k,
     )
-    concated_key = flow.cat([past_key, key], dim=1)
-    concated_value = flow.cat([past_value, value], dim=1)
+    if past_m > 0:
+        concated_key = flow.cat([past_key, key], dim=1)
+        concated_value = flow.cat([past_value, value], dim=1)
+    else:
+        concated_key = key
+        concated_value = value
     ref_concated_key = _to_layout(
         [concated_key, concated_key, concated_value], past_key_layout, 1
     )
@@ -488,6 +498,19 @@ class TestFusedAttentionConcatPastKeyValue(flow.unittest.TestCase):
                 key_layout=key_layout,
                 value_layout=value_layout,
             )
+        _test_fused_attention_concat_past_key_value(
+            test_case,
+            flow.float,
+            1,
+            0,
+            1,
+            40,
+            128,
+            past_key_layout="BMHK",
+            past_value_layout="BMHK",
+            key_layout="BMHK",
+            value_layout="BMHK",
+        )
 
 
 if __name__ == "__main__":
