@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"  // OF_DISALLOW_COPY_AND_MOVE
 #include "cnrt.h"
+#include "cnnl.h"
 #include "cndev.h"
 #include "cn_api.h"
 
