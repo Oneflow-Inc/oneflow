@@ -841,6 +841,20 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.inverse,
+    """
+    See :func:`oneflow.linalg.inv`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.trunc,
+    """
+    See :func:`oneflow.trunc`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.is_leaf,
     r"""
     All Tensors that have ``requires_grad`` which is ``False`` will be leaf Tensors by convention.
@@ -1049,6 +1063,13 @@ add_docstr(
     oneflow.Tensor.exp,
     """
     See :func:`oneflow.exp`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.exp2,
+    """
+    See :func:`oneflow.exp2`
     """,
 )
 

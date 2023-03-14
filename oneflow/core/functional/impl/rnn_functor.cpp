@@ -1398,7 +1398,8 @@ class PackPaddedSequenceFunctor {
     lsv[0] = lengths_vec[0];
     const Shape ls(lsv);
     std::shared_ptr<Tensor> batch_sizes_t =
-        JUST(functional::Empty(ls, lengths->dtype(), JUST(lengths->device()), false));
+        JUST(functional::Empty(ls, lengths->dtype(), JUST(lengths->device()),
+                               /*requires_grad=*/lengths->requires_grad(), /*pin_memory=*/false));
     const auto& callback2 = [&](ep::Stream* stream,
                                 const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
       SyncAutoMemcpy(stream, eager_blob_object->mut_dptr(), batch_sizes.data(),

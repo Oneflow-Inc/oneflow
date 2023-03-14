@@ -22,7 +22,7 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-using OpArgsVector = small_vector<T, kOpArgsReservedSize>;
+using OpArgsVector = small_vector<T>;
 
 }
 
