@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <string>
+#include <vector>
 #include "fmt/core.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -5378,6 +5380,55 @@ class FusedScaleMaskBiasSoftmaxGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class TransposedBinaryOpFunctor {
+ public:
+  TransposedBinaryOpFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("transposed_binary_op").Input("lhs").Input("rhs").Output("y").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& lhs, const std::shared_ptr<Tensor>& rhs,
+                           const std::string& op, const bool inplace = false) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("op", "inplace");
+    attrs.SetAllAttrs(op, inplace);
+    if (inplace) {
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = lhs;
+      JUST(OpInterpUtil::Dispatch(*op_, {lhs, rhs}, outputs.get(), attrs));
+      return outputs->at(0);
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {lhs, rhs}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class TransposedBinaryOpGradFunctor {
+ public:
+  TransposedBinaryOpGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("transposed_binary_op_grad")
+                         .Input("dy")
+                         .Input("y")
+                         .Input("lhs", 0)
+                         .Input("rhs", 0)
+                         .Output("dlhs")
+                         .Output("drhs")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& dy, const std::shared_ptr<Tensor>& y,
+                           const std::shared_ptr<Tensor>& lhs, const std::shared_ptr<Tensor>& rhs,
+                           const std::string& op, const bool inplace) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("op", "inplace");
+    attrs.SetAllAttrs(op, inplace);  // CHECK(!inplace)
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, y, lhs, rhs}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -5512,6 +5563,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::RMSNormFunctor>("RMSNorm");
   m.add_functor<impl::FusedScaleMaskBiasSoftmaxFunctor>("FusedScaleMaskBiasSoftmax");
   m.add_functor<impl::FusedScaleMaskBiasSoftmaxGradFunctor>("FusedScaleMaskBiasSoftmaxGrad");
+  m.add_functor<impl::TransposedBinaryOpFunctor>("TransposedBinaryOp");
+  m.add_functor<impl::TransposedBinaryOpGradFunctor>("TransposedBinaryOpGrad");
   m.add_functor<impl::MultiTensorYoloV5WeightUpdateFunctor>("MultiTensorYoloV5WeightUpdate");
 }
 

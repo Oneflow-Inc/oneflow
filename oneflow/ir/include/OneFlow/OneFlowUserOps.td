@@ -3291,6 +3291,45 @@ def OneFlow_FusedCodegeexQkvReshapeOp : OneFlow_BaseOp<"fused_codegeex_qkv_resha
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_TransposedBinaryOp : OneFlow_BaseOp<"transposed_binary_op", [NoSideEffect, SupportNonContiguous, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$lhs,
+    OneFlow_Tensor:$rhs
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let attrs = (ins
+    DefaultValuedAttr<StrAttr, "\"add\"">:$op,
+    DefaultValuedAttr<BoolAttr, "false">:$inplace
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_TransposedBinaryOpGrad : OneFlow_BaseOp<"transposed_binary_op_grad", [NoSideEffect, SupportNonContiguous, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$lhs,
+    OneFlow_Tensor:$rhs
+  );
+  let output = (outs
+    OneFlow_Tensor:$dlhs,
+    OneFlow_Tensor:$drhs
+  );
+  let attrs = (ins
+    DefaultValuedAttr<StrAttr, "\"add\"">:$op,
+    DefaultValuedAttr<BoolAttr, "false">:$inplace
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 #endif // GET_ONEFLOW_FUSED_OP_DEFINITIONS
 
 
