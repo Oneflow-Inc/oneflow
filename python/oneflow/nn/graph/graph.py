@@ -1443,28 +1443,31 @@ class Graph(object):
         self._outputs_tensor_tuple = convert_to_synced_tensor_tuple(
             self.__flatten_io("output", *self._eager_outputs)
         )
-        if not run_graph_by_vm():
-            self._eager_outputs_buffer = [
-                self._eager_outputs,
-            ]
-            self._outputs_tensor_tuple_buffer = [
-                self._outputs_tensor_tuple,
-            ]
+        # _eager_outputs_buffer and _outputs_tensor_tuple_buffer are not
+        # used if nn.Graph is run by VM
+        if run_graph_by_vm():
+            return
+        self._eager_outputs_buffer = [
+            self._eager_outputs,
+        ]
+        self._outputs_tensor_tuple_buffer = [
+            self._outputs_tensor_tuple,
+        ]
 
-            # Make outputs buffer
-            for i in range(self._outputs_buffer_size - 1):
-                outputs_buffer_item, _ = self.__empty_like_io(
-                    "output", *self._eager_outputs
-                )
-                self._eager_outputs_buffer.append(outputs_buffer_item)
-                outputs_tensor_tuple_buffer_item = convert_to_synced_tensor_tuple(
-                    self.__flatten_io("output", *outputs_buffer_item)
-                )
-                self._outputs_tensor_tuple_buffer.append(
-                    outputs_tensor_tuple_buffer_item
-                )
+        # Make outputs buffer
+        for i in range(self._outputs_buffer_size - 1):
+            outputs_buffer_item, _ = self.__empty_like_io(
+                "output", *self._eager_outputs
+            )
+            self._eager_outputs_buffer.append(outputs_buffer_item)
+            outputs_tensor_tuple_buffer_item = convert_to_synced_tensor_tuple(
+                self.__flatten_io("output", *outputs_buffer_item)
+            )
+            self._outputs_tensor_tuple_buffer.append(
+                outputs_tensor_tuple_buffer_item
+            )
 
-            self.__check_outputs_buffer()
+        self.__check_outputs_buffer()
 
     def __check_outputs_buffer(self):
         has_len = len(self._outputs_tensor_tuple_buffer)
