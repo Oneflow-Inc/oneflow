@@ -18,10 +18,32 @@ import unittest
 import oneflow as flow
 
 
-# TODO(lml): add support and test for flow.randn(), flow.ones(), flow.zeros(),
-# Tensor.real(), Tensor.imag(), Tensor.conj(), Tensor.adjoint(), Tensor.conj_physical()
-# Tensor.conj_physical_(), Tensor.resolve_conj(), Tensor.chalf(), Tensor.cfloat(),
-# Tensor.cdouble(), and so on.
+'''
+TODO(lml): Support and test more apis.
+Finished: 
+flow.from_numpy()
+flow.tensor()
+flow.ones()
+flow.zeros()
+flow.full()
+flow.new_ones()
+flow.new_zeros()
+flow.new_full()
+
+To complete:
+flow.randn()
+Tensor.real()
+Tensor.imag()
+Tensor.conj()
+Tensor.adjoint()
+Tensor.conj_physical()
+Tensor.conj_physical_()
+Tensor.resolve_conj()
+Tensor.chalf()
+Tensor.cfloat(),
+Tensor.cdouble()
+More apis..
+'''
 class TestTensorComplex64(unittest.TestCase):
     def setUp(self):
         self.dtype = flow.cfloat
@@ -111,6 +133,14 @@ class TestTensorComplex64(unittest.TestCase):
         np_c = c.numpy()
         self.assertEqual(np_c.dtype, self.np_dtype)
 
+    def test_ones(self):
+        c = flow.ones((3, 2), dtype=self.dtype)
+        self.assertEqual(c.dtype, self.dtype)
+        self.assertEqual(c.type(), "oneflow." + self.type_str)
+        np_c = c.numpy()
+        self.assertEqual(np_c.dtype, self.np_dtype)
+        assert np.allclose(np_c, np.ones((3, 2), dtype=self.np_dtype))
+
     def test_new_ones(self):
         b = flow.tensor(self.b, dtype=self.dtype)
         c = b.new_ones((3, 2))
@@ -120,7 +150,15 @@ class TestTensorComplex64(unittest.TestCase):
         self.assertEqual(np_c.dtype, self.np_dtype)
         assert np.allclose(np_c, np.ones((3, 2), dtype=self.np_dtype))
 
-    def _test_new_zeros(self):
+    def test_zeros(self):
+        c = flow.zeros((3, 2), dtype=self.dtype)
+        self.assertEqual(c.dtype, self.dtype)
+        self.assertEqual(c.type(), "oneflow." + self.type_str)
+        np_c = c.numpy()
+        self.assertEqual(np_c.dtype, self.np_dtype)
+        assert np.allclose(np_c, np.zeros((3, 2), dtype=self.np_dtype))
+
+    def test_new_zeros(self):
         b = flow.tensor(self.b, dtype=self.dtype)
         c = b.new_zeros((3, 2))
         self.assertEqual(c.dtype, self.dtype)
@@ -129,7 +167,15 @@ class TestTensorComplex64(unittest.TestCase):
         self.assertEqual(np_c.dtype, self.np_dtype)
         assert np.allclose(np_c, np.zeros((3, 2), dtype=self.np_dtype))
 
-    def _test_new_full(self):
+    def test_full(self):
+        c = flow.full((3, 2), 3.14 + 2j, dtype=self.dtype)
+        self.assertEqual(c.dtype, self.dtype)
+        self.assertEqual(c.type(), "oneflow." + self.type_str)
+        np_c = c.numpy()
+        self.assertEqual(np_c.dtype, self.np_dtype)
+        assert np.allclose(np_c, self.np_c)
+
+    def test_new_full(self):
         a = flow.tensor(self.a, dtype=self.dtype)
         c = a.new_full((3, 2), 3.14 + 2j)
         self.assertEqual(c.dtype, self.dtype)
