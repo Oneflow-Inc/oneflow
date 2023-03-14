@@ -33,7 +33,7 @@ namespace oneflow {
 #define OF_CNNL_CHECK(condition)                                                            \
   for (cnnlStatus_t _cnnl_check_status = (condition); _cnnl_check_status != CNNL_STATUS_SUCCESS;) \
   LOG(FATAL) << "CNNL check failed: " #condition " : "                                          \
-             << " (error code:" << _cnnl_check_status << " " + std::string(cnnlGetErrorString(_cnnl_check_status)) + ") "
+             << " (error code:" << _cnnl_check_status << " " + std::string(cnnlErrorString(_cnnl_check_status)) + ") "
 
 cnrtRet_t NumaAwareMluMallocHost(int32_t dev, void** ptr, size_t size);
 
@@ -56,7 +56,7 @@ void SetMluDeviceIndex(int device_id);
 
 void MluSynchronize(int device_id);
 
-std::string cnnlGetErrorString(cnnlStatus_t status);
+std::string cnnlErrorString(cnnlStatus_t status);
 
 }  // namespace oneflow
 
