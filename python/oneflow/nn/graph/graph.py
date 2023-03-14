@@ -1852,11 +1852,14 @@ class Graph(object):
                 self._run_with_cache = True
                 import oneflow.nn.graph.cache as cache
 
-                self._dynamic_input_graph_cache = cache.GraphCache(weakref.proxy(self), cache_size=size)
+                self._dynamic_input_graph_cache = cache.GraphCache(
+                    weakref.proxy(self), cache_size=size
+                )
                 self._cached_init_args = args
                 self._cached_init_kwargs = kwargs
 
             return deco_func
+
         return deco_with_config
 
 
