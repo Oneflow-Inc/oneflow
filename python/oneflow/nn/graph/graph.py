@@ -1689,10 +1689,10 @@ class Graph(object):
 
     def __empty_like_io(self, io_type, *args, **kwargs):
         def func(t):
-            shape = t.shape
             dtype = t.dtype
 
             with oneflow._oneflow_internal.lazy_mode.guard(False):
+                shape = t.shape
                 if t.is_global:
                     eager_out = oneflow.empty(
                         shape, dtype=dtype, placement=t.placement, sbp=t.sbp,

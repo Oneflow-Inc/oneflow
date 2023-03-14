@@ -14,11 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/nn_graph.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/framework/local_tensor_infer_cache.h"
 
@@ -108,6 +110,24 @@ Maybe<void> RunNormalOp(const std::shared_ptr<UserOpExpr>& op, Env& env, const T
   return Maybe<void>::Ok();
 }
 
+Maybe<void> RunShapeOp(Env& env, const std::shared_ptr<Tensor>& input,
+                       const std::string& output_name) {
+  const auto& shape = input->shape();
+  const auto output = JUST(functional::Empty(Shape{static_cast<int64_t>(shape->size())},
+                                             DType::Int64(), NullOpt, false, false));
+  const auto& Callback = [shape](ep::Stream* stream,
+                                 const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+    AutoMemcpy(stream, eager_blob_object->mut_dptr(), shape->data(),
+               shape->size() * sizeof(int64_t), memory::MakeHostMemCase(),
+               memory::MakeHostMemCase());
+  };
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    return builder->AccessBlobByCallback(JUST(output->AsLocalTensor()), Callback, "mut");
+  }));
+  env.emplace(output_name, output);
+  return Maybe<void>::Ok();
+}
+
 // tensors in outdated_tensors_after_op[i] will not be accessed any more after i-th op
 // so they can be released once i-th op's execution finishes.
 std::vector<std::vector<std::string>> GetOutdatedTensorsAfterOp(const Job& job) {
@@ -173,7 +193,9 @@ Maybe<one::TensorTuple> InterpretJob(const one::TensorTuple& graph_inputs,
             return CHECK_JUST(functional::To(tensor, op_conf.device_tag()));
           }));
       OpArgsVector<std::string> output_names = GetOutputNamesOfOp(user_conf);
-      if (IsViewOp(op)) {
+      if (op->op_type_name() == "shape") {
+        JUST(RunShapeOp(env, inputs[0], output_names[0]));
+      } else if (IsViewOp(op)) {
         JUST(RunViewOp(op, env, inputs, output_names));
       } else {
         JUST(RunNormalOp(op, env, inputs, output_names));

@@ -511,6 +511,13 @@ def _logaddexp(self, other):
     return flow._C.logaddexp(self, other)
 
 
+def tensor_bool(self):
+    if self.is_lazy:
+        print("return True for lazy tensor")
+        return True
+    return is_nonzero(self)
+
+
 def RegisterMethods():
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _numpy
@@ -521,7 +528,7 @@ def RegisterMethods():
     Tensor.__str__ = _str
     Tensor.__repr__ = _repr
     Tensor.__contains__ = _contains
-    Tensor.__bool__ = is_nonzero
+    Tensor.__bool__ = tensor_bool
     Tensor.__iadd__ = _iadd
     Tensor.addmm = _addmm
     Tensor.__format__ = _format

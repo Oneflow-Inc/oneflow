@@ -23,6 +23,8 @@ import oneflow as flow
 
 def _ntuple(n):
     def parse(x):
+        if isinstance(x, flow.Tensor):
+            return x
         if isinstance(x, container_abcs.Iterable):
             return tuple(x)
         return tuple(repeat(x, n))
@@ -48,7 +50,7 @@ _quadruple = _ntuple(4)
 
 def _handle_size_arg(size):
     assert len(size) > 0, "size of tensor doesn't exists"
-    if isinstance(size[0], (list, tuple, flow.Size)):
+    if isinstance(size[0], (list, tuple, flow.Size, flow.Tensor)):
         assert (
             len(size) == 1
         ), "shape should be specified by tuple of int size, not tuple of list"

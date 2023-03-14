@@ -560,6 +560,9 @@ static PyObject* PyTensorObject_ndim(PyObject* self, void* unused) {
 }
 
 static PyObject* PyTensorObject_shape(PyObject* self, void* unused) {
+  if (LazyMode::is_enabled()) {
+    return PyTensor_New(CHECK_JUST(functional::ShapeOp(PyTensor_Unpack(self))));
+  }
   return functional::CastToPyObject(PyTensor_Unpack(self)->shape());
 }
 

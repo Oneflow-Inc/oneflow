@@ -1111,7 +1111,10 @@
   bind_python: True
 
 - name: "expand"
-  signature: "Tensor (Tensor x, Shape shape) => Expand"
+  signature: [
+    "Tensor (Tensor x, Shape shape) => Expand",
+    "Tensor (Tensor x, Tensor shape) => Expand",
+  ]
   bind_python: True
 
 - name: "repeat"
@@ -3284,4 +3287,8 @@
 
 - name: "clone"
   signature: "Tensor (Tensor input) => Clone"
+  bind_python: True
+
+- name: "shape"
+  signature: "Tensor (Tensor input) => ShapeOp"
   bind_python: True
