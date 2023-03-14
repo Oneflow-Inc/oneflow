@@ -56,28 +56,22 @@ def _test_bitwise_inplace_op(test_case, op,inplace_op):
     x = random_tensor(dtype=int, **dims_kwargs,low=0,high=2).to(device).to(dtype)
     y = random_tensor(dtype=int, **dims_kwargs,low=0,high=2).to(device).to(dtype)
     bool_tensor = random_tensor(low=-1, high=1, **dims_kwargs,).to(device) > 0
-    result_=op(x,y)
-    # print(result_)
-    result = op(result_,bool_tensor)
-    # print(result.pytorch.cpu().numpy())
-    
-    # print(x.oneflow.numpy(),y.pytorch.cpu().numpy())
-    x_flow = x.oneflow
-    y_flow = y.oneflow
-    bool_tensor_flow = bool_tensor.oneflow
-    inplace_op(x_flow,y_flow)
-    
+  
+    result = op(op(x,y),bool_tensor)
+
+    x_flow = x.oneflow.clone()
+    y_flow = y.oneflow.clone()
+    bool_tensor_flow = bool_tensor.oneflow.clone()
+    inplace_op(x_flow,y_flow)  
     inplace_op(x_flow,bool_tensor_flow)
-    print(x_flow.numpy())
-    print(result.pytorch.cpu().numpy())
-    import pdb
-    pdb.set_trace()
     test_case.assertTrue(
         np.allclose(
-            result.pytorch.cpu().numpy(),
             x_flow.numpy(),
+            result.pytorch.cpu().numpy()
         )
     )
+    
+
 
 
 def _test_scalar_bitwise(test_case, op):
