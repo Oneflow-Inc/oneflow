@@ -304,6 +304,7 @@ Tensor class reference
     Tensor.numpy
     Tensor.offload
     Tensor.load
+    Tensor.is_offloaded
     Tensor.permute
     Tensor.pow
     Tensor.prod

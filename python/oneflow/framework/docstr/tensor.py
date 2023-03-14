@@ -200,15 +200,17 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.offload,
     """
-    Tensor.offload() -> None
-
     Transfer tensor data from GPU memory back to host (CPU) memory. If the tensor is already in host (CPU) memory, the operation does nothing and gives a warning.
+    Note that this operation only changes the storage of the tensor, and the tensor id will not change.
 
     Note:
     
         Both global tensor and local tensor of oneflow are applicable to this operation.
 
-        Use with :func:`oneflow.Tensor.load` and :func:`oneflow.Tensor.is_offloaded`.        
+        Use with :func:`oneflow.Tensor.load` and :func:`oneflow.Tensor.is_offloaded`. 
+        The behavior of load() is the opposite of offload(), is_offloaded() returns a boolean indicating whether the tensor has been moved to CPU memory.     
+
+        In addition, support for offloading elements of :func:`oneflow.nn.Module.parameters` is provided.        
 
     For example:
 
@@ -252,8 +254,6 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.load,
     """
-    Tensor.load() -> None
-
     Load tensor data stored on the host (CPU) back to GPU memory. If the tensor is already in GPU memory, the operation does nothing and gives a warning.
 
     """,
