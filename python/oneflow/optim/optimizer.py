@@ -166,9 +166,18 @@ class ParamGroup(object):
                 "now only contiguous_params is set."
             )
 
+    def get(self, key, default=None):
+        if key == "contiguous_params":
+            return self._options.get("contiguous_params", False)
+        if key == "params":
+            return self._parameters
+        return self._options.get(key, default)
+
     def __getitem__(self, key):
         if key == "contiguous_params":
             return self._options.get("contiguous_params", False)
+        if key == "params":
+            return self._parameters
         return self._options[key]
 
     def __setitem__(self, key, value):
