@@ -332,7 +332,12 @@ of::Maybe<void> Graph::GraphImpl::AddOp(of::OperatorConf op_conf) {
   }
   op_conf.set_device_tag(GetDeviceTag(device_));
   if (batch_size_ > 0 && op_conf.has_input_conf()) {
-    op_conf.mutable_input_conf()->mutable_blob_conf()->mutable_shape()->mutable_dim()->Add()->set_int64_value(batch_size_);
+    op_conf.mutable_input_conf()
+        ->mutable_blob_conf()
+        ->mutable_shape()
+        ->mutable_dim()
+        ->Add()
+        ->set_int64_value(batch_size_);
   }
   auto* ctx = JUST(of::GetCurInferCtx());
   JUST(ctx->AddAndInferGlobalOp(op_conf));
