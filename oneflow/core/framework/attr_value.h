@@ -31,7 +31,7 @@ namespace std {
 template<>
 struct hash<std::complex<double>> {
   size_t operator()(const std::complex<double>& c) const {
-    return std::hash<double>()(c.real()) ^ std::hash<double>()(c.imag());
+    return oneflow::Hash(c.real(), c.imag());
   }
 };
 }  // namespace std
