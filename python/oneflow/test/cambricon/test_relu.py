@@ -27,11 +27,10 @@ import oneflow.unittest
 def np_relu(x):
     return np.where(x > 0, x, 0)
 
+
 def _test_relu_forward(test_case, shape, device, dtype):
     arr = np.random.randn(*shape)
-    x = flow.tensor(
-        arr, device=flow.device(device), dtype=dtype
-    )
+    x = flow.tensor(arr, device=flow.device(device), dtype=dtype)
     of_out = flow.relu(x)
     np_out = np_relu(arr).astype(arr.dtype)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.001, 0.001))
@@ -49,6 +48,7 @@ class TestReluCambriconModule(flow.unittest.TestCase):
         arg_dict["dtype"] = [flow.float16, flow.float32]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
 
 if __name__ == "__main__":
     unittest.main()

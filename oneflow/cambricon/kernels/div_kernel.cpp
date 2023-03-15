@@ -51,22 +51,21 @@ class MluDivKernel final : public user_op::OpKernel {
 
     OF_CNNL_CHECK(cnnlDiv_v2(ctx->stream()->As<ep::MluStream>()->cnnl_handle(),
                              CNNL_COMPUTATION_HIGH_PRECISION, x_desc.desc(), x->dptr(),
-                             y_decs.desc(), y->dptr(), _div_workspace,
-                             _div_workspace_size, z_desc.desc(), z->mut_dptr()));
+                             y_decs.desc(), y->dptr(), _div_workspace, _div_workspace_size,
+                             z_desc.desc(), z->mut_dptr()));
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_DIV_MLU_KERNEL(name, dtype)                      \
-  REGISTER_USER_KERNEL(name)                               \
-      .SetCreateFn<MluDivKernel<dtype>>()                    \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kMLU) \
-                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
+#define REGISTER_DIV_MLU_KERNEL(name, dtype)                                     \
+  REGISTER_USER_KERNEL(name).SetCreateFn<MluDivKernel<dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceType() == DeviceType::kMLU)                             \
+      && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
-REGISTER_DIV_MLU_KERNEL("div" ,float)
+REGISTER_DIV_MLU_KERNEL("div", float)
 REGISTER_DIV_MLU_KERNEL("div", float16)
-REGISTER_DIV_MLU_KERNEL("broadcast_div" ,float)
+REGISTER_DIV_MLU_KERNEL("broadcast_div", float)
 REGISTER_DIV_MLU_KERNEL("broadcast_div", float16)
 
 }  // namespace oneflow

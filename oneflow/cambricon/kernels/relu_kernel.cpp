@@ -49,19 +49,18 @@ class MluReluKernel final : public user_op::OpKernel {
 
     OF_CNNL_CHECK(cnnlCreateActivationDescriptor(&activation_desc));
     OF_CNNL_CHECK(cnnlSetActivationDescriptor(activation_desc, mode, relu_nan_opt, coef));
-    OF_CNNL_CHECK(cnnlActivationForward(ctx->stream()->As<ep::MluStream>()->cnnl_handle(), activation_desc,
-                                     nullptr, input_desc.desc(), in->dptr(), nullptr, output_desc.desc(),
-                                     out->mut_dptr()));
+    OF_CNNL_CHECK(cnnlActivationForward(ctx->stream()->As<ep::MluStream>()->cnnl_handle(),
+                                        activation_desc, nullptr, input_desc.desc(), in->dptr(),
+                                        nullptr, output_desc.desc(), out->mut_dptr()));
     OF_CNNL_CHECK(cnnlDestroyActivationDescriptor(activation_desc));
-
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_RELU_MLU_KERNEL(dtype)                                              \
+#define REGISTER_RELU_MLU_KERNEL(dtype)                                             \
   REGISTER_USER_KERNEL("relu").SetCreateFn<MluReluKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kMLU)                                 \
+      (user_op::HobDeviceType() == DeviceType::kMLU)                                \
       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
 REGISTER_RELU_MLU_KERNEL(float)
