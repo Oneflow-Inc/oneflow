@@ -401,40 +401,62 @@ struct ReshapeOpLowering final : public OpConversionPattern<ReshapeOp> {
   }
 };
 
+// transpose the last two dims of the tensor. Reshape it to 3D if it is 2D.
+Value transposeAndTransposeIfRequired(Location loc, ConversionPatternRewriter& rewriter,
+                                      Value matrix, bool transpose) {
+  auto shape_type = matrix.getType().cast<ShapedType>();
+  CHECK(shape_type.getRank() == 2 || shape_type.getRank() == 3);
+  if (transpose) {
+    if (shape_type.getRank() == 2) {
+      matrix = CreateTransposeValue(loc, rewriter, matrix, {1, 0});
+      shape_type = matrix.getType().cast<ShapedType>();
+      llvm::SmallVector<int64_t, 4> reshape_dims{1, shape_type.getDimSize(0),
+                                                 shape_type.getDimSize(1)};
+      auto reshape_type = RankedTensorType::get(reshape_dims, shape_type.getElementType());
+      return rewriter.create<tosa::ReshapeOp>(loc, reshape_type, matrix,
+                                              rewriter.getI64ArrayAttr(reshape_dims));
+    } else if (shape_type.getRank() == 3) {
+      return CreateTransposeValue(loc, rewriter, matrix, {0, 2, 1});
+    } else {
+      return Value{};
+    }
+  } else {
+    return matrix;
+  }
+}
+
+// Reshape: 2D -> 3D -> tosa.matmul -> 3D -> 2D
 struct MatmulOpLowering final : public OpConversionPattern<MatmulOp> {
  public:
   using OpConversionPattern<MatmulOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(MatmulOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    // TODO: more throw for robust in matmul shape rank
-    auto loc = op.getLoc();
-
-    auto preprocess = [&](Value matrix, bool transpose) -> Value {
-      auto shape_type = matrix.getType().cast<ShapedType>();
-      if (transpose) { matrix = CreateTransposeValue(loc, rewriter, matrix, {1, 0}); }
-
-      shape_type = matrix.getType().cast<ShapedType>();
-      auto reshape_type = RankedTensorType::get(
-          {1, shape_type.getDimSize(0), shape_type.getDimSize(1)}, shape_type.getElementType());
-
-      return rewriter.create<tosa::ReshapeOp>(
-          op.getLoc(), reshape_type, matrix,
-          rewriter.getI64ArrayAttr({1, shape_type.getDimSize(0), shape_type.getDimSize(1)}));
-    };
-
-    auto a = preprocess(op.a(), op.transpose_a());
-    auto b = preprocess(op.b(), op.transpose_b());
+    auto a = transposeAndTransposeIfRequired(op->getLoc(), rewriter, op.a(), op.transpose_a());
+    auto b = transposeAndTransposeIfRequired(op->getLoc(), rewriter, op.b(), op.transpose_b());
 
     const auto out_shape_type = op.out().getType().cast<ShapedType>();
     const auto out_reshape_type =
         RankedTensorType::get({1, out_shape_type.getDimSize(0), out_shape_type.getDimSize(1)},
                               out_shape_type.getElementType());
 
-    auto matmul = rewriter.create<tosa::MatMulOp>(loc, out_reshape_type, a, b);
+    auto matmul = rewriter.create<tosa::MatMulOp>(op.getLoc(), out_reshape_type, a, b);
     const auto new_shape =
         rewriter.getI64ArrayAttr({out_shape_type.getDimSize(0), out_shape_type.getDimSize(1)});
 
     rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(op, out_shape_type, matmul, new_shape);
+    return success();
+  }
+};
+
+struct BatchMatmulOpLowering final : public OpConversionPattern<BatchMatmulOp> {
+ public:
+  using OpConversionPattern<BatchMatmulOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(BatchMatmulOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    auto a = transposeAndTransposeIfRequired(op->getLoc(), rewriter, op.a(), op.transpose_a());
+    auto b = transposeAndTransposeIfRequired(op->getLoc(), rewriter, op.b(), op.transpose_b());
+
+    rewriter.replaceOpWithNewOp<tosa::MatMulOp>(op, op.out().getType(), a, b);
     return success();
   }
 };
@@ -632,8 +654,8 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   }
   patterns.add<CastOpLowering, ScalarMulByTensorOpLowering, ReluOpLowering, Conv2DOpLowering,
                AvgPool2DOpLowering, ReshapeOpLowering, Add2OpLowering, MaxPool2DOpLowering,
-               MatmulOpLowering, BroadcastAddOpLowering, JobLowering, ReturnOpLowering,
-               InputOpLowering, OutputOpLowering, NormalizationOpLowering,
+               MatmulOpLowering, BatchMatmulOpLowering, BroadcastAddOpLowering, JobLowering,
+               ReturnOpLowering, InputOpLowering, OutputOpLowering, NormalizationOpLowering,
                NormalizationInferenceOpLowering, TransposeOpLowering>(typeConverter, context);
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
     signalPassFailure();
