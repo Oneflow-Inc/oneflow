@@ -159,14 +159,13 @@ Maybe<Operator> MakeOp(const UserOpExpr& user_op_expr, const AttrMap& attrs,
   return JUST(ConstructOp(op_conf, device_type));
 }
 
-Maybe<void> CheckInputParallelDescIdentical(
-    const GlobalTensorMetaInferArgs& infer_args,
-    const small_vector<int32_t, kOpArgsReservedSize>& host_memory_input_ids) {
+Maybe<void> CheckInputParallelDescIdentical(const GlobalTensorMetaInferArgs& infer_args,
+                                            const small_vector<int32_t>& host_memory_input_ids) {
   if (infer_args.input_global_tensor_metas().empty()) { return Maybe<void>::Ok(); }
   Symbol<ParallelDesc> default_parallel_desc;
   for (int i = 0; i < infer_args.input_global_tensor_metas().size(); ++i) {
-    if (std::any_of(host_memory_input_ids.begin(), host_memory_input_ids.end(),
-                    [i](int32_t host_memory_input_id) { return host_memory_input_id == i; })) {
+    if (std::find(host_memory_input_ids.begin(), host_memory_input_ids.end(), i)
+        != host_memory_input_ids.end()) {
       continue;
     }
     default_parallel_desc =

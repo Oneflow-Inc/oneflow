@@ -144,9 +144,9 @@ Maybe<bool> UserOpRegistryMgr::IsOpKernelRegistered(const std::string& op_type_n
 
 namespace {
 
-HashMap<std::string, small_vector<std::pair<std::string, int32_t>, kOpArgsReservedSize>>*
+HashMap<std::string, small_vector<std::pair<std::string, int32_t>>>*
 GlobalOpTypeName2HostMemoryInputArgs() {
-  static HashMap<std::string, small_vector<std::pair<std::string, int32_t>, kOpArgsReservedSize>>
+  static HashMap<std::string, small_vector<std::pair<std::string, int32_t>>>
       op_type_name2host_memory_input_args;
   return &op_type_name2host_memory_input_args;
 }
@@ -159,7 +159,7 @@ Maybe<void> SetHostMemoryInput4Op(const std::string& op_type_name, const std::st
   auto it = op_type_name2host_memory_input_args->find(op_type_name);
   if (it == op_type_name2host_memory_input_args->end()) {
     auto pair = op_type_name2host_memory_input_args->emplace(
-        op_type_name, small_vector<std::pair<std::string, int32_t>, kOpArgsReservedSize>());
+        op_type_name, small_vector<std::pair<std::string, int32_t>>());
     CHECK_OR_RETURN(pair.second);
     it = pair.first;
   }
@@ -172,10 +172,8 @@ bool IsHostMemoryInput4Op(const std::string& op_type_name, const std::string& ar
   auto* op_type_name2host_memory_input_args = GlobalOpTypeName2HostMemoryInputArgs();
   auto it = op_type_name2host_memory_input_args->find(op_type_name);
   if (it == op_type_name2host_memory_input_args->end()) { return false; }
-  return std::any_of(it->second.begin(), it->second.end(),
-                     [&arg_name, index](const std::pair<std::string, int32_t>& input_arg) {
-                       return input_arg == std::make_pair(arg_name, index);
-                     });
+  return std::find(it->second.begin(), it->second.end(), std::make_pair(arg_name, index))
+         != it->second.end();
 }
 
 bool HasHostMemoryInput(const std::string& op_type_name) {
@@ -184,10 +182,9 @@ bool HasHostMemoryInput(const std::string& op_type_name) {
          != op_type_name2host_memory_input_args->end();
 }
 
-const small_vector<std::pair<std::string, int32_t>, kOpArgsReservedSize>& HostMemoryInputs4Op(
+const small_vector<std::pair<std::string, int32_t>>& HostMemoryInputs4Op(
     const std::string& op_type_name) {
-  static small_vector<std::pair<std::string, int32_t>, kOpArgsReservedSize>
-      empty_host_memory_input_args;
+  static small_vector<std::pair<std::string, int32_t>> empty_host_memory_input_args;
   auto* op_type_name2host_memory_input_args = GlobalOpTypeName2HostMemoryInputArgs();
   if (op_type_name2host_memory_input_args->find(op_type_name)
       != op_type_name2host_memory_input_args->end()) {

@@ -32,12 +32,12 @@ Maybe<void> CheckIsDeviceSupportedByOp(const Device& device, const std::string& 
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CheckInputDeviceIdentical(
-    const LocalTensorMetaInferArgs& infer_args, Symbol<Device> default_device,
-    const small_vector<int32_t, kOpArgsReservedSize>& host_memory_input_ids) {
+Maybe<void> CheckInputDeviceIdentical(const LocalTensorMetaInferArgs& infer_args,
+                                      Symbol<Device> default_device,
+                                      const small_vector<int32_t>& host_memory_input_ids) {
   for (int i = 0; i < infer_args.input_local_tensor_metas().size(); ++i) {
-    if (std::any_of(host_memory_input_ids.begin(), host_memory_input_ids.end(),
-                    [i](int32_t host_memory_input_id) { return host_memory_input_id == i; })) {
+    if (std::find(host_memory_input_ids.begin(), host_memory_input_ids.end(), i)
+        != host_memory_input_ids.end()) {
       continue;
     }
     CHECK_OR_RETURN(default_device

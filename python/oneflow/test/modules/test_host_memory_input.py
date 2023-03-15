@@ -23,7 +23,7 @@ import oneflow.unittest
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class TestReluGraph(oneflow.unittest.TestCase):
+class TestHostMemory(oneflow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     def test_host_memory(test_case):
         x = flow.ones(2, 3, device="cuda")

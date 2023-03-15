@@ -74,7 +74,7 @@ bool IsHostMemoryInput4Op(const std::string& op_type_name, const std::string& ar
 
 bool HasHostMemoryInput(const std::string& op_type_name);
 
-const small_vector<std::pair<std::string, int32_t>, kOpArgsReservedSize>& HostMemoryInputs4Op(
+const small_vector<std::pair<std::string, int32_t>>& HostMemoryInputs4Op(
     const std::string& op_type_name);
 
 }  // namespace oneflow

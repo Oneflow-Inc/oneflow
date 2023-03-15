@@ -43,13 +43,12 @@ namespace one {
 
 namespace {
 
-Maybe<Symbol<ParallelDesc>> GetParallelDesc(
-    const TensorTuple& inputs, const OpExprInterpContext& ctx,
-    const small_vector<int32_t, kOpArgsReservedSize>& filtered_ids) {
+Maybe<Symbol<ParallelDesc>> GetParallelDesc(const TensorTuple& inputs,
+                                            const OpExprInterpContext& ctx,
+                                            const small_vector<int32_t>& filtered_ids) {
   if (!inputs.empty()) {
     for (int32_t i = 0; i < inputs.size(); ++i) {
-      if (!std::any_of(filtered_ids.begin(), filtered_ids.end(),
-                       [i](int32_t filtered_id) { return filtered_id == i; })) {
+      if (std::find(filtered_ids.begin(), filtered_ids.end(), i) == filtered_ids.end()) {
         return inputs.at(i)->parallel_desc();
       }
     }
