@@ -25,15 +25,24 @@ import oneflow.unittest
 
 
 def _test_add_forward(test_case, shape, device, dtype):
-    x = flow.tensor(
-        np.random.randn(*shape), device=flow.device(device), dtype=dtype
-    )
-    y = flow.tensor(
-        np.random.randn(*shape), device=flow.device(device), dtype=dtype
-    )
+    x = flow.tensor(np.random.randn(*shape), device=flow.device(device), dtype=dtype)
+    y = flow.tensor(np.random.randn(*shape), device=flow.device(device), dtype=dtype)
     of_out = flow.add(x, y)
     np_out = np.add(x.numpy(), y.numpy())
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
+
+
+def _test_broadcast_add_forward(test_case, shape1, shape2, device, dtype):
+    if len(shape1) == len(shape2):
+        x = flow.tensor(
+            np.random.randn(*shape1), device=flow.device(device), dtype=dtype
+        )
+        y = flow.tensor(
+            np.random.randn(*shape2), device=flow.device(device), dtype=dtype
+        )
+        of_out = flow.add(x, y)
+        np_out = np.add(x.numpy(), y.numpy())
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -45,7 +54,31 @@ class TestAddCambriconModule(flow.unittest.TestCase):
         ]
         arg_dict["shape"] = [(2,), (2, 3), (2, 3, 4), (2, 3, 4, 5)]
         arg_dict["device"] = ["mlu"]
-        arg_dict["dtype"] = [flow.float32, flow.float16, flow.int8, flow.uint8, flow.int32]
+        arg_dict["dtype"] = [
+            flow.float32,
+            flow.float16,
+            flow.int8,
+            flow.uint8,
+            flow.int32,
+        ]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+    def test_broadcast_add(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_broadcast_add_forward,
+        ]
+        arg_dict["shape1"] = [(2,), (2, 3), (2, 3, 4), (2, 3, 4, 5)]
+        arg_dict["shape2"] = [(1,), (2, 1), (2, 1, 4), (2, 1, 1, 5)]
+        arg_dict["device"] = ["mlu"]
+        arg_dict["dtype"] = [
+            flow.float32,
+            flow.float16,
+            flow.int8,
+            flow.uint8,
+            flow.int32,
+        ]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
@@ -54,6 +87,7 @@ class TestAddCambriconModule(flow.unittest.TestCase):
         y = flow.tensor(2.0, device=flow.device("mlu"), dtype=flow.float32)
         z = x + y
         test_case.assertTrue(np.allclose(z.numpy(), [3.0], 0.0001, 0.0001))
+
 
 if __name__ == "__main__":
     unittest.main()
