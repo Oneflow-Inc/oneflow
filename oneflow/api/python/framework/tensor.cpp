@@ -636,8 +636,7 @@ static PyObject* PyTensorObject_ref_index(PyObject* self, void* unused) {
 static int PyTensorObject_set_ref_index(PyObject* self, PyObject* index, void* unused) {
   HANDLE_ERRORS
   const auto& t = PyTensor_Unpack(self);
-  CHECK_OR_THROW(PyLong_Check(index)) << Error::RuntimeError()
-                                       << "Index must be Integer type.";
+  CHECK_OR_THROW(PyLong_Check(index)) << Error::RuntimeError() << "Index must be Integer type.";
   ASSERT(t->set_ref_index(PyLong_AsLong(index)));
   return 0;
   END_HANDLE_ERRORS_RET(-1)
