@@ -763,8 +763,8 @@ class FracInplaceFunctor {
 
 class FracGradFunctor {
  public:
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
-    return JUST(functional::OnesLike(x));
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x)const {
+    return x;
   }
 };
 }  // namespace impl

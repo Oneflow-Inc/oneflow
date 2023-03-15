@@ -613,8 +613,8 @@ class Frac : public OpExprGradFunction<FracCaptureState> {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
     if (ctx->requires_grad) {
-      const auto& x = ctx->SavedTensors().at(0);
-      in_grads->at(0) = JUST(functional::FracGrad(x)); 
+      // const auto& x = ctx->SavedTensors().at(0);
+      in_grads->at(0) = JUST(functional::FracGrad(out_grads.at(0))); 
     }
     return Maybe<void>::Ok();
   }
