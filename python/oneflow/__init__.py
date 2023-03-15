@@ -152,7 +152,7 @@ from oneflow._C import asinh as arcsinh
 from oneflow._C import atan
 from oneflow._C import atan as arctan
 from oneflow._C import atan2
-from oneflow._C import ceil
+from oneflow._C import ceil, ceil_
 from oneflow._C import clamp, clamp_, clamp_min, clamp_min_, clamp_max, clamp_max_
 from oneflow._C import clip, clip_
 from oneflow._C import cos
@@ -187,7 +187,7 @@ from oneflow._C import matmul
 from oneflow._C import mm
 from oneflow._C import matrix_vector_product as mv
 from oneflow._C import bernoulli
-from oneflow._C import round
+from oneflow._C import round, round_
 from oneflow._C import softplus
 from oneflow._C import threshold
 from oneflow._C import tril
@@ -254,6 +254,7 @@ from oneflow._C import linalg_cross as cross
 from oneflow._C import bincount
 from oneflow._C import isclose
 from oneflow._C import allclose
+from oneflow._C import lerp, lerp_
 from oneflow._C import index_add, index_add_
 from oneflow._C import sort
 from oneflow._C import clone
