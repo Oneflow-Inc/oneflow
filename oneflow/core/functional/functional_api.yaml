@@ -3250,6 +3250,10 @@
   signature: "Tensor (Tensor x) => Frac"
   bind_python: True
 
+- name: "frac_"
+  signature: "Tensor (Tensor x) => FracInplace"
+  bind_python: True
+
 - name: "frac_grad"
   signature: "Tensor (Tensor x) => FracGrad"
   bind_python: False
