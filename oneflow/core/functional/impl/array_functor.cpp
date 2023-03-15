@@ -198,8 +198,8 @@ class GlobalConstantFunctor {
                                                  "is_complex_value", "floating_value",
                                                  "is_floating_value", "integer_value", "nd_sbp");
     if (IsComplexDataType(dtype->data_type())) {
-      attrs.SetAllAttrs(shape, dtype->data_type(), value.Value<std::complex<double>>(), true, NullOpt, false,
-                        NullOpt, NullOpt);
+      attrs.SetAllAttrs(shape, dtype->data_type(), value.Value<std::complex<double>>(), true,
+                        NullOpt, false, NullOpt, NullOpt);
     } else if (IsIntegralDataType(dtype->data_type())) {
       attrs.SetAllAttrs(shape, dtype->data_type(), NullOpt, false, NullOpt, false,
                         value.As<int64_t>(), NullOpt);
@@ -259,8 +259,8 @@ class ConstantFunctor {
         THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "complex_value", "is_complex_value",
                                        "floating_value", "is_floating_value", "integer_value");
     if (IsComplexDataType(dtype->data_type())) {
-      attrs.SetAllAttrs(shape, dtype->data_type(), value.Value<std::complex<double>>(), true, NullOpt, false,
-                        NullOpt);
+      attrs.SetAllAttrs(shape, dtype->data_type(), value.Value<std::complex<double>>(), true,
+                        NullOpt, false, NullOpt);
     } else if (IsIntegralDataType(dtype->data_type())) {
       attrs.SetAllAttrs(shape, dtype->data_type(), NullOpt, false, NullOpt, false,
                         value.As<int64_t>());

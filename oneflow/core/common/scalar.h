@@ -28,9 +28,10 @@ class Scalar {
  public:
   Scalar() : Scalar(int32_t(0)) {}
 
-  template<typename T, typename std::enable_if<std::is_same<std::complex<float>, T>::value || std::is_same<std::complex<double>, T>::value, int>::type = 0>
-  Scalar(const T& value)
-      : value_{.c = {value.real(), value.imag()}}, active_tag_(HAS_C) {}
+  template<typename T, typename std::enable_if<std::is_same<std::complex<float>, T>::value
+                                                   || std::is_same<std::complex<double>, T>::value,
+                                               int>::type = 0>
+  Scalar(const T& value) : value_{.c = {value.real(), value.imag()}}, active_tag_(HAS_C) {}
 
   template<typename T, typename std::enable_if<std::is_same<T, bool>::value, int>::type = 0>
   OF_DEVICE_FUNC Scalar(const T& value) : value_{.b = value}, active_tag_(HAS_B) {}
@@ -75,7 +76,9 @@ class Scalar {
     return As<T>();
   }
 
-  template<typename T, typename std::enable_if<std::is_same<std::complex<float>, T>::value || std::is_same<std::complex<double>, T>::value, int>::type = 0>
+  template<typename T, typename std::enable_if<std::is_same<std::complex<float>, T>::value
+                                                   || std::is_same<std::complex<double>, T>::value,
+                                               int>::type = 0>
   T Value() const {
     if (!IsComplex()) { return T(As<double>(), 0.0); }
     return T(value_.c.real, value_.c.imag);
@@ -107,7 +110,7 @@ class Scalar {
     struct {
       double real;
       double imag;
-    }c;
+    } c;
   } value_;
   enum { HAS_B, HAS_S, HAS_U, HAS_D, HAS_C, HAS_NONE } active_tag_;
 };
