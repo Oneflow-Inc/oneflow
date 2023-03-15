@@ -20,7 +20,7 @@ namespace oneflow {
 
 namespace {
 
-oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
+oneflow::DataType InferParamDataType(const DataType x_data_type) {
   return (x_data_type == DataType::kFloat16 || x_data_type == DataType::kBFloat16)
              ? DataType::kFloat
              : x_data_type;
@@ -115,8 +115,8 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
 
   // set output data type
   ctx->SetOutputDType("y", 0, x_dtype);
-  ctx->SetOutputDType("mean", 0, InferBnParamDataType(x_dtype));
-  ctx->SetOutputDType("inv_variance", 0, InferBnParamDataType(x_dtype));
+  ctx->SetOutputDType("mean", 0, InferParamDataType(x_dtype));
+  ctx->SetOutputDType("inv_variance", 0, InferParamDataType(x_dtype));
 
   return Maybe<void>::Ok();
 }
