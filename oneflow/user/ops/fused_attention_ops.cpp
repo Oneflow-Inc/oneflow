@@ -38,8 +38,6 @@ Maybe<void> ParseDims(const Shape& shape, const std::string& layout,
         packed_n = 2;
       } else if (layout == "(BM)(H3K)") {
         packed_n = 3;
-      } else if (layout == "MB(H3K)") {
-        packed_n = 3;
       } else {
         UNIMPLEMENTED_THEN_RETURN();
       }

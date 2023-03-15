@@ -688,6 +688,26 @@ class TestFusedMultiHeadAttentionInference(flow.unittest.TestCase):
                 value_layout=value_layout,
                 use_kv_seq_len=use_kv_seq_len,
             )
+            if (
+                query_layout == "(BM)(H3K)"
+                or key_layout == "(BM)(H3K)"
+                or value_layout == "(BM)(H3K)"
+            ):
+                continue
+            _test_fused_multi_head_attention_inference_variable_length(
+                test_case,
+                2,
+                8,
+                16,
+                32,
+                40,
+                40,
+                flow.float16,
+                query_layout=query_layout,
+                key_layout=key_layout,
+                value_layout=value_layout,
+                use_kv_seq_len=use_kv_seq_len,
+            )
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
