@@ -562,6 +562,25 @@ struct Conv2DOpLowering final : public OpConversionPattern<Conv2DOp> {
   }
 };
 
+struct TransposeOpLowering final : public OpConversionPattern<TransposeOp> {
+ public:
+  using OpConversionPattern<TransposeOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(TransposeOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    llvm::SmallVector<int32_t, 4> perms{};
+    for (auto dim : op.perm().getAsValueRange<mlir::IntegerAttr>()) {
+      perms.push_back(dim.getSExtValue());
+    }
+    llvm::SmallVector<int64_t, 4> perms_shape(op.perm().size(), 1);
+    auto perms_op = rewriter.create<tosa::ConstOp>(
+        op->getLoc(), RankedTensorType::get(perms_shape, rewriter.getI32Type()),
+        rewriter.getI32TensorAttr(perms));
+    rewriter.replaceOpWithNewOp<tosa::TransposeOp>(op, op.output().getType(), op.input(),
+                                                   perms_op.output());
+    return success();
+  }
+};
+
 namespace {
 
 struct OneFlowLoweringToTosaPass : public LowerOneFlowToTosaPassBase<OneFlowLoweringToTosaPass> {
@@ -611,12 +630,11 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   } else {
     patterns.add<VariableOpToConstLowering>(typeConverter, context, this->variableAsConstant);
   }
-  patterns
-      .add<CastOpLowering, ScalarMulByTensorOpLowering, ReluOpLowering, Conv2DOpLowering,
-           AvgPool2DOpLowering, ReshapeOpLowering, Add2OpLowering, MaxPool2DOpLowering,
-           MatmulOpLowering, BroadcastAddOpLowering, JobLowering, ReturnOpLowering, InputOpLowering,
-           OutputOpLowering, NormalizationOpLowering, NormalizationInferenceOpLowering>(
-          typeConverter, context);
+  patterns.add<CastOpLowering, ScalarMulByTensorOpLowering, ReluOpLowering, Conv2DOpLowering,
+               AvgPool2DOpLowering, ReshapeOpLowering, Add2OpLowering, MaxPool2DOpLowering,
+               MatmulOpLowering, BroadcastAddOpLowering, JobLowering, ReturnOpLowering,
+               InputOpLowering, OutputOpLowering, NormalizationOpLowering,
+               NormalizationInferenceOpLowering, TransposeOpLowering>(typeConverter, context);
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
     signalPassFailure();
     LOG(ERROR) << "Failed to lower OneFlow to Tosa";
