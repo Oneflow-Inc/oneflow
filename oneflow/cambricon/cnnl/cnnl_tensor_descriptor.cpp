@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/cambricon/cnnl/cnnl_tensor_descriptor.h"
 
 #include "oneflow/core/common/throw.h"
+#include "oneflow/core/common/tensor_meta.h"
 
 // Modified from Cambricon catch for PyTorch.
 // https://github.com/Cambricon/catch/blob/main/torch_mlu/csrc/aten/cnnl/cnnlTensorDescriptors.cpp
