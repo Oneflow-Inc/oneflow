@@ -264,8 +264,8 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf&
     }
     else if (value.has_at_complex_double()) {
       std::vector<mlir::Attribute> dense_attr_vector{
-          getF64FloatAttr(value.at_complex_double().real()),
-          getF64FloatAttr(value.at_complex_double().imag())};
+          GetBuilder().getF64FloatAttr(value.at_complex_double().real()),
+          GetBuilder().getF64FloatAttr(value.at_complex_double().imag())};
       attr_vec.emplace_back(
           GetBuilder().getNamedAttr(name, GetBuilder().getArrayAttr(dense_attr_vector)));
     }
