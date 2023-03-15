@@ -57,6 +57,7 @@ class Scalar {
 
   OF_DEVICE_FUNC Scalar& operator=(const Scalar& other) {
     value_ = other.value_;
+    active_tag_ = other.active_tag_;
     return *this;
   }
 
