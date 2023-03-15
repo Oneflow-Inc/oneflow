@@ -52,6 +52,7 @@ oneflow_add_mlir_dialect_library(
   UserOpConversion.cpp
   OneFlowOpFolders.cpp
   Conversion/OneFlowToTosa.cpp
+  Conversion/OneFlowToLinalg.cpp
   Conversion/PTXToCubin.cpp
   Transform/BufferHostRegister.cpp
   Transform/OutlineAndFuse.cpp
