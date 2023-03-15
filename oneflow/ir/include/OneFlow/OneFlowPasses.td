@@ -13,6 +13,12 @@ def LowerOneFlowToTosaPass : Pass<"lower-oneflow-to-tosa", "ModuleOp"> {
   ];
 }
 
+def LowerOneFlowToLinalgPass : Pass<"lower-oneflow-to-linalg", "ModuleOp"> {
+  let summary = "lower oneflow dialect to Linalg dialect";
+  let constructor = "mlir::oneflow::createLowerOneFlowToLinalgPass()";
+  let dependentDialects = ["linalg::LinalgDialect", "memref::MemRefDialect", "mlir::func::FuncDialect"];
+}
+
 def BufferHostRegisterPass : Pass<"buffer-host-register", "func::FuncOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createBufferHostRegisterPass()";
