@@ -25,19 +25,20 @@ flow.mock_torch.disable() should be able to restore the original torch within th
 
 class TestMock(flow.unittest.TestCase):
     def test_mock_diffusers(test_case):
-        
+
         flow.mock_torch.enable(lazy=True)
         from diffusers import UNet2DConditionModel
-        torch_module = UNet2DConditionModel.__dict__['forward'].__globals__["torch"]
+
+        torch_module = UNet2DConditionModel.__dict__["forward"].__globals__["torch"]
 
         flow.mock_torch.disable()
         from diffusers import UNet2DConditionModel
-        
-        torch_module = UNet2DConditionModel.__dict__['forward'].__globals__["torch"]
-        
+
+        torch_module = UNet2DConditionModel.__dict__["forward"].__globals__["torch"]
+
         # check whether the torch module is the original torch
         test_case.assertFalse(isinstance(torch_module, flow.mock_torch.ModuleWrapper))
-        
-        
+
+
 if __name__ == "__main__":
     unittest.main()
