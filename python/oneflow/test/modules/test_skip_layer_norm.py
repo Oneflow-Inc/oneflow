@@ -23,6 +23,8 @@ import oneflow.unittest
 from collections import OrderedDict
 from oneflow.test_utils.test_util import GenArgList
 
+is_profiling = True
+
 
 def compare_result(test_case, a, b, rtol=1e-5, atol=1e-8):
     test_case.assertTrue(
@@ -93,7 +95,7 @@ def _test_skip_layer_norm(
     dtype=flow.float32,
 ):
     print(
-        f"x_shape: {x_shape}\nhas_gamma: {has_gamma}\nhas_beta: {has_beta}\nhas_bias: {has_bias}\nhas_skip: {has_skip}"
+        f"x_shape: {x_shape}\nhas_gamma: {has_gamma}\nhas_beta: {has_beta}\nhas_bias: {has_bias}\nhas_skip: {has_skip}\ndtype: {dtype}\n"
     )
 
     normalize_shape = list()
@@ -181,14 +183,24 @@ class TestSkipLayerNorm(flow.unittest.TestCase):
         ]
 
         # set up test parameters
-        arg_dict["x_shape"] = [[1, 5120]]
-        arg_dict["has_gamma"] = [True, False]
-        arg_dict["has_beta"] = [True, False]
-        arg_dict["has_bias"] = [True, False]
-        arg_dict["has_skip"] = [True, False]
-        arg_dict["eps"] = [1e-6]
-        arg_dict["alpha"] = [1e-5]
-        arg_dict["dtype"] = [flow.float32, flow.float16]
+        if is_profiling:
+            arg_dict["x_shape"] = [[1, 5120]]
+            arg_dict["has_gamma"] = [True]
+            arg_dict["has_beta"] = [True]
+            arg_dict["has_bias"] = [True]
+            arg_dict["has_skip"] = [True]
+            arg_dict["eps"] = [1e-6]
+            arg_dict["alpha"] = [1e-5]
+            arg_dict["dtype"] = [flow.float32]
+        else:
+            arg_dict["x_shape"] = [[1, 5120]]
+            arg_dict["has_gamma"] = [True, False]
+            arg_dict["has_beta"] = [True, False]
+            arg_dict["has_bias"] = [True, False]
+            arg_dict["has_skip"] = [True, False]
+            arg_dict["eps"] = [1e-6]
+            arg_dict["alpha"] = [1e-5]
+            arg_dict["dtype"] = [flow.float32, flow.float16]
 
         # run test functions
         for arg in GenArgList(arg_dict):

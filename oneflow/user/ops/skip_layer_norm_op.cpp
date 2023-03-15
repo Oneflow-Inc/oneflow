@@ -18,6 +18,16 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
+  return (x_data_type == DataType::kFloat16 || x_data_type == DataType::kBFloat16)
+             ? DataType::kFloat
+             : x_data_type;
+}
+
+}  // namespace
+
 /* static */ auto SkipLayerNormOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   return Maybe<void>::Ok();
 }
@@ -104,16 +114,9 @@ namespace oneflow {
   }
 
   // set output data type
-  if(x_dtype == DataType::kFloat16){
-    ctx->SetOutputDType("y", 0, DataType::kFloat);
-    ctx->SetOutputDType("mean", 0, DataType::kFloat);
-    ctx->SetOutputDType("inv_variance", 0, DataType::kFloat);
-  } else {
-    ctx->SetOutputDType("y", 0, x_dtype);
-    ctx->SetOutputDType("mean", 0, x_dtype);
-    ctx->SetOutputDType("inv_variance", 0, x_dtype);
-  }
-  
+  ctx->SetOutputDType("y", 0, x_dtype);
+  ctx->SetOutputDType("mean", 0, InferBnParamDataType(x_dtype));
+  ctx->SetOutputDType("inv_variance", 0, InferBnParamDataType(x_dtype));
 
   return Maybe<void>::Ok();
 }

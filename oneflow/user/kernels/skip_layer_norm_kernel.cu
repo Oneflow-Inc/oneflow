@@ -39,9 +39,9 @@ struct SkipLoad {
       : src(src), bias(bias), skip(skip), alpha(alpha), row_size(row_size) {}
   template<int N>
   __device__ void load(DST* dst, int64_t row, int64_t col) const {
-    cuda::layer_norm::Pack<DST, N> src_pack;
-    cuda::layer_norm::Pack<DST, N> bias_pack;
-    cuda::layer_norm::Pack<DST, N> skip_pack;
+    cuda::layer_norm::Pack<SRC, N> src_pack;
+    cuda::layer_norm::Pack<SRC, N> bias_pack;
+    cuda::layer_norm::Pack<SRC, N> skip_pack;
     const int64_t offset = (row * row_size + col) / N;
     const int64_t bias_offset = col / N;
     src_pack.storage = *(reinterpret_cast<const cuda::layer_norm::PackType<SRC, N>*>(src) + offset);
@@ -116,11 +116,10 @@ struct AffineStore {
 
 template<typename T, bool do_scale, bool do_center>
 void LaunchSkipLayerNormForwardGpu(ep::Stream* stream, const int64_t num_instances,
-                                              const int64_t norm_size, const double epsilon,
-                                              const T* x_ptr, const T* gamma_ptr, const T* beta_ptr,
-                                              const T* bias_ptr, const T* skip_ptr,
-                                              const double alpha, T* y_ptr, user_op::Tensor* mean,
-                                              user_op::Tensor* inv_variance) {
+                                   const int64_t norm_size, const double epsilon, const T* x_ptr,
+                                   const T* gamma_ptr, const T* beta_ptr, const T* bias_ptr,
+                                   const T* skip_ptr, const double alpha, T* y_ptr,
+                                   user_op::Tensor* mean, user_op::Tensor* inv_variance) {
   constexpr int32_t block_size = 128;
   unsigned int nb_element = norm_size * num_instances;
   unsigned int grid_size = (nb_element + block_size - 1) / block_size;
@@ -133,12 +132,13 @@ void LaunchSkipLayerNormForwardGpu(ep::Stream* stream, const int64_t num_instanc
 }
 
 template<typename T>
-void DispatchSkipLayerNormForwardGpu(
-    ep::Stream* stream, const int64_t num_instances, const int64_t norm_size, const double epsilon,
-    const T* x_ptr, const T* gamma_ptr, const T* beta_ptr, const T* bias_ptr, const T* skip_ptr,
-    const double alpha, T* y_ptr, user_op::Tensor* mean, user_op::Tensor* inv_variance) {
+void DispatchSkipLayerNormForwardGpu(ep::Stream* stream, const int64_t num_instances,
+                                     const int64_t norm_size, const double epsilon, const T* x_ptr,
+                                     const T* gamma_ptr, const T* beta_ptr, const T* bias_ptr,
+                                     const T* skip_ptr, const double alpha, T* y_ptr,
+                                     user_op::Tensor* mean, user_op::Tensor* inv_variance) {
 #define LAUNCH_GPU_KERNEL(has_gamma, has_beta)                                                   \
-  LaunchSkipLayerNormForwardGpu<T, has_gamma, has_beta>(                              \
+  LaunchSkipLayerNormForwardGpu<T, has_gamma, has_beta>(                                         \
       stream, num_instances, norm_size, epsilon, x_ptr, gamma_ptr, beta_ptr, bias_ptr, skip_ptr, \
       alpha, y_ptr, mean, inv_variance);
 
@@ -230,9 +230,9 @@ class SkipLayerNormGpuKernel final : public user_op::OpKernel, public user_op::C
     const int64_t norm_size = x->shape_view().elem_cnt() / num_instances;
 
     // dispatch kernel
-    DispatchSkipLayerNormForwardGpu<T>(
-        ctx->stream(), num_instances, norm_size, epsilon, x->dptr<T>(), gamma_ptr, beta_ptr,
-        bias_ptr, skip_ptr, alpha, y->mut_dptr<T>(), mean, inv_variance);
+    DispatchSkipLayerNormForwardGpu<T>(ctx->stream(), num_instances, norm_size, epsilon,
+                                       x->dptr<T>(), gamma_ptr, beta_ptr, bias_ptr, skip_ptr, alpha,
+                                       y->mut_dptr<T>(), mean, inv_variance);
   }
 };
 
@@ -242,13 +242,13 @@ class SkipLayerNormGpuKernel final : public user_op::OpKernel, public user_op::C
   REGISTER_USER_KERNEL("skip_layer_norm")                              \
       .SetCreateFn<SkipLayerNormGpuKernel<dtype>>()                    \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
-                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_SKIP_LAYER_NORM_CUDA_KERNEL(float)
 REGISTER_SKIP_LAYER_NORM_CUDA_KERNEL(double)
 REGISTER_SKIP_LAYER_NORM_CUDA_KERNEL(half)
 #if CUDA_VERSION >= 11000
-  REGISTER_SKIP_LAYER_NORM_CUDA_KERNEL(nv_bfloat16)
+REGISTER_SKIP_LAYER_NORM_CUDA_KERNEL(nv_bfloat16)
 #endif
 
 }  // namespace oneflow
