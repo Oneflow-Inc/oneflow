@@ -28,11 +28,15 @@ class TestMock(flow.unittest.TestCase):
         
         flow.mock_torch.enable(lazy=True)
         from diffusers import UNet2DConditionModel
-        
+        torch_module = UNet2DConditionModel.__dict__['forward'].__globals__["torch"]
+        print("Enable:")
+        print(f"{type(torch_module) = }")
         flow.mock_torch.disable()
         from diffusers import UNet2DConditionModel
         
         torch_module = UNet2DConditionModel.__dict__['forward'].__globals__["torch"]
+        print("Disable:")
+        print(f"{type(torch_module) = }")
         # check whether the torch module is the original torch
         test_case.assertFalse(isinstance(torch_module, flow.mock_torch.ModuleWrapper))
 if __name__ == "__main__":
