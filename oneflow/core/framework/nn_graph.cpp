@@ -687,6 +687,7 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
   return Maybe<void>::Ok();
 }
 
+// Master compile the full plan.
 Maybe<void> NNGraph::NaiveCompile() {
   auto compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
   if (GlobalProcessCtx::IsThisProcessMaster()) {
@@ -729,22 +730,30 @@ Maybe<void> NNGraph::NaiveCompile() {
   return Maybe<void>::Ok();
 }
 
+// There are four plan compilation modes, with the first mode "master compilation" (default) and the
+// fourth mode "rank separation compilation" being the ones actually used.
 Maybe<void> NNGraph::CompilePlanForRuntime() {
   // A global variable to get graph configurations.
   auto current_graph_config = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id());
   auto compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
   typedef Maybe<void> (NNGraph::*CompileMethodT)();
   struct GetCompileMethod final : public CompileModeVisitor<GetCompileMethod> {
-    static CompileMethodT VisitNaive() { return &NNGraph::NaiveCompile; }
+    static CompileMethodT VisitNaive() {
+      // Master rank compile the full plan.
+      return &NNGraph::NaiveCompile;
+    }
     static CompileMethodT VisitRankPerIter() {
-      // Master thread run.
+      // One thread run seperation compile. Just for debug.
       return &NNGraph::MasterRankCompile<0>;
     }
     static CompileMethodT VisitRankPerThread() {
-      // Multi thread run.
+      // Multi thread run seperation compile. Just for debug.
       return &NNGraph::MasterRankCompile<-1>;
     }
-    static CompileMethodT VisitRankPerProcess() { return &NNGraph::MasterAndWorkerRanksCompile; }
+    static CompileMethodT VisitRankPerProcess() {
+      // Multi process(rank) run seperation compile.
+      return &NNGraph::MasterAndWorkerRanksCompile;
+    }
   };
   JUST((this->*GetCompileMethod::Visit(JUST(CurrentCompileMode())))());
   compile_tc->Count("[GraphCompile]" + name_ + " CompileAndSyncPlan", 0);
