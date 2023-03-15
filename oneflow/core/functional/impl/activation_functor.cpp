@@ -13,8 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <iostream>
+#include <vector>
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/error.h"
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
@@ -31,6 +34,7 @@ limitations under the License.
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/functional/sequence_function.h"
+#include "oneflow/core/functional/tensor_index.h"
 #include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
@@ -759,26 +763,16 @@ class FracInplaceFunctor {
 
 class FracGradFunctor {
  public:
-  FracGradFunctor() {
-    op_ = CHECK_JUST(
-        one::OpBuilder("frac_grad").Input("x").Input("dy").Output("dx").Build());
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    return JUST(functional::OnesLike(x));
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& dy) const {
-
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy});
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
 };
-
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FracFunctor>("Frac");
   m.add_functor<impl::FracInplaceFunctor>("FracInplace");
-  m.add_functor<impl::FracFunctor>("FracGrad");
+  m.add_functor<impl::FracGradFunctor>("FracGrad");
   m.add_functor<impl::ReluFunctor>("Relu");
   m.add_functor<impl::ReluGradFunctor>("ReluGrad");
   m.add_functor<impl::PReluFunctor>("PRelu");
