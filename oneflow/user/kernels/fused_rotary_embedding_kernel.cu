@@ -22,21 +22,130 @@ namespace oneflow {
 
 namespace {
 
-template<typename T, int N>
+void ParseDims(const ShapeView& shape, const std::string& layout,
+               const Optional<int64_t>& num_heads, const Optional<int64_t>& head_size,
+               int64_t tensor_index, int64_t* b, int64_t* m, int64_t* h, int64_t* k,
+               int64_t* b_stride, int64_t* m_stride, int64_t* h_stride, int64_t* offset) {
+  if (shape.NumAxes() == 3) {
+    if (layout == "BM(HK)" || layout == "BM(H2K)" || layout == "BM(H3K)" || layout == "MB(HK)"
+        || layout == "MB(H2K)" || layout == "MB(H3K)") {
+      bool batch_first = false;
+      int64_t packed_n = 0;
+      const std::string layout_bm = layout.substr(0, 2);
+      const std::string layout_hk = layout.substr(2);
+      if (layout_bm == "BM") {
+        *b = shape.At(0);
+        *m = shape.At(1);
+        batch_first = true;
+      } else if (layout_bm == "MB") {
+        *b = shape.At(1);
+        *m = shape.At(0);
+        batch_first = false;
+      } else {
+        UNIMPLEMENTED();
+      }
+      if (layout_hk == "(HK)") {
+        packed_n = 1;
+      } else if (layout_hk == "(H2K)") {
+        packed_n = 2;
+      } else if (layout_hk == "(H3K)") {
+        packed_n = 3;
+      } else {
+        UNIMPLEMENTED();
+      }
+      const int64_t hidden_size = shape.At(2);
+      if (num_heads) {
+        const int64_t expected_h = CHECK_JUST(num_heads);
+        const int64_t packed_h = packed_n * expected_h;
+        CHECK_EQ(hidden_size % packed_h, 0);
+        *h = expected_h;
+        *k = hidden_size / packed_h;
+      } else if (head_size) {
+        const int64_t expected_k = CHECK_JUST(head_size);
+        const int64_t packed_k = packed_n * expected_k;
+        CHECK_EQ(hidden_size % packed_k, 0);
+        *h = hidden_size / packed_k;
+        *k = expected_k;
+      } else {
+        UNIMPLEMENTED();
+      }
+      *h_stride = *k * packed_n;
+      if (batch_first) {
+        *m_stride = *h_stride * *h;
+        *b_stride = *m_stride * *m;
+      } else {
+        *b_stride = *h_stride * *h;
+        *m_stride = *b_stride * *b;
+      }
+      if (packed_n == 1) {
+        *offset = 0;
+      } else if (packed_n == 2) {
+        CHECK_GE(tensor_index, 1);
+        *offset = (tensor_index - 1) * *k;
+      } else if (packed_n == 3) {
+        *offset = tensor_index * *k;
+      } else {
+        UNIMPLEMENTED();
+      }
+    } else {
+      UNIMPLEMENTED();
+    }
+  } else if (shape.NumAxes() == 4) {
+    if (layout == "BMHK") {
+      *b = shape.At(0);
+      *m = shape.At(1);
+      *h = shape.At(2);
+      *k = shape.At(3);
+      *h_stride = *k;
+      *m_stride = *h_stride * *h;
+      *b_stride = *m_stride * *m;
+    } else if (layout == "BHMK") {
+      *b = shape.At(0);
+      *m = shape.At(2);
+      *h = shape.At(1);
+      *k = shape.At(3);
+      *m_stride = *k;
+      *h_stride = *m_stride * *m;
+      *b_stride = *h_stride * *h;
+    } else if (layout == "MBHK") {
+      *b = shape.At(1);
+      *m = shape.At(0);
+      *h = shape.At(2);
+      *k = shape.At(3);
+      *h_stride = *k;
+      *b_stride = *h_stride * *h;
+      *m_stride = *b_stride * *b;
+    } else {
+      UNIMPLEMENTED();
+    }
+    if (num_heads) {
+      const int64_t expected_h = CHECK_JUST(num_heads);
+      CHECK_EQ(*h, expected_h);
+    }
+    if (head_size) {
+      const int64_t expected_k = CHECK_JUST(head_size);
+      CHECK_EQ(*k, expected_k);
+    }
+    *offset = 0;
+  } else {
+    UNIMPLEMENTED();
+  };
+}
+
+template<typename T, int num_dims>
 struct FusedApplyRotaryEmbParam {
   const T* x;
   const T* cos;
   const T* sin;
   T* out;
-  const int32_t num_rows;
   int32_t num_elements;
-  size_t x_stride[N];
-  size_t sinuous_stride[N];
-  size_t sinuous_mask[N];
+  int64_t k;
+  int64_t offset;
+  std::pair<char, int64_t> strides[num_dims];
 
-  explicit FusedApplyRotaryEmbParam(const T* x, const T* cos, const T* sin, T* out,
-                                     const int32_t num_rows, const int32_t num_elements)
-      : x(x), cos(cos), sin(sin), out(out), num_rows(num_rows), num_elements(num_elements) {}
+  FusedApplyRotaryEmbParam(const T* x, const T* cos, const T* sin, T* out,
+                                    const int32_t num_elements, const int64_t k, const int64_t offset)
+      : x(x), cos(cos), sin(sin), out(out), num_elements(num_elements), k(k), offset(offset) {}
 };
 
 template<typename T, typename IndexType, size_t pack_size, size_t num_dims>
@@ -46,25 +155,27 @@ __global__ void FusedApplyRotaryEmbComputeKernel(FusedApplyRotaryEmbParam<T, num
   const T* sin = param.sin;
   T* out = param.out;
   const IndexType num_elements = param.num_elements;
-  IndexType index[num_dims];
-  for (IndexType offset = threadIdx.x + blockIdx.x * blockDim.x; offset < num_elements;
-       offset += blockDim.x * gridDim.x) {
+  for (IndexType packed_offset = threadIdx.x + blockIdx.x * blockDim.x; packed_offset < num_elements;
+       packed_offset += blockDim.x * gridDim.x) {
     using LoadPack = cuda::elementwise::Packed<T, pack_size>;
-    IndexType packed_offset = offset * pack_size;
-    const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + packed_offset);
+    IndexType offset = param.offset + packed_offset * pack_size; //TODO: two offset has different meaning, therefore one needs to be multiplied with pack_size, the other does not
+    const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + offset);
     const LoadPack x_vec = *x_load;
+    IndexType m_index, k_index;
 
 #pragma unloop
     for (int i = 0; i < num_dims; i++) {
-      index[i] = packed_offset / param.x_stride[i];
-      packed_offset = packed_offset - index[i] * param.x_stride[i];
+      IndexType index = offset / param.strides[i].second;
+      if (param.strides[i].first == 'm') {
+        m_index = index;
+      } else if (param.strides[i].first == 'k') {
+        k_index = index;
+      }
+      offset = offset - index * param.strides[i].second;
     }
 
-    IndexType sinuous_offset = 0;
-#pragma unloop
-    for (int i = 0; i < num_dims; i++) {
-      sinuous_offset += (index[i] * param.sinuous_mask[i] * param.sinuous_stride[i]);
-    }
+    IndexType sinuous_offset = m_index * param.k + k_index;
+    
     const LoadPack* cos_load = reinterpret_cast<const LoadPack*>(cos + sinuous_offset);
     const LoadPack* sin_load = reinterpret_cast<const LoadPack*>(sin + sinuous_offset);
     const LoadPack cos_vec = *cos_load, sin_vec = *sin_load;
@@ -78,38 +189,21 @@ __global__ void FusedApplyRotaryEmbComputeKernel(FusedApplyRotaryEmbParam<T, num
                                 + x_vec.elem[i * 2] * sin_vec.elem[i * 2 + 1];
     }
 
-    *(reinterpret_cast<LoadPack*>(out + offset * pack_size)) = out_vec;
+    *(reinterpret_cast<LoadPack*>(out + param.offset + packed_offset * pack_size)) = out_vec;
   }
 }
 
 template<typename T, typename IndexType, size_t pack_size, size_t num_dims>
-void LaunchKernel(const T* x, const T* cos, const T* sin, T* out, const int64_t* x_shape,
-                  const int64_t* sinuous_shape, const std::string& layout,
-                  const IndexType num_elements, const IndexType num_rows) {
+void LaunchKernel(const T* x, const T* cos, const T* sin, T* out, const std::string& layout, const int64_t b,
+                    const int64_t m, const int64_t h, const int64_t k, const int64_t b_stride, 
+                    const int64_t m_stride, const int64_t h_stride, const int64_t offset, 
+                    IndexType num_elements) {
   DimVector kernel_x_shape(num_dims), kernel_sinuous_shape(num_dims);
   size_t x_stride[num_dims];
   size_t sinuous_stride[num_dims];
 
   x_stride[num_dims - 1] = 1;
   sinuous_stride[num_dims - 1] = 1;
-
-  if (layout == "BHMK") {
-#pragma unloop
-    for (int i = 0; i < num_dims; i++) { kernel_x_shape.at(i) = x_shape[i]; }
-    kernel_sinuous_shape.at(0) = 1;
-    kernel_sinuous_shape.at(1) = 1;
-    kernel_sinuous_shape.at(2) = sinuous_shape[0];
-    kernel_sinuous_shape.at(3) = sinuous_shape[1];
-  } else if (layout == "BM(HK)") {
-    kernel_x_shape.at(0) = x_shape[0];
-    kernel_x_shape.at(1) = x_shape[1];
-    kernel_x_shape.at(2) = x_shape[2] / sinuous_shape[1];
-    kernel_x_shape.at(3) = sinuous_shape[1];
-    kernel_sinuous_shape.at(0) = 1;
-    kernel_sinuous_shape.at(1) = sinuous_shape[0];
-    kernel_sinuous_shape.at(2) = 1;
-    kernel_sinuous_shape.at(3) = sinuous_shape[1];
-  }
 
   for (int i = num_dims - 2; i >= 0; i--) {
     x_stride[i] = x_stride[i + 1] * kernel_x_shape.at(i + 1);
@@ -118,14 +212,42 @@ void LaunchKernel(const T* x, const T* cos, const T* sin, T* out, const int64_t*
 
   struct FusedApplyRotaryEmbParam<T, num_dims> param(
       reinterpret_cast<const T*>(x), reinterpret_cast<const T*>(cos),
-      reinterpret_cast<const T*>(sin), reinterpret_cast<T*>(out), num_rows, num_elements);
+      reinterpret_cast<const T*>(sin), reinterpret_cast<T*>(out), num_elements, k, offset);
 
-#pragma unloop
-  for (int i = 0; i < num_dims; i++) {
-    param.x_stride[i] = x_stride[i];
-    param.sinuous_mask[i] = (kernel_sinuous_shape.at(i) == 1) ? 0 : 1;
-    param.sinuous_stride[i] = sinuous_stride[i];
-  }
+  //TODO: 在不传入layout的情况下，如何使得kernel能够感知到当前计算的是哪一个维度的index，因为在这个kernel中，
+  // 每一维有着对应的业务信息，在后续计算或从cos/sin中取数时，需要知道当前计算得到的是否是m/k维
+  param.strides[0] = {'b', b_stride};
+  param.strides[1] = {'h', h_stride};
+  param.strides[2] = {'m', m_stride};
+  param.strides[3] = {'k', 1};
+
+  auto GetDim = [&](const char c) {
+    if (c == 'b') {
+        return b;
+    } else if (c == 'h') {
+        return h;
+    } else if (c == 'm') {
+        return m;
+    } else if (c == 'k') {
+        return k;
+    }
+
+    return 0L;
+  };
+
+  std::sort(param.strides, param.strides + num_dims, [&](auto pair1, auto pair2) {
+    if (pair1.second > pair2.second) {
+        return true;
+    } else if (pair1.second == pair2.second) {
+        if (GetDim(pair1.first) != 1) {
+            return true;
+        }
+        return false;
+    } else {
+        return false;
+    }
+    return pair1.second > pair2.second;
+  });
 
   constexpr size_t blk_size = 128;
   FusedApplyRotaryEmbComputeKernel<T, IndexType, pack_size, num_dims>
@@ -133,48 +255,41 @@ void LaunchKernel(const T* x, const T* cos, const T* sin, T* out, const int64_t*
 }
 
 template<typename T, typename IndexType, size_t num_dims>
-void DispatchPackSize(const T* x, const T* cos, const T* sin, T* out, const int64_t* x_shape,
-                      const int64_t* sinuous_shape, const std::string& layout,
+void DispatchPackSize(const T* x, const T* cos, const T* sin, T* out, const std::string& layout, const int64_t b, 
+                      const int64_t m, const int64_t h, const int64_t k, const int64_t b_stride,
+                      const int64_t m_stride, const int64_t h_stride, const int64_t offset, 
                       IndexType num_elements) {
-  const IndexType num_rows = x_shape[num_dims - 1];
-
   const auto CheckPackSize = [&](const size_t pack_size) {
     bool r = (((reinterpret_cast<uintptr_t>(x) % (sizeof(T) * pack_size)) == 0)
-              && ((num_rows % pack_size) == 0) && ((16 / sizeof(T)) >= pack_size));
+              && ((k % pack_size) == 0) && ((16 / sizeof(T)) >= pack_size));
     return r;
   };
 
   if (CheckPackSize(8)) {
     num_elements /= 8;
-    LaunchKernel<T, IndexType, 8, num_dims>(x, cos, sin, out, x_shape, sinuous_shape, layout,
-                                            num_elements, num_rows);
+    LaunchKernel<T, IndexType, 8, num_dims>(x, cos, sin, out, layout, b, m, h, k, b_stride, m_stride, h_stride, offset,
+                                            num_elements);
   } else if (CheckPackSize(4)) {
     num_elements /= 4;
-    LaunchKernel<T, IndexType, 4, num_dims>(x, cos, sin, out, x_shape, sinuous_shape, layout,
-                                            num_elements, num_rows);
+    LaunchKernel<T, IndexType, 4, num_dims>(x, cos, sin, out, layout, b, m, h, k, b_stride, m_stride, h_stride, offset,
+                                            num_elements);
   } else {
     num_elements /= 2;
-    LaunchKernel<T, IndexType, 2, num_dims>(x, cos, sin, out, x_shape, sinuous_shape, layout,
-                                            num_elements, num_rows);
+    LaunchKernel<T, IndexType, 2, num_dims>(x, cos, sin, out, layout, b, m, h, k, b_stride, m_stride, h_stride, offset,
+                                            num_elements);
   }
 }
 
 template<typename T, size_t num_dims>
-void DispatchIndex(const T* x, const T* cos, const T* sin, T* out, const int64_t* x_shape,
-                   const int64_t* sinuous_shape, const std::string& layout) {
-  int64_t num_elements = 1;
-  if (layout == "BHMK") {
-#pragma unloop
-    for (int i = 0; i < num_dims; i++) { num_elements = num_elements * x_shape[i]; }
-  } else {
-#pragma unloop
-    for (int i = 0; i < num_dims - 1; i++) { num_elements = num_elements * x_shape[i]; }
-  }
+void DispatchIndex(const T* x, const T* cos, const T* sin, T* out, const std::string& layout, const int64_t b, const int64_t m,
+  const int64_t h, const int64_t k, const int64_t b_stride, const int64_t m_stride, const int64_t h_stride,
+  const int64_t offset) {
+  int64_t num_elements = b * m * h * k;
   if (num_elements < (1 << 30)) {
-    DispatchPackSize<T, int32_t, num_dims>(x, cos, sin, out, x_shape, sinuous_shape, layout,
+    DispatchPackSize<T, int32_t, num_dims>(x, cos, sin, out, layout, b, m, h, k, b_stride, m_stride, h_stride, offset,
                                            static_cast<int32_t>(num_elements));
   } else {
-    DispatchPackSize<T, int64_t, num_dims>(x, cos, sin, out, x_shape, sinuous_shape, layout,
+    DispatchPackSize<T, int64_t, num_dims>(x, cos, sin, out, layout, b, m, h, k, b_stride, m_stride, h_stride, offset,
                                            num_elements);
   }
 }
@@ -197,12 +312,23 @@ class FusedApplyRotaryEmbKernel final : public user_op::OpKernel {
     const std::string& layout = ctx->Attr<std::string>("layout");
 
     constexpr size_t N = 4;
+    int64_t b = 0;
+    int64_t m = 0;
+    int64_t h = 0;
+    int64_t k = 0;
+    int64_t b_stride = 0;
+    int64_t m_stride = 0;
+    int64_t h_stride = 0;
+    int64_t offset   = 0;
+
+    ParseDims(x->shape_view(), layout, Optional<int64_t>(), Optional<int64_t>(cos->shape_view().At(1)), 1,
+      &b, &m, &h, &k, &b_stride, &m_stride, &h_stride, &offset);
 
     // TODO: hard code num_dims & seems redundant template problem...
     DispatchIndex<T, N>(
         reinterpret_cast<const T*>(x->dptr()), reinterpret_cast<const T*>(cos->dptr()),
-        reinterpret_cast<const T*>(sin->dptr()), reinterpret_cast<T*>(out->mut_dptr()),
-        x->shape_view().data(), cos->shape_view().data(), layout);
+        reinterpret_cast<const T*>(sin->dptr()), reinterpret_cast<T*>(out->mut_dptr()), layout,
+        b, m, h, k, b_stride, m_stride, h_stride, offset);
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

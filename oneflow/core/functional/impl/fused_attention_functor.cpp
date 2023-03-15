@@ -421,6 +421,53 @@ class FusedAttentionConcatPastKeyValueFunctor {
   std::shared_ptr<OpExpr> op_without_past_;
 };
 
+class FusedApplyRotaryEmbFunctor {
+ public:
+  FusedApplyRotaryEmbFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_apply_rotary_emb")
+                         .Input("x")
+                         .Input("cos")
+                         .Input("sin")
+                         .Output("out")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& cos,
+                           const std::shared_ptr<one::Tensor>& sin,
+                           const std::string& layout) const {
+    /*
+    x: (B, H, M, K)
+    x: (B, M, E) <=> (B, M, H, K)
+    cos: (M, K)
+    sin: (M, K)
+    */
+
+    CHECK_EQ_OR_RETURN(cos->shape()->NumAxes(), 2)
+        << Error::RuntimeError() << "The number of dimensions of cos should be equal to 2.";
+    CHECK_EQ_OR_RETURN(sin->shape()->NumAxes(), 2)
+        << Error::RuntimeError() << "The number of dimensions of sin should be equal to 2.";
+    CHECK_OR_RETURN(cos->shape() == sin->shape())
+        << Error::RuntimeError() << "Each dimension of cos & sin should be the same.";
+
+    int64_t b, m, h, k;
+    //TODO: fused_apply_rotary_emb have same logic no matter name
+    ParseDims("", *x->shape(), layout, Optional<int64_t>(), Optional<int64_t>(cos->shape()->At(1)), 
+      &b, &m, &h, &k);
+    
+    CHECK_EQ_OR_RETURN(cos->shape()->At(0), m)
+            << Error::RuntimeError()
+            << "M of x should be equal to M of cos & sin."; // K of cos & sin is checked inside ParseDims
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("layout");
+    attrs.SetAllAttrs(layout);
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, cos, sin}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -428,6 +475,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedMultiHeadAttentionInferenceV2Functor>(
       "FusedMultiHeadAttentionInferenceV2");
   m.add_functor<impl::FusedAttentionConcatPastKeyValueFunctor>("FusedAttentionConcatPastKeyValue");
+  m.add_functor<impl::FusedApplyRotaryEmbFunctor>("FusedApplyRotaryEmb");
 }
 
 }  // namespace functional
