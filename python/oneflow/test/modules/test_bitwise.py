@@ -113,18 +113,16 @@ def _test_scalar_bitwise_inplace(test_case, op, inplace_op):
         .to(device)
         .to(dtype)
     )
-    scalar = random(low=-10, high=10).to(dtype)
-    # print(scalar)
-    bool_scalar = random_bool()
-    # print(bool_scalar)
+    scalar = random_tensor(ndim=1,dim0=1,low=0,high=2,dtype=int).to(device).to(dtype)
+    scalar = scalar[0]
+    bool_scalar = random_tensor(ndim=1,dim0=1,low=-1,high=2,dtype=int).to(device) > 0
+    bool_scalar = bool_scalar[0]
     result = op(op(x, scalar), bool_scalar)
     
     x_flow = x.oneflow.clone()
-    scalar_flow = scalar.to(dtype).value()
-    bool_scalar_flow = bool_scalar.value()
-    # inplace_op(inplace_op(x_flow,scalar_flow),bool_scalar_flow)
-    inplace_op(x_flow,scalar_flow)
-    inplace_op(x_flow,bool_scalar_flow)
+    scalar_flow = scalar.oneflow
+    bool_scalar_flow = bool_scalar.oneflow
+    inplace_op(inplace_op(x_flow,scalar_flow),bool_scalar_flow)
     test_case.assertTrue(
         np.allclose(
             x_flow.numpy(),
@@ -147,7 +145,7 @@ class TestBitwiseAndModule(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestBitwiseAndInplaceModule(flow.unittest.TestCase):
-    @autotest(n=3, auto_backward=False)
+    @autotest(n=10, auto_backward=False)
     def test_bitwise_and_inplace(test_case):
         return _test_bitwise_inplace_op(test_case, torch.bitwise_and,flow.bitwise_and_)
 
