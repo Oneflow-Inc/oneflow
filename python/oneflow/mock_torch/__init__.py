@@ -178,7 +178,7 @@ class OneflowImporter(MetaPathFinder, Loader):
                 del sys.modules[k]
                 for alias in aliases:
                     del globals[alias]
-            name = k if k.find('.') == -1 else k[:k.find('.')]
+            name = k if '.' not in k else k[:k.find('.')]
             if not name in HAZARD_LIST and k in self.delete_list:
                 aliases = list(filter(lambda alias: globals[alias] is v, globals))
                 self.enable_mod_cache.update({k: (v, aliases)})
