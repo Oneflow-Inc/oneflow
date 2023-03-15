@@ -151,7 +151,7 @@ void ExecNode::InferBlobDescsByNdSbp(const ParallelContext* parallel_ctx) {
       std::bind(&Operator::GetLogicalBlobDesc4Ibn, op().get(), std::placeholders::_1),
       nd_sbp_signature, parallel_ctx, GetBlobDesc4BnInOp));
   CHECK_JUST_MSG(op_->InferBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, &GlobalJobDesc()),
-                 std::stringstream() << " infer blob descs if failed, op name " << op_->op_loc());
+                 std::stringstream() << " infer blob descs is failed, op name " << op_->op_loc());
   CHECK_JUST(CheckPhysicalBlobDesc(
       *op(), op()->output_bns(),
       std::bind(&Operator::GetLogicalBlobDesc4Obn, op().get(), std::placeholders::_1),
@@ -159,7 +159,7 @@ void ExecNode::InferBlobDescsByNdSbp(const ParallelContext* parallel_ctx) {
   CHECK_JUST_MSG(op_->InferInplaceObn2IbnIf(&mut_inplace_obn2ibn_, &con_inplace_obn2ibn_,
                                             GetBlobDesc4BnInOp, parallel_ctx),
                  std::stringstream()
-                     << " infer inplace obn to ibn if failed, op name " << op_->op_loc());
+                     << " infer inplace obn to ibn is failed, op name " << op_->op_loc());
 }
 
 void ExecNode::InferBlobDescsByInputs(const ParallelContext* parallel_ctx) {
@@ -175,7 +175,7 @@ void ExecNode::InferBlobDescsByInputs(const ParallelContext* parallel_ctx) {
         nd_sbp_signature, parallel_ctx, GetBlobDesc4BnInOp));
   }
   CHECK_JUST_MSG(op_->InferBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, &GlobalJobDesc()),
-                 std::stringstream() << " infer blob descs if failed, op name " << op_->op_loc());
+                 std::stringstream() << " infer blob descs is failed, op name " << op_->op_loc());
   if (op_node != nullptr && parallel_ctx->parallel_num() > 1 && nd_sbp_signature != nullptr) {
     CHECK_JUST(CheckPhysicalBlobDesc(
         *op(), op()->output_bns(),

@@ -68,8 +68,10 @@ struct PlanUtil {
   static int64_t GetDeviceIndex(const TaskProto& task);
 
   static bool IsCollectiveBoxingTaskProto(const TaskProto& task_proto);
-  static void GenReachableTaskPairs(
-      const Plan& plan, const std::function<bool(const TaskProto&)>& FilterTaskProto,
+  // This function generates a set of reachable task pairs of collective boxing tasks in the given
+  // Plan object.
+  static void GenReachableCollectiveBoxingTaskPairs(
+      const Plan& plan,
       HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>* reachable_task_pairs);
 };
 

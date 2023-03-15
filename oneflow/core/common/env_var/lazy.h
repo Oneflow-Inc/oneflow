@@ -21,6 +21,7 @@ limitations under the License.
 
 namespace oneflow {
 
+// Default compilation mode and default number of threads during compilation.
 DEFINE_THREAD_LOCAL_ENV_STRING(ONEFLOW_LAZY_COMPILE_MODE, "naive");
 DEFINE_THREAD_LOCAL_ENV_INTEGER(ONEFLOW_LAZY_COMPILE_RPC_THREAD_NUM, 16);
 

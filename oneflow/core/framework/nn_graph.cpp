@@ -348,7 +348,7 @@ void MergeByMod(size_t index, size_t n, std::vector<HashSet<T>>* data) {
   }
 }
 
-// use multi-thread to merge all data into (*data)[0]
+// Use multi-thread to merge std::vector<HashSet> into the HashSet at vector[0].
 template<typename T>
 void MergeIntoFirst(std::vector<HashSet<T>>* data) {
   const auto& MergeInto = [&](size_t n) {
@@ -364,6 +364,11 @@ void MergeIntoFirst(std::vector<HashSet<T>>* data) {
 
 }  // namespace
 
+// This function is an intermediate state used for debugging purposes and can be ignored when doing
+// code review.
+// MasterRankCompile is used for separate compilation on the master rank, compiling the task graph
+// of each rank separately. Two types of compilation are validated here: sequential compilation
+// (ThreadNumLimit is 0) and parallel compilation (ThreadNumLimit is -1).
 template<int64_t ThreadNumLimit>
 Maybe<void> NNGraph::MasterRankCompile() {
   constexpr int kWorkerStartRank = 1;
@@ -409,9 +414,8 @@ Maybe<void> NNGraph::MasterRankCompile() {
       // PlanUtil::SetForceInplaceMemBlock(plan); NOTE(chengcheng): only for ssp.
       PlanUtil::DumpCtrlRegstInfoToPlan(plan);
       if (i >= kWorkerStartRank /*skip master*/) {
-        // generate reachable collective boxing task pairs
-        PlanUtil::GenReachableTaskPairs(*plan, &PlanUtil::IsCollectiveBoxingTaskProto,
-                                        &reachable_cb_pairs[i]);
+        // Generate reachable collective boxing task pairs
+        PlanUtil::GenReachableCollectiveBoxingTaskPairs(*plan, &reachable_cb_pairs[i]);
         std::string plan_name = "plan:" + job_name() + ":" + std::to_string(i);
         Singleton<CtrlClient>::Get()->PushKV(plan_name, *plan);
       }
@@ -462,7 +466,8 @@ Maybe<void> NNGraph::MasterRankCompile() {
 
 namespace {
 
-// return push/pull keys only in master process.
+// A templated function that broadcasts data from the master process to worker processes in a
+// multi-threaded manner. Return push/pull keys only in master process.
 template<typename X, typename Y>
 std::set<std::string> MultiThreadBroadcastFromMasterToWorkers(size_t world_size,
                                                               const std::string& prefix,
@@ -493,7 +498,8 @@ std::set<std::string> MultiThreadBroadcastFromMasterToWorkers(size_t world_size,
   return keys;
 }
 
-// return push/pull keys only in master process.
+// A templated function that pulls data from worker processes to the master process in a
+// multi-threaded manner. Return push/pull keys only in master process.
 template<typename T, typename DoEachT>
 std::set<std::string> MultiThreadPullFromWorkersToMaster(const std::string& prefix, const T& data,
                                                          const DoEachT& DoEach) {
@@ -520,7 +526,10 @@ std::set<std::string> MultiThreadPullFromWorkersToMaster(const std::string& pref
   return keys;
 }
 
-// return push/pull keys only in master process.
+// A templated function that pushes data from the master process to each worker process using the
+// control client. The function takes as input a prefix for the key used to store the data in the
+// control client, a pointer to the data to be pushed, and a callable object PrepareEach that
+// preprocesses the worker's data. Return push/pull keys only in master process.
 template<typename T, typename PrepareEachT>
 std::set<std::string> MultiThreadPushFromMasterToWorkers(const std::string& prefix, T* data,
                                                          const PrepareEachT& PrepareEach) {
@@ -559,6 +568,19 @@ void DumpCalculationPassName(Job* job) {
 
 }  // namespace
 
+// The main logic of separation plan compilation. Each rank (process) compile it's related task
+// nodes. This can reduce plan compile time and avoid transport large plan protobuf.
+// When master compile the full plan, some plan protos are much larger than 1GB, but protobuf has
+// 2GB limitation and larg files are slow to transport. So we mush do separatioin plan compile when
+// total rank num is large.
+// Separation plan compilation is done by:
+//   a. Master broadcast job(or logical graph) to all workers, make all rank use the same job.
+//   b. Mater compile BoxingTaskGraph and broadcast it to all workers. BoxingTaskGraph needs to be
+//      done on master rank.
+//   c. Each rank compile it's related task node with RankCompiler. RankCompiler compile with the
+//      BoxingTaskGraph and the job.
+//   d. Master CollectiveBoxingPlan and then broadcast to all the workers.
+
 Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
   // for async deallocating big objects.
   AsyncDeallocateContext deallocate_ctx{};
@@ -567,14 +589,18 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
     push_pull_keys.insert(keys.begin(), keys.end());
   };
   if (GlobalProcessCtx::IsThisProcessMaster()) { DumpCalculationPassName(&job_); }
+
+  // a. Master broadcast job(or logical graph) to all workers, make all rank use the same job.
   const size_t world_size = GlobalProcessCtx::WorldSize();
   MergeCommKeys(MultiThreadBroadcastFromMasterToWorkers(
       world_size, name_ + std::string(__FUNCTION__) + "_job", job_, &job_));
   OpGraphSingletonGuard op_graph_guard(job_);
   Singleton<OpGraph>::Get()->UpdateCachedPredicatorIsReachable();
   size_t rank = GlobalProcessCtx::Rank();
-  auto boxing_task_graph_proto = std::make_shared<BoxingTaskGraphProto>();
 
+  // b. Mater compile BoxingTaskGraph and broadcast it to all workers. BoxingTaskGraph needs to be
+  //    done on master rank.
+  auto boxing_task_graph_proto = std::make_shared<BoxingTaskGraphProto>();
   std::shared_ptr<BoxingTaskGraph> boxing_task_graph;
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     const auto& ParallelLoop = [](size_t work_num, const std::function<void(size_t)>& Work) {
@@ -599,13 +625,15 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
   MergeCommKeys(MultiThreadPushFromMasterToWorkers(
       name_ + std::string(__FUNCTION__) + "_boxing_task_graph", boxing_task_graph_proto.get(),
       PrepareWorkerBoxingTaskGraphProto));
-  // async deallocate `boxing_task_graph`.
+  // Async deallocate `boxing_task_graph`.
   deallocate_ctx.Deallocate(std::move(boxing_task_graph));
+
+  // c. Each rank compile it's related task node with RankCompiler. RankCompiler compile with the
+  //    BoxingTaskGraph and the job.
   auto* plan = &plan_;
-  // TODO(chengcheng): new memory reused by chunk
   CHECK_JUST(RankCompiler(boxing_task_graph_proto, rank)
                  .Compile(variable_op_names_, &job_, plan, &deallocate_ctx));
-  // async deallocate `boxing_task_graph_proto`.
+  // Async deallocate `boxing_task_graph_proto`.
   deallocate_ctx.Deallocate(std::move(boxing_task_graph_proto));
   PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names_);
 
@@ -614,17 +642,18 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
     PlanUtil::ToDotFile(*plan, "job_" + name_ + "_plan" + std::to_string(rank) + ".dot");
   }
   PlanUtil::GenRegisterHint(plan);
+
+  // d. Master CollectiveBoxingPlan and then broadcast to all the workers.
   plan->mutable_collective_boxing_plan();
-  // PlanUtil::SetForceInplaceMemBlock(plan); NOTE(chengcheng): only for ssp.
   PlanUtil::DumpCtrlRegstInfoToPlan(plan);
-  // reachable collective boxing task pairs,
+  // Reachable collective boxing task pairs,
   auto reachable_cb_pairs =
       std::make_shared<HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>>();
-  // generate reachable collective boxing task pairs
-  PlanUtil::GenReachableTaskPairs(*plan, &PlanUtil::IsCollectiveBoxingTaskProto,
-                                  reachable_cb_pairs.get());
+  // Generate reachable collective boxing task pairs
+  PlanUtil::GenReachableCollectiveBoxingTaskPairs(*plan, reachable_cb_pairs.get());
   {
-    // merge collective boxing task id pairs from workers.
+    // Merge collective boxing task id pairs from workers.
+    // Used for storing the task ID pairs with reachability relation.
     IdPairs id_pairs{};
     if (!GlobalProcessCtx::IsThisProcessMaster()) { InitIdPairs(*reachable_cb_pairs, &id_pairs); }
     const auto& MergePairs = [&](const IdPairs& pairs) {
@@ -637,7 +666,7 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
         name_ + std::string(__FUNCTION__) + "_reachable_cb_pairs", id_pairs, MergePairs));
   }
   if (GlobalProcessCtx::IsThisProcessMaster()) {
-    // TODO(chengcheng): test collective boxing for multi-job.
+    // CollectiveBoxingPlan needs to know the reachable relation of collective boxing nodes.
     PlanUtil::GenCollectiveBoxingPlan(&deallocate_ctx, &job_, &plan_, [&] {
       return std::make_unique<RankPlanTaskGraph>(plan_, *reachable_cb_pairs);
     });
@@ -671,7 +700,7 @@ Maybe<void> NNGraph::NaiveCompile() {
     sub_compile_tc->Count("[PlanCompile]" + name_ + " GenRegisterHint", 1);
     // TODO(chengcheng): test collective boxing for multi-job.
     PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_,
-                                      [&] { return std::make_unique<NaivePlanTaskGraph>(plan_); });
+                                      [&] { return std::make_unique<GlobalPlanTaskGraph>(plan_); });
     // PlanUtil::SetForceInplaceMemBlock(&plan_); NOTE(chengcheng): only for ssp.
     sub_compile_tc->Count("[PlanCompile]" + name_ + " GenCollectiveBoxingPlan", 1);
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);

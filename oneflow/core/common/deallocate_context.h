@@ -26,6 +26,8 @@ class DeallocateContext {
   DeallocateContext() = default;
   virtual ~DeallocateContext() = default;
 
+  // Support customizing the Dispatch method for releasing a pointer, such as releasing it in a
+  // separate thread. Note that T also needs to be a smart pointer.
   template<typename T>
   void Deallocate(std::shared_ptr<T>&& ptr) {
     std::shared_ptr<T> data = ptr;

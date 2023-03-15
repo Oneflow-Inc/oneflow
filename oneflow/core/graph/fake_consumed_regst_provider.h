@@ -18,6 +18,9 @@ limitations under the License.
 
 namespace oneflow {
 
+// Provide a compute task node with a fake input regst, and its output regst can be inferred using
+// SBP + Placement. The fake compute task node can help the task graph of one rank to infer blob
+// desc, mainly to ensure that the transport task node has the correct input blob desc.
 class FakeConsumedRegstProvider {
  public:
   FakeConsumedRegstProvider() = default;

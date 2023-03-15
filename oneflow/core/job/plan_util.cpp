@@ -1401,25 +1401,26 @@ void PlanUtil::PopulateOpAttribute(
   return GetStreamId(task).device_id().device_index();
 }
 
-/*static*/ void PlanUtil::GenReachableTaskPairs(
-    const Plan& plan, const std::function<bool(const TaskProto&)>& TaskProtoFilter,
+/*static*/ void PlanUtil::GenReachableCollectiveBoxingTaskPairs(
+    const Plan& plan,
     HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>* reachable_task_pairs) {
-  NaivePlanTaskGraph plan_task_graph(plan);
-  HashMap<const PlanTaskNode*, std::set<const PlanTaskNode*>> node2nearest_filtered_nodes;
+  GlobalPlanTaskGraph plan_task_graph(plan);
+  // cb stands for CollectiveBoxing
+  HashMap<const PlanTaskNode*, std::set<const PlanTaskNode*>> node2predecessor_cb_nodes;
   plan_task_graph.TopoForEachNode([&](const PlanTaskNode* task_node) {
-    auto* set = &node2nearest_filtered_nodes[task_node];
-    if (TaskProtoFilter(*task_node->task_proto())) {
+    auto* set = &node2predecessor_cb_nodes[task_node];
+    if (IsCollectiveBoxingTaskProto(*task_node->task_proto())) {
       int64_t dst_task_id = task_node->task_proto()->task_id();
       task_node->ForEachNodeOnInEdge([&](PlanTaskNode* in_task_node) {
-        for (const auto* nearest_filtered_node : node2nearest_filtered_nodes[in_task_node]) {
-          int64_t src_task_id = nearest_filtered_node->task_proto()->task_id();
+        for (const auto* pre_cb_node : node2predecessor_cb_nodes[in_task_node]) {
+          int64_t src_task_id = pre_cb_node->task_proto()->task_id();
           reachable_task_pairs->insert(std::make_pair(src_task_id, dst_task_id));
         }
       });
       set->insert(task_node);
     } else {
       task_node->ForEachNodeOnInEdge([&](PlanTaskNode* in_task_node) {
-        const auto& nearests = node2nearest_filtered_nodes[in_task_node];
+        const auto& nearests = node2predecessor_cb_nodes[in_task_node];
         set->insert(nearests.begin(), nearests.end());
       });
     }

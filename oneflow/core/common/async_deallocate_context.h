@@ -17,15 +17,18 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_ASYNC_DEALLOCATE_CONTEXT_H_
 
 #include "oneflow/core/common/deallocate_context.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
 class ThreadPool;
 
+// Support releasing large objects in a separate thread.
 class AsyncDeallocateContext final : public DeallocateContext {
  public:
   AsyncDeallocateContext();
   ~AsyncDeallocateContext() override;
+  OF_DISALLOW_COPY_AND_MOVE(AsyncDeallocateContext);
 
   void Dispatch(std::function<void()> Handle) override;
 

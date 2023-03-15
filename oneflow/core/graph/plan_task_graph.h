@@ -64,10 +64,10 @@ class PlanTaskGraph : public Graph<const PlanTaskNode, PlanTaskEdge> {
   HashSet<std::pair<PlanTaskNode*, PlanTaskNode*>> edges_;
 };
 
-class NaivePlanTaskGraph final : public PlanTaskGraph {
+class GlobalPlanTaskGraph final : public PlanTaskGraph {
  public:
   using PlanTaskGraph::PlanTaskGraph;
-  ~NaivePlanTaskGraph() override = default;
+  ~GlobalPlanTaskGraph() override = default;
 };
 
 class RankPlanTaskGraph final : public PlanTaskGraph {
