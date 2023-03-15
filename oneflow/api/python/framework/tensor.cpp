@@ -629,6 +629,20 @@ static int PyTensorObject_set_ref_tensor(PyObject* self, PyObject* ref, void* un
   END_HANDLE_ERRORS_RET(-1)
 }
 
+static PyObject* PyTensorObject_ref_index(PyObject* self, void* unused) {
+  return functional::CastToPyObject(PyTensor_Unpack(self)->ref_index());
+}
+
+static int PyTensorObject_set_ref_index(PyObject* self, PyObject* index, void* unused) {
+  HANDLE_ERRORS
+  const auto& t = PyTensor_Unpack(self);
+  CHECK_OR_THROW(PyLong_Check(index)) << Error::RuntimeError()
+                                       << "Index must be Integer type.";
+  ASSERT(t->set_ref_index(PyLong_AsLong(index)));
+  return 0;
+  END_HANDLE_ERRORS_RET(-1)
+}
+
 static PyObject* PyTensorObject_grad_fn(PyObject* self, void* unused) {
   return functional::CastToPyObject(PyTensor_Unpack(self)->grad_fn_node());
 }
@@ -703,6 +717,8 @@ static PyGetSetDef PyTensorObject_properties[] = {
      NULL},
     {PYGETSET_NAME("_ref_tensor"), (getter)PyTensorObject_ref_tensor,
      (setter)PyTensorObject_set_ref_tensor, NULL, NULL},
+    {PYGETSET_NAME("_ref_index"), (getter)PyTensorObject_ref_index,
+     (setter)PyTensorObject_set_ref_index, NULL, NULL},
     {PYGETSET_NAME("grad_fn"), (getter)PyTensorObject_grad_fn, NULL, NULL, NULL},
     {PYGETSET_NAME("is_leaf"), (getter)PyTensorObject_is_leaf, NULL, NULL, NULL},
     {PYGETSET_NAME("requires_grad"), (getter)PyTensorObject_requires_grad,

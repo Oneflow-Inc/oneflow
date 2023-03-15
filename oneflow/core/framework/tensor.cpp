@@ -50,6 +50,11 @@ Maybe<void> Tensor::set_ref_tensor(const std::shared_ptr<Tensor>& ref) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> Tensor::set_ref_index(const int64_t index) {
+  ref_index_ = index;
+  return Maybe<void>::Ok();
+}
+
 Maybe<LocalTensor> StaticZerosTensor::AsLocalTensor() {
   CHECK_OR_RETURN(is_local());  // NOLINT
   return std::dynamic_pointer_cast<LocalTensor>(
