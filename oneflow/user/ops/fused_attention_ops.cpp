@@ -23,9 +23,10 @@ namespace {
 Maybe<void> ParseDims(const Shape& shape, const std::string& layout,
                       const Optional<int64_t>& batch_size, const Optional<int64_t>& seq_len,
                       const Optional<int64_t>& num_heads, const Optional<int64_t>& head_size,
-                      int64_t* b, int64_t* m, int64_t* h, int64_t* k) {
+                      int64_t* b, int64_t* m, int64_t* h, int64_t* k, bool* bm_packed) {
   if (shape.NumAxes() == 2) {
     if (layout == "(BM)(HK)" || layout == "(BM)(H2K)" || layout == "(BM)(H3K)") {
+      *bm_packed = true;
       CHECK_OR_RETURN(batch_size);
       CHECK_OR_RETURN(seq_len);
       *b = JUST(batch_size);
@@ -64,6 +65,7 @@ Maybe<void> ParseDims(const Shape& shape, const std::string& layout,
   } else if (shape.NumAxes() == 3) {
     if (layout == "BM(HK)" || layout == "MB(HK)" || layout == "BM(H2K)" || layout == "MB(H2K)"
         || layout == "BM(H3K)" || layout == "MB(H3K)") {
+      *bm_packed = false;
       int64_t packed_n = 0;
       if (layout == "BM(HK)") {
         *b = shape.At(0);
@@ -109,6 +111,7 @@ Maybe<void> ParseDims(const Shape& shape, const std::string& layout,
         UNIMPLEMENTED_THEN_RETURN();
       }
     } else if (layout == "(BM)HK") {
+      *bm_packed = true;
       CHECK_OR_RETURN(batch_size);
       CHECK_OR_RETURN(seq_len);
       *b = JUST(batch_size);
@@ -119,6 +122,7 @@ Maybe<void> ParseDims(const Shape& shape, const std::string& layout,
       UNIMPLEMENTED_THEN_RETURN();
     }
   } else if (shape.NumAxes() == 4) {
+    *bm_packed = false;
     if (layout == "BMHK") {
       *b = shape.At(0);
       *m = shape.At(1);
@@ -163,8 +167,9 @@ Maybe<void> ParseDims(const Shape& shape, const std::string& layout,
 Maybe<void> ParseDims(const Shape& shape, const std::string& layout,
                       const Optional<int64_t>& num_heads, const Optional<int64_t>& head_size,
                       int64_t* b, int64_t* m, int64_t* h, int64_t* k) {
+  bool bm_packed{};
   return ParseDims(shape, layout, Optional<int64_t>(), Optional<int64_t>(), num_heads, head_size, b,
-                   m, h, k);
+                   m, h, k, &bm_packed);
 }
 
 Maybe<Shape> LayoutToShape(int64_t b, int64_t m, int64_t h, int64_t k, const std::string& layout) {
@@ -286,8 +291,10 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   int64_t q_m = 0;
   int64_t q_h = 0;
   int64_t q_k = 0;
+  bool q_bm_packed = false;
   JUST(ParseDims(query_shape, query_layout, batch_size, ctx->Attr<int64_t>("query_max_seq_len"),
-                 Optional<int64_t>(), query_head_size, &q_b, &q_m, &q_h, &q_k));
+                 Optional<int64_t>(), query_head_size, &q_b, &q_m, &q_h, &q_k, &q_bm_packed));
+  if (q_bm_packed) { CHECK_OR_RETURN(ctx->has_input("query_seq_start", 0)); }
 
   const Shape& key_shape = ctx->InputShape("key", 0);
   const std::string& key_layout = ctx->Attr<std::string>("key_layout");
@@ -295,10 +302,12 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   int64_t k_m = 0;
   int64_t k_h = 0;
   int64_t k_k = 0;
+  bool k_bm_packed = false;
   JUST(ParseDims(key_shape, key_layout, q_b, ctx->Attr<int64_t>("key_max_seq_len"), q_h, q_k, &k_b,
-                 &k_m, &k_h, &k_k));
+                 &k_m, &k_h, &k_k, &k_bm_packed));
   CHECK_EQ_OR_RETURN(k_b, q_b);
   CHECK_EQ_OR_RETURN(k_h, q_h);
+  CHECK_EQ_OR_RETURN(k_bm_packed, q_bm_packed);
 
   const Shape& value_shape = ctx->InputShape("value", 0);
   const std::string& value_layout = ctx->Attr<std::string>("value_layout");
@@ -306,10 +315,12 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   int64_t v_m = 0;
   int64_t v_h = 0;
   int64_t v_k = 0;
+  bool v_bm_packed = false;
   JUST(ParseDims(value_shape, value_layout, q_b, k_m, q_h, Optional<int64_t>(), &v_b, &v_m, &v_h,
-                 &v_k));
+                 &v_k, &v_bm_packed));
   CHECK_EQ_OR_RETURN(v_b, q_b);
   CHECK_EQ_OR_RETURN(v_m, k_m);
+  CHECK_EQ_OR_RETURN(v_bm_packed, k_bm_packed);
 
   if (ctx->has_input("attn_bias", 0)) {
     const Shape& attn_bias_shape = ctx->InputShape("attn_bias", 0);
@@ -327,14 +338,14 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
     CHECK_OR_RETURN(padded_attn_bias_shape.at(3) >= k_m);
   }
   const std::string& output_layout = ctx->Attr<std::string>("output_layout");
-  if (output_layout == "BM(HK)") {
+  const bool o_bm_packed = output_layout == "(BM)(HK)";
+  CHECK_EQ(o_bm_packed, q_bm_packed);
+  if (output_layout == "(BM)(HK)") {
+    ctx->SetOutputShape("out", 0, Shape({query_shape.At(0), q_h * v_k}));
+  } else if (output_layout == "BM(HK)") {
     ctx->SetOutputShape("out", 0, Shape({q_b, q_m, q_h * v_k}));
   } else if (output_layout == "MB(HK)") {
     ctx->SetOutputShape("out", 0, Shape({q_m, q_b, q_h * v_k}));
-  } else if (output_layout == "(BM)(HK)") {
-    CHECK_OR_RETURN(query_layout == "(BM)HK" || query_layout == "(BM)(HK)"
-                    || query_layout == "(BM)(H2K)" || query_layout == "(BM)(H3K)");
-    ctx->SetOutputShape("out", 0, Shape({query_shape.At(0), q_h * v_k}));
   } else {
     UNIMPLEMENTED_THEN_RETURN();
   }

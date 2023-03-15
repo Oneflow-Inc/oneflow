@@ -36,9 +36,11 @@ void ParseDims(const ShapeView& shape, const std::string& layout,
                const Optional<int64_t>& batch_size, const Optional<int64_t>& seq_len,
                const Optional<int64_t>& num_heads, const Optional<int64_t>& head_size,
                int64_t tensor_index, int64_t* b, int64_t* m, int64_t* h, int64_t* k,
-               int64_t* b_stride, int64_t* m_stride, int64_t* h_stride, int64_t* offset) {
+               int64_t* b_stride, int64_t* m_stride, int64_t* h_stride, int64_t* offset,
+               bool* bm_packed) {
   if (shape.NumAxes() == 2) {
     if (layout == "(BM)(HK)" || layout == "(BM)(H2K)" || layout == "(BM)(H3K)") {
+      *bm_packed = true;
       CHECK(batch_size);
       CHECK(seq_len);
       *b = CHECK_JUST(batch_size);
@@ -88,6 +90,7 @@ void ParseDims(const ShapeView& shape, const std::string& layout,
   } else if (shape.NumAxes() == 3) {
     if (layout == "BM(HK)" || layout == "BM(H2K)" || layout == "BM(H3K)" || layout == "MB(HK)"
         || layout == "MB(H2K)" || layout == "MB(H3K)") {
+      *bm_packed = false;
       bool batch_first = false;
       int64_t packed_n = 0;
       const std::string layout_bm = layout.substr(0, 2);
@@ -147,6 +150,7 @@ void ParseDims(const ShapeView& shape, const std::string& layout,
         UNIMPLEMENTED();
       }
     } else if (layout == "(BM)HK") {
+      *bm_packed = true;
       CHECK(batch_size);
       CHECK(seq_len);
       *b = CHECK_JUST(batch_size);
@@ -156,45 +160,11 @@ void ParseDims(const ShapeView& shape, const std::string& layout,
       *h_stride = *k;
       *m_stride = *h_stride * *h;
       *b_stride = 0;
-    } else if (layout == "(BM)(HK)") {
-      CHECK(batch_size);
-      CHECK(seq_len);
-      *b = CHECK_JUST(batch_size);
-      *m = CHECK_JUST(seq_len);
-      const int64_t packed_n = 1;
-      const int64_t hidden_size = shape.At(1);
-      if (num_heads) {
-        const int64_t expected_h = CHECK_JUST(num_heads);
-        const int64_t packed_h = packed_n * expected_h;
-        CHECK_EQ(hidden_size % packed_h, 0);
-        *h = expected_h;
-        *k = hidden_size / packed_h;
-      } else if (head_size) {
-        const int64_t expected_k = CHECK_JUST(head_size);
-        const int64_t packed_k = packed_n * expected_k;
-        CHECK_EQ(hidden_size % packed_k, 0);
-        *h = hidden_size / packed_k;
-        *k = expected_k;
-      } else {
-        UNIMPLEMENTED();
-      }
-      *h_stride = *k * packed_n;
-      *m_stride = *h_stride * *h;
-      *b_stride = 0;
-      if (packed_n == 1) {
-        *offset = 0;
-      } else if (packed_n == 2) {
-        CHECK_GE(tensor_index, 1);
-        *offset = (tensor_index - 1) * *k;
-      } else if (packed_n == 3) {
-        *offset = tensor_index * *k;
-      } else {
-        UNIMPLEMENTED();
-      }
     } else {
       UNIMPLEMENTED();
     }
   } else if (shape.NumAxes() == 4) {
+    *bm_packed = false;
     if (layout == "BMHK") {
       *b = shape.At(0);
       *m = shape.At(1);
@@ -248,8 +218,9 @@ void ParseDims(const ShapeView& shape, const std::string& layout,
                const Optional<int64_t>& num_heads, const Optional<int64_t>& head_size,
                int64_t tensor_index, int64_t* b, int64_t* m, int64_t* h, int64_t* k,
                int64_t* b_stride, int64_t* m_stride, int64_t* h_stride, int64_t* offset) {
+  bool bm_packed{};
   ParseDims(shape, layout, Optional<int64_t>(), Optional<int64_t>(), num_heads, head_size,
-            tensor_index, b, m, h, k, b_stride, m_stride, h_stride, offset);
+            tensor_index, b, m, h, k, b_stride, m_stride, h_stride, offset, &bm_packed);
 }
 
 template<typename T, int pack_size>
@@ -527,9 +498,12 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
     int64_t q_m_stride = 0;
     int64_t q_h_stride = 0;
     int64_t q_offset = 0;
+    bool q_bm_packed = false;
     ParseDims(query->shape_view(), query_layout, batch_size,
               ctx->Attr<int64_t>("query_max_seq_len"), Optional<int64_t>(), query_head_size, 0,
-              &q_b, &q_m, &q_h, &q_k, &q_b_stride, &q_m_stride, &q_h_stride, &q_offset);
+              &q_b, &q_m, &q_h, &q_k, &q_b_stride, &q_m_stride, &q_h_stride, &q_offset,
+              &q_bm_packed);
+    if (q_bm_packed) { CHECK(query_seq_start != nullptr); }
 
     int64_t k_b = 0;
     int64_t k_m = 0;
@@ -539,11 +513,13 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
     int64_t k_m_stride = 0;
     int64_t k_h_stride = 0;
     int64_t k_offset = 0;
+    bool k_bm_packed = false;
     ParseDims(key->shape_view(), key_layout, q_b, ctx->Attr<int64_t>("key_max_seq_len"),
               Optional<int64_t>(), query_head_size, 1, &k_b, &k_m, &k_h, &k_k, &k_b_stride,
-              &k_m_stride, &k_h_stride, &k_offset);
+              &k_m_stride, &k_h_stride, &k_offset, &k_bm_packed);
     CHECK_EQ(k_b, q_b);
     CHECK_EQ(k_h, q_h);
+    CHECK_EQ(k_bm_packed, q_bm_packed);
 
     int64_t v_b = 0;
     int64_t v_m = 0;
@@ -553,25 +529,28 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
     int64_t v_m_stride = 0;
     int64_t v_h_stride = 0;
     int64_t v_offset = 0;
+    bool v_bm_packed = false;
     ParseDims(value->shape_view(), value_layout, q_b, k_m, q_h, Optional<int64_t>(), 2, &v_b, &v_m,
-              &v_h, &v_k, &v_b_stride, &v_m_stride, &v_h_stride, &v_offset);
+              &v_h, &v_k, &v_b_stride, &v_m_stride, &v_h_stride, &v_offset, &v_bm_packed);
     CHECK_EQ(v_b, q_b);
     CHECK_EQ(v_m, k_m);
+    CHECK_EQ(v_bm_packed, k_bm_packed);
     if (output_layout == "BM(HK)") {
+      CHECK(!q_bm_packed);
       CHECK_EQ(out->shape_view().NumAxes(), 3);
       CHECK_EQ(out->shape_view().At(0), q_b);
       CHECK_EQ(out->shape_view().At(1), q_m);
       CHECK_EQ(out->shape_view().At(2), q_h * v_k);
     } else if (output_layout == "MB(HK)") {
+      CHECK(!q_bm_packed);
       CHECK_EQ(out->shape_view().NumAxes(), 3);
       CHECK_EQ(q_b, 1);
       CHECK_EQ(out->shape_view().At(0), q_m);
       CHECK_EQ(out->shape_view().At(1), q_b);
       CHECK_EQ(out->shape_view().At(2), q_h * v_k);
     } else if (output_layout == "(BM)(HK)") {
+      CHECK(q_bm_packed);
       CHECK_EQ(out->shape_view().NumAxes(), 2);
-      CHECK(query_layout == "(BM)HK" || query_layout == "(BM)(HK)" || query_layout == "(BM)(H2K)"
-            || query_layout == "(BM)(H3K)");
       CHECK_EQ(out->shape_view().At(0), query->shape_view().At(0));
       CHECK_EQ(out->shape_view().At(1), q_h * v_k);
     } else {

@@ -39,9 +39,10 @@ namespace {
 Maybe<void> ParseDims(const std::string& name, const Shape& shape, const std::string& layout,
                       const Optional<int64_t>& batch_size, const Optional<int64_t>& seq_len,
                       const Optional<int64_t>& num_heads, const Optional<int64_t>& head_size,
-                      int64_t* b, int64_t* m, int64_t* h, int64_t* k) {
+                      int64_t* b, int64_t* m, int64_t* h, int64_t* k, bool* bm_packed) {
   if (shape.NumAxes() == 2) {
     if (layout == "(BM)(HK)" || layout == "(BM)(H2K)" || layout == "(BM)(H3K)") {
+      *bm_packed = true;
       CHECK_OR_RETURN(batch_size);
       CHECK_OR_RETURN(seq_len);
       *b = JUST(batch_size);
@@ -86,6 +87,7 @@ Maybe<void> ParseDims(const std::string& name, const Shape& shape, const std::st
   } else if (shape.NumAxes() == 3) {
     if (layout == "BM(HK)" || layout == "MB(HK)" || layout == "BM(H2K)" || layout == "MB(H2K)"
         || layout == "BM(H3K)" || layout == "MB(H3K)") {
+      *bm_packed = false;
       int64_t packed_n = 0;
       if (layout == "BM(HK)") {
         *b = shape.At(0);
@@ -137,6 +139,7 @@ Maybe<void> ParseDims(const std::string& name, const Shape& shape, const std::st
         UNIMPLEMENTED_THEN_RETURN();
       }
     } else if (layout == "(BM)HK") {
+      *bm_packed = true;
       CHECK_OR_RETURN(batch_size);
       CHECK_OR_RETURN(seq_len);
       *b = JUST(batch_size);
@@ -151,6 +154,7 @@ Maybe<void> ParseDims(const std::string& name, const Shape& shape, const std::st
           << name << " tensor is 3.";
     }
   } else if (shape.NumAxes() == 4) {
+    *bm_packed = false;
     if (layout == "BMHK") {
       *b = shape.At(0);
       *m = shape.At(1);
@@ -201,8 +205,9 @@ Maybe<void> ParseDims(const std::string& name, const Shape& shape, const std::st
 Maybe<void> ParseDims(const std::string& name, const Shape& shape, const std::string& layout,
                       const Optional<int64_t>& num_heads, const Optional<int64_t>& head_size,
                       int64_t* b, int64_t* m, int64_t* h, int64_t* k) {
+  bool bm_packed{};
   return ParseDims(name, shape, layout, Optional<int64_t>(), Optional<int64_t>(), num_heads,
-                   head_size, b, m, h, k);
+                   head_size, b, m, h, k, &bm_packed);
 }
 
 }  // namespace
@@ -342,24 +347,33 @@ class FusedMultiHeadAttentionInferenceV2Functor {
     int64_t q_m = 0;
     int64_t q_h = 0;
     int64_t q_k = 0;
+    bool q_bm_packed = false;
     JUST(ParseDims("query", *query->shape(), query_layout, batch_size, query_max_seq_len,
-                   Optional<int64_t>(), query_head_size, &q_b, &q_m, &q_h, &q_k));
+                   Optional<int64_t>(), query_head_size, &q_b, &q_m, &q_h, &q_k, &q_bm_packed));
     CHECK_EQ_OR_RETURN(q_k % 8, 0)
         << "The size of dimension 'K' of the query tensor should be a multiple of 8.";
+    if (q_bm_packed) {
+      CHECK_OR_RETURN(query_seq_start)
+          << "The query_seq_start tensor should not be None when the query tensor is BM-Packed.";
+    }
 
     int64_t k_b = 0;
     int64_t k_m = 0;
     int64_t k_h = 0;
     int64_t k_k = 0;
+    bool k_bm_packed = false;
     if (key) {
       key_tensor = JUST(key);
       key_tensor_layout = *JUST(key_layout);
       JUST(ParseDims("key", *key_tensor->shape(), key_tensor_layout, q_b, key_max_seq_len,
-                     Optional<int64_t>(), q_k, &k_b, &k_m, &k_h, &k_k));
+                     Optional<int64_t>(), q_k, &k_b, &k_m, &k_h, &k_k, &k_bm_packed));
       CHECK_EQ_OR_RETURN(k_b, q_b) << "The size of dimension 'B' of the key tensor should be the "
                                       "same as that of the query tensor.";
       CHECK_EQ_OR_RETURN(k_h, q_h) << "The size of dimension 'H' of the key tensor should be the "
                                       "same as that of the query tensor.";
+      CHECK_EQ_OR_RETURN(k_bm_packed, q_bm_packed)
+          << "The query tensor and the key tensor should either both be BM-Packed or both not be "
+             "BM-Packed at the same time.";
 
     } else {
       CHECK_OR_RETURN(query_layout == "BM(H3K)" || query_layout == "MB(H3K)")
@@ -371,23 +385,28 @@ class FusedMultiHeadAttentionInferenceV2Functor {
       k_m = q_m;
       k_h = q_h;
       k_k = q_k;
+      k_bm_packed = q_bm_packed;
     }
 
     int64_t v_b = 0;
     int64_t v_m = 0;
     int64_t v_h = 0;
     int64_t v_k = 0;
+    bool v_bm_packed = false;
     if (value) {
       value_tensor = JUST(value);
       value_tensor_layout = *JUST(value_layout);
       JUST(ParseDims("value", *value_tensor->shape(), value_tensor_layout, q_b, k_m, q_h,
-                     Optional<int64_t>(), &v_b, &v_m, &v_h, &v_k));
+                     Optional<int64_t>(), &v_b, &v_m, &v_h, &v_k, &v_bm_packed));
       CHECK_EQ_OR_RETURN(v_b, q_b) << "The size of dimension 'B' of the value tensor should be the "
                                       "same as that of the query tensor.";
       CHECK_EQ_OR_RETURN(v_m, k_m) << "The size of dimension 'M' of the value tensor should be the "
                                       "same as that of the key tensor.";
       CHECK_EQ_OR_RETURN(v_k % 8, 0)
           << "The size of dimension 'K' of the value tensor should be a multiple of 8.";
+      CHECK_EQ_OR_RETURN(v_bm_packed, k_bm_packed)
+          << "The key tensor and the value tensor should either both be BM-Packed or both not be "
+             "BM-Packed at the same time.";
 
     } else {
       CHECK_OR_RETURN(key_tensor_layout == "BM(H2K)" || key_tensor_layout == "MB(H2K)"
@@ -400,6 +419,7 @@ class FusedMultiHeadAttentionInferenceV2Functor {
       v_m = k_m;
       v_h = k_h;
       v_k = k_k;
+      v_bm_packed = k_bm_packed;
     }
 
     if (attn_bias) {
@@ -431,7 +451,10 @@ class FusedMultiHeadAttentionInferenceV2Functor {
                "the query tensor or equal to 1.";
       }
     }
-
+    const bool o_bm_packed = output_layout == "(BM)(HK)";
+    CHECK_EQ_OR_RETURN(o_bm_packed, q_bm_packed)
+        << "The query tensor and the output tensor should either both be BM-Packed or both not be "
+           "BM-Packed at the same time.";
     std::string op_output_layout;
     if (output_layout == "BM(HK)" || output_layout == "(BM)(HK)") {
       op_output_layout = output_layout;
