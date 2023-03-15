@@ -1385,7 +1385,7 @@ class Module(object):
         
         """
         self.cpg = flow.nn.utils.parameters_grouping.ContiguousParamsGroup(
-            list(self.parameters()), self, for_module=True
+            list(self.parameters()), for_module=True
         )
 
     def __repr__(self):

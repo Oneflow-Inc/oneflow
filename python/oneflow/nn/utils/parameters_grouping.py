@@ -45,7 +45,6 @@ class ContiguousParamsGroup(object):
     def __init__(
         self,
         params_group_list: _tensor_or_tensors,
-        module: "flow.nn.Module",
         for_module: bool = False,
     ):
         """
@@ -80,20 +79,30 @@ class ContiguousParamsGroup(object):
                 "Parameters must be all local tensors or all global tensors for params grouping."
             )
 
-        self.module = module
         self.for_module = for_module
         self.grouped_tensors = []
         self.grouped_grads = []
+
         if self.for_module:
             # buffer to ordered parameters list mapping
-            self.module._buffer_params_mapping = collections.defaultdict(list)
             self._parameters_grouping_for_module()
         else:
             self._parameters_grouping_for_operations()
 
-    def _parameters_grouping_for_module(self):
-        _buffer_params_mapping = self.module._buffer_params_mapping
+    def _make_buffer_params_mapping(self):
+        buffer_params_mapping = collections.defaultdict(list)
 
+        for params in self.params_group_list:
+            for p in params:
+                if p._ref_tensor is not None:
+                    buffer_params_mapping[p._ref_tensor].append((p._ref_index, p))
+
+        for buffer, params_list in buffer_params_mapping.items():
+            buffer_params_mapping[buffer] = sorted(params_list, key=lambda x: x[0])
+
+        return buffer_params_mapping
+
+    def _parameters_grouping_for_module(self):
         assert len(self.params_group_list) == 1
 
         params_buffer_size = {}
@@ -155,15 +164,16 @@ class ContiguousParamsGroup(object):
             p.data = param_buf[index : index + size].view(shape)
             p.grad = param_buf.grad[index : index + size].view(shape)
 
+            p._ref_tensor = param_buf
+            p._ref_index = index
+
             index += numel_in_bucket(p)
             params_buffer_index[tensor_key] = index
 
-            _buffer_params_mapping[param_buf].append(p)
-
     def _parameters_grouping_for_operations(self):
-        _buffer_params_mapping = self.module._buffer_params_mapping
+        buffer_params_mapping = self._make_buffer_params_mapping()
 
-        if _buffer_params_mapping is None or len(_buffer_params_mapping) == 0:
+        if buffer_params_mapping is None or len(buffer_params_mapping) == 0:
             warnings.warn(
                 "Since nn.Module didn't use make_contiguous_params_group() to create "
                 "a contiguous module, the remapping won't make any difference for parameters. "
@@ -178,12 +188,12 @@ class ContiguousParamsGroup(object):
             params_group.append(group)
 
         # handling the parameters already on allocated buffers
-        for param_buf, params in _buffer_params_mapping.items():
+        for param_buf, params in buffer_params_mapping.items():
             logical_buffer_start, logical_buffer_size = 0, 0
             pre_group_index = -1
             params_cnt = len(params)
 
-            for p_index, p in enumerate(params):
+            for p_index, (_, p) in enumerate(params):
                 current_group_index = -1
 
                 for group_index, group in enumerate(params_group):
@@ -235,10 +245,6 @@ class ContiguousParamsGroup(object):
             for p in group:
                 self.grouped_tensors.append(p)
                 self.grouped_grads.append(p.grad)
-
-    def __del__(self):
-        if self.module._buffer_params_mapping:
-            self.module._buffer_params_mapping = None
 
     @property
     def grouped_parameters(self):

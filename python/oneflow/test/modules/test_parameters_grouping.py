@@ -40,9 +40,9 @@ def module_grouping(test_case, device):
                         flow.tensor([i % 2 + 1, i % 2 + 1], dtype=dtypes[i % 2])
                     ),
                 )
-            self.make_contiguous_params_group()
 
     m = Model().to(device)
+    m.make_contiguous_params_group()
     cpg = CPG(
         list(m.parameters())
         + [flow.tensor([3, 3], dtype=flow.float32, requires_grad=True)]
@@ -106,7 +106,6 @@ def multi_module_grad(test_case):
             super().__init__()
             self.w1 = flow.nn.Parameter(flow.Tensor([1, 1]))
             self.w2 = flow.nn.Parameter(flow.Tensor([1, 1]))
-            self.make_contiguous_params_group()
 
         def forward(self, x):
             return x * self.w1 * self.w2
@@ -116,13 +115,14 @@ def multi_module_grad(test_case):
             super().__init__()
             self.w1 = flow.nn.Parameter(flow.Tensor([2, 2]))
             self.w2 = flow.nn.Parameter(flow.Tensor([2, 2]))
-            self.make_contiguous_params_group()
 
         def forward(self, x):
             return x * self.w1 * self.w2
 
     m1 = Module1()
+    m1.make_contiguous_params_group()
     m2 = Module2()
+    m2.make_contiguous_params_group()
     optim1 = flow.optim.SGD(m1.parameters(), lr=1e-2, contiguous_params=True)
     optim2 = flow.optim.SGD(m2.parameters(), lr=1e-2, contiguous_params=True)
     x1 = flow.ones([1, 1])
@@ -147,7 +147,6 @@ def multi_module_lifecycle(test_case):
             super().__init__()
             self.w1 = flow.nn.Parameter(flow.Tensor([1, 1]))
             self.w2 = flow.nn.Parameter(flow.Tensor([1, 1]))
-            self.make_contiguous_params_group()
 
         def forward(self, x):
             return x * self.w1 * self.w2
@@ -157,13 +156,14 @@ def multi_module_lifecycle(test_case):
             super().__init__()
             self.w1 = flow.nn.Parameter(flow.Tensor([2, 2]))
             self.w2 = flow.nn.Parameter(flow.Tensor([2, 2]))
-            self.make_contiguous_params_group()
 
         def forward(self, x):
             return x * self.w1 * self.w2
 
     m1 = Module1()
+    m1.make_contiguous_params_group()
     m2 = Module2()
+    m2.make_contiguous_params_group()
     del m1
     cpg = CPG(list(m2.parameters()))
     test_case.assertTrue(len(cpg.grouped_parameters) == 1)

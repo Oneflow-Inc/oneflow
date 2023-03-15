@@ -47,11 +47,6 @@ class ParamGroup(object):
                     "parameters in ParamGroup must be Tensor or ProxyTensor."
                 )
 
-        # do not hold module in options
-        module = default_options.pop("module", None)
-        if parameters.get("module", None):
-            module = parameters["module"]
-
         self._options = deepcopy(default_options)
         # rewrite options in default_options
         for key in self._options:
@@ -59,7 +54,7 @@ class ParamGroup(object):
                 self._options[key] = parameters[key]
         # add excess keys in dict
         for key in parameters:
-            if key not in self._options and key not in ["params", "module"]:
+            if key not in self._options and key != "params":
                 self._options[key] = parameters[key]
 
         self._enable_clip_grad = False
@@ -71,10 +66,7 @@ class ParamGroup(object):
         self._make_options_valid()
         self.contiguous_params = self._options.get("contiguous_params", False)
         if self.contiguous_params:
-            assert (
-                module is not None
-            ), "module itself is needed while building contiguous parameters."
-            self.params_group = ContiguousParamsGroup([parameters["params"]], module)
+            self.params_group = ContiguousParamsGroup([parameters["params"]])
 
     def _make_options_valid(self):
         """handle the conflict between optimizer options
@@ -172,7 +164,6 @@ class Optimizer(object):
             "params_group",
             "_parameters",
             "contiguous_params",
-            "module",
         ]
 
     def add_param_group(self, param_group) -> None:

@@ -24,6 +24,7 @@ from optimizer_test_util import clip_grad_norm_np
 
 import oneflow as flow
 from oneflow.nn.parameter import Parameter
+from oneflow.nn.utils.parameters_grouping import ContiguousParamsGroup as CPG
 
 
 def compare_with_numpy_rmsprop(
@@ -47,17 +48,14 @@ def compare_with_numpy_rmsprop(
     init_value = np.random.uniform(size=x_shape).astype(np.float32)
 
     def train_by_oneflow():
-        class Mul(flow.nn.Module):
-            def __init__(self) -> None:
-                super().__init__()
-                self.x = Parameter(flow.Tensor(init_value, device=flow.device(device)))
-
-        m = Mul().to(device)
-        m.make_contiguous_params_group()
+        x = Parameter(flow.Tensor(init_value, device=flow.device(device)))
+        param_list = list()
+        param_list.append(x)
+        cpg = CPG(param_list, for_module=True)
         rmsprop = flow.optim.RMSprop(
             [
                 {
-                    "params": [m.x],
+                    "params": param_list,
                     "lr": learning_rate,
                     "alpha": alpha,
                     "eps": eps,
@@ -65,7 +63,6 @@ def compare_with_numpy_rmsprop(
                     "momentum": momentum,
                     "centered": centered,
                     "contiguous_params": contiguous_params,
-                    "module": m,
                 }
             ]
         )
@@ -77,7 +74,7 @@ def compare_with_numpy_rmsprop(
                 requires_grad=False,
                 device=flow.device(device),
             )
-            loss = flow.sum(m.x * grad_tensor)
+            loss = flow.sum(x * grad_tensor)
             loss.backward()
             rmsprop.step()
             rmsprop.zero_grad()
@@ -86,11 +83,13 @@ def compare_with_numpy_rmsprop(
             train_one_iter(random_grad_seq[i])
             if i == reload_state_step:
                 state_dict = rmsprop.state_dict()
-                rmsprop = flow.optim.RMSprop(
-                    [m.x], contiguous_params=contiguous_params, module=m
-                )
+                rmsprop = flow.optim.RMSprop([x], contiguous_params=contiguous_params)
+                if save_load_by_pickle:
+                    with tempfile.NamedTemporaryFile() as f:
+                        flow.save(state_dict, f.name)
+                        state_dict = flow.load(f.name)
                 rmsprop.load_state_dict(state_dict)
-        return m.x
+        return x
 
     def train_by_numpy():
         x = init_value
@@ -145,17 +144,14 @@ def compare_with_numpy_rmsprop_clip_grad(
     init_value = np.random.uniform(size=x_shape).astype(np.float32)
 
     def train_by_oneflow():
-        class Mul(flow.nn.Module):
-            def __init__(self) -> None:
-                super().__init__()
-                self.x = Parameter(flow.Tensor(init_value, device=flow.device(device)))
-
-        m = Mul().to(device)
-        m.make_contiguous_params_group()
+        x = Parameter(flow.Tensor(init_value, device=flow.device(device)))
+        param_list = list()
+        param_list.append(x)
+        cpg = CPG(param_list, for_module=True)
         rmsprop = flow.optim.RMSprop(
             [
                 {
-                    "params": [m.x],
+                    "params": param_list,
                     "lr": learning_rate,
                     "alpha": alpha,
                     "eps": eps,
@@ -165,7 +161,6 @@ def compare_with_numpy_rmsprop_clip_grad(
                     "clip_grad_max_norm": clip_grad_max_norm,
                     "clip_grad_norm_type": clip_grad_norm_type,
                     "contiguous_params": contiguous_params,
-                    "module": m,
                 }
             ]
         )
@@ -177,7 +172,7 @@ def compare_with_numpy_rmsprop_clip_grad(
                 requires_grad=False,
                 device=flow.device(device),
             )
-            loss = flow.sum(m.x * grad_tensor)
+            loss = flow.sum(x * grad_tensor)
             loss.backward()
             rmsprop.clip_grad()
             rmsprop.step()
@@ -187,15 +182,13 @@ def compare_with_numpy_rmsprop_clip_grad(
             train_one_iter(random_grad_seq[i])
             if i == reload_state_step:
                 state_dict = rmsprop.state_dict()
-                rmsprop = flow.optim.RMSprop(
-                    [m.x], contiguous_params=contiguous_params, module=m
-                )
+                rmsprop = flow.optim.RMSprop([x], contiguous_params=contiguous_params)
                 if save_load_by_pickle:
                     with tempfile.NamedTemporaryFile() as f:
                         flow.save(state_dict, f.name)
                         state_dict = flow.load(f.name)
                 rmsprop.load_state_dict(state_dict)
-        return m.x
+        return x
 
     def train_by_numpy():
         x = init_value
