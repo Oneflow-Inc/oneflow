@@ -27,9 +27,11 @@ namespace functional {
 
 namespace impl {
 
-#define INPLACE_UNARY_FLOAT_FUNC_SEQ      \
-  OF_PP_MAKE_TUPLE_SEQ("sin", InplaceSin) \
-  OF_PP_MAKE_TUPLE_SEQ("floor", InplaceFloor)
+#define INPLACE_UNARY_FLOAT_FUNC_SEQ          \
+  OF_PP_MAKE_TUPLE_SEQ("sin", InplaceSin)     \
+  OF_PP_MAKE_TUPLE_SEQ("floor", InplaceFloor) \
+  OF_PP_MAKE_TUPLE_SEQ("ceil", InplaceCeil)   \
+  OF_PP_MAKE_TUPLE_SEQ("round", InplaceRound)
 
 #define UNARY_PRIMITIVE_FUNC_BWD_WITH_DY_X_SEQ    \
   OF_PP_MAKE_TUPLE_SEQ("abs", Abs)                \
@@ -50,6 +52,7 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("erf", Erf)                   \
   OF_PP_MAKE_TUPLE_SEQ("erfc", Erfc)                 \
   OF_PP_MAKE_TUPLE_SEQ("exp", Exp)                   \
+  OF_PP_MAKE_TUPLE_SEQ("exp2", Exp2)                 \
   OF_PP_MAKE_TUPLE_SEQ("expm1", Expm1)               \
   OF_PP_MAKE_TUPLE_SEQ("log", Log)                   \
   OF_PP_MAKE_TUPLE_SEQ("log2", Log2)                 \
@@ -179,6 +182,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   ADD_UNARY_FUNCTOR_WITH_DY_X(Erf, "Erf");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Erfc, "Erfc");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Exp, "Exp");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Exp2, "Exp2");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Expm1, "Expm1");
   m.add_functor<FloorFunctor>("Floor");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Lgamma, "Lgamma");
@@ -206,6 +210,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<LogicalNotFunctor>("LogicalNot");
   m.add_functor<InplaceSinFunctor>("Sin_");
   m.add_functor<InplaceFloorFunctor>("Floor_");
+  m.add_functor<InplaceCeilFunctor>("Ceil_");
+  m.add_functor<InplaceRoundFunctor>("Round_");
 };
 
 #undef ADD_UNARY_FUNCTOR_WITH_DY_X
