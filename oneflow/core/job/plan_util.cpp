@@ -279,7 +279,7 @@ void PlanUtil::MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job, int64
     } else {
       if (logical_chain_id2machine_id2mem_block_id.find(merged_logical_chain_id)
           == logical_chain_id2machine_id2mem_block_id.end()) {
-        // Skip when do rank compile and this logical chain group is not related with this rank.
+        // Skip when doing rank compile and this logical chain group is not related to this rank.
         continue;
       }
     }
