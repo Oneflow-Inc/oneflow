@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/cambricon/ep/mlu_device.h"
 #include "oneflow/cambricon/common/mlu_util.h"
 #include "oneflow/core/ep/include/stream.h"
+#include "oneflow/core/vm/caching_allocator.h"
 
 namespace oneflow {
 namespace ep {
@@ -46,11 +47,14 @@ class MluStream : public Stream {
   cnrtQueue_t mlu_stream() const;
   cnnlHandle_t cnnl_handle() const;
 
+  vm::CachingAllocator* workspace_allocator() { return workspace_allocator_.get(); }
+
  private:
   cnrtQueue_t mlu_stream_{};
   int device_index_;
   MluDevice* device_;
   cnnlHandle_t cnnl_handle_;
+  std::unique_ptr<vm::CachingAllocator> workspace_allocator_;
 };
 
 }  // namespace ep

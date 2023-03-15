@@ -13,12 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/hardware/node_device_descriptor_manager.h"
+#include "oneflow/cambricon/ep/mlu_stream.h"
+
 #include "oneflow/cambricon/common/mlu_util.h"
 #include "oneflow/cambricon/common/mlu_guard.h"
-#include "oneflow/cambricon/ep/mlu_stream.h"
-#include "oneflow/cambricon/ep/mlu_event.h"
 #include "oneflow/cambricon/ep/mlu_device.h"
+#include "oneflow/cambricon/ep/mlu_event.h"
+#include "oneflow/core/hardware/node_device_descriptor_manager.h"
+#include "oneflow/core/vm/bin_allocator.h"
+#include "oneflow/core/vm/ep_backend_allocator.h"
+#include "oneflow/core/vm/thread_safe_guard.h"
 
 namespace oneflow {
 namespace ep {
@@ -34,6 +38,12 @@ MluStream::MluStream(MluDevice* device) : device_index_(device->device_index()),
   // see:https://www.cambricon.com/docs/sdk_1.10.0/cambricon_cnnl_1.15.2/developer_guide/cnnl_api/data/datatype.html#_CPPv412cnnlHandle_t
   OF_CNNL_CHECK(cnnlCreate(&cnnl_handle_));
   OF_CNNL_CHECK(cnnlSetQueue(cnnl_handle_, mlu_stream_));
+
+  std::shared_ptr<ep::Device> ep_device(device, /*empty deleter*/ [](auto p) {});
+  auto ep_backend_allocator =
+      std::make_unique<vm::EpBackendAllocator>(ep_device, ep::AllocationOptions{});
+  workspace_allocator_.reset(new vm::BinAllocator<vm::ThreadSafeLock>(
+      ep::kMaxAlignmentRequirement, std::move(ep_backend_allocator)));
 }
 
 MluStream::~MluStream() {
