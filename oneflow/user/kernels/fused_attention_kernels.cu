@@ -634,15 +634,22 @@ class FusedAttentionConcatPastKeyValueKernel final : public user_op::OpKernel,
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const Tensor* past_key = ctx->Tensor4ArgNameAndIndex("past_key", 0);
-    const Tensor* past_value = ctx->Tensor4ArgNameAndIndex("past_value", 0);
     const Tensor* key = ctx->Tensor4ArgNameAndIndex("key", 0);
     const Tensor* value = ctx->Tensor4ArgNameAndIndex("value", 0);
     Tensor* output_key = ctx->Tensor4ArgNameAndIndex("output_key", 0);
     Tensor* output_value = ctx->Tensor4ArgNameAndIndex("output_value", 0);
-    const DataType data_type = past_key->data_type();
-    CHECK_EQ(past_value->data_type(), data_type);
-    CHECK_EQ(key->data_type(), data_type);
+    const DataType data_type = key->data_type();
+    const Tensor* past_key = nullptr;
+    const Tensor* past_value = nullptr;
+    if (ctx->has_input("past_key", 0)) {
+      CHECK(ctx->has_input("past_value", 0));
+      past_key = ctx->Tensor4ArgNameAndIndex("past_key", 0);
+      past_value = ctx->Tensor4ArgNameAndIndex("past_value", 0);
+      CHECK_EQ(past_key->data_type(), data_type);
+      CHECK_EQ(past_value->data_type(), data_type);
+    } else {
+      CHECK(!ctx->has_input("past_value", 0));
+    }
     CHECK_EQ(value->data_type(), data_type);
     CHECK_EQ(output_key->data_type(), data_type);
     CHECK_EQ(output_value->data_type(), data_type);
@@ -670,33 +677,6 @@ class FusedAttentionConcatPastKeyValueKernel final : public user_op::OpKernel,
           *offset /= pack_size;
         };
 
-    int64_t past_key_b = 0;
-    int64_t past_key_m = 0;
-    int64_t past_key_h = 0;
-    int64_t past_key_k = 0;
-    int64_t past_key_b_stride = 0;
-    int64_t past_key_m_stride = 0;
-    int64_t past_key_h_stride = 0;
-    int64_t past_key_offset = 0;
-    ParsePackedDims(past_key->shape_view(), past_key_layout, Optional<int64_t>(), key_head_size, 1,
-                    &past_key_b, &past_key_m, &past_key_h, &past_key_k, &past_key_b_stride,
-                    &past_key_m_stride, &past_key_h_stride, &past_key_offset, pack_size);
-
-    int64_t past_value_b = 0;
-    int64_t past_value_m = 0;
-    int64_t past_value_h = 0;
-    int64_t past_value_k = 0;
-    int64_t past_value_b_stride = 0;
-    int64_t past_value_m_stride = 0;
-    int64_t past_value_h_stride = 0;
-    int64_t past_value_offset = 0;
-    ParsePackedDims(past_value->shape_view(), past_value_layout, past_key_h, key_head_size, 2,
-                    &past_value_b, &past_value_m, &past_value_h, &past_value_k,
-                    &past_value_b_stride, &past_value_m_stride, &past_value_h_stride,
-                    &past_value_offset, pack_size);
-    CHECK_EQ(past_value_b, past_key_b);
-    CHECK_EQ(past_value_m, past_key_m);
-
     int64_t key_b = 0;
     int64_t key_m = 0;
     int64_t key_h = 0;
@@ -705,10 +685,9 @@ class FusedAttentionConcatPastKeyValueKernel final : public user_op::OpKernel,
     int64_t key_m_stride = 0;
     int64_t key_h_stride = 0;
     int64_t key_offset = 0;
-    ParsePackedDims(key->shape_view(), key_layout, past_key_h, key_head_size, 1, &key_b, &key_m,
-                    &key_h, &key_k, &key_b_stride, &key_m_stride, &key_h_stride, &key_offset,
-                    pack_size);
-    CHECK_EQ(key_b, past_value_b);
+    ParsePackedDims(key->shape_view(), key_layout, Optional<int64_t>(), key_head_size, 1, &key_b,
+                    &key_m, &key_h, &key_k, &key_b_stride, &key_m_stride, &key_h_stride,
+                    &key_offset, pack_size);
 
     int64_t value_b = 0;
     int64_t value_m = 0;
@@ -718,11 +697,42 @@ class FusedAttentionConcatPastKeyValueKernel final : public user_op::OpKernel,
     int64_t value_m_stride = 0;
     int64_t value_h_stride = 0;
     int64_t value_offset = 0;
-    ParsePackedDims(value->shape_view(), value_layout, past_key_h, key_head_size, 2, &value_b,
-                    &value_m, &value_h, &value_k, &value_b_stride, &value_m_stride, &value_h_stride,
+    ParsePackedDims(value->shape_view(), value_layout, key_h, key_head_size, 2, &value_b, &value_m,
+                    &value_h, &value_k, &value_b_stride, &value_m_stride, &value_h_stride,
                     &value_offset, pack_size);
-    CHECK_EQ(value_b, past_key_b);
+    CHECK_EQ(value_b, key_b);
     CHECK_EQ(value_m, key_m);
+
+    int64_t past_key_b = 0;
+    int64_t past_key_m = 0;
+    int64_t past_key_h = 0;
+    int64_t past_key_k = 0;
+    int64_t past_key_b_stride = 0;
+    int64_t past_key_m_stride = 0;
+    int64_t past_key_h_stride = 0;
+    int64_t past_key_offset = 0;
+    if (past_key != nullptr) {
+      ParsePackedDims(past_key->shape_view(), past_key_layout, key_h, key_head_size, 1, &past_key_b,
+                      &past_key_m, &past_key_h, &past_key_k, &past_key_b_stride, &past_key_m_stride,
+                      &past_key_h_stride, &past_key_offset, pack_size);
+    }
+
+    int64_t past_value_b = 0;
+    int64_t past_value_m = 0;
+    int64_t past_value_h = 0;
+    int64_t past_value_k = 0;
+    int64_t past_value_b_stride = 0;
+    int64_t past_value_m_stride = 0;
+    int64_t past_value_h_stride = 0;
+    int64_t past_value_offset = 0;
+    if (past_value != nullptr) {
+      ParsePackedDims(past_value->shape_view(), past_value_layout, key_h, key_head_size, 2,
+                      &past_value_b, &past_value_m, &past_value_h, &past_value_k,
+                      &past_value_b_stride, &past_value_m_stride, &past_value_h_stride,
+                      &past_value_offset, pack_size);
+    }
+    CHECK_EQ(past_value_b, past_key_b);
+    CHECK_EQ(past_value_m, past_key_m);
 
     int64_t output_key_b = 0;
     int64_t output_key_m = 0;
@@ -732,11 +742,11 @@ class FusedAttentionConcatPastKeyValueKernel final : public user_op::OpKernel,
     int64_t output_key_m_stride = 0;
     int64_t output_key_h_stride = 0;
     int64_t output_key_offset = 0;
-    ParsePackedDims(output_key->shape_view(), past_key_layout, past_key_h, key_head_size, 1,
+    ParsePackedDims(output_key->shape_view(), past_key_layout, key_h, key_head_size, 1,
                     &output_key_b, &output_key_m, &output_key_h, &output_key_k,
                     &output_key_b_stride, &output_key_m_stride, &output_key_h_stride,
                     &output_key_offset, pack_size);
-    CHECK_EQ(output_key_b, past_key_b);
+    CHECK_EQ(output_key_b, key_b);
     CHECK_EQ(output_key_m, past_key_m + key_m);
 
     int64_t output_value_b = 0;
@@ -747,16 +757,16 @@ class FusedAttentionConcatPastKeyValueKernel final : public user_op::OpKernel,
     int64_t output_value_m_stride = 0;
     int64_t output_value_h_stride = 0;
     int64_t output_value_offset = 0;
-    ParsePackedDims(output_value->shape_view(), past_value_layout, past_key_h, key_head_size, 2,
+    ParsePackedDims(output_value->shape_view(), past_value_layout, key_h, key_head_size, 2,
                     &output_value_b, &output_value_m, &output_value_h, &output_value_k,
                     &output_value_b_stride, &output_value_m_stride, &output_value_h_stride,
                     &output_value_offset, pack_size);
-    CHECK_EQ(output_value_b, past_key_b);
+    CHECK_EQ(output_value_b, key_b);
     CHECK_EQ(output_value_m, past_value_m + value_m);
 
     int64_t max_tensor_elem = (1 << 30) * pack_size;
-    CHECK(past_key->shape_view().elem_cnt() <= max_tensor_elem
-          && past_value->shape_view().elem_cnt() <= max_tensor_elem
+    CHECK((past_key == nullptr || past_key->shape_view().elem_cnt() <= max_tensor_elem)
+          && (past_value == nullptr || past_value->shape_view().elem_cnt() <= max_tensor_elem)
           && key->shape_view().elem_cnt() <= max_tensor_elem
           && value->shape_view().elem_cnt() <= max_tensor_elem
           && output_key->shape_view().elem_cnt() <= max_tensor_elem
@@ -765,7 +775,7 @@ class FusedAttentionConcatPastKeyValueKernel final : public user_op::OpKernel,
     int64_t count = output_key_b * output_key_m * output_key_h * output_key_k;
     BatchConcatParam<int32_t> kv;
 
-    kv.params[0].past_ptr = past_key->dptr();
+    kv.params[0].past_ptr = past_key == nullptr ? nullptr : past_key->dptr();
     kv.params[0].ptr = key->dptr();
     kv.params[0].output_ptr = output_key->mut_dptr();
     kv.params[0].past_offset = past_key_offset;
@@ -786,7 +796,7 @@ class FusedAttentionConcatPastKeyValueKernel final : public user_op::OpKernel,
     kv.params[0].output_kh = output_key_k * output_key_h;
     kv.params[0].output_k = output_key_k;
 
-    kv.params[1].past_ptr = past_value->dptr();
+    kv.params[1].past_ptr = past_value == nullptr ? nullptr : past_value->dptr();
     kv.params[1].ptr = value->dptr();
     kv.params[1].output_ptr = output_value->mut_dptr();
     kv.params[1].past_offset = past_value_offset;

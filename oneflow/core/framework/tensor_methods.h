@@ -68,6 +68,8 @@ Maybe<void> InplaceSqueeze(const std::shared_ptr<Tensor>& input,
 
 Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const Shape& expand_shape);
 
+Maybe<void> InplaceExpand(const std::shared_ptr<Tensor>& input, const Shape& expand_shape);
+
 Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t dim, const int64_t start,
                      const int64_t length);
 
