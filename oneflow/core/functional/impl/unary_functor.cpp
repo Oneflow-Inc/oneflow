@@ -27,9 +27,11 @@ namespace functional {
 
 namespace impl {
 
-#define INPLACE_UNARY_FLOAT_FUNC_SEQ      \
-  OF_PP_MAKE_TUPLE_SEQ("sin", InplaceSin) \
-  OF_PP_MAKE_TUPLE_SEQ("floor", InplaceFloor)
+#define INPLACE_UNARY_FLOAT_FUNC_SEQ          \
+  OF_PP_MAKE_TUPLE_SEQ("sin", InplaceSin)     \
+  OF_PP_MAKE_TUPLE_SEQ("floor", InplaceFloor) \
+  OF_PP_MAKE_TUPLE_SEQ("ceil", InplaceCeil)   \
+  OF_PP_MAKE_TUPLE_SEQ("round", InplaceRound)
 
 #define UNARY_PRIMITIVE_FUNC_BWD_WITH_DY_X_SEQ    \
   OF_PP_MAKE_TUPLE_SEQ("abs", Abs)                \
@@ -208,6 +210,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<LogicalNotFunctor>("LogicalNot");
   m.add_functor<InplaceSinFunctor>("Sin_");
   m.add_functor<InplaceFloorFunctor>("Floor_");
+  m.add_functor<InplaceCeilFunctor>("Ceil_");
+  m.add_functor<InplaceRoundFunctor>("Round_");
 };
 
 #undef ADD_UNARY_FUNCTOR_WITH_DY_X
