@@ -35,7 +35,7 @@ class CompTaskNode : public TaskNode, public FakeConsumedRegstProvider {
   void ConsumeFakeRegstsIf() override;
   void EraseFakeRegstsIf() override;
 
-  // ConsumeFakeRegsts is used for initializing CompTaskNode.consumed_regsts_ on other ranks.
+  // ConsumeFakeRegsts is used for initializing CompTaskNode.consumed_regsts_ on the other ranks.
   virtual void ConsumeFakeRegsts() = 0;
   void ConsumeFakeRegst(const std::string& regst_name);
 
