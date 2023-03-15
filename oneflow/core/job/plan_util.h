@@ -30,8 +30,8 @@ namespace oneflow {
 struct PlanUtil {
   static RegstDescProto* GetSoleProducedDataRegst(TaskProto* task_proto);
   static std::function<const TaskProto*(int64_t)> MakeGetterTaskProto4TaskId(const Plan& plan);
-  // limited_rank equals -1 means taking care of all ranks. Otherwise, only task care about rank
-  // liimited_rank.
+  // limited_rank equals -1 means taking care of all ranks.
+  // Otherwise, only take care of rank limited_rank.
   static void MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job,
                                               int64_t limited_rank = -1);
   static void SetUniqueMemBlockId4UnreusedMemRegst(Plan* plan);
