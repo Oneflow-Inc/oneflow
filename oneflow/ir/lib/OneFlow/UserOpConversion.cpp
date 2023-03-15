@@ -153,9 +153,9 @@ LogicalResult doConvertUserOpAttributes(llvm::StringRef op_type_name, Dictionary
         user_attr.mutable_at_complex_double();
         auto ref = attr.dyn_cast<ArrayAttr>();
         user_attr.mutable_at_complex_double()->set_real(
-            ref.getValue().at(0).dyn_cast<FloatAttr>().getValue().convertToDouble());
+            ref.getValue()[0].dyn_cast<FloatAttr>().getValue().convertToDouble());
         user_attr.mutable_at_complex_double()->set_real(
-            ref.getValue().at(1).dyn_cast<FloatAttr>().getValue().convertToDouble());
+            ref.getValue()[1].dyn_cast<FloatAttr>().getValue().convertToDouble());
       } else {
         return failure();
       }
