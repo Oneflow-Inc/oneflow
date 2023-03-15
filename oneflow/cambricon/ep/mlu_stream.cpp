@@ -13,9 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job/global_for.h"
-#include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/hardware/node_device_descriptor_manager.h"
+#include "oneflow/cambricon/common/mlu_util.h"
+#include "oneflow/cambricon/common/mlu_guard.h"
 #include "oneflow/cambricon/ep/mlu_stream.h"
 #include "oneflow/cambricon/ep/mlu_event.h"
 #include "oneflow/cambricon/ep/mlu_device.h"

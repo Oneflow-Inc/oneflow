@@ -14,8 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/ep/include/primitive/memcpy.h"
+
+#include "oneflow/cambricon/common/mlu_util.h"
 #include "oneflow/cambricon/ep/mlu_stream.h"
-#include "oneflow/cambricon/ep/mlu_util.h"
 
 namespace oneflow {
 namespace ep {

@@ -19,11 +19,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/device.h"
 #include "oneflow/core/common/data_type.h"
 
-#include "cnrt.h"
-#include "cn_api.h"
-
 namespace oneflow {
-
 namespace ep {
 
 class MluDevice : public Device {
@@ -65,7 +61,6 @@ class MluDevice : public Device {
 };
 
 }  // namespace ep
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_CAMBRICON_EP_MLU_DEVICE_H_

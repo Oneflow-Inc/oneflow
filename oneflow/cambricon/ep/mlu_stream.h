@@ -16,9 +16,9 @@ limitations under the License.
 #ifndef ONEFLOW_CAMBRICON_EP_MLU_STREAM_H_
 #define ONEFLOW_CAMBRICON_EP_MLU_STREAM_H_
 
-#include "oneflow/core/ep/include/stream.h"
 #include "oneflow/cambricon/ep/mlu_device.h"
-#include "oneflow/cambricon/ep/mlu_util.h"
+#include "oneflow/cambricon/common/mlu_util.h"
+#include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
 namespace ep {

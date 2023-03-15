@@ -14,8 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/cambricon/ep/mlu_device_manager.h"
+
+#include "oneflow/cambricon/common/mlu_util.h"
+#include "oneflow/cambricon/common/mlu_guard.h"
 #include "oneflow/cambricon/ep/mlu_device.h"
-#include "oneflow/cambricon/ep/mlu_util.h"
 
 namespace oneflow {
 namespace ep {

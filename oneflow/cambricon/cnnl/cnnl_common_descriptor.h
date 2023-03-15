@@ -19,7 +19,7 @@ limitations under the License.
 #include <memory>
 #include <vector>
 
-#include "oneflow/cambricon/ep/mlu_util.h"
+#include "oneflow/cambricon/common/mlu_util.h"
 #include "cnnl.h"
 
 // Modified from Cambricon catch for PyTorch.

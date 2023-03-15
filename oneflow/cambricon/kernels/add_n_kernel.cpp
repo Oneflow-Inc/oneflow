@@ -13,15 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <cstdint>
+#include "oneflow/cambricon/common/mlu_util.h"
 #include "oneflow/cambricon/ep/mlu_stream.h"
-#include "oneflow/cambricon/ep/mlu_util.h"
+#include "oneflow/cambricon/cnnl/cnnl_tensor_descriptor.h"
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/common/data_type.pb.h"
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/cambricon/cnnl/cnnl_tensor_descriptor.h"
 
 namespace oneflow {
 
@@ -52,12 +49,15 @@ class MluAddNKernel final : public user_op::OpKernel {
     input_desc.set(in_0);
     output_desc.set(out);
     std::vector<cnnlTensorDescriptor_t> input_descs_vec{in_num, input_desc.desc()};
+    // The workspace is used for broadcasting.
+    // Set 0 since oneflow addn has no broadcasting.
     size_t addn_workspace_size = 0;
     void* addn_workspace = nullptr;
 
     OF_CNNL_CHECK(cnnlAddN_v2(ctx->stream()->As<ep::MluStream>()->cnnl_handle(),
-                           input_descs_vec.data(), input_dptrs_vec.data(), in_num,
-                           output_desc.desc(), out->mut_dptr(), addn_workspace, addn_workspace_size));
+                              input_descs_vec.data(), input_dptrs_vec.data(), in_num,
+                              output_desc.desc(), out->mut_dptr(), addn_workspace,
+                              addn_workspace_size));
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

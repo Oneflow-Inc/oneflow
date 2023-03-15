@@ -13,31 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CAMBRICON_EP_MLU_EVENT_H_
-#define ONEFLOW_CAMBRICON_EP_MLU_EVENT_H_
+#ifndef ONEFLOW_CAMBRICON_COMMON_MLU_GUARD_H_
+#define ONEFLOW_CAMBRICON_COMMON_MLU_GUARD_H_
 
-#include "oneflow/cambricon/common/mlu_util.h"
-#include "oneflow/core/ep/include/event.h"
+#include "oneflow/core/common/util.h"  // OF_DISALLOW_COPY_AND_MOVE
 
 namespace oneflow {
-namespace ep {
 
-class MluEvent : public Event {
+class MluCurrentDeviceGuard final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(MluEvent);
-  explicit MluEvent(unsigned int flags);
-  ~MluEvent() override;
-
-  Maybe<bool> QueryDone() override;
-  Maybe<void> Sync() override;
-
-  cnrtNotifier_t mlu_event();
+  OF_DISALLOW_COPY_AND_MOVE(MluCurrentDeviceGuard);
+  explicit MluCurrentDeviceGuard(int32_t dev_id);
+  MluCurrentDeviceGuard();
+  ~MluCurrentDeviceGuard();
 
  private:
-  cnrtNotifier_t mlu_event_;
+  int32_t saved_dev_id_ = -1;
 };
 
-}  // namespace ep
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CAMBRICON_EP_MLU_EVENT_H_
+#endif  // ONEFLOW_CAMBRICON_COMMON_MLU_GUARD_H_

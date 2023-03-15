@@ -13,31 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CAMBRICON_EP_MLU_EVENT_H_
-#define ONEFLOW_CAMBRICON_EP_MLU_EVENT_H_
+#include "oneflow/cambricon/common/mlu_guard.h"
 
 #include "oneflow/cambricon/common/mlu_util.h"
-#include "oneflow/core/ep/include/event.h"
+#include "oneflow/core/platform/include/pthread_fork.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
-namespace ep {
 
-class MluEvent : public Event {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(MluEvent);
-  explicit MluEvent(unsigned int flags);
-  ~MluEvent() override;
+MluCurrentDeviceGuard::MluCurrentDeviceGuard(int32_t dev_id) {
+  CHECK(!pthread_fork::IsForkedSubProcess()) << pthread_fork::kOfDeviceNotSupportInForkedSubProcess;
+  OF_MLU_CHECK(cnrtGetDevice(&saved_dev_id_));
+  OF_MLU_CHECK(cnrtSetDevice(dev_id));
+}
 
-  Maybe<bool> QueryDone() override;
-  Maybe<void> Sync() override;
+MluCurrentDeviceGuard::MluCurrentDeviceGuard() { OF_MLU_CHECK(cnrtGetDevice(&saved_dev_id_)); }
 
-  cnrtNotifier_t mlu_event();
+MluCurrentDeviceGuard::~MluCurrentDeviceGuard() { OF_MLU_CHECK(cnrtSetDevice(saved_dev_id_)); }
 
- private:
-  cnrtNotifier_t mlu_event_;
-};
-
-}  // namespace ep
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CAMBRICON_EP_MLU_EVENT_H_

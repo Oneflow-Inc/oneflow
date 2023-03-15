@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/cambricon/ep/mlu_device.h"
+
+#include "oneflow/cambricon/common/mlu_util.h"
+#include "oneflow/cambricon/common/mlu_guard.h"
 #include "oneflow/cambricon/ep/mlu_event.h"
 #include "oneflow/cambricon/ep/mlu_stream.h"
 
@@ -113,7 +116,7 @@ void MluDevice::Free(const AllocationOptions& attr, void* ptr) {
 
 Maybe<void> MluDevice::AllocPinned(const AllocationOptions& options, void** ptr, size_t size) {
   MluCurrentDeviceGuard guard(device_index_);
-  cnrtRet_t err = NumaAwareMluMallocHost(device_index_, ptr, size);
+  cnrtRet_t err = cnrtHostMalloc(ptr, size);
   if (err != cnrtSuccess) {
     return Error::RuntimeError() << "MluDevice::AllocPinned error";
   } else {
