@@ -32,11 +32,6 @@ class Scalar {
   Scalar(const std::complex<T>& cvalue)
       : cvalue_{.real = cvalue.real(), .imag = cvalue.imag()}, active_tag_(HAS_C) {}
 
-  // NOTE(lml): This constructor is not used anywhere.
-  template<typename T, typename std::enable_if<std::is_floating_point<T>::value, int>::type = 0>
-  OF_DEVICE_FUNC Scalar(const T& real, const T& imag)
-      : cvalue_{.real = real, .imag = imag}, active_tag_(HAS_C) {}
-
   template<typename T, typename std::enable_if<std::is_same<T, bool>::value, int>::type = 0>
   OF_DEVICE_FUNC Scalar(const T& value) : value_{.b = value}, active_tag_(HAS_B) {}
 
