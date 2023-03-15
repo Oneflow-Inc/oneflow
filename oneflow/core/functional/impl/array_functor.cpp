@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/job/nd_sbp_util.h"
+#include <complex>
 
 namespace oneflow {
 namespace one {
@@ -197,7 +198,7 @@ class GlobalConstantFunctor {
                                                  "is_complex_value", "floating_value",
                                                  "is_floating_value", "integer_value", "nd_sbp");
     if (IsComplexDataType(dtype->data_type())) {
-      attrs.SetAllAttrs(shape, dtype->data_type(), value.ToComplexNum(), true, NullOpt, false,
+      attrs.SetAllAttrs(shape, dtype->data_type(), value.Value<std::complex<double>>(), true, NullOpt, false,
                         NullOpt, NullOpt);
     } else if (IsIntegralDataType(dtype->data_type())) {
       attrs.SetAllAttrs(shape, dtype->data_type(), NullOpt, false, NullOpt, false,
@@ -258,7 +259,7 @@ class ConstantFunctor {
         THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "complex_value", "is_complex_value",
                                        "floating_value", "is_floating_value", "integer_value");
     if (IsComplexDataType(dtype->data_type())) {
-      attrs.SetAllAttrs(shape, dtype->data_type(), value.ToComplexNum(), true, NullOpt, false,
+      attrs.SetAllAttrs(shape, dtype->data_type(), value.Value<std::complex<double>>(), true, NullOpt, false,
                         NullOpt);
     } else if (IsIntegralDataType(dtype->data_type())) {
       attrs.SetAllAttrs(shape, dtype->data_type(), NullOpt, false, NullOpt, false,

@@ -22,7 +22,7 @@ namespace oneflow {
 #define DEFINE_SCALAR_BINARY_OP(op)                                      \
   Scalar& Scalar::operator op##=(const Scalar& other) {                  \
     if (IsComplex() || other.IsComplex()) {                              \
-      std::complex<double> val = ToComplexNum() op other.ToComplexNum(); \
+      std::complex<double> val = Value<std::complex<double>>() op other.Value<std::complex<double>>(); \
       *this = val;                                                       \
     }                                                                    \
     if (IsFloatingPoint() || other.IsFloatingPoint()) {                  \
@@ -36,7 +36,7 @@ namespace oneflow {
   }                                                                      \
   Scalar Scalar::operator op(const Scalar& other) const {                \
     if (IsComplex() || other.IsComplex()) {                              \
-      std::complex<double> val = ToComplexNum() op other.ToComplexNum(); \
+      std::complex<double> val = Value<std::complex<double>>() op other.Value<std::complex<double>>(); \
       return Scalar(val);                                                \
     }                                                                    \
     if (IsFloatingPoint() || other.IsFloatingPoint()) {                  \

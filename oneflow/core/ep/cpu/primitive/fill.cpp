@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/fill.h"
 #include "oneflow/core/ep/cpu/primitive/type_seq.h"
 #include "oneflow/core/common/scalar.h"
-#include <complex>
 
 namespace oneflow {
 
@@ -38,16 +37,6 @@ float16 GetValue<float16>(Scalar value) {
 template<>
 bfloat16 GetValue<bfloat16>(Scalar value) {
   return static_cast<bfloat16>(GetValue<float>(value));
-}
-
-template<>
-std::complex<float> GetValue<std::complex<float>>(Scalar value) {
-  return static_cast<std::complex<float>>(value.ToComplexNum());
-}
-
-template<>
-std::complex<double> GetValue<std::complex<double>>(Scalar value) {
-  return value.ToComplexNum();
 }
 
 template<typename T>
