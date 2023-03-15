@@ -14,13 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from oneflow._C import erf
-from oneflow._C import erfc
-from oneflow._C import erfinv
-from oneflow._C import exp2
-from oneflow._C import expm1
-from oneflow._C import log1p
-from oneflow._C import log_softmax
-from oneflow._C import logsumexp
-from oneflow._C import round
-from oneflow._C import softmax
+
+import oneflow
+
+
+from .special_ops import erf
+from .special_ops import erfc
+from .special_ops import erfinv
+from .special_ops import exp2
+from .special_ops import expm1
+from .special_ops import log1p
+from .special_ops import log_softmax
+from .special_ops import logsumexp
+from .special_ops import round
+from .special_ops import softmax

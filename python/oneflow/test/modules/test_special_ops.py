@@ -99,7 +99,7 @@ class TestSpecialOps(flow.unittest.TestCase):
         y = torch.special.softmax(x, dim=random(low=0, high=num_dims).to(int))
         return y
 
-    @autotest(n=5, check_graph="auto")
+    @autotest(n=5, auto_backward="auto")
     def test_flow_logsumexp_with_random_data(test_case):
         device = random_device()
         x = random_tensor(4, random(0, 5), 2).to(device)
