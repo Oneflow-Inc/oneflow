@@ -349,10 +349,14 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
 
 /*static*/ auto FusedAttentionConcatPastKeyValueOp::InferDataType(user_op::InferContext* ctx)
     -> Maybe<void> {
-  const DataType data_type = ctx->InputDType("past_key", 0);
-  CHECK_EQ_OR_RETURN(ctx->InputDType("past_value", 0), data_type);
-  CHECK_EQ_OR_RETURN(ctx->InputDType("key", 0), data_type);
+  const DataType data_type = ctx->InputDType("key", 0);
   CHECK_EQ_OR_RETURN(ctx->InputDType("value", 0), data_type);
+  if (ctx->has_input("past_key", 0)) {
+    CHECK_EQ_OR_RETURN(ctx->InputDType("past_key", 0), data_type);
+  }
+  if (ctx->has_input("past_value", 0)) {
+    CHECK_EQ_OR_RETURN(ctx->InputDType("past_value", 0), data_type);
+  }
   ctx->SetOutputDType("output_key", 0, data_type);
   ctx->SetOutputDType("output_value", 0, data_type);
   return Maybe<void>::Ok();
@@ -363,35 +367,14 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   const int64_t key_head_size = ctx->Attr<int64_t>("key_head_size");
   CHECK_GE_OR_RETURN(key_head_size, 1);
 
-  const Shape& past_key_shape = ctx->InputShape("past_key", 0);
-  const std::string& past_key_layout = ctx->Attr<std::string>("past_key_layout");
-  int64_t past_k_b = 0;
-  int64_t past_k_m = 0;
-  int64_t past_k_h = 0;
-  int64_t past_k_k = 0;
-  JUST(ParseDims(past_key_shape, past_key_layout, Optional<int64_t>(), key_head_size, &past_k_b,
-                 &past_k_m, &past_k_h, &past_k_k));
-
-  const Shape& past_value_shape = ctx->InputShape("past_value", 0);
-  const std::string& past_value_layout = ctx->Attr<std::string>("past_value_layout");
-  int64_t past_v_b = 0;
-  int64_t past_v_m = 0;
-  int64_t past_v_h = 0;
-  int64_t past_v_k = 0;
-  JUST(ParseDims(past_value_shape, past_value_layout, past_k_h, past_k_k, &past_v_b, &past_v_m,
-                 &past_v_h, &past_v_k));
-  CHECK_EQ_OR_RETURN(past_v_b, past_k_b);
-  CHECK_EQ_OR_RETURN(past_v_m, past_k_m);
-  CHECK_EQ_OR_RETURN(past_v_k, past_k_k);
-
   const Shape& key_shape = ctx->InputShape("key", 0);
   const std::string& key_layout = ctx->Attr<std::string>("key_layout");
   int64_t k_b = 0;
   int64_t k_m = 0;
   int64_t k_h = 0;
   int64_t k_k = 0;
-  JUST(ParseDims(key_shape, key_layout, past_k_h, past_k_k, &k_b, &k_m, &k_h, &k_k));
-  CHECK_EQ_OR_RETURN(k_b, past_k_b);
+  JUST(
+      ParseDims(key_shape, key_layout, Optional<int64_t>(), key_head_size, &k_b, &k_m, &k_h, &k_k));
 
   const Shape& value_shape = ctx->InputShape("value", 0);
   const std::string& value_layout = ctx->Attr<std::string>("value_layout");
@@ -399,17 +382,40 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   int64_t v_m = 0;
   int64_t v_h = 0;
   int64_t v_k = 0;
-  JUST(ParseDims(value_shape, value_layout, past_k_h, past_k_k, &v_b, &v_m, &v_h, &v_k));
-  CHECK_EQ_OR_RETURN(v_b, past_k_b);
+  JUST(ParseDims(value_shape, value_layout, k_h, k_k, &v_b, &v_m, &v_h, &v_k));
+  CHECK_EQ_OR_RETURN(v_b, k_b);
   CHECK_EQ_OR_RETURN(v_m, k_m);
-  CHECK_EQ_OR_RETURN(v_k, past_k_k);
 
-  ctx->SetOutputShape(
-      "output_key", 0,
-      *JUST(LayoutToShape(past_k_b, past_k_m + k_m, past_k_h, past_k_k, past_key_layout)));
-  ctx->SetOutputShape(
-      "output_value", 0,
-      *JUST(LayoutToShape(past_v_b, past_v_m + v_m, past_v_h, past_v_k, past_value_layout)));
+  int64_t past_k_b = 0;
+  int64_t past_k_m = 0;
+  int64_t past_k_h = 0;
+  int64_t past_k_k = 0;
+  int64_t past_v_b = 0;
+  int64_t past_v_m = 0;
+  int64_t past_v_h = 0;
+  int64_t past_v_k = 0;
+  const std::string& past_key_layout = ctx->Attr<std::string>("past_key_layout");
+  const std::string& past_value_layout = ctx->Attr<std::string>("past_value_layout");
+  if (ctx->has_input("past_key", 0)) {
+    CHECK_OR_RETURN(ctx->has_input("past_value", 0));
+    const Shape& past_key_shape = ctx->InputShape("past_key", 0);
+    JUST(ParseDims(past_key_shape, past_key_layout, k_h, k_k, &past_k_b, &past_k_m, &past_k_h,
+                   &past_k_k));
+    CHECK_EQ_OR_RETURN(past_k_b, k_b);
+
+    const Shape& past_value_shape = ctx->InputShape("past_value", 0);
+    JUST(ParseDims(past_value_shape, past_value_layout, k_h, k_k, &past_v_b, &past_v_m, &past_v_h,
+                   &past_v_k));
+    CHECK_EQ_OR_RETURN(past_v_b, k_b);
+    CHECK_EQ_OR_RETURN(past_v_m, past_k_m);
+  } else {
+    CHECK_OR_RETURN(!ctx->has_input("past_value", 0));
+  }
+
+  ctx->SetOutputShape("output_key", 0,
+                      *JUST(LayoutToShape(k_b, past_k_m + k_m, k_h, k_k, past_key_layout)));
+  ctx->SetOutputShape("output_value", 0,
+                      *JUST(LayoutToShape(v_b, past_v_m + v_m, v_h, v_k, past_value_layout)));
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedAttentionConcatPastKeyValueOp::InferPhysicalTensorDesc(
@@ -429,10 +435,9 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
     int64_t m = 0;
     int64_t k = 0;
 
-    const user_op::TensorDesc& past_key =
-        ctx->LogicalTensorDesc4InputArgNameAndIndex("past_key", 0);
-    JUST(ParseDims(past_key.shape(), past_key_layout, Optional<int64_t>(), key_head_size, &b, &m,
-                   &num_heads, &k));
+    const user_op::TensorDesc& key = ctx->LogicalTensorDesc4InputArgNameAndIndex("key", 0);
+    JUST(ParseDims(key.shape(), key_layout, Optional<int64_t>(), key_head_size, &b, &m, &num_heads,
+                   &k));
   }
   const bool can_hk_split = num_heads % ctx->parallel_num() == 0;
   int64_t past_k_b_split_axis = -1;
@@ -448,11 +453,17 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   int64_t v_h_split_axis = -1;
   JUST(ParseSplitAxis(value_layout, can_hk_split, &v_b_split_axis, &v_h_split_axis));
 
+  std::vector<user_op::OpArg> past_key_arg;
+  if (ctx->user_op_conf().has_input("past_key", 0)) { past_key_arg.emplace_back("past_key", 0); }
+  std::vector<user_op::OpArg> past_value_arg;
+  if (ctx->user_op_conf().has_input("past_value", 0)) {
+    past_value_arg.emplace_back("past_value", 0);
+  }
   if (past_k_b_split_axis >= 0 && past_v_b_split_axis >= 0 && k_b_split_axis >= 0
       && v_b_split_axis >= 0) {
     ctx->NewBuilder()
-        .Split(user_op::OpArg("past_key", 0), past_k_b_split_axis)
-        .Split(user_op::OpArg("past_value", 0), past_v_b_split_axis)
+        .Split(past_key_arg, past_k_b_split_axis)
+        .Split(past_value_arg, past_v_b_split_axis)
         .Split(user_op::OpArg("key", 0), k_b_split_axis)
         .Split(user_op::OpArg("value", 0), v_b_split_axis)
         .Split(user_op::OpArg("output_key", 0), past_k_b_split_axis)
@@ -463,8 +474,8 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   if (past_k_h_split_axis >= 0 && past_v_h_split_axis >= 0 && k_h_split_axis >= 0
       && v_h_split_axis >= 0) {
     ctx->NewBuilder()
-        .Split(user_op::OpArg("past_key", 0), past_k_h_split_axis)
-        .Split(user_op::OpArg("past_value", 0), past_v_h_split_axis)
+        .Split(past_key_arg, past_k_h_split_axis)
+        .Split(past_value_arg, past_v_h_split_axis)
         .Split(user_op::OpArg("key", 0), k_h_split_axis)
         .Split(user_op::OpArg("value", 0), v_h_split_axis)
         .Split(user_op::OpArg("output_key", 0), past_k_h_split_axis)

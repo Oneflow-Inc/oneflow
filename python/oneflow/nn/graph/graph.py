@@ -14,13 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import logging
+import warnings
 import os
 import sys
 import time
 import inspect
 import weakref
 from collections import OrderedDict
-from functools import partial
+from functools import partial, wraps
 from typing import Dict, Optional, Union, List, Callable
 from google.protobuf import text_format
 from copy import deepcopy
@@ -103,7 +104,7 @@ class Graph(object):
     """
     _child_init_cnt = dict()
 
-    def __init__(self):
+    def __init__(self, enable_get_runtime_state_dict: bool = False):
         """
         Initializes internal Graph states. It MUST be called in ``__init__`` method of subclass.
 
@@ -168,7 +169,10 @@ class Graph(object):
         self._build_with_shared_graph = False
 
         # For load graph from runtime states.
-        self._enable_save_runtime_state_dict = False
+        self.enable_save_runtime_state_dict(enable_get_runtime_state_dict)
+
+        # For run graph with dynamic shape cache
+        self._run_with_cache = False
 
     def build(self, *args, **kwargs):
         r"""The ``build()`` method must be overridden to define neural network
@@ -238,6 +242,9 @@ class Graph(object):
 
             Donot override this function.
         """
+        # For cache cache graphs with dynamic input shape.
+        if self._run_with_cache == True:
+            return self._dynamic_input_graph_cache(*args, **kwargs)
 
         if not self._is_compiled:
             if not self._build_with_shared_graph:
@@ -955,7 +962,13 @@ class Graph(object):
 
     def runtime_state_dict(
         self, destination=None
-    ) -> Dict[str, Union[Dict[str, Tensor], str]]:
+    ) -> Union[
+        Dict[str, Union[Dict[str, Tensor], str]],
+        Dict[str, Dict[str, Union[Dict[str, Tensor], str]]],
+    ]:
+        if self._run_with_cache == True:
+            return self._dynamic_input_graph_cache.runtime_state_dict()
+
         assert (
             self._enable_save_runtime_state_dict
         ), "nn.Graph's runtime state dict can only be got when enable_save_runtime_state_dict is set with True."
@@ -969,6 +982,7 @@ class Graph(object):
             destination = OrderedDict()
             destination._metadata = OrderedDict()
 
+        destination["oneflow_version"] = oneflow.__version__
         destination["graph_name"] = self.name
         destination["job_id"] = self._job_id
 
@@ -1015,10 +1029,25 @@ class Graph(object):
         return destination
 
     def load_runtime_state_dict(
-        self, state_dict: Dict[str, Union[Dict[str, Tensor], str]]
+        self,
+        state_dict: Union[
+            Dict[str, Union[Dict[str, Tensor], str]],
+            Dict[str, Dict[str, Union[Dict[str, Tensor], str]]],
+        ],
     ) -> None:
-        # Generate new config.
+        if self._run_with_cache == True:
+            return self._dynamic_input_graph_cache.load_runtime_state_dict(state_dict)
+
         self._name = state_dict["graph_name"]
+        if "oneflow_version" not in state_dict:
+            state_dict["oneflow_version"] = "none"
+        if state_dict["oneflow_version"] != oneflow.__version__:
+            warnings.warn(
+                f"nn.Graph {self._name} WARNING: current oneflow version ({oneflow.__version__}) is loading "
+                f"runtime_state_dict from a different version ({state_dict['oneflow_version']}), "
+                "there may has compatibility problems."
+            )
+        # Generate new config.
         self._generate_config_proto()
         self._job_id = state_dict["job_id"]
         # Create a c nn graph to run with lazy runtime.
@@ -1812,6 +1841,25 @@ class Graph(object):
             return value
 
         args_tree.map_leaf(func)
+
+    @staticmethod
+    def with_dynamic_input_shape(size: int = 10):
+        def deco_with_config(graph_init_func):
+            @wraps(graph_init_func)
+            def deco_func(self, *args, **kwargs):
+                graph_init_func(self, *args, **kwargs)
+                self._run_with_cache = True
+                import oneflow.nn.graph.cache as cache
+
+                self._dynamic_input_graph_cache = cache.GraphCache(
+                    weakref.proxy(self), cache_size=size
+                )
+                self._cached_init_args = args
+                self._cached_init_kwargs = kwargs
+
+            return deco_func
+
+        return deco_with_config
 
 
 if __name__ == "__main__":
