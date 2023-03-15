@@ -15,9 +15,6 @@ limitations under the License.
 """
 
 
-import oneflow
-
-
 from .special_ops import erf
 from .special_ops import erfc
 from .special_ops import erfinv
