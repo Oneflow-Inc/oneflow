@@ -51,6 +51,10 @@ class CnnlTensorDescriptor : public CnnlDescriptor<cnnlTensorStruct, &cnnlCreate
   // assigned a special shape, not use tensor shape and stride info.
   void set_additional_dim(const user_op::Tensor* t, std::vector<int>& dims);
 
+  // set_additional_dim will change layout (i.e. NCHW -> NHWC)
+  // `set_reshape` only modify shape and stride
+  void set_reshape(const user_op::Tensor* t, std::vector<int>& dims);
+
   template<typename T>
   void set(const user_op::Tensor* t, const std::vector<T>& shape_info,
            const std::vector<T>& stride_info, cnnlTensorLayout_t layout,
