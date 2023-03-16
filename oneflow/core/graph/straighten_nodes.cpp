@@ -217,13 +217,13 @@ int32_t TopoStruct::ComputeMinLayer(
     std::map<std::string, std::vector<TopoStruct*>>* key2topo_structs) {
   // Directly return the value if computed
   if (min_layer > -1) { return min_layer; }
-  if (IsTransferNode(node->GetTaskType())) {
+  auto transport_task_node = dynamic_cast<TransportTaskNode*>(node);
+  if (transport_task_node) {
     // Only compute the minimum layer for this transport node
     min_layer = MaxProducerMinLayer(task_node2topo_struct, key2topo_structs, node);
     // Generate the key to determine the same task nodes
     // Since the key is connected with the min_layer for transport nodes
-    key = dynamic_cast<TransportTaskNode*>(node)->lbi().ShortDebugString()
-          + "MinLayer:" + std::to_string(min_layer);
+    key = transport_task_node->lbi().ShortDebugString() + "MinLayer:" + std::to_string(min_layer);
     // Gather all the task nodes with the same key
     (*key2topo_structs)[key].push_back(this);
   } else {
@@ -535,7 +535,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
     topo_struct.ComputeMemoryIncrement();
     topo_struct.ComputeExceedTime();
     // Generate the key to determine the same task nodes
-    if (IsTransferNode(node->GetTaskType())) {
+    if (dynamic_cast<TransportTaskNode*>(node)) {
       // Deal with the key and the same task nodes later
       return;
       // topo_struct.key = dynamic_cast<TransportTaskNode*>(node)->lbi().ShortDebugString();
