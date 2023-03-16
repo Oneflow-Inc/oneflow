@@ -153,7 +153,7 @@ from oneflow._C import asinh as arcsinh
 from oneflow._C import atan
 from oneflow._C import atan as arctan
 from oneflow._C import atan2
-from oneflow._C import ceil
+from oneflow._C import ceil, ceil_
 from oneflow._C import clamp, clamp_, clamp_min, clamp_min_, clamp_max, clamp_max_
 from oneflow._C import clip, clip_
 from oneflow._C import cos
@@ -188,7 +188,7 @@ from oneflow._C import matmul
 from oneflow._C import mm
 from oneflow._C import matrix_vector_product as mv
 from oneflow._C import bernoulli
-from oneflow._C import round
+from oneflow._C import round, round_
 from oneflow._C import softplus
 from oneflow._C import threshold
 from oneflow._C import tril
@@ -223,7 +223,6 @@ from oneflow._C import dim_gather as gather
 from oneflow._C import deform_conv2d
 from oneflow._C import gather_nd
 from oneflow._C import roi_align
-from oneflow._C import decode_onerec
 from oneflow._C import dot
 from oneflow._C import eye
 from oneflow._C import erfinv, erfinv_
@@ -256,6 +255,7 @@ from oneflow._C import linalg_cross as cross
 from oneflow._C import bincount
 from oneflow._C import isclose
 from oneflow._C import allclose
+from oneflow._C import lerp, lerp_
 from oneflow._C import index_add, index_add_
 from oneflow._C import sort
 from oneflow._C import clone
@@ -399,6 +399,7 @@ from oneflow.nn.modules.constant import new_full_op as new_full
 from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.empty import new_empty_op as new_empty
 from oneflow.nn.modules.empty import empty_like_op as empty_like
+from oneflow._C import empty_strided
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
 from oneflow._C import movedim
 from oneflow.nn.modules.expand import expand_op as expand
