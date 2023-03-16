@@ -276,7 +276,7 @@ std::string NormalizationInferenceOp::getOriginalOpTypeName() { return "normaliz
 
 void Job::build(OpBuilder& builder, OperationState& state, StringRef name, FunctionType type) {
   state.addAttribute(SymbolTable::getSymbolAttrName(), builder.getStringAttr(name));
-  state.addAttribute(func::FuncOp::getSymNameAttrName(state.name), TypeAttr::get(type));
+  state.addAttribute(Job::getSymNameAttrName(state.name), TypeAttr::get(type));
   state.addRegion();
 }
 
