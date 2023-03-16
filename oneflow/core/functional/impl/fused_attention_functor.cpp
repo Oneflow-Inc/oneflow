@@ -82,7 +82,7 @@ Maybe<void> ParseDims(const std::string& name, const Shape& shape, const std::st
       UNIMPLEMENTED_THEN_RETURN() << name
                                   << "_layout should be '(BM)(HK)', '(BM)(H2K)', or '(BM)(H3K)' "
                                      "when the number of dimensions of "
-                                  << name << " tensor is 3.";
+                                  << name << " tensor is 2.";
     }
   } else if (shape.NumAxes() == 3) {
     if (layout == "BM(HK)" || layout == "MB(HK)" || layout == "BM(H2K)" || layout == "MB(H2K)"
@@ -149,8 +149,8 @@ Maybe<void> ParseDims(const std::string& name, const Shape& shape, const std::st
     } else {
       UNIMPLEMENTED_THEN_RETURN()
           << name
-          << "_layout should be 'BM(HK)', 'MB(HK)', 'BM(H2K)', 'MB(H2K)', 'BM(H3K)' or "
-             "'MB(H3K)' when the number of dimensions of "
+          << "_layout should be 'BM(HK)', 'MB(HK)', 'BM(H2K)', 'MB(H2K)', 'BM(H3K)', "
+             "'MB(H3K)' or '(BM)HK' when the number of dimensions of "
           << name << " tensor is 3.";
     }
   } else if (shape.NumAxes() == 4) {
