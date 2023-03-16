@@ -3203,6 +3203,32 @@
     'Tensor (Tensor input, Int64 n_fft,Int64 hop_length=None, Int64 win_length=None, Tensor window=None,Bool center=True,String pad_mode="reflect",Bool normalized=False,Bool onesided=True,Bool return_complex=False) =>Stft'
   bind_python: True
 
+- name: "fft_c2c"
+  signature:
+    'Tensor (Tensor input, Int64 n=None, Int64 dim=-1, String norm_str="backward", Bool forward=True) =>FftC2C'
+  bind_python: False
+
+- name: "fft_r2c"
+  signature:
+    'Tensor (Tensor input, Int64 n=None, Int64 dim=-1, String norm_str="backward", Bool onesided=False, Bool forward=True) =>FftR2C'
+  bind_python: False
+
+# TO-DO
+# - name: "fft_c2r"
+#   signature:
+#     'Tensor (Tensor input, Int64 n, Int64 dim, String norm_str="backward", Bool forward=True) =>FftC2R'
+#   bind_python: False
+
+- name: "fft"
+  signature: 
+    'Tensor (Tensor input, Int64 n=None, Int64 dim=-1, String norm=None) =>Fft'
+  bind_python: True
+
+- name: "ifft"
+  signature: 
+    'Tensor (Tensor input, Int64 n=None, Int64 dim=-1, String norm=None) =>IFft'
+  bind_python: True
+
 - name: "isclose"
   signature: "Tensor (Tensor input, Tensor other, Float atol=1e-08, Float rtol=1e-05, Bool equal_nan=False) => IsClose"
   bind_python: True
