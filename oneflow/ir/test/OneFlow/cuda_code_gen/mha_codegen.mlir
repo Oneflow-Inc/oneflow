@@ -1,8 +1,8 @@
 // RUN: oneflow-opt %s \
 // RUN: -split-input-file \
 // RUN: -lower-oneflow-to-tosa="full=0" -canonicalize \
-// -pass-pipeline="builtin.module(func.func(tosa-to-linalg-named))" \
-// -pass-pipeline="builtin.module(func.func(tosa-to-linalg))"
+// RUN: -pass-pipeline="builtin.module(func.func(tosa-to-linalg-named))" \
+// RUN: -pass-pipeline="builtin.module(func.func(tosa-to-linalg))"
 
 module {
   func.func @GraphToRun_11(%arg0: tensor<2x256x1280xf16>, %arg1: tensor<2x77x1280xf16>, %arg2: tensor<2x77x1280xf16>) -> tensor<2x256x1280xf16> {
