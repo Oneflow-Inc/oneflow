@@ -667,6 +667,7 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
   }
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     // CollectiveBoxingPlan needs to know the reachable relation of collective boxing nodes.
+    // TODO(strint): Optimize the reachable_cb_pairs if it cost a lot.
     PlanUtil::GenCollectiveBoxingPlan(&deallocate_ctx, &job_, &plan_, [&] {
       return std::make_unique<RankPlanTaskGraph>(plan_, *reachable_cb_pairs);
     });
