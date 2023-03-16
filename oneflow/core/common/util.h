@@ -47,12 +47,10 @@ limitations under the License.
 #define CHECK_ISNULL(e) CHECK((e) == nullptr)
 
 namespace fmt {
-template<typename T, typename std::enable_if<std::is_same<std::complex<float>, T>::value
-                                                 || std::is_same<std::complex<double>, T>::value,
-                                             int>::type = 0>
-struct formatter<T> : formatter<std::string_view> {
+template<typename T>
+struct formatter<std::complex<T>> : formatter<std::string_view> {
   template<typename FormatContext>
-  auto format(const T& c, FormatContext& ctx) {
+  auto format(const std::complex<T>& c, FormatContext& ctx) {
     return formatter<std::string_view>::format(fmt::format("({}+{}j)", c.real(), c.imag()), ctx);
   }
 };

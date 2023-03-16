@@ -60,11 +60,9 @@ struct hash<std::vector<T>> {
   }
 };
 
-template<typename T, typename std::enable_if<std::is_same<std::complex<float>, T>::value
-                                                 || std::is_same<std::complex<double>, T>::value,
-                                             int>::type = 0>
-struct hash<T> {
-  size_t operator()(const T& c) const { return oneflow::Hash(c.real(), c.imag()); }
+template<typename T>
+struct hash<std::complex<T>> {
+  size_t operator()(const std::complex<T>& c) const { return oneflow::Hash(c.real(), c.imag()); }
 };
 
 }  // namespace std
