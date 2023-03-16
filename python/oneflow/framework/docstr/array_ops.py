@@ -798,7 +798,6 @@ add_docstr(
         \text{out}_{i} = \text{input}_{i} - \left\lfloor |\text{input}_{i}| \right\rfloor * \operatorname{sgn}(\text{input}_{i})
 
     For example:
-    .. code-block:: python
     
         >>> import oneflow as flow
         >>> flow.frac(flow.Tensor([1, 2.50, -3.21]))
@@ -806,3 +805,9 @@ add_docstr(
     """,
 )
 
+add_docstr(
+    oneflow.frac_,
+    r"""
+    In-place version of :func:`oneflow.frac`
+    """,
+)
