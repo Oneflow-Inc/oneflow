@@ -2851,8 +2851,8 @@ def OneFlow_FusedMultiHeadAttentionInferenceOp : OneFlow_BaseOp<"fused_multi_hea
   );
   let attrs = (ins
     SI64Attr:$query_head_size,
-    SI64Attr:$query_seq_max_len,
-    SI64Attr:$key_seq_max_len,
+    DefaultValuedAttr<SI64Attr, "0">:$query_max_seq_len,
+    DefaultValuedAttr<SI64Attr, "0">:$key_max_seq_len,
     F32Attr:$scale,
     DefaultValuedAttr<SI64Attr, "0">:$causal_diagonal_offset,
     DefaultValuedAttr<StrAttr, "\"none\"">:$attn_mask_type,

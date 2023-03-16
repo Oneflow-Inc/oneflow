@@ -489,6 +489,12 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
 
     Optional<int64_t> batch_size;
     if (query_seq_start != nullptr) { batch_size = query_seq_start->shape_view().At(0) - 1; }
+    Optional<int64_t> query_max_seq_len;
+    const int64_t attr_query_max_seq_len = ctx->Attr<int64_t>("query_max_seq_len");
+    if (attr_query_max_seq_len != 0) { query_max_seq_len = attr_query_max_seq_len; }
+    Optional<int64_t> key_max_seq_len;
+    const int64_t attr_key_max_seq_len = ctx->Attr<int64_t>("key_max_seq_len");
+    if (attr_key_max_seq_len != 0) { key_max_seq_len = attr_key_max_seq_len; }
 
     int64_t q_b = 0;
     int64_t q_m = 0;
@@ -499,10 +505,9 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
     int64_t q_h_stride = 0;
     int64_t q_offset = 0;
     bool q_bm_packed = false;
-    ParseDims(query->shape_view(), query_layout, batch_size,
-              ctx->Attr<int64_t>("query_max_seq_len"), Optional<int64_t>(), query_head_size, 0,
-              &q_b, &q_m, &q_h, &q_k, &q_b_stride, &q_m_stride, &q_h_stride, &q_offset,
-              &q_bm_packed);
+    ParseDims(query->shape_view(), query_layout, batch_size, query_max_seq_len, Optional<int64_t>(),
+              query_head_size, 0, &q_b, &q_m, &q_h, &q_k, &q_b_stride, &q_m_stride, &q_h_stride,
+              &q_offset, &q_bm_packed);
     if (q_bm_packed) { CHECK(query_seq_start != nullptr); }
 
     int64_t k_b = 0;
@@ -514,9 +519,9 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
     int64_t k_h_stride = 0;
     int64_t k_offset = 0;
     bool k_bm_packed = false;
-    ParseDims(key->shape_view(), key_layout, q_b, ctx->Attr<int64_t>("key_max_seq_len"),
-              Optional<int64_t>(), query_head_size, 1, &k_b, &k_m, &k_h, &k_k, &k_b_stride,
-              &k_m_stride, &k_h_stride, &k_offset, &k_bm_packed);
+    ParseDims(key->shape_view(), key_layout, q_b, key_max_seq_len, Optional<int64_t>(),
+              query_head_size, 1, &k_b, &k_m, &k_h, &k_k, &k_b_stride, &k_m_stride, &k_h_stride,
+              &k_offset, &k_bm_packed);
     CHECK_EQ(k_b, q_b);
     CHECK_EQ(k_h, q_h);
     CHECK_EQ(k_bm_packed, q_bm_packed);

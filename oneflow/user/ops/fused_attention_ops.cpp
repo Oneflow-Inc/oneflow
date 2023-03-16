@@ -283,6 +283,12 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
     CHECK_OR_RETURN(!ctx->has_input("key_seq_len", 0));
   }
 
+  Optional<int64_t> query_max_seq_len;
+  const int64_t attr_query_max_seq_len = ctx->Attr<int64_t>("query_max_seq_len");
+  if (attr_query_max_seq_len != 0) { query_max_seq_len = attr_query_max_seq_len; }
+  Optional<int64_t> key_max_seq_len;
+  const int64_t attr_key_max_seq_len = ctx->Attr<int64_t>("key_max_seq_len");
+  if (attr_key_max_seq_len != 0) { key_max_seq_len = attr_key_max_seq_len; }
   const Shape& query_shape = ctx->InputShape("query", 0);
   const std::string& query_layout = ctx->Attr<std::string>("query_layout");
   int64_t q_b = 0;
@@ -290,8 +296,8 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   int64_t q_h = 0;
   int64_t q_k = 0;
   bool q_bm_packed = false;
-  JUST(ParseDims(query_shape, query_layout, batch_size, ctx->Attr<int64_t>("query_max_seq_len"),
-                 Optional<int64_t>(), query_head_size, &q_b, &q_m, &q_h, &q_k, &q_bm_packed));
+  JUST(ParseDims(query_shape, query_layout, batch_size, query_max_seq_len, Optional<int64_t>(),
+                 query_head_size, &q_b, &q_m, &q_h, &q_k, &q_bm_packed));
   if (q_bm_packed) { CHECK_OR_RETURN(ctx->has_input("query_seq_start", 0)); }
 
   const Shape& key_shape = ctx->InputShape("key", 0);
@@ -301,8 +307,8 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   int64_t k_h = 0;
   int64_t k_k = 0;
   bool k_bm_packed = false;
-  JUST(ParseDims(key_shape, key_layout, q_b, ctx->Attr<int64_t>("key_max_seq_len"), q_h, q_k, &k_b,
-                 &k_m, &k_h, &k_k, &k_bm_packed));
+  JUST(ParseDims(key_shape, key_layout, q_b, key_max_seq_len, q_h, q_k, &k_b, &k_m, &k_h, &k_k,
+                 &k_bm_packed));
   CHECK_EQ_OR_RETURN(k_b, q_b);
   CHECK_EQ_OR_RETURN(k_h, q_h);
   CHECK_EQ_OR_RETURN(k_bm_packed, q_bm_packed);
