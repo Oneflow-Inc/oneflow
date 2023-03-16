@@ -3592,7 +3592,7 @@ class FftC2CFunctor : public FftBaseFunctor{
     auto resized_tensor = n.has_value() == true ? JUST(resize_fft_input(x, {wrapped_dim}, {fft_len})) : x;
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "forward");
-    attrs.SetAllAttrs(dim, norm_str, forward);
+    attrs.SetAllAttrs(wrapped_dim, norm_str, forward);
 
 
     return OpInterpUtil::Dispatch<Tensor>(
@@ -3621,7 +3621,7 @@ class FftR2CFunctor : public FftBaseFunctor{
   auto resized_tensor = n.has_value() == true ? JUST(resize_fft_input(input_tensor, {wrapped_dim}, {fft_len})) : input_tensor;
   
   auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "onesided", "forward");
-  attrs.SetAllAttrs(dim, norm_str, onesided, forward);
+  attrs.SetAllAttrs(wrapped_dim, norm_str, onesided, forward);
 
   return OpInterpUtil::Dispatch<Tensor>(
       *op_, {resized_tensor}, attrs);
@@ -3653,7 +3653,7 @@ class FftC2RFunctor : public FftBaseFunctor{
   }
 
   auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "last_dim_size", "forward");
-  attrs.SetAllAttrs(dim, norm_str, fft_len, forward);
+  attrs.SetAllAttrs(wrapped_dim, norm_str, fft_len, forward);
 
   return OpInterpUtil::Dispatch<Tensor>(
       *op_, {resized_tensor}, attrs);
@@ -3665,12 +3665,13 @@ class FftFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int64_t> n,
                            const Optional<int64_t> dim, const Optional<std::string> norm) const {
-    auto dim_ = dim.value_or(-1);
+    auto dim_val = dim.value_or(-1);
+    auto norm_str = norm.value_or("backward");
     if (input->dtype()->is_complex()){
-      return functional::FftC2C(input, n, dim, norm, /*forward=*/true);
+      return functional::FftC2C(input, n, dim_val, norm_str, /*forward=*/true);
     }
     else{
-      return functional::FftR2C(input, n, dim, norm, /*forward=*/true, /*onesided=*/false);
+      return functional::FftR2C(input, n, dim_val, norm_str, /*forward=*/true, /*onesided=*/false);
     }
   }
 };
@@ -3680,12 +3681,13 @@ class IFftFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int64_t> n,
                            const Optional<int64_t> dim, const Optional<std::string> norm) const {
-    auto dim_ = dim.value_or(-1);
+    auto dim_val = dim.value_or(-1);
+    auto norm_str = norm.value_or("backward");
     if (input->dtype()->is_complex()){
-      return functional::FftC2C(input, n, dim, norm, /*forward=*/false);
+      return functional::FftC2C(input, n, dim_val, norm_str, /*forward=*/false);
     }
     else{
-      return functional::FftR2C(input, n, dim, norm, /*forward=*/false, /*onesided=*/false);
+      return functional::FftR2C(input, n, dim_val, norm_str, /*forward=*/false, /*onesided=*/false);
     }
   }
 };
@@ -4395,13 +4397,12 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<DetFunctor>("Det");
   m.add_functor<GeluWithApproximateFunctor>("GeluWithApproximate");
   m.add_functor<impl::TruncFunctor>("Trunc");
-  m.add_functor<StftFunctor>("Stft");
+  // m.add_functor<StftFunctor>("Stft");  disable Stft, TO-DO: compat Stft into fft
   m.add_functor<FftC2CFunctor>("FftC2C");
   m.add_functor<FftR2CFunctor>("FftR2C");
   // m.add_functor<FftC2RFunctor>("FftC2R");  TO-DO
   m.add_functor<FftFunctor>("Fft");
   m.add_functor<IFftFunctor>("IFft");
-  
   m.add_functor<impl::FusedWeightedSumFunctor>("FusedWeightedSum");
   m.add_functor<impl::FusedCenterFunctor>("FusedCenter");
   m.add_functor<impl::FusedCenterGradFunctor>("FusedCenterGrad");

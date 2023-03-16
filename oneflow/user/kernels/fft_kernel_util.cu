@@ -19,6 +19,7 @@ limitations under the License.
 #if CUDA_VERSION >= 11000
 
 #include "cufft_plan_cache.h"
+#include "oneflow/user/kernels/fft_kernel_util.h"
 
 namespace oneflow {
 

@@ -13,29 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/framework.h"
+#include <complex>
+#include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/user/kernels/fft_kernel_util.h"
 #include "pocketfftplan.h"
 using namespace pocketfft;
 namespace oneflow {
 
 namespace {
 
-enum class fft_norm_mode {
-  none,       // No normalization
-  by_root_n,  // Divide by sqrt(signal_size)
-  by_n,       // Divide by signal_size
-};
 
-template<typename T>
-T compute_fct(int64_t size, fft_norm_mode normalization) {
-  constexpr auto one = static_cast<T>(1);
-  switch (normalization) {
-    case fft_norm_mode::none: return one;
-    case fft_norm_mode::by_n: return one / static_cast<T>(size);
-    case fft_norm_mode::by_root_n: return one / std::sqrt(static_cast<T>(size));
-  }
-  return static_cast<T>(0);
-}
 template<typename T>
 void convert_to_doublesized(const std::complex<T>* in, std::complex<T>* dst, size_t len, size_t n) {
   size_t fact_len = 2 * len - 2;
@@ -66,6 +53,47 @@ void comvert_to_real(const std::complex<T>* in, T* out, size_t n) {
   }
 }
 
+
+template<DeviceType device_type, typename T>
+class FftC2CKernel final : public user_op::OpKernel{
+public:
+    FftC2CKernel() = default;
+    ~FftC2CKernel() = default;
+private:
+    bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+    void Compute(user_op::KernelComputeContext* ctx) const override {
+
+      const user_op::Tensor* input = ctx->Tensor4ArgNameAndIndex("input", 0);
+      user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+      bool forward = ctx->Attr<bool>("forward");
+      const auto& norm_str = ctx->Attr<std::string>("norm");
+      const auto& dims = ctx->Attr<std::vector<int64_t>>("dims");
+
+      const T* input_ptr = input->dptr<T>();
+      T* out_ptr = out->mut_dptr<T>();
+
+      Shape input_shape (input->shape_view());
+      Shape out_shape (out->shape_view());
+      fft_norm_mode norm_mode = norm_from_string(norm_str, forward);
+      
+
+      if (input->data_type() == kComplex64){
+      // static void FftC2CForward(ep::Stream* stream, IN* data_in, OUT* data_out, const Shape& input_shape, 
+      //                           const Shape& output_shape, bool forward, const std::vector<int64_t>& dims, fft_norm_mode normalization){
+        FftC2CKernelUtil<device_type, std::complex<float>, std::complex<float>, float>(ctx->stream(), input_ptr, out_ptr,
+                                                                                       input_shape, out_shape, forward, dims, norm_mode);
+      }
+      else if (input->data_type() == kComplex128){
+        FftC2CKernelUtil<device_type, std::complex<double>, std::complex<double>, double>(ctx->stream(), input_ptr, out_ptr,
+                                                                                       input_shape, out_shape, forward, dims, norm_mode);
+      }
+      else{
+        Error::RuntimeError() << "expects kComplex64 or kComplex128, but got " << x->data_type();
+      }
+    }
+};
+
+#if 1
 template<typename IN, typename OUT>
 class StftCpuKernel final : public user_op::OpKernel {
  public:
@@ -85,7 +113,7 @@ class StftCpuKernel final : public user_op::OpKernel {
     const ShapeView& input_shape = input->shape_view();
     const ShapeView& output_shape = output->shape_view();
     const auto output_elem_cnt = output_shape.elem_cnt() / 2;
-
+    
     int64_t dims = input_shape.At(0);
     int64_t batch = input_shape.At(1);
     int64_t len = input_shape.back();
@@ -133,6 +161,8 @@ class StftCpuKernel final : public user_op::OpKernel {
 
 REGISTER_STFT_CPU_KERNEL(double, std::complex<double>)
 REGISTER_STFT_CPU_KERNEL(float, std::complex<float>)
+#endif
+
 
 }  // namespace
 }  // namespace oneflow
