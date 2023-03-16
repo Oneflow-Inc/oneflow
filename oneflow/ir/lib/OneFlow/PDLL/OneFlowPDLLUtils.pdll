@@ -22,3 +22,4 @@ Constraint IsNotNestedInJit(mul: Op);
 Constraint IsScalarTensor(value: Value);
 Constraint IsScalarEqualSqrtDim(query_reshape: Value, scalar_div_operand: Attr);
 Constraint IsScalarEqualSqrtDimReciprocal(query_reshape: Value, scalar_div_operand: Attr);
+Rewrite GetReciprocal(a: Attr) -> Attr;
