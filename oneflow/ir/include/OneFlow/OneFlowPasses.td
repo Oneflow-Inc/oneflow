@@ -10,6 +10,8 @@ def LowerOneFlowToTosaPass : Pass<"lower-oneflow-to-tosa", "ModuleOp"> {
   let options = [
     Option<"variableAsConstant", "variable-as-constant", "int", "0",
            "convert variable op as const op of tosa">,
+    Option<"fullyConvert", "full", "bool",
+           /*default=*/"true", "Fully convert operations and make OneFlow dialect illegal target">,
   ];
 }
 

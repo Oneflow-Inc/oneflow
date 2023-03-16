@@ -629,7 +629,7 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   ConversionTarget target(*context);
   target.addLegalDialect<memref::MemRefDialect, mlir::func::FuncDialect, tosa::TosaDialect,
                          tensor::TensorDialect, arith::ArithmeticDialect>();
-  target.addIllegalDialect<OneFlowDialect>();
+  if (fullyConvert) { target.addIllegalDialect<OneFlowDialect>(); }
 
   TypeConverter typeConverter;
   typeConverter.addConversion([context](Type type) { return convertToSignless(context, type); });
