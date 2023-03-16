@@ -147,7 +147,7 @@ struct GetDataType<void> : std::integral_constant<DataType, DataType::kChar> {};
   struct GetDataType<type_cpp> : std::integral_constant<DataType, type_proto> {}; \
   inline type_cpp GetTypeByDataType(std::integral_constant<DataType, type_proto>) { return {}; }
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE, ALL_DATA_TYPE_SEQ UNSIGNED_INT32_DATA_TYPE_SEQ
-                                                   FLOAT16_DATA_TYPE_SEQ BFLOAT16_DATA_TYPE_SEQ);
+                                                   FLOAT16_DATA_TYPE_SEQ BFLOAT16_DATA_TYPE_SEQ UNSIGNED_INT64_DATA_TYPE_SEQ);
 #undef SPECIALIZE_GET_DATA_TYPE
 
 template<typename T>
