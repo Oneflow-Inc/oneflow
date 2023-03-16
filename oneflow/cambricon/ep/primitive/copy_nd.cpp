@@ -24,6 +24,12 @@ namespace primitive {
 
 namespace {
 
+template<size_t num_dims, size_t movement_size, typename IndexType>
+void LaunchKernel(Stream* stream, CopyNdKernelParams<num_dims, IndexType> params) {
+  // Just to define LaunchKernel used in REGISTER_PRIMITIVE_FACTORY
+  UNIMPLEMENTED();
+}
+
 class CopyNdImpl : public CopyNd {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CopyNdImpl);
