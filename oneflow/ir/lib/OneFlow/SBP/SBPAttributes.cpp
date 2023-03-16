@@ -23,7 +23,7 @@ limitations under the License.
 
 using namespace mlir;
 
-LogicalResult parseSBP(AsmParser& parser, FailureOr<ArrayAttr> args) {
+LogicalResult parseSBP(AsmParser& parser, ArrayAttr args) {
   if (failed(parser.parseLSquare())) { return failure(); }
   if (succeeded(parser.parseOptionalRSquare())) {
     args = parser.getBuilder().getArrayAttr({});

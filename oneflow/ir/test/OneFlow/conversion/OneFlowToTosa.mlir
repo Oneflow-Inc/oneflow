@@ -193,7 +193,7 @@ oneflow.job @test_conv2d(%arg0: tensor<1x3x224x224xf32>, %arg1: tensor<5x3x1x1xf
         hierarchy = [1],
         kernel_size = [1 : si32, 1 : si32],
         op_name = "",
-        operand_segment_sizes = dense<[1, 1, 0, 0]> : vector<4xi32>,
+        operand_segment_sizes = array<i32: 1, 1, 0, 0>,
         output_lbns = [""],
         padding_before = [0 : si32, 0 : si32],
         scope_symbol_id = 4611686018431012863 : i64,

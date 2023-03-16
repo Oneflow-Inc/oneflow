@@ -395,8 +395,7 @@ LogicalResult JobImporter::ProcessInputOp(const ::oneflow::OperatorConf& op_conf
   if (op_conf.input_conf().blob_conf().has_data_type()) {
     attr_vec.emplace_back(GetBuilder().getNamedAttr(
         OpTrait::TensorSource<void>::getDataTypeAttrName(),
-        GetDataTypeAttr(GetMLIRContext(), op_conf.input_conf().blob_conf().data_type())
-            .value()));
+        GetDataTypeAttr(GetMLIRContext(), op_conf.input_conf().blob_conf().data_type()).value()));
   }
   // attr is_dynamic
   if (op_conf.input_conf().blob_conf().has_is_dynamic()) {
@@ -478,8 +477,7 @@ LogicalResult JobImporter::ProcessOutputOp(const ::oneflow::OperatorConf& op_con
   if (op_conf.output_conf().blob_conf().has_data_type()) {
     attr_vec.emplace_back(GetBuilder().getNamedAttr(
         OpTrait::TensorSource<void>::getDataTypeAttrName(),
-        GetDataTypeAttr(GetMLIRContext(), op_conf.output_conf().blob_conf().data_type())
-            .value()));
+        GetDataTypeAttr(GetMLIRContext(), op_conf.output_conf().blob_conf().data_type()).value()));
   }
   // attr is_dynamic
   if (op_conf.output_conf().blob_conf().has_is_dynamic()) {
@@ -560,7 +558,7 @@ LogicalResult JobImporter::ProcessJob() {
   });
   if (!is_succeeded) { return failure(); }
 
-  auto func_type = GetBuilder().getFunctionType(input_types, llvm::None);
+  auto func_type = GetBuilder().getFunctionType(input_types, std::nullopt);
   auto job_op =
       GetBuilder().create<oneflow::Job>(GetRootLocation(), job_->job_conf().job_name(), func_type);
   auto* entryBlock = job_op.addEntryBlock();
@@ -591,7 +589,7 @@ LogicalResult JobImporter::ProcessJob() {
   if (!return_op) { GetBuilder().create<mlir::oneflow::ReturnOp>(GetRootLocation(), results); }
 
   func_type = GetBuilder().getFunctionType(input_types, result_types);
-  dyn_cast<func::FuncOp>(job_op.getOperation()).setFunctionTypeAttr(TypeAttr::get(func_type));
+  job_op.setFunctionTypeAttr(TypeAttr::get(func_type));
   GetModule().push_back(job_op);
   return success();
 }
@@ -1022,7 +1020,7 @@ void LoadJobFromIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::
 }
 
 void registerFromOneFlowJobTranslation() {
-  TranslateToMLIRRegistration fromOneFlowJob("import-oneflow-job", "import oneflow from job" ,
+  TranslateToMLIRRegistration fromOneFlowJob("import-oneflow-job", "import oneflow from job",
                                              [](llvm::StringRef str, MLIRContext* context) {
                                                return TranslateOneFlowJobToModule(str, context);
                                              });
