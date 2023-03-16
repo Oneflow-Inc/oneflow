@@ -44,37 +44,9 @@ class ImageFlipFuntor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class DecodeOneRecFunctor {
- public:
-  DecodeOneRecFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("onerec_decoder").Input("in").Output("out").Build());
-  }
-
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const std::string& key,
-                           const Symbol<DType>& dtype, const Shape& shape, const bool is_dynamic,
-                           const Optional<Shape>& reshape,
-                           const Optional<Shape>& batch_padding) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("reshape", "batch_padding", "key", "data_type",
-                                                 "static_shape", "is_dynamic", "has_reshape",
-                                                 "has_batch_padding");
-    bool has_reshape = reshape.has_value();
-    bool has_batch_padding = batch_padding.has_value();
-    attrs.SetAllAttrs(has_reshape ? *JUST(reshape) : shape,
-                      has_batch_padding ? *JUST(batch_padding) : shape, key, dtype->data_type(),
-                      shape, is_dynamic, has_reshape, has_batch_padding);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
 }  // namespace impl
 
-ONEFLOW_FUNCTION_LIBRARY(m) {
-  m.add_functor<impl::ImageFlipFuntor>("ImageFlip");
-  m.add_functor<impl::DecodeOneRecFunctor>("DecodeOneRec");
-};
+ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<impl::ImageFlipFuntor>("ImageFlip"); };
 
 }  // namespace functional
 }  // namespace one
