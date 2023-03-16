@@ -1,9 +1,11 @@
 // RUN: oneflow-opt %s \
 // RUN: -split-input-file \
-// RUN: -lower-oneflow-to-tosa="full=0" -canonicalize
+// RUN: -lower-oneflow-to-tosa="full=0" -canonicalize \
+// -pass-pipeline="builtin.module(func.func(tosa-to-linalg-named))" \
+// -pass-pipeline="builtin.module(func.func(tosa-to-linalg))"
 
 module {
-  oneflow.job @GraphToRun_11(%arg0: tensor<2x256x1280xf16>, %arg1: tensor<2x77x1280xf16>, %arg2: tensor<2x77x1280xf16>) -> tensor<2x256x1280xf16> {
+  func.func @GraphToRun_11(%arg0: tensor<2x256x1280xf16>, %arg1: tensor<2x77x1280xf16>, %arg2: tensor<2x77x1280xf16>) -> tensor<2x256x1280xf16> {
     %output = "oneflow.input"(%arg0) {data_type = 9 : i32, device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], is_dynamic = false, nd_sbp = ["B"], op_name = "_GraphToRun_11_input.0.0_2", output_lbns = ["_GraphToRun_11_input.0.0_2/out"], scope_symbol_id = 681 : i64, shape = [2 : si64, 256 : si64, 1280 : si64]} : (tensor<2x256x1280xf16>) -> tensor<2x256x1280xf16>
     %output_0 = "oneflow.input"(%arg1) {data_type = 9 : i32, device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], is_dynamic = false, nd_sbp = ["B"], op_name = "_GraphToRun_11_input.0.1_3", output_lbns = ["_GraphToRun_11_input.0.1_3/out"], scope_symbol_id = 681 : i64, shape = [2 : si64, 77 : si64, 1280 : si64]} : (tensor<2x77x1280xf16>) -> tensor<2x77x1280xf16>
     %output_1 = "oneflow.input"(%arg2) {data_type = 9 : i32, device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], is_dynamic = false, nd_sbp = ["B"], op_name = "_GraphToRun_11_input.0.2_4", output_lbns = ["_GraphToRun_11_input.0.2_4/out"], scope_symbol_id = 681 : i64, shape = [2 : si64, 77 : si64, 1280 : si64]} : (tensor<2x77x1280xf16>) -> tensor<2x77x1280xf16>
@@ -24,6 +26,6 @@ module {
     %14 = "oneflow.transpose"(%13) {device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], op_name = "transpose-15", perm = [0 : si32, 2 : si32, 1 : si32, 3 : si32], scope_symbol_id = 681 : i64} : (tensor<2x8x256x160xf16>) -> tensor<2x256x8x160xf16>
     %15 = "oneflow.reshape"(%14) {device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], op_name = "reshape-16", scope_symbol_id = 681 : i64, shape = [2 : si64, 256 : si64, 1280 : si64]} : (tensor<2x256x8x160xf16>) -> tensor<2x256x1280xf16>
     %output_2 = "oneflow.output"(%15) {data_type = 9 : i32, device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], is_dynamic = false, nd_sbp = ["B"], op_name = "_GraphToRun_11_output.0.0_2", output_lbns = ["_GraphToRun_11_output.0.0_2/out"], scope_symbol_id = 681 : i64, shape = [2 : si64, 256 : si64, 1280 : si64]} : (tensor<2x256x1280xf16>) -> tensor<2x256x1280xf16>
-    oneflow.return %output_2 : tensor<2x256x1280xf16>
+    return %output_2 : tensor<2x256x1280xf16>
   }
 }
