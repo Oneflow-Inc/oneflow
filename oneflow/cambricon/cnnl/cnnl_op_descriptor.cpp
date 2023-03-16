@@ -63,9 +63,11 @@ void CnnlOpTensorDescriptor::set(cnnlOpTensorDesc_t op_type, cnnlDataType_t op_t
       cnnlSetOpTensorDescriptor(this->mut_desc(), op_type, op_tensor_comp_type, op_tensor_nan_opt));
 }
 
-void CnnlActivationDescriptor::set(cnnlActivationMode_t mode, cnnlNanPropagation_t nanProp,
-                                   float ceof) {
-  OF_CNNL_CHECK(cnnlSetActivationDescriptor(this->mut_desc(), mode, nanProp, ceof));
+void CnnlActivationDescriptor::set(cnnlActivationMode_t mode, cnnlActivationPreference_t prefer,
+                                   cnnlNanPropagation_t nanProp, float ceof, int sliced_dim,
+                                   float gamma, float scale, bool is_result, bool approximate) {
+  OF_CNNL_CHECK(cnnlSetActivationDescriptor_v6(this->mut_desc(), mode, prefer, nanProp, ceof,
+                                               sliced_dim, gamma, scale, is_result, approximate));
 }
 
 void CnnlConvolutionDescriptor::set(int dim, int* stride, int* padding, int* dilation,

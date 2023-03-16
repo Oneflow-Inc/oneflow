@@ -71,7 +71,9 @@ class CnnlActivationDescriptor
  public:
   CnnlActivationDescriptor() {}
 
-  void set(cnnlActivationMode_t mode, cnnlNanPropagation_t nanProp, float ceof);
+  void set(cnnlActivationMode_t mode, cnnlActivationPreference_t prefer,
+           cnnlNanPropagation_t nanProp, float ceof, int sliced_dim = 0, float gamma = 0.f,
+           float scale = 0.f, bool is_result = false, bool approximate = true);
 };
 
 class CnnlConvolutionDescriptor
