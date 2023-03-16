@@ -65,7 +65,8 @@ Pattern {
       query_layout = attr<"\"BM(HK)\"">,
       key_layout = attr<"\"BM(HK)\"">,
       value_layout = attr<"\"BM(HK)\"">,
-      output_layout = attr<"\"BM(HK)\"">
+      output_layout = attr<"\"BM(HK)\"">,
+      operand_segment_sizes = attr<"dense<[1, 1, 1, 0, 0, 0, 0]> : vector<7xi32>">
     } -> (out_t));
   };
 }
@@ -107,7 +108,8 @@ Pattern {
       query_layout = attr<"\"BM(HK)\"">,
       key_layout = attr<"\"BM(HK)\"">,
       value_layout = attr<"\"BM(HK)\"">,
-      output_layout = attr<"\"BM(HK)\"">
+      output_layout = attr<"\"BM(HK)\"">,
+      operand_segment_sizes = attr<"dense<[1, 1, 1, 0, 0, 0, 0]> : vector<7xi32>">
     } -> (out_t));
   };
 }
