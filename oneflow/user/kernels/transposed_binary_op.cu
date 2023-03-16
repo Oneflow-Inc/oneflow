@@ -95,15 +95,13 @@ __global__ void noncontiguous_binary_op_kernel(IndexType n_pack, Store y, Loader
 template<int pack_size, typename IndexType, typename FastIntegerMath, typename Src,
          typename Dst = void>
 struct LoadStore {
-  LoadStore(FastIntegerMath fast_integer_math[MaxDims], const int ndims, const int pack_dim,
-            const int strides[MaxDims], const Src* src, Dst* dst = nullptr,
-            bool is_contiguous = false)
+  LoadStore(FastIntegerMath fast_integer_math[MaxDims], const int ndims, const int strides[MaxDims],
+            const Src* src, Dst* dst = nullptr, bool is_contiguous = false)
       : ndims_(ndims),
         src_(src),
         dst_(dst),
         last_idx_(0),
         last_offset_(0),
-        pack_dim_(pack_dim),
         is_contiguous_(is_contiguous) {
     for (int i = 0; i < ndims; i++) {
       strides_[i] = static_cast<IndexType>(strides[i]);
@@ -144,7 +142,7 @@ struct LoadStore {
 
   int ndims_;
   int pack_dim_;
-  IndexType last_idx_;
+  IndexType last_idx_;  //这俩不能删，影响性能，很奇怪。。。
   IndexType last_offset_;
   bool is_contiguous_;
   const Src* src_;
@@ -186,62 +184,60 @@ void dispatchOp(cudaStream_t stream, const std::string& op, const IndexType n_pa
 
 template<int pack_size, typename IndexType, typename R, typename lhs, typename rhs>
 void dispatchInplace(cudaStream_t stream, const bool inplace, const std::string& op,
-                     const int& ndims, const int& pack_dim, const IndexType n_pack,
-                     const int sizes[MaxDims], const int strides[][MaxDims], R* y, const lhs* x1,
-                     const rhs* x2) {
+                     const int& ndims, const IndexType n_pack, const int sizes[MaxDims],
+                     const int strides[][MaxDims], R* y, const lhs* x1, const rhs* x2) {
   typedef FastIntegerMath<IndexType> FastIntegerMathT;
   FastIntegerMathT fast_integer_math[MaxDims];
   for (int i = 0; i < ndims; ++i) fast_integer_math[i] = FastIntegerMathT(sizes[i]);
   if (inplace) {
-    LoadStore<pack_size, IndexType, FastIntegerMathT, lhs, R> load_store(
-        fast_integer_math, ndims, pack_dim, strides[0], x1, y);
+    LoadStore<pack_size, IndexType, FastIntegerMathT, lhs, R> load_store(fast_integer_math, ndims,
+                                                                         strides[0], x1, y);
     LoadStore<pack_size, IndexType, FastIntegerMathT, rhs> loader2(fast_integer_math, ndims,
-                                                                   pack_dim, strides[2], x2);
+                                                                   strides[2], x2);
     dispatchOp<pack_size, IndexType, R, lhs, rhs>(stream, op, n_pack, load_store, load_store,
                                                   loader2);
   } else {
-    LoadStore<pack_size, IndexType, FastIntegerMathT, lhs, R> store(
-        fast_integer_math, ndims, pack_dim, strides[0], nullptr, y);
+    LoadStore<pack_size, IndexType, FastIntegerMathT, lhs, R> store(fast_integer_math, ndims,
+                                                                    strides[0], nullptr, y);
     LoadStore<pack_size, IndexType, FastIntegerMathT, lhs> loader1(fast_integer_math, ndims,
-                                                                   pack_dim, strides[1], x1);
+                                                                   strides[1], x1);
 
     LoadStore<pack_size, IndexType, FastIntegerMathT, rhs> loader2(fast_integer_math, ndims,
-                                                                   pack_dim, strides[2], x2);
+                                                                   strides[2], x2);
     dispatchOp<pack_size, IndexType, R, lhs, rhs>(stream, op, n_pack, store, loader1, loader2);
   }
 }
 
 template<int pack_size, typename R, typename lhs, typename rhs>
 void dispatchIndexType(cudaStream_t stream, const bool inplace, const std::string& op,
-                       const int& ndims, const int& pack_dim, const int64_t& n_pack,
-                       const int sizes[MaxDims], const int strides[][MaxDims], R* y, const lhs* x1,
-                       const rhs* x2) {
+                       const int& ndims, const int64_t& n_pack, const int sizes[MaxDims],
+                       const int strides[][MaxDims], R* y, const lhs* x1, const rhs* x2) {
   if ((n_pack * pack_size) >> 30 == 0) {
     int32_t n = (int32_t)n_pack;
-    dispatchInplace<pack_size, int32_t, R, lhs, rhs>(stream, inplace, op, ndims, pack_dim, n, sizes,
-                                                     strides, y, x1, x2);
+    dispatchInplace<pack_size, int32_t, R, lhs, rhs>(stream, inplace, op, ndims, n, sizes, strides,
+                                                     y, x1, x2);
   } else
-    dispatchInplace<pack_size, int64_t, R, lhs, rhs>(stream, inplace, op, ndims, pack_dim, n_pack,
-                                                     sizes, strides, y, x1, x2);
+    dispatchInplace<pack_size, int64_t, R, lhs, rhs>(stream, inplace, op, ndims, n_pack, sizes,
+                                                     strides, y, x1, x2);
 }
 
 template<typename R, typename lhs, typename rhs>
 void dispatchPacksize(cudaStream_t stream, const bool inplace, const std::string& op,
-                      const int& ndims, const int& pack_dim, const int64_t n_pack, int pack_size,
+                      const int& ndims, const int64_t n_pack, int pack_size,
                       const int sizes[MaxDims], const int strides[][MaxDims], R* y, const lhs* x1,
                       const rhs* x2) {
   if (pack_size == 8)
-    dispatchIndexType<8, R, lhs, rhs>(stream, inplace, op, ndims, pack_dim, n_pack, sizes, strides,
-                                      y, x1, x2);
+    dispatchIndexType<8, R, lhs, rhs>(stream, inplace, op, ndims, n_pack, sizes, strides, y, x1,
+                                      x2);
   else if (pack_size == 4)
-    dispatchIndexType<4, R, lhs, rhs>(stream, inplace, op, ndims, pack_dim, n_pack, sizes, strides,
-                                      y, x1, x2);
+    dispatchIndexType<4, R, lhs, rhs>(stream, inplace, op, ndims, n_pack, sizes, strides, y, x1,
+                                      x2);
   else if (pack_size == 2)
-    dispatchIndexType<2, R, lhs, rhs>(stream, inplace, op, ndims, pack_dim, n_pack, sizes, strides,
-                                      y, x1, x2);
+    dispatchIndexType<2, R, lhs, rhs>(stream, inplace, op, ndims, n_pack, sizes, strides, y, x1,
+                                      x2);
   else if (pack_size == 1)
-    dispatchIndexType<1, R, lhs, rhs>(stream, inplace, op, ndims, pack_dim, n_pack, sizes, strides,
-                                      y, x1, x2);
+    dispatchIndexType<1, R, lhs, rhs>(stream, inplace, op, ndims, n_pack, sizes, strides, y, x1,
+                                      x2);
   else
     UNIMPLEMENTED();
 }
@@ -268,7 +264,6 @@ class TransposedBinaryOpKernel final : public user_op::OpKernel {
 
     int pack_size = 1;
     int64_t elem_cnt = 1;
-    int pack_dim = -1;
     int max_elem_size = MAX3(GetSizeOfDataType(y->data_type()), GetSizeOfDataType(x1->data_type()),
                              GetSizeOfDataType(x2->data_type()));
     for (int i = 0; i < ndims; ++i) {
@@ -280,7 +275,6 @@ class TransposedBinaryOpKernel final : public user_op::OpKernel {
       if (x1->stride()[i] == 1 && x2->stride()[i] == 1) {
         pack_size = 16 / max_elem_size;
         while (pack_size > 1 && sizes[i] % pack_size) pack_size >>= 1;
-        pack_dim = i;
         sizes[i] = sizes[i] / pack_size;
         strides[0][i] *= pack_size;
         strides[1][i] *= pack_size;
@@ -289,7 +283,7 @@ class TransposedBinaryOpKernel final : public user_op::OpKernel {
     }
 
     dispatchPacksize(ctx->stream()->As<ep::CudaStream>()->cuda_stream(), inplace, op, ndims,
-                     elem_cnt / pack_size, pack_dim, pack_size, sizes, strides, y->mut_dptr<R>(),
+                     elem_cnt / pack_size, pack_size, sizes, strides, y->mut_dptr<R>(),
                      x1->dptr<lhs>(), x2->dptr<rhs>());
   }
 
@@ -368,54 +362,53 @@ void dispatchOpGrad(cudaStream_t stream, const std::string& op, const IndexType&
 
 template<int pack_size, typename IndexType, typename R, typename lhs, typename rhs>
 void dispatchLoader(cudaStream_t stream, const std::string& op, const int& ndims,
-                    const int& pack_dim, const IndexType n_pack, const int sizes[MaxDims],
-                    const int strides[][MaxDims], lhs* dx1, rhs* dx2, const R* dy, const lhs* x1,
-                    const rhs* x2) {
+                    const IndexType n_pack, const int sizes[MaxDims], const int strides[][MaxDims],
+                    lhs* dx1, rhs* dx2, const R* dy, const lhs* x1, const rhs* x2) {
   typedef FastIntegerMath<IndexType> FastIntegerMathT;
   FastIntegerMathT fast_integer_math[MaxDims];
   for (int i = 0; i < ndims; ++i) fast_integer_math[i] = FastIntegerMathT(sizes[i]);
   LoadStore<pack_size, IndexType, FastIntegerMathT, lhs, R> load_y(fast_integer_math, ndims,
-                                                                   pack_dim, strides[0], dy);
+                                                                   strides[0], dy);
   LoadStore<pack_size, IndexType, FastIntegerMathT, lhs, lhs> loader_store1(
-      fast_integer_math, ndims, pack_dim, strides[1], x1, dx1);
+      fast_integer_math, ndims, strides[1], x1, dx1);
 
   LoadStore<pack_size, IndexType, FastIntegerMathT, rhs, rhs> loader_store2(
-      fast_integer_math, ndims, pack_dim, strides[2], x2, dx2);
+      fast_integer_math, ndims, strides[2], x2, dx2);
   dispatchOpGrad<pack_size, IndexType, R, lhs, rhs>(stream, op, n_pack, load_y, loader_store1,
                                                     loader_store2);
 }
 
 template<int pack_size, typename R, typename lhs, typename rhs>
 void dispatchIndexTypeGrad(cudaStream_t stream, const std::string& op, const int& ndims,
-                           const int& pack_dim, const int64_t& n_pack, const int sizes[MaxDims],
+                           const int64_t& n_pack, const int sizes[MaxDims],
                            const int strides[][MaxDims], lhs* dx1, rhs* dx2, const R* dy,
                            const lhs* x1, const rhs* x2) {
   if ((n_pack * pack_size) >> 30 == 0) {
     int32_t n = (int32_t)n_pack;
-    dispatchLoader<pack_size, int32_t, R, lhs, rhs>(stream, op, ndims, pack_dim, n, sizes, strides,
-                                                    dx1, dx2, dy, x1, x2);
+    dispatchLoader<pack_size, int32_t, R, lhs, rhs>(stream, op, ndims, n, sizes, strides, dx1, dx2,
+                                                    dy, x1, x2);
   } else
-    dispatchLoader<pack_size, int64_t, R, lhs, rhs>(stream, op, ndims, pack_dim, n_pack, sizes,
-                                                    strides, dx1, dx2, dy, x1, x2);
+    dispatchLoader<pack_size, int64_t, R, lhs, rhs>(stream, op, ndims, n_pack, sizes, strides, dx1,
+                                                    dx2, dy, x1, x2);
 }
 
 template<typename R, typename lhs, typename rhs>
 void dispatchPacksizeGrad(cudaStream_t stream, const std::string& op, const int& ndims,
-                          const int& pack_dim, const int64_t& n_pack, int& pack_size,
-                          const int sizes[MaxDims], const int strides[][MaxDims], lhs* dx1,
-                          rhs* dx2, const R* dy, const lhs* x1, const rhs* x2) {
+                          const int64_t& n_pack, int& pack_size, const int sizes[MaxDims],
+                          const int strides[][MaxDims], lhs* dx1, rhs* dx2, const R* dy,
+                          const lhs* x1, const rhs* x2) {
   if (pack_size == 8)
-    dispatchIndexTypeGrad<8, R, lhs, rhs>(stream, op, ndims, pack_dim, n_pack, sizes, strides, dx1,
-                                          dx2, dy, x1, x2);
+    dispatchIndexTypeGrad<8, R, lhs, rhs>(stream, op, ndims, n_pack, sizes, strides, dx1, dx2, dy,
+                                          x1, x2);
   else if (pack_size == 4)
-    dispatchIndexTypeGrad<4, R, lhs, rhs>(stream, op, ndims, pack_dim, n_pack, sizes, strides, dx1,
-                                          dx2, dy, x1, x2);
+    dispatchIndexTypeGrad<4, R, lhs, rhs>(stream, op, ndims, n_pack, sizes, strides, dx1, dx2, dy,
+                                          x1, x2);
   else if (pack_size == 2)
-    dispatchIndexTypeGrad<2, R, lhs, rhs>(stream, op, ndims, pack_dim, n_pack, sizes, strides, dx1,
-                                          dx2, dy, x1, x2);
+    dispatchIndexTypeGrad<2, R, lhs, rhs>(stream, op, ndims, n_pack, sizes, strides, dx1, dx2, dy,
+                                          x1, x2);
   else if (pack_size == 1)
-    dispatchIndexTypeGrad<1, R, lhs, rhs>(stream, op, ndims, pack_dim, n_pack, sizes, strides, dx1,
-                                          dx2, dy, x1, x2);
+    dispatchIndexTypeGrad<1, R, lhs, rhs>(stream, op, ndims, n_pack, sizes, strides, dx1, dx2, dy,
+                                          x1, x2);
   else
     UNIMPLEMENTED();
 }
@@ -444,7 +437,6 @@ class TransposedBinaryOpGradKernel final : public user_op::OpKernel {
 
     int pack_size = 1;
     int64_t elem_cnt = 1;
-    int pack_dim = -1;
     int max_elem_size = MAX3(GetSizeOfDataType(dy->data_type()), GetSizeOfDataType(x1->data_type()),
                              GetSizeOfDataType(x2->data_type()));
     for (int i = 0; i < ndims; ++i) {
@@ -456,12 +448,11 @@ class TransposedBinaryOpGradKernel final : public user_op::OpKernel {
       if (x1->stride()[i] == 1 && x2->stride()[i] == 1) {
         pack_size = 16 / max_elem_size;
         while (pack_size > 1 && sizes[i] % pack_size) pack_size >>= 1;
-        pack_dim = i;
         sizes[i] = sizes[i] / pack_size;
       }
     }
 
-    dispatchPacksizeGrad(ctx->stream()->As<ep::CudaStream>()->cuda_stream(), op, ndims, pack_dim,
+    dispatchPacksizeGrad(ctx->stream()->As<ep::CudaStream>()->cuda_stream(), op, ndims,
                          elem_cnt / pack_size, pack_size, sizes, strides, dx1->mut_dptr<lhs>(),
                          dx2->mut_dptr<rhs>(), dy->dptr<R>(), x1->dptr<lhs>(), x2->dptr<rhs>());
   }
