@@ -18,9 +18,8 @@ limitations under the License.
 
 namespace oneflow {
 
-void GetWindowedOutputShape(Dim input_size, int32_t filter_size, int32_t stride,
-                            int32_t padding, bool ceil_mode, int32_t dilation_rate,
-                            Dim* output_ptr) {
+void GetWindowedOutputShape(Dim input_size, int32_t filter_size, int32_t stride, int32_t padding,
+                            bool ceil_mode, int32_t dilation_rate, Dim* output_ptr) {
   int64_t output_size = (input_size + 2 * padding - dilation_rate * (filter_size - 1) - 1 + stride
                          + (ceil_mode ? stride - 1 : 0))
                         / stride;

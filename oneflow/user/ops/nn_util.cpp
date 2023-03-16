@@ -59,8 +59,8 @@ Maybe<void> CalcSamePadding(Dim input_size, int32_t filter_size, int32_t dilatio
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CalcConvOut(Dim input_size, int32_t filter_size, int32_t dilation_rate,
-                        int32_t stride, int32_t padding_before, Dim* output_size) {
+Maybe<void> CalcConvOut(Dim input_size, int32_t filter_size, int32_t dilation_rate, int32_t stride,
+                        int32_t padding_before, Dim* output_size) {
   CHECK_GT_OR_RETURN(stride, 0);
   CHECK_GE_OR_RETURN(dilation_rate, 1);
 
