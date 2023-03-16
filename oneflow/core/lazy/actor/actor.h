@@ -216,6 +216,7 @@ class Actor : public ActorBase {
   bool is_kernel_launch_synchronized_;
   std::vector<int64_t> tmp_regst_desc_id_vec_;
   int64_t act_cnt_{1};
+  std::string op_name_;
 };
 
 }  // namespace oneflow

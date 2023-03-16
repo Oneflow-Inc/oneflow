@@ -225,10 +225,12 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
   void Init(const JobDesc* job_desc, ActorContext* actor_ctx) override {
     const TaskProto& task_proto = actor_ctx->task_proto();
     CHECK_EQ(task_proto.exec_sequence().exec_node_size(), 1);
+    op_name_ = "NULL_OP";
     if (exec_kernel) {
       kernel_info_[0].reset(new KernelInfo());
       const KernelConf& kernel_conf = task_proto.exec_sequence().exec_node(0).kernel_conf();
       kernel_info_[0]->kernel = ConstructKernel(kernel_conf, this);
+      op_name_ = kernel_conf.op_attribute().op_conf().name();
 #if defined(WITH_CUDA_GRAPHS) || defined(WITH_ROCM_GRAPHS)
       auto* cuda_stream = dynamic_cast<ep::CudaStream*>(actor_ctx->stream_ctx()->stream());
       if (cuda_stream != nullptr && kernel_conf.all_blobs_are_static()
@@ -298,23 +300,18 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
 
   int ProcessMsg(const ActorMsg& msg) override {
     HandleActorMsg(msg);
+    auto actor_id = actor_ctx_->task_proto().task_id();
+    LOG(INFO) << " Actor " << actor_id << " name " << op_name_ << " IsReadReady: " << (ready_consumed_ == max_ready_consumed_)
+      << " IsWriteReady: " << (total_reading_cnt_ == 0) << " act_cnt_: " << act_cnt_;
     if (total_reading_cnt_ != 0) { return 0; }
     if (ready_consumed_ == max_ready_consumed_) {
-      const auto& op_name = actor_ctx_->task_proto()
-                                .exec_sequence()
-                                .exec_node(0)
-                                .kernel_conf()
-                                .op_attribute()
-                                .op_conf()
-                                .name();
-      auto actor_id = actor_ctx_->task_proto().task_id();
 
-      LOG(INFO) << "Actor " << actor_id << " name " << op_name << " try to act count " << act_cnt_
+      LOG(INFO) << "Actor " << actor_id << " name " << op_name_ << " try to act count " << act_cnt_
                 << " type " << TaskType_Name(actor_ctx_->task_proto().task_type());
 
       ActOnce();
 
-      LOG(INFO) << "Actor " << actor_id << " name " << op_name << " finish to act count "
+      LOG(INFO) << "Actor " << actor_id << " name " << op_name_ << " finish to act count "
                 << act_cnt_;
       ++act_cnt_;
 
@@ -371,8 +368,12 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
     auto EnqueueActorMsg = [&](const ActorMsg& msg) {
       if (IsSyncMsg(msg)) {
         sync_post_act_msgs_.emplace_back(msg);
+        LOG(INFO) << "actor Sync post msg by: " << op_name_ << " actor_id: " << actor_id
+              << " to dst_actor_id: " << msg.dst_actor_id();
       } else {
         async_post_act_msgs_.emplace_back(msg);
+        LOG(INFO) << "actor Async post msg by: " << op_name_ << " actor_id: " << actor_id
+              << " to dst_actor_id: " << msg.dst_actor_id();
       }
     };
     std::vector<int64_t> index2regst_desc_id;
@@ -446,13 +447,6 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
 
   inline void HandleRegstMsg(const ActorMsg& msg) {
 
-    const auto& op_name = actor_ctx_->task_proto()
-                              .exec_sequence()
-                              .exec_node(0)
-                              .kernel_conf()
-                              .op_attribute()
-                              .op_conf()
-                              .name();
     auto actor_id = actor_ctx_->task_proto().task_id();
 
     int64_t regst_desc_id = msg.regst_desc_id();
@@ -468,9 +462,11 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
         return_inplace_consumed_fn_[0]();
       }
 
-      LOG(INFO) << "Actor " << actor_id << " name " << op_name << " try to act count " << act_cnt_
-                << " got message from it's produced and cur cnt "
-                << static_cast<int64_t>(total_reading_cnt_) << " need cnt 0";
+      LOG(INFO) << "Actor " << actor_id << " name " << op_name_
+                << " got a regst message from it's consumer and the not ready consumer count is "
+                << static_cast<int64_t>(total_reading_cnt_)
+                << ", the not ready consumer count needs to be 0."
+                << " current act is at the " << act_cnt_ << "th execution.";
 
     } else if (state.regst_type == RegstType::kConsumed) {
       CHECK_EQ(state.consumed.ready, false);
@@ -481,9 +477,10 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
         CHECK(state.regst == msg.regst());
       }
       ready_consumed_ += 1;
-       LOG(INFO) << "Actor " << actor_id << " name " << op_name << " try to act count " << act_cnt_
-                << " got message from it's consumed and cur cnt "
-                << static_cast<int64_t>(ready_consumed_) << " need cnt "
+      LOG(INFO) << "Actor " << actor_id << " name " << op_name_
+                << " got a regst message from it's producer and the ready producer count is "
+                << static_cast<int64_t>(ready_consumed_)
+                << ", the ready producer count needs to be "
                 << static_cast<int64_t>(max_ready_consumed_);
 
     } else {
@@ -644,6 +641,7 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
   std::vector<ActorMsg> async_post_act_msgs_;
   KernelObserver* stream_kernel_observer_;
   int64_t act_cnt_{1};
+  std::string op_name_;
 };
 
 template<int kernel_exec, int inplace, typename IndexType, typename RegstIndex,

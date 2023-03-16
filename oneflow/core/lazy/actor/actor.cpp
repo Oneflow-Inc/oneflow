@@ -134,11 +134,13 @@ void Actor::Init(const JobDesc* job_desc, ActorContext* actor_ctx) {
   actor_id_ = task_proto.task_id();
   thrd_id_ = ThrdId4ActorId(actor_id_);
   job_id_ = task_proto.job_id();
+  op_name_ = "NULL_OP";
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
     ek.kernel_ctx.reset(new KernelContextImpl(actor_ctx));
     ek.kernel = ConstructKernel(node.kernel_conf(), ek.kernel_ctx.get());
     exec_kernel_vec_.emplace_back(std::move(ek));
+    op_name_ = node.kernel_conf().op_attribute().op_conf().name();
   }
 
   is_kernel_launch_synchronized_ =
@@ -329,16 +331,6 @@ bool Actor::ReceiveEordMsg(int64_t regst_desc_id) const {
 }
 
 int Actor::HandlerNormal(const ActorMsg& msg) {
-
-  const auto& op_name = actor_ctx_->task_proto()
-                            .exec_sequence()
-                            .exec_node(0)
-                            .kernel_conf()
-                            .op_attribute()
-                            .op_conf()
-                            .name();
-
-
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
     remaining_eord_cnt_ -= 1;
     CHECK(eord_regst_desc_ids_.insert(msg.eord_regst_desc_id()).second);
@@ -359,15 +351,24 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
         if (rdeq.front()->regst_desc()->regst_desc_type().has_data_regst_desc()) {
           NormalProcessNaiveReadableDataRegstMsg(rdeq);
         }
+        
+        LOG(INFO) << "Actor " << actor_id_ << " name " << op_name_ 
+          << " recv naive consumed regst " << regst->regst_desc_id();
+
       } else if (inplace_consumed_rs_.HasRegstDescId(regst->regst_desc_id())) {
         CHECK_EQ(0, inplace_consumed_rs_.TryPushBackRegst(regst));
         int64_t out_regst_desc_id = inplace_regst_desc_id_in2out_.at(regst->regst_desc_id());
         CHECK(regst->GetSoleBlob()->dptr()
               == inplace_produced_rs_.Front(out_regst_desc_id)->GetSoleBlob()->dptr());
+        
+        LOG(INFO) << "Actor " << actor_id_ << " name " << op_name_ 
+          << " recv inplace consumed regst " << regst->regst_desc_id();
       } else if (TryUpdtStateAsProducedRegst(regst) == 0) {
         // do nothing
       } else {
         NormalProcessCustomizedReadableRegstMsg(msg);
+        LOG(INFO) << "Actor " << actor_id_ << " name " << op_name_ 
+          << " recv customized consumed regst " << regst->regst_desc_id();
       }
     } else {
       if (NormalTryProcessReadableMsgFromOtherMachine(msg) == false) {
@@ -385,8 +386,8 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
       }
     }
 
-    LOG(INFO) << "Actor " << actor_id_ << " name " << op_name << " try to act count " << act_cnt_
-              << " got regst message.";
+    LOG(INFO) << "Actor " << actor_id_ << " name " << op_name_ << " try to act count " << act_cnt_
+              << " got regst message: " << msg.regst()->regst_desc_id();
 
     ActUntilFail();
   } else if (msg.msg_type() == ActorMsgType::kCmdMsg) {
@@ -436,16 +437,11 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
 }
 
 void Actor::ActUntilFail() {
-   const auto& op_name = actor_ctx_->task_proto()
-                            .exec_sequence()
-                            .exec_node(0)
-                            .kernel_conf()
-                            .op_attribute()
-                            .op_conf()
-                            .name();
-
+  LOG(INFO) << "Actor " << actor_id_ << " name " << op_name_ << 
+    << " IsReadReady: " << IsReadReady() << " , IsWriteReady: " << IsWriteReady() 
+    << " act_cnt: " << act_cnt_;
   while (IsReadReady() && IsWriteReady()) {
-     LOG(INFO) << "Actor " << actor_id_ << " name " << op_name << " try to act count " << act_cnt_
+     LOG(INFO) << "Actor " << actor_id_ << " name " << op_name_ << " try to act count " << act_cnt_
               << " type " << TaskType_Name(actor_ctx_->task_proto().task_type());
 
     Act();
@@ -459,13 +455,13 @@ void Actor::ActUntilFail() {
     AsyncRetInplaceConsumedRegstIfNoConsumer();
 
     AsyncSendQueuedMsg();
+    
+    LOG(INFO) << "Actor " << actor_id_ << " name " << op_name_ << " finish to act count "
+              << act_cnt_;
+    ++act_cnt_;
   }
   // NOTE(liujuncheng): return inplace consumed
   AsyncSendQueuedMsg();
-
-  LOG(INFO) << "Actor " << actor_id_ << " name " << op_name << " finish to act count "
-              << act_cnt_;
-    ++act_cnt_;
 }
 
 void Actor::AsyncSendNaiveProducedRegstMsgToConsumer() {
@@ -674,6 +670,10 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   CHECK_GE(reading_cnt_it->second, 1);
   reading_cnt_it->second -= 1;
   total_reading_cnt_ -= 1;
+  
+  LOG(INFO) << "Actor " << actor_id_ << " name " << op_name_ 
+          << " recv prduce regst " << regst->regst_desc_id() << " from downstream actor."
+          << " And the regst reading cnt is : " << reading_cnt_it->second << " now. ( 0 is write ready)";
   if (reading_cnt_it->second != 0) { return 0; }
 
   if (inplace_produced_rs_.TryPushBackRegst(regst) == 0) {
@@ -691,8 +691,12 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
 void Actor::EnqueueAsyncMsg(const ActorMsg& msg) {
   if (is_kernel_launch_synchronized_ && thrd_id_ == ThrdId4ActorId(msg.dst_actor_id())) {
     Singleton<ActorMsgBus>::Get()->SendMsg(msg);
+    LOG(INFO) << "actor Sync post msg by: " << op_name_ << " actor_id: " << actor_id_
+              << " to dst_actor_id: " << msg.dst_actor_id();
   } else {
     async_msg_queue_.emplace_back(msg);
+    LOG(INFO) << "actor Async post msg by: " << op_name_ << " actor_id: " << actor_id_
+              << " to dst_actor_id: " << msg.dst_actor_id();
   }
 }
 
