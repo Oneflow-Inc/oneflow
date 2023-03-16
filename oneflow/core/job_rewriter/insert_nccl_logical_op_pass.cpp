@@ -89,7 +89,7 @@ bool IsBreakpointOpNode(const OpNode* node) {
       return true;
     }
     if (!EnableLogicalChain()) {
-      // NOTE(chengcheng): in old task graph chain version, acc as breakpoint node
+      // NOTE(chengcheng): in old task graph chain version, consider acc as breakpoint node
       if (user_type_name == "acc") { return true; }
     }
   }
@@ -521,9 +521,9 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
 void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
     HashMap<std::string, OperatorConf>* subgraph_op_name2conf, HashSet<std::string>* mut_op_names,
     std::vector<OperatorConf>* nccl_op_confs, std::vector<ParallelConf>* nccl_op_parallel_confs,
-    const std::vector<const OpNode*>& subgraph_order,
+    const std::vector<const OpNode*>& subgraph_ordered_nodes,
     const HashMap<const OpNode*, int64_t>& node2subgraph_order) {
-  for (const OpNode* dst_node : subgraph_order) {
+  for (const OpNode* dst_node : subgraph_ordered_nodes) {
     const std::string& dst_op_name = dst_node->op().op_name();
     for (const OpEdge* op_edge : dst_node->in_edges()) {
       const OpNode* src_node = op_edge->src_node();
@@ -554,7 +554,6 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
           }
 
           // NOTE(chengcheng): Do NOT add ctrl edge for nccl fusion.
-
           nccl_op_confs->emplace_back(nccl_op);
           // NOTE(chengcheng, guoran): set nccl op as dst_node parallel_conf (hierarchy) may check
           //   failed in complier, so need use dst_node reduced_parallel_conf.
@@ -646,13 +645,13 @@ std::string GetStreamIndexName(uint32_t id) { return "NCCL_COMPUTE_" + std::to_s
 
 void InsertNcclLogicalOpsInSubGraph(
     const OpGraph& op_graph, JobBuilder* job_builder,
-    const std::vector<const OpNode*>& subgraph_order,
+    const std::vector<const OpNode*>& subgraph_ordered_nodes,
     const std::function<bool(const std::string&, const std::string&)>& IsReachable,
     uint32_t* stream_offset, const int64_t logical_chain_id) {
   HashMap<const OpNode*, int64_t> node2subgraph_order;
-  node2subgraph_order.reserve(subgraph_order.size());
-  for (int64_t i = 0; i < subgraph_order.size(); ++i) {
-    CHECK(node2subgraph_order.emplace(subgraph_order.at(i), i).second);
+  node2subgraph_order.reserve(subgraph_ordered_nodes.size());
+  for (int64_t i = 0; i < subgraph_ordered_nodes.size(); ++i) {
+    CHECK(node2subgraph_order.emplace(subgraph_ordered_nodes.at(i), i).second);
   }
 
   VLOG(3) << " ======================================================================== \n"
@@ -661,7 +660,7 @@ void InsertNcclLogicalOpsInSubGraph(
 
   HashSet<std::string> mut_op_names;
   HashMap<std::string, OperatorConf> subgraph_op_name2conf;
-  for (const OpNode* this_node : subgraph_order) {
+  for (const OpNode* this_node : subgraph_ordered_nodes) {
     VLOG(3) << "logical_chain: " << logical_chain_id << " , op: " << this_node->op().op_name();
     CHECK(
         subgraph_op_name2conf.emplace(this_node->op().op_name(), this_node->op().op_conf()).second);
@@ -672,7 +671,7 @@ void InsertNcclLogicalOpsInSubGraph(
   // NOTE(chengcheng): ONLY support insert nccl to dst for memory.
   InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(&subgraph_op_name2conf, &mut_op_names,
                                                  &nccl_op_confs, &nccl_op_parallel_confs,
-                                                 subgraph_order, node2subgraph_order);
+                                                 subgraph_ordered_nodes, node2subgraph_order);
 
   VLOG(3) << " ======================================================================== \n"
           << " Try insert nccl logical ops into Graph: " << job_builder->job().job_conf().job_name()
