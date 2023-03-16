@@ -14,9 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <cstdint>
-#include <cmath>
-#include <valarray>
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/cuda/elementwise.cuh"
@@ -27,12 +24,10 @@ namespace oneflow {
 
 namespace {
 
-// Write ReLU Functor. 
+// Write ReLU Functor.
 template<typename T>
 struct FracForwardGpu {
-  OF_DEVICE_FUNC T operator()(T x) const {
-    return x - std::trunc(x); 
-  }
+  OF_DEVICE_FUNC T operator()(T x) const { return x - std::trunc(x); }
 };
 
 }  // namespace
@@ -49,22 +44,20 @@ class GpuFracKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int32_t elem_cnt = x->shape_view().elem_cnt();
-    // Use CUDA Elementwise Template. 
-    OF_CUDA_CHECK((cuda::elementwise::Unary(FracForwardGpu<T>(), elem_cnt, y->mut_dptr<T>(),
-                                        x->dptr<T>(), ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
+    // Use CUDA Elementwise Template.
+    OF_CUDA_CHECK(
+        (cuda::elementwise::Unary(FracForwardGpu<T>(), elem_cnt, y->mut_dptr<T>(), x->dptr<T>(),
+                                  ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_FRAC_KERNEL(dtype)                      \
-  REGISTER_USER_KERNEL("frac")                               \
-      .SetCreateFn<GpuFracKernel<dtype>>()                     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
-                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
-
+#define REGISTER_GPU_FRAC_KERNEL(dtype)                                             \
+  REGISTER_USER_KERNEL("frac").SetCreateFn<GpuFracKernel<dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceType() == DeviceType::kCUDA)                               \
+      && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_FRAC_KERNEL(float)
 REGISTER_GPU_FRAC_KERNEL(double)
-
 
 }  // namespace oneflow

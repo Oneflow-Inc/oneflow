@@ -13,8 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <cstdint>
-#include <cmath>
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
@@ -37,11 +35,10 @@ class CpuFracKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_FRAC_KERNEL(dtype)                     \
-  REGISTER_USER_KERNEL("frac")                              \
-      .SetCreateFn<CpuFracKernel<dtype>>()                    \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
-                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+#define REGISTER_CPU_FRAC_KERNEL(dtype)                                             \
+  REGISTER_USER_KERNEL("frac").SetCreateFn<CpuFracKernel<dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceType() == DeviceType::kCPU)                                \
+      && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_CPU_FRAC_KERNEL(float)
 REGISTER_CPU_FRAC_KERNEL(double)

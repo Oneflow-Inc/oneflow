@@ -599,12 +599,12 @@ class Frac : public OpExprGradFunction<FracCaptureState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(FracCaptureState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+  Maybe<void> Capture(FracCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     ctx->requires_grad = inputs.at(0)->requires_grad();
-    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }  
-    ctx->SaveTensorForBackward(inputs.at(0));
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+    // ctx->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
 
@@ -614,7 +614,8 @@ class Frac : public OpExprGradFunction<FracCaptureState> {
     in_grads->resize(1);
     if (ctx->requires_grad) {
       // const auto& x = ctx->SavedTensors().at(0);
-      in_grads->at(0) = JUST(functional::FracGrad(out_grads.at(0))); 
+      // in_grads->at(0) = JUST(functional::FracGrad(out_grads.at(0)));
+      in_grads->at(0) = out_grads.at(0);
     }
     return Maybe<void>::Ok();
   }
