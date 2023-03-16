@@ -16,7 +16,7 @@ struct SoftmaxOpLowering final : public OpConversionPattern<SoftmaxOp> {
   using OpConversionPattern<SoftmaxOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(SoftmaxOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    return success();
+    return failure();
   }
 };
 
