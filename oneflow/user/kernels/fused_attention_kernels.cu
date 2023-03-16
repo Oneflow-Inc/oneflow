@@ -452,7 +452,7 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel,
     const Tensor* query_seq_start = nullptr;
     const Tensor* key_seq_start = nullptr;
     const Tensor* key_seq_len = nullptr;
-    const float scale = ctx->Attr<float>("scale");
+    const float scale = ctx->Attr<double>("scale");
     if (ctx->has_input("query_seq_start", 0)) {
       CHECK(ctx->has_input("key_seq_start", 0));
       query_seq_start = ctx->Tensor4ArgNameAndIndex("query_seq_start", 0);

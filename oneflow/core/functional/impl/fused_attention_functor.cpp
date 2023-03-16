@@ -468,7 +468,7 @@ class FusedMultiHeadAttentionInferenceV2Functor {
       UNIMPLEMENTED_THEN_RETURN() << "output_layout should be 'BM(HK)', 'MB(HK)' or (BM)(HK)";
     }
 
-    float scale_value = 0.0;
+    double scale_value = 0.0;
     if (scale) {
       scale_value = JUST(scale);
     } else {

@@ -2853,7 +2853,7 @@ def OneFlow_FusedMultiHeadAttentionInferenceOp : OneFlow_BaseOp<"fused_multi_hea
     SI64Attr:$query_head_size,
     DefaultValuedAttr<SI64Attr, "0">:$query_max_seq_len,
     DefaultValuedAttr<SI64Attr, "0">:$key_max_seq_len,
-    F32Attr:$scale,
+    F64Attr:$scale,
     DefaultValuedAttr<SI64Attr, "0">:$causal_diagonal_offset,
     DefaultValuedAttr<StrAttr, "\"none\"">:$attn_mask_type,
     StrAttr:$query_layout,
@@ -8918,7 +8918,7 @@ def OneFlow_ScalarLerpOp : OneFlow_BaseOp<"scalar_lerp", [NoSideEffect, DeclareO
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
- 
+
 def OneFlow_ScalarLerpGradOp : OneFlow_BaseOp<"scalar_lerp_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$start,
