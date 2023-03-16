@@ -240,14 +240,17 @@ class ArgsTree(object):
 
         # Cases handled: tuple(tuple(tensor, ...), ), such as the output args of return.
         elif len(self._io_args) > 0 and self._io_args[0] is not None:
-            for i in self._io_args[0]:
-                mapped_value = map_function(i)
-                stack.append(mapped_value)
+            try:
+                for i in self._io_args[0]:
+                        mapped_value = map_function(i)
+                        stack.append(mapped_value)
 
-            if isinstance(self._io_args[0], tuple):
-                return (tuple(stack),)
-            elif isinstance(self._io_args[0], list):
-                return (stack,)
+                if isinstance(self._io_args[0], tuple):
+                    return (tuple(stack),)
+                elif isinstance(self._io_args[0], list):
+                    return (stack,)
+            except:
+                return self._execute_mapping(self._io_args, map_function)
         else:
             return (None,)
 
