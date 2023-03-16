@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_HASH_H_
 #define ONEFLOW_CORE_COMMON_HASH_H_
 #include <functional>
+#include <complex>
 
 namespace oneflow {
 
@@ -57,6 +58,13 @@ struct hash<std::vector<T>> {
     for (const auto& elem : vec) { oneflow::AddHash<T>(&hash_value, elem); }
     return hash_value;
   }
+};
+
+template<typename T, typename std::enable_if<std::is_same<std::complex<float>, T>::value
+                                                 || std::is_same<std::complex<double>, T>::value,
+                                             int>::type = 0>
+struct hash<T> {
+  size_t operator()(const T& c) const { return oneflow::Hash(c.real(), c.imag()); }
 };
 
 }  // namespace std

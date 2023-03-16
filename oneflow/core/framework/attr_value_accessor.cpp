@@ -171,9 +171,7 @@ std::complex<double> AttrValueAccessor<std::complex<double>>::Attr(const AttrVal
 template<>
 void AttrValueAccessor<std::complex<double>>::Attr(const std::complex<double>& cpp_val,
                                                    AttrValue* attr_val) {
-  attr_val->mutable_at_complex_double()->clear_real();
   attr_val->mutable_at_complex_double()->set_real(cpp_val.real());
-  attr_val->mutable_at_complex_double()->clear_imag();
   attr_val->mutable_at_complex_double()->set_imag(cpp_val.imag());
 }
 
