@@ -24,48 +24,41 @@ limitations under the License.
 namespace oneflow {
 
 #define MaxDims 6
-
-namespace {
 #define MAX2(a, b) ((a) > (b)) ? (a) : (b)
 #define MAX3(a, b, c) MAX2(MAX2(a, b), c)
 
-struct Add {
-  template<typename R>
-  OF_DEVICE_FUNCTION R operator()(R x1, R x2) {
-    return x1 + x2;
-  }
-};
-struct Sub {
-  template<typename R>
-  OF_DEVICE_FUNCTION R operator()(R x1, R x2) {
-    return x1 - x2;
-  }
-};
-struct Mul {
-  template<typename R>
-  OF_DEVICE_FUNCTION R operator()(R x1, R x2) {
-    return x1 * x2;
-  }
-};
-struct Div {
-  template<typename R>
-  OF_DEVICE_FUNCTION R operator()(R x1, R x2) {
-    return x1 / x2;
-  }
-};
+namespace {
 
-template<typename T, int pack_size>
-struct alignas(sizeof(T) * pack_size) Packed {
-  __device__ Packed() {  // do nothing
-  }
-  union {
-    T elem[pack_size];
+#define DEFINE_BINARY_FUNCTOR(OP, expr)                                                        \
+  template<typename T>                                                                         \
+  struct OP {                                                                                  \
+    __device__ __forceinline__ T operator()(const T& a, const T& b) const { return a expr b; } \
+  };                                                                                           \
+  template<>                                                                                   \
+  struct OP<half> {                                                                            \
+    __device__ __forceinline__ half operator()(const half& a, const half& b) const {           \
+      return __float2half(__half2float(a) expr __half2float(b));                               \
+    }                                                                                          \
   };
-};
+
+DEFINE_BINARY_FUNCTOR(Add, +)
+DEFINE_BINARY_FUNCTOR(Sub, -)
+DEFINE_BINARY_FUNCTOR(Mul, *)
+DEFINE_BINARY_FUNCTOR(Div, /)
+
+// template<typename T, int pack_size>
+// struct alignas(sizeof(T) * pack_size) Packed {
+//   __device__ Packed() {  // do nothing
+//   }
+//   union {
+//     T elem[pack_size];
+//   };
+// };
+using cuda::elementwise::Packed;
 
 template<int pack_size, typename IndexType, typename BinaryOp, typename R, typename T1, typename T2,
          typename Store, typename Loader1, typename Loader2>
-__global__ void launch_kernel(IndexType n_pack, Store& y, Loader1& x1, Loader2& x2) {
+__global__ void noncontiguous_binary_op_kernel(IndexType n_pack, Store y, Loader1 x1, Loader2 x2) {
   Packed<R, pack_size> pack_y;
   Packed<T1, pack_size> pack_x1;
   Packed<T2, pack_size> pack_x2;
@@ -84,43 +77,59 @@ template<int pack_size, typename IndexType, typename FastIntegerMath, typename S
          typename Dst = void>
 struct LoadStore {
   LoadStore(FastIntegerMath fast_integer_math[MaxDims], const int ndims, const int strides[MaxDims],
-            const Src* src, Dst* dst = nullptr)
-      : ndims_(ndims), src_(src), dst_(dst) {
+            const Src* src, Dst* dst = nullptr, bool is_contiguous = false, int pack_dim = -1)
+      : ndims_(ndims),
+        src_(src),
+        dst_(dst),
+        last_idx_(0),
+        last_offset_(0),
+        pack_dim_(pack_dim),
+        is_contiguous_(is_contiguous) {
     for (int i = 0; i < ndims; i++) {
       strides_[i] = static_cast<IndexType>(strides[i]);
       fast_integer_math_[i] = fast_integer_math[i];
     }
-    last_idx_ = 0;
-    last_offset_ = 0;
   }
 
   OF_DEVICE_FUNCTION IndexType index2offset(IndexType index) {
     IndexType offset = 0;
     IndexType div = 0, mod = 0;
 #pragma unroll
-    for (int dim = ndims_ - 1; dim >= 0 && index > 0; --dim) {
+    for (int dim = ndims_ - 1; dim >= 0; --dim) {
+      if (index == 0) break;
       fast_integer_math_[dim].divmod(index, &div, &mod);
       index = div;
-      offset += mod * strides_[dim];
+      if (dim == ndims_ - 1)
+        offset += mod * pack_size;
+      else
+        offset += mod * strides_[dim];
     }
     return offset;
   }
 
   OF_DEVICE_FUNCTION void load(IndexType idx, Packed<Src, pack_size>* pack) {
-    IndexType offset = index2offset(idx);
-    last_idx_ = idx;
-    last_offset_ = offset;
-    *pack = *(reinterpret_cast<const Packed<Src, pack_size>*>(src_) + offset);
+    IndexType offset;
+    if (is_contiguous_)
+      offset = idx * pack_size;
+    else
+      offset = index2offset(idx);
+    *pack = *(reinterpret_cast<const Packed<Src, pack_size>*>(src_ + offset));
   }
 
   OF_DEVICE_FUNCTION void store(IndexType idx, Packed<Dst, pack_size>* pack) {
-    IndexType offset = (idx == last_idx_) ? last_offset_ : index2offset(idx);  // inplace
-    *(reinterpret_cast<Packed<Dst, pack_size>*>(dst_) + offset) = *pack;
+    IndexType offset;
+    if (is_contiguous_)
+      offset = idx * pack_size;
+    else
+      offset = index2offset(idx);
+    *(reinterpret_cast<Packed<Dst, pack_size>*>(dst_ + offset)) = *pack;
   }
 
   int ndims_;
+  int pack_dim_;
   IndexType last_idx_;
   IndexType last_offset_;
+  bool is_contiguous_;
   const Src* src_;
   Dst* dst_;
   IndexType strides_[MaxDims];
@@ -133,7 +142,7 @@ void launch(cudaStream_t stream, const IndexType n_pack, Store& store, Load1& lo
   int num_blocks = 1, block_size = cuda::elementwise::kBlockSize;
   cudaError_t err = cuda::elementwise::GetNumBlocks(n_pack, &num_blocks);
   CHECK(err == cudaSuccess);
-  launch_kernel<pack_size, IndexType, BinaryOp, R, lhs, rhs>
+  noncontiguous_binary_op_kernel<pack_size, IndexType, BinaryOp, R, lhs, rhs>
       <<<num_blocks, block_size, 0, stream>>>(n_pack, store, load1, load2);
 }
 
@@ -142,13 +151,13 @@ template<int pack_size, typename IndexType, typename R, typename lhs, typename r
 void dispatchOp(cudaStream_t stream, const std::string& op, const IndexType n_pack, Store& store,
                 Load1& load1, Load2& load2) {
   if (op == "add")
-    launch<pack_size, IndexType, Add, R, lhs, rhs>(stream, n_pack, store, load1, load2);
+    launch<pack_size, IndexType, Add<R>, R, lhs, rhs>(stream, n_pack, store, load1, load2);
   else if (op == "sub")
-    launch<pack_size, IndexType, Sub, R, lhs, rhs>(stream, n_pack, store, load1, load2);
+    launch<pack_size, IndexType, Sub<R>, R, lhs, rhs>(stream, n_pack, store, load1, load2);
   else if (op == "mul")
-    launch<pack_size, IndexType, Mul, R, lhs, rhs>(stream, n_pack, store, load1, load2);
+    launch<pack_size, IndexType, Mul<R>, R, lhs, rhs>(stream, n_pack, store, load1, load2);
   else if (op == "div")
-    launch<pack_size, IndexType, Div, R, lhs, rhs>(stream, n_pack, store, load1, load2);
+    launch<pack_size, IndexType, Div<R>, R, lhs, rhs>(stream, n_pack, store, load1, load2);
   else
     UNIMPLEMENTED_THEN_THROW();
 }
@@ -224,8 +233,8 @@ class TransposedBinaryOpKernel final : public user_op::OpKernel {
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    user_op::Tensor* x1 = ctx->Tensor4ArgNameAndIndex("lhs", 0);
-    user_op::Tensor* x2 = ctx->Tensor4ArgNameAndIndex("rhs", 0);
+    const user_op::Tensor* x1 = ctx->Tensor4ArgNameAndIndex("lhs", 0);
+    const user_op::Tensor* x2 = ctx->Tensor4ArgNameAndIndex("rhs", 0);
     const std::string op = ctx->Attr<std::string>("op");
     const bool inplace = ctx->Attr<bool>("inplace");
     int ndims = y->shape_view().NumAxes();
@@ -235,6 +244,7 @@ class TransposedBinaryOpKernel final : public user_op::OpKernel {
 
     int pack_size = 1;
     int64_t elem_cnt = 1;
+    int pack_dim = -1;
     int max_elem_size = MAX3(GetSizeOfDataType(y->data_type()), GetSizeOfDataType(x1->data_type()),
                              GetSizeOfDataType(x2->data_type()));
     for (int i = 0; i < ndims; ++i) {
@@ -246,7 +256,8 @@ class TransposedBinaryOpKernel final : public user_op::OpKernel {
       if (x1->stride()[i] == 1 && x2->stride()[i] == 1) {
         pack_size = 16 / max_elem_size;
         while (pack_size > 1 && sizes[i] % pack_size) pack_size >>= 1;
-        sizes[i] = shape.At(i) / pack_size;  //
+        pack_dim = i;
+        sizes[i] = sizes[i] / pack_size;
       }
     }
 
@@ -269,7 +280,7 @@ class TransposedBinaryOpKernel final : public user_op::OpKernel {
 // output_type, lhs_type, rhs_type
 REGISTER_USER_KERNEL_TRANSPOSED_BINARY_OP_KERNEL(float, float, float)
 REGISTER_USER_KERNEL_TRANSPOSED_BINARY_OP_KERNEL(half, half, half)
-#if CUDA_VERSION >= 11000
-REGISTER_USER_KERNEL_TRANSPOSED_BINARY_OP_KERNEL(nv_bfloat16, nv_bfloat16, nv_bfloat16)
-#endif
+// #if CUDA_VERSION >= 11000
+// REGISTER_USER_KERNEL_TRANSPOSED_BINARY_OP_KERNEL(nv_bfloat16, nv_bfloat16, nv_bfloat16)
+// #endif
 }  // namespace oneflow
