@@ -381,8 +381,8 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
       }
     }
 #ifdef OF_DEBUG_LAZY_RUNTIME
-    LOG(INFO) << "Actor " << actor_id_ << " name " << op_name << " try to act count " << act_cnt_
-              << " got regst message.";
+    LOG(INFO) << "Actor " << actor_id_ << " name " << op_name << " got a regst message at the "
+              << act_cnt_ << "th execution.";
 #endif  // OF_DEBUG_LAZY_RUNTIME
     ActUntilFail();
   } else if (msg.msg_type() == ActorMsgType::kCmdMsg) {
@@ -443,8 +443,9 @@ void Actor::ActUntilFail() {
 #endif  // OF_DEBUG_LAZY_RUNTIME
   while (IsReadReady() && IsWriteReady()) {
 #ifdef OF_DEBUG_LAZY_RUNTIME
-    LOG(INFO) << "Actor " << actor_id_ << " name " << op_name << " try to act count " << act_cnt_
-              << " type " << TaskType_Name(actor_ctx_->task_proto().task_type());
+    LOG(INFO) << "Actor " << actor_id_ << " name " << op_name << " start act at the " << act_cnt_
+              << "th execution, the actor's task type is "
+              << TaskType_Name(actor_ctx_->task_proto().task_type());
 #endif  // OF_DEBUG_LAZY_RUNTIME
     PrepareProducedNaiveInplaceDataRegst();
     Act();
@@ -459,8 +460,8 @@ void Actor::ActUntilFail() {
 
     AsyncSendQueuedMsg();
 #ifdef OF_DEBUG_LAZY_RUNTIME
-    LOG(INFO) << "Actor " << actor_id_ << " name " << op_name << " finish to act count "
-              << act_cnt_;
+    LOG(INFO) << "Actor " << actor_id_ << " name " << op_name << " finish act at the " << act_cnt_
+              << "th execution.";
     ++act_cnt_;
 #endif  // OF_DEBUG_LAZY_RUNTIME
   }

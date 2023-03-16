@@ -47,7 +47,7 @@ void BoxingIdentityTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   out_regst->AddLbi(sole_op->BnInOp2Lbi(sole_op->SoleObn()));
   node->BindBnWithRegst(sole_op->SoleObn(), out_regst);
-  (node->*GetExecNodeMethodInferBlobDescs())(nullptr);
+  (node->*GetInferBlobDescsMethod())(nullptr);
 }
 
 void BoxingIdentityTaskNode::InferProducedDataRegstTimeShape() {

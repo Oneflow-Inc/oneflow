@@ -103,6 +103,7 @@ Maybe<void> CheckPhysicalBlobDesc(
   return Maybe<void>::Ok();
 }
 
+// A helper function to infer blob's physical shape with ND SBP.
 Maybe<void> InferPhysicalBlobDesc(
     const Operator& op, const PbRpf<std::string>& bns,
     const std::function<Maybe<const BlobDesc>(const std::string&)>& GetLogicalBlobDesc,
@@ -130,6 +131,8 @@ void ExecNode::InferBlobDescsByNdSbp(const ParallelContext* parallel_ctx) {
   const HashSet<std::string> ibns{op()->input_bns().begin(), op()->input_bns().end()};
   HashMap<std::string, BlobDesc> ibn2blob_desc{};
   const auto& GetBlobDesc4BnInOp = [&](const std::string& bn_in_op) -> BlobDesc* {
+    // Generate temp regst to store input blob desc, and will be released after infer output blob
+    // desc.
     if (ibns.count(bn_in_op) > 0) {
       auto iter = ibn2blob_desc.find(bn_in_op);
       if (iter == ibn2blob_desc.end()) {
@@ -146,10 +149,15 @@ void ExecNode::InferBlobDescsByNdSbp(const ParallelContext* parallel_ctx) {
   const OpNode* op_node = Singleton<OpGraph>::Get()->OpNode4OpName(op()->op_name());
   const NdSbpSignature* nd_sbp_signature = &CHECK_NOTNULL(op_node)->nd_sbp_signature();
 
+  // TODO(strint): user op can infer output with SBP, so there is no need to infer the input.
+  // Reference: https://github.com/Oneflow-Inc/oneflow/pull/8971
+  // Infer input blob desc with SBP, the infer results are set intuo the temp input blob desc.
   CHECK_JUST(InferPhysicalBlobDesc(
       *op(), op()->input_bns(),
       std::bind(&Operator::GetLogicalBlobDesc4Ibn, op().get(), std::placeholders::_1),
       nd_sbp_signature, parallel_ctx, GetBlobDesc4BnInOp));
+
+  // Infer output blob desc with input.
   CHECK_JUST_MSG(op_->InferBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, &GlobalJobDesc()),
                  std::stringstream() << " infer blob descs is failed, op name " << op_->op_loc());
   CHECK_JUST(CheckPhysicalBlobDesc(

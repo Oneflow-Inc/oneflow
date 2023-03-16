@@ -52,8 +52,10 @@ class CompTaskNode : public TaskNode, public FakeConsumedRegstProvider {
   // op
   std::shared_ptr<const Operator> op() const { return op_node_->shared_op(); }
 
-  ExecNode::InferBlobDescsMethod GetExecNodeMethodInferBlobDescs() const override {
-    return GetInferBlobDescsMethod::Visit(CHECK_JUST(CurrentCompileMode()));
+  ExecNode::InferBlobDescsMethod GetInferBlobDescsMethod() const override {
+    // For default compilation mode, compute task node use input blob desc to infer output blob
+    // desc; For separate compilation mode, compute task node use NdSBP to infer output blob desc.
+    return InferBlobDescsMethodGetter::Visit(CHECK_JUST(CurrentCompileMode()));
   }
 
  protected:
@@ -65,7 +67,7 @@ class CompTaskNode : public TaskNode, public FakeConsumedRegstProvider {
   void InferProducedDataRegstTimeShape() override;
 
  private:
-  struct GetInferBlobDescsMethod final : public CompileModeVisitor<GetInferBlobDescsMethod> {
+  struct InferBlobDescsMethodGetter final : public CompileModeVisitor<InferBlobDescsMethodGetter> {
     static ExecNode::InferBlobDescsMethod VisitNaive() { return &ExecNode::InferBlobDescsByInputs; }
     static ExecNode::InferBlobDescsMethod VisitRankPerIter() {
       return &ExecNode::InferBlobDescsByNdSbp;

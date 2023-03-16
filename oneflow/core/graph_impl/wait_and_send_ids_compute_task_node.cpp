@@ -50,7 +50,7 @@ void WaitAndSendIdsCompTaskNode::BuildExecGphAndRegst() {
     out_regst->AddLbi(lbi);
     node->BindBnWithRegst(obn, out_regst);
   }
-  (node->*GetExecNodeMethodInferBlobDescs())(parallel_ctx());
+  (node->*GetInferBlobDescsMethod())(parallel_ctx());
 }
 
 void WaitAndSendIdsCompTaskNode::InferProducedDataRegstTimeShape() {

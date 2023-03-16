@@ -38,7 +38,9 @@ class TransportTaskNode : public TaskNode {
 
   void ToTransportTaskProtoIf(TransportTaskProto*) const;
 
-  ExecNode::InferBlobDescsMethod GetExecNodeMethodInferBlobDescs() const override {
+  ExecNode::InferBlobDescsMethod GetInferBlobDescsMethod() const override {
+    // TransportTaskNode infers output BlobDesc based on input BlobDesc, because it can't infers
+    // output BlobDesc with SBP.
     return &ExecNode::InferBlobDescsByInputs;
   }
 

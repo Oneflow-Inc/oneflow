@@ -341,13 +341,14 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
                                 .op_conf()
                                 .name();
       auto actor_id = actor_ctx_->task_proto().task_id();
-      LOG(INFO) << "Actor " << actor_id << " name " << op_name << " try to act count " << act_cnt_
-                << " type " << TaskType_Name(actor_ctx_->task_proto().task_type());
+      LOG(INFO) << "Actor " << actor_id << " name " << op_name << " start act at the " << act_cnt_
+                << "th execution, the actor's task type is "
+                << TaskType_Name(actor_ctx_->task_proto().task_type());
 #endif  // OF_DEBUG_LAZY_RUNTIME
       ActOnce();
 #ifdef OF_DEBUG_LAZY_RUNTIME
-      LOG(INFO) << "Actor " << actor_id << " name " << op_name << " finish to act count "
-                << act_cnt_;
+      LOG(INFO) << "Actor " << actor_id << " name " << op_name << " finish act at the " << act_cnt_
+                << "th execution.";
       ++act_cnt_;
 #endif  // OF_DEBUG_LAZY_RUNTIME
       return 0;
@@ -535,9 +536,11 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
         return_inplace_consumed_fn_[0]();
       }
 #ifdef OF_DEBUG_LAZY_RUNTIME
-      LOG(INFO) << "Actor " << actor_id << " name " << op_name << " try to act count " << act_cnt_
-                << " got message from it's produced and cur cnt "
-                << static_cast<int64_t>(total_reading_cnt_) << " need cnt 0";
+      LOG(INFO) << "Actor " << actor_id << " name " << op_name
+                << " got a regst message from it's consumer and the not ready consumer count is "
+                << static_cast<int64_t>(total_reading_cnt_)
+                << ", the not ready consumer count needs to be 0."
+                << " current act is at the " << act_cnt_ << "th execution.";
 #endif  // OF_DEBUG_LAZY_RUNTIME
     } else if (state.regst_type == RegstType::kConsumed) {
       CHECK_EQ(state.consumed.ready, false);
@@ -549,9 +552,10 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
       }
       ready_consumed_ += 1;
 #ifdef OF_DEBUG_LAZY_RUNTIME
-      LOG(INFO) << "Actor " << actor_id << " name " << op_name << " try to act count " << act_cnt_
-                << " got message from it's consumed and cur cnt "
-                << static_cast<int64_t>(ready_consumed_) << " need cnt "
+      LOG(INFO) << "Actor " << actor_id << " name " << op_name
+                << " got a regst message from it's producer and the ready producer count is "
+                << static_cast<int64_t>(ready_consumed_)
+                << ", the ready producer count needs to be "
                 << static_cast<int64_t>(max_ready_consumed_);
 #endif  // OF_DEBUG_LAZY_RUNTIME
     } else {
