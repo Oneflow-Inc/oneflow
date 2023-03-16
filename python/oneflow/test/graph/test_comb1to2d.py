@@ -238,10 +238,8 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
         model_diff_placement = _TestModuleDiffPlacementMiddle()
         graph_diff_placement = _TestGraph(model_diff_placement)
         z = graph_diff_placement(x)
-        print("fininsh 0")
         flow._oneflow_internal.eager.Sync()
         test_case.assertTrue(np.allclose(x.numpy(), z.numpy(), 1e-05, 1e-05))
-        print("fininsh 1")
 
     # This is for debug, so will not run by CI.
     def _test_lazy_boxing_2d_all_combination_diff_placement_small(test_case):

@@ -92,19 +92,8 @@ void TaskNode::set_chain_id(int64_t val) {
 }
 
 void TaskNode::set_order_in_chain(int64_t val, const std::string& debug) {
-  if (!order_has_been_set) {
-    CHECK_EQ(order_in_chain_, -1);
-    order_in_chain_ = val;
-    order_has_been_set = true;
-    set_debug = debug;
-    set_thread_id = std::this_thread::get_id();
-  } else {
-    LOG(ERROR) << " task " << VisualStr() << " 's order has been set by thread " << set_thread_id
-               << " debug " << set_debug << " with " << order_in_chain_
-               << " but set again by thread " << std::this_thread::get_id() << " debug " << debug
-               << " with " << val;
-    CHECK_EQ(order_in_chain_, -1);
-  }
+  CHECK_EQ(order_in_chain_, -1);
+  order_in_chain_ = val;
 }
 
 void TaskNode::PinConsumedRegst() {
@@ -334,6 +323,8 @@ std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, bool 
 std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, bool enable_reuse_mem,
                                                   int32_t min_register_num,
                                                   int32_t max_register_num) {
+  // Because the Regst of separate compilation is not created in order, some Regst may have been
+  // built. This implementation can avoid ProduceRegst being called multiple times.
   const auto& regst = GetOrCheckRegst(name, enable_reuse_mem, min_register_num, max_register_num);
   if (regst) { return regst; }
   RegstDescTypeProto regst_desc_type;
