@@ -30,6 +30,7 @@ import oneflow.unittest
 
 def do_nhwc_conv_maxpool(test_case, with_cuda, with_bias):
     x = flow.randn(2, 3, 4, 5)
+    print(x.shape)
     conv = flow.nn.Conv2d(3, 4, 2, 1, bias=with_bias)
     maxpool_2d = flow.nn.MaxPool2d(
         kernel_size=3, padding=1, stride=2, return_indices=False
