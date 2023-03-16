@@ -50,8 +50,8 @@ namespace oneflow {
     }
 
     /* static */ Maybe<void> FftR2COp::GetSbp(user_op::SbpContext* ctx) {
-    // ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
-    // TO-DO : Add sbp
+    // TO-DO : Validate sbp
+    ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
     return Maybe<void>::Ok();
     }
 
@@ -85,7 +85,8 @@ namespace oneflow {
     }
 
     /* static */ Maybe<void> FftC2ROp::GetSbp(user_op::SbpContext* ctx) {
-    // TO-DO : Add sbp
+    // TO-DO : Validate sbp
+    ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
     return Maybe<void>::Ok();
     }
 
