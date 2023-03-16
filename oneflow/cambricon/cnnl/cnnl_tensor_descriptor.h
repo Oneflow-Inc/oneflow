@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/cambricon/cnnl/cnnl_common_descriptor.h"
 #include "oneflow/cambricon/cnnl/cnnl_types.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/framework/user_op_tensor.h"
 
 // Modified from Cambricon catch for PyTorch.
@@ -59,7 +60,8 @@ class CnnlTensorDescriptor : public CnnlDescriptor<cnnlTensorStruct, &cnnlCreate
   void set(const user_op::Tensor* t, const std::vector<T>& shape_info,
            const std::vector<T>& stride_info, cnnlTensorLayout_t layout,
            cnnlDataType_t data_type = CNNL_DTYPE_INVALID) {
-    OF_CHECK(shape_info.size() == stride_info.size(), "shape size need equal to stride size.");
+    CHECK_EQ_OR_THROW(shape_info.size(), stride_info.size())
+        << "shape size need equal to stride size.";
     int t_dim = shape_info.size();
     // data_type default value is CNNL_DTYPE_INVALID in this interface,
     // and can't transmit to cnnl. so call cnnl interface will using
@@ -80,6 +82,36 @@ class CnnlTensorDescriptor : public CnnlDescriptor<cnnlTensorStruct, &cnnlCreate
     }
     OF_CNNL_CHECK(cnnlSetTensorDescriptorEx(this->mut_desc(), layout, data_type, t_dim,
                                             real_shape_info.data(), real_stride_info.data()));
+  }
+
+  template<typename T>
+  void set(int ndim, const T* shape, cnnlDataType_t data_type,
+           cnnlTensorLayout_t layout = CNNL_LAYOUT_ARRAY) {
+    std::vector<int> shape_info(ndim, 1);
+    std::vector<int> stride_info(ndim, 1);
+    int value = 1;
+    for (size_t i = ndim - 1; i > 0; --i) {
+      shape_info[i] = static_cast<int>(shape[i]);
+      stride_info[i] = value;
+      value *= shape_info[i];
+    }
+    shape_info[0] = static_cast<int>(shape[0]);
+    stride_info[0] = value;
+    OF_CNNL_CHECK(cnnlSetTensorDescriptorEx(this->mut_desc(), layout, data_type, ndim,
+                                            shape_info.data(), stride_info.data()));
+  }
+
+  template<typename T>
+  void set(int ndim, const T* shape, const T* stride, cnnlDataType_t data_type,
+           cnnlTensorLayout_t layout = CNNL_LAYOUT_ARRAY) {
+    std::vector<int> shape_info(ndim, 1);
+    std::vector<int> stride_info(ndim, 1);
+    for (int i = 0; i < ndim; ++i) {
+      shape_info[i] = static_cast<int>(shape[i]);
+      stride_info[i] = static_cast<int>(stride[i]);
+    }
+    OF_CNNL_CHECK(cnnlSetTensorDescriptorEx(this->mut_desc(), layout, data_type, ndim,
+                                            shape_info.data(), stride_info.data()));
   }
 };
 
