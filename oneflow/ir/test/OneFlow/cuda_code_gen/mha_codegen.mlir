@@ -2,10 +2,10 @@
 // RUN: -split-input-file \
 // RUN: -lower-oneflow-to-tosa="full=0" \
 // RUN: -lower-oneflow-to-linalg \
-// RUN: -canonicalize \
 // RUN: -tosa-to-tensor \
 // RUN: -pass-pipeline="func.func(tosa-to-linalg-named)" \
-// RUN: -pass-pipeline="func.func(tosa-to-linalg)"
+// RUN: -pass-pipeline="func.func(tosa-to-linalg)" \
+// RUN: -canonicalize
 
 // TODO: don't convert oneflow.job to func.func
 
