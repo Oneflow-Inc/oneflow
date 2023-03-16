@@ -274,9 +274,12 @@ void OutputOp::getCanonicalizationPatterns(RewritePatternSet& results, MLIRConte
 std::string Add2Op::getOriginalOpTypeName() { return "add_n"; }
 std::string NormalizationInferenceOp::getOriginalOpTypeName() { return "normalization"; }
 
-void Job::build(OpBuilder& builder, OperationState& state, StringRef name, FunctionType type) {
+void Job::build(OpBuilder& builder, OperationState& state, StringRef name, FunctionType type,
+                llvm::ArrayRef<mlir::NamedAttribute> attrs) {
   state.addAttribute(SymbolTable::getSymbolAttrName(), builder.getStringAttr(name));
-  state.addAttribute(Job::getSymNameAttrName(state.name), TypeAttr::get(type));
+  state.addAttribute(Job::getFunctionTypeAttrName(state.name), TypeAttr::get(type));
+  state.attributes.append(attrs.begin(), attrs.end());
+
   state.addRegion();
 }
 

@@ -154,8 +154,7 @@ def OneFlow_Job : Op<OneFlow_Dialect, "job", [FunctionOpInterface, IsolatedFromA
 
   let builders = [OpBuilder<(ins
     "StringRef":$sym_name, "FunctionType":$function_type,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
-      CArg<"ArrayRef<DictionaryAttr>", "{}">:$argAttrs
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs
   )>];
 
   let extraClassDeclaration = [{
