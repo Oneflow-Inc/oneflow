@@ -17,34 +17,15 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_ATTR_VALUE_H_
 
 #include <complex>
-#include "fmt/format.h"
 #include "fmt/core.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/hash.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/protobuf.h"
-
-namespace std {
-template<>
-struct hash<std::complex<double>> {
-  size_t operator()(const std::complex<double>& c) const {
-    return std::hash<double>()(c.real()) ^ std::hash<double>()(c.imag());
-  }
-};
-}  // namespace std
-
-namespace fmt {
-template<>
-struct formatter<std::complex<double>> : formatter<std::string_view> {
-  template<typename FormatContext>
-  auto format(const std::complex<double>& c, FormatContext& ctx) {
-    return formatter<std::string_view>::format(fmt::format("({}+{}i)", c.real(), c.imag()), ctx);
-  }
-};
-}  // namespace fmt
 
 namespace oneflow {
 
