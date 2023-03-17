@@ -146,8 +146,9 @@ struct GetDataType<void> : std::integral_constant<DataType, DataType::kChar> {};
   template<>                                                                      \
   struct GetDataType<type_cpp> : std::integral_constant<DataType, type_proto> {}; \
   inline type_cpp GetTypeByDataType(std::integral_constant<DataType, type_proto>) { return {}; }
-OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE, ALL_DATA_TYPE_SEQ UNSIGNED_INT32_DATA_TYPE_SEQ
-                                                   FLOAT16_DATA_TYPE_SEQ BFLOAT16_DATA_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE,
+                     ALL_DATA_TYPE_SEQ UNSIGNED_INT32_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ
+                         BFLOAT16_DATA_TYPE_SEQ COMPLEX_DATA_TYPE_SEQ);
 #undef SPECIALIZE_GET_DATA_TYPE
 
 template<typename T>
@@ -303,6 +304,7 @@ bool IsIntegralDataType(DataType data_type);
 bool IsFloatingDataType(DataType data_type);
 bool IsHalfDataType(DataType data_type);
 bool IsSupportRequireGradDataType(DataType data_type);
+bool IsComplexDataType(DataType data_type);
 bool IsTriviallyCopyableDataType(DataType data_type);
 bool IsIndexDataType(DataType data_type);
 bool NotSupportBoxingDataType(DataType data_type);
