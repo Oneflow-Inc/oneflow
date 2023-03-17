@@ -45,7 +45,7 @@ namespace oneflow {
         << "RuntimeError: upper bound and larger bound inconsistent with step sign";
     range_elem_cnt = std::ceil(static_cast<double>(float_limit - float_start) / float_delta);
   }
-  ctx->SetOutputShape("out", 0, Shape({range_elem_cnt}));
+  ctx->SetOutputShape("out", 0, Shape{range_elem_cnt});
   return Maybe<void>::Ok();
 }
 
@@ -78,7 +78,7 @@ namespace oneflow {
     }
     range_elem_cnt = std::ceil(static_cast<double>(float_limit - float_start) / float_delta);
   }
-  const Shape& logical_shape = Shape({range_elem_cnt});
+  const Shape& logical_shape = Shape{range_elem_cnt};
   const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
   const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
 

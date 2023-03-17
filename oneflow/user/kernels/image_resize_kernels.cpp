@@ -210,11 +210,11 @@ class ImageResizeKeepAspectRatioKernel final : public user_op::OpKernel {
       const int64_t res_h = out_img_buf[i].shape_view().At(0);
       const int64_t res_w = out_img_buf[i].shape_view().At(1);
 
-      scale_buf[i].Resize(Shape({2}), DataType::kFloat);
+      scale_buf[i].Resize(Shape{2}, DataType::kFloat);
       scale_buf[i].mut_data<float>()[0] = static_cast<float>(res_w) / static_cast<float>(org_w);
       scale_buf[i].mut_data<float>()[1] = static_cast<float>(res_h) / static_cast<float>(org_h);
 
-      size_buf[i].Resize(Shape({2}), DataType::kInt32);
+      size_buf[i].Resize(Shape{2}, DataType::kInt32);
       size_buf[i].mut_data<int32_t>()[0] = static_cast<int32_t>(res_w);
       size_buf[i].mut_data<int32_t>()[1] = static_cast<int32_t>(res_h);
     });

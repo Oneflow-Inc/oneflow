@@ -27,7 +27,7 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> SquareSumOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);
-  y->set_shape(Shape({1}));
+  y->set_shape(Shape{1});
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SquareSumOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -51,7 +51,7 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> MultiSquareSumOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);
-  y->set_shape(Shape({1}));
+  y->set_shape(Shape{1});
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> MultiSquareSumOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {

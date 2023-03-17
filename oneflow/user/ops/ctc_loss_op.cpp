@@ -34,7 +34,7 @@ namespace oneflow {
   CHECK_GE_OR_RETURN(ctx->Attr<int64_t>("blank"), 0);
   CHECK_LT_OR_RETURN(ctx->Attr<int64_t>("blank"), log_probs.shape().At(2));
 
-  ctx->SetOutputShape("loss", 0, Shape({batch_size}));
+  ctx->SetOutputShape("loss", 0, Shape{batch_size});
   ctx->SetOutputShape("alpha", 0,
                       Shape({batch_size, log_probs.shape().At(0), 2 * max_target_length + 1}));
   return Maybe<void>::Ok();

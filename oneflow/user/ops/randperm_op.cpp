@@ -31,14 +31,14 @@ namespace oneflow {
   CHECK_GE_OR_RETURN(n, 0) << Error::RuntimeError()
                            << "Trying to create tensor with negative dimension " << n << ":"
                            << " [" << n << "]";
-  ctx->SetOutputShape("out", 0, Shape({n}));
+  ctx->SetOutputShape("out", 0, Shape{n});
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> RandpermOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
   const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
   int32_t n = ctx->Attr<int32_t>("n");
-  const Shape& logical_shape = Shape({n});
+  const Shape& logical_shape = Shape{n};
   const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
   const auto tensor_slice_view =
       GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, parallel_id);

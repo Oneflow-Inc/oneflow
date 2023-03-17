@@ -63,11 +63,11 @@ namespace oneflow {
 
   user_op::TensorDesc* output_desc = ctx->MutOutputTensorDesc("output", 0);
   output_desc->set_is_dynamic(is_dynamic);
-  output_desc->set_shape(Shape({N}));
+  output_desc->set_shape(Shape{N});
 
   user_op::TensorDesc* out_weight_desc = ctx->MutOutputTensorDesc("out_weight", 0);
   out_weight_desc->set_is_dynamic(is_dynamic);
-  out_weight_desc->set_shape(Shape({N}));
+  out_weight_desc->set_shape(Shape{N});
 
   return Maybe<void>::Ok();
 }

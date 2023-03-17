@@ -459,7 +459,7 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
   CHECK_LE_OR_RETURN(num_spatial_dims, 3);
   CHECK_EQ_OR_RETURN(dy.shape().NumAxes(), num_spatial_dims + 2);
   if (data_format == "channels_first") {
-    bias_diff->set_shape(Shape({dy.shape().At(1)}));
+    bias_diff->set_shape(Shape{dy.shape().At(1)});
   } else if (data_format == "channels_last") {
     bias_diff->set_shape(Shape({dy.shape().At(dy.shape().NumAxes() - 1)}));
   } else {

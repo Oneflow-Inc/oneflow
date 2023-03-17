@@ -864,7 +864,7 @@ class MedianFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     if (x->shape()->elem_cnt() == 0) {
       return functional::To(
-          JUST(functional::Constant(Shape({1}).RemoveOnes({0}),
+          JUST(functional::Constant(Shape{1}.RemoveOnes({0}),
                                     Scalar(std::numeric_limits<float>::quiet_NaN()),
                                     JUST(DType::Get(DataType::kFloat)), NullOpt)),
           x, false);

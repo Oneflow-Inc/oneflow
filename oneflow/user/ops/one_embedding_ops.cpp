@@ -139,7 +139,7 @@ namespace oneflow {
   const bool use_dynamic_memory_allocation = embedding::UseDynamicMemoryAllocation();
   if (ctx->has_output("embeddings", 0)) {
     if (use_dynamic_memory_allocation) {
-      ctx->SetOutputShape("embeddings", 0, Shape({1}));
+      ctx->SetOutputShape("embeddings", 0, Shape{1});
     } else {
       DimVector embeddings_dim_vec = unique_ids_shape.dim_vec();
       embeddings_dim_vec.push_back(embedding_size);
@@ -147,7 +147,7 @@ namespace oneflow {
     }
   }
   if (use_dynamic_memory_allocation) {
-    ctx->SetOutputShape("unique_values", 0, Shape({1}));
+    ctx->SetOutputShape("unique_values", 0, Shape{1});
   } else {
     DimVector unique_values_dim_vec = unique_ids_shape.dim_vec();
     unique_values_dim_vec.push_back(line_size);
@@ -220,12 +220,12 @@ namespace oneflow {
 
 Maybe<void> CheckDataShape(user_op::InferContext* ctx) {
   if (ctx->has_input("learning_rate", 0)) {
-    CHECK_EQ_OR_RETURN(ctx->InputShape("learning_rate", 0), Shape({1}));
+    CHECK_EQ_OR_RETURN(ctx->InputShape("learning_rate", 0), Shape{1});
   }
   if (ctx->has_input("down_scale_by_tensor", 0)) {
-    CHECK_EQ_OR_RETURN(ctx->InputShape("down_scale_by_tensor", 0), Shape({1}));
+    CHECK_EQ_OR_RETURN(ctx->InputShape("down_scale_by_tensor", 0), Shape{1});
   }
-  CHECK_EQ_OR_RETURN(ctx->InputShape("num_unique_ids", 0), Shape({1}));
+  CHECK_EQ_OR_RETURN(ctx->InputShape("num_unique_ids", 0), Shape{1});
   const Shape& embedding_grad_shape = ctx->InputShape("embedding_grad", 0);
   CHECK_EQ_OR_RETURN(embedding_grad_shape.NumAxes(), 2);
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);

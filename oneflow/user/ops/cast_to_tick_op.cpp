@@ -20,7 +20,7 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> CastToTickOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  ctx->SetOutputShape("out", 0, Shape({1}));
+  ctx->SetOutputShape("out", 0, Shape{1});
   return Maybe<void>::Ok();
 }
 

@@ -38,7 +38,7 @@ namespace oneflow {
   count->set_is_dynamic(x.is_dynamic());
 
   user_op::TensorDesc* num_unique = ctx->MutOutputTensorDesc("num_unique", 0);
-  num_unique->set_shape(Shape({1}));
+  num_unique->set_shape(Shape{1});
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UniqueWithCountsOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {

@@ -42,7 +42,7 @@ namespace oneflow {
   } else {
     // NOTE(chengcheng): for Scalar input pack
     CHECK_EQ_OR_RETURN(out_shape.elem_cnt(), 1);
-    out_desc->set_shape(Shape({pack_num}));
+    out_desc->set_shape(Shape{pack_num});
   }
   return Maybe<void>::Ok();
 }
