@@ -161,9 +161,9 @@ struct OneFlowLoweringToLinalgPass
   void runOnOperation() {
     MLIRContext* context = &getContext();
     ConversionTarget target(*context);
-    target
-        .addLegalDialect<memref::MemRefDialect, mlir::func::FuncDialect, tosa::TosaDialect,
-                         linalg::LinalgDialect, tensor::TensorDialect, arith::ArithmeticDialect>();
+    target.addLegalDialect<memref::MemRefDialect, mlir::func::FuncDialect, tosa::TosaDialect,
+                           linalg::LinalgDialect, tensor::TensorDialect, arith::ArithmeticDialect,
+                           math::MathDialect>();
     RewritePatternSet patterns(context);
     patterns.add<SoftmaxOpLowering>(context);
     if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {

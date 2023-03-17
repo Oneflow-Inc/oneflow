@@ -8,6 +8,7 @@
 // RUN: | FileCheck --dump-input=always %s
 
 // CHECK: linalg.generic
+// CHECK-NOT: oneflow.softmax
 
 // TODO: don't convert oneflow.job to func.func
 
