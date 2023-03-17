@@ -32,7 +32,8 @@ error_msg = """ is not implemented, please submit an issue at
 'https://github.com/Oneflow-Inc/oneflow/issues' including the log information of the error, the 
 minimum reproduction code, and the system information."""
 
-HAZARD_LIST = ["_distutils_hack", "importlib", "regex", "tokenizers"]
+# TODO(peiyuan): support fine-grained package name like "safetensor.safetensor_rust"
+HAZARD_LIST = ["_distutils_hack", "importlib", "regex", "tokenizers", "safetensor"]
 
 # module wrapper with checks for existence of methods
 class ModuleWrapper(ModuleType):
