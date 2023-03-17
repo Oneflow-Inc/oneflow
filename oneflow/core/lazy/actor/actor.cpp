@@ -353,7 +353,7 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
         }
         
         LOG(INFO) << "Actor " << actor_id_ << " name " << op_name_ 
-          << " recv naive consumed regst " << regst->regst_desc_id();
+          << " recv naive consumed regst " << msg.regst_desc_id();
 
       } else if (inplace_consumed_rs_.HasRegstDescId(regst->regst_desc_id())) {
         CHECK_EQ(0, inplace_consumed_rs_.TryPushBackRegst(regst));
@@ -362,13 +362,13 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
               == inplace_produced_rs_.Front(out_regst_desc_id)->GetSoleBlob()->dptr());
         
         LOG(INFO) << "Actor " << actor_id_ << " name " << op_name_ 
-          << " recv inplace consumed regst " << regst->regst_desc_id();
+          << " recv inplace consumed regst " << msg.regst_desc_id();
       } else if (TryUpdtStateAsProducedRegst(regst) == 0) {
         // do nothing
       } else {
         NormalProcessCustomizedReadableRegstMsg(msg);
         LOG(INFO) << "Actor " << actor_id_ << " name " << op_name_ 
-          << " recv customized consumed regst " << regst->regst_desc_id();
+          << " recv customized consumed regst " << msg.regst_desc_id();
       }
     } else {
       if (NormalTryProcessReadableMsgFromOtherMachine(msg) == false) {
@@ -387,7 +387,7 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
     }
 
     LOG(INFO) << "Actor " << actor_id_ << " name " << op_name_ << " try to act count " << act_cnt_
-              << " got regst message: " << msg.regst()->regst_desc_id();
+              << " got regst message: " << msg.regst_desc_id();
 
     ActUntilFail();
   } else if (msg.msg_type() == ActorMsgType::kCmdMsg) {

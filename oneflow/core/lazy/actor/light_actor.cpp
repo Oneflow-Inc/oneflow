@@ -369,10 +369,12 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
       if (IsSyncMsg(msg)) {
         sync_post_act_msgs_.emplace_back(msg);
         LOG(INFO) << "actor Sync post msg by: " << op_name_ << " actor_id: " << actor_id
+              << " from src_actor_id: " << msg.src_actor_id()
               << " to dst_actor_id: " << msg.dst_actor_id();
       } else {
         async_post_act_msgs_.emplace_back(msg);
         LOG(INFO) << "actor Async post msg by: " << op_name_ << " actor_id: " << actor_id
+              << " from src_actor_id: " << msg.src_actor_id()
               << " to dst_actor_id: " << msg.dst_actor_id();
       }
     };
