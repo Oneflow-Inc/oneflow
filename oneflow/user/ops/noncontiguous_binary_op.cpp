@@ -39,9 +39,11 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(lhs.NumAxes(), rhs.NumAxes());
   for (int i = 0; i < lhs.NumAxes(); i++) CHECK_EQ_OR_RETURN(lhs.At(i), rhs.At(i));
   ctx->SetOutputShape("y", 0, lhs);
-  // const bool inplace = ctx->Attr<bool>("inplace");
-  // if (inplace)
-  ctx->SetOutputStride("y", 0, ctx->InputStride("lhs", 0));
+  const bool inplace = ctx->Attr<bool>("inplace");
+  if (inplace)
+    ctx->SetOutputStride("y", 0, ctx->InputStride("lhs", 0));
+  else  // set contiguous for y if not inplace
+    ctx->SetOutputStride("y", 0, Stride(lhs));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> NonContiguousBinaryOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
