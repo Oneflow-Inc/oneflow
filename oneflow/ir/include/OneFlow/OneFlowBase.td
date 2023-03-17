@@ -35,6 +35,8 @@ def DTArrayAttr : TypedArrayAttrBase<OneFlow_DataType, ""> {}
 
 def ShapeArrayAttr : TypedArrayAttrBase<ShapeAttr, ""> {}
 
+def ComplexDoubleAttr : TypedArrayAttrBase<F64Attr, ""> {}
+
 def OneFlow_IsOpConfCompatible : NativeOpTrait<"IsOpConfCompatible">;
 def OneFlow_IsImportCompatible : NativeOpTrait<"IsImportCompatible">;
 def OneFlow_AlternativeOp : NativeOpTrait<"IsAlternative">;

@@ -56,14 +56,23 @@ bool IsHalfDataType(DataType data_type) {
   }
 #undef HALF_CASE
 }
-bool IsTriviallyCopyableDataType(DataType data_type) {
+bool IsComplexDataType(DataType data_type) {
   switch (data_type) {
-#define POD_AND_HALF_CASE(type_cpp, type_proto) \
+#define COMPLEX_CASE(type_cpp, type_proto) \
   case type_proto: return true;
-    OF_PP_FOR_EACH_TUPLE(POD_AND_HALF_CASE, POD_AND_HALF_DATA_TYPE_SEQ)
+    OF_PP_FOR_EACH_TUPLE(COMPLEX_CASE, COMPLEX_DATA_TYPE_SEQ)
     default: return false;
   }
-#undef POD_AND_HALF_CASE
+#undef COMPLEX_CASE
+}
+bool IsTriviallyCopyableDataType(DataType data_type) {
+  switch (data_type) {
+#define TRIVIALLY_COPY_CASE(type_cpp, type_proto) \
+  case type_proto: return true;
+    OF_PP_FOR_EACH_TUPLE(TRIVIALLY_COPY_CASE, TRIVIALLY_COPY_DATA_TYPE_SEQ)
+    default: return false;
+  }
+#undef TRIVIALLY_COPY_CASE
 }
 bool IsIndexDataType(DataType data_type) {
   switch (data_type) {
