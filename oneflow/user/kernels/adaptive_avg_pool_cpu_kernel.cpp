@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/user/kernels/adaptive_pool_kernel_util.h"
 
 namespace oneflow {
@@ -214,6 +215,7 @@ class AdaptivePool3DCpuGradKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_ADAPTIVE_POOL_KERNEL_WITH_DEVICE(device) \
+  REGISTER_ADAPTIVE_POOL_KERNEL(device, float16)          \
   REGISTER_ADAPTIVE_POOL_KERNEL(device, float)            \
   REGISTER_ADAPTIVE_POOL_KERNEL(device, double)           \
   REGISTER_ADAPTIVE_POOL_KERNEL(device, int)
@@ -235,6 +237,7 @@ REGISTER_ADAPTIVE_POOL_KERNEL_WITH_DEVICE(DeviceType::kCPU)
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_ADAPTIVE_POOL_BACKWARD_KERNEL_WITH_DEVICE(device) \
+  REGISTER_ADAPTIVE_POOL_KERNEL(device, float16)                   \
   REGISTER_ADAPTIVE_POOL_BACKWARD_KERNEL(device, float)            \
   REGISTER_ADAPTIVE_POOL_BACKWARD_KERNEL(device, double)           \
   REGISTER_ADAPTIVE_POOL_BACKWARD_KERNEL(device, int)
