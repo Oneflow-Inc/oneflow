@@ -158,7 +158,6 @@ class TestMock(flow.unittest.TestCase):
         with mock.enable(lazy=True):
             import torch
 
-            # Test no infinite loop
             if torch.not_exist:
                 test_case.assertTrue(False)
 
