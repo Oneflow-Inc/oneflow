@@ -610,9 +610,7 @@ class Frac : public OpExprGradFunction<FracCaptureState> {
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
-    if (ctx->requires_grad) {
-      in_grads->at(0) = out_grads.at(0);
-    }
+    if (ctx->requires_grad) { in_grads->at(0) = out_grads.at(0); }
     return Maybe<void>::Ok();
   }
 
