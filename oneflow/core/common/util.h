@@ -34,15 +34,27 @@ limitations under the License.
 #include <thread>
 #include <utility>
 #include <cfenv>
+#include <complex>
 
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/meta_util.hpp"
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/hash.h"
 #include "oneflow/core/common/cpp_attribute.h"
+#include "fmt/format.h"
 #include "fmt/ranges.h"
 
 #define CHECK_ISNULL(e) CHECK((e) == nullptr)
+
+namespace fmt {
+template<typename T>
+struct formatter<std::complex<T>> : formatter<std::string_view> {
+  template<typename FormatContext>
+  auto format(const std::complex<T>& c, FormatContext& ctx) {
+    return formatter<std::string_view>::format(fmt::format("({}+{}j)", c.real(), c.imag()), ctx);
+  }
+};
+}  // namespace fmt
 
 template<class T>
 std::ostream& operator<<(std::ostream& os, const std::vector<T>& v) {
