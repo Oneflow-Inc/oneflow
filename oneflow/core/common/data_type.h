@@ -276,6 +276,14 @@ OF_DEVICE_FUNC T GetMinVal() {
   return *(T*)&ret;
 }
 
+#if CUDA_VERSION >= 11000
+template<>
+OF_DEVICE_FUNC nv_bfloat16 GetMinVal<nv_bfloat16>() {
+  uint16_t ret = 0xff7f;
+  return *(nv_bfloat16*)&ret;
+}
+#endif  // CUDA_VERSION >= 11000
+
 template<DeviceType, typename T>
 struct DevDType {
   typedef T type;
