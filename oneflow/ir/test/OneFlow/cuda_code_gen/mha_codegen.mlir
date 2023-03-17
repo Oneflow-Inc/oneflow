@@ -4,6 +4,7 @@
 // RUN: -tosa-to-tensor \
 // RUN: -pass-pipeline="func.func(tosa-to-linalg-named)" \
 // RUN: -pass-pipeline="func.func(tosa-to-linalg)" \
+// RUN: -linalg-fuse-elementwise-ops \
 // RUN: -canonicalize \
 // RUN: | FileCheck --dump-input=always %s
 
