@@ -22,10 +22,11 @@ namespace oneflow {
 
 namespace {
 
-
+// len = input_shape.back() / 2 + 1
+// n = output_shape.elem_cnt() / 2
 template<typename T>
 void convert_to_doublesized(const std::complex<T>* in, std::complex<T>* dst, size_t len, size_t n) {
-  size_t fact_len = 2 * len - 2;
+  size_t fact_len = 2 * len - 2;  // input_shape.back()
   for (int i = 0; i < n; i++) {
     int index_x = i / fact_len;
     int index_y = i % fact_len;
@@ -109,7 +110,6 @@ private:
       bool onesided = ctx->Attr<bool>("onesided");
       const auto& norm_str = ctx->Attr<std::string>("norm");
       const auto& dims = ctx->Attr<std::vector<int64_t>>("dims");
-
       const T* input_ptr = input->dptr<T>();
       T* out_ptr = out->mut_dptr<T>();
 
@@ -117,6 +117,12 @@ private:
       Shape out_shape (out->shape_view());
       fft_norm_mode norm_mode = norm_from_string(norm_str, forward);
       
+      // get last dim half size
+      if (onesided){
+        int64_t last_dim = dims.back();
+        int64_t last_dim_halfsize = (input_shape[last_dim]) / 2 + 1;
+        out_shape[last_dim] = last_dim_halfsize;
+      }
 
       if (input->data_type() == kComplex64){
       // static void FftC2CForward(ep::Stream* stream, IN* data_in, OUT* data_out, const Shape& input_shape, 

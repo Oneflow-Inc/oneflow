@@ -70,24 +70,27 @@ T compute_fct(const Shape& in_shape, std::vector<int64_t> dims, fft_norm_mode no
 }
 
 
-template<DeviceType device_type, typename IN, typename OUT, typename fct_type>
+template<DeviceType device_type, typename IN, typename OUT, typename dtype>
 struct FftC2CKernelUtil{
-    static void FftC2CForward(ep::Stream* stream, IN* data_in, OUT* data_out, const Shape& input_shape_view, 
-                              const Shape& output_shape, bool forward, const std::vector<int64_t>& dims,
-                              fft_norm_mode normalization);
+    static void FftC2CForward(ep::Stream* stream, IN* data_in, OUT* data_out, 
+                              const Shape& input_shape, const Shape& output_shape, 
+                              const Stride& input_stride, const Stride& output_stride,
+                              bool forward, const std::vector<int64_t>& dims, fft_norm_mode normalization);
 };
 
-template<DeviceType device_type, typename IN, typename OUT, typename fct_type>
+template<DeviceType device_type, typename IN, typename OUT, typename dtype>
 struct FftR2CKernelUtil{
-    static void FftC2CForward(ep::Stream* stream, IN* data_in, OUT* data_out, const Shape& input_shape_view, 
-                              const Shape& output_shape, bool forward, const std::vector<int64_t>& dims,
+    static void FftC2CForward(ep::Stream* stream, IN* data_in, OUT* data_out, 
+                              const Shape& input_shape, const Shape& output_shape, 
+                              const Stride& input_stride, const Stride& output_stride,
+                              bool forward, const std::vector<int64_t>& dims,
                               fft_norm_mode normalization);
 };
 
 
-#define INSTANTIATE_FFTC2C_KERNEL_UTIL(device_type, in_type_pair, out_type_pair, fct_type)  \
+#define INSTANTIATE_FFTC2C_KERNEL_UTIL(device_type, in_type_pair, out_type_pair, dtype)  \
   template struct FftC2CKernelUtil<device_type, in_type_pair, \
-                                  out_type_pair, fct_type>;
+                                  out_type_pair, dtype>;
 
 
 }   // oneflow

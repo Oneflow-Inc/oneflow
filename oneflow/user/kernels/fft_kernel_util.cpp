@@ -4,34 +4,38 @@
 
 namespace oneflow{
 
-template<typename IN, typename OUT, typename fct_type>
-struct FftC2CKernelUtil<DeviceType::kCPU, IN, OUT, fct_type>{
-    static void FftC2CForward(ep::Stream* stream, IN* data_in, OUT* data_out, const Shape& input_shape, 
-                              const Shape& output_shape, bool forward, const std::vector<int64_t>& dims, fft_norm_mode normalization){
+template<typename IN, typename OUT, typename dtype>
+struct FftC2CKernelUtil<DeviceType::kCPU, IN, OUT, dtype>{
+    static void FftC2CForward(ep::Stream* stream, IN* data_in, OUT* data_out, 
+                              const Shape& input_shape, const Shape& output_shape, 
+                              const Stride& input_stride, const Stride& output_stride,
+                              bool forward, const std::vector<int64_t>& dims, fft_norm_mode normalization){
         
-    PocketFFtParams<IN, OUT, fct_type> params(input_shape, output_shape, dims, forward,
-                                    compute_fct<fct_type>(input_shape, dims, normalization) /*1.f*/,
+    PocketFFtParams<dtype> params(input_shape, output_shape, input_stride, output_stride, dims, forward,
+                                    compute_fct<dtype>(input_shape, dims, normalization) /*1.f*/,
                                     FFT_EXCUTETYPE::C2C);
-    PocketFFtConfig<IN, OUT, fct_type> config(params);
+    PocketFFtConfig<dtype> config(params);
     config.excute(data_in, data_out);
     }
 };
 
 
-template<typename IN, typename OUT, typename fct_type>
-struct FftR2CKernelUtil<DeviceType::kCPU, IN, OUT, fct_type>{
-    static void FftR2CForward(ep::Stream* stream, IN* data_in, OUT* data_out, const Shape& input_shape, 
-                              const Shape& output_shape, bool forward, const std::vector<int64_t>& dims, fft_norm_mode normalization){
-    
-    // get temp buffer ? or use out, must be sure out is contiguos?
-    
+template<typename IN, typename OUT, typename dtype>
+struct FftR2CKernelUtil<DeviceType::kCPU, IN, OUT, dtype>{
+    static void FftC2CForward(ep::Stream* stream, IN* data_in, OUT* data_out, 
+                              const Shape& input_shape, const Shape& output_shape, 
+                              const Stride& input_stride, const Stride& output_stride,
+                              bool forward, const std::vector<int64_t>& dims,
+                              fft_norm_mode normalization){
+    // get temp buffer ? or use out, must be sure `out` is contiguos?
+
     // get last dim half size
-    
+
     // do r2c, get half size fft out
-    PocketFFtParams<IN, OUT, fct_type> params(input_shape, output_shape, dims, forward,
-                                    compute_fct<fct_type>(input_shape, dims, normalization) /*1.f*/,
+    PocketFFtParams<dtype> params(input_shape, output_shape, input_stride, output_stride, dims, forward,
+                                    compute_fct<dtype>(input_shape, dims, normalization) /*1.f*/,
                                     FFT_EXCUTETYPE::R2C);
-    PocketFFtConfig<IN, OUT, fct_type> config(params);
+    PocketFFtConfig<dtype> config(params);
     config.excute(data_in, data_out);
 
     // convert_to_doublesized
