@@ -70,7 +70,6 @@ check_unwanted_test_scripts(
         "exceptions",
         "expensive",
         "ddp",
-        "misc",
         "profiler",
     ],
 )
