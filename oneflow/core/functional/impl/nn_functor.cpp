@@ -5098,7 +5098,7 @@ class NonContiguousBinaryOpFunctor {
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& lhs, const std::shared_ptr<Tensor>& rhs,
-                           const std::string& op, const bool inplace = false) const {
+                           const std::string& op, const bool& inplace = false) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("op", "inplace");
     attrs.SetAllAttrs(op, inplace);
     if (inplace) {
@@ -5119,20 +5119,22 @@ class NonContiguousBinaryOpGradFunctor {
   NonContiguousBinaryOpGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("noncontiguous_binary_op_grad")
                          .Input("dy")
-                         .Input("lhs", 0)
-                         .Input("rhs", 0)
+                         .Input("lhs")
+                         .Input("rhs")
                          .Output("dlhs")
                          .Output("drhs")
                          .Build());
   }
 
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& dy, const std::shared_ptr<Tensor>& lhs,
-                           const std::shared_ptr<Tensor>& rhs, const std::string& op,
-                           const bool inplace) const {
+  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& dy,
+                                const std::shared_ptr<Tensor>& lhs,
+                                const std::shared_ptr<Tensor>& rhs, const std::string& op,
+                                const bool& inplace = false) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("op", "inplace");
-    CHECK(!inplace) << "inplace should be false when inputs of noncontiguous_binary_op need grad.";
+    CHECK(!inplace)
+        << "inplace should be false when the inputs of noncontiguous_binary_op need grad.";
     attrs.SetAllAttrs(op, inplace);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, lhs, rhs}, attrs);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, lhs, rhs}, attrs);
   }
 
  private:

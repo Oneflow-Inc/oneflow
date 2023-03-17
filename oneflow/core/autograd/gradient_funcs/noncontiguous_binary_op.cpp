@@ -70,6 +70,7 @@ Maybe<void> NonContiguousBinaryOp::Apply(const NonContiguousBinaryOpCaptureState
                                          TensorTuple* in_grads) const {
   if (!ctx->lhs_requires_grad && !ctx->rhs_requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
+  in_grads->resize(2);
   auto lhs = ctx->SavedTensors().at(0);
   auto rhs = ctx->SavedTensors().at(1);
   auto ret = JUST(functional::NonContiguousBinaryOpGrad(out_grads.at(0), lhs, rhs, ctx->op, false));

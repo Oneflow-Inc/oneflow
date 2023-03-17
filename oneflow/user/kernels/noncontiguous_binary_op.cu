@@ -321,8 +321,7 @@ __global__ void noncontiguous_binary_op_grad_kernel(IndexType n_pack, Loadery dy
     dy.load(i, &pack_dy);
 #pragma unroll
     for (int j = 0; j < pack_size; ++j)
-      BinaryOp()(static_cast<R>(pack_dy.elem[j]), static_cast<R>(pack_x1.elem[j]),
-                 static_cast<R>(pack_x2.elem[j]), &pack_dx1.elem[j],
+      BinaryOp()(pack_dy.elem[j], pack_x1.elem[j], pack_x2.elem[j], &pack_dx1.elem[j],
                  &pack_dx2.elem[j]);  // todo: Apply2
     load1.store(i, &pack_dx1);
     load2.store(i, &pack_dx2);
@@ -449,6 +448,9 @@ class NonContiguousBinaryOpGradKernel final : public user_op::OpKernel {
         pack_size = 16 / max_elem_size;
         while (pack_size > 1 && sizes[i] % pack_size) pack_size >>= 1;
         sizes[i] = sizes[i] / pack_size;
+        strides[0][i] *= pack_size;
+        strides[1][i] *= pack_size;
+        strides[2][i] *= pack_size;
       }
     }
 
