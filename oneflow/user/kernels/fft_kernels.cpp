@@ -88,12 +88,12 @@ private:
                                                                                        input_shape, out_shape, forward, dims, norm_mode);
       }
       else{
-        Error::RuntimeError() << "expects kComplex64 or kComplex128, but got " << x->data_type();
+        Error::RuntimeError() << "expects kComplex64 or kComplex128, but got " << input->data_type();
       }
     }
 };
 
-#if 1
+#if 0
 template<typename IN, typename OUT>
 class StftCpuKernel final : public user_op::OpKernel {
  public:
@@ -162,6 +162,18 @@ class StftCpuKernel final : public user_op::OpKernel {
 REGISTER_STFT_CPU_KERNEL(double, std::complex<double>)
 REGISTER_STFT_CPU_KERNEL(float, std::complex<float>)
 #endif
+
+
+
+
+#define REGISTER_FFTC2C_KERNELS(device, dtype)                 \
+  REGISTER_USER_KERNEL("fft_c2c")                               \
+      .SetCreateFn<FftC2CKernel<device, dtype>>()              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device) \
+                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value))
+
+REGISTER_FFTC2C_KERNELS(DeviceType::kCPU, std::complex<float>);
+REGISTER_FFTC2C_KERNELS(DeviceType::kCPU, std::complex<double>);
 
 
 }  // namespace

@@ -17,6 +17,8 @@ struct FftC2CKernelUtil<DeviceType::kCPU, IN, OUT, fct_type>{
     }
 };
 
-
-
+// OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_FFTC2C_KERNEL_UTIL, (DeviceType::kCPU),
+//                                  COMPLEX_DATA_TYPE_SEQ, COMPLEX_DATA_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ);
+INSTANTIATE_FFTC2C_KERNEL_UTIL((DeviceType::kCPU), std::complex<float>, std::complex<float>, float);
+INSTANTIATE_FFTC2C_KERNEL_UTIL((DeviceType::kCPU), std::complex<double>, std::complex<double>, double);
 }   // namespace oneflow

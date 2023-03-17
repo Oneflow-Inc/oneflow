@@ -70,7 +70,9 @@ struct FftC2CKernelUtil{
                               fft_norm_mode normalization);
 };
 
-
+#define INSTANTIATE_FFTC2C_KERNEL_UTIL(device_type, in_type_pair, out_type_pair, fct_type)  \
+  template struct FftC2CKernelUtil<device_type, in_type_pair, \
+                                  out_type_pair, fct_type>;
 
 
 }   // oneflow
