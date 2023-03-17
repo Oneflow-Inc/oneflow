@@ -5624,9 +5624,11 @@ def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", [NoSideEffect, NoGrad, Decla
     OneFlow_Tensor:$out
   );
   let attrs = (ins
+    ComplexDoubleAttr:$complex_value,
     DefaultValuedAttr<F64Attr, "0.">:$floating_value,
     DefaultValuedAttr<SI64Attr, "0">:$integer_value,
     DefaultValuedAttr<BoolAttr, "false">:$is_floating_value,
+    DefaultValuedAttr<BoolAttr, "false">:$is_complex_value,
     OneFlow_DataType:$dtype,
     ShapeAttr:$shape,
     StrArrayAttr:$nd_sbp

@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <string>
 #include <vector>
+#include <complex>
 #include <pybind11/pybind11.h>
 
 #include "oneflow/api/python/framework/tensor.h"
@@ -97,11 +98,13 @@ Scalar PyUnpackScalarTensor(PyObject* obj);
 DefinePyTypeScalarTensorCheck(Bool, IsBoolDataType);         // PyBoolScalarTensorCheck
 DefinePyTypeScalarTensorCheck(Integer, IsIntegralDataType);  // PyIntegerScalarTensorCheck
 DefinePyTypeScalarTensorCheck(Float, IsFloatingDataType);    // PyFloatScalarTensorCheck
+DefinePyTypeScalarTensorCheck(Complex, IsComplexDataType);   // PyComplexScalarTensorCheck
 #undef DefinePyTypeScalarTensorCheck
 
 bool PyUnpackBoolScalarTensor(PyObject* obj);
 long long PyUnpackIntegerScalarTensor_AsLongLong(PyObject* obj);
 double PyUnpackFloatScalarTensor_AsDouble(PyObject* obj);
+std::complex<double> PyUnpackComplexScalarTensor_AsCComplex(PyObject* obj);
 
 // Integer/Float list
 bool PyLongSequenceCheck(PyObject* obj);
