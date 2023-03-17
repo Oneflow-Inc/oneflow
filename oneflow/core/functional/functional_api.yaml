@@ -291,6 +291,30 @@
   signature: "Tensor (Tensor dz, Tensor x, Tensor y) => FloorDivYGrad"
   bind_python: False
 
+- name: "lerp"
+  signature: 
+    [
+      "Tensor (Tensor start, Tensor end, Tensor weight) => Lerp",
+      "Tensor (Tensor start, Tensor end, Scalar weight) => ScalarLerp"
+    ]
+  bind_python: True
+
+- name: "lerp_"
+  signature: 
+    [
+      "Tensor (Tensor start, Tensor end, Tensor weight) => InplaceLerp",
+      "Tensor (Tensor start, Tensor end, Scalar weight) => ScalarInplaceLerp",
+    ]
+  bind_python: True
+
+- name: "lerp_grad"
+  signature: "TensorTuple (Tensor start, Tensor end, Tensor weight, Tensor out_diff) => LerpGrad"
+  bind_python: False
+
+- name: "scalar_lerp_grad"
+  signature: "TensorTuple (Tensor start, Tensor end, Tensor out_diff, Scalar weight) => ScalarLerpGrad"
+  bind_python: False
+
 - name: "trunc_divide"
   signature:
     [
@@ -443,9 +467,13 @@
 - name: "logaddexp"
   signature: "Tensor (Tensor x, Tensor y) => LogAddExp"
   bind_python: True
-  
+
 - name: "quantile"
-  signature: 'Tensor (Tensor x, Scalar q, Int32 dim, Bool keepdim=False, String interpolation="linear", Tensor out=None) => Quantile'
+  signature: 
+    [
+      'Tensor (Tensor input, Tensor q, Int64 dim=None, Bool keepdim=False, String interpolation="linear", Bool ignore_nan=False) => Quantile',
+      'Tensor (Tensor input, Scalar q, Int64 dim=None, Bool keepdim=False, String interpolation="linear", Bool ignore_nan=False) ==> ScalarQuantile'
+    ]
   bind_python: True
 
 - name: "transpose"
@@ -956,6 +984,10 @@
 
 - name: "ones_like"
   signature: "Tensor (Tensor x) => OnesLike"
+  bind_python: False
+
+- name: "full_like"
+  signature: "Tensor (Tensor x, Scalar fill_value) => FullLike"
   bind_python: False
 
 - name: "bernoulli"
@@ -1880,6 +1912,10 @@
   signature: "Tensor (Tensor x) => Ceil"
   bind_python: True
 
+- name: "ceil_"
+  signature: "Tensor (Tensor x) => Ceil_"
+  bind_python: True
+
 - name: "ceil_grad"
   signature: "Tensor (Tensor x, Tensor dy) => CeilGrad"
   bind_python: False
@@ -1954,6 +1990,10 @@
 
 - name: "round"
   signature: "Tensor (Tensor x) => Round"
+  bind_python: True
+
+- name: "round_"
+  signature: "Tensor (Tensor x) => Round_"
   bind_python: True
 
 - name: "round_grad"
@@ -2609,7 +2649,7 @@
   bind_python: True
 
 - name: "fused_multi_head_attention_inference_v2"
-  signature: 'Tensor (*, Tensor query, String query_layout, Int64 query_head_size=None, Tensor key=None, String key_layout=None, Tensor value=None, String value_layout=None, Tensor attn_bias=None, String output_layout="BM(HK)", Bool causal=False, Int64 causal_diagonal_offset=0) => FusedMultiHeadAttentionInferenceV2'
+  signature: 'Tensor (*, Tensor query, String query_layout, Int64 query_head_size=None, Tensor query_seq_start=None, Int64 query_max_seq_len=None, Tensor key=None, String key_layout=None, Tensor key_seq_start=None, Tensor key_seq_len=None, Int64 key_max_seq_len=None, Tensor value=None, String value_layout=None, Tensor attn_bias=None, String output_layout="BM(HK)", Float scale=None, Bool causal=None, String attn_mask_type=None, Int64 causal_diagonal_offset=0) => FusedMultiHeadAttentionInferenceV2'
   bind_python: True
 
 - name: "fused_attention_concat_past_key_value"
