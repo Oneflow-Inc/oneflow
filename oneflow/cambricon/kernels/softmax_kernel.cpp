@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <cstdint>
 #include "cnnl.h"
 #include "oneflow/cambricon/ep/mlu_stream.h"
 #include "oneflow/core/common/data_type.h"
@@ -26,17 +25,17 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-class MluLogSoftmaxKernel final : public user_op::OpKernel {
+class MluSoftmaxKernel final : public user_op::OpKernel {
  public:
-  MluLogSoftmaxKernel() = default;
-  ~MluLogSoftmaxKernel() = default;
+  MluSoftmaxKernel() = default;
+  ~MluSoftmaxKernel() = default;
 
  private:
   using user_op::OpKernel::Compute;
 
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("prob", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CnnlTensorDescriptor input_desc, output_desc;
     int in_ndim = in->shape_view().NumAxes();
     int batch_dims = in->shape_view().Count(0, in_ndim - 1);
@@ -49,7 +48,7 @@ class MluLogSoftmaxKernel final : public user_op::OpKernel {
 
     OF_CNNL_CHECK(cnnlSoftmaxForward_v2(
         /* handle    */ ctx->stream()->As<ep::MluStream>()->cnnl_handle(),
-        /* algorithm */ CNNL_SOFTMAX_LOG,
+        /* algorithm */ CNNL_SOFTMAX_ACCURATE,
         /* mode      */ CNNL_SOFTMAX_MODE_LOW_DIMENSION,
         /* prefer    */ CNNL_COMPUTATION_HIGH_PRECISION,
         /* alpha     */ nullptr,
@@ -63,13 +62,12 @@ class MluLogSoftmaxKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_LOG_SOFTMAX_MLU_KERNEL(dtype)                        \
-  REGISTER_USER_KERNEL("log_softmax")                                 \
-      .SetCreateFn<MluLogSoftmaxKernel<dtype>>()                      \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kMLU) \
-                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
+#define REGISTER_SOFTMAX_MLU_KERNEL(dtype)                                                \
+  REGISTER_USER_KERNEL("softmax").SetCreateFn<MluSoftmaxKernel<dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceType() == DeviceType::kMLU)                                      \
+      && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
-REGISTER_LOG_SOFTMAX_MLU_KERNEL(float)
-REGISTER_LOG_SOFTMAX_MLU_KERNEL(float16)
+REGISTER_SOFTMAX_MLU_KERNEL(float)
+REGISTER_SOFTMAX_MLU_KERNEL(float16)
 
 }  // namespace oneflow

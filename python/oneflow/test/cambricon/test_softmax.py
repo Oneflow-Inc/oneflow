@@ -24,27 +24,27 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def _test_log_softmax_forward(test_case, shape, device, dtype):
+def _test_softmax_forward(test_case, shape, device, dtype):
     x = flow.tensor(np.random.randn(*shape), device=flow.device(device), dtype=dtype)
-    mlu_out = flow.log_softmax(x)
+    mlu_out = flow.softmax(x)
     if dtype == flow.float16:
-        cpu_out = flow.log_softmax(x.cpu().float())
+        cpu_out = flow.softmax(x.cpu().float())
         test_case.assertTrue(
             np.allclose(cpu_out.numpy(), mlu_out.numpy(), 0.001, 0.001)
         )
     else:
-        cpu_out = flow.log_softmax(x.cpu())
+        cpu_out = flow.softmax(x.cpu())
         test_case.assertTrue(
             np.allclose(cpu_out.numpy(), mlu_out.numpy(), 0.0001, 0.0001)
         )
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestLogSoftmaxCambriconModule(flow.unittest.TestCase):
-    def test_log_softmax(test_case):
+class TestSoftmaxCambriconModule(flow.unittest.TestCase):
+    def test_softmax(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _test_log_softmax_forward,
+            _test_softmax_forward,
         ]
         arg_dict["shape"] = [
             (16, 32,),
