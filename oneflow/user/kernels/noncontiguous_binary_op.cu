@@ -272,7 +272,7 @@ class NonContiguousBinaryOpKernel final : public user_op::OpKernel {
       strides[0][i] = y->stride()[i];
       strides[1][i] = x1->stride()[i];
       strides[2][i] = x2->stride()[i];
-      if (x1->stride()[i] == 1 && x2->stride()[i] == 1) {
+      if (x1->stride()[i] == 1 && x2->stride()[i] == 1 && y->stride()[i] == 1) {
         pack_size = 16 / max_elem_size;
         while (pack_size > 1 && sizes[i] % pack_size) pack_size >>= 1;
         sizes[i] = sizes[i] / pack_size;
@@ -444,7 +444,7 @@ class NonContiguousBinaryOpGradKernel final : public user_op::OpKernel {
       strides[0][i] = dy->stride()[i];
       strides[1][i] = x1->stride()[i];
       strides[2][i] = x2->stride()[i];
-      if (x1->stride()[i] == 1 && x2->stride()[i] == 1) {
+      if (x1->stride()[i] == 1 && x2->stride()[i] == 1 && dy->stride()[i] == 1) {
         pack_size = 16 / max_elem_size;
         while (pack_size > 1 && sizes[i] % pack_size) pack_size >>= 1;
         sizes[i] = sizes[i] / pack_size;
