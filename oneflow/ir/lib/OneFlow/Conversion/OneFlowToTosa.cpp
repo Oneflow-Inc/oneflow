@@ -402,8 +402,8 @@ struct ReshapeOpLowering final : public OpConversionPattern<ReshapeOp> {
 };
 
 // transpose the last two dims of the tensor. Reshape it to 3D if it is 2D.
-Value transposeAndTransposeIfRequired(Location loc, ConversionPatternRewriter& rewriter,
-                                      Value matrix, bool transpose) {
+Value transposeAndReshapeIfRequired(Location loc, ConversionPatternRewriter& rewriter, Value matrix,
+                                    bool transpose) {
   auto shape_type = matrix.getType().cast<ShapedType>();
   CHECK(shape_type.getRank() == 2 || shape_type.getRank() == 3);
   if (transpose) {
@@ -431,8 +431,8 @@ struct MatmulOpLowering final : public OpConversionPattern<MatmulOp> {
   using OpConversionPattern<MatmulOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(MatmulOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    auto a = transposeAndTransposeIfRequired(op->getLoc(), rewriter, op.a(), op.transpose_a());
-    auto b = transposeAndTransposeIfRequired(op->getLoc(), rewriter, op.b(), op.transpose_b());
+    auto a = transposeAndReshapeIfRequired(op->getLoc(), rewriter, op.a(), op.transpose_a());
+    auto b = transposeAndReshapeIfRequired(op->getLoc(), rewriter, op.b(), op.transpose_b());
 
     const auto out_shape_type = op.out().getType().cast<ShapedType>();
     const auto out_reshape_type =
@@ -453,9 +453,8 @@ struct BatchMatmulOpLowering final : public OpConversionPattern<BatchMatmulOp> {
   using OpConversionPattern<BatchMatmulOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(BatchMatmulOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    auto a = transposeAndTransposeIfRequired(op->getLoc(), rewriter, op.a(), op.transpose_a());
-    auto b = transposeAndTransposeIfRequired(op->getLoc(), rewriter, op.b(), op.transpose_b());
-
+    auto a = transposeAndReshapeIfRequired(op->getLoc(), rewriter, op.a(), op.transpose_a());
+    auto b = transposeAndReshapeIfRequired(op->getLoc(), rewriter, op.b(), op.transpose_b());
     rewriter.replaceOpWithNewOp<tosa::MatMulOp>(op, op.out().getType(), a, b);
     return success();
   }
