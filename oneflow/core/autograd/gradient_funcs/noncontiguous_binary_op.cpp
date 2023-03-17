@@ -13,7 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <glog/logging.h>
 #include "oneflow/core/common/just.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -60,6 +62,10 @@ Maybe<void> NonContiguousBinaryOp::Capture(NonContiguousBinaryOpCaptureState* ct
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->inplace = JUST(composed_attrs.GetAttr<bool>("inplace"));
   ctx->op = JUST(composed_attrs.GetAttr<std::string>("op"));
+  if (ctx->inplace && ctx->rhs_requires_grad) {
+    CHECK_OR_RETURN(ctx->op == "add" || ctx->op == "sub")
+        << "when inplace and rhs requires grad, op should be add/sub";
+  }
   ctx->SaveTensorForBackward(inputs.at(0));
   ctx->SaveTensorForBackward(inputs.at(1));
   return Maybe<void>::Ok();

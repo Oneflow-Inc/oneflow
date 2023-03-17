@@ -5131,8 +5131,6 @@ class NonContiguousBinaryOpGradFunctor {
                                 const std::shared_ptr<Tensor>& rhs, const std::string& op,
                                 const bool& inplace = false) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("op", "inplace");
-    CHECK(!inplace)
-        << "inplace should be false when the inputs of noncontiguous_binary_op need grad.";
     attrs.SetAllAttrs(op, inplace);
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, lhs, rhs}, attrs);
   }
