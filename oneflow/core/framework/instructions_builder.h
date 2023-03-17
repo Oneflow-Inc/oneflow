@@ -145,16 +145,15 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
                               Symbol<Stream> stream);
 
   Maybe<void> SoftSyncStreamBetween(
-      small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&& dependences,
-      Symbol<Stream> from_stream, Symbol<Stream> to_stream);
+      small_vector<intrusive::shared_ptr<LocalDepObject>>&& dependences, Symbol<Stream> from_stream,
+      Symbol<Stream> to_stream);
 
-  Maybe<void> StreamWait(
-      small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&& dependences,
-      Symbol<Stream> from_stream, Symbol<Stream> to_stream);
+  Maybe<void> StreamWait(small_vector<intrusive::shared_ptr<LocalDepObject>>&& dependences,
+                         Symbol<Stream> from_stream, Symbol<Stream> to_stream);
 
-  Maybe<void> RecordEvent(small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&&
-                              compute_local_dep_objects,
-                          Symbol<Stream> stream);
+  Maybe<void> RecordEvent(
+      small_vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_objects,
+      Symbol<Stream> stream);
 
   vm::InstructionList* instruction_list_;
 };

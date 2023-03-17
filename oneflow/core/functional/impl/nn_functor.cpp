@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "fmt/core.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/tensor_util.h"
@@ -25,8 +24,11 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/user/kernels/random_mask_like_kernel.h"
 #include "oneflow/user/kernels/dropout_kernel.h"
-#include "oneflow/core/common/container_util.h"
 #include "oneflow/user/kernels/distributions/common.h"
+#include "oneflow/user/kernels/random_seed_util.h"
+
+#include "oneflow/core/common/container_util.h"
+#include "fmt/core.h"
 
 namespace oneflow {
 namespace one {
@@ -795,8 +797,6 @@ class FusedMatmulBiasAddReluDropoutFunctor {
     */
     const auto& x_shape = x->shape();
     k = x_shape->At(1);
-    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
     for (int64_t i = 0; i < weight_size; i++) {
       CHECK_GE_OR_RETURN(dropout_rate_list[i], 0.0f)
           << Error::RuntimeError() << "Dropout rate should be >= 0.0";
@@ -815,6 +815,8 @@ class FusedMatmulBiasAddReluDropoutFunctor {
       k = n;
     }
 
+    auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+
 #if CUDA_VERSION >= 11060
     DeviceType device_type{};
     if (x->is_global()) {
@@ -822,15 +824,19 @@ class FusedMatmulBiasAddReluDropoutFunctor {
     } else {
       device_type = JUST(x->device())->enum_type();
     }
-
     if ((device_type == DeviceType::kCUDA) && (weight_size <= kMaxInputCount)
         && (!ParseBooleanFromEnv("ONEFLOW_FUNCTOR_DISABLE_FUSED_MLP", false))) {
       TensorTuple input(2 * weight_size + 1);
       input[0] = x;
       std::copy(weights.begin(), weights.end(), input.begin() + 1);
       std::copy(biases.begin(), biases.end(), input.begin() + 1 + weight_size);
-      auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("skip_final_activation", "dropout_rate_list");
-      attrs.SetAllAttrs(skip_final_activation, dropout_rate_list);
+
+      gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
+      auto& attrs =
+          THREAD_CACHED_MUTABLE_ATTR_MAP("skip_final_activation", "seed", "dropout_rate_list");
+      attrs.SetAllAttrs(skip_final_activation, static_cast<int64_t>(gen->current_seed()),
+                        dropout_rate_list);
+      const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
       return OpInterpUtil::Dispatch<Tensor>(*fused_op_[weight_size], input,
                                             OpExprInterpContext(attrs, dropout_state));
     }
@@ -2816,25 +2822,27 @@ class DropoutFunctor {
       JUST(CheckInplaceValid(x));
       (*outputs)[0] = x;
     }
-    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+
+    auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
+    auto& dropout_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rate", "seed");
+    dropout_attrs.SetAllAttrs(p, static_cast<int64_t>(gen->current_seed()));
+
     const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
-    auto& dropout_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rate");
-    dropout_attrs.SetAllAttrs(p);
+    OpExprInterpContext ctx(dropout_attrs, dropout_state);
     if (addend) {
       if ((!training) || p == 0.0) {
         JUST(OpInterpUtil::Dispatch(*add_op_, {x, JUST(addend)}, outputs.get()));
       } else {
         outputs->resize(2);
-        JUST(OpInterpUtil::Dispatch(*dropout_addend_op_, {x, JUST(addend)}, outputs.get(),
-                                    OpExprInterpContext(dropout_attrs, dropout_state)));
+        JUST(OpInterpUtil::Dispatch(*dropout_addend_op_, {x, JUST(addend)}, outputs.get(), ctx));
       }
     } else {
       if (!training || p == 0.0) {
         return x;
       } else {
         outputs->resize(2);
-        JUST(OpInterpUtil::Dispatch(*dropout_op_, {x}, outputs.get(),
-                                    OpExprInterpContext(dropout_attrs, dropout_state)));
+        JUST(OpInterpUtil::Dispatch(*dropout_op_, {x}, outputs.get(), ctx));
       }
     }
     return (*outputs)[0];
@@ -2856,7 +2864,9 @@ Maybe<Tensor> MakeFeatureNoise(const std::shared_ptr<one::Tensor>& x) {
   sizes.push_back(x->shape()->At(0));
   sizes.push_back(x->shape()->At(1));
   for (int i = 2; i < ndim; i++) { sizes.push_back(1); }
-  return JUST(Empty(Shape(sizes), x->dtype(), JUST(x->device()), false));
+  return JUST(Empty(Shape(sizes), x->dtype(), JUST(x->device()),
+                    /*requires_grad=*/x->requires_grad(),
+                    /*pin_memory=*/false));
 }
 
 Maybe<Tensor> DropoutImpl(const std::shared_ptr<one::Tensor>& input, const float& p,
@@ -3280,11 +3290,11 @@ class FusedScaleTrilSoftmaxMaskScaleFunctor {
                                 const int64_t diagonal, const float tril_scale_value,
                                 const float tril_fill_value,
                                 const Optional<one::Generator>& generator) const {
-    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
     auto& random_mask_like_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rate", "seed");
     random_mask_like_attrs.SetAllAttrs(p, static_cast<int64_t>(gen->current_seed()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
-
     const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(
         *random_mask_like_op_, {x},
         OpExprInterpContext(random_mask_like_attrs, random_mask_like_state)));
@@ -3385,7 +3395,8 @@ class FusedBiasAddDropoutFunctor {
       axis_val += num_axes;
     }
     if (p > 0.0) {
-      const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+      auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+      gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), a));
       auto& random_mask_like_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rate", "seed");
       random_mask_like_attrs.SetAllAttrs(p, static_cast<int64_t>(gen->current_seed()));
       const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
@@ -3626,11 +3637,11 @@ class FusedScaleMaskSoftmaxDropoutFunctor {
                                 const Optional<one::Generator>& generator) const {
     float rate = p;
     if (!training) rate = 0.0;
-    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
     auto& random_mask_like_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rate", "seed");
     random_mask_like_attrs.SetAllAttrs(rate, static_cast<int64_t>(gen->current_seed()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
-
     const auto& dropout_mask = JUST(OpInterpUtil::Dispatch<Tensor>(
         *random_mask_like_op_, {x},
         OpExprInterpContext(random_mask_like_attrs, random_mask_like_state)));
@@ -3677,11 +3688,11 @@ class FusedBiasAddScaleMaskSoftmaxDropoutFunctor {
                                 const Optional<one::Generator>& generator) const {
     float rate = p;
     if (!training) rate = 0.0;
-    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
     auto& random_mask_like_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rate", "seed");
     random_mask_like_attrs.SetAllAttrs(rate, static_cast<int64_t>(gen->current_seed()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
-
     const auto& dropout_mask = JUST(OpInterpUtil::Dispatch<Tensor>(
         *random_mask_op_, {x},
         OpExprInterpContext(random_mask_like_attrs, random_mask_like_state)));
@@ -4851,218 +4862,6 @@ class BatchNormBackwardElemtFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class FusedMultiHeadAttentionInferenceFunctor {
- public:
-  FusedMultiHeadAttentionInferenceFunctor() = default;
-  Maybe<Tensor> operator()(
-      const std::shared_ptr<one::Tensor>& query, const std::shared_ptr<one::Tensor>& key,
-      const std::shared_ptr<one::Tensor>& value, const int64_t& num_heads, const bool& causal,
-      const int64_t& query_hidden_slice_start, const int64_t& query_hidden_slice_end,
-      const int64_t& key_hidden_slice_start, const int64_t& key_hidden_slice_end,
-      const int64_t& value_hidden_slice_start, const int64_t& value_hidden_slice_end,
-      const Optional<one::Tensor>& attn_bias, const int64_t& causal_diagonal_offset) const {
-    CHECK_OR_RETURN(query_hidden_slice_start == 0 && key_hidden_slice_start == 0
-                    && value_hidden_slice_start == 0 && query_hidden_slice_end == -1
-                    && key_hidden_slice_end == -1 && value_hidden_slice_end == -1)
-        << "The parameters 'query_hidden_slice_start', 'query_hidden_slice_end', "
-           "'key_hidden_slice_start', 'key_hidden_slice_end', 'value_hidden_slice_start', "
-           "'value_hidden_slice_end' have been deprecated.";
-
-    const int64_t query_hidden_size = query->shape()->At(2);
-    CHECK_EQ_OR_RETURN(query_hidden_size % num_heads, 0)
-        << "The hidden size of the query tensor should be a multiple of num_heads.";
-    const int64_t query_head_size = query_hidden_size / num_heads;
-    return functional::FusedMultiHeadAttentionInferenceV2(query, "BM(HK)", query_head_size, key,
-                                                          "BM(HK)", value, "BM(HK)", attn_bias,
-                                                          causal, causal_diagonal_offset);
-  }
-};
-
-class FusedMultiHeadAttentionInferenceV2Functor {
- public:
-  FusedMultiHeadAttentionInferenceV2Functor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_multi_head_attention_inference")
-                         .Input("query")
-                         .Input("key")
-                         .Input("value")
-                         .Output("out")
-                         .Build());
-    op_with_attn_bias_ = CHECK_JUST(one::OpBuilder("fused_multi_head_attention_inference")
-                                        .Input("query")
-                                        .Input("key")
-                                        .Input("value")
-                                        .Input("attn_bias")
-                                        .Output("out")
-                                        .Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& query,
-                           const std::string& query_layout,
-                           const Optional<int64_t>& query_head_size,
-                           const std::shared_ptr<one::Tensor>& key, const std::string& key_layout,
-                           const std::shared_ptr<one::Tensor>& value,
-                           const std::string& value_layout, const Optional<one::Tensor>& attn_bias,
-                           const bool& causal, const int64_t& causal_diagonal_offset) const {
-    CHECK_GE_OR_RETURN(causal_diagonal_offset, 0)
-        << "The value of causal_diagonal_offset should be greater or equal to 0.";
-
-    const auto ParseDims = [](const std::string& name, const Shape& shape,
-                              const std::string& layout, const Optional<int64_t>& num_heads,
-                              const Optional<int64_t>& head_size, int64_t* b, int64_t* m,
-                              int64_t* h, int64_t* k) -> Maybe<void> {
-      if (shape.NumAxes() == 3) {
-        if (layout == "BM(HK)") {
-          *b = shape.At(0);
-          *m = shape.At(1);
-          const int64_t hidden_size = shape.At(2);
-          if (num_heads) {
-            const int64_t expected_h = JUST(num_heads);
-            CHECK_EQ_OR_RETURN(hidden_size % expected_h, 0);
-            *h = expected_h;
-            *k = hidden_size / expected_h;
-          } else if (head_size) {
-            const int64_t expected_k = JUST(head_size);
-            CHECK_EQ_OR_RETURN(hidden_size % expected_k, 0);
-            *h = hidden_size / expected_k;
-            *k = expected_k;
-          } else {
-            UNIMPLEMENTED_THEN_RETURN();
-          }
-        } else if (layout == "MB(HK)") {
-          *b = shape.At(1);
-          *m = shape.At(0);
-          const int64_t hidden_size = shape.At(2);
-          if (num_heads) {
-            const int64_t expected_h = JUST(num_heads);
-            CHECK_EQ_OR_RETURN(hidden_size % expected_h, 0);
-            *h = expected_h;
-            *k = hidden_size / expected_h;
-          } else if (head_size) {
-            const int64_t expected_k = JUST(head_size);
-            CHECK_EQ_OR_RETURN(hidden_size % expected_k, 0);
-            *h = hidden_size / expected_k;
-            *k = expected_k;
-          } else {
-            UNIMPLEMENTED_THEN_RETURN();
-          }
-        } else {
-          UNIMPLEMENTED_THEN_RETURN()
-              << name << "_layout should be 'BM(HK)' or 'MB(HK)' when the number of dimensions of "
-              << name << " tensor is 3.";
-        }
-      } else if (shape.NumAxes() == 4) {
-        if (layout == "BMHK") {
-          *b = shape.At(0);
-          *m = shape.At(1);
-          *h = shape.At(2);
-          *k = shape.At(3);
-        } else if (layout == "BHMK") {
-          *b = shape.At(0);
-          *m = shape.At(2);
-          *h = shape.At(1);
-          *k = shape.At(3);
-        } else {
-          UNIMPLEMENTED_THEN_RETURN()
-              << name << "_layout should be 'BMHK' or 'BHMK' when the number of dimensions of "
-              << name << " tensor is 4.";
-          ;
-        }
-        if (num_heads) {
-          const int64_t expected_h = JUST(num_heads);
-          CHECK_EQ_OR_RETURN(*h, expected_h) << "The size of dimension 'H' of " << name
-                                             << " tensor should be " << expected_h << ".";
-        }
-        if (head_size) {
-          const int64_t expected_k = JUST(head_size);
-          CHECK_EQ_OR_RETURN(*k, expected_k) << "The size of dimension 'K' of " << name
-                                             << " tensor should be " << expected_k << ".";
-        }
-      } else {
-        UNIMPLEMENTED_THEN_RETURN()
-            << "The number of dimensions of the " << name << " tensor should be 3 or 4";
-      };
-      return Maybe<void>::Ok();
-    };
-
-    int64_t q_b = 0;
-    int64_t q_m = 0;
-    int64_t q_h = 0;
-    int64_t q_k = 0;
-    JUST(ParseDims("query", *query->shape(), query_layout, Optional<int64_t>(), query_head_size,
-                   &q_b, &q_m, &q_h, &q_k));
-    CHECK_EQ_OR_RETURN(q_k % 8, 0)
-        << "The size of dimension 'K' of the query tensor should be a multiple of 8.";
-
-    int64_t k_b = 0;
-    int64_t k_m = 0;
-    int64_t k_h = 0;
-    int64_t k_k = 0;
-    JUST(ParseDims("key", *key->shape(), key_layout, Optional<int64_t>(), q_k, &k_b, &k_m, &k_h,
-                   &k_k));
-    CHECK_EQ_OR_RETURN(k_b, q_b) << "The size of dimension 'B' of the key tensor should be the "
-                                    "same as that of the query tensor.";
-    CHECK_EQ_OR_RETURN(k_h, q_h) << "The size of dimension 'H' of the key tensor should be the "
-                                    "same as that of the query tensor.";
-
-    int64_t v_b = 0;
-    int64_t v_m = 0;
-    int64_t v_h = 0;
-    int64_t v_k = 0;
-    JUST(ParseDims("value", *value->shape(), value_layout, q_h, Optional<int64_t>(), &v_b, &v_m,
-                   &v_h, &v_k));
-    CHECK_EQ_OR_RETURN(v_b, q_b) << "The size of dimension 'B' of the value tensor should be the "
-                                    "same as that of the query tensor.";
-    CHECK_EQ_OR_RETURN(v_m, k_m) << "The size of dimension 'M' of the value tensor should be the "
-                                    "same as that of the key tensor.";
-    CHECK_EQ_OR_RETURN(v_k % 8, 0)
-        << "The size of dimension 'K' of the value tensor should be a multiple of 8.";
-
-    if (attn_bias) {
-      const auto attn_bias_shape = JUST(attn_bias)->shape();
-      const int64_t num_attn_bias_axes = attn_bias_shape->NumAxes();
-      CHECK_OR_RETURN(num_attn_bias_axes > 0 && num_attn_bias_axes <= 4)
-          << "The number of dimensions of attn_bias should be greater than 0 and less than or "
-             "equal to 4.";
-      CHECK_GE_OR_RETURN(attn_bias_shape->At(num_attn_bias_axes - 1), k_m)
-          << "The size of the -1 dimension of attn_bias should be greater than or equal to the "
-             "dimension 'M' of the key tensor";
-      CHECK_EQ_OR_RETURN(attn_bias_shape->At(num_attn_bias_axes - 1) % 8, 0)
-          << "The size of the -1 dimension of attn_bias should be a multiple of 8.";
-      if (num_attn_bias_axes >= 2) {
-        CHECK_OR_RETURN(attn_bias_shape->At(num_attn_bias_axes - 2) == 1
-                        || attn_bias_shape->At(num_attn_bias_axes - 2) >= q_m)
-            << "The size of the -2 dimension of attn_bias should be greater than or equal to the "
-               "dimension 'M' of the query tensor or equal to 1.";
-      }
-      if (num_attn_bias_axes >= 3) {
-        CHECK_OR_RETURN(attn_bias_shape->At(num_attn_bias_axes - 3) == 1
-                        || attn_bias_shape->At(num_attn_bias_axes - 3) == q_h)
-            << "The size of the -3 dimension of attn_bias should be equal to the dimension 'H' of "
-               "the query tensor or equal to 1.";
-      }
-      if (num_attn_bias_axes == 4) {
-        CHECK_OR_RETURN(attn_bias_shape->At(0) == 1 || attn_bias_shape->At(0) == q_b)
-            << "The size of the -4 dimension of attn_bias should be equal to the dimension 'B' of "
-               "the query tensor or equal to 1.";
-      }
-    }
-
-    auto& attrs =
-        THREAD_CACHED_MUTABLE_ATTR_MAP("query_layout", "key_layout", "value_layout",
-                                       "query_head_size", "causal", "causal_diagonal_offset");
-    attrs.SetAllAttrs(query_layout, key_layout, value_layout, q_k, causal, causal_diagonal_offset);
-    if (attn_bias) {
-      return OpInterpUtil::Dispatch<Tensor>(*op_with_attn_bias_,
-                                            {query, key, value, JUST(attn_bias)}, attrs);
-    } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {query, key, value}, attrs);
-    }
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-  std::shared_ptr<OpExpr> op_with_attn_bias_;
-};
-
 class FusedFastGeluMulFunctor {
  public:
   FusedFastGeluMulFunctor() {
@@ -5415,9 +5214,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BatchNormElemtFunctor>("BatchNormElemt");
   m.add_functor<impl::BatchNormBackwardReduceFunctor>("BatchNormBackwardReduce");
   m.add_functor<impl::BatchNormBackwardElemtFunctor>("BatchNormBackwardElemt");
-  m.add_functor<impl::FusedMultiHeadAttentionInferenceFunctor>("FusedMultiHeadAttentionInference");
-  m.add_functor<impl::FusedMultiHeadAttentionInferenceV2Functor>(
-      "FusedMultiHeadAttentionInferenceV2");
   m.add_functor<impl::FusedFastGeluMulFunctor>("FusedFastGeluMul");
   m.add_functor<impl::FusedFastGeluMulGradFunctor>("FusedFastGeluMulGrad");
   m.add_functor<impl::GroupedMatmulBiasFunctor>("GroupedMatmulBias");

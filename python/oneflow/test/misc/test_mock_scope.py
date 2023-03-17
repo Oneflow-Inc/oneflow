@@ -146,6 +146,24 @@ class TestMock(flow.unittest.TestCase):
             model = torchvision.models.resnet18(pretrained=False)
             test_case.assertEqual(len(list(model.parameters())), 62)
 
+    def test_mock_lazy_for_loop(test_case):
+        with mock.enable(lazy=True):
+            import torch
+
+            # Test no infinite loop
+            for _ in torch.not_exist:
+                pass
+
+    def test_blacklist(test_case):
+        with mock.enable(lazy=True):
+            import torch
+            import torch.nn.functional as F
+
+            test_case.assertFalse(hasattr(F, "scaled_dot_product_attention"))
+            test_case.assertFalse(
+                hasattr(torch.nn.functional, "scaled_dot_product_attention")
+            )
+
 
 # MUST use pytest to run this test
 def test_verbose(capsys):
