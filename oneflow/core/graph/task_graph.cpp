@@ -1063,7 +1063,8 @@ RetT TaskNodeVisitor(TaskNode* task_node, const HandleTansportTaskNodeT& HandleT
       task_node, [&](TransportTaskNode* task_node) { return task_node->machine_id() == rank; },
       [&](CompTaskNode* task_node) {
         const auto& machine_id = task_node->machine_id();
-        return IsComputTaskNodeDutyRank(rank, task_node->op_node()->parallel_desc(), machine_id);
+        bool b = IsComputTaskNodeDutyRank(rank, task_node->op_node()->parallel_desc(), machine_id);
+        return b;
       });
 }
 

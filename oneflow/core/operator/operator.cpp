@@ -344,11 +344,18 @@ Maybe<void> Operator::InferLogicalOutBlobDescsIf() {
   return Maybe<void>::Ok();
 }
 
+extern bool for_debug_xxxy;
 Maybe<void> Operator::InferBlobDescsIf(
     const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const JobDesc* job_desc) const {
   JUST(InferOutBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx));
+  if  (for_debug_xxxy) {
+    LOG(ERROR) << "====> infer 1 "; std::this_thread::sleep_for(std::chrono::seconds(15));
+  }
   JUST(InferInternalBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, job_desc));
+  if  (for_debug_xxxy) {
+    LOG(ERROR) << "====> infer 2 "; std::this_thread::sleep_for(std::chrono::seconds(15));
+  }
   return Maybe<void>::Ok();
 }
 

@@ -98,11 +98,37 @@ void NormalForwardCompTaskNode::ConsumeAllRegsts() {
 void NormalForwardCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
 
 void NormalForwardCompTaskNode::BuildExecGphAndRegst() {
+  auto n = VisualStr();
+  bool d = false;
+  if (n == "model.GPT_model.transformer.layernorm_f-layer_norm_param_grad-712") {
+    LOG(ERROR) << "in" << TaskNode::VisualStr();
+    d = true;
+  }
+  if (d == true) {
+    LOG(ERROR) << n << "-0"; 
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+  }
   BuildExecGphStructAndBindInRegst();
+  if (d == true) {
+    LOG(ERROR) << n << "-1"; 
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+  }
   BuildOutRegst();
+  if (d == true) {
+    LOG(ERROR) << n << "-2"; 
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+  }
   BuildTmp7BufRegsts();
+  if (d == true) {
+    LOG(ERROR) << n << "-3"; 
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+  }
   mut_exec_gph().TopoForEachNode(
       [this](ExecNode* node) { (node->*GetInferBlobDescsMethod())(parallel_ctx()); });
+  if (d == true) {
+    LOG(ERROR) << n << "-4"; 
+    std::this_thread::sleep_for(std::chrono::seconds(6));
+  }
 }
 
 void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {

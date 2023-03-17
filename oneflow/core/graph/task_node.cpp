@@ -159,7 +159,19 @@ void TaskNode::ForEachProducedDataRegst(
   }
 }
 
-void TaskNode::Build() { BuildExecGphAndRegst(); }
+void TaskNode::Build() { 
+  auto n = VisualStr();
+  LOG(ERROR) << "start " << n;
+  if (n == "model.GPT_model.transformer.layernorm_f-layer_norm_param_grad-712") {
+    LOG(ERROR) << TaskNode::VisualStr();
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+  }
+  BuildExecGphAndRegst();
+  LOG(ERROR) << "end " << n;
+  if (n == "model.GPT_model.transformer.layernorm_f-layer_norm_param_grad-712") {
+    std::this_thread::sleep_for(std::chrono::seconds(60));
+  }
+  }
 
 void TaskNode::EraseUninitializedShapeProducedBlob() {
   for (auto& pair : produced_regsts_) { pair.second->EraseUninitializedShapeBlob(); }

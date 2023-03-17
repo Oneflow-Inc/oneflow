@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <cmath>
 #include <mutex>
+#include <chrono>
 #include "oneflow/core/framework/nn_graph.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/hash_container.h"
@@ -628,11 +629,20 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
   // Async deallocate `boxing_task_graph`.
   deallocate_ctx.Deallocate(std::move(boxing_task_graph));
 
+  OF_SESSION_BARRIER();
+  LOG(ERROR) << "==>3"; std::this_thread::sleep_for(std::chrono::seconds(5));
+  OF_SESSION_BARRIER();
   // c. Each rank compile it's related task node with RankCompiler. RankCompiler compile with the
   //    BoxingTaskGraph and the job.
   auto* plan = &plan_;
+  if (GlobalProcessCtx::Rank() != 1) {
+    std::this_thread::sleep_for(std::chrono::seconds(100000));
+  }
   CHECK_JUST(RankCompiler(boxing_task_graph_proto, rank)
                  .Compile(variable_op_names_, &job_, plan, &deallocate_ctx));
+  OF_SESSION_BARRIER();
+  LOG(ERROR) << "==>3.1"; std::this_thread::sleep_for(std::chrono::seconds(5));
+  OF_SESSION_BARRIER();
   // Async deallocate `boxing_task_graph_proto`.
   deallocate_ctx.Deallocate(std::move(boxing_task_graph_proto));
   PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names_);
@@ -643,6 +653,7 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
   }
   PlanUtil::GenRegisterHint(plan);
 
+  if (GlobalProcessCtx::IsThisProcessMaster()) { LOG(ERROR) << "==>4"; std::this_thread::sleep_for(std::chrono::seconds(3)); }
   // d. Master CollectiveBoxingPlan and then broadcast to all the workers.
   plan->mutable_collective_boxing_plan();
   PlanUtil::DumpCtrlRegstInfoToPlan(plan);
@@ -672,6 +683,7 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
       return std::make_unique<RankPlanTaskGraph>(plan_, *reachable_cb_pairs);
     });
   }
+  if (GlobalProcessCtx::IsThisProcessMaster()) { LOG(ERROR) << "==>5"; }
   // async deallocate `boxing_task_graph_proto`.
   deallocate_ctx.Deallocate(std::move(reachable_cb_pairs));
   MergeCommKeys(MultiThreadBroadcastFromMasterToWorkers(

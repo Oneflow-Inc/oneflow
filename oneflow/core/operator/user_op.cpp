@@ -702,10 +702,14 @@ Maybe<void> UserOp::InitFromOpConf() {
   return Maybe<void>::Ok();
 }
 
+extern bool for_debug_xxxy;
 Maybe<void> UserOp::InferInternalBlobDescs(
     const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const JobDesc* job_desc) const {
   // tmp buffer size must be inferred after out shape/dtype
+  if  (for_debug_xxxy) {
+    LOG(ERROR) << "****> inferin 0 "; std::this_thread::sleep_for(std::chrono::seconds(15));
+  }
   UserOpInferContext infer_ctx(this, parallel_ctx, job_desc, GetBlobDesc4BnInOp);
   const user_op::OpKernelRegistryResult* kernel_reg_val =
       JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
@@ -713,14 +717,24 @@ Maybe<void> UserOp::InferInternalBlobDescs(
           UserOpKernelRegContext(this, GetBlobDesc4BnInOp, parallel_ctx)));
   CHECK_OR_RETURN(kernel_reg_val != nullptr)
       << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in kernel registry !";
+  if  (for_debug_xxxy) {
+    LOG(ERROR) << "****> inferin 1 " << op_conf().user_conf().op_type_name(); std::this_thread::sleep_for(std::chrono::seconds(15));
+  }
 
+  // problem is here.
   size_t tmp_size = kernel_reg_val->infer_tmp_size_fn(&infer_ctx);
+  if  (for_debug_xxxy) {
+    LOG(ERROR) << "****> inferin 2 " << op_conf().user_conf().op_type_name(); std::this_thread::sleep_for(std::chrono::seconds(15));
+  }
   if (tmp_size > 0) {
     BlobDesc* tmp_buffer_blob = GetBlobDesc4BnInOp(GenRepeatedBn("tmp_buffer", 0));
     CHECK_NOTNULL_OR_RETURN(tmp_buffer_blob);
     tmp_buffer_blob->set_data_type(DataType::kChar);
     tmp_buffer_blob->set_shape(Shape({static_cast<int64_t>(tmp_size)}));
     tmp_buffer_blob->set_stride(Stride({static_cast<int64_t>(tmp_size)}));
+  }
+  if  (for_debug_xxxy) {
+    LOG(ERROR) << "****> inferin 3 "; std::this_thread::sleep_for(std::chrono::seconds(15));
   }
   return Maybe<void>::Ok();
 }

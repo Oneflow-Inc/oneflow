@@ -126,8 +126,20 @@ Maybe<void> InferPhysicalBlobDesc(
 }
 
 }  // namespace
+bool for_debug_xxxy = false;
 
 void ExecNode::InferBlobDescsByNdSbp(const ParallelContext* parallel_ctx) {
+  auto n = op()->op_name();
+  bool d = false;
+  if (n == "model.GPT_model.transformer.layernorm_f-layer_norm_param_grad-712") {
+    LOG(ERROR) << "====> in " << n;
+    d = true;
+    for_debug_xxxy = true;
+  }
+  if (d == true) {
+    LOG(ERROR) << "====> +1" << n;
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+  }
   const HashSet<std::string> ibns{op()->input_bns().begin(), op()->input_bns().end()};
   HashMap<std::string, BlobDesc> ibn2blob_desc{};
   const auto& GetBlobDesc4BnInOp = [&](const std::string& bn_in_op) -> BlobDesc* {
@@ -148,6 +160,10 @@ void ExecNode::InferBlobDescsByNdSbp(const ParallelContext* parallel_ctx) {
   };
   const OpNode* op_node = Singleton<OpGraph>::Get()->OpNode4OpName(op()->op_name());
   const NdSbpSignature* nd_sbp_signature = &CHECK_NOTNULL(op_node)->nd_sbp_signature();
+  if (d == true) {
+    LOG(ERROR) << "====> +2" << n;
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+  }
 
   // TODO(strint): user op can infer output with SBP, so there is no need to infer the input.
   // Reference: https://github.com/Oneflow-Inc/oneflow/pull/8971
@@ -156,18 +172,35 @@ void ExecNode::InferBlobDescsByNdSbp(const ParallelContext* parallel_ctx) {
       *op(), op()->input_bns(),
       std::bind(&Operator::GetLogicalBlobDesc4Ibn, op().get(), std::placeholders::_1),
       nd_sbp_signature, parallel_ctx, GetBlobDesc4BnInOp));
+  if (d == true) {
+    LOG(ERROR) << "====> +3" << n;
+    std::this_thread::sleep_for(std::chrono::seconds(15));
+  }
 
   // Infer output blob desc with input.
   CHECK_JUST_MSG(op_->InferBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, &GlobalJobDesc()),
                  std::stringstream() << " infer blob descs is failed, op name " << op_->op_loc());
+  if (d == true) {
+    LOG(ERROR) << "====> +4" << n;
+    std::this_thread::sleep_for(std::chrono::seconds(15));
+  }
   CHECK_JUST(CheckPhysicalBlobDesc(
       *op(), op()->output_bns(),
       std::bind(&Operator::GetLogicalBlobDesc4Obn, op().get(), std::placeholders::_1),
       nd_sbp_signature, parallel_ctx, GetBlobDesc4BnInOp));
+  if (d == true) {
+    LOG(ERROR) << "====> +5" << n;
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+  }
   CHECK_JUST_MSG(op_->InferInplaceObn2IbnIf(&mut_inplace_obn2ibn_, &con_inplace_obn2ibn_,
                                             GetBlobDesc4BnInOp, parallel_ctx),
                  std::stringstream()
                      << " infer inplace obn to ibn is failed, op name " << op_->op_loc());
+  if (d == true) {
+    LOG(ERROR) << "====> +6" << n;
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+  }
+  for_debug_xxxy = false;
 }
 
 void ExecNode::InferBlobDescsByInputs(const ParallelContext* parallel_ctx) {
