@@ -97,12 +97,7 @@ template<int pack_size, typename IndexType, typename FastIntegerMath, typename S
 struct LoadStore {
   LoadStore(FastIntegerMath fast_integer_math[MaxDims], const int ndims, const int strides[MaxDims],
             const Src* src, Dst* dst = nullptr, bool is_contiguous = false)
-      : ndims_(ndims),
-        src_(src),
-        dst_(dst),
-        last_idx_(0),
-        last_offset_(0),
-        is_contiguous_(is_contiguous) {
+      : ndims_(ndims), src_(src), dst_(dst), is_contiguous_(is_contiguous) {
     for (int i = 0; i < ndims; i++) {
       strides_[i] = static_cast<IndexType>(strides[i]);
       fast_integer_math_[i] = fast_integer_math[i];
@@ -142,8 +137,6 @@ struct LoadStore {
 
   int ndims_;
   int pack_dim_;
-  IndexType last_idx_;  //这俩不能删，影响性能，很奇怪。。。
-  IndexType last_offset_;
   bool is_contiguous_;
   const Src* src_;
   Dst* dst_;
