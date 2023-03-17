@@ -239,20 +239,24 @@ class ArgsTree(object):
             return self._execute_mapping(self._io_args, map_function)
 
         # Cases handled: tuple(tuple(tensor, ...), ), such as the output args of return.
-        elif len(self._io_args) > 0 and self._io_args[0] is not None:
-            try:
-                for i in self._io_args[0]:
-                        mapped_value = map_function(i)
-                        stack.append(mapped_value)
+        elif (
+            len(self._io_args) > 0
+            and isinstance(self._io_args[0], (tuple, list))
+            and all(isinstance(arg, Tensor) for arg in self._io_args[0])
+        ):
+            for i in self._io_args[0]:
+                mapped_value = map_function(i)
+                stack.append(mapped_value)
 
-                if isinstance(self._io_args[0], tuple):
-                    return (tuple(stack),)
-                elif isinstance(self._io_args[0], list):
-                    return (stack,)
-            except:
-                return self._execute_mapping(self._io_args, map_function)
+            if isinstance(self._io_args[0], tuple):
+                return (tuple(stack),)
+            elif isinstance(self._io_args[0], list):
+                return (stack,)
+
+        # Other cases.
+        # Do not loop optimize, and continue to execute the recursive code (`_execute_mapping`).
         else:
-            return (None,)
+            return self._execute_mapping(self._io_args, map_function)
 
     def map_leaf(self, map_function: Callable):
         r"""
