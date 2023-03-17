@@ -244,10 +244,10 @@ void dispatchPacksize(cudaStream_t stream, const bool inplace, const std::string
 }  // namespace
 
 template<typename R, typename lhs, typename rhs>
-class TransposedBinaryOpKernel final : public user_op::OpKernel {
+class NonContiguousBinaryOpKernel final : public user_op::OpKernel {
  public:
-  TransposedBinaryOpKernel() = default;
-  ~TransposedBinaryOpKernel() override = default;
+  NonContiguousBinaryOpKernel() = default;
+  ~NonContiguousBinaryOpKernel() override = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -290,19 +290,19 @@ class TransposedBinaryOpKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_USER_KERNEL_TRANSPOSED_BINARY_OP_KERNEL(dtype, lhs, rhs)             \
-  REGISTER_USER_KERNEL("transposed_binary_op")                                        \
-      .SetCreateFn<TransposedBinaryOpKernel<dtype, lhs, rhs>>()                       \
+#define REGISTER_USER_KERNEL_NONCONTIGUOUS_BINARY_OP_KERNEL(dtype, lhs, rhs)          \
+  REGISTER_USER_KERNEL("noncontiguous_binary_op")                                     \
+      .SetCreateFn<NonContiguousBinaryOpKernel<dtype, lhs, rhs>>()                    \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                \
                        && (user_op::HobDataType("y", 0) == GetDataType<lhs>::value)   \
                        && (user_op::HobDataType("lhs", 0) == GetDataType<lhs>::value) \
                        && (user_op::HobDataType("rhs", 0) == GetDataType<rhs>::value));
 
 // output_type, lhs_type, rhs_type
-REGISTER_USER_KERNEL_TRANSPOSED_BINARY_OP_KERNEL(float, float, float)
-REGISTER_USER_KERNEL_TRANSPOSED_BINARY_OP_KERNEL(half, half, half)
+REGISTER_USER_KERNEL_NONCONTIGUOUS_BINARY_OP_KERNEL(float, float, float)
+REGISTER_USER_KERNEL_NONCONTIGUOUS_BINARY_OP_KERNEL(half, half, half)
 // #if CUDA_VERSION >= 11000
-// REGISTER_USER_KERNEL_TRANSPOSED_BINARY_OP_KERNEL(nv_bfloat16, nv_bfloat16, nv_bfloat16)
+// REGISTER_USER_KERNEL_NONCONTIGUOUS_BINARY_OP_KERNEL(nv_bfloat16, nv_bfloat16, nv_bfloat16)
 // #endif
 
 // ------------------------------------- grad kernel -------------------------------------
@@ -414,10 +414,10 @@ void dispatchPacksizeGrad(cudaStream_t stream, const std::string& op, const int&
 }
 
 template<typename R, typename lhs, typename rhs>
-class TransposedBinaryOpGradKernel final : public user_op::OpKernel {
+class NonContiguousBinaryOpGradKernel final : public user_op::OpKernel {
  public:
-  TransposedBinaryOpGradKernel() = default;
-  ~TransposedBinaryOpGradKernel() override = default;
+  NonContiguousBinaryOpGradKernel() = default;
+  ~NonContiguousBinaryOpGradKernel() override = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -460,16 +460,16 @@ class TransposedBinaryOpGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_USER_KERNEL_TRANSPOSED_BINARY_OP_GRAD_KERNEL(dtype, lhs, rhs)         \
-  REGISTER_USER_KERNEL("transposed_binary_op_grad")                                    \
-      .SetCreateFn<TransposedBinaryOpGradKernel<dtype, lhs, rhs>>()                    \
+#define REGISTER_USER_KERNEL_NONCONTIGUOUS_BINARY_OP_GRAD_KERNEL(dtype, lhs, rhs)      \
+  REGISTER_USER_KERNEL("noncontiguous_binary_op_grad")                                 \
+      .SetCreateFn<NonContiguousBinaryOpGradKernel<dtype, lhs, rhs>>()                 \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value) \
                        && (user_op::HobDataType("lhs", 0) == GetDataType<lhs>::value)  \
                        && (user_op::HobDataType("rhs", 0) == GetDataType<rhs>::value));
 
 // output_type, lhs_type, rhs_type
-REGISTER_USER_KERNEL_TRANSPOSED_BINARY_OP_GRAD_KERNEL(float, float, float)
-REGISTER_USER_KERNEL_TRANSPOSED_BINARY_OP_GRAD_KERNEL(half, half, half)
+REGISTER_USER_KERNEL_NONCONTIGUOUS_BINARY_OP_GRAD_KERNEL(float, float, float)
+REGISTER_USER_KERNEL_NONCONTIGUOUS_BINARY_OP_GRAD_KERNEL(half, half, half)
 
 }  // namespace oneflow

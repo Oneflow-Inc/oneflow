@@ -35,7 +35,7 @@ Tensor::Tensor(const Shape& shape, const Device& device, const DType& dtype) {
   of::LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
   tensor_ = functional::Empty(*shape.shape_,
                               of::DType::Get(static_cast<of::DataType>(dtype)).GetOrThrow(),
-                              *device.device_, /*pin_memory=*/false)
+                              *device.device_, /*requires_grad=*/false, /*pin_memory=*/false)
                 .GetPtrOrThrow();
 }
 Tensor::Tensor(const std::shared_ptr<oneflow::one::Tensor>& tensor) : tensor_(tensor) {}

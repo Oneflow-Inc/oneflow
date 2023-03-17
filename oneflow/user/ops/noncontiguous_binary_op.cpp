@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <glog/logging.h>
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/shape.h"
@@ -24,7 +23,7 @@ limitations under the License.
 
 namespace oneflow {
 
-/*static*/ Maybe<void> TransposedBinaryOp::GetSbp(user_op::SbpContext* ctx) {
+/*static*/ Maybe<void> NonContiguousBinaryOp::GetSbp(user_op::SbpContext* ctx) {
   const bool inplace = ctx->Attr<bool>("inplace");
   ctx->NewBuilder()
       .Broadcast(user_op::OpArg("lhs", 0))
@@ -34,7 +33,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> TransposedBinaryOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> NonContiguousBinaryOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& lhs = ctx->InputShape("lhs", 0);
   const Shape& rhs = ctx->InputShape("rhs", 0);
   CHECK_EQ_OR_RETURN(lhs.NumAxes(), rhs.NumAxes());
@@ -45,42 +44,49 @@ namespace oneflow {
   ctx->SetOutputStride("y", 0, ctx->InputStride("lhs", 0));
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> TransposedBinaryOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> NonContiguousBinaryOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
-/*static*/ Maybe<void> TransposedBinaryOp::InferDataType(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> NonContiguousBinaryOp::InferDataType(user_op::InferContext* ctx) {
   auto lhs = ctx->InputDType("lhs", 0);
   auto rhs = ctx->InputDType("rhs", 0);
   ctx->SetOutputDType("y", 0, GetSizeOfDataType(lhs) >= GetSizeOfDataType(rhs) ? lhs : rhs);
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> TransposedBinaryOpGrad::GetSbp(user_op::SbpContext* ctx) {
+/*static*/ Maybe<void> NonContiguousBinaryOpGrad::GetSbp(user_op::SbpContext* ctx) {
   const bool inplace = ctx->Attr<bool>("inplace");
   ctx->NewBuilder()
       .Broadcast(user_op::OpArg("lhs", 0))
       .Broadcast(user_op::OpArg("rhs", 0))
-      .Broadcast(user_op::OpArg("y", 0))
+      .Broadcast(user_op::OpArg("dy", 0))
+      .Broadcast(user_op::OpArg("dlhs", 0))
+      .Broadcast(user_op::OpArg("drhs", 0))
       .Build();
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> TransposedBinaryOpGrad::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> NonContiguousBinaryOpGrad::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
   const Shape& lhs = ctx->InputShape("lhs", 0);
   const Shape& rhs = ctx->InputShape("rhs", 0);
   CHECK_EQ_OR_RETURN(lhs.NumAxes(), rhs.NumAxes());
   for (int i = 0; i < lhs.NumAxes(); i++) CHECK_EQ_OR_RETURN(lhs.At(i), rhs.At(i));
-  ctx->SetOutputShape("y", 0, lhs);
-  ctx->SetOutputStride("y", 0, ctx->InputStride("lhs", 0));
+  ctx->SetOutputShape("dlhs", 0, lhs);
+  ctx->SetOutputStride("dlhs", 0, ctx->InputStride("lhs", 0));
+  ctx->SetOutputShape("drhs", 0, rhs);
+  ctx->SetOutputStride("drhs", 0, ctx->InputStride("rhs", 0));
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> TransposedBinaryOpGrad::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> NonContiguousBinaryOpGrad::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
-/*static*/ Maybe<void> TransposedBinaryOpGrad::InferDataType(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> NonContiguousBinaryOpGrad::InferDataType(user_op::InferContext* ctx) {
   auto lhs = ctx->InputDType("lhs", 0);
   auto rhs = ctx->InputDType("rhs", 0);
-  ctx->SetOutputDType("y", 0, GetSizeOfDataType(lhs) >= GetSizeOfDataType(rhs) ? lhs : rhs);
+  ctx->SetOutputDType("dlhs", 0, lhs);
+  ctx->SetOutputDType("drhs", 0, rhs);
   return Maybe<void>::Ok();
 }
 

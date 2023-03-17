@@ -41,7 +41,9 @@ def main():
         paths = os.environ["PYTHONPATH"].rstrip(":").split(":")
         paths = [x for x in paths if x != str(torch_env)]
         path = ":".join(paths)
-        print("export PYTHONPATH=" + path)
+        print(
+            f"export PYTHONPATH={path}; unset ONEFLOW_MOCK_TORCH_LAZY; unset ONEFLOW_MOCK_TORCH_VERBOSE"
+        )
 
 
 if __name__ == "__main__":
