@@ -133,6 +133,9 @@ class Graph(object):
         self._is_user_mode = False
         # Default is local view
         self._is_global_view = False
+        # Optimize the overhead of graph input/output process
+        self._is_simple_tuple_input = False
+        self._is_simple_tuple_output = False
 
         self._debug = False
         self._debug_min_s_level = 2
@@ -812,8 +815,20 @@ class Graph(object):
         return a_graph
 
     def _compile(self, *args, **kwargs):
+        if (
+            len(args) != 0
+            and isinstance(args, (tuple, list))
+            and len(kwargs) == 0
+            and all(isinstance(arg, Tensor) for arg in args)
+        ):
+            self._is_simple_tuple_input = True
+
         self.__ensure_input_tensors_contiguous(*args, **kwargs)
         _, eager_outputs = self.build_graph(*args, **kwargs)
+        if isinstance(eager_outputs, (tuple, list)) and all(
+            isinstance(arg, Tensor) for arg in eager_outputs
+        ):
+            self._is_simple_tuple_output = True
         self.finish_compile_and_init_runtime()
         return eager_outputs
 
@@ -1503,10 +1518,10 @@ class Graph(object):
                 )
 
     def __run(self, *args, **kwargs):
-        self.__ensure_input_tensors_contiguous(*args, **kwargs)
         try:
-            flattened_eager_args = self.__flatten_io("input", *args, **kwargs)
-
+            flattened_eager_args = self.__ensure_input_tensors_contiguous_and_flatten(
+                *args, **kwargs
+            )
             if oneflow.support.env_var_util.parse_boolean_from_env(
                 "ONEFLOW_RUN_GRAPH_BY_VM", False
             ):
@@ -1652,10 +1667,6 @@ class Graph(object):
                 mapped_arg = None
             return mapped_arg
 
-        args_tree = ArgsTree(
-            (args, kwargs), True, "_" + self.name + "_" + io_type, None
-        )
-
         def leaf_arg_fn(arg):
             arg_value = arg.value()
             if isinstance(arg_value, Tensor) or arg_value is None:
@@ -1664,6 +1675,16 @@ class Graph(object):
                 self.__io_item_check(
                     arg_value, None, io_type, arg.prefix() + "_" + arg.name(),
                 )
+
+        # NOTE(lixiang): Reduce the overhead of traversal and parsing of io args.
+        if self._is_simple_tuple_output or self._is_simple_tuple_input:
+            args_tree = ArgsTree(args, False)
+            out = args_tree.map_tuple_leaf(mapping_tensor_or_none)
+            return out, kwargs
+
+        args_tree = ArgsTree(
+            (args, kwargs), True, "_" + self.name + "_" + io_type, None
+        )
 
         out = args_tree.map_leaf(leaf_arg_fn)
         mapped_args = out[0]
@@ -1840,7 +1861,44 @@ class Graph(object):
                 value.contiguous_()
             return value
 
+        # NOTE(lixiang): Reduce the overhead of traversal and parsing of input args.
+        if self._is_simple_tuple_input:
+            args_tree.map_tuple_leaf(func)
+            return
+
         args_tree.map_leaf(func)
+
+    def __ensure_input_tensors_contiguous_and_flatten(self, *args, **kwargs):
+        flattened_args = []
+
+        def func(value):
+            if isinstance(value, Tensor) and not value.is_contiguous():
+                value.contiguous_()
+            return value
+
+        # NOTE(lixiang): Reduce the overhead of traversal and parsing of input args.
+        if self._is_simple_tuple_input:
+            args_tree = ArgsTree(args, False)
+            # contiguous
+            args_tree.map_tuple_leaf(func)
+            # flatten
+            for arg in args_tree.iter_nodes():
+                if isinstance(arg, Tensor):
+                    flattened_args.append(arg)
+                else:
+                    continue
+            return flattened_args
+
+        args_tree = ArgsTree((args, kwargs), False)
+        # contiguous
+        args_tree.map_leaf(func)
+        # flatten
+        for arg in args_tree.iter_nodes():
+            if isinstance(arg, Tensor):
+                flattened_args.append(arg)
+            else:
+                continue
+        return flattened_args
 
     @staticmethod
     def with_dynamic_input_shape(size: int = 10):
