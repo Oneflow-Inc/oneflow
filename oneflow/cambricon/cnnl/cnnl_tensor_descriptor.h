@@ -31,6 +31,16 @@ class CnnlTensorDescriptor : public CnnlDescriptor<cnnlTensorStruct, &cnnlCreate
  public:
   // Init create Tensor descriptor
   CnnlTensorDescriptor() = default;
+  CnnlTensorDescriptor(const user_op::Tensor* t) { set(t); }  // NOLINT
+  CnnlTensorDescriptor(const user_op::Tensor* t, cnnlTensorLayout_t layout,
+                       cnnlDataType_t data_type = CNNL_DTYPE_INVALID) {
+    set(t, layout, data_type);
+  }
+  CnnlTensorDescriptor(const user_op::Tensor* t, cnnlDataType_t dtype) { set(t, dtype); }
+  CnnlTensorDescriptor(const user_op::Tensor* t, bool keep_dim, std::vector<int64_t>& keepdim_sizes,
+                       cnnlDataType_t dtype = CNNL_DTYPE_INVALID) {
+    set(t, keep_dim, keepdim_sizes, dtype);
+  }
   // set descriptor from tensor
   void set(const user_op::Tensor* t);
   void set(const user_op::Tensor* t, cnnlTensorLayout_t layout,
