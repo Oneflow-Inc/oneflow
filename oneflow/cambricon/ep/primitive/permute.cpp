@@ -16,7 +16,6 @@ limitations under the License.
 
 #include "oneflow/core/ep/include/primitive/permute.h"
 #include "oneflow/core/ep/common/primitive/permute.h"
-#include "oneflow/core/ep/common/primitive/permute_impl.h"
 #include "oneflow/cambricon/common/mlu_util.h"
 #include "oneflow/cambricon/ep/mlu_stream.h"
 #include "oneflow/cambricon/cnnl/cnnl_workspace.h"

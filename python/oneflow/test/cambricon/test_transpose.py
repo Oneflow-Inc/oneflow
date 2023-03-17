@@ -33,8 +33,8 @@ def _test_eager_transpose(test_case, device, shape, perm, dtype):
     arr = np.random.randn(*shape)
     x = flow.tensor(arr, device=flow.device(device), dtype=dtype)
     of_out = flow.transpose(x, perm)
-    np_out = _cpu_transpose(x, perm)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
+    cpu_out = _cpu_transpose(x, perm)
+    test_case.assertTrue(np.allclose(of_out.numpy(), cpu_out, 0.0001, 0.0001))
 
 
 def _test_graph_transpose(test_case, device, shape, perm, dtype):
@@ -50,8 +50,8 @@ def _test_graph_transpose(test_case, device, shape, perm, dtype):
 
     graph = TransposeGraph()
     graph_out = graph(x)
-    np_out = _cpu_transpose(x, perm)
-    test_case.assertTrue(np.allclose(graph_out.numpy(), np_out, 0.0001, 0.0001))
+    cpu_out = _cpu_transpose(x, perm)
+    test_case.assertTrue(np.allclose(graph_out.numpy(), cpu_out, 0.0001, 0.0001))
 
 
 @flow.unittest.skip_unless_1n1d()
