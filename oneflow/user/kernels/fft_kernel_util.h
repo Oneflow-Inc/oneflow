@@ -25,18 +25,25 @@ enum class fft_norm_mode {
 
 // Convert NumPy compatible normalization mode string to enum values
 // In Numpy, "forward" translates to `by_n` for a forward transform and `none` for backward.
-fft_norm_mode norm_from_string(Optional<std::string> norm_op, bool forward){
-    if (!norm_op.has_value() || norm_op.value() == "backward"){
+fft_norm_mode norm_from_string(const Optional<std::string>& norm_op, bool forward) {
+
+    if (norm_op.has_value()){
+        if (*JUST(norm_op) == "backward"){
+            return forward ? fft_norm_mode::none : fft_norm_mode::by_n;
+        }
+        else if (*JUST(norm_op) == "forward"){
+            return forward ? fft_norm_mode::by_n : fft_norm_mode::none;
+        }
+        else if (*JUST(norm_op) == "ortho"){
+            return fft_norm_mode::by_root_n;
+        }
+    }
+    else{
         return forward ? fft_norm_mode::none : fft_norm_mode::by_n;
     }
-    else if (norm_op.value() == "forward"){
-        return forward ? fft_norm_mode::by_n : fft_norm_mode::none;
-    }
-    else if (norm_op.value() == "ortho"){
-        return fft_norm_mode::by_root_n;
-    }
 
-    CHECK_OR_THROW(false) << "Invalid normalization mode: \"" << norm_op.value() << "\"";
+    CHECK_OR_THROW(false) << "Invalid normalization mode: \"" << *JUST(norm_op) << "\"";
+    return fft_norm_mode::none;
 }
 
 template<typename T>
@@ -69,6 +76,14 @@ struct FftC2CKernelUtil{
                               const Shape& output_shape, bool forward, const std::vector<int64_t>& dims,
                               fft_norm_mode normalization);
 };
+
+template<DeviceType device_type, typename IN, typename OUT, typename fct_type>
+struct FftR2CKernelUtil{
+    static void FftC2CForward(ep::Stream* stream, IN* data_in, OUT* data_out, const Shape& input_shape_view, 
+                              const Shape& output_shape, bool forward, const std::vector<int64_t>& dims,
+                              fft_norm_mode normalization);
+};
+
 
 #define INSTANTIATE_FFTC2C_KERNEL_UTIL(device_type, in_type_pair, out_type_pair, fct_type)  \
   template struct FftC2CKernelUtil<device_type, in_type_pair, \
