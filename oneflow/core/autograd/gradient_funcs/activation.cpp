@@ -586,7 +586,7 @@ class Threshold : public OpExprGradFunction<ThresholdCaptureState> {
 };
 
 struct FracCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
+  bool requires_grad = False;
 };
 
 class Frac : public OpExprGradFunction<FracCaptureState> {
