@@ -9,6 +9,7 @@ R"OP_SCHEMA_INC(
 #include <string>
 #include <vector>
 #include <functional>
+#include <complex>
 
 class OperatorConf;
 class NdSbpSignature;

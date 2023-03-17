@@ -53,6 +53,11 @@ locals()["record"] = oneflow._oneflow_internal.record
 locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
 locals()["bfloat16"] = oneflow._oneflow_internal.bfloat16
 
+locals()["cfloat"] = oneflow._oneflow_internal.cfloat
+locals()["complex64"] = oneflow._oneflow_internal.complex64
+locals()["cdouble"] = oneflow._oneflow_internal.cdouble
+locals()["complex128"] = oneflow._oneflow_internal.complex128
+
 locals()["layout"] = oneflow._oneflow_internal.layout
 locals()["strided"] = oneflow._oneflow_internal.strided
 
