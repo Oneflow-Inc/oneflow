@@ -39,8 +39,8 @@ def _test_sparse_softmax_cross_entropy(
 
     of_logits_cpu = flow.tensor(np_logits, dtype=data_type, requires_grad=True)
     of_labels_cpu = flow.tensor(np_labels, dtype=label_type)
-    of_output_cpu = flow.nn.functional.cross_entropy(
-        of_logits_cpu, of_labels_cpu, reduction="none"
+    of_output_cpu = flow.nn.functional.sparse_softmax_cross_entropy(
+        labels=of_labels_cpu, logits=of_logits_cpu
     )
     # of_output_cpu.sum().backward()
 
