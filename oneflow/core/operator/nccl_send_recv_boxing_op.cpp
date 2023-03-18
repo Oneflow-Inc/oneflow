@@ -92,7 +92,7 @@ Maybe<void> NcclSendRecvBoxingOp::InferInternalBlobDescs(
       buf_count += out->shape().elem_cnt();
     }
   }
-  buf->set_shape(Shape({buf_count}));
+  buf->set_shape(Shape{buf_count});
   return Maybe<void>::Ok();
 }
 

@@ -1,7 +1,6 @@
 syntax = "proto2";
 package oneflow;
 
-import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 
 // For compatibility with old ShapeProto
