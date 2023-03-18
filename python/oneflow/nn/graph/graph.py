@@ -1901,7 +1901,7 @@ class Graph(object):
         return flattened_args
 
     @staticmethod
-    def with_dynamic_input_shape(size: int = 10):
+    def with_dynamic_input_shape(*, size: int = 10):
         def deco_with_config(graph_init_func):
             @wraps(graph_init_func)
             def deco_func(self, *args, **kwargs):
