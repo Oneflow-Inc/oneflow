@@ -35,6 +35,7 @@ with mock.disable():
     import torch.version
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestMock(flow.unittest.TestCase):
     def test_with(test_case):
         with mock.enable():
@@ -117,7 +118,7 @@ class TestMock(flow.unittest.TestCase):
 
     def test_3rd_party(test_case):
         with mock.enable():
-            from test_mock_simple import f
+            from mock_example import f
 
             test_case.assertEqual(f(), "oneflow")
 
