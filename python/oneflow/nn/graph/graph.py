@@ -614,6 +614,9 @@ class Graph(object):
                 elif isinstance(msg, Callable):
                     print(msg(), flush=True)
 
+    def _print(self, s_level=2, v_level=0, msg=None):
+        self.__print(s_level, v_level, msg)
+
     @property
     def _config_proto(self):
         return self.config.proto
@@ -855,6 +858,10 @@ class Graph(object):
         self._build_with_shared_graph = True
 
     def _compile_from_shared(self, *args, **kwargs):
+        self.__print(
+            0, 0, self._shallow_repr() + " start building a shared graph and plan."
+        )
+        build_graph_start = time.perf_counter()
         self.__ensure_input_tensors_contiguous(*args, **kwargs)
 
         self.__ensure_state_tensors_contiguous()
@@ -962,6 +969,16 @@ class Graph(object):
         self._c_nn_graph.compile_plan_for_runtime()
         self._c_nn_graph.init_runtime()
         self._is_compiled = True
+        build_graph_end = time.perf_counter()
+        self.__print(
+            0,
+            0,
+            self._shallow_repr()
+            + " building a shared graph and plan Done! Cost time: "
+            + str(round(build_graph_end - build_graph_start, 2))
+            + "s."
+            + "\n",
+        )
 
         return (seq_to_func_return(self._eager_outputs_buffer[0], True),)
 
@@ -1053,6 +1070,8 @@ class Graph(object):
         if self._run_with_cache == True:
             return self._dynamic_input_graph_cache.load_runtime_state_dict(state_dict)
 
+        build_graph_start = time.perf_counter()
+
         self._name = state_dict["graph_name"]
         if "oneflow_version" not in state_dict:
             state_dict["oneflow_version"] = "none"
@@ -1064,6 +1083,7 @@ class Graph(object):
             )
         # Generate new config.
         self._generate_config_proto()
+        self.__print(0, 0, self._shallow_repr() + " start loading a graph and plan.")
         self._job_id = state_dict["job_id"]
         # Create a c nn graph to run with lazy runtime.
         self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(
@@ -1142,6 +1162,16 @@ class Graph(object):
         self._c_nn_graph.align_states_after_logical_graph_compile()
         self._c_nn_graph.init_runtime()
         self._is_compiled = True
+        build_graph_end = time.perf_counter()
+        self.__print(
+            0,
+            0,
+            self._shallow_repr()
+            + " load a graph and plan Done! Cost time: "
+            + str(round(build_graph_end - build_graph_start, 2))
+            + "s."
+            + "\n",
+        )
 
     def build_graph(self, *args, **kwargs):
         # Build graph
@@ -1910,7 +1940,9 @@ class Graph(object):
                 import oneflow.nn.graph.cache as cache
 
                 self._dynamic_input_graph_cache = cache.GraphCache(
-                    weakref.proxy(self), cache_size=size, enable_graph_shared = enable_shared,
+                    weakref.proxy(self),
+                    cache_size=size,
+                    enable_graph_shared=enable_shared,
                 )
                 self._cached_init_args = args
                 self._cached_init_kwargs = kwargs
