@@ -83,11 +83,26 @@ class ContiguousParamsGroup(object):
         self.grouped_tensors = []
         self.grouped_grads = []
 
+        if not self.for_module:
+            self._check_for_module()
+
         if self.for_module:
-            # buffer to ordered parameters list mapping
             self._parameters_grouping_for_module()
         else:
             self._parameters_grouping_for_operations()
+    
+    def _check_for_module(self):
+        """If all tensors are not held by any buffer, try to create buffer.
+        """
+        for params in self.params_group_list:
+            for p in params:
+                if p._ref_tensor is not None:
+                    return
+
+        self._physical_preparation = ContiguousParamsGroup(
+            self.params_group_list,
+            for_module=True,
+        )
 
     def _make_buffer_params_mapping(self):
         buffer_params_mapping = collections.defaultdict(list)
@@ -103,22 +118,21 @@ class ContiguousParamsGroup(object):
         return buffer_params_mapping
 
     def _parameters_grouping_for_module(self):
-        assert len(self.params_group_list) == 1
-
         params_buffer_size = {}
         physical_params_buffer = {}
         params_buffer_index = {}
 
-        for p in self.params_group_list[0]:
-            if p.requires_grad:
-                if self.is_global:
-                    tensor_key = (p.dtype, p.placement, p.sbp)
-                else:
-                    tensor_key = (p.dtype, p.device)
+        for params in self.params_group_list:
+            for p in params:
+                if p.requires_grad:
+                    if self.is_global:
+                        tensor_key = (p.dtype, p.placement, p.sbp)
+                    else:
+                        tensor_key = (p.dtype, p.device)
 
-                params_buffer_size[tensor_key] = params_buffer_size.get(
-                    tensor_key, 0
-                ) + numel_in_bucket(p)
+                    params_buffer_size[tensor_key] = params_buffer_size.get(
+                        tensor_key, 0
+                    ) + numel_in_bucket(p)
 
         for tensor_key, buffer_size in params_buffer_size.items():
             dtype = tensor_key[0]
@@ -144,31 +158,32 @@ class ContiguousParamsGroup(object):
             physical_params_buffer[tensor_key] = physical_param_buf
             params_buffer_index[tensor_key] = 0
 
-        for p in self.params_group_list[0]:
-            if not p.requires_grad:
-                continue
+        for params in self.params_group_list:
+            for p in params:
+                if not p.requires_grad:
+                    continue
 
-            if self.is_global:
-                tensor_key = (p.dtype, p.placement, p.sbp)
-            else:
-                tensor_key = (p.dtype, p.device)
+                if self.is_global:
+                    tensor_key = (p.dtype, p.placement, p.sbp)
+                else:
+                    tensor_key = (p.dtype, p.device)
 
-            param_buf = physical_params_buffer[tensor_key]
-            index = params_buffer_index[tensor_key]
-            size = p.numel()
-            shape = p.data.shape
+                param_buf = physical_params_buffer[tensor_key]
+                index = params_buffer_index[tensor_key]
+                size = p.numel()
+                shape = p.data.shape
 
-            assert index + numel_in_bucket(p) <= param_buf.numel()
+                assert index + numel_in_bucket(p) <= param_buf.numel()
 
-            param_buf[index : index + size] = p.data.detach().clone().view(-1)
-            p.data = param_buf[index : index + size].view(shape)
-            p.grad = param_buf.grad[index : index + size].view(shape)
+                param_buf[index : index + size] = p.data.detach().clone().view(-1)
+                p.data = param_buf[index : index + size].view(shape)
+                p.grad = param_buf.grad[index : index + size].view(shape)
 
-            p._ref_tensor = param_buf
-            p._ref_index = index
+                p._ref_tensor = param_buf
+                p._ref_index = index
 
-            index += numel_in_bucket(p)
-            params_buffer_index[tensor_key] = index
+                index += numel_in_bucket(p)
+                params_buffer_index[tensor_key] = index
 
     def _parameters_grouping_for_operations(self):
         buffer_params_mapping = self._make_buffer_params_mapping()

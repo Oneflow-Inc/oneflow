@@ -24,7 +24,6 @@ from optimizer_test_util import clip_grad_norm_np
 
 import oneflow as flow
 from oneflow.nn.parameter import Parameter
-from oneflow.nn.utils.parameters_grouping import ContiguousParamsGroup as CPG
 
 
 def compare_with_numpy_rmsprop(
@@ -51,7 +50,6 @@ def compare_with_numpy_rmsprop(
         x = Parameter(flow.Tensor(init_value, device=flow.device(device)))
         param_list = list()
         param_list.append(x)
-        cpg = CPG(param_list, for_module=True)
         rmsprop = flow.optim.RMSprop(
             [
                 {
@@ -147,7 +145,6 @@ def compare_with_numpy_rmsprop_clip_grad(
         x = Parameter(flow.Tensor(init_value, device=flow.device(device)))
         param_list = list()
         param_list.append(x)
-        cpg = CPG(param_list, for_module=True)
         rmsprop = flow.optim.RMSprop(
             [
                 {
