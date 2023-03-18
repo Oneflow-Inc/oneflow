@@ -49,6 +49,27 @@ def _test_matmul_forward(test_case, shape, device, dtype):
 
 @flow.unittest.skip_unless_1n1d()
 class TestBatchMatmulCambriconModule(flow.unittest.TestCase):
+    def test_matmul(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_matmul_forward,
+        ]
+        arg_dict["shape"] = [
+            ((1, 1), (1, 1), False, False),
+            ((1, 3), (3, 1), False, False),
+            ((1, 3), (3, 1), True, True),
+            ((2, 3), (3, 4), False, False),
+            ((2, 3), (4, 3), False, True),
+            ((3, 2), (3, 4), True, False),
+            ((3, 2), (4, 3), True, True),
+        ]
+        arg_dict["device"] = ["mlu"]
+        arg_dict["dtype"] = [
+            flow.float,
+        ]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
     def test_batch_matmul(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
