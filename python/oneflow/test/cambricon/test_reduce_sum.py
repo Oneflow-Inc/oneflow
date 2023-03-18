@@ -57,6 +57,11 @@ def _test_reduce_sum_impl(test_case, device="mlu", data_type=flow.float32):
     np_out = np.sum(input.numpy(), axis=(2, 1))
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-04, 1e-04))
 
+    # full reduce
+    of_out = input.sum()
+    np_out = input.numpy().sum()
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-04, 1e-04))
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestReduceSumModule(flow.unittest.TestCase):

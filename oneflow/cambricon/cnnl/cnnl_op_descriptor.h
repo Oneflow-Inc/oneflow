@@ -51,7 +51,7 @@ class CnnlReduceDescriptor : public CnnlDescriptor<cnnlReduceStruct, &cnnlCreate
                                                    &cnnlDestroyReduceDescriptor> {
  public:
   CnnlReduceDescriptor() {}
-  void set(cnnlDataType_t data_type, std::vector<int64_t> axis, cnnlReduceOp_t mode,
+  void set(cnnlDataType_t data_type, std::vector<int32_t> axis, cnnlReduceOp_t mode,
            cnnlReduceIndices_t is_indices, cnnlIndicesType_t indices_type);
 };
 

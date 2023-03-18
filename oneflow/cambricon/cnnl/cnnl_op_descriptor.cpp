@@ -46,7 +46,7 @@ void CnnlTransposeDescriptor::set(const int p_dims, const int permute[]) {
   OF_CNNL_CHECK(cnnlSetTransposeDescriptor(this->mut_desc(), p_dims, permute));
 }
 
-void CnnlReduceDescriptor::set(cnnlDataType_t data_type, std::vector<int64_t> axis,
+void CnnlReduceDescriptor::set(cnnlDataType_t data_type, std::vector<int32_t> axis,
                                cnnlReduceOp_t mode, cnnlReduceIndices_t is_indices,
                                cnnlIndicesType_t indices_type) {
   int axis_num = axis.size();
