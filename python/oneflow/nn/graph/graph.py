@@ -1901,7 +1901,7 @@ class Graph(object):
         return flattened_args
 
     @staticmethod
-    def with_dynamic_input_shape(*, size: int = 10):
+    def with_dynamic_input_shape(*, size: int = 10, enable_shared: bool = True):
         def deco_with_config(graph_init_func):
             @wraps(graph_init_func)
             def deco_func(self, *args, **kwargs):
@@ -1910,7 +1910,7 @@ class Graph(object):
                 import oneflow.nn.graph.cache as cache
 
                 self._dynamic_input_graph_cache = cache.GraphCache(
-                    weakref.proxy(self), cache_size=size
+                    weakref.proxy(self), cache_size=size, enable_graph_shared = enable_shared,
                 )
                 self._cached_init_args = args
                 self._cached_init_kwargs = kwargs
