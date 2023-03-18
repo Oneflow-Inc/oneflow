@@ -22,13 +22,13 @@ limitations under the License.
 
 #define OF_MLU_CHECK(condition)                                                        \
   for (cnrtRet_t _cnrt_check_status = (condition); _cnrt_check_status != cnrtSuccess;) \
-  LOG(FATAL) << "CNRT check failed: " #condition " : "                                 \
-             << " (" << _cnrt_check_status << ") "
+  THROW(RuntimeError) << "CNRT check failed: " #condition " : "                        \
+                      << " (" << _cnrt_check_status << ") "
 
 #define OF_CNNL_CHECK(condition)                                                                  \
   for (cnnlStatus_t _cnnl_check_status = (condition); _cnnl_check_status != CNNL_STATUS_SUCCESS;) \
-  LOG(FATAL) << "CNNL check failed: " #condition " : "                                            \
-             << " (error code:" << _cnnl_check_status                                             \
-             << " " + std::string(cnnlGetErrorString(_cnnl_check_status)) + ") "
+  THROW(RuntimeError) << "CNNL check failed: " #condition " : "                                   \
+                      << " (error code:" << _cnnl_check_status                                    \
+                      << " " + std::string(cnnlGetErrorString(_cnnl_check_status)) + ") "
 
 #endif  // ONEFLOW_CAMBRICON_COMMON_MLU_UTIL_H_
