@@ -104,7 +104,16 @@ class Graph(object):
     """
     _child_init_cnt = dict()
 
-    def __init__(self, enable_get_runtime_state_dict: bool = False):
+    def __init__(
+        self,
+        *,
+        enable_get_runtime_state_dict: bool = False,
+        debug_v_level: int = -1,
+        debug_ranks: Optional[Union[int, List[int]]] = None,
+        debug_max_py_stack_depth: int = 2,
+        debug_only_user_py_stack=True,
+        debug_op_repr_with_py_stack=False,
+    ):
         """
         Initializes internal Graph states. It MUST be called in ``__init__`` method of subclass.
 
@@ -137,12 +146,6 @@ class Graph(object):
         self._is_simple_tuple_input = False
         self._is_simple_tuple_output = False
 
-        self._debug = False
-        self._debug_min_s_level = 2
-        self._debug_max_v_level = 0
-        self._debug_max_py_stack_depth = 2
-        self._debug_op_repr_with_py_stack = False
-        self._debug_only_user_py_stack = True
         self._outputs_buffer_size = 2
         self._cur_index_of_ouputs_buffer = 0
 
@@ -176,6 +179,21 @@ class Graph(object):
 
         # For run graph with dynamic shape cache
         self._run_with_cache = False
+
+        # For debug
+        self._debug = False
+        self._debug_min_s_level = 2
+        self._debug_max_v_level = 0
+        self._debug_max_py_stack_depth = 2
+        self._debug_op_repr_with_py_stack = False
+        self._debug_only_user_py_stack = True
+        self.debug(
+            debug_v_level,
+            ranks=debug_ranks,
+            max_py_stack_depth=debug_max_py_stack_depth,
+            only_user_py_stack=debug_only_user_py_stack,
+            op_repr_with_py_stack=debug_op_repr_with_py_stack,
+        )
 
     def build(self, *args, **kwargs):
         r"""The ``build()`` method must be overridden to define neural network

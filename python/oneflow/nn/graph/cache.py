@@ -188,7 +188,7 @@ class GraphCache(object):
                 0,
                 0,
                 self._base_graph._shallow_repr()
-                + " got a new input, starting compiling a new graph.",
+                + " got a new input shape, is compiling a new graph.",
             )
 
         return graph
