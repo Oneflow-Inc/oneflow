@@ -43,9 +43,7 @@ def numel_in_bucket(tensor: Tensor):
 
 class ContiguousParamsGroup(object):
     def __init__(
-        self,
-        params_group_list: _tensor_or_tensors,
-        for_module: bool = False,
+        self, params_group_list: _tensor_or_tensors, for_module: bool = False,
     ):
         """
         The ContiguousParamsGroup is created by 2D List of Tensors,
@@ -90,7 +88,7 @@ class ContiguousParamsGroup(object):
             self._parameters_grouping_for_module()
         else:
             self._parameters_grouping_for_operations()
-    
+
     def _check_for_module(self):
         """If all tensors are not held by any buffer, try to create buffer.
         """
@@ -100,8 +98,7 @@ class ContiguousParamsGroup(object):
                     return
 
         self._physical_preparation = ContiguousParamsGroup(
-            self.params_group_list,
-            for_module=True,
+            self.params_group_list, for_module=True,
         )
 
     def _make_buffer_params_mapping(self):
