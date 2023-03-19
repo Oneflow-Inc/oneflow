@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/rank_compiler.h"
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/intra_job_mem_sharing_util.h"
 #include "oneflow/core/job/plan_util.h"
@@ -52,6 +53,9 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
 
 Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job* job, Plan* plan,
                                   DeallocateContext* deallocate_ctx) const {
+#ifdef WITH_CUDA
+  CudaCurrentDeviceGuard guard(GetCudaDeviceIndex());
+#endif  // WITH_CUDA
   auto task_gph = JUST(RankTaskGraph::New(boxing_task_graph_proto_, var_op_names, rank_));
   using std::placeholders::_1;
   const auto& IsNotMyDuty = [&](const CompTaskNode* comp_task_node) {
@@ -77,17 +81,23 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
       task_node->PinConsumedRegst();
     }
   });
-  LOG(ERROR) << "r" << rank_ << "==>R4"; std::this_thread::sleep_for(std::chrono::seconds(5));
+  LOG(ERROR) << "r" << rank_ << "==>R4";
+  std::this_thread::sleep_for(std::chrono::seconds(5));
   task_gph->TopoForEachNode(&TaskNode::Build);
-  LOG(ERROR) << "r" << rank_ << "==>R4.1"; std::this_thread::sleep_for(std::chrono::seconds(10));
+  LOG(ERROR) << "r" << rank_ << "==>R4.1";
+  std::this_thread::sleep_for(std::chrono::seconds(10));
   task_gph->RemoveEmptyRegsts();
-  LOG(ERROR) << "r" << rank_ << "==>R4.2"; std::this_thread::sleep_for(std::chrono::seconds(5));
+  LOG(ERROR) << "r" << rank_ << "==>R4.2";
+  std::this_thread::sleep_for(std::chrono::seconds(5));
   task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
-  LOG(ERROR) << "r" << rank_ << "==>R4.3"; std::this_thread::sleep_for(std::chrono::seconds(5));
+  LOG(ERROR) << "r" << rank_ << "==>R4.3";
+  std::this_thread::sleep_for(std::chrono::seconds(5));
   task_gph->DecideExecutionOrder();
-  LOG(ERROR) << "r" << rank_ << "==>R4.4"; std::this_thread::sleep_for(std::chrono::seconds(5));
+  LOG(ERROR) << "r" << rank_ << "==>R4.4";
+  std::this_thread::sleep_for(std::chrono::seconds(5));
   task_gph->MergeChainAndAddOrderingCtrlEdgeInSameChain();
-  LOG(ERROR) << "r" << rank_ << "==>R5"; std::this_thread::sleep_for(std::chrono::seconds(5));
+  LOG(ERROR) << "r" << rank_ << "==>R5";
+  std::this_thread::sleep_for(std::chrono::seconds(5));
   auto IsReachable = Singleton<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
   const JobDesc& job_desc = GlobalJobDesc();
   if (job_desc.enable_inplace()) {
@@ -98,7 +108,8 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
     });
   }
   task_gph->ForEachEdge([&](TaskEdge* task_edge) { task_edge->CheckRegstLbiValid(); });
-  LOG(ERROR) << "r" << rank_ << "==>R6"; std::this_thread::sleep_for(std::chrono::seconds(5));
+  LOG(ERROR) << "r" << rank_ << "==>R6";
+  std::this_thread::sleep_for(std::chrono::seconds(5));
 
   // put infomation from task_gph into plan.
   task_gph->ForEachNode([&](TaskNode* task_node) {
@@ -120,7 +131,8 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
     }
     plan->mutable_task()->Add(std::move(task_proto));
   });
-  LOG(ERROR) << "r" << rank_ << "==>R7"; std::this_thread::sleep_for(std::chrono::seconds(5));
+  LOG(ERROR) << "r" << rank_ << "==>R7";
+  std::this_thread::sleep_for(std::chrono::seconds(5));
   deallocate_ctx->Deallocate(std::move(task_gph));
 
   // post-process for plan and delete Singleton<OpGraph>.
@@ -132,7 +144,8 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
   PlanUtil::MergeMemBlockIdByLogicalChainId(plan, *job, rank_);
   PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(plan);
   PlanUtil::SetForceInplaceMemBlock(plan);
-  LOG(ERROR) << "r" << rank_ << "==>R8"; std::this_thread::sleep_for(std::chrono::seconds(5));
+  LOG(ERROR) << "r" << rank_ << "==>R8";
+  std::this_thread::sleep_for(std::chrono::seconds(5));
   return Maybe<void>::Ok();
 }
 
