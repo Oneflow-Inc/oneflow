@@ -95,7 +95,7 @@ private:
 };
 
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type, typename IN, typename OUT>
 class FftR2CKernel final : public user_op::OpKernel{
 public:
     FftR2CKernel() = default;
@@ -110,8 +110,8 @@ private:
       bool onesided = ctx->Attr<bool>("onesided");
       const auto& norm_str = ctx->Attr<std::string>("norm");
       const auto& dims = ctx->Attr<std::vector<int64_t>>("dims");
-      const T* input_ptr = input->dptr<T>();
-      T* out_ptr = out->mut_dptr<T>();
+      const IN* input_ptr = input->dptr<IN>();
+      OUT* out_ptr = out->mut_dptr<OUT>();
 
       Shape input_shape (input->shape_view());
       Shape out_shape (out->shape_view());
@@ -125,18 +125,25 @@ private:
       }
 
       if (input->data_type() == kComplex64){
-      // static void FftC2CForward(ep::Stream* stream, IN* data_in, OUT* data_out, const Shape& input_shape, 
-      //                           const Shape& output_shape, bool forward, const std::vector<int64_t>& dims, fft_norm_mode normalization){
         FftR2CKernelUtil<device_type, std::complex<float>, std::complex<float>, float>(ctx->stream(), input_ptr, out_ptr,
-                                                                                       input_shape, out_shape, forward, dims, norm_mode);
+                                                                                       input_shape, out_shape, 
+                                                                                       input->stride(), out->stride(),
+                                                                                       forward, dims, norm_mode);
       }
       else if (input->data_type() == kComplex128){
         FftR2CKernelUtil<device_type, std::complex<double>, std::complex<double>, double>(ctx->stream(), input_ptr, out_ptr,
-                                                                                       input_shape, out_shape, forward, dims, norm_mode);
+                                                                                          input_shape, out_shape, 
+                                                                                          input->stride(), out->stride(),
+                                                                                          forward, dims, norm_mode);
       }
       else{
-        Error::RuntimeError() << "expects kComplex64 or kComplex128, but got " << input->data_type();
+        Error::RuntimeError() << "expects kComplex64 or kComplex128, but gets " << input->data_type();
       }
+
+      if (!onesided) {
+        conj_symmetry(out_ptr, out_shape, out->stride(), dims, out_shape.elem_cnt());
+      }
+
     }
 };
 
@@ -215,7 +222,7 @@ REGISTER_STFT_CPU_KERNEL(float, std::complex<float>)
 
 
 #define REGISTER_FFTC2C_KERNELS(device, dtype)                 \
-  REGISTER_USER_KERNEL("fft_c2c")       1                        \
+  REGISTER_USER_KERNEL("fft_c2c")                              \
       .SetCreateFn<FftC2CKernel<device, dtype>>()              \
       .SetIsMatchedHob((user_op::HobDeviceType() == device) \
                        && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value))
@@ -223,6 +230,15 @@ REGISTER_STFT_CPU_KERNEL(float, std::complex<float>)
 REGISTER_FFTC2C_KERNELS(DeviceType::kCPU, std::complex<float>);
 REGISTER_FFTC2C_KERNELS(DeviceType::kCPU, std::complex<double>);
 
+
+#define REGISTER_FFTR2C_KERNELS(device, in_dtype, out_dtype)                 \
+  REGISTER_USER_KERNEL("fft_r2c")                              \
+      .SetCreateFn<FftR2CKernel<device, in_dtype, out_dtype>>()              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device) \
+                       && (user_op::HobDataType("input", 0) == GetDataType<in_dtype>::value))
+
+REGISTER_FFTR2C_KERNELS(DeviceType::kCPU, float, std::complex<float>);
+REGISTER_FFTR2C_KERNELS(DeviceType::kCPU, double, std::complex<double>);
 
 }  // namespace
 }  // namespace oneflow

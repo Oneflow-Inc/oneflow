@@ -22,7 +22,7 @@ struct FftC2CKernelUtil<DeviceType::kCPU, IN, OUT, dtype>{
 
 template<typename IN, typename OUT, typename dtype>
 struct FftR2CKernelUtil<DeviceType::kCPU, IN, OUT, dtype>{
-    static void FftC2CForward(ep::Stream* stream, IN* data_in, OUT* data_out, 
+    static void FftR2CForward(ep::Stream* stream, IN* data_in, OUT* data_out, 
                               const Shape& input_shape, const Shape& output_shape, 
                               const Stride& input_stride, const Stride& output_stride,
                               bool forward, const std::vector<int64_t>& dims,

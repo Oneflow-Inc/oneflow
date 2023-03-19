@@ -14,6 +14,7 @@
 #include "oneflow/core/operator/operator_util.h"
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/common/nd_index_offset_helper.h"
 
 namespace oneflow{
 
@@ -69,6 +70,62 @@ T compute_fct(const Shape& in_shape, std::vector<int64_t> dims, fft_norm_mode no
   return compute_fct<T>(n, normalization);
 }
 
+template <typename T, int NDIM>
+void _conj_symmetry(T* data_out, 
+                  const Shape& shape, 
+                  const Stride& strides,
+                  std::vector<int64_t> dims, int64_t elem_count){
+    // const int NDIM = out_shape.size();
+    const oneflow::NdIndexStrideOffsetHelper<int64_t, NDIM> helper (strides.data(), strides.size());
+    std::sort(dims.begin(), dims.end());
+    int64_t last_dim = dims.back();
+    int64_t last_dim_size = out_shape[last_dim];
+    int64_t last_dim_half = last_dim_size / 2;
+
+    std::vector<int64_t> indices (shape.size());
+    for (int offset = 0; offset < elem_count; offset++){
+        helper.OffsetToNdIndex(offset, indices.data(), indices.size());
+        if (indices[last_dim] <= last_dim_half){
+            continue;
+        }
+
+        int64_t cur_last_dim_index = indices[last_dim];
+        // get symmetric
+        indices[last_dim] = last_dim_size - cur_last_dim_index;
+        int64_t symmetric_offset = helper.NdIndexToOffset(indices.data(), indices.size());
+
+        // conj
+        data_out[offset] = std::conj(data_out[symmetric_offset]);
+    }
+}
+
+template <typename T>
+void conj_symmetry(T* data_out, 
+                  const Shape& shape, 
+                  const Stride& strides,
+                  const std::vector<int64_t>& dims, int64_t elem_count){
+    
+    void (*func)(T* /*data_out*/, const Shape& /*shape*/, const Stride& /*strides*/, 
+                const std::vector<int64_t>& /*dims*/, int64_t /*elem_count*/) = nullptr;
+    
+    switch (shape.size()){
+      case 1 : _conj_symmetry<T, 1>;break;
+      case 2 : _conj_symmetry<T, 2>;break;
+      case 3 : _conj_symmetry<T, 3>;break;
+      case 4 : _conj_symmetry<T, 4>;break;
+      case 5 : _conj_symmetry<T, 5>;break;
+      case 6 : _conj_symmetry<T, 6>;break;
+      case 7 : _conj_symmetry<T, 7>;break;
+      case 8 : _conj_symmetry<T, 8>;break;
+      case 9 : _conj_symmetry<T, 9>;break;
+      case 10 : _conj_symmetry<T, 10>;break;
+      case 11 : _conj_symmetry<T, 11>;break;
+      case 12 : _conj_symmetry<T, 12>;break;
+      default:  UNIMPLEMENTED(); break;
+    }
+    _conj_symmetry(data_out, shape, strides, dims, elem_count);
+}
+
 
 template<DeviceType device_type, typename IN, typename OUT, typename dtype>
 struct FftC2CKernelUtil{
@@ -80,7 +137,7 @@ struct FftC2CKernelUtil{
 
 template<DeviceType device_type, typename IN, typename OUT, typename dtype>
 struct FftR2CKernelUtil{
-    static void FftC2CForward(ep::Stream* stream, IN* data_in, OUT* data_out, 
+    static void FftR2CForward(ep::Stream* stream, IN* data_in, OUT* data_out, 
                               const Shape& input_shape, const Shape& output_shape, 
                               const Stride& input_stride, const Stride& output_stride,
                               bool forward, const std::vector<int64_t>& dims,
@@ -92,6 +149,9 @@ struct FftR2CKernelUtil{
   template struct FftC2CKernelUtil<device_type, in_type_pair, \
                                   out_type_pair, dtype>;
 
+#define INSTANTIATE_FFTR2C_KERNEL_UTIL(device_type, in_type_pair, out_type_pair, dtype)  \
+  template struct FftR2CKernelUtil<device_type, in_type_pair, \
+                                  out_type_pair, dtype>;
 
 }   // oneflow
 #endif // ONEFLOW_USER_KERNEL_UTIL_H_
