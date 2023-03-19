@@ -184,5 +184,11 @@ class GraphCache(object):
         # Create graph
         if graph is None:
             graph = self._init_and_get_a_graph_in_cache(cache_key)
+            self._base_graph._print(
+                0,
+                0,
+                self._base_graph._shallow_repr()
+                + " got a new input shape, is compiling a new graph.",
+            )
 
         return graph
