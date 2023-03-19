@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/rank_compiler.h"
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/intra_job_mem_sharing_util.h"
 #include "oneflow/core/job/plan_util.h"
@@ -52,6 +53,11 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
 
 Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job* job, Plan* plan,
                                   DeallocateContext* deallocate_ctx) const {
+#ifdef WITH_CUDA
+  // Use the right device when some plan compilation needs cuda to avoid creating unnecessary cuda
+  // context on cuda:0.
+  CudaCurrentDeviceGuard guard(GetCudaDeviceIndex());
+#endif  // WITH_CUDA
   auto task_gph = JUST(RankTaskGraph::New(boxing_task_graph_proto_, var_op_names, rank_));
   using std::placeholders::_1;
   const auto& IsNotMyDuty = [&](const CompTaskNode* comp_task_node) {
