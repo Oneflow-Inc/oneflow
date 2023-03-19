@@ -141,7 +141,9 @@ struct FusedApplyRotaryEmbParam {
   int32_t num_elements;
   int64_t k;
   int64_t offset;
-  std::pair<char, int64_t> strides[num_dims];
+  int64_t x_stride[num_dims];
+  int64_t sinuous_stride[num_dims];
+  int64_t sinuous_mask[num_dims];
 
   FusedApplyRotaryEmbParam(const T* x, const T* cos, const T* sin, T* out,
                                     const int32_t num_elements, const int64_t k, const int64_t offset)
@@ -158,23 +160,18 @@ __global__ void FusedApplyRotaryEmbComputeKernel(FusedApplyRotaryEmbParam<T, num
   for (IndexType packed_offset = threadIdx.x + blockIdx.x * blockDim.x; packed_offset < num_elements;
        packed_offset += blockDim.x * gridDim.x) {
     using LoadPack = cuda::elementwise::Packed<T, pack_size>;
-    IndexType offset = param.offset + packed_offset * pack_size; //TODO: two offset has different meaning, therefore one needs to be multiplied with pack_size, the other does not
+    IndexType offset = param.offset + packed_offset * pack_size;
     const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + offset);
     const LoadPack x_vec = *x_load;
     IndexType m_index, k_index;
+    IndexType sinuous_offset = 0;
 
 #pragma unloop
     for (int i = 0; i < num_dims; i++) {
-      IndexType index = offset / param.strides[i].second;
-      if (param.strides[i].first == 'm') {
-        m_index = index;
-      } else if (param.strides[i].first == 'k') {
-        k_index = index;
-      }
-      offset = offset - index * param.strides[i].second;
+      IndexType index = offset / param.x_stride[i];
+      offset = offset - index * param.x_stride[i];
+      sinuous_offset = sinuous_offset + (index * param.sinuous_mask[i] * param.sinuous_stride[i]);
     }
-
-    IndexType sinuous_offset = m_index * param.k + k_index;
     
     const LoadPack* cos_load = reinterpret_cast<const LoadPack*>(cos + sinuous_offset);
     const LoadPack* sin_load = reinterpret_cast<const LoadPack*>(sin + sinuous_offset);
@@ -214,12 +211,11 @@ void LaunchKernel(const T* x, const T* cos, const T* sin, T* out, const std::str
       reinterpret_cast<const T*>(x), reinterpret_cast<const T*>(cos),
       reinterpret_cast<const T*>(sin), reinterpret_cast<T*>(out), num_elements, k, offset);
 
-  //TODO: 在不传入layout的情况下，如何使得kernel能够感知到当前计算的是哪一个维度的index，因为在这个kernel中，
-  // 每一维有着对应的业务信息，在后续计算或从cos/sin中取数时，需要知道当前计算得到的是否是m/k维
-  param.strides[0] = {'b', b_stride};
-  param.strides[1] = {'h', h_stride};
-  param.strides[2] = {'m', m_stride};
-  param.strides[3] = {'k', 1};
+  std::pair<char, std::int64_t> strides[num_dims];
+  strides[0] = {'b', b_stride};
+  strides[1] = {'h', h_stride};
+  strides[2] = {'m', m_stride};
+  strides[3] = {'k', 1};
 
   auto GetDim = [&](const char c) {
     if (c == 'b') {
@@ -235,7 +231,7 @@ void LaunchKernel(const T* x, const T* cos, const T* sin, T* out, const std::str
     return 0L;
   };
 
-  std::sort(param.strides, param.strides + num_dims, [&](auto pair1, auto pair2) {
+  std::sort(strides, strides + num_dims, [&](auto pair1, auto pair2) {
     if (pair1.second > pair2.second) {
         return true;
     } else if (pair1.second == pair2.second) {
@@ -248,6 +244,20 @@ void LaunchKernel(const T* x, const T* cos, const T* sin, T* out, const std::str
     }
     return pair1.second > pair2.second;
   });
+
+// K has to be the last dimension, therefore sinuous_stride has to be [k, k, k, 1]
+#pragma unloop
+  for (int i = 0; i < num_dims; i++) {
+    param.x_stride[i] = strides[i].second;
+    param.sinuous_stride[i] = k;
+    param.sinuous_mask[i] = 0;
+    if (strides[i].first == 'm') {
+      param.sinuous_mask[i] = 1;
+    } else if (strides[i].first == 'k') {
+      param.sinuous_mask[i] = 1;
+      param.sinuous_stride[i] = 1;
+    }
+  }
 
   constexpr size_t blk_size = 128;
   FusedApplyRotaryEmbComputeKernel<T, IndexType, pack_size, num_dims>
