@@ -29,7 +29,7 @@ class CnnlPoolingDescriptor : public CnnlDescriptor<cnnlPoolingStruct, &cnnlCrea
   CnnlPoolingDescriptor() = default;
 
   void set(cnnlPoolingMode_t mode, int kernel_h, int kernel_w, int stride_h, int stride_w,
-           int pad_u, int pad_d, int pad_l, int pad_r);
+           int pad_u, int pad_d, int pad_l, int pad_r, bool ceil_mode);
 
   // NdPooling
   void set(cnnlPoolingMode_t mode, int64_t dims, const int kernel_size[], const int stride[],

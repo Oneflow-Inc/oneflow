@@ -23,10 +23,11 @@ limitations under the License.
 namespace oneflow {
 
 void CnnlPoolingDescriptor::set(cnnlPoolingMode_t mode, int kernel_h, int kernel_w, int stride_h,
-                                int stride_w, int pad_u, int pad_d, int pad_l, int pad_r) {
-  OF_CNNL_CHECK(cnnlSetPooling2dDescriptor(this->mut_desc(), mode, CNNL_PROPAGATE_NAN, kernel_h,
-                                           kernel_w, pad_u, pad_d, pad_l, pad_r, stride_h,
-                                           stride_w));
+                                int stride_w, int pad_u, int pad_d, int pad_l, int pad_r,
+                                bool ceil_mode) {
+  OF_CNNL_CHECK(cnnlSetPooling2dDescriptor_v2(this->mut_desc(), mode, CNNL_PROPAGATE_NAN, kernel_h,
+                                              kernel_w, pad_u, pad_d, pad_l, pad_r, stride_h,
+                                              stride_w, 1, 1, ceil_mode));
 }
 
 void CnnlPoolingDescriptor::set(cnnlPoolingMode_t mode, int64_t dims, const int kernel_size[],
