@@ -27,7 +27,7 @@ Maybe<void> CallbackNotifyOp::InitFromOpConf() {
 namespace {
 
 Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
-  CHECK_OR_RETURN(BlobDesc4BnInOp("in")->shape() == Shape{1});
+  CHECK_OR_RETURN(BlobDesc4BnInOp("in")->shape() == Shape({1}));
   CHECK_OR_RETURN(IsIntegralDataType(BlobDesc4BnInOp("in")->data_type()));
   return Maybe<void>::Ok();
 }
