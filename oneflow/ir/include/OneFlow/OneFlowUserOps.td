@@ -3766,13 +3766,15 @@ def OneFlow_FusedApplyRotaryEmbOp : OneFlow_BaseOp<"fused_apply_rotary_emb", [No
   let input = (ins
     OneFlow_Tensor:$x,
     OneFlow_Tensor:$cos,
-    OneFlow_Tensor:$sin
+    OneFlow_Tensor:$sin,
+    Optional<OneFlow_Tensor>:$position_ids
   );
   let output = (outs
     OneFlow_Tensor:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<StrAttr, "\"BHMK\"">:$layout
+    DefaultValuedAttr<StrAttr, "\"BHMK\"">:$layout,
+    DefaultValuedAttr<SI32Attr, "0">:$pass_ndims
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

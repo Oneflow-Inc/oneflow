@@ -1221,7 +1221,7 @@
   bind_python: True
 
 - name: "fused_apply_rotary_emb"
-  signature: 'Tensor (Tensor x, Tensor cos, Tensor sin, String layout="BHMK") => FusedApplyRotaryEmb'
+  signature: 'Tensor (Tensor x, Tensor cos, Tensor sin, Tensor position_ids=None, String layout="BHMK", Int32 pass_ndims=0) => FusedApplyRotaryEmb'
   bind_python: True
 
 - name: "fused_relu_dropout_grad"

@@ -492,6 +492,7 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   const user_op::TensorDesc& cos_desc = ctx->InputTensorDesc("cos", 0);
   const user_op::TensorDesc& sin_desc = ctx->InputTensorDesc("sin", 0);
   const std::string& layout = ctx->Attr<std::string>("layout");
+  const int pass_ndims = ctx->Attr<int>("pass_ndims");
 
   CHECK_EQ_OR_RETURN(cos_desc.shape().NumAxes(), 2);
   CHECK_EQ_OR_RETURN(sin_desc.shape().NumAxes(), 2);
@@ -501,6 +502,15 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   //TODO: fused_apply_rotary_emb have same logic no matter name
   ParseDims(x_desc.shape(), layout, Optional<int64_t>(), Optional<int64_t>(cos_desc.shape().At(1)), 
     &b, &m, &h, &k);
+
+  if (ctx->has_input("position_ids", 0)) { 
+    const user_op::TensorDesc& position_ids_desc = ctx->InputTensorDesc("position_ids", 0);
+    CHECK_LE_OR_RETURN(position_ids_desc.shape().NumAxes(), 3); //TODO: supported shape should be discussed
+    CHECK_EQ_OR_RETURN(position_ids_desc.shape().At(0), b);
+    CHECK_EQ_OR_RETURN(position_ids_desc.shape().At(1), m);
+  }
+
+  CHECK_LE_OR_RETURN(pass_ndims, k);
   CHECK_EQ_OR_RETURN(cos_desc.shape().At(0), m); // K of cos & sin is checked inside ParseDims
 
   ctx->SetOutputShape("out", 0, x_desc.shape());

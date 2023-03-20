@@ -54,7 +54,7 @@ def shuffle_adjacent_two_elem(x, dims):
     return y
 
 
-def _test_fused_rotary_embedding(test_case, layout, dims, dtype):
+def _test_fused_rotary_embedding(test_case, layout, pass_ndims, dims, dtype):
     theta = 1e-4
 
     if layout == "BHMK":
@@ -95,7 +95,7 @@ def _test_fused_rotary_embedding(test_case, layout, dims, dtype):
     fused_cos = flow.tensor(cos, dtype=dtype, device="cuda")
     fused_sin = flow.tensor(sin, dtype=dtype, device="cuda")
 
-    fused_out = flow._C.fused_apply_rotary_emb(fused_x, fused_cos, fused_sin, layout)
+    fused_out = flow._C.fused_apply_rotary_emb(fused_x, fused_cos, fused_sin, None, layout, pass_ndims)
 
     test_case.assertTrue(
         np.allclose(
@@ -110,8 +110,9 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
         args_dict = OrderedDict()
         args_dict["test_fun"] = [_test_fused_rotary_embedding]
         args_dict["layout"] = ["BHMK"]
-        #args_dict["dims"] = [(1,1,1,4), (1,1,5,4), (1,3,1,4), (1,3,5,4), (2,1,1,4), (2,1,5,4), (2,3,1,4), (2,3,5,4)]
-        args_dict["dims"] = [(1, 65536, 1024, 2), (1, 65536, 512, 4), (1, 65536, 256, 8)]
+        args_dict["pass_ndims"] = [0]
+        args_dict["dims"] = [(1,1,1,4), (1,1,5,4), (1,3,1,4), (1,3,5,4), (2,1,1,4), (2,1,5,4), (2,3,1,4), (2,3,5,4)]
+        #args_dict["dims"] = [(1, 65536, 1024, 2), (1, 65536, 512, 4), (1, 65536, 256, 8)]
         args_dict["dtype"] = [flow.float16]
 
         for arg in GenArgList(args_dict):

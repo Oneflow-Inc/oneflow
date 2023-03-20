@@ -424,7 +424,14 @@ class FusedAttentionConcatPastKeyValueFunctor {
 class FusedApplyRotaryEmbFunctor {
  public:
   FusedApplyRotaryEmbFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_apply_rotary_emb")
+    op_with_position_ids = CHECK_JUST(one::OpBuilder("fused_apply_rotary_emb")
+                         .Input("x")
+                         .Input("cos")
+                         .Input("sin")
+                         .Input("position_ids")
+                         .Output("out")
+                         .Build());
+    op_without_position_ids = CHECK_JUST(one::OpBuilder("fused_apply_rotary_emb")
                          .Input("x")
                          .Input("cos")
                          .Input("sin")
@@ -434,7 +441,8 @@ class FusedApplyRotaryEmbFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& cos,
                            const std::shared_ptr<one::Tensor>& sin,
-                           const std::string& layout) const {
+                           const Optional<one::Tensor>& position_ids,
+                           const std::string& layout, const int pass_ndims) const {
     /*
     x: (B, H, M, K)
     x: (B, M, E) <=> (B, M, H, K)
@@ -453,19 +461,36 @@ class FusedApplyRotaryEmbFunctor {
     //TODO: fused_apply_rotary_emb have same logic no matter name
     ParseDims("", *x->shape(), layout, Optional<int64_t>(), Optional<int64_t>(cos->shape()->At(1)), 
       &b, &m, &h, &k);
+
+    if (position_ids) {
+      CHECK_LE_OR_RETURN(JUST(position_ids)->shape()->NumAxes(), 3)
+        << Error::RuntimeError() << "ndims of position_ids should be no more than 3."; //TODO: supported shape should be discussed
+      CHECK_EQ_OR_RETURN(JUST(position_ids)->shape()->At(0), b)
+        << Error::RuntimeError() << "1st dim of position_ids should be equal to B.";
+      CHECK_EQ_OR_RETURN(JUST(position_ids)->shape()->At(1), m)
+        << Error::RuntimeError() << "2nd dim of position_ids should be equal to M.";
+    }
     
+    CHECK_LE_OR_RETURN(pass_ndims, k)
+            << Error::RuntimeError()
+            << "pass_ndims should be no more than k.";
     CHECK_EQ_OR_RETURN(cos->shape()->At(0), m)
             << Error::RuntimeError()
             << "M of x should be equal to M of cos & sin."; // K of cos & sin is checked inside ParseDims
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("layout");
-    attrs.SetAllAttrs(layout);
-
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, cos, sin}, attrs);
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("layout", "pass_ndims");
+    attrs.SetAllAttrs(layout, pass_ndims);
+    
+    if (position_ids) {
+      return OpInterpUtil::Dispatch<Tensor>(*op_with_position_ids, {x, cos, sin, JUST(position_ids)}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_without_position_ids, {x, cos, sin}, attrs);
+    }
   }
 
  private:
-  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_with_position_ids;
+  std::shared_ptr<OpExpr> op_without_position_ids;
 };
 
 }  // namespace impl

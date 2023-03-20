@@ -191,7 +191,8 @@ __global__ void FusedApplyRotaryEmbComputeKernel(FusedApplyRotaryEmbParam<T, num
 }
 
 template<typename T, typename IndexType, size_t pack_size, size_t num_dims>
-void LaunchKernel(const T* x, const T* cos, const T* sin, T* out, const std::string& layout, const int64_t b,
+void LaunchKernel(const T* x, const T* cos, const T* sin, const T* position_ids, T* out, const std::string& layout, 
+                    const int pass_ndims, const int64_t b,
                     const int64_t m, const int64_t h, const int64_t k, const int64_t b_stride, 
                     const int64_t m_stride, const int64_t h_stride, const int64_t offset, 
                     IndexType num_elements) {
@@ -265,9 +266,10 @@ void LaunchKernel(const T* x, const T* cos, const T* sin, T* out, const std::str
 }
 
 template<typename T, typename IndexType, size_t num_dims>
-void DispatchPackSize(const T* x, const T* cos, const T* sin, T* out, const std::string& layout, const int64_t b, 
-                      const int64_t m, const int64_t h, const int64_t k, const int64_t b_stride,
-                      const int64_t m_stride, const int64_t h_stride, const int64_t offset, 
+void DispatchPackSize(const T* x, const T* cos, const T* sin, const T* position_ids, T* out, const std::string& layout, 
+                      const int pass_ndims, const IndexType b, 
+                      const IndexType m, const IndexType h, const IndexType k, const IndexType b_stride,
+                      const IndexType m_stride, const IndexType h_stride, const IndexType offset, 
                       IndexType num_elements) {
   const auto CheckPackSize = [&](const size_t pack_size) {
     bool r = (((reinterpret_cast<uintptr_t>(x) % (sizeof(T) * pack_size)) == 0)
@@ -277,30 +279,33 @@ void DispatchPackSize(const T* x, const T* cos, const T* sin, T* out, const std:
 
   if (CheckPackSize(8)) {
     num_elements /= 8;
-    LaunchKernel<T, IndexType, 8, num_dims>(x, cos, sin, out, layout, b, m, h, k, b_stride, m_stride, h_stride, offset,
-                                            num_elements);
+    LaunchKernel<T, IndexType, 8, num_dims>(x, cos, sin, position_ids, out, layout, pass_ndims, b, m, h, k, 
+                                          b_stride, m_stride, h_stride, offset, num_elements);
   } else if (CheckPackSize(4)) {
     num_elements /= 4;
-    LaunchKernel<T, IndexType, 4, num_dims>(x, cos, sin, out, layout, b, m, h, k, b_stride, m_stride, h_stride, offset,
-                                            num_elements);
+    LaunchKernel<T, IndexType, 4, num_dims>(x, cos, sin, position_ids, out, layout, pass_ndims, b, m, h, k, 
+                                          b_stride, m_stride, h_stride, offset, num_elements);
   } else {
     num_elements /= 2;
-    LaunchKernel<T, IndexType, 2, num_dims>(x, cos, sin, out, layout, b, m, h, k, b_stride, m_stride, h_stride, offset,
-                                            num_elements);
+    LaunchKernel<T, IndexType, 2, num_dims>(x, cos, sin, position_ids, out, layout, pass_ndims, b, m, h, k, 
+                                          b_stride, m_stride, h_stride, offset, num_elements);
   }
 }
 
 template<typename T, size_t num_dims>
-void DispatchIndex(const T* x, const T* cos, const T* sin, T* out, const std::string& layout, const int64_t b, const int64_t m,
-  const int64_t h, const int64_t k, const int64_t b_stride, const int64_t m_stride, const int64_t h_stride,
-  const int64_t offset) {
+void DispatchIndex(const T* x, const T* cos, const T* sin, const T* position_ids, T* out, const std::string& layout, 
+  const int pass_ndims, const int64_t b, const int64_t m, const int64_t h, const int64_t k, const int64_t b_stride, 
+  const int64_t m_stride, const int64_t h_stride, const int64_t offset) {
   int64_t num_elements = b * m * h * k;
   if (num_elements < (1 << 30)) {
-    DispatchPackSize<T, int32_t, num_dims>(x, cos, sin, out, layout, b, m, h, k, b_stride, m_stride, h_stride, offset,
-                                           static_cast<int32_t>(num_elements));
+    DispatchPackSize<T, int32_t, num_dims>(x, cos, sin, position_ids, out, layout, pass_ndims, static_cast<int32_t>(b), 
+                                          static_cast<int32_t>(m), static_cast<int32_t>(h), static_cast<int32_t>(k), 
+                                          static_cast<int32_t>(b_stride), static_cast<int32_t>(m_stride), 
+                                          static_cast<int32_t>(h_stride), static_cast<int32_t>(offset), 
+                                          static_cast<int32_t>(num_elements));
   } else {
-    DispatchPackSize<T, int64_t, num_dims>(x, cos, sin, out, layout, b, m, h, k, b_stride, m_stride, h_stride, offset,
-                                           num_elements);
+    DispatchPackSize<T, int64_t, num_dims>(x, cos, sin, position_ids, out, layout, pass_ndims, b, m, h, k, 
+                                          b_stride, m_stride, h_stride, offset, num_elements);
   }
 }
 
@@ -318,8 +323,11 @@ class FusedApplyRotaryEmbKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* cos = ctx->Tensor4ArgNameAndIndex("cos", 0);
     const user_op::Tensor* sin = ctx->Tensor4ArgNameAndIndex("sin", 0);
+    const user_op::Tensor* position_ids = ctx->has_input("position_ids", 0) ? 
+      ctx->Tensor4ArgNameAndIndex("position_ids", 0) : nullptr;
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const std::string& layout = ctx->Attr<std::string>("layout");
+    const int pass_ndims = ctx->Attr<int>("pass_ndims");
 
     constexpr size_t N = 4;
     int64_t b = 0;
@@ -337,7 +345,8 @@ class FusedApplyRotaryEmbKernel final : public user_op::OpKernel {
     // TODO: hard code num_dims & seems redundant template problem...
     DispatchIndex<T, N>(
         reinterpret_cast<const T*>(x->dptr()), reinterpret_cast<const T*>(cos->dptr()),
-        reinterpret_cast<const T*>(sin->dptr()), reinterpret_cast<T*>(out->mut_dptr()), layout,
+        reinterpret_cast<const T*>(sin->dptr()), position_ids ? reinterpret_cast<const T*>(position_ids->dptr()) :
+          nullptr, reinterpret_cast<T*>(out->mut_dptr()), layout, pass_ndims,
         b, m, h, k, b_stride, m_stride, h_stride, offset);
   }
 
