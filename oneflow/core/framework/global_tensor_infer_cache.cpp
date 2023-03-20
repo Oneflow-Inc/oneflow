@@ -160,24 +160,18 @@ Maybe<Operator> MakeOp(const UserOpExpr& user_op_expr, const AttrMap& attrs,
 }
 
 Maybe<void> CheckInputParallelDescIdentical(const GlobalTensorMetaInferArgs& infer_args,
-                                            const small_vector<int32_t>& host_memory_input_ids) {
+                                            const UserOpExpr& user_op_expr) {
   if (infer_args.input_global_tensor_metas().empty()) { return Maybe<void>::Ok(); }
   Symbol<ParallelDesc> default_parallel_desc;
   for (int i = 0; i < infer_args.input_global_tensor_metas().size(); ++i) {
-    if (std::find(host_memory_input_ids.begin(), host_memory_input_ids.end(), i)
-        != host_memory_input_ids.end()) {
-      continue;
-    }
+    if (user_op_expr.IsHostMemoryInput(i)) { continue; }
     default_parallel_desc =
         JUST(VectorAt(infer_args.input_global_tensor_metas(), i)).tensor_meta()->parallel_desc();
     break;
   }
 
   for (int i = 0; i < infer_args.input_global_tensor_metas().size(); ++i) {
-    if (std::any_of(host_memory_input_ids.begin(), host_memory_input_ids.end(),
-                    [i](int32_t host_memory_input_id) { return host_memory_input_id == i; })) {
-      continue;
-    }
+    if (user_op_expr.IsHostMemoryInput(i)) { continue; }
     CHECK_OR_RETURN(
         default_parallel_desc
         == JUST(VectorAt(infer_args.input_global_tensor_metas(), i)).tensor_meta()->parallel_desc())
@@ -270,7 +264,7 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
   CHECK_GT_OR_RETURN(infer_args.input_global_tensor_metas().size(), 0);  // NOLINT
   Symbol<ParallelDesc> parallel_desc =
       infer_args.input_global_tensor_metas()[0].tensor_meta()->parallel_desc();
-  JUST(CheckInputParallelDescIdentical(infer_args, user_op_expr.host_memory_input_ids()));
+  JUST(CheckInputParallelDescIdentical(infer_args, user_op_expr));
   JUST(CheckIsDeviceSupportedByOp(*parallel_desc, user_op_expr.op_type_name()));
   std::vector<OpArgMutGlobalTensorMeta> output_mut_metas(user_op_expr.output_size());
   {

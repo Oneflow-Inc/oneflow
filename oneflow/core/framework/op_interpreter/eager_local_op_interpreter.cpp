@@ -54,12 +54,10 @@ Maybe<Symbol<Device>> RawGetDefaultCpuDevice() { return Device::New("cpu"); }
 constexpr auto* GetDefaultCpuDevice = DECORATE(&RawGetDefaultCpuDevice, ThreadLocal);
 
 Maybe<Symbol<Device>> GetDefaultDevice(const TensorTuple& inputs, const OpExprInterpContext& ctx,
-                                       const small_vector<int32_t>& filtered_ids) {
+                                       const UserOpExpr& user_op_expr) {
   if (!inputs.empty()) {
     for (int32_t i = 0; i < inputs.size(); ++i) {
-      if (std::find(filtered_ids.begin(), filtered_ids.end(), i) == filtered_ids.end()) {
-        return JUST(inputs.at(i)->device());
-      }
+      if (!user_op_expr.IsHostMemoryInput(i)) { return JUST(inputs.at(i)->device()); }
     }
   }
   if (ctx.device.has_value()) {
@@ -80,8 +78,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
                            TensorTuple* outputs, const OpExprInterpContext& ctx) {
   OF_PROFILER_RANGE_GUARD("NaiveInterpret");
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());  // NOLINT
-  Symbol<Device> default_device =
-      JUST(GetDefaultDevice(inputs, ctx, user_op_expr.host_memory_input_ids()));
+  Symbol<Device> default_device = JUST(GetDefaultDevice(inputs, ctx, user_op_expr));
   const std::shared_ptr<const LocalTensorInferResult> result =
       JUST([&]() -> Maybe<const LocalTensorInferResult> {
         LocalTensorMetaInferArgs infer_args;
@@ -93,7 +90,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   // expand lifetime of host_inputs to the end of this function
   TensorTuple host_inputs;
   for (int i = 0; i < inputs.size(); i++) {
-    if (user_op_expr.is_host_memory_input(i)) {
+    if (user_op_expr.IsHostMemoryInput(i)) {
       const auto& host_input = JUST(functional::To(
           inputs.at(i), Optional<Symbol<Device>>(JUST(GetDefaultCpuDevice())), NullOpt, false));
       input_eager_blob_objects.at(i) = JUST(host_input->eager_blob_object());

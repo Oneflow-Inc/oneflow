@@ -788,7 +788,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
   for (int i = 0; i < inputs.size(); ++i) {
     const auto& input_tensor = inputs.at(i);
     CHECK_EQ_OR_RETURN(is_local, input_tensor->is_local());  // NOLINT(maybe-need-error-msg)
-    if (!op_expr.is_host_memory_input(i)) {
+    if (!op_expr.IsHostMemoryInput(i)) {
       if (is_local) {
         CHECK_OR_RETURN(device_tag == JUST(GetDeviceTagOfTensor(input_tensor)))
             << Error::RuntimeError() << "Lazy nn.Graph name: " << graph_name

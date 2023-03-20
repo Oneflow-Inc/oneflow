@@ -155,7 +155,7 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
     return device_and_stream_infer_fn_;
   }
 
-  bool is_host_memory_input(int32_t input_index) const {
+  bool IsHostMemoryInput(int32_t input_index) const {
     return std::find(host_memory_input_ids_.begin(), host_memory_input_ids_.end(), input_index)
            != host_memory_input_ids_.end();
   }

@@ -140,25 +140,17 @@ Maybe<bool> UserOpRegistryMgr::IsOpKernelRegistered(const std::string& op_type_n
   return false;
 }
 
-}  // namespace user_op
-
-namespace {
-
-HashMap<std::string, small_vector<std::pair<std::string, int32_t>>>*
-GlobalOpTypeName2HostMemoryInputArgs() {
-  static HashMap<std::string, small_vector<std::pair<std::string, int32_t>>>
-      op_type_name2host_memory_input_args;
-  return &op_type_name2host_memory_input_args;
+UserOpHostMemoryInputRegistryMgr& UserOpHostMemoryInputRegistryMgr::Get() {
+  static UserOpHostMemoryInputRegistryMgr mgr;
+  return mgr;
 }
 
-}  // namespace
-
-Maybe<void> SetHostMemoryInput4Op(const std::string& op_type_name, const std::string& arg_name,
-                                  int32_t index) {
-  auto* op_type_name2host_memory_input_args = GlobalOpTypeName2HostMemoryInputArgs();
-  auto it = op_type_name2host_memory_input_args->find(op_type_name);
-  if (it == op_type_name2host_memory_input_args->end()) {
-    auto pair = op_type_name2host_memory_input_args->emplace(
+Maybe<void> UserOpHostMemoryInputRegistryMgr::SetHostMemoryInput4Op(const std::string& op_type_name,
+                                                                    const std::string& arg_name,
+                                                                    int32_t index) {
+  auto it = op_type_name2host_memory_input_args_.find(op_type_name);
+  if (it == op_type_name2host_memory_input_args_.end()) {
+    auto pair = op_type_name2host_memory_input_args_.emplace(
         op_type_name, small_vector<std::pair<std::string, int32_t>>());
     CHECK_OR_RETURN(pair.second);
     it = pair.first;
@@ -167,31 +159,19 @@ Maybe<void> SetHostMemoryInput4Op(const std::string& op_type_name, const std::st
   return Maybe<void>::Ok();
 }
 
-bool IsHostMemoryInput4Op(const std::string& op_type_name, const std::string& arg_name,
-                          int32_t index) {
-  auto* op_type_name2host_memory_input_args = GlobalOpTypeName2HostMemoryInputArgs();
-  auto it = op_type_name2host_memory_input_args->find(op_type_name);
-  if (it == op_type_name2host_memory_input_args->end()) { return false; }
+bool UserOpHostMemoryInputRegistryMgr::IsHostMemoryInput4Op(const std::string& op_type_name,
+                                                            const std::string& arg_name,
+                                                            int32_t index) const {
+  auto it = op_type_name2host_memory_input_args_.find(op_type_name);
+  if (it == op_type_name2host_memory_input_args_.end()) { return false; }
   return std::find(it->second.begin(), it->second.end(), std::make_pair(arg_name, index))
          != it->second.end();
 }
 
-bool HasHostMemoryInput(const std::string& op_type_name) {
-  auto* op_type_name2host_memory_input_args = GlobalOpTypeName2HostMemoryInputArgs();
-  return op_type_name2host_memory_input_args->find(op_type_name)
-         != op_type_name2host_memory_input_args->end();
+bool UserOpHostMemoryInputRegistryMgr::HasHostMemoryInput(const std::string& op_type_name) const {
+  return op_type_name2host_memory_input_args_.find(op_type_name)
+         != op_type_name2host_memory_input_args_.end();
 }
 
-const small_vector<std::pair<std::string, int32_t>>& HostMemoryInputs4Op(
-    const std::string& op_type_name) {
-  static small_vector<std::pair<std::string, int32_t>> empty_host_memory_input_args;
-  auto* op_type_name2host_memory_input_args = GlobalOpTypeName2HostMemoryInputArgs();
-  if (op_type_name2host_memory_input_args->find(op_type_name)
-      != op_type_name2host_memory_input_args->end()) {
-    return op_type_name2host_memory_input_args->at(op_type_name);
-  } else {
-    return empty_host_memory_input_args;
-  }
-}
-
+}  // namespace user_op
 }  // namespace oneflow

@@ -552,7 +552,8 @@ Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
   const auto& indexed_input_pairs = this->indexed_input_pairs();
   for (int32_t i = 0; i < indexed_input_pairs.size(); ++i) {
     const auto& input_pair = JUST(VectorAt(indexed_input_pairs, i));
-    if (IsHostMemoryInput4Op(op_type_name, input_pair.first, input_pair.second)) {
+    if (user_op::UserOpHostMemoryInputRegistryMgr::Get().IsHostMemoryInput4Op(
+            op_type_name, input_pair.first, input_pair.second)) {
       host_memory_input_ids_.emplace_back(i);
     }
   }

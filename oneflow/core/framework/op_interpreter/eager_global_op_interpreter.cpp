@@ -45,12 +45,10 @@ namespace {
 
 Maybe<Symbol<ParallelDesc>> GetParallelDesc(const TensorTuple& inputs,
                                             const OpExprInterpContext& ctx,
-                                            const small_vector<int32_t>& filtered_ids) {
+                                            const UserOpExpr& user_op_expr) {
   if (!inputs.empty()) {
     for (int32_t i = 0; i < inputs.size(); ++i) {
-      if (std::find(filtered_ids.begin(), filtered_ids.end(), i) == filtered_ids.end()) {
-        return inputs.at(i)->parallel_desc();
-      }
+      if (!user_op_expr.IsHostMemoryInput(i)) { return inputs.at(i)->parallel_desc(); }
     }
   }
   return JUST(ctx.parallel_desc);
@@ -117,8 +115,7 @@ auto* GetBoxingOutput =
 Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                       TensorTuple* outputs, const OpExprInterpContext& ctx) {
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
-  const auto& host_memory_input_ids = user_op_expr.host_memory_input_ids();
-  const auto& parallel_desc = JUST(GetParallelDesc(inputs, ctx, host_memory_input_ids));
+  const auto& parallel_desc = JUST(GetParallelDesc(inputs, ctx, user_op_expr));
   std::shared_ptr<const GlobalTensorInferResult> result;
   NonRecursiveMetaInfoConsistencyCheckScope scope;
   if (inputs.empty()) {
@@ -167,7 +164,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     const auto& infered_input_meta = result->input_tensor_metas().at(i);
     const auto& input_parallel_desc = JUST(input->parallel_desc());
     CHECK_OR_RETURN(input_parallel_desc == infered_input_meta->parallel_desc());
-    bool is_host_input = user_op_expr.is_host_memory_input(i);
+    bool is_host_input = user_op_expr.IsHostMemoryInput(i);
     Symbol<ParallelDesc> dst_parallel_desc =
         is_host_input
             ? JUST(ReplaceDeviceType(infered_input_meta->parallel_desc(), DeviceType::kCPU))
