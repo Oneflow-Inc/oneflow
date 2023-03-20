@@ -142,7 +142,7 @@ class AdaptivePool1DCpuKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     if (std::is_same<T, float16>::value) {
-      AvgForwardCompute<float16, T>(ctx, 1);
+      AvgForwardCompute<T, /*accscalar_t*/float>(ctx, 1);
     } else {
       AvgForwardCompute<T, T>(ctx, 1);
     }
@@ -160,7 +160,7 @@ class AdaptivePool2DCpuKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     if (std::is_same<T, float16>::value) {
-      AvgForwardCompute<float16, T>(ctx, 2);
+      AvgForwardCompute<T, /*accscalar_t*/float >(ctx, 2);
     } else {
       AvgForwardCompute<T, T>(ctx, 2);
     }
@@ -178,7 +178,7 @@ class AdaptivePool3DCpuKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     if (std::is_same<T, float16>::value) {
-      AvgForwardCompute<float16, T>(ctx, 3);
+      AvgForwardCompute<T, /*accscalar_t*/float>(ctx, 3);
     } else {
       AvgForwardCompute<T, T>(ctx, 3);
     }
