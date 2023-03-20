@@ -154,6 +154,13 @@ class TestMock(flow.unittest.TestCase):
             for _ in torch.not_exist:
                 pass
 
+    def test_mock_lazy_in_if(test_case):
+        with mock.enable(lazy=True):
+            import torch
+
+            if torch.not_exist:
+                test_case.assertTrue(False)
+
     def test_blacklist(test_case):
         with mock.enable(lazy=True):
             import torch
