@@ -110,9 +110,8 @@ def DistributedDataParallel(
             for i in range(0, len(reversed_param_list), bucket_size)
         ]
 
-        # module.make_contiguous_params_group()
-        module._params_group = ContiguousParamsGroup(module._buckets)
-        module._bucket_tensors = list(module._params_group.grouped_parameters_grad)
+        module._params_group = ContiguousParamsGroup(module._buckets[::-1])
+        module._bucket_tensors = module._params_group.grouped_parameters_grad[::-1]
 
     ddp_state_for_reversed_params = OrderedDict(
         reversed([(x, [False, False]) for x in module.parameters() if x.requires_grad])
