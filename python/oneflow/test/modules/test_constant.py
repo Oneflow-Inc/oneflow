@@ -191,7 +191,7 @@ class TestConstantModule(flow.unittest.TestCase):
             requires_grad=constant(True),
         )
         return y
-    
+
     @autotest(n=5, auto_backward=False)
     def test_new_full_with_scalar(test_case):
         device = random_device()
@@ -202,7 +202,7 @@ class TestConstantModule(flow.unittest.TestCase):
     @autotest(n=5, auto_backward=False)
     def test_full_with_scalar(test_case):
         device = random_device()
-        y = torch.full([], random().to(int), device=device)        
+        y = torch.full([], random().to(int), device=device)
         return y
 
     @autotest(n=10, auto_backward=True)
