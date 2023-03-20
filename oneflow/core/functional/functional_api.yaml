@@ -3248,6 +3248,11 @@
     'Tensor (Tensor input, Int64 n=None, Int64 dim=-1, String norm_str="backward", Bool forward=True) =>FftC2C'
   bind_python: False
 
+- name: "fft_c2c_grad"
+  signature:
+    'Tensor (Tensor input, Int64List dim, String norm_str="backward", Bool forward=True) =>FftC2CGrad'
+  bind_python: False
+
 - name: "fft_r2c"
   signature:
     'Tensor (Tensor input, Int64 n=None, Int64 dim=-1, String norm_str="backward", Bool onesided=False, Bool forward=True) =>FftR2C'
