@@ -105,7 +105,9 @@ class ContiguousParamsGroup(object):
         for params in self.params_group_list:
             for p in params:
                 if p._ref_tensor is not None and p.requires_grad:
-                    assert p._ref_index < p._ref_tensor.numel(), "invalid ref tensor index."
+                    assert (
+                        p._ref_index < p._ref_tensor.numel()
+                    ), "invalid ref tensor index."
                     buffer_params_mapping[p._ref_tensor].append((p._ref_index, p))
 
         for buffer, params_list in buffer_params_mapping.items():
