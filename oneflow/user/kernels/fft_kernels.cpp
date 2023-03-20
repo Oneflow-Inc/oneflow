@@ -148,7 +148,7 @@ private:
 };
 
 
-#if 1
+#if 0
 template<typename IN, typename OUT>
 class StftCpuKernel final : public user_op::OpKernel {
  public:
