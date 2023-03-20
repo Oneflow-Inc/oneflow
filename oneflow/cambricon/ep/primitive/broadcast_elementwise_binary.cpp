@@ -45,6 +45,12 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
                                                   Scalar attr1) override {
     if (max_num_dims > kMaxNumDims) { return nullptr; }
 
+#define MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY(binary_op, data_type_pair) \
+  {std::make_tuple(binary_op, OF_PP_PAIR_SECOND(data_type_pair),                    \
+                   OF_PP_PAIR_SECOND(data_type_pair)),                              \
+   NewBroadcastElementwiseBinary<binary_op, OF_PP_PAIR_FIRST(data_type_pair),       \
+                                 OF_PP_PAIR_FIRST(data_type_pair)>},
+
 #define MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_LOGICAL_ENTRY(binary_op, src_data_type_pair, \
                                                             dst_data_type_pair)            \
   {std::make_tuple(binary_op, OF_PP_PAIR_SECOND(src_data_type_pair),                       \
@@ -55,11 +61,15 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
     static const std::map<
         std::tuple<BinaryOp, DataType, DataType>,
         std::function<std::unique_ptr<BroadcastElementwiseBinary>(Scalar, Scalar)>>
-        new_broadcast_elementwise_binary_handle{OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-            MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_LOGICAL_ENTRY, MLU_BINARY_LOGICAL_OP_SEQ,
-            MLU_PRIMITIVE_ALL_TYPE_SEQ, MLU_PRIMITIVE_BOOL_TYPE_SEQ)};
+        new_broadcast_elementwise_binary_handle{
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
+                                             MLU_BINARY_MATH_OP_SEQ, MLU_PRIMITIVE_ALL_TYPE_SEQ)
+                OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+                    MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_LOGICAL_ENTRY, MLU_BINARY_LOGICAL_OP_SEQ,
+                    MLU_PRIMITIVE_ALL_TYPE_SEQ, MLU_PRIMITIVE_BOOL_TYPE_SEQ)};
 
 #undef MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_LOGICAL_ENTRY
+#undef MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY
 
     const auto it =
         new_broadcast_elementwise_binary_handle.find(std::make_tuple(op, src_type, dst_type));

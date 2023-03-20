@@ -23,6 +23,12 @@ namespace ep {
 namespace primitive {
 namespace mlu {
 
+#define MLU_BINARY_MATH_OP_SEQ         \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAdd) \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSub) \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMul) \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kDiv)
+
 #define MLU_BINARY_LOGICAL_OP_SEQ               \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kEqual)        \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kNotEqual)     \
@@ -44,6 +50,28 @@ namespace mlu {
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogicalAnd, CNNL_LOGIC_OP_AND)  \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogicalOr, CNNL_LOGIC_OP_OR)    \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogicalXor, CNNL_LOGIC_OP_XOR)
+
+template<BinaryOp op, typename T>
+inline DataType GetBinaryMathComputeDataType() {
+  return GetDataType<T>::value;
+}
+
+#define GET_BINARY_MATH_COMPUTE_DATA_TYPE(op, T, D)       \
+  template<>                                              \
+  inline DataType GetBinaryMathComputeDataType<op, T>() { \
+    return GetDataType<D>::value;                         \
+  }
+
+GET_BINARY_MATH_COMPUTE_DATA_TYPE(BinaryOp::kAdd, int64_t, int32_t);
+GET_BINARY_MATH_COMPUTE_DATA_TYPE(BinaryOp::kAdd, uint64_t, int32_t);
+GET_BINARY_MATH_COMPUTE_DATA_TYPE(BinaryOp::kSub, int64_t, int32_t);
+GET_BINARY_MATH_COMPUTE_DATA_TYPE(BinaryOp::kSub, uint64_t, int32_t);
+GET_BINARY_MATH_COMPUTE_DATA_TYPE(BinaryOp::kMul, int64_t, int32_t);
+GET_BINARY_MATH_COMPUTE_DATA_TYPE(BinaryOp::kMul, uint64_t, int32_t);
+GET_BINARY_MATH_COMPUTE_DATA_TYPE(BinaryOp::kDiv, int64_t, float);
+GET_BINARY_MATH_COMPUTE_DATA_TYPE(BinaryOp::kDiv, uint64_t, float);
+
+#undef GET_BINARY_MATH_COMPUTE_DATA_TYPE
 
 template<BinaryOp binary_op, typename Src, typename Dst>
 std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary(Scalar attr0,
