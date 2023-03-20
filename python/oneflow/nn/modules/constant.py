@@ -26,7 +26,7 @@ class _ConstantBase:
     def __init__(
         self,
         size: Union[_size_any_t, flow.Size],
-        value: Union[float, int],
+        value: Union[float, int, complex],
         dtype: Optional[flow.dtype],
         device: Union[flow.device, int, str] = None,
         placement: flow.placement = None,
@@ -353,7 +353,7 @@ class Full(_ConstantBase):
 
 def full_op(
     size: Union[_size_any_t, flow.Size],
-    fill_value: Union[float, int],
+    fill_value: Union[float, int, complex],
     dtype: Optional[flow.dtype] = None,
     device: Union[flow.device, str, None] = None,
     placement: flow.placement = None,
@@ -394,7 +394,7 @@ def full_op(
 
     """
     size = _handle_size_arg(size)
-    if not isinstance(fill_value, (int, float, flow.Tensor)):
+    if not isinstance(fill_value, (int, float, complex, flow.Tensor)):
         # handle numpy scalar dtype
         assert isinstance(
             fill_value.dtype, (np.dtype)

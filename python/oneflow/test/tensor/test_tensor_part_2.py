@@ -811,6 +811,12 @@ class TestTensor(flow.unittest.TestCase):
         return x.exp()
 
     @autotest(n=5)
+    def test_exp2_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        return x.exp2()
+
+    @autotest(n=5)
     def test_round_tensor_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
