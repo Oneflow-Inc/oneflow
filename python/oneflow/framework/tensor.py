@@ -454,7 +454,7 @@ def _cross(self, other, dim=None):
     return flow._C.cross(self, other, dim)
 
 
-def _scatter(self, dim, index, src, *, reduce=""):
+def _scatter(self, dim, index, src, *, reduce=None):
     return flow._C.scatter(self, dim, index, src, reduce=reduce, inplace=False)
 
 
