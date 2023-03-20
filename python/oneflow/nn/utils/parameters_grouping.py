@@ -81,12 +81,10 @@ class ContiguousParamsGroup(object):
         self.grouped_tensors = []
         self.grouped_grads = []
 
-        if not self.for_module:
-            self._check_for_module()
-
         if self.for_module:
             self._parameters_grouping_for_module()
         else:
+            self._check_for_module()
             self._parameters_grouping_for_operations()
 
     def _check_for_module(self):
@@ -106,7 +104,8 @@ class ContiguousParamsGroup(object):
 
         for params in self.params_group_list:
             for p in params:
-                if p._ref_tensor is not None:
+                if p._ref_tensor is not None and p.requires_grad:
+                    assert p._ref_index < p._ref_tensor.numel(), "invalid ref tensor index."
                     buffer_params_mapping[p._ref_tensor].append((p._ref_index, p))
 
         for buffer, params_list in buffer_params_mapping.items():
@@ -121,15 +120,17 @@ class ContiguousParamsGroup(object):
 
         for params in self.params_group_list:
             for p in params:
-                if p.requires_grad:
-                    if self.is_global:
-                        tensor_key = (p.dtype, p.placement, p.sbp)
-                    else:
-                        tensor_key = (p.dtype, p.device)
+                if not p.requires_grad:
+                    continue
 
-                    params_buffer_size[tensor_key] = params_buffer_size.get(
-                        tensor_key, 0
-                    ) + numel_in_bucket(p)
+                if self.is_global:
+                    tensor_key = (p.dtype, p.placement, p.sbp)
+                else:
+                    tensor_key = (p.dtype, p.device)
+
+                params_buffer_size[tensor_key] = params_buffer_size.get(
+                    tensor_key, 0
+                ) + numel_in_bucket(p)
 
         for tensor_key, buffer_size in params_buffer_size.items():
             dtype = tensor_key[0]
