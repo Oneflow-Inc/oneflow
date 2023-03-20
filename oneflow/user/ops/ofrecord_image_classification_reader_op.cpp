@@ -23,8 +23,8 @@ namespace oneflow {
   user_op::TensorDesc* image_tensor = ctx->MutOutputTensorDesc("image", 0);
   user_op::TensorDesc* label_tensor = ctx->MutOutputTensorDesc("label", 0);
   int32_t batch_size = ctx->Attr<int32_t>("batch_size");
-  image_tensor->set_shape(Shape{batch_size});
-  label_tensor->set_shape(Shape{batch_size});
+  image_tensor->set_shape(Shape({batch_size}));
+  label_tensor->set_shape(Shape({batch_size}));
   return Maybe<void>::Ok();
 }
 
@@ -45,8 +45,8 @@ namespace oneflow {
     CHECK_EQ_OR_RETURN(local_batch_size % split_num, 0);
     local_batch_size /= split_num;
   }
-  image_tensor->set_shape(Shape{local_batch_size});
-  label_tensor->set_shape(Shape{local_batch_size});
+  image_tensor->set_shape(Shape({local_batch_size}));
+  label_tensor->set_shape(Shape({local_batch_size}));
   return Maybe<void>::Ok();
 }
 

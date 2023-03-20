@@ -56,7 +56,7 @@ class ArangeKernel final : public OpKernel, public CudaGraphSupport {
         double float_limit = ctx->Attr<double>("float_limit");
         range_elem_cnt = std::ceil(static_cast<double>(float_limit - float_start) / float_delta);
       }
-      const Shape& logical_shape = Shape{range_elem_cnt};
+      const Shape& logical_shape = Shape({range_elem_cnt});
       const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
       const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
       const int64_t parallel_id = ctx->parallel_ctx().parallel_id();

@@ -35,11 +35,18 @@ TEST(Shape, function_test_1) {
 }
 
 TEST(Shape, single_scalar_initializer_list) {
-  Shape shape{4};
-  ASSERT_EQ(shape.is_initialized(), true);
-  ASSERT_EQ(shape.NumAxes(), 1);
-  ASSERT_EQ(shape.elem_cnt(), 4);
-  ASSERT_EQ(shape[0], 4);
+  Shape shape1({4});
+  ASSERT_EQ(shape1.is_initialized(), true);
+  ASSERT_EQ(shape1.NumAxes(), 1);
+  ASSERT_EQ(shape1.elem_cnt(), 4);
+  ASSERT_EQ(shape1[0], 4);
+
+  Shape shape2{4};
+  ASSERT_EQ(shape1, shape2);
+  ASSERT_EQ(shape2.is_initialized(), true);
+  ASSERT_EQ(shape2.NumAxes(), 1);
+  ASSERT_EQ(shape2.elem_cnt(), 4);
+  ASSERT_EQ(shape2[0], 4);
 }
 
 TEST(Dim, operators) {

@@ -53,7 +53,7 @@ class TmpBufferManager {
     explicit PoolToBuffer(user_op::Tensor* tensor, int64_t size, int64_t offset)
         : tensor_(tensor),
           raw_dptr_(reinterpret_cast<char*>(tensor_->mut_raw_dptr()) + offset),
-          shape_{size} {}
+          shape_({size}) {}
 
     ShapeView shape_view() const override { return shape_; }
     const Stride& stride() const override { return tensor_->stride(); }

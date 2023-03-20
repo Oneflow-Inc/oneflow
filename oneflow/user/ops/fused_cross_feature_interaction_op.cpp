@@ -62,7 +62,7 @@ namespace oneflow {
   ctx->SetOutputShape("dx0", 0, x0_shape);
   ctx->SetOutputShape("dw", 0, weight_shape);
   ctx->SetOutputShape("dx", 0, x0_shape);
-  ctx->SetOutputShape("dbias", 0, Shape{x0_shape.At(1)});
+  ctx->SetOutputShape("dbias", 0, Shape({x0_shape.At(1)}));
   return Maybe<void>::Ok();
 }
 
@@ -103,7 +103,7 @@ namespace oneflow {
   ctx->SetOutputShape("dx0", 0, x0_shape);
   ctx->SetOutputShape("dw", 0, weight_shape);
   ctx->SetOutputShape("dx", 0, x0_shape);
-  ctx->SetOutputShape("dbias", 0, Shape{x0_shape.At(1)});
+  ctx->SetOutputShape("dbias", 0, Shape({x0_shape.At(1)}));
   return Maybe<void>::Ok();
 }
 

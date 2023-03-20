@@ -150,7 +150,7 @@ class OFRecordBytesDecoderKernel final : public user_op::OpKernel {
       CHECK(feature.has_bytes_list());
       CHECK_EQ(feature.bytes_list().value_size(), 1);
       const int64_t size = feature.bytes_list().value(0).size();
-      buffer->Resize(Shape{size}, DataType::kUInt8);
+      buffer->Resize(Shape({size}), DataType::kUInt8);
       memcpy(buffer->mut_data(), feature.bytes_list().value(0).data(), size);
     });
   }

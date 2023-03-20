@@ -2361,7 +2361,7 @@ class NormalizationFunctor {
       gamma_val = JUST(gamma);
       beta_val = JUST(beta);
     } else {
-      const Shape gamma_beta_shape = Shape{x->shape()->At(1)};
+      const Shape gamma_beta_shape = Shape({x->shape()->At(1)});
       gamma_val = JUST(functional::Constant(gamma_beta_shape, 1.0, x->dtype(), JUST(x->device())));
       beta_val = JUST(functional::Constant(gamma_beta_shape, 0.0, x->dtype(), JUST(x->device())));
     }

@@ -51,7 +51,7 @@ namespace oneflow {
   for (int64_t i = 0; i < instance_shape.NumAxes(); ++i) {
     dim_vec.push_back(instance_shape.At(i));
   }
-  out_tensor->set_shape(Shape{dim_vec});
+  out_tensor->set_shape(Shape({dim_vec}));
   return Maybe<void>::Ok();
 }
 

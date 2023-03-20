@@ -33,9 +33,9 @@ namespace oneflow {
       CHECK_EQ_OR_RETURN(keys_shape.At(1), num_tables) << "keys cols must equal to num_tables";
     }
   }
-  ctx->SetOutputShape("num_unique", 0, Shape{1});
-  ctx->SetOutputShape("unique_keys", 0, Shape{keys_shape.elem_cnt()});
-  ctx->SetOutputShape("unique_values", 0, Shape{keys_shape.elem_cnt()});
+  ctx->SetOutputShape("num_unique", 0, Shape({1}));
+  ctx->SetOutputShape("unique_keys", 0, Shape({keys_shape.elem_cnt()}));
+  ctx->SetOutputShape("unique_values", 0, Shape({keys_shape.elem_cnt()}));
   ctx->SetOutputShape("inverse_indices", 0, keys_shape);
   return Maybe<void>::Ok();
 }
@@ -75,12 +75,12 @@ namespace oneflow {
   }
   const int64_t num_ids = ids_shape.elem_cnt();
   const int64_t parallel_num = ctx->parallel_num();
-  ctx->SetOutputShape("num_unique_matrix", 0, Shape{parallel_num * parallel_num});
+  ctx->SetOutputShape("num_unique_matrix", 0, Shape({parallel_num * parallel_num}));
   ctx->SetOutputShape("inverse_unique_partition_indices", 0, ids_shape);
-  ctx->SetOutputShape("cur_rank_num_unique", 0, Shape{1});
-  ctx->SetOutputShape("cur_rank_unique_ids", 0, Shape{num_ids * parallel_num});
-  ctx->SetOutputShape("cur_rank_inverse_indices", 0, Shape{num_ids * parallel_num});
-  ctx->SetOutputShape("cur_rank_unique_table_ids", 0, Shape{num_ids * parallel_num});
+  ctx->SetOutputShape("cur_rank_num_unique", 0, Shape({1}));
+  ctx->SetOutputShape("cur_rank_unique_ids", 0, Shape({num_ids * parallel_num}));
+  ctx->SetOutputShape("cur_rank_inverse_indices", 0, Shape({num_ids * parallel_num}));
+  ctx->SetOutputShape("cur_rank_unique_table_ids", 0, Shape({num_ids * parallel_num}));
   return Maybe<void>::Ok();
 }
 

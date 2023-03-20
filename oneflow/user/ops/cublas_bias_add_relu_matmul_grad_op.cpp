@@ -29,7 +29,7 @@ Maybe<void> InferTensorDesc4FusedMatmulBackward(user_op::InferContext* ctx) {
   const int64_t bias_size = weight_desc.shape().At(1);
   Shape d_grad_shape({dy_desc.shape().At(0), weight_desc.shape().At(1)});
   ctx->SetOutputShape("d_grad", 0, d_grad_shape);
-  ctx->SetOutputShape("d_bias", 0, Shape{bias_size});
+  ctx->SetOutputShape("d_bias", 0, Shape({bias_size}));
   return Maybe<void>::Ok();
 }
 

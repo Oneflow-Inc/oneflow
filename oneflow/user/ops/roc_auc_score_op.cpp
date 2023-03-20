@@ -25,7 +25,7 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(pred_shape.elem_cnt(), label_shape.elem_cnt())
       << "pred and label MUST have same element count.";
   out_desc->set_is_dynamic(false);
-  out_desc->set_shape(Shape{1});
+  out_desc->set_shape(Shape({1}));
   return Maybe<void>::Ok();
 }
 

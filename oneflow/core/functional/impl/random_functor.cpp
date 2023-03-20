@@ -363,7 +363,7 @@ class Normal2Functor {
                            const Optional<Symbol<Device>>& optional_device,
                            const Optional<one::Generator>& optional_generator,
                            const bool& requires_grad) const {
-    const Shape size = Shape{shape};
+    const Shape size = Shape({shape});
     return Normal(mean, std, size, out, optional_dtype, optional_device, optional_generator,
                   requires_grad);
   }
@@ -434,7 +434,7 @@ class GlobalNormal2Functor {
                            const Optional<Symbol<DType>>& optional_dtype,
                            const Optional<one::Generator>& optional_generator,
                            const bool& requires_grad) const {
-    const Shape size = Shape{shape};
+    const Shape size = Shape({shape});
     return GlobalNormal(mean, std, size, out, placement, sbp_tuple, optional_dtype,
                         optional_generator, requires_grad);
   }

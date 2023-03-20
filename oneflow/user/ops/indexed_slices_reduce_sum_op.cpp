@@ -32,11 +32,11 @@ namespace oneflow {
   user_op::TensorDesc* y_indices = ctx->MutOutputTensorDesc("y_indices", 0);
   user_op::TensorDesc* y_values = ctx->MutOutputTensorDesc("y_values", 0);
   *y_indices = x_indices;
-  y_indices->set_shape(Shape{n});
+  y_indices->set_shape(Shape({n}));
   *y_values = x_values;
   y_values->set_shape(Shape({n, m}));
   user_op::TensorDesc* num_unique = ctx->MutOutputTensorDesc("num_unique", 0);
-  num_unique->set_shape(Shape{1});
+  num_unique->set_shape(Shape({1}));
   return Maybe<void>::Ok();
 }
 

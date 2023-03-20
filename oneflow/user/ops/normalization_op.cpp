@@ -270,7 +270,7 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn() {
       CHECK_EQ_OR_RETURN(reserve_space_bits % split_num, 0);
       reserve_space_bits = reserve_space_bits / split_num;
     }
-    reserve_space->set_shape(Shape{static_cast<int64_t>(RoundUp(reserve_space_bits, 32) / 32)});
+    reserve_space->set_shape(Shape({static_cast<int64_t>(RoundUp(reserve_space_bits, 32) / 32)}));
     return Maybe<void>::Ok();
   })(ctx);
 }
@@ -281,7 +281,7 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn() {
                                     user_op::TensorDesc* reserve_space) -> Maybe<void> {
     const auto& x_desc = ctx->InputTensorDesc("x", 0);
     reserve_space->set_shape(
-        Shape{static_cast<int64_t>(RoundUp(x_desc.shape().elem_cnt(), 32) / 32)});
+        Shape({static_cast<int64_t>(RoundUp(x_desc.shape().elem_cnt(), 32) / 32)}));
     return Maybe<void>::Ok();
   })(ctx);
 }
@@ -354,7 +354,7 @@ void InferCudnnReserveSpaceSize(DataType data_type, cudnnBatchNormOps_t ops, int
     size_t reserve_space_size;
     InferCudnnReserveSpaceSize(x->data_type(), ops, n, c, h, w, &reserve_space_size);
     reserve_space_size = std::max(reserve_space_size, GetOneVal<size_t>());
-    reserve_space->set_shape(Shape{static_cast<int64_t>(reserve_space_size)});
+    reserve_space->set_shape(Shape({static_cast<int64_t>(reserve_space_size)}));
     return Maybe<void>::Ok();
   })(ctx);
 }
@@ -379,7 +379,7 @@ void InferCudnnReserveSpaceSize(DataType data_type, cudnnBatchNormOps_t ops, int
     size_t reserve_space_size;
     InferCudnnReserveSpaceSize(x->data_type(), ops, n, c, h, w, &reserve_space_size);
     reserve_space_size = std::max(reserve_space_size, GetOneVal<size_t>());
-    reserve_space->set_shape(Shape{static_cast<int64_t>(reserve_space_size)});
+    reserve_space->set_shape(Shape({static_cast<int64_t>(reserve_space_size)}));
     return Maybe<void>::Ok();
   })(ctx);
 }

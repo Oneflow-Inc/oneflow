@@ -90,7 +90,7 @@ class GpuRandPermKernel final : public user_op::OpKernel {
       const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
       int64_t parallel_id = ctx->parallel_ctx().parallel_id();
       int32_t n = ctx->Attr<int32_t>("n");
-      const Shape& logical_shape = Shape{n};
+      const Shape& logical_shape = Shape({n});
       TensorSliceView view =
           GetTensorSliceView4ParallelId(hierarchy, nd_sbp, logical_shape, parallel_id);
       std::shared_ptr<GpuRandPermKernelCache> cache(

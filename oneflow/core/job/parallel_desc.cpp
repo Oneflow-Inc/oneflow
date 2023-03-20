@@ -252,7 +252,7 @@ void ParallelDesc::ClearUp() {
     hierarchy_.reset(new Shape(parallel_conf_.hierarchy()));
     CHECK_EQ(hierarchy_->elem_cnt(), parallel_num_);
   } else {
-    hierarchy_.reset(new Shape{parallel_num_});
+    hierarchy_.reset(new Shape({parallel_num_}));
     hierarchy_->ToProto(parallel_conf_.mutable_hierarchy());
   }
   SortAndRemoveDuplication(&sorted_machine_ids_);

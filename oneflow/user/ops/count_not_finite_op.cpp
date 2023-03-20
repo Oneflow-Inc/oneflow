@@ -20,7 +20,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> CountNotFiniteOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
-  y_desc->set_shape(Shape{1});
+  y_desc->set_shape(Shape({1}));
   return Maybe<void>::Ok();
 }
 
@@ -44,7 +44,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> MultiCountNotFiniteOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
-  y_desc->set_shape(Shape{1});
+  y_desc->set_shape(Shape({1}));
   return Maybe<void>::Ok();
 }
 

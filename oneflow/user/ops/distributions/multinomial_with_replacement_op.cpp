@@ -23,7 +23,7 @@ namespace oneflow {
   int32_t num_samples = ctx->Attr<int32_t>("num_samples");
   const Shape& x_shape = ctx->InputShape("x", 0);
   if (x_shape.NumAxes() == 1) {
-    ctx->SetOutputShape("out", 0, Shape{num_samples});
+    ctx->SetOutputShape("out", 0, Shape({num_samples}));
   } else {
     ctx->SetOutputShape("out", 0, Shape({x_shape.At(0), num_samples}));
   }
