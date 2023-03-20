@@ -913,7 +913,7 @@ class SkipLayerNormFunctor {
           }  // has_bias
         }    // has_beta
       }      // has_gamma
-    }        // number of skip
+    }        // has_skip
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
