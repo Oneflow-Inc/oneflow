@@ -35,7 +35,7 @@ namespace {
 template<typename SRC, typename DST>
 struct SkipLoad {
   using LoadType = DST;
-  SkipLoad(const SRC* src, const SRC* bias, const SRC* skip, double alpha, int64_t row_size)
+  SkipLoad(const SRC* src, const SRC* bias, const SRC* skip, float alpha, int64_t row_size)
       : src(src), bias(bias), skip(skip), alpha(alpha), row_size(row_size) {}
   template<int N>
   __device__ void load(DST* dst, int64_t row, int64_t col) const {
@@ -215,7 +215,6 @@ class SkipLayerNormGpuKernel final : public user_op::OpKernel, public user_op::C
     // obtain epsilon and check its value
     const double epsilon = ctx->Attr<double>("epsilon");
     const double alpha = ctx->Attr<double>("alpha");
-    CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
 
     // obtain output tensors
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);

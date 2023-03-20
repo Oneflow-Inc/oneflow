@@ -23,7 +23,7 @@ import oneflow.unittest
 from collections import OrderedDict
 from oneflow.test_utils.test_util import GenArgList
 
-is_profiling = True
+is_profiling = False
 
 
 def compare_result(test_case, a, b, rtol=1e-5, atol=1e-8):

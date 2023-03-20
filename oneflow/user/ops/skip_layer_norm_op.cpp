@@ -29,6 +29,18 @@ oneflow::DataType InferParamDataType(const DataType x_data_type) {
 }  // namespace
 
 /* static */ auto SkipLayerNormOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
+  for (int64_t i = 0; i < ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape().NumAxes() - 1;
+       ++i) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("x", 0), i)
+        .Split(user_op::OpArg("skip", 0), i)
+        .Broadcast(user_op::OpArg("bias", 0))
+        .Broadcast(user_op::OpArg("gamma", 0))
+        .Broadcast(user_op::OpArg("beta", 0))
+        .Split(ctx->outputs(), i)
+        .Build();
+  }
+
   return Maybe<void>::Ok();
 }
 
@@ -63,14 +75,13 @@ oneflow::DataType InferParamDataType(const DataType x_data_type) {
   }
 
   // set output shape of y
-  Shape y_shape = x_shape;  // borrow from input shape
   user_op::TensorDesc* y_tensor = ctx->MutOutputTensorDesc("y", 0);
-  y_tensor->set_shape(y_shape);
+  y_tensor->set_shape(x_shape);
 
   // set output shape of mean and varience
   DimVector mean_dim_vec;
   mean_dim_vec.push_back(x_shape.Count(0, x_shape.NumAxes() - 1));
-  Shape mean_shape(mean_dim_vec);  // borrow from input shape
+  Shape mean_shape(mean_dim_vec);
 
   user_op::TensorDesc* mean_tensor = ctx->MutOutputTensorDesc("mean", 0);
   user_op::TensorDesc* varience_tensor = ctx->MutOutputTensorDesc("inv_variance", 0);
@@ -95,7 +106,7 @@ oneflow::DataType InferParamDataType(const DataType x_data_type) {
         << "data type of \'gamma\' is not consitant with \'x\'";
   }
 
-  // check data type of pre_bias
+  // check data type of bias
   if (ctx->has_input("bias", 0)) {
     CHECK_EQ_OR_RETURN(ctx->InputDType("bias", 0), x_dtype)
         << "data type of \'bias\' is not consitant with \'x\'";
@@ -107,7 +118,7 @@ oneflow::DataType InferParamDataType(const DataType x_data_type) {
         << "data type of \'beta\' is not consitant with \'x\'";
   }
 
-  // check data types of pre_residual_1 and pre_residual_2
+  // check data types of skip
   if (ctx->has_input("skip", 0)) {
     CHECK_EQ_OR_RETURN(ctx->InputDType("skip", 0), x_dtype)
         << "data type of \'skip\' is not consitant with \'x\'";
