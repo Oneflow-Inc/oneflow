@@ -70,8 +70,8 @@ double oneflow_cast(const std::string& s) {
 // COMMAND(feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW));
 #endif
 
-void AbortSignalHandler(int signal) { exit(-1); }
-
+// Reference: https://github.com/Oneflow-Inc/OneTeam/issues/1954
+void AbortSignalHandler(int signal) { std::abort(); }
 COMMAND(std::signal(SIGINT, AbortSignalHandler));
 
 size_t GetAvailableCpuMemSize() {
