@@ -3889,11 +3889,13 @@ class FftBaseFunctor {
   }
   virtual ~FftBaseFunctor() = default;
 
-  // NOTE: The implementation of `resize_fft_input` and `promote_type_fft` are mostly taken from pytorch.
+  // NOTE: The implementation of `resize_fft_input` and `promote_type_fft` are mostly taken from
+  // pytorch.
   //       For more details pls refer to:
   //       https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/SpectralOps.cpp#L136
-  Maybe<Tensor> resize_fft_input(const std::shared_ptr<one::Tensor>& x, 
-                                 const std::vector<int64_t>& dims, const std::vector<int64_t>& sizes) const{
+  Maybe<Tensor> resize_fft_input(const std::shared_ptr<one::Tensor>& x,
+                                 const std::vector<int64_t>& dims,
+                                 const std::vector<int64_t>& sizes) const {
     CHECK_EQ_OR_THROW(dims.size(), sizes.size()) << "dims.size() != sizes.size().";
     bool must_copy = false;
     auto x_sizes = x->shape()->dim_vec();
@@ -3902,24 +3904,21 @@ class FftBaseFunctor {
     std::vector<int64_t> slice_end(x_sizes.size());
     std::vector<int64_t> slice_step(x_sizes.size(), 1);
 
-    FOR_RANGE(int64_t, i, 0, x_sizes.size()){
+    FOR_RANGE(int64_t, i, 0, x_sizes.size()) {
       slice_st[i] = 0;
       slice_end[i] = x_sizes[i];
     }
 
-    FOR_RANGE(int64_t, i, 0, sizes.size()){
+    FOR_RANGE(int64_t, i, 0, sizes.size()) {
+      if (sizes[i] == -1) { continue; }
 
-      if (sizes[i] == -1){
-        continue;
-      }
-
-      if (x_sizes[dims[i]] < sizes[i]){
+      if (x_sizes[dims[i]] < sizes[i]) {
         must_copy = true;
         auto pad_idx = pad_amount.size() - 2 * dims[i] - 1;
         pad_amount[pad_idx] = sizes[i] - x_sizes[dims[i]];
       }
 
-      if (x_sizes[dims[i]] > sizes[i]){
+      if (x_sizes[dims[i]] > sizes[i]) {
         // slice in dims[i]
         slice_end[dims[i]] = sizes[i];
       }
@@ -3929,21 +3928,16 @@ class FftBaseFunctor {
     return must_copy ? functional::ConstantPad(sliced_tenosr, pad_amount, 0) : sliced_tenosr;
   }
 
-  Maybe<Symbol<DType>> promote_type_fft(Symbol<DType> type, bool require_complex) const{
-    if (type->is_complex()){
-      return type;
-    }
+  Maybe<Symbol<DType>> promote_type_fft(Symbol<DType> type, bool require_complex) const {
+    if (type->is_complex()) { return type; }
 
-    if (!type->is_floating_point()){
-      type = GetDefaultDType();
-    }
-    CHECK_OR_THROW(type->data_type() == kFloat || type->data_type() == kDouble) << "Unsupported dtype " << type->name();
-    
-    if (!require_complex){
-      return type;
-    }
+    if (!type->is_floating_point()) { type = GetDefaultDType(); }
+    CHECK_OR_THROW(type->data_type() == kFloat || type->data_type() == kDouble)
+        << "Unsupported dtype " << type->name();
 
-    switch(type->data_type()){
+    if (!require_complex) { return type; }
+
+    switch (type->data_type()) {
       //  TO-DO: add kFloat16
       case (kFloat): return CHECK_JUST(DType::Get(DataType::kComplex64));
       case (kDouble): return CHECK_JUST(DType::Get(DataType::kComplex128));
@@ -3952,7 +3946,8 @@ class FftBaseFunctor {
     return Error::RuntimeError() << "dtype can't be handled";
   }
 
-  Maybe<Tensor> promote_tensor_fft(const std::shared_ptr<Tensor>& x, bool require_complex = false) const{
+  Maybe<Tensor> promote_tensor_fft(const std::shared_ptr<Tensor>& x,
+                                   bool require_complex = false) const {
     auto cur_type = x->dtype();
     auto new_type = JUST(promote_type_fft(cur_type, require_complex));
     // DeviceType x_device_type;
@@ -3963,26 +3958,29 @@ class FftBaseFunctor {
     //   x_device_type = JUST(x->parallel_desc())->device_type();
     // }
     // const std::string& x_device_str = *JUST(DeviceTag4DeviceType(x_device_type));
-    // return (cur_type->data_type() == new_type->data_type()) ? x : functional::To(x, x_device_str, new_type, false);
-    return (cur_type->data_type() == new_type->data_type()) ? x : functional::To(x, Optional<Symbol<Device>>(JUST(x->device())), new_type, false);
+    // return (cur_type->data_type() == new_type->data_type()) ? x : functional::To(x, x_device_str,
+    // new_type, false);
+    return (cur_type->data_type() == new_type->data_type())
+               ? x
+               : functional::To(x, Optional<Symbol<Device>>(JUST(x->device())), new_type, false);
   }
 
   Maybe<void> maybe_warp_dims(std::vector<int64_t>& dims, int64_t dim_post_expr,
-                                              bool wrap_scalar = true) const {
+                              bool wrap_scalar = true) const {
     if (dim_post_expr <= 0) {
       if (!wrap_scalar) {
         return Error::RuntimeError()
-              << "dimension specified as " << dims[0] << " but tensor has no dimensions";
+               << "dimension specified as " << dims[0] << " but tensor has no dimensions";
       }
       dim_post_expr = 1;  // this will make range [-1, 0]
     }
 
     int64_t min = -dim_post_expr;
     int64_t max = dim_post_expr - 1;
-    for (auto& dim : dims){
+    for (auto& dim : dims) {
       if (dim < min || dim > max) {
         return Error::IndexError() << "Dimension out of range (expected to be in range of [" << min
-                                  << ", " << max << "], but got " << dim << ")";
+                                   << ", " << max << "], but got " << dim << ")";
       }
       if (dim < 0) dim += dim_post_expr;
     }
@@ -3997,75 +3995,76 @@ class FftBaseFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class FftC2CFunctor : public FftBaseFunctor{
+class FftC2CFunctor : public FftBaseFunctor {
  public:
   FftC2CFunctor() : FftBaseFunctor("fft_c2c") {}
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<int64_t>& n, 
-                        int64_t dim, const std::string& norm_str, bool forward) const {
-
-    CHECK_OR_THROW(x->dtype()->is_complex()) << "expects the dtype of input Tensor  is Complex, but gets " << x->dtype()->name();
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<int64_t>& n,
+                           int64_t dim, const std::string& norm_str, bool forward) const {
+    CHECK_OR_THROW(x->dtype()->is_complex())
+        << "expects the dtype of input Tensor  is Complex, but gets " << x->dtype()->name();
 
     const auto wrapped_dim = JUST(maybe_wrap_dim(dim, x->ndim()));
 
     int64_t orig_len = x->dim(wrapped_dim);
     int64_t fft_len = n.has_value() == true ? JUST(n) : orig_len;
-    CHECK_OR_RETURN(fft_len >= 1)
-        << Error::RuntimeError() << "Expected n >= 1, but got " << fft_len;
+    CHECK_OR_RETURN(fft_len >= 1) << Error::RuntimeError() << "Expected n >= 1, but got "
+                                  << fft_len;
 
-    auto resized_tensor = n.has_value() == true ? JUST(resize_fft_input(x, {wrapped_dim}, {fft_len})) : x;
+    auto resized_tensor =
+        n.has_value() == true ? JUST(resize_fft_input(x, {wrapped_dim}, {fft_len})) : x;
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "forward");
     attrs.SetAllAttrs(wrapped_dim, norm_str, forward);
 
-
-    return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {resized_tensor}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {resized_tensor}, attrs);
   }
 };
 
-class FftC2CFunctorGrad : public FftBaseFunctor{
+class FftC2CFunctorGrad : public FftBaseFunctor {
  public:
   FftC2CFunctorGrad() : FftBaseFunctor("fft_c2c") {}
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& dims, const std::string& norm_str, bool forward) const {
-
-    CHECK_OR_THROW(x->dtype()->is_complex()) << "expects the dtype of input Tensor  is Complex, but gets " << x->dtype()->name();
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& dims,
+                           const std::string& norm_str, bool forward) const {
+    CHECK_OR_THROW(x->dtype()->is_complex())
+        << "expects the dtype of input Tensor  is Complex, but gets " << x->dtype()->name();
 
     std::vector<int64_t> wrapped_dims(dims.begin(), dims.end());
     maybe_warp_dims(wrapped_dims, x->ndim());
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "forward");
     attrs.SetAllAttrs(wrapped_dims, norm_str, forward);
-    
+
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 };
 
-
-class FftR2CFunctor : public FftBaseFunctor{
+class FftR2CFunctor : public FftBaseFunctor {
  public:
   FftR2CFunctor() : FftBaseFunctor("fft_r2c") {}
 
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<int64_t>& n, 
-                        int64_t dim, const std::string& norm_str, bool forward, bool onesided) const {
-    
-  CHECK_OR_THROW(!(x->dtype()->is_complex())) << "expects the dtype of input Tensor  is Real, but gets " << x->dtype()->name();
-    
-  auto input_tensor = JUST(promote_tensor_fft(x));
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<int64_t>& n,
+                           int64_t dim, const std::string& norm_str, bool forward,
+                           bool onesided) const {
+    CHECK_OR_THROW(!(x->dtype()->is_complex()))
+        << "expects the dtype of input Tensor  is Real, but gets " << x->dtype()->name();
 
-  const auto wrapped_dim = JUST(maybe_wrap_dim(dim, x->ndim()));
+    auto input_tensor = JUST(promote_tensor_fft(x));
 
-  int64_t orig_len = x->dim(wrapped_dim);
-  int64_t fft_len = n.has_value() == true ? JUST(n) : orig_len;
-  CHECK_OR_RETURN(fft_len >= 1)
-      << Error::RuntimeError() << "Expected n >= 1, but got " << fft_len;
+    const auto wrapped_dim = JUST(maybe_wrap_dim(dim, x->ndim()));
 
-  auto resized_tensor = n.has_value() == true ? JUST(resize_fft_input(input_tensor, {wrapped_dim}, {fft_len})) : input_tensor;
-  
-  auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "onesided", "forward");
-  attrs.SetAllAttrs(wrapped_dim, norm_str, onesided, forward);
+    int64_t orig_len = x->dim(wrapped_dim);
+    int64_t fft_len = n.has_value() == true ? JUST(n) : orig_len;
+    CHECK_OR_RETURN(fft_len >= 1) << Error::RuntimeError() << "Expected n >= 1, but got "
+                                  << fft_len;
 
-  return OpInterpUtil::Dispatch<Tensor>(
-      *op_, {resized_tensor}, attrs);
+    auto resized_tensor = n.has_value() == true
+                              ? JUST(resize_fft_input(input_tensor, {wrapped_dim}, {fft_len}))
+                              : input_tensor;
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "onesided", "forward");
+    attrs.SetAllAttrs(wrapped_dim, norm_str, onesided, forward);
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {resized_tensor}, attrs);
   }
 };
 
@@ -4104,49 +4103,49 @@ class FftR2CFunctorGrad : public FftBaseFunctor{
 };
 #endif
 
-class FftC2RFunctor : public FftBaseFunctor{
+class FftC2RFunctor : public FftBaseFunctor {
  public:
   FftC2RFunctor() : FftBaseFunctor("fft_c2r") {}
 
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<int64_t>& n, 
-                        int64_t dim, const std::string& norm_str, bool forward) const {
-    
-  CHECK_OR_THROW(!(x->dtype()->is_complex())) << "expects the dtype of input Tensor  is Real, but gets " << x->dtype()->name();
-    
-  auto input_tensor = JUST(promote_tensor_fft(x, true));
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<int64_t>& n,
+                           int64_t dim, const std::string& norm_str, bool forward) const {
+    CHECK_OR_THROW(!(x->dtype()->is_complex()))
+        << "expects the dtype of input Tensor  is Real, but gets " << x->dtype()->name();
 
-  const auto wrapped_dim = JUST(maybe_wrap_dim(dim, x->ndim()));
-  int64_t orig_len = x->dim(wrapped_dim);
-  int64_t fft_len = n.has_value() == true ? JUST(n) : 2 * (orig_len - 1);
-  CHECK_OR_RETURN(fft_len >= 1)
-      << Error::RuntimeError() << "Expected n >= 1, but got " << fft_len;
+    auto input_tensor = JUST(promote_tensor_fft(x, true));
 
-  auto resized_tensor = n.has_value() == true ? JUST(resize_fft_input(input_tensor, {wrapped_dim}, {fft_len/2 + 1})) : input_tensor;
-  
-  if (forward){
-    // TO-DO: make resized_tensor conjugate
-    // resized_tensor = resized_tensor->conj();
-  }
+    const auto wrapped_dim = JUST(maybe_wrap_dim(dim, x->ndim()));
+    int64_t orig_len = x->dim(wrapped_dim);
+    int64_t fft_len = n.has_value() == true ? JUST(n) : 2 * (orig_len - 1);
+    CHECK_OR_RETURN(fft_len >= 1) << Error::RuntimeError() << "Expected n >= 1, but got "
+                                  << fft_len;
 
-  auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "last_dim_size", "forward");
-  attrs.SetAllAttrs(wrapped_dim, norm_str, fft_len, forward);
+    auto resized_tensor =
+        n.has_value() == true
+            ? JUST(resize_fft_input(input_tensor, {wrapped_dim}, {fft_len / 2 + 1}))
+            : input_tensor;
 
-  return OpInterpUtil::Dispatch<Tensor>(
-      *op_, {resized_tensor}, attrs);
+    if (forward) {
+      // TO-DO: make resized_tensor conjugate
+      // resized_tensor = resized_tensor->conj();
+    }
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "last_dim_size", "forward");
+    attrs.SetAllAttrs(wrapped_dim, norm_str, fft_len, forward);
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {resized_tensor}, attrs);
   }
 };
 
 class FftFunctor {
  public:
-
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int64_t>& n,
                            const Optional<int64_t>& dim, const Optional<std::string>& norm) const {
     auto dim_val = dim.value_or(-1);
     auto norm_str = norm.value_or("backward");
-    if (input->dtype()->is_complex()){
+    if (input->dtype()->is_complex()) {
       return functional::FftC2C(input, n, dim_val, norm_str, /*forward=*/true);
-    }
-    else{
+    } else {
       return functional::FftR2C(input, n, dim_val, norm_str, /*forward=*/true, /*onesided=*/false);
     }
   }
@@ -4154,15 +4153,13 @@ class FftFunctor {
 
 class IFftFunctor {
  public:
-
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int64_t>& n,
                            const Optional<int64_t>& dim, const Optional<std::string>& norm) const {
     auto dim_val = dim.value_or(-1);
     auto norm_str = norm.value_or("backward");
-    if (input->dtype()->is_complex()){
+    if (input->dtype()->is_complex()) {
       return functional::FftC2C(input, n, dim_val, norm_str, /*forward=*/false);
-    }
-    else{
+    } else {
       return functional::FftR2C(input, n, dim_val, norm_str, /*forward=*/false, /*onesided=*/false);
     }
   }
@@ -4880,7 +4877,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TruncFunctor>("Trunc");
   // m.add_functor<StftFunctor>("Stft");  disable Stft, TO-DO: compat Stft into fft
   m.add_functor<FftC2CFunctor>("FftC2C");
-  m.add_functor<FftC2CFunctorGrad>("FftC2CGrad");  
+  m.add_functor<FftC2CFunctorGrad>("FftC2CGrad");
   m.add_functor<FftR2CFunctor>("FftR2C");
   // m.add_functor<FftR2CFunctorGrad>("FftR2CGrad");  TO-DO
   // m.add_functor<FftC2RFunctor>("FftC2R");  TO-DO

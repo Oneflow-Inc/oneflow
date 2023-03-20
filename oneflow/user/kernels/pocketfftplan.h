@@ -25,11 +25,7 @@ using namespace pocketfft;
 namespace oneflow {
 namespace {
 
-enum class FFT_EXCUTETYPE { 
-  R2C, 
-  C2C, 
-  C2R
-};
+enum class FFT_EXCUTETYPE { R2C, C2C, C2R };
 
 template<typename dtype>
 struct PocketFFtParams {
@@ -42,13 +38,15 @@ struct PocketFFtParams {
   shape_t input_shape;
   shape_t output_shape;
   PocketFFtParams() = default;
-  PocketFFtParams(const Shape& in_shape, const Shape& out_shape,
-                  const Stride& in_stride, const Stride& out_stride,
-                  const std::vector<int64_t>& dims, const bool is_froward, const dtype f,
-                  FFT_EXCUTETYPE type)
-      : IsForward(is_froward), excute_type(type), fct(f), axes(dims.begin(), dims.end()),
-      in_stridef(in_stride.begin(), in_stride.end()), out_stridef(out_stride.begin(), out_stride.end()) {
-    
+  PocketFFtParams(const Shape& in_shape, const Shape& out_shape, const Stride& in_stride,
+                  const Stride& out_stride, const std::vector<int64_t>& dims, const bool is_froward,
+                  const dtype f, FFT_EXCUTETYPE type)
+      : IsForward(is_froward),
+        excute_type(type),
+        fct(f),
+        axes(dims.begin(), dims.end()),
+        in_stridef(in_stride.begin(), in_stride.end()),
+        out_stridef(out_stride.begin(), out_stride.end()) {
     input_shape.resize(in_shape.size());
     output_shape.resize(out_shape.size());
 
@@ -56,19 +54,18 @@ struct PocketFFtParams {
     std::copy(out_shape.begin(), out_shape.end(), output_shape.begin());
 
     // calc element size
-    size_t in_elemsize = type == FFT_EXCUTETYPE::C2C || type == FFT_EXCUTETYPE::C2R ? sizeof(std::complex<dtype>) : sizeof(dtype);
-    size_t out_elemsize = type == FFT_EXCUTETYPE::R2C || type == FFT_EXCUTETYPE::C2C ? sizeof(std::complex<dtype>) : sizeof(dtype);
-    for (auto& s : in_stridef){
-        s *= in_elemsize;
-    }
-    for (auto& s : out_stridef){
-        s *= out_elemsize;
-    }
-
+    size_t in_elemsize = type == FFT_EXCUTETYPE::C2C || type == FFT_EXCUTETYPE::C2R
+                             ? sizeof(std::complex<dtype>)
+                             : sizeof(dtype);
+    size_t out_elemsize = type == FFT_EXCUTETYPE::R2C || type == FFT_EXCUTETYPE::C2C
+                              ? sizeof(std::complex<dtype>)
+                              : sizeof(dtype);
+    for (auto& s : in_stridef) { s *= in_elemsize; }
+    for (auto& s : out_stridef) { s *= out_elemsize; }
   }
 };
 
-template <typename dtype>
+template<typename dtype>
 class PocketFFtConfig {
  public:
   PocketFFtConfig(const PocketFFtConfig&) = delete;
@@ -76,21 +73,22 @@ class PocketFFtConfig {
 
   explicit PocketFFtConfig(const PocketFFtParams<dtype>& params) : fftparams(params) {}
 
-    void excute(const std::complex<dtype>* in, std::complex<dtype>* out) {
-        pocketfft::c2c(fftparams.input_shape, fftparams.in_stridef, fftparams.out_stridef, fftparams.axes,
-                       fftparams.IsForward, in, out, fftparams.fct);
-    }
+  void excute(const std::complex<dtype>* in, std::complex<dtype>* out) {
+    pocketfft::c2c(fftparams.input_shape, fftparams.in_stridef, fftparams.out_stridef,
+                   fftparams.axes, fftparams.IsForward, in, out, fftparams.fct);
+  }
 
-    void excute(const dtype* in, std::complex<dtype>* out) {
-        pocketfft::r2c(fftparams.input_shape, fftparams.in_stridef, fftparams.out_stridef, fftparams.axes,
-                       fftparams.IsForward, in, out, fftparams.fct);
-    }
+  void excute(const dtype* in, std::complex<dtype>* out) {
+    pocketfft::r2c(fftparams.input_shape, fftparams.in_stridef, fftparams.out_stridef,
+                   fftparams.axes, fftparams.IsForward, in, out, fftparams.fct);
+  }
 
-    void excute(const std::complex<dtype>* in, dtype* out) {
-        // TO-DO c2r
-        // pocketfft::c2r(fftparams.input_shape, fftparams.in_stridef, fftparams.out_stridef, fftparams.axes,
-        //                fftparams.IsForward, in, out, fftparams.fct);
-    }
+  void excute(const std::complex<dtype>* in, dtype* out) {
+    // TO-DO c2r
+    // pocketfft::c2r(fftparams.input_shape, fftparams.in_stridef, fftparams.out_stridef,
+    // fftparams.axes,
+    //                fftparams.IsForward, in, out, fftparams.fct);
+  }
 
  private:
   PocketFFtParams<dtype> fftparams;
