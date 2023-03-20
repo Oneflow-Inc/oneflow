@@ -65,8 +65,8 @@ struct ExponentialTransformFunctor<double, double> {
 template<>
 struct ExponentialTransformFunctor<half, float> {
   ExponentialTransformFunctor(float epsilon, float lambd) : float_functor(epsilon, lambd) {}
-  __device__ float operator()(half random_val) const {
-    return float_functor(static_cast<float>(random_val));
+  __device__ half operator()(float random_val) const {
+    return static_cast<half>(float_functor(random_val));
   }
   ExponentialTransformFunctor<float, float> float_functor;
 };
