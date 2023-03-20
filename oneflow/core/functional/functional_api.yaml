@@ -2048,6 +2048,10 @@
   signature: "Tensor (Tensor x, Int64 diagonal=0) => Tril"
   bind_python: True
 
+- name: "tril_"
+  signature: "Tensor (Tensor x, Int64 diagonal=0) => InplaceTril"
+  bind_python: True
+
 - name: "triu"
   signature: "Tensor (Tensor x, Int64 diagonal=0) => Triu"
   bind_python: True
@@ -2649,7 +2653,7 @@
   bind_python: True
 
 - name: "fused_multi_head_attention_inference_v2"
-  signature: 'Tensor (*, Tensor query, String query_layout, Int64 query_head_size=None, Tensor key=None, String key_layout=None, Tensor value=None, String value_layout=None, Tensor attn_bias=None, String output_layout="BM(HK)", Bool causal=False, Int64 causal_diagonal_offset=0) => FusedMultiHeadAttentionInferenceV2'
+  signature: 'Tensor (*, Tensor query, String query_layout, Int64 query_head_size=None, Tensor query_seq_start=None, Int64 query_max_seq_len=None, Tensor key=None, String key_layout=None, Tensor key_seq_start=None, Tensor key_seq_len=None, Int64 key_max_seq_len=None, Tensor value=None, String value_layout=None, Tensor attn_bias=None, String output_layout="BM(HK)", Float scale=None, Bool causal=None, String attn_mask_type=None, Int64 causal_diagonal_offset=0) => FusedMultiHeadAttentionInferenceV2'
   bind_python: True
 
 - name: "fused_attention_concat_past_key_value"

@@ -2836,20 +2836,26 @@ def OneFlow_FusedCrossFeatureInteractionV2GradOp : OneFlow_BaseOp<"fused_cross_f
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedMultiHeadAttentionInferenceOp : OneFlow_BaseOp<"fused_multi_head_attention_inference", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedMultiHeadAttentionInferenceOp : OneFlow_BaseOp<"fused_multi_head_attention_inference", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$query,
     OneFlow_Tensor:$key,
     OneFlow_Tensor:$value,
-    Optional<OneFlow_Tensor>:$attn_bias
+    Optional<OneFlow_Tensor>:$attn_bias,
+    Optional<OneFlow_Tensor>:$query_seq_start,
+    Optional<OneFlow_Tensor>:$key_seq_start,
+    Optional<OneFlow_Tensor>:$key_seq_len
   );
   let output = (outs
     OneFlow_Tensor:$out
   );
   let attrs = (ins
     SI64Attr:$query_head_size,
-    DefaultValuedAttr<BoolAttr, "false">:$causal,
+    DefaultValuedAttr<SI64Attr, "0">:$query_max_seq_len,
+    DefaultValuedAttr<SI64Attr, "0">:$key_max_seq_len,
+    F64Attr:$scale,
     DefaultValuedAttr<SI64Attr, "0">:$causal_diagonal_offset,
+    DefaultValuedAttr<StrAttr, "\"none\"">:$attn_mask_type,
     StrAttr:$query_layout,
     StrAttr:$key_layout,
     StrAttr:$value_layout,
@@ -5580,9 +5586,11 @@ def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", [NoSideEffect, NoGrad, Decla
     OneFlow_Tensor:$out
   );
   let attrs = (ins
+    ComplexDoubleAttr:$complex_value,
     DefaultValuedAttr<F64Attr, "0.">:$floating_value,
     DefaultValuedAttr<SI64Attr, "0">:$integer_value,
     DefaultValuedAttr<BoolAttr, "false">:$is_floating_value,
+    DefaultValuedAttr<BoolAttr, "false">:$is_complex_value,
     OneFlow_DataType:$dtype,
     ShapeAttr:$shape,
     StrArrayAttr:$nd_sbp
@@ -8912,7 +8920,7 @@ def OneFlow_ScalarLerpOp : OneFlow_BaseOp<"scalar_lerp", [NoSideEffect, DeclareO
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
- 
+
 def OneFlow_ScalarLerpGradOp : OneFlow_BaseOp<"scalar_lerp_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$start,
