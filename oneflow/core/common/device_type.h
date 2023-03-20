@@ -36,6 +36,7 @@ inline std::string PrintAvailableDevices() {
 #ifdef WITH_CUDA
   str += ", cuda";
 #endif
+  str += ", meta";
   return str;
 }
 
@@ -44,6 +45,7 @@ inline std::string PrintGeneratorAvailableDevices() {
 #ifdef WITH_CUDA
   str += ", cuda";
 #endif
+  str += ", meta";
   str += ", auto";  // "auto" is a fake device type for random generator.
   return str;
 }

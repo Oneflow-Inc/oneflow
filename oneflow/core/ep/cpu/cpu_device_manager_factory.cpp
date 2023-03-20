@@ -65,6 +65,28 @@ COMMAND(DeviceManagerRegistry::RegisterDeviceManagerFactory(
 
 }  // namespace
 
+namespace {
+
+class MetaDeviceManagerFactory : public DeviceManagerFactory {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(MetaDeviceManagerFactory);
+  MetaDeviceManagerFactory() = default;
+  ~MetaDeviceManagerFactory() override = default;
+
+  std::unique_ptr<DeviceManager> NewDeviceManager(DeviceManagerRegistry* registry) override {
+    return std::make_unique<CpuDeviceManager>(registry);
+  }
+
+  DeviceType device_type() const override { return DeviceType::kMeta; }
+
+  std::string device_type_name() const override { return "meta"; }
+};
+
+COMMAND(DeviceManagerRegistry::RegisterDeviceManagerFactory(
+    std::make_unique<MetaDeviceManagerFactory>()))
+
+}  // namespace
+
 }  // namespace ep
 
 }  // namespace oneflow

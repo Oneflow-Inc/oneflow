@@ -23,6 +23,8 @@ from oneflow.nn.modules.module import Module
 
 
 def nonzero_op(input, as_tuple=False):
+    if input.device.type == "meta":
+        raise RuntimeError("Could not run nonzero with arguments from the meta backend.")
     if as_tuple:
         return flow._C.nonzero(input, as_tuple)
     else:
