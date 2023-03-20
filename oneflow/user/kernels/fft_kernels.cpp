@@ -81,12 +81,16 @@ private:
       if (input->data_type() == kComplex64){
       // static void FftC2CForward(ep::Stream* stream, IN* data_in, OUT* data_out, const Shape& input_shape, 
       //                           const Shape& output_shape, bool forward, const std::vector<int64_t>& dims, fft_norm_mode normalization){
-        FftC2CKernelUtil<device_type, std::complex<float>, std::complex<float>, float>(ctx->stream(), input_ptr, out_ptr,
-                                                                                       input_shape, out_shape, forward, dims, norm_mode);
+        FftC2CKernelUtil<device_type, std::complex<float>, std::complex<float>, float>::FftC2CForward(ctx->stream(), input_ptr, out_ptr,
+                                                                                       input_shape, out_shape, 
+                                                                                       input->stride(), out->stride(),
+                                                                                       forward, dims, norm_mode);
       }
       else if (input->data_type() == kComplex128){
-        FftC2CKernelUtil<device_type, std::complex<double>, std::complex<double>, double>(ctx->stream(), input_ptr, out_ptr,
-                                                                                       input_shape, out_shape, forward, dims, norm_mode);
+        FftC2CKernelUtil<device_type, std::complex<double>, std::complex<double>, double>::FftC2CForward(ctx->stream(), input_ptr, out_ptr,
+                                                                                       input_shape, out_shape, 
+                                                                                       input->stride(), out->stride(),
+                                                                                       forward, dims, norm_mode);
       }
       else{
         Error::RuntimeError() << "expects kComplex64 or kComplex128, but got " << input->data_type();
@@ -125,13 +129,13 @@ private:
       }
 
       if (input->data_type() == kComplex64){
-        FftR2CKernelUtil<device_type, std::complex<float>, std::complex<float>, float>(ctx->stream(), input_ptr, out_ptr,
+        FftR2CKernelUtil<device_type, std::complex<float>, std::complex<float>, float>::FftR2CForward(ctx->stream(), input_ptr, out_ptr,
                                                                                        input_shape, out_shape, 
                                                                                        input->stride(), out->stride(),
                                                                                        forward, dims, norm_mode);
       }
       else if (input->data_type() == kComplex128){
-        FftR2CKernelUtil<device_type, std::complex<double>, std::complex<double>, double>(ctx->stream(), input_ptr, out_ptr,
+        FftR2CKernelUtil<device_type, std::complex<double>, std::complex<double>, double>::FftR2CForward(ctx->stream(), input_ptr, out_ptr,
                                                                                           input_shape, out_shape, 
                                                                                           input->stride(), out->stride(),
                                                                                           forward, dims, norm_mode);

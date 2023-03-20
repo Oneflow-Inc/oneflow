@@ -115,7 +115,7 @@ public:
         // TO-DO add gradient logic
         CHECK_EQ_OR_RETURN(out_grads.size(), 1);
         in_grads->resize(1);
-        in_grads->at(0) = functional::FftC2CGrad(out_grads.at(0), ctx->dims, ctx->norm_str, !(ctx->forward));
+        in_grads->at(0) = JUST(functional::FftC2CGrad(out_grads.at(0), ctx->dims, ctx->norm_str, !(ctx->forward)));
         return Maybe<void>::Ok();
     }
 

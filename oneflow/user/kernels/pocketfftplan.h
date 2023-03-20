@@ -33,14 +33,14 @@ enum class FFT_EXCUTETYPE {
 
 template<typename dtype>
 struct PocketFFtParams {
-  shape_t input_shape;
-  shape_t output_shape;
-  stride_t in_stridef;
-  stride_t out_stridef;
-  shape_t axes;
   bool IsForward;
   FFT_EXCUTETYPE excute_type;
   dtype fct;
+  shape_t axes;
+  stride_t in_stridef;
+  stride_t out_stridef;
+  shape_t input_shape;
+  shape_t output_shape;
   PocketFFtParams() = default;
   PocketFFtParams(const Shape& in_shape, const Shape& out_shape,
                   const Stride& in_stride, const Stride& out_stride,

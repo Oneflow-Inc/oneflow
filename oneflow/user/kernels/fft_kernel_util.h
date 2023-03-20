@@ -28,22 +28,33 @@ enum class fft_norm_mode {
 // In Numpy, "forward" translates to `by_n` for a forward transform and `none` for backward.
 fft_norm_mode norm_from_string(const Optional<std::string>& norm_op, bool forward) {
 
-    if (norm_op.has_value()){
-        if (*JUST(norm_op) == "backward"){
-            return forward ? fft_norm_mode::none : fft_norm_mode::by_n;
-        }
-        else if (*JUST(norm_op) == "forward"){
-            return forward ? fft_norm_mode::by_n : fft_norm_mode::none;
-        }
-        else if (*JUST(norm_op) == "ortho"){
-            return fft_norm_mode::by_root_n;
-        }
+    std::string norm_str = norm_op.value_or("backward");
+    if (norm_str == "backward"){
+      return forward ? fft_norm_mode::none : fft_norm_mode::by_n;
     }
-    else{
-        return forward ? fft_norm_mode::none : fft_norm_mode::by_n;
+    else if (norm_str == "forward"){
+      return forward ? fft_norm_mode::by_n : fft_norm_mode::none;
+    }
+    else if (norm_str == "ortho"){
+      return fft_norm_mode::by_root_n;
     }
 
-    CHECK_OR_THROW(false) << "Invalid normalization mode: \"" << *JUST(norm_op) << "\"";
+    // if (norm_op){
+    //     // std::string norm_str = *JUST(norm_op);
+    //     if (*JUST(norm_op) == "backward"){
+    //         return forward ? fft_norm_mode::none : fft_norm_mode::by_n;
+    //     }
+    //     else if (*JUST(norm_op) == "forward"){
+    //         return forward ? fft_norm_mode::by_n : fft_norm_mode::none;
+    //     }
+    //     else if (*JUST(norm_op) == "ortho"){
+    //         return fft_norm_mode::by_root_n;
+    //     }
+    // }
+    // else{
+    //     return forward ? fft_norm_mode::none : fft_norm_mode::by_n;
+    // }
+    // CHECK_OR_RETURN(false) << "Invalid normalization mode: \"" << *JUST(norm_op) << "\"";
     return fft_norm_mode::none;
 }
 
@@ -79,7 +90,7 @@ void _conj_symmetry(T* data_out,
     const oneflow::NdIndexStrideOffsetHelper<int64_t, NDIM> helper (strides.data(), strides.size());
     std::sort(dims.begin(), dims.end());
     int64_t last_dim = dims.back();
-    int64_t last_dim_size = out_shape[last_dim];
+    int64_t last_dim_size = shape[last_dim];
     int64_t last_dim_half = last_dim_size / 2;
 
     std::vector<int64_t> indices (shape.size());
@@ -129,7 +140,7 @@ void conj_symmetry(T* data_out,
 
 template<DeviceType device_type, typename IN, typename OUT, typename dtype>
 struct FftC2CKernelUtil{
-    static void FftC2CForward(ep::Stream* stream, IN* data_in, OUT* data_out, 
+    static void FftC2CForward(ep::Stream* stream, const IN* data_in, OUT* data_out, 
                               const Shape& input_shape, const Shape& output_shape, 
                               const Stride& input_stride, const Stride& output_stride,
                               bool forward, const std::vector<int64_t>& dims, fft_norm_mode normalization);
@@ -137,7 +148,7 @@ struct FftC2CKernelUtil{
 
 template<DeviceType device_type, typename IN, typename OUT, typename dtype>
 struct FftR2CKernelUtil{
-    static void FftR2CForward(ep::Stream* stream, IN* data_in, OUT* data_out, 
+    static void FftR2CForward(ep::Stream* stream, const IN* data_in, OUT* data_out, 
                               const Shape& input_shape, const Shape& output_shape, 
                               const Stride& input_stride, const Stride& output_stride,
                               bool forward, const std::vector<int64_t>& dims,

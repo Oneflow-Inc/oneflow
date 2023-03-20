@@ -3893,7 +3893,7 @@ class FftBaseFunctor {
   //       For more details pls refer to:
   //       https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/SpectralOps.cpp#L136
   Maybe<Tensor> resize_fft_input(const std::shared_ptr<one::Tensor>& x, 
-                                 std::vector<int64_t> dims, std::vector<int64_t> sizes) const{
+                                 const std::vector<int64_t>& dims, const std::vector<int64_t>& sizes) const{
     CHECK_EQ_OR_THROW(dims.size(), sizes.size()) << "dims.size() != sizes.size().";
     bool must_copy = false;
     auto x_sizes = x->shape()->dim_vec();
@@ -3949,16 +3949,26 @@ class FftBaseFunctor {
       case (kDouble): return CHECK_JUST(DType::Get(DataType::kComplex128));
       default: return Error::RuntimeError() << "dtype can't be handled";
     }
+    return Error::RuntimeError() << "dtype can't be handled";
   }
 
   Maybe<Tensor> promote_tensor_fft(const std::shared_ptr<Tensor>& x, bool require_complex = false) const{
     auto cur_type = x->dtype();
     auto new_type = JUST(promote_type_fft(cur_type, require_complex));
-    return (cur_type->data_type() == new_type->data_type()) ? x : functional::To(x, x->device(), new_type->data_type());
+    // DeviceType x_device_type;
+    // if (x->is_local()){
+    //   x_device_type = JUST(x->device())->enum_type();
+    // }
+    // else{
+    //   x_device_type = JUST(x->parallel_desc())->device_type();
+    // }
+    // const std::string& x_device_str = *JUST(DeviceTag4DeviceType(x_device_type));
+    // return (cur_type->data_type() == new_type->data_type()) ? x : functional::To(x, x_device_str, new_type, false);
+    return (cur_type->data_type() == new_type->data_type()) ? x : functional::To(x, Optional<Symbol<Device>>(JUST(x->device())), new_type, false);
   }
 
   Maybe<void> maybe_warp_dims(std::vector<int64_t>& dims, int64_t dim_post_expr,
-                                              bool wrap_scalar = true) const{
+                                              bool wrap_scalar = true) const {
     if (dim_post_expr <= 0) {
       if (!wrap_scalar) {
         return Error::RuntimeError()
@@ -3976,11 +3986,12 @@ class FftBaseFunctor {
       }
       if (dim < 0) dim += dim_post_expr;
     }
+    return Maybe<void>::Ok();
   }
 
-  Maybe<Tensor> convert_to_real(const std::shared_ptr<one::Tensor>& x){
+  // Maybe<Tensor> convert_to_real(const std::shared_ptr<one::Tensor>& x){
 
-  }
+  // }
 
  protected:
   std::shared_ptr<OpExpr> op_;
@@ -4025,8 +4036,7 @@ class FftC2CFunctorGrad : public FftBaseFunctor{
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "forward");
     attrs.SetAllAttrs(wrapped_dims, norm_str, forward);
     
-    auto out = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs));
-
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 };
 
@@ -4129,8 +4139,8 @@ class FftC2RFunctor : public FftBaseFunctor{
 class FftFunctor {
  public:
 
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int64_t> n,
-                           const Optional<int64_t> dim, const Optional<std::string> norm) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int64_t>& n,
+                           const Optional<int64_t>& dim, const Optional<std::string>& norm) const {
     auto dim_val = dim.value_or(-1);
     auto norm_str = norm.value_or("backward");
     if (input->dtype()->is_complex()){
@@ -4145,8 +4155,8 @@ class FftFunctor {
 class IFftFunctor {
  public:
 
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int64_t> n,
-                           const Optional<int64_t> dim, const Optional<std::string> norm) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int64_t>& n,
+                           const Optional<int64_t>& dim, const Optional<std::string>& norm) const {
     auto dim_val = dim.value_or(-1);
     auto norm_str = norm.value_or("backward");
     if (input->dtype()->is_complex()){
@@ -4157,7 +4167,7 @@ class IFftFunctor {
     }
   }
 };
-
+#if 0
 class StftFunctor {
  public:
   StftFunctor() {
@@ -4270,6 +4280,7 @@ class StftFunctor {
  private:
   std::shared_ptr<OpExpr> op_;
 };
+#endif
 class FusedWeightedSumFunctor {
  public:
   FusedWeightedSumFunctor() {
