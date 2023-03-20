@@ -141,6 +141,7 @@ class Shape final : public DimVector, public MutShapeMixIn<Shape> {
   using Base = DimVector;
   using DimVector::DimVector;
   Shape() : is_initialized_(false) {}
+  Shape(std::initializer_list<int64_t> dim_vec);
   explicit Shape(const std::vector<int64_t>& dim_vec);
   explicit Shape(const DimVector& dim_vec);
   explicit Shape(DimVector&& dim_vec);
