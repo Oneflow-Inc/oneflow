@@ -90,9 +90,13 @@ class ContiguousParamsGroup(object):
         ]
 
     def _check_tensor_position_consistency(self):
-        if all([all([p.is_global for p in params]) for params in self.params_group_list]):
+        if all(
+            [all([p.is_global for p in params]) for params in self.params_group_list]
+        ):
             self.is_global = True
-        elif all([all([p.is_local for p in params]) for params in self.params_group_list]):
+        elif all(
+            [all([p.is_local for p in params]) for params in self.params_group_list]
+        ):
             self.is_global = False
         else:
             raise ValueError(
