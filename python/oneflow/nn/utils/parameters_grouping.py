@@ -52,7 +52,23 @@ class ContiguousParamsGroup(object):
         """
         self.params_group_list = params_group_list.copy()
 
-        # making params_group_list 2D List of Tensors
+        self._make_valid_params_group_list()
+        self._remove_no_grad_tensors()
+        self._check_tensor_position_consistency()
+
+        self.for_module = for_module
+        self.grouped_tensors = []
+        self.grouped_grads = []
+
+        if self.for_module:
+            self._parameters_grouping_for_module()
+        else:
+            self._check_for_module()
+            self._parameters_grouping_for_operations()
+
+    def _make_valid_params_group_list(self):
+        """making params_group_list 2D List of Tensors
+        """
         if isinstance(self.params_group_list, Tensor):
             warnings.warn("Single tensor is best not do grouping.")
             self.params_group_list = [[self.params_group_list]]
@@ -68,24 +84,20 @@ class ContiguousParamsGroup(object):
         else:
             raise ValueError("The shape of params_group_list is illegal!")
 
-        if all([all([p.is_global for p in params]) for params in params_group_list]):
+    def _remove_no_grad_tensors(self):
+        self.params_group_list = [
+            [p for p in params if p.requires_grad] for params in self.params_group_list
+        ]
+
+    def _check_tensor_position_consistency(self):
+        if all([all([p.is_global for p in params]) for params in self.params_group_list]):
             self.is_global = True
-        elif all([all([p.is_local for p in params]) for params in params_group_list]):
+        elif all([all([p.is_local for p in params]) for params in self.params_group_list]):
             self.is_global = False
         else:
             raise ValueError(
                 "Parameters must be all local tensors or all global tensors for params grouping."
             )
-
-        self.for_module = for_module
-        self.grouped_tensors = []
-        self.grouped_grads = []
-
-        if self.for_module:
-            self._parameters_grouping_for_module()
-        else:
-            self._check_for_module()
-            self._parameters_grouping_for_operations()
 
     def _check_for_module(self):
         """If all tensors are not held by any buffer, try to create buffer.
@@ -104,7 +116,7 @@ class ContiguousParamsGroup(object):
 
         for params in self.params_group_list:
             for p in params:
-                if p._ref_tensor is not None and p.requires_grad:
+                if p._ref_tensor is not None:
                     assert (
                         p._ref_index < p._ref_tensor.numel()
                     ), "invalid ref tensor index."
@@ -122,9 +134,6 @@ class ContiguousParamsGroup(object):
 
         for params in self.params_group_list:
             for p in params:
-                if not p.requires_grad:
-                    continue
-
                 if self.is_global:
                     tensor_key = (p.dtype, p.placement, p.sbp)
                 else:
@@ -160,9 +169,6 @@ class ContiguousParamsGroup(object):
 
         for params in self.params_group_list:
             for p in params:
-                if not p.requires_grad:
-                    continue
-
                 if self.is_global:
                     tensor_key = (p.dtype, p.placement, p.sbp)
                 else:
@@ -198,8 +204,7 @@ class ContiguousParamsGroup(object):
         for params in self.params_group_list:
             group = set()
             for p in params:
-                if p.requires_grad:
-                    group.add(p)
+                group.add(p)
             params_group.append(group)
 
         # handling the parameters already on allocated buffers
