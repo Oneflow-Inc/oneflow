@@ -140,7 +140,7 @@ class Embedding(Module):
         assert sparse is False, "Not support sparse=True yet!"
         if _weight is None:
             self.weight = flow.nn.Parameter(
-                Tensor((num_embeddings, embedding_dim), **factory_kwargs)
+                flow.empty((num_embeddings, embedding_dim), **factory_kwargs)
             )
             self.reset_parameters()
         else:
