@@ -39,6 +39,25 @@ class CnnlWorkspace {
   char* workspace_dptr_;
 };
 
+class CnnlHostWorkspace {
+ public:
+  CnnlHostWorkspace(ep::MluStream* stream, size_t workspace_size = 0);
+  ~CnnlHostWorkspace();
+
+  void resize(size_t workspace_size);
+
+  size_t size() const { return size_; }
+
+  void* dptr() { return workspace_dptr_; }
+  const void* dptr() const { return workspace_dptr_; }
+
+ private:
+  ep::MluStream* mlu_stream_;
+  size_t size_;
+  size_t capacity_;
+  char* workspace_dptr_;
+};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CAMBRICON_CNNL_CNNL_WORKSPACE_H_

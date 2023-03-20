@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/hardware/node_device_descriptor_manager.h"
 #include "oneflow/core/vm/bin_allocator.h"
 #include "oneflow/core/vm/ep_backend_allocator.h"
+#include "oneflow/core/vm/ep_backend_host_allocator.h"
 #include "oneflow/core/vm/thread_safe_guard.h"
 
 namespace oneflow {
@@ -44,6 +45,11 @@ MluStream::MluStream(MluDevice* device) : device_index_(device->device_index()),
       std::make_unique<vm::EpBackendAllocator>(ep_device, ep::AllocationOptions{});
   workspace_allocator_.reset(new vm::BinAllocator<vm::ThreadSafeLock>(
       ep::kMaxAlignmentRequirement, std::move(ep_backend_allocator)));
+
+  auto ep_backend_host_allocator =
+      std::make_unique<vm::EpBackendHostAllocator>(ep_device, ep::AllocationOptions{});
+  host_workspace_allocator_.reset(new vm::BinAllocator<vm::ThreadSafeLock>(
+      ep::kMaxAlignmentRequirement, std::move(ep_backend_host_allocator)));
 }
 
 MluStream::~MluStream() {

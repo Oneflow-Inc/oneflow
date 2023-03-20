@@ -28,10 +28,10 @@ limitations under the License.
 namespace oneflow {
 
 template<int Nd, typename T>
-class MluMaxPoolKernel final : public user_op::OpKernel {
+class MluAvgPoolKernel final : public user_op::OpKernel {
  public:
-  MluMaxPoolKernel() = default;
-  ~MluMaxPoolKernel() = default;
+  MluAvgPoolKernel() = default;
+  ~MluAvgPoolKernel() = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -39,102 +39,92 @@ class MluMaxPoolKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    user_op::Tensor* indice = ctx->Tensor4ArgNameAndIndex("indice", 0);
 
     const std::vector<int32_t>& padding = ctx->Attr<std::vector<int32_t>>("padding");
     const std::vector<int32_t>& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
     const std::vector<int32_t>& stride = ctx->Attr<std::vector<int32_t>>("stride");
-    const std::vector<int32_t>& dilation = ctx->Attr<std::vector<int32_t>>("dilation");
     const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
     const std::string& data_format = ctx->Attr<std::string>("data_format");
+    const bool count_include_pad = ctx->Attr<bool>("count_include_pad");
+    const int32_t divisor_override = ctx->Attr<int32_t>("divisor_override");
 
     CHECK_OR_THROW(padding.size() == 2) << "padding size should be 2.";
     CHECK_OR_THROW(kernel_size.size() == 2) << "kernel_size size should be 2.";
     CHECK_OR_THROW(stride.size() == 2) << "stride size should be 2.";
-    CHECK_OR_THROW(dilation.size() == 2) << "dilation size should be 2.";
-    CHECK_OR_THROW(dilation[0] == 1 && dilation[1] == 1)
-        << "cambricon cnnl max pool only supports dilation 1.";
+    CHECK_OR_THROW(divisor_override == 0)
+        << "cambricon cnnl avg pool does not support divisor_override.";
 
     cnnlTensorLayout_t layout =
         (data_format == "channels_last") ? CNNL_LAYOUT_NHWC : CNNL_LAYOUT_NCHW;
-    cnnlPoolingMode_t mode = CNNL_POOLING_MAX;
+    cnnlPoolingMode_t mode = count_include_pad ? CNNL_POOLING_AVERAGE_COUNT_INCLUDE_PADDING
+                                               : CNNL_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
+
     CnnlPoolingDescriptor pooling_desc;
-    CnnlTensorDescriptor x_desc, y_desc, indice_desc;
+    CnnlTensorDescriptor x_desc, y_desc;
     x_desc.set(x, layout);
     y_desc.set(y, layout);
-    indice_desc.set(indice, layout);
 
-    // cnnlPoolingForwardWithIndex requires index_desc->dtype == CNNL_DTYPE_INT32 or
-    // CNNL_DTYPE_INT16 But in oneflow/user/ops/max_pool_op.cpp its dtype is set as kInt64.
-    // cnnlPoolingForwardWithIndex requires index dtype is int32 for float input,
-    // and index dtype is int16 for half input
-    auto local_index_dtype = CNNL_DTYPE_INVALID;
-    CnnlWorkspace local_index(ctx->stream()->As<ep::MluStream>());
-    if (GetDataType<T>::value == DataType::kFloat) {
-      local_index_dtype = ConvertToCnnlDataType(kInt32);
-      local_index.resize(sizeof(int32_t) * indice->shape_view().elem_cnt());
-    } else if (GetDataType<T>::value == DataType::kFloat16) {
-      local_index_dtype = ConvertToCnnlDataType(kInt16);
-      local_index.resize(sizeof(int16_t) * indice->shape_view().elem_cnt() * 3);
-    }
-    CnnlTensorDescriptor local_index_desc;
-    local_index_desc.set(indice->shape_view().NumAxes(), indice->shape_view().data(),
-                         local_index_dtype, layout);
+    int h_axis = (data_format == "channels_last") ? 1 : 2;
+    int w_axis = h_axis + 1;
+    int64_t output_h = y->shape_view()[h_axis];
+    int64_t output_w = y->shape_view()[w_axis];
 
     // calculate paddings
     int pu = padding[0], pd = padding[0], pl = padding[1], pr = padding[1];
     pooling_desc.set(mode, kernel_size[0], kernel_size[1], stride[0], stride[1], pu, pd, pl, pr,
                      ceil_mode);
 
+    auto handle = ctx->stream()->As<ep::MluStream>()->cnnl_handle();
     size_t pooling_workspace_size = 0;
-    OF_CNNL_CHECK(cnnlGetPoolingWithIndexWorkspaceSize(
-        /* handle         */ ctx->stream()->As<ep::MluStream>()->cnnl_handle(),
-        /* x_desc         */ x_desc.desc(),
-        /* y_desc         */ y_desc.desc(),
+    OF_CNNL_CHECK(cnnlGetPoolingWorkspaceSize(
+        /* handle         */ handle,
+        /* mode           */ mode,
+        /* output_w       */ output_w,
+        /* output_h       */ output_h,
         /* workspace_size */ &pooling_workspace_size));
     CnnlWorkspace pooling_workspace(ctx->stream()->As<ep::MluStream>(), pooling_workspace_size);
 
-    OF_CNNL_CHECK(cnnlPoolingForwardWithIndex(
-        /* handle         */ ctx->stream()->As<ep::MluStream>()->cnnl_handle(),
+    const void* extra_device_input_dptr = nullptr;
+    CnnlHostWorkspace extra_input_workspace(ctx->stream()->As<ep::MluStream>());
+    CnnlWorkspace extra_device_input_workspace(ctx->stream()->As<ep::MluStream>());
+    size_t extra_input_size = 0;
+    OF_CNNL_CHECK(
+        cnnlGetPoolingExtraInputSize(handle, mode, output_w, output_h, &extra_input_size));
+    if (extra_input_size > 0) {
+      extra_input_workspace.resize(extra_input_size);
+      OF_CNNL_CHECK(cnnlInitPoolingExtraInput(handle, pooling_desc.desc(), x_desc.desc(),
+                                              y_desc.desc(), extra_input_workspace.dptr()));
+      extra_device_input_workspace.resize(extra_input_size);
+      OF_MLU_CHECK(cnrtMemcpyAsync(
+          extra_device_input_workspace.dptr(), extra_input_workspace.dptr(), extra_input_size,
+          ctx->stream()->As<ep::MluStream>()->mlu_stream(), cnrtMemcpyHostToDev));
+      extra_device_input_dptr = extra_device_input_workspace.dptr();
+    }
+
+    OF_CNNL_CHECK(cnnlPoolingForward_v2(
+        /* handle         */ handle,
         /* pooling_desc   */ pooling_desc.desc(),
         /* alpha          */ nullptr,
         /* x_desc         */ x_desc.desc(),
         /* x              */ x->dptr(),
         /* beta           */ nullptr,
+        /* extra_input    */ extra_device_input_dptr,
         /* y_desc         */ y_desc.desc(),
         /* y              */ y->mut_dptr(),
-        /* index_desc     */ local_index_desc.desc(),
-        /* index          */ local_index.dptr(),
         /* workspace      */ pooling_workspace.dptr(),
         /* workspace_size */ pooling_workspace_size));
-
-    // cast int32/int16 index to int64 index
-    CnnlTensorDescriptor int32_index_desc;
-    char* int32_index_dptr = reinterpret_cast<char*>(local_index.dptr());
-    if (local_index_dtype == CNNL_DTYPE_INT16) {
-      int32_index_dptr += sizeof(int16_t) * indice->shape_view().elem_cnt();
-      int32_index_desc.set(indice->shape_view().NumAxes(), indice->shape_view().data(),
-                           CNNL_DTYPE_INT32, layout);
-      OF_CNNL_CHECK(cnnlCastDataType(
-          ctx->stream()->As<ep::MluStream>()->cnnl_handle(), local_index_desc.desc(),
-          local_index.dptr(), CNNL_CAST_INT16_TO_INT32, int32_index_desc.desc(), int32_index_dptr));
-    }
-    OF_CNNL_CHECK(cnnlCastDataType(
-        ctx->stream()->As<ep::MluStream>()->cnnl_handle(),
-        (local_index_dtype == CNNL_DTYPE_INT16) ? int32_index_desc.desc() : local_index_desc.desc(),
-        int32_index_dptr, CNNL_CAST_INT32_TO_INT64, indice_desc.desc(), indice->mut_dptr()));
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_MAX_POOL_MLU_KERNEL(dtype)                           \
-  REGISTER_USER_KERNEL("max_pool_2d")                                 \
-      .SetCreateFn<MluMaxPoolKernel<2, dtype>>()                      \
+#define REGISTER_AVG_POOL_MLU_KERNEL(dtype)                           \
+  REGISTER_USER_KERNEL("avg_pool_2d")                                 \
+      .SetCreateFn<MluAvgPoolKernel<2, dtype>>()                      \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kMLU) \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
-REGISTER_MAX_POOL_MLU_KERNEL(float)
-REGISTER_MAX_POOL_MLU_KERNEL(float16)
+REGISTER_AVG_POOL_MLU_KERNEL(float)
+REGISTER_AVG_POOL_MLU_KERNEL(float16)
 
 }  // namespace oneflow

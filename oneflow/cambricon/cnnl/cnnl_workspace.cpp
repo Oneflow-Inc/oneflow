@@ -46,4 +46,33 @@ void CnnlWorkspace::resize(size_t workspace_size) {
   size_ = workspace_size;
 }
 
+CnnlHostWorkspace::CnnlHostWorkspace(ep::MluStream* stream, size_t workspace_size)
+    : mlu_stream_(stream),
+      size_(workspace_size),
+      capacity_(workspace_size),
+      workspace_dptr_(nullptr) {
+  if (capacity_ > 0) {
+    auto* allocator = mlu_stream_->host_workspace_allocator();
+    CHECK_JUST(allocator->Allocate(&workspace_dptr_, capacity_));
+  }
+}
+
+CnnlHostWorkspace::~CnnlHostWorkspace() {
+  if (capacity_ > 0 && !workspace_dptr_) {
+    auto* allocator = mlu_stream_->host_workspace_allocator();
+    allocator->Deallocate(workspace_dptr_, capacity_);
+  }
+  workspace_dptr_ = nullptr;
+}
+
+void CnnlHostWorkspace::resize(size_t workspace_size) {
+  if (capacity_ < workspace_size) {
+    auto* allocator = mlu_stream_->host_workspace_allocator();
+    allocator->Deallocate(workspace_dptr_, capacity_);
+    capacity_ = workspace_size;
+    CHECK_JUST(allocator->Allocate(&workspace_dptr_, capacity_));
+  }
+  size_ = workspace_size;
+}
+
 }  // namespace oneflow

@@ -48,6 +48,7 @@ class MluStream : public Stream {
   cnnlHandle_t cnnl_handle() const;
 
   vm::CachingAllocator* workspace_allocator() { return workspace_allocator_.get(); }
+  vm::CachingAllocator* host_workspace_allocator() { return host_workspace_allocator_.get(); }
 
  private:
   cnrtQueue_t mlu_stream_{};
@@ -55,6 +56,7 @@ class MluStream : public Stream {
   MluDevice* device_;
   cnnlHandle_t cnnl_handle_;
   std::unique_ptr<vm::CachingAllocator> workspace_allocator_;
+  std::unique_ptr<vm::CachingAllocator> host_workspace_allocator_;
 };
 
 }  // namespace ep
