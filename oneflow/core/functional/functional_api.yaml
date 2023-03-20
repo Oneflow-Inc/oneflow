@@ -2048,6 +2048,10 @@
   signature: "Tensor (Tensor x, Int64 diagonal=0) => Tril"
   bind_python: True
 
+- name: "tril_"
+  signature: "Tensor (Tensor x, Int64 diagonal=0) => InplaceTril"
+  bind_python: True
+
 - name: "triu"
   signature: "Tensor (Tensor x, Int64 diagonal=0) => Triu"
   bind_python: True
