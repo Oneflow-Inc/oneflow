@@ -203,4 +203,185 @@ class Conv2DKernel final : public user_op::OpKernel {
 REGISTER_CONV2D_MLU_KERNEL(float)
 REGISTER_CONV2D_MLU_KERNEL(float16)
 
+template<typename T>
+class ConvDataGradKernel final : public user_op::OpKernel {
+ public:
+  ConvDataGradKernel() = default;
+  ~ConvDataGradKernel() = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    const user_op::Tensor* filter = ctx->Tensor4ArgNameAndIndex("filter", 0);
+    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+
+    if (dx->shape_view().elem_cnt() == 0) return;
+
+    const int& groups = ctx->Attr<int32_t>("groups");
+    std::vector<int32_t> paddings = ctx->Attr<std::vector<int32_t>>("padding_before");
+    std::vector<int32_t> strides = ctx->Attr<std::vector<int32_t>>("strides");
+    std::vector<int32_t> dilation_rates = ctx->Attr<std::vector<int32_t>>("dilation_rate");
+    const std::string& data_format = ctx->Attr<std::string>("data_format");
+
+    const auto& dy_shape = dy->shape_view();
+    const auto& filter_shape = filter->shape_view();
+    const auto& dx_shape = dx->shape_view();
+
+    int32_t kernel_dims = dx_shape.NumAxes() - 2;
+    UpdateConvParams(&paddings, &strides, &dilation_rates, kernel_dims);
+
+    auto cnnl_data_type = ConvertToCnnlDataType(dy->data_type());
+    CnnlTensorDescriptor dy_desc, filter_desc, dx_desc;
+    CnnlConvolutionDescriptor conv_desc;
+    conv_desc.set(dx_shape.NumAxes(), strides.data(), paddings.data(), dilation_rates.data(),
+                  groups, cnnl_data_type);
+    cnnlTensorLayout_t layout;
+    if (data_format != "channels_last") {
+      layout = CNNL_LAYOUT_NCHW;
+    } else {
+      layout = CNNL_LAYOUT_NHWC;
+    }
+    dy_desc.set(dy_shape.NumAxes(), dy_shape.data(), cnnl_data_type, layout);
+    filter_desc.set(filter_shape.NumAxes(), filter_shape.data(), cnnl_data_type, layout);
+    dx_desc.set(dx_shape.NumAxes(), dx_shape.data(), cnnl_data_type, layout);
+
+    cnnlConvolutionBwdDataAlgo_t algo;
+    OF_CNNL_CHECK(cnnlGetConvolutionBackwardDataAlgorithm(
+        ctx->stream()->As<ep::MluStream>()->cnnl_handle(), filter_desc.desc(), dy_desc.desc(),
+        conv_desc.desc(), dx_desc.desc(), CNNL_CONVOLUTION_BWD_DATA_FASTEST, &algo));
+
+    size_t workspace_size = 0;
+    OF_CNNL_CHECK(cnnlGetConvolutionBackwardDataWorkspaceSize(
+        ctx->stream()->As<ep::MluStream>()->cnnl_handle(), filter_desc.desc(), dy_desc.desc(),
+        conv_desc.desc(), dx_desc.desc(), algo, &workspace_size));
+    CnnlWorkspace workspace(ctx->stream()->As<ep::MluStream>(), workspace_size);
+
+    OF_CNNL_CHECK(cnnlConvolutionBackwardData(
+        ctx->stream()->As<ep::MluStream>()->cnnl_handle(), nullptr, filter_desc.desc(),
+        filter->dptr(), dy_desc.desc(), dy->dptr(), conv_desc.desc(), algo, workspace.dptr(),
+        workspace_size, nullptr, dx_desc.desc(), dx->mut_dptr()));
+  }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_CONV_DATA_GRAD_MLU_KERNEL(dtype)                     \
+  REGISTER_USER_KERNEL("conv_data_grad")                              \
+      .SetCreateFn<ConvDataGradKernel<dtype>>()                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kMLU) \
+                       && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value));
+
+REGISTER_CONV_DATA_GRAD_MLU_KERNEL(float)
+REGISTER_CONV_DATA_GRAD_MLU_KERNEL(float16)
+
+template<typename T>
+class ConvFilterGradKernel final : public user_op::OpKernel {
+ public:
+  ConvFilterGradKernel() = default;
+  ~ConvFilterGradKernel() = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* filter_diff = ctx->Tensor4ArgNameAndIndex("filter_diff", 0);
+
+    if (x->shape_view().elem_cnt() == 0) {
+      Memset<DeviceType::kMLU>(
+          ctx->stream(), filter_diff->mut_dptr(), 0,
+          filter_diff->shape_view().elem_cnt() * GetSizeOfDataType(filter_diff->data_type()));
+      return;
+    }
+
+    const int& groups = ctx->Attr<int32_t>("groups");
+    std::vector<int32_t> paddings = ctx->Attr<std::vector<int32_t>>("padding_before");
+    std::vector<int32_t> strides = ctx->Attr<std::vector<int32_t>>("strides");
+    std::vector<int32_t> dilation_rates = ctx->Attr<std::vector<int32_t>>("dilation_rate");
+    const std::string& data_format = ctx->Attr<std::string>("data_format");
+
+    const auto& dy_shape = dy->shape_view();
+    const auto& x_shape = x->shape_view();
+    const auto& filter_diff_shape = filter_diff->shape_view();
+
+    int32_t kernel_dims = x_shape.NumAxes() - 2;
+    UpdateConvParams(&paddings, &strides, &dilation_rates, kernel_dims);
+
+    auto cnnl_data_type = ConvertToCnnlDataType(dy->data_type());
+    CnnlTensorDescriptor dy_desc, x_desc, filter_diff_desc;
+    CnnlConvolutionDescriptor conv_desc;
+    conv_desc.set(x_shape.NumAxes(), strides.data(), paddings.data(), dilation_rates.data(), groups,
+                  cnnl_data_type);
+
+    const void* x_ptr = x->dptr();
+    const void* dy_ptr = dy->dptr();
+
+    CnnlWorkspace temp_x(ctx->stream()->As<ep::MluStream>(), 0);
+    CnnlWorkspace temp_dy(ctx->stream()->As<ep::MluStream>(), 0);
+
+    cnnlTensorLayout_t layout = CNNL_LAYOUT_NHWC;
+    cnnlTensorLayout_t filter_diff_layout;
+
+    size_t element_size = GetSizeOfDataType(x->data_type());
+    std::vector<int64_t> temp_dy_shape;
+    if (data_format != "channels_last") {
+      filter_diff_layout = CNNL_LAYOUT_NCHW;
+      auto permute = ComputePermutation(x_shape.NumAxes(), layout);
+      temp_x.resize(x_shape.elem_cnt() * element_size);
+      auto transpose = NewPermutePrimitive(ctx, x_shape.NumAxes());
+      CHECK(transpose);
+      // transpose input from NCHW to NHWC
+      transpose->Launch(ctx->stream(), x->data_type(), x_shape.NumAxes(), x_shape.data(), x->dptr(),
+                        permute.data(), temp_x.dptr());
+      const auto& permute_shape = ComputePermuteShape(x_shape, permute);
+      x_desc.set(x_shape.NumAxes(), permute_shape.data(), cnnl_data_type, layout);
+      x_ptr = temp_x.dptr();
+
+      temp_dy.resize(dy_shape.elem_cnt() * element_size);
+      transpose->Launch(ctx->stream(), dy->data_type(), dy_shape.NumAxes(), dy_shape.data(),
+                        dy->dptr(), permute.data(), temp_dy.dptr());
+      temp_dy_shape = ComputePermuteShape(dy_shape, permute);
+      dy_desc.set(dy_shape.NumAxes(), temp_dy_shape.data(), cnnl_data_type, layout);
+      temp_dy.resize(dy_shape.elem_cnt() * element_size);
+      dy_ptr = temp_dy.dptr();
+    } else {
+      filter_diff_layout = CNNL_LAYOUT_NHWC;
+      x_desc.set(x_shape.NumAxes(), x_shape.data(), cnnl_data_type, layout);
+      dy_desc.set(dy_shape.NumAxes(), dy_shape.data(), cnnl_data_type, layout);
+    }
+    filter_diff_desc.set(filter_diff_shape.NumAxes(), filter_diff_shape.data(), cnnl_data_type,
+                         filter_diff_layout);
+
+    cnnlConvolutionBwdFilterAlgo_t algo;
+    OF_CNNL_CHECK(cnnlGetConvolutionBackwardFilterAlgorithm(
+        ctx->stream()->As<ep::MluStream>()->cnnl_handle(), conv_desc.desc(), x_desc.desc(),
+        dy_desc.desc(), filter_diff_desc.desc(), CNNL_CONVOLUTION_BWD_FILTER_FASTEST, &algo));
+
+    size_t workspace_size = 0;
+    OF_CNNL_CHECK(cnnlGetConvolutionBackwardFilterWorkspaceSize(
+        ctx->stream()->As<ep::MluStream>()->cnnl_handle(), x_desc.desc(), dy_desc.desc(),
+        filter_diff_desc.desc(), conv_desc.desc(), algo, &workspace_size));
+    CnnlWorkspace workspace(ctx->stream()->As<ep::MluStream>(), workspace_size);
+
+    OF_CNNL_CHECK(cnnlConvolutionBackwardFilter(
+        ctx->stream()->As<ep::MluStream>()->cnnl_handle(), nullptr, x_desc.desc(), x_ptr,
+        dy_desc.desc(), dy_ptr, conv_desc.desc(), algo, workspace.dptr(), workspace_size, nullptr,
+        filter_diff_desc.desc(), filter_diff->mut_dptr()));
+  }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_CONV_FILTER_GRAD_MLU_KERNEL(dtype)                   \
+  REGISTER_USER_KERNEL("conv_filter_grad")                            \
+      .SetCreateFn<ConvFilterGradKernel<dtype>>()                     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kMLU) \
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
+
+REGISTER_CONV_FILTER_GRAD_MLU_KERNEL(float)
+REGISTER_CONV_FILTER_GRAD_MLU_KERNEL(float16)
+
 }  // namespace oneflow

@@ -1613,6 +1613,23 @@ class TestConv2d(flow.unittest.TestCase):
                 device=device,
             )
 
+    def test_conv2d_backward(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["mlu"]
+        os.environ["ONEFLOW_ENABLE_NHWC"] = "0"
+        for arg in GenArgList(arg_dict):
+            device = arg[0]
+            conv = flow.nn.Conv2d(1, 3, (3, 3), bias=False).to(flow.device(device))
+            _test_conv2d_backward(
+                test_case,
+                conv,
+                test_conv2d_data,
+                test_conv2d_weight,
+                test_conv2d_data_grad,
+                test_conv2d_weight_grad,
+                device=device,
+            )
+
     # bias grad not yet supported
     def test_conv2d_with_bias(test_case):
         arg_dict = OrderedDict()
@@ -1715,23 +1732,23 @@ class TestConv2d(flow.unittest.TestCase):
                 device=device,
             )
 
-    # def test_large_in_channel_group_conv(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["test_fun"] = [
-    #         _test_conv2d_large_in_channel,
-    #     ]
-    #     arg_dict["device"] = ["mlu"]
-    #     for arg in GenArgList(arg_dict):
-    #         arg[0](test_case, *arg[1:])
+    def test_large_in_channel_group_conv(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_conv2d_large_in_channel,
+        ]
+        arg_dict["device"] = ["mlu"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
-    # def test_large_out_channel_group_conv(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["test_fun"] = [
-    #         _test_conv2d_large_out_channel,
-    #     ]
-    #     arg_dict["device"] = ["mlu"]
-    #     for arg in GenArgList(arg_dict):
-    #         arg[0](test_case, *arg[1:])
+    def test_large_out_channel_group_conv(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_conv2d_large_out_channel,
+        ]
+        arg_dict["device"] = ["mlu"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
     def test_conv2d_group2(test_case):
         conv_cpu = flow.nn.Conv2d(4, 4, (3, 3), groups=2, bias=False)
