@@ -232,7 +232,8 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
   } else {
     const auto& dtype_symbol = JUST(DType::Get(dtype));
     const auto& empty =
-        JUST(functional::Empty(*cur_rank_phy_shape, dtype_symbol, device, /*pin_memory=*/false));
+        JUST(functional::Empty(*cur_rank_phy_shape, dtype_symbol, device,
+                               /*requires_grad=*/requires_grad, /*pin_memory=*/false));
     cur_rank_phy_tensor = JUST(empty->AsLocalTensor());
     JUST(cur_rank_phy_tensor->set_requires_grad(requires_grad));
     cur_rank_phy_tensor->set_is_leaf(is_leaf);
