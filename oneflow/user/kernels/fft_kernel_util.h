@@ -41,7 +41,7 @@ enum class fft_norm_mode {
 
 // Convert NumPy compatible normalization mode string to enum values
 // In Numpy, "forward" translates to `by_n` for a forward transform and `none` for backward.
-fft_norm_mode norm_from_string(const Optional<std::string>& norm_op, bool forward) {
+inline fft_norm_mode norm_from_string(const Optional<std::string>& norm_op, bool forward) {
   std::string norm_str = norm_op.value_or("backward");
   if (norm_str == "backward") {
     return forward ? fft_norm_mode::none : fft_norm_mode::by_n;
@@ -71,7 +71,7 @@ fft_norm_mode norm_from_string(const Optional<std::string>& norm_op, bool forwar
 }
 
 template<typename T>
-T compute_fct(int64_t size, fft_norm_mode normalization) {
+inline T compute_fct(int64_t size, fft_norm_mode normalization) {
   constexpr auto one = static_cast<T>(1);
   switch (normalization) {
     case fft_norm_mode::none: return one;
@@ -82,7 +82,7 @@ T compute_fct(int64_t size, fft_norm_mode normalization) {
 }
 
 template<typename T>
-T compute_fct(const Shape& in_shape, std::vector<int64_t> dims, fft_norm_mode normalization) {
+inline T compute_fct(const Shape& in_shape, std::vector<int64_t> dims, fft_norm_mode normalization) {
   if (normalization == fft_norm_mode::none) { return static_cast<T>(1); }
   int64_t n = 1;
   for (int64_t idx : dims) { n *= in_shape.At(idx); }
@@ -90,7 +90,7 @@ T compute_fct(const Shape& in_shape, std::vector<int64_t> dims, fft_norm_mode no
 }
 
 template<typename T, int NDIM>
-void _conj_symmetry(T* data_out, const Shape& shape, const std::vector<int64_t>& strides,
+static void _conj_symmetry(T* data_out, const Shape& shape, const std::vector<int64_t>& strides,
                     const std::vector<int64_t>& dims, int64_t elem_count) {
   // const int NDIM = out_shape.size();
   const oneflow::NdIndexStrideOffsetHelper<int64_t, NDIM> helper(strides.data(), NDIM);
@@ -115,7 +115,7 @@ void _conj_symmetry(T* data_out, const Shape& shape, const std::vector<int64_t>&
 }
 
 template<typename T>
-void conj_symmetry(T* data_out, const Shape& shape, const Stride& strides,
+static void conj_symmetry(T* data_out, const Shape& shape, const Stride& strides,
                    const std::vector<int64_t>& dims, int64_t elem_count) {
   void (*func)(T* /*data_out*/, const Shape& /*shape*/, const std::vector<int64_t>& /*strides*/,
                const std::vector<int64_t>& /*dims*/, int64_t /*elem_count*/) = nullptr;

@@ -60,4 +60,7 @@ struct FftR2CKernelUtil<DeviceType::kCPU, IN, OUT, dtype> {
 INSTANTIATE_FFTC2C_KERNEL_UTIL((DeviceType::kCPU), std::complex<float>, std::complex<float>, float);
 INSTANTIATE_FFTC2C_KERNEL_UTIL((DeviceType::kCPU), std::complex<double>, std::complex<double>,
                                double);
+
+INSTANTIATE_FFTR2C_KERNEL_UTIL((DeviceType::kCPU), float, std::complex<float>, float);
+INSTANTIATE_FFTR2C_KERNEL_UTIL((DeviceType::kCPU), double, std::complex<double>, double);
 }  // namespace oneflow
