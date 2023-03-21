@@ -13,20 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import unittest
 
+import unittest
 import oneflow as flow
 import oneflow.unittest
 from oneflow.nn.common_types import _size_1_t
 from packaging import version
 import torch as torch_original
 from typing import Union, Tuple
-
-
 from oneflow.test_utils.automated_test_util import *
 
 NoneType = type(None)
-# Not the same as those in PyTorch because 'output_size' cannot be NoneType (even in 'torch.nn.AdaptiveAvgPoolXd')
 _size_2_opt_t_not_none = Union[int, Tuple[Union[int, NoneType], Union[int, NoneType]]]
 _size_3_opt_t_not_none = Union[
     int, Tuple[Union[int, NoneType], Union[int, NoneType], Union[int, NoneType]]
@@ -46,6 +43,10 @@ class Test_CpuFp16_AdaptiveAvgPool(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @profile(torch.nn.functional.adaptive_avg_pool1d)
+    def profile_adaptive_avg_pool1d(test_case):
+        return torch.nn.functional.adaptive_avg_pool1d(torch.ones(1, 64, 8).half(), 5)
+
     @autotest(n=5, rtol=0.0009)
     def test_adaptive_avgpool2d(test_case):
         m = torch.nn.AdaptiveAvgPool2d(output_size=random().to(_size_2_opt_t_not_none))
@@ -57,29 +58,25 @@ class Test_CpuFp16_AdaptiveAvgPool(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @profile(torch.nn.functional.adaptive_avg_pool1d)
-    def profile_adaptive_avg_pool1d(test_case):
-        return torch.nn.functional.adaptive_avg_pool1d(torch.ones(1, 64, 8).half(), 5)
-
     @profile(torch.nn.functional.adaptive_avg_pool2d)
     def profile_adaptive_avg_pool2d(test_case):
         torch.nn.functional.adaptive_avg_pool2d(torch.ones(1, 64, 10, 9).half(), 7)
         torch.nn.functional.adaptive_avg_pool2d(torch.ones(1, 64, 8, 9).half(), (5, 7))
 
-    # @unittest.skipIf(
-    #     version.parse(torch_original.__version__) < version.parse("1.10.0"),
-    #     "GPU version 'nn.AdaptiveAvgPool3d' has a bug in PyTorch before '1.10.0'",
-    # )
-    # @autotest(n=5, rtol = 0.001, atol = 0.0001)
-    # def test_adaptive_avgpool3d(test_case):
-    #     m = torch.nn.AdaptiveAvgPool3d(output_size=random().to(_size_3_opt_t_not_none))
-    #     m.train(random())
-    #     device = "cpu"
-    #     m.to(device)
-    #     x = random_tensor(ndim=5).to(device)
-    #     x = x.half()
-    #     y = m(x)
-    #     return y
+    @unittest.skipIf(
+        version.parse(torch_original.__version__) < version.parse("1.10.0"),
+        "GPU version 'nn.AdaptiveAvgPool3d' has a bug in PyTorch before '1.10.0'",
+    )
+    @autotest(n=5, rtol=1e-3, atol=1e-03)
+    def test_adaptive_avgpool3d(test_case):
+        m = torch.nn.AdaptiveAvgPool3d(output_size=random().to(_size_3_opt_t_not_none))
+        m.train(random())
+        device = "cpu"
+        m.to(device)
+        x = random_tensor(ndim=5).to(device)
+        x = x.half()
+        y = m(x)
+        return y
 
     @profile(torch.nn.functional.adaptive_avg_pool3d)
     def profile_adaptive_avg_pool3d(test_case):
@@ -95,18 +92,21 @@ class Test_CpuFp16_AdaptiveAvgPoolFunctional(flow.unittest.TestCase):
     def test_adaptive_avgpool1d_functional(test_case):
         device = "cpu"
         x = random_tensor(ndim=3).to(device)
+        x = x.half()
         return torch.nn.functional.adaptive_avg_pool1d(x, output_size=random().to(int))
 
     @autotest(n=5, rtol=0.0009)
     def test_adaptive_avgpool2d_functional(test_case):
         device = "cpu"
         x = random_tensor(ndim=4).to(device)
+        x = x.half()
         return torch.nn.functional.adaptive_avg_pool2d(x, output_size=random().to(int))
 
-    @autotest(n=5, rtol=0.0009)
+    @autotest(n=5, rtol=1e-3, atol=1e-03)
     def test_adaptive_avgpool3d_functional(test_case):
         device = "cpu"
         x = random_tensor(ndim=5).to(device)
+        x = x.half()
         return torch.nn.functional.adaptive_avg_pool3d(x, output_size=random().to(int))
 
 
