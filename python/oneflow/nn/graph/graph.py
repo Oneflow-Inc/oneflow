@@ -1085,7 +1085,6 @@ class Graph(object):
                                 self._state_tensor_tuple[state_idx].device
                             )
                         )
-                        print("fake save ", self._state_op_names[state_idx])
                     else:
                         _state_tensor_tuple4save.append(
                             self._state_tensor_tuple[state_idx]
@@ -1197,8 +1196,6 @@ class Graph(object):
                             assert oneflow.allclose(
                                 state_tensor_from_eager, self._state_tensor_tuple[s_idx]
                             )
-                        else:
-                            print("skip compare with eager of ", s_name)
                         self._state_tensor_tuple[s_idx] = state_tensor_from_eager
 
         self.__build_outputs_buffer()

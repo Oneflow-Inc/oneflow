@@ -130,6 +130,26 @@ def _test_linear_multi_graph_share(test_case, device, with_reshape):
     test_case.assertTrue(np.array_equal(of_lazy_out2.numpy(), of_eager_out2.numpy()))
 
 
+def _get_state_dict_tensor_size(sd):
+    from oneflow.framework.args_tree import ArgsTree
+
+    def _get_tensor_mem(input):
+        # if input.dim() == 0:
+        #     return 2
+        cnt_size = input.element_size() * flow.numel(input)
+        return cnt_size
+
+    args_tree = ArgsTree(sd, False)
+
+    size = 0
+    for arg in args_tree.iter_nodes():
+        if isinstance(arg, flow.Tensor):
+            size += _get_tensor_mem(arg)
+        else:
+            continue
+    return size
+
+
 @_with_new_session
 def _test_linear_multi_graph_save(return_dict, device, with_reshape, with_eager):
     linear = flow.nn.Linear(3, 8, False)
@@ -304,6 +324,10 @@ def _test_linear_multi_graph_load(return_dict, device, with_reshape, state_dict)
 def _graph_save(return_dict, filename, with_eager):
     state_dict = _test_linear_multi_graph_save(
         return_dict, flow.device("cuda"), True, with_eager
+    )
+    print(
+        f"state_dict(with_eager={with_eager}) tensors size ",
+        _get_state_dict_tensor_size(state_dict),
     )
     flow.save(state_dict, filename)
 
