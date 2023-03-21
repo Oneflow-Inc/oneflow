@@ -451,7 +451,7 @@ class FusedApplyRotaryEmbFunctor {
                            const Optional<one::Tensor>& cos,
                            const Optional<one::Tensor>& sin,
                            const Optional<one::Tensor>& position_ids,
-                           const std::string& layout, const int pass_ndims) const {
+                           const std::string& layout, const float theta, const int pass_ndims) const {
     /*
     x: (B, H, M, K)
     x: (B, M, E) <=> (B, M, H, K)
@@ -509,8 +509,8 @@ class FusedApplyRotaryEmbFunctor {
       }
     }
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("layout", "pass_ndims");
-    attrs.SetAllAttrs(layout, pass_ndims);
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("layout", "theta", "pass_ndims");
+    attrs.SetAllAttrs(layout, theta, pass_ndims);
     
     if (position_ids) {
       if (cos && sin) {

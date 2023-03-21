@@ -3774,6 +3774,7 @@ def OneFlow_FusedApplyRotaryEmbOp : OneFlow_BaseOp<"fused_apply_rotary_emb", [No
   );
   let attrs = (ins
     DefaultValuedAttr<StrAttr, "\"BHMK\"">:$layout,
+    DefaultValuedAttr<F32Attr, "1e-4">:$theta,
     DefaultValuedAttr<SI32Attr, "0">:$pass_ndims
   );
   let has_logical_tensor_desc_infer_fn = 1;

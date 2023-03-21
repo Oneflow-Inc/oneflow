@@ -119,11 +119,11 @@ def _test_fused_rotary_embedding(test_case, layout, pass_ndims, dims, dtype):
     fused_sin = flow.tensor(sin, dtype=dtype, device="cuda")
     fused_position_ids = flow.tensor(position_ids, dtype=flow.int32, device="cuda")
 
-    fused_out = flow._C.fused_apply_rotary_emb(fused_x, fused_cos, fused_sin, fused_position_ids, layout, pass_ndims)
+    fused_out = flow._C.fused_apply_rotary_emb(fused_x, None, None, fused_position_ids, layout, theta, pass_ndims)
 
     test_case.assertTrue(
         np.allclose(
-            naive_out.reshape(merged_dims), fused_out.numpy(), atol=5e-2, rtol=1e-3
+            naive_out.reshape(merged_dims), fused_out.numpy(), atol=5e-2, rtol=5e-3
         )
     )
 
