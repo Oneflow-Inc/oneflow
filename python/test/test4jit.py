@@ -1,19 +1,31 @@
-import oneflow.mock_torch as mock
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
 
-mock.enable()
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-import torch
-from torch import nn
+    http://www.apache.org/licenses/LICENSE-2.0
 
-model = nn.Sequential(
-    nn.Linear(5, 3),
-    nn.Linear(3, 1)
-)
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+import oneflow
+from oneflow.test_utils.automated_test_util.torch_flow_dual_object import autotest
 
-if isinstance(model, torch.jit.ScriptModule):
-    print(True)
-else:
-    print(False)
-#原先报错为ModuleNotFoundError: No module named 'oneflow.jit.__ScriptModule'
-#修改后打印信息为TypeError: isinstance() arg 2 must be a type or tuple of types，说明torch.jit.ScriptModule已成功返回空对象，空接口撰写完毕
+@autotest()
+def testcase4module():
+    model = oneflow.nn.Sequential(
+    oneflow.nn.Linear(5, 3),
+    oneflow.nn.Linear(3, 1)
+    )
+    if isinstance(model, oneflow.jit.ScriptModule):
+        return True
+    else:
+        return False
 
+if __name__ == "__main__":
+    testcase4module()
