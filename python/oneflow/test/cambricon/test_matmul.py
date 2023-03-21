@@ -49,6 +49,84 @@ def _test_matmul_forward(test_case, shape, device, dtype):
 
 @flow.unittest.skip_unless_1n1d()
 class TestBatchMatmulCambriconModule(flow.unittest.TestCase):
+    def test_broadcast_matmul_grad_b_grad(test_case):
+        broadcast_dims = [
+            np.random.randint(2, 10) for _ in range(np.random.randint(1, 3))
+        ]
+        m = np.random.randint(2, 10)
+        n = np.random.randint(2, 10)
+        k = np.random.randint(2, 10)
+
+        shape_a = broadcast_dims + [m, k]
+        shape_b = [k, n]
+        shape_y = broadcast_dims + [m, n]
+        dtype = flow.float32
+
+        arr_a = np.random.randn(*shape_a)
+        arr_b = np.random.randn(*shape_b)
+        arr_grad_y = np.random.randn(*shape_y)
+
+        a = flow.tensor(arr_a, device="cpu", dtype=dtype).requires_grad_(True)
+        b = flow.tensor(arr_b, device="cpu", dtype=dtype).requires_grad_(True)
+        y = flow.matmul(a, b)
+
+        a_mlu = flow.tensor(arr_a, device="mlu", dtype=dtype).requires_grad_(True)
+        b_mlu = flow.tensor(arr_b, device="mlu", dtype=dtype).requires_grad_(True)
+        y_mlu = flow.matmul(a_mlu, b_mlu)
+
+        init_grad_y = flow.tensor(arr_grad_y, device="cpu", dtype=dtype).requires_grad_(
+            True
+        )
+        init_grad_y_mlu = flow.tensor(
+            arr_grad_y, device="mlu", dtype=dtype
+        ).requires_grad_(True)
+
+        da = flow.autograd.grad(
+            outputs=y,
+            inputs=a,
+            grad_outputs=init_grad_y,
+            create_graph=True,
+            retain_graph=True,
+        )[0]
+        da_mlu = flow.autograd.grad(
+            outputs=y_mlu,
+            inputs=a_mlu,
+            grad_outputs=init_grad_y_mlu,
+            create_graph=True,
+            retain_graph=True,
+        )[0]
+        test_case.assertTrue(
+            np.allclose(
+                da.detach().cpu().numpy(),
+                da_mlu.detach().cpu().numpy(),
+                rtol=1e-4,
+                atol=1e-4,
+            )
+        )
+
+        db = flow.autograd.grad(
+            outputs=y,
+            inputs=b,
+            grad_outputs=init_grad_y,
+            create_graph=True,
+            retain_graph=True,
+        )[0]
+        db_mlu = flow.autograd.grad(
+            outputs=y_mlu,
+            inputs=b_mlu,
+            grad_outputs=init_grad_y_mlu,
+            create_graph=True,
+            retain_graph=True,
+        )[0]
+        test_case.assertTrue(
+            np.allclose(
+                db.detach().cpu().numpy(),
+                db_mlu.detach().cpu().numpy(),
+                rtol=1e-4,
+                atol=1e-4,
+            )
+        )
+
     def test_matmul(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
