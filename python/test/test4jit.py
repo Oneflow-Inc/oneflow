@@ -15,5 +15,5 @@ if isinstance(model, torch.jit.ScriptModule):
 else:
     print(False)
 #原先报错为ModuleNotFoundError: No module named 'oneflow.jit.__ScriptModule'
-#修改后打印信息为TypeError: isinstance() arg 2 must be a type or tuple of types，说明torch.jit.ScriptModule已成功返回空对象，空接口撰写完毕
+#修改后打印信息为false，修改完毕
 
