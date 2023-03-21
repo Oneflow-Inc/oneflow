@@ -653,9 +653,13 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   }
   patterns.add<CastOpLowering, ScalarMulByTensorOpLowering, ReluOpLowering, Conv2DOpLowering,
                AvgPool2DOpLowering, ReshapeOpLowering, Add2OpLowering, MaxPool2DOpLowering,
-               MatmulOpLowering, BatchMatmulOpLowering, BroadcastAddOpLowering, JobLowering,
-               ReturnOpLowering, InputOpLowering, OutputOpLowering, NormalizationOpLowering,
-               NormalizationInferenceOpLowering, TransposeOpLowering>(typeConverter, context);
+               MatmulOpLowering, BatchMatmulOpLowering, BroadcastAddOpLowering,
+               NormalizationOpLowering, NormalizationInferenceOpLowering, TransposeOpLowering>(
+      typeConverter, context);
+  if (lowerJob) {
+    patterns.add<InputOpLowering, OutputOpLowering, JobLowering, ReturnOpLowering>(typeConverter,
+                                                                                   context);
+  }
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
     signalPassFailure();
     LOG(ERROR) << "Failed to lower OneFlow to Tosa";

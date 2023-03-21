@@ -12,6 +12,8 @@ def LowerOneFlowToTosaPass : Pass<"lower-oneflow-to-tosa", "ModuleOp"> {
            "convert variable op as const op of tosa">,
     Option<"fullyConvert", "full", "bool",
            /*default=*/"true", "Fully convert operations and make OneFlow dialect illegal target">,
+    Option<"lowerJob", "lower-job", "bool",
+           /*default=*/"true", "Convert oneflow.job to func.func">,
   ];
 }
 
