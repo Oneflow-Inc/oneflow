@@ -153,7 +153,8 @@ class OneFlow_ConvolutionBaseOp<string mnemonic, list<Trait> traits = []> :
       SI32ArrayAttr:$kernel_size,
       SI32ArrayAttr:$strides,
       SI32ArrayAttr:$dilation_rate,
-      DefaultValuedAttr<SI32Attr, "1">:$groups
+      DefaultValuedAttr<SI32Attr, "1">:$groups,
+      DefaultValuedAttr<StrAttr, "\"\"">:$tuning_cache
     );
     let trait_attrs = (ins
       I32ElementsAttr:$operand_segment_sizes
