@@ -40,20 +40,33 @@ class CopyNdImpl : public CopyNd {
               const int64_t* dst_dims, const int64_t* dst_pos, const void* src,
               const int64_t* src_dims, const int64_t* src_pos,
               const int64_t* extent) const override {
-    std::vector<int> begin(num_dims, 0);
-    std::vector<int> end(num_dims, 0);
-    std::vector<int> stride(num_dims, 1);
-    for (int i = 0; i < num_dims; ++i) {
-      begin[i] = static_cast<int>(src_pos[i]);
-      end[i] = begin[i] + static_cast<int>(extent[i]);
-    }
     cnnlDataType_t cnnl_data_type = ConvertToCnnlDataType(data_type);
     CnnlTensorDescriptor input_desc, output_desc;
-    input_desc.set(num_dims, src_dims, cnnl_data_type);
-    output_desc.set(num_dims, dst_dims, cnnl_data_type);
-    OF_CNNL_CHECK(cnnlStridedSlice(stream->As<ep::MluStream>()->cnnl_handle(), input_desc.desc(),
-                                   src, begin.data(), end.data(), stride.data(), output_desc.desc(),
-                                   dst));
+    if (num_dims == 0) {
+      input_desc.set(num_dims, src_dims, cnnl_data_type);
+      output_desc.set(num_dims, dst_dims, cnnl_data_type);
+    } else {
+      std::vector<int64_t> src_stride(num_dims, 1);
+      std::vector<int64_t> dst_stride(num_dims, 1);
+
+      int src_offset = src_pos[num_dims - 1];
+      int dst_offset = dst_pos[num_dims - 1];
+      for (int i = num_dims - 2; i >= 0; --i) {
+        src_stride[i] = src_stride[i + 1] * src_dims[i + 1];
+        dst_stride[i] = dst_stride[i + 1] * dst_dims[i + 1];
+        src_offset += src_pos[i] * src_stride[i];
+        dst_offset += dst_pos[i] * dst_stride[i];
+      }
+
+      input_desc.set(num_dims, extent, src_stride.data(), cnnl_data_type);
+      output_desc.set(num_dims, extent, dst_stride.data(), cnnl_data_type);
+
+      src = static_cast<const char*>(src) + src_offset * GetSizeOfDataType(data_type);
+      dst = static_cast<char*>(dst) + dst_offset * GetSizeOfDataType(data_type);
+    }
+
+    OF_CNNL_CHECK(cnnlCopy(stream->As<ep::MluStream>()->cnnl_handle(), input_desc.desc(), src,
+                           output_desc.desc(), dst));
   }
 };
 
