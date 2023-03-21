@@ -15,7 +15,7 @@ limitations under the License.
 """
 import warnings
 from typing import Any, Dict, List, Set, Tuple, Union, Callable
-import oneflow.nn
+import oneflow
 
 def script(
     obj,
