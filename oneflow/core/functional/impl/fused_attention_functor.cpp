@@ -480,7 +480,8 @@ class FusedMultiHeadAttentionInferenceV2Functor {
                                                  "attn_mask_type", "causal_diagonal_offset",
                                                  "query_max_seq_len", "key_max_seq_len", "scale");
     attrs.SetAllAttrs(query_layout, key_tensor_layout, value_tensor_layout, op_output_layout, q_k,
-                      attn_mask_type_val, causal_diagonal_offset, q_m, k_m, scale_value);
+                      attn_mask_type_val, causal_diagonal_offset, query_max_seq_len.value_or(0),
+                      key_max_seq_len.value_or(0), scale_value);
     OpExprCacheKey cache_key{};
     std::vector<std::shared_ptr<one::Tensor>> inputs;
     inputs.emplace_back(query);
