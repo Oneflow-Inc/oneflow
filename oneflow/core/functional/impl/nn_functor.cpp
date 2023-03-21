@@ -923,7 +923,8 @@ class SkipLayerNormFunctor {
     // check shape of x
     const auto& x_shape = *(x->shape());
     CHECK_GE_OR_RETURN(x_shape.NumAxes(), 2)
-        << "number of axes of \'x\' should have be greater than 1, yet get " << x_shape.NumAxes();
+        << "number of axes of \'x\' should be greater than or equal to 2, yet get "
+        << x_shape.NumAxes();
 
     if (gamma) {
       const auto& gamma_shape = *(JUST(gamma)->shape());
@@ -931,7 +932,7 @@ class SkipLayerNormFunctor {
           << "number of axes of \'gamma\' should have be equal to 1, yet get "
           << gamma_shape.NumAxes();
       CHECK_EQ_OR_RETURN(gamma_shape.At(0), x_shape.At(x_shape.NumAxes() - 1))
-          << "dimension 1 of \'gamma\'(" << gamma_shape.At(0)
+          << "the size of \'gamma\'(" << gamma_shape.At(0)
           << ") is not consistant with the last dimension of \'x\'("
           << x_shape.At(x_shape.NumAxes() - 1) << ")";
     }
@@ -955,13 +956,9 @@ class SkipLayerNormFunctor {
           << ") is not consistant with the last dimension of \'x\'("
           << x_shape.At(x_shape.NumAxes() - 1) << ")";
     }
-
-    // check shape of residual
-    bool has_skip = false;
     if (skip) {
       const auto& skip_shape = *(JUST(skip)->shape());
       CHECK_EQ_OR_RETURN(skip_shape, x_shape) << "shape of \'skip\' is not the same as \'x\'";
-      has_skip = true;
     }
 
     // set attributes
@@ -978,28 +975,28 @@ class SkipLayerNormFunctor {
     // construct input tensor tuple
     size_t tensor_index = 1;
     TensorTuple input(nb_inputs);
+    bool has_gamma = false, has_beta = false, has_bias = false, has_skip = false;
     input[0] = x;
     if (gamma) {
       input[tensor_index] = JUST(gamma);
       tensor_index += 1;
+      has_gamma = true;
     }
     if (beta) {
       input[tensor_index] = JUST(beta);
       tensor_index += 1;
+      has_beta = true;
     }
     if (bias) {
       input[tensor_index] = JUST(bias);
       tensor_index += 1;
+      has_bias = true;
     }
     if (skip) {
       input[tensor_index] = JUST(skip);
       tensor_index += 1;
+      has_skip = true;
     }
-
-    bool has_gamma = false, has_beta = false, has_bias = false;
-    if (gamma) { has_gamma = true; }
-    if (beta) { has_beta = true; }
-    if (bias) { has_bias = true; }
 
     return OpInterpUtil::Dispatch<Tensor>(
         *(ops_.find(std::tuple<bool, bool, bool, bool>(has_skip, has_gamma, has_beta, has_bias))

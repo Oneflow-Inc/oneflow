@@ -168,39 +168,54 @@ class SkipLayerNormGpuKernel final : public user_op::OpKernel, public user_op::C
     // obtain x and check its shape
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const ShapeView& x_shape = x->shape_view();
-    CHECK_GT(x_shape.NumAxes(), 1)
-        << "number of axes of \'x\' should have be greater than 1, yet get " << x_shape.NumAxes();
-
-#define GET_GAMMA_BETA_BIAS_AND_SHAPE_CHECK(tensor)                                      \
-  if (ctx->has_input(#tensor, 0)) {                                                      \
-    const user_op::Tensor* tensor = ctx->Tensor4ArgNameAndIndex(#tensor, 0);             \
-    tensor##_shape = tensor->shape_view();                                               \
-    tensor##_ptr = tensor->dptr<T>();                                                    \
-    CHECK_EQ(tensor##_shape.NumAxes(), 1)                                                \
-        << "number of axes of \'" << #tensor << "\' should have be equal to 1, yet get " \
-        << tensor##_shape.NumAxes();                                                     \
-    CHECK_EQ(tensor##_shape.At(0), x_shape.At(x_shape.NumAxes() - 1))                    \
-        << "dimension 1 of \'" << #tensor << "\'(" << tensor##_shape.At(0)               \
-        << ") is not consistant with the last dimension of \'x\'("                       \
-        << x_shape.At(x_shape.NumAxes() - 1) << ")";                                     \
-  }
+    CHECK_GE(x_shape.NumAxes(), 2)
+        << "number of axes of \'x\' should be greater than or equal to 2, yet get "
+        << x_shape.NumAxes();
 
     // obtain gamma and check its shape
     const T* gamma_ptr = nullptr;
     ShapeView gamma_shape;
-    GET_GAMMA_BETA_BIAS_AND_SHAPE_CHECK(gamma);
+    if (ctx->has_input("gamma", 0)) {
+      const user_op::Tensor* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
+      gamma_shape = gamma->shape_view();
+      gamma_ptr = gamma->dptr<T>();
+      CHECK_EQ(gamma_shape.NumAxes(), 1)
+          << "number of axes of \'gamma\' should be equal to 1, yet get " << gamma_shape.NumAxes();
+      CHECK_EQ(gamma_shape.At(0), x_shape.At(x_shape.NumAxes() - 1))
+          << "the size of \'gamma\'(" << gamma_shape.At(0)
+          << ") is not consistant with the last dimension of \'x\'("
+          << x_shape.At(x_shape.NumAxes() - 1) << ")";
+    }
 
     // obtain beta and check its shape
     const T* beta_ptr = nullptr;
     ShapeView beta_shape;
-    GET_GAMMA_BETA_BIAS_AND_SHAPE_CHECK(beta);
+    if (ctx->has_input("beta", 0)) {
+      const user_op::Tensor* beta = ctx->Tensor4ArgNameAndIndex("beta", 0);
+      beta_shape = beta->shape_view();
+      beta_ptr = beta->dptr<T>();
+      CHECK_EQ(beta_shape.NumAxes(), 1)
+          << "number of axes of \'beta\' should be equal to 1, yet get " << beta_shape.NumAxes();
+      CHECK_EQ(beta_shape.At(0), x_shape.At(x_shape.NumAxes() - 1))
+          << "the size of \'beta\'(" << beta_shape.At(0)
+          << ") is not consistant with the last dimension of \'x\'("
+          << x_shape.At(x_shape.NumAxes() - 1) << ")";
+    }
 
     // obtain bias and check its shape
     const T* bias_ptr = nullptr;
     ShapeView bias_shape;
-    GET_GAMMA_BETA_BIAS_AND_SHAPE_CHECK(bias);
-
-#undef GET_GAMMA_BETA_BIAS_AND_SHAPE_CHECK
+    if (ctx->has_input("bias", 0)) {
+      const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
+      bias_shape = bias->shape_view();
+      bias_ptr = bias->dptr<T>();
+      CHECK_EQ(bias_shape.NumAxes(), 1)
+          << "number of axes of \'bias\' should be equal to 1, yet get " << bias_shape.NumAxes();
+      CHECK_EQ(bias_shape.At(0), x_shape.At(x_shape.NumAxes() - 1))
+          << "the size of \'bias\'(" << bias_shape.At(0)
+          << ") is not consistant with the last dimension of \'x\'("
+          << x_shape.At(x_shape.NumAxes() - 1) << ")";
+    }
 
     // obtain residual and check its shape
     const T* skip_ptr = nullptr;

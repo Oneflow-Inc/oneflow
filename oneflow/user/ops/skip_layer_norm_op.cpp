@@ -48,27 +48,40 @@ oneflow::DataType InferParamDataType(const DataType x_data_type) {
     -> Maybe<void> {
   // check shape of x
   const Shape& x_shape = ctx->InputShape("x", 0);
-  CHECK_GT_OR_RETURN(x_shape.NumAxes(), 1)
-      << "number of axes of \'x\' should have be greater than 1, yet get " << x_shape.NumAxes();
-
-#define GAMMA_BETA_BIAS_SHAPE_CHECK(tensor)                                                \
-  const Shape& tensor##_shape = ctx->InputShape(#tensor, 0);                               \
-  CHECK_EQ_OR_RETURN(tensor##_shape.NumAxes(), 1)                                          \
-      << "number of axes of \'" << #tensor << "\' should have be greater than 1, yet get " \
-      << tensor##_shape.NumAxes();                                                         \
-  CHECK_EQ_OR_RETURN(tensor##_shape.At(0), x_shape.At(x_shape.NumAxes() - 1))              \
-      << "dimension 1 of \'" << #tensor << "\'(" << tensor##_shape.At(0)                   \
-      << ") is not consistant with the last dimension of \'x\'("                           \
-      << x_shape.At(x_shape.NumAxes() - 1) << ")";
+  CHECK_GE_OR_RETURN(x_shape.NumAxes(), 2)
+      << "number of axes of \'x\' should have be greater than or equal to 2, yet get "
+      << x_shape.NumAxes();
 
   // check shape of gamma, beta and bias
-  if (ctx->has_input("gamma", 0)) { GAMMA_BETA_BIAS_SHAPE_CHECK(gamma); }
-  if (ctx->has_input("beta", 0)) { GAMMA_BETA_BIAS_SHAPE_CHECK(beta); }
-  if (ctx->has_input("bias", 0)) { GAMMA_BETA_BIAS_SHAPE_CHECK(bias); }
+  if (ctx->has_input("gamma", 0)) {
+    const Shape& gamma_shape = ctx->InputShape("gamma", 0);
+    CHECK_EQ_OR_RETURN(gamma_shape.NumAxes(), 1)
+        << "number of axes of \'gamma\' should be equal to 1, yet get " << gamma_shape.NumAxes();
+    CHECK_EQ_OR_RETURN(gamma_shape.At(0), x_shape.At(x_shape.NumAxes() - 1))
+        << "the size of \'gamma\'(" << gamma_shape.At(0)
+        << ") is not consistant with the last dimension of \'x\'("
+        << x_shape.At(x_shape.NumAxes() - 1) << ")";
+  }
+  if (ctx->has_input("beta", 0)) {
+    const Shape& beta_shape = ctx->InputShape("beta", 0);
+    CHECK_EQ_OR_RETURN(beta_shape.NumAxes(), 1)
+        << "number of axes of \'beta\' should be equal to 1, yet get " << beta_shape.NumAxes();
+    CHECK_EQ_OR_RETURN(beta_shape.At(0), x_shape.At(x_shape.NumAxes() - 1))
+        << "the size of \'beta\'(" << beta_shape.At(0)
+        << ") is not consistant with the last dimension of \'x\'("
+        << x_shape.At(x_shape.NumAxes() - 1) << ")";
+  }
+  if (ctx->has_input("bias", 0)) {
+    const Shape& bias_shape = ctx->InputShape("bias", 0);
+    CHECK_EQ_OR_RETURN(bias_shape.NumAxes(), 1)
+        << "number of axes of \'bias\' should be equal to 1, yet get " << bias_shape.NumAxes();
+    CHECK_EQ_OR_RETURN(bias_shape.At(0), x_shape.At(x_shape.NumAxes() - 1))
+        << "the size of \'bias\'(" << bias_shape.At(0)
+        << ") is not consistant with the last dimension of \'x\'("
+        << x_shape.At(x_shape.NumAxes() - 1) << ")";
+  }
 
-#undef GAMMA_BETA_BIAS_SHAPE_CHECK
-
-  // check shape of residual
+  // check shape of skip
   if (ctx->has_input("skip", 0)) {
     const Shape& skip_shape = ctx->InputShape("skip", 0);
     CHECK_EQ_OR_RETURN(skip_shape, x_shape) << "shape of \'skip\' is not the same as \'x\'";
