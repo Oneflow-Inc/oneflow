@@ -24,6 +24,7 @@ from oneflow.nn.graph.proxy import ProxyTensor
 from oneflow.nn.parameter import Parameter
 from oneflow.nn.utils.clip_grad import clip_grad_norm_
 import oneflow as flow
+from collections import defaultdict, abc as container_abcs
 
 
 class ContiguousParamsUnit(object):
@@ -252,8 +253,8 @@ class Optimizer(object):
             "contiguous_params",
         ]
 
-        self.state = dict()
-        self.defaults = dict()
+        self.state = defaultdict(dict)
+        self.defaults = options
 
     def add_param_group(self, param_group) -> None:
         r"""
