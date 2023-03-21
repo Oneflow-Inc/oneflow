@@ -1012,7 +1012,7 @@ class Graph(object):
             self._enable_save_runtime_state_dict = False
 
     def runtime_state_dict(
-        self, destination=None, with_eager=True
+        self, destination=None, with_eager=False
     ) -> Union[
         Dict[str, Union[Dict[str, Tensor], str]],
         Dict[str, Dict[str, Union[Dict[str, Tensor], str]]],

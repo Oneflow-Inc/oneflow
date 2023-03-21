@@ -115,7 +115,7 @@ class GraphCache(object):
             return graph(*args, **kwargs)
 
     def runtime_state_dict(
-        self, destination=None, with_eager=True,
+        self, destination=None, with_eager=False,
     ) -> Dict[str, Dict[str, Union[Dict[str, Tensor], str]]]:
         if destination is None:
             destination = OrderedDict()
