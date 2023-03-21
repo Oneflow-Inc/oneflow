@@ -90,11 +90,11 @@ T compute_fct(const Shape& in_shape, std::vector<int64_t> dims, fft_norm_mode no
 }
 
 template<typename T, int NDIM>
-void _conj_symmetry(T* data_out, const Shape& shape, const Stride& strides,
-                    std::vector<int64_t> dims, int64_t elem_count) {
+void _conj_symmetry(T* data_out, const Shape& shape, const std::vector<int64_t>& strides,
+                    const std::vector<int64_t>& dims, int64_t elem_count) {
   // const int NDIM = out_shape.size();
-  const oneflow::NdIndexStrideOffsetHelper<int64_t, NDIM> helper(strides.data(), strides.size());
-  std::sort(dims.begin(), dims.end());
+  const oneflow::NdIndexStrideOffsetHelper<int64_t, NDIM> helper(strides.data(), NDIM);
+  // NOTE: dims must be sorted
   int64_t last_dim = dims.back();
   int64_t last_dim_size = shape[last_dim];
   int64_t last_dim_half = last_dim_size / 2;
@@ -117,25 +117,26 @@ void _conj_symmetry(T* data_out, const Shape& shape, const Stride& strides,
 template<typename T>
 void conj_symmetry(T* data_out, const Shape& shape, const Stride& strides,
                    const std::vector<int64_t>& dims, int64_t elem_count) {
-  void (*func)(T* /*data_out*/, const Shape& /*shape*/, const Stride& /*strides*/,
+  void (*func)(T* /*data_out*/, const Shape& /*shape*/, const std::vector<int64_t>& /*strides*/,
                const std::vector<int64_t>& /*dims*/, int64_t /*elem_count*/) = nullptr;
 
   switch (shape.size()) {
-    case 1: _conj_symmetry<T, 1>; break;
-    case 2: _conj_symmetry<T, 2>; break;
-    case 3: _conj_symmetry<T, 3>; break;
-    case 4: _conj_symmetry<T, 4>; break;
-    case 5: _conj_symmetry<T, 5>; break;
-    case 6: _conj_symmetry<T, 6>; break;
-    case 7: _conj_symmetry<T, 7>; break;
-    case 8: _conj_symmetry<T, 8>; break;
-    case 9: _conj_symmetry<T, 9>; break;
-    case 10: _conj_symmetry<T, 10>; break;
-    case 11: _conj_symmetry<T, 11>; break;
-    case 12: _conj_symmetry<T, 12>; break;
+    case 1: func = _conj_symmetry<T, 1>; break;
+    case 2: func = _conj_symmetry<T, 2>; break;
+    case 3: func = _conj_symmetry<T, 3>; break;
+    case 4: func = _conj_symmetry<T, 4>; break;
+    case 5: func = _conj_symmetry<T, 5>; break;
+    case 6: func = _conj_symmetry<T, 6>; break;
+    case 7: func = _conj_symmetry<T, 7>; break;
+    case 8: func = _conj_symmetry<T, 8>; break;
+    case 9: func = _conj_symmetry<T, 9>; break;
+    case 10: func = _conj_symmetry<T, 10>; break;
+    case 11: func = _conj_symmetry<T, 11>; break;
+    case 12: func = _conj_symmetry<T, 12>; break;
     default: UNIMPLEMENTED(); break;
   }
-  _conj_symmetry(data_out, shape, strides, dims, elem_count);
+  std::vector<int64_t> strides_vec (strides.begin(), strides.end());
+  func(data_out, shape, strides_vec, dims, elem_count);
 }
 
 template<DeviceType device_type, typename IN, typename OUT, typename dtype>
@@ -161,4 +162,4 @@ struct FftR2CKernelUtil {
   template struct FftR2CKernelUtil<device_type, in_type_pair, out_type_pair, dtype>;
 
 }  // namespace oneflow
-#endif  // ONEFLOW_USER_KERNEL_UTIL_H_
+#endif  // ONEFLOW_USER_KERNELS_FFT_KERNEL_UTIL_H_

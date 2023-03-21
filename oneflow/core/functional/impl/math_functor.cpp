@@ -4028,6 +4028,7 @@ class FftC2CFunctorGrad : public FftBaseFunctor {
 
     std::vector<int64_t> wrapped_dims(dims.begin(), dims.end());
     maybe_warp_dims(wrapped_dims, x->ndim());
+    std::sort(wrapped_dims.begin(), wrapped_dims.end());
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "forward");
     attrs.SetAllAttrs(wrapped_dims, norm_str, forward);

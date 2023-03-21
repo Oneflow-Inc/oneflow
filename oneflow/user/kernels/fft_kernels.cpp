@@ -54,7 +54,7 @@ void comvert_to_real(const std::complex<T>* in, T* out, size_t n) {
   }
 }
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type, typename IN, typename OUT>
 class FftC2CKernel final : public user_op::OpKernel {
  public:
   FftC2CKernel() = default;
@@ -69,8 +69,8 @@ class FftC2CKernel final : public user_op::OpKernel {
     const auto& norm_str = ctx->Attr<std::string>("norm");
     const auto& dims = ctx->Attr<std::vector<int64_t>>("dims");
 
-    const T* input_ptr = input->dptr<T>();
-    T* out_ptr = out->mut_dptr<T>();
+    const IN* input_ptr = input->dptr<IN>();
+    OUT* out_ptr = out->mut_dptr<OUT>();
 
     Shape input_shape(input->shape_view());
     Shape out_shape(out->shape_view());
@@ -81,11 +81,11 @@ class FftC2CKernel final : public user_op::OpKernel {
       // input_shape,
       //                           const Shape& output_shape, bool forward, const
       //                           std::vector<int64_t>& dims, fft_norm_mode normalization){
-      FftC2CKernelUtil<device_type, std::complex<float>, std::complex<float>, float>::FftC2CForward(
+      FftC2CKernelUtil<device_type, IN, OUT, float>::FftC2CForward(
           ctx->stream(), input_ptr, out_ptr, input_shape, out_shape, input->stride(), out->stride(),
           forward, dims, norm_mode);
     } else if (input->data_type() == kComplex128) {
-      FftC2CKernelUtil<device_type, std::complex<double>, std::complex<double>,
+      FftC2CKernelUtil<device_type, IN, OUT,
                        double>::FftC2CForward(ctx->stream(), input_ptr, out_ptr, input_shape,
                                               out_shape, input->stride(), out->stride(), forward,
                                               dims, norm_mode);
@@ -109,7 +109,7 @@ class FftR2CKernel final : public user_op::OpKernel {
     bool forward = ctx->Attr<bool>("forward");
     bool onesided = ctx->Attr<bool>("onesided");
     const auto& norm_str = ctx->Attr<std::string>("norm");
-    const auto& dims = ctx->Attr<std::vector<int64_t>>("dims");
+    auto& dims = ctx->Attr<std::vector<int64_t>>("dims");
     const IN* input_ptr = input->dptr<IN>();
     OUT* out_ptr = out->mut_dptr<OUT>();
 
@@ -125,11 +125,11 @@ class FftR2CKernel final : public user_op::OpKernel {
     }
 
     if (input->data_type() == kComplex64) {
-      FftR2CKernelUtil<device_type, std::complex<float>, std::complex<float>, float>::FftR2CForward(
+      FftR2CKernelUtil<device_type, IN, OUT, float>::FftR2CForward(
           ctx->stream(), input_ptr, out_ptr, input_shape, out_shape, input->stride(), out->stride(),
           forward, dims, norm_mode);
     } else if (input->data_type() == kComplex128) {
-      FftR2CKernelUtil<device_type, std::complex<double>, std::complex<double>,
+      FftR2CKernelUtil<device_type, IN, OUT,
                        double>::FftR2CForward(ctx->stream(), input_ptr, out_ptr, input_shape,
                                               out_shape, input->stride(), out->stride(), forward,
                                               dims, norm_mode);
@@ -211,13 +211,13 @@ REGISTER_STFT_CPU_KERNEL(double, std::complex<double>)
 REGISTER_STFT_CPU_KERNEL(float, std::complex<float>)
 #endif
 
-#define REGISTER_FFTC2C_KERNELS(device, dtype)                                                \
-  REGISTER_USER_KERNEL("fft_c2c").SetCreateFn<FftC2CKernel<device, dtype>>().SetIsMatchedHob( \
+#define REGISTER_FFTC2C_KERNELS(device, in_dtype, out_dtype)                                                \
+  REGISTER_USER_KERNEL("fft_c2c").SetCreateFn<FftC2CKernel<device, in_dtype, out_dtype>>().SetIsMatchedHob( \
       (user_op::HobDeviceType() == device)                                                    \
-      && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value))
+      && (user_op::HobDataType("input", 0) == GetDataType<in_dtype>::value))
 
-REGISTER_FFTC2C_KERNELS(DeviceType::kCPU, std::complex<float>);
-REGISTER_FFTC2C_KERNELS(DeviceType::kCPU, std::complex<double>);
+REGISTER_FFTC2C_KERNELS(DeviceType::kCPU, std::complex<float>, std::complex<float>);
+REGISTER_FFTC2C_KERNELS(DeviceType::kCPU, std::complex<double>, std::complex<double>);
 
 #define REGISTER_FFTR2C_KERNELS(device, in_dtype, out_dtype)    \
   REGISTER_USER_KERNEL("fft_r2c")                               \
