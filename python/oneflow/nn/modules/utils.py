@@ -47,6 +47,8 @@ _quadruple = _ntuple(4)
 
 
 def _handle_size_arg(size):
+    if len(size) == 0:
+        return size
     assert len(size) > 0, "size of tensor doesn't exists"
     if isinstance(size[0], (list, tuple, flow.Size)):
         assert (
