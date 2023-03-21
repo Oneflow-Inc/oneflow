@@ -1346,9 +1346,14 @@ Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names) {
 
   ForEachOpGraphNecessaryCtrlEdge<&OpGraph::cached_predicator_is_reachable>(
       op_graph, [&](const OpNode* src, const OpNode* dst) {
-        CHECK(src->parallel_desc_sym()->EqualsIgnoringHierarchy(*dst->parallel_desc_sym()))
-            << " src " << src->parallel_desc_sym()->data().DebugString() << " dst "
-            << dst->parallel_desc_sym()->data().DebugString();
+        // CHECK(src->parallel_desc_sym()->EqualsIgnoringHierarchy(*dst->parallel_desc_sym()))
+        //     << " src " << src->parallel_desc_sym()->data().DebugString() << " dst "
+        //     << dst->parallel_desc_sym()->data().DebugString();
+        if (!src->parallel_desc_sym()->EqualsIgnoringHierarchy(*dst->parallel_desc_sym())) {
+          LOG(ERROR) << " src " << src->parallel_desc_sym()->data().DebugString() << " dst "
+                     << dst->parallel_desc_sym()->data().DebugString();
+          return;
+        }
         CHECK_JUST(DoRankDuty(src->parallel_desc(),
                               [&](int64_t rank) { return ConnectCtrlEdges(src, dst, rank); }));
       });
