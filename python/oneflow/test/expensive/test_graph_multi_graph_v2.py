@@ -154,7 +154,7 @@ def _test_linear_multi_graph_save(return_dict, device, with_reshape):
     linear_reshape = LinearReshapeModule()
 
     class LinearGraph(flow.nn.Graph):
-        @flow.nn.Graph.with_dynamic_input_shape()
+        @flow.nn.Graph.with_dynamic_input_shape(size=3)
         def __init__(self):
             super().__init__(enable_get_runtime_state_dict=True)
             self.my_linear = linear_reshape
@@ -198,7 +198,32 @@ def _test_linear_multi_graph_save(return_dict, device, with_reshape):
     test_case1 = np.array_equal(of_lazy_out1.numpy(), of_eager_out1.numpy())
     return_dict["save1"] = test_case1
 
+    input_arr2 = np.array(
+        [
+            [-0.94630778, -0.83378579, -0.87060891],
+            [2.0289922, -0.28708987, -2.18369248],
+        ],
+        dtype=np.float32,
+    )
+    x2 = flow.tensor(input_arr2, device=device)
+    of_lazy_out2 = linear_g(x2)
+    of_eager_out2 = linear_reshape(x2)
+    test_case2 = np.array_equal(of_lazy_out2.numpy(), of_eager_out2.numpy())
+    return_dict["save2"] = test_case2
+
+    input_arr3 = np.array([[-0.94630778, -0.83378579, -0.87060891],], dtype=np.float32,)
+    x3 = flow.tensor(input_arr3, device=device)
+    of_lazy_out3 = linear_g(x3)
+    of_eager_out3 = linear_reshape(x3)
+    test_case3 = np.array_equal(of_lazy_out3.numpy(), of_eager_out3.numpy())
+    return_dict["save3"] = test_case3
+
+    of_lazy_out1 = linear_g(x1)
+    test_case1 = np.array_equal(of_lazy_out1.numpy(), of_eager_out1.numpy())
+    return_dict["save4"] = test_case1
+
     state_dict = linear_g.runtime_state_dict()
+    print("====> saved graphs", state_dict.keys())
     return state_dict
 
 
@@ -226,7 +251,7 @@ def _test_linear_multi_graph_load(return_dict, device, with_reshape, state_dict)
     linear_reshape = LinearReshapeModule()
 
     class LinearGraph(flow.nn.Graph):
-        @flow.nn.Graph.with_dynamic_input_shape(size=4)
+        @flow.nn.Graph.with_dynamic_input_shape(size=2)
         def __init__(self):
             super().__init__()
             self.my_linear = linear_reshape
@@ -272,6 +297,8 @@ def _test_linear_multi_graph_load(return_dict, device, with_reshape, state_dict)
     of_eager_out1 = linear_reshape(x1)
     test_case1 = np.array_equal(of_lazy_out1.numpy(), of_eager_out1.numpy())
     return_dict["load1"] = test_case1
+
+    # TODO(strint): shared from a load graph.
 
 
 def _graph_save(return_dict, filename):
