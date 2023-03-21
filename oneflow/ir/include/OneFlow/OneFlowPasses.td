@@ -35,7 +35,7 @@ def GpuCopyArgPass : Pass<"gpu-copy-arg", "func::FuncOp"> {
   let dependentDialects = ["memref::MemRefDialect", "gpu::GPUDialect"];
 }
 
-def OutlineJitFunctionPass : Pass<"outline-jit-function", "ModuleOp"> {
+def OutlineJitFunctionPass : InterfacePass<"outline-jit-function", "FunctionOpInterface"> {
   let summary = "move ops could be jitted to jit function";
   let constructor = "mlir::oneflow::createOutlineJitFunctionPass()";
   let dependentDialects = ["pdl_interp::PDLInterpDialect", "pdl::PDLDialect"];
