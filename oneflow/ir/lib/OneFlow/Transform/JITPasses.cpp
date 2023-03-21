@@ -6,16 +6,20 @@ namespace oneflow {
 
 namespace {
 
-void createJITOps(Operation* op) {
-  if (!llvm::dyn_cast<OneFlowDialect>(op->getDialect())) { op->dump(); }
-}
+// 1. collect ops to outline
+// 2. create func.func jit ops to call
+// 3. replace the usages with jit ops' results
+
+// entries: non-oneflow ops which have operands are from oneflow ops
+// exits: result consumed by oneflow ops
 
 class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunctionPass> {
   void runOnOperation() override {
-    Operation* op = getOperation();
-    RewritePatternSet patterns(op->getContext());
-    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
-  }
+    FunctionOpInterface func = getOperation();
+    for (auto& op : func.getBody().front()) {
+      if (!llvm::dyn_cast<OneFlowDialect>(op.getDialect())) { op.dump(); }
+    }
+  };
 };
 
 }  // namespace
