@@ -3765,8 +3765,8 @@ def OneFlow_EmbeddingOp : OneFlow_BaseOp<"embedding", [NoSideEffect, DeclareOpIn
 def OneFlow_FusedApplyRotaryEmbOp : OneFlow_BaseOp<"fused_apply_rotary_emb", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x,
-    OneFlow_Tensor:$cos,
-    OneFlow_Tensor:$sin,
+    Optional<OneFlow_Tensor>:$cos,
+    Optional<OneFlow_Tensor>:$sin,
     Optional<OneFlow_Tensor>:$position_ids
   );
   let output = (outs

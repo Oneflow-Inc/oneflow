@@ -74,17 +74,17 @@ def _test_fused_rotary_embedding(test_case, layout, pass_ndims, dims, dtype):
     cos = np.array(
         [
             [math.cos(m * (theta ** (2 * (i // 2) / K))) for i in range(K)]
-            for m in range(M)
+            for m in range(2*M)
         ]
     )
     sin = np.array(
         [
             [math.sin(m * (theta ** (2 * (i // 2) / K))) for i in range(K)]
-            for m in range(M)
+            for m in range(2*M)
         ]
     )
 
-    position_ids = np.random.randint(M, size=(B, M, 2), dtype=int)
+    position_ids = np.random.randint(M, size=(B, 2, M), dtype=int)
 
     #position_ids = np.array([[[m for i in range(2)] for m in range(M)] for b in range(B)])
 
@@ -92,14 +92,14 @@ def _test_fused_rotary_embedding(test_case, layout, pass_ndims, dims, dtype):
 
     naive_cos = np.array(
         [[
-            [math.cos(position_ids[b, m, i // ((K - pass_ndims)//2)] * (theta ** (2 * (i // 2) / K))) if i < K - pass_ndims else 1 for i in range(K)]
+            [math.cos(position_ids[b, i // ((K - pass_ndims)//2), m] * (theta ** (2 * (i // 2) / K))) if i < K - pass_ndims else 1 for i in range(K)]
             for m in range(M)
         ] for b in range(B)]
     )
 
     naive_sin = np.array(
         [[
-            [math.sin(position_ids[b, m, i // ((K - pass_ndims)//2)] * (theta ** (2 * (i // 2) / K))) if i < K - pass_ndims else 0 for i in range(K)]
+            [math.sin(position_ids[b, i // ((K - pass_ndims)//2), m] * (theta ** (2 * (i // 2) / K))) if i < K - pass_ndims else 0 for i in range(K)]
             for m in range(M)
         ] for b in range(B)]
     )

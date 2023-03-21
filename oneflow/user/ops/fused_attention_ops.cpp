@@ -489,29 +489,48 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
 /* static */ Maybe<void> FusedApplyRotaryEmbOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
-  const user_op::TensorDesc& cos_desc = ctx->InputTensorDesc("cos", 0);
-  const user_op::TensorDesc& sin_desc = ctx->InputTensorDesc("sin", 0);
   const std::string& layout = ctx->Attr<std::string>("layout");
   const int pass_ndims = ctx->Attr<int>("pass_ndims");
 
-  CHECK_EQ_OR_RETURN(cos_desc.shape().NumAxes(), 2);
-  CHECK_EQ_OR_RETURN(sin_desc.shape().NumAxes(), 2);
-  CHECK_OR_RETURN(cos_desc.shape() == sin_desc.shape());
-
   int64_t b, m, h, k;
+  bool has_cos = ctx->has_input("cos", 0);
+  bool has_sin = ctx->has_input("sin", 0);
   //TODO: fused_apply_rotary_emb have same logic no matter name
-  ParseDims(x_desc.shape(), layout, Optional<int64_t>(), Optional<int64_t>(cos_desc.shape().At(1)), 
-    &b, &m, &h, &k);
+  if (has_cos && has_sin) {
+    const user_op::TensorDesc& cos_desc = ctx->InputTensorDesc("cos", 0);
+    const user_op::TensorDesc& sin_desc = ctx->InputTensorDesc("sin", 0);
+    CHECK_EQ_OR_RETURN(cos_desc.shape().NumAxes(), 2);
+    CHECK_EQ_OR_RETURN(sin_desc.shape().NumAxes(), 2);
+    CHECK_OR_RETURN(cos_desc.shape() == sin_desc.shape());
+    ParseDims(x_desc.shape(), layout, Optional<int64_t>(), Optional<int64_t>(cos_desc.shape().At(1)), 
+      &b, &m, &h, &k);
+  } else if (!has_cos && !has_sin) {
+    ParseDims(x_desc.shape(), layout, Optional<int64_t>(), Optional<int64_t>(), 
+      &b, &m, &h, &k);
+  } else {
+    UNIMPLEMENTED_THEN_RETURN();
+  }
 
   if (ctx->has_input("position_ids", 0)) { 
     const user_op::TensorDesc& position_ids_desc = ctx->InputTensorDesc("position_ids", 0);
     CHECK_LE_OR_RETURN(position_ids_desc.shape().NumAxes(), 3); //TODO: supported shape should be discussed
     CHECK_EQ_OR_RETURN(position_ids_desc.shape().At(0), b);
-    CHECK_EQ_OR_RETURN(position_ids_desc.shape().At(1), m);
+    CHECK_GE_OR_RETURN(position_ids_desc.shape().At(2), m);
   }
 
   CHECK_LE_OR_RETURN(pass_ndims, k);
-  CHECK_EQ_OR_RETURN(cos_desc.shape().At(0), m); // K of cos & sin is checked inside ParseDims
+
+  if (ctx->has_input("position_ids", 0)) {
+    if (has_cos && has_sin) {
+      const user_op::TensorDesc& cos_desc = ctx->InputTensorDesc("cos", 0);
+      CHECK_GE_OR_RETURN(cos_desc.shape().At(0), m); // K of cos & sin is checked inside ParseDims
+    }
+  } else {
+    if (has_cos && has_sin) {
+      const user_op::TensorDesc& cos_desc = ctx->InputTensorDesc("cos", 0);
+      CHECK_EQ_OR_RETURN(cos_desc.shape().At(0), m); // K of cos & sin is checked inside ParseDims
+    }
+  }
 
   ctx->SetOutputShape("out", 0, x_desc.shape());
   return Maybe<void>::Ok();
@@ -529,15 +548,20 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
 
 /* static */ Maybe<void> FusedApplyRotaryEmbOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& first_in_desc = ctx->InputTensorDesc("x", 0);
-  const user_op::TensorDesc& cos_desc = ctx->InputTensorDesc("cos", 0);
-  const user_op::TensorDesc& sin_desc = ctx->InputTensorDesc("sin", 0);
 
-  CHECK_EQ_OR_RETURN(cos_desc.data_type(), first_in_desc.data_type())
-        << "InferDataType Failed. Expected " << DataType_Name(first_in_desc.data_type())
-        << ", but got " << DataType_Name(cos_desc.data_type());
-  CHECK_EQ_OR_RETURN(sin_desc.data_type(), first_in_desc.data_type())
-        << "InferDataType Failed. Expected " << DataType_Name(first_in_desc.data_type())
-        << ", but got " << DataType_Name(sin_desc.data_type());
+  bool has_sinuous = ctx->has_input("cos", 0);
+
+  if (has_sinuous) {
+    const user_op::TensorDesc& cos_desc = ctx->InputTensorDesc("cos", 0);
+    const user_op::TensorDesc& sin_desc = ctx->InputTensorDesc("sin", 0);
+
+    CHECK_EQ_OR_RETURN(cos_desc.data_type(), first_in_desc.data_type())
+          << "InferDataType Failed. Expected " << DataType_Name(first_in_desc.data_type())
+          << ", but got " << DataType_Name(cos_desc.data_type());
+    CHECK_EQ_OR_RETURN(sin_desc.data_type(), first_in_desc.data_type())
+          << "InferDataType Failed. Expected " << DataType_Name(first_in_desc.data_type())
+          << ", but got " << DataType_Name(sin_desc.data_type());
+  }
 
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   out_desc->set_data_type(first_in_desc.data_type());
