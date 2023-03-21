@@ -13,10 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow
-from oneflow.test_utils.automated_test_util.torch_flow_dual_object import autotest
+import unittest
 
-@autotest()
+import oneflow as flow
+import oneflow.unittest
+import numpy as np
+
+
+@flow.unittest.skip_unless_1n1d()
 def testcase4module():
     model = oneflow.nn.Sequential(
     oneflow.nn.Linear(5, 3),
@@ -28,4 +32,4 @@ def testcase4module():
         return False
 
 if __name__ == "__main__":
-    testcase4module()
+    unittest.main()
