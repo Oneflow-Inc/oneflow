@@ -173,8 +173,11 @@ int64_t ShiftNegativeAxis(int64_t axis, const int64_t num_axes) {
   return axis;
 }
 
+// Fix compile errors in clang
+#ifdef __clang__
 Shape::Shape(std::initializer_list<int64_t> dim_vec)
     : DimVector(dim_vec.begin(), dim_vec.end()), is_initialized_(true) {}
+#endif
 Shape::Shape(const std::vector<int64_t>& dim_vec)
     : DimVector(dim_vec.begin(), dim_vec.end()), is_initialized_(true) {}
 Shape::Shape(const DimVector& dim_vec) : DimVector(dim_vec), is_initialized_(true) {}
