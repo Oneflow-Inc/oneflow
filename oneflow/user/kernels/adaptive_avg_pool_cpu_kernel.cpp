@@ -115,7 +115,7 @@ void AvgBackwardCompute(user_op::KernelComputeContext* ctx, const int32_t& dim) 
             int64_t iw0 = start_index(ow, out.At(4), in.At(4));
             int64_t iw1 = end_index(ow, out.At(4), in.At(4));
             int64_t kw = iw1 - iw0;
-            T grad_delta = static_cast<T>(out_ptr[od * output_image_size + oh * output_width + ow]/ kd / kh / kw);
+            T grad_delta = static_cast<T>(out_ptr[od * output_image_size + oh * output_width + ow] / kd / kh / kw);
             FOR_RANGE(int64_t, id, id0, id1) {
               FOR_RANGE(int64_t, ih, ih0, ih1) {
                 FOR_RANGE(int64_t, iw, iw0, iw1) {
@@ -141,7 +141,7 @@ class AdaptivePool1DCpuKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    if (std::is_same<T, float16>::value) {
+    if (GetDataType<T>::value == kFloat16) {
       AvgForwardCompute<T, float>(ctx, 1);
     } else {
       AvgForwardCompute<T, T>(ctx, 1);
@@ -159,7 +159,7 @@ class AdaptivePool2DCpuKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    if (std::is_same<T, float16>::value) {
+    if (GetDataType<T>::value == kFloat16) {
       AvgForwardCompute<T, float>(ctx, 2);
     } else {
       AvgForwardCompute<T, T>(ctx, 2);
@@ -177,7 +177,7 @@ class AdaptivePool3DCpuKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    if (std::is_same<T, float16>::value) {
+    if (GetDataType<T>::value == kFloat16) {
       AvgForwardCompute<T, float>(ctx, 3);
     } else {
       AvgForwardCompute<T, T>(ctx, 3);
