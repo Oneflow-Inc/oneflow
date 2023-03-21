@@ -5,7 +5,8 @@
 // RUN: -pass-pipeline="oneflow.job(tosa-to-linalg-named)" \
 // RUN: -pass-pipeline="oneflow.job(tosa-to-linalg)" \
 // RUN: -linalg-fuse-elementwise-ops \
-// RUN: -canonicalize -pass-pipeline="oneflow.job(outline-jit-function)"
+// RUN: -canonicalize -pass-pipeline="oneflow.job(outline-jit-function)" \
+// RUN: | FileCheck --dump-input=always %s
 
 // CHECK: linalg.generic
 // CHECK-NOT: oneflow.softmax
