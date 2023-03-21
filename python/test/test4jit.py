@@ -1,17 +1,12 @@
-import oneflow.mock_torch as mock
-
-mock.enable()
-
-import torch
-from torch import nn
+import oneflow
 
 @autotest()
 def testcase4module():
-    model = nn.Sequential(
-    nn.Linear(5, 3),
-    nn.Linear(3, 1)
+    model = oneflow.nn.Sequential(
+    oneflow.nn.Linear(5, 3),
+    oneflow.nn.Linear(3, 1)
     )
-    if isinstance(model, torch.jit.ScriptModule):
+    if isinstance(model, oneflow.jit.ScriptModule):
         print(True)
     else:
         print(False)
