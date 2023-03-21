@@ -56,6 +56,7 @@ oneflow_add_mlir_dialect_library(
   Conversion/PTXToCubin.cpp
   Transform/BufferHostRegister.cpp
   Transform/OutlineAndFuse.cpp
+  Transform/JITPasses.cpp
   Transform/AutoNhwc.cpp
   Transform/ConvertInferenceOp.cpp
   Transform/AggregateOps.cpp
