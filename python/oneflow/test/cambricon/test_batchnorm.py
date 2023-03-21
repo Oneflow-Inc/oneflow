@@ -24,14 +24,18 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def _test_batchnorm2d_forward(test_case, shape, device, dtype):
-    arr = np.random.randn(*shape)
+def _test_batchnorm2d_forward(test_case, shape, affine, device, dtype):
+    arr = np.random.randn(*shape) * 3
     # NOTE: mlu batchnorm only support NHWC format tensor as input, so need permutation.
     x1 = flow.tensor(arr, device=flow.device(device), dtype=dtype)
     x2 = flow.tensor(arr, device="cpu", dtype=dtype)
     m1 = (
         flow.nn.BatchNorm2d(
-            num_features=int(x1.shape[1]), track_running_stats=True, affine=False
+            num_features=int(x1.shape[1]),
+            track_running_stats=True,
+            affine=affine,
+            eps=1e-05,
+            momentum=0.1,
         )
         .eval()
         .to(flow.device(device))
@@ -39,7 +43,11 @@ def _test_batchnorm2d_forward(test_case, shape, device, dtype):
 
     m2 = (
         flow.nn.BatchNorm2d(
-            num_features=int(x2.shape[1]), track_running_stats=True, affine=False
+            num_features=int(x2.shape[1]),
+            track_running_stats=True,
+            affine=affine,
+            eps=1e-05,
+            momentum=0.1,
         )
         .eval()
         .to("cpu")
@@ -59,6 +67,7 @@ class TestBatchNormCambriconModule(flow.unittest.TestCase):
             _test_batchnorm2d_forward,
         ]
         arg_dict["shape"] = [(2, 3, 4, 5), (1, 2, 3, 4), (5, 6, 7, 8)]
+        arg_dict["affine"] = [True]
         arg_dict["device"] = ["mlu"]
         arg_dict["dtype"] = [flow.float32]
         for arg in GenArgList(arg_dict):
