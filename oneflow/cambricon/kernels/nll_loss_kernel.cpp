@@ -58,12 +58,6 @@ class MluNLLKernel final : public user_op::OpKernel {
     target_desc.set(target);
     output_desc.set(output);
 
-    int64_t element_size = GetSizeOfDataType(out_weight->data_type());
-    // we only use the 0 index out_weight, so out_weight shoule be filled by zero.
-    if (out_weight->shape_view().elem_cnt() > 1) {
-      AutoMemset(ctx->stream(), out_weight->mut_dptr(), 0,
-                 out_weight->shape_view().elem_cnt() * element_size, out_weight->mem_case());
-    }
     int64_t out_weight_size[1] = {1};
     out_weight_desc.set(1, out_weight_size, ConvertToCnnlDataType(out_weight->data_type()));
 
@@ -114,6 +108,38 @@ class MluNLLKernel final : public user_op::OpKernel {
         /* total_filter   */ out_weight->mut_dptr(),
         /* y_desc         */ output_desc.desc(),
         /* y              */ output->mut_dptr()));
+
+    // execute cnnlNlllossForward again to compute out_weight.
+    {
+      void* mean_y = static_cast<char*>(workspace) + workspace_size;
+
+      OF_CNNL_CHECK(cnnlNlllossForward(
+          /* handle         */ ctx->stream()->As<ep::MluStream>()->cnnl_handle(),
+          /* algorithm      */ CNNL_REDUCTION_MEAN,
+          /* workspace      */ workspace,
+          /* workspace_size */ workspace_size,
+          /* x_desc         */ input_desc.desc(),
+          /* x              */ input->dptr(),
+          /* t_desc         */ target_desc.desc(),
+          /* target         */ target->dptr(),
+          /* ignore_index   */ ignore_index,
+          /* w_desc         */ weight_desc.desc(),
+          /* filter         */ weight_dptr,
+          /* tf_desc        */ out_weight_desc.desc(),
+          /* total_filter   */ out_weight->mut_dptr(),
+          /* y_desc         */ out_weight_desc.desc(),
+          /* y              */ mean_y));
+
+      // out_weight[i] = none_loss[i] / mean_loss
+      OF_CNNL_CHECK(cnnlGetDivWorkspaceSize(ctx->stream()->As<ep::MluStream>()->cnnl_handle(),
+                                            output_desc.desc(), out_weight_desc.desc(),
+                                            output_desc.desc(), &workspace_size));
+      CnnlWorkspace div_workspace(ctx->stream()->As<ep::MluStream>(), workspace_size);
+      OF_CNNL_CHECK(cnnlDiv_v2(ctx->stream()->As<ep::MluStream>()->cnnl_handle(),
+                               CNNL_COMPUTATION_HIGH_PRECISION, output_desc.desc(), output->dptr(),
+                               out_weight_desc.desc(), mean_y, div_workspace.dptr(), workspace_size,
+                               output_desc.desc(), out_weight->mut_dptr()));
+    }
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

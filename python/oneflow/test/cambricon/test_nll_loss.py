@@ -68,10 +68,8 @@ class TestNLLLossCambriconModule(flow.unittest.TestCase):
             (16, 32,),
             (8, 12, 24),
         ]
-        # TODO: mean is not supported since out_weight is 0 when reduction type
-        # is CNNL_REDUCTION_NONE for cnnl cnnlNlllossForward
         arg_dict["reduction"] = [
-            # "mean",
+            "mean",
             "sum",
             "none",
         ]
