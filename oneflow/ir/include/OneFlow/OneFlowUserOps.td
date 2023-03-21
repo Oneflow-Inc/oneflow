@@ -5341,6 +5341,10 @@ def OneFlow_FusedMatmulBiasOp : OneFlow_BaseOp<"fused_matmul_bias", [NoSideEffec
   let output = (outs
     OneFlow_Tensor:$out
   );
+  let attrs = (ins
+    DefaultValuedAttr<F64Attr, "1.">:$alpha,
+    DefaultValuedAttr<F64Attr, "1.">:$beta
+  );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_data_type_infer_fn = 1;
