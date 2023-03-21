@@ -529,14 +529,15 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
 
 /* static */ Maybe<void> FusedApplyRotaryEmbOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& first_in_desc = ctx->InputTensorDesc("x", 0);
+  const user_op::TensorDesc& cos_desc = ctx->InputTensorDesc("cos", 0);
+  const user_op::TensorDesc& sin_desc = ctx->InputTensorDesc("sin", 0);
 
-  for (const auto& in_arg_pair : ctx->inputs()) {
-    const user_op::TensorDesc& in_desc =
-        ctx->InputTensorDesc(in_arg_pair.first, in_arg_pair.second);
-    CHECK_EQ_OR_RETURN(in_desc.data_type(), first_in_desc.data_type())
+  CHECK_EQ_OR_RETURN(cos_desc.data_type(), first_in_desc.data_type())
         << "InferDataType Failed. Expected " << DataType_Name(first_in_desc.data_type())
-        << ", but got " << DataType_Name(in_desc.data_type());
-  }
+        << ", but got " << DataType_Name(cos_desc.data_type());
+  CHECK_EQ_OR_RETURN(sin_desc.data_type(), first_in_desc.data_type())
+        << "InferDataType Failed. Expected " << DataType_Name(first_in_desc.data_type())
+        << ", but got " << DataType_Name(sin_desc.data_type());
 
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   out_desc->set_data_type(first_in_desc.data_type());

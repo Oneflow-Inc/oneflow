@@ -55,14 +55,18 @@ def shuffle_adjacent_two_elem(x, dims):
 
 
 def _test_fused_rotary_embedding(test_case, layout, pass_ndims, dims, dtype):
-    theta = 1e-4
+    theta = 1e-1
 
     if layout == "BHMK":
+        B = dims[0]
+        H = dims[1]
         M = dims[2]
         K = dims[3]
         merged_dims = dims  # no merge
     else:
+        B = dims[0]
         M = dims[1]
+        H = dims[2]
         K = dims[3]
         merged_dims = [dims[0], dims[1], dims[2] * dims[3]]
 
@@ -80,22 +84,42 @@ def _test_fused_rotary_embedding(test_case, layout, pass_ndims, dims, dtype):
         ]
     )
 
+    position_ids = np.random.randint(M, size=(B, M, 2), dtype=int)
+
+    #position_ids = np.array([[[m for i in range(2)] for m in range(M)] for b in range(B)])
+
     y = shuffle_adjacent_two_elem(x, merged_dims)
 
+    naive_cos = np.array(
+        [[
+            [math.cos(position_ids[b, m, i // ((K - pass_ndims)//2)] * (theta ** (2 * (i // 2) / K))) if i < K - pass_ndims else 1 for i in range(K)]
+            for m in range(M)
+        ] for b in range(B)]
+    )
+
+    naive_sin = np.array(
+        [[
+            [math.sin(position_ids[b, m, i // ((K - pass_ndims)//2)] * (theta ** (2 * (i // 2) / K))) if i < K - pass_ndims else 0 for i in range(K)]
+            for m in range(M)
+        ] for b in range(B)]
+    )
+
+
     if layout == "BHMK":
-        naive_out = x * cos + y * sin
+        naive_out = x * naive_cos.reshape([B, 1, M, K]) + y * naive_sin.reshape([B, 1, M, K])
     else:
-        naive_out = x.reshape(dims) * cos.reshape([1, M, 1, K]) + y.reshape(
+        naive_out = x.reshape(dims) * naive_cos.reshape([B, M, 1, K]) + y.reshape(
             dims
-        ) * sin.reshape(
-            [1, M, 1, K]
+        ) * naive_sin.reshape(
+            [B, M, 1, K]
         )  # un-merge
 
     fused_x = flow.tensor(x, dtype=dtype, device="cuda")
     fused_cos = flow.tensor(cos, dtype=dtype, device="cuda")
     fused_sin = flow.tensor(sin, dtype=dtype, device="cuda")
+    fused_position_ids = flow.tensor(position_ids, dtype=flow.int32, device="cuda")
 
-    fused_out = flow._C.fused_apply_rotary_emb(fused_x, fused_cos, fused_sin, None, layout, pass_ndims)
+    fused_out = flow._C.fused_apply_rotary_emb(fused_x, fused_cos, fused_sin, fused_position_ids, layout, pass_ndims)
 
     test_case.assertTrue(
         np.allclose(
@@ -103,16 +127,15 @@ def _test_fused_rotary_embedding(test_case, layout, pass_ndims, dims, dtype):
         )
     )
 
-
 @flow.unittest.skip_unless_1n1d()
 class TestFusedRotaryEmbedding(flow.unittest.TestCase):
     def test_fused_rotary_embedding_op(test_case):
         args_dict = OrderedDict()
         args_dict["test_fun"] = [_test_fused_rotary_embedding]
         args_dict["layout"] = ["BHMK"]
-        args_dict["pass_ndims"] = [0]
-        args_dict["dims"] = [(1,1,1,4), (1,1,5,4), (1,3,1,4), (1,3,5,4), (2,1,1,4), (2,1,5,4), (2,3,1,4), (2,3,5,4)]
-        #args_dict["dims"] = [(1, 65536, 1024, 2), (1, 65536, 512, 4), (1, 65536, 256, 8)]
+        args_dict["pass_ndims"] = [48]
+        args_dict["dims"] = [(1,1,1,64), (1,1,5,64), (1,3,1,64), (1,3,5,64), (2,1,1,64), (2,1,5,64), (2,3,1,64), (2,3,5,64)]
+        #args_dict["dims"] = [(32, 2048, 32, 64)]
         args_dict["dtype"] = [flow.float16]
 
         for arg in GenArgList(args_dict):

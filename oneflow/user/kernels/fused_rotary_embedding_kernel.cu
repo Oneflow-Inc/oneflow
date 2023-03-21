@@ -137,18 +137,21 @@ struct FusedApplyRotaryEmbParam {
   const T* x;
   const T* cos;
   const T* sin;
-  const T* position_ids;
+  const int* position_ids;
   T* out;
   int pass_ndims;
-  int rotary_emb_dim;
+  int rotary_emb_dim; //TODO: dispatch
   IndexType num_elements;
   IndexType k;
   IndexType offset;
   IndexType x_stride[num_dims];
+  IndexType position_stride[num_dims];
+  IndexType position_mask[num_dims];
   IndexType sinuous_stride[num_dims];
   IndexType sinuous_mask[num_dims];
 
-  FusedApplyRotaryEmbParam(const T* x, const T* cos, const T* sin, const T* position_ids,T* out, const int pass_ndims,
+//TODO: position_id type? for now it is int32
+  FusedApplyRotaryEmbParam(const T* x, const T* cos, const T* sin, const int* position_ids, T* out, const int pass_ndims,
                                     const int rotary_emb_dim, const IndexType num_elements, 
                                     const IndexType k, const IndexType offset)
       : x(x), cos(cos), sin(sin), position_ids(position_ids), out(out), pass_ndims(pass_ndims), 
@@ -160,26 +163,36 @@ __global__ void FusedApplyRotaryEmbFetchKernel(FusedApplyRotaryEmbParam<T, Index
   const T* x = param.x;
   const T* cos = param.cos;
   const T* sin = param.sin;
+  const int* position_ids = param.position_ids;
   T* out = param.out;
   const IndexType packed_k = param.k / pack_size;
   const IndexType packed_pass_ndims = param.pass_ndims / pack_size;
-  const IndexType packed_rotary_emb_dim = packed_k - packed_pass_ndims;
-  const IndexType rotary_num_elements = param.num_elements / packed_k  * packed_rotary_emb_dim;
+  const IndexType packed_rotary_ndims = packed_k - packed_pass_ndims;
+  const IndexType rotary_num_elements = param.num_elements / packed_k  * packed_rotary_ndims;
   for (IndexType packed_offset = threadIdx.x + blockIdx.x * blockDim.x; packed_offset < rotary_num_elements;
        packed_offset += blockDim.x * gridDim.x) {
     using LoadPack = cuda::elementwise::Packed<T, pack_size>;
-    IndexType offset = param.offset + (packed_offset % packed_rotary_emb_dim + packed_offset / packed_rotary_emb_dim * packed_k) * pack_size;
+    IndexType offset = param.offset + (packed_offset % packed_rotary_ndims + packed_offset / packed_rotary_ndims * packed_k) * pack_size;
     const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + offset);
     const LoadPack x_vec = *x_load;
     IndexType sinuous_offset = 0;
+    IndexType position_id_offset = 0;
+    IndexType k_index = 0;
 
     IndexType temp_offset = offset;
 #pragma unloop
     for (int i = 0; i < num_dims; i++) {
       IndexType index = temp_offset / param.x_stride[i];
+      if (i == num_dims-1) k_index = index;
       temp_offset = temp_offset - index * param.x_stride[i];
-      sinuous_offset = sinuous_offset + (index * param.sinuous_mask[i] * param.sinuous_stride[i]);
+      position_id_offset = position_id_offset + (index * param.position_mask[i] * param.position_stride[i]);
     }
+
+    position_id_offset = position_id_offset + k_index * param.rotary_emb_dim / (param.k - param.pass_ndims);
+
+    const int position = position_ids[position_id_offset];
+
+    sinuous_offset = position * param.k + k_index;
     
     const LoadPack* cos_load = reinterpret_cast<const LoadPack*>(cos + sinuous_offset);
     const LoadPack* sin_load = reinterpret_cast<const LoadPack*>(sin + sinuous_offset);
@@ -202,7 +215,7 @@ __global__ void FusedApplyRotaryEmbFetchKernel(FusedApplyRotaryEmbParam<T, Index
       packed_offset += blockDim.x * gridDim.x) {
     using LoadPack = cuda::elementwise::Packed<T, pack_size>;
     IndexType offset = param.offset + 
-      (packed_rotary_emb_dim + (packed_offset - rotary_num_elements) % packed_pass_ndims 
+      (packed_rotary_ndims + (packed_offset - rotary_num_elements) % packed_pass_ndims 
         + (packed_offset - rotary_num_elements) / packed_pass_ndims * packed_k) * pack_size;
     const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + offset);
     const LoadPack x_vec = *x_load;
@@ -217,7 +230,7 @@ __global__ void FusedApplyRotaryEmbComputeKernel(FusedApplyRotaryEmbParam<T, Ind
 }
 
 template<typename T, typename IndexType, size_t pack_size, size_t num_dims>
-void LaunchKernel(const T* x, const T* cos, const T* sin, const T* position_ids, T* out, const std::string& layout, 
+void LaunchKernel(const T* x, const T* cos, const T* sin, const int* position_ids, T* out, const std::string& layout, 
                     const int pass_ndims, const int rotary_emb_dim, const int64_t b,
                     const int64_t m, const int64_t h, const int64_t k, const int64_t b_stride, 
                     const int64_t m_stride, const int64_t h_stride, const int64_t offset, 
@@ -236,7 +249,7 @@ void LaunchKernel(const T* x, const T* cos, const T* sin, const T* position_ids,
 
   struct FusedApplyRotaryEmbParam<T, IndexType, num_dims> param(
       reinterpret_cast<const T*>(x), reinterpret_cast<const T*>(cos),
-      reinterpret_cast<const T*>(sin), reinterpret_cast<const T*>(position_ids), reinterpret_cast<T*>(out), pass_ndims, rotary_emb_dim,
+      reinterpret_cast<const T*>(sin), reinterpret_cast<const int*>(position_ids), reinterpret_cast<T*>(out), pass_ndims, rotary_emb_dim,
       num_elements, k, offset);
 
   std::pair<char, std::int64_t> strides[num_dims];
@@ -245,7 +258,7 @@ void LaunchKernel(const T* x, const T* cos, const T* sin, const T* position_ids,
   strides[2] = {'m', m_stride};
   strides[3] = {'k', 1};
 
-  auto GetDim = [&](const char c) {
+  auto GetDimX = [&](const char c) {
     if (c == 'b') {
         return b;
     } else if (c == 'h') {
@@ -263,7 +276,7 @@ void LaunchKernel(const T* x, const T* cos, const T* sin, const T* position_ids,
     if (pair1.second > pair2.second) {
         return true;
     } else if (pair1.second == pair2.second) {
-        if (GetDim(pair1.first) != 1) {
+        if (GetDimX(pair1.first) != 1) {
             return true;
         }
         return false;
@@ -273,7 +286,7 @@ void LaunchKernel(const T* x, const T* cos, const T* sin, const T* position_ids,
     return pair1.second > pair2.second;
   });
 
-// K has to be the last dimension, therefore sinuous_stride has to be [k, k, k, 1]
+// K has to be the last dimension, only k&m matters, therefore strides other than k&m does not really needs to be computed
 #pragma unloop
   for (int i = 0; i < num_dims; i++) {
     param.x_stride[i] = strides[i].second;
@@ -284,6 +297,28 @@ void LaunchKernel(const T* x, const T* cos, const T* sin, const T* position_ids,
     } else if (strides[i].first == 'k') {
       param.sinuous_mask[i] = 1;
       param.sinuous_stride[i] = 1;
+    }
+  }
+
+  IndexType position_shape[num_dims];
+
+  for (int i = 0; i < num_dims; i++) {
+    if (strides[i].first == 'k') {
+      position_shape[i] = rotary_emb_dim;
+    } else if (strides[i].first == 'h') {
+      position_shape[i] = 1;
+    } else {
+      position_shape[i] = GetDimX(strides[i].first);
+    }
+  }
+  param.position_stride[num_dims-1] = 1;
+  param.position_mask[num_dims-1] = 0;
+
+  for (int i = num_dims-2; i >= 0; i--) {
+    param.position_stride[i] = param.position_stride[i+1] * position_shape[i+1];
+    param.position_mask[i] = 1;
+    if (position_shape[i] == 1 || strides[i].first == 'k') {
+      param.position_mask[i] = 0;
     }
   }
 
@@ -299,14 +334,14 @@ void LaunchKernel(const T* x, const T* cos, const T* sin, const T* position_ids,
 }
 
 template<typename T, typename IndexType, size_t num_dims>
-void DispatchPackSize(const T* x, const T* cos, const T* sin, const T* position_ids, T* out, const std::string& layout, 
+void DispatchPackSize(const T* x, const T* cos, const T* sin, const int* position_ids, T* out, const std::string& layout, 
                       const int pass_ndims, const int rotary_emb_dim, const IndexType b, 
                       const IndexType m, const IndexType h, const IndexType k, const IndexType b_stride,
                       const IndexType m_stride, const IndexType h_stride, const IndexType offset, 
                       IndexType num_elements) {
   const auto CheckPackSize = [&](const size_t pack_size) {
     bool r = (((reinterpret_cast<uintptr_t>(x) % (sizeof(T) * pack_size)) == 0)
-              && (((k - pass_ndims) % pack_size) == 0) && ((pass_ndims % pack_size) == 0) && ((16 / sizeof(T)) >= pack_size));
+              && ((((k - pass_ndims) / 2) % pack_size) == 0) && ((pass_ndims % pack_size) == 0) && ((16 / sizeof(T)) >= pack_size));
     return r;
   };
 
@@ -326,7 +361,7 @@ void DispatchPackSize(const T* x, const T* cos, const T* sin, const T* position_
 }
 
 template<typename T, size_t num_dims>
-void DispatchIndex(const T* x, const T* cos, const T* sin, const T* position_ids, T* out, const std::string& layout, 
+void DispatchIndex(const T* x, const T* cos, const T* sin, const int* position_ids, T* out, const std::string& layout, 
   const int pass_ndims, const int rotary_emb_dim, const int64_t b, const int64_t m, const int64_t h, const int64_t k, const int64_t b_stride, 
   const int64_t m_stride, const int64_t h_stride, const int64_t offset) {
   int64_t num_elements = b * m * h * k;
@@ -383,7 +418,7 @@ class FusedApplyRotaryEmbKernel final : public user_op::OpKernel {
     // TODO: hard code num_dims & seems redundant template problem...
     DispatchIndex<T, N>(
         reinterpret_cast<const T*>(x->dptr()), reinterpret_cast<const T*>(cos->dptr()),
-        reinterpret_cast<const T*>(sin->dptr()), position_ids ? reinterpret_cast<const T*>(position_ids->dptr()) :
+        reinterpret_cast<const T*>(sin->dptr()), position_ids ? reinterpret_cast<const int*>(position_ids->dptr()) :
           nullptr, reinterpret_cast<T*>(out->mut_dptr()), layout, pass_ndims, rotary_emb_dim,
         b, m, h, k, b_stride, m_stride, h_stride, offset);
   }
