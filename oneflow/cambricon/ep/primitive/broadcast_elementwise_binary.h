@@ -27,7 +27,8 @@ namespace mlu {
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAdd) \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSub) \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMul) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kDiv)
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kDiv) \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kPow)
 
 #define MLU_BINARY_LOGICAL_OP_SEQ               \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kEqual)        \
@@ -70,6 +71,7 @@ GET_BINARY_MATH_COMPUTE_DATA_TYPE(BinaryOp::kMul, int64_t, int32_t);
 GET_BINARY_MATH_COMPUTE_DATA_TYPE(BinaryOp::kMul, uint64_t, int32_t);
 GET_BINARY_MATH_COMPUTE_DATA_TYPE(BinaryOp::kDiv, int64_t, float);
 GET_BINARY_MATH_COMPUTE_DATA_TYPE(BinaryOp::kDiv, uint64_t, float);
+GET_BINARY_MATH_COMPUTE_DATA_TYPE(BinaryOp::kPow, int32_t, float);
 
 #undef GET_BINARY_MATH_COMPUTE_DATA_TYPE
 

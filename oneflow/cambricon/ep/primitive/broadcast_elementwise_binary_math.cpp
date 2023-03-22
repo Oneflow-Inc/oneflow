@@ -125,6 +125,21 @@ struct BinaryMathImpl<BinaryOp::kDiv, T> {
   }
 };
 
+template<typename T>
+struct BinaryMathImpl<BinaryOp::kPow, T> {
+  void operator()(Stream* stream, cnnlDataType_t cnnl_dtype, cnnlTensorDescriptor_t src0_desc,
+                  const void* src0, cnnlTensorDescriptor_t src1_desc, const void* src1,
+                  cnnlTensorDescriptor_t dst_desc, void* dst) {
+    size_t workspace_size = 0;
+    OF_CNNL_CHECK(cnnlGetPowWorkspaceSize(stream->As<ep::MluStream>()->cnnl_handle(), src0_desc,
+                                          src1_desc, dst_desc, &workspace_size));
+    CnnlWorkspace workspace(stream->As<ep::MluStream>(), workspace_size);
+    cnnlComputationPreference_t prefer = CNNL_COMPUTATION_HIGH_PRECISION;
+    OF_CNNL_CHECK(cnnlPow(stream->As<ep::MluStream>()->cnnl_handle(), prefer, src0_desc, src0,
+                          src1_desc, src1, workspace.dptr(), workspace_size, dst_desc, dst));
+  }
+};
+
 template<BinaryOp op, typename T>
 class BinaryMath : public BroadcastElementwiseBinary {
  public:
