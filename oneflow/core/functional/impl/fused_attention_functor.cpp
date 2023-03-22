@@ -424,25 +424,25 @@ class FusedAttentionConcatPastKeyValueFunctor {
 class FusedApplyRotaryEmbFunctor {
  public:
   FusedApplyRotaryEmbFunctor() {
-    op_with_position_sinuous = CHECK_JUST(one::OpBuilder("fused_apply_rotary_emb")
+    op_with_position_sinuous_ = CHECK_JUST(one::OpBuilder("fused_apply_rotary_emb")
                          .Input("x")
                          .Input("cos")
                          .Input("sin")
                          .Input("position_ids")
                          .Output("out")
                          .Build());
-    op_with_position = CHECK_JUST(one::OpBuilder("fused_apply_rotary_emb")
+    op_with_position_ = CHECK_JUST(one::OpBuilder("fused_apply_rotary_emb")
                          .Input("x")
                          .Input("position_ids")
                          .Output("out")
                          .Build());
-    op_without_position = CHECK_JUST(one::OpBuilder("fused_apply_rotary_emb")
+    op_without_position_ = CHECK_JUST(one::OpBuilder("fused_apply_rotary_emb")
                          .Input("x")
                          .Input("cos")
                          .Input("sin")
                          .Output("out")
                          .Build());
-    op_without_position_sinuous = CHECK_JUST(one::OpBuilder("fused_apply_rotary_emb")
+    op_without_position_sinuous_ = CHECK_JUST(one::OpBuilder("fused_apply_rotary_emb")
                          .Input("x")
                          .Output("out")
                          .Build());
@@ -451,19 +451,9 @@ class FusedApplyRotaryEmbFunctor {
                            const Optional<one::Tensor>& cos,
                            const Optional<one::Tensor>& sin,
                            const Optional<one::Tensor>& position_ids,
-                           const std::string& layout, const int k_size, const float theta, const int pass_ndims) const {
-    /*
-    x: (B, H, M, K)
-    x: (B, M, E) <=> (B, M, H, K)
-    cos: (M, K)
-    sin: (M, K)
-    */
-
-    
+                           const std::string& x_layout, const int k_size, const float base, const int pass_ndims) const {    
 
     int64_t b, m, h, k;
-    //TODO: fused_apply_rotary_emb have same logic no matter name
-    
 
     if (cos && sin) {
       CHECK_EQ_OR_RETURN(JUST(cos)->shape()->NumAxes(), 2)
@@ -472,10 +462,10 @@ class FusedApplyRotaryEmbFunctor {
           << Error::RuntimeError() << "The number of dimensions of sin should be equal to 2.";
       CHECK_OR_RETURN(JUST(cos)->shape() == JUST(sin)->shape())
           << Error::RuntimeError() << "Each dimension of cos & sin should be the same.";
-      ParseDims("", *x->shape(), layout, Optional<int64_t>(), Optional<int64_t>(JUST(cos)->shape()->At(1)), 
+      ParseDims("x", *x->shape(), x_layout, Optional<int64_t>(), Optional<int64_t>(JUST(cos)->shape()->At(1)), 
         &b, &m, &h, &k);
     } else if (!cos && !sin) {
-      ParseDims("", *x->shape(), layout, Optional<int64_t>(), k_size ? Optional<int64_t>(k_size) : Optional<int64_t>(), 
+      ParseDims("x", *x->shape(), x_layout, Optional<int64_t>(), k_size ? Optional<int64_t>(k_size) : Optional<int64_t>(), 
         &b, &m, &h, &k);
     } else {
       UNIMPLEMENTED_THEN_RETURN()
@@ -514,29 +504,29 @@ class FusedApplyRotaryEmbFunctor {
       }
     }
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("layout", "k_size", "theta", "pass_ndims");
-    attrs.SetAllAttrs(layout, k_size, theta, pass_ndims);
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("x_layout", "k_size", "base", "pass_ndims");
+    attrs.SetAllAttrs(x_layout, k_size, base, pass_ndims);
     
     if (position_ids) {
       if (cos && sin) {
-        return OpInterpUtil::Dispatch<Tensor>(*op_with_position_sinuous, {x, JUST(cos), JUST(sin), JUST(position_ids)}, attrs);
+        return OpInterpUtil::Dispatch<Tensor>(*op_with_position_sinuous_, {x, JUST(cos), JUST(sin), JUST(position_ids)}, attrs);
       } else {
-        return OpInterpUtil::Dispatch<Tensor>(*op_with_position, {x, JUST(position_ids)}, attrs);
+        return OpInterpUtil::Dispatch<Tensor>(*op_with_position_, {x, JUST(position_ids)}, attrs);
       }
     } else {
       if (cos && sin) {
-        return OpInterpUtil::Dispatch<Tensor>(*op_without_position, {x, JUST(cos), JUST(sin)}, attrs);
+        return OpInterpUtil::Dispatch<Tensor>(*op_without_position_, {x, JUST(cos), JUST(sin)}, attrs);
       } else {
-        return OpInterpUtil::Dispatch<Tensor>(*op_without_position_sinuous, {x}, attrs);
+        return OpInterpUtil::Dispatch<Tensor>(*op_without_position_sinuous_, {x}, attrs);
       }
     }
   }
 
  private:
-  std::shared_ptr<OpExpr> op_with_position;
-  std::shared_ptr<OpExpr> op_with_position_sinuous;
-  std::shared_ptr<OpExpr> op_without_position;
-  std::shared_ptr<OpExpr> op_without_position_sinuous;
+  std::shared_ptr<OpExpr> op_with_position_;
+  std::shared_ptr<OpExpr> op_with_position_sinuous_;
+  std::shared_ptr<OpExpr> op_without_position_;
+  std::shared_ptr<OpExpr> op_without_position_sinuous_;
 };
 
 }  // namespace impl

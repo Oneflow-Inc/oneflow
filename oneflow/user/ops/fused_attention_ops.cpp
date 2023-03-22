@@ -489,7 +489,7 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
 /* static */ Maybe<void> FusedApplyRotaryEmbOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
-  const std::string& layout = ctx->Attr<std::string>("layout");
+  const std::string& x_layout = ctx->Attr<std::string>("x_layout");
   const int pass_ndims = ctx->Attr<int>("pass_ndims");
   const int k_size = ctx->Attr<int>("k_size");
 
@@ -503,10 +503,10 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
     CHECK_EQ_OR_RETURN(cos_desc.shape().NumAxes(), 2);
     CHECK_EQ_OR_RETURN(sin_desc.shape().NumAxes(), 2);
     CHECK_OR_RETURN(cos_desc.shape() == sin_desc.shape());
-    ParseDims(x_desc.shape(), layout, Optional<int64_t>(), Optional<int64_t>(cos_desc.shape().At(1)), 
+    ParseDims(x_desc.shape(), x_layout, Optional<int64_t>(), Optional<int64_t>(cos_desc.shape().At(1)), 
       &b, &m, &h, &k);
   } else if (!has_cos && !has_sin) {
-    ParseDims(x_desc.shape(), layout, Optional<int64_t>(), k_size ? Optional<int64_t>(k_size) : Optional<int64_t>(), 
+    ParseDims(x_desc.shape(), x_layout, Optional<int64_t>(), k_size ? Optional<int64_t>(k_size) : Optional<int64_t>(), 
       &b, &m, &h, &k);
   } else {
     UNIMPLEMENTED_THEN_RETURN();
@@ -514,7 +514,7 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
 
   if (ctx->has_input("position_ids", 0)) { 
     const user_op::TensorDesc& position_ids_desc = ctx->InputTensorDesc("position_ids", 0);
-    CHECK_LE_OR_RETURN(position_ids_desc.shape().NumAxes(), 3); //TODO: supported shape should be discussed
+    CHECK_EQ_OR_RETURN(position_ids_desc.shape().NumAxes(), 3); //TODO: supported shape should be discussed
     CHECK_EQ_OR_RETURN(position_ids_desc.shape().At(0), b);
     CHECK_GE_OR_RETURN(position_ids_desc.shape().At(2), m);
   }
