@@ -342,8 +342,8 @@ class FusedLinearWithGroupwiseQuantizedWeightFunctor {
       const auto w_dequantized = JUST(functional::GroupwiseDequantize(
           w, w_scale, w_zero, num_bits, symmetric, group_dim, group_size));
       if (b) {
-        return JUST(
-            functional::FusedMatmulBias(x, w_dequantized, JUST(b), Optional<one::Tensor>()));
+        return JUST(functional::FusedMatmulBias(x, w_dequantized, JUST(b), Optional<one::Tensor>(),
+                                                1.0, 1.0));
       } else {
         return JUST(functional::MatMul(x, w_dequantized, false, true, 1.0));
       }
