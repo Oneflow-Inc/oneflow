@@ -36,7 +36,7 @@ void UniformIntDistribution<DeviceType::kCPU, T>::operator()(
     ep::Stream* stream, const int64_t elem_cnt, T* dptr,
     const std::shared_ptr<one::Generator>& generator) const {
   CHECK_GE(elem_cnt, 0);
-  auto gen = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
+  auto gen = CHECK_JUST(generator->Get<ep::CPUGenerator>());
   // std::uniform_int_distribution generates [low, high], but we want [low, high) here
   CPUUniformIntDistributionImpl<T> impl(low_, high_ - 1);
   for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = impl(gen->engine()); }

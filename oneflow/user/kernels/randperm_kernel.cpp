@@ -81,7 +81,7 @@ class CpuRandPermKernel final : public user_op::OpKernel {
     auto* distribution_state = dynamic_cast<DistributionKernelState*>(state);
     CHECK_NOTNULL(distribution_state);
     const auto& generator = distribution_state->generator();
-    const auto& cpu_generator = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
+    const auto& cpu_generator = CHECK_JUST(generator->Get<ep::CPUGenerator>());
     CHECK_NOTNULL(generator);
     if (cache == nullptr) {
       user_op::ArangeFunctor<DeviceType::kCPU, int32_t>()(ctx->stream(), 0, 1, n, output);

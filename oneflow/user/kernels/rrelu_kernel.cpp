@@ -72,9 +72,9 @@ class CpuRReluKernel final : public user_op::OpKernel {
     CHECK_NOTNULL(distribution_state);
     const auto& generator = distribution_state->generator();
     CHECK_NOTNULL(generator);
-    auto cpu_gen = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
+    auto cpu_gen = CHECK_JUST(generator->Get<ep::CPUGenerator>());
     std::lock_guard<std::mutex> lock(cpu_gen->mutex_);
-    one::pytorch_mt19937_engine& engine = cpu_gen->torch_engine();
+    ep::pytorch_mt19937_engine& engine = cpu_gen->torch_engine();
 
     FOR_RANGE(int64_t, i, 0, size) {
       if (*(in_ptr + i) >= 0) {

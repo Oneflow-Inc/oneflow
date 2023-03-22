@@ -35,14 +35,14 @@ class RandomMaskGenerator<DeviceType::kCPU> final {
   OF_DISALLOW_COPY_AND_MOVE(RandomMaskGenerator);
   RandomMaskGenerator(const std::shared_ptr<one::Generator>& generator,
                       const int device_index = -1) {
-    generator_ = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>(device_index));
+    generator_ = CHECK_JUST(generator->Get<ep::CPUGenerator>(device_index));
   }
   ~RandomMaskGenerator() = default;
 
   void Generate(ep::Stream* stream, int64_t n, float rate, bool* mask);
 
  private:
-  std::shared_ptr<one::CPUGeneratorImpl> generator_;
+  std::shared_ptr<ep::CPUGenerator> generator_;
 };
 
 #ifdef WITH_CUDA
@@ -52,14 +52,14 @@ class RandomMaskGenerator<DeviceType::kCUDA> final {
   OF_DISALLOW_COPY_AND_MOVE(RandomMaskGenerator);
   RandomMaskGenerator(const std::shared_ptr<one::Generator>& generator,
                       const int device_index = -1) {
-    generator_ = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>(device_index));
+    generator_ = CHECK_JUST(generator->Get<ep::CUDAGenerator>(device_index));
   }
   ~RandomMaskGenerator() = default;
 
   void Generate(ep::Stream* stream, int64_t n, float rate, bool* mask);
 
  private:
-  std::shared_ptr<one::CUDAGeneratorImpl> generator_;
+  std::shared_ptr<ep::CUDAGenerator> generator_;
 };
 #endif
 

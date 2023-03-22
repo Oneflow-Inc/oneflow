@@ -50,7 +50,7 @@ class BernoulliKerenl final : public user_op::OpKernel {
     CHECK_NOTNULL(kernel_state);
     const auto& generator = kernel_state->generator();
     CHECK_NOTNULL(generator);
-    const auto& cpu_generator = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
+    const auto& cpu_generator = CHECK_JUST(generator->Get<ep::CPUGenerator>());
 
     double p = ctx->Attr<double>("p");
     // prob != -1 means use prob instead of tensor to generate random number
