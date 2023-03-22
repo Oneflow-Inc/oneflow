@@ -9,6 +9,4 @@ def skip_init(module_cls, *args, **kwargs):
   
   final_device = kwargs.pop('device', 'cpu')
   kwargs['device'] = 'meta'
-  # return module_cls(*args, **kwargs).to_empty(device=final_device)
-  module_obj = module_cls(*args, **kwargs)
-  return module_obj.to_empty(device=final_device)
+  return module_cls(*args, **kwargs).to_empty(device=final_device)
