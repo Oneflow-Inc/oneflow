@@ -30,6 +30,7 @@ REGISTER_EXPONENTIAL_KERNEL(DeviceType::kCPU, double)
 #ifdef WITH_CUDA
 REGISTER_EXPONENTIAL_KERNEL(DeviceType::kCUDA, float)
 REGISTER_EXPONENTIAL_KERNEL(DeviceType::kCUDA, double)
+REGISTER_EXPONENTIAL_KERNEL(DeviceType::kCUDA, half)
 #endif  // WITH_CUDA
 
 }  // namespace

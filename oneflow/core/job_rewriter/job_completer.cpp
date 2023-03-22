@@ -259,6 +259,12 @@ Maybe<void> JobCompleter::UpdateSharedGraphForNewInput(
   auto op_graph = std::make_unique<OpGraph>(*job);
   op_graph->DumpLogicalBlobDesc(job);
 
+#ifdef WITH_CUTLASS
+  // Warmup cutlass conv with new input shape.
+  JobPassCtx job_pass_ctx(GlobalJobDesc());
+  JUST(JobPass4Name("CutlassConvTuningWarmupPass")(job, &job_pass_ctx));
+#endif  // WITH_CUTLASS
+
   JUST(CheckAndLogOpGraph(*job));
   return Maybe<void>::Ok();
 }

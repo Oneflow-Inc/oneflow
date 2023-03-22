@@ -216,6 +216,7 @@ UNARY_METHOD(PyTensorObject_log2, functional::Log2);
 UNARY_METHOD(PyTensorObject_log10, functional::Log10);
 UNARY_METHOD(PyTensorObject_reciprocal, functional::Reciprocal);
 UNARY_METHOD(PyTensorObject_ceil, functional::Ceil);
+UNARY_METHOD(PyTensorObject_ceil_, functional::Ceil_);
 UNARY_METHOD(PyTensorObject_erf, functional::Erf);
 UNARY_METHOD(PyTensorObject_erfc, functional::Erfc);
 UNARY_METHOD(PyTensorObject_erfinv, functional::Erfinv);
@@ -226,6 +227,7 @@ UNARY_METHOD(PyTensorObject_rsqrt, functional::Rsqrt);
 UNARY_METHOD(PyTensorObject_sqrt, functional::Sqrt);
 UNARY_METHOD(PyTensorObject_square, functional::Square);
 UNARY_METHOD(PyTensorObject_round, functional::Round);
+UNARY_METHOD(PyTensorObject_round_, functional::Round_);
 UNARY_METHOD(PyTensorObject_t, functional::TransposeAllDimFunction);
 UNARY_METHOD(PyTensorObject_isnan, functional::IsNan);
 UNARY_METHOD(PyTensorObject_isinf, functional::IsInf);
@@ -299,6 +301,7 @@ DIRECT_PASS_FUNC(PyTensorObject_logsumexp, functional::logsumexp)
 DIRECT_PASS_FUNC(PyTensorObject_maximum, functional::maximum)
 DIRECT_PASS_FUNC(PyTensorObject_minimum, functional::minimum)
 DIRECT_PASS_FUNC(PyTensorObject_tril, functional::tril)
+DIRECT_PASS_FUNC(PyTensorObject_tril_, functional::tril_)
 DIRECT_PASS_FUNC(PyTensorObject_triu, functional::triu)
 DIRECT_PASS_FUNC(PyTensorObject_triu_, functional::triu_)
 DIRECT_PASS_FUNC(PyTensorObject_softmax, functional::softmax)
@@ -327,8 +330,11 @@ DIRECT_PASS_FUNC(PyTensorObject_bernoulli_, functional::bernoulli_)
 DIRECT_PASS_FUNC(PyTensorObject_bincount, functional::bincount)
 DIRECT_PASS_FUNC(PyTensorObject_isclose, functional::isclose)
 DIRECT_PASS_FUNC(PyTensorObject_broadcast_to, functional::broadcast_to)
+DIRECT_PASS_FUNC(PyTensorObject_lerp, functional::lerp)
+DIRECT_PASS_FUNC(PyTensorObject_lerp_, functional::lerp_)
 DIRECT_PASS_FUNC(PyTensorObject_unique, functional::unique)
 DIRECT_PASS_FUNC(PyTensorObject_topk, functional::topk)
+DIRECT_PASS_FUNC(PyTensorObject_quantile, functional::quantile)
 DIRECT_PASS_FUNC(PyTensorObject_bitwise_and, functional::bitwise_and)
 DIRECT_PASS_FUNC(PyTensorObject_bitwise_or, functional::bitwise_or)
 DIRECT_PASS_FUNC(PyTensorObject_bitwise_xor, functional::bitwise_xor)
@@ -1054,6 +1060,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"maximum", (PyCFunction)PyTensorObject_maximum, METH_VARARGS | METH_KEYWORDS, NULL},
     {"minimum", (PyCFunction)PyTensorObject_minimum, METH_VARARGS | METH_KEYWORDS, NULL},
     {"tril", (PyCFunction)PyTensorObject_tril, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"tril_", (PyCFunction)PyTensorObject_tril_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"triu", (PyCFunction)PyTensorObject_triu, METH_VARARGS | METH_KEYWORDS, NULL},
     {"triu_", (PyCFunction)PyTensorObject_triu_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"softmax", (PyCFunction)PyTensorObject_softmax, METH_VARARGS | METH_KEYWORDS, NULL},
@@ -1083,6 +1090,8 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"bincount", (PyCFunction)PyTensorObject_bincount, METH_VARARGS | METH_KEYWORDS, NULL},
     {"isclose", (PyCFunction)PyTensorObject_isclose, METH_VARARGS | METH_KEYWORDS, NULL},
     {"broadcast_to", (PyCFunction)PyTensorObject_broadcast_to, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"lerp", (PyCFunction)PyTensorObject_lerp, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"lerp_", (PyCFunction)PyTensorObject_lerp_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"unique", (PyCFunction)PyTensorObject_unique, METH_VARARGS | METH_KEYWORDS, NULL},
     {"topk", (PyCFunction)PyTensorObject_topk, METH_VARARGS | METH_KEYWORDS, NULL},
     {"bitwise_and", (PyCFunction)PyTensorObject_bitwise_and, METH_VARARGS | METH_KEYWORDS, NULL},
@@ -1132,6 +1141,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"atan", PyTensorObject_atan, METH_NOARGS, NULL},
     {"arctan", PyTensorObject_atan, METH_NOARGS, NULL},
     {"ceil", PyTensorObject_ceil, METH_NOARGS, NULL},
+    {"ceil_", PyTensorObject_ceil_, METH_NOARGS, NULL},
     {"cos", PyTensorObject_cos, METH_NOARGS, NULL},
     {"cosh", PyTensorObject_cosh, METH_NOARGS, NULL},
     {"erf", PyTensorObject_erf, METH_NOARGS, NULL},
@@ -1144,6 +1154,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"sqrt", PyTensorObject_sqrt, METH_NOARGS, NULL},
     {"square", PyTensorObject_square, METH_NOARGS, NULL},
     {"round", PyTensorObject_round, METH_NOARGS, NULL},
+    {"round_", PyTensorObject_round_, METH_NOARGS, NULL},
     {"t", PyTensorObject_t, METH_NOARGS, NULL},
     {"sin", PyTensorObject_sin, METH_NOARGS, NULL},
     {"sin_", PyTensorObject_sin_, METH_NOARGS, NULL},
@@ -1162,6 +1173,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"permute", (PyCFunction)PyTensorObject_permute, METH_VARARGS | METH_KEYWORDS, NULL},
     {"transpose", (PyCFunction)PyTensorObject_transpose, METH_VARARGS | METH_KEYWORDS, NULL},
     {"logsumexp", (PyCFunction)PyTensorObject_logsumexp, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"quantile", (PyCFunction)PyTensorObject_quantile, METH_VARARGS | METH_KEYWORDS, NULL},
     {NULL},
 };
 
