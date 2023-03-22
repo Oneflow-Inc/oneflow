@@ -140,8 +140,8 @@ struct FusedApplyRotaryEmbParam {
   const int* position_ids;
   T* out;
   T theta;
-  int pass_ndims;
-  int rotary_emb_dim; //TODO: dispatch
+  int64_t pass_ndims;
+  int64_t rotary_emb_dim; //TODO: dispatch
   IndexType num_elements;
   IndexType k;
   IndexType sinuous_m;
@@ -153,7 +153,7 @@ struct FusedApplyRotaryEmbParam {
   IndexType sinuous_mask[num_dims];
 
 //TODO: position_id type? for now it is int32
-  FusedApplyRotaryEmbParam(const T* x, const T* cos, const T* sin, const int* position_ids, T* out, const T theta, const int pass_ndims,
+  FusedApplyRotaryEmbParam(const T* x, const T* cos, const T* sin, const int* position_ids, T* out, const T theta, const int64_t pass_ndims,
                                     const int rotary_emb_dim, const IndexType num_elements, 
                                     const IndexType k, const IndexType sinuous_m,const IndexType offset)
       : x(x), cos(cos), sin(sin), position_ids(position_ids), out(out), theta(theta), pass_ndims(pass_ndims), 
@@ -427,7 +427,7 @@ __global__ void FusedApplyRotaryEmbComputeKernel(FusedApplyRotaryEmbParam<T, Ind
 
 template<typename T, typename IndexType, size_t pack_size, size_t num_dims>
 void LaunchKernel(const T* x, const T* cos, const T* sin, const int* position_ids, T* out, const int64_t* position_shape, const std::string& x_layout, 
-                    const T theta, const int pass_ndims, const int rotary_emb_dim, const int64_t b,
+                    const T theta, const int64_t pass_ndims, const int rotary_emb_dim, const int64_t b,
                     const int64_t m, const int64_t h, const int64_t k, const int64_t b_stride, 
                     const int64_t m_stride, const int64_t h_stride, const int64_t offset, 
                     IndexType num_elements) {
@@ -524,7 +524,7 @@ void LaunchKernel(const T* x, const T* cos, const T* sin, const int* position_id
 
 template<typename T, typename IndexType, size_t num_dims>
 void DispatchPackSize(const T* x, const T* cos, const T* sin, const int* position_ids, T* out, const int64_t* position_shape, const std::string& x_layout, 
-                      const T theta, const int pass_ndims, const int rotary_emb_dim, const IndexType b, 
+                      const T theta, const int64_t pass_ndims, const int rotary_emb_dim, const IndexType b, 
                       const IndexType m, const IndexType h, const IndexType k, const IndexType b_stride,
                       const IndexType m_stride, const IndexType h_stride, const IndexType offset, 
                       IndexType num_elements) {
@@ -551,7 +551,7 @@ void DispatchPackSize(const T* x, const T* cos, const T* sin, const int* positio
 
 template<typename T, size_t num_dims>
 void DispatchIndex(const T* x, const T* cos, const T* sin, const int* position_ids, T* out, const int64_t* position_shape, const std::string& x_layout, 
-  const T theta, const int pass_ndims, const int rotary_emb_dim, const int64_t b, const int64_t m, const int64_t h, const int64_t k, const int64_t b_stride, 
+  const T theta, const int64_t pass_ndims, const int rotary_emb_dim, const int64_t b, const int64_t m, const int64_t h, const int64_t k, const int64_t b_stride, 
   const int64_t m_stride, const int64_t h_stride, const int64_t offset) {
   int64_t num_elements = b * m * h * k;
   if (num_elements < (1 << 30)) {
@@ -583,8 +583,8 @@ class FusedApplyRotaryEmbKernel final : public user_op::OpKernel {
     user_op::Tensor* position_ids = nullptr;
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const std::string& x_layout = ctx->Attr<std::string>("x_layout");
-    const int k_size = ctx->Attr<int>("k_size");
-    const int pass_ndims = ctx->Attr<int>("pass_ndims");
+    const int64_t k_size = ctx->Attr<int64_t>("k_size");
+    const int64_t pass_ndims = k_size - ctx->Attr<int64_t>("rotary_size");
     const float theta = 1.0f / ctx->Attr<float>("base");
     int rotary_emb_dim = 1;
 

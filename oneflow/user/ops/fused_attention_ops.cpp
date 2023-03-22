@@ -490,8 +490,8 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
     user_op::InferContext* ctx) {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   const std::string& x_layout = ctx->Attr<std::string>("x_layout");
-  const int pass_ndims = ctx->Attr<int>("pass_ndims");
-  const int k_size = ctx->Attr<int>("k_size");
+  const int64_t rotary_size = ctx->Attr<int64_t>("rotary_size");
+  const int64_t k_size = ctx->Attr<int64_t>("k_size");
 
   int64_t b, m, h, k;
   bool has_cos = ctx->has_input("cos", 0);
@@ -519,7 +519,7 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
     CHECK_GE_OR_RETURN(position_ids_desc.shape().At(2), m);
   }
 
-  CHECK_LE_OR_RETURN(pass_ndims, k);
+  CHECK_LE_OR_RETURN(rotary_size, k);
   if (k_size) {
     CHECK_EQ_OR_RETURN(k_size, k);
   }

@@ -451,7 +451,7 @@ class FusedApplyRotaryEmbFunctor {
                            const Optional<one::Tensor>& cos,
                            const Optional<one::Tensor>& sin,
                            const Optional<one::Tensor>& position_ids,
-                           const std::string& x_layout, const int k_size, const float base, const int pass_ndims) const {    
+                           const std::string& x_layout, const Optional<int64_t>& k_size, const float base, const Optional<int64_t>& rotary_size) const {    
 
     int64_t b, m, h, k;
 
@@ -465,7 +465,7 @@ class FusedApplyRotaryEmbFunctor {
       ParseDims("x", *x->shape(), x_layout, Optional<int64_t>(), Optional<int64_t>(JUST(cos)->shape()->At(1)), 
         &b, &m, &h, &k);
     } else if (!cos && !sin) {
-      ParseDims("x", *x->shape(), x_layout, Optional<int64_t>(), k_size ? Optional<int64_t>(k_size) : Optional<int64_t>(), 
+      ParseDims("x", *x->shape(), x_layout, Optional<int64_t>(), k_size ? Optional<int64_t>(JUST(k_size)) : Optional<int64_t>(), 
         &b, &m, &h, &k);
     } else {
       UNIMPLEMENTED_THEN_RETURN()
@@ -481,11 +481,11 @@ class FusedApplyRotaryEmbFunctor {
         << Error::RuntimeError() << "3rd dim of position_ids should be no less than M.";
     }
     
-    CHECK_LE_OR_RETURN(pass_ndims, k)
+    CHECK_LE_OR_RETURN(JUST(rotary_size), k)
             << Error::RuntimeError()
-            << "pass_ndims should be no more than k.";
+            << "rotary_size should be no more than k.";
     if (k_size) {
-      CHECK_LE_OR_RETURN(k_size, k)
+      CHECK_LE_OR_RETURN(JUST(k_size), k)
             << Error::RuntimeError()
             << "k_size if given should be equal to K of cos, sin and x.";
     }
@@ -504,8 +504,8 @@ class FusedApplyRotaryEmbFunctor {
       }
     }
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("x_layout", "k_size", "base", "pass_ndims");
-    attrs.SetAllAttrs(x_layout, k_size, base, pass_ndims);
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("x_layout", "k_size", "base", "rotary_size");
+    attrs.SetAllAttrs(x_layout, k_size ? JUST(k_size) : k, base, rotary_size ? JUST(rotary_size) : k);
     
     if (position_ids) {
       if (cos && sin) {
