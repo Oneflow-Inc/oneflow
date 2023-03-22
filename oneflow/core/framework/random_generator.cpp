@@ -111,7 +111,7 @@ Maybe<Generator> DefaultGenerator(const std::string& device, int device_index) {
 
 Maybe<Generator> DefaultAutoGenerator() {
   static auto default_auto_generator =
-      std::make_shared<Generator>(std::make_shared<AutoGenerator>(GetNonDeterministicRandom()));
+      std::make_shared<Generator>(std::make_shared<AutoGenerator>(GetNonDeterministicRandom(), 0));
   return default_auto_generator;
 }
 
@@ -139,7 +139,7 @@ Maybe<Generator> DefaultCUDAGenerator(int device_index) {
 }
 
 Maybe<Generator> MakeAutoGenerator() {
-  return std::make_shared<Generator>(std::make_shared<AutoGenerator>(default_rng_seed_val));
+  return std::make_shared<Generator>(std::make_shared<AutoGenerator>(default_rng_seed_val, 0));
 }
 
 Maybe<Generator> MakeCPUGenerator() {

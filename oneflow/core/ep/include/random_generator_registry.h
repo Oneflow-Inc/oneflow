@@ -37,10 +37,10 @@ class RandomGeneratorRegistry {
 }  // namespace ep
 }  // namespace oneflow
 
-#define REGISTER_RANDOM_GENERATOR(device, T)                          \
-  COMMAND(::oneflow::ep::RandomGeneratorRegistry::Register(           \
-      device, [](uint64_t seed, int device_index) {                   \
-        return std::shared_ptr<Generator>(new T(seed, device_index)); \
+#define REGISTER_RANDOM_GENERATOR(device, T)                                         \
+  COMMAND(::oneflow::ep::RandomGeneratorRegistry::Register(                          \
+      device, [](uint64_t seed, int device_index) {                                  \
+        return std::shared_ptr<::oneflow::ep::Generator>(new T(seed, device_index)); \
       }))
 
 #endif  // ONEFLOW_CORE_EP_RANDOM_GENERATOR_REGISTRY_H_

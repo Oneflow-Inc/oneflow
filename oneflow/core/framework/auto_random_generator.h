@@ -30,7 +30,7 @@ namespace one {
 
 class AutoGenerator : public ep::Generator {
  public:
-  explicit AutoGenerator(uint64_t seed) : seed_(seed) {}
+  AutoGenerator(uint64_t seed, int) : seed_(seed) {}
   virtual ~AutoGenerator() = default;
 
   uint64_t current_seed() const override { return seed_; }
