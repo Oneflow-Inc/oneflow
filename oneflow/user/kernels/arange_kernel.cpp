@@ -119,6 +119,7 @@ class ArangeKernel final : public OpKernel, public CudaGraphSupport {
   REGISTER_ARANGE_KERNEL(device, int8_t)            \
   REGISTER_ARANGE_KERNEL(device, int32_t)           \
   REGISTER_ARANGE_KERNEL(device, int64_t)           \
+  REGISTER_ARANGE_KERNEL(device, float16)           \
   REGISTER_ARANGE_KERNEL(device, float)             \
   REGISTER_ARANGE_KERNEL(device, double)
 
