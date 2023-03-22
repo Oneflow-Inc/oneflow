@@ -245,7 +245,8 @@ class GpuCumKernel : public user_op::OpKernel {
   REGISTER_CUMOP_KERNEL(int32_t, op_name, op_functor)         \
   REGISTER_CUMOP_KERNEL(int64_t, op_name, op_functor)         \
   REGISTER_CUMOP_KERNEL(float, op_name, op_functor)           \
-  REGISTER_CUMOP_KERNEL(double, op_name, op_functor)
+  REGISTER_CUMOP_KERNEL(double, op_name, op_functor)          \
+  REGISTER_CUMOP_KERNEL(half, op_name, op_functor)
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_CUMOP_KERNEL_WITH_DTYPE, CUMOP_SEQ);
 
