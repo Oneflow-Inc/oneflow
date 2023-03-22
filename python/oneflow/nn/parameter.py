@@ -17,12 +17,19 @@ import oneflow as flow
 
 Parameter = flow._oneflow_internal.nn.Parameter
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> fe32cfb85fb5fc59c532a9eec8009e17ab6f30d3
 class UninitializedParameter(Parameter):
 
     cls_to_become = Parameter
 
     def __new__(cls, required_grad=True, device=None, dtype=None) -> None:
+<<<<<<< HEAD
         factory_kwargs = {"device": device, "dtype": dtype}
+=======
+        factory_kwargs = {'device' : device, 'dtype' : dtype}
+>>>>>>> fe32cfb85fb5fc59c532a9eec8009e17ab6f30d3
         data = flow.empty(0, **factory_kwargs)
         return flow.Tensor._make_subclass(cls, data, required_grad)
