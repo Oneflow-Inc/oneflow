@@ -38,6 +38,47 @@ def _test_log_softmax_forward(test_case, shape, device, dtype):
             np.allclose(cpu_out.numpy(), mlu_out.numpy(), 0.0001, 0.0001)
         )
 
+def _test_log_softmax_backward(test_case, shape, dtype):
+    x_np = np.random.randn(*shape)
+    y_grad_np = np.random.randn(*shape)
+
+    rtol = 1e-3 if dtype == flow.float16 else 1e-4
+    atol = 1e-2 if dtype == flow.float16 else 1e-4
+
+    def _get_log_softmax_grad(device):
+        x = flow.tensor(x_np, device=flow.device(device), dtype=dtype).requires_grad_(
+            True
+        )
+        y_grad = flow.tensor(
+            y_grad_np, device=flow.device(device), dtype=dtype
+        ).requires_grad_(True)
+        if device == "cpu":
+            x = x.float()
+            y_grad = y_grad.float()
+        y = flow.log_softmax(x)
+
+        dx = flow.autograd.grad(
+            outputs=y,
+            inputs=x,
+            grad_outputs=y_grad,
+            create_graph=True,
+            retain_graph=True,
+        )[0]
+
+        return dx
+
+    dx_cpu = _get_log_softmax_grad("cpu")
+    dx_mlu = _get_log_softmax_grad("mlu")
+
+    test_case.assertTrue(
+        np.allclose(
+            dx_cpu.detach().numpy(),
+            dx_mlu.detach().cpu().numpy(),
+            rtol=rtol,
+            atol=atol,
+        )
+    )
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestLogSoftmaxCambriconModule(flow.unittest.TestCase):
@@ -53,6 +94,24 @@ class TestLogSoftmaxCambriconModule(flow.unittest.TestCase):
             (4, 8, 12, 16, 24),
         ]
         arg_dict["device"] = ["mlu"]
+        arg_dict["dtype"] = [
+            flow.float32,
+            flow.float16,
+        ]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+    def test_log_softmax_grad(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_log_softmax_backward,
+        ]
+        arg_dict["shape"] = [
+            (16, 32,),
+            (12, 16, 24),
+            (8, 12, 16, 24),
+            (4, 8, 12, 16, 24),
+        ]
         arg_dict["dtype"] = [
             flow.float32,
             flow.float16,

@@ -150,7 +150,7 @@ void CnnlTensorDescriptor::set_additional_dim(const user_op::Tensor* t, std::vec
                                           dims.data(), stride_info.data()));
 }
 
-void CnnlTensorDescriptor::set_reshape(const user_op::Tensor* t, std::vector<int>& dims) {
+void CnnlTensorDescriptor::set_reshape(const user_op::Tensor* t, const std::vector<int>& dims) {
   // TODO(WangYi): support non contiguous tensor.
   CHECK_OR_THROW(one::IsContiguous(t->shape_view(), t->stride()))
       << "set_reshape(): tensor must be contiguous";
@@ -160,7 +160,7 @@ void CnnlTensorDescriptor::set_reshape(const user_op::Tensor* t, std::vector<int
   int value = 1;
   for (size_t i = dim - 1; i > 0; --i) {
     stride_info[i] = value;
-    value *= dims[i];
+    value *= dims.at(i);
   }
   stride_info[0] = value;
   OF_CNNL_CHECK(cnnlSetTensorDescriptorEx(this->mut_desc(), CNNL_LAYOUT_NCHW, data_type, dim,

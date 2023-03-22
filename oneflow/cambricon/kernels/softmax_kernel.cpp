@@ -41,10 +41,9 @@ class MluSoftmaxKernel final : public user_op::OpKernel {
     int batch_dims = in->shape_view().Count(0, in_ndim - 1);
     int softmax_dim = in->shape_view().At(in_ndim - 1);
 
-    std::vector<int> addentional_dims_input = {batch_dims, 1, softmax_dim};
-    std::vector<int> addentional_dims_output = {batch_dims, 1, softmax_dim};
-    input_desc.set_reshape(in, addentional_dims_input);
-    output_desc.set_reshape(out, addentional_dims_output);
+    std::vector<int> addentional_dims = {batch_dims, 1, softmax_dim};
+    input_desc.set_reshape(in, addentional_dims);
+    output_desc.set_reshape(out, addentional_dims);
 
     OF_CNNL_CHECK(cnnlSoftmaxForward_v2(
         /* handle    */ ctx->stream()->As<ep::MluStream>()->cnnl_handle(),
@@ -70,4 +69,52 @@ class MluSoftmaxKernel final : public user_op::OpKernel {
 REGISTER_SOFTMAX_MLU_KERNEL(float)
 REGISTER_SOFTMAX_MLU_KERNEL(float16)
 
+template<typename T>
+class MluSoftmaxGradKernel final : public user_op::OpKernel {
+ public:
+  MluSoftmaxGradKernel() = default;
+  ~MluSoftmaxGradKernel() = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    int y_ndim = y->shape_view().NumAxes();
+    int batch_dims = y->shape_view().Count(0, y_ndim - 1);
+    int softmax_dim = y->shape_view().At(y_ndim - 1);
+
+    CnnlTensorDescriptor y_desc, dy_desc, dx_desc;
+    std::vector<int> addentional_dims = {batch_dims, 1, softmax_dim};
+    y_desc.set_reshape(y, addentional_dims);
+    dy_desc.set_reshape(dy, addentional_dims);
+    dx_desc.set_reshape(dx, addentional_dims);
+
+    cnnlSoftmaxBackward(
+        /* handle      */ ctx->stream()->As<ep::MluStream>()->cnnl_handle(),
+        /* algorithm   */ CNNL_SOFTMAX_ACCURATE,
+        /* mode        */ CNNL_SOFTMAX_MODE_LOW_DIMENSION,
+        /* alpha       */ nullptr,
+        /* y_desc      */ y_desc.desc(),
+        /* y           */ y->dptr(),
+        /* diff_y_desc */ dy_desc.desc(),
+        /* diff_y      */ dy->dptr(),
+        /* beta        */ nullptr,
+        /* diff_x_desc */ dx_desc.desc(),
+        /* diff_x      */ dx->mut_dptr());
+  }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_SOFTMAX_GRAD_MLU_KERNEL(dtype)                       \
+  REGISTER_USER_KERNEL("softmax_grad")                                \
+      .SetCreateFn<MluSoftmaxGradKernel<dtype>>()                     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kMLU) \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+
+REGISTER_SOFTMAX_GRAD_MLU_KERNEL(float)
+REGISTER_SOFTMAX_GRAD_MLU_KERNEL(float16)
 }  // namespace oneflow
