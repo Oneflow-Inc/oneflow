@@ -485,7 +485,7 @@ class FusedApplyRotaryEmbFunctor {
             << Error::RuntimeError()
             << "rotary_size should be no more than k.";
     if (k_size) {
-      CHECK_LE_OR_RETURN(JUST(k_size), k)
+      CHECK_EQ_OR_RETURN(JUST(k_size), k)
             << Error::RuntimeError()
             << "k_size if given should be equal to K of cos, sin and x.";
     }
