@@ -1233,7 +1233,7 @@
   bind_python: True
 
 - name: "fused_matmul_bias"
-  signature: "Tensor (Tensor x, Tensor weight, Tensor bias, Tensor _add_to_output=None) => FusedMatmulBias"
+  signature: "Tensor (Tensor x, Tensor weight, Tensor bias, Tensor _add_to_output=None, Double alpha=1.0, Double beta=1.0) => FusedMatmulBias"
   bind_python: True
 
 - name: "fused_mlp_grad"
