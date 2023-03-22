@@ -628,10 +628,19 @@ class FusedApplyRotaryEmbKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("fused_apply_rotary_emb")                       \
       .SetCreateFn<FusedApplyRotaryEmbKernel<dtype, position_type>>()                \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
-                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value) \);
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobInputSize("position_ids") == 1) \
+                       && (user_op::HobDataType("position_ids", 0) == GetDataType<position_type>::value));
+  
 
 #define REGISTER_FUSED_APPLY_ROTARY_EMB_GPU_DTYPE(dtype)              \
-  REGISTER_FUSED_APPLY_ROTARY_EMB_GPU(dtype, int64_t)
+  REGISTER_FUSED_APPLY_ROTARY_EMB_GPU(dtype, int64_t); \
+  REGISTER_FUSED_APPLY_ROTARY_EMB_GPU(dtype, int32_t); \
+  REGISTER_USER_KERNEL("fused_apply_rotary_emb")                       \
+      .SetCreateFn<FusedApplyRotaryEmbKernel<dtype, int64_t>>()                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobInputSize("position_ids") == 0));
 
 REGISTER_FUSED_APPLY_ROTARY_EMB_GPU_DTYPE(float);
 REGISTER_FUSED_APPLY_ROTARY_EMB_GPU_DTYPE(half);

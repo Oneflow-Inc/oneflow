@@ -205,7 +205,7 @@ def _test_with_position_sinuous(test_case, x_layout, base, rotary_size, dims, ro
 
     x = np.random.uniform(low=-1, high=1, size=(*merged_dims,))
 
-    position_ids = np.random.randint(2*M, size=(B, rotary_ndims, M), dtype=int)
+    position_ids = np.random.randint(2*M, size=(B, rotary_ndims, M), dtype=np.int64)
 
     naive_cos = np.array(
         [[
