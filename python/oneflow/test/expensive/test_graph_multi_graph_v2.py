@@ -130,8 +130,28 @@ def _test_linear_multi_graph_share(test_case, device, with_reshape):
     test_case.assertTrue(np.array_equal(of_lazy_out2.numpy(), of_eager_out2.numpy()))
 
 
+def _get_state_dict_tensor_size(sd):
+    from oneflow.framework.args_tree import ArgsTree
+
+    def _get_tensor_mem(input):
+        # if input.dim() == 0:
+        #     return 2
+        cnt_size = input.element_size() * flow.numel(input)
+        return cnt_size
+
+    args_tree = ArgsTree(sd, False)
+
+    size = 0
+    for arg in args_tree.iter_nodes():
+        if isinstance(arg, flow.Tensor):
+            size += _get_tensor_mem(arg)
+        else:
+            continue
+    return size
+
+
 @_with_new_session
-def _test_linear_multi_graph_save(return_dict, device, with_reshape):
+def _test_linear_multi_graph_save(return_dict, device, with_reshape, with_eager):
     linear = flow.nn.Linear(3, 8, False)
     linear = linear.to(device)
     np_weight = np.ones((3, 8)).astype(np.float32)
@@ -222,7 +242,7 @@ def _test_linear_multi_graph_save(return_dict, device, with_reshape):
     test_case1 = np.array_equal(of_lazy_out1.numpy(), of_eager_out1.numpy())
     return_dict["save4"] = test_case1
 
-    state_dict = linear_g.runtime_state_dict()
+    state_dict = linear_g.runtime_state_dict(with_eager=with_eager)
     print("====> saved graphs", state_dict.keys())
     return state_dict
 
@@ -301,8 +321,14 @@ def _test_linear_multi_graph_load(return_dict, device, with_reshape, state_dict)
     # TODO(strint): shared from a load graph.
 
 
-def _graph_save(return_dict, filename):
-    state_dict = _test_linear_multi_graph_save(return_dict, flow.device("cuda"), True)
+def _graph_save(return_dict, filename, with_eager):
+    state_dict = _test_linear_multi_graph_save(
+        return_dict, flow.device("cuda"), True, with_eager
+    )
+    print(
+        f"state_dict(with_eager={with_eager}) tensors size ",
+        _get_state_dict_tensor_size(state_dict),
+    )
     flow.save(state_dict, filename)
 
 
@@ -314,14 +340,14 @@ def _graph_load(return_dict, filename):
     )
 
 
-def _test_linear_multi_graph_save_load_gpu(test_case):
+def _test_linear_multi_graph_save_load_gpu(test_case, with_eager):
     # A graph runtime state dict
     with tempfile.NamedTemporaryFile() as f:
         # Save a graph
         manager = multiprocessing.Manager()
         return_dict = manager.dict()
         save_p = multiprocessing.get_context("spawn").Process(
-            target=_graph_save, args=(return_dict, f.name)
+            target=_graph_save, args=(return_dict, f.name, with_eager)
         )
         save_p.start()
         save_p.join()
@@ -349,7 +375,10 @@ class TestLinearMultiGraph(oneflow.unittest.TestCase):
         _test_linear_multi_graph_share(test_case, flow.device("cuda"), True)
 
     def test_linear_multi_graph_save_load_gpu_with_share(test_case):
-        _test_linear_multi_graph_save_load_gpu(test_case)
+        _test_linear_multi_graph_save_load_gpu(test_case, True)
+
+    def test_linear_multi_graph_save_load_gpu_with_share_without_eager(test_case):
+        _test_linear_multi_graph_save_load_gpu(test_case, False)
 
 
 if __name__ == "__main__":

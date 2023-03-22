@@ -115,7 +115,7 @@ class GraphCache(object):
             return graph(*args, **kwargs)
 
     def runtime_state_dict(
-        self, destination=None
+        self, destination=None, with_eager=False,
     ) -> Dict[str, Dict[str, Union[Dict[str, Tensor], str]]]:
         if destination is None:
             destination = OrderedDict()
@@ -123,7 +123,7 @@ class GraphCache(object):
 
         for (key, graph) in self._cache.items():
             with AvoidRecursiveCacheCall(graph):
-                state_dict = graph.runtime_state_dict()
+                state_dict = graph.runtime_state_dict(with_eager=with_eager)
             state_dict["cache_order"] = graph._oneflow_graph_cache_order
             state_dict["cache_key"] = key
             destination[state_dict["graph_name"]] = state_dict
