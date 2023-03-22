@@ -169,11 +169,6 @@ class ParamGroup(dict):
                 "now only contiguous_params is set."
             )
 
-    def __repr__(self):
-        res = self.options
-        res["params"] = self.parameters
-        return str(res)
-
     @property
     def options(self):
         return self._options
