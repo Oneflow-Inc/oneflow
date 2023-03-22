@@ -3066,8 +3066,12 @@ class ToFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const Optional<std::string>& device_,
-                           const Optional<Symbol<DType>>& dtype_, bool copy) const {
+                           const Optional<Symbol<DType>>& dtype_, bool copy,
+                           bool non_blocking = false) const {
     Symbol<DType> dtype = dtype_.value_or(input->dtype());
+    if (non_blocking) {
+      printf("non_blocking was developing, please wait until new version come out");
+    }
     if (input->is_global()) {
       std::string device_type = device_.value_or(JUST(input->parallel_desc())->device_tag());
       CHECK_OR_RETURN(ep::DeviceManagerRegistry::GetDeviceTypeByDeviceTypeName(device_type)
@@ -3092,7 +3096,11 @@ class To2Functor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const Optional<Symbol<Device>>& device_,
-                           const Optional<Symbol<DType>>& dtype_, bool copy) const {
+                           const Optional<Symbol<DType>>& dtype_, bool copy,
+                           bool non_blocking = false) const {
+    if (non_blocking) {
+      printf("non_blocking was developing, please wait until new version come out");
+    }
     if (input->is_global()) {
       if (!device_.has_value()) {
         std::string device_type = JUST(input->parallel_desc())->device_tag();
@@ -3118,7 +3126,11 @@ class To2Functor {
 class To3Functor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
-                           const Optional<Symbol<DType>>& dtype_, bool copy) const {
+                           const Optional<Symbol<DType>>& dtype_, bool copy,
+                           bool non_blocking = false) const {
+    if (non_blocking) {
+      printf("non_blocking was developing, please wait until new version come out");
+    }
     Symbol<DType> dtype = dtype_.value_or(input->dtype());
     if (input->is_global()) {
       return GlobalTensorTo(input, JUST(input->parallel_desc())->device_tag(), dtype, copy);
@@ -3132,7 +3144,11 @@ class To3Functor {
 class To4Functor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
-                           const std::shared_ptr<Tensor>& other, bool copy) const {
+                           const std::shared_ptr<Tensor>& other, bool copy,
+                           bool non_blocking = false) const {
+    if (non_blocking) {
+      printf("non_blocking was developing, please wait until new version come out");
+    }
     CHECK_OR_RETURN(!input->is_global() && !other->is_global())
         << Error::RuntimeError()
         << "tensor.to(other) can only be called when tensor and other are local tensors";
@@ -3145,34 +3161,7 @@ class To4Functor {
 class ToDeviceFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
-                           const Optional<std::string>& device_) const {
-    Symbol<DType> dtype = input->dtype();
-    const bool copy = false;
-    if (input->is_global()) {
-      std::string device_type = device_.value_or(JUST(input->parallel_desc())->device_tag());
-      CHECK_OR_RETURN(ep::DeviceManagerRegistry::GetDeviceTypeByDeviceTypeName(device_type)
-                      != DeviceType::kInvalidDevice)
-          << Error::RuntimeError()
-          << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
-          << "for global tensor, but got " << device_.value_or("");
-      return JUST(GlobalTensorTo(input, device_type, dtype, copy));
-    } else {
-      Symbol<Device> device =
-          device_
-              .map([](const std::shared_ptr<std::string>& str) -> Symbol<Device> {
-                return CHECK_JUST(Device::ParseAndNew(*str));
-              })
-              .value_or(JUST(input->device()));
-      return JUST(LocalTensorTo(input, device, dtype, copy));
-    }
-  }
-};
-
-class ToNonBlockFunctor {
- public:
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
-                           const Optional<std::string>& device_,
-                           const bool non_blocking = false) const {
+                           const Optional<std::string>& device_, bool non_blocking = false) const {
     Symbol<DType> dtype = input->dtype();
     const bool copy = false;
     if (non_blocking) {
@@ -3197,6 +3186,57 @@ class ToNonBlockFunctor {
     }
   }
 };
+
+// class ToNonBlockFunctor {
+//  public:
+//   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
+//                            const Optional<std::string>& device_, bool non_blocking = false) const
+//                            {
+//     Symbol<DType> dtype = input->dtype();
+//     const bool copy = false;
+// if (non_blocking) {
+//   printf("non_blocking was developing, please wait until new version come out");
+// }
+//     if (input->is_global()) {
+//       std::string device_type = device_.value_or(JUST(input->parallel_desc())->device_tag());
+//       CHECK_OR_RETURN(ep::DeviceManagerRegistry::GetDeviceTypeByDeviceTypeName(device_type)
+//                       != DeviceType::kInvalidDevice)
+//           << Error::RuntimeError()
+//           << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
+//           << "for global tensor, but got " << device_.value_or("");
+//       return JUST(GlobalTensorTo(input, device_type, dtype, copy));
+//     } else {
+//       Symbol<Device> device =
+//           device_
+//               .map([](const std::shared_ptr<std::string>& str) -> Symbol<Device> {
+//                 return CHECK_JUST(Device::ParseAndNew(*str));
+//               })
+//               .value_or(JUST(input->device()));
+//       return JUST(LocalTensorTo(input, device, dtype, copy));
+//     }
+//   }
+// };
+
+// class ToNonBlockFunctor {
+//  public:
+//   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
+//                            const Optional<Symbol<Device>>& device_, bool non_block) const {
+//     // CHECK_OR_RETURN(!input->is_global() && !other->is_global())
+//     //     << Error::RuntimeError()
+//     //     << "tensor.to(other) can only be called when tensor and other are local tensors";
+//     Symbol<DType> dtype = input->dtype();
+//     const bool copy = false;
+//     // Symbol<Device> device = JUST(other->device());
+//     // return LocalTensorTo(input, device, dtype, copy);
+
+//     if (input->is_global()) {
+//       return GlobalTensorTo(input, JUST(input->parallel_desc())->device_tag(), dtype, copy);
+//     } else {
+//       auto device = JUST(input->device());
+//       return LocalTensorTo(input, device, dtype, copy);
+//     }
+//   }
+// };
 
 class TopKFunctor {
  public:
@@ -4124,7 +4164,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MeshgridFunctor>("Meshgrid");
   m.add_functor<impl::IndexSelectFunctor>("IndexSelect");
   m.add_functor<impl::ToFunctor, impl::To2Functor, impl::To3Functor, impl::To4Functor,
-                impl::ToDeviceFunctor, impl::ToNonBlockFunctor>("To");
+                impl::ToDeviceFunctor>("To");
   m.add_functor<impl::TopKFunctor>("TopK");
   m.add_functor<impl::InTopKFunctor>("InTopK");
   m.add_functor<impl::TensorToTensorBufferFunctor>("TensorToTensorBuffer");

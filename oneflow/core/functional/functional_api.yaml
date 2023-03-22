@@ -1672,12 +1672,11 @@
 - name: "to"
   signature: [
       # type of device must be string for global tensor to perform argument validation
-      "Tensor (Tensor x, String device=None, DataType dtype=None, Bool copy=False) => To",
-      "Tensor (Tensor x, Device device=None, DataType dtype=None, Bool copy=False) => To",
-      "Tensor (Tensor x, DataType dtype=None, Bool copy=False) => To",
-      "Tensor (Tensor x, Tensor other, Bool copy=False) => To",
-      "Tensor (Tensor x, String device=None) => To",
-      "Tensor (Tensor x, String device=None, Bool NonBlockFunctor=False) => To",
+      "Tensor (Tensor x, String device=None, DataType dtype=None, Bool copy=False, Bool non_blocking=False) => To",
+      "Tensor (Tensor x, Device device=None, DataType dtype=None, Bool copy=False, Bool non_blocking=False) => To",
+      "Tensor (Tensor x, DataType dtype=None, Bool copy=False, Bool non_blocking=False) => To",
+      "Tensor (Tensor x, Tensor other, Bool copy=False, Bool non_blocking=False) => To",
+      "Tensor (Tensor x, String device=None, Bool non_blocking=False) => To",
     ]
   bind_python: True
 
