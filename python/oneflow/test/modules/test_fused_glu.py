@@ -368,7 +368,7 @@ class TestFusedGlu(flow.unittest.TestCase):
                 {"m": 256, "k": 1280, "n": 5120, "act": "gelu"},
                 {"m": 256, "k": 1280, "n": 5120, "act": "fast_gelu"},
                 {"m": 256, "k": 1280, "n": 5120, "act": "silu"},
-                m=1024, k=640, n=2560
+                # m=1024, k=640, n=2560
                 {"m": 1024, "k": 640, "n": 2560, "act": "none"},
                 {"m": 1024, "k": 640, "n": 2560, "act": "sigmoid"},
                 {"m": 1024, "k": 640, "n": 2560, "act": "relu"},
