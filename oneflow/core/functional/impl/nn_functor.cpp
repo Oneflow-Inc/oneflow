@@ -706,7 +706,8 @@ class FusedMatmulBiasFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& weight,
                            const std::shared_ptr<one::Tensor>& bias,
-                           const Optional<one::Tensor>& _add_to_output) const {
+                           const Optional<one::Tensor>& _add_to_output, const double& alpha,
+                           const double& beta) const {
     /*
     x: (m_i, ... m_0, k)
     weight: (n, k) need transpose
@@ -737,21 +738,30 @@ class FusedMatmulBiasFunctor {
       device_type = JUST(x->device())->enum_type();
     }
 
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("alpha", "beta");
+    attrs.SetAllAttrs(alpha, beta);
     if (device_type == DeviceType::kCUDA) {
       if (_add_to_output) {
         return OpInterpUtil::Dispatch<Tensor>(*_with_add_to_output_op,
-                                              {x, weight, bias, JUST(_add_to_output)});
+                                              {x, weight, bias, JUST(_add_to_output)}, attrs);
+      } else {
+        return OpInterpUtil::Dispatch<Tensor>(*_without_add_to_output_op, {x, weight, bias}, attrs);
       }
-      return OpInterpUtil::Dispatch<Tensor>(*_without_add_to_output_op, {x, weight, bias});
     }
 #endif  // CUDA_VERSION >= 11020
 
     auto matmul_bias = JUST(functional::BiasAdd(
-        JUST(functional::MatMul(x, weight, false, true, 1.0)), bias, x->shape()->NumAxes() - 1));
-    if (_add_to_output) {
-      return JUST(functional::Add({matmul_bias, JUST(_add_to_output)}, false));
+        JUST(functional::MatMul(x, weight, false, true, alpha)), bias, x->shape()->NumAxes() - 1));
+    if (_add_to_output && beta != 0.0) {
+      if (beta == 1.0) {
+        return JUST(functional::Add({matmul_bias, JUST(_add_to_output)}, false));
+      } else {
+        return JUST(functional::Add(
+            {matmul_bias, JUST(functional::ScalarMul(JUST(_add_to_output), beta, false))}, false));
+      }
+    } else {
+      return matmul_bias;
     }
-    return matmul_bias;
   }
 
  private:
