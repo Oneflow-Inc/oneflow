@@ -120,9 +120,8 @@ def naive_embedding(x, cos, sin, layout, B, M, H, K, dims, merged_dims):
     
     return naive_out
 
-def _test_without_position(test_case, layout, theta, pass_ndims, dims, dtype):
-    print("_test_without_position", layout, theta, pass_ndims, dims, dtype)
-
+# this assume that rotary_ndims is by default 1
+def _test_without_position(test_case, layout, theta, pass_ndims, dims, rotary_ndims, dtype):
     B, M, H, K, merged_dims = parseDims(dims, layout)
 
     x = np.random.uniform(low=-1, high=1, size=(*merged_dims,))
@@ -168,9 +167,8 @@ def _test_without_position(test_case, layout, theta, pass_ndims, dims, dtype):
         )
     )
 
-def _test_without_position_sinuous(test_case, layout, theta, pass_ndims, dims, dtype):
-    print("_test_without_position_sinuous", layout, theta, pass_ndims, dims, dtype)
-
+# this assume that rotary_ndims is by default 1
+def _test_without_position_sinuous(test_case, layout, theta, pass_ndims, dims, rotary_ndims, dtype):
     B, M, H, K, merged_dims = parseDims(dims, layout)
 
     x = np.random.uniform(low=-1, high=1, size=(*merged_dims,))
@@ -202,25 +200,23 @@ def _test_without_position_sinuous(test_case, layout, theta, pass_ndims, dims, d
         )
     )
 
-def _test_with_position_sinuous(test_case, layout, theta, pass_ndims, dims, dtype):
-    print("_test_with_position_sinuous", layout, theta, pass_ndims, dims, dtype)
-
+def _test_with_position_sinuous(test_case, layout, theta, pass_ndims, dims, rotary_ndims, dtype):
     B, M, H, K, merged_dims = parseDims(dims, layout)
 
     x = np.random.uniform(low=-1, high=1, size=(*merged_dims,))
 
-    position_ids = np.random.randint(2*M, size=(B, 2, M), dtype=int)
+    position_ids = np.random.randint(2*M, size=(B, rotary_ndims, M), dtype=int)
 
     naive_cos = np.array(
         [[
-            [math.cos(position_ids[b, i // ((K - pass_ndims)//2), m] * (theta ** (2 * (i // 2) / K))) if i < K - pass_ndims else 1 for i in range(K)]
+            [math.cos(position_ids[b, i // ((K - pass_ndims)//rotary_ndims), m] * (theta ** (2 * (i // 2) / K))) if i < K - pass_ndims else 1 for i in range(K)]
             for m in range(M)
         ] for b in range(B)]
     ).reshape(B, 1, M, K)
 
     naive_sin = np.array(
         [[
-            [math.sin(position_ids[b, i // ((K - pass_ndims)//2), m] * (theta ** (2 * (i // 2) / K))) if i < K - pass_ndims else 0 for i in range(K)]
+            [math.sin(position_ids[b, i // ((K - pass_ndims)//rotary_ndims), m] * (theta ** (2 * (i // 2) / K))) if i < K - pass_ndims else 0 for i in range(K)]
             for m in range(M)
         ] for b in range(B)]
     ).reshape(B, 1, M, K)
@@ -256,25 +252,23 @@ def _test_with_position_sinuous(test_case, layout, theta, pass_ndims, dims, dtyp
         )
     )
 
-def _test_with_position(test_case, layout, theta, pass_ndims, dims, dtype):
-    print("_test_with_position", layout, theta, pass_ndims, dims, dtype)
-
+def _test_with_position(test_case, layout, theta, pass_ndims, dims, rotary_ndims, dtype):
     B, M, H, K, merged_dims = parseDims(dims, layout)
 
     x = np.random.uniform(low=-1, high=1, size=(*merged_dims,))
 
-    position_ids = np.random.randint(2*M, size=(B, 2, M), dtype=int)
+    position_ids = np.random.randint(2*M, size=(B, rotary_ndims, M), dtype=int)
 
     naive_cos = np.array(
         [[
-            [math.cos(position_ids[b, i // ((K - pass_ndims)//2), m] * (theta ** (2 * (i // 2) / K))) if i < K - pass_ndims else 1 for i in range(K)]
+            [math.cos(position_ids[b, i // ((K - pass_ndims)//rotary_ndims), m] * (theta ** (2 * (i // 2) / K))) if i < K - pass_ndims else 1 for i in range(K)]
             for m in range(M)
         ] for b in range(B)]
     ).reshape(B, 1, M, K)
 
     naive_sin = np.array(
         [[
-            [math.sin(position_ids[b, i // ((K - pass_ndims)//2), m] * (theta ** (2 * (i // 2) / K))) if i < K - pass_ndims else 0 for i in range(K)]
+            [math.sin(position_ids[b, i // ((K - pass_ndims)//rotary_ndims), m] * (theta ** (2 * (i // 2) / K))) if i < K - pass_ndims else 0 for i in range(K)]
             for m in range(M)
         ] for b in range(B)]
     ).reshape(B, 1, M, K)
@@ -298,7 +292,8 @@ def _test_with_position(test_case, layout, theta, pass_ndims, dims, dtype):
 '''
 1. if cos&sin is given, then theta will not be used
 2. if cos&sin is not given, then any form of layout which cannot infer the dimension of k is not allowed, e.g. BM(HK)
-2. if position_ids is given, then M of cos&sin could be different from M of x
+3. if position_ids is given, then M of cos&sin could be different from M of x
+4. if position_ids is not given, the dimension of rotary positional embedding is by default 1
 '''
 
 @flow.unittest.skip_unless_1n1d()
@@ -311,9 +306,10 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
         args_dict["theta"] = [1e-1]
         args_dict["pass_ndims"] = [0, 4]
         args_dict["dims"] = [(2,8,3,8)]
+        args_dict["rotary_ndims"] = [1, 2]
         #args_dict["pass_ndims"] = [48]
         #args_dict["dims"] = [(32, 2048, 32, 64)]
-        args_dict["dtype"] = [flow.float16]
+        args_dict["dtype"] = [flow.float16, float32]
 
         for arg in GenArgList(args_dict):
             arg[0](test_case, *arg[1:])
@@ -325,6 +321,7 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
         args_dict["theta"] = [1e-1]
         args_dict["pass_ndims"] = [0, 4]
         args_dict["dims"] = [(2,8,3,8)]
+        args_dict["rotary_ndims"] = [1, 2]
         #args_dict["pass_ndims"] = [48]
         #args_dict["dims"] = [(32, 2048, 32, 64)]
         args_dict["dtype"] = [flow.float16, flow.float32]
