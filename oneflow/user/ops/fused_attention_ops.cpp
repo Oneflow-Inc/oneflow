@@ -491,6 +491,7 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   const std::string& layout = ctx->Attr<std::string>("layout");
   const int pass_ndims = ctx->Attr<int>("pass_ndims");
+  const int k_size = ctx->Attr<int>("k_size");
 
   int64_t b, m, h, k;
   bool has_cos = ctx->has_input("cos", 0);
@@ -505,7 +506,7 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
     ParseDims(x_desc.shape(), layout, Optional<int64_t>(), Optional<int64_t>(cos_desc.shape().At(1)), 
       &b, &m, &h, &k);
   } else if (!has_cos && !has_sin) {
-    ParseDims(x_desc.shape(), layout, Optional<int64_t>(), Optional<int64_t>(), 
+    ParseDims(x_desc.shape(), layout, Optional<int64_t>(), k_size ? Optional<int64_t>(k_size) : Optional<int64_t>(), 
       &b, &m, &h, &k);
   } else {
     UNIMPLEMENTED_THEN_RETURN();
@@ -519,6 +520,9 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   }
 
   CHECK_LE_OR_RETURN(pass_ndims, k);
+  if (k_size) {
+    CHECK_EQ_OR_RETURN(k_size, k);
+  }
 
   if (ctx->has_input("position_ids", 0)) {
     if (has_cos && has_sin) {

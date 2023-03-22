@@ -583,6 +583,7 @@ class FusedApplyRotaryEmbKernel final : public user_op::OpKernel {
     user_op::Tensor* position_ids = nullptr;
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const std::string& layout = ctx->Attr<std::string>("layout");
+    const int k_size = ctx->Attr<int>("k_size");
     const int pass_ndims = ctx->Attr<int>("pass_ndims");
     const float theta = ctx->Attr<float>("theta");
     int rotary_emb_dim = 1;
@@ -610,7 +611,7 @@ class FusedApplyRotaryEmbKernel final : public user_op::OpKernel {
     int64_t h_stride = 0;
     int64_t offset   = 0;
     
-    ParseDims(x->shape_view(), layout, Optional<int64_t>(), cos ? Optional<int64_t>(cos->shape_view().At(1)) : Optional<int64_t>(), 1,
+    ParseDims(x->shape_view(), layout, Optional<int64_t>(), k_size ? Optional<int64_t>(k_size) : Optional<int64_t>(), 1,
       &b, &m, &h, &k, &b_stride, &m_stride, &h_stride, &offset);
 
     // TODO: hard code num_dims & seems redundant template problem...

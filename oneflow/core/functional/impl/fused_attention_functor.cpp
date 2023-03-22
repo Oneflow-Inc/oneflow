@@ -451,7 +451,7 @@ class FusedApplyRotaryEmbFunctor {
                            const Optional<one::Tensor>& cos,
                            const Optional<one::Tensor>& sin,
                            const Optional<one::Tensor>& position_ids,
-                           const std::string& layout, const float theta, const int pass_ndims) const {
+                           const std::string& layout, const int k_size, const float theta, const int pass_ndims) const {
     /*
     x: (B, H, M, K)
     x: (B, M, E) <=> (B, M, H, K)
@@ -475,7 +475,7 @@ class FusedApplyRotaryEmbFunctor {
       ParseDims("", *x->shape(), layout, Optional<int64_t>(), Optional<int64_t>(JUST(cos)->shape()->At(1)), 
         &b, &m, &h, &k);
     } else if (!cos && !sin) {
-      ParseDims("", *x->shape(), layout, Optional<int64_t>(), Optional<int64_t>(), 
+      ParseDims("", *x->shape(), layout, Optional<int64_t>(), k_size ? Optional<int64_t>(k_size) : Optional<int64_t>(), 
         &b, &m, &h, &k);
     } else {
       UNIMPLEMENTED_THEN_RETURN()
@@ -494,6 +494,11 @@ class FusedApplyRotaryEmbFunctor {
     CHECK_LE_OR_RETURN(pass_ndims, k)
             << Error::RuntimeError()
             << "pass_ndims should be no more than k.";
+    if (k_size) {
+      CHECK_LE_OR_RETURN(k_size, k)
+            << Error::RuntimeError()
+            << "k_size if given should be equal to K of cos, sin and x.";
+    }
     
     if (position_ids) {
       if (cos && sin) {
@@ -509,8 +514,8 @@ class FusedApplyRotaryEmbFunctor {
       }
     }
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("layout", "theta", "pass_ndims");
-    attrs.SetAllAttrs(layout, theta, pass_ndims);
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("layout", "k_size", "theta", "pass_ndims");
+    attrs.SetAllAttrs(layout, k_size, theta, pass_ndims);
     
     if (position_ids) {
       if (cos && sin) {

@@ -159,7 +159,7 @@ def _test_without_position(test_case, layout, theta, pass_ndims, dims, rotary_nd
     fused_cos = flow.tensor(fused_cos.squeeze(), dtype=dtype, device="cuda")
     fused_sin = flow.tensor(fused_sin.squeeze(), dtype=dtype, device="cuda")
 
-    fused_out = flow._C.fused_apply_rotary_emb(fused_x, fused_cos, fused_sin, None, layout, theta, pass_ndims)
+    fused_out = flow._C.fused_apply_rotary_emb(fused_x, fused_cos, fused_sin, None, layout, K, theta, pass_ndims)
 
     test_case.assertTrue(
         np.allclose(
@@ -192,7 +192,7 @@ def _test_without_position_sinuous(test_case, layout, theta, pass_ndims, dims, r
 
     fused_x = flow.tensor(x, dtype=dtype, device="cuda")
 
-    fused_out = flow._C.fused_apply_rotary_emb(fused_x, None, None, None, layout, theta, pass_ndims)
+    fused_out = flow._C.fused_apply_rotary_emb(fused_x, None, None, None, layout, K, theta, pass_ndims)
 
     test_case.assertTrue(
         np.allclose(
@@ -244,7 +244,7 @@ def _test_with_position_sinuous(test_case, layout, theta, pass_ndims, dims, rota
     fused_sin = flow.tensor(fused_sin.squeeze(), dtype=dtype, device="cuda")
     fused_position_ids = flow.tensor(position_ids, dtype=flow.int32, device="cuda")
 
-    fused_out = flow._C.fused_apply_rotary_emb(fused_x, fused_cos, fused_sin, fused_position_ids, layout, theta, pass_ndims)
+    fused_out = flow._C.fused_apply_rotary_emb(fused_x, fused_cos, fused_sin, fused_position_ids, layout, K, theta, pass_ndims)
 
     test_case.assertTrue(
         np.allclose(
@@ -281,7 +281,7 @@ def _test_with_position(test_case, layout, theta, pass_ndims, dims, rotary_ndims
     fused_x = flow.tensor(x, dtype=dtype, device="cuda")
     fused_position_ids = flow.tensor(position_ids, dtype=flow.int32, device="cuda")
 
-    fused_out = flow._C.fused_apply_rotary_emb(fused_x, None, None, fused_position_ids, layout, theta, pass_ndims)
+    fused_out = flow._C.fused_apply_rotary_emb(fused_x, None, None, fused_position_ids, layout, K, theta, pass_ndims)
 
     test_case.assertTrue(
         np.allclose(
@@ -299,25 +299,10 @@ def _test_with_position(test_case, layout, theta, pass_ndims, dims, rotary_ndims
 @flow.unittest.skip_unless_1n1d()
 class TestFusedRotaryEmbedding(flow.unittest.TestCase):
     # because rule no.2, kernels without cos&sin cannot work under specific layout
-    def test_fused_rotary_embedding_op_with_sinuous(test_case):
+    def test_fused_rotary_embedding_op(test_case):
         args_dict = OrderedDict()
-        args_dict["test_fun"] = [_test_with_position_sinuous, _test_without_position]
+        args_dict["test_fun"] = [_test_with_position_sinuous, _test_without_position, _test_with_position, _test_without_position_sinuous]
         args_dict["layout"] = ["BMHK", "BHMK", "MBHK", "BM(HK)","MB(HK)"]
-        args_dict["theta"] = [1e-1]
-        args_dict["pass_ndims"] = [0, 4]
-        args_dict["dims"] = [(2,8,3,8)]
-        args_dict["rotary_ndims"] = [1, 2]
-        #args_dict["pass_ndims"] = [48]
-        #args_dict["dims"] = [(32, 2048, 32, 64)]
-        args_dict["dtype"] = [flow.float16, float32]
-
-        for arg in GenArgList(args_dict):
-            arg[0](test_case, *arg[1:])
-
-    def test_fused_rotary_embedding_op_without_sinuous(test_case):
-        args_dict = OrderedDict()
-        args_dict["test_fun"] = [_test_with_position, _test_without_position_sinuous]
-        args_dict["layout"] = ["BMHK", "BHMK", "MBHK"]
         args_dict["theta"] = [1e-1]
         args_dict["pass_ndims"] = [0, 4]
         args_dict["dims"] = [(2,8,3,8)]
