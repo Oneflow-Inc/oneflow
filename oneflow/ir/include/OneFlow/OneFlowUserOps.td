@@ -5341,6 +5341,10 @@ def OneFlow_FusedMatmulBiasOp : OneFlow_BaseOp<"fused_matmul_bias", [NoSideEffec
   let output = (outs
     OneFlow_Tensor:$out
   );
+  let attrs = (ins
+    DefaultValuedAttr<F64Attr, "1.">:$alpha,
+    DefaultValuedAttr<F64Attr, "1.">:$beta
+  );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_data_type_infer_fn = 1;
@@ -6706,6 +6710,32 @@ def OneFlow_LayerNormOp : OneFlow_BaseOp<"layer_norm", [NoSideEffect, AttrSizedO
     DefaultValuedAttr<SI64Attr, "0">:$begin_norm_axis,
     DefaultValuedAttr<SI64Attr, "0">:$begin_params_axis,
     DefaultValuedAttr<F64Attr, "0.">:$epsilon
+  );
+  let trait_attrs = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_SkipLayerNormOp : OneFlow_BaseOp<"skip_layer_norm", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    Optional<OneFlow_Tensor>:$gamma,
+    Optional<OneFlow_Tensor>:$beta,
+    Optional<OneFlow_Tensor>:$bias,
+    Optional<OneFlow_Tensor>:$skip
+  );
+  let output = (outs
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$mean,
+    OneFlow_Tensor:$inv_variance
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F64Attr, "0.">:$epsilon,
+    DefaultValuedAttr<F64Attr, "0.">:$alpha
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
