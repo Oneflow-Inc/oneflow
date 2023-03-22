@@ -71,14 +71,3 @@ def is_scripting():
 def is_tracing():
     return False
 
-def ScriptModule(
-    obj,
-    optimize=None,
-    _frames_up=0,
-    _rcb=None,
-    example_inputs: Union[List[Tuple], Dict[Callable, List[Tuple]], None] = None,
-):
-    warnings.warn(
-        "The oneflow.jit.ScriptModule interface is just to align the torch.jit.script interface and has no practical significance."
-    )
-    return obj
