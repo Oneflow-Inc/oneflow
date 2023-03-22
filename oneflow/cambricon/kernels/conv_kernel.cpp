@@ -134,11 +134,22 @@ class Conv2DKernel final : public user_op::OpKernel {
       auto transpose = NewPermutePrimitive(ctx, in_shape.NumAxes());
       CHECK(transpose);
       // transpose input from NCHW to NHWC
+      const auto& temp_input_shape = ComputePermuteShape(in_shape, permute);
       transpose->Launch(ctx->stream(), in->data_type(), in_shape.NumAxes(), in_shape.data(),
                         in->dptr(), permute.data(), temp_input.dptr());
-      input_desc.set(in_shape.NumAxes(), ComputePermuteShape(in_shape, permute).data(),
-                     cnnl_data_type, layout);
+      input_desc.set(in_shape.NumAxes(), temp_input_shape.data(), cnnl_data_type, layout);
       input_ptr = temp_input.dptr();
+
+      auto weigth_transpose = NewPermutePrimitive(ctx, weight_shape.NumAxes());
+      CHECK(weigth_transpose);
+      temp_weight.resize(weight_shape.elem_cnt() * element_size);
+      auto weigth_permute = ComputePermutation(weight_shape.NumAxes(), layout);
+      const auto& temp_weigth_shape = ComputePermuteShape(weight_shape, weigth_permute);
+      transpose->Launch(ctx->stream(), weight->data_type(), weight_shape.NumAxes(),
+                        weight_shape.data(), weight->dptr(), weigth_permute.data(),
+                        temp_weight.dptr());
+      weight_desc.set(weight_shape.NumAxes(), temp_weigth_shape.data(), cnnl_data_type, layout);
+      weight_ptr = temp_weight.dptr();
 
       temp_output_shape = ComputePermuteShape(out_shape, permute);
       output_desc.set(out_shape.NumAxes(), temp_output_shape.data(), cnnl_data_type, layout);
@@ -149,16 +160,6 @@ class Conv2DKernel final : public user_op::OpKernel {
       weight_desc.set(weight_shape.NumAxes(), weight_shape.data(), cnnl_data_type, layout);
       output_desc.set(out_shape.NumAxes(), out_shape.data(), cnnl_data_type, layout);
     }
-
-    auto transpose = NewPermutePrimitive(ctx, weight_shape.NumAxes());
-    CHECK(transpose);
-    temp_weight.resize(weight_shape.elem_cnt() * element_size);
-    auto permute = ComputePermutation(weight_shape.NumAxes(), layout);
-    transpose->Launch(ctx->stream(), weight->data_type(), weight_shape.NumAxes(),
-                      weight_shape.data(), weight->dptr(), permute.data(), temp_weight.dptr());
-    weight_desc.set(weight_shape.NumAxes(), ComputePermuteShape(weight_shape, permute).data(),
-                    cnnl_data_type, layout);
-    weight_ptr = temp_weight.dptr();
 
     const void* bias_ptr = nullptr;
     if (bias) {

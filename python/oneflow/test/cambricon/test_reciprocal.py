@@ -29,7 +29,7 @@ def _test_reciprocal_forward(test_case, shape, device, dtype):
     arr[0] = 0
     x = flow.tensor(arr, device=flow.device(device), dtype=dtype)
     x_cpu = x.cpu()
-    
+
     of_out = flow._C.reciprocal(x_cpu)
     mlu_out = flow._C.reciprocal(x)
     test_case.assertTrue(np.allclose(mlu_out.numpy(), of_out.numpy(), 0.001, 0.001))
@@ -40,7 +40,7 @@ def _test_reciprocal_no_nan_forward(test_case, shape, device, dtype):
     arr[0] = 0
     x = flow.tensor(arr, device=flow.device(device), dtype=dtype)
     x_cpu = x.cpu()
-    
+
     of_out = flow._C.reciprocal_no_nan(x_cpu)
     mlu_out = flow._C.reciprocal_no_nan(x)
     test_case.assertTrue(np.allclose(mlu_out.numpy(), of_out.numpy(), 0.001, 0.001))
@@ -52,7 +52,7 @@ class TestReluCambriconModule(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_reciprocal_forward,
-            _test_reciprocal_no_nan_forward
+            _test_reciprocal_no_nan_forward,
         ]
         arg_dict["shape"] = [(2,), (2, 3), (2, 3, 4), (2, 3, 4, 5)]
         arg_dict["device"] = ["mlu"]
