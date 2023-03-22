@@ -24,22 +24,29 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def _test_ones_like(test_case, shape, device, dtype):
-    x = flow.tensor(np.random.randn(*shape), dtype=dtype, device=flow.device(device))
-    y = flow.ones_like(x)
-    test_case.assertTrue(y.shape == x.shape)
-    test_case.assertTrue(y.device == x.device)
-    y_numpy = np.ones_like(x.numpy())
-    test_case.assertTrue(np.array_equal(y.numpy(), y_numpy))
+def _get_data(shape, dtype):
+    array = np.random.randn(*shape)
+    if dtype == flow.int:
+        array = array * 100
+        array = array.astype(int)
+    return array
+
+
+def _test_identity(test_case, shape, device, dtype):
+    array = _get_data(shape, dtype)
+    x = flow.tensor(array, dtype=dtype, device=flow.device(device))
+    y = flow._C.identity(x)
+    diff = 0.001 if dtype == flow.float16 else 0.0001
+    test_case.assertTrue(np.allclose(y.numpy(), array, diff, diff))
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestOnesLikeCambriconModule(flow.unittest.TestCase):
+class TestIdentityCambriconModule(flow.unittest.TestCase):
     def test_ones_like(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_ones_like]
+        arg_dict["test_fun"] = [_test_identity]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
-        arg_dict["device"] = ["cpu", "mlu"]
+        arg_dict["device"] = ["mlu"]
         arg_dict["data_type"] = [
             flow.int,
             flow.float,
