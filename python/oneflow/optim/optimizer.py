@@ -46,7 +46,7 @@ class ContiguousParamsUnit(object):
         )
 
 
-class ParamGroup(object):
+class ParamGroup(dict):
     def __init__(
         self, parameters: Dict[str, Any], default_options: Dict,
     ):
@@ -88,6 +88,9 @@ class ParamGroup(object):
             self.params_dict = dict()
             self._contiguous_parameters = list()
             self._make_contiguous_params(parameters)
+
+        super().__init__(**self._options, params=self._parameters)
+        super().setdefault("contiguous_params", False)
 
     def _make_contiguous_params(self, parameters):
         assert not any(
@@ -165,33 +168,6 @@ class ParamGroup(object):
                 "do not set contiguous_params and fused at the same time, "
                 "now only contiguous_params is set."
             )
-
-    def get(self, key, default=None):
-        if key == "contiguous_params":
-            return self._options.get("contiguous_params", False)
-        if key == "params":
-            return self._parameters
-        return self._options.get(key, default)
-
-    def __getitem__(self, key):
-        if key == "contiguous_params":
-            return self._options.get("contiguous_params", False)
-        if key == "params":
-            return self._parameters
-        return self._options[key]
-
-    def __setitem__(self, key, value):
-        self._options[key] = value
-
-    def __contains__(self, key):
-        return self._options.__contains__(key)
-
-    def setdefault(self, key, value):
-        if key not in self._options:
-            self._options[key] = value
-
-    def items(self):
-        return self.__dict__.items()
 
     def __repr__(self):
         res = self.options
