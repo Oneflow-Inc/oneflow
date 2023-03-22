@@ -3168,6 +3168,36 @@ class ToDeviceFunctor {
   }
 };
 
+class ToNonBlockFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
+                           const Optional<std::string>& device_,
+                           const bool non_blocking = false) const {
+    Symbol<DType> dtype = input->dtype();
+    const bool copy = false;
+    if (non_blocking) {
+      printf("non_blocking was developing, please wait until new version come out");
+    }
+    if (input->is_global()) {
+      std::string device_type = device_.value_or(JUST(input->parallel_desc())->device_tag());
+      CHECK_OR_RETURN(ep::DeviceManagerRegistry::GetDeviceTypeByDeviceTypeName(device_type)
+                      != DeviceType::kInvalidDevice)
+          << Error::RuntimeError()
+          << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
+          << "for global tensor, but got " << device_.value_or("");
+      return JUST(GlobalTensorTo(input, device_type, dtype, copy));
+    } else {
+      Symbol<Device> device =
+          device_
+              .map([](const std::shared_ptr<std::string>& str) -> Symbol<Device> {
+                return CHECK_JUST(Device::ParseAndNew(*str));
+              })
+              .value_or(JUST(input->device()));
+      return JUST(LocalTensorTo(input, device, dtype, copy));
+    }
+  }
+};
+
 class TopKFunctor {
  public:
   TopKFunctor() { op_ = CHECK_JUST(one::OpBuilder("top_k").Input("in").Output("out").Build()); }
@@ -4094,7 +4124,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MeshgridFunctor>("Meshgrid");
   m.add_functor<impl::IndexSelectFunctor>("IndexSelect");
   m.add_functor<impl::ToFunctor, impl::To2Functor, impl::To3Functor, impl::To4Functor,
-                impl::ToDeviceFunctor>("To");
+                impl::ToDeviceFunctor, impl::ToNonBlockFunctor>("To");
   m.add_functor<impl::TopKFunctor>("TopK");
   m.add_functor<impl::InTopKFunctor>("InTopK");
   m.add_functor<impl::TensorToTensorBufferFunctor>("TensorToTensorBuffer");

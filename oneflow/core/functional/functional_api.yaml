@@ -1677,6 +1677,7 @@
       "Tensor (Tensor x, DataType dtype=None, Bool copy=False) => To",
       "Tensor (Tensor x, Tensor other, Bool copy=False) => To",
       "Tensor (Tensor x, String device=None) => To",
+      "Tensor (Tensor x, String device=None, Bool NonBlockFunctor=False) => To",
     ]
   bind_python: True
 
