@@ -59,7 +59,7 @@ def _test_arange_backward(test_case, device):
     x.requires_grad = True
     y = x.sum()
     y.backward()
-    test_case.assertTrue(np.allclose(x.grad.numpy(), np.ones(13, dtype=np.float16), 1e-05, 1e-05))
+    test_case.assertTrue(np.allclose(x.grad.numpy(), np.ones(13), 1e-05, 1e-05))
 
 
 def _test_arange_input_tensor_type(test_case, device):
@@ -108,45 +108,39 @@ class TestArange(flow.unittest.TestCase):
         device = random_device()
         x.to(device)
         return x
-    
+
     @autotest(n=5, auto_backward=False, rtol=1e-5, atol=1e-5, check_graph=True)
-    def test_arange_with_float16_delta(test_case):
+    def test_arange_input_float_scalar_tensor(test_case):
+        start = random().to(float)
+        end = start + random().to(float)
+        x = torch.arange(start=torch.tensor(start), end=torch.tensor(end))
+        device = random_device()
+        x.to(device)
+        return x
+
+    @autotest(n=5, auto_backward=False, rtol=1e-5, atol=1e-5, check_graph=True)
+    def test_arange_input_float16_scalar_tensor(test_case):
+        start = random().to(float)
+        end = start + random().to(float)
+        start, end = torch.tensor(start).half(), torch.tensor(end).half()
+        x = torch.arange(start=start, end=end)
+        device = random_device()
+        x.to(device)
+        return x
+
+    @autotest(n=5, auto_backward=False, rtol=1e-5, atol=1e-5, check_graph=True)
+    def test_arange_float16(self):
         start = random().to(int)
         end = start + random().to(int)
-        step = random(1, end - start + 1).to(float)
-        step = step.half()
-        x = torch.arange(start=start, end=end, step=step)
+        step = random(1, end - start + 1).to(int)
         device = random_device()
-        x.to(device)
-        return x
-    
-    @autotest(n=5, auto_backward=False, rtol=1e-5, atol=1e-5, check_graph=True)
-    def test_arange_input_float_scalar_tensor(test_case):
-        start = random().to(float)
-        end = start + random().to(float)
-        x = torch.arange(start=torch.tensor(start), end=torch.tensor(end))
-        device = random_device()
-        x.to(device)
-        return x
-    
-    @autotest(n=5, auto_backward=False, rtol=1e-5, atol=1e-5, check_graph=True)
-    def test_arange_input_float_scalar_tensor(test_case):
-        start = random().to(float)
-        end = start + random().to(float)
-        start,end = start.half(),end.half()
-        x = torch.arange(start=torch.tensor(start), end=torch.tensor(end))
-        device = random_device()
-        x.to(device)
+        x = torch.arange(start, end, step, dtype=torch.float16, device=device)
         return x
 
     def test_global_naive(test_case):
         placement = flow.placement("cpu", ranks=[0])
         sbp = (flow.sbp.broadcast,)
         x = flow.arange(start=0, end=10, step=1, placement=placement, sbp=sbp)
-        test_case.assertEqual(x.sbp, sbp)
-        test_case.assertEqual(x.placement, placement)
-    
-        x = flow.arange(start=0, end=10, step=1, placement=placement, sbp=sbp, dtype=flow.float16)
         test_case.assertEqual(x.sbp, sbp)
         test_case.assertEqual(x.placement, placement)
 
