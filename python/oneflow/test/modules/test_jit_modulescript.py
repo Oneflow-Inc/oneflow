@@ -35,3 +35,4 @@ class test_jit_scriptmodule(flow.unittest.Testcase):
   
 if __name__ == "__main__":
     unittest.main()
+    
