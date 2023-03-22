@@ -22,7 +22,7 @@ import numpy as np
 
 @flow.unittest.skip_unless_1n1d()
 def testcase4module():
-    model = oneflow.nn.Sequential(
+    model = flow.nn.Sequential(
     oneflow.nn.Linear(5, 3),
     oneflow.nn.Linear(3, 1)
     )
