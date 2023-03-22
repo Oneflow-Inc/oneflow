@@ -13,24 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-<<<<<<< HEAD
-import oneflow
-from oneflow.test_utils.automated_test_util.torch_flow_dual_object import autotest
-
-@autotest()
-def testcase4module():
-    model = oneflow.nn.Sequential(
-    oneflow.nn.Linear(5, 3),
-    oneflow.nn.Linear(3, 1)
-    )
-    if isinstance(model, oneflow.jit.ScriptModule):
-        return True
-    else:
-        return False
-
-if __name__ == "__main__":
-    testcase4module()
-=======
 import unittest
 
 import oneflow as flow
@@ -51,4 +33,3 @@ def testcase4module():
 
 if __name__ == "__main__":
     unittest.main()
->>>>>>> 2de0f9472880fdeb009c8b30a600d118dc2d3495
