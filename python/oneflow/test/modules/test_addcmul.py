@@ -19,6 +19,7 @@ import oneflow as flow
 import oneflow.unittest
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestAddcmul(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_addcmul(test_case):
