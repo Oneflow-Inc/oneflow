@@ -269,9 +269,9 @@ if("${LLVM_MONO_REPO_URL}" STREQUAL
   unset(LLVM_MONO_REPO_MD5 CACHE)
 endif()
 set(LLVM_MONO_REPO_URL
-    "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-16.0.0-rc4.zip" CACHE STRING "")
+    "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-16.0.0.zip" CACHE STRING "")
 use_mirror(VARIABLE LLVM_MONO_REPO_URL URL ${LLVM_MONO_REPO_URL})
-set(LLVM_MONO_REPO_MD5 "b64481eaca658a2ff4e3e193440d0f68" CACHE STRING "")
+set(LLVM_MONO_REPO_MD5 "78172b0f67282e28956cd310612091fd" CACHE STRING "")
 set(ONEFLOW_BUILD_ROOT_DIR "${PROJECT_BINARY_DIR}")
 add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/ir)
 if(WITH_MLIR)
