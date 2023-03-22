@@ -114,8 +114,6 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
     c_desc.set(c_dims.size(), c_dims.data(), cnnl_data_type);
 
     int return_algo_count = 0;
-    cnnlMatMulHeuristicResult_t result;
-    OF_CNNL_CHECK(cnnlCreateMatMulHeuristicResult(&result));
     OF_CNNL_CHECK(cnnlGetBatchMatMulAlgoHeuristic(mlu_stream->cnnl_handle(), matmul_desc.desc(),
                                                   a_desc.desc(), b_desc.desc(), c_desc.desc(), NULL,
                                                   1, &result, &return_algo_count));
