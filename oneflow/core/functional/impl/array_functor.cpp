@@ -4164,7 +4164,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MeshgridFunctor>("Meshgrid");
   m.add_functor<impl::IndexSelectFunctor>("IndexSelect");
   m.add_functor<impl::ToFunctor, impl::To2Functor, impl::To3Functor, impl::To4Functor,
-                impl::ToDeviceFunctor>("To");
+                impl::ToDeviceFunctor>("To"); 
   m.add_functor<impl::TopKFunctor>("TopK");
   m.add_functor<impl::InTopKFunctor>("InTopK");
   m.add_functor<impl::TensorToTensorBufferFunctor>("TensorToTensorBuffer");
