@@ -175,7 +175,7 @@ class GroupwiseDequantizeFunctor {
         << "group_size should be in range (0," << group_dim_size << "].";
     CHECK_EQ_OR_RETURN(group_dim_size % regularized_group_size, 0)
         << "group_size should be a divisor of " << group_dim_size << ".";
-    const int64_t num_groups = group_dim_size / group_size;
+    const int64_t num_groups = group_dim_size / regularized_group_size;
     if (symmetric) {
       CHECK_OR_RETURN(in->dtype()->data_type() == DataType::kUInt8
                       || in->dtype()->data_type() == DataType::kInt8)
