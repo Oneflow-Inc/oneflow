@@ -196,84 +196,83 @@ def _test_gru_impl(
     )
 
 
-# NOTE(lixiang): CI test taking too long.
-# class TestRNNGlobal(oneflow.unittest.TestCase):
-#     @globaltest
-#     def test_rnn(test_case):
-#         arg_dict = OrderedDict()
-#         arg_dict["input_size"] = [
-#             1,
-#         ]
-#         arg_dict["hidden_size"] = [
-#             1,
-#         ]
-#         arg_dict["num_layers"] = [
-#             1,
-#         ]
-#         arg_dict["nonlinearity"] = ["tanh", "relu"]
-#         arg_dict["bias"] = [True, False]
-#         arg_dict["batch_first"] = [True, False]
-#         arg_dict["dropout"] = [
-#             0,
-#         ]
-#         arg_dict["bidirectional"] = [True, False]
+class TestRNNGlobal(oneflow.unittest.TestCase):
+    @globaltest
+    def test_rnn(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["input_size"] = [
+            1,
+        ]
+        arg_dict["hidden_size"] = [
+            1,
+        ]
+        arg_dict["num_layers"] = [
+            1,
+        ]
+        arg_dict["nonlinearity"] = ["tanh", "relu"]
+        arg_dict["bias"] = [True, False]
+        arg_dict["batch_first"] = [True, False]
+        arg_dict["dropout"] = [
+            0,
+        ]
+        arg_dict["bidirectional"] = [True, False]
 
-#         module_sbp = flow.sbp.broadcast
-#         for args in GenArgDict(arg_dict):
-#             for placement in all_placement():
-#                 for in_sbp in all_sbp(placement, max_dim=3, valid_split_axis=1):
-#                     _test_rnn_impl(test_case, placement, module_sbp, in_sbp, **args)
+        module_sbp = flow.sbp.broadcast
+        for args in GenArgDict(arg_dict):
+            for placement in all_placement():
+                for in_sbp in all_sbp(placement, max_dim=3, valid_split_axis=1):
+                    _test_rnn_impl(test_case, placement, module_sbp, in_sbp, **args)
 
-#     @globaltest
-#     def test_lstm(test_case):
-#         arg_dict = OrderedDict()
-#         arg_dict["input_size"] = [
-#             1,
-#         ]
-#         arg_dict["hidden_size"] = [
-#             2,
-#         ]
-#         arg_dict["num_layers"] = [
-#             1,
-#         ]
-#         arg_dict["bias"] = [True, False]
-#         arg_dict["batch_first"] = [True, False]
-#         arg_dict["dropout"] = [
-#             0,
-#         ]
-#         arg_dict["bidirectional"] = [True, False]
-#         arg_dict["proj_size"] = [0, 1]
+    @globaltest
+    def test_lstm(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["input_size"] = [
+            1,
+        ]
+        arg_dict["hidden_size"] = [
+            2,
+        ]
+        arg_dict["num_layers"] = [
+            1,
+        ]
+        arg_dict["bias"] = [True, False]
+        arg_dict["batch_first"] = [True, False]
+        arg_dict["dropout"] = [
+            0,
+        ]
+        arg_dict["bidirectional"] = [True, False]
+        arg_dict["proj_size"] = [0, 1]
 
-#         module_sbp = flow.sbp.broadcast
-#         for args in GenArgDict(arg_dict):
-#             for placement in all_placement():
-#                 for in_sbp in all_sbp(placement, max_dim=3, valid_split_axis=1):
-#                     _test_lstm_impl(test_case, placement, module_sbp, in_sbp, **args)
+        module_sbp = flow.sbp.broadcast
+        for args in GenArgDict(arg_dict):
+            for placement in all_placement():
+                for in_sbp in all_sbp(placement, max_dim=3, valid_split_axis=1):
+                    _test_lstm_impl(test_case, placement, module_sbp, in_sbp, **args)
 
-#     @globaltest
-#     def test_gru(test_case):
-#         arg_dict = OrderedDict()
-#         arg_dict["input_size"] = [
-#             1,
-#         ]
-#         arg_dict["hidden_size"] = [
-#             1,
-#         ]
-#         arg_dict["num_layers"] = [
-#             1,
-#         ]
-#         arg_dict["bias"] = [True, False]
-#         arg_dict["batch_first"] = [True, False]
-#         arg_dict["dropout"] = [
-#             0,
-#         ]
-#         arg_dict["bidirectional"] = [True, False]
+    @globaltest
+    def test_gru(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["input_size"] = [
+            1,
+        ]
+        arg_dict["hidden_size"] = [
+            1,
+        ]
+        arg_dict["num_layers"] = [
+            1,
+        ]
+        arg_dict["bias"] = [True, False]
+        arg_dict["batch_first"] = [True, False]
+        arg_dict["dropout"] = [
+            0,
+        ]
+        arg_dict["bidirectional"] = [True, False]
 
-#         module_sbp = flow.sbp.broadcast
-#         for args in GenArgDict(arg_dict):
-#             for placement in all_placement():
-#                 for in_sbp in all_sbp(placement, max_dim=3, valid_split_axis=1):
-#                     _test_gru_impl(test_case, placement, module_sbp, in_sbp, **args)
+        module_sbp = flow.sbp.broadcast
+        for args in GenArgDict(arg_dict):
+            for placement in all_placement():
+                for in_sbp in all_sbp(placement, max_dim=3, valid_split_axis=1):
+                    _test_gru_impl(test_case, placement, module_sbp, in_sbp, **args)
 
 
 if __name__ == "__main__":
