@@ -142,7 +142,7 @@ class InplaceUniformFunctor {
       const auto& nb_sbp = JUST(x->nd_sbp());
       const auto& placement = JUST(x->parallel_desc());
       JUST(CheckDeviceIdsIsValid(placement));
-      uint64_t init_seed = JUST(gen->Get<CPUGeneratorImpl>(0))->engine()();
+      uint64_t init_seed = JUST(gen->Get<ep::CPUGenerator>(0))->engine()();
       if (LazyMode::is_enabled())  // lazy
       {
         if (IsInteger) {
@@ -250,7 +250,7 @@ class GlobalRandFunctor {
     }
 
     auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    uint64_t init_seed = JUST(gen->Get<CPUGeneratorImpl>(0))->engine()();
+    uint64_t init_seed = JUST(gen->Get<ep::CPUGenerator>(0))->engine()();
 
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
 
@@ -426,7 +426,7 @@ class GlobalNormalFunctor {
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
 
     std::shared_ptr<Generator> gen = optional_generator.value_or(JUST(one::DefaultAutoGenerator()));
-    uint64_t init_seed = JUST(gen->Get<CPUGeneratorImpl>(0))->engine()();
+    uint64_t init_seed = JUST(gen->Get<ep::CPUGenerator>(0))->engine()();
 
     if (LazyMode::is_enabled()) {
       attrs.SetAllAttrs(static_cast<double>(mean), static_cast<double>(std), shape,
@@ -590,7 +590,7 @@ class GlobalRandIntFunctor {
 
     auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& nd_sbp = JUST(GetNdSbp(sbp));
-    uint64_t init_seed = JUST(gen->Get<CPUGeneratorImpl>(0))->engine()();
+    uint64_t init_seed = JUST(gen->Get<ep::CPUGenerator>(0))->engine()();
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "from", "to", "dtype", "seed", "nd_sbp");
     if (LazyMode::is_enabled()) {

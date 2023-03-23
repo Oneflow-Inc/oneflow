@@ -112,7 +112,7 @@ class MultinomialWithReplacementGpuKernel final : public user_op::OpKernel {
     CHECK_NOTNULL(distribution_state);
     const auto& generator = distribution_state->generator();
     CHECK_NOTNULL(generator);
-    auto gpu_gen = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>());
+    auto gpu_gen = CHECK_JUST(generator->Get<ep::CUDAGenerator>());
 
     const user_op::Tensor* norm_dist = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* prefix_sum = ctx->Tensor4ArgNameAndIndex("prefix_sum", 0);

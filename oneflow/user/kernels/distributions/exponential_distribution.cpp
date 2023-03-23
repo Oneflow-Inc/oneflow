@@ -42,8 +42,8 @@ void ExponentialDistribution<DeviceType::kCPU, T>::operator()(
     ep::Stream* stream, const int64_t elem_cnt, T* dptr,
     const std::shared_ptr<one::Generator>& generator) const {
   CHECK_GE(elem_cnt, 0);
-  auto gen = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
-  one::pytorch_mt19937_engine& engine = gen->torch_engine();
+  auto gen = CHECK_JUST(generator->Get<ep::CPUGenerator>());
+  ep::pytorch_mt19937_engine& engine = gen->torch_engine();
   for (int64_t i = 0; i < elem_cnt; ++i) {
     uint32_t random1 = engine();
     uint32_t random2 = engine();
