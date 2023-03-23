@@ -16,7 +16,19 @@ limitations under the License.
 import contextlib
 import os
 import warnings
-from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Union, IO, BinaryIO
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+    IO,
+    BinaryIO,
+)
 from typing_extensions import TypeAlias
 from pathlib import Path
 import pickle
@@ -83,26 +95,28 @@ def _open_file_like(path_or_buffer, mode):
     if _is_path(path_or_buffer):
         return _open_file(path_or_buffer, mode)
     else:
-        if 'w' in mode:
+        if "w" in mode:
             return _open_buffer_writer(path_or_buffer)
-        elif 'r' in mode:
+        elif "r" in mode:
             return _open_buffer_reader(path_or_buffer)
         else:
             raise RuntimeError(f"Expected 'r' or 'w' in mode but got {mode}")
 
 
 def _is_path(path_or_buffer):
-    return isinstance(path_or_buffer, str) or \
-        isinstance(path_or_buffer, Path)
+    return isinstance(path_or_buffer, str) or isinstance(path_or_buffer, Path)
 
 
 def _check_seekable(f) -> bool:
     def raise_err_msg(patterns, e):
         for p in patterns:
             if p in str(e):
-                msg = (str(e) + ". You can only torch.load from a file that is seekable."
-                       + " Please pre-load the data into a buffer like io.BytesIO and"
-                       + " try to load from it instead.")
+                msg = (
+                    str(e)
+                    + ". You can only torch.load from a file that is seekable."
+                    + " Please pre-load the data into a buffer like io.BytesIO and"
+                    + " try to load from it instead."
+                )
                 raise type(e)(msg)
         raise e
 
@@ -641,11 +655,13 @@ def save(
     """
     if isinstance(obj, graph_util.Graph):
         if not _is_path(path_or_buffer):
-            raise ValueError("path_or_buffer must be the type of {`str`, `pathlib.Path`} while obj is Graph")
+            raise ValueError(
+                "path_or_buffer must be the type of {`str`, `pathlib.Path`} while obj is Graph"
+            )
         _save_graph(obj, path_or_buffer)
 
     # this `path` is only used for `ContextData` and is set to empty when `path_or_buffer` is IO[bytes] or BinaryIO
-    path: Path = Path(path_or_buffer if _is_path(path_or_buffer) else '')
+    path: Path = Path(path_or_buffer if _is_path(path_or_buffer) else "")
     obj = {"protocol_version": PROTOCOL_VERSION, ONEFLOW_MAGIC_KEY: None, "data": obj}
 
     with tensor_pickling_context(path, global_dst_rank, None, save_as_external_data):
