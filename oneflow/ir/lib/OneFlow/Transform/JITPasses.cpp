@@ -6,6 +6,10 @@ namespace oneflow {
 
 namespace {
 
+// general lowering path:
+// 1. outline linalg ops to a func.func and an oneflow.jit op
+// 2. bufferize the func.func and update oneflow.jit op's tmp buffer size
+
 // 1. collect ops to outline
 // 2. create func.func jit ops to call
 // 3. replace the usages with jit ops' results
