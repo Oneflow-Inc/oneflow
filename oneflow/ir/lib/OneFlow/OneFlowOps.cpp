@@ -110,7 +110,7 @@ LogicalResult TrimRedundantCtrl(Operation* op, PatternRewriter& rewriter) {
       attributes.erase(OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr());
       attributes.push_back(
           rewriter.getNamedAttr(OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr(),
-                                rewriter.getI32VectorAttr({num_data_outputs, 0})));
+                                rewriter.getDenseI32ArrayAttr({num_data_outputs, 0})));
     }
     OperationState state(op->getLoc(), op->getName(), op->getOperands(), data_outputs.getTypes(),
                          attributes);
@@ -164,12 +164,12 @@ struct ConcreteUserOps : public OpRewritePattern<UserOp> {
       if (!input_sizes.empty()) {
         attributes.push_back(rewriter.getNamedAttr(
             OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr(),
-            rewriter.getI32VectorAttr(input_sizes)));
+            rewriter.getDenseI32ArrayAttr(input_sizes)));
       }
       if (!output_sizes.empty()) {
         attributes.push_back(rewriter.getNamedAttr(
             OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr(),
-            rewriter.getI32VectorAttr(output_sizes)));
+            rewriter.getDenseI32ArrayAttr(output_sizes)));
       }
       OperationState state(op->getLoc(), OneFlowDialect::getDialectNamespace().str() + "."
                                              + op.getOpTypeName().str());
