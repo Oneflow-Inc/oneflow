@@ -47,6 +47,8 @@ Maybe<int> OFDataTypeToNumpyType(DataType of_data_type) {
     case DataType::kInt64: return NPY_INT64;
     case DataType::kUInt8: return NPY_UINT8;
     case DataType::kFloat16: return NPY_FLOAT16;
+    case DataType::kComplex64: return NPY_COMPLEX64;
+    case DataType::kComplex128: return NPY_COMPLEX128;
     default:
       return Error::InvalidValueError() << "OneFlow data type " << DataType_Name(of_data_type)
                                         << " is not valid to Numpy data type.";
@@ -64,6 +66,8 @@ Maybe<DataType> NumpyTypeToOFDataType(int np_type) {
     case NPY_LONGLONG: return DataType::kInt64;
     case NPY_UINT8: return DataType::kUInt8;
     case NPY_FLOAT16: return DataType::kFloat16;
+    case NPY_COMPLEX64: return DataType::kComplex64;
+    case NPY_COMPLEX128: return DataType::kComplex128;
     default:
       return Error::InvalidValueError() << "Numpy data type " << std::to_string(np_type)
                                         << " is not valid to OneFlow data type.";
@@ -101,6 +105,10 @@ bool PyArrayCheckFloatScalar(PyObject* obj) {
 
 bool PyArrayCheckBoolScalar(PyObject* obj) {
   return PyArray_CheckScalar(obj) && PyDataType_ISBOOL(PyArray_DescrFromScalar(obj));
+}
+
+bool PyArrayCheckComplexScalar(PyObject* obj) {
+  return PyArray_CheckScalar(obj) && PyDataType_ISCOMPLEX(PyArray_DescrFromScalar(obj));
 }
 
 // Executing any numpy c api before _import_array() results in segfault
