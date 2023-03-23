@@ -369,8 +369,8 @@ def load_if(condition):
     return decorator
 
 
-def is_dir_and_no_pickle_file(path: Path, support_pytorch_format: bool):
-    if path.is_dir():
+def is_dir_and_no_pickle_file(path: FILE_LIKE, support_pytorch_format: bool):
+    if _is_path(path) and path.is_dir():
         pickle_path = path / PICKLE_FILENAME
         return not pickle_path.exists()
     return False
@@ -420,11 +420,12 @@ def tensor_pickling_context(
         context_data = None
 
 
-def is_oneflow_pickle_file(path: Path, support_pytorch_format: bool) -> bool:
-    if not path.is_file():
-        return False
+def is_oneflow_pickle_file(path: FILE_LIKE, support_pytorch_format: bool) -> bool:
+    if _is_path(path):
+        if not path.is_file():
+            return False
     try:
-        with open(path, "rb") as f:
+        with _open_file_like(path, "rb") as f:
             content = pickle.load(f)
             if ONEFLOW_MAGIC_KEY in content:
                 return True, (content,)
@@ -439,7 +440,7 @@ def is_oneflow_pickle_file(path: Path, support_pytorch_format: bool) -> bool:
 # as `content`.
 @load_if(is_oneflow_pickle_file)
 def load_from_oneflow_single_file(
-    path: Path,
+    path: FILE_LIKE,
     global_src_rank,
     map_location: Optional[Union[str, flow.device]],
     content: Any = None,
@@ -463,14 +464,16 @@ def load_from_oneflow_single_file(
 
 
 def is_file_and_support_pytorch_format(
-    path: Path, support_pytorch_format: bool
+    path: FILE_LIKE, support_pytorch_format: bool
 ) -> bool:
-    return path.is_file() and support_pytorch_format
+    if _is_path(path):
+        return path.is_file() and support_pytorch_format
+    return support_pytorch_format
 
 
 @load_if(is_file_and_support_pytorch_format)
 def load_from_pytorch_file(
-    path: Path, global_src_rank, map_location: Optional[Union[str, flow.device]],
+    path: FILE_LIKE, global_src_rank, map_location: Optional[Union[str, flow.device]],
 ):
     with flow.mock_torch.disable():
         import torch
@@ -499,8 +502,8 @@ def load_from_pytorch_file(
         return flow_obj
 
 
-def is_dir_and_has_pickle_file(path: Path, support_pytorch_format: bool) -> bool:
-    if path.is_dir():
+def is_dir_and_has_pickle_file(path: FILE_LIKE, support_pytorch_format: bool) -> bool:
+    if _is_path(path) and path.is_dir():
         pickle_path = path / PICKLE_FILENAME
         return pickle_path.exists()
     return False
@@ -534,7 +537,7 @@ def load_from_oneflow_pickle_dir(
 
 
 def load(
-    path: str,
+    path: FILE_LIKE,
     global_src_rank: Optional[int] = None,
     map_location: Optional[Union[str, flow.device, flow.placement]] = None,
     *,
@@ -543,7 +546,8 @@ def load(
     r"""Loads an object saved with oneflow.save() from a directory.
 
     Args:
-        path (str): The directory containing the object
+        path: a file-like object (has to implement :meth:`read`, :meth:`readline`, :meth:`tell`, and :meth:`seek`),
+            or a string or os.PathLike object containing a file name
         global_src_rank (int, optional): The source rank for
             loading global tensors. When specified, only the
             process whose rank == global_src_rank will really
@@ -558,7 +562,8 @@ def load(
     Returns:
         The loaded object
     """
-    path: Path = Path(path)
+    if isinstance(path, str):
+        path: Path = Path(path)
     rank = flow.env.get_rank()
     if global_src_rank is None or global_src_rank == rank:
         for i, (condition, load) in enumerate(load_methods):
