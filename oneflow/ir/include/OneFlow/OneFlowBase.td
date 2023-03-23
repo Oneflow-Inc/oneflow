@@ -99,8 +99,8 @@ class OneFlow_Op<string mnemonic, list<Trait> traits = []> :
   let ctrl_input = (ins Variadic<AnyType>:$ctrl_inputs);
   let ctrl_output = (outs Optional<AnyType>:$ctrl_output);
   let trait_attrs = (ins
-    I32ElementsAttr:$operand_segment_sizes,
-    I32ElementsAttr:$result_segment_sizes
+    DenseI32ArrayAttr:$operand_segment_sizes,
+    DenseI32ArrayAttr:$result_segment_sizes
   );
 }
 
@@ -124,8 +124,8 @@ class OneFlow_UserBaseWithCtrlOp<string mnemonic, list<Trait> traits = []> :
     let ctrl_input = (ins Variadic<AnyType>:$ctrl_inputs);
     let ctrl_output = (outs Optional<AnyType>:$ctrl_output);
     let trait_attrs = (ins
-      I32ElementsAttr:$operand_segment_sizes,
-      I32ElementsAttr:$result_segment_sizes
+      DenseI32ArrayAttr:$operand_segment_sizes,
+      DenseI32ArrayAttr:$result_segment_sizes
     );
 }
 
@@ -154,7 +154,7 @@ class OneFlow_ConvolutionBaseOp<string mnemonic, list<Trait> traits = []> :
       DefaultValuedAttr<SI32Attr, "1">:$groups
     );
     let trait_attrs = (ins
-      I32ElementsAttr:$operand_segment_sizes
+      DenseI32ArrayAttr:$operand_segment_sizes
     );
     let has_check_fn = 1;
     let has_logical_tensor_desc_infer_fn = 1;
