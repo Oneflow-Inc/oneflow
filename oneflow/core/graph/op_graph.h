@@ -133,7 +133,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
 
   std::function<bool(const OpNode* src, const OpNode* dst)> CreatePredicatorIsReachable() const;
   void UpdateCachedPredicatorIsReachable();
-  std::function<bool(const OpNode* src, const OpNode* dst)> cached_predicator_is_reachable() const;
+  std::function<bool(const OpNode* src, const OpNode* dst)> GetCachedPredicatorIsReachable() const;
   // Print the graph with SBP in order
   void PrintSBPGraphDebugInfo() const;
 
