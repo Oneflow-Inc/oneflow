@@ -826,6 +826,8 @@ void PlanUtil::SetForceInplaceMemBlock(Plan* plan, int64_t limited_rank) {
   auto RegstDesc4Id = MakeMutRegstDesc4Id(plan);
   for (int i = 0; i < plan->task_size(); i++) {
     TaskProto* task = plan->mutable_task(i);
+    // When do seperation compilation, some rank's plan (such as rank 0) has other ranks task node
+    // for compilation. There is no need to set mem block for other ranks task node.
     if (limited_rank >= 0 && task->machine_id() != limited_rank) { continue; }
     for (auto& pair : *task->mutable_produced_regst_desc()) {
       RegstDescProto* regst_desc = &pair.second;
