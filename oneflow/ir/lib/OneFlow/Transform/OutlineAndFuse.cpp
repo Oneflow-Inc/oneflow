@@ -139,9 +139,9 @@ struct GroupMatMulPattern : public mlir::OpInterfaceRewritePattern<MatMulCompati
       attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(), scope_symbol_id);
     }
     attributes.set("operand_segment_sizes",
-                   rewriter.getI32VectorAttr({static_cast<int>(all_matmuls.size()),
-                                              static_cast<int>(all_matmuls.size()),
-                                              static_cast<int>(all_bias_adds.size())}));
+                   rewriter.getDenseI32ArrayAttr({static_cast<int>(all_matmuls.size()),
+                                                  static_cast<int>(all_matmuls.size()),
+                                                  static_cast<int>(all_bias_adds.size())}));
     attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
                    rewriter.getStringAttr(
                        "grouped_matmul_" + OpTrait::IsOpConfCompatible<void>::getOpName(op).str()));
@@ -154,7 +154,8 @@ struct GroupMatMulPattern : public mlir::OpInterfaceRewritePattern<MatMulCompati
     } else {
       CHECK(all_bias_adds.size() == all_matmuls.size());
       for (const auto& bias_add : llvm::enumerate(all_bias_adds)) {
-        bias_add.value().biasAddGetOut().replaceAllUsesWith(grouped_matmul.getYs()[bias_add.index()]);
+        bias_add.value().biasAddGetOut().replaceAllUsesWith(
+            grouped_matmul.getYs()[bias_add.index()]);
       }
     }
     return success();

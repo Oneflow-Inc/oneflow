@@ -281,7 +281,7 @@ LogicalResult Importer::AddOperandSegmentSizes(int32_t input_lbns_size, int32_t 
                                                std::vector<NamedAttribute>& attr_vec) {
   attr_vec.push_back(GetBuilder().getNamedAttr(
       mlir::OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr(),
-      GetBuilder().getI32VectorAttr({input_lbns_size, ctrl_in_size})));
+      GetBuilder().getDenseI32ArrayAttr({input_lbns_size, ctrl_in_size})));
   return success();
 }
 
@@ -289,7 +289,7 @@ LogicalResult Importer::AddResultSegmentSizes(int32_t output_lbns_size,
                                               std::vector<NamedAttribute>& attr_vec) {
   attr_vec.push_back(GetBuilder().getNamedAttr(
       mlir::OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr(),
-      GetBuilder().getI32VectorAttr({output_lbns_size, 1} /* {data_out_size, ctrl_out_size} */)));
+      GetBuilder().getDenseI32ArrayAttr({output_lbns_size, 1} /* {data_out_size, ctrl_out_size} */)));
   return success();
 }
 
