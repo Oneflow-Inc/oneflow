@@ -40,6 +40,14 @@ llvm::SmallVector<llvm::DenseSet<Operation*>, 4> mergeEntries(
   }
 }
 
+void findEntriesOfRoot(Operation* root, llvm::DenseSet<Operation*>& entryOps,
+                       llvm::DenseSet<Operation*>& results) {
+  if (entryOps.count(root)) { results.insert(root); }
+  for (auto operand : root->getOperands()) {
+    if (auto defOp = operand.getDefiningOp()) { findEntriesOfRoot(defOp, entryOps, results); }
+  }
+}
+
 class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunctionPass> {
   void runOnOperation() override {
     llvm::DenseSet<Operation*> entryOps{};
@@ -55,20 +63,22 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
           }
         }
         for (auto operand : op.getOperands()) {
-          if (operand.dyn_cast<BlockArgument>()) { continue; }
-          if (!llvm::dyn_cast<OneFlowDialect>(operand.getDefiningOp()->getDialect())) {
-            exitOps.insert(operand.getDefiningOp());
+          if (auto defOp = operand.getDefiningOp()) {
+            if (!llvm::dyn_cast<OneFlowDialect>(defOp->getDialect())) { exitOps.insert(defOp); }
           }
         }
       }
     }
     llvm::SmallVector<llvm::DenseSet<Operation*>, 4> entryGroups{};
-    // TODO: pupulate groups by building trees
-
-    // cluster non-oneflow operations
+    for (auto exitOp : exitOps) {
+      llvm::DenseSet<Operation*> group;
+      findEntriesOfRoot(exitOp, entryOps, group);
+      entryGroups.push_back(group);
+    }
     entryGroups = mergeEntries(entryGroups);
     llvm::errs() << entryOps.size() << "\n";
     llvm::errs() << exitOps.size() << "\n";
+    llvm::errs() << entryGroups.size() << "\n";
   };
 };
 
