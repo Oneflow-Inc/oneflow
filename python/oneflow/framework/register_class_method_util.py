@@ -15,7 +15,6 @@ limitations under the License.
 """
 import oneflow._oneflow_internal
 import oneflow.framework.check_point_v2 as check_point_v2
-import oneflow.framework.generator as generator
 import oneflow.framework.tensor as tensor_util
 
 

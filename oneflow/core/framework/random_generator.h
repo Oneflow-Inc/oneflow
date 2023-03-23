@@ -36,7 +36,7 @@ class Tensor;
 
 class Generator final {
  public:
-  explicit Generator(const std::shared_ptr<ep::Generator>& internal);
+  explicit Generator(const std::shared_ptr<ep::RandomGenerator>& internal);
 
   ~Generator() = default;
 
@@ -52,7 +52,7 @@ class Generator final {
   Maybe<Tensor> GetState() const;
   Maybe<void> SetState(const std::shared_ptr<Tensor>& state);
 
-  const std::shared_ptr<ep::Generator>& internal() const { return internal_; }
+  const std::shared_ptr<ep::RandomGenerator>& internal() const { return internal_; }
 
   template<typename T>
   Maybe<T> Get(int device_index = -1) const {
@@ -71,7 +71,7 @@ class Generator final {
 
  private:
   mutable std::mutex mutex_;
-  std::shared_ptr<ep::Generator> internal_;
+  std::shared_ptr<ep::RandomGenerator> internal_;
 };
 
 Maybe<Generator> MakeGenerator(const std::string& device, int device_index = -1);

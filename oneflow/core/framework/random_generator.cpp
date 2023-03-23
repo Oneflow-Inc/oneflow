@@ -17,7 +17,7 @@ limitations under the License.
 
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/ep/include/random_generator_registry.h"
+#include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/framework/auto_random_generator.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor_util.h"
@@ -46,7 +46,7 @@ Maybe<void> CPUSynchronize() {
 
 }  // namespace
 
-Generator::Generator(const std::shared_ptr<ep::Generator>& internal) : internal_(internal) {}
+Generator::Generator(const std::shared_ptr<ep::RandomGenerator>& internal) : internal_(internal) {}
 
 uint64_t Generator::current_seed() const { return internal_->current_seed(); }
 
@@ -62,7 +62,7 @@ uint64_t Generator::seed() {
 }
 
 Maybe<Symbol<Device>> Generator::device() const {
-  return Device::New(internal_->device(), internal_->device_index());
+  return Device::New(internal_->device_type_name(), internal_->device_index());
 }
 
 Maybe<Tensor> Generator::GetState() const {
@@ -111,7 +111,7 @@ Maybe<Generator> DefaultGenerator(const std::string& device, int device_index) {
 
 Maybe<Generator> DefaultAutoGenerator() {
   static auto default_auto_generator =
-      std::make_shared<Generator>(std::make_shared<AutoGenerator>(GetNonDeterministicRandom(), 0));
+      std::make_shared<Generator>(std::make_shared<AutoGenerator>(GetNonDeterministicRandom()));
   return default_auto_generator;
 }
 
@@ -139,18 +139,21 @@ Maybe<Generator> DefaultCUDAGenerator(int device_index) {
 }
 
 Maybe<Generator> MakeAutoGenerator() {
-  return std::make_shared<Generator>(std::make_shared<AutoGenerator>(default_rng_seed_val, 0));
+  return std::make_shared<Generator>(std::make_shared<AutoGenerator>(default_rng_seed_val));
 }
 
 Maybe<Generator> MakeCPUGenerator() {
-  static auto cpu_generator_ctor = ep::RandomGeneratorRegistry::Lookup("cpu");
-  return std::make_shared<Generator>(cpu_generator_ctor(default_rng_seed_val, 0));
+  static auto device_mgr =
+      Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceManager(DeviceType::kCPU);
+  return std::make_shared<Generator>(device_mgr->CreateRandomGenerator(default_rng_seed_val, 0));
 }
 
 Maybe<Generator> MakeCUDAGenerator(int device_index) {
-  static auto cuda_generator_ctor = ep::RandomGeneratorRegistry::Lookup("cuda");
+  static auto device_mgr =
+      Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceManager(DeviceType::kCUDA);
   if (device_index == -1) { device_index = GlobalProcessCtx::LocalRank(); }
-  return std::make_shared<Generator>(cuda_generator_ctor(default_rng_seed_val, device_index));
+  return std::make_shared<Generator>(
+      device_mgr->CreateRandomGenerator(default_rng_seed_val, device_index));
 }
 
 Maybe<void> ManualSeedAllCudaGenerator(uint64_t seed) {
@@ -165,9 +168,14 @@ Maybe<void> ManualSeedAllCudaGenerator(uint64_t seed) {
 }
 
 Maybe<Generator> MakeGenerator(const std::string& device, int device_index) {
-  auto generator_ctor = ep::RandomGeneratorRegistry::Lookup(device);
+  if (device == "auto") {
+    return std::make_shared<Generator>(std::make_shared<AutoGenerator>(default_rng_seed_val));
+  }
+  auto device_mgr = Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceManager(
+      ep::DeviceManagerRegistry::GetDeviceTypeByDeviceTypeName(device));
   if (device_index == -1) { device_index = (device == "cpu" ? 0 : GlobalProcessCtx::LocalRank()); }
-  return std::make_shared<Generator>(generator_ctor(default_rng_seed_val, device_index));
+  return std::make_shared<Generator>(
+      device_mgr->CreateRandomGenerator(default_rng_seed_val, device_index));
 }
 
 Maybe<Generator> DefaultGenerator(DeviceType device, int device_index) {

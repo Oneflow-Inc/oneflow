@@ -17,7 +17,7 @@ limitations under the License.
 
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/control/global_process_ctx.h"
-#include "oneflow/core/ep/include/random_generator_registry.h"
+#include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
@@ -50,11 +50,11 @@ size_t AutoGenerator::GetStateSize() const {
   std::stringstream ss;
   auto it = generators_.begin();
   if (it != generators_.end()) {
-    ss << it->second->device() << ":" << it->second->device_index();
+    ss << it->second->device_type_name() << ":" << it->second->device_index();
     ++it;
   }
   for (; it != generators_.end(); ++it) {
-    ss << "," << it->second->device() << ":" << it->second->device_index();
+    ss << "," << it->second->device_type_name() << ":" << it->second->device_index();
   }
   state_size += ss.str().size();
   for (const auto& it : generators_) { state_size += it.second->GetStateSize(); }
@@ -77,11 +77,11 @@ void AutoGenerator::GetState(size_t state_size, void* state) const {
   std::stringstream ss;
   auto it = generators_.begin();
   if (it != generators_.end()) {
-    ss << it->second->device() << ":" << it->second->device_index();
+    ss << it->second->device_type_name() << ":" << it->second->device_index();
     ++it;
   }
   for (; it != generators_.end(); ++it) {
-    ss << "," << it->second->device() << ":" << it->second->device_index();
+    ss << "," << it->second->device_type_name() << ":" << it->second->device_index();
   }
 
   std::string device_tags = ss.str();
@@ -147,19 +147,19 @@ void AutoGenerator::SetState(size_t state_size, const void* state) {
   }
 }
 
-Maybe<ep::Generator> AutoGenerator::GetOrCreate(const std::string& device, int device_index) {
+Maybe<ep::RandomGenerator> AutoGenerator::GetOrCreate(const std::string& device, int device_index) {
   if (device_index == -1) { device_index = (device == "cpu" ? 0 : GlobalProcessCtx::LocalRank()); }
   std::lock_guard<std::mutex> lock(mutex_);
   auto device_key = JUST(Device::New(device, device_index));
   auto it = generators_.find(device_key);
   if (it == generators_.end()) {
-    auto generator_ctor = ep::RandomGeneratorRegistry::Lookup(device);
-    it = generators_.emplace(device_key, generator_ctor(seed_, device_index)).first;
+    auto device_mgr = Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceManager(
+        ep::DeviceManagerRegistry::GetDeviceTypeByDeviceTypeName(device));
+    it = generators_.emplace(device_key, device_mgr->CreateRandomGenerator(seed_, device_index))
+             .first;
   }
   return it->second;
 }
-
-REGISTER_RANDOM_GENERATOR("auto", AutoGenerator);
 
 }  // namespace one
 }  // namespace oneflow

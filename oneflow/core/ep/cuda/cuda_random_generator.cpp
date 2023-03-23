@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/ep/include/random_generator_registry.h"
 #include <cuda.h>
 #include <cuda_runtime.h>
 
@@ -50,7 +49,7 @@ int GetThreadNum(const cudaDeviceProp& prop) {
 }  // namespace
 
 CUDAGenerator::CUDAGenerator(uint64_t seed, int device_index)
-    : Generator(), seed_(seed), device_index_(device_index), philox_offset_per_thread_(0) {
+    : RandomGenerator(), seed_(seed), device_index_(device_index), philox_offset_per_thread_(0) {
   cudaDeviceProp prop;  // NOLINT
   OF_CUDA_CHECK(cudaGetDeviceProperties(&prop, device_index));
   max_block_num_ = prop.multiProcessorCount;
@@ -131,11 +130,9 @@ void CUDAGenerator::SetState(size_t state_size, const void* state) {
 }
 
 template<>
-std::string GetRandomGeneratorDevice<CUDAGenerator>() {
+std::string GetRandomGeneratorDeviceTypeName<CUDAGenerator>() {
   return "cuda";
 }
-
-REGISTER_RANDOM_GENERATOR("cuda", CUDAGenerator);
 
 }  // namespace ep
 }  // namespace oneflow

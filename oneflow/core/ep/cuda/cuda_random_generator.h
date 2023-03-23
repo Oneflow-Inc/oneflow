@@ -27,7 +27,7 @@ limitations under the License.
 namespace oneflow {
 namespace ep {
 
-class CUDAGenerator : public Generator {
+class CUDAGenerator : public RandomGenerator {
  public:
   explicit CUDAGenerator(uint64_t seed, int device_index);
   virtual ~CUDAGenerator() = default;
