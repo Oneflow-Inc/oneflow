@@ -33,7 +33,7 @@ error_msg = """ is not implemented, please submit an issue at
 minimum reproduction code, and the system information."""
 
 # TODO(peiyuan): support fine-grained package name like "safetensor.safetensor_rust"
-HAZARD_LIST = ["_distutils_hack", "importlib", "regex", "tokenizers", "safetensor"]
+HAZARD_LIST = ["_distutils_hack", "importlib", "regex", "tokenizers", "safetensors"]
 
 # module wrapper with checks for existence of methods
 class ModuleWrapper(ModuleType):
