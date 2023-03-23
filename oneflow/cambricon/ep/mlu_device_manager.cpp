@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/cambricon/common/mlu_util.h"
 #include "oneflow/cambricon/common/mlu_guard.h"
 #include "oneflow/cambricon/ep/mlu_device.h"
+#include "oneflow/cambricon/ep/mlu_random_generator.h"
 
 namespace oneflow {
 namespace ep {
@@ -59,6 +60,11 @@ size_t MluDeviceManager::GetActiveDeviceIndex() {
 
 void MluDeviceManager::SetActiveDeviceByIndex(size_t device_index) {
   OF_MLU_CHECK(cnrtSetDevice(static_cast<int>(device_index)));
+}
+
+std::shared_ptr<RandomGenerator> MluDeviceManager::CreateRandomGenerator(uint64_t seed,
+                                                                         size_t device_index) {
+  return std::make_shared<MLUGenerator>(seed, device_index);
 }
 
 }  // namespace ep
