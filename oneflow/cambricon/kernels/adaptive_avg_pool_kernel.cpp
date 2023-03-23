@@ -56,9 +56,9 @@ class AdaptiveAvgPool2DKernel final : public user_op::OpKernel {
                                       in_tensor->shape_view().At(3)});
     auto transpose = NewPermutePrimitive(ctx, in_tensor->shape_view().NumAxes());
     CHECK(transpose);
+    const std::vector<int> in_permutation = {0, 2, 3, 1};
     transpose->Launch(ctx->stream(), in_tensor->data_type(), in_tensor->shape_view().NumAxes(),
-                      in_shapevec.data(), in_ptr, std::vector<int>({0, 2, 3, 1}).data(),
-                      tmp_in_ptr);
+                      in_shapevec.data(), in_ptr, in_permutation.data(), tmp_in_ptr);
     cnnlTensorDescriptor_t in_desc = nullptr, out_decs = nullptr;
     const int in_dims[4] = {static_cast<int>(in_tensor->shape_view().At(0)),
                             static_cast<int>(in_tensor->shape_view().At(2)),
@@ -96,9 +96,9 @@ class AdaptiveAvgPool2DKernel final : public user_op::OpKernel {
          out_tensor->shape_view().At(3), out_tensor->shape_view().At(1)});
     transpose = NewPermutePrimitive(ctx, out_tensor->shape_view().NumAxes());
     CHECK(transpose);
+    const std::vector<int> out_permutation = {0, 3, 1, 2};
     transpose->Launch(ctx->stream(), out_tensor->data_type(), out_tensor->shape_view().NumAxes(),
-                      out_shapevec.data(), tmp_out_ptr, std::vector<int>({0, 3, 1, 2}).data(),
-                      out_ptr);
+                      out_shapevec.data(), tmp_out_ptr, out_permutation.data(), out_ptr);
     cnnlDestroyTensorDescriptor(in_desc);
     cnnlDestroyTensorDescriptor(out_decs);
   }
@@ -114,5 +114,84 @@ class AdaptiveAvgPool2DKernel final : public user_op::OpKernel {
 
 REGISTER_ADAPTIVE_AVGPOOL2D_MLU_KERNEL(float)
 REGISTER_ADAPTIVE_AVGPOOL2D_MLU_KERNEL(float16)
+
+template<typename T>
+class AdaptiveAvgPool2DGradKernel final : public user_op::OpKernel {
+ public:
+  AdaptiveAvgPool2DGradKernel() = default;
+  ~AdaptiveAvgPool2DGradKernel() = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
+
+    CHECK_EQ(x_tensor->shape_view().NumAxes(), 4);
+
+    const T* dy_ptr = dy_tensor->dptr<T>();
+    T* dx_ptr = dx_tensor->mut_dptr<T>();
+
+    size_t tmp_dy_workspace_size =
+        dy_tensor->shape_view().elem_cnt() * sizeof(dy_tensor->data_type());
+    CnnlWorkspace tmp_dy_cnnl_workspace(ctx->stream()->As<ep::MluStream>(), tmp_dy_workspace_size);
+    void* tmp_dy_ptr = tmp_dy_cnnl_workspace.dptr();
+
+    std::vector<int64_t> dy_shapevec(dy_tensor->shape_view().begin(),
+                                     dy_tensor->shape_view().end());
+    std::vector<int> dy_permutation = {0, 2, 3, 1};
+
+    const auto& dy_transpose = NewPermutePrimitive(ctx, dy_tensor->shape_view().NumAxes());
+    CHECK(dy_transpose);
+
+    dy_transpose->Launch(ctx->stream(), dy_tensor->data_type(), dy_tensor->shape_view().NumAxes(),
+                         dy_shapevec.data(), dy_ptr, dy_permutation.data(), tmp_dy_ptr);
+
+    const std::vector<int> tmp_dy_dims = {static_cast<int>(dy_tensor->shape_view().At(0)),
+                                          static_cast<int>(dy_tensor->shape_view().At(2)),
+                                          static_cast<int>(dy_tensor->shape_view().At(3)),
+                                          static_cast<int>(dy_tensor->shape_view().At(1))};
+    const std::vector<int> tmp_dx_dims = {static_cast<int>(dx_tensor->shape_view().At(0)),
+                                          static_cast<int>(dx_tensor->shape_view().At(2)),
+                                          static_cast<int>(dx_tensor->shape_view().At(3)),
+                                          static_cast<int>(dx_tensor->shape_view().At(1))};
+    cnnlTensorLayout_t layout = CNNL_LAYOUT_NHWC;
+    auto dtype = ConvertToCnnlDataType(dy_tensor->data_type());
+
+    CnnlTensorDescriptor dy_desc, dx_desc;
+    dy_desc.set(4, tmp_dy_dims.data(), dtype, layout);
+    dx_desc.set(4, tmp_dx_dims.data(), dtype, layout);
+
+    size_t tmp_dx_workspace_size =
+        dx_tensor->shape_view().elem_cnt() * sizeof(dy_tensor->data_type());
+    CnnlWorkspace tmp_dx_cnnl_workspace(ctx->stream()->As<ep::MluStream>(), tmp_dx_workspace_size);
+    void* tmp_dx_ptr = tmp_dx_cnnl_workspace.dptr();
+
+    OF_CNNL_CHECK(cnnlAdaptivePoolingBackward(
+        ctx->stream()->As<ep::MluStream>()->cnnl_handle(), dy_desc.desc(), tmp_dy_ptr, nullptr,
+        nullptr, CNNL_POOLING_AVERAGE_COUNT_INCLUDE_PADDING, dx_desc.desc(), tmp_dx_ptr));
+
+    std::vector<int64_t> dx_shapevec({dx_tensor->shape_view().At(0), dx_tensor->shape_view().At(2),
+                                      dx_tensor->shape_view().At(3),
+                                      dx_tensor->shape_view().At(1)});
+    const std::vector<int> dx_permutation = {0, 3, 1, 2};
+    const auto& dx_transpose = NewPermutePrimitive(ctx, dx_tensor->shape_view().NumAxes());
+    CHECK(dx_transpose);
+    dx_transpose->Launch(ctx->stream(), dx_tensor->data_type(), dx_tensor->shape_view().NumAxes(),
+                         dx_shapevec.data(), tmp_dx_ptr, dx_permutation.data(), dx_ptr);
+  }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_ADAPTIVE_AVGPOOL2D_GRAD_MLU_KERNEL(dtype)            \
+  REGISTER_USER_KERNEL("adaptive_avg_pool2d_grad")                    \
+      .SetCreateFn<AdaptiveAvgPool2DGradKernel<dtype>>()              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kMLU) \
+                       && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value));
+REGISTER_ADAPTIVE_AVGPOOL2D_GRAD_MLU_KERNEL(float)
+REGISTER_ADAPTIVE_AVGPOOL2D_GRAD_MLU_KERNEL(float16)
 
 }  // namespace oneflow

@@ -38,6 +38,7 @@ def _test_log_softmax_forward(test_case, shape, device, dtype):
             np.allclose(cpu_out.numpy(), mlu_out.numpy(), 0.0001, 0.0001)
         )
 
+
 def _test_log_softmax_backward(test_case, shape, dtype):
     x_np = np.random.randn(*shape)
     y_grad_np = np.random.randn(*shape)

@@ -24,20 +24,34 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def _test_adaptive_avg_pool2d_forward(test_case, shape, out_shape, device, dtype):
-    x = flow.tensor(np.random.randn(*shape), device=flow.device(device), dtype=dtype)
+def _test_adaptive_avg_pool2d_forward_backward(
+    test_case, shape, out_shape, device, dtype
+):
+    arry = np.random.randn(*shape)
+    x = flow.tensor(arry, device=flow.device(device), dtype=dtype, requires_grad=True,)
+    x_cpu = flow.tensor(
+        arry, device=flow.device("cpu"), dtype=dtype, requires_grad=True,
+    )
     pool = flow.nn.AdaptiveAvgPool2d((out_shape[2], out_shape[3]))
     y = pool(x)
-    y_cpu = pool(x.to("cpu"))
+    y_cpu = pool(x_cpu)
     test_case.assertTrue(np.allclose(y.numpy(), y_cpu.numpy(), 0.0001, 0.0001))
+
+    s = y.sum()
+    s_cpu = y_cpu.sum()
+    s.backward()
+    s_cpu.backward()
+    test_case.assertTrue(
+        np.allclose(x.grad.numpy(), x_cpu.grad.numpy(), 0.0001, 0.0001)
+    )
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestAdaptiveAvgPool2dCambriconModule(flow.unittest.TestCase):
-    def test_add(test_case):
+    def test_adaptive_avg_pool2d_forward_backward(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _test_adaptive_avg_pool2d_forward,
+            _test_adaptive_avg_pool2d_forward_backward,
         ]
         arg_dict["shape"] = [(1, 2, 224, 224), (1, 3, 128, 128)]
         arg_dict["out_shape"] = [(1, 2, 64, 64), (1, 3, 32, 35)]

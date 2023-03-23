@@ -112,9 +112,9 @@ class MluLogSoftmaxGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_LOG_SOFTMAX_GRAD_MLU_KERNEL(dtype)                        \
-  REGISTER_USER_KERNEL("log_softmax_grad")                                 \
-      .SetCreateFn<MluLogSoftmaxGradKernel<dtype>>()                      \
+#define REGISTER_LOG_SOFTMAX_GRAD_MLU_KERNEL(dtype)                   \
+  REGISTER_USER_KERNEL("log_softmax_grad")                            \
+      .SetCreateFn<MluLogSoftmaxGradKernel<dtype>>()                  \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kMLU) \
                        && (user_op::HobDataType("prob", 0) == GetDataType<dtype>::value));
 
