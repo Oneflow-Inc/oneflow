@@ -253,7 +253,6 @@ class Optimizer(object):
             "contiguous_params",
         ]
 
-
     def add_param_group(self, param_group) -> None:
         r"""
         
