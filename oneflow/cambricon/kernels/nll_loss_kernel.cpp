@@ -48,15 +48,8 @@ class MluNLLKernel final : public user_op::OpKernel {
     const int64_t C = input->shape_view().At(input->shape_view().NumAxes() - 1);
     const K ignore_index = static_cast<K>(ctx->Attr<int64_t>("ignore_index"));
 
-    CnnlTensorDescriptor input_desc;
-    CnnlTensorDescriptor target_desc;
-    CnnlTensorDescriptor weight_desc;
-    CnnlTensorDescriptor output_desc;
-    CnnlTensorDescriptor out_weight_desc;
-
-    input_desc.set(input);
-    target_desc.set(target);
-    output_desc.set(output);
+    CnnlTensorDescriptor input_desc(input), target_desc(target), output_desc(output);
+    CnnlTensorDescriptor weight_desc, out_weight_desc;
 
     int64_t out_weight_size[1] = {1};
     out_weight_desc.set(1, out_weight_size, ConvertToCnnlDataType(out_weight->data_type()));
@@ -156,5 +149,63 @@ class MluNLLKernel final : public user_op::OpKernel {
 // target only supports int32
 REGISTER_NLL_MLU_KERNEL(float, int32_t)
 REGISTER_NLL_MLU_KERNEL(float16, int32_t)
+
+template<typename T, typename K>
+class MluNLLGradKernel final : public user_op::OpKernel {
+ public:
+  MluNLLGradKernel() = default;
+  ~MluNLLGradKernel() = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* input = ctx->Tensor4ArgNameAndIndex("input", 0);
+    const user_op::Tensor* target = ctx->Tensor4ArgNameAndIndex("target", 0);
+    const user_op::Tensor* out_grad = ctx->Tensor4ArgNameAndIndex("out_grad", 0);
+    user_op::Tensor* in_grad = ctx->Tensor4ArgNameAndIndex("in_grad", 0);
+    const K ignore_index = static_cast<K>(ctx->Attr<int64_t>("ignore_index"));
+
+    CnnlTensorDescriptor input_desc(input), target_desc(target), out_grad_desc(out_grad),
+        in_grad_desc(in_grad);
+    CnnlTensorDescriptor weight_desc;
+
+    const void* weight_dptr = nullptr;
+    if (ctx->has_input("weight", 0)) {
+      const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
+      weight_desc.set(weight);
+      weight_dptr = weight->dptr();
+    }
+
+    OF_CNNL_CHECK(cnnlNlllossBackward(
+        /* handle       */ ctx->stream()->As<ep::MluStream>()->cnnl_handle(),
+        /* algorithm    */ CNNL_REDUCTION_NONE,
+        /* diff_y_desc  */ out_grad_desc.desc(),
+        /* diff_y       */ out_grad->dptr(),
+        /* t_desc       */ target_desc.desc(),
+        /* target       */ target->dptr(),
+        /* ignore_index */ ignore_index,
+        /* w_desc       */ weight_desc.desc(),
+        /* filter       */ weight_dptr,
+        /* tw_desc      */ nullptr,
+        /* total_filter */ nullptr,
+        /* diff_x_desc  */ in_grad_desc.desc(),
+        /* diff_x       */ in_grad->mut_dptr()));
+  }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_NLL_GRAD_MLU_KERNEL(input_dtype, target_dtype)                    \
+  REGISTER_USER_KERNEL("nll_grad")                                                 \
+      .SetCreateFn<MluNLLGradKernel<input_dtype, target_dtype>>()                  \
+      .SetIsMatchedHob(                                                            \
+          (user_op::HobDeviceType() == DeviceType::kMLU)                           \
+          && (user_op::HobDataType("input", 0) == GetDataType<input_dtype>::value) \
+          && (user_op::HobDataType("target", 0) == GetDataType<target_dtype>::value));
+
+// target only supports int32
+REGISTER_NLL_GRAD_MLU_KERNEL(float, int32_t)
+REGISTER_NLL_GRAD_MLU_KERNEL(float16, int32_t)
 
 }  // namespace oneflow
