@@ -141,8 +141,11 @@ class Shape final : public DimVector, public MutShapeMixIn<Shape> {
   using Base = DimVector;
   using DimVector::DimVector;
   Shape() : is_initialized_(false) {}
+  // Shape::Shape(std::initializer_list<int64_t>) is added to fix compile errors in clang and nvcc,
+  // and template<typename=void> avoids ambiguous overload error.
   template<typename = void>
-  Shape(std::initializer_list<int64_t> dim_vec);
+  Shape(std::initializer_list<int64_t> dim_vec)
+      : DimVector(dim_vec.begin(), dim_vec.end()), is_initialized_(true) {}
   explicit Shape(const std::vector<int64_t>& dim_vec);
   explicit Shape(const DimVector& dim_vec);
   explicit Shape(DimVector&& dim_vec);
