@@ -345,6 +345,32 @@ class TestSaveLoad(flow.unittest.TestCase):
             new_res = new_m(x)
             test_case.assertTrue(np.array_equal(res.numpy(), new_res.numpy()))
 
+    @flow.unittest.skip_unless_1n1d()
+    def test_save_load_module_directly_load_filestream(test_case):
+        x = flow.randn(1, 3, 3, 3)
+
+        m = CustomModuleForSaveLoad()
+
+        with tempfile.NamedTemporaryFile() as f:
+            flow.save(m, f.name)
+            with open(f.name, "rb") as r:
+                new_m = flow.load(r)
+            res = m(x)
+            new_res = new_m(x)
+            test_case.assertTrue(np.array_equal(res.numpy(), new_res.numpy()))
+
+        m = flow.nn.parallel.DistributedDataParallel(m)
+        test_case.assertTrue(m._is_ddp_module)
+
+        with tempfile.NamedTemporaryFile() as f:
+            flow.save(m, f.name)
+            with open(f.name, "rb") as r:
+                new_m = flow.load(r)
+            test_case.assertTrue(new_m._is_ddp_module)
+            res = m(x)
+            new_res = new_m(x)
+            test_case.assertTrue(np.array_equal(res.numpy(), new_res.numpy()))
+
     def test_load_old_dir_data(test_case):
         test_data_dir = Path(__file__).parent / "save_load_test_data"
         m1 = nn.Conv2d(3, 3, 3)
@@ -362,6 +388,15 @@ class TestSaveLoad(flow.unittest.TestCase):
         with tempfile.NamedTemporaryFile() as f:
             torch.save({"a": 2}, f.name)
             res = flow.load(f.name, map_location="cpu")
+        test_case.assertTrue(isinstance(res, dict))
+        test_case.assertEqual(len(res), 1)
+        test_case.assertEqual(res["a"], 2)
+
+    def test_pytorch_non_tensor_load_filestream(test_case):
+        with tempfile.NamedTemporaryFile() as f:
+            torch.save({"a": 2}, f.name)
+            with open(f.name, "rb") as r:
+                res = flow.load(r, map_location="cpu")
         test_case.assertTrue(isinstance(res, dict))
         test_case.assertEqual(len(res), 1)
         test_case.assertEqual(res["a"], 2)
