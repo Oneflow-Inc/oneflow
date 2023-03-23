@@ -71,8 +71,8 @@ Maybe<Tensor> Generator::GetState() const {
   std::vector<uint8_t> state_data(state_size);
   internal_->GetState(state_size, state_data.data());
   const auto& device = JUST(Device::New("cpu"));
-  const auto& state =
-      JUST(functional::Empty(Shape{state_size}, DType::UInt8(), device, /*pin_memory=*/false));
+  const auto& state = JUST(functional::Empty(Shape{state_size}, DType::UInt8(), device,
+                                             /*requires_grad=*/false, /*pin_memory=*/false));
   const auto& callback = [&](ep::Stream*,
                              const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
     memcpy(eager_blob_object->mut_dptr(), state_data.data(), state_size);
