@@ -490,8 +490,22 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
     user_op::InferContext* ctx) {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   const std::string& x_layout = ctx->Attr<std::string>("x_layout");
+  const std::string& mode = ctx->Attr<std::string>("mode");
   const int64_t rotary_size = ctx->Attr<int64_t>("rotary_size");
   const int64_t k_size = ctx->Attr<int64_t>("k_size");
+  const int64_t tensor_index = ctx->Attr<int64_t>("tensor_index");
+
+  CHECK_OR_RETURN((tensor_index >= 0) && (tensor_index <= 2));
+  CHECK_OR_RETURN((mode == "interval") || (mode == "plane"));
+
+  if (ctx->has_input("output_layout", 0)) {
+    const std::string& output_layout = ctx->Attr<std::string>("output_layout");
+    
+    if (output_layout != x_layout) {
+      CHECK_OR_RETURN((output_layout == "BMHK" && (x_layout == "BM(HK)" || x_layout == "BM(H2K)" || x_layout == "BM(H3K)"))
+        || (output_layout == "MBHK" && (x_layout == "MB(HK)" || x_layout == "MB(H2K)" || x_layout == "MB(H3K)")));
+    }
+  }
 
   int64_t b, m, h, k;
   bool has_cos = ctx->has_input("cos", 0);

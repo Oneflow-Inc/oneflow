@@ -451,9 +451,16 @@ class FusedApplyRotaryEmbFunctor {
                            const Optional<one::Tensor>& cos,
                            const Optional<one::Tensor>& sin,
                            const Optional<one::Tensor>& position_ids,
-                           const std::string& x_layout, const Optional<int64_t>& k_size, const float base, const Optional<int64_t>& rotary_size) const {    
+                           const std::string& x_layout, const Optional<std::string>& output_layout, const std::string& mode, 
+                           const int64_t tensor_index, const Optional<int64_t>& k_size, const float base, 
+                           const Optional<int64_t>& rotary_size) const {    
 
     int64_t b, m, h, k;
+
+    CHECK_OR_RETURN((tensor_index >= 0) && (tensor_index <= 2))
+      << Error::RuntimeError() << "tensor_index should be set between [0, 2]";
+    CHECK_OR_RETURN((mode == "interval") || (mode == "plane"))
+      << Error::RuntimeError() << "mode should be \"intervel\" or \"plane\"";
 
     if (cos && sin) {
       CHECK_EQ_OR_RETURN(JUST(cos)->shape()->NumAxes(), 2)
@@ -504,8 +511,9 @@ class FusedApplyRotaryEmbFunctor {
       }
     }
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("x_layout", "k_size", "base", "rotary_size");
-    attrs.SetAllAttrs(x_layout, k_size ? JUST(k_size) : k, base, rotary_size ? JUST(rotary_size) : k);
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("x_layout", "output_layout", "mode", "tensor_index", "k_size", "base", "rotary_size");
+    attrs.SetAllAttrs(x_layout, output_layout ? *JUST(output_layout) : x_layout, mode, tensor_index, k_size ? JUST(k_size) : k,  
+      base, rotary_size ? JUST(rotary_size) : k);
     
     if (position_ids) {
       if (cos && sin) {

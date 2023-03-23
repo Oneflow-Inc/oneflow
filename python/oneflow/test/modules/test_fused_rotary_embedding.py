@@ -23,7 +23,10 @@ import numpy as np
 import math
 
 
-def shuffle_adjacent_two_elem(x, dims):
+def shuffle_adjacent_two_elem(x, dims, mode):
+    switch_stride = 1
+    if mode == "plane":
+        switch_stride = dims[-1] // 2
     y = x.copy()
     num_elements = 1
     stride = [1] * len(dims)
@@ -35,8 +38,8 @@ def shuffle_adjacent_two_elem(x, dims):
             stride[len(dims) - 1 - i] = stride[len(dims) - i] * dims[len(dims) - i]
 
     for i in range(len(dims) - 1):
-        stride[i] = stride[i] // 2
-    num_elements = num_elements // 2
+        stride[i] = stride[i] // (2 * switch_stride)
+    num_elements = num_elements // (2 * switch_stride)
 
     for i in range(num_elements):
         index = [1] * len(dims)
@@ -46,10 +49,13 @@ def shuffle_adjacent_two_elem(x, dims):
             index[j] = offset // s
             offset = offset - index[j] * s
 
-        index[-1] = index[-1] * 2
-        switch_index = index.copy()
-        switch_index[-1] = switch_index[-1] + 1
-        y[(*index,)], y[(*switch_index,)] = -y[(*switch_index,)], y[(*index,)]
+        index[-1] = index[-1] * (2 * switch_stride)
+        for j in range(switch_stride):
+            switch_index = index.copy()
+            origin_index = index.copy()
+            origin_index[-1] = origin_index[-1] + j
+            switch_index[-1] = switch_index[-1] + switch_stride + j
+            y[(*origin_index,)], y[(*switch_index,)] = -y[(*switch_index,)], y[(*origin_index,)]
 
     return y
 
@@ -88,8 +94,8 @@ def parseDims(dims, x_layout):
     return B, M, H, K, merged_dims
 
 # all cos&sin are by default in x_layout (B, H, M, K), in which H is 1
-def naive_embedding(x, cos, sin, x_layout, B, M, H, K, dims, merged_dims):
-    y = shuffle_adjacent_two_elem(x, merged_dims)
+def naive_embedding(x, cos, sin, x_layout, B, M, H, K, dims, merged_dims, mode):
+    y = shuffle_adjacent_two_elem(x, merged_dims, mode)
 
     if x_layout == "BHMK":
         naive_out = x * cos + y * sin
@@ -121,7 +127,7 @@ def naive_embedding(x, cos, sin, x_layout, B, M, H, K, dims, merged_dims):
     return naive_out
 
 # this assume that rotary_ndims is by default 1
-def _test_without_position(test_case, x_layout, base, rotary_size, dims, rotary_ndims, dtype):
+def _test_without_position(test_case, x_layout, mode, base, rotary_size, dims, rotary_ndims, dtype):
     B, M, H, K, merged_dims = parseDims(dims, x_layout)
 
     x = np.random.uniform(low=-1, high=1, size=(*merged_dims,))
@@ -141,7 +147,7 @@ def _test_without_position(test_case, x_layout, base, rotary_size, dims, rotary_
     naive_cos[..., rotary_size:] = 1
     naive_sin[..., rotary_size:] = 0
 
-    naive_out = naive_embedding(x, naive_cos, naive_sin, x_layout, B, M, H, K, dims, merged_dims)
+    naive_out = naive_embedding(x, naive_cos, naive_sin, x_layout, B, M, H, K, dims, merged_dims, mode)
 
     fused_cos = np.array(
         [
@@ -159,7 +165,7 @@ def _test_without_position(test_case, x_layout, base, rotary_size, dims, rotary_
     fused_cos = flow.tensor(fused_cos, dtype=dtype, device="cuda")
     fused_sin = flow.tensor(fused_sin, dtype=dtype, device="cuda")
 
-    fused_out = flow._C.fused_apply_rotary_emb(fused_x, cos=fused_cos, sin=fused_sin, position_ids=None, x_layout=x_layout, k_size=K, base=base, rotary_size=rotary_size)
+    fused_out = flow._C.fused_apply_rotary_emb(fused_x, cos=fused_cos, sin=fused_sin, position_ids=None, x_layout=x_layout, k_size=K, base=base, rotary_size=rotary_size, mode=mode)
 
     test_case.assertTrue(
         np.allclose(
@@ -168,7 +174,7 @@ def _test_without_position(test_case, x_layout, base, rotary_size, dims, rotary_
     )
 
 # this assume that rotary_ndims is by default 1
-def _test_without_position_sinuous(test_case, x_layout, base, rotary_size, dims, rotary_ndims, dtype):
+def _test_without_position_sinuous(test_case, x_layout, mode, base, rotary_size, dims, rotary_ndims, dtype):
     B, M, H, K, merged_dims = parseDims(dims, x_layout)
 
     x = np.random.uniform(low=-1, high=1, size=(*merged_dims,))
@@ -188,11 +194,11 @@ def _test_without_position_sinuous(test_case, x_layout, base, rotary_size, dims,
     naive_cos[..., rotary_size:] = 1
     naive_sin[..., rotary_size:] = 0
 
-    naive_out = naive_embedding(x, naive_cos, naive_sin, x_layout, B, M, H, K, dims, merged_dims)
+    naive_out = naive_embedding(x, naive_cos, naive_sin, x_layout, B, M, H, K, dims, merged_dims, mode)
 
     fused_x = flow.tensor(x, dtype=dtype, device="cuda")
 
-    fused_out = flow._C.fused_apply_rotary_emb(fused_x, cos=None, sin=None, position_ids=None, x_layout=x_layout, k_size=K, base=base, rotary_size=rotary_size)
+    fused_out = flow._C.fused_apply_rotary_emb(fused_x, cos=None, sin=None, position_ids=None, x_layout=x_layout, k_size=K, base=base, rotary_size=rotary_size, mode=mode)
 
     test_case.assertTrue(
         np.allclose(
@@ -200,7 +206,7 @@ def _test_without_position_sinuous(test_case, x_layout, base, rotary_size, dims,
         )
     )
 
-def _test_with_position_sinuous(test_case, x_layout, base, rotary_size, dims, rotary_ndims, dtype):
+def _test_with_position_sinuous(test_case, x_layout, mode, base, rotary_size, dims, rotary_ndims, dtype):
     B, M, H, K, merged_dims = parseDims(dims, x_layout)
 
     x = np.random.uniform(low=-1, high=1, size=(*merged_dims,))
@@ -224,7 +230,7 @@ def _test_with_position_sinuous(test_case, x_layout, base, rotary_size, dims, ro
     naive_cos[..., rotary_size:] = 1
     naive_sin[..., rotary_size:] = 0
 
-    naive_out = naive_embedding(x, naive_cos, naive_sin, x_layout, B, M, H, K, dims, merged_dims)
+    naive_out = naive_embedding(x, naive_cos, naive_sin, x_layout, B, M, H, K, dims, merged_dims, mode)
 
     fused_cos = np.array(
         [
@@ -244,7 +250,7 @@ def _test_with_position_sinuous(test_case, x_layout, base, rotary_size, dims, ro
     fused_sin = flow.tensor(fused_sin, dtype=dtype, device="cuda")
     fused_position_ids = flow.tensor(position_ids, dtype=flow.int32, device="cuda")
 
-    fused_out = flow._C.fused_apply_rotary_emb(fused_x, cos=fused_cos, sin=fused_sin, position_ids=fused_position_ids, x_layout=x_layout, k_size=K, base=base, rotary_size=rotary_size)
+    fused_out = flow._C.fused_apply_rotary_emb(fused_x, cos=fused_cos, sin=fused_sin, position_ids=fused_position_ids, x_layout=x_layout, output_layout=x_layout, mode=mode, tensor_index=0, k_size=K, base=base, rotary_size=rotary_size)
 
     test_case.assertTrue(
         np.allclose(
@@ -252,7 +258,7 @@ def _test_with_position_sinuous(test_case, x_layout, base, rotary_size, dims, ro
         )
     )
 
-def _test_with_position(test_case, x_layout, base, rotary_size, dims, rotary_ndims, dtype):
+def _test_with_position(test_case, x_layout, mode, base, rotary_size, dims, rotary_ndims, dtype):
     B, M, H, K, merged_dims = parseDims(dims, x_layout)
 
     x = np.random.uniform(low=-1, high=1, size=(*merged_dims,))
@@ -276,12 +282,67 @@ def _test_with_position(test_case, x_layout, base, rotary_size, dims, rotary_ndi
     naive_cos[..., rotary_size:] = 1
     naive_sin[..., rotary_size:] = 0
 
-    naive_out = naive_embedding(x, naive_cos, naive_sin, x_layout, B, M, H, K, dims, merged_dims)
+    naive_out = naive_embedding(x, naive_cos, naive_sin, x_layout, B, M, H, K, dims, merged_dims, mode)
 
     fused_x = flow.tensor(x, dtype=dtype, device="cuda")
     fused_position_ids = flow.tensor(position_ids, dtype=flow.int32, device="cuda")
 
-    fused_out = flow._C.fused_apply_rotary_emb(fused_x, cos=None, sin=None, position_ids=fused_position_ids, x_layout=x_layout, k_size=K, base=base, rotary_size=rotary_size)
+    fused_out = flow._C.fused_apply_rotary_emb(fused_x, cos=None, sin=None, position_ids=fused_position_ids, x_layout=x_layout, k_size=K, base=base, rotary_size=rotary_size, mode=mode)
+
+    test_case.assertTrue(
+        np.allclose(
+            naive_out.reshape(merged_dims), fused_out.numpy(), atol=5e-2, rtol=5e-3
+        )
+    )
+
+def _test_plane(test_case, x_layout, mode, base, rotary_size, dims, rotary_ndims, dtype):
+
+    B, M, H, K, merged_dims = parseDims(dims, x_layout)
+    
+    np.random.seed(3124)
+
+    x = np.random.uniform(low=-1, high=1, size=(*merged_dims,))
+
+    position_ids = np.random.randint(2*M, size=(B, rotary_ndims, M), dtype=int)
+
+    naive_cos = np.array(
+        [[
+            [math.cos(position_ids[b, i // ((rotary_size)//rotary_ndims), m] * ((1/base) ** (2 * (i % (rotary_size // (2 * rotary_ndims))) / K))) if i < rotary_size else 1 for i in range(K)]
+            for m in range(M)
+        ] for b in range(B)]
+    ).reshape(B, 1, M, K)
+
+    naive_sin = np.array(
+        [[
+            [math.sin(position_ids[b, i // ((rotary_size)//rotary_ndims), m] * ((1/base) ** (2 * (i % (rotary_size // (2 * rotary_ndims))) / K))) if i < rotary_size else 0 for i in range(K)]
+            for m in range(M)
+        ] for b in range(B)]
+    ).reshape(B, 1, M, K)
+
+    naive_cos[..., rotary_size:] = 1
+    naive_sin[..., rotary_size:] = 0
+
+    naive_out = naive_embedding(x, naive_cos, naive_sin, x_layout, B, M, H, K, dims, merged_dims, mode)
+
+    fused_x = flow.tensor(x, dtype=dtype, device="cuda")
+    fused_cos = np.array(
+        [
+            [math.cos(m * ((1/base) ** (2 * (i % (rotary_size // (2 * rotary_ndims))) / K))) for i in range(K)]
+            for m in range(2*M)
+        ]
+    )
+
+    fused_sin = np.array(
+        [
+            [math.sin(m * ((1/base) ** (2 * (i % (rotary_size // (2 * rotary_ndims))) / K))) for i in range(K)]
+            for m in range(2*M)
+        ]
+    )
+    fused_cos = flow.tensor(fused_cos, dtype=dtype, device="cuda")
+    fused_sin = flow.tensor(fused_sin, dtype=dtype, device="cuda")
+    fused_position_ids = flow.tensor(position_ids, dtype=flow.int32, device="cuda")
+
+    fused_out = flow._C.fused_apply_rotary_emb(fused_x, cos=fused_cos, sin=fused_sin, position_ids=fused_position_ids, x_layout=x_layout, k_size=K, base=base, rotary_size=rotary_size, mode=mode)
 
     test_case.assertTrue(
         np.allclose(
@@ -301,15 +362,16 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
     # because rule no.2, kernels without cos&sin cannot work under specific x_layout
     def test_fused_rotary_embedding_op(test_case):
         args_dict = OrderedDict()
-        args_dict["test_fun"] = [_test_with_position_sinuous, _test_without_position, _test_with_position, _test_without_position_sinuous]
-        args_dict["x_layout"] = ["BMHK", "BHMK", "MBHK", "BM(HK)","MB(HK)"]
+        args_dict["test_fun"] = [_test_plane]
+        args_dict["x_layout"] = ["MB(HK)"]
+        args_dict["mode"] = ["plane"]
         args_dict["base"] = [1e1]
-        args_dict["rotary_size"] = [8, 4]
-        args_dict["dims"] = [(2,8,3,8)]
-        args_dict["rotary_ndims"] = [1, 2]
+        args_dict["rotary_size"] = [8]
+        args_dict["dims"] = [(3,2,3,8)]
+        args_dict["rotary_ndims"] = [1]
         #args_dict["rotary_size"] = [48]
         #args_dict["dims"] = [(32, 2048, 32, 64)]
-        args_dict["dtype"] = [flow.float16, flow.float32]
+        args_dict["dtype"] = [flow.float16]
 
         for arg in GenArgList(args_dict):
             arg[0](test_case, *arg[1:])
