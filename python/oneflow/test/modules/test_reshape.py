@@ -125,7 +125,7 @@ class TestModule(flow.unittest.TestCase):
         y = torch.reshape(x, shape=(-1,))
         return y
 
-    @autotest(n=2, auto_backward=False, check_graph=False)
+    @autotest(n=2, auto_backward=False, check_graph=True)
     def test_reshape_like(test_case):
         device = random_device()
         shape = [random(1, 5).to(int).value() for _ in range(4)]
