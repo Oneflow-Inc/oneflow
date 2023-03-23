@@ -21,7 +21,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=2, check_graph=False)
+@autotest(n=2, check_graph=True)
 def _test_repeat_impl(test_case, ndim, placement, sbp):
     dims = [random(1, 4).to(int).value() * 8 for _ in range(ndim)]
     repeat_size = [random(1, 3).to(int).value() for _ in range(ndim)]
