@@ -39,7 +39,7 @@ class Test_CpuFp16_AdaptiveAvgPool(flow.unittest.TestCase):
         device = "cpu"
         m.to(device)
         x = random_tensor(ndim=3).to(device)
-        x = x.half()
+        x = x.clone().half()
         y = m(x)
         return y
 
@@ -47,11 +47,12 @@ class Test_CpuFp16_AdaptiveAvgPool(flow.unittest.TestCase):
     def profile_adaptive_avg_pool1d(test_case):
         return torch.nn.functional.adaptive_avg_pool1d(torch.ones(1, 64, 8).half(), 5)
 
+
     @autotest(n=5, rtol=0.0009)
     def test_adaptive_avgpool2d(test_case):
         m = torch.nn.AdaptiveAvgPool2d(output_size=random().to(_size_2_opt_t_not_none))
         m.train(random())
-        device = "cpu"
+        device = random_device()
         m.to(device)
         x = random_tensor(ndim=4).to(device)
         x = x.half()
@@ -71,7 +72,7 @@ class Test_CpuFp16_AdaptiveAvgPool(flow.unittest.TestCase):
     def test_adaptive_avgpool3d(test_case):
         m = torch.nn.AdaptiveAvgPool3d(output_size=random().to(_size_3_opt_t_not_none))
         m.train(random())
-        device = "cpu"
+        device = random_device()
         m.to(device)
         x = random_tensor(ndim=5).to(device)
         x = x.half()
@@ -90,21 +91,21 @@ class Test_CpuFp16_AdaptiveAvgPool(flow.unittest.TestCase):
 class Test_CpuFp16_AdaptiveAvgPoolFunctional(flow.unittest.TestCase):
     @autotest(n=5, rtol=0.0009)
     def test_adaptive_avgpool1d_functional(test_case):
-        device = "cpu"
+        device = random_device()
         x = random_tensor(ndim=3).to(device)
         x = x.half()
         return torch.nn.functional.adaptive_avg_pool1d(x, output_size=random().to(int))
 
     @autotest(n=5, rtol=0.0009)
     def test_adaptive_avgpool2d_functional(test_case):
-        device = "cpu"
+        device = random_device()
         x = random_tensor(ndim=4).to(device)
         x = x.half()
         return torch.nn.functional.adaptive_avg_pool2d(x, output_size=random().to(int))
 
     @autotest(n=5, rtol=1e-3, atol=1e-03)
     def test_adaptive_avgpool3d_functional(test_case):
-        device = "cpu"
+        device = random_device() 
         x = random_tensor(ndim=5).to(device)
         x = x.half()
         return torch.nn.functional.adaptive_avg_pool3d(x, output_size=random().to(int))
