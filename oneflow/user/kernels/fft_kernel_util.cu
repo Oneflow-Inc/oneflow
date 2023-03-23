@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
+#if 0
 #include <cuda.h>
 
 #if CUDA_VERSION >= 11000
@@ -160,5 +160,7 @@ REGISTER_STFT_GPU_KERNEL(float, cufftComplex)
 REGISTER_STFT_GPU_KERNEL(double, cufftDoubleComplex)
 
 }  // namespace oneflow
+
+#endif
 
 #endif

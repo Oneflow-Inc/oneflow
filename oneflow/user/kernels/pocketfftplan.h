@@ -14,13 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <cstdint>
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "pocketfft_hdronly.h"
 #include "oneflow/core/kernel/kernel.h"
-using namespace pocketfft;
+// using namespace pocketfft;
 
 namespace oneflow {
 namespace {
@@ -32,11 +31,11 @@ struct PocketFFtParams {
   bool IsForward;
   FFT_EXCUTETYPE excute_type;
   dtype fct;
-  shape_t axes;
-  stride_t in_stridef;
-  stride_t out_stridef;
-  shape_t input_shape;
-  shape_t output_shape;
+  pocketfft::shape_t axes;
+  pocketfft::stride_t in_stridef;
+  pocketfft::stride_t out_stridef;
+  pocketfft::shape_t input_shape;
+  pocketfft::shape_t output_shape;
   PocketFFtParams() = default;
   PocketFFtParams(const Shape& in_shape, const Shape& out_shape, const Stride& in_stride,
                   const Stride& out_stride, const std::vector<int64_t>& dims, const bool is_froward,

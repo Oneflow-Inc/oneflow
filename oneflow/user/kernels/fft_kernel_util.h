@@ -16,18 +16,18 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_FFT_KERNEL_UTIL_H_
 #define ONEFLOW_USER_KERNELS_FFT_KERNEL_UTIL_H_
 
-#include <cstdint>
-#include <vector>
-#include "oneflow/core/common/data_type.pb.h"
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/shape.h"
-#include "oneflow/core/common/throw.h"
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/framework/framework.h"
-#include "oneflow/core/framework/op_kernel.h"
-#include "oneflow/core/ep/include/stream.h"
-#include "oneflow/core/operator/operator_util.h"
-#include "oneflow/core/common/shape_vec.h"
+// #include <cstdint>
+// #include <vector>
+// #include "oneflow/core/common/data_type.pb.h"
+// #include "oneflow/core/common/maybe.h"
+// #include "oneflow/core/common/shape.h"
+// #include "oneflow/core/common/throw.h"
+// #include "oneflow/core/common/util.h"
+// #include "oneflow/core/framework/framework.h"
+// #include "oneflow/core/framework/op_kernel.h"
+// #include "oneflow/core/ep/include/stream.h"
+// #include "oneflow/core/operator/operator_util.h"
+// #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
@@ -51,22 +51,6 @@ inline fft_norm_mode norm_from_string(const Optional<std::string>& norm_op, bool
     return fft_norm_mode::by_root_n;
   }
 
-  // if (norm_op){
-  //     // std::string norm_str = *JUST(norm_op);
-  //     if (*JUST(norm_op) == "backward"){
-  //         return forward ? fft_norm_mode::none : fft_norm_mode::by_n;
-  //     }
-  //     else if (*JUST(norm_op) == "forward"){
-  //         return forward ? fft_norm_mode::by_n : fft_norm_mode::none;
-  //     }
-  //     else if (*JUST(norm_op) == "ortho"){
-  //         return fft_norm_mode::by_root_n;
-  //     }
-  // }
-  // else{
-  //     return forward ? fft_norm_mode::none : fft_norm_mode::by_n;
-  // }
-  // CHECK_OR_RETURN(false) << "Invalid normalization mode: \"" << *JUST(norm_op) << "\"";
   return fft_norm_mode::none;
 }
 
@@ -82,7 +66,7 @@ inline T compute_fct(int64_t size, fft_norm_mode normalization) {
 }
 
 template<typename T>
-inline T compute_fct(const Shape& in_shape, std::vector<int64_t> dims, fft_norm_mode normalization) {
+inline T compute_fct(const Shape& in_shape, const std::vector<int64_t>& dims, fft_norm_mode normalization) {
   if (normalization == fft_norm_mode::none) { return static_cast<T>(1); }
   int64_t n = 1;
   for (int64_t idx : dims) { n *= in_shape.At(idx); }
@@ -154,12 +138,6 @@ struct FftR2CKernelUtil {
                             const Stride& input_stride, const Stride& output_stride, bool forward,
                             const std::vector<int64_t>& dims, fft_norm_mode normalization);
 };
-
-#define INSTANTIATE_FFTC2C_KERNEL_UTIL(device_type, in_type_pair, out_type_pair, dtype) \
-  template struct FftC2CKernelUtil<device_type, in_type_pair, out_type_pair, dtype>;
-
-#define INSTANTIATE_FFTR2C_KERNEL_UTIL(device_type, in_type_pair, out_type_pair, dtype) \
-  template struct FftR2CKernelUtil<device_type, in_type_pair, out_type_pair, dtype>;
 
 }  // namespace oneflow
 #endif  // ONEFLOW_USER_KERNELS_FFT_KERNEL_UTIL_H_

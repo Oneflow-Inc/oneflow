@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/fft_kernel_util.h"
-#include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/preprocessor.h"
 #include "pocketfftplan.h"
 
 
@@ -55,17 +55,11 @@ struct FftR2CKernelUtil<DeviceType::kCPU, IN, OUT, dtype> {
   }
 };
 
-// OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_FFTC2C_KERNEL_UTIL, (DeviceType::kCPU),
-//                                  COMPLEX_DATA_TYPE_SEQ, COMPLEX_DATA_TYPE_SEQ,
-//                                  FLOATING_DATA_TYPE_SEQ);
+
 template struct FftC2CKernelUtil<DeviceType::kCPU, std::complex<float>, std::complex<float>, float>;
 template struct FftC2CKernelUtil<DeviceType::kCPU, std::complex<double>, std::complex<double>, double>;
 
 template struct FftR2CKernelUtil<DeviceType::kCPU, float, std::complex<float>, float>;
 template struct FftR2CKernelUtil<DeviceType::kCPU, double, std::complex<double>, double>; 
-// INSTANTIATE_FFTC2C_KERNEL_UTIL(DeviceType::kCPU, std::complex<float>, std::complex<float>, float)
-// INSTANTIATE_FFTC2C_KERNEL_UTIL(DeviceType::kCPU, std::complex<double>, std::complex<double>, double)
 
-// INSTANTIATE_FFTR2C_KERNEL_UTIL(DeviceType::kCPU, float, std::complex<float>, float)
-// INSTANTIATE_FFTR2C_KERNEL_UTIL(DeviceType::kCPU, double, std::complex<double>, double)
 }  // namespace oneflow
