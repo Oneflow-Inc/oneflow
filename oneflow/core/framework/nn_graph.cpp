@@ -680,7 +680,7 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
 
   PlanUtil::PlanMemoryLog(&plan_, name_);
   if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    PlanUtil::GenLightPlan(&plan_, name_);
+    PlanUtil::GenLightPlan(&plan_, name_, rank);
   }
   OF_SESSION_BARRIER();
   for (const auto& k : push_pull_keys) { Singleton<CtrlClient>::Get()->ClearKV(k); }
