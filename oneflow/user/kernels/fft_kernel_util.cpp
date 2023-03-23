@@ -20,23 +20,23 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename IN, typename OUT, typename dtype>
-struct FftC2CKernelUtil<DeviceType::kCPU, IN, OUT, dtype> {
-  static void FftC2CForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
+template<typename T>
+struct FftC2CKernelUtil<DeviceType::kCPU, T> {
+  static void FftC2CForward(ep::Stream* stream, const std::complex<T>* data_in, std::complex<T>* data_out,
                             const Shape& input_shape, const Shape& output_shape,
                             const Stride& input_stride, const Stride& output_stride, bool forward,
                             const std::vector<int64_t>& dims, fft_norm_mode normalization) {
-    PocketFFtParams<dtype> params(
+    PocketFFtParams<T> params(
         input_shape, output_shape, input_stride, output_stride, dims, forward,
-        compute_fct<dtype>(input_shape, dims, normalization) /*1.f*/, FFT_EXCUTETYPE::C2C);
-    PocketFFtConfig<dtype> config(params);
+        compute_fct<T>(input_shape, dims, normalization) /*1.f*/, FFT_EXCUTETYPE::C2C);
+    PocketFFtConfig<T> config(params);
     config.excute(data_in, data_out);
   }
 };
 
-template<typename IN, typename OUT, typename dtype>
-struct FftR2CKernelUtil<DeviceType::kCPU, IN, OUT, dtype> {
-  static void FftR2CForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
+template<typename T>
+struct FftR2CKernelUtil<DeviceType::kCPU, T> {
+  static void FftR2CForward(ep::Stream* stream, const T* data_in, std::complex<T>* data_out,
                             const Shape& input_shape, const Shape& output_shape,
                             const Stride& input_stride, const Stride& output_stride, bool forward,
                             const std::vector<int64_t>& dims, fft_norm_mode normalization) {
@@ -45,10 +45,10 @@ struct FftR2CKernelUtil<DeviceType::kCPU, IN, OUT, dtype> {
     // get last dim half size
 
     // do r2c, get half size fft out
-    PocketFFtParams<dtype> params(
+    PocketFFtParams<T> params(
         input_shape, output_shape, input_stride, output_stride, dims, forward,
-        compute_fct<dtype>(input_shape, dims, normalization) /*1.f*/, FFT_EXCUTETYPE::R2C);
-    PocketFFtConfig<dtype> config(params);
+        compute_fct<T>(input_shape, dims, normalization) /*1.f*/, FFT_EXCUTETYPE::R2C);
+    PocketFFtConfig<T> config(params);
     config.excute(data_in, data_out);
 
     // convert_to_doublesized
@@ -56,10 +56,10 @@ struct FftR2CKernelUtil<DeviceType::kCPU, IN, OUT, dtype> {
 };
 
 
-template struct FftC2CKernelUtil<DeviceType::kCPU, std::complex<float>, std::complex<float>, float>;
-template struct FftC2CKernelUtil<DeviceType::kCPU, std::complex<double>, std::complex<double>, double>;
+template struct FftC2CKernelUtil<DeviceType::kCPU, float>;
+template struct FftC2CKernelUtil<DeviceType::kCPU, double>;
 
-template struct FftR2CKernelUtil<DeviceType::kCPU, float, std::complex<float>, float>;
-template struct FftR2CKernelUtil<DeviceType::kCPU, double, std::complex<double>, double>; 
+template struct FftR2CKernelUtil<DeviceType::kCPU, float>;
+template struct FftR2CKernelUtil<DeviceType::kCPU, double>; 
 
 }  // namespace oneflow

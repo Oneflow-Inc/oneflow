@@ -4139,13 +4139,13 @@ class FftC2RFunctor : public FftBaseFunctor {
 class FftFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int64_t>& n,
-                           const Optional<int64_t>& dim, const Optional<std::string>& norm) const {
-    auto dim_val = dim.value_or(-1);
+                           int64_t dim, const Optional<std::string>& norm) const {
+    // auto dim_val = dim.value_or(-1);
     auto norm_str = norm.value_or("backward");
     if (input->dtype()->is_complex()) {
-      return functional::FftC2C(input, n, dim_val, norm_str, /*forward=*/true);
+      return functional::FftC2C(input, n, dim, norm_str, /*forward=*/true);
     } else {
-      return functional::FftR2C(input, n, dim_val, norm_str, /*forward=*/true, /*onesided=*/false);
+      return functional::FftR2C(input, n, dim, norm_str, /*forward=*/true, /*onesided=*/false);
     }
   }
 };
@@ -4153,13 +4153,12 @@ class FftFunctor {
 class IFftFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int64_t>& n,
-                           const Optional<int64_t>& dim, const Optional<std::string>& norm) const {
-    auto dim_val = dim.value_or(-1);
+                          int64_t dim, const Optional<std::string>& norm) const {
     auto norm_str = norm.value_or("backward");
     if (input->dtype()->is_complex()) {
-      return functional::FftC2C(input, n, dim_val, norm_str, /*forward=*/false);
+      return functional::FftC2C(input, n, dim, norm_str, /*forward=*/false);
     } else {
-      return functional::FftR2C(input, n, dim_val, norm_str, /*forward=*/false, /*onesided=*/false);
+      return functional::FftR2C(input, n, dim, norm_str, /*forward=*/false, /*onesided=*/false);
     }
   }
 };
@@ -4875,13 +4874,13 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<GeluWithApproximateFunctor>("GeluWithApproximate");
   m.add_functor<impl::TruncFunctor>("Trunc");
   // m.add_functor<StftFunctor>("Stft");  disable Stft, TO-DO: compat Stft into fft
-  m.add_functor<FftC2CFunctor>("FftC2C");
-  m.add_functor<FftC2CFunctorGrad>("FftC2CGrad");
-  m.add_functor<FftR2CFunctor>("FftR2C");
+  m.add_functor<impl::FftC2CFunctor>("FftC2C");
+  m.add_functor<impl::FftC2CFunctorGrad>("FftC2CGrad");
+  m.add_functor<impl::FftR2CFunctor>("FftR2C");
   // m.add_functor<FftR2CFunctorGrad>("FftR2CGrad");  TO-DO
   // m.add_functor<FftC2RFunctor>("FftC2R");  TO-DO
-  m.add_functor<FftFunctor>("Fft");
-  m.add_functor<IFftFunctor>("IFft");
+  m.add_functor<impl::FftFunctor>("Fft");
+  m.add_functor<impl::IFftFunctor>("IFft");
   m.add_functor<impl::FusedWeightedSumFunctor>("FusedWeightedSum");
   m.add_functor<impl::FusedCenterFunctor>("FusedCenter");
   m.add_functor<impl::FusedCenterGradFunctor>("FusedCenterGrad");

@@ -123,17 +123,17 @@ static void conj_symmetry(T* data_out, const Shape& shape, const Stride& strides
   func(data_out, shape, strides_vec, dims, elem_count);
 }
 
-template<DeviceType device_type, typename IN, typename OUT, typename dtype>
+template<DeviceType device_type, typename T>
 struct FftC2CKernelUtil {
-  static void FftC2CForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
+  static void FftC2CForward(ep::Stream* stream, const std::complex<T>* data_in, std::complex<T>* data_out,
                             const Shape& input_shape, const Shape& output_shape,
                             const Stride& input_stride, const Stride& output_stride, bool forward,
                             const std::vector<int64_t>& dims, fft_norm_mode normalization);
 };
 
-template<DeviceType device_type, typename IN, typename OUT, typename dtype>
+template<DeviceType device_type, typename T>
 struct FftR2CKernelUtil {
-  static void FftR2CForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
+  static void FftR2CForward(ep::Stream* stream, const T* data_in, std::complex<T>* data_out,
                             const Shape& input_shape, const Shape& output_shape,
                             const Stride& input_stride, const Stride& output_stride, bool forward,
                             const std::vector<int64_t>& dims, fft_norm_mode normalization);
