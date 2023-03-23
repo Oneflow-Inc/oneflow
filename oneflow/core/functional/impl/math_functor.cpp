@@ -4002,6 +4002,7 @@ class FftC2CFunctor : public FftBaseFunctor {
         << "expects the dtype of input Tensor  is Complex, but gets " << x->dtype()->name();
 
     const auto wrapped_dim = JUST(maybe_wrap_dim(dim, x->ndim()));
+    std::vector<int64_t> wrapped_dims {wrapped_dim};
 
     int64_t orig_len = x->dim(wrapped_dim);
     int64_t fft_len = n.has_value() == true ? JUST(n) : orig_len;
@@ -4012,7 +4013,7 @@ class FftC2CFunctor : public FftBaseFunctor {
         n.has_value() == true ? JUST(resize_fft_input(x, {wrapped_dim}, {fft_len})) : x;
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "forward");
-    attrs.SetAllAttrs(wrapped_dim, norm_str, forward);
+    attrs.SetAllAttrs(wrapped_dims, norm_str, forward);
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {resized_tensor}, attrs);
   }
