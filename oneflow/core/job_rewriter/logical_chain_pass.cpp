@@ -538,7 +538,7 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
   }
 
   for (int32_t global_order = 0; global_order < ordered_op_nodes.size(); global_order++) {
-    auto& node = ordered_op_nodes[global_order];
+    const OpNode* node = JUST(VectorAt(ordered_op_nodes, global_order));
     op_node2global_order.emplace(node, global_order);
     std::shared_ptr<const Shape> this_time_shape = GetOpNodeFastestTimeShape(node);
     if (this_time_shape->elem_cnt() > seed_time_shape->elem_cnt()) {

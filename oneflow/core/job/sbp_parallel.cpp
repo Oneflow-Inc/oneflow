@@ -201,8 +201,6 @@ bool ParseNdSbpFromLongString(const std::string& nd_sbp_str, NdSbp* nd_sbp) {
     bool ret = ParseSbpParallelFromString(sbp_str, sbp_parallel);
     if (!ret) { success = false; }
   });
-  VLOG(3) << " ccdebuglog: parse nd_sbp_str: [ " << nd_sbp_str << " ] to [ "
-          << nd_sbp->DebugString() << "]";
   if (nd_sbp->sbp_parallel_size() == 0) { return false; }
   return success;
 }
@@ -213,7 +211,6 @@ std::string NdSbpToLongString(const NdSbp& nd_sbp) {
     if (i > 0) { ret += ","; }  // NOTE(chengcheng): Separator ','
     ret += SbpToString(nd_sbp.sbp_parallel(i));
   }
-  VLOG(3) << " ccdebuglog: NdSbp long string : " << ret;
   return ret;
 }
 

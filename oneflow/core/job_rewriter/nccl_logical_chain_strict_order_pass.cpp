@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #ifdef WITH_CUDA
+#include "oneflow/core/auto_parallel/auto_memory.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/nd_sbp.h"
@@ -69,9 +70,17 @@ Maybe<void> NcclLogicalChainStrictOrderPass::Apply(const OpGraph& op_graph,
   const int64_t acc_num = job_builder->job().job_conf().num_gradient_accumulation_steps();
   if (acc_num > 1) { need_insert_ctrl_before_acc = true; }
 
-  // TODO(chengcheng, yipeng) better order for memory strighten.
-  op_graph.TopoForEachNodeWithCtrlEdge([&](const OpNode* node) {
-    if (!node->op().op_conf().has_logical_chain_id()) { return; }
+  std::vector<const OpNode*> ordered_op_nodes;
+  if (ParseBooleanFromEnv("DISABLE_LOGICAL_STRAIGHTEN", false)) {
+    op_graph.TopoForEachNodeWithCtrlEdge(
+        [&](const OpNode* node) { ordered_op_nodes.emplace_back(node); });
+  } else {
+    auto_parallel::StraightenOpGraph(op_graph, &ordered_op_nodes);
+  }
+
+  for (int32_t global_order = 0; global_order < ordered_op_nodes.size(); global_order++) {
+    const OpNode* node = JUST(VectorAt(ordered_op_nodes, global_order));
+    if (!node->op().op_conf().has_logical_chain_id()) { continue; }
     const int64_t logical_chain_id = node->op().op_conf().logical_chain_id();
 
     // add ctrl edge for strict order
@@ -118,7 +127,7 @@ Maybe<void> NcclLogicalChainStrictOrderPass::Apply(const OpGraph& op_graph,
         }
       }
     }
-  });
+  }
 
   if (need_insert_ctrl_before_acc) {
     for (const auto& pair : placement2last_normal_node) {
