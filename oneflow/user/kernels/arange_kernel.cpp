@@ -102,8 +102,9 @@ class ArangeKernel final : public OpKernel, public CudaGraphSupport {
     } else {
       const auto* arange_cache = dynamic_cast<const ArangeOpKernelCache*>(cache);
       auto arange_len = arange_cache->upper() - arange_cache->lower();
-      T base = static_cast<T>(start + delta * arange_cache->lower());
-      ArangeFunctor<device_type, T>()(ctx->stream(), base, delta, arange_len, output);
+      ArangeFunctor<device_type, T>()(ctx->stream(),
+                                      static_cast<T>(start + delta * arange_cache->lower()), delta,
+                                      arange_len, output);
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
