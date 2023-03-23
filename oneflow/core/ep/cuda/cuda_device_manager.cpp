@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/ep/cuda/cuda_device_manager.h"
+#include "oneflow/core/ep/cuda/cuda_random_generator.h"
 #include "oneflow/core/device/cuda_util.h"
 
 #ifdef WITH_CUDA
@@ -59,6 +60,11 @@ size_t CudaDeviceManager::GetActiveDeviceIndex() {
 
 void CudaDeviceManager::SetActiveDeviceByIndex(size_t device_index) {
   OF_CUDA_CHECK(cudaSetDevice(static_cast<int>(device_index)));
+}
+
+std::shared_ptr<RandomGenerator> CudaDeviceManager::CreateRandomGenerator(uint64_t seed,
+                                                                          size_t device_index) {
+  return std::make_shared<CUDAGenerator>(seed, device_index);
 }
 
 }  // namespace ep

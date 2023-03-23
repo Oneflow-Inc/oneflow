@@ -114,10 +114,10 @@ class pytorch_mt19937_engine {
   }
 };
 
-class CPUGenerator : public Generator {
+class CPUGenerator : public RandomGenerator {
  public:
   explicit CPUGenerator(uint64_t seed, int device_index)
-      : Generator(), seed_(seed), engine_(seed), torch_engine_(seed) {}
+      : RandomGenerator(), seed_(seed), engine_(seed), torch_engine_(seed) {}
 
   virtual ~CPUGenerator() = default;
 
@@ -128,7 +128,7 @@ class CPUGenerator : public Generator {
 
   pytorch_mt19937_engine& torch_engine() { return torch_engine_; }
 
-  std::string device() const override { return "cpu"; }
+  std::string device_type_name() const override { return "cpu"; }
   int64_t device_index() const override { return 0; }
 
   size_t GetStateSize() const override;

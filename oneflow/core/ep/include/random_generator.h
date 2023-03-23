@@ -21,15 +21,15 @@ limitations under the License.
 namespace oneflow {
 namespace ep {
 
-class Generator {
+class RandomGenerator {
  public:
-  Generator() = default;
-  virtual ~Generator() = default;
+  RandomGenerator() = default;
+  virtual ~RandomGenerator() = default;
 
   virtual uint64_t current_seed() const = 0;
   virtual void set_current_seed(uint64_t seed) = 0;
 
-  virtual std::string device() const = 0;
+  virtual std::string device_type_name() const = 0;
   virtual int64_t device_index() const = 0;
 
   virtual size_t GetStateSize() const = 0;
@@ -38,7 +38,7 @@ class Generator {
 };
 
 template<typename T>
-std::string GetRandomGeneratorDevice();
+std::string GetRandomGeneratorDeviceTypeName();
 
 }  // namespace ep
 }  // namespace oneflow

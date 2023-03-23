@@ -17,7 +17,6 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/str_util.h"
-#include "oneflow/core/ep/include/random_generator_registry.h"
 
 namespace oneflow {
 namespace ep {
@@ -70,11 +69,9 @@ void CPUGenerator::SetState(size_t state_size, const void* state) {
 }
 
 template<>
-std::string GetRandomGeneratorDevice<CPUGenerator>() {
+std::string GetRandomGeneratorDeviceTypeName<CPUGenerator>() {
   return "cpu";
 }
-
-REGISTER_RANDOM_GENERATOR("cpu", CPUGenerator);
 
 }  // namespace ep
 }  // namespace oneflow

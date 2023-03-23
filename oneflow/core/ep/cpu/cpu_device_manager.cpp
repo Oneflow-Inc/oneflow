@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/ep/cpu/cpu_device_manager.h"
 #include "oneflow/core/ep/cpu/cpu_device.h"
+#include "oneflow/core/ep/cpu/cpu_random_generator.h"
 
 namespace oneflow {
 
@@ -44,6 +45,11 @@ void CpuDeviceManager::SetActiveDeviceByIndex(size_t device_index) {}
 
 void CpuDeviceManager::SetDeviceNumThreads(size_t num_threads) {
   device_num_threads_ = num_threads;
+}
+
+std::shared_ptr<RandomGenerator> CpuDeviceManager::CreateRandomGenerator(uint64_t seed,
+                                                                         size_t device_index) {
+  return std::make_shared<CPUGenerator>(seed, device_index);
 }
 
 }  // namespace ep
