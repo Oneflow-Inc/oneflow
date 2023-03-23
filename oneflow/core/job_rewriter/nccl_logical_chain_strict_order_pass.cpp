@@ -93,12 +93,8 @@ Maybe<void> NcclLogicalChainStrictOrderPass::Apply(const OpGraph& op_graph,
       if (!IsReachable(prev_op_name, this_op_name)) {
         CHECK(mut_op_name2conf.emplace(this_op_name, node->op().op_conf()).second);
         mut_op_name2conf.at(this_op_name).add_ctrl_in_op_name(prev_op_name);
-        LOG(INFO) << " ccdebuglog: logical_chain_id: " << logical_chain_id << " insert ctrl [ "
-                  << prev_op_name << " ] -> [ " << this_op_name << " ]";
       }
       it->second = node;
-      LOG(INFO) << " ccdebuglog: update last op of logical_chain_id : " << logical_chain_id
-                << " is " << it->second->op().op_name() << " now. ";
     }
 
     if (need_insert_ctrl_before_acc) {
@@ -111,19 +107,11 @@ Maybe<void> NcclLogicalChainStrictOrderPass::Apply(const OpGraph& op_graph,
       if (time_shape_cnt == acc_num) {
         // fw/bw chain
         placement2last_normal_node[placement_key] = node;  // create or update
-        // placement2last_normal_node.emplace(placement_key, node);
-        LOG(INFO) << " ccdebuglog v2: update last normal op of placement: " << placement_key
-                  << " is " << node->op().op_name() << " now. "
-                  << " \n\n and placement2last_normal_node = "
-                  << placement2last_normal_node.at(placement_key)->op().op_name();
-
       } else {
         // acc chain
         if (placement2first_after_acc_node.find(placement_key)
             == placement2first_after_acc_node.end()) {
           CHECK(placement2first_after_acc_node.emplace(placement_key, node).second);
-          LOG(INFO) << " ccdebuglog v2: first after acc op of placement: " << placement_key
-                    << " is " << node->op().op_name() << " now. ";
         }
       }
     }
@@ -138,9 +126,6 @@ Maybe<void> NcclLogicalChainStrictOrderPass::Apply(const OpGraph& op_graph,
       const OpNode* first_after_acc_node = JUST(MapAt(placement2first_after_acc_node, pair.first));
       const std::string& last_bw_op_name = last_bw_node->op().op_name();
       const std::string& first_after_acc_op_name = first_after_acc_node->op().op_name();
-
-      LOG(INFO) << " ccdebuglog v2: last normal op of placement: " << pair.first
-                << " is : " << last_bw_op_name;
 
       CHECK_OR_RETURN(!IsReachable(first_after_acc_op_name, last_bw_op_name))
           << Error::RuntimeError()

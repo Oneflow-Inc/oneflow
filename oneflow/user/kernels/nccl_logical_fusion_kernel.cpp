@@ -652,8 +652,6 @@ void NcclLogicalFusionKernel::Compute(user_op::KernelComputeContext* ctx,
                                       const user_op::OpKernelCache*) const {
   auto* kernel_state = dynamic_cast<NcclLogicalFusionKernelState*>(state);
   CHECK_NOTNULL(kernel_state);
-  VLOG(3) << "ccdebuglog: kernel " << ctx->op_name() << " nccl_num: " << kernel_state->nccl_num()
-          << " stream_name: " << kernel_state->stream_name();
   const int32_t nccl_num = kernel_state->nccl_num();
   const std::vector<std::string>& nccl_type_list =
       ctx->Attr<std::vector<std::string>>("nccl_type_list");
@@ -697,10 +695,6 @@ void NcclLogicalFusionKernel::Compute(user_op::KernelComputeContext* ctx,
   for (int32_t i = 0; i < nccl_num; ++i) {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", i);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", i);
-    VLOG(3) << "ccdebuglog :  === i = " << i
-            << " , src_split_axis = " << kernel_state->src_split_axis(i)
-            << " , dst_split_axis = " << kernel_state->dst_split_axis(i)
-            << " , tmp_buffer_offset = " << kernel_state->tmp_buffer_offset(i);
     DoNcclComputeByNcclTypeInGroup(pack_to_ptr_list.at(i), unpack_from_ptr_list.at(i),
                                    nccl_type_list.at(i), in, out, ctx, kernel_state, i, comm);
   }

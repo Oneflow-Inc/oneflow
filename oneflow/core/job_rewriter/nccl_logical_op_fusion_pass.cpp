@@ -182,7 +182,6 @@ std::string GenNcclFusionKey(const OpNode* nccl_op) {
       "logical_chain_id: " + std::to_string(logical_chain_id)
       + ", device_mesh: " + hierarchy->ToString()
       + ", comm: " + GetCommKeyFromNcclType(nccl_op->op().op_conf().user_conf().op_type_name());
-  LOG(INFO) << "ccdebuglog: fusion_key = " << fusion_key << " nccl_op: " << nccl_op->op().op_name();
   return fusion_key;
 }
 
@@ -212,13 +211,6 @@ void AppendOrCreatFusionBucket(std::vector<NcclFusionBucket>* buckets, const OpN
   buckets->push_back(NcclFusionBucket());
   buckets->back().nccl_ops.push_back(nccl_op);
   buckets->back().fusion_bucket_size += nccl_mem_size;
-  if (buckets->size() > 1) {
-    LOG(INFO) << " ccdebuglog: same key has " << buckets->size() << " buckets.";
-    for (int i = 0; i < buckets->size(); ++i) {
-      LOG(INFO) << " i = " << i << " , fusion_bucket_size = " << buckets->at(i).fusion_bucket_size
-                << " with nccl num : " << buckets->at(i).nccl_ops.size();
-    }
-  }
 }
 
 Maybe<void> NcclLogicalOpFusionPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
@@ -266,7 +258,7 @@ Maybe<void> NcclLogicalOpFusionPass::Apply(const OpGraph& op_graph, JobBuilder* 
   HashMap<std::string, OperatorConf> mut_op_name2conf;
 
   const int64_t bucket_limit = EnvInteger<ONEFLOW_GRAPH_NCCL_LOGICAL_FUSION_BUCKET_SIZE>();
-  LOG(INFO) << "ccdebuglog: bucket_limit = " << bucket_limit;
+  VLOG(2) << "bucket_limit = " << bucket_limit;
 
   for (const auto& pair : nccl_depth2nccl_ops) {
     HashMap<std::string, std::vector<NcclFusionBucket>> fusion_key2nccl_buckets;
