@@ -24,7 +24,7 @@ llvm::SmallVector<llvm::DenseSet<Operation*>, 4> mergeEntries(
     bool hasIntersection = false;
     for (auto& r : results) {
       for (auto op : g) {
-        if (r.count(op)) {
+        if (r.contains(op)) {
           hasIntersection = true;
           break;
         }
@@ -46,7 +46,7 @@ llvm::SmallVector<llvm::DenseSet<Operation*>, 4> mergeEntries(
 
 void findEntriesOfRoot(Operation* root, llvm::DenseSet<Operation*>& entryOps,
                        llvm::DenseSet<Operation*>& results) {
-  if (entryOps.count(root)) { results.insert(root); }
+  if (entryOps.contains(root)) { results.insert(root); }
   for (auto operand : root->getOperands()) {
     if (auto defOp = operand.getDefiningOp()) { findEntriesOfRoot(defOp, entryOps, results); }
   }
