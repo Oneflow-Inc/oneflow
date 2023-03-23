@@ -52,6 +52,29 @@ void findEntriesOfRoot(Operation* root, llvm::DenseSet<Operation*>& entryOps,
   }
 }
 
+// NOTE: we assume all values are produced by an oneflow op and won't be an argument
+void cloneOpsToNewBody(::mlir::PatternRewriter& rewriter, Operation* op, Block& body,
+                       llvm::DenseSet<Operation*>& visited, BlockAndValueMapping& mapping) {
+  if (visited.contains(op)) { return; }
+  for (auto operand : op->getOperands()) {
+    // clone precedent non-entry ops (mostly constant ops)
+    if (auto defOp = operand.getDefiningOp()) {
+      if (!llvm::dyn_cast<OneFlowDialect>(defOp->getDialect())) {
+        cloneOpsToNewBody(rewriter, defOp, body, visited, mapping);
+      }
+    }
+  }
+  OpBuilder::InsertionGuard guard(rewriter);
+  ImplicitLocOpBuilder nb(op->getLoc(), rewriter);
+  nb.clone(*op, mapping);
+  // clone until meeting exit ops
+  for (auto user : op->getUsers()) {
+    if (!llvm::dyn_cast<OneFlowDialect>(user->getDialect())) {
+      cloneOpsToNewBody(rewriter, user, body, visited, mapping);
+    }
+  }
+}
+
 class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunctionPass> {
   void runOnOperation() override {
     llvm::DenseSet<Operation*> entryOps{};
