@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "cnnl.h"
 #include "oneflow/cambricon/common/mlu_util.h"
 #include "oneflow/cambricon/cnnl/cnnl_op_descriptor.h"
 #include "oneflow/cambricon/cnnl/cnnl_tensor_descriptor.h"
@@ -84,5 +85,18 @@ REGISTER_USER_KERNEL("gelu")
       });
     })
     .SetIsMatchedHob(BaseActivationIsMatched("in"));
+
+REGISTER_USER_KERNEL("tanh")
+    .SetCreateFn([]() {
+      return user_op::NewOpKernel<MluActivationKernel>([](user_op::KernelComputeContext* ctx) {
+        const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("x", 0);
+        user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("y", 0);
+        CnnlActivationDescriptor activation_desc;
+        activation_desc.set(CNNL_ACTIVATION_TANH, /*prefer=*/CNNL_ACTIVATION_HIGH_PRECISION,
+                            /*nanProp=*/CNNL_NOT_PROPAGATE_NAN, /*ceof=*/1.0);
+        CnnlActivationForward(ctx, in, out, activation_desc);
+      });
+    })
+    .SetIsMatchedHob(BaseActivationIsMatched("x"));
 
 }  // namespace oneflow

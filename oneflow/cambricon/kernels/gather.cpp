@@ -35,9 +35,26 @@ class MluGatherKernel final : public user_op::OpKernel, public user_op::CudaGrap
 
     const int64_t axis = ctx->Attr<int64_t>("axis");
 
-    if (out->shape_view().elem_cnt() == 0) { return; }
+    const auto out_shape_view = out->shape_view();
+
+    if (out_shape_view.elem_cnt() == 0) { return; }
 
     CnnlTensorDescriptor in_desc(in), indices_desc(indices), out_desc(out);
+
+    // shapes:  (10, 128) + (1, 3) = (1, 3, 128) ==> (10, 128) + (3, ) = (3, 128)
+    if (indices->shape_view().NumAxes() > 1) {
+      std::vector<int> indices_shape_flatten{static_cast<int>(indices->shape_view().Count(0))};
+
+      std::vector<int> out_shape;
+      for (int64_t i = 0; i < out_shape_view.NumAxes(); ++i) {
+        if (i == axis) { continue; }
+        out_shape.emplace_back(static_cast<int>(out_shape_view.At(i)));
+      }
+
+      indices_desc.set_reshape(indices, indices_shape_flatten);
+      out_desc.set_reshape(out, out_shape);
+    }
+
     OF_CNNL_CHECK(cnnlIndexSelect(ctx->stream()->As<ep::MluStream>()->cnnl_handle(), axis,
                                   in_desc.desc(), in->dptr(), indices_desc.desc(), indices->dptr(),
                                   out_desc.desc(), out->mut_dptr()));
