@@ -26,18 +26,21 @@ import oneflow.unittest
 class TestMluMomentumUpdate(flow.unittest.TestCase):
     def test_mlu_momentum_update(test_case):
         def get_updated_tensors(device):
-            params = [flow.ones(4, 100, 200, 10).to(device), flow.ones(23333).to(device) * 2]
+            params = [
+                flow.ones(4, 100, 200, 10).to(device),
+                flow.ones(23333).to(device) * 2,
+            ]
             params[0].grad = flow.ones_like(params[0]).to(device)
             params[1].grad = flow.ones_like(params[1]).to(device) * 0.5
             optimizer = flow.optim.SGD(params, lr=0.001, momentum=0.9)
             optimizer.step()
             return params
-        cpu_tensors = get_updated_tensors('cpu')
-        mlu_tensors = get_updated_tensors('mlu')
+
+        cpu_tensors = get_updated_tensors("cpu")
+        mlu_tensors = get_updated_tensors("mlu")
         for cpu, mlu in zip(cpu_tensors, mlu_tensors):
             test_case.assertTrue(np.allclose(cpu.numpy(), mlu.numpy()))
 
 
 if __name__ == "__main__":
     unittest.main()
-

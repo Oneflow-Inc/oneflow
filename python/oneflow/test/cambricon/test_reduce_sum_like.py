@@ -33,6 +33,7 @@ def _get_np_dtype(oneflow_dtype):
     if oneflow_dtype == flow.int32:
         return np.int32
 
+
 def _test_reduce_sum_like(test_case, device, dtype):
     np_dtype = _get_np_dtype(dtype)
     input = flow.tensor(
@@ -46,7 +47,7 @@ def _test_reduce_sum_like(test_case, device, dtype):
         device=flow.device(device),
     )
     of_out = flow._C.reduce_sum_like(input, like_tensor, axis=(1, 2))
-    
+
     np_out = np.full(shape=like_tensor.shape, fill_value=9, dtype=np_dtype)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
 
@@ -59,9 +60,7 @@ def _test_reduce_sum_like_one(test_case, device, dtype):
         device=flow.device(device),
     )
     like_tensor = flow.tensor(
-        np.ones(shape=(1, 1), dtype=np_dtype),
-        dtype=dtype,
-        device=flow.device(device),
+        np.ones(shape=(1, 1), dtype=np_dtype), dtype=dtype, device=flow.device(device),
     )
     of_out = flow._C.reduce_sum_like(input, like_tensor, axis=(1, 2))
     np_out = np.full(like_tensor.shape, 6)
@@ -76,9 +75,7 @@ def _test_reduce_sum_like_different_dim(test_case, device, dtype):
         device=flow.device(device),
     )
     like_tensor = flow.tensor(
-        np.ones(shape=(3, 1), dtype=np_dtype),
-        dtype=dtype,
-        device=flow.device(device),
+        np.ones(shape=(3, 1), dtype=np_dtype), dtype=dtype, device=flow.device(device),
     )
     of_out = flow._C.reduce_sum_like(input, like_tensor, axis=(0, 2))
     np_out = np.full(like_tensor.shape, 8)

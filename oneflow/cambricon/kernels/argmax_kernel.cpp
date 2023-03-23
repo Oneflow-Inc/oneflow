@@ -37,7 +37,7 @@ class MluArgmaxKernel final : public user_op::OpKernel {
     // cnnlTopKTensor_v3 requires output and index have the same ndim as input,
     // but the size of the dim to be reduced should be 1
     std::vector<int> out_shape;
-    for(int64_t i = 0; i < in->shape_view().NumAxes() - 1; i++) {
+    for (int64_t i = 0; i < in->shape_view().NumAxes() - 1; i++) {
       out_shape.push_back(in->shape_view().At(i));
     }
     out_shape.push_back(1);
@@ -53,8 +53,7 @@ class MluArgmaxKernel final : public user_op::OpKernel {
     CnnlTensorDescriptor out_indices_desc;
     out_indices_desc.set(out_shape.size(), out_shape.data(), CNNL_DTYPE_INT32);
     CnnlWorkspace out_indices(ctx->stream()->As<ep::MluStream>(),
-                            GetSizeOfDataType(kInt32) * out->shape_view().elem_cnt());
-    
+                              GetSizeOfDataType(kInt32) * out->shape_view().elem_cnt());
 
     size_t workspace_size = 0;
     OF_CNNL_CHECK(cnnlGetTopKTensorWorkspaceSize(
@@ -83,14 +82,14 @@ class MluArgmaxKernel final : public user_op::OpKernel {
         /* output            */ out_value.dptr(),
         /* index_desc        */ out_indices_desc.desc(),
         /* index             */ out_indices.dptr()));
-    
+
     OF_CNNL_CHECK(cnnlCastDataType(
-      /* handle      */ ctx->stream()->As<ep::MluStream>()->cnnl_handle(),
-      /* input_desc  */ out_indices_desc.desc(),
-      /* input       */ out_indices.dptr(),
-      /* cast_type   */ CNNL_CAST_INT32_TO_INT64,
-      /* output_desc */ out_desc.desc(),
-      /* output      */ out->mut_dptr()));
+        /* handle      */ ctx->stream()->As<ep::MluStream>()->cnnl_handle(),
+        /* input_desc  */ out_indices_desc.desc(),
+        /* input       */ out_indices.dptr(),
+        /* cast_type   */ CNNL_CAST_INT32_TO_INT64,
+        /* output_desc */ out_desc.desc(),
+        /* output      */ out->mut_dptr()));
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

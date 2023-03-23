@@ -25,14 +25,14 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace{
+namespace {
 
 template<typename Context>
 std::unique_ptr<ep::primitive::Permute> NewPermutePrimitive(Context* ctx, const int& num_dims) {
   return ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(ctx->device_type(), num_dims);
 }
 
-void infer_channel_sizes(const ShapeView& shape, int* n, int* c, int* h, int* w){
+void infer_channel_sizes(const ShapeView& shape, int* n, int* c, int* h, int* w) {
   if (shape.NumAxes() == 2) {
     *n = shape.At(0);
     *h = 1;
@@ -46,8 +46,7 @@ void infer_channel_sizes(const ShapeView& shape, int* n, int* c, int* h, int* w)
   }
 }
 
-} // namespace
-
+}  // namespace
 
 template<typename T>
 class MluNormalizationInferenceKernel final : public user_op::OpKernel {
@@ -74,7 +73,7 @@ class MluNormalizationInferenceKernel final : public user_op::OpKernel {
 
     int n = 0, c = 0, h = 0, w = 0;
     infer_channel_sizes(x->shape_view(), &n, &c, &h, &w);
-    
+
     size_t tmp_in_size = x->shape_view().elem_cnt() * GetSizeOfDataType(x->data_type());
     size_t tmp_out_size = y->shape_view().elem_cnt() * GetSizeOfDataType(y->data_type());
     CnnlWorkspace tmp_in_workspace(ctx->stream()->As<ep::MluStream>(), tmp_in_size);
