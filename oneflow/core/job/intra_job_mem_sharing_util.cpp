@@ -115,15 +115,6 @@ void InitMemoryChains(Plan* plan,
         if (!mem_chain->time_shape.is_initialized()) {
           mem_chain->time_shape = regst_time_shape;
         } else {
-          if (mem_chain->time_shape != regst_time_shape) {
-            LOG(WARNING) << " ccdebuglog warning! mem_chain_time_shape = "
-                         << mem_chain->time_shape.ToString()
-                         << " , bug this regst time shape = " << regst_time_shape.ToString()
-                         << " with task proto: " << task->DebugString();
-            for (auto* task_now : mem_chain->sorted_tasks) {
-              LOG(WARNING) << " this mem chain task: " << task_now->DebugString();
-            }
-          }
           CHECK(mem_chain->time_shape == regst_time_shape);
         }
       }
