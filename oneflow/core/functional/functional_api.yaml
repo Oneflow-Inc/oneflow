@@ -1986,7 +1986,7 @@
 
 - name: "unsorted_segment_sum_like"
   signature: "Tensor (Tensor x, Tensor segment_ids, Tensor like, Int64 axis) => UnsortedSegmentSumLike"
-  bind_python: False
+  bind_python: True
 
 - name: "unsorted_segment_sum"
   signature: "Tensor (Tensor x, Tensor segment_ids, Int64 axis, Int64 num_segments) => UnsortedSegmentSum"
