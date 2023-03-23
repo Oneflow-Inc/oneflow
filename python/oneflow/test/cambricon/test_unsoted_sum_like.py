@@ -23,20 +23,29 @@ from oneflow.test_utils.test_util import GenArgList
 import oneflow as flow
 import oneflow.unittest
 
+
 def _test_unsorted_segment_sum_like(test_case, shape, indes, device, dtype):
-    table = flow.tensor(np.random.randn(*shape), device=flow.device(device), dtype=dtype)
+    table = flow.tensor(
+        np.random.randn(*shape), device=flow.device(device), dtype=dtype
+    )
     indes = flow.tensor(indes, device=flow.device(device), dtype=flow.int32)
     grad_shape = (*indes.shape, *table.shape[1:])
-    out_grad = flow.tensor(np.random.randn(*grad_shape), device=flow.device(device), dtype=dtype)
+    out_grad = flow.tensor(
+        np.random.randn(*grad_shape), device=flow.device(device), dtype=dtype
+    )
     mlu_out = flow._C.unsorted_segment_sum_like(out_grad, indes, table, axis=0)
     tol = 1e-8
     if dtype == flow.float16:
         out_grad = out_grad.to(flow.float32)
         table = table.to(flow.float32)
         tol = 0.001
-    cpu_out = flow._C.unsorted_segment_sum_like(out_grad.cpu(), indes.cpu(), table.cpu(), axis=0)
+    cpu_out = flow._C.unsorted_segment_sum_like(
+        out_grad.cpu(), indes.cpu(), table.cpu(), axis=0
+    )
     test_case.assertTrue(
-        np.allclose(mlu_out.to(flow.float32).numpy(), cpu_out.numpy(), atol=tol, rtol=tol)
+        np.allclose(
+            mlu_out.to(flow.float32).numpy(), cpu_out.numpy(), atol=tol, rtol=tol
+        )
     )
 
 
@@ -47,8 +56,12 @@ class TestUnsortedSegmentSumLikeCambriconModule(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_unsorted_segment_sum_like,
         ]
-        arg_dict["shape"] = [(10, 3),]
-        arg_dict["indes"] = [[[1, 2, 4, 5], [4, 3, 2, 9]],]
+        arg_dict["shape"] = [
+            (10, 3),
+        ]
+        arg_dict["indes"] = [
+            [[1, 2, 4, 5], [4, 3, 2, 9]],
+        ]
         arg_dict["device"] = ["mlu"]
         arg_dict["dtype"] = [
             flow.float32,
@@ -56,6 +69,7 @@ class TestUnsortedSegmentSumLikeCambriconModule(flow.unittest.TestCase):
         ]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
 
 if __name__ == "__main__":
     unittest.main()

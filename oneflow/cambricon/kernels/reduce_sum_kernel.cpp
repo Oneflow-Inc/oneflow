@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/kernel/new_kernel_util.h"
 
 namespace oneflow {
+namespace {
 
 template<DeviceType device_type, typename T, typename K>
 class ReduceKernel final : public user_op::OpKernel {
@@ -86,4 +87,5 @@ class ReduceKernel final : public user_op::OpKernel {
 
 REGISTER_REDUCE_SUM_KERNELS_BY_DEVICE(DeviceType::kMLU)
 
+}  // namespace
 }  // namespace oneflow

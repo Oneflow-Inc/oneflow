@@ -34,9 +34,6 @@ def _test_argmax(test_case, shape, dtype):
         indices = x.argmax(dim)
         return indices.numpy()
 
-    import ipdb
-
-    ipdb.set_trace()
     result_cpu = _get_result("cpu")
     result_mlu = _get_result("mlu")
     test_case.assertTrue(np.allclose(result_cpu, result_mlu, 0.0001, 0.0001))
