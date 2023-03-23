@@ -810,18 +810,23 @@ std::function<RegstDescProto*(int64_t)> PlanUtil::MakeMutRegstDesc4Id(Plan* plan
     TaskProto* task = plan->mutable_task(i);
     for (auto& pair : *task->mutable_produced_regst_desc()) {
       int64_t regst_desc_id = pair.second.regst_desc_id();
-      regst_desc_id2regst_desc->insert({regst_desc_id, &pair.second});
+      CHECK(regst_desc_id2regst_desc->insert({regst_desc_id, &pair.second}).second)
+          << "regst_desc_id2regst_desc has got duplicated regst_desc_id " << regst_desc_id;
     }
   }
   return [regst_desc_id2regst_desc](int64_t regst_desc_id) -> RegstDescProto* {
-    return regst_desc_id2regst_desc->at(regst_desc_id);
+    auto iter = regst_desc_id2regst_desc->find(regst_desc_id);
+    CHECK(iter != regst_desc_id2regst_desc->end())
+        << "regst_desc_id " << regst_desc_id << " can't be found in plan.";
+    return iter->second;
   };
 }
 
-void PlanUtil::SetForceInplaceMemBlock(Plan* plan) {
+void PlanUtil::SetForceInplaceMemBlock(Plan* plan, int64_t limited_rank) {
   auto RegstDesc4Id = MakeMutRegstDesc4Id(plan);
   for (int i = 0; i < plan->task_size(); i++) {
     TaskProto* task = plan->mutable_task(i);
+    if (limited_rank >= 0 && task->machine_id() != limited_rank) { continue; }
     for (auto& pair : *task->mutable_produced_regst_desc()) {
       RegstDescProto* regst_desc = &pair.second;
       if (regst_desc->has_force_inplace_consumed_regst_desc_id()) {
@@ -1226,7 +1231,7 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
   }
 }
 
-void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name, int64_t filter_rank) {
+void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name, int64_t limited_rank) {
   // NOTE(chengcheng): ordered_tasks is NOT exec order, just task id order.
   std::vector<const TaskProto*> ordered_tasks;
   for (const TaskProto& task : plan->task()) { ordered_tasks.push_back(&task); }
@@ -1290,7 +1295,7 @@ void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name, int64_t fi
   }
   for (int64_t rank = 0; rank < GlobalProcessCtx::WorldSize(); ++rank) {
     // Filter rank to generate log.
-    if (filter_rank >= 0 && rank != filter_rank) { continue; }
+    if (limited_rank >= 0 && rank != limited_rank) { continue; }
     auto file_stream =
         TeePersistentLogStream::Create(plan_name + "_rank_" + std::to_string(rank) + "_light_plan");
     file_stream << "rank : " << std::to_string(rank) << "\n";

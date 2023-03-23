@@ -129,7 +129,7 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
   IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(plan, IsReachable);
   PlanUtil::MergeMemBlockIdByLogicalChainId(plan, *job, rank_);
   PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(plan);
-  PlanUtil::SetForceInplaceMemBlock(plan);
+  PlanUtil::SetForceInplaceMemBlock(plan, rank_);
   return Maybe<void>::Ok();
 }
 
