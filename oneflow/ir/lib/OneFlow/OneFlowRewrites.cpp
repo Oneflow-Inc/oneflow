@@ -161,7 +161,7 @@ static Operation* CreateConv2DBatchNorm(PatternRewriter& rewriter, Attribute eps
   auto ctx = rewriter.getContext();
   NamedAttrList attributes = conv_op->getAttrs();
 
-  attributes.set("operand_segment_sizes", rewriter.getDenseI32ArrayAttr({1, 1, 1, 0}));
+  attributes.set(OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr(), rewriter.getDenseI32ArrayAttr({1, 1, 1, 0}));
 
   SmallVector<Value, 4> operands;
   operands.push_back(conv_op.getIn());

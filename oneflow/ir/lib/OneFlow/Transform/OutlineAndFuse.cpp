@@ -138,7 +138,7 @@ struct GroupMatMulPattern : public mlir::OpInterfaceRewritePattern<MatMulCompati
     if (auto scope_symbol_id = OpTrait::IsOpConfCompatible<void>::getScopeSymbolID(op)) {
       attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(), scope_symbol_id);
     }
-    attributes.set("operand_segment_sizes",
+    attributes.set(OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr(),
                    rewriter.getDenseI32ArrayAttr({static_cast<int>(all_matmuls.size()),
                                                   static_cast<int>(all_matmuls.size()),
                                                   static_cast<int>(all_bias_adds.size())}));
