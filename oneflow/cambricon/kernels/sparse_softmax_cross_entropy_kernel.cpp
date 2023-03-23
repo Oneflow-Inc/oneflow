@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
+#include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/cambricon/cnnl/cnnl_workspace.h"
 #include "oneflow/cambricon/common/mlu_util.h"
 #include "oneflow/cambricon/ep/mlu_stream.h"
 #include "oneflow/cambricon/cnnl/cnnl_tensor_descriptor.h"
@@ -62,5 +65,41 @@ REGISTER_USER_KERNEL("sparse_softmax_cross_entropy")
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kMLU)
                      && ((user_op::HobDataType("out", 0) == DataType::kFloat)
                          || (user_op::HobDataType("out", 0) == DataType::kFloat16)));
+
+class MluSparseSoftmaxCrossEntropyGradKernel final : public user_op::OpKernel {
+ public:
+  MluSparseSoftmaxCrossEntropyGradKernel() = default;
+  ~MluSparseSoftmaxCrossEntropyGradKernel() = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    user_op::Tensor* prob = ctx->Tensor4ArgNameAndIndex("prob", 0);
+    user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    user_op::Tensor* prediction_diff = ctx->Tensor4ArgNameAndIndex("prediction_diff", 0);
+
+    std::vector<int64_t> expand_shape{};
+    for (int i = 0; i < dy->shape_view().NumAxes(); i++) {
+      expand_shape.push_back(dy->shape_view().At(i));
+    }
+    expand_shape.push_back(1);
+
+    auto bcast_mul = ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
+        ctx->device_type(), ep::primitive::BinaryOp::kMul, prediction_diff->data_type(),
+        prediction_diff->data_type(), prediction_diff->shape_view().NumAxes());
+    CHECK(bcast_mul);
+    bcast_mul->Launch(ctx->stream(), prob->shape_view().NumAxes(), prob->shape_view().ptr(),
+                      prob->dptr(), expand_shape.size(), expand_shape.data(), dy->dptr(),
+                      prediction_diff->mut_dptr());
+  }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+REGISTER_USER_KERNEL("sparse_softmax_cross_entropy_grad")
+    .SetCreateFn<MluSparseSoftmaxCrossEntropyGradKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kMLU)
+                     && ((user_op::HobDataType("prob", 0) == DataType::kFloat)
+                         || (user_op::HobDataType("prob", 0) == DataType::kFloat16)));
 
 }  // namespace oneflow
