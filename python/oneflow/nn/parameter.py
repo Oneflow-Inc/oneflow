@@ -16,12 +16,3 @@ limitations under the License.
 import oneflow as flow
 
 Parameter = flow._oneflow_internal.nn.Parameter
-
-
-class UninitializedParameter(Parameter):
-    cls_to_become = Parameter
-
-    def __new__(cls, required_grad=True, device=None, dtype=None) -> None:
-        factory_kwargs = {"device": device, "dtype": dtype}
-        data = flow.empty(0, **factory_kwargs)
-        return flow.Tensor._make_subclass(cls, data, required_grad)
