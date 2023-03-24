@@ -586,7 +586,7 @@ void OpGraph::UpdateCachedPredicatorIsReachable() {
   cached_predicator_is_reachable_ = MakePredicatorIsReachable();
 }
 
-std::function<bool(const OpNode* src, const OpNode* dst)> OpGraph::cached_predicator_is_reachable()
+std::function<bool(const OpNode* src, const OpNode* dst)> OpGraph::GetCachedPredicatorIsReachable()
     const {
   CHECK(static_cast<bool>(cached_predicator_is_reachable_))
       << "cached_predicator_is_reachable_ is not initialized";
