@@ -148,7 +148,7 @@ struct GetDataType<void> : std::integral_constant<DataType, DataType::kChar> {};
   inline type_cpp GetTypeByDataType(std::integral_constant<DataType, type_proto>) { return {}; }
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE,
                      ALL_DATA_TYPE_SEQ UNSIGNED_INT32_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ
-                         BFLOAT16_DATA_TYPE_SEQ COMPLEX_DATA_TYPE_SEQ);
+                         BFLOAT16_DATA_TYPE_SEQ COMPLEX_DATA_TYPE_SEQ UNSIGNED_INT64_DATA_TYPE_SEQ);
 #undef SPECIALIZE_GET_DATA_TYPE
 
 template<typename T>
@@ -276,6 +276,14 @@ OF_DEVICE_FUNC T GetMinVal() {
   uint16_t ret = 0xfbff;  // Decimal: 64511; Binary: 1 11110 1111111111
   return *(T*)&ret;
 }
+
+#if CUDA_VERSION >= 11000
+template<>
+OF_DEVICE_FUNC nv_bfloat16 GetMinVal<nv_bfloat16>() {
+  uint16_t ret = 0xff7f;
+  return *(nv_bfloat16*)&ret;
+}
+#endif  // CUDA_VERSION >= 11000
 
 template<DeviceType, typename T>
 struct DevDType {

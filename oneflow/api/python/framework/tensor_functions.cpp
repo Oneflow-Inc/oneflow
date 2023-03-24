@@ -301,6 +301,7 @@ DIRECT_PASS_FUNC(PyTensorObject_logsumexp, functional::logsumexp)
 DIRECT_PASS_FUNC(PyTensorObject_maximum, functional::maximum)
 DIRECT_PASS_FUNC(PyTensorObject_minimum, functional::minimum)
 DIRECT_PASS_FUNC(PyTensorObject_tril, functional::tril)
+DIRECT_PASS_FUNC(PyTensorObject_tril_, functional::tril_)
 DIRECT_PASS_FUNC(PyTensorObject_triu, functional::triu)
 DIRECT_PASS_FUNC(PyTensorObject_triu_, functional::triu_)
 DIRECT_PASS_FUNC(PyTensorObject_softmax, functional::softmax)
@@ -1059,6 +1060,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"maximum", (PyCFunction)PyTensorObject_maximum, METH_VARARGS | METH_KEYWORDS, NULL},
     {"minimum", (PyCFunction)PyTensorObject_minimum, METH_VARARGS | METH_KEYWORDS, NULL},
     {"tril", (PyCFunction)PyTensorObject_tril, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"tril_", (PyCFunction)PyTensorObject_tril_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"triu", (PyCFunction)PyTensorObject_triu, METH_VARARGS | METH_KEYWORDS, NULL},
     {"triu_", (PyCFunction)PyTensorObject_triu_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"softmax", (PyCFunction)PyTensorObject_softmax, METH_VARARGS | METH_KEYWORDS, NULL},

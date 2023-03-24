@@ -21,7 +21,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=5, auto_backward=False, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=True)
 def _test_sort_impl(test_case, placement):
     sbp = random_sbp(placement, max_dim=4)
     x_dims = [random(2, 4) * 8 for _ in range(4)]
