@@ -27,6 +27,7 @@ limitations under the License.
 */
 #include <string>
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
@@ -113,9 +114,12 @@ class FftC2C : public OpExprGradFunction<FftC2CCaptureState> {
   Maybe<void> Capture(FftC2CCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
+    ComposedAttrMap composed_attrs(attrs, base_attrs_);
+
     ctx->requires_grad = inputs.at(0)->requires_grad();
-    ctx->forward = JUST(attrs.GetAttr<bool>("forward"));
-    ctx->dims = JUST(attrs.GetAttr<std::vector<int64_t>>("forward"));
+    
+    ctx->forward = JUST(composed_attrs.GetAttr<bool>("forward"));
+    ctx->dims = JUST(attrs.GetAttr<std::vector<int64_t>>("dims"));
     ctx->norm_str = JUST(attrs.GetAttr<std::string>("norm"));
 
     return Maybe<void>::Ok();

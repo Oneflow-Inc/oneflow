@@ -4142,7 +4142,7 @@ class FftFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int64_t>& n,
                            int64_t dim, const Optional<std::string>& norm) const {
     // auto dim_val = dim.value_or(-1);
-    auto norm_str = norm.value_or("backward");
+    std::string norm_str = norm.value_or("backward");
     if (input->dtype()->is_complex()) {
       return functional::FftC2C(input, n, dim, norm_str, /*forward=*/true);
     } else {

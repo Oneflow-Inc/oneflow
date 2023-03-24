@@ -66,6 +66,9 @@ class FftC2CKernel final : public user_op::OpKernel {
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
+
+    std::cout << "=========== [FftC2CKernel] in ==================" << std::endl;
+
     const user_op::Tensor* input = ctx->Tensor4ArgNameAndIndex("input", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     bool forward = ctx->Attr<bool>("forward");
@@ -102,6 +105,8 @@ class FftR2CKernel final : public user_op::OpKernel {
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
+    std::cout << "=========== [FftR2CKernel] in ==================" << std::endl;
+
     const user_op::Tensor* input = ctx->Tensor4ArgNameAndIndex("input", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     bool forward = ctx->Attr<bool>("forward");

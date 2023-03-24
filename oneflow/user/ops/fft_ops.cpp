@@ -20,11 +20,11 @@ limitations under the License.
 namespace oneflow {
 /* static */ Maybe<void> FftC2COp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("input", 0);
-  // const auto& dims = ctx->Attr<std::vector<int64_t>>("dims");
-  // const int64_t norm = ctx->Attr<int64_t>("norm");
-  // bool forward = ctx->Attr<bool>("forward");
+  const Stride& in_stride = ctx->InputStride("input", 0);
 
   ctx->SetOutputShape("out", 0, in_shape);
+  ctx->SetOutputStride("out", 0, in_stride);
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("input", 0));
   return Maybe<void>::Ok();
 }
 
@@ -33,7 +33,8 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> FftC2COp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+  // ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+  ctx->NewBuilder().PartialSum(user_op::OpArg("input", 0)).PartialSum(user_op::OpArg("out", 0)).Build();
   return Maybe<void>::Ok();
 }
 
