@@ -44,13 +44,13 @@ class TestMedianModule(flow.unittest.TestCase):
         x = random_tensor(ndim).to(device)
         return torch.median(x, reduce_dim, True)
 
-    @autotest(n=5, auto_backward=False, check_graph=False)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_median_0size(test_case):
         device = random_device()
         x = random_tensor(ndim=3, dim1=0, requires_grad=False).to(device)
         return torch.median(x)
 
-    @autotest(n=5, auto_backward=False, check_graph=False)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_median_reduce_one_dim_0size(test_case):
         device = random_device()
         x = random_tensor(ndim=3, dim1=0, requires_grad=False).to(device)

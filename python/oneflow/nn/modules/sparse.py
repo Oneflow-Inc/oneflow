@@ -116,7 +116,10 @@ class Embedding(Module):
         scale_grad_by_freq: bool = False,
         sparse: bool = False,
         _weight: Optional[Tensor] = None,
+        device=None,
+        dtype=None,
     ):
+        factory_kwargs = {"device": device, "dtype": dtype}
         super().__init__()
         self.num_embeddings = num_embeddings
         self.embedding_dim = embedding_dim
@@ -136,7 +139,9 @@ class Embedding(Module):
         self.scale_grad_by_freq = scale_grad_by_freq
         assert sparse is False, "Not support sparse=True yet!"
         if _weight is None:
-            self.weight = flow.nn.Parameter(Tensor(num_embeddings, embedding_dim))
+            self.weight = flow.nn.Parameter(
+                flow.empty((num_embeddings, embedding_dim), **factory_kwargs)
+            )
             self.reset_parameters()
         else:
             assert list(_weight.shape) == [

@@ -82,14 +82,14 @@ def _test_global_transpose_backward_v2(test_case, placement, sbp):
     )
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_global_transpose_flow_with_random_data(test_case, placement, sbp):
     x = random_tensor(4, 8, 16, 24, 8).to_global(placement, sbp)
     y = torch.transpose(x, dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))
     return y
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_global_transpose_with_0_size_data(test_case, placement, sbp):
     device = random_device()
     x = random_tensor(4, 8, 16, 0, 8).to_global(placement, sbp)
