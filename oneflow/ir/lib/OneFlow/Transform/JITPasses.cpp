@@ -18,7 +18,7 @@ namespace {
 // exits: result consumed by oneflow ops
 
 // NOTE: we assume all arg values are produced by an oneflow op and won't be an argument
-void cloneOpsToNewBody(OpBuilder& builder, Operation* op, Block& body,
+void cloneOpsToNewBody(OpBuilder& builder, Operation* op, Block* body,
                        llvm::DenseSet<Operation*>& visitedEntryOps,
                        llvm::DenseSet<Value>& argValues, llvm::DenseSet<Value> returnValues,
                        BlockAndValueMapping& mapping) {
@@ -28,7 +28,7 @@ void cloneOpsToNewBody(OpBuilder& builder, Operation* op, Block& body,
         if (llvm::dyn_cast<OneFlowDialect>(defOp->getDialect())) {
           visitedEntryOps.insert(op);
           argValues.insert(operand);
-          mapping.map(operand, body.addArgument(operand.getType(), operand.getLoc()));
+          mapping.map(operand, body->addArgument(operand.getType(), operand.getLoc()));
         } else {
           cloneOpsToNewBody(builder, defOp, body, visitedEntryOps, argValues, returnValues,
                             mapping);
@@ -51,10 +51,9 @@ void cloneOpsToNewBody(OpBuilder& builder, Operation* op, Block& body,
 class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunctionPass> {
   void runOnOperation() override {
     llvm::DenseSet<Operation*> entryOps, visitedEntryOps;
-    llvm::DenseSet<Value> argValues, returnValues;
-    FunctionOpInterface func = getOperation();
-    auto& operations = func.getBody().front().getOperations();
-    // collect non-oneflow operations
+    FunctionOpInterface job = getOperation();
+    auto& operations = job.getBody().front().getOperations();
+
     for (auto& op : operations) {
       if (llvm::dyn_cast<OneFlowDialect>(op.getDialect())) {
         for (auto result : op.getResults()) {
@@ -64,17 +63,33 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
         }
       }
     }
+
     OpBuilder builder{&getContext()};
     for (auto entryOp : entryOps) {
+      llvm::DenseSet<Value> argValues, returnValues;
       OpBuilder::InsertionGuard guard(builder);
-      Block body{};
-      builder.setInsertionPointToStart(&body);
+      auto block = new Block();
+      builder.setInsertionPointToStart(block);
       BlockAndValueMapping mapping;
       if (visitedEntryOps.contains(entryOp)) { continue; }
-      cloneOpsToNewBody(builder, entryOp, body, visitedEntryOps, argValues, returnValues, mapping);
+      cloneOpsToNewBody(builder, entryOp, block, visitedEntryOps, argValues, returnValues, mapping);
+
+      SmallVector<::mlir::Value, 4> mapped_results;
+      SmallVector<Type, 4> argument_types, result_types;
+
+      for (auto ret : returnValues) {
+        mapped_results.push_back(mapping.lookup(ret));
+        result_types.push_back(ret.getType());
+      }
+      builder.setInsertionPointToEnd(block);
+      builder.create<func::ReturnOp>(entryOp->getLoc(), mapped_results);
+
+      for (auto argument : block->getArguments()) { argument_types.push_back(argument.getType()); }
+      auto func_type = builder.getFunctionType(argument_types, result_types);
+      auto function = builder.create<func::FuncOp>(entryOp->getLoc(), "func_name", func_type);
+      function.getBody().push_back(block);
     }
-    llvm::errs() << entryOps.size() << "\n";
-  };
+  }
 };
 
 }  // namespace
