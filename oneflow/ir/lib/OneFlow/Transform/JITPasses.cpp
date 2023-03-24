@@ -26,44 +26,44 @@ class Outliner {
   OpBuilder& builder;
   Block* body;
   llvm::DenseSet<Operation*>& visitedOps;
-  std::deque<Operation*> worklist{};
-  void cloneOpsToNewBody(Operation* op) {
+  std::queue<Operation*> worklist{};
+  void cloneOpsToNewBody(Operation* op, bool defer = false) {
     if (visitedOps.contains(op)) { return; }
     for (auto operand : op->getOperands()) {
       if (!mapping.lookup(operand)) {
         if (auto defOp = operand.getDefiningOp()) {
-          if (!visitedOps.contains(defOp)) {
-            if (isOneFlowOp(defOp)) {
-              argValues.insert(operand);
-              mapping.map(operand, body->addArgument(operand.getType(), operand.getLoc()));
-            } else {
-              cloneOpsToNewBody(defOp);
-            }
+          if (isOneFlowOp(defOp)) {
+            argValues.insert(operand);
+            mapping.map(operand, body->addArgument(operand.getType(), operand.getLoc()));
+          } else {
+            cloneOpsToNewBody(defOp, true);
           }
         }
       }
     }
     ImplicitLocOpBuilder nb(op->getLoc(), builder);
-    if (!visitedOps.contains(op)) { nb.clone(*op, mapping); }
+    nb.clone(*op, mapping);
     visitedOps.insert(op);
-    llvm::errs() << "[clone] " << op << " ";
-    op->dump();
 
     for (auto& use : op->getUses()) {
       auto owner = use.getOwner();
       if (isOneFlowOp(owner)) {
         returnValues.insert(use.get());
       } else {
-        if (!visitedOps.contains(owner)) { cloneOpsToNewBody(owner); }
-        // worklist.push_front(owner);
+        if (defer) {
+          worklist.push(owner);
+        } else {
+          cloneOpsToNewBody(owner);
+        }
       }
     }
-
-    // while (!worklist.empty()) {
-    //   auto op = worklist.front();
-    //   worklist.pop_front();
-    //   cloneOpsToNewBody(op);
-    // }
+    if (!defer) {
+      while (!worklist.empty()) {
+        auto op = worklist.front();
+        worklist.pop();
+        cloneOpsToNewBody(op);
+      }
+    }
   }
 
  public:
@@ -72,7 +72,7 @@ class Outliner {
     cloneOpsToNewBody(op);
   }
 
-  BlockAndValueMapping mapping;
+  BlockAndValueMapping mapping{};
   llvm::DenseSet<Value> argValues{}, returnValues{};
 };
 
@@ -112,9 +112,9 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
 
       for (auto argument : block->getArguments()) { argumentTypes.push_back(argument.getType()); }
       auto funcType = builder.getFunctionType(argumentTypes, resultTypes);
-      funcType.dump();
+      builder.setInsertionPointToStart(&job.getBody().front());
       auto function = builder.create<func::FuncOp>(entryOp->getLoc(), "TODO-func_name", funcType);
-      function.getBody().push_back(block);
+      function.getBody().push_front(block);
     }
   }
 };
