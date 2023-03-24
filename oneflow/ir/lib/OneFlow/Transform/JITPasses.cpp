@@ -1,3 +1,4 @@
+#include <queue>
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/Passes.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -18,39 +19,65 @@ namespace {
 // exits: result consumed by oneflow ops
 
 // NOTE: we assume all arg values are produced by an oneflow op and won't be an argument
-void cloneOpsToNewBody(OpBuilder& builder, Operation* op, Block* body,
-                       llvm::DenseSet<Operation*>& visitedEntryOps,
-                       llvm::DenseSet<Value>& argValues, llvm::DenseSet<Value> returnValues,
-                       BlockAndValueMapping& mapping) {
-  for (auto operand : op->getOperands()) {
-    if (!mapping.lookup(operand)) {
-      if (auto defOp = operand.getDefiningOp()) {
-        if (llvm::dyn_cast<OneFlowDialect>(defOp->getDialect())) {
-          visitedEntryOps.insert(op);
-          argValues.insert(operand);
-          mapping.map(operand, body->addArgument(operand.getType(), operand.getLoc()));
-        } else {
-          cloneOpsToNewBody(builder, defOp, body, visitedEntryOps, argValues, returnValues,
-                            mapping);
+
+class Outliner {
+ private:
+  OpBuilder& builder;
+  Block* body;
+  llvm::DenseSet<Operation*>& visitedOps;
+  std::deque<Operation*> worklist{};
+  void cloneOpsToNewBody(Operation* op) {
+    if (visitedOps.contains(op)) { return; }
+    for (auto operand : op->getOperands()) {
+      if (!mapping.lookup(operand)) {
+        if (auto defOp = operand.getDefiningOp()) {
+          if (visitedOps.contains(defOp)) { continue; }
+          if (llvm::dyn_cast<OneFlowDialect>(defOp->getDialect())) {
+            argValues.insert(operand);
+            mapping.map(operand, body->addArgument(operand.getType(), operand.getLoc()));
+          } else {
+            cloneOpsToNewBody(defOp);
+          }
         }
       }
     }
-  }
-  ImplicitLocOpBuilder nb(op->getLoc(), builder);
-  nb.clone(*op, mapping);
-  for (auto& use : op->getUses()) {
-    if (llvm::dyn_cast<OneFlowDialect>(use.getOwner()->getDialect())) {
-      returnValues.insert(use.get());
-    } else {
-      cloneOpsToNewBody(builder, use.getOwner(), body, visitedEntryOps, argValues, returnValues,
-                        mapping);
+    ImplicitLocOpBuilder nb(op->getLoc(), builder);
+    nb.clone(*op, mapping);
+    visitedOps.insert(op);
+    llvm::errs() << "[clone] ";
+    op->dump();
+
+    for (auto& use : op->getUses()) {
+      auto owner = use.getOwner();
+      if (llvm::dyn_cast<OneFlowDialect>(owner->getDialect())) {
+        returnValues.insert(use.get());
+      } else {
+        if (visitedOps.contains(owner)) { continue; }
+        // worklist.push_front(owner);
+        cloneOpsToNewBody(owner);
+      }
     }
+
+    // while (!worklist.empty()) {
+    //   auto op = worklist.front();
+    //   worklist.pop_front();
+    //   cloneOpsToNewBody(op);
+    // }
   }
-}
+
+ public:
+  Outliner(OpBuilder& builder, Block* body, Operation* op, llvm::DenseSet<Operation*>& visitedOps)
+      : builder{builder}, body{body}, visitedOps{visitedOps} {
+    cloneOpsToNewBody(op);
+  }
+
+  BlockAndValueMapping mapping;
+  llvm::DenseSet<Value> argValues{}, returnValues{};
+};
 
 class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunctionPass> {
   void runOnOperation() override {
-    llvm::DenseSet<Operation*> entryOps, visitedEntryOps;
+    llvm::DenseSet<Operation*> entryOps, visitedOps;
     FunctionOpInterface job = getOperation();
     auto& operations = job.getBody().front().getOperations();
 
@@ -66,27 +93,26 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
 
     OpBuilder builder{&getContext()};
     for (auto entryOp : entryOps) {
-      llvm::DenseSet<Value> argValues, returnValues;
+      if (visitedOps.contains(entryOp)) { continue; }
       OpBuilder::InsertionGuard guard(builder);
       auto block = new Block();
       builder.setInsertionPointToStart(block);
-      BlockAndValueMapping mapping;
-      if (visitedEntryOps.contains(entryOp)) { continue; }
-      cloneOpsToNewBody(builder, entryOp, block, visitedEntryOps, argValues, returnValues, mapping);
+      auto outliner = Outliner(builder, block, entryOp, visitedOps);
 
-      SmallVector<::mlir::Value, 4> mapped_results;
-      SmallVector<Type, 4> argument_types, result_types;
+      SmallVector<::mlir::Value, 4> mappedResults;
+      SmallVector<Type, 4> argumentTypes, resultTypes;
 
-      for (auto ret : returnValues) {
-        mapped_results.push_back(mapping.lookup(ret));
-        result_types.push_back(ret.getType());
+      for (auto ret : outliner.returnValues) {
+        mappedResults.push_back(outliner.mapping.lookup(ret));
+        resultTypes.push_back(ret.getType());
       }
       builder.setInsertionPointToEnd(block);
-      builder.create<func::ReturnOp>(entryOp->getLoc(), mapped_results);
+      builder.create<func::ReturnOp>(entryOp->getLoc(), mappedResults);
 
-      for (auto argument : block->getArguments()) { argument_types.push_back(argument.getType()); }
-      auto func_type = builder.getFunctionType(argument_types, result_types);
-      auto function = builder.create<func::FuncOp>(entryOp->getLoc(), "func_name", func_type);
+      for (auto argument : block->getArguments()) { argumentTypes.push_back(argument.getType()); }
+      auto funcType = builder.getFunctionType(argumentTypes, resultTypes);
+      funcType.dump();
+      auto function = builder.create<func::FuncOp>(entryOp->getLoc(), "TODO-func_name", funcType);
       function.getBody().push_back(block);
     }
   }
