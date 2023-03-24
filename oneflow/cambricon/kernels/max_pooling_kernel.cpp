@@ -24,8 +24,14 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/user_op_tensor.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/ep/include/primitive/permute.h"
 
 namespace oneflow {
+
+template<typename Context>
+std::unique_ptr<ep::primitive::Permute> NewPermutePrimitive(Context* ctx, const int& num_dims) {
+  return ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(ctx->device_type(), num_dims);
+}
 
 template<int Nd, typename T>
 class MluMaxPoolKernel final : public user_op::OpKernel {
@@ -136,5 +142,191 @@ class MluMaxPoolKernel final : public user_op::OpKernel {
 
 REGISTER_MAX_POOL_MLU_KERNEL(float)
 REGISTER_MAX_POOL_MLU_KERNEL(float16)
+
+template<int Nd, typename T>
+class MluMaxPoolGradKernel final : public user_op::OpKernel {
+ public:
+  MluMaxPoolGradKernel() = default;
+  ~MluMaxPoolGradKernel() = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    const user_op::Tensor* indice = ctx->Tensor4ArgNameAndIndex("indice", 0);
+    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+
+    const std::vector<int32_t>& padding = ctx->Attr<std::vector<int32_t>>("padding");
+    const std::vector<int32_t>& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
+    const std::vector<int32_t>& stride = ctx->Attr<std::vector<int32_t>>("stride");
+    const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
+    const std::string& data_format = ctx->Attr<std::string>("data_format");
+
+    cnnlTensorLayout_t layout =
+        (data_format == "channels_last") ? CNNL_LAYOUT_NHWC : CNNL_LAYOUT_NCHW;
+    cnnlPoolingMode_t mode = CNNL_POOLING_MAX;
+
+    CnnlTensorDescriptor x_desc, indice_desc, dy_desc, dx_desc;
+    const void* temp_x = nullptr;
+    const void* temp_indice = nullptr;
+    const void* temp_dy = nullptr;
+    void* temp_dx = nullptr;
+    CnnlWorkspace temp_x_cnnl_workspace(ctx->stream()->As<ep::MluStream>());
+    CnnlWorkspace temp_indice_cnnl_workspace(ctx->stream()->As<ep::MluStream>());
+    CnnlWorkspace temp_dy_cnnl_workspace(ctx->stream()->As<ep::MluStream>());
+    CnnlWorkspace temp_dx_cnnl_workspace(ctx->stream()->As<ep::MluStream>());
+
+    if (layout == CNNL_LAYOUT_NCHW) {
+      std::vector<int> permute_NCHW2NHWC{0, 2, 3, 1};
+      auto transpose2NHWC = [&ctx, &permute_NCHW2NHWC](const user_op::Tensor* tensor,
+                                                       CnnlWorkspace& workspace,
+                                                       CnnlTensorDescriptor& desc) {
+        size_t workspace_size =
+            tensor->shape_view().elem_cnt() * GetSizeOfDataType(tensor->data_type());
+        workspace.resize(workspace_size);
+        std::vector<int64_t> target_shape({tensor->shape_view().At(0), tensor->shape_view().At(2),
+                                           tensor->shape_view().At(3), tensor->shape_view().At(1)});
+
+        auto transpose = NewPermutePrimitive(ctx, tensor->shape_view().NumAxes());
+        CHECK(transpose);
+        transpose->Launch(ctx->stream(), tensor->data_type(), tensor->shape_view().NumAxes(),
+                          tensor->shape_view().data(), tensor->dptr(), permute_NCHW2NHWC.data(),
+                          workspace.dptr());
+        desc.set(target_shape.size(), target_shape.data(),
+                 ConvertToCnnlDataType(tensor->data_type()), CNNL_LAYOUT_NHWC);
+      };
+
+      transpose2NHWC(x, temp_x_cnnl_workspace, x_desc);
+      transpose2NHWC(indice, temp_indice_cnnl_workspace, indice_desc);
+      transpose2NHWC(dy, temp_dy_cnnl_workspace, dy_desc);
+      transpose2NHWC(dx, temp_dx_cnnl_workspace, dx_desc);
+
+      temp_x = temp_x_cnnl_workspace.dptr();
+      temp_indice = temp_indice_cnnl_workspace.dptr();
+      temp_dy = temp_dy_cnnl_workspace.dptr();
+      temp_dx = temp_dx_cnnl_workspace.dptr();
+
+    } else {
+      temp_x = x->dptr();
+      temp_indice = indice->dptr();
+      temp_dy = dy->dptr();
+      temp_dx = dx->mut_dptr();
+
+      x_desc.set(x, layout);
+      dy_desc.set(dy, layout);
+      indice_desc.set(indice, layout);
+      dx_desc.set(dx, layout);
+    }
+
+    // cnnlPoolingBackward requires y_desc is int32/int16, which is int64 in oneflow op
+    auto local_index_dtype = CNNL_DTYPE_INVALID;
+    CnnlWorkspace local_index(ctx->stream()->As<ep::MluStream>());
+    if (GetDataType<T>::value == DataType::kFloat) {
+      local_index_dtype = ConvertToCnnlDataType(kInt32);
+      local_index.resize(sizeof(int32_t) * indice->shape_view().elem_cnt());
+    } else if (GetDataType<T>::value == DataType::kFloat16) {
+      local_index_dtype = ConvertToCnnlDataType(kInt16);
+      local_index.resize(sizeof(int16_t) * indice->shape_view().elem_cnt() * 3);
+    }
+    CnnlTensorDescriptor local_index_desc;
+
+    std::vector<int> temp_indice_shape;
+    if (layout == CNNL_LAYOUT_NCHW) {
+      temp_indice_shape = {
+          static_cast<int>(indice->shape_view().At(0)),
+          static_cast<int>(indice->shape_view().At(2)),
+          static_cast<int>(indice->shape_view().At(3)),
+          static_cast<int>(indice->shape_view().At(1)),
+      };
+    } else {
+      temp_indice_shape = {
+          static_cast<int>(indice->shape_view().At(0)),
+          static_cast<int>(indice->shape_view().At(1)),
+          static_cast<int>(indice->shape_view().At(2)),
+          static_cast<int>(indice->shape_view().At(3)),
+      };
+    }
+    local_index_desc.set(indice->shape_view().NumAxes(), temp_indice_shape.data(),
+                         local_index_dtype, CNNL_LAYOUT_NHWC);
+
+    if (local_index_dtype == CNNL_DTYPE_INT16) {
+      CnnlTensorDescriptor int32_index_desc;
+      char* int32_index_dptr = reinterpret_cast<char*>(local_index.dptr());
+      int32_index_dptr += sizeof(int16_t) * indice->shape_view().elem_cnt();
+      int32_index_desc.set(indice->shape_view().NumAxes(), temp_indice_shape.data(),
+                           CNNL_DTYPE_INT32, layout);
+      OF_CNNL_CHECK(cnnlCastDataType(
+          /* handle      */ ctx->stream()->As<ep::MluStream>()->cnnl_handle(),
+          /* input_desc  */ indice_desc.desc(),
+          /* input       */ temp_indice,
+          /* cast_type   */ CNNL_CAST_INT64_TO_INT32,
+          /* output_desc */ int32_index_desc.desc(),
+          /* output      */ int32_index_dptr));
+
+      OF_CNNL_CHECK(cnnlCastDataType(
+          /* handle      */ ctx->stream()->As<ep::MluStream>()->cnnl_handle(),
+          /* input_desc  */ int32_index_desc.desc(),
+          /* input       */ int32_index_dptr,
+          /* cast_type   */ CNNL_CAST_INT32_TO_INT16,
+          /* output_desc */ local_index_desc.desc(),
+          /* output      */ local_index.dptr()));
+    } else {
+      OF_CNNL_CHECK(cnnlCastDataType(
+          /* handle      */ ctx->stream()->As<ep::MluStream>()->cnnl_handle(),
+          /* input_desc  */ indice_desc.desc(),
+          /* input       */ temp_indice,
+          /* cast_type   */ CNNL_CAST_INT64_TO_INT32,
+          /* output_desc */ local_index_desc.desc(),
+          /* output      */ local_index.dptr()));
+    }
+    CnnlPoolingDescriptor pooling_desc;
+    // calculate paddings
+    int pu = padding[0], pd = padding[0], pl = padding[1], pr = padding[1];
+    pooling_desc.set(mode, kernel_size[0], kernel_size[1], stride[0], stride[1], pu, pd, pl, pr,
+                     ceil_mode);
+
+    OF_CNNL_CHECK(cnnlPoolingBackward(
+        /* handle       */ ctx->stream()->As<ep::MluStream>()->cnnl_handle(),
+        /* pooling_desc */ pooling_desc.desc(),
+        /* alpha        */ nullptr,
+        /* y_desc       */ local_index_desc.desc(),
+        /* y            */ local_index.dptr(),
+        /* diff_y_desc  */ dy_desc.desc(),
+        /* diff_y       */ temp_dy,
+        /* x_desc       */ x_desc.desc(),
+        /* x            */ temp_x,
+        /* beta         */ nullptr,
+        /* diff_x_desc  */ dx_desc.desc(),
+        /* diff_x       */ temp_dx));
+
+    if (layout == CNNL_LAYOUT_NCHW) {
+      std::vector<int> permute_NHWC2NCHW{0, 3, 1, 2};
+      std::vector<int64_t> temp_dx_shape = {
+          dx->shape_view().At(0),
+          dx->shape_view().At(2),
+          dx->shape_view().At(3),
+          dx->shape_view().At(1),
+      };
+      auto transpose = NewPermutePrimitive(ctx, dx->shape_view().NumAxes());
+      CHECK(transpose);
+      transpose->Launch(ctx->stream(), dx->data_type(), dx->shape_view().NumAxes(),
+                        temp_dx_shape.data(), temp_dx, permute_NHWC2NCHW.data(), dx->mut_dptr());
+    }
+  }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_MAX_POOL_GRAD_MLU_KERNEL(x_dtype, indice_dtype)                        \
+  REGISTER_USER_KERNEL("max_pool_2d_grad")                                              \
+      .SetCreateFn<MluMaxPoolGradKernel<2, x_dtype>>()                                  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kMLU)                   \
+                       && (user_op::HobDataType("x", 0) == GetDataType<x_dtype>::value) \
+                       && user_op::HobDataType("indice", 0) == GetDataType<indice_dtype>::value);
+
+REGISTER_MAX_POOL_GRAD_MLU_KERNEL(float, int64_t)
+REGISTER_MAX_POOL_GRAD_MLU_KERNEL(float16, int64_t)
 
 }  // namespace oneflow
