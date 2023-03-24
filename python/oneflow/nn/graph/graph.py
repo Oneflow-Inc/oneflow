@@ -1197,6 +1197,13 @@ class Graph(object):
                                 state_tensor_from_eager, self._state_tensor_tuple[s_idx]
                             )
                         self._state_tensor_tuple[s_idx] = state_tensor_from_eager
+                for s_idx, s_name in enumerate(self._state_op_names):
+                    if oneflow.numel(self._state_tensor_tuple[s_idx]) == 0:
+                        print(f"parameter {s_name} is 0 size tensor.")
+                        if s_name in states_from_eager:
+                            print(f"parameter {s_name} is an eager module parameter and size is {oneflow.numel(states_from_eager[s_name])}.")
+                        else:
+                            print(f"parameter {s_name} is not an eager module parameter, this is not valid.")
 
         self.__build_outputs_buffer()
 
