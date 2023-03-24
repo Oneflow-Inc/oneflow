@@ -18,6 +18,10 @@ limitations under the License.
 
 namespace oneflow {
 
+// TODO(lml): use hash map and push this to a common head file
+static std::map<int, int> complex_to_real_map {{kComplex32, kFloat16}, {kComplex64, kFloat}, {kComplex128, kDouble}};
+static std::map<int, int> real_to_complex_map {{kFloat16, kComplex32}, {kFloat, kComplex64}, {kDouble, kComplex128}};
+
 /*static*/ Maybe<void> ImagOp::GetSbp(user_op::SbpContext* ctx) {
   return user_op::GetSbpFnUtil::SplitForEachAxis(ctx);
 }
@@ -28,8 +32,12 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ImagOp::InferDataType(user_op::InferContext* ctx) {
-  // TODO(lml): to finsh
-  return user_op::TensorDescInferFnUtil::UnchangedDataType(ctx);
+  // TODO(lml): add some check
+  const std::pair<std::string, int32_t>& input_arg = ctx->inputs().at(0);
+  const TensorDesc& tensor_desc = ctx->InputTensorDesc(input_arg.first, input_arg.second);
+  const std::pair<std::string, int32_t>& output_arg = ctx->outputs().at(0);
+  ctx->SetOutputDType(output_arg.first, output_arg.second, complex_to_real_map[tensor_desc->data_type()]);
+  return Maybe<void>::Ok();
 }
 
 /*static*/ Maybe<void> ImagGradOp::GetSbp(user_op::SbpContext* ctx) {
@@ -42,8 +50,12 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ImagGradOp::InferDataType(user_op::InferContext* ctx) {
-  // TODO(lml): to finsh
-  return user_op::TensorDescInferFnUtil::UnchangedDataType(ctx);
+  // TODO(lml): add some check
+  const std::pair<std::string, int32_t>& input_arg = ctx->inputs().at(0);
+  const TensorDesc& tensor_desc = ctx->InputTensorDesc(input_arg.first, input_arg.second);
+  const std::pair<std::string, int32_t>& output_arg = ctx->outputs().at(0);
+  ctx->SetOutputDType(output_arg.first, output_arg.second, tensor_desc->data_type());
+  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow

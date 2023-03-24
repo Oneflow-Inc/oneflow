@@ -4536,7 +4536,7 @@ class ImagGradFunctor {
 class ConjFunctor {
  public:
   ConjFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("conj")
+    op_ = CHECK_JUST(one::OpBuilder("conj_physical")
                          .Input("x")
                          .Output("out")
                          .Build());
@@ -4553,7 +4553,7 @@ class ConjFunctor {
 class ConjGradFunctor {
  public:
   ConjGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("conj_grad")
+    op_ = CHECK_JUST(one::OpBuilder("conj_physical_grad")
                          .Input("dout")
                          .Input("x")
                          .Output("dx")

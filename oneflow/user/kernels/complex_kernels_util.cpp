@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/real_kernel_util.h"
+#include "oneflow/user/kernels/complex_kernels_util.h"
 #include <complex>
 
 namespace oneflow {
@@ -30,6 +30,26 @@ struct RealFunctor<DeviceType::kCPU, dtype_x, dtype_out> final {
 
 INSTANTIATE_REAL_FUNCTOR(DeviceType::kCPU, std::complex<float>, float)
 INSTANTIATE_REAL_FUNCTOR(DeviceType::kCPU, std::complex<double>, double)
+
+template<typename dtype_x, typename dtype_out>
+struct ImagFunctor<DeviceType::kCPU, dtype_x, dtype_out> final {
+  void operator()(ep::Stream* stream, const dtype_x* x, const dtype_out* out) {
+    // TODO(lml): finish this function.
+  }
+};
+
+INSTANTIATE_IMAG_FUNCTOR(DeviceType::kCPU, std::complex<float>, float)
+INSTANTIATE_IMAG_FUNCTOR(DeviceType::kCPU, std::complex<double>, double)
+
+template<typename dtype>
+struct ConjPhysicalFunctor<DeviceType::kCPU, dtype> final {
+  void operator()(ep::Stream* stream, const dtype* x, const dtype* out) {
+    // TODO(lml): finish this function.
+  }
+};
+
+INSTANTIATE_CONJ_PHYSICAL_FUNCTOR(DeviceType::kCPU, std::complex<float>)
+INSTANTIATE_CONJ_PHYSICAL_FUNCTOR(DeviceType::kCPU, std::complex<double>)
 
 }  // namespace user_op
 }  // namespace oneflow
