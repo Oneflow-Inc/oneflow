@@ -192,6 +192,19 @@ class TestConstantModule(flow.unittest.TestCase):
         )
         return y
 
+    @autotest(n=5, auto_backward=False)
+    def test_new_full_with_scalar(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        y = x.new_full([], random().to(int))
+        return y
+
+    @autotest(n=5, auto_backward=False)
+    def test_full_with_scalar(test_case):
+        device = random_device()
+        y = torch.full([], random().to(int), device=device)
+        return y
+
     @autotest(n=10, auto_backward=True)
     def test_full_with_random_data_int(test_case):
         device = random_device()

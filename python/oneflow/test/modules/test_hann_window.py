@@ -22,7 +22,7 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestHannWindow(flow.unittest.TestCase):
-    @autotest(n=5, auto_backward=False, check_graph=False)
+    @autotest(n=1, auto_backward=False, check_graph=True)
     def test_hann_window(test_case):
         device = random_device()
         window_length = random(1, 8).to(int).value()

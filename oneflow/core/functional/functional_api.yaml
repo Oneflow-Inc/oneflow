@@ -1233,7 +1233,7 @@
   bind_python: True
 
 - name: "fused_matmul_bias"
-  signature: "Tensor (Tensor x, Tensor weight, Tensor bias, Tensor _add_to_output=None) => FusedMatmulBias"
+  signature: "Tensor (Tensor x, Tensor weight, Tensor bias, Tensor _add_to_output=None, Double alpha=1.0, Double beta=1.0) => FusedMatmulBias"
   bind_python: True
 
 - name: "fused_mlp_grad"
@@ -1513,6 +1513,10 @@
   signature:
     "Tensor (Tensor x, Tensor gamma, Tensor beta, Int64 begin_norm_axis,
     Int64 begin_params_axis, Double epsilon) => LayerNormAffine"
+  bind_python: True
+
+- name: "skip_layer_norm"
+  signature: "Tensor (Tensor x, *, Tensor gamma=None, Tensor beta=None, Tensor bias=None, Tensor skip=None, Double epsilon=1e-5, Double alpha=1e1) => SkipLayerNorm"
   bind_python: True
 
 - name: "layer_norm"
