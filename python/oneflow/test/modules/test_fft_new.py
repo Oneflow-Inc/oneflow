@@ -11,24 +11,25 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-
-import numpy as np
 from collections import OrderedDict
 
-import oneflow as flow
+import numpy as np
 import torch
-import oneflow.unittest
-from oneflow.test_utils.automated_test_util import *
+# import oneflow.unittest
+# from oneflow.test_utils.automated_test_util import *
 from oneflow.test_utils.test_util import GenArgList
+
+import oneflow as flow
+
 
 def tensor_builder(params: dict, dtype=np.complex64):
     input_shape = params["shape"]
-
+    
     # generate random input
-    x = np.random.randn(input_shape) + 1.j * np.random.randn(input_shape)
+    x = np.random.randn(*input_shape) + 1.j * np.random.randn(*input_shape)
     x = x.astype(dtype)
 
-    # transfer to gpu memory
+    # requires grad
     x_flow = flow.from_numpy(x).requires_grad_(True)
     x_torch = torch.from_numpy(x).requires_grad_(True)
 
@@ -53,15 +54,16 @@ def _test_fft(test_case, params: dict, dtype=np.complex64):
     print(f"fft dim: {dim}")
     print(f"fft norm: {norm}")
     print(f"x_flow.dtype: {x_flow.dtype}")
-    print(f"x_torch.dtype: {x_torch.dtype}")
-    
+    print("x_torch.dtype: ", x_torch.dtype)
+    # print(f"x_torch.dtype: {x_torch.dtype}")
+    # print(x_torch)    
 
     # forward
     y_torch = torch.fft.fft(x_torch, 
                             n=n, 
                             dim=dim, 
                             norm=norm)
-
+    
     # backward
     y_torch.sum().backward()
 
@@ -107,11 +109,11 @@ class TestFft(flow.unittest.TestCase):
             if np.random.randint(0,1) == 1:
                 dim = np.random.randint(low=-num_dims, high=num_dims-1)
             else:
-                dim = None
+                dim = -1
             
             norm = np.random.choice(["backward", "forward", "ortho", None])
 
-            if np.random.randint(0,1) == 1 and dim is not None:
+            if np.random.randint(0,1) == 1 and dim != -1:
                 n = np.random.randint(low=1, high=shape[dim])
             else:
                 n = None
