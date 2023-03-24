@@ -3299,7 +3299,7 @@
   bind_python: True
 
 - name: "real_grad"
-  signature: "Tensor (Tensor dout, Tensor x) => RealGrad"
+  signature: "Tensor (Tensor dout) => RealGrad"
   bind_python: False
 
 - name: "imag"
@@ -3307,7 +3307,7 @@
   bind_python: True
 
 - name: "imag_grad"
-  signature: "Tensor (Tensor dout, Tensor x) => ImagGrad"
+  signature: "Tensor (Tensor dout) => ImagGrad"
   bind_python: False
 
 - name: "conj"
@@ -3315,7 +3315,7 @@
   bind_python: True
 
 - name: "conj_grad"
-  signature: "Tensor (Tensor dout, Tensor x) => ConjGrad"
+  signature: "Tensor (Tensor dout) => ConjGrad"
   bind_python: False
 
 - name: "conj_physical"
@@ -3323,5 +3323,5 @@
   bind_python: True
 
 - name: "conj_physical_grad"
-  signature: "Tensor (Tensor dout, Tensor x) => ConjPhysicalGrad"
+  signature: "Tensor (Tensor dout) => ConjPhysicalGrad"
   bind_python: False

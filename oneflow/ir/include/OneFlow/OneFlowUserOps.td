@@ -11769,7 +11769,6 @@ def OneFlow_RealOp : OneFlow_BaseOp<"real", [NoGrad, DeclareOpInterfaceMethods<U
 def OneFlow_RealGradOp : OneFlow_BaseOp<"real_grad", [NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dout
-    OneFlow_Tensor:$x,
   );
   let output = (outs
     OneFlow_Tensor:$dx
@@ -11796,7 +11795,6 @@ def OneFlow_ImagOp : OneFlow_BaseOp<"imag", [NoGrad, DeclareOpInterfaceMethods<U
 def OneFlow_ImagGradOp : OneFlow_BaseOp<"imag_grad", [NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dout
-    OneFlow_Tensor:$x,
   );
   let output = (outs
     OneFlow_Tensor:$dx
@@ -11823,7 +11821,6 @@ def OneFlow_ConjPhysicalOp : OneFlow_BaseOp<"conj_physical", [NoGrad, DeclareOpI
 def OneFlow_ConjPhysicalGradOp : OneFlow_BaseOp<"conj_physical_grad", [NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dout
-    OneFlow_Tensor:$x,
   );
   let output = (outs
     OneFlow_Tensor:$dx
