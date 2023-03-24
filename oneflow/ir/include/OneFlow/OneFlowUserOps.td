@@ -6959,6 +6959,28 @@ def OneFlow_RmsNormGradOp : OneFlow_BaseOp<"rms_norm_grad", [NoSideEffect, Decla
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_SkipRmsNormOp : OneFlow_BaseOp<"skip_rms_norm", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    Optional<OneFlow_Tensor>:$weight,
+    Optional<OneFlow_Tensor>:$bias,
+    Optional<OneFlow_Tensor>:$skip
+  );
+  let output = (outs
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$inv_rms
+  );
+  let attrs = (ins
+    ShapeAttr:$normalized_shape,
+    DefaultValuedAttr<F32Attr, "0.00001">:$epsilon,
+    DefaultValuedAttr<F32Attr, "0.00001">:$alpha
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 #endif // GET_ONEFLOW_NORMALIZATION_OP_DEFINITIONS
 
 
