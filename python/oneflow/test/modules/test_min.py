@@ -24,7 +24,7 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestMinModule(flow.unittest.TestCase):
-    @autotest(n=5, check_allclose=False, check_graph=False)
+    @autotest(n=5, check_allclose=False, check_graph=True)
     def test_min_reduce_random_dim(test_case):
         device = random_device()
         ndim = random().to(int).value()
@@ -63,14 +63,14 @@ class TestMinModule(flow.unittest.TestCase):
             )
         )
 
-    @autotest(n=5, check_graph=False)
+    @autotest(n=5, check_graph=True)
     def test_min_reduce_all_dim(test_case):
         device = random_device()
         ndim = random().to(int).value()
         x = random_tensor(ndim=ndim, dim0=random(1, 8)).to(device)
         return torch.min(x)
 
-    @autotest(n=5, check_graph=False)
+    @autotest(n=5, check_graph=True)
     def test_min_elementwise(test_case):
         device = random_device()
         ndim = random().to(int).value()
@@ -79,7 +79,7 @@ class TestMinModule(flow.unittest.TestCase):
         y = random_tensor(ndim, *dims).to(device)
         return torch.min(x, y)
 
-    @autotest(n=5, check_graph=False, check_dtype=True)
+    @autotest(n=5, check_graph=True, check_dtype=True)
     def test_min_elementwise_dtype_promotion(test_case):
         device = random_device()
         ndim = random().to(int).value()
@@ -88,7 +88,7 @@ class TestMinModule(flow.unittest.TestCase):
         y = random_tensor(ndim, *dims, dtype=int).to(device)
         return torch.min(x, y)
 
-    @autotest(n=5, check_graph=False, check_dtype=True)
+    @autotest(n=5, check_graph=True, check_dtype=True)
     def test_min_broadcast_dtype_promotion(test_case):
         device = random_device()
         ndim = random().to(int).value()
