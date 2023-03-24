@@ -3293,3 +3293,35 @@
 - name: "clone"
   signature: "Tensor (Tensor input) => Clone"
   bind_python: True
+
+- name: "real"
+  signature: "Tensor (Tensor x) => Real"
+  bind_python: True
+
+- name: "real_grad"
+  signature: "Tensor (Tensor dout, Tensor x) => RealGrad"
+  bind_python: False
+
+- name: "imag"
+  signature: "Tensor (Tensor x) => Imag"
+  bind_python: True
+
+- name: "imag_grad"
+  signature: "Tensor (Tensor dout, Tensor x) => ImagGrad"
+  bind_python: False
+
+- name: "conj"
+  signature: "Tensor (Tensor x) => Conj"
+  bind_python: True
+
+- name: "conj_grad"
+  signature: "Tensor (Tensor dout, Tensor x) => ConjGrad"
+  bind_python: False
+
+- name: "conj_physical"
+  signature: "Tensor (Tensor x) => ConjPhysical"
+  bind_python: True
+
+- name: "conj_physical_grad"
+  signature: "Tensor (Tensor dout, Tensor x) => ConjPhysicalGrad"
+  bind_python: False

@@ -4463,6 +4463,146 @@ class FusedGetConvexDiagonalSquaredGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class RealFunctor {
+ public:
+  RealFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("real")
+                         .Input("x")
+                         .Output("out")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, x);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class RealGradFunctor {
+ public:
+  RealGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("real_grad")
+                         .Input("dout")
+                         .Input("x")
+                         .Output("dx")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dout, const std::shared_ptr<one::Tensor>& x) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dout, x});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ImagFunctor {
+ public:
+  ImagFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("imag")
+                         .Input("x")
+                         .Output("out")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, x);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ImagGradFunctor {
+ public:
+  ImagGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("imag_grad")
+                         .Input("dout")
+                         .Input("x")
+                         .Output("dx")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dout, const std::shared_ptr<one::Tensor>& x) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dout, x});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ConjFunctor {
+ public:
+  ConjFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("conj")
+                         .Input("x")
+                         .Output("out")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, x);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ConjGradFunctor {
+ public:
+  ConjGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("conj_grad")
+                         .Input("dout")
+                         .Input("x")
+                         .Output("dx")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dout, const std::shared_ptr<one::Tensor>& x) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dout, x});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ConjPhysicalFunctor {
+ public:
+  ConjPhysicalFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("conj_physical")
+                         .Input("x")
+                         .Output("out")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, x);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ConjPhysicalGradFunctor {
+ public:
+  ConjPhysicalGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("conj_physical_grad")
+                         .Input("dout")
+                         .Input("x")
+                         .Output("dx")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dout, const std::shared_ptr<one::Tensor>& x) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dout, x});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 using namespace impl;
@@ -4609,6 +4749,14 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ScalarBitwiseAndFunctor, impl::ScalarBitwiseAnd2Functor>("ScalarBitwiseAnd");
   m.add_functor<impl::ScalarBitwiseOrFunctor, impl::ScalarBitwiseOr2Functor>("ScalarBitwiseOr");
   m.add_functor<impl::ScalarBitwiseXorFunctor, impl::ScalarBitwiseXor2Functor>("ScalarBitwiseXor");
+  m.add_functor<RealFunctor>("Real");
+  m.add_functor<RealGradFunctor>("RealGrad");
+  m.add_functor<ImagFunctor>("Imag");
+  m.add_functor<ImagGradFunctor>("ImagGrad");
+  m.add_functor<ConjFunctor>("Conj");
+  m.add_functor<ConjGradFunctor>("ConjGrad");
+  m.add_functor<ConjPhysicalFunctor>("ConjPhysical");
+  m.add_functor<ConjPhysicalGradFunctor>("ConjPhysicalGrad");
 };
 
 }  // namespace functional
