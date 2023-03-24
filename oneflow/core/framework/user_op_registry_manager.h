@@ -64,13 +64,13 @@ struct UserOpRegisterTrigger final {
   }
 };
 
-class UserOpHostMemoryInputRegistryMgr final {
+class UserOpHostMemoryInputRegistry final {
  public:
-  UserOpHostMemoryInputRegistryMgr(UserOpHostMemoryInputRegistryMgr const&) = delete;
-  UserOpHostMemoryInputRegistryMgr& operator=(UserOpHostMemoryInputRegistryMgr const&) = delete;
-  ~UserOpHostMemoryInputRegistryMgr() = default;
+  UserOpHostMemoryInputRegistry(UserOpHostMemoryInputRegistry const&) = delete;
+  UserOpHostMemoryInputRegistry& operator=(UserOpHostMemoryInputRegistry const&) = delete;
+  ~UserOpHostMemoryInputRegistry() = default;
 
-  static UserOpHostMemoryInputRegistryMgr& Get();
+  static UserOpHostMemoryInputRegistry& Get();
 
   Maybe<void> SetHostMemoryInput4Op(const std::string& op_type_name, const std::string& arg_name,
                                     int32_t index);
@@ -80,7 +80,7 @@ class UserOpHostMemoryInputRegistryMgr final {
   bool HasHostMemoryInput(const std::string& op_type_name) const;
 
  private:
-  UserOpHostMemoryInputRegistryMgr() {}
+  UserOpHostMemoryInputRegistry() {}
   HashMap<std::string, small_vector<std::pair<std::string, int32_t>>>
       op_type_name2host_memory_input_args_;
 };
@@ -89,8 +89,8 @@ class UserOpHostMemoryInputRegistryMgr final {
 
 }  // namespace oneflow
 
-#define REGISTER_OP_HOST_MEMORY_INPUT(op_type_name, arg_name, index)                         \
-  COMMAND(CHECK_JUST(user_op::UserOpHostMemoryInputRegistryMgr::Get().SetHostMemoryInput4Op( \
+#define REGISTER_OP_HOST_MEMORY_INPUT(op_type_name, arg_name, index)                      \
+  COMMAND(CHECK_JUST(user_op::UserOpHostMemoryInputRegistry::Get().SetHostMemoryInput4Op( \
       op_type_name, arg_name, index)));
 
 #define REGISTER_USER_OP(name)                                                                \

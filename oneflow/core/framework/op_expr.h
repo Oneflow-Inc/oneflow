@@ -160,8 +160,6 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
            != host_memory_input_ids_.end();
   }
 
-  const small_vector<int32_t>& host_memory_input_ids() const { return host_memory_input_ids_; }
-
   Maybe<void> InferPhysicalTensorDesc(
       const AttrMap& attrs, const std::string& device_tag,
       const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,

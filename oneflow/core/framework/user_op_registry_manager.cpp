@@ -140,14 +140,14 @@ Maybe<bool> UserOpRegistryMgr::IsOpKernelRegistered(const std::string& op_type_n
   return false;
 }
 
-UserOpHostMemoryInputRegistryMgr& UserOpHostMemoryInputRegistryMgr::Get() {
-  static UserOpHostMemoryInputRegistryMgr mgr;
+UserOpHostMemoryInputRegistry& UserOpHostMemoryInputRegistry::Get() {
+  static UserOpHostMemoryInputRegistry mgr;
   return mgr;
 }
 
-Maybe<void> UserOpHostMemoryInputRegistryMgr::SetHostMemoryInput4Op(const std::string& op_type_name,
-                                                                    const std::string& arg_name,
-                                                                    int32_t index) {
+Maybe<void> UserOpHostMemoryInputRegistry::SetHostMemoryInput4Op(const std::string& op_type_name,
+                                                                 const std::string& arg_name,
+                                                                 int32_t index) {
   auto it = op_type_name2host_memory_input_args_.find(op_type_name);
   if (it == op_type_name2host_memory_input_args_.end()) {
     auto pair = op_type_name2host_memory_input_args_.emplace(
@@ -159,16 +159,16 @@ Maybe<void> UserOpHostMemoryInputRegistryMgr::SetHostMemoryInput4Op(const std::s
   return Maybe<void>::Ok();
 }
 
-bool UserOpHostMemoryInputRegistryMgr::IsHostMemoryInput4Op(const std::string& op_type_name,
-                                                            const std::string& arg_name,
-                                                            int32_t index) const {
+bool UserOpHostMemoryInputRegistry::IsHostMemoryInput4Op(const std::string& op_type_name,
+                                                         const std::string& arg_name,
+                                                         int32_t index) const {
   auto it = op_type_name2host_memory_input_args_.find(op_type_name);
   if (it == op_type_name2host_memory_input_args_.end()) { return false; }
   return std::find(it->second.begin(), it->second.end(), std::make_pair(arg_name, index))
          != it->second.end();
 }
 
-bool UserOpHostMemoryInputRegistryMgr::HasHostMemoryInput(const std::string& op_type_name) const {
+bool UserOpHostMemoryInputRegistry::HasHostMemoryInput(const std::string& op_type_name) const {
   return op_type_name2host_memory_input_args_.find(op_type_name)
          != op_type_name2host_memory_input_args_.end();
 }
