@@ -29,6 +29,7 @@ _size_3_opt_t_not_none = Union[
     int, Tuple[Union[int, NoneType], Union[int, NoneType], Union[int, NoneType]]
 ]
 
+
 @flow.unittest.skip_unless_1n1d()
 class Test_CpuFp16_AdaptiveAvgPool(flow.unittest.TestCase):
     @autotest(n=5, rtol=0.01, atol=0.01)
@@ -45,7 +46,6 @@ class Test_CpuFp16_AdaptiveAvgPool(flow.unittest.TestCase):
     @profile(torch.nn.functional.adaptive_avg_pool1d)
     def profile_adaptive_avg_pool1d(test_case):
         return torch.nn.functional.adaptive_avg_pool1d(torch.ones(1, 64, 8).half(), 5)
-
 
     @autotest(n=5, rtol=0.01, atol=0.01)
     def test_adaptive_avgpool2d(test_case):
@@ -104,7 +104,7 @@ class Test_CpuFp16_AdaptiveAvgPoolFunctional(flow.unittest.TestCase):
 
     @autotest(n=5, rtol=0.01, atol=0.01)
     def test_adaptive_avgpool3d_functional(test_case):
-        device = random_device() 
+        device = random_device()
         x = random_tensor(ndim=5).to(device)
         x = x.half()
         return torch.nn.functional.adaptive_avg_pool3d(x, output_size=random().to(int))
