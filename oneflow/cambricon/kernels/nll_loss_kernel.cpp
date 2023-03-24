@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "cnnl.h"
+#include "oneflow/cambricon/ep/primitive/cast.h"
 #include "oneflow/cambricon/ep/mlu_stream.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/data_type.pb.h"
@@ -42,7 +42,7 @@ class MluNLLKernel final : public user_op::OpKernel {
   // use workspace to save weight filled by 1.0 and set tensor desc manually
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* input = ctx->Tensor4ArgNameAndIndex("input", 0);
-    const user_op::Tensor* target = ctx->Tensor4ArgNameAndIndex("target", 0);
+    user_op::Tensor* target = ctx->Tensor4ArgNameAndIndex("target", 0);
     user_op::Tensor* output = ctx->Tensor4ArgNameAndIndex("output", 0);
     user_op::Tensor* out_weight = ctx->Tensor4ArgNameAndIndex("out_weight", 0);
     const int64_t C = input->shape_view().At(input->shape_view().NumAxes() - 1);
@@ -50,6 +50,22 @@ class MluNLLKernel final : public user_op::OpKernel {
 
     CnnlTensorDescriptor input_desc(input), target_desc(target), output_desc(output);
     CnnlTensorDescriptor weight_desc, out_weight_desc;
+
+    CnnlTensorDescriptor tmp_target_desc;
+    size_t tmp_target_workspace_size = target->shape_view().elem_cnt() * GetSizeOfDataType(kInt32);
+    CnnlWorkspace tmp_target_cnnl_workspace(ctx->stream()->As<ep::MluStream>(),
+                                            tmp_target_workspace_size);
+    void* tmp_target_ptr = tmp_target_cnnl_workspace.dptr();
+    if (target->data_type() == kInt32) {
+      tmp_target_desc.set(target);
+      tmp_target_ptr = target->mut_dptr();
+    } else {
+      cnnlCastDataType_t type = ep::primitive::GetCnnlCastType(kInt64, kInt32);
+      tmp_target_desc.set(target, ConvertToCnnlDataType(kInt32));
+      OF_CNNL_CHECK(cnnlCastDataType(ctx->stream()->As<ep::MluStream>()->cnnl_handle(),
+                                     target_desc.desc(), target->dptr(), type,
+                                     tmp_target_desc.desc(), tmp_target_ptr));
+    }
 
     int64_t out_weight_size[1] = {1};
     out_weight_desc.set(1, out_weight_size, ConvertToCnnlDataType(out_weight->data_type()));
@@ -92,8 +108,8 @@ class MluNLLKernel final : public user_op::OpKernel {
         /* workspace_size */ workspace_size,
         /* x_desc         */ input_desc.desc(),
         /* x              */ input->dptr(),
-        /* t_desc         */ target_desc.desc(),
-        /* target         */ target->dptr(),
+        /* t_desc         */ tmp_target_desc.desc(),
+        /* target         */ tmp_target_ptr,
         /* ignore_index   */ ignore_index,
         /* w_desc         */ weight_desc.desc(),
         /* filter         */ weight_dptr,
@@ -113,8 +129,8 @@ class MluNLLKernel final : public user_op::OpKernel {
           /* workspace_size */ workspace_size,
           /* x_desc         */ input_desc.desc(),
           /* x              */ input->dptr(),
-          /* t_desc         */ target_desc.desc(),
-          /* target         */ target->dptr(),
+          /* t_desc         */ tmp_target_desc.desc(),
+          /* target         */ tmp_target_ptr,
           /* ignore_index   */ ignore_index,
           /* w_desc         */ weight_desc.desc(),
           /* filter         */ weight_dptr,
@@ -149,6 +165,8 @@ class MluNLLKernel final : public user_op::OpKernel {
 // target only supports int32
 REGISTER_NLL_MLU_KERNEL(float, int32_t)
 REGISTER_NLL_MLU_KERNEL(float16, int32_t)
+REGISTER_NLL_MLU_KERNEL(float, int64_t)
+REGISTER_NLL_MLU_KERNEL(float16, int64_t)
 
 template<typename T, typename K>
 class MluNLLGradKernel final : public user_op::OpKernel {
@@ -161,7 +179,7 @@ class MluNLLGradKernel final : public user_op::OpKernel {
 
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* input = ctx->Tensor4ArgNameAndIndex("input", 0);
-    const user_op::Tensor* target = ctx->Tensor4ArgNameAndIndex("target", 0);
+    user_op::Tensor* target = ctx->Tensor4ArgNameAndIndex("target", 0);
     const user_op::Tensor* out_grad = ctx->Tensor4ArgNameAndIndex("out_grad", 0);
     user_op::Tensor* in_grad = ctx->Tensor4ArgNameAndIndex("in_grad", 0);
     const K ignore_index = static_cast<K>(ctx->Attr<int64_t>("ignore_index"));
@@ -169,6 +187,22 @@ class MluNLLGradKernel final : public user_op::OpKernel {
     CnnlTensorDescriptor input_desc(input), target_desc(target), out_grad_desc(out_grad),
         in_grad_desc(in_grad);
     CnnlTensorDescriptor weight_desc;
+
+    CnnlTensorDescriptor tmp_target_desc;
+    size_t tmp_target_workspace_size = target->shape_view().elem_cnt() * GetSizeOfDataType(kInt32);
+    CnnlWorkspace tmp_target_cnnl_workspace(ctx->stream()->As<ep::MluStream>(),
+                                            tmp_target_workspace_size);
+    void* tmp_target_ptr = tmp_target_cnnl_workspace.dptr();
+    if (target->data_type() == kInt32) {
+      tmp_target_desc.set(target);
+      tmp_target_ptr = target->mut_dptr();
+    } else {
+      cnnlCastDataType_t type = ep::primitive::GetCnnlCastType(kInt64, kInt32);
+      tmp_target_desc.set(target, ConvertToCnnlDataType(kInt32));
+      OF_CNNL_CHECK(cnnlCastDataType(ctx->stream()->As<ep::MluStream>()->cnnl_handle(),
+                                     target_desc.desc(), target->dptr(), type,
+                                     tmp_target_desc.desc(), tmp_target_ptr));
+    }
 
     const void* weight_dptr = nullptr;
     if (ctx->has_input("weight", 0)) {
@@ -182,8 +216,8 @@ class MluNLLGradKernel final : public user_op::OpKernel {
         /* algorithm    */ CNNL_REDUCTION_NONE,
         /* diff_y_desc  */ out_grad_desc.desc(),
         /* diff_y       */ out_grad->dptr(),
-        /* t_desc       */ target_desc.desc(),
-        /* target       */ target->dptr(),
+        /* t_desc       */ tmp_target_desc.desc(),
+        /* target       */ tmp_target_ptr,
         /* ignore_index */ ignore_index,
         /* w_desc       */ weight_desc.desc(),
         /* filter       */ weight_dptr,
@@ -207,5 +241,7 @@ class MluNLLGradKernel final : public user_op::OpKernel {
 // target only supports int32
 REGISTER_NLL_GRAD_MLU_KERNEL(float, int32_t)
 REGISTER_NLL_GRAD_MLU_KERNEL(float16, int32_t)
+REGISTER_NLL_GRAD_MLU_KERNEL(float, int64_t)
+REGISTER_NLL_GRAD_MLU_KERNEL(float16, int64_t)
 
 }  // namespace oneflow
