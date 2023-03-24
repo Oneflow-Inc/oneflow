@@ -112,9 +112,14 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
 
       for (auto argument : block->getArguments()) { argumentTypes.push_back(argument.getType()); }
       auto funcType = builder.getFunctionType(argumentTypes, resultTypes);
-      builder.setInsertionPointToStart(&job.getBody().front());
-      auto function = builder.create<func::FuncOp>(entryOp->getLoc(), "TODO-func_name", funcType);
-      function.getBody().push_front(block);
+      if (auto mod = job->getParentOfType<ModuleOp>()) {
+        builder.setInsertionPointToStart(&mod.getRegion().front());
+        auto function = builder.create<func::FuncOp>(entryOp->getLoc(), "TODO-func_name", funcType);
+        function.getBody().push_front(block);
+      } else {
+        job->emitError() << "fail to outline";
+        signalPassFailure();
+      }
     }
   }
 };
