@@ -1319,20 +1319,6 @@ Maybe<void> RankTaskGraph::InitRegstDescsConsumers() {
   return Maybe<void>::Ok();
 }
 
-bool RawSafeToAddCtrlEdgesBetween(Symbol<ParallelDesc> lhs, Symbol<ParallelDesc> rhs) {
-  if (lhs->parallel_num() != rhs->parallel_num()) { return false; }
-  if (lhs->sorted_machine_ids() != rhs->sorted_machine_ids()) { return false; }
-  for (int64_t machine_id : lhs->sorted_machine_ids()) {
-    if (lhs->sorted_dev_phy_ids(machine_id) != rhs->sorted_dev_phy_ids(machine_id)) {
-      return false;
-    }
-  }
-  return true;
-}
-
-static constexpr auto* SafeToAddCtrlEdgesBetween =
-    DECORATE(&RawSafeToAddCtrlEdgesBetween, ThreadLocal);
-
 Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names) {
   JUST(AddBoxingReletedCompTaskNodesFromProto());
   JUST(CreateAndPartiallyInitTransportTaskNodesFromProto());
@@ -1363,21 +1349,11 @@ Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names) {
 
   ForEachOpGraphNecessaryCtrlEdge<&OpGraph::GetCachedPredicatorIsReachable>(
       op_graph, [&](const OpNode* src, const OpNode* dst) {
-        // CHECK(src->parallel_desc_sym()->EqualsIgnoringHierarchy(*dst->parallel_desc_sym()))
-        //     << " src " << src->parallel_desc_sym()->data().DebugString() << " dst "
-        //     << dst->parallel_desc_sym()->data().DebugString();
-
-        // if (!src->parallel_desc_sym()->EqualsIgnoringHierarchy(*dst->parallel_desc_sym())) {
-        //   LOG(ERROR) << " src " << src->parallel_desc_sym()->data().DebugString() << " dst "
-        //              << dst->parallel_desc_sym()->data().DebugString();
-        //   return;
-        // }
-
-        CHECK(SafeToAddCtrlEdgesBetween(src->parallel_desc(), dst->parallel_desc()))
-            << "\n========[src]========\n"
-            << src->op().op_name() << ", " << src->parallel_desc().parallel_conf().DebugString()
-            << "\n========[dst]========\n"
-            << dst->op().op_name() << ", " << dst->parallel_desc().parallel_conf().DebugString();
+        if (!src->parallel_desc_sym()->EqualsIgnoringHierarchy(*dst->parallel_desc_sym())) {
+          LOG(INFO) << " src " << src->parallel_desc_sym()->data().DebugString() << " dst "
+                    << dst->parallel_desc_sym()->data().DebugString();
+          return;
+        }
         CHECK_JUST(DoRankDuty(src->parallel_desc(),
                               [&](int64_t rank) { return ConnectCtrlEdges(src, dst, rank); }));
       });
