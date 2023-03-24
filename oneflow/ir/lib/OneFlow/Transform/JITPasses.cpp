@@ -17,68 +17,41 @@ namespace {
 // entries: non-oneflow ops which have operands are from oneflow ops
 // exits: result consumed by oneflow ops
 
-llvm::SmallVector<llvm::DenseSet<Operation*>, 4> mergeEntries(
-    const llvm::SmallVector<llvm::DenseSet<Operation*>, 4>& groups, size_t iter = 100) {
-  llvm::SmallVector<llvm::DenseSet<Operation*>, 4> results{};
-  for (auto g : groups) {
-    bool hasIntersection = false;
-    for (auto& r : results) {
-      for (auto op : g) {
-        if (r.contains(op)) {
-          hasIntersection = true;
-          break;
+// NOTE: we assume all arg values are produced by an oneflow op and won't be an argument
+void cloneOpsToNewBody(OpBuilder& builder, Operation* op, Block& body,
+                       llvm::DenseSet<Operation*>& visitedEntryOps,
+                       llvm::DenseSet<Value>& argValues, llvm::DenseSet<Value> returnValues,
+                       BlockAndValueMapping& mapping) {
+  for (auto operand : op->getOperands()) {
+    if (!mapping.lookup(operand)) {
+      if (auto defOp = operand.getDefiningOp()) {
+        if (llvm::dyn_cast<OneFlowDialect>(defOp->getDialect())) {
+          visitedEntryOps.insert(op);
+          argValues.insert(operand);
+          mapping.map(operand, body.addArgument(operand.getType(), operand.getLoc()));
+        } else {
+          cloneOpsToNewBody(builder, defOp, body, visitedEntryOps, argValues, returnValues,
+                            mapping);
         }
       }
-      if (hasIntersection) {
-        (void)results.emplace_back();
-        std::set_union(g.begin(), g.end(), r.begin(), r.end(), results.back().begin());
-        break;
-      }
-    }
-    if (!hasIntersection) { results.push_back(g); }
-  }
-  if (iter > 0) {
-    return mergeEntries(results, iter - 1);
-  } else {
-    return results;
-  }
-}
-
-void findEntriesOfRoot(Operation* root, llvm::DenseSet<Operation*>& entryOps,
-                       llvm::DenseSet<Operation*>& results) {
-  if (entryOps.contains(root)) { results.insert(root); }
-  for (auto operand : root->getOperands()) {
-    if (auto defOp = operand.getDefiningOp()) { findEntriesOfRoot(defOp, entryOps, results); }
-  }
-}
-
-// NOTE: we assume all values are produced by an oneflow op and won't be an argument
-void cloneOpsToNewBody(::mlir::PatternRewriter& rewriter, Operation* op, Block& body,
-                       llvm::DenseSet<Operation*>& visited, BlockAndValueMapping& mapping) {
-  if (visited.contains(op)) { return; }
-  for (auto operand : op->getOperands()) {
-    // clone precedent non-entry ops (mostly constant ops)
-    if (auto defOp = operand.getDefiningOp()) {
-      if (!llvm::dyn_cast<OneFlowDialect>(defOp->getDialect())) {
-        cloneOpsToNewBody(rewriter, defOp, body, visited, mapping);
-      }
     }
   }
-  OpBuilder::InsertionGuard guard(rewriter);
-  ImplicitLocOpBuilder nb(op->getLoc(), rewriter);
+  ImplicitLocOpBuilder nb(op->getLoc(), builder);
   nb.clone(*op, mapping);
-  // clone until meeting exit ops
-  for (auto user : op->getUsers()) {
-    if (!llvm::dyn_cast<OneFlowDialect>(user->getDialect())) {
-      cloneOpsToNewBody(rewriter, user, body, visited, mapping);
+  for (auto& use : op->getUses()) {
+    if (llvm::dyn_cast<OneFlowDialect>(use.getOwner()->getDialect())) {
+      returnValues.insert(use.get());
+    } else {
+      cloneOpsToNewBody(builder, use.getOwner(), body, visitedEntryOps, argValues, returnValues,
+                        mapping);
     }
   }
 }
 
 class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunctionPass> {
   void runOnOperation() override {
-    llvm::DenseSet<Operation*> entryOps{};
-    llvm::DenseSet<Operation*> exitOps{};
+    llvm::DenseSet<Operation*> entryOps, visitedEntryOps;
+    llvm::DenseSet<Value> argValues, returnValues;
     FunctionOpInterface func = getOperation();
     auto& operations = func.getBody().front().getOperations();
     // collect non-oneflow operations
@@ -89,23 +62,18 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
             if (!llvm::dyn_cast<OneFlowDialect>(user->getDialect())) { entryOps.insert(user); }
           }
         }
-        for (auto operand : op.getOperands()) {
-          if (auto defOp = operand.getDefiningOp()) {
-            if (!llvm::dyn_cast<OneFlowDialect>(defOp->getDialect())) { exitOps.insert(defOp); }
-          }
-        }
       }
     }
-    llvm::SmallVector<llvm::DenseSet<Operation*>, 4> entryGroups{};
-    for (auto exitOp : exitOps) {
-      llvm::DenseSet<Operation*> group;
-      findEntriesOfRoot(exitOp, entryOps, group);
-      entryGroups.push_back(group);
+    OpBuilder builder{&getContext()};
+    for (auto entryOp : entryOps) {
+      OpBuilder::InsertionGuard guard(builder);
+      Block body{};
+      builder.setInsertionPointToStart(&body);
+      BlockAndValueMapping mapping;
+      if (visitedEntryOps.contains(entryOp)) { continue; }
+      cloneOpsToNewBody(builder, entryOp, body, visitedEntryOps, argValues, returnValues, mapping);
     }
-    entryGroups = mergeEntries(entryGroups);
     llvm::errs() << entryOps.size() << "\n";
-    llvm::errs() << exitOps.size() << "\n";
-    llvm::errs() << entryGroups.size() << "\n";
   };
 };
 
