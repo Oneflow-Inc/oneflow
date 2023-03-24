@@ -20,6 +20,7 @@ namespace {
 
 // NOTE: we assume all arg values are produced by an oneflow op and won't be an argument
 
+bool isOneFlowOp(Operation* op) { return llvm::dyn_cast<OneFlowDialect>(op->getDialect()); }
 class Outliner {
  private:
   OpBuilder& builder;
@@ -31,30 +32,30 @@ class Outliner {
     for (auto operand : op->getOperands()) {
       if (!mapping.lookup(operand)) {
         if (auto defOp = operand.getDefiningOp()) {
-          if (visitedOps.contains(defOp)) { continue; }
-          if (llvm::dyn_cast<OneFlowDialect>(defOp->getDialect())) {
-            argValues.insert(operand);
-            mapping.map(operand, body->addArgument(operand.getType(), operand.getLoc()));
-          } else {
-            cloneOpsToNewBody(defOp);
+          if (!visitedOps.contains(defOp)) {
+            if (isOneFlowOp(defOp)) {
+              argValues.insert(operand);
+              mapping.map(operand, body->addArgument(operand.getType(), operand.getLoc()));
+            } else {
+              cloneOpsToNewBody(defOp);
+            }
           }
         }
       }
     }
     ImplicitLocOpBuilder nb(op->getLoc(), builder);
-    nb.clone(*op, mapping);
+    if (!visitedOps.contains(op)) { nb.clone(*op, mapping); }
     visitedOps.insert(op);
-    llvm::errs() << "[clone] ";
+    llvm::errs() << "[clone] " << op << " ";
     op->dump();
 
     for (auto& use : op->getUses()) {
       auto owner = use.getOwner();
-      if (llvm::dyn_cast<OneFlowDialect>(owner->getDialect())) {
+      if (isOneFlowOp(owner)) {
         returnValues.insert(use.get());
       } else {
-        if (visitedOps.contains(owner)) { continue; }
+        if (!visitedOps.contains(owner)) { cloneOpsToNewBody(owner); }
         // worklist.push_front(owner);
-        cloneOpsToNewBody(owner);
       }
     }
 
@@ -85,7 +86,7 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
       if (llvm::dyn_cast<OneFlowDialect>(op.getDialect())) {
         for (auto result : op.getResults()) {
           for (auto user : result.getUsers()) {
-            if (!llvm::dyn_cast<OneFlowDialect>(user->getDialect())) { entryOps.insert(user); }
+            if (!isOneFlowOp(user)) { entryOps.insert(user); }
           }
         }
       }
