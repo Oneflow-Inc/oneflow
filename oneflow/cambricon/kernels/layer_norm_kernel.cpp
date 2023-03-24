@@ -78,14 +78,110 @@ class LayerNormMluKernel final : public user_op::OpKernel {
         mean->mut_dptr(), inv_variance->mut_dptr()));
   };
 };
+enum class LayerNormGradRelatedKernelType {
+  kDefault,
+  kParams,
+};
+template<LayerNormGradRelatedKernelType TYPE, typename T>
+class MluLayerNormGradRelatedKernel final : public user_op::OpKernel {
+ public:
+  MluLayerNormGradRelatedKernel() = default;
+  ~MluLayerNormGradRelatedKernel() = default;
 
-#define REGISTER_LAYER_NORM_MLU_KERNEL(dtype)                         \
+ private:
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    const user_op::Tensor* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
+    const user_op::Tensor* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
+
+    const void* gamma_dptr = nullptr;
+    void* dx_mut_dptr = nullptr;
+    void* gamma_diff_mut_dptr = nullptr;
+    void* beta_diff_mut_dptr = nullptr;
+
+    int64_t axis = 0;
+    if constexpr (TYPE == LayerNormGradRelatedKernelType::kDefault) {
+      axis = ctx->Attr<int64_t>("begin_norm_axis");
+    } else {
+      axis = ctx->Attr<int64_t>("begin_params_axis");
+    }
+
+    CnnlTensorDescriptor x_desc(x), dy_desc(dy), gamma_desc, mean_desc(mean), dx_desc;
+
+    const auto stream = ctx->stream()->As<ep::MluStream>();
+    CnnlWorkspace gamma_worksacpe(stream),
+        dx_workspace(stream, dy->shape_view().Count(0) * GetSizeOfDataType(dy->data_type()));
+
+    if (ctx->has_input("gamma", 0)) {
+      auto gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
+      gamma_desc.set(gamma);
+      gamma_dptr = gamma->dptr();
+    } else {
+      const std::vector<int> gamma_shape(x->shape_view().begin() + axis, x->shape_view().end());
+      gamma_desc.set(gamma_shape.size(), gamma_shape.data(), ConvertToCnnlDataType(x->data_type()));
+      gamma_worksacpe.resize(x->shape_view().Count(axis) * GetSizeOfDataType(x->data_type()));
+      gamma_dptr = gamma_worksacpe.dptr();
+    }
+
+    if (ctx->has_output("dx", 0)) {
+      auto* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+      dx_desc.set(dx);
+      dx_mut_dptr = dx->mut_dptr();
+    } else {
+      dx_desc.set(dy);
+      dx_mut_dptr = dx_workspace.dptr();
+    }
+
+    if (ctx->has_output("gamma_diff", 0)) {
+      gamma_diff_mut_dptr = ctx->Tensor4ArgNameAndIndex("gamma_diff", 0)->mut_dptr();
+    } else {
+      gamma_diff_mut_dptr = dx_workspace.dptr();
+    }
+
+    if (ctx->has_output("beta_diff", 0)) {
+      beta_diff_mut_dptr = ctx->Tensor4ArgNameAndIndex("beta_diff", 0)->mut_dptr();
+    } else {
+      beta_diff_mut_dptr = dx_workspace.dptr();
+    }
+
+    const auto cnnl_handle = stream->cnnl_handle();
+
+    size_t workspace_size = 0;
+    OF_CNNL_CHECK(
+        cnnlGetLayerNormBackwardWorkspaceSize(cnnl_handle, x_desc.desc(), axis, &workspace_size));
+    CnnlWorkspace cnnl_workspace(stream, workspace_size);
+
+    OF_CNNL_CHECK(cnnlLayerNormBackward_v2(
+        cnnl_handle, x_desc.desc(), x->dptr(), axis, dy_desc.desc(), dy->dptr(), gamma_desc.desc(),
+        gamma_dptr, mean_desc.desc(), mean->dptr(), inv_variance->dptr(), cnnl_workspace.dptr(),
+        workspace_size, dx_desc.desc(), dx_mut_dptr, gamma_diff_mut_dptr, beta_diff_mut_dptr));
+  }
+};
+
+#define REGISTER_MLU_LAYER_NORM_KERNEL(dtype)                         \
   REGISTER_USER_KERNEL("layer_norm")                                  \
       .SetCreateFn<LayerNormMluKernel<dtype>>()                       \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kMLU) \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
-REGISTER_LAYER_NORM_MLU_KERNEL(float)
-REGISTER_LAYER_NORM_MLU_KERNEL(float16)
+REGISTER_MLU_LAYER_NORM_KERNEL(float)
+REGISTER_MLU_LAYER_NORM_KERNEL(float16)
 
+#define REGISTER_MLU_LAYER_NORM_GRAD_RELATED_KERNEL(name, type, dtype) \
+  REGISTER_USER_KERNEL(name)                                           \
+      .SetCreateFn<MluLayerNormGradRelatedKernel<type, dtype>>()       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kMLU)  \
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
+
+REGISTER_MLU_LAYER_NORM_GRAD_RELATED_KERNEL("layer_norm_grad",
+                                            LayerNormGradRelatedKernelType::kDefault, float)
+REGISTER_MLU_LAYER_NORM_GRAD_RELATED_KERNEL("layer_norm_grad",
+                                            LayerNormGradRelatedKernelType::kDefault, float16)
+
+REGISTER_MLU_LAYER_NORM_GRAD_RELATED_KERNEL("layer_norm_param_grad",
+                                            LayerNormGradRelatedKernelType::kParams, float)
+REGISTER_MLU_LAYER_NORM_GRAD_RELATED_KERNEL("layer_norm_param_grad",
+                                            LayerNormGradRelatedKernelType::kParams, float16)
 }  // namespace oneflow

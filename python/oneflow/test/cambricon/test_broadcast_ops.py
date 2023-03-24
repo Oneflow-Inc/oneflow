@@ -35,7 +35,8 @@ def test_broadcast_add_forward():
     )
     default_dtype_list = [flow.float32, flow.float16]
     dtypes = {
-        flow.add: [flow.int8, flow.uint8, flow.int32] + default_dtype_list,
+        flow.add: [flow.int32]
+        + default_dtype_list,  # broadcast_add implemented with primitive dose not support int8 and uint8
         flow.div: default_dtype_list,
         flow.mul: default_dtype_list,
     }
