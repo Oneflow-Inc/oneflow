@@ -274,9 +274,9 @@ oneflow.job @test_bn(
         hierarchy = [1],
         momentum = 0.899999976 : f32,
         op_name = "",
-        operand_segment_sizes = dense<[1, 1, 1, 1, 1, 0]> : vector<6xi32>,
+        operand_segment_sizes = array<i32: 1, 1, 1, 1, 1, 0>,
         output_lbns = ["", "", ""],
-        result_segment_sizes = dense<1> : vector<3xi32>,
+        result_segment_sizes = array<i32: 1>,
         scope_symbol_id = 4611686018427453439 : i64,
         training = true
     } : (tensor<1x64x112x112xf32>, tensor<64xf32>, tensor<64xf32>, tensor<64xf32>, tensor<64xf32>) -> (tensor<1x64x112x112xf32>, tensor<64xf32>, tensor<64xf32>)
@@ -312,9 +312,9 @@ oneflow.job @test_bn_infer(
         hierarchy = [1],
         momentum = 0.899999976 : f32,
         op_name = "",
-        operand_segment_sizes = dense<[1, 1, 1, 1, 1, 0]> : vector<6xi32>,
+        operand_segment_sizes = array<i32: 1, 1, 1, 1, 1, 0>,
         output_lbns = ["", "", ""],
-        result_segment_sizes = dense<1> : vector<3xi32>,
+        result_segment_sizes = array<i32: 1>,
         scope_symbol_id = 4611686018427453439 : i64,
         training = true
     } : (tensor<1x64x112x112xf32>, tensor<64xf32>, tensor<64xf32>, tensor<64xf32>, tensor<64xf32>) -> tensor<1x64x112x112xf32>
