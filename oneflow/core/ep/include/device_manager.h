@@ -43,9 +43,7 @@ class DeviceManager {
   virtual void SetActiveDeviceByIndex(size_t device_index) = 0;
 
   virtual std::shared_ptr<RandomGenerator> CreateRandomGenerator(uint64_t seed,
-                                                                 size_t device_index) {
-    return nullptr;
-  }
+                                                                 size_t device_index) = 0;
 };
 
 }  // namespace ep
