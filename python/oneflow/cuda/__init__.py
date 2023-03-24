@@ -20,6 +20,7 @@ from oneflow.cuda._utils import _get_device_index
 
 from typing import Optional, Tuple, Union, Any
 
+default_generators: Tuple = ()
 
 def is_available() -> bool:
     r"""Returns a bool indicating if CUDA is currently available."""
