@@ -50,3 +50,4 @@ class fused_scale_tril_softmax_mask_scale_op(flow.unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+    
