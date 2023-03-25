@@ -35,6 +35,9 @@ class MluDevice : public Device {
   size_t device_index() const override { return device_index_; }
   DeviceManager* device_manager() const override { return device_manager_; }
 
+  int nclusters() const { return nclusters_; }
+  int ncores_per_cluster() const { return ncores_per_cluster_; }
+
   Stream* CreateStream() override;
   void DestroyStream(Stream* stream) override;
 
@@ -55,6 +58,8 @@ class MluDevice : public Device {
   std::vector<Event*> events_;
   unsigned int event_flags_;
   DeviceManager* device_manager_;
+  int nclusters_;
+  int ncores_per_cluster_;
   int64_t const_buf_elem_cnt_;
   void* const_zeros_buffer_;
   void* const_ones_buffer_fp32_;

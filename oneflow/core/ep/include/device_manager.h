@@ -45,9 +45,7 @@ class DeviceManager {
   virtual bool IsDeviceStreamWaitEventSupported() const { return false; }
 
   virtual std::shared_ptr<RandomGenerator> CreateRandomGenerator(uint64_t seed,
-                                                                 size_t device_index) {
-    return nullptr;
-  }
+                                                                 size_t device_index) = 0;
 };
 
 }  // namespace ep

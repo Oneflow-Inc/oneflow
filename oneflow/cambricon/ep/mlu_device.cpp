@@ -52,6 +52,9 @@ MluDevice::MluDevice(int device_index, DeviceManager* device_manager)
     CreateConstBuffer<float>(&const_ones_buffer_fp32_, static_cast<float>(1.0),
                              const_buf_elem_cnt_);
   }
+  OF_MLU_CHECK(cnrtDeviceGetAttribute(&nclusters_, cnrtAttrClusterCount, device_index_));
+  OF_MLU_CHECK(
+      cnrtDeviceGetAttribute(&ncores_per_cluster_, cnrtAttrMcorePerCluster, device_index_));
 }
 
 MluDevice::~MluDevice() {
