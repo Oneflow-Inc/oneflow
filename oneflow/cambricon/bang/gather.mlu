@@ -49,27 +49,49 @@ void bang_gather_kernel(BangHandle& handle, const T* input, int64_t batch, int64
                                                          output, offset);
 }
 
-#define INSTANCE_BANG_GATHER_INTERNAL_IMPL(T, K)                                             \
+template<typename K>
+void bang_gather_half_kernel(BangHandle& handle, const void* input, int64_t batch, int64_t N,
+                             int64_t length, const K* index, int64_t index_size, void* output,
+                             int64_t offset) {
+  cnrtDim3_t dim = {handle.nclusters, handle.ncores_per_cluster, 1};
+  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
+  bang_gather_internal<<<dim, func_type, handle.queue>>>(static_cast<const half*>(input), batch, N,
+                                                         length, index, index_size,
+                                                         static_cast<half*>(output), offset);
+}
+
+#define INSTANCE_BANG_GATHER_KERNEL_IMPL(T, K)                                               \
   template void bang_gather_kernel<T, K>(BangHandle & handle, const T* input, int64_t batch, \
                                          int64_t N, int64_t length, const K* index,          \
                                          int64_t index_size, T* output, int64_t offset);
 
-#define INSTANCE_BANG_GATHER_INTERNAL(T)         \
-  INSTANCE_BANG_GATHER_INTERNAL_IMPL(T, int64_t) \
-  INSTANCE_BANG_GATHER_INTERNAL_IMPL(T, int32_t) \
-  INSTANCE_BANG_GATHER_INTERNAL_IMPL(T, uint32_t)
+#define INSTANCE_BANG_GATHER_KERNEL(T)         \
+  INSTANCE_BANG_GATHER_KERNEL_IMPL(T, int64_t) \
+  INSTANCE_BANG_GATHER_KERNEL_IMPL(T, int32_t) \
+  INSTANCE_BANG_GATHER_KERNEL_IMPL(T, uint32_t)
 
-INSTANCE_BANG_GATHER_INTERNAL(float)
-INSTANCE_BANG_GATHER_INTERNAL(half)
-INSTANCE_BANG_GATHER_INTERNAL(int8_t)
-INSTANCE_BANG_GATHER_INTERNAL(int16_t)
-INSTANCE_BANG_GATHER_INTERNAL(int32_t)
-INSTANCE_BANG_GATHER_INTERNAL(uint8_t)
-INSTANCE_BANG_GATHER_INTERNAL(uint16_t)
-INSTANCE_BANG_GATHER_INTERNAL(uint32_t)
-INSTANCE_BANG_GATHER_INTERNAL(bool)
+INSTANCE_BANG_GATHER_KERNEL(float)
+INSTANCE_BANG_GATHER_KERNEL(half)
+INSTANCE_BANG_GATHER_KERNEL(int8_t)
+INSTANCE_BANG_GATHER_KERNEL(int16_t)
+INSTANCE_BANG_GATHER_KERNEL(int32_t)
+INSTANCE_BANG_GATHER_KERNEL(uint8_t)
+INSTANCE_BANG_GATHER_KERNEL(uint16_t)
+INSTANCE_BANG_GATHER_KERNEL(uint32_t)
+INSTANCE_BANG_GATHER_KERNEL(bool)
 
-#undef INSTANCE_BANG_GATHER_INTERNAL
-#undef INSTANCE_BANG_GATHER_INTERNAL_IMPL
+#undef INSTANCE_BANG_GATHER_KERNEL
+#undef INSTANCE_BANG_GATHER_KERNEL_IMPL
+
+#define INSTANCE_BANG_GATHER_HALF_KERNEL(K)                                                       \
+  template void bang_gather_half_kernel<K>(BangHandle & handle, const void* input, int64_t batch, \
+                                           int64_t N, int64_t length, const K* index,             \
+                                           int64_t index_size, void* output, int64_t offset);
+
+INSTANCE_BANG_GATHER_HALF_KERNEL(int64_t)
+INSTANCE_BANG_GATHER_HALF_KERNEL(int32_t)
+INSTANCE_BANG_GATHER_HALF_KERNEL(uint32_t)
+
+#undef INSTANCE_BANG_GATHER_HALF_KERNEL
 
 }  // namespace oneflow

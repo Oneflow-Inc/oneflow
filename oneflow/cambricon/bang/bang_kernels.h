@@ -22,10 +22,29 @@ namespace oneflow {
 
 // input is a 3D tensor with shape [batch, N, length]
 // indices is a 1D tensor with shape [index_size]
+// output is a 3D tensor with shape [batch, index_size, length]
 template<typename T, typename K>
 void bang_gather_kernel(BangHandle& handle, const T* input, int64_t batch, int64_t N,
                         int64_t length, const K* index, int64_t index_size, T* output,
                         int64_t offset);
+
+template<typename K>
+void bang_gather_half_kernel(BangHandle& handle, const void* input, int64_t batch, int64_t N,
+                             int64_t length, const K* index, int64_t index_size, void* output,
+                             int64_t offset);
+
+// input is a 3D tensor with shape [batch, segment_size, length]
+// indices is a 1D tensor with shape [segment_size]
+// output is a 3D tensor with shape [batch, N, length]
+template<typename T, typename K>
+void bang_unsorted_segment_sum_kernel(BangHandle& handle, const T* input, int64_t batch, int64_t N,
+                                      int64_t length, const K* segment, int64_t segment_size,
+                                      T* output, int64_t offset);
+
+template<typename K>
+void bang_unsorted_segment_sum_half_kernel(BangHandle& handle, const void* input, int64_t batch,
+                                           int64_t N, int64_t length, const K* segment,
+                                           int64_t segment_size, void* output, int64_t offset);
 
 }  // namespace oneflow
 
