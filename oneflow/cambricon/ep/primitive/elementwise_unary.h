@@ -28,9 +28,10 @@ namespace ep {
 namespace primitive {
 namespace mlu {
 
-#define MLU_UNARY_FLOATING_MATH_OP_SEQ       \
-  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kReciprocal) \
-  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kReciprocalNoNan)
+#define MLU_UNARY_FLOATING_MATH_OP_SEQ            \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kReciprocal)      \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kReciprocalNoNan) \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRsqrt)
 
 template<UnaryOp unary_op>
 class ElementwiseUnaryImpl : public ElementwiseUnary {
@@ -46,15 +47,19 @@ class ElementwiseUnaryImpl : public ElementwiseUnary {
     input_desc.set(1, dims.data(), ConvertToCnnlDataType(src_dtype));
     output_desc.set(1, dims.data(), ConvertToCnnlDataType(dst_dtype));
 
+    auto* cnnl_handle = stream->As<ep::MluStream>()->cnnl_handle();
+
     if constexpr (unary_op == UnaryOp::kReciprocal) {
-      OF_CNNL_CHECK(cnnlReciprocal(stream->As<ep::MluStream>()->cnnl_handle(), input_desc.desc(),
-                                   src_ptr, output_desc.desc(), dst_ptr));
+      OF_CNNL_CHECK(
+          cnnlReciprocal(cnnl_handle, input_desc.desc(), src_ptr, output_desc.desc(), dst_ptr));
     } else if constexpr (unary_op == UnaryOp::kReciprocalNoNan) {
-      OF_CNNL_CHECK(cnnlReciprocal(stream->As<ep::MluStream>()->cnnl_handle(), input_desc.desc(),
-                                   src_ptr, output_desc.desc(), dst_ptr));
-      OF_CNNL_CHECK(cnnlNanToNum(stream->As<ep::MluStream>()->cnnl_handle(), output_desc.desc(),
-                                 static_cast<const void*>(dst_ptr), 0, 0, 0, output_desc.desc(),
-                                 dst_ptr));
+      OF_CNNL_CHECK(
+          cnnlReciprocal(cnnl_handle, input_desc.desc(), src_ptr, output_desc.desc(), dst_ptr));
+      OF_CNNL_CHECK(cnnlNanToNum(cnnl_handle, output_desc.desc(), static_cast<const void*>(dst_ptr),
+                                 0, 0, 0, output_desc.desc(), dst_ptr));
+    } else if constexpr (unary_op == UnaryOp::kRsqrt) {
+      OF_CNNL_CHECK(cnnlRsqrt_v2(cnnl_handle, CNNL_COMPUTATION_HIGH_PRECISION, input_desc.desc(),
+                                 src_ptr, output_desc.desc(), dst_ptr));
     } else {
       UNIMPLEMENTED();
     }
