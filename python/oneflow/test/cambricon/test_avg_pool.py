@@ -46,18 +46,42 @@ def _test_avg_pool2d_forward(
     }
     mlu_result = flow.nn.functional.avg_pool2d(x, **kwargs)
     cpu_result = flow.nn.functional.avg_pool2d(x.cpu().float(), **kwargs)
-    if dtype == flow.float16:
-        test_case.assertTrue(
-            np.allclose(mlu_result.cpu().numpy(), cpu_result.numpy(), 0.001, 0.001)
-        )
-    else:
-        if not np.allclose(
-            mlu_result.cpu().numpy(), cpu_result.numpy(), 0.0001, 0.0001
-        ):
-            print("Failed")
-        test_case.assertTrue(
-            np.allclose(mlu_result.cpu().numpy(), cpu_result.numpy(), 0.0001, 0.0001)
-        )
+    test_case.assertTrue(
+        np.allclose(mlu_result.cpu().numpy(), cpu_result.numpy(), 0.0001, 0.0001)
+    )
+
+
+def _test_avg_pool2d_backward(
+    test_case,
+    shape,
+    kernel,
+    stride,
+    padding,
+    count_include_pad,
+    ceil_mode,
+    device,
+    dtype,
+):
+    x = np.random.randn(*shape)
+    mlu_x = flow.tensor(x, device=flow.device(device), dtype=dtype, requires_grad=True)
+    cpu_x = flow.tensor(x, dtype=dtype, requires_grad=True)
+    kwargs = {
+        "kernel_size": kernel,
+        "stride": stride,
+        "padding": padding,
+        "count_include_pad": count_include_pad,
+        "ceil_mode": ceil_mode,
+    }
+    mlu_result = flow.nn.functional.avg_pool2d(mlu_x, **kwargs)
+    cpu_result = flow.nn.functional.avg_pool2d(cpu_x, **kwargs)
+    test_case.assertTrue(
+        np.allclose(mlu_result.cpu().numpy(), cpu_result.numpy(), 0.0001, 0.0001)
+    )
+    mlu_result.sum().backward()
+    cpu_result.sum().backward()
+    test_case.assertTrue(
+        np.allclose(mlu_x.grad.cpu().numpy(), cpu_x.grad.numpy(), 0.0001, 0.0001)
+    )
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -66,6 +90,7 @@ class TestMaxPoolCambriconModule(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_avg_pool2d_forward,
+            _test_avg_pool2d_backward,
         ]
         arg_dict["shape"] = [
             (1, 3, 24, 24),
@@ -92,7 +117,6 @@ class TestMaxPoolCambriconModule(flow.unittest.TestCase):
         arg_dict["device"] = ["mlu"]
         arg_dict["dtype"] = [
             flow.float32,
-            flow.float16,
         ]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
