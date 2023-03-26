@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/cambricon/common/mlu_util.h"
 #include "oneflow/cambricon/ep/mlu_stream.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/cambricon/cnnl/cnnl_workspace.h"
 #include "oneflow/cambricon/cnnl/cnnl_tensor_descriptor.h"
 

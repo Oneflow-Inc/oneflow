@@ -1,0 +1,103 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+#include "oneflow/cambricon/bang/bang_kernels.h"
+
+namespace oneflow {
+
+template<typename T, typename G>
+__mlu_global__ void bang_momentum_update_internal(int64_t n, T scale, float l1, float l2,
+                                                  float beta, float dampening, bool nesterov,
+                                                  bool maximize, float weight_decay,
+                                                  float learning_rate_val, float lr_scale,
+                                                  const float* learning_rate, const T* scale_by_ptr,
+                                                  const int64_t* skip_if, const G* model_diff,
+                                                  T* model, T* momentum) {
+  if (skip_if && *skip_if != 0) { return; }
+  if (learning_rate) { learning_rate_val = *learning_rate; }
+  if (scale_by_ptr) { scale *= *scale_by_ptr; }
+  learning_rate_val *= lr_scale;
+
+  for (int64_t i = taskId; i < n; i += taskDim) {
+    T model_val = model[i];
+    T momentum_val = momentum[i];
+
+    T model_diff_val = static_cast<T>(model_diff[i]) * scale
+                       + l1 * ((model_val >= 0) - (model_val <= 0)) + l2 * model_val;
+    T v = beta * momentum_val + (1.0f - dampening) * model_diff_val;
+    momentum[i] = v;
+
+    if (!nesterov) {
+      model_diff_val = v;
+    } else {
+      model_diff_val += beta * v;
+    }
+    T alpha = -learning_rate_val;
+    if (maximize) { alpha = learning_rate_val; }
+    T w = model_val + alpha * model_diff_val - learning_rate_val * weight_decay * model_val;
+    model[i] = w;
+  }
+}
+
+template<typename T>
+void bang_momentum_update_kernel(BangHandle& handle, int64_t n, T scale, float l1, float l2,
+                                 float beta, float dampening, bool nesterov, bool maximize,
+                                 float weight_decay, float learning_rate_val, float lr_scale,
+                                 const float* learning_rate, const T* scale_by_ptr,
+                                 const int64_t* skip_if, const T* model_diff, T* model,
+                                 T* momentum) {
+  cnrtDim3_t dim = {handle.nclusters, handle.ncores_per_cluster, 1};
+  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
+  bang_momentum_update_internal<<<dim, func_type, handle.queue>>>(
+      n, scale, l1, l2, beta, dampening, nesterov, maximize, weight_decay, learning_rate_val,
+      lr_scale, learning_rate, scale_by_ptr, skip_if, model_diff, model, momentum);
+}
+
+template<typename T>
+void bang_momentum_update_half_kernel(BangHandle& handle, int64_t n, T scale, float l1, float l2,
+                                      float beta, float dampening, bool nesterov, bool maximize,
+                                      float weight_decay, float learning_rate_val, float lr_scale,
+                                      const float* learning_rate, const T* scale_by_ptr,
+                                      const int64_t* skip_if, const void* model_diff, T* model,
+                                      T* momentum) {
+  cnrtDim3_t dim = {handle.nclusters, handle.ncores_per_cluster, 1};
+  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
+  bang_momentum_update_internal<<<dim, func_type, handle.queue>>>(
+      n, scale, l1, l2, beta, dampening, nesterov, maximize, weight_decay, learning_rate_val,
+      lr_scale, learning_rate, scale_by_ptr, skip_if, static_cast<const half*>(model_diff), model,
+      momentum);
+}
+
+#define INSTANCE_BANG_MOMENTUM_UPDATE_KERNEL(T)                                                  \
+  template void bang_momentum_update_kernel<T>(                                                  \
+      BangHandle & handle, int64_t n, T scale, float l1, float l2, float beta, float dampening,  \
+      bool nesterov, bool maximize, float weight_decay, float learning_rate_val, float lr_scale, \
+      const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,                 \
+      const T* model_diff, T* model, T* momentum);
+
+#define INSTANCE_BANG_MOMENTUM_UPDATE_HALF_KERNEL(T)                                             \
+  template void bang_momentum_update_half_kernel<T>(                                             \
+      BangHandle & handle, int64_t n, T scale, float l1, float l2, float beta, float dampening,  \
+      bool nesterov, bool maximize, float weight_decay, float learning_rate_val, float lr_scale, \
+      const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,                 \
+      const void* model_diff, T* model, T* momentum);
+
+INSTANCE_BANG_MOMENTUM_UPDATE_KERNEL(float)
+INSTANCE_BANG_MOMENTUM_UPDATE_HALF_KERNEL(float)
+
+#undef INSTANCE_BANG_MOMENTUM_UPDATE_KERNEL
+#undef INSTANCE_BANG_MOMENTUM_UPDATE_HALF_KERNEL
+
+}  // namespace oneflow

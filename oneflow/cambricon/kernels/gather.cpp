@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/cambricon/ep/mlu_stream.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/job/nd_sbp_util.h"
-#include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/user/kernels/gather_kernel_util.h"
 
 namespace oneflow {
