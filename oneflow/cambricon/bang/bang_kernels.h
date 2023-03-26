@@ -63,6 +63,27 @@ void bang_momentum_update_half_kernel(BangHandle& handle, int64_t n, T scale, fl
                                       T* momentum);
 
 template<typename T>
+void bang_adam_update_kernel(BangHandle& handle, int64_t n, T scale, float l1, float l2,
+                             float beta1, float beta2, float epsilon, float weight_decay,
+                             bool amsgrad, bool do_bias_correction, float learning_rate_val,
+                             float lr_scale, float bias_correction1_val, float bias_correction2_val,
+                             const float* learning_rate, const T* scale_by_ptr,
+                             const int64_t* skip_if, const float* bias_correction1_ptr,
+                             const float* bias_correction2_ptr, const T* model_diff, T* model,
+                             void* model_copy, T* m, T* v, T* max_v);
+
+template<typename T>
+void bang_adam_update_half_kernel(BangHandle& handle, int64_t n, T scale, float l1, float l2,
+                                  float beta1, float beta2, float epsilon, float weight_decay,
+                                  bool amsgrad, bool do_bias_correction, float learning_rate_val,
+                                  float lr_scale, float bias_correction1_val,
+                                  float bias_correction2_val, const float* learning_rate,
+                                  const T* scale_by_ptr, const int64_t* skip_if,
+                                  const float* bias_correction1_ptr,
+                                  const float* bias_correction2_ptr, const void* model_diff,
+                                  T* model, void* model_copy, T* m, T* v, T* max_v);
+
+template<typename T>
 void bang_regularize_gradient_kernel(BangHandle& handle, int64_t n, const T* model,
                                      const T* model_diff, T* out, float l1, float l2);
 

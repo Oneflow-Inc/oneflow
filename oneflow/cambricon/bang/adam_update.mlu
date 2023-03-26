@@ -1,0 +1,125 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+#include "oneflow/cambricon/bang/bang_kernels.h"
+
+namespace oneflow {
+
+template<typename T, typename G>
+__mlu_global__ void bang_adam_update_internal(
+    int64_t n, T scale, float l1, float l2, float beta1, float beta2, float epsilon,
+    float weight_decay, bool amsgrad, bool do_bias_correction, float learning_rate_val,
+    float lr_scale, float bias_correction1_val, float bias_correction2_val,
+    const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
+    const float* bias_correction1_ptr, const float* bias_correction2_ptr, const G* model_diff,
+    T* model, half* model_copy, T* m, T* v, T* max_v) {
+  if (skip_if && *skip_if != 0) { return; }
+  if (learning_rate) { learning_rate_val = *learning_rate; }
+  if (scale_by_ptr) { scale *= *scale_by_ptr; }
+  if (bias_correction1_ptr) { bias_correction1_val = *bias_correction1_ptr; }
+  if (bias_correction2_ptr) { bias_correction2_val = *bias_correction2_ptr; }
+
+  learning_rate_val *= lr_scale;
+
+  for (int64_t i = taskId; i < n; i += taskDim) {
+    T model_val = model[i];
+    T model_diff_val = static_cast<T>(model_diff[i]) * scale
+                       + l1 * ((model_val >= 0) - (model_val <= 0)) + l2 * model_val;
+    T m_val = beta1 * m[i] + (1.0f - beta1) * model_diff_val;
+    T v_val = beta2 * v[i] + (1.0f - beta2) * model_diff_val * model_diff_val;
+    m[i] = m_val;
+    v[i] = v_val;
+
+    T denom = 0;
+    if (amsgrad) {
+      T max_v_val = max_v[i];
+      if (max_v_val < v_val) { max_v_val = v_val; }
+      max_v[i] = max_v_val;
+      denom = (sqrt(max_v_val) / sqrt(bias_correction2_val)) + epsilon;
+    } else {
+      denom = (sqrt(v_val) / sqrt(bias_correction2_val)) + epsilon;
+    }
+
+    T step_size = learning_rate_val / bias_correction1_val;
+    T w = model_val - step_size * (m_val / denom) - learning_rate_val * weight_decay * model_val;
+    model[i] = w;
+    if (model_copy) { model_copy[i] = static_cast<half>(w); }
+  }
+}
+
+template<typename T>
+void bang_adam_update_kernel(BangHandle& handle, int64_t n, T scale, float l1, float l2,
+                             float beta1, float beta2, float epsilon, float weight_decay,
+                             bool amsgrad, bool do_bias_correction, float learning_rate_val,
+                             float lr_scale, float bias_correction1_val, float bias_correction2_val,
+                             const float* learning_rate, const T* scale_by_ptr,
+                             const int64_t* skip_if, const float* bias_correction1_ptr,
+                             const float* bias_correction2_ptr, const T* model_diff, T* model,
+                             void* model_copy, T* m, T* v, T* max_v) {
+  cnrtDim3_t dim = {handle.nclusters, handle.ncores_per_cluster, 1};
+  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
+  bang_adam_update_internal<<<dim, func_type, handle.queue>>>(
+      n, scale, l1, l2, beta1, beta2, epsilon, weight_decay, amsgrad, do_bias_correction,
+      learning_rate_val, lr_scale, bias_correction1_val, bias_correction2_val, learning_rate,
+      scale_by_ptr, skip_if, bias_correction1_ptr, bias_correction2_ptr, model_diff, model,
+      static_cast<half*>(model_copy), m, v, max_v);
+}
+
+template<typename T>
+void bang_adam_update_half_kernel(BangHandle& handle, int64_t n, T scale, float l1, float l2,
+                                  float beta1, float beta2, float epsilon, float weight_decay,
+                                  bool amsgrad, bool do_bias_correction, float learning_rate_val,
+                                  float lr_scale, float bias_correction1_val,
+                                  float bias_correction2_val, const float* learning_rate,
+                                  const T* scale_by_ptr, const int64_t* skip_if,
+                                  const float* bias_correction1_ptr,
+                                  const float* bias_correction2_ptr, const void* model_diff,
+                                  T* model, void* model_copy, T* m, T* v, T* max_v) {
+  cnrtDim3_t dim = {handle.nclusters, handle.ncores_per_cluster, 1};
+  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
+  bang_adam_update_internal<<<dim, func_type, handle.queue>>>(
+      n, scale, l1, l2, beta1, beta2, epsilon, weight_decay, amsgrad, do_bias_correction,
+      learning_rate_val, lr_scale, bias_correction1_val, bias_correction2_val, learning_rate,
+      scale_by_ptr, skip_if, bias_correction1_ptr, bias_correction2_ptr,
+      static_cast<const half*>(model_diff), model, static_cast<half*>(model_copy), m, v, max_v);
+}
+
+#define INSTANCE_BANG_ADAM_UPDATE_KERNEL(T)                                                     \
+  template void bang_adam_update_kernel<T>(                                                     \
+      BangHandle & handle, int64_t n, T scale, float l1, float l2, float beta1, float beta2,    \
+      float epsilon, float weight_decay, bool amsgrad, bool do_bias_correction,                 \
+      float learning_rate_val, float lr_scale, float bias_correction1_val,                      \
+      float bias_correction2_val, const float* learning_rate, const T* scale_by_ptr,            \
+      const int64_t* skip_if, const float* bias_correction1_ptr,                                \
+      const float* bias_correction2_ptr, const T* model_diff, T* model, void* model_copy, T* m, \
+      T* v, T* max_v);
+
+#define INSTANCE_BANG_ADAM_UPDATE_HALF_KERNEL(T)                                                   \
+  template void bang_adam_update_half_kernel<T>(                                                   \
+      BangHandle & handle, int64_t n, T scale, float l1, float l2, float beta1, float beta2,       \
+      float epsilon, float weight_decay, bool amsgrad, bool do_bias_correction,                    \
+      float learning_rate_val, float lr_scale, float bias_correction1_val,                         \
+      float bias_correction2_val, const float* learning_rate, const T* scale_by_ptr,               \
+      const int64_t* skip_if, const float* bias_correction1_ptr,                                   \
+      const float* bias_correction2_ptr, const void* model_diff, T* model, void* model_copy, T* m, \
+      T* v, T* max_v);
+
+INSTANCE_BANG_ADAM_UPDATE_KERNEL(float)
+INSTANCE_BANG_ADAM_UPDATE_HALF_KERNEL(float)
+
+#undef INSTANCE_BANG_ADAM_UPDATE_KERNEL
+#undef INSTANCE_BANG_ADAM_UPDATE_HALF_KERNEL
+
+}  // namespace oneflow
