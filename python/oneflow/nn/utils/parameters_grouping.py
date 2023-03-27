@@ -25,9 +25,7 @@ _tensor_or_tensors = Union[Tensor, List[Tensor], List[List[Tensor]]]
 
 
 def numel_in_bucket(tensor: Tensor):
-    assert flow.is_floating_point(
-        tensor
-    ), "params grouping only support float tensor."
+    assert flow.is_floating_point(tensor), "params grouping only support float tensor."
 
     def align(x: int, unit_size: int):
         return (x + (unit_size - 1)) // unit_size * unit_size
@@ -60,7 +58,9 @@ class ContiguousParamsGroup(object):
     """
 
     def __init__(
-        self, params_group_list: _tensor_or_tensors, group_on_current_buffer: bool = True,
+        self,
+        params_group_list: _tensor_or_tensors,
+        group_on_current_buffer: bool = True,
     ):
         self.params_group_list = params_group_list.copy()
 
@@ -123,7 +123,7 @@ class ContiguousParamsGroup(object):
                 if p._ref_tensor is not None:
                     return
 
-        warnings.warn('create defualt buffer for all parameters as one group.')
+        warnings.warn("create defualt buffer for all parameters as one group.")
 
         self._physical_preparation = ContiguousParamsGroup(
             self.params_group_list, group_on_current_buffer=False,

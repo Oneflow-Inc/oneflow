@@ -1009,8 +1009,8 @@ class Module(object):
         if self.cpg is not None:
             self.cpg = None
             warnings.warn(
-                'deleted ContiguousParamsGroup since creating it before '
-                'apply operations like to(), to_global() will cause error.'
+                "deleted ContiguousParamsGroup since creating it before "
+                "apply operations like to(), to_global() will cause error."
             )
 
         # A dict to store tensors that has already been applied.
@@ -1132,8 +1132,8 @@ class Module(object):
         if self.cpg is not None:
             self.cpg = None
             warnings.warn(
-                'deleted ContiguousParamsGroup since creating it before '
-                'apply operations like to(), to_global() will cause error.'
+                "deleted ContiguousParamsGroup since creating it before "
+                "apply operations like to(), to_global() will cause error."
             )
 
         for module in self.children():
