@@ -1,5 +1,5 @@
 /*
-Copyright 2023 The OneFlow Authors. All rights reserved.
+Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,8 +24,8 @@ limitations under the License.
 namespace oneflow {
 namespace user_op {
 
-template <DeviceType device, typename dtype_x, typename dtype_out>
-class RealKernel final : public user_op::OpKernel{
+template<DeviceType device, typename dtype_x, typename dtype_out>
+class RealKernel final : public user_op::OpKernel {
  public:
   RealKernel() = default;
   ~RealKernel() = default;
@@ -43,10 +43,10 @@ class RealKernel final : public user_op::OpKernel{
   }
 };
 
-#define REGISTER_REAL_KERNEL(device, dtype_x, dtype_out)                               \
-  REGISTER_USER_KERNEL("real")                                \
-      .SetCreateFn<RealKernel<device, dtype_x, dtype_out>>()                      \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device) \
+#define REGISTER_REAL_KERNEL(device, dtype_x, dtype_out)     \
+  REGISTER_USER_KERNEL("real")                               \
+      .SetCreateFn<RealKernel<device, dtype_x, dtype_out>>() \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)  \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype_x>::value));
 
 REGISTER_REAL_KERNEL(DeviceType::kCPU, std::complex<float>, float)
@@ -56,8 +56,8 @@ REGISTER_REAL_KERNEL(DeviceType::kCUDA, cufftComplex, float)
 REGISTER_REAL_KERNEL(DeviceType::kCUDA, cufftDoubleComplex, double)
 #endif  // WITH_CUDA
 
-template <DeviceType device, typename dtype_x, typename dtype_out>
-class ImagKernel final : public user_op::OpKernel{
+template<DeviceType device, typename dtype_x, typename dtype_out>
+class ImagKernel final : public user_op::OpKernel {
  public:
   ImagKernel() = default;
   ~ImagKernel() = default;
@@ -75,10 +75,10 @@ class ImagKernel final : public user_op::OpKernel{
   }
 };
 
-#define REGISTER_IMAG_KERNEL(device, dtype_x, dtype_out)                               \
-  REGISTER_USER_KERNEL("imag")                                \
-      .SetCreateFn<ImagKernel<device, dtype_x, dtype_out>>()                      \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device) \
+#define REGISTER_IMAG_KERNEL(device, dtype_x, dtype_out)     \
+  REGISTER_USER_KERNEL("imag")                               \
+      .SetCreateFn<ImagKernel<device, dtype_x, dtype_out>>() \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)  \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype_x>::value));
 
 REGISTER_IMAG_KERNEL(DeviceType::kCPU, std::complex<float>, float)
@@ -88,8 +88,8 @@ REGISTER_IMAG_KERNEL(DeviceType::kCUDA, cufftComplex, float)
 REGISTER_IMAG_KERNEL(DeviceType::kCUDA, cufftDoubleComplex, double)
 #endif  // WITH_CUDA
 
-template <DeviceType device, typename dtype>
-class ConjPhysicalKernel final : public user_op::OpKernel{
+template<DeviceType device, typename dtype>
+class ConjPhysicalKernel final : public user_op::OpKernel {
  public:
   ConjPhysicalKernel() = default;
   ~ConjPhysicalKernel() = default;
@@ -107,9 +107,9 @@ class ConjPhysicalKernel final : public user_op::OpKernel{
   }
 };
 
-#define REGISTER_CONJ_PHYSICAL_KERNEL(device, dtype)                               \
-  REGISTER_USER_KERNEL("conj_physical")                                \
-      .SetCreateFn<ConjPhysicalKernel<device, dtype>>()                      \
+#define REGISTER_CONJ_PHYSICAL_KERNEL(device, dtype)        \
+  REGISTER_USER_KERNEL("conj_physical")                     \
+      .SetCreateFn<ConjPhysicalKernel<device, dtype>>()     \
       .SetIsMatchedHob((user_op::HobDeviceType() == device) \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
