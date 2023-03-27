@@ -146,14 +146,12 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
       auto funcType = builder.getFunctionType(argumentTypes, resultTypes);
       if (auto mod = job->getParentOfType<ModuleOp>()) {
         std::string name = "TODO-func_name";
-        OpBuilder::InsertionGuard guard(builder);
 
         builder.setInsertionPointToStart(&mod.getRegion().front());
         auto function = builder.create<func::FuncOp>(entryOp->getLoc(), name, funcType);
         function.getBody().push_front(block);
 
         if (auto lastOp = exits.back().getDefiningOp()) {
-          OpBuilder::InsertionGuard guard(builder);
           builder.setInsertionPointAfter(lastOp);
           NamedAttrList attributes =
               GetJitOpAttributes(builder, name, argumentTypes.size(), resultTypes.size(),
