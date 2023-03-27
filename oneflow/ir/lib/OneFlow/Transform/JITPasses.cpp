@@ -125,7 +125,7 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
       SmallVector<::mlir::Value, 4> entries, exits, mappedExits;
       SmallVector<Type, 4> argumentTypes, resultTypes;
 
-      for (auto exit : outliner.exits) {
+      for (Value exit : outliner.exits) {
         exits.push_back(exit);
         mappedExits.push_back(outliner.mapping.lookup(exit));
         resultTypes.push_back(exit.getType());
@@ -152,16 +152,19 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
         auto function = builder.create<func::FuncOp>(entryOp->getLoc(), name, funcType);
         function.getBody().push_front(block);
 
-        if (auto lastOp = exits.end()->getDefiningOp()) {
+        if (auto lastOp = exits.back().getDefiningOp()) {
           OpBuilder::InsertionGuard guard(builder);
           builder.setInsertionPointAfter(lastOp);
           NamedAttrList attributes =
               GetJitOpAttributes(builder, name, argumentTypes.size(), resultTypes.size(),
                                  entryOp->getOperand(0).getDefiningOp());
-          // auto created =
-          // builder.create<MlirJitOp>(entryOp->getLoc(), function, attributes, entries);
+          std::string mlir;
+          llvm::raw_string_ostream os_mlir(mlir);
+          function->print(os_mlir);
+          auto jitOp = builder.create<MlirJitOp>(entryOp->getLoc(), function, attributes, entries);
+          jitOp->setAttr("mlir_assembly", builder.getStringAttr(mlir));
           for (const auto& old : llvm::enumerate(exits)) {
-            // old.value().replaceAllUsesWith(created->getResult(old.index()));
+            old.value().replaceAllUsesWith(jitOp->getResult(old.index()));
           }
         } else {
           job->emitError() << "fail to outline, nowhere to replace";
