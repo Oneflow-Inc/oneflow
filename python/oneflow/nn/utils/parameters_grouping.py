@@ -54,6 +54,9 @@ class ContiguousParamsGroup(object):
         The ContiguousParamsGroup is created by 2D List of Tensors, which indicates the
         Tensors in the same 1D List should be grouped into the same Tensor buffer, otherwise
         try to make them into a 2D List.
+
+        If group_on_current_buffer is set True but there is not any buffer created before,
+        ContiguousParamsGroup will allocate default buffers for all parameters.
     """
 
     def __init__(
@@ -119,6 +122,8 @@ class ContiguousParamsGroup(object):
             for p in params:
                 if p._ref_tensor is not None:
                     return
+
+        warnings.warn('create defualt buffer for all parameters as one group.')
 
         self._physical_preparation = ContiguousParamsGroup(
             self.params_group_list, group_on_current_buffer=False,
