@@ -64,6 +64,8 @@ class CommRank final {
 
   int32_t device_id() const { return device_id_; }
 
+  int32_t global_rank() const { return global_rank_; }
+
   ncclComm_t nccl_comm() const { return nccl_comm_; }
 
   void InitRank(ncclUniqueId unique_id, int32_t global_rank_count) {
@@ -190,13 +192,19 @@ struct CollectiveBackendOfccl::Impl {
         // VLOG(2) << "coll_id = " << coll_id << " local_rank_count = " << coll_id2device_set7CommGroup[coll_id].comm_group.local_rank_count();
         for (int32_t j = 0; j < coll_id2device_set7CommGroup[coll_id].comm_group.local_rank_count(); ++j) { // 其实是预期这里只有一个
           // 准备rank_ctx
-          int curr_device_id = coll_id2device_set7CommGroup[coll_id].comm_group.GetCommRank(j).device_id();
-          OF_CUDA_CHECK(cudaSetDevice(curr_device_id));
+          
+          int local_device_id = coll_id2device_set7CommGroup[coll_id].comm_group.GetCommRank(j).device_id();
+
+          OF_CUDA_CHECK(cudaSetDevice(local_device_id));
+
+          // bugfix: 为支持多机pp，使用GlobalProcessCtx::Rank()
+          // int curr_device_id = coll_id2device_set7CommGroup[coll_id].comm_group.GetCommRank(j).global_rank();
+          int curr_device_id = GlobalProcessCtx::Rank();
 
           if (device_id2ofccl_rank_ctx.find(curr_device_id) == device_id2ofccl_rank_ctx.end()) {
             device_id2ofccl_rank_ctx[curr_device_id] = nullptr;
-            ofcclInitRankCtx(&device_id2ofccl_rank_ctx[curr_device_id], curr_device_id);
-            VLOG(2) << "coll_id = " << coll_id << " curr_device_id = " << curr_device_id << " rankctx @ " << device_id2ofccl_rank_ctx[curr_device_id];
+            ofcclInitRankCtx(&device_id2ofccl_rank_ctx[curr_device_id], local_device_id);
+            VLOG(1) << "coll_id = " << coll_id << " curr_device_id = " << curr_device_id << " rankctx @ " << device_id2ofccl_rank_ctx[curr_device_id];
           }
 
           // 获取count和datatype、op信息。
