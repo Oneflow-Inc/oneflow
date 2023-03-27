@@ -1,5 +1,6 @@
 #include <queue>
 #include "OneFlow/OneFlowDialect.h"
+#include "OneFlow/OneFlowOps.h"
 #include "OneFlow/Passes.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 namespace mlir {
@@ -20,6 +21,24 @@ namespace {
 
 // NOTE: we assume all arg values are produced by an oneflow op and won't be an argument
 
+NamedAttrList GetJitOpAttributes(Builder& rewriter, StringRef op_name, int32_t input_size,
+                                 int32_t output_size, Operation* op) {
+  NamedAttrList attributes;
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(),
+                 OpTrait::IsOpConfCompatible<void>::getDeviceTag(op));
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
+                 OpTrait::IsOpConfCompatible<void>::getDeviceName(op));
+  if (auto hierarchy = OpTrait::IsOpConfCompatible<void>::getHierarchy(op)) {
+    attributes.set(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(), hierarchy);
+  }
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
+                 rewriter.getStringAttr(op_name));
+  if (auto scope_symbol_id = OpTrait::IsOpConfCompatible<void>::getScopeSymbolID(op)) {
+    attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(), scope_symbol_id);
+  }
+  return attributes;
+}
+
 bool isOneFlowOp(Operation* op) { return llvm::dyn_cast<OneFlowDialect>(op->getDialect()); }
 class Outliner {
  private:
@@ -33,7 +52,7 @@ class Outliner {
       if (!mapping.lookup(operand)) {
         if (auto defOp = operand.getDefiningOp()) {
           if (isOneFlowOp(defOp)) {
-            argValues.insert(operand);
+            entries.insert(operand);
             mapping.map(operand, body->addArgument(operand.getType(), operand.getLoc()));
           } else {
             cloneOpsToNewBody(defOp, true);
@@ -48,7 +67,7 @@ class Outliner {
     for (auto& use : op->getUses()) {
       auto owner = use.getOwner();
       if (isOneFlowOp(owner)) {
-        returnValues.insert(use.get());
+        exits.insert(use.get());
       } else {
         if (defer) {
           worklist.push(owner);
@@ -73,7 +92,7 @@ class Outliner {
   }
 
   BlockAndValueMapping mapping{};
-  llvm::DenseSet<Value> argValues{}, returnValues{};
+  llvm::DenseSet<Value> entries{}, exits{};
 };
 
 class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunctionPass> {
@@ -100,22 +119,43 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
       builder.setInsertionPointToStart(block);
       auto outliner = Outliner(builder, block, entryOp, visitedOps);
 
-      SmallVector<::mlir::Value, 4> mappedResults;
+      SmallVector<::mlir::Value, 4> entries, exits, mappedExits;
       SmallVector<Type, 4> argumentTypes, resultTypes;
 
-      for (auto ret : outliner.returnValues) {
-        mappedResults.push_back(outliner.mapping.lookup(ret));
-        resultTypes.push_back(ret.getType());
+      for (auto exit : outliner.exits) {
+        exits.push_back(exit);
+        mappedExits.push_back(outliner.mapping.lookup(exit));
+        resultTypes.push_back(exit.getType());
       }
       builder.setInsertionPointToEnd(block);
-      builder.create<func::ReturnOp>(entryOp->getLoc(), mappedResults);
+      builder.create<func::ReturnOp>(entryOp->getLoc(), mappedExits);
 
-      for (auto argument : block->getArguments()) { argumentTypes.push_back(argument.getType()); }
+      for (auto argument : outliner.entries) {
+        entries.push_back(argument);
+        argumentTypes.push_back(argument.getType());
+      }
       auto funcType = builder.getFunctionType(argumentTypes, resultTypes);
       if (auto mod = job->getParentOfType<ModuleOp>()) {
+        std::string name = "TODO-func_name";
+
         builder.setInsertionPointToStart(&mod.getRegion().front());
-        auto function = builder.create<func::FuncOp>(entryOp->getLoc(), "TODO-func_name", funcType);
+        auto function = builder.create<func::FuncOp>(entryOp->getLoc(), name, funcType);
         function.getBody().push_front(block);
+
+        auto lastOp = exits.end()->getDefiningOp();
+        if (!lastOp) {
+          job->emitError() << "fail to outline, nowhere to replace";
+          signalPassFailure();
+        }
+        builder.setInsertionPointAfter(lastOp);
+        NamedAttrList attributes =
+            GetJitOpAttributes(builder, name, argumentTypes.size(), resultTypes.size(),
+                               entryOp->getOperand(0).getDefiningOp());
+        // auto created = builder.create<MlirJitOp>(entryOp->getLoc(), function, attributes,
+        // operands);
+        for (const auto& old : llvm::enumerate(exits)) {
+          // old.value().replaceAllUsesWith(created->getResult(old.index()));
+        }
       } else {
         job->emitError() << "fail to outline";
         signalPassFailure();
