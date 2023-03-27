@@ -149,7 +149,7 @@ def _test_skip_rms_norm(
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
-class TestSkipLayerNorm(flow.unittest.TestCase):
+class TestSkipRMSNorm(flow.unittest.TestCase):
     def test_gather(test_case):
         arg_dict = OrderedDict()
 
