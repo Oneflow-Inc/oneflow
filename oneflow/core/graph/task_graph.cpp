@@ -789,7 +789,8 @@ void TaskGraph::DecideExecutionOrder() {
           && GlobalProcessCtx::WorldSize() == 1)) {
     InitOrderedTaskNodes();
   } else {
-    StraightenNodes(this, &ordered_task_nodes_);
+    StraightenNodes(this, &ordered_task_nodes_,
+                    Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream());
   }
 }
 
