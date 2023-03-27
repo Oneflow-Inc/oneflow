@@ -209,7 +209,7 @@ class TensorWithShapeGenericCtorFunctor {
     } else {
       device_ = JUST(Device::New("cpu"));
     }
-    return functional::Empty(shape, dtype, device_, /*pin_memory=*/false);
+    return functional::Empty(shape, dtype, device_, /*requires_grad=*/false, /*pin_memory=*/false);
   }
 };
 

@@ -25,21 +25,21 @@ import oneflow as flow
 import oneflow.unittest
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_squeeze_1d_input(test_case, placement, sbp):
     x = random_tensor(1, 16, dtype=float).to_global(placement, sbp)
     y = torch.squeeze(x)
     return y
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_flow_squeeze_with_random_data(test_case, placement, sbp):
     x = random_tensor(2, 8, 16).to_global(placement, sbp)
     y = torch.squeeze(x, random(0, 2).to(int))
     return y
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_squeeze_with_0_size_data(test_case, placement, sbp):
     x = random_tensor(3, 8, 16, 0).to_global(placement, sbp)
     y = torch.squeeze(x)
