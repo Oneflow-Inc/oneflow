@@ -58,7 +58,7 @@ enum class BinaryOp {
   // Unary Backward
   kIdentityBackwardWithDyX,
   kEluBackwardWithDyX,
-  kCeluBackwardWithDyX,
+  kCeluBackwardWithDyY,
   kGeluBackwardWithDyX,
   kHardswishBackwardWithDyX,
   kHardsigmoidBackwardWithDyX,
@@ -89,6 +89,7 @@ enum class BinaryOp {
   kErfBackwardWithDyX,
   kErfcBackwardWithDyX,
   kExpBackwardWithDyX,
+  kExp2BackwardWithDyX,
   kExpm1BackwardWithDyX,
   kLgammaBackwardWithDyX,
   kLogBackwardWithDyX,
