@@ -5,13 +5,12 @@
 // RUN: -pass-pipeline="oneflow.job(tosa-to-linalg-named)" \
 // RUN: -pass-pipeline="oneflow.job(tosa-to-linalg)" \
 // RUN: -linalg-fuse-elementwise-ops \
-// RUN: -canonicalize -pass-pipeline="oneflow.job(outline-jit-function)" \
+// RUN: -pass-pipeline="oneflow.job(outline-jit-function)" -canonicalize \
 // RUN: | FileCheck --dump-input=always %s
 
 // CHECK: linalg.generic
+// CHECK: oneflow.mlir_jit
 // CHECK-NOT: oneflow.softmax
-
-// TODO: don't convert oneflow.job to func.func
 
 oneflow.job @GraphToRun_11(%arg0: tensor<2x256x1280xf16>, %arg1: tensor<2x77x1280xf16>, %arg2: tensor<2x77x1280xf16>) -> tensor<2x256x1280xf16> {
   %output = "oneflow.input"(%arg0) {data_type = 9 : i32, device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], is_dynamic = false, nd_sbp = ["B"], op_name = "_GraphToRun_11_input.0.0_2", output_lbns = ["_GraphToRun_11_input.0.0_2/out"], scope_symbol_id = 681 : i64, shape = [2 : si64, 256 : si64, 1280 : si64]} : (tensor<2x256x1280xf16>) -> tensor<2x256x1280xf16>
