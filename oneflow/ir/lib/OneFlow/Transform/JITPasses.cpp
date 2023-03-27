@@ -1,6 +1,7 @@
 #include <queue>
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
+#include "OneFlow/OneFlowUtils.h"
 #include "OneFlow/Passes.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 namespace mlir {
@@ -98,6 +99,9 @@ class Outliner {
   llvm::DenseSet<Value> entries{}, exits{};
 };
 
+static std::atomic_int64_t countJITFunction = 0;
+static std::string JITOpNamePrefix = "JITOpGenerated";
+
 class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunctionPass> {
   void runOnOperation() override {
     llvm::DenseSet<Operation*> entryOps, visitedOps;
@@ -145,7 +149,10 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
       }
       auto funcType = builder.getFunctionType(argumentTypes, resultTypes);
       if (auto mod = job->getParentOfType<ModuleOp>()) {
-        std::string name = "TODO-func_name";
+        auto name = JITOpNamePrefix + std::to_string(countJITFunction);
+        countJITFunction += 1;
+        SmallString<16> tempBuffer;
+        name = SanitizeIdentifier(name, tempBuffer);
 
         builder.setInsertionPointToStart(&mod.getRegion().front());
         auto function = builder.create<func::FuncOp>(entryOp->getLoc(), name, funcType);
