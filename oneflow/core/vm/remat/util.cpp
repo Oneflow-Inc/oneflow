@@ -154,8 +154,8 @@ Maybe<double> GetComputeTime(const vm::OpCallInstructionPolicy& operand) {
 
 namespace vm {
 
-Pack::Pack(const OpCallInstructionPolicy& op_call_instruction_policy)
-    : op_call_instruction_policy(op_call_instruction_policy) {
+RematHelper::RematHelper(const OpCallInstructionPolicy& op_call_instruction_policy_)
+    : op_call_instruction_policy_(op_call_instruction_policy_) {
   const auto save_eager_blob_object_storages = [](const auto& eager_blob_objects,
                                                   auto& storage_conatiner) {
     storage_conatiner.reserve(eager_blob_objects.size());
@@ -164,15 +164,32 @@ Pack::Pack(const OpCallInstructionPolicy& op_call_instruction_policy)
           std::dynamic_pointer_cast<RematableTensorStorage>(x->tensor_storage()));
     }
   };
-  save_eager_blob_object_storages(op_call_instruction_policy.inputs(), input_storages);
-  save_eager_blob_object_storages(op_call_instruction_policy.outputs(), output_storages);
+  save_eager_blob_object_storages(op_call_instruction_policy_.inputs(), input_storages_);
+  save_eager_blob_object_storages(op_call_instruction_policy_.outputs(), output_storages_);
 }
 
-Maybe<void> _IncReferenceNumOfRecomputedTensor(
-    const Pack& pack, int& pinned_num, std::set<const DtrOpCallInstructionPolicy*>& visited_ops) {
-  VLOG(1) << "op is " << pack.op_call_instruction_policy.opkernel().op_type_name();
-  for (int i = 0; i < pack.input_storages.size(); i++) {
-    auto& storage = pack.input_storages[i];
+RematHelper::RematHelper(const OpCallInstructionPolicy& op_call_instruction_policy,
+                         bool inputs_rematable, bool outputs_rematable)
+    : RematHelper(op_call_instruction_policy) {
+  if (outputs_rematable) {
+    storage_is_initialized_.reserve(output_storages_.size());
+    for (auto& storage : output_storages_) {
+      storage_is_initialized_.push_back(storage->is_initialized());
+    }
+    if (!inputs_rematable) {
+      for (auto& storage : output_storages_) {
+        VLOG(1) << "set storage " << storage->id() << " unevictable" << std::endl;
+        storage->set_eviction_disabled(true);
+      }
+    }
+  }
+}
+
+Maybe<void> RematHelper::_IncReferenceNumOfRecomputedTensor(
+    int& pinned_num, std::set<const DtrOpCallInstructionPolicy*>& visited_ops) {
+  VLOG(1) << "op is " << op_call_instruction_policy_.opkernel().op_type_name();
+  for (int i = 0; i < input_storages_.size(); i++) {
+    auto& storage = input_storages_[i];
     storage->Pin();
     VLOG(1) << "No." << i << " input is in memory? " << storage->is_in_memory();
     if (!storage->is_in_memory()) {
@@ -183,37 +200,37 @@ Maybe<void> _IncReferenceNumOfRecomputedTensor(
 
       if (visited_ops.find(storage->dtr_compute_op().get()) == visited_ops.end()) {
         visited_ops.insert(storage->dtr_compute_op().get());
-        JUST(_IncReferenceNumOfRecomputedTensor(Pack(tmp_op), pinned_num, visited_ops));
+        RematHelper new_helper(tmp_op);
+        JUST(new_helper._IncReferenceNumOfRecomputedTensor(pinned_num, visited_ops));
       }
     } else {
       pinned_num++;
     }
   }
-  VLOG(1) << "op " << pack.op_call_instruction_policy.opkernel().op_type_name() << " end";
+  VLOG(1) << "op " << op_call_instruction_policy_.opkernel().op_type_name() << " end";
   return Maybe<void>::Ok();
 }
 
-Maybe<int> IncReferenceNumOfRecomputedTensor(const Pack& pack) {
+Maybe<int> RematHelper::IncReferenceNumOfRecomputedTensor() {
   int pinned_num = 0;
   std::set<const DtrOpCallInstructionPolicy*> visited_ops;
-  JUST(_IncReferenceNumOfRecomputedTensor(pack, pinned_num, visited_ops));
+  JUST(_IncReferenceNumOfRecomputedTensor(pinned_num, visited_ops));
   return pinned_num;
 }
 
-Maybe<void> RematInputs(
-    const Pack& pack, vm::Stream* vm_stream, bool first,
+Maybe<void> RematHelper::RematInputs(vm::Stream* vm_stream, bool first,
     const std::function<Maybe<void>(OpCallInstructionPolicy*, vm::Stream*)>& compute_fn) {
   CHECK_OR_RETURN(!ThreadLocalEnvBool<ONEFLOW_VM_MULTI_THREAD>());
   Singleton<remat::Env>::Get()->current_op_type_name =
-      pack.op_call_instruction_policy.opkernel().op_type_name();
+      op_call_instruction_policy_.opkernel().op_type_name();
   VLOG(2) << "set current op type name to " << Singleton<remat::Env>::Get()->current_op_type_name
           << std::endl;
-  if (first) { JUST(IncReferenceNumOfRecomputedTensor(pack)); }
-  VLOG(1) << "compute " << pack.op_call_instruction_policy.opkernel().op_type_name() << std::endl;
-  VLOG(1) << "input num " << pack.op_call_instruction_policy.inputs().size() << std::endl;
+  if (first) { JUST(IncReferenceNumOfRecomputedTensor()); }
+  VLOG(1) << "compute " << op_call_instruction_policy_.opkernel().op_type_name() << std::endl;
+  VLOG(1) << "input num " << op_call_instruction_policy_.inputs().size() << std::endl;
 
-  for (int i = 0; i < pack.input_storages.size(); i++) {
-    auto& storage = pack.input_storages[i];
+  for (int i = 0; i < input_storages_.size(); i++) {
+    auto& storage = input_storages_[i];
     if (!storage->is_in_memory()) {
       VLOG(1) << "recompute No." << i << " input by " << storage->compute_op_type_name()
               << ". Storage id: " << storage->id();
@@ -224,9 +241,9 @@ Maybe<void> RematInputs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> EagerlyEvictRemattedTensors(const Pack& pack, vm::Stream* vm_stream, bool first) {
+Maybe<void> RematHelper::EagerlyEvictRemattedTensors(bool first) {
   auto& need_eager_eviction_storages = Singleton<remat::Env>::Get()->need_eager_eviction_storages;
-  for (auto& storage : pack.input_storages) {
+  for (auto& storage : input_storages_) {
     storage->Unpin();
     if (storage->num_pinned() == 0 && need_eager_eviction_storages.count(storage.get()) > 0) {
       need_eager_eviction_storages.erase(storage.get());
@@ -244,22 +261,21 @@ Maybe<void> EagerlyEvictRemattedTensors(const Pack& pack, vm::Stream* vm_stream,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> UpdateRematInfo(const Pack& pack, vm::Stream* vm_stream, bool first, bool recompute,
-                            bool include_input, bool include_output,
-                            const std::vector<bool>& storage_is_initialized) {
+Maybe<void> RematHelper::UpdateRematInfo(bool first, bool recompute,
+                                         bool include_input, bool include_output) {
   if (include_output) {
     const std::unique_ptr<OpCallInstructionPolicy> compute_op = [&]() {
-      auto compute_op = std::make_unique<OpCallInstructionPolicy>(pack.op_call_instruction_policy);
-      for (int i = 0; i < pack.output_storages.size(); i++) {
-        const auto& storage = pack.output_storages[i];
+      auto compute_op = std::make_unique<OpCallInstructionPolicy>(op_call_instruction_policy_);
+      for (int i = 0; i < output_storages_.size(); i++) {
+        const auto& storage = output_storages_[i];
         VLOG(1) << "output " << i << " storage id: " << storage->id();
         if (storage->is_eviction_disabled()) { continue; }
-        if (storage_is_initialized[i] && !recompute) {
+        if (storage_is_initialized_[i] && !recompute) {
           VLOG(1) << "storage->is_initialized(), op is " << storage->compute_op_type_name()
                   << std::endl;
           compute_op = std::make_unique<OpCallInstructionPolicy>(
               Singleton<remat::Env>::Get()->update_tensor_with_storage(
-                  storage.get(), pack.op_call_instruction_policy));
+                  storage.get(), op_call_instruction_policy_));
         }
       }
       return compute_op;
@@ -267,7 +283,7 @@ Maybe<void> UpdateRematInfo(const Pack& pack, vm::Stream* vm_stream, bool first,
     std::shared_ptr<DtrOpCallInstructionPolicy> dtr_compute_op =
         std::make_shared<DtrOpCallInstructionPolicy>(*compute_op);
     double compute_time = JUST(remat::GetComputeTime(*compute_op));
-    for (auto& storage : pack.output_storages) {
+    for (auto& storage : output_storages_) {
       storage->Pin();
       if (!recompute && !storage->is_eviction_disabled()) {
         storage->set_compute_op(dtr_compute_op, compute_time);
@@ -278,18 +294,16 @@ Maybe<void> UpdateRematInfo(const Pack& pack, vm::Stream* vm_stream, bool first,
     }
   }
   if (include_input) {
-    for (int i : pack.op_call_instruction_policy.opkernel().input_tuple_indexes4mut_ibns()) {
-      pack.input_storages[i]->set_eviction_disabled(true);
+    for (int i : op_call_instruction_policy_.opkernel().input_tuple_indexes4mut_ibns()) {
+      input_storages_[i]->set_eviction_disabled(true);
     }
 
-    for (auto& storage : pack.input_storages) { storage->Access(); }
+    for (auto& storage : input_storages_) { storage->Access(); }
   }
 
   if (recompute) { Singleton<remat::Env>::Get()->add_recomputation_num(); }
-  Singleton<remat::Env>::Get()->add_time(
-      JUST(remat::GetComputeTime(pack.op_call_instruction_policy)));
-  VLOG(1) << "end compute " << pack.op_call_instruction_policy.opkernel().op_type_name()
-          << std::endl;
+  Singleton<remat::Env>::Get()->add_time(JUST(remat::GetComputeTime(op_call_instruction_policy_)));
+  VLOG(1) << "end compute " << op_call_instruction_policy_.opkernel().op_type_name() << std::endl;
   Singleton<remat::Env>::Get()->current_op_type_name = "None";
   return Maybe<void>::Ok();
 }

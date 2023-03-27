@@ -131,7 +131,7 @@ Maybe<Tensor> LocalTensor::clone() const {
 }
 
 Maybe<void> LocalTensor::set_data(const std::shared_ptr<Tensor>& other) {
-  // CHECK_OR_RETURN(this->is_leaf()) << "Can only set leaf tensor's data.";
+  CHECK_OR_RETURN(this->is_leaf()) << "Can only set leaf tensor's data.";
   const auto& mirrored_tensor = std::dynamic_pointer_cast<LocalTensor>(JUST(other->detach()));
   CHECK_NOTNULL_OR_RETURN(mirrored_tensor)
       << "Can not set a global tensor to the data of a local tensor";

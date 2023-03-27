@@ -45,43 +45,15 @@ struct OpCallInstructionUtil final {
     return Maybe<void>::Ok();
   }
 
-  static inline Maybe<void> ComputeFnForRemat(OpCallInstructionPolicy* op_call_instruction_policy,
-                                              vm::Stream* vm_stream) {
-    return Compute(op_call_instruction_policy, vm_stream, false, true);
-  }
-
   static inline Maybe<void> Compute(OpCallInstructionPolicy* op_call_instruction_policy,
                                     vm::Stream* vm_stream, bool first, bool recompute) {
     Allocator* allocator = vm_stream->mut_stream_policy()->mut_allocator();
-    bool inputs_rematable = false;
-    bool outputs_rematable = false;
-    if (op_call_instruction_policy->opkernel().op_type_name() == "copy") {
-      inputs_rematable =
-          op_call_instruction_policy->inputs()[0]->tensor_storage()->device()->rematable();
-      outputs_rematable =
-          op_call_instruction_policy->outputs()[0]->tensor_storage()->device()->rematable();
-    } else {
-      inputs_rematable = vm_stream->device()->rematable();
-      outputs_rematable = vm_stream->device()->rematable();
-    }
+    const auto [remat_helper, inputs_rematable, outputs_rematable] =
+        get_remat_(op_call_instruction_policy, vm_stream);
     VLOG(1) << "op: " << op_call_instruction_policy->opkernel().op_type_name() << std::endl;
     VLOG(1) << "input_rematable: " << inputs_rematable
             << ", output_rematable: " << outputs_rematable << std::endl;
-    Pack pack(*op_call_instruction_policy);
-    if (!inputs_rematable && outputs_rematable) {
-      for (auto& storage : pack.output_storages) {
-        VLOG(1) << "set storage " << storage->id() << " unevictable" << std::endl;
-        storage->set_eviction_disabled(true);
-      }
-    }
-    if (inputs_rematable) { JUST(RematInputs(pack, vm_stream, first, ComputeFnForRemat)); }
-    std::vector<bool> storage_is_initialized;
-    if (outputs_rematable) {
-      storage_is_initialized.reserve(pack.output_storages.size());
-      for (auto& storage : pack.output_storages) {
-        storage_is_initialized.push_back(storage->is_initialized());
-      }
-    }
+    if (inputs_rematable) { JUST(remat_helper->RematInputs(vm_stream, first, ComputeFnForRemat)); }
     JUST(AllocateOutputBlobsMemory(op_call_instruction_policy, allocator, vm_stream));
     if (unlikely(op_call_instruction_policy->need_temp_storage())) {
       JUST(TryAllocateTempStorage(op_call_instruction_policy, allocator));
@@ -96,9 +68,10 @@ struct OpCallInstructionUtil final {
     if (unlikely(op_call_instruction_policy->need_temp_storage())) {
       DeallocateTempStorage(op_call_instruction_policy, allocator);
     }
-    if (inputs_rematable) { JUST(EagerlyEvictRemattedTensors(pack, vm_stream, first)); }
-    JUST(UpdateRematInfo(pack, vm_stream, first, recompute, inputs_rematable, outputs_rematable,
-                         storage_is_initialized));
+    if (inputs_rematable) { JUST(remat_helper->EagerlyEvictRemattedTensors(first)); }
+    if (inputs_rematable || outputs_rematable) {
+      JUST(remat_helper->UpdateRematInfo(first, recompute, inputs_rematable, outputs_rematable));
+    }
     return Maybe<void>::Ok();
   }
 
@@ -172,6 +145,29 @@ struct OpCallInstructionUtil final {
     auto* user_kernel = op_call_instruction_policy->user_opkernel();
     op_call_instruction_policy->mut_opkernel()->Compute(op_call_instruction_policy->mut_call_ctx(),
                                                         stream, user_kernel, state, cache);
+  }
+
+  static inline Maybe<void> ComputeFnForRemat(OpCallInstructionPolicy* op_call_instruction_policy,
+                                              vm::Stream* vm_stream) {
+    return Compute(op_call_instruction_policy, vm_stream, false, true);
+  }
+
+  static inline std::tuple<std::unique_ptr<RematHelper>, bool, bool> get_remat_(
+      OpCallInstructionPolicy* op_call_instruction_policy, vm::Stream* vm_stream) {
+    bool inputs_rematable = false;
+    bool outputs_rematable = false;
+    if (op_call_instruction_policy->opkernel().op_type_name() == "copy") {
+      inputs_rematable = op_call_instruction_policy->inputs()[0]->tensor_storage()->device()->rematable();
+      outputs_rematable = op_call_instruction_policy->outputs()[0]->tensor_storage()->device()->rematable();
+    } else {
+      inputs_rematable = vm_stream->device()->rematable();
+      outputs_rematable = vm_stream->device()->rematable();
+    }
+    std::unique_ptr<RematHelper> remat_helper;
+    if (inputs_rematable || outputs_rematable) {
+      remat_helper = std::make_unique<RematHelper>(*op_call_instruction_policy, inputs_rematable, outputs_rematable);
+    }
+    return std::make_tuple(std::move(remat_helper), inputs_rematable, outputs_rematable);
   }
 };
 

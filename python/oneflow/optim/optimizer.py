@@ -244,8 +244,12 @@ class Optimizer(object):
 
         self._parse_input_parameters(parameters)
 
-        dtr_enabled = True
-        if not dtr_enabled:
+        all_remat = all(p.device.rematable for pg in self.param_groups for p in pg.parameters)
+        all_not_remat = all(not p.device.rematable for pg in self.param_groups for p in pg.parameters)
+        if not all_remat and not all_not_remat:
+            raise ValueError("Parameters should be all on rematable device or all on non-rematable device.")
+
+        if all_not_remat:
             # _decorate_step makes mutable update interleaved with backward
             # computation, producing wrong results in DTR if the original
             # weight is used to recompute other tensors.

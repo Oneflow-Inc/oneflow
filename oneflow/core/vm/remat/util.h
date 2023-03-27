@@ -37,22 +37,32 @@ namespace vm {
 
 class RematableTensorStorage;
 class Stream;
+class DtrOpCallInstructionPolicy;
 
-class Pack {
+// This class is mainly for holding RematableTensorStorage vector so that we do not
+// need to generate them every time.
+class RematHelper {
  public:
-  const OpCallInstructionPolicy& op_call_instruction_policy;
-  std::vector<std::shared_ptr<RematableTensorStorage>> input_storages;
-  std::vector<std::shared_ptr<RematableTensorStorage>> output_storages;
-  explicit Pack(const OpCallInstructionPolicy& op_call_instruction_policy);
+  explicit RematHelper(const OpCallInstructionPolicy& op_call_instruction_policy);
+  RematHelper(const OpCallInstructionPolicy& op_call_instruction_policy,
+              bool inputs_rematable, bool outputs_rematable);
+
+  Maybe<void> RematInputs(
+      vm::Stream* vm_stream, bool first,
+      const std::function<Maybe<void>(OpCallInstructionPolicy*, vm::Stream*)>& compute_fn);
+  Maybe<void> EagerlyEvictRemattedTensors(bool first);
+  Maybe<void> UpdateRematInfo(bool first, bool recompute, bool include_input, bool include_output);
+
+ private:
+  Maybe<int> IncReferenceNumOfRecomputedTensor();
+  Maybe<void> _IncReferenceNumOfRecomputedTensor(
+      int& pinned_num, std::set<const DtrOpCallInstructionPolicy*>& visited_ops);
+  const OpCallInstructionPolicy& op_call_instruction_policy_;
+  std::vector<std::shared_ptr<RematableTensorStorage>> input_storages_;
+  std::vector<std::shared_ptr<RematableTensorStorage>> output_storages_;
+  std::vector<bool> storage_is_initialized_;
 };
 
-Maybe<void> RematInputs(
-    const Pack& pack, vm::Stream* vm_stream, bool first,
-    const std::function<Maybe<void>(OpCallInstructionPolicy*, vm::Stream*)>& compute_fn);
-Maybe<void> EagerlyEvictRemattedTensors(const Pack& pack, vm::Stream* vm_stream, bool first);
-Maybe<void> UpdateRematInfo(const Pack& pack, vm::Stream* vm_stream, bool first, bool recompute,
-                            bool include_input, bool include_output,
-                            const std::vector<bool>& storage_is_initialized);
 }  // namespace vm
 
 }  // namespace oneflow
