@@ -553,7 +553,7 @@ __global__ void PlaneKernel(FusedApplyRotaryEmbParam<T, PositionType, IndexType,
 }
 
 template<typename T, typename PositionType, typename IndexType, size_t pack_size, size_t num_dims>
-void LaunchKernel(ep::Stream* stream, const T* x, const T* cos, const T* sin, const PositionType* position_ids, T* out,
+void LaunchKernel(ep::CudaStream* stream, const T* x, const T* cos, const T* sin, const PositionType* position_ids, T* out,
                   const int64_t* position_shape, const std::string& x_layout,
                   const std::string& output_layout, const std::string& mode, const T theta,
                   const int64_t pass_ndims, const int rotary_emb_dim, const int64_t b,
@@ -670,7 +670,7 @@ void LaunchKernel(ep::Stream* stream, const T* x, const T* cos, const T* sin, co
 }
 
 template<typename T, typename PositionType, typename IndexType, size_t num_dims>
-void DispatchPackSize(ep::Stream* stream, const T* x, const T* cos, const T* sin, const PositionType* position_ids,
+void DispatchPackSize(ep::CudaStream* stream, const T* x, const T* cos, const T* sin, const PositionType* position_ids,
                       T* out, const int64_t* position_shape, const std::string& x_layout,
                       const std::string& output_layout, const std::string& mode, const T theta,
                       const int64_t pass_ndims, const int rotary_emb_dim, const IndexType b,
@@ -703,7 +703,7 @@ void DispatchPackSize(ep::Stream* stream, const T* x, const T* cos, const T* sin
 }
 
 template<typename T, typename PositionType, size_t num_dims>
-void DispatchIndex(ep::Stream* stream, const T* x, const T* cos, const T* sin, const PositionType* position_ids, T* out,
+void DispatchIndex(ep::CudaStream* stream, const T* x, const T* cos, const T* sin, const PositionType* position_ids, T* out,
                    const int64_t* position_shape, const std::string& x_layout,
                    const std::string& output_layout, const std::string& mode, const T theta,
                    const int64_t pass_ndims, const int rotary_emb_dim, const int64_t b,
