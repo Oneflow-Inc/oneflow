@@ -472,21 +472,16 @@ __global__ void PlaneKernel(FusedApplyRotaryEmbParam<T, PositionType, IndexType,
       cos_val = *(cos + sinuous_offset);
       sin_val = *(sin + sinuous_offset);
     } else {
-      float val = position * expf(2.0f * static_cast<float>(k_index % ((param.k - param.pass_ndims) / (2 * param.rotary_emb_dim))) / param.k * logf(theta));
+      int actual_ndim = (param.k - param.pass_ndims) / param.rotary_emb_dim;
+      float val = position * expf(2.0f * static_cast<float>(k_index % ( actual_ndim / 2 )) / actual_ndim * logf(theta));
       cos_val = cosf(val);
       sin_val = sinf(val);
     }
 
     if (k_index < param.k0) {
-      if (k_index < param.k0 / 2) {
-        x_vec.elem[0] = *(x + offset);
-        x_vec.elem[1] = -*(x + offset + param.k0 / 2);
-        out_val = cos_val * x_vec.elem[0] + sin_val * x_vec.elem[1];
-      } else {
-        x_vec.elem[0] = *(x + offset);
-        x_vec.elem[1] = *(x + offset - param.k0 / 2);
-        out_val = cos_val * x_vec.elem[0] + sin_val * x_vec.elem[1];
-      }
+      x_vec.elem[0] = *(x + offset);
+      x_vec.elem[1] = (k_index < param.k0 / 2) ? static_cast<T>(-*(x + offset + param.k0 / 2)) : *(x + offset - param.k0 / 2);
+      out_val = cos_val * x_vec.elem[0] + sin_val * x_vec.elem[1];
     } else if (k_index < param.k1) {
       if ((k_index - param.k0) < ((param.k - param.pass_ndims)/(2 * param.rotary_emb_dim))) {
         x_vec.elem[0] = *(x + offset);
@@ -719,7 +714,7 @@ class FusedApplyRotaryEmbKernel final : public user_op::OpKernel {
     int64_t h_stride = 0;
     int64_t offset   = 0;
     
-    ParseDims(x->shape_view(), x_layout, Optional<int64_t>(), k_size ? Optional<int64_t>(k_size) : Optional<int64_t>(), 1,
+    ParseDims(x->shape_view(), x_layout, Optional<int64_t>(), k_size ? Optional<int64_t>(k_size) : Optional<int64_t>(), tensor_index,
       &b, &m, &h, &k, &b_stride, &m_stride, &h_stride, &offset);
 
     // TODO: hard code num_dims & seems redundant template problem...
