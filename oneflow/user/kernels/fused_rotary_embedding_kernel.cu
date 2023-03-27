@@ -232,7 +232,7 @@ __global__ void FusedApplyRotaryEmbFetchKernel(
                                 + x_vec.elem[i * 2] * sin_vec.elem[i * 2 + 1];
     }
 
-    *(reinterpret_cast<LoadPack*>(out + offset)) = out_vec;
+    *(reinterpret_cast<LoadPack*>(out + offset - param.offset)) = out_vec;
   }
 
   for (IndexType packed_offset = threadIdx.x + blockIdx.x * blockDim.x;
@@ -247,7 +247,7 @@ __global__ void FusedApplyRotaryEmbFetchKernel(
     const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + offset);
     const LoadPack x_vec = *x_load;
 
-    *(reinterpret_cast<LoadPack*>(out + offset)) = x_vec;
+    *(reinterpret_cast<LoadPack*>(out + offset - param.offset)) = x_vec;
   }
 }
 
@@ -295,7 +295,7 @@ __global__ void FusedApplyRotaryEmbFetchWithoutPositionKernel(
                                 + x_vec.elem[i * 2] * sin_vec.elem[i * 2 + 1];
     }
 
-    *(reinterpret_cast<LoadPack*>(out + offset)) = out_vec;
+    *(reinterpret_cast<LoadPack*>(out + offset - param.offset)) = out_vec;
   }
 
   for (IndexType packed_offset = threadIdx.x + blockIdx.x * blockDim.x;
@@ -310,7 +310,7 @@ __global__ void FusedApplyRotaryEmbFetchWithoutPositionKernel(
     const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + offset);
     const LoadPack x_vec = *x_load;
 
-    *(reinterpret_cast<LoadPack*>(out + offset)) = x_vec;
+    *(reinterpret_cast<LoadPack*>(out + offset - param.offset)) = x_vec;
   }
 }
 
@@ -371,7 +371,7 @@ __global__ void FusedApplyRotaryEmbComputeWithoutPositionKernel(
                                 + x_vec.elem[i * 2] * sin_vec.elem[i * 2 + 1];
     }
 
-    *(reinterpret_cast<LoadPack*>(out + offset)) = out_vec;
+    *(reinterpret_cast<LoadPack*>(out + offset - param.offset)) = out_vec;
   }
 
   for (IndexType packed_offset = threadIdx.x + blockIdx.x * blockDim.x;
@@ -386,7 +386,7 @@ __global__ void FusedApplyRotaryEmbComputeWithoutPositionKernel(
     const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + offset);
     const LoadPack x_vec = *x_load;
 
-    *(reinterpret_cast<LoadPack*>(out + offset)) = x_vec;
+    *(reinterpret_cast<LoadPack*>(out + offset - param.offset)) = x_vec;
   }
 }
 
@@ -453,7 +453,7 @@ __global__ void FusedApplyRotaryEmbComputeKernel(
                                 + x_vec.elem[i * 2] * sin_vec.elem[i * 2 + 1];
     }
 
-    *(reinterpret_cast<LoadPack*>(out + offset)) = out_vec;
+    *(reinterpret_cast<LoadPack*>(out + offset - param.offset)) = out_vec;
   }
 
   for (IndexType packed_offset = threadIdx.x + blockIdx.x * blockDim.x;
@@ -468,7 +468,7 @@ __global__ void FusedApplyRotaryEmbComputeKernel(
     const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + offset);
     const LoadPack x_vec = *x_load;
 
-    *(reinterpret_cast<LoadPack*>(out + offset)) = x_vec;
+    *(reinterpret_cast<LoadPack*>(out + offset - param.offset)) = x_vec;
   }
 }
 
@@ -485,6 +485,7 @@ __global__ void PlaneKernel(FusedApplyRotaryEmbParam<T, PositionType, IndexType,
   for (IndexType offset = threadIdx.x + blockIdx.x * blockDim.x; offset < param.num_elements;
        offset += blockDim.x * gridDim.x) {
     using LoadPack = cuda::elementwise::Packed<T, 2>;
+    IndexType x_offset = offset + param.offset;
     IndexType temp_offset = offset;
     IndexType k_index, m_index;
     IndexType position_id_offset = 0;
@@ -545,10 +546,10 @@ __global__ void PlaneKernel(FusedApplyRotaryEmbParam<T, PositionType, IndexType,
         out_val = cos_val * x_vec.elem[0] + sin_val * x_vec.elem[1];
       }
     } else {
-      *(out + offset) = *(x + offset);
+      out_val = *(x + offset);
     }
 
-    *(out + offset) = out_val;
+    *(out + offset - param.offset) = out_val;
   }
 }
 

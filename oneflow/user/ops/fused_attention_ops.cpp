@@ -635,6 +635,7 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
 /* static */ Maybe<void> FusedApplyRotaryEmbOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   const std::string& x_layout = ctx->Attr<std::string>("x_layout");
+  const std::string& output_layout = ctx->Attr<std::string>("output_layout");
   const std::string& mode = ctx->Attr<std::string>("mode");
   const int64_t rotary_size = ctx->Attr<int64_t>("rotary_size");
   const int64_t k_size = ctx->Attr<int64_t>("k_size");
@@ -643,16 +644,12 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   CHECK_OR_RETURN((tensor_index >= 0) && (tensor_index <= 2));
   CHECK_OR_RETURN((mode == "interval") || (mode == "plane"));
 
-  if (ctx->has_input("output_layout", 0)) {
-    const std::string& output_layout = ctx->Attr<std::string>("output_layout");
-
-    if (output_layout != x_layout) {
-      CHECK_OR_RETURN(
-          (output_layout == "BMHK"
-           && (x_layout == "BM(HK)" || x_layout == "BM(H2K)" || x_layout == "BM(H3K)"))
-          || (output_layout == "MBHK"
-              && (x_layout == "MB(HK)" || x_layout == "MB(H2K)" || x_layout == "MB(H3K)")));
-    }
+  if (output_layout != x_layout) {
+    CHECK_OR_RETURN(
+        (output_layout == "BMHK"
+          && (x_layout == "BM(HK)" || x_layout == "BM(H2K)" || x_layout == "BM(H3K)"))
+        || (output_layout == "MBHK"
+            && (x_layout == "MB(HK)" || x_layout == "MB(H2K)" || x_layout == "MB(H3K)")));
   }
 
   int64_t b, m, h, k;
@@ -697,7 +694,13 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
     }
   }
 
-  ctx->SetOutputShape("out", 0, x_desc.shape());
+  Shape out_shape = x_desc.shape();
+  if (output_layout == "MBHK") {
+    out_shape = Shape({m, b, h, k});
+  } else if (output_layout == "BMHK") {
+    out_shape = Shape({b, m, h, k});
+  }
+  ctx->SetOutputShape("out", 0, out_shape);
   return Maybe<void>::Ok();
 }
 

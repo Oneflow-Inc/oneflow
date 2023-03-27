@@ -70,8 +70,8 @@ def shuffle_adjacent_two_elem(x, dims, mode):
 
 def parseDims(dims, x_layout):
     B = 1
-    H = 1
     M = 1
+    H = 1
     K = 1
     merged_dims = dims
     if x_layout == "BHMK":
@@ -104,12 +104,12 @@ def parseDims(dims, x_layout):
         H = dims[2]
         K = dims[3]
         merged_dims = [dims[0], dims[1], dims[2] * dims[3]]
-    elif x_layout == "MB(H3K)":
-        B = dims[1]
-        M = dims[0]
+    elif x_layout == "BM(H3K)":
+        B = dims[0]
+        M = dims[1]
         H = dims[2]
-        K = dims[3] // 3
-        merged_dims = [dims[0], dims[1], dims[2], dims[3]]
+        K = dims[3]
+        merged_dims = [dims[0], dims[1], 3 * dims[2] * dims[3]]
 
     return B, M, H, K, merged_dims
 
@@ -161,6 +161,26 @@ def naive_embedding(
         ) * sin.reshape(
             [B, M, 1, K]
         )  # un-merge
+    elif x_layout == "BM(H3K)":
+        print(x)
+        print(y)
+        out0 = x[..., 0, :].reshape(dims) * cos.reshape([B, M, 1, K]) + y[..., 0, :].reshape(
+            dims
+        ) * sin.reshape(
+            [B, M, 1, K]
+        ) 
+        out1 = x[..., 1, :].reshape(dims) * cos.reshape([B, M, 1, K]) + y[..., 0, :].reshape(
+            dims
+        ) * sin.reshape(
+            [B, M, 1, K]
+        )
+        out2 = x[..., 2, :].reshape(dims) * cos.reshape([B, M, 1, K]) + y[..., 0, :].reshape(
+            dims
+        ) * sin.reshape(
+            [B, M, 1, K]
+        )
+
+        naive_out = np.concatenate((out0, out1, out2), axis=-1)
 
     return naive_out
 
@@ -478,17 +498,19 @@ def _test_with_position(
     fused_x = flow.tensor(x, dtype=dtype, device="cuda")
     fused_position_ids = flow.tensor(position_ids, dtype=flow.int32, device="cuda")
 
-    fused_out = flow._C.fused_apply_rotary_emb(
-        fused_x,
-        cos=None,
-        sin=None,
-        position_ids=fused_position_ids,
-        x_layout=x_layout,
-        k_size=K,
-        base=base,
-        rotary_size=rotary_size,
-        mode=mode,
-    )
+    if x_layout == "MB(H2K)" or x_layout == "MB(H3K)" or x_layout == "BM(H2K)" or x_layout == "BM(H3K)":
+        fused_out = flow._C.fused_apply_rotary_emb(
+            fused_x,
+            cos=None,
+            sin=None,
+            position_ids=fused_position_ids,
+            x_layout=x_layout,
+            k_size=K,
+            base=base,
+            rotary_size=rotary_size,
+            mode=mode,
+            tensor_index=1
+        )
 
     test_case.assertTrue(
         np.allclose(
@@ -565,8 +587,14 @@ def _test_plane(
         ]
     ).reshape(B, 1, M, K)
 
+    naive_x = x
+    if x_layout == "BM(HK)" or x_layout == "BM(H2K)" or x_layout == "BM(H3K)":
+        naive_x = x.reshape([B, M, H, -1, K])
+    elif x_layout == "MB(HK)" or x_layout == "MB(H2K)" or x_layout == "MB(H3K)":
+        naive_x = x.reshape([M, B, H, -1, K])
+
     naive_out = naive_embedding(
-        x.reshape(dims),
+        naive_x,
         naive_cos,
         naive_sin,
         x_layout,
@@ -641,7 +669,11 @@ def _test_plane(
         base=base,
         rotary_size=rotary_size,
         mode=mode,
+        tensor_index=2
     )
+
+    print(naive_out.reshape(merged_dims))
+    print(fused_out.numpy())
 
     test_case.assertTrue(
         np.allclose(
