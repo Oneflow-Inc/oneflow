@@ -632,8 +632,7 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> FusedApplyRotaryEmbOp::InferLogicalTensorDesc(
-    user_op::InferContext* ctx) {
+/* static */ Maybe<void> FusedApplyRotaryEmbOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   const std::string& x_layout = ctx->Attr<std::string>("x_layout");
   const std::string& mode = ctx->Attr<std::string>("mode");
@@ -646,53 +645,55 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
 
   if (ctx->has_input("output_layout", 0)) {
     const std::string& output_layout = ctx->Attr<std::string>("output_layout");
-    
+
     if (output_layout != x_layout) {
-      CHECK_OR_RETURN((output_layout == "BMHK" && (x_layout == "BM(HK)" || x_layout == "BM(H2K)" || x_layout == "BM(H3K)"))
-        || (output_layout == "MBHK" && (x_layout == "MB(HK)" || x_layout == "MB(H2K)" || x_layout == "MB(H3K)")));
+      CHECK_OR_RETURN(
+          (output_layout == "BMHK"
+           && (x_layout == "BM(HK)" || x_layout == "BM(H2K)" || x_layout == "BM(H3K)"))
+          || (output_layout == "MBHK"
+              && (x_layout == "MB(HK)" || x_layout == "MB(H2K)" || x_layout == "MB(H3K)")));
     }
   }
 
   int64_t b, m, h, k;
   bool has_cos = ctx->has_input("cos", 0);
   bool has_sin = ctx->has_input("sin", 0);
-  //TODO: fused_apply_rotary_emb have same logic no matter name
+  // TODO: fused_apply_rotary_emb have same logic no matter name
   if (has_cos && has_sin) {
     const user_op::TensorDesc& cos_desc = ctx->InputTensorDesc("cos", 0);
     const user_op::TensorDesc& sin_desc = ctx->InputTensorDesc("sin", 0);
     CHECK_EQ_OR_RETURN(cos_desc.shape().NumAxes(), 2);
     CHECK_EQ_OR_RETURN(sin_desc.shape().NumAxes(), 2);
     CHECK_OR_RETURN(cos_desc.shape() == sin_desc.shape());
-    ParseDims(x_desc.shape(), x_layout, Optional<int64_t>(), Optional<int64_t>(cos_desc.shape().At(1)), 
-      &b, &m, &h, &k);
+    ParseDims(x_desc.shape(), x_layout, Optional<int64_t>(),
+              Optional<int64_t>(cos_desc.shape().At(1)), &b, &m, &h, &k);
   } else if (!has_cos && !has_sin) {
-    ParseDims(x_desc.shape(), x_layout, Optional<int64_t>(), k_size ? Optional<int64_t>(k_size) : Optional<int64_t>(), 
-      &b, &m, &h, &k);
+    ParseDims(x_desc.shape(), x_layout, Optional<int64_t>(),
+              k_size ? Optional<int64_t>(k_size) : Optional<int64_t>(), &b, &m, &h, &k);
   } else {
     UNIMPLEMENTED_THEN_RETURN();
   }
 
-  if (ctx->has_input("position_ids", 0)) { 
+  if (ctx->has_input("position_ids", 0)) {
     const user_op::TensorDesc& position_ids_desc = ctx->InputTensorDesc("position_ids", 0);
-    CHECK_EQ_OR_RETURN(position_ids_desc.shape().NumAxes(), 3); //TODO: supported shape should be discussed
+    CHECK_EQ_OR_RETURN(position_ids_desc.shape().NumAxes(),
+                       3);  // TODO: supported shape should be discussed
     CHECK_EQ_OR_RETURN(position_ids_desc.shape().At(0), b);
     CHECK_GE_OR_RETURN(position_ids_desc.shape().At(2), m);
   }
 
   CHECK_LE_OR_RETURN(rotary_size, k);
-  if (k_size) {
-    CHECK_EQ_OR_RETURN(k_size, k);
-  }
+  if (k_size) { CHECK_EQ_OR_RETURN(k_size, k); }
 
   if (ctx->has_input("position_ids", 0)) {
     if (has_cos && has_sin) {
       const user_op::TensorDesc& cos_desc = ctx->InputTensorDesc("cos", 0);
-      CHECK_GE_OR_RETURN(cos_desc.shape().At(0), m); // K of cos & sin is checked inside ParseDims
+      CHECK_GE_OR_RETURN(cos_desc.shape().At(0), m);  // K of cos & sin is checked inside ParseDims
     }
   } else {
     if (has_cos && has_sin) {
       const user_op::TensorDesc& cos_desc = ctx->InputTensorDesc("cos", 0);
-      CHECK_EQ_OR_RETURN(cos_desc.shape().At(0), m); // K of cos & sin is checked inside ParseDims
+      CHECK_EQ_OR_RETURN(cos_desc.shape().At(0), m);  // K of cos & sin is checked inside ParseDims
     }
   }
 
@@ -720,11 +721,11 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
     const user_op::TensorDesc& sin_desc = ctx->InputTensorDesc("sin", 0);
 
     CHECK_EQ_OR_RETURN(cos_desc.data_type(), first_in_desc.data_type())
-          << "InferDataType Failed. Expected " << DataType_Name(first_in_desc.data_type())
-          << ", but got " << DataType_Name(cos_desc.data_type());
+        << "InferDataType Failed. Expected " << DataType_Name(first_in_desc.data_type())
+        << ", but got " << DataType_Name(cos_desc.data_type());
     CHECK_EQ_OR_RETURN(sin_desc.data_type(), first_in_desc.data_type())
-          << "InferDataType Failed. Expected " << DataType_Name(first_in_desc.data_type())
-          << ", but got " << DataType_Name(sin_desc.data_type());
+        << "InferDataType Failed. Expected " << DataType_Name(first_in_desc.data_type())
+        << ", but got " << DataType_Name(sin_desc.data_type());
   }
 
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
