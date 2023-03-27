@@ -146,24 +146,26 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
       auto funcType = builder.getFunctionType(argumentTypes, resultTypes);
       if (auto mod = job->getParentOfType<ModuleOp>()) {
         std::string name = "TODO-func_name";
+        OpBuilder::InsertionGuard guard(builder);
 
         builder.setInsertionPointToStart(&mod.getRegion().front());
         auto function = builder.create<func::FuncOp>(entryOp->getLoc(), name, funcType);
         function.getBody().push_front(block);
 
-        auto lastOp = exits.end()->getDefiningOp();
-        if (!lastOp) {
+        if (auto lastOp = exits.end()->getDefiningOp()) {
+          OpBuilder::InsertionGuard guard(builder);
+          builder.setInsertionPointAfter(lastOp);
+          NamedAttrList attributes =
+              GetJitOpAttributes(builder, name, argumentTypes.size(), resultTypes.size(),
+                                 entryOp->getOperand(0).getDefiningOp());
+          // auto created =
+          // builder.create<MlirJitOp>(entryOp->getLoc(), function, attributes, entries);
+          for (const auto& old : llvm::enumerate(exits)) {
+            // old.value().replaceAllUsesWith(created->getResult(old.index()));
+          }
+        } else {
           job->emitError() << "fail to outline, nowhere to replace";
           signalPassFailure();
-        }
-        builder.setInsertionPointAfter(lastOp);
-        NamedAttrList attributes =
-            GetJitOpAttributes(builder, name, argumentTypes.size(), resultTypes.size(),
-                               entryOp->getOperand(0).getDefiningOp());
-        // auto created = builder.create<MlirJitOp>(entryOp->getLoc(), function, attributes,
-        // operands);
-        for (const auto& old : llvm::enumerate(exits)) {
-          // old.value().replaceAllUsesWith(created->getResult(old.index()));
         }
       } else {
         job->emitError() << "fail to outline";
