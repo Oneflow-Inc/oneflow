@@ -730,6 +730,7 @@ class Graph(object):
                 self._variables_conf[state_tensor] = VariableConfig(op_name)
 
         self._state_tensor_tuple = convert_to_tensor_tuple(state_tensors)
+        self._eager_state_op_names = deepcopy(state_op_names)
         return state_op_names
 
     def _generate_config_proto(self):
@@ -1011,13 +1012,15 @@ class Graph(object):
             self._enable_save_runtime_state_dict = False
 
     def runtime_state_dict(
-        self, destination=None
+        self, destination=None, with_eager=False
     ) -> Union[
         Dict[str, Union[Dict[str, Tensor], str]],
         Dict[str, Dict[str, Union[Dict[str, Tensor], str]]],
     ]:
         if self._run_with_cache == True:
-            return self._dynamic_input_graph_cache.runtime_state_dict()
+            return self._dynamic_input_graph_cache.runtime_state_dict(
+                with_eager=with_eager
+            )
 
         assert (
             self._enable_save_runtime_state_dict
@@ -1067,10 +1070,28 @@ class Graph(object):
         )
         destination["outputs"] = outputs_sub_destination
 
+        destination["oneflow_with_eager_tensor"] = with_eager
         if not self._build_with_shared_graph:
+            _state_tensor_tuple4save = []
+            if with_eager:
+                _state_tensor_tuple4save = self._state_tensor_tuple
+            else:
+                assert len(self._state_tensor_tuple) == len(self._state_op_names)
+                for state_idx in range(len(self._state_tensor_tuple)):
+                    if self._state_op_names[state_idx] in self._eager_state_op_names:
+                        # This state tensor is from eager module. Just save a dummy tensor here.
+                        _state_tensor_tuple4save.append(
+                            oneflow.Tensor().to(
+                                self._state_tensor_tuple[state_idx].device
+                            )
+                        )
+                    else:
+                        _state_tensor_tuple4save.append(
+                            self._state_tensor_tuple[state_idx]
+                        )
             states_sub_destination = OrderedDict()
             _fill_sub_destination(
-                states_sub_destination, self._state_op_names, self._state_tensor_tuple
+                states_sub_destination, self._state_op_names, _state_tensor_tuple4save
             )
             destination["states"] = states_sub_destination
 
@@ -1140,6 +1161,13 @@ class Graph(object):
             get_tensor_in_tuple, *_eager_outputs_index
         )
         self._eager_outputs = _eager_outputs
+
+        # Load state tensor of modules
+        if "oneflow_with_eager_tensor" in state_dict:
+            with_eager = state_dict["oneflow_with_eager_tensor"]
+        else:
+            with_eager = True
+
         if self._build_with_shared_graph:
             self._state_op_names = self._shared_graph._state_op_names
             self._state_tensor_tuple = self._shared_graph._state_tensor_tuple
@@ -1160,10 +1188,14 @@ class Graph(object):
                 for s_idx, s_name in enumerate(self._state_op_names):
                     if s_name in states_from_eager:
                         state_tensor_from_eager = states_from_eager[s_name]
-                        # Note: compare value has extra cost.
-                        assert oneflow.allclose(
-                            state_tensor_from_eager, self._state_tensor_tuple[s_idx]
+                        assert (
+                            state_tensor_from_eager.device
+                            == self._state_tensor_tuple[s_idx].device
                         )
+                        if with_eager:
+                            assert oneflow.allclose(
+                                state_tensor_from_eager, self._state_tensor_tuple[s_idx]
+                            )
                         self._state_tensor_tuple[s_idx] = state_tensor_from_eager
 
         self.__build_outputs_buffer()
