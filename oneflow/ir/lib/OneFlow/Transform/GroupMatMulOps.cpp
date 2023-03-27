@@ -67,7 +67,7 @@ Value FusedMatmulBiasOp::matMulGetY() { return getOut(); }
 namespace {
 
 bool shouldGroupFusedMatmulBiasOp(FusedMatmulBiasOp& op) {
-  return !op.get_addToOutput() && op.getDeviceTag() == "cuda";
+  return !op.get_addToOutput() && op.getDeviceTag() == "cuda" && op.getAlpha().convertToDouble() == 1.0;
 }
 
 }  // namespace

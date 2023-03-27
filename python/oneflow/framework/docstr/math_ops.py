@@ -439,6 +439,9 @@ add_docstr(
     """,
 )
 
+add_docstr(oneflow.ceil_, r"""In-place version of :func:`oneflow.ceil`""")
+
+
 add_docstr(
     oneflow.negative,
     r"""This operator computes the negative value of Tensor.
@@ -1496,6 +1499,8 @@ add_docstr(
 
     """,
 )
+
+add_docstr(oneflow.round_, r"""In-place version of :func:`oneflow.round`.""")
 
 add_docstr(
     oneflow.std,
