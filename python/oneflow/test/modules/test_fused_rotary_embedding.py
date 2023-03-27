@@ -162,21 +162,15 @@ def naive_embedding(
             [B, M, 1, K]
         )  # un-merge
     elif x_layout == "BM(H3K)":
-        out0 = x[..., 0, :].reshape(dims) * cos.reshape([B, M, 1, K]) + y[..., 0, :].reshape(
-            dims
-        ) * sin.reshape(
-            [B, M, 1, K]
-        ) 
-        out1 = x[..., 1, :].reshape(dims) * cos.reshape([B, M, 1, K]) + y[..., 1, :].reshape(
-            dims
-        ) * sin.reshape(
-            [B, M, 1, K]
-        )
-        out2 = x[..., 2, :].reshape(dims) * cos.reshape([B, M, 1, K]) + y[..., 2, :].reshape(
-            dims
-        ) * sin.reshape(
-            [B, M, 1, K]
-        )
+        out0 = x[..., 0, :].reshape(dims) * cos.reshape([B, M, 1, K]) + y[
+            ..., 0, :
+        ].reshape(dims) * sin.reshape([B, M, 1, K])
+        out1 = x[..., 1, :].reshape(dims) * cos.reshape([B, M, 1, K]) + y[
+            ..., 1, :
+        ].reshape(dims) * sin.reshape([B, M, 1, K])
+        out2 = x[..., 2, :].reshape(dims) * cos.reshape([B, M, 1, K]) + y[
+            ..., 2, :
+        ].reshape(dims) * sin.reshape([B, M, 1, K])
 
         naive_out = np.concatenate((out0, out1, out2), axis=-1)
 
@@ -477,8 +471,14 @@ def _test_with_position(
         ]
     ).reshape(B, 1, M, K)
 
+    naive_x = x
+    if x_layout == "BM(HK)" or x_layout == "BM(H2K)" or x_layout == "BM(H3K)":
+        naive_x = x.reshape([B, M, H, -1, K])
+    elif x_layout == "MB(HK)" or x_layout == "MB(H2K)" or x_layout == "MB(H3K)":
+        naive_x = x.reshape([M, B, H, -1, K])
+
     naive_out = naive_embedding(
-        x,
+        naive_x,
         naive_cos,
         naive_sin,
         x_layout,
@@ -496,7 +496,75 @@ def _test_with_position(
     fused_x = flow.tensor(x, dtype=dtype, device="cuda")
     fused_position_ids = flow.tensor(position_ids, dtype=flow.int32, device="cuda")
 
-    if x_layout == "MB(H2K)" or x_layout == "MB(H3K)" or x_layout == "BM(H2K)" or x_layout == "BM(H3K)":
+    if x_layout == "BM(H2K)":
+        out1 = flow._C.fused_apply_rotary_emb(
+            fused_x,
+            cos=None,
+            sin=None,
+            position_ids=fused_position_ids,
+            x_layout=x_layout,
+            k_size=K,
+            base=base,
+            rotary_size=rotary_size,
+            mode=mode,
+            tensor_index=1,
+        )
+        out2 = flow._C.fused_apply_rotary_emb(
+            fused_x,
+            cos=None,
+            sin=None,
+            position_ids=fused_position_ids,
+            x_layout=x_layout,
+            output_layout="BMHK",
+            k_size=K,
+            base=base,
+            rotary_size=rotary_size,
+            mode=mode,
+            tensor_index=2,
+        )
+
+        naive_out = np.concatenate((out1, out2), axis=-1)
+    elif x_layout == "BM(H3K)":
+        out0 = flow._C.fused_apply_rotary_emb(
+            fused_x,
+            cos=None,
+            sin=None,
+            position_ids=fused_position_ids,
+            x_layout=x_layout,
+            output_layout="BMHK",
+            k_size=K,
+            base=base,
+            rotary_size=rotary_size,
+            mode=mode,
+            tensor_index=0,
+        )
+        out1 = flow._C.fused_apply_rotary_emb(
+            fused_x,
+            cos=None,
+            sin=None,
+            position_ids=fused_position_ids,
+            x_layout=x_layout,
+            k_size=K,
+            base=base,
+            rotary_size=rotary_size,
+            mode=mode,
+            tensor_index=1,
+        )
+        out2 = flow._C.fused_apply_rotary_emb(
+            fused_x,
+            cos=None,
+            sin=None,
+            position_ids=fused_position_ids,
+            x_layout=x_layout,
+            k_size=K,
+            base=base,
+            rotary_size=rotary_size,
+            mode=mode,
+            tensor_index=2,
+        )
+
+        naive_out = np.concatenate((out0, out1, out2), axis=-1)
+    else:
         fused_out = flow._C.fused_apply_rotary_emb(
             fused_x,
             cos=None,
@@ -507,7 +575,6 @@ def _test_with_position(
             base=base,
             rotary_size=rotary_size,
             mode=mode,
-            tensor_index=1
         )
 
     test_case.assertTrue(
@@ -668,7 +735,7 @@ def _test_plane(
         base=base,
         rotary_size=rotary_size,
         mode=mode,
-        tensor_index=0
+        tensor_index=0,
     )
 
     out1 = flow._C.fused_apply_rotary_emb(
@@ -682,7 +749,7 @@ def _test_plane(
         base=base,
         rotary_size=rotary_size,
         mode=mode,
-        tensor_index=1
+        tensor_index=1,
     )
 
     out2 = flow._C.fused_apply_rotary_emb(
@@ -696,14 +763,17 @@ def _test_plane(
         base=base,
         rotary_size=rotary_size,
         mode=mode,
-        tensor_index=2
+        tensor_index=2,
     )
 
     fused_out = np.concatenate([out0.numpy(), out1.numpy(), out2.numpy()], axis=-1)
 
     test_case.assertTrue(
         np.allclose(
-            naive_out.reshape(merged_dims), fused_out.reshape(merged_dims), atol=5e-2, rtol=5e-3
+            naive_out.reshape(merged_dims),
+            fused_out.reshape(merged_dims),
+            atol=5e-2,
+            rtol=5e-3,
         )
     )
 
@@ -721,9 +791,9 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
     # because rule no.2, kernels without cos&sin cannot work under specific x_layout
     def test_fused_rotary_embedding_op(test_case):
         args_dict = OrderedDict()
-        args_dict["test_fun"] = [_test_plane]
+        args_dict["test_fun"] = [_test_with_position]
         args_dict["x_layout"] = ["BM(H3K)"]
-        args_dict["mode"] = ["plane"]
+        args_dict["mode"] = ["interval"]
         args_dict["base"] = [1e1]
         args_dict["rotary_size"] = [8]
         args_dict["dims"] = [(1, 1, 3, 8)]

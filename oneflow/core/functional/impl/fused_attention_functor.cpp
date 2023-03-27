@@ -711,8 +711,9 @@ class FusedApplyRotaryEmbFunctor {
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("x_layout", "output_layout", "mode",
                                                  "tensor_index", "k_size", "base", "rotary_size");
-    attrs.SetAllAttrs(x_layout, output_layout ? *JUST(output_layout) : x_layout, mode, tensor_index ? JUST(tensor_index) : 0,
-                      k_size ? JUST(k_size) : k, base, rotary_size ? JUST(rotary_size) : k);
+    attrs.SetAllAttrs(x_layout, output_layout ? *JUST(output_layout) : x_layout, mode,
+                      tensor_index ? JUST(tensor_index) : 0, k_size ? JUST(k_size) : k, base,
+                      rotary_size ? JUST(rotary_size) : k);
 
     if (position_ids) {
       if (cos && sin) {

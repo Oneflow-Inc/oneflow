@@ -647,7 +647,7 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   if (output_layout != x_layout) {
     CHECK_OR_RETURN(
         (output_layout == "BMHK"
-          && (x_layout == "BM(HK)" || x_layout == "BM(H2K)" || x_layout == "BM(H3K)"))
+         && (x_layout == "BM(HK)" || x_layout == "BM(H2K)" || x_layout == "BM(H3K)"))
         || (output_layout == "MBHK"
             && (x_layout == "MB(HK)" || x_layout == "MB(H2K)" || x_layout == "MB(H3K)")));
   }
