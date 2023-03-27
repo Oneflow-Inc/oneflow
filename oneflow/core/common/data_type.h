@@ -88,8 +88,8 @@ using float16 = half_float::half;
 DEFINE_SPEC(detail::IsComplexHelper, std::complex<float>, true)
 DEFINE_SPEC(detail::IsComplexHelper, std::complex<double>, true)
 #ifdef WITH_CUDA
-DEFINE_SPEC(detail::IsFloat16Helper, cufftComplex, true)
-DEFINE_SPEC(detail::IsFloat16Helper, cufftDoubleComplex, true)
+DEFINE_SPEC(detail::IsComplexHelper, cufftComplex, true)
+DEFINE_SPEC(detail::IsComplexHelper, cufftDoubleComplex, true)
 #endif  // WITH_CUDA
 
 template<typename T>
