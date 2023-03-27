@@ -507,7 +507,6 @@ __global__ void PlaneKernel(FusedApplyRotaryEmbParam<T, PositionType, IndexType,
         position_id_offset
         + param.sinuous_m * (k_index * param.rotary_emb_dim / (param.k - param.pass_ndims));
     x_offset = (offset - k_index) * param.packed_n + k_index + param.offset;
-    printf("param.offset %d x_offset%d\n", static_cast<int>(param.offset), static_cast<int>(x_offset));
 
     if (param.position_ids) {
       position = position_ids[position_id_offset];

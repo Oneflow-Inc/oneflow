@@ -162,20 +162,17 @@ def naive_embedding(
             [B, M, 1, K]
         )  # un-merge
     elif x_layout == "BM(H3K)":
-        print(x)
-
-        print(x[..., 0, :])
         out0 = x[..., 0, :].reshape(dims) * cos.reshape([B, M, 1, K]) + y[..., 0, :].reshape(
             dims
         ) * sin.reshape(
             [B, M, 1, K]
         ) 
-        out1 = x[..., 1, :].reshape(dims) * cos.reshape([B, M, 1, K]) + y[..., 0, :].reshape(
+        out1 = x[..., 1, :].reshape(dims) * cos.reshape([B, M, 1, K]) + y[..., 1, :].reshape(
             dims
         ) * sin.reshape(
             [B, M, 1, K]
         )
-        out2 = x[..., 2, :].reshape(dims) * cos.reshape([B, M, 1, K]) + y[..., 0, :].reshape(
+        out2 = x[..., 2, :].reshape(dims) * cos.reshape([B, M, 1, K]) + y[..., 2, :].reshape(
             dims
         ) * sin.reshape(
             [B, M, 1, K]
@@ -703,13 +700,6 @@ def _test_plane(
     )
 
     fused_out = np.concatenate([out0.numpy(), out1.numpy(), out2.numpy()], axis=-1)
-
-
-    print("out0", out0.numpy())
-    print("out1", out1.numpy())
-
-    print(naive_out)
-    print(fused_out)
 
     test_case.assertTrue(
         np.allclose(
