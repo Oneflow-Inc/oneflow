@@ -17,6 +17,7 @@ limitations under the License.
 
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/framework/nd_sbp.h"
@@ -176,7 +177,9 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
   std::shared_ptr<Tensor> tensor =
       JUST(functional::Empty(shape, JUST(DType::Get(np_data_type)), device_,
                              /*requires_grad=*/false, /*pin_memory=*/pin_memory));
-  JUST(CopyLocalTensorFromUntypedArray(tensor, array));
+  if (device_->enum_type() != DeviceType::kMeta) {
+    JUST(CopyLocalTensorFromUntypedArray(tensor, array));
+  }
 
   Py_DECREF(array);
   if (dtype && JUST(dtype)->data_type() != np_data_type) {
