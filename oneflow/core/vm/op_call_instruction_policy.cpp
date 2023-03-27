@@ -157,15 +157,18 @@ struct OpCallInstructionUtil final {
     bool inputs_rematable = false;
     bool outputs_rematable = false;
     if (op_call_instruction_policy->opkernel().op_type_name() == "copy") {
-      inputs_rematable = op_call_instruction_policy->inputs()[0]->tensor_storage()->device()->rematable();
-      outputs_rematable = op_call_instruction_policy->outputs()[0]->tensor_storage()->device()->rematable();
+      inputs_rematable =
+          op_call_instruction_policy->inputs()[0]->tensor_storage()->device()->rematable();
+      outputs_rematable =
+          op_call_instruction_policy->outputs()[0]->tensor_storage()->device()->rematable();
     } else {
       inputs_rematable = vm_stream->device()->rematable();
       outputs_rematable = vm_stream->device()->rematable();
     }
     std::unique_ptr<RematHelper> remat_helper;
     if (inputs_rematable || outputs_rematable) {
-      remat_helper = std::make_unique<RematHelper>(*op_call_instruction_policy, inputs_rematable, outputs_rematable);
+      remat_helper = std::make_unique<RematHelper>(*op_call_instruction_policy, inputs_rematable,
+                                                   outputs_rematable);
     }
     return std::make_tuple(std::move(remat_helper), inputs_rematable, outputs_rematable);
   }

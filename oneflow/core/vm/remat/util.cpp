@@ -218,7 +218,8 @@ Maybe<int> RematHelper::IncReferenceNumOfRecomputedTensor() {
   return pinned_num;
 }
 
-Maybe<void> RematHelper::RematInputs(vm::Stream* vm_stream, bool first,
+Maybe<void> RematHelper::RematInputs(
+    vm::Stream* vm_stream, bool first,
     const std::function<Maybe<void>(OpCallInstructionPolicy*, vm::Stream*)>& compute_fn) {
   CHECK_OR_RETURN(!ThreadLocalEnvBool<ONEFLOW_VM_MULTI_THREAD>());
   Singleton<remat::Env>::Get()->current_op_type_name =
@@ -261,8 +262,8 @@ Maybe<void> RematHelper::EagerlyEvictRemattedTensors(bool first) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> RematHelper::UpdateRematInfo(bool first, bool recompute,
-                                         bool include_input, bool include_output) {
+Maybe<void> RematHelper::UpdateRematInfo(bool first, bool recompute, bool include_input,
+                                         bool include_output) {
   if (include_output) {
     const std::unique_ptr<OpCallInstructionPolicy> compute_op = [&]() {
       auto compute_op = std::make_unique<OpCallInstructionPolicy>(op_call_instruction_policy_);

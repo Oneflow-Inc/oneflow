@@ -50,9 +50,7 @@ void TensorStorage::_Release() {
   blob_dptr_.reset();
 }
 
-void TensorStorage::Release() {
-  return _Release();
-}
+void TensorStorage::Release() { return _Release(); }
 
 Maybe<void> TensorStorage::init_producer_stream(Symbol<::oneflow::Stream> producer_stream) {
   CHECK_OR_RETURN(!producer_stream_.has_value());

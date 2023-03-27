@@ -44,8 +44,8 @@ class DtrOpCallInstructionPolicy;
 class RematHelper {
  public:
   explicit RematHelper(const OpCallInstructionPolicy& op_call_instruction_policy);
-  RematHelper(const OpCallInstructionPolicy& op_call_instruction_policy,
-              bool inputs_rematable, bool outputs_rematable);
+  RematHelper(const OpCallInstructionPolicy& op_call_instruction_policy, bool inputs_rematable,
+              bool outputs_rematable);
 
   Maybe<void> RematInputs(
       vm::Stream* vm_stream, bool first,
