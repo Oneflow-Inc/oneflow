@@ -68,7 +68,7 @@ Pattern {
       key_layout = attr<"\"BM(HK)\"">,
       value_layout = attr<"\"BM(HK)\"">,
       output_layout = attr<"\"BM(HK)\"">,
-      operand_segment_sizes = attr<"dense<[1, 1, 1, 0, 0, 0, 0]> : vector<7xi32>">,
+      operand_segment_sizes = attr<"array<i32: 1, 1, 1, 0, 0, 0, 0>">,
       scale = GetReciprocal(scalar_div_operand)
     } -> (out_t));
   };
@@ -114,7 +114,7 @@ Pattern {
       key_layout = attr<"\"BM(HK)\"">,
       value_layout = attr<"\"BM(HK)\"">,
       output_layout = attr<"\"BM(HK)\"">,
-      operand_segment_sizes = attr<"dense<[1, 1, 1, 0, 0, 0, 0]> : vector<7xi32>">,
+      operand_segment_sizes = attr<"array<i32: 1, 1, 1, 0, 0, 0, 0>">,
       scale = batch_matmul_alpha
     } -> (out_t));
   };
