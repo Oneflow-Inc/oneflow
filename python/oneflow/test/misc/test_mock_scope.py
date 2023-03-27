@@ -176,6 +176,7 @@ class TestMock(flow.unittest.TestCase):
             import sys
             import safetensors
         test_case.assertTrue('safetensors._safetensors_rust' in sys.modules)
+        import safetensors
 
 # MUST use pytest to run this test
 def test_verbose(capsys):
