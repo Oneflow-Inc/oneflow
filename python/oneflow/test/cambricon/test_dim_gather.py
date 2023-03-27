@@ -28,6 +28,20 @@ def __test_dim_gather(x_array, index_array, dim, index_dtype):
     assert np.allclose(cpu_out_numpy, mlu_out_numpy, 1e-4, 1e-4)
 
 
+def __test_dim_gather_backward(x_array, index_array, dim, index_dtype):
+    x_cpu = flow.tensor(x_array, device="cpu", dtype=flow.float32, requires_grad=True)
+    index = flow.tensor(index_array, device="cpu", dtype=index_dtype)
+    out_cpu = flow.gather(x_cpu, dim, index)
+    out_cpu.sum().backward()
+
+    x_mlu = flow.tensor(x_array, device="mlu", dtype=flow.float32, requires_grad=True)
+    index = index.to("mlu")
+    out_mlu = flow.gather(x_mlu, dim, index)
+    out_mlu.sum().backward()
+    assert np.allclose(out_cpu.numpy(), out_mlu.cpu().numpy(), 1e-4, 1e-4)
+    assert np.allclose(x_cpu.grad.numpy(), x_mlu.grad.cpu().numpy(), 1e-4, 1e-4)
+
+
 def test_dim_gather():
     array = (
         np.array([[1, 2], [3, 4]]),
@@ -43,9 +57,12 @@ def test_dim_gather():
 
     for dim, dtype in itertools.product([0, 1], index_dtypes):
         __test_dim_gather(*array, dim, dtype)
+        __test_dim_gather_backward(*array, dim, dtype)
 
     for dim, dtype in itertools.product([1, 2, 3], index_dtypes):
         __test_dim_gather(*array_multi_dim, dim, dtype)
+        __test_dim_gather_backward(*array_multi_dim, dim, dtype)
 
     for array_pair, dtype in itertools.product(arrays_single_dim, index_dtypes):
         __test_dim_gather(*array_pair, 0, dtype)
+        __test_dim_gather_backward(*array_pair, 0, dtype)
