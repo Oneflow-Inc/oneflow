@@ -90,8 +90,8 @@ static Operation* BuildFusedBiasAddMaskScaleOpWithRate(PatternRewriter& rewriter
   if (rate_float < 1.0f) { scale = 1.0f / (1.0f - rate_float); }
   attributes.set("scale", rewriter.getF32FloatAttr(scale));
   attributes.erase(dropout_op.getRateAttrName());
-  return rewriter.create<FusedBiasAddMaskScaleOp>(dropout_op->getLoc(), dropout_op.getOut().getType(),
-                                                  operands, attributes);
+  return rewriter.create<FusedBiasAddMaskScaleOp>(
+      dropout_op->getLoc(), dropout_op.getOut().getType(), operands, attributes);
 }
 
 static Operation* CreateConv2dAndErasePad(PatternRewriter& rewriter, Value x, Value weight,
@@ -161,7 +161,8 @@ static Operation* CreateConv2DBatchNorm(PatternRewriter& rewriter, Attribute eps
   auto ctx = rewriter.getContext();
   NamedAttrList attributes = conv_op->getAttrs();
 
-  attributes.set(OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr(), rewriter.getDenseI32ArrayAttr({1, 1, 1, 0}));
+  attributes.set(OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr(),
+                 rewriter.getDenseI32ArrayAttr({1, 1, 1, 0}));
 
   SmallVector<Value, 4> operands;
   operands.push_back(conv_op.getIn());
@@ -174,8 +175,8 @@ static Operation* CreateConv2DBatchNorm(PatternRewriter& rewriter, Attribute eps
   add_op_attrs.set("float_operand", rewriter.getF64FloatAttr(epsilon_attr));
 
   auto add_op = rewriter.create<oneflow::ScalarAddOp>(
-      conv_op->getLoc(), conv_op.getOut().getType(), SmallVector<Value, 4>({bn_op.getMovingVariance()}),
-      add_op_attrs);
+      conv_op->getLoc(), conv_op.getOut().getType(),
+      SmallVector<Value, 4>({bn_op.getMovingVariance()}), add_op_attrs);
 
   auto sqrt_op = rewriter.create<oneflow::SqrtOp>(conv_op->getLoc(), conv_op.getOut().getType(),
                                                   SmallVector<Value, 4>({add_op.getOut()}),
@@ -221,7 +222,8 @@ static Operation* CreateConv2DBatchNorm(PatternRewriter& rewriter, Attribute eps
   operands.push_back(mul_op.getZ());
 
   // deal with bias
-  CHECK(!conv_op.getBias()) << "Fusing conv2d and batch_norm only supports conv2d without bias now.";
+  CHECK(!conv_op.getBias())
+      << "Fusing conv2d and batch_norm only supports conv2d without bias now.";
 
   auto mul_op_bias = rewriter.create<oneflow::BroadcastMulOp>(
       conv_op->getLoc(), conv_op.getOut().getType(),
@@ -233,8 +235,8 @@ static Operation* CreateConv2DBatchNorm(PatternRewriter& rewriter, Attribute eps
       GetUserOpCommonAttrs(ctx, "sub_bias"));
   operands.push_back(sub_op_bias.getZ());
 
-  auto new_conv_op = rewriter.create<oneflow::Conv2DOp>(conv_op->getLoc(), conv_op.getOut().getType(),
-                                                        operands, attributes);
+  auto new_conv_op = rewriter.create<oneflow::Conv2DOp>(
+      conv_op->getLoc(), conv_op.getOut().getType(), operands, attributes);
 
   return new_conv_op;
 }

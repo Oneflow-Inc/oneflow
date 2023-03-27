@@ -536,7 +536,8 @@ struct Conv2DOpLowering final : public OpConversionPattern<Conv2DOp> {
     const auto pad = rewriter.getDenseI64ArrayAttr(
         {pad_pairs.first, pad_pairs.second, pad_pairs.first, pad_pairs.second});
     const auto stride = rewriter.getDenseI64ArrayAttr({stride_pairs.first, stride_pairs.second});
-    const auto dilation = rewriter.getDenseI64ArrayAttr({dilation_pairs.first, dilation_pairs.second});
+    const auto dilation =
+        rewriter.getDenseI64ArrayAttr({dilation_pairs.first, dilation_pairs.second});
 
     auto bias = op.getBias();
     auto loc = op.getLoc();

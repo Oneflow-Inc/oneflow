@@ -296,7 +296,8 @@ LogicalResult Importer::AddResultSegmentSizes(int32_t output_lbns_size,
                                               std::vector<NamedAttribute>& attr_vec) {
   attr_vec.push_back(GetBuilder().getNamedAttr(
       mlir::OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr(),
-      GetBuilder().getDenseI32ArrayAttr({output_lbns_size, 1} /* {data_out_size, ctrl_out_size} */)));
+      GetBuilder().getDenseI32ArrayAttr(
+          {output_lbns_size, 1} /* {data_out_size, ctrl_out_size} */)));
   return success();
 }
 
@@ -614,8 +615,7 @@ LogicalResult ConvertVariableOpConf(VariableOp op, ::oneflow::OperatorConf* op_c
     var_op_conf->mutable_initializer()->mutable_constant_conf()->set_value(
         floatInit.value().convertToFloat());
   } else if (auto integerInit = op.getIntegerInitializer()) {
-    var_op_conf->mutable_initializer()->mutable_constant_int_conf()->set_value(
-        integerInit.value());
+    var_op_conf->mutable_initializer()->mutable_constant_int_conf()->set_value(integerInit.value());
   } else {
     // empty initializer
     var_op_conf->mutable_initializer()->mutable_empty_conf();

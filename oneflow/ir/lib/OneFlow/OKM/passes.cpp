@@ -141,8 +141,7 @@ struct WrapOKMKernelPattern : public mlir::OpRewritePattern<func::FuncOp> {
     return nullptr;
   }
 
-  static void CreateWrapOp(Operation* op, mlir::PatternRewriter& rewriter,
-                           IRMapping& mapper,
+  static void CreateWrapOp(Operation* op, mlir::PatternRewriter& rewriter, IRMapping& mapper,
                            const llvm::SmallVector<Type>& mem_outs_types,
                            const llvm::SmallVector<Value>& map_ins) {
     auto wrapper_op = rewriter.create<WrapperOp>(op->getLoc(), mem_outs_types, ValueRange(map_ins));
@@ -175,8 +174,7 @@ struct WrapOKMKernelPattern : public mlir::OpRewritePattern<func::FuncOp> {
     rewriter.create<ReturnOp>(rewriter.getUnknownLoc(), ValueRange(outs));
   }
 
-  static void HandleOneFlowOp(Operation* op, mlir::PatternRewriter& rewriter,
-                              IRMapping& mapper) {
+  static void HandleOneFlowOp(Operation* op, mlir::PatternRewriter& rewriter, IRMapping& mapper) {
     // record outs type
     llvm::SmallVector<Type> mem_outs_types;
     for (auto it : op->getResultTypes()) {

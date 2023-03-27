@@ -105,7 +105,8 @@ llvm::SmallVector<Value, 4> NormalizationOp::NchwToNhwc(llvm::SmallVector<Value,
   SmallVector<Value, 4> operands;
   operands.push_back(value[0]);
   if (normalization_op.getMovingMean()) operands.push_back(normalization_op.getMovingMean());
-  if (normalization_op.getMovingVariance()) operands.push_back(normalization_op.getMovingVariance());
+  if (normalization_op.getMovingVariance())
+    operands.push_back(normalization_op.getMovingVariance());
   operands.push_back(normalization_op.getGamma());
   operands.push_back(normalization_op.getBeta());
   if (normalization_op.get_addToOutput()) operands.push_back(normalization_op.get_addToOutput());
@@ -125,7 +126,9 @@ bool MaxPool2DOp::IsNCHW() { return this->getDataFormat().str() == "channels_fir
 
 llvm::DenseSet<Value> MaxPool2DOp::OperandsToTranspose() { return {this->getX()}; }
 
-llvm::DenseSet<Value> MaxPool2DOp::ResultsToTranspose() { return {this->getY(), this->getIndice()}; }
+llvm::DenseSet<Value> MaxPool2DOp::ResultsToTranspose() {
+  return {this->getY(), this->getIndice()};
+}
 
 llvm::SmallVector<Value, 4> MaxPool2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
                                                     PatternRewriter& rewriter) {
