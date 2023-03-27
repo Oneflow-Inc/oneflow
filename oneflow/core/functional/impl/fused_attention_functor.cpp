@@ -646,7 +646,7 @@ class FusedApplyRotaryEmbFunctor {
     int64_t b, m, h, k;
 
     if (tensor_index) {
-      CHECK_OR_RETURN((JUST(tensor_index) >= 1) && (JUST(tensor_index) <= 3))
+      CHECK_OR_RETURN((JUST(tensor_index) >= 0) && (JUST(tensor_index) <= 2))
           << Error::RuntimeError() << "tensor_index should be set between [0, 2]";
     }
     CHECK_OR_RETURN((mode == "interval") || (mode == "plane"))

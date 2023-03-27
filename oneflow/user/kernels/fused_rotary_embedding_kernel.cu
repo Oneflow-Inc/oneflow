@@ -147,6 +147,7 @@ struct FusedApplyRotaryEmbParam {
   IndexType num_elements;
   IndexType k;
   IndexType sinuous_m;
+  IndexType packed_n;
   IndexType offset;
   IndexType x_stride[num_dims];
   IndexType position_stride[num_dims];
@@ -159,7 +160,7 @@ struct FusedApplyRotaryEmbParam {
                            T* out, const T theta, const int64_t pass_ndims,
                            const int rotary_emb_dim, const IndexType num_elements,
                            const IndexType k, const IndexType k0, const IndexType k1,
-                           const IndexType sinuous_m, const IndexType offset)
+                           const IndexType sinuous_m, const IndexType offset, const IndexType packed_n)
       : x(x),
         cos(cos),
         sin(sin),
@@ -173,7 +174,8 @@ struct FusedApplyRotaryEmbParam {
         k0(k0),
         k1(k1),
         sinuous_m(sinuous_m),
-        offset(offset) {}
+        offset(offset),
+        packed_n(packed_n) {}
 };
 
 template<typename T, typename PositionType, typename IndexType, size_t pack_size, size_t num_dims>
@@ -485,8 +487,8 @@ __global__ void PlaneKernel(FusedApplyRotaryEmbParam<T, PositionType, IndexType,
   for (IndexType offset = threadIdx.x + blockIdx.x * blockDim.x; offset < param.num_elements;
        offset += blockDim.x * gridDim.x) {
     using LoadPack = cuda::elementwise::Packed<T, 2>;
-    IndexType x_offset = offset + param.offset;
     IndexType temp_offset = offset;
+    IndexType x_offset;
     IndexType k_index, m_index;
     IndexType position_id_offset = 0;
     PositionType position;
@@ -504,6 +506,8 @@ __global__ void PlaneKernel(FusedApplyRotaryEmbParam<T, PositionType, IndexType,
     position_id_offset =
         position_id_offset
         + param.sinuous_m * (k_index * param.rotary_emb_dim / (param.k - param.pass_ndims));
+    x_offset = (offset - k_index) * param.packed_n + k_index + param.offset;
+    printf("param.offset %d x_offset%d\n", static_cast<int>(param.offset), static_cast<int>(x_offset));
 
     if (param.position_ids) {
       position = position_ids[position_id_offset];
@@ -531,25 +535,25 @@ __global__ void PlaneKernel(FusedApplyRotaryEmbParam<T, PositionType, IndexType,
     }
 
     if (k_index < param.k0) {
-      x_vec.elem[0] = *(x + offset);
-      x_vec.elem[1] = (k_index < param.k0 / 2) ? static_cast<T>(-*(x + offset + param.k0 / 2))
-                                               : *(x + offset - param.k0 / 2);
+      x_vec.elem[0] = *(x + x_offset);
+      x_vec.elem[1] = (k_index < param.k0 / 2) ? static_cast<T>(-*(x + x_offset + param.k0 / 2))
+                                               : *(x + x_offset - param.k0 / 2);
       out_val = cos_val * x_vec.elem[0] + sin_val * x_vec.elem[1];
     } else if (k_index < param.k1) {
       if ((k_index - param.k0) < ((param.k - param.pass_ndims) / (2 * param.rotary_emb_dim))) {
-        x_vec.elem[0] = *(x + offset);
-        x_vec.elem[1] = -*(x + offset + param.k0 / 2);
+        x_vec.elem[0] = *(x + x_offset);
+        x_vec.elem[1] = -*(x + x_offset + param.k0 / 2);
         out_val = cos_val * x_vec.elem[0] + sin_val * x_vec.elem[1];
       } else {
-        x_vec.elem[0] = *(x + offset);
-        x_vec.elem[1] = *(x + offset - param.k0 / 2);
+        x_vec.elem[0] = *(x + x_offset);
+        x_vec.elem[1] = *(x + x_offset - param.k0 / 2);
         out_val = cos_val * x_vec.elem[0] + sin_val * x_vec.elem[1];
       }
     } else {
-      out_val = *(x + offset);
+      out_val = *(x + x_offset);
     }
 
-    *(out + offset - param.offset) = out_val;
+    *(out + offset) = out_val;
   }
 }
 
@@ -583,14 +587,22 @@ void LaunchKernel(ep::CudaStream* stream, const T* x, const T* cos, const T* sin
     k1 = k - pass_ndims;
   }
 
+  IndexType packed_n = 1;
+  //TODO: only to test its accuracy, needs to be passed through parseDims
+  if (x_layout == "BM(H2K)" || x_layout == "MB(H2K)") {
+    packed_n = 2;
+  } else if (x_layout == "BM(H3K)" || x_layout == "MB(H3k)") {
+    packed_n = 3;
+  }
+
   struct FusedApplyRotaryEmbParam<T, PositionType, IndexType, num_dims> param(
       x, cos, sin, position_ids, out, theta, pass_ndims, rotary_emb_dim, num_elements, k, k0, k1,
-      position_shape ? static_cast<IndexType>(position_shape[2]) : m, offset);
+      position_shape ? static_cast<IndexType>(position_shape[2]) : m, offset, packed_n);
 
   std::pair<char, std::int64_t> strides[num_dims];
-  strides[0] = {'b', b_stride};
-  strides[1] = {'h', h_stride};
-  strides[2] = {'m', m_stride};
+  strides[0] = {'b', b_stride / packed_n};
+  strides[1] = {'h', h_stride / packed_n};
+  strides[2] = {'m', m_stride / packed_n};
   strides[3] = {'k', 1};
 
   auto GetDimX = [&](const char c) {

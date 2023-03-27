@@ -163,7 +163,8 @@ def naive_embedding(
         )  # un-merge
     elif x_layout == "BM(H3K)":
         print(x)
-        print(y)
+
+        print(x[..., 0, :])
         out0 = x[..., 0, :].reshape(dims) * cos.reshape([B, M, 1, K]) + y[..., 0, :].reshape(
             dims
         ) * sin.reshape(
@@ -659,12 +660,41 @@ def _test_plane(
     fused_sin = flow.tensor(fused_sin, dtype=dtype, device="cuda")
     fused_position_ids = flow.tensor(position_ids, dtype=flow.int32, device="cuda")
 
-    fused_out = flow._C.fused_apply_rotary_emb(
+    out0 = flow._C.fused_apply_rotary_emb(
         fused_x,
         cos=fused_cos,
         sin=fused_sin,
         position_ids=fused_position_ids,
         x_layout=x_layout,
+        output_layout="BMHK",
+        k_size=K,
+        base=base,
+        rotary_size=rotary_size,
+        mode=mode,
+        tensor_index=0
+    )
+
+    out1 = flow._C.fused_apply_rotary_emb(
+        fused_x,
+        cos=fused_cos,
+        sin=fused_sin,
+        position_ids=fused_position_ids,
+        x_layout=x_layout,
+        output_layout="BMHK",
+        k_size=K,
+        base=base,
+        rotary_size=rotary_size,
+        mode=mode,
+        tensor_index=1
+    )
+
+    out2 = flow._C.fused_apply_rotary_emb(
+        fused_x,
+        cos=fused_cos,
+        sin=fused_sin,
+        position_ids=fused_position_ids,
+        x_layout=x_layout,
+        output_layout="BMHK",
         k_size=K,
         base=base,
         rotary_size=rotary_size,
@@ -672,12 +702,18 @@ def _test_plane(
         tensor_index=2
     )
 
-    print(naive_out.reshape(merged_dims))
-    print(fused_out.numpy())
+    fused_out = np.concatenate([out0.numpy(), out1.numpy(), out2.numpy()], axis=-1)
+
+
+    print("out0", out0.numpy())
+    print("out1", out1.numpy())
+
+    print(naive_out)
+    print(fused_out)
 
     test_case.assertTrue(
         np.allclose(
-            naive_out.reshape(merged_dims), fused_out.numpy(), atol=5e-2, rtol=5e-3
+            naive_out.reshape(merged_dims), fused_out.reshape(merged_dims), atol=5e-2, rtol=5e-3
         )
     )
 
@@ -696,12 +732,12 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
     def test_fused_rotary_embedding_op(test_case):
         args_dict = OrderedDict()
         args_dict["test_fun"] = [_test_plane]
-        args_dict["x_layout"] = ["BM(HK)"]
+        args_dict["x_layout"] = ["BM(H3K)"]
         args_dict["mode"] = ["plane"]
         args_dict["base"] = [1e1]
         args_dict["rotary_size"] = [8]
         args_dict["dims"] = [(1, 1, 3, 8)]
-        args_dict["rotary_ndims"] = [2, 1]
+        args_dict["rotary_ndims"] = [2]
         # args_dict["rotary_size"] = [48]
         # args_dict["dims"] = [(32, 2048, 32, 64)]
         args_dict["dtype"] = [flow.float16]
