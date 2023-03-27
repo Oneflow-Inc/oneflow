@@ -171,9 +171,13 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
                        "backend by adding cmake argument, for instance: -DRPC_BACKEND=GRPC";
 #endif  // RPC_BACKEND_GRPC
   }
+  size_t rank = Singleton<EnvDesc>::Get()->bootstrap_conf().rank();
   CHECK_JUST(Singleton<RpcManager>::Get()->CreateServer());
+  LOG(WARNING) << "rank " << rank << " create server success";
   CHECK_JUST(Singleton<RpcManager>::Get()->Bootstrap());
+  LOG(WARNING) << "rank " << rank << " bootstrap success";
   CHECK_JUST(Singleton<RpcManager>::Get()->CreateClient());
+  LOG(WARNING) << "rank " << rank << " create client success";
   Singleton<ResourceDesc, ForEnv>::New(GetDefaultResource(env_proto),
                                        GlobalProcessCtx::NumOfProcessPerNode());
   Singleton<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto),
