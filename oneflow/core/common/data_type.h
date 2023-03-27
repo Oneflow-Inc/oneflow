@@ -21,6 +21,7 @@ limitations under the License.
 #if defined(WITH_CUDA)
 #include <cuda_fp16.h>
 #include <cuda.h>
+#include <cufft.h>
 #if CUDA_VERSION >= 11000
 #include <cuda_bf16.h>
 #endif  // CUDA_VERSION >= 11000
@@ -33,6 +34,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/device_type.h"
 #include <half.hpp>
+#include <complex>
 
 namespace std {
 
@@ -70,6 +72,9 @@ struct IsIntegralHelper : std::false_type {};
 template<typename>
 struct IsUnsignedIntegralHelper : std::false_type {};
 
+template<typename>
+struct IsComplexHelper : std::false_type {};
+
 }  // namespace detail
 
 using float16 = half_float::half;
@@ -77,6 +82,20 @@ using float16 = half_float::half;
 #define DEFINE_SPEC(Trait, Type, Value) \
   template<>                            \
   struct Trait<Type> : std::integral_constant<bool, Value> {};
+
+// Type Trait: IsComplex
+
+DEFINE_SPEC(detail::IsComplexHelper, std::complex<float>, true)
+DEFINE_SPEC(detail::IsComplexHelper, std::complex<double>, true)
+#ifdef WITH_CUDA
+DEFINE_SPEC(detail::IsFloat16Helper, cufftComplex, true)
+DEFINE_SPEC(detail::IsFloat16Helper, cufftDoubleComplex, true)
+#endif  // WITH_CUDA
+
+template<typename T>
+struct IsComplex
+    : std::integral_constant<bool,
+                             (detail::IsComplexHelper<typename std::remove_cv<T>::type>::value)> {};
 
 // Type Trait: IsFloat16
 
@@ -154,6 +173,13 @@ OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE,
 template<typename T>
 struct GetDataType<T, typename std::enable_if<IsFloat16<T>::value>::type>
     : std::integral_constant<DataType, DataType::kFloat16> {};
+
+#ifdef WITH_CUDA
+template<>
+struct GetDataType<cufftComplex> : std::integral_constant<DataType, DataType::kComplex64> {};
+template<>
+struct GetDataType<cufftDoubleComplex> : std::integral_constant<DataType, DataType::kComplex128> {};
+#endif  // WITH_CUDA
 
 #if CUDA_VERSION >= 11000
 template<>

@@ -4473,7 +4473,7 @@ class RealFunctor {
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, x);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
   }
 
  private:
@@ -4485,13 +4485,12 @@ class RealGradFunctor {
   RealGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("real_grad")
                          .Input("dout")
-                         .Input("x")
                          .Output("dx")
                          .Build());
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dout, const std::shared_ptr<one::Tensor>& x) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dout, x});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dout});
   }
 
  private:
@@ -4508,7 +4507,7 @@ class ImagFunctor {
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, x);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
   }
 
  private:
@@ -4520,13 +4519,12 @@ class ImagGradFunctor {
   ImagGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("imag_grad")
                          .Input("dout")
-                         .Input("x")
                          .Output("dx")
                          .Build());
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dout, const std::shared_ptr<one::Tensor>& x) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dout, x});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dout});
   }
 
  private:
@@ -4543,7 +4541,7 @@ class ConjFunctor {
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, x);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
   }
 
  private:
@@ -4555,13 +4553,12 @@ class ConjGradFunctor {
   ConjGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("conj_physical_grad")
                          .Input("dout")
-                         .Input("x")
                          .Output("dx")
                          .Build());
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dout, const std::shared_ptr<one::Tensor>& x) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dout, x});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dout});
   }
 
  private:
@@ -4578,7 +4575,7 @@ class ConjPhysicalFunctor {
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, x);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
   }
 
  private:
@@ -4590,13 +4587,12 @@ class ConjPhysicalGradFunctor {
   ConjPhysicalGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("conj_physical_grad")
                          .Input("dout")
-                         .Input("x")
                          .Output("dx")
                          .Build());
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dout, const std::shared_ptr<one::Tensor>& x) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dout, x});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dout});
   }
 
  private:

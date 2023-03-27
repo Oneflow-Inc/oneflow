@@ -20,8 +20,8 @@ limitations under the License.
 namespace oneflow {
 
 // TODO(lml): use hash map and push this to a common head file
-static std::map<int, int> complex_to_real_map {{kComplex32, kFloat16}, {kComplex64, kFloat}, {kComplex128, kDouble}};
-static std::map<int, int> real_to_complex_map {{kFloat16, kComplex32}, {kFloat, kComplex64}, {kDouble, kComplex128}};
+static std::map<DataType, DataType> complex_to_real_map {{DataType::kComplex32, DataType::kFloat16}, {DataType::kComplex64, DataType::kFloat}, {DataType::kComplex128, DataType::kDouble}};
+static std::map<DataType, DataType> real_to_complex_map {{DataType::kFloat16, DataType::kComplex32}, {DataType::kFloat, DataType::kComplex64}, {DataType::kDouble, DataType::kComplex128}};
 
 /*static*/ Maybe<void> RealOp::GetSbp(user_op::SbpContext* ctx) {
   return user_op::GetSbpFnUtil::SplitForEachAxis(ctx);
@@ -35,9 +35,9 @@ static std::map<int, int> real_to_complex_map {{kFloat16, kComplex32}, {kFloat, 
 /*static*/ Maybe<void> RealOp::InferDataType(user_op::InferContext* ctx) {
   // TODO(lml): add some check
   const std::pair<std::string, int32_t>& input_arg = ctx->inputs().at(0);
-  const TensorDesc& tensor_desc = ctx->InputTensorDesc(input_arg.first, input_arg.second);
+  const user_op::TensorDesc& tensor_desc = ctx->InputTensorDesc(input_arg.first, input_arg.second);
   const std::pair<std::string, int32_t>& output_arg = ctx->outputs().at(0);
-  ctx->SetOutputDType(output_arg.first, output_arg.second, complex_to_real_map[tensor_desc->data_type()]);
+  ctx->SetOutputDType(output_arg.first, output_arg.second, complex_to_real_map[tensor_desc.data_type()]);
   return Maybe<void>::Ok();
 }
 
@@ -53,9 +53,9 @@ static std::map<int, int> real_to_complex_map {{kFloat16, kComplex32}, {kFloat, 
 /*static*/ Maybe<void> RealGradOp::InferDataType(user_op::InferContext* ctx) {
   // TODO(lml): add some check
   const std::pair<std::string, int32_t>& input_arg = ctx->inputs().at(0);
-  const TensorDesc& tensor_desc = ctx->InputTensorDesc(input_arg.first, input_arg.second);
+  const user_op::TensorDesc& tensor_desc = ctx->InputTensorDesc(input_arg.first, input_arg.second);
   const std::pair<std::string, int32_t>& output_arg = ctx->outputs().at(0);
-  ctx->SetOutputDType(output_arg.first, output_arg.second, tensor_desc->data_type());
+  ctx->SetOutputDType(output_arg.first, output_arg.second, tensor_desc.data_type());
   return Maybe<void>::Ok();
 }
 
@@ -71,9 +71,9 @@ static std::map<int, int> real_to_complex_map {{kFloat16, kComplex32}, {kFloat, 
 /*static*/ Maybe<void> ImagOp::InferDataType(user_op::InferContext* ctx) {
   // TODO(lml): add some check
   const std::pair<std::string, int32_t>& input_arg = ctx->inputs().at(0);
-  const TensorDesc& tensor_desc = ctx->InputTensorDesc(input_arg.first, input_arg.second);
+  const user_op::TensorDesc& tensor_desc = ctx->InputTensorDesc(input_arg.first, input_arg.second);
   const std::pair<std::string, int32_t>& output_arg = ctx->outputs().at(0);
-  ctx->SetOutputDType(output_arg.first, output_arg.second, complex_to_real_map[tensor_desc->data_type()]);
+  ctx->SetOutputDType(output_arg.first, output_arg.second, complex_to_real_map[tensor_desc.data_type()]);
   return Maybe<void>::Ok();
 }
 
@@ -89,9 +89,9 @@ static std::map<int, int> real_to_complex_map {{kFloat16, kComplex32}, {kFloat, 
 /*static*/ Maybe<void> ImagGradOp::InferDataType(user_op::InferContext* ctx) {
   // TODO(lml): add some check
   const std::pair<std::string, int32_t>& input_arg = ctx->inputs().at(0);
-  const TensorDesc& tensor_desc = ctx->InputTensorDesc(input_arg.first, input_arg.second);
+  const user_op::TensorDesc& tensor_desc = ctx->InputTensorDesc(input_arg.first, input_arg.second);
   const std::pair<std::string, int32_t>& output_arg = ctx->outputs().at(0);
-  ctx->SetOutputDType(output_arg.first, output_arg.second, tensor_desc->data_type());
+  ctx->SetOutputDType(output_arg.first, output_arg.second, tensor_desc.data_type());
   return Maybe<void>::Ok();
 }
 

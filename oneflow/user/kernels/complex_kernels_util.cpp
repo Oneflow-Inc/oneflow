@@ -23,7 +23,7 @@ namespace user_op {
 
 template<typename dtype_x, typename dtype_out>
 struct RealFunctor<DeviceType::kCPU, dtype_x, dtype_out> final {
-  void operator()(ep::Stream* stream, const dtype_x* x, const dtype_out* out) {
+  void operator()(ep::Stream* stream, const dtype_x* x, dtype_out* out) {
     // TODO(lml): finish this function.
   }
 };
@@ -33,7 +33,7 @@ INSTANTIATE_REAL_FUNCTOR(DeviceType::kCPU, std::complex<double>, double)
 
 template<typename dtype_x, typename dtype_out>
 struct ImagFunctor<DeviceType::kCPU, dtype_x, dtype_out> final {
-  void operator()(ep::Stream* stream, const dtype_x* x, const dtype_out* out) {
+  void operator()(ep::Stream* stream, const dtype_x* x, dtype_out* out) {
     // TODO(lml): finish this function.
   }
 };
@@ -43,7 +43,7 @@ INSTANTIATE_IMAG_FUNCTOR(DeviceType::kCPU, std::complex<double>, double)
 
 template<typename dtype>
 struct ConjPhysicalFunctor<DeviceType::kCPU, dtype> final {
-  void operator()(ep::Stream* stream, const dtype* x, const dtype* out) {
+  void operator()(ep::Stream* stream, const dtype* x, dtype* out) {
     // TODO(lml): finish this function.
   }
 };

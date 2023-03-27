@@ -34,10 +34,12 @@ class RealKernel final : public user_op::OpKernel{
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    if (out->shape_view().elem_cnt() == 0) { return; }
-    RealFunctor<device, dtype_x, dtype_out>(ctx->stream(), x, out);
+    const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
+    if (out_tensor->shape_view().elem_cnt() == 0) { return; }
+    const dtype_x* x = x_tensor->dptr<dtype_x>();
+    dtype_out* out = out_tensor->mut_dptr<dtype_out>();
+    RealFunctor<device, dtype_x, dtype_out>()(ctx->stream(), x, out);
   }
 };
 
@@ -51,7 +53,7 @@ REGISTER_REAL_KERNEL(DeviceType::kCPU, std::complex<float>, float)
 REGISTER_REAL_KERNEL(DeviceType::kCPU, std::complex<double>, double)
 #ifdef WITH_CUDA
 REGISTER_REAL_KERNEL(DeviceType::kCUDA, cufftComplex, float)
-REGISTER_REAL_KERNEL(DeviceType::kCUDA, cufftComplexDouble, double)
+REGISTER_REAL_KERNEL(DeviceType::kCUDA, cufftDoubleComplex, double)
 #endif  // WITH_CUDA
 
 template <DeviceType device, typename dtype_x, typename dtype_out>
@@ -64,10 +66,12 @@ class ImagKernel final : public user_op::OpKernel{
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    if (out->shape_view().elem_cnt() == 0) { return; }
-    ImagFunctor<device, dtype_x, dtype_out>(ctx->stream(), x, out);
+    const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
+    if (out_tensor->shape_view().elem_cnt() == 0) { return; }
+    const dtype_x* x = x_tensor->dptr<dtype_x>();
+    dtype_out* out = out_tensor->mut_dptr<dtype_out>();
+    ImagFunctor<device, dtype_x, dtype_out>()(ctx->stream(), x, out);
   }
 };
 
@@ -81,7 +85,7 @@ REGISTER_IMAG_KERNEL(DeviceType::kCPU, std::complex<float>, float)
 REGISTER_IMAG_KERNEL(DeviceType::kCPU, std::complex<double>, double)
 #ifdef WITH_CUDA
 REGISTER_IMAG_KERNEL(DeviceType::kCUDA, cufftComplex, float)
-REGISTER_IMAG_KERNEL(DeviceType::kCUDA, cufftComplexDouble, double)
+REGISTER_IMAG_KERNEL(DeviceType::kCUDA, cufftDoubleComplex, double)
 #endif  // WITH_CUDA
 
 template <DeviceType device, typename dtype>
@@ -94,10 +98,12 @@ class ConjPhysicalKernel final : public user_op::OpKernel{
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    if (out->shape_view().elem_cnt() == 0) { return; }
-    ConjPhysicalFunctor<device, dtype>(ctx->stream(), x, out);
+    const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
+    if (out_tensor->shape_view().elem_cnt() == 0) { return; }
+    const dtype* x = x_tensor->dptr<dtype>();
+    dtype* out = out_tensor->mut_dptr<dtype>();
+    ConjPhysicalFunctor<device, dtype>()(ctx->stream(), x, out);
   }
 };
 
@@ -111,7 +117,7 @@ REGISTER_CONJ_PHYSICAL_KERNEL(DeviceType::kCPU, std::complex<float>)
 REGISTER_CONJ_PHYSICAL_KERNEL(DeviceType::kCPU, std::complex<double>)
 #ifdef WITH_CUDA
 REGISTER_CONJ_PHYSICAL_KERNEL(DeviceType::kCUDA, cufftComplex)
-REGISTER_CONJ_PHYSICAL_KERNEL(DeviceType::kCUDA, cufftComplexDouble)
+REGISTER_CONJ_PHYSICAL_KERNEL(DeviceType::kCUDA, cufftDoubleComplex)
 #endif  // WITH_CUDA
 
 }  // namespace user_op

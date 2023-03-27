@@ -24,33 +24,33 @@ namespace user_op {
 
 template<typename dtype_x, typename dtype_out>
 struct RealFunctor<DeviceType::kCUDA, dtype_x, dtype_out> final {
-  void operator()(ep::Stream* stream, const dtype_x* x, const dtype_out* out) {
+  void operator()(ep::Stream* stream, const dtype_x* x, dtype_out* out) {
     // TODO(lml): finish this function.
   }
 };
 
 INSTANTIATE_REAL_FUNCTOR(DeviceType::kCUDA, cufftComplex, float)
-INSTANTIATE_REAL_FUNCTOR(DeviceType::kCUDA, cufftComplexDouble, double)
+INSTANTIATE_REAL_FUNCTOR(DeviceType::kCUDA, cufftDoubleComplex, double)
 
 template<typename dtype_x, typename dtype_out>
 struct ImagFunctor<DeviceType::kCUDA, dtype_x, dtype_out> final {
-  void operator()(ep::Stream* stream, const dtype_x* x, const dtype_out* out) {
+  void operator()(ep::Stream* stream, const dtype_x* x, dtype_out* out) {
     // TODO(lml): finish this function.
   }
 };
 
 INSTANTIATE_IMAG_FUNCTOR(DeviceType::kCUDA, cufftComplex, float)
-INSTANTIATE_IMAG_FUNCTOR(DeviceType::kCUDA, cufftComplexDouble, double)
+INSTANTIATE_IMAG_FUNCTOR(DeviceType::kCUDA, cufftDoubleComplex, double)
 
 template<typename dtype>
 struct ConjPhysicalFunctor<DeviceType::kCUDA, dtype> final {
-  void operator()(ep::Stream* stream, const dtype* x, const dtype* out) {
+  void operator()(ep::Stream* stream, const dtype* x, dtype* out) {
     // TODO(lml): finish this function.
   }
 };
 
 INSTANTIATE_CONJ_PHYSICAL_FUNCTOR(DeviceType::kCUDA, cufftComplex)
-INSTANTIATE_CONJ_PHYSICAL_FUNCTOR(DeviceType::kCUDA, cufftComplexDouble)
+INSTANTIATE_CONJ_PHYSICAL_FUNCTOR(DeviceType::kCUDA, cufftDoubleComplex)
 
 }  // namespace user_op
 }  // namespace oneflow
