@@ -95,7 +95,7 @@ def global_grouping(test_case):
             sbp=flow.sbp.split(0), placement=flow.placement("cuda", [0])
         )
     )
-    cpg = CPG([x, y], for_module=True)
+    cpg = CPG([x, y], group_on_current_buffer=False)
     test_case.assertTrue(len(cpg.grouped_parameters) == 2)
     test_case.assertTrue(len(cpg.grouped_grads) == 2)
 

@@ -27,7 +27,7 @@ _tensor_or_tensors = Union[Tensor, List[Tensor], List[List[Tensor]]]
 def numel_in_bucket(tensor: Tensor):
     assert flow.is_floating_point(
         tensor
-    ), "params should be float tensor while grouping."
+    ), "params grouping only support float tensor."
 
     def align(x: int, unit_size: int):
         return (x + (unit_size - 1)) // unit_size * unit_size
@@ -42,29 +42,38 @@ def numel_in_bucket(tensor: Tensor):
 
 
 class ContiguousParamsGroup(object):
+    """Arange tensors into contiguous buffer according to their group.
+
+    Args:
+        params_group_list (Iterable[Tensor] or Tensor): an iterable of Tensors or
+            a single Tensor that will be made into buffers.
+        group_on_current_buffer (bool, optional): whether to group tensors on allocated
+            buffers. (default: True)
+
+    Note:
+        The ContiguousParamsGroup is created by 2D List of Tensors, which indicates the
+        Tensors in the same 1D List should be grouped into the same Tensor buffer, otherwise
+        try to make them into a 2D List.
+    """
+
     def __init__(
-        self, params_group_list: _tensor_or_tensors, for_module: bool = False,
+        self, params_group_list: _tensor_or_tensors, group_on_current_buffer: bool = True,
     ):
-        """
-        The ContiguousParamsGroup is created by 2D List of Tensors,
-        which indicates the Tensors in the same 1D List should be 
-        grouped into the same Tensor buffer.
-        """
         self.params_group_list = params_group_list.copy()
 
         self._make_valid_params_group_list()
         self._remove_no_grad_tensors()
         self._check_tensor_position_consistency()
 
-        self.for_module = for_module
+        self.group_on_current_buffer = group_on_current_buffer
         self.grouped_tensors = []
         self.grouped_grads = []
 
-        if self.for_module:
-            self._parameters_grouping_for_module()
+        if not self.group_on_current_buffer:
+            self._parameters_grouping_on_new_buffer()
         else:
-            self._check_for_module()
-            self._parameters_grouping_for_operations()
+            self._check_current_buffer()
+            self._parameters_grouping_on_current_buffer()
 
     def _make_valid_params_group_list(self):
         """making params_group_list 2D List of Tensors
@@ -103,7 +112,7 @@ class ContiguousParamsGroup(object):
                 "Parameters must be all local tensors or all global tensors for params grouping."
             )
 
-    def _check_for_module(self):
+    def _check_current_buffer(self):
         """If all tensors are not held by any buffer, try to create buffer.
         """
         for params in self.params_group_list:
@@ -112,7 +121,7 @@ class ContiguousParamsGroup(object):
                     return
 
         self._physical_preparation = ContiguousParamsGroup(
-            self.params_group_list, for_module=True,
+            self.params_group_list, group_on_current_buffer=False,
         )
 
     def _make_buffer_params_mapping(self):
@@ -131,7 +140,7 @@ class ContiguousParamsGroup(object):
 
         return buffer_params_mapping
 
-    def _parameters_grouping_for_module(self):
+    def _parameters_grouping_on_new_buffer(self):
         params_buffer_size = {}
         physical_params_buffer = {}
         params_buffer_index = {}
@@ -195,7 +204,7 @@ class ContiguousParamsGroup(object):
                 index += numel_in_bucket(p)
                 params_buffer_index[tensor_key] = index
 
-    def _parameters_grouping_for_operations(self):
+    def _parameters_grouping_on_current_buffer(self):
         buffer_params_mapping = self._make_buffer_params_mapping()
 
         if buffer_params_mapping is None or len(buffer_params_mapping) == 0:
@@ -212,6 +221,7 @@ class ContiguousParamsGroup(object):
             params_group.append(group)
 
         # handling the parameters already on allocated buffers
+        # try best to make the adjacent tensors on device into same logical buffer
         for param_buf, params in buffer_params_mapping.items():
             logical_buffer_start, logical_buffer_size = 0, 0
             pre_group_index = -1
@@ -272,8 +282,12 @@ class ContiguousParamsGroup(object):
 
     @property
     def grouped_parameters(self):
+        """the grouped contiguous parameters
+        """
         return self.grouped_tensors
 
     @property
     def grouped_parameters_grad(self):
+        """the grouped contiguous parameters' gradient
+        """
         return self.grouped_grads
