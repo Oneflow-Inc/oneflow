@@ -56,6 +56,38 @@ REGISTER_REAL_KERNEL(DeviceType::kCUDA, cufftComplex, float)
 REGISTER_REAL_KERNEL(DeviceType::kCUDA, cufftDoubleComplex, double)
 #endif  // WITH_CUDA
 
+template<DeviceType device, typename dtype_dout, typename dtype_dx>
+class RealGradKernel final : public user_op::OpKernel {
+ public:
+  RealGradKernel() = default;
+  ~RealGradKernel() = default;
+
+ private:
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* dout_tensor = ctx->Tensor4ArgNameAndIndex("dout", 0);
+    user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    if (dx_tensor->shape_view().elem_cnt() == 0) { return; }
+    const dtype_dout* dout = dout_tensor->dptr<dtype_dout>();
+    dtype_dx* dx = dx_tensor->mut_dptr<dtype_dx>();
+    RealGradFunctor<device, dtype_dout, dtype_dx>()(ctx->stream(), dout, dx);
+  }
+};
+
+#define REGISTER_REAL_GRAD_KERNEL(device, dtype_dout, dtype_dx)     \
+  REGISTER_USER_KERNEL("real_grad")                               \
+      .SetCreateFn<RealGradKernel<device, dtype_dout, dtype_dx>>() \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)  \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype_dx>::value));
+
+REGISTER_REAL_GRAD_KERNEL(DeviceType::kCPU, float, std::complex<float>)
+REGISTER_REAL_GRAD_KERNEL(DeviceType::kCPU, double, std::complex<double>)
+#ifdef WITH_CUDA
+REGISTER_REAL_GRAD_KERNEL(DeviceType::kCUDA, float, cufftComplex)
+REGISTER_REAL_GRAD_KERNEL(DeviceType::kCUDA, double, cufftDoubleComplex)
+#endif  // WITH_CUDA
+
 template<DeviceType device, typename dtype_x, typename dtype_out>
 class ImagKernel final : public user_op::OpKernel {
  public:
@@ -86,6 +118,38 @@ REGISTER_IMAG_KERNEL(DeviceType::kCPU, std::complex<double>, double)
 #ifdef WITH_CUDA
 REGISTER_IMAG_KERNEL(DeviceType::kCUDA, cufftComplex, float)
 REGISTER_IMAG_KERNEL(DeviceType::kCUDA, cufftDoubleComplex, double)
+#endif  // WITH_CUDA
+
+template<DeviceType device, typename dtype_dout, typename dtype_dx>
+class ImagGradKernel final : public user_op::OpKernel {
+ public:
+  ImagGradKernel() = default;
+  ~ImagGradKernel() = default;
+
+ private:
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* dout_tensor = ctx->Tensor4ArgNameAndIndex("dout", 0);
+    user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    if (dx_tensor->shape_view().elem_cnt() == 0) { return; }
+    const dtype_dout* dout = dout_tensor->dptr<dtype_dout>();
+    dtype_dx* dx = dx_tensor->mut_dptr<dtype_dx>();
+    ImagGradFunctor<device, dtype_dout, dtype_dx>()(ctx->stream(), dout, dx);
+  }
+};
+
+#define REGISTER_IMAG_GRAD_KERNEL(device, dtype_dout, dtype_dx)     \
+  REGISTER_USER_KERNEL("imag_grad")                               \
+      .SetCreateFn<ImagGradKernel<device, dtype_dout, dtype_dx>>() \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)  \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype_dx>::value));
+
+REGISTER_IMAG_GRAD_KERNEL(DeviceType::kCPU, float, std::complex<float>)
+REGISTER_IMAG_GRAD_KERNEL(DeviceType::kCPU, double, std::complex<double>)
+#ifdef WITH_CUDA
+REGISTER_IMAG_GRAD_KERNEL(DeviceType::kCUDA, float, cufftComplex)
+REGISTER_IMAG_GRAD_KERNEL(DeviceType::kCUDA, double, cufftDoubleComplex)
 #endif  // WITH_CUDA
 
 template<DeviceType device, typename dtype>

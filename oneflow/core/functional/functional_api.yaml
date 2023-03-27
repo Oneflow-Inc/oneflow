@@ -3314,14 +3314,6 @@
   signature: "Tensor (Tensor x) => Conj"
   bind_python: True
 
-- name: "conj_grad"
-  signature: "Tensor (Tensor dout) => ConjGrad"
-  bind_python: False
-
 - name: "conj_physical"
   signature: "Tensor (Tensor x) => ConjPhysical"
   bind_python: True
-
-- name: "conj_physical_grad"
-  signature: "Tensor (Tensor dout) => ConjPhysicalGrad"
-  bind_python: False

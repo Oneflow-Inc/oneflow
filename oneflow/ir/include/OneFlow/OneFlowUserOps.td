@@ -10791,7 +10791,7 @@ def OneFlow_IsFiniteOp : OneFlow_BaseOp<"isfinite", [NoSideEffect, NoGrad, Decla
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_RealOp : OneFlow_BaseOp<"real", [NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_RealOp : OneFlow_BaseOp<"real", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x
   );
@@ -10804,7 +10804,7 @@ def OneFlow_RealOp : OneFlow_BaseOp<"real", [NoGrad, DeclareOpInterfaceMethods<U
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_RealGradOp : OneFlow_BaseOp<"real_grad", [NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_RealGradOp : OneFlow_BaseOp<"real_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dout
   );
@@ -10817,7 +10817,7 @@ def OneFlow_RealGradOp : OneFlow_BaseOp<"real_grad", [NoGrad, DeclareOpInterface
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_ImagOp : OneFlow_BaseOp<"imag", [NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ImagOp : OneFlow_BaseOp<"imag", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x
   );
@@ -10830,7 +10830,7 @@ def OneFlow_ImagOp : OneFlow_BaseOp<"imag", [NoGrad, DeclareOpInterfaceMethods<U
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_ImagGradOp : OneFlow_BaseOp<"imag_grad", [NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ImagGradOp : OneFlow_BaseOp<"imag_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dout
   );
@@ -10843,25 +10843,12 @@ def OneFlow_ImagGradOp : OneFlow_BaseOp<"imag_grad", [NoGrad, DeclareOpInterface
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_ConjPhysicalOp : OneFlow_BaseOp<"conj_physical", [NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ConjPhysicalOp : OneFlow_BaseOp<"conj_physical", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x
   );
   let output = (outs
     OneFlow_Tensor:$y
-  );
-  let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
-  let has_get_sbp_fn = 1;
-  let has_data_type_infer_fn = 1;
-}
-
-def OneFlow_ConjPhysicalGradOp : OneFlow_BaseOp<"conj_physical_grad", [NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    OneFlow_Tensor:$dout
-  );
-  let output = (outs
-    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

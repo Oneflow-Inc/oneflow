@@ -27,6 +27,14 @@ struct RealFunctor final {
 #define INSTANTIATE_REAL_FUNCTOR(device, dtype_x, dtype_out) \
   template struct RealFunctor<device, dtype_x, dtype_out>;
 
+template<DeviceType device, typename dtype_dout, typename dtype_dx>
+struct RealGradFunctor final {
+  void operator()(ep::Stream* stream, const dtype_dout* dout, dtype_dx* dx);
+};
+
+#define INSTANTIATE_REAL_GRAD_FUNCTOR(device, dtype_dout, dtype_dx) \
+  template struct RealGradFunctor<device, dtype_dout, dtype_dx>;
+
 template<DeviceType device, typename dtype_x, typename dtype_out>
 struct ImagFunctor final {
   void operator()(ep::Stream* stream, const dtype_x* x, dtype_out* out);
@@ -34,6 +42,14 @@ struct ImagFunctor final {
 
 #define INSTANTIATE_IMAG_FUNCTOR(device, dtype_x, dtype_out) \
   template struct ImagFunctor<device, dtype_x, dtype_out>;
+
+template<DeviceType device, typename dtype_dout, typename dtype_dx>
+struct ImagGradFunctor final {
+  void operator()(ep::Stream* stream, const dtype_dout* dout, dtype_dx* dx);
+};
+
+#define INSTANTIATE_IMAG_GRAD_FUNCTOR(device, dtype_dout, dtype_dx) \
+  template struct ImagGradFunctor<device, dtype_dout, dtype_dx>;
 
 template<DeviceType device, typename dtype>
 struct ConjPhysicalFunctor final {

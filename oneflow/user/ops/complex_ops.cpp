@@ -60,7 +60,7 @@ static std::map<DataType, DataType> real_to_complex_map{{DataType::kFloat16, Dat
   const std::pair<std::string, int32_t>& input_arg = ctx->inputs().at(0);
   const user_op::TensorDesc& tensor_desc = ctx->InputTensorDesc(input_arg.first, input_arg.second);
   const std::pair<std::string, int32_t>& output_arg = ctx->outputs().at(0);
-  ctx->SetOutputDType(output_arg.first, output_arg.second, tensor_desc.data_type());
+  ctx->SetOutputDType(output_arg.first, output_arg.second, real_to_complex_map[tensor_desc.data_type()]);
   return Maybe<void>::Ok();
 }
 
@@ -97,7 +97,7 @@ static std::map<DataType, DataType> real_to_complex_map{{DataType::kFloat16, Dat
   const std::pair<std::string, int32_t>& input_arg = ctx->inputs().at(0);
   const user_op::TensorDesc& tensor_desc = ctx->InputTensorDesc(input_arg.first, input_arg.second);
   const std::pair<std::string, int32_t>& output_arg = ctx->outputs().at(0);
-  ctx->SetOutputDType(output_arg.first, output_arg.second, tensor_desc.data_type());
+  ctx->SetOutputDType(output_arg.first, output_arg.second, real_to_complex_map[tensor_desc.data_type()]);
   return Maybe<void>::Ok();
 }
 
@@ -111,19 +111,6 @@ static std::map<DataType, DataType> real_to_complex_map{{DataType::kFloat16, Dat
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ConjPhysicalOp::InferDataType(user_op::InferContext* ctx) {
-  return user_op::TensorDescInferFnUtil::UnchangedDataType(ctx);
-}
-
-/*static*/ Maybe<void> ConjPhysicalGradOp::GetSbp(user_op::SbpContext* ctx) {
-  return user_op::GetSbpFnUtil::SplitForEachAxis(ctx);
-}
-/*static*/ Maybe<void> ConjPhysicalGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  return user_op::TensorDescInferFnUtil::Unchanged(ctx);
-}
-/*static*/ Maybe<void> ConjPhysicalGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-/*static*/ Maybe<void> ConjPhysicalGradOp::InferDataType(user_op::InferContext* ctx) {
   return user_op::TensorDescInferFnUtil::UnchangedDataType(ctx);
 }
 
