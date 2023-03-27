@@ -60,26 +60,21 @@ class StackPrinter : protected Printer {
   void print_trace(std::ostream& os, const ResolvedTrace& trace, Colorize& colorize) {
     if (!is_oneflow_file(trace.object_filename)) { return; }
     // os << "#" << std::left << std::setw(2) << trace.idx << std::right;
-    bool already_indented = true;
 
     if (!trace.source.filename.size() || object) {
       os << "   Object \"" << trace.object_filename << "\", at " << trace.addr << ", in "
          << trace.object_function << "\n";
-      // already_indented = false;
     }
 
     for (size_t inliner_idx = trace.inliners.size(); inliner_idx > 0; --inliner_idx) {
-      if (!already_indented) { os << "   "; }
       const ResolvedTrace::SourceLoc& inliner_loc = trace.inliners[inliner_idx - 1];
       print_source_loc(os, " | ", inliner_loc);
       if (snippet) {
         print_snippet(os, "   ", inliner_loc, colorize, Color::purple, inliner_context_size);
       }
-      // already_indented = false;
     }
 
     if (trace.source.filename.size()) {
-      if (!already_indented) { os << "   "; }
       print_source_loc(os, "  ", trace.source, trace.addr);
       if (snippet) {
         print_snippet(os, "   ", trace.source, colorize, Color::yellow, trace_context_size);
@@ -132,45 +127,10 @@ class StackPrinter : protected Printer {
     print_stacktrace(st, os, colorize);
     return fp;
   }
-
-  // template<typename ST>
-  // FILE* print(ST& st, FILE* fp = stderr) {
-  //   // cfile_streambuf obuf(fp);
-  //   // std::ostream os(&obuf);
-  //   // Colorize colorize(os);
-  //   // colorize.activate(color_mode, fp);
-  //   // print_stacktrace(st, os, colorize);
-  //   std::cout << std::endl;
-  //   return fp;
-  // }
-  // void print_trace(std::ostream& os, const ResolvedTrace& trace, Colorize& colorize) {
-  // }
 };
 
-class OneFlowSignalHandling {
+class OneFlowSignalHandling : protected backward::SignalHandling {
  public:
-  static std::vector<int> make_default_signals() {
-    const int posix_signals[] = {
-      // Signals for which the default action is "Core".
-      SIGABRT,  // Abort signal from abort(3)
-      SIGBUS,   // Bus error (bad memory access)
-      SIGFPE,   // Floating point exception
-      SIGILL,   // Illegal Instruction
-      SIGIOT,   // IOT trap. A synonym for SIGABRT
-      SIGQUIT,  // Quit from keyboard
-      SIGSEGV,  // Invalid memory reference
-      SIGSYS,   // Bad argument to routine (SVr4)
-      SIGTRAP,  // Trace/breakpoint trap
-      SIGXCPU,  // CPU time limit exceeded (4.2BSD)
-      SIGXFSZ,  // File size limit exceeded (4.2BSD)
-#if defined(BACKWARD_SYSTEM_DARWIN)
-      SIGEMT,  // emulation instruction executed
-#endif
-    };
-    return std::vector<int>(posix_signals,
-                            posix_signals + sizeof posix_signals / sizeof posix_signals[0]);
-  }
-
   explicit OneFlowSignalHandling(const std::vector<int>& posix_signals = make_default_signals())
       : _loaded(false) {
     bool success = true;
@@ -207,9 +167,7 @@ class OneFlowSignalHandling {
     }
 
     _loaded = success;
-  }
-
-  bool loaded() const { return _loaded; }
+  };
 
   static void handleSignal(int, siginfo_t* info, void* _ctx) {
     ucontext_t* uctx = static_cast<ucontext_t*>(_ctx);
@@ -251,7 +209,6 @@ class OneFlowSignalHandling {
     }
 
     StackPrinter printer;
-    // printer.address = true;
     printer.print(st, stderr);
 
 #if (defined(_XOPEN_SOURCE) && _XOPEN_SOURCE >= 700) \
