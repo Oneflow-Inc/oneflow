@@ -53,7 +53,9 @@ class Outliner {
         if (auto defOp = operand.getDefiningOp()) {
           if (isOneFlowOp(defOp)) {
             entries.insert(operand);
-            mapping.map(operand, body->addArgument(operand.getType(), operand.getLoc()));
+            auto arg = body->addArgument(operand.getType(), operand.getLoc());
+            mapping.map(operand, arg);
+            mappingReversed.map(arg, operand);
           } else {
             cloneOpsToNewBody(defOp, true);
           }
@@ -92,6 +94,7 @@ class Outliner {
   }
 
   BlockAndValueMapping mapping{};
+  BlockAndValueMapping mappingReversed{};
   llvm::DenseSet<Value> entries{}, exits{};
 };
 
@@ -130,9 +133,15 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
       builder.setInsertionPointToEnd(block);
       builder.create<func::ReturnOp>(entryOp->getLoc(), mappedExits);
 
-      for (auto argument : outliner.entries) {
-        entries.push_back(argument);
-        argumentTypes.push_back(argument.getType());
+      for (auto argument : block->getArguments()) {
+        if (auto found = outliner.mappingReversed.lookup(argument.cast<Value>())) {
+          entries.push_back(found);
+          argumentTypes.push_back(argument.getType());
+        } else {
+          job->emitError() << "fail to outline, entry not found for argument #"
+                           << argument.getArgNumber();
+          signalPassFailure();
+        }
       }
       auto funcType = builder.getFunctionType(argumentTypes, resultTypes);
       if (auto mod = job->getParentOfType<ModuleOp>()) {
