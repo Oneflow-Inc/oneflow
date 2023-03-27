@@ -697,7 +697,7 @@ void DispatchPackSize(ep::CudaStream* stream, const T* x, const T* cos, const T*
   } else {
     num_elements /= 2;
     LaunchKernel<T, PositionType, IndexType, 2, num_dims>(
-        stream, cos, sin, position_ids, out, position_shape, x_layout, output_layout, mode, theta,
+        stream, x, cos, sin, position_ids, out, position_shape, x_layout, output_layout, mode, theta,
         pass_ndims, rotary_emb_dim, b, m, h, k, b_stride, m_stride, h_stride, offset, num_elements);
   }
 }
