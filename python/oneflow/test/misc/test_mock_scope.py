@@ -172,6 +172,13 @@ class TestMock(flow.unittest.TestCase):
                 hasattr(torch.nn.functional, "scaled_dot_product_attention")
             )
 
+    def test_hazard_list(test_case):
+        with mock.enable():
+            import sys
+            import safetensors
+        test_case.assertTrue("safetensors._safetensors_rust" in sys.modules)
+        import safetensors
+
 
 # MUST use pytest to run this test
 def test_verbose(capsys):
