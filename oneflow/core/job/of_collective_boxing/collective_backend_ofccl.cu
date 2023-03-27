@@ -197,8 +197,9 @@ struct CollectiveBackendOfccl::Impl {
 
           OF_CUDA_CHECK(cudaSetDevice(local_device_id));
 
-          // bugfix: 为支持多机pp，使用global rank
-          int curr_device_id = coll_id2device_set7CommGroup[coll_id].comm_group.GetCommRank(j).global_rank();
+          // bugfix: 为支持多机pp，使用GlobalProcessCtx::Rank()
+          // int curr_device_id = coll_id2device_set7CommGroup[coll_id].comm_group.GetCommRank(j).global_rank();
+          int curr_device_id = GlobalProcessCtx::Rank();
 
           if (device_id2ofccl_rank_ctx.find(curr_device_id) == device_id2ofccl_rank_ctx.end()) {
             device_id2ofccl_rank_ctx[curr_device_id] = nullptr;
