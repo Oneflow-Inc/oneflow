@@ -1,0 +1,40 @@
+#include "OneFlowPDLLUtils.pdll"
+
+Pattern {
+  let device_name: Attr;
+  let device_tag: Attr;
+
+  let matmul_wx = op<oneflow.broadcast_matmul>(x: Value, w: Value){device_name = device_name, device_tag = device_tag, alpha = attr<"1.000000e+00 : f64">};
+  let matmul_wx_add = op<oneflow.broadcast_add>(matmul_wx.0, b: Value){device_name = device_name, device_tag = device_tag} -> (matmul_wx_out: Type);
+
+  let hidden_states = op<oneflow.narrow>(matmul_wx_add.0){device_name = device_name, device_tag = device_tag};
+  let gate = op<oneflow.narrow>(matmul_wx_add.0){device_name = device_name, device_tag = device_tag};
+  let gate_activate = op<oneflow.gelu>(gate.0){device_name = device_name, device_tag = device_tag};
+  let gelu_out = op<oneflow.broadcast_mul>(hidden_states.0,gate_activate.0){device_name = device_name, device_tag = device_tag} -> (out: Type);
+
+  rewrite gelu_out with{
+    let fused_gelu_out = op<oneflow.fused_glu>(x, w, b){activation = attr<"\"gelu\"">, operand_segment_sizes = attr<"dense<[1, 1, 1, 0, 0]> : vector<5xi32>">, device_name = device_name, device_tag = device_tag, has_bias = attr<"true : bool">, is_split = attr<"false : bool">}-> (out, matmul_wx_out);
+    CopyUserOpAttrs(gelu_out, fused_gelu_out);
+    replace gelu_out with fused_gelu_out.0;
+    replace matmul_wx_add with fused_gelu_out.1;
+  };
+}
+
+Pattern {
+  let device_name: Attr;
+  let device_tag: Attr;
+
+  let matmul_wx_add = op<oneflow.fused_matmul_bias>(x: Value, w: Value, b: Value){device_name = device_name, device_tag = device_tag, alpha = attr<"1.000000e+00 : f64">} -> (matmul_wx_out: Type);
+
+  let hidden_states = op<oneflow.narrow>(matmul_wx_add.0){device_name = device_name, device_tag = device_tag};
+  let gate = op<oneflow.narrow>(matmul_wx_add.0){device_name = device_name, device_tag = device_tag};
+  let gate_activate = op<oneflow.gelu>(gate.0){device_name = device_name, device_tag = device_tag};
+  let gelu_out = op<oneflow.broadcast_mul>(hidden_states.0,gate_activate.0){device_name = device_name, device_tag = device_tag}-> (out: Type);
+
+  rewrite gelu_out with{
+    let fused_gelu_out = op<oneflow.fused_glu>(x, w, b){activation = attr<"\"gelu\"">, operand_segment_sizes = attr<"dense<[1, 1, 1, 0, 0]> : vector<5xi32>">, device_name = device_name, device_tag = device_tag}-> (out, matmul_wx_out);
+    CopyUserOpAttrs(gelu_out, fused_gelu_out);
+    replace gelu_out with fused_gelu_out.0;
+    replace matmul_wx_add with fused_gelu_out.1;
+  };
+}

@@ -137,11 +137,11 @@ IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value)
                           APInt(64, value, /*isSigned=*/true));
 }
 
-static Attribute GetNumHeadsFromTranpose(PatternRewriter& rewriter, Operation* transpose) {
+static Attribute GetHeadSizeFromTranpose(PatternRewriter& rewriter, Operation* transpose) {
   auto transpose_op = llvm::dyn_cast<TransposeOp>(transpose);
   CHECK(transpose_op);
   return getSI64IntegerAttr(rewriter,
-                            transpose_op.output().getType().cast<ShapedType>().getDimSize(1));
+                            transpose_op.output().getType().cast<ShapedType>().getDimSize(3));
 }
 NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name) {
   NamedAttrList attrs;
@@ -431,6 +431,10 @@ static LogicalResult IsScalarEqualSqrtDimReciprocal(PatternRewriter& rewriter, V
       < mha_scale_max_diff);
 }
 
+static Attribute GetReciprocal(PatternRewriter& rewriter, Attribute a) {
+  return rewriter.getF64FloatAttr(1 / a.cast<FloatAttr>().getValueAsDouble());
+}
+
 }  // namespace
 
 namespace rewrites {
@@ -439,12 +443,13 @@ void populateRewrites(RewritePatternSet& patterns) {
   patterns.getPDLPatterns().registerRewriteFunction("BuildFusedBiasAddMaskScaleOpWithRate",
                                                     BuildFusedBiasAddMaskScaleOpWithRate);
   patterns.getPDLPatterns().registerRewriteFunction("CopyUserOpAttrs", CopyUserOpAttrs);
-  patterns.getPDLPatterns().registerRewriteFunction("GetNumHeadsFromTranpose",
-                                                    GetNumHeadsFromTranpose);
+  patterns.getPDLPatterns().registerRewriteFunction("GetHeadSizeFromTranpose",
+                                                    GetHeadSizeFromTranpose);
   patterns.getPDLPatterns().registerRewriteFunction("CreateConv2dAndErasePad",
                                                     CreateConv2dAndErasePad);
   patterns.getPDLPatterns().registerRewriteFunction("CreateConv2DBatchNorm", CreateConv2DBatchNorm);
   patterns.getPDLPatterns().registerRewriteFunction("OutlineMulCast", OutlineMulCast);
+  patterns.getPDLPatterns().registerRewriteFunction("GetReciprocal", GetReciprocal);
 }
 
 mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {

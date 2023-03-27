@@ -151,7 +151,9 @@ class Adadelta(Optimizer):
         with flow.no_grad():
             loss = None
             if closure is not None:
-                loss = closure()
+                with flow.enable_grad():
+                    loss = closure()
+
             for param_group in self.param_groups:
                 kwargs = {
                     "learning_rate": param_group["lr"],

@@ -140,6 +140,244 @@ class QuantizationFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class GroupwiseDequantizeFunctor {
+ public:
+  GroupwiseDequantizeFunctor() {
+    symmetric_op_ = CHECK_JUST(
+        one::OpBuilder("groupwise_dequantize").Input("in").Input("scale").Output("out").Build());
+    asymmetric_op_ = CHECK_JUST(one::OpBuilder("groupwise_dequantize")
+                                    .Input("in")
+                                    .Input("scale")
+                                    .Input("zero")
+                                    .Output("out")
+                                    .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
+                           const std::shared_ptr<one::Tensor>& scale,
+                           const Optional<one::Tensor>& zero, const int32_t& num_bits,
+                           const bool& symmetric, const int64_t& group_dim,
+                           const int64_t& group_size) const {
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("num_bits", "symmetric", "group_dim", "group_size");
+    CHECK_OR_RETURN(num_bits == 4 || num_bits == 8) << "num_bits should be 4 or 8.";
+    CHECK_GE_OR_RETURN(in->shape()->NumAxes(), 1)
+        << "The number of dimensions for tensor in should be greater than or equal to 1.";
+    const int64_t regularized_group_dim =
+        group_dim < 0 ? in->shape()->NumAxes() + group_dim : group_dim;
+    CHECK_OR_RETURN(regularized_group_dim >= 0 && regularized_group_dim < in->shape()->NumAxes())
+        << "group_dim should be in range [-" << in->shape()->NumAxes() << ","
+        << in->shape()->NumAxes() << ").";
+    const int64_t group_dim_size =
+        in->shape()->At(regularized_group_dim)
+        * (regularized_group_dim == in->shape()->NumAxes() - 1 ? 8 / num_bits : 1);
+    const int64_t regularized_group_size = group_size < 0 ? group_dim_size : group_size;
+    CHECK_OR_RETURN(regularized_group_size > 0 && regularized_group_size <= group_dim_size)
+        << "group_size should be in range (0," << group_dim_size << "].";
+    CHECK_EQ_OR_RETURN(group_dim_size % regularized_group_size, 0)
+        << "group_size should be a divisor of " << group_dim_size << ".";
+    const int64_t num_groups = group_dim_size / regularized_group_size;
+    if (symmetric) {
+      CHECK_OR_RETURN(in->dtype()->data_type() == DataType::kUInt8
+                      || in->dtype()->data_type() == DataType::kInt8)
+          << "The dtype of tensor in should be int8 or uint8.";
+    } else {
+      CHECK_OR_RETURN(in->dtype()->data_type() == DataType::kUInt8)
+          << "The dtype of tensor in should be uint8.";
+    }
+    CHECK_EQ_OR_RETURN(scale->shape()->NumAxes(), in->shape()->NumAxes())
+        << "The number of dimensions of tensor scale should be equal to tensor in.";
+    for (int64_t i = 0; i < in->shape()->NumAxes(); ++i) {
+      if (i == regularized_group_dim) {
+        CHECK_EQ_OR_RETURN(scale->shape()->At(i), num_groups)
+            << "The size of the " << i << "-th dimension of tensor scale should be equal to "
+            << num_groups;
+      } else if (i == in->shape()->NumAxes() - 1) {
+        CHECK_EQ_OR_RETURN(scale->shape()->At(i), in->shape()->At(i) * (8 / num_bits))
+            << "The size of the " << i << "-th dimension of tensor scale should be equal to "
+            << in->shape()->At(i) * (8 / num_bits) << ".";
+      } else {
+        CHECK_EQ_OR_RETURN(scale->shape()->At(i), in->shape()->At(i))
+            << "The size of the " << i
+            << "-th dimension of tensor scale should be equal to tensor in.";
+      }
+    }
+    if (!symmetric) {
+      CHECK_OR_RETURN(zero) << "When symmetric is False, tensor zero should be specified.";
+      CHECK_OR_RETURN(JUST(zero)->dtype() == scale->dtype())
+          << "The dtype of the zero tensor should be the same as the scale "
+             "tensor.";
+      CHECK_OR_RETURN(*JUST(zero)->shape() == *scale->shape())
+          << "The shape of zero tensor should be equal to tensor scale.";
+    } else {
+      CHECK_OR_RETURN(!zero) << "When symmetric is True, tensor zero should be None.";
+    }
+    attrs.SetAllAttrs(num_bits, symmetric, regularized_group_dim, regularized_group_size);
+    if (symmetric) {
+      return OpInterpUtil::Dispatch<Tensor>(*symmetric_op_, {in, scale}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*asymmetric_op_, {in, scale, JUST(zero)}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> symmetric_op_;
+  std::shared_ptr<OpExpr> asymmetric_op_;
+};
+
+class FusedLinearWithGroupwiseQuantizedWeightFunctor {
+ public:
+  FusedLinearWithGroupwiseQuantizedWeightFunctor() {
+    symmetric_with_bias_op_ =
+        CHECK_JUST(one::OpBuilder("fused_linear_with_groupwise_quantized_weight")
+                       .Input("x")
+                       .Input("w")
+                       .Input("w_scale")
+                       .Input("b")
+                       .Output("out")
+                       .Build());
+    symmetric_without_bias_op_ =
+        CHECK_JUST(one::OpBuilder("fused_linear_with_groupwise_quantized_weight")
+                       .Input("x")
+                       .Input("w")
+                       .Input("w_scale")
+                       .Output("out")
+                       .Build());
+    asymmetric_with_bias_op_ =
+        CHECK_JUST(one::OpBuilder("fused_linear_with_groupwise_quantized_weight")
+                       .Input("x")
+                       .Input("w")
+                       .Input("w_scale")
+                       .Input("w_zero")
+                       .Input("b")
+                       .Output("out")
+                       .Build());
+    asymmetric_without_bias_op_ =
+        CHECK_JUST(one::OpBuilder("fused_linear_with_groupwise_quantized_weight")
+                       .Input("x")
+                       .Input("w")
+                       .Input("w_scale")
+                       .Input("w_zero")
+                       .Output("out")
+                       .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& w,
+                           const std::shared_ptr<one::Tensor>& w_scale,
+                           const Optional<one::Tensor>& w_zero, const Optional<one::Tensor>& b,
+                           const int32_t& num_bits, const bool& symmetric, const int64_t& group_dim,
+                           const int64_t& group_size) const {
+    CHECK_GE_OR_RETURN(x->shape()->NumAxes(), 2)
+        << "The number of dimensions for tensor x should be greater than or equal to 2.";
+    const int64_t m = x->shape()->Count(0, x->shape()->NumAxes() - 1);
+    const int64_t k = x->shape()->At(x->shape()->NumAxes() - 1);
+    CHECK_OR_RETURN(num_bits == 4 || num_bits == 8) << "num_bits should be 4 or 8.";
+    CHECK_EQ_OR_RETURN(w->shape()->NumAxes(), 2)
+        << "The number of dimensions for tensor w should be equal to 2.";
+    CHECK_EQ_OR_RETURN(k % (8 / num_bits), 0)
+        << "The size of the last dimension of x should be a multiple of (8/num_bits).";
+    CHECK_EQ_OR_RETURN(w->shape()->At(1), k / (8 / num_bits))
+        << "The size of second dimension of tensor w should be equal to " << k / (8 / num_bits);
+    const int64_t n = w->shape()->At(0);
+    const int64_t regularized_group_dim =
+        group_dim < 0 ? w->shape()->NumAxes() + group_dim : group_dim;
+    CHECK_OR_RETURN(regularized_group_dim == 0 || regularized_group_dim == 1)
+        << "group_dim should be in range [-2,2).";
+    const int64_t group_dim_size = regularized_group_dim == 0 ? n : k;
+    const int64_t regularized_group_size = group_size < 0 ? group_dim_size : group_size;
+    CHECK_OR_RETURN(regularized_group_size > 0 && regularized_group_size <= group_dim_size)
+        << "group_size should be in range (0," << group_dim_size << "].";
+    CHECK_EQ_OR_RETURN(group_dim_size % regularized_group_size, 0)
+        << "group_size should be a divisor of " << group_dim_size << ".";
+    const int64_t num_groups = group_dim_size / regularized_group_size;
+    if (symmetric) {
+      CHECK_OR_RETURN(w->dtype()->data_type() == DataType::kUInt8
+                      || w->dtype()->data_type() == DataType::kInt8)
+          << "The dtype of tensor w should be int8 or uint8.";
+    } else {
+      CHECK_OR_RETURN(w->dtype()->data_type() == DataType::kUInt8)
+          << "The dtype of tensor w should be uint8.";
+    }
+    CHECK_EQ_OR_RETURN(w_scale->shape()->NumAxes(), 2)
+        << "The number of dimensions of tensor w_scale should be equal to 2.";
+    for (int64_t i = 0; i < 2; ++i) {
+      if (i == regularized_group_dim) {
+        CHECK_EQ_OR_RETURN(w_scale->shape()->At(i), num_groups)
+            << "The size of the " << i << "-th dimension of tensor w_scale should be equal to "
+            << num_groups;
+      } else if (i == 1) {
+        CHECK_EQ_OR_RETURN(w_scale->shape()->At(i), k)
+            << "The size of the " << i << "-th dimension of tensor w_scale should be equal to " << k
+            << ".";
+      } else {
+        CHECK_EQ_OR_RETURN(w_scale->shape()->At(i), w->shape()->At(i))
+            << "The size of the " << i
+            << "-th dimension of tensor w_scale should be equal to tensor w.";
+      }
+    }
+    CHECK_OR_RETURN(w_scale->dtype() == x->dtype())
+        << "The dtype of the w_scale tensor should be the same as the x tensor.";
+    if (!symmetric) {
+      CHECK_OR_RETURN(w_zero) << "When symmetric is False, tensor w_zero should be specified.";
+      CHECK_OR_RETURN(JUST(w_zero)->dtype() == w_scale->dtype())
+          << "The dtype of the w_zero tensor should be the same as the w_scale "
+             "tensor.";
+      CHECK_OR_RETURN(*JUST(w_zero)->shape() == *w_scale->shape())
+          << "The shape of w_zero tensor should be equal to tensor w_scale.";
+    } else {
+      CHECK_OR_RETURN(!w_zero) << "When symmetric is True, tensor w_zero should be None.";
+    }
+
+    if (b) {
+      CHECK_OR_RETURN(JUST(b)->dtype() == x->dtype())
+          << "The dtype of the b tensor should be the same as the x tensor.";
+      CHECK_EQ_OR_RETURN(JUST(b)->shape()->NumAxes(), 1)
+          << "The number of dimensions for tensor b should be equal to 1.";
+      CHECK_EQ_OR_RETURN(JUST(b)->shape()->At(0), n)
+          << "The size of first dimension of tensor b should be equal to the size of first "
+             "dimension of tensor w";
+    }
+
+    if (m > 8) {
+      const auto w_dequantized = JUST(functional::GroupwiseDequantize(
+          w, w_scale, w_zero, num_bits, symmetric, group_dim, group_size));
+      if (b) {
+        return JUST(functional::FusedMatmulBias(x, w_dequantized, JUST(b), Optional<one::Tensor>(),
+                                                1.0, 1.0));
+      } else {
+        return JUST(functional::MatMul(x, w_dequantized, false, true, 1.0));
+      }
+    }
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("num_bits", "symmetric", "group_dim", "group_size");
+
+    attrs.SetAllAttrs(num_bits, symmetric, regularized_group_dim, regularized_group_size);
+
+    if (symmetric) {
+      if (b) {
+        return OpInterpUtil::Dispatch<Tensor>(*symmetric_with_bias_op_, {x, w, w_scale, JUST(b)},
+                                              attrs);
+      } else {
+        return OpInterpUtil::Dispatch<Tensor>(*symmetric_without_bias_op_, {x, w, w_scale}, attrs);
+      }
+    } else {
+      if (b) {
+        return OpInterpUtil::Dispatch<Tensor>(*asymmetric_with_bias_op_,
+                                              {x, w, w_scale, JUST(w_zero), JUST(b)}, attrs);
+      } else {
+        return OpInterpUtil::Dispatch<Tensor>(*asymmetric_without_bias_op_,
+                                              {x, w, w_scale, JUST(w_zero)}, attrs);
+      }
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> symmetric_with_bias_op_;
+  std::shared_ptr<OpExpr> symmetric_without_bias_op_;
+  std::shared_ptr<OpExpr> asymmetric_with_bias_op_;
+  std::shared_ptr<OpExpr> asymmetric_without_bias_op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<impl::FakeQuantizationFunctor>("FakeQuantization"); };
@@ -147,6 +385,11 @@ ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<impl::QuantizationFunctor>("Quantiza
 ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<impl::MinMaxObserverFunctor>("MinMaxObserver"); };
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MovingAverageMinMaxObserverFunctor>("MovingAverageMinMaxObserver");
+};
+ONEFLOW_FUNCTION_LIBRARY(m) {
+  m.add_functor<impl::GroupwiseDequantizeFunctor>("GroupwiseDequantize");
+  m.add_functor<impl::FusedLinearWithGroupwiseQuantizedWeightFunctor>(
+      "FusedLinearWithGroupwiseQuantizedWeight");
 };
 
 }  // namespace functional
