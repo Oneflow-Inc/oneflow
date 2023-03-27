@@ -13,16 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
-#include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/cambricon/cnnl/cnnl_tensor_descriptor.h"
 #include "oneflow/cambricon/cnnl/cnnl_workspace.h"
 #include "oneflow/cambricon/common/mlu_util.h"
 #include "oneflow/cambricon/ep/mlu_stream.h"
-#include "oneflow/cambricon/cnnl/cnnl_tensor_descriptor.h"
+#include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
+#include "oneflow/core/ep/include/primitive/cast.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 
 namespace oneflow {
+namespace {
+
+std::unique_ptr<ep::primitive::Cast> NewCastPrimitive(DataType from, DataType to) {
+  return ep::primitive::NewPrimitive<ep::primitive::CastFactory>(DeviceType::kMLU, from, to);
+}
 
 class MluSparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel {
  public:
@@ -35,8 +41,6 @@ class MluSparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* prediction = ctx->Tensor4ArgNameAndIndex("prediction", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
-    CHECK_EQ_OR_THROW(label->data_type(), DataType::kInt32)
-        << "the data type of label should be int32 for mlu sparse_softmax_cross_entropy op.";
 
     user_op::Tensor* prob = ctx->Tensor4ArgNameAndIndex("prob", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -45,15 +49,28 @@ class MluSparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel {
 
     CnnlTensorDescriptor prediction_desc, label_desc, prob_desc, out_desc;
     prediction_desc.set(prediction);
-    label_desc.set(label);
     prob_desc.set(prob);
     out_desc.set(out);
+
+    const void* label_ptr = label->dptr();
+    CnnlWorkspace label_workspace(ctx->stream()->As<ep::MluStream>());
+
+    if (label->data_type() != DataType::kInt32) {
+      label_workspace.resize(num_instances * sizeof(int32_t));
+      auto cast = NewCastPrimitive(label->data_type(), DataType::kInt32);
+      cast->Launch(ctx->stream(), label->dptr(), label_workspace.dptr(), num_instances);
+
+      label_ptr = label_workspace.dptr();
+      label_desc.set(label->shape_view().NumAxes(), label->shape_view().data(), CNNL_DTYPE_INT32);
+    } else {
+      label_desc.set(label);
+    }
 
     // prob means the gradients.
     OF_CNNL_CHECK(cnnlSparseSoftmaxCrossEntropyWithLogits_v2(
         ctx->stream()->As<ep::MluStream>()->cnnl_handle(), CNNL_COMPUTATION_HIGH_PRECISION,
         CNNL_SOFTMAX_MODE_LOW_DIMENSION, prediction_desc.desc(), prediction->dptr(),
-        label_desc.desc(), label->dptr(), out_desc.desc(), out->mut_dptr(), prob_desc.desc(),
+        label_desc.desc(), label_ptr, out_desc.desc(), out->mut_dptr(), prob_desc.desc(),
         prob->mut_dptr()));
   }
 
@@ -102,4 +119,5 @@ REGISTER_USER_KERNEL("sparse_softmax_cross_entropy_grad")
                      && ((user_op::HobDataType("prob", 0) == DataType::kFloat)
                          || (user_op::HobDataType("prob", 0) == DataType::kFloat16)));
 
+}  // namespace
 }  // namespace oneflow

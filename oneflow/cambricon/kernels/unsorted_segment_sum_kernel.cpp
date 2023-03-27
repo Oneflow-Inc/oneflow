@@ -73,7 +73,7 @@ std::shared_ptr<user_op::OpKernelCache> CreateUnsortedSegmentSumOpKernelCache(
 
 }  // namespace
 
-template<typename T>
+template<typename T, typename K>
 class MluUnsortedSegmentSumKernel final : public user_op::OpKernel {
  public:
   MluUnsortedSegmentSumKernel() = default;
@@ -112,29 +112,32 @@ class MluUnsortedSegmentSumKernel final : public user_op::OpKernel {
     BangHandle handle(stream->mlu_stream(), stream->device()->nclusters(),
                       stream->device()->ncores_per_cluster());
     if constexpr (std::is_same<T, float16>::value) {
-      bang_unsorted_segment_sum_half_kernel<int32_t>(
-          handle, data->dptr<T>(), outer_dim_size, num_segments, inner_dim_size,
-          segment_ids->dptr<int32_t>(), num_segment_ids, out->mut_dptr<T>(), offset);
+      bang_unsorted_segment_sum_half_kernel<K>(handle, data->dptr<T>(), outer_dim_size,
+                                               num_segments, inner_dim_size, segment_ids->dptr<K>(),
+                                               num_segment_ids, out->mut_dptr<T>(), offset);
     } else {
-      bang_unsorted_segment_sum_kernel<T, int32_t>(
-          handle, data->dptr<T>(), outer_dim_size, num_segments, inner_dim_size,
-          segment_ids->dptr<int32_t>(), num_segment_ids, out->mut_dptr<T>(), offset);
+      bang_unsorted_segment_sum_kernel<T, K>(handle, data->dptr<T>(), outer_dim_size, num_segments,
+                                             inner_dim_size, segment_ids->dptr<K>(),
+                                             num_segment_ids, out->mut_dptr<T>(), offset);
     }
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_UNSORTED_SEGMENT_SUM_KERNEL(out_type)                                     \
-  REGISTER_USER_KERNEL("unsorted_segment_sum_like")                                        \
-      .SetCreateFn<MluUnsortedSegmentSumKernel<OF_PP_PAIR_FIRST(out_type)>>()              \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kMLU)                      \
-                       && (user_op::HobDataType("segment_ids", 0) == DataType::kInt32)     \
-                       && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_type))  \
-                       && (user_op::HobDataType("data", 0) == OF_PP_PAIR_SECOND(out_type)) \
-                       && (user_op::HobDataType("like", 0) == OF_PP_PAIR_SECOND(out_type)));
+#define REGISTER_MLU_UNSORTED_SEGMENT_SUM_KERNEL(out_type, index_type)                  \
+  REGISTER_USER_KERNEL("unsorted_segment_sum_like")                                     \
+      .SetCreateFn<MluUnsortedSegmentSumKernel<out_type, index_type>>()                 \
+      .SetIsMatchedHob(                                                                 \
+          (user_op::HobDeviceType() == DeviceType::kMLU)                                \
+          && (user_op::HobDataType("segment_ids", 0) == GetDataType<index_type>::value) \
+          && (user_op::HobDataType("out", 0) == GetDataType<out_type>::value)           \
+          && (user_op::HobDataType("data", 0) == GetDataType<out_type>::value)          \
+          && (user_op::HobDataType("like", 0) == GetDataType<out_type>::value));
 
-REGISTER_UNSORTED_SEGMENT_SUM_KERNEL((float, DataType::kFloat))
-REGISTER_UNSORTED_SEGMENT_SUM_KERNEL((float16, DataType::kFloat16))
+REGISTER_MLU_UNSORTED_SEGMENT_SUM_KERNEL(float, int32_t)
+REGISTER_MLU_UNSORTED_SEGMENT_SUM_KERNEL(float, int64_t)
+REGISTER_MLU_UNSORTED_SEGMENT_SUM_KERNEL(float16, int32_t)
+REGISTER_MLU_UNSORTED_SEGMENT_SUM_KERNEL(float16, int64_t)
 
 }  // namespace oneflow
