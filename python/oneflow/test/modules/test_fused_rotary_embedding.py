@@ -69,6 +69,11 @@ def shuffle_adjacent_two_elem(x, dims, mode):
 
 
 def parseDims(dims, x_layout):
+    B = 1
+    H = 1
+    M = 1
+    K = 1
+    merged_dims = dims
     if x_layout == "BHMK":
         B = dims[0]
         H = dims[1]
@@ -125,6 +130,7 @@ def naive_embedding(
     rotary_ndims,
     mode,
 ):
+    naive_out = None
     if mode == "plane":
         if rotary_ndims == 2:
             y1 = plane_shuffle(x[..., : rotary_size // 2])
@@ -658,12 +664,12 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
     def test_fused_rotary_embedding_op(test_case):
         args_dict = OrderedDict()
         args_dict["test_fun"] = [_test_plane]
-        args_dict["x_layout"] = ["BM(H3K)"]
+        args_dict["x_layout"] = ["BM(HK)"]
         args_dict["mode"] = ["plane"]
         args_dict["base"] = [1e1]
         args_dict["rotary_size"] = [8]
         args_dict["dims"] = [(1, 1, 3, 8)]
-        args_dict["rotary_ndims"] = [2]
+        args_dict["rotary_ndims"] = [2, 1]
         # args_dict["rotary_size"] = [48]
         # args_dict["dims"] = [(32, 2048, 32, 64)]
         args_dict["dtype"] = [flow.float16]
