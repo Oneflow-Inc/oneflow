@@ -359,7 +359,9 @@ class TestRemat(flow.unittest.TestCase):
         ITER_NUM = 5
         for i in range(ITER_NUM):
             print("start allocated_memory(cpu):", allocated_memory("cpu"))
-            print("recomputation num: ", flow._oneflow_internal.remat.recomputation_num())
+            print(
+                "recomputation num: ", flow._oneflow_internal.remat.recomputation_num()
+            )
             output = model(x)
             loss = criterion(output, target)
             del output
@@ -371,7 +373,9 @@ class TestRemat(flow.unittest.TestCase):
             optimizer.step()
             optimizer.zero_grad()
             print("end allocated_memory(cpu):", allocated_memory("cpu"))
-            print("recomputation num: ", flow._oneflow_internal.remat.recomputation_num())
+            print(
+                "recomputation num: ", flow._oneflow_internal.remat.recomputation_num()
+            )
 
         # check there is more than 10 recomputations each iteration
         # so the correctness check makes sense.
@@ -435,7 +439,9 @@ class TestRemat(flow.unittest.TestCase):
         print(
             f"forced eviction num: {flow._oneflow_internal.remat.forced_eviction_num()}"
         )
-        print(f"eager eviction num: {flow._oneflow_internal.remat.eager_eviction_num()}")
+        print(
+            f"eager eviction num: {flow._oneflow_internal.remat.eager_eviction_num()}"
+        )
 
         print("-------------")
 
@@ -448,7 +454,9 @@ class TestRemat(flow.unittest.TestCase):
         print(
             f"forced eviction num: {flow._oneflow_internal.remat.forced_eviction_num()}"
         )
-        print(f"eager eviction num: {flow._oneflow_internal.remat.eager_eviction_num()}")
+        print(
+            f"eager eviction num: {flow._oneflow_internal.remat.eager_eviction_num()}"
+        )
 
 
 if __name__ == "__main__":
