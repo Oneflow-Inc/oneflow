@@ -35,7 +35,7 @@ Maybe<vm::RematableTensorStorage> rematable_storage(const std::shared_ptr<one::T
 }
 }  // namespace
 
-ONEFLOW_API_PYBIND11_MODULE("dtr", m) {
+ONEFLOW_API_PYBIND11_MODULE("remat", m) {
   m.def("is_in_memory", [](const std::shared_ptr<one::Tensor>& tensor) -> Maybe<bool> {
     return JUST(rematable_storage(tensor))->is_in_memory();
   });
@@ -78,6 +78,11 @@ ONEFLOW_API_PYBIND11_MODULE("dtr", m) {
         []() { return Singleton<remat::Env>::Get()->forced_eviction_num(); });
   m.def("eager_eviction_num", []() { return Singleton<remat::Env>::Get()->eager_eviction_num(); });
   m.def("recomputation_num", []() { return Singleton<remat::Env>::Get()->recomputation_num(); });
+  m.def("set_budget_in_bytes", [](size_t budget_in_bytes) { Singleton<remat::Env>::Get()->set_budget_in_bytes(budget_in_bytes); });
+  m.def("budget_in_bytes", []() { return Singleton<remat::Env>::Get()->budget_in_bytes(); });
+  m.def("set_small_pieces_optimization", [](bool enabled) { return Singleton<remat::Env>::Get()->set_small_pieces_optimization(enabled); });
+  m.def("is_small_pieces_optimization_enabled", []() { return Singleton<remat::Env>::Get()->is_small_pieces_optimization_enabled(); });
 }
 
 }  // namespace oneflow
+

@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,19 +12,27 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#pragma once
+"""
+import subprocess
+import sys
+import os
+import unittest
+import oneflow as flow
+import oneflow.unittest
 
-#include "oneflow/core/common/env_var/env_var.h"
 
-namespace oneflow {
+class TestRemat(flow.unittest.TestCase):
+    def test_remat_in_single_threaded_vm(test_case):
+        env = os.environ.copy()
+        env["ONEFLOW_VM_MULTI_THREAD"] = "0"
+        p = subprocess.run(
+            [sys.executable, "_test_remat.py"],
+            cwd=os.path.dirname(os.path.realpath(__file__)),
+            env=env,
+        )
+        test_case.assertEqual(p.returncode, 0)
 
-DEFINE_ENV_BOOL(ONEFLOW_REMAT_SMALL_PIECE, true);
-DEFINE_ENV_BOOL(ONEFLOW_REMAT_DISPLAY_IN_FIRST_TIME, false);
-DEFINE_ENV_BOOL(ONEFLOW_REMAT_RECORD_MEM_FRAG_RATE, true);
-DEFINE_ENV_INTEGER(ONEFLOW_REMAT_GROUP_NUM, 1);
-DEFINE_ENV_BOOL(ONEFLOW_REMAT_NEIGHBOR, true);
-DEFINE_ENV_BOOL(ONEFLOW_REMAT_HEURISTIC_DTE, false);
-DEFINE_ENV_BOOL(ONEFLOW_REMAT_HEURISTIC_DTR, false);
 
-}  // namespace oneflow
+if __name__ == "__main__":
+    unittest.main()
+

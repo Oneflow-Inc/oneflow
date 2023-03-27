@@ -61,12 +61,23 @@ class Env {
 
   std::string current_op_type_name;
 
+  void set_budget_in_bytes(int64_t budget_in_bytes) { budget_in_bytes_ = budget_in_bytes; }
+  int64_t budget_in_bytes() const { return budget_in_bytes_; }
+
+  void set_small_pieces_optimization(bool enabled) {
+    small_pieces_optimization_ = enabled;
+  }
+  bool is_small_pieces_optimization_enabled() const { return small_pieces_optimization_; }
+
  private:
   double time_now_ = 0;
 
   int eager_eviction_num_ = 0;
   int forced_eviction_num_ = 0;
   int recomputation_num_ = 0;
+  
+  int budget_in_bytes_ = 0;
+  bool small_pieces_optimization_ = true;
 };
 
 }  // namespace remat

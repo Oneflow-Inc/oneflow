@@ -46,7 +46,7 @@ inline double bytes2Mb(size_t bytes) { return bytes * 1. / 1024 / 1024; }
 static constexpr size_t kSmallPieceThreshold = 10 * 1024;  // 10 KB
 
 inline bool ShouldBeHeldBySmallPiece(size_t size) {
-  return EnvBool<ONEFLOW_REMAT_SMALL_PIECE>() && size <= kSmallPieceThreshold;
+  return Singleton<remat::Env>::Get()->is_small_pieces_optimization_enabled() && size <= kSmallPieceThreshold;
 }
 
 std::vector<size_t> GroupNumToIndexes(size_t group_num) {
@@ -367,11 +367,11 @@ size_t RematEpAllocator::group_index(bool high) const {
 }
 
 void RematEpAllocator::InitMemory() {
-  memory_size_ = EnvInteger<ONEFLOW_REMAT_BUDGET_MB>() * 1024 * 1024;
+  memory_size_ = Singleton<remat::Env>::Get()->budget_in_bytes();
   CHECK_JUST(backend_->Allocate(&memory_, memory_size_));
   LOG(INFO) << "memory_: " << (void*)memory_ << ", size: " << memory_size_;
   const size_t small_piece_area_size =
-      EnvBool<ONEFLOW_REMAT_SMALL_PIECE>() ? 1024 * kSmallPieceThreshold : 0;
+      Singleton<remat::Env>::Get()->is_small_pieces_optimization_enabled() ? 1024 * kSmallPieceThreshold : 0;
   const size_t normal_area_size = memory_size_ - small_piece_area_size;
   small_piece_area_ptr_ = memory_ + normal_area_size;
 
