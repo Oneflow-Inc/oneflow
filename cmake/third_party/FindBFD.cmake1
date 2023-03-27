@@ -1,0 +1,27 @@
+# - BFD Library module.
+#=============================================================================
+# This module finds libbfd and associated headers.
+#
+#=== Variables ===============================================================
+# This module will set the following variables in your project:
+#
+#   BFD_FOUND            Whether libbfd was successfully found.
+#   bfd::bfd             Cmake target for bfd
+#
+#=============================================================================
+
+cmake_policy(SET CMP0074 NEW)
+
+find_path(BFD_INCLUDE_PATH bfd.h PATH_SUFFIXES include)
+find_library(BFD_LIBRARIES bfd)
+
+if(BFD_FOUND)
+  if(NOT TARGET bfd::bfd)
+    add_library(bfd::bfd INTERFACE)
+    target_include_directories(bfd::bfd INTERFACE ${BFD_INCLUDE_PATH})
+    target_link_libraries(bfd::bfd INTERFACE ${BFD_LIBRARIES})
+    set_property(TARGET bfd::bfd PROPERTY IMPORTED_CONFIGURATIONS RELEASE)
+  endif()
+endif()
+
+mark_as_advanced(BFD_INCLUDE_PATH BFD_LIBRARIES)
