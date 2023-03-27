@@ -29,7 +29,7 @@ CnnlWorkspace::CnnlWorkspace(ep::MluStream* stream, size_t workspace_size)
 }
 
 CnnlWorkspace::~CnnlWorkspace() {
-  if (capacity_ > 0 && !workspace_dptr_) {
+  if (capacity_ > 0 && workspace_dptr_) {
     auto* allocator = mlu_stream_->workspace_allocator();
     allocator->Deallocate(workspace_dptr_, capacity_);
   }
@@ -58,7 +58,7 @@ CnnlHostWorkspace::CnnlHostWorkspace(ep::MluStream* stream, size_t workspace_siz
 }
 
 CnnlHostWorkspace::~CnnlHostWorkspace() {
-  if (capacity_ > 0 && !workspace_dptr_) {
+  if (capacity_ > 0 && workspace_dptr_) {
     auto* allocator = mlu_stream_->host_workspace_allocator();
     allocator->Deallocate(workspace_dptr_, capacity_);
   }
