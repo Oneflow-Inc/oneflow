@@ -285,19 +285,13 @@ class MluAvgPoolGradKernel final : public user_op::OpKernel {
 
       // transpose input from NCHW to NHWC
       auto permute = ComputePermutation(x_shape.NumAxes(), layout);
-      {
-        auto transpose = NewPermutePrimitive(ctx, x_shape.NumAxes());
-        CHECK(transpose);
-        transpose->Launch(ctx->stream(), x->data_type(), x_shape.NumAxes(), x_shape.data(),
-                          x->dptr(), permute.data(), temp_x.dptr());
-      }
-      {
-        auto transpose = NewPermutePrimitive(ctx, dy_shape.NumAxes());
-        CHECK(transpose);
-        auto permute = ComputePermutation(dy_shape.NumAxes(), layout);
-        transpose->Launch(ctx->stream(), dy->data_type(), dy_shape.NumAxes(), dy_shape.data(),
-                          dy->dptr(), permute.data(), temp_dy.dptr());
-      }
+      auto transpose = NewPermutePrimitive(ctx, x_shape.NumAxes());
+      CHECK(transpose);
+      transpose->Launch(ctx->stream(), x->data_type(), x_shape.NumAxes(), x_shape.data(), x->dptr(),
+                        permute.data(), temp_x.dptr());
+      transpose->Launch(ctx->stream(), dy->data_type(), dy_shape.NumAxes(), dy_shape.data(),
+                        dy->dptr(), permute.data(), temp_dy.dptr());
+
       const auto& temp_x_shape = ComputePermuteShape(x_shape, permute);
       x_desc.set(x_shape.NumAxes(), temp_x_shape.data(), cnnl_data_type, layout);
       const auto& temp_dy_shape = ComputePermuteShape(dy_shape, permute);

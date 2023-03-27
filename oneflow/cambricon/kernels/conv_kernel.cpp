@@ -234,19 +234,58 @@ class ConvDataGradKernel final : public user_op::OpKernel {
     UpdateConvParams(&paddings, &strides, &dilation_rates, kernel_dims);
 
     auto cnnl_data_type = ConvertToCnnlDataType(dy->data_type());
+    cnnlTensorLayout_t layout = CNNL_LAYOUT_NHWC;
     CnnlTensorDescriptor dy_desc, filter_desc, dx_desc;
     CnnlConvolutionDescriptor conv_desc;
     conv_desc.set(dx_shape.NumAxes(), strides.data(), paddings.data(), dilation_rates.data(),
                   groups, cnnl_data_type);
-    cnnlTensorLayout_t layout;
+
+    const void* dy_ptr = dy->dptr();
+    const void* filter_ptr = filter->dptr();
+    void* dx_ptr = dx->mut_dptr();
+
+    CnnlWorkspace temp_dy(ctx->stream()->As<ep::MluStream>(), 0);
+    CnnlWorkspace temp_filter(ctx->stream()->As<ep::MluStream>(), 0);
+    CnnlWorkspace temp_dx(ctx->stream()->As<ep::MluStream>(), 0);
+
+    size_t element_size = GetSizeOfDataType(dx->data_type());
+    std::vector<int64_t> temp_dx_shape;
+
     if (data_format != "channels_last") {
-      layout = CNNL_LAYOUT_NCHW;
+      temp_dy.resize(dy_shape.elem_cnt() * element_size);
+      temp_filter.resize(filter_shape.elem_cnt() * element_size);
+      temp_dx.resize(dx_shape.elem_cnt() * element_size);
+      dy_ptr = temp_dy.dptr();
+      filter_ptr = temp_filter.dptr();
+      dx_ptr = temp_dx.dptr();
+
+      // transpose input from NCHW to NHWC
+      {
+        auto permute = ComputePermutation(dy_shape.NumAxes(), layout);
+        auto transpose = NewPermutePrimitive(ctx, dx_shape.NumAxes());
+        CHECK(transpose);
+        transpose->Launch(ctx->stream(), dy->data_type(), dy_shape.NumAxes(), dy_shape.data(),
+                          dy->dptr(), permute.data(), temp_dy.dptr());
+        const auto& temp_dy_shape = ComputePermuteShape(dy_shape, permute);
+        dy_desc.set(dy_shape.NumAxes(), temp_dy_shape.data(), cnnl_data_type, layout);
+
+        temp_dx_shape = ComputePermuteShape(dx_shape, permute);
+        dx_desc.set(dx_shape.NumAxes(), temp_dx_shape.data(), cnnl_data_type, layout);
+      }
+      {
+        auto permute = ComputePermutation(filter_shape.NumAxes(), layout);
+        auto transpose = NewPermutePrimitive(ctx, filter_shape.NumAxes());
+        CHECK(transpose);
+        transpose->Launch(ctx->stream(), filter->data_type(), filter_shape.NumAxes(),
+                          filter_shape.data(), filter->dptr(), permute.data(), temp_filter.dptr());
+        const auto& temp_filter_shape = ComputePermuteShape(filter_shape, permute);
+        filter_desc.set(filter_shape.NumAxes(), temp_filter_shape.data(), cnnl_data_type, layout);
+      }
     } else {
-      layout = CNNL_LAYOUT_NHWC;
+      dy_desc.set(dy_shape.NumAxes(), dy_shape.data(), cnnl_data_type, layout);
+      filter_desc.set(filter_shape.NumAxes(), filter_shape.data(), cnnl_data_type, layout);
+      dx_desc.set(dx_shape.NumAxes(), dx_shape.data(), cnnl_data_type, layout);
     }
-    dy_desc.set(dy_shape.NumAxes(), dy_shape.data(), cnnl_data_type, layout);
-    filter_desc.set(filter_shape.NumAxes(), filter_shape.data(), cnnl_data_type, layout);
-    dx_desc.set(dx_shape.NumAxes(), dx_shape.data(), cnnl_data_type, layout);
 
     cnnlConvolutionBwdDataAlgo_t algo;
     OF_CNNL_CHECK(cnnlGetConvolutionBackwardDataAlgorithm(
@@ -260,9 +299,18 @@ class ConvDataGradKernel final : public user_op::OpKernel {
     CnnlWorkspace workspace(ctx->stream()->As<ep::MluStream>(), workspace_size);
 
     OF_CNNL_CHECK(cnnlConvolutionBackwardData(
-        ctx->stream()->As<ep::MluStream>()->cnnl_handle(), nullptr, filter_desc.desc(),
-        filter->dptr(), dy_desc.desc(), dy->dptr(), conv_desc.desc(), algo, workspace.dptr(),
-        workspace_size, nullptr, dx_desc.desc(), dx->mut_dptr()));
+        ctx->stream()->As<ep::MluStream>()->cnnl_handle(), nullptr, filter_desc.desc(), filter_ptr,
+        dy_desc.desc(), dy_ptr, conv_desc.desc(), algo, workspace.dptr(), workspace_size, nullptr,
+        dx_desc.desc(), dx_ptr));
+
+    if (data_format != "channels_last") {
+      // transpose output from NHWC to NCHW
+      auto permute = ComputePermutation(dx_shape.NumAxes(), CNNL_LAYOUT_NCHW);
+      auto transpose = NewPermutePrimitive(ctx, dx_shape.NumAxes());
+      CHECK(transpose);
+      transpose->Launch(ctx->stream(), dx->data_type(), dx_shape.NumAxes(), temp_dx_shape.data(),
+                        dx_ptr, permute.data(), dx->mut_dptr());
+    }
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -346,7 +394,6 @@ class ConvFilterGradKernel final : public user_op::OpKernel {
                         dy->dptr(), permute.data(), temp_dy.dptr());
       temp_dy_shape = ComputePermuteShape(dy_shape, permute);
       dy_desc.set(dy_shape.NumAxes(), temp_dy_shape.data(), cnnl_data_type, layout);
-      temp_dy.resize(dy_shape.elem_cnt() * element_size);
       dy_ptr = temp_dy.dptr();
     } else {
       filter_diff_layout = CNNL_LAYOUT_NHWC;
