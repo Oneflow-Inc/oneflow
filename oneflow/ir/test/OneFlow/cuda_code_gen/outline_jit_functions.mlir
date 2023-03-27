@@ -35,3 +35,12 @@ oneflow.job @GraphToRun_11(%arg0: tensor<2x256x1280xf16>, %arg1: tensor<2x77x128
   %output_2 = "oneflow.output"(%15) {data_type = 9 : i32, device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], is_dynamic = false, nd_sbp = ["B"], op_name = "_GraphToRun_11_output.0.0_2", output_lbns = ["_GraphToRun_11_output.0.0_2/out"], scope_symbol_id = 681 : i64, shape = [2 : si64, 256 : si64, 1280 : si64]} : (tensor<2x256x1280xf16>) -> tensor<2x256x1280xf16>
   oneflow.return %output_2 : tensor<2x256x1280xf16>
 }
+
+oneflow.job @GraphToRun_1(%arg0: tensor<2x5xsi64>, %arg1: tensor<1xf32>) -> tensor<2x5xf32> {
+  %output = "oneflow.input"(%arg0) {data_type = 6 : i32, device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], is_dynamic = false, nd_sbp = ["B"], op_name = "_GraphToRun_1_input.0.0_2", output_lbns = ["_GraphToRun_1_input.0.0_2/out"], scope_symbol_id = 34 : i64, shape = [2 : si64, 5 : si64]} : (tensor<2x5xsi64>) -> tensor<2x5xsi64>
+  %output_0 = "oneflow.input"(%arg1) {data_type = 2 : i32, device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], is_dynamic = false, nd_sbp = ["B"], op_name = "_GraphToRun_1_input.0.1_3", output_lbns = ["_GraphToRun_1_input.0.1_3/out"], scope_symbol_id = 34 : i64, shape = [1 : si64]} : (tensor<1xf32>) -> tensor<1xf32>
+  %0 = "oneflow.cast"(%output) {device_name = ["@0:0"], device_tag = "cpu", dtype = 2 : i32, hierarchy = [1], op_name = "fw-cast-0", pin_memory = false, scope_symbol_id = 41 : i64} : (tensor<2x5xsi64>) -> tensor<2x5xf32>
+  %1 = "oneflow.scalar_mul_by_tensor"(%0, %output_0) {device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], op_name = "fw-broadcast_mul-1-mlir-gen-2", scope_symbol_id = 41 : i64} : (tensor<2x5xf32>, tensor<1xf32>) -> tensor<2x5xf32>
+  %output_1 = "oneflow.output"(%1) {data_type = 2 : i32, device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], is_dynamic = false, nd_sbp = ["B"], op_name = "_GraphToRun_1_output.0.0_2", output_lbns = ["_GraphToRun_1_output.0.0_2/out"], scope_symbol_id = 34 : i64, shape = [2 : si64, 5 : si64]} : (tensor<2x5xf32>) -> tensor<2x5xf32>
+  oneflow.return %output_1 : tensor<2x5xf32>
+}
