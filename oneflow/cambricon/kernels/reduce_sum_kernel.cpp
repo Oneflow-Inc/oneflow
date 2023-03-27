@@ -20,13 +20,35 @@ limitations under the License.
 #include "oneflow/cambricon/ep/mlu_stream.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/ep/include/primitive/cast.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 
 namespace oneflow {
 namespace {
 
-template<DeviceType device_type, typename T, typename K>
+std::unique_ptr<ep::primitive::Cast> NewCastPrimitive(DataType from, DataType to) {
+  return ep::primitive::NewPrimitive<ep::primitive::CastFactory>(DeviceType::kMLU, from, to);
+}
+
+template<typename T>
+DataType GetReduceComputeDataType() {
+  return GetDataType<T>::value;
+}
+
+#define GET_REDUCE_COMPUTE_DATA_TYPE(T, D) \
+  template<>                               \
+  DataType GetReduceComputeDataType<T>() { \
+    return GetDataType<D>::value;          \
+  }
+
+GET_REDUCE_COMPUTE_DATA_TYPE(uint32_t, int32_t)
+GET_REDUCE_COMPUTE_DATA_TYPE(int64_t, int32_t)
+GET_REDUCE_COMPUTE_DATA_TYPE(uint64_t, int32_t)
+
+#undef GET_REDUCE_COMPUTE_DATA_TYPE
+
+template<typename T>
 class ReduceKernel final : public user_op::OpKernel {
  public:
   ReduceKernel() = default;
@@ -38,11 +60,30 @@ class ReduceKernel final : public user_op::OpKernel {
     user_op::Tensor* output = ctx->Tensor4ArgNameAndIndex("output_tensor", 0);
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
 
-    auto cnnl_dtype = ConvertToCnnlDataType(output->data_type());
-
     CnnlReduceDescriptor reduce_desc;
     CnnlTensorDescriptor input_desc, output_desc;
-    input_desc.set_reduce(input);
+    CnnlWorkspace cast_workspace(ctx->stream()->As<ep::MluStream>());
+    DataType compute_dtype = GetReduceComputeDataType<T>();
+
+    const void* input_ptr = input->dptr();
+    void* output_ptr = output->mut_dptr();
+
+    if (compute_dtype != GetDataType<T>::value) {
+      int element_size = GetSizeOfDataType(compute_dtype);
+      size_t input_count = input->shape_view().elem_cnt() * element_size;
+      size_t output_count = output->shape_view().elem_cnt() * element_size;
+      cast_workspace.resize(input_count + output_count);
+      input_ptr = cast_workspace.dptr();
+      output_ptr = static_cast<char*>(cast_workspace.dptr()) + input_count;
+
+      auto cast_input = NewCastPrimitive(GetDataType<T>::value, compute_dtype);
+      cast_input->Launch(ctx->stream(), input->dptr(), cast_workspace.dptr(),
+                         input_count / element_size);
+      cast_input->Launch(ctx->stream(), output->dptr(), output_ptr, output_count / element_size);
+    }
+
+    auto cnnl_dtype = ConvertToCnnlDataType(compute_dtype);
+    input_desc.set(input->shape_view().NumAxes(), input->shape_view().data(), cnnl_dtype);
 
     auto reduce_mode = CNNL_REDUCE_ADD;
     auto reduce_indices = CNNL_REDUCE_NO_INDICES;
@@ -52,10 +93,10 @@ class ReduceKernel final : public user_op::OpKernel {
       std::vector<int32_t> full_reduce(1, -1);
       std::vector<int32_t> fake_size(input->shape_view().NumAxes(), 1);
       reduce_desc.set(cnnl_dtype, full_reduce, reduce_mode, reduce_indices, reduce_indices_type);
-      output_desc.set(fake_size.size(), fake_size.data(), cnnl_dtype, CNNL_LAYOUT_NCHW);
+      output_desc.set(fake_size.size(), fake_size.data(), cnnl_dtype);
     } else {
       reduce_desc.set(cnnl_dtype, axis, reduce_mode, reduce_indices, reduce_indices_type);
-      output_desc.set(output);
+      output_desc.set(output->shape_view().NumAxes(), output->shape_view().data(), cnnl_dtype);
     }
     size_t workspace_size = 0;
     OF_CNNL_CHECK(cnnlGetReduceOpWorkspaceSize(ctx->stream()->As<ep::MluStream>()->cnnl_handle(),
@@ -65,27 +106,31 @@ class ReduceKernel final : public user_op::OpKernel {
 
     OF_CNNL_CHECK(cnnlReduce(ctx->stream()->As<ep::MluStream>()->cnnl_handle(), reduce_desc.desc(),
                              workspace.dptr(), workspace_size, nullptr, input_desc.desc(),
-                             input->dptr(), 0, nullptr, nullptr, output_desc.desc(),
-                             output->mut_dptr()));
+                             input_ptr, 0, nullptr, nullptr, output_desc.desc(), output_ptr));
+
+    if (compute_dtype != GetDataType<T>::value) {
+      auto cast_output = NewCastPrimitive(compute_dtype, GetDataType<T>::value);
+      cast_output->Launch(ctx->stream(), output_ptr, output->mut_dptr(),
+                          output->shape_view().elem_cnt());
+    }
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_REDUCE_MLU_KERNEL(op_name, device, dtype)                                         \
-  REGISTER_USER_KERNEL(op_name).SetCreateFn<ReduceKernel<device, dtype, dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == device)                                                         \
-      && (user_op::HobDataType("output_tensor", 0) == GetDataType<dtype>::value));
+#define REGISTER_REDUCE_MLU_KERNEL(dtype)                \
+  REGISTER_USER_KERNEL("reduce_sum")                     \
+      .SetCreateFn<ReduceKernel<dtype>>()                \
+      .SetIsMatchedHob(                                  \
+          (user_op::HobDeviceType() == DeviceType::kMLU) \
+          && (user_op::HobDataType("output_tensor", 0) == GetDataType<dtype>::value));
 
-#define REGISTER_REDUCE_SUM_KERNELS(device, dtype) \
-  REGISTER_REDUCE_MLU_KERNEL("reduce_sum", device, dtype)
-
-#define REGISTER_REDUCE_SUM_KERNELS_BY_DEVICE(device) \
-  REGISTER_REDUCE_SUM_KERNELS(device, float)          \
-  REGISTER_REDUCE_SUM_KERNELS(device, float16)        \
-  REGISTER_REDUCE_SUM_KERNELS(device, int32_t)
-
-REGISTER_REDUCE_SUM_KERNELS_BY_DEVICE(DeviceType::kMLU)
+REGISTER_REDUCE_MLU_KERNEL(float)
+REGISTER_REDUCE_MLU_KERNEL(float16)
+REGISTER_REDUCE_MLU_KERNEL(int32_t)
+REGISTER_REDUCE_MLU_KERNEL(uint32_t)
+REGISTER_REDUCE_MLU_KERNEL(int64_t)
+REGISTER_REDUCE_MLU_KERNEL(uint64_t)
 
 }  // namespace
 }  // namespace oneflow

@@ -25,7 +25,9 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def _test_reduce_sum_impl(test_case, device="mlu", data_type=flow.float32):
+def _test_reduce_sum_impl(
+    test_case, data_type, device="mlu",
+):
     input = flow.tensor(
         np.random.randn(2, 3) - 0.5, dtype=data_type, device=flow.device(device)
     )
@@ -66,7 +68,8 @@ def _test_reduce_sum_impl(test_case, device="mlu", data_type=flow.float32):
 @flow.unittest.skip_unless_1n1d()
 class TestReduceSumModule(flow.unittest.TestCase):
     def test_reduce_sum(test_case):
-        _test_reduce_sum_impl(test_case)
+        _test_reduce_sum_impl(test_case, flow.int32)
+        _test_reduce_sum_impl(test_case, flow.int64)
 
 
 if __name__ == "__main__":

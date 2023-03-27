@@ -27,6 +27,7 @@ namespace ep {
 namespace primitive {
 namespace mlu {
 
+namespace {
 template<typename T>
 std::unique_ptr<ep::primitive::Fill> NewFillPrimitive() {
   return ep::primitive::NewPrimitive<ep::primitive::FillFactory>(DeviceType::kMLU,
@@ -36,26 +37,7 @@ std::unique_ptr<ep::primitive::Fill> NewFillPrimitive() {
 std::unique_ptr<ep::primitive::Cast> NewCastPrimitive(DataType from, DataType to) {
   return ep::primitive::NewPrimitive<ep::primitive::CastFactory>(DeviceType::kMLU, from, to);
 }
-
-static int64_t ComputeElementCount(size_t ndim, const int64_t* dims) {
-  int64_t count = 1;
-  for (int i = 0; i < ndim; ++i) { count *= dims[i]; }
-  return count;
-}
-
-static std::vector<int64_t> ComputeBroadcastShape(size_t small_num_dims, const int64_t* small_dims,
-                                                  size_t large_num_dims,
-                                                  const int64_t* large_dims) {
-  std::vector<int64_t> dst_dims(large_num_dims);
-  size_t offset = large_num_dims - small_num_dims;
-  for (int i = 0; i < offset; ++i) { dst_dims[i] = large_dims[i]; }
-  for (int i = offset; i < large_num_dims; ++i) {
-    int64_t dim0 = large_dims[i];
-    int64_t dim1 = small_dims[i - offset];
-    dst_dims[i] = (dim0 > dim1) ? dim0 : dim1;
-  }
-  return dst_dims;
-}
+}  // namespace
 
 template<BinaryOp op>
 cnnlOpTensorDesc_t GetCnnlOpTensorType();
@@ -159,7 +141,7 @@ class BinaryMath : public BroadcastElementwiseBinary {
       dst_dims = ComputeBroadcastShape(num_src0_dims, src0_dims, num_src1_dims, src1_dims);
     }
 
-    DataType compute_dtype = GetBinaryMathComputeDataType<op, T>();
+    DataType compute_dtype = GetBinaryComputeDataType<op, T>();
     if (compute_dtype != GetDataType<T>::value) {
       CnnlWorkspace cast_workspace(stream->As<ep::MluStream>());
       int element_size = GetSizeOfDataType(compute_dtype);
@@ -175,15 +157,15 @@ class BinaryMath : public BroadcastElementwiseBinary {
       cast_input->Launch(stream, src1, cast_workspace_dptr + src0_count, src1_count / element_size);
 
       auto cnnl_compute_dtype = ConvertToCnnlDataType(compute_dtype);
-      CnnlTensorDescriptor src0_tmp_desc, src1_tmp_desc, dst_tmp_desc;
-      src0_tmp_desc.set(num_src0_dims, src0_dims, cnnl_compute_dtype);
-      src1_tmp_desc.set(num_src1_dims, src1_dims, cnnl_compute_dtype);
+      CnnlTensorDescriptor src0_desc, src1_desc, dst_desc;
+      src0_desc.set(num_src0_dims, src0_dims, cnnl_compute_dtype);
+      src1_desc.set(num_src1_dims, src1_dims, cnnl_compute_dtype);
 
-      dst_tmp_desc.set(dst_dims.size(), dst_dims.data(), cnnl_compute_dtype);
+      dst_desc.set(dst_dims.size(), dst_dims.data(), cnnl_compute_dtype);
       void* dst_tmp = cast_workspace_dptr + src0_count + src1_count;
-      BinaryMathImpl<op, T>()(stream, cnnl_compute_dtype, src0_tmp_desc.desc(), cast_workspace_dptr,
-                              src1_tmp_desc.desc(), cast_workspace_dptr + src0_count,
-                              dst_tmp_desc.desc(), dst_tmp);
+      BinaryMathImpl<op, T>()(stream, cnnl_compute_dtype, src0_desc.desc(), cast_workspace_dptr,
+                              src1_desc.desc(), cast_workspace_dptr + src0_count, dst_desc.desc(),
+                              dst_tmp);
 
       auto cast_output = NewCastPrimitive(compute_dtype, GetDataType<T>::value);
       cast_output->Launch(stream, dst_tmp, dst, dst_count / element_size);

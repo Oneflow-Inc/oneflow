@@ -29,6 +29,7 @@ namespace primitive {
 namespace mlu {
 
 #define MLU_UNARY_FLOATING_MATH_OP_SEQ            \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kNegative)        \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kReciprocal)      \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kReciprocalNoNan) \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRsqrt)
@@ -49,7 +50,10 @@ class ElementwiseUnaryImpl : public ElementwiseUnary {
 
     auto* cnnl_handle = stream->As<ep::MluStream>()->cnnl_handle();
 
-    if constexpr (unary_op == UnaryOp::kReciprocal) {
+    if constexpr (unary_op == UnaryOp::kNegative) {
+      OF_CNNL_CHECK(
+          cnnlNegTensor(cnnl_handle, input_desc.desc(), src_ptr, output_desc.desc(), dst_ptr));
+    } else if constexpr (unary_op == UnaryOp::kReciprocal) {
       OF_CNNL_CHECK(
           cnnlReciprocal(cnnl_handle, input_desc.desc(), src_ptr, output_desc.desc(), dst_ptr));
     } else if constexpr (unary_op == UnaryOp::kReciprocalNoNan) {

@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/cambricon/cnnl/cnnl_workspace.h"
 #include "oneflow/cambricon/ep/primitive/type_seq.h"
 #include "oneflow/core/ep/common/primitive/broadcast_elementwise_binary.h"
+#include "oneflow/core/ep/include/primitive/cast.h"
 #include "oneflow/core/ep/include/primitive/fill.h"
 
 namespace oneflow {
@@ -25,11 +26,17 @@ namespace ep {
 namespace primitive {
 namespace mlu {
 
+namespace {
 template<typename T>
 std::unique_ptr<ep::primitive::Fill> NewFillPrimitive() {
   return ep::primitive::NewPrimitive<ep::primitive::FillFactory>(DeviceType::kMLU,
                                                                  GetDataType<T>::value);
 }
+
+std::unique_ptr<ep::primitive::Cast> NewCastPrimitive(DataType from, DataType to) {
+  return ep::primitive::NewPrimitive<ep::primitive::CastFactory>(DeviceType::kMLU, from, to);
+}
+}  // namespace
 
 template<BinaryOp op>
 cnnlLogicOp_t GetCnnlLogicOp();
@@ -60,25 +67,35 @@ class BinaryLogical : public BroadcastElementwiseBinary {
   void Launch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const void* src0,
               size_t num_src1_dims, const int64_t* src1_dims, const void* src1, void* dst) {
     CnnlTensorDescriptor src0_desc, src1_desc, dst_desc;
-    src0_desc.set(num_src0_dims, src0_dims, src_dtype_);
-    src1_desc.set(num_src1_dims, src1_dims, src_dtype_);
-
     std::vector<int64_t> dst_dims;
-    auto broadcast_shape = [&](size_t small_num_dims, const int64_t* small_dims,
-                               size_t large_num_dims, const int64_t* large_dims) {
-      dst_dims.resize(large_num_dims);
-      size_t offset = large_num_dims - small_num_dims;
-      for (int i = 0; i < offset; ++i) { dst_dims[i] = large_dims[i]; }
-      for (int i = offset; i < large_num_dims; ++i) {
-        int64_t dim0 = large_dims[i];
-        int64_t dim1 = small_dims[i - offset];
-        dst_dims[i] = (dim0 > dim1) ? dim0 : dim1;
-      }
-    };
     if (num_src0_dims > num_src1_dims) {
-      broadcast_shape(num_src1_dims, src1_dims, num_src0_dims, src0_dims);
+      dst_dims = ComputeBroadcastShape(num_src1_dims, src1_dims, num_src0_dims, src0_dims);
     } else {
-      broadcast_shape(num_src0_dims, src0_dims, num_src1_dims, src1_dims);
+      dst_dims = ComputeBroadcastShape(num_src0_dims, src0_dims, num_src1_dims, src1_dims);
+    }
+
+    DataType compute_dtype = GetBinaryComputeDataType<op, Src>();
+    CnnlWorkspace cast_workspace(stream->As<ep::MluStream>());
+
+    if (compute_dtype != GetDataType<Src>::value) {
+      int element_size = GetSizeOfDataType(compute_dtype);
+      int64_t src0_count = ComputeElementCount(num_src0_dims, src0_dims) * element_size;
+      int64_t src1_count = ComputeElementCount(num_src1_dims, src1_dims) * element_size;
+      cast_workspace.resize(src0_count + src1_count);
+      char* cast_workspace_dptr = reinterpret_cast<char*>(cast_workspace.dptr());
+
+      auto cast_input = NewCastPrimitive(GetDataType<Src>::value, compute_dtype);
+      cast_input->Launch(stream, src0, cast_workspace_dptr, src0_count / element_size);
+      cast_input->Launch(stream, src1, cast_workspace_dptr + src0_count, src1_count / element_size);
+
+      src0 = cast_workspace_dptr;
+      src1 = cast_workspace_dptr + src0_count;
+      auto cnnl_compute_dtype = ConvertToCnnlDataType(compute_dtype);
+      src0_desc.set(num_src0_dims, src0_dims, cnnl_compute_dtype);
+      src1_desc.set(num_src1_dims, src1_dims, cnnl_compute_dtype);
+    } else {
+      src0_desc.set(num_src0_dims, src0_dims, src_dtype_);
+      src1_desc.set(num_src1_dims, src1_dims, src_dtype_);
     }
     dst_desc.set(dst_dims.size(), dst_dims.data(), dst_dtype_);
 

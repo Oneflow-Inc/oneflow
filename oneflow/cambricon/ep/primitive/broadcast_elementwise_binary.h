@@ -53,27 +53,60 @@ namespace mlu {
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogicalXor, CNNL_LOGIC_OP_XOR)
 
 template<BinaryOp op, typename T>
-inline DataType GetBinaryMathComputeDataType() {
+inline DataType GetBinaryComputeDataType() {
   return GetDataType<T>::value;
 }
 
-#define GET_BINARY_MATH_COMPUTE_DATA_TYPE(op, T, D)       \
-  template<>                                              \
-  inline DataType GetBinaryMathComputeDataType<op, T>() { \
-    return GetDataType<D>::value;                         \
+#define GET_BINARY_COMPUTE_DATA_TYPE(op, T, D)        \
+  template<>                                          \
+  inline DataType GetBinaryComputeDataType<op, T>() { \
+    return GetDataType<D>::value;                     \
   }
 
-GET_BINARY_MATH_COMPUTE_DATA_TYPE(BinaryOp::kAdd, int64_t, int32_t);
-GET_BINARY_MATH_COMPUTE_DATA_TYPE(BinaryOp::kAdd, uint64_t, int32_t);
-GET_BINARY_MATH_COMPUTE_DATA_TYPE(BinaryOp::kSub, int64_t, int32_t);
-GET_BINARY_MATH_COMPUTE_DATA_TYPE(BinaryOp::kSub, uint64_t, int32_t);
-GET_BINARY_MATH_COMPUTE_DATA_TYPE(BinaryOp::kMul, int64_t, int32_t);
-GET_BINARY_MATH_COMPUTE_DATA_TYPE(BinaryOp::kMul, uint64_t, int32_t);
-GET_BINARY_MATH_COMPUTE_DATA_TYPE(BinaryOp::kDiv, int64_t, float);
-GET_BINARY_MATH_COMPUTE_DATA_TYPE(BinaryOp::kDiv, uint64_t, float);
-GET_BINARY_MATH_COMPUTE_DATA_TYPE(BinaryOp::kPow, int32_t, float);
+GET_BINARY_COMPUTE_DATA_TYPE(BinaryOp::kAdd, int64_t, int32_t);
+GET_BINARY_COMPUTE_DATA_TYPE(BinaryOp::kAdd, uint64_t, int32_t);
+GET_BINARY_COMPUTE_DATA_TYPE(BinaryOp::kSub, int64_t, int32_t);
+GET_BINARY_COMPUTE_DATA_TYPE(BinaryOp::kSub, uint64_t, int32_t);
+GET_BINARY_COMPUTE_DATA_TYPE(BinaryOp::kMul, int64_t, int32_t);
+GET_BINARY_COMPUTE_DATA_TYPE(BinaryOp::kMul, uint64_t, int32_t);
+GET_BINARY_COMPUTE_DATA_TYPE(BinaryOp::kDiv, int64_t, float);
+GET_BINARY_COMPUTE_DATA_TYPE(BinaryOp::kDiv, uint64_t, float);
+GET_BINARY_COMPUTE_DATA_TYPE(BinaryOp::kPow, int32_t, float);
 
-#undef GET_BINARY_MATH_COMPUTE_DATA_TYPE
+GET_BINARY_COMPUTE_DATA_TYPE(BinaryOp::kEqual, int64_t, int32_t);
+GET_BINARY_COMPUTE_DATA_TYPE(BinaryOp::kEqual, uint64_t, int32_t);
+GET_BINARY_COMPUTE_DATA_TYPE(BinaryOp::kNotEqual, int64_t, int32_t);
+GET_BINARY_COMPUTE_DATA_TYPE(BinaryOp::kNotEqual, uint64_t, int32_t);
+GET_BINARY_COMPUTE_DATA_TYPE(BinaryOp::kGreaterThan, int64_t, int32_t);
+GET_BINARY_COMPUTE_DATA_TYPE(BinaryOp::kGreaterThan, uint64_t, int32_t);
+GET_BINARY_COMPUTE_DATA_TYPE(BinaryOp::kGreaterEqual, int64_t, int32_t);
+GET_BINARY_COMPUTE_DATA_TYPE(BinaryOp::kGreaterEqual, uint64_t, int32_t);
+GET_BINARY_COMPUTE_DATA_TYPE(BinaryOp::kLessThan, int64_t, int32_t);
+GET_BINARY_COMPUTE_DATA_TYPE(BinaryOp::kLessThan, uint64_t, int32_t);
+GET_BINARY_COMPUTE_DATA_TYPE(BinaryOp::kLessEqual, int64_t, int32_t);
+GET_BINARY_COMPUTE_DATA_TYPE(BinaryOp::kLessEqual, uint64_t, int32_t);
+
+#undef GET_BINARY_COMPUTE_DATA_TYPE
+
+inline int64_t ComputeElementCount(size_t ndim, const int64_t* dims) {
+  int64_t count = 1;
+  for (int i = 0; i < ndim; ++i) { count *= dims[i]; }
+  return count;
+}
+
+inline std::vector<int64_t> ComputeBroadcastShape(size_t small_num_dims, const int64_t* small_dims,
+                                                  size_t large_num_dims,
+                                                  const int64_t* large_dims) {
+  std::vector<int64_t> dst_dims(large_num_dims);
+  size_t offset = large_num_dims - small_num_dims;
+  for (int i = 0; i < offset; ++i) { dst_dims[i] = large_dims[i]; }
+  for (int i = offset; i < large_num_dims; ++i) {
+    int64_t dim0 = large_dims[i];
+    int64_t dim1 = small_dims[i - offset];
+    dst_dims[i] = (dim0 > dim1) ? dim0 : dim1;
+  }
+  return dst_dims;
+}
 
 template<BinaryOp binary_op, typename Src, typename Dst>
 std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary(Scalar attr0,
