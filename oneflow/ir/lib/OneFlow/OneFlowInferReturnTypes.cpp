@@ -63,11 +63,11 @@ LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorCon
 
 size_t getResultSize(DictionaryAttr attributes) {
   const StringRef attr_name = OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr();
-  const DenseIntElementsAttr& size_attr =
-      attributes.get(attr_name).dyn_cast_or_null<DenseIntElementsAttr>();
-  CHECK(size_attr) << "Attr " << attr_name.str() << " is not found or not DenseIntElementsAttr";
+  const DenseI32ArrayAttr& size_attr =
+      attributes.get(attr_name).dyn_cast_or_null<DenseI32ArrayAttr>();
+  CHECK(size_attr) << "Attr " << attr_name.str() << " is not found or not DenseI32ArrayAttr";
   auto size = 0;
-  for (auto s : size_attr.getValues<int32_t>()) { size += s; }
+  for (auto s : size_attr.asArrayRef()) { size += s; }
   return size;
 }
 

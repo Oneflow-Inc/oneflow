@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/common/data_type.pb.h"
@@ -235,8 +236,8 @@ func::FuncOp InsertKernelOFFuncOp(::mlir::PatternRewriter& rewriter, Operation* 
   // NOTE: to get lowered to LLVM, it has to be async
   ::mlir::ValueRange empty_async_dependencies{};
   auto token = rewriter.getType<gpu::AsyncTokenType>();
-  auto t0 =
-      rewriter.create<gpu::WaitOp>(copyOp->getLoc(), token, empty_async_dependencies).getAsyncToken();
+  auto t0 = rewriter.create<gpu::WaitOp>(copyOp->getLoc(), token, empty_async_dependencies)
+                .getAsyncToken();
   auto t2 = rewriter
                 .create<gpu::MemcpyOp>(copyOp->getLoc(),
                                        /*optional asyncToken*/ token,
@@ -1021,6 +1022,7 @@ void AddLowerToLinalgMemRefPasses(PassManager& pm) {
   pm.addNestedPass<func::FuncOp>(
       createLinalgElementwiseOpFusionPass());                       // linalg-fuse-elementwise-ops
   pm.addNestedPass<func::FuncOp>(createLinalgBufferizePass());      // linalg-bufferize
+  pm.addPass(bufferization::createEmptyTensorToAllocTensorPass());  // empty-tensor-to-alloc-tensor
   pm.addNestedPass<func::FuncOp>(createTensorBufferizePass());      // tensor-bufferize
   pm.addPass(func::createFuncBufferizePass());                      // func-bufferize
   pm.addPass(bufferization::createBufferResultsToOutParamsPass());  // buffer-results-to-out-params
@@ -1035,8 +1037,10 @@ LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
   pm.addNestedPass<func::FuncOp>(createConvertLinalgToLoopsPass());  // convert-linalg-to-loops
   pm.addNestedPass<func::FuncOp>(createConvertSCFToCFPass());        // convert-scf-to-cf
   pm.addPass(createConvertLinalgToLLVMPass());                       // convert-linalg-to-llvm
-  pm.addPass(createMemRefToLLVMConversionPass());                              // convert-memref-to-llvm
+  pm.addPass(createMemRefToLLVMConversionPass());                    // convert-memref-to-llvm
   pm.addPass(createConvertFuncToLLVMPass());                         // convert-func-to-llvm
+  pm.addPass(memref::createExpandStridedMetadataPass());             // expand-strided-metadata
+  pm.addPass(createMemRefToLLVMConversionPass());                    // convert-memref-to-llvm
   pm.addPass(createReconcileUnrealizedCastsPass());                  // reconcile-unrealized-casts
   return pm.run(module);
 }
@@ -1062,7 +1066,9 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   pm.addNestedPass<gpu::GPUModuleOp>(createLowerGpuOpsToNVVMOpsPass());  // convert-gpu-to-nvvm
   pm.addNestedPass<gpu::GPUModuleOp>(createSerializeToCubinPass());      // out-of-tree-gpu-to-cubin
   pm.addNestedPass<func::FuncOp>(createGpuCopyArgPass());                // buffer-host-register
-  pm.addPass(createGpuToLLVMConversionPass());
+  pm.addPass(createGpuToLLVMConversionPass());                           // gpu-to-llvm
+  pm.addPass(memref::createExpandStridedMetadataPass());                 // expand-strided-metadata
+  pm.addPass(createMemRefToLLVMConversionPass());                        // convert-memref-to-llvm
   pm.addPass(createReconcileUnrealizedCastsPass());  // reconcile-unrealized-casts
   return pm.run(module);
 }

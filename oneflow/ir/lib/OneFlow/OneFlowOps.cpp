@@ -127,7 +127,7 @@ LogicalResult TrimRedundantCtrl(Operation* op, PatternRewriter& rewriter) {
 bool IsCtrlOutTrimmed(UserOp& op) { return !op.getCtrlOutput(); }
 
 bool IsCtrlInAbsent(UserOp& op) {
-  if (!op->hasAttrOfType<DenseIntElementsAttr>(
+  if (!op->hasAttrOfType<DenseI32ArrayAttr>(
           OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr()))
     op.dump();
   return op.getCtrlInputs().empty();
