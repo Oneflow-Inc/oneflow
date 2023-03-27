@@ -21,7 +21,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_add_with_alpha(test_case, ndim, placement, sbp):
     dims = [random(1, 4) * 8 for i in range(ndim)]
     x1 = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp).mean()
@@ -36,7 +36,7 @@ def _test_add_with_alpha(test_case, ndim, placement, sbp):
     return z1, z2, z3
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_add_with_0size(test_case, ndim, zerodim, placement, sbp):
     dims = [random(1, 4) * 8 for i in range(ndim)]
     dims[zerodim] = 1
