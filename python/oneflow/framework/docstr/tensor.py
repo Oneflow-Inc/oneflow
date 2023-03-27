@@ -166,6 +166,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.floor_,
+    """
+    See :func:`oneflow.floor_`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.flip,
     """
     See :func:`oneflow.flip`
@@ -194,6 +201,78 @@ add_docstr(
     oneflow.Tensor.numel,
     """
     See :func:`oneflow.numel`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.offload,
+    """
+    Transfer tensor data from GPU memory back to host (CPU) memory. If the tensor is already in host (CPU) memory, the operation does nothing and gives a warning.
+    Note that this operation only changes the storage of the tensor, and the tensor id will not change.
+
+    Note:
+    
+        Both global tensor and local tensor of oneflow are applicable to this operation.
+
+        Use with :func:`oneflow.Tensor.load` and :func:`oneflow.Tensor.is_offloaded`. 
+        The behavior of load() is the opposite of offload(), is_offloaded() returns a boolean indicating whether the tensor has been moved to CPU memory.     
+
+        In addition, support for offloading elements of :func:`oneflow.nn.Module.parameters` is provided.        
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+
+        >>> # local tensor
+        >>> x = flow.tensor(np.random.randn(1024, 1024, 100), dtype=flow.float32, device=flow.device("cuda"), )
+        >>> before_id = id(x)
+        >>> x.offload() # Move the Tensor from the GPU to the CPU
+        >>> after_id = id(x)
+        >>> after_id == before_id
+        True
+        >>> x.is_offloaded()
+        True
+        >>> x.load() # Move the Tensor from the cpu to the gpu
+        >>> x.is_offloaded()
+        False
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+
+        >>> # global tensor
+        >>> # Run on 2 ranks respectively
+        >>> placement = flow.placement("cuda", ranks=[0, 1])
+        >>> sbp = flow.sbp.broadcast
+        >>> x = flow.randn(1024, 1024, 100, dtype=flow.float32, placement=placement, sbp=sbp) # doctest: +SKIP
+        >>> before_id = id(x) # doctest: +SKIP
+        >>> x.offload() # doctest: +SKIP
+        >>> after_id = id(x) # doctest: +SKIP
+        >>> print(after_id == before_id) # doctest: +SKIP
+        >>> print(x.is_offloaded()) # doctest: +SKIP
+        >>> x.load() # doctest: +SKIP
+        >>> print(x.is_offloaded()) # doctest: +SKIP
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.load,
+    """
+    Load tensor data stored on the host (CPU) back to GPU memory. If the tensor is already in GPU memory, the operation does nothing and gives a warning.
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.is_offloaded,
+    """
+    Tensor.is_offloaded() -> bool
+
+    Determine whether the tensor has been moved to CPU memory and the CUDA device memory has been released.
+
     """,
 )
 
@@ -560,6 +639,27 @@ add_docstr(
     """
     logical_not() -> Tensor
     See :func:`oneflow.logical_not`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.lerp,
+    """
+    See :func:`oneflow.lerp`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.lerp_,
+    """
+    See :func:`oneflow.lerp_`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.quantile,
+    """
+    See :func:`oneflow.quantile`
     """,
 )
 
@@ -1255,14 +1355,6 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow.Tensor.floor_,
-    r"""
-    In-place version of :func:`oneflow.floor`
-
-    """,
-)
-
-add_docstr(
     oneflow.Tensor.normal_,
     """
     normal_(mean=0, std=1, *, generator=None) -> Tensor
@@ -1306,6 +1398,13 @@ add_docstr(
     oneflow.Tensor.round,
     """
     See :func:`oneflow.round`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.round_,
+    """
+    See :func:`oneflow.round_`
     """,
 )
 
@@ -1870,6 +1969,13 @@ add_docstr(
     oneflow.Tensor.ceil,
     """
     See :func:`oneflow.ceil`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.ceil_,
+    """
+    See :func:`oneflow.ceil_`
     """,
 )
 
