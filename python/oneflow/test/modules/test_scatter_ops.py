@@ -60,7 +60,11 @@ def _test_scatter_reduce(test_case, dim: int):
     input = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
     src = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
     y = torch.scatter(
-        input, dim, oneof(*_get_indexes(device)), src, reduce=oneof("add", "multiply")
+        input,
+        dim,
+        oneof(*_get_indexes(device)),
+        src,
+        reduce=oneof("add", "multiply", nothing()),
     )
     return y
 

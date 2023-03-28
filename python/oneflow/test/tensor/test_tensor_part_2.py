@@ -37,6 +37,15 @@ class TestTensor(flow.unittest.TestCase):
         y = x.permute(permute_list)
         return y
 
+    @autotest(n=1)
+    def test_permute_flow_with_random_data_and_keyword(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4).to(device)
+        permute_list = [0, 1, 2, 3]
+        np.random.shuffle(permute_list)
+        y = x.permute(dims=permute_list)
+        return y
+
     @autotest(n=5)
     def test_transpose_tensor_with_random_data(test_case):
         device = random_device()
@@ -811,6 +820,12 @@ class TestTensor(flow.unittest.TestCase):
         return x.exp()
 
     @autotest(n=5)
+    def test_exp2_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        return x.exp2()
+
+    @autotest(n=5)
     def test_round_tensor_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
@@ -847,6 +862,19 @@ class TestTensor(flow.unittest.TestCase):
 
     @autotest(n=5)
     def test_flow_tensor_view_with_random_data(test_case):
+        dim0_ = random(2, 4).to(int)
+        dim1_ = random(2, 4).to(int)
+        dim2_ = random(2, 4).to(int)
+        dim3_ = random(2, 4).to(int)
+        dim4_ = random(2, 4).to(int)
+        x = random_tensor(
+            ndim=5, dim0=dim0_, dim1=dim1_, dim2=dim2_, dim3=dim3_, dim4=dim4_
+        )
+        shape = [x.value() for x in [dim4_, dim3_, dim2_, dim1_, dim0_]]
+        return [x.view(shape), x.view(size=shape)]
+
+    @autotest(n=5)
+    def test_flow_tensor_view_as_with_random_data(test_case):
         dim0_ = random(2, 4).to(int)
         dim1_ = random(2, 4).to(int)
         dim2_ = random(2, 4).to(int)

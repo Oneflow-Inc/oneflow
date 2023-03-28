@@ -32,6 +32,13 @@ error_msg = """ is not implemented, please submit an issue at
 'https://github.com/Oneflow-Inc/oneflow/issues' including the log information of the error, the 
 minimum reproduction code, and the system information."""
 
+hazard_list = [
+    "_distutils_hack",
+    "importlib",
+    "regex",
+    "tokenizers",
+    "safetensors._safetensors_rust",
+]
 
 # module wrapper with checks for existence of methods
 class ModuleWrapper(ModuleType):
@@ -46,11 +53,17 @@ class ModuleWrapper(ModuleType):
                 return [attr for attr in dir(self.module) if not attr.startswith("_")]
             new_name = self.module.__name__ + "." + name
             if _importer.lazy:
-                if _importer.verbose:
-                    print(
-                        f"{new_name} is not found in oneflow, use dummy object as fallback."
-                    )
-                return DummyModule(new_name)
+                blacklist = ["scaled_dot_product_attention"]
+                if name in blacklist:
+                    if _importer.verbose:
+                        print(f'"{new_name}" is in blacklist, raise AttributeError')
+                    raise AttributeError(new_name + error_msg)
+                else:
+                    if _importer.verbose:
+                        print(
+                            f'"{new_name}" is not found in oneflow, use dummy object as fallback.'
+                        )
+                    return DummyModule(new_name)
             else:
                 raise AttributeError(new_name + error_msg)
         attr = getattr(self.module, name)
@@ -72,6 +85,7 @@ class OneflowImporter(MetaPathFinder, Loader):
         # both __init__.py of oneflow and torch can't be executed multiple times, so we use a cache
         self.enable_mod_cache = {}
         self.disable_mod_cache = {}
+        self.delete_list = []
 
     def find_spec(self, fullname, path, target=None):
         if _is_torch(fullname):  # don't touch modules other than torch
@@ -79,6 +93,7 @@ class OneflowImporter(MetaPathFinder, Loader):
             if not self.enable and self.disable_mod_cache.get(fullname) is None:
                 return None
             return ModuleSpec(fullname, self)
+        self.delete_list.append(fullname)
         return None
 
     def find_module(self, fullname, path=None):
@@ -169,6 +184,15 @@ class OneflowImporter(MetaPathFinder, Loader):
                 del sys.modules[k]
                 for alias in aliases:
                     del globals[alias]
+            name = k if "." not in k else k[: k.find(".")]
+            if (
+                not name in hazard_list
+                and not k in hazard_list
+                and k in self.delete_list
+            ):
+                aliases = list(filter(lambda alias: globals[alias] is v, globals))
+                self.enable_mod_cache.update({k: (v, aliases)})
+                del sys.modules[k]
         for k, (v, aliases) in self.disable_mod_cache.items():
             sys.modules.update({k: v})
             for alias in aliases:
@@ -195,6 +219,8 @@ class DummyModule(ModuleType):
             return []
         if name == "__file__":
             return None
+        if name == "__mro_entries__":
+            return lambda x: ()
         return DummyModule(self.__name__ + "." + name)
 
     def __getitem__(self, name):
@@ -214,6 +240,13 @@ class DummyModule(ModuleType):
         if _importer.verbose:
             print(f'"{self.__name__}" is a dummy object, and `{new_name}` is called.')
         return DummyModule(new_name)
+
+    def __bool__(self):
+        if _importer.verbose:
+            print(
+                f'"{self.__name__}" is a dummy object, and its bool value is accessed.'
+            )
+        return False
 
 
 class enable:

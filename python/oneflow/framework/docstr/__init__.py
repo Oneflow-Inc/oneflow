@@ -84,4 +84,6 @@ from .convolution import *
 from .linalg import *
 from .index_add import *
 from .baddbmm import *
+from .lerp import *
+from .quantile import *
 from .depend import *

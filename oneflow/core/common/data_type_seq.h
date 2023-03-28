@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_DATA_TYPE_SEQ_H_
 #define ONEFLOW_CORE_COMMON_DATA_TYPE_SEQ_H_
 
+#include <complex>
 #include "oneflow/core/common/preprocessor.h"
 
 // SEQ
@@ -33,10 +34,15 @@ limitations under the License.
 
 #define UNSIGNED_INT_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(uint8_t, DataType::kUInt8)
 #define UNSIGNED_INT32_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(uint32_t, DataType::kUInt32)
+#define UNSIGNED_INT64_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(uint64_t, DataType::kUInt64)
 
 #define INT_DATA_TYPE_SEQ SIGNED_INT_DATA_TYPE_SEQ
 
 #define CHAR_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(char, DataType::kChar)
+
+#define COMPLEX_DATA_TYPE_SEQ                                     \
+  OF_PP_MAKE_TUPLE_SEQ(std::complex<float>, DataType::kComplex64) \
+  OF_PP_MAKE_TUPLE_SEQ(std::complex<double>, DataType::kComplex128)
 
 #define ARITHMETIC_DATA_TYPE_SEQ \
   FLOATING_DATA_TYPE_SEQ         \
@@ -45,6 +51,7 @@ limitations under the License.
 #define POD_DATA_TYPE_SEQ \
   ARITHMETIC_DATA_TYPE_SEQ CHAR_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ
 #define POD_AND_HALF_DATA_TYPE_SEQ POD_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ BFLOAT16_DATA_TYPE_SEQ
+#define TRIVIALLY_COPY_DATA_TYPE_SEQ POD_AND_HALF_DATA_TYPE_SEQ COMPLEX_DATA_TYPE_SEQ
 #define PB_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(OFRecord, DataType::kOFRecord)
 #define ALL_DATA_TYPE_SEQ POD_DATA_TYPE_SEQ PB_DATA_TYPE_SEQ
 
