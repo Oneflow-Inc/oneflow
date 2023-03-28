@@ -18,32 +18,32 @@ import oneflow.unittest
 
 
 class TestGatherOp(flow.unittest.TestCase):
-    def test_input_tensor_dimesion_error_msg(test_case):
+    def test_input_tensor_dimesion_error_msg(test_case):#
         with test_case.assertRaises(RuntimeError) as context:
             x = flow.tensor(1)
             indice = flow.tensor([1])
-            flow.gather(x, indice)
+            flow.batch_gather(x, indice)
         test_case.assertTrue(
             "The dimension of the input tensor should be greater than zero, but got " 
             in str(context.exception)
         )
 
-    def test_indices_dimesion_error_msg(test_case):
+    def test_indices_dimesion_error_msg(test_case):#
         with test_case.assertRaises(RuntimeError) as context:
             x = flow.tensor([1])
             indice = flow.tensor(1)
-            flow.gather(x, indice)
+            flow.batch_gather(x, indice)
         test_case.assertTrue(
             "The dimension of the indices tensor should be greater than zero, but got" 
             in str(context.exception)
         )
 
 
-    def test_gather_axis_dimension_error_msg(test_case):
+    def test_gather_axis_tensor_error_msg(test_case):
         with test_case.assertRaises(RuntimeError) as context:
             x = flow.tensor([1,2])
-            x_tensor = flow.tensor([1])
-            flow.gather(x, x_tensor)
+            indice = flow.tensor([1])
+            flow.gather(x, 0, indice)
         test_case.assertTrue(
             "The gather axis should be less or equal to input tensor's axis" 
             in str(context.exception)
@@ -54,7 +54,7 @@ class TestGatherOp(flow.unittest.TestCase):
             x = np.random.randn(2)
             x_tensor = flow.tensor(x)
             indice = flow.tensor([1, 1], dtype=flow.float64)
-            flow.gather(x_tensor, indice)
+            flow.batch_gather(x_tensor, indice)
         test_case.assertTrue(
             "The dtype of the indices tensor must be int32 or int64" 
             in str(context.exception)
@@ -63,4 +63,3 @@ class TestGatherOp(flow.unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    
