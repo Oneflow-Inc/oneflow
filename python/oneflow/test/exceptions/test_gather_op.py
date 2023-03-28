@@ -18,41 +18,35 @@ import oneflow.unittest
 
 
 class TestGatherOp(flow.unittest.TestCase):
-    def test_input_axis_GT_error_msg(test_case):
-        a = flow.tensor([1, 2])
-        b = flow.tensor([3, 4])
-        c = flow.tensor([[2, 2], [2, 2]])
+    def test_input_tensor_dimesion_error_msg(test_case):
         with test_case.assertRaises(RuntimeError) as context:
-            flow.add(a, b, c)
+            x = flow.tensor(1)
+            indice = flow.tensor([1])
+            flow.gather(x, indice)
         test_case.assertTrue(
-            "The dimension of the input tensor should be greater than zero, but got " in str(context.exception)
+            "The dimension of the input tensor should be greater than zero, but got " 
+            in str(context.exception)
         )
 
-    def test_input_axis_GE_error_msg(test_case):
+    def test_indices_dimesion_error_msg(test_case):
         with test_case.assertRaises(RuntimeError) as context:
             x = flow.tensor([1])
             indice = flow.tensor(1)
-            flow.batch_gather(x, indice)
+            flow.gather(x, indice)
         test_case.assertTrue(
-            "The dimension of the indices tensor should be greater or equal to zero, but got " in str(context.exception)
+            "The dimension of the indices tensor should be greater than zero, but got" 
+            in str(context.exception)
         )
 
-    def test_gather_axis_GE_error_msg(test_case):
-        with test_case.assertRaises(RuntimeError) as context:
-            x = flow.tensor([1])
-            indice = flow.tensor(1)
-            flow.batch_gather(x, indice)
-        test_case.assertTrue(
-            "The gather axis should be greater or equal to zero, but got " in str(context.exception)
-        )
 
-    def test_gather_axis_GE_in_tensor_error_msg(test_case):
+    def test_gather_axis_dimension_error_msg(test_case):
         with test_case.assertRaises(RuntimeError) as context:
-            x = flow.tensor([1])
-            indice = flow.tensor(1)
-            flow.batch_gather(x, indice)
+            x = flow.tensor([1,2])
+            x_tensor = flow.tensor([1])
+            flow.gather(x, x_tensor)
         test_case.assertTrue(
-            "The gather axis should be less or equal to input tensor's axis" in str(context.exception)
+            "The gather axis should be less or equal to input tensor's axis" 
+            in str(context.exception)
         )
 
     def test_type_error_msg(test_case):
@@ -60,9 +54,10 @@ class TestGatherOp(flow.unittest.TestCase):
             x = np.random.randn(2)
             x_tensor = flow.tensor(x)
             indice = flow.tensor([1, 1], dtype=flow.float64)
-            flow.batch_gather(x_tensor, indice)
+            flow.gather(x_tensor, indice)
         test_case.assertTrue(
-            "The dtype of the indices tensor must be int32 or int64" in str(context.exception)
+            "The dtype of the indices tensor must be int32 or int64" 
+            in str(context.exception)
         )
 
 
