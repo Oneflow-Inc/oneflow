@@ -25,37 +25,27 @@ namespace user_op {
 
 template<typename dtype_x, typename dtype_out>
 __global__ void RealCUDA(const dtype_x* x, dtype_out* out, int64_t cnt) {
-  CUDA_1D_KERNEL_LOOP(i, cnt) {
-    out[i] = x[i].x;
-  }
+  CUDA_1D_KERNEL_LOOP(i, cnt) { out[i] = x[i].x; }
 }
 
 template<typename dtype_dout, typename dtype_dx>
 __global__ void RealGradCUDA(const dtype_dout* dout, dtype_dx* dx, int64_t cnt) {
-  CUDA_1D_KERNEL_LOOP(i, cnt) {
-    dx[i] = dtype_dx{dout[i], 0.0};
-  }
+  CUDA_1D_KERNEL_LOOP(i, cnt) { dx[i] = dtype_dx{dout[i], 0.0}; }
 }
 
 template<typename dtype_x, typename dtype_out>
 __global__ void ImagCUDA(const dtype_x* x, dtype_out* out, int64_t cnt) {
-  CUDA_1D_KERNEL_LOOP(i, cnt) {
-    out[i] = x[i].y;
-  }
+  CUDA_1D_KERNEL_LOOP(i, cnt) { out[i] = x[i].y; }
 }
 
 template<typename dtype_dout, typename dtype_dx>
 __global__ void ImagGradCUDA(const dtype_dout* dout, dtype_dx* dx, int64_t cnt) {
-  CUDA_1D_KERNEL_LOOP(i, cnt) {
-    dx[i] = dtype_dx{0.0, dout[i]};
-  }
+  CUDA_1D_KERNEL_LOOP(i, cnt) { dx[i] = dtype_dx{0.0, dout[i]}; }
 }
 
 template<typename dtype>
 __global__ void ConjPhysicalCUDA(const dtype* x, dtype* out, int64_t cnt) {
-  CUDA_1D_KERNEL_LOOP(i, cnt) {
-    out[i] = dtype{x[i].x, -x[i].y};
-  }
+  CUDA_1D_KERNEL_LOOP(i, cnt) { out[i] = dtype{x[i].x, -x[i].y}; }
 }
 
 template<typename dtype_x, typename dtype_out>

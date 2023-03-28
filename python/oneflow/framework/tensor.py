@@ -510,17 +510,22 @@ def _as_strided_inplace(self, size, stride, storage_offset=0):
 def _logaddexp(self, other):
     return flow._C.logaddexp(self, other)
 
+
 def _real(self):
     return flow._C.real(self)
+
 
 def _imag(self):
     return flow._C.imag(self)
 
+
 def _conj(self):
     return flow._C.conj(self)
 
+
 def _conj_physical(self):
     return flow._C.conj_physical(self)
+
 
 def RegisterMethods():
     Tensor.ndim = property(_ndim)

@@ -39,7 +39,8 @@ class RealKernel final : public user_op::OpKernel {
     if (out_tensor->shape_view().elem_cnt() == 0) { return; }
     const dtype_x* x = x_tensor->dptr<dtype_x>();
     dtype_out* out = out_tensor->mut_dptr<dtype_out>();
-    RealFunctor<device, dtype_x, dtype_out>()(ctx->stream(), x, out, out_tensor->shape_view().elem_cnt());
+    RealFunctor<device, dtype_x, dtype_out>()(ctx->stream(), x, out,
+                                              out_tensor->shape_view().elem_cnt());
   }
 };
 
@@ -71,14 +72,15 @@ class RealGradKernel final : public user_op::OpKernel {
     if (dx_tensor->shape_view().elem_cnt() == 0) { return; }
     const dtype_dout* dout = dout_tensor->dptr<dtype_dout>();
     dtype_dx* dx = dx_tensor->mut_dptr<dtype_dx>();
-    RealGradFunctor<device, dtype_dout, dtype_dx>()(ctx->stream(), dout, dx, dx_tensor->shape_view().elem_cnt());
+    RealGradFunctor<device, dtype_dout, dtype_dx>()(ctx->stream(), dout, dx,
+                                                    dx_tensor->shape_view().elem_cnt());
   }
 };
 
-#define REGISTER_REAL_GRAD_KERNEL(device, dtype_dout, dtype_dx)     \
-  REGISTER_USER_KERNEL("real_grad")                               \
+#define REGISTER_REAL_GRAD_KERNEL(device, dtype_dout, dtype_dx)    \
+  REGISTER_USER_KERNEL("real_grad")                                \
       .SetCreateFn<RealGradKernel<device, dtype_dout, dtype_dx>>() \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)        \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype_dx>::value));
 
 REGISTER_REAL_GRAD_KERNEL(DeviceType::kCPU, float, std::complex<float>)
@@ -103,7 +105,8 @@ class ImagKernel final : public user_op::OpKernel {
     if (out_tensor->shape_view().elem_cnt() == 0) { return; }
     const dtype_x* x = x_tensor->dptr<dtype_x>();
     dtype_out* out = out_tensor->mut_dptr<dtype_out>();
-    ImagFunctor<device, dtype_x, dtype_out>()(ctx->stream(), x, out, out_tensor->shape_view().elem_cnt());
+    ImagFunctor<device, dtype_x, dtype_out>()(ctx->stream(), x, out,
+                                              out_tensor->shape_view().elem_cnt());
   }
 };
 
@@ -135,14 +138,15 @@ class ImagGradKernel final : public user_op::OpKernel {
     if (dx_tensor->shape_view().elem_cnt() == 0) { return; }
     const dtype_dout* dout = dout_tensor->dptr<dtype_dout>();
     dtype_dx* dx = dx_tensor->mut_dptr<dtype_dx>();
-    ImagGradFunctor<device, dtype_dout, dtype_dx>()(ctx->stream(), dout, dx, dx_tensor->shape_view().elem_cnt());
+    ImagGradFunctor<device, dtype_dout, dtype_dx>()(ctx->stream(), dout, dx,
+                                                    dx_tensor->shape_view().elem_cnt());
   }
 };
 
-#define REGISTER_IMAG_GRAD_KERNEL(device, dtype_dout, dtype_dx)     \
-  REGISTER_USER_KERNEL("imag_grad")                               \
+#define REGISTER_IMAG_GRAD_KERNEL(device, dtype_dout, dtype_dx)    \
+  REGISTER_USER_KERNEL("imag_grad")                                \
       .SetCreateFn<ImagGradKernel<device, dtype_dout, dtype_dx>>() \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)        \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype_dx>::value));
 
 REGISTER_IMAG_GRAD_KERNEL(DeviceType::kCPU, float, std::complex<float>)
@@ -167,7 +171,8 @@ class ConjPhysicalKernel final : public user_op::OpKernel {
     if (out_tensor->shape_view().elem_cnt() == 0) { return; }
     const dtype* x = x_tensor->dptr<dtype>();
     dtype* out = out_tensor->mut_dptr<dtype>();
-    ConjPhysicalFunctor<device, dtype>()(ctx->stream(), x, out, out_tensor->shape_view().elem_cnt());
+    ConjPhysicalFunctor<device, dtype>()(ctx->stream(), x, out,
+                                         out_tensor->shape_view().elem_cnt());
   }
 };
 
