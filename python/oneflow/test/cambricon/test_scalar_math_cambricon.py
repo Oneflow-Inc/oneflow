@@ -77,12 +77,15 @@ def _test_scalar_pow_forward(test_case, shape, device, dtype):
         np.allclose(cpu_out.numpy(), mlu_out.numpy(), 0.0001, 0.0001, equal_nan=True)
     )
 
+
 def _test_scalar_pow_backward(test_case, shape, device, dtype):
     if dtype == flow.int:
         return
     array, y = _get_data(shape, dtype)
     x = flow.tensor(array, device=flow.device(device), dtype=dtype, requires_grad=True)
-    x_cpu = flow.tensor(array, device=flow.device('cpu'), dtype=dtype, requires_grad=True)
+    x_cpu = flow.tensor(
+        array, device=flow.device("cpu"), dtype=dtype, requires_grad=True
+    )
     mlu_out = flow.pow(x, y)
     cpu_out = flow.pow(x_cpu, y)
     mlu_out = mlu_out.sum()
@@ -92,7 +95,6 @@ def _test_scalar_pow_backward(test_case, shape, device, dtype):
     test_case.assertTrue(
         np.allclose(x_cpu.grad.numpy(), x.grad.numpy(), 0.0001, 0.0001, equal_nan=True)
     )
-
 
 
 @flow.unittest.skip_unless_1n1d()

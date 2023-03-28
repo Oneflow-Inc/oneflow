@@ -9,11 +9,10 @@ endif()
 # cncc gflags
 set(BANG_CNCC_FLAGS "-Wall -Werror -fPIC -std=c++11 -pthread")
 if(CMAKE_BUILD_TYPE MATCHES "debug" OR CMAKE_BUILD_TYPE MATCHES "DEBUG")
-  set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -O3")
+  set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -O0 -g")
 else()
   set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -O3 -DNDEBUG")
   set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -Xbang-cnas -fno-soft-pipeline")
 endif()
 
-set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS}" "--bang-mlu-arch=mtp_220" "--bang-mlu-arch=mtp_270"
-                    "--bang-mlu-arch=mtp_290" "--bang-mlu-arch=mtp_372" "--bang-mlu-arch=mtp_592")
+set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS}" "--bang-mlu-arch=mtp_372" "--bang-mlu-arch=mtp_592")

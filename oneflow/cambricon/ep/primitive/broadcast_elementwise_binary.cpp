@@ -58,6 +58,12 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
    NewBroadcastElementwiseBinary<binary_op, OF_PP_PAIR_FIRST(src_data_type_pair),          \
                                  OF_PP_PAIR_FIRST(dst_data_type_pair)>},
 
+#define MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_LOGICAL_ENTRY2(binary_op, data_type_pair) \
+  {std::make_tuple(binary_op, OF_PP_PAIR_SECOND(data_type_pair),                        \
+                   OF_PP_PAIR_SECOND(data_type_pair)),                                  \
+   NewBroadcastElementwiseBinary<binary_op, OF_PP_PAIR_FIRST(data_type_pair),           \
+                                 OF_PP_PAIR_FIRST(data_type_pair)>},
+
     static const std::map<
         std::tuple<BinaryOp, DataType, DataType>,
         std::function<std::unique_ptr<BroadcastElementwiseBinary>(Scalar, Scalar)>>
@@ -66,8 +72,12 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
                                              MLU_BINARY_MATH_OP_SEQ, MLU_PRIMITIVE_ALL_TYPE_SEQ)
                 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
                     MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_LOGICAL_ENTRY, MLU_BINARY_LOGICAL_OP_SEQ,
-                    MLU_PRIMITIVE_ALL_TYPE_SEQ, MLU_PRIMITIVE_BOOL_TYPE_SEQ)};
+                    MLU_PRIMITIVE_ALL_TYPE_SEQ, MLU_PRIMITIVE_BOOL_TYPE_SEQ)
+                    OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+                        MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_LOGICAL_ENTRY2,
+                        MLU_BINARY_LOGICAL_OP_SEQ, MLU_PRIMITIVE_ALL_TYPE_WITHOUT_BOOL_SEQ)};
 
+#undef MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_LOGICAL_ENTRY2
 #undef MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_LOGICAL_ENTRY
 #undef MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY
 

@@ -48,11 +48,11 @@ GET_REDUCE_COMPUTE_DATA_TYPE(uint64_t, int32_t)
 
 #undef GET_REDUCE_COMPUTE_DATA_TYPE
 
-template<typename T>
-class ReduceKernel final : public user_op::OpKernel {
+template<cnnlReduceOp_t mode, typename T>
+class MulReduceKernel final : public user_op::OpKernel {
  public:
-  ReduceKernel() = default;
-  ~ReduceKernel() = default;
+  MulReduceKernel() = default;
+  ~MulReduceKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -85,17 +85,16 @@ class ReduceKernel final : public user_op::OpKernel {
     auto cnnl_dtype = ConvertToCnnlDataType(compute_dtype);
     input_desc.set(input->shape_view().NumAxes(), input->shape_view().data(), cnnl_dtype);
 
-    auto reduce_mode = CNNL_REDUCE_ADD;
     auto reduce_indices = CNNL_REDUCE_NO_INDICES;
     auto reduce_indices_type = CNNL_32BIT_INDICES;
 
     if (axis.size() == input->shape_view().NumAxes()) {
       std::vector<int32_t> full_reduce(1, -1);
       std::vector<int32_t> fake_size(input->shape_view().NumAxes(), 1);
-      reduce_desc.set(cnnl_dtype, full_reduce, reduce_mode, reduce_indices, reduce_indices_type);
+      reduce_desc.set(cnnl_dtype, full_reduce, mode, reduce_indices, reduce_indices_type);
       output_desc.set(fake_size.size(), fake_size.data(), cnnl_dtype);
     } else {
-      reduce_desc.set(cnnl_dtype, axis, reduce_mode, reduce_indices, reduce_indices_type);
+      reduce_desc.set(cnnl_dtype, axis, mode, reduce_indices, reduce_indices_type);
       output_desc.set(output->shape_view().NumAxes(), output->shape_view().data(), cnnl_dtype);
     }
     size_t workspace_size = 0;
@@ -118,19 +117,38 @@ class ReduceKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_REDUCE_MLU_KERNEL(dtype)                \
-  REGISTER_USER_KERNEL("reduce_sum")                     \
-      .SetCreateFn<ReduceKernel<dtype>>()                \
-      .SetIsMatchedHob(                                  \
-          (user_op::HobDeviceType() == DeviceType::kMLU) \
+#define REGISTER_MLU_REDUCE_SUM_KERNEL(dtype)                 \
+  REGISTER_USER_KERNEL("reduce_sum")                          \
+      .SetCreateFn<MulReduceKernel<CNNL_REDUCE_ADD, dtype>>() \
+      .SetIsMatchedHob(                                       \
+          (user_op::HobDeviceType() == DeviceType::kMLU)      \
           && (user_op::HobDataType("output_tensor", 0) == GetDataType<dtype>::value));
 
-REGISTER_REDUCE_MLU_KERNEL(float)
-REGISTER_REDUCE_MLU_KERNEL(float16)
-REGISTER_REDUCE_MLU_KERNEL(int32_t)
-REGISTER_REDUCE_MLU_KERNEL(uint32_t)
-REGISTER_REDUCE_MLU_KERNEL(int64_t)
-REGISTER_REDUCE_MLU_KERNEL(uint64_t)
+#define REGISTER_MLU_REDUCE_MAX_KERNEL(dtype)                 \
+  REGISTER_USER_KERNEL("reduce_max")                          \
+      .SetCreateFn<MulReduceKernel<CNNL_REDUCE_MAX, dtype>>() \
+      .SetIsMatchedHob(                                       \
+          (user_op::HobDeviceType() == DeviceType::kMLU)      \
+          && (user_op::HobDataType("output_tensor", 0) == GetDataType<dtype>::value));
+
+#define REGISTER_MLU_REDUCE_MIN_KERNEL(dtype)                 \
+  REGISTER_USER_KERNEL("reduce_min")                          \
+      .SetCreateFn<MulReduceKernel<CNNL_REDUCE_MIN, dtype>>() \
+      .SetIsMatchedHob(                                       \
+          (user_op::HobDeviceType() == DeviceType::kMLU)      \
+          && (user_op::HobDataType("output_tensor", 0) == GetDataType<dtype>::value));
+
+#define REGISTER_MLU_REDUCE_KERNEL(T) \
+  REGISTER_MLU_REDUCE_SUM_KERNEL(T)   \
+  REGISTER_MLU_REDUCE_MAX_KERNEL(T)   \
+  REGISTER_MLU_REDUCE_MIN_KERNEL(T)
+
+REGISTER_MLU_REDUCE_KERNEL(float)
+REGISTER_MLU_REDUCE_KERNEL(float16)
+REGISTER_MLU_REDUCE_KERNEL(int32_t)
+REGISTER_MLU_REDUCE_KERNEL(uint32_t)
+REGISTER_MLU_REDUCE_KERNEL(int64_t)
+REGISTER_MLU_REDUCE_KERNEL(uint64_t)
 
 }  // namespace
 }  // namespace oneflow

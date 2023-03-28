@@ -151,6 +151,21 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_LO
                                  MLU_BINARY_LOGICAL_OP_SEQ, MLU_PRIMITIVE_ALL_TYPE_SEQ,
                                  MLU_PRIMITIVE_BOOL_TYPE_SEQ);
 
+#define INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_LOGICAL_ENTRY2(binary_op, data_type_pair) \
+  template<>                                                                                   \
+  std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary<                   \
+      binary_op, OF_PP_PAIR_FIRST(data_type_pair), OF_PP_PAIR_FIRST(data_type_pair)>(          \
+      Scalar attr0, Scalar attr1) {                                                            \
+    return std::unique_ptr<BroadcastElementwiseBinary>(                                        \
+        new BinaryLogical<binary_op, OF_PP_PAIR_FIRST(data_type_pair),                         \
+                          OF_PP_PAIR_FIRST(data_type_pair)>);                                  \
+  }
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_LOGICAL_ENTRY2,
+                                 MLU_BINARY_LOGICAL_OP_SEQ,
+                                 MLU_PRIMITIVE_ALL_TYPE_WITHOUT_BOOL_SEQ);
+
+#undef INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_LOGICAL_ENTRY2
 #undef INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_LOGICAL_ENTRY
 
 }  // namespace mlu

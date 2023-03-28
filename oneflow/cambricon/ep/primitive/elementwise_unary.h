@@ -16,8 +16,9 @@ limitations under the License.
 #ifndef ONEFLOW_CAMBRICON_EP_PRIMITIVE_UNARY_ELEMENTWISE_BINARY_H_
 #define ONEFLOW_CAMBRICON_EP_PRIMITIVE_UNARY_ELEMENTWISE_BINARY_H_
 
-#include "oneflow/core/ep/include/primitive/unary_op.h"
+#include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
 #include "oneflow/core/ep/include/primitive/elementwise_unary.h"
+#include "oneflow/core/ep/include/primitive/unary_op.h"
 #include "oneflow/cambricon/cnnl/cnnl_tensor_descriptor.h"
 #include "oneflow/cambricon/ep/primitive/type_seq.h"
 #include "oneflow/cambricon/ep/mlu_stream.h"
@@ -29,7 +30,9 @@ namespace primitive {
 namespace mlu {
 
 #define MLU_UNARY_FLOATING_MATH_OP_SEQ            \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAbs)             \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kNegative)        \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kNotEqualZero)    \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kReciprocal)      \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kReciprocalNoNan) \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRsqrt)
@@ -50,9 +53,18 @@ class ElementwiseUnaryImpl : public ElementwiseUnary {
 
     auto* cnnl_handle = stream->As<ep::MluStream>()->cnnl_handle();
 
-    if constexpr (unary_op == UnaryOp::kNegative) {
+    if constexpr (unary_op == UnaryOp::kAbs) {
+      OF_CNNL_CHECK(cnnlAbs(cnnl_handle, input_desc.desc(), src_ptr, output_desc.desc(), dst_ptr));
+    } else if constexpr (unary_op == UnaryOp::kNegative) {
       OF_CNNL_CHECK(
           cnnlNegTensor(cnnl_handle, input_desc.desc(), src_ptr, output_desc.desc(), dst_ptr));
+    } else if constexpr (unary_op == UnaryOp::kNotEqualZero) {
+      auto primitive =
+          ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
+              DeviceType::kMLU, ep::primitive::BinaryOp::kNotEqual, src_dtype, dst_dtype, 1);
+      CHECK_NOTNULL_OR_THROW(primitive);
+      int64_t dims[1] = {static_cast<int64_t>(count)};
+      primitive->Launch(stream, 1, dims, src_ptr, Scalar(0), dst_ptr);
     } else if constexpr (unary_op == UnaryOp::kReciprocal) {
       OF_CNNL_CHECK(
           cnnlReciprocal(cnnl_handle, input_desc.desc(), src_ptr, output_desc.desc(), dst_ptr));
@@ -67,6 +79,7 @@ class ElementwiseUnaryImpl : public ElementwiseUnary {
     } else {
       UNIMPLEMENTED();
     }
+    (void)cnnl_handle;
   }
 
  protected:

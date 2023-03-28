@@ -15,23 +15,23 @@ limitations under the License.
 */
 #include "oneflow/cambricon/bang/bang_kernels.h"
 
-#define BLOCK_SIZE 1024
-__nram__ char BUFFER[2 * BLOCK_SIZE];
-
 namespace oneflow {
+
+static constexpr int nram_limit = 32;
 
 template<typename T>
 __mlu_func__ void bang_inplace_atomic_add(const T* from, T* to, int64_t length) {
-  int64_t nram_limit = BLOCK_SIZE / sizeof(T);
   int64_t nram_limit_bytes = nram_limit * sizeof(T);
-  int64_t nram_rest = length - length / nram_limit * nram_limit;
+  int64_t nram_rest = (length & 0x1F);  // length % nram_limit
   int64_t nram_rest_bytes = nram_rest * sizeof(T);
 
-  T* nram_from = (T*)BUFFER;
-  T* nram_dst = (T*)(BUFFER + BLOCK_SIZE);
+  __nram__ T nram_buffer[2 * nram_limit];
+
+  T* nram_from = nram_buffer;
+  T* nram_dst = nram_buffer + nram_limit;
 
   int64_t j = 0;
-  for (; j < length - nram_limit; j += nram_limit) {
+  for (; j < length - nram_limit + 1; j += nram_limit) {
     __memcpy_async(nram_from, from + j, nram_limit_bytes, GDRAM2NRAM);
     __sync_copy_dram_to_nram();
     __bang_atomic_add(nram_dst, to + j, nram_from, nram_limit);

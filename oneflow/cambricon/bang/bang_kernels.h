@@ -91,9 +91,25 @@ void bang_regularize_gradient_half_kernel(BangHandle& handle, int64_t n, const v
                                           const void* model_diff, void* out, float l1, float l2);
 
 template<typename T>
-void bang_scalar_pow_gradient_kernel(BangHandle& handle, int64_t n, const T* x, const T* dy, const float value, T* dx);
+void bang_multi_reduce_sum_pow_abs_kernel(BangHandle& handle, int64_t n, const T** inputs,
+                                          const int64_t* sizes, T* output, float p, void* workspace,
+                                          int64_t workspace_size);
 
-void bang_scalar_pow_gradient_half_kernel(BangHandle& handle, int64_t n, const void* x, const void* dy, const float value, void* dx);
+template<typename T>
+void bang_multi_count_not_finite_kernel(BangHandle& handle, int64_t n, const T** inputs,
+                                        const int64_t* sizes, int64_t* output, void* workspace,
+                                        int64_t workspace_size);
+
+void bang_multi_count_not_finite_half_kernel(BangHandle& handle, int64_t n, const void** inputs,
+                                             const int64_t* sizes, int64_t* output, void* workspace,
+                                             int64_t workspace_size);
+
+template<typename T>
+void bang_scalar_pow_gradient_kernel(BangHandle& handle, int64_t n, const T* x, const T* dy,
+                                     const float value, T* dx);
+
+void bang_scalar_pow_gradient_half_kernel(BangHandle& handle, int64_t n, const void* x,
+                                          const void* dy, const float value, void* dx);
 
 }  // namespace oneflow
 

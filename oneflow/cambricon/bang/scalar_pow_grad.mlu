@@ -18,16 +18,16 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-__mlu_global__ void bang_scalar_pow_grad_kernel(int64_t n, const T* x,
-                                                      const T* dy, const float value, T* dx) {
+__mlu_global__ void bang_scalar_pow_grad_kernel(int64_t n, const T* x, const T* dy,
+                                                const float value, T* dx) {
   for (int64_t i = taskId; i < n; i += taskDim) {
     dx[i] = value * dy[i] * pow(x[i], value - static_cast<T>(1.0));
   }
 }
 
 template<typename T>
-void bang_scalar_pow_gradient_kernel(BangHandle& handle, int64_t n, const T* x,
-                                     const T* dy, const float value, T* dx) {
+void bang_scalar_pow_gradient_kernel(BangHandle& handle, int64_t n, const T* x, const T* dy,
+                                     const float value, T* dx) {
   cnrtDim3_t dim = {handle.nclusters, handle.ncores_per_cluster, 1};
   cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
   bang_scalar_pow_grad_kernel<<<dim, func_type, handle.queue>>>(n, x, dy, value, dx);
@@ -38,8 +38,7 @@ void bang_scalar_pow_gradient_half_kernel(BangHandle& handle, int64_t n, const v
   cnrtDim3_t dim = {handle.nclusters, handle.ncores_per_cluster, 1};
   cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
   bang_scalar_pow_grad_kernel<<<dim, func_type, handle.queue>>>(
-      n, static_cast<const half*>(x), static_cast<const half*>(dy), value, 
-      static_cast<half*>(dx));
+      n, static_cast<const half*>(x), static_cast<const half*>(dy), value, static_cast<half*>(dx));
 }
 
 #define INSTANCE_BANG_SCALAR_POW_GRAD_KERNEL(T)                                                \
