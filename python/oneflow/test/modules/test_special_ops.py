@@ -23,6 +23,9 @@ from oneflow.test_utils.test_util import GenArgList
 import oneflow as flow
 import oneflow.unittest
 
+import torch as torch_original
+from packaging import version
+
 from oneflow.test_utils.automated_test_util import *
 
 
@@ -91,6 +94,10 @@ class TestSpecialOps(flow.unittest.TestCase):
         y = torch.special.log_softmax(x, dim=random(low=0, high=num_dims).to(int))
         return y
 
+    @unittest.skipIf(
+        version.parse(torch_original.__version__) <= version.parse("1.13.0"),
+        "module 'torch.special' has no attribute 'softmax' before '1.13.0'",
+    )
     @autotest(n=5, auto_backward="auto")
     def test_flow_softmax_with_random_data(test_case):
         num_dims = random(low=1, high=5).to(int)
