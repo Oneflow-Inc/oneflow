@@ -17,7 +17,9 @@ import numpy as np
 import os
 import unittest
 import oneflow as flow
-
+import oneflow.unittest
+from oneflow.test_utils.automated_test_util import *
+import torch
 
 """
 TODO(lml): Support and test more apis.
@@ -46,6 +48,18 @@ Tensor.cdouble()
 More apis..
 """
 
+def tensor_builder(params: dict, dtype=np.complex64):
+    input_shape = params["shape"]
+
+    # generate random input
+    x = np.random.randn(*input_shape) + 1.0j * np.random.randn(*input_shape)
+    x = x.astype(dtype)
+
+    # requires grad
+    x_flow = flow.from_numpy(x).requires_grad_(True)
+    x_torch = torch.from_numpy(x).requires_grad_(True)
+
+    return x_flow, x_torch
 
 class TestTensorComplex64(unittest.TestCase):
     def setUp(self):
@@ -62,6 +76,14 @@ class TestTensorComplex64(unittest.TestCase):
             [3.14 + 2j, 3.14 + 2j],
         ]
         self.np_c = np.array(self.c, dtype=self.np_dtype)
+        
+        self.lower_n_dims = 1
+        self.upper_n_dims = 8
+        # self.n_dims = []
+        # for _ in range(10):
+        #     num_dims = np.random.randint(lower_n_dims, upper_n_dims)
+        #     self.n_dims.append(num_dims)
+        
 
     def test_from_numpy(self):
         a = flow.from_numpy(self.np_a)
@@ -188,6 +210,15 @@ class TestTensorComplex64(unittest.TestCase):
         self.assertEqual(np_c.dtype, self.np_dtype)
         assert np.allclose(np_c, self.np_c)
 
+    # @autotest(n=5, rtol=1e-2, atol=1e-3)
+    # def test_add(self):
+    #     ndim = np.random.randint(self.lower_n_dims, self.upper_n_dims)
+    #     m = torch.add
+    #     device = "cpu"
+    #     x = random_tensor(ndim=ndim).to(device)
+    #     y = random_tensor(ndim=ndim).to(device)
+    #     ret = m(x, y)
+    #     return ret
 
 class TestTensorComplex128(TestTensorComplex64):
     def setUp(self):
