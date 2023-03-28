@@ -5005,7 +5005,8 @@ def OneFlow_FftC2COp : OneFlow_BaseOp<"fft_c2c", [SupportNonContiguous,NoSideEff
   let attrs = (ins
     SI64ArrayAttr:$dims,
     StrAttr:$norm,
-    BoolAttr:$forward
+    BoolAttr:$forward,
+    BoolAttr:$is_grad_fn
   );
 
   let has_logical_tensor_desc_infer_fn = 1;

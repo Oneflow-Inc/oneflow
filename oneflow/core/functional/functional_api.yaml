@@ -3249,12 +3249,7 @@
 
 - name: "fft_c2c"
   signature:
-    'Tensor (Tensor input, Int64 n=None, Int64 dim=-1, String norm_str="backward", Bool forward=True) => FftC2C'
-  bind_python: False
-
-- name: "fft_c2c_grad"
-  signature:
-    'Tensor (Tensor input, Int64List dim, String norm_str="backward", Bool forward=True) => FftC2CGrad'
+    'Tensor (Tensor input, Int64List n=None, Int64List dims=None, String norm_str="backward", Bool forward=True, Bool is_grad_fn=False) => FftC2C'
   bind_python: False
 
 - name: "fft_r2c"
@@ -3276,6 +3271,16 @@
 - name: "ifft"
   signature: 
     'Tensor (Tensor input, Int64 n=None, Int64 dim=-1, String norm=None) => IFft'
+  bind_python: True
+
+- name: "fftn"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim=None, String norm=None) => FftN'
+  bind_python: True
+
+- name: "ifftn"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim=None, String norm=None) => IFftN'
   bind_python: True
 
 - name: "isclose"

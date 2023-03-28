@@ -129,9 +129,13 @@ class FftC2C : public OpExprGradFunction<FftC2CCaptureState> {
                     TensorTuple* in_grads) const override {
     // TO-DO add gradient logic
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    // std::vector<int64_t> n (out_grads.at(0)->ndim());
+    // for (int i = 0; i < ctx->dims.size(); i++){
+    //   n[i] = out_grads.at(0)->dim(ctx->dims[i]);
+    // }
     in_grads->resize(1);
     in_grads->at(0) =
-        JUST(functional::FftC2CGrad(out_grads.at(0), ctx->dims, ctx->norm_str, !(ctx->forward)));
+        JUST(functional::FftC2C(out_grads.at(0), NullOpt, ctx->dims, ctx->norm_str, /*forward*/!(ctx->forward), /*is_grad_fn*/true));
     return Maybe<void>::Ok();
   }
 

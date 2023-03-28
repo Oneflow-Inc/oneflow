@@ -14,8 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <vector>
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -3963,7 +3965,7 @@ class FftBaseFunctor {
                : functional::To(x, Optional<Symbol<Device>>(JUST(x->device())), new_type, false);
   }
 
-  Maybe<void> maybe_warp_dims(std::vector<int64_t>& dims, int64_t dim_post_expr,
+  Maybe<void> maybe_wrap_dims(std::vector<int64_t>& dims, int64_t dim_post_expr,
                               bool wrap_scalar = true) const {
     if (dim_post_expr <= 0) {
       if (!wrap_scalar) {
@@ -3985,6 +3987,44 @@ class FftBaseFunctor {
     return Maybe<void>::Ok();
   }
 
+  
+  Maybe<void> calculate_fftn_shape_and_dims(const std::shared_ptr<Tensor>& x, const Optional<std::vector<int64_t>>& n, const Optional<std::vector<int64_t>>& dims,
+                                          std::vector<int64_t>& fft_shape, std::vector<int64_t>& fft_dims) const {
+
+    if (dims.has_value()){
+      fft_dims = *JUST(dims);
+      maybe_wrap_dims(fft_dims, x->ndim());
+      std::sort(fft_dims.begin(), fft_dims.end());
+      auto duplicate = std::adjacent_find(fft_dims.begin(), fft_dims.end());
+      CHECK_OR_RETURN(duplicate != fft_dims.end()) << Error::RuntimeError() << "FFT dims must be unique";
+    }
+    else{
+      fft_dims.resize(x->ndim());
+      for (int i = 0; i < x->ndim(); i++){
+        fft_dims[i] = i;
+      }
+    }
+
+    if (!n.has_value()){
+      fft_shape.resize(fft_dims.size());
+      for (int i = 0; i < fft_dims.size(); i++){
+        fft_shape[i] = x->dim(fft_dims[i]);
+      }
+    }
+    else{
+      fft_shape = *JUST(n);
+      if (dims.has_value()){
+        for (int i = 0; i < fft_dims.size(); i++){
+          fft_shape[fft_dims[i]] = fft_shape[fft_dims[i]] == -1 ? x->dim(fft_dims[i]) : fft_shape[fft_dims[i]];
+        }
+      }
+      else{
+        fft_dims.resize(1, fft_shape.size() - 1);
+      }
+    }
+          
+    return Maybe<void>::Ok();
+  }
   // Maybe<Tensor> convert_to_real(const std::shared_ptr<one::Tensor>& x){
 
   // }
@@ -3996,45 +4036,39 @@ class FftBaseFunctor {
 class FftC2CFunctor : public FftBaseFunctor {
  public:
   FftC2CFunctor() : FftBaseFunctor("fft_c2c") {}
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<int64_t>& n,
-                           int64_t dim, const std::string& norm_str, bool forward) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<std::vector<int64_t>>& n,
+                           const Optional<std::vector<int64_t>>& dims, const std::string& norm_str, bool forward, bool is_grad_fn) const {
     CHECK_OR_THROW(x->dtype()->is_complex())
         << "expects the dtype of input Tensor  is Complex, but gets " << x->dtype()->name();
 
-    const auto wrapped_dim = JUST(maybe_wrap_dim(dim, x->ndim()));
-    std::vector<int64_t> wrapped_dims {wrapped_dim};
+    if (n.has_value() && dims.has_value()){
+      CHECK_OR_RETURN((*JUST(n)).size() == (*JUST(dims)).size()) << Error::RuntimeError() << "When dim and shape were both given, they must have the same length";
+    }
 
-    int64_t orig_len = x->dim(wrapped_dim);
-    int64_t fft_len = n.has_value() == true ? JUST(n) : orig_len;
-    CHECK_OR_RETURN(fft_len >= 1) << Error::RuntimeError() << "Expected n >= 1, but got "
-                                  << fft_len;
+    std::vector<int64_t> wrapped_dims(x->ndim(), 0);
+    std::vector<int64_t> fft_len(x->ndim(), 0);
+    if (dims.has_value() && (*JUST(dims)).size() == 1){
+      // 1D-fft
+      wrapped_dims = *JUST(dims);
+      maybe_wrap_dims(wrapped_dims, x->ndim());
+      for (int i = 0; i < wrapped_dims.size(); i++){
+        fft_len[i] = n.has_value() == true ? (*JUST(n))[i] : x->dim(wrapped_dims[i]);
+        CHECK_OR_RETURN(fft_len[i] >= 1) << Error::RuntimeError() << "Expected n >= 1, but got "
+                                      << fft_len[i];
+      }
+    }
+    else{
+      // ND-fft
+      calculate_fftn_shape_and_dims(x, n, dims, fft_len, wrapped_dims);
+    }
 
     auto resized_tensor =
-        n.has_value() == true ? JUST(resize_fft_input(x, {wrapped_dim}, {fft_len})) : x;
+        n.has_value() == true ? JUST(resize_fft_input(x, wrapped_dims, fft_len)) : x;
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "forward");
-    attrs.SetAllAttrs(wrapped_dims, norm_str, forward);
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "forward", "is_grad_fn");
+    attrs.SetAllAttrs(wrapped_dims, norm_str, forward, is_grad_fn);
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {resized_tensor}, attrs);
-  }
-};
-
-class FftC2CFunctorGrad : public FftBaseFunctor {
- public:
-  FftC2CFunctorGrad() : FftBaseFunctor("fft_c2c") {}
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& dims,
-                           const std::string& norm_str, bool forward) const {
-    CHECK_OR_THROW(x->dtype()->is_complex())
-        << "expects the dtype of input Tensor  is Complex, but gets " << x->dtype()->name();
-
-    std::vector<int64_t> wrapped_dims(dims.begin(), dims.end());
-    maybe_warp_dims(wrapped_dims, x->ndim());
-    std::sort(wrapped_dims.begin(), wrapped_dims.end());
-
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "forward");
-    attrs.SetAllAttrs(wrapped_dims, norm_str, forward);
-
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 };
 
@@ -4144,9 +4178,19 @@ class FftFunctor {
     // auto dim_val = dim.value_or(-1);
     std::string norm_str = norm.value_or("backward");
     if (input->dtype()->is_complex()) {
-      return functional::FftC2C(input, n, dim, norm_str, /*forward=*/true);
+      std::vector<int64_t> fft_dim {dim};
+      if (n.has_value()){
+        std::vector<int64_t> len {JUST(n)};
+        return functional::FftC2C(input, len, fft_dim, norm_str, /*forward=*/true, /*is_grad_fn*/false);
+      }
+      else{
+        return functional::FftC2C(input, NullOpt, fft_dim, norm_str, /*forward=*/true, /*is_grad_fn*/false);
+      }
     } else {
-      return functional::FftR2C(input, n, dim, norm_str, /*forward=*/true, /*onesided=*/false);
+      // TO-DO
+      // return functional::FftR2C(input, n, dim, norm_str, /*forward=*/true, /*onesided=*/false);
+      CHECK_OR_THROW(false) << "UNIMPLEMENTED";
+      return input;
     }
   }
 };
@@ -4157,12 +4201,69 @@ class IFftFunctor {
                           int64_t dim, const Optional<std::string>& norm) const {
     auto norm_str = norm.value_or("backward");
     if (input->dtype()->is_complex()) {
-      return functional::FftC2C(input, n, dim, norm_str, /*forward=*/false);
+        std::vector<int64_t> fft_dim {dim};
+        if (n.has_value()){
+          std::vector<int64_t> len {JUST(n)};
+          return functional::FftC2C(input, len, fft_dim, norm_str, /*forward=*/false, /*is_grad_fn*/false);
+        }
+        else{
+          return functional::FftC2C(input, NullOpt, fft_dim, norm_str, /*forward=*/false, /*is_grad_fn*/false);
+        }
     } else {
-      return functional::FftR2C(input, n, dim, norm_str, /*forward=*/false, /*onesided=*/false);
+      // TO-DO
+      // return functional::FftR2C(input, n, dim, norm_str, /*forward=*/false, /*onesided=*/false);
+        CHECK_OR_THROW(false) << "UNIMPLEMENTED";
+        return input;
     }
   }
 };
+
+class FftNFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<std::vector<int64_t>>& s,
+                           const Optional<std::vector<int64_t>>& dim, const Optional<std::string>& norm) const {
+    std::string norm_str = norm.value_or("backward");
+
+    if (input->dtype()->is_complex()) {
+      if (s.has_value()){
+        std::vector<int64_t> len = *JUST(s);
+        return functional::FftC2C(input, len, dim, norm_str, /*forward=*/true, /*is_grad_fn*/false);
+      }
+      else{
+        return functional::FftC2C(input, NullOpt, dim, norm_str, /*forward=*/true, /*is_grad_fn*/false);
+      }
+    } else {
+      // TO-DO
+      // return functional::FftR2C(input, s, {0}, norm_str, /*forward=*/true, /*onesided=*/false);
+        CHECK_OR_THROW(false) << "UNIMPLEMENTED";
+        return input;
+    }
+  }
+};
+
+class IFftNFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<std::vector<int64_t>>& s,
+                           const Optional<std::vector<int64_t>>& dim, const Optional<std::string>& norm) const {
+    std::string norm_str = norm.value_or("backward");
+
+    if (input->dtype()->is_complex()) {
+      if (s.has_value()){
+        std::vector<int64_t> len = *JUST(s);
+        return functional::FftC2C(input, len, dim, norm_str, /*forward=*/false, /*is_grad_fn*/false);
+      }
+      else{
+        return functional::FftC2C(input, NullOpt, dim, norm_str, /*forward=*/false, /*is_grad_fn*/false);
+      }
+    } else {
+      // TO-DO
+      // return functional::FftR2C(input, s, {0}, norm_str, /*forward=*/true, /*onesided=*/false);
+        CHECK_OR_THROW(false) << "UNIMPLEMENTED";
+        return input;
+    }
+  }
+};
+
 #if 0
 class StftFunctor {
  public:
@@ -4876,12 +4977,13 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TruncFunctor>("Trunc");
   // m.add_functor<StftFunctor>("Stft");  disable Stft, TO-DO: compat Stft into fft
   m.add_functor<impl::FftC2CFunctor>("FftC2C");
-  m.add_functor<impl::FftC2CFunctorGrad>("FftC2CGrad");
   m.add_functor<impl::FftR2CFunctor>("FftR2C");
   // m.add_functor<FftR2CFunctorGrad>("FftR2CGrad");  TO-DO
   // m.add_functor<FftC2RFunctor>("FftC2R");  TO-DO
   m.add_functor<impl::FftFunctor>("Fft");
   m.add_functor<impl::IFftFunctor>("IFft");
+  m.add_functor<impl::FftNFunctor>("FftN");
+  m.add_functor<impl::IFftNFunctor>("IFftN");
   m.add_functor<impl::FusedWeightedSumFunctor>("FusedWeightedSum");
   m.add_functor<impl::FusedCenterFunctor>("FusedCenter");
   m.add_functor<impl::FusedCenterGradFunctor>("FusedCenterGrad");
