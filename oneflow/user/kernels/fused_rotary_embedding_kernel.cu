@@ -195,11 +195,8 @@ __global__ void FusedApplyRotaryEmbFetchKernel(
        packed_offset < rotary_num_elements; packed_offset += blockDim.x * gridDim.x) {
     using LoadPack = cuda::elementwise::Packed<T, pack_size>;
     IndexType offset =
-        param.offset
-        + (packed_offset % packed_rotary_ndims + packed_offset / packed_rotary_ndims * packed_k)
+        (packed_offset % packed_rotary_ndims + packed_offset / packed_rotary_ndims * packed_k)
               * pack_size;
-    const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + offset);
-    const LoadPack x_vec = *x_load;
     IndexType sinuous_offset = 0;
     IndexType position_id_offset = 0;
     IndexType k_index = 0;
@@ -225,6 +222,10 @@ __global__ void FusedApplyRotaryEmbFetchKernel(
     const LoadPack* cos_load = reinterpret_cast<const LoadPack*>(cos + sinuous_offset);
     const LoadPack* sin_load = reinterpret_cast<const LoadPack*>(sin + sinuous_offset);
     const LoadPack cos_vec = *cos_load, sin_vec = *sin_load;
+
+    const IndexType x_offset = (offset - k_index) * param.packed_n + k_index + param.offset;
+    const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + x_offset);
+    const LoadPack x_vec = *x_load;
     LoadPack out_vec;
 
 #pragma unloop
@@ -235,7 +236,7 @@ __global__ void FusedApplyRotaryEmbFetchKernel(
                                 + x_vec.elem[i * 2] * sin_vec.elem[i * 2 + 1];
     }
 
-    *(reinterpret_cast<LoadPack*>(out + offset - param.offset)) = out_vec;
+    *(reinterpret_cast<LoadPack*>(out + offset)) = out_vec;
   }
 
   for (IndexType packed_offset = threadIdx.x + blockIdx.x * blockDim.x;
@@ -243,14 +244,15 @@ __global__ void FusedApplyRotaryEmbFetchKernel(
        packed_offset += blockDim.x * gridDim.x) {
     using LoadPack = cuda::elementwise::Packed<T, pack_size>;
     IndexType offset =
-        param.offset
-        + (packed_rotary_ndims + (packed_offset - rotary_num_elements) % packed_pass_ndims
+        (packed_rotary_ndims + (packed_offset - rotary_num_elements) % packed_pass_ndims
            + (packed_offset - rotary_num_elements) / packed_pass_ndims * packed_k)
               * pack_size;
-    const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + offset);
+    const IndexType k_index = offset % param.k;
+    const IndexType x_offset = (offset - k_index) * param.packed_n + k_index + param.offset;
+    const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + x_offset);
     const LoadPack x_vec = *x_load;
 
-    *(reinterpret_cast<LoadPack*>(out + offset - param.offset)) = x_vec;
+    *(reinterpret_cast<LoadPack*>(out + offset)) = x_vec;
   }
 }
 
