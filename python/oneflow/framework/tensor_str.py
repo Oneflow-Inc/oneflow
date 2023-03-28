@@ -332,10 +332,7 @@ def _gen_tensor_str_template(tensor, is_meta):
         suffixes.append(f"placement={str(tensor.placement)}")
         suffixes.append(f"sbp={str(tensor.sbp)}")
     elif tensor.device.type != "cpu":
-        if tensor.device.type == "meta":
-            suffixes.append("device='" + tensor.device.type + "'")
-        else:
-            suffixes.append("device='" + str(tensor.device) + "'")
+        suffixes.append("device='" + str(tensor.device) + "'")
     if tensor.is_lazy:
         suffixes.append("is_lazy='True'")
 
