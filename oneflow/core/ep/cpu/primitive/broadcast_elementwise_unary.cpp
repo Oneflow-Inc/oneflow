@@ -32,7 +32,9 @@ namespace {
 
 #define CPU_PRIMITIVE_CAST_ALL_TYPE_SEQ \
   CPU_PRIMITIVE_UINT32_TYPE_SEQ         \
-  CPU_PRIMITIVE_ALL_TYPE_SEQ
+  CPU_PRIMITIVE_NATIVE_TYPE_SEQ         \
+  CPU_PRIMITIVE_FLOAT16_TYPE_SEQ        \
+  CPU_PRIMITIVE_BFLOAT16_TYPE_SEQ
 
 bool IsContiguous(size_t num_dims, const int64_t* dims, const int64_t* strides) {
   for (int i = num_dims - 1; i >= 0; i--) {

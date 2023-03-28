@@ -126,25 +126,26 @@ bool DType::is_complex() const { return CHECK_JUST(DTypeMeta4DataType(data_type_
 */
 const int DType::priority_order[DataType_ARRAYSIZE] = {0,  /*kInvalid*/
                                                        3,  /*kChar*/
-                                                       13, /*kFloat32*/
-                                                       14, /*kDouble*/
+                                                       14, /*kFloat32*/
+                                                       15, /*kDouble*/
                                                        4,  /*kInt8*/
-                                                       7,  /*kInt32*/
-                                                       9,  /*kInt64*/
+                                                       8,  /*kInt32*/
+                                                       10, /*kInt64*/
                                                        2,  /*kUInt8*/
-                                                       19, /*kOFRecord*/
-                                                       12, /*kFloat16*/
-                                                       20, /*kTensorBuffer*/
-                                                       18, /*kBFloat16*/
+                                                       20, /*kOFRecord*/
+                                                       13, /*kFloat16*/
+                                                       21, /*kTensorBuffer*/
+                                                       19, /*kBFloat16*/
                                                        1,  /*kBool*/
-                                                       6,  /*kUint32*/
-                                                       8,  /*kUint64*/
-                                                       10, /*kUint128*/
-                                                       5,  /*kInt16*/
-                                                       11, /*kInt128*/
-                                                       15, /*kComplex32*/
-                                                       16, /*kComplex64*/
-                                                       17 /*kComplex128*/};
+                                                       5,  /*kUint16*/
+                                                       7,  /*kUint32*/
+                                                       9,  /*kUint64*/
+                                                       11, /*kUint128*/
+                                                       6,  /*kInt16*/
+                                                       12, /*kInt128*/
+                                                       16, /*kComplex32*/
+                                                       17, /*kComplex64*/
+                                                       18 /*kComplex128*/};
 
 bool DType::is_integer() const { return CHECK_JUST(DTypeMeta4DataType(data_type_)).is_integer(); }
 
