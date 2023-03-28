@@ -28,43 +28,11 @@ def plane_shuffle(x):
     return np.concatenate((-x2, x1), axis=-1)
 
 
-def shuffle_adjacent_two_elem(x, dims, mode):
-    switch_stride = 1
-    if mode == "plane":
-        switch_stride = dims[-1] // 2
+def shuffle_adjacent_two_elem(x):
     y = x.copy()
-    num_elements = 1
-    stride = [1] * len(dims)
-
-    for i in range(len(dims)):
-        dim = dims[len(dims) - 1 - i]
-        num_elements = num_elements * dim
-        if i > 0:
-            stride[len(dims) - 1 - i] = stride[len(dims) - i] * dims[len(dims) - i]
-
-    for i in range(len(dims) - 1):
-        stride[i] = stride[i] // (2 * switch_stride)
-    num_elements = num_elements // (2 * switch_stride)
-
-    for i in range(num_elements):
-        index = [1] * len(dims)
-        offset = i
-        for j in range(len(stride)):
-            s = stride[j]
-            index[j] = offset // s
-            offset = offset - index[j] * s
-
-        index[-1] = index[-1] * (2 * switch_stride)
-        for j in range(switch_stride):
-            switch_index = index.copy()
-            origin_index = index.copy()
-            origin_index[-1] = origin_index[-1] + j
-            switch_index[-1] = switch_index[-1] + switch_stride + j
-            y[(*origin_index,)], y[(*switch_index,)] = (
-                -y[(*switch_index,)],
-                y[(*origin_index,)],
-            )
-
+    for i in range(x.shape[-1] // 2):
+        y[..., 2 * i] = -x[..., 2 * i + 1]
+        y[..., 2 * i + 1] = x[..., 2 * i]
     return y
 
 
@@ -139,7 +107,7 @@ def naive_embedding(
         else:
             y = plane_shuffle(x)
     else:
-        y = shuffle_adjacent_two_elem(x, merged_dims, mode)
+        y = shuffle_adjacent_two_elem(x)
 
     if x_layout == "BHMK":
         naive_out = x * cos + y * sin
@@ -523,7 +491,7 @@ def _test_with_position(
             tensor_index=2,
         )
 
-        naive_out = np.concatenate((out1, out2), axis=-1)
+        fused_out = np.concatenate((out1, out2), axis=-1)
     elif x_layout == "BM(H3K)":
         out0 = flow._C.fused_apply_rotary_emb(
             fused_x,
@@ -544,6 +512,7 @@ def _test_with_position(
             sin=None,
             position_ids=fused_position_ids,
             x_layout=x_layout,
+            output_layout="BMHK",
             k_size=K,
             base=base,
             rotary_size=rotary_size,
@@ -556,6 +525,7 @@ def _test_with_position(
             sin=None,
             position_ids=fused_position_ids,
             x_layout=x_layout,
+            output_layout="BMHK",
             k_size=K,
             base=base,
             rotary_size=rotary_size,
@@ -563,7 +533,7 @@ def _test_with_position(
             tensor_index=2,
         )
 
-        naive_out = np.concatenate((out0, out1, out2), axis=-1)
+        fused_out = np.concatenate((out0, out1, out2), axis=-1)
     else:
         fused_out = flow._C.fused_apply_rotary_emb(
             fused_x,
@@ -575,11 +545,14 @@ def _test_with_position(
             base=base,
             rotary_size=rotary_size,
             mode=mode,
-        )
+        ).numpy()
 
     test_case.assertTrue(
         np.allclose(
-            naive_out.reshape(merged_dims), fused_out.numpy(), atol=5e-2, rtol=5e-3
+            naive_out.reshape(merged_dims),
+            fused_out.reshape(merged_dims),
+            atol=5e-2,
+            rtol=5e-3,
         )
     )
 
@@ -795,9 +768,9 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
         args_dict["x_layout"] = ["BM(H3K)"]
         args_dict["mode"] = ["interval"]
         args_dict["base"] = [1e1]
-        args_dict["rotary_size"] = [8]
-        args_dict["dims"] = [(1, 1, 3, 8)]
-        args_dict["rotary_ndims"] = [2]
+        args_dict["rotary_size"] = [4]
+        args_dict["dims"] = [(3, 5, 3, 8)]
+        args_dict["rotary_ndims"] = [2, 1]
         # args_dict["rotary_size"] = [48]
         # args_dict["dims"] = [(32, 2048, 32, 64)]
         args_dict["dtype"] = [flow.float16]
