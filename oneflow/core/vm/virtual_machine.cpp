@@ -240,6 +240,8 @@ std::string VirtualMachine::GetBlockingDebugString() {
 
 Maybe<void> VirtualMachine::Receive(vm::InstructionList* instruction_list) {
   SyncVmModeGuard guard(SyncVmMode::kEnable);
+  for (auto& main_thread_pending_task : main_thread_pending_tasks_) { main_thread_pending_task(); }
+  main_thread_pending_tasks_.clear();
   if (unlikely(pthread_fork::IsForkedSubProcess())) {
     INTRUSIVE_FOR_EACH_PTR(instruction, instruction_list) {
       const auto& device = instruction->stream().device();

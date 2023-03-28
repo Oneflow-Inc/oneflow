@@ -52,6 +52,10 @@ class VirtualMachine final {
 
   size_t flying_instruction_cnt() const { return engine().flying_instruction_cnt(); }
 
+  void add_main_thread_pending_task(std::function<void()> task) {
+    main_thread_pending_tasks_.push_back(std::move(task));
+  }
+
  private:
   friend class InstructionsBuilder;
 
@@ -100,6 +104,7 @@ class VirtualMachine final {
 
   std::thread schedule_thread_;
   Notifier pending_notifier_;
+  std::vector<std::function<void()>> main_thread_pending_tasks_;
 };
 
 }  // namespace oneflow
