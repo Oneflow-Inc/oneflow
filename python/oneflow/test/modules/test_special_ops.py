@@ -44,7 +44,7 @@ class TestSpecialOps(flow.unittest.TestCase):
         y = torch.special.erfc(x)
         return y
 
-    @autotest(check_graph=True, auto_backward=False)
+    @autotest(n=5, auto_backward="auto")
     def test_flow_erfinv_with_random_data(test_case):
         device = random_device()
         x_dtype = random_dtype(["float"])
