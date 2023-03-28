@@ -162,6 +162,18 @@ void AttrValueAccessor<std::vector<std::string>>::Attr(const std::vector<std::st
                                                        AttrValue* attr_val) {
   *(attr_val->mutable_at_list_string()->mutable_val()) = StdVec2PbRpf<std::string>(cpp_val);
 }
+// ComplexDouble Attr
+template<>
+std::complex<double> AttrValueAccessor<std::complex<double>>::Attr(const AttrValue& val) {
+  std::complex<double> ret{val.at_complex_double().real(), val.at_complex_double().imag()};
+  return ret;
+}
+template<>
+void AttrValueAccessor<std::complex<double>>::Attr(const std::complex<double>& cpp_val,
+                                                   AttrValue* attr_val) {
+  attr_val->mutable_at_complex_double()->set_real(cpp_val.real());
+  attr_val->mutable_at_complex_double()->set_imag(cpp_val.imag());
+}
 
 template<typename ProtoT>
 Maybe<AttrVal> MakeCppAttrValueFromProtoAttrValue(const ProtoT& attr_value) {

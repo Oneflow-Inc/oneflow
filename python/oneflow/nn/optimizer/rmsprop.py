@@ -162,7 +162,7 @@ class RMSprop(Optimizer):
 
             for param in param_list:
                 assert param.is_leaf, "parameters must be leaf tensor"
-                self._state[param] = dict()
+                self.state[param] = dict()
 
         self._centered_rmsprop = (
             flow.stateful_op("rmsprop_update")
@@ -190,7 +190,9 @@ class RMSprop(Optimizer):
         with flow.no_grad():
             loss = None
             if closure is not None:
-                loss = closure()
+                with flow.enable_grad():
+                    loss = closure()
+
             for param_group in self.param_groups:
                 kwargs = {
                     "learning_rate": param_group["lr"],
@@ -208,14 +210,14 @@ class RMSprop(Optimizer):
                     if param.grad is None:
                         continue
 
-                    if "square_avg" not in self._state[param]:
-                        self._state[param]["square_avg"] = flow.zeros_like(param)
-                    ms_tensor = self._state[param]["square_avg"]
+                    if "square_avg" not in self.state[param]:
+                        self.state[param]["square_avg"] = flow.zeros_like(param)
+                    ms_tensor = self.state[param]["square_avg"]
 
                     if param_group["centered"]:
-                        if "grad_avg" not in self._state[param]:
-                            self._state[param]["grad_avg"] = flow.zeros_like(param)
-                        mg_tensor = self._state[param]["grad_avg"]
+                        if "grad_avg" not in self.state[param]:
+                            self.state[param]["grad_avg"] = flow.zeros_like(param)
+                        mg_tensor = self.state[param]["grad_avg"]
                         flow._C.dispatch_rmsprop_update(
                             self._centered_rmsprop,
                             (param, param.grad, ms_tensor, mg_tensor),
@@ -226,7 +228,7 @@ class RMSprop(Optimizer):
                         flow._C.dispatch_rmsprop_update(
                             self._rmsprop, (param, param.grad, ms_tensor), **kwargs
                         )
-            self._state["step"] = self._state["step"] + 1
+            self.state["step"] = self.state["step"] + 1
             return loss
 
     def _generate_conf_for_graph(self, train_conf, vars_conf):

@@ -21,7 +21,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=3, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_roll_impl(test_case, placement, sbp):
     shifts = (
         random(-100, 100).to(int).value(),
