@@ -17,6 +17,7 @@ import contextlib
 import os
 import warnings
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Union
+from typing_extensions import TypeAlias
 from pathlib import Path
 import pickle
 import json
@@ -43,6 +44,8 @@ PICKLE_FILENAME = "pickled_data"
 DATA_FILENAME = "out"
 PROTOCOL_VERSION = 1
 ONEFLOW_MAGIC_KEY = "__oneflow__"
+
+MAP_LOCATION: TypeAlias = Optional[Union[Callable[[Tensor, str], Tensor], flow.device, str, flow.placement]]
 
 
 class FileBackendVariableBlob:
@@ -127,18 +130,55 @@ def _save_tensor_to_disk(tensor: "oneflow.Tensor", dir_name: Union[str, Path]) -
 ValueContainer = Union[FileBackendVariableBlob, np.ndarray, "oneflow.Tensor"]
 
 
+def _default_restore_location(storage, location=None):
+    return storage
+
+
+def _get_restore_location(map_location):
+    if map_location is None:
+        restore_location = _default_restore_location
+    elif isinstance(map_location, (str, flow.device)):
+        def restore_location(storage, location=None):
+            return storage.to(device=map_location)
+    elif isinstance(map_location, flow.placement):
+        def restore_location(storage, location=None):
+            return storage.to_global(placement=map_location)
+    else:
+        def restore_location(storage, location=None):
+            result = map_location(storage, location)
+            if result is None:
+                result = _default_restore_location(storage, location)
+            return result
+    return restore_location
+
+
 def smart_to(
-    obj: Any, dest: Optional[Union[str, flow.device, flow.placement]]
+    obj: Any, dest: MAP_LOCATION
 ) -> "oneflow.Tensor":
     if not isinstance(obj, flow.Tensor):
         return obj
     tensor = obj
-    if dest is None:
-        return tensor
-    if isinstance(dest, (str, flow.device)):
-        return tensor.to(device=dest)
+    restore_location = _get_restore_location(dest)
+    return restore_location(tensor, None)
+
+
+def module_to(
+        obj: flow.nn.Module, dest: MAP_LOCATION
+) -> "oneflow.nn.Module":
+    restore_location = _get_restore_location(dest)
+    # for nn.Module object, we will use a tensor to get the device
+    # to support dest with a Callable type
+    device = restore_location(flow.tensor([0])).device
+    obj.to(device)
+    return obj
+
+
+def _map_location(obj: Any, map_location: MAP_LOCATION):
+    if isinstance(obj, flow.nn.Module):
+        return module_to(obj, map_location)
     else:
-        return tensor.to_global(placement=dest)
+        res = ArgsTree(obj).map_leaf(lambda x: smart_to(x, map_location))
+        return res
 
 
 def _LoadSingleVariable(
@@ -389,7 +429,7 @@ def load_from_oneflow_single_file(
             sbp=flow.sbp.broadcast,
             warn_on_non_tensor_leaf=False,
         )
-    res = ArgsTree(res).map_leaf(lambda x: smart_to(x, map_location))
+    res = _map_location(res, map_location)
     return res
 
 
@@ -425,8 +465,7 @@ def load_from_pytorch_file(
                 sbp=flow.sbp.broadcast,
                 warn_on_non_tensor_leaf=False,
             )
-
-        flow_obj = ArgsTree(flow_obj).map_leaf(lambda x: smart_to(x, map_location))
+        flow_obj = _map_location(flow_obj, map_location)
         return flow_obj
 
 
