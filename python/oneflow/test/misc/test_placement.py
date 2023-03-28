@@ -24,12 +24,14 @@ class TestPlacement(flow.unittest.TestCase):
     def test_placement_all_cuda(test_case):
         placement = flow.placement.all("cuda")
         test_case.assertEqual(placement.type, "cuda")
-        test_case.assertEqual(placement.ranks, range(flow.env.get_world_size()))
+        # assertEqual fails to compare lists
+        test_case.assertTrue(list(placement.ranks) == list(range(flow.env.get_world_size())))
 
     def test_placement_all_cpu(test_case):
         placement = flow.placement.all("cpu")
         test_case.assertEqual(placement.type, "cpu")
-        test_case.assertEqual(placement.ranks, range(flow.env.get_world_size()))
+        # assertEqual fails to compare lists
+        test_case.assertTrue(list(placement.ranks) == list(range(flow.env.get_world_size())))
 
 
 if __name__ == "__main__":
