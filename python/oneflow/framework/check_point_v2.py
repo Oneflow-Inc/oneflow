@@ -184,7 +184,7 @@ def _map_location(obj: Any, map_location: MAP_LOCATION):
 def _LoadSingleVariable(
     path: Optional[str],
     global_src_rank: Optional[int] = None,
-    map_location: Optional[Union[flow.device, flow.placement]] = None,
+    map_location: MAP_LOCATION = None,
 ) -> "flow.Tensor":
     if global_src_rank is not None:
         rank = flow.env.get_rank()
@@ -351,7 +351,7 @@ def is_dir_and_no_pickle_file(path: Path, support_pytorch_format: bool):
 def legacy_load(
     path: Path,
     global_src_rank: Optional[int],
-    map_location: Optional[Union[str, flow.device]],
+    map_location: MAP_LOCATION,
 ) -> Dict[str, "flow.Tensor"]:
     assert os.path.isdir(path), "Directory {} doesn't exist!".format(path)
     rank = flow.env.get_rank()
@@ -380,7 +380,7 @@ def legacy_load(
 def tensor_pickling_context(
     path: Path,
     global_rank: Optional[int],
-    mp: Optional[Union[str, flow.device, flow.placement]],
+    mp: MAP_LOCATION,
     save_as_external_data: bool,
 ):
     global context_data
@@ -412,7 +412,7 @@ def is_oneflow_pickle_file(path: Path, support_pytorch_format: bool) -> bool:
 def load_from_oneflow_single_file(
     path: Path,
     global_src_rank,
-    map_location: Optional[Union[str, flow.device]],
+    map_location: MAP_LOCATION,
     content: Any = None,
 ):
     rank = flow.env.get_rank()
@@ -441,7 +441,7 @@ def is_file_and_support_pytorch_format(
 
 @load_if(is_file_and_support_pytorch_format)
 def load_from_pytorch_file(
-    path: Path, global_src_rank, map_location: Optional[Union[str, flow.device]],
+    path: Path, global_src_rank, map_location: MAP_LOCATION,
 ):
     with flow.mock_torch.disable():
         import torch
@@ -480,7 +480,7 @@ def is_dir_and_has_pickle_file(path: Path, support_pytorch_format: bool) -> bool
 def load_from_oneflow_pickle_dir(
     path: Path,
     global_src_rank: Optional[int],
-    map_location: Optional[Union[str, flow.device, flow.placement]],
+    map_location: MAP_LOCATION,
 ):
     rank = flow.env.get_rank()
     pickle_path = path / PICKLE_FILENAME
@@ -506,7 +506,7 @@ def load_from_oneflow_pickle_dir(
 def load(
     path: str,
     global_src_rank: Optional[int] = None,
-    map_location: Optional[Union[str, flow.device, flow.placement]] = None,
+    map_location: MAP_LOCATION = None,
     *,
     support_pytorch_format: bool = True,
 ) -> Any:
