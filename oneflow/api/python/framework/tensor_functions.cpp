@@ -17,6 +17,7 @@ limitations under the License.
 #include <Python.h>
 #include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/framework/size.h"
+#include "oneflow/api/python/framework/tensor_functions_util.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
 #include "oneflow/api/python/functional/tensor_api.yaml.pybind.h"
@@ -461,14 +462,9 @@ static PyObject* PyTensorObject_matmul(PyObject* self, PyObject* args, PyObject*
 
 static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  PyObject* shape = args;
-  if (PyTuple_Size(args) == 1) {
-    PyObject* item = PyTuple_GetItem(args, 0);
-    if (!PyLong_Check(item)) { shape = item; }
-  }
-
+  PyObject* shape = PyParseArgs(args, kwargs, "reshape", "shape");
   PyObjectPtr _args = PyObjectPtr(PyTuple_Pack(2, self, shape));
-  PyObject* result = functional::reshape(NULL, _args.get(), kwargs);
+  PyObject* result = functional::reshape(NULL, _args.get(), NULL);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
   END_HANDLE_ERRORS
@@ -642,14 +638,9 @@ DATATYPE_FUNC(PyTensorObject_bfloat16, DType::BFloat16());
 
 static PyObject* PyTensorObject_view(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  PyObject* shape = args;
-  if (PyTuple_Size(args) == 1) {
-    PyObject* item = PyTuple_GetItem(args, 0);
-    if (!PyLong_Check(item)) { shape = item; }
-  }
-
-  PyObjectPtr _args = PyObjectPtr(PyTuple_Pack(2, self, shape));
-  PyObject* result = functional::view(NULL, _args.get(), kwargs);
+  PyObject* size = PyParseArgs(args, kwargs, "view", "size");
+  PyObjectPtr _args = PyObjectPtr(PyTuple_Pack(2, self, size));
+  PyObject* result = functional::view(NULL, _args.get(), NULL);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
   END_HANDLE_ERRORS
@@ -670,14 +661,9 @@ static PyObject* PyTensorObject_view_as(PyObject* self, PyObject* args, PyObject
 
 static PyObject* PyTensorObject_permute(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  PyObject* dims = args;
-  if (PyTuple_Size(args) == 1) {
-    PyObject* item = PyTuple_GetItem(args, 0);
-    if (!PyLong_Check(item)) { dims = item; }
-  }
-
+  PyObject* dims = PyParseArgs(args, kwargs, "permute", "dims");
   PyObjectPtr _args = PyObjectPtr(PyTuple_Pack(2, self, dims));
-  PyObject* result = functional::permute(NULL, _args.get(), kwargs);
+  PyObject* result = functional::permute(NULL, _args.get(), NULL);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
 
