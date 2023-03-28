@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/device/cuda_pseudo_bfloat16.h"
+#include <cuComplex.h>
 
 namespace oneflow {
 
@@ -38,6 +39,22 @@ template<typename T, typename U, typename... Args>
 struct AddFunctor<T, U, Args...> {
   __device__ T operator()(T x0, U x1, Args... xs) const {
     return x0 + AddFunctor<U, Args...>()(x1, xs...);
+  }
+};
+
+template<typename U, typename... Args>
+struct AddFunctor<cuComplex, U, Args...> {
+  __device__ cuComplex operator()(cuComplex x0, U x1, Args... xs) const {
+    cuComplex xn = AddFunctor<U, Args...>()(x1, xs...);
+    return cuComplex{x0.x + xn.x, x0.y + xn.y};
+  }
+};
+
+template<typename U, typename... Args>
+struct AddFunctor<cuDoubleComplex, U, Args...> {
+  __device__ cuDoubleComplex operator()(cuDoubleComplex x0, U x1, Args... xs) const {
+    cuDoubleComplex xn = AddFunctor<U, Args...>()(x1, xs...);
+    return cuDoubleComplex{x0.x + xn.x, x0.y + xn.y};
   }
 };
 
@@ -115,7 +132,7 @@ class AddFactoryImpl : public AddFactory {
 #define MAKE_NEW_ADD_ENTRY(type_cpp, type_proto) {type_proto, NewAdd<type_cpp>},
 
     static const std::map<DataType, std::function<std::unique_ptr<Add>()>> new_add_handle{
-        OF_PP_FOR_EACH_TUPLE(MAKE_NEW_ADD_ENTRY, CUDA_PRIMITIVE_ALL_TYPE_SEQ)};
+        OF_PP_FOR_EACH_TUPLE(MAKE_NEW_ADD_ENTRY, CUDA_PRIMITIVE_ALL_TYPE_SEQ CUDA_PRIMITIVE_COMPLEX_TYPE_SEQ)};
 
 #undef MAKE_NEW_ADD_ENTRY
 

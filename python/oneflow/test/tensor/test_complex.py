@@ -27,17 +27,19 @@ flow.tensor()
 flow.ones()
 flow.zeros()
 flow.full()
-flow.new_ones()
-flow.new_zeros()
-flow.new_full()
+Tensor.new_ones()
+Tensor.new_zeros()
+Tensor.new_full()
 
-To complete:
-flow.randn()
+TO add test:
 Tensor.real()
 Tensor.imag()
 Tensor.conj()
-Tensor.adjoint()
 Tensor.conj_physical()
+
+To complete:
+flow.randn()
+Tensor.adjoint()
 Tensor.conj_physical_()
 Tensor.resolve_conj()
 Tensor.chalf()

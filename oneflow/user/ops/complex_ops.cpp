@@ -19,7 +19,6 @@ limitations under the License.
 
 namespace oneflow {
 
-// TODO(lml): use hash map and push this to a common head file
 static std::map<DataType, DataType> complex_to_real_map{{DataType::kComplex32, DataType::kFloat16},
                                                         {DataType::kComplex64, DataType::kFloat},
                                                         {DataType::kComplex128, DataType::kDouble}};
@@ -37,7 +36,6 @@ static std::map<DataType, DataType> real_to_complex_map{{DataType::kFloat16, Dat
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> RealOp::InferDataType(user_op::InferContext* ctx) {
-  // TODO(lml): add some check
   const std::pair<std::string, int32_t>& input_arg = ctx->inputs().at(0);
   const user_op::TensorDesc& tensor_desc = ctx->InputTensorDesc(input_arg.first, input_arg.second);
   const std::pair<std::string, int32_t>& output_arg = ctx->outputs().at(0);
@@ -56,7 +54,6 @@ static std::map<DataType, DataType> real_to_complex_map{{DataType::kFloat16, Dat
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> RealGradOp::InferDataType(user_op::InferContext* ctx) {
-  // TODO(lml): add some check
   const std::pair<std::string, int32_t>& input_arg = ctx->inputs().at(0);
   const user_op::TensorDesc& tensor_desc = ctx->InputTensorDesc(input_arg.first, input_arg.second);
   const std::pair<std::string, int32_t>& output_arg = ctx->outputs().at(0);
@@ -74,7 +71,6 @@ static std::map<DataType, DataType> real_to_complex_map{{DataType::kFloat16, Dat
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ImagOp::InferDataType(user_op::InferContext* ctx) {
-  // TODO(lml): add some check
   const std::pair<std::string, int32_t>& input_arg = ctx->inputs().at(0);
   const user_op::TensorDesc& tensor_desc = ctx->InputTensorDesc(input_arg.first, input_arg.second);
   const std::pair<std::string, int32_t>& output_arg = ctx->outputs().at(0);
@@ -93,7 +89,6 @@ static std::map<DataType, DataType> real_to_complex_map{{DataType::kFloat16, Dat
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ImagGradOp::InferDataType(user_op::InferContext* ctx) {
-  // TODO(lml): add some check
   const std::pair<std::string, int32_t>& input_arg = ctx->inputs().at(0);
   const user_op::TensorDesc& tensor_desc = ctx->InputTensorDesc(input_arg.first, input_arg.second);
   const std::pair<std::string, int32_t>& output_arg = ctx->outputs().at(0);

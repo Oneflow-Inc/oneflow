@@ -21,7 +21,7 @@ namespace user_op {
 
 template<DeviceType device, typename dtype_x, typename dtype_out>
 struct RealFunctor final {
-  void operator()(ep::Stream* stream, const dtype_x* x, dtype_out* out);
+  void operator()(ep::Stream* stream, const dtype_x* x, dtype_out* out, int64_t cnt);
 };
 
 #define INSTANTIATE_REAL_FUNCTOR(device, dtype_x, dtype_out) \
@@ -29,7 +29,7 @@ struct RealFunctor final {
 
 template<DeviceType device, typename dtype_dout, typename dtype_dx>
 struct RealGradFunctor final {
-  void operator()(ep::Stream* stream, const dtype_dout* dout, dtype_dx* dx);
+  void operator()(ep::Stream* stream, const dtype_dout* dout, dtype_dx* dx, int64_t cnt);
 };
 
 #define INSTANTIATE_REAL_GRAD_FUNCTOR(device, dtype_dout, dtype_dx) \
@@ -37,7 +37,7 @@ struct RealGradFunctor final {
 
 template<DeviceType device, typename dtype_x, typename dtype_out>
 struct ImagFunctor final {
-  void operator()(ep::Stream* stream, const dtype_x* x, dtype_out* out);
+  void operator()(ep::Stream* stream, const dtype_x* x, dtype_out* out, int64_t cnt);
 };
 
 #define INSTANTIATE_IMAG_FUNCTOR(device, dtype_x, dtype_out) \
@@ -45,7 +45,7 @@ struct ImagFunctor final {
 
 template<DeviceType device, typename dtype_dout, typename dtype_dx>
 struct ImagGradFunctor final {
-  void operator()(ep::Stream* stream, const dtype_dout* dout, dtype_dx* dx);
+  void operator()(ep::Stream* stream, const dtype_dout* dout, dtype_dx* dx, int64_t cnt);
 };
 
 #define INSTANTIATE_IMAG_GRAD_FUNCTOR(device, dtype_dout, dtype_dx) \
@@ -53,7 +53,7 @@ struct ImagGradFunctor final {
 
 template<DeviceType device, typename dtype>
 struct ConjPhysicalFunctor final {
-  void operator()(ep::Stream* stream, const dtype* x, dtype* out);
+  void operator()(ep::Stream* stream, const dtype* x, dtype* out, int64_t cnt);
 };
 
 #define INSTANTIATE_CONJ_PHYSICAL_FUNCTOR(device, dtype) \

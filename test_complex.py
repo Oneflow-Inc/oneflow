@@ -1,7 +1,7 @@
 import oneflow as flow
 
 
-a = flow.tensor([1.0 + 2j, 2.0 - 3j, 1j], dtype=flow.cfloat)
+a = flow.tensor([1.0 + 2j, 2.0 - 3j, 1j], dtype=flow.cfloat, device='cuda')
 a.requires_grad = True
 print("a: ", a)
 
@@ -13,11 +13,11 @@ c = a + b
 
 print("c: ", c)
 
-d = flow.real(c)
+d = c.real()
 
 print("d: ", d)
 
-e = flow.imag(c)
+e = c.imag()
 
 print("e: ", e)
 

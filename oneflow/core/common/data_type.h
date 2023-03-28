@@ -21,7 +21,7 @@ limitations under the License.
 #if defined(WITH_CUDA)
 #include <cuda_fp16.h>
 #include <cuda.h>
-#include <cufft.h>
+#include <cuComplex.h>
 #if CUDA_VERSION >= 11000
 #include <cuda_bf16.h>
 #endif  // CUDA_VERSION >= 11000
@@ -88,8 +88,8 @@ using float16 = half_float::half;
 DEFINE_SPEC(detail::IsComplexHelper, std::complex<float>, true)
 DEFINE_SPEC(detail::IsComplexHelper, std::complex<double>, true)
 #ifdef WITH_CUDA
-DEFINE_SPEC(detail::IsComplexHelper, cufftComplex, true)
-DEFINE_SPEC(detail::IsComplexHelper, cufftDoubleComplex, true)
+DEFINE_SPEC(detail::IsComplexHelper, cuComplex, true)
+DEFINE_SPEC(detail::IsComplexHelper, cuDoubleComplex, true)
 #endif  // WITH_CUDA
 
 template<typename T>
@@ -176,9 +176,9 @@ struct GetDataType<T, typename std::enable_if<IsFloat16<T>::value>::type>
 
 #ifdef WITH_CUDA
 template<>
-struct GetDataType<cufftComplex> : std::integral_constant<DataType, DataType::kComplex64> {};
+struct GetDataType<cuComplex> : std::integral_constant<DataType, DataType::kComplex64> {};
 template<>
-struct GetDataType<cufftDoubleComplex> : std::integral_constant<DataType, DataType::kComplex128> {};
+struct GetDataType<cuDoubleComplex> : std::integral_constant<DataType, DataType::kComplex128> {};
 #endif  // WITH_CUDA
 
 #if CUDA_VERSION >= 11000
