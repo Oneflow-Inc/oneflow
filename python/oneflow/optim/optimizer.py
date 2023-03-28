@@ -24,6 +24,7 @@ from oneflow.nn.graph.proxy import ProxyTensor
 from oneflow.nn.parameter import Parameter
 from oneflow.nn.utils.clip_grad import clip_grad_norm_
 import oneflow as flow
+from collections import defaultdict, abc as container_abcs
 
 
 class ContiguousParamsUnit(object):
@@ -238,9 +239,9 @@ required = _RequiredParameter()
 class Optimizer(object):
     def __init__(self, parameters, options):
         self.param_groups = list()
-        self._default_options = options
-        self._state = dict()
-        self._state["step"] = 0
+        self.state = defaultdict(dict)
+        self.defaults = options
+        self.state["step"] = 0
 
         self._parse_input_parameters(parameters)
 
@@ -251,9 +252,6 @@ class Optimizer(object):
             "params_dict",
             "contiguous_params",
         ]
-
-        self.state = dict()
-        self.defaults = dict()
 
     def add_param_group(self, param_group) -> None:
         r"""
@@ -308,7 +306,7 @@ class Optimizer(object):
             if not param.is_leaf:
                 raise ValueError("can't optimize a non-leaf Tensor")
 
-        for name, default in self._default_options.items():
+        for name, default in self.defaults.items():
             if default is required and name not in param_group:
                 raise ValueError(
                     "parameter group didn't specify a value of required optimization parameter "
@@ -331,11 +329,11 @@ class Optimizer(object):
         if not param_set.isdisjoint(set(param_group["params"])):
             raise ValueError("some parameters appear in more than one parameter group")
 
-        self.param_groups.append(ParamGroup(param_group, self._default_options))
+        self.param_groups.append(ParamGroup(param_group, self.defaults))
 
         for param in param_group["params"]:
             assert param.is_leaf, "parameters must be leaf tensor"
-            self._state[param] = dict()
+            self.state[param] = dict()
 
     def load_state_dict(self, state_dict) -> None:
         r"""
@@ -421,7 +419,7 @@ class Optimizer(object):
                 state[param] = cast(param, v)
             else:
                 state[k] = v
-        self._state = state
+        self.state = state
 
         # Update parameter groups, setting their 'params' value
         def update_group(group, new_group):
@@ -472,7 +470,7 @@ class Optimizer(object):
         # Remap state to use order indices as keys
         packed_state = {
             (param_mappings[id(k)] if isinstance(k, Tensor) else k): v
-            for k, v in self._state.items()
+            for k, v in self.state.items()
         }
         return {
             "state": packed_state,
@@ -557,18 +555,18 @@ class Optimizer(object):
         if isinstance(parameters, collections.abc.Iterator):
             # Iterator
             self.param_groups.append(
-                ParamGroup({"params": list(parameters)}, self._default_options)
+                ParamGroup({"params": list(parameters)}, self.defaults)
             )
         elif isinstance(parameters, collections.abc.Iterable):
             # List[Dict]
             if isinstance(parameters[0], dict):
                 for param in parameters:
                     assert isinstance(param, dict)
-                    self.param_groups.append(ParamGroup(param, self._default_options))
+                    self.param_groups.append(ParamGroup(param, self.defaults))
             # List[Parameter or Tensor]
             else:
                 self.param_groups.append(
-                    ParamGroup({"params": parameters}, self._default_options)
+                    ParamGroup({"params": parameters}, self.defaults)
                 )
         else:
             raise TypeError(
