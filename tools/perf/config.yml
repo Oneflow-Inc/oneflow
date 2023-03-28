@@ -5,11 +5,13 @@
 # ctrl_host: str
 # ctrl_port: int
 # iteration_num: int
-rank_size_this_machine: 20
-world_size: 20
-data_size: 102400
-master_host: "127.0.0.1"
+# start_rank: int
+rank_size_this_machine: 4
+world_size: 4
+data_size: 1024
+master_host: "192.168.1.26"
 master_port: 49155
-ctrl_host: "127.0.0.1"
+ctrl_host: "192.168.1.26"
 ctrl_port: 49156
 iteration_num: 2
+start_rank: 0

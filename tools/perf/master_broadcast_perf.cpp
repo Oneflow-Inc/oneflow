@@ -232,6 +232,7 @@ int main(int argc, char* argv[]) {
     output_file << result_json.dump();
     output_file.close();
   }
+  LOG(INFO) << "Finish perf";
 
   return 0;
 }
