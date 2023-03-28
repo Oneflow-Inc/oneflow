@@ -41,9 +41,13 @@ flow.new_full()
 flow.add()
 flow.sub()
 flow.sum()
+flow.equal()
+flow.not_equal()
 
 To complete:
 flow.randn()
+flow.div()
+flow.pow()
 Tensor.real()
 Tensor.imag()
 Tensor.conj()
@@ -380,7 +384,37 @@ class TestTensorComplex64(unittest.TestCase):
                         
             # backward
             flow_ret.sum().backward()
-            compare_result(flow_x.grad.numpy(), np.ones(input_shape), 1e-5, 1e-2)
+            compare_result(flow_x.grad.numpy(), np.ones(input_shape), 1e-5, 1e-2) 
+    
+    def test_equal(self):
+        device = "cpu"
+        for i, input_shape in enumerate(self.shape):
+            
+            np_x = np.random.randn(*input_shape) + 1.0j * np.random.randn(*input_shape)
+            np_x = np_x.astype(self.np_dtype)
+            
+            np_y = np.random.randn(*input_shape) + 1.0j * np.random.randn(*input_shape)
+            np_y = np_y.astype(self.np_dtype)
+            
+            np_z = np.copy(np_x)
+            
+            flow_x = flow.from_numpy(np_x).to(device).requires_grad_(False)
+            flow_y = flow.from_numpy(np_y).to(device).requires_grad_(False)
+            flow_z = flow.from_numpy(np_z).to(device).requires_grad_(False)
+            self.assertEqual(flow_x.dtype, self.dtype)
+            self.assertEqual(flow_y.dtype, self.dtype)
+            self.assertEqual(flow_z.dtype, self.dtype)
+            
+            # forward
+            flow_ret = flow.equal(flow_x, flow_y)
+            np_ret = np.equal(np_x, np_y)
+            compare_result(flow_ret, np_ret, 1e-5, 1e-2)
+            
+            flow_ret = flow.equal(flow_x, flow_z)
+            compare_result(flow_ret, np.ones(flow_x.shape).astype(bool), 1e-5, 1e-2)
+
+            flow_ret = flow.not_equal(flow_x, flow_z)
+            compare_result(flow_ret, np.zeros(flow_x.shape).astype(bool), 1e-5, 1e-2)
             
     def test_constant_pad(self):
         arg_dict = OrderedDict()
@@ -390,6 +424,7 @@ class TestTensorComplex64(unittest.TestCase):
         arg_dict["device"] = ["cpu"]
         for arg in GenArgList(arg_dict):
             _test_ZeroPad2d(self, *arg)
+    
     
 class TestTensorComplex128(TestTensorComplex64):
     def setUp(self):
