@@ -71,7 +71,8 @@ class DistributeOneFlowEnv {
     // TODO: addr和port作为参数传入
     const std::string addr = "127.0.0.1";
     size_t master_port = 49155;
-    size_t port = master_port + rank;
+    // Adding 1 here is to ensure that master_port cannot overlap with ctrl_port on the master.
+    size_t port = master_port + rank + 1;
 
     master_addr->set_host(addr);
     master_addr->set_port(master_port);
@@ -127,6 +128,7 @@ std::set<std::string> MultiThreadBroadcastFromMasterToWorkers(size_t world_size,
   std::set<std::string> keys;
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     std::mutex mtx4keys;
+    // Unlike the implementation within the framework, here we directly transmit std::string.
     const std::string& data = master_data;
     MultiThreadLoop(
         split_num,
@@ -158,7 +160,6 @@ int main(int argc, char* argv[]) {
 
   TestEnvScope scope(rank, world_size);
 
-  LOG(INFO) << "world size: " << Singleton<GlobalProcessCtx>::Get()->WorldSize();
   auto start_time = std::chrono::high_resolution_clock::now();
   std::set<std::string> keys =
       MultiThreadBroadcastFromMasterToWorkers(world_size, prefix, master_data, &worker_data);

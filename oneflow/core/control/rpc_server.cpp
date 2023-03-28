@@ -63,10 +63,7 @@ void RpcServer::HandleRpcs() {
 }
 
 void RpcServer::Init() {
-  Add([this](CtrlCall<CtrlMethod::kLoadServer>* call) {
-    LOG(WARNING) << "RPC Server receive KLoadServer call from rank " << call->request().rank();
-    OnLoadServer(call);
-  });
+  Add([this](CtrlCall<CtrlMethod::kLoadServer>* call) { OnLoadServer(call); });
 
   Add([this](CtrlCall<CtrlMethod::kBarrier>* call) {
     const std::string& barrier_name = call->request().name();

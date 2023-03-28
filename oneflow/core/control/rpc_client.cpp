@@ -192,9 +192,6 @@ void RpcClient::LoadServer(const LoadServerRequest& request, CtrlService::Stub* 
   for (; retry_idx < rpc_client_max_retry_times(); ++retry_idx) {
     grpc::ClientContext client_ctx;
     LoadServerResponse response;
-    // 增加log记录发送了多少次请求
-    LOG(WARNING) << "rank " << request.rank() << " call LoadServer to " << request.addr()
-                 << " at retry " << retry_idx;
     grpc::Status st = stub->CallMethod<CtrlMethod::kLoadServer>(&client_ctx, request, &response);
     if (st.error_code() == grpc::StatusCode::OK) {
       VLOG(3) << "LoadServer " << request.addr() << " Successful at " << retry_idx + 1 << " times";
@@ -212,7 +209,6 @@ void RpcClient::LoadServer(const LoadServerRequest& request, CtrlService::Stub* 
       LOG(FATAL) << st.error_message();
     }
   }
-  LOG(WARNING) << "rank " << request.rank() << " ends LoadServer loop";
   CHECK_LT(retry_idx, rpc_client_max_retry_times());
 }
 

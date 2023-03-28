@@ -125,13 +125,10 @@ void RankInfoBootstrapServer::OnLoadServer(CtrlCall<CtrlMethod::kLoadServer>* ca
   CHECK_GE(rank, 0);
   CHECK_LT(rank, world_size_);
   if (!rank2host_) { rank2host_ = std::make_shared<std::vector<std::string>>(world_size_); }
-  LOG(WARNING) << "add lock for rank " << rank;
   std::lock_guard<std::mutex> lock(lock_);
   rank2host_->at(rank) = GetHostFromUri(call->server_ctx().peer());
-  LOG(WARNING) << "rank " << rank << " 's url: " << call->server_ctx().peer(); // 表示完成Load Server
   call->SendResponse();
   EnqueueRequest<CtrlMethod::kLoadServer>();
-  LOG(WARNING) << "release lock for rank " << rank;
 }
 
 }  // namespace oneflow
