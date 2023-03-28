@@ -34,7 +34,10 @@ namespace oneflow {
 
 /* static */ Maybe<void> FftC2COp::GetSbp(user_op::SbpContext* ctx) {
   // ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
-  ctx->NewBuilder().PartialSum(user_op::OpArg("input", 0)).PartialSum(user_op::OpArg("out", 0)).Build();
+  ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("input", 0))
+      .PartialSum(user_op::OpArg("out", 0))
+      .Build();
   return Maybe<void>::Ok();
 }
 

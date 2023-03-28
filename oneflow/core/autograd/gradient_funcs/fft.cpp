@@ -13,18 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-/*
-Copyright 2020 The OneFlow Authors. All rights reserved.
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 #include <string>
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/attr_map.h"
@@ -117,7 +105,7 @@ class FftC2C : public OpExprGradFunction<FftC2CCaptureState> {
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
 
     ctx->requires_grad = inputs.at(0)->requires_grad();
-    
+
     ctx->forward = JUST(composed_attrs.GetAttr<bool>("forward"));
     ctx->dims = JUST(attrs.GetAttr<std::vector<int64_t>>("dims"));
     ctx->norm_str = JUST(attrs.GetAttr<std::string>("norm"));
@@ -134,8 +122,8 @@ class FftC2C : public OpExprGradFunction<FftC2CCaptureState> {
     //   n[i] = out_grads.at(0)->dim(ctx->dims[i]);
     // }
     in_grads->resize(1);
-    in_grads->at(0) =
-        JUST(functional::FftC2C(out_grads.at(0), NullOpt, ctx->dims, ctx->norm_str, /*forward*/!(ctx->forward), /*is_grad_fn*/true));
+    in_grads->at(0) = JUST(functional::FftC2C(out_grads.at(0), NullOpt, ctx->dims, ctx->norm_str,
+                                              /*forward*/ !(ctx->forward), /*is_grad_fn*/ true));
     return Maybe<void>::Ok();
   }
 

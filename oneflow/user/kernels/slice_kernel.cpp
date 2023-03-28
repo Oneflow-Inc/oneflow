@@ -435,16 +435,16 @@ class SliceGradKernel final : public user_op::OpKernel, public user_op::CudaGrap
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                \
                        && (user_op::HobDataType("ref", 0) == GetDataType<dtype>::value));
 
-#define REGISTER_SLICE_KERNEL_WITH_DEVICE(device) \
-  REGISTER_SLICE_KERNEL(device, bool)             \
-  REGISTER_SLICE_KERNEL(device, float16)          \
-  REGISTER_SLICE_KERNEL(device, float)            \
-  REGISTER_SLICE_KERNEL(device, double)           \
-  REGISTER_SLICE_KERNEL(device, int32_t)          \
-  REGISTER_SLICE_KERNEL(device, int64_t)          \
-  REGISTER_SLICE_KERNEL(device, int8_t)           \
-  REGISTER_SLICE_KERNEL(device, uint8_t)          \
-  REGISTER_SLICE_KERNEL(device, std::complex<float>)  \
+#define REGISTER_SLICE_KERNEL_WITH_DEVICE(device)    \
+  REGISTER_SLICE_KERNEL(device, bool)                \
+  REGISTER_SLICE_KERNEL(device, float16)             \
+  REGISTER_SLICE_KERNEL(device, float)               \
+  REGISTER_SLICE_KERNEL(device, double)              \
+  REGISTER_SLICE_KERNEL(device, int32_t)             \
+  REGISTER_SLICE_KERNEL(device, int64_t)             \
+  REGISTER_SLICE_KERNEL(device, int8_t)              \
+  REGISTER_SLICE_KERNEL(device, uint8_t)             \
+  REGISTER_SLICE_KERNEL(device, std::complex<float>) \
   REGISTER_SLICE_KERNEL(device, std::complex<double>)
 
 REGISTER_SLICE_KERNEL_WITH_DEVICE(DeviceType::kCPU)

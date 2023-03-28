@@ -66,7 +66,6 @@ class FftC2CKernel final : public user_op::OpKernel {
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
-
     std::cout << "=========== [FftC2CKernel] in ==================" << std::endl;
 
     const user_op::Tensor* input = ctx->Tensor4ArgNameAndIndex("input", 0);
@@ -83,21 +82,20 @@ class FftC2CKernel final : public user_op::OpKernel {
     Shape out_shape(out->shape_view());
 
     fft_norm_mode norm_mode = fft_norm_mode::none;
-    if (!is_grad_fn){
+    if (!is_grad_fn) {
       norm_mode = norm_from_string(norm_str, forward);
-    }
-    else{
+    } else {
       norm_mode = norm_from_string(norm_str, !forward);
     }
 
     if (input->data_type() == kComplex64) {
-      FftC2CKernelUtil<device_type, T>::FftC2CForward(
-          ctx->stream(), input_ptr, out_ptr, input_shape, out_shape, input->stride(), out->stride(),
-          forward, dims, norm_mode);
+      FftC2CKernelUtil<device_type, T>::FftC2CForward(ctx->stream(), input_ptr, out_ptr,
+                                                      input_shape, out_shape, input->stride(),
+                                                      out->stride(), forward, dims, norm_mode);
     } else if (input->data_type() == kComplex128) {
-      FftC2CKernelUtil<device_type, T>::FftC2CForward(ctx->stream(), input_ptr, out_ptr, input_shape,
-                                              out_shape, input->stride(), out->stride(), forward,
-                                              dims, norm_mode);
+      FftC2CKernelUtil<device_type, T>::FftC2CForward(ctx->stream(), input_ptr, out_ptr,
+                                                      input_shape, out_shape, input->stride(),
+                                                      out->stride(), forward, dims, norm_mode);
     } else {
       Error::RuntimeError() << "expects kComplex64 or kComplex128, but got " << input->data_type();
     }
@@ -136,14 +134,13 @@ class FftR2CKernel final : public user_op::OpKernel {
     }
 
     if (input->data_type() == kFloat) {
-      FftR2CKernelUtil<device_type, T>::FftR2CForward(
-          ctx->stream(), input_ptr, out_ptr, input_shape, out_shape, input->stride(), out->stride(),
-          forward, dims, norm_mode);
+      FftR2CKernelUtil<device_type, T>::FftR2CForward(ctx->stream(), input_ptr, out_ptr,
+                                                      input_shape, out_shape, input->stride(),
+                                                      out->stride(), forward, dims, norm_mode);
     } else if (input->data_type() == kDouble) {
-      FftR2CKernelUtil<device_type, T>::FftR2CForward(
-        ctx->stream(), input_ptr, out_ptr, input_shape,
-        out_shape, input->stride(), out->stride(), forward,
-        dims, norm_mode);
+      FftR2CKernelUtil<device_type, T>::FftR2CForward(ctx->stream(), input_ptr, out_ptr,
+                                                      input_shape, out_shape, input->stride(),
+                                                      out->stride(), forward, dims, norm_mode);
     } else {
       Error::RuntimeError() << "expects kFloat or kDouble, but gets " << input->data_type();
     }
@@ -153,25 +150,22 @@ class FftR2CKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_FFTC2C_KERNELS(device, dtype)                                                \
-  REGISTER_USER_KERNEL("fft_c2c")       \
-      .SetCreateFn<FftC2CKernel<device, dtype>>()  \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                                    \
-      && (user_op::HobDataType("input", 0) == GetDataType<std::complex<dtype>>::value)   \
+  REGISTER_USER_KERNEL("fft_c2c").SetCreateFn<FftC2CKernel<device, dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceType() == device)                                                    \
+      && (user_op::HobDataType("input", 0) == GetDataType<std::complex<dtype>>::value)        \
       && (user_op::HobDataType("out", 0) == GetDataType<std::complex<dtype>>::value))
 
 REGISTER_FFTC2C_KERNELS(DeviceType::kCPU, float);
 REGISTER_FFTC2C_KERNELS(DeviceType::kCPU, double);
 
-#define REGISTER_FFTR2C_KERNELS(device, dtype)    \
-  REGISTER_USER_KERNEL("fft_r2c")                               \
-      .SetCreateFn<FftR2CKernel<device, dtype>>() \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)     \
-                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
-                       && (user_op::HobDataType("out", 0) == GetDataType<std::complex<dtype>>::value))
+#define REGISTER_FFTR2C_KERNELS(device, dtype)                                                \
+  REGISTER_USER_KERNEL("fft_r2c").SetCreateFn<FftR2CKernel<device, dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceType() == device)                                                    \
+      && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)                      \
+      && (user_op::HobDataType("out", 0) == GetDataType<std::complex<dtype>>::value))
 
 REGISTER_FFTR2C_KERNELS(DeviceType::kCPU, float);
 REGISTER_FFTR2C_KERNELS(DeviceType::kCPU, double);
-
 
 #if 0
 template<typename IN, typename OUT>

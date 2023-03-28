@@ -66,7 +66,8 @@ inline T compute_fct(int64_t size, fft_norm_mode normalization) {
 }
 
 template<typename T>
-inline T compute_fct(const Shape& in_shape, const std::vector<int64_t>& dims, fft_norm_mode normalization) {
+inline T compute_fct(const Shape& in_shape, const std::vector<int64_t>& dims,
+                     fft_norm_mode normalization) {
   if (normalization == fft_norm_mode::none) { return static_cast<T>(1); }
   int64_t n = 1;
   for (int64_t idx : dims) { n *= in_shape.At(idx); }
@@ -75,7 +76,7 @@ inline T compute_fct(const Shape& in_shape, const std::vector<int64_t>& dims, ff
 
 template<typename T, int NDIM>
 static void _conj_symmetry(T* data_out, const Shape& shape, const std::vector<int64_t>& strides,
-                    const std::vector<int64_t>& dims, int64_t elem_count) {
+                           const std::vector<int64_t>& dims, int64_t elem_count) {
   // const int NDIM = out_shape.size();
   const oneflow::NdIndexStrideOffsetHelper<int64_t, NDIM> helper(strides.data(), NDIM);
   // NOTE: dims must be sorted
@@ -100,7 +101,7 @@ static void _conj_symmetry(T* data_out, const Shape& shape, const std::vector<in
 
 template<typename T>
 static void conj_symmetry(T* data_out, const Shape& shape, const Stride& strides,
-                   const std::vector<int64_t>& dims, int64_t elem_count) {
+                          const std::vector<int64_t>& dims, int64_t elem_count) {
   void (*func)(T* /*data_out*/, const Shape& /*shape*/, const std::vector<int64_t>& /*strides*/,
                const std::vector<int64_t>& /*dims*/, int64_t /*elem_count*/) = nullptr;
 
@@ -119,15 +120,16 @@ static void conj_symmetry(T* data_out, const Shape& shape, const Stride& strides
     case 12: func = _conj_symmetry<T, 12>; break;
     default: UNIMPLEMENTED(); break;
   }
-  std::vector<int64_t> strides_vec (strides.begin(), strides.end());
+  std::vector<int64_t> strides_vec(strides.begin(), strides.end());
   func(data_out, shape, strides_vec, dims, elem_count);
 }
 
 template<DeviceType device_type, typename T>
 struct FftC2CKernelUtil {
-  static void FftC2CForward(ep::Stream* stream, const std::complex<T>* data_in, std::complex<T>* data_out,
-                            const Shape& input_shape, const Shape& output_shape,
-                            const Stride& input_stride, const Stride& output_stride, bool forward,
+  static void FftC2CForward(ep::Stream* stream, const std::complex<T>* data_in,
+                            std::complex<T>* data_out, const Shape& input_shape,
+                            const Shape& output_shape, const Stride& input_stride,
+                            const Stride& output_stride, bool forward,
                             const std::vector<int64_t>& dims, fft_norm_mode normalization);
 };
 

@@ -3987,42 +3987,38 @@ class FftBaseFunctor {
     return Maybe<void>::Ok();
   }
 
-  
-  Maybe<void> calculate_fftn_shape_and_dims(const std::shared_ptr<Tensor>& x, const Optional<std::vector<int64_t>>& n, const Optional<std::vector<int64_t>>& dims,
-                                          std::vector<int64_t>& fft_shape, std::vector<int64_t>& fft_dims) const {
-
-    if (dims.has_value()){
+  Maybe<void> calculate_fftn_shape_and_dims(const std::shared_ptr<Tensor>& x,
+                                            const Optional<std::vector<int64_t>>& n,
+                                            const Optional<std::vector<int64_t>>& dims,
+                                            std::vector<int64_t>& fft_shape,
+                                            std::vector<int64_t>& fft_dims) const {
+    if (dims.has_value()) {
       fft_dims = *JUST(dims);
       maybe_wrap_dims(fft_dims, x->ndim());
       std::sort(fft_dims.begin(), fft_dims.end());
       auto duplicate = std::adjacent_find(fft_dims.begin(), fft_dims.end());
-      CHECK_OR_RETURN(duplicate != fft_dims.end()) << Error::RuntimeError() << "FFT dims must be unique";
-    }
-    else{
+      CHECK_OR_RETURN(duplicate != fft_dims.end())
+          << Error::RuntimeError() << "FFT dims must be unique";
+    } else {
       fft_dims.resize(x->ndim());
-      for (int i = 0; i < x->ndim(); i++){
-        fft_dims[i] = i;
-      }
+      for (int i = 0; i < x->ndim(); i++) { fft_dims[i] = i; }
     }
 
-    if (!n.has_value()){
+    if (!n.has_value()) {
       fft_shape.resize(fft_dims.size());
-      for (int i = 0; i < fft_dims.size(); i++){
-        fft_shape[i] = x->dim(fft_dims[i]);
-      }
-    }
-    else{
+      for (int i = 0; i < fft_dims.size(); i++) { fft_shape[i] = x->dim(fft_dims[i]); }
+    } else {
       fft_shape = *JUST(n);
-      if (dims.has_value()){
-        for (int i = 0; i < fft_dims.size(); i++){
-          fft_shape[fft_dims[i]] = fft_shape[fft_dims[i]] == -1 ? x->dim(fft_dims[i]) : fft_shape[fft_dims[i]];
+      if (dims.has_value()) {
+        for (int i = 0; i < fft_dims.size(); i++) {
+          fft_shape[fft_dims[i]] =
+              fft_shape[fft_dims[i]] == -1 ? x->dim(fft_dims[i]) : fft_shape[fft_dims[i]];
         }
-      }
-      else{
+      } else {
         fft_dims.resize(1, fft_shape.size() - 1);
       }
     }
-          
+
     return Maybe<void>::Ok();
   }
   // Maybe<Tensor> convert_to_real(const std::shared_ptr<one::Tensor>& x){
@@ -4036,28 +4032,31 @@ class FftBaseFunctor {
 class FftC2CFunctor : public FftBaseFunctor {
  public:
   FftC2CFunctor() : FftBaseFunctor("fft_c2c") {}
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<std::vector<int64_t>>& n,
-                           const Optional<std::vector<int64_t>>& dims, const std::string& norm_str, bool forward, bool is_grad_fn) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<std::vector<int64_t>>& n,
+                           const Optional<std::vector<int64_t>>& dims, const std::string& norm_str,
+                           bool forward, bool is_grad_fn) const {
     CHECK_OR_THROW(x->dtype()->is_complex())
         << "expects the dtype of input Tensor  is Complex, but gets " << x->dtype()->name();
 
-    if (n.has_value() && dims.has_value()){
-      CHECK_OR_RETURN((*JUST(n)).size() == (*JUST(dims)).size()) << Error::RuntimeError() << "When dim and shape were both given, they must have the same length";
+    if (n.has_value() && dims.has_value()) {
+      CHECK_OR_RETURN((*JUST(n)).size() == (*JUST(dims)).size())
+          << Error::RuntimeError()
+          << "When dim and shape were both given, they must have the same length";
     }
 
     std::vector<int64_t> wrapped_dims(x->ndim(), 0);
     std::vector<int64_t> fft_len(x->ndim(), 0);
-    if (dims.has_value() && (*JUST(dims)).size() == 1){
+    if (dims.has_value() && (*JUST(dims)).size() == 1) {
       // 1D-fft
       wrapped_dims = *JUST(dims);
       maybe_wrap_dims(wrapped_dims, x->ndim());
-      for (int i = 0; i < wrapped_dims.size(); i++){
+      for (int i = 0; i < wrapped_dims.size(); i++) {
         fft_len[i] = n.has_value() == true ? (*JUST(n))[i] : x->dim(wrapped_dims[i]);
-        CHECK_OR_RETURN(fft_len[i] >= 1) << Error::RuntimeError() << "Expected n >= 1, but got "
-                                      << fft_len[i];
+        CHECK_OR_RETURN(fft_len[i] >= 1)
+            << Error::RuntimeError() << "Expected n >= 1, but got " << fft_len[i];
       }
-    }
-    else{
+    } else {
       // ND-fft
       calculate_fftn_shape_and_dims(x, n, dims, fft_len, wrapped_dims);
     }
@@ -4178,13 +4177,14 @@ class FftFunctor {
     // auto dim_val = dim.value_or(-1);
     std::string norm_str = norm.value_or("backward");
     if (input->dtype()->is_complex()) {
-      std::vector<int64_t> fft_dim {dim};
-      if (n.has_value()){
-        std::vector<int64_t> len {JUST(n)};
-        return functional::FftC2C(input, len, fft_dim, norm_str, /*forward=*/true, /*is_grad_fn*/false);
-      }
-      else{
-        return functional::FftC2C(input, NullOpt, fft_dim, norm_str, /*forward=*/true, /*is_grad_fn*/false);
+      std::vector<int64_t> fft_dim{dim};
+      if (n.has_value()) {
+        std::vector<int64_t> len{JUST(n)};
+        return functional::FftC2C(input, len, fft_dim, norm_str, /*forward=*/true,
+                                  /*is_grad_fn*/ false);
+      } else {
+        return functional::FftC2C(input, NullOpt, fft_dim, norm_str, /*forward=*/true,
+                                  /*is_grad_fn*/ false);
       }
     } else {
       // TO-DO
@@ -4198,68 +4198,75 @@ class FftFunctor {
 class IFftFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int64_t>& n,
-                          int64_t dim, const Optional<std::string>& norm) const {
+                           int64_t dim, const Optional<std::string>& norm) const {
     auto norm_str = norm.value_or("backward");
     if (input->dtype()->is_complex()) {
-        std::vector<int64_t> fft_dim {dim};
-        if (n.has_value()){
-          std::vector<int64_t> len {JUST(n)};
-          return functional::FftC2C(input, len, fft_dim, norm_str, /*forward=*/false, /*is_grad_fn*/false);
-        }
-        else{
-          return functional::FftC2C(input, NullOpt, fft_dim, norm_str, /*forward=*/false, /*is_grad_fn*/false);
-        }
+      std::vector<int64_t> fft_dim{dim};
+      if (n.has_value()) {
+        std::vector<int64_t> len{JUST(n)};
+        return functional::FftC2C(input, len, fft_dim, norm_str, /*forward=*/false,
+                                  /*is_grad_fn*/ false);
+      } else {
+        return functional::FftC2C(input, NullOpt, fft_dim, norm_str, /*forward=*/false,
+                                  /*is_grad_fn*/ false);
+      }
     } else {
       // TO-DO
       // return functional::FftR2C(input, n, dim, norm_str, /*forward=*/false, /*onesided=*/false);
-        CHECK_OR_THROW(false) << "UNIMPLEMENTED";
-        return input;
+      CHECK_OR_THROW(false) << "UNIMPLEMENTED";
+      return input;
     }
   }
 };
 
 class FftNFunctor {
  public:
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<std::vector<int64_t>>& s,
-                           const Optional<std::vector<int64_t>>& dim, const Optional<std::string>& norm) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const Optional<std::vector<int64_t>>& s,
+                           const Optional<std::vector<int64_t>>& dim,
+                           const Optional<std::string>& norm) const {
     std::string norm_str = norm.value_or("backward");
 
     if (input->dtype()->is_complex()) {
-      if (s.has_value()){
+      if (s.has_value()) {
         std::vector<int64_t> len = *JUST(s);
-        return functional::FftC2C(input, len, dim, norm_str, /*forward=*/true, /*is_grad_fn*/false);
-      }
-      else{
-        return functional::FftC2C(input, NullOpt, dim, norm_str, /*forward=*/true, /*is_grad_fn*/false);
+        return functional::FftC2C(input, len, dim, norm_str, /*forward=*/true,
+                                  /*is_grad_fn*/ false);
+      } else {
+        return functional::FftC2C(input, NullOpt, dim, norm_str, /*forward=*/true,
+                                  /*is_grad_fn*/ false);
       }
     } else {
       // TO-DO
       // return functional::FftR2C(input, s, {0}, norm_str, /*forward=*/true, /*onesided=*/false);
-        CHECK_OR_THROW(false) << "UNIMPLEMENTED";
-        return input;
+      CHECK_OR_THROW(false) << "UNIMPLEMENTED";
+      return input;
     }
   }
 };
 
 class IFftNFunctor {
  public:
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<std::vector<int64_t>>& s,
-                           const Optional<std::vector<int64_t>>& dim, const Optional<std::string>& norm) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const Optional<std::vector<int64_t>>& s,
+                           const Optional<std::vector<int64_t>>& dim,
+                           const Optional<std::string>& norm) const {
     std::string norm_str = norm.value_or("backward");
 
     if (input->dtype()->is_complex()) {
-      if (s.has_value()){
+      if (s.has_value()) {
         std::vector<int64_t> len = *JUST(s);
-        return functional::FftC2C(input, len, dim, norm_str, /*forward=*/false, /*is_grad_fn*/false);
-      }
-      else{
-        return functional::FftC2C(input, NullOpt, dim, norm_str, /*forward=*/false, /*is_grad_fn*/false);
+        return functional::FftC2C(input, len, dim, norm_str, /*forward=*/false,
+                                  /*is_grad_fn*/ false);
+      } else {
+        return functional::FftC2C(input, NullOpt, dim, norm_str, /*forward=*/false,
+                                  /*is_grad_fn*/ false);
       }
     } else {
       // TO-DO
       // return functional::FftR2C(input, s, {0}, norm_str, /*forward=*/true, /*onesided=*/false);
-        CHECK_OR_THROW(false) << "UNIMPLEMENTED";
-        return input;
+      CHECK_OR_THROW(false) << "UNIMPLEMENTED";
+      return input;
     }
   }
 };

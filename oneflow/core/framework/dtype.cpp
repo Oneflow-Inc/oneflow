@@ -130,7 +130,7 @@ const int DType::priority_order[DataType_ARRAYSIZE] = {0,  /*kInvalid*/
                                                        15, /*kDouble*/
                                                        4,  /*kInt8*/
                                                        8,  /*kInt32*/
-                                                       10,  /*kInt64*/
+                                                       10, /*kInt64*/
                                                        2,  /*kUInt8*/
                                                        20, /*kOFRecord*/
                                                        13, /*kFloat16*/
