@@ -19,7 +19,13 @@ import unittest
 import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
-import torch
+from oneflow.test_utils.test_util import (
+    Array2Numpy,
+    FlattenArray,
+    GenArgList,
+    Index2Coordinate,
+)
+from collections import OrderedDict
 
 """
 TODO(lml): Support and test more apis.
@@ -32,6 +38,9 @@ flow.full()
 flow.new_ones()
 flow.new_zeros()
 flow.new_full()
+flow.add()
+flow.sub()
+flow.sum()
 
 To complete:
 flow.randn()
@@ -48,18 +57,72 @@ Tensor.cdouble()
 More apis..
 """
 
-def tensor_builder(params: dict, dtype=np.complex64):
-    input_shape = params["shape"]
 
-    # generate random input
-    x = np.random.randn(*input_shape) + 1.0j * np.random.randn(*input_shape)
-    x = x.astype(dtype)
+def compare_result(a, b, rtol=1e-5, atol=1e-8):
+    assert np.allclose(
+        a, b, rtol=rtol, atol=atol
+    ), f"\na\n{a}\n{'-' * 80}\nb:\n{b}\n{'*' * 80}\ndiff:\n{a - b}"
 
-    # requires grad
-    x_flow = flow.from_numpy(x).requires_grad_(True)
-    x_torch = torch.from_numpy(x).requires_grad_(True)
 
-    return x_flow, x_torch
+def _np_zero_pad2d_grad(src, dest, padding):
+    (c_idx, h_idx, w_idx) = (1, 2, 3)
+    pad_left = padding[0]
+    pad_right = padding[1]
+    pad_top = padding[2]
+    pad_bottom = padding[3]
+    (dx_height, dx_width) = (dest.shape[h_idx], dest.shape[w_idx])
+    (dy_height, dy_width) = (src.shape[h_idx], src.shape[w_idx])
+    numpy_src = np.ones(src.shape, np.int32)
+    numpy_dest = np.zeros(dest.shape, np.int32)
+    array_src = FlattenArray(numpy_src)
+    array_dest = FlattenArray(numpy_dest)
+    src_num = src.shape[c_idx] * src.shape[h_idx] * src.shape[w_idx]
+    dest_num = dest.shape[c_idx] * dest.shape[h_idx] * dest.shape[w_idx]
+    elements_num = src.shape[0] * src_num
+    for iter_n in range(elements_num):
+        coords = Index2Coordinate(iter_n, src.shape)
+        (n, c, i, j) = (coords[0], coords[c_idx], coords[h_idx], coords[w_idx])
+        ip_x = ip_y = 0
+        if (
+            j >= pad_left
+            and j < dx_width + pad_left
+            and (i >= pad_top)
+            and (i < dx_height + pad_top)
+        ):
+            ip_x = j - pad_left
+            ip_y = i - pad_top
+            src_index = n * src_num + c * dy_width * dy_height + i * dy_width + j
+            dest_index = (
+                n * dest_num + c * dx_width * dx_height + ip_y * dx_width + ip_x
+            )
+            array_dest[dest_index] += array_src[src_index]
+    numpy_dest = Array2Numpy(array_dest, dest.shape)
+    return numpy_dest
+
+def _test_ZeroPad2d(test_case, shape, padding, value, device):
+    np_input = np.random.random(shape)
+    of_input = flow.tensor(
+        np_input, dtype=test_case.dtype, device=flow.device(device), requires_grad=True
+    )
+    if isinstance(padding, int):
+        np_boundary = ((0, 0), (0, 0), (padding, padding), (padding, padding))
+    elif isinstance(padding, (tuple, int)) and len(padding) == 4:
+        np_boundary = (
+            (0, 0),
+            (0, 0),
+            (padding[2], padding[3]),
+            (padding[0], padding[1]),
+        )
+    else:
+        raise ValueError("padding must be in  or tuple!")
+    layer = flow.nn.ZeroPad2d(padding=padding)
+    of_out = layer(of_input)
+    np_out = np.pad(np_input, np_boundary, mode="constant", constant_values=value)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
+    of_out = of_out.sum()
+    of_out.backward()
+    np_out_grad = _np_zero_pad2d_grad(np_out, np_input, layer.padding)
+    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out_grad, 1e-05, 1e-05))
 
 class TestTensorComplex64(unittest.TestCase):
     def setUp(self):
@@ -77,13 +140,13 @@ class TestTensorComplex64(unittest.TestCase):
         ]
         self.np_c = np.array(self.c, dtype=self.np_dtype)
         
-        self.lower_n_dims = 1
-        self.upper_n_dims = 8
-        # self.n_dims = []
-        # for _ in range(10):
-        #     num_dims = np.random.randint(lower_n_dims, upper_n_dims)
-        #     self.n_dims.append(num_dims)
-        
+        self.lower_n_dims = 2
+        self.upper_n_dims = 5
+        self.shape = []
+        for _ in range(10):
+            num_dims = np.random.randint(self.lower_n_dims, self.upper_n_dims)
+            shape_ = [np.random.randint(1, 11) * 4 for _ in range(num_dims)]
+            self.shape.append(shape_)
 
     def test_from_numpy(self):
         a = flow.from_numpy(self.np_a)
@@ -141,6 +204,11 @@ class TestTensorComplex64(unittest.TestCase):
         np_slice_b = b[1].numpy()
         self.assertEqual(np_slice_b.dtype, self.np_dtype)
         assert np.allclose(np_slice_b, self.np_b[1])
+        
+        c = flow.from_numpy(self.np_c)
+        np_slice_c = c[0:2,:].numpy()
+        self.assertEqual(np_slice_c.dtype, self.np_dtype)
+        assert np.allclose(np_slice_c, self.np_c[0:2,:])    
 
     def test_new_tensor(self):
         a = flow.tensor(self.a, dtype=self.dtype)
@@ -213,13 +281,116 @@ class TestTensorComplex64(unittest.TestCase):
     # @autotest(n=5, rtol=1e-2, atol=1e-3)
     # def test_add(self):
     #     ndim = np.random.randint(self.lower_n_dims, self.upper_n_dims)
-    #     m = torch.add
+    #     shape = [np.random.randint(1, 11) * 5 for _ in range(ndim)]
     #     device = "cpu"
-    #     x = random_tensor(ndim=ndim).to(device)
-    #     y = random_tensor(ndim=ndim).to(device)
-    #     ret = m(x, y)
+    #     x = random_tensor(ndim, *shape).to(device, torch.complex64)
+    #     y = random_tensor(ndim, *shape).to(device, torch.complex64)
+    #     ret = x + y
     #     return ret
 
+    def test_add(self):
+        device = "cpu"
+        for i, input_shape in enumerate(self.shape):
+            np_x = np.random.randn(*input_shape) + 1.0j * np.random.randn(*input_shape)
+            np_x = np_x.astype(self.np_dtype)
+
+            np_y = np.random.randn(*input_shape) + 1.0j * np.random.randn(*input_shape)
+            np_y = np_y.astype(self.np_dtype)
+            
+            flow_x = flow.from_numpy(np_x).to(device).requires_grad_(True)
+            flow_y = flow.from_numpy(np_y).to(device).requires_grad_(True)
+            self.assertEqual(flow_x.dtype, self.dtype)
+            self.assertEqual(flow_y.dtype, self.dtype)
+            
+            # forward
+            flow_ret = flow.add(flow_x, flow_y)
+            np_ret = np_x + np_y
+            compare_result(flow_ret, np_ret, 1e-5, 1e-2)
+                        
+            # backward
+            flow_ret.sum().backward()
+            compare_result(flow_x.grad.numpy(), np.ones(input_shape), 1e-5, 1e-2)
+            compare_result(flow_y.grad.numpy(), np.ones(input_shape), 1e-5, 1e-2)
+
+    def test_sub(self):
+        device = "cpu"
+        for i, input_shape in enumerate(self.shape):
+            np_x = np.random.randn(*input_shape) + 1.0j * np.random.randn(*input_shape)
+            np_x = np_x.astype(self.np_dtype)
+
+            np_y = np.random.randn(*input_shape) + 1.0j * np.random.randn(*input_shape)
+            np_y = np_y.astype(self.np_dtype)
+            
+            flow_x = flow.from_numpy(np_x).to(device).requires_grad_(True)
+            flow_y = flow.from_numpy(np_y).to(device).requires_grad_(True)
+            self.assertEqual(flow_x.dtype, self.dtype)
+            self.assertEqual(flow_y.dtype, self.dtype)
+            
+            # forward
+            flow_ret = flow.sub(flow_x, flow_y)
+            np_ret = np_x - np_y
+            compare_result(flow_ret, np_ret, 1e-5, 1e-2)
+                        
+            # backward
+            flow_ret.sum().backward()
+            compare_result(flow_x.grad.numpy(), np.ones(input_shape), 1e-5, 1e-2)
+            compare_result(flow_y.grad.numpy(), -np.ones(input_shape), 1e-5, 1e-2)
+
+    def test_mul(self):
+        device = "cpu"
+        for i, input_shape in enumerate(self.shape):
+            np_x = np.random.randn(*input_shape) + 1.0j * np.random.randn(*input_shape)
+            np_x = np_x.astype(self.np_dtype)
+
+            np_y = np.random.randn(*input_shape) + 1.0j * np.random.randn(*input_shape)
+            np_y = np_y.astype(self.np_dtype)
+            
+            flow_x = flow.from_numpy(np_x).to(device).requires_grad_(True)
+            flow_y = flow.from_numpy(np_y).to(device).requires_grad_(True)
+            self.assertEqual(flow_x.dtype, self.dtype)
+            self.assertEqual(flow_y.dtype, self.dtype)
+            
+            # forward
+            flow_ret = flow.mul(flow_x, flow_y)
+            np_ret = np_x * np_y
+            compare_result(flow_ret, np_ret, 1e-5, 1e-2)
+                        
+            # backward
+            flow_ret.sum().backward()
+            compare_result(flow_x.grad.numpy(), flow_y.numpy(), 1e-5, 1e-2)
+            compare_result(flow_y.grad.numpy(), flow_x.numpy(), 1e-5, 1e-2)    
+            
+    def test_sum(self):
+        device = "cpu"
+        for i, input_shape in enumerate(self.shape):
+            n_dims = np.random.randint(1, len(input_shape))
+            dims = np.random.choice(len(input_shape) - 1, n_dims, replace=False).tolist()
+            keepdim = True if np.random.randint(2) == 1 else False
+            
+            np_x = np.random.randn(*input_shape) + 1.0j * np.random.randn(*input_shape)
+            np_x = np_x.astype(self.np_dtype)
+            
+            flow_x = flow.from_numpy(np_x).to(device).requires_grad_(True)
+            self.assertEqual(flow_x.dtype, self.dtype)
+            
+            # forward
+            flow_ret = flow.sum(flow_x, dim=dims, keepdim=keepdim)
+            np_ret = np.sum(np_x, axis=tuple(dims), keepdims=keepdim)
+            compare_result(flow_ret, np_ret, 1e-5, 1e-2)
+                        
+            # backward
+            flow_ret.sum().backward()
+            compare_result(flow_x.grad.numpy(), np.ones(input_shape), 1e-5, 1e-2)
+            
+    def test_constant_pad(self):
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(1, 2, 3, 4), (8, 3, 4, 4)]
+        arg_dict["padding"] = [2, (1, 1, 2, 2)]
+        arg_dict["value"] = [0.0]
+        arg_dict["device"] = ["cpu"]
+        for arg in GenArgList(arg_dict):
+            _test_ZeroPad2d(self, *arg)
+    
 class TestTensorComplex128(TestTensorComplex64):
     def setUp(self):
         self.dtype = flow.cdouble
@@ -235,7 +406,13 @@ class TestTensorComplex128(TestTensorComplex64):
             [3.14 + 2j, 3.14 + 2j],
         ]
         self.np_c = np.array(self.c, dtype=self.np_dtype)
-
+        self.lower_n_dims = 2
+        self.upper_n_dims = 5
+        self.shape = []
+        for _ in range(10):
+            num_dims = np.random.randint(self.lower_n_dims, self.upper_n_dims)
+            shape_ = [np.random.randint(1, 11) * 4 for _ in range(num_dims)]
+            self.shape.append(shape_)
 
 if __name__ == "__main__":
     unittest.main()
