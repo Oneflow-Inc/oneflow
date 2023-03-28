@@ -115,6 +115,14 @@ class TestMetaTensor(flow.unittest.TestCase):
     test_case.assertEqual(x.fc.weight.shape, y.fc.weight.shape)
     test_case.assertEqual(x.fc.weight.requires_grad, y.fc.weight.requires_grad)
     test_case.assertEqual(x.fc.weight.device, flow.device("cpu"))
+  
+  @flow.unittest.skip_unless_1n1d()
+  def test_meta_tensor_local_mode_clone(test_case):
+    x = flow.tensor([3, 2], device="meta")
+    y = x.clone()
+    test_case.assertEqual(x.dtype, y.dtype)
+    test_case.assertEqual(x.shape, y.shape)
+    test_case.assertEqual(x.device, y.device)
 
 
 if __name__ == "__main__":
