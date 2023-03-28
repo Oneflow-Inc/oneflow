@@ -108,8 +108,9 @@ def naive_embedding(
     if mode == "plane":
         if rotary_ndims == 2:
             y1 = plane_shuffle(x[..., : rotary_size // 2])
-            y2 = plane_shuffle(x[..., rotary_size // 2 :])
-            y = np.concatenate((y1, y2), axis=-1)
+            y2 = plane_shuffle(x[..., rotary_size // 2 : rotary_size])
+            y3 = x[..., rotary_size:]
+            y = np.concatenate((y1, y2, y3), axis=-1)
         else:
             y = plane_shuffle(x)
     else:
@@ -148,15 +149,15 @@ def naive_embedding(
 
         naive_out = np.concatenate((out0, out1, out2), axis=-1)
     elif x_layout == "MB(H3K)":
-        out0 = x[..., 0, :].reshape(dims) * cos.reshape([M, B, 1, K]) + y[
+        out0 = x[..., 0, :].reshape(dims) * cos.transpose([2, 0, 1, 3]).reshape([M, B, 1, K]) + y[
             ..., 0, :
-        ].reshape(dims) * sin.reshape([M, B, 1, K])
-        out1 = x[..., 1, :].reshape(dims) * cos.reshape([M, B, 1, K]) + y[
+        ].reshape(dims) * sin.transpose([2, 0, 1, 3]).reshape([M, B, 1, K])
+        out1 = x[..., 1, :].reshape(dims) * cos.transpose([2, 0, 1, 3]).reshape([M, B, 1, K]) + y[
             ..., 1, :
-        ].reshape(dims) * sin.reshape([M, B, 1, K])
-        out2 = x[..., 2, :].reshape(dims) * cos.reshape([M, B, 1, K]) + y[
+        ].reshape(dims) * sin.transpose([2, 0, 1, 3]).reshape([M, B, 1, K])
+        out2 = x[..., 2, :].reshape(dims) * cos.transpose([2, 0, 1, 3]).reshape([M, B, 1, K]) + y[
             ..., 2, :
-        ].reshape(dims) * sin.reshape([M, B, 1, K])
+        ].reshape(dims) * sin.transpose([2, 0, 1, 3]).reshape([M, B, 1, K])
 
         naive_out = np.concatenate((out0, out1, out2), axis=-1)
 
@@ -780,8 +781,8 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
         args_dict["x_layout"] = ["MB(H3K)"]
         args_dict["mode"] = ["plane"]
         args_dict["base"] = [1e4]
-        args_dict["rotary_size"] = [8]
-        args_dict["dims"] = [(1, 1, 3, 8)]
+        args_dict["rotary_size"] = [4]
+        args_dict["dims"] = [(1, 2, 1, 8)]
         args_dict["rotary_ndims"] = [2]
         # args_dict["rotary_size"] = [48]
         # args_dict["dims"] = [(32, 2048, 32, 64)]
