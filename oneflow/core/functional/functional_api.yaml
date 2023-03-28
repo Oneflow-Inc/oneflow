@@ -1233,7 +1233,7 @@
   bind_python: True
 
 - name: "fused_matmul_bias"
-  signature: "Tensor (Tensor x, Tensor weight, Tensor bias, Tensor _add_to_output=None) => FusedMatmulBias"
+  signature: "Tensor (Tensor x, Tensor weight, Tensor bias, Tensor _add_to_output=None, Double alpha=1.0, Double beta=1.0) => FusedMatmulBias"
   bind_python: True
 
 - name: "fused_mlp_grad"
@@ -1513,6 +1513,10 @@
   signature:
     "Tensor (Tensor x, Tensor gamma, Tensor beta, Int64 begin_norm_axis,
     Int64 begin_params_axis, Double epsilon) => LayerNormAffine"
+  bind_python: True
+
+- name: "skip_layer_norm"
+  signature: "Tensor (Tensor x, *, Tensor gamma=None, Tensor beta=None, Tensor bias=None, Tensor skip=None, Double epsilon=1e-5, Double alpha=1e1) => SkipLayerNorm"
   bind_python: True
 
 - name: "layer_norm"
@@ -2046,6 +2050,10 @@
 
 - name: "tril"
   signature: "Tensor (Tensor x, Int64 diagonal=0) => Tril"
+  bind_python: True
+
+- name: "tril_"
+  signature: "Tensor (Tensor x, Int64 diagonal=0) => InplaceTril"
   bind_python: True
 
 - name: "triu"
@@ -2649,7 +2657,7 @@
   bind_python: True
 
 - name: "fused_multi_head_attention_inference_v2"
-  signature: 'Tensor (*, Tensor query, String query_layout, Int64 query_head_size=None, Tensor key=None, String key_layout=None, Tensor value=None, String value_layout=None, Tensor attn_bias=None, String output_layout="BM(HK)", Bool causal=False, Int64 causal_diagonal_offset=0) => FusedMultiHeadAttentionInferenceV2'
+  signature: 'Tensor (*, Tensor query, String query_layout, Int64 query_head_size=None, Tensor query_seq_start=None, Int64 query_max_seq_len=None, Tensor key=None, String key_layout=None, Tensor key_seq_start=None, Tensor key_seq_len=None, Int64 key_max_seq_len=None, Tensor value=None, String value_layout=None, Tensor attn_bias=None, String output_layout="BM(HK)", Float scale=None, Bool causal=None, String attn_mask_type=None, Int64 causal_diagonal_offset=0) => FusedMultiHeadAttentionInferenceV2'
   bind_python: True
 
 - name: "fused_attention_concat_past_key_value"
