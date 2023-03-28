@@ -61,10 +61,7 @@ namespace oneflow {
   const int64_t indices_num_axes =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0).shape().NumAxes();
   const int64_t gather_axis = ctx->Attr<int64_t>("axis");
-  CHECK_GE_OR_RETURN(gather_axis, 0)
-  << Error::RuntimeError()
-  << "The gather axis should be greater or equal to zero, "
-  << "but got " << gather_axis;
+  CHECK_GE_OR_RETURN(gather_axis, 0) // NOLINT(maybe-need-error-msg)
   CHECK_LT_OR_RETURN(gather_axis, in_num_axes)
   << Error::RuntimeError()
   << "The gather axis should be less or equal to input tensor's axis, "
