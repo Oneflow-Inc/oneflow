@@ -72,6 +72,7 @@ class FftC2CKernel final : public user_op::OpKernel {
     const user_op::Tensor* input = ctx->Tensor4ArgNameAndIndex("input", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     bool forward = ctx->Attr<bool>("forward");
+    bool is_grad_fn = ctx->Attr<bool>("is_grad_fn");
     const std::string& norm_str = ctx->Attr<std::string>("norm");
     const std::vector<int64_t>& dims = ctx->Attr<std::vector<int64_t>>("dims");
 
@@ -80,7 +81,14 @@ class FftC2CKernel final : public user_op::OpKernel {
 
     Shape input_shape(input->shape_view());
     Shape out_shape(out->shape_view());
-    fft_norm_mode norm_mode = norm_from_string(norm_str, forward);
+
+    fft_norm_mode norm_mode = fft_norm_mode::none;
+    if (!is_grad_fn){
+      norm_mode = norm_from_string(norm_str, forward);
+    }
+    else{
+      norm_mode = norm_from_string(norm_str, !forward);
+    }
 
     if (input->data_type() == kComplex64) {
       FftC2CKernelUtil<device_type, T>::FftC2CForward(
