@@ -780,7 +780,7 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
         args_dict["x_layout"] = ["MB(H3K)"]
         args_dict["mode"] = ["plane"]
         args_dict["base"] = [1e4]
-        args_dict["rotary_size"] = [8]
+        args_dict["rotary_size"] = [4]
         args_dict["dims"] = [(1, 1, 3, 8)]
         args_dict["rotary_ndims"] = [2]
         # args_dict["rotary_size"] = [48]

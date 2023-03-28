@@ -141,6 +141,8 @@ struct FusedApplyRotaryEmbParam {
   T* out;
   T theta;
   int64_t pass_ndims;
+  IndexType rotate_stride;
+  IndexType rotate_boundary;
   IndexType segment_k[RotaryEmbDim];
   IndexType k0;
   IndexType k1;
@@ -157,9 +159,9 @@ struct FusedApplyRotaryEmbParam {
 
   // TODO: position_id type? for now it is int32
   FusedApplyRotaryEmbParam(const T* x, const T* cos, const T* sin, const PositionType* position_ids,
-                           T* out, const T theta, const int64_t pass_ndims,
-                           const IndexType num_elements, const IndexType k, const IndexType k0,
-                           const IndexType k1, const IndexType sinuous_m, const IndexType offset,
+                           T* out, const T theta, const int64_t pass_ndims, const IndexType rotate_stride, 
+                           const IndexType rotate_boundary, const IndexType num_elements, const IndexType k, 
+                           const IndexType k0, const IndexType k1, const IndexType sinuous_m, const IndexType offset,
                            const IndexType packed_n)
       : x(x),
         cos(cos),
@@ -168,6 +170,8 @@ struct FusedApplyRotaryEmbParam {
         out(out),
         theta(theta),
         pass_ndims(pass_ndims),
+        rotate_stride(rotate_stride),
+        rotate_boundary(rotate_boundary),
         num_elements(num_elements),
         k(k),
         k0(k0),
@@ -547,22 +551,17 @@ __global__ void PlaneKernel(
     }
 
     x_offset = (offset - k_index) * param.packed_n + k_index + param.offset;
-    if (k_index < param.k0) {
-      x_vec.elem[0] = *(x + x_offset);
-      x_vec.elem[1] = (k_index < param.k0 / 2) ? static_cast<T>(-*(x + x_offset + param.k0 / 2))
-                                               : *(x + x_offset - param.k0 / 2);
-      out_val = cos_val * x_vec.elem[0] + sin_val * x_vec.elem[1];
-    } else if (k_index < param.k1) {
-      if ((k_index - param.k0) < ((param.k - param.pass_ndims) / (2 * RotaryEmbDim))) {
+    
+    for (int i = 0; i < RotaryEmbDim; i++) {
+      if ((i == 0 && k_index < param.segment_k[i]) || (param.segment_k[i-1] <= k_index && k_index < param.segment_k[i])) {
         x_vec.elem[0] = *(x + x_offset);
-        x_vec.elem[1] = -*(x + x_offset + param.k0 / 2);
-        out_val = cos_val * x_vec.elem[0] + sin_val * x_vec.elem[1];
-      } else {
-        x_vec.elem[0] = *(x + x_offset);
-        x_vec.elem[1] = *(x + x_offset - param.k0 / 2);
+        x_vec.elem[1] = (param.segment_k[i] - k_index > param.rotate_stride) ? static_cast<T>(-*(x + x_offset + param.rotate_stride))
+                                               : *(x + x_offset - param.rotate_stride);
         out_val = cos_val * x_vec.elem[0] + sin_val * x_vec.elem[1];
       }
-    } else {
+    }
+
+    if (k_index >= param.segment_k[RotaryEmbDim-1]) {
       out_val = *(x + x_offset);
     }
 
@@ -601,6 +600,9 @@ void LaunchKernel(ep::CudaStream* stream, const T* x, const T* cos, const T* sin
     k1 = k - pass_ndims;
   }
 
+  const IndexType rotate_stride = (k - pass_ndims) / (2 * RotaryEmbDim);
+  const IndexType rotate_boundary = (k - pass_ndims) / RotaryEmbDim;
+
   IndexType packed_n = 1;
   // TODO: only to test its accuracy, needs to be passed through parseDims
   if (x_layout == "BM(H2K)" || x_layout == "MB(H2K)") {
@@ -610,8 +612,14 @@ void LaunchKernel(ep::CudaStream* stream, const T* x, const T* cos, const T* sin
   }
 
   struct FusedApplyRotaryEmbParam<T, PositionType, IndexType, NumDims, RotaryEmbDim> param(
-      x, cos, sin, position_ids, out, theta, pass_ndims, num_elements, k, k0, k1,
+      x, cos, sin, position_ids, out, theta, pass_ndims, rotate_stride, rotate_boundary, num_elements, k, k0, k1,
       position_shape ? static_cast<IndexType>(position_shape[2]) : m, offset, packed_n);
+
+
+#pragma unloop
+  for (int i = 0; i < RotaryEmbDim; i++) {
+    param.segment_k[i] = (k - pass_ndims) / RotaryEmbDim * (i + 1);
+  }
 
   std::pair<char, std::int64_t> strides[NumDims];
   strides[0] = {'b', b_stride / packed_n};
