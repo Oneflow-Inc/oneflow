@@ -78,6 +78,12 @@ def parseDims(dims, x_layout):
         H = dims[2]
         K = dims[3]
         merged_dims = [dims[0], dims[1], 3 * dims[2] * dims[3]]
+    elif x_layout == "MB(H3K)":
+        B = dims[1]
+        M = dims[0]
+        H = dims[2]
+        K = dims[3]
+        merged_dims = [dims[0], dims[1], 3 * dims[2] * dims[3]]
 
     return B, M, H, K, merged_dims
 
@@ -139,6 +145,18 @@ def naive_embedding(
         out2 = x[..., 2, :].reshape(dims) * cos.reshape([B, M, 1, K]) + y[
             ..., 2, :
         ].reshape(dims) * sin.reshape([B, M, 1, K])
+
+        naive_out = np.concatenate((out0, out1, out2), axis=-1)
+    elif x_layout == "MB(H3K)":
+        out0 = x[..., 0, :].reshape(dims) * cos.reshape([M, B, 1, K]) + y[
+            ..., 0, :
+        ].reshape(dims) * sin.reshape([M, B, 1, K])
+        out1 = x[..., 1, :].reshape(dims) * cos.reshape([M, B, 1, K]) + y[
+            ..., 1, :
+        ].reshape(dims) * sin.reshape([M, B, 1, K])
+        out2 = x[..., 2, :].reshape(dims) * cos.reshape([M, B, 1, K]) + y[
+            ..., 2, :
+        ].reshape(dims) * sin.reshape([M, B, 1, K])
 
         naive_out = np.concatenate((out0, out1, out2), axis=-1)
 
@@ -699,11 +717,9 @@ def _test_plane(
 
     out0 = flow._C.fused_apply_rotary_emb(
         fused_x,
-        cos=fused_cos,
-        sin=fused_sin,
         position_ids=fused_position_ids,
         x_layout=x_layout,
-        output_layout="BMHK",
+        output_layout="MBHK",
         k_size=K,
         base=base,
         rotary_size=rotary_size,
@@ -713,11 +729,9 @@ def _test_plane(
 
     out1 = flow._C.fused_apply_rotary_emb(
         fused_x,
-        cos=fused_cos,
-        sin=fused_sin,
         position_ids=fused_position_ids,
         x_layout=x_layout,
-        output_layout="BMHK",
+        output_layout="MBHK",
         k_size=K,
         base=base,
         rotary_size=rotary_size,
@@ -727,11 +741,9 @@ def _test_plane(
 
     out2 = flow._C.fused_apply_rotary_emb(
         fused_x,
-        cos=fused_cos,
-        sin=fused_sin,
         position_ids=fused_position_ids,
         x_layout=x_layout,
-        output_layout="BMHK",
+        output_layout="MBHK",
         k_size=K,
         base=base,
         rotary_size=rotary_size,
@@ -764,13 +776,13 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
     # because rule no.2, kernels without cos&sin cannot work under specific x_layout
     def test_fused_rotary_embedding_op(test_case):
         args_dict = OrderedDict()
-        args_dict["test_fun"] = [_test_with_position]
-        args_dict["x_layout"] = ["BM(H3K)"]
-        args_dict["mode"] = ["interval"]
-        args_dict["base"] = [1e1]
-        args_dict["rotary_size"] = [4]
-        args_dict["dims"] = [(3, 5, 3, 8)]
-        args_dict["rotary_ndims"] = [2, 1]
+        args_dict["test_fun"] = [_test_plane]
+        args_dict["x_layout"] = ["MB(H3K)"]
+        args_dict["mode"] = ["plane"]
+        args_dict["base"] = [1e4]
+        args_dict["rotary_size"] = [8]
+        args_dict["dims"] = [(1, 1, 3, 8)]
+        args_dict["rotary_ndims"] = [2]
         # args_dict["rotary_size"] = [48]
         # args_dict["dims"] = [(32, 2048, 32, 64)]
         args_dict["dtype"] = [flow.float16]

@@ -600,7 +600,7 @@ void LaunchKernel(ep::CudaStream* stream, const T* x, const T* cos, const T* sin
   // TODO: only to test its accuracy, needs to be passed through parseDims
   if (x_layout == "BM(H2K)" || x_layout == "MB(H2K)") {
     packed_n = 2;
-  } else if (x_layout == "BM(H3K)" || x_layout == "MB(H3k)") {
+  } else if (x_layout == "BM(H3K)" || x_layout == "MB(H3K)") {
     packed_n = 3;
   }
 
