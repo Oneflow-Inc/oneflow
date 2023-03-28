@@ -233,35 +233,7 @@ def _test_without_position(
     fused_cos = flow.tensor(fused_cos, dtype=dtype, device="cuda")
     fused_sin = flow.tensor(fused_sin, dtype=dtype, device="cuda")
 
-    if x_layout == "BM(H2K)":
-        out1 = flow._C.fused_apply_rotary_emb(
-            fused_x,
-            cos=fused_cos,
-            sin=fused_sin,
-            position_ids=None,
-            x_layout=x_layout,
-            k_size=K,
-            base=base,
-            rotary_size=rotary_size,
-            mode=mode,
-            tensor_index=1,
-        )
-        out2 = flow._C.fused_apply_rotary_emb(
-            fused_x,
-            cos=fused_cos,
-            sin=fused_sin,
-            position_ids=None,
-            x_layout=x_layout,
-            output_layout="BMHK",
-            k_size=K,
-            base=base,
-            rotary_size=rotary_size,
-            mode=mode,
-            tensor_index=2,
-        )
-
-        fused_out = np.concatenate((out1, out2), axis=-1)
-    elif x_layout == "BM(H3K)":
+    if x_layout == "BM(H3K)":
         out0 = flow._C.fused_apply_rotary_emb(
             fused_x,
             cos=fused_cos,
@@ -376,35 +348,7 @@ def _test_without_position_sinuous(
 
     fused_x = flow.tensor(x, dtype=dtype, device="cuda")
 
-    if x_layout == "BM(H2K)":
-        out1 = flow._C.fused_apply_rotary_emb(
-            fused_x,
-            cos=None,
-            sin=None,
-            position_ids=None,
-            x_layout=x_layout,
-            k_size=K,
-            base=base,
-            rotary_size=rotary_size,
-            mode=mode,
-            tensor_index=1,
-        )
-        out2 = flow._C.fused_apply_rotary_emb(
-            fused_x,
-            cos=None,
-            sin=None,
-            position_ids=None,
-            x_layout=x_layout,
-            output_layout="BMHK",
-            k_size=K,
-            base=base,
-            rotary_size=rotary_size,
-            mode=mode,
-            tensor_index=2,
-        )
-
-        fused_out = np.concatenate((out1, out2), axis=-1)
-    elif x_layout == "BM(H3K)":
+    if x_layout == "BM(H3K)":
         out0 = flow._C.fused_apply_rotary_emb(
             fused_x,
             cos=None,
@@ -469,6 +413,7 @@ def _test_without_position_sinuous(
 def _test_with_position_sinuous(
     test_case, x_layout, mode, base, rotary_size, dims, rotary_ndims, dtype
 ):
+    print(x_layout, mode, base, rotary_size, dims, rotary_ndims)
     B, M, H, K, merged_dims = parseDims(dims, x_layout)
 
     x = np.random.uniform(low=-1, high=1, size=(*merged_dims,))
@@ -554,35 +499,7 @@ def _test_with_position_sinuous(
     fused_sin = flow.tensor(fused_sin, dtype=dtype, device="cuda")
     fused_position_ids = flow.tensor(position_ids, dtype=flow.int32, device="cuda")
 
-    if x_layout == "BM(H2K)":
-        out1 = flow._C.fused_apply_rotary_emb(
-            fused_x,
-            cos=fused_cos,
-            sin=fused_sin,
-            position_ids=None,
-            x_layout=x_layout,
-            k_size=K,
-            base=base,
-            rotary_size=rotary_size,
-            mode=mode,
-            tensor_index=1,
-        )
-        out2 = flow._C.fused_apply_rotary_emb(
-            fused_x,
-            cos=fused_cos,
-            sin=fused_sin,
-            position_ids=fused_position_ids,
-            x_layout=x_layout,
-            output_layout="BMHK",
-            k_size=K,
-            base=base,
-            rotary_size=rotary_size,
-            mode=mode,
-            tensor_index=2,
-        )
-
-        fused_out = np.concatenate((out1, out2), axis=-1)
-    elif x_layout == "BM(H3K)":
+    if x_layout == "BM(H3K)":
         out0 = flow._C.fused_apply_rotary_emb(
             fused_x,
             cos=fused_cos,
@@ -714,35 +631,7 @@ def _test_with_position(
     fused_x = flow.tensor(x, dtype=dtype, device="cuda")
     fused_position_ids = flow.tensor(position_ids, dtype=flow.int32, device="cuda")
 
-    if x_layout == "BM(H2K)":
-        out1 = flow._C.fused_apply_rotary_emb(
-            fused_x,
-            cos=None,
-            sin=None,
-            position_ids=fused_position_ids,
-            x_layout=x_layout,
-            k_size=K,
-            base=base,
-            rotary_size=rotary_size,
-            mode=mode,
-            tensor_index=1,
-        )
-        out2 = flow._C.fused_apply_rotary_emb(
-            fused_x,
-            cos=None,
-            sin=None,
-            position_ids=fused_position_ids,
-            x_layout=x_layout,
-            output_layout="BMHK",
-            k_size=K,
-            base=base,
-            rotary_size=rotary_size,
-            mode=mode,
-            tensor_index=2,
-        )
-
-        fused_out = np.concatenate((out1, out2), axis=-1)
-    elif x_layout == "BM(H3K)":
+    if x_layout == "BM(H3K)":
         out0 = flow._C.fused_apply_rotary_emb(
             fused_x,
             cos=None,
@@ -947,43 +836,60 @@ def _test_plane(
     fused_sin = flow.tensor(fused_sin, dtype=dtype, device="cuda")
     fused_position_ids = flow.tensor(position_ids, dtype=flow.int32, device="cuda")
 
-    out0 = flow._C.fused_apply_rotary_emb(
-        fused_x,
-        position_ids=fused_position_ids,
-        x_layout=x_layout,
-        output_layout="MBHK",
-        k_size=K,
-        base=base,
-        rotary_size=rotary_size,
-        mode=mode,
-        tensor_index=0,
-    )
+    if x_layout == "MB(H3K)":
+        out0 = flow._C.fused_apply_rotary_emb(
+            fused_x,
+            cos=None,
+            sin=None,
+            position_ids=fused_position_ids,
+            x_layout=x_layout,
+            output_layout="MBHK",
+            k_size=K,
+            base=base,
+            rotary_size=rotary_size,
+            mode=mode,
+            tensor_index=0,
+        )
+        out1 = flow._C.fused_apply_rotary_emb(
+            fused_x,
+            cos=None,
+            sin=None,
+            position_ids=fused_position_ids,
+            x_layout=x_layout,
+            output_layout="MBHK",
+            k_size=K,
+            base=base,
+            rotary_size=rotary_size,
+            mode=mode,
+            tensor_index=1,
+        )
+        out2 = flow._C.fused_apply_rotary_emb(
+            fused_x,
+            cos=None,
+            sin=None,
+            position_ids=fused_position_ids,
+            x_layout=x_layout,
+            output_layout="MBHK",
+            k_size=K,
+            base=base,
+            rotary_size=rotary_size,
+            mode=mode,
+            tensor_index=2,
+        )
 
-    out1 = flow._C.fused_apply_rotary_emb(
-        fused_x,
-        position_ids=fused_position_ids,
-        x_layout=x_layout,
-        output_layout="MBHK",
-        k_size=K,
-        base=base,
-        rotary_size=rotary_size,
-        mode=mode,
-        tensor_index=1,
-    )
-
-    out2 = flow._C.fused_apply_rotary_emb(
-        fused_x,
-        position_ids=fused_position_ids,
-        x_layout=x_layout,
-        output_layout="MBHK",
-        k_size=K,
-        base=base,
-        rotary_size=rotary_size,
-        mode=mode,
-        tensor_index=2,
-    )
-
-    fused_out = np.concatenate([out0.numpy(), out1.numpy(), out2.numpy()], axis=-1)
+        fused_out = np.concatenate((out0, out1, out2), axis=-1)
+    else:
+        fused_out = flow._C.fused_apply_rotary_emb(
+            fused_x,
+            cos=None,
+            sin=None,
+            position_ids=fused_position_ids,
+            x_layout=x_layout,
+            k_size=K,
+            base=base,
+            rotary_size=rotary_size,
+            mode=mode,
+        ).numpy()
 
     test_case.assertTrue(
         np.allclose(
@@ -1006,15 +912,31 @@ def _test_plane(
 @flow.unittest.skip_unless_1n1d()
 class TestFusedRotaryEmbedding(flow.unittest.TestCase):
     # because rule no.2, kernels without cos&sin cannot work under specific x_layout
-    def test_fused_rotary_embedding_op(test_case):
+    def test_fused_rotary_embedding_op_plane(test_case):
         args_dict = OrderedDict()
         args_dict["test_fun"] = [_test_plane]
-        args_dict["x_layout"] = ["MB(H3K)"]
+        args_dict["x_layout"] = ["MB(H3K)", "MB(HK)"]
         args_dict["mode"] = ["plane"]
         args_dict["base"] = [1e4]
         args_dict["rotary_size"] = [4]
-        args_dict["dims"] = [(3, 2, 3, 8)]
-        args_dict["rotary_ndims"] = [1]
+        args_dict["dims"] = [(3, 2, 2, 8)]
+        args_dict["rotary_ndims"] = [2, 1]
+        # args_dict["rotary_size"] = [48]
+        # args_dict["dims"] = [(32, 2048, 32, 64)]
+        args_dict["dtype"] = [flow.float16]
+
+        for arg in GenArgList(args_dict):
+            arg[0](test_case, *arg[1:])
+
+    def test_fused_rotary_embedding_op_interval(test_case):
+        args_dict = OrderedDict()
+        args_dict["test_fun"] = [_test_without_position_sinuous, _test_without_position, _test_with_position, _test_without_position_sinuous]
+        args_dict["x_layout"] = ["BM(H3K)", "BM(HK)"]
+        args_dict["mode"] = ["interval"]
+        args_dict["base"] = [1e4]
+        args_dict["rotary_size"] = [4]
+        args_dict["dims"] = [(3, 2, 2, 8)]
+        args_dict["rotary_ndims"] = [2, 1]
         # args_dict["rotary_size"] = [48]
         # args_dict["dims"] = [(32, 2048, 32, 64)]
         args_dict["dtype"] = [flow.float16]

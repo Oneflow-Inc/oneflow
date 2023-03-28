@@ -151,6 +151,7 @@ struct FusedApplyRotaryEmbParam {
   IndexType sinuous_m;
   IndexType packed_n;
   IndexType offset;
+  std::pair<char, IndexType> out_stride[NumDims];
   IndexType x_stride[NumDims];
   IndexType position_stride[NumDims];
   IndexType position_mask[NumDims];
@@ -181,235 +182,64 @@ struct FusedApplyRotaryEmbParam {
         packed_n(packed_n) {}
 };
 
-template<typename T, typename PositionType, typename IndexType, size_t PackSize, size_t NumDims,
-         size_t RotaryEmbDim>
-__global__ void FusedApplyRotaryEmbFetchKernel(
-    FusedApplyRotaryEmbParam<T, PositionType, IndexType, NumDims, RotaryEmbDim> param) {
-  const T* x = param.x;
-  const T* cos = param.cos;
-  const T* sin = param.sin;
-  const PositionType* position_ids = param.position_ids;
-  T* out = param.out;
-  const IndexType packed_k = param.k / PackSize;
-  const IndexType packed_pass_ndims = param.pass_ndims / PackSize;
-  const IndexType packed_rotary_ndims = packed_k - packed_pass_ndims;
-  const IndexType rotary_num_elements = param.num_elements / packed_k * packed_rotary_ndims;
-  for (IndexType packed_offset = threadIdx.x + blockIdx.x * blockDim.x;
-       packed_offset < rotary_num_elements; packed_offset += blockDim.x * gridDim.x) {
-    using LoadPack = cuda::elementwise::Packed<T, PackSize>;
-    IndexType offset =
-        (packed_offset % packed_rotary_ndims + packed_offset / packed_rotary_ndims * packed_k)
-              * PackSize;
+template<typename T, typename IndexType, size_t PackSize, size_t NumDims>
+struct SinuousLoader {
+  const T theta;
+  const T* cos;
+  const T* sin;
+  const IndexType k;
+  const IndexType index_of_k;
+  const IndexType index_of_m;
+  IndexType strides[NumDims];
+  IndexType mask[NumDims];
+  using LoadPack = cuda::elementwise::Packed<T, PackSize>;
+
+  template<bool has_sinuous, bool has_position>
+  __device__ typename std::enable_if<has_sinuous, std::pair<const LoadPack, const LoadPack>>::type load(const IndexType index[NumDims], const IndexType position=0) {
     IndexType sinuous_offset = 0;
-    IndexType position_id_offset = 0;
-    IndexType k_index = 0;
-
-    IndexType temp_offset = offset;
+    if (has_position) {
+      sinuous_offset = position * k + index[index_of_k];
+    } else {
 #pragma unloop
-    for (int i = 0; i < NumDims; i++) {
-      IndexType index = temp_offset / param.x_stride[i];
-      if (i == NumDims - 1) k_index = index;
-      temp_offset = temp_offset - index * param.x_stride[i];
-      position_id_offset =
-          position_id_offset + (index * param.position_mask[i] * param.position_stride[i]);
+      for (int i = 0; i < NumDims; i++) {
+        sinuous_offset = sinuous_offset + mask[i] * strides[i] * index[i];
+      }
     }
-
-    position_id_offset =
-        position_id_offset
-        + param.sinuous_m * (k_index * RotaryEmbDim / (param.k - param.pass_ndims));
-
-    const int position = position_ids[position_id_offset];
-
-    sinuous_offset = position * param.k + k_index;
-
+    
     const LoadPack* cos_load = reinterpret_cast<const LoadPack*>(cos + sinuous_offset);
     const LoadPack* sin_load = reinterpret_cast<const LoadPack*>(sin + sinuous_offset);
-    const LoadPack cos_vec = *cos_load, sin_vec = *sin_load;
 
-    const IndexType x_offset = (offset - k_index) * param.packed_n + k_index + param.offset;
-    const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + x_offset);
-    const LoadPack x_vec = *x_load;
-    LoadPack out_vec;
-
-#pragma unloop
-    for (int i = 0; i < PackSize / 2; i++) {
-      out_vec.elem[i * 2] =
-          x_vec.elem[i * 2] * cos_vec.elem[i * 2] - x_vec.elem[i * 2 + 1] * sin_vec.elem[i * 2];
-      out_vec.elem[i * 2 + 1] = x_vec.elem[i * 2 + 1] * cos_vec.elem[i * 2 + 1]
-                                + x_vec.elem[i * 2] * sin_vec.elem[i * 2 + 1];
-    }
-
-    *(reinterpret_cast<LoadPack*>(out + offset)) = out_vec;
+    return std::pair<const LoadPack, const LoadPack>(*cos_load, *sin_load);
   }
 
-  for (IndexType packed_offset = threadIdx.x + blockIdx.x * blockDim.x;
-       packed_offset < param.num_elements && packed_offset >= rotary_num_elements;
-       packed_offset += blockDim.x * gridDim.x) {
-    using LoadPack = cuda::elementwise::Packed<T, PackSize>;
-    IndexType offset =
-        (packed_rotary_ndims + (packed_offset - rotary_num_elements) % packed_pass_ndims
-           + (packed_offset - rotary_num_elements) / packed_pass_ndims * packed_k)
-              * PackSize;
-    const IndexType k_index = offset % param.k;
-    const IndexType x_offset = (offset - k_index) * param.packed_n + k_index + param.offset;
-    const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + x_offset);
-    const LoadPack x_vec = *x_load;
-
-    *(reinterpret_cast<LoadPack*>(out + offset)) = x_vec;
-  }
-}
-
-template<typename T, typename PositionType, typename IndexType, size_t PackSize, size_t NumDims,
-         size_t RotaryEmbDim>
-__global__ void FusedApplyRotaryEmbFetchWithoutPositionKernel(
-    FusedApplyRotaryEmbParam<T, PositionType, IndexType, NumDims, RotaryEmbDim> param) {
-  const T* x = param.x;
-  const T* cos = param.cos;
-  const T* sin = param.sin;
-  T* out = param.out;
-  const IndexType packed_k = param.k / PackSize;
-  const IndexType packed_pass_ndims = param.pass_ndims / PackSize;
-  const IndexType packed_rotary_ndims = packed_k - packed_pass_ndims;
-  const IndexType rotary_num_elements = param.num_elements / packed_k * packed_rotary_ndims;
-  for (IndexType packed_offset = threadIdx.x + blockIdx.x * blockDim.x;
-       packed_offset < rotary_num_elements; packed_offset += blockDim.x * gridDim.x) {
-    using LoadPack = cuda::elementwise::Packed<T, PackSize>;
-    IndexType offset =
-        (packed_offset % packed_rotary_ndims + packed_offset / packed_rotary_ndims * packed_k)
-        * PackSize;
-
-    IndexType sinuous_offset = 0;
-    IndexType k_index = 0;
-
-    IndexType temp_offset = offset;
-#pragma unloop
-    for (int i = 0; i < NumDims; i++) {
-      IndexType index = temp_offset / param.x_stride[i];
-      if (i == NumDims - 1) k_index = index;
-      temp_offset = temp_offset - index * param.x_stride[i];
-      sinuous_offset = sinuous_offset + index * param.sinuous_stride[i] * param.sinuous_mask[i];
-    }
-
-    const LoadPack* cos_load = reinterpret_cast<const LoadPack*>(cos + sinuous_offset);
-    const LoadPack* sin_load = reinterpret_cast<const LoadPack*>(sin + sinuous_offset);
-    const LoadPack cos_vec = *cos_load, sin_vec = *sin_load;
-    const IndexType x_offset = (offset - k_index) * param.packed_n + k_index + param.offset;
-    const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + x_offset);
-    const LoadPack x_vec = *x_load;
-    LoadPack out_vec;
-
-#pragma unloop
-    for (int i = 0; i < PackSize / 2; i++) {
-      out_vec.elem[i * 2] =
-          x_vec.elem[i * 2] * cos_vec.elem[i * 2] - x_vec.elem[i * 2 + 1] * sin_vec.elem[i * 2];
-      out_vec.elem[i * 2 + 1] = x_vec.elem[i * 2 + 1] * cos_vec.elem[i * 2 + 1]
-                                + x_vec.elem[i * 2] * sin_vec.elem[i * 2 + 1];
-    }
-
-    *(reinterpret_cast<LoadPack*>(out + offset)) = out_vec;
-  }
-
-  for (IndexType packed_offset = threadIdx.x + blockIdx.x * blockDim.x;
-       packed_offset < param.num_elements && packed_offset >= rotary_num_elements;
-       packed_offset += blockDim.x * gridDim.x) {
-    using LoadPack = cuda::elementwise::Packed<T, PackSize>;
-    IndexType offset =
-        (packed_rotary_ndims + (packed_offset - rotary_num_elements) % packed_pass_ndims
-         + (packed_offset - rotary_num_elements) / packed_pass_ndims * packed_k)
-        * PackSize;
-
-    const IndexType k_index = offset % param.k;
-    const IndexType x_offset = (offset - k_index) * param.packed_n + k_index + param.offset;
-    const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + x_offset);
-    const LoadPack x_vec = *x_load;
-
-    *(reinterpret_cast<LoadPack*>(out + offset)) = x_vec;
-  }
-}
-
-template<typename T, typename PositionType, typename IndexType, size_t PackSize, size_t NumDims,
-         size_t RotaryEmbDim>
-__global__ void FusedApplyRotaryEmbComputeWithoutPositionKernel(
-    FusedApplyRotaryEmbParam<T, PositionType, IndexType, NumDims, RotaryEmbDim> param) {
-  const T* x = param.x;
-  const T* cos = param.cos;
-  const T* sin = param.sin;
-  T* out = param.out;
-  const T theta = param.theta;
-  const IndexType packed_k = param.k / PackSize;
-  const IndexType packed_pass_ndims = param.pass_ndims / PackSize;
-  const IndexType packed_rotary_ndims = packed_k - packed_pass_ndims;
-  const IndexType rotary_num_elements = param.num_elements / packed_k * packed_rotary_ndims;
-  for (IndexType packed_offset = threadIdx.x + blockIdx.x * blockDim.x;
-       packed_offset < rotary_num_elements; packed_offset += blockDim.x * gridDim.x) {
-    using LoadPack = cuda::elementwise::Packed<T, PackSize>;
-    IndexType offset =
-        (packed_offset % packed_rotary_ndims + packed_offset / packed_rotary_ndims * packed_k)
-        * PackSize;
-    IndexType sinuous_offset = 0;
-    IndexType k_index = 0;
-
-    IndexType temp_offset = offset;
-#pragma unloop
-    for (int i = 0; i < NumDims; i++) {
-      IndexType index = temp_offset / param.x_stride[i];
-      if (i == NumDims - 1) k_index = index;
-      temp_offset = temp_offset - index * param.x_stride[i];
-      sinuous_offset = sinuous_offset + index * param.sinuous_stride[i] * param.sinuous_mask[i];
-    }
-
-    IndexType m_index = sinuous_offset / param.k;
-
-    const IndexType x_offset = (offset - k_index) * param.packed_n + k_index + param.offset;
-    const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + x_offset);
-    const LoadPack x_vec = *x_load;
-
-    LoadPack cos_vec, sin_vec, out_vec;
-
+  template<bool has_sinuous, bool has_position>
+  __device__ typename std::enable_if<!has_sinuous, std::pair<const LoadPack, const LoadPack>>::type load(const IndexType index[NumDims], const IndexType position) {
+    LoadPack cos_vec;
+    LoadPack sin_vec;
+    const IndexType k_index = index[index_of_k];
+    const IndexType m_index = index[index_of_m];
 #pragma unloop
     for (int i = 0; i < PackSize / 2; i++) {
       float val =
-          m_index * expf(2.0f * static_cast<float>(k_index / 2 + i) / param.k * logf(theta));
+          (has_position ? position : m_index) * expf(2.0f * static_cast<float>(k_index / 2 + i) / k * logf(theta));
       T cos_val = cosf(val);
       T sin_val = sinf(val);
       cos_vec.elem[i * 2] = cos_val;
-      cos_vec.elem[i * 2 + 1] = cos_val;
+      sin_vec.elem[i * 2 + 1] = cos_val;
       sin_vec.elem[i * 2] = sin_val;
       sin_vec.elem[i * 2 + 1] = sin_val;
     }
 
-#pragma unloop
-    for (int i = 0; i < PackSize / 2; i++) {
-      out_vec.elem[i * 2] =
-          x_vec.elem[i * 2] * cos_vec.elem[i * 2] - x_vec.elem[i * 2 + 1] * sin_vec.elem[i * 2];
-      out_vec.elem[i * 2 + 1] = x_vec.elem[i * 2 + 1] * cos_vec.elem[i * 2 + 1]
-                                + x_vec.elem[i * 2] * sin_vec.elem[i * 2 + 1];
-    }
-
-    *(reinterpret_cast<LoadPack*>(out + offset)) = out_vec;
+    return std::pair<const LoadPack, const LoadPack>(cos_vec, sin_vec);
   }
 
-  for (IndexType packed_offset = threadIdx.x + blockIdx.x * blockDim.x;
-       packed_offset < param.num_elements && packed_offset >= rotary_num_elements;
-       packed_offset += blockDim.x * gridDim.x) {
-    using LoadPack = cuda::elementwise::Packed<T, PackSize>;
-    IndexType offset =
-        (packed_rotary_ndims + (packed_offset - rotary_num_elements) % packed_pass_ndims
-         + (packed_offset - rotary_num_elements) / packed_pass_ndims * packed_k)
-        * PackSize;
-
-    const IndexType k_index = offset % param.k;
-    const IndexType x_offset = (offset - k_index) * param.packed_n + k_index + param.offset;
-    const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + x_offset);
-    const LoadPack x_vec = *x_load;
-
-    *(reinterpret_cast<LoadPack*>(out + offset)) = x_vec;
-  }
-}
+  SinuousLoader(const T theta, const T* cos, const T* sin, const IndexType index_of_k, const IndexType index_of_m): theta(theta), cos(cos), 
+    sin(sin), index_of_k(index_of_k) {}
+};
 
 template<typename T, typename PositionType, typename IndexType, size_t PackSize, size_t NumDims,
          size_t RotaryEmbDim>
-__global__ void FusedApplyRotaryEmbComputeKernel(
+__global__ void IntervalKernel(
     FusedApplyRotaryEmbParam<T, PositionType, IndexType, NumDims, RotaryEmbDim> param) {
   const T* x = param.x;
   const T* cos = param.cos;
@@ -428,6 +258,7 @@ __global__ void FusedApplyRotaryEmbComputeKernel(
         (packed_offset % packed_rotary_ndims + packed_offset / packed_rotary_ndims * packed_k)
         * PackSize;
     IndexType position_id_offset = 0;
+    IndexType sinuous_offset = 0;
     IndexType k_index = 0;
 
     IndexType temp_offset = offset;
@@ -438,13 +269,24 @@ __global__ void FusedApplyRotaryEmbComputeKernel(
       temp_offset = temp_offset - index * param.x_stride[i];
       position_id_offset =
           position_id_offset + (index * param.position_mask[i] * param.position_stride[i]);
+      sinuous_offset = sinuous_offset + (index * param.sinuous_mask[i] * param.sinuous_stride[i]);
     }
 
     position_id_offset =
         position_id_offset
         + param.sinuous_m * (k_index * RotaryEmbDim / (param.k - param.pass_ndims));
 
-    const PositionType position = position_ids[position_id_offset];
+
+    IndexType m_index;
+    IndexType position;
+
+    if (position_ids) {
+      position = position_ids[position_id_offset];
+      sinuous_offset = position * param.k + k_index;
+    } else {
+      m_index = sinuous_offset / param.k;
+      position = m_index;
+    }
 
     const IndexType x_offset = (offset - k_index) * param.packed_n + k_index + param.offset;
     const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + x_offset);
@@ -452,16 +294,21 @@ __global__ void FusedApplyRotaryEmbComputeKernel(
 
     LoadPack cos_vec, sin_vec, out_vec;
 
+    if (param.cos) {
+      cos_vec = *reinterpret_cast<const LoadPack*>(cos + sinuous_offset);
+      sin_vec = *reinterpret_cast<const LoadPack*>(sin + sinuous_offset);
+    } else {
 #pragma unloop
-    for (int i = 0; i < PackSize / 2; i++) {
-      float val =
-          position * expf(2.0f * static_cast<float>(k_index / 2 + i) / param.k * logf(theta));
-      T cos_val = cosf(val);
-      T sin_val = sinf(val);
-      cos_vec.elem[i * 2] = cos_val;
-      cos_vec.elem[i * 2 + 1] = cos_val;
-      sin_vec.elem[i * 2] = sin_val;
-      sin_vec.elem[i * 2 + 1] = sin_val;
+      for (int i = 0; i < PackSize / 2; i++) {
+        float val =
+            position * expf(2.0f * static_cast<float>(k_index / 2 + i) / param.k * logf(theta));
+        T cos_val = cosf(val);
+        T sin_val = sinf(val);
+        cos_vec.elem[i * 2] = cos_val;
+        cos_vec.elem[i * 2 + 1] = cos_val;
+        sin_vec.elem[i * 2] = sin_val;
+        sin_vec.elem[i * 2 + 1] = sin_val;
+      }
     }
 
 #pragma unloop
@@ -623,7 +470,7 @@ void LaunchKernel(ep::CudaStream* stream, const T* x, const T* cos, const T* sin
     param.segment_k[i] = (k - pass_ndims) / RotaryEmbDim * (i + 1);
   }
 
-  std::pair<char, std::int64_t> strides[NumDims];
+  std::pair<char, IndexType> strides[NumDims];
   strides[0] = {'b', b_stride / packed_n};
   strides[1] = {'h', h_stride / packed_n};
   strides[2] = {'m', m_stride / packed_n};
@@ -659,6 +506,7 @@ void LaunchKernel(ep::CudaStream* stream, const T* x, const T* cos, const T* sin
 // really needs to be computed
 #pragma unloop
   for (int i = 0; i < NumDims; i++) {
+    param.out_stride[i] = strides[i];
     param.x_stride[i] = strides[i].second;
     param.sinuous_mask[i] = 0;
     param.position_mask[i] = 0;
@@ -684,32 +532,12 @@ void LaunchKernel(ep::CudaStream* stream, const T* x, const T* cos, const T* sin
     PlaneKernel<T, PositionType, IndexType, NumDims, RotaryEmbDim>
         <<<(param.num_elements + blk_size - 1) / blk_size, blk_size, 0, stream->cuda_stream()>>>(
             param);
-    return;
-  }
-
-  if (cos) {
-    if (position_ids) {
-      FusedApplyRotaryEmbFetchKernel<T, PositionType, IndexType, PackSize, NumDims, RotaryEmbDim>
-          <<<(param.num_elements + blk_size - 1) / blk_size, blk_size, 0, stream->cuda_stream()>>>(
-              param);
-    } else {
-      FusedApplyRotaryEmbFetchWithoutPositionKernel<T, PositionType, IndexType, PackSize, NumDims,
-                                                    RotaryEmbDim>
-          <<<(param.num_elements + blk_size - 1) / blk_size, blk_size, 0, stream->cuda_stream()>>>(
-              param);
-    }
   } else {
-    if (position_ids) {
-      FusedApplyRotaryEmbComputeKernel<T, PositionType, IndexType, PackSize, NumDims, RotaryEmbDim>
+    IntervalKernel<T, PositionType, IndexType, PackSize, NumDims, RotaryEmbDim>
           <<<(param.num_elements + blk_size - 1) / blk_size, blk_size, 0, stream->cuda_stream()>>>(
               param);
-    } else {
-      FusedApplyRotaryEmbComputeWithoutPositionKernel<T, PositionType, IndexType, PackSize, NumDims,
-                                                      RotaryEmbDim>
-          <<<(param.num_elements + blk_size - 1) / blk_size, blk_size, 0, stream->cuda_stream()>>>(
-              param);
-    }
   }
+  
 }
 
 template<typename T, typename PositionType, typename IndexType, size_t NumDims, size_t RotaryEmbDim>
