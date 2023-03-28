@@ -520,7 +520,7 @@ def load(
             read the files in `path`, and tensors in the loaded
             object will be consistent with placement =
             `flow.placement('cuda', [global_src_rank])`
-        map_location (str, flow.device or flow.placement, optional):
+        map_location (str, flow.device or flow.placement, callable, optional):
             indicates the location where all tensors should be loaded.
         support_pytorch_format (bool, optional): whether to support
             loading the file saved by `torch.save`. Default: True
