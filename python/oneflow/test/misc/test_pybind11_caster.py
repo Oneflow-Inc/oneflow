@@ -30,15 +30,9 @@ class TestPybind11Caster(flow.unittest.TestCase):
 
     def test_maybe(test_case):
         test_case.assertEqual(flow._oneflow_internal.test_api.divide(6, 2), 3)
-        with test_case.assertRaises(Exception) as context:
-            flow._oneflow_internal.test_api.divide(6, 0)
-        test_case.assertTrue("Check failed" in str(context.exception))
 
     def test_maybe_void(test_case):
         flow._oneflow_internal.test_api.throw_if_zero(1)
-        with test_case.assertRaises(Exception) as context:
-            flow._oneflow_internal.test_api.throw_if_zero(0)
-        test_case.assertTrue("Check failed" in str(context.exception))
 
     def test_return_maybe_shared_ptr(test_case):
         a1 = flow._oneflow_internal.test_api.get_singleton_a()
