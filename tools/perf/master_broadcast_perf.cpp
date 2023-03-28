@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <glog/logging.h>
+#include <nlohmann/json.hpp>
 #include <cstddef>
 #include <cmath>
 #include <cstdlib>
@@ -58,29 +59,33 @@ int64_t GetEnvVar(const std::string& key, int64_t default_value) {
 
 class DistributeOneFlowEnv {
  public:
-  explicit DistributeOneFlowEnv(size_t rank, size_t world_size) {
+  explicit DistributeOneFlowEnv(size_t world_size, size_t rank, const std::string& master_host,
+                                size_t master_port, const std::string& ctrl_host,
+                                size_t ctrl_port) {
     EnvProto env_proto;
-    CompleteEnvProto(env_proto, rank, world_size);
+    CompleteEnvProto(env_proto, rank, world_size, master_host, master_port, ctrl_host, ctrl_port);
     env_ctx_ = std::make_shared<EnvGlobalObjectsScope>(env_proto);
   }
   ~DistributeOneFlowEnv() { env_ctx_.reset(); }
 
-  void CompleteEnvProto(EnvProto& env_proto, size_t rank, size_t world_size) {
+  void CompleteEnvProto(EnvProto& env_proto, size_t rank, size_t world_size,
+                        const std::string& master_host, size_t master_port,
+                        const std::string& ctrl_host, size_t ctrl_port) {
     auto bootstrap_conf = env_proto.mutable_ctrl_bootstrap_conf();
     auto master_addr = bootstrap_conf->mutable_master_addr();
     // TODO: addr和port作为参数传入
-    const std::string addr = "127.0.0.1";
-    size_t master_port = 49155;
+    // const std::string addr = "127.0.0.1";
+    // size_t master_port = 49155;
     // Adding 1 here is to ensure that master_port cannot overlap with ctrl_port on the master.
-    size_t port = master_port + rank + 1;
+    // size_t port = master_port + rank + 1;
 
-    master_addr->set_host(addr);
+    master_addr->set_host(master_host);
     master_addr->set_port(master_port);
 
     bootstrap_conf->set_world_size(world_size);
     bootstrap_conf->set_rank(rank);
-    bootstrap_conf->set_ctrl_port(port);
-    bootstrap_conf->set_host("127.0.0.1");
+    bootstrap_conf->set_host(ctrl_host);
+    bootstrap_conf->set_ctrl_port(ctrl_port);
 
     auto cpp_logging_conf = env_proto.mutable_cpp_logging_conf();
     if (HasEnvVar("GLOG_log_dir")) {
@@ -104,9 +109,11 @@ class DistributeOneFlowEnv {
 
 class TestEnvScope {
  public:
-  explicit TestEnvScope(size_t rank, size_t world_size) {
+  explicit TestEnvScope(size_t world_size, size_t rank, const std::string& master_host,
+                        size_t master_port, const std::string& ctrl_host, size_t ctrl_port) {
     if (Singleton<DistributeOneFlowEnv>::Get() == nullptr) {
-      Singleton<DistributeOneFlowEnv>::New(rank, world_size);
+      Singleton<DistributeOneFlowEnv>::New(world_size, rank, master_host, master_port, ctrl_host,
+                                           ctrl_port);
     }
   }
 
@@ -148,30 +155,82 @@ std::set<std::string> MultiThreadBroadcastFromMasterToWorkers(size_t world_size,
 }
 
 int main(int argc, char* argv[]) {
-  if (argc == 1) { LOG(FATAL) << "Error: must set world_size and rank"; }
+  if (argc == 1) {
+    LOG(FATAL) << "Error: must set world_size, rank, master_host, master_port, ctrl_host, "
+                  "ctrl_port, iteration_num and data_size";
+  }
   size_t world_size = std::stoi(argv[1]);
   size_t rank = std::stoi(argv[2]);
+  std::string master_host = argv[3];
+  size_t master_port = std::stoi(argv[4]);
+  std::string ctrl_host = argv[5];
+  size_t ctrl_port = std::stoi(argv[6]);
+  size_t iteration_num = std::stoi(argv[7]);
+  size_t data_size = std::stoi(argv[8]);
 
   std::string master_data, worker_data;
-  if (rank == 0) {
-    master_data.resize(10 * 1024 * 1024);  // 10MB
+  if (rank == 0) { master_data.resize(data_size * 1024); }
+
+  TestEnvScope scope(world_size, rank, master_host, master_port, ctrl_host, ctrl_port);
+
+  auto rank_duration = std::chrono::milliseconds::zero();
+  auto total_duration = std::chrono::milliseconds::zero();
+  for (size_t i = 0; i < iteration_num; ++i) {
+    std::string prefix("test" + std::to_string(i));
+    auto start_time = std::chrono::high_resolution_clock::now();
+
+    std::set<std::string> keys =
+        MultiThreadBroadcastFromMasterToWorkers(world_size, prefix, master_data, &worker_data);
+
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    rank_duration += duration;
+
+    // sync all process
+    Singleton<CtrlClient>::Get()->Barrier("iteration_" + std::to_string(i));
+    if (rank == 0) {
+      end_time = std::chrono::high_resolution_clock::now();
+      duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+      total_duration += rank_duration;
+    }
   }
-  std::string prefix("test");
 
-  TestEnvScope scope(rank, world_size);
+  auto average_rank_duration = rank_duration / iteration_num;
+  // push perf result to master
+  if (rank != 0) {
+    nlohmann::json result_json;
+    result_json["rank"] = rank;
+    result_json["cost_time"] = std::to_string(average_rank_duration.count()) + " ms";
+    std::string key = "result_of_rank_" + std::to_string(rank);
+    // Singleton<CtrlClient>::Get()->PushMasterKV(key, result_json.dump());
+    // PushMasterKV不支持std::string
+    Singleton<CtrlClient>::Get()->PushKV(key, result_json.dump());
+  }
 
-  auto start_time = std::chrono::high_resolution_clock::now();
-  std::set<std::string> keys =
-      MultiThreadBroadcastFromMasterToWorkers(world_size, prefix, master_data, &worker_data);
-
-  // synchronize all process
-  Singleton<CtrlClient>::Get()->Barrier("sync all process");
-  auto end_time = std::chrono::high_resolution_clock::now();
-  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-
+  std::vector<nlohmann::json> results;
   if (rank == 0) {
-    LOG(INFO) << "broadcast to all workers"
-              << " spends time: " << duration.count() << " ms";
+    nlohmann::json result_json;
+    // add master result
+    result_json["rank_0"] = std::to_string(average_rank_duration.count()) + " ms";
+
+    // add worker result
+    for (size_t i = 1; i < world_size; ++i) {
+      std::string key = "result_of_rank_" + std::to_string(i);
+      std::string result_data;
+      Singleton<CtrlClient>::Get()->PullKV(key, &result_data);
+      nlohmann::json result = nlohmann::json::parse(result_data);
+      size_t rank = result["rank"];
+      std::string cost_time = result["cost_time"];
+      result_json["rank_" + std::to_string(rank)] = cost_time;
+    }
+
+    auto average_total_duration = total_duration / iteration_num;
+    result_json["total_cost"] = std::to_string(average_total_duration.count()) + " ms";
+    // dump json
+    std::string filename = "result.json";
+    std::ofstream output_file(filename);
+    output_file << result_json.dump();
+    output_file.close();
   }
 
   return 0;
