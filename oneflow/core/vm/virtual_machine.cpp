@@ -241,7 +241,9 @@ std::string VirtualMachine::GetBlockingDebugString() {
 
 void VirtualMachine::RunMainThreadPendingTasks() {
   std::unique_lock lock(main_thread_pending_tasks_mutex_);
-  for (const auto& main_thread_pending_task : main_thread_pending_tasks_) { main_thread_pending_task(); }
+  for (const auto& main_thread_pending_task : main_thread_pending_tasks_) {
+    main_thread_pending_task();
+  }
   main_thread_pending_tasks_.clear();
 }
 
