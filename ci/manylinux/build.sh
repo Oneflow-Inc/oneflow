@@ -32,11 +32,10 @@ cmake --build . --parallel ${ONEFLOW_CI_BUILD_PARALLEL}
 if [ ! -z "$ONEFLOW_CI_BUILD_RUN_LIT" ]; then
     ${ONEFLOW_CI_PYTHON_EXE} -m pip install -i https://mirrors.aliyun.com/pypi/simple --user flowvision==0.1.0
     export PATH=$PATH:$(dirname $ONEFLOW_CI_PYTHON_EXE)
-    sleep 99999999
-    cmake --build . -t c1
+    # cmake --build . -t c1
 fi
 
-# build pip
-cd ${ONEFLOW_CI_SRC_DIR}
-cd python
-${ONEFLOW_CI_PYTHON_EXE} setup.py bdist_wheel
+# # build pip
+# cd ${ONEFLOW_CI_SRC_DIR}
+# cd python
+# ${ONEFLOW_CI_PYTHON_EXE} setup.py bdist_wheel

@@ -276,6 +276,8 @@ jobs:
           python-versions: |
             3.7
             3.8
+      - name: Debugging with ssh
+        uses: lhotari/action-upterm@v1
       - uses: Oneflow-Inc/get-oneflow@torch1.13
         name: Build manylinux ${{ matrix.entry }}
         id: build-cpu-sanitizers
