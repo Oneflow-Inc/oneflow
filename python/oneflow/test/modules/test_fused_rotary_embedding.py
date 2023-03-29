@@ -299,7 +299,6 @@ def _test_without_position(
 def _test_without_position_sinuous(
     test_case, x_layout, mode, base, rotary_size, dims, rotary_ndims, dtype
 ):
-    print(x_layout, mode, base, rotary_size, dims, rotary_ndims)
     B, M, H, K, merged_dims = parseDims(dims, x_layout)
 
     x = np.random.uniform(low=-1, high=1, size=(*merged_dims,))

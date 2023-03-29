@@ -167,7 +167,6 @@ struct FusedApplyRotaryEmbParam {
   
   IndexType sinuous_m_stride;
 
-  // TODO: position_id type? for now it is int32
   FusedApplyRotaryEmbParam(const T* x, const T* cos, const T* sin, const PositionType* position_ids,
                            T* out, const T theta, const int64_t pass_ndims, const IndexType rotate_stride, 
                            const IndexType rotate_boundary, const IndexType num_elements, const IndexType k, 
@@ -286,6 +285,10 @@ __global__ void IntervalKernel(
       temp_offset = temp_offset - index * out_stride; 
     }
 
+    const IndexType x_offset = param.x_b_stride * b_index + param.x_m_stride * m_index + param.x_h_stride * h_index 
+        + k_index + param.offset;
+    const LoadPack x_vec = *reinterpret_cast<const LoadPack*>(x + x_offset);
+
     if (k_index < packed_rotary_size * PackSize) {
       const IndexType position_rotate_index = (k_index >= param.k0) ? 1 : 0;
       position_id_offset = b_index * param.position_b_stride + position_rotate_index * param.position_rotate_stride + m_index;
@@ -293,22 +296,16 @@ __global__ void IntervalKernel(
       const IndexType position = position_ids ? position_ids[position_id_offset] : m_index;
       sinuous_offset = position * param.sinuous_m_stride + k_index;
 
-      const IndexType x_offset = param.x_b_stride * b_index + param.x_m_stride * m_index + param.x_h_stride * h_index 
-        + k_index + param.offset;
-      
-      const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + x_offset);
-      const LoadPack x_vec = *x_load;
-
       LoadPack cos_vec, sin_vec, out_vec;
 
-      if (param.cos) {
+      if (param.cos && param.sin) {
         cos_vec = *reinterpret_cast<const LoadPack*>(cos + sinuous_offset);
         sin_vec = *reinterpret_cast<const LoadPack*>(sin + sinuous_offset);
       } else {
   #pragma unloop
         for (int i = 0; i < PackSize / 2; i++) {
           float val =
-              position * expf(2.0f * static_cast<float>(k_index / 2 + i) / param.k * logf(theta));
+              position * expf(2.0f * static_cast<float>(k_index / 2 + i) / param.k * logf(theta)); //FIXME: this logic seems to be incorrect in 2d or hight rotary positional encoding
           T cos_val = cosf(val);
           T sin_val = sinf(val);
           cos_vec.elem[i * 2] = cos_val;
@@ -328,11 +325,6 @@ __global__ void IntervalKernel(
 
       *(reinterpret_cast<LoadPack*>(out + offset)) = out_vec;
     } else {
-      const IndexType x_offset = param.x_b_stride * b_index + param.x_m_stride * m_index + param.x_h_stride * h_index 
-        + k_index + param.offset;
-      const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + x_offset);
-      const LoadPack x_vec = *x_load;
-
       *(reinterpret_cast<LoadPack*>(out + offset)) = x_vec;
     }
     
@@ -537,7 +529,6 @@ void LaunchKernel(ep::CudaStream* stream, const T* x, const T* cos, const T* sin
   param.position_rotate_stride = position_m;
   param.position_b_stride = position_m * RotaryEmbDim;
 
-  // TODO: something bad here... need to be refined to support mode dispatch
   if (mode == "plane") {
     param.num_elements = param.num_elements * PackSize;
     PlaneKernel<T, PositionType, IndexType, NumDims, RotaryEmbDim>
