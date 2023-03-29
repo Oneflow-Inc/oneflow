@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/device/cuda_pseudo_bfloat16.h"
-#include <cuComplex.h>
 
 namespace oneflow {
 
