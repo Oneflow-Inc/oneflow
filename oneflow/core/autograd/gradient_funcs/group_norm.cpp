@@ -105,7 +105,7 @@ Maybe<void> GroupNorm::Apply(const GroupNormCaptureState* ctx, const TensorTuple
   if (ctx->affine && (ctx->gamma_requires_grad || ctx->beta_requires_grad)) {
     const auto& results = JUST(functional::GroupNormParamGrad(dy, x, mean, inv_variance));
     if (ctx->gamma_requires_grad) { in_grads->at(1) = results->at(0); }  // For gamma.
-    if (ctx->beta_requires_grad) { in_grads->at(2) = results->at(1); }  // For beta.
+    if (ctx->beta_requires_grad) { in_grads->at(2) = results->at(1); }   // For beta.
   }
   if (ctx->x_requires_grad) {
     if (ctx->affine) {
