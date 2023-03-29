@@ -268,20 +268,24 @@ def _test_global_mode(test_case):
         test_case.assertEqual(v.placement, P, k)
         test_case.assertEqual(v.sbp[0], B, k)
 
+
 def _test_global_mode_with_default_placement_and_sbp(test_case):
     # create a tensor with broadcast split and placement on rank 0
     a = flow.randn(
-        (1, 8),
-        sbp=flow.sbp.broadcast,
-        placement=flow.placement("cuda", ranks=[0])
+        (1, 8), sbp=flow.sbp.broadcast, placement=flow.placement("cuda", ranks=[0])
     )
     # enter global mode with broadcast split and placement on 2 GPUs
-    with global_mode(True, placement=flow.placement(type="cuda", ranks=[0,1]),sbp=flow.sbp.broadcast):
+    with global_mode(
+        True,
+        placement=flow.placement(type="cuda", ranks=[0, 1]),
+        sbp=flow.sbp.broadcast,
+    ):
         # check tensor placement and split
         test_case.assertTrue(a.placement == flow.placement("cuda", ranks=[0]))
         test_case.assertTrue(a.sbp == (flow.sbp.broadcast,))
         # check tensor print
         print(a)
+
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
