@@ -127,8 +127,8 @@ class Adagrad(Optimizer):
 
             for param in param_list:
                 assert param.is_leaf, "parameters must be leaf tensor"
-                self._state[param] = dict()
-                self._state[param]["sum"] = flow.zeros_like(param).fill_(
+                self.state[param] = dict()
+                self.state[param]["sum"] = flow.zeros_like(param).fill_(
                     param_group["initial_accumulator_value"]
                 )
 
@@ -159,7 +159,7 @@ class Adagrad(Optimizer):
                     "l2": param_group["weight_decay"],
                     "epsilon": param_group["eps"],
                     "lr_decay": param_group["lr_decay"],
-                    "train_step_val": self._state["step"] + 1,
+                    "train_step_val": self.state["step"] + 1,
                 }
 
                 if param_group["contiguous_params"]:
@@ -170,12 +170,12 @@ class Adagrad(Optimizer):
                 for param in param_list:
                     if param.grad is None:
                         continue
-                    sum_tensor = self._state[param]["sum"]
+                    sum_tensor = self.state[param]["sum"]
                     flow._C.dispatch_adagrad_update(
                         self._op, (param, param.grad, sum_tensor), **kwargs
                     )
 
-            self._state["step"] = self._state["step"] + 1
+            self.state["step"] = self.state["step"] + 1
             return loss
 
     def _generate_conf_for_graph(self, train_conf, vars_conf):
