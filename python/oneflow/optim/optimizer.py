@@ -246,10 +246,10 @@ class Optimizer(object):
         self._parse_input_parameters(parameters)
 
         all_remat = all(
-            p.device.rematable for pg in self.param_groups for p in pg.parameters
+            p.is_local and p.device.rematable for pg in self.param_groups for p in pg.parameters
         )
         all_not_remat = all(
-            not p.device.rematable for pg in self.param_groups for p in pg.parameters
+            not p.is_local or not p.device.rematable for pg in self.param_groups for p in pg.parameters
         )
         if not all_remat and not all_not_remat:
             raise ValueError(
