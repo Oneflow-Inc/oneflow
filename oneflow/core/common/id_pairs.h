@@ -22,19 +22,9 @@ limitations under the License.
 
 namespace oneflow {
 
-void InitIdPairs(const std::unordered_set<std::pair<int64_t, int64_t>>& pairs, IdPairs* proto) {
-  for (const auto& pair : pairs) {
-    auto* proto_pair = proto->mutable_int64_pair()->Add();
-    proto_pair->set_first(pair.first);
-    proto_pair->set_second(pair.second);
-  }
-}
+void InitIdPairs(const std::unordered_set<std::pair<int64_t, int64_t>>& pairs, IdPairs* proto);
 
-void MergeIdPairs(const IdPairs& id_pairs, std::unordered_set<std::pair<int64_t, int64_t>>* pairs) {
-  for (const auto& pair : id_pairs.int64_pair()) {
-    pairs->emplace(std::make_pair(pair.first(), pair.second()));
-  }
-}
+void MergeIdPairs(const IdPairs& id_pairs, std::unordered_set<std::pair<int64_t, int64_t>>* pairs);
 
 }  // namespace oneflow
 
