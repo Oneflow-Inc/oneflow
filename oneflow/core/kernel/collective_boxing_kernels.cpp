@@ -84,7 +84,7 @@ void CollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) const
   }
   auto* actor_ctx = GetCollectiveBoxingActorContext(ctx);
 #ifdef OF_DEBUG_LAZY_RUNTIME
-  LOG(INFO) << " collective boxing kernel schedule op " << this->op_conf().name();
+  LOG(INFO) << " Collective boxing kernel schedule op " << this->op_conf().name();
 #endif  // OF_DEBUG_LAZY_RUNTIME
   actor_ctx->Schedule(request_handle, send_buff, recv_buff);
 }
