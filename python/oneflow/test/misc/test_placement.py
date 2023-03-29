@@ -23,13 +23,19 @@ class TestPlacement(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_placement_all_cuda(test_case):
         placement = flow.placement.all("cuda")
-        test_case.assertEqual(placement.device_tag, "cuda")
-        test_case.assertEqual(placement.ranks, range(flow.env.get_world_size()))
+        test_case.assertEqual(placement.type, "cuda")
+        # assertEqual fails to compare lists
+        test_case.assertTrue(
+            list(placement.ranks) == list(range(flow.env.get_world_size()))
+        )
 
     def test_placement_all_cpu(test_case):
         placement = flow.placement.all("cpu")
-        test_case.assertEqual(placement.device_tag, "cpu")
-        test_case.assertEqual(placement.ranks, range(flow.env.get_world_size()))
+        test_case.assertEqual(placement.type, "cpu")
+        # assertEqual fails to compare lists
+        test_case.assertTrue(
+            list(placement.ranks) == list(range(flow.env.get_world_size()))
+        )
 
 
 if __name__ == "__main__":
