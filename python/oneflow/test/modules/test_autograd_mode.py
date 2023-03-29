@@ -94,8 +94,13 @@ class TestAutogradMode(oneflow.unittest.TestCase):
         func()
         test_case.assertTrue(flow.is_grad_enabled())
 
+        # set global grad mode to false
         flow.set_grad_enabled(False)
         test_case.assertFalse(flow.is_grad_enabled())
+
+        @flow.set_grad_enabled(True)
+        def func():
+            test_case.assertTrue(flow.is_grad_enabled())
 
         with flow.set_grad_enabled(True):
             test_case.assertTrue(flow.is_grad_enabled())
@@ -103,13 +108,24 @@ class TestAutogradMode(oneflow.unittest.TestCase):
             test_case.assertFalse(flow.is_grad_enabled())
         test_case.assertFalse(flow.is_grad_enabled())
 
+        func()
+        test_case.assertFalse(flow.is_grad_enabled())
+
+        # set global grad mode to true
         flow.set_grad_enabled(True)
         test_case.assertTrue(flow.is_grad_enabled())
+
+        @flow.set_grad_enabled(False)
+        def func():
+            test_case.assertTrue(flow.is_grad_enabled())
 
         with flow.set_grad_enabled(False):
             test_case.assertFalse(flow.is_grad_enabled())
             flow.set_grad_enabled(True)
             test_case.assertTrue(flow.is_grad_enabled())
+        test_case.assertTrue(flow.is_grad_enabled())
+
+        func()
         test_case.assertTrue(flow.is_grad_enabled())
 
 
