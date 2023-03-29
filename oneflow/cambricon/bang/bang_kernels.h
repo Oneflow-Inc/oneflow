@@ -111,6 +111,12 @@ void bang_scalar_pow_gradient_kernel(BangHandle& handle, int64_t n, const T* x, 
 void bang_scalar_pow_gradient_half_kernel(BangHandle& handle, int64_t n, const void* x,
                                           const void* dy, const float value, void* dx);
 
+template<typename T>
+void bang_tanh_gradient_kernel(BangHandle& handle, int64_t n, const T* x, const T* dy, T* dx);
+
+void bang_tanh_gradient_half_kernel(BangHandle& handle, int64_t n, const void* x, const void* dy,
+                                    void* dx);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CAMBRICON_BANG_BANG_KERNELS_H_

@@ -174,24 +174,6 @@ REGISTER_RELU_GRAD_USER_KERNEL(float16)
 REGISTER_GELU_GRAD_USER_KERNEL(float)
 REGISTER_GELU_GRAD_USER_KERNEL(float16)
 
-#define REGISTER_TANH_GRAD_USER_KERNEL(data_type)                                       \
-  REGISTER_USER_KERNEL("tanh_grad")                                                     \
-      .SetCreateFn([]() {                                                               \
-        return user_op::NewOpKernel<ActivationGradKernelMlu<data_type>>(                \
-            [](user_op::KernelComputeContext* ctx) {                                    \
-              user_op::Tensor* output = ctx->Tensor4ArgNameAndIndex("dx", 0);           \
-              const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);         \
-              const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);           \
-              CnnlActivationDescriptor activation_desc;                                 \
-              activation_desc.set(CNNL_ACTIVATION_TANH, CNNL_ACTIVATION_HIGH_PRECISION, \
-                                  CNNL_NOT_PROPAGATE_NAN, /*coef*/ 0.0);                \
-              CnnlActivationBackwardWithX(ctx, activation_desc, dy, x, output);         \
-            });                                                                         \
-      })                                                                                \
-      .SetIsMatchedHob(ActivationGradIsMatched("dx", "dy", "x", GetDataType<data_type>::value));
-REGISTER_TANH_GRAD_USER_KERNEL(float)
-REGISTER_TANH_GRAD_USER_KERNEL(float16)
-
 REGISTER_USER_KERNEL("tanh")
     .SetCreateFn([]() {
       return user_op::NewOpKernel<MluActivationKernel>([](user_op::KernelComputeContext* ctx) {

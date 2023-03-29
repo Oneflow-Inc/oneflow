@@ -74,6 +74,7 @@ class TestActivationBackwardGradCambriconModule(flow.unittest.TestCase):
         arg_dict["op"] = [
             flow.relu,
             flow.gelu,
+            flow.tanh,
         ]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
         arg_dict["device"] = ["mlu"]
