@@ -236,7 +236,7 @@ class TestTensorComplex64(unittest.TestCase):
     def test_conj_cuda(self):
         c = flow.full((3, 2), 3.14 + 2j, dtype=self.dtype, device="cuda").conj()
         self.assertEqual(c.dtype, self.dtype)
-        self.assertEqual(c.type(), "oneflow." + self.type_str)
+        self.assertEqual(c.type(), "oneflow.cuda." + self.type_str)
         np_c = c.numpy()
         self.assertEqual(np_c.dtype, self.np_dtype)
         assert np.allclose(np_c, np.ones((3, 2), dtype=self.np_dtype) * (3.14 - 2j))
@@ -247,7 +247,7 @@ class TestTensorComplex64(unittest.TestCase):
             (3, 2), 3.14 + 2j, dtype=self.dtype, device="cuda"
         ).conj_physical()
         self.assertEqual(c.dtype, self.dtype)
-        self.assertEqual(c.type(), "oneflow." + self.type_str)
+        self.assertEqual(c.type(), "oneflow.cuda." + self.type_str)
         np_c = c.numpy()
         self.assertEqual(np_c.dtype, self.np_dtype)
         assert np.allclose(np_c, np.ones((3, 2), dtype=self.np_dtype) * (3.14 - 2j))
