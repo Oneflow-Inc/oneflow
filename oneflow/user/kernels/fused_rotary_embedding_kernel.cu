@@ -151,12 +151,21 @@ struct FusedApplyRotaryEmbParam {
   IndexType sinuous_m;
   IndexType packed_n;
   IndexType offset;
-  std::pair<char, IndexType> out_stride[NumDims];
+  std::pair<char, IndexType> out_stride[NumDims]; // ordered descendingly by stride
   IndexType x_stride[NumDims];
   IndexType position_stride[NumDims];
   IndexType position_mask[NumDims];
   IndexType sinuous_stride[NumDims];
   IndexType sinuous_mask[NumDims];
+
+  IndexType x_b_stride;
+  IndexType x_m_stride;
+  IndexType x_h_stride;
+
+  IndexType position_b_stride;
+  IndexType position_rotate_stride;
+  
+  IndexType sinuous_m_stride;
 
   // TODO: position_id type? for now it is int32
   FusedApplyRotaryEmbParam(const T* x, const T* cos, const T* sin, const PositionType* position_ids,
@@ -248,94 +257,85 @@ __global__ void IntervalKernel(
   T* out = param.out;
   const T theta = param.theta;
   const IndexType packed_k = param.k / PackSize;
-  const IndexType packed_pass_ndims = param.pass_ndims / PackSize;
-  const IndexType packed_rotary_ndims = packed_k - packed_pass_ndims;
-  const IndexType rotary_num_elements = param.num_elements / packed_k * packed_rotary_ndims;
+  const IndexType packed_pass_size = param.pass_ndims / PackSize;
+  const IndexType packed_rotary_size = packed_k - packed_pass_size;
+  const IndexType rotary_num_elements = param.num_elements / packed_k * packed_rotary_size;
   for (IndexType packed_offset = threadIdx.x + blockIdx.x * blockDim.x;
-       packed_offset < rotary_num_elements; packed_offset += blockDim.x * gridDim.x) {
+       packed_offset < param.num_elements; packed_offset += blockDim.x * gridDim.x) {
     using LoadPack = cuda::elementwise::Packed<T, PackSize>;
-    IndexType offset =
-        (packed_offset % packed_rotary_ndims + packed_offset / packed_rotary_ndims * packed_k)
-        * PackSize;
+    IndexType offset = packed_offset * PackSize;
     IndexType position_id_offset = 0;
     IndexType sinuous_offset = 0;
-    IndexType k_index = 0;
+    IndexType b_index = 0, m_index = 0, h_index = 0, k_index = 0;
 
     IndexType temp_offset = offset;
-#pragma unloop
+
     for (int i = 0; i < NumDims; i++) {
-      IndexType index = temp_offset / param.x_stride[i];
-      if (i == NumDims - 1) k_index = index;
-      temp_offset = temp_offset - index * param.x_stride[i];
-      position_id_offset =
-          position_id_offset + (index * param.position_mask[i] * param.position_stride[i]);
-      sinuous_offset = sinuous_offset + (index * param.sinuous_mask[i] * param.sinuous_stride[i]);
-    }
-
-    position_id_offset =
-        position_id_offset
-        + param.sinuous_m * (k_index * RotaryEmbDim / (param.k - param.pass_ndims));
-
-
-    IndexType m_index;
-    IndexType position;
-
-    if (position_ids) {
-      position = position_ids[position_id_offset];
-      sinuous_offset = position * param.k + k_index;
-    } else {
-      m_index = sinuous_offset / param.k;
-      position = m_index;
-    }
-
-    const IndexType x_offset = (offset - k_index) * param.packed_n + k_index + param.offset;
-    const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + x_offset);
-    const LoadPack x_vec = *x_load;
-
-    LoadPack cos_vec, sin_vec, out_vec;
-
-    if (param.cos) {
-      cos_vec = *reinterpret_cast<const LoadPack*>(cos + sinuous_offset);
-      sin_vec = *reinterpret_cast<const LoadPack*>(sin + sinuous_offset);
-    } else {
-#pragma unloop
-      for (int i = 0; i < PackSize / 2; i++) {
-        float val =
-            position * expf(2.0f * static_cast<float>(k_index / 2 + i) / param.k * logf(theta));
-        T cos_val = cosf(val);
-        T sin_val = sinf(val);
-        cos_vec.elem[i * 2] = cos_val;
-        cos_vec.elem[i * 2 + 1] = cos_val;
-        sin_vec.elem[i * 2] = sin_val;
-        sin_vec.elem[i * 2 + 1] = sin_val;
+      IndexType dim_tag = param.out_stride[i].first;
+      IndexType out_stride = param.out_stride[i].second;
+      IndexType index = temp_offset / out_stride;
+      if (dim_tag == 'b') {
+        b_index = index;
+      } else if (dim_tag == 'm') {
+        m_index = index;
+      } else if (dim_tag == 'h') {
+        h_index = index;
+      } else {
+        k_index = index;
       }
+      temp_offset = temp_offset - index * out_stride; 
     }
 
-#pragma unloop
-    for (int i = 0; i < PackSize / 2; i++) {
-      out_vec.elem[i * 2] =
-          x_vec.elem[i * 2] * cos_vec.elem[i * 2] - x_vec.elem[i * 2 + 1] * sin_vec.elem[i * 2];
-      out_vec.elem[i * 2 + 1] = x_vec.elem[i * 2 + 1] * cos_vec.elem[i * 2 + 1]
-                                + x_vec.elem[i * 2] * sin_vec.elem[i * 2 + 1];
+    if (k_index < packed_rotary_size * PackSize) {
+      const IndexType position_rotate_index = (k_index >= param.k0) ? 1 : 0;
+      position_id_offset = b_index * param.position_b_stride + position_rotate_index * param.position_rotate_stride + m_index;
+
+      const IndexType position = position_ids ? position_ids[position_id_offset] : m_index;
+      sinuous_offset = position * param.sinuous_m_stride + k_index;
+
+      const IndexType x_offset = param.x_b_stride * b_index + param.x_m_stride * m_index + param.x_h_stride * h_index 
+        + k_index + param.offset;
+      
+      const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + x_offset);
+      const LoadPack x_vec = *x_load;
+
+      LoadPack cos_vec, sin_vec, out_vec;
+
+      if (param.cos) {
+        cos_vec = *reinterpret_cast<const LoadPack*>(cos + sinuous_offset);
+        sin_vec = *reinterpret_cast<const LoadPack*>(sin + sinuous_offset);
+      } else {
+  #pragma unloop
+        for (int i = 0; i < PackSize / 2; i++) {
+          float val =
+              position * expf(2.0f * static_cast<float>(k_index / 2 + i) / param.k * logf(theta));
+          T cos_val = cosf(val);
+          T sin_val = sinf(val);
+          cos_vec.elem[i * 2] = cos_val;
+          cos_vec.elem[i * 2 + 1] = cos_val;
+          sin_vec.elem[i * 2] = sin_val;
+          sin_vec.elem[i * 2 + 1] = sin_val;
+        }
+      }
+
+  #pragma unloop
+      for (int i = 0; i < PackSize / 2; i++) {
+        out_vec.elem[i * 2] =
+            x_vec.elem[i * 2] * cos_vec.elem[i * 2] - x_vec.elem[i * 2 + 1] * sin_vec.elem[i * 2];
+        out_vec.elem[i * 2 + 1] = x_vec.elem[i * 2 + 1] * cos_vec.elem[i * 2 + 1]
+                                  + x_vec.elem[i * 2] * sin_vec.elem[i * 2 + 1];
+      }
+
+      *(reinterpret_cast<LoadPack*>(out + offset)) = out_vec;
+    } else {
+      const IndexType x_offset = param.x_b_stride * b_index + param.x_m_stride * m_index + param.x_h_stride * h_index 
+        + k_index + param.offset;
+      const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + x_offset);
+      const LoadPack x_vec = *x_load;
+
+      *(reinterpret_cast<LoadPack*>(out + offset)) = x_vec;
     }
-
-    *(reinterpret_cast<LoadPack*>(out + offset)) = out_vec;
-  }
-
-  for (IndexType packed_offset = threadIdx.x + blockIdx.x * blockDim.x;
-       packed_offset < param.num_elements && packed_offset >= rotary_num_elements;
-       packed_offset += blockDim.x * gridDim.x) {
-    using LoadPack = cuda::elementwise::Packed<T, PackSize>;
-    IndexType offset =
-        (packed_rotary_ndims + (packed_offset - rotary_num_elements) % packed_pass_ndims
-         + (packed_offset - rotary_num_elements) / packed_pass_ndims * packed_k)
-        * PackSize;
-    IndexType k_index = offset % param.k;
-    const IndexType x_offset = (offset - k_index) * param.packed_n + k_index + param.offset;
-    const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + x_offset);
-    const LoadPack x_vec = *x_load;
-
-    *(reinterpret_cast<LoadPack*>(out + offset)) = x_vec;
+    
   }
 }
 
@@ -476,6 +476,10 @@ void LaunchKernel(ep::CudaStream* stream, const T* x, const T* cos, const T* sin
   strides[2] = {'m', m_stride / packed_n};
   strides[3] = {'k', 1};
 
+  param.x_b_stride = b_stride;
+  param.x_h_stride = h_stride;
+  param.x_m_stride = m_stride;
+
   auto GetDimX = [&](const char c) {
     if (c == 'b') {
       return b;
@@ -525,6 +529,13 @@ void LaunchKernel(ep::CudaStream* stream, const T* x, const T* cos, const T* sin
   }
 
   constexpr size_t blk_size = 128;
+
+  param.sinuous_m_stride = k;
+
+  const IndexType position_m = position_shape ? static_cast<IndexType>(position_shape[2]) : m;
+
+  param.position_rotate_stride = position_m;
+  param.position_b_stride = position_m * RotaryEmbDim;
 
   // TODO: something bad here... need to be refined to support mode dispatch
   if (mode == "plane") {
