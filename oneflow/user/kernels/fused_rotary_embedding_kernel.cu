@@ -190,61 +190,6 @@ struct FusedApplyRotaryEmbParam {
         packed_n(packed_n) {}
 };
 
-template<typename T, typename IndexType, size_t PackSize, size_t NumDims>
-struct SinuousLoader {
-  const T theta;
-  const T* cos;
-  const T* sin;
-  const IndexType k;
-  const IndexType index_of_k;
-  const IndexType index_of_m;
-  IndexType strides[NumDims];
-  IndexType mask[NumDims];
-  using LoadPack = cuda::elementwise::Packed<T, PackSize>;
-
-  template<bool has_sinuous, bool has_position>
-  __device__ typename std::enable_if<has_sinuous, std::pair<const LoadPack, const LoadPack>>::type load(const IndexType index[NumDims], const IndexType position=0) {
-    IndexType sinuous_offset = 0;
-    if (has_position) {
-      sinuous_offset = position * k + index[index_of_k];
-    } else {
-#pragma unloop
-      for (int i = 0; i < NumDims; i++) {
-        sinuous_offset = sinuous_offset + mask[i] * strides[i] * index[i];
-      }
-    }
-    
-    const LoadPack* cos_load = reinterpret_cast<const LoadPack*>(cos + sinuous_offset);
-    const LoadPack* sin_load = reinterpret_cast<const LoadPack*>(sin + sinuous_offset);
-
-    return std::pair<const LoadPack, const LoadPack>(*cos_load, *sin_load);
-  }
-
-  template<bool has_sinuous, bool has_position>
-  __device__ typename std::enable_if<!has_sinuous, std::pair<const LoadPack, const LoadPack>>::type load(const IndexType index[NumDims], const IndexType position) {
-    LoadPack cos_vec;
-    LoadPack sin_vec;
-    const IndexType k_index = index[index_of_k];
-    const IndexType m_index = index[index_of_m];
-#pragma unloop
-    for (int i = 0; i < PackSize / 2; i++) {
-      float val =
-          (has_position ? position : m_index) * expf(2.0f * static_cast<float>(k_index / 2 + i) / k * logf(theta));
-      T cos_val = cosf(val);
-      T sin_val = sinf(val);
-      cos_vec.elem[i * 2] = cos_val;
-      sin_vec.elem[i * 2 + 1] = cos_val;
-      sin_vec.elem[i * 2] = sin_val;
-      sin_vec.elem[i * 2 + 1] = sin_val;
-    }
-
-    return std::pair<const LoadPack, const LoadPack>(cos_vec, sin_vec);
-  }
-
-  SinuousLoader(const T theta, const T* cos, const T* sin, const IndexType index_of_k, const IndexType index_of_m): theta(theta), cos(cos), 
-    sin(sin), index_of_k(index_of_k) {}
-};
-
 template<typename T, typename PositionType, typename IndexType, size_t PackSize, size_t NumDims,
          size_t RotaryEmbDim>
 __global__ void IntervalKernel(
@@ -339,45 +284,39 @@ __global__ void PlaneKernel(
   const T* sin = param.sin;
   const PositionType* position_ids = param.position_ids;
   T* out = param.out;
-  IndexType sinuous_offset = 0;
   const T theta = param.theta;
 
   for (IndexType offset = threadIdx.x + blockIdx.x * blockDim.x; offset < param.num_elements;
        offset += blockDim.x * gridDim.x) {
     using LoadPack = cuda::elementwise::Packed<T, 2>;
     IndexType temp_offset = offset;
-    IndexType x_offset;
-    IndexType k_index, m_index;
-    IndexType position_id_offset = 0;
-    PositionType position;
+    IndexType b_index, m_index, h_index, k_index;
 #pragma unloop
     for (int i = 0; i < NumDims; i++) {
-      IndexType index = temp_offset / param.x_stride[i];
-      if (i == NumDims - 1) k_index = index;
-      temp_offset = temp_offset - index * param.x_stride[i];
-      sinuous_offset = sinuous_offset + index * param.sinuous_stride[i] * param.sinuous_mask[i];
-      position_id_offset =
-          position_id_offset + (index * param.position_mask[i] * param.position_stride[i]);
+      IndexType dim_tag = param.out_stride[i].first;
+      IndexType out_stride = param.out_stride[i].second;
+      IndexType index = temp_offset / out_stride;
+      if (dim_tag == 'b') {
+        b_index = index;
+      } else if (dim_tag == 'm') {
+        m_index = index;
+      } else if (dim_tag == 'h') {
+        h_index = index;
+      } else {
+        k_index = index;
+      }
+      temp_offset = temp_offset - index * out_stride;
     }
 
-    if (param.k0 <= k_index && k_index < param.k1) {
-      position_id_offset =
-          position_id_offset + param.sinuous_m;  // To get the other position applied to second half
-    }
+    const IndexType position_rotate_index = (k_index >= param.k0) ? 1 : 0;
+    const IndexType position_id_offset = b_index * param.position_b_stride + position_rotate_index * param.position_rotate_stride + m_index;
 
-    if (param.position_ids) {
-      position = position_ids[position_id_offset];
-      sinuous_offset = position * param.k + k_index;
-    } else {
-      m_index = sinuous_offset / param.k;
-      position = m_index;
-    }
+    const PositionType position = param.position_ids ? param.position_ids[position_id_offset] : m_index;
+    const IndexType sinuous_offset = position * param.k + k_index;
 
     LoadPack x_vec;
 
-    T cos_val;
-    T sin_val;
-    T out_val;
+    T cos_val, sin_val, out_val;
 
     if (param.cos) {
       cos_val = *(cos + sinuous_offset);
@@ -391,18 +330,20 @@ __global__ void PlaneKernel(
       sin_val = sinf(val);
     }
 
-    x_offset = (offset - k_index) * param.packed_n + k_index + param.offset;
-    
-    for (int i = 0; i < RotaryEmbDim; i++) {
-      if ((i == 0 && k_index < param.segment_k[i]) || (param.segment_k[i-1] <= k_index && k_index < param.segment_k[i])) {
-        x_vec.elem[0] = *(x + x_offset);
-        x_vec.elem[1] = (param.segment_k[i] - k_index > param.rotate_stride) ? static_cast<T>(-*(x + x_offset + param.rotate_stride))
-                                               : *(x + x_offset - param.rotate_stride);
-        out_val = cos_val * x_vec.elem[0] + sin_val * x_vec.elem[1];
-      }
-    }
+    const IndexType x_offset = param.x_b_stride * b_index + param.x_m_stride * m_index + param.x_h_stride * h_index 
+        + k_index + param.offset;
 
-    if (k_index >= param.segment_k[RotaryEmbDim-1]) {
+    if (k_index < param.k0) {
+      x_vec.elem[0] = *(x + x_offset);
+      x_vec.elem[1] = (param.k0 - k_index > param.rotate_stride) ? static_cast<T>(-*(x + x_offset + param.rotate_stride))
+                                               : *(x + x_offset - param.rotate_stride);
+      out_val = cos_val * x_vec.elem[0] + sin_val * x_vec.elem[1];
+    } else if (k_index < param.k1) {
+      x_vec.elem[0] = *(x + x_offset);
+      x_vec.elem[1] = (param.k1 - k_index > param.rotate_stride) ? static_cast<T>(-*(x + x_offset + param.rotate_stride))
+                                               : *(x + x_offset - param.rotate_stride);
+      out_val = cos_val * x_vec.elem[0] + sin_val * x_vec.elem[1];
+    } else {
       out_val = *(x + x_offset);
     }
 
