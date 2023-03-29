@@ -738,6 +738,7 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
   std::vector<ActorMsg> sync_post_act_msgs_;
   std::vector<ActorMsg> async_post_act_msgs_;
   KernelObserver* stream_kernel_observer_;
+
 #ifdef OF_DEBUG_LAZY_RUNTIME
   int64_t act_cnt_{1};
 #endif  // OF_DEBUG_LAZY_RUNTIME
