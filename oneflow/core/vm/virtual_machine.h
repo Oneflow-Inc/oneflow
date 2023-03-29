@@ -85,6 +85,8 @@ class VirtualMachine final {
 
   Maybe<void> CloseWorkerThreads();
 
+  void RunMainThreadPendingTasks();
+
   bool multi_thread_;
   bool threads_closed_;
   bool scheduler_stopped_;

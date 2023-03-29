@@ -208,6 +208,7 @@ Maybe<void> VirtualMachine::ShrinkAllMem() {
 
 VirtualMachine::~VirtualMachine() {
   if (!threads_closed_) { CHECK_JUST(CloseVMThreads()); }
+  RunMainThreadPendingTasks();
   CHECK(engine_->SchedulerEmpty());
   engine_.Reset();
 }
@@ -238,15 +239,15 @@ std::string VirtualMachine::GetBlockingDebugString() {
   return engine_->GetLivelyInstructionListDebugString(limit);
 }
 
+void VirtualMachine::RunMainThreadPendingTasks() {
+  std::unique_lock lock(main_thread_pending_tasks_mutex_);
+  for (const auto& main_thread_pending_task : main_thread_pending_tasks_) { main_thread_pending_task(); }
+  main_thread_pending_tasks_.clear();
+}
+
 Maybe<void> VirtualMachine::Receive(vm::InstructionList* instruction_list) {
   SyncVmModeGuard guard(SyncVmMode::kEnable);
-  {
-    std::unique_lock lock(main_thread_pending_tasks_mutex_);
-    for (auto& main_thread_pending_task : main_thread_pending_tasks_) {
-      main_thread_pending_task();
-    }
-    main_thread_pending_tasks_.clear();
-  }
+  RunMainThreadPendingTasks();
   if (unlikely(pthread_fork::IsForkedSubProcess())) {
     INTRUSIVE_FOR_EACH_PTR(instruction, instruction_list) {
       const auto& device = instruction->stream().device();
