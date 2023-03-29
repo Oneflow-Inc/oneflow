@@ -21,11 +21,15 @@ namespace oneflow {
 
 static constexpr int32_t nram_limit = 32;
 static constexpr int32_t BATCH = 256;
+static __mlu_shared__ char s_result[1024 * 4];
 
 template<typename T>
 __mlu_global__ void bang_multi_reduce_sum_pow_abs_kernel_internal(int64_t n,
                                                                   AddressList<BATCH> inputs_info,
                                                                   float p, T* workspace) {
+  int32_t core_dim = taskDim / clusterDim;
+  int32_t core_id = taskId % core_dim;
+
   int32_t nram_limit_bytes = nram_limit * sizeof(T);
 
   __nram__ T nram_input[nram_limit];
@@ -33,14 +37,20 @@ __mlu_global__ void bang_multi_reduce_sum_pow_abs_kernel_internal(int64_t n,
 
   __bang_write_zero(nram_result, nram_limit);
 
-  for (int64_t i = taskId; i < n; i += taskDim) {
+  for (int64_t i = clusterId; i < n; i += clusterDim) {
     const T* input = static_cast<const T*>(inputs_info.address[i]);
     int64_t size = inputs_info.sizes[i];
-    int64_t nram_rest = (size & 0x1F);  // size % nram_limit2
+
+    int64_t step = (size + core_dim - 1) / core_dim;
+    int64_t start = step * core_id;
+    int64_t end = start + step;
+    if (end > size) { end = size; }
+    int64_t length = start < end ? end - start : 0;
+    int64_t nram_rest = (length & 0x1F);  // length % nram_limit2
 
     int64_t j = 0;
-    for (; j < size - nram_limit + 1; j += nram_limit) {
-      __memcpy_async(nram_input, input + j, nram_limit_bytes, GDRAM2NRAM);
+    for (; j < length - nram_limit + 1; j += nram_limit) {
+      __memcpy_async(nram_input, input + start + j, nram_limit_bytes, GDRAM2NRAM);
       __sync_copy_dram_to_nram();
       if (p == 0.f) {
         __bang_ne_scalar(nram_input, nram_input, T(0), nram_limit);
@@ -55,7 +65,7 @@ __mlu_global__ void bang_multi_reduce_sum_pow_abs_kernel_internal(int64_t n,
       __bang_add(nram_result, nram_result, nram_input, nram_limit);
     }
     if (nram_rest > 0) {
-      __memcpy_async(nram_input, input + j, nram_rest * sizeof(T), GDRAM2NRAM);
+      __memcpy_async(nram_input, input + start + j, nram_rest * sizeof(T), GDRAM2NRAM);
       __sync_copy_dram_to_nram();
       if (p == 0.f) {
         __bang_ne_scalar(nram_input, nram_input, T(0), nram_rest);
@@ -71,15 +81,23 @@ __mlu_global__ void bang_multi_reduce_sum_pow_abs_kernel_internal(int64_t n,
     }
   }
 
-  if (taskId < n) {
-    // write output
+  T* s_data = reinterpret_cast<T*>(s_result);
+  int32_t offset = clusterId * core_dim;
+
 #if (__BANG_ARCH__ >= 520)
-    workspace[taskId] += __bang_sum(nram_result, nram_limit);
+  s_data[offset + core_id] = __bang_sum(nram_result, nram_limit);
 #else
-    T result = 0;
-    for (int i = 0; i < nram_limit; ++i) { result += nram_result[i]; }
-    workspace[taskId] += result;
+  T result = 0;
+  for (int i = 0; i < nram_limit; ++i) { result += nram_result[i]; }
+  s_data[offset + core_id] = result;
 #endif
+
+  __sync_cluster();
+
+  if (clusterId < n && core_id == 0) {
+    T result = s_data[offset];
+    for (int i = 1; i < core_dim; ++i) { result += s_data[offset + i]; }
+    workspace[clusterId] += result;
   }
 }
 
@@ -129,8 +147,8 @@ void bang_multi_reduce_sum_pow_abs_kernel(BangHandle& handle, int64_t n, const T
   // TODO(): check workspace_size == n * sizeof(T)
   T* workspace_ptr = static_cast<T*>(workspace);
 
-  cnrtDim3_t dim = {handle.nclusters, handle.ncores_per_cluster, 1};
-  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
+  cnrtDim3_t dim = {handle.nclusters * handle.ncores_per_cluster, 1, 1};
+  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION4;
 
   for (int64_t i = 0; i < n; i += BATCH) {
     int32_t num = (n - i) > BATCH ? BATCH : (n - i);
