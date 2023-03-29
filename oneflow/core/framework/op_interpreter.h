@@ -135,7 +135,7 @@ class EagerInterpreter : public OpExprInterpreter {
                     const OpExprInterpContext& ctx) const override;
 
  protected:
-  // NOTE(lixiang): To ensure the correctness of GlobalMode, check whether it is a local thread and
+  // NOTE(lixiang): To ensure the correctness of GlobalMode, check whether it is a local operation and
   // initialize it as true when using EagerLocalInterpreter.
   //   Used by Maybe<void> EagerInterpreter::Apply.
   bool is_local_;
