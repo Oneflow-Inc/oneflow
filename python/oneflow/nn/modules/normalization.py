@@ -142,6 +142,8 @@ class GroupNorm(Module):
 
 
 def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-05):
+    print(f'{input.sym_shape=}')
+    print(f'{normalized_shape=}')
     assert len(input.shape) > len(
         normalized_shape
     ), "Input tensor dim must greater than normalized dim!"
@@ -151,7 +153,8 @@ def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-05):
     elementwise_affine = True if (weight is not None and bias is not None) else False
 
     for i in range(0, len(normalized_shape)):
-        if input.shape[i + begin_params_axis] != normalized_shape[i]:
+        dim = input.shape[i + begin_params_axis]
+        if isinstance(dim, int) and dim != normalized_shape[i]:
             raise RuntimeError(
                 f"Given normalized_shape={normalized_shape}, expected input with shape [*, {str(normalized_shape)[1:-1]}], but got input of size {input.shape}"
             )

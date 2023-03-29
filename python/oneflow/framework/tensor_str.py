@@ -254,7 +254,7 @@ def _tensor_str_with_formatter(self, indent, summarize, formatter1):
             + ["..."]
             + [
                 _tensor_str_with_formatter(self[i], indent + 1, summarize, formatter1,)
-                for i in range(self.shape[0] - PRINT_OPTS.edgeitems, self.shape[0])
+                for i in range(self.sym_shape[0] - PRINT_OPTS.edgeitems, self.sym_shape[0])
             ]
         )
     else:
@@ -306,7 +306,7 @@ def get_summarized_data(self):
     if self.size(0) > 2 * PRINT_OPTS.edgeitems:
         start = [self[i] for i in range(0, PRINT_OPTS.edgeitems)]
         end = [
-            self[i] for i in range(self.shape[0] - PRINT_OPTS.edgeitems, self.shape[0])
+            self[i] for i in range(self.sym_shape[0] - PRINT_OPTS.edgeitems, self.sym_shape[0])
         ]
         return flow.stack([get_summarized_data(x) for x in (start + end)])
     else:
@@ -337,14 +337,14 @@ def _gen_tensor_str_template(tensor, is_meta):
         suffixes.append("is_lazy='True'")
 
     # tensor is empty, meta or normal
-    if tensor.shape.all_dims_known() and tensor.numel() == 0:
+    if tensor.sym_shape.all_dims_known() and tensor.numel() == 0:
         # Explicitly print the shape if it is not (0,), to match NumPy behavior
         if tensor.dim() != 1:
-            suffixes.append("size=" + str(tuple(tensor.shape)))
+            suffixes.append("size=" + str(tuple(tensor.sym_shape)))
         tensor_str = "[]"
     elif is_meta:
         tensor_str = "..."
-        suffixes.append("size=" + str(tuple(tensor.shape)))
+        suffixes.append("size=" + str(tuple(tensor.sym_shape)))
     else:
         if _format_tensor_on_cpu(tensor):
             tensor_str = _tensor_str(tensor.detach().to("cpu"), indent)

@@ -21,7 +21,9 @@ namespace oneflow {
 namespace {
 
 void CheckShape(const Shape& shape) {
-  FOR_RANGE(int, i, 1, shape.NumAxes()) { CHECK_GE(shape.At(i), 0); }
+  FOR_RANGE(int, i, 1, shape.NumAxes()) {
+    if (auto dim = shape.At(i); dim.is_known()) { CHECK_GE(shape.At(i), 0); }
+  }
 }
 
 Maybe<void> GetSbpSignature(const InterfaceBlobConf& blob_conf, const PbRpf<std::string>& input_bns,

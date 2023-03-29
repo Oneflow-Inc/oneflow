@@ -560,9 +560,14 @@ static PyObject* PyTensorObject_ndim(PyObject* self, void* unused) {
 }
 
 static PyObject* PyTensorObject_shape(PyObject* self, void* unused) {
-  if (LazyMode::is_enabled()) {
-    return PyTensor_New(CHECK_JUST(functional::ShapeOp(PyTensor_Unpack(self))));
+  auto tensor = PyTensor_Unpack(self);
+  if (LazyMode::is_enabled() && !tensor->shape()->all_dims_known()) {
+    return PyTensor_New(CHECK_JUST(functional::ShapeOp(tensor)));
   }
+  return functional::CastToPyObject(tensor->shape());
+}
+
+static PyObject* PyTensorObject_sym_shape(PyObject* self, void* unused) {
   return functional::CastToPyObject(PyTensor_Unpack(self)->shape());
 }
 
@@ -679,6 +684,7 @@ static PyObject* PyTensorObject_sbp(PyObject* self, void* unused) {
 static PyGetSetDef PyTensorObject_properties[] = {
     {PYGETSET_NAME("ndim"), (getter)PyTensorObject_ndim, NULL, NULL, NULL},
     {PYGETSET_NAME("shape"), (getter)PyTensorObject_shape, NULL, NULL, NULL},
+    {PYGETSET_NAME("sym_shape"), (getter)PyTensorObject_sym_shape, NULL, NULL, NULL},
     {PYGETSET_NAME("dtype"), (getter)PyTensorObject_dtype, NULL, NULL, NULL},
     {PYGETSET_NAME("is_cuda"), (getter)PyTensorObject_is_cuda, NULL, NULL, NULL},
     {PYGETSET_NAME("grad"), (getter)PyTensorObject_grad, (setter)PyTensorObject_set_grad, NULL,

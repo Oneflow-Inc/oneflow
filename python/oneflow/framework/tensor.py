@@ -212,6 +212,18 @@ def _argsort(self, dim=-1, descending=None):
     return flow.argsort(self, dim=dim, descending=descending)
 
 
+def _reshape(self, *args):
+    if len(args) == 1 and isinstance(args[0], tuple):
+        args = args[0]
+    if not any(isinstance(x, Tensor) for x in args):
+        return flow._C.reshape(self, args)
+    else:
+        args = [flow.tensor(x) if not isinstance(x, Tensor) else x for x in args]
+        args = [x.unsqueeze(0) for x in args]
+        shape = flow.cat(args)
+        return flow._C.reshape_to_shape_tensor(self, shape)
+
+
 def _uniform(self, a=0, b=1):
     return flow.nn.init.uniform_(self, a, b)
 
@@ -586,6 +598,7 @@ def RegisterMethods():
     Tensor.as_strided = _as_strided
     Tensor.as_strided_ = _as_strided_inplace
     Tensor.logaddexp = _logaddexp
+    Tensor.reshape = _reshape
 
 
 def register_tensor_op(op_name):

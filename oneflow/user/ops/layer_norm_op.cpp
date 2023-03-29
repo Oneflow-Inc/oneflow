@@ -61,11 +61,15 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   const Shape param_shape(param_shape_dim_vec);
   if (center) {
     const user_op::TensorDesc& beta = ctx->InputTensorDesc("beta", 0);
-    CHECK_EQ_OR_RETURN(beta.shape(), param_shape);
+    if (beta.shape().all_dims_known()) {
+      CHECK_EQ_OR_RETURN(beta.shape(), param_shape);
+    }
   }
   if (scale) {
     const user_op::TensorDesc& gamma = ctx->InputTensorDesc("gamma", 0);
-    CHECK_EQ_OR_RETURN(gamma.shape(), param_shape);
+    if (gamma.shape().all_dims_known()) {
+      CHECK_EQ_OR_RETURN(gamma.shape(), param_shape);
+    }
   }
   const int64_t begin_norm_axis =
       ShiftNegativeAxisIfNeed(x.shape(), ctx->Attr<int64_t>("begin_norm_axis"));

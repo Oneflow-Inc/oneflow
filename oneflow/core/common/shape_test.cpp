@@ -27,6 +27,10 @@ TEST(Shape, constructor_0) {
   ASSERT_EQ(a.is_initialized(), false);
 }
 
+TEST(Shape, constructor_1) {
+  Shape a(4, Dim::Unknown());
+}
+
 TEST(Shape, function_test_1) {
   Shape shape({4096, 16, 197, 197});
   ASSERT_EQ(shape.is_initialized(), true);

@@ -682,40 +682,37 @@ class ConcatFunctor {
     const int64_t ninput = inputs.size();
     int64_t axis = dim;
     int64_t ndim = inputs[0]->ndim();
-    int64_t nelement = inputs[0]->nelement();
-    int64_t max_dim_size = 0;
+    // int64_t nelement = inputs[0]->nelement();
     CHECK_GE_OR_RETURN(ninput, 1) << Error::RuntimeError() << "inputs size must greater than 0";
     axis = JUST(maybe_wrap_dim(axis, ndim));
 
     const std::shared_ptr<const Shape>& shape = inputs[0]->shape();
-    for (const auto& input : inputs) {
-      if (nelement == 0 and ndim == 1) {
-        if (input->nelement() != 0 or input->ndim() != 1) {
-          ndim = input->ndim();
-          nelement = input->nelement();
-        } else {
-          continue;
-        }
-      } else if (input->nelement() != 0 or input->ndim() != 1) {
-        CHECK_OR_RETURN(input->ndim() == ndim)
-            << Error::RuntimeError() << "Tensors must have same number of dimensions: got " << ndim
-            << " and " << input->ndim() << " is expected.";
-      }
-      for (int i = 0; i < ndim; ++i) {
-        if (input->nelement() == 0 and input->ndim() == 1) { continue; }
-        if (axis == i) {
-          max_dim_size += input->shape()->At(i);
-        } else if (inputs[0]->nelement() != 0) {
-          CHECK_OR_RETURN(input->shape()->At(i) == shape->At(i))
-              << Error::RuntimeError() << "Sizes of tensors must match except in dimension " << axis
-              << ". Got " << input->shape()->At(i) << " and " << shape->At(i)
-              << " is expected in dimension " << i << ".";
-        }
-      }
-    }
+    // for (const auto& input : inputs) {
+    //   if (nelement == 0 and ndim == 1) {
+    //     if (input->nelement() != 0 or input->ndim() != 1) {
+    //       ndim = input->ndim();
+    //       nelement = input->nelement();
+    //     } else {
+    //       continue;
+    //     }
+    //   } else if (input->nelement() != 0 or input->ndim() != 1) {
+    //     CHECK_OR_RETURN(input->ndim() == ndim)
+    //         << Error::RuntimeError() << "Tensors must have same number of dimensions: got " << ndim
+    //         << " and " << input->ndim() << " is expected.";
+    //   }
+    //   for (int i = 0; i < ndim; ++i) {
+    //     if (input->nelement() == 0 and input->ndim() == 1) { continue; }
+    //     if (inputs[0]->nelement() != 0) {
+    //       CHECK_OR_RETURN(input->shape()->At(i) == shape->At(i))
+    //           << Error::RuntimeError() << "Sizes of tensors must match except in dimension " << axis
+    //           << ". Got " << input->shape()->At(i) << " and " << shape->At(i)
+    //           << " is expected in dimension " << i << ".";
+    //     }
+    //   }
+    // }
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis", "max_dim_size");
-    attrs.SetAllAttrs(axis, max_dim_size);
+    attrs.SetAllAttrs(axis, 0);
     TensorTuple outputs;
     for (int i = 0; i < ninput; i += kMaxInputCount) {
       size_t size = (i + kMaxInputCount) < ninput ? kMaxInputCount : ninput - i;
@@ -977,6 +974,21 @@ class ExpandFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("expand_shape");
     attrs.SetAllAttrs(expand_shape);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ExpandToShapeTensorFunctor {
+ public:
+  ExpandToShapeTensorFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("expand_to_shape_tensor").Input("in").Input("shape").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& shape) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, shape});
   }
 
  private:
@@ -1554,6 +1566,21 @@ class ReshapeFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape");
     attrs.SetAllAttrs(infered_shape);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ReshapeToShapeTensorFunctor {
+ public:
+  ReshapeToShapeTensorFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("reshape_to_shape_tensor").Input("in").Input("shape").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& shape) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, shape});
   }
 
  private:
@@ -4030,7 +4057,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::VStackFunctor>("VStack");
   m.add_functor<impl::RowStackFunctor>("RowStack");
   m.add_functor<impl::DStackFunctor>("DStack");
-  m.add_functor<impl::ExpandFunctor>("Expand");
+  m.add_functor<impl::ExpandFunctor, impl::ExpandToShapeTensorFunctor>("Expand");
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
   m.add_functor<impl::ExpandDimsFunctor>("Unsqueeze");
   m.add_functor<impl::UnsqueezeMultipleFunctor>("UnsqueezeMultiple");
@@ -4049,6 +4076,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ScatterNdLikeFunctor>("ScatterNdLike");
   m.add_functor<impl::ShapeFunctor>("ShapeOp");
   m.add_functor<impl::ReshapeFunctor>("Reshape");
+  m.add_functor<impl::ReshapeToShapeTensorFunctor>("ReshapeToShapeTensor");
   m.add_functor<impl::ViewFunctor>("View");
   m.add_functor<impl::ToContiguousFunctor>("ToContiguous");
   m.add_functor<impl::InplaceToContiguousFunctor>("InplaceToContiguous");

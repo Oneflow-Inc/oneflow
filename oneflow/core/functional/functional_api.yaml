@@ -1661,6 +1661,10 @@
   signature: "Tensor (Tensor x, Shape shape) => Reshape"
   bind_python: True
 
+- name: "reshape_to_shape_tensor"
+  signature: "Tensor (Tensor x, Tensor shape) => ReshapeToShapeTensor"
+  bind_python: True
+
 - name: "view"
   signature: "Tensor (Tensor x, Shape shape) => View"
   bind_python: True

@@ -59,15 +59,17 @@ Maybe<void> CalcSamePadding(int64_t input_size, int32_t filter_size, int32_t dil
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CalcConvOut(int64_t input_size, int32_t filter_size, int32_t dilation_rate,
-                        int32_t stride, int32_t padding_before, int64_t* output_size) {
+Maybe<void> CalcConvOut(Dim input_size, Dim filter_size, int32_t dilation_rate,
+                        int32_t stride, int32_t padding_before, Dim* output_size) {
   CHECK_GT_OR_RETURN(stride, 0);
   CHECK_GE_OR_RETURN(dilation_rate, 1);
 
   int32_t effective_filter_size = (filter_size - 1) * dilation_rate + 1;
   if (output_size) {
     *output_size = (input_size + 2 * padding_before - effective_filter_size + stride) / stride;
-    CHECK_GE_OR_RETURN((*output_size), 0);
+    if (output_size->is_known()) {
+      CHECK_GE_OR_RETURN((*output_size), 0);
+    }
   }
   return Maybe<void>::Ok();
 }

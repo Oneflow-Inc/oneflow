@@ -53,14 +53,20 @@ Maybe<void> InferTensorDescBinaryBroadcastNormal(user_op::InferContext* ctx) {
     ctx->SetOutputIsDynamic("z", 0, ctx->InputIsDynamic("x", 0));
     Shape out_shape(x_shape);
     FOR_RANGE(int64_t, i, 0, x_shape.NumAxes()) {
-      if (x_shape.At(i) != 1 && y_shape.At(i) != 1 && x_shape.At(i) != y_shape.At(i)) {
+      auto x_len = x_shape.At(i);
+      auto y_len = y_shape.At(i);
+      if (x_len.is_known() && y_len.is_known() && x_len != 1 && y_len != 1 && x_len != y_len) {
         return Error::RuntimeError()
                << "The size of tensor a (" << x_shape.At(i) << ") must match the size of tensor b ("
                << y_shape.At(i) << ") at non-singleton dimension " << i;
       }
-      out_shape.Set(i, (x_shape.At(i) == 0 || y_shape.At(i) == 0)
-                           ? Dim(0)
-                           : std::max(x_shape.At(i), y_shape.At(i)));
+      if (x_len.is_known() && !y_len.is_known()) {
+        out_shape.Set(i, x_len == 1 ? y_len : x_len);
+      } else if (!x_len.is_known() && y_len.is_known()) {
+        out_shape.Set(i, y_len == 1 ? x_len : y_len);
+      } else if (x_len.is_known() && y_len.is_known()) {
+        out_shape.Set(i, (x_len == 0 || y_len == 0) ? Dim(0) : std::max(x_len, y_len));
+      }
     }
     tensor_z->set_shape(out_shape);
   }
@@ -196,8 +202,8 @@ Maybe<void> GetBinaryBroadcastSbpSignature(user_op::SbpContext* ctx) {
             .Broadcast(user_op::OpArg("y", 0))
             .Split(ctx->outputs(), i)
             .Build();
-      } else {
-        UNIMPLEMENTED();
+        // } else {
+        //   UNIMPLEMENTED();
       }
     }
   }

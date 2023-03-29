@@ -39,6 +39,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Dim>(m, "Dim")
       .def(py::init([](int value) { return Dim(value); }))
       .def_static("unknown", &Dim::Unknown)
+      .def("is_known", &Dim::is_known)
       .def("__str__",
            [](Dim dim) {
              std::stringstream ss;
