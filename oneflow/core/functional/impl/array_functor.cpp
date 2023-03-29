@@ -168,6 +168,7 @@ class TensorConstantFunctor {
     // NOTE: this op is an source op, so the value(scalar tensor) should not have autograd status.
     autograd::AutoGradMode mode(false);
     if (GlobalMode::is_enabled()) {
+      auto global_mode_gurad = GlobalMode::Guard(false);
       return JUST(functional::GlobalTensorConstant(shape, value, dtype,
                                                    GetGlobalParallelDescFromDevice(device),
                                                    *JUST(GetSbpList(GlobalMode::nd_sbp()))));
@@ -251,6 +252,7 @@ class ConstantFunctor {
   Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     if (GlobalMode::is_enabled()) {
+      auto global_mode_gurad = GlobalMode::Guard(false);
       return JUST(functional::GlobalConstant(shape, value, dtype,
                                              GetGlobalParallelDescFromDevice(device),
                                              *JUST(GetSbpList(GlobalMode::nd_sbp()))));
@@ -3149,6 +3151,7 @@ class To2Functor {
         return JUST(GlobalTensorTo(input, device_type, dtype_.value_or(input->dtype()), copy));
       } else {
         if (!GlobalMode::is_enabled()) {
+          auto global_mode_gurad = GlobalMode::Guard(false);
           CHECK_OR_RETURN(!device_.has_value())
               << Error::RuntimeError()
               << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
