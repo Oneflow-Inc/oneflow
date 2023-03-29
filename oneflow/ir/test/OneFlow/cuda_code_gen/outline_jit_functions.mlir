@@ -1,4 +1,5 @@
 // RUN: oneflow-opt %s \
+// RUN: -lower-oneflow-to-signless \
 // RUN: -lower-oneflow-to-tosa="full=0 lower-job=0" \
 // RUN: -lower-oneflow-to-linalg \
 // RUN: -tosa-to-tensor \

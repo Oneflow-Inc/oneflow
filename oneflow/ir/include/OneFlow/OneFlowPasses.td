@@ -3,6 +3,11 @@
 
 include "OneFlow/OneFlowOps.td"
 
+def LowerOneFlowToSignlessPass : Pass<"lower-oneflow-to-signless", "ModuleOp"> {
+  let summary = "lower the element type of oneflow ops tensor to signless type";
+  let constructor = "mlir::oneflow::createLowerOneFlowToSignlessPass()";
+}
+
 def LowerOneFlowToTosaPass : Pass<"lower-oneflow-to-tosa", "ModuleOp"> {
   let summary = "lower oneflow dialect to tosa dialect";
   let constructor = "mlir::oneflow::createLowerOneFlowToTosaPass()";

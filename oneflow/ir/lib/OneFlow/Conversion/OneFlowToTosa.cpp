@@ -608,6 +608,11 @@ struct OneFlowLoweringToTosaPass : public LowerOneFlowToTosaPassBase<OneFlowLowe
   void runOnOperation() override;
 };
 
+struct LowerOneFlowToSignlessPass
+    : public LowerOneFlowToSignlessPassBase<LowerOneFlowToSignlessPass> {
+  void runOnOperation() override;
+};
+
 struct ConvertToSignlessForTosaPass
     : public ConvertToSignlessForTosaPassBase<ConvertToSignlessForTosaPass> {
   void runOnOperation() override;
@@ -619,8 +624,29 @@ std::unique_ptr<Pass> createLowerOneFlowToTosaPass() {
   return std::make_unique<OneFlowLoweringToTosaPass>();
 }
 
+std::unique_ptr<Pass> createLowerOneFlowToSignlessPass() {
+  return std::make_unique<LowerOneFlowToSignlessPass>();
+}
+
 std::unique_ptr<Pass> createConvertToSignlessForTosaPass() {
   return std::make_unique<ConvertToSignlessForTosaPass>();
+}
+
+struct ConvertInputSignlessPattern : public mlir::OpRewritePattern<InputOp> {
+  explicit ConvertInputSignlessPattern(mlir::MLIRContext* context)
+      : OpRewritePattern<InputOp>(context, /*benefit=*/0) {}
+  mlir::LogicalResult matchAndRewrite(InputOp op, mlir::PatternRewriter& rewriter) const override {
+    auto res = op.output();
+    res.setType(convertToSignless(op.getContext(), res.getType()));
+    return success();
+  }
+};
+
+void LowerOneFlowToSignlessPass::runOnOperation() {
+  Operation* op = getOperation();
+  RewritePatternSet patterns(op->getContext());
+  patterns.add<ConvertInputSignlessPattern>(patterns.getContext());
+  (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
 }
 
 void OneFlowLoweringToTosaPass::runOnOperation() {
