@@ -288,6 +288,7 @@ class EmptyFunctor {
                            const bool pin_memory) const {
     std::shared_ptr<Tensor> empty;
     if (GlobalMode::is_enabled()) {
+      auto global_mode_gurad = GlobalMode::Guard(false);
       empty = JUST(functional::GlobalEmpty(shape, dtype, GetGlobalParallelDescFromDevice(device),
                                            *JUST(GetSbpList(GlobalMode::nd_sbp()))));
       if (dtype->is_floating_point()) { JUST(empty->set_requires_grad(requires_grad)); }

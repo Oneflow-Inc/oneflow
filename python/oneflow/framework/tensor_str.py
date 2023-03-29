@@ -362,19 +362,9 @@ def _gen_tensor_str_template(tensor, is_meta):
 
 
 def _gen_tensor_str(tensor):
-    cur_global_mode = flow.utils.global_view.current_global_mode()
-    if cur_global_mode.is_enabled and tensor.is_global:
-        with flow.utils.global_view.global_mode(False):
-            return _gen_tensor_str_template(tensor, False)
-    else:
-        return _gen_tensor_str_template(tensor, False)
+    return _gen_tensor_str_template(tensor, False)
 
 
 def _gen_tensor_meta_str(tensor):
     # meta
-    cur_global_mode = flow.utils.global_view.current_global_mode()
-    if cur_global_mode.is_enabled and tensor.is_global:
-        with flow.utils.global_view.global_mode(False):
-            return _gen_tensor_str_template(tensor, True)
-    else:
-        return _gen_tensor_str_template(tensor, True)
+    return _gen_tensor_str_template(tensor, True)
