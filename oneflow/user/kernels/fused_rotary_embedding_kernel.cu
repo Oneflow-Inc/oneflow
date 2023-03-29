@@ -247,10 +247,11 @@ __global__ void IntervalKernel(
         cos_vec = *reinterpret_cast<const LoadPack*>(cos + sinuous_offset);
         sin_vec = *reinterpret_cast<const LoadPack*>(sin + sinuous_offset);
       } else {
+        const IndexType actual_ndim = (param.k - param.pass_ndims) / RotaryEmbDim;
   #pragma unloop
         for (int i = 0; i < PackSize / 2; i++) {
           float val =
-              position * expf(2.0f * static_cast<float>(k_index / 2 + i) / param.k * logf(theta)); //FIXME: this logic seems to be incorrect in 2d or hight rotary positional encoding
+              position * expf(2.0f * static_cast<float>((k_index / 2 + i) % actual_ndim) / actual_ndim * logf(theta));
           T cos_val = cosf(val);
           T sin_val = sinf(val);
           cos_vec.elem[i * 2] = cos_val;
