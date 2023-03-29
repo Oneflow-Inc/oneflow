@@ -202,9 +202,11 @@ class set_grad_enabled:
     def __call__(self, func):
         # recover grad mode set in __init__
         oneflow._oneflow_internal.autograd.set_grad_enabled(self.prev_mode)
+
         def wrapper(*args, **kwargs):
             with AutoGradMode(self.is_train):
                 return func(*args, **kwargs)
+
         return wrapper
 
     def __enter__(self):

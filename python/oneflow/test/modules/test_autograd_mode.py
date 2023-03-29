@@ -72,61 +72,55 @@ class TestAutogradMode(oneflow.unittest.TestCase):
         test_case.assertTrue(flow.is_grad_enabled())
 
     def test_set_grad_enabled(test_case):
-        with flow.set_grad_enabled(True):
-            test_case.assertTrue(flow.is_grad_enabled())
-        test_case.assertTrue(flow.is_grad_enabled())
+        def assert_grad_mode(mode):
+            if mode:
+                test_case.assertTrue(flow.is_grad_enabled())
+            else:
+                test_case.assertFalse(flow.is_grad_enabled())
 
-        @flow.set_grad_enabled(True)
-        def func():
-            test_case.assertTrue(flow.is_grad_enabled())
+        def get_decorater_func_with_mode(mode):
+            @flow.set_grad_enabled(mode)
+            def func():
+                assert_grad_mode(mode)
 
-        func()
-        test_case.assertTrue(flow.is_grad_enabled())
+            return func
 
-        with flow.set_grad_enabled(False):
-            test_case.assertFalse(flow.is_grad_enabled())
-        test_case.assertTrue(flow.is_grad_enabled())
+        def get_decorater_context_func_with_mode(dec_mode, ctx_mode):
+            @flow.set_grad_enabled(dec_mode)
+            def func():
+                assert_grad_mode(dec_mode)
+                with flow.set_grad_enabled(ctx_mode):
+                    assert_grad_mode(ctx_mode)
+                assert_grad_mode(dec_mode)
 
-        @flow.set_grad_enabled(False)
-        def func():
-            test_case.assertFalse(flow.is_grad_enabled())
+            return func
 
-        func()
-        test_case.assertTrue(flow.is_grad_enabled())
-
-        # set global grad mode to false
         flow.set_grad_enabled(False)
-        test_case.assertFalse(flow.is_grad_enabled())
-
-        @flow.set_grad_enabled(True)
-        def func():
-            test_case.assertTrue(flow.is_grad_enabled())
+        assert_grad_mode(False)
 
         with flow.set_grad_enabled(True):
-            test_case.assertTrue(flow.is_grad_enabled())
+            assert_grad_mode(True)
             flow.set_grad_enabled(False)
-            test_case.assertFalse(flow.is_grad_enabled())
-        test_case.assertFalse(flow.is_grad_enabled())
+            assert_grad_mode(False)
+            func = get_decorater_func_with_mode(True)
+            func()
+        assert_grad_mode(False)
 
-        func()
-        test_case.assertFalse(flow.is_grad_enabled())
-
-        # set global grad mode to true
         flow.set_grad_enabled(True)
-        test_case.assertTrue(flow.is_grad_enabled())
-
-        @flow.set_grad_enabled(False)
-        def func():
-            test_case.assertFalse(flow.is_grad_enabled())
+        assert_grad_mode(True)
 
         with flow.set_grad_enabled(False):
-            test_case.assertFalse(flow.is_grad_enabled())
+            assert_grad_mode(False)
             flow.set_grad_enabled(True)
-            test_case.assertTrue(flow.is_grad_enabled())
-        test_case.assertTrue(flow.is_grad_enabled())
+            assert_grad_mode(True)
+            func = get_decorater_func_with_mode(False)
+            func()
+        assert_grad_mode(True)
 
-        func()
-        test_case.assertTrue(flow.is_grad_enabled())
+        get_decorater_context_func_with_mode(True, True)()
+        get_decorater_context_func_with_mode(True, False)()
+        get_decorater_context_func_with_mode(False, True)()
+        get_decorater_context_func_with_mode(False, False)()
 
 
 if __name__ == "__main__":
