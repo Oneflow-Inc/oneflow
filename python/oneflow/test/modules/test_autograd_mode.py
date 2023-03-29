@@ -117,7 +117,7 @@ class TestAutogradMode(oneflow.unittest.TestCase):
 
         @flow.set_grad_enabled(False)
         def func():
-            test_case.assertTrue(flow.is_grad_enabled())
+            test_case.assertFalse(flow.is_grad_enabled())
 
         with flow.set_grad_enabled(False):
             test_case.assertFalse(flow.is_grad_enabled())
