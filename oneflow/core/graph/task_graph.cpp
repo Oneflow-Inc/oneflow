@@ -433,6 +433,13 @@ void ForEachOpGraphNecessaryCtrlEdge(
         } else {
           CHECK_EQ(src_time_shape->elem_cnt(), dst_time_shape->elem_cnt());
         }
+        if (!src->parallel_desc().EqualsIgnoringHierarchy(dst->parallel_desc())) {
+          LOG(WARNING) << " Warning, there is a ctrl edge connected across placement from: "
+                       << src->op().op_name() << " ["
+                       << src->parallel_desc().parallel_conf().DebugString()
+                       << "] to: " << dst->op().op_name() << " ["
+                       << dst->parallel_desc().parallel_conf().DebugString() << "]";
+        }
         Handler(src, dst);
       }
     }
