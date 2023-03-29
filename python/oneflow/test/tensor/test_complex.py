@@ -218,7 +218,7 @@ class TestTensorComplex64(unittest.TestCase):
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_real_cuda(self):
-        c = flow.full((3, 2), 3.14 + 2j, dtype=self.dtype, device='cuda').real()
+        c = flow.full((3, 2), 3.14 + 2j, dtype=self.dtype, device="cuda").real()
         self.assertEqual(c.dtype, self.real_dtype)
         np_c = c.numpy()
         self.assertEqual(np_c.dtype, self.np_real_dtype)
@@ -226,7 +226,7 @@ class TestTensorComplex64(unittest.TestCase):
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_imag_cuda(self):
-        c = flow.full((3, 2), 3.14 + 2j, dtype=self.dtype, device='cuda').imag()
+        c = flow.full((3, 2), 3.14 + 2j, dtype=self.dtype, device="cuda").imag()
         self.assertEqual(c.dtype, self.real_dtype)
         np_c = c.numpy()
         self.assertEqual(np_c.dtype, self.np_real_dtype)
@@ -234,7 +234,7 @@ class TestTensorComplex64(unittest.TestCase):
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_conj_cuda(self):
-        c = flow.full((3, 2), 3.14 + 2j, dtype=self.dtype, device='cuda').conj()
+        c = flow.full((3, 2), 3.14 + 2j, dtype=self.dtype, device="cuda").conj()
         self.assertEqual(c.dtype, self.dtype)
         self.assertEqual(c.type(), "oneflow." + self.type_str)
         np_c = c.numpy()
@@ -243,7 +243,9 @@ class TestTensorComplex64(unittest.TestCase):
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_conj_physical_cuda(self):
-        c = flow.full((3, 2), 3.14 + 2j, dtype=self.dtype, device='cuda').conj_physical()
+        c = flow.full(
+            (3, 2), 3.14 + 2j, dtype=self.dtype, device="cuda"
+        ).conj_physical()
         self.assertEqual(c.dtype, self.dtype)
         self.assertEqual(c.type(), "oneflow." + self.type_str)
         np_c = c.numpy()
@@ -263,6 +265,7 @@ class TestTensorComplex128(TestTensorComplex64):
         self.b = [[1.0 + 1j, 2.0], [1.0, 2.0 - 1j], [-1.0, 1j]]
         self.np_b = np.array(self.b, dtype=self.np_dtype)
 
+
 class TestAutograd(unittest.TestCase):
     def test_backward(self):
         a = flow.tensor([1.0 + 2j, 2.0 - 3j, 1j], dtype=flow.cfloat)
@@ -274,7 +277,7 @@ class TestAutograd(unittest.TestCase):
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_backward_cuda(self):
-        a = flow.tensor([1.0 + 2j, 2.0 - 3j, 1j], dtype=flow.cfloat, device='cuda')
+        a = flow.tensor([1.0 + 2j, 2.0 - 3j, 1j], dtype=flow.cfloat, device="cuda")
         a.requires_grad = True
         b = flow.conj(a)
         loss = flow.sum(a.real() + b.imag())
@@ -288,18 +291,18 @@ class TestAutograd(unittest.TestCase):
         c = a.real() + b.imag()
         np_dc = np.ones((3,), dtype=np.float32)
         dc = flow.tensor(np_dc)
-        da, = flow.autograd.grad(c, a, dc)
+        (da,) = flow.autograd.grad(c, a, dc)
         assert np.allclose(da.numpy(), np.ones((3,), dtype=np.complex64) * (1 - 1j))
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_grad_cuda(self):
-        a = flow.tensor([1.0 + 2j, 2.0 - 3j, 1j], dtype=flow.cfloat, device='cuda')
+        a = flow.tensor([1.0 + 2j, 2.0 - 3j, 1j], dtype=flow.cfloat, device="cuda")
         a.requires_grad = True
         b = flow.conj(a)
         c = a.real() + b.imag()
         np_dc = np.ones((3,), dtype=np.float32)
         dc = flow.tensor(np_dc)
-        da, = flow.autograd.grad(c, a, dc)
+        (da,) = flow.autograd.grad(c, a, dc)
         assert np.allclose(da.numpy(), np.ones((3,), dtype=np.complex64) * (1 - 1j))
 
 
