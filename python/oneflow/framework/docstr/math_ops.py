@@ -805,7 +805,7 @@ add_docstr(
         >>> input = flow.tensor(arr, dtype=flow.float32)
         >>> output = flow.cosh(input).numpy()
         >>> output
-        array([1.0133467, 1.7859949, 1.2535788, 1.2804903], dtype=float32)
+        array([1.0133467, 1.7859949, 1.2535787, 1.2804903], dtype=float32)
 
     """,
 )
