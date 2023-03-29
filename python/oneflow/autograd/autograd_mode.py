@@ -196,20 +196,21 @@ class set_grad_enabled:
 
     def __init__(self, is_train=True):
         self.is_train = is_train
+        self.prev_mode = oneflow._oneflow_internal.autograd.is_grad_enabled()
+        oneflow._oneflow_internal.autograd.set_grad_enabled(is_train)
 
     def __call__(self, func):
         def wrapper(*args, **kwargs):
             with AutoGradMode(self.is_train):
                 return func(*args, **kwargs)
-
+        oneflow._oneflow_internal.autograd.set_grad_enabled(self.prev_mode)
         return wrapper
 
     def __enter__(self):
-        self.grad_mode = AutoGradMode(self.is_train)
-        return self
+        pass
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
+        oneflow._oneflow_internal.autograd.set_grad_enabled(self.prev_mode)
 
 
 if __name__ == "__main__":
