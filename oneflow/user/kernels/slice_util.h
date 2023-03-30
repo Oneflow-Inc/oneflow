@@ -114,7 +114,7 @@ struct SliceKernelUtil {
   INSTANTIATE_SLICE_KERNEL_UTIL(device, int64_t)          \
   INSTANTIATE_SLICE_KERNEL_UTIL(device, int8_t)           \
   INSTANTIATE_SLICE_KERNEL_UTIL(device, uint8_t)
-  
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_USER_KERNELS_SLICE_UTIL_H_

@@ -43,6 +43,7 @@ flow.sub()
 flow.sum()
 flow.equal()
 flow.not_equal()
+flow.cast()
 
 To complete:
 flow.randn()
@@ -103,6 +104,7 @@ def _np_zero_pad2d_grad(src, dest, padding):
     numpy_dest = Array2Numpy(array_dest, dest.shape)
     return numpy_dest
 
+
 def _test_ZeroPad2d(test_case, shape, padding, value, device):
     np_input = np.random.random(shape)
     of_input = flow.tensor(
@@ -128,6 +130,7 @@ def _test_ZeroPad2d(test_case, shape, padding, value, device):
     np_out_grad = _np_zero_pad2d_grad(np_out, np_input, layer.padding)
     test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out_grad, 1e-05, 1e-05))
 
+
 class TestTensorComplex64(unittest.TestCase):
     def setUp(self):
         self.dtype = flow.cfloat
@@ -144,7 +147,7 @@ class TestTensorComplex64(unittest.TestCase):
             [3.14 + 2j, 3.14 + 2j],
         ]
         self.np_c = np.array(self.c, dtype=self.np_dtype)
-        
+
         self.lower_n_dims = 2
         self.upper_n_dims = 5
         self.shape = []
@@ -209,11 +212,11 @@ class TestTensorComplex64(unittest.TestCase):
         np_slice_b = b[1].numpy()
         self.assertEqual(np_slice_b.dtype, self.np_dtype)
         assert np.allclose(np_slice_b, self.np_b[1])
-        
+
         c = flow.from_numpy(self.np_c)
-        np_slice_c = c[0:2,:].numpy()
+        np_slice_c = c[0:2, :].numpy()
         self.assertEqual(np_slice_c.dtype, self.np_dtype)
-        assert np.allclose(np_slice_c, self.np_c[0:2,:])    
+        assert np.allclose(np_slice_c, self.np_c[0:2, :])
 
     def test_new_tensor(self):
         a = flow.tensor(self.a, dtype=self.dtype)
@@ -291,17 +294,17 @@ class TestTensorComplex64(unittest.TestCase):
 
             np_y = np.random.randn(*input_shape) + 1.0j * np.random.randn(*input_shape)
             np_y = np_y.astype(self.np_dtype)
-            
+
             flow_x = flow.from_numpy(np_x).to(device).requires_grad_(True)
             flow_y = flow.from_numpy(np_y).to(device).requires_grad_(True)
             self.assertEqual(flow_x.dtype, self.dtype)
             self.assertEqual(flow_y.dtype, self.dtype)
-            
+
             # forward
             flow_ret = flow.add(flow_x, flow_y)
             np_ret = np_x + np_y
             compare_result(flow_ret, np_ret, 1e-5, 1e-2)
-                        
+
             # backward
             flow_ret.sum().backward()
             compare_result(flow_x.grad.numpy(), np.ones(input_shape), 1e-5, 1e-2)
@@ -315,17 +318,17 @@ class TestTensorComplex64(unittest.TestCase):
 
             np_y = np.random.randn(*input_shape) + 1.0j * np.random.randn(*input_shape)
             np_y = np_y.astype(self.np_dtype)
-            
+
             flow_x = flow.from_numpy(np_x).to(device).requires_grad_(True)
             flow_y = flow.from_numpy(np_y).to(device).requires_grad_(True)
             self.assertEqual(flow_x.dtype, self.dtype)
             self.assertEqual(flow_y.dtype, self.dtype)
-            
+
             # forward
             flow_ret = flow.sub(flow_x, flow_y)
             np_ret = np_x - np_y
             compare_result(flow_ret, np_ret, 1e-5, 1e-2)
-                        
+
             # backward
             flow_ret.sum().backward()
             compare_result(flow_x.grad.numpy(), np.ones(input_shape), 1e-5, 1e-2)
@@ -339,74 +342,76 @@ class TestTensorComplex64(unittest.TestCase):
 
             np_y = np.random.randn(*input_shape) + 1.0j * np.random.randn(*input_shape)
             np_y = np_y.astype(self.np_dtype)
-            
+
             flow_x = flow.from_numpy(np_x).to(device).requires_grad_(True)
             flow_y = flow.from_numpy(np_y).to(device).requires_grad_(True)
             self.assertEqual(flow_x.dtype, self.dtype)
             self.assertEqual(flow_y.dtype, self.dtype)
-            
+
             # forward
             flow_ret = flow.mul(flow_x, flow_y)
             np_ret = np_x * np_y
             compare_result(flow_ret, np_ret, 1e-5, 1e-2)
-                        
+
             # backward
             flow_ret.sum().backward()
             compare_result(flow_x.grad.numpy(), flow_y.numpy(), 1e-5, 1e-2)
-            compare_result(flow_y.grad.numpy(), flow_x.numpy(), 1e-5, 1e-2)    
-            
+            compare_result(flow_y.grad.numpy(), flow_x.numpy(), 1e-5, 1e-2)
+
     def test_sum(self):
         device = "cpu"
         for i, input_shape in enumerate(self.shape):
             n_dims = np.random.randint(1, len(input_shape))
-            dims = np.random.choice(len(input_shape) - 1, n_dims, replace=False).tolist()
+            dims = np.random.choice(
+                len(input_shape) - 1, n_dims, replace=False
+            ).tolist()
             keepdim = True if np.random.randint(2) == 1 else False
-            
+
             np_x = np.random.randn(*input_shape) + 1.0j * np.random.randn(*input_shape)
             np_x = np_x.astype(self.np_dtype)
-            
+
             flow_x = flow.from_numpy(np_x).to(device).requires_grad_(True)
             self.assertEqual(flow_x.dtype, self.dtype)
-            
+
             # forward
             flow_ret = flow.sum(flow_x, dim=dims, keepdim=keepdim)
             np_ret = np.sum(np_x, axis=tuple(dims), keepdims=keepdim)
             compare_result(flow_ret, np_ret, 1e-5, 1e-2)
-                        
+
             # backward
             flow_ret.sum().backward()
-            compare_result(flow_x.grad.numpy(), np.ones(input_shape), 1e-5, 1e-2) 
-    
+            compare_result(flow_x.grad.numpy(), np.ones(input_shape), 1e-5, 1e-2)
+
     def test_equal(self):
         device = "cpu"
         for i, input_shape in enumerate(self.shape):
-            
+
             np_x = np.random.randn(*input_shape) + 1.0j * np.random.randn(*input_shape)
             np_x = np_x.astype(self.np_dtype)
-            
+
             np_y = np.random.randn(*input_shape) + 1.0j * np.random.randn(*input_shape)
             np_y = np_y.astype(self.np_dtype)
-            
+
             np_z = np.copy(np_x)
-            
+
             flow_x = flow.from_numpy(np_x).to(device).requires_grad_(False)
             flow_y = flow.from_numpy(np_y).to(device).requires_grad_(False)
             flow_z = flow.from_numpy(np_z).to(device).requires_grad_(False)
             self.assertEqual(flow_x.dtype, self.dtype)
             self.assertEqual(flow_y.dtype, self.dtype)
             self.assertEqual(flow_z.dtype, self.dtype)
-            
+
             # forward
             flow_ret = flow.equal(flow_x, flow_y)
             np_ret = np.equal(np_x, np_y)
             compare_result(flow_ret, np_ret, 1e-5, 1e-2)
-            
+
             flow_ret = flow.equal(flow_x, flow_z)
             compare_result(flow_ret, np.ones(flow_x.shape).astype(bool), 1e-5, 1e-2)
 
             flow_ret = flow.not_equal(flow_x, flow_z)
             compare_result(flow_ret, np.zeros(flow_x.shape).astype(bool), 1e-5, 1e-2)
-            
+
     def test_constant_pad(self):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(1, 2, 3, 4), (8, 3, 4, 4)]
@@ -415,24 +420,26 @@ class TestTensorComplex64(unittest.TestCase):
         arg_dict["device"] = ["cpu"]
         for arg in GenArgList(arg_dict):
             _test_ZeroPad2d(self, *arg)
-    
+
     def test_cast(self):
         dtype_pairs = [
-                  (np.uint8, "ByteTensor"), 
-                  (np.int8, "CharTensor"), 
-                  (np.int32, "IntTensor"), 
-                  (np.int64, "LongTensor"), 
-                  (np.float32, "FloatTensor"), 
-                  (np.float64, "DoubleTensor")]
-        shape = (3,5,2)
+            (np.uint8, "ByteTensor"),
+            (np.int8, "CharTensor"),
+            (np.int32, "IntTensor"),
+            (np.int64, "LongTensor"),
+            (np.float32, "FloatTensor"),
+            (np.float64, "DoubleTensor"),
+        ]
+        shape = (3, 5, 2)
         for np_dtype, type_str in dtype_pairs:
             np_arr = np.random.randn(*shape).astype(np_dtype)
             flow_tensor = flow.from_numpy(np_arr)
-            self.assertEqual(flow_tensor.type(), "oneflow." + type_str)      
+            self.assertEqual(flow_tensor.type(), "oneflow." + type_str)
             np_out = np_arr.astype(self.np_dtype)
             flow_out = flow.cast(flow_tensor, dtype=self.complex_dtype)
             self.assertTrue(np.array_equal(flow_out.numpy(), np_out))
-    
+
+
 class TestTensorComplex128(TestTensorComplex64):
     def setUp(self):
         self.dtype = flow.cdouble
@@ -456,6 +463,7 @@ class TestTensorComplex128(TestTensorComplex64):
             num_dims = np.random.randint(self.lower_n_dims, self.upper_n_dims)
             shape_ = [np.random.randint(1, 11) * 4 for _ in range(num_dims)]
             self.shape.append(shape_)
+
 
 if __name__ == "__main__":
     unittest.main()
