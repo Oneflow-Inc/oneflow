@@ -1,10 +1,13 @@
 // RUN: oneflow-opt %s \
+// RUN: -ofjob-to-func \
 // RUN: -lower-oneflow-to-tosa="full=0 lower-job=0" \
+// RUN: --tosa-make-broadcastable \
 // RUN: -lower-oneflow-to-linalg \
 // RUN: -tosa-to-tensor \
-// RUN: -pass-pipeline="oneflow.job(tosa-to-linalg-named)" \
-// RUN: -pass-pipeline="oneflow.job(tosa-to-linalg)" \
+// RUN: -pass-pipeline="func.func(tosa-to-linalg-named)" \
+// RUN: -pass-pipeline="func.func(tosa-to-linalg)" \
 // RUN: -linalg-fuse-elementwise-ops \
+// RUN: -func-to-ofjob \
 // RUN: -pass-pipeline="oneflow.job(outline-jit-function)" -canonicalize \
 // RUN: | FileCheck --dump-input=always %s
 

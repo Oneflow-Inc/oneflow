@@ -63,6 +63,8 @@ int32_t main(int32_t argc, char** argv) {
   mlir::registerGpuMapParallelLoopsPassPass();
   mlir::registerBufferHostRegisterPassPass();
   mlir::registerGpuCopyArgPassPass();
+  mlir::registerOneFlowJobToFuncPassPass();
+  mlir::registerFuncToOneFlowJobPassPass();
 #ifdef WITH_MLIR_CUDA_CODEGEN
   mlir::oneflow::registerGpuSerializeToCubinPass();
 #endif  // WITH_MLIR_CUDA_CODEGEN

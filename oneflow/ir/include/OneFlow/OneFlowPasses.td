@@ -23,6 +23,18 @@ def LowerOneFlowToLinalgPass : Pass<"lower-oneflow-to-linalg", "ModuleOp"> {
   let dependentDialects = ["linalg::LinalgDialect", "memref::MemRefDialect", "mlir::func::FuncDialect"];
 }
 
+def FuncToOneFlowJobPass : Pass<"func-to-ofjob", "ModuleOp"> {
+  let summary = "convert func Ops to oneflow Ops";
+  let constructor = "mlir::oneflow::createFuncToOneFlowJobPass()";
+  let dependentDialects = ["mlir::func::FuncDialect"];
+}
+
+def OneFlowJobToFuncPass : Pass<"ofjob-to-func", "ModuleOp"> {
+  let summary = "convert oneflow Ops to func Ops";
+  let constructor = "mlir::oneflow::createOneFlowJobToFuncPass()";
+  let dependentDialects = ["mlir::func::FuncDialect"];
+}
+
 def BufferHostRegisterPass : Pass<"buffer-host-register", "func::FuncOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createBufferHostRegisterPass()";
