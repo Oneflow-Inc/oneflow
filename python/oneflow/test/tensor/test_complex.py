@@ -439,17 +439,17 @@ class TestTensorComplex64(unittest.TestCase):
             np_out = np_arr.astype(self.np_dtype)
             flow_out = flow.cast(flow_tensor, dtype=self.complex_dtype)
             self.assertTrue(np.array_equal(flow_out.numpy(), np_out))
-            
+
         # cp64 -> cp128
-        np_arr = np.random.randn(*shape) + 1.j * np.random.randn(*shape)
+        np_arr = np.random.randn(*shape) + 1.0j * np.random.randn(*shape)
         np_arr = np_arr.astype(np.complex64)
         flow_tensor = flow.from_numpy(np_arr)
         self.assertEqual(flow_tensor.dtype, flow.complex64)
-        
+
         np_out = np_arr.astype(np.complex128)
         flow_out = flow.cast(flow_tensor, dtype=flow.complex128)
         self.assertTrue(np.array_equal(flow_out.numpy(), np_out))
-        
+
         # cp128 -> cp64
         np_out = np_out.astype(np.complex64)
         flow_out = flow.cast(flow_out, dtype=flow.complex64)
