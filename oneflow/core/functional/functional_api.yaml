@@ -3303,7 +3303,6 @@
   signature: "Tensor (Tensor input) => Clone"
   bind_python: True
 
-<<<<<<< HEAD
 - name: "real"
   signature: "Tensor (Tensor x) => Real"
   bind_python: True
