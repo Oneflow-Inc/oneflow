@@ -172,6 +172,8 @@ def _test_without_position(
 ):
     B, M, H, K, merged_dims = parseDims(dims, x_layout)
 
+    np.random.seed(3124)
+
     x = np.random.uniform(low=-1, high=1, size=(*merged_dims,))
     naive_cos = np.array(
         [
@@ -305,7 +307,7 @@ def _test_without_position_sinuous(
     naive_cos = np.array(
         [
             [
-                [math.cos(m * ((1 / base) ** (2 * ((i % (rotary_size / rotary_ndims)) // 2) / (rotary_size / rotary_ndims)))) for i in range(K)]
+                [math.cos(m * ((1 / base) ** (2 * ((i % (rotary_size // rotary_ndims)) // 2) / (rotary_size // rotary_ndims)))) for i in range(K)]
                 for m in range(M)
             ]
             for b in range(B)
@@ -314,7 +316,7 @@ def _test_without_position_sinuous(
     naive_sin = np.array(
         [
             [
-                [math.sin(m * ((1 / base) ** (2 * ((i % (rotary_size / rotary_ndims)) // 2) / (rotary_size / rotary_ndims)))) for i in range(K)]
+                [math.sin(m * ((1 / base) ** (2 * ((i % (rotary_size // rotary_ndims)) // 2) / (rotary_size // rotary_ndims)))) for i in range(K)]
                 for m in range(M)
             ]
             for b in range(B)
@@ -420,6 +422,8 @@ def _test_with_position_sinuous(
     print(x_layout, mode, base, rotary_size, dims, rotary_ndims)
     B, M, H, K, merged_dims = parseDims(dims, x_layout)
 
+    np.random.seed(3124)
+
     x = np.random.uniform(low=-1, high=1, size=(*merged_dims,))
 
     position_ids = np.random.randint(2 * M, size=(B, rotary_ndims, M), dtype=np.int64)
@@ -430,7 +434,7 @@ def _test_with_position_sinuous(
                 [
                     math.cos(
                         position_ids[b, i // ((rotary_size) // rotary_ndims), m]
-                        * ((1 / base) ** (2 * ((i % (rotary_size / rotary_ndims)) // 2) / (rotary_size / rotary_ndims)))
+                        * ((1 / base) ** (2 * ((i % (rotary_size // rotary_ndims)) // 2) / (rotary_size // rotary_ndims)))
                     )
                     if i < rotary_size
                     else 1
@@ -448,7 +452,7 @@ def _test_with_position_sinuous(
                 [
                     math.sin(
                         position_ids[b, i // ((rotary_size) // rotary_ndims), m]
-                        * ((1 / base) ** (2 * ((i % (rotary_size / rotary_ndims)) // 2) / (rotary_size / rotary_ndims)))
+                        * ((1 / base) ** (2 * ((i % (rotary_size // rotary_ndims)) // 2) / (rotary_size // rotary_ndims)))
                     )
                     if i < rotary_size
                     else 0
@@ -487,13 +491,13 @@ def _test_with_position_sinuous(
 
     fused_cos = np.array(
         [
-            [math.cos(m * ((1 / base) ** ((i % (rotary_size / rotary_ndims)) // 2) / (rotary_size / rotary_ndims))) for i in range(K)]
+            [math.cos(m * ((1 / base) ** (2 * ((i % (rotary_size // rotary_ndims)) // 2) / (rotary_size // rotary_ndims)))) for i in range(K)]
             for m in range(2 * M)
         ]
     )
     fused_sin = np.array(
         [
-            [math.sin(m * ((1 / base) ** ((i % (rotary_size / rotary_ndims)) // 2) / (rotary_size / rotary_ndims))) for i in range(K)]
+            [math.sin(m * ((1 / base) ** (2 * ((i % (rotary_size // rotary_ndims)) // 2) / (rotary_size // rotary_ndims)))) for i in range(K)]
             for m in range(2 * M)
         ]
     )
@@ -921,9 +925,9 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
         args_dict["test_fun"] = [_test_plane]
         args_dict["x_layout"] = ["MB(H3K)", "MB(HK)"]
         args_dict["mode"] = ["plane"]
-        args_dict["base"] = [1e4]
-        args_dict["rotary_size"] = [4]
-        args_dict["dims"] = [(3, 2, 2, 8)]
+        args_dict["base"] = [1e1]
+        args_dict["rotary_size"] = [4, 8]
+        args_dict["dims"] = [(3, 2, 5, 8)]
         args_dict["rotary_ndims"] = [2, 1]
         # args_dict["rotary_size"] = [48]
         # args_dict["dims"] = [(32, 2048, 32, 64)]
@@ -934,10 +938,10 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
 
     def test_fused_rotary_embedding_op_interval(test_case):
         args_dict = OrderedDict()
-        args_dict["test_fun"] = [_test_without_position_sinuous, _test_without_position, _test_with_position, _test_without_position_sinuous]
-        args_dict["x_layout"] = [ "BM(HK)"]
+        args_dict["test_fun"] = [_test_without_position_sinuous, _test_without_position, _test_with_position, _test_with_position_sinuous]
+        args_dict["x_layout"] = ["BMHK"]
         args_dict["mode"] = ["interval"]
-        args_dict["base"] = [1e4]
+        args_dict["base"] = [1e1]
         args_dict["rotary_size"] = [4]
         args_dict["dims"] = [(3, 2, 1, 8)]
         args_dict["rotary_ndims"] = [2]
