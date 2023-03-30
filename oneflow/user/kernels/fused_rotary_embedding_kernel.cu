@@ -238,18 +238,11 @@ __global__ void IntervalKernel(
       const IndexType position_rotate_index = (k_index >= param.k0) ? 1 : 0;
       position_id_offset = b_index * param.position_b_stride + position_rotate_index * param.position_rotate_stride + m_index;
 
-      printf("position_b_stride %d position_rotate_stride %d\n", static_cast<int>(param.position_b_stride), static_cast<int>(param.position_rotate_stride));
-
       const IndexType position = position_ids ? position_ids[position_id_offset] : m_index;
       sinuous_offset = position * param.sinuous_m_stride + k_index;
 
       LoadPack cos_vec, sin_vec, out_vec;
-
-      printf("pack_size: %d\n", static_cast<int>(PackSize));
-      printf("offset %d b_index %d m_index %d h_index %d k_index %d\n", static_cast<int>(offset), static_cast<int>(b_index),
-        static_cast<int>(m_index), static_cast<int>(h_index), static_cast<int>(k_index));
       
-
       if (param.cos && param.sin) {
         cos_vec = *reinterpret_cast<const LoadPack*>(cos + sinuous_offset);
         sin_vec = *reinterpret_cast<const LoadPack*>(sin + sinuous_offset);
@@ -258,11 +251,7 @@ __global__ void IntervalKernel(
   #pragma unloop
         for (int i = 0; i < PackSize / 2; i++) {
           float val =
-              position * expf(2.0f * static_cast<float>(((k_index / 2 + i) % actual_ndim)) / actual_ndim * logf(theta)); //FIXME: this logic seems to be incorrect in 2d or hight rotary positional encoding
-          printf("offset %d position_id_offset %d sinuous_offset %d k_index %d val %f sub_val %f position %d\n", static_cast<int>(offset), 
-            static_cast<int>(position_id_offset), static_cast<int>(sinuous_offset), 
-            static_cast<int>(k_index), static_cast<float>(val), static_cast<float>(static_cast<float>(((k_index / 2 + i) % actual_ndim) / actual_ndim)), static_cast<int>(position));
-          
+              position * expf(2.0f * static_cast<float>(((k_index % actual_ndim) / 2 + i)) / actual_ndim * logf(theta)); 
           T cos_val = cosf(val);
           T sin_val = sinf(val);
           cos_vec.elem[i * 2] = cos_val;

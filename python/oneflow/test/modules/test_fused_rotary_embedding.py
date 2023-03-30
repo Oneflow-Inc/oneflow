@@ -405,10 +405,6 @@ def _test_without_position_sinuous(
             mode=mode,
         ).numpy()
 
-    print(naive_out)
-
-    print(fused_out)
-
     test_case.assertTrue(
         np.allclose(
             naive_out.reshape(merged_dims), fused_out.reshape(merged_dims), atol=5e-2, rtol=5e-3
@@ -419,7 +415,6 @@ def _test_without_position_sinuous(
 def _test_with_position_sinuous(
     test_case, x_layout, mode, base, rotary_size, dims, rotary_ndims, dtype
 ):
-    print(x_layout, mode, base, rotary_size, dims, rotary_ndims)
     B, M, H, K, merged_dims = parseDims(dims, x_layout)
 
     np.random.seed(3124)
@@ -936,7 +931,23 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
         for arg in GenArgList(args_dict):
             arg[0](test_case, *arg[1:])
 
-    def test_fused_rotary_embedding_op_interval(test_case):
+    def test_fused_rotary_embedding_op_interval_2d(test_case):
+        args_dict = OrderedDict()
+        args_dict["test_fun"] = [_test_with_position, _test_with_position_sinuous]
+        args_dict["x_layout"] = ["BMHK"]
+        args_dict["mode"] = ["interval"]
+        args_dict["base"] = [1e1]
+        args_dict["rotary_size"] = [4]
+        args_dict["dims"] = [(3, 2, 1, 8)]
+        args_dict["rotary_ndims"] = [2]
+        # args_dict["rotary_size"] = [48]
+        # args_dict["dims"] = [(32, 2048, 32, 64)]
+        args_dict["dtype"] = [flow.float16]
+
+        for arg in GenArgList(args_dict):
+            arg[0](test_case, *arg[1:])
+    
+    def test_fused_rotary_embedding_op_interval_1d(test_case):
         args_dict = OrderedDict()
         args_dict["test_fun"] = [_test_without_position_sinuous, _test_without_position, _test_with_position, _test_with_position_sinuous]
         args_dict["x_layout"] = ["BMHK"]
@@ -944,7 +955,7 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
         args_dict["base"] = [1e1]
         args_dict["rotary_size"] = [4]
         args_dict["dims"] = [(3, 2, 1, 8)]
-        args_dict["rotary_ndims"] = [2]
+        args_dict["rotary_ndims"] = [1]
         # args_dict["rotary_size"] = [48]
         # args_dict["dims"] = [(32, 2048, 32, 64)]
         args_dict["dtype"] = [flow.float16]
