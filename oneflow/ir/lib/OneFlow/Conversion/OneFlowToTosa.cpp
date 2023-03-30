@@ -32,6 +32,7 @@ limitations under the License.
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/OpImplementation.h"
@@ -263,6 +264,19 @@ struct CastOpLowering final : public OpConversionPattern<CastOp> {
                                 ConversionPatternRewriter& rewriter) const override {
     auto output = op.out().getType();
     auto input = op.in();
+
+    if (auto ranked_tensor = input.getType().dyn_cast<RankedTensorType>()) {
+      if (auto intTy = ranked_tensor.getElementType().dyn_cast<IntegerType>()) {
+        if (!intTy.isSignless()) {
+          auto new_type = RankedTensorType::get(
+              ranked_tensor.getShape(),
+              IntegerType::get(rewriter.getContext(), intTy.getWidth(),
+                               mlir::IntegerType::SignednessSemantics::Signless));
+          input = rewriter.create<UnrealizedConversionCastOp>(op->getLoc(), new_type, input)
+                      ->getResult(0);
+        }
+      }
+    }
     rewriter.replaceOpWithNewOp<tosa::CastOp>(op, output, input);
     return success();
   }
@@ -627,7 +641,7 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   MLIRContext* context = &getContext();
   ConversionTarget target(*context);
   target.addLegalDialect<memref::MemRefDialect, mlir::func::FuncDialect, tosa::TosaDialect,
-                         tensor::TensorDialect, arith::ArithmeticDialect>();
+                         tensor::TensorDialect, arith::ArithmeticDialect, BuiltinDialect>();
   if (fullyConvert) { target.addIllegalDialect<OneFlowDialect>(); }
 
   TypeConverter typeConverter;
