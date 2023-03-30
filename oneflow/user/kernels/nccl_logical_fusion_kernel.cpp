@@ -185,8 +185,8 @@ class NcclLogicalFusionKernelState : public user_op::OpKernelState {
                                  const NdSbp& src_nd_sbp, const NdSbp& dst_nd_sbp) {
     if (nccl_type == "_nccl_logical_all_gather_noncontinuous") {
       CHECK_EQ(src_nd_sbp.sbp_parallel_size(), 1);
-      src_split_axis_list_.at(i) = src_nd_sbp.sbp_parallel(0).split_parallel().axis();
       CHECK(src_nd_sbp.sbp_parallel(0).has_split_parallel());
+      src_split_axis_list_.at(i) = src_nd_sbp.sbp_parallel(0).split_parallel().axis();
     } else if (nccl_type == "_nccl_logical_reduce_scatter_noncontinuous") {
       CHECK_EQ(dst_nd_sbp.sbp_parallel_size(), 1);
       CHECK(dst_nd_sbp.sbp_parallel(0).has_split_parallel());
@@ -376,13 +376,8 @@ void DoPackBeforeNcclGroup(void* pack_to_ptr, const std::string& nccl_type,
     if (out_split_axis != 0) {
       // Do pack before all2all
       const int64_t num_ranks = kernel_state->num_ranks();
-      const int64_t in_split_axis = kernel_state->src_split_axis(i);
-
       DimVector transpose_in_dim_vec;
       in->shape_view().ToDimVector(&transpose_in_dim_vec);
-      transpose_in_dim_vec[in_split_axis] = transpose_in_dim_vec.at(in_split_axis) * num_ranks;
-      CHECK_EQ(transpose_in_dim_vec.at(in_split_axis) % num_ranks, 0);
-      transpose_in_dim_vec[in_split_axis] = transpose_in_dim_vec.at(in_split_axis) / num_ranks;
       CHECK_EQ(transpose_in_dim_vec.at(out_split_axis) % num_ranks, 0);
       transpose_in_dim_vec[out_split_axis] = transpose_in_dim_vec.at(out_split_axis) / num_ranks;
       transpose_in_dim_vec.insert(transpose_in_dim_vec.begin() + out_split_axis, num_ranks);
@@ -403,13 +398,8 @@ void DoPackBeforeNcclGroup(void* pack_to_ptr, const std::string& nccl_type,
     const int64_t out_split_axis = kernel_state->dst_split_axis(i);
     if (out_split_axis != 0) {
       const int64_t num_ranks = kernel_state->num_ranks();
-      const int64_t in_split_axis = kernel_state->src_split_axis(i);
       DimVector transpose_in_dim_vec;
       in->shape_view().ToDimVector(&transpose_in_dim_vec);
-      transpose_in_dim_vec[in_split_axis] = transpose_in_dim_vec.at(in_split_axis) * num_ranks;
-
-      CHECK_EQ(transpose_in_dim_vec.at(in_split_axis) % num_ranks, 0);
-      transpose_in_dim_vec[in_split_axis] = transpose_in_dim_vec.at(in_split_axis) / num_ranks;
       CHECK_EQ(transpose_in_dim_vec.at(out_split_axis) % num_ranks, 0);
       transpose_in_dim_vec[out_split_axis] = transpose_in_dim_vec.at(out_split_axis) / num_ranks;
       transpose_in_dim_vec.insert(transpose_in_dim_vec.begin() + out_split_axis, num_ranks);
@@ -555,10 +545,6 @@ void DoUnpackAfterNcclGroup(void* unpack_from_ptr, const std::string& nccl_type,
     CHECK_GT(in_split_axis, 0);
     DimVector unpack_from_dim_vec;
     in->shape_view().ToDimVector(&unpack_from_dim_vec);
-    unpack_from_dim_vec[in_split_axis] = unpack_from_dim_vec.at(in_split_axis) * num_ranks;
-
-    CHECK_EQ(unpack_from_dim_vec.at(in_split_axis) % num_ranks, 0);
-    unpack_from_dim_vec[in_split_axis] = unpack_from_dim_vec.at(in_split_axis) / num_ranks;
     unpack_from_dim_vec.insert(unpack_from_dim_vec.begin(), num_ranks);
     std::vector<int32_t> perm;
     FOR_RANGE(int64_t, i, 1, unpack_from_dim_vec.size()) { perm.emplace_back(i); }
@@ -580,10 +566,6 @@ void DoUnpackAfterNcclGroup(void* unpack_from_ptr, const std::string& nccl_type,
 
       DimVector unpack_from_dim_vec;
       in->shape_view().ToDimVector(&unpack_from_dim_vec);
-      unpack_from_dim_vec[in_split_axis] = unpack_from_dim_vec.at(in_split_axis) * num_ranks;
-
-      CHECK_EQ(unpack_from_dim_vec.at(in_split_axis) % num_ranks, 0);
-      unpack_from_dim_vec[in_split_axis] = unpack_from_dim_vec.at(in_split_axis) / num_ranks;
       CHECK_EQ(unpack_from_dim_vec.at(out_split_axis) % num_ranks, 0);
       unpack_from_dim_vec[out_split_axis] = unpack_from_dim_vec.at(out_split_axis) / num_ranks;
       unpack_from_dim_vec.insert(unpack_from_dim_vec.begin(), num_ranks);
@@ -601,12 +583,8 @@ void DoUnpackAfterNcclGroup(void* unpack_from_ptr, const std::string& nccl_type,
   } else if (nccl_type == "_nccl_logical_2D_same_dim0_all_gather_noncontinuous") {
     DimVector unpack_from_dim_vec;
     in->shape_view().ToDimVector(&unpack_from_dim_vec);
-    unpack_from_dim_vec[in_split_axis] = unpack_from_dim_vec.at(in_split_axis) * num_ranks;
-
     CHECK_GT(in_split_axis, 0);
     // NOTE(chengcheng): Do unpack.
-    CHECK_EQ(unpack_from_dim_vec.at(in_split_axis) % num_ranks, 0);
-    unpack_from_dim_vec[in_split_axis] = unpack_from_dim_vec.at(in_split_axis) / num_ranks;
     unpack_from_dim_vec.insert(unpack_from_dim_vec.begin(), num_ranks);
     std::vector<int32_t> perm;
     FOR_RANGE(int64_t, i, 1, unpack_from_dim_vec.size()) { perm.emplace_back(i); }
@@ -626,12 +604,8 @@ void DoUnpackAfterNcclGroup(void* unpack_from_ptr, const std::string& nccl_type,
     if (in_split_axis != 0) {
       DimVector unpack_from_dim_vec;
       in->shape_view().ToDimVector(&unpack_from_dim_vec);
-      unpack_from_dim_vec[in_split_axis] = unpack_from_dim_vec.at(in_split_axis) * num_ranks;
-
       // Do unpack.
       CHECK(unpack_from_ptr != out->mut_dptr());
-      CHECK_EQ(unpack_from_dim_vec.at(in_split_axis) % num_ranks, 0);
-      unpack_from_dim_vec[in_split_axis] = unpack_from_dim_vec.at(in_split_axis) / num_ranks;
       CHECK_EQ(unpack_from_dim_vec.at(out_split_axis) % num_ranks, 0);
       unpack_from_dim_vec[out_split_axis] = unpack_from_dim_vec.at(out_split_axis) / num_ranks;
       unpack_from_dim_vec.insert(unpack_from_dim_vec.begin(), num_ranks);
