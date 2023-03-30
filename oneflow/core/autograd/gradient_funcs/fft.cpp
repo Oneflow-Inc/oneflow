@@ -29,6 +29,7 @@ struct FftR2CCaptureState : public AutoGradCaptureState {
   bool onesided;
   bool forward;
   std::vector<int64_t> dims;
+  DimVector input_shape_vec;
   std::string norm_str;
 };
 
@@ -52,6 +53,7 @@ public:
         ctx->forward = JUST(attrs.GetAttr<bool>("forward"));
         ctx->dims = JUST(attrs.GetAttr<std::vector<int64_t>>("dims"));
         ctx->norm_str = JUST(attrs.GetAttr<std::string>("norm"));
+        ctx->input_shape_vec = inputs.at(0)->shape()->dim_vec();
 
         return Maybe<void>::Ok();
     }
@@ -66,8 +68,9 @@ public:
         }
         else{
           // CHECK_OR_THROW(false) << "UNIMPLEMENTED";
+          Shape input_shape(ctx->input_shape_vec);
           int64_t last_dim = ctx->dims.back();
-          int64_t last_dim_size = in_grads->at(0)->dim(last_dim);
+          int64_t last_dim_size = input_shape.At(last_dim);
           int64_t zero_length = last_dim_size - out_grads.at(0)->dim(last_dim);
           if (zero_length > 0){
             std::vector<int64_t> fft_dims {last_dim};
@@ -77,11 +80,11 @@ public:
           }
           else{
             // do c2c and slice
-            const auto& in_grad_sizes = in_grads->at(0)->shape()->dim_vec();
+            // const auto& in_grad_sizes = in_grads->at(0)->shape()->dim_vec();
             auto complex_grad = JUST(functional::FftC2C(in_grads->at(0), NullOpt, ctx->dims, ctx->norm_str, /*forward*/ false, /*is_grad_fn*/ true));
-            std::vector<int64_t> slice_st(in_grad_sizes.begin(), in_grad_sizes.end());
-            std::vector<int64_t> slice_end(in_grad_sizes.begin(), in_grad_sizes.end());
-            std::vector<int64_t> slice_step(in_grad_sizes.size(), 1);
+            std::vector<int64_t> slice_st(input_shape.begin(), input_shape.end());
+            std::vector<int64_t> slice_end(input_shape.begin(), input_shape.end());
+            std::vector<int64_t> slice_step(input_shape.size(), 1);
             auto sliced_tensor = JUST(functional::Slice(complex_grad, slice_st, slice_end, slice_step, false));
             in_grads->at(0) = sliced_tensor;
           }

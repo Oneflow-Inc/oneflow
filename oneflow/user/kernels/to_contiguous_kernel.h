@@ -96,8 +96,8 @@ struct ToContiguousUtil : ToContiguousUtilBase {
   OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
 
 #define TO_CONTIGUOUS_CPU_TYPES                                                \
-  TO_CONTIGUOUS_COMMON_TYPES OF_PP_MAKE_TUPLE_SEQ(float16, DataType::kFloat16) \
-      OF_PP_MAKE_TUPLE_SEQ(bfloat16, DataType::kBFloat16)
+  TO_CONTIGUOUS_COMMON_TYPES COMPLEX_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(float16, DataType::kFloat16) \
+      OF_PP_MAKE_TUPLE_SEQ(bfloat16, DataType::kBFloat16) 
 
 #ifdef WITH_CUDA
 #if CUDA_VERSION >= 11000

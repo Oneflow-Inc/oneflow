@@ -4305,8 +4305,17 @@ class RFftFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int64_t>& n,
                            int64_t dim, const Optional<std::string>& norm) const {
-      // TO-DO: reference to FftFunctor
-      return input;
+    CHECK_OR_THROW(!(input->dtype()->is_complex()))
+    << "expects the dtype of input Tensor  is Real, but gets " << input->dtype()->name();
+
+    std::string norm_str = norm.value_or("backward");
+    std::vector<int64_t> fft_dim{dim};
+    if (n.has_value()) {
+      std::vector<int64_t> len{JUST(n)};
+      return functional::FftR2C(input, len, fft_dim, norm_str, /*onesided=*/true, /*forward=*/true);
+    } else {
+      return functional::FftR2C(input, NullOpt, fft_dim, norm_str,/*onesided=*/true, /*forward=*/true);
+    }
   }
 };
 
@@ -4314,8 +4323,17 @@ class IRFftFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int64_t>& n,
                            int64_t dim, const Optional<std::string>& norm) const {
-      // TO-DO: reference to IFftFunctor
-      return input;
+    CHECK_OR_THROW(!(input->dtype()->is_complex()))
+    << "expects the dtype of input Tensor  is Real, but gets " << input->dtype()->name();
+
+    std::string norm_str = norm.value_or("backward");
+    std::vector<int64_t> fft_dim{dim};
+    if (n.has_value()) {
+      std::vector<int64_t> len{JUST(n)};
+      return functional::FftR2C(input, len, fft_dim, norm_str, /*onesided=*/true, /*forward=*/false);
+    } else {
+      return functional::FftR2C(input, NullOpt, fft_dim, norm_str,/*onesided=*/true, /*forward=*/false);
+    }
   }
 };
 
@@ -5119,6 +5137,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::IFftFunctor>("IFft");
   m.add_functor<impl::FftNFunctor>("FftN");
   m.add_functor<impl::IFftNFunctor>("IFftN");
+  m.add_functor<impl::RFftFunctor>("RFft");
+  m.add_functor<impl::IRFftFunctor>("IRFft");
   m.add_functor<impl::FusedWeightedSumFunctor>("FusedWeightedSum");
   m.add_functor<impl::FusedCenterFunctor>("FusedCenter");
   m.add_functor<impl::FusedCenterGradFunctor>("FusedCenterGrad");
