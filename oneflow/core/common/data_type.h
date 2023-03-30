@@ -79,6 +79,18 @@ using float16 = half_float::half;
   template<>                            \
   struct Trait<Type> : std::integral_constant<bool, Value> {};
 
+// Type Trait: IsFloat16
+
+DEFINE_SPEC(detail::IsFloat16Helper, float16, true)
+#ifdef WITH_CUDA
+DEFINE_SPEC(detail::IsFloat16Helper, half, true)
+#endif  // WITH_CUDA
+
+template<typename T>
+struct IsFloat16
+    : std::integral_constant<bool,
+                             (detail::IsFloat16Helper<typename std::remove_cv<T>::type>::value)> {};
+
 // Type Trait: IsFloating
 
 #define SPECIALIZE_TRUE_FLOATING(type_cpp, type_proto) \
