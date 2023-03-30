@@ -36,6 +36,7 @@ limitations under the License.
 #include "oneflow/core/graph/straighten_nodes.h"
 #include "oneflow/core/register/runtime_register_desc.h"
 #include "oneflow/core/common/env_var/env_var.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
 
 namespace oneflow {
 
@@ -445,6 +446,35 @@ void ForEachOpGraphNecessaryCtrlEdge(
   });
 }
 
+void GetHostInputLbis4OpNode(const OpNode* op_node,
+                             std::vector<LogicalBlobId>* host_mem_input_lbis) {
+  host_mem_input_lbis->clear();
+  if (op_node->op().op_conf().has_user_conf()) {
+    const auto& user_conf = op_node->op().op_conf().user_conf();
+    const auto& op_type_name = user_conf.op_type_name();
+    if (user_op::UserOpHostMemoryInputRegistry::Get().HasHostMemoryInput(op_type_name)) {
+      const auto& inputs = [&]() -> std::vector<std::pair<std::string, int32_t>> {
+        const auto& arg_map = op_node->op().op_conf().user_conf().input();
+        std::vector<std::pair<std::string, int32_t>> arg_vec;
+        for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
+          for (int32_t i = 0; i < it->second.s_size(); ++i) {
+            arg_vec.emplace_back(std::make_pair(it->first, i));
+          }
+        }
+        return arg_vec;
+      }();
+      for (const auto& pair : inputs) {
+        if (user_op::UserOpHostMemoryInputRegistry::Get().IsHostMemoryInput4Op(
+                op_type_name, pair.first, pair.second)) {
+          const LogicalBlobId& host_input_lbi =
+              GenLogicalBlobId(user_conf.input().at(pair.first).s(pair.second));
+          host_mem_input_lbis->emplace_back(host_input_lbi);
+        }
+      }
+    }
+  }
+}
+
 }  // namespace
 
 TaskGraph::TaskGraph() {
@@ -757,6 +787,8 @@ void TaskGraph::EnableInplaceMemSharing(
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
   const OpNode* src_op_node = op_edge->src_node();
   const OpNode* dst_op_node = op_edge->dst_node();
+  std::vector<LogicalBlobId> host_mem_input_lbis;
+  GetHostInputLbis4OpNode(dst_op_node, &host_mem_input_lbis);
   for (const LogicalBlobId& lbi : op_edge->lbis()) {
     std::vector<TaskNode*> in_nodes(sorted_src_comp_tasks.begin(), sorted_src_comp_tasks.end());
     std::vector<TaskNode*> out_nodes;
@@ -765,7 +797,15 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
     const NdSbp& src_nd_sbp = src_op_node->NdSbp4Lbi(lbi);
     const NdSbp& dst_nd_sbp = dst_op_node->NdSbp4Lbi(lbi);
     const ParallelDesc& src_parallel_desc = src_op_node->parallel_desc();
-    const ParallelDesc& dst_parallel_desc = dst_op_node->parallel_desc();
+    const ParallelDesc& dst_parallel_desc = [&]() {
+      if (std::find(host_mem_input_lbis.begin(), host_mem_input_lbis.end(), lbi)
+          != host_mem_input_lbis.end()) {
+        return *CHECK_JUST(
+            ReplaceDeviceType(SymbolOf(dst_op_node->parallel_desc()), DeviceType::kCPU));
+      } else {
+        return dst_op_node->parallel_desc();
+      }
+    }();
     const BlobDesc& blob_desc = src_op_node->LogicalBlobDesc4Lbi(lbi);
     VLOG(3) << "src op: " << src_op_node->op().op_name()
             << " dst op: " << dst_op_node->op().op_name()
@@ -800,21 +840,32 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
 }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne) {
+  std::vector<LogicalBlobId> host_mem_input_lbis;
+  GetHostInputLbis4OpNode(op_edge->dst_node(), &host_mem_input_lbis);
   CHECK_EQ(sorted_src_comp_tasks.size(), sorted_dst_comp_tasks.size());
   FOR_RANGE(size_t, i, 0, sorted_src_comp_tasks.size()) {
     for (const LogicalBlobId& lbi : op_edge->lbis()) {
-      BuildTaskPath(sorted_src_comp_tasks.at(i), sorted_dst_comp_tasks.at(i), lbi);
+      bool is_host_mem_input =
+          std::find(host_mem_input_lbis.begin(), host_mem_input_lbis.end(), lbi)
+          != host_mem_input_lbis.end();
+      BuildTaskPath(sorted_src_comp_tasks.at(i), sorted_dst_comp_tasks.at(i), lbi,
+                    is_host_mem_input);
     }
   }
 }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBroadcastToBroadcast) {
+  std::vector<LogicalBlobId> host_mem_input_lbis;
+  GetHostInputLbis4OpNode(op_edge->dst_node(), &host_mem_input_lbis);
   for (CompTaskNode* dst_node : sorted_dst_comp_tasks) {
     CompTaskNode* nearest_src_node =
         SubTskGphBuilderUtil::FindNearestNode(sorted_src_comp_tasks, dst_node);
     CHECK_NOTNULL(nearest_src_node);
     for (const LogicalBlobId& lbi : op_edge->lbis()) {
-      BuildTaskPath(nearest_src_node, dst_node, lbi);
+      bool is_host_mem_input =
+          std::find(host_mem_input_lbis.begin(), host_mem_input_lbis.end(), lbi)
+          != host_mem_input_lbis.end();
+      BuildTaskPath(nearest_src_node, dst_node, lbi, is_host_mem_input);
     }
   }
 }
@@ -823,13 +874,19 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialInLbiConnect) {
   const Operator& src_op = op_edge->src_node()->op();
   const Operator& dst_op = op_edge->dst_node()->op();
   HashSet<LogicalBlobId> lbis;
+  std::vector<LogicalBlobId> host_mem_input_lbis;
+  GetHostInputLbis4OpNode(op_edge->dst_node(), &host_mem_input_lbis);
   for (const auto& obn : src_op.output_bns()) { lbis.insert(src_op.BnInOp2Lbi(obn)); }
   CHECK_EQ(sorted_src_comp_tasks.size(), 1);
   CHECK_EQ(dst_op.input_bns().size(), sorted_dst_comp_tasks.size());
   FOR_RANGE(int, i, 0, sorted_dst_comp_tasks.size()) {
     const auto& lbi = dst_op.BnInOp2Lbi(dst_op.input_bns().Get(i));
     if (lbis.find(lbi) != lbis.end()) {
-      BuildTaskPath(sorted_src_comp_tasks.at(0), sorted_dst_comp_tasks.at(i), lbi);
+      bool is_host_mem_input =
+          std::find(host_mem_input_lbis.begin(), host_mem_input_lbis.end(), lbi)
+          != host_mem_input_lbis.end();
+      BuildTaskPath(sorted_src_comp_tasks.at(0), sorted_dst_comp_tasks.at(i), lbi,
+                    is_host_mem_input);
     }
   }
 }
@@ -838,13 +895,19 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialOutLbiConnect) {
   const Operator& src_op = op_edge->src_node()->op();
   const Operator& dst_op = op_edge->dst_node()->op();
   HashSet<LogicalBlobId> lbis;
+  std::vector<LogicalBlobId> host_mem_input_lbis;
+  GetHostInputLbis4OpNode(op_edge->dst_node(), &host_mem_input_lbis);
   for (const auto& ibn : dst_op.input_bns()) { lbis.insert(dst_op.BnInOp2Lbi(ibn)); }
   CHECK_EQ(sorted_dst_comp_tasks.size(), 1);
   CHECK_EQ(src_op.output_bns().size(), sorted_src_comp_tasks.size());
   FOR_RANGE(int, i, 0, sorted_src_comp_tasks.size()) {
     const auto& lbi = src_op.BnInOp2Lbi(src_op.output_bns().Get(i));
     if (lbis.find(lbi) != lbis.end()) {
-      BuildTaskPath(sorted_src_comp_tasks.at(i), sorted_dst_comp_tasks.at(0), lbi);
+      bool is_host_mem_input =
+          std::find(host_mem_input_lbis.begin(), host_mem_input_lbis.end(), lbi)
+          != host_mem_input_lbis.end();
+      BuildTaskPath(sorted_src_comp_tasks.at(i), sorted_dst_comp_tasks.at(0), lbi,
+                    is_host_mem_input);
     }
   }
 }
@@ -895,8 +958,17 @@ void TaskGraph::ConnectWithLbi(TaskNode* src_node, TaskNode* dst_node, const Log
   Connect<TaskNode>(src_node, connected_edge, dst_node);
 }
 
-void TaskGraph::BuildTaskPath(TaskNode* src_node, TaskNode* dst_node, const LogicalBlobId& lbi) {
-  TaskNode* proxy_node = GetProxyNode(src_node, lbi, dst_node->MemZoneId121());
+void TaskGraph::BuildTaskPath(TaskNode* src_node, TaskNode* dst_node, const LogicalBlobId& lbi,
+                              bool is_host_mem_input) {
+  const MemZoneId dst_mem_zone_id = [&]() {
+    if (is_host_mem_input) {
+      MemZoneId mem_zone_id = dst_node->MemZoneId121();
+      return MemZoneId(mem_zone_id.rank(), DeviceType::kCPU, 0);
+    } else {
+      return dst_node->MemZoneId121();
+    }
+  }();
+  TaskNode* proxy_node = GetProxyNode(src_node, lbi, dst_mem_zone_id);
   ConnectWithLbi(proxy_node, dst_node, lbi);
 }
 
