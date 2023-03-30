@@ -30,8 +30,6 @@ flow.full()
 Tensor.new_ones()
 Tensor.new_zeros()
 Tensor.new_full()
-
-TO add test:
 Tensor.real()
 Tensor.imag()
 Tensor.conj()
