@@ -40,6 +40,8 @@ def modified_environ(*remove, **update):
 def run_testcase_with_sep_compile(test_case_cls):
     new_cls = type("SeparationCompile_" + test_case_cls.__name__, (test_case_cls,), {})
     with modified_environ(ONEFLOW_LAZY_COMPILE_MODE="rank_per_process", ENABLE_LOGICAL_CHAIN="1"):
+        assert os.environ.get("ONEFLOW_LAZY_COMPILE_MODE") == "rank_per_process"
+        assert os.environ.get("ENABLE_LOGICAL_CHAIN") == "1"
         unittest.TextTestRunner().run(unittest.TestLoader().loadTestsFromTestCase(new_cls))
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -53,10 +55,6 @@ class TestSeparationCompile(oneflow.unittest.TestCase):
         from oneflow.test.graph.test_comb1to2d import TestLazyAllSbpCombinationTesting
         run_testcase_with_sep_compile(TestLazyAllSbpCombinationTesting)
     
-    def test_graph_pipeline(test_case):
-        from oneflow.test.graph.test_graph_pipeline import TestGraphPipeline
-        run_testcase_with_sep_compile(TestGraphPipeline)
-    
     def test_graph_zero(test_case):
         from oneflow.test.graph.test_graph_zero import TestLinearTrainGraph2DWithZeRO
         run_testcase_with_sep_compile(TestLinearTrainGraph2DWithZeRO)
@@ -65,7 +63,9 @@ class TestSeparationCompile(oneflow.unittest.TestCase):
         from oneflow.test.graph.test_graph_clip_grad_norm import TestGraphClipGradNorm
         run_testcase_with_sep_compile(TestGraphClipGradNorm)
 
-    # TODO(): add grad acc and activation checkpoint test cases
+    def test_graph_pipeline_grad_acc_and_activatioin_checkpointing(test_case):
+        from oneflow.test.graph.test_graph_pipeline import TestGraphPipeline
+        run_testcase_with_sep_compile(TestGraphPipeline)
 
 if __name__ == "__main__":
     unittest.main()

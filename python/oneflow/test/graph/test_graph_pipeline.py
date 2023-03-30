@@ -145,6 +145,12 @@ def _train_with_graph(iter_num=3):
             self.pp_m.stage_1_m.to(GraphModule).set_stage(1)
             self.pp_m.stage_2_m.to(GraphModule).set_stage(2)
             self.pp_m.stage_3_m.to(GraphModule).set_stage(3)
+
+            self.pp_m.stage_0_m.to(GraphModule).activation_checkpointing = True
+            self.pp_m.stage_1_m.to(GraphModule).activation_checkpointing = True
+            self.pp_m.stage_2_m.to(GraphModule).activation_checkpointing = True
+            self.pp_m.stage_3_m.to(GraphModule).activation_checkpointing = True
+
             self.mseloss = flow.nn.MSELoss("sum")
             self.add_optimizer(sgd)
             # Let graph to do gradient accumulatioin, pipline execution depends on gradient accumulatioin.
