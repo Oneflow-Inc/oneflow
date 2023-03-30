@@ -24,15 +24,15 @@ import numpy as np
 from oneflow.test_utils.test_util import GenArgList
 
 @flow.unittest.skip_unless_1n1d()
-class test_jit_scriptmodule(flow.unittest.Testcase):
+class test_jit_scriptmodule(flow.unittest.TestCase):
     def testcase4module(test_case):
         model = flow.nn.Sequential(
             flow.nn.Linear(5, 3),
             flow.nn.Linear(3, 1)
             )
         status = isinstance(model, flow.jit.ScriptModule)
-        test_case.assertTrue(status, False)
-  
+        test_case.assertFalse(status, False)
+
 if __name__ == "__main__":
     unittest.main()
     
