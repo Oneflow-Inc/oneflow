@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <string>
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
@@ -49,7 +50,7 @@ public:
         ctx->requires_grad = inputs.at(0)->requires_grad();
         ctx->onesided = JUST(attrs.GetAttr<bool>("onesided"));
         ctx->forward = JUST(attrs.GetAttr<bool>("forward"));
-        ctx->dims = JUST(attrs.GetAttr<std::vector<int64_t>>("forward"));
+        ctx->dims = JUST(attrs.GetAttr<std::vector<int64_t>>("dims"));
         ctx->norm_str = JUST(attrs.GetAttr<std::string>("norm"));
 
         return Maybe<void>::Ok();
@@ -57,20 +58,52 @@ public:
 
     Maybe<void> Apply(const FftR2CCaptureState* ctx, const TensorTuple& out_grads,
                         TensorTuple* in_grads) const override {
-        // CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-        // in_grads->resize(ctx->requires_grad.size());
-        // for (int i = 0; i < ctx->requires_grad.size(); ++i){
-        //     if (ctx->requires_grad.at(i)){
-        //         in_grads->at(i) = JUST(functional::Fft(out_grads.at(0), ctx->SavedTensors().at(ctx->indices[i])));
-        //     }
-        // }
-        // TO-DO add gradient logic
         CHECK_EQ_OR_RETURN(out_grads.size(), 1);
         in_grads->resize(1);
         if (!ctx->onesided){
-            in_grad.at(0) = JUST(functional::Real(functional::FftC2C()));
+            auto complex_grad = JUST(functional::FftC2C(out_grads.at(0), NullOpt, ctx->dims, ctx->norm_str, /*forward*/ false, /*is_grad_fn*/ true));
+            in_grads->at(0) = JUST(functional::Real(complex_grad));
         }
-        
+        else{
+          // CHECK_OR_THROW(false) << "UNIMPLEMENTED";
+          int64_t last_dim = ctx->dims.back();
+          int64_t last_dim_size = in_grads->at(0)->dim(last_dim);
+          int64_t zero_length = last_dim_size - out_grads.at(0)->dim(last_dim);
+          if (zero_length > 0){
+            std::vector<int64_t> fft_dims {last_dim};
+            std::vector<int64_t> fft_shapes {last_dim_size};
+            auto complex_full_grad = JUST(functional::FftC2C(out_grads.at(0), fft_shapes, fft_dims, ctx->norm_str, /*forward*/ false, /*is_grad_fn*/ true));
+            in_grads->at(0) = JUST(functional::Real(complex_full_grad));
+          }
+          else{
+            // do c2c and slice
+            const auto& in_grad_sizes = in_grads->at(0)->shape()->dim_vec();
+            auto complex_grad = JUST(functional::FftC2C(in_grads->at(0), NullOpt, ctx->dims, ctx->norm_str, /*forward*/ false, /*is_grad_fn*/ true));
+            std::vector<int64_t> slice_st(in_grad_sizes.begin(), in_grad_sizes.end());
+            std::vector<int64_t> slice_end(in_grad_sizes.begin(), in_grad_sizes.end());
+            std::vector<int64_t> slice_step(in_grad_sizes.size(), 1);
+            auto sliced_tensor = JUST(functional::Slice(complex_grad, slice_st, slice_end, slice_step, false));
+            in_grads->at(0) = sliced_tensor;
+          }
+          // if (zero_length > 0){
+          //   // do pad and c2c
+          //   std::vector<int64_t> pad_amount(in_grad_sizes.size() * 2, 0);
+          //   auto pad_idx = pad_amount.size() - 2 * last_dim - 1;
+          //   pad_amount[pad_idx] = zero_length;
+          //   auto complex_full_grad = JUST(functional::ConstantPad(out_grads.at(0), pad_amount, 0));
+          //   in_grads->at(0) = functioanl::FftC2C(complex_full_grad, )
+          // }
+          // else{
+          //   // do c2c and slice
+          //   auto complex_grad = JUST(functional::FftC2C(in_grads->at(0), NullOpt, ctx->dims, ctx->norm_str, /*forward*/ false, /*is_grad_fn*/ true));
+          //   std::vector<int64_t> slice_st(in_grad_sizes.begin(), in_grad_sizes.end());
+          //   std::vector<int64_t> slice_end(in_grad_sizes.begin(), in_grad_sizes.end());
+          //   std::vector<int64_t> slice_step(in_grad_sizes.size(), 1);
+          //   auto sliced_tensor = JUST(functional::Slice(complex_grad, slice_st, slice_end, slice_step, false));
+          //   in_grads->at(0) = sliced_tensor;
+          // }
+        }
+
         return Maybe<void>::Ok();
     }
 
@@ -128,7 +161,7 @@ class FftC2C : public OpExprGradFunction<FftC2CCaptureState> {
   AttrMap base_attrs_;
 };
 
-// REGISTER_OP_EXPR_GRAD_FUNCTION("fft_r2c", FftR2C);   TO-DO
+REGISTER_OP_EXPR_GRAD_FUNCTION("fft_r2c", FftR2C);
 REGISTER_OP_EXPR_GRAD_FUNCTION("fft_c2c", FftC2C);
 
 }  // namespace one

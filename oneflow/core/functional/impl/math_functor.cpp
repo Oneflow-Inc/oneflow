@@ -4079,7 +4079,7 @@ class FftR2CFunctor : public FftBaseFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, 
                            const Optional<std::vector<int64_t>>& n,
                            const Optional<std::vector<int64_t>>& dims, const std::string& norm_str,
-                           bool forward, bool onesided) const {
+                           bool onesided, bool forward) const {
     CHECK_OR_THROW(!(x->dtype()->is_complex()))
         << "expects the dtype of input Tensor  is Real, but gets " << x->dtype()->name();
 
@@ -4114,12 +4114,11 @@ class FftR2CFunctor : public FftBaseFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "onesided", "forward");
     attrs.SetAllAttrs(wrapped_dims, norm_str, onesided, forward);
 
-    auto output = OpInterpUtil::Dispatch<Tensor>(*op_, {resized_tensor}, attrs);
+    auto output = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {resized_tensor}, attrs));
     if (!forward){
-      // TO-DO
-      // return functional::ConjPhysical(output);
-      CHECK_OR_THROW(false) << "UNIMPLEMENTED";
-      return output;
+      return functional::ConjPhysical(output);
+      // CHECK_OR_THROW(false) << "UNIMPLEMENTED";
+      // return output;
     }
     else{
       return output;
@@ -4215,9 +4214,9 @@ class FftFunctor {
     } else {
       if (n.has_value()) {
         std::vector<int64_t> len{JUST(n)};
-        return functional::FftR2C(input, len, fft_dim, norm_str, /*forward=*/true, /*onesided=*/false);
+        return functional::FftR2C(input, len, fft_dim, norm_str,  /*onesided=*/false, /*forward=*/true);
       } else {
-        return functional::FftR2C(input, NullOpt, fft_dim, norm_str, /*forward=*/true, /*onesided=*/false);
+        return functional::FftR2C(input, NullOpt, fft_dim, norm_str, /*onesided=*/false, /*forward=*/true);
       }
     }
   }
@@ -4228,8 +4227,8 @@ class IFftFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int64_t>& n,
                            int64_t dim, const Optional<std::string>& norm) const {
     auto norm_str = norm.value_or("backward");
+    std::vector<int64_t> fft_dim{dim};
     if (input->dtype()->is_complex()) {
-      std::vector<int64_t> fft_dim{dim};
       if (n.has_value()) {
         std::vector<int64_t> len{JUST(n)};
         return functional::FftC2C(input, len, fft_dim, norm_str, /*forward=*/false,
@@ -4239,9 +4238,12 @@ class IFftFunctor {
                                   /*is_grad_fn*/ false);
       }
     } else {
-      // TO-DO
-      // return functional::FftR2C(input, n, dim, norm_str, /*forward=*/false, /*onesided=*/false);
-      CHECK_OR_THROW(false) << "UNIMPLEMENTED";
+      if (n.has_value()) {
+        std::vector<int64_t> len{JUST(n)};
+        return functional::FftR2C(input, len, fft_dim, norm_str,  /*onesided=*/false, /*forward=*/false);
+      } else {
+        return functional::FftR2C(input, NullOpt, fft_dim, norm_str, /*onesided=*/false, /*forward=*/false);
+      }
       return input;
     }
   }
