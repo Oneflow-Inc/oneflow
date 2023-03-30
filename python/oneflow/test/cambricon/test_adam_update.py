@@ -166,7 +166,7 @@ class TestAdam(flow.unittest.TestCase):
     def test_adam(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["mlu"]
-        arg_dict["x_shape"] = [(10,)]
+        arg_dict["x_shape"] = [(10,), (2023)]
         arg_dict["learning_rate"] = [1, 1e-3]
         arg_dict["train_iters"] = [10]
         arg_dict["betas"] = [(0.99, 0.9)]
