@@ -22,7 +22,7 @@ limitations under the License.
 namespace mlir {
 
 namespace oneflow {
-std::unique_ptr<mlir::Pass> createLowerOneFlowToSignlessPass();
+
 std::unique_ptr<mlir::Pass> createLowerOneFlowToTosaPass();
 std::unique_ptr<mlir::Pass> createLowerOneFlowToLinalgPass();
 std::unique_ptr<mlir::Pass> createConvertToSignlessForTosaPass();
