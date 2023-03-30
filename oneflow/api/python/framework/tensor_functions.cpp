@@ -264,6 +264,8 @@ DIRECT_PASS_FUNC(PyTensorObject_floor_divide, functional::floor_divide)
 DIRECT_PASS_FUNC(PyTensorObject_atan2, functional::atan2)
 DIRECT_PASS_FUNC(PyTensorObject_gt, functional::greater)
 DIRECT_PASS_FUNC(PyTensorObject_gt_, functional::greater_)
+DIRECT_PASS_FUNC(PyTensorObject_frac, functional::frac)
+DIRECT_PASS_FUNC(PyTensorObject_frac_, functional::frac_)
 DIRECT_PASS_FUNC(PyTensorObject_ge, functional::greater_equal)
 DIRECT_PASS_FUNC(PyTensorObject_div, functional::div)
 DIRECT_PASS_FUNC(PyTensorObject_div_, functional::div_)
@@ -1018,6 +1020,8 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"equal", (PyCFunction)PyTensorObject_equal, METH_VARARGS | METH_KEYWORDS, NULL},
     {"gt", (PyCFunction)PyTensorObject_gt, METH_VARARGS | METH_KEYWORDS, NULL},
     {"gt_", (PyCFunction)PyTensorObject_gt_, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"frac", (PyCFunction)PyTensorObject_frac, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"frac_", (PyCFunction)PyTensorObject_frac_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"ge", (PyCFunction)PyTensorObject_ge, METH_VARARGS | METH_KEYWORDS, NULL},
     {"div", (PyCFunction)PyTensorObject_div, METH_VARARGS | METH_KEYWORDS, NULL},
     {"div_", (PyCFunction)PyTensorObject_div_, METH_VARARGS | METH_KEYWORDS, NULL},
