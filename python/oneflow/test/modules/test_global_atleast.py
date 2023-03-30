@@ -22,7 +22,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=2, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_atleast1d_with_random_data(test_case, placement, sbp):
     x = random_tensor(ndim=1, dim0=8).to_global(placement, sbp)
     y = random_tensor(ndim=2, dim0=8).to_global(placement, sbp)
@@ -30,7 +30,7 @@ def _test_atleast1d_with_random_data(test_case, placement, sbp):
     return out
 
 
-@autotest(n=2, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_atleast2d_with_random_data(test_case, placement, sbp):
     x = random_tensor(ndim=1, dim0=8).to_global(placement, sbp)
     y = random_tensor(ndim=2, dim0=8).to_global(placement, sbp)
@@ -39,7 +39,7 @@ def _test_atleast2d_with_random_data(test_case, placement, sbp):
     return out
 
 
-@autotest(n=2, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_atleast3d_with_random_data(test_case, placement, sbp):
     x = random_tensor(ndim=1, dim0=8).to_global(placement, sbp)
     y = random_tensor(ndim=2, dim0=8).to_global(placement, sbp)

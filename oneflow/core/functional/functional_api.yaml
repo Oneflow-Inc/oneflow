@@ -1233,7 +1233,7 @@
   bind_python: True
 
 - name: "fused_matmul_bias"
-  signature: "Tensor (Tensor x, Tensor weight, Tensor bias, Tensor _add_to_output=None) => FusedMatmulBias"
+  signature: "Tensor (Tensor x, Tensor weight, Tensor bias, Tensor _add_to_output=None, Double alpha=1.0, Double beta=1.0) => FusedMatmulBias"
   bind_python: True
 
 - name: "fused_mlp_grad"
@@ -1515,6 +1515,10 @@
     Int64 begin_params_axis, Double epsilon) => LayerNormAffine"
   bind_python: True
 
+- name: "skip_layer_norm"
+  signature: "Tensor (Tensor x, *, Tensor gamma=None, Tensor beta=None, Tensor bias=None, Tensor skip=None, Double epsilon=1e-5, Double alpha=1e1) => SkipLayerNorm"
+  bind_python: True
+
 - name: "layer_norm"
   signature: "Tensor (Tensor x, Int64 begin_norm_axis, Int64 begin_params_axis, Double epsilon) => LayerNorm"
   bind_python: True
@@ -1538,6 +1542,10 @@
 - name: "rms_norm_grad"
   signature: "Tensor (Tensor dy, Tensor x, Tensor inv_rms, Tensor weight=None, Bool param_grad) => RMSNormGrad"
   bind_python: False
+
+- name: "skip_rms_norm"
+  signature: "Tensor (Tensor x, *, Tensor weight=None, Tensor bias=None, Tensor skip=None, Double epsilon=1e-5, Double alpha=1e1) => SkipRMSNorm"
+  bind_python: True
 
 - name: "group_norm"
   signature:
@@ -3334,4 +3342,28 @@
 
 - name: "clone"
   signature: "Tensor (Tensor input) => Clone"
+  bind_python: True
+
+- name: "real"
+  signature: "Tensor (Tensor x) => Real"
+  bind_python: True
+
+- name: "real_grad"
+  signature: "Tensor (Tensor dout) => RealGrad"
+  bind_python: False
+
+- name: "imag"
+  signature: "Tensor (Tensor x) => Imag"
+  bind_python: True
+
+- name: "imag_grad"
+  signature: "Tensor (Tensor dout) => ImagGrad"
+  bind_python: False
+
+- name: "conj"
+  signature: "Tensor (Tensor x) => Conj"
+  bind_python: True
+
+- name: "conj_physical"
+  signature: "Tensor (Tensor x) => ConjPhysical"
   bind_python: True

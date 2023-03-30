@@ -5404,6 +5404,10 @@ def OneFlow_FusedMatmulBiasOp : OneFlow_BaseOp<"fused_matmul_bias", [NoSideEffec
   let output = (outs
     OneFlow_Tensor:$out
   );
+  let attrs = (ins
+    DefaultValuedAttr<F64Attr, "1.">:$alpha,
+    DefaultValuedAttr<F64Attr, "1.">:$beta
+  );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_data_type_infer_fn = 1;
@@ -6779,6 +6783,32 @@ def OneFlow_LayerNormOp : OneFlow_BaseOp<"layer_norm", [NoSideEffect, AttrSizedO
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_SkipLayerNormOp : OneFlow_BaseOp<"skip_layer_norm", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    Optional<OneFlow_Tensor>:$gamma,
+    Optional<OneFlow_Tensor>:$beta,
+    Optional<OneFlow_Tensor>:$bias,
+    Optional<OneFlow_Tensor>:$skip
+  );
+  let output = (outs
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$mean,
+    OneFlow_Tensor:$inv_variance
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F64Attr, "0.00001">:$epsilon,
+    DefaultValuedAttr<F64Attr, "1.0">:$alpha
+  );
+  let trait_attrs = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_LayerNormGradOp : OneFlow_BaseOp<"layer_norm_grad", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dy,
@@ -6985,6 +7015,28 @@ def OneFlow_RmsNormGradOp : OneFlow_BaseOp<"rms_norm_grad", [NoSideEffect, Decla
   );
   let output = (outs
     OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_SkipRmsNormOp : OneFlow_BaseOp<"skip_rms_norm", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    Optional<OneFlow_Tensor>:$weight,
+    Optional<OneFlow_Tensor>:$bias,
+    Optional<OneFlow_Tensor>:$skip
+  );
+  let output = (outs
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$inv_rms
+  );
+  let attrs = (ins
+    ShapeAttr:$normalized_shape,
+    DefaultValuedAttr<F32Attr, "0.00001">:$epsilon,
+    DefaultValuedAttr<F32Attr, "1.0">:$alpha
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -10817,6 +10869,71 @@ def OneFlow_IsFiniteOp : OneFlow_BaseOp<"isfinite", [NoSideEffect, NoGrad, Decla
   );
   let output = (outs
     OneFlow_Tensor:$out
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_RealOp : OneFlow_BaseOp<"real", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_RealGradOp : OneFlow_BaseOp<"real_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$dout
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_ImagOp : OneFlow_BaseOp<"imag", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_ImagGradOp : OneFlow_BaseOp<"imag_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$dout
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_ConjPhysicalOp : OneFlow_BaseOp<"conj_physical", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
