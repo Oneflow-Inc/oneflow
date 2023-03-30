@@ -65,12 +65,21 @@ class MluDropoutKernel final : public user_op::OpKernel {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), out->data_type());
       CHECK_EQ(add_to_output->shape_view(), out->shape_view());
-      std::unique_ptr<ep::primitive::Add> primitive =
-          ep::primitive::NewPrimitive<ep::primitive::AddFactory>(DeviceType::kMLU,
-                                                                 add_to_output->data_type());
-      CHECK(primitive);
-      primitive->Launch(ctx->stream(), out->dptr<T>(), add_to_output->dptr<T>(), out->mut_dptr<T>(),
-                        add_to_output->shape_view().elem_cnt());
+      CnnlTensorDescriptor add_to_output_desc;
+      add_to_output_desc.set(add_to_output);
+      std::vector<cnnlTensorDescriptor_t> add_to_output_descs_vec{1, add_to_output_desc.desc()};
+      std::vector<const void*> add_to_output_dptrs_vec(1);
+      add_to_output_dptrs_vec[0] = add_to_output->dptr();
+      size_t addn_workspace_size = 0;
+      OF_CNNL_CHECK(cnnlGetAddNWorkspaceSize(ctx->stream()->As<ep::MluStream>()->cnnl_handle(),
+                                                add_to_output_descs_vec.data(), 1,
+                                                out_desc.desc(), &addn_workspace_size));
+      CnnlWorkspace workspace(ctx->stream()->As<ep::MluStream>(), addn_workspace_size);
+
+      OF_CNNL_CHECK(cnnlAddN_v2(ctx->stream()->As<ep::MluStream>()->cnnl_handle(),
+                                add_to_output_descs_vec.data(), add_to_output_dptrs_vec.data(), 1,
+                                out_desc.desc(), out->mut_dptr(), workspace.dptr(),
+                                addn_workspace_size));
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
