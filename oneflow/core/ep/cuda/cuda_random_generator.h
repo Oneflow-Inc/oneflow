@@ -19,6 +19,8 @@ limitations under the License.
 #ifdef WITH_CUDA
 
 #include <mutex>
+#include <curand.h>
+#include <curand_kernel.h>
 
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
