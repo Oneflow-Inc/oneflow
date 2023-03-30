@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "OneFlow/OneFlowDataTypeConversion.h"
+#include "OneFlow/Transform/FuncOps.h"
 #include "OneFlow/UserOpReflection.h"
 #include "OneFlow/Transform/AggregateOps.h"
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
@@ -812,14 +813,17 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   }
   if (job_wrapper.IsLastIRPass()
       && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS", false)) {
+    pm.addPass(oneflow::createOneFlowJobToFuncPass());
     auto toTosa = oneflow::createLowerOneFlowToTosaPass();
     CHECK(toTosa->initializeOptions("full=0 lower-job=0").succeeded());
     pm.addPass(std::move(toTosa));
+    pm.addNestedPass<func::FuncOp>(tosa::createTosaMakeBroadcastablePass());
     pm.addPass(oneflow::createLowerOneFlowToLinalgPass());
     pm.addPass(tosa::createTosaToTensor());
-    pm.addNestedPass<Job>(tosa::createTosaToLinalgNamed());
-    pm.addNestedPass<Job>(tosa::createTosaToLinalg());
+    pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalgNamed());
+    pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());
     pm.addPass(createLinalgElementwiseOpFusionPass());
+    pm.addPass(oneflow::createFuncToOneFlowJobPass());
     pm.addNestedPass<Job>(oneflow::createOutlineJitFunctionPass());
     pm.addPass(createCanonicalizerPass());
   }
