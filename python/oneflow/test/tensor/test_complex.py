@@ -131,6 +131,7 @@ def _test_ZeroPad2d(test_case, shape, padding, value, device):
 class TestTensorComplex64(unittest.TestCase):
     def setUp(self):
         self.dtype = flow.cfloat
+        self.complex_dtype = flow.complex64
         self.np_dtype = np.complex64
         self.type_str = "ComplexFloatTensor"
         self.a = [1.0 + 1j, 2.0]
@@ -282,16 +283,6 @@ class TestTensorComplex64(unittest.TestCase):
         self.assertEqual(np_c.dtype, self.np_dtype)
         assert np.allclose(np_c, self.np_c)
 
-    # @autotest(n=5, rtol=1e-2, atol=1e-3)
-    # def test_add(self):
-    #     ndim = np.random.randint(self.lower_n_dims, self.upper_n_dims)
-    #     shape = [np.random.randint(1, 11) * 5 for _ in range(ndim)]
-    #     device = "cpu"
-    #     x = random_tensor(ndim, *shape).to(device, torch.complex64)
-    #     y = random_tensor(ndim, *shape).to(device, torch.complex64)
-    #     ret = x + y
-    #     return ret
-
     def test_add(self):
         device = "cpu"
         for i, input_shape in enumerate(self.shape):
@@ -425,10 +416,27 @@ class TestTensorComplex64(unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_ZeroPad2d(self, *arg)
     
+    def test_cast(self):
+        dtype_pairs = [
+                  (np.uint8, "ByteTensor"), 
+                  (np.int8, "CharTensor"), 
+                  (np.int32, "IntTensor"), 
+                  (np.int64, "LongTensor"), 
+                  (np.float32, "FloatTensor"), 
+                  (np.float64, "DoubleTensor")]
+        shape = (3,5,2)
+        for np_dtype, type_str in dtype_pairs:
+            np_arr = np.random.randn(*shape).astype(np_dtype)
+            flow_tensor = flow.from_numpy(np_arr)
+            self.assertEqual(flow_tensor.type(), "oneflow." + type_str)      
+            np_out = np_arr.astype(self.np_dtype)
+            flow_out = flow.cast(flow_tensor, dtype=self.complex_dtype)
+            self.assertTrue(np.array_equal(flow_out.numpy(), np_out))
     
 class TestTensorComplex128(TestTensorComplex64):
     def setUp(self):
         self.dtype = flow.cdouble
+        self.complex_dtype = flow.complex128
         self.np_dtype = np.complex128
         self.type_str = "ComplexDoubleTensor"
         self.a = [1.0 + 1j, 2.0]
