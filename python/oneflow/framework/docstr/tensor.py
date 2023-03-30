@@ -2760,13 +2760,13 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.frac,
     r"""
-    See :func:`oneflow.frac`
+    See :func:`oneflow.frac`.
     """,
 )
 
 add_docstr(
     oneflow.Tensor.frac_,
     r"""
-    In-place version of :func:`oneflow.Tensor.frac`
+    In-place version of :func:`oneflow.Tensor.frac`.
     """,
 )
