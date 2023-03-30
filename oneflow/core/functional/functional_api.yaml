@@ -3254,7 +3254,7 @@
 
 - name: "fft_r2c"
   signature:
-    'Tensor (Tensor input, Int64 n=None, Int64 dim=-1, String norm_str="backward", Bool onesided=False, Bool forward=True) => FftR2C'
+    'Tensor (Tensor input, Int64List n=None, Int64List dims=None, String norm_str="backward", Bool onesided=False, Bool forward=True) => FftR2C'
   bind_python: False
 
 # TO-DO
@@ -3281,6 +3281,16 @@
 - name: "ifftn"
   signature: 
     'Tensor (Tensor input, Int64List s=None, Int64List dim=None, String norm=None) => IFftN'
+  bind_python: True
+
+- name: "rfft"
+  signature: 
+    'Tensor (Tensor input, Int64 n=None, Int64 dim=-1, String norm=None) => RFft'
+  bind_python: True
+
+- name: "irfft"
+  signature: 
+    'Tensor (Tensor input, Int64 n=None, Int64 dim=-1, String norm=None) => IRFft'
   bind_python: True
 
 - name: "isclose"

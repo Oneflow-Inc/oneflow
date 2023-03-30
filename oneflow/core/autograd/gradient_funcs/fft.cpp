@@ -31,7 +31,7 @@ struct FftR2CCaptureState : public AutoGradCaptureState {
   std::string norm_str;
 };
 
-#if 0
+#if 1
 class FftR2C : public OpExprGradFunction<FftR2CCaptureState> {
 public:
     Maybe<void> Init(const OpExpr& op) override {
@@ -67,11 +67,8 @@ public:
         // TO-DO add gradient logic
         CHECK_EQ_OR_RETURN(out_grads.size(), 1);
         in_grads->resize(1);
-        in_grads->at(0) = functional::FftR2CGrad(out_grads.at(0), ctx->dims, ctx->norm_str, !(ctx->forward));
-        return Maybe<void>::Ok();
-
         if (!ctx->onesided){
-
+            in_grad.at(0) = JUST(functional::Real(functional::FftC2C()));
         }
         
         return Maybe<void>::Ok();

@@ -18,6 +18,8 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
 namespace oneflow {
+
+
 /* static */ Maybe<void> FftC2COp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("input", 0);
   const Stride& in_stride = ctx->InputStride("input", 0);
@@ -48,6 +50,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> FftR2COp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("input", 0);
+  const Stride& in_stride = ctx->InputStride("input", 0);
   const auto& dims = ctx->Attr<std::vector<int64_t>>("dims");
   // const int64_t norm = ctx->Attr<int64_t>("norm");
   bool onesided = ctx->Attr<bool>("onesided");
@@ -57,6 +60,8 @@ namespace oneflow {
   if (onesided) { out_shape[last_dim] = out_shape[last_dim] / 2 + 1; }
 
   ctx->SetOutputShape("out", 0, out_shape);
+  ctx->SetOutputStride("out", 0, in_stride);
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("input", 0));
   return Maybe<void>::Ok();
 }
 
