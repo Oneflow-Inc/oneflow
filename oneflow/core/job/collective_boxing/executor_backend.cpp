@@ -13,23 +13,33 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/ops/comm_net_device_infer_util.h"
+#include "oneflow/core/job/collective_boxing/executor_backend.h"
 
 namespace oneflow {
 
+namespace boxing {
+
+namespace collective {
+
 namespace {
 
-Maybe<Symbol<Stream>> RawGetTransportDevice(Symbol<Device> device) {
-  return Stream::New(JUST(Device::New(device->type())), StreamType::kCcl);
+std::vector<DeviceType>* GlobalVaildExecutorDeviceTypes() {
+  static std::vector<DeviceType> vaild_executor_device_types;
+  return &vaild_executor_device_types;
 }
 
 }  // namespace
 
-decltype(GetTransportDevice) GetTransportDevice = DECORATE(&RawGetTransportDevice, ThreadLocal);
-
-Maybe<Symbol<Device>> DefaultGetOutputDeivce(user_op::DeviceAndStreamInferContext* ctx) {
-  CHECK_GT_OR_RETURN(ctx->inputs().size(), 0);
-  return ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
+const std::vector<DeviceType>& VaildExecutorDeviceTypes() {
+  return *GlobalVaildExecutorDeviceTypes();
 }
+
+void RegisterExecutorDeviceType(DeviceType device_type) {
+  auto* vaild_executor_device_types = GlobalVaildExecutorDeviceTypes();
+  vaild_executor_device_types->emplace_back(device_type);
+}
+}  // namespace collective
+
+}  // namespace boxing
 
 }  // namespace oneflow

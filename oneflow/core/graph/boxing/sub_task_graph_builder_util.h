@@ -29,7 +29,7 @@ struct SubTskGphBuilderUtil {
   static constexpr int64_t kDistanceDiffMachine = 2;
   static constexpr int64_t kDistanceMax = 3;
 
-  static bool IsDeviceTypeCPUOrCUDA(const ParallelDesc& parallel_desc);
+  static bool IsDeviceTypeCPUOr(const ParallelDesc& parallel_desc, DeviceType device_type);
   static bool HasEmptySliceIfSplit(int64_t parallel_num, const SbpParallel& sbp_parallel,
                                    const BlobDesc& blob_desc);
   static bool IsOnSameCUDADevice(const TaskNode* lhs, const TaskNode* rhs);

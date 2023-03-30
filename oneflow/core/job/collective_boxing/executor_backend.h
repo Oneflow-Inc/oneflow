@@ -17,6 +17,8 @@ limitations under the License.
 #define ONEFLOW_CORE_JOB_COLLECTIVE_BOXING_EXECUTOR_BACKEND_H_
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/device_type.h"
+#include "oneflow/core/common/auto_registration_factory.h"
 
 namespace oneflow {
 
@@ -44,6 +46,22 @@ class ExecutorBackend {
   virtual void* CreateGroupToken(const std::vector<RequestId>& group) = 0;
   virtual void DestroyGroupToken(void* group_token) = 0;
 };
+
+const std::vector<DeviceType>& VaildExecutorDeviceTypes();
+
+void RegisterExecutorDeviceType(DeviceType device_type);
+
+template<typename... Args>
+static std::unique_ptr<ExecutorBackend> NewExecutorBackend(DeviceType device_type, Args&&... args) {
+  std::unique_ptr<ExecutorBackend> executor_backend_entry =
+      NewObjUniquePtr<DeviceType, ExecutorBackend>(device_type, std::forward<Args>(args)...);
+  if (!executor_backend_entry) { return nullptr; }
+  return executor_backend_entry;
+}
+
+#define REGISTER_EXECUTOR_BACKEND(device, Derived) \
+  COMMAND(RegisterExecutorDeviceType(device));     \
+  REGISTER_CLASS(DeviceType, device, ExecutorBackend, Derived)
 
 }  // namespace collective
 

@@ -31,7 +31,6 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/vm/virtual_machine_scope.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
-#include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/device/cudnn_conv_util.h"
 #include "oneflow/core/rpc/include/manager.h"
 #include "oneflow/core/transport/transport.h"
@@ -131,6 +130,13 @@ bool CommNetIBEnabled() {
 
 #endif  // WITH_RDMA && OF_PLATFORM_POSIX
 
+std::vector<std::pair<CclMgrCreateOrDestroyFn, CclMgrCreateOrDestroyFn>>*
+GlobalCclMgrCreatorDestroyers() {
+  static std::vector<std::pair<CclMgrCreateOrDestroyFn, CclMgrCreateOrDestroyFn>>
+      ccl_mgr_creator_destroyer_list;
+  return &ccl_mgr_creator_destroyer_list;
+}
+
 }  // namespace
 
 EnvGlobalObjectsScope::EnvGlobalObjectsScope(const std::string& env_proto_str) {
@@ -188,11 +194,11 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Singleton<ThreadPool>::New(Singleton<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
   SetCpuDeviceManagerNumThreads();
 #ifdef WITH_CUDA
-  Singleton<EagerNcclCommMgr>::New();
   Singleton<CudnnConvAlgoCache>::New();
   Singleton<CudnnHandlePool>::New();
   Singleton<embedding::EmbeddingManager>::New();
 #endif
+  for (const auto& pair : *GlobalCclMgrCreatorDestroyers()) { CHECK_JUST(pair.first()); }
   Singleton<vm::VirtualMachineScope>::New(Singleton<ResourceDesc, ForSession>::Get()->resource());
 #ifdef __linux__
   Singleton<EpollCommNet>::New();
@@ -239,8 +245,8 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Singleton<embedding::EmbeddingManager>::Delete();
   Singleton<CudnnConvAlgoCache>::Delete();
   Singleton<CudnnHandlePool>::Delete();
-  Singleton<EagerNcclCommMgr>::Delete();
 #endif
+  for (const auto& pair : *GlobalCclMgrCreatorDestroyers()) { CHECK_JUST(pair.second()); }
   Singleton<ThreadPool>::Delete();
   Singleton<ep::DeviceManagerRegistry>::Delete();
   if (Singleton<ResourceDesc, ForSession>::Get() != nullptr) {
@@ -305,6 +311,12 @@ Maybe<void> DestoryRDMA() {
     }
   }
 #endif  // WITH_RDMA && OF_PLATFORM_POSIX
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> RegisterCclMgrCreatorDestroyer(CclMgrCreateOrDestroyFn creator,
+                                           CclMgrCreateOrDestroyFn destroyer) {
+  GlobalCclMgrCreatorDestroyers()->emplace_back(std::make_pair(creator, destroyer));
   return Maybe<void>::Ok();
 }
 
