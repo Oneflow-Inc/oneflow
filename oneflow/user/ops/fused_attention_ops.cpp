@@ -674,6 +674,8 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
     UNIMPLEMENTED_THEN_RETURN();
   }
 
+  int64_t rotary_emd_dim = 1;
+
   if (ctx->has_input("position_ids", 0)) {
     const user_op::TensorDesc& position_ids_desc = ctx->InputTensorDesc("position_ids", 0);
     CHECK_EQ_OR_RETURN(position_ids_desc.shape().NumAxes(), 3)
@@ -682,12 +684,16 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
         << "The dimensions of position_ids should be B1M or B2M.";
     CHECK_GE_OR_RETURN(position_ids_desc.shape().At(2), m)
         << "The dimensions of position_ids should be B1M or B2M.";
+    rotary_emd_dim = position_ids_desc.shape().At(1);
   }
 
   CHECK_LE_OR_RETURN(rotary_size, k) << "rotary_size should be no more than K of input x.";
   if (k_size) {
     CHECK_EQ_OR_RETURN(k_size, k) << "k_size if given should be equal to K of input x.";
   }
+
+  const int64_t actual_ndims = rotary_size / rotary_emd_dim;
+  CHECK_EQ_OR_RETURN(actual_ndims % 2, 0) << "rotary_size should be a multiple of 2 * rotary_encoding_dim.";
 
   if (ctx->has_input("position_ids", 0)) {
     if (has_cos && has_sin) {

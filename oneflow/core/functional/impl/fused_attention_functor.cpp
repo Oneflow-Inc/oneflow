@@ -668,6 +668,8 @@ class FusedApplyRotaryEmbFunctor {
       UNIMPLEMENTED_THEN_RETURN() << "cos & sin should both be given or not given.";
     }
 
+    int64_t rotary_emd_dim = 1;
+
     if (position_ids) {
       CHECK_LE_OR_RETURN(JUST(position_ids)->shape()->NumAxes(), 3)
           << "ndims of position_ids should be no more than 3.";  // TODO: supported shape should be
@@ -676,13 +678,20 @@ class FusedApplyRotaryEmbFunctor {
           << "1st dim of position_ids should be equal to B.";
       CHECK_GE_OR_RETURN(JUST(position_ids)->shape()->At(2), m)
           << "3rd dim of position_ids should be no less than M.";
+      rotary_emd_dim = JUST(position_ids)->shape()->At(1);
     }
 
-    CHECK_LE_OR_RETURN(JUST(rotary_size), k) << "rotary_size should be no more than k.";
+    
     if (k_size) {
       CHECK_EQ_OR_RETURN(JUST(k_size), k)
           << "k_size if given should be equal to K of cos, sin and x.";
     }
+    if (rotary_size) {
+      CHECK_LE_OR_RETURN(JUST(rotary_size), k) << "rotary_size should be no more than k.";
+    }
+
+    const int64_t actual_ndims = (rotary_size ? JUST(rotary_size) : k) / rotary_emd_dim;
+    CHECK_EQ_OR_RETURN(actual_ndims % 2, 0) << "k ,or rotary_size if given, should be a multiple of 2 * rotary_encoding_dim.";
 
     if (position_ids) {
       if (cos && sin) {
