@@ -130,7 +130,7 @@ bool CanBeMergedInChain(const TaskNode* node) {
   if (IsTaskNodeProducedRegstHasMultiRegstNum(node)) { return false; }
   const auto* fw_comp_node = dynamic_cast<const NormalForwardCompTaskNode*>(node);
   if (fw_comp_node == nullptr) { return false; }
-  if (fw_comp_node->device_type() != DeviceType::kCUDA) { return false; }
+  if (fw_comp_node->device_type() == DeviceType::kCPU) { return false; }
   const Operator* op = fw_comp_node->op().get();
   if (IsSpecialOpNotConsiderMergeInChain(op)) { return false; }
   return true;
@@ -742,7 +742,7 @@ void TaskGraph::ForEachGpuDeviceNodes(
     const std::function<void(const HashSet<TaskNode*>& dev_nodes)>& Handler) const {
   HashMap<std::pair<int64_t, int64_t>, HashSet<TaskNode*>> global_dev_phy_id2nodes;
   ForEachNode([&](TaskNode* task_node) {
-    if (task_node->device_type() != DeviceType::kCUDA) { return; }
+    if (task_node->device_type() == DeviceType::kCPU) { return; }
     int64_t dev_phy_id = task_node->stream_id().device_id().device_index();
     global_dev_phy_id2nodes[{task_node->machine_id(), dev_phy_id}].emplace(task_node);
   });
