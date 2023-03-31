@@ -229,7 +229,7 @@ __global__ void IntervalKernel(
         sin_vec = *reinterpret_cast<const LoadPack*>(param.sin + sinuous_offset);
       } else {
         const IndexType actual_ndim = param.rotary_size / RotaryEmbDim;
-#pragma unloop
+#pragma unroll
         for (int i = 0; i < PackSize / 2; i++) {
           float val = position
                       * expf(2.0f * static_cast<float>(((k_index % actual_ndim) / 2 + i))
@@ -243,7 +243,7 @@ __global__ void IntervalKernel(
         }
       }
 
-#pragma unloop
+#pragma unroll
       for (int i = 0; i < PackSize / 2; i++) {
         out_vec.elem[i * 2] =
             x_vec.elem[i * 2] * cos_vec.elem[i * 2] - x_vec.elem[i * 2 + 1] * sin_vec.elem[i * 2];
@@ -266,7 +266,7 @@ __global__ void PlaneKernel(
     using LoadPack = cuda::elementwise::Packed<T, 2>;
     IndexType temp_offset = offset;
     IndexType b_index = 0, m_index = 0, h_index = 0, k_index = 0;
-#pragma unloop
+#pragma unroll
     for (int i = 0; i < NumDims; i++) {
       IndexType dim_tag = param.out_stride[i].first;
       IndexType out_stride = param.out_stride[i].second;
@@ -402,7 +402,7 @@ void LaunchKernel(ep::CudaStream* stream, const T* x, const T* cos, const T* sin
 
 // K has to be the last dimension, only k&m matters, therefore strides other than k&m does not
 // really needs to be computed
-#pragma unloop
+#pragma unroll
   for (int i = 0; i < NumDims; i++) { param.out_stride[i] = strides[i]; }
 
   constexpr size_t blk_size = 128;
