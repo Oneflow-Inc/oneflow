@@ -23,7 +23,9 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/impl/binary_functor.h"
+#include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/functional/tensor_processor.h"
@@ -1036,39 +1038,286 @@ class LogAddExpFunctor {
 class QuantileFunctor {
  public:
   QuantileFunctor() {}
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& q,
-                           const int32_t& dim, const bool& keepdim,
-                           const std::string& interpolation,
-                           const Optional<one::Tensor>& out) const {
-    // TODO(Liang Depeng): refine the implementaion of quantile to have the full funcitonality
-    // later.
-    CHECK_EQ_OR_RETURN(x->ndim(), 2)
-        << "for now oneflow.quantile only support `input` tensor with 2 dims.";
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& q, const Optional<int64_t>& dim,
+                           const bool keepdim, const std::string& interpolation,
+                           const bool ignore_nan) const {
+    CHECK_GT_OR_RETURN(input->nelement(), 0) << "oneflow.quantile input tensor must be non-empty";
+    CHECK_LE_OR_RETURN(q->ndim(), 1)
+        << "oneflow.quantile only support `q` tensor is a scalar or 1D tensor.";
+    int64_t wrapped_dim = JUST(maybe_wrap_dim(dim.value_or(0), input->ndim()));
+
+    // NOTE(hujiakui): this check is only performed when running on the CPU to avoid
+    // synchronizing an accelerator with the CPU
+    // For q is a Tensor.
+    DeviceType input_device{};
+    if (input->is_global()) {
+      input_device = JUST(input->parallel_desc())->device_type();
+    } else {
+      input_device = JUST(input->device())->enum_type();
+    }
+    if (input_device == DeviceType::kCPU) {
+      std::shared_ptr<Tensor> condition =
+          JUST(functional::ReduceAllWhole(JUST(functional::BroadcastLogicalAnd(
+              JUST(functional::ScalarLogicalGreaterEqual(q, Scalar(0.0))),
+              JUST(functional::ScalarLogicalLessEqual(q, Scalar(1.0)))))));
+      CHECK_OR_RETURN(JUST(functional::Equal(
+          condition,
+          JUST(functional::Cast(JUST(functional::OnesLike(condition)), DType::Bool(), false)))))
+          << "oneflow.quantile q values must be in the range [0, 1]";
+    }
+
+    // calculate the shape of output
+    auto out_shape = quantile_output_shape(dim, input, q, keepdim, wrapped_dim);
+
+    std::shared_ptr<Tensor> sorted;
+    if (!dim.has_value()) {
+      sorted = JUST(functional::Flatten(input, 0, -1));
+      sorted = JUST(functional::Sort(sorted, -1, false))->at(0);
+    } else if (wrapped_dim == input->ndim() - 1) {
+      sorted = JUST(functional::Sort(input, -1, false))->at(0);
+    } else {
+      sorted = JUST(functional::Unsqueeze(input, input->ndim() - 1));
+      std::vector<int32_t> perm(sorted->ndim());
+      std::iota(perm.begin(), perm.end(), 0);
+      std::swap(perm[wrapped_dim], perm[perm.size() - 1]);
+      sorted = JUST(view::Transpose(sorted, perm));
+      sorted = JUST(functional::Sort(sorted, -1, false))->at(0);
+    }
+
+    std::vector<int64_t> in_shape(out_shape.size());
+    std::copy(out_shape.begin() + 1, out_shape.end(), in_shape.begin());
+    in_shape[in_shape.size() - 1] = sorted->dim(sorted->ndim() - 1);
+    DimVector inv(in_shape.size());
+    for (int i = 0; i < in_shape.size(); ++i) { inv[i] = in_shape[i]; }
+    const Shape step_shape(inv);
+    sorted = JUST(functional::View(sorted->contiguous(), step_shape));
+
+    CHECK_LE_OR_RETURN(sorted->dim(sorted->ndim() - 1), std::pow(2, 24))
+        << "oneflow.quantile input tensor is too large";
+
+    std::shared_ptr<Tensor> ranks;
+
+    if (ignore_nan) {
+      ranks = JUST(
+          functional::Mul(JUST(functional::ScalarSub(
+                              JUST(functional::ReduceSum(
+                                  JUST(functional::LogicalNot(JUST(functional::IsNan(sorted)))),
+                                  std::vector<int32_t>({static_cast<int32_t>(sorted->ndim() - 1)}),
+                                  /*keepdim=*/true)),
+                              Scalar(1), Scalar(1), /*inplace=*/false)),
+                          q));
+      ranks = JUST(functional::MaskedFill(
+          ranks, JUST(functional::ScalarLogicalLess(ranks, Scalar(0))), Scalar(0)));
+    } else {
+      int64_t last_index = sorted->dim(sorted->ndim() - 1) - 1;
+      std::shared_ptr<TensorTuple> tl = JUST(functional::BroadcastTensors(
+          {JUST(functional::ScalarMul(q, last_index, /*inplace=*/false)),
+           JUST(functional::ReduceAny(
+               JUST(functional::IsNan(sorted)),
+               std::vector<int32_t>({static_cast<int32_t>(sorted->ndim() - 1)}),
+               /*keepdim=*/true))}));
+      ranks = JUST(functional::MaskedFill(tl->at(0), tl->at(1), Scalar(last_index)));
+    }
+
+    if (interpolation == "lower") {
+      JUST(functional::Floor_(ranks));
+    } else if (interpolation == "higher") {
+      JUST(functional::Ceil_(ranks));
+    } else if (interpolation == "nearest") {
+      JUST(functional::Round_(ranks));
+    }
+
+    std::shared_ptr<Tensor> ranks_below = JUST(functional::Cast(ranks, DType::Int64(),
+                                                                /*pin_memory=*/false));
+    std::shared_ptr<Tensor> values_below =
+        JUST(functional::DimGather(sorted, sorted->ndim() - 1, ranks_below, false));
+
+    if (interpolation == "linear" || interpolation == "midpoint") {
+      std::shared_ptr<Tensor> weights = interpolation == "midpoint"
+                                            ? JUST(functional::FullLike(ranks, Scalar(0.5)))
+                                            : JUST(functional::Sub(ranks, ranks_below, Scalar(1.0),
+                                                                   /*inplace=*/false));
+      JUST(functional::Ceil_(ranks));
+      std::shared_ptr<Tensor> ranks_above =
+          JUST(functional::Cast(ranks, DType::Int64(), /*pin_memory=*/false));
+      std::shared_ptr<Tensor> values_above =
+          JUST(functional::DimGather(sorted, sorted->ndim() - 1, ranks_above, false));
+
+      values_below = JUST(functional::Lerp(values_below, values_above, weights));
+    }
+
+    values_below = JUST(view::Unsqueeze(values_below, 0));
+
+    int32_t ndim = values_below->ndim();
+    std::vector<int32_t> perm(ndim);
+    std::iota(perm.begin(), perm.end(), 0);
+    std::swap(perm[0], perm[perm.size() - 1]);
+    values_below = JUST(view::Transpose(values_below, perm));
+
+    return view::Squeeze(values_below,
+                         std::vector<int32_t>({static_cast<int32_t>(values_below->ndim() - 1)}));
+  }
+
+ private:
+  static inline std::vector<int64_t> quantile_output_shape(const Optional<int64_t>& dim,
+                                                           const std::shared_ptr<Tensor>& input,
+                                                           const std::shared_ptr<Tensor>& q,
+                                                           const bool keepdim,
+                                                           int64_t wrapped_dim) {
+    // Compute output shape: q_size + reduced_size
+    std::vector<int64_t> out_shape;
+    if (dim.has_value() && input->ndim() > 0) {
+      out_shape =
+          std::vector<int64_t>(input->shape()->dim_vec().begin(), input->shape()->dim_vec().end());
+      if (keepdim) {
+        out_shape[wrapped_dim] = 1;
+      } else {
+        out_shape.erase(out_shape.begin() + wrapped_dim);
+      }
+    } else if (keepdim) {
+      out_shape = std::vector<int64_t>(input->ndim(), 1);
+    }
+    out_shape.insert(out_shape.begin(), q->nelement());
+
+    return out_shape;
+  }
+};
+
+class ScalarQuantileFunctor {
+ public:
+  ScalarQuantileFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Scalar& q,
+                           const Optional<int64_t>& dim, const bool& keepdim,
+                           const std::string& interpolation, const bool& ignore_nan) const {
+    CHECK_GT_OR_RETURN(input->nelement(), 0) << "oneflow.quantile input tensor must be non-empty";
+    int64_t wrapped_dim = JUST(maybe_wrap_dim(dim.value_or(0), input->ndim()));
     double qf = 0;
     if (q.IsIntegral()) {
       qf = static_cast<double>(q.As<int64_t>());
     } else {
       qf = q.As<double>();
     }
-    CHECK_EQ_OR_RETURN(dim, 1) << "for now oneflow.quantile only support `dim=1`.";
-    CHECK_OR_RETURN(interpolation == "linear")
-        << "for now oneflow.quantile only support `interpolation=linear`.";
+    CHECK_OR_RETURN(qf <= 1.0 && qf >= 0.0)
+        << "oneflow.quantile q values must be in the range [0, 1]";
 
-    double qn = qf * (x->dim(1) - 1);
-    std::shared_ptr<one::Tensor> sorted_index = JUST(ArgSort(x, "ASCENDING"));
-    std::shared_ptr<one::Tensor> sorted_x = JUST(DimGather(x, dim, sorted_index, false));
-    std::shared_ptr<one::Tensor> ranks =
-        JUST(Constant(Shape({x->dim(0), 1}), qn, DType::Double(), JUST(x->device())));
-    std::shared_ptr<one::Tensor> ranks_below = JUST(Floor(ranks));
-    std::shared_ptr<one::Tensor> weights = JUST(Sub(ranks, ranks_below, 1, false));
-    ranks_below =
-        JUST(DimGather(sorted_x, dim, JUST(Cast(ranks_below, DType::Int64(), false)), false));
-    std::shared_ptr<one::Tensor> ranks_above =
-        JUST(DimGather(sorted_x, dim, JUST(Cast(JUST(Ceil(ranks)), DType::Int64(), false)), false));
-    std::shared_ptr<one::Tensor> res = JUST(Add(
-        ranks_below, JUST(Mul(JUST(Sub(ranks_above, ranks_below, 1, false)), weights)), 1, false));
-    std::vector<int32_t> dims = {-1};
-    return Squeeze(res, dims);
+    // calculate the shape of output
+    auto out_shape = quantile_output_shape(dim, input, q, keepdim, wrapped_dim);
+
+    std::shared_ptr<Tensor> sorted;
+    if (!dim.has_value()) {
+      sorted = JUST(functional::Flatten(input, 0, -1));
+      sorted = JUST(functional::Sort(sorted, -1, false))->at(0);
+    } else if (wrapped_dim == input->ndim() - 1) {
+      sorted = JUST(functional::Sort(input, -1, false))->at(0);
+    } else {
+      sorted = JUST(functional::Unsqueeze(input, input->ndim() - 1));
+      std::vector<int32_t> perm(sorted->ndim());
+      std::iota(perm.begin(), perm.end(), 0);
+      std::swap(perm[wrapped_dim], perm[perm.size() - 1]);
+      sorted = JUST(view::Transpose(sorted, perm));
+      sorted = JUST(functional::Sort(sorted, -1, false))->at(0);
+    }
+
+    // q ==> 1-D Tensor
+    out_shape.insert(out_shape.begin(), 1);
+
+    std::vector<int64_t> in_shape(out_shape.size());
+    std::copy(out_shape.begin() + 1, out_shape.end(), in_shape.begin());
+    in_shape[in_shape.size() - 1] = sorted->dim(sorted->ndim() - 1);
+    DimVector inv(in_shape.size());
+    for (int i = 0; i < in_shape.size(); ++i) { inv[i] = in_shape[i]; }
+    const Shape step_shape(inv);
+    sorted = JUST(functional::View(sorted->contiguous(), step_shape));
+
+    CHECK_LE_OR_RETURN(sorted->dim(sorted->ndim() - 1), std::pow(2, 24))
+        << "oneflow.quantile input tensor is too large";
+
+    std::shared_ptr<Tensor> ranks;
+
+    if (ignore_nan) {
+      ranks = JUST(functional::ScalarMul(
+          JUST(functional::ScalarSub(
+              JUST(functional::ReduceSum(
+                  JUST(functional::LogicalNot(JUST(functional::IsNan(sorted)))),
+                  std::vector<int32_t>({static_cast<int32_t>(sorted->ndim() - 1)}),
+                  /*keepdim=*/true)),
+              Scalar(1), Scalar(1), /*inplace=*/false)),
+          q, /*inplace=*/false));
+      ranks = JUST(functional::MaskedFill(
+          ranks, JUST(functional::ScalarLogicalLess(ranks, Scalar(0))), Scalar(0)));
+    } else {
+      int64_t last_index = sorted->dim(sorted->ndim() - 1) - 1;
+      std::shared_ptr<Tensor> tl_index = JUST(
+          functional::ReduceAny(JUST(functional::IsNan(sorted)),
+                                std::vector<int32_t>({static_cast<int32_t>(sorted->ndim() - 1)}),
+                                /*keepdim=*/true));
+      std::shared_ptr<Tensor> tl_value;
+      if (input->is_local()) {
+        tl_value =
+            JUST(functional::Empty(*(tl_index->shape()), DType::Float(), JUST(tl_index->device()),
+                                   /*requires_grad=*/false, /*pin_memory=*/false));
+      } else {
+        tl_value = JUST(functional::GlobalEmpty(
+            *(tl_index->shape()), DType::Float(), JUST(tl_index->parallel_desc()),
+            *JUST(private_details::RawGetSbpList(JUST(tl_index->nd_sbp())))));
+      }
+      tl_value = JUST(functional::Fill(tl_value, Scalar(qf * last_index)));
+      ranks = JUST(functional::MaskedFill(tl_value, tl_index, Scalar(last_index)));
+    }
+
+    // adjust ranks based on the interpolation mode
+    if (interpolation == "lower") {
+      JUST(functional::Floor_(ranks));
+    } else if (interpolation == "higher") {
+      JUST(functional::Ceil_(ranks));
+    } else if (interpolation == "nearest") {
+      JUST(functional::Round_(ranks));
+    }
+
+    std::shared_ptr<Tensor> ranks_below = JUST(functional::Cast(ranks, DType::Int64(),
+                                                                /*pin_memory=*/false));
+    std::shared_ptr<Tensor> values_below =
+        JUST(functional::DimGather(sorted, sorted->ndim() - 1, ranks_below, false));
+
+    if (interpolation == "linear" || interpolation == "midpoint") {
+      std::shared_ptr<Tensor> weights = interpolation == "midpoint"
+                                            ? JUST(functional::FullLike(ranks, Scalar(0.5)))
+                                            : JUST(functional::Sub(ranks, ranks_below, Scalar(1.0),
+                                                                   /*inplace=*/false));
+      JUST(functional::Ceil_(ranks));
+      std::shared_ptr<Tensor> ranks_above =
+          JUST(functional::Cast(ranks, DType::Int64(), /*pin_memory=*/false));
+      std::shared_ptr<Tensor> values_above =
+          JUST(functional::DimGather(sorted, sorted->ndim() - 1, ranks_above, false));
+
+      values_below = JUST(functional::Lerp(values_below, values_above, weights));
+    }
+
+    return view::Squeeze(values_below,
+                         std::vector<int32_t>({static_cast<int32_t>(values_below->ndim() - 1)}));
+  }
+
+ private:
+  static inline std::vector<int64_t> quantile_output_shape(const Optional<int64_t>& dim,
+                                                           const std::shared_ptr<Tensor>& input,
+                                                           const Scalar& q, const bool keepdim,
+                                                           int64_t wrapped_dim) {
+    // Compute output shape: q_size + reduced_size
+    std::vector<int64_t> out_shape;
+    if (dim.has_value() && input->ndim() > 0) {
+      out_shape =
+          std::vector<int64_t>(input->shape()->dim_vec().begin(), input->shape()->dim_vec().end());
+      if (keepdim) {
+        out_shape[wrapped_dim] = 1;
+      } else {
+        out_shape.erase(out_shape.begin() + wrapped_dim);
+      }
+    } else if (keepdim) {
+      out_shape = std::vector<int64_t>(input->ndim(), 1);
+    }
+
+    return out_shape;
   }
 };
 
@@ -1204,6 +1453,7 @@ class ArangeFunctor {
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     if (GlobalMode::is_enabled()) {
+      auto global_mode_gurad = GlobalMode::Guard(false);
       return JUST(functional::GlobalArange(start, limit, delta, dtype,
                                            GetGlobalParallelDescFromDevice(device),
                                            *JUST(GetSbpList(GlobalMode::nd_sbp()))));
@@ -1308,6 +1558,7 @@ class HannWindowFunctor {
                            const Optional<Symbol<Device>>& device,
                            const Optional<Symbol<DType>>& dtype, const bool& requires_grad) const {
     if (GlobalMode::is_enabled()) {
+      auto global_mode_gurad = GlobalMode::Guard(false);
       return JUST(functional::GlobalHannWindow(
           window_length, periodic, GetGlobalParallelDescFromDevice(device),
           *JUST(GetSbpList(GlobalMode::nd_sbp())), dtype, requires_grad));
@@ -2402,6 +2653,144 @@ class ScalarBitwiseBaseFunctor {
     TensorTuple casted_vec = JUST(tensor_processor.GetInputs());
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {casted_vec}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ScalarLerpFunctor {
+ public:
+  ScalarLerpFunctor() {
+    op_ =
+        CHECK_JUST(one::OpBuilder("scalar_lerp").Input("start").Input("end").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& start,
+                           const std::shared_ptr<one::Tensor>& end, const Scalar& weight) const {
+    CHECK_EQ_OR_RETURN(start->shape()->NumAxes(), end->shape()->NumAxes())
+        << Error::RuntimeError() << "expected dim" << start->shape()->NumAxes()
+        << "for `end` but got dim" << end->shape()->NumAxes();
+
+    auto broadcast_shape = *start->shape();
+    if (*start->shape() != *end->shape()) {
+      broadcast_shape = *JUST(InferUnifiedShapeForBroadcasting({*start->shape(), *end->shape()}));
+    }
+
+    std::shared_ptr<Tensor> broadcast_start = start;
+    std::shared_ptr<Tensor> broadcast_end = end;
+    if (*start->shape() != broadcast_shape) {
+      broadcast_start = JUST(functional::Expand(start, broadcast_shape));
+    }
+    if (*end->shape() != broadcast_shape) {
+      broadcast_end = JUST(functional::Expand(end, broadcast_shape));
+    }
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("float_operand", "has_float_operand",
+                                                 "int_operand", "has_int_operand");
+    if (weight.IsFloatingPoint()) {
+      attrs.SetAllAttrs(weight.As<double>(), true, NullOpt, false);
+    } else if (weight.IsIntegral() || weight.IsBool()) {
+      attrs.SetAllAttrs(NullOpt, false, weight.As<int64_t>(), true);
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "The scalar in " << op_->op_type_name()
+                                  << " should be float or int.";
+    }
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {broadcast_start, broadcast_end}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ScalarInplaceLerpFunctor {
+ public:
+  ScalarInplaceLerpFunctor() {
+    op_ =
+        CHECK_JUST(one::OpBuilder("scalar_lerp").Input("start").Input("end").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& start,
+                           const std::shared_ptr<one::Tensor>& end, const Scalar& weight) const {
+    CHECK_EQ_OR_RETURN(start->shape()->NumAxes(), end->shape()->NumAxes())
+        << Error::RuntimeError() << "expected dim" << start->shape()->NumAxes()
+        << "for `end` but got dim" << end->shape()->NumAxes();
+
+    auto broadcast_shape = *start->shape();
+    if (*start->shape() != *end->shape()) {
+      broadcast_shape = *JUST(InferUnifiedShapeForBroadcasting({*start->shape(), *end->shape()}));
+    }
+
+    std::shared_ptr<one::Tensor> broadcast_start = JUST(Identity(start));
+    std::shared_ptr<one::Tensor> broadcast_end = JUST(Identity(end));
+    if (*start->shape() != broadcast_shape) {
+      broadcast_start = JUST(view::Expand(start, broadcast_shape));
+    }
+    if (*end->shape() != broadcast_shape) {
+      broadcast_end = JUST(view::Expand(end, broadcast_shape));
+    }
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("float_operand", "has_float_operand",
+                                                 "int_operand", "has_int_operand");
+    if (weight.IsFloatingPoint()) {
+      attrs.SetAllAttrs(weight.As<double>(), true, NullOpt, false);
+    } else if (weight.IsIntegral() || weight.IsBool()) {
+      attrs.SetAllAttrs(NullOpt, false, weight.As<int64_t>(), true);
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "The scalar in " << op_->op_type_name()
+                                  << " should be float or int.";
+    }
+
+    TensorProcessor tensor_processor;
+    if (broadcast_end->requires_grad()) {
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+               .AddInputs({JUST(Identity(broadcast_start)), broadcast_end})
+               .Apply());
+    } else {
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+               .AddInputs({broadcast_start, broadcast_end})
+               .Apply());
+    }
+    const TensorTuple& input_vec = JUST(tensor_processor.GetInputs());
+    const std::shared_ptr<one::Tensor>& start_cast = input_vec.at(0);
+    const std::shared_ptr<one::Tensor>& end_cast = input_vec.at(1);
+    JUST(CheckInplaceValid(broadcast_start));
+    JUST(CheckInplaceCastValid(broadcast_start, start_cast));
+    JUST(CheckInplaceShapeCanExpandTo(*start_cast->shape(), *end_cast->shape()));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = start;
+    JUST(OpInterpUtil::Dispatch(*op_, input_vec, outputs.get(), attrs));
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ScalarLerpGradFunctor {
+ public:
+  ScalarLerpGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("scalar_lerp_grad")
+                         .Input("start")
+                         .Input("end")
+                         .Input("out_diff")
+                         .Output("start_diff")
+                         .Output("end_diff")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& start,
+                                const std::shared_ptr<one::Tensor>& end,
+                                const std::shared_ptr<one::Tensor>& out_diff,
+                                const Scalar& weight) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("float_operand", "has_float_operand",
+                                                 "int_operand", "has_int_operand");
+    if (weight.IsFloatingPoint()) {
+      attrs.SetAllAttrs(weight.As<double>(), true, NullOpt, false);
+    } else if (weight.IsIntegral()) {
+      attrs.SetAllAttrs(NullOpt, false, weight.As<int64_t>(), true);
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarLerpGrad should be float or int.";
+    }
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {start, end, out_diff}, attrs);
   }
 
  private:
@@ -4127,6 +4516,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<LogSumExpFunctor>("LogSumExp");
   m.add_functor<LogAddExpFunctor>("LogAddExp");
   m.add_functor<QuantileFunctor>("Quantile");
+  m.add_functor<ScalarQuantileFunctor>("ScalarQuantile");
   m.add_functor<TransposeFunctor>("Transpose");
   m.add_functor<Transpose2dimFunctor>("Transpose2dim");
   m.add_functor<TransposeFunctor>("Permute");
@@ -4176,6 +4566,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarLogicalAndFunctor, ScalarLogicalAnd2Functor>("ScalarLogicalAnd");
   m.add_functor<ScalarLogicalOrFunctor, ScalarLogicalOr2Functor>("ScalarLogicalOr");
   m.add_functor<ScalarLogicalXorFunctor, ScalarLogicalXor2Functor>("ScalarLogicalXor");
+  m.add_functor<ScalarLerpFunctor>("ScalarLerp");
+  m.add_functor<ScalarInplaceLerpFunctor>("ScalarInplaceLerp");
+  m.add_functor<ScalarLerpGradFunctor>("ScalarLerpGrad");
   m.add_functor<StandardDeviationFunctor>("StandardDeviation");
   m.add_functor<VarianceFunctor>("Variance");
   m.add_functor<RMSLayerNormalizationFunctor>("RMSLayerNormalization");

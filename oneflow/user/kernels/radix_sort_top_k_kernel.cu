@@ -112,7 +112,7 @@ class GpuRadixSortTopKKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("top_k")                                                                  \
       .SetCreateFn<GpuRadixSortTopKKernel<dtype>>()                                              \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                           \
-                       && (user_op::HobAttr<int32_t>("k") > 128)                                 \
+                       && (user_op::HobAttr<int32_t>("k") > 32)                                  \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))          \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
         const Shape& in_shape = ctx->InputShape("in", 0);                                        \
@@ -140,5 +140,6 @@ REGISTER_CUDA_RADIX_SORT_TOP_K_KERNEL(uint8_t)
 REGISTER_CUDA_RADIX_SORT_TOP_K_KERNEL(int8_t)
 REGISTER_CUDA_RADIX_SORT_TOP_K_KERNEL(int32_t)
 REGISTER_CUDA_RADIX_SORT_TOP_K_KERNEL(int64_t)
+REGISTER_CUDA_RADIX_SORT_TOP_K_KERNEL(half)
 
 }  // namespace oneflow
