@@ -29,6 +29,8 @@ class TestMluMomentumUpdate(flow.unittest.TestCase):
             params = [
                 flow.ones(4, 100, 200, 10).to(device),
                 flow.ones(23333).to(device) * 2,
+                flow.ones(1).to(device),
+                flow.ones(1, 10).to(device),
             ]
             params[0].grad = flow.ones_like(params[0]).to(device)
             params[1].grad = flow.ones_like(params[1]).to(device) * 0.5

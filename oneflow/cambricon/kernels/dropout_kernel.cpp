@@ -72,8 +72,8 @@ class MluDropoutKernel final : public user_op::OpKernel {
       add_to_output_dptrs_vec[0] = add_to_output->dptr();
       size_t addn_workspace_size = 0;
       OF_CNNL_CHECK(cnnlGetAddNWorkspaceSize(ctx->stream()->As<ep::MluStream>()->cnnl_handle(),
-                                                add_to_output_descs_vec.data(), 1,
-                                                out_desc.desc(), &addn_workspace_size));
+                                             add_to_output_descs_vec.data(), 1, out_desc.desc(),
+                                             &addn_workspace_size));
       CnnlWorkspace workspace(ctx->stream()->As<ep::MluStream>(), addn_workspace_size);
 
       OF_CNNL_CHECK(cnnlAddN_v2(ctx->stream()->As<ep::MluStream>()->cnnl_handle(),

@@ -17,81 +17,173 @@ limitations under the License.
 
 namespace oneflow {
 
+static constexpr int32_t nram_limit = 32;
+
+__mlu_func__ void load_model_diff(float* dst, const float* src, int32_t size) {
+  __memcpy_async(dst, src, size * sizeof(float), GDRAM2NRAM);
+}
+
+__mlu_func__ void load_model_diff(float* dst, const half* src, int32_t size) {
+  __nram__ half temp[nram_limit];
+  __memcpy_async(temp, src, size * sizeof(half), GDRAM2NRAM);
+  __bang_half2float(dst, temp, size);
+}
+
 template<typename T, typename G>
 __mlu_global__ void bang_momentum_update_internal(int64_t n, T scale, float l1, float l2,
                                                   float beta, float dampening, bool nesterov,
                                                   bool maximize, float weight_decay,
-                                                  float learning_rate_val, float lr_scale,
-                                                  const float* learning_rate, const T* scale_by_ptr,
-                                                  const int64_t* skip_if, const G* model_diff,
-                                                  T* model, T* momentum) {
+                                                  float learning_rate, float lr_scale,
+                                                  const float* learning_rate_ptr,
+                                                  const T* scale_by_ptr, const int64_t* skip_if,
+                                                  const G* model_diff, T* model, T* momentum) {
   if (skip_if && *skip_if != 0) { return; }
-  if (learning_rate) { learning_rate_val = *learning_rate; }
+  if (learning_rate_ptr) { learning_rate = *learning_rate_ptr; }
   if (scale_by_ptr) { scale *= *scale_by_ptr; }
-  learning_rate_val *= lr_scale;
 
-  for (int64_t i = taskId; i < n; i += taskDim) {
-    T model_val = model[i];
-    T momentum_val = momentum[i];
+  learning_rate *= lr_scale;
+  T lr_decay = learning_rate * weight_decay;
+  T alpha = -learning_rate;
+  if (maximize) { alpha = learning_rate; }
 
-    T model_diff_val = static_cast<T>(model_diff[i]) * scale
-                       + l1 * ((model_val >= 0) - (model_val <= 0)) + l2 * model_val;
-    T v = beta * momentum_val + (1.0f - dampening) * model_diff_val;
-    momentum[i] = v;
+  int64_t step = (n + taskDim - 1) / taskDim;
+  int64_t start = step * taskId;
+  int64_t end = start + step;
+  if (end > n) { end = n; }
+  int64_t length = start < end ? end - start : 0;
+  int64_t nram_rest = (length & 0x1F);  // length % nram_limit2
+  int32_t nram_limit_bytes = nram_limit * sizeof(T);
 
-    if (!nesterov) {
-      model_diff_val = v;
-    } else {
-      model_diff_val += beta * v;
+  __nram__ T nram_model[nram_limit];
+  __nram__ T nram_model_diff[nram_limit];
+  __nram__ T nram_momentum[nram_limit];
+  __nram__ T nram_temp0[nram_limit];
+  __nram__ T nram_temp1[nram_limit];
+
+  int64_t j = 0;
+  for (; j < length - nram_limit + 1; j += nram_limit) {
+    __memcpy_async(nram_model, model + start + j, nram_limit_bytes, GDRAM2NRAM);
+    __memcpy_async(nram_momentum, momentum + start + j, nram_limit_bytes, GDRAM2NRAM);
+
+    load_model_diff(nram_model_diff, model_diff + start + j, nram_limit);
+    __sync_copy_dram_to_nram();
+
+    __bang_mul_scalar(nram_model_diff, nram_model_diff, scale, nram_limit);
+    __bang_ge_scalar(nram_temp0, nram_model, 0, nram_limit);
+    __bang_le_scalar(nram_temp1, nram_model, 0, nram_limit);
+    __bang_sub(nram_temp0, nram_temp0, nram_temp1, nram_limit);
+
+    __bang_mul_scalar(nram_temp0, nram_temp0, l1, nram_limit);
+    __bang_mul_scalar(nram_temp1, nram_model, l2, nram_limit);
+    __bang_add(nram_model_diff, nram_model_diff, nram_temp0, nram_limit);
+    __bang_add(nram_model_diff, nram_model_diff, nram_temp1, nram_limit);
+
+    __bang_mul_scalar(nram_momentum, nram_momentum, beta, nram_limit);
+    __bang_mul_scalar(nram_temp0, nram_model_diff, 1.0f - dampening, nram_limit);
+    __bang_add(nram_momentum, nram_momentum, nram_temp0, nram_limit);
+
+    __sync_compute();
+    __memcpy_async(momentum + start + j, nram_momentum, nram_limit_bytes, NRAM2GDRAM);
+
+    T* model_diff_val = nram_momentum;
+    if (nesterov) {
+      model_diff_val = nram_model_diff;
+      __bang_mul_scalar(nram_temp0, nram_momentum, beta, nram_limit);
+      __bang_add(model_diff_val, model_diff_val, nram_temp0, nram_limit);
     }
-    T alpha = -learning_rate_val;
-    if (maximize) { alpha = learning_rate_val; }
-    T w = model_val + alpha * model_diff_val - learning_rate_val * weight_decay * model_val;
-    model[i] = w;
+
+    __bang_mul_scalar(model_diff_val, model_diff_val, alpha, nram_limit);
+    __bang_mul_scalar(nram_model, nram_model, 1 - lr_decay, nram_limit);
+    __bang_add(nram_model, nram_model, model_diff_val, nram_limit);
+
+    __sync_compute();
+    __memcpy_async(model + start + j, nram_model, nram_limit_bytes, NRAM2GDRAM);
+    __sync_copy_nram_to_dram();
+  }
+
+  if (nram_rest > 0) {
+    int32_t nram_rest_bytes = nram_rest * sizeof(T);
+    __memcpy_async(nram_model, model + start + j, nram_rest_bytes, GDRAM2NRAM);
+    __memcpy_async(nram_momentum, momentum + start + j, nram_rest_bytes, GDRAM2NRAM);
+
+    load_model_diff(nram_model_diff, model_diff + start + j, nram_rest);
+    __sync_copy_dram_to_nram();
+
+    __bang_mul_scalar(nram_model_diff, nram_model_diff, scale, nram_rest);
+    __bang_ge_scalar(nram_temp0, nram_model, 0, nram_rest);
+    __bang_le_scalar(nram_temp1, nram_model, 0, nram_rest);
+    __bang_sub(nram_temp0, nram_temp0, nram_temp1, nram_rest);
+
+    __bang_mul_scalar(nram_temp0, nram_temp0, l1, nram_rest);
+    __bang_mul_scalar(nram_temp1, nram_model, l2, nram_rest);
+    __bang_add(nram_model_diff, nram_model_diff, nram_temp0, nram_rest);
+    __bang_add(nram_model_diff, nram_model_diff, nram_temp1, nram_rest);
+
+    __bang_mul_scalar(nram_momentum, nram_momentum, beta, nram_rest);
+    __bang_mul_scalar(nram_temp0, nram_model_diff, 1.0f - dampening, nram_rest);
+    __bang_add(nram_momentum, nram_momentum, nram_temp0, nram_rest);
+
+    __sync_compute();
+    __memcpy_async(momentum + start + j, nram_momentum, nram_rest_bytes, NRAM2GDRAM);
+
+    T* model_diff_val = nram_momentum;
+    if (nesterov) {
+      model_diff_val = nram_model_diff;
+      __bang_mul_scalar(nram_temp0, nram_momentum, beta, nram_rest);
+      __bang_add(model_diff_val, model_diff_val, nram_temp0, nram_rest);
+    }
+
+    __bang_mul_scalar(model_diff_val, model_diff_val, alpha, nram_rest);
+    __bang_mul_scalar(nram_model, nram_model, 1 - lr_decay, nram_rest);
+    __bang_add(nram_model, nram_model, model_diff_val, nram_rest);
+
+    __sync_compute();
+    __memcpy_async(model + start + j, nram_model, nram_rest_bytes, NRAM2GDRAM);
+    __sync_copy_nram_to_dram();
   }
 }
 
 template<typename T>
 void bang_momentum_update_kernel(BangHandle& handle, int64_t n, T scale, float l1, float l2,
                                  float beta, float dampening, bool nesterov, bool maximize,
-                                 float weight_decay, float learning_rate_val, float lr_scale,
-                                 const float* learning_rate, const T* scale_by_ptr,
+                                 float weight_decay, float learning_rate, float lr_scale,
+                                 const float* learning_rate_ptr, const T* scale_by_ptr,
                                  const int64_t* skip_if, const T* model_diff, T* model,
                                  T* momentum) {
   cnrtDim3_t dim = {handle.nclusters, handle.ncores_per_cluster, 1};
   cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
   bang_momentum_update_internal<<<dim, func_type, handle.queue>>>(
-      n, scale, l1, l2, beta, dampening, nesterov, maximize, weight_decay, learning_rate_val,
-      lr_scale, learning_rate, scale_by_ptr, skip_if, model_diff, model, momentum);
+      n, scale, l1, l2, beta, dampening, nesterov, maximize, weight_decay, learning_rate, lr_scale,
+      learning_rate_ptr, scale_by_ptr, skip_if, model_diff, model, momentum);
 }
 
 template<typename T>
 void bang_momentum_update_half_kernel(BangHandle& handle, int64_t n, T scale, float l1, float l2,
                                       float beta, float dampening, bool nesterov, bool maximize,
-                                      float weight_decay, float learning_rate_val, float lr_scale,
-                                      const float* learning_rate, const T* scale_by_ptr,
+                                      float weight_decay, float learning_rate, float lr_scale,
+                                      const float* learning_rate_ptr, const T* scale_by_ptr,
                                       const int64_t* skip_if, const void* model_diff, T* model,
                                       T* momentum) {
   cnrtDim3_t dim = {handle.nclusters, handle.ncores_per_cluster, 1};
   cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
   bang_momentum_update_internal<<<dim, func_type, handle.queue>>>(
-      n, scale, l1, l2, beta, dampening, nesterov, maximize, weight_decay, learning_rate_val,
-      lr_scale, learning_rate, scale_by_ptr, skip_if, static_cast<const half*>(model_diff), model,
+      n, scale, l1, l2, beta, dampening, nesterov, maximize, weight_decay, learning_rate, lr_scale,
+      learning_rate_ptr, scale_by_ptr, skip_if, static_cast<const half*>(model_diff), model,
       momentum);
 }
 
-#define INSTANCE_BANG_MOMENTUM_UPDATE_KERNEL(T)                                                  \
-  template void bang_momentum_update_kernel<T>(                                                  \
-      BangHandle & handle, int64_t n, T scale, float l1, float l2, float beta, float dampening,  \
-      bool nesterov, bool maximize, float weight_decay, float learning_rate_val, float lr_scale, \
-      const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,                 \
+#define INSTANCE_BANG_MOMENTUM_UPDATE_KERNEL(T)                                                 \
+  template void bang_momentum_update_kernel<T>(                                                 \
+      BangHandle & handle, int64_t n, T scale, float l1, float l2, float beta, float dampening, \
+      bool nesterov, bool maximize, float weight_decay, float learning_rate, float lr_scale,    \
+      const float* learning_rate_ptr, const T* scale_by_ptr, const int64_t* skip_if,            \
       const T* model_diff, T* model, T* momentum);
 
-#define INSTANCE_BANG_MOMENTUM_UPDATE_HALF_KERNEL(T)                                             \
-  template void bang_momentum_update_half_kernel<T>(                                             \
-      BangHandle & handle, int64_t n, T scale, float l1, float l2, float beta, float dampening,  \
-      bool nesterov, bool maximize, float weight_decay, float learning_rate_val, float lr_scale, \
-      const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,                 \
+#define INSTANCE_BANG_MOMENTUM_UPDATE_HALF_KERNEL(T)                                            \
+  template void bang_momentum_update_half_kernel<T>(                                            \
+      BangHandle & handle, int64_t n, T scale, float l1, float l2, float beta, float dampening, \
+      bool nesterov, bool maximize, float weight_decay, float learning_rate, float lr_scale,    \
+      const float* learning_rate_ptr, const T* scale_by_ptr, const int64_t* skip_if,            \
       const void* model_diff, T* model, T* momentum);
 
 INSTANCE_BANG_MOMENTUM_UPDATE_KERNEL(float)
