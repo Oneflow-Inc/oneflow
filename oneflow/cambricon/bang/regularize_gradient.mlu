@@ -17,13 +17,63 @@ limitations under the License.
 
 namespace oneflow {
 
+static constexpr int32_t nram_limit = 32;
+
 template<typename T>
 __mlu_global__ void bang_regularize_gradient_internal(int64_t n, const T* model,
                                                       const T* model_diff, T* out, float l1,
                                                       float l2) {
-  for (int64_t i = taskId; i < n; i += taskDim) {
-    T model_val = model[i];
-    out[i] = model_diff[i] + l1 * ((model_val >= 0) - (model_val <= 0)) + l2 * model_val;
+  int64_t step = (n + taskDim - 1) / taskDim;
+  int64_t start = step * taskId;
+  int64_t end = start + step;
+  if (end > n) { end = n; }
+  int64_t length = start < end ? end - start : 0;
+  int64_t nram_rest = (length & 0x1F);  // length % nram_limit2
+  int32_t nram_limit_bytes = nram_limit * sizeof(T);
+
+  __nram__ T nram_model[nram_limit];
+  __nram__ T nram_model_diff[nram_limit];
+  __nram__ T nram_temp0[nram_limit];
+  __nram__ T nram_temp1[nram_limit];
+
+  int64_t j = 0;
+  for (; j < length - nram_limit + 1; j += nram_limit) {
+    __memcpy_async(nram_model, model + start + j, nram_limit_bytes, GDRAM2NRAM);
+    __memcpy_async(nram_model_diff, model_diff + start + j, nram_limit_bytes, GDRAM2NRAM);
+    __sync_copy_dram_to_nram();
+
+    __bang_ge_scalar(nram_temp0, nram_model, 0, nram_limit);
+    __bang_le_scalar(nram_temp1, nram_model, 0, nram_limit);
+    __bang_sub(nram_temp0, nram_temp0, nram_temp1, nram_limit);
+
+    __bang_mul_scalar(nram_temp0, nram_temp0, l1, nram_limit);
+    __bang_mul_scalar(nram_temp1, nram_model, l2, nram_limit);
+    __bang_add(nram_model_diff, nram_model_diff, nram_temp0, nram_limit);
+    __bang_add(nram_model_diff, nram_model_diff, nram_temp1, nram_limit);
+
+    __sync_compute();
+    __memcpy_async(out + start + j, nram_model_diff, nram_limit_bytes, NRAM2GDRAM);
+    __sync_copy_nram_to_dram();
+  }
+
+  if (nram_rest > 0) {
+    int32_t nram_rest_bytes = nram_rest * sizeof(T);
+    __memcpy_async(nram_model, model + start + j, nram_rest_bytes, GDRAM2NRAM);
+    __memcpy_async(nram_model_diff, model_diff + start + j, nram_rest_bytes, GDRAM2NRAM);
+    __sync_copy_dram_to_nram();
+
+    __bang_ge_scalar(nram_temp0, nram_model, 0, nram_rest);
+    __bang_le_scalar(nram_temp1, nram_model, 0, nram_rest);
+    __bang_sub(nram_temp0, nram_temp0, nram_temp1, nram_rest);
+
+    __bang_mul_scalar(nram_temp0, nram_temp0, l1, nram_rest);
+    __bang_mul_scalar(nram_temp1, nram_model, l2, nram_rest);
+    __bang_add(nram_model_diff, nram_model_diff, nram_temp0, nram_rest);
+    __bang_add(nram_model_diff, nram_model_diff, nram_temp1, nram_rest);
+
+    __sync_compute();
+    __memcpy_async(out + start + j, nram_model_diff, nram_rest_bytes, NRAM2GDRAM);
+    __sync_copy_nram_to_dram();
   }
 }
 

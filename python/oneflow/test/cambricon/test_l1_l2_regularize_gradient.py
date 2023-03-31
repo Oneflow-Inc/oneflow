@@ -79,7 +79,7 @@ class TestL1L2RegularizeGradientMLUModule(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_l1_l2_regularize_gradient,
         ]
-        arg_dict["shape"] = [(200, 200), (400, 400)]
+        arg_dict["shape"] = [(1,), (1, 2023), (200, 200), (400, 400)]
         arg_dict["device"] = ["mlu"]
         arg_dict["dtype"] = [flow.float32]
         arg_dict["optimizer"] = [flow.optim.SGD]
