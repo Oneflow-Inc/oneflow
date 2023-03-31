@@ -16,31 +16,33 @@ limitations under the License.
 #include <curand.h>
 #include <curand_kernel.h>
 
-#include "oneflow/core/common/data_type.h"
-#include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/random_generator.h"
+#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/container_util.h"
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/user/kernels/op_kernel_wrapper.h"
 #include "oneflow/user/kernels/arange_kernel_util.h"
 #include "oneflow/user/kernels/radix_sort.cuh"
+#include "oneflow/user/kernels/random_seed_util.h"
 #include "oneflow/user/kernels/distributions/common.h"
+#include "oneflow/user/kernels/distributions/distribution_template_util.cuh"
 #include "oneflow/core/ep/include/device.h"
+#include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/job/nd_sbp_util.h"
-#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/register/tensor_slice_view.h"
-#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
-__global__ void GeneKeysAndValues(const int32_t n, int32_t* values, int32_t* keys,
-                                  curandState* state) {
+__global__ void GeneKeysAndValues(const int32_t n, uint64_t seed, uint64_t offset, int32_t* values,
+                                  int32_t* keys) {
   const int id = blockIdx.x * blockDim.x + threadIdx.x;
-  curandState local_state = state[id];
+  curandStatePhilox4_32_10_t state;
+  curand_init(seed, id, offset, &state);
   CUDA_1D_KERNEL_LOOP(i, n) {
-    keys[i] = curand(&local_state);
+    keys[i] = curand(&state);
     values[i] = i;
   }
-  state[id] = local_state;
 }
 
 __global__ void tempcopy2output(const int32_t n, const int32_t offset, int32_t* temp,
@@ -101,7 +103,8 @@ class GpuRandPermKernel final : public user_op::OpKernel {
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     const auto& generator = CHECK_JUST(one::MakeGenerator(kCUDA));
-    generator->set_current_seed(ctx->Attr<int64_t>("seed"));
+    generator->set_current_seed(
+        CHECK_JUST(GetOpKernelRandomSeedInCurrentRank(ctx, ctx->Attr<int64_t>("seed"))));
     return std::make_shared<DistributionKernelState>(generator);
   }
 
@@ -118,14 +121,20 @@ class GpuRandPermKernel final : public user_op::OpKernel {
     auto* distribution_state = dynamic_cast<DistributionKernelState*>(state);
     CHECK_NOTNULL(distribution_state);
     const auto& generator = distribution_state->generator();
+    CHECK_NOTNULL(generator);
     auto* stream = ctx->stream();
     const auto device_index = stream->device()->device_index();
     const auto& gpu_generator = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>(device_index));
-    CHECK_NOTNULL(generator);
 
-    int32_t block_num = gpu_generator->max_block_num();
-    int32_t thread_num = gpu_generator->max_thread_num();
-    curandState* curand_states = gpu_generator->curand_states();
+    ep::CudaStream* cuda_stream = stream->As<ep::CudaStream>();
+    auto execution_policy = gpu_generator->CalcExecutionPolicy(n, cuda_stream);
+
+    auto counter_offset = std::get<0>(execution_policy);
+    auto grid = std::get<1>(execution_policy);
+    auto block = std::get<2>(execution_policy);
+
+    uint64_t seed = gpu_generator->current_seed();
+    uint64_t offset = gpu_generator->get_philox_offset(counter_offset);
 
     // layout for tmp |...key(in and out,2xN)..|....value....|.... space for sort function....|
     // values are the desired indexes ,and keys are generated randomly.
@@ -143,8 +152,8 @@ class GpuRandPermKernel final : public user_op::OpKernel {
     void* tmp_base = reinterpret_cast<void*>(reinterpret_cast<char*>(temp_buffer_base)
                                              + temp_buffer_aligned_bytes);
     size_t temp_storage_bytes = GetCubSortPairsTempStorageSize<int32_t>(n);
-    GeneKeysAndValues<<<block_num, thread_num, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-        n, value_base, key_base, curand_states);
+    GeneKeysAndValues<<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+        n, seed, offset, value_base, key_base);
     if (cache == nullptr) {
       auto err = cub::DeviceRadixSort::SortPairs(
           /* d_temp_storage */ tmp_base,
@@ -174,6 +183,7 @@ class GpuRandPermKernel final : public user_op::OpKernel {
       const auto* randperm_cache = dynamic_cast<const GpuRandPermKernelCache*>(cache);
       auto len = randperm_cache->upper() - randperm_cache->lower();
       const int64_t offset = randperm_cache->lower();
+      int32_t block_num = gpu_generator->max_block_num();
       tempcopy2output<<<block_num, kCudaThreadsNumPerBlock, 0,
                         ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
           len, offset, temp_buffer_base, output);
@@ -198,4 +208,5 @@ REGISTER_USER_KERNEL("randperm")
       return sorted_in_aligned_bytes + indices_aligned_bytes + temp_storage_bytes
              + temp_aligned_bytes;
     });
+
 }  // namespace oneflow

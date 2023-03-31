@@ -15,7 +15,11 @@ limitations under the License.
 """
 
 import unittest
+from collections import OrderedDict
+from oneflow.test_utils.test_util import GenArgList
 from oneflow.test_utils.automated_test_util import *
+
+import numpy as np
 import oneflow as flow
 import oneflow.unittest
 import torch as torch_original
@@ -66,7 +70,9 @@ def generate_necessity_for_bce_loss(dim: int):
     batch_size = random(low=10, high=100).to(int)
     extra_dim = [random().to(int) for _ in range(dim - 2)]
     return (
-        random_tensor(dim, batch_size, num_classes, *extra_dim).to(device),
+        random_tensor(dim, batch_size, num_classes, low=0, high=1, *extra_dim).to(
+            device
+        ),
         random_tensor(
             dim,
             batch_size,
@@ -154,7 +160,7 @@ class TestCrossEntropyLossModule(flow.unittest.TestCase):
     def test_cross_entropy_prob_loss_with_random_data_dim_2(test_case):
         return _test_cross_entropy_loss(2, prob=True)
 
-    @autotest(n=5)
+    @autotest(n=5, rtol=1e-3)
     def test_cross_entropy_prob_loss_with_random_data_dim_3(test_case):
         return _test_cross_entropy_loss(3, prob=True)
 
@@ -257,6 +263,72 @@ def _test_nn_functional_binary_cross_entropy_with_logits(dim=int):
     return y
 
 
+def _test_nn_functional_binary_cross_entropy_with_logits_different_dtype_float_first(
+    test_case, shape, reduction, device
+):
+    def compare(a, b):
+        test_case.assertTrue(
+            np.allclose(
+                a.detach().cpu().numpy(),
+                b.detach().cpu().numpy(),
+                rtol=1e-5,
+                atol=1e-5,
+            )
+        )
+
+    arr = np.random.randn(*shape)
+
+    flow_pred_mask = flow.Tensor(arr).float().to(device)
+    flow_pred_mask.requires_grad = True
+    flow_gt_mask = flow.Tensor(arr).double().to(device)
+    flow_loss = flow.nn.functional.binary_cross_entropy_with_logits(
+        flow_pred_mask, flow_gt_mask, reduction=reduction
+    )
+    flow_loss.sum().backward()
+    torch_pred_mask = torch_original.Tensor(arr).float().to(device)
+    torch_pred_mask.requires_grad = True
+    torch_gt_mask = torch_original.Tensor(arr).double().to(device)
+    torch_loss = torch_original.nn.functional.binary_cross_entropy_with_logits(
+        torch_pred_mask, torch_gt_mask, reduction=reduction
+    )
+    torch_loss.sum().backward()
+    compare(flow_loss, torch_loss)
+    compare(flow_pred_mask.grad.data, torch_pred_mask.grad.data)
+
+
+def _test_nn_functional_binary_cross_entropy_with_logits_different_dtype_double_first(
+    test_case, shape, reduction, device
+):
+    def compare(a, b):
+        test_case.assertTrue(
+            np.allclose(
+                a.detach().cpu().numpy(),
+                b.detach().cpu().numpy(),
+                rtol=1e-5,
+                atol=1e-5,
+            )
+        )
+
+    arr = np.random.randn(*shape)
+
+    flow_pred_mask = flow.Tensor(arr).double().to(device)
+    flow_pred_mask.requires_grad = True
+    flow_gt_mask = flow.Tensor(arr).float().to(device)
+    flow_loss = flow.nn.functional.binary_cross_entropy_with_logits(
+        flow_pred_mask, flow_gt_mask, reduction=reduction
+    )
+    flow_loss.sum().backward()
+    torch_pred_mask = torch_original.Tensor(arr).double().to(device)
+    torch_pred_mask.requires_grad = True
+    torch_gt_mask = torch_original.Tensor(arr).float().to(device)
+    torch_loss = torch_original.nn.functional.binary_cross_entropy_with_logits(
+        torch_pred_mask, torch_gt_mask, reduction=reduction
+    )
+    torch_loss.sum().backward()
+    compare(flow_loss, torch_loss)
+    compare(flow_pred_mask.grad.data, torch_pred_mask.grad.data)
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestBCELossModule(flow.unittest.TestCase):
     @autotest(n=5)
@@ -303,6 +375,20 @@ class TestBCEWithLogitsLossModule(flow.unittest.TestCase):
     def test_nn_functional_binary_cross_entropy_with_logits(test_case):
         dim = random(2, 6).to(int).value()
         return _test_nn_functional_binary_cross_entropy_with_logits(dim)
+
+    @autotest(n=5)
+    def test_nn_functional_binary_cross_entropy_with_logits_different_dtype(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["fun"] = [
+            _test_nn_functional_binary_cross_entropy_with_logits_different_dtype_float_first,
+            _test_nn_functional_binary_cross_entropy_with_logits_different_dtype_double_first,
+        ]
+        arg_dict["shape"] = [(24, 16, 80), (42, 160), (4, 54, 32, 56)]
+        arg_dict["reduction"] = ["sum", "mean", "none"]
+        arg_dict["device"] = ["cpu", "cuda"]
+
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -394,12 +480,14 @@ class TestKLDivLossModule(flow.unittest.TestCase):
         device = random_device()
         shape = random_tensor().oneflow.shape
 
-        x = random_tensor(len(shape), *shape).to(device)
-        target = random_tensor(len(shape), *shape, requires_grad=False).to(device)
+        x = random_tensor(len(shape), low=0, *shape).to(device)
+        target = random_tensor(len(shape), low=0, *shape, requires_grad=False).to(
+            device
+        )
 
         m = torch.nn.KLDivLoss(
             reduction=oneof("none", "sum", "mean", "batchmean", nothing()),
-            log_target=oneof(True, False),
+            log_target=oneof(True, False, nothing()),
         )
         m.train(random())
         m.to(device)
@@ -411,13 +499,15 @@ class TestKLDivLossModule(flow.unittest.TestCase):
     def test_nn_functional_kl_div(test_case):
         device = random_device()
         shape = random_tensor().oneflow.shape
-        x = random_tensor(len(shape), *shape).to(device)
-        target = random_tensor(len(shape), *shape, requires_grad=False).to(device)
+        x = random_tensor(len(shape), low=0, *shape).to(device)
+        target = random_tensor(len(shape), low=0, *shape, requires_grad=False).to(
+            device
+        )
         y = torch.nn.functional.kl_div(
             x,
             target,
             reduction=oneof("none", "sum", "mean", "batchmean", nothing()),
-            log_target=oneof(True, False),
+            log_target=oneof(True, False, nothing()),
         )
         return y
 

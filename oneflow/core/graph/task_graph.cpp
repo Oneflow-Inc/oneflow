@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
+#include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/global_for.h"
@@ -117,7 +118,7 @@ bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
   return false;
 }
 
-bool IsTaskNodeProducedResgtHasMultiRegstNum(const TaskNode* node) {
+bool IsTaskNodeProducedRegstHasMultiRegstNum(const TaskNode* node) {
   for (const auto& pair : node->produced_regsts()) {
     if (pair.second->min_register_num() > 1) { return true; }
   }
@@ -126,7 +127,7 @@ bool IsTaskNodeProducedResgtHasMultiRegstNum(const TaskNode* node) {
 
 bool CanBeMergedInChain(const TaskNode* node) {
   // ONLY the node which is NormalForward and in GPU and NOT variable can be merged.
-  if (IsTaskNodeProducedResgtHasMultiRegstNum(node)) { return false; }
+  if (IsTaskNodeProducedRegstHasMultiRegstNum(node)) { return false; }
   const auto* fw_comp_node = dynamic_cast<const NormalForwardCompTaskNode*>(node);
   if (fw_comp_node == nullptr) { return false; }
   if (fw_comp_node->device_type() != DeviceType::kCUDA) { return false; }
@@ -374,7 +375,7 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const OpEdge* op_edge) {
   std::shared_ptr<CompTaskNode> src_comp_task(NewCompTaskNode4OpNode(src_node));
   std::shared_ptr<CompTaskNode> dst_comp_task(NewCompTaskNode4OpNode(dst_node));
   // NOTE(chengcheng): MUST use TaskType instead of OpTypeCase because may
-  //   Multi-op correspoding to SAME TaskType such as:
+  //   Multi-op corresponding to SAME TaskType such as:
   //     DistributeConcatOpConf and DistributeAddOpConf -> TaskType::kDistributeConcat
   //     DistributeSplitOpConf  and DistributeCloneOpConf -> TaskType::kDistributeSplit
   // * -> DistributeConcat
@@ -897,12 +898,13 @@ void TaskGraph::DecideExecutionOrder() {
   // of memory
   StraightenAlgorithmTag straighten_algorithm_tag =
       GlobalJobDesc().job_conf().straighten_algorithm_tag_in_task_graph();
-  if (straighten_algorithm_tag == StraightenAlgorithmTag::kCompressMemory
-      || (straighten_algorithm_tag == StraightenAlgorithmTag::kOverlap4ModelParallelism
-          && GlobalProcessCtx::WorldSize() > 1)) {
-    StraightenNodes(this, &ordered_task_nodes_);
-  } else {
+  if (straighten_algorithm_tag == StraightenAlgorithmTag::kDisableStraighten
+      || (straighten_algorithm_tag == StraightenAlgorithmTag::kOverlap4Transfer
+          && GlobalProcessCtx::WorldSize() == 1)) {
     SetOrderInGraphForEachNode();
+  } else {
+    StraightenNodes(this, &ordered_task_nodes_,
+                    Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream());
   }
 }
 

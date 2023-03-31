@@ -42,6 +42,7 @@ enum class UnaryOp {
   kTanh,
   kThreshold,
   kFastGelu,
+  kQuickGelu,
   // math op
   kAbs,
   kAcos,
@@ -56,6 +57,7 @@ enum class UnaryOp {
   kErf,
   kErfc,
   kExp,
+  kExp2,
   kExpm1,
   kFloor,
   kLgamma,
@@ -82,11 +84,17 @@ enum class UnaryOp {
   // logical op
   kLogicalNot,
 
+  // cast op
+  kCast,
+
   // utils op
   kIsInf,
   kIsNan,
   kIsFinite,
   kNanAssign,
+
+  // bitwise op
+  kBitwiseNot,
 };
 
 }

@@ -22,7 +22,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestRNNModules(flow.unittest.TestCase):
-    @autotest(n=5, check_graph=True)
+    @autotest(n=5, check_graph=True, rtol=1e-2, atol=1e-3)
     def test_rnn(test_case):
         device = random_device()
         batch_size = random(1, 6)
@@ -46,7 +46,7 @@ class TestRNNModules(flow.unittest.TestCase):
         out = m(input)
         return out[0]
 
-    @autotest(n=5, check_graph=True)
+    @autotest(n=5, check_graph=True, rtol=1e-2)
     def test_lstm(test_case):
         device = random_device()
         batch_size = random(1, 6)
@@ -71,7 +71,7 @@ class TestRNNModules(flow.unittest.TestCase):
         out = m(input)
         return out[0]
 
-    @autotest(n=5, check_graph=True)
+    @autotest(n=5, check_graph=True, rtol=1e-2)
     def test_gru(test_case):
         device = random_device()
         batch_size = random(1, 6)

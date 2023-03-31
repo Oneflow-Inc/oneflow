@@ -33,6 +33,11 @@ def _test_logical_and(test_case, shape, dtype, device):
     of_out = flow.logical_and(input, other)
     np_out = np.logical_and(np_input, np_other)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+    x = torch.ones(3).byte()
+    y = torch.ones(3).byte()
+
+    z = (x & ~y).bool()
+    test_case.assertTrue(np.array_equal(z.numpy(), [False, False, False]))
 
 
 def _test_tensor_logical_and(test_case, shape, dtype, device):

@@ -17,7 +17,7 @@ from typing import Callable, Dict, Iterator, List, Union, Tuple
 
 import math
 import oneflow as flow
-from oneflow.nn.optimizer.optimizer import Optimizer
+from oneflow.optim.optimizer import Optimizer
 from oneflow.nn.parameter import Parameter
 
 
@@ -53,7 +53,10 @@ class LAMB(Optimizer):
             decoupled weight decay (also known as AdamW) (default: True)
         do_bias_correction (bool, optional): whether to do bias correction (default: True)
         amsgrad (bool, optional): whether to use the AMSGrad variant of this algorithm. 
-        NOT SUPPORTED now! (default: False)
+            NOT SUPPORTED now! (default: False)
+        contiguous_params (bool, optional): whether to use contiguous ParamGroup 
+            which puts all parameters of the same type, device and group into the
+            same tensor and update them together. (default: False)
         
     .. _Large Batch Optimization for Deep Learning\\: Training BERT in 76 minutes:
         https://arxiv.org/abs/1904.00962
@@ -113,6 +116,7 @@ class LAMB(Optimizer):
         adam_w_mode: bool = True,
         do_bias_correction: bool = True,
         amsgrad: bool = False,
+        contiguous_params: bool = False,
     ):
         if amsgrad:
             # TODO: supported amsgrad in Lamb
@@ -137,11 +141,17 @@ class LAMB(Optimizer):
         options["bias_correction1"] = 1.0
         options["bias_correction2"] = 1.0
         options["do_bias_correction"] = do_bias_correction
+        options["contiguous_params"] = contiguous_params
 
         super().__init__(params, options)
 
         for param_group in self.param_groups:
-            for param in param_group.parameters:
+            if param_group["contiguous_params"]:
+                param_list = param_group.contiguous_parameters
+            else:
+                param_list = param_group.parameters
+
+            for param in param_list:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
 
@@ -164,7 +174,8 @@ class LAMB(Optimizer):
         with flow.no_grad():
             loss = None
             if closure is not None:
-                loss = closure()
+                with flow.enable_grad():
+                    loss = closure()
 
             for param_group in self.param_groups:
                 if param_group["do_bias_correction"]:
@@ -190,7 +201,13 @@ class LAMB(Optimizer):
                 else:
                     kwargs["l2"] = param_group["weight_decay"]
                     kwargs["weight_decay"] = 0.0
-                for param in param_group.parameters:
+
+                if param_group["contiguous_params"]:
+                    param_list = param_group.contiguous_parameters
+                else:
+                    param_list = param_group.parameters
+
+                for param in param_list:
                     if param.grad is None:
                         continue
                     if "exp_avg" not in self._state[param]:
@@ -211,6 +228,10 @@ class LAMB(Optimizer):
     def _generate_conf_for_graph(self, train_conf, vars_conf):
         new_opt_confs = []
         for param_group in self.param_groups:
+            assert (
+                param_group["contiguous_params"] != True
+            ), "contiguous_params cannot be used in graph"
+
             optimizer_conf = train_conf.optimizer_conf.add()
 
             lr = (

@@ -25,11 +25,8 @@ if(RPC_BACKEND MATCHES "GRPC")
   include(grpc)
 endif()
 include(flatbuffers)
-include(lz4)
-include(string_view)
 
 include(hwloc)
-include(liburing)
 if(WITH_ONEDNN)
   include(oneDNN)
 endif()
@@ -68,9 +65,7 @@ set(oneflow_third_party_libs
     ${OPENSSL_STATIC_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
     ${FLATBUFFERS_STATIC_LIBRARIES}
-    ${LZ4_STATIC_LIBRARIES}
-    nlohmann_json::nlohmann_json
-    string-view-lite)
+    nlohmann_json::nlohmann_json)
 if(WITH_ONEDNN)
   set(oneflow_third_party_libs ${oneflow_third_party_libs} ${ONEDNN_STATIC_LIBRARIES})
 endif()
@@ -94,9 +89,7 @@ set(oneflow_third_party_dependencies
     re2
     opencv
     install_libpng_headers
-    flatbuffers
-    lz4_copy_libs_to_destination
-    lz4_copy_headers_to_destination)
+    flatbuffers)
 if(WITH_ONEDNN)
   list(APPEND oneflow_third_party_dependencies onednn)
 endif()
@@ -128,8 +121,7 @@ list(
   ${HALF_INCLUDE_DIR}
   ${ABSL_INCLUDE_DIR}
   ${OPENSSL_INCLUDE_DIR}
-  ${FLATBUFFERS_INCLUDE_DIR}
-  ${LZ4_INCLUDE_DIR})
+  ${FLATBUFFERS_INCLUDE_DIR})
 if(WITH_ONEDNN)
   list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${ONEDNN_INCLUDE_DIR})
 endif()
@@ -137,7 +129,8 @@ endif()
 list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${RE2_INCLUDE_DIR})
 
 if(BUILD_CUDA)
-  if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
+  # Always use third_party/cub for Clang CUDA in case of compatibility issues
+  if("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA" AND CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
     if(CMAKE_CXX_STANDARD LESS 14)
       add_definitions(-DTHRUST_IGNORE_DEPRECATED_CPP_DIALECT)
       add_definitions(-DCUB_IGNORE_DEPRECATED_CPP11)
@@ -150,6 +143,8 @@ if(BUILD_CUDA)
     list(APPEND oneflow_third_party_dependencies cub_copy_headers_to_destination)
   endif()
   include(nccl)
+  include(cutlass)
+  include(trt_flash_attention)
 
   list(APPEND oneflow_third_party_libs ${NCCL_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
@@ -159,6 +154,16 @@ if(BUILD_CUDA)
 
   list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${CUDNN_INCLUDE_DIRS} ${CUB_INCLUDE_DIR}
        ${NCCL_INCLUDE_DIR})
+
+  if(WITH_CUTLASS)
+    list(APPEND oneflow_third_party_dependencies cutlass)
+    list(APPEND oneflow_third_party_dependencies cutlass_copy_examples_to_destination)
+    list(APPEND oneflow_third_party_libs ${CUTLASS_LIBRARIES})
+    list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${CUTLASS_INCLUDE_DIR})
+  endif()
+  list(APPEND oneflow_third_party_dependencies trt_flash_attention)
+  list(APPEND oneflow_third_party_libs ${TRT_FLASH_ATTENTION_LIBRARIES})
+  list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${TRT_FLASH_ATTENTION_INCLUDE_DIR})
 endif()
 
 if(BUILD_RDMA)
@@ -182,13 +187,6 @@ if(BUILD_HWLOC)
   list(APPEND oneflow_third_party_libs ${PCIACCESS_STATIC_LIBRARIES})
   list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${HWLOC_INCLUDE_DIR})
   add_definitions(-DWITH_HWLOC)
-endif()
-
-if(WITH_LIBURING)
-  list(APPEND oneflow_third_party_dependencies liburing)
-  list(APPEND oneflow_third_party_libs ${LIBURING_STATIC_LIBRARIES})
-  list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${LIBURING_INCLUDE_DIR})
-  add_definitions(-DWITH_LIBURING)
 endif()
 
 include_directories(SYSTEM ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})

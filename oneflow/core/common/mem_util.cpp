@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/mem_util.h"
+#include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/vm/virtual_machine.h"
 
 #include <unistd.h>
 #include <sys/sysinfo.h>
@@ -29,6 +31,11 @@ struct ProcStat {
   unsigned long vsize = 0;
   long rss = 0;
 };
+
+Maybe<void> CPUSynchronize() {
+  if (Singleton<VirtualMachine>::Get() != nullptr) { return vm::CurrentRankSync(); }
+  return Maybe<void>::Ok();
+}
 
 }  // namespace
 
@@ -57,6 +64,29 @@ void ProcessMemUsage(double* vm_usage, double* resident_set) {
   // return with MB
   *resident_set = (proc_stat.rss * page_size_kb) >> 20;
 #endif  // __linux__
+}
+
+Maybe<double> GetCPUMemoryUsed() {
+  JUST(CPUSynchronize());
+  double vm_ = 0, rss_ = 0;
+  ProcessMemUsage(&vm_, &rss_);
+  return rss_;
+}
+
+std::string FormatMemSize(uint64_t size) {
+  std::ostringstream os;
+  os.precision(1);
+  os << std::fixed;
+  if (size <= 1024UL) {
+    os << size << " Bytes";
+  } else if (size <= 1048576UL) {
+    os << ((float)size / 1024.0) << " KB";
+  } else if (size <= 1073741824UL) {
+    os << ((float)size / 1048576.0) << " MB";
+  } else {
+    os << ((float)size / 1073741824.0) << " GB";
+  }
+  return os.str();
 }
 
 }  // namespace oneflow

@@ -24,6 +24,7 @@ def OneFlow_OFRecordTensor : TensorOf<[OneFlow_OFRecordElement]>;
 def OneFlow_TensorBufferTensor : TensorOf<[OneFlow_TensorBufferElement]>;
 
 def OneFlow_Tensor : TensorOf<[AnyType]>;
+
 def SI32ArrayAttr : TypedArrayAttrBase<SI32Attr, "signed 32-bit integer array attribute"> {}
 
 def SI64ArrayAttr : TypedArrayAttrBase<SI64Attr, "signed 64-bit integer array attribute"> {}
@@ -33,6 +34,8 @@ def ShapeAttr : TypedArrayAttrBase<SI64Attr, ""> {}
 def DTArrayAttr : TypedArrayAttrBase<OneFlow_DataType, ""> {}
 
 def ShapeArrayAttr : TypedArrayAttrBase<ShapeAttr, ""> {}
+
+def ComplexDoubleAttr : TypedArrayAttrBase<F64Attr, ""> {}
 
 def OneFlow_IsOpConfCompatible : NativeOpTrait<"IsOpConfCompatible">;
 def OneFlow_IsImportCompatible : NativeOpTrait<"IsImportCompatible">;
@@ -89,6 +92,7 @@ class OneFlow_BaseOp<string mnemonic, list<Trait> traits = []> :
   bit has_nd_sbp_infer_fn = 0;
   bit has_compute_complexity_fn = 0;
   bit has_get_nd_sbp_fn = 0;
+  bit has_enumerate_nd_sbp_signatures_fn = 0;
   bit has_dump_nd_sbp_signature_for_op_conf_fn = 0;
 }
 
@@ -149,7 +153,8 @@ class OneFlow_ConvolutionBaseOp<string mnemonic, list<Trait> traits = []> :
       SI32ArrayAttr:$kernel_size,
       SI32ArrayAttr:$strides,
       SI32ArrayAttr:$dilation_rate,
-      DefaultValuedAttr<SI32Attr, "1">:$groups
+      DefaultValuedAttr<SI32Attr, "1">:$groups,
+      DefaultValuedAttr<StrAttr, "\"\"">:$tuning_cache
     );
     let trait_attrs = (ins
       I32ElementsAttr:$operand_segment_sizes
@@ -235,6 +240,29 @@ class OneFlow_MaxPoolBaseOp<string mnemonic, list<Trait> traits = []> :
   let has_compute_complexity_fn = 1;
 }
 
+class OneFlow_MaxUnpoolBaseOp<string mnemonic, list<Trait> traits = []> :
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
+  let summary = "OneFlow Max Unpooling operation";
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$indices
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let attrs = (ins
+    SI64ArrayAttr:$kernel_size,
+    SI64ArrayAttr:$stride,
+    SI64ArrayAttr:$padding,
+    DefaultValuedAttr<BoolAttr, "false">:$has_output_size,
+    ShapeAttr:$output_size
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 class OneFlow_AvgPoolBaseOp<string mnemonic, list<Trait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
   let summary = "OneFlow Average Pooling operation";
@@ -311,6 +339,23 @@ class OneFlow_AvgPoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
   let has_compute_complexity_fn = 1;
+}
+
+class OneFlow_MaxUnpoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
+  let summary = "OneFlow Max Unpooling Grad operation";
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$indices,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
 }
 
 class OneFlow_AdaptivePoolBaseOp<string mnemonic, list<Trait> traits = []> :

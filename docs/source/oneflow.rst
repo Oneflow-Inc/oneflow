@@ -107,6 +107,7 @@ Indexing, Slicing, Joining, Mutating Ops
     vsplit
     vstack
     index_select
+    index_add
     masked_select
     movedim
     narrow
@@ -249,6 +250,7 @@ Pointwise Ops
     arctanh 
     atan2 
     ceil 
+    ceil_
     clamp 
     clamp_min
     clamp_max
@@ -265,6 +267,7 @@ Pointwise Ops
     floor_ 
     fmod 
     gelu
+    quick_gelu
     log 
     log1p 
     log2 
@@ -273,6 +276,10 @@ Pointwise Ops
     logical_not 
     logical_or 
     logical_xor 
+    bitwise_and
+    bitwise_or
+    bitwise_xor
+    bitwise_not
     mish
     mul 
     neg 
@@ -280,6 +287,7 @@ Pointwise Ops
     pow 
     reciprocal 
     round 
+    round_
     rsqrt 
     selu
     softmax
@@ -298,6 +306,9 @@ Pointwise Ops
     tanh
     trunc
     floor_divide
+    lerp
+    lerp_
+    quantile
 
 Reduction Ops
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -315,6 +326,7 @@ Reduction Ops
     min  
     mean  
     median
+    mode
     prod
     nansum
     std  
@@ -375,7 +387,6 @@ Other Ops
     cast
     cumprod 
     cumsum 
-    decode_onerec
     diag 
     diagonal 
     einsum 
@@ -393,6 +404,10 @@ Other Ops
     triu
     cross
     bincount
+    broadcast_shapes
+    broadcast_tensors
+    broadcast_to
+    unique
 
 BLAS and LAPACK Operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -402,7 +417,8 @@ BLAS and LAPACK Operations
     :nosignatures:
 
     addmm 
-    bmm 
+    bmm
+    baddbmm 
     dot 
     matmul
     mm

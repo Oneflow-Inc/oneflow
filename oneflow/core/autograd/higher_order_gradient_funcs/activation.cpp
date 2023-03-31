@@ -417,15 +417,15 @@ class CeluGradGrad : public EluGradGrad {
   Maybe<void> Apply(const EluGradGradCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     in_grads->resize(2);
-    const auto& x = ctx->SavedTensors().at(0);
+    const auto& y = ctx->SavedTensors().at(0);
 
     if (ctx->x_requires_grad) {
       const auto& grad = ctx->SavedTensors().at(1);
       in_grads->at(0) = JUST(
-          functional::CeluGradGrad(x, JUST(functional::Mul(out_grads.at(0), (grad))), ctx->alpha));
+          functional::CeluGradGrad(y, JUST(functional::Mul(out_grads.at(0), (grad))), ctx->alpha));
     }
     if (ctx->grad_requires_grad) {
-      in_grads->at(1) = JUST(functional::CeluGrad(x, out_grads.at(0), ctx->alpha));
+      in_grads->at(1) = JUST(functional::CeluGrad(y, out_grads.at(0), ctx->alpha));
     }
     return Maybe<void>::Ok();
   }

@@ -69,9 +69,19 @@ void MultiThreadLoop(size_t num, const DoEachT& DoEach) {
       bc.Decrease();
     });
   }
-  // buzy loop wait.
+  // busy loop wait.
   bc.WaitForeverUntilCntEqualZero();
 }
+
+inline bool* MutIsMainThread() {
+  thread_local bool is_main_thread = false;
+  return &is_main_thread;
+}
+
+inline bool IsMainThread() { return *MutIsMainThread(); }
+inline void SetIsMainThread(bool is_main_thread) { *MutIsMainThread() = is_main_thread; }
+
+COMMAND(SetIsMainThread(true));
 
 }  // namespace oneflow
 

@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-# RUN: python3 %s | FileCheck %s
+# RUN: python3 -m oneflow.test_utils.throttle --with-cuda=%with_cuda python3 %s | FileCheck %s
 # CHECK-NOT: oneflow.cast
 
 import os
@@ -21,6 +21,11 @@ import unittest
 import numpy as np
 
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+os.environ["ONEFLOW_MLIR_FUSE_FORWARD_OPS"] = "1"
+os.environ["ONEFLOW_MLIR_STDOUT"] = "1"
+os.environ["ONEFLOW_MLIR_ENABLE_TIMING"] = "1"
+os.environ["ONEFLOW_MLIR_PRINT_STATS"] = "1"
+os.environ["ONEFLOW_MLIR_ENABLE_IR_PRINTING"] = "1"
 import oneflow as flow
 import oneflow.unittest
 

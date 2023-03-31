@@ -142,6 +142,7 @@ void OpSchemaEmitter<Target>::run(raw_ostream& os) {
     emitBit(def, "has_output_blob_time_shape_infer_fn", &op);
     emitBit(def, "has_sbp_signature_infer_fn", &op);
     emitBit(def, "has_get_nd_sbp_fn", &op);
+    emitBit(def, "has_enumerate_nd_sbp_signatures_fn", &op);
     emitBit(def, "has_dump_nd_sbp_signature_for_op_conf_fn", &op);
     emitBit(def, "has_compute_complexity_fn", &op);
     emitBit(def, "has_check_fn", &op);
@@ -153,7 +154,7 @@ void OpSchemaEmitter<Target>::run(raw_ostream& os) {
   filename = filename != "-" ? filename : "";
   json data{{"filename", filename}, {"ops", ops}};
 
-  if (Target == FileTarget::kSource) { data["include"] = sourceIncludeFilename; }
+  if (Target == FileTarget::kSource) { data["include"] = sourceIncludeFilename.getValue(); }
   if (!dumpJson.empty()) {
     std::ofstream file(dumpJson);
     file << data.dump();

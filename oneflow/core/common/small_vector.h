@@ -16,11 +16,13 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_SMALL_VECTOR_H_
 #define ONEFLOW_CORE_COMMON_SMALL_VECTOR_H_
 
+#include <glog/logging.h>
 #include "llvm/ADT/SmallVector.h"
+#include "oneflow/core/common/op_args_reserved_size.h"
 
 namespace oneflow {
 
-template<typename T, size_t N>
+template<typename T, size_t N = kOpArgsReservedSize>
 class small_vector : public llvm::SmallVector<T, N> {
   using Base = llvm::SmallVector<T, N>;
 

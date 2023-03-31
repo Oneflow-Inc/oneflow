@@ -41,28 +41,38 @@ bool IsFloatingDataType(DataType data_type) {
   switch (data_type) {
 #define FLOATING_CASE(type_cpp, type_proto) \
   case type_proto: return true;
-    OF_PP_FOR_EACH_TUPLE(FLOATING_CASE, FLOATING_DATA_TYPE_SEQ)
+    OF_PP_FOR_EACH_TUPLE(FLOATING_CASE,
+                         FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ BFLOAT16_DATA_TYPE_SEQ)
     default: return false;
   }
 #undef FLOATING_CASE
 }
-bool IsPODDataType(DataType data_type) {
+bool IsHalfDataType(DataType data_type) {
   switch (data_type) {
-#define POD_CASE(type_cpp, type_proto) \
+#define HALF_CASE(type_cpp, type_proto) \
   case type_proto: return true;
-    OF_PP_FOR_EACH_TUPLE(POD_CASE, POD_DATA_TYPE_SEQ)
+    OF_PP_FOR_EACH_TUPLE(HALF_CASE, FLOAT16_DATA_TYPE_SEQ BFLOAT16_DATA_TYPE_SEQ)
     default: return false;
   }
-#undef POD_CASE
+#undef HALF_CASE
 }
-bool IsPODAndHalfDataType(DataType data_type) {
+bool IsComplexDataType(DataType data_type) {
   switch (data_type) {
-#define POD_AND_HALF_CASE(type_cpp, type_proto) \
+#define COMPLEX_CASE(type_cpp, type_proto) \
   case type_proto: return true;
-    OF_PP_FOR_EACH_TUPLE(POD_AND_HALF_CASE, POD_AND_HALF_DATA_TYPE_SEQ)
+    OF_PP_FOR_EACH_TUPLE(COMPLEX_CASE, COMPLEX_DATA_TYPE_SEQ)
     default: return false;
   }
-#undef POD_AND_HALF_CASE
+#undef COMPLEX_CASE
+}
+bool IsTriviallyCopyableDataType(DataType data_type) {
+  switch (data_type) {
+#define TRIVIALLY_COPY_CASE(type_cpp, type_proto) \
+  case type_proto: return true;
+    OF_PP_FOR_EACH_TUPLE(TRIVIALLY_COPY_CASE, TRIVIALLY_COPY_DATA_TYPE_SEQ)
+    default: return false;
+  }
+#undef TRIVIALLY_COPY_CASE
 }
 bool IsIndexDataType(DataType data_type) {
   switch (data_type) {
@@ -129,58 +139,6 @@ size_t GetSizeOfDataType(DataType data_type) {
     case kTensorBuffer: return sizeof(TensorBuffer);
     default: LOG(FATAL) << "invalid data_type: " << DataType_Name(data_type);
   }
-}
-
-int64_t GetIntMaxVal(DataType datatype) {
-#define SWITCH_INT_TYPE(cpp_type, of_datatype) \
-  case of_datatype: return static_cast<int64_t>(GetMaxVal<DataTypeToType<of_datatype>>());
-
-  switch (datatype) {
-    OF_PP_FOR_EACH_TUPLE(SWITCH_INT_TYPE, INT_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
-    default:
-      LOG(FATAL) << "invalid data_type: " << DataType_Name(datatype)
-                 << " for GetIntMaxVal(DataType)";
-  }
-#undef SWITCH_INT_TYPE
-}
-
-int64_t GetIntMinVal(DataType datatype) {
-#define SWITCH_INT_TYPE(cpp_type, of_datatype) \
-  case of_datatype: return static_cast<int64_t>(GetMinVal<DataTypeToType<of_datatype>>());
-
-  switch (datatype) {
-    OF_PP_FOR_EACH_TUPLE(SWITCH_INT_TYPE, INT_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
-    default:
-      LOG(FATAL) << "invalid data_type: " << DataType_Name(datatype)
-                 << " for GetIntMinVal(DataType)";
-  }
-#undef SWITCH_INT_TYPE
-}
-
-double GetFloatMaxVal(DataType datatype) {
-#define SWITCH_FLOAT_TYPE(cpp_type, of_datatype) \
-  case of_datatype: return static_cast<double>(GetMaxVal<DataTypeToType<of_datatype>>());
-
-  switch (datatype) {
-    OF_PP_FOR_EACH_TUPLE(SWITCH_FLOAT_TYPE, FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
-    default:
-      LOG(FATAL) << "invalid data_type: " << DataType_Name(datatype)
-                 << " for GetFloatMaxVal(DataType)";
-  }
-#undef SWITCH_FLOAT_TYPE
-}
-
-double GetFloatMinVal(DataType datatype) {
-#define SWITCH_FLOAT_TYPE(cpp_type, of_datatype) \
-  case of_datatype: return static_cast<double>(GetMinVal<DataTypeToType<of_datatype>>());
-
-  switch (datatype) {
-    OF_PP_FOR_EACH_TUPLE(SWITCH_FLOAT_TYPE, FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
-    default:
-      LOG(FATAL) << "invalid data_type: " << DataType_Name(datatype)
-                 << " for GetFloatMinVal(DataType)";
-  }
-#undef SWITCH_INT_TYPE
 }
 
 namespace {

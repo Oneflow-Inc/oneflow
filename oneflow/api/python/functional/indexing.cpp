@@ -156,6 +156,8 @@ Shape InferArraySizes(PyObject* object) {
 }
 
 Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
+  // NOTE: convert data to indexing will ensure in eager mode
+  LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
   const DataType dtype = InferScalarType(object);
   const auto& device = JUST(Device::New("cpu"));
 
@@ -166,12 +168,12 @@ Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
   }
   // In advanced indexing condition, index can be array object, need to handle it specially.
   if (PyArray_Check(object)) {
-    return TensorWithData(object, NullOpt, device, false, /*pin_memory=*/false);
+    return TensorWithData(object, NullOpt, device, /*requires_grad=*/false, /*pin_memory=*/false);
   }
 
   const auto& sizes = InferArraySizes(object);
-  const auto& tensor =
-      JUST(functional::Empty(sizes, CHECK_JUST(DType::Get(dtype)), device, /*pin_memory=*/false));
+  const auto& tensor = JUST(functional::Empty(sizes, CHECK_JUST(DType::Get(dtype)), device,
+                                              /*requires_grad=*/false, /*pin_memory=*/false));
   // Prevent the python object release until the callback is complete.
   Py_INCREF(object);
   auto handle = std::shared_ptr<PyObject>(PyObjectPtr(object));

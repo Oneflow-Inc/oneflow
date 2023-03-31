@@ -16,6 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_PASSES_H_
 #define ONEFLOW_IR_INCLUDE_ONEFLOW_PASSES_H_
 
+#include "mlir/Dialect/PDL/IR/PDL.h"
+#include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -29,6 +31,8 @@ limitations under the License.
 #include "OneFlow/Transform/ConvertInferenceOp.h"
 #include "OneFlow/Transform/OutlineAndFuse.h"
 #include "OneFlow/Transform/AutoNhwc.h"
+#include "OneFlow/Transform/AggregateOps.h"
+#include "OneFlow/Transform/CSEWithAttributesIgnored.h"
 
 #ifdef WITH_MLIR_CUDA_CODEGEN
 #include "OneFlow/Conversion/PTXToCubin.h"
@@ -42,14 +46,13 @@ namespace mlir {
 
 namespace oneflow {
 
-LogicalResult LowerKernelLaunchModuleToLLVM(ModuleOp module);
 LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module);
 #ifdef WITH_MLIR_CUDA_CODEGEN
 LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module);
 #endif  // WITH_MLIR_CUDA_CODEGEN
 void populateFuserPasses(::mlir::RewritePatternSet& patterns);
-void populateConvertOFKLCalleeToLLVMPasses(::mlir::RewritePatternSet& patterns);
-void populateKernelWrapperPasses(::mlir::RewritePatternSet& patterns);
+void populateWrapOpsToKernelLaunchPatterns(::mlir::RewritePatternSet& patterns,
+                                           const std::string& mode);
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns);
 void populateGpuHelperPatterns(::mlir::RewritePatternSet& patterns);
 void populateAutoNhwcPatterns(::mlir::RewritePatternSet& patterns);
@@ -57,6 +60,10 @@ void populateAutoNhwcPatterns(::mlir::RewritePatternSet& patterns);
 void populatePreConvertInferenceOp(::mlir::RewritePatternSet& patterns);
 void populateConvertInferenceOp(::mlir::RewritePatternSet& patterns);
 void populatePostConvertInferenceOp(::mlir::RewritePatternSet& patterns);
+
+namespace okl_func {
+const auto OKL_FUNC = "_mlir_okl_subgraph";
+}  // namespace okl_func
 
 }  // namespace oneflow
 

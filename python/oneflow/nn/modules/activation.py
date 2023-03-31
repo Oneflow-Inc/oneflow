@@ -17,7 +17,7 @@ import warnings
 from typing import Optional
 
 import oneflow as flow
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 
 
 class PReLU(Module):
@@ -368,6 +368,43 @@ class GELU(Module):
             return flow._C.gelu_with_approximate(input, self.approximate)
         else:
             raise NotImplementedError
+
+
+class QuickGELU(Module):
+    """
+    QuickGELU() -> Tensor
+
+    Applies GELU approximation that is fast but somewhat inaccurate. See: https://github.com/hendrycks/GELUs
+
+    .. math::
+        \\text{QuickGELU}(x) = x * \\sigma(1.702x) = x * \\frac{1}{1 + \\exp(-1.702x)}
+
+    Args:
+        input (oneflow.Tensor): Input Tensor
+
+    Returns:
+        oneflow.Tensor: A Tensor has same shape as the input.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        
+        >>> input = flow.Tensor([-0.5, 0, 0.5])
+        >>> gelu = flow.nn.QuickGELU()
+
+        >>> out = gelu(input)
+        >>> out
+        tensor([-0.1496,  0.0000,  0.3504], dtype=oneflow.float32)
+
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        return flow._C.quick_gelu(x)
 
 
 class Sigmoid(Module):
@@ -863,6 +900,64 @@ class LeakyReLU(Module):
 
     def extra_repr(self):
         param_str = f"negative_slope={self.negative_slope}"
+        param_str += ", inplace=True" if self.inplace else ""
+        return param_str
+
+
+class RReLU(Module):
+    """Applies the randomized leaky rectified liner unit function, element-wise:
+
+    .. math::
+        \\text{RReLU}(x) = \\begin{cases}
+            x, & \\text{ if } x \\geq 0 \\\\
+            a \\times x, & \\text{ otherwise }
+        \\end{cases}
+        
+    where :math:`a` is randomly sampled from uniform distribution
+    :math:`\mathcal{U}(\text{lower}, \text{upper})`.
+    
+    .. note::
+        See `Empirical Evaluation of Rectified Activations in Convolution Network: <https://arxiv.org/pdf/1505.00853.pdf>`_
+
+    Args:
+        lower: lower bound of the uniform distribution. Default: :math:`\frac{1}{8}`
+        upper: upper bound of the uniform distribution. Default: :math:`\frac{1}{3}`
+        inplace: can optionally do the operation in-place. Default: ``False``
+
+    Shape:
+        - Input: :math:`(*)`, where :math:`*` means any number of dimensions.
+        - Output: :math:`(N, *)`, same shape as the input
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        
+        >>> m = flow.nn.RReLU(0.1, 0.3)
+        >>> arr = np.array([0.2, -0.3, -3.0, 4.0, 0.5, -2.2])
+        >>> x = flow.Tensor(arr)
+        >>> out = m(x) 
+        >>> print(out) # doctest: +SKIP
+        tensor([ 0.2000, -0.0824, -0.5418,  4.0000,  0.5000, -0.4213], dtype=oneflow.float32) # doctest: +SKIP
+            
+    """
+
+    def __init__(
+        self, lower: float = 1.0 / 8, upper: float = 1.0 / 3, inplace: bool = False
+    ):
+        super().__init__()
+        self.lower = lower
+        self.upper = upper
+        self.inplace = inplace
+
+    def forward(self, x):
+        return flow._C.rrelu(x, self.lower, self.upper, self.training, self.inplace)
+
+    def extra_repr(self):
+        param_str = f"lower={self.lower}"
+        param_str += f"upper={self.upper}"
         param_str += ", inplace=True" if self.inplace else ""
         return param_str
 

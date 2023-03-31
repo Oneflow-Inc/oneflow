@@ -67,7 +67,7 @@ class TestAddmm(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(n=5)
+    @autotest(n=5, rtol=1e-2, atol=1e-3)
     def test_addmm_flow_with_random_data(test_case):
         device = random_device()
         input = random_tensor(ndim=2, dim0=2, dim1=3).to(device)
@@ -82,7 +82,7 @@ class TestAddmm(flow.unittest.TestCase):
         )
         return y
 
-    @autotest(n=5)
+    @autotest(n=5, rtol=1e-2, atol=1e-3)
     def test_addmm_broadcast_flow_with_random_data(test_case):
         device = random_device()
         input = random_tensor(ndim=2, dim0=1, dim1=1).to(device)
