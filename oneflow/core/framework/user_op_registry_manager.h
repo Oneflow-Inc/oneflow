@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/framework/user_op_kernel_registry.h"
 #include "oneflow/core/common/registry_error.h"
+#include "oneflow/core/common/op_args_reserved_size.h"
 
 namespace oneflow {
 
@@ -63,9 +64,34 @@ struct UserOpRegisterTrigger final {
   }
 };
 
+class UserOpHostMemoryInputRegistry final {
+ public:
+  UserOpHostMemoryInputRegistry(UserOpHostMemoryInputRegistry const&) = delete;
+  UserOpHostMemoryInputRegistry& operator=(UserOpHostMemoryInputRegistry const&) = delete;
+  ~UserOpHostMemoryInputRegistry() = default;
+
+  static UserOpHostMemoryInputRegistry& Get();
+
+  Maybe<void> SetHostMemoryInput4Op(const std::string& op_type_name, const std::string& arg_name,
+                                    int32_t index);
+  bool IsHostMemoryInput4Op(const std::string& op_type_name, const std::string& arg_name,
+                            int32_t index) const;
+
+  bool HasHostMemoryInput(const std::string& op_type_name) const;
+
+ private:
+  UserOpHostMemoryInputRegistry() {}
+  HashMap<std::string, small_vector<std::pair<std::string, int32_t>>>
+      op_type_name2host_memory_input_args_;
+};
+
 }  // namespace user_op
 
 }  // namespace oneflow
+
+#define REGISTER_OP_HOST_MEMORY_INPUT(op_type_name, arg_name, index)                      \
+  COMMAND(CHECK_JUST(user_op::UserOpHostMemoryInputRegistry::Get().SetHostMemoryInput4Op( \
+      op_type_name, arg_name, index)));
 
 #define REGISTER_USER_OP(name)                                                                \
   static ::oneflow::user_op::UserOpRegisterTrigger<::oneflow::user_op::OpRegistry> OF_PP_CAT( \
