@@ -35,7 +35,7 @@ struct FftR2CCaptureState : public AutoGradCaptureState {
 
 #if 1
 class FftR2C : public OpExprGradFunction<FftR2CCaptureState> {
-public:
+  public:
     Maybe<void> Init(const OpExpr& op) override {
         const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
         CHECK_NOTNULL_OR_RETURN(fw_op_expr);
@@ -60,11 +60,12 @@ public:
 
     Maybe<void> Apply(const FftR2CCaptureState* ctx, const TensorTuple& out_grads,
                         TensorTuple* in_grads) const override {
-        std::cout << "=========== [FftR2C Op Backward] ===========" << std::endl;
         CHECK_EQ_OR_RETURN(out_grads.size(), 1);
         in_grads->resize(1);
         if (!ctx->onesided){
-            auto complex_grad = JUST(functional::FftC2C(out_grads.at(0), NullOpt, ctx->dims, ctx->norm_str, /*forward*/ false, /*is_grad_fn*/ true));
+            std::cout << "=========== [FftR2C Op Backward] !ctx->onesided ===========" << std::endl;
+            // different from torch -- we set `forward` is true
+            auto complex_grad = JUST(functional::FftC2C(out_grads.at(0), NullOpt, ctx->dims, ctx->norm_str, /*forward*/ !(ctx->forward), /*is_grad_fn*/ true));
             in_grads->at(0) = JUST(functional::Real(complex_grad));
         }
         else{
@@ -76,42 +77,26 @@ public:
           if (zero_length > 0){
             std::vector<int64_t> fft_dims {last_dim};
             std::vector<int64_t> fft_shapes {last_dim_size};
-            auto complex_full_grad = JUST(functional::FftC2C(out_grads.at(0), fft_shapes, fft_dims, ctx->norm_str, /*forward*/ false, /*is_grad_fn*/ true));
+            auto complex_full_grad = JUST(functional::FftC2C(out_grads.at(0), fft_shapes, fft_dims, ctx->norm_str, /*forward*/ !(ctx->forward), /*is_grad_fn*/ true));
             in_grads->at(0) = JUST(functional::Real(complex_full_grad));
+            std::cout << "=========== [FftR2C Op Backward] ctx->onesided, zero_length > 0 ===========" << std::endl;
           }
           else{
             // do c2c and slice
             // const auto& in_grad_sizes = in_grads->at(0)->shape()->dim_vec();
-            auto complex_grad = JUST(functional::FftC2C(in_grads->at(0), NullOpt, ctx->dims, ctx->norm_str, /*forward*/ false, /*is_grad_fn*/ true));
+            auto complex_grad = JUST(functional::FftC2C(in_grads->at(0), NullOpt, ctx->dims, ctx->norm_str, /*forward*/ !(ctx->forward), /*is_grad_fn*/ true));
             std::vector<int64_t> slice_st(input_shape.begin(), input_shape.end());
             std::vector<int64_t> slice_end(input_shape.begin(), input_shape.end());
             std::vector<int64_t> slice_step(input_shape.size(), 1);
             auto sliced_tensor = JUST(functional::Slice(complex_grad, slice_st, slice_end, slice_step, false));
             in_grads->at(0) = sliced_tensor;
+            std::cout << "=========== [FftR2C Op Backward] ctx->onesided, zero_length <= 0 ===========" << std::endl;
           }
-          // if (zero_length > 0){
-          //   // do pad and c2c
-          //   std::vector<int64_t> pad_amount(in_grad_sizes.size() * 2, 0);
-          //   auto pad_idx = pad_amount.size() - 2 * last_dim - 1;
-          //   pad_amount[pad_idx] = zero_length;
-          //   auto complex_full_grad = JUST(functional::ConstantPad(out_grads.at(0), pad_amount, 0));
-          //   in_grads->at(0) = functioanl::FftC2C(complex_full_grad, )
-          // }
-          // else{
-          //   // do c2c and slice
-          //   auto complex_grad = JUST(functional::FftC2C(in_grads->at(0), NullOpt, ctx->dims, ctx->norm_str, /*forward*/ false, /*is_grad_fn*/ true));
-          //   std::vector<int64_t> slice_st(in_grad_sizes.begin(), in_grad_sizes.end());
-          //   std::vector<int64_t> slice_end(in_grad_sizes.begin(), in_grad_sizes.end());
-          //   std::vector<int64_t> slice_step(in_grad_sizes.size(), 1);
-          //   auto sliced_tensor = JUST(functional::Slice(complex_grad, slice_st, slice_end, slice_step, false));
-          //   in_grads->at(0) = sliced_tensor;
-          // }
         }
 
         return Maybe<void>::Ok();
     }
-
-private:
+  private:
     AttrMap base_attrs_;
 
 };
@@ -165,8 +150,77 @@ class FftC2C : public OpExprGradFunction<FftC2CCaptureState> {
   AttrMap base_attrs_;
 };
 
+
+struct FftC2RCaptureState : public AutoGradCaptureState {
+  bool requires_grad;
+  bool forward;
+  std::vector<int64_t> dims;
+  std::string norm_str;
+  int64_t last_dim_size;
+  DimVector input_shape_vec;
+};
+
+
+#if 1
+class FftC2R : public OpExprGradFunction<FftC2RCaptureState> {
+public:
+    Maybe<void> Init(const OpExpr& op) override {
+        const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+        CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+        base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+        return Maybe<void>::Ok();
+    }
+
+    Maybe<void> Capture(FftC2RCaptureState* ctx, const TensorTuple& inputs,
+                        const TensorTuple& outputs, const AttrMap& attrs) const override {
+        
+        
+        CHECK_EQ_OR_RETURN(inputs.size(), 1);
+        ctx->requires_grad = inputs.at(0)->requires_grad();
+        ctx->forward = JUST(attrs.GetAttr<bool>("forward"));
+        ctx->dims = JUST(attrs.GetAttr<std::vector<int64_t>>("dims"));
+        ctx->norm_str = JUST(attrs.GetAttr<std::string>("norm"));
+        ctx->last_dim_size = JUST(attrs.GetAttr<int64_t>("last_dim_size"));
+        ctx->input_shape_vec = inputs.at(0)->shape()->dim_vec();
+
+        return Maybe<void>::Ok();
+    }
+
+    Maybe<void> Apply(const FftC2RCaptureState* ctx, const TensorTuple& out_grads,
+                        TensorTuple* in_grads) const override {
+        CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+        in_grads->resize(1);
+        auto complex_grad = JUST(functional::FftR2C(out_grads.at(0), NullOpt, ctx->dims, ctx->norm_str, 
+                                                    /*onesided=*/true, ctx->forward));
+        Shape input_shape(ctx->input_shape_vec);
+        int64_t last_dim = ctx->dims.back();
+        auto double_length = out_grads.at(0)->dim(last_dim) - complex_grad->dim(last_dim);
+        auto in_grad = complex_grad;
+
+        // mul by 2, and slice
+        if (double_length > 0){
+          in_grad = JUST(functional::Narrow(complex_grad, last_dim, 1, double_length));
+          in_grad = JUST(functional::ScalarMul(in_grad, 2, /*inplace*/true));
+        }
+
+        std::vector<int64_t> slice_st(input_shape.begin(), input_shape.end());
+        std::vector<int64_t> slice_end(input_shape.begin(), input_shape.end());
+        std::vector<int64_t> slice_step(input_shape.size(), 1);
+        auto sliced_tensor = JUST(functional::Slice(in_grad, slice_st, slice_end, slice_step, false));
+
+        in_grads->at(0) = sliced_tensor;
+        return Maybe<void>::Ok();
+    }
+
+private:
+    AttrMap base_attrs_;
+
+};
+#endif
+
 REGISTER_OP_EXPR_GRAD_FUNCTION("fft_r2c", FftR2C);
 REGISTER_OP_EXPR_GRAD_FUNCTION("fft_c2c", FftC2C);
+REGISTER_OP_EXPR_GRAD_FUNCTION("fft_c2r", FftC2R);
 
 }  // namespace one
 
