@@ -125,6 +125,7 @@ class FftR2CKernel final : public user_op::OpKernel {
     Shape input_shape(input->shape_view());
     Shape out_shape(out->shape_view());
     fft_norm_mode norm_mode = norm_from_string(norm_str, forward);
+    std::cout << "=========== [FftR2CKernel] 1 ==================" << std::endl;
 
     // get last dim half size
     if (onesided) {
@@ -132,6 +133,7 @@ class FftR2CKernel final : public user_op::OpKernel {
       int64_t last_dim_halfsize = (input_shape[last_dim]) / 2 + 1;
       out_shape[last_dim] = last_dim_halfsize;
     }
+    std::cout << "=========== [FftR2CKernel] 2 ==================" << std::endl;
 
     if (input->data_type() == kFloat) {
       FftR2CKernelUtil<device_type, T>::FftR2CForward(ctx->stream(), input_ptr, out_ptr,
@@ -144,8 +146,10 @@ class FftR2CKernel final : public user_op::OpKernel {
     } else {
       Error::RuntimeError() << "expects kFloat or kDouble, but gets " << input->data_type();
     }
+    std::cout << "=========== [FftR2CKernel] 3 ==================" << std::endl;
 
     if (!onesided) { conj_symmetry(out_ptr, out_shape, out->stride(), dims, out_shape.elem_cnt()); }
+    std::cout << "=========== [FftR2CKernel] 4 ==================" << std::endl;
   }
 };
 

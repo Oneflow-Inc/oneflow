@@ -70,27 +70,28 @@ class FftR2C : public OpExprGradFunction<FftR2CCaptureState> {
         }
         else{
           // CHECK_OR_THROW(false) << "UNIMPLEMENTED";
+          std::cout << "=========== [FftR2C Op Backward] ctx->onesided ===========" << std::endl;
           Shape input_shape(ctx->input_shape_vec);
           int64_t last_dim = ctx->dims.back();
           int64_t last_dim_size = input_shape.At(last_dim);
           int64_t zero_length = last_dim_size - out_grads.at(0)->dim(last_dim);
           if (zero_length > 0){
+            std::cout << "=========== [FftR2C Op Backward] ctx->onesided, zero_length > 0 ===========" << std::endl;
             std::vector<int64_t> fft_dims {last_dim};
             std::vector<int64_t> fft_shapes {last_dim_size};
             auto complex_full_grad = JUST(functional::FftC2C(out_grads.at(0), fft_shapes, fft_dims, ctx->norm_str, /*forward*/ !(ctx->forward), /*is_grad_fn*/ true));
             in_grads->at(0) = JUST(functional::Real(complex_full_grad));
-            std::cout << "=========== [FftR2C Op Backward] ctx->onesided, zero_length > 0 ===========" << std::endl;
           }
           else{
             // do c2c and slice
             // const auto& in_grad_sizes = in_grads->at(0)->shape()->dim_vec();
-            auto complex_grad = JUST(functional::FftC2C(in_grads->at(0), NullOpt, ctx->dims, ctx->norm_str, /*forward*/ !(ctx->forward), /*is_grad_fn*/ true));
-            std::vector<int64_t> slice_st(input_shape.begin(), input_shape.end());
+            std::cout << "=========== [FftR2C Op Backward] ctx->onesided, zero_length <= 0 ===========" << std::endl;
+            auto complex_grad = JUST(functional::FftC2C(out_grads.at(0), NullOpt, ctx->dims, ctx->norm_str, /*forward*/ !(ctx->forward), /*is_grad_fn*/ true));
+            std::vector<int64_t> slice_st(input_shape.size(), 0);
             std::vector<int64_t> slice_end(input_shape.begin(), input_shape.end());
             std::vector<int64_t> slice_step(input_shape.size(), 1);
             auto sliced_tensor = JUST(functional::Slice(complex_grad, slice_st, slice_end, slice_step, false));
             in_grads->at(0) = sliced_tensor;
-            std::cout << "=========== [FftR2C Op Backward] ctx->onesided, zero_length <= 0 ===========" << std::endl;
           }
         }
 
@@ -203,7 +204,7 @@ public:
           in_grad = JUST(functional::ScalarMul(in_grad, 2, /*inplace*/true));
         }
 
-        std::vector<int64_t> slice_st(input_shape.begin(), input_shape.end());
+        std::vector<int64_t> slice_st(input_shape.size(), 0);
         std::vector<int64_t> slice_end(input_shape.begin(), input_shape.end());
         std::vector<int64_t> slice_step(input_shape.size(), 1);
         auto sliced_tensor = JUST(functional::Slice(in_grad, slice_st, slice_end, slice_step, false));
