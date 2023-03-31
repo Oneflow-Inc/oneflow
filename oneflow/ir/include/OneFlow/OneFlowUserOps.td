@@ -6972,7 +6972,7 @@ def OneFlow_RmsNormGradOp : OneFlow_BaseOp<"rms_norm_grad", [NoMemoryEffect, Dec
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_SkipRmsNormOp : OneFlow_BaseOp<"skip_rms_norm", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SkipRmsNormOp : OneFlow_BaseOp<"skip_rms_norm", [NoMemoryEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x,
     Optional<OneFlow_Tensor>:$weight,
