@@ -742,6 +742,23 @@ class ScalarAddByTensorFunctor : public InplaceableBinaryFunctor {
   }
 };
 
+// this functor just for test host memory input
+class HostScalarAddByTensorFunctor {
+ public:
+  HostScalarAddByTensorFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("host_scalar_add_by_tensor").Input("x").Input("scalar").Output("y").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& scalar) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, scalar});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ScalarSubByTensorFunctor : public BinaryFunctor {
  public:
   ScalarSubByTensorFunctor() {
@@ -796,6 +813,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BroadcastLessFunctor>("BroadcastLess");
   m.add_functor<impl::BroadcastLessEqualFunctor>("BroadcastLessEqual");
   m.add_functor<impl::ScalarAddByTensorFunctor>("ScalarAddByTensor");
+  m.add_functor<impl::HostScalarAddByTensorFunctor>("HostScalarAddByTensor");
   m.add_functor<impl::ScalarSubByTensorFunctor>("ScalarSubByTensor");
   m.add_functor<impl::ScalarMulByTensorFunctor>("ScalarMulByTensor");
   m.add_functor<impl::ScalarDivByTensorFunctor>("ScalarDivByTensor");
