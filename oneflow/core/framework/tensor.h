@@ -623,6 +623,7 @@ class GlobalTensor final : public TensorIf<GlobalTensor> {
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override { return impl_->parallel_desc(); }
   Maybe<Symbol<Device>> device() const override {
     if (GlobalMode::is_enabled()) {
+      auto global_mode_gurad = GlobalMode::Guard(false);
       const auto& device_tag = JUST(parallel_desc())->device_tag();
       return JUST(Device::New(device_tag));
     }
