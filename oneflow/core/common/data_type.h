@@ -21,6 +21,7 @@ limitations under the License.
 #if defined(WITH_CUDA)
 #include <cuda_fp16.h>
 #include <cuda.h>
+#include <cuComplex.h>
 #if CUDA_VERSION >= 11000
 #include <cuda_bf16.h>
 #endif  // CUDA_VERSION >= 11000
@@ -154,6 +155,13 @@ OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE,
 template<typename T>
 struct GetDataType<T, typename std::enable_if<IsFloat16<T>::value>::type>
     : std::integral_constant<DataType, DataType::kFloat16> {};
+
+#ifdef WITH_CUDA
+template<>
+struct GetDataType<cuComplex> : std::integral_constant<DataType, DataType::kComplex64> {};
+template<>
+struct GetDataType<cuDoubleComplex> : std::integral_constant<DataType, DataType::kComplex128> {};
+#endif  // WITH_CUDA
 
 #if CUDA_VERSION >= 11000
 template<>
