@@ -239,8 +239,8 @@ def _test_irfft(test_case, dtype=np.float32, params: dict = None):
 class TestFft(flow.unittest.TestCase):
     def setUp(test_case):
         test_case.arg_dict = OrderedDict()
-        test_case.arg_dict["test_fun"] = [_test_fft, _test_ifft]
-        test_case.arg_dict["dtype"] = [np.complex64, np.complex128]
+        test_case.arg_dict["test_fun"] = [_test_ifft]
+        test_case.arg_dict["dtype"] = [np.float32, np.float64, np.complex64, np.complex128]
     
     def test_gather(test_case):        
         test_case.arg_dict["params"] = []
@@ -272,6 +272,12 @@ class TestRFft(TestFft):
         test_case.arg_dict = OrderedDict()
         test_case.arg_dict["test_fun"] = [_test_rfft]
         test_case.arg_dict["dtype"] = [np.float32, np.float64]
+
+class TestHFft(TestFft):
+    def setUp(test_case):
+        test_case.arg_dict = OrderedDict()
+        test_case.arg_dict["test_fun"] = [_test_hfft]
+        test_case.arg_dict["dtype"] = [np.complex64, np.float128]
 
 if __name__ == "__main__":
     unittest.main()

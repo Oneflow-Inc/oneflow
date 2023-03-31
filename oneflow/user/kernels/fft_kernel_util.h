@@ -16,18 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_FFT_KERNEL_UTIL_H_
 #define ONEFLOW_USER_KERNELS_FFT_KERNEL_UTIL_H_
 
-// #include <cstdint>
-// #include <vector>
-// #include "oneflow/core/common/data_type.pb.h"
-// #include "oneflow/core/common/maybe.h"
-// #include "oneflow/core/common/shape.h"
-// #include "oneflow/core/common/throw.h"
-// #include "oneflow/core/common/util.h"
-// #include "oneflow/core/framework/framework.h"
-// #include "oneflow/core/framework/op_kernel.h"
-// #include "oneflow/core/ep/include/stream.h"
-// #include "oneflow/core/operator/operator_util.h"
-// #include "oneflow/core/common/shape_vec.h"
+#include <cstdint>
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
@@ -138,6 +127,14 @@ struct FftR2CKernelUtil {
   static void FftR2CForward(ep::Stream* stream, const T* data_in, std::complex<T>* data_out,
                             const Shape& input_shape, const Shape& output_shape,
                             const Stride& input_stride, const Stride& output_stride, bool forward,
+                            const std::vector<int64_t>& dims, fft_norm_mode normalization);
+};
+
+template<DeviceType device_type, typename T>
+struct FftC2RKernelUtil {
+  static void FftC2RForward(ep::Stream* stream, const T* data_in, std::complex<T>* data_out,
+                            const Shape& input_shape, const Shape& output_shape,
+                            const Stride& input_stride, const Stride& output_stride, int64_t last_dim_size,
                             const std::vector<int64_t>& dims, fft_norm_mode normalization);
 };
 

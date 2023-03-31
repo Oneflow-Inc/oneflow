@@ -215,6 +215,16 @@ class TestTensorComplex64(unittest.TestCase):
         np_c = c.numpy()
         self.assertEqual(np_c.dtype, self.np_dtype)
         assert np.allclose(np_c, np.ones((3, 2), dtype=self.np_dtype) * (3.14 - 2j))
+        
+        shape = (5,6,8)
+        np_c = np.random.randn(*shape) + 1.0j * np.random.randn(*shape)
+        np_c = np_c.astype(self.np_dtype)
+        c = flow.from_numpy(np_c)
+        self.assertEqual(c.type(), "oneflow." + self.type_str)
+        np_c = np.conj(np_c)
+        c = flow.conj_physical(c)
+        assert np.allclose(np_c, c.numpy())
+        
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_real_cuda(self):

@@ -38,9 +38,9 @@ struct PocketFFtParams {
   pocketfft::shape_t output_shape;
   PocketFFtParams() = default;
   PocketFFtParams(const Shape& in_shape, const Shape& out_shape, const Stride& in_stride,
-                  const Stride& out_stride, const std::vector<int64_t>& dims, const bool is_froward,
+                  const Stride& out_stride, const std::vector<int64_t>& dims, const bool is_forward,
                   const dtype f, FFT_EXCUTETYPE type)
-      : IsForward(is_froward),
+      : IsForward(is_forward),
         excute_type(type),
         fct(f),
         axes(dims.begin(), dims.end()),
@@ -83,10 +83,8 @@ class PocketFFtConfig {
   }
 
   void excute(const std::complex<dtype>* in, dtype* out) {
-    // TO-DO c2r
-    // pocketfft::c2r(fftparams.input_shape, fftparams.in_stridef, fftparams.out_stridef,
-    // fftparams.axes,
-    //                fftparams.IsForward, in, out, fftparams.fct);
+    pocketfft::c2r(fftparams.input_shape, fftparams.in_stridef, fftparams.out_stridef,
+                   fftparams.axes, fftparams.IsForward, in, out, fftparams.fct);
   }
 
  private:

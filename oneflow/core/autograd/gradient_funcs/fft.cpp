@@ -60,6 +60,7 @@ public:
 
     Maybe<void> Apply(const FftR2CCaptureState* ctx, const TensorTuple& out_grads,
                         TensorTuple* in_grads) const override {
+        std::cout << "=========== [FftR2C Op Backward] ===========" << std::endl;
         CHECK_EQ_OR_RETURN(out_grads.size(), 1);
         in_grads->resize(1);
         if (!ctx->onesided){

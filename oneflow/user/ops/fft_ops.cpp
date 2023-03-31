@@ -88,14 +88,16 @@ namespace oneflow {
 
 /* static */ Maybe<void> FftC2ROp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("input", 0);
+  const Stride& in_stride = ctx->InputStride("input", 0);
 
   const auto& dims = ctx->Attr<std::vector<int64_t>>("dims");
   int64_t last_dim_size = ctx->Attr<int64_t>("last_dim_size");
 
   Shape out_shape = in_shape;
   out_shape[dims.back()] = last_dim_size;
-
   ctx->SetOutputShape("out", 0, out_shape);
+  ctx->SetOutputStride("out", 0, in_stride);
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("input", 0));
   return Maybe<void>::Ok();
 }
 

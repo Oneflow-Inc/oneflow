@@ -3266,10 +3266,10 @@
   bind_python: False
 
 # TO-DO
-# - name: "fft_c2r"
-#   signature:
-#     'Tensor (Tensor input, Int64 n, Int64 dim, String norm_str="backward", Bool forward=True) =>FftC2R'
-#   bind_python: False
+- name: "fft_c2r"
+  signature:
+    'Tensor (Tensor input, Int64List n=None, Int64List dims=None, String norm_str="backward", Bool forward=True) =>FftC2R'
+  bind_python: False
 
 - name: "fft"
   signature: 
@@ -3299,6 +3299,36 @@
 - name: "irfft"
   signature: 
     'Tensor (Tensor input, Int64 n=None, Int64 dim=-1, String norm=None) => IRFft'
+  bind_python: True
+
+- name: "rfftn"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim=None, String norm=None) => RFftN'
+  bind_python: True
+
+- name: "irfftn"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim=None, String norm=None) => IRFftN'
+  bind_python: True
+
+- name: "hfft"
+  signature: 
+    'Tensor (Tensor input, Int64 n=None, Int64 dim=-1, String norm=None) => HFft'
+  bind_python: True
+
+- name: "ihfft"
+  signature: 
+    'Tensor (Tensor input, Int64 n=None, Int64 dim=-1, String norm=None) => IHFft'
+  bind_python: True
+
+- name: "hfftn"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim=None, String norm=None) => HFftN'
+  bind_python: True
+
+- name: "ihfftn"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim=None, String norm=None) => IHFftN'
   bind_python: True
 
 - name: "isclose"
