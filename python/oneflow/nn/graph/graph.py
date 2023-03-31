@@ -176,6 +176,7 @@ class Graph(object):
 
         # For load graph from runtime states.
         self.enable_save_runtime_state_dict(enable_get_runtime_state_dict)
+        self._is_from_runtime_state_dict = False
 
         # For run graph with dynamic shape cache
         self._run_with_cache = False
@@ -887,6 +888,9 @@ class Graph(object):
         # Filter to get unique states in graph
         state_op_names = self._filter_states()
         # Generate new config.
+        if self._shared_graph._is_from_runtime_state_dict == True:
+            # To avoid same graph name with the loaded graphs.
+            self._name = self._name + "_of_shared_from_loaded_" + self._shared_graph.name
         self._generate_config_proto()
         # Deal with parameter and buffer
         self._create_states_builder()
@@ -920,14 +924,14 @@ class Graph(object):
 
         # Create op name vectors from shared graph and this graph.
         assert len(self._forward_job_proto.net.op) == len(
-            self._shared_graph._forward_job_proto.net.op
+            self._shared_graph._forward_graph_proto.net.op
         )
         # This graph and the shared graph's original graph have same operators and operator order.
         # We use this to find the corresponding operator in shared graph.
         shared_op_names_from_ordered_original_graph = []
         for op_idx in range(len(self._forward_job_proto.net.op)):
             shared_op_names_from_ordered_original_graph.append(
-                self._shared_graph._forward_job_proto.net.op[op_idx].name
+                self._shared_graph._forward_graph_proto.net.op[op_idx].name
             )
 
         # Copy the completed graph from the shared graphwo and reuse it.
@@ -1096,6 +1100,9 @@ class Graph(object):
             destination["states"] = states_sub_destination
 
         destination["exe_plan"] = self._c_nn_graph.plan
+        if self._enable_shared_from_this == True:
+            destination["forward_graph"] = self._forward_job_proto
+            destination["compile_graph"] = self._compiled_job_proto
 
         return destination
 
@@ -1111,6 +1118,7 @@ class Graph(object):
 
         build_graph_start = time.perf_counter()
 
+        self._is_from_runtime_state_dict = True 
         self._name = state_dict["graph_name"]
         if "oneflow_version" not in state_dict:
             state_dict["oneflow_version"] = "none"
@@ -1124,6 +1132,7 @@ class Graph(object):
         self._generate_config_proto()
         self.__print(0, 0, self._shallow_repr() + " start loading a graph and plan.")
         self._job_id = state_dict["job_id"]
+
         # Create a c nn graph to run with lazy runtime.
         self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(
             self._name,
@@ -1161,6 +1170,15 @@ class Graph(object):
             get_tensor_in_tuple, *_eager_outputs_index
         )
         self._eager_outputs = _eager_outputs
+
+        # The base graph need extra info to create new shared graph
+        if self._enable_shared_from_this == True:
+            self._forward_job_proto = state_dict["forward_graph"]
+            self._compiled_job_proto = state_dict["compile_graph"]
+            self._build_eager_outputs = self._eager_outputs
+            self._out2name = dict()
+            for output_idx in range(len(self._output_op_names)):
+                self._out2name[self._outputs_tensor_tuple[output_idx]] = self._output_op_names[output_idx]
 
         # Load state tensor of modules
         if "oneflow_with_eager_tensor" in state_dict:
