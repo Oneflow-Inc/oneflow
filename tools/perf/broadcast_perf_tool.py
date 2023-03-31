@@ -10,6 +10,7 @@ default_config = {
     "master_port": 49155,
     "ctrl_host": "127.0.0.1",
     "ctrl_port": 49156,
+    "node_size": 1,
     "iteration_num": 10,
     "start_rank": 0,
 }
@@ -36,7 +37,7 @@ def main():
         p = subprocess.Popen(["../../build/broadcast_perf", str(default_config["world_size"]), str(rank), 
                               default_config["master_host"], str(default_config["master_port"]), 
                               default_config["ctrl_host"], str(default_config["ctrl_port"] + i), 
-                              str(default_config["iteration_num"]), str(default_config["data_size"])])
+                              str(default_config["iteration_num"]), str(default_config["data_size"]), str(default_config["node_size"])])
         processes.append(p)
 
     # 等待子进程结束

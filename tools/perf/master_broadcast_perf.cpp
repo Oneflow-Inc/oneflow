@@ -61,16 +61,16 @@ class DistributeOneFlowEnv {
  public:
   explicit DistributeOneFlowEnv(size_t world_size, size_t rank, const std::string& master_host,
                                 size_t master_port, const std::string& ctrl_host,
-                                size_t ctrl_port) {
+                                size_t ctrl_port, size_t node_size) {
     EnvProto env_proto;
-    CompleteEnvProto(env_proto, rank, world_size, master_host, master_port, ctrl_host, ctrl_port);
+    CompleteEnvProto(env_proto, rank, world_size, master_host, master_port, ctrl_host, ctrl_port, node_size);
     env_ctx_ = std::make_shared<EnvGlobalObjectsScope>(env_proto);
   }
   ~DistributeOneFlowEnv() { env_ctx_.reset(); }
 
   void CompleteEnvProto(EnvProto& env_proto, size_t rank, size_t world_size,
                         const std::string& master_host, size_t master_port,
-                        const std::string& ctrl_host, size_t ctrl_port) {
+                        const std::string& ctrl_host, size_t ctrl_port, size_t node_size) {
     auto bootstrap_conf = env_proto.mutable_ctrl_bootstrap_conf();
     auto master_addr = bootstrap_conf->mutable_master_addr();
     // TODO: addr和port作为参数传入
@@ -86,6 +86,7 @@ class DistributeOneFlowEnv {
     bootstrap_conf->set_rank(rank);
     bootstrap_conf->set_host(ctrl_host);
     bootstrap_conf->set_ctrl_port(ctrl_port);
+    bootstrap_conf->set_node_size(node_size);
 
     auto cpp_logging_conf = env_proto.mutable_cpp_logging_conf();
     if (HasEnvVar("GLOG_log_dir")) {
@@ -110,10 +111,10 @@ class DistributeOneFlowEnv {
 class TestEnvScope {
  public:
   explicit TestEnvScope(size_t world_size, size_t rank, const std::string& master_host,
-                        size_t master_port, const std::string& ctrl_host, size_t ctrl_port) {
+                        size_t master_port, const std::string& ctrl_host, size_t ctrl_port, size_t node_size) {
     if (Singleton<DistributeOneFlowEnv>::Get() == nullptr) {
       Singleton<DistributeOneFlowEnv>::New(world_size, rank, master_host, master_port, ctrl_host,
-                                           ctrl_port);
+                                           ctrl_port, node_size);
     }
   }
 
@@ -157,7 +158,7 @@ std::set<std::string> MultiThreadBroadcastFromMasterToWorkers(size_t world_size,
 int main(int argc, char* argv[]) {
   if (argc == 1) {
     LOG(FATAL) << "Error: must set world_size, rank, master_host, master_port, ctrl_host, "
-                  "ctrl_port, iteration_num and data_size";
+                  "ctrl_port, iteration_num, data_size and node_size";
   }
   size_t world_size = std::stoi(argv[1]);
   size_t rank = std::stoi(argv[2]);
@@ -167,11 +168,12 @@ int main(int argc, char* argv[]) {
   size_t ctrl_port = std::stoi(argv[6]);
   size_t iteration_num = std::stoi(argv[7]);
   size_t data_size = std::stoi(argv[8]);
+  size_t node_size = std::stoi(argv[9]);
 
   std::string master_data, worker_data;
   if (rank == 0) { master_data.resize(data_size * 1024); }
 
-  TestEnvScope scope(world_size, rank, master_host, master_port, ctrl_host, ctrl_port);
+  TestEnvScope scope(world_size, rank, master_host, master_port, ctrl_host, ctrl_port, node_size);
 
   auto rank_duration = std::chrono::milliseconds::zero();
   auto total_duration = std::chrono::milliseconds::zero();
