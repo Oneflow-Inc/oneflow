@@ -293,6 +293,8 @@ Tensor class reference
     Tensor.mode
     Tensor.mul
     Tensor.mul_
+    Tensor.frac
+    Tensor.frac_
     Tensor.nansum
     Tensor.narrow
     Tensor.ndimension
