@@ -42,6 +42,9 @@ class MemcpyImpl : public Memcpy {
     auto* mlu_stream = stream->As<MluStream>();
     OF_MLU_CHECK(
         cnrtMemcpyAsync(dst, const_cast<void*>(src), count, mlu_stream->mlu_stream(), kind_));
+    // Synchronous the stream since the host memory may not be page-locked, and cnrtMemcpyAsync will
+    // not translate to synchronous automatically like cuda.
+    if (kind_ != cnrtMemcpyDevToDev) { mlu_stream->Sync(); }
   }
 
  private:

@@ -34,6 +34,7 @@ MLUGenerator::MLUGenerator(uint64_t seed, int device_index)
 
 MLUGenerator::~MLUGenerator() {
   MluCurrentDeviceGuard guard(device_index_);
+  OF_MLU_CHECK(cnrtSyncDevice());
   OF_CNNL_CHECK(cnnlRandDestroyGenerator(cnnl_rng_));
   OF_MLU_CHECK(cnrtFree(state_));
 }

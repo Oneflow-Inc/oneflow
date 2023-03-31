@@ -54,8 +54,8 @@ MluStream::MluStream(MluDevice* device) : device_index_(device->device_index()),
 
 MluStream::~MluStream() {
   MluCurrentDeviceGuard guard(device_index_);
-  OF_CNNL_CHECK(cnnlDestroy(cnnl_handle_));
   OF_MLU_CHECK(cnrtQueueSync(mlu_stream_));
+  OF_CNNL_CHECK(cnnlDestroy(cnnl_handle_));
   OF_MLU_CHECK(cnrtQueueDestroy(mlu_stream_));
 }
 
@@ -89,7 +89,11 @@ void MluStream::WaitEvent(Event* event) {
   OF_MLU_CHECK(cnrtQueueWaitNotifier(mlu_event->mlu_event(), mlu_stream_, 0));
 }
 
-Maybe<void> MluStream::GetAsyncError() { return Maybe<void>::Ok(); }
+Maybe<void> MluStream::GetAsyncError() {
+  cnrtRet_t err = cnrtGetLastError();
+  if (err != cnrtSuccess) { return Error::RuntimeError() << "(" << cnrtGetErrorStr(err) << ")"; }
+  return Maybe<void>::Ok();
+}
 
 cnrtQueue_t MluStream::mlu_stream() const { return mlu_stream_; }
 
