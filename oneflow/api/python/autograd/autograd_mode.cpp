@@ -32,6 +32,7 @@ ONEFLOW_API_PYBIND11_MODULE("autograd", m) {
       .def("__exit__", [](const AutoGradMode& no_grad_obj, const py::object& type,
                           const py::object& value, const py::object& traceback) {});
   m.def("is_grad_enabled", &GradMode::is_enabled);
+  m.def("set_grad_enabled", &GradMode::set_enabled);
 }
 
 }  // namespace autograd
