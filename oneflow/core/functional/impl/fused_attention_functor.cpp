@@ -643,54 +643,50 @@ class FusedApplyRotaryEmbFunctor {
                            const Optional<std::string>& output_layout, const std::string& mode,
                            const Optional<int64_t>& tensor_index, const Optional<int64_t>& k_size,
                            const float base, const Optional<int64_t>& rotary_size) const {
-    int64_t b, m, h, k;
+    int64_t b = 0, m = 0, h = 0, k = 0;
 
     if (tensor_index) {
       CHECK_OR_RETURN((JUST(tensor_index) >= 0) && (JUST(tensor_index) <= 2))
-          << Error::RuntimeError() << "tensor_index should be set between [0, 2]";
+          << "tensor_index should be set between [0, 2]";
     }
     CHECK_OR_RETURN((mode == "interval") || (mode == "plane"))
-        << Error::RuntimeError() << "mode should be \"intervel\" or \"plane\"";
+        << "mode should be \"intervel\" or \"plane\"";
 
     if (cos && sin) {
       CHECK_EQ_OR_RETURN(JUST(cos)->shape()->NumAxes(), 2)
-          << Error::RuntimeError() << "The number of dimensions of cos should be equal to 2.";
+          << "The number of dimensions of cos should be equal to 2.";
       CHECK_EQ_OR_RETURN(JUST(sin)->shape()->NumAxes(), 2)
-          << Error::RuntimeError() << "The number of dimensions of sin should be equal to 2.";
+          << "The number of dimensions of sin should be equal to 2.";
       CHECK_OR_RETURN(JUST(cos)->shape() == JUST(sin)->shape())
-          << Error::RuntimeError() << "Each dimension of cos & sin should be the same.";
+          << "Each dimension of cos & sin should be the same.";
       ParseDims("x", *x->shape(), x_layout, Optional<int64_t>(),
                 Optional<int64_t>(JUST(cos)->shape()->At(1)), &b, &m, &h, &k);
     } else if (!cos && !sin) {
       ParseDims("x", *x->shape(), x_layout, Optional<int64_t>(),
                 k_size ? Optional<int64_t>(JUST(k_size)) : Optional<int64_t>(), &b, &m, &h, &k);
     } else {
-      UNIMPLEMENTED_THEN_RETURN() << Error::RuntimeError()
-                                  << "cos & sin should both be given or not given.";
+      UNIMPLEMENTED_THEN_RETURN() << "cos & sin should both be given or not given.";
     }
 
     if (position_ids) {
       CHECK_LE_OR_RETURN(JUST(position_ids)->shape()->NumAxes(), 3)
-          << Error::RuntimeError()
           << "ndims of position_ids should be no more than 3.";  // TODO: supported shape should be
                                                                  // discussed
       CHECK_EQ_OR_RETURN(JUST(position_ids)->shape()->At(0), b)
-          << Error::RuntimeError() << "1st dim of position_ids should be equal to B.";
+          << "1st dim of position_ids should be equal to B.";
       CHECK_GE_OR_RETURN(JUST(position_ids)->shape()->At(2), m)
-          << Error::RuntimeError() << "3rd dim of position_ids should be no less than M.";
+          << "3rd dim of position_ids should be no less than M.";
     }
 
-    CHECK_LE_OR_RETURN(JUST(rotary_size), k)
-        << Error::RuntimeError() << "rotary_size should be no more than k.";
+    CHECK_LE_OR_RETURN(JUST(rotary_size), k) << "rotary_size should be no more than k.";
     if (k_size) {
       CHECK_EQ_OR_RETURN(JUST(k_size), k)
-          << Error::RuntimeError() << "k_size if given should be equal to K of cos, sin and x.";
+          << "k_size if given should be equal to K of cos, sin and x.";
     }
 
     if (position_ids) {
       if (cos && sin) {
         CHECK_GE_OR_RETURN(JUST(cos)->shape()->At(0), m)
-            << Error::RuntimeError()
             << "M of cos & sin should be to less than M of x when position_ids is given.";  // K of
                                                                                             // cos &
                                                                                             // sin
@@ -701,8 +697,7 @@ class FusedApplyRotaryEmbFunctor {
       }
     } else {
       if (cos && sin) {
-        CHECK_EQ_OR_RETURN(JUST(cos)->shape()->At(0), m) << Error::RuntimeError()
-                                                         << "M of cos & sin should be to equal to "
+        CHECK_EQ_OR_RETURN(JUST(cos)->shape()->At(0), m) << "M of cos & sin should be to equal to "
                                                             "M of x when position_ids is not "
                                                             "given.";  // K of cos & sin is checked
                                                                        // inside ParseDims

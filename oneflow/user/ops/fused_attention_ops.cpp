@@ -652,45 +652,60 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
             && (x_layout == "MB(HK)" || x_layout == "MB(H2K)" || x_layout == "MB(H3K)")));
   }
 
-  int64_t b, m, h, k;
+  int64_t b = 0, m = 0, h = 0, k = 0;
   bool has_cos = ctx->has_input("cos", 0);
   bool has_sin = ctx->has_input("sin", 0);
   // TODO: fused_apply_rotary_emb have same logic no matter name
   if (has_cos && has_sin) {
     const user_op::TensorDesc& cos_desc = ctx->InputTensorDesc("cos", 0);
     const user_op::TensorDesc& sin_desc = ctx->InputTensorDesc("sin", 0);
-    CHECK_EQ_OR_RETURN(cos_desc.shape().NumAxes(), 2);
-    CHECK_EQ_OR_RETURN(sin_desc.shape().NumAxes(), 2);
-    CHECK_OR_RETURN(cos_desc.shape() == sin_desc.shape());
-    ParseDims(x_desc.shape(), x_layout, Optional<int64_t>(),
-              Optional<int64_t>(cos_desc.shape().At(1)), &b, &m, &h, &k);
+    CHECK_EQ_OR_RETURN(cos_desc.shape().NumAxes(), 2)
+        << "The number of dimensions of cos should be equal to 2.";
+    CHECK_EQ_OR_RETURN(sin_desc.shape().NumAxes(), 2)
+        << "The number of dimensions of sin should be equal to 2.";
+    CHECK_OR_RETURN(cos_desc.shape() == sin_desc.shape())
+        << "The dimensions of cos & sin should be the same.";
+    JUST(ParseDims(x_desc.shape(), x_layout, Optional<int64_t>(),
+                   Optional<int64_t>(cos_desc.shape().At(1)), &b, &m, &h, &k));
   } else if (!has_cos && !has_sin) {
-    ParseDims(x_desc.shape(), x_layout, Optional<int64_t>(),
-              k_size ? Optional<int64_t>(k_size) : Optional<int64_t>(), &b, &m, &h, &k);
+    JUST(ParseDims(x_desc.shape(), x_layout, Optional<int64_t>(),
+                   k_size ? Optional<int64_t>(k_size) : Optional<int64_t>(), &b, &m, &h, &k));
   } else {
     UNIMPLEMENTED_THEN_RETURN();
   }
 
   if (ctx->has_input("position_ids", 0)) {
     const user_op::TensorDesc& position_ids_desc = ctx->InputTensorDesc("position_ids", 0);
-    CHECK_EQ_OR_RETURN(position_ids_desc.shape().NumAxes(),
-                       3);  // TODO: supported shape should be discussed
-    CHECK_EQ_OR_RETURN(position_ids_desc.shape().At(0), b);
-    CHECK_GE_OR_RETURN(position_ids_desc.shape().At(2), m);
+    CHECK_EQ_OR_RETURN(position_ids_desc.shape().NumAxes(), 3)
+        << "The dimensions of position_ids should be B1M or B2M.";
+    CHECK_EQ_OR_RETURN(position_ids_desc.shape().At(0), b)
+        << "The dimensions of position_ids should be B1M or B2M.";
+    CHECK_GE_OR_RETURN(position_ids_desc.shape().At(2), m)
+        << "The dimensions of position_ids should be B1M or B2M.";
   }
 
-  CHECK_LE_OR_RETURN(rotary_size, k);
-  if (k_size) { CHECK_EQ_OR_RETURN(k_size, k); }
+  CHECK_LE_OR_RETURN(rotary_size, k) << "rotary_size should be no more than K of input x.";
+  if (k_size) {
+    CHECK_EQ_OR_RETURN(k_size, k) << "k_size if given should be equal to K of input x.";
+  }
 
   if (ctx->has_input("position_ids", 0)) {
     if (has_cos && has_sin) {
       const user_op::TensorDesc& cos_desc = ctx->InputTensorDesc("cos", 0);
-      CHECK_GE_OR_RETURN(cos_desc.shape().At(0), m);  // K of cos & sin is checked inside ParseDims
+      CHECK_GE_OR_RETURN(cos_desc.shape().At(0), m)
+          << "M of cos should be no less than M of x if position_ids is given.";  // K of cos & sin
+                                                                                  // is checked
+                                                                                  // inside
+                                                                                  // ParseDims
     }
   } else {
     if (has_cos && has_sin) {
       const user_op::TensorDesc& cos_desc = ctx->InputTensorDesc("cos", 0);
-      CHECK_EQ_OR_RETURN(cos_desc.shape().At(0), m);  // K of cos & sin is checked inside ParseDims
+      CHECK_EQ_OR_RETURN(cos_desc.shape().At(0), m)
+          << "M of cos should be equal to M of x if position_ids is not given.";  // K of cos & sin
+                                                                                  // is checked
+                                                                                  // inside
+                                                                                  // ParseDims
     }
   }
 

@@ -151,15 +151,21 @@ def naive_embedding(
 
         naive_out = np.concatenate((out0, out1, out2), axis=-1)
     elif x_layout == "MB(H3K)":
-        out0 = x[..., 0, :].reshape(dims) * cos.transpose([2, 0, 1, 3]).reshape([M, B, 1, K]) + y[
-            ..., 0, :
-        ].reshape(dims) * sin.transpose([2, 0, 1, 3]).reshape([M, B, 1, K])
-        out1 = x[..., 1, :].reshape(dims) * cos.transpose([2, 0, 1, 3]).reshape([M, B, 1, K]) + y[
-            ..., 1, :
-        ].reshape(dims) * sin.transpose([2, 0, 1, 3]).reshape([M, B, 1, K])
-        out2 = x[..., 2, :].reshape(dims) * cos.transpose([2, 0, 1, 3]).reshape([M, B, 1, K]) + y[
-            ..., 2, :
-        ].reshape(dims) * sin.transpose([2, 0, 1, 3]).reshape([M, B, 1, K])
+        out0 = x[..., 0, :].reshape(dims) * cos.transpose([2, 0, 1, 3]).reshape(
+            [M, B, 1, K]
+        ) + y[..., 0, :].reshape(dims) * sin.transpose([2, 0, 1, 3]).reshape(
+            [M, B, 1, K]
+        )
+        out1 = x[..., 1, :].reshape(dims) * cos.transpose([2, 0, 1, 3]).reshape(
+            [M, B, 1, K]
+        ) + y[..., 1, :].reshape(dims) * sin.transpose([2, 0, 1, 3]).reshape(
+            [M, B, 1, K]
+        )
+        out2 = x[..., 2, :].reshape(dims) * cos.transpose([2, 0, 1, 3]).reshape(
+            [M, B, 1, K]
+        ) + y[..., 2, :].reshape(dims) * sin.transpose([2, 0, 1, 3]).reshape(
+            [M, B, 1, K]
+        )
 
         naive_out = np.concatenate((out0, out1, out2), axis=-1)
 
@@ -178,7 +184,20 @@ def _test_without_position(
     naive_cos = np.array(
         [
             [
-                [math.cos(m * ((1 / base) ** (2 * ((i % (rotary_size / rotary_ndims)) // 2) / (rotary_size / rotary_ndims)))) for i in range(K)]
+                [
+                    math.cos(
+                        m
+                        * (
+                            (1 / base)
+                            ** (
+                                2
+                                * ((i % (rotary_size / rotary_ndims)) // 2)
+                                / (rotary_size / rotary_ndims)
+                            )
+                        )
+                    )
+                    for i in range(K)
+                ]
                 for m in range(M)
             ]
             for b in range(B)
@@ -187,7 +206,20 @@ def _test_without_position(
     naive_sin = np.array(
         [
             [
-                [math.sin(m * ((1 / base) ** (2 * ((i % (rotary_size / rotary_ndims)) // 2) / (rotary_size / rotary_ndims)))) for i in range(K)]
+                [
+                    math.sin(
+                        m
+                        * (
+                            (1 / base)
+                            ** (
+                                2
+                                * ((i % (rotary_size / rotary_ndims)) // 2)
+                                / (rotary_size / rotary_ndims)
+                            )
+                        )
+                    )
+                    for i in range(K)
+                ]
                 for m in range(M)
             ]
             for b in range(B)
@@ -221,13 +253,39 @@ def _test_without_position(
 
     fused_cos = np.array(
         [
-            [math.cos(m * ((1 / base) ** (2 * ((i % (rotary_size / rotary_ndims)) // 2) / (rotary_size / rotary_ndims)))) for i in range(K)]
+            [
+                math.cos(
+                    m
+                    * (
+                        (1 / base)
+                        ** (
+                            2
+                            * ((i % (rotary_size / rotary_ndims)) // 2)
+                            / (rotary_size / rotary_ndims)
+                        )
+                    )
+                )
+                for i in range(K)
+            ]
             for m in range(M)
         ]
     ).reshape(M, K)
     fused_sin = np.array(
         [
-            [math.sin(m * ((1 / base) ** (2 * ((i % (rotary_size / rotary_ndims)) // 2) / (rotary_size / rotary_ndims)))) for i in range(K)]
+            [
+                math.sin(
+                    m
+                    * (
+                        (1 / base)
+                        ** (
+                            2
+                            * ((i % (rotary_size / rotary_ndims)) // 2)
+                            / (rotary_size / rotary_ndims)
+                        )
+                    )
+                )
+                for i in range(K)
+            ]
             for m in range(M)
         ]
     ).reshape(M, K)
@@ -292,7 +350,10 @@ def _test_without_position(
 
     test_case.assertTrue(
         np.allclose(
-            naive_out.reshape(merged_dims), fused_out.reshape(merged_dims), atol=5e-2, rtol=5e-3
+            naive_out.reshape(merged_dims),
+            fused_out.reshape(merged_dims),
+            atol=5e-2,
+            rtol=5e-3,
         )
     )
 
@@ -307,7 +368,20 @@ def _test_without_position_sinuous(
     naive_cos = np.array(
         [
             [
-                [math.cos(m * ((1 / base) ** (2 * ((i % (rotary_size // rotary_ndims)) // 2) / (rotary_size // rotary_ndims)))) for i in range(K)]
+                [
+                    math.cos(
+                        m
+                        * (
+                            (1 / base)
+                            ** (
+                                2
+                                * ((i % (rotary_size // rotary_ndims)) // 2)
+                                / (rotary_size // rotary_ndims)
+                            )
+                        )
+                    )
+                    for i in range(K)
+                ]
                 for m in range(M)
             ]
             for b in range(B)
@@ -316,7 +390,20 @@ def _test_without_position_sinuous(
     naive_sin = np.array(
         [
             [
-                [math.sin(m * ((1 / base) ** (2 * ((i % (rotary_size // rotary_ndims)) // 2) / (rotary_size // rotary_ndims)))) for i in range(K)]
+                [
+                    math.sin(
+                        m
+                        * (
+                            (1 / base)
+                            ** (
+                                2
+                                * ((i % (rotary_size // rotary_ndims)) // 2)
+                                / (rotary_size // rotary_ndims)
+                            )
+                        )
+                    )
+                    for i in range(K)
+                ]
                 for m in range(M)
             ]
             for b in range(B)
@@ -407,7 +494,10 @@ def _test_without_position_sinuous(
 
     test_case.assertTrue(
         np.allclose(
-            naive_out.reshape(merged_dims), fused_out.reshape(merged_dims), atol=5e-2, rtol=5e-3
+            naive_out.reshape(merged_dims),
+            fused_out.reshape(merged_dims),
+            atol=5e-2,
+            rtol=5e-3,
         )
     )
 
@@ -429,7 +519,14 @@ def _test_with_position_sinuous(
                 [
                     math.cos(
                         position_ids[b, i // ((rotary_size) // rotary_ndims), m]
-                        * ((1 / base) ** (2 * ((i % (rotary_size // rotary_ndims)) // 2) / (rotary_size // rotary_ndims)))
+                        * (
+                            (1 / base)
+                            ** (
+                                2
+                                * ((i % (rotary_size // rotary_ndims)) // 2)
+                                / (rotary_size // rotary_ndims)
+                            )
+                        )
                     )
                     if i < rotary_size
                     else 1
@@ -447,7 +544,14 @@ def _test_with_position_sinuous(
                 [
                     math.sin(
                         position_ids[b, i // ((rotary_size) // rotary_ndims), m]
-                        * ((1 / base) ** (2 * ((i % (rotary_size // rotary_ndims)) // 2) / (rotary_size // rotary_ndims)))
+                        * (
+                            (1 / base)
+                            ** (
+                                2
+                                * ((i % (rotary_size // rotary_ndims)) // 2)
+                                / (rotary_size // rotary_ndims)
+                            )
+                        )
                     )
                     if i < rotary_size
                     else 0
@@ -486,13 +590,39 @@ def _test_with_position_sinuous(
 
     fused_cos = np.array(
         [
-            [math.cos(m * ((1 / base) ** (2 * ((i % (rotary_size // rotary_ndims)) // 2) / (rotary_size // rotary_ndims)))) for i in range(K)]
+            [
+                math.cos(
+                    m
+                    * (
+                        (1 / base)
+                        ** (
+                            2
+                            * ((i % (rotary_size // rotary_ndims)) // 2)
+                            / (rotary_size // rotary_ndims)
+                        )
+                    )
+                )
+                for i in range(K)
+            ]
             for m in range(2 * M)
         ]
     )
     fused_sin = np.array(
         [
-            [math.sin(m * ((1 / base) ** (2 * ((i % (rotary_size // rotary_ndims)) // 2) / (rotary_size // rotary_ndims)))) for i in range(K)]
+            [
+                math.sin(
+                    m
+                    * (
+                        (1 / base)
+                        ** (
+                            2
+                            * ((i % (rotary_size // rotary_ndims)) // 2)
+                            / (rotary_size // rotary_ndims)
+                        )
+                    )
+                )
+                for i in range(K)
+            ]
             for m in range(2 * M)
         ]
     )
@@ -559,7 +689,10 @@ def _test_with_position_sinuous(
 
     test_case.assertTrue(
         np.allclose(
-            naive_out.reshape(merged_dims), fused_out.reshape(merged_dims), atol=5e-2, rtol=5e-3
+            naive_out.reshape(merged_dims),
+            fused_out.reshape(merged_dims),
+            atol=5e-2,
+            rtol=5e-3,
         )
     )
 
@@ -579,7 +712,14 @@ def _test_with_position(
                 [
                     math.cos(
                         position_ids[b, i // ((rotary_size) // rotary_ndims), m]
-                        * ((1 / base) ** (2 * ((i % (rotary_size / rotary_ndims)) // 2) / (rotary_size / rotary_ndims)))
+                        * (
+                            (1 / base)
+                            ** (
+                                2
+                                * ((i % (rotary_size / rotary_ndims)) // 2)
+                                / (rotary_size / rotary_ndims)
+                            )
+                        )
                     )
                     if i < rotary_size
                     else 1
@@ -597,7 +737,14 @@ def _test_with_position(
                 [
                     math.sin(
                         position_ids[b, i // ((rotary_size) // rotary_ndims), m]
-                        * ((1 / base) ** (2 * ((i % (rotary_size / rotary_ndims)) // 2) / (rotary_size / rotary_ndims)))
+                        * (
+                            (1 / base)
+                            ** (
+                                2
+                                * ((i % (rotary_size / rotary_ndims)) // 2)
+                                / (rotary_size / rotary_ndims)
+                            )
+                        )
                     )
                     if i < rotary_size
                     else 0
@@ -946,10 +1093,15 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
 
         for arg in GenArgList(args_dict):
             arg[0](test_case, *arg[1:])
-    
+
     def test_fused_rotary_embedding_op_interval_1d(test_case):
         args_dict = OrderedDict()
-        args_dict["test_fun"] = [_test_without_position_sinuous, _test_without_position, _test_with_position, _test_with_position_sinuous]
+        args_dict["test_fun"] = [
+            _test_without_position_sinuous,
+            _test_without_position,
+            _test_with_position,
+            _test_with_position_sinuous,
+        ]
         args_dict["x_layout"] = ["BMHK"]
         args_dict["mode"] = ["interval"]
         args_dict["base"] = [1e1]
