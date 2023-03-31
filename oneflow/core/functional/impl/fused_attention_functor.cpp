@@ -681,7 +681,6 @@ class FusedApplyRotaryEmbFunctor {
       rotary_emd_dim = JUST(position_ids)->shape()->At(1);
     }
 
-    
     if (k_size) {
       CHECK_EQ_OR_RETURN(JUST(k_size), k)
           << "k_size if given should be equal to K of cos, sin and x.";
@@ -691,7 +690,8 @@ class FusedApplyRotaryEmbFunctor {
     }
 
     const int64_t actual_ndims = (rotary_size ? JUST(rotary_size) : k) / rotary_emd_dim;
-    CHECK_EQ_OR_RETURN(actual_ndims % 2, 0) << "k ,or rotary_size if given, should be a multiple of 2 * rotary_encoding_dim.";
+    CHECK_EQ_OR_RETURN(actual_ndims % 2, 0)
+        << "k ,or rotary_size if given, should be a multiple of 2 * rotary_encoding_dim.";
 
     if (position_ids) {
       if (cos && sin) {

@@ -693,7 +693,8 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   }
 
   const int64_t actual_ndims = rotary_size / rotary_emd_dim;
-  CHECK_EQ_OR_RETURN(actual_ndims % 2, 0) << "rotary_size should be a multiple of 2 * rotary_encoding_dim.";
+  CHECK_EQ_OR_RETURN(actual_ndims % 2, 0)
+      << "rotary_size should be a multiple of 2 * rotary_encoding_dim.";
 
   if (ctx->has_input("position_ids", 0)) {
     if (has_cos && has_sin) {
