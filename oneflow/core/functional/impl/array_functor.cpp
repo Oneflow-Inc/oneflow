@@ -3148,7 +3148,7 @@ class To2Functor {
                            const Optional<Symbol<DType>>& dtype_, bool copy,
                            bool non_blocking = false) const {
     if (non_blocking) {
-      cout << "warning:non_blocking was developing, please wait until new version come out" << endl;
+      cout << "Warning: 'non_blocking' is not implemented, non_blocking=False is used instead." << endl;
     }
     if (input->is_global()) {
       if (!device_.has_value()) {
@@ -3178,7 +3178,7 @@ class To3Functor {
                            const Optional<Symbol<DType>>& dtype_, bool copy,
                            bool non_blocking = false) const {
     if (non_blocking) {
-      cout << "warning:non_blocking was developing, please wait until new version come out" << endl;
+      cout << "Warning: 'non_blocking' is not implemented, non_blocking=False is used instead." << endl;
     }
     Symbol<DType> dtype = dtype_.value_or(input->dtype());
     if (input->is_global()) {
@@ -3196,7 +3196,7 @@ class To4Functor {
                            const std::shared_ptr<Tensor>& other, bool copy,
                            bool non_blocking = false) const {
     if (non_blocking) {
-      cout << "warning:non_blocking was developing, please wait until new version come out" << endl;
+      cout << "Warning: 'non_blocking' is not implemented, non_blocking=False is used instead." << endl;
     }
     CHECK_OR_RETURN(!input->is_global() && !other->is_global())
         << Error::RuntimeError()
@@ -3214,7 +3214,7 @@ class ToDeviceFunctor {
     Symbol<DType> dtype = input->dtype();
     const bool copy = false;
     if (non_blocking) {
-      cout << "warning:non_blocking was developing, please wait until new version come out" << endl;
+      cout << "Warning: 'non_blocking' is not implemented, non_blocking=False is used instead." << endl;
     }
     if (input->is_global()) {
       std::string device_type = device_.value_or(JUST(input->parallel_desc())->device_tag());
