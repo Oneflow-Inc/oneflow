@@ -247,6 +247,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Singleton<EagerNcclCommMgr>::Delete();
 #endif
   Singleton<ThreadPool>::Delete();
+  Singleton<remat::AllocatorManager>::Delete();
   Singleton<ep::DeviceManagerRegistry>::Delete();
   if (Singleton<ResourceDesc, ForSession>::Get() != nullptr) {
     Singleton<ResourceDesc, ForSession>::Delete();
