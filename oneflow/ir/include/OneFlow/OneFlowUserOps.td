@@ -2470,7 +2470,8 @@ def OneFlow_FusedBiasAddMaskScaleOp : OneFlow_BaseOp<"fused_bias_add_mask_scale"
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$axis,
-    DefaultValuedAttr<F32Attr, "1.">:$scale
+    DefaultValuedAttr<F32Attr, "1.">:$scale,
+    DefaultValuedAttr<SI64Attr, "0">:$seed
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
