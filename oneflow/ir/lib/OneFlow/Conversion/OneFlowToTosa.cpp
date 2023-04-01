@@ -434,9 +434,14 @@ Value transposeAndReshapeIfRequired(Location loc, ConversionPatternRewriter& rew
     } else {
       return Value{};
     }
-  } else {
-    return matrix;
+  } else if (shape_type.getRank() == 2) {
+    llvm::SmallVector<int64_t, 4> reshape_dims{1, shape_type.getDimSize(0),
+                                               shape_type.getDimSize(1)};
+    auto reshape_type = RankedTensorType::get(reshape_dims, shape_type.getElementType());
+    return rewriter.create<tosa::ReshapeOp>(loc, reshape_type, matrix,
+                                            rewriter.getI64ArrayAttr(reshape_dims));
   }
+  return matrix;
 }
 
 // Reshape: 2D -> 3D -> tosa.matmul -> 3D -> 2D
