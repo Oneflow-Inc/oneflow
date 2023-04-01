@@ -16,6 +16,7 @@ limitations under the License.
 import warnings
 from typing import Any, Dict, List, Set, Tuple, Union, Callable
 
+
 def script(
     obj,
     optimize=None,
@@ -70,4 +71,3 @@ def is_scripting():
 
 def is_tracing():
     return False
-
