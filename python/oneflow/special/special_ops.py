@@ -59,3 +59,6 @@ def round(x: Tensor):
 
 def softmax(x: Tensor, dim: int):
     return oneflow._C.softmax(x, dim)
+
+def digamma(x:Tensor):
+    return oneflow._C.digamma(x)

@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include <cuda.h>
+#include "oneflow/core/common/math_util.h"
 
 namespace oneflow {
 namespace ep {
@@ -222,6 +223,33 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTrunc, double, double> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
   OF_DEVICE_FUNC double operator()(double src) const { return trunc(src); }
 };
+
+
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kDigamma, Dst, Src> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    return static_cast<Dst>(calc_digamma_cuda<Src,Src>(src));
+  }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kDigamma, half, half> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC half operator()(half src) const {
+    return  calc_digamma_cuda<half,float>(src);
+  }
+};
+// template<>
+// struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kDigamma, double, double> {
+//   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+//   OF_DEVICE_FUNC double operator()(double src) const {
+//     return calc_digamma_cuda<double>(src);
+//   }
+// };
 
 template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kAbs, half, half> {
@@ -443,6 +471,7 @@ SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kNotEqualZero);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kNanAssign);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kFastGelu);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kQuickGelu);
+SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kDigamma);
 
 template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsInf, bool, nv_bfloat16> {
