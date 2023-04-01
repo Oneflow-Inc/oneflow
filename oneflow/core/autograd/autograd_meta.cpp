@@ -68,7 +68,7 @@ AutogradMeta::AutogradMeta(bool requires_grad, bool is_leaf)
       current_grad_(new TensorArg) {}
 
 Maybe<void> AutogradMeta::set_acc_grad(const std::shared_ptr<Tensor>& grad) {
-  if (grad && acc_grad_ != nullptr) {
+  if (grad && acc_grad_ != nullptr && acc_grad_->is_eager()) {
     // set old acc_grad evictable
     if (auto rematable_storage = std::dynamic_pointer_cast<vm::RematableTensorStorage>(
             JUST(acc_grad_->eager_blob_object())->tensor_storage())) {
@@ -80,7 +80,7 @@ Maybe<void> AutogradMeta::set_acc_grad(const std::shared_ptr<Tensor>& grad) {
   } else {
     acc_grad_ = grad;
   }
-  if (acc_grad_ != nullptr) {
+  if (acc_grad_ != nullptr && acc_grad_->is_eager()) {
     // set new acc_grad non-evictable
     if (auto rematable_storage = std::dynamic_pointer_cast<vm::RematableTensorStorage>(
             JUST(acc_grad_->eager_blob_object())->tensor_storage())) {
