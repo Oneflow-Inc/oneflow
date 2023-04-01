@@ -112,6 +112,14 @@ class TestSpecialOps(flow.unittest.TestCase):
         x = random_tensor(4, random(0, 5), 2).to(device)
         y = torch.special.logsumexp(x, dim=np.random.randint(0, 3))
         return y
+    
+    # TODO:shijiaxing  When the grad function be implemented, set "auto_backward=auto"
+    @autotest(n=5, auto_backward=False)
+    def test_flow_digamma_with_random_data(test_case):
+        device = random_device()
+        x_dtype = random_dtype(["arithmetic"])
+        x = random_tensor().to(device).to(x_dtype)
+        y = torch.special.digamma(x)
 
 
 if __name__ == "__main__":
