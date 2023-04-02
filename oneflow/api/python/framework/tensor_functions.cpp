@@ -348,6 +348,8 @@ DIRECT_PASS_FUNC(PyTensorObject_mv, functional::matrix_vector_product)
 DIRECT_PASS_FUNC(PyTensorObject_fill_, functional::fill_)
 DIRECT_PASS_FUNC(PyTensorObject_gather, functional::dim_gather)
 DIRECT_PASS_FUNC(PyTensorObject_repeat_interleave, functional::repeat_interleave)
+DIRECT_PASS_FUNC(PyTensorObject_scatter_add, functional::scatter_add)
+DIRECT_PASS_FUNC(PyTensorObject_logaddexp, functional::logaddexp)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
@@ -1095,6 +1097,8 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"gather", (PyCFunction)PyTensorObject_gather, METH_VARARGS | METH_KEYWORDS, NULL},
     {"repeat_interleave", (PyCFunction)PyTensorObject_repeat_interleave,
      METH_VARARGS | METH_KEYWORDS, NULL},
+    {"scatter_add", (PyCFunction)PyTensorObject_scatter_add, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"logaddexp", (PyCFunction)PyTensorObject_logaddexp, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},
