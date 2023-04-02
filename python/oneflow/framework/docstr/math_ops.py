@@ -1972,3 +1972,24 @@ add_docstr(
         tensor([3., 0., -0., -0.], dtype=oneflow.float32)
     """,
 )
+
+add_docstr(
+    oneflow.digamma,
+    r"""digamma(input) -> Tensor
+
+    .. math::
+    \digamma(x) = \frac{d}{dx} \ln\left(\Gamma\left(x\right)\right) = \frac{\Gamma'(x)}{\Gamma(x)}
+
+    Args:
+        input (Tensor): the tensor to compute the digamma function on
+        
+    .. note::  This function is similar to SciPy's `scipy.special.digamma`.
+
+    Example::
+
+        >>> import oneflow as flow
+        >>> a = flow.tensor([1, 0.5, 0, -2.1])
+        >>> flow.digamma(a)
+        tensor([-5.7722e-01, -1.9635e+00,        -inf,  1.0630e+01], dtype=oneflow.float32)
+    """,
+)
