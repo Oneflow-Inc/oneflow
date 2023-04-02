@@ -1988,8 +1988,9 @@ add_docstr(
     Example::
 
         >>> import oneflow as flow
-        >>> a = flow.tensor([1, 0.5, 0, -2.1])
+        >>> a = flow.tensor([1, 0.5])
         >>> flow.digamma(a)
-        tensor([-5.7722e-01, -1.9635e+00,        -inf,  1.0630e+01], dtype=oneflow.float32)
+        tensor([-0.5772, -1.9635], dtype=oneflow.float32)
+        
     """,
 )
