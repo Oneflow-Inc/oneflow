@@ -21,12 +21,18 @@ limitations under the License.
 
 namespace oneflow {
 
+/*
+ * math constants
+ */
+template<typename T>
+constexpr T pi = static_cast<T>(3.141592653589793238462643383279502);
+
 int64_t Gcd(int64_t m, int64_t n);
 
 int64_t Lcm(int64_t m, int64_t n);
 
 template<typename T>
- T polevl(const T x, const T A[], size_t len);
+T polevl(const T x, const T A[], size_t len);
 
 // This function references pytorch/aten/src/ATen/native/Math.h
 double calc_digamma_cpu(double x);
@@ -34,7 +40,7 @@ double calc_digamma_cpu(double x);
 float calc_digamma_cpu(float x);
 
 template<typename scalar_t, typename accscalar_t>
-static OF_DEVICE_FUNC scalar_t calc_digamma_cuda(scalar_t in) {
+OF_DEVICE_FUNC scalar_t calc_digamma_cuda(scalar_t in) {
   static const double PI_f64 = 3.14159265358979323846;
   const accscalar_t PSI_10 = 2.25175258906672110764;
   const accscalar_t A[] = {
@@ -103,14 +109,6 @@ OF_DEVICE_FUNC T DeviceMax(T a, T b) {
   return std::max(a, b);
 #endif
 }
-
-template<typename T>
-constexpr T pi = static_cast<T>(3.141592653589793238462643383279502);
-
-// template <typename T>
-// inline constexpr T pi() {
-//   return static_cast<T>(3.141592653589793238462643383279502);
-// }
 
 }  // namespace oneflow
 

@@ -4599,10 +4599,11 @@ def OneFlow_DigammaOp : OneFlow_BaseOp<"digamma", [NoSideEffect, DeclareOpInterf
 
 def OneFlow_DigammaGradOp : OneFlow_BaseOp<"digamma_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    OneFlow_Tensor:$x
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    OneFlow_Tensor:$y
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

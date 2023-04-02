@@ -180,7 +180,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<CeilFunctor>("Ceil");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Cos, "Cos");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Cosh, "Cosh");
-  ADD_UNARY_FUNCTOR_WITH_DY_X(Digamma,"Digamma");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Digamma, "Digamma");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Erf, "Erf");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Erfc, "Erfc");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Exp, "Exp");

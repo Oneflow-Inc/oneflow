@@ -76,7 +76,7 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("expm1", Expm1)                          \
   OF_PP_MAKE_TUPLE_SEQ("log", Log)                              \
   OF_PP_MAKE_TUPLE_SEQ("lgamma", Lgamma)                        \
-  OF_PP_MAKE_TUPLE_SEQ("digamma", Digamma)                        \
+  OF_PP_MAKE_TUPLE_SEQ("digamma", Digamma)                      \
   OF_PP_MAKE_TUPLE_SEQ("log2", Log2)                            \
   OF_PP_MAKE_TUPLE_SEQ("log10", Log10)                          \
   OF_PP_MAKE_TUPLE_SEQ("log1p", Log1p)                          \
