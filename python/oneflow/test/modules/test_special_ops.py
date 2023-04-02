@@ -120,6 +120,7 @@ class TestSpecialOps(flow.unittest.TestCase):
         x_dtype = random_dtype(["arithmetic","half"])
         x = random_tensor().to(device).to(x_dtype)
         y = torch.special.digamma(x)
+        return y
 
 
 if __name__ == "__main__":
