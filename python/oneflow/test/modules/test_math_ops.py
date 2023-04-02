@@ -608,6 +608,7 @@ class TestLog10Module(flow.unittest.TestCase):
         x = random_tensor().to(device)
         return torch.log10(x)
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestDigammaModule(flow.unittest.TestCase):
     # TODO:shijiaxing  When the grad function be implemented, rm "auto_backward=False"
@@ -616,6 +617,7 @@ class TestDigammaModule(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor().to(device)
         return torch.digamma(x)
+
 
 if __name__ == "__main__":
     unittest.main()

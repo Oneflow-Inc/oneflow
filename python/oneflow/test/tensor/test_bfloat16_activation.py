@@ -690,7 +690,7 @@ class TestBfloat16Activatian(flow.unittest.TestCase):
                 rtol=1e-4,
             )
         )
-    
+
     def test_digamma_with_random_data(test_case):
         np_array = np.random.rand(4, 4)
         x = flow.tensor(np_array, dtype=flow.bfloat16, device="cpu")
