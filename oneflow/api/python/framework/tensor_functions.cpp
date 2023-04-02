@@ -200,6 +200,7 @@ PyNumberMethods PyTensorObject_as_number = {
   }
 
 UNARY_METHOD(PyTensorObject_abs, functional::Abs);
+UNARY_METHOD(PyTensorObject_digamma, functional::Digamma);
 UNARY_METHOD(PyTensorObject_exp, functional::Exp);
 UNARY_METHOD(PyTensorObject_exp2, functional::Exp2);
 UNARY_METHOD(PyTensorObject_floor, functional::Floor);
@@ -788,9 +789,7 @@ static PyObject* PyTensorObject_to_global(PyObject* self, PyObject* args, PyObje
   PyObject* result = NULL;
   if (tensor->is_global())
     result = PyTensorObject_global_to_global(self, args, kwargs);
-  else {
-    result = PyTensorObject_local_to_global(self, args, kwargs);
-  }
+  else { result = PyTensorObject_local_to_global(self, args, kwargs); }
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
 
@@ -1098,6 +1097,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
 
     // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},
+    {"digamma", PyTensorObject_digamma, METH_NOARGS, NULL},
     {"exp", PyTensorObject_exp, METH_NOARGS, NULL},
     {"exp2", PyTensorObject_exp2, METH_NOARGS, NULL},
     {"floor", PyTensorObject_floor, METH_NOARGS, NULL},
