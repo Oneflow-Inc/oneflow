@@ -233,13 +233,6 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kDigamma, Dst, Src> {
   }
 };
 
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kDigamma, half, half> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC half operator()(half src) const { return calc_digamma_cuda<half, float>(src); }
-};
-
 
 template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kAbs, half, half> {
@@ -369,6 +362,7 @@ SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kAtanh);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kCeil);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kCos);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kCosh);
+SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kDigamma);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kErf);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kErfc);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kExp);
