@@ -71,7 +71,7 @@ def loss_test():
     if os.getenv("ONEFLOW_REMAT_RUN_LOSS_TEST") is not None:
         return lambda f: f
     else:
-        return unittest.skip("")
+        return unittest.skip("Environment variable 'ONEFLOW_REMAT_RUN_LOSS_TEST' need to be set to run this test.")
 
 
 @contextmanager
@@ -309,7 +309,7 @@ class TestRemat(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     @memory_budget(80, "cuda")
-    def test_bn_and_backward(self, device):
+    def test_simple_network(self, device):
         model = nn.Sequential(
             nn.Conv2d(3, 32, 3, 2, 1),
             nn.BatchNorm2d(32),
