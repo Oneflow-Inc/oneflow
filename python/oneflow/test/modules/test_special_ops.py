@@ -121,7 +121,7 @@ class TestSpecialOps(flow.unittest.TestCase):
         x = random_tensor().to(device).to(x_dtype)
         y = torch.special.digamma(x)
         return y
-    
+
     # TODO:shijiaxing  When the grad function be implemented, rm "auto_backward=False"
     @autotest(n=5, auto_backward=False)
     def test_flow_psi_with_random_data(test_case):

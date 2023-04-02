@@ -64,5 +64,6 @@ def softmax(x: Tensor, dim: int):
 def digamma(x: Tensor):
     return oneflow._C.digamma(x)
 
+
 def psi(x: Tensor):
     return oneflow._C.digamma(x)
