@@ -67,6 +67,13 @@ def only_copy_on_write():
         return unittest.skip("")
 
 
+def loss_test():
+    if os.getenv("ONEFLOW_REMAT_RUN_LOSS_TEST") is not None:
+        return lambda f: f
+    else:
+        return unittest.skip("")
+
+
 @contextmanager
 def generate_placeholder(size_mb, device):
     global placeholder_size
@@ -386,6 +393,7 @@ class TestRemat(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     @only_fbip()
     @memory_budget(220, "cpu")
+    @loss_test()
     def test_resnet18_naive_sgd(self, _):
         # NOTE: this loss is only correct in my environment on 21
         self._test_resnet18(
@@ -397,6 +405,7 @@ class TestRemat(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
     @only_fbip()
     @memory_budget(220, "cpu")
+    @loss_test()
     def test_resnet18_naive_sgd_ddp_1n2d(self, _):
         # 2 devices, 2 losses
         # NOTE: these losses are only correct in my environment on 21
@@ -409,6 +418,7 @@ class TestRemat(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     @only_fbip()
     @memory_budget(270, "cpu")
+    @loss_test()
     def test_resnet18_momentum_sgd(self, _):
         # NOTE: this loss is only correct in my environment on 21
         self._test_resnet18(
@@ -418,6 +428,7 @@ class TestRemat(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     @only_fbip()
     @memory_budget(310, "cpu")
+    @loss_test()
     def test_resnet18_adam(self, _):
         # NOTE: this loss is only correct in my environment on 21
         self._test_resnet18(lambda params: flow.optim.Adam(params, lr=0.1), False, None)
