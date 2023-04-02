@@ -71,7 +71,9 @@ def loss_test():
     if os.getenv("ONEFLOW_REMAT_RUN_LOSS_TEST") is not None:
         return lambda f: f
     else:
-        return unittest.skip("Environment variable 'ONEFLOW_REMAT_RUN_LOSS_TEST' need to be set to run this test.")
+        return unittest.skip(
+            "Environment variable 'ONEFLOW_REMAT_RUN_LOSS_TEST' need to be set to run this test."
+        )
 
 
 @contextmanager
