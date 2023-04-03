@@ -171,9 +171,9 @@ struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kDigamma, float, float> {
         float y = 0;
         if (x < 1.0e17f) {
           float z = 1 / (x * x);
-         float polevl_result = 0;
-    for (int i = 0; i <= 6; i++) { polevl_result = polevl_result * z + A[i]; }
-    y = z * polevl_result;
+          float polevl_result = 0;
+          for (int i = 0; i <= 6; i++) { polevl_result = polevl_result * z + A[i]; }
+          y = z * polevl_result;
         }
         return result + logf(x) - (0.5f / x) - y;
       };
@@ -237,8 +237,8 @@ struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kDigamma, double, double> {
           // y = z * polevl(z, A, 6);
 
           double polevl_result = 0;
-    for (int i = 0; i <= 6; i++) { polevl_result = polevl_result * z + A[i]; }
-    y = z * polevl_result;
+          for (int i = 0; i <= 6; i++) { polevl_result = polevl_result * z + A[i]; }
+          y = z * polevl_result;
         }
         return result + log(x) - (0.5 / x) - y;
       };
