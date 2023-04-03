@@ -221,7 +221,7 @@ Maybe<void> TensorAutoCastProcessor::Apply() {
       if (args_eligible[i] && JUST(IsDeviceType(inputs_[i], autocast_device_type))
           && inputs_[i]->dtype()->is_floating_point() && inputs_[i]->dtype() != autocast_dtype) {
         autocast_inputs_[i] = JUST(
-            functional::To(inputs_[i], autocast_dtype, /*copy=*/false, /*non_blocking=*/false));
+            functional::To(inputs_[i], autocast_dtype, /*non_blocking=*/false, /*copy=*/false));
       } else {
         autocast_inputs_[i] = inputs_[i];
       }

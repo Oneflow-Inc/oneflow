@@ -2290,7 +2290,7 @@ class CtcLossFunctor {
           {
               log_probs,
               JUST(functional::To(targets, Optional<std::string>(log_probs_device_str),
-                                  DType::Int64(), /*copy=*/false, /*non_blocking=*/false)),
+                                  DType::Int64(), /*non_blocking=*/false, /*copy=*/false)),
               JUST(functional::To(input_lengths, log_probs_device_str, /*non_blocking=*/false)),
               target_lengths_on_log_probs_device,
           },
