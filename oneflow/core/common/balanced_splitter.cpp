@@ -49,7 +49,7 @@ Range BalancedSplitter::At(int64_t first_idx, int64_t last_idx) const {
   return Range(first_range.begin(), last_range.end());
 }
 
-int64_t BalancedSplitter::GetRangIndex(int64_t value) const {
+int64_t BalancedSplitter::GetRangeIndexForVal(int64_t value) const {
   CHECK_GE(value, 0);
   CHECK_LT(value, total_num());
   int64_t base_size = (base_part_size_ + 1) * base_begin_idx_;
