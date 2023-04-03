@@ -444,7 +444,8 @@ static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* k
   }
   if (PyTensorMetaClass_CheckExact(tensor_type)) {
     Optional<std::string> device = "cpu";
-    return PyTensor_New(ASSERT_PTR(functional::To(tensor, device, DType::Float(), /*copy=*/false)));
+    return PyTensor_New(ASSERT_PTR(
+        functional::To(tensor, device, DType::Float(), /*non_blocking=*/false, /*copy=*/false)));
   }
   if (PyUnicode_Check(tensor_type)) {
     tensor_type = PyTensorType_FromString(PyUnicode_AsUTF8(tensor_type));
@@ -453,14 +454,16 @@ static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* k
     const auto& dtype = PyTensorType_UnpackDType(tensor_type);
     DeviceType device_type = PyTensorType_UnpackDevice(tensor_type);
     if (device_type == ASSERT(tensor->device())->enum_type()) {
-      return PyTensor_New(ASSERT_PTR(functional::To(tensor, dtype, /*copy=*/false)));
+      return PyTensor_New(
+          ASSERT_PTR(functional::To(tensor, dtype, /*non_blocking=*/false, /*copy=*/false)));
     }
     Optional<std::string> device = ASSERT(DeviceTag4DeviceType(device_type));
-    return PyTensor_New(ASSERT_PTR(functional::To(tensor, device, dtype, /*copy=*/false)));
+    return PyTensor_New(
+        ASSERT_PTR(functional::To(tensor, device, dtype, /*non_blocking=*/false, /*copy=*/false)));
 
   } else if (functional::PyDTypeCheck(tensor_type)) {
-    return PyTensor_New(
-        ASSERT_PTR(functional::To(tensor, functional::PyUnpackDType(tensor_type), /*copy=*/false)));
+    return PyTensor_New(ASSERT_PTR(functional::To(tensor, functional::PyUnpackDType(tensor_type),
+                                                  /*non_blocking=*/false, /*copy=*/false)));
   }
   return PyErr_Format(PyExc_TypeError, "dtype must be a type, str, or dtype object");
   END_HANDLE_ERRORS
