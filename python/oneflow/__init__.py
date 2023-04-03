@@ -488,6 +488,7 @@ import oneflow.asyncs
 import oneflow.one_embedding
 import oneflow.profiler
 import oneflow.mock_torch
+import oneflow.remat
 
 if oneflow._oneflow_internal.flags.with_mlir():
     oneflow_internal_path = oneflow._oneflow_internal.__file__
