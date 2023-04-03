@@ -128,9 +128,9 @@ class Adadelta(Optimizer):
 
             for param in param_list:
                 assert param.is_leaf, "parameters must be leaf tensor"
-                self._state[param] = dict()
-                self._state[param]["square_avgs"] = flow.zeros_like(param)
-                self._state[param]["acc_deltas"] = flow.zeros_like(param)
+                self.state[param] = dict()
+                self.state[param]["square_avgs"] = flow.zeros_like(param)
+                self.state[param]["acc_deltas"] = flow.zeros_like(param)
 
         self._op = (
             flow.stateful_op("adadelta_update")
@@ -171,15 +171,15 @@ class Adadelta(Optimizer):
                 for param in param_list:
                     if param.grad is None:
                         continue
-                    square_avgs_tensor = self._state[param]["square_avgs"]
-                    acc_deltas_tensor = self._state[param]["acc_deltas"]
+                    square_avgs_tensor = self.state[param]["square_avgs"]
+                    acc_deltas_tensor = self.state[param]["acc_deltas"]
                     flow._C.dispatch_adadelta_update(
                         self._op,
                         (param, param.grad, square_avgs_tensor, acc_deltas_tensor),
                         **kwargs,
                     )
 
-            self._state["step"] = self._state["step"] + 1
+            self.state["step"] = self.state["step"] + 1
             return loss
 
     def _generate_conf_for_graph(self, train_conf, vars_conf):

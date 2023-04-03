@@ -788,27 +788,29 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
   for (int i = 0; i < inputs.size(); ++i) {
     const auto& input_tensor = inputs.at(i);
     CHECK_EQ_OR_RETURN(is_local, input_tensor->is_local());  // NOLINT(maybe-need-error-msg)
-    if (is_local) {
-      CHECK_OR_RETURN(device_tag == JUST(GetDeviceTagOfTensor(input_tensor)))
-          << Error::RuntimeError() << "Lazy nn.Graph name: " << graph_name
-          << " encountered ERROR in module/op_name: " << new_op_name
-          << ". Expected all tensors to be on the same device, but found at least two devices, "
-          << JUST(JUST(VectorAt(inputs, 0))->device())->ToString() << " (positional 0) and "
-          << JUST(JUST(VectorAt(inputs, i))->device())->ToString() << " (positional " << i
-          << ")! Please use tensor.to() to synchronize all the input with the same device.";
-    } else {
-      // TODO: Print out all the placement
-      CHECK_OR_RETURN(parallel_desc->Equals(*JUST(GetParallelDescOfTensor(input_tensor))))
-          << Error::RuntimeError() << "Lazy nn.Graph name: " << graph_name
-          << " encountered ERROR in module/op_name: " << new_op_name
-          << ". Expected all tensors to be on the same placement, but found at least two "
-             "placements, "
-          << *JUST(PlacementToString(JUST(JUST(VectorAt(inputs, 0))->parallel_desc())))
-          << " (positional 0) and "
-          << *JUST(PlacementToString(JUST(JUST(VectorAt(inputs, i))->parallel_desc())))
-          << " (positional " << i
-          << ")! Please use tensor.to_global() to synchronize all the input with the same "
-             "placement.";
+    if (!op_expr.IsHostMemoryInput(i)) {
+      if (is_local) {
+        CHECK_OR_RETURN(device_tag == JUST(GetDeviceTagOfTensor(input_tensor)))
+            << Error::RuntimeError() << "Lazy nn.Graph name: " << graph_name
+            << " encountered ERROR in module/op_name: " << new_op_name
+            << ". Expected all tensors to be on the same device, but found at least two devices, "
+            << JUST(JUST(VectorAt(inputs, 0))->device())->ToString() << " (positional 0) and "
+            << JUST(JUST(VectorAt(inputs, i))->device())->ToString() << " (positional " << i
+            << ")! Please use tensor.to() to synchronize all the input with the same device.";
+      } else {
+        // TODO: Print out all the placement
+        CHECK_OR_RETURN(parallel_desc->Equals(*JUST(GetParallelDescOfTensor(input_tensor))))
+            << Error::RuntimeError() << "Lazy nn.Graph name: " << graph_name
+            << " encountered ERROR in module/op_name: " << new_op_name
+            << ". Expected all tensors to be on the same placement, but found at least two "
+               "placements, "
+            << *JUST(PlacementToString(JUST(JUST(VectorAt(inputs, 0))->parallel_desc())))
+            << " (positional 0) and "
+            << *JUST(PlacementToString(JUST(JUST(VectorAt(inputs, i))->parallel_desc())))
+            << " (positional " << i
+            << ")! Please use tensor.to_global() to synchronize all the input with the same "
+               "placement.";
+      }
     }
     const std::string& ibn = op_expr.indexed_ibns().at(i);
     std::string lbn = TensorNameScope::Global()->Lookup(input_tensor);

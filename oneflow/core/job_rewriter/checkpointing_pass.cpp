@@ -48,6 +48,7 @@ class CheckpointingPass final : public JobPass {
 };
 
 const std::string kCheckpointingFakeOpNamePrefix = "Sys-Checkpointing-Fake-Fw-Op_";
+const std::string kCheckpointingIdentityOpName = "Sys-Checkpointing-Identity";
 const std::string kCheckpointingBadOpName = "Sys-CheckpointPassBadEndOpName";
 
 const Scope& Scope4OpNode(const OpNode* op_node) {
@@ -277,17 +278,53 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     CHECK(first_bw_consumer != nullptr);
     std::string end_op_name = kCheckpointingBadOpName;
     int32_t end_order = -1;
+    const OpNode* end_op_node = nullptr;
     first_bw_consumer->ForEachNodeOnInEdge([&](const OpNode* end_node) {
       CHECK(op_node2order.find(end_node) != op_node2order.end());
       int32_t this_order = op_node2order.at(end_node);
       if (this_order > end_order) {
         end_order = this_order;
         end_op_name = end_node->op().op_name();
+        end_op_node = end_node;
       }
     });
     CHECK_NE(end_order, -1);
     CHECK_NE(end_op_name, kCheckpointingBadOpName);
     CHECK_LT(end_order, first_bw_order);
+    CHECK(end_op_node != nullptr);
+    // NOTE(chengcheng): if end_op placement is different with first_bw_consumer, the ctrl edge
+    //   cannot be directly connected.
+    if (!first_bw_consumer->parallel_desc().EqualsIgnoringHierarchy(end_op_node->parallel_desc())) {
+      std::string lbn = "";
+      LogicalBlobId lbi;
+      const OpEdge* end_op_edge = nullptr;
+      for (const OpEdge* in_edge : first_bw_consumer->in_edges()) {
+        if (in_edge->src_node() == end_op_node) {
+          lbi = in_edge->lbis().front();
+          lbn = GenLogicalBlobName(lbi);
+          end_op_edge = in_edge;
+          break;
+        }
+      }
+      CHECK(!lbn.empty());
+
+      auto id_op = user_op::UserOpConfWrapperBuilder(kCheckpointingIdentityOpName + NewUniqueId())
+                       .Op("identity")
+                       .Input("in", lbn)
+                       .Output("out")
+                       .ScopeSymbolId(first_bw_consumer->op().op_conf().scope_symbol_id())
+                       .Build();
+
+      std::string id_out = id_op.output("out", 0);
+      for (const std::string& ibn : end_op_edge->lbi2ibns().at(lbi)) {
+        std::string old_lbn = ReplaceInputLbnInOpCustomizedConf(
+            &(total_bw_consumers_op_name2conf.at(first_bw_consumer->op().op_name())), ibn, id_out);
+        CHECK_EQ(old_lbn, lbn);
+      }
+
+      JUST(job_builder->AddOp(first_bw_consumer->parallel_desc().parallel_conf(), id_op.op_conf()));
+      end_op_name = id_op.op_name();
+    }
     for (const auto& source_op_name : source_node_in_fake_subgraph) {
       fake_op_name2conf.at(source_op_name).add_ctrl_in_op_name(end_op_name);
     }
