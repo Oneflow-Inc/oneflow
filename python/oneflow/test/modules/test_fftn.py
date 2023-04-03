@@ -93,7 +93,7 @@ def _test_fftn(test_case, dtype=np.complex64, params: dict = None):
     print("\n")
 
 
-def _test_ifftn(test_case, params: dict, dtype=np.complex64):
+def _test_ifftn(test_case, dtype=np.complex64, params: dict = None):
     print(f"========== Start Testing ==========")
     print(f"tensor shape: {params['shape']}")
     print(f"dtype: {dtype}")
@@ -142,48 +142,57 @@ def _test_ifftn(test_case, params: dict, dtype=np.complex64):
 class TestFftN(flow.unittest.TestCase):
     def setUp(test_case):
         test_case.arg_dict = OrderedDict()
-        # test_case.arg_dict["test_fun"] = [_test_fftn, _test_ifftn]
-        # test_case.arg_dict["dtype"] = [np.float32, np.float64, np.complex64, np.complex128]
-        test_case.arg_dict["test_fun"] = [_test_fftn]
+        test_case.arg_dict["test_fun"] = [_test_fftn, _test_ifftn]
+        test_case.arg_dict["dtype"] = [np.float32, np.float64, np.complex64, np.complex128]
+        # test_case.arg_dict["test_fun"] = [_test_ifftn]
         # test_case.arg_dict["dtype"] = [np.float32, np.float64]
-        test_case.arg_dict["dtype"] = [np.complex64, np.complex128]
+        # test_case.arg_dict["dtype"] = [np.complex64, np.complex128]
     
     def test_gather(test_case):
         # set up profiling functions
         test_case.arg_dict["params"] = []
         lower_n_dims = 1
         upper_n_dims = 5
-        for _ in range(10):
-            # num_dims = np.random.randint(lower_n_dims, upper_n_dims)
-            # shape = [np.random.randint(1, 11) * 2 for _ in range(num_dims)]
-            # len_fft_dim = np.random.randint(low=0, high=num_dims)
+        for _ in range(20):
+            num_dims = np.random.randint(lower_n_dims, upper_n_dims)
+            shape = [np.random.randint(1, 11) * 2 for _ in range(num_dims)]
+            len_fft_dim = np.random.randint(low=0, high=num_dims)
 
-            # total_dims_range = np.arange(num_dims)
-            # if np.random.randint(2) == 1:
-            #     # dim = np.random.randint(low=-num_dims, high=num_dims-1)
-            #     dims = np.random.choice(
-            #         total_dims_range, size=num_dims, replace=False
-            #     ).tolist()
-            # else:
-            #     dims = None
+            total_dims_range = np.arange(num_dims)
+            if np.random.randint(2) == 1:
+                # dim = np.random.randint(low=-num_dims, high=num_dims-1)
+                dims = np.random.choice(
+                    total_dims_range, size=num_dims, replace=False
+                ).tolist()
+            else:
+                dims = None
 
-            # norm = np.random.choice(["backward", "forward", "ortho", None])
+            norm = np.random.choice(["backward", "forward", "ortho", None])
 
-            # if np.random.randint(2) == 1 and dims is not None:
-            #     n = []
-            #     for i in range(num_dims):
-            #         n_ = (
-            #             np.random.randint(low=1, high=2 * shape[i])
-            #             if np.random.randint(2) == 1
-            #             else -1
-            #         )
-            #         n.append(n_)
-            # else:
-            #     n = None
-            shape = (2, 18, 4, 10)
-            n = (-1,-1,2,-1)
-            dims = (2,3,0,1)
-            norm = "forward"
+            if np.random.randint(2) == 1 and dims is not None:
+                n = []
+                for i in range(num_dims):
+                    n_ = (
+                        np.random.randint(low=1, high=2 * shape[i])
+                        if np.random.randint(2) == 1
+                        else -1
+                    )
+                    n.append(n_)
+            else:
+                n = None
+
+            # shape = (10,)
+            # n = (-1,)
+            # dims = (0,)
+            # norm = "forward"
+
+            # shape = (2, 18, 4, 10)
+            # n = (-1,-1,2,-1)
+            # dims = (2,3,0,1)
+            # norm = "forward"
+            # expected :
+            # fft_shape : (4, 10, 2, 18)
+            # fft_tensor : (2, 18, 4, 10)
 
             test_case.arg_dict["params"].append(
                 {"shape": shape, "n": n, "dims": dims, "norm": norm}
