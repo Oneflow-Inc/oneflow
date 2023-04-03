@@ -96,10 +96,6 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
   Maybe<void> Prepare(Instruction* instruction) override { return Maybe<void>::Ok(); }
   void Compute(Instruction* instruction) override {
     auto* lazy_job_stream_policy = GetLazyJobStreamPolicy(instruction);
-
-#ifdef OF_DEBUG_LAZY_RUNTIME
-    static thread_local int64_t run_cnt = 0;
-#endif  // OF_DEBUG_LAZY_RUNTIME
     {
       OF_PROFILER_RANGE_GUARD("WaitUntilQueueEmptyIfFrontNNGraphNotEquals");
       lazy_job_stream_policy->WaitUntilQueueEmptyIfFrontNNGraphNotEquals(nn_graph_);
@@ -110,21 +106,10 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
       const auto& job_name = job_instance->job_name();
       auto* buffer_mgr = Singleton<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
       buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Push(job_instance);
-#ifdef OF_DEBUG_LAZY_RUNTIME
-      LOG(INFO) << "vm run lazy " << job_name << " push callback"
-                << " run count " << run_cnt;
-#endif  // OF_DEBUG_LAZY_RUNTIME
       buffer_mgr->Get(GetSourceTickBufferName(job_name))->Push(job_instance);
-#ifdef OF_DEBUG_LAZY_RUNTIME
-      LOG(INFO) << "vm run lazy " << job_name << " push source tick "
-                << " run count " << run_cnt;
-#endif  // OF_DEBUG_LAZY_RUNTIME
     }
     OF_PROFILER_RANGE_GUARD("EnqueueNNGraph");
     lazy_job_stream_policy->EnqueueNNGraph(nn_graph_);
-#ifdef OF_DEBUG_LAZY_RUNTIME
-    ++run_cnt;
-#endif  // OF_DEBUG_LAZY_RUNTIME
   }
 
  private:
