@@ -50,6 +50,13 @@ Maybe<void> LazyInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inp
 
 Maybe<void> EagerInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                                     TensorTuple* outputs, const OpExprInterpContext& ctx) const {
+  // In the op interpreter, judge whether to open the global mode to avoid recursion caused by
+  // GlobalMode.
+  // The global mode is enabled only if it was enabled and the current operation is a local
+  // operation.
+  auto global_mode_gurad = GlobalMode::Guard(GlobalMode::is_enabled() && is_local_,
+                                             GlobalMode::nd_sbp(), GlobalMode::parallel_desc());
+
 #define APPLY_IF(op_type)                                              \
   if (const auto* op = dynamic_cast<const op_type##Expr*>(&op_expr)) { \
     return ApplyImpl(*op, inputs, outputs, ctx);                       \

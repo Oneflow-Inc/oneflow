@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/framework/op_interpreter/eager_local_op_interpreter.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/eager/tensor_storage.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/virtual_machine.h"
 
@@ -49,6 +50,31 @@ Maybe<LocalTensor> StaticZerosTensor::AsLocalTensor() {
   CHECK_OR_RETURN(is_local());  // NOLINT
   return std::dynamic_pointer_cast<LocalTensor>(
       JUST(functional::Constant(*shape_, Scalar(0), CHECK_JUST(DType::Get(dtype_)), device_)));
+}
+
+Parameter::Parameter(const std::shared_ptr<Tensor>& tensor, bool requires_grad)
+    : ProxyTensor<Parameter>(tensor) {
+  CHECK_JUST(this->tensor_->set_requires_grad(requires_grad));
+  if (tensor->is_local() && tensor->is_eager()) {
+    if (auto rematable_storage = std::dynamic_pointer_cast<vm::RematableTensorStorage>(
+            CHECK_JUST(tensor_->eager_blob_object())->tensor_storage());
+        rematable_storage != nullptr && tensor_->is_local() && tensor_->is_eager()) {
+      rematable_storage->set_eviction_disabled(true);
+    }
+  }
+}
+Maybe<void> Parameter::set_data(const std::shared_ptr<Tensor>& other) {
+  if (is_local() && is_eager()) {
+    auto rematable_storage = std::dynamic_pointer_cast<vm::RematableTensorStorage>(
+        CHECK_JUST(tensor_->eager_blob_object())->tensor_storage());
+    bool enable_remat = rematable_storage != nullptr && tensor_->is_local() && tensor_->is_eager();
+    if (enable_remat) { rematable_storage->set_eviction_disabled(false); }
+    JUST(tensor_->set_data(other));
+    if (enable_remat) { rematable_storage->set_eviction_disabled(true); }
+  } else {
+    JUST(tensor_->set_data(other));
+  }
+  return Maybe<void>::Ok();
 }
 
 std::shared_ptr<Tensor> Parameter::contiguous() const {
