@@ -20,7 +20,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_frac(test_case, ndim, placement, sbp):
     shape = [random(2, 4) * 8 for i in range(ndim)]
     input = random_tensor(ndim, *shape).to_global(placement=placement, sbp=sbp)
