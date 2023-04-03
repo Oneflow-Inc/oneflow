@@ -695,13 +695,15 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
     if (has_cos && has_sin) {
       const user_op::TensorDesc& cos_desc = ctx->InputTensorDesc("cos", 0);
       CHECK_GE_OR_RETURN(cos_desc.shape().At(0), m)
-          << "M of cos should be no less than M of x if position_ids is given.";  // K of cos & sin is checked inside ParseDims
+          << "M of cos should be no less than M of x if position_ids is given.";  
+          // K of cos & sin is checked inside ParseDims
     }
   } else {
     if (has_cos && has_sin) {
       const user_op::TensorDesc& cos_desc = ctx->InputTensorDesc("cos", 0);
       CHECK_EQ_OR_RETURN(cos_desc.shape().At(0), m)
-          << "M of cos should be equal to M of x if position_ids is not given.";  // K of cos & sin is checked inside ParseDims
+          << "M of cos should be equal to M of x if position_ids is not given.";  
+          // K of cos & sin is checked inside ParseDims
     }
   }
 
