@@ -38,7 +38,6 @@ Thread::Thread(const StreamId& stream_id) : thrd_id_(EncodeStreamIdToInt64(strea
   }
 
   actor_thread_ = std::thread([this, stream_id]() {
-    VLOG(1) << "Actor thread " << thrd_id_ << " begins.";
     LazyMode::Guard guard(true);
     OF_PROFILER_NAME_THIS_HOST_THREAD("_" + ToString(stream_id.device_id().device_type())
                                       + std::to_string(stream_id.device_id().device_index())
@@ -51,7 +50,6 @@ Thread::Thread(const StreamId& stream_id) : thrd_id_(EncodeStreamIdToInt64(strea
 
 Thread::~Thread() {
   actor_thread_.join();
-  VLOG(1) << "Actor thread " << thrd_id_ << " ends.";
   CHECK(id2task_.empty());
   msg_channel_.Close();
 }

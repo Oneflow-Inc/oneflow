@@ -489,7 +489,7 @@ std::set<std::string> MultiThreadBroadcastFromMasterToWorkers(size_t world_size,
         },
         thread_num);
   } else {
-    const int64_t bs_index = bs.GetRangIndex(GlobalProcessCtx::Rank());
+    const int64_t bs_index = bs.GetRangeIndexForVal(GlobalProcessCtx::Rank());
     std::string key = prefix + std::to_string(bs_index);
     Singleton<CtrlClient>::Get()->PullKV(key, worker_data);
   }

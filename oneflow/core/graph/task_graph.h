@@ -84,7 +84,8 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
  protected:
   explicit TaskGraph();
 
-  void BuildTaskPath(TaskNode* src_node, TaskNode* dst_node, const LogicalBlobId& lbi);
+  void BuildTaskPath(TaskNode* src_node, TaskNode* dst_node, const LogicalBlobId& lbi,
+                     bool is_host_mem_input);
 
   void ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_nodes,
                         const std::vector<CompTaskNode*>& dst_task_nodes);

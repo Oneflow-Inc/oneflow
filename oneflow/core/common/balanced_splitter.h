@@ -42,8 +42,8 @@ class BalancedSplitter final {
   Range At(int64_t idx) const;
   Range At(int64_t first_idx, int64_t last_idx) const;
 
-  // Get the index number of a range.
-  int64_t GetRangIndex(int64_t value) const;
+  // Get the range index number of a value.
+  int64_t GetRangeIndexForVal(int64_t value) const;
   int64_t total_num() const;
 
  private:

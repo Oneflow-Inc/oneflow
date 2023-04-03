@@ -42,9 +42,8 @@ struct CompileModeVisitor {
         return DerivedT::VisitRankPerThread(std::forward<Args>(args)...);
       case CompileMode::kRankPerProcess:
         return DerivedT::VisitRankPerProcess(std::forward<Args>(args)...);
-      case CompileMode::kEnd: LOG(FATAL) << "invalid compile mode";
+      default: LOG(FATAL) << "invalid compile mode";
     }
-    LOG(FATAL) << "invalid compile mode";
   }
 };
 

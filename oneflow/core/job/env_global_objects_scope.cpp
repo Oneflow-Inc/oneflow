@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/vm/remat/allocator.h"
 #ifdef WITH_CUDA
 #include <cuda.h>
 #endif  // WITH_CUDA
@@ -30,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/vm/virtual_machine_scope.h"
+#include "oneflow/core/vm/remat/util.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/device/cudnn_conv_util.h"
@@ -48,6 +50,7 @@ limitations under the License.
 #include "oneflow/core/kernel/blob_access_checker_kernel_observer.h"
 #include "oneflow/core/kernel/profiler_kernel_observer.h"
 #include "oneflow/core/embedding/embedding_manager.h"
+#include "oneflow/core/vm/remat/env.h"
 #ifdef WITH_RDMA
 #include "oneflow/core/platform/include/ibv.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
@@ -148,6 +151,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Singleton<EnvGlobalObjectsScope>::SetAllocated(this);
 
   InitLogging(env_proto.cpp_logging_conf());
+  Singleton<remat::Env>::New();
   Singleton<EnvDesc>::New(env_proto);
   Singleton<ProcessCtx>::New();
   // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
@@ -184,6 +188,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
     Singleton<hardware::NodeDeviceDescriptorManager>::Get()->DumpSummary("devices");
   }
   Singleton<ep::DeviceManagerRegistry>::New();
+  Singleton<remat::AllocatorManager>::New();
   Singleton<ThreadPool>::New(Singleton<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
   SetCpuDeviceManagerNumThreads();
 #ifdef WITH_CUDA
@@ -241,6 +246,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Singleton<EagerNcclCommMgr>::Delete();
 #endif
   Singleton<ThreadPool>::Delete();
+  Singleton<remat::AllocatorManager>::Delete();
   Singleton<ep::DeviceManagerRegistry>::Delete();
   if (Singleton<ResourceDesc, ForSession>::Get() != nullptr) {
     Singleton<ResourceDesc, ForSession>::Delete();
@@ -252,6 +258,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Singleton<RpcManager>::Delete();
   Singleton<ProcessCtx>::Delete();
   Singleton<EnvDesc>::Delete();
+  Singleton<remat::Env>::Delete();
   ClearAllSymbol();
   ClearAllBackwardPassScope();
   if (Singleton<EnvGlobalObjectsScope>::Get() != nullptr) {

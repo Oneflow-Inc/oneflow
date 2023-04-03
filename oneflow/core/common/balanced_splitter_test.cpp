@@ -35,7 +35,7 @@ TEST(BalancedSplitter, split_2_to_3_part) {
   ASSERT_TRUE(splitter.At(2) == Range(2, 2));
 }
 
-TEST(BalancedSplitter, GetRangeIndex) {
+TEST(BalancedSplitter, GetRangeIndexForVal) {
   const size_t total_num = 937;
   const size_t split_num = 11;
   BalancedSplitter bs(total_num, split_num);
@@ -43,7 +43,7 @@ TEST(BalancedSplitter, GetRangeIndex) {
   for (size_t i = 0; i < split_num; ++i) {
     Range range = bs.At(i);
     for (size_t value = range.begin(); value < range.end(); ++value) {
-      ASSERT_TRUE(bs.GetRangIndex(value) == i);
+      ASSERT_TRUE(bs.GetRangeIndexForVal(value) == i);
     }
   }
 }
