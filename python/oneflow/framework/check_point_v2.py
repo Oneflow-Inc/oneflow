@@ -58,7 +58,9 @@ DATA_FILENAME = "out"
 PROTOCOL_VERSION = 1
 ONEFLOW_MAGIC_KEY = "__oneflow__"
 
-MAP_LOCATION: TypeAlias = Optional[Union[Callable[[Tensor, str], Tensor], flow.device, str, flow.placement]]
+MAP_LOCATION: TypeAlias = Optional[
+    Union[Callable[[Tensor, str], Tensor], flow.device, str, flow.placement]
+]
 FILE_LIKE: TypeAlias = Union[str, os.PathLike, BinaryIO, IO[bytes], Path]
 
 
@@ -219,23 +221,27 @@ def _get_restore_location(map_location):
     if map_location is None:
         restore_location = _default_restore_location
     elif isinstance(map_location, (str, flow.device)):
+
         def restore_location(storage, location=None):
             return storage.to(device=map_location)
+
     elif isinstance(map_location, flow.placement):
+
         def restore_location(storage, location=None):
             return storage.to_global(placement=map_location)
+
     else:
+
         def restore_location(storage, location=None):
             result = map_location(storage, location)
             if result is None:
                 result = _default_restore_location(storage, location)
             return result
+
     return restore_location
 
 
-def smart_to(
-    obj: Any, dest: MAP_LOCATION
-) -> "oneflow.Tensor":
+def smart_to(obj: Any, dest: MAP_LOCATION) -> "oneflow.Tensor":
     if not isinstance(obj, flow.Tensor):
         return obj
     tensor = obj
@@ -243,9 +249,7 @@ def smart_to(
     return restore_location(tensor, None)
 
 
-def module_to(
-        obj: flow.nn.Module, dest: MAP_LOCATION
-) -> "oneflow.nn.Module":
+def module_to(obj: flow.nn.Module, dest: MAP_LOCATION) -> "oneflow.nn.Module":
     restore_location = _get_restore_location(dest)
     # for nn.Module object, we will use a tensor to get the device
     # to support dest with a Callable type
@@ -430,9 +434,7 @@ def is_dir_and_no_pickle_file(path: FILE_LIKE, support_pytorch_format: bool):
 
 @load_if(is_dir_and_no_pickle_file)
 def legacy_load(
-    path: Path,
-    global_src_rank: Optional[int],
-    map_location: MAP_LOCATION,
+    path: Path, global_src_rank: Optional[int], map_location: MAP_LOCATION,
 ) -> Dict[str, "flow.Tensor"]:
     assert os.path.isdir(path), "Directory {} doesn't exist!".format(path)
     rank = flow.env.get_rank()
@@ -492,10 +494,7 @@ def is_oneflow_pickle_file(path: FILE_LIKE, support_pytorch_format: bool) -> boo
 # as `content`.
 @load_if(is_oneflow_pickle_file)
 def load_from_oneflow_single_file(
-    path: FILE_LIKE,
-    global_src_rank,
-    map_location: MAP_LOCATION,
-    content: Any = None,
+    path: FILE_LIKE, global_src_rank, map_location: MAP_LOCATION, content: Any = None,
 ):
     rank = flow.env.get_rank()
     if global_src_rank is None or rank == global_src_rank:
@@ -562,9 +561,7 @@ def is_dir_and_has_pickle_file(path: FILE_LIKE, support_pytorch_format: bool) ->
 
 @load_if(is_dir_and_has_pickle_file)
 def load_from_oneflow_pickle_dir(
-    path: Path,
-    global_src_rank: Optional[int],
-    map_location: MAP_LOCATION,
+    path: Path, global_src_rank: Optional[int], map_location: MAP_LOCATION,
 ):
     rank = flow.env.get_rank()
     pickle_path = path / PICKLE_FILENAME
@@ -696,6 +693,7 @@ def save(
                 "path_or_buffer must be the type of {`str`, `pathlib.Path`} while obj is Graph"
             )
         _save_graph(obj, path_or_buffer)
+        return
 
     # this `path` is only used for `ContextData` and is set to empty when `path_or_buffer` is IO[bytes] or BinaryIO
     path: Path = Path(path_or_buffer if _is_path(path_or_buffer) else "")
