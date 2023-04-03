@@ -659,6 +659,7 @@ def save(
                 "path_or_buffer must be the type of {`str`, `pathlib.Path`} while obj is Graph"
             )
         _save_graph(obj, path_or_buffer)
+        return
 
     # this `path` is only used for `ContextData` and is set to empty when `path_or_buffer` is IO[bytes] or BinaryIO
     path: Path = Path(path_or_buffer if _is_path(path_or_buffer) else "")
