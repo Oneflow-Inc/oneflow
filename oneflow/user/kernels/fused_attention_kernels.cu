@@ -1007,15 +1007,16 @@ struct FusedApplyRotaryEmbParam {
   const T* sin;
   const PositionType* position_ids;
   T* out;
-  T theta;
-  IndexType rotary_size;
-  IndexType rotate_stride;
-  IndexType k0;
-  IndexType k1;
+  const T theta;
+  const float inv_actual_rotary_size; // 1.0 / (rotary_size per rotary dimension)
+  const IndexType actual_rotary_size; // rotary_size per rotary dimension
+  const IndexType rotary_size;
+  const IndexType rotate_stride;
+  const IndexType k0;
+  const IndexType k1;
   IndexType num_elements;
-  IndexType k;
-  IndexType packed_n;
-  IndexType x_offset;
+  const IndexType k;
+  const IndexType x_offset;
 
   IndexType ref_stride[NumDims];  // b, m, h, k
   IndexType out_stride[NumDims];  // ordered descendingly by stride
@@ -1027,8 +1028,8 @@ struct FusedApplyRotaryEmbParam {
   IndexType sinuous_m_stride;
 
   FusedApplyRotaryEmbParam(const T* x, const T* cos, const T* sin, const PositionType* position_ids,
-                           T* out, const T theta, const IndexType rotary_size,
-                           const IndexType rotate_stride, const IndexType num_elements,
+                           T* out, const T theta, const float inv_actual_rotary_size, const IndexType actual_rotary_size,
+                           const IndexType rotary_size, const IndexType rotate_stride, const IndexType num_elements,
                            const IndexType k, const IndexType k0, const IndexType k1,
                            const IndexType x_offset)
       : x(x),
@@ -1037,6 +1038,8 @@ struct FusedApplyRotaryEmbParam {
         position_ids(position_ids),
         out(out),
         theta(theta),
+        inv_actual_rotary_size(inv_actual_rotary_size),
+        actual_rotary_size(actual_rotary_size),
         rotary_size(rotary_size),
         rotate_stride(rotate_stride),
         num_elements(num_elements),
@@ -1058,12 +1061,13 @@ __global__ void IntervalKernel(
 
     IndexType temp_offset = offset;
 
-    for (int i = 0; i < NumDims; i++) {
+    for (int i = 0; i < NumDims - 1; i++) {
       IndexType ref_stride = param.ref_stride[i];
       IndexType idx = temp_offset / ref_stride;
       index[i] = idx;
       temp_offset = temp_offset - idx * ref_stride;
     }
+    index[NumDims - 1] = temp_offset;
 
     IndexType x_offset = param.x_offset;
     IndexType out_offset = 0;
@@ -1095,9 +1099,9 @@ __global__ void IntervalKernel(
         const IndexType actual_ndim = param.rotary_size / RotaryEmbDim;
 #pragma unroll
         for (int i = 0; i < PackSize / 2; i++) {
-          float val = position
-                      * expf(2.0f * static_cast<float>(((k_index % actual_ndim) / 2 + i))
-                             / actual_ndim * logf(param.theta));
+          T val = position
+                      * expf(2.0f * static_cast<float>((((k_index % param.actual_rotary_size) >> 1) + i))
+                             * param.inv_actual_rotary_size * logf(param.theta));
           T cos_val = cosf(val);
           T sin_val = sinf(val);
           cos_vec.elem[i * 2] = cos_val;
@@ -1131,12 +1135,13 @@ __global__ void PlaneKernel(
     IndexType temp_offset = offset;
     IndexType index[NumDims];
 #pragma unroll
-    for (int i = 0; i < NumDims; i++) {
+    for (int i = 0; i < NumDims - 1; i++) {
       IndexType ref_stride = param.ref_stride[i];
       IndexType idx = temp_offset / ref_stride;
       index[i] = idx;
       temp_offset = temp_offset - idx * ref_stride;
     }
+    index[NumDims - 1] = temp_offset;
 
     const IndexType b_index = index[0], m_index = index[1], k_index = index[NumDims - 1];
     const IndexType position_rotate_index = (k_index >= param.k0) ? 1 : 0;
@@ -1154,9 +1159,8 @@ __global__ void PlaneKernel(
       cos_val = *(param.cos + sinuous_offset);
       sin_val = *(param.sin + sinuous_offset);
     } else {
-      int actual_ndim = param.rotary_size / RotaryEmbDim;
-      float val = position
-                  * expf(2.0f * static_cast<float>(k_index % (actual_ndim / 2)) / actual_ndim
+      T val = position
+                  * expf(2.0f * static_cast<float>(k_index % (param.actual_rotary_size >> 1)) * param.inv_actual_rotary_size
                          * logf(param.theta));
       cos_val = cosf(val);
       sin_val = sinf(val);
@@ -1208,9 +1212,12 @@ void LaunchKernel(ep::CudaStream* stream, const T* x, const T* cos, const T* sin
 
   const IndexType rotate_stride = rotary_size / (2 * RotaryEmbDim);
 
+  const IndexType actual_rotary_size = rotary_size / RotaryEmbDim;
+  const float inv_actual_rotary_size = 1.0 / actual_rotary_size;
+
   struct FusedApplyRotaryEmbParam<T, PositionType, IndexType, NumDims, RotaryEmbDim> param(
-      x, cos, sin, position_ids, out, theta, rotary_size, rotate_stride, num_elements, k, k0, k1,
-      x_offset);
+      x, cos, sin, position_ids, out, theta, inv_actual_rotary_size, actual_rotary_size, rotary_size, rotate_stride, num_elements, 
+      k, k0, k1, x_offset);
 
   const IndexType ref_strides[NumDims] = {m * h * k, h * k, k, 1};
   const IndexType out_strides[NumDims] = {out_b_stride, out_m_stride, out_h_stride, 1};
