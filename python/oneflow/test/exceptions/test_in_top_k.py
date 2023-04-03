@@ -20,15 +20,18 @@ import oneflow as flow
 import numpy as np
 
 
-class TestMaskedFill(flow.unittest.TestCase):
-    def test_masked_fill_error_msg(test_case):
-        arr = np.array([0.1, 0.2, 0.3, 3.0, 4.0])
-        mask = flow.Tensor(arr)
-        arr = np.array([1, 1, 1, 1, 1])
-        x = flow.Tensor(arr)
+class TestInTopK(flow.unittest.TestCase):
+    def test_in_top_k_error_msg(test_case):
+        arr = np.array([1, 1])
+        targets = flow.Tensor(arr)
+        targets = flow.cast(targets, flow.float)
+        arr = np.array([[0.8, 0.6, 0.3], [0.1, 0.6, 0.4]])
+        predictions = flow.Tensor(arr)
         with test_case.assertRaises(RuntimeError) as ctx:
-            flow._C.masked_fill_(x, mask, 2)
-        test_case.assertTrue("mask type must be integral or bool" in str(ctx.exception))
+            flow._C.in_top_k(targets, predictions, 1)
+        test_case.assertTrue(
+            "targets data type must be index type" in str(ctx.exception)
+        )
 
 
 if __name__ == "__main__":
