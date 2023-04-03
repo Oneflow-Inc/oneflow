@@ -80,7 +80,7 @@ static Operation* BuildFusedBiasAddMaskScaleOpWithRate(PatternRewriter& rewriter
   operands.push_back(a);
   operands.push_back(b);
   operands.push_back(mask);
-  NamedAttrList attributes = dropout_op->getAttrs();
+  NamedAttrList attributes;
   attributes.set("axis", axis);
   attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
                  rewriter.getStringAttr(OpTrait::IsOpConfCompatible<void>::getOpName(dropout).str()
@@ -89,8 +89,6 @@ static Operation* BuildFusedBiasAddMaskScaleOpWithRate(PatternRewriter& rewriter
   float rate_float = rate.cast<FloatAttr>().getValueAsDouble();
   if (rate_float < 1.0f) { scale = 1.0f / (1.0f - rate_float); }
   attributes.set("scale", rewriter.getF32FloatAttr(scale));
-  attributes.erase(dropout_op.rateAttrName());
-  attributes.erase(dropout_op.seedAttrName());
   return rewriter.create<FusedBiasAddMaskScaleOp>(dropout_op->getLoc(), dropout_op.out().getType(),
                                                   operands, attributes);
 }
