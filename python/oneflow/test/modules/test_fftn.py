@@ -42,7 +42,7 @@ def tensor_builder(params: dict, dtype=np.complex64):
     return x_flow, x_torch
 
 
-def compare_result(test_case, a, b, rtol=1e-5, atol=1e-8):
+def compare_result(test_case, a, b, rtol=1e-6, atol=1e-8):
     test_case.assertTrue(
         np.allclose(a.numpy(), b.numpy(), rtol=rtol, atol=atol),
         f"\na\n{a.numpy()}\n{'-' * 80}\nb:\n{b.numpy()}\n{'*' * 80}\ndiff:\n{a.numpy() - b.numpy()}",
@@ -90,8 +90,8 @@ def _test_fftn(test_case, dtype=np.complex64, params: dict = None):
     if torch.is_conj(x_torch_grad):
         x_torch_grad = torch.resolve_conj(x_torch_grad)
 
-    compare_result(test_case, y_flow, y_torch, 1e-5, 1e-2)
-    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-2)
+    compare_result(test_case, y_flow, y_torch, 1e-6, 1e-2)
+    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-6, 1e-2)
 
     print(f"============== PASSED =============")
     print("\n")
@@ -138,8 +138,8 @@ def _test_ifftn(test_case, dtype=np.complex64, params: dict = None):
     if torch.is_conj(x_torch_grad):
         x_torch_grad = torch.resolve_conj(x_torch_grad)
 
-    compare_result(test_case, y_flow, y_torch, 1e-5, 1e-2)
-    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-2)
+    compare_result(test_case, y_flow, y_torch, 1e-6, 1e-2)
+    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-6, 1e-2)
 
     print(f"============== PASSED =============")
     print("\n")
@@ -185,8 +185,8 @@ def _test_rfftn(test_case, dtype=np.float32, params: dict = None):
     if torch.is_conj(x_torch_grad):
         x_torch_grad = torch.resolve_conj(x_torch_grad)
 
-    compare_result(test_case, y_flow, y_torch, 1e-5, 1e-2)
-    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-2)
+    compare_result(test_case, y_flow, y_torch, 1e-6, 1e-2)
+    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-6, 1e-2)
 
     print(f"============== PASSED =============")
     print("\n")
@@ -232,8 +232,8 @@ def _test_irfftn(test_case, dtype=np.complex64, params: dict = None):
     if torch.is_conj(x_torch_grad):
         x_torch_grad = torch.resolve_conj(x_torch_grad)
 
-    compare_result(test_case, y_flow, y_torch, 1e-5, 1e-2)
-    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-2)
+    compare_result(test_case, y_flow, y_torch, 1e-6, 1e-2)
+    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-6, 1e-2)
 
     print(f"============== PASSED =============")
     print("\n")
@@ -279,8 +279,8 @@ def _test_hfftn(test_case, dtype=np.complex64, params: dict = None):
     if torch.is_conj(x_torch_grad):
         x_torch_grad = torch.resolve_conj(x_torch_grad)
 
-    compare_result(test_case, y_flow, y_torch, 1e-5, 1e-2)
-    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-2)
+    compare_result(test_case, y_flow, y_torch, 1e-6, 1e-2)
+    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-6, 1e-2)
 
     print(f"============== PASSED =============")
     print("\n")
@@ -326,8 +326,8 @@ def _test_ihfftn(test_case, dtype=np.float32, params: dict = None):
     if torch.is_conj(x_torch_grad):
         x_torch_grad = torch.resolve_conj(x_torch_grad)
 
-    compare_result(test_case, y_flow, y_torch, 1e-5, 1e-2)
-    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-2)
+    compare_result(test_case, y_flow, y_torch, 1e-6, 1e-2)
+    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-6, 1e-2)
 
     print(f"============== PASSED =============")
     print("\n")
@@ -416,11 +416,11 @@ class TestHFftN(TestFftN):
         test_case.arg_dict["test_fun"] = [_test_hfftn]
         test_case.arg_dict["dtype"] = [np.complex64, np.complex128]
 
-# class TestIHFftN(TestFftN):
-#     def setUp(test_case):
-#         test_case.arg_dict = OrderedDict()
-#         test_case.arg_dict["test_fun"] = [_test_ihfftn]
-#         test_case.arg_dict["dtype"] = [np.float32, np.float32]
+class TestIHFftN(TestFftN):
+    def setUp(test_case):
+        test_case.arg_dict = OrderedDict()
+        test_case.arg_dict["test_fun"] = [_test_ihfftn]
+        test_case.arg_dict["dtype"] = [np.float32, np.float64]
 
 if __name__ == "__main__":
     unittest.main()

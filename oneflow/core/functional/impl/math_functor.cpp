@@ -4523,9 +4523,12 @@ class IHFftNFunctor {
     << "expects the dtype of input Tensor is Real, but gets " << input->dtype()->name();
 
     std::string norm_str = norm.value_or("backward");
-    // TO-DO
-    CHECK_OR_THROW(false) << "UNIMPLEMENTED";
-    return input;
+    if (s.has_value()) {
+      std::vector<int64_t> len = *JUST(s);
+      return functional::FftR2C(input, len, dim, norm_str, /*onesided=*/true, /*forward=*/false);
+    } else {
+      return functional::FftR2C(input, NullOpt, dim, norm_str,/*onesided=*/true, /*forward=*/false);
+    }
   }
 };
 
