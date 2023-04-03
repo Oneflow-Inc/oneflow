@@ -1197,6 +1197,14 @@ class Graph(object):
                                 state_tensor_from_eager, self._state_tensor_tuple[s_idx]
                             )
                         self._state_tensor_tuple[s_idx] = state_tensor_from_eager
+                if not with_eager:
+                    for s_idx, s_name in enumerate(self._state_op_names):
+                        if (oneflow.numel(self._state_tensor_tuple[s_idx]) == 0) and (
+                            s_name not in states_from_eager
+                        ):
+                            warnings.warn(
+                                f"Current graph is missing parameter {s_name}, but load_runtime_state_dict needs it. This may cause error later."
+                            )
 
         self.__build_outputs_buffer()
 

@@ -1454,6 +1454,7 @@ class ArangeFunctor {
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     if (GlobalMode::is_enabled()) {
+      auto global_mode_gurad = GlobalMode::Guard(false);
       return JUST(functional::GlobalArange(start, limit, delta, dtype,
                                            GetGlobalParallelDescFromDevice(device),
                                            *JUST(GetSbpList(GlobalMode::nd_sbp()))));
@@ -1558,6 +1559,7 @@ class HannWindowFunctor {
                            const Optional<Symbol<Device>>& device,
                            const Optional<Symbol<DType>>& dtype, const bool& requires_grad) const {
     if (GlobalMode::is_enabled()) {
+      auto global_mode_gurad = GlobalMode::Guard(false);
       return JUST(functional::GlobalHannWindow(
           window_length, periodic, GetGlobalParallelDescFromDevice(device),
           *JUST(GetSbpList(GlobalMode::nd_sbp())), dtype, requires_grad));
