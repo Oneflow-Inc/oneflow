@@ -74,7 +74,7 @@ def test_run_graph_by_vm(capsys):
     os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "0"
 
 
-class DataParallel_Mul(flow.nn.Module):
+class DataParallelMul(flow.nn.Module):
     def __init__(self, placement) -> None:
         super().__init__()
         self.w = flow.randn(5, 8, placement=placement, sbp=flow.sbp.broadcast)
@@ -90,7 +90,7 @@ def test_data_parallel_run_by_vm():
 
     placement = flow.placement("cuda", [0, 1])
 
-    m = DataParallel_Mul(placement).eval()
+    m = DataParallelMul(placement).eval()
     g = Graph(m)
     
     input = flow.randn(4, 5, placement=placement, sbp=flow.sbp.split(0))
@@ -99,6 +99,7 @@ def test_data_parallel_run_by_vm():
 
     assert graph_output.sbp == eager_output.sbp
     assert graph_output.shape == eager_output.shape
+    assert graph_output.placement == eager_output.placement
     assert np.allclose(graph_output, eager_output)
 
     os.environ["ONEFLOW_RUN_GRAPH_BY_VM"] = "0"
@@ -108,7 +109,7 @@ def test_data_parallel_run_by_vm():
 test_data_parallel_run_by_vm()
 
 
-class ModuleParallel_Mul(flow.nn.Module):
+class ModuleParallelMul(flow.nn.Module):
     def __init__(self, placement) -> None:
         super().__init__()
         self.w = flow.randn(5, 8, placement=placement, sbp=flow.sbp.split(1))
@@ -123,7 +124,7 @@ def test_module_parallel_run_by_vm():
     os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "1"
 
     placement = flow.placement("cuda", [0, 1])
-    m = ModuleParallel_Mul(placement).eval()
+    m = ModuleParallelMul(placement).eval()
     g = Graph(m)
     
     input = flow.randn(4, 5, placement=placement, sbp=flow.sbp.broadcast)
@@ -132,6 +133,7 @@ def test_module_parallel_run_by_vm():
 
     assert graph_output.sbp == eager_output.sbp
     assert graph_output.shape == eager_output.shape
+    assert graph_output.placement == eager_output.placement
     assert np.allclose(graph_output, eager_output)
 
     os.environ["ONEFLOW_RUN_GRAPH_BY_VM"] = "0"
@@ -139,3 +141,40 @@ def test_module_parallel_run_by_vm():
     os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "0"  
 
 test_module_parallel_run_by_vm()
+
+
+class BoxingModuleParallelMul(flow.nn.Module):
+    def __init__(self, placement) -> None:
+        super().__init__()
+        self.w1 = flow.randn(5, 8, placement=placement, sbp=flow.sbp.split(1))
+        self.w2 = flow.randn(8, 6, placement=placement, sbp=flow.sbp.split(1))
+
+    def forward(self, x):
+        x = flow.matmul(x, self.w1)
+        x = flow.matmul(x, self.w2)
+        return x
+
+
+def test_boxing_data_parallel_run_by_vm():
+    os.environ["ONEFLOW_RUN_GRAPH_BY_VM"] = "1"
+    os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+    os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "1"
+
+    placement = flow.placement("cuda", [0, 1])
+    m = BoxingModuleParallelMul(placement).eval()
+    g = Graph(m)
+    
+    input = flow.randn(4, 5, placement=placement, sbp=flow.sbp.broadcast)
+    graph_output = g(input)
+    eager_output = m(input)
+
+    assert graph_output.sbp == eager_output.sbp
+    assert graph_output.shape == eager_output.shape
+    assert graph_output.placement == eager_output.placement
+    assert np.allclose(graph_output, eager_output)
+
+    os.environ["ONEFLOW_RUN_GRAPH_BY_VM"] = "0"
+    os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "0"
+    os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "0"  
+
+test_boxing_data_parallel_run_by_vm()
