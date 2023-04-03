@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/session_util.h"
 
@@ -22,20 +21,9 @@ namespace py = pybind11;
 namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  py::class_<Session, std::shared_ptr<Session>>(m, "Session")
-      .def_property_readonly("id", &Session::id)
-      .def("push_local_strategy_enabled", &Session::PushLocalStrategyEnabled)
-      .def("pop_local_strategy_enabled", &Session::PopLocalStrategyEnabled)
-      .def("is_local_strategy_enabled", &Session::IsLocalStrategyEnabled)
-      .def("is_global_strategy_enabled", &Session::IsGlobalStrategyEnabled)
-      .def("is_local_strategy_enabled_stack_size",
-           [](const Session* sess) { return sess->is_local_strategy_enabled_stack()->size(); });
-
-  m.def("GetDefaultSessionId", &GetDefaultSessionId);
-  m.def("RegsiterSession", &RegsiterSession);
-
-  m.def("GetDefaultSession", &GetDefaultSession);
-  m.def("ClearSessionById", &ClearSessionById);
+  m.def("GetDefaultSessionId", []() -> int64_t { return GetDefaultSessionId().GetOrThrow(); });
+  m.def("RegsterSessionId", &RegsterSessionId);
+  m.def("ClearSessionId", &ClearSessionId);
 }
 
 }  // namespace oneflow

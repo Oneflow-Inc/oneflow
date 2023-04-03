@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <typeinfo>
+#include <thread>
+#include <chrono>
 #include "oneflow/core/vm/sync_vm_mode_guard.h"
 #include "oneflow/core/vm/barrier_instruction_policy.h"
 #include "oneflow/core/vm/caching_allocator.h"
@@ -69,23 +71,34 @@ void GetSchedulerThreadInitializer(std::function<void()>* Initializer) {
 void WorkerLoop(vm::ThreadCtx* thread_ctx, const std::function<void(vm::ThreadCtx*)>& Initializer) {
   SyncVmModeGuard guard(SyncVmMode::kEnable);
   Initializer(thread_ctx);
+  constexpr static size_t kExpireMicroseconds = 200;
   while (thread_ctx->mut_notifier()->WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) {
-    while (thread_ctx->TryReceiveAndRun()) {}
+    std::chrono::time_point<std::chrono::steady_clock> start{};
+    do {
+      while (thread_ctx->TryReceiveAndRun()) { start = std::chrono::steady_clock::now(); }
+      std::this_thread::yield();
+    } while (MicrosecondsFrom(start) < kExpireMicroseconds);
   }
 }
 
 }  // namespace
 
-VirtualMachine::VirtualMachine() : disable_vm_threads_(false), scheduler_stopped_(false) {
+VirtualMachine::VirtualMachine()
+    : multi_thread_(ThreadLocalEnvBool<ONEFLOW_VM_MULTI_THREAD>()),
+      threads_closed_(false),
+      scheduler_stopped_(false) {
   // Class VirtualMachineEngine only cares the basic logical of vm, while class VirtualMachine
   // manages threads and condition variables.
   // In order to notify threads in VirtualMachineEngine, a notify callback lambda should be take as
   // an argument for VirtualMachineEngine's constructor.
   engine_ = intrusive::make_shared<vm::VirtualMachineEngine>();
   OF_PROFILER_NAME_THIS_HOST_THREAD("_Main");
-  std::function<void()> SchedulerInitializer;
-  GetSchedulerThreadInitializer(&SchedulerInitializer);
-  schedule_thread_ = std::thread(&VirtualMachine::ScheduleLoop, this, SchedulerInitializer);
+
+  if (multi_thread_) {
+    std::function<void()> SchedulerInitializer;
+    GetSchedulerThreadInitializer(&SchedulerInitializer);
+    schedule_thread_ = std::thread(&VirtualMachine::ScheduleLoop, this, SchedulerInitializer);
+  }
   transport_dependence_.Reset();
 }
 
@@ -125,11 +138,16 @@ void VirtualMachine::ControlSync() {
 }
 
 Maybe<void> VirtualMachine::CloseVMThreads() {
-  CHECK_OR_RETURN(!disable_vm_threads_) << "vm threads closed";
+  CHECK_OR_RETURN(!threads_closed_) << "vm threads closed";
   ControlSync();
   pending_notifier_.Close();
-  schedule_thread_.join();
-  disable_vm_threads_ = true;
+  if (multi_thread_) {
+    schedule_thread_.join();
+  } else {
+    // For technical reasons, worker threads are always created even in single thread mode
+    JUST(CloseWorkerThreads());
+  }
+  threads_closed_ = true;
   return Maybe<void>::Ok();
 }
 
@@ -160,7 +178,7 @@ Maybe<void> VirtualMachine::BlockingRunProbeFunc(
       bc->Decrease();
       return true;
     });
-    if (disable_vm_threads_) {
+    if (threads_closed_ || !multi_thread_) {
       ScheduleUntilVMEmpty(engine_.Mutable(), SingleThreadScheduleCtx());
     } else {
       pending_notifier_.Notify();
@@ -189,7 +207,7 @@ Maybe<void> VirtualMachine::ShrinkAllMem() {
 }
 
 VirtualMachine::~VirtualMachine() {
-  if (!disable_vm_threads_) { CHECK_JUST(CloseVMThreads()); }
+  if (!threads_closed_) { CHECK_JUST(CloseVMThreads()); }
   CHECK(engine_->SchedulerEmpty());
   engine_.Reset();
 }
@@ -230,7 +248,8 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionList* instruction_list) {
       JUST(instruction->Prepare());
       instruction->Compute();
     }
-  } else if (unlikely(disable_vm_threads_)) {
+    instruction_list->Clear();
+  } else if (unlikely(threads_closed_ || !multi_thread_)) {
     JUST(RunInCurrentThread(instruction_list));
   } else {
     const int64_t kHighWaterMark = GetInstructionHighWaterMark();
@@ -257,10 +276,22 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionList* instruction_list) {
 }
 
 Maybe<void> VirtualMachine::NotifyOrRunScheduler() {
-  if (unlikely(pthread_fork::IsForkedSubProcess() || disable_vm_threads_)) {
+  if (unlikely(pthread_fork::IsForkedSubProcess() || threads_closed_ || !multi_thread_)) {
     ScheduleUntilVMEmpty(engine_.Mutable(), SingleThreadScheduleCtx());
   } else {
     pending_notifier_.Notify();
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> VirtualMachine::CloseWorkerThreads() {
+  JUST(ForEachThreadCtx(engine_.Mutable(), [&](vm::ThreadCtx* thread_ctx) -> Maybe<void> {
+    thread_ctx->mut_notifier()->Close();
+    return Maybe<void>::Ok();
+  }));
+  {
+    std::unique_lock<std::mutex> lock(worker_threads_mutex_);
+    for (const auto& worker_thread : worker_threads_) { worker_thread->join(); }
   }
   return Maybe<void>::Ok();
 }
@@ -323,14 +354,7 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
     } while (MicrosecondsFrom(start) < kWorkingMicroseconds);
   }
   ScheduleUntilVMEmpty(engine_.Mutable(), schedule_ctx);
-  CHECK_JUST(ForEachThreadCtx(engine_.Mutable(), [&](vm::ThreadCtx* thread_ctx) -> Maybe<void> {
-    thread_ctx->mut_notifier()->Close();
-    return Maybe<void>::Ok();
-  }));
-  {
-    std::unique_lock<std::mutex> lock(worker_threads_mutex_);
-    for (const auto& worker_thread : worker_threads_) { worker_thread->join(); }
-  }
+  CHECK_JUST(CloseWorkerThreads());
   scheduler_stopped_ = true;
 }
 

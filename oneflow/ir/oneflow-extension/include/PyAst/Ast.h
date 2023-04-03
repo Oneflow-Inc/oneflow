@@ -41,7 +41,7 @@ class arguments {
   vector<shared_ptr<arg>> args;
 
  public:
-  explicit arguments(vector<shared_ptr<arg>> args) : args(move(args)) {}
+  explicit arguments(vector<shared_ptr<arg>> args) : args(std::move(args)) {}
 
   vector<shared_ptr<arg>> get_args() { return args; }
 
@@ -101,7 +101,7 @@ class FunctionDef : public stmt {
 
  public:
   FunctionDef(identifier name, shared_ptr<arguments> args, vector<shared_ptr<stmt>> body)
-      : stmt(kFunctionDef), name(move(name)), args(move(args)), body(move(body)) {}
+      : stmt(kFunctionDef), name(std::move(name)), args(std::move(args)), body(std::move(body)) {}
 
   static shared_ptr<FunctionDef> FunctionDef_(identifier name, shared_ptr<arguments> args,
                                               vector<shared_ptr<stmt>> body) {
@@ -119,7 +119,7 @@ class Return : public stmt {
   shared_ptr<expr> value;
 
  public:
-  explicit Return(shared_ptr<expr> value) : stmt(kReturn), value(move(value)) {}
+  explicit Return(shared_ptr<expr> value) : stmt(kReturn), value(std::move(value)) {}
 
   static shared_ptr<Return> Return_(shared_ptr<expr> value) { return make_shared<Return>(value); }
 
@@ -134,7 +134,7 @@ class Assign : public stmt {
 
  public:
   Assign(vector<shared_ptr<expr>> targets, shared_ptr<expr> value)
-      : stmt(kAssign), targets(move(targets)), value(move(value)) {}
+      : stmt(kAssign), targets(std::move(targets)), value(std::move(value)) {}
 
   static shared_ptr<Assign> Assign_(vector<shared_ptr<expr>> targets, shared_ptr<expr> value) {
     return make_shared<Assign>(targets, value);
@@ -153,7 +153,7 @@ class If : public stmt {
 
  public:
   If(shared_ptr<expr> test, vector<shared_ptr<stmt>> body, vector<shared_ptr<stmt>> orelse)
-      : stmt(kIf), test(move(test)), body(move(body)), orelse(orelse) {}
+      : stmt(kIf), test(std::move(test)), body(std::move(body)), orelse(orelse) {}
 
   static shared_ptr<If> If_(shared_ptr<expr> test, vector<shared_ptr<stmt>> body,
                             vector<shared_ptr<stmt>> orelse) {
@@ -173,7 +173,7 @@ class Raise : public stmt {
 
  public:
   Raise(shared_ptr<expr> exc, shared_ptr<expr> cause)
-      : stmt(kRaise), exc(move(exc)), cause(move(cause)) {}
+      : stmt(kRaise), exc(std::move(exc)), cause(std::move(cause)) {}
 
   static shared_ptr<Raise> Raise_(shared_ptr<expr> exc, shared_ptr<expr> cause) {
     return make_shared<Raise>(exc, cause);
@@ -191,7 +191,7 @@ class Assert : public stmt {
 
  public:
   Assert(shared_ptr<expr> test, shared_ptr<expr> msg)
-      : stmt(kAssert), test(move(test)), msg(move(msg)) {}
+      : stmt(kAssert), test(std::move(test)), msg(std::move(msg)) {}
 
   static shared_ptr<Assert> Assert_(shared_ptr<expr> test, shared_ptr<expr> msg) {
     return make_shared<Assert>(test, msg);
@@ -206,7 +206,7 @@ class Expr : public stmt {
   shared_ptr<expr> value;
 
  public:
-  explicit Expr(shared_ptr<expr> value) : stmt(kExpr), value(move(value)) {}
+  explicit Expr(shared_ptr<expr> value) : stmt(kExpr), value(std::move(value)) {}
 
   static shared_ptr<Expr> Expr_(shared_ptr<expr> value) { return make_shared<Expr>(value); }
 
@@ -222,7 +222,7 @@ class BoolOp : public expr {
     kOr,
   };
   BoolOp(boolop_t op, vector<shared_ptr<expr>> values)
-      : expr(kBoolOp), op(op), values(move(values)) {}
+      : expr(kBoolOp), op(op), values(std::move(values)) {}
 
   static shared_ptr<BoolOp> BoolOp_(boolop_t op, vector<shared_ptr<expr>> values) {
     return make_shared<BoolOp>(op, values);
@@ -249,10 +249,10 @@ class BinOp : public expr {
   };
 
   BinOp(shared_ptr<expr> left, operator_t op, shared_ptr<expr> right)
-      : expr(kBinOp), left(move(left)), right(move(right)), op(move(op)) {}
+      : expr(kBinOp), left(std::move(left)), right(std::move(right)), op(std::move(op)) {}
 
   BinOp(shared_ptr<expr> left, int op, shared_ptr<expr> right)
-      : expr(kBinOp), left(move(left)), right(move(right)), op(int2op(op)) {}
+      : expr(kBinOp), left(std::move(left)), right(std::move(right)), op(int2op(op)) {}
 
   static shared_ptr<BinOp> BinOp_(shared_ptr<expr> left, int op, shared_ptr<expr> right) {
     return make_shared<BinOp>(left, op, right);
@@ -278,7 +278,7 @@ class Lambda : public expr {
 
  public:
   Lambda(shared_ptr<arguments> args, shared_ptr<expr> body)
-      : expr(kLambda), args(move(args)), body(move(body)) {}
+      : expr(kLambda), args(std::move(args)), body(std::move(body)) {}
 
   static shared_ptr<Lambda> Lambda_(shared_ptr<arguments> args, shared_ptr<expr> body) {
     return make_shared<Lambda>(args, body);
@@ -302,10 +302,16 @@ class Compare : public expr {
   };
 
   Compare(shared_ptr<expr> left, vector<cmpop_t> ops, vector<shared_ptr<expr>> comparators)
-      : expr(kCompare), left(move(left)), ops(move(ops)), comparators(move(comparators)) {}
+      : expr(kCompare),
+        left(std::move(left)),
+        ops(std::move(ops)),
+        comparators(std::move(comparators)) {}
 
   Compare(shared_ptr<expr> left, const vector<int>& ops, vector<shared_ptr<expr>> comparators)
-      : expr(kCompare), left(move(left)), ops(int2op(ops)), comparators(move(comparators)) {}
+      : expr(kCompare),
+        left(std::move(left)),
+        ops(int2op(ops)),
+        comparators(std::move(comparators)) {}
 
   static shared_ptr<Compare> Compare_(shared_ptr<expr> left, vector<int> ops,
                                       vector<shared_ptr<expr>> comparators) {
@@ -336,7 +342,7 @@ class Call : public expr {
 
  public:
   Call(shared_ptr<expr> func, vector<shared_ptr<expr>> args)
-      : expr(kCall), func(move(func)), args(move(args)) {}
+      : expr(kCall), func(std::move(func)), args(std::move(args)) {}
 
   static shared_ptr<Call> Call_(shared_ptr<expr> func, vector<shared_ptr<expr>> args) {
     return make_shared<Call>(func, args);
@@ -378,7 +384,7 @@ class Attribute : public expr {
 
  public:
   Attribute(shared_ptr<expr> value, const identifier& attr)
-      : expr(kAttribute), value(move(value)), attr(attr) {}
+      : expr(kAttribute), value(std::move(value)), attr(attr) {}
 
   static shared_ptr<Attribute> Attribute_(shared_ptr<expr> value, const identifier& attr) {
     return make_shared<Attribute>(value, attr);

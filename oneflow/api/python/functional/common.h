@@ -18,14 +18,19 @@ limitations under the License.
 
 #include <string>
 #include <vector>
+#include <complex>
 #include <pybind11/pybind11.h>
 
 #include "oneflow/api/python/framework/tensor.h"
+#include "oneflow/api/python/caster/maybe.h"
+#include "oneflow/api/python/caster/optional.h"
 #include "oneflow/core/common/throw.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/dtype.h"
+#include "oneflow/core/framework/layout.h"
+#include "oneflow/core/framework/memory_format.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/tensor.h"
@@ -93,11 +98,13 @@ Scalar PyUnpackScalarTensor(PyObject* obj);
 DefinePyTypeScalarTensorCheck(Bool, IsBoolDataType);         // PyBoolScalarTensorCheck
 DefinePyTypeScalarTensorCheck(Integer, IsIntegralDataType);  // PyIntegerScalarTensorCheck
 DefinePyTypeScalarTensorCheck(Float, IsFloatingDataType);    // PyFloatScalarTensorCheck
+DefinePyTypeScalarTensorCheck(Complex, IsComplexDataType);   // PyComplexScalarTensorCheck
 #undef DefinePyTypeScalarTensorCheck
 
 bool PyUnpackBoolScalarTensor(PyObject* obj);
 long long PyUnpackIntegerScalarTensor_AsLongLong(PyObject* obj);
 double PyUnpackFloatScalarTensor_AsDouble(PyObject* obj);
+std::complex<double> PyUnpackComplexScalarTensor_AsCComplex(PyObject* obj);
 
 // Integer/Float list
 bool PyLongSequenceCheck(PyObject* obj);
@@ -146,6 +153,14 @@ std::shared_ptr<TensorTuple> PyUnpackTensorTuple(PyObject* obj);
 // DType
 bool PyDTypeCheck(PyObject* obj);
 Symbol<DType> PyUnpackDType(PyObject* obj);
+
+// Layout
+bool PyLayoutCheck(PyObject* obj);
+Symbol<Layout> PyUnpackLayout(PyObject* obj);
+
+// Memory Format
+bool PyMemoryFormatCheck(PyObject* obj);
+Symbol<MemoryFormat> PyUnpackMemoryFormat(PyObject* obj);
 
 // DType list
 bool PyDTypeSequenceCheck(PyObject* obj);

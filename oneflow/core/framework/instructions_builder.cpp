@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <atomic>
+#include <thread>
+#include <chrono>
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/stream_guard.h"
 #include "oneflow/core/framework/symbol_storage_util.h"
@@ -42,6 +44,7 @@ limitations under the License.
 #include "oneflow/core/vm/stream_wait_instruction_policy.h"
 #include "oneflow/core/vm/stream_record_event_instruction_policy.h"
 #include "oneflow/core/vm/stream_wait_event_instruction_policy.h"
+#include "oneflow/core/vm/sync_access_instruction_policy.h"
 #include "oneflow/core/vm/touch_tensors_instruction_policy.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/vm_util.h"
@@ -483,7 +486,7 @@ Maybe<void> InstructionsBuilder::TouchTensors(const vm::EagerBlobObjectListPtr& 
 namespace {
 
 template<typename T>
-using SmallSet = small_vector<T, kOpArgsReservedSize>;
+using SmallSet = small_vector<T>;
 
 template<typename T>
 std::pair<typename SmallSet<T>::iterator, bool> SmallSetInsert(SmallSet<T>* vec, const T& elem) {
@@ -504,7 +507,7 @@ Maybe<void> ForEachEagerBlobObjectsNeedingSoftSync(
       if (unlikely(!opt_last_used_stream.has_value())) { continue; }
       const auto& last_used_stream = JUST(opt_last_used_stream);
       if (last_used_stream != stream) {
-        small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize> dep_objects{
+        small_vector<intrusive::shared_ptr<LocalDepObject>> dep_objects{
             intrusive::shared_ptr<LocalDepObject>(
                 JUST(eager_blob_object->compute_local_dep_object()))};
         JUST(DoEach(last_used_stream, std::move(dep_objects)));
@@ -519,7 +522,7 @@ Maybe<void> ForEachEagerBlobObjectsNeedingSoftSync(
       if (last_used_stream != stream) { SmallSetInsert(&last_used_streams, last_used_stream); }
     }
     for (const auto& last_used_stream : last_used_streams) {
-      small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize> dep_objects{};
+      small_vector<intrusive::shared_ptr<LocalDepObject>> dep_objects{};
       for (const auto& eager_blob_object : eager_blob_objects) {
         const auto& opt_stream = eager_blob_object->last_used_stream();
         if (unlikely(!opt_stream.has_value())) { continue; }
@@ -569,8 +572,8 @@ bool SupportingStreamWait(Symbol<Stream> from_stream, Symbol<Stream> to_stream) 
 }  // namespace
 
 Maybe<void> InstructionsBuilder::SoftSyncStreamBetween(
-    small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&& dependences,
-    Symbol<Stream> from_stream, Symbol<Stream> to_stream) {
+    small_vector<intrusive::shared_ptr<LocalDepObject>>&& dependences, Symbol<Stream> from_stream,
+    Symbol<Stream> to_stream) {
   CHECK(from_stream != to_stream) << "synchronization is unnecessary";
   if (SupportingStreamWait(from_stream, to_stream)) {
     JUST(StreamWait(std::move(dependences), from_stream, to_stream));
@@ -581,8 +584,8 @@ Maybe<void> InstructionsBuilder::SoftSyncStreamBetween(
 }
 
 Maybe<void> InstructionsBuilder::StreamWait(
-    small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&& dependences,
-    Symbol<Stream> from_stream, Symbol<Stream> to_stream) {
+    small_vector<intrusive::shared_ptr<LocalDepObject>>&& dependences, Symbol<Stream> from_stream,
+    Symbol<Stream> to_stream) {
   auto* from_vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(from_stream));
   auto* to_vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(to_stream));
   if (from_vm_stream->mut_thread_ctx() != to_vm_stream->mut_thread_ctx()) {
@@ -606,8 +609,7 @@ Maybe<void> InstructionsBuilder::StreamWait(
 }
 
 Maybe<void> InstructionsBuilder::RecordEvent(
-    small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&&
-        compute_local_dep_objects,
+    small_vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_objects,
     Symbol<Stream> last_used_stream) {
   DeviceType device_type = last_used_stream->device()->enum_type();
   if (!NeedSoftSync::Visit(last_used_stream->stream_type(), device_type)) {
@@ -663,7 +665,7 @@ Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
   const auto& CallbackWrapper = [btb, Callback](
                                     ep::Stream* stream,
                                     const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
-    btb->mut_blocking_counter()->Decrease();
+    btb->mut_notifier()->Notify();
     Callback(stream, eager_blob_object);
     btb->mut_spin_counter()->Decrease();
   };
@@ -690,14 +692,8 @@ Maybe<Symbol<Device>> GetDevice(const one::EagerLocalTensorImpl* tensor) {
   return tensor->device();  // return const Symbol<Device>&
 }
 
-}  // namespace
-
 template<typename T>
-Maybe<void> InstructionsBuilder::AccessBlobByCallback(
-    const T tensor,
-    const std::function<void(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&)>& callback,
-    const std::string& modifier) {
-  const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object = JUST(tensor->eager_blob_object());
+Maybe<Symbol<Stream>> GetAccessStream(const T tensor) {
   Symbol<Device> device = JUST(GetDevice(tensor));
   // Do not use producer_stream or last_used_stream.
   // Bug case when using producer_stream or last_used_stream:
@@ -710,7 +706,18 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(
   // `ndarray` may not be ones because instruction AccessBlobByCallback is prescheduled before
   // oneflow.ones actually finished.
   Symbol<Stream> stream = JUST(GetDefaultStreamByDevice(device));
-  stream = JUST(StreamGuard::TryConvertStream(stream));
+  return StreamGuard::TryConvertStream(stream);
+}
+
+}  // namespace
+
+template<typename T>
+Maybe<void> InstructionsBuilder::AccessBlobByCallback(
+    const T tensor,
+    const std::function<void(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&)>& callback,
+    const std::string& modifier) {
+  const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object = JUST(tensor->eager_blob_object());
+  Symbol<Stream> stream = JUST(GetAccessStream(tensor));
   JUST(SoftSyncStream({eager_blob_object}, stream));
   auto instruction = intrusive::make_shared<vm::Instruction>(
       // Never replace `stream` with producer_stream or last_used_stream.
@@ -757,5 +764,78 @@ Maybe<void> InstructionsBuilder::Barrier(const std::function<void()>& Callback) 
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }
+
+namespace {
+
+template<typename InstructionPolicyT>
+Maybe<vm::Instruction*> MutThreadLocalInstruction(Symbol<Stream> stream) {
+  static thread_local std::vector<intrusive::shared_ptr<vm::Instruction>> vec;
+  if (unlikely(stream->unique_stream_id() >= vec.size())) {
+    vec.resize(stream->unique_stream_id() + 1);
+  }
+  auto* instruction_ptr = &vec[stream->unique_stream_id()];
+  if (static_cast<bool>(*instruction_ptr) && (*instruction_ptr)->ref_cnt() != 1) {
+    // This instruction should not be reusd because of being hold by other threads.
+    instruction_ptr->Reset();
+  }
+  if (unlikely(!static_cast<bool>(*instruction_ptr))) {
+    *instruction_ptr = intrusive::make_shared<vm::Instruction>(
+        JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream)),
+        std::make_shared<InstructionPolicyT>());
+  }
+  return instruction_ptr->Mutable();
+}
+
+}  // namespace
+
+template<typename T, typename InstructionPolicyT>
+Maybe<void> SyncAccessSmallMem(char* mem_ptr, size_t bytes, const T tensor) {
+  static thread_local vm::InstructionList instruction_list;
+  static thread_local InstructionsBuilder instructions_builder(&instruction_list);
+  const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object = JUST(tensor->eager_blob_object());
+  const Symbol<Stream> stream = JUST(GetAccessStream(tensor));
+  if (eager_blob_object->last_used_stream().has_value()
+      && stream != JUST(eager_blob_object->last_used_stream())) {
+    // Synchronize stream.
+    JUST(instructions_builder.SoftSyncStream({eager_blob_object}, stream));
+  }
+  InstructionPolicyT* instruction_policy = nullptr;
+  {
+    // Construct instruction.
+    auto* instruction = JUST(MutThreadLocalInstruction<InstructionPolicyT>(stream));
+    instruction_policy =
+        static_cast<InstructionPolicyT*>(instruction->mut_instruction_policy());  // NOLINT
+    instruction_policy->Reset(mem_ptr, bytes, eager_blob_object.get());
+    instruction_list.PushBack(instruction);
+  }
+  // Dispatch instructions.
+  JUST(vm::Run(&instruction_list));
+  {
+    // This thread should blocking wait if and only if there is a lot of workload on worker thread.
+    // When workload is small, we want better performance by skipping cond_.notify_xxx which costs
+    // about 2us to 3us.
+    auto* virtual_machine = JUST(SingletonMaybe<VirtualMachine>());
+    static constexpr int kSkipBlockingThreshold = 2;
+    if (virtual_machine->flying_instruction_cnt() < kSkipBlockingThreshold) {
+      // skip pthread_cond_broadcast on worker thread.
+      instruction_policy->mut_btb()->mut_notifier()->Notify();
+    }
+  }
+  // wait until done.
+  JUST(instruction_policy->mut_btb()->WaitUntilCntEqualZero(
+      VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+  return Maybe<void>::Ok();
+}
+
+template<typename T>
+Maybe<void> SyncReadSmallMem(char* mem_ptr, size_t bytes, const T tensor) {
+  return SyncAccessSmallMem<T, vm::SyncReadInstructionPolicy>(mem_ptr, bytes, tensor);
+}
+
+template Maybe<void> SyncReadSmallMem(char* mem_ptr, size_t bytes,
+                                      const std::shared_ptr<one::LocalTensor> tensor);
+
+template Maybe<void> SyncReadSmallMem(char* mem_ptr, size_t bytes,
+                                      const one::EagerLocalTensorImpl* tensor);
 
 }  // namespace oneflow

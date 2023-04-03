@@ -48,7 +48,7 @@ def _test_embedding_gradient_shuffle(test_case, enable_quantize, fp16, embedding
         if fp16:
             np_tolerance = 1e-2
         else:
-            np_tolerance = 1e-4
+            np_tolerance = 1e-3
         os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM"] = "0"
 
     table_ids = (

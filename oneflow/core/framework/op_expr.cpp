@@ -379,9 +379,30 @@ class UserOpExprInferContext : public user_op::InferContext {
   std::string loc_;
 };
 
+namespace {
+
+Symbol<NdSbp> Get1DBroadcastNdSbp() {
+  NdSbp broadcast_nd_sbp;
+  broadcast_nd_sbp.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
+  return SymbolOf(broadcast_nd_sbp);
+}
+
+auto* CachedGet1DBroadcastNdSbp = DECORATE(&Get1DBroadcastNdSbp, ThreadLocalCached);
+
+}  // namespace
+
 class UserOpExprPhysicalInferContext final : public UserOpExprInferContext {
  public:
-  using UserOpExprInferContext::UserOpExprInferContext;
+  UserOpExprPhysicalInferContext(
+      const UserOpExpr* user_op_expr, const AttrMap& attrs, const std::string& device_tag,
+      const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
+      const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex)
+      : UserOpExprInferContext(user_op_expr, attrs, device_tag, TensorMeta4InputIndex,
+                               TensorMeta4OutputIndex),
+        parallel_desc_(CHECK_JUST(GetParallelDescOfThisRank(device_tag))) {
+    parallel_ctx_.set_parallel_id(0);
+    parallel_ctx_.set_parallel_num(1);
+  }
   ~UserOpExprPhysicalInferContext() override = default;
 
   const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& name,
@@ -390,23 +411,23 @@ class UserOpExprPhysicalInferContext final : public UserOpExprInferContext {
     return nullptr;
   }
 
-  const ParallelContext& parallel_ctx() const override {
-    UNIMPLEMENTED();
-    return *(const ParallelContext*)nullptr;
+  const ParallelContext& parallel_ctx() const override { return parallel_ctx_; }
+  const ParallelDesc& parallel_desc() const override { return *parallel_desc_; }
+  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& name,
+                                                 int32_t index) const override {
+    CHECK_NOTNULL(TensorDesc4ArgNameAndIndex(name, index));
+    return CachedGet1DBroadcastNdSbp()->sbp_parallel(0);
   }
-  const ParallelDesc& parallel_desc() const override {
-    UNIMPLEMENTED();
-    return *(const ParallelDesc*)nullptr;
-  }
-  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&, int32_t) const override {
-    UNIMPLEMENTED();
-    return *(const SbpParallel*)nullptr;
-  }
-  const NdSbp& NdSbp4ArgNameAndIndex(const std::string&, int32_t) const override {
-    UNIMPLEMENTED();
-    return *(const NdSbp*)nullptr;
+  const NdSbp& NdSbp4ArgNameAndIndex(const std::string& name, int32_t index) const override {
+    CHECK_NOTNULL(TensorDesc4ArgNameAndIndex(name, index));
+    return *(CachedGet1DBroadcastNdSbp());
   }
   int64_t parallel_num() const override { return 1; }
+
+ private:
+  // these member vars just used for physical infer
+  Symbol<ParallelDesc> parallel_desc_;
+  ParallelContext parallel_ctx_;
 };
 
 class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
@@ -513,8 +534,11 @@ Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
   const auto* registry =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_proto_.op_type_name());
   CHECK_NOTNULL_OR_RETURN(registry);
-  tensor_desc_infer_fn_ = registry->logical_tensor_desc_infer_fn;
-  CHECK_OR_RETURN(static_cast<bool>(tensor_desc_infer_fn_))
+  logical_tensor_desc_infer_fn_ = registry->logical_tensor_desc_infer_fn;
+  CHECK_OR_RETURN(static_cast<bool>(logical_tensor_desc_infer_fn_))
+      << Error::RuntimeError() << "registry->logical_tensor_desc_infer_fn failed.";
+  physical_tensor_desc_infer_fn_ = registry->physical_tensor_desc_infer_fn;
+  CHECK_OR_RETURN(static_cast<bool>(physical_tensor_desc_infer_fn_))
       << Error::RuntimeError() << "registry->logical_tensor_desc_infer_fn failed.";
   dtype_infer_fn_ = registry->data_type_infer_fn;
   CHECK_OR_RETURN(static_cast<bool>(dtype_infer_fn_))
@@ -544,7 +568,7 @@ Maybe<void> UserOpExpr::InferPhysicalTensorDesc(
     const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const {
   UserOpExprPhysicalInferContext infer_ctx(this, attrs, device_tag, TensorMeta4InputIndex,
                                            TensorMeta4OutputIndex);
-  JUST(tensor_desc_infer_fn_(&infer_ctx));
+  JUST(physical_tensor_desc_infer_fn_(&infer_ctx));
   JUST(dtype_infer_fn_(&infer_ctx));
   return Maybe<void>::Ok();
 }
@@ -555,7 +579,7 @@ Maybe<void> UserOpExpr::InferLogicalTensorDesc(
     const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const {
   UserOpExprLogicalInferContext infer_ctx(this, attrs, parallel_desc, TensorMeta4InputIndex,
                                           TensorMeta4OutputIndex);
-  JUST(tensor_desc_infer_fn_(&infer_ctx));
+  JUST(logical_tensor_desc_infer_fn_(&infer_ctx));
   JUST(dtype_infer_fn_(&infer_ctx));
   return Maybe<void>::Ok();
 }

@@ -16,9 +16,10 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FUNCTIONAL_IMPL_COMMON_H_
 #define ONEFLOW_CORE_FUNCTIONAL_IMPL_COMMON_H_
 
-#include <cstdint>
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/common/stride.h"
+#include "oneflow/core/common/maybe.h"
+#include "fmt/core.h"
 
 namespace oneflow {
 namespace one {
@@ -39,12 +40,23 @@ Maybe<void> CheckInplaceShapeCanExpandTo(const Shape& shape, const Shape& expand
 Optional<Stride> ComputeStride(const Shape& shape, const Stride& stride, const Shape& target_shape);
 Maybe<Shape> InferShapeUnspecifiedDim(const int64_t& elem_count, const Shape& shape);
 
-// returns tuple<unified_shape, input_need_to_broadcast, other_need_to_broadcast>
-Maybe<std::tuple<Shape, bool, bool>> InferUnifiedShapeForBroadcasting(const Shape& input_shape,
-                                                                      const Shape& other_shape);
+// returns unified_shape
+Maybe<Shape> InferUnifiedShapeForBroadcasting(const std::vector<Shape>& shapes);
+// returns tuple<unified_shape, need_to_broadcasts>
+Maybe<std::tuple<Shape, std::deque<bool>>> InferUnifiedShapeForBroadcastingWithInfo(
+    const std::vector<Shape>& shapes);
 
 Maybe<void> BroadcastSeedToAllRanks(uint64_t* seed, int64_t root = 0);
 
+Maybe<std::vector<int32_t>> GetPermWhenTransposeAxisToLastDim(const int32_t& ndim,
+                                                              const int32_t& axis);
+Maybe<std::vector<int32_t>> GetInversedPerm(const std::vector<int32_t>& perm);
+
+// batchify function is referenced from
+// https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/Convolution.cpp#L729
+Maybe<std::tuple<std::shared_ptr<Tensor>, bool>> batchify(const std::shared_ptr<Tensor>& input,
+                                                          const int64_t num_spatial_dims,
+                                                          const std::string& func_name);
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow

@@ -72,6 +72,7 @@ bool IsInterfaceOpConf(const OperatorConf& op_conf) {
 }
 
 GlobalJobDescScope::GlobalJobDescScope(const JobConfigProto& job_conf, int64_t job_id) {
+  if (Singleton<JobDesc>::Get() != nullptr) { Singleton<JobDesc>::Delete(); }
   Singleton<JobDesc>::New(job_conf, job_id);
 }
 

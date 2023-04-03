@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The sbp Authors. All rights reserved.
+Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_SBP_SBPBASE_H_
-#define ONEFLOW_IR_INCLUDE_SBP_SBPBASE_H_
+#ifndef ONEFLOW_IR_INCLUDE_SBP_SBPBASE
+#define ONEFLOW_IR_INCLUDE_SBP_SBPBASE
 
 include "OneFlow/SBP/SBPDialect.td"
 include "mlir/IR/AttrTypeBase.td"
@@ -74,4 +74,4 @@ def SBP_ParallelSignatureAttr : SBP_Attr<"ParallelSignature", "parallel"> {
   let assemblyFormat = "`<` custom<SBP>($inputs)` ` `->` ` ` custom<SBP>($outputs) `>`";
 }
 
-#endif // ONEFLOW_IR_INCLUDE_SBP_SBPBASE_H_
+#endif // ONEFLOW_IR_INCLUDE_SBP_SBPBASE

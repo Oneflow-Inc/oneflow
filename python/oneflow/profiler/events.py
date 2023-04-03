@@ -135,13 +135,19 @@ class CustomEvent(EventBase):
 
 class KernelEvent(EventBase):
     def __init__(
-        self, name: str, time_total: float, memory_size: int, input_shapes: str
+        self,
+        name: str,
+        time_total: float,
+        memory_size: int,
+        description: Dict[str, str],
     ) -> None:
         super().__init__(name, time_total, EventType.Kernel)
         self.children: List[CustomEvent] = []
         self.memory_size = memory_size
-        self.input_shapes = input_shapes
+        self.description = description
         self._cuda_time_total = 0.0
+        self._enable_show_input_shapes = True
+        self._enable_show_attributes = True
 
     def add_child(self, event: CustomEvent):
         self.children.append(event)
@@ -151,7 +157,7 @@ class KernelEvent(EventBase):
     @classmethod
     def from_dict(cls, d: dict):
         kernel_event = cls(
-            d.get("name"), d.get("time"), d.get("memory_size"), d.get("input_shapes")
+            d.get("name"), d.get("time"), d.get("memory_size"), d.get("description", {})
         )
         if "children" in d.keys():
             children_list = d.get("children")
@@ -162,11 +168,19 @@ class KernelEvent(EventBase):
 
     @property
     def key(self):
+        def get_extra_keys():
+            extra_keys = []
+            if self.input_shapes != "" and self._enable_show_input_shapes:
+                extra_keys.append(self.description.get("input_shapes")[1])
+            if self.attributes != "" and self._enable_show_attributes:
+                extra_keys.append(self.description.get("attrs")[1])
+            return tuple(extra_keys)
+
         if len(self.children) == 0:
-            return (self.name, self.input_shapes)
+            return (self.name,) + get_extra_keys()
         return (
             self.name,
-            self.input_shapes,
+            *get_extra_keys(),
             ",".join([x.name for x in self.children]),
         )
 
@@ -181,11 +195,23 @@ class KernelEvent(EventBase):
         self._cuda_time_total = new_time
 
     @property
+    def input_shapes(self):
+        if "input_shapes" in self.description:
+            return self.description["input_shapes"][0]
+        return ""
+
+    @property
+    def attributes(self):
+        if "attrs" in self.description:
+            return self.description["attrs"][0]
+        return ""
+
+    @property
     def bandwidth(self):
         if len(self.children) > 0 and self.has_cuda_time():
             if self.memory_size != -1:
                 return f"{self.memory_size / (1024.0 * 1024.0 * 1024.0) / (self.cuda_time / (1000 * 1000)):.3f}GB/s"
-        return "-"
+        return ""
 
     def to_dict(self):
         result = {
@@ -194,7 +220,7 @@ class KernelEvent(EventBase):
             "cpu_time": format_time(self.cpu_time),
             "count": self.count,
             "input_shapes": self.input_shapes,
-            "bandwidth": self.bandwidth,
+            "attributes": self.attributes,
         }
         if self.has_cuda_time():
             result.update(
@@ -237,6 +263,7 @@ class KernelEvent(EventBase):
             and self.children == __o.children
             and self.memory_size == __o.memory_size
             and self.input_shapes == __o.input_shapes
+            and self.attributes == __o.attributes
         )
 
 
@@ -255,12 +282,14 @@ class Events(list):
     def __str__(self):
         return self.table()
 
-    def key_averages(self, group_by_input_shape=False):
+    def key_averages(self, group_by_input_shape=False, group_by_attributes=False):
         stats: Dict[Tuple[str, ...], EventBase] = OrderedDict()
 
         def deal_event(e):
-            if group_by_input_shape == False and isinstance(e, KernelEvent):
-                e.input_shapes = "-"
+            if isinstance(e, KernelEvent):
+                e._enable_show_input_shapes = group_by_input_shape
+                e._enable_show_attributes = group_by_attributes
+
             key = e.key
             if key in stats:
                 stats[key].update(e)
@@ -281,10 +310,21 @@ class Events(list):
 
     def table(self):
         has_input_shapes = any(
-            [x.input_shapes != "-" for x in self if isinstance(x, KernelEvent)]
+            [
+                x.input_shapes != "" and x._enable_show_input_shapes
+                for x in self
+                if isinstance(x, KernelEvent)
+            ]
+        )
+        has_attributes = any(
+            [
+                x.attributes != "" and x._enable_show_attributes
+                for x in self
+                if isinstance(x, KernelEvent)
+            ]
         )
         has_bandwidth = any(
-            [x.bandwidth != "-" for x in self if isinstance(x, KernelEvent)]
+            [x.bandwidth != "" for x in self if isinstance(x, KernelEvent)]
         )
         t = Table(
             "Name",
@@ -306,12 +346,15 @@ class Events(list):
         if has_input_shapes:
             t.add_column("Input shapes")
             field_keys.append("input_shapes")
+        if has_attributes:
+            t.add_column("Attributes")
+            field_keys.append("attributes")
         if has_bandwidth:
             t.add_column("Bandwidth")
             field_keys.append("bandwidth")
 
         def build_row(data: dict):
-            return tuple(str(data.get(key, "-")) for key in field_keys)
+            return tuple(str(data.get(key, "")) for key in field_keys)
 
         for item in self:
             if isinstance(item, CustomEvent):

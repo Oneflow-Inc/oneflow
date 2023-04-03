@@ -18,7 +18,7 @@ import math
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.init import _calculate_fan_in_and_fan_out
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 import os
 
 
@@ -111,13 +111,15 @@ class Linear(Module):
             if bias
             else None
         )
-        self.use_fused_mlp = (
+        self.use_fused_matmul_bias = (
             self.bias is not None
             and os.getenv("ONEFLOW_KERNEL_ENABLE_FUSED_LINEAR") == "1"
         )
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
+        if os.getenv("ONEFLOW_LINEAR_EMBEDDING_SKIP_INIT", "0") == "1":
+            return
         flow.nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
         if self.bias is not None:
             (fan_in, _) = _calculate_fan_in_and_fan_out(self.weight)
@@ -125,18 +127,13 @@ class Linear(Module):
             flow.nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
-        if self.use_fused_mlp:
-            x_shape = x.shape
-            if len(x_shape) > 2:
-                x = x.reshape(-1, x.shape[-1])
-            res = flow._C.fused_mlp(x, [self.weight], [self.bias], True)
-            if len(x_shape) > 2:
-                res = res.reshape(x_shape[0 : len(x_shape) - 1] + (res.shape[-1],))
+        if self.use_fused_matmul_bias:
+            return flow._C.fused_matmul_bias(x, self.weight, self.bias)
+        else:
+            res = flow._C.matmul(x, self.weight, transpose_a=False, transpose_b=True)
+            if self.bias is not None:
+                res += self.bias
             return res
-        res = flow._C.matmul(x, self.weight, transpose_a=False, transpose_b=True)
-        if self.bias is not None:
-            res += self.bias
-        return res
 
     def extra_repr(self) -> str:
         return "in_features={}, out_features={}, bias={}".format(

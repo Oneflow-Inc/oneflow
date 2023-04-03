@@ -13,15 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/kernels/op_kernel_wrapper.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/cuda/atomic.cuh"
-#include "oneflow/user/kernels/dropout_kernel.h"
-#include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/device/cuda_pseudo_bfloat16.h"
 #include "oneflow/core/ep/include/device.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
-#include "oneflow/core/device/cuda_pseudo_bfloat16.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/user/kernels/op_kernel_wrapper.h"
+#include "oneflow/user/kernels/dropout_kernel.h"
+#include "oneflow/user/kernels/random_seed_util.h"
+
 namespace oneflow {
 
 namespace {
@@ -127,13 +129,15 @@ __device__ Pack2Type<nv_bfloat16> Make2<nv_bfloat16>(float v) {
 #define RETURN_VOID_IF_DOUBLE typename std::enable_if_t<std::is_same<T, double>::value, void>
 
 template<typename T, int pack_size, bool tail, bool has_addend>
-__global__ RETURN_VOID_IF_FLOAT FusedDropoutAddGpu(
-    uint64_t seed, one::CUDAGeneratorState* cuda_gen_state, uint64_t inc_offset,
-    const int64_t elem_cnt, float rate, float scale, int64_t n_tail, const T* x, bool* mask,
-    const T* addend, T* y, const T* tail_x, bool* tail_mask, const T* tail_addend, T* tail_y) {
+__global__ RETURN_VOID_IF_FLOAT FusedDropoutAddGpu(uint64_t seed, uint64_t offset,
+                                                   const int64_t elem_cnt, float rate, float scale,
+                                                   int64_t n_tail, const T* x, bool* mask,
+                                                   const T* addend, T* y, const T* tail_x,
+                                                   bool* tail_mask, const T* tail_addend,
+                                                   T* tail_y) {
   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
-  curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
+  curand_init(seed, global_thread_id, offset, &state);
   using LoadType = cuda::elementwise::PackType<T, pack_size>;
   using LoadPack = cuda::elementwise::Pack<T, pack_size>;
   using MaskType = cuda::elementwise::PackType<bool, pack_size>;
@@ -178,26 +182,18 @@ __global__ RETURN_VOID_IF_FLOAT FusedDropoutAddGpu(
     if (has_addend) { tmp_tail_out += tail_addend[global_thread_id]; }
     tail_y[global_thread_id] = tmp_tail_out;
   }
-
-  __syncthreads();
-
-  if (threadIdx.x == 0) {
-    int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
-    if (new_counter == gridDim.x) {
-      cuda_gen_state->dev_counter = 0;           // reset counter to zero
-      cuda_gen_state->dev_offset += inc_offset;  // maintain the state of generator's dev_offset
-    }
-  }
 }
 
 template<typename T, int pack_size, bool tail, bool has_addend>
-__global__ RETURN_VOID_IF_HALF FusedDropoutAddGpu(
-    uint64_t seed, one::CUDAGeneratorState* cuda_gen_state, uint64_t inc_offset,
-    const int64_t elem_cnt, float rate, float scale, int64_t n_tail, const T* x, bool* mask,
-    const T* addend, T* y, const T* tail_x, bool* tail_mask, const T* tail_addend, T* tail_y) {
+__global__ RETURN_VOID_IF_HALF FusedDropoutAddGpu(uint64_t seed, uint64_t offset,
+                                                  const int64_t elem_cnt, float rate, float scale,
+                                                  int64_t n_tail, const T* x, bool* mask,
+                                                  const T* addend, T* y, const T* tail_x,
+                                                  bool* tail_mask, const T* tail_addend,
+                                                  T* tail_y) {
   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
-  curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
+  curand_init(seed, global_thread_id, offset, &state);
   using LoadType = cuda::elementwise::PackType<T, pack_size>;
   using LoadPack = cuda::elementwise::Pack<T, pack_size>;
   using StoreType = cuda::elementwise::PackType<Pack2Type<T>, pack_size / 2>;
@@ -259,25 +255,18 @@ __global__ RETURN_VOID_IF_HALF FusedDropoutAddGpu(
     if (has_addend) { tmp_tail_out += tail_addend[global_thread_id]; }
     tail_y[global_thread_id] = tmp_tail_out;
   }
-
-  __syncthreads();
-  if (threadIdx.x == 0) {
-    int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
-    if (new_counter == gridDim.x) {
-      cuda_gen_state->dev_counter = 0;           // reset counter to zero
-      cuda_gen_state->dev_offset += inc_offset;  // maintain the state of generator's dev_offset
-    }
-  }
 }
 
 template<typename T, int pack_size, bool tail, bool has_addend>
-__global__ RETURN_VOID_IF_DOUBLE FusedDropoutAddGpu(
-    uint64_t seed, one::CUDAGeneratorState* cuda_gen_state, uint64_t inc_offset,
-    const int64_t elem_cnt, float rate, float scale, int64_t n_tail, const T* x, bool* mask,
-    const T* addend, T* y, const T* tail_x, bool* tail_mask, const T* tail_addend, T* tail_y) {
+__global__ RETURN_VOID_IF_DOUBLE FusedDropoutAddGpu(uint64_t seed, uint64_t offset,
+                                                    const int64_t elem_cnt, float rate, float scale,
+                                                    int64_t n_tail, const T* x, bool* mask,
+                                                    const T* addend, T* y, const T* tail_x,
+                                                    bool* tail_mask, const T* tail_addend,
+                                                    T* tail_y) {
   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
-  curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
+  curand_init(seed, global_thread_id, offset, &state);
   using LoadType = cuda::elementwise::PackType<T, pack_size>;
   using LoadPack = cuda::elementwise::Pack<T, pack_size>;
   using MaskType = cuda::elementwise::PackType<bool, pack_size>;
@@ -327,15 +316,6 @@ __global__ RETURN_VOID_IF_DOUBLE FusedDropoutAddGpu(
     if (has_addend) { tmp_tail_out += tail_addend[global_thread_id]; }
     tail_y[global_thread_id] = tmp_tail_out;
   }
-
-  __syncthreads();
-  if (threadIdx.x == 0) {
-    int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
-    if (new_counter == gridDim.x) {
-      cuda_gen_state->dev_counter = 0;           // reset counter to zero
-      cuda_gen_state->dev_offset += inc_offset;  // maintain the state of generator's dev_offset
-    }
-  }
 }
 
 unsigned int ComputeGridSize(ep::Stream* stream, const int32_t block_size, const int64_t elem_cnt) {
@@ -350,7 +330,7 @@ unsigned int ComputeGridSize(ep::Stream* stream, const int32_t block_size, const
 }
 
 template<typename T, bool has_addend>
-void DispatchTail(ep::Stream* stream, uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
+void DispatchTail(ep::Stream* stream, const std::shared_ptr<one::CUDAGeneratorImpl>& cuda_generator,
                   const int64_t elem_cnt, float rate, float scale, const T* x, bool* mask,
                   const T* addend, T* y) {
   constexpr int pack_size = GetDropoutPackSize<T>();
@@ -359,21 +339,24 @@ void DispatchTail(ep::Stream* stream, uint64_t seed, one::CUDAGeneratorState* cu
   const int64_t tail_offset = pack_num * pack_size;
   const int64_t n_tail = elem_cnt - tail_offset;
   const bool tail = n_tail > 0 ? true : false;
-  uint64_t inc_offset = 0;
+  uint64_t offset = 0;
+  uint64_t seed = cuda_generator->current_seed();
 
   if (tail) {
     // If tail, we need generate randnum one more time, so here we add another `1`.
-    inc_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize + 1;
+    uint64_t inc_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize + 1;
+    offset = cuda_generator->get_philox_offset(inc_offset);
     FusedDropoutAddGpu<T, pack_size, true, has_addend>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            seed, cuda_gen_state, inc_offset, elem_cnt, rate, scale, n_tail, x, mask, addend, y,
-            (x + tail_offset), (mask + tail_offset), (addend + tail_offset), (y + tail_offset));
+            seed, offset, elem_cnt, rate, scale, n_tail, x, mask, addend, y, (x + tail_offset),
+            (mask + tail_offset), (addend + tail_offset), (y + tail_offset));
   } else {
-    inc_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize;
+    uint64_t inc_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize;
+    offset = cuda_generator->get_philox_offset(inc_offset);
     FusedDropoutAddGpu<T, pack_size, false, has_addend>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            seed, cuda_gen_state, inc_offset, elem_cnt, rate, scale, n_tail, x, mask, addend, y,
-            nullptr, nullptr, nullptr, nullptr);
+            seed, offset, elem_cnt, rate, scale, n_tail, x, mask, addend, y, nullptr, nullptr,
+            nullptr, nullptr);
   }
 }
 
@@ -399,7 +382,7 @@ struct MaskAndScaleFunctor<nv_bfloat16> {
 #endif
 
 template<typename T>
-class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+class DropoutKernelGPU final : public user_op::OpKernel {
  public:
   DropoutKernelGPU() = default;
   ~DropoutKernelGPU() = default;
@@ -407,6 +390,8 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     const auto& generator = CHECK_JUST(one::MakeGenerator(DeviceType::kCUDA));
+    generator->set_current_seed(
+        CHECK_JUST(GetOpKernelRandomSeedInCurrentRank(ctx, ctx->Attr<int64_t>("seed"))));
     return std::make_shared<FusedDropoutKernelState>(generator);
   }
 
@@ -425,21 +410,19 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
     const auto device_index = stream->device()->device_index();
     std::shared_ptr<one::CUDAGeneratorImpl> cuda_generator =
         CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>(device_index));
-    uint64_t seed = cuda_generator->current_seed();
 
     const float rate = ctx->Attr<float>("rate");
     float scale = 0.0;
     if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
-    one::CUDAGeneratorState* cuda_gen_state = cuda_generator->cuda_gen_state();
 
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* addend = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       DispatchTail<T, true>(
-          stream, seed, cuda_gen_state, in->shape_view().elem_cnt(), rate, scale,
+          stream, cuda_generator, in->shape_view().elem_cnt(), rate, scale,
           reinterpret_cast<const T*>(in->dptr()), reinterpret_cast<bool*>(mask->mut_dptr()),
           reinterpret_cast<const T*>(addend->dptr()), reinterpret_cast<T*>(out->mut_dptr()));
     } else {
-      DispatchTail<T, false>(stream, seed, cuda_gen_state, in->shape_view().elem_cnt(), rate, scale,
+      DispatchTail<T, false>(stream, cuda_generator, in->shape_view().elem_cnt(), rate, scale,
                              reinterpret_cast<const T*>(in->dptr()),
                              reinterpret_cast<bool*>(mask->mut_dptr()), nullptr,
                              reinterpret_cast<T*>(out->mut_dptr()));
@@ -500,6 +483,7 @@ REGISTER_DROPOUT_GRAD_KERNEL_GPU(double, DataType::kDouble);
 #if CUDA_VERSION >= 11000
 REGISTER_DROPOUT_GRAD_KERNEL_GPU(nv_bfloat16, DataType::kBFloat16);
 #endif
+
 }  // namespace
 
 }  // namespace oneflow

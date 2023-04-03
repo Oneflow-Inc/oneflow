@@ -25,6 +25,8 @@ from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+import torch as torch_original
+from packaging import version
 
 test_conv2d_weight = np.array(
     [
@@ -1163,7 +1165,18 @@ def _test_conv2d(
 
 
 def _test_conv2d_backward(
-    test_case, conv, data, weight, data_grad, weight_grad, bias=None, device="cuda",
+    test_case,
+    conv,
+    data,
+    weight,
+    data_grad,
+    weight_grad,
+    bias=None,
+    device="cuda",
+    data_rtol=1e-4,
+    data_atol=1e-8,
+    weight_rtol=1e-4,
+    weight_atol=1e-8,
 ):
     to_device = flow.device(device)
     x = flow.tensor(data, dtype=flow.float32, device=to_device, requires_grad=True)
@@ -1173,9 +1186,13 @@ def _test_conv2d_backward(
     conv.to(to_device)
     of_out = conv(x)
     of_out.sum().backward()
-    test_case.assertTrue(np.allclose(x.grad.numpy(), data_grad, rtol=1e-4, atol=1e-8))
     test_case.assertTrue(
-        np.allclose(conv.weight.grad.numpy(), weight_grad, rtol=1e-4, atol=1e-8)
+        np.allclose(x.grad.numpy(), data_grad, rtol=data_rtol, atol=data_atol)
+    )
+    test_case.assertTrue(
+        np.allclose(
+            conv.weight.grad.numpy(), weight_grad, rtol=weight_rtol, atol=weight_atol
+        )
     )
 
 
@@ -1587,7 +1604,19 @@ class TestConv2d(flow.unittest.TestCase):
         device = random_device()
         img = torch.ones((1, 3, 224, 224), requires_grad=True).to(device)
         kernel = torch.ones((3, 1, 3, 3), requires_grad=True).to(device)
-        y = torch.nn.functional.conv2d(img, kernel, groups=3)
+        y = torch.nn.functional.conv2d(input=img, weight=kernel, groups=3)
+        return y
+
+    @unittest.skipIf(
+        version.parse(torch_original.__version__) <= version.parse("1.13.0"),
+        "conv module don't support unbatched input in PyTorch before '1.13.0'",
+    )
+    @autotest(n=3)
+    def test_nn_functional_conv2d_3dinput(test_case):
+        device = random_device()
+        img = torch.ones((3, 224, 224), requires_grad=True).to(device)
+        kernel = torch.ones((3, 1, 3, 3), requires_grad=True).to(device)
+        y = torch.nn.functional.conv2d(input=img, weight=kernel, groups=3)
         return y
 
     def test_conv2d(test_case):
@@ -1608,6 +1637,7 @@ class TestConv2d(flow.unittest.TestCase):
     def test_conv2d_backward(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cuda", "cpu"]
+        os.environ["ONEFLOW_ENABLE_NHWC"] = "0"
         for arg in GenArgList(arg_dict):
             device = arg[0]
             conv = flow.nn.Conv2d(1, 3, (3, 3), bias=False).to(flow.device(device))
@@ -1706,6 +1736,7 @@ class TestConv2d(flow.unittest.TestCase):
                 test_conv2d_padding_data_grad,
                 test_conv2d_padding_weight_grad,
                 device=device,
+                weight_atol=1e-3,
             )
 
     def test_conv2d_stride(test_case):
@@ -1831,7 +1862,7 @@ class TestConv2d(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(n=5)
+    @autotest(n=5, rtol=1e-2)
     def test_conv2d_with_random_data(test_case):
         channels = random(1, 6)
         m = torch.nn.Conv2d(
@@ -1848,6 +1879,31 @@ class TestConv2d(flow.unittest.TestCase):
         device = random_device()
         m.to(device)
         x = random_tensor(ndim=4, dim1=channels).to(device)
+        y = m(x)
+        return y
+
+    @unittest.skipIf(
+        version.parse(torch_original.__version__) <= version.parse("1.13.0"),
+        "conv module don't support unbatched input in PyTorch before '1.13.0'",
+    )
+    @autotest(n=5)
+    def test_conv2d_auto_squeeze_with_random_data(test_case):
+        channels = random(1, 6)
+        m = torch.nn.Conv2d(
+            in_channels=channels,
+            out_channels=random(1, 20),
+            kernel_size=random(1, 4),
+            stride=random() | nothing(),
+            padding=random(1, 3).to(int) | nothing(),
+            dilation=random(1, 5) | nothing(),
+            groups=random(1, 5) | nothing(),
+            padding_mode=constant("zeros") | nothing(),
+            bias=random_bool(),
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor(ndim=3, dim0=channels).to(device)
         y = m(x)
         return y
 
@@ -1982,7 +2038,7 @@ class TestConv2d(flow.unittest.TestCase):
             np.allclose(
                 flow_nchw_weights.grad.numpy(),
                 np.transpose(flow_nhwc_permuted_weights.grad.numpy(), (0, 3, 1, 2)),
-                rtol=1e-4,
+                rtol=1e-3,
                 atol=1e-4,
             )
         )

@@ -18,8 +18,10 @@ limitations under the License.
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
+#include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/functional/impl/binary_functor.h"
+#include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -28,10 +30,10 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/framework/tensor_tuple.h"
-#include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/autograd/autograd_mode.h"
-#include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/user/kernels/distributions/common.h"
+#include "oneflow/user/kernels/random_seed_util.h"
 
 namespace oneflow {
 namespace one {
@@ -192,13 +194,13 @@ class CeluFunctor {
 class CeluGradFunctor {
  public:
   CeluGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("celu_grad").Input("x").Input("dy").Output("dx").Build());
+    op_ = CHECK_JUST(one::OpBuilder("celu_grad").Input("y").Input("dy").Output("dx").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& y,
                            const std::shared_ptr<one::Tensor>& dy, const double& alpha) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("alpha");
     attrs.SetAllAttrs(alpha);
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {y, dy}, attrs);
   }
 
  private:
@@ -228,6 +230,20 @@ class FastGeluGradFunctor : public BinaryFunctor {
  public:
   FastGeluGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("fast_gelu_grad").Input("dy").Input("x").Output("dx").Build());
+  }
+};
+
+class QuickGeluFunctor : public UnaryFunctor {
+ public:
+  QuickGeluFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("quick_gelu").Input("x").Output("y").Build());
+  }
+};
+
+class QuickGeluGradFunctor : public BinaryFunctor {
+ public:
+  QuickGeluGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("quick_gelu_grad").Input("dy").Input("x").Output("dx").Build());
   }
 };
 
@@ -421,9 +437,6 @@ class GumbelSoftmaxFunctor {
     const int64_t num_axes = in_shape->NumAxes();
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("tau", "seed", "hard");
-    attrs.SetAllAttrs(tau, static_cast<int64_t>(gen->current_seed()), hard);
-
     auto random_tensor =
         JUST(functional::Rand(*in_shape.get(), dtype, device, gen, /*requires_grad=*/false));
     auto gumbel_noise_tensor = JUST(functional::ScalarSub(
@@ -518,6 +531,44 @@ class LeakyReluGradFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class RReluFunctor {
+ public:
+  RReluFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("rrelu").Input("in").Output("output").Output("noise_data").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& lower,
+                           const float& upper, bool training, bool inplace) const {
+    if (!training) { return JUST(functional::LeakyRelu(x, ((lower + upper) / 2), inplace)); }
+
+    auto gen = JUST(
+        GetGeneratorForLazyOrGlobal(JUST(one::DefaultAutoGenerator()), LazyMode::is_enabled(), x));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("seed", "lower", "upper", "training");
+    attrs.SetAllAttrs(static_cast<int64_t>(gen->current_seed()), lower, upper, training);
+    const auto& state = std::make_shared<DistributionKernelState>(gen);
+
+    OpExprInterpContext ctx(attrs, state);
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(2);
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      outputs->at(0) = x;
+    }
+    JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), ctx));
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class RReluInplaceFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& lower,
+                           const float& upper, bool training) const {
+    return JUST(functional::RRelu(x, lower, upper, training, true /*inplace*/));
+  }
 };
 
 class SoftplusFunctor {
@@ -698,6 +749,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::GeluGradFunctor>("GeluGrad");
   m.add_functor<impl::FastGeluFunctor>("FastGelu");
   m.add_functor<impl::FastGeluGradFunctor>("FastGeluGrad");
+  m.add_functor<impl::QuickGeluFunctor>("QuickGelu");
+  m.add_functor<impl::QuickGeluGradFunctor>("QuickGeluGrad");
   m.add_functor<impl::GluFunctor>("Glu");
   m.add_functor<impl::HardSigmoidFunctor>("HardSigmoid");
   m.add_functor<impl::HardSigmoidGradFunctor>("HardSigmoidGrad");
@@ -712,6 +765,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::HardSwishGradFunctor>("HardSwishGrad");
   m.add_functor<impl::LeakyReluFunctor>("LeakyRelu");
   m.add_functor<impl::LeakyReluGradFunctor>("LeakyReluGrad");
+  m.add_functor<impl::RReluFunctor>("RRelu");
+  m.add_functor<impl::RReluInplaceFunctor>("RReluInplace");
   m.add_functor<impl::SoftplusFunctor>("Softplus");
   m.add_functor<impl::SoftplusGradFunctor>("SoftplusGrad");
   m.add_functor<impl::SiluFunctor>("Silu");

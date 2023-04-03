@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/framework/tensor_methods.h"
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
@@ -28,6 +29,8 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/framework/op_interpreter/eager_local_op_interpreter.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/vm/virtual_machine.h"
 
 namespace oneflow {
 
@@ -96,11 +99,9 @@ std::shared_ptr<Tensor> LocalTensor::pin_memory() const {
 }
 
 Maybe<Tensor> LocalTensor::clone() const {
-  const auto& device_type = JUST(this->device())->type();
-  int64_t device_id = JUST(this->device())->device_id();
   std::shared_ptr<Tensor> input = std::const_pointer_cast<Tensor>(shared_from_this());
   const bool pin_memory = JUST(JUST(input->AsLocalTensor())->is_pinned());
-  return JUST(functional::Copy(input, device_type, device_id, /*pin_memory=*/pin_memory));
+  return JUST(functional::Copy(input, JUST(this->device()), /*pin_memory=*/pin_memory));
 }
 
 Maybe<void> LocalTensor::set_data(const std::shared_ptr<Tensor>& other) {
@@ -113,6 +114,63 @@ Maybe<void> LocalTensor::set_data(const std::shared_ptr<Tensor>& other) {
   JUST(set_requires_grad(old_requires_grad));
   grad_fn_node_ = nullptr;
   if (other->is_lazy()) { JUST(this->BorrowTensorName(other.get())); }
+  return Maybe<void>::Ok();
+}
+
+#define TENSOR_OFFLOAD_CHECK(is_offloaded, msg)                  \
+  if (!is_cuda()) {                                              \
+    LOG(WARNING) << "Only cuda tensor can be offloaded.";        \
+    return Maybe<void>::Ok();                                    \
+  }                                                              \
+  if (is_offloaded_ != is_offloaded) {                           \
+    LOG(WARNING) << "This tensor has already be " << msg << "."; \
+    return Maybe<void>::Ok();                                    \
+  }
+
+Maybe<void> LocalTensor::offload() {
+  TENSOR_OFFLOAD_CHECK(false, "offloaded");
+
+  // Offload to cpu mem with a cpu tensor implantation.
+  int64_t device_id = JUST(this->device())->device_id();
+  std::shared_ptr<Tensor> cuda_tensor = shared_from_this();
+  auto offloaded_tensor =
+      JUST(functional::Copy(cuda_tensor, "cpu", device_id, /*pin_memory=*/JUST(is_pinned())));
+  JUST(vm::CurrentRankSync());
+
+  const auto& detached_tensor =
+      std::dynamic_pointer_cast<LocalTensor>(JUST(offloaded_tensor->detach()));
+  CHECK_NOTNULL_OR_RETURN(detached_tensor) << " detached_tensor must be a local tensor.";
+  offloaded_impl_ = detached_tensor->impl_;
+
+  // Release cuda memory, but the meta data is valid.
+  auto eager_blob_obj = JUST(JUST(impl_->mut_eager_local_tensor_impl())->eager_blob_object());
+  JUST(eager_blob_obj->DeallocateBlobDataPtr());
+
+  auto* vm = JUST(SingletonMaybe<VirtualMachine>());
+  JUST(vm->ShrinkAllMem());
+
+  is_offloaded_ = true;
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> LocalTensor::load() {
+  TENSOR_OFFLOAD_CHECK(true, "loaded");
+
+  // Load cpu to cuda.
+  int64_t device_id = JUST(this->device())->device_id();
+  std::shared_ptr<Tensor> cpu_tensor = std::make_shared<LocalTensor>(offloaded_impl_);
+  auto loaded_tensor = JUST(functional::Copy(cpu_tensor, "cuda", device_id,
+                                             /*pin_memory=*/JUST(cpu_tensor->is_pinned())));
+  JUST(vm::CurrentRankSync());
+  JUST(set_data(loaded_tensor));
+
+  // Release cpu memory.
+  cpu_tensor.reset();
+  offloaded_impl_.reset();
+  auto* vm = JUST(SingletonMaybe<VirtualMachine>());
+  JUST(vm->ShrinkAllMem());
+
+  is_offloaded_ = false;
   return Maybe<void>::Ok();
 }
 
@@ -174,6 +232,51 @@ Maybe<void> GlobalTensor::set_data(const std::shared_ptr<Tensor>& other) {
   if (other->is_lazy()) { JUST(this->BorrowTensorName(other.get())); }
   return Maybe<void>::Ok();
 }
+
+Maybe<void> GlobalTensor::offload() {
+  TENSOR_OFFLOAD_CHECK(false, "offloaded");
+
+  // Offload to cpu mem with a cpu tensor implantation.
+  std::shared_ptr<Tensor> cuda_tensor = shared_from_this();
+  auto offloaded_tensor = JUST(functional::Copy(cuda_tensor, "cpu", GlobalProcessCtx::LocalRank(),
+                                                /*pin_memory=*/false));
+  JUST(vm::ClusterSync());
+  const auto& detached_tensor =
+      std::dynamic_pointer_cast<GlobalTensor>(JUST(offloaded_tensor->detach()));
+  CHECK_NOTNULL_OR_RETURN(detached_tensor) << "detached_tensor must be a global tensor.";
+  offloaded_impl_ = detached_tensor->impl_;
+
+  // Release cuda memory, but the meta data is valid.
+  auto eager_blob_obj = JUST(JUST(impl_->cur_rank_phy_tensor())->eager_blob_object());
+  JUST(eager_blob_obj->DeallocateBlobDataPtr());
+
+  auto* vm = JUST(SingletonMaybe<VirtualMachine>());
+  JUST(vm->ShrinkAllMem());
+
+  is_offloaded_ = true;
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> GlobalTensor::load() {
+  TENSOR_OFFLOAD_CHECK(true, "loaded");
+
+  // Load cpu to cuda.
+  std::shared_ptr<Tensor> cpu_tensor = std::make_shared<GlobalTensor>(offloaded_impl_);
+  auto loaded_tensor = JUST(functional::Copy(cpu_tensor, "cuda", GlobalProcessCtx::LocalRank(),
+                                             /*pin_memory=*/false));
+  JUST(vm::ClusterSync());
+  JUST(set_data(loaded_tensor));
+
+  // Release cpu memory.
+  cpu_tensor.reset();
+  offloaded_impl_.reset();
+  auto* vm = JUST(SingletonMaybe<VirtualMachine>());
+  JUST(vm->ShrinkAllMem());
+
+  is_offloaded_ = false;
+  return Maybe<void>::Ok();
+}
+#undef TENSOR_OFFLOAD_CHECK
 
 }  // namespace one
 

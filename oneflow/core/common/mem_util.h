@@ -21,15 +21,18 @@ limitations under the License.
 #include <string>
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 void ProcessMemUsage(double* vm_usage, double* resident_set);
+std::string FormatMemSize(uint64_t size);
+Maybe<double> GetCPUMemoryUsed();
 }  // namespace oneflow
 
 #define LOG_MEM(...)                                                                \
   double vm_ = 0, rss_ = 0;                                                         \
   ProcessMemUsage(&vm_, &rss_);                                                     \
   VLOG(1) << "File " __FILE__ << ", Line " << __LINE__ << ", Func " << __FUNCTION__ \
-          << ", Mem size RSS " << rss_ << "MB, VM " << vm_ << " MB."
+          << ", Mem size RSS " << rss_ << "MB."
 
 #endif  // ONEFLOW_CORE_COMMON_MEM_UTIL_H_

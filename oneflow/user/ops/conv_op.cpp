@@ -24,7 +24,9 @@ namespace {
 template<size_t NDims>
 Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
-  CHECK_EQ_OR_RETURN(NDims + 2, in.shape().NumAxes());
+  CHECK_EQ_OR_RETURN(NDims + 2, in.shape().NumAxes())
+      << "Conv" << NDims << "D op's input shape ndim should equal to " << NDims + 2
+      << " ,but got: " << in.shape().NumAxes();
 
   auto data_format = ctx->Attr<std::string>("data_format");
   auto kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");

@@ -19,6 +19,8 @@ limitations under the License.
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/attr_value.h"
+#include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {
@@ -65,6 +67,19 @@ Stride AttrValueAccessor<Stride>::Attr(const AttrValue& val) {
 template<>
 void AttrValueAccessor<Stride>::Attr(const Stride& cpp_val, AttrValue* attr_val) {
   cpp_val.ToProto(attr_val->mutable_at_stride());
+}
+
+template<>
+Symbol<Device> AttrValueAccessor<Symbol<Device>>::Attr(const AttrValue& val) {
+  auto pb_device = val.at_device();
+  return CHECK_JUST(Device::New(*CHECK_JUST(DeviceTag4DeviceType(pb_device.device_type())),
+                                pb_device.device_id()));
+}
+
+template<>
+void AttrValueAccessor<Symbol<Device>>::Attr(const Symbol<Device>& cpp_val, AttrValue* attr_val) {
+  attr_val->mutable_at_device()->set_device_type(cpp_val->enum_type());
+  attr_val->mutable_at_device()->set_device_id(cpp_val->device_id());
 }
 
 // List of Basic Attr
@@ -146,6 +161,18 @@ template<>
 void AttrValueAccessor<std::vector<std::string>>::Attr(const std::vector<std::string>& cpp_val,
                                                        AttrValue* attr_val) {
   *(attr_val->mutable_at_list_string()->mutable_val()) = StdVec2PbRpf<std::string>(cpp_val);
+}
+// ComplexDouble Attr
+template<>
+std::complex<double> AttrValueAccessor<std::complex<double>>::Attr(const AttrValue& val) {
+  std::complex<double> ret{val.at_complex_double().real(), val.at_complex_double().imag()};
+  return ret;
+}
+template<>
+void AttrValueAccessor<std::complex<double>>::Attr(const std::complex<double>& cpp_val,
+                                                   AttrValue* attr_val) {
+  attr_val->mutable_at_complex_double()->set_real(cpp_val.real());
+  attr_val->mutable_at_complex_double()->set_imag(cpp_val.imag());
 }
 
 template<typename ProtoT>

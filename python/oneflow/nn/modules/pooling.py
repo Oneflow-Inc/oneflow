@@ -13,12 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Optional
+from typing import Optional, Union, List
 import os
 
 import oneflow as flow
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 from oneflow.nn.modules.utils import (
     _generate_output_size,
     _getint,
@@ -1018,6 +1018,252 @@ class AdaptiveMaxPool3d(_AdaptiveMaxPoolNd):
         new_output_size = _generate_output_size(input.shape, self.output_size)
         return flow.nn.functional.adaptive_max_pool3d(
             input, self.output_size, self.return_indices
+        )
+
+
+class MaxUnpool1d(Module):
+    r"""Computes a partial inverse of :class:`MaxPool1d`.
+
+    :class:`MaxPool1d` is not fully invertible, since the non-maximal values are lost.
+
+    :class:`MaxUnpool1d` takes in as input the output of :class:`MaxPool1d`
+    including the indices of the maximal values and computes a partial inverse
+    in which all non-maximal values are set to zero.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.MaxUnpool1d.html.
+
+    .. note:: :class:`MaxPool1d` can map several input sizes to the same output
+              sizes. Hence, the inversion process can get ambiguous.
+              To accommodate this, you can provide the needed output size
+              as an additional argument :attr:`output_size` in the forward call.
+              See the Inputs and Example below.
+
+    Args:
+        kernel_size (int or tuple): Size of the max pooling window.
+        stride (int or tuple): Stride of the max pooling window.
+            It is set to :attr:`kernel_size` by default.
+        padding (int or tuple): Padding that was added to the input
+
+    Inputs:
+        - `input`: the input Tensor to invert
+        - `indices`: the indices given out by :class:`~oneflow.nn.MaxPool1d`
+        - `output_size` (optional): the targeted output size
+
+    Shape:
+        - Input: :math:`(N, C, H_{in})`.
+        - Output: :math:`(N, C, H_{out})`, where
+
+          .. math::
+              H_{out} = (H_{in} - 1) \times \text{stride}[0] - 2 \times \text{padding}[0] + \text{kernel\_size}[0]
+
+          or as given by :attr:`output_size` in the call operator
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> pool = flow.nn.MaxPool1d(2, stride=2, return_indices=True)
+        >>> unpool = flow.nn.MaxUnpool1d(2, stride=2)
+        >>> input = flow.tensor([[[1., 2, 3, 4, 5, 6, 7, 8]]])
+        >>> output, indices = pool(input)
+        >>> unpool(output, indices)
+        tensor([[[0., 2., 0., 4., 0., 6., 0., 8.]]], dtype=oneflow.float32)
+        >>> # Example showcasing the use of output_size
+        >>> input = flow.tensor([[[1., 2, 3, 4, 5, 6, 7, 8, 9]]])
+        >>> output, indices = pool(input)
+        >>> unpool(output, indices, output_size=input.size())
+        tensor([[[0., 2., 0., 4., 0., 6., 0., 8., 0.]]], dtype=oneflow.float32)
+        >>> unpool(output, indices)
+        tensor([[[0., 2., 0., 4., 0., 6., 0., 8.]]], dtype=oneflow.float32)
+
+    .. note:: When `indices` contains elements out of the `output_size` range,
+              an RuntimeError will be raised on the cpu and an indeterminate
+              result will be calculated on the cuda.
+
+    """
+
+    def __init__(
+        self,
+        kernel_size: _size_1_t,
+        stride: Optional[_size_1_t] = None,
+        padding: Optional[_size_1_t] = 0,
+    ):
+        super().__init__()
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+
+    def forward(self, x, indices, output_size=None):
+        return flow._C.max_unpool1d(
+            x, indices, self.kernel_size, self.stride, self.padding, output_size
+        )
+
+
+class MaxUnpool2d(Module):
+    r"""Computes a partial inverse of :class:`MaxPool2d`.
+
+    :class:`MaxPool2d` is not fully invertible, since the non-maximal values are lost.
+
+    :class:`MaxUnpool2d` takes in as input the output of :class:`MaxPool2d`
+    including the indices of the maximal values and computes a partial inverse
+    in which all non-maximal values are set to zero.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.MaxUnpool2d.html.
+
+    .. note:: :class:`MaxPool2d` can map several input sizes to the same output
+              sizes. Hence, the inversion process can get ambiguous.
+              To accommodate this, you can provide the needed output size
+              as an additional argument :attr:`output_size` in the forward call.
+              See the Inputs and Example below.
+
+    Args:
+        kernel_size (int or tuple): Size of the max pooling window.
+        stride (int or tuple): Stride of the max pooling window.
+            It is set to :attr:`kernel_size` by default.
+        padding (int or tuple): Padding that was added to the input
+
+    Inputs:
+        - `input`: the input Tensor to invert
+        - `indices`: the indices given out by :class:`~oneflow.nn.MaxPool2d`
+        - `output_size` (optional): the targeted output size
+
+    Shape:
+        - Input: :math:`(N, C, H_{in}, W_{in})` .
+        - Output: :math:`(N, C, H_{out}, W_{out})`, where
+
+          .. math::
+            H_{out} = (H_{in} - 1) \times \text{stride[0]} - 2 \times \text{padding[0]} + \text{kernel\_size[0]}
+
+          .. math::
+            W_{out} = (W_{in} - 1) \times \text{stride[1]} - 2 \times \text{padding[1]} + \text{kernel\_size[1]}
+
+          or as given by :attr:`output_size` in the call operator
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> pool = flow.nn.MaxPool2d(2, stride=2, return_indices=True)
+        >>> unpool = flow.nn.MaxUnpool2d(2, stride=2)
+        >>> input = flow.tensor([[[[ 1.,  2,  3,  4],
+        ...                         [ 5,  6,  7,  8],
+        ...                         [ 9, 10, 11, 12],
+        ...                         [13, 14, 15, 16]]]])
+        >>> output, indices = pool(input)
+        >>> unpool(output, indices) # doctest: +SKIP 
+        tensor([[[[ 0.,  0.,  0.,  0.],
+                [ 0.,  6.,  0.,  8.],
+                [ 0.,  0.,  0.,  0.],
+                [ 0., 14.,  0., 16.]]]], dtype=oneflow.float32)
+        >>> # specify a different output size than input size
+        >>> unpool(output, indices, output_size=flow.Size([1, 1, 5, 5])) # doctest: +SKIP
+        tensor([[[[ 0.,  0.,  0.,  0.,  0.],
+                [ 6.,  0.,  8.,  0.,  0.],
+                [ 0.,  0.,  0., 14.,  0.],
+                [16.,  0.,  0.,  0.,  0.],
+                [ 0.,  0.,  0.,  0.,  0.]]]], dtype=oneflow.float32)
+
+    .. note:: When `indices` contains elements out of the `output_size` range,
+              an RuntimeError will be raised on the cpu and an indeterminate
+              result will be calculated on the cuda.
+    """
+
+    def __init__(
+        self,
+        kernel_size: _size_2_t,
+        stride: Optional[_size_2_t] = None,
+        padding: Optional[_size_2_t] = 0,
+    ):
+        super().__init__()
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+
+    def forward(self, x, indices, output_size=None):
+        return flow._C.max_unpool2d(
+            x, indices, self.kernel_size, self.stride, self.padding, output_size
+        )
+
+
+class MaxUnpool3d(Module):
+    r"""Computes a partial inverse of :class:`MaxPool3d`.
+
+    :class:`MaxPool3d` is not fully invertible, since the non-maximal values are lost.
+    :class:`MaxUnpool3d` takes in as input the output of :class:`MaxPool3d`
+    including the indices of the maximal values and computes a partial inverse
+    in which all non-maximal values are set to zero.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.MaxPool3d.html.
+
+    .. note:: :class:`MaxPool3d` can map several input sizes to the same output
+              sizes. Hence, the inversion process can get ambiguous.
+              To accommodate this, you can provide the needed output size
+              as an additional argument :attr:`output_size` in the forward call.
+              See the Inputs section below.
+
+    Args:
+        kernel_size (int or tuple): Size of the max pooling window.
+        stride (int or tuple): Stride of the max pooling window.
+            It is set to :attr:`kernel_size` by default.
+        padding (int or tuple): Padding that was added to the input
+
+    Inputs:
+        - `input`: the input Tensor to invert
+        - `indices`: the indices given out by :class:`~oneflow.nn.MaxPool3d`
+        - `output_size` (optional): the targeted output size
+
+    Shape:
+        - Input: :math:`(N, C, D_{in}, H_{in}, W_{in})`.
+        - Output: :math:`(N, C, D_{out}, H_{out}, W_{out})`, where
+
+          .. math::
+              D_{out} = (D_{in} - 1) \times \text{stride[0]} - 2 \times \text{padding[0]} + \text{kernel\_size[0]}
+
+          .. math::
+              H_{out} = (H_{in} - 1) \times \text{stride[1]} - 2 \times \text{padding[1]} + \text{kernel\_size[1]}
+
+          .. math::
+              W_{out} = (W_{in} - 1) \times \text{stride[2]} - 2 \times \text{padding[2]} + \text{kernel\_size[2]}
+
+          or as given by :attr:`output_size` in the call operator
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> # pool of square window of size=3, stride=2
+        >>> pool = flow.nn.MaxPool3d(3, stride=2, return_indices=True)
+        >>> unpool = flow.nn.MaxUnpool3d(3, stride=2)
+        >>> output, indices = pool(flow.randn(20, 16, 51, 33, 15))
+        >>> unpooled_output = unpool(output, indices)
+        >>> unpooled_output.size()
+        oneflow.Size([20, 16, 51, 33, 15])
+
+    .. note:: When `indices` contains elements out of the `output_size` range,
+              an RuntimeError will be raised on the cpu and an indeterminate
+              result will be calculated on the cuda.
+    """
+
+    def __init__(
+        self,
+        kernel_size: _size_3_t,
+        stride: Optional[_size_3_t] = None,
+        padding: Optional[_size_3_t] = 0,
+    ):
+        super().__init__()
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+
+    def forward(self, x, indices, output_size=None):
+        return flow._C.max_unpool3d(
+            x, indices, self.kernel_size, self.stride, self.padding, output_size
         )
 
 

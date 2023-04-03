@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/user/kernels/arange_kernel_util.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/job/nd_sbp_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 namespace user_op {
@@ -33,7 +34,7 @@ class ArangeOpKernelCache final : public user_op::OpKernelCache {
   const int32_t upper_;
 };
 template<DeviceType device_type, typename T>
-class ArangeKernel final : public OpKernel {
+class ArangeKernel final : public OpKernel, public CudaGraphSupport {
  public:
   ArangeKernel() = default;
   ~ArangeKernel() = default;

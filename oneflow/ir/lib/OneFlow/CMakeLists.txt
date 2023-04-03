@@ -15,18 +15,41 @@ foreach(OP_GROUP_NAME IN LISTS ONEFLOW_OP_GROUPS)
   configure_file(OneFlowOpGetGen.cpp.in ${CPP_FILE} @ONLY)
 endforeach()
 
+add_subdirectory(PDLL)
+
 oneflow_add_mlir_dialect_library(
   MLIROneFlow
+  OKM/OKMDialect.cpp
+  OKM/passes.cpp
+  OKM/Conversion/Conversion.cpp
+  OKL/OKLDialect.cpp
+  OKL/OKLOps.cpp
+  OKL/OKLTypes.cpp
+  OKL/Conversion/OKLToLLVM.cpp
+  OKL/Conversion/CudaGraphSupport.cpp
+  OKL/Conversion/Conversion.cpp
+  OKL/Kernel/InferContext.cpp
+  OKL/Kernel/KernelLaunchOp.cpp
+  OKL/Kernel/LauncherState.cpp
+  OKL/Kernel/LauncherContext.cpp
+  OKL/Kernel/ComputeContext.cpp
+  OKL/Kernel/RegContext.cpp
+  OKL/Kernel/TmpBufferManager.cpp
+  OKL/Kernel/JITOpInfer.cpp
+  OKL/Kernel/JITEngine.cpp
   SBP/SBPDialect.cpp
   SBP/SBPAttributes.cpp
   SBP/SBPImporter.cpp
   OneFlowDialect.cpp
   OneFlowTypes.cpp
+  OneFlowInferReturnTypes.cpp
   OneFlowOps.cpp
   OneFlowOpTraits.cpp
   OneFlowSupport.cpp
   OneFlowUtils.cpp
+  OneFlowDataTypeConversion.cpp
   UserOpReflection.cpp
+  UserOpConversion.cpp
   OneFlowOpFolders.cpp
   Conversion/OneFlowToTosa.cpp
   Conversion/PTXToCubin.cpp
@@ -34,8 +57,14 @@ oneflow_add_mlir_dialect_library(
   Transform/OutlineAndFuse.cpp
   Transform/AutoNhwc.cpp
   Transform/ConvertInferenceOp.cpp
+  Transform/AggregateOps.cpp
+  Transform/CSEWithAttributesIgnored.cpp
+  Transform/GroupMatMulOps.cpp
+  Transform/AutoNHWCOps.cpp
   TransposeHelpers.cpp
   Passes.cpp
+  OneFlowCanonicalizers.cpp
+  OneFlowRewrites.cpp
   ${GROUPED_OP_CPP_FILES}
   ADDITIONAL_HEADER_DIRS
   ${PROJECT_SOURCE_DIR}/include/OneFlow
@@ -52,6 +81,8 @@ oneflow_add_mlir_dialect_library(
   MLIRReconcileUnrealizedCasts
   ${MLIR_GPU_LIBS}
   MLIRIR
+  MLIROneFlowPDLLPatterns
+  MLIRExecutionEngine
   oneflow)
 
 if(WITH_MLIR_CUDA_CODEGEN)

@@ -175,7 +175,9 @@ def _test_embedding_gradient_shuffle(test_case, enable_quantize, fp16, embedding
     )
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+# FIXME: restore this test after upgrading CUDA driver
+@unittest.skip("CUDA driver version of CI machine is insufficient for this test")
+# @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
 class DataShuffleTestCase(flow.unittest.TestCase):
     def test_embedding_gradient_shuffle(test_case):

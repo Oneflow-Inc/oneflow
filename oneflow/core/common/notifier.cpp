@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/notifier.h"
+#include "oneflow/core/common/foreign_lock_helper.h"
+#include "oneflow/core/common/env_var/env_var.h"
 
 namespace oneflow {
 
@@ -35,6 +37,30 @@ NotifierStatus Notifier::WaitAndClearNotifiedCnt() {
   if (notified_cnt_ == 0) { return kNotifierStatusErrorClosed; }
   notified_cnt_ = 0;
   return kNotifierStatusSuccess;
+}
+
+Maybe<void> Notifier::TimedWaitAndClearNotifiedCnt(size_t timeout_seconds) {
+  return Singleton<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
+    std::chrono::duration<size_t> seconds(timeout_seconds);
+    std::unique_lock<std::mutex> lock(mutex_);
+    CHECK_OR_RETURN(cond_.wait_for(lock, seconds, [this]() {
+      return notified_cnt_ > 0 || is_closed_;
+    })) << Error::TimeoutError();
+    CHECK_GT_OR_RETURN(notified_cnt_, 0) << "notifier closed.";
+    notified_cnt_ = 0;
+    return Maybe<void>::Ok();
+  });
+}
+
+Maybe<void> Notifier::TimedWaitAndClearNotifiedCnt(
+    const std::function<Maybe<bool>()>& StopWaitingAfterTimeout) {
+  while (true) {
+    auto status = TRY(TimedWaitAndClearNotifiedCnt(EnvInteger<ONEFLOW_TIMEOUT_SECONDS>()));
+    if (status.IsOk()) { return status; }
+    if (!status.error()->has_timeout_error()) { return status; }
+    if (JUST(StopWaitingAfterTimeout())) { return status; }
+  }
+  UNIMPLEMENTED_THEN_RETURN();
 }
 
 void Notifier::Close() {

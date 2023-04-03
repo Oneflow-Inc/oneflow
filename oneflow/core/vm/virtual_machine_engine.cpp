@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/singleton_ptr.h"
 #include "oneflow/core/common/foreign_lock_helper.h"
+#include "oneflow/extension/stack/foreign_stack_getter.h"
 
 namespace oneflow {
 
@@ -306,6 +307,7 @@ std::string DebugDeviceReset(vm::Stream* stream) {
 
 void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
                                                const ScheduleCtx& schedule_ctx) {
+  ForeignFrameThreadLocalGuard guard(instruction->foreign_frame());
   auto* stream = instruction->mut_stream();
   // Prepare
   {
@@ -431,7 +433,7 @@ void VirtualMachineEngine::Schedule(const ScheduleCtx& schedule_ctx) {
   // Use thread_unsafe_size to avoid acquiring mutex lock.
   // The inconsistency between pending_instruction_list.list_head_.list_head_.container_ and
   // pending_instruction_list.list_head_.list_head_.size_ is not a fatal error because
-  // VirtualMachineEngine::Schedule is always in a buzy loop. All instructions will get handled
+  // VirtualMachineEngine::Schedule is always in a busy loop. All instructions will get handled
   // eventually.
   //  VirtualMachineEngine::Receive may be less effiencient if the thread safe version
   //  `pending_instruction_list().size()` used here, because VirtualMachineEngine::Schedule is more

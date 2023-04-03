@@ -25,8 +25,6 @@ namespace oneflow {
 
 Maybe<NaiveAsyncTransportCtx> CheckTransportToken(Symbol<RankGroup> rank_group);
 
-Maybe<int64_t> GetCurrentRankGroupLevel();
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_PLACEMENT_RPC_UTIL_H_

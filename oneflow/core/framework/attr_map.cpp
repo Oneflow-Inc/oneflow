@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <fmt/ranges.h>
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
@@ -137,6 +138,17 @@ void AttrMap::const_iterator::UpdateKV() {
   }
 }
 
+std::string ComposedAttrMap::ToString() const {
+  std::vector<std::string> results;
+  for (const auto& attr : prior_) {
+    results.emplace_back(fmt::format("{}={}", attr.first, attr.second->ToString()));
+  }
+  for (const auto& attr : base_) {
+    if (prior_.Has(attr.first)) { continue; }
+    results.emplace_back(fmt::format("{}={}", attr.first, attr.second->ToString()));
+  }
+  return fmt::format("{}", fmt::join(results, ", "));
+}
 AttrMap MakeAttrMapFromUserOpConf(const UserOpConf& user_conf) { return AttrMap(user_conf); }
 
 template<typename T>

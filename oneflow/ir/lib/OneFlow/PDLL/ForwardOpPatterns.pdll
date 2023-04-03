@@ -1,0 +1,206 @@
+#include "OneFlow/OneFlowOps.td"
+#include "OneFlowPDLLUtils.pdll"
+
+Pattern {
+  let rate: Attr;
+  let device_name: Attr;
+  let device_tag: Attr;
+  let axis: Attr;
+  let dropout =
+    op<oneflow.dropout>(
+      op<oneflow.bias_add>(a: Value, b: Value) {axis = axis, device_name = device_name, device_tag = device_tag})
+      {rate = rate, device_name = device_name, device_tag = device_tag} -> (out: Type, mask: Type);
+
+  rewrite dropout with {
+    let random_mask_like = CopyUserOpAttrs(dropout, op<oneflow.random_mask_like>(a){rate = rate} -> (mask));
+    let fused_bias_add_mask_scale = BuildFusedBiasAddMaskScaleOpWithRate(a, b, random_mask_like.0, axis, rate, dropout);
+    replace dropout with (fused_bias_add_mask_scale.0, random_mask_like.0);
+  };
+}
+
+Pattern {
+  let device_name: Attr;
+  let device_tag: Attr;
+  let axis: Attr;
+  let gelu =
+    op<oneflow.gelu>(
+      op<oneflow.bias_add>(a: Value, b: Value) {axis = axis, device_name = device_name, device_tag = device_tag})
+      {device_name = device_name, device_tag = device_tag} -> (out: Type);
+
+  rewrite gelu with{
+    replace gelu with CopyUserOpAttrs(gelu, op<oneflow.fused_bias_add_gelu>(a, b){axis = axis} -> (out));
+  };
+}
+
+Pattern {
+  let device_name: Attr;
+  let device_tag = attr<"\"cuda\"">;
+  let scalar_div_operand: Attr;
+  let out_shape: Attr;
+
+  let query: Value;
+  let key: Value;
+  let value: Value;
+
+  let query_reshape = op<oneflow.reshape>(query) {device_name = device_name, device_tag = device_tag};
+  let key_reshape = op<oneflow.reshape>(key) {device_name = device_name, device_tag = device_tag};
+  let value_reshape = op<oneflow.reshape>(value) {device_name = device_name, device_tag = device_tag};
+  let query_transpose = op<oneflow.transpose>(query_reshape.0) {device_name = device_name, device_tag = device_tag, perm = attr<"[0 : si32, 2 : si32, 1 : si32, 3 : si32]">};
+  let key_transpose = op<oneflow.transpose>(key_reshape.0) {device_name = device_name, device_tag = device_tag, perm = attr<"[0 : si32, 2 : si32, 3 : si32, 1 : si32]">};
+  let value_transpose = op<oneflow.transpose>(value_reshape.0) {device_name = device_name, device_tag = device_tag, perm = attr<"[0 : si32, 2 : si32, 1 : si32, 3 : si32]">};
+  let scores = op<oneflow.batch_matmul>(query_transpose.0, key_transpose.0) {alpha = attr<"1.000000e+00 : f64">, device_name = device_name, device_tag = device_tag, transpose_a = attr<"false : bool">, transpose_b = attr<"false : bool">};
+  let scores_scaled = op<oneflow.scalar_div>(scores.0) {device_name = device_name, device_tag = device_tag, float_operand = scalar_div_operand, has_float_operand = attr<"true : bool">};
+  let attn = op<oneflow.softmax>(scores_scaled.0) {device_name = device_name, device_tag = device_tag};
+  let out = op<oneflow.batch_matmul>(attn.0, value_transpose.0) {alpha = attr<"1.000000e+00 : f64">, device_name = device_name, device_tag = device_tag, transpose_a = attr<"false : bool">, transpose_b = attr<"false : bool">};
+  let out_transpose = op<oneflow.transpose>(out.0) {device_name = device_name, device_tag = device_tag, perm = attr<"[0 : si32, 2 : si32, 1 : si32, 3 : si32]">};
+  let out_reshape = op<oneflow.reshape>(out_transpose.0) {device_name = device_name, device_tag = device_tag, shape = out_shape} -> (out_t: Type);
+
+  IsScalarEqualSqrtDim(query_reshape.0, scalar_div_operand);
+
+  rewrite out_reshape with{
+    replace out_reshape with CopyUserOpAttrs(out, op<oneflow.fused_multi_head_attention_inference>(query, key, value) {
+      attn_mask_type = attr<"\"none\"">,
+      query_max_seq_len = attr<"0 : si64">,
+      key_max_seq_len = attr<"0 : si64">,
+      causal_diagonal_offset = attr<"0 : si64">,
+      query_head_size = GetHeadSizeFromTranpose(query_transpose),
+      query_layout = attr<"\"BM(HK)\"">,
+      key_layout = attr<"\"BM(HK)\"">,
+      value_layout = attr<"\"BM(HK)\"">,
+      output_layout = attr<"\"BM(HK)\"">,
+      operand_segment_sizes = attr<"dense<[1, 1, 1, 0, 0, 0, 0]> : vector<7xi32>">,
+      scale = GetReciprocal(scalar_div_operand)
+    } -> (out_t));
+  };
+}
+
+Pattern {
+  let device_name: Attr;
+  let device_tag = attr<"\"cuda\"">;
+  let batch_matmul_alpha: Attr;
+  let out_shape: Attr;
+
+  let query: Value;
+  let key: Value;
+  let value: Value;
+
+  let value_reshape = op<oneflow.reshape>(value) {device_name = device_name, device_tag = device_tag};
+  let key_reshape = op<oneflow.reshape>(key) {device_name = device_name, device_tag = device_tag};
+  let query_reshape = op<oneflow.reshape>(query) {device_name = device_name, device_tag = device_tag};
+  let value_permute = op<oneflow.transpose>(value_reshape.0) {device_name = device_name, device_tag = device_tag, perm = attr<"[0 : si32, 2 : si32, 1 : si32, 3 : si32]">};
+  let key_permute = op<oneflow.transpose>(key_reshape.0) {device_name = device_name, device_tag = device_tag, perm = attr<"[0 : si32, 2 : si32, 1 : si32, 3 : si32]">};
+  let query_permute = op<oneflow.transpose>(query_reshape.0) {device_name = device_name, device_tag = device_tag, perm = attr<"[0 : si32, 2 : si32, 1 : si32, 3 : si32]">};
+  let value_reshape_to_batch = op<oneflow.reshape>(value_permute.0) {device_name = device_name, device_tag = device_tag};
+  let key_reshape_to_batch = op<oneflow.reshape>(key_permute.0) {device_name = device_name, device_tag = device_tag};
+  let query_reshape_to_batch = op<oneflow.reshape>(query_permute.0) {device_name = device_name, device_tag = device_tag};
+  let key_transpose = op<oneflow.transpose>(key_reshape_to_batch.0) {device_name = device_name, device_tag = device_tag, perm = attr<"[0 : si32, 2 : si32, 1 : si32]">};
+  let scores_scaled = op<oneflow.batch_matmul>(query_reshape_to_batch.0, key_transpose.0) {alpha = batch_matmul_alpha, device_name = device_name, device_tag = device_tag, transpose_a = attr<"false : bool">, transpose_b = attr<"false : bool">};
+  let attn = op<oneflow.softmax>(scores_scaled.0) {device_name = device_name, device_tag = device_tag};
+  let out = op<oneflow.batch_matmul>(attn.0, value_reshape_to_batch.0) {alpha = attr<"1.000000e+00  : f64">, device_name = device_name, device_tag = device_tag, transpose_a = attr<"false : bool">, transpose_b = attr<"false : bool">};
+  let out_reshape_before = op<oneflow.reshape>(out.0) {device_name = device_name, device_tag = device_tag};
+  let out_transpose = op<oneflow.transpose>(out_reshape_before.0) {device_name = device_name, device_tag = device_tag, perm = attr<"[0 : si32, 2 : si32, 1 : si32, 3 : si32]">};
+  let out_reshape = op<oneflow.reshape>(out_transpose.0) {device_name = device_name, device_tag = device_tag, shape = out_shape} -> (out_t: Type);
+
+  IsScalarEqualSqrtDimReciprocal(query_reshape.0, batch_matmul_alpha);
+
+  rewrite out_reshape with{
+    replace out_reshape with CopyUserOpAttrs(out, op<oneflow.fused_multi_head_attention_inference>(query, key, value) {
+      attn_mask_type = attr<"\"none\"">,
+      query_max_seq_len = attr<"0 : si64">,
+      key_max_seq_len = attr<"0 : si64">,
+      causal_diagonal_offset = attr<"0 : si64">,
+      query_head_size = GetHeadSizeFromTranpose(query_permute),
+      query_layout = attr<"\"BM(HK)\"">,
+      key_layout = attr<"\"BM(HK)\"">,
+      value_layout = attr<"\"BM(HK)\"">,
+      output_layout = attr<"\"BM(HK)\"">,
+      operand_segment_sizes = attr<"dense<[1, 1, 1, 0, 0, 0, 0]> : vector<7xi32>">,
+      scale = batch_matmul_alpha
+    } -> (out_t));
+  };
+}
+
+Pattern {
+  let device_name: Attr;
+  let device_tag: Attr;
+  let padding_before: Attr;
+  let padding_after: Attr;
+  let data_format: Attr;
+
+  let conv =
+    op<oneflow.conv2d>(
+      op<oneflow.pad>(x: Value){device_name = device_name, device_tag = device_tag, padding_before = padding_before, padding_after = padding_after}, weight: Value)
+      {device_name = device_name, device_tag = device_tag, data_format = data_format};
+  IsPaddingCouldBeAssimilatedIntoConv(padding_before, padding_after, data_format);
+
+  rewrite conv with{
+    let conv2d_and_erase_pad = CreateConv2dAndErasePad(x, weight, padding_before, data_format, conv);
+    replace conv with CopyUserOpAttrs(conv, conv2d_and_erase_pad);
+  };
+}
+
+Pattern {
+  let valueType: Type;
+  let x: Value<valueType>;
+  let cast = op<oneflow.cast>(x) -> (valueType);
+
+  replace cast with x;
+}
+
+Pattern {
+  let device_name: Attr;
+  let has_float_operand: Attr;
+  let int_operand: Attr;
+  let float_operand: Attr;
+  let diagonal: Attr;
+  let floating_fill_value: Attr;
+  let integer_fill_value: Attr;
+  let is_floating_fill_value: Attr;
+
+  let tril =
+    op<oneflow.tril>(
+      op<oneflow.scalar_mul>(x: Value)
+      {device_name = device_name, device_tag = attr<"\"cuda\"">, has_float_operand = has_float_operand,
+        int_operand = int_operand, float_operand = float_operand})
+      {device_name = device_name, device_tag = attr<"\"cuda\"">, diagonal = diagonal, floating_fill_value = floating_fill_value,
+        integer_fill_value =integer_fill_value, is_floating_fill_value = is_floating_fill_value} -> (out: Type);
+
+  replace tril with CopyUserOpAttrs(tril, CreatScaleTrilOp(x, diagonal, floating_fill_value, integer_fill_value,
+                                      is_floating_fill_value, float_operand ,int_operand, has_float_operand, out));
+}
+
+Pattern {
+  let device_name: Attr;
+  let has_float_operand: Attr;
+  let int_operand: Attr;
+  let float_operand: Attr;
+  let diagonal: Attr;
+  let floating_fill_value: Attr;
+  let integer_fill_value: Attr;
+  let is_floating_fill_value: Attr;
+
+  let scalar =
+    op<oneflow.scalar_mul>(
+      op<oneflow.tril>(x: Value)
+      {device_name = device_name, device_tag = attr<"\"cuda\"">, diagonal = diagonal, floating_fill_value = floating_fill_value,
+        integer_fill_value =integer_fill_value, is_floating_fill_value = is_floating_fill_value })
+      {device_name = device_name, device_tag = attr<"\"cuda\"">, has_float_operand = has_float_operand,
+        int_operand = int_operand, float_operand = float_operand} -> (out: Type);
+
+  replace scalar with CopyUserOpAttrs(scalar, CreatScaleTrilOp(x, diagonal, floating_fill_value, integer_fill_value,
+                                        is_floating_fill_value, float_operand ,int_operand, has_float_operand, out));
+}
+
+Pattern {
+  let device_name: Attr;
+  let device_tag: Attr;
+
+  let broadcast_mul = op<oneflow.broadcast_mul>(x: Value, y: Value){device_name = device_name, device_tag = device_tag}-> (out: Type);
+
+  IsScalarTensor(y);
+
+  rewrite broadcast_mul with{
+    let scalar_mul = op<oneflow.scalar_mul_by_tensor>(x, y) {device_name = device_name, device_tag = device_tag} -> (out);
+    replace broadcast_mul with CopyUserOpAttrs(broadcast_mul, scalar_mul);
+  };
+}

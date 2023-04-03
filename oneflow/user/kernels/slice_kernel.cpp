@@ -269,6 +269,9 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
       SliceKernelUtil<device_type, T>::Forward(ctx->stream(), large_slice_param, src->dptr<T>(),
                                                dst->mut_dptr<T>());
     } else {
+      AutoMemset(ctx->stream(), dst->mut_dptr(), 0,
+                 dst->shape_view().elem_cnt() * GetSizeOfDataType(dst->data_type()),
+                 dst->mem_case());
       SliceKernelUtil<device_type, T>::Forward(ctx->stream(), large_slice_param, small_slice_param,
                                                src->dptr<T>(), dst->mut_dptr<T>());
     }
@@ -279,7 +282,7 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
 }
 
 template<DeviceType device_type, typename T>
-class SliceKernel final : public user_op::OpKernel {
+class SliceKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   SliceKernel() = default;
   ~SliceKernel() = default;
@@ -329,9 +332,6 @@ class SliceKernel final : public user_op::OpKernel {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     const SliceContext& slice_ctx =
         dynamic_cast<const OpKernelCacheWrapper<SliceContext>*>(cache)->Get();
-    AutoMemset(ctx->stream(), y_tensor->mut_dptr(), 0,
-               y_tensor->shape_view().elem_cnt() * GetSizeOfDataType(y_tensor->data_type()),
-               y_tensor->mem_case());
     WriteSlice<device_type, T>(ctx, x_tensor, y_tensor, slice_ctx, /*from_large_to_small=*/true);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

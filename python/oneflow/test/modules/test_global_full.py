@@ -32,6 +32,15 @@ def _test_global_full(test_case, shape, placement, sbp):
     test_case.assertEqual(x.placement, placement)
 
 
+def _test_global_full_tensor_scalar(test_case, shape, placement, sbp):
+    scalar_sbp = [flow.sbp.broadcast for _ in range(len(placement.ranks.shape))]
+    x1 = flow.tensor(1.0, placement=placement, sbp=scalar_sbp)
+    x2 = flow.full(shape, x1, placement=placement, sbp=sbp)
+    test_case.assertEqual(x2.shape, flow.Size(shape))
+    test_case.assertEqual(x2.sbp, sbp)
+    test_case.assertEqual(x2.placement, placement)
+
+
 def _test_graph_full(test_case, shape, placement, sbp):
     class GlobalFullGraph(flow.nn.Graph):
         def __init__(self,):
@@ -49,6 +58,32 @@ def _test_graph_full(test_case, shape, placement, sbp):
     test_case.assertEqual(x.placement, placement)
 
 
+def _test_graph_full_tensor_scalar(test_case, shape, placement, sbp):
+    class GlobalFullGraph2(flow.nn.Graph):
+        def __init__(self,):
+            super().__init__()
+
+        def build(self):
+            x = flow.full(
+                shape,
+                flow.tensor(
+                    1.0,
+                    placement=placement,
+                    sbp=[flow.sbp.broadcast for _ in range(len(placement.ranks.shape))],
+                ),
+                placement=placement,
+                sbp=sbp,
+            )
+            return x
+
+    model = GlobalFullGraph2()
+    x = model()
+
+    test_case.assertEqual(x.shape, flow.Size(shape))
+    test_case.assertEqual(x.sbp, sbp)
+    test_case.assertEqual(x.placement, placement)
+
+
 class TestFullGlobal(flow.unittest.TestCase):
     @globaltest
     def test_full_global(test_case):
@@ -59,6 +94,7 @@ class TestFullGlobal(flow.unittest.TestCase):
                     placement, max_dim=len(shape), except_partial_sum=True
                 ):
                     _test_global_full(test_case, shape, placement, sbp)
+                    _test_global_full_tensor_scalar(test_case, shape, placement, sbp)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n2d()
@@ -78,6 +114,7 @@ class TestFullGlobal(flow.unittest.TestCase):
             placement = args["placement"]
             for sbp in all_sbp(placement, max_dim=len(shape), except_partial_sum=True):
                 _test_graph_full(test_case, shape, placement, sbp)
+                _test_graph_full_tensor_scalar(test_case, shape, placement, sbp)
 
 
 if __name__ == "__main__":

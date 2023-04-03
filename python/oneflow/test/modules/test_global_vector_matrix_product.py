@@ -19,7 +19,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_vector_matrix_product(test_case, placement, sbp):
     dim = random(1, 6)
     vec = random_tensor(1, dim0=dim).to_global(placement=placement, sbp=sbp)

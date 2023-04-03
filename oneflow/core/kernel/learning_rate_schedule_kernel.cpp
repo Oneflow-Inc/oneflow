@@ -64,7 +64,7 @@ double LinearLearningRate(double base_lr, double start_factor, double end_factor
   CHECK_LE(start_factor, 1.0);
   CHECK_GE(end_factor, 0.0);
   CHECK_LE(end_factor, 1.0);
-  double multiplier = 1.0;
+  double multiplier = end_factor;
   double c_step_f = float(cur_step);
   double t_step_f = float(total_step);
   if (cur_step < total_step) {

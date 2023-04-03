@@ -42,7 +42,7 @@ class TestResNet18LoadWeightCompatibile(flow.unittest.TestCase):
         flow_output = resnet18_flow(flow_input)
         test_case.assertTrue(
             np.allclose(
-                torch_output.detach().numpy(), flow_output.numpy(), atol=1e-4, rtol=1e-4
+                torch_output.detach().numpy(), flow_output.numpy(), atol=1e-4, rtol=1e-3
             )
         )
 

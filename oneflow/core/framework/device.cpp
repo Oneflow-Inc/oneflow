@@ -30,10 +30,6 @@ namespace oneflow {
 
 namespace {
 
-inline size_t HashDevice(const std::string& type, int64_t device_id) {
-  return Hash(type, device_id);
-}
-
 void CheckDeviceType(const std::string& type) {
   if (!TRY(DeviceType4DeviceTag(type)).IsOk()) {
     std::string error_msg = "Expected one of " + PrintAvailableDevices()
@@ -48,7 +44,7 @@ Device::Device(const std::string& type, int64_t device_id)
     : type_(type),
       enum_type_(kInvalidDevice),
       device_id_(device_id),
-      hash_value_(HashDevice(type, device_id)) {}
+      hash_value_(Hash(type, device_id)) {}
 
 Maybe<void> Device::Init() {
   if (type_ == "auto") { return Maybe<void>::Ok(); }
@@ -62,37 +58,15 @@ Maybe<void> Device::Init() {
 }
 
 /* static */ Maybe<Symbol<Device>> Device::New(const std::string& type, int64_t device_id) {
-  return ThreadLocalGetOrNew(type, device_id);
-}
-
-/* static */ Maybe<Symbol<Device>> Device::ThreadLocalGetOrNew(const std::string& type,
-                                                               int64_t device_id) {
   CHECK_GE_OR_RETURN(device_id, 0)
       << Error::InvalidValueError() << "Device ID should be non-negative";
-  static thread_local HashMap<std::string, HashMap<int64_t, Symbol<Device>>> map;
-  auto* device_id2symbol = &map[type];
-  auto iter = device_id2symbol->find(device_id);
-  if (iter == device_id2symbol->end()) {
-    Device device(type, device_id);
-    JUST(device.Init());
-    iter = device_id2symbol->emplace(device_id, SymbolOf(device)).first;
-  }
-  return iter->second;
-}
-
-/* static */ Maybe<Symbol<Device>> Device::ThreadLocalGetOrNew(
-    const std::string& type_or_type_with_device_id) {
-  static thread_local HashMap<std::string, Symbol<Device>> map;
-  auto iter = map.find(type_or_type_with_device_id);
+  static thread_local HashMap<std::tuple<std::string, int>, Symbol<Device>> map;
+  auto key = std::make_tuple(type, device_id);
+  auto iter = map.find(key);
   if (iter == map.end()) {
-    std::string type;
-    int device_id = -1;
-    JUST(ParsingDeviceTag(type_or_type_with_device_id, &type, &device_id));
-    CheckDeviceType(type);
-    if (device_id == -1) { device_id = GlobalProcessCtx::LocalRank(); }
     Device device(type, device_id);
     JUST(device.Init());
-    iter = map.emplace(type_or_type_with_device_id, SymbolOf(device)).first;
+    iter = map.emplace(key, SymbolOf(device)).first;
   }
   return iter->second;
 }
@@ -101,9 +75,18 @@ Maybe<void> Device::Init() {
   return New(type, GlobalProcessCtx::LocalRank());
 }
 
-/* static */ Maybe<Symbol<Device>> Device::ParseAndNew(
-    const std::string& type_or_type_with_device_id) {
-  return ThreadLocalGetOrNew(type_or_type_with_device_id);
+/* static */ Maybe<Symbol<Device>> Device::ParseAndNew(const std::string& device_str) {
+  static thread_local HashMap<std::string, Symbol<Device>> map;
+  auto iter = map.find(device_str);
+  if (iter == map.end()) {
+    auto [type, device_id] = *JUST(ParseDeviceString(device_str));
+    CheckDeviceType(type);
+    if (device_id == -1) { device_id = GlobalProcessCtx::LocalRank(); }
+    Device device(type, device_id);
+    JUST(device.Init());
+    iter = map.emplace(device_str, SymbolOf(device)).first;
+  }
+  return iter->second;
 }
 
 std::string Device::ToRepr() const {
@@ -114,6 +97,11 @@ std::string Device::ToRepr() const {
   ss << device_id_;
   ss << ")";
   return ss.str();
+}
+
+std::ostream& operator<<(std::ostream& os, Symbol<Device> device) {
+  os << device->ToRepr();
+  return os;
 }
 
 std::string Device::ToString() const {
@@ -165,20 +153,16 @@ decltype(Device::GetPlacement) Device::GetPlacement =
     DECORATE(&RawGetPlacement, ThreadLocalCopiable);
 decltype(Placement4Device) Placement4Device = DECORATE(&RawPlacement4Device, ThreadLocal);
 
-Maybe<void> ParsingDeviceTag(const std::string& device_tag, std::string* device_name,
-                             int* device_index) {
-  std::string::size_type pos = device_tag.find(':');
+Maybe<std::pair<std::string, int>> ParseDeviceString(const std::string& device_str) {
+  std::string::size_type pos = device_str.find(':');
   if (pos == std::string::npos) {
-    *device_name = device_tag;
-    *device_index = -1;
+    return std::make_pair(device_str, -1);
   } else {
-    std::string index_str = device_tag.substr(pos + 1);
+    std::string index_str = device_str.substr(pos + 1);
     CHECK_OR_RETURN(IsStrInt(index_str))
-        << Error::InvalidValueError() << "Invalid device tag " << device_tag;
-    *device_name = device_tag.substr(0, pos);
-    *device_index = std::stoi(index_str);
+        << Error::InvalidValueError() << "Invalid device tag " << device_str;
+    return std::make_pair(device_str.substr(0, pos), std::stoi(index_str));
   }
-  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow

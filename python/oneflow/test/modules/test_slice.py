@@ -210,7 +210,7 @@ class TestSliceUpdate(flow.unittest.TestCase):
         input = flow.tensor(np_arr, dtype=flow.float32)
         np_arr[-1] = 1
 
-        @flow.nn.Graph.to_graph
+        @flow.nn.Graph.trace
         def test_func():
             input[-1] = 1
             return input
@@ -239,7 +239,7 @@ class TestSliceUpdate(flow.unittest.TestCase):
         input = flow.tensor(np_arr, dtype=flow.float32)
         np_arr[0, ::1, ..., 2:3] = 1
 
-        @flow.nn.Graph.to_graph
+        @flow.nn.Graph.trace
         def test_func():
             input[0, ::1, ..., 2:3] = 1
             return input

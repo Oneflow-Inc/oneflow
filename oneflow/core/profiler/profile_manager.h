@@ -32,10 +32,12 @@ class ProfileManager {
  public:
   friend class EventRecorder;
 
-  ProfileManager(bool use_cpu, bool use_cuda, bool record_shapes, bool record_bandwidth)
+  ProfileManager(bool use_cpu, bool use_cuda, bool record_shapes, bool record_attrs,
+                 bool record_bandwidth)
       : use_cpu_(use_cpu),
         use_cuda_(use_cuda),
         record_shapes_(record_shapes),
+        record_attrs_(record_attrs),
         record_bandwidth_(record_bandwidth) {
 #if defined(WITH_CUDA)
     std::set<ActivityType> activities{};
@@ -55,6 +57,7 @@ class ProfileManager {
   bool use_cpu_;
   bool use_cuda_;
   bool record_shapes_;
+  bool record_attrs_;
   bool record_bandwidth_;
 
   std::queue<std::shared_ptr<IEvent>> events_;

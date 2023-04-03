@@ -30,19 +30,20 @@ from typing import Any
 string_classes = (str, bytes)
 
 __all__ = ["autocast", "custom_fwd", "custom_bwd"]
+from typing import Any, Optional
 
 
 class autocast(flow.amp.autocast_mode.autocast):
     r"""
-    See :class:`flow.autocast`.
-    ``flow.cuda.amp.autocast(args...)`` is equivalent to ``flow.autocast("cuda", args...)``
+    See :class:`oneflow.autocast`.
+    ``oneflow.cuda.amp.autocast(args...)`` is equivalent to ``oneflow.autocast("cuda", args...)``
     """
 
     def __init__(
         self,
         enabled: bool = True,
-        dtype: flow.dtype = flow.float16,
-        cache_enabled: bool = True,
+        dtype: Optional[flow.dtype] = None,
+        cache_enabled: Optional[bool] = None,
     ):
         super().__init__(
             "cuda", enabled=enabled, dtype=dtype, cache_enabled=cache_enabled
@@ -51,7 +52,6 @@ class autocast(flow.amp.autocast_mode.autocast):
     def __enter__(self):
         return super().__enter__()
 
-    # TODO: discuss a unified TorchScript-friendly API for autocast
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any):  # type: ignore[override]
         return super().__exit__(exc_type, exc_val, exc_tb)
 

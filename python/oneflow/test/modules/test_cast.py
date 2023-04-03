@@ -19,10 +19,11 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+from oneflow.test_utils.test_util import GenArgList
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_cast_float2int(test_case, device, shape):
@@ -51,8 +52,7 @@ def _test_cast_with_non_contiguous_input(test_case, device, shape):
     output = flow.cast(input, flow.float32)
     np_out = np_arr.astype(np.float32).transpose(permute_dims)
     test_case.assertTrue(np.array_equal(output.numpy(), np_out))
-    # TODO:when cast kernel support stride
-    # test_case.assertTrue(input.stride() == output.stride())
+    test_case.assertTrue(input.stride() == output.stride())
 
 
 def _test_cast_backward(test_case, device, shape):
@@ -75,7 +75,7 @@ class TestCast(flow.unittest.TestCase):
             _test_cast_float2int,
             _test_cast_int2float,
             _test_cast_backward,
-            _test_cast_with_non_contiguous_input,
+            # _test_cast_with_non_contiguous_input,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
@@ -92,6 +92,27 @@ class TestCast(flow.unittest.TestCase):
         arg_dict["shape"] = [(2, 3, 0, 5)]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest(n=5)
+    def test_cast_with_strided_input(test_case):
+        device = random_device()
+        x = random_tensor()
+        x = x.to(dtype=torch.float32, device=device)
+        perm_list = [0, 1, 2, 3]
+        shuffle(perm_list)
+        x = x.permute(perm_list)
+        y = x.to(dtype=torch.float64, device=device)
+        return y
+
+    @autotest(n=5, auto_backward=False)
+    # NOTE:if set auto_backward=True, both oneflow and pytorch will raise RuntimeError:
+    # element 0 of tensors does not require grad and does not have a grad_fn
+    def test_cast_with_scalar_input(test_case):
+        device = random_device()
+        x = torch.tensor(3.14, device=device)
+        y = x.to(dtype=torch.float64, device=device)
+        z = y.to(dtype=torch.int8, device=device)
+        return z
 
 
 if __name__ == "__main__":

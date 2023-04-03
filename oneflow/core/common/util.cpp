@@ -23,6 +23,7 @@ limitations under the License.
 
 #ifdef __linux__
 #include <sys/sysinfo.h>
+#include <unistd.h>
 #endif
 
 namespace oneflow {
@@ -91,8 +92,7 @@ size_t GetAvailableCpuMemSize() {
     CHECK_EQ(token, "kB");
     return mem_available * 1024;
   }
-  LOG(FATAL) << "can't find MemAvailable in /proc/meminfo";
-  return 0;
+  return sysconf(_SC_PAGESIZE) * sysconf(_SC_AVPHYS_PAGES);
 #elif defined(__APPLE__)
   // macOS will eagerly make use of all memory so there is no point querying it
   return std::numeric_limits<size_t>::max();

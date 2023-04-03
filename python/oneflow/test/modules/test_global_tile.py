@@ -21,7 +21,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=3, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_global_flow_tile_with_random_data(test_case, placement, sbp):
     x = random_tensor(ndim=2, dim0=8, dim1=16).to_global(placement, sbp)
     reps = (
@@ -33,7 +33,7 @@ def _test_global_flow_tile_with_random_data(test_case, placement, sbp):
     return z
 
 
-@autotest(n=3, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_global_flow_tensor_tile_with_random_data(test_case, placement, sbp):
     x = random_tensor(ndim=2, dim0=8, dim1=16).to_global(placement, sbp)
     reps = (

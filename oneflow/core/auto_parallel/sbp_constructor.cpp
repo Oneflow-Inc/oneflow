@@ -15,18 +15,56 @@ limitations under the License.
 */
 
 #include "oneflow/core/auto_parallel/sbp_constructor.h"
+#include "oneflow/core/auto_parallel/auto_memory.h"
 #include "oneflow/core/auto_parallel/sbp_node.h"
 #include "oneflow/core/auto_parallel/sbp_util.h"
+#include "oneflow/core/common/singleton.h"
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/job/job_conf.pb.h"
+#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/auto_parallel/sbp_collector.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
 namespace auto_parallel {
+
+namespace {
+
+// AMS, a.k.a. Applied Mathematics & Statistics, is a department of the Stony Brook University.
+// It contains 5 tracks: Computational & Applied Mathematics, Computational Biology,
+// Operation Research, Quantitative Finance, Statistics.
+AutoMemoryStrategy ams;
+
+// kMemoryRatio increase by this rate at each time.
+static const double kMemoryIncreaseRatio = 2.0;
+// The ceil of kMemoryRatio.
+static const double kMaxMemoryRatio = 22.0;
+// The floor of kMemoryRatio
+static const double kMinMemoryRatio = 0.1;
+// If the current memory > available memory * kImpossibleRatio,
+// then it is impossible to reduce the memory to an acceptable size
+static const double kImpossibleRatio = 1.4;
+
+// Pick from 5 fixed types of memory ratio.
+double UpdateMemoryRatio() {
+  switch (ams) {
+    case kAdaptiveAutoMemory:
+    case kDisableAutoMemory: return 0.0;
+    case kSlightAutoMemory: return 0.4;
+    case kModerateAutoMemory: return 4.3;
+    default: return 11.0;  // case kHeavyAutoMemory
+  }
+}
+
+}  // namespace
+
+double kMemoryRatio;
 
 Maybe<void> SbpConstructor::Init(const OpGraph& op_graph, Job* job /*Maybe not use*/) {
   JUST(InitSbpGraph(op_graph, *job));
@@ -34,21 +72,34 @@ Maybe<void> SbpConstructor::Init(const OpGraph& op_graph, Job* job /*Maybe not u
 }
 
 Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job) {
+  // Update nccl_use_compute_stream
+  nccl_use_compute_stream_ = Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream();
+  ams = job.job_conf().enable_auto_memory();
+  kMemoryRatio = UpdateMemoryRatio();
   // TODO: process local node
   JUST(GenerateNodeAndEdge(op_graph, job));
   JUST(FillSbpSignatureForOpNode(op_graph, job));
   JUST(InitComputationCost(op_graph));
   if (enable_trunk_algo_) { JUST(ApplyTrunkAlgo()); }
+  // Load logical blobs on all sbp edges.
+  LoadLbi2SbpEdge(op_graph);
+  // InitMemory() should be run before the sbp collector and after the ApplyTrunkAlgo() and
+  // LoadLbi2SbpEdge(op_graph).
+  InitAvailableMemory();
+  InitMemory(op_graph, &sbp_graph_, nccl_use_compute_stream_);
   if (use_sbp_collector_) {
-    // Load logical blobs on all sbp edges.
-    LoadLbi2SbpEdge(op_graph);
     // Use sbp collector to create sbp proxy for nodes with multiple downstream operators.
     SbpCollector sbp_collector;
     sbp_collector.CollectUniverse(sbp_graph_);
+    // TODO: Init memory cost for proxy
     sbp_collector.ProxySbpCandidate(op_graph, op_name2sbp_node_, sbp_graph_);
   }
 
-  JUST(InitCopyCost(op_graph));
+  JUST(InitCopyAndMemoryCost(op_graph));
+  // We need to store the original cost and memory after the initialization (InitComputationCost(),
+  // InitMemory(), InitCopyAndMemoryCost()) and before the usage of them (InitWeightedCost())
+  sbp_graph_.StoreOriginMemory();
+  InitWeightedCost();
   // TODO:  Set all the sbp signature id to be 0 for initialization.
   //        Could revert it back to
   // sbp_graph_.RandomSbpSignature(use_sbp_collector_);
@@ -76,12 +127,30 @@ Maybe<void> SbpConstructor::FindBestSbpSignature() {
     ori_cost = sbp_graph_.ComputeCost();
     LOG(INFO) << "Greedy cost: " << ori_cost;
   }
-  sbp_graph_.GreedyStrategy(4);
+
+  int32_t step = 1;
+  while (true) {
+    sbp_graph_.GreedyStrategy(/*nbh_num=*/4);
+    double curr_memory = sbp_graph_.GetMemory();
+    double total_weighted_cost = sbp_graph_.ComputeWeightedCost();
+    LOG(INFO) << "The " << step << "-th try, memory ratio: " << kMemoryRatio
+              << ", memory: " << curr_memory << ", total cost: " << total_weighted_cost
+              << ", time cost: " << (total_weighted_cost - kMemoryRatio * curr_memory);
+    if (ams != AutoMemoryStrategy::kAdaptiveAutoMemory) { break; }
+    if (curr_memory < available_memory_ || kMemoryRatio >= kMaxMemoryRatio) { break; }
+    if (curr_memory > available_memory_ * kImpossibleRatio) {
+      kMemoryRatio = kMaxMemoryRatio;
+    } else {
+      kMemoryRatio =
+          std::max(std::min(kMaxMemoryRatio, kMemoryRatio * kMemoryIncreaseRatio), kMinMemoryRatio);
+    }
+    step++;
+    sbp_graph_.ReComputeWeightedCost();
+  }
   sbp_graph_.FinalizeSbp();
 
   double final_cost = sbp_graph_.ComputeCost();
   LOG(INFO) << "Final cost: " << final_cost;
-  if (ori_cost + 1.0 < final_cost) { LOG(WARNING) << "ori_cost less than final_cost!!!"; }
   // TODO: Restart searching with another original random strategy
   CHECK_LT_OR_RETURN(final_cost, GetValidMaxCopyCost())
       << "Failed! Auto parallel can't find a strategy with reasonable cost!";
@@ -244,7 +313,9 @@ Maybe<void> SbpConstructor::InitComputationCost(const OpGraph& op_graph) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SbpConstructor::InitCopyCost(const OpGraph& op_graph) {
+// Init copy cost and memory for edges
+Maybe<void> SbpConstructor::InitCopyAndMemoryCost(const OpGraph& op_graph) {
+  bool nccl_not_use_compute_stream = !nccl_use_compute_stream_;
   // Compute copy cost for sbp edges
   op_graph.ForEachNode([&](OpNode* op_node) {
     // get corresponding sbp node consumer
@@ -256,20 +327,25 @@ Maybe<void> SbpConstructor::InitCopyCost(const OpGraph& op_graph) {
       // skip it if proxy
       if (!sbp_node_producer->op_node_) { continue; }
       sbp_edge->cost_.resize(sbp_node_producer->sbp_sig_list_.size());
+      if (nccl_not_use_compute_stream) {
+        sbp_edge->memory_.resize(sbp_node_producer->sbp_sig_list_.size());
+      }
       int32_t consumer_sbp_size = sbp_node_consumer->sbp_sig_list_.size();
       // look through sbp signature in producer
       for (int32_t i = 0; i < sbp_node_producer->sbp_sig_list_.size(); ++i) {
         sbp_edge->cost_[i].resize(consumer_sbp_size, 0);
+        if (nccl_not_use_compute_stream) { sbp_edge->memory_[i].resize(consumer_sbp_size, 0); }
       }
     }
     // Find all those cases with wait time
     // Do not skip edges carrying no lbi
-    sbp_node_consumer->InitializeCopyCost(use_sbp_collector_);
+    sbp_node_consumer->InitCopyAndMemoryCost(use_sbp_collector_, nccl_not_use_compute_stream);
   });
   return Maybe<void>::Ok();
 }
 
 Maybe<void> SbpConstructor::ApplyTrunkAlgo() {
+  // TODO: Remove this
   auto OpNode2MutableOpCtrlDeps = JUST(GetMutableOpCtrlDeps(*op_graph_));
   // Compute layer number for each node
   int32_t max_min_layer = sbp_graph_.ComputeLayer(op_name2sbp_node_, *OpNode2MutableOpCtrlDeps);
@@ -331,6 +407,7 @@ Maybe<void> SbpConstructor::CheckSbpAgreement(const Job& job) {
   return Maybe<void>::Ok();
 }
 
+// TODO: delete this, this is for variable op only
 Maybe<HashMap<const OpNode*, HashSet<std::string>>> SbpConstructor::GetMutableOpCtrlDeps(
     const OpGraph& op_graph) {
   auto IsMutableConsumedLbi = [](const Operator& op, const LogicalBlobId& lbi) -> bool {
@@ -377,12 +454,56 @@ Maybe<HashMap<const OpNode*, HashSet<std::string>>> SbpConstructor::GetMutableOp
   return filter_op_ctrl_deps;
 }
 
+void SbpConstructor::InitAvailableMemory() {
+  size_t free = 0;
+  size_t total = 0;
+#ifdef WITH_CUDA
+  CudaCurrentDeviceGuard guard(GlobalProcessCtx::Rank());
+  OF_CUDA_CHECK(cudaMemGetInfo(&free, &total));
+#else
+  free = 1e13;   // 10T = 10,000G
+  total = 1e13;  // 10T = 10,000G
+  LOG(INFO) << "We do not use CUDA in CPU mode, auto memory is unnecessary since all the SBPs are "
+               "Broadcast.";
+#endif
+  // The estimated memory differs from the lower bound of the peak memory by the first ratio.
+  // The first ratio varies from -3% to 3.2% if not enabling nccl_use_compute_stream.
+  // It varies from 0.00313% to 0.5% if enabling nccl_use_compute_stream.
+  double first_ratio = 1.0;
+  if (nccl_use_compute_stream_) {
+    first_ratio = 1.01;
+  } else {
+    first_ratio = 1.04;
+  }
+  // The lower bound of the peak memory differs from the allocated memory by the second ratio.
+  // The second ratio varies from 0 to 2.65% if not using pipeline parallelism.
+  // It varies from 0 to 5.23% if using pipeline parallelism.
+  double second_ratio = 1.06;
+  // The occupied memory at this moment would be around 1114MB to 1240MB.
+  // When it gets to the training process, the occupied memory might drop by 162MB.
+  // But the key is that we start to allocate memory before the training process.
+  // Thus, this 161MB should not be added to the free memory.
+  // We still use "available memory = free / ratio" instead of "free / ratio + 161MB".
+  available_memory_ = int64_t(free / (first_ratio * second_ratio));
+  LOG(INFO) << "Free memory: " << free << ", total memory: " << total
+            << ", available memory: " << available_memory_;
+}
+
+void SbpConstructor::InitWeightedCost() {
+  for (auto& sbp_node : sbp_graph_.node_list_) {
+    sbp_node->ComputeWeightedCost();
+    for (auto& sbp_edge : sbp_node->edges_in_) { sbp_edge->ComputeWeightedCost(); }
+  }
+}
+
 // Print the graph with SBP in order
 void SbpConstructor::PrintSBPGraphDebugInfo() {
   // sbp constructor information
   std::cout << "cost_ratio_:" << cost_ratio_ << std::endl;
   std::cout << "wait_time_:" << sbp_graph_.wait_time_ << std::endl;
   std::cout << "use_sbp_collector_" << use_sbp_collector_ << std::endl;
+  std::cout << "Total auto parallel guessed memory: " << sbp_graph_.GetMemory() << std::endl;
+  std::cout << "Final memory ratio: " << kMemoryRatio << std::endl;
   // test debug
   std::cout << "Get Into Print Op Graph" << std::endl;
   // Collect op_node
@@ -412,7 +533,7 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
     // Print debug information for sbp graph
     CHECK(it != op_name2sbp_node_.end());
     const SbpNode* sbp_node = it->second;
-    std::cout << "Computation Cost: " << sbp_node->cost_[sbp_node->final_sbp_sig_id_];
+    std::cout << "Computation Cost: " << sbp_node->weighted_cost_[sbp_node->final_sbp_sig_id_];
     std::cout << ", Min Layer: " << sbp_node->min_layer_ << ", Max Layer: " << sbp_node->max_layer_
               << ", Tributary Layer: " << sbp_node->tributary_layer_
               << ", in trunk: " << sbp_node->on_trunk_
@@ -432,8 +553,7 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
       const auto& this_sbp_parallel = sbp_signature.bn_in_op2nd_sbp().at(ibn);
       std::cout << ", " << NdSbpToString(this_sbp_parallel);
       if (RequireSameSbp(op_node, ibn)) { std::cout << ", require same SBP"; }
-      std::cout << ", "
-                << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn)).shape().elem_cnt();
+      std::cout << ", " << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn)).shape();
       std::cout << std::endl;
     }
     // Sort before printing
@@ -445,8 +565,7 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
       std::cout << "Out Op:" << obn;
       const auto& this_sbp_parallel = sbp_signature.bn_in_op2nd_sbp().at(obn);
       std::cout << ", " << NdSbpToString(this_sbp_parallel);
-      std::cout << ", "
-                << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(obn)).shape().elem_cnt();
+      std::cout << ", " << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(obn)).shape();
       std::cout << std::endl;
     }
     std::cout << std::endl;

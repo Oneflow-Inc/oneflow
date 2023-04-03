@@ -42,14 +42,13 @@ class FuseAddToOutputPass final : public JobPass {
 
 Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   const HashMap<std::string, user_op::OpArg> supported_op_type_name2output_arg(
-      {{"conv_data_grad", user_op::OpArg("dx", 0)},
-       {"normalization", user_op::OpArg("y", 0)},
-       {"conv2d", user_op::OpArg("out", 0)},
+      {{"normalization", user_op::OpArg("y", 0)},
        {"dropout", user_op::OpArg("out", 0)},
        {"matmul", user_op::OpArg("out", 0)},
        {"layer_norm_grad", user_op::OpArg("dx", 0)},
        {"batch_matmul", user_op::OpArg("out", 0)},
        {"fused_bias_add_mask_scale", user_op::OpArg("out", 0)},
+       {"fused_matmul_bias", user_op::OpArg("out", 0)},
        {"broadcast_matmul", user_op::OpArg("out", 0)},
        {"broadcast_matmul_grad_b", user_op::OpArg("out", 0)}});
   HashSet<std::string> consumer_op_names;

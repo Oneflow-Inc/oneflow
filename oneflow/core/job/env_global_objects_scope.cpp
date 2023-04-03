@@ -54,6 +54,7 @@ limitations under the License.
 #endif  // WITH_RDMA
 #include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/ep/cpu/cpu_device_manager.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
 
 namespace oneflow {
 
@@ -70,9 +71,15 @@ void InitLogging(const CppLoggingConf& logging_conf) {
   FLAGS_log_dir = LogDir(logging_conf.log_dir());
   FLAGS_logtostderr = logging_conf.logtostderr();
   FLAGS_logbuflevel = logging_conf.logbuflevel();
+  FLAGS_minloglevel = logging_conf.minloglevel();
   FLAGS_stderrthreshold = 1;  // 1=WARNING
   google::InitGoogleLogging("oneflow");
-  LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir);
+  if (IsInDebugMode()) {
+    // record all level logs to file in debug mode
+    FLAGS_logtostderr = 0;
+    FLAGS_minloglevel = 0;  // 0=INFO
+  }
+  if (!FLAGS_logtostderr) { LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir); }
 }
 
 int32_t GetDefaultCpuDeviceNum() { return std::thread::hardware_concurrency(); }
@@ -264,7 +271,7 @@ Maybe<void> InitRDMA() {
         Singleton<IBVerbsCommNet>::New();
         Singleton<CommNet>::SetAllocated(Singleton<IBVerbsCommNet>::Get());
       } else {
-        LOG(WARNING) << "Skip init RDMA because RDMA is already initialized!";
+        LOG(INFO) << "Skip init RDMA because RDMA is already initialized!";
       }
     } else {
       LOG(WARNING) << "Skip init RDMA because RDMA is unavailable!";
@@ -273,7 +280,7 @@ Maybe<void> InitRDMA() {
     LOG(WARNING) << "Skip init RDMA because RDMA is not compiled!";
 #endif  // WITH_RDMA && OF_PLATFORM_POSIX
   } else {
-    LOG(WARNING) << "Skip init RDMA because only one process in this group!";
+    LOG(INFO) << "Skip init RDMA because only one process in this group!";
   }
 #endif  // __linux__
   return Maybe<void>::Ok();

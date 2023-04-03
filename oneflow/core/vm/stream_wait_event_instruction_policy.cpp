@@ -27,7 +27,7 @@ namespace oneflow {
 namespace vm {
 
 StreamWaitEventInstructionPolicy::StreamWaitEventInstructionPolicy(
-    const small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>& dependences,
+    const small_vector<intrusive::shared_ptr<LocalDepObject>>& dependences,
     const std::shared_ptr<StreamRecordEventInstructionPolicy>&
         stream_record_event_instruction_policy)
     : dependences_(dependences),

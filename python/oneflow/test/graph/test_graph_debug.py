@@ -20,6 +20,7 @@ import numpy as np
 
 import oneflow as flow
 import oneflow.unittest
+from oneflow.nn.graph import GraphModule
 
 
 rank = flow.env.get_rank()
@@ -48,11 +49,11 @@ def _graph_debug(test_case, v_level=0, ranks=None, max_py_stack_depth=2):
         -1 in rank_list or rank in rank_list
     ) and v_level >= 0:  # v_level == -1 means debug mode is closed
         test_case.assertTrue(d_g._debug)
-        test_case.assertTrue(d_g.m._debug)
+        test_case.assertTrue(d_g.m.to(GraphModule)._debug)
         print(f"ranks {ranks} rank {rank} debug is opened.")
     else:
         test_case.assertTrue(not d_g._debug)
-        test_case.assertTrue(not d_g.m._debug)
+        test_case.assertTrue(not d_g.m.to(GraphModule)._debug)
         print(f"ranks {ranks} rank {rank} debug is closed.")
 
 

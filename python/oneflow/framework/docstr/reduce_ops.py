@@ -43,10 +43,10 @@ add_docstr(
         >>> input = flow.Tensor([[4, 1, 5], [2, 6, 3]])
         >>> flow.max(input)
         tensor(6., dtype=oneflow.float32)
-        >>> (values, indices) = flow.max(input, dim=1)
-        >>> values
+        >>> result = flow.max(input, dim=1)
+        >>> result.values
         tensor([5., 6.], dtype=oneflow.float32)
-        >>> indices
+        >>> result.indices
         tensor([2, 1], dtype=oneflow.int64)
 
     """,
@@ -79,10 +79,10 @@ add_docstr(
         >>> input = flow.Tensor([[4, 1, 5], [2, 6, 3]])
         >>> flow.min(input)
         tensor(1., dtype=oneflow.float32)
-        >>> (values, indices) = flow.min(input, dim=1)
-        >>> values
+        >>> result = flow.min(input, dim=1)
+        >>> result.values
         tensor([1., 2.], dtype=oneflow.float32)
-        >>> indices
+        >>> result.indices
         tensor([1, 0], dtype=oneflow.int64)
 
     """,

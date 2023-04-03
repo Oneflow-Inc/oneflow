@@ -47,3 +47,4 @@ saved_model
 /devcontainer-cache
 
 op_prof.csv
+*.lock

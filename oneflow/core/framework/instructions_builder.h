@@ -137,22 +137,23 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::shared_ptr<const one::GlobalTensorInferResult>& global_tensor_infer_result,
       const one::OpExprInterpContext& ctx, Symbol<Stream> stream);
 
+  Maybe<void> SoftSyncStream(const vm::EagerBlobObjectList& eager_blob_objects,
+                             Symbol<Stream> stream);
+
  private:
   Maybe<void> AllocateTensors(const vm::EagerBlobObjectList& eager_blob_objects,
                               Symbol<Stream> stream);
-  Maybe<void> SoftSyncStream(const vm::EagerBlobObjectList& eager_blob_objects,
-                             Symbol<Stream> stream);
+
   Maybe<void> SoftSyncStreamBetween(
-      small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&& dependences,
-      Symbol<Stream> from_stream, Symbol<Stream> to_stream);
+      small_vector<intrusive::shared_ptr<LocalDepObject>>&& dependences, Symbol<Stream> from_stream,
+      Symbol<Stream> to_stream);
 
-  Maybe<void> StreamWait(
-      small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&& dependences,
-      Symbol<Stream> from_stream, Symbol<Stream> to_stream);
+  Maybe<void> StreamWait(small_vector<intrusive::shared_ptr<LocalDepObject>>&& dependences,
+                         Symbol<Stream> from_stream, Symbol<Stream> to_stream);
 
-  Maybe<void> RecordEvent(small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&&
-                              compute_local_dep_objects,
-                          Symbol<Stream> stream);
+  Maybe<void> RecordEvent(
+      small_vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_objects,
+      Symbol<Stream> stream);
 
   vm::InstructionList* instruction_list_;
 };
@@ -166,6 +167,9 @@ Maybe<void> PhysicalRun(const CallbackT& Build) {
   JUST(vm::Run(instructions_builder.mut_instruction_list()));
   return Maybe<void>::Ok();
 }
+
+template<typename T>
+Maybe<void> SyncReadSmallMem(char* mem_ptr, size_t bytes, const T tensor);
 
 }  // namespace oneflow
 

@@ -168,3 +168,36 @@ add_docstr(
         divisor_override: if specified, it will be used as divisor, otherwise size of the pooling region will be used. Default: 0
     """,
 )
+
+add_docstr(
+    oneflow._C.max_unpool1d,
+    """
+    max_unpool1d(input, indices, kernel_size, stride=None, padding=0, output_size=None) -> Tensor
+
+    Computes a partial inverse of ``MaxPool1d``.
+
+    See :class:`MaxUnpool1d` for details.
+    """,
+)
+
+add_docstr(
+    oneflow._C.max_unpool2d,
+    """
+    max_unpool2d(input, indices, kernel_size, stride=None, padding=0, output_size=None) -> Tensor
+
+    Computes a partial inverse of ``MaxPool2d``.
+
+    See :class:`MaxUnpool2d` for details.
+    """,
+)
+
+add_docstr(
+    oneflow._C.max_unpool3d,
+    """
+    max_unpool3d(input, indices, kernel_size, stride=None, padding=0, output_size=None) -> Tensor
+
+    Computes a partial inverse of ``MaxPool3d``.
+
+    See :class:`MaxUnpool3d` for details.
+    """,
+)
