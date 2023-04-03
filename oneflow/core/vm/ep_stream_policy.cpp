@@ -17,27 +17,34 @@ limitations under the License.
 #include "oneflow/core/vm/ep_stream_policy.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/stream_type.h"
+#include "oneflow/core/vm/remat/allocator.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/ep_optional_event_record_status_querier.h"
 #include "oneflow/core/vm/ep_backend_allocator.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/vm/remat/util.h"
 
 namespace oneflow {
 namespace vm {
 
 namespace {
 
-std::unique_ptr<BinAllocator<ThreadSafeLock>> CreateEpBackendDeviceAllocator(
-    Symbol<Device> device) {
+std::unique_ptr<vm::Allocator> CreateEpBackendDeviceAllocator(Symbol<Device> device) {
   DeviceType device_type = device->enum_type();
   size_t device_index = device->device_id();
-  auto ep_device =
-      Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
-  auto ep_backend_allocator =
-      std::make_unique<EpBackendAllocator>(ep_device, ep::AllocationOptions{});
-  return std::make_unique<BinAllocator<ThreadSafeLock>>(ep::kMaxAlignmentRequirement,
-                                                        std::move(ep_backend_allocator));
+
+  if (device->rematable()) {
+    return std::make_unique<vm::DtrEpAllocatorProxy>(
+        Singleton<remat::AllocatorManager>::Get()->CreateOrGetAllocator(device_type, device_index));
+  } else {
+    auto ep_device =
+        Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
+    auto ep_backend_allocator =
+        std::make_unique<EpBackendAllocator>(ep_device, ep::AllocationOptions{});
+    return std::make_unique<BinAllocator<ThreadSafeLock>>(ep::kMaxAlignmentRequirement,
+                                                          std::move(ep_backend_allocator));
+  }
 }
 
 }  // namespace

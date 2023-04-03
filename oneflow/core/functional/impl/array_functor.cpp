@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/job/nd_sbp_util.h"
+#include "oneflow/core/eager/tensor_storage.h"
 #include <complex>
 
 namespace oneflow {
@@ -168,6 +169,7 @@ class TensorConstantFunctor {
     // NOTE: this op is an source op, so the value(scalar tensor) should not have autograd status.
     autograd::AutoGradMode mode(false);
     if (GlobalMode::is_enabled()) {
+      auto global_mode_gurad = GlobalMode::Guard(false);
       return JUST(functional::GlobalTensorConstant(shape, value, dtype,
                                                    GetGlobalParallelDescFromDevice(device),
                                                    *JUST(GetSbpList(GlobalMode::nd_sbp()))));
@@ -251,6 +253,7 @@ class ConstantFunctor {
   Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     if (GlobalMode::is_enabled()) {
+      auto global_mode_gurad = GlobalMode::Guard(false);
       return JUST(functional::GlobalConstant(shape, value, dtype,
                                              GetGlobalParallelDescFromDevice(device),
                                              *JUST(GetSbpList(GlobalMode::nd_sbp()))));
@@ -288,6 +291,7 @@ class EmptyFunctor {
                            const bool pin_memory) const {
     std::shared_ptr<Tensor> empty;
     if (GlobalMode::is_enabled()) {
+      auto global_mode_gurad = GlobalMode::Guard(false);
       empty = JUST(functional::GlobalEmpty(shape, dtype, GetGlobalParallelDescFromDevice(device),
                                            *JUST(GetSbpList(GlobalMode::nd_sbp()))));
       if (dtype->is_floating_point()) { JUST(empty->set_requires_grad(requires_grad)); }
@@ -1781,6 +1785,13 @@ class CopyToDeviceFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, Symbol<Device> device,
                            const bool pin_memory) const {
+    if (x->is_local()) {
+      if (auto x_device = JUST(x->device()); x_device != device && x_device->rematable()) {
+        std::dynamic_pointer_cast<vm::RematableTensorStorage>(
+            JUST(x->eager_blob_object())->tensor_storage())
+            ->Remat();
+      }
+    }
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("device", "pin_memory");
     attrs.SetAllAttrs(device, pin_memory);
 
