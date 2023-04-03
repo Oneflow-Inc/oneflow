@@ -119,6 +119,16 @@ void RpcClient::PushKV(const std::string& k, const PbMessage& msg) {
 void RpcClient::PushMasterKV(const std::string& k, const PbMessage& msg) {
   PushMasterKV(k, [&](std::string* o) { msg.SerializeToString(o); });
 }
+void RpcClient::PushRankKV(const size_t rank, const std::string& k,
+                           std::function<void(std::string*)> VSetter) {
+  ClientCall<CtrlMethod::kPushKV> call;
+  call.mut_request()->set_key(k);
+  VSetter(call.mut_request()->mutable_val());
+  call(GetRankStub(rank));
+}
+void RpcClient::PushRankKV(const size_t rank, const std::string& k, const std::string& v) {
+  PushRankKV(rank, k, [&](std::string* o) { *o = v; });
+}
 
 void RpcClient::ClearKV(const std::string& k) {
   ClientCall<CtrlMethod::kClearKV> call;
@@ -133,13 +143,12 @@ void RpcClient::ClearMasterKV(const std::string& k) {
 }
 
 void RpcClient::PullKV(const std::string& k, std::function<void(const std::string&)> VGetter) {
-  if (k.find("test") != std::string::npos) {
-    int64_t machine_id =
-        (std::hash<std::string>{}(k)) % Singleton<EnvDesc>::Get()->TotalMachineNum();
-    size_t rank = Singleton<GlobalProcessCtx>::Get()->Rank();
-    LOG(WARNING) << "rank_" << rank << " call server of rank_" << machine_id << " by key: " << k;
-  }
-
+  // if (k.find("test") != std::string::npos) {
+  //   int64_t machine_id =
+  //       (std::hash<std::string>{}(k)) % Singleton<EnvDesc>::Get()->TotalMachineNum();
+  //   size_t rank = Singleton<GlobalProcessCtx>::Get()->Rank();
+  //   LOG(WARNING) << "rank_" << rank << " call server of rank_" << machine_id << " by key: " << k;
+  // }
   ClientCall<CtrlMethod::kPullKV> call;
   call.mut_request()->set_key(k);
   call(GetResponsibleStub(k));
@@ -164,6 +173,18 @@ void RpcClient::PullKV(const std::string& k, PbMessage* msg) {
 
 void RpcClient::PullMasterKV(const std::string& k, PbMessage* msg) {
   PullMasterKV(k, [&](const std::string& i) { msg->ParseFromString(i); });
+}
+
+void RpcClient::PullRankKV(const size_t rank, const std::string& k,
+                           std::function<void(const std::string&)> VGetter) {
+  ClientCall<CtrlMethod::kPullKV> call;
+  call.mut_request()->set_key(k);
+  call(GetRankStub(rank));
+  VGetter(call.response().val());
+}
+
+void RpcClient::PullRankKV(const size_t rank, const std::string& k, std::string* v) {
+  PullRankKV(rank, k, [&](const std::string& i) { *v = i; });
 }
 
 void RpcClient::Clear() {
@@ -222,22 +243,11 @@ void RpcClient::LoadServer(const LoadServerRequest& request, CtrlService::Stub* 
 CtrlService::Stub* RpcClient::GetThisStub() { return stubs_[GlobalProcessCtx::Rank()].get(); }
 
 CtrlService::Stub* RpcClient::GetResponsibleStub(const std::string& key) {
-  char* hash_strategy = std::getenv("SPECIAL_STRATEGY");
-  if (!hash_strategy) {
-    int64_t machine_id =
-        (std::hash<std::string>{}(key)) % Singleton<EnvDesc>::Get()->TotalMachineNum();
-    return stubs_[machine_id].get();
-  }
-
-  size_t rank = Singleton<GlobalProcessCtx>::Get()->Rank();
-  size_t local_rank = Singleton<GlobalProcessCtx>::Get()->LocalRank();
-  size_t machine_first_rank = rank - local_rank;
-  if (local_rank != 0) { return stubs_[machine_first_rank].get(); }
   int64_t machine_id =
       (std::hash<std::string>{}(key)) % Singleton<EnvDesc>::Get()->TotalMachineNum();
-  // 哈希到就近local为0的机器上
-  size_t target_machine = machine_id - Singleton<GlobalProcessCtx>::Get()->LocalRank(machine_id);
-  return stubs_[target_machine].get();
+  return stubs_[machine_id].get();
 }
+
+CtrlService::Stub* RpcClient::GetRankStub(const size_t rank) { return stubs_[rank].get(); }
 
 }  // namespace oneflow

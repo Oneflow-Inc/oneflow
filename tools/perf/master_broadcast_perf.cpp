@@ -60,10 +60,11 @@ int64_t GetEnvVar(const std::string& key, int64_t default_value) {
 class DistributeOneFlowEnv {
  public:
   explicit DistributeOneFlowEnv(size_t world_size, size_t rank, const std::string& master_host,
-                                size_t master_port, const std::string& ctrl_host,
-                                size_t ctrl_port, size_t node_size) {
+                                size_t master_port, const std::string& ctrl_host, size_t ctrl_port,
+                                size_t node_size) {
     EnvProto env_proto;
-    CompleteEnvProto(env_proto, rank, world_size, master_host, master_port, ctrl_host, ctrl_port, node_size);
+    CompleteEnvProto(env_proto, rank, world_size, master_host, master_port, ctrl_host, ctrl_port,
+                     node_size);
     env_ctx_ = std::make_shared<EnvGlobalObjectsScope>(env_proto);
   }
   ~DistributeOneFlowEnv() { env_ctx_.reset(); }
@@ -111,7 +112,8 @@ class DistributeOneFlowEnv {
 class TestEnvScope {
  public:
   explicit TestEnvScope(size_t world_size, size_t rank, const std::string& master_host,
-                        size_t master_port, const std::string& ctrl_host, size_t ctrl_port, size_t node_size) {
+                        size_t master_port, const std::string& ctrl_host, size_t ctrl_port,
+                        size_t node_size) {
     if (Singleton<DistributeOneFlowEnv>::Get() == nullptr) {
       Singleton<DistributeOneFlowEnv>::New(world_size, rank, master_host, master_port, ctrl_host,
                                            ctrl_port, node_size);
@@ -134,23 +136,53 @@ std::set<std::string> MultiThreadBroadcastFromMasterToWorkers(size_t world_size,
   const size_t split_num = std::sqrt(world_size);
   BalancedSplitter bs(world_size, split_num);
   std::set<std::string> keys;
+  char* broadcast_strategy = std::getenv("BROADCAST_STRATEGY");
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     std::mutex mtx4keys;
     // Unlike the implementation within the framework, here we directly transmit std::string.
     const std::string& data = master_data;
-    MultiThreadLoop(
-        split_num,
-        [&](int i) {
-          std::string key = prefix + std::to_string(i);
-          Singleton<CtrlClient>::Get()->PushKV(key, data);
-          std::lock_guard<std::mutex> lock(mtx4keys);
-          CHECK(keys.insert(key).second);
-        },
-        thread_num);
+
+    if (!broadcast_strategy && std::string(broadcast_strategy) == "LOCAL_RANK_PROXY") {
+      const size_t node_size = Singleton<GlobalProcessCtx>::Get()->NodeSize();
+      MultiThreadLoop(
+          node_size,
+          [&](int i) {
+            // std::string key = prefix + std::to_string(i);
+            const size_t single_node_process_num =
+                Singleton<GlobalProcessCtx>::Get()->NumOfProcessPerNode();
+            const size_t target_rank = single_node_process_num * i;
+            std::string key = prefix + std::to_string(i);
+            Singleton<CtrlClient>::Get()->PushRankKV(target_rank, key, data);
+            std::lock_guard<std::mutex> lock(mtx4keys);
+            CHECK(keys.insert(key).second);
+          },
+          thread_num);
+    } else {
+      MultiThreadLoop(
+          split_num,
+          [&](int i) {
+            std::string key = prefix + std::to_string(i);
+            Singleton<CtrlClient>::Get()->PushKV(key, data);
+            std::lock_guard<std::mutex> lock(mtx4keys);
+            CHECK(keys.insert(key).second);
+          },
+          thread_num);
+    }
+
   } else {
-    const int64_t bs_index = bs.GetRangIndex(GlobalProcessCtx::Rank());
-    std::string key = prefix + std::to_string(bs_index);
-    Singleton<CtrlClient>::Get()->PullKV(key, worker_data);
+    if (std::string(broadcast_strategy) == "LOCAL_RANK_PROXY") {
+      const size_t rank = Singleton<GlobalProcessCtx>::Get()->Rank();
+      const size_t local_rank = Singleton<GlobalProcessCtx>::Get()->LocalRank();
+      const size_t target_rank = rank - local_rank;
+      const size_t node_id = Singleton<GlobalProcessCtx>::Get()->NodeId(rank);
+      std::string key = prefix + std::to_string(node_id);
+      Singleton<CtrlClient>::Get()->PullRankKV(target_rank, key, worker_data);
+
+    } else {
+      const int64_t bs_index = bs.GetRangIndex(GlobalProcessCtx::Rank());
+      std::string key = prefix + std::to_string(bs_index);
+      Singleton<CtrlClient>::Get()->PullKV(key, worker_data);
+    }
   }
   return keys;
 }

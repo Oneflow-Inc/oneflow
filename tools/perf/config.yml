@@ -6,13 +6,13 @@
 # ctrl_port: int
 # iteration_num: int
 # start_rank: int
-rank_size_this_machine: 10 # 这台机器上的rank数量
-world_size: 20
+rank_size_this_machine: 8 # 这台机器上的rank数量
+world_size: 16
 data_size: 102400 # 单位KB
 master_host: "192.168.1.26"
 master_port: 49155
 ctrl_host: "192.168.1.26"
 ctrl_port: 49156 # ctrl上的host:port不能与master相同
 node_size: 2
-iteration_num: 5 # 测量次数（多次测量取平均）
+iteration_num: 1 # 测量次数（多次测量取平均）
 start_rank: 0 # 机器上的rank范围是 [start_rank, start_rank + rank_size_this_machine)

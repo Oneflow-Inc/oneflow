@@ -44,6 +44,9 @@ class RpcClient {
   typename std::enable_if<std::is_arithmetic<T>::value>::type PushKVT(const std::string& k, T v) {
     PushKV(k, std::to_string(v));
   }
+  void PushRankKV(const size_t rank, const std::string& k,
+                  std::function<void(std::string*)> VSetter);
+  void PushRankKV(const size_t rank, const std::string& k, const std::string& v);
 
   void ClearKV(const std::string& k);
   void ClearMasterKV(const std::string& k);
@@ -59,6 +62,10 @@ class RpcClient {
     *v = oneflow_cast<T>(v_str);
   }
 
+  void PullRankKV(const size_t rank, const std::string& k,
+                  std::function<void(const std::string&)> VGetter);
+  void PullRankKV(const size_t rank, const std::string& k, std::string* v);
+
   void Clear();
 
   int32_t IncreaseCount(const std::string& k, int32_t v);
@@ -71,6 +78,7 @@ class RpcClient {
   CtrlService::Stub* GetMasterStub() { return stubs_[0].get(); }
   CtrlService::Stub* GetThisStub();
   CtrlService::Stub* GetResponsibleStub(const std::string& key);
+  CtrlService::Stub* GetRankStub(const size_t rank);
   CtrlService::Stub* GetStubAt(int64_t i) { return stubs_[i].get(); };
   size_t GetStubSize() { return stubs_.size(); };
   void ReserveStubsOfSize(int64_t n) { stubs_.reserve(n); };
