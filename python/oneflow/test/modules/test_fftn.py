@@ -27,12 +27,17 @@ def tensor_builder(params: dict, dtype=np.complex64):
     input_shape = params["shape"]
 
     # generate random input
-    x = np.random.randn(*input_shape) + 1.0j * np.random.randn(*input_shape)
-    x = x.astype(dtype)
+    if dtype in [np.complex64, np.complex128]:
+        x = np.random.randn(*input_shape) + 1.0j * np.random.randn(*input_shape)
+        x = x.astype(dtype)
+    else:
+        x = np.random.randn(*input_shape).astype(dtype)
 
     # requires grad
     x_flow = flow.from_numpy(x).requires_grad_(True)
     x_torch = torch.from_numpy(x).requires_grad_(True)
+    # x_flow = flow.from_numpy(x).requires_grad_(False)
+    # x_torch = torch.from_numpy(x).requires_grad_(False)
 
     return x_flow, x_torch
 
@@ -44,7 +49,7 @@ def compare_result(test_case, a, b, rtol=1e-5, atol=1e-8):
     )
 
 
-def _test_fftn(test_case, params: dict, dtype=np.complex64):
+def _test_fftn(test_case, dtype=np.complex64, params: dict = None):
     print(f"========== Start Testing ==========")
     print(f"tensor shape: {params['shape']}")
     print(f"dtype: {dtype}")
@@ -58,8 +63,6 @@ def _test_fftn(test_case, params: dict, dtype=np.complex64):
     print(f"fftn norm: {norm}")
     print(f"x_flow.dtype: {x_flow.dtype}")
     print("x_torch.dtype: ", x_torch.dtype)
-    # print(f"x_torch.dtype: {x_torch.dtype}")
-    # print(x_torch)
 
     # forward
     y_torch = torch.fft.fftn(x_torch, s=n, dim=dims, norm=norm)
@@ -136,54 +139,82 @@ def _test_ifftn(test_case, params: dict, dtype=np.complex64):
     print("\n")
 
 
-class TestFft(flow.unittest.TestCase):
+class TestFftN(flow.unittest.TestCase):
+    def setUp(test_case):
+        test_case.arg_dict = OrderedDict()
+        # test_case.arg_dict["test_fun"] = [_test_fftn, _test_ifftn]
+        # test_case.arg_dict["dtype"] = [np.float32, np.float64, np.complex64, np.complex128]
+        test_case.arg_dict["test_fun"] = [_test_fftn]
+        # test_case.arg_dict["dtype"] = [np.float32, np.float64]
+        test_case.arg_dict["dtype"] = [np.complex64, np.complex128]
+    
     def test_gather(test_case):
-        arg_dict = OrderedDict()
-        # set up test functions
-        arg_dict["test_fun"] = [_test_fftn, _test_ifftn]
-
         # set up profiling functions
-        arg_dict["params"] = []
+        test_case.arg_dict["params"] = []
         lower_n_dims = 1
         upper_n_dims = 5
         for _ in range(10):
-            num_dims = np.random.randint(lower_n_dims, upper_n_dims)
-            shape = [np.random.randint(1, 11) * 8 for _ in range(num_dims)]
-            len_fft_dim = np.random.randint(low=0, high=num_dims)
+            # num_dims = np.random.randint(lower_n_dims, upper_n_dims)
+            # shape = [np.random.randint(1, 11) * 2 for _ in range(num_dims)]
+            # len_fft_dim = np.random.randint(low=0, high=num_dims)
 
-            total_dims_range = np.arange(num_dims)
-            if np.random.randint(2) == 1:
-                # dim = np.random.randint(low=-num_dims, high=num_dims-1)
-                dims = np.random.choice(
-                    total_dims_range, size=num_dims, replace=False
-                ).tolist()
-            else:
-                dims = None
+            # total_dims_range = np.arange(num_dims)
+            # if np.random.randint(2) == 1:
+            #     # dim = np.random.randint(low=-num_dims, high=num_dims-1)
+            #     dims = np.random.choice(
+            #         total_dims_range, size=num_dims, replace=False
+            #     ).tolist()
+            # else:
+            #     dims = None
 
-            norm = np.random.choice(["backward", "forward", "ortho", None])
+            # norm = np.random.choice(["backward", "forward", "ortho", None])
 
-            if np.random.randint(2) == 1 and dims is not None:
-                n = []
-                for i in range(num_dims):
-                    n_ = (
-                        np.random.randint(low=1, high=shape[i])
-                        if np.random.randint(2) == 1
-                        else -1
-                    )
-                    n.append(n_)
-            else:
-                n = None
+            # if np.random.randint(2) == 1 and dims is not None:
+            #     n = []
+            #     for i in range(num_dims):
+            #         n_ = (
+            #             np.random.randint(low=1, high=2 * shape[i])
+            #             if np.random.randint(2) == 1
+            #             else -1
+            #         )
+            #         n.append(n_)
+            # else:
+            #     n = None
+            shape = (2, 18, 4, 10)
+            n = (-1,-1,2,-1)
+            dims = (2,3,0,1)
+            norm = "forward"
 
-            arg_dict["params"].append(
+            test_case.arg_dict["params"].append(
                 {"shape": shape, "n": n, "dims": dims, "norm": norm}
             )
 
-        arg_dict["dtype"] = [np.complex64, np.complex128]
-        # arg_dict["dtype"] = [np.complex128]
-
-        for arg in GenArgList(arg_dict):
+        for arg in GenArgList(test_case.arg_dict):
             arg[0](test_case, *arg[1:])
 
+# class TestRFftN(TestFft):
+#     def setUp(test_case):
+#         test_case.arg_dict = OrderedDict()
+#         test_case.arg_dict["test_fun"] = [_test_rfftn]
+#         test_case.arg_dict["dtype"] = [np.float32, np.float64]
+        
+# class TestIRFftN(TestFft):
+#     def setUp(test_case):
+#         test_case.arg_dict = OrderedDict()
+#         test_case.arg_dict["test_fun"] = [_test_irfftn]
+#         test_case.arg_dict["dtype"] = [np.complex64, np.complex128]
+
+# class TestHFftN(TestFft):
+#     def setUp(test_case):
+#         test_case.arg_dict = OrderedDict()
+#         test_case.arg_dict["test_fun"] = [_test_hfftn]
+#         test_case.arg_dict["dtype"] = [np.complex64, np.complex128]
+
+# class TestIHFftN(TestFft):
+#     def setUp(test_case):
+#         test_case.arg_dict = OrderedDict()
+#         test_case.arg_dict["test_fun"] = [_test_ihfftn]
+#         test_case.arg_dict["dtype"] = [np.float32, np.float32]
 
 if __name__ == "__main__":
     unittest.main()

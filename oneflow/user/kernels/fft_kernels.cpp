@@ -172,26 +172,22 @@ class FftC2RKernel final : public user_op::OpKernel {
     const std::vector<int64_t>& dims = ctx->Attr<std::vector<int64_t>>("dims");
     std::cout << "=========== [FftC2RKernel] get attr ==================" << std::endl;
 
-    const T* input_ptr = input->dptr<T>();
-    std::complex<T>* out_ptr = out->mut_dptr<std::complex<T>>();
+    const std::complex<T>* input_ptr = input->dptr<std::complex<T>>();
+    T* out_ptr = out->mut_dptr<T>();
 
     Shape input_shape(input->shape_view());
     Shape out_shape(out->shape_view());
     fft_norm_mode norm_mode = norm_from_string(norm_str, forward);
-    std::cout << "=========== [FftC2RKernel] get attr ==================" << std::endl;
+    std::cout << "=========== [FftC2RKernel] get norm ==================" << std::endl;
 
     out_shape[dims.back()] = last_dim_size;
 
-    if (input->data_type() == kFloat) {
+    if (input->data_type() == kComplex64 || input->data_type() == kComplex128) {
       FftC2RKernelUtil<device_type, T>::FftC2RForward(ctx->stream(), input_ptr, out_ptr,
                                                       input_shape, out_shape, input->stride(),
-                                                      out->stride(), /*forward=*/false, dims, norm_mode);
-    } else if (input->data_type() == kDouble) {
-      FftC2RKernelUtil<device_type, T>::FftC2RForward(ctx->stream(), input_ptr, out_ptr,
-                                                      input_shape, out_shape, input->stride(),
-                                                      out->stride(), /*forward=*/false, dims, norm_mode);
+                                                      out->stride(), /*last_dim_size=*/last_dim_size, dims, norm_mode);
     } else {
-      Error::RuntimeError() << "expects kFloat or kDouble, but gets " << input->data_type();
+      Error::RuntimeError() << "expects kComplex64 or kComplex128, but gets " << input->data_type();
     }
   }
 };

@@ -83,7 +83,9 @@ class PocketFFtConfig {
   }
 
   void excute(const std::complex<dtype>* in, dtype* out) {
-    pocketfft::c2r(fftparams.input_shape, fftparams.in_stridef, fftparams.out_stridef,
+    // pocketfft::c2r(fftparams.input_shape, fftparams.in_stridef, fftparams.out_stridef,
+    //                fftparams.axes, fftparams.IsForward, in, out, fftparams.fct);
+    pocketfft::c2r(fftparams.output_shape, fftparams.in_stridef, fftparams.out_stridef,
                    fftparams.axes, fftparams.IsForward, in, out, fftparams.fct);
   }
 

@@ -197,17 +197,17 @@ public:
         int64_t last_dim = ctx->dims.back();
         auto double_length = out_grads.at(0)->dim(last_dim) - complex_grad->dim(last_dim);
         auto in_grad = complex_grad;
-
+        
         // mul by 2, and slice
         if (double_length > 0){
-          in_grad = JUST(functional::Narrow(complex_grad, last_dim, 1, double_length));
+          in_grad = JUST(functional::Narrow(complex_grad, last_dim, 1, double_length)); // will change shape of in_grad
           in_grad = JUST(functional::ScalarMul(in_grad, 2, /*inplace*/true));
         }
 
         std::vector<int64_t> slice_st(input_shape.size(), 0);
         std::vector<int64_t> slice_end(input_shape.begin(), input_shape.end());
         std::vector<int64_t> slice_step(input_shape.size(), 1);
-        auto sliced_tensor = JUST(functional::Slice(in_grad, slice_st, slice_end, slice_step, false));
+        auto sliced_tensor = JUST(functional::Slice(complex_grad, slice_st, slice_end, slice_step, false));
 
         in_grads->at(0) = sliced_tensor;
         return Maybe<void>::Ok();

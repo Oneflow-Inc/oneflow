@@ -57,12 +57,12 @@ struct FftR2CKernelUtil<DeviceType::kCPU, T> {
 
 template<typename T>
 struct FftC2RKernelUtil<DeviceType::kCPU, T> {
-  static void FftC2RForward(ep::Stream* stream, const T* data_in, std::complex<T>* data_out,
+  static void FftC2RForward(ep::Stream* stream, const std::complex<T>* data_in, T* data_out,
                             const Shape& input_shape, const Shape& output_shape,
                             const Stride& input_stride, const Stride& output_stride, int64_t last_dim_size,
                             const std::vector<int64_t>& dims, fft_norm_mode normalization) {
     PocketFFtParams<T> params(input_shape, output_shape, input_stride, output_stride, dims, /*is_forward=*/false,
-                              compute_fct<T>(input_shape, dims, normalization) /*1.f*/,
+                              compute_fct<T>(output_shape, dims, normalization) /*1.f*/,
                               FFT_EXCUTETYPE::C2R);
     PocketFFtConfig<T> config(params);
     config.excute(data_in, data_out);
