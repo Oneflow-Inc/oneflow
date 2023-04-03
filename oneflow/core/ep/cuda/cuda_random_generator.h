@@ -40,7 +40,7 @@ class CUDAGenerator : public RandomGenerator {
   uint64_t current_seed() const override { return seed_; }
   void set_current_seed(uint64_t seed) override;
 
-  std::string device() const override { return "cuda"; }
+  std::string device_type_name() const override { return "cuda"; }
   int64_t device_index() const override { return device_index_; }
 
   size_t GetStateSize() const override;
