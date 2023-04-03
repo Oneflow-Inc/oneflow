@@ -671,13 +671,12 @@ class FusedApplyRotaryEmbFunctor {
     int64_t rotary_emd_dim = 1;
 
     if (position_ids) {
-      CHECK_LE_OR_RETURN(JUST(position_ids)->shape()->NumAxes(), 3)
-          << "ndims of position_ids should be no more than 3.";  // TODO: supported shape should be
-                                                                 // discussed
+      CHECK_EQ_OR_RETURN(JUST(position_ids)->shape()->NumAxes(), 3)
+          << "ndims of position_ids should be equal to 3, either in form of B1M or B2M.";
       CHECK_EQ_OR_RETURN(JUST(position_ids)->shape()->At(0), b)
           << "1st dim of position_ids should be equal to B.";
-      CHECK_GE_OR_RETURN(JUST(position_ids)->shape()->At(2), m)
-          << "3rd dim of position_ids should be no less than M.";
+      CHECK_EQ_OR_RETURN(JUST(position_ids)->shape()->At(2), m)
+          << "3rd dim of position_ids should be equal to M.";
       rotary_emd_dim = JUST(position_ids)->shape()->At(1);
     }
 

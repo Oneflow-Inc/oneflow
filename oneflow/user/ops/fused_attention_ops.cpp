@@ -677,7 +677,7 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
         << "The dimensions of position_ids should be B1M or B2M.";
     CHECK_EQ_OR_RETURN(position_ids_desc.shape().At(0), b)
         << "The dimensions of position_ids should be B1M or B2M.";
-    CHECK_GE_OR_RETURN(position_ids_desc.shape().At(2), m)
+    CHECK_EQ_OR_RETURN(position_ids_desc.shape().At(2), m)
         << "The dimensions of position_ids should be B1M or B2M.";
     rotary_emd_dim = position_ids_desc.shape().At(1);
   }
