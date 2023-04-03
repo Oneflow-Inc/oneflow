@@ -69,7 +69,6 @@ class FftR2C : public OpExprGradFunction<FftR2CCaptureState> {
             in_grads->at(0) = JUST(functional::Real(complex_grad));
         }
         else{
-          // CHECK_OR_THROW(false) << "UNIMPLEMENTED";
           std::cout << "=========== [FftR2C Op Backward] ctx->onesided ===========" << std::endl;
           Shape input_shape(ctx->input_shape_vec);
           int64_t last_dim = ctx->dims.back();
@@ -77,10 +76,13 @@ class FftR2C : public OpExprGradFunction<FftR2CCaptureState> {
           int64_t zero_length = last_dim_size - out_grads.at(0)->dim(last_dim);
           if (zero_length > 0){
             std::cout << "=========== [FftR2C Op Backward] ctx->onesided, zero_length > 0 ===========" << std::endl;
-            std::vector<int64_t> fft_dims {last_dim};
-            std::vector<int64_t> fft_shapes {last_dim_size};
-            auto complex_full_grad = JUST(functional::FftC2C(out_grads.at(0), fft_shapes, fft_dims, ctx->norm_str, /*forward*/ !(ctx->forward), /*is_grad_fn*/ true));
-            in_grads->at(0) = JUST(functional::Real(complex_full_grad));
+            std::vector<int64_t> fft_dims = ctx->dims;
+            std::vector<int64_t> fft_shapes(fft_dims.size(), 0);
+            FOR_RANGE(size_t, i, 0, fft_dims.size()){
+              fft_shapes[i] = input_shape[fft_dims[i]];
+            }
+            auto complex_full_grad = JUST(functional::FftC2C(out_grads.at(0), fft_shapes, ctx->dims, ctx->norm_str, /*forward*/ !(ctx->forward), /*is_grad_fn*/ true));
+            in_grads->at(0) = JUST(functional::Real(complex_full_grad))
           }
           else{
             // do c2c and slice

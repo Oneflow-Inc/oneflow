@@ -4080,7 +4080,7 @@ class FftC2CFunctor : public FftBaseFunctor {
     auto resized_tensor =
         n.has_value() == true ? JUST(resize_fft_input(x, wrapped_dims, fft_len)) : x;
 
-    std::sort(wrapped_dims.begin(), wrapped_dims.end());
+    // std::sort(wrapped_dims.begin(), wrapped_dims.end());
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "forward", "is_grad_fn");
     attrs.SetAllAttrs(wrapped_dims, norm_str, forward, is_grad_fn);
 
@@ -4116,6 +4116,9 @@ class FftR2CFunctor : public FftBaseFunctor {
       fft_len.resize(wrapped_dims.size());
       for (int i = 0; i < wrapped_dims.size(); i++) {
         fft_len[i] = n.has_value() == true ? (*JUST(n))[i] : x->dim(wrapped_dims[i]);
+        if (fft_len[i] == -1){
+          fft_len[i] = x->dim(wrapped_dims[i]);
+        }
         CHECK_OR_THROW(fft_len[i] >= 1)
             << Error::RuntimeError() << "Expected n >= 1, but got " << fft_len[i];
       }
@@ -4127,7 +4130,7 @@ class FftR2CFunctor : public FftBaseFunctor {
     auto resized_tensor =
       n.has_value() == true ? JUST(resize_fft_input(x, wrapped_dims, fft_len)) : x;
 
-    std::sort(wrapped_dims.begin(), wrapped_dims.end());
+    // std::sort(wrapped_dims.begin(), wrapped_dims.end());
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "onesided", "forward");
     attrs.SetAllAttrs(wrapped_dims, norm_str, onesided, forward);
 
@@ -4234,7 +4237,7 @@ class FftC2RFunctor : public FftBaseFunctor {
       resized_tensor = JUST(functional::ConjPhysical(resized_tensor));
     }
 
-    std::sort(wrapped_dims.begin(), wrapped_dims.end());
+    // std::sort(wrapped_dims.begin(), wrapped_dims.end());
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "last_dim_size", "forward");
     attrs.SetAllAttrs(wrapped_dims, norm_str, last_dim_size, forward);
 
@@ -4423,9 +4426,12 @@ class RFftNFunctor {
                            const Optional<std::vector<int64_t>>& dim,
                            const Optional<std::string>& norm) const {
     std::string norm_str = norm.value_or("backward");
-    // TO-DO
-    CHECK_OR_THROW(false) << "UNIMPLEMENTED";
-    return input;
+    if (s.has_value()) {
+      std::vector<int64_t> len = *JUST(s);
+      return functional::FftR2C(input, len, dim, norm_str, /*onesided=*/true, /*forward=*/true);
+    } else {
+      return functional::FftR2C(input, NullOpt, dim, norm_str, /*onesided=*/true, /*forward=*/true);
+    }
   }
 };
 
