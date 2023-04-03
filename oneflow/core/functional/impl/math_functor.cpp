@@ -4116,8 +4116,7 @@ class AmpForEachNonFiniteCheckAndUnscaleFunctor {
 
  private:
   std::vector<std::shared_ptr<OpExpr>> ops_;
-}
-class FusedCenterGradFunctor {
+} class FusedCenterGradFunctor {
  public:
   FusedCenterGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("fused_get_center_dist_grad")
