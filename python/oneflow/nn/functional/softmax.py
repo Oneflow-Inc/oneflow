@@ -18,19 +18,6 @@ from typing import List, Optional
 
 from oneflow.framework.tensor import Tensor
 import oneflow as flow
-import warnings
-
-def _get_softmax_dim(name: str, ndim: int, stacklevel: int) -> int:
-    warnings.warn(
-        "Implicit dimension choice for {} has been deprecated. "
-        "Change the call to include dim=X as an argument.".format(name),
-        stacklevel=stacklevel,
-    )
-    if ndim == 0 or ndim == 1 or ndim == 3:
-        ret = 0
-    else:
-        ret = 1
-    return ret
 
 # ref https://github.com/pytorch/pytorch/blob/master/torch/nn/functional.py
 def softmax(input: Tensor, dim: Optional[int] = None, _stacklevel: int = 3, dtype = None) -> Tensor:
@@ -51,8 +38,6 @@ def softmax(input: Tensor, dim: Optional[int] = None, _stacklevel: int = 3, dtyp
         which expects the Log to be computed between the Softmax and itself.
         Use log_softmax instead (it's faster and has better numerical properties).
     """
-    if dim is None:
-        dim = _get_softmax_dim("softmax", input.dim(), _stacklevel)
     if dtype is None:
         ret = flow._C.softmax(input, dim)
     else:
