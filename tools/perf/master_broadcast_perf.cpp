@@ -152,6 +152,7 @@ std::set<std::string> MultiThreadBroadcastFromMasterToWorkers(size_t world_size,
                 Singleton<GlobalProcessCtx>::Get()->NumOfProcessPerNode();
             const size_t target_rank = single_node_process_num * i;
             std::string key = prefix + std::to_string(i);
+            LOG(WARNING) << "master pull rank kv to: " << target_rank;
             Singleton<CtrlClient>::Get()->PushRankKV(target_rank, key, data);
             std::lock_guard<std::mutex> lock(mtx4keys);
             CHECK(keys.insert(key).second);
@@ -173,9 +174,10 @@ std::set<std::string> MultiThreadBroadcastFromMasterToWorkers(size_t world_size,
     if (std::string(broadcast_strategy) == "LOCAL_RANK_PROXY") {
       const size_t rank = Singleton<GlobalProcessCtx>::Get()->Rank();
       const size_t local_rank = Singleton<GlobalProcessCtx>::Get()->LocalRank();
-      const size_t target_rank = rank - local_rank;
       const size_t node_id = Singleton<GlobalProcessCtx>::Get()->NodeId(rank);
       std::string key = prefix + std::to_string(node_id);
+      const size_t target_rank = rank - local_rank;
+      LOG(WARNING) << "rank_" << rank << " pull rank kv from: " << target_rank;
       Singleton<CtrlClient>::Get()->PullRankKV(target_rank, key, worker_data);
 
     } else {
