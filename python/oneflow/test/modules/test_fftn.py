@@ -179,6 +179,48 @@ def _test_rfftn(test_case, dtype=np.float32, params: dict = None):
     print(f"============== PASSED =============")
     print("\n")
 
+def _test_irfftn(test_case, dtype=np.complex64, params: dict = None):
+    print(f"========== Start Testing ==========")
+    print(f"tensor shape: {params['shape']}")
+    print(f"dtype: {dtype}")
+
+    x_flow, x_torch = tensor_builder(params=params, dtype=dtype)
+    n = params["n"]
+    dims = params["dims"]
+    norm = params["norm"]
+    print(f"irfftn n: {n}")
+    print(f"irfftn dims: {dims}")
+    print(f"irfftn norm: {norm}")
+    print(f"x_flow.dtype: {x_flow.dtype}")
+    print("x_torch.dtype: ", x_torch.dtype)
+
+    # forward
+    y_torch = torch.fft.irfftn(x_torch, s=n, dim=dims, norm=norm)
+    y_torch_sum = y_torch.sum()
+
+    # backward
+    y_torch_sum.backward()
+
+    # copy back to cpu memory
+    x_torch_grad = x_torch.grad.detach().cpu()
+    y_torch = y_torch.detach().cpu()
+
+    # forward
+    y_flow = flow._C.irfftn(x_flow, s=n, dim=dims, norm=norm)
+    y_flow_sum = y_flow.sum()
+
+    # backward
+    y_flow_sum.backward()
+
+    # copy back to cpu memory
+    x_flow_grad = x_flow.grad.detach().cpu()
+    y_flow = y_flow.detach().cpu()
+
+    compare_result(test_case, y_flow, y_torch, 1e-5, 1e-2)
+    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-2)
+
+    print(f"============== PASSED =============")
+    print("\n")
 
 class TestFftN(flow.unittest.TestCase):
     def setUp(test_case):
@@ -195,42 +237,46 @@ class TestFftN(flow.unittest.TestCase):
         lower_n_dims = 1
         upper_n_dims = 5
         for _ in range(10):
-        #     num_dims = np.random.randint(lower_n_dims, upper_n_dims)
-        #     shape = [np.random.randint(1, 11) * 2 for _ in range(num_dims)]
-        #     len_fft_dim = np.random.randint(low=0, high=num_dims)
+            num_dims = np.random.randint(lower_n_dims, upper_n_dims)
+            shape = [np.random.randint(1, 11) * 2 for _ in range(num_dims)]
+            len_fft_dim = np.random.randint(low=0, high=num_dims)
 
-        #     total_dims_range = np.arange(num_dims)
-        #     if np.random.randint(2) == 1:
-        #         # dim = np.random.randint(low=-num_dims, high=num_dims-1)
-        #         dims = np.random.choice(
-        #             total_dims_range, size=num_dims, replace=False
-        #         ).tolist()
-        #     else:
-        #         dims = None
+            total_dims_range = np.arange(num_dims)
+            if np.random.randint(2) == 1:
+                # dim = np.random.randint(low=-num_dims, high=num_dims-1)
+                dims = np.random.choice(
+                    total_dims_range, size=num_dims, replace=False
+                ).tolist()
+            else:
+                dims = None
 
-        #     norm = np.random.choice(["backward", "forward", "ortho", None])
+            norm = np.random.choice(["backward", "forward", "ortho", None])
 
-        #     if np.random.randint(2) == 1 and dims is not None:
-        #         n = []
-        #         for i in range(num_dims):
-        #             n_ = (
-        #                 np.random.randint(low=1, high=2 * shape[i])
-        #                 if np.random.randint(2) == 1
-        #                 else -1
-        #             )
-        #             n.append(n_)
-        #     else:
-        #         n = None
+            if np.random.randint(2) == 1 and dims is not None:
+                n = []
+                for i in range(num_dims):
+                    n_ = (
+                        np.random.randint(low=1, high=2 * shape[i])
+                        if np.random.randint(2) == 1
+                        else -1
+                    )
+                    n.append(n_)
+            else:
+                n = None
 
             # shape = (10,)
             # n = (-1,)
             # dims = (0,)
             # norm = "forward"
 
-            shape = (8, 2)
-            n = None
-            dims = (1, 0)
-            norm = None
+            # shape = (2, 20, 8)
+            # n = None
+            # dims = (2, 0, 1)
+            # norm = "ortho"
+            # shape = (14, 12, 16, 8)
+            # n = (26, 18, 10, 15)
+            # dims = (0, 3, 2, 1)
+            # norm = None
             # expected :
             # fft_shape : (4, 22, 1)
             # fft_tensor : (4, 22, 1)
@@ -248,11 +294,11 @@ class TestRFftN(TestFftN):
         test_case.arg_dict["test_fun"] = [_test_rfftn]
         test_case.arg_dict["dtype"] = [np.float32, np.float64]
         
-# class TestIRFftN(TestFftN):
-#     def setUp(test_case):
-#         test_case.arg_dict = OrderedDict()
-#         test_case.arg_dict["test_fun"] = [_test_irfftn]
-#         test_case.arg_dict["dtype"] = [np.complex64, np.complex128]
+class TestIRFftN(TestFftN):
+    def setUp(test_case):
+        test_case.arg_dict = OrderedDict()
+        test_case.arg_dict["test_fun"] = [_test_irfftn]
+        test_case.arg_dict["dtype"] = [np.complex64, np.complex128]
 
 # class TestHFftN(TestFftN):
 #     def setUp(test_case):

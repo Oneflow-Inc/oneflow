@@ -82,7 +82,7 @@ class FftR2C : public OpExprGradFunction<FftR2CCaptureState> {
               fft_shapes[i] = input_shape[fft_dims[i]];
             }
             auto complex_full_grad = JUST(functional::FftC2C(out_grads.at(0), fft_shapes, ctx->dims, ctx->norm_str, /*forward*/ !(ctx->forward), /*is_grad_fn*/ true));
-            in_grads->at(0) = JUST(functional::Real(complex_full_grad))
+            in_grads->at(0) = JUST(functional::Real(complex_full_grad));
           }
           else{
             // do c2c and slice

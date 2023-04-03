@@ -4214,15 +4214,14 @@ class FftC2RFunctor : public FftBaseFunctor {
     } else {
       // ND-discrete fourier transform
       calculate_fftn_shape_and_dims(x, n, dims, fft_len, wrapped_dims);
-      std::sort(wrapped_dims.begin(), wrapped_dims.end());
+      // std::sort(wrapped_dims.begin(), wrapped_dims.end());
       int64_t last_dim = wrapped_dims.back();
       if (!n.has_value() || JUST(n)->back() == -1){
         last_dim_size = 2 * (x->dim(last_dim) - 1);
       }
       else{
-        // last_dim_size = (*JUST(n))[last_dim];
-        
-        last_dim_size = (*JUST(n)).back();  // TO-DO may be not correct last dim size
+        // last_dim_size = (*JUST(n)).back();  // TO-DO may be not correct last dim size
+        last_dim_size = JUST(n)->back();  // TO-DO may be not correct last dim size
       }
       fft_len[fft_len.size() - 1] = last_dim_size / 2 + 1;
     }
@@ -4442,9 +4441,12 @@ class IRFftNFunctor {
                            const Optional<std::vector<int64_t>>& dim,
                            const Optional<std::string>& norm) const {
     std::string norm_str = norm.value_or("backward");
-    // TO-DO
-    CHECK_OR_THROW(false) << "UNIMPLEMENTED";
-    return input;
+    if (s.has_value()) {
+      std::vector<int64_t> len = *JUST(s);
+      return functional::FftC2R(input, len, dim, norm_str, /*forward=*/false);
+    } else {
+      return functional::FftC2R(input, NullOpt, dim, norm_str, /*forward=*/false);
+    }
   }
 };
 
