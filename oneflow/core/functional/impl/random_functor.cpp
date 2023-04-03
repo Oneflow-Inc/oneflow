@@ -79,8 +79,7 @@ class BernoulliProbFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& p,
                            const Symbol<DType>& dtype, const Optional<one::Generator>& generator,
                            const bool& inplace) const {
-    CHECK_OR_THROW(p >= 0.0 && p <= 1.0)
-        << "bernoulli expects p to be in [0, 1], but got p=" << p;
+    CHECK_OR_THROW(p >= 0.0 && p <= 1.0) << "bernoulli expects p to be in [0, 1], but got p=" << p;
     if (x->is_global()) { JUST(CheckDeviceIdsIsValid(JUST(x->parallel_desc()))); }
 
     auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
