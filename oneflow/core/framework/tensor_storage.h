@@ -33,7 +33,6 @@ namespace one {
 
 class TensorStorage final {
  public:
-  explicit TensorStorage(const std::shared_ptr<const ParallelDesc>& parallel_desc);
   explicit TensorStorage(const std::shared_ptr<vm::TensorStorage>& tensor_storage);
   ~TensorStorage();
 
