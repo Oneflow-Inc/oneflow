@@ -119,6 +119,16 @@ void RpcClient::PushKV(const std::string& k, const PbMessage& msg) {
 void RpcClient::PushMasterKV(const std::string& k, const PbMessage& msg) {
   PushMasterKV(k, [&](std::string* o) { msg.SerializeToString(o); });
 }
+void RpcClient::PushRankKV(const size_t rank, const std::string& k,
+                           std::function<void(std::string*)> VSetter) {
+  ClientCall<CtrlMethod::kPushKV> call;
+  call.mut_request()->set_key(k);
+  VSetter(call.mut_request()->mutable_val());
+  call(GetStubAt(rank));
+}
+void RpcClient::PushRankKV(const size_t rank, const std::string& k, const std::string& v) {
+  PushRankKV(rank, k, [&](std::string* o) { *o = v; });
+}
 
 void RpcClient::ClearKV(const std::string& k) {
   ClientCall<CtrlMethod::kClearKV> call;
@@ -157,6 +167,18 @@ void RpcClient::PullKV(const std::string& k, PbMessage* msg) {
 
 void RpcClient::PullMasterKV(const std::string& k, PbMessage* msg) {
   PullMasterKV(k, [&](const std::string& i) { msg->ParseFromString(i); });
+}
+
+void RpcClient::PullRankKV(const size_t rank, const std::string& k,
+                           std::function<void(const std::string&)> VGetter) {
+  ClientCall<CtrlMethod::kPullKV> call;
+  call.mut_request()->set_key(k);
+  call(GetStubAt(rank));
+  VGetter(call.response().val());
+}
+
+void RpcClient::PullRankKV(const size_t rank, const std::string& k, std::string* v) {
+  PullRankKV(rank, k, [&](const std::string& i) { *v = i; });
 }
 
 void RpcClient::Clear() {

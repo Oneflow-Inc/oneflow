@@ -85,6 +85,8 @@ class CtrlClient {
   typename std::enable_if<std::is_arithmetic<T>::value>::type PushKVT(const std::string& k, T v) {
     PushKV(k, std::to_string(v));
   }
+  virtual void PushRankKV(const size_t rank, const std::string& k, std::function<void(std::string*)> VSetter) = 0;
+  virtual void PushRankKV(const size_t rank, const std::string& k, const std::string& v) = 0;
 
   virtual void ClearKV(const std::string& k) = 0;
   virtual void ClearMasterKV(const std::string& k) = 0;
@@ -99,6 +101,8 @@ class CtrlClient {
     PullKV(k, &v_str);
     *v = oneflow_cast<T>(v_str);
   }
+  virtual void PullRankKV(const size_t rank, const std::string& k, std::function<void(const std::string&)> VGetter) = 0;
+  virtual void PullRankKV(const size_t rank, const std::string& k, std::string* v) = 0;
 
   virtual void Clear() = 0;
   virtual int32_t IncreaseCount(const std::string& k, int32_t v) = 0;
