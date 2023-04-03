@@ -37,7 +37,7 @@ class DummyModule(flow.nn.Module):
         super().__init__()
         self.register_buffer("dummy_buf", flow.Tensor(dummy_val))
         self.dummy_para = flow.nn.Parameter(flow.Tensor(dummy_val))
-        self.dummy_para_int = flow.nn.Parameter(flow.Tensor(dummy_val).to(flow.int32))
+        self.register_buffer("dummy_buf_int", flow.Tensor(dummy_val).to(flow.int32))
 
     def forward(self, x):
         return self.dummy_para * x + self.dummy_buf
@@ -96,17 +96,17 @@ class TestModuleTo(flow.unittest.TestCase):
         m.to(flow.float64)
         test_case.assertEqual(m.dummy_buf.dtype, flow.float64)
         test_case.assertEqual(m.dummy_para.dtype, flow.float64)
-        test_case.assertEqual(m.dummy_para_int.dtype, flow.int32)
+        test_case.assertEqual(m.dummy_buf_int.dtype, flow.int32)
 
     def test_module_to_tensor(test_case):
         m = DummyModule()
         m.to(flow.zeros(1, dtype=flow.float16, device="cuda"))
         test_case.assertEqual(m.dummy_buf.dtype, flow.float16)
         test_case.assertEqual(m.dummy_para.dtype, flow.float16)
-        test_case.assertEqual(m.dummy_para_int.dtype, flow.int32)
+        test_case.assertEqual(m.dummy_buf_int.dtype, flow.int32)
         test_case.assertEqual(m.dummy_buf.device.type, "cuda")
         test_case.assertEqual(m.dummy_para.device.type, "cuda")
-        test_case.assertEqual(m.dummy_para_int.device.type, "cuda")
+        test_case.assertEqual(m.dummy_buf_int.device.type, "cuda")
 
     def test_module_to_with_var_reuse(test_case):
         class ReuseVarModule(flow.nn.Module):

@@ -87,6 +87,8 @@ std::shared_ptr<const Stride> EagerBlobObject::stride_ptr() const {
   }
 }
 
+int64_t EagerBlobObject::storage_offset() const { return storage_offset_; }
+
 void EagerBlobObject::set_storage_offset(const int64_t offset) { storage_offset_ = offset; }
 
 Maybe<bool> EagerBlobObject::TryAllocateBlobBodyMemory(vm::Allocator* allocator) {
