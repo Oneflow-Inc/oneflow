@@ -4087,47 +4087,6 @@ class FftC2CFunctor : public FftBaseFunctor {
         << "expects the dtype of input Tensor  is Complex, but gets " << x->dtype()->name();
     std::vector<int64_t> fft_len(x->ndim(), 0);
     std::vector<int64_t> wrapped_dims(x->ndim(), 0);
-#if 0
-    if (n.has_value() && dims.has_value()) {
-      CHECK_OR_THROW((*JUST(n)).size() == (*JUST(dims)).size())
-          << Error::RuntimeError()
-          << "When dim and shape were both given, they must have the same length";
-    }
-
-    std::vector<int64_t> wrapped_dims(x->ndim(), 0);
-    std::vector<int64_t> fft_len(x->ndim(), 0);
-    if (dims.has_value() && (*JUST(dims)).size() == 1) {
-      // 1D-discrete fourier transform
-      wrapped_dims = *JUST(dims);
-      maybe_wrap_dims(wrapped_dims, x->ndim());
-      fft_len.resize(wrapped_dims.size());
-      for (int i = 0; i < wrapped_dims.size(); i++) {
-        fft_len[i] = n.has_value() == true ? (*JUST(n))[i] : x->dim(wrapped_dims[i]);
-        if (fft_len[i] == -1){
-          fft_len[i] = x->dim(wrapped_dims[i]);
-        }
-        CHECK_OR_THROW(fft_len[i] >= 1)
-            << Error::RuntimeError() << "Expected n >= 1, but got " << fft_len[i];
-      }
-    } 
-    else if (n.has_value() && JUST(n)->size() == 1){
-      // 1D-discrete fourier transform
-      // fft_len.resize(1);
-      // fft_len[0] = JUST(n)->operator[](0);
-      fft_len = *(JUST(n));
-      if (fft_len[0] == -1){
-        fft_len[0] = x->shape()->back();
-      }
-      CHECK_OR_THROW(fft_len[0] >= 1)
-          << Error::RuntimeError() << "Expected n >= 1, but got " << fft_len[0];
-      wrapped_dims.resize(1);
-      wrapped_dims[0] = x->ndim() - 1;
-    }
-    else {
-      // ND-discrete fourier transform
-      calculate_fftn_shape_and_dims(x, n, dims, fft_len, wrapped_dims);
-    }
-#endif
 
     parse_input_n_and_dims(x, n, dims, fft_len, wrapped_dims);
     auto resized_tensor =
@@ -4162,26 +4121,6 @@ class FftR2CFunctor : public FftBaseFunctor {
 
     std::vector<int64_t> fft_len(x->ndim(), 0);
     std::vector<int64_t> wrapped_dims(x->ndim(), 0);
-#if 0
-    if (dims.has_value() && (*JUST(dims)).size() == 1) {
-      // 1D-discrete fourier transform
-      wrapped_dims = *JUST(dims);
-      maybe_wrap_dims(wrapped_dims, x->ndim());
-      fft_len.resize(wrapped_dims.size());
-      for (int i = 0; i < wrapped_dims.size(); i++) {
-        fft_len[i] = n.has_value() == true ? (*JUST(n))[i] : x->dim(wrapped_dims[i]);
-        if (fft_len[i] == -1){
-          fft_len[i] = x->dim(wrapped_dims[i]);
-        }
-        CHECK_OR_THROW(fft_len[i] >= 1)
-            << Error::RuntimeError() << "Expected n >= 1, but got " << fft_len[i];
-      }
-    } else {
-      // ND-discrete fourier transform
-      calculate_fftn_shape_and_dims(x, n, dims, fft_len, wrapped_dims);
-    }
-#endif
-
     parse_input_n_and_dims(x, n, dims, fft_len, wrapped_dims);
     auto resized_tensor =
       n.has_value() == true ? JUST(resize_fft_input(x, wrapped_dims, fft_len)) : x;
@@ -4218,41 +4157,6 @@ class FftC2RFunctor : public FftBaseFunctor {
     std::vector<int64_t> wrapped_dims(x->ndim(), 0);
     std::vector<int64_t> fft_len(x->ndim(), 0);
     int64_t last_dim_size = 0;
-#if 0
-    if (dims.has_value() && (*JUST(dims)).size() == 1) {
-      // 1D-discrete fourier transform
-      // to be polished, because `(*JUST(dims)).size() == 1` so that we can remove for arange
-      wrapped_dims = *JUST(dims);
-      maybe_wrap_dims(wrapped_dims, x->ndim());
-      fft_len.resize(wrapped_dims.size());  // note: wrapped_dims.size().size() == 1
-      for (int i = 0; i < wrapped_dims.size(); i++) {
-        fft_len[i] = n.has_value() == true ? (*JUST(n))[i] : x->dim(wrapped_dims[i]);
-        if (fft_len[i] == -1){
-          fft_len[i] = x->dim(wrapped_dims[i]);
-        }
-        CHECK_OR_THROW(fft_len[i] >= 1)
-            << Error::RuntimeError() << "Expected n >= 1, but got " << fft_len[i];
-      }
-      last_dim_size = n.has_value() == true && (*JUST(n))[0] != -1 ? fft_len[0] : 2 * (x->dim(wrapped_dims.back()) - 1);
-      if (n.has_value() == true && (*JUST(n))[0] != -1){
-        fft_len[0] = last_dim_size / 2 + 1;
-      }
-    } else {
-      // ND-discrete fourier transform
-      calculate_fftn_shape_and_dims(x, n, dims, fft_len, wrapped_dims);
-      // std::sort(wrapped_dims.begin(), wrapped_dims.end());
-      int64_t last_dim = wrapped_dims.back();
-      if (!n.has_value() || JUST(n)->back() == -1){
-        last_dim_size = 2 * (x->dim(last_dim) - 1);
-      }
-      else{
-        // last_dim_size = (*JUST(n)).back();  // TO-DO may be not correct last dim size
-        last_dim_size = JUST(n)->back();  // TO-DO may be not correct last dim size
-      }
-      fft_len[fft_len.size() - 1] = last_dim_size / 2 + 1;
-    }
-    CHECK_OR_THROW(last_dim_size >= 1) << "Invalid number of last_dim_size (" << last_dim_size << ") specified";
-#endif
     parse_c2r_input_n_and_dims(x, n, dims, last_dim_size, fft_len, wrapped_dims);
 
     auto resized_tensor =
@@ -4299,26 +4203,17 @@ class FftFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int64_t>& n,
                            int64_t dim, const Optional<std::string>& norm) const {
-    // auto dim_val = dim.value_or(-1);
     std::string norm_str = norm.value_or("backward");
     std::vector<int64_t> fft_dim{dim};
-    if (input->dtype()->is_complex()) {
-      if (n.has_value()) {
+      if (n.has_value()){
         std::vector<int64_t> len{JUST(n)};
-        return functional::FftC2C(input, len, fft_dim, norm_str, /*forward=*/true,
-                                  /*is_grad_fn*/ false);
-      } else {
-        return functional::FftC2C(input, NullOpt, fft_dim, norm_str, /*forward=*/true,
-                                  /*is_grad_fn*/ false);
+        return input->dtype()->is_complex() ? functional::FftC2C(input, len, fft_dim, norm_str, /*forward=*/true, /*is_grad_fn*/ false)
+                                          : functional::FftR2C(input, len, fft_dim, norm_str,  /*onesided=*/false, /*forward=*/true);
       }
-    } else {
-      if (n.has_value()) {
-        std::vector<int64_t> len{JUST(n)};
-        return functional::FftR2C(input, len, fft_dim, norm_str,  /*onesided=*/false, /*forward=*/true);
-      } else {
-        return functional::FftR2C(input, NullOpt, fft_dim, norm_str, /*onesided=*/false, /*forward=*/true);
+      else{
+        return input->dtype()->is_complex() ? functional::FftC2C(input, NullOpt, fft_dim, norm_str, /*forward=*/true, /*is_grad_fn*/ false)
+                                          : functional::FftR2C(input, NullOpt, fft_dim, norm_str,  /*onesided=*/false, /*forward=*/true);        
       }
-    }
   }
 };
 
@@ -4328,26 +4223,15 @@ class IFftFunctor {
                            int64_t dim, const Optional<std::string>& norm) const {
     auto norm_str = norm.value_or("backward");
     std::vector<int64_t> fft_dim{dim};
-    if (input->dtype()->is_complex()) {
-      if (n.has_value()) {
+      if (n.has_value()){
         std::vector<int64_t> len{JUST(n)};
-        return functional::FftC2C(input, len, fft_dim, norm_str, /*forward=*/false,
-                                  /*is_grad_fn*/ false);
-      } else {
-        return functional::FftC2C(input, NullOpt, fft_dim, norm_str, /*forward=*/false,
-                                  /*is_grad_fn*/ false);
+        return input->dtype()->is_complex() ? functional::FftC2C(input, len, fft_dim, norm_str, /*forward=*/false, /*is_grad_fn*/ false)
+                                          : functional::FftR2C(input, len, fft_dim, norm_str,  /*onesided=*/false, /*forward=*/false);
       }
-    } else {
-      if (n.has_value()) {
-        std::vector<int64_t> len{JUST(n)};
-        // call conj_physical
-        return functional::FftR2C(input, len, fft_dim, norm_str,  /*onesided=*/false, /*forward=*/false);
-      } else {
-        // call conj_physical
-        return functional::FftR2C(input, NullOpt, fft_dim, norm_str, /*onesided=*/false, /*forward=*/false);
+      else{
+        return input->dtype()->is_complex() ? functional::FftC2C(input, NullOpt, fft_dim, norm_str, /*forward=*/false, /*is_grad_fn*/ false)
+                                          : functional::FftR2C(input, NullOpt, fft_dim, norm_str,  /*onesided=*/false, /*forward=*/false);        
       }
-      return input;
-    }
   }
 };
 
@@ -4358,6 +4242,7 @@ class Fft2Functor {
                            const Optional<std::vector<int64_t>>& s,
                            const Optional<std::vector<int64_t>>& dim,
                            const Optional<std::string>& norm) const {
+    // TO-DO: Add dim default params = {-2,-1}
     return functional::FftN(input, s, dim, norm);
   }
 };
@@ -4368,6 +4253,7 @@ class IFft2Functor {
                            const Optional<std::vector<int64_t>>& s,
                            const Optional<std::vector<int64_t>>& dim,
                            const Optional<std::string>& norm) const {
+    // TO-DO: Add dim default params = {-2,-1}
     return functional::IFftN(input, s, dim, norm);
   }
 };
@@ -4394,26 +4280,10 @@ class FftNFunctor {
       TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
       return functional::FftC2C(input_tuple.at(0), s, dim, norm_str, /*forward=*/true,
                                 /*is_grad_fn*/ false);
-      // if (s.has_value()) {
-      //   std::vector<int64_t> len = *JUST(s);
-      //   return functional::FftC2C(input_tuple.at(0), len, dim, norm_str, /*forward=*/true,
-      //                             /*is_grad_fn*/ false);
-      // } else {
-      //   return functional::FftC2C(input_tuple.at(0), NullOpt, dim, norm_str, /*forward=*/true,
-      //                             /*is_grad_fn*/ false);
-      // }
     }
     else{
       return functional::FftC2C(input, s, dim, norm_str, /*forward=*/true,
                                 /*is_grad_fn*/ false);
-      // if (s.has_value()) {
-      //   std::vector<int64_t> len = *JUST(s);
-      //   return functional::FftC2C(input, len, dim, norm_str, /*forward=*/true,
-      //                             /*is_grad_fn*/ false);
-      // } else {
-      //   return functional::FftC2C(input, NullOpt, dim, norm_str, /*forward=*/true,
-      //                             /*is_grad_fn*/ false);
-      // }
     }
   }
 };
@@ -4438,25 +4308,13 @@ class IFftNFunctor {
       }
       JUST(tensor_processor.AddInputs({input}, {complex_dtype}).Apply());
       TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
-      if (s.has_value()) {
-        std::vector<int64_t> len = *JUST(s);
-        return functional::FftC2C(input_tuple.at(0), len, dim, norm_str, /*forward=*/false,
-                                  /*is_grad_fn*/ false);
-      } else {
-        return functional::FftC2C(input_tuple.at(0), NullOpt, dim, norm_str, /*forward=*/false,
-                                  /*is_grad_fn*/ false);
+      return functional::FftC2C(input_tuple.at(0), s, dim, norm_str, /*forward=*/false,
+                                /*is_grad_fn*/ false);
       }
-    }
     else{
-      if (s.has_value()) {
-        std::vector<int64_t> len = *JUST(s);
-        return functional::FftC2C(input, len, dim, norm_str, /*forward=*/false,
-                                  /*is_grad_fn*/ false);
-      } else {
-        return functional::FftC2C(input, NullOpt, dim, norm_str, /*forward=*/false,
-                                  /*is_grad_fn*/ false);
+      return functional::FftC2C(input, s, dim, norm_str, /*forward=*/false,
+                                /*is_grad_fn*/ false);
       }
-    }
   }
 };
 
@@ -4500,6 +4358,7 @@ class RFft2Functor {
                            const Optional<std::vector<int64_t>>& s,
                            const Optional<std::vector<int64_t>>& dim,
                            const Optional<std::string>& norm) const {
+  // TO-DO: Add dim default params = {-2,-1}
     return functional::RFftN(input, s, dim, norm);
   }
 };
@@ -4510,6 +4369,7 @@ class IRFft2Functor {
                            const Optional<std::vector<int64_t>>& s,
                            const Optional<std::vector<int64_t>>& dim,
                            const Optional<std::string>& norm) const {
+    // TO-DO: Add dim default params = {-2,-1}
     return functional::IRFftN(input, s, dim, norm);
   }
 };
@@ -4524,12 +4384,7 @@ class RFftNFunctor {
     << "expects the dtype of input Tensor  is Real, but gets " << input->dtype()->name();
 
     std::string norm_str = norm.value_or("backward");
-    if (s.has_value()) {
-      std::vector<int64_t> len = *JUST(s);
-      return functional::FftR2C(input, len, dim, norm_str, /*onesided=*/true, /*forward=*/true);
-    } else {
-      return functional::FftR2C(input, NullOpt, dim, norm_str, /*onesided=*/true, /*forward=*/true);
-    }
+    return functional::FftR2C(input, s, dim, norm_str, /*onesided=*/true, /*forward=*/true);
   }
 };
 
@@ -4540,12 +4395,7 @@ class IRFftNFunctor {
                            const Optional<std::vector<int64_t>>& dim,
                            const Optional<std::string>& norm) const {
     std::string norm_str = norm.value_or("backward");
-    if (s.has_value()) {
-      std::vector<int64_t> len = *JUST(s);
-      return functional::FftC2R(input, len, dim, norm_str, /*forward=*/false);
-    } else {
-      return functional::FftC2R(input, NullOpt, dim, norm_str, /*forward=*/false);
-    }
+    return functional::FftC2R(input, s, dim, norm_str, /*forward=*/false);
   }
 };
 
@@ -4592,6 +4442,7 @@ class HFft2Functor {
                            const Optional<std::vector<int64_t>>& s,
                            const Optional<std::vector<int64_t>>& dim,
                            const Optional<std::string>& norm) const {
+    // TO-DO: Add dim default params = {-2,-1}
     return functional::HFftN(input, s, dim, norm);
   }
 };
@@ -4602,6 +4453,7 @@ class IHFft2Functor {
                            const Optional<std::vector<int64_t>>& s,
                            const Optional<std::vector<int64_t>>& dim,
                            const Optional<std::string>& norm) const {
+    // TO-DO: Add dim default params = {-2,-1}
     return functional::IHFftN(input, s, dim, norm);
   }
 };
@@ -4618,12 +4470,7 @@ class HFftNFunctor {
     << "expects the dtype of input Tensor is Complex, but gets " << input->dtype()->name();
 
     std::string norm_str = norm.value_or("backward");
-    if (s.has_value()) {
-      std::vector<int64_t> len = *JUST(s);
-      return functional::FftC2R(input, len, dim, norm_str, /*onesided=*/true);
-    } else {
-      return functional::FftC2R(input, NullOpt, dim, norm_str, /*onesided=*/true);
-    }
+    return functional::FftC2R(input, s, dim, norm_str, /*onesided=*/true);
   }
 };
 
@@ -4637,12 +4484,7 @@ class IHFftNFunctor {
     << "expects the dtype of input Tensor is Real, but gets " << input->dtype()->name();
 
     std::string norm_str = norm.value_or("backward");
-    if (s.has_value()) {
-      std::vector<int64_t> len = *JUST(s);
-      return functional::FftR2C(input, len, dim, norm_str, /*onesided=*/true, /*forward=*/false);
-    } else {
-      return functional::FftR2C(input, NullOpt, dim, norm_str,/*onesided=*/true, /*forward=*/false);
-    }
+    return functional::FftR2C(input, s, dim, norm_str, /*onesided=*/true, /*forward=*/false);
   }
 };
 

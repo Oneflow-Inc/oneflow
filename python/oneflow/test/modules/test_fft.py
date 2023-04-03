@@ -359,10 +359,11 @@ class TestFft(flow.unittest.TestCase):
 
             norm = np.random.choice(["backward", "forward", "ortho", None])
 
-            if np.random.randint(2) == 1 and dim != -1:
-                n = np.random.randint(low=1, high=shape[dim] * 2)
-            else:
+            if np.random.randint(2) == 1:
                 n = None
+            else:
+                n = np.random.randint(low=1, high=shape[dim] * 2)
+                
             # shape = (12, 4, 10, 2)
             # n = 17
             # dim = 2
