@@ -179,6 +179,8 @@ def _test_alexnet_graph(test_case, args, placement, sbp):
                             epoch, i, len(train_iter), l, end_t - start_t
                         )
                     )
+                # Stop after 20 iters to save time
+                break
         if flow.env.get_rank() == 0:
             print("epoch %d train done, start validation" % epoch)
 
@@ -212,7 +214,7 @@ def _test_alexnet_graph(test_case, args, placement, sbp):
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestAlexnetAutoParallel(oneflow.unittest.TestCase):
-    def _test_alexnet_auto_parallel_1d_sbp(test_case):
+    def test_alexnet_auto_parallel_1d_sbp(test_case):
         args, unknown_args = _parse_args()
         placement = flow.placement.all("cuda")
         sbp = [flow.sbp.broadcast,] * len(placement.ranks.shape)

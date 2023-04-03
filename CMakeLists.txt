@@ -153,10 +153,6 @@ if(BUILD_PROFILER)
   add_definitions(-DOF_ENABLE_PROFILER)
 endif()
 
-if(BUILD_DEBUG_LAZY_RUNTIME)
-  add_definitions(-DOF_DEBUG_LAZY_RUNTIME)
-endif()
-
 if(OF_SOFTMAX_USE_FAST_MATH)
   add_definitions(-DOF_SOFTMAX_USE_FAST_MATH)
 endif()

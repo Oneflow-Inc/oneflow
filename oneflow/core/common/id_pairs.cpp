@@ -13,19 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_ID_PAIRS_H_
-#define ONEFLOW_CORE_COMMON_ID_PAIRS_H_
+#include "oneflow/core/common/id_pairs.h"
 
-#include "oneflow/core/common/id_pairs.pb.h"
-#include <unordered_set>
-#include <utility>
+#include "oneflow/core/common/hash.h"
 
 namespace oneflow {
 
-void InitIdPairs(const std::unordered_set<std::pair<int64_t, int64_t>>& pairs, IdPairs* proto);
+void InitIdPairs(const std::unordered_set<std::pair<int64_t, int64_t>>& pairs, IdPairs* proto) {
+  for (const auto& pair : pairs) {
+    auto* proto_pair = proto->mutable_int64_pair()->Add();
+    proto_pair->set_first(pair.first);
+    proto_pair->set_second(pair.second);
+  }
+}
 
-void MergeIdPairs(const IdPairs& id_pairs, std::unordered_set<std::pair<int64_t, int64_t>>* pairs);
+void MergeIdPairs(const IdPairs& id_pairs, std::unordered_set<std::pair<int64_t, int64_t>>* pairs) {
+  for (const auto& pair : id_pairs.int64_pair()) {
+    pairs->emplace(std::make_pair(pair.first(), pair.second()));
+  }
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_COMMON_ID_PAIRS_H_

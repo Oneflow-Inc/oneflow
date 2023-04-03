@@ -83,7 +83,6 @@ void CollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) const
     recv_buff = out->mut_dptr();
   }
   auto* actor_ctx = GetCollectiveBoxingActorContext(ctx);
-  LOG(INFO) << " collective boxing schedule op " << this->op_conf().name();
   actor_ctx->Schedule(request_handle, send_buff, recv_buff);
 }
 

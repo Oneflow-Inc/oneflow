@@ -332,25 +332,7 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
     HandleActorMsg(msg);
     if (total_reading_cnt_ != 0) { return 0; }
     if (ready_consumed_ == max_ready_consumed_) {
-#ifdef OF_DEBUG_LAZY_RUNTIME
-      const auto& op_name = actor_ctx_->task_proto()
-                                .exec_sequence()
-                                .exec_node(0)
-                                .kernel_conf()
-                                .op_attribute()
-                                .op_conf()
-                                .name();
-      auto actor_id = actor_ctx_->task_proto().task_id();
-      LOG(INFO) << "Actor " << actor_id << " name " << op_name << " start act at the " << act_cnt_
-                << "th execution, the actor's task type is "
-                << TaskType_Name(actor_ctx_->task_proto().task_type());
-#endif  // OF_DEBUG_LAZY_RUNTIME
       ActOnce();
-#ifdef OF_DEBUG_LAZY_RUNTIME
-      LOG(INFO) << "Actor " << actor_id << " name " << op_name << " finish act at the " << act_cnt_
-                << "th execution.";
-      ++act_cnt_;
-#endif  // OF_DEBUG_LAZY_RUNTIME
       return 0;
     }
     if (OF_PREDICT_FALSE(ready_consumed_ == 0 && remaining_eord_cnt_ == 0)) {
@@ -496,16 +478,6 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
   }
 
   inline void HandleRegstMsg(const ActorMsg& msg) {
-#ifdef OF_DEBUG_LAZY_RUNTIME
-    const auto& op_name = actor_ctx_->task_proto()
-                              .exec_sequence()
-                              .exec_node(0)
-                              .kernel_conf()
-                              .op_attribute()
-                              .op_conf()
-                              .name();
-    auto actor_id = actor_ctx_->task_proto().task_id();
-#endif  // OF_DEBUG_LAZY_RUNTIME
     int64_t regst_desc_id = msg.regst_desc_id();
     if (regst_desc_id == -1) { regst_desc_id = msg.regst()->regst_desc_id(); }
     const IndexType index = regst_desc_id_index_.Lookup(regst_desc_id);
@@ -535,13 +507,6 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
       if (inplace && index == inplace_produced_index_[0] && state.produced.reading_cnt == 0) {
         return_inplace_consumed_fn_[0]();
       }
-#ifdef OF_DEBUG_LAZY_RUNTIME
-      LOG(INFO) << "Actor " << actor_id << " name " << op_name
-                << " got a regst message from it's consumer and the not ready consumer count is "
-                << static_cast<int64_t>(total_reading_cnt_)
-                << ", the not ready consumer count needs to be 0."
-                << " current act is at the " << act_cnt_ << "th execution.";
-#endif  // OF_DEBUG_LAZY_RUNTIME
     } else if (state.regst_type == RegstType::kConsumed) {
       CHECK_EQ(state.consumed.ready, false);
       CHECK_EQ(state.consumed.eord, false);
@@ -551,13 +516,6 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
         CHECK(state.regst == msg.regst());
       }
       ready_consumed_ += 1;
-#ifdef OF_DEBUG_LAZY_RUNTIME
-      LOG(INFO) << "Actor " << actor_id << " name " << op_name
-                << " got a regst message from it's producer and the ready producer count is "
-                << static_cast<int64_t>(ready_consumed_)
-                << ", the ready producer count needs to be "
-                << static_cast<int64_t>(max_ready_consumed_);
-#endif  // OF_DEBUG_LAZY_RUNTIME
     } else {
       UNIMPLEMENTED();
     }
@@ -738,9 +696,6 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
   std::vector<ActorMsg> sync_post_act_msgs_;
   std::vector<ActorMsg> async_post_act_msgs_;
   KernelObserver* stream_kernel_observer_;
-#ifdef OF_DEBUG_LAZY_RUNTIME
-  int64_t act_cnt_{1};
-#endif  // OF_DEBUG_LAZY_RUNTIME
 };
 
 template<int kernel_exec, int inplace, typename IndexType, typename RegstIndex,
