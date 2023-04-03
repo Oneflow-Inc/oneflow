@@ -29,5 +29,4 @@ int64_t Gcd(int64_t m, int64_t n) {
 
 int64_t Lcm(int64_t m, int64_t n) { return m * n / Gcd(m, n); }
 
-
 }  // namespace oneflow

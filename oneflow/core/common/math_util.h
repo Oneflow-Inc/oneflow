@@ -31,8 +31,6 @@ int64_t Gcd(int64_t m, int64_t n);
 
 int64_t Lcm(int64_t m, int64_t n);
 
-
-
 template<typename T>
 OF_DEVICE_FUNC T DeviceMin(T a, T b) {
 #if defined(__CUDA_ARCH__)
