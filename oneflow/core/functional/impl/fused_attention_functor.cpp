@@ -663,7 +663,7 @@ class FusedApplyRotaryEmbFunctor {
                 Optional<int64_t>(JUST(cos)->shape()->At(1)), &b, &m, &h, &k);
     } else if (!cos && !sin) {
       ParseDims("x", *x->shape(), x_layout, Optional<int64_t>(),
-                k_size ? Optional<int64_t>(JUST(k_size)) : Optional<int64_t>(), &b, &m, &h, &k);
+                k_size, &b, &m, &h, &k);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "cos & sin should both be given or not given.";
     }
@@ -689,20 +689,15 @@ class FusedApplyRotaryEmbFunctor {
       CHECK_LE_OR_RETURN(JUST(rotary_size), k) << "rotary_size should be no more than k.";
     }
 
-    const int64_t actual_ndims = (rotary_size ? JUST(rotary_size) : k) / rotary_emd_dim;
-    CHECK_EQ_OR_RETURN(actual_ndims % 2, 0)
+    const int64_t actual_rotary_size = (rotary_size ? JUST(rotary_size) : k) / rotary_emd_dim;
+    CHECK_EQ_OR_RETURN(actual_rotary_size % 2, 0)
         << "k ,or rotary_size if given, should be a multiple of 2 * rotary_encoding_dim.";
 
     if (position_ids) {
       if (cos && sin) {
         CHECK_GE_OR_RETURN(JUST(cos)->shape()->At(0), m)
-            << "M of cos & sin should be to less than M of x when position_ids is given.";  // K of
-                                                                                            // cos &
-                                                                                            // sin
-                                                                                            // is
-                                                                                            // checked
-                                                                                            // inside
-                                                                                            // ParseDims
+            << "M of cos & sin should be to less than" 
+               " M of x when position_ids is given.";  // K of cos & sin is checked inside ParseDims
       }
     } else {
       if (cos && sin) {

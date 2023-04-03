@@ -641,16 +641,11 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   const int64_t k_size = ctx->Attr<int64_t>("k_size");
   const int64_t tensor_index = ctx->Attr<int64_t>("tensor_index");
 
-  CHECK_OR_RETURN((tensor_index >= 0) && (tensor_index <= 2));
-  CHECK_OR_RETURN((mode == "interval") || (mode == "plane"));
+  CHECK_OR_RETURN((tensor_index >= 0) && (tensor_index <= 2)) << "tensor_index should be in range [0, 2].";
+  CHECK_OR_RETURN((mode == "interval") || (mode == "plane")) << "mode should be either \"interval\" or \"plane\".";
 
-  if (output_layout != x_layout) {
-    CHECK_OR_RETURN(
-        (output_layout == "BMHK"
-         && (x_layout == "BM(HK)" || x_layout == "BM(H2K)" || x_layout == "BM(H3K)"))
-        || (output_layout == "MBHK"
-            && (x_layout == "MB(HK)" || x_layout == "MB(H2K)" || x_layout == "MB(H3K)")));
-  }
+  CHECK_OR_RETURN(output_layout != "BM(H2K)" && output_layout != "BM(H3K)" 
+    && output_layout != "MB(H2K)" && output_layout != "MB(H3K)") << "output_layout should not be \"BM(H2k)\", \"BM(H3K)\", \"MB(H2K)\", \"MB(H3K)\".";
 
   int64_t b = 0, m = 0, h = 0, k = 0;
   bool has_cos = ctx->has_input("cos", 0);
