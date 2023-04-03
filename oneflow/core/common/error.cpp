@@ -21,11 +21,10 @@ limitations under the License.
 #include "oneflow/core/common/exception.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/stacktrace.h"
 #include "oneflow/core/common/error_util.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
 #include "oneflow/extension/stack/foreign_stack_getter.h"
-// #include "oneflow/extension/stack/stacktrace.h"
+#include "oneflow/extension/stack/stacktrace.h"
 #include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
@@ -55,8 +54,7 @@ Error&& Error::GetStackTrace(int64_t depth, int64_t skip_n_firsts) {
   backward::StackTrace st;
   st.load_here(depth);
   st.skip_n_firsts(skip_n_firsts);
-  StackPrinter p;
-  // backward::Printer p;
+  backward::Printer p;
   p.print(st, stderr);
   return std::move(*this);
 }

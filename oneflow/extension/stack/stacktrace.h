@@ -3863,7 +3863,8 @@ class Printer {
   void print_source_loc(std::ostream& os, const char* indent,
                         const ResolvedTrace::SourceLoc& source_loc, void* addr = nullptr) {
     // Modify: Remove indent and replace 'Source' to 'File'
-    // os << indent << "Source \"" << source_loc.filename << "\", line " << source_loc.line << ", in "
+    // os << indent << "Source \"" << source_loc.filename << "\", line " << source_loc.line << ", in
+    // "
     os << "  File \"" << source_loc.filename << "\", line " << source_loc.line << ", in "
        << source_loc.function;
 
