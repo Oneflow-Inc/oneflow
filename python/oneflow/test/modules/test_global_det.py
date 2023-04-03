@@ -31,7 +31,7 @@ def det_all_placement():
         # return all_placement()
 
 
-@autotest(n=1, check_graph=False, auto_backward="auto")
+@autotest(n=1, check_graph=True, auto_backward="auto")
 def _test_det(test_case, placement, sbp, ndim):
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim - 2)]
     square_dim = 8

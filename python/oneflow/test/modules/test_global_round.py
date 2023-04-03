@@ -22,7 +22,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_round_impl(test_case, ndim, placement, sbp):
     x_dims = [random(2, 4) * 8 for _ in range(ndim)]
     x = random_tensor(ndim, *x_dims)
