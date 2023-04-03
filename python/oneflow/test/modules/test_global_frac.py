@@ -13,38 +13,29 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import os
+import unittest
 
-os.environ["ONEFLOW_PYTHON_STACK_GETTER"] = "1"
 import oneflow as flow
 import oneflow.unittest
+from oneflow.test_utils.automated_test_util import *
 
 
-def h():
-    return g()
+@autotest(n=1, check_graph=False)
+def _test_frac(test_case, ndim, placement, sbp):
+    shape = [random(2, 4) * 8 for i in range(ndim)]
+    input = random_tensor(ndim, *shape).to_global(placement=placement, sbp=sbp)
+    output = torch.frac(input)
+    return output
 
 
-def g():
-    res = f()
-    res = f()
-    res = f()
-    res = f()
-    res = f()
-    res = f()
-    return res
-
-
-def f():
-    return flow._oneflow_internal.GetCurrentStack()
-
-
-@flow.unittest.skip_unless_1n1d()
-def test_stack_getter():
-    stack = h()
-    assert "flow._oneflow_internal.GetCurrentStack" in stack
-    assert "g()" in stack
-    assert "f()" in stack
+class TestModule(flow.unittest.TestCase):
+    @globaltest
+    def test_frac(test_case):
+        ndim = random(2, 4).to(int).value()
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=ndim):
+                _test_frac(test_case, ndim, placement, sbp)
 
 
 if __name__ == "__main__":
-    test_stack_getter()
+    unittest.main()

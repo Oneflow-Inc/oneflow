@@ -30,6 +30,11 @@
     ]
   bind_python: true
 
+# this api just for test host memory input
+- name: "host_scalar_add_by_tensor"
+  signature: "Tensor (Tensor x, Tensor scalar) => HostScalarAddByTensor"
+  bind_python: true
+
 - name: "amin"
   signature: "Tensor (Tensor input, Int32List[1] dim=None, Bool keepdim=False) => Amin"
   bind_python: True
@@ -1554,6 +1559,10 @@
 - name: "rms_norm_grad"
   signature: "Tensor (Tensor dy, Tensor x, Tensor inv_rms, Tensor weight=None, Bool param_grad) => RMSNormGrad"
   bind_python: False
+
+- name: "skip_rms_norm"
+  signature: "Tensor (Tensor x, *, Tensor weight=None, Tensor bias=None, Tensor skip=None, Double epsilon=1e-5, Double alpha=1e1) => SkipRMSNorm"
+  bind_python: True
 
 - name: "group_norm"
   signature:
@@ -3304,4 +3313,12 @@
 
 - name: "clone"
   signature: "Tensor (Tensor input) => Clone"
+  bind_python: True
+
+- name: "frac"
+  signature: "Tensor (Tensor x) => Frac"
+  bind_python: True
+
+- name: "frac_"
+  signature: "Tensor (Tensor x) => FracInplace"
   bind_python: True

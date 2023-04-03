@@ -32,8 +32,13 @@ error_msg = """ is not implemented, please submit an issue at
 'https://github.com/Oneflow-Inc/oneflow/issues' including the log information of the error, the 
 minimum reproduction code, and the system information."""
 
-# TODO(peiyuan): support fine-grained package name like "safetensor.safetensor_rust"
-HAZARD_LIST = ["_distutils_hack", "importlib", "regex", "tokenizers", "safetensors"]
+hazard_list = [
+    "_distutils_hack",
+    "importlib",
+    "regex",
+    "tokenizers",
+    "safetensors._safetensors_rust",
+]
 
 # module wrapper with checks for existence of methods
 class ModuleWrapper(ModuleType):
@@ -180,7 +185,11 @@ class OneflowImporter(MetaPathFinder, Loader):
                 for alias in aliases:
                     del globals[alias]
             name = k if "." not in k else k[: k.find(".")]
-            if not name in HAZARD_LIST and k in self.delete_list:
+            if (
+                not name in hazard_list
+                and not k in hazard_list
+                and k in self.delete_list
+            ):
                 aliases = list(filter(lambda alias: globals[alias] is v, globals))
                 self.enable_mod_cache.update({k: (v, aliases)})
                 del sys.modules[k]

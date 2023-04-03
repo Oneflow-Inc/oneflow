@@ -82,7 +82,7 @@ __global__ void AdaptiveAvgPoolCudaKernel(const T* input, T* output, int num_ele
       in_ptr += in_h * in_w;  // next input depth
     }
     // Update output
-    output[idx] = sum / k_d / k_h / k_w;
+    output[idx] = sum / static_cast<T>(k_d) / static_cast<T>(k_h) / static_cast<T>(k_w);
   }
 }
 
@@ -111,7 +111,8 @@ __global__ void AdaptiveAvgPoolGradCudaKernel(T* input, const T* output, int num
     int in_end_w = END_IND(out_w_idx, out_w, in_w);
     int k_w = in_end_w - in_start_w;
 
-    const T grad_delta = output[idx] / k_d / k_h / k_w;
+    const T grad_delta =
+        output[idx] / static_cast<T>(k_d) / static_cast<T>(k_h) / static_cast<T>(k_w);
     T* input_ptr =
         input + bc_idx * in_panel_size + in_start_d * in_h * in_w + in_start_h * in_w + in_start_w;
     for (int id = 0; id < k_d; ++id) {
@@ -259,6 +260,7 @@ class GpuAdaptiveAvgPool3dGradKernel final : public OpKernel {
       .SetIsMatchedHob((HobDeviceType() == device)                             \
                        && (HobDataType("y", 0) == GetDataType<dtype>::value));
 
+REGISTER_CUDA_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kCUDA, half);
 REGISTER_CUDA_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kCUDA, float);
 REGISTER_CUDA_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kCUDA, double);
 REGISTER_CUDA_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kCUDA, int);
@@ -277,6 +279,7 @@ REGISTER_CUDA_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kCUDA, int);
       .SetIsMatchedHob((HobDeviceType() == device)                              \
                        && (HobDataType("dx", 0) == GetDataType<dtype>::value));
 
+REGISTER_CUDA_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kCUDA, half);
 REGISTER_CUDA_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kCUDA, float);
 REGISTER_CUDA_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kCUDA, double);
 REGISTER_CUDA_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kCUDA, int);

@@ -25,6 +25,7 @@ try:
     HAS_NUMPY = True
 except ModuleNotFoundError:
     np = None  # type: ignore[assignment]
+from typing import Any
 
 string_classes = (str, bytes)
 
