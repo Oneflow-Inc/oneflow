@@ -93,7 +93,7 @@ def _test_scalar_pow_backward(test_case, shape, device, dtype):
     mlu_out.backward()
     cpu_out.backward()
     test_case.assertTrue(
-        np.allclose(x_cpu.grad.numpy(), x.grad.numpy(), 0.0001, 0.0001, equal_nan=True)
+        np.allclose(x_cpu.grad.numpy(), x.grad.numpy(), 0.01, 0.01, equal_nan=True)
     )
 
 

@@ -17,11 +17,48 @@ limitations under the License.
 
 namespace oneflow {
 
+static constexpr int32_t nram_limit = 32;
+
 template<typename T>
 __mlu_global__ void bang_scalar_pow_grad_kernel(int64_t n, const T* x, const T* dy,
                                                 const float value, T* dx) {
-  for (int64_t i = taskId; i < n; i += taskDim) {
-    dx[i] = value * dy[i] * pow(x[i], value - static_cast<T>(1.0));
+  const T value_ = value - static_cast<T>(1.0);
+  int64_t step = (n + taskDim - 1) / taskDim;
+  int64_t start = step * taskId;
+  int64_t end = start + step;
+  if (end > n) { end = n; }
+  int64_t length = start < end ? end - start : 0;
+  int64_t nram_rest = (length & 0x1F);  // length % nram_limit2
+  int32_t nram_limit_bytes = nram_limit * sizeof(T);
+
+  __nram__ T nram_x[nram_limit];
+  __nram__ T nram_dx[nram_limit];
+  __nram__ T nram_dy[nram_limit];
+  int64_t j = 0;
+  for (; j < length - nram_limit + 1; j += nram_limit) {
+    __memcpy_async(nram_x, x + start + j, nram_limit_bytes, GDRAM2NRAM);
+    __memcpy_async(nram_dx, dx + start + j, nram_limit_bytes, GDRAM2NRAM);
+    __memcpy_async(nram_dy, dy + start + j, nram_limit_bytes, GDRAM2NRAM);
+    __sync_copy_dram_to_nram();
+    for (int k = 0; k < nram_limit; k++) { nram_dx[k] = std::pow(nram_x[k], value_); }
+    __bang_mul(nram_dx, nram_dx, nram_dy, nram_limit);
+    __bang_mul_scalar(nram_dx, nram_dx, value, nram_limit);
+    __sync_compute();
+    __memcpy_async(dx + start + j, nram_dx, nram_limit_bytes, NRAM2GDRAM);
+    __sync_copy_nram_to_dram();
+  }
+  if (nram_rest > 0) {
+    int32_t nram_rest_bytes = nram_rest * sizeof(T);
+    __memcpy_async(nram_x, x + start + j, nram_rest_bytes, GDRAM2NRAM);
+    __memcpy_async(nram_dx, dx + start + j, nram_rest_bytes, GDRAM2NRAM);
+    __memcpy_async(nram_dy, dy + start + j, nram_rest_bytes, GDRAM2NRAM);
+    __sync_copy_dram_to_nram();
+    for (int k = 0; k < nram_rest; k++) { nram_dx[k] = std::pow(nram_x[k], value_); }
+    __bang_mul(nram_dx, nram_dx, nram_dy, nram_rest);
+    __bang_mul_scalar(nram_dx, nram_dx, value, nram_rest);
+    __sync_compute();
+    __memcpy_async(dx + start + j, nram_dx, nram_rest_bytes, NRAM2GDRAM);
+    __sync_copy_nram_to_dram();
   }
 }
 

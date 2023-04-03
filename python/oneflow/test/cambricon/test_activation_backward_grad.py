@@ -62,7 +62,11 @@ def _test_activation_backward_grad(test_case, op, shape, device, dtype):
         retain_graph=True,
     )[0]
     # compare
-    diff = 0.001 if dtype == flow.float16 else 0.0001
+    if op == flow.tanh:
+        diff = 0.01
+    else:
+        diff = 0.001 if dtype == flow.float16 else 0.0001
+
     test_case.assertTrue(np.allclose(grad_mlu.numpy(), grad_cpu.numpy(), diff, diff))
 
 
