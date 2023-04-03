@@ -41,11 +41,12 @@ class TestGatherOp(flow.unittest.TestCase):
 
     def test_gather_axis_tensor_error_msg(test_case):
         with test_case.assertRaises(RuntimeError) as context:
-            x = flow.tensor([1,2])
-            indice = flow.tensor([1])
-            flow.gather(x, 0, indice)
+            x = np.random.randn(1)
+            x_tensor = flow.tensor(x)
+            indice = flow.tensor([[0, 0],[1, 0]])
+            flow.gather(x_tensor, 0, indice)
         test_case.assertTrue(
-            "The gather axis should be less or equal to input tensor's axis" 
+            "The gather axis should be less or equal to input tensor's axis, "
             in str(context.exception)
         )
 
