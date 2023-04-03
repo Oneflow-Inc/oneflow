@@ -13,19 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/tensor_storage.h"
-#include "oneflow/core/eager/tensor_storage.h"
-#include "oneflow/core/framework/shut_down_util.h"
+#pragma once
+
+#include "oneflow/core/common/env_var/env_var.h"
 
 namespace oneflow {
-namespace one {
 
-TensorStorage::TensorStorage(const std::shared_ptr<vm::TensorStorage>& tensor_storage)
-    : storage_(tensor_storage) {}
+DEFINE_ENV_BOOL(ONEFLOW_REMAT_DISPLAY_IN_FIRST_TIME, false);
+DEFINE_ENV_BOOL(ONEFLOW_REMAT_RECORD_MEM_FRAG_RATE, true);
+DEFINE_ENV_INTEGER(ONEFLOW_REMAT_GROUP_NUM, 1);
+DEFINE_ENV_BOOL(ONEFLOW_REMAT_NEIGHBOR, true);
+DEFINE_ENV_BOOL(ONEFLOW_REMAT_HEURISTIC_DTE, false);
+DEFINE_ENV_BOOL(ONEFLOW_REMAT_HEURISTIC_DTR, false);
 
-TensorStorage::~TensorStorage() {
-  if (!IsShuttingDown() && releaser_hook_) { (*releaser_hook_)(storage_); }
-}
-
-}  // namespace one
 }  // namespace oneflow

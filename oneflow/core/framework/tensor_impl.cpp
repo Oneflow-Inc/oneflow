@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/eager/tensor_storage.h"
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/eager/tensor_storage.h"
 #include "oneflow/core/vm/vm_util.h"
@@ -128,9 +129,12 @@ Maybe<void> EagerLocalTensorImpl::InitEagerBlobObject(
         mem_case, local_tensor_meta, mut_local_tensor_meta, local_tensor_meta->dtype(),
         tensor_storage, dep_object);
   } else {
-    const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
-        mem_case, local_tensor_meta, mut_local_tensor_meta, local_tensor_meta->dtype(),
-        std::make_shared<vm::TensorStorage>(true), dep_object);
+    auto device = local_tensor_meta->device();
+    auto storage = device->rematable() ? std::make_shared<vm::RematableTensorStorage>(device)
+                                       : std::make_shared<vm::TensorStorage>(true, device);
+    const auto& eager_blob_object =
+        std::make_shared<vm::EagerBlobObject>(mem_case, local_tensor_meta, mut_local_tensor_meta,
+                                              local_tensor_meta->dtype(), storage, dep_object);
     JUST(set_eager_blob_object(eager_blob_object));
   }
   return Maybe<void>::Ok();
