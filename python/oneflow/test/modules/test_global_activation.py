@@ -66,7 +66,7 @@ def build_module(act_type):
         raise ValueError("activation type %s is not support" % act_type)
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_activation_module_with_random_data(test_case, act_type, ndim, placement, sbp):
     m = build_module(act_type)
     m.train(random())
@@ -76,7 +76,7 @@ def _test_activation_module_with_random_data(test_case, act_type, ndim, placemen
     return y
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_activation_module_with_0dim_data(test_case, act_type, placement, sbp):
     m = build_module(act_type)
     m.train(random())

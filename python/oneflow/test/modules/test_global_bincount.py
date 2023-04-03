@@ -19,7 +19,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False, auto_backward=False)
+@autotest(n=1, check_graph="ValidatedFalse", auto_backward=False)
 def _test_bincount(test_case, placement, sbp):
     x = random_tensor(1, 64, low=0, dtype=int).to_global(placement=placement, sbp=sbp)
     weight = random_tensor(1, 64).to_global(placement=placement, sbp=sbp)
