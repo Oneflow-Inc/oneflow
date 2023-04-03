@@ -140,6 +140,38 @@ Maybe<bool> UserOpRegistryMgr::IsOpKernelRegistered(const std::string& op_type_n
   return false;
 }
 
-}  // namespace user_op
+UserOpHostMemoryInputRegistry& UserOpHostMemoryInputRegistry::Get() {
+  static UserOpHostMemoryInputRegistry mgr;
+  return mgr;
+}
 
+Maybe<void> UserOpHostMemoryInputRegistry::SetHostMemoryInput4Op(const std::string& op_type_name,
+                                                                 const std::string& arg_name,
+                                                                 int32_t index) {
+  auto it = op_type_name2host_memory_input_args_.find(op_type_name);
+  if (it == op_type_name2host_memory_input_args_.end()) {
+    auto pair = op_type_name2host_memory_input_args_.emplace(
+        op_type_name, small_vector<std::pair<std::string, int32_t>>());
+    CHECK_OR_RETURN(pair.second);
+    it = pair.first;
+  }
+  it->second.emplace_back(std::make_pair(arg_name, index));
+  return Maybe<void>::Ok();
+}
+
+bool UserOpHostMemoryInputRegistry::IsHostMemoryInput4Op(const std::string& op_type_name,
+                                                         const std::string& arg_name,
+                                                         int32_t index) const {
+  auto it = op_type_name2host_memory_input_args_.find(op_type_name);
+  if (it == op_type_name2host_memory_input_args_.end()) { return false; }
+  return std::find(it->second.begin(), it->second.end(), std::make_pair(arg_name, index))
+         != it->second.end();
+}
+
+bool UserOpHostMemoryInputRegistry::HasHostMemoryInput(const std::string& op_type_name) const {
+  return op_type_name2host_memory_input_args_.find(op_type_name)
+         != op_type_name2host_memory_input_args_.end();
+}
+
+}  // namespace user_op
 }  // namespace oneflow

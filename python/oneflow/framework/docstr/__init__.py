@@ -87,3 +87,4 @@ from .baddbmm import *
 from .lerp import *
 from .quantile import *
 from .depend import *
+from .special_ops import *
