@@ -39,6 +39,8 @@ oneflow.job @GraphToRun_11(%arg0: tensor<2x256x1280xf16>, %arg1: tensor<2x77x128
   oneflow.return %output_2 : tensor<2x256x1280xf16>
 }
 
+// CHECK: oneflow.mlir_jit
+// CHECK-NOT: oneflow.cast
 oneflow.job @GraphToRun_1(%arg0: tensor<2x5xsi64>, %arg1: tensor<1xf32>) -> tensor<2x5xf32> {
   %output = "oneflow.input"(%arg0) {data_type = 6 : i32, device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], is_dynamic = false, nd_sbp = ["B"], op_name = "_GraphToRun_1_input.0.0_2", output_lbns = ["_GraphToRun_1_input.0.0_2/out"], scope_symbol_id = 34 : i64, shape = [2 : si64, 5 : si64]} : (tensor<2x5xsi64>) -> tensor<2x5xsi64>
   %output_0 = "oneflow.input"(%arg1) {data_type = 2 : i32, device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], is_dynamic = false, nd_sbp = ["B"], op_name = "_GraphToRun_1_input.0.1_3", output_lbns = ["_GraphToRun_1_input.0.1_3/out"], scope_symbol_id = 34 : i64, shape = [1 : si64]} : (tensor<1xf32>) -> tensor<1xf32>
