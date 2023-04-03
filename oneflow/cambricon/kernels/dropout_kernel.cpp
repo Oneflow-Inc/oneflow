@@ -17,12 +17,12 @@ limitations under the License.
 #include "oneflow/cambricon/cnnl/cnnl_workspace.h"
 #include "oneflow/cambricon/ep/mlu_random_generator.h"
 #include "oneflow/cambricon/ep/mlu_stream.h"
+#include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/user/kernels/dropout_kernel.h"
 #include "oneflow/user/kernels/op_kernel_wrapper.h"
-#include "oneflow/core/ep/include/primitive/add.h"
 
 namespace oneflow {
 
@@ -63,23 +63,14 @@ class MluDropoutKernel final : public user_op::OpKernel {
 
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
-      CHECK_EQ(add_to_output->data_type(), out->data_type());
-      CHECK_EQ(add_to_output->shape_view(), out->shape_view());
-      CnnlTensorDescriptor add_to_output_desc;
-      add_to_output_desc.set(add_to_output);
-      std::vector<cnnlTensorDescriptor_t> add_to_output_descs_vec{1, add_to_output_desc.desc()};
-      std::vector<const void*> add_to_output_dptrs_vec(1);
-      add_to_output_dptrs_vec[0] = add_to_output->dptr();
-      size_t addn_workspace_size = 0;
-      OF_CNNL_CHECK(cnnlGetAddNWorkspaceSize(ctx->stream()->As<ep::MluStream>()->cnnl_handle(),
-                                             add_to_output_descs_vec.data(), 1, out_desc.desc(),
-                                             &addn_workspace_size));
-      CnnlWorkspace workspace(ctx->stream()->As<ep::MluStream>(), addn_workspace_size);
-
-      OF_CNNL_CHECK(cnnlAddN_v2(ctx->stream()->As<ep::MluStream>()->cnnl_handle(),
-                                add_to_output_descs_vec.data(), add_to_output_dptrs_vec.data(), 1,
-                                out_desc.desc(), out->mut_dptr(), workspace.dptr(),
-                                addn_workspace_size));
+      auto bcast_add =
+          ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
+              ctx->device_type(), ep::primitive::BinaryOp::kAdd, out->data_type(),
+              add_to_output->data_type(), out->shape_view().NumAxes());
+      CHECK(bcast_add);
+      bcast_add->Launch(ctx->stream(), out->shape_view().NumAxes(), out->shape_view().ptr(),
+                        out->dptr(), add_to_output->shape_view().NumAxes(),
+                        add_to_output->shape_view().ptr(), add_to_output->dptr(), out->mut_dptr());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
