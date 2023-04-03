@@ -999,6 +999,7 @@ REGISTER_USER_KERNEL("fused_attention_concat_past_key_value")
     .SetCreateFn<FusedAttentionConcatPastKeyValueKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA));
 
+
 template<typename T, typename PositionType, typename IndexType, size_t NumDims, size_t RotaryEmbDim>
 struct FusedApplyRotaryEmbParam {
   const T* x;
@@ -1042,7 +1043,7 @@ struct FusedApplyRotaryEmbParam {
         k(k),
         k0(k0),
         k1(k1),
-        x_offset(x_offset)
+        x_offset(x_offset) {}
 };
 
 template<typename T, typename PositionType, typename IndexType, size_t PackSize, size_t NumDims,
