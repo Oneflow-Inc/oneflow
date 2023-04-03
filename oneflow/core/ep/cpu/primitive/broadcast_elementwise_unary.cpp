@@ -31,9 +31,9 @@ namespace broadcast_elementwise_unary {
 namespace {
 
 #define CPU_PRIMITIVE_CAST_REAL_TYPE_SEQ \
-  CPU_PRIMITIVE_UINT32_TYPE_SEQ         \
-  CPU_PRIMITIVE_NATIVE_TYPE_SEQ         \
-  CPU_PRIMITIVE_FLOAT16_TYPE_SEQ        \
+  CPU_PRIMITIVE_UINT32_TYPE_SEQ          \
+  CPU_PRIMITIVE_NATIVE_TYPE_SEQ          \
+  CPU_PRIMITIVE_FLOAT16_TYPE_SEQ         \
   CPU_PRIMITIVE_BFLOAT16_TYPE_SEQ
 
 bool IsContiguous(size_t num_dims, const int64_t* dims, const int64_t* strides) {
