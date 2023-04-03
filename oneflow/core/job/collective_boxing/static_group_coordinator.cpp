@@ -178,18 +178,10 @@ void StaticGroupCoordinator::AddRequest(void* coordinator_token) {
   info->group_states.at(request_group_index.group_id)
       .AddReadyRequest(request_group_index.index_in_group);
   int64_t num_launched_groups = 0;
-#ifdef OF_DEBUG_LAZY_RUNTIME
-  LOG(INFO) << "Collective boxing StaticGroupCoordinator get request with group index "
-            << current_group_idx_in_job_ << " of job " << current_job_id_;
-#endif  // OF_DEBUG_LAZY_RUNTIME
   while (true) {
     auto& group_state = info->group_states.at(current_group_idx_in_job_);
     if (group_state.IsReady()) {
       impl_->executor_->ExecuteGroup(info->group_id2group_token.at(current_group_idx_in_job_));
-#ifdef OF_DEBUG_LAZY_RUNTIME
-      LOG(INFO) << "Collective boxing StaticGroupCoordinator execute request with group index "
-                << current_group_idx_in_job_ << " of job " << current_job_id_;
-#endif  // OF_DEBUG_LAZY_RUNTIME
       group_state.Reset();
       current_group_idx_in_job_ = (current_group_idx_in_job_ + 1) % info->group_states.size();
       num_launched_groups += 1;
