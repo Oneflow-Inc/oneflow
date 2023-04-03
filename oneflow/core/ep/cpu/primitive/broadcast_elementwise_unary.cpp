@@ -30,7 +30,7 @@ namespace broadcast_elementwise_unary {
 
 namespace {
 
-#define CPU_PRIMITIVE_CAST_ALL_TYPE_SEQ \
+#define CPU_PRIMITIVE_CAST_REAL_TYPE_SEQ \
   CPU_PRIMITIVE_UINT32_TYPE_SEQ         \
   CPU_PRIMITIVE_NATIVE_TYPE_SEQ         \
   CPU_PRIMITIVE_FLOAT16_TYPE_SEQ        \
@@ -238,13 +238,13 @@ class BroadcastElementwiseUnaryFactoryImpl : public BroadcastElementwiseUnaryFac
             // For Cast OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
                 MAKE_NEW_BROADCAST_ELEMENTWISE_UNARY_ENTRY, BROADCAST_ELEMENTWISE_CAST_OP_SEQ,
-                CPU_PRIMITIVE_CAST_ALL_TYPE_SEQ, CPU_PRIMITIVE_CAST_ALL_TYPE_SEQ)
+                CPU_PRIMITIVE_CAST_REAL_TYPE_SEQ, CPU_PRIMITIVE_CAST_REAL_TYPE_SEQ)
                 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
                     MAKE_NEW_BROADCAST_ELEMENTWISE_UNARY_ENTRY, BROADCAST_ELEMENTWISE_CAST_OP_SEQ,
                     CPU_PRIMITIVE_COMPLEX_TYPE_SEQ, CPU_PRIMITIVE_COMPLEX_TYPE_SEQ)
                     OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_BROADCAST_ELEMENTWISE_UNARY_ENTRY,
                                                      BROADCAST_ELEMENTWISE_CAST_OP_SEQ,
-                                                     CPU_PRIMITIVE_CAST_ALL_TYPE_SEQ,
+                                                     CPU_PRIMITIVE_CAST_REAL_TYPE_SEQ,
                                                      CPU_PRIMITIVE_COMPLEX_TYPE_SEQ)};
 
 #undef MAKE_NEW_BROADCAST_ELEMENTWISE_UNARY_ENTRY
