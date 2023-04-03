@@ -50,7 +50,7 @@ def compare_result(test_case, a, b, rtol=1e-6, atol=1e-8):
 
 
 def _test_fftn(test_case, dtype=np.complex64, params: dict = None):
-    print(f"========== Start Testing ==========")
+    print(f"========== Start Testing {__name__} ==========")
     print(f"tensor shape: {params['shape']}")
     print(f"dtype: {dtype}")
 
@@ -337,8 +337,8 @@ class TestFftN(flow.unittest.TestCase):
         test_case.arg_dict = OrderedDict()
         test_case.arg_dict["test_fun"] = [_test_fftn, _test_ifftn]
         test_case.arg_dict["dtype"] = [np.float32, np.float64, np.complex64, np.complex128]
-        # test_case.arg_dict["test_fun"] = [_test_ifftn]
-        # test_case.arg_dict["dtype"] = [np.float32, np.float64]
+        # test_case.arg_dict["test_fun"] = [_test_fftn]
+        # test_case.arg_dict["dtype"] = [np.float32, np.float64, np.complex64, np.complex128]
         # test_case.arg_dict["dtype"] = [np.complex64, np.complex128]
     
     def test_gather(test_case):
@@ -349,44 +349,42 @@ class TestFftN(flow.unittest.TestCase):
         for _ in range(30):
             num_dims = np.random.randint(lower_n_dims, upper_n_dims)
             shape = [np.random.randint(1, 11) * 2 for _ in range(num_dims)]
-            len_fft_dim = np.random.randint(low=0, high=num_dims)
+            len_fft_dim = np.random.randint(low=1, high=num_dims + 1)
 
             total_dims_range = np.arange(num_dims)
             if np.random.randint(2) == 1:
                 # dim = np.random.randint(low=-num_dims, high=num_dims-1)
                 dims = np.random.choice(
-                    total_dims_range, size=num_dims, replace=False
+                    total_dims_range, size=len_fft_dim, replace=False
                 ).tolist()
             else:
                 dims = None
 
             norm = np.random.choice(["backward", "forward", "ortho", None])
 
-            if np.random.randint(2) == 1 and dims is not None:
+            if np.random.randint(2) == 1:
+                n = None
+            else:
                 n = []
-                for i in range(num_dims):
+                len_fft_dim = len(dims) if dims is not None else np.random.randint(low=1, high=num_dims+1)
+                for i in range(len_fft_dim):
                     n_ = (
                         np.random.randint(low=1, high=2 * shape[i])
                         if np.random.randint(2) == 1
                         else -1
                     )
                     n.append(n_)
-            else:
-                n = None
-
-            # shape = (10,)
-            # n = (-1,)
-            # dims = (0,)
-            # norm = "forward"
-
-            # shape = (2, 20, 8)
-            # n = None
-            # dims = (2, 0, 1)
-            # norm = "ortho"
-            # shape = (20,)
-            # n = (-1,)
-            # dims = (0,)
+                            
+            # shape = (8,8)
+            # n = (11,)
+            # dims = None
             # norm = None
+            
+            # shape = (18,2,6,4)
+            # n = (2,3)
+            # dims = None
+            # norm = None
+
             # expected :
             # fft_shape : (4, 22, 1)
             # fft_tensor : (4, 22, 1)

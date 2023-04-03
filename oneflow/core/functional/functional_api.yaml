@@ -3281,6 +3281,16 @@
     'Tensor (Tensor input, Int64 n=None, Int64 dim=-1, String norm=None) => IFft'
   bind_python: True
 
+- name: "fft2"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim=None, String norm=None) => Fft2'
+  bind_python: True
+
+- name: "ifft2"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim=None, String norm=None) => IFft2'
+  bind_python: True
+
 - name: "fftn"
   signature: 
     'Tensor (Tensor input, Int64List s=None, Int64List dim=None, String norm=None) => FftN'
@@ -3301,6 +3311,16 @@
     'Tensor (Tensor input, Int64 n=None, Int64 dim=-1, String norm=None) => IRFft'
   bind_python: True
 
+- name: "rfft2"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim=None, String norm=None) => RFft2'
+  bind_python: True
+
+- name: "irfft2"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim=None, String norm=None) => IRFft2'
+  bind_python: True
+
 - name: "rfftn"
   signature: 
     'Tensor (Tensor input, Int64List s=None, Int64List dim=None, String norm=None) => RFftN'
@@ -3319,6 +3339,16 @@
 - name: "ihfft"
   signature: 
     'Tensor (Tensor input, Int64 n=None, Int64 dim=-1, String norm=None) => IHFft'
+  bind_python: True
+
+- name: "hfft2"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim=None, String norm=None) => HFft2'
+  bind_python: True
+
+- name: "ihfft2"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim=None, String norm=None) => IHFft2'
   bind_python: True
 
 - name: "hfftn"
