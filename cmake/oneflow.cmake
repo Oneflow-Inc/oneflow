@@ -291,6 +291,18 @@ set_property(TARGET LLVMSupportWithHeader PROPERTY INTERFACE_INCLUDE_DIRECTORIES
 
 list(APPEND oneflow_third_party_libs LLVMSupportWithHeader)
 
+# for stack backtrace
+find_package(BFD)
+if(BFD_FOUND)
+  add_definitions(-DBACKWARD_HAS_BFD=1)
+  list(APPEND oneflow_third_party_libs bfd::bfd)
+endif()
+find_package(Unwind)
+if(Unwind_FOUND)
+  add_definitions(-DBACKWARD_HAS_LIBUNWIND=1)
+  list(APPEND oneflow_third_party_libs unwind::unwind)
+endif()
+
 include(op_schema)
 
 get_property(EXTERNAL_TARGETS GLOBAL PROPERTY EXTERNAL_TARGETS)
@@ -383,7 +395,7 @@ if(BUILD_PYTHON)
                                                     "${ONEFLOW_PYTHON_DIR}/oneflow")
   target_link_libraries(
     oneflow_internal PRIVATE ${of_libs} of_functional_tensor_obj of_api_common
-                             ${oneflow_third_party_libs} of_pyext_obj glog::glog bfd unwind)
+                             ${oneflow_third_party_libs} of_pyext_obj glog::glog)
   target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS}
                                                       ${Python_NumPy_INCLUDE_DIRS})
 

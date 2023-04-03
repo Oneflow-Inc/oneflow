@@ -13,22 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-// https://github.com/bombela/backward-cpp
-/*
-Copyright 2020 The OneFlow Authors. All rights reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 /*
  * backward.hpp
  * Copyright 2013 Google Inc. All Rights Reserved.
@@ -112,6 +96,7 @@ limitations under the License.
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -3717,8 +3702,11 @@ class Printer {
         color_mode(ColorMode::automatic),
         address(false),
         object(false),
-        inliner_context_size(5),
-        trace_context_size(7),
+        // Modify: Show one line by default
+        // inliner_context_size(5),
+        // trace_context_size(7),
+        inliner_context_size(1),
+        trace_context_size(1),
         reverse(true) {}
 
   template<typename ST>
@@ -3757,6 +3745,12 @@ class Printer {
     return os;
   }
 
+  // Modify: skip stacks in python object file
+  static inline bool is_oneflow_file(const std::string& filename) {
+    return std::string(std::filesystem::path(filename).filename()).find("oneflow")
+           != std::string::npos;
+  }
+
   TraceResolver const& resolver() const { return _resolver; }
 
  private:
@@ -3776,6 +3770,8 @@ class Printer {
         print_trace(os, _resolver.resolve(st[trace_idx]), colorize);
       }
     }
+    // Modify: Add a new line before Python stack
+    os << std::endl;
   }
 
   template<typename IT>
@@ -3791,30 +3787,43 @@ class Printer {
   }
 
   void print_trace(std::ostream& os, const ResolvedTrace& trace, Colorize& colorize) {
-    os << "#" << std::left << std::setw(2) << trace.idx << std::right;
-    bool already_indented = true;
+    // Modify: skip stacks in python object file
+    if (!is_oneflow_file(trace.object_filename)) { return; }
+    // Modify: symbol '#', trace idx and indent are not necessary
+    // os << "#" << std::left << std::setw(2) << trace.idx << std::right;
+    // bool already_indented = true;
 
     if (!trace.source.filename.size() || object) {
       os << "   Object \"" << trace.object_filename << "\", at " << trace.addr << ", in "
          << trace.object_function << "\n";
-      already_indented = false;
+      // Modify: Extra indent is not necessary
+      // already_indented = false;
     }
 
     for (size_t inliner_idx = trace.inliners.size(); inliner_idx > 0; --inliner_idx) {
-      if (!already_indented) { os << "   "; }
+      // Modify: Extra indent is not necessary
+      // if (!already_indented) { os << "   "; }
       const ResolvedTrace::SourceLoc& inliner_loc = trace.inliners[inliner_idx - 1];
       print_source_loc(os, " | ", inliner_loc);
       if (snippet) {
-        print_snippet(os, "    | ", inliner_loc, colorize, Color::purple, inliner_context_size);
+        // Modify: Symbol '|' is not necessary
+        // print_snippet(os, "    | ", inliner_loc, colorize, Color::purple, inliner_context_size);
+        print_snippet(os, "   ", inliner_loc, colorize, Color::purple, inliner_context_size);
       }
-      already_indented = false;
+      // Modify: Extra indent is not necessary
+      // already_indented = false;
     }
 
     if (trace.source.filename.size()) {
-      if (!already_indented) { os << "   "; }
-      print_source_loc(os, "   ", trace.source, trace.addr);
+      // Modify: Extra indent is not necessary
+      // if (!already_indented) { os << "   "; }
+      // Modify: Adjust the indent
+      // print_source_loc(os, "   ", trace.source, trace.addr);
+      print_source_loc(os, "  ", trace.source, trace.addr);
       if (snippet) {
-        print_snippet(os, "      ", trace.source, colorize, Color::yellow, trace_context_size);
+        // Modify: Adjust the indent
+        // print_snippet(os, "      ", trace.source, colorize, Color::yellow, trace_context_size);
+        print_snippet(os, "   ", trace.source, colorize, Color::yellow, trace_context_size);
       }
     }
   }
@@ -3831,18 +3840,32 @@ class Printer {
     for (lines_t::const_iterator it = lines.begin(); it != lines.end(); ++it) {
       if (it->first == source_loc.line) {
         colorize.set_color(color_code);
-        os << indent << ">";
+        // Modify: Remove symbol '>' if there is only one line to show
+        //   os << indent << ">";
+        // } else {
+        //   os << indent << " ";
+        // }
+        // os << std::setw(4) << it->first << ": " << it->second << "\n";
+        if (lines.size() > 1) {
+          os << indent << ">";
+        } else {
+          os << indent << " ";
+        }
       } else {
         os << indent << " ";
       }
-      os << std::setw(4) << it->first << ": " << it->second << "\n";
+      const auto pos = it->second.find_first_not_of(" \t");
+      os << std::setw(4) << it->second.substr(pos, it->second.size() - pos) << "\n";
       if (it->first == source_loc.line) { colorize.set_color(Color::reset); }
     }
   }
 
   void print_source_loc(std::ostream& os, const char* indent,
                         const ResolvedTrace::SourceLoc& source_loc, void* addr = nullptr) {
-    os << indent << "Source \"" << source_loc.filename << "\", line " << source_loc.line << ", in "
+    // Modify: Remove indent and replace 'Source' to 'File'
+    // os << indent << "Source \"" << source_loc.filename << "\", line " << source_loc.line << ", in
+    // "
+    os << "  File \"" << source_loc.filename << "\", line " << source_loc.line << ", in "
        << source_loc.function;
 
     if (address && addr != nullptr) { os << " [" << addr << "]"; }
@@ -3957,7 +3980,8 @@ class SignalHandling {
     }
 
     Printer printer;
-    printer.address = true;
+    // Modify: Hide the address in stack when seg fault
+    // printer.address = true;
     printer.print(st, stderr);
 
 #if (defined(_XOPEN_SOURCE) && _XOPEN_SOURCE >= 700) \
