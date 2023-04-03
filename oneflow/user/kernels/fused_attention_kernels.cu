@@ -999,6 +999,198 @@ REGISTER_USER_KERNEL("fused_attention_concat_past_key_value")
     .SetCreateFn<FusedAttentionConcatPastKeyValueKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA));
 
+
+void ParseDims(const ShapeView& shape, const std::string& layout,
+               const Optional<int64_t>& batch_size, const Optional<int64_t>& seq_len,
+               const Optional<int64_t>& num_heads, const Optional<int64_t>& head_size,
+               int64_t tensor_index, int64_t* b, int64_t* m, int64_t* h, int64_t* k,
+               int64_t* b_stride, int64_t* m_stride, int64_t* h_stride, int64_t* offset,
+               bool* bm_packed) {
+  if (shape.NumAxes() == 2) {
+    if (layout == "(BM)(HK)" || layout == "(BM)(H2K)" || layout == "(BM)(H3K)") {
+      *bm_packed = true;
+      CHECK(batch_size);
+      CHECK(seq_len);
+      *b = CHECK_JUST(batch_size);
+      *m = CHECK_JUST(seq_len);
+      int64_t packed_n = 0;
+      if (layout == "(BM)(HK)") {
+        packed_n = 1;
+      } else if (layout == "(BM)(H2K)") {
+        packed_n = 2;
+      } else if (layout == "(BM)(H3K)") {
+        packed_n = 3;
+      } else {
+        UNIMPLEMENTED();
+      }
+      const int64_t hidden_size = shape.At(1);
+      if (num_heads) {
+        const int64_t expected_h = CHECK_JUST(num_heads);
+        const int64_t packed_h = packed_n * expected_h;
+        CHECK_EQ(hidden_size % packed_h, 0);
+        *h = expected_h;
+        *k = hidden_size / packed_h;
+      } else if (head_size) {
+        const int64_t expected_k = CHECK_JUST(head_size);
+        const int64_t packed_k = packed_n * expected_k;
+        CHECK_EQ(hidden_size % packed_k, 0);
+        *h = hidden_size / packed_k;
+        *k = expected_k;
+      } else {
+        UNIMPLEMENTED();
+      }
+      *h_stride = *k * packed_n;
+      *m_stride = *h_stride * *h;
+      *b_stride = 0;
+      if (packed_n == 1) {
+        *offset = 0;
+      } else if (packed_n == 2) {
+        CHECK_GE(tensor_index, 1);
+        *offset = (tensor_index - 1) * *k;
+      } else if (packed_n == 3) {
+        *offset = tensor_index * *k;
+      } else {
+        UNIMPLEMENTED();
+      }
+    } else {
+      UNIMPLEMENTED();
+    }
+  } else if (shape.NumAxes() == 3) {
+    if (layout == "BM(HK)" || layout == "BM(H2K)" || layout == "BM(H3K)" || layout == "MB(HK)"
+        || layout == "MB(H2K)" || layout == "MB(H3K)") {
+      *bm_packed = false;
+      bool batch_first = false;
+      int64_t packed_n = 0;
+      const std::string layout_bm = layout.substr(0, 2);
+      const std::string layout_hk = layout.substr(2);
+      if (layout_bm == "BM") {
+        *b = shape.At(0);
+        *m = shape.At(1);
+        batch_first = true;
+      } else if (layout_bm == "MB") {
+        *b = shape.At(1);
+        *m = shape.At(0);
+        batch_first = false;
+      } else {
+        UNIMPLEMENTED();
+      }
+      if (layout_hk == "(HK)") {
+        packed_n = 1;
+      } else if (layout_hk == "(H2K)") {
+        packed_n = 2;
+      } else if (layout_hk == "(H3K)") {
+        packed_n = 3;
+      } else {
+        UNIMPLEMENTED();
+      }
+      const int64_t hidden_size = shape.At(2);
+      if (num_heads) {
+        const int64_t expected_h = CHECK_JUST(num_heads);
+        const int64_t packed_h = packed_n * expected_h;
+        CHECK_EQ(hidden_size % packed_h, 0);
+        *h = expected_h;
+        *k = hidden_size / packed_h;
+      } else if (head_size) {
+        const int64_t expected_k = CHECK_JUST(head_size);
+        const int64_t packed_k = packed_n * expected_k;
+        CHECK_EQ(hidden_size % packed_k, 0);
+        *h = hidden_size / packed_k;
+        *k = expected_k;
+      } else {
+        UNIMPLEMENTED();
+      }
+      *h_stride = *k * packed_n;
+      if (batch_first) {
+        *m_stride = *h_stride * *h;
+        *b_stride = *m_stride * *m;
+      } else {
+        *b_stride = *h_stride * *h;
+        *m_stride = *b_stride * *b;
+      }
+      if (packed_n == 1) {
+        *offset = 0;
+      } else if (packed_n == 2) {
+        CHECK_GE(tensor_index, 1);
+        *offset = (tensor_index - 1) * *k;
+      } else if (packed_n == 3) {
+        *offset = tensor_index * *k;
+      } else {
+        UNIMPLEMENTED();
+      }
+    } else if (layout == "(BM)HK") {
+      *bm_packed = true;
+      CHECK(batch_size);
+      CHECK(seq_len);
+      *b = CHECK_JUST(batch_size);
+      *m = CHECK_JUST(seq_len);
+      *h = shape.At(1);
+      *k = shape.At(2);
+      *h_stride = *k;
+      *m_stride = *h_stride * *h;
+      *b_stride = 0;
+    } else {
+      UNIMPLEMENTED();
+    }
+  } else if (shape.NumAxes() == 4) {
+    *bm_packed = false;
+    if (layout == "BMHK") {
+      *b = shape.At(0);
+      *m = shape.At(1);
+      *h = shape.At(2);
+      *k = shape.At(3);
+      *h_stride = *k;
+      *m_stride = *h_stride * *h;
+      *b_stride = *m_stride * *m;
+    } else if (layout == "BHMK") {
+      *b = shape.At(0);
+      *m = shape.At(2);
+      *h = shape.At(1);
+      *k = shape.At(3);
+      *m_stride = *k;
+      *h_stride = *m_stride * *m;
+      *b_stride = *h_stride * *h;
+    } else if (layout == "MBHK") {
+      *b = shape.At(1);
+      *m = shape.At(0);
+      *h = shape.At(2);
+      *k = shape.At(3);
+      *h_stride = *k;
+      *b_stride = *h_stride * *h;
+      *m_stride = *b_stride * *b;
+    } else {
+      UNIMPLEMENTED();
+    }
+    *offset = 0;
+  } else {
+    UNIMPLEMENTED();
+  };
+  if (batch_size) {
+    const int64_t expected_b = CHECK_JUST(batch_size);
+    CHECK_EQ(*b, expected_b);
+  }
+  if (seq_len) {
+    const int64_t expected_m = CHECK_JUST(seq_len);
+    CHECK_EQ(*m, expected_m);
+  }
+  if (num_heads) {
+    const int64_t expected_h = CHECK_JUST(num_heads);
+    CHECK_EQ(*h, expected_h);
+  }
+  if (head_size) {
+    const int64_t expected_k = CHECK_JUST(head_size);
+    CHECK_EQ(*k, expected_k);
+  }
+}
+
+void ParseDims(const ShapeView& shape, const std::string& layout,
+               const Optional<int64_t>& num_heads, const Optional<int64_t>& head_size,
+               int64_t tensor_index, int64_t* b, int64_t* m, int64_t* h, int64_t* k,
+               int64_t* b_stride, int64_t* m_stride, int64_t* h_stride, int64_t* offset) {
+  bool bm_packed{};
+  ParseDims(shape, layout, Optional<int64_t>(), Optional<int64_t>(), num_heads, head_size,
+            tensor_index, b, m, h, k, b_stride, m_stride, h_stride, offset, &bm_packed);
+}
+
 template<typename T, typename PositionType, typename IndexType, size_t NumDims, size_t RotaryEmbDim>
 struct FusedApplyRotaryEmbParam {
   const T* x;
@@ -1015,12 +1207,11 @@ struct FusedApplyRotaryEmbParam {
   IndexType k;
   IndexType packed_n;
   IndexType x_offset;
-  std::pair<char, IndexType> out_stride[NumDims];  // ordered descendingly by stride
 
-  IndexType x_b_stride;
-  IndexType x_m_stride;
-  IndexType x_h_stride;
-
+  IndexType ref_stride[NumDims];  // b, m, h, k
+  IndexType out_stride[NumDims];  // ordered descendingly by stride
+  IndexType x_stride[NumDims];
+  
   IndexType position_b_stride;
   IndexType position_rotate_stride;
 
@@ -1030,7 +1221,7 @@ struct FusedApplyRotaryEmbParam {
                            T* out, const T theta, const IndexType rotary_size,
                            const IndexType rotate_stride, const IndexType num_elements,
                            const IndexType k, const IndexType k0, const IndexType k1,
-                           const IndexType x_offset, const IndexType packed_n)
+                           const IndexType x_offset)
       : x(x),
         cos(cos),
         sin(sin),
@@ -1043,8 +1234,7 @@ struct FusedApplyRotaryEmbParam {
         k(k),
         k0(k0),
         k1(k1),
-        x_offset(x_offset),
-        packed_n(packed_n) {}
+        x_offset(x_offset)
 };
 
 template<typename T, typename PositionType, typename IndexType, size_t PackSize, size_t NumDims,
@@ -1055,32 +1245,30 @@ __global__ void IntervalKernel(
        packed_offset < param.num_elements; packed_offset += blockDim.x * gridDim.x) {
     using LoadPack = cuda::elementwise::Packed<T, PackSize>;
     IndexType offset = packed_offset * PackSize;
-    IndexType b_index = 0, m_index = 0, h_index = 0, k_index = 0;
+    IndexType index[NumDims]; // b, m, h, k
 
     IndexType temp_offset = offset;
 
     for (int i = 0; i < NumDims; i++) {
-      IndexType dim_tag = param.out_stride[i].first;
-      IndexType out_stride = param.out_stride[i].second;
-      IndexType index = temp_offset / out_stride;
-      if (dim_tag == 'b') {
-        b_index = index;
-      } else if (dim_tag == 'm') {
-        m_index = index;
-      } else if (dim_tag == 'h') {
-        h_index = index;
-      } else {
-        k_index = index;
-      }
-      temp_offset = temp_offset - index * out_stride;
+      IndexType ref_stride = param.ref_stride[i];
+      IndexType idx = temp_offset / ref_stride;
+      index[i] = idx;
+      temp_offset = temp_offset - idx * ref_stride;
     }
 
-    const IndexType x_offset = param.x_b_stride * b_index + param.x_m_stride * m_index
-                               + param.x_h_stride * h_index + k_index + param.x_offset;
+    IndexType x_offset = param.x_offset;
+    IndexType out_offset = 0;
+#pragma unroll
+    for (int i = 0; i < NumDims; i++) {
+      x_offset = x_offset + param.x_stride[i] * index[i];
+      out_offset = out_offset + param.out_stride[i] * index[i];
+    }
     const LoadPack x_vec = *reinterpret_cast<const LoadPack*>(param.x + x_offset);
 
+    const IndexType k_index = index[NumDims - 1];
     if (k_index < param.rotary_size) {
       const IndexType position_rotate_index = (k_index >= param.k0) ? 1 : 0;
+      const IndexType b_index = index[0], m_index = index[1];
       const IndexType position_id_offset = b_index * param.position_b_stride
                                            + position_rotate_index * param.position_rotate_stride
                                            + m_index;
@@ -1118,9 +1306,9 @@ __global__ void IntervalKernel(
                                   + x_vec.elem[i * 2] * sin_vec.elem[i * 2 + 1];
       }
 
-      *(reinterpret_cast<LoadPack*>(param.out + offset)) = out_vec;
+      *(reinterpret_cast<LoadPack*>(param.out + out_offset)) = out_vec;
     } else {
-      *(reinterpret_cast<LoadPack*>(param.out + offset)) = x_vec;
+      *(reinterpret_cast<LoadPack*>(param.out + out_offset)) = x_vec;
     }
   }
 }
@@ -1132,24 +1320,16 @@ __global__ void PlaneKernel(
        offset += blockDim.x * gridDim.x) {
     using LoadPack = cuda::elementwise::Packed<T, 2>;
     IndexType temp_offset = offset;
-    IndexType b_index = 0, m_index = 0, h_index = 0, k_index = 0;
+    IndexType index[NumDims];
 #pragma unroll
     for (int i = 0; i < NumDims; i++) {
-      IndexType dim_tag = param.out_stride[i].first;
-      IndexType out_stride = param.out_stride[i].second;
-      IndexType index = temp_offset / out_stride;
-      if (dim_tag == 'b') {
-        b_index = index;
-      } else if (dim_tag == 'm') {
-        m_index = index;
-      } else if (dim_tag == 'h') {
-        h_index = index;
-      } else {
-        k_index = index;
-      }
-      temp_offset = temp_offset - index * out_stride;
+      IndexType ref_stride = param.ref_stride[i];
+      IndexType idx = temp_offset / ref_stride;
+      index[i] = idx;
+      temp_offset = temp_offset - idx * ref_stride;
     }
 
+    const IndexType b_index = index[0], m_index = index[1], k_index = index[NumDims - 1];
     const IndexType position_rotate_index = (k_index >= param.k0) ? 1 : 0;
     const IndexType position_id_offset = b_index * param.position_b_stride
                                          + position_rotate_index * param.position_rotate_stride
@@ -1174,8 +1354,13 @@ __global__ void PlaneKernel(
     }
 
     LoadPack x_vec;
-    const IndexType x_offset = param.x_b_stride * b_index + param.x_m_stride * m_index
-                               + param.x_h_stride * h_index + k_index + param.x_offset;
+    IndexType x_offset = param.x_offset;
+    IndexType out_offset = 0;
+#pragma unroll
+    for (int i = 0; i < NumDims; i++) {
+      x_offset = x_offset + param.x_stride[i] * index[i];
+      out_offset = out_offset + param.out_stride[i] * index[i];
+    }
 
     if (k_index < param.k0) {
       x_vec.elem[0] = *(param.x + x_offset);
@@ -1193,7 +1378,7 @@ __global__ void PlaneKernel(
       out_val = *(param.x + x_offset);
     }
 
-    *(param.out + offset) = out_val;
+    *(param.out + out_offset) = out_val;
   }
 }
 
@@ -1202,10 +1387,10 @@ template<typename T, typename PositionType, typename IndexType, size_t PackSize,
 void LaunchKernel(ep::CudaStream* stream, const T* x, const T* cos, const T* sin,
                   const PositionType* position_ids, T* out, const int64_t* position_shape,
                   const std::string& x_layout, const std::string& output_layout,
-                  const std::string& mode, const T theta, const int64_t rotary_size,
-                  const int64_t b, const int64_t m, const int64_t h, const int64_t k,
-                  const int64_t x_b_stride, const int64_t x_m_stride, const int64_t x_h_stride,
-                  const int64_t x_offset, const int64_t out_b_stride, const int64_t out_m_stride, const int64_t out_h_stride,
+                  const std::string& mode, const T theta, const IndexType rotary_size,
+                  const IndexType b, const IndexType m, const IndexType h, const IndexType k,
+                  const IndexType x_b_stride, const IndexType x_m_stride, const IndexType x_h_stride,
+                  const IndexType x_offset, const IndexType out_b_stride, const IndexType out_m_stride, const IndexType out_h_stride,
                   IndexType num_elements) {
   DimVector kernel_x_shape(NumDims), kernel_sinuous_shape(NumDims);
 
@@ -1214,27 +1399,13 @@ void LaunchKernel(ep::CudaStream* stream, const T* x, const T* cos, const T* sin
 
   const IndexType rotate_stride = rotary_size / (2 * RotaryEmbDim);
 
-  IndexType packed_n = 1;
-  // TODO: only to test its accuracy, needs to be passed through parseDims
-  if (x_layout == "BM(H2K)" || x_layout == "MB(H2K)") {
-    packed_n = 2;
-  } else if (x_layout == "BM(H3K)" || x_layout == "MB(H3K)") {
-    packed_n = 3;
-  }
-
   struct FusedApplyRotaryEmbParam<T, PositionType, IndexType, NumDims, RotaryEmbDim> param(
       x, cos, sin, position_ids, out, theta, rotary_size, rotate_stride, num_elements, k, k0, k1,
-      x_offset, packed_n);
+      x_offset);
 
-  std::pair<char, IndexType> out_strides[NumDims];
-  out_strides[0] = {'b', out_b_stride};
-  out_strides[1] = {'h', out_h_stride};
-  out_strides[2] = {'m', out_m_stride};
-  out_strides[3] = {'k', 1};
-
-  param.x_b_stride = x_b_stride;
-  param.x_h_stride = x_h_stride;
-  param.x_m_stride = x_m_stride;
+  const IndexType ref_strides[NumDims] = {m * h * k, h * k, k, 1};
+  const IndexType out_strides[NumDims] = {out_b_stride, out_m_stride, out_h_stride, 1};
+  const IndexType x_strides[NumDims] = {x_b_stride, x_m_stride, x_h_stride, 1};
 
   param.sinuous_m_stride = k;
 
@@ -1242,36 +1413,14 @@ void LaunchKernel(ep::CudaStream* stream, const T* x, const T* cos, const T* sin
   param.position_rotate_stride = position_m;
   param.position_b_stride = position_m * RotaryEmbDim;
 
-  auto GetOutDim = [&](const char c) {
-    if (c == 'b') {
-      return b;
-    } else if (c == 'h') {
-      return h;
-    } else if (c == 'm') {
-      return m;
-    } else if (c == 'k') {
-      return k;
-    }
-
-    return 0L;
-  };
-
-  std::sort(out_strides, out_strides + NumDims, [&](auto pair1, auto pair2) {
-    if (pair1.second > pair2.second) {
-      return true;
-    } else if (pair1.second == pair2.second) {
-      if (GetOutDim(pair1.first) != 1) { return true; }
-      return false;
-    } else {
-      return false;
-    }
-    return pair1.second > pair2.second;
-  });
-
 // K has to be the last dimension, only k&m matters, therefore strides other than k&m does not
 // really needs to be computed
 #pragma unroll
-  for (int i = 0; i < NumDims; i++) { param.out_stride[i] = out_strides[i]; }
+  for (int i = 0; i < NumDims; i++) {
+    param.ref_stride[i] = ref_strides[i];
+    param.out_stride[i] = out_strides[i];
+    param.x_stride[i] = x_strides[i]; 
+  }
 
   constexpr size_t blk_size = 128;
 
@@ -1291,7 +1440,7 @@ template<typename T, typename PositionType, typename IndexType, size_t NumDims, 
 void DispatchPackSize(ep::CudaStream* stream, const T* x, const T* cos, const T* sin,
                       const PositionType* position_ids, T* out, const int64_t* position_shape,
                       const std::string& x_layout, const std::string& output_layout,
-                      const std::string& mode, const T theta, const int64_t rotary_size,
+                      const std::string& mode, const T theta, const IndexType rotary_size,
                       const IndexType b, const IndexType m, const IndexType h, const IndexType k,
                       const IndexType x_b_stride, const IndexType x_m_stride, const IndexType x_h_stride,
                       const IndexType x_offset, const IndexType out_b_stride, const IndexType out_m_stride, 
@@ -1336,7 +1485,7 @@ void DispatchIndex(ep::CudaStream* stream, const T* x, const T* cos, const T* si
   if (num_elements < (1 << 30)) {
     DispatchPackSize<T, PositionType, int32_t, NumDims, RotaryEmbDim>(
         stream, x, cos, sin, position_ids, out, position_shape, x_layout, output_layout, mode,
-        theta, rotary_size, static_cast<int32_t>(b), static_cast<int32_t>(m),
+        theta, static_cast<int32_t>(rotary_size), static_cast<int32_t>(b), static_cast<int32_t>(m),
         static_cast<int32_t>(h), static_cast<int32_t>(k), static_cast<int32_t>(x_b_stride),
         static_cast<int32_t>(x_m_stride), static_cast<int32_t>(x_h_stride),
         static_cast<int32_t>(x_offset), static_cast<int32_t>(out_b_stride),
