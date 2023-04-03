@@ -73,13 +73,14 @@ template<>
 Symbol<Device> AttrValueAccessor<Symbol<Device>>::Attr(const AttrValue& val) {
   auto pb_device = val.at_device();
   return CHECK_JUST(Device::New(*CHECK_JUST(DeviceTag4DeviceType(pb_device.device_type())),
-                                pb_device.device_id()));
+                                pb_device.device_id(), pb_device.rematable()));
 }
 
 template<>
 void AttrValueAccessor<Symbol<Device>>::Attr(const Symbol<Device>& cpp_val, AttrValue* attr_val) {
   attr_val->mutable_at_device()->set_device_type(cpp_val->enum_type());
   attr_val->mutable_at_device()->set_device_id(cpp_val->device_id());
+  attr_val->mutable_at_device()->set_rematable(cpp_val->rematable());
 }
 
 // List of Basic Attr
