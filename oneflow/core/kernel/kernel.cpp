@@ -52,13 +52,7 @@ void Kernel::Init(const KernelConf& kernel_conf, KernelContext* ctx) {
 void Kernel::Launch(KernelContext* ctx) const {
   SyncVmModeGuard guard(SyncVmMode::kEnable);
   ctx->WillForward(ctx, this);
-#ifdef OF_DEBUG_LAZY_RUNTIME
-  LOG(INFO) << "Kernel try to launch op " << this->op_conf().name();
-#endif  // OF_DEBUG_LAZY_RUNTIME
   Forward(ctx);
-#ifdef OF_DEBUG_LAZY_RUNTIME
-  LOG(INFO) << "Kernel finish launch op " << this->op_conf().name();
-#endif  // OF_DEBUG_LAZY_RUNTIME
   ctx->DidForward(ctx, this);
 }
 

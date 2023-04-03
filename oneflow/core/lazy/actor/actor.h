@@ -217,10 +217,6 @@ class Actor : public ActorBase {
   std::vector<ActorMsg> sync_msg_queue_;
   bool is_kernel_launch_synchronized_;
   std::vector<int64_t> tmp_regst_desc_id_vec_;
-
-#ifdef OF_DEBUG_LAZY_RUNTIME
-  int64_t act_cnt_{1};
-#endif  // OF_DEBUG_LAZY_RUNTIME
 };
 
 }  // namespace oneflow
