@@ -316,64 +316,73 @@ void LaunchAggregatedOps(const CommGroup& comm_group,
     const auto comm = comm_rank.cncl_comm();
     const StreamCtx* stream_ctx = device_id2stream_ctx.at(comm_rank.device_id()).get();
     MluCurrentDeviceGuard guard(comm_rank.device_id());
-    request_store->ForEachMutRequestEntryForIdsInJob(
-        request_ids, [&](RequestEntry* request_entry, int32_t i, const RequestId& request_id) {
-          const auto& op_desc = request_entry->desc().op_desc();
-          const std::shared_ptr<const RuntimeRequestInfo>& runtime_request_info =
-              request_entry->GetRuntimeRequest(local_rank);
-          const OpType op_type = op_desc.op_type();
-          const void* send_buff = runtime_request_info->send_buff;
-          void* recv_buff = runtime_request_info->recv_buff;
-          const int64_t elem_cnt = request_entry->elem_cnt();
-          const cnclDataType_t cncl_data_type = GetCnclDataType(op_desc.data_type());
-          const int32_t num_ranks = comm_group.global_rank_count();
-          if (op_type == OpType::kOpTypeAllReduce) {
-            OF_CNCL_CHECK(cnclAllReduce(send_buff, recv_buff, elem_cnt, cncl_data_type,
+    request_store->ForEachMutRequestEntryForIdsInJob(request_ids, [&](RequestEntry* request_entry,
+                                                                      int32_t i,
+                                                                      const RequestId& request_id) {
+      const auto& op_desc = request_entry->desc().op_desc();
+      const std::shared_ptr<const RuntimeRequestInfo>& runtime_request_info =
+          request_entry->GetRuntimeRequest(local_rank);
+      const OpType op_type = op_desc.op_type();
+      const void* send_buff = runtime_request_info->send_buff;
+      void* recv_buff = runtime_request_info->recv_buff;
+      const int64_t elem_cnt = request_entry->elem_cnt();
+      const cnclDataType_t cncl_data_type = GetCnclDataType(op_desc.data_type());
+      const int32_t num_ranks = comm_group.global_rank_count();
+      if (op_type == OpType::kOpTypeAllReduce) {
+        OF_CNCL_CHECK(cnclAllReduce(send_buff, recv_buff, elem_cnt, cncl_data_type,
+                                    GetCnclReduceOp(op_desc.reduce_method()), comm,
+                                    stream_ctx->stream()));
+      } else if (op_type == OpType::kOpTypeAllGather) {
+        CHECK_EQ(elem_cnt % num_ranks, 0);
+        OF_CNCL_CHECK(cnclAllGather(send_buff, recv_buff, elem_cnt / num_ranks, cncl_data_type,
+                                    comm, stream_ctx->stream()));
+      } else if (op_type == OpType::kOpTypeReduceScatter) {
+        CHECK_EQ(elem_cnt % num_ranks, 0);
+        OF_CNCL_CHECK(cnclReduceScatter(send_buff, recv_buff, elem_cnt / num_ranks, cncl_data_type,
                                         GetCnclReduceOp(op_desc.reduce_method()), comm,
                                         stream_ctx->stream()));
-          } else if (op_type == OpType::kOpTypeAllGather) {
-            CHECK_EQ(elem_cnt % num_ranks, 0);
-            OF_CNCL_CHECK(cnclAllGather(send_buff, recv_buff, elem_cnt / num_ranks, cncl_data_type,
-                                        comm, stream_ctx->stream()));
-          } else if (op_type == OpType::kOpTypeReduceScatter) {
-            CHECK_EQ(elem_cnt % num_ranks, 0);
-            OF_CNCL_CHECK(cnclReduceScatter(
-                send_buff, recv_buff, elem_cnt / num_ranks, cncl_data_type,
-                GetCnclReduceOp(op_desc.reduce_method()), comm, stream_ctx->stream()));
-          } else if (op_type == OpType::kOpTypeReduce) {
-            OF_CNCL_CHECK(cnclReduce(send_buff, recv_buff, elem_cnt, cncl_data_type,
-                                     GetCnclReduceOp(op_desc.reduce_method()), op_desc.root(), comm,
-                                     stream_ctx->stream()));
-          } else if (op_type == OpType::kOpTypeBroadcast) {
-            OF_CNCL_CHECK(cnclBroadcast(send_buff, recv_buff, elem_cnt, cncl_data_type,
-                                        op_desc.root(), comm, stream_ctx->stream()));
-          } else if (op_type == OpType::kOpTypeAll2All) {
-            const int64_t elem_per_rank = elem_cnt / num_ranks;
-            const int64_t elem_per_chunk = elem_per_rank / num_ranks;
-            const int64_t dtype_size = GetSizeOfDataType(op_desc.data_type());
-            const int64_t chunk_size = elem_per_chunk * dtype_size;
-            std::vector<const void*> send_bufs(num_ranks, nullptr);
-            std::vector<void*> revc_bufs(num_ranks, nullptr);
-            std::vector<uint32_t> buf_count(num_ranks, 0);
-            std::vector<cnclDataType_t> cncl_types(num_ranks, cnclInvalid);
-            for (int64_t j = 0; j < num_ranks; ++j) {
-              send_bufs[j] = reinterpret_cast<const void*>(reinterpret_cast<const char*>(send_buff)
-                                                           + j * chunk_size);
-              revc_bufs[j] =
-                  reinterpret_cast<void*>(reinterpret_cast<char*>(recv_buff) + j * chunk_size);
-              buf_count[j] = elem_per_chunk;
-              cncl_types[j] = cncl_data_type;
-            }
-
-            for (int64_t j = 0; j < num_ranks; ++j) {
-              OF_CNCL_CHECK(cnclAlltoAllv(send_bufs.data(), buf_count.data(), cncl_types.data(),
-                                          revc_bufs.data(), buf_count.data(), cncl_types.data(),
-                                          comm, stream_ctx->stream()));
-            }
-          } else {
-            UNIMPLEMENTED();
-          }
-        });
+      } else if (op_type == OpType::kOpTypeReduce) {
+        OF_CNCL_CHECK(cnclReduce(send_buff, recv_buff, elem_cnt, cncl_data_type,
+                                 GetCnclReduceOp(op_desc.reduce_method()), op_desc.root(), comm,
+                                 stream_ctx->stream()));
+      } else if (op_type == OpType::kOpTypeBroadcast) {
+        OF_CNCL_CHECK(cnclBroadcast(send_buff, recv_buff, elem_cnt, cncl_data_type, op_desc.root(),
+                                    comm, stream_ctx->stream()));
+      } else if (op_type == OpType::kOpTypeAll2All) {
+        const int64_t elem_per_rank = elem_cnt / num_ranks;
+        const int64_t elem_per_chunk = elem_per_rank / num_ranks;
+        const int64_t dtype_size = GetSizeOfDataType(op_desc.data_type());
+        const int64_t chunk_size = elem_per_chunk * dtype_size;
+        int64_t current_rank = GlobalProcessCtx::Rank();
+        OF_MLU_CHECK(cnrtMemcpyAsync(
+            reinterpret_cast<void*>(reinterpret_cast<char*>(recv_buff) + current_rank * chunk_size),
+            const_cast<void*>(reinterpret_cast<const void*>(reinterpret_cast<const char*>(send_buff)
+                                                            + current_rank * chunk_size)),
+            chunk_size, stream_ctx->stream(), cnrtMemcpyDevToDev));
+        for (int64_t j = 0; j < current_rank; ++j) {
+          OF_CNCL_CHECK(
+              cnclRecv(reinterpret_cast<void*>(reinterpret_cast<char*>(recv_buff) + j * chunk_size),
+                       elem_per_chunk, cncl_data_type, j, comm, stream_ctx->stream()));
+        }
+        for (int64_t j = current_rank + 1; j < num_ranks; ++j) {
+          OF_CNCL_CHECK(cnclSend(const_cast<void*>(reinterpret_cast<const void*>(
+                                     reinterpret_cast<const char*>(send_buff) + j * chunk_size)),
+                                 elem_per_chunk, cncl_data_type, j, comm, stream_ctx->stream()));
+        }
+        for (int64_t j = 0; j < current_rank; ++j) {
+          OF_CNCL_CHECK(cnclSend(const_cast<void*>(reinterpret_cast<const void*>(
+                                     reinterpret_cast<const char*>(send_buff) + j * chunk_size)),
+                                 elem_per_chunk, cncl_data_type, j, comm, stream_ctx->stream()));
+        }
+        for (int64_t j = current_rank + 1; j < num_ranks; ++j) {
+          OF_CNCL_CHECK(
+              cnclRecv(reinterpret_cast<void*>(reinterpret_cast<char*>(recv_buff) + j * chunk_size),
+                       elem_per_chunk, cncl_data_type, j, comm, stream_ctx->stream()));
+        }
+      } else {
+        UNIMPLEMENTED();
+      }
+    });
   }
 }
 
