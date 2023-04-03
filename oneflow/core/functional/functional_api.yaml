@@ -492,6 +492,10 @@
   signature: "Void (TensorTuple scaled_grads, Tensor found_inf, Tensor inv_scale) => AmpForEachNonFiniteCheckAndUnscale"
   bind_python: True
 
+- name: "multi_tensor_amp_foreach_non_finite_check_and_unscale_"
+  signature: "Void (TensorTuple scaled_grads, Tensor found_inf, Tensor inv_scale) => MultiTensorAmpForEachNonFiniteCheckAndUnscale"
+  bind_python: True
+
 - name: "as_strided"
   signature: "Tensor (Tensor input, Int64List size, Int64List stride, Int64 storage_offset=0) => AsStrided"
   bind_python: True

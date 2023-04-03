@@ -115,6 +115,9 @@ class GradScaler(object):
         enabled (bool, optional):  If ``False``, disables gradient scaling. :meth:`step` simply
             invokes the underlying ``optimizer.step()``, and other methods become no-ops.
             Default: ``True``
+        fused (bool, optional): whether to divide all the parameters into several groups, then
+            update each group of parameters with the fused kernel. Set fused=True can accelerate the training.
+            Default: ``False``
     """
 
     def __init__(
@@ -124,6 +127,7 @@ class GradScaler(object):
         backoff_factor=0.5,
         growth_interval=2000,
         enabled=True,
+        fused=False,
     ):
         if enabled and amp_definitely_not_available():
             warnings.warn(
@@ -147,6 +151,7 @@ class GradScaler(object):
             # self._growth_tracker will be lazily initialized during the first call to scale()
             self._growth_tracker = None
             self._per_optimizer_states = defaultdict(_refresh_per_optimizer_state)
+            self.fused = fused
 
     def _check_scale_growth_tracker(self, funcname) -> Tuple[Tensor, Tensor]:
         fix = "This may indicate your script did not use scaler.scale(loss or outputs) earlier in the iteration."
@@ -234,13 +239,24 @@ class GradScaler(object):
                         to_unscale.dtype
                     ].append(to_unscale)
 
+            # import ipdb
+
+            # ipdb.set_trace()
             for device, per_dtype_grads in per_device_and_dtype_grads.items():
-                for grads in per_dtype_grads.values():
-                    flow._C.amp_foreach_non_finite_check_and_unscale_(
-                        grads,
-                        per_device_found_inf.get(device),
-                        per_device_inv_scale.get(device),
-                    )
+                if self.fused:
+                    for grads in per_dtype_grads.values():
+                        flow._C.multi_tensor_amp_foreach_non_finite_check_and_unscale_(
+                            grads,
+                            per_device_found_inf.get(device),
+                            per_device_inv_scale.get(device),
+                        )
+                else:
+                    for grads in per_dtype_grads.values():
+                        flow._C.amp_foreach_non_finite_check_and_unscale_(
+                            grads,
+                            per_device_found_inf.get(device),
+                            per_device_inv_scale.get(device),
+                        )
 
         return per_device_found_inf._per_device_tensors
 

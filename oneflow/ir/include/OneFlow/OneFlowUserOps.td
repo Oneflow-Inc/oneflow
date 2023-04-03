@@ -11787,6 +11787,17 @@ def OneFlow_AMPForEachNonFiniteCheckAndUnscaleOp : OneFlow_BaseOp<"amp_non_finit
   let has_input_arg_modify_fn = 1;
 }
 
+def OneFlow_MultiTensorAMPForEachNonFiniteCheckAndUnscaleOp : OneFlow_BaseOp<"multi_tensor_amp_non_finite_check_and_unscale", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    Variadic<OneFlow_Tensor>:$scaled_grads_found_inf_inv_scale
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_input_arg_modify_fn = 1;
+}
+
 
 
 #endif // GET_ONEFLOW_EAGER_AMP_OP_DEFINITIONS

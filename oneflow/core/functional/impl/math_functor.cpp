@@ -4116,6 +4116,36 @@ class AmpForEachNonFiniteCheckAndUnscaleFunctor {
   std::vector<std::shared_ptr<OpExpr>> ops_;
 };
 
+class MultiTensorAmpForEachNonFiniteCheckAndUnscaleFunctor {
+ public:
+  MultiTensorAmpForEachNonFiniteCheckAndUnscaleFunctor() {
+    ops_.resize(kMaxInputCount + 2);
+    for (int n = 0; n < ops_.size(); ++n) {
+      ops_[n] = CHECK_JUST(one::OpBuilder("multi_tensor_amp_non_finite_check_and_unscale")
+                               .Input("scaled_grads_found_inf_inv_scale", n + 2)
+                               .Build());
+    }
+  }
+  Maybe<void> operator()(const TensorTuple& scaled_grads,
+                         const std::shared_ptr<one::Tensor>& found_inf,
+                         const std::shared_ptr<one::Tensor>& inv_scale) const {
+    const int64_t ninput = scaled_grads.size();
+    for (int i = 0; i < ninput; i += kMaxInputCount) {
+      size_t size = (i + kMaxInputCount) < ninput ? kMaxInputCount : ninput - i;
+      TensorTuple partial_inputs(size + 2);
+      for (int j = 0; j < size; ++j) { partial_inputs[j] = scaled_grads[i + j]; }
+      partial_inputs[size] = found_inf;
+      partial_inputs[size + 1] = inv_scale;
+      JUST(OpInterpUtil::Dispatch<TensorTuple>(*ops_[size], {partial_inputs}, AttrMap{}));
+    }
+
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> ops_;
+};
+
 class FusedCenterGradFunctor {
  public:
   FusedCenterGradFunctor() {
@@ -4664,6 +4694,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TruncFunctor>("Trunc");
   m.add_functor<AmpUpdateScaleFunctor>("AmpUpdateScale");
   m.add_functor<AmpForEachNonFiniteCheckAndUnscaleFunctor>("AmpForEachNonFiniteCheckAndUnscale");
+  m.add_functor<MultiTensorAmpForEachNonFiniteCheckAndUnscaleFunctor>(
+      "MultiTensorAmpForEachNonFiniteCheckAndUnscale");
   m.add_functor<StftFunctor>("Stft");
   m.add_functor<impl::FusedWeightedSumFunctor>("FusedWeightedSum");
   m.add_functor<impl::FusedCenterFunctor>("FusedCenter");
