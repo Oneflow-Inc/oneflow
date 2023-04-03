@@ -90,6 +90,7 @@ static Operation* BuildFusedBiasAddMaskScaleOpWithRate(PatternRewriter& rewriter
   if (rate_float < 1.0f) { scale = 1.0f / (1.0f - rate_float); }
   attributes.set("scale", rewriter.getF32FloatAttr(scale));
   attributes.erase(dropout_op.rateAttrName());
+  attributes.erase(dropout_op.seedAttrName());
   return rewriter.create<FusedBiasAddMaskScaleOp>(dropout_op->getLoc(), dropout_op.out().getType(),
                                                   operands, attributes);
 }
