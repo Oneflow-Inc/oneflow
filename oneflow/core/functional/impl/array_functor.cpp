@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/job/nd_sbp_util.h"
+#include "oneflow/core/eager/tensor_storage.h"
 #include <complex>
 
 namespace oneflow {
@@ -1784,6 +1785,13 @@ class CopyToDeviceFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, Symbol<Device> device,
                            const bool pin_memory) const {
+    if (x->is_local()) {
+      if (auto x_device = JUST(x->device()); x_device != device && x_device->rematable()) {
+        std::dynamic_pointer_cast<vm::RematableTensorStorage>(
+            JUST(x->eager_blob_object())->tensor_storage())
+            ->Remat();
+      }
+    }
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("device", "pin_memory");
     attrs.SetAllAttrs(device, pin_memory);
 
