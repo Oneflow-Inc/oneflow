@@ -254,13 +254,6 @@ class GradScaler(object):
                             per_device_found_inf.get(device),
                             per_device_inv_scale.get(device),
                         )
-            for device, per_dtype_grads in per_device_and_dtype_grads.items():
-                for grads in per_dtype_grads.values():
-                    flow._C.amp_foreach_non_finite_check_and_unscale_(
-                        grads,
-                        per_device_found_inf.get(device),
-                        per_device_inv_scale.get(device),
-                    )
 
         return per_device_found_inf._per_device_tensors
 
