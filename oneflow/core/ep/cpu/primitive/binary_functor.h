@@ -358,7 +358,7 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kDigammaBackwardWithDyX, Src, D
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
     // TODO:shijiaxing： This function is named trigamma, it will be implemented soon.
-    assert(false);
+   UNIMPLEMENTED();
     return 0;
   }
 };
