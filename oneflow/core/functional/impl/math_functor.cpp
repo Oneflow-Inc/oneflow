@@ -4199,16 +4199,20 @@ class FftC2RFunctor : public FftBaseFunctor {
     int64_t last_dim_size = 0;
     if (dims.has_value() && (*JUST(dims)).size() == 1) {
       // 1D-discrete fourier transform
+      // to be polished, because `(*JUST(dims)).size() == 1` so that we can remove for arange
       wrapped_dims = *JUST(dims);
       maybe_wrap_dims(wrapped_dims, x->ndim());
-      fft_len.resize(wrapped_dims.size());
+      fft_len.resize(wrapped_dims.size());  // note: wrapped_dims.size().size() == 1
       for (int i = 0; i < wrapped_dims.size(); i++) {
         fft_len[i] = n.has_value() == true ? (*JUST(n))[i] : x->dim(wrapped_dims[i]);
+        if (fft_len[i] == -1){
+          fft_len[i] = x->dim(wrapped_dims[i]);
+        }
         CHECK_OR_THROW(fft_len[i] >= 1)
             << Error::RuntimeError() << "Expected n >= 1, but got " << fft_len[i];
       }
-      last_dim_size = n.has_value() == true ? (*JUST(n))[0] : 2 * (x->dim(wrapped_dims.back()) - 1);
-      if (n.has_value()){
+      last_dim_size = n.has_value() == true && (*JUST(n))[0] != -1 ? fft_len[0] : 2 * (x->dim(wrapped_dims.back()) - 1);
+      if (n.has_value() == true && (*JUST(n))[0] != -1){
         fft_len[0] = last_dim_size / 2 + 1;
       }
     } else {
@@ -4424,6 +4428,9 @@ class RFftNFunctor {
                            const Optional<std::vector<int64_t>>& s,
                            const Optional<std::vector<int64_t>>& dim,
                            const Optional<std::string>& norm) const {
+    CHECK_OR_THROW(!(input->dtype()->is_complex()))
+    << "expects the dtype of input Tensor  is Real, but gets " << input->dtype()->name();
+
     std::string norm_str = norm.value_or("backward");
     if (s.has_value()) {
       std::vector<int64_t> len = *JUST(s);
@@ -4493,10 +4500,16 @@ class HFftNFunctor {
                            const Optional<std::vector<int64_t>>& s,
                            const Optional<std::vector<int64_t>>& dim,
                            const Optional<std::string>& norm) const {
+    CHECK_OR_THROW(input->dtype()->is_complex())
+    << "expects the dtype of input Tensor is Complex, but gets " << input->dtype()->name();
+
     std::string norm_str = norm.value_or("backward");
-    // TO-DO
-    CHECK_OR_THROW(false) << "UNIMPLEMENTED";
-    return input;
+    if (s.has_value()) {
+      std::vector<int64_t> len = *JUST(s);
+      return functional::FftC2R(input, len, dim, norm_str, /*onesided=*/true);
+    } else {
+      return functional::FftC2R(input, NullOpt, dim, norm_str, /*onesided=*/true);
+    }
   }
 };
 
@@ -4506,6 +4519,9 @@ class IHFftNFunctor {
                            const Optional<std::vector<int64_t>>& s,
                            const Optional<std::vector<int64_t>>& dim,
                            const Optional<std::string>& norm) const {
+    CHECK_OR_THROW(!(input->dtype()->is_complex()))
+    << "expects the dtype of input Tensor is Real, but gets " << input->dtype()->name();
+
     std::string norm_str = norm.value_or("backward");
     // TO-DO
     CHECK_OR_THROW(false) << "UNIMPLEMENTED";

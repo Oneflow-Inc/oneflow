@@ -85,6 +85,10 @@ def _test_fftn(test_case, dtype=np.complex64, params: dict = None):
     # copy back to cpu memory
     x_flow_grad = x_flow.grad.detach().cpu()
     y_flow = y_flow.detach().cpu()
+    if torch.is_conj(y_torch):
+        y_torch = torch.resolve_conj(y_torch)
+    if torch.is_conj(x_torch_grad):
+        x_torch_grad = torch.resolve_conj(x_torch_grad)
 
     compare_result(test_case, y_flow, y_torch, 1e-5, 1e-2)
     compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-2)
@@ -129,6 +133,10 @@ def _test_ifftn(test_case, dtype=np.complex64, params: dict = None):
     # copy back to cpu memory
     x_flow_grad = x_flow.grad.detach().cpu()
     y_flow = y_flow.detach().cpu()
+    if torch.is_conj(y_torch):
+        y_torch = torch.resolve_conj(y_torch)
+    if torch.is_conj(x_torch_grad):
+        x_torch_grad = torch.resolve_conj(x_torch_grad)
 
     compare_result(test_case, y_flow, y_torch, 1e-5, 1e-2)
     compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-2)
@@ -172,6 +180,10 @@ def _test_rfftn(test_case, dtype=np.float32, params: dict = None):
     # copy back to cpu memory
     x_flow_grad = x_flow.grad.detach().cpu()
     y_flow = y_flow.detach().cpu()
+    if torch.is_conj(y_torch):
+        y_torch = torch.resolve_conj(y_torch)
+    if torch.is_conj(x_torch_grad):
+        x_torch_grad = torch.resolve_conj(x_torch_grad)
 
     compare_result(test_case, y_flow, y_torch, 1e-5, 1e-2)
     compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-2)
@@ -215,6 +227,104 @@ def _test_irfftn(test_case, dtype=np.complex64, params: dict = None):
     # copy back to cpu memory
     x_flow_grad = x_flow.grad.detach().cpu()
     y_flow = y_flow.detach().cpu()
+    if torch.is_conj(y_torch):
+        y_torch = torch.resolve_conj(y_torch)
+    if torch.is_conj(x_torch_grad):
+        x_torch_grad = torch.resolve_conj(x_torch_grad)
+
+    compare_result(test_case, y_flow, y_torch, 1e-5, 1e-2)
+    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-2)
+
+    print(f"============== PASSED =============")
+    print("\n")
+
+def _test_hfftn(test_case, dtype=np.complex64, params: dict = None):
+    print(f"========== Start Testing ==========")
+    print(f"tensor shape: {params['shape']}")
+    print(f"dtype: {dtype}")
+
+    x_flow, x_torch = tensor_builder(params=params, dtype=dtype)
+    n = params["n"]
+    dims = params["dims"]
+    norm = params["norm"]
+    print(f"irfftn n: {n}")
+    print(f"irfftn dims: {dims}")
+    print(f"irfftn norm: {norm}")
+    print(f"x_flow.dtype: {x_flow.dtype}")
+    print("x_torch.dtype: ", x_torch.dtype)
+
+    # forward
+    y_torch = torch.fft.hfftn(x_torch, s=n, dim=dims, norm=norm)
+    y_torch_sum = y_torch.sum()
+
+    # backward
+    y_torch_sum.backward()
+
+    # copy back to cpu memory
+    x_torch_grad = x_torch.grad.detach().cpu()
+    y_torch = y_torch.detach().cpu()
+
+    # forward
+    y_flow = flow._C.hfftn(x_flow, s=n, dim=dims, norm=norm)
+    y_flow_sum = y_flow.sum()
+
+    # backward
+    y_flow_sum.backward()
+
+    # copy back to cpu memory
+    x_flow_grad = x_flow.grad.detach().cpu()
+    y_flow = y_flow.detach().cpu()
+    if torch.is_conj(y_torch):
+        y_torch = torch.resolve_conj(y_torch)
+    if torch.is_conj(x_torch_grad):
+        x_torch_grad = torch.resolve_conj(x_torch_grad)
+
+    compare_result(test_case, y_flow, y_torch, 1e-5, 1e-2)
+    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-2)
+
+    print(f"============== PASSED =============")
+    print("\n")
+
+def _test_ihfftn(test_case, dtype=np.float32, params: dict = None):
+    print(f"========== Start Testing ==========")
+    print(f"tensor shape: {params['shape']}")
+    print(f"dtype: {dtype}")
+
+    x_flow, x_torch = tensor_builder(params=params, dtype=dtype)
+    n = params["n"]
+    dims = params["dims"]
+    norm = params["norm"]
+    print(f"irfftn n: {n}")
+    print(f"irfftn dims: {dims}")
+    print(f"irfftn norm: {norm}")
+    print(f"x_flow.dtype: {x_flow.dtype}")
+    print("x_torch.dtype: ", x_torch.dtype)
+
+    # forward
+    y_torch = torch.fft.ihfftn(x_torch, s=n, dim=dims, norm=norm)
+    y_torch_sum = y_torch.sum()
+
+    # backward
+    y_torch_sum.backward()
+
+    # copy back to cpu memory
+    x_torch_grad = x_torch.grad.detach().cpu()
+    y_torch = y_torch.detach().cpu()
+
+    # forward
+    y_flow = flow._C.ihfftn(x_flow, s=n, dim=dims, norm=norm)
+    y_flow_sum = y_flow.sum()
+
+    # backward
+    y_flow_sum.backward()
+
+    # copy back to cpu memory
+    x_flow_grad = x_flow.grad.detach().cpu()
+    y_flow = y_flow.detach().cpu()
+    if torch.is_conj(y_torch):
+        y_torch = torch.resolve_conj(y_torch)
+    if torch.is_conj(x_torch_grad):
+        x_torch_grad = torch.resolve_conj(x_torch_grad)
 
     compare_result(test_case, y_flow, y_torch, 1e-5, 1e-2)
     compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-2)
@@ -236,7 +346,7 @@ class TestFftN(flow.unittest.TestCase):
         test_case.arg_dict["params"] = []
         lower_n_dims = 1
         upper_n_dims = 5
-        for _ in range(10):
+        for _ in range(30):
             num_dims = np.random.randint(lower_n_dims, upper_n_dims)
             shape = [np.random.randint(1, 11) * 2 for _ in range(num_dims)]
             len_fft_dim = np.random.randint(low=0, high=num_dims)
@@ -273,9 +383,9 @@ class TestFftN(flow.unittest.TestCase):
             # n = None
             # dims = (2, 0, 1)
             # norm = "ortho"
-            # shape = (14, 12, 16, 8)
-            # n = (26, 18, 10, 15)
-            # dims = (0, 3, 2, 1)
+            # shape = (20,)
+            # n = (-1,)
+            # dims = (0,)
             # norm = None
             # expected :
             # fft_shape : (4, 22, 1)
@@ -300,11 +410,11 @@ class TestIRFftN(TestFftN):
         test_case.arg_dict["test_fun"] = [_test_irfftn]
         test_case.arg_dict["dtype"] = [np.complex64, np.complex128]
 
-# class TestHFftN(TestFftN):
-#     def setUp(test_case):
-#         test_case.arg_dict = OrderedDict()
-#         test_case.arg_dict["test_fun"] = [_test_hfftn]
-#         test_case.arg_dict["dtype"] = [np.complex64, np.complex128]
+class TestHFftN(TestFftN):
+    def setUp(test_case):
+        test_case.arg_dict = OrderedDict()
+        test_case.arg_dict["test_fun"] = [_test_hfftn]
+        test_case.arg_dict["dtype"] = [np.complex64, np.complex128]
 
 # class TestIHFftN(TestFftN):
 #     def setUp(test_case):
