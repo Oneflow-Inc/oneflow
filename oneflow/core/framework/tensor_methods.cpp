@@ -113,6 +113,7 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object =
       JUST(view_tensor->eager_blob_object());
   view_eager_blob_object->set_storage_offset(JUST(view_tensor->storage_offset()));
+  view_eager_blob_object->set_input_of_view_op(blob_object);
   return std::static_pointer_cast<Tensor>(view_tensor);
 }
 

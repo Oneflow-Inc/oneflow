@@ -264,6 +264,8 @@ DIRECT_PASS_FUNC(PyTensorObject_floor_divide, functional::floor_divide)
 DIRECT_PASS_FUNC(PyTensorObject_atan2, functional::atan2)
 DIRECT_PASS_FUNC(PyTensorObject_gt, functional::greater)
 DIRECT_PASS_FUNC(PyTensorObject_gt_, functional::greater_)
+DIRECT_PASS_FUNC(PyTensorObject_frac, functional::frac)
+DIRECT_PASS_FUNC(PyTensorObject_frac_, functional::frac_)
 DIRECT_PASS_FUNC(PyTensorObject_ge, functional::greater_equal)
 DIRECT_PASS_FUNC(PyTensorObject_div, functional::div)
 DIRECT_PASS_FUNC(PyTensorObject_div_, functional::div_)
@@ -346,6 +348,8 @@ DIRECT_PASS_FUNC(PyTensorObject_mv, functional::matrix_vector_product)
 DIRECT_PASS_FUNC(PyTensorObject_fill_, functional::fill_)
 DIRECT_PASS_FUNC(PyTensorObject_gather, functional::dim_gather)
 DIRECT_PASS_FUNC(PyTensorObject_repeat_interleave, functional::repeat_interleave)
+DIRECT_PASS_FUNC(PyTensorObject_scatter_add, functional::scatter_add)
+DIRECT_PASS_FUNC(PyTensorObject_logaddexp, functional::logaddexp)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
@@ -1018,6 +1022,8 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"equal", (PyCFunction)PyTensorObject_equal, METH_VARARGS | METH_KEYWORDS, NULL},
     {"gt", (PyCFunction)PyTensorObject_gt, METH_VARARGS | METH_KEYWORDS, NULL},
     {"gt_", (PyCFunction)PyTensorObject_gt_, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"frac", (PyCFunction)PyTensorObject_frac, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"frac_", (PyCFunction)PyTensorObject_frac_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"ge", (PyCFunction)PyTensorObject_ge, METH_VARARGS | METH_KEYWORDS, NULL},
     {"div", (PyCFunction)PyTensorObject_div, METH_VARARGS | METH_KEYWORDS, NULL},
     {"div_", (PyCFunction)PyTensorObject_div_, METH_VARARGS | METH_KEYWORDS, NULL},
@@ -1091,6 +1097,8 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"gather", (PyCFunction)PyTensorObject_gather, METH_VARARGS | METH_KEYWORDS, NULL},
     {"repeat_interleave", (PyCFunction)PyTensorObject_repeat_interleave,
      METH_VARARGS | METH_KEYWORDS, NULL},
+    {"scatter_add", (PyCFunction)PyTensorObject_scatter_add, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"logaddexp", (PyCFunction)PyTensorObject_logaddexp, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},

@@ -3302,3 +3302,11 @@
 - name: "clone"
   signature: "Tensor (Tensor input) => Clone"
   bind_python: True
+
+- name: "frac"
+  signature: "Tensor (Tensor x) => Frac"
+  bind_python: True
+
+- name: "frac_"
+  signature: "Tensor (Tensor x) => FracInplace"
+  bind_python: True
