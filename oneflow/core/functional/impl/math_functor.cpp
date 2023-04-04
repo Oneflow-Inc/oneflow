@@ -3937,7 +3937,7 @@ class FftBaseFunctor {
     return must_copy ? functional::ConstantPad(sliced_tenosr, pad_amount, 0) : sliced_tenosr;
   }
 
-  Maybe<Symbol<DType>> promote_type_fft(Symbol<DType> type, bool require_complex) const {
+  Maybe<Symbol<DType>> promote_type_fft(Symbol<DType> type, bool require_complex=false) const {
     if (type->is_complex()) { return type; }
 
     if (!type->is_floating_point()) { type = GetDefaultDType(); }
@@ -3959,9 +3959,17 @@ class FftBaseFunctor {
                                    bool require_complex = false) const {
     auto cur_type = x->dtype();
     auto new_type = JUST(promote_type_fft(cur_type, require_complex));
-    return (cur_type->data_type() == new_type->data_type())
-               ? x
-               : functional::To(x, Optional<Symbol<Device>>(JUST(x->device())), new_type, false);
+    // return (cur_type->data_type() == new_type->data_type())
+    //            ? x
+    //            : functional::To(x, Optional<Symbol<Device>>(JUST(x->device())), new_type, false);
+    if (cur_type->data_type() == new_type->data_type()){
+      return x;
+    }
+    else{
+      TensorProcessor tensor_processor;
+      JUST(tensor_processor.AddInputs({x}, {new_type}).Apply());
+      return JUST(tensor_processor.GetInputs()).at(0);
+    }
   }
 
   Maybe<void> maybe_wrap_dims(std::vector<int64_t>& dims, int64_t dim_post_expr,
@@ -4107,11 +4115,11 @@ class FftR2CFunctor : public FftBaseFunctor {
           << "When dim and shape were both given, they must have the same length";
     }
 
-    std::vector<int64_t> fft_len(x->ndim(), 0);
-    std::vector<int64_t> wrapped_dims(x->ndim(), 0);
-    parse_input_n_and_dims(x, n, dims, fft_len, wrapped_dims);
+    std::vector<int64_t> fft_len(input_tensor->ndim(), 0);
+    std::vector<int64_t> wrapped_dims(input_tensor->ndim(), 0);
+    parse_input_n_and_dims(input_tensor, n, dims, fft_len, wrapped_dims);
     auto resized_tensor =
-        n.has_value() == true ? JUST(resize_fft_input(x, wrapped_dims, fft_len)) : x;
+        n.has_value() == true ? JUST(resize_fft_input(input_tensor, wrapped_dims, fft_len)) : input_tensor;
 
     // std::sort(wrapped_dims.begin(), wrapped_dims.end());
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "onesided", "forward");
@@ -4230,7 +4238,7 @@ class IFftFunctor {
 class Fft2Functor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const Optional<std::vector<int64_t>>& s,
+                           const std::vector<int64_t>& s,
                            const Optional<std::vector<int64_t>>& dim,
                            const Optional<std::string>& norm) const {
     // TO-DO: Add dim default params = {-2,-1}
@@ -4241,7 +4249,7 @@ class Fft2Functor {
 class IFft2Functor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const Optional<std::vector<int64_t>>& s,
+                           const std::vector<int64_t>& s,
                            const Optional<std::vector<int64_t>>& dim,
                            const Optional<std::string>& norm) const {
     // TO-DO: Add dim default params = {-2,-1}
@@ -4342,7 +4350,7 @@ class IRFftFunctor {
 class RFft2Functor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const Optional<std::vector<int64_t>>& s,
+                           const std::vector<int64_t>& s,
                            const Optional<std::vector<int64_t>>& dim,
                            const Optional<std::string>& norm) const {
     // TO-DO: Add dim default params = {-2,-1}
@@ -4353,7 +4361,7 @@ class RFft2Functor {
 class IRFft2Functor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const Optional<std::vector<int64_t>>& s,
+                           const std::vector<int64_t>& s,
                            const Optional<std::vector<int64_t>>& dim,
                            const Optional<std::string>& norm) const {
     // TO-DO: Add dim default params = {-2,-1}
@@ -4427,7 +4435,7 @@ class IHFftFunctor {
 class HFft2Functor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const Optional<std::vector<int64_t>>& s,
+                           const std::vector<int64_t>& s,
                            const Optional<std::vector<int64_t>>& dim,
                            const Optional<std::string>& norm) const {
     // TO-DO: Add dim default params = {-2,-1}
@@ -4438,7 +4446,7 @@ class HFft2Functor {
 class IHFft2Functor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const Optional<std::vector<int64_t>>& s,
+                           const std::vector<int64_t>& s,
                            const Optional<std::vector<int64_t>>& dim,
                            const Optional<std::string>& norm) const {
     // TO-DO: Add dim default params = {-2,-1}
