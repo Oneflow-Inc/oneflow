@@ -18,6 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+import os
 from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
@@ -47,6 +48,7 @@ def _test_softmax_impl(test_case, shape, input_dtype, output_dtype):
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.001, 0.001))
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class Testsoftmax(flow.unittest.TestCase):
     def test_softmax(test_case):

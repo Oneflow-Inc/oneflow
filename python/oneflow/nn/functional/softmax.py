@@ -20,7 +20,7 @@ from oneflow.framework.tensor import Tensor
 import oneflow as flow
 
 # ref https://github.com/pytorch/pytorch/blob/master/torch/nn/functional.py
-def softmax(input: Tensor, dim: Optional[int] = None, dtype = None) -> Tensor:
+def softmax(input: Tensor, dim: Optional[int] = None, dtype=None) -> Tensor:
     r"""Applies a softmax function.
     Softmax is defined as:
     :math:`\text{Softmax}(x_{i}) = \frac{\exp(x_i)}{\sum_j \exp(x_j)}`
