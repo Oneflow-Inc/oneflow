@@ -187,6 +187,7 @@ class Graph(object):
         self._debug_max_py_stack_depth = 2
         self._debug_op_repr_with_py_stack = False
         self._debug_only_user_py_stack = True
+        self._debug_ops_before_compile_runtime_flag = False
         self.debug(
             debug_v_level,
             ranks=debug_ranks,
@@ -608,7 +609,7 @@ class Graph(object):
     def _ops_repr(self):
         r"""Generate operators' string representation of this graph
         """
-        if self._is_compiled and self._compiled_graph_proto is not None:
+        if self._compiled_graph_proto is not None:
             module_conf = self._compiled_graph_proto.module_name2module_conf[self.name]
             if self._oneflow_internal_graph_ir__ is None:
                 self._oneflow_internal_graph_ir__ = GraphIR(self._compiled_graph_proto)
@@ -675,7 +676,7 @@ class Graph(object):
 
     @property
     def _compiled_graph_proto(self):
-        if not self._is_compiled:
+        if not self._is_compiled and not self._debug_ops_before_compile_runtime_flag:
             self.__print(
                 2,
                 0,
@@ -1296,7 +1297,10 @@ class Graph(object):
                 compiled_job_str = self._c_nn_graph.get_current_job_str()
                 self._compiled_job_proto = job_pb.Job()
                 self._compiled_job_proto.ParseFromString(compiled_job_str)
-
+                self._debug_ops_before_compile_runtime_flag = True
+                self.__print(
+                    0, 2, lambda: f"{self.name} with operators:\n" + self.__repr__()
+                )
                 self._c_nn_graph.compile_plan_for_runtime()
                 self._c_nn_graph.init_runtime()
 
