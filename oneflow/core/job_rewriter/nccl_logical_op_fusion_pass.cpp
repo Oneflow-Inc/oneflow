@@ -176,6 +176,8 @@ struct NcclFusionBucket {
 };
 
 std::string GenNcclFusionKey(const OpNode* nccl_op) {
+  // NOTE(chengcheng): Chain need same placement but ignore hierarchy,
+  //   logical_chain_id + hierarchy_shape can guarantee the same device_mesh.
   int64_t logical_chain_id = nccl_op->op().op_conf().logical_chain_id();
   const auto& hierarchy = nccl_op->parallel_desc().hierarchy();
   std::string fusion_key =
@@ -263,7 +265,7 @@ Maybe<void> NcclLogicalOpFusionPass::Apply(const OpGraph& op_graph, JobBuilder* 
   for (const auto& pair : nccl_depth2nccl_ops) {
     HashMap<std::string, std::vector<NcclFusionBucket>> fusion_key2nccl_buckets;
     for (const OpNode* nccl_op : pair.second) {
-      CHECK_OR_RETURN(nccl_op->op().op_conf().has_logical_chain_id());
+      CHECK(nccl_op->op().op_conf().has_logical_chain_id());
       std::string fusion_key = GenNcclFusionKey(nccl_op);
       AppendOrCreatFusionBucket(&fusion_key2nccl_buckets[fusion_key], nccl_op, bucket_limit);
     }
@@ -277,7 +279,7 @@ Maybe<void> NcclLogicalOpFusionPass::Apply(const OpGraph& op_graph, JobBuilder* 
 
   job_builder->RemoveOpByName(del_ops);
   for (const auto& pair : mut_op_name2conf) { JUST(job_builder->MutOpOnlyOnce(pair.second)); }
-  CHECK_EQ_OR_RETURN(nccl_fusion_ops.size(), nccl_fusion_op_parallel_confs.size());
+  CHECK_EQ(nccl_fusion_ops.size(), nccl_fusion_op_parallel_confs.size());
   for (int32_t i = 0; i < nccl_fusion_ops.size(); ++i) {
     JUST(job_builder->AddOp(JUST(VectorAt(nccl_fusion_op_parallel_confs, i)),
                             JUST(VectorAt(nccl_fusion_ops, i))));

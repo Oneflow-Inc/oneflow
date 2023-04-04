@@ -24,7 +24,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> _ncclLogicalFusionOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   int32_t nccl_size = ctx->input_size("in");
-  CHECK_EQ_OR_RETURN(nccl_size, ctx->output_size("out"));
+  CHECK_EQ_OR_RETURN(nccl_size, ctx->output_size("out"));  // NOLINT
   for (int32_t i = 0; i < nccl_size; ++i) {
     ctx->SetOutputShape("out", i, ctx->InputShape("in", i));
     ctx->SetOutputIsDynamic("out", i, ctx->InputIsDynamic("in", i));
@@ -38,13 +38,13 @@ namespace oneflow {
 
 /* static */ Maybe<void> _ncclLogicalFusionOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
   int32_t nccl_size = ctx->inputs().size();
-  CHECK_EQ_OR_RETURN(nccl_size, ctx->outputs().size());
+  CHECK_EQ_OR_RETURN(nccl_size, ctx->outputs().size());  // NOLINT
   const std::vector<std::string>& src_nd_sbp_str_list =
       ctx->user_op_conf().attr<std::vector<std::string>>("src_nd_sbp_str_list");
   const std::vector<std::string>& dst_nd_sbp_str_list =
       ctx->user_op_conf().attr<std::vector<std::string>>("dst_nd_sbp_str_list");
-  CHECK_EQ_OR_RETURN(nccl_size, src_nd_sbp_str_list.size());
-  CHECK_EQ_OR_RETURN(nccl_size, dst_nd_sbp_str_list.size());
+  CHECK_EQ_OR_RETURN(nccl_size, src_nd_sbp_str_list.size());  // NOLINT
+  CHECK_EQ_OR_RETURN(nccl_size, dst_nd_sbp_str_list.size());  // NOLINT
   for (int32_t i = 0; i < nccl_size; ++i) {
     NdSbp* input_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", i);
     NdSbp* output_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", i);
@@ -63,7 +63,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> _ncclLogicalFusionOp::InferDataType(user_op::InferContext* ctx) {
   int32_t nccl_size = ctx->input_size("in");
-  CHECK_EQ_OR_RETURN(nccl_size, ctx->output_size("out"));
+  CHECK_EQ_OR_RETURN(nccl_size, ctx->output_size("out"));  // NOLINT
   for (int32_t i = 0; i < nccl_size; ++i) {
     ctx->SetOutputDType("out", i, ctx->InputDType("in", i));
   }

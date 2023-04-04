@@ -92,7 +92,7 @@ Maybe<void> NcclLogicalChainStrictOrderPass::Apply(const OpGraph& op_graph,
       const std::string& prev_op_name = it->second->op().op_name();
       if (!IsReachable(prev_op_name, this_op_name)) {
         CHECK(mut_op_name2conf.emplace(this_op_name, node->op().op_conf()).second);
-        mut_op_name2conf.at(this_op_name).add_ctrl_in_op_name(prev_op_name);
+        JUST(MapAt(mut_op_name2conf, this_op_name)).add_ctrl_in_op_name(prev_op_name);
       }
       it->second = node;
     }
@@ -105,7 +105,7 @@ Maybe<void> NcclLogicalChainStrictOrderPass::Apply(const OpGraph& op_graph,
           << " , 1 ]";
       std::string placement_key = GenParallelConfKey(node->parallel_desc().parallel_conf());
       if (time_shape_cnt == acc_num) {
-        // fw/bw chain
+        // for all fw/bw chains in this placement
         placement2last_normal_node[placement_key] = node;  // create or update
       } else {
         // acc chain
@@ -158,7 +158,7 @@ Maybe<void> NcclLogicalChainStrictOrderPass::Apply(const OpGraph& op_graph,
         sink_acc_tick_conf.set_name(std::string("Sys-LastNcclChainSink-AccTick_") + NewUniqueId());
         sink_acc_tick_conf.set_scope_symbol_id(last_bw_node->op().op_conf().scope_symbol_id());
         auto* acc_conf = sink_acc_tick_conf.mutable_acc_tick_conf();
-        acc_conf->set_one(cast_to_tick_op.output("out", 0));
+        acc_conf->set_one(acc_tick_output_lbn);
         acc_conf->set_acc("acc");
         acc_conf->set_max_acc_num(acc_num);
 
