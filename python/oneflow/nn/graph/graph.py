@@ -271,9 +271,6 @@ class Graph(object):
         if not self._is_compiled:
             if not self._build_with_shared_graph:
                 self._compile(*args, **kwargs)
-                self.__print(
-                    0, 2, lambda: f"{self.name} with operators:\n" + self.__repr__()
-                )
             else:
                 self._compile_from_shared(*args, **kwargs)
 
