@@ -1708,7 +1708,10 @@ add_docstr(
         If the ``input`` Tensor already
         has the correct :class:`flow.dtype` and :class:`flow.device`, then ``input`` is returned.
         Otherwise, the returned tensor is a copy of ``input`` with the desired.
-
+        
+    Warning:
+        ``non_blocking=True`` is not implemented, ``non_blocking=False`` is used instead.
+        
     Args:
         input (oneflow.Tensor): An input tensor.
         *args (oneflow.Tensor or oneflow.device or oneflow.dtype): Positional arguments
