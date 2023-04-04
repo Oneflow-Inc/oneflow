@@ -134,6 +134,7 @@ std::set<std::string> MultiThreadBroadcastFromMasterToWorkers(size_t world_size,
                                                               Y* worker_data) {
   std::set<std::string> keys;
   char* broadcast_strategy = std::getenv("BROADCAST_STRATEGY");
+  char* master_machine_proxy = std::getenv("MASTER_MACHINE_PROXY");
   const size_t thread_num = ThreadLocalEnvInteger<ONEFLOW_LAZY_COMPILE_RPC_THREAD_NUM>();
   // optimize n <= k case
   if (broadcast_strategy && std::string(broadcast_strategy) == "LOCAL_RANK_PROXY") {
@@ -141,13 +142,17 @@ std::set<std::string> MultiThreadBroadcastFromMasterToWorkers(size_t world_size,
       std::mutex mtx4keys;
       // Unlike the implementation within the framework, here we directly transmit std::string.
       const std::string& data = master_data;
-      const size_t node_size = Singleton<GlobalProcessCtx>::Get()->NodeSize();
+      size_t node_size = Singleton<GlobalProcessCtx>::Get()->NodeSize();
       MultiThreadLoop(
           node_size,
           [&](int i) {
             const size_t single_node_process_num =
                 Singleton<GlobalProcessCtx>::Get()->NumOfProcessPerNode();
-            const size_t target_rank = single_node_process_num * i;
+            size_t target_rank = single_node_process_num * i;
+            if (master_machine_proxy && std::string(master_machine_proxy) == "RANK1"
+                && target_rank == 0) {
+              target_rank = 1;
+            }
             std::string key = prefix + std::to_string(i);
             Singleton<CtrlClient>::Get()->PushRankKV(target_rank, key, data);
             std::lock_guard<std::mutex> lock(mtx4keys);
@@ -159,7 +164,11 @@ std::set<std::string> MultiThreadBroadcastFromMasterToWorkers(size_t world_size,
       const size_t local_rank = Singleton<GlobalProcessCtx>::Get()->LocalRank();
       const size_t node_id = Singleton<GlobalProcessCtx>::Get()->NodeId(rank);
       std::string key = prefix + std::to_string(node_id);
-      const size_t target_rank = rank - local_rank;
+      size_t target_rank = rank - local_rank;
+      if (master_machine_proxy && std::string(master_machine_proxy) == "RANK1"
+          && target_rank == 0) {
+        target_rank = 1;
+      }
       Singleton<CtrlClient>::Get()->PullRankKV(target_rank, key, worker_data);
     }
 
