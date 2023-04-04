@@ -60,7 +60,7 @@ bool IsAccOrPackOpNode(const OpNode* node) {
 
 Maybe<void> NcclLogicalChainStrictOrderPass::Apply(const OpGraph& op_graph,
                                                    JobBuilder* job_builder) const {
-  HashMap<int64_t, const OpNode*> nccl_chain_id2last_node;
+  HashMap<int64_t, const OpNode*> nccl_chain_id2cur_last_node;
   HashMap<std::string, OperatorConf> mut_op_name2conf;
   HashMap<std::string, const OpNode*> placement2last_normal_node;
   HashMap<std::string, const OpNode*> placement2first_after_acc_node;
@@ -84,9 +84,9 @@ Maybe<void> NcclLogicalChainStrictOrderPass::Apply(const OpGraph& op_graph,
     const int64_t logical_chain_id = node->op().op_conf().logical_chain_id();
 
     // add ctrl edge for strict order
-    auto it = nccl_chain_id2last_node.find(logical_chain_id);
-    if (it == nccl_chain_id2last_node.end()) {
-      nccl_chain_id2last_node.emplace(logical_chain_id, node);
+    auto it = nccl_chain_id2cur_last_node.find(logical_chain_id);
+    if (it == nccl_chain_id2cur_last_node.end()) {
+      nccl_chain_id2cur_last_node.emplace(logical_chain_id, node);
     } else {
       const std::string& this_op_name = node->op().op_name();
       const std::string& prev_op_name = it->second->op().op_name();
