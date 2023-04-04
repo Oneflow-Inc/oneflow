@@ -14,12 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <vector>
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
-#include "oneflow/core/common/data_type.h"
-#include "oneflow/core/common/optional.h"
-#include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -1628,13 +1624,6 @@ class CastFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Symbol<DType>& dtype,
                            const bool pin_memory) const {
     if (x->dtype() == dtype) { return x; }
-    if (IsComplexDataType(x->dtype()->data_type()) && !(IsComplexDataType(dtype->data_type()))) {
-      // complex -> real
-      auto real_tensor = JUST(functional::Real(x));
-      auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "pin_memory");
-      attrs.SetAllAttrs(dtype->data_type(), pin_memory);
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {real_tensor}, attrs);
-    }
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "pin_memory");
     attrs.SetAllAttrs(dtype->data_type(), pin_memory);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
