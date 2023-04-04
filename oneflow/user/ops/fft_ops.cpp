@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/framework/op_generated.h"
 namespace oneflow {
 
-
 /* static */ Maybe<void> FftC2COp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("input", 0);
   const Stride& in_stride = ctx->InputStride("input", 0);

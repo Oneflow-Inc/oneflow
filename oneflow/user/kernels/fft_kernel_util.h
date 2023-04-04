@@ -134,8 +134,9 @@ template<DeviceType device_type, typename T>
 struct FftC2RKernelUtil {
   static void FftC2RForward(ep::Stream* stream, const std::complex<T>* data_in, T* data_out,
                             const Shape& input_shape, const Shape& output_shape,
-                            const Stride& input_stride, const Stride& output_stride, int64_t last_dim_size,
-                            const std::vector<int64_t>& dims, fft_norm_mode normalization);
+                            const Stride& input_stride, const Stride& output_stride,
+                            int64_t last_dim_size, const std::vector<int64_t>& dims,
+                            fft_norm_mode normalization);
 };
 
 }  // namespace oneflow

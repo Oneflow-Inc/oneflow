@@ -136,13 +136,13 @@ class FftR2CKernel final : public user_op::OpKernel {
     std::cout << "=========== [FftR2CKernel] 2 ==================" << std::endl;
 
     if (input->data_type() == kFloat) {
-      FftR2CKernelUtil<device_type, T>::FftR2CForward(ctx->stream(), input_ptr, out_ptr,
-                                                      input_shape, out_shape, input->stride(),
-                                                      out->stride(), /*forward=*/true, dims, norm_mode);
+      FftR2CKernelUtil<device_type, T>::FftR2CForward(
+          ctx->stream(), input_ptr, out_ptr, input_shape, out_shape, input->stride(), out->stride(),
+          /*forward=*/true, dims, norm_mode);
     } else if (input->data_type() == kDouble) {
-      FftR2CKernelUtil<device_type, T>::FftR2CForward(ctx->stream(), input_ptr, out_ptr,
-                                                      input_shape, out_shape, input->stride(),
-                                                      out->stride(), /*forward=*/true, dims, norm_mode);
+      FftR2CKernelUtil<device_type, T>::FftR2CForward(
+          ctx->stream(), input_ptr, out_ptr, input_shape, out_shape, input->stride(), out->stride(),
+          /*forward=*/true, dims, norm_mode);
     } else {
       Error::RuntimeError() << "expects kFloat or kDouble, but gets " << input->data_type();
     }
@@ -183,9 +183,9 @@ class FftC2RKernel final : public user_op::OpKernel {
     out_shape[dims.back()] = last_dim_size;
 
     if (input->data_type() == kComplex64 || input->data_type() == kComplex128) {
-      FftC2RKernelUtil<device_type, T>::FftC2RForward(ctx->stream(), input_ptr, out_ptr,
-                                                      input_shape, out_shape, input->stride(),
-                                                      out->stride(), /*last_dim_size=*/last_dim_size, dims, norm_mode);
+      FftC2RKernelUtil<device_type, T>::FftC2RForward(
+          ctx->stream(), input_ptr, out_ptr, input_shape, out_shape, input->stride(), out->stride(),
+          /*last_dim_size=*/last_dim_size, dims, norm_mode);
     } else {
       Error::RuntimeError() << "expects kComplex64 or kComplex128, but gets " << input->data_type();
     }
@@ -284,7 +284,7 @@ REGISTER_FFTR2C_KERNELS(DeviceType::kCPU, double);
 #define REGISTER_FFTC2R_KERNELS(device, dtype)                                                \
   REGISTER_USER_KERNEL("fft_c2r").SetCreateFn<FftC2RKernel<device, dtype>>().SetIsMatchedHob( \
       (user_op::HobDeviceType() == device)                                                    \
-      && (user_op::HobDataType("input", 0) == GetDataType<std::complex<dtype>>::value)                      \
+      && (user_op::HobDataType("input", 0) == GetDataType<std::complex<dtype>>::value)        \
       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))
 
 REGISTER_FFTC2R_KERNELS(DeviceType::kCPU, float);

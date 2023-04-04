@@ -1,4 +1,19 @@
 """
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+"""
 Copyright 2023 The OneFlow Authors. All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -220,7 +235,6 @@ def _test_irfft(test_case, dtype=np.float32, params: dict = None):
     x_torch_grad = x_torch.grad.detach().cpu()
     y_torch = y_torch.detach().cpu()
 
-
     # forward
     y_flow = flow._C.irfft(x_flow, n=n, dim=dim, norm=norm)
     y_flow_sum = y_flow.sum()
@@ -241,6 +255,7 @@ def _test_irfft(test_case, dtype=np.float32, params: dict = None):
 
     print(f"============== PASSED =============")
     print("\n")
+
 
 def _test_hfft(test_case, dtype=np.complex64, params: dict = None):
     print(f"========== Start Testing ==========")
@@ -339,13 +354,19 @@ def _test_ihfft(test_case, dtype=np.float32, params: dict = None):
     print(f"============== PASSED =============")
     print("\n")
 
+
 class TestFft(flow.unittest.TestCase):
     def setUp(test_case):
         test_case.arg_dict = OrderedDict()
         test_case.arg_dict["test_fun"] = [_test_fft, _test_ifft]
-        test_case.arg_dict["dtype"] = [np.float32, np.float64, np.complex64, np.complex128]
-    
-    def test_gather(test_case):        
+        test_case.arg_dict["dtype"] = [
+            np.float32,
+            np.float64,
+            np.complex64,
+            np.complex128,
+        ]
+
+    def test_gather(test_case):
         test_case.arg_dict["params"] = []
         lower_n_dims = 1
         upper_n_dims = 5
@@ -363,17 +384,18 @@ class TestFft(flow.unittest.TestCase):
                 n = None
             else:
                 n = np.random.randint(low=1, high=shape[dim] * 2)
-                
+
             # shape = (12, 4, 10, 2)
             # n = 17
             # dim = 2
             # norm = None
-                            
+
             test_case.arg_dict["params"].append(
                 {"shape": shape, "n": n, "dim": dim, "norm": norm}
             )
         for arg in GenArgList(test_case.arg_dict):
             arg[0](test_case, *arg[1:])
+
 
 class TestRFft(TestFft):
     def setUp(test_case):
@@ -381,11 +403,13 @@ class TestRFft(TestFft):
         test_case.arg_dict["test_fun"] = [_test_rfft]
         test_case.arg_dict["dtype"] = [np.float32, np.float64]
 
+
 class TestIRFft(TestFft):
     def setUp(test_case):
         test_case.arg_dict = OrderedDict()
         test_case.arg_dict["test_fun"] = [_test_irfft]
         test_case.arg_dict["dtype"] = [np.complex64, np.complex128]
+
 
 class TestHFft(TestFft):
     def setUp(test_case):
@@ -393,11 +417,13 @@ class TestHFft(TestFft):
         test_case.arg_dict["test_fun"] = [_test_hfft]
         test_case.arg_dict["dtype"] = [np.complex64, np.complex128]
 
+
 class TestIHFft(TestFft):
     def setUp(test_case):
         test_case.arg_dict = OrderedDict()
         test_case.arg_dict["test_fun"] = [_test_ihfft]
         test_case.arg_dict["dtype"] = [np.float32, np.float64]
+
 
 if __name__ == "__main__":
     unittest.main()

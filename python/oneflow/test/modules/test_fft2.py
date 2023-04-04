@@ -1,4 +1,19 @@
 """
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+"""
 Copyright 2023 The OneFlow Authors. All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -142,6 +157,7 @@ def _test_ifft2(test_case, dtype=np.complex64, params: dict = None):
     print(f"============== PASSED =============")
     print("\n")
 
+
 def _test_rfft2(test_case, dtype=np.float32, params: dict = None):
     print(f"========== Start Testing ==========")
     print(f"tensor shape: {params['shape']}")
@@ -188,6 +204,7 @@ def _test_rfft2(test_case, dtype=np.float32, params: dict = None):
 
     print(f"============== PASSED =============")
     print("\n")
+
 
 def _test_irfft2(test_case, dtype=np.complex64, params: dict = None):
     print(f"========== Start Testing ==========")
@@ -236,6 +253,7 @@ def _test_irfft2(test_case, dtype=np.complex64, params: dict = None):
     print(f"============== PASSED =============")
     print("\n")
 
+
 def _test_hfft2(test_case, dtype=np.complex64, params: dict = None):
     print(f"========== Start Testing ==========")
     print(f"tensor shape: {params['shape']}")
@@ -282,6 +300,7 @@ def _test_hfft2(test_case, dtype=np.complex64, params: dict = None):
 
     print(f"============== PASSED =============")
     print("\n")
+
 
 def _test_ihfft2(test_case, dtype=np.float32, params: dict = None):
     print(f"========== Start Testing ==========")
@@ -330,12 +349,18 @@ def _test_ihfft2(test_case, dtype=np.float32, params: dict = None):
     print(f"============== PASSED =============")
     print("\n")
 
+
 class TestFft2(flow.unittest.TestCase):
     def setUp(test_case):
         test_case.arg_dict = OrderedDict()
         test_case.arg_dict["test_fun"] = [_test_fft2, _test_ifft2]
-        test_case.arg_dict["dtype"] = [np.float32, np.float64, np.complex64, np.complex128]
-    
+        test_case.arg_dict["dtype"] = [
+            np.float32,
+            np.float64,
+            np.complex64,
+            np.complex128,
+        ]
+
     def test_gather(test_case):
         # set up profiling functions
         test_case.arg_dict["params"] = []
@@ -376,17 +401,20 @@ class TestFft2(flow.unittest.TestCase):
         for arg in GenArgList(test_case.arg_dict):
             arg[0](test_case, *arg[1:])
 
+
 class TestRFft2(TestFft2):
     def setUp(test_case):
         test_case.arg_dict = OrderedDict()
         test_case.arg_dict["test_fun"] = [_test_rfft2]
         test_case.arg_dict["dtype"] = [np.float32, np.float64]
-        
+
+
 class TestIRFft2(TestFft2):
     def setUp(test_case):
         test_case.arg_dict = OrderedDict()
         test_case.arg_dict["test_fun"] = [_test_irfft2]
         test_case.arg_dict["dtype"] = [np.complex64, np.complex128]
+
 
 class TestHFft2(TestFft2):
     def setUp(test_case):
@@ -394,11 +422,13 @@ class TestHFft2(TestFft2):
         test_case.arg_dict["test_fun"] = [_test_hfft2]
         test_case.arg_dict["dtype"] = [np.complex64, np.complex128]
 
+
 class TestIHFft2(TestFft2):
     def setUp(test_case):
         test_case.arg_dict = OrderedDict()
         test_case.arg_dict["test_fun"] = [_test_ihfft2]
         test_case.arg_dict["dtype"] = [np.float32, np.float64]
+
 
 if __name__ == "__main__":
     unittest.main()
