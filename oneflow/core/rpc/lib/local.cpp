@@ -148,6 +148,10 @@ void LocalCtrlClient::PullRankKV(const size_t rank, const std::string& k, std::s
   PullKV(k, v);
 }
 
+void LocalCtrlClient::PullRankKV(const size_t rank, const std::string& k, PbMessage* msg) {
+  PullKV(k, msg);
+}
+
 void LocalCtrlClient::Clear() {
   {
     std::unique_lock<std::mutex> lck(done_names_mtx_);
@@ -242,6 +246,10 @@ class DryRunCtrlClient : public CtrlClient {
   void PullRankKV(const size_t rank, const std::string& k, std::string* v) override {
     local_ctrl_client_->PullRankKV(rank, k, v);
   }
+  void PullRankKV(const size_t rank, const std::string& k, PbMessage* msg) override {
+    local_ctrl_client_->PullRankKV(rank, k, msg);
+  }
+
   void Clear() override { local_ctrl_client_->Clear(); }
   int32_t IncreaseCount(const std::string& k, int32_t v) override {
     return local_ctrl_client_->IncreaseCount(k, v);

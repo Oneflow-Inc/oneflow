@@ -120,6 +120,10 @@ void GrpcCtrlClient::PullRankKV(const size_t rank, const std::string& k, std::st
   rpc_client_.PullRankKV(rank, k, v);
 }
 
+void GrpcCtrlClient::PullRankKV(const size_t rank, const std::string& k, PbMessage* msg) {
+  rpc_client_.PullRankKV(rank, k, msg);
+}
+
 void GrpcCtrlClient::Clear() { rpc_client_.Clear(); }
 
 int32_t GrpcCtrlClient::IncreaseCount(const std::string& k, int32_t v) {
