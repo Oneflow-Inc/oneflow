@@ -256,6 +256,8 @@ if("${LLVM_MONO_REPO_URL}" STREQUAL
    OR "${LLVM_MONO_REPO_URL}" STREQUAL
       "https://github.com/llvm/llvm-project/archive/6d6268dcbf0f48e43f6f9fe46b3a28c29ba63c7d.zip"
    OR "${LLVM_MONO_REPO_URL}" STREQUAL
+      "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-16.0.0-rc4.zip"
+   OR "${LLVM_MONO_REPO_URL}" STREQUAL
       "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-15.0.6.zip"
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "f2f17229cf21049663b8ef4f2b6b8062"
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "6b7c6506d5922de9632c8ff012b2f945"
@@ -264,6 +266,7 @@ if("${LLVM_MONO_REPO_URL}" STREQUAL
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "075fbfdf06cb3f02373ea44971af7b03"
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "e412dc61159b5e929b0c94e44b11feb2"
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "1ccc00accc87a1a5d42a275d6e31cd8c"
+   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "b64481eaca658a2ff4e3e193440d0f68"
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "334997b4879aba15d9323a732356cf2a")
   unset(LLVM_MONO_REPO_URL CACHE)
   unset(LLVM_MONO_REPO_MD5 CACHE)
