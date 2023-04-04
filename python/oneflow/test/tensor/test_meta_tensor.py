@@ -180,6 +180,17 @@ class TestMetaTensor(flow.unittest.TestCase):
         test_case.assertEqual(x.sbp, y.sbp)
         test_case.assertEqual(x.placement, y.placement)
 
+    @flow.unittest.skip_unless_1n1d()
+    def test_meta_tensor_calculate(test_case):
+        x1 = flow.tensor([3, 2], device="meta")
+        y1 = x1 + 1
+        P = flow.placement(type="meta", ranks=[0])
+        sbp = flow.sbp.broadcast
+        x2 = flow.tensor([3, 2], placement=P, sbp=sbp)
+        y2 = x2 + 1
+        test_case.assertEqual(y1.device.type, "meta")
+        test_case.assertEqual(y2.placement.type, "meta")
+
 
 if __name__ == "__main__":
     unittest.main()
