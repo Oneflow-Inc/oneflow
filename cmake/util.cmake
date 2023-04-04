@@ -225,7 +225,7 @@ function(target_treat_warnings_as_errors target)
     target_try_compile_options(${target} -Wno-error=attributes)
 
     # disable error about XXX has no out-of-line virtual method definitions; its vtable will be emitted in every translation unit
-    target_try_compile_options(${target} -Wno-error=weak-tables)
+    target_try_compile_options(${target} -Wno-error=weak-vtables)
 
   endif()
 endfunction()
