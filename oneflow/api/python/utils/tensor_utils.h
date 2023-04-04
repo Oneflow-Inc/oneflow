@@ -138,10 +138,10 @@ inline Maybe<void> CopyBetweenLocalTensorAndNumpy(
   } else {
     Py_INCREF(array);
     NumPyArrayPtr array_ptr(array, [array]() {
-      CHECK_JUST(Singleton<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
+      // release array in main thread to eliminate the time-consuming gil request
+      CHECK_JUST(SingletonMaybe<VirtualMachine>())->add_main_thread_pending_task([array]() {
         Py_DECREF(array);
-        return Maybe<void>::Ok();
-      }));
+      });
     });
 
     JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
