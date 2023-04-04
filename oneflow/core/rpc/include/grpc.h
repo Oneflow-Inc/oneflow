@@ -53,6 +53,7 @@ class GrpcCtrlClient final : public CtrlClient {
   void PullRankKV(const size_t rank, const std::string& k,
                   std::function<void(const std::string&)> VGetter) override;
   void PullRankKV(const size_t rank, const std::string& k, std::string* v) override;
+  void PullRankKV(const size_t rank, const std::string& k, PbMessage* msg) override;
   void Clear() override;
   int32_t IncreaseCount(const std::string& k, int32_t v) override;
   void EraseCount(const std::string& k) override;

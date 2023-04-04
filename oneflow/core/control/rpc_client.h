@@ -65,6 +65,7 @@ class RpcClient {
   void PullRankKV(const size_t rank, const std::string& k,
                   std::function<void(const std::string&)> VGetter);
   void PullRankKV(const size_t rank, const std::string& k, std::string* v);
+  void PullRankKV(const size_t, const std::string& k, PbMessage* msg);
 
   void Clear();
 

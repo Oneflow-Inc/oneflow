@@ -440,10 +440,6 @@ function(oneflow_add_test target_name)
                                 "HTTP_PROXY='';HTTPS_PROXY='';http_proxy='';https_proxy='';")
 endfunction()
 
-# broadcast perf program
-oneflow_add_executable(broadcast_perf "${PROJECT_SOURCE_DIR}/tools/perf/master_broadcast_perf.cpp")
-target_link_libraries(broadcast_perf ${of_libs} ${oneflow_third_party_libs} glog::glog)
-
 # build test
 if(BUILD_TESTING)
   if(of_all_test_cc)

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/control/rpc_client.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/common/env_var/bootstrap.h"
@@ -185,6 +186,10 @@ void RpcClient::PullRankKV(const size_t rank, const std::string& k,
 
 void RpcClient::PullRankKV(const size_t rank, const std::string& k, std::string* v) {
   PullRankKV(rank, k, [&](const std::string& i) { *v = i; });
+}
+
+void RpcClient::PullRankKV(const size_t rank, const std::string& k, PbMessage* msg) {
+  PullRankKV(rank, k, [&](const std::string& i) { msg->ParseFromString(i); });
 }
 
 void RpcClient::Clear() {

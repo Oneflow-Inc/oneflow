@@ -103,6 +103,7 @@ class CtrlClient {
   }
   virtual void PullRankKV(const size_t rank, const std::string& k, std::function<void(const std::string&)> VGetter) = 0;
   virtual void PullRankKV(const size_t rank, const std::string& k, std::string* v) = 0;
+  virtual void PullRankKV(const size_t rank, const std::string& k, PbMessage* msg) = 0;
 
   virtual void Clear() = 0;
   virtual int32_t IncreaseCount(const std::string& k, int32_t v) = 0;
