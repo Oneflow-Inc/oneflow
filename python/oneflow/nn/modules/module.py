@@ -1381,7 +1381,7 @@ class Module(object):
             module.apply(fn)
         fn(self)
         return self
-    
+
     def to_empty(self: T, *, device: Union[str, flow.device]) -> T:
         r"""Moves the parameters and buffers to the specified device without copying storage.
 

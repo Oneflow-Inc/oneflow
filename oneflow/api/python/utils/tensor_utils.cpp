@@ -242,7 +242,9 @@ Maybe<Tensor> MakeGlobalTensorFromData(PyObject* data, const Optional<Symbol<DTy
         JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device, /*requires_grad=*/false,
                                /*pin_memory=*/false));
   }
-  JUST(CopyLocalTensorFromUntypedArray(local_tensor, array));
+  if (device->enum_type() != DeviceType::kMeta) {
+    JUST(CopyLocalTensorFromUntypedArray(local_tensor, array));
+  }
 
   Py_DECREF(array);
   // Cast to float if data is double sequence, rather than numpy array.
