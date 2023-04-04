@@ -33,13 +33,11 @@ struct FftR2CCaptureState : public AutoGradCaptureState {
   std::string norm_str;
 };
 
-#if 1
 class FftR2C : public OpExprGradFunction<FftR2CCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     return Maybe<void>::Ok();
   }
 
@@ -102,11 +100,7 @@ class FftR2C : public OpExprGradFunction<FftR2CCaptureState> {
 
     return Maybe<void>::Ok();
   }
-
- private:
-  AttrMap base_attrs_;
 };
-#endif
 
 struct FftC2CCaptureState : public AutoGradCaptureState {
   bool requires_grad;
@@ -120,18 +114,16 @@ class FftC2C : public OpExprGradFunction<FftC2CCaptureState> {
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Capture(FftC2CCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
-    ComposedAttrMap composed_attrs(attrs, base_attrs_);
 
     ctx->requires_grad = inputs.at(0)->requires_grad();
 
-    ctx->forward = JUST(composed_attrs.GetAttr<bool>("forward"));
+    ctx->forward = JUST(attrs.GetAttr<bool>("forward"));
     ctx->dims = JUST(attrs.GetAttr<std::vector<int64_t>>("dims"));
     ctx->norm_str = JUST(attrs.GetAttr<std::string>("norm"));
 
@@ -140,20 +132,12 @@ class FftC2C : public OpExprGradFunction<FftC2CCaptureState> {
 
   Maybe<void> Apply(const FftC2CCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    // TO-DO add gradient logic
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-    // std::vector<int64_t> n (out_grads.at(0)->ndim());
-    // for (int i = 0; i < ctx->dims.size(); i++){
-    //   n[i] = out_grads.at(0)->dim(ctx->dims[i]);
-    // }
     in_grads->resize(1);
     in_grads->at(0) = JUST(functional::FftC2C(out_grads.at(0), NullOpt, ctx->dims, ctx->norm_str,
                                               /*forward*/ !(ctx->forward), /*is_grad_fn*/ true));
     return Maybe<void>::Ok();
   }
-
- private:
-  AttrMap base_attrs_;
 };
 
 struct FftC2RCaptureState : public AutoGradCaptureState {
@@ -165,13 +149,11 @@ struct FftC2RCaptureState : public AutoGradCaptureState {
   DimVector input_shape_vec;
 };
 
-#if 1
 class FftC2R : public OpExprGradFunction<FftC2RCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     return Maybe<void>::Ok();
   }
 
@@ -216,10 +198,7 @@ class FftC2R : public OpExprGradFunction<FftC2RCaptureState> {
     return Maybe<void>::Ok();
   }
 
- private:
-  AttrMap base_attrs_;
 };
-#endif
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("fft_r2c", FftR2C);
 REGISTER_OP_EXPR_GRAD_FUNCTION("fft_c2c", FftC2C);

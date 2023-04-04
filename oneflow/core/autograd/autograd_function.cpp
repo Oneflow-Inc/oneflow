@@ -27,8 +27,6 @@ namespace one {
                                                           const FType& forward_fn,
                                                           const FType& backward_fn,
                                                           const TensorTuple& inputs) {
-  std::cout << "============ [AutogradFunctionBase::Apply] ============" << std::endl;
-
   std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>();
   const auto& op = JUST(FunctionOpExpr::New(name, forward_fn, backward_fn));
   JUST(OpInterpUtil::Dispatch(*op, inputs, outputs.get(), {}));

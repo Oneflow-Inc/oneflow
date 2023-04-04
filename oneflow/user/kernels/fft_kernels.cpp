@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include <complex>
 #include <cstdint>
-#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/stride.h"
 #include "oneflow/user/kernels/fft_kernel_util.h"
 #include "pocketfftplan.h"
@@ -24,8 +23,6 @@ namespace oneflow {
 
 namespace {
 
-// len = input_shape.back() / 2 + 1
-// n = output_shape.elem_cnt() / 2
 template<typename T>
 void convert_to_doublesized(const std::complex<T>* in, std::complex<T>* dst, size_t len, size_t n) {
   size_t fact_len = 2 * len - 2;  // input_shape.back()
@@ -126,7 +123,6 @@ class FftR2CKernel final : public user_op::OpKernel {
     Shape input_shape(input->shape_view());
     Shape out_shape(out->shape_view());
     fft_norm_mode norm_mode = norm_from_string(norm_str, forward);
-    std::cout << "=========== [FftR2CKernel] 1 ==================" << std::endl;
 
     // get last dim half size
     if (onesided) {
@@ -134,7 +130,6 @@ class FftR2CKernel final : public user_op::OpKernel {
       int64_t last_dim_halfsize = (input_shape[last_dim]) / 2 + 1;
       out_shape[last_dim] = last_dim_halfsize;
     }
-    std::cout << "=========== [FftR2CKernel] 2 ==================" << std::endl;
 
     if (input->data_type() == kFloat) {
       FftR2CKernelUtil<device_type, T>::FftR2CForward(
@@ -147,10 +142,8 @@ class FftR2CKernel final : public user_op::OpKernel {
     } else {
       Error::RuntimeError() << "expects kFloat or kDouble, but gets " << input->data_type();
     }
-    std::cout << "=========== [FftR2CKernel] 3 ==================" << std::endl;
 
     if (!onesided) { conj_symmetry(out_ptr, out_shape, out->stride(), dims, out_shape.elem_cnt()); }
-    std::cout << "=========== [FftR2CKernel] 4 ==================" << std::endl;
   }
 };
 
@@ -171,7 +164,6 @@ class FftC2RKernel final : public user_op::OpKernel {
     bool forward = ctx->Attr<bool>("forward");
     const std::string& norm_str = ctx->Attr<std::string>("norm");
     const std::vector<int64_t>& dims = ctx->Attr<std::vector<int64_t>>("dims");
-    std::cout << "=========== [FftC2RKernel] get attr ==================" << std::endl;
 
     const std::complex<T>* input_ptr = input->dptr<std::complex<T>>();
     T* out_ptr = out->mut_dptr<T>();
@@ -179,7 +171,6 @@ class FftC2RKernel final : public user_op::OpKernel {
     Shape input_shape(input->shape_view());
     Shape out_shape(out->shape_view());
     fft_norm_mode norm_mode = norm_from_string(norm_str, forward);
-    std::cout << "=========== [FftC2RKernel] get norm ==================" << std::endl;
 
     out_shape[dims.back()] = last_dim_size;
 
@@ -222,15 +213,6 @@ class StftCpuKernel final : public user_op::OpKernel {
     const T* data_in = input->dptr<T>();
     T* data_out = output->mut_dptr<T>();
 
-    // ===============
-    // auto normalization = normalized ? fft_norm_mode::by_root_n : fft_norm_mode::none;
-    // PocketFFtParams<IN, OUT> params(/*in_shape=*/Shape{len}, /*out_shape=*/Shape{len}, /*is_forward=*/true,
-    //                                 /*f=*/compute_fct<IN>(len, normalization) /*1.f*/,
-    //                                 /*type=*/FFT_EXCUTETYPE::R2C);
-    // PocketFFtConfig<IN, OUT> config(params);
-    // OUT* out_tmp_buffer = reinterpret_cast<OUT*>(tmp_buffer->mut_dptr<char>());
-    // config.excute(data_in, out_tmp_buffer, dims, batch, len);
-    // ===============
     auto normalization = normalized ? fft_norm_mode::by_root_n : fft_norm_mode::none;
     std::complex<T>* out_tmp_buffer = reinterpret_cast<std::complex<T>*>(tmp_buffer->mut_dptr<char>());
     Shape out_tmp_shape = Shape{len};
@@ -254,17 +236,6 @@ class StftCpuKernel final : public user_op::OpKernel {
 
     if (!return_complex) { comvert_to_real<T>(out_tmp_buffer, data_out, output_elem_cnt); }
 
-    // if (!onesized) {
-    //   OUT* doublesided_tmp_buffer =
-    //       reinterpret_cast<OUT*>(tmp_buffer->mut_dptr<char>()) + output_elem_cnt;
-    //   size_t last_dim_length = len / 2 + 1;
-    //   size_t elem_conut = output_elem_cnt;
-    //   convert_to_doublesized<IN>(out_tmp_buffer, doublesided_tmp_buffer, last_dim_length,
-    //                              elem_conut);
-    //   out_tmp_buffer = doublesided_tmp_buffer;
-    // }
-
-    // if (!return_complex) { comvert_to_real<IN>(out_tmp_buffer, data_out, output_elem_cnt); }
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -284,24 +255,9 @@ class StftCpuKernel final : public user_op::OpKernel {
         const int64_t output_bytes = (output_elem_cnt * sizeof(std::complex<dtype>));                   \
         return onesided ? output_bytes : 2 * output_bytes;                                  \
       });
-// #define REGISTER_STFT_CPU_KERNEL(intype, outtype)                                           \
-//   REGISTER_USER_KERNEL("stft")                                                              \
-//       .SetCreateFn<StftCpuKernel<intype, outtype>>()                                        \
-//       .SetIsMatchedHob((user_op::HobDeviceType() == kCPU)                                   \
-//                        && (user_op::HobDataType("input", 0) == GetDataType<intype>::value)) \
-//       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                   \
-//         const Shape& output_shape = ctx->InputShape("output", 0);                           \
-//         const bool return_complex = ctx->Attr<bool>("return_complex");                      \
-//         const bool onesided = ctx->Attr<bool>("onesided");                                  \
-//         int64_t output_elem_cnt =                                                           \
-//             return_complex ? output_shape.elem_cnt() : output_shape.elem_cnt() / 2;         \
-//         const int64_t output_bytes = (output_elem_cnt * sizeof(outtype));                   \
-//         return onesided ? output_bytes : 2 * output_bytes;                                  \
-//       });
+
 REGISTER_STFT_CPU_KERNEL(double)
 REGISTER_STFT_CPU_KERNEL(float)
-// REGISTER_STFT_CPU_KERNEL(double, std::complex<double>)
-// REGISTER_STFT_CPU_KERNEL(float, std::complex<float>)
 
 #endif
 

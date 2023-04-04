@@ -55,10 +55,6 @@ Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
       << "RuntimeError: got " << outputs.size() << " tensors and " << gradients->size()
       << " gradients";
   for (int i = 0; i < outputs.size(); ++i) {
-    int dims = outputs.at(i)->ndim();
-    // std::cout << "dims = " << dims << std::endl;
-    // for (int x = 0; x < dims; x++) { std::cout << outputs.at(i)->dim(x) << " "; }
-    // std::cout << std::endl;
     CHECK_OR_RETURN(outputs.at(i)->requires_grad())
         << "\nRuntimeError: element " << i
         << " of tensors does not require grad and does not have a grad_fn";
