@@ -22,9 +22,9 @@ namespace oneflow {
 namespace one {
 
 struct AsStridedCaptureState : public AutoGradCaptureState {
-  std::vector<int32_t> size;
-  std::vector<int32_t> stride;
-  int32_t storage_offset = 0;
+  std::vector<int64_t> size;
+  std::vector<int64_t> stride;
+  int64_t storage_offset = 0;
   bool requires_grad = false;
 };
 
@@ -55,9 +55,9 @@ Maybe<void> AsStrided::Capture(AsStridedCaptureState* ctx, const TensorTuple& in
   ctx->SaveTensorForBackward(inputs.at(0));
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->size = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("size"));
-  ctx->stride = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("stride"));
-  ctx->storage_offset = JUST(composed_attrs.GetAttr<int32_t>("storage_offset"));
+  ctx->size = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("size"));
+  ctx->stride = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("stride"));
+  ctx->storage_offset = JUST(composed_attrs.GetAttr<int64_t>("storage_offset"));
   return Maybe<void>::Ok();
 }
 
@@ -67,9 +67,9 @@ Maybe<void> AsStrided::Apply(const AsStridedCaptureState* ctx, const TensorTuple
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
 
   const auto& input = ctx->SavedTensors().at(0);
-  std::vector<int32_t> size = ctx->size;
-  std::vector<int32_t> stride = ctx->stride;
-  int32_t storage_offset = ctx->storage_offset;
+  std::vector<int64_t> size = ctx->size;
+  std::vector<int64_t> stride = ctx->stride;
+  int64_t storage_offset = ctx->storage_offset;
 
   in_grads->at(0) =
       JUST(functional::AsStridedGrad(out_grads.at(0), input, size, stride, storage_offset));

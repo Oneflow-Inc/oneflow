@@ -49,7 +49,6 @@ class CastToStaticShapeKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("cast_to_static_shape")
     .SetCreateFn<CastToStaticShapeKernel>()
-    .SetIsMatchedHob(user_op::HobTrue())
     .SetInplaceProposalFn([](const user_op::InferContext&,
                              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       OF_RETURN_IF_ERROR(AddInplaceArgPairFn("output", 0, "input", 0, false));

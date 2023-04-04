@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/user_op_conf.h"
+#include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/sbp_parallel.pb.h"
@@ -62,8 +63,8 @@ class DataParallelNodeSequence final {
   int64_t len() const { return len_; }
 
   void resize(const int64_t size) {
-    CHECK(size <= len_);
-    CHECK(size > 1);
+    CHECK_LE(size, len_);
+    CHECK_GE(size, 1);
     nodes_.resize(size);
     len_ = nodes().size();
   }
@@ -338,8 +339,7 @@ bool IsSplitValid(const Shape& shape, const NdSbp& nd_sbp, const Shape& hierachy
     if (sbp.has_split_parallel()) {
       const int64_t dim = sbp.split_parallel().axis();
       if (dim >= cur_shape.NumAxes()) { return false; }
-      // Evenly split.
-      if (cur_shape.At(dim) % hierachy.At(i) != 0) { return false; }
+      // Unbalanced split and take the minimum
       cur_shape.Set(dim, cur_shape.At(dim) / hierachy.At(i));
       // Larger then min size.
       if (cur_shape.elem_cnt() < min_size) { return false; }
@@ -430,7 +430,7 @@ void ShardSequence(JobBuilder* builder, const int64_t threshold, const ParallelD
       }
     }
     if (!split_is_allowed) {
-      VLOG(3) << var_node->op().op_name() << " failed to change form B to S "
+      VLOG(3) << var_node->op().op_name() << " failed to change from B to S "
               << " with op conf " << new_var_op_conf.variable_conf().DebugString();
       continue;
     }
@@ -443,7 +443,7 @@ void ShardSequence(JobBuilder* builder, const int64_t threshold, const ParallelD
       SetNdSbp4Consumers(builder, sorted_sequences.at(i), var_nd_sbp);
     }
     prev_allowed_op_name = var_node->op().op_name();
-    VLOG(3) << var_node->op().op_name() << " succeed to change form B to " << new_split_signature
+    VLOG(3) << var_node->op().op_name() << " succeed to change from B to " << new_split_signature
             << " on ranks dim " << split_dim << " with op conf "
             << new_var_op_conf.variable_conf().DebugString();
   }
@@ -522,8 +522,16 @@ class OptimizerPlacementOptimizationPass final : public JobPass {
           && ctx->job_desc().job_conf().optimizer_placement_optimization_mode() != "none")) {
       return Maybe<void>::Ok();
     }
-    if (job->job_conf().enable_auto_parallel()) {
-      LOG(WARNING) << "ZeRO optimization will be ignored when enabling AutoParallel";
+    if (job->job_conf().enable_auto_parallel()
+        && job->job_conf().enable_auto_parallel_ignore_user_sbp_config()) {
+      LOG(WARNING) << "ZeRO optimization will be ignored when enabling AutoParallel to ignore user "
+                      "sbp configuration";
+      if (job->job_conf().enable_auto_memory() != oneflow::AutoMemoryStrategy::kHeavyAutoMemory) {
+        job->mutable_job_conf()->set_enable_auto_memory(
+            ::oneflow::AutoMemoryStrategy::kModerateAutoMemory);
+        LOG(WARNING) << "But we turn on moderate auto memory to reduce the memory, which has "
+                        "similar effect as the ZeRO optimization";
+      }
       return Maybe<void>::Ok();
     }
     const std::string& mode = ctx->job_desc().job_conf().optimizer_placement_optimization_mode();

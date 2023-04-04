@@ -32,7 +32,7 @@ class TensorScatterNdUpdate(flow.nn.Graph):
         return flow.tensor_scatter_nd_update(origin, indices, update)
 
 
-def _test_global_tensor_scatter_nd_update(test_case, placement, sbp, check_graph=False):
+def _test_global_tensor_scatter_nd_update(test_case, placement, sbp, check_graph=True):
     origin = random_tensor(1, 16, requires_grad=False).to_global(placement, sbp)
     indices = choice_tensor(16, (8, 1), replace=False).to_global(
         placement, [flow.sbp.broadcast for _ in range(len(placement.ranks.shape))]
@@ -61,7 +61,7 @@ def _test_global_tensor_scatter_nd_update(test_case, placement, sbp, check_graph
 
 
 def _test_global_tensor_scatter_nd_update_t(
-    test_case, placement, sbp, check_graph=False
+    test_case, placement, sbp, check_graph=True
 ):
 
     origin = random_tensor(2, 16, 4, requires_grad=False).to_global(placement, sbp)

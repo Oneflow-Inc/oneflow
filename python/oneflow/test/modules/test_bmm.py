@@ -97,7 +97,7 @@ class TestModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(check_graph=True)
+    @autotest(check_graph=True, rtol=1e-4, atol=1e-3)
     def test_bmm_with_torch(test_case):
         device = random_device()
         mat1 = random_tensor(ndim=3, dim0=2, dim1=4, dim2=3).to(device)

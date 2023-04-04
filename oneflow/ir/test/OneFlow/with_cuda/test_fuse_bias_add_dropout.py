@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-# RUN: python3 %s | FileCheck %s
+# RUN: python3 -m oneflow.test_utils.throttle --with-cuda=%with_cuda python3 %s | FileCheck %s
 # CHECK-NOT: oneflow.bias_add
 
 import unittest
@@ -22,7 +22,8 @@ import numpy as np
 import os
 
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-
+os.environ["ONEFLOW_MLIR_FUSE_FORWARD_OPS"] = "1"
+os.environ["ONEFLOW_MLIR_STDOUT"] = "1"
 import oneflow as flow
 import oneflow.unittest
 import oneflow.sysconfig
@@ -49,7 +50,10 @@ def do_bias_add_dropout_graph(test_case, with_cuda, prob):
 
     graph_to_run = GraphToRun()
     lazy_res = graph_to_run(x, bias)
-    test_case.assertTrue(np.array_equal(eager_res.numpy(), lazy_res.numpy()))
+    if prob == 1.0:
+        test_case.assertTrue(np.array_equal(eager_res.numpy(), lazy_res.numpy()))
+    else:
+        test_case.assertTrue(lazy_res.sum().item() != 0.0)
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -57,6 +61,7 @@ def do_bias_add_dropout_graph(test_case, with_cuda, prob):
 class TestBiasAddDropout(oneflow.unittest.TestCase):
     def test_bias_add_dropout_graph(test_case):
         do_bias_add_dropout_graph(test_case, True, 1.0)
+        do_bias_add_dropout_graph(test_case, True, 0.5)
 
 
 if __name__ == "__main__":

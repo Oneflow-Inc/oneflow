@@ -19,8 +19,8 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ auto AsStridedOp::InferLogicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
-  const auto& size = ctx->Attr<std::vector<int32_t>>("size");
-  const auto& stride = ctx->Attr<std::vector<int32_t>>("stride");
+  const auto& size = ctx->Attr<std::vector<int64_t>>("size");
+  const auto& stride = ctx->Attr<std::vector<int64_t>>("stride");
   CHECK_EQ_OR_RETURN(size.size(), stride.size()) << "mismatch in length of strides and shape";
   DimVector out_vec;
   out_vec.insert(out_vec.end(), size.cbegin(), size.cend());

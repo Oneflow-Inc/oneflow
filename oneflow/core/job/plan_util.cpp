@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/graph/task_node.h"
 
 namespace oneflow {
 
@@ -52,15 +53,63 @@ std::function<const TaskProto*(int64_t)> PlanUtil::MakeGetterTaskProto4TaskId(co
   return [task_id2task_proto](int64_t task_id) { return task_id2task_proto->at(task_id); };
 }
 
-void PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(Plan* plan) {
+namespace {
+
+void SetVariableOpNamesForVariableAndRepeatRegst(Plan* plan) {
+  // NOTE(chengcheng): set variable_op_name before set separated header because var regst alway
+  //  separated.
+  HashMap<int64_t, std::string> regst_id2var_name;
   for (int i = 0; i < plan->task_size(); i++) {
     TaskProto* task = plan->mutable_task(i);
+    if (task->exec_sequence().exec_node_size() == 1) {
+      const auto& op_conf =
+          PlanUtil::GetOpAttribute(plan, task->job_id(),
+                                   task->exec_sequence().exec_node(0).kernel_conf())
+              .op_conf();
+      if (op_conf.has_variable_conf()) {
+        RegstDescProto* regst = PlanUtil::GetSoleProducedDataRegst(task);
+        regst_id2var_name.emplace(regst->regst_desc_id(), op_conf.name());
+        regst->set_variable_op_name(op_conf.name());
+      }
+    }
+  }
+
+  for (int i = 0; i < plan->task_size(); i++) {
+    TaskProto* task = plan->mutable_task(i);
+    if (task->task_type() == TaskType::kRepeat) {
+      RegstDescProto* regst = PlanUtil::GetSoleProducedDataRegst(task);
+      CHECK(regst->has_force_inplace_consumed_regst_desc_id());
+      int64_t force_inplace_regst_id = regst->force_inplace_consumed_regst_desc_id();
+      auto var_name_it = regst_id2var_name.find(force_inplace_regst_id);
+      if (var_name_it != regst_id2var_name.end()) {
+        regst->set_variable_op_name(var_name_it->second);
+        VLOG(3) << " set var op name to repeat regst : " << regst->DebugString();
+      }
+    }
+  }
+}
+
+}  // namespace
+
+void PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(Plan* plan) {
+  SetVariableOpNamesForVariableAndRepeatRegst(plan);
+
+  for (int i = 0; i < plan->task_size(); i++) {
+    TaskProto* task = plan->mutable_task(i);
+
     for (auto& pair : *task->mutable_produced_regst_desc()) {
       RegstDescProto* regst_desc = &pair.second;
       if (regst_desc->mem_block_id() == -1) {
         CHECK_EQ(regst_desc->mem_block_offset(), -1);
         regst_desc->set_mem_block_id(Singleton<IDMgr>::Get()->NewMemBlockId());
         regst_desc->set_mem_block_offset(0);
+      }
+
+      RtRegstDesc rt_regst_desc(*regst_desc);
+      int64_t regst_separated_size = rt_regst_desc.TotalSeparatedHeaderByteSize4AllRegst();
+      if (regst_separated_size > 0) {
+        int64_t separated_mem_block_id = Singleton<IDMgr>::Get()->NewMemBlockId();
+        regst_desc->set_separated_header_mem_block_id(separated_mem_block_id);
       }
     }
   }
@@ -188,6 +237,94 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
 
 }  // namespace
 
+void PlanUtil::MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job) {
+  if (job.logical_chain_groups_size() == 0) { return; }
+  HashMap<int64_t, HashMap<int64_t, int64_t>> logical_chain_id2machine_id2mem_block_id;
+
+  for (int64_t i = 0; i < plan->task_size(); ++i) {
+    TaskProto* task = plan->mutable_task(i);
+    const StreamId stream_id = PlanUtil::GetStreamId(*task);
+    int64_t machine_id = task->machine_id();
+    DeviceType device_type = stream_id.device_id().device_type();
+    // TODO(zwx): eliminate this special 'is cpu' determine
+    if (device_type == DeviceType::kCPU) { continue; }
+    if (!IsValidChainId(task->task_set_info().chain_id())) { continue; }
+    int64_t logical_chain_id = task->task_set_info().chain_id();
+
+    for (auto& pair : *(task->mutable_produced_regst_desc())) {
+      RegstDescProto* regst_desc = &pair.second;
+      if (regst_desc->mem_block_id() != -1 && regst_desc->enable_reuse_mem()
+          && regst_desc->mem_case().device_type() == device_type
+          && regst_desc->regst_desc_type().has_data_regst_desc()) {
+        int64_t mem_block_id = regst_desc->mem_block_id();
+        auto* rank2blocks = &(logical_chain_id2machine_id2mem_block_id[logical_chain_id]);
+        if (rank2blocks->find(machine_id) == rank2blocks->end()) {
+          rank2blocks->emplace(machine_id, mem_block_id);
+        } else {
+          CHECK_EQ(rank2blocks->at(machine_id), mem_block_id);
+        }
+      }
+    }
+  }
+
+  HashMap<int64_t, int64_t> mem_block_id2merged_mem_block_id;
+  for (const auto& logical_chain_group : job.logical_chain_groups()) {
+    CHECK_GE(logical_chain_group.logical_chain_id_list_size(), 2);
+    int64_t merged_logical_chain_id = logical_chain_group.logical_chain_id_list(0);
+    CHECK(logical_chain_id2machine_id2mem_block_id.find(merged_logical_chain_id)
+          != logical_chain_id2machine_id2mem_block_id.end());
+    const auto& merged_rank2block =
+        logical_chain_id2machine_id2mem_block_id.at(merged_logical_chain_id);
+    for (int64_t i = 1; i < logical_chain_group.logical_chain_id_list_size(); ++i) {
+      int64_t this_logical_chain_id = logical_chain_group.logical_chain_id_list(i);
+      // NOTE(chengcheng): merge mem block id by each rank
+      CHECK(logical_chain_id2machine_id2mem_block_id.find(this_logical_chain_id)
+            != logical_chain_id2machine_id2mem_block_id.end());
+      const auto& this_rank2block =
+          logical_chain_id2machine_id2mem_block_id.at(this_logical_chain_id);
+      for (const auto& pair : this_rank2block) {
+        int64_t this_machine_id = pair.first;
+        int64_t this_mem_block_id = pair.second;
+        CHECK(merged_rank2block.find(this_machine_id) != merged_rank2block.end());
+        int64_t merged_mem_block_id = merged_rank2block.at(this_machine_id);
+        CHECK(mem_block_id2merged_mem_block_id.emplace(this_mem_block_id, merged_mem_block_id)
+                  .second);
+        VLOG(2) << " merge mem_block_id: " << this_mem_block_id << " to " << merged_mem_block_id;
+      }
+    }
+  }
+
+  for (int64_t i = 0; i < plan->task_size(); ++i) {
+    TaskProto* task = plan->mutable_task(i);
+    const StreamId stream_id = PlanUtil::GetStreamId(*task);
+    DeviceType device_type = stream_id.device_id().device_type();
+    // TODO(zwx): eliminate this special 'is cpu' determine
+    if (device_type == DeviceType::kCPU) { continue; }
+    if (!IsValidChainId(task->task_set_info().chain_id())) { continue; }
+
+    for (auto& pair : *(task->mutable_produced_regst_desc())) {
+      RegstDescProto* regst_desc = &pair.second;
+      if (regst_desc->mem_block_id() != -1 && regst_desc->enable_reuse_mem()
+          && regst_desc->mem_case().device_type() == device_type
+          && regst_desc->regst_desc_type().has_data_regst_desc()) {
+        int64_t mem_block_id = regst_desc->mem_block_id();
+        if (mem_block_id2merged_mem_block_id.find(mem_block_id)
+            != mem_block_id2merged_mem_block_id.end()) {
+          // merge mem_block_id
+          int64_t merged_mem_block_id = mem_block_id2merged_mem_block_id.at(mem_block_id);
+          regst_desc->set_mem_block_id(merged_mem_block_id);
+          const auto& data_regst = regst_desc->regst_desc_type().data_regst_desc();
+          CHECK_GE(data_regst.lbi2blob_desc_size(), 1);
+          const auto& lbi2blob_desc_pair = data_regst.lbi2blob_desc(0);
+          std::string tensor_name = GenLogicalBlobName(lbi2blob_desc_pair.lbi());
+          VLOG(3) << " regst: " << tensor_name << " merge mem block id " << mem_block_id << " to "
+                  << merged_mem_block_id;
+        }
+      }
+    }
+  }
+}
+
 void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     Plan* plan, const HashSet<std::string>& variable_op_names) {
   HashMap<int64_t, std::unique_ptr<MemBlockProto>> mem_block_id2mem_block;
@@ -218,7 +355,6 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     int64_t mem_block_offset = regst_desc->mem_block_offset();
     CHECK_NE(mem_block_id, -1);
     CHECK_NE(mem_block_offset, -1);
-    CHECK_EQ(regst_desc->separated_header_mem_block_id(), -1);
 
     std::string var_name;
     bool is_variable_regst = IsVariableRegst(task, &var_name);
@@ -235,7 +371,8 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     int64_t regst_main_size = rt_regst_desc.TotalMainByteSize4AllRegst();
     int64_t regst_separated_size = rt_regst_desc.TotalSeparatedHeaderByteSize4AllRegst();
 
-    if (mem_block_id2mem_block.find(mem_block_id) == mem_block_id2mem_block.end()) {
+    auto mem_block_it = mem_block_id2mem_block.find(mem_block_id);
+    if (mem_block_it == mem_block_id2mem_block.end()) {
       MemBlockProto mem_block;
       mem_block.set_mem_block_id(mem_block_id);
       mem_block.add_job_id(job_id);
@@ -252,33 +389,56 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
                 .emplace(mem_block.mem_block_id(), std::make_unique<MemBlockProto>(mem_block))
                 .second);
     } else {
-      MemBlockProto* mem_block = mem_block_id2mem_block.at(mem_block_id).get();
-      CHECK(!mem_block->has_variable_op_name());  // variable regst mem block is unique.
+      MemBlockProto* mem_block = mem_block_it->second.get();
       CHECK_EQ(mem_block->job_id(0), job_id);
       CHECK_EQ(mem_block->machine_id(), machine_id);
       CHECK(mem_block->mem_case() == regst_desc->mem_case());
       CHECK_EQ(mem_block->enable_reuse_mem(), regst_desc->enable_reuse_mem());
-      mem_block->set_mem_size(std::max(mem_block->mem_size(), regst_main_size + mem_block_offset));
+      if (mem_block->enable_reuse_mem()) {
+        mem_block->set_mem_size(
+            std::max(mem_block->mem_size(), regst_main_size + mem_block_offset));
+      } else {
+        CHECK_EQ(mem_block->mem_size(), regst_main_size);
+        CHECK_EQ(mem_block_offset, 0);
+      }
+      if (is_variable_regst) {
+        mem_block->set_variable_op_name(var_name);
+        mem_block->set_is_separated_header(false);
+      }
     }
 
     if (regst_separated_size > 0) {
-      int64_t separated_mem_block_id = Singleton<IDMgr>::Get()->NewMemBlockId();
-      regst_desc->set_separated_header_mem_block_id(separated_mem_block_id);
-      MemBlockProto mem_block;
-      mem_block.set_mem_block_id(separated_mem_block_id);
-      mem_block.add_job_id(job_id);
-      mem_block.set_machine_id(machine_id);
-      *(mem_block.mutable_mem_case()) = memory::GetPinnedHostMemoryCase(regst_desc->mem_case());
-      mem_block.set_enable_reuse_mem(false);
-      mem_block.set_mem_size(regst_separated_size);
-      mem_block.set_thrd_id_hint(thrd_id);
-      if (is_variable_regst) {
-        mem_block.set_variable_op_name(var_name);
-        mem_block.set_is_separated_header(true);
+      CHECK(regst_desc->has_separated_header_mem_block_id()) << regst_desc->DebugString();
+      int64_t separated_mem_block_id = regst_desc->separated_header_mem_block_id();
+      CHECK_NE(separated_mem_block_id, -1);
+      if (mem_block_id2mem_block.find(separated_mem_block_id) == mem_block_id2mem_block.end()) {
+        MemBlockProto mem_block;
+        mem_block.set_mem_block_id(separated_mem_block_id);
+        mem_block.add_job_id(job_id);
+        mem_block.set_machine_id(machine_id);
+        *(mem_block.mutable_mem_case()) = memory::GetPinnedHostMemoryCase(regst_desc->mem_case());
+        mem_block.set_enable_reuse_mem(false);
+        mem_block.set_mem_size(regst_separated_size);
+        mem_block.set_thrd_id_hint(thrd_id);
+        if (is_variable_regst) {
+          mem_block.set_variable_op_name(var_name);
+          mem_block.set_is_separated_header(true);
+        }
+        CHECK(mem_block_id2mem_block
+                  .emplace(mem_block.mem_block_id(), std::make_unique<MemBlockProto>(mem_block))
+                  .second);
+      } else {
+        MemBlockProto* mem_block = mem_block_id2mem_block.at(separated_mem_block_id).get();
+        CHECK_EQ(mem_block->job_id(0), job_id);
+        CHECK_EQ(mem_block->machine_id(), machine_id);
+        CHECK(mem_block->mem_case() == memory::GetPinnedHostMemoryCase(regst_desc->mem_case()));
+        CHECK_EQ(mem_block->enable_reuse_mem(), false);
+        CHECK_EQ(mem_block->mem_size(), regst_separated_size);
+        if (is_variable_regst) {
+          mem_block->set_variable_op_name(var_name);
+          mem_block->set_is_separated_header(true);
+        }
       }
-      CHECK(mem_block_id2mem_block
-                .emplace(mem_block.mem_block_id(), std::make_unique<MemBlockProto>(mem_block))
-                .second);
     }
   };
 
@@ -656,8 +816,22 @@ void PlanUtil::SetForceInplaceMemBlock(Plan* plan) {
         CHECK_EQ(in_regst_desc->mem_block_offset(), 0);
         CHECK_EQ(regst_desc->mem_block_offset(), 0);
         CHECK_EQ(in_regst_desc->register_num(), regst_desc->register_num());
+        CHECK(in_regst_desc->mem_case() == regst_desc->mem_case());
+        RtRegstDesc in_regst_rt(*in_regst_desc);
+        RtRegstDesc regst_rt(*regst_desc);
+        CHECK_EQ(in_regst_rt.TotalByteSize4AllRegst(), regst_rt.TotalByteSize4AllRegst());
+        CHECK_EQ(in_regst_rt.TotalMainByteSize4AllRegst(), regst_rt.TotalMainByteSize4AllRegst());
+        CHECK_EQ(in_regst_rt.TotalSeparatedHeaderByteSize4AllRegst(),
+                 regst_rt.TotalSeparatedHeaderByteSize4AllRegst());
         regst_desc->set_mem_block_id(in_regst_desc->mem_block_id());
         regst_desc->set_inplace_consumed_regst_desc_id(force_id);
+        if (in_regst_desc->has_separated_header_mem_block_id()) {
+          CHECK(regst_desc->has_separated_header_mem_block_id());
+          regst_desc->set_separated_header_mem_block_id(
+              in_regst_desc->separated_header_mem_block_id());
+        }
+        VLOG(3) << " set force inplace from " << regst_desc->DebugString() << " to "
+                << in_regst_desc->DebugString();
       }
     }
   }
@@ -1074,37 +1248,25 @@ void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name) {
     }
   }
 
-  auto RegstId2TensorStr = [&](int64_t regst_id) {
-    std::string ret;
+  auto RegstId2TensorStr = [&](int64_t regst_id) -> std::string {
     CHECK(regst_id2proto.find(regst_id) != regst_id2proto.end())
         << " regst_id2proto cannot find: " << regst_id;
+    std::ostringstream ss;
+    ss << "{";
     const RegstDescProto& regst = regst_id2proto.at(regst_id);
-    ret += " regst_num: " + std::to_string(regst.register_num());
-    std::string mem;
-    switch (regst.mem_case().device_type()) {
-      case DeviceType::kCPU: {
-        mem = ", cpu ";
-        break;
-      }
-      case DeviceType::kCUDA: {
-        mem = ", cuda ";
-        break;
-      }
-      default: {
-        UNIMPLEMENTED() << "Unsupported device_type " << regst.mem_case().device_type();
-      }
-    }
-    ret += mem;
+    ss << "regust_num: " << std::to_string(regst.register_num());
+    ss << ", device: " << *CHECK_JUST(DeviceTag4DeviceType(regst.mem_case().device_type()));
     if (regst.regst_desc_type().has_data_regst_desc()) {
       const DataRegstDesc& data = regst.regst_desc_type().data_regst_desc();
-      ret += ", time_shape: " + Shape(data.time_shape()).ToString();
+      ss << ", time_shape: " << Shape(data.time_shape()).ToString();
       const BlobDescProto& blob = data.lbi2blob_desc(0).blob_desc();
-      ret += ", shape: " + Shape(blob.shape()).ToString()
-             + " , dtype: " + DataType_Name(blob.data_type());
+      ss << ", shape: " << Shape(blob.shape()).ToString();
+      ss << ", dtype: " << DataType_Name(blob.data_type());
     } else {
-      ret += ", ctrl ";
+      ss << ", ctrl";
     }
-    return ret;
+    ss << "}";
+    return ss.str();
   };
   std::vector<std::vector<const TaskProto*>> rank2ordered_task(GlobalProcessCtx::WorldSize(),
                                                                std::vector<const TaskProto*>());

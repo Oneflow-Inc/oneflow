@@ -15,199 +15,52 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/framework/dtype.h"
 
 namespace oneflow {
 
 namespace {
 
-Maybe<Shape> GetBroadcastShape(const Shape& a_shape, const Shape& b_shape) {
-  Shape broadcast_shape = Shape::Ones(std::max(a_shape.NumAxes(), b_shape.NumAxes()));
-  Shape a_extend_shape = CreateLeftExtendedShape(ShapeView(a_shape), broadcast_shape.NumAxes());
-  Shape b_extend_shape = CreateLeftExtendedShape(ShapeView(b_shape), broadcast_shape.NumAxes());
-  FOR_RANGE(int64_t, i, 0, broadcast_shape.NumAxes()) {
-    CHECK_OR_RETURN(a_extend_shape.At(i) == 1 || b_extend_shape.At(i) == 1
-                    || a_extend_shape.At(i) == b_extend_shape.At(i))
-        << Error::RuntimeError() << "The size of tensor a (" << a_extend_shape.At(i)
-        << ") must match the size of tensor b (" << b_extend_shape.At(i)
-        << ") at non-singleton dimension " << i;
-    broadcast_shape.Set(i, std::max(a_extend_shape.At(i), b_extend_shape.At(i)));
-  }
-  return broadcast_shape;
-}
+Maybe<Shape> GetBroadcastShape(const Shape& cond_shape, const Shape& x_shape,
+                               const Shape& y_shape) {
+  size_t ndim = std::max(x_shape.size(), y_shape.size());
+  ndim = std::max(ndim, cond_shape.size());
 
-Maybe<std::vector<std::tuple<int64_t, int64_t, int64_t, int64_t>>> CalValidSplitDims(
-    const Shape& a_shape, const Shape& b_shape, const Shape& c_shape) {
-  std::shared_ptr<std::vector<std::tuple<int64_t, int64_t, int64_t, int64_t>>> vaild_split_dims =
-      std::make_shared<std::vector<std::tuple<int64_t, int64_t, int64_t, int64_t>>>();
-  int32_t max_num_axes =
-      std::max(a_shape.NumAxes(), std::max(b_shape.NumAxes(), c_shape.NumAxes()));
-  Shape broadcast_shape = Shape::Ones(std::max(a_shape.NumAxes(), b_shape.NumAxes()));
-  Shape a_extend_shape = CreateLeftExtendedShape(ShapeView(a_shape), broadcast_shape.NumAxes());
-  Shape b_extend_shape = CreateLeftExtendedShape(ShapeView(b_shape), broadcast_shape.NumAxes());
-  Shape c_extend_shape = CreateLeftExtendedShape(ShapeView(c_shape), broadcast_shape.NumAxes());
-  int64_t a_dim_offset = max_num_axes - a_shape.NumAxes();
-  int64_t b_dim_offset = max_num_axes - b_shape.NumAxes();
-  int64_t c_dim_offset = max_num_axes - c_shape.NumAxes();
-  FOR_RANGE(int64_t, i, 0, max_num_axes) {
-    if (a_extend_shape.At(i) != 1 && a_extend_shape.At(i) == b_extend_shape.At(i)
-        && a_extend_shape.At(i) == c_extend_shape.At(i)) {
-      vaild_split_dims->emplace_back(
-          std::make_tuple(i - a_dim_offset, i - b_dim_offset, i - c_dim_offset, i));
+  DimVector broadcast_dim_vec(ndim);
+  for (size_t i = 0; i < ndim; ++i) {
+    size_t cond_lpad = ndim - cond_shape.size();
+    size_t x_lpad = ndim - x_shape.size();
+    size_t y_lpad = ndim - y_shape.size();
+    int64_t cond_dim = (i < cond_lpad) ? 1 : cond_shape[i - cond_lpad];
+    int64_t x_dim = (i < x_lpad) ? 1 : x_shape[i - x_lpad];
+    int64_t y_dim = (i < y_lpad) ? 1 : y_shape[i - y_lpad];
+    int64_t max_dim = std::max(x_dim, y_dim);
+    max_dim = std::max(max_dim, cond_dim);
+    broadcast_dim_vec[i] = max_dim;
+    if ((cond_dim != 1 && cond_dim != max_dim) || (x_dim != 1 && x_dim != max_dim)
+        || (y_dim != 1 && y_dim != max_dim)) {
+      return Error::RuntimeError() << "The tensor cond with size " << cond_shape.ToString()
+                                   << ", x with size " << x_shape.ToString() << " and y with size "
+                                   << y_shape.ToString() << " are not broadcastable.";
     }
   }
-  return vaild_split_dims;
-}
-
-Maybe<std::vector<std::tuple<int64_t, int64_t, int64_t>>> CalValidSplitDims(const Shape& a_shape,
-                                                                            const Shape& b_shape) {
-  std::shared_ptr<std::vector<std::tuple<int64_t, int64_t, int64_t>>> vaild_split_dims =
-      std::make_shared<std::vector<std::tuple<int64_t, int64_t, int64_t>>>();
-  int32_t max_num_axes = std::max(a_shape.NumAxes(), b_shape.NumAxes());
-  Shape broadcast_shape = Shape::Ones(std::max(a_shape.NumAxes(), b_shape.NumAxes()));
-  Shape a_extend_shape = CreateLeftExtendedShape(ShapeView(a_shape), broadcast_shape.NumAxes());
-  Shape b_extend_shape = CreateLeftExtendedShape(ShapeView(b_shape), broadcast_shape.NumAxes());
-  int64_t a_dim_offset = max_num_axes - a_shape.NumAxes();
-  int64_t b_dim_offset = max_num_axes - b_shape.NumAxes();
-  FOR_RANGE(int64_t, i, 0, max_num_axes) {
-    if (a_extend_shape.At(i) != 1 && a_extend_shape.At(i) == b_extend_shape.At(i)) {
-      vaild_split_dims->emplace_back(std::make_tuple(i - a_dim_offset, i - b_dim_offset, i));
-    }
-  }
-  return vaild_split_dims;
-}
-
-Maybe<void> InferWhereTensorDesc(user_op::InferContext* ctx) {
-  const Shape& cond_shape = ctx->InputShape("condition", 0);
-  const Shape& x_shape = ctx->InputShape("x", 0);
-  const Shape& y_shape = ctx->InputShape("y", 0);
-  if (x_shape == y_shape && y_shape == cond_shape) {
-    ctx->SetOutputShape("out", 0, cond_shape);
-  } else {
-    Shape max_shape = *JUST(GetBroadcastShape(cond_shape, x_shape));
-    max_shape = *JUST(GetBroadcastShape(max_shape, y_shape));
-    ctx->SetOutputShape("out", 0, max_shape);
-  }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> InferWhereXScalarTensorDesc(user_op::InferContext* ctx) {
-  const Shape& cond_shape = ctx->InputShape("condition", 0);
-  const Shape& y_shape = ctx->InputShape("y", 0);
-  if (cond_shape == y_shape) {
-    ctx->SetOutputShape("out", 0, cond_shape);
-  } else {
-    Shape max_shape = *JUST(GetBroadcastShape(cond_shape, y_shape));
-    ctx->SetOutputShape("out", 0, max_shape);
-  }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> InferWhereYScalarTensorDesc(user_op::InferContext* ctx) {
-  const Shape& cond_shape = ctx->InputShape("condition", 0);
-  const Shape& x_shape = ctx->InputShape("x", 0);
-  if (cond_shape == x_shape) {
-    ctx->SetOutputShape("out", 0, cond_shape);
-  } else {
-    Shape max_shape = *JUST(GetBroadcastShape(cond_shape, x_shape));
-    ctx->SetOutputShape("out", 0, max_shape);
-  }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> InferWhereXYScalarTensorDesc(user_op::InferContext* ctx) {
-  ctx->SetOutputShape("out", 0, ctx->InputShape("condition", 0));
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> GetWhereSbpSignatures(user_op::SbpContext* ctx) {
-  const Shape& cond_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("condition", 0).shape();
-  const Shape& x_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape();
-  const Shape& y_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0).shape();
-  const auto& vaild_split_dims = JUST(CalValidSplitDims(cond_shape, x_shape, y_shape));
-  for (const auto& vaild_split_dim : *vaild_split_dims) {
-    ctx->NewBuilder()
-        .Split(user_op::OpArg("condition", 0), std::get<0>(vaild_split_dim))
-        .Split(user_op::OpArg("x", 0), std::get<1>(vaild_split_dim))
-        .Split(user_op::OpArg("y", 0), std::get<2>(vaild_split_dim))
-        .Split(user_op::OpArg("out", 0), std::get<3>(vaild_split_dim))
-        .Build();
-  }
-  ctx->NewBuilder()
-      .Broadcast(user_op::OpArg("condition", 0))
-      .PartialSum(user_op::OpArg("x", 0))
-      .PartialSum(user_op::OpArg("y", 0))
-      .PartialSum(user_op::OpArg("out", 0))
-      .Build();
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> GetWhereXScalarSbpSignatures(user_op::SbpContext* ctx) {
-  const Shape& cond_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("condition", 0).shape();
-  const Shape& y_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0).shape();
-  const auto& vaild_split_dims = JUST(CalValidSplitDims(cond_shape, y_shape));
-  for (const auto& vaild_split_dim : *vaild_split_dims) {
-    ctx->NewBuilder()
-        .Split(user_op::OpArg("condition", 0), std::get<0>(vaild_split_dim))
-        .Split(user_op::OpArg("y", 0), std::get<1>(vaild_split_dim))
-        .Split(user_op::OpArg("out", 0), std::get<2>(vaild_split_dim))
-        .Build();
-  }
-  ctx->NewBuilder()
-      .Broadcast(user_op::OpArg("condition", 0))
-      .PartialSum(user_op::OpArg("y", 0))
-      .PartialSum(user_op::OpArg("out", 0))
-      .Build();
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> GetWhereYScalarSbpSignatures(user_op::SbpContext* ctx) {
-  const Shape& cond_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("condition", 0).shape();
-  const Shape& x_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape();
-  const auto& vaild_split_dims = JUST(CalValidSplitDims(cond_shape, x_shape));
-  for (const auto& vaild_split_dim : *vaild_split_dims) {
-    ctx->NewBuilder()
-        .Split(user_op::OpArg("condition", 0), std::get<0>(vaild_split_dim))
-        .Split(user_op::OpArg("x", 0), std::get<1>(vaild_split_dim))
-        .Split(user_op::OpArg("out", 0), std::get<2>(vaild_split_dim))
-        .Build();
-  }
-  ctx->NewBuilder()
-      .Broadcast(user_op::OpArg("condition", 0))
-      .PartialSum(user_op::OpArg("x", 0))
-      .PartialSum(user_op::OpArg("out", 0))
-      .Build();
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> GetWhereXYScalarSbpSignatures(user_op::SbpContext* ctx) {
-  const Shape& cond_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("condition", 0).shape();
-  FOR_RANGE(int64_t, i, 0, cond_shape.NumAxes()) {
-    ctx->NewBuilder()
-        .Split(user_op::OpArg("condition", 0), i)
-        .Split(user_op::OpArg("out", 0), i)
-        .Build();
-  }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifierFn,
-                                   const user_op::UserOpConfWrapper&) {
-  user_op::InputArgModifier* cond_arg_modifier = GetInputArgModifierFn("condition", 0);
-  cond_arg_modifier->set_requires_grad(false);
-  return Maybe<void>::Ok();
+  return Shape(broadcast_dim_vec);
 }
 
 }  // namespace
 
-/*static*/ Maybe<void> WhereOp::GetSbp(user_op::SbpContext* ctx) {
-  return GetWhereSbpSignatures(ctx);
-}
 /*static*/ Maybe<void> WhereOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  return InferWhereTensorDesc(ctx);
+  const Shape& cond_shape = ctx->InputShape("condition", 0);
+  const Shape& x_shape = ctx->InputShape("x", 0);
+  const Shape& y_shape = ctx->InputShape("y", 0);
+  ctx->SetOutputShape("out", 0, *JUST(GetBroadcastShape(cond_shape, x_shape, y_shape)));
+  return Maybe<void>::Ok();
 }
+
 /*static*/ Maybe<void> WhereOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
+
 /*static*/ Maybe<void> WhereOp::InferDataType(user_op::InferContext* ctx) {
   DataType cond_dtype = ctx->InputDType("condition", 0);
   CHECK_OR_RETURN(IsBoolDataType(cond_dtype) || IsIntegralDataType(cond_dtype));
@@ -218,99 +71,63 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
   ctx->SetOutputDType("out", 0, x_dtype);
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> WhereOp::ModifyInputArg(const GetInputArgModifier& f,
+
+/*static*/ Maybe<void> WhereOp::GetSbp(user_op::SbpContext* ctx) {
+  const Shape& cond_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("condition", 0).shape();
+  const Shape& x_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape();
+  const Shape& y_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0).shape();
+  Shape broadcast_shape = *JUST(GetBroadcastShape(cond_shape, x_shape, y_shape));
+  const size_t ndim = broadcast_shape.size();
+
+  std::vector<user_op::OpArg> broadcast_args;
+  std::vector<user_op::OpArg> split_args;
+  std::vector<int> split_dims;
+  broadcast_args.reserve(3);
+  split_args.reserve(3);
+  split_dims.reserve(3);
+
+  auto CheckArgCanSplit = [&](std::string&& arg_name, const int dim, const Shape& shape) {
+    size_t ddiff = ndim - shape.size();
+    int dim_size = (dim >= ddiff) ? shape[dim - ddiff] : 1;
+    if (dim_size == 1) {
+      broadcast_args.emplace_back(std::forward<decltype(arg_name)>(arg_name), 0);
+    } else {
+      split_args.emplace_back(std::forward<decltype(arg_name)>(arg_name), 0);
+      split_dims.push_back(dim - ddiff);
+    }
+  };
+
+  for (int i = 0; i < ndim; ++i) {
+    if (broadcast_shape[i] == 1) { continue; }
+    broadcast_args.clear();
+    split_args.clear();
+    split_dims.clear();
+    CheckArgCanSplit("x", i, x_shape);
+    CheckArgCanSplit("y", i, y_shape);
+    CheckArgCanSplit("condition", i, cond_shape);
+
+    auto builder = ctx->NewBuilder();
+    builder.Broadcast(broadcast_args);
+    for (int i = 0; i < split_args.size(); ++i) { builder.Split(split_args[i], split_dims[i]); }
+    builder.Split(user_op::OpArg("out", 0), i);
+    builder.Build();
+  }
+
+  ctx->NewBuilder()
+      .Broadcast(user_op::OpArg("condition", 0))
+      .PartialSum(user_op::OpArg("x", 0))
+      .PartialSum(user_op::OpArg("y", 0))
+      .PartialSum(user_op::OpArg("out", 0))
+      .Build();
+
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> WhereOp::ModifyInputArg(const GetInputArgModifier& fn,
                                                const user_op::UserOpConfWrapper& conf) {
-  return GetWhereInputArgModify(f, conf);
-}
-
-/*static*/ Maybe<void> WhereScalarXOp::GetSbp(user_op::SbpContext* ctx) {
-  return GetWhereXScalarSbpSignatures(ctx);
-}
-/*static*/ Maybe<void> WhereScalarXOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  return InferWhereXScalarTensorDesc(ctx);
-}
-/*static*/ Maybe<void> WhereScalarXOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-/*static*/ Maybe<void> WhereScalarXOp::InferDataType(user_op::InferContext* ctx) {
-  DataType cond_dtype = ctx->InputDType("condition", 0);
-  CHECK_OR_RETURN(IsBoolDataType(cond_dtype) || IsIntegralDataType(cond_dtype));
-  DataType y_dtype = ctx->InputDType("y", 0);
-  if (ctx->Attr<bool>("has_int_operand")) {
-    CHECK_EQ_OR_RETURN(y_dtype, GetDataType<int64_t>::value)
-        << "expected scalar type " << GetDataType<int64_t>::value << "but found " << y_dtype;
-  } else if (ctx->Attr<bool>("has_float_operand")) {
-    CHECK_EQ_OR_RETURN(y_dtype, GetDataType<double>::value)
-        << "expected scalar type " << GetDataType<double>::value << "but found " << y_dtype;
-  } else if (ctx->Attr<bool>("has_bool_operand")) {
-    CHECK_EQ_OR_RETURN(y_dtype, GetDataType<bool>::value)
-        << "expected scalar type " << GetDataType<bool>::value << "but found " << y_dtype;
-  }
-  ctx->SetOutputDType("out", 0, y_dtype);
+  user_op::InputArgModifier* cond_arg_modifier = fn("condition", 0);
+  cond_arg_modifier->set_requires_grad(false);
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> WhereScalarXOp::ModifyInputArg(const GetInputArgModifier& f,
-                                                      const user_op::UserOpConfWrapper& conf) {
-  return GetWhereInputArgModify(f, conf);
-}
-
-/*static*/ Maybe<void> WhereScalarYOp::GetSbp(user_op::SbpContext* ctx) {
-  return GetWhereYScalarSbpSignatures(ctx);
-}
-/*static*/ Maybe<void> WhereScalarYOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  return InferWhereYScalarTensorDesc(ctx);
-}
-/*static*/ Maybe<void> WhereScalarYOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-/*static*/ Maybe<void> WhereScalarYOp::InferDataType(user_op::InferContext* ctx) {
-  DataType cond_dtype = ctx->InputDType("condition", 0);
-  CHECK_OR_RETURN(IsBoolDataType(cond_dtype) || IsIntegralDataType(cond_dtype));
-  DataType x_dtype = ctx->InputDType("x", 0);
-  if (ctx->Attr<bool>("has_int_operand")) {
-    CHECK_EQ_OR_RETURN(x_dtype, GetDataType<int64_t>::value)
-        << "expected scalar type " << GetDataType<int64_t>::value << "but found " << x_dtype;
-  } else if (ctx->Attr<bool>("has_float_operand")) {
-    CHECK_EQ_OR_RETURN(x_dtype, GetDataType<double>::value)
-        << "expected scalar type " << GetDataType<double>::value << "but found " << x_dtype;
-  } else if (ctx->Attr<bool>("has_bool_operand")) {
-    CHECK_EQ_OR_RETURN(x_dtype, GetDataType<bool>::value)
-        << "expected scalar type " << GetDataType<bool>::value << "but found " << x_dtype;
-  }
-  ctx->SetOutputDType("out", 0, x_dtype);
-  return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> WhereScalarYOp::ModifyInputArg(const GetInputArgModifier& f,
-                                                      const user_op::UserOpConfWrapper& conf) {
-  return GetWhereInputArgModify(f, conf);
-}
-
-/*static*/ Maybe<void> WhereScalarXyOp::GetSbp(user_op::SbpContext* ctx) {
-  return GetWhereXYScalarSbpSignatures(ctx);
-}
-/*static*/ Maybe<void> WhereScalarXyOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  return InferWhereXYScalarTensorDesc(ctx);
-}
-/*static*/ Maybe<void> WhereScalarXyOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-/*static*/ Maybe<void> WhereScalarXyOp::InferDataType(user_op::InferContext* ctx) {
-  DataType cond_dtype = ctx->InputDType("condition", 0);
-  CHECK_OR_RETURN(IsBoolDataType(cond_dtype) || IsIntegralDataType(cond_dtype));
-  if (ctx->Attr<bool>("has_x_bool_operand") && ctx->Attr<bool>("has_y_bool_operand")) {
-    ctx->SetOutputDType("out", 0, GetDataType<bool>::value);
-  } else if (ctx->Attr<bool>("has_x_int_operand") && ctx->Attr<bool>("has_y_int_operand")) {
-    ctx->SetOutputDType("out", 0, GetDataType<int64_t>::value);
-  } else if (ctx->Attr<bool>("has_x_float_operand") && ctx->Attr<bool>("has_y_float_operand")) {
-    ctx->SetOutputDType("out", 0, GetDataType<double>::value);
-  } else {
-    UNIMPLEMENTED();
-  }
-  return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> WhereScalarXyOp::ModifyInputArg(const GetInputArgModifier& f,
-                                                       const user_op::UserOpConfWrapper& conf) {
-  return GetWhereInputArgModify(f, conf);
 }
 
 }  // namespace oneflow

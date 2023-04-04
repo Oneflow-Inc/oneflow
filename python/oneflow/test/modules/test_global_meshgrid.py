@@ -21,7 +21,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=5, auto_backward=False, check_graph=False)
+@autotest(n=5, auto_backward=False, check_graph=True)
 def _test_meshgrid(test_case, placement):
     x_sbp = random_sbp(placement, max_dim=1)
     x = random_tensor(ndim=1, dim0=8, requires_grad=False).to_global(placement, x_sbp)

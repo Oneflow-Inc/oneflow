@@ -135,6 +135,20 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kFastGeluBackwardWithDyX, Src,
 };
 
 template<typename Src, typename Dst>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kQuickGeluBackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    const Src one = static_cast<Src>(1.0);
+    const Src sigmoid = one / (one + exp(-x * alpha));
+    return dy * (sigmoid + alpha * x * (sigmoid * (one - sigmoid)));
+  }
+
+ private:
+  const Src alpha = static_cast<Src>(1.702);
+};
+
+template<typename Src, typename Dst>
 struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kTanhBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
@@ -200,11 +214,11 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kIsCloseEqualNan, Src, Dst> {
 
   OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const {
     bool close = src0 == src1;
-    close |= (std::isnan(src0) and std::isnan(src1));
+    close |= (isnan(src0) and isnan(src1));
     if (atol == 0 and rtol == 0) return close;
     Src allowed_error = static_cast<Src>(atol) + abs(static_cast<Src>(rtol) * src1);
     Src actual_error = abs(src0 - src1);
-    close |= (std::isfinite(actual_error) and (actual_error <= allowed_error));
+    close |= (isfinite(actual_error) and (actual_error <= allowed_error));
     return close;
   }
   float atol, rtol;
@@ -220,11 +234,33 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kIsClose, Src, Dst> {
     if (atol == 0 and rtol == 0) return close;
     Src allowed_error = static_cast<Src>(atol) + abs(static_cast<Src>(rtol) * src1);
     Src actual_error = abs(src0 - src1);
-    close |= (std::isfinite(actual_error) and (actual_error <= allowed_error));
+    close |= (isfinite(actual_error) and (actual_error <= allowed_error));
     return close;
   }
   float atol, rtol;
 };
+
+#define SPECIALIZATION_INTEGRAL_CLOSENESS_BINARY_FUNCTOR(op, type)                            \
+  template<typename Dst>                                                                      \
+  struct BinaryFunctor<DeviceType::kCUDA, op, type, Dst> {                                    \
+    OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : float_functor(attr0, attr1) {} \
+    OF_DEVICE_FUNC Dst operator()(type src0, type src1) const {                               \
+      return float_functor(static_cast<float>(src0), static_cast<float>(src1));               \
+    }                                                                                         \
+    BinaryFunctor<DeviceType::kCUDA, op, float, Dst> float_functor;                           \
+  };
+SPECIALIZATION_INTEGRAL_CLOSENESS_BINARY_FUNCTOR(BinaryOp::kIsClose, bool);
+SPECIALIZATION_INTEGRAL_CLOSENESS_BINARY_FUNCTOR(BinaryOp::kIsClose, int);
+SPECIALIZATION_INTEGRAL_CLOSENESS_BINARY_FUNCTOR(BinaryOp::kIsClose, char);
+SPECIALIZATION_INTEGRAL_CLOSENESS_BINARY_FUNCTOR(BinaryOp::kIsClose, int8_t);
+SPECIALIZATION_INTEGRAL_CLOSENESS_BINARY_FUNCTOR(BinaryOp::kIsClose, uint8_t);
+SPECIALIZATION_INTEGRAL_CLOSENESS_BINARY_FUNCTOR(BinaryOp::kIsClose, int64_t);
+SPECIALIZATION_INTEGRAL_CLOSENESS_BINARY_FUNCTOR(BinaryOp::kIsCloseEqualNan, bool);
+SPECIALIZATION_INTEGRAL_CLOSENESS_BINARY_FUNCTOR(BinaryOp::kIsCloseEqualNan, int);
+SPECIALIZATION_INTEGRAL_CLOSENESS_BINARY_FUNCTOR(BinaryOp::kIsCloseEqualNan, char);
+SPECIALIZATION_INTEGRAL_CLOSENESS_BINARY_FUNCTOR(BinaryOp::kIsCloseEqualNan, int8_t);
+SPECIALIZATION_INTEGRAL_CLOSENESS_BINARY_FUNCTOR(BinaryOp::kIsCloseEqualNan, uint8_t);
+SPECIALIZATION_INTEGRAL_CLOSENESS_BINARY_FUNCTOR(BinaryOp::kIsCloseEqualNan, int64_t);
 
 /*********nv_bfloat16_kernel*******/
 
@@ -248,8 +284,9 @@ SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kTruncDiv);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kFloorMod);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kScalarBasePowerGrad);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kScalarExpPowerGrad);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kIdentityBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kEluBackwardWithDyX);
-SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kCeluBackwardWithDyX);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kCeluBackwardWithDyY);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kGeluBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kHardswishBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kHardsigmoidBackwardWithDyX);
@@ -265,6 +302,7 @@ SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kSoftshrinkBackwardWithD
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kTanhBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kThresholdBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kFastGeluBackwardWithDyX);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kQuickGeluBackwardWithDyX);
 
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kAcosBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kAcoshBackwardWithDyX);
@@ -275,6 +313,7 @@ SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kCoshBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kErfBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kErfcBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kExpBackwardWithDyX);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kExp2BackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kExpm1BackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kLog2BackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kLog10BackwardWithDyX);
@@ -286,6 +325,7 @@ SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kSinhBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kSqrtBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kTanBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kSigmoidBackwardWithDyY);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kSigmoidBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kAtanhBackwardWithDyX);
 
 #define SPECIALIZATION_BFLOAT16_COMPARISON_BINARY_FUNCTOR(op)                                 \
@@ -321,7 +361,7 @@ SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kFloorMod);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kScalarBasePowerGrad);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kScalarExpPowerGrad);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kEluBackwardWithDyX);
-SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kCeluBackwardWithDyX);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kCeluBackwardWithDyY);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kGeluBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kHardswishBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kHardshrinkBackwardWithDyY);
@@ -334,6 +374,7 @@ SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kSoftshrinkBackwardWithDyY);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kThresholdBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kTanhBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kFastGeluBackwardWithDyX);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kQuickGeluBackwardWithDyX);
 
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kAcosBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kAcoshBackwardWithDyX);
@@ -344,6 +385,7 @@ SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kCoshBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kErfBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kErfcBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kExpBackwardWithDyX);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kExp2BackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kExpm1BackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kLog2BackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kLog10BackwardWithDyX);
@@ -355,6 +397,7 @@ SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kSinhBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kSqrtBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kTanBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kSigmoidBackwardWithDyY);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kSigmoidBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kAtanhBackwardWithDyX);
 
 #define SPECIALIZATION_HALF_COMPARISON_BINARY_FUNCTOR(op)                                     \

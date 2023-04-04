@@ -78,6 +78,8 @@ class OpConfCache {
 std::function<bool(const OpNode* op_node)> MakePredicatorIsSafeToDelete(const OpGraph& op_graph);
 bool IsUserOpWithTypeName(const OperatorConf& op_conf, const std::string& op_type_name);
 
+std::string GenParallelConfKey(const ParallelConf& conf);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_JOB_REWRITER_PASS_UTIL_H_

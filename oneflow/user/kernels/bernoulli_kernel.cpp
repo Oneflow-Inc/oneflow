@@ -29,8 +29,9 @@ class BernoulliKerenl final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    const auto& generator = CHECK_JUST(one::MakeGenerator(kCPU));
-    generator->set_current_seed(ctx->Attr<int64_t>("seed"));
+    const auto& generator = CHECK_JUST(one::MakeGenerator(DeviceType::kCPU));
+    generator->set_current_seed(
+        CHECK_JUST(GetOpKernelRandomSeedInCurrentRank(ctx, ctx->Attr<int64_t>("seed"))));
     return std::make_shared<DistributionKernelState>(generator);
   }
 

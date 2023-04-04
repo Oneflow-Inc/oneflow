@@ -17,3 +17,4 @@ from oneflow.framework.config_util import api_load_library as load_library
 from oneflow.utils import tensor
 from oneflow.utils import global_view
 from . import checkpoint
+from . import hooks

@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/ir/oneflow-extension/include/PyAst/Ast.h"
-#include "oneflow/ir/oneflow-extension/include/PyAst/AstMlirGen.h"
+#include "PyAst/Ast.h"
+#include "PyAst/AstMlirGen.h"
 
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
@@ -145,7 +145,7 @@ static LRJITRegistry_Store_ GenFunc(pyast::FunctionDef& ast, bool is_dump) {
   CHECK(jit_or_err) << "failed to create JIT exe engine, "
                     << llvm::toString(jit_or_err.takeError());
 
-  std::shared_ptr<mlir::ExecutionEngine> engine = cantFail(move(jit_or_err));
+  std::shared_ptr<mlir::ExecutionEngine> engine = cantFail(std::move(jit_or_err));
 
   std::weak_ptr<mlir::ExecutionEngine> engine_ = engine;
 

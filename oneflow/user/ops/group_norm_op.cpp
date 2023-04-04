@@ -37,7 +37,16 @@ oneflow::DataType InferGnParamDataType(const DataType x_data_type) {
   const bool affine = ctx->Attr<bool>("affine");
   const int32_t num_groups = ctx->Attr<int32_t>("num_groups");
   const int64_t batch_size = x.shape().At(0);
-  const int64_t channel_size = x.shape().At(1);  // Assume NCHW format.
+  const std::string& data_format = ctx->Attr<std::string>("data_format");
+  CHECK_GT_OR_RETURN(x.shape().NumAxes(), 2);
+  int64_t channel_size = 0;
+  if (data_format == "channels_first") {
+    channel_size = x.shape().At(1);
+  } else if (data_format == "channels_last") {
+    channel_size = x.shape().At(x.shape().NumAxes() - 1);
+  } else {
+    UNIMPLEMENTED_THEN_RETURN();
+  }
   y->set_shape(x.shape());
   y->set_is_dynamic(x.is_dynamic());
   if (affine) {

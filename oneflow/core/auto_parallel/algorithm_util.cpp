@@ -30,4 +30,18 @@ void InverseOrder(const std::vector<int32_t>& order, std::vector<int32_t>& inver
 }
 
 }  // namespace auto_parallel
+
+// Ceil quotient define a division process, denoted by (/),
+// which give us the maximum part of an integer division.
+// For example,
+// 16 (/) 4 = 4, 17 (/) 4 = 5
+// 5 (/) 2 = 3, 6 (/) 2 = 3
+// 1 (/) 3 = 1, 2 (/) 7 = 1
+// 17 divide by 4 give us 5, 4, 4, 4
+// The normal quotient would take the smaller one 4,
+// but the ceil quotient would take the larger one 5.
+int64_t CeilQuotient(int64_t dividend, int64_t divisor) {
+  return (dividend + divisor - 1) / divisor;
+}
+
 }  // namespace oneflow

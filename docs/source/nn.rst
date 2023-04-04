@@ -67,6 +67,9 @@ nn.Module
     register_buffer
     register_forward_hook
     register_forward_pre_hook
+    register_backward_hook
+    register_full_backward_hook
+    register_state_dict_pre_hook
     register_parameter
     requires_grad_
     state_dict
@@ -105,6 +108,9 @@ Pooling Layers
     nn.MaxPool1d 
     nn.MaxPool2d 
     nn.MaxPool3d 
+    nn.MaxUnpool1d
+    nn.MaxUnpool2d
+    nn.MaxUnpool3d
     nn.AdaptiveAvgPool1d 
     nn.AdaptiveAvgPool2d 
     nn.AdaptiveAvgPool3d
@@ -153,6 +159,7 @@ Non-linear Activations (weighted sum, nonlinearity)
     nn.SELU 
     nn.CELU 
     nn.GELU 
+    nn.QuickGELU 
     nn.SiLU 
     nn.Sigmoid 
     nn.Mish 
@@ -195,6 +202,7 @@ Normalization Layers
     nn.InstanceNorm3d 
     nn.LayerNorm
     nn.RMSLayerNorm
+    nn.RMSNorm
 
 Recurrent Layers
 ----------------

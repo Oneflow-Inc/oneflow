@@ -738,7 +738,8 @@ void UserKernel::VirtualKernelInit(KernelContext* ctx) {
   kernel_->InitOpKernelCacheWithFlags(cache_ctx_.get(), user_op::OpKernelCache::kAllMayChanged,
                                       &opkernel_cache_);
 #ifdef WITH_CUDA_GRAPHS
-  if (ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH", false)) {
+  if (ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH", false)
+      && (!ParseBooleanFromEnv("ONEFLOW_GRAPH_ENABLE_STREAM_ORDERED_MEMORY_ALLOCATION", false))) {
     UserKernelInitContext init_ctx(ctx->stream(), kernel_conf());
     auto* cuda_stream = dynamic_cast<ep::CudaStream*>(ctx->stream());
     const auto* cuda_graph_support = dynamic_cast<const user_op::CudaGraphSupport*>(kernel_.get());

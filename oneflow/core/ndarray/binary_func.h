@@ -309,6 +309,24 @@ struct BinaryFuncXOR final {
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncXOR);
 
+template<typename T>
+struct BinaryFuncBitwiseAnd final {
+  static OF_DEVICE_FUNC T Invoke(const T x, const T y) { return x & y; }
+};
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncBitwiseAnd);
+
+template<typename T>
+struct BinaryFuncBitwiseOr final {
+  static OF_DEVICE_FUNC T Invoke(const T x, const T y) { return x | y; }
+};
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncBitwiseOr);
+
+template<typename T>
+struct BinaryFuncBitwiseXor final {
+  static OF_DEVICE_FUNC T Invoke(const T x, const T y) { return x ^ y; }
+};
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncBitwiseXor);
+
 #if defined(__CUDACC__)
 template<>
 struct BinaryFuncAdd<half> final {

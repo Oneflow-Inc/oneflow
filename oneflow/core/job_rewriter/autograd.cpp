@@ -112,7 +112,8 @@ void ScaleModelDiffByConstantLossInstanceNum(const OpGraph& op_graph, JobBuilder
     const LogicalBlobId& lbi = pair.first;
     LogicalBlobId& diff_lbi = pair.second;
     auto scalar_mul_op =
-        user_op::UserOpConfWrapperBuilder("System-ModelDiffScale-ScalarMul_" + NewUniqueId())
+        user_op::UserOpConfWrapperBuilder("Sys-DiffScale-ScalarMul-" + lbi.op_name() + "_"
+                                          + lbi.blob_name() + "-" + NewUniqueId())
             .Op("scalar_mul")
             .Input("in", GenLogicalBlobName(diff_lbi))
             .Output("out")
@@ -230,7 +231,8 @@ void ScaleModelDiffByDynamicLossInstanceNum(
     const LogicalBlobId& lbi = pair.first;
     LogicalBlobId& diff_lbi = pair.second;
     auto scalar_div_op =
-        user_op::UserOpConfWrapperBuilder("System-ModelDiffScale-ScalarDiv_" + NewUniqueId())
+        user_op::UserOpConfWrapperBuilder("Sys-DiffScale-ScalarDiv-" + lbi.op_name() + "_"
+                                          + lbi.blob_name() + "-" + NewUniqueId())
             .Op("scalar_div_by_tensor")
             .Input("x", GenLogicalBlobName(diff_lbi))
             .Input("scalar", GenLogicalBlobName(total_loss_instance_num_lbi))
@@ -882,7 +884,8 @@ void ScaleModelDiffByLossScale(JobPassCtx* ctx, const OpGraph& op_graph, JobBuil
       const LogicalBlobId& lbi = pair.first;
       LogicalBlobId& diff_lbi = pair.second;
       auto scalar_mul_op =
-          user_op::UserOpConfWrapperBuilder("System-ModelDiffScale-ScalarMul-" + NewUniqueId())
+          user_op::UserOpConfWrapperBuilder("Sys-DiffScale-ScalarMul-" + lbi.op_name() + "_"
+                                            + lbi.blob_name() + "-" + NewUniqueId())
               .Op("scalar_mul_by_tensor")
               .Input("x", GenLogicalBlobName(diff_lbi))
               .Input("scalar", LossScale4DataType(op_graph.GetLogicalBlobDesc(lbi).data_type()))
@@ -900,7 +903,8 @@ void ScaleModelDiffByLossScale(JobPassCtx* ctx, const OpGraph& op_graph, JobBuil
       const LogicalBlobId& lbi = pair.first;
       LogicalBlobId& diff_lbi = pair.second;
       auto scalar_mul_op =
-          user_op::UserOpConfWrapperBuilder("System-ModelDiffScale-ScalarMul-" + NewUniqueId())
+          user_op::UserOpConfWrapperBuilder("Sys-DiffScale-ScalarMul-" + lbi.op_name() + "_"
+                                            + lbi.blob_name() + "-" + NewUniqueId())
               .Op("scalar_mul")
               .Input("in", GenLogicalBlobName(diff_lbi))
               .Output("out")

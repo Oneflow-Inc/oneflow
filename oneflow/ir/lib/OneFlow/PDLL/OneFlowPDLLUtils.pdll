@@ -1,0 +1,25 @@
+Rewrite BuildFusedBiasAddMaskScaleOpWithRate(a: Value, b: Value, mask: Value, axis: Attr, rate: Attr, dropout: Op) -> Op;
+Rewrite CopyUserOpAttrs(src: Op, dst: Op) -> Op;
+
+Rewrite GetHeadSizeFromTranpose(transpose: Op) -> Attr;
+Rewrite CreateConv2dAndErasePad(x: Value, weight: Value, padding_before: Attr, data_format: Attr, conv: Op) -> Op;
+Rewrite CreatScaleTrilOp(x: Value, diagonal: Attr, floating_fill_value: Attr, integer_fill_value: Attr,
+                          is_floating_fill_value: Attr, float_operand: Attr, int_operand: Attr, has_float_operand: Attr, out: Type) -> Op {
+  let floating_scale_value = float_operand;
+  let integer_scale_value = int_operand;
+  let is_floating_scale_value = has_float_operand;
+  let scale_tril_op = op<oneflow.fused_scale_tril>(x){diagonal = diagonal, floating_fill_value = floating_fill_value, integer_fill_value = integer_fill_value,
+                                                        is_floating_fill_value = is_floating_fill_value, floating_scale_value = floating_scale_value,
+                                                        integer_scale_value = integer_scale_value, is_floating_scale_value = is_floating_scale_value} -> (out);
+  return scale_tril_op;
+}
+
+Rewrite CreateConv2DBatchNorm(epsilon: Attr, conv: Op, bn: Op) -> Op;
+Rewrite OutlineMulCast(mul: Op, cast: Op) -> Op;
+
+Constraint IsPaddingCouldBeAssimilatedIntoConv(padding_before: Attr, padding_after: Attr, data_format:Attr);
+Constraint IsNotNestedInJit(mul: Op);
+Constraint IsScalarTensor(value: Value);
+Constraint IsScalarEqualSqrtDim(query_reshape: Value, scalar_div_operand: Attr);
+Constraint IsScalarEqualSqrtDimReciprocal(query_reshape: Value, scalar_div_operand: Attr);
+Rewrite GetReciprocal(a: Attr) -> Attr;

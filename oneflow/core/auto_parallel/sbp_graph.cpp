@@ -33,7 +33,6 @@ static const int32_t kMinNodeInGraphForMerging = 4;
 }  // anonymous namespace
 
 // Generate a node
-
 SbpNode* SbpGraph::GenerateNode() {
   SbpNode* this_node = new SbpNode();
   node_list_.emplace_back(this_node);
@@ -68,18 +67,61 @@ void SbpGraph::SetDefaultSbpSig() const {
   for (const auto& this_node : node_list_) { this_node->final_sbp_sig_id_ = 0; }
 };
 
+void SbpGraph::StoreOriginMemory() {
+  // We do not need to store the origin cost and memory for edges
+  // Because the origin cost and memory is the current cost and memory for a bare edge.
+  // For nodes, we need to do so because child elimination would attach the child cost and memory to
+  // the current cost and memory.
+  for (auto& this_node : node_list_) {
+    this_node->origin_cost_ = this_node->cost_;
+    this_node->origin_memory_ = this_node->memory_;
+  }
+}
+
 double SbpGraph::ComputeCost() const {
-  // Over All Cost under current strategy
+  // Overall cost under current strategy
   double graph_cost_ = 0;
   for (const auto& this_node : node_list_) {
     int32_t this_id = this_node->final_sbp_sig_id_;
 
-    graph_cost_ += this_node->cost_[this_id];
+    graph_cost_ += this_node->weighted_cost_[this_id];
     for (const auto& edge_out : this_node->edges_out_) {
-      graph_cost_ += edge_out->cost_[this_id][edge_out->end_node_->final_sbp_sig_id_];
+      graph_cost_ += edge_out->weighted_cost_[this_id][edge_out->end_node_->final_sbp_sig_id_];
     }
   }
   return graph_cost_;
+}
+
+double SbpGraph::ComputeWeightedCost() const {
+  // Overall cost under current strategy
+  double graph_cost_ = 0;
+  for (const auto& this_node : node_list_) {
+    int32_t this_id = this_node->final_sbp_sig_id_;
+
+    graph_cost_ += this_node->weighted_cost_[this_id];
+    for (const auto& edge_out : this_node->edges_out_) {
+      graph_cost_ += edge_out->weighted_cost_[this_id][edge_out->end_node_->final_sbp_sig_id_];
+    }
+  }
+  return graph_cost_;
+}
+
+// Re-compute weighted cost
+void SbpGraph::ReComputeWeightedCost() {
+  for (const auto& this_node : node_list_) {
+    this_node->ComputeWeightedCost();
+    for (const auto& edge_out : this_node->edges_out_) { edge_out->ComputeWeightedCost(); }
+  }
+}
+
+int64_t SbpGraph::GetMemory() const {
+  // Overall memory under current strategy
+  int64_t total_memory = 0;
+  for (const auto& this_node : node_list_) {
+    total_memory += this_node->GetMemory();
+    for (const auto& edge_out : this_node->edges_out_) { total_memory += edge_out->GetMemory(); }
+  }
+  return total_memory;
 }
 
 int32_t SbpGraph::NodeElimination(SbpNode* this_node) {
@@ -237,7 +279,6 @@ int32_t SbpGraph::ChildElimination(SbpNode* this_node) {
 }
 
 // Merge two nodes
-
 int32_t SbpGraph::NodeMerging(SbpNode* first, SbpNode* second) {
   SbpNode* new_node = new SbpNode(first, second);
 
@@ -421,10 +462,11 @@ bool SbpGraph::DfsFindReasonableCost(std::vector<int32_t>& nbh_id2node_list_id,
   if (nbh_id == nbh_id2order.size()) { return true; }
   SbpNode* sbp_node = node_list_[nbh_id2node_list_id[nbh_id]];
   // Start from B.
-  for (int32_t sbp_id = sbp_node->cost_.size() - 1; sbp_id >= 0; sbp_id--) {
+  for (int32_t sbp_id = sbp_node->weighted_cost_.size() - 1; sbp_id >= 0; sbp_id--) {
     sbp_node->final_sbp_sig_id_ = sbp_id;
     // If the cost for this node is reasonable, then go to the next one
-    if (sbp_node->cost_[sbp_id] + sbp_node->EvalInNbhCost(node_list_id2nbh_id, nbh_id2order)
+    if (sbp_node->weighted_cost_[sbp_id]
+            + sbp_node->EvalInNbhCost(node_list_id2nbh_id, nbh_id2order)
         < GetValidMaxCopyCost()) {
       if (DfsFindReasonableCost(nbh_id2node_list_id, node_list_id2nbh_id, nbh_id2order,
                                 nbh_id + 1)) {
@@ -439,7 +481,6 @@ bool SbpGraph::DfsFindReasonableCost(std::vector<int32_t>& nbh_id2node_list_id,
 }
 
 // Find one strategy with finite cost for adjustment
-
 Maybe<void> SbpGraph::Find1Strategy4Greedy() const {
   std::vector<int32_t> nbh_id2node_list_id;
   std::vector<bool> not_visited(node_list_.size(), true);
@@ -502,7 +543,6 @@ Maybe<void> SbpGraph::Find1Strategy4Greedy() const {
 }
 
 // Use brute force to search for a strategy with minimum cost for a neighborhood
-
 double SbpGraph::NbhGreedyStrategy(std::vector<int32_t>& nbh_id2node_list_id) const {
   // number of nodes in the neighborhood
   int32_t num_nbh = nbh_id2node_list_id.size();
@@ -520,8 +560,8 @@ double SbpGraph::NbhGreedyStrategy(std::vector<int32_t>& nbh_id2node_list_id) co
   std::vector<std::vector<double>> out_nbh_costs(num_nbh);
   for (int32_t nbh_id = 0; nbh_id < num_nbh; nbh_id++) {
     SbpNode* sbp_node = node_list_[nbh_id2node_list_id[nbh_id]];
-    out_nbh_costs[nbh_id].resize(sbp_node->cost_.size());
-    for (int32_t sbp_id = sbp_node->cost_.size() - 1; sbp_id >= 0; sbp_id--) {
+    out_nbh_costs[nbh_id].resize(sbp_node->weighted_cost_.size());
+    for (int32_t sbp_id = sbp_node->weighted_cost_.size() - 1; sbp_id >= 0; sbp_id--) {
       sbp_node->final_sbp_sig_id_ = sbp_id;
       out_nbh_costs[nbh_id][sbp_id] = sbp_node->EvalOutNbhCost(node_list_id2nbh_id);
     }
@@ -560,7 +600,7 @@ double SbpGraph::NbhGreedyStrategy(std::vector<int32_t>& nbh_id2node_list_id) co
     original_cost += sbp_node->EvalInNbhCost(node_list_id2nbh_id, nbh_id2order);
   }
   double min_cost = original_cost;
-  // Accumulate minimum cost form the current node to the end of the neighborhood node list.
+  // Accumulate minimum cost from the current node to the end of the neighborhood node list.
   // The accumulated cost include the current node.
   std::vector<double> order2acc_min_in_nbh_cost(num_nbh);
   order2acc_min_in_nbh_cost[num_nbh - 1] =
@@ -595,7 +635,6 @@ double SbpGraph::NbhGreedyStrategy(std::vector<int32_t>& nbh_id2node_list_id) co
 }
 
 // Select and Merge two nodes
-
 int32_t SbpGraph::PickAndMerge() {
   if (node_list_.size() < kMinNodeInGraphForMerging) { return 0; }
   // Pick the one with the smallest cut ratio
@@ -639,7 +678,7 @@ int32_t SbpGraph::PickAndMerge() {
     int32_t min_sbp_num = 0, curr_sbp_num = 0;
     for (int32_t i = 0; i < node_list_.size(); i++) {
       for (int32_t j = i + 1; j < node_list_.size(); j++) {
-        curr_sbp_num = node_list_[i]->cost_.size() * node_list_[j]->cost_.size();
+        curr_sbp_num = node_list_[i]->weighted_cost_.size() * node_list_[j]->weighted_cost_.size();
         if (curr_sbp_num <= threshold_) {
           node_binary_sets[i].IntersectionTo(node_binary_sets[j], buffer_binary_set);
           curr_comm_edge_num = buffer_binary_set.Total();
@@ -662,7 +701,6 @@ int32_t SbpGraph::PickAndMerge() {
 }
 
 // Clip an edge, remove it from graph
-
 void SbpGraph::ClipEdge(SbpEdge* this_edge) const {
   CheckAndRemoveFrom<SbpEdge*>(this_edge->end_node_->edges_in_, this_edge);
   CheckAndRemoveFrom<SbpEdge*>(this_edge->start_node_->edges_out_, this_edge);
@@ -670,7 +708,6 @@ void SbpGraph::ClipEdge(SbpEdge* this_edge) const {
 }
 
 // Compute the minimum and maximum layer of each node in the graph
-
 int32_t SbpGraph::ComputeLayer(
     HashMap<std::string, SbpNode*>& op_name2sbp_node,
     const HashMap<const OpNode*, HashSet<std::string>>& op_node2mutable_op_ctrl_deps) const {
@@ -691,8 +728,8 @@ int32_t SbpGraph::ComputeLayer(
   return max_min_layer;
 }
 
+// TODO: Remove the tributary layer here.
 // Find the trunk of the sbp graph, then reduce the wait time for tributaries
-
 void SbpGraph::FindTrunk(int32_t max_min_layer,
                          HashMap<std::string, SbpNode*>& op_name2sbp_node) const {
   // Summarize cost for each layer, on the trunk or tributaries
@@ -758,8 +795,7 @@ void SbpGraph::FindTrunk(int32_t max_min_layer,
   for (SbpNode* this_node : node_list_) { this_node->RaiseConsumerNum(op_name2sbp_node); }
   // Reduce the wait time for tributaries
   for (SbpNode* this_node : node_list_) {
-    this_node->SpreadAvailWaitTime(trunk_cost, acc_trunk_cost, op_name2sbp_node, wait_time_,
-                                   transfer_cost_);
+    this_node->SpreadAvailWaitTime(trunk_cost, acc_trunk_cost, op_name2sbp_node, wait_time_);
   }
 
   // Reduce the wait time for trunk from the end to the begin
@@ -787,11 +823,11 @@ void SbpGraph::FindTrunk(int32_t max_min_layer,
     // This code maintains ( acc_tributary_cost + used_tributary_cost )
     if (acc_tributary_cost > 0.0) {
       if (acc_tributary_cost > wait_time_) {
-        curr_wait_time = transfer_cost_;
+        curr_wait_time = 0.0;
         acc_tributary_cost -= wait_time_;
         used_tributary_cost += wait_time_;
       } else {
-        curr_wait_time = transfer_cost_ + wait_time_ - acc_tributary_cost;
+        curr_wait_time = wait_time_ - acc_tributary_cost;
         used_tributary_cost += acc_tributary_cost;
         acc_tributary_cost = 0.0;
       }
@@ -804,12 +840,7 @@ void SbpGraph::FindTrunk(int32_t max_min_layer,
 }
 
 // Set wait time
-
 void SbpGraph::SetWaitTime(double wait_time) { wait_time_ = wait_time; }
-
-// Set transfer cost
-
-void SbpGraph::SetTransferCost(double transfer_cost) { transfer_cost_ = transfer_cost; }
 
 }  // namespace auto_parallel
 }  // namespace oneflow

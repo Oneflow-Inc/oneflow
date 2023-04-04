@@ -190,6 +190,7 @@ REGISTER_REDUCE_SUM_KERNELS_BY_DEVICE(DeviceType::kCPU)
 REGISTER_REDUCE_SUM_KERNELS_BY_DEVICE(DeviceType::kCUDA)
 #endif
 REGISTER_REDUCE_SUM_KERNELS(DeviceType::kCPU, float)
+REGISTER_REDUCE_SUM_KERNELS(DeviceType::kCPU, float16)
 
 #define REGISTER_REDUCE_LOGICAL_KERNELS(device)                                    \
   REGISTER_REDUCE_LOGICAL_XPU_KERNEL("reduce_any", BinaryFuncAny, device, bool)    \

@@ -23,7 +23,7 @@ import oneflow.unittest
 
 
 def _test_linear_graph_save_load(test_case, device):
-    def train_with_graph(call_cnt=0, state_dict_dir=None, last_state_dict=None):
+    def train_with_graph(call_cnt=0, state_dict_file=None, last_state_dict=None):
         linear = flow.nn.Linear(3, 8)
         linear = linear.to(device)
         flow.nn.init.constant_(linear.weight, 2.068758)
@@ -60,7 +60,7 @@ def _test_linear_graph_save_load(test_case, device):
 
         linear_t_g = LinearTrainGraph()
         if call_cnt == 1:
-            state_dict = flow.load(state_dict_dir)
+            state_dict = flow.load(state_dict_file)
             linear_t_g.load_state_dict(state_dict)
             # Check state in module has been loaded.
             test_case.assertTrue(
@@ -110,7 +110,7 @@ def _test_linear_graph_save_load(test_case, device):
         of_graph_out.numpy()
         iter1_state_dict = linear_t_g.state_dict()
         if call_cnt == 0:
-            flow.save(iter1_state_dict, state_dict_dir)
+            flow.save(iter1_state_dict, state_dict_file)
 
         if call_cnt == 0:
             of_graph_out = linear_t_g(x)
@@ -118,9 +118,9 @@ def _test_linear_graph_save_load(test_case, device):
             of_graph_out.numpy()
             return iter2_state_dict
 
-    with tempfile.TemporaryDirectory(prefix="graph_save_load_local") as state_dict_dir:
-        iter2_state_dict = train_with_graph(0, state_dict_dir)
-        train_with_graph(1, state_dict_dir, iter2_state_dict)
+    with tempfile.NamedTemporaryFile(prefix="graph_save_load_local") as f:
+        iter2_state_dict = train_with_graph(0, f.name)
+        train_with_graph(1, f.name, iter2_state_dict)
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -138,7 +138,7 @@ def _test_linear_graph_save_load_global(test_case, device):
     B = flow.sbp.broadcast
     S = flow.sbp.split(0)
 
-    def train_with_graph(call_cnt=0, state_dict_dir=None, last_state_dict=None):
+    def train_with_graph(call_cnt=0, state_dict_file=None, last_state_dict=None):
         linear = flow.nn.Linear(3, 8)
         linear = linear.to(device)
         flow.nn.init.constant_(linear.weight, 2.068758)
@@ -177,7 +177,7 @@ def _test_linear_graph_save_load_global(test_case, device):
 
         linear_t_g = LinearTrainGraphGlobal()
         if call_cnt == 1:
-            state_dict = flow.load(state_dict_dir, global_src_rank=0)
+            state_dict = flow.load(state_dict_file, global_src_rank=0)
             linear_t_g.load_state_dict(state_dict)
             # Check state in module has been loaded.
             # Tensors in state dict are save to rank 0, so they need to be broadcast to rank 0 and 1 before check.
@@ -250,7 +250,7 @@ def _test_linear_graph_save_load_global(test_case, device):
         of_graph_out.numpy()
         iter1_state_dict = linear_t_g.state_dict()
         if call_cnt == 0:
-            flow.save(iter1_state_dict, state_dict_dir, global_dst_rank=0)
+            flow.save(iter1_state_dict, state_dict_file, global_dst_rank=0)
 
         if call_cnt == 0:
             of_graph_out = linear_t_g(x)
@@ -258,9 +258,9 @@ def _test_linear_graph_save_load_global(test_case, device):
             iter2_state_dict = linear_t_g.state_dict()
             return iter2_state_dict
 
-    with tempfile.TemporaryDirectory(prefix="graph_save_load_global") as state_dict_dir:
-        iter2_state_dict = train_with_graph(0, state_dict_dir)
-        train_with_graph(1, state_dict_dir, iter2_state_dict)
+    with tempfile.NamedTemporaryFile(prefix="graph_save_load_global") as f:
+        iter2_state_dict = train_with_graph(0, f.name)
+        train_with_graph(1, f.name, iter2_state_dict)
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")

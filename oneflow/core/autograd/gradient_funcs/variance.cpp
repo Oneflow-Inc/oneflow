@@ -68,6 +68,9 @@ Maybe<void> Variance::Apply(const VarianceState* ctx, const TensorTuple& out_gra
                             TensorTuple* in_grads) const {
   // TODO(): replace it using kernel
   const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
+  DataType data_type = x->dtype()->data_type();
+  CHECK_NE_OR_RETURN(data_type, DataType::kBFloat16)
+      << Error::RuntimeError() << "Variance op not support backward for bfloat16 yet!";
   size_t correction = ctx->unbiased ? 1 : 0;
   size_t elem_cnt = 1;
   CHECK_OR_RETURN(ctx->axis.size() > 0)

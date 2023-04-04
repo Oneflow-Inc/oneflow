@@ -17,11 +17,14 @@ limitations under the License.
 #include <memory>
 
 #include "oneflow/api/python/utils/tensor_utils.h"
+#include "oneflow/api/python/dlpack/converter.h"
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/tensor_api.yaml.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
+#include "oneflow/core/eager/tensor_storage.h"
+#include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -50,6 +53,12 @@ class TensorWithDataFunctor {
     //  even if in nn.Graph build (module forward function), if you create a flow.Tensor,
     //  its a eager tensor by Run functional::Empty() in LazyMode::Grad(false)
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
+    if (GlobalMode::is_enabled()) {
+      auto global_mode_gurad = GlobalMode::Guard(false);
+      return JUST(
+          functional::GlobalTensorWithData(data, dtype, GetGlobalParallelDescFromDevice(device),
+                                           *JUST(GetSbpList(GlobalMode::nd_sbp())), requires_grad));
+    }
 
     if (PyTensor_Check(data)) {
       // Throw warnings like pytorch.
@@ -98,50 +107,54 @@ class GlobalTensorWithDataFunctor {
   }
 };
 
-class TensorEmptyCtorFunctor {
+class TensorEmptyGenericCtorFunctor {
  public:
-  Maybe<Tensor> operator()(const Optional<Symbol<Device>>& device) const {
+  Maybe<Tensor> operator()(const Symbol<DType>& dtype,
+                           const Optional<Symbol<Device>>& device) const {
     Shape shape(DimVector{0});
-    return TensorWithShapeCtor(shape, device);
+    return TensorWithShapeGenericCtor(shape, dtype, device);
   }
 };
 
-class GlobalTensorEmptyCtorFunctor {
+class GlobalTensorEmptyGenericCtorFunctor {
  public:
-  Maybe<Tensor> operator()(const Symbol<ParallelDesc>& placement,
+  Maybe<Tensor> operator()(const Symbol<DType>& dtype, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     Shape shape(DimVector{0});
     JUST(CheckDeviceIdsIsValid(placement));
-    return GlobalTensorWithShapeCtor(shape, placement, sbp_tuple);
+    return GlobalTensorWithShapeGenericCtor(shape, dtype, placement, sbp_tuple);
   }
 };
 
-class TensorWithOtherCtorFunctor {
+class TensorWithOtherGenericCtorFunctor {
  public:
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& other) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& other,
+                           const Optional<Symbol<DType>>& dtype) const {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     bool is_pinned = false;
     if (other->is_local()) { is_pinned = JUST(CHECK_JUST(other->AsLocalTensor())->is_pinned()); }
-    return MakeTensorFromOtherTensor(other, is_pinned);
+    return To(JUST(MakeTensorFromOtherTensor(other, is_pinned)), dtype, false);
   }
 };
 
-class TensorWithDataCtorFunctor {
+class TensorWithDataGenericCtorFunctor {
  public:
-  Maybe<Tensor> operator()(PyObject* data, const Optional<Symbol<Device>>& device) const {
+  Maybe<Tensor> operator()(PyObject* data, const Symbol<DType>& dtype,
+                           const Optional<Symbol<Device>>& device) const {
     // Treat the single long as shape.
     if (PyLong_Check(data)) {
       int64_t size = PyLong_AsLongLong(data);
       Shape shape(DimVector{size});
-      return TensorWithShapeCtor(shape, device);
+      return TensorWithShapeGenericCtor(shape, dtype, device);
     }
-    if (TensorSize_Check(data)) { return TensorWithShapeCtor(TensorSize_AsShape(data), device); }
+    if (TensorSize_Check(data)) {
+      return TensorWithShapeGenericCtor(TensorSize_AsShape(data), dtype, device);
+    }
 
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
 
-    const auto& dtype = GetDefaultDType();
     if (PyTensor_Check(data)) {
       const auto& other = PyTensor_Unpack(data);
       const bool pin_memory =
@@ -155,25 +168,26 @@ class TensorWithDataCtorFunctor {
   }
 };
 
-class GlobalTensorWithDataCtorFunctor {
+class GlobalTensorWithDataGenericCtorFunctor {
  public:
-  Maybe<Tensor> operator()(PyObject* data, const Symbol<ParallelDesc>& placement,
+  Maybe<Tensor> operator()(PyObject* data, const Symbol<DType>& dtype,
+                           const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
     // Treat the single long as shape.
     if (PyLong_Check(data)) {
       int64_t size = PyLong_AsLongLong(data);
       Shape shape(DimVector{size});
-      return GlobalTensorWithShapeCtor(shape, placement, sbp_tuple);
+      return GlobalTensorWithShapeGenericCtor(shape, dtype, placement, sbp_tuple);
     }
     if (TensorSize_Check(data)) {
-      return GlobalTensorWithShapeCtor(TensorSize_AsShape(data), placement, sbp_tuple);
+      return GlobalTensorWithShapeGenericCtor(TensorSize_AsShape(data), dtype, placement,
+                                              sbp_tuple);
     }
 
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
 
-    const auto& dtype = GetDefaultDType();
     if (PyTensor_Check(data)) {
       const auto& other = PyTensor_Unpack(data);
       return MakeTensorFromOtherTensor(other, dtype, placement, sbp_tuple,
@@ -184,9 +198,10 @@ class GlobalTensorWithDataCtorFunctor {
   }
 };
 
-class TensorWithShapeCtorFunctor {
+class TensorWithShapeGenericCtorFunctor {
  public:
-  Maybe<Tensor> operator()(const Shape& shape, const Optional<Symbol<Device>>& device) const {
+  Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
+                           const Optional<Symbol<Device>>& device) const {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     Symbol<Device> device_;
@@ -195,35 +210,39 @@ class TensorWithShapeCtorFunctor {
     } else {
       device_ = JUST(Device::New("cpu"));
     }
-    return functional::Empty(shape, GetDefaultDType(), device_, /*pin_memory=*/false);
+    return functional::Empty(shape, dtype, device_, /*requires_grad=*/false, /*pin_memory=*/false);
   }
 };
 
-class GlobalTensorWithShapeCtorFunctor {
+class GlobalTensorWithShapeGenericCtorFunctor {
  public:
-  Maybe<Tensor> operator()(const Shape& shape, const Symbol<ParallelDesc>& placement,
+  Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
+                           const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     JUST(CheckDeviceIdsIsValid(placement));
-    return functional::GlobalEmpty(shape, GetDefaultDType(), placement, sbp_tuple);
+    return functional::GlobalEmpty(shape, dtype, placement, sbp_tuple);
   }
 };
 
 class AssignLocalTensorFunctor {
  public:
   AssignLocalTensorFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("assign").Input("ref").Input("value").Build());
+    op_ = CHECK_JUST(one::OpBuilder("copy").Input("in").Output("out").Build());
   }
-  Maybe<void> operator()(const std::shared_ptr<one::Tensor>& ref,
-                         const std::shared_ptr<one::Tensor>& value) const {
-    // JUST(CheckInplaceValid(ref)); // align check to torch
-    CHECK_OR_RETURN(ref->is_local() && value->is_local())
-        << "Both ref and value must be local tensor.";
-    std::shared_ptr<one::Tensor> src = value;
-    if (ref->dtype() != src->dtype()) { src = JUST(To(src, ref->dtype(), false)); }
-    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ref, src}));
-    return Maybe<void>::Ok();
+  Maybe<void> operator()(const std::shared_ptr<one::Tensor>& y,
+                         const std::shared_ptr<one::Tensor>& x) const {
+    // JUST(CheckInplaceValid(y)); // align check to torch
+    CHECK_OR_RETURN(y->is_local() && x->is_local()) << "Both x and y must be local tensor.";
+    std::shared_ptr<one::Tensor> src = x;
+    if (y->dtype() != src->dtype()) { src = JUST(To(src, y->dtype(), false)); }
+
+    auto device = JUST(y->device());
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("device", "pin_memory");
+    attrs.SetAllAttrs(device, false);
+    TensorTuple outputs{y};
+    return OpInterpUtil::Dispatch(*op_, {x}, &outputs, attrs);
   }
 
  private:
@@ -235,6 +254,29 @@ static std::vector<int64_t> get_shape_or_stride_from_numpy(size_t ndim, npy_intp
   for (size_t i = 0; i < ndim; ++i) { result[i] = static_cast<int64_t>(values[i]); }
   return result;
 }
+
+class LocalTensorSharedDlPackDataFunctor {
+ public:
+  LocalTensorSharedDlPackDataFunctor() {}
+  Maybe<Tensor> operator()(PyObject* obj) const {
+    DLManagedTensor* dlMTensor = (DLManagedTensor*)PyCapsule_GetPointer(obj, "dltensor");
+    CHECK_NOTNULL_OR_RETURN(dlMTensor)
+        << "from_dlpack received an invalid capsule. "
+           "Note that DLTensor capsules can be consumed only once, "
+           "so you might have already constructed a tensor from it once.";
+
+    // `tensor` steals the ownership of the underlying storage. It also passes a
+    // destructor function that will be called when the underlying storage goes
+    // out of scope. When the destructor is called, the dlMTensor is destructed
+    // too.
+    auto tensor = fromDLPack(dlMTensor);
+
+    // Make sure this capsule will never be used again.
+    PyCapsule_SetName(obj, "used_dltensor");
+
+    return tensor;
+  }
+};
 
 class LocalTensorSharedNumpyDataFunctor {
  public:
@@ -293,10 +335,10 @@ class LocalTensorSharedNumpyDataFunctor {
     };
 
     const auto array_size_in_bytes = PyArray_NBYTES(array);
-    auto tensor_data = std::make_shared<vm::TensorStorage>();
+    auto tensor_data = std::make_shared<vm::TensorStorage>(false, device);
     tensor_data->set_blob_dptr(
         std::unique_ptr<char, std::function<void(char*)>>(static_cast<char*>(data_ptr), Free),
-        array_size_in_bytes, /*is_allocated_in_vm*/ false);
+        array_size_in_bytes);
 
     // Build TensorStorage: decrease ndarray reference count before releasing
     auto tensor_storage = std::make_shared<TensorStorage>(tensor_data);
@@ -322,15 +364,47 @@ class LocalTensorSharedNumpyDataFunctor {
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TensorWithDataFunctor>("TensorWithData");
   m.add_functor<impl::GlobalTensorWithDataFunctor>("GlobalTensorWithData");
-  m.add_functor<impl::TensorEmptyCtorFunctor>("TensorEmptyCtor");
-  m.add_functor<impl::GlobalTensorEmptyCtorFunctor>("GlobalTensorEmptyCtor");
-  m.add_functor<impl::TensorWithOtherCtorFunctor>("TensorWithOtherCtor");
-  m.add_functor<impl::TensorWithDataCtorFunctor>("TensorWithDataCtor");
-  m.add_functor<impl::GlobalTensorWithDataCtorFunctor>("GlobalTensorWithDataCtor");
-  m.add_functor<impl::TensorWithShapeCtorFunctor>("TensorWithShapeCtor");
-  m.add_functor<impl::GlobalTensorWithShapeCtorFunctor>("GlobalTensorWithShapeCtor");
+  m.add_functor<impl::TensorEmptyGenericCtorFunctor>("TensorEmptyGenericCtor");
+  m.add_functor<impl::GlobalTensorEmptyGenericCtorFunctor>("GlobalTensorEmptyGenericCtor");
+  m.add_functor<impl::TensorWithOtherGenericCtorFunctor>("TensorWithOtherGenericCtor");
+  m.add_functor<impl::TensorWithDataGenericCtorFunctor>("TensorWithDataGenericCtor");
+  m.add_functor<impl::GlobalTensorWithDataGenericCtorFunctor>("GlobalTensorWithDataGenericCtor");
+  m.add_functor<impl::TensorWithShapeGenericCtorFunctor>("TensorWithShapeGenericCtor");
+  m.add_functor<impl::GlobalTensorWithShapeGenericCtorFunctor>("GlobalTensorWithShapeGenericCtor");
   m.add_functor<impl::AssignLocalTensorFunctor>("AssignLocalTensor");
   m.add_functor<impl::LocalTensorSharedNumpyDataFunctor>("LocalTensorSharedNumpyData");
+  m.add_functor("TensorEmptyCtor", [](const Optional<Symbol<Device>>& device) -> Maybe<Tensor> {
+    return TensorEmptyGenericCtor(GetDefaultDType(), device);
+  });
+  m.add_functor("GlobalTensorEmptyCtor",
+                [](const Symbol<ParallelDesc>& placement,
+                   const std::vector<Symbol<SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
+                  return GlobalTensorEmptyGenericCtor(GetDefaultDType(), placement, sbp_tuple);
+                });
+  m.add_functor("TensorWithOtherCtor", [](const std::shared_ptr<Tensor>& other) -> Maybe<Tensor> {
+    return TensorWithOtherGenericCtor(other, NullOpt);
+  });
+  m.add_functor("TensorWithDataCtor",
+                [](PyObject* data, const Optional<Symbol<Device>>& device) -> Maybe<Tensor> {
+                  return TensorWithDataGenericCtor(data, GetDefaultDType(), device);
+                });
+  m.add_functor("GlobalTensorWithDataCtor",
+                [](PyObject* data, const Symbol<ParallelDesc>& placement,
+                   const std::vector<Symbol<SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
+                  return GlobalTensorWithDataGenericCtor(data, GetDefaultDType(), placement,
+                                                         sbp_tuple);
+                });
+  m.add_functor("TensorWithShapeCtor",
+                [](const Shape& shape, const Optional<Symbol<Device>>& device) -> Maybe<Tensor> {
+                  return TensorWithShapeGenericCtor(shape, GetDefaultDType(), device);
+                });
+  m.add_functor("GlobalTensorWithShapeCtor",
+                [](const Shape& shape, const Symbol<ParallelDesc>& placement,
+                   const std::vector<Symbol<SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
+                  return GlobalTensorWithShapeGenericCtor(shape, GetDefaultDType(), placement,
+                                                          sbp_tuple);
+                });
+  m.add_functor<impl::LocalTensorSharedDlPackDataFunctor>("LocalTensorSharedDlPackData");
 }
 
 }  // namespace functional

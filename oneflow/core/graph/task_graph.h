@@ -76,13 +76,15 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphNormalForwardToDecodeH2D);
 
  private:
-  void BuildTaskPath(TaskNode* src_node, TaskNode* dst_node, const LogicalBlobId& lbi);
+  void BuildTaskPath(TaskNode* src_node, TaskNode* dst_node, const LogicalBlobId& lbi,
+                     bool is_host_mem_input);
 
   void ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_nodes,
                         const std::vector<CompTaskNode*>& dst_task_nodes);
 
   void SetOrderInGraphForEachNode();
-  void MergeChain();
+  void MergeChainByPhysicalTaskGraph();
+  void MergeChainByLogicalChainId();
   void BuildCtrlRegstDescInSameChain();
 
   // inplace

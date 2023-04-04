@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_SBP_SBPOPS_H_
-#define ONEFLOW_IR_INCLUDE_SBP_SBPOPS_H_
+#ifndef ONEFLOW_IR_INCLUDE_SBP_SBPOPS
+#define ONEFLOW_IR_INCLUDE_SBP_SBPOPS
 
 include "OneFlow/SBP/SBPDialect.td"
 include "OneFlow/SBP/SBPBase.td"
@@ -27,4 +27,4 @@ include "mlir/Pass/PassBase.td"
 
 include "mlir/IR/OpBase.td"
 
-#endif // ONEFLOW_IR_INCLUDE_SBP_SBPOPS_H_
+#endif // ONEFLOW_IR_INCLUDE_SBP_SBPOPS

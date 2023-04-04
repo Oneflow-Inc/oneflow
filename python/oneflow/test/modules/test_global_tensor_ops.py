@@ -34,6 +34,29 @@ def _test_type_as(test_case, shape, src_dtype, tgt_dtype, placement, sbp):
     test_case.assertEqual(input.dtype, target.dtype)
 
 
+def _test_local_to_global_type_as(
+    test_case, shape, src_dtype, tgt_dtype, placement, sbp
+):
+    np_input = np.random.rand(*shape)
+    input = random_tensor(ndim=len(shape)).oneflow.to_local()
+    target = flow.tensor(np_input, dtype=tgt_dtype).to_global(placement, sbp)
+    input = input.type_as(target)
+    test_case.assertEqual(input.dtype, target.dtype)
+    test_case.assertEqual(input.placement, target.placement)
+    test_case.assertEqual(input.sbp, target.sbp)
+
+
+def _test_global_to_local_type_as(
+    test_case, shape, src_dtype, tgt_dtype, placement, sbp
+):
+    np_input = np.random.rand(*shape)
+    input = flow.tensor(np_input, dtype=tgt_dtype).to_global(placement, sbp)
+    target = random_tensor(ndim=len(shape)).to(random_device()).oneflow.to_local()
+    input = input.type_as(target)
+    test_case.assertEqual(input.dtype, target.dtype)
+    test_case.assertEqual(input.device, target.device)
+
+
 def _test_is_floating_point(test_case, shape, dtype, placement, sbp):
     np_input = np.random.rand(*shape)
     input = flow.tensor(np_input, dtype=dtype).to_global(placement, sbp)
@@ -44,7 +67,7 @@ def _test_is_floating_point(test_case, shape, dtype, placement, sbp):
         test_case.assertEqual(output, False)
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def _test_global_cuda(test_case, placement, sbp):
     x = random_tensor(2, 8, 16).to_global(placement, sbp)
@@ -61,7 +84,7 @@ class TestGlobalCuda(flow.unittest.TestCase):
                 _test_global_cuda(test_case, placement, sbp)
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_global_cpu(test_case, placement, sbp):
     x = random_tensor(2, 8, 16).to_global(placement, sbp)
     x = x.cpu()
@@ -71,7 +94,7 @@ def _test_global_cpu(test_case, placement, sbp):
 
 # PyTorch error if open auto_backward:
 # element 0 of tensors does not require grad and does not have a grad_fn
-@autotest(n=1, auto_backward=False, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=True)
 def _test_global_long(test_case, placement, sbp):
     x = random_tensor(2, 8, 16, requires_grad=True).to_global(placement, sbp)
     y = x.long()
@@ -79,7 +102,7 @@ def _test_global_long(test_case, placement, sbp):
     return y
 
 
-@autotest(n=1, auto_backward=False, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=True)
 def _test_global_int(test_case, placement, sbp):
     x = random_tensor(2, 8, 16, requires_grad=True).to_global(placement, sbp)
     y = x.int()
@@ -87,21 +110,21 @@ def _test_global_int(test_case, placement, sbp):
     return y
 
 
-@autotest(n=1, auto_backward=False, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=True)
 def _test_global_float(test_case, placement, sbp):
     x = random_tensor(2, 8, 16, dtype=int).to_global(placement, sbp)
     y = x.float()
     return y
 
 
-@autotest(n=1, auto_backward=False, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=True)
 def _test_global_double(test_case, placement, sbp):
     x = random_tensor(2, 8, 16, dtype=int).to_global(placement, sbp)
     y = x.double()
     return y
 
 
-@autotest(n=1, auto_backward=False, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=True)
 def _test_global_item(test_case, placement, sbp):
     x = random_tensor(ndim=1, dim0=1, dtype=int).to_global(placement, sbp)
     y = torch.tensor(x.item())
@@ -171,6 +194,8 @@ class TestGlobalTensorOps(flow.unittest.TestCase):
             for placement in all_placement():
                 for sbp in all_sbp(placement, max_dim=len(arg[0])):
                     _test_type_as(test_case, *arg, placement, sbp)
+                    _test_local_to_global_type_as(test_case, *arg, placement, sbp)
+                    _test_global_to_local_type_as(test_case, *arg, placement, sbp)
 
     @globaltest
     def test_is_floating_point(test_case):

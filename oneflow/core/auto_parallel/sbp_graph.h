@@ -46,8 +46,12 @@ class SbpGraph final {
   // assign 0 to a SbpSignature strategy to avoid randomness
   void SetDefaultSbpSig() const;
 
+  void StoreOriginMemory();
   // Compute Cost for current strategy
   double ComputeCost() const;
+  double ComputeWeightedCost() const;
+  // Re-compute weighted cost
+  void ReComputeWeightedCost();
 
   // Generate a node
   SbpNode* GenerateNode();
@@ -91,8 +95,9 @@ class SbpGraph final {
   // Set wait time
   void SetWaitTime(double wait_time);
 
-  // Set transfer cost
-  void SetTransferCost(double transfer_cost);
+  // Constant getter
+  std::vector<SbpNode*>& GetNodeList() { return node_list_; }
+  int64_t GetMemory() const;
 
  private:
   friend class SbpCollector;
@@ -104,10 +109,8 @@ class SbpGraph final {
   // Limitation: Merged node should not have a number of Sbp Signature greater
   // than threshold.
   int32_t threshold_ = 100;
-  // Overlayable wait time for copy cost, which occurs before communication between devices.
+  // Wait time for copy cost, which occurs before communication between devices.
   double wait_time_ = 16500.0;
-  // Uncovered wait time for copy cost, which is already set up somewhere else
-  double transfer_cost_ = 0.0;
 
   // Remove a node from the node list
   void RemoveFromNodeList(SbpNode* this_node);

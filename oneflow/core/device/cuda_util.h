@@ -21,6 +21,9 @@ limitations under the License.
 #ifdef WITH_CUDA
 
 #include <cublas_v2.h>
+#if CUDA_VERSION >= 11000
+#include <cusolverDn.h>
+#endif
 #include <cuda.h>
 #if CUDA_VERSION >= 10010
 #include <cublasLt.h>
@@ -48,6 +51,10 @@ const char* CublasGetErrorString(cublasStatus_t error);
 
 const char* CurandGetErrorString(curandStatus_t error);
 
+#if CUDA_VERSION >= 11000
+const char* CusovlerGetErrorString(cusolverStatus_t error);
+#endif
+
 #if CUDA_VERSION >= 10020
 
 const char* NvjpegGetErrorString(nvjpegStatus_t error);
@@ -70,6 +77,15 @@ const char* NvjpegGetErrorString(nvjpegStatus_t error);
        _of_cublas_check_status != CUBLAS_STATUS_SUCCESS;)                                          \
   LOG(FATAL) << "Check failed: " #condition " : " << CublasGetErrorString(_of_cublas_check_status) \
              << " (" << _of_cublas_check_status << ") "
+
+#if CUDA_VERSION >= 11000
+#define OF_CUSOLVER_CHECK(condition)                                        \
+  for (cusolverStatus_t _of_cusolver_check_status = (condition);            \
+       _of_cusolver_check_status != CUSOLVER_STATUS_SUCCESS;)               \
+    LOG(FATAL) << "Check failed: " #condition " : "                         \
+               << CusovlerGetErrorString(_of_cusolver_check_status) << " (" \
+               << _of_cusolver_check_status << ") ";
+#endif
 
 #define OF_CURAND_CHECK(condition)                                                                 \
   for (curandStatus_t _of_curand_check_status = (condition);                                       \

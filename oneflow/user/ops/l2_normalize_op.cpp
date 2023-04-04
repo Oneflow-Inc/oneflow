@@ -52,8 +52,13 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> L2NormalizeOp::InferDataType(user_op::InferContext* ctx) {
-  ctx->SetOutputDType("square_x_sum", 0, ctx->InputDType("x", 0));
-  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
+  DataType x_dtype = ctx->InputDType("x", 0);
+  DataType square_x_sum_dtype = x_dtype;
+  if (x_dtype == DataType::kFloat16 || x_dtype == DataType::kBFloat16) {
+    square_x_sum_dtype = DataType::kFloat;
+  }
+  ctx->SetOutputDType("square_x_sum", 0, square_x_sum_dtype);
+  ctx->SetOutputDType("y", 0, x_dtype);
   return Maybe<void>::Ok();
 }
 

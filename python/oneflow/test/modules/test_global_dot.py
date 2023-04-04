@@ -20,7 +20,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def do_test_dot_impl(test_case, placement, sbp):
     k = random(100, 1000) * 8
     x = random_tensor(ndim=1, dim0=k).to_global(placement=placement, sbp=sbp)

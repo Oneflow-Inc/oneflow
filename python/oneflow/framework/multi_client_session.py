@@ -35,8 +35,6 @@ class MultiClientSession(object):
         self._id = sess_id
         self._env = env
         assert self._env is not None
-        # TODO(strint): Remove old session.
-        self._internal_sess = oneflow._oneflow_internal.RegsiterSession(sess_id)
         # New a MultiClientSessionContext
         self._session_ctx = oneflow._oneflow_internal.SessionContext(self._env._env_cxt)
         self.config_proto_ = self._make_config_proto()
@@ -45,6 +43,12 @@ class MultiClientSession(object):
         self.scope_attr_name2default_val_ = {}
         self._update_scope_attr_name2defaultVal()
         self.status_ = self.Status.CREATED
+
+    def __del__(self):
+        if self._env.is_shutting_down():
+            # After python shutting down, it's not safe to call oneflow
+            return
+        self._TryClose()
 
     def TryInit(self):
         self._check_status(self.Status.CREATED, self.Status.INITED)
@@ -55,7 +59,7 @@ class MultiClientSession(object):
 
     def _TryClose(self):
         if self.status_ != self.Status.CLOSED:
-            oneflow._oneflow_internal.ClearSessionById(self.id)
+            oneflow._oneflow_internal.ClearSessionId(self.id)
         self.status_ = self.Status.CLOSED
 
     @property
@@ -120,9 +124,3 @@ class MultiClientSession(object):
         self._check_status(self.Status.INITED)
         config_proto_str = text_format.MessageToString(resource_config)
         self._session_ctx.update_resource(config_proto_str)
-
-    def __del__(self):
-        if self._env.is_shutting_down():
-            # After python shutting down, it's not safe to call oneflow
-            return
-        self._TryClose()

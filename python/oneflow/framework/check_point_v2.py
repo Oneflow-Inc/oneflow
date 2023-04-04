@@ -13,14 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from contextlib import contextmanager
+import contextlib
 import os
 import warnings
-from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+    IO,
+    BinaryIO,
+)
+from typing_extensions import TypeAlias
 from pathlib import Path
 import pickle
 import json
 from collections import OrderedDict
+import io
 
 import numpy as np
 from google.protobuf import text_format
@@ -33,13 +47,88 @@ import oneflow.framework.dtype as dtype_util
 import oneflow.framework.id_util as id_util
 from oneflow.framework.tensor import Tensor
 import oneflow.nn.graph.graph as graph_util
+from oneflow.framework.args_tree import ArgsTree
 import pickle
+from oneflow.nn.graph import GraphTensor
 
 SNAPSHOT_DONE_FILENAME = "snapshot_done"
 META_INFO_FILENAME = "meta"
 PICKLE_FILENAME = "pickled_data"
 DATA_FILENAME = "out"
 PROTOCOL_VERSION = 1
+ONEFLOW_MAGIC_KEY = "__oneflow__"
+
+MAP_LOCATION: TypeAlias = Optional[
+    Union[Callable[[Tensor, str], Tensor], flow.device, str, flow.placement]
+]
+FILE_LIKE: TypeAlias = Union[str, os.PathLike, BinaryIO, IO[bytes], Path]
+
+
+class _opener(object):
+    def __init__(self, file_like):
+        self.file_like = file_like
+
+    def __enter__(self):
+        return self.file_like
+
+    def __exit__(self, *args):
+        pass
+
+
+class _open_file(_opener):
+    def __init__(self, path, mode):
+        super(_open_file, self).__init__(open(path, mode))
+
+    def __exit__(self, *args):
+        self.file_like.close()
+
+
+class _open_buffer_reader(_opener):
+    def __init__(self, buffer):
+        super(_open_buffer_reader, self).__init__(buffer)
+        _check_seekable(buffer)
+
+
+class _open_buffer_writer(_opener):
+    def __exit__(self, *args):
+        self.file_like.flush()
+
+
+def _open_file_like(path_or_buffer, mode):
+    if _is_path(path_or_buffer):
+        return _open_file(path_or_buffer, mode)
+    else:
+        if "w" in mode:
+            return _open_buffer_writer(path_or_buffer)
+        elif "r" in mode:
+            return _open_buffer_reader(path_or_buffer)
+        else:
+            raise RuntimeError(f"Expected 'r' or 'w' in mode but got {mode}")
+
+
+def _is_path(path_or_buffer):
+    return isinstance(path_or_buffer, str) or isinstance(path_or_buffer, Path)
+
+
+def _check_seekable(f) -> bool:
+    def raise_err_msg(patterns, e):
+        for p in patterns:
+            if p in str(e):
+                msg = (
+                    str(e)
+                    + ". You can only oneflow.load from a file that is seekable."
+                    + " Please pre-load the data into a buffer like io.BytesIO and"
+                    + " try to load from it instead."
+                )
+                raise type(e)(msg)
+        raise e
+
+    try:
+        f.seek(f.tell())
+        return True
+    except (io.UnsupportedOperation, AttributeError) as e:
+        raise_err_msg(["seek", "tell"], e)
+    return False
 
 
 class FileBackendVariableBlob:
@@ -124,13 +213,67 @@ def _save_tensor_to_disk(tensor: "oneflow.Tensor", dir_name: Union[str, Path]) -
 ValueContainer = Union[FileBackendVariableBlob, np.ndarray, "oneflow.Tensor"]
 
 
+def _default_restore_location(storage, location=None):
+    return storage
+
+
+def _get_restore_location(map_location):
+    if map_location is None:
+        restore_location = _default_restore_location
+    elif isinstance(map_location, (str, flow.device)):
+
+        def restore_location(storage, location=None):
+            return storage.to(device=map_location)
+
+    elif isinstance(map_location, flow.placement):
+
+        def restore_location(storage, location=None):
+            return storage.to_global(placement=map_location)
+
+    else:
+
+        def restore_location(storage, location=None):
+            result = map_location(storage, location)
+            if result is None:
+                result = _default_restore_location(storage, location)
+            return result
+
+    return restore_location
+
+
+def smart_to(obj: Any, dest: MAP_LOCATION) -> "oneflow.Tensor":
+    if not isinstance(obj, flow.Tensor):
+        return obj
+    tensor = obj
+    restore_location = _get_restore_location(dest)
+    return restore_location(tensor, None)
+
+
+def module_to(obj: flow.nn.Module, dest: MAP_LOCATION) -> "oneflow.nn.Module":
+    restore_location = _get_restore_location(dest)
+    # for nn.Module object, we will use a tensor to get the device
+    # to support dest with a Callable type
+    device = restore_location(flow.tensor([0])).device
+    obj.to(device)
+    return obj
+
+
+def _map_location(obj: Any, map_location: MAP_LOCATION):
+    if isinstance(obj, flow.nn.Module):
+        return module_to(obj, map_location)
+    else:
+        res = ArgsTree(obj).map_leaf(lambda x: smart_to(x, map_location))
+        return res
+
+
 def _LoadSingleVariable(
-    path: Optional[str], global_src_rank: Optional[int] = None
+    path: Optional[str],
+    global_src_rank: Optional[int] = None,
+    map_location: MAP_LOCATION = None,
 ) -> "flow.Tensor":
     if global_src_rank is not None:
         rank = flow.env.get_rank()
         if rank == global_src_rank:
-            assert isinstance(path, str)
             file_backed_blob = FileBackendVariableBlob(path)
             loaded = flow.tensor(file_backed_blob.numpy(), dtype=file_backed_blob.dtype)
         else:
@@ -138,10 +281,9 @@ def _LoadSingleVariable(
         loaded = loaded.to_global(
             flow.placement("cpu", [global_src_rank]), flow.sbp.broadcast
         )
-        return loaded
-
-    assert isinstance(path, str)
-    return flow.tensor(FileBackendVariableBlob(path).numpy())
+    else:
+        loaded = flow.tensor(FileBackendVariableBlob(path).numpy())
+    return smart_to(loaded, map_location)
 
 
 def _broadcast_py_object(obj, src: int = 0):
@@ -157,21 +299,16 @@ def _broadcast_py_object(obj, src: int = 0):
 # (de)serializing a container of global tensors requires the order
 # of those tensors are the same across all ranks.
 def tensor_getstate(self):
-    if save_load_path is not None:
-        # save_load_path is not None means setstate/getstate is called inside
-        # flow.save or flow.load
-        assert isinstance(save_load_path, Path)
-        if global_src_dsk_rank is None:
-            assert self.is_local
-            rel_dir_name = id_util.UniqueStr("tensor_")
-            abs_dir_name = save_load_path / rel_dir_name
-
+    # context_data is not None means setstate/getstate is called inside
+    # flow.save or flow.load
+    if context_data is not None:
+        if context_data.global_rank is None:
+            assert (
+                self.is_local
+            ), "Please set global_dst_rank in `flow.save` to save global tensor"
             tensor = self
         else:
             assert not self.is_local
-            rel_dir_name = f"global_tensor_{self.global_id()}"
-            abs_dir_name = save_load_path / rel_dir_name
-
             # Boxing to cpu firstly to avoid extra gpu memory usage
             tensor = (
                 self.to_global(
@@ -179,17 +316,31 @@ def tensor_getstate(self):
                 )
                 .to_global(
                     sbp=flow.sbp.broadcast,
-                    placement=flow.placement("cpu", [global_src_dsk_rank]),
+                    placement=flow.placement("cpu", [context_data.global_rank]),
                 )
                 .to_local()
             )
-        if global_src_dsk_rank is None or global_src_dsk_rank == flow.env.get_rank():
-            _save_tensor_to_disk(tensor, abs_dir_name)
+        if context_data.save_as_external_data:
+            if context_data.global_rank is None:
+                rel_dir_name = id_util.UniqueStr("tensor_")
+            else:
+                rel_dir_name = f"global_tensor_{self.global_id()}"
+            abs_dir_name = context_data.path / rel_dir_name
 
-        return {"path": rel_dir_name}
+            if (
+                context_data.global_rank is None
+                or context_data.global_rank == flow.env.get_rank()
+            ):
+                _save_tensor_to_disk(tensor, abs_dir_name)
+
+            return {"path": rel_dir_name}
+        else:
+            return {
+                "data": tensor.numpy(),
+                "dtype": tensor.dtype,
+                "device": "cpu",
+            }
     else:
-        # save_load_path is None means setstate/getstate is called inside
-        # methods other than flow.save/load, for example, copy.deepcopy
         if self.is_local:
             if self.is_cuda:
                 device = "cuda"
@@ -206,23 +357,17 @@ def tensor_getstate(self):
 
 
 def tensor_setstate(self, pickle_dict):
-    if save_load_path is not None:
-        assert isinstance(save_load_path, Path)
-        rel_dir_name = pickle_dict["path"]
-        abs_dir_name = save_load_path / rel_dir_name
-        tmp_tensor = _LoadSingleVariable(str(abs_dir_name), global_src_dsk_rank)
-        if map_location is not None:
-            if isinstance(map_location, flow.device):
-                tmp_tensor = tmp_tensor.to(map_location)
-            elif isinstance(map_location, flow.placement):
-                tmp_tensor = tmp_tensor.to_global(map_location)
-            else:
-                raise ValueError(
-                    f"Unsupported 'map_location' type {type(map_location)}."
-                )
-        self.__init__(tmp_tensor)
+    if context_data is not None:
+        if context_data.save_as_external_data:
+            rel_dir_name = pickle_dict["path"]
+            abs_dir_name = context_data.path / rel_dir_name
+            tmp_tensor = _LoadSingleVariable(
+                str(abs_dir_name), context_data.global_rank, context_data.map_location
+            )
+            self.__init__(tmp_tensor)
+        else:
+            self.__init__(flow.tensor(pickle_dict["data"], dtype=pickle_dict["dtype"]))
     else:
-        assert map_location is None
         if "placement" in pickle_dict:
             return self.__init__(
                 flow.tensor(
@@ -260,8 +405,36 @@ def RegisterMethods():
     flow._oneflow_internal.placement.__setstate__ = placement_setstate
 
 
+load_methods = []
+
+
+def load_if(condition):
+    def decorator(func):
+        def condition_always_returning_extra_data(*args, **kwargs):
+            res = condition(*args, **kwargs)
+            if isinstance(res, tuple):
+                assert len(res) == 2
+                assert isinstance(res[1], tuple)
+                return res
+            else:
+                return res, ()
+
+        load_methods.append((condition_always_returning_extra_data, func))
+        return func
+
+    return decorator
+
+
+def is_dir_and_no_pickle_file(path: FILE_LIKE, support_pytorch_format: bool):
+    if _is_path(path) and path.is_dir():
+        pickle_path = path / PICKLE_FILENAME
+        return not pickle_path.exists()
+    return False
+
+
+@load_if(is_dir_and_no_pickle_file)
 def legacy_load(
-    path: Union[str, Path], global_src_rank: Optional[int] = None,
+    path: Path, global_src_rank: Optional[int], map_location: MAP_LOCATION,
 ) -> Dict[str, "flow.Tensor"]:
     assert os.path.isdir(path), "Directory {} doesn't exist!".format(path)
     rank = flow.env.get_rank()
@@ -277,7 +450,7 @@ def legacy_load(
     for f in all_files:
         var_dir = os.path.join(path, f)
         try:
-            var_dict[f] = _LoadSingleVariable(var_dir, global_src_rank)
+            var_dict[f] = _LoadSingleVariable(var_dir, global_src_rank, map_location)
         except FileNotFoundError:
             warnings.warn(
                 f"'{var_dir}' does not have valid tensor data. Please check it if it is unexpected.",
@@ -286,56 +459,112 @@ def legacy_load(
     return var_dict
 
 
-@contextmanager
-def tensor_pickling_context(path: Path, global_src_dst_rank: Optional[int], mp):
-    global save_load_path
-    global global_src_dsk_rank
-    global map_location
-    global_src_dsk_rank = global_src_dst_rank
-    save_load_path = path
-    map_location = mp
+@contextlib.contextmanager
+def tensor_pickling_context(
+    path: Path,
+    global_rank: Optional[int],
+    mp: MAP_LOCATION,
+    save_as_external_data: bool,
+):
+    global context_data
+    context_data = ContextData(path, global_rank, mp, save_as_external_data)
     try:
         yield
     finally:
-        global_src_dsk_rank = None
-        save_load_path = None
-        map_location = None
+        context_data = None
 
 
-def load(
-    path: str,
-    global_src_rank: Optional[int] = None,
-    map_location: Optional[Union[str, flow.device, flow.placement]] = None,
-) -> Any:
-    r"""Loads an object saved with oneflow.save() from a directory.
+def is_oneflow_pickle_file(path: FILE_LIKE, support_pytorch_format: bool) -> bool:
+    if _is_path(path):
+        if not path.is_file():
+            return False
+    try:
+        with _open_file_like(path, "rb") as f:
+            content = pickle.load(f)
+            if ONEFLOW_MAGIC_KEY in content:
+                return True, (content,)
+            else:
+                return False
+    except:
+        return False
 
-    Args:
-        path (str): The directory containing the object
-        global_src_rank (int, optional): The source rank for
-            loading global tensors. When specified, only the
-            process whose rank == global_src_rank will really
-            read the files in `path`, and tensors in the loaded
-            object will be consistent with placement =
-            `flow.placement('cuda', [global_src_rank])`
-        map_location (str, flow.device or flow.placement, optional):
-            indicates the location where all tensors should be loaded.
 
-    Returns:
-        The loaded object
-    """
-    path: Path = Path(path)
+# `path` is not used in this function, because the file is already loaded
+# and deserialized in `is_oneflow_pickle_file`, and the content is passed
+# as `content`.
+@load_if(is_oneflow_pickle_file)
+def load_from_oneflow_single_file(
+    path: FILE_LIKE, global_src_rank, map_location: MAP_LOCATION, content: Any = None,
+):
     rank = flow.env.get_rank()
-    if global_src_rank is None or global_src_rank == rank:
-        assert path.is_dir(), "Directory {} doesn't exist!".format(path)
-        pickle_path = path / PICKLE_FILENAME
-        is_legacy = not pickle_path.exists()
-        if global_src_rank is not None:
-            _broadcast_py_object(is_legacy, global_src_rank)
+    if global_src_rank is None or rank == global_src_rank:
+        assert content["protocol_version"] == PROTOCOL_VERSION
+        res = content["data"]
     else:
-        is_legacy = _broadcast_py_object(None, global_src_rank)
-    if is_legacy:
-        return legacy_load(path, global_src_rank)
+        res = None
 
+    if global_src_rank is not None:
+        res = flow.utils.global_view.to_global(
+            res,
+            placement=flow.placement("cpu", [global_src_rank]),
+            sbp=flow.sbp.broadcast,
+            warn_on_non_tensor_leaf=False,
+        )
+    res = _map_location(res, map_location)
+    return res
+
+
+def is_file_and_support_pytorch_format(
+    path: FILE_LIKE, support_pytorch_format: bool
+) -> bool:
+    if _is_path(path):
+        return path.is_file() and support_pytorch_format
+    return support_pytorch_format
+
+
+@load_if(is_file_and_support_pytorch_format)
+def load_from_pytorch_file(
+    path: FILE_LIKE, global_src_rank, map_location: MAP_LOCATION,
+):
+    with flow.mock_torch.disable():
+        import torch
+
+        if global_src_rank is None or global_src_rank == flow.env.get_rank():
+            torch_obj = torch.load(path, map_location="cpu")
+
+            def torch_tensor_to_flow(x):
+                if isinstance(x, torch.Tensor):
+                    return flow.utils.tensor.from_torch(x)
+                else:
+                    return x
+
+            flow_obj = ArgsTree(torch_obj).map_leaf(torch_tensor_to_flow)
+        else:
+            flow_obj = None
+        if global_src_rank is not None:
+            flow_obj = flow.utils.global_view.to_global(
+                flow_obj,
+                placement=flow.placement("cpu", [global_src_rank]),
+                sbp=flow.sbp.broadcast,
+                warn_on_non_tensor_leaf=False,
+            )
+        flow_obj = _map_location(flow_obj, map_location)
+        return flow_obj
+
+
+def is_dir_and_has_pickle_file(path: FILE_LIKE, support_pytorch_format: bool) -> bool:
+    if _is_path(path) and path.is_dir():
+        pickle_path = path / PICKLE_FILENAME
+        return pickle_path.exists()
+    return False
+
+
+@load_if(is_dir_and_has_pickle_file)
+def load_from_oneflow_pickle_dir(
+    path: Path, global_src_rank: Optional[int], map_location: MAP_LOCATION,
+):
+    rank = flow.env.get_rank()
+    pickle_path = path / PICKLE_FILENAME
     if global_src_rank is not None:
         if rank == global_src_rank:
             pickle_bytes = pickle_path.read_bytes()
@@ -346,15 +575,59 @@ def load(
         pickle_bytes = pickle_path.read_bytes()
 
     if map_location is not None:
-        if isinstance(map_location, str):
-            map_location: flow.device = flow.device(map_location)
         assert isinstance(
-            map_location, (flow.device, flow.placement)
+            map_location, (str, flow.device, flow.placement)
         ), "'map_location' only supports str, device or placement."
-    with tensor_pickling_context(path, global_src_rank, map_location):
+    with tensor_pickling_context(path, global_src_rank, map_location, True):
         res = pickle.loads(pickle_bytes)
     assert res["protocol_version"] == PROTOCOL_VERSION
     return res["data"]
+
+
+def load(
+    path: FILE_LIKE,
+    global_src_rank: Optional[int] = None,
+    map_location: MAP_LOCATION = None,
+    *,
+    support_pytorch_format: bool = True,
+) -> Any:
+    r"""Loads an object saved with oneflow.save() from a directory.
+
+    Args:
+        path: a file-like object (has to implement :meth:`read`, :meth:`readline`, :meth:`tell`, and :meth:`seek`),
+            or a string or os.PathLike object containing a file name
+        global_src_rank (int, optional): The source rank for
+            loading global tensors. When specified, only the
+            process whose rank == global_src_rank will really
+            read the files in `path`, and tensors in the loaded
+            object will be consistent with placement =
+            `flow.placement('cuda', [global_src_rank])`
+        map_location (str, flow.device or flow.placement, callable, optional):
+            indicates the location where all tensors should be loaded.
+        support_pytorch_format (bool, optional): whether to support
+            loading the file saved by `torch.save`. Default: True
+
+    Returns:
+        The loaded object
+    """
+    if isinstance(path, str):
+        path: Path = Path(path)
+    rank = flow.env.get_rank()
+    if global_src_rank is None or global_src_rank == rank:
+        for i, (condition, load) in enumerate(load_methods):
+            is_ok, extra_data = condition(path, support_pytorch_format)
+            if is_ok:
+                if global_src_rank is not None:
+                    _broadcast_py_object(i, global_src_rank)
+                break
+        else:
+            raise NotImplementedError("No valid load method found for {}".format(path))
+    else:
+        i = _broadcast_py_object(None, global_src_rank)
+        load = load_methods[i][1]
+        extra_data = ()
+
+    return load(path, global_src_rank, map_location, *extra_data)  # type: ignore
 
 
 def save_one_embedding_info(state_dict: Any, path: Union[str, Path]) -> None:
@@ -395,46 +668,48 @@ def save_one_embedding_info(state_dict: Any, path: Union[str, Path]) -> None:
 
 
 def save(
-    obj: Any, path: Union[str, Path], global_dst_rank: Optional[int] = None,
+    obj: Any,
+    path_or_buffer: FILE_LIKE,
+    global_dst_rank: Optional[int] = None,
+    save_as_external_data: bool = False,
 ) -> None:
     r"""Save an object to a directory.
 
     Args:
         obj: The object to be saved
-        path (str): The directory in which the object is saved
+        path_or_buffer: a file-like object (has to implement write and flush) or a string or
+           os.PathLike object containing a file name
         global_dst_rank (int, optional): The destination rank for
             saving global tensors. When specified, whole tensors
             will be saved by the process whose rank ==
             global_src_rank, while other processes will not do any
             disk I/O.
+        save_as_external_data (bool): useful only if path_or_buffer is a string or
+           os.PathLike object containing a file name
     """
-    path: Path = Path(path)
-
     if isinstance(obj, graph_util.Graph):
-        graph: graph_util.Graph = obj
-        if not graph._is_compiled:
-            raise RuntimeError("graph must be compiled first.")
-
-        path.mkdir(exist_ok=True)
-
-        serialized_job = graph._forward_job_proto.SerializeToString()
-        oneflow._oneflow_internal.nn.graph.SaveJobToIR(serialized_job, str(path))
-
-        for x in graph._state():
-            _save_tensor_to_disk(x.origin, path / f"{x.name_prefix}{x.name}")
-
-        save_one_embedding_info(obj.state_dict(), path)
-
+        if not _is_path(path_or_buffer):
+            raise ValueError(
+                "path_or_buffer must be the type of {`str`, `pathlib.Path`} while obj is Graph"
+            )
+        _save_graph(obj, path_or_buffer)
         return
 
-    obj = {"protocol_version": PROTOCOL_VERSION, "data": obj}
-    with tensor_pickling_context(path, global_dst_rank, None):
+    # this `path` is only used for `ContextData` and is set to empty when `path_or_buffer` is IO[bytes] or BinaryIO
+    path: Path = Path(path_or_buffer if _is_path(path_or_buffer) else "")
+    obj = {"protocol_version": PROTOCOL_VERSION, ONEFLOW_MAGIC_KEY: None, "data": obj}
+
+    with tensor_pickling_context(path, global_dst_rank, None, save_as_external_data):
         pickled_bytes = pickle.dumps(obj)
 
-    def write_to_path(path):
-        path.mkdir(exist_ok=True)
-        pickle_path = path / PICKLE_FILENAME
-        pickle_path.write_bytes(pickled_bytes)
+    if _is_path(path_or_buffer) and save_as_external_data:
+        path_or_buffer: Path = Path(path_or_buffer)
+        path_or_buffer.mkdir(exist_ok=True)
+        path_or_buffer = path_or_buffer / PICKLE_FILENAME
+
+    def write_file():
+        with _open_file_like(path_or_buffer, "wb") as f:
+            f.write(pickled_bytes)
 
     if global_dst_rank is not None:
         assert isinstance(
@@ -444,12 +719,44 @@ def save(
             global_dst_rank >= 0 and global_dst_rank < flow.env.get_world_size()
         ), f"out of range (expected to be in range of [0, {flow.env.get_world_size()}), but got {global_dst_rank})."
         if flow.env.get_rank() == global_dst_rank:
-            write_to_path(path)
+            write_file()
     else:
         # global_dst_rank is None
-        write_to_path(path)
+        write_file()
 
 
-save_load_path = None
-global_src_dsk_rank = None
-map_location = None
+def _save_graph(obj: graph_util.Graph, path: Union[str, Path]):
+    path: Path = Path(path)
+    graph: graph_util.Graph = obj
+    if not graph._is_compiled:
+        raise RuntimeError("graph must be compiled first.")
+
+    path.mkdir(exist_ok=True)
+
+    serialized_job = graph._forward_job_proto.SerializeToString()
+    oneflow._oneflow_internal.nn.graph.SaveJobToIR(serialized_job, str(path))
+
+    for x in graph._state():
+        _save_tensor_to_disk(
+            x.to(Tensor),
+            path / f"{x.to(GraphTensor).name_prefix}{x.to(GraphTensor).name}",
+        )
+
+    save_one_embedding_info(obj.state_dict(), path)
+
+
+class ContextData:
+    def __init__(
+        self,
+        path: Path,
+        global_rank: Optional[int],
+        map_location: Optional[Union[str, flow.device, flow.placement]],
+        save_as_external_data: bool,
+    ):
+        self.path = path
+        self.global_rank = global_rank
+        self.map_location = map_location
+        self.save_as_external_data = save_as_external_data
+
+
+context_data = None

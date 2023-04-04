@@ -21,7 +21,7 @@ from oneflow.test_utils.automated_test_util import *
 
 # TODO: the test is dependent on global select op(global tensor->stride())
 @unittest.skip("global select op is not currently supported")
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_unbind(test_case, placement, sbp):
     dim_size = random(1, 3).to(int).value() * 8
     rand_dim = random(0, 3).to(int).value()

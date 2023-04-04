@@ -79,30 +79,26 @@ IBVerbsCommNet::~IBVerbsCommNet() {
 }
 
 void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
-  ActorMsg new_msg = msg;
+  IBVerbsActorMsgWrapper msg_wrapper;
+  msg_wrapper.msg = msg;
   if (msg.IsDataRegstMsgToConsumer()) {
-    CHECK_EQ(msg.user_data_size(), 0);
     auto* mem_desc = reinterpret_cast<IBVerbsMemDesc*>(msg.regst()->comm_net_token());
     CHECK(mem_desc != nullptr);
-    IBVerbsCommNetRMADesc rma_desc{};
-    rma_desc.mem_ptr = reinterpret_cast<uint64_t>(mem_desc->mem_ptr());
-    rma_desc.mem_size = mem_desc->mem_size();
-    rma_desc.mr_rkey = mem_desc->mr()->rkey;
-    static_assert(sizeof(IBVerbsCommNetRMADesc) <= kActorMsgUserDataMaxSize, "");
-    new_msg.AddUserData(sizeof(IBVerbsCommNetRMADesc), &rma_desc);
+    msg_wrapper.rma_desc.mem_ptr = reinterpret_cast<uint64_t>(mem_desc->mem_ptr());
+    msg_wrapper.rma_desc.mem_size = mem_desc->mem_size();
+    msg_wrapper.rma_desc.mr_rkey = mem_desc->mr()->rkey;
   }
-  qp_vec_.at(dst_machine_id)->PostSendRequest(new_msg);
+  qp_vec_.at(dst_machine_id)->PostSendRequest(msg_wrapper);
 }
 
-void IBVerbsCommNet::RecvActorMsg(const ActorMsg& msg) {
-  ActorMsg new_msg = msg;
-  if (msg.IsDataRegstMsgToConsumer()) {
+void IBVerbsCommNet::RecvActorMsg(const IBVerbsActorMsgWrapper& msg_wrapper) {
+  ActorMsg new_msg = msg_wrapper.msg;
+  if (msg_wrapper.msg.IsDataRegstMsgToConsumer()) {
     std::lock_guard<std::mutex> lock(remote_regst2rma_desc_mutex_);
-    auto& desc = remote_regst2rma_desc_[std::make_pair(msg.src_actor_id(),
-                                                       reinterpret_cast<uint64_t>(msg.regst()))];
+    auto& desc = remote_regst2rma_desc_[std::make_pair(
+        msg_wrapper.msg.src_actor_id(), reinterpret_cast<uint64_t>(msg_wrapper.msg.regst()))];
     if (!desc) { desc.reset(new IBVerbsCommNetRMADesc); }
-    CHECK_EQ(msg.user_data_size(), sizeof(IBVerbsCommNetRMADesc));
-    std::memcpy(desc.get(), msg.user_data(), sizeof(IBVerbsCommNetRMADesc));
+    *desc = msg_wrapper.rma_desc;
     new_msg.set_comm_net_token(desc.get());
   }
   Singleton<ActorMsgBus>::Get()->SendMsgWithoutCommNet(new_msg);

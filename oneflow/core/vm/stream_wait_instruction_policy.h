@@ -31,9 +31,8 @@ class Stream;
 
 class StreamWaitInstructionPolicy final : public vm::InstructionPolicy {
  public:
-  StreamWaitInstructionPolicy(
-      small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&& dependences,
-      vm::Stream* from_vm_stream, vm::Stream* to_vm_stream);
+  StreamWaitInstructionPolicy(small_vector<intrusive::shared_ptr<LocalDepObject>>&& dependences,
+                              vm::Stream* from_vm_stream, vm::Stream* to_vm_stream);
   ~StreamWaitInstructionPolicy() = default;
 
   std::string DebugName(const vm::Instruction&) const override { return "StreamWait"; }
@@ -47,13 +46,11 @@ class StreamWaitInstructionPolicy final : public vm::InstructionPolicy {
   const DependenceVector& input_dependences() const override { return input_dependences_; }
   const DependenceVector& output_dependences() const override { return output_dependences_; }
 
-  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {}
-
  private:
   vm::Stream* mut_from_vm_stream() { return from_vm_stream_; }
   std::shared_ptr<EpEvent>& mut_ep_event() { return ep_event_; }
 
-  small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize> dependences_;
+  small_vector<intrusive::shared_ptr<LocalDepObject>> dependences_;
   DependenceVector input_dependences_;
   DependenceVector output_dependences_;
   vm::Stream* from_vm_stream_;

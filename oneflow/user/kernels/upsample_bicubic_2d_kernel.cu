@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/user/kernels/upsample_kernel.h"
+#include "oneflow/core/kernel/kernel_util.cuh"
 
 namespace oneflow {
 
@@ -25,10 +26,11 @@ namespace {
 
 template<typename T>
 __device__ void upsample_increment_value_bounded_cuda(T* data, int64_t width, int64_t height,
-                                                      int64_t x, int64_t y, T value) {
+                                                      int64_t element, int64_t x, int64_t y,
+                                                      T value) {
   int64_t access_x = max(min(x, width - 1), static_cast<int64_t>(0));
   int64_t access_y = max(min(y, height - 1), static_cast<int64_t>(0));
-  cuda::atomic::Add(data + access_y * width + access_x, value);
+  cuda::atomic::FastAdd(data, access_y * width + access_x, element, value);
 }
 
 template<typename T>
@@ -110,8 +112,8 @@ __global__ void UpsampleBicubic2dBackward(const int64_t elem_cnt, const T* dy_dp
 
       for (int64_t i = 0; i < 4; i++) {
         for (int64_t j = 0; j < 4; j++) {
-          upsample_increment_value_bounded_cuda<T>(in, in_width, in_height, input_x - 1 + i,
-                                                   input_y - 1 + j,
+          upsample_increment_value_bounded_cuda<T>(in, in_width, in_height, elem_cnt,
+                                                   input_x - 1 + i, input_y - 1 + j,
                                                    out_value * y_coeffs[j] * x_coeffs[i]);
         }
       }

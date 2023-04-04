@@ -2,7 +2,7 @@
 // RUN:   -gpu-kernel-outlining -buffer-host-register  \
 // RUN:   -pass-pipeline='gpu.module(strip-debuginfo,lower-affine,convert-gpu-to-nvvm,out-of-tree-gpu-to-cubin)' \
 // RUN:   -gpu-to-llvm \
-// RUN: | oneflow-runner \
+// RUN: | python3 -m oneflow.test_utils.throttle --with-cuda=%with_cuda oneflow-runner \
 // RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_cuda_runtime%shlibext \
 // RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_runner_utils%shlibext \
 // RUN:   --entry-point-result=void \

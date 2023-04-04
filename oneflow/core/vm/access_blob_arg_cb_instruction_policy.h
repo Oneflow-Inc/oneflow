@@ -23,9 +23,11 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_policy_util.h"
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/eager/tensor_storage.h"
 #include "oneflow/core/framework/tensor_storage.h"
 #include "oneflow/core/intrusive/list.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/vm/op_call_instruction_policy.h"
 #include "oneflow/core/vm/stream_policy.h"
 
 namespace oneflow {
@@ -68,17 +70,23 @@ class AccessBlobArgCbInstructionPolicy final : public InstructionPolicy {
     if (modifier_ == "mut2") { DoEach(CHECK_JUST(eager_blob_object_->compute_local_dep_object())); }
   }
 
-  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {
-    DoEach(eager_blob_object_.get());
-  }
-
   std::string DebugName(const Instruction& instruction) const override {
     return "AccessBlobByCallback";
   }
   Maybe<void> Prepare(Instruction* instruction) override { return Maybe<void>::Ok(); }
   void Compute(Instruction* instruction) override {
     StreamPolicy* stream_policy = instruction->mut_stream_policy();
-    return callback_(stream_policy->stream(), eager_blob_object());
+    auto rematable_storage =
+        std::dynamic_pointer_cast<RematableTensorStorage>(eager_blob_object()->tensor_storage());
+
+    if (rematable_storage && !rematable_storage->is_in_memory()) {
+      OpCallInstructionPolicy tmp_op = rematable_storage->compute_op();
+      CHECK_JUST(Recompute(&tmp_op, instruction->mut_stream()));
+    }
+    callback_(stream_policy->stream(), eager_blob_object());
+    if (rematable_storage && (modifier_ == "mut" || modifier_ == "mut2")) {
+      rematable_storage->set_eviction_disabled(true);
+    }
   }
 
  private:

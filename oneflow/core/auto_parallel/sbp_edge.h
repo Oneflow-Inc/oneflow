@@ -60,7 +60,9 @@ class SbpEdge final {
   void SummarizeCost();
   // Duplicate Cost. Designed for merging two nodes.
   void DuplicateCost(bool merged_node_is_start_node, bool duplicating_first_node,
-                     const std::vector<std::pair<int32_t, int32_t>>& merged_sig_id2children_sig_id);
+                     const std::vector<std::pair<int32_t, int32_t>>& merged_sig_id2half_sig_id);
+  // Compute the weighted sum of the time and memory cost
+  void ComputeWeightedCost();
   // Determine Final SbpSignature for attachment of this edge
   void FinalizeSbp();
   // Use Greedy Strategy to pick the sbp signature with minimum cost for this
@@ -81,14 +83,15 @@ class SbpEdge final {
   bool EmptyLbi() const;
 
   // Get the minimum element in Cost
-  double GetMinCost();
-  // Get the maximum element in Cost
-  double GetMaxCost() const;
+  double GetMinWeightedCost();
 
-  // Assemble copy cost
-  // compute_cost = true: It is computing cost
-  // compute_cost = false: It is deciding whether this edge needs the wait time.
-  void InitializeCopyCost(const std::string& ibn, bool compute_cost, bool use_sbp_collector);
+  // Assemble copy and partial cost
+  void InitCopyAndMemoryCost(const std::string& ibn, bool use_sbp_collector,
+                             bool nccl_not_use_compute_stream);
+  // Assemble memory cost
+  void InitializeMemory(const HashMap<LogicalBlobId, int32_t>& lbi2id,
+                        const std::vector<int32_t>& id2count,
+                        const std::vector<int64_t>& producer_nd_sbp_sig2memory);
 
   // find the cut ratio
   // (#c>GetValidMaxCopyCost() in Cost)/(#c in Cost)
@@ -96,6 +99,19 @@ class SbpEdge final {
   double FindCutRatio(int32_t threshold) const;
   // Get the cut ratio
   double GetCutRatio() const;
+
+  // Constant getter
+  SbpNode* GetEndNode() const { return end_node_; }
+  int64_t GetMemory(int32_t i, int32_t j) const { return in_memory_support_ ? memory_[i][j] : 0; }
+  // Get the current memory with the current sbp signature index
+  int64_t GetMemory() const {
+    return GetMemory(start_node_->final_sbp_sig_id_, end_node_->final_sbp_sig_id_);
+  }
+  double GetWeightedCost(int32_t i, int32_t j) const { return weighted_cost_[i][j]; }
+  // Get the current weighted cost with the current sbp signature index
+  double GetWeightedCost() const {
+    return GetWeightedCost(start_node_->final_sbp_sig_id_, end_node_->final_sbp_sig_id_);
+  }
 
  private:
   friend class SbpNode;
@@ -131,9 +147,22 @@ class SbpEdge final {
   // Also would not be changed by node merging, which will only perform cost copy for the expanding
   // dimensions.
   // Minimum cost in the 2D array Cost.
-  // Would be initialized after GetMinCost();
+  // Would be initialized after GetMinWeightedCost();
   // Only used in the final graph.
-  double min_cost_ = -1.0;
+  // Such pre-store and access process save a lot time.
+  // Gpt2 has 1178 storing and 14053 taking.
+  // Bert has 1464 storing and 17633 taking.
+  double min_weighted_cost_ = -1.0;
+  // If consider memory, each GetMinWeightedCost would have a memory_ratio_search
+  // Use the stored value for the same memory_ratio_search
+  double memory_ratio4min_weighted_cost_ = -1.0;
+
+  // The produced blob belongs to the support of the total memory
+  bool in_memory_support_ = false;
+  // The consumed memory for different sbp strategies
+  std::vector<std::vector<int64_t>> memory_;
+  // The weighted sum of time cost and memory cost
+  std::vector<std::vector<double>> weighted_cost_;
 };
 
 }  // namespace auto_parallel

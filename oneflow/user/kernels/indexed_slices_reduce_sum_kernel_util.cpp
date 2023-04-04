@@ -36,7 +36,7 @@ void IndexedSlicesReduceSumKernelUtil<device_type, K, T, IDX>::ReduceSum(
   const int64_t unique_workspace_size = workspace_size_in_bytes - unique_idx_size;
   UniqueKernelUtil<device_type, K, IDX>::Unique(stream, n, indices, num_unique_indices, indices_out,
                                                 unique_idx_ptr, unique_workspace_ptr,
-                                                unique_workspace_size);
+                                                unique_workspace_size, /*sorted*/ false);
   const Shape flat_in_shape({1, n, m});
   Memset<device_type>(stream, values_out, 0, n * m * sizeof(T));
 

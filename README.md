@@ -3,7 +3,7 @@
 OneFlow is a deep learning framework designed to be **user-friendly, scalable and efficient**. With OneFlow, it is easy to:
 - program a model with [**PyTorch-like API**](https://oneflow.readthedocs.io/en/master/)
 - scale a model to n-dimensional-parallel execution with the [**Global Tensor**](https://docs.oneflow.org/en/master/cookies/global_tensor.html)
-- accelerate/deploy a model with the [**Static Graph**](https://oneflow.readthedocs.io/en/master/graph.html).
+- accelerate/deploy a model with the [**Static Graph Compiler**](https://oneflow.readthedocs.io/en/master/graph.html).
 
 [![Simple CI](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml/badge.svg)](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml)
 [![Nightly Docker Image](https://github.com/Oneflow-Inc/docker-images/actions/workflows/oneflow-nightly.yml/badge.svg)](https://github.com/Oneflow-Inc/docker-images/actions/workflows/oneflow-nightly.yml)
@@ -12,8 +12,8 @@ OneFlow is a deep learning framework designed to be **user-friendly, scalable an
 
 ## Latest News
 
-- Version 0.8.0 is out!
-  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.8.0)
+- Version 0.9.0 is out!
+  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.9.0)
 
 ## Publication
 
@@ -60,14 +60,14 @@ OneFlow is a deep learning framework designed to be **user-friendly, scalable an
 - To install nightly release of OneFlow with CUDA support:
 
   ```bash
-  python3 -m pip install --pre oneflow -f https://staging.oneflow.info/branch/master/cu102
+  python3 -m pip install --pre oneflow -f https://staging.oneflow.info/branch/master/cu117
   ```
 
 - To install other available builds for different variants:
 
   - Stable
     ```bash
-    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.8.0+[PLATFORM]
+    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.9.0+cu117
     ```
   - Nightly
     ```
@@ -76,7 +76,7 @@ OneFlow is a deep learning framework designed to be **user-friendly, scalable an
   - All available `[PLATFORM]`:
     | Platform |CUDA Driver Version| Supported GPUs |
     |---|---|---|
-    | cu112 | >= 450.80.02 | GTX 10xx, RTX 20xx, A100, RTX 30xx |
+    | cu117 | >= 450.80.02 | GTX 10xx, RTX 20xx, A100, RTX 30xx |
     | cu102 | >= 440.33 | GTX 10xx, RTX 20xx |
     | cpu | N/A | N/A |
 
@@ -89,8 +89,7 @@ OneFlow is a deep learning framework designed to be **user-friendly, scalable an
 ### Use docker image
 
 ```
-docker pull oneflowinc/oneflow:nightly-cuda10.2
-docker pull oneflowinc/oneflow:nightly-cuda11.2
+docker pull oneflowinc/oneflow:nightly-cuda11.7
 ```
 
 ### Build from Source

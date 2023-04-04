@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_DIM_SCATTER_KERNEL_UTIL_H_
 #ifdef WITH_CUDA
 #include "oneflow/core/cuda/atomic.cuh"
+#include <cuda_fp16.h>
 #endif  // WITH_CUDA
 
 #include "oneflow/core/ndarray/xpu_util.h"
@@ -28,6 +29,10 @@ limitations under the License.
 
 namespace oneflow {
 
+#define NO_HALF_UTIL_FOUND         \
+  printf("cuda arch must >= 530"); \
+  assert(false)
+
 namespace user_op {
 
 constexpr int kDimGatherMaxDimCount = 8;
@@ -35,7 +40,7 @@ constexpr int kDimGatherMaxDimCount = 8;
 template<typename T>
 using DimOpIndexNdHelper = NdIndexOffsetHelper<T, kDimGatherMaxDimCount>;
 
-#define INSTANTIATE_DIM_SCATTER_FUNCTORS(device_type, opt)               \
+#define INSTANTIATE_DIM_SCATTER_CPU_FUNCTORS(device_type, opt)           \
   template struct DimScatterFunctor<device_type, bool, int32_t, opt>;    \
   template struct DimScatterFunctor<device_type, uint8_t, int32_t, opt>; \
   template struct DimScatterFunctor<device_type, int8_t, int32_t, opt>;  \
@@ -43,13 +48,33 @@ using DimOpIndexNdHelper = NdIndexOffsetHelper<T, kDimGatherMaxDimCount>;
   template struct DimScatterFunctor<device_type, int64_t, int32_t, opt>; \
   template struct DimScatterFunctor<device_type, float, int32_t, opt>;   \
   template struct DimScatterFunctor<device_type, double, int32_t, opt>;  \
+  template struct DimScatterFunctor<device_type, float16, int32_t, opt>; \
   template struct DimScatterFunctor<device_type, bool, int64_t, opt>;    \
   template struct DimScatterFunctor<device_type, uint8_t, int64_t, opt>; \
   template struct DimScatterFunctor<device_type, int8_t, int64_t, opt>;  \
   template struct DimScatterFunctor<device_type, int32_t, int64_t, opt>; \
   template struct DimScatterFunctor<device_type, int64_t, int64_t, opt>; \
   template struct DimScatterFunctor<device_type, float, int64_t, opt>;   \
-  template struct DimScatterFunctor<device_type, double, int64_t, opt>;
+  template struct DimScatterFunctor<device_type, double, int64_t, opt>;  \
+  template struct DimScatterFunctor<device_type, float16, int64_t, opt>;
+
+#define INSTANTIATE_DIM_SCATTER_CUDA_FUNCTORS(device_type, opt)          \
+  template struct DimScatterFunctor<device_type, bool, int32_t, opt>;    \
+  template struct DimScatterFunctor<device_type, uint8_t, int32_t, opt>; \
+  template struct DimScatterFunctor<device_type, int8_t, int32_t, opt>;  \
+  template struct DimScatterFunctor<device_type, int32_t, int32_t, opt>; \
+  template struct DimScatterFunctor<device_type, int64_t, int32_t, opt>; \
+  template struct DimScatterFunctor<device_type, float, int32_t, opt>;   \
+  template struct DimScatterFunctor<device_type, double, int32_t, opt>;  \
+  template struct DimScatterFunctor<device_type, half, int32_t, opt>;    \
+  template struct DimScatterFunctor<device_type, bool, int64_t, opt>;    \
+  template struct DimScatterFunctor<device_type, uint8_t, int64_t, opt>; \
+  template struct DimScatterFunctor<device_type, int8_t, int64_t, opt>;  \
+  template struct DimScatterFunctor<device_type, int32_t, int64_t, opt>; \
+  template struct DimScatterFunctor<device_type, int64_t, int64_t, opt>; \
+  template struct DimScatterFunctor<device_type, float, int64_t, opt>;   \
+  template struct DimScatterFunctor<device_type, double, int64_t, opt>;  \
+  template struct DimScatterFunctor<device_type, half, int64_t, opt>;
 
 template<typename T>
 struct BinOpAddFunctor {
@@ -61,6 +86,19 @@ struct BinOpAddFunctor {
 #endif
   }
 };
+
+#ifdef WITH_CUDA
+template<>
+struct BinOpAddFunctor<half> {
+  OF_DEVICE_FUNC static void apply(const half* x, half* y) {
+#ifdef __CUDA_ARCH__
+    *y = __float2half(__half2float(*x) + __half2float(*y));
+#else
+    NO_HALF_UTIL_FOUND;
+#endif
+  }
+};
+#endif
 
 #define SPECIALIZE_BIN_OP_ADD_FUNCTOR(name, dtype)                           \
   template<>                                                                 \
@@ -83,6 +121,19 @@ struct BinOpMulFunctor {
 #endif
   }
 };
+
+#ifdef WITH_CUDA
+template<>
+struct BinOpMulFunctor<half> {
+  OF_DEVICE_FUNC static void apply(const half* x, half* y) {
+#ifdef __CUDA_ARCH__
+    *y = __float2half(__half2float(*x) * __half2float(*y));
+#else
+    NO_HALF_UTIL_FOUND;
+#endif
+  }
+};
+#endif
 
 #define SPECIALIZE_BIN_OP_MUL_FUNCTOR(name, dtype)                           \
   template<>                                                                 \

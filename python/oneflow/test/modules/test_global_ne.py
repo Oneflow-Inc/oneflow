@@ -19,7 +19,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, auto_backward=False, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=True)
 def _test_ne(test_case, placement, sbp):
     x1 = random_tensor(ndim=2, dim0=8, dim1=8).to_global(placement, sbp)
     x2 = random_tensor(ndim=2, dim0=8, dim1=8).to_global(placement, sbp)

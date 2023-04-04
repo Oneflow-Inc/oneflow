@@ -532,6 +532,17 @@ def set_prune_amp_white_identity_ops(func_desc, value=True):
     func_desc.job_config_proto.prune_amp_white_identity_ops = value
 
 
+@oneflow_function_config("prune_depend_ops")
+def set_prune_depend_ops(func_desc, value=True):
+    """Whether prune depend operations or not.
+
+    Args:
+        func_desc ([type]): [description]
+        value (bool, optional): [description]. Defaults to True.
+    """
+    func_desc.job_config_proto.prune_depend_ops = value
+
+
 @oneflow_function_config("non_distributed_optimizer_group_size_mbyte")
 def set_non_distributed_optimizer_group_size_mbyte(func_desc, value):
     print(

@@ -30,7 +30,7 @@ class BoxingCollector final {
 
   ~BoxingCollector() = default;
 
-  // A constructor with init, designed for uncustomized boxing collector
+  // A constructor with init, designed for non-customized boxing collector
   BoxingCollector(int32_t max_axis);
 
   // Set default Sbp list
@@ -66,7 +66,7 @@ class BoxingCollector final {
   void PrintBoxingTables();
   // Ask if the boxing algorithm accepts the current sbp combination
   // If is_customized is true and we can not find a middle node list with
-  // resonable cost, error occurs.
+  // reasonable cost, error occurs.
   // If compute_cost is true, then no error occur even if no suitable middle nodes paths found.
   // For different placements, we would return a diagonal node.
   // Before this diagonal node (< *diag_node_pos), we use the parallel description of the producer.

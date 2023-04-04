@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/eager/tensor_storage.h"
 #include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/shut_down_util.h"
@@ -35,10 +36,6 @@ EagerBlobObject::EagerBlobObject(
       data_type_(data_type),
       storage_offset_(0),
       tensor_storage_(tensor_storage),
-      mem_ptr_for_allocation_compuation_pipelining_(nullptr),
-      inited_mem_ptr_for_allocation_compuation_pipelining_(false),
-      is_non_pod_object_placement_newed_(false),
-      pin_memory_(false),
       compute_local_dep_object_(dep_object),
       static_local_tensor_meta_(static_local_tensor_meta),
       dynamic_local_tensor_meta_(dynamic_local_tensor_meta) {
@@ -90,18 +87,11 @@ std::shared_ptr<const Stride> EagerBlobObject::stride_ptr() const {
   }
 }
 
+int64_t EagerBlobObject::storage_offset() const { return storage_offset_; }
+
 void EagerBlobObject::set_storage_offset(const int64_t offset) { storage_offset_ = offset; }
 
-void EagerBlobObject::TryInitNonPODTypeEagerBlobObjectIfNeed() {
-  if (!IsPODDataType(data_type())) {
-    if (!is_non_pod_object_placement_newed_) {
-      InitNonPODTypeEagerBlobObjectIfNeed(tensor_storage_->non_pod_allocator(), this);
-      is_non_pod_object_placement_newed_ = true;
-    }
-  }
-}
-
-Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(vm::Allocator* allocator) {
+Maybe<bool> EagerBlobObject::TryAllocateBlobBodyMemory(vm::Allocator* allocator) {
   size_t required_body_bytes = AlignedByteSizeOfBlobBody();
   if (required_body_bytes == 0) {
     CHECK_ISNULL_OR_RETURN(tensor_storage_->blob_dptr());
@@ -117,11 +107,42 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(vm::Allocator* allocator)
       allocator->Deallocate(dptr, required_body_bytes);
     };
     tensor_storage_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free),
-                                   required_body_bytes, /*is_allocated_in_vm*/ true);
-    InitMemPtrForAllocationComputationPipelining();
+                                   required_body_bytes);
+    InitNonPODTypeEagerBlobObjectIfNeed(tensor_storage_->non_pod_allocator(), this);
+    return true;
   }
-  InitOrCheckMemPtrForAllocationComputationPipelining();
+  return false;
+}
+
+const void* EagerBlobObject::raw_dptr() const {
+  char* ptr = tensor_storage_->blob_dptr();
+  if (tensor_storage_->blob_bytes() > 0) { CHECK_NOTNULL(ptr); }
+  return ptr + storage_offset_ * GetSizeOfDataType(data_type_);
+}
+
+Maybe<void> EagerBlobObject::DeallocateBlobDataPtr() {
+  tensor_storage_->Release();
   return Maybe<void>::Ok();
+}
+
+void EagerBlobObject::RegisterStorageDeleteHook(const std::function<void()>& hook) {
+  tensor_storage_->RegisterStorageDeleteHook(hook);
+}
+
+const Optional<Symbol<::oneflow::Stream>>& EagerBlobObject::producer_stream() const {
+  return tensor_storage_->producer_stream();
+}
+
+Maybe<void> EagerBlobObject::init_producer_stream(Symbol<::oneflow::Stream> producer_stream) {
+  return tensor_storage_->init_producer_stream(producer_stream);
+}
+
+const Optional<Symbol<::oneflow::Stream>>& EagerBlobObject::last_used_stream() const {
+  return tensor_storage_->last_used_stream();
+}
+
+void EagerBlobObject::set_last_used_stream(Symbol<::oneflow::Stream> last_used_stream) {
+  tensor_storage_->set_last_used_stream(last_used_stream);
 }
 
 }  // namespace vm
