@@ -49,8 +49,8 @@ def tensor_builder(params: dict, dtype=np.complex64):
         x = np.random.randn(*input_shape).astype(dtype)
 
     # requires grad
-    x_flow = flow.from_numpy(x).requires_grad_(True)
     x_torch = torch.from_numpy(x).requires_grad_(True)
+    x_flow = flow.tensor(x_torch.detach().cpu().numpy()).requires_grad_(True)
     # x_flow = flow.from_numpy(x).requires_grad_(False)
     # x_torch = torch.from_numpy(x).requires_grad_(False)
 
@@ -105,8 +105,8 @@ def _test_fft(test_case, dtype=np.complex64, params: dict = None):
     if torch.is_conj(x_torch_grad):
         x_torch_grad = torch.resolve_conj(x_torch_grad)
 
-    compare_result(test_case, y_flow, y_torch, 1e-5, 1e-2)
-    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-2)
+    compare_result(test_case, y_flow, y_torch, 1e-5, 1e-5)
+    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-5)
 
     print(f"============== PASSED =============")
     print("\n")
@@ -153,8 +153,8 @@ def _test_ifft(test_case, dtype=np.complex64, params: dict = None):
     if torch.is_conj(x_torch_grad):
         x_torch_grad = torch.resolve_conj(x_torch_grad)
 
-    compare_result(test_case, y_flow, y_torch, 1e-5, 1e-2)
-    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-2)
+    compare_result(test_case, y_flow, y_torch, 1e-5, 1e-5)
+    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-5)
 
     print(f"============== PASSED =============")
     print("\n")
@@ -202,8 +202,8 @@ def _test_rfft(test_case, dtype=np.float32, params: dict = None):
     if torch.is_conj(x_torch_grad):
         x_torch_grad = torch.resolve_conj(x_torch_grad)
 
-    compare_result(test_case, y_flow, y_torch, 1e-5, 1e-2)
-    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-2)
+    compare_result(test_case, y_flow, y_torch, 1e-5, 1e-5)
+    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-5)
 
     print(f"============== PASSED =============")
     print("\n")
@@ -250,8 +250,8 @@ def _test_irfft(test_case, dtype=np.float32, params: dict = None):
     if torch.is_conj(x_torch_grad):
         x_torch_grad = torch.resolve_conj(x_torch_grad)
 
-    compare_result(test_case, y_flow, y_torch, 1e-5, 1e-2)
-    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-2)
+    compare_result(test_case, y_flow, y_torch, 1e-5, 1e-5)
+    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-5)
 
     print(f"============== PASSED =============")
     print("\n")
@@ -299,8 +299,8 @@ def _test_hfft(test_case, dtype=np.complex64, params: dict = None):
     if torch.is_conj(x_torch_grad):
         x_torch_grad = torch.resolve_conj(x_torch_grad)
 
-    compare_result(test_case, y_flow, y_torch, 1e-5, 1e-2)
-    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-2)
+    compare_result(test_case, y_flow, y_torch, 1e-5, 1e-5)
+    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-5)
 
     print(f"============== PASSED =============")
     print("\n")
@@ -348,8 +348,8 @@ def _test_ihfft(test_case, dtype=np.float32, params: dict = None):
     if torch.is_conj(x_torch_grad):
         x_torch_grad = torch.resolve_conj(x_torch_grad)
 
-    compare_result(test_case, y_flow, y_torch, 1e-5, 1e-2)
-    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-2)
+    compare_result(test_case, y_flow, y_torch, 1e-5, 1e-5)
+    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-5)
 
     print(f"============== PASSED =============")
     print("\n")
@@ -365,6 +365,10 @@ class TestFft(flow.unittest.TestCase):
             np.complex64,
             np.complex128,
         ]
+        # test_case.arg_dict["dtype"] = [
+        #     np.float32,
+        #     np.float64
+        # ]
 
     def test_gather(test_case):
         test_case.arg_dict["params"] = []

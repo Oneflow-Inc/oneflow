@@ -1,19 +1,4 @@
 """
-Copyright 2020 The OneFlow Authors. All rights reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
-"""
 Copyright 2023 The OneFlow Authors. All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -49,8 +34,8 @@ def tensor_builder(params: dict, dtype=np.complex64):
         x = np.random.randn(*input_shape).astype(dtype)
 
     # requires grad
-    x_flow = flow.from_numpy(x).requires_grad_(True)
     x_torch = torch.from_numpy(x).requires_grad_(True)
+    x_flow = flow.tensor(x_torch.detach().cpu().numpy()).requires_grad_(True)
 
     return x_flow, x_torch
 
@@ -89,7 +74,7 @@ def _test_fft2(test_case, dtype=np.complex64, params: dict = None):
     y_torch = y_torch.detach().cpu()
 
     # forward
-    y_flow = flow._C.fft2(x_flow, s=n, dim=dims, norm=norm)
+    y_flow = flow.fft.fft2(x_flow, s=n, dim=dims, norm=norm)
     y_flow_sum = y_flow.sum()
 
     # backward
@@ -103,8 +88,8 @@ def _test_fft2(test_case, dtype=np.complex64, params: dict = None):
     if torch.is_conj(x_torch_grad):
         x_torch_grad = torch.resolve_conj(x_torch_grad)
 
-    compare_result(test_case, y_flow, y_torch, 1e-6, 1e-2)
-    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-6, 1e-2)
+    compare_result(test_case, y_flow, y_torch, 1e-6, 1e-5)
+    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-6, 1e-5)
 
     print(f"============== PASSED =============")
     print("\n")
@@ -137,7 +122,7 @@ def _test_ifft2(test_case, dtype=np.complex64, params: dict = None):
     y_torch = y_torch.detach().cpu()
 
     # forward
-    y_flow = flow._C.ifft2(x_flow, s=n, dim=dims, norm=norm)
+    y_flow = flow.fft.ifft2(x_flow, s=n, dim=dims, norm=norm)
     y_flow_sum = y_flow.sum()
 
     # backward
@@ -151,8 +136,8 @@ def _test_ifft2(test_case, dtype=np.complex64, params: dict = None):
     if torch.is_conj(x_torch_grad):
         x_torch_grad = torch.resolve_conj(x_torch_grad)
 
-    compare_result(test_case, y_flow, y_torch, 1e-6, 1e-2)
-    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-6, 1e-2)
+    compare_result(test_case, y_flow, y_torch, 1e-6, 1e-5)
+    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-6, 1e-5)
 
     print(f"============== PASSED =============")
     print("\n")
@@ -185,7 +170,7 @@ def _test_rfft2(test_case, dtype=np.float32, params: dict = None):
     y_torch = y_torch.detach().cpu()
 
     # forward
-    y_flow = flow._C.rfft2(x_flow, s=n, dim=dims, norm=norm)
+    y_flow = flow.fft.rfft2(x_flow, s=n, dim=dims, norm=norm)
     y_flow_sum = y_flow.sum()
 
     # backward
@@ -199,8 +184,8 @@ def _test_rfft2(test_case, dtype=np.float32, params: dict = None):
     if torch.is_conj(x_torch_grad):
         x_torch_grad = torch.resolve_conj(x_torch_grad)
 
-    compare_result(test_case, y_flow, y_torch, 1e-6, 1e-2)
-    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-6, 1e-2)
+    compare_result(test_case, y_flow, y_torch, 1e-6, 1e-5)
+    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-6, 1e-5)
 
     print(f"============== PASSED =============")
     print("\n")
@@ -233,7 +218,7 @@ def _test_irfft2(test_case, dtype=np.complex64, params: dict = None):
     y_torch = y_torch.detach().cpu()
 
     # forward
-    y_flow = flow._C.irfft2(x_flow, s=n, dim=dims, norm=norm)
+    y_flow = flow.fft.irfft2(x_flow, s=n, dim=dims, norm=norm)
     y_flow_sum = y_flow.sum()
 
     # backward
@@ -247,8 +232,8 @@ def _test_irfft2(test_case, dtype=np.complex64, params: dict = None):
     if torch.is_conj(x_torch_grad):
         x_torch_grad = torch.resolve_conj(x_torch_grad)
 
-    compare_result(test_case, y_flow, y_torch, 1e-6, 1e-2)
-    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-6, 1e-2)
+    compare_result(test_case, y_flow, y_torch, 1e-6, 1e-5)
+    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-6, 1e-5)
 
     print(f"============== PASSED =============")
     print("\n")
@@ -281,7 +266,7 @@ def _test_hfft2(test_case, dtype=np.complex64, params: dict = None):
     y_torch = y_torch.detach().cpu()
 
     # forward
-    y_flow = flow._C.hfft2(x_flow, s=n, dim=dims, norm=norm)
+    y_flow = flow.fft.hfft2(x_flow, s=n, dim=dims, norm=norm)
     y_flow_sum = y_flow.sum()
 
     # backward
@@ -295,8 +280,8 @@ def _test_hfft2(test_case, dtype=np.complex64, params: dict = None):
     if torch.is_conj(x_torch_grad):
         x_torch_grad = torch.resolve_conj(x_torch_grad)
 
-    compare_result(test_case, y_flow, y_torch, 1e-6, 1e-2)
-    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-6, 1e-2)
+    compare_result(test_case, y_flow, y_torch, 1e-6, 1e-5)
+    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-6, 1e-5)
 
     print(f"============== PASSED =============")
     print("\n")
@@ -329,7 +314,7 @@ def _test_ihfft2(test_case, dtype=np.float32, params: dict = None):
     y_torch = y_torch.detach().cpu()
 
     # forward
-    y_flow = flow._C.ihfft2(x_flow, s=n, dim=dims, norm=norm)
+    y_flow = flow.fft.ihfft2(x_flow, s=n, dim=dims, norm=norm)
     y_flow_sum = y_flow.sum()
 
     # backward
@@ -343,8 +328,8 @@ def _test_ihfft2(test_case, dtype=np.float32, params: dict = None):
     if torch.is_conj(x_torch_grad):
         x_torch_grad = torch.resolve_conj(x_torch_grad)
 
-    compare_result(test_case, y_flow, y_torch, 1e-6, 1e-2)
-    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-6, 1e-2)
+    compare_result(test_case, y_flow, y_torch, 1e-6, 1e-5)
+    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-6, 1e-5)
 
     print(f"============== PASSED =============")
     print("\n")

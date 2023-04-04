@@ -4227,8 +4227,8 @@ class IFftFunctor {
 class Fft2Functor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const std::vector<int64_t>& s,
-                           const Optional<std::vector<int64_t>>& dim,
+                           const Optional<std::vector<int64_t>>& s,
+                           const std::vector<int64_t>& dim,
                            const Optional<std::string>& norm) const {
     // TO-DO: Add dim default params = {-2,-1}
     return functional::FftN(input, s, dim, norm);
@@ -4238,8 +4238,8 @@ class Fft2Functor {
 class IFft2Functor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const std::vector<int64_t>& s,
-                           const Optional<std::vector<int64_t>>& dim,
+                           const Optional<std::vector<int64_t>>& s,
+                           const std::vector<int64_t>& dim,
                            const Optional<std::string>& norm) const {
     // TO-DO: Add dim default params = {-2,-1}
     return functional::IFftN(input, s, dim, norm);
@@ -4339,8 +4339,8 @@ class IRFftFunctor {
 class RFft2Functor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const std::vector<int64_t>& s,
-                           const Optional<std::vector<int64_t>>& dim,
+                           const Optional<std::vector<int64_t>>& s,
+                           const std::vector<int64_t>& dim,
                            const Optional<std::string>& norm) const {
     // TO-DO: Add dim default params = {-2,-1}
     return functional::RFftN(input, s, dim, norm);
@@ -4350,8 +4350,8 @@ class RFft2Functor {
 class IRFft2Functor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const std::vector<int64_t>& s,
-                           const Optional<std::vector<int64_t>>& dim,
+                           const Optional<std::vector<int64_t>>& s,
+                           const std::vector<int64_t>& dim,
                            const Optional<std::string>& norm) const {
     // TO-DO: Add dim default params = {-2,-1}
     return functional::IRFftN(input, s, dim, norm);
@@ -4424,8 +4424,8 @@ class IHFftFunctor {
 class HFft2Functor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const std::vector<int64_t>& s,
-                           const Optional<std::vector<int64_t>>& dim,
+                           const Optional<std::vector<int64_t>>& s,
+                           const std::vector<int64_t>& dim,
                            const Optional<std::string>& norm) const {
     // TO-DO: Add dim default params = {-2,-1}
     return functional::HFftN(input, s, dim, norm);
@@ -4435,8 +4435,8 @@ class HFft2Functor {
 class IHFft2Functor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const std::vector<int64_t>& s,
-                           const Optional<std::vector<int64_t>>& dim,
+                           const Optional<std::vector<int64_t>>& s,
+                           const std::vector<int64_t>& dim,
                            const Optional<std::string>& norm) const {
     // TO-DO: Add dim default params = {-2,-1}
     return functional::IHFftN(input, s, dim, norm);
