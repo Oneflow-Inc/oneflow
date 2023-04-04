@@ -61,8 +61,6 @@ Maybe<bool> IsInputParallelDescIdentical(const GlobalTensorMetaInferArgs& infer_
         JUST(VectorAt(infer_args.input_global_tensor_metas(), i)).tensor_meta()->parallel_desc();
     break;
   }
-  printf("\ndefault_parallel_desc  >>>>>>>>>>> %s\n",
-         JUST(PlacementToString(default_parallel_desc))->c_str());
 
   for (int i = 0; i < infer_args.input_global_tensor_metas().size(); ++i) {
     if (user_op_expr.IsHostMemoryInput(i)) { continue; }
@@ -70,11 +68,6 @@ Maybe<bool> IsInputParallelDescIdentical(const GlobalTensorMetaInferArgs& infer_
         != JUST(VectorAt(infer_args.input_global_tensor_metas(), i))
                .tensor_meta()
                ->parallel_desc()) {
-      printf("\ninputs i:%d parallel_desc >>>>>>>>>>> %s\n", i,
-             JUST(PlacementToString(JUST(VectorAt(infer_args.input_global_tensor_metas(), i))
-                                        .tensor_meta()
-                                        ->parallel_desc()))
-                 ->c_str());
       return false;
     }
   }
@@ -82,7 +75,6 @@ Maybe<bool> IsInputParallelDescIdentical(const GlobalTensorMetaInferArgs& infer_
 }
 
 Maybe<int> GetMaxRankId(Symbol<ParallelDesc> placement) {
-  // const std::string& device_type = placement->device_tag();
   std::vector<int64_t> sorted_node_ids;
   sorted_node_ids.reserve(placement->sorted_machine_ids().size());
   HashMap<int64_t, std::vector<int64_t>> node_id2sorted_dev_phy_ids;
@@ -191,19 +183,14 @@ auto* GetBoxingOutput =
 Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                       TensorTuple* outputs, const OpExprInterpContext& ctx) {
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
-  // 这里获取的是第一个非host的input tensor的parallel_desc
   auto parallel_desc = JUST(GetParallelDesc(inputs, ctx, user_op_expr));
-  // 需求是：提前检测check inputs tensor的的parallel
-  // desc，如果发现不一致，也不报错，而是通过parallel_desc找到inputs里最大的rank数
-  // 将其他tensor通过boxing（GetBoxingOutput()）拿到to_global后的tensor
   std::shared_ptr<const GlobalTensorInferResult> result;
   NonRecursiveMetaInfoConsistencyCheckScope scope;
   bool is_identical = true;
   int64_t max_rank_tensor_id = -1;
-  int64_t max_rank = -1;
   vm::EagerBlobObjectList boxing_input_eager_blob_objects(inputs.size());
   // extand lifetime of boxing outputs to the end of this function
-  TensorTuple boxing_inputs;
+  TensorTuple boxing_inputs = inputs;
   if (inputs.empty()) {
     // check consistency placement and nd_sbp, do not check in non-src op because it is assumed that
     // InferSbp in op is a deterministic algorithm
@@ -212,12 +199,6 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
         JUST(SrcOpGlobalTensorMetaInferArgs::New(ctx.attrs, parallel_desc, JUST(ctx.nd_sbp)));
     result = JUST(user_op_expr.mut_global_tensor_infer_cache()->GetOrInfer(*infer_args));
   } else {
-    // inputs非空时，通过ctx.attrs和inputs New一个infer_args(GlobalTensorMetaInferArgs)
-    // 再通过infer_args进行infer，并将infer的result放入cache中。
-    // infer时首先做了2个check:
-    //  - 1.CheckInputParallelDescIdentical（check inputs parallel desc是否一致，不一致则报错)
-    //  - 2.CheckIsDeviceSupportedByOp
-    // 然后主要对output tensors的TensorMeta进行了推导
     for (int i = 0; i < outputs->size(); ++i) {
       if ((*outputs)[i]) {
         const auto& nd_sbp = JUST((*outputs)[i]->nd_sbp());
@@ -227,13 +208,8 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
 
     const auto& infer_args = JUST(GlobalTensorMetaInferArgs::New(ctx.attrs, inputs));
     is_identical = JUST(IsInputParallelDescIdentical(*infer_args, user_op_expr));
-    printf("\nis_identical >>>>>>>>>>>> %d\n", is_identical);
-    if (!is_identical) {
+    if (IsEnvEnablePipelineParallelismAutoToGlobal() && !is_identical) {
       max_rank_tensor_id = JUST(GetMaxRankTensorId(inputs));
-      max_rank = JUST(GetMaxRankId(JUST(inputs[max_rank_tensor_id]->parallel_desc())));
-      printf("\nmax rank tensor id:%d  max rank >>>>>>>>>> ********* %d;\n",
-             int(max_rank_tensor_id), int(max_rank));
-
       parallel_desc = JUST(inputs[max_rank_tensor_id]->parallel_desc());
       JUST(inputs[max_rank_tensor_id]->nd_sbp());
       Optional<int64_t> max_parallel_id;
@@ -244,29 +220,19 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
         Optional<int64_t> parallel_id;
 
         JUST(GetTensorDevice4CurrentProcessCtx(JUST(input->parallel_desc()), &parallel_id));
-        printf("\nBefore GetBoxingOutput of input :%d; inputs size:%d; parallel_desc(origin:%s; "
-               "target:%s)\n",
-               i, int(inputs.size()),
-               JUST(PlacementToString(JUST(input->parallel_desc())))->c_str(),
-               JUST(PlacementToString(parallel_desc))->c_str());
         final_input = JUST(GetBoxingOutput(input, JUST(inputs[i]->nd_sbp()), parallel_desc,
                                            parallel_id.has_value() || max_parallel_id.has_value()));
-        printf("\nAfter GetBoxingOutput of input :%d; parallel_desc:%s;\n", i,
-               JUST(PlacementToString(JUST(input->parallel_desc())))->c_str());
 
-        boxing_inputs.emplace_back(final_input);
+        boxing_inputs[i] = final_input;
         const auto& local_tensor = JUST(final_input->cur_rank_phy_tensor());
         boxing_input_eager_blob_objects.at(i) = JUST(local_tensor->eager_blob_object());
       }
       const auto& new_infer_args = JUST(GlobalTensorMetaInferArgs::New(ctx.attrs, boxing_inputs));
-      printf("\n==============GetOrInfer 1===============\n");
       result = JUST(user_op_expr.mut_global_tensor_infer_cache()->GetOrInfer(*new_infer_args));
     } else {
-      printf("\n==============GetOrInfer 2===============\n");
       result = JUST(user_op_expr.mut_global_tensor_infer_cache()->GetOrInfer(*infer_args));
     }
   }
-  // 这里根据上面infer得到的output tensors的TensorMeta，然后New出最终的output tensors
   const auto& output_tensor_metas = result->output_tensor_metas();
   Optional<int64_t> parallel_id;
   const auto& tensor_device = JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
@@ -288,8 +254,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   const auto& kernel = JUST(user_op_expr.MutKernel4Stream(result->stream()));
   CHECK_EQ_OR_RETURN(kernel->output_tuple_indexes4mut2_obns().size(), 0)
       << Error::UnimplementedError() << GetDynamicOpGlobalFailedDebugString(user_op_expr, *kernel);
-  // 遍历input tensors，对一些parallel_desc不适合的tensor，通过boxing来得到可用的tensor
-  // vm::EagerBlobObjectList input_eager_blob_objects(boxing_inputs.size());
+
   // extand lifetime of boxing outputs to the end of this function
   TensorTuple boxing_outputs;
   for (int i = 0; i < boxing_inputs.size(); ++i) {
@@ -320,7 +285,6 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     output_eager_blob_objects.at(i) = JUST(local_tensor->eager_blob_object());
   }
 
-  // dispatch op执行指令至虚拟机，执行该op/kernel
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->Call(kernel, std::move(boxing_input_eager_blob_objects),
                          std::move(output_eager_blob_objects), result, ctx, result->stream());
