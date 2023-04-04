@@ -95,6 +95,13 @@ struct MultiTensorYoloV5WeightUpdateKernelUtil {
                      TensorTupleParams<2> tensor_tuple_params);
 };
 
+template<DeviceType device_type, typename T>
+struct MultiTensorAMPForEachNonFiniteCheckAndUnscaleGpuKernelUtil {
+  static void Update(ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor,
+                     float* found_inf, const float* inv_scale,
+                     TensorTupleParams<1> tensor_tuple_params);
+};
+
 }  // namespace oneflow
 
 #endif

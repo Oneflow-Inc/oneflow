@@ -241,12 +241,14 @@ class GradScaler(object):
 
             for device, per_dtype_grads in per_device_and_dtype_grads.items():
                 if self.fused:
+                    total_grads = []
                     for grads in per_dtype_grads.values():
-                        flow._C.multi_tensor_amp_foreach_non_finite_check_and_unscale_(
-                            grads,
-                            per_device_found_inf.get(device),
-                            per_device_inv_scale.get(device),
-                        )
+                        total_grads += grads
+                    flow._C.multi_tensor_amp_foreach_non_finite_check_and_unscale_(
+                        total_grads,
+                        per_device_found_inf.get(device),
+                        per_device_inv_scale.get(device),
+                    )
                 else:
                     for grads in per_dtype_grads.values():
                         flow._C.amp_foreach_non_finite_check_and_unscale_(
