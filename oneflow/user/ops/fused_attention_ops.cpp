@@ -648,25 +648,14 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
     && output_layout != "MB(H2K)" && output_layout != "MB(H3K)") << "output_layout should not be \"BM(H2k)\", \"BM(H3K)\", \"MB(H2K)\", \"MB(H3K)\".";
 
   int64_t b = 0, m = 0, h = 0, k = 0;
-  bool has_cos = ctx->has_input("cos", 0);
-  bool has_sin = ctx->has_input("sin", 0);
-  // TODO: fused_apply_rotary_emb have same logic no matter name
-  if (has_cos && has_sin) {
-    const user_op::TensorDesc& cos_desc = ctx->InputTensorDesc("cos", 0);
-    const user_op::TensorDesc& sin_desc = ctx->InputTensorDesc("sin", 0);
-    CHECK_EQ_OR_RETURN(cos_desc.shape().NumAxes(), 2)
-        << "The number of dimensions of cos should be equal to 2.";
-    CHECK_EQ_OR_RETURN(sin_desc.shape().NumAxes(), 2)
-        << "The number of dimensions of sin should be equal to 2.";
-    CHECK_OR_RETURN(cos_desc.shape() == sin_desc.shape())
-        << "The dimensions of cos & sin should be the same.";
-    JUST(ParseDims(x_desc.shape(), x_layout, Optional<int64_t>(),
-                   Optional<int64_t>(cos_desc.shape().At(1)), &b, &m, &h, &k));
-  } else if (!has_cos && !has_sin) {
-    JUST(ParseDims(x_desc.shape(), x_layout, Optional<int64_t>(),
+
+  JUST(ParseDims(x_desc.shape(), x_layout, Optional<int64_t>(),
                    k_size ? Optional<int64_t>(k_size) : Optional<int64_t>(), &b, &m, &h, &k));
-  } else {
-    UNIMPLEMENTED_THEN_RETURN();
+  
+
+  CHECK_LE_OR_RETURN(rotary_size, k) << "rotary_size should be no more than K of input x.";
+  if (k_size) {
+    CHECK_EQ_OR_RETURN(k_size, k) << "k_size if given should be equal to K of input x.";
   }
 
   int64_t rotary_emd_dim = 1;
@@ -682,14 +671,29 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
     rotary_emd_dim = position_ids_desc.shape().At(1);
   }
 
-  CHECK_LE_OR_RETURN(rotary_size, k) << "rotary_size should be no more than K of input x.";
-  if (k_size) {
-    CHECK_EQ_OR_RETURN(k_size, k) << "k_size if given should be equal to K of input x.";
-  }
-
   const int64_t actual_rotary_size = rotary_size / rotary_emd_dim;
   CHECK_EQ_OR_RETURN(actual_rotary_size % 2, 0)
       << "rotary_size should be a multiple of 2 * rotary_encoding_dim.";
+
+  bool has_cos = ctx->has_input("cos", 0);
+  bool has_sin = ctx->has_input("sin", 0);
+  // TODO: fused_apply_rotary_emb have same logic no matter name
+  if (has_cos && has_sin) {
+    const user_op::TensorDesc& cos_desc = ctx->InputTensorDesc("cos", 0);
+    const user_op::TensorDesc& sin_desc = ctx->InputTensorDesc("sin", 0);
+    CHECK_EQ_OR_RETURN(cos_desc.shape().NumAxes(), 2)
+        << "The number of dimensions of cos should be equal to 2.";
+    CHECK_EQ_OR_RETURN(sin_desc.shape().NumAxes(), 2)
+        << "The number of dimensions of sin should be equal to 2.";
+    CHECK_OR_RETURN(cos_desc.shape() == sin_desc.shape())
+        << "The dimensions of cos & sin should be the same.";
+    CHECK_EQ_OR_RETURN(cos_desc.shape().At(1), actual_rotary_size)
+        << "The 1st dimension of cos & sin should equal to rotary_size // rotary_embedding_dimension.";
+  } else if (!has_cos && !has_sin) {
+    // Do nothing
+  } else {
+    UNIMPLEMENTED_THEN_RETURN();
+  }
 
   if (ctx->has_input("position_ids", 0)) {
     if (has_cos && has_sin) {

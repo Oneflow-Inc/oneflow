@@ -652,20 +652,15 @@ class FusedApplyRotaryEmbFunctor {
     CHECK_OR_RETURN((mode == "interval") || (mode == "plane"))
         << "mode should be \"intervel\" or \"plane\"";
 
-    if (cos && sin) {
-      CHECK_EQ_OR_RETURN(JUST(cos)->shape()->NumAxes(), 2)
-          << "The number of dimensions of cos should be equal to 2.";
-      CHECK_EQ_OR_RETURN(JUST(sin)->shape()->NumAxes(), 2)
-          << "The number of dimensions of sin should be equal to 2.";
-      CHECK_OR_RETURN(JUST(cos)->shape() == JUST(sin)->shape())
-          << "Each dimension of cos & sin should be the same.";
-      ParseDims("x", *x->shape(), x_layout, Optional<int64_t>(),
-                Optional<int64_t>(JUST(cos)->shape()->At(1)), &b, &m, &h, &k);
-    } else if (!cos && !sin) {
-      ParseDims("x", *x->shape(), x_layout, Optional<int64_t>(),
+    ParseDims("x", *x->shape(), x_layout, Optional<int64_t>(),
                 k_size, &b, &m, &h, &k);
-    } else {
-      UNIMPLEMENTED_THEN_RETURN() << "cos & sin should both be given or not given.";
+    
+    if (k_size) {
+      CHECK_EQ_OR_RETURN(JUST(k_size), k)
+          << "k_size if given should be equal to K of cos, sin and x.";
+    }
+    if (rotary_size) {
+      CHECK_LE_OR_RETURN(JUST(rotary_size), k) << "rotary_size should be no more than k.";
     }
 
     int64_t rotary_emd_dim = 1;
@@ -680,17 +675,24 @@ class FusedApplyRotaryEmbFunctor {
       rotary_emd_dim = JUST(position_ids)->shape()->At(1);
     }
 
-    if (k_size) {
-      CHECK_EQ_OR_RETURN(JUST(k_size), k)
-          << "k_size if given should be equal to K of cos, sin and x.";
-    }
-    if (rotary_size) {
-      CHECK_LE_OR_RETURN(JUST(rotary_size), k) << "rotary_size should be no more than k.";
-    }
-
     const int64_t actual_rotary_size = (rotary_size ? JUST(rotary_size) : k) / rotary_emd_dim;
     CHECK_EQ_OR_RETURN(actual_rotary_size % 2, 0)
         << "k ,or rotary_size if given, should be a multiple of 2 * rotary_encoding_dim.";
+
+    if (cos && sin) {
+      CHECK_EQ_OR_RETURN(JUST(cos)->shape()->NumAxes(), 2)
+          << "The number of dimensions of cos should be equal to 2.";
+      CHECK_EQ_OR_RETURN(JUST(sin)->shape()->NumAxes(), 2)
+          << "The number of dimensions of sin should be equal to 2.";
+      CHECK_OR_RETURN(JUST(cos)->shape() == JUST(sin)->shape())
+          << "Each dimension of cos & sin should be the same.";
+      CHECK_EQ_OR_RETURN(JUST(cos)->shape()->At(1), actual_rotary_size)
+        << "The 1st dimension of cos & sin should equal to rotary_size // rotary_embedding_dimension.";
+    } else if (!cos && !sin) {
+      // do nothing
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "cos & sin should both be given or not given.";
+    }
 
     if (position_ids) {
       if (cos && sin) {

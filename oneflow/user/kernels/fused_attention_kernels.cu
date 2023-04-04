@@ -1088,7 +1088,8 @@ __global__ void IntervalKernel(
 
       const PositionType position =
           param.position_ids ? param.position_ids[position_id_offset] : m_index;
-      const IndexType sinuous_offset = position * param.sinuous_m_stride + k_index;
+      const IndexType actual_k_index = k_index % param.actual_rotary_size;
+      const IndexType sinuous_offset = position * param.sinuous_m_stride + actual_k_index;
 
       LoadPack cos_vec, sin_vec, out_vec;
 
@@ -1100,7 +1101,7 @@ __global__ void IntervalKernel(
 #pragma unroll
         for (int i = 0; i < PackSize / 2; i++) {
           T val = position
-                      * expf(2.0f * static_cast<float>((((k_index % param.actual_rotary_size) >> 1) + i))
+                      * expf(2.0f * static_cast<float>(((actual_k_index >> 1) + i))
                              * param.inv_actual_rotary_size * logf(param.theta));
           T cos_val = cosf(val);
           T sin_val = sinf(val);
@@ -1151,7 +1152,8 @@ __global__ void PlaneKernel(
 
     const PositionType position =
         param.position_ids ? param.position_ids[position_id_offset] : m_index;
-    const IndexType sinuous_offset = position * param.k + k_index;
+    const IndexType actual_k_index = k_index % param.actual_rotary_size;
+    const IndexType sinuous_offset = position * param.k + actual_k_index;
 
     T cos_val, sin_val, out_val;
 
@@ -1223,7 +1225,7 @@ void LaunchKernel(ep::CudaStream* stream, const T* x, const T* cos, const T* sin
   const IndexType out_strides[NumDims] = {out_b_stride, out_m_stride, out_h_stride, 1};
   const IndexType x_strides[NumDims] = {x_b_stride, x_m_stride, x_h_stride, 1};
 
-  param.sinuous_m_stride = k;
+  param.sinuous_m_stride = actual_rotary_size;
 
   const IndexType position_m = position_shape ? static_cast<IndexType>(position_shape[2]) : m;
   param.position_rotate_stride = position_m;
