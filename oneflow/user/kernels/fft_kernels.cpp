@@ -16,6 +16,7 @@ limitations under the License.
 #include <complex>
 #include <cstdint>
 #include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/stride.h"
 #include "oneflow/user/kernels/fft_kernel_util.h"
 #include "pocketfftplan.h"
 using namespace pocketfft;
@@ -192,8 +193,9 @@ class FftC2RKernel final : public user_op::OpKernel {
   }
 };
 
-#if 0
-template<typename IN, typename OUT>
+#if 1
+// template<typename IN, typename OUT>
+template<DeviceType device_type, typename T>
 class StftCpuKernel final : public user_op::OpKernel {
  public:
   StftCpuKernel() = default;
@@ -216,50 +218,90 @@ class StftCpuKernel final : public user_op::OpKernel {
     int64_t dims = input_shape.At(0);
     int64_t batch = input_shape.At(1);
     int64_t len = input_shape.back();
-    const IN* data_in = input->dptr<IN>();
-    IN* data_out = output->mut_dptr<IN>();
-    auto normalization = normalized ? fft_norm_mode::by_root_n : fft_norm_mode::none;
-    PocketFFtParams<IN, OUT> params(Shape{len}, Shape{len}, true,
-                                    compute_fct<IN>(len, normalization) /*1.f*/,
-                                    FFT_EXCUTETYPE::R2C);
-    PocketFFtConfig<IN, OUT> config(params);
+    // const IN* data_in = input->dptr<IN>();
+    const T* data_in = input->dptr<T>();
+    T* data_out = output->mut_dptr<T>();
 
-    OUT* out_tmp_buffer = reinterpret_cast<OUT*>(tmp_buffer->mut_dptr<char>());
-    config.excute(data_in, out_tmp_buffer, dims, batch, len);
+    // ===============
+    // auto normalization = normalized ? fft_norm_mode::by_root_n : fft_norm_mode::none;
+    // PocketFFtParams<IN, OUT> params(/*in_shape=*/Shape{len}, /*out_shape=*/Shape{len}, /*is_forward=*/true,
+    //                                 /*f=*/compute_fct<IN>(len, normalization) /*1.f*/,
+    //                                 /*type=*/FFT_EXCUTETYPE::R2C);
+    // PocketFFtConfig<IN, OUT> config(params);
+    // OUT* out_tmp_buffer = reinterpret_cast<OUT*>(tmp_buffer->mut_dptr<char>());
+    // config.excute(data_in, out_tmp_buffer, dims, batch, len);
+    // ===============
+    auto normalization = normalized ? fft_norm_mode::by_root_n : fft_norm_mode::none;
+    std::complex<T>* out_tmp_buffer = reinterpret_cast<std::complex<T>*>(tmp_buffer->mut_dptr<char>());
+    Shape out_tmp_shape = Shape{len};
+    Stride out_tmp_stride = Stride(out_tmp_shape);
+    std::vector<int64_t> axes (out_tmp_shape.size());
+    std::iota(axes.begin(), axes.end(), 0);
+    FftStftKernelUtil<device_type, T>::FftStftForward(ctx->stream(), data_in, out_tmp_buffer, out_tmp_shape, 
+                                                  out_tmp_shape, out_tmp_stride, out_tmp_stride, 
+                                                  true, /*axes=*/axes, /*normalization=*/normalization,
+                                                  /*len=*/len, /*dims=*/dims, /*batch=*/batch);
 
     if (!onesized) {
-      OUT* doublesided_tmp_buffer =
-          reinterpret_cast<OUT*>(tmp_buffer->mut_dptr<char>()) + output_elem_cnt;
+      std::complex<T>* doublesided_tmp_buffer =
+          reinterpret_cast<std::complex<T>*>(tmp_buffer->mut_dptr<char>()) + output_elem_cnt;
       size_t last_dim_length = len / 2 + 1;
       size_t elem_conut = output_elem_cnt;
-      convert_to_doublesized<IN>(out_tmp_buffer, doublesided_tmp_buffer, last_dim_length,
+      convert_to_doublesized<T>(out_tmp_buffer, doublesided_tmp_buffer, last_dim_length,
                                  elem_conut);
       out_tmp_buffer = doublesided_tmp_buffer;
     }
 
-    if (!return_complex) { comvert_to_real<IN>(out_tmp_buffer, data_out, output_elem_cnt); }
+    if (!return_complex) { comvert_to_real<T>(out_tmp_buffer, data_out, output_elem_cnt); }
+
+    // if (!onesized) {
+    //   OUT* doublesided_tmp_buffer =
+    //       reinterpret_cast<OUT*>(tmp_buffer->mut_dptr<char>()) + output_elem_cnt;
+    //   size_t last_dim_length = len / 2 + 1;
+    //   size_t elem_conut = output_elem_cnt;
+    //   convert_to_doublesized<IN>(out_tmp_buffer, doublesided_tmp_buffer, last_dim_length,
+    //                              elem_conut);
+    //   out_tmp_buffer = doublesided_tmp_buffer;
+    // }
+
+    // if (!return_complex) { comvert_to_real<IN>(out_tmp_buffer, data_out, output_elem_cnt); }
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_STFT_CPU_KERNEL(intype, outtype)                                           \
+#define REGISTER_STFT_CPU_KERNEL(dtype)                                           \
   REGISTER_USER_KERNEL("stft")                                                              \
-      .SetCreateFn<StftCpuKernel<intype, outtype>>()                                        \
+      .SetCreateFn<StftCpuKernel<DeviceType::kCPU, dtype>>()                                        \
       .SetIsMatchedHob((user_op::HobDeviceType() == kCPU)                                   \
-                       && (user_op::HobDataType("input", 0) == GetDataType<intype>::value)) \
+                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                   \
         const Shape& output_shape = ctx->InputShape("output", 0);                           \
         const bool return_complex = ctx->Attr<bool>("return_complex");                      \
         const bool onesided = ctx->Attr<bool>("onesided");                                  \
         int64_t output_elem_cnt =                                                           \
             return_complex ? output_shape.elem_cnt() : output_shape.elem_cnt() / 2;         \
-        const int64_t output_bytes = (output_elem_cnt * sizeof(outtype));                   \
+        const int64_t output_bytes = (output_elem_cnt * sizeof(std::complex<dtype>));                   \
         return onesided ? output_bytes : 2 * output_bytes;                                  \
       });
-
-REGISTER_STFT_CPU_KERNEL(double, std::complex<double>)
-REGISTER_STFT_CPU_KERNEL(float, std::complex<float>)
+// #define REGISTER_STFT_CPU_KERNEL(intype, outtype)                                           \
+//   REGISTER_USER_KERNEL("stft")                                                              \
+//       .SetCreateFn<StftCpuKernel<intype, outtype>>()                                        \
+//       .SetIsMatchedHob((user_op::HobDeviceType() == kCPU)                                   \
+//                        && (user_op::HobDataType("input", 0) == GetDataType<intype>::value)) \
+//       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                   \
+//         const Shape& output_shape = ctx->InputShape("output", 0);                           \
+//         const bool return_complex = ctx->Attr<bool>("return_complex");                      \
+//         const bool onesided = ctx->Attr<bool>("onesided");                                  \
+//         int64_t output_elem_cnt =                                                           \
+//             return_complex ? output_shape.elem_cnt() : output_shape.elem_cnt() / 2;         \
+//         const int64_t output_bytes = (output_elem_cnt * sizeof(outtype));                   \
+//         return onesided ? output_bytes : 2 * output_bytes;                                  \
+//       });
+REGISTER_STFT_CPU_KERNEL(double)
+REGISTER_STFT_CPU_KERNEL(float)
+// REGISTER_STFT_CPU_KERNEL(double, std::complex<double>)
+// REGISTER_STFT_CPU_KERNEL(float, std::complex<float>)
 
 #endif
 

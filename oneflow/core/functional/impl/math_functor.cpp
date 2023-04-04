@@ -4474,7 +4474,7 @@ class IHFftNFunctor {
   }
 };
 
-#if 0
+#if 1
 class StftFunctor {
  public:
   StftFunctor() {
@@ -5266,7 +5266,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<GeluWithApproximateFunctor>("GeluWithApproximate");
   m.add_functor<impl::TruncFunctor>("Trunc");
 
-  // m.add_functor<StftFunctor>("Stft");  // disable Stft, TO-DO: compat Stft into fft
+  m.add_functor<StftFunctor>("Stft");  // disable Stft, TO-DO: compat Stft into fft
   m.add_functor<impl::FftC2CFunctor>("FftC2C");
   m.add_functor<impl::FftR2CFunctor>("FftR2C");
   m.add_functor<impl::FftC2RFunctor>("FftC2R");

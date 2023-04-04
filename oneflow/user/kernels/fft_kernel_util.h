@@ -139,5 +139,14 @@ struct FftC2RKernelUtil {
                             fft_norm_mode normalization);
 };
 
+template<DeviceType device_type, typename T>
+struct FftStftKernelUtil {
+  static void FftStftForward(ep::Stream* stream, const T* data_in, std::complex<T>* data_out,
+                            const Shape& input_shape, const Shape& output_shape,
+                            const Stride& input_stride, const Stride& output_stride, bool forward,
+                            const std::vector<int64_t>& axes, fft_norm_mode normalization, int64_t len,
+                            int64_t dims, int64_t batch);
+};
+
 }  // namespace oneflow
 #endif  // ONEFLOW_USER_KERNELS_FFT_KERNEL_UTIL_H_

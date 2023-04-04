@@ -3250,10 +3250,10 @@
   signature: "Tensor (Tensor input, Tensor weights=None, Int64 minlength=None) => BinCount"
   bind_python: True
 
-# - name: "stft"
-#   signature: 
-#     'Tensor (Tensor input, Int64 n_fft,Int64 hop_length=None, Int64 win_length=None, Tensor window=None,Bool center=True,String pad_mode="reflect",Bool normalized=False,Bool onesided=True,Bool return_complex=False) =>Stft'
-#   bind_python: True
+- name: "stft"
+  signature: 
+    'Tensor (Tensor input, Int64 n_fft,Int64 hop_length=None, Int64 win_length=None, Tensor window=None,Bool center=True,String pad_mode="reflect",Bool normalized=False,Bool onesided=True,Bool return_complex=False) =>Stft'
+  bind_python: True
 
 - name: "fft_c2c"
   signature:
