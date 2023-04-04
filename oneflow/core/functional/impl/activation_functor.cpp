@@ -462,8 +462,9 @@ class GumbelSoftmaxFunctor {
       int64_t dim_ = dim ? JUST(dim) : get_dim();
       dim_ = JUST(maybe_wrap_dim(dim_, num_axes));
       auto out_max = JUST(functional::ArgMax(out_soft, dim_, /*keepdim=*/true, dtype));
-      auto index = JUST(functional::To(out_max, JUST(DType::Get(DataType::kInt64)), /*non_blocking=*/ false,
-                                       /*copy=*/ false));
+      auto index =
+          JUST(functional::To(out_max, JUST(DType::Get(DataType::kInt64)), /*non_blocking=*/false,
+                              /*copy=*/false));
       auto zero = JUST(functional::ZerosLike(out_soft));
       auto out_hard =
           JUST(functional::DimScatterUpdateScalar(zero, dim_, index, 1.0, /*inplace=*/false));

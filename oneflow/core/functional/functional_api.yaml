@@ -1713,12 +1713,6 @@
       "Tensor (Tensor x, DataType dtype=None, Bool non_blocking=False, Bool copy=False) => To",
       "Tensor (Tensor x, Tensor other, Bool non_blocking=False, Bool copy=False) => To",
       "Tensor (Tensor x, String device=None, Bool non_blocking=False) => To",
-
-      # "Tensor (Tensor x, String device=None, DataType dtype=None, Bool copy=False) => To",
-      # "Tensor (Tensor x, Device device=None, DataType dtype=None, Bool copy=False) => To",
-      # "Tensor (Tensor x, DataType dtype=None, Bool copy=False) => To",
-      # "Tensor (Tensor x, Tensor other, Bool copy=False) => To",
-      # "Tensor (Tensor x, String device=None) => To",
     ]
   bind_python: True
 
