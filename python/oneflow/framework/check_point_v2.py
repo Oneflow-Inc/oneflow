@@ -58,6 +58,9 @@ DATA_FILENAME = "out"
 PROTOCOL_VERSION = 1
 ONEFLOW_MAGIC_KEY = "__oneflow__"
 
+MAP_LOCATION: TypeAlias = Optional[
+    Union[Callable[[Tensor, str], Tensor], flow.device, str, flow.placement]
+]
 FILE_LIKE: TypeAlias = Union[str, os.PathLike, BinaryIO, IO[bytes], Path]
 
 
@@ -210,24 +213,63 @@ def _save_tensor_to_disk(tensor: "oneflow.Tensor", dir_name: Union[str, Path]) -
 ValueContainer = Union[FileBackendVariableBlob, np.ndarray, "oneflow.Tensor"]
 
 
-def smart_to(
-    obj: Any, dest: Optional[Union[str, flow.device, flow.placement]]
-) -> "oneflow.Tensor":
+def _default_restore_location(storage, location=None):
+    return storage
+
+
+def _get_restore_location(map_location):
+    if map_location is None:
+        restore_location = _default_restore_location
+    elif isinstance(map_location, (str, flow.device)):
+
+        def restore_location(storage, location=None):
+            return storage.to(device=map_location)
+
+    elif isinstance(map_location, flow.placement):
+
+        def restore_location(storage, location=None):
+            return storage.to_global(placement=map_location)
+
+    else:
+
+        def restore_location(storage, location=None):
+            result = map_location(storage, location)
+            if result is None:
+                result = _default_restore_location(storage, location)
+            return result
+
+    return restore_location
+
+
+def smart_to(obj: Any, dest: MAP_LOCATION) -> "oneflow.Tensor":
     if not isinstance(obj, flow.Tensor):
         return obj
     tensor = obj
-    if dest is None:
-        return tensor
-    if isinstance(dest, (str, flow.device)):
-        return tensor.to(device=dest)
+    restore_location = _get_restore_location(dest)
+    return restore_location(tensor, None)
+
+
+def module_to(obj: flow.nn.Module, dest: MAP_LOCATION) -> "oneflow.nn.Module":
+    restore_location = _get_restore_location(dest)
+    # for nn.Module object, we will use a tensor to get the device
+    # to support dest with a Callable type
+    device = restore_location(flow.tensor([0])).device
+    obj.to(device)
+    return obj
+
+
+def _map_location(obj: Any, map_location: MAP_LOCATION):
+    if isinstance(obj, flow.nn.Module):
+        return module_to(obj, map_location)
     else:
-        return tensor.to_global(placement=dest)
+        res = ArgsTree(obj).map_leaf(lambda x: smart_to(x, map_location))
+        return res
 
 
 def _LoadSingleVariable(
     path: Optional[str],
     global_src_rank: Optional[int] = None,
-    map_location: Optional[Union[flow.device, flow.placement]] = None,
+    map_location: MAP_LOCATION = None,
 ) -> "flow.Tensor":
     if global_src_rank is not None:
         rank = flow.env.get_rank()
@@ -392,9 +434,7 @@ def is_dir_and_no_pickle_file(path: FILE_LIKE, support_pytorch_format: bool):
 
 @load_if(is_dir_and_no_pickle_file)
 def legacy_load(
-    path: Path,
-    global_src_rank: Optional[int],
-    map_location: Optional[Union[str, flow.device]],
+    path: Path, global_src_rank: Optional[int], map_location: MAP_LOCATION,
 ) -> Dict[str, "flow.Tensor"]:
     assert os.path.isdir(path), "Directory {} doesn't exist!".format(path)
     rank = flow.env.get_rank()
@@ -423,7 +463,7 @@ def legacy_load(
 def tensor_pickling_context(
     path: Path,
     global_rank: Optional[int],
-    mp: Optional[Union[str, flow.device, flow.placement]],
+    mp: MAP_LOCATION,
     save_as_external_data: bool,
 ):
     global context_data
@@ -454,10 +494,7 @@ def is_oneflow_pickle_file(path: FILE_LIKE, support_pytorch_format: bool) -> boo
 # as `content`.
 @load_if(is_oneflow_pickle_file)
 def load_from_oneflow_single_file(
-    path: FILE_LIKE,
-    global_src_rank,
-    map_location: Optional[Union[str, flow.device]],
-    content: Any = None,
+    path: FILE_LIKE, global_src_rank, map_location: MAP_LOCATION, content: Any = None,
 ):
     rank = flow.env.get_rank()
     if global_src_rank is None or rank == global_src_rank:
@@ -473,7 +510,7 @@ def load_from_oneflow_single_file(
             sbp=flow.sbp.broadcast,
             warn_on_non_tensor_leaf=False,
         )
-    res = ArgsTree(res).map_leaf(lambda x: smart_to(x, map_location))
+    res = _map_location(res, map_location)
     return res
 
 
@@ -487,7 +524,7 @@ def is_file_and_support_pytorch_format(
 
 @load_if(is_file_and_support_pytorch_format)
 def load_from_pytorch_file(
-    path: FILE_LIKE, global_src_rank, map_location: Optional[Union[str, flow.device]],
+    path: FILE_LIKE, global_src_rank, map_location: MAP_LOCATION,
 ):
     with flow.mock_torch.disable():
         import torch
@@ -511,8 +548,7 @@ def load_from_pytorch_file(
                 sbp=flow.sbp.broadcast,
                 warn_on_non_tensor_leaf=False,
             )
-
-        flow_obj = ArgsTree(flow_obj).map_leaf(lambda x: smart_to(x, map_location))
+        flow_obj = _map_location(flow_obj, map_location)
         return flow_obj
 
 
@@ -525,9 +561,7 @@ def is_dir_and_has_pickle_file(path: FILE_LIKE, support_pytorch_format: bool) ->
 
 @load_if(is_dir_and_has_pickle_file)
 def load_from_oneflow_pickle_dir(
-    path: Path,
-    global_src_rank: Optional[int],
-    map_location: Optional[Union[str, flow.device, flow.placement]],
+    path: Path, global_src_rank: Optional[int], map_location: MAP_LOCATION,
 ):
     rank = flow.env.get_rank()
     pickle_path = path / PICKLE_FILENAME
@@ -553,7 +587,7 @@ def load_from_oneflow_pickle_dir(
 def load(
     path: FILE_LIKE,
     global_src_rank: Optional[int] = None,
-    map_location: Optional[Union[str, flow.device, flow.placement]] = None,
+    map_location: MAP_LOCATION = None,
     *,
     support_pytorch_format: bool = True,
 ) -> Any:
@@ -568,7 +602,7 @@ def load(
             read the files in `path`, and tensors in the loaded
             object will be consistent with placement =
             `flow.placement('cuda', [global_src_rank])`
-        map_location (str, flow.device or flow.placement, optional):
+        map_location (str, flow.device or flow.placement, callable, optional):
             indicates the location where all tensors should be loaded.
         support_pytorch_format (bool, optional): whether to support
             loading the file saved by `torch.save`. Default: True
@@ -659,6 +693,7 @@ def save(
                 "path_or_buffer must be the type of {`str`, `pathlib.Path`} while obj is Graph"
             )
         _save_graph(obj, path_or_buffer)
+        return
 
     # this `path` is only used for `ContextData` and is set to empty when `path_or_buffer` is IO[bytes] or BinaryIO
     path: Path = Path(path_or_buffer if _is_path(path_or_buffer) else "")
