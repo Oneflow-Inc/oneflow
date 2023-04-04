@@ -687,8 +687,8 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
     CHECK_EQ_OR_RETURN(k_size, k) << "k_size if given should be equal to K of input x.";
   }
 
-  const int64_t actual_ndims = rotary_size / rotary_emd_dim;
-  CHECK_EQ_OR_RETURN(actual_ndims % 2, 0)
+  const int64_t actual_rotary_size = rotary_size / rotary_emd_dim;
+  CHECK_EQ_OR_RETURN(actual_rotary_size % 2, 0)
       << "rotary_size should be a multiple of 2 * rotary_encoding_dim.";
 
   if (ctx->has_input("position_ids", 0)) {
@@ -722,7 +722,52 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
 }
 
 /* static */ Maybe<void> FusedApplyRotaryEmbOp::GetSbp(user_op::SbpContext* ctx) {
-  // (b, h, s, d) elemntwise-multiply (s, d)
+  const user_op::TensorDesc& x = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+  const std::string& x_layout = ctx->user_op_conf().attr<std::string>("x_layout");
+  const std::string& output_layout = ctx->user_op_conf().attr<std::string>("output_layout");
+  const int64_t k_size = ctx->user_op_conf().attr<int64_t>("k_size");
+
+  int64_t b = 0, m = 0, h = 0, k = 0;
+  if (ctx->user_op_conf().has_input("cos", 0) && ctx->user_op_conf().has_input("sin", 0)) {
+    const user_op::TensorDesc& cos = ctx->LogicalTensorDesc4InputArgNameAndIndex("cos", 0);
+    JUST(ParseDims(x.shape(), x_layout, Optional<int64_t>(),
+                   Optional<int64_t>(cos.shape().At(1)), &b, &m, &h, &k));
+  } else {
+    JUST(ParseDims(x.shape(), x_layout, Optional<int64_t>(),
+                   k_size ? Optional<int64_t>(k_size) : Optional<int64_t>(), &b, &m, &h, &k));
+  }
+  
+  bool can_hk_split = (h % ctx->parallel_num()) == 0;
+  int64_t x_b_split_axis = -1, x_h_split_axis = -1, out_b_split_axis = -1, out_h_split_axis = -1;
+  JUST(ParseSplitAxis(x_layout, can_hk_split, &x_b_split_axis, &x_h_split_axis));
+  JUST(ParseSplitAxis(output_layout, can_hk_split, &out_b_split_axis, &out_h_split_axis));
+
+  if (x_h_split_axis >= 0 && out_h_split_axis >= 0) {
+      ctx->NewBuilder()
+        .Split(user_op::OpArg("x", 0), x_h_split_axis)
+        .Split(user_op::OpArg("out", 0), out_h_split_axis)
+        .Broadcast(user_op::OpArg("sin", 0))
+        .Broadcast(user_op::OpArg("cos", 0))
+        .Broadcast(user_op::OpArg("position_ids", 0))
+        .Build();
+  }
+
+  if (x_b_split_axis >= 0 && out_b_split_axis >= 0 && ctx->user_op_conf().has_input("position_ids", 0)) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("x", 0), x_b_split_axis)
+        .Split(user_op::OpArg("out", 0), x_b_split_axis)
+        .Split(user_op::OpArg("position_ids", 0), 0)
+        .Broadcast(user_op::OpArg("sin", 0))
+        .Broadcast(user_op::OpArg("cos", 0))
+        .Build();
+  } else {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("x", 0), x_b_split_axis)
+        .Split(user_op::OpArg("out", 0), x_b_split_axis)
+        .Broadcast(user_op::OpArg("sin", 0))
+        .Broadcast(user_op::OpArg("cos", 0))
+        .Build();
+  }
 
   return Maybe<void>::Ok();
 }
