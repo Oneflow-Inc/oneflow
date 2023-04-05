@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <memory>
 #include <sstream>
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/op_interpreter.h"
@@ -43,8 +44,6 @@ namespace one {
 
 namespace {
 
-// NOTE: use env variable 'ONEFLOW_DISABLE_VIEW' control use view mechanism or not
-// If  set true, then do not use view mechanism(and view ops)
 bool IsEnvEnablePipelineParallelismAutoToGlobal() {
   static const bool env_enable_auto_to_global =
       ParseBooleanFromEnv("ONEFLOW_ENABLE_PIPELINE_PARALLELISM_AUTO_TO_GLOBAL", false);
@@ -74,7 +73,10 @@ Maybe<bool> IsInputParallelDescIdentical(const GlobalTensorMetaInferArgs& infer_
   return true;
 }
 
-Maybe<int> GetMaxRankId(Symbol<ParallelDesc> placement) {
+Maybe<int> GetMaxRankNumber(Symbol<ParallelDesc> placement) {
+  // Find max rank number of a tensor's placement
+  // e.g. tensor's placement is [[0,1,2],[2,3,4],[7,8,9]]
+  // then max rank number is 9
   std::vector<int64_t> sorted_node_ids;
   sorted_node_ids.reserve(placement->sorted_machine_ids().size());
   HashMap<int64_t, std::vector<int64_t>> node_id2sorted_dev_phy_ids;
@@ -94,6 +96,14 @@ Maybe<int> GetMaxRankId(Symbol<ParallelDesc> placement) {
 }
 
 Maybe<int> GetMaxRankTensorId(const TensorTuple& inputs) {
+  // Find the max rank tensor id in all input tensors.
+  // e.g. if there are three tensor in inputs
+  //        tensor        parallel_desc
+  // inputs[0] tensor a    [0, 1, 2]
+  // inputs[1] tensor b    [3, 4, 5]
+  // inputs[2] tensor c    [2, 3, 4]
+
+  // then max rank number is 5, max rank tensor is b, max rank tensor id is 1
   int64_t max_rank_tensor_id = 0;
   if (inputs.size() < 0) {
     return -1;
@@ -102,7 +112,7 @@ Maybe<int> GetMaxRankTensorId(const TensorTuple& inputs) {
   }
   int64_t max_rank = 0;
   for (int64_t i = 0; i < inputs.size(); ++i) {
-    int64_t tensor_max_rank = JUST(GetMaxRankId(JUST(inputs[i]->parallel_desc())));
+    int64_t tensor_max_rank = JUST(GetMaxRankNumber(JUST(inputs[i]->parallel_desc())));
     if (tensor_max_rank >= max_rank) {
       max_rank = tensor_max_rank;
       max_rank_tensor_id = i;
@@ -186,18 +196,17 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   auto parallel_desc = JUST(GetParallelDesc(inputs, ctx, user_op_expr));
   std::shared_ptr<const GlobalTensorInferResult> result;
   NonRecursiveMetaInfoConsistencyCheckScope scope;
-  bool is_identical = true;
-  int64_t max_rank_tensor_id = -1;
   vm::EagerBlobObjectList boxing_input_eager_blob_objects(inputs.size());
   // extand lifetime of boxing outputs to the end of this function
   TensorTuple boxing_inputs = inputs;
+  auto infer_args = JUST(GlobalTensorMetaInferArgs::New(ctx.attrs, inputs));
   if (inputs.empty()) {
-    // check consistency placement and nd_sbp, do not check in non-src op because it is assumed that
-    // InferSbp in op is a deterministic algorithm
+    // check consistency placement and nd_sbp, do not check in non-src op because it is assumed
+    // that InferSbp in op is a deterministic algorithm
     JUST(MetaInfoConsistencyCheck(parallel_desc, ctx.nd_sbp, 1, /* force_check */ false));
-    const auto& infer_args =
+    const auto& src_op_infer_args =
         JUST(SrcOpGlobalTensorMetaInferArgs::New(ctx.attrs, parallel_desc, JUST(ctx.nd_sbp)));
-    result = JUST(user_op_expr.mut_global_tensor_infer_cache()->GetOrInfer(*infer_args));
+    result = JUST(user_op_expr.mut_global_tensor_infer_cache()->GetOrInfer(*src_op_infer_args));
   } else {
     for (int i = 0; i < outputs->size(); ++i) {
       if ((*outputs)[i]) {
@@ -206,33 +215,32 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
       }
     }
 
-    const auto& infer_args = JUST(GlobalTensorMetaInferArgs::New(ctx.attrs, inputs));
-    is_identical = JUST(IsInputParallelDescIdentical(*infer_args, user_op_expr));
+    // is_identical is true indicating inputs tensor have same parallel_desc
+    const bool is_identical = JUST(IsInputParallelDescIdentical(*infer_args, user_op_expr));
+    // if is_identical is false and env 'ONEFLOW_ENABLE_PIPELINE_PARALLELISM_AUTO_TO_GLOBAL' set to
+    // true then traverse all input tensor use function GetBoxingOutput(), during this process,
+    // each tensor will to_global with target parallel_desc
     if (IsEnvEnablePipelineParallelismAutoToGlobal() && !is_identical) {
-      max_rank_tensor_id = JUST(GetMaxRankTensorId(inputs));
-      parallel_desc = JUST(inputs[max_rank_tensor_id]->parallel_desc());
-      JUST(inputs[max_rank_tensor_id]->nd_sbp());
+      parallel_desc = JUST(inputs[JUST(GetMaxRankTensorId(inputs))]->parallel_desc());
       Optional<int64_t> max_parallel_id;
       JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &max_parallel_id));
       for (int i = 0; i < inputs.size(); ++i) {
-        std::shared_ptr<Tensor> input = inputs.at(i);
-        std::shared_ptr<Tensor> final_input = nullptr;
+        const auto& input = inputs.at(i);
         Optional<int64_t> parallel_id;
-
         JUST(GetTensorDevice4CurrentProcessCtx(JUST(input->parallel_desc()), &parallel_id));
-        final_input = JUST(GetBoxingOutput(input, JUST(inputs[i]->nd_sbp()), parallel_desc,
-                                           parallel_id.has_value() || max_parallel_id.has_value()));
+        const auto& final_input =
+            JUST(GetBoxingOutput(input, JUST(inputs[i]->nd_sbp()), parallel_desc,
+                                 parallel_id.has_value() || max_parallel_id.has_value()));
 
         boxing_inputs[i] = final_input;
         const auto& local_tensor = JUST(final_input->cur_rank_phy_tensor());
         boxing_input_eager_blob_objects.at(i) = JUST(local_tensor->eager_blob_object());
       }
-      const auto& new_infer_args = JUST(GlobalTensorMetaInferArgs::New(ctx.attrs, boxing_inputs));
-      result = JUST(user_op_expr.mut_global_tensor_infer_cache()->GetOrInfer(*new_infer_args));
-    } else {
-      result = JUST(user_op_expr.mut_global_tensor_infer_cache()->GetOrInfer(*infer_args));
+      infer_args = JUST(GlobalTensorMetaInferArgs::New(ctx.attrs, boxing_inputs));
     }
+    result = JUST(user_op_expr.mut_global_tensor_infer_cache()->GetOrInfer(*infer_args));
   }
+
   const auto& output_tensor_metas = result->output_tensor_metas();
   Optional<int64_t> parallel_id;
   const auto& tensor_device = JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
