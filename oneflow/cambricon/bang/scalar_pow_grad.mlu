@@ -17,46 +17,108 @@ limitations under the License.
 
 namespace oneflow {
 
-static constexpr int32_t nram_limit = 32;
+static constexpr int32_t nram_limit = 1024;
+
+static __mlu_func__ void bang_mask_assign(float* dst, float* src, float* mask, int32_t elem_count) {
+  __nram__ int32_t bitmask[nram_limit];
+  __nram__ int32_t nram_temp[nram_limit];
+
+  uint32_t mask_value = 0xFFFFFFFF;
+  __bang_write_value(bitmask, elem_count, *((int32_t*)(&mask_value)));
+  __bang_float2int32(nram_temp, mask, elem_count, 0);
+  __bang_mul(bitmask, nram_temp, bitmask, elem_count);
+
+  __bang_band((char*)bitmask, (char*)src, (char*)bitmask, elem_count * sizeof(float));
+  __bang_ne_scalar((float*)nram_temp, mask, 1.0, elem_count);
+  __bang_mul(dst, dst, (float*)nram_temp, elem_count);
+  __bang_add(dst, dst, (float*)bitmask, elem_count);
+}
+
+static __mlu_func__ void bang_pow_scalar(float* dst, float* src, float exponent,
+                                         int32_t elem_count) {
+// TODO(): Dealing with precision issue when `exponent * log|src| > 17`.
+#if 1
+  __nram__ float nram_temp[nram_limit];
+  __nram__ float nram_scale[nram_limit];
+  __nram__ float nram_mask_neg[nram_limit];
+
+  __bang_gt_scalar(nram_scale, src, static_cast<float>(0), elem_count);
+  __bang_lt_scalar(nram_mask_neg, src, static_cast<float>(0), elem_count);
+
+  float floor_exponent = floor(exponent);
+  if (floor_exponent != exponent) {
+    __bang_write_value(nram_temp, elem_count, static_cast<float>(NAN));
+  } else {
+    bool is_odd = static_cast<int64_t>(floor_exponent) & 0x1;
+    if (is_odd) {
+      __bang_write_value(nram_temp, elem_count, static_cast<float>(-1.0));
+    } else {
+      __bang_write_value(nram_temp, elem_count, static_cast<float>(1.0));
+    }
+  }
+  bang_mask_assign(nram_scale, nram_temp, nram_mask_neg, elem_count);
+
+  __bang_abs(nram_temp, src, elem_count);
+  __bang_active_loghp(nram_temp, nram_temp, elem_count);
+  __bang_mul_scalar(nram_temp, nram_temp, exponent, elem_count);
+  __bang_active_exphp(nram_temp, nram_temp, elem_count);
+  __bang_mul(dst, nram_temp, nram_scale, elem_count);
+#else
+  for (int i = 0; i < elem_count; ++i) { dst[i] = pow(src[i], exponent); }
+#endif
+}
+
+static __mlu_func__ void bang_pow_scalar(half* dst, half* src, float exponent, int32_t elem_count) {
+  __nram__ float nram_float_src[nram_limit];
+  __nram__ float nram_float_dst[nram_limit];
+  __bang_half2float(nram_float_src, src, elem_count);
+  bang_pow_scalar(nram_float_dst, nram_float_src, exponent, elem_count);
+  __bang_float2half_rd(dst, nram_float_dst, elem_count);
+}
 
 template<typename T>
 __mlu_global__ void bang_scalar_pow_grad_kernel(int64_t n, const T* x, const T* dy,
                                                 const float value, T* dx) {
-  const T value_ = value - static_cast<T>(1.0);
+  float exponent = value - 1.0;
   int64_t step = (n + taskDim - 1) / taskDim;
   int64_t start = step * taskId;
   int64_t end = start + step;
   if (end > n) { end = n; }
   int64_t length = start < end ? end - start : 0;
-  int64_t nram_rest = (length & 0x1F);  // length % nram_limit2
+  int64_t nram_rest = length & (nram_limit - 1);  // length % nram_limit2
   int32_t nram_limit_bytes = nram_limit * sizeof(T);
 
   __nram__ T nram_x[nram_limit];
   __nram__ T nram_dx[nram_limit];
   __nram__ T nram_dy[nram_limit];
+
   int64_t j = 0;
   for (; j < length - nram_limit + 1; j += nram_limit) {
     __memcpy_async(nram_x, x + start + j, nram_limit_bytes, GDRAM2NRAM);
-    __memcpy_async(nram_dx, dx + start + j, nram_limit_bytes, GDRAM2NRAM);
     __memcpy_async(nram_dy, dy + start + j, nram_limit_bytes, GDRAM2NRAM);
     __sync_copy_dram_to_nram();
-    for (int k = 0; k < nram_limit; k++) { nram_dx[k] = std::pow(nram_x[k], value_); }
+
+    bang_pow_scalar(nram_dx, nram_x, exponent, nram_limit);
+
     __bang_mul(nram_dx, nram_dx, nram_dy, nram_limit);
     __bang_mul_scalar(nram_dx, nram_dx, value, nram_limit);
     __sync_compute();
+
     __memcpy_async(dx + start + j, nram_dx, nram_limit_bytes, NRAM2GDRAM);
     __sync_copy_nram_to_dram();
   }
   if (nram_rest > 0) {
     int32_t nram_rest_bytes = nram_rest * sizeof(T);
     __memcpy_async(nram_x, x + start + j, nram_rest_bytes, GDRAM2NRAM);
-    __memcpy_async(nram_dx, dx + start + j, nram_rest_bytes, GDRAM2NRAM);
     __memcpy_async(nram_dy, dy + start + j, nram_rest_bytes, GDRAM2NRAM);
     __sync_copy_dram_to_nram();
-    for (int k = 0; k < nram_rest; k++) { nram_dx[k] = std::pow(nram_x[k], value_); }
+
+    bang_pow_scalar(nram_dx, nram_x, exponent, nram_rest);
+
     __bang_mul(nram_dx, nram_dx, nram_dy, nram_rest);
     __bang_mul_scalar(nram_dx, nram_dx, value, nram_rest);
     __sync_compute();
+
     __memcpy_async(dx + start + j, nram_dx, nram_rest_bytes, NRAM2GDRAM);
     __sync_copy_nram_to_dram();
   }
