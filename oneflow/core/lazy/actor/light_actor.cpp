@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
 #include "oneflow/core/kernel/user_kernel.h"
 #include "oneflow/core/lazy/stream_context/include/stream_context.h"
 
@@ -249,6 +250,10 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
   void Init(const JobDesc* job_desc, ActorContext* actor_ctx) override {
     const TaskProto& task_proto = actor_ctx->task_proto();
     CHECK_EQ(task_proto.exec_sequence().exec_node_size(), 1);
+    op_name_ =
+        task_proto.exec_sequence().exec_node(0).kernel_conf().op_attribute().op_conf().name();
+    debug_ = EnableActorDebugLog();
+    actor_id_ = task_proto.task_id();
     if (exec_kernel) {
       kernel_info_[0].reset(new KernelInfo());
       const KernelConf& kernel_conf = task_proto.exec_sequence().exec_node(0).kernel_conf();
@@ -330,6 +335,15 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
 
   int ProcessMsg(const ActorMsg& msg) override {
     HandleActorMsg(msg);
+    if (debug_) {
+      LOG(INFO) << " Actor: " << actor_id_ << " op: " << op_name_ << " in act_cnt: [ " << act_cnt_
+                << " ]  IsWriteReady: " << (total_reading_cnt_ == 0)
+                << " IsReadReady: " << (ready_consumed_ == max_ready_consumed_)
+                << " \n details: { total_reading_cnt = " << static_cast<int64_t>(total_reading_cnt_)
+                << " (expect: 0) , ready_consumed_ = " << static_cast<int64_t>(ready_consumed_)
+                << " (except: " << static_cast<int64_t>(max_ready_consumed_) << ") }";
+    }
+
     if (total_reading_cnt_ != 0) { return 0; }
     if (ready_consumed_ == max_ready_consumed_) {
       ActOnce();
@@ -480,6 +494,13 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
   inline void HandleRegstMsg(const ActorMsg& msg) {
     int64_t regst_desc_id = msg.regst_desc_id();
     if (regst_desc_id == -1) { regst_desc_id = msg.regst()->regst_desc_id(); }
+
+    if (debug_) {
+      LOG(INFO) << " Actor: " << actor_id_ << " op: " << op_name_ << " in act_cnt: [ " << act_cnt_
+                << " ] , Recv ActorMsg from: " << msg.src_actor_id()
+                << " to: " << msg.dst_actor_id() << " with regst: " << regst_desc_id;
+    }
+
     const IndexType index = regst_desc_id_index_.Lookup(regst_desc_id);
     auto& state = index2state_.Get(index);
     if (state.regst_type == RegstType::kProduced) {
@@ -549,7 +570,13 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
       }
     }
 
+    if (debug_) {
+      LOG(INFO) << " Actor: " << actor_id_ << " op: " << op_name_ << " Try to act act_cnt: [ "
+                << act_cnt_ << " ] before launch kernel.";
+    }
+
     if (exec_kernel) { LaunchKernel(); }
+
     ResetState();
     thread_->EnqueueActorMsg(sync_post_act_msgs_.cbegin(), sync_post_act_msgs_.cend());
     if (!async_post_act_msgs_.empty()) {
@@ -558,6 +585,21 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
           Singleton<ActorMsgBus>::Get()->SendMsg(msg);
         }
       });
+    }
+
+    if (debug_) {
+      for (const auto& msg : sync_post_act_msgs_) {
+        LOG(INFO) << " Actor: " << actor_id_ << " op: " << op_name_ << " in act_cnt: [ " << act_cnt_
+                  << " ] Sync post ActorMsg from: " << msg.src_actor_id()
+                  << " to: " << msg.dst_actor_id() << " with regst: " << msg.regst_desc_id();
+      }
+      for (const auto& msg : async_post_act_msgs_) {
+        LOG(INFO) << " Actor: " << actor_id_ << " op: " << op_name_ << " in act_cnt: [ " << act_cnt_
+                  << " ] Async post ActorMsg from: " << msg.src_actor_id()
+                  << " to: " << msg.dst_actor_id() << " with regst: " << msg.regst_desc_id();
+      }
+      LOG(INFO) << " Actor: " << actor_id_ << " op: " << op_name_ << " Finish act act_cnt: [ "
+                << act_cnt_++ << " ].";
     }
   }
 
@@ -696,6 +738,12 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
   std::vector<ActorMsg> sync_post_act_msgs_;
   std::vector<ActorMsg> async_post_act_msgs_;
   KernelObserver* stream_kernel_observer_;
+
+  // for debug
+  int64_t actor_id_;
+  std::string op_name_;
+  bool debug_;
+  int64_t act_cnt_;
 };
 
 template<int kernel_exec, int inplace, typename IndexType, typename RegstIndex,

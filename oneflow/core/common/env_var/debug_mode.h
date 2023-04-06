@@ -25,6 +25,9 @@ DEFINE_ENV_BOOL(ONEFLOW_DEBUG, false);
 
 inline bool IsInDebugMode() { return EnvBool<ONEFLOW_DEBUG_MODE>() || EnvBool<ONEFLOW_DEBUG>(); }
 
+DEFINE_ENV_BOOL(ENABLE_ACTOR_DEBUG_LOG, false);
+inline bool EnableActorDebugLog() { return EnvBool<ENABLE_ACTOR_DEBUG_LOG>(); }
+
 DEFINE_ENV_BOOL(ENABLE_LOGICAL_CHAIN, false);
 inline bool EnableLogicalChain() { return EnvBool<ENABLE_LOGICAL_CHAIN>(); }
 
