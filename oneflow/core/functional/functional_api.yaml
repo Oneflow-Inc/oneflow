@@ -922,6 +922,10 @@
   signature: "Tensor (Tensor x, Int32 start_dim=0, Int32 end_dim=-1) => Flatten"
   bind_python: True
 
+- name: "unflatten"
+  signature: "Tensor (Tensor x, Int64 dim, Shape sizes) => Unflatten"
+  bind_python: True
+
 - name: "argmax"
   signature: "Tensor (Tensor x, Int32 dim=None, Bool keepdim=None, DataType dtype=None) => ArgMax"
   bind_python: True

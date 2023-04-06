@@ -159,6 +159,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.unflatten,
+    """
+    See :func:`oneflow.unflatten`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.floor,
     """
     See :func:`oneflow.floor`

@@ -375,6 +375,7 @@ Tensor class reference
     Tensor.t
     Tensor.T
     Tensor.unbind
+    Tensor.unflatten
     Tensor.unfold
     Tensor.uniform_
     Tensor.unsqueeze
