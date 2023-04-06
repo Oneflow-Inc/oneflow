@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "pocketfft_hdronly.h"
 #include "oneflow/core/kernel/kernel.h"
-// using namespace pocketfft;
 
 namespace oneflow {
 namespace {

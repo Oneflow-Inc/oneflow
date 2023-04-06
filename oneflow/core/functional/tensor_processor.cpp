@@ -126,8 +126,6 @@ Maybe<void> TensorProcessor::Apply() {
       // Cast all the inputs to it's attribute `lowest_dtype` if the input tensor dtype is lower
       // than attribute `lowest_dtype`.
       Symbol<DType> base_dtype = inputs_lowest_dtype_vec_.at(i);
-      // printf("base_dtype->data_type() = %#x, tensor_tuple_.at(%d)->dtype()->data_type() = %#x\n",
-      //       base_dtype->data_type(), i, tensor_tuple_.at(i)->dtype()->data_type());
       if (base_dtype->data_type()
           && DType::priority_order[base_dtype->data_type()]
                  > DType::priority_order[tensor_tuple_.at(i)->dtype()->data_type()]) {

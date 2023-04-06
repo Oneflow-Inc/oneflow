@@ -704,6 +704,7 @@ void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)
     }
   }
 #endif  // WITH_CUDA_GRAPHS
+
   kernel_->Compute(ctx_.get(), opkernel_state, opkernel_cache_.get());
 
 #ifdef WITH_CUDA_GRAPHS

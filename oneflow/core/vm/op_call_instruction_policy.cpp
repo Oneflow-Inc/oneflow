@@ -116,7 +116,6 @@ struct OpCallInstructionUtil final {
   static inline void OpKernelCompute(OpCallInstructionPolicy* op_call_instruction_policy,
                                      ep::Stream* stream, user_op::OpKernelState* state,
                                      user_op::OpKernelCache* cache) {
-    // std::cout << "=========== [OpKernelCompute] ===========" << std::endl;
     auto* user_kernel = op_call_instruction_policy->user_opkernel();
     op_call_instruction_policy->mut_opkernel()->Compute(op_call_instruction_policy->mut_call_ctx(),
                                                         stream, user_kernel, state, cache);

@@ -303,8 +303,6 @@ class OpKernel {
   }
 
   virtual void Compute(KernelComputeContext* ctx, OpKernelState*, const OpKernelCache*) const {
-    // std::cout << "============== [OpKernel::Compute] " << ctx->op_name() << " ================="
-    // << std::endl;
     Compute(ctx);
   }
   virtual void Compute(KernelComputeContext* ctx) const {

@@ -108,16 +108,16 @@ auto MathBinaryBroadcastPrimitiveExists() {
       .SetCreateFn<MathBinaryBroadcastEpKernel<binary_op>>()           \
       .SetIsMatchedHob(MathBinaryBroadcastPrimitiveExists<binary_op>() == true);
 
-REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_add", ep::primitive::BinaryOp::kAdd)  // ke
-REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_sub", ep::primitive::BinaryOp::kSub)  // ke
-REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_mul", ep::primitive::BinaryOp::kMul)  // ke
-REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_div", ep::primitive::BinaryOp::kDiv)  // ke
+REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_add", ep::primitive::BinaryOp::kAdd)
+REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_sub", ep::primitive::BinaryOp::kSub)
+REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_mul", ep::primitive::BinaryOp::kMul)
+REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_div", ep::primitive::BinaryOp::kDiv)
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_minimum", ep::primitive::BinaryOp::kMin)
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_maximum", ep::primitive::BinaryOp::kMax)
-REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_pow", ep::primitive::BinaryOp::kPow)      // ke
-REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_equal", ep::primitive::BinaryOp::kEqual)  // ke
+REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_pow", ep::primitive::BinaryOp::kPow)
+REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_equal", ep::primitive::BinaryOp::kEqual)
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_not_equal",
-                                    ep::primitive::BinaryOp::kNotEqual)  // ke
+                                    ep::primitive::BinaryOp::kNotEqual)
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_greater", ep::primitive::BinaryOp::kGreaterThan)
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_greater_equal",
                                     ep::primitive::BinaryOp::kGreaterEqual)

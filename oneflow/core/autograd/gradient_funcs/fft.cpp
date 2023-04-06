@@ -60,7 +60,6 @@ class FftR2C : public OpExprGradFunction<FftR2CCaptureState> {
     in_grads->resize(1);
     if (!ctx->onesided) {
       std::cout << "=========== [FftR2C Op Backward] !ctx->onesided ===========" << std::endl;
-      // different from torch -- we set `forward` is true
       auto complex_grad =
           JUST(functional::FftC2C(out_grads.at(0), NullOpt, ctx->dims, ctx->norm_str,
                                   /*forward*/ !(ctx->forward), /*is_grad_fn*/ true));
@@ -68,12 +67,6 @@ class FftR2C : public OpExprGradFunction<FftR2CCaptureState> {
     } else {
       std::cout << "=========== [FftR2C Op Backward] ctx->onesided ===========" << std::endl;
       Shape input_shape(ctx->input_shape_vec);
-      // int64_t last_dim = ctx->dims.back();
-      // int64_t last_dim_size = input_shape.At(last_dim);
-      // int64_t zero_length = last_dim_size - out_grads.at(0)->dim(last_dim);
-      // if (zero_length > 0) {
-        // std::cout << "=========== [FftR2C Op Backward] ctx->onesided, zero_length > 0 ==========="
-        //           << std::endl;
       std::vector<int64_t> fft_dims = ctx->dims;
       std::vector<int64_t> fft_shapes(fft_dims.size(), 0);
       FOR_RANGE(size_t, i, 0, fft_dims.size()) { fft_shapes[i] = input_shape[fft_dims[i]]; }
@@ -81,22 +74,6 @@ class FftR2C : public OpExprGradFunction<FftR2CCaptureState> {
           JUST(functional::FftC2C(out_grads.at(0), fft_shapes, ctx->dims, ctx->norm_str,
                                   /*forward*/ !(ctx->forward), /*is_grad_fn*/ true));
       in_grads->at(0) = JUST(functional::Real(complex_full_grad));
-      // } else {
-      //   // do c2c and slice
-      //   // const auto& in_grad_sizes = in_grads->at(0)->shape()->dim_vec();
-      //   // what about zero_length < 0 ?
-      //   std::cout << "=========== [FftR2C Op Backward] ctx->onesided, zero_length <= 0 ==========="
-      //             << std::endl;
-      //   auto complex_grad =
-      //       JUST(functional::FftC2C(out_grads.at(0), NullOpt, ctx->dims, ctx->norm_str,
-      //                               /*forward*/ !(ctx->forward), /*is_grad_fn*/ true));
-      //   std::vector<int64_t> slice_st(input_shape.size(), 0);
-      //   std::vector<int64_t> slice_end(input_shape.begin(), input_shape.end());
-      //   std::vector<int64_t> slice_step(input_shape.size(), 1);
-      //   auto sliced_tensor =
-      //       JUST(functional::Slice(complex_grad, slice_st, slice_end, slice_step, false));
-      //   in_grads->at(0) = sliced_tensor;
-      // }
     }
 
     return Maybe<void>::Ok();

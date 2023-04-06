@@ -3948,9 +3948,6 @@ class FftBaseFunctor {
                                    bool require_complex = false) const {
     auto cur_type = x->dtype();
     auto new_type = JUST(promote_type_fft(cur_type, require_complex));
-    // return (cur_type->data_type() == new_type->data_type())
-    //            ? x
-    //            : functional::To(x, Optional<Symbol<Device>>(JUST(x->device())), new_type, false);
     if (cur_type->data_type() == new_type->data_type()){
       return x;
     }
@@ -4077,7 +4074,6 @@ class FftC2CFunctor : public FftBaseFunctor {
     auto resized_tensor =
         n.has_value() == true ? JUST(resize_fft_input(x, wrapped_dims, fft_len)) : x;
 
-    // std::sort(wrapped_dims.begin(), wrapped_dims.end());
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "forward", "is_grad_fn");
     attrs.SetAllAttrs(wrapped_dims, norm_str, forward, is_grad_fn);
 
@@ -4110,7 +4106,6 @@ class FftR2CFunctor : public FftBaseFunctor {
     auto resized_tensor =
         n.has_value() == true ? JUST(resize_fft_input(input_tensor, wrapped_dims, fft_len)) : input_tensor;
 
-    // std::sort(wrapped_dims.begin(), wrapped_dims.end());
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "onesided", "forward");
     attrs.SetAllAttrs(wrapped_dims, norm_str, onesided, forward);
 
@@ -4150,7 +4145,6 @@ class FftC2RFunctor : public FftBaseFunctor {
 
     if (forward) { resized_tensor = JUST(functional::ConjPhysical(resized_tensor)); }
 
-    // std::sort(wrapped_dims.begin(), wrapped_dims.end());
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "last_dim_size", "forward");
     attrs.SetAllAttrs(wrapped_dims, norm_str, last_dim_size, forward);
 
@@ -4230,7 +4224,6 @@ class Fft2Functor {
                            const Optional<std::vector<int64_t>>& s,
                            const std::vector<int64_t>& dim,
                            const Optional<std::string>& norm) const {
-    // TO-DO: Add dim default params = {-2,-1}
     return functional::FftN(input, s, dim, norm);
   }
 };
@@ -4241,7 +4234,6 @@ class IFft2Functor {
                            const Optional<std::vector<int64_t>>& s,
                            const std::vector<int64_t>& dim,
                            const Optional<std::string>& norm) const {
-    // TO-DO: Add dim default params = {-2,-1}
     return functional::IFftN(input, s, dim, norm);
   }
 };
@@ -4342,7 +4334,6 @@ class RFft2Functor {
                            const Optional<std::vector<int64_t>>& s,
                            const std::vector<int64_t>& dim,
                            const Optional<std::string>& norm) const {
-    // TO-DO: Add dim default params = {-2,-1}
     return functional::RFftN(input, s, dim, norm);
   }
 };
@@ -4353,7 +4344,6 @@ class IRFft2Functor {
                            const Optional<std::vector<int64_t>>& s,
                            const std::vector<int64_t>& dim,
                            const Optional<std::string>& norm) const {
-    // TO-DO: Add dim default params = {-2,-1}
     return functional::IRFftN(input, s, dim, norm);
   }
 };
@@ -4427,7 +4417,6 @@ class HFft2Functor {
                            const Optional<std::vector<int64_t>>& s,
                            const std::vector<int64_t>& dim,
                            const Optional<std::string>& norm) const {
-    // TO-DO: Add dim default params = {-2,-1}
     return functional::HFftN(input, s, dim, norm);
   }
 };
@@ -4438,7 +4427,6 @@ class IHFft2Functor {
                            const Optional<std::vector<int64_t>>& s,
                            const std::vector<int64_t>& dim,
                            const Optional<std::string>& norm) const {
-    // TO-DO: Add dim default params = {-2,-1}
     return functional::IHFftN(input, s, dim, norm);
   }
 };
@@ -4471,7 +4459,6 @@ class IHFftNFunctor {
   }
 };
 
-#if 1
 class StftFunctor {
  public:
   StftFunctor() {
@@ -4586,7 +4573,7 @@ class StftFunctor {
  private:
   std::shared_ptr<OpExpr> op_;
 };
-#endif
+
 class FusedWeightedSumFunctor {
  public:
   FusedWeightedSumFunctor() {

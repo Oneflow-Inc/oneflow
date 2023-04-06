@@ -67,7 +67,6 @@ inline T compute_fct(const Shape& in_shape, const std::vector<int64_t>& dims,
 template<typename T, int NDIM>
 static void _conj_symmetry(T* data_out, const Shape& shape, const std::vector<int64_t>& strides,
                            const std::vector<int64_t>& dims, int64_t elem_count) {
-  // const int NDIM = out_shape.size();
   const oneflow::NdIndexStrideOffsetHelper<int64_t, NDIM> helper(strides.data(), NDIM);
   // NOTE: dims must be sorted
   int64_t last_dim = dims.back();
