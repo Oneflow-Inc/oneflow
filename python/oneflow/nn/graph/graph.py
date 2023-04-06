@@ -1294,7 +1294,7 @@ class Graph(object):
                 self._compiled_job_proto = job_pb.Job()
                 self._compiled_job_proto.ParseFromString(compiled_job_str)
                 self.__print(
-                    0, 2, lambda: f"{self.name} with operators:\n" + self.__repr__()
+                    0, 1, lambda: f"{self.name} with operators:\n" + self.__repr__()
                 )
                 self._c_nn_graph.compile_plan_for_runtime()
                 self._c_nn_graph.init_runtime()
@@ -1852,6 +1852,7 @@ class Graph(object):
         .. code-block:: python
 
             >>> import oneflow as flow
+            >>> import numpy as np
             >>> class LinearGraph(flow.nn.Graph):
             ...     def __init__(self):
             ...         super().__init__()
@@ -1864,10 +1865,17 @@ class Graph(object):
 
         The block can be accessed as an attribute using the given name.
             >>> g = LinearGraph()
+            >>> g(flow.Tensor(np.random.randn(8, 3)))
             >>> print(g.linear)
             (MODULE:linear:Linear(in_features=3, out_features=8, bias=False)): (
-              (PARAMETER:linear.weight:tensor(..., size=(8, 3), dtype=oneflow.float32, requires_grad=True)): ()
-              (GraphModule:linear()): ()
+              (INPUT:_linear_input.0.0_2:tensor(..., is_lazy='True', size=(8, 3), dtype=oneflow.float32))
+              (PARAMETER:linear.weight:tensor(..., size=(8, 3), dtype=oneflow.float32, grad_fn=<accumulate_grad>)): ()
+              (OUTPUT:_linear_output.0.0_2:tensor(..., is_lazy='True', size=(8, 8), dtype=oneflow.float32,
+                     grad_fn=<matmul_backward>))
+              (GraphModule:linear()): (
+                (OPERATOR: linear.weight() -> (out:sbp=(B), size=(8, 3), dtype=(oneflow.float32)), placement=(oneflow.placement(type="cpu", ranks=[0])))
+                (OPERATOR: linear-matmul-0(_LinearGraph_0_input.0.0_2/out:(sbp=(B), size=(8, 3), dtype=(oneflow.float32)), linear.weight/out:(sbp=(B), size=(8, 3), dtype=(oneflow.float32))) -> (linear-matmul-0/out_0:(sbp=(B), size=(8, 8), dtype=(oneflow.float32))), placement=(oneflow.placement(type="cpu", ranks=[0])))
+              )
             )
         """
         if "_name" not in self.__dict__:
