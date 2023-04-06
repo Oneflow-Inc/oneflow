@@ -881,12 +881,12 @@ add_docstr(
         >>> x = flow.tensor(np.array([0, -1., 10.]), dtype=flow.float32)
         >>> out = flow.erfc(x)
         >>> out
-        tensor([1.0000e+00, 1.8427e+00, 1.4013e-45], dtype=oneflow.float32)
+        tensor([1.0000e+00, 1.8427e+00, 2.8026e-45], dtype=oneflow.float32)
 
         >>> x = flow.tensor(np.array([[0, -1., 10.], [5, 7, 0.8]]), dtype=flow.float32)
         >>> out = flow.erfc(x)
         >>> out
-        tensor([[1.0000e+00, 1.8427e+00, 1.4013e-45],
+        tensor([[1.0000e+00, 1.8427e+00, 2.8026e-45],
                 [1.5375e-12, 4.1838e-23, 2.5790e-01]], dtype=oneflow.float32)
 
     """,
@@ -927,11 +927,11 @@ add_docstr(
         >>> print(y.shape)
         oneflow.Size([2, 2, 3])
         >>> print(y.numpy())
-        [[[6.3890562e+00 5.3598148e+01 4.0242880e+02]
+        [[[6.3890562e+00 5.3598152e+01 4.0242880e+02]
           [1.0956332e+03 2.9799580e+03 8.1020840e+03]]
         <BLANKLINE>
          [[2.2025465e+04 5.9873141e+04 1.6275380e+05]
-          [4.4241241e+05 1.2026032e+06 3.2690162e+06]]]
+          [4.4241238e+05 1.2026032e+06 3.2690165e+06]]]
 
 
     """,

@@ -34,7 +34,6 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/device_type.h"
 #include <half.hpp>
-#include <complex>
 
 namespace std {
 
@@ -72,9 +71,6 @@ struct IsIntegralHelper : std::false_type {};
 template<typename>
 struct IsUnsignedIntegralHelper : std::false_type {};
 
-template<typename>
-struct IsComplexHelper : std::false_type {};
-
 }  // namespace detail
 
 using float16 = half_float::half;
@@ -82,20 +78,6 @@ using float16 = half_float::half;
 #define DEFINE_SPEC(Trait, Type, Value) \
   template<>                            \
   struct Trait<Type> : std::integral_constant<bool, Value> {};
-
-// Type Trait: IsComplex
-
-DEFINE_SPEC(detail::IsComplexHelper, std::complex<float>, true)
-DEFINE_SPEC(detail::IsComplexHelper, std::complex<double>, true)
-#ifdef WITH_CUDA
-DEFINE_SPEC(detail::IsComplexHelper, cuComplex, true)
-DEFINE_SPEC(detail::IsComplexHelper, cuDoubleComplex, true)
-#endif  // WITH_CUDA
-
-template<typename T>
-struct IsComplex
-    : std::integral_constant<bool,
-                             (detail::IsComplexHelper<typename std::remove_cv<T>::type>::value)> {};
 
 // Type Trait: IsFloat16
 
