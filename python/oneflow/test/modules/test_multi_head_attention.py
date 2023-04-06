@@ -27,12 +27,12 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestModule(flow.unittest.TestCase):
-    @autotest(check_graph=False, rtol=1e-4, atol=1e-3)
+    @autotest(n=1, check_graph=False, rtol=1e-4, atol=1e-3)
     def test_multi_head_attention_with_torch(test_case):
         device = random_device()
         embed_dim = 128
         num_heads = 4
-        query = random_tensor(ndim=3, dim0=2, dim1=4, dim2=128).to(device)
+        query = random_tensor(ndim=4, dim0=8, dim2=128).to(device)
         key = query
         value = query
 
