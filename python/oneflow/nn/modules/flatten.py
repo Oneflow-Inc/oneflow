@@ -53,7 +53,7 @@ class Flatten(Module):
 
 
 class Unflatten(Module):
-    r"""
+    """
     Unflattens a tensor dim expanding it to a desired shape. For use with :class:`~nn.Sequential`.
 
     * :attr:`dim` specifies the dimension of the input tensor to be unflattened, and it is a `int` type
@@ -61,15 +61,14 @@ class Unflatten(Module):
     * :attr:`unflattened_size` is the new shape of the unflattened dimension of the tensor and it can be
       a `tuple` of ints or a `list` of ints or `oneflow.Size` for `Tensor` input
 
-    Shape:
-        - Input: :math:`(N, *dims)`
-        - Output: :math:`(N, C_{\text{out}}, H_{\text{out}}, W_{\text{out}})`
-
     Args:
         dim (int): Dimension to be unflattened
         unflattened_size (Union[oneflow.Size, Tuple, List]): New shape of the unflattened dimension
 
-    Examples:
+    For example: 
+
+    .. code-block:: python 
+
         >>> input = oneflow.randn(2, 50)
         >>> # With tuple of ints
         >>> m = nn.Sequential(
@@ -87,6 +86,7 @@ class Unflatten(Module):
         >>> output = m(input)
         >>> output.size()
         oneflow.Size([2, 2, 5, 5])
+        
     """
 
     def __init__(
