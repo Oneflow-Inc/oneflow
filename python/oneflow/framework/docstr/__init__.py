@@ -39,7 +39,6 @@ from .meshgrid import *
 from .dataset import *
 from .bmm import *
 from .flatten import *
-from .unflatten import *
 from .chunk import *
 from .broadcast_like import *
 from .arange import *
