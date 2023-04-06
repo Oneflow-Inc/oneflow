@@ -49,7 +49,7 @@ bool IsEnvEnablePipelineParallelismAutoToGlobal() {
   return env_enable_auto_to_global;
 }
 
-Maybe<bool> IsInputParallelDescIdentical(const GlobalTensorMetaInferArgs& infer_args) {
+Maybe<bool> IsInputsParallelDescIdentical(const GlobalTensorMetaInferArgs& infer_args) {
   if (infer_args.input_global_tensor_metas().empty()) { return true; }
   Symbol<ParallelDesc> default_parallel_desc =
       JUST(VectorAt(infer_args.input_global_tensor_metas(), 0)).tensor_meta()->parallel_desc();
@@ -163,6 +163,9 @@ Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<NdSb
 auto* GetBoxingOutput =
     DECORATE(DECORATE(&CalcBoxingOutput, CheckGlobalTensorMeta), DisableRecusiveBoxingCall);
 
+constexpr auto* IsAllInputsParallelDescIdentical =
+    DECORATE(&IsInputsParallelDescIdentical, ThreadLocalCopiable);
+
 Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                       TensorTuple* outputs, const OpExprInterpContext& ctx) {
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
@@ -186,8 +189,8 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
         JUST((*outputs)[i]->set_consumer_nd_sbp_constraint(nd_sbp));
       }
     }
-    // is_identical is true indicating inputs tensor have same parallel_desc
-    const bool is_identical = JUST(IsInputParallelDescIdentical(*infer_args));
+    // is_identical is true indicating all inputs tensor have same parallel_desc
+    const bool is_identical = JUST(IsAllInputsParallelDescIdentical(*infer_args));
     // if is_identical is false and env 'ONEFLOW_ENABLE_PIPELINE_PARALLELISM_AUTO_TO_GLOBAL' set to
     // true then traverse all input tensor use function GetBoxingOutput(), during this process,
     // each tensor will to_global with target parallel_desc
