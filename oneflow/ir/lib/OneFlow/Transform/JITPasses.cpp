@@ -114,11 +114,10 @@ class Outliner {
   llvm::DenseSet<Value> entries{}, exits{};
 };
 
-static std::atomic_int64_t countJITFunction = 0;
 static std::string JITOpNamePrefix = "JITOpGenerated";
 int64_t getCountJITFunction() {
-  countJITFunction += 1;
-  return countJITFunction;
+  static std::atomic_int64_t countJITFunction = 0;
+  return countJITFunction.fetch_add(1);
 }
 
 class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunctionPass> {
