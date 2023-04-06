@@ -1294,7 +1294,7 @@ class Graph(object):
                 self._compiled_job_proto = job_pb.Job()
                 self._compiled_job_proto.ParseFromString(compiled_job_str)
                 self.__print(
-                    0, 2, lambda: f"{self.name} with operators:\n" + self.__repr__()
+                    0, 1, lambda: f"{self.name} with operators:\n" + self.__repr__()
                 )
                 self._c_nn_graph.compile_plan_for_runtime()
                 self._c_nn_graph.init_runtime()
