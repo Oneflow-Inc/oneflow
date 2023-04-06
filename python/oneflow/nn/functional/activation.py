@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from typing import Optional, Tuple, List
 import math
 
@@ -5,6 +20,7 @@ from oneflow.framework.tensor import Tensor
 import oneflow as flow
 from oneflow.nn.functional import softmax
 from oneflow.nn.functional import dropout
+from oneflow.nn.functional import linear
 
 
 # ref https://github.com/pytorch/pytorch/blob/v1.10.1/torch/nn/functional.py#L4809
@@ -53,36 +69,6 @@ def _scaled_dot_product_attention(
     output = flow.bmm(attn, v)
     return output, attn
 
-# ref https://github.com/pytorch/pytorch/blob/v1.10.1/aten/src/ATen/native/Linear.cpp#L19
-def linear(input: Tensor, weight: Tensor, bias: Optional[Tensor] = None) -> Tensor:
-    r"""
-    Applies a linear transformation to the incoming data: :math:`y = xA^T + b`.
-
-    This operator supports :ref:`TensorFloat32<tf32_on_ampere>`.
-
-    Shape:
-
-        - Input: :math:`(N, *, in\_features)` N is the batch size, `*` means any number of
-          additional dimensions
-        - Weight: :math:`(out\_features, in\_features)`
-        - Bias: :math:`(out\_features)`
-        - Output: :math:`(N, *, out\_features)`
-    """
-    if bias is None:
-        bias = flow.empty_like(weight)
-
-    # op fused when dimension is 2
-    if input.dim() == 2 and bias is not None:
-        return flow.addmm(bias, input, weight.t())
-    output = flow.matmul(input, weight.t())
-    if bias is not None:
-        output += bias
-    return output
-
-
-#
-# multihead attention
-#
 
 # ref https://github.com/pytorch/pytorch/blob/v1.10.1/torch/nn/functional.py#L4700
 def _in_projection_packed(
@@ -135,6 +121,7 @@ def _in_projection_packed(
         else:
             b_q, b_k, b_v = b.chunk(3)
         return linear(q, w_q, b_q), linear(k, w_k, b_k), linear(v, w_v, b_v)
+
 
 # ref https://github.com/pytorch/pytorch/blob/v1.10.1/torch/nn/functional.py#L4855
 def multi_head_attention_forward(
