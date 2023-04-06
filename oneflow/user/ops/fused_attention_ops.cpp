@@ -654,21 +654,20 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   
 
   CHECK_LE_OR_RETURN(rotary_size, k) << "rotary_size should be no more than K of input x.";
-  if (k_size) {
-    CHECK_EQ_OR_RETURN(k_size, k) << "k_size if given should be equal to K of input x.";
-  }
 
   int64_t rotary_emd_dim = 1;
 
   if (ctx->has_input("position_ids", 0)) {
     const user_op::TensorDesc& position_ids_desc = ctx->InputTensorDesc("position_ids", 0);
     CHECK_EQ_OR_RETURN(position_ids_desc.shape().NumAxes(), 3)
-        << "The dimensions of position_ids should be B1M or B2M.";
+        << "ndims of position_ids should be equal to 3, either in form of B1M or B2M.";
     CHECK_EQ_OR_RETURN(position_ids_desc.shape().At(0), b)
-        << "The dimensions of position_ids should be B1M or B2M.";
+        << "1st dim of position_ids should be equal to B.";
     CHECK_EQ_OR_RETURN(position_ids_desc.shape().At(2), m)
-        << "The dimensions of position_ids should be B1M or B2M.";
+        << "3rd dim of position_ids should be equal to M.";
     rotary_emd_dim = position_ids_desc.shape().At(1);
+    CHECK_OR_RETURN(rotary_emd_dim == 1 || rotary_emd_dim == 2)
+        << "2nd dim of position_ids should be 1 or 2.";
   }
 
   const int64_t actual_rotary_size = rotary_size / rotary_emd_dim;
@@ -683,8 +682,6 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
     const user_op::TensorDesc& sin_desc = ctx->InputTensorDesc("sin", 0);
     CHECK_EQ_OR_RETURN(cos_desc.shape().NumAxes(), 2)
         << "The number of dimensions of cos should be equal to 2.";
-    CHECK_EQ_OR_RETURN(sin_desc.shape().NumAxes(), 2)
-        << "The number of dimensions of sin should be equal to 2.";
     CHECK_OR_RETURN(cos_desc.shape() == sin_desc.shape())
         << "The dimensions of cos & sin should be the same.";
     CHECK_EQ_OR_RETURN(cos_desc.shape().At(1), actual_rotary_size)
@@ -695,18 +692,11 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
     UNIMPLEMENTED_THEN_RETURN();
   }
 
-  if (ctx->has_input("position_ids", 0)) {
+  if (!ctx->has_input("position_ids", 0)) {
     if (has_cos && has_sin) {
       const user_op::TensorDesc& cos_desc = ctx->InputTensorDesc("cos", 0);
       CHECK_GE_OR_RETURN(cos_desc.shape().At(0), m)
-          << "M of cos should be no less than M of x if position_ids is given.";  
-          // K of cos & sin is checked inside ParseDims
-    }
-  } else {
-    if (has_cos && has_sin) {
-      const user_op::TensorDesc& cos_desc = ctx->InputTensorDesc("cos", 0);
-      CHECK_EQ_OR_RETURN(cos_desc.shape().At(0), m)
-          << "M of cos should be equal to M of x if position_ids is not given.";  
+          << "M of cos should be no less than M of x if position_ids is not given.";  
           // K of cos & sin is checked inside ParseDims
     }
   }

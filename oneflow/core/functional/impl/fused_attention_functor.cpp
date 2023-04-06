@@ -673,17 +673,17 @@ class FusedApplyRotaryEmbFunctor {
       CHECK_EQ_OR_RETURN(JUST(position_ids)->shape()->At(2), m)
           << "3rd dim of position_ids should be equal to M.";
       rotary_emd_dim = JUST(position_ids)->shape()->At(1);
+      CHECK_OR_RETURN(rotary_emd_dim == 1 || rotary_emd_dim == 2)
+          << "2nd dim of position_ids should be 1 or 2.";
     }
 
-    const int64_t actual_rotary_size = (rotary_size ? JUST(rotary_size) : k) / rotary_emd_dim;
+    const int64_t actual_rotary_size = rotary_size.value_or(k) / rotary_emd_dim;
     CHECK_EQ_OR_RETURN(actual_rotary_size % 2, 0)
         << "k ,or rotary_size if given, should be a multiple of 2 * rotary_encoding_dim.";
 
     if (cos && sin) {
       CHECK_EQ_OR_RETURN(JUST(cos)->shape()->NumAxes(), 2)
           << "The number of dimensions of cos should be equal to 2.";
-      CHECK_EQ_OR_RETURN(JUST(sin)->shape()->NumAxes(), 2)
-          << "The number of dimensions of sin should be equal to 2.";
       CHECK_OR_RETURN(JUST(cos)->shape() == JUST(sin)->shape())
           << "Each dimension of cos & sin should be the same.";
       CHECK_EQ_OR_RETURN(JUST(cos)->shape()->At(1), actual_rotary_size)
@@ -694,15 +694,9 @@ class FusedApplyRotaryEmbFunctor {
       UNIMPLEMENTED_THEN_RETURN() << "cos & sin should both be given or not given.";
     }
 
-    if (position_ids) {
+    if (!position_ids) {
       if (cos && sin) {
-        CHECK_GE_OR_RETURN(JUST(cos)->shape()->At(0), m)
-            << "M of cos & sin should be to less than" 
-               " M of x when position_ids is given.";  // K of cos & sin is checked inside ParseDims
-      }
-    } else {
-      if (cos && sin) {
-        CHECK_EQ_OR_RETURN(JUST(cos)->shape()->At(0), m) << "M of cos & sin should be to equal to "
+        CHECK_GE_OR_RETURN(JUST(cos)->shape()->At(0), m) << "M of cos & sin should be to no less than "
                                                             "M of x when position_ids is not "
                                                             "given.";  // K of cos & sin is checked
                                                                        // inside ParseDims
@@ -711,9 +705,9 @@ class FusedApplyRotaryEmbFunctor {
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("x_layout", "output_layout", "mode",
                                                  "tensor_index", "k_size", "base", "rotary_size");
-    attrs.SetAllAttrs(x_layout, output_layout ? *JUST(output_layout) : x_layout, mode,
-                      tensor_index ? JUST(tensor_index) : 0, k_size ? JUST(k_size) : k, base,
-                      rotary_size ? JUST(rotary_size) : k);
+    attrs.SetAllAttrs(x_layout, output_layout.value_or(x_layout), mode,
+                      tensor_index.value_or(0), k_size.value_or(k), base,
+                      rotary_size.value_or(k));
 
     if (position_ids) {
       if (cos && sin) {
