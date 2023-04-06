@@ -64,12 +64,14 @@ Maybe<bool> IsInputParallelDescIdentical(const GlobalTensorMetaInferArgs& infer_
   return true;
 }
 
-Maybe<int> GetMaxRankNumber(Symbol<ParallelDesc> placement) {
+Maybe<int> MaxRankNumber(Symbol<ParallelDesc> placement) {
   // Find max rank number of a tensor's placement
   // e.g. tensor's placement is [[0,1,2],[2,3,4],[7,8,9]]
   // then max rank number is 9
   return placement->sorted_machine_ids().back();
 }
+
+constexpr auto* GetMaxRankNumber = DECORATE(&MaxRankNumber, ThreadLocalCachedCopiable);
 
 Maybe<Symbol<ParallelDesc>> GetMaxRankTensorPlacement(const TensorTuple& inputs) {
   // Find the max rank tensor id in all input tensors.
@@ -184,14 +186,12 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
         JUST((*outputs)[i]->set_consumer_nd_sbp_constraint(nd_sbp));
       }
     }
-
     // is_identical is true indicating inputs tensor have same parallel_desc
     const bool is_identical = JUST(IsInputParallelDescIdentical(*infer_args));
     // if is_identical is false and env 'ONEFLOW_ENABLE_PIPELINE_PARALLELISM_AUTO_TO_GLOBAL' set to
     // true then traverse all input tensor use function GetBoxingOutput(), during this process,
     // each tensor will to_global with target parallel_desc
     if (IsEnvEnablePipelineParallelismAutoToGlobal() && !is_identical) {
-      // parallel_desc = JUST(inputs[JUST(GetMaxRankTensorPlacement(inputs))]->parallel_desc());
       parallel_desc = JUST(GetMaxRankTensorPlacement(inputs));
       Optional<int64_t> max_parallel_id;
       JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &max_parallel_id));
@@ -204,7 +204,6 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                                  parallel_id.has_value() || max_parallel_id.has_value()));
 
         boxing_inputs[i] = final_input;
-        const auto& local_tensor = JUST(final_input->cur_rank_phy_tensor());
       }
       infer_args = JUST(GlobalTensorMetaInferArgs::New(ctx.attrs, boxing_inputs));
     }
