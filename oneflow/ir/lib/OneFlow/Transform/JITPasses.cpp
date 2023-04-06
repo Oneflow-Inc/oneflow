@@ -116,6 +116,10 @@ class Outliner {
 
 static std::atomic_int64_t countJITFunction = 0;
 static std::string JITOpNamePrefix = "JITOpGenerated";
+int64_t getCountJITFunction() {
+  countJITFunction += 1;
+  return countJITFunction;
+}
 
 class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunctionPass> {
   void runOnOperation() override {
@@ -164,8 +168,7 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
       }
       auto funcType = builder.getFunctionType(argumentTypes, resultTypes);
       if (auto mod = job->getParentOfType<ModuleOp>()) {
-        auto name = JITOpNamePrefix + std::to_string(countJITFunction);
-        countJITFunction += 1;
+        auto name = JITOpNamePrefix + std::to_string(getCountJITFunction());
         SmallString<16> tempBuffer;
         name = SanitizeIdentifier(name, tempBuffer);
 
