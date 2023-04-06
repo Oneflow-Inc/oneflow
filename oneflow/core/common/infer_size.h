@@ -33,14 +33,12 @@ static inline Maybe<void> infer_size_impl(const Shape& shape, int64_t numel, Dim
   auto infer_dim = Optional<int64_t>();
   for (int64_t dim = 0, ndim = shape.size(); dim != ndim; dim++) {
     if (shape[dim] == -1) {
-      if (infer_dim.has_value()) { throw std::runtime_error("only one dimension can be inferred"); }
+      CHECK_OR_RETURN(infer_dim.has_value()) << "only one dimension can be inferred";
       infer_dim = dim;
     } else if (shape[dim] >= 0) {
       newsize *= shape[dim];
     } else {
-      std::ostringstream ss;
-      ss << "invalid shape dimension " << shape[dim];
-      throw std::runtime_error(ss.str());
+      CHECK_OR_RETURN(false) << "invalid shape dimension " << shape[dim];
     }
   }
 
@@ -54,22 +52,15 @@ static inline Maybe<void> infer_size_impl(const Shape& shape, int64_t numel, Dim
       // works yet
       //   empty_tensor.view(-1, 0)
       // doesn't.
-      if (newsize == 0) {
-        std::ostringstream ss;
-        ss << "cannot reshape tensor of 0 elements into shape " << shape.ToString()
-           << " because the unspecified dimension size -1 can be any value and is ambiguous";
-        throw std::runtime_error(ss.str());
-      }
+      CHECK_OR_RETURN(newsize == 0) << "cannot reshape tensor of 0 elements into shape " << shape.ToString()
+                                    << " because the unspecified dimension size -1 can be any value and is ambiguous";
       int64_t infer_dim_ = JUST(infer_dim);
       res[infer_dim_] = numel / newsize;
     }
     return Maybe<void>::Ok();
-    ;
   }
 
-  std::ostringstream ss;
-  ss << "shape '" << shape.ToString() << "' is invalid for input of size " << numel;
-  throw std::runtime_error(ss.str());
+  CHECK_OR_RETURN(false) << "shape '" << shape.ToString() << "' is invalid for input of size " << numel;
 }
 
 static inline Maybe<DimVector> infer_size_dv(const Shape& shape, int64_t numel) {
