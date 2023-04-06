@@ -1864,9 +1864,9 @@ class Graph(object):
 
 
         The block can be accessed as an attribute using the given name.
-            >>> g = LinearGraph()
-            >>> g(flow.Tensor(np.random.randn(8, 3)))
-            >>> print(g.linear)
+            g = LinearGraph()
+            g(flow.Tensor(np.random.randn(8, 3)))
+            print(g.linear)
             (MODULE:linear:Linear(in_features=3, out_features=8, bias=False)): (
               (INPUT:_linear_input.0.0_2:tensor(..., is_lazy='True', size=(8, 3), dtype=oneflow.float32))
               (PARAMETER:linear.weight:tensor(..., size=(8, 3), dtype=oneflow.float32, grad_fn=<accumulate_grad>)): ()
