@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-static constexpr int32_t nram_limit = 32;
+static constexpr int32_t nram_limit = 1024;
 
 template<typename T>
 __mlu_global__ void bang_tanh_grad_kernel(int64_t n, const T* x, const T* dy, T* dx) {
@@ -26,7 +26,7 @@ __mlu_global__ void bang_tanh_grad_kernel(int64_t n, const T* x, const T* dy, T*
   int64_t end = start + step;
   if (end > n) { end = n; }
   int64_t length = start < end ? end - start : 0;
-  int64_t nram_rest = (length & 0x1F);  // length % nram_limit2
+  int64_t nram_rest = (length & (nram_limit - 1));  // length % nram_limit2
   int32_t nram_limit_bytes = nram_limit * sizeof(T);
 
   __nram__ T nram_x[nram_limit];

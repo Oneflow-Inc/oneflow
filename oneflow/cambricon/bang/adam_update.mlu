@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-static constexpr int32_t nram_limit = 32;
+static constexpr int32_t nram_limit = 1024;
 
 __mlu_func__ void load_model_diff(float* dst, const float* src, int32_t size) {
   __memcpy_async(dst, src, size * sizeof(float), GDRAM2NRAM);
@@ -53,7 +53,7 @@ __mlu_global__ void bang_adam_update_internal(
   int64_t end = start + step;
   if (end > n) { end = n; }
   int64_t length = start < end ? end - start : 0;
-  int64_t nram_rest = (length & 0x1F);  // length % nram_limit2
+  int64_t nram_rest = (length & (nram_limit - 1));  // length % nram_limit2
   int32_t nram_limit_bytes = nram_limit * sizeof(T);
 
   __nram__ T nram_model[nram_limit];
@@ -81,8 +81,8 @@ __mlu_global__ void bang_adam_update_internal(
 
     __bang_mul_scalar(nram_temp0, nram_temp0, l1, nram_limit);
     __bang_mul_scalar(nram_temp1, nram_model, l2, nram_limit);
-    __bang_add(nram_model_diff, nram_model_diff, nram_temp0, nram_limit);
-    __bang_add(nram_model_diff, nram_model_diff, nram_temp1, nram_limit);
+    __bang_fusion(FUSION_FAA, nram_model_diff, nram_model_diff, nram_temp0, nram_temp1, nram_limit,
+                  nram_limit);
 
     __bang_mul_scalar(nram_m, nram_m, beta1, nram_limit);
     __bang_mul_scalar(nram_v, nram_v, beta2, nram_limit);
@@ -120,8 +120,8 @@ __mlu_global__ void bang_adam_update_internal(
     __bang_mul_scalar(nram_temp1, nram_model, lr_decay, nram_limit);
 
     // model_val - p - q
-    __bang_sub(nram_model, nram_model, nram_temp0, nram_limit);
-    __bang_sub(nram_model, nram_model, nram_temp1, nram_limit);
+    __bang_fusion(FUSION_FSS, nram_model, nram_model, nram_temp0, nram_temp1, nram_limit,
+                  nram_limit);
 
     __sync_compute();
     __memcpy_async(model + start + j, nram_model, nram_limit_bytes, NRAM2GDRAM);
@@ -149,8 +149,8 @@ __mlu_global__ void bang_adam_update_internal(
 
     __bang_mul_scalar(nram_temp0, nram_temp0, l1, nram_rest);
     __bang_mul_scalar(nram_temp1, nram_model, l2, nram_rest);
-    __bang_add(nram_model_diff, nram_model_diff, nram_temp0, nram_rest);
-    __bang_add(nram_model_diff, nram_model_diff, nram_temp1, nram_rest);
+    __bang_fusion(FUSION_FAA, nram_model_diff, nram_model_diff, nram_temp0, nram_temp1, nram_rest,
+                  nram_rest);
 
     __bang_mul_scalar(nram_m, nram_m, beta1, nram_rest);
     __bang_mul_scalar(nram_v, nram_v, beta2, nram_rest);
@@ -188,8 +188,7 @@ __mlu_global__ void bang_adam_update_internal(
     __bang_mul_scalar(nram_temp1, nram_model, lr_decay, nram_rest);
 
     // model_val - p - q
-    __bang_sub(nram_model, nram_model, nram_temp0, nram_rest);
-    __bang_sub(nram_model, nram_model, nram_temp1, nram_rest);
+    __bang_fusion(FUSION_FSS, nram_model, nram_model, nram_temp0, nram_temp1, nram_rest, nram_rest);
 
     __sync_compute();
     __memcpy_async(model + start + j, nram_model, nram_rest_bytes, NRAM2GDRAM);
