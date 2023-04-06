@@ -121,26 +121,26 @@ struct FftC2CKernelUtil {
                             const std::vector<int64_t>& dims, fft_norm_mode normalization);
 };
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type, typename IN, typename OUT>
 struct FftR2CKernelUtil {
-  static void FftR2CForward(ep::Stream* stream, const T* data_in, std::complex<T>* data_out,
+  static void FftR2CForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
                             const Shape& input_shape, const Shape& output_shape,
                             const Stride& input_stride, const Stride& output_stride, bool forward,
                             const std::vector<int64_t>& dims, fft_norm_mode normalization);
 };
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type, typename IN, typename OUT>
 struct FftC2RKernelUtil {
-  static void FftC2RForward(ep::Stream* stream, const std::complex<T>* data_in, T* data_out,
+  static void FftC2RForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
                             const Shape& input_shape, const Shape& output_shape,
                             const Stride& input_stride, const Stride& output_stride,
                             int64_t last_dim_size, const std::vector<int64_t>& dims,
                             fft_norm_mode normalization);
 };
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type, typename IN, typename OUT>
 struct FftStftKernelUtil {
-  static void FftStftForward(ep::Stream* stream, const T* data_in, std::complex<T>* data_out,
+  static void FftStftForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
                              const Shape& input_shape, const Shape& output_shape,
                              const Stride& input_stride, const Stride& output_stride, bool forward,
                              const std::vector<int64_t>& axes, fft_norm_mode normalization,

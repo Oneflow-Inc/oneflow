@@ -30,6 +30,8 @@ namespace {
 
 constexpr int max_rank = 3;
 
+enum class CUFFT_EXCUTETYPE{ R2C, C2C, C2R };
+
 }
 
 struct CuFFtParams {
@@ -38,11 +40,13 @@ struct CuFFtParams {
   int32_t input_shape[max_rank + 1];
   int32_t input_strides[max_rank + 1];
   int32_t output_strides[max_rank + 1];
-  int32_t* rank;
-  int32_t batch;
-  CuFFtParams(int32_t dims, int32_t* r, const Stride& in_strides,  // NOLINT
-              const Stride& out_strides, const Shape& in_shape, const Shape& out_shape, int32_t b)
-      : ndim(dims), rank(r), batch(b) {
+  int32_t rank;
+
+  CuFFtParams() = default;
+
+  CuFFtParams(int32_t dims, int32_t r, const Stride& in_strides,  // NOLINT
+              const Stride& out_strides, const Shape& in_shape, const Shape& out_shape)
+      : ndim(dims), rank(r) {
     std::copy(in_strides.begin(), in_strides.end(), input_strides);
     std::copy(out_strides.begin(), out_strides.end(), output_strides);
     std::copy(in_shape.begin(), in_shape.end(), input_shape);

@@ -128,7 +128,7 @@ class FftR2CKernel final : public user_op::OpKernel {
     }
 
     if (input->data_type() == kFloat || input->data_type() == kDouble) {
-      FftR2CKernelUtil<device_type, dtype_in>::FftR2CForward(
+      FftR2CKernelUtil<device_type, dtype_in, dtype_out>::FftR2CForward(
           ctx->stream(), input_ptr, out_ptr, input_shape, out_shape, input->stride(), out->stride(),
           /*forward=*/true, dims, norm_mode);
     } else {
@@ -167,7 +167,7 @@ class FftC2RKernel final : public user_op::OpKernel {
     out_shape[dims.back()] = last_dim_size;
 
     if (input->data_type() == kComplex64 || input->data_type() == kComplex128) {
-      FftC2RKernelUtil<device_type, dtype_out>::FftC2RForward(
+      FftC2RKernelUtil<device_type, dtype_in, dtype_out>::FftC2RForward(
           ctx->stream(), input_ptr, out_ptr, input_shape, out_shape, input->stride(), out->stride(),
           /*last_dim_size=*/last_dim_size, dims, norm_mode);
     } else {
@@ -209,7 +209,7 @@ class StftCpuKernel final : public user_op::OpKernel {
     Stride out_tmp_stride = Stride(out_tmp_shape);
     std::vector<int64_t> axes(out_tmp_shape.size());
     std::iota(axes.begin(), axes.end(), 0);
-    FftStftKernelUtil<device_type, dtype_in>::FftStftForward(
+    FftStftKernelUtil<device_type, dtype_in, dtype_out>::FftStftForward(
         ctx->stream(), data_in, out_tmp_buffer, out_tmp_shape, out_tmp_shape, out_tmp_stride,
         out_tmp_stride, true, /*axes=*/axes, /*normalization=*/normalization,
         /*len=*/len, /*dims=*/dims, /*batch=*/batch);

@@ -54,51 +54,51 @@ struct FftC2CKernelUtil<
   }
 };
 
-template<typename T>
-struct FftR2CKernelUtil<DeviceType::kCPU, T> {
-  static void FftR2CForward(ep::Stream* stream, const T* data_in, std::complex<T>* data_out,
+template<typename IN, typename OUT>
+struct FftR2CKernelUtil<DeviceType::kCPU, IN, OUT> {
+  static void FftR2CForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
                             const Shape& input_shape, const Shape& output_shape,
                             const Stride& input_stride, const Stride& output_stride, bool forward,
                             const std::vector<int64_t>& dims, fft_norm_mode normalization) {
-    PocketFFtParams<T> params(input_shape, output_shape, input_stride, output_stride, dims, forward,
-                              compute_fct<T>(input_shape, dims, normalization) /*1.f*/,
+    PocketFFtParams<IN> params(input_shape, output_shape, input_stride, output_stride, dims, forward,
+                              compute_fct<IN>(input_shape, dims, normalization) /*1.f*/,
                               FFT_EXCUTETYPE::R2C);
-    PocketFFtConfig<T> config(params);
+    PocketFFtConfig<IN> config(params);
     config.excute(data_in, data_out);
   }
 };
 
-template<typename T>
-struct FftC2RKernelUtil<DeviceType::kCPU, T> {
-  static void FftC2RForward(ep::Stream* stream, const std::complex<T>* data_in, T* data_out,
+template<typename IN, typename OUT>
+struct FftC2RKernelUtil<DeviceType::kCPU, IN, OUT> {
+  static void FftC2RForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
                             const Shape& input_shape, const Shape& output_shape,
                             const Stride& input_stride, const Stride& output_stride,
                             int64_t last_dim_size, const std::vector<int64_t>& dims,
                             fft_norm_mode normalization) {
-    PocketFFtParams<T> params(
+    PocketFFtParams<OUT> params(
         input_shape, output_shape, input_stride, output_stride, dims, /*is_forward=*/false,
-        compute_fct<T>(output_shape, dims, normalization) /*1.f*/, FFT_EXCUTETYPE::C2R);
-    PocketFFtConfig<T> config(params);
+        compute_fct<OUT>(output_shape, dims, normalization) /*1.f*/, FFT_EXCUTETYPE::C2R);
+    PocketFFtConfig<OUT> config(params);
     config.excute(data_in, data_out);
   }
 };
 
-template<typename T>
-struct FftStftKernelUtil<DeviceType::kCPU, T> {
-  static void FftStftForward(ep::Stream* stream, const T* data_in, std::complex<T>* data_out,
+template<typename IN, typename OUT>
+struct FftStftKernelUtil<DeviceType::kCPU, IN, OUT> {
+  static void FftStftForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
                              const Shape& input_shape, const Shape& output_shape,
                              const Stride& input_stride, const Stride& output_stride, bool forward,
                              const std::vector<int64_t>& axes, fft_norm_mode normalization,
                              int64_t len, int64_t dims, int64_t batch) {
-    PocketFFtParams<T> params(input_shape, output_shape, input_stride, output_stride, axes, forward,
-                              compute_fct<T>(len, normalization) /*1.f*/, FFT_EXCUTETYPE::R2C);
-    PocketFFtConfig<T> config(params);
+    PocketFFtParams<IN> params(input_shape, output_shape, input_stride, output_stride, axes, forward,
+                              compute_fct<IN>(len, normalization) /*1.f*/, FFT_EXCUTETYPE::R2C);
+    PocketFFtConfig<IN> config(params);
     int64_t in_offset = len;
     int64_t out_offset = len / 2 + 1;
     for (int j = 0; j < dims; j++) {
       for (int i = 0; i < batch; i++) {
-        const T* in = data_in + j * batch * in_offset + i * in_offset;
-        std::complex<T>* out = data_out + j * batch * out_offset + i * out_offset;
+        const IN* in = data_in + j * batch * in_offset + i * in_offset;
+        OUT* out = data_out + j * batch * out_offset + i * out_offset;
         config.excute(in, out);
       }
     }
@@ -108,12 +108,12 @@ struct FftStftKernelUtil<DeviceType::kCPU, T> {
 template struct FftC2CKernelUtil<DeviceType::kCPU, std::complex<float>>;
 template struct FftC2CKernelUtil<DeviceType::kCPU, std::complex<double>>;
 
-template struct FftR2CKernelUtil<DeviceType::kCPU, float>;
-template struct FftR2CKernelUtil<DeviceType::kCPU, double>;
+template struct FftR2CKernelUtil<DeviceType::kCPU, float, std::complex<float>>;
+template struct FftR2CKernelUtil<DeviceType::kCPU, double, std::complex<double>>;
 
-template struct FftC2RKernelUtil<DeviceType::kCPU, float>;
-template struct FftC2RKernelUtil<DeviceType::kCPU, double>;
+template struct FftC2RKernelUtil<DeviceType::kCPU, std::complex<float>, float>;
+template struct FftC2RKernelUtil<DeviceType::kCPU, std::complex<double>, double>;
 
-template struct FftStftKernelUtil<DeviceType::kCPU, float>;
-template struct FftStftKernelUtil<DeviceType::kCPU, double>;
+template struct FftStftKernelUtil<DeviceType::kCPU, float, std::complex<float>>;
+template struct FftStftKernelUtil<DeviceType::kCPU, double, std::complex<double>>;
 }  // namespace oneflow

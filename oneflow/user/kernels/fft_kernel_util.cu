@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#if 0
+#if 1
 #include <cuda.h>
 
 #if CUDA_VERSION >= 11000
@@ -23,6 +23,7 @@ limitations under the License.
 
 namespace oneflow {
 
+#if 0
 namespace {
 
 template<typename IN, typename OUT>
@@ -69,7 +70,9 @@ __global__ void convert_doublesided(const FFTTYPE* src, FFTTYPE* dst, size_t len
 }
 
 }  // namespace
+#endif
 
+#if 0
 template<typename IN, typename OUT>
 class StftGpuKernel final : public user_op::OpKernel {
  public:
@@ -158,6 +161,41 @@ class StftGpuKernel final : public user_op::OpKernel {
 
 REGISTER_STFT_GPU_KERNEL(float, cufftComplex)
 REGISTER_STFT_GPU_KERNEL(double, cufftDoubleComplex)
+#endif
+
+template<typename T>
+class FftC2CKernelUtil<DeviceType::kCUDA, T>{
+  static void FftC2CForward(ep::Stream* stream, const T* data_in, T* data_out,
+                            const Shape& input_shape, const Shape& output_shape,
+                            const Stride& input_stride, const Stride& output_stride, bool forward,
+                            const std::vector<int64_t>& dims, fft_norm_mode normalization){
+    // TO-DO:
+    UNIMPLEMENTED();
+  }
+};
+
+template<typename IN, typename OUT>
+struct FftR2CKernelUtil<DeviceType::kCUDA, IN, OUT> {
+  static void FftR2CForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
+                            const Shape& input_shape, const Shape& output_shape,
+                            const Stride& input_stride, const Stride& output_stride, bool forward,
+                            const std::vector<int64_t>& dims, fft_norm_mode normalization){
+    // TO-DO:
+    UNIMPLEMENTED();
+  }
+};
+
+template<typename IN, typename OUT>
+struct FftC2RKernelUtil<DeviceType::kCUDA, IN, OUT> {
+  static void FftC2RForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
+                            const Shape& input_shape, const Shape& output_shape,
+                            const Stride& input_stride, const Stride& output_stride,
+                            int64_t last_dim_size, const std::vector<int64_t>& dims,
+                            fft_norm_mode normalization){
+    // TO-DO:
+    UNIMPLEMENTED();
+  }
+};
 
 }  // namespace oneflow
 
