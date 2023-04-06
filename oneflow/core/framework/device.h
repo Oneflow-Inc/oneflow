@@ -43,15 +43,18 @@ class Device final {
   const std::string& type() const { return type_; }
   DeviceType enum_type() const { return enum_type_; }
   int64_t device_id() const { return device_id_; }
+  bool rematable() const { return rematable_; }
   std::string ToString() const;
   std::string ToRepr() const;
   size_t hash_value() const { return hash_value_; }
   bool operator==(const Device& device) const {
-    return type_ == device.type() && device_id_ == device.device_id();
+    return type_ == device.type() && device_id_ == device.device_id()
+           && rematable_ == device.rematable();
   }
   bool operator!=(const Device& device) const { return !operator==(device); }
   const std::shared_ptr<MemoryCase>& mem_case() const { return mem_case_; }
 
+  static Maybe<Symbol<Device>> New(const std::string& type, int64_t device_id, bool rematable);
   static Maybe<Symbol<Device>> New(const std::string& type, int64_t device_id);
   static Maybe<Symbol<Device>> New(const std::string& type);
   static Maybe<Symbol<Device>> ParseAndNew(const std::string& type_or_type_with_device_id);
@@ -61,12 +64,13 @@ class Device final {
   static Maybe<Symbol<ParallelDesc>> (*GetPlacement)(const Device& device);
 
  private:
-  Device(const std::string& type, int64_t device_id);
+  Device(const std::string& type, int64_t device_id, bool rematable);
   Maybe<void> Init();
 
   const std::string type_;
   DeviceType enum_type_;
   const int64_t device_id_;
+  bool rematable_;
   const size_t hash_value_;
   std::shared_ptr<MemoryCase> mem_case_;
 };
@@ -75,7 +79,7 @@ std::ostream& operator<<(std::ostream& os, Symbol<Device> device);
 
 extern Maybe<Symbol<ParallelDesc>> (*Placement4Device)(Symbol<Device> device);
 
-Maybe<std::pair<std::string, int>> ParseDeviceString(const std::string& device_str);
+Maybe<std::tuple<std::string, int, bool>> ParseDeviceString(std::string device_str);
 
 }  // namespace oneflow
 
