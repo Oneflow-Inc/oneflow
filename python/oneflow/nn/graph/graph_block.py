@@ -298,20 +298,19 @@ class GraphModule(GraphBlock):
             + "'s belonged graph is not set."
         )
 
-        if self._belonged_graph.is_compiled:
-            if self._belonged_graph._compiled_graph_proto is not None:
-                module_conf = self._belonged_graph._compiled_graph_proto.module_name2module_conf[
-                    self.name_prefix + self.name
-                ]
-                if self._belonged_graph._oneflow_internal_graph_ir__ is None:
-                    self._belonged_graph._oneflow_internal_graph_ir__ = GraphIR(
-                        self._belonged_graph._compiled_graph_proto
-                    )
-                return operators_repr(
-                    module_conf.ops,
-                    self._belonged_graph._oneflow_internal_graph_ir__,
-                    self._debug_op_repr_with_py_stack,
+        if self._belonged_graph._compiled_graph_proto is not None:
+            module_conf = self._belonged_graph._compiled_graph_proto.module_name2module_conf[
+                self.name_prefix + self.name
+            ]
+            if self._belonged_graph._oneflow_internal_graph_ir__ is None:
+                self._belonged_graph._oneflow_internal_graph_ir__ = GraphIR(
+                    self._belonged_graph._compiled_graph_proto
                 )
+            return operators_repr(
+                module_conf.ops,
+                self._belonged_graph._oneflow_internal_graph_ir__,
+                self._debug_op_repr_with_py_stack,
+            )
 
         return []
 
