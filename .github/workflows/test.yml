@@ -21,7 +21,7 @@ env:
   ONEFLOW_FACE_SRC: oneflow_face
   ONEFLOW_FACE_COMMIT: 110a97e8d5737a1f1856281a7df556a5ac8f06de
   ONEFLOW_IREE_SRC: oneflow_iree
-  ONEFLOW_IREE_COMMIT: c17732b50abf1b070a4b2dd638372ba585ef2ddd
+  ONEFLOW_IREE_COMMIT: ac07662d22ceb506a8d9f48ab913fd96430e0dd3
   ONE_FX_SRC: one-fx
   ONE_FX_COMMIT: da4051c7f1ace7a20b3f54395b580cd102fc99da
   TEST_WITH_TORCH_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.10.0-cuda11.3-cudnn8-runtime:67505df94022a6b4b979f013e2cbd3e0cdac3828
