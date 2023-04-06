@@ -297,9 +297,9 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
       const auto& slice = index_item.slice();
       CHECK_GT_OR_RETURN(slice.step(), 0)
           << Error::RuntimeError() << "Step must be greater than zero.";
-      int64_t step = std::min(slice.step(), shape.At(dim));
-      int64_t end = std::min(slice.end(), shape.At(dim));
-      int64_t start = std::min(slice.start(), shape.At(dim));
+      int64_t step = std::min(slice.step(), shape.At(dim).val());
+      int64_t end = std::min(slice.end(), shape.At(dim).val());
+      int64_t start = std::min(slice.start(), shape.At(dim).val());
       if (start < 0) { start += shape.At(dim); }
       if (start < 0) { start = 0; }
       if (end < 0) { end += shape.At(dim); }

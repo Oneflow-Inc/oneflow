@@ -78,14 +78,14 @@ class SplitLikeKernel final : public user_op::OpKernel {
       const int64_t out_cols = out_tensor->shape_view().Count(axis);
       CHECK_EQ(out_tensor->shape_view().elem_cnt(), rows * out_cols);
       if (out_cols > 0) {
-        DimVector dst_shape = {rows, out_cols};
-        DimVector dst_pos_vec = {0, 0};
-        DimVector src_shape = {rows, in_cols};
-        DimVector src_pos_vec = {0, in_col_offset};
-        DimVector extent_vec = {rows, out_cols};
+        Shape dst_shape = {rows, out_cols};
+        std::array<int64_t, 2> dst_pos_vec = {0, 0};
+        Shape src_shape = {rows, in_cols};
+        std::array<int64_t, 2> src_pos_vec = {0, in_col_offset};
+        std::array<int64_t, 2> extent_vec = {rows, out_cols};
         primitive->Launch(ctx->stream(), out_tensor->data_type(), 2, out_tensor->mut_dptr(),
-                          dst_shape.data(), dst_pos_vec.data(), in_tensor->dptr(), src_shape.data(),
-                          src_pos_vec.data(), extent_vec.data());
+                          dst_shape.int64_ptr(), dst_pos_vec.data(), in_tensor->dptr(),
+                          src_shape.int64_ptr(), src_pos_vec.data(), extent_vec.data());
       }
       in_col_offset += out_cols;
     }

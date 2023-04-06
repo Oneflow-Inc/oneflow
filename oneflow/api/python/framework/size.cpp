@@ -31,7 +31,7 @@ static PyObject* TensorSize_repr(TensorSize* self) {
   int32_t size = PyTuple_Size((PyObject*)self);
   ss << "oneflow.Size([";
   for (int i = 0; i < size; ++i) {
-    int64_t dim = PyLong_AsLongLong(PyTuple_GET_ITEM(self, i));
+    Dim dim = one::functional::PyUnpackShapeItem(PyTuple_GET_ITEM(self, i));
     ss << dim;
     if (++idx != size) { ss << ", "; }
   }
@@ -44,10 +44,11 @@ static PyObject* TensorSize_new(PyTypeObject* type, PyObject* args, PyObject* kw
   if (self.get()) {
     for (int i = 0; i < PyTuple_Size(self.get()); ++i) {
       PyObject* item = PyTuple_GET_ITEM(self.get(), i);
-      if (!PyLong_Check(item)) {
-        return PyErr_Format(PyExc_TypeError,
-                            "oneflow.Size() takes an iterable of 'int', but item '%d' is '%s'", i,
-                            Py_TYPE(item)->tp_name);
+      if (!one::functional::PyShapeItemCheck(item)) {
+        return PyErr_Format(
+            PyExc_TypeError,
+            "oneflow.Size() takes an iterable of 'int' or 'Dim', but item '%d' is '%s'", i,
+            Py_TYPE(item)->tp_name);
       }
     }
   }
@@ -121,8 +122,18 @@ static PyObject* TensorSize_numel(PyObject* self, PyObject* args) {
   return PyLong_FromLongLong(numel);
 }
 
+static PyObject* TensorSize_all_dims_known(PyObject* self, PyObject* args) {
+  for (int i = 0; i < PyTuple_Size(self); ++i) {
+    Dim dim = one::functional::PyUnpackShapeItem(PyTuple_GET_ITEM((TensorSize*)self, i));
+    if (!dim.is_known()) { Py_RETURN_FALSE; }
+  }
+  Py_RETURN_TRUE;
+}
+
 static PyMethodDef TensorSize_methods[] = {
-    {"numel", (PyCFunction)TensorSize_numel, METH_NOARGS, NULL}, {NULL}};
+    {"numel", (PyCFunction)TensorSize_numel, METH_NOARGS, NULL},
+    {"all_dims_known", (PyCFunction)TensorSize_all_dims_known, METH_NOARGS, NULL},
+    {NULL}};
 
 PyTypeObject TensorSize_Type = {
     PyVarObject_HEAD_INIT(NULL, 0) "oneflow.Size", /* tp_name */
@@ -173,7 +184,10 @@ PyObject* TensorSize_NewFromShape(const Shape& size) {
   PyObjectPtr self(TensorSize_New(size.NumAxes()));
   if (self.get()) {
     for (int i = 0; i < size.NumAxes(); ++i) {
-      PyTuple_SET_ITEM(self.get(), i, PyLong_FromLongLong(size.At(i)));
+      Dim dim = size[i];
+      PyTuple_SET_ITEM(self.get(), i,
+                       dim.is_known() ? one::functional::CastToPyObject(dim.val())
+                                      : one::functional::CastToPyObject(dim));
     }
   }
   return self.release();
@@ -186,11 +200,11 @@ Shape TensorSize_AsShape(PyObject* self) {
     return Shape();
   }
   int size = TensorSize_length((TensorSize*)self);
-  DimVector dim_vec(size);
+  Shape shape(size);
   for (int i = 0; i < size; ++i) {
-    dim_vec[i] = PyLong_AsLongLong(PyTuple_GET_ITEM((TensorSize*)self, i));
+    shape[i] = py::handle(PyTuple_GET_ITEM((TensorSize*)self, i)).cast<Dim>();
   }
-  return Shape(std::move(dim_vec));
+  return shape;
 }
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {

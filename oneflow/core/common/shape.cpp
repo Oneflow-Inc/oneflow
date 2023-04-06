@@ -25,11 +25,12 @@ int64_t ConstShapeMixIn<T>::elem_cnt() const {
 }
 
 template<class T>
-int64_t ConstShapeMixIn<T>::At(int64_t index) const {
-  CHECK_GE(index, 0);
-  CHECK_LT(index, tp()->NumAxes()) << " Shape: " << tp()->DebugStr() << " visit index: " << index
-                                   << " > num_axes: " << tp()->NumAxes();
-  return (*tp())[index];
+const Dim& ConstShapeMixIn<T>::DimAt(int64_t index) const {
+  if constexpr (std::is_same_v<T, Shape>) {
+    return this->tp()->DimVector::operator[](index);
+  } else {
+    return this->tp()->ArrayRef<Dim>::operator[](index);
+  }
 }
 
 template<class T>
@@ -37,7 +38,7 @@ int64_t ConstShapeMixIn<T>::Count(int64_t begin_axis, int64_t end_axis) const {
   CHECK(0 <= begin_axis && begin_axis <= end_axis && end_axis <= tp()->NumAxes())
       << begin_axis << " " << end_axis;
   int64_t cnt = 1;
-  for (int64_t i = begin_axis; i < end_axis; ++i) { cnt *= At(i); }
+  for (int64_t i = begin_axis; i < end_axis; ++i) { cnt *= tp()->At(i); }
   return cnt;
 }
 template<class T>
@@ -68,7 +69,7 @@ std::string ConstShapeMixIn<T>::ToString() const {
   std::stringstream ss;
   int32_t idx = 0;
   ss << "(";
-  for (int64_t dim : *tp()) {
+  for (Dim dim : *tp()) {
     ss << dim;
     if (++idx != tp()->size() || tp()->size() == 1) { ss << ","; }
   }
@@ -83,16 +84,40 @@ std::string ConstShapeMixIn<T>::DebugStr() const {
 
 template<class T>
 void ConstShapeMixIn<T>::ToProto(ShapeProto* ret) const {
-  *(ret->mutable_dim()) = PbRf<int64_t>(tp()->begin(), tp()->end());
+  ret->Clear();
+  for (Dim dim : *tp()) {
+    if (!dim.is_known()) {
+      ret->add_dim()->mutable_unknown();
+    } else {
+      ret->add_dim()->set_int64_value(dim.val());
+    }
+  }
 }
 
 template<class T>
 bool ConstShapeMixIn<T>::operator==(const T& rhs) const {
   if (this->NumAxes() != rhs.NumAxes()) { return false; }
   FOR_RANGE(int, i, 0, this->NumAxes()) {
-    if (this->At(i) != rhs.At(i)) { return false; }
+    if (this->tp()->At(i) != rhs.At(i)) { return false; }
   }
   return true;
+}
+
+template<class T>
+bool ConstShapeMixIn<T>::all_dims_known() const {
+  for (Dim dim : *tp()) {
+    if (!dim.is_known()) { return false; }
+  }
+  return true;
+}
+
+template<class T>
+Dim& MutShapeMixIn<T>::DimAt(int64_t index) {
+  if constexpr (std::is_same_v<T, Shape>) {
+    return this->tp()->DimVector::operator[](index);
+  } else {
+    return this->tp()->MutableArrayRef<Dim>::operator[](index);
+  }
 }
 
 template struct ConstShapeMixIn<Shape>;
@@ -101,23 +126,29 @@ template struct ConstShapeMixIn<ShapeView>;
 template struct ConstShapeMixIn<MutShapeView>;
 template struct MutShapeMixIn<MutShapeView>;
 
+Dim Shape::At(int64_t index) const {
+  CHECK_GE(index, 0);
+  CHECK_LT(index, tp()->NumAxes()) << " Shape: " << tp()->DebugStr() << " visit index: " << index
+                                   << " > num_axes: " << tp()->NumAxes();
+  return (*tp())[index];
+}
+
 Shape CreateReducedShape(ShapeView shape, const AxisVector& axis_vec) {
   // For 0-dim Tensor
   if (axis_vec.empty()) { return Shape({}); }
-  DimVector dim_vec;
-  shape.ToDimVector(&dim_vec);
-  for (int64_t axis : axis_vec) { dim_vec.at(ShiftNegativeAxis(axis, shape.NumAxes())) = 1; }
-  return Shape(std::move(dim_vec));
+  Shape new_shape(shape);
+  for (int64_t axis : axis_vec) { new_shape.at(ShiftNegativeAxis(axis, shape.NumAxes())) = 1; }
+  return new_shape;
 }
 
 Shape CreateLeftExtendedShape(ShapeView shape, int ndims_left_extend_to) {
   CHECK_GE(ndims_left_extend_to, shape.NumAxes());
-  DimVector dim_vec(ndims_left_extend_to);
+  Shape new_shape(ndims_left_extend_to);
   const size_t left_ones_num = ndims_left_extend_to - shape.NumAxes();
   int i = 0;
-  for (; i < left_ones_num; ++i) { dim_vec.at(i) = 1LL; }
-  for (; i < ndims_left_extend_to; ++i) { dim_vec.at(i) = shape.At(i - left_ones_num); }
-  return Shape(std::move(dim_vec));
+  for (; i < left_ones_num; ++i) { new_shape.at(i) = 1LL; }
+  for (; i < ndims_left_extend_to; ++i) { new_shape[i] = shape.DimAt(i - left_ones_num); }
+  return new_shape;
 }
 
 Shape ExpandDimIf0D(const Shape& shape) {
@@ -142,6 +173,8 @@ int64_t ShiftNegativeAxis(int64_t axis, const int64_t num_axes) {
   return axis;
 }
 
+Shape::Shape(const std::vector<int64_t>& dim_vec)
+    : DimVector(dim_vec.begin(), dim_vec.end()), is_initialized_(true) {}
 Shape::Shape(const DimVector& dim_vec) : DimVector(dim_vec), is_initialized_(true) {}
 Shape::Shape(DimVector&& dim_vec) : DimVector(std::move(dim_vec)), is_initialized_(true) {}
 Shape::Shape(const ShapeProto& shape_proto)

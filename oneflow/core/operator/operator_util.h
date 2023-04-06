@@ -34,20 +34,20 @@ std::vector<int32_t> Get3DVecInOpConf(const PbRf<int32_t>& field_vals, int32_t N
 int64_t GetInDim(const ShapeView& shape, const std::string& data_format, int32_t dim, int32_t NDim);
 
 void GetWindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t stride,
-                           const std::string& padding_type, int64_t* output_size,
+                           const std::string& padding_type, Dim* output_size,
                            int32_t* padding_before, int32_t* padding_after);
 
 void GetWindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t stride,
-                           const std::string& padding_type, int64_t* output_size,
+                           const std::string& padding_type, Dim* output_size,
                            int32_t* padding_size);
 
 void GetWindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t dilation_rate,
-                           int32_t stride, const std::string& padding_type, int64_t* output_size,
+                           int32_t stride, const std::string& padding_type, Dim* output_size,
                            int32_t* padding_before, int32_t* padding_after);
 
 void GetWindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t dilation_rate,
                            int32_t stride, const std::string& padding_type, bool ceil_mode,
-                           int64_t* output_size, int32_t* padding_before, int32_t* padding_after);
+                           Dim* output_size, int32_t* padding_before, int32_t* padding_after);
 
 void Get3DOutputSize(const DimVector& in, const std::vector<int32_t>& pool_size,
                      const std::vector<int32_t>& strides, const std::string& padding_type,

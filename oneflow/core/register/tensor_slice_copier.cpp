@@ -55,9 +55,9 @@ TensorSliceCopier::TensorSliceCopier(const TensorSliceView& dst_view,
 
 void TensorSliceCopier::Copy(ep::Stream* stream, void* dst, const void* src) const {
   copy_nd_primitive_->Launch(stream, data_type_, dst_view_.shape().NumAxes(), dst,
-                             dst_view_.shape().dim_vec().data(), dst_pos_.dim_vec().data(), src,
-                             src_view_.shape().dim_vec().data(), src_pos_.dim_vec().data(),
-                             extent_.dim_vec().data());
+                             dst_view_.shape().int64_ptr(), dst_pos_.vector().data(), src,
+                             src_view_.shape().int64_ptr(), src_pos_.vector().data(),
+                             extent_.int64_ptr());
 }
 
 void TensorSliceCopier::Copy(ep::Stream* stream, Blob* dst_blob, const Blob* src_blob) const {

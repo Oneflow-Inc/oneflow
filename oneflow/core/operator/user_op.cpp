@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/infer_nd_sbp_fn_context.h"
 #include "oneflow/core/framework/compute_complexity_fn_context.h"
 #include "oneflow/core/framework/get_nd_sbp_signature_list_context.h"
+#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 
@@ -719,7 +720,7 @@ Maybe<void> UserOp::InferInternalBlobDescs(
     BlobDesc* tmp_buffer_blob = GetBlobDesc4BnInOp(GenRepeatedBn("tmp_buffer", 0));
     CHECK_NOTNULL_OR_RETURN(tmp_buffer_blob);
     tmp_buffer_blob->set_data_type(DataType::kChar);
-    tmp_buffer_blob->set_shape(Shape({static_cast<int64_t>(tmp_size)}));
+    tmp_buffer_blob->set_shape(Shape{static_cast<int64_t>(tmp_size)});
     tmp_buffer_blob->set_stride(Stride({static_cast<int64_t>(tmp_size)}));
   }
   return Maybe<void>::Ok();
@@ -750,15 +751,17 @@ Maybe<void> UserOp::InferLogicalOutBlobDescs(
     const user_op::TensorDesc& tensor_desc = infer_ctx.OutputTensorDesc(pair.first, pair.second);
     out_blob_desc->set_data_type(tensor_desc.data_type());
     out_blob_desc->set_shape(tensor_desc.shape());
-    if (val_->non_contiguous_supported) {
-      out_blob_desc->set_stride(tensor_desc.stride());
-    } else {
-      out_blob_desc->set_stride(Stride(out_blob_desc->shape()));
+    if (!LazyMode::is_enabled()) {
+      if (val_->non_contiguous_supported) {
+        out_blob_desc->set_stride(tensor_desc.stride());
+      } else {
+        out_blob_desc->set_stride(Stride(out_blob_desc->shape()));
+      }
+      CHECK_EQ_OR_RETURN(out_blob_desc->stride().size(), out_blob_desc->shape().size())
+          << Error::RuntimeError() << "stride and shape size mismatch since stride is "
+          << out_blob_desc->stride().ToString() << " but shape is "
+          << out_blob_desc->shape().ToString();
     }
-    CHECK_EQ_OR_RETURN(out_blob_desc->stride().size(), out_blob_desc->shape().size())
-        << Error::RuntimeError() << "stride and shape size mismatch since stride is "
-        << out_blob_desc->stride().ToString() << " but shape is "
-        << out_blob_desc->shape().ToString();
     out_blob_desc->set_is_dynamic(tensor_desc.is_dynamic());
   }
   return Maybe<void>::Ok();

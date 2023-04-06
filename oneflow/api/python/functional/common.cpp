@@ -248,25 +248,50 @@ std::vector<Symbol<DType>> PyUnpackDTypeSequence(PyObject* obj) {
   return PyUnpackSequence<Symbol<DType>>(obj, [](PyObject* item) { return PyUnpackDType(item); });
 }
 
+bool PyDimCheck(PyObject* obj) { return detail::isinstance_fast<Dim>(obj); }
+Dim PyUnpackDim(PyObject* obj) { return *detail::cast_fast<Dim*>(obj); }
+
 // Shape
-bool PyShapeCheck(PyObject* obj) { return PyLongSequenceCheck(obj); }
+bool PyShapeItemCheck(PyObject* obj) {
+  return PyLong_Check(obj) || PyIntegerScalarTensorCheck(obj) || PyDimCheck(obj);
+}
+Dim PyUnpackShapeItem(PyObject* obj) {
+  if (PyLong_Check(obj)) {
+    return PyLong_AsLongLong(obj);
+  } else if (PyDimCheck(obj)) {
+    return PyUnpackDim(obj);
+  } else {
+    return PyUnpackIntegerScalarTensor_AsLongLong(obj);
+  }
+}
+bool PyShapeCheck(PyObject* obj) {
+  return PySequenceCheck(obj, [](PyObject* item) { return PyShapeItemCheck(item); });
+}
 
 Shape PyUnpackShape(PyObject* obj) {
   bool is_tuple = PyTuple_Check(obj);
   CHECK_OR_THROW(is_tuple || PyList_Check(obj))
       << "The object is not list or tuple, but is " << Py_TYPE(obj)->tp_name;
   size_t size = is_tuple ? PyTuple_GET_SIZE(obj) : PyList_GET_SIZE(obj);
-  DimVector values(size);
+  Shape shape(size);
   for (int i = 0; i < size; ++i) {
     PyObject* item = is_tuple ? PyTuple_GET_ITEM(obj, i) : PyList_GET_ITEM(obj, i);
-    values[i] = PyLong_AsLongLong(item);
+    if (PyLong_Check(item)) {
+      shape.Set(i, PyLong_AsLongLong(item));
+    } else if (PyIntegerScalarTensorCheck(item)) {
+      shape.Set(i, PyUnpackIntegerScalarTensor_AsLongLong(item));
+    } else if (PyDimCheck(item)) {
+      shape.Set(i, PyUnpackDim(item));
+    } else {
+      THROW(RuntimeError) << "Unsupported item type: " << Py_TYPE(item)->tp_name;
+    }
   }
-  return Shape(values);
+  return shape;
 }
 
 // Shape list
 bool PyShapeSequenceCheck(PyObject* obj) {
-  return PySequenceCheck(obj, [](PyObject* item) { return PyLongSequenceCheck(item); });
+  return PySequenceCheck(obj, [](PyObject* item) { return PyShapeCheck(item); });
 }
 std::vector<Shape> PyUnpackShapeSequence(PyObject* obj) {
   return PyUnpackSequence<Shape>(obj, [](PyObject* item) -> Shape { return PyUnpackShape(item); });

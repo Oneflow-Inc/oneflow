@@ -68,12 +68,12 @@ class NarrowKernel final : public user_op::OpKernel {
     const int64_t inner_dim = in_shape.Count(dim + 1);
     const int64_t narrow_dim = in_shape.At(dim);
 
-    DimVector dst_shape = {outer_dim, length, inner_dim};
-    DimVector dst_pos_vec = {0, 0, 0};
+    Shape dst_shape = {outer_dim, length, inner_dim};
+    std::array<int64_t, 3> dst_pos_vec = {0, 0, 0};
 
-    DimVector src_shape = {outer_dim, narrow_dim, inner_dim};
-    DimVector src_pos_vec = {0, start, 0};
-    DimVector extent_vec = {outer_dim, length, inner_dim};
+    Shape src_shape = {outer_dim, narrow_dim, inner_dim};
+    std::array<int64_t, 3> src_pos_vec = {0, start, 0};
+    std::array<int64_t, 3> extent_vec = {outer_dim, length, inner_dim};
     copy_nd_primitive->Launch(ctx->stream(), out->data_type(), 3, out->mut_dptr(), dst_shape.data(),
                               dst_pos_vec.data(), in->dptr(), src_shape.data(), src_pos_vec.data(),
                               extent_vec.data());
@@ -109,12 +109,12 @@ class NarrowGradKernel final : public user_op::OpKernel {
     const int64_t inner_dim = dx_shape.Count(dim + 1);
     const int64_t narrow_dim = dx_shape.At(dim);
 
-    DimVector dst_shape = {outer_dim, narrow_dim, inner_dim};
-    DimVector dst_pos_vec = {0, start, 0};
+    Shape dst_shape = {outer_dim, narrow_dim, inner_dim};
+    std::array<int64_t, 3> dst_pos_vec = {0, start, 0};
 
-    DimVector src_shape = {outer_dim, length, inner_dim};
-    DimVector src_pos_vec = {0, 0, 0};
-    DimVector extent_vec = {outer_dim, length, inner_dim};
+    Shape src_shape = {outer_dim, length, inner_dim};
+    std::array<int64_t, 3> src_pos_vec = {0, 0, 0};
+    std::array<int64_t, 3> extent_vec = {outer_dim, length, inner_dim};
 
     copy_nd_primitive->Launch(ctx->stream(), dx->data_type(), 3, dst, dst_shape.data(),
                               dst_pos_vec.data(), dy->dptr(), src_shape.data(), src_pos_vec.data(),

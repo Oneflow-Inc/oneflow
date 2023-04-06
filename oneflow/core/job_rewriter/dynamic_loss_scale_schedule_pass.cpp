@@ -56,7 +56,7 @@ Maybe<void> DynamicLossScaleSchedulePass::Apply(Job* job, JobPassCtx* ctx) const
     loss_scale_var_op_conf.set_name(op_name_prefix + job->job_conf().job_name() + "-LossScale");
     VariableOpConf* variable_conf = loss_scale_var_op_conf.mutable_variable_conf();
     variable_conf->set_out("out");
-    *variable_conf->mutable_shape()->mutable_dim()->Add() = 1;
+    variable_conf->mutable_shape()->add_dim()->set_int64_value(1);
     variable_conf->set_data_type(DataType::kFloat);
     variable_conf->mutable_initializer()->mutable_constant_conf()->set_value(
         policy.initial_loss_scale());
@@ -68,7 +68,7 @@ Maybe<void> DynamicLossScaleSchedulePass::Apply(Job* job, JobPassCtx* ctx) const
                                         + "-GoodStepCounter");
     VariableOpConf* variable_conf = good_step_counter_var_conf.mutable_variable_conf();
     variable_conf->set_out("out");
-    *variable_conf->mutable_shape()->mutable_dim()->Add() = 1;
+    variable_conf->mutable_shape()->add_dim()->set_int64_value(1);
     variable_conf->set_data_type(DataType::kInt64);
     variable_conf->mutable_initializer()->mutable_constant_int_conf()->set_value(0);
     good_step_counter_var_conf.set_scope_symbol_id(scope_symbol_id);
@@ -93,7 +93,7 @@ Maybe<void> DynamicLossScaleSchedulePass::Apply(Job* job, JobPassCtx* ctx) const
           .Attr<int64_t>("integer_value", 0)
           .Attr<bool>("is_floating_value", false)
           .Attr<DataType>("dtype", DataType::kInt64)
-          .Attr<Shape>("shape", Shape({1}))
+          .Attr<Shape>("shape", Shape{1})
           .ScopeSymbolId(scope_symbol_id)
           .Build();
   const std::string loss_scale_val_lbn = GenLogicalBlobName(

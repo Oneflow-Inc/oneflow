@@ -332,13 +332,15 @@ Maybe<void> Operator::InferLogicalOutBlobDescsIf() {
   for (int32_t i = 0; i < output_bns().size(); ++i) {
     auto& out_blob_desc = output_logical_blob_desc_vec[i];
     // initialize stride by shape if the op does not support non-contiguous
-    if (!JUST(SupportNonContiguous(this))) {
-      out_blob_desc->set_stride(Stride(out_blob_desc->shape()));
+    if (!LazyMode::is_enabled()) {
+      if (!JUST(SupportNonContiguous(this))) {
+        out_blob_desc->set_stride(Stride(out_blob_desc->shape()));
+      }
+      CHECK_EQ_OR_RETURN(out_blob_desc->stride().size(), out_blob_desc->shape().size())
+          << Error::RuntimeError() << "stride and shape size mismatch since stride is "
+          << out_blob_desc->stride().ToString() << " but shape is "
+          << out_blob_desc->shape().ToString();
     }
-    CHECK_EQ_OR_RETURN(out_blob_desc->stride().size(), out_blob_desc->shape().size())
-        << Error::RuntimeError() << "stride and shape size mismatch since stride is "
-        << out_blob_desc->stride().ToString() << " but shape is "
-        << out_blob_desc->shape().ToString();
     (*output_index2logical_blob_desc_)[i] = out_blob_desc;
   }
   return Maybe<void>::Ok();

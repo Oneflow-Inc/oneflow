@@ -243,7 +243,7 @@ bool PythonArg::TypeCheck(ValueType type) const {
     case kDTYPE: return PyDTypeCheck(object_);
     case kLAYOUT: return PyLayoutCheck(object_);
     case kMEMORYFORMAT: return PyMemoryFormatCheck(object_);
-    case kSHAPE: return PyLongSequenceCheck(object_);
+    case kSHAPE: return PyShapeCheck(object_);
     case kGENERATOR:
     case kGENERATOR_REF: return PyGeneratorCheck(object_);
     case kTENSOR_INDEX: return PyTensorIndexCheck(object_);

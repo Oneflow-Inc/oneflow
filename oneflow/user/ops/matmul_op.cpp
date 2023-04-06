@@ -270,7 +270,7 @@ Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx) {
     const int64_t num_batch_dims = num_dims - 2;
     const int64_t num_padding_dims = num_max_batch_dims - num_batch_dims;
     return [num_padding_dims, shape_dim](size_t index) {
-      return index < num_padding_dims ? 1 : shape_dim.At(index - num_padding_dims);
+      return index < num_padding_dims ? Dim(1) : shape_dim.At(index - num_padding_dims);
     };
   };
   auto GetABatchDim = MakeGetBatchDim(num_a_dims, a.shape());
@@ -371,7 +371,7 @@ Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx) {
     const int64_t num_batch_dims = num_dims - 2;
     const int64_t num_padding_dims = num_max_batch_dims - num_batch_dims;
     return [num_padding_dims, shape_dim](size_t index) {
-      return index < num_padding_dims ? 1 : shape_dim.At(index - num_padding_dims);
+      return index < num_padding_dims ? Dim(1) : shape_dim.At(index - num_padding_dims);
     };
   };
   auto GetABatchDim = MakeGetBatchDim(a_num_axes, a_shape);

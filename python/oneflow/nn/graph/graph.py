@@ -59,6 +59,12 @@ from oneflow.nn.optimizer.lr_scheduler import LRScheduler
 from oneflow.optim.optimizer import Optimizer
 
 
+def run_graph_by_vm():
+    return oneflow.support.env_var_util.parse_boolean_from_env(
+        "ONEFLOW_RUN_GRAPH_BY_VM", False
+    )
+
+
 class Graph(object):
     r"""Base class for training or evaluating a neural network in static graph mode.
 
@@ -179,6 +185,9 @@ class Graph(object):
 
         # For run graph with dynamic shape cache
         self._run_with_cache = False
+
+        # For VM-based nn.Graph
+        self._input_shape = {}
 
         # For debug
         self._debug = False
@@ -1297,8 +1306,9 @@ class Graph(object):
                 self._compiled_job_proto = job_pb.Job()
                 self._compiled_job_proto.ParseFromString(compiled_job_str)
 
-                self._c_nn_graph.compile_plan_for_runtime()
-                self._c_nn_graph.init_runtime()
+                if not run_graph_by_vm():
+                    self._c_nn_graph.compile_plan_for_runtime()
+                    self._c_nn_graph.init_runtime()
 
             compile_and_init_end = time.perf_counter()
             self.__print(
@@ -1347,15 +1357,18 @@ class Graph(object):
         with graph_build_util.graph_build_context(self.config.proto, self._session):
             # Deal with inputs
             self.__print(0, 1, self._shallow_repr() + " start building graph inputs.")
+
+            def build_graph_input_arg(op_name, arg):
+                shape = self._input_shape.get(arg, None)
+                return graph_build_util.build_graph_input_arg(op_name, arg, shape)
+
             (
                 input_op_names,
                 lazy_args,
                 lazy_kwargs,
                 self._args_repr,
                 _,
-            ) = self.__build_io(
-                "input", graph_build_util.build_graph_input_arg, *args, **kwargs
-            )
+            ) = self.__build_io("input", build_graph_input_arg, *args, **kwargs)
             self.__print(0, 1, self._shallow_repr() + " end building graph inputs.")
 
             # Deal with module in self.build(*args)
@@ -1492,7 +1505,7 @@ class Graph(object):
         # Always pack outputs to remain type of outputs
         return (
             self._full_job_proto,
-            seq_to_func_return(self._eager_outputs_buffer[0], True),
+            self._eager_outputs[0],
         )
 
     def __prepare_for_share_or_runtime_save(
@@ -1527,7 +1540,7 @@ class Graph(object):
             assert lbn in compiled_graph_proto.helper.lbn2logical_blob_desc
             blob_conf = compiled_graph_proto.helper.lbn2logical_blob_desc[lbn]
 
-            shape = tuple(blob_conf.shape.dim)
+            shape = tuple(map(lambda x: x.int64_value, blob_conf.shape.dim))
             dtype = fake_eager_out.dtype
 
             with oneflow._oneflow_internal.lazy_mode.guard(False):
@@ -1563,6 +1576,10 @@ class Graph(object):
         self._outputs_tensor_tuple = convert_to_synced_tensor_tuple(
             self.__flatten_io("output", *self._eager_outputs)
         )
+        # _eager_outputs_buffer and _outputs_tensor_tuple_buffer are not
+        # used if nn.Graph is run by VM
+        if run_graph_by_vm():
+            return
         self._eager_outputs_buffer = [
             self._eager_outputs,
         ]
@@ -1610,9 +1627,8 @@ class Graph(object):
             flattened_eager_args = self.__ensure_input_tensors_contiguous_and_flatten(
                 *args, **kwargs
             )
-            if oneflow.support.env_var_util.parse_boolean_from_env(
-                "ONEFLOW_RUN_GRAPH_BY_VM", False
-            ):
+
+            if run_graph_by_vm():
                 eager_outputs = oneflow._oneflow_internal.nn.graph.RunLazyNNGraphByVM(
                     convert_to_tensor_tuple(flattened_eager_args), self._c_nn_graph,
                 )

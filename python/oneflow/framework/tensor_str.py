@@ -337,7 +337,7 @@ def _gen_tensor_str_template(tensor, is_meta):
         suffixes.append("is_lazy='True'")
 
     # tensor is empty, meta or normal
-    if tensor.numel() == 0:
+    if tensor.shape.all_dims_known() and tensor.numel() == 0:
         # Explicitly print the shape if it is not (0,), to match NumPy behavior
         if tensor.dim() != 1:
             suffixes.append("size=" + str(tuple(tensor.shape)))

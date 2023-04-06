@@ -32,7 +32,7 @@ void Get3DOutputShape(const DimVector& in, const std::vector<int32_t>& pool_size
   out->clear();
   out->resize(3);
   FOR_RANGE(size_t, i, 0, 3) {
-    int64_t* out_ptr = &(*out).at(i);
+    int64_t* out_ptr = out->at(i).int64_ptr();
     GetWindowedOutputShape(in.at(i), pool_size.at(i), strides.at(i), padding.at(i), out_ptr);
   }
 }

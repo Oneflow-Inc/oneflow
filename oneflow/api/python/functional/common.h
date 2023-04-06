@@ -22,8 +22,7 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 
 #include "oneflow/api/python/framework/tensor.h"
-#include "oneflow/api/python/caster/maybe.h"
-#include "oneflow/api/python/caster/optional.h"
+#include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/throw.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/preprocessor.h"
@@ -166,7 +165,13 @@ Symbol<MemoryFormat> PyUnpackMemoryFormat(PyObject* obj);
 bool PyDTypeSequenceCheck(PyObject* obj);
 std::vector<Symbol<DType>> PyUnpackDTypeSequence(PyObject* obj);
 
+// Dim
+bool PyDimCheck(PyObject* obj);
+Dim PyUnpackDim(PyObject* obj);
+
 // Shape
+bool PyShapeItemCheck(PyObject* obj);
+Dim PyUnpackShapeItem(PyObject* obj);
 bool PyShapeCheck(PyObject* obj);
 Shape PyUnpackShape(PyObject* obj);
 

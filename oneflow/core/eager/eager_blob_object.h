@@ -132,7 +132,7 @@ class EagerBlobObject final : public user_op::Tensor,
 
   const char* header_ptr() const { return reinterpret_cast<const char*>(shape().dim_vec().data()); }
   char* mut_header_ptr() {
-    return reinterpret_cast<char*>(const_cast<int64_t*>(shape().dim_vec().data()));
+    return reinterpret_cast<char*>(const_cast<int64_t*>(shape().int64_ptr()));
   }
 
   void set_input_of_view_op(std::shared_ptr<EagerBlobObject> input) {

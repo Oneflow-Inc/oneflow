@@ -19,6 +19,10 @@ limitations under the License.
 
 namespace oneflow {
 
+const int64_t& ShapeView::At(int64_t index) const {
+  return *ArrayRef<Dim>::operator[](index).int64_ptr();
+}
+
 void ShapeView::ToDimVector(DimVector* dim_vec) const {
   dim_vec->resize(this->size());
   dim_vec->assign(this->data(), this->data() + this->size());
@@ -35,10 +39,24 @@ std::ostream& operator<<(std::ostream& out, ShapeView shape) {
   return out;
 }
 
+const Dim& MutShapeView::DimAt(int64_t index) const {
+  return MutableArrayRef<Dim>::operator[](index);
+}
+
+Dim& MutShapeView::DimAt(int64_t index) { return MutableArrayRef<Dim>::operator[](index); }
+
+const int64_t& MutShapeView::At(int64_t index) const {
+  return *MutableArrayRef<Dim>::operator[](index).int64_ptr();
+}
+
+int64_t& MutShapeView::At(int64_t index) {
+  return *MutableArrayRef<Dim>::operator[](index).int64_ptr();
+}
+
 void MutShapeView::set_shape(ShapeView shape) {
-  if (shape.ptr() == mut_ptr() && shape.NumAxes() == NumAxes()) { return; }
+  if (shape.ptr() == data() && shape.NumAxes() == NumAxes()) { return; }
   CHECK_EQ(NumAxes(), shape.NumAxes());
-  std::copy(shape.ptr(), shape.ptr() + shape.NumAxes(), mut_ptr());
+  std::copy(shape.ptr(), shape.ptr() + shape.NumAxes(), data());
 }
 
 }  // namespace oneflow

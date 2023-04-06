@@ -219,7 +219,11 @@ LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op
 
   auto writeAttrToShape = [](mlir::Attribute& attr, ::oneflow::ShapeProto* shape) {
     for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
-      shape->add_dim(v.dyn_cast<IntegerAttr>().getSInt());
+      if (auto integer = v.dyn_cast<IntegerAttr>().getSInt(); ShapedType::isDynamic(integer)) {
+        shape->add_dim()->mutable_unknown();
+      } else {
+        shape->add_dim()->set_int64_value(integer);
+      }
     }
   };
 
@@ -418,7 +422,11 @@ LogicalResult ConvertUserOpInputs(llvm::StringRef op_type_name, ValueRange opera
 ::oneflow::ShapeProto getAttrAsShape(mlir::Attribute& attr) {
   ::oneflow::ShapeProto shape{};
   for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
-    shape.add_dim(v.dyn_cast<IntegerAttr>().getSInt());
+    if (auto integer = v.dyn_cast<IntegerAttr>().getSInt(); ShapedType::isDynamic(integer)) {
+      shape.add_dim()->mutable_unknown();
+    } else {
+      shape.add_dim()->set_int64_value(integer);
+    }
   }
   return shape;
 }
@@ -448,7 +456,8 @@ LogicalResult ConvertUserOpInputs(llvm::StringRef op_type_name, ValueRange opera
   if (auto hierarchy = attributes.get(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr())
                            .dyn_cast_or_null<ArrayAttr>()) {
     for (auto dim : hierarchy.getValue()) {
-      parallel_conf.mutable_hierarchy()->add_dim(dim.template dyn_cast<IntegerAttr>().getInt());
+      parallel_conf.mutable_hierarchy()->add_dim()->set_int64_value(
+          dim.template dyn_cast<IntegerAttr>().getInt());
     }
   }
   return parallel_conf;

@@ -127,7 +127,7 @@ Maybe<void> InferReduceGlobalStageTensorDescFn(user_op::InferContext* ctx) {
     if (keepdims) {
       output_shape = Shape::Ones(input_shape.NumAxes());
     } else {
-      output_shape = Shape({1});
+      output_shape = Shape{1};
     }
   } else {
     const AxisVector axis_vec = {axis.begin(), axis.end()};

@@ -223,7 +223,7 @@ def scope_to_proto(scope):
     return text_format.Parse(scope._proto_str, scope_pb2_util.ScopeProto())
 
 
-def build_graph_input_arg(op_name, arg):
+def build_graph_input_arg(op_name, arg, shape=None):
     assert isinstance(arg, Tensor)
     input_conf = oneflow.core.operator.op_conf_pb2.FeedInputOpConf()
     input_conf.in_0 = "in_0"  # Set the default value, otherwise the parsing fails
@@ -233,7 +233,7 @@ def build_graph_input_arg(op_name, arg):
     input_op = oneflow._oneflow_internal.one.FeedInputOpExpr(
         op_name, input_conf_str, ["in_0"], ["out_0"]
     )
-    lazy_arg = _C.dispatch_feed_input(input_op, arg)
+    lazy_arg = _C.dispatch_feed_input(input_op, arg, shape)
     return lazy_arg
 
 

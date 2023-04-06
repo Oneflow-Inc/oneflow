@@ -31,6 +31,7 @@ oneflow._oneflow_internal.InitPythonPathsToBeKeptAndFilteredForDebugging(
 )
 oneflow._oneflow_internal.InitNumpyCAPI()
 oneflow._oneflow_internal.CheckAndClearRegistryFlag()
+Dim = oneflow._oneflow_internal.Dim
 Size = oneflow._oneflow_internal.Size
 device = oneflow._oneflow_internal.device
 placement = oneflow._oneflow_internal.placement

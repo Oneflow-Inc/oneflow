@@ -38,8 +38,6 @@ namespace oneflow {
   UNPOOL_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(half, DataType::kFloat16)
 // OF_PP_MAKE_TUPLE_SEQ(nv_bfloat16, DataType::kBFloat16)
 
-typedef small_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedDimVector;
-
 class MaxUnpoolParams3D {
  public:
   MaxUnpoolParams3D(const int32_t dim, const ShapeView& x_shape,
@@ -62,8 +60,8 @@ class MaxUnpoolParams3D {
 
  private:
   int32_t dim_;
-  FixedDimVector x_3d_;
-  FixedDimVector y_3d_;
+  DimVector x_3d_;
+  DimVector y_3d_;
   std::vector<int32_t> padding_;
   std::vector<int32_t> pool_size_3d_;
   std::vector<int32_t> stride_3d_;

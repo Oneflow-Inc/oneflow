@@ -65,8 +65,6 @@ struct XPUAdd {
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
   OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
 
-typedef small_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedDimVector;
-
 class AvgPoolParams3D {
  public:
   AvgPoolParams3D(const int32_t dim, const ShapeView& x_shape, const std::string& data_format,
@@ -92,8 +90,8 @@ class AvgPoolParams3D {
 
  private:
   int32_t dim_;
-  FixedDimVector x_3d_;
-  FixedDimVector y_3d_;
+  DimVector x_3d_;
+  DimVector y_3d_;
   std::string data_format_;
   std::vector<int32_t> padding_;
   std::vector<int32_t> pool_size_3d_;

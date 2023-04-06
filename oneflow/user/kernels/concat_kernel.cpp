@@ -72,14 +72,14 @@ class ConcatKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
       const int64_t in_cols = in_tensor->shape_view().Count(axis);
       CHECK_EQ(in_tensor->shape_view().elem_cnt(), rows * in_cols);
       if (in_cols > 0) {
-        DimVector dst_shape = {rows, out_cols};
-        DimVector dst_pos_vec = {0, out_col_offset};
-        DimVector src_shape = {rows, in_cols};
-        DimVector src_pos_vec = {0, 0};
-        DimVector extent_vec = {rows, in_cols};
+        Shape dst_shape = {rows, out_cols};
+        std::array<int64_t, 2> dst_pos_arr = {0, out_col_offset};
+        Shape src_shape = {rows, in_cols};
+        std::array<int64_t, 2> src_pos_arr = {0, 0};
+        std::array<int64_t, 2> extent_arr = {rows, in_cols};
         primitive->Launch(ctx->stream(), out_tensor->data_type(), 2, out_tensor->mut_dptr(),
-                          dst_shape.data(), dst_pos_vec.data(), in_tensor->dptr(), src_shape.data(),
-                          src_pos_vec.data(), extent_vec.data());
+                          dst_shape.data(), dst_pos_arr.data(), in_tensor->dptr(), src_shape.data(),
+                          src_pos_arr.data(), extent_arr.data());
       }
       out_col_offset += in_cols;
     }

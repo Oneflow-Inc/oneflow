@@ -34,5 +34,71 @@ TEST(Shape, function_test_1) {
   ASSERT_EQ(shape.elem_cnt(), 2543386624);
 }
 
+TEST(Shape, single_scalar_initializer_list) {
+  Shape shape1({4});
+  ASSERT_EQ(shape1.is_initialized(), true);
+  ASSERT_EQ(shape1.NumAxes(), 1);
+  ASSERT_EQ(shape1.elem_cnt(), 4);
+  ASSERT_EQ(shape1[0], 4);
+
+  Shape shape2{4};
+  ASSERT_EQ(shape1, shape2);
+  ASSERT_EQ(shape2.is_initialized(), true);
+  ASSERT_EQ(shape2.NumAxes(), 1);
+  ASSERT_EQ(shape2.elem_cnt(), 4);
+  ASSERT_EQ(shape2[0], 4);
+}
+
+TEST(Dim, operators) {
+  Dim dim(4);
+  ASSERT_EQ(dim.is_known(), true);
+  ASSERT_EQ(dim, 4);
+  ASSERT_EQ(dim, Dim(4));
+  ASSERT_GT(dim, 3);
+  ASSERT_GT(dim, Dim(3));
+  ASSERT_LT(dim, 5);
+  ASSERT_LT(dim, Dim(5));
+  ASSERT_GE(dim, 4);
+  ASSERT_GE(dim, Dim(4));
+  ASSERT_LE(dim, 4);
+  ASSERT_LE(dim, Dim(4));
+  ASSERT_EQ(dim + 1, 5);
+  ASSERT_EQ(dim + Dim(1), 5);
+  ASSERT_EQ(dim - 1, 3);
+  ASSERT_EQ(dim - Dim(1), 3);
+  ASSERT_EQ(dim * 2, 8);
+  ASSERT_EQ(dim * Dim(2), 8);
+  ASSERT_EQ(dim / 2, 2);
+  ASSERT_EQ(dim / Dim(2), 2);
+  ASSERT_EQ(dim % 3, 1);
+  ASSERT_EQ(dim % Dim(3), 1);
+  ASSERT_EQ(dim / 3, 1);
+  ASSERT_EQ(dim / Dim(3), 1);
+
+  dim = Dim::Unknown();
+  ASSERT_EQ(dim.is_known(), false);
+  ASSERT_EQ(dim, Dim::Unknown());
+  ASSERT_NE(dim, 4);
+  ASSERT_NE(dim, Dim(4));
+  ASSERT_FALSE(dim > 3);
+  ASSERT_FALSE(dim > Dim(3));
+  ASSERT_FALSE(dim < 3);
+  ASSERT_FALSE(dim < Dim(3));
+  ASSERT_FALSE(dim >= 3);
+  ASSERT_FALSE(dim >= Dim(3));
+  ASSERT_FALSE(dim <= 3);
+  ASSERT_FALSE(dim <= Dim(3));
+  ASSERT_EQ(dim + 1, Dim::Unknown());
+  ASSERT_EQ(dim + Dim(1), Dim::Unknown());
+  ASSERT_EQ(dim - 1, Dim::Unknown());
+  ASSERT_EQ(dim - Dim(1), Dim::Unknown());
+  ASSERT_EQ(dim * 2, Dim::Unknown());
+  ASSERT_EQ(dim * Dim(2), Dim::Unknown());
+  ASSERT_EQ(dim / 2, Dim::Unknown());
+  ASSERT_EQ(dim / Dim(2), Dim::Unknown());
+  ASSERT_EQ(dim % 3, Dim::Unknown());
+  ASSERT_EQ(dim % Dim(3), Dim::Unknown());
+}
+
 }  // namespace test
 }  // namespace oneflow

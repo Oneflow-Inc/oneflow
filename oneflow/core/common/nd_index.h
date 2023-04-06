@@ -25,20 +25,20 @@ class NdIndex final {
  public:
   NdIndex() = default;
   explicit NdIndex(const DimVector& dim_vec);
-  NdIndex(const std::initializer_list<int64_t>& dim_vec);
+  NdIndex(const std::initializer_list<int64_t>& vec);
   ~NdIndex() = default;
   NdIndex& operator=(const NdIndex& other);
 
   bool operator==(const NdIndex& rhs) const;
   bool operator!=(const NdIndex& rhs) const { return !(*this == rhs); }
 
-  const DimVector& dim_vec() const { return dim_vec_; }
+  const small_vector<int64_t, 20>& vector() const { return vec_; }
 
-  int64_t At(int64_t index) const { return dim_vec_.at(index); }
-  int64_t NumAxes() const { return dim_vec_.size(); }
+  int64_t At(int64_t index) const { return vec_.at(index); }
+  int64_t NumAxes() const { return vec_.size(); }
 
  private:
-  DimVector dim_vec_;
+  small_vector<int64_t, 20> vec_;
 };
 
 }  // namespace oneflow

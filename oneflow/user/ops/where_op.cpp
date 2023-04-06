@@ -31,9 +31,9 @@ Maybe<Shape> GetBroadcastShape(const Shape& cond_shape, const Shape& x_shape,
     size_t cond_lpad = ndim - cond_shape.size();
     size_t x_lpad = ndim - x_shape.size();
     size_t y_lpad = ndim - y_shape.size();
-    int64_t cond_dim = (i < cond_lpad) ? 1 : cond_shape[i - cond_lpad];
-    int64_t x_dim = (i < x_lpad) ? 1 : x_shape[i - x_lpad];
-    int64_t y_dim = (i < y_lpad) ? 1 : y_shape[i - y_lpad];
+    int64_t cond_dim = (i < cond_lpad) ? 1 : cond_shape[i - cond_lpad].val();
+    int64_t x_dim = (i < x_lpad) ? 1 : x_shape[i - x_lpad].val();
+    int64_t y_dim = (i < y_lpad) ? 1 : y_shape[i - y_lpad].val();
     int64_t max_dim = std::max(x_dim, y_dim);
     max_dim = std::max(max_dim, cond_dim);
     broadcast_dim_vec[i] = max_dim;
@@ -88,7 +88,7 @@ Maybe<Shape> GetBroadcastShape(const Shape& cond_shape, const Shape& x_shape,
 
   auto CheckArgCanSplit = [&](std::string&& arg_name, const int dim, const Shape& shape) {
     size_t ddiff = ndim - shape.size();
-    int dim_size = (dim >= ddiff) ? shape[dim - ddiff] : 1;
+    int dim_size = (dim >= ddiff) ? shape[dim - ddiff].val() : 1;
     if (dim_size == 1) {
       broadcast_args.emplace_back(std::forward<decltype(arg_name)>(arg_name), 0);
     } else {

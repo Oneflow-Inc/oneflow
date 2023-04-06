@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/dim.h"
 
 namespace oneflow {
 
@@ -38,20 +39,29 @@ class ShapeProto;
  * There are two widely used shape-related classes: Shape and ShapeView.
  * The differences are:
  * 1. Shape owns the data, and ShapeView does not.
- * 2. ShapeView is very lightweight, whose size is only 16 bytes (two int64_t).
+ * 2. ShapeView is usually used in kernels while Shape is usually used in operators,
+ *    so ShapeView::operator[] and ShapeView::At return int64_t while Shape::operator[]
+ *    and Shape::At return Dim.
+ *    ```c++
+ *    Shape shape({1, 2, 3});
+ *    ShapeView shape_view(shape);
+ *    auto x = shape[0]; // x is Dim(1)
+ *    auto y = shape_view[0]; // y is 1
+ *    ```
+ * 3. ShapeView is very lightweight, whose size is only 16 bytes (two int64_t).
  *    So it should be passed by value.
  *
  * When adding new functions accepting a shape as a parameter, please follow
- * the rules:
+ * these rules:
  * 1. If your function doesn't modify the shape, prefer
- *    ShapeView. Shape can be implicitly converted to ShapeView so the method
- *    with ShapeView parameter can accept both Shape and ShapeView actually.
+ *    ShapeView. Shape can be implicitly converted to ShapeView so a function
+ *    with a ShapeView argument can accept both Shape and ShapeView actually.
  * 2. If your function modify the shape but doesn't affect
  *    its rank, prefer MutShapeView. The reason is the same with rule 1.
  * 3. Use Shape otherwise.
  *
  * When adding new member methods of Shape or ShapeView, please follow
- * the rules:
+ * these rules:
  * 1. If the method is shared between Shape and ShapeView (like `NumAxes()`)
  *    please add it to ConstShapeMixIn.
  * 2. If the method is shared between Shape and MutShapeView (like `Set()`)
@@ -63,9 +73,9 @@ template<class T>
 struct ConstShapeMixIn {
   using DimType = int64_t;
 
+  const Dim& DimAt(int64_t index) const;
   int64_t NumAxes() const { return tp()->size(); }
   int64_t elem_cnt() const;
-  int64_t At(int64_t index) const;
   int64_t Count(int64_t begin_axis, int64_t end_axis) const;
   int64_t Count(int64_t begin_axis) const;
   bool Containing(ShapeView small_shape) const;
@@ -83,6 +93,17 @@ struct ConstShapeMixIn {
 
   bool operator==(const T& rhs) const;
 
+  // NOTE(daquexian): ptr() returns int64_t* instead of Dim* for better
+  // compatibility with old code. It is recommended to use int64_ptr()
+  // whenever possible.
+  const int64_t* ptr() const { return int64_ptr(); }
+
+  const int64_t* int64_ptr() const { return tp()->data(); }
+
+  const Dim* dim_ptr() const { return &(this->tp()->DimAt(0)); }
+
+  bool all_dims_known() const;
+
  protected:
   // tp means "this pointer"
   T* tp() { return static_cast<T*>(this); }
@@ -91,20 +112,41 @@ struct ConstShapeMixIn {
 
 template<class T>
 struct MutShapeMixIn : public ConstShapeMixIn<T> {
-  void Set(int64_t index, int64_t val) {
+  void Set(int64_t index, Dim val) {
     CHECK_GE(index, 0);
     CHECK_LT(index, this->tp()->NumAxes())
         << " Shape: " << this->tp()->DebugStr() << " visit index: " << index
         << " > num_axes: " << this->tp()->NumAxes();
     (*this->tp())[index] = val;
   }
+
+  using ConstShapeMixIn<T>::DimAt;
+  using ConstShapeMixIn<T>::ptr;
+  using ConstShapeMixIn<T>::int64_ptr;
+  using ConstShapeMixIn<T>::dim_ptr;
+
+  Dim& DimAt(int64_t index);
+  // NOTE(daquexian): ptr returns int64_t* instead of Dim* for better
+  // compatibility with old code. It is not recommended to use it.
+  int64_t* ptr() { return int64_ptr(); }
+
+  int64_t* int64_ptr() { return this->tp()->data(); }
+
+  Dim* dim_ptr() { return &(this->tp()->DimAt(0)); }
 };
 
 class Shape final : public DimVector, public MutShapeMixIn<Shape> {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(Shape);
+  using Base = DimVector;
   using DimVector::DimVector;
   Shape() : is_initialized_(false) {}
+  // Shape::Shape(std::initializer_list<int64_t>) is added to fix compile errors in clang and nvcc,
+  // and template<typename=void> avoids ambiguous overload error.
+  template<typename = void>
+  Shape(std::initializer_list<int64_t> dim_vec)
+      : DimVector(dim_vec.begin(), dim_vec.end()), is_initialized_(true) {}
+  explicit Shape(const std::vector<int64_t>& dim_vec);
   explicit Shape(const DimVector& dim_vec);
   explicit Shape(DimVector&& dim_vec);
   explicit Shape(const ShapeProto& shape_proto);
@@ -128,6 +170,22 @@ class Shape final : public DimVector, public MutShapeMixIn<Shape> {
   OVERRIDE_ADD_DATA_FUNC(resize)
 
 #undef OVERRIDE_ADD_DATA_FUNC
+
+  Dim At(int64_t index) const;
+  // NOTE(daquexian): data() returns int64_t* instead of Dim* for better
+  // compatibility with old code. It is recommended to use int64_ptr()
+  // whenever possible.
+  const int64_t* data() const {
+    CHECK(all_dims_known());
+    return reinterpret_cast<const int64_t*>(DimVector::data());
+  }
+  // NOTE(daquexian): data() returns int64_t* instead of Dim* for better
+  // compatibility with old code. It is recommended to use int64_ptr()
+  // whenever possible.
+  int64_t* data() {
+    CHECK(all_dims_known());
+    return reinterpret_cast<int64_t*>(DimVector::data());
+  }
 
   Shape& CheckNumAxesIdenticalAndAssign(ShapeView shape_view);
   Shape& LeftOnesExtendedAssign(ShapeView shape_view);

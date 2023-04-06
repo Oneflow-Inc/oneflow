@@ -32,6 +32,7 @@ class NdSbp;
 namespace one {
 
 struct OpExprInterpContext {
+  OpExprInterpContext(const std::shared_ptr<Shape>& shape) : shape(shape) {}
   OpExprInterpContext(const AttrMap& attrs_arg) : attrs(attrs_arg) {}
   OpExprInterpContext(const AttrMap& attrs_arg, Symbol<Device> device_arg)
       : attrs(attrs_arg), device(device_arg) {}
@@ -53,6 +54,7 @@ struct OpExprInterpContext {
   Optional<Symbol<Device>> device;               // for local op
   Optional<Symbol<ParallelDesc>> parallel_desc;  // for global op
   Optional<Symbol<NdSbp>> nd_sbp;                // for global op
+  Optional<Shape> shape;                         // for input dynamic shape
   std::shared_ptr<user_op::OpKernelState> state;
 };
 

@@ -163,8 +163,11 @@ llvm::Optional<mlir::oneflow::DataTypeAttr> GetDataTypeAttr(MLIRContext* context
 }
 
 ArrayAttr Importer::GetAttrFromShape(const ::oneflow::ShapeProto& shape) {
-  return GetBuilder().getArrayAttr(llvm::to_vector<8>(llvm::map_range(
-      shape.dim(), [this](int64_t v) -> Attribute { return getSI64IntegerAttr(v); })));
+  return GetBuilder().getArrayAttr(llvm::to_vector<8>(
+      llvm::map_range(shape.dim(), [this](const ::oneflow::DimProto& v) -> Attribute {
+        ::oneflow::Dim dim(v);
+        return getSI64IntegerAttr(dim.val_or(ShapedType::kDynamicSize));
+      })));
 }
 
 ArrayAttr Importer::GetAttrFromStride(const ::oneflow::Int64ListProto& stride) {

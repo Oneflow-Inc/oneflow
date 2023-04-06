@@ -4,7 +4,12 @@ package oneflow;
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 
+// For compatibility with old ShapeProto
+message KnownShapeProto {
+  repeated int64 dim = 1;
+}
+
 message VariableMetaInfo {
-  required ShapeProto shape = 2;
+  required KnownShapeProto shape = 2;
   required DataType data_type = 3;
 }

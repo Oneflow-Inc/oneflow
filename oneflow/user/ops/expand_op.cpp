@@ -29,7 +29,7 @@ Maybe<void> InferExpandOutputStride(const Shape& input_shape, const Stride& inpu
 
   output_stride->resize(expand_shape.size(), 0);
   for (int i = expand_shape.size() - 1; i >= 0; --i) {
-    int64_t dim = i < lpad ? 1 : input_shape[i - lpad];
+    int64_t dim = i < lpad ? 1 : input_shape[i - lpad].val();
     if (dim == expand_shape[i]) {
       if (i >= lpad) {
         output_stride->at(i) = input_stride[i - lpad];

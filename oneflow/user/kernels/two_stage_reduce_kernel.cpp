@@ -176,8 +176,7 @@ class ReduceGlobalStageKernel final : public OpKernel {
         in->shape_view().NumAxes());
     CHECK(bcast_eq);
     bcast_eq->Launch(ctx->stream(), in->shape_view().NumAxes(), in->shape_view().ptr(), in->dptr(),
-                     reduced_shape.NumAxes(), reduced_shape.dim_vec().data(), out->dptr(),
-                     mask->mut_dptr());
+                     reduced_shape.NumAxes(), reduced_shape.ptr(), out->dptr(), mask->mut_dptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

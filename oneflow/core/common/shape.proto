@@ -1,10 +1,16 @@
 syntax = "proto2";
 package oneflow;
 
-// NOTE: shape.proto can be replaced with sequential.proto
-// for compatibility reasons, it will not be modified here.
+message UnknownDimProto {}
+message DimProto {
+  oneof value {
+    int64 int64_value = 1;
+    UnknownDimProto unknown = 2;
+  };
+}
+
 message ShapeProto {
-  repeated int64 dim = 1;
+  repeated DimProto dim = 1;
 }
 
 

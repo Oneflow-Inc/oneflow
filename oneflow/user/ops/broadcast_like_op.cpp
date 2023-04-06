@@ -68,10 +68,10 @@ bool IsAxesLegal(const AxisVector& axis_vec, const Shape& like_shape, const Shap
     in_shape_vec.reserve(in_shape.NumAxes());
     std::vector<int64_t> like_shape_vec;
     like_shape_vec.reserve(reduced_like_shape.NumAxes());
-    for (const int64_t& dim : in_shape.dim_vec()) {
+    for (const auto& dim : in_shape) {
       if (dim != 1) { in_shape_vec.emplace_back(dim); }
     }
-    for (const int64_t& dim : reduced_like_shape.dim_vec()) {
+    for (const auto& dim : reduced_like_shape) {
       if (dim != 1) { like_shape_vec.emplace_back(dim); }
     }
     if (in_shape_vec.size() > like_shape_vec.size()) {

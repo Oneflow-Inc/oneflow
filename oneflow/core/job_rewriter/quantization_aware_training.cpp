@@ -133,7 +133,7 @@ OperatorConf Get1DZeroVariableOpConf(std::string name, const int64_t scope_symbo
   variable_op_conf.set_scope_symbol_id(scope_symbol_id);
   VariableOpConf* variable_conf = variable_op_conf.mutable_variable_conf();
   variable_conf->set_out("out");
-  *variable_conf->mutable_shape()->mutable_dim()->Add() = length;
+  variable_conf->mutable_shape()->add_dim()->set_int64_value(length);
   variable_conf->set_data_type(data_type);
   variable_conf->mutable_initializer()->mutable_constant_conf()->set_value(0);
   (*inserted_ops)[name] = variable_op_conf;

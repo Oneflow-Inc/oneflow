@@ -64,7 +64,7 @@ class SliceBoxingAddKernel final : public SliceBoxingKernel {
 void SliceBoxingKernel::VirtualKernelInit(KernelContext* ctx) {
   const SliceBoxingConf& conf = GetCustomizedBoxingConf();
   if (/*is_0size_tensor=*/std::any_of(conf.out_shape().dim().begin(), conf.out_shape().dim().end(),
-                                      [](int64_t dim) { return dim == 0; })) {
+                                      [](auto dim_proto) { return Dim(dim_proto) == 0; })) {
     return;
   }
   const TensorSliceView out_slice(conf.out_slice());

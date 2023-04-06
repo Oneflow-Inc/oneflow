@@ -106,16 +106,16 @@ void ConcatFeatures(user_op::KernelComputeContext* ctx, int64_t dst_rows, int64_
                     void* dst_ptr) {
   const int64_t feature_input_size = ctx->input_size("features");
   auto primitive = ep::primitive::NewPrimitive<ep::primitive::CopyNdFactory>(DeviceType::kCUDA, 2);
-  DimVector dst_shape = {dst_rows, dst_cols};
+  Shape dst_shape = {dst_rows, dst_cols};
   int64_t out_col_offset = 0;
   for (int64_t i = 0; i < feature_input_size; ++i) {
     const user_op::Tensor* feature = ctx->Tensor4ArgNameAndIndex("features", i);
     const int64_t feature_rows = feature->shape_view().At(0);
     const int64_t feature_cols = feature->shape_view().Count(1);
-    DimVector dst_pos_vec = {0, out_col_offset};
-    DimVector src_shape = {feature_rows, feature_cols};
-    DimVector src_pos_vec = {0, 0};
-    DimVector extent_vec = {feature_rows, feature_cols};
+    std::array<int64_t, 2> dst_pos_vec = {0, out_col_offset};
+    Shape src_shape = {feature_rows, feature_cols};
+    std::array<int64_t, 2> src_pos_vec = {0, 0};
+    std::array<int64_t, 2> extent_vec = {feature_rows, feature_cols};
     primitive->Launch(ctx->stream(), feature->data_type(), 2, dst_ptr, dst_shape.data(),
                       dst_pos_vec.data(), feature->dptr<T>(), src_shape.data(), src_pos_vec.data(),
                       extent_vec.data());
@@ -168,16 +168,16 @@ void ConcatFeaturesGrad(user_op::KernelComputeContext* ctx, const int64_t batch_
                         const int64_t concated_padded_dim, const int64_t vector_size,
                         const T* concated_features_grad) {
   auto primitive = ep::primitive::NewPrimitive<ep::primitive::CopyNdFactory>(DeviceType::kCUDA, 2);
-  DimVector src_shape = {batch_size, concated_padded_dim * vector_size};
+  std::array<int64_t, 2> src_shape = {batch_size, concated_padded_dim * vector_size};
   int64_t in_col_offset = 0;
   for (int64_t i = 0; i < ctx->output_size("features_grad"); ++i) {
     user_op::Tensor* feature_grad = ctx->Tensor4ArgNameAndIndex("features_grad", i);
     const int64_t feature_grad_rows = feature_grad->shape_view().At(0);
     const int64_t feature_grad_cols = feature_grad->shape_view().Count(1);
-    DimVector dst_shape = {feature_grad_rows, feature_grad_cols};
-    DimVector dst_pos_vec = {0, 0};
-    DimVector src_pos_vec = {0, in_col_offset};
-    DimVector extent_vec = {feature_grad_rows, feature_grad_cols};
+    std::array<int64_t, 2> dst_shape = {feature_grad_rows, feature_grad_cols};
+    std::array<int64_t, 2> dst_pos_vec = {0, 0};
+    std::array<int64_t, 2> src_pos_vec = {0, in_col_offset};
+    std::array<int64_t, 2> extent_vec = {feature_grad_rows, feature_grad_cols};
     in_col_offset += feature_grad_cols;
     primitive->Launch(ctx->stream(), feature_grad->data_type(), 2, feature_grad->mut_dptr(),
                       dst_shape.data(), dst_pos_vec.data(), concated_features_grad,

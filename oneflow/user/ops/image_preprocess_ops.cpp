@@ -107,8 +107,8 @@ namespace oneflow {
     H = in_tensor.shape().At(1);
     W = in_tensor.shape().At(2);
   } else {
-    H = std::min(H, in_tensor.shape().At(1));
-    W = std::min(W, in_tensor.shape().At(2));
+    H = std::min<Dim>(H, in_tensor.shape().At(1));
+    W = std::min<Dim>(W, in_tensor.shape().At(2));
   }
   std::string output_layout = ctx->Attr<std::string>("output_layout");
   if (output_layout == "NCHW") {
@@ -157,7 +157,7 @@ namespace oneflow {
 /* static */ Maybe<void> CoinFlipOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   int64_t batch_size = ctx->Attr<int64_t>("batch_size");
-  out_tensor->set_shape(Shape({batch_size}));
+  out_tensor->set_shape(Shape{batch_size});
   return Maybe<void>::Ok();
 }
 
@@ -165,7 +165,7 @@ namespace oneflow {
   const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
   const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
   int64_t batch_size = ctx->Attr<int64_t>("batch_size");
-  const Shape logical_shape = Shape({batch_size});
+  const Shape logical_shape = Shape{batch_size};
   const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
 
   const auto tensor_slice_view =

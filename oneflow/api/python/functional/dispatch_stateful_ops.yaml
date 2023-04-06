@@ -21,7 +21,7 @@
 # }
 
 - name: "dispatch_feed_input"
-  signature: "Tensor (OpExpr op, Tensor input) => DispatchFeedInput"
+  signature: "Tensor (OpExpr op, Tensor input, Shape shape=None) => DispatchFeedInput"
   bind_python: True
 
 - name: "dispatch_feed_variable"

@@ -18,9 +18,8 @@ limitations under the License.
 
 namespace oneflow {
 
-void GetWindowedOutputShape(int64_t input_size, int32_t filter_size, int32_t stride,
-                            int32_t padding, bool ceil_mode, int32_t dilation_rate,
-                            int64_t* output_ptr) {
+void GetWindowedOutputShape(Dim input_size, int32_t filter_size, int32_t stride, int32_t padding,
+                            bool ceil_mode, int32_t dilation_rate, Dim* output_ptr) {
   int64_t output_size = (input_size + 2 * padding - dilation_rate * (filter_size - 1) - 1 + stride
                          + (ceil_mode ? stride - 1 : 0))
                         / stride;
@@ -39,7 +38,7 @@ void Get3DOutputShape(const DimVector& in, const std::vector<int32_t>& pool_size
   out->clear();
   out->resize(3);
   FOR_RANGE(size_t, i, 0, 3) {
-    int64_t* out_ptr = &(*out).at(i);
+    Dim* out_ptr = &out->at(i);
     GetWindowedOutputShape(in.at(i), pool_size.at(i), strides.at(i), padding.at(i), ceil_mode,
                            dilation_rate.at(i), out_ptr);
   }

@@ -207,10 +207,10 @@ class IntraGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
         std::vector<std::vector<TaskNode*>> ctrl_tasks;
         ParallelConf in_parallel_conf;
         in_parallel_conf.set_device_tag(in_parallel_desc.device_tag());
-        in_parallel_conf.mutable_hierarchy()->add_dim(group_size);
+        in_parallel_conf.mutable_hierarchy()->add_dim()->set_int64_value(group_size);
         ParallelConf out_parallel_conf;
         out_parallel_conf.set_device_tag(out_parallel_desc.device_tag());
-        out_parallel_conf.mutable_hierarchy()->add_dim(group_size);
+        out_parallel_conf.mutable_hierarchy()->add_dim()->set_int64_value(group_size);
         FOR_RANGE(int64_t, j, 0, group_size) {
           const int64_t parallel_id = i * group_size + j;
           in_tasks.emplace_back(sorted_in_tasks.at(parallel_id));
@@ -287,10 +287,10 @@ class InterGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
         std::vector<std::vector<TaskNode*>> ctrl_tasks;
         ParallelConf in_parallel_conf;
         in_parallel_conf.set_device_tag(in_parallel_desc.device_tag());
-        in_parallel_conf.mutable_hierarchy()->add_dim(num_groups);
+        in_parallel_conf.mutable_hierarchy()->add_dim()->set_int64_value(num_groups);
         ParallelConf out_parallel_conf;
         out_parallel_conf.set_device_tag(out_parallel_desc.device_tag());
-        out_parallel_conf.mutable_hierarchy()->add_dim(num_groups);
+        out_parallel_conf.mutable_hierarchy()->add_dim()->set_int64_value(num_groups);
         FOR_RANGE(int64_t, j, 0, num_groups) {
           const int64_t parallel_id = j * group_size + i;
           in_tasks.emplace_back(sorted_in_tasks.at(parallel_id));

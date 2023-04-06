@@ -57,7 +57,7 @@ Maybe<void> Expand::Capture(ExpandCaptureState* ctx, const TensorTuple& inputs,
   if (ctx->keep_dims) {
     for (size_t i = 0; i < expand_shape.size(); ++i) {
       const auto& t_dim = expand_shape[i];
-      const auto& dim = i < ctx->lpad ? 1 : in_shape[i - ctx->lpad];
+      const auto& dim = i < ctx->lpad ? 1 : in_shape[i - ctx->lpad].val();
       if (dim != t_dim) { ctx->reduce_dims.push_back(i); }
     }
   } else {

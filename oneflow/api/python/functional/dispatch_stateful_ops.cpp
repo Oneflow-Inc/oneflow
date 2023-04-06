@@ -32,13 +32,16 @@ namespace functional {
 namespace impl {
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
-  m.add_functor(
-      "DispatchFeedInput",
-      [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input) -> Maybe<Tensor> {
-        const auto& origin_input = JUST(OpInterpUtil::Dispatch<Tensor>(*op, {input}));
-        // Unpack input when do grad acc
-        return GradAccTryInsertUnpackAfterInput(origin_input);
-      });
+  m.add_functor("DispatchFeedInput",
+                [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
+                   const Optional<Shape>& shape) -> Maybe<Tensor> {
+                  const auto& origin_input =
+                      shape.has_value() ? JUST(OpInterpUtil::Dispatch<Tensor>(
+                          *op, {input}, OpExprInterpContext(JUST(shape))))
+                                        : JUST(OpInterpUtil::Dispatch<Tensor>(*op, {input}));
+                  // Unpack input when do grad acc
+                  return GradAccTryInsertUnpackAfterInput(origin_input);
+                });
   m.add_functor(
       "DispatchFetchOutput",
       [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input) -> Maybe<Tensor> {

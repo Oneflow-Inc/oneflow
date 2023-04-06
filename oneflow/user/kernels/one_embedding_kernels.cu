@@ -576,11 +576,11 @@ void CopyValuesToEmbeddings(ep::Stream* stream, int64_t num_unique, const int32_
     cast_primitive->Launch(stream, values, embeddings, cast_elem_count);
   } else if (!need_cast && need_copy_nd) {
     const int32_t ndims = 2;
-    DimVector src_pos_vec(ndims, 0);
-    DimVector dst_pos_vec(ndims, 0);
-    DimVector src_shape = {num_unique, value_size};
-    DimVector dst_shape = {num_unique, embedding_size};
-    DimVector extent_shape = {num_unique, embedding_size};
+    std::array<int64_t, 2> src_pos_vec{0, 0};
+    std::array<int64_t, 2> dst_pos_vec{0, 0};
+    std::array<int64_t, 2> src_shape = {num_unique, value_size};
+    std::array<int64_t, 2> dst_shape = {num_unique, embedding_size};
+    std::array<int64_t, 2> extent_shape = {num_unique, embedding_size};
     std::unique_ptr<ep::primitive::CopyNd> copy_nd_primitive =
         ep::primitive::NewPrimitive<ep::primitive::CopyNdFactory>(DeviceType::kCUDA, ndims);
     CHECK(copy_nd_primitive);

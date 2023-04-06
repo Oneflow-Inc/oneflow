@@ -332,8 +332,12 @@ of::Maybe<void> Graph::GraphImpl::AddOp(of::OperatorConf op_conf) {
   }
   op_conf.set_device_tag(GetDeviceTag(device_));
   if (batch_size_ > 0 && op_conf.has_input_conf()) {
-    op_conf.mutable_input_conf()->mutable_blob_conf()->mutable_shape()->mutable_dim()->Set(
-        0, batch_size_);
+    op_conf.mutable_input_conf()
+        ->mutable_blob_conf()
+        ->mutable_shape()
+        ->mutable_dim()
+        ->Add()
+        ->set_int64_value(batch_size_);
   }
   auto* ctx = JUST(of::GetCurInferCtx());
   JUST(ctx->AddAndInferGlobalOp(op_conf));
@@ -379,7 +383,7 @@ of::Maybe<void> Graph::GraphImpl::BuildGraph() {
           const std::string input_lbi_str = op_conf.output_conf().in();
           const of::LogicalBlobId input_lbi = of::GenLogicalBlobId(input_lbi_str);
           int64_t batch_size = node->LogicalBlobDesc4Lbi(input_lbi).shape().At(0);
-          blob_conf.mutable_shape()->set_dim(0, batch_size);
+          blob_conf.mutable_shape()->mutable_dim()->Add()->set_int64_value(batch_size);
         }
         output_name_to_tensor_[op_conf.name()] = JUST(of::one::functional::Empty(
             of::Shape(blob_conf.shape()),

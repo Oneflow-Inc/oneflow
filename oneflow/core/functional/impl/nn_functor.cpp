@@ -1573,7 +1573,8 @@ class KLDivLossFunctor : public LossFunctorBase {
     if (reduction == "batchmean" && input->ndim() != 0) {
       const auto& result = JUST(
           apply_reduction(OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs), "sum"));
-      return ScalarDiv(result, input->shape()->At(0));
+      // FIXME: support dynamic shape
+      return ScalarDiv(result, input->shape()->At(0).val());
     } else {
       return apply_reduction(OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs),
                              reduction);
@@ -2335,7 +2336,7 @@ class CombinedMarginLossFunctor {
                            const std::shared_ptr<one::Tensor>& label, const float& m1,
                            const float& m2, const float& m3) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("m1", "m2", "m3", "depth");
-    attrs.SetAllAttrs(m1, m2, m3, x->shape()->At(1));
+    attrs.SetAllAttrs(m1, m2, m3, x->shape()->At(1).val());
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, label}, attrs);
   }
 
@@ -3093,12 +3094,12 @@ Maybe<Tensor> MakeFeatureNoise(const std::shared_ptr<one::Tensor>& x) {
   const int64_t ndim = x->ndim();
   CHECK_GE_OR_RETURN(ndim, 2) << Error::RuntimeError()
                               << "Feature dropout requires at least 2 dimensions in the input";
-  std::vector<int64_t> sizes;
+  Shape sizes;
   sizes.reserve(ndim);
   sizes.push_back(x->shape()->At(0));
   sizes.push_back(x->shape()->At(1));
   for (int i = 2; i < ndim; i++) { sizes.push_back(1); }
-  return JUST(Empty(Shape(sizes), x->dtype(), JUST(x->device()),
+  return JUST(Empty(sizes, x->dtype(), JUST(x->device()),
                     /*requires_grad=*/x->requires_grad(),
                     /*pin_memory=*/false));
 }
@@ -3375,8 +3376,8 @@ class CosineSimilarityFunctor {
         int64_t offset = max_shape.NumAxes() - 1 - i;
         int64_t dim_x = x_shape.NumAxes() - 1 - offset;
         int64_t dim_y = y_shape.NumAxes() - 1 - offset;
-        int64_t size_x = (dim_x >= 0) ? x_shape.At(dim_x) : 1;
-        int64_t size_y = (dim_y >= 0) ? y_shape.At(dim_y) : 1;
+        int64_t size_x = (dim_x >= 0) ? x_shape.At(dim_x) : Dim(1);
+        int64_t size_y = (dim_y >= 0) ? y_shape.At(dim_y) : Dim(1);
         if (!(size_x == size_y || size_x == 1 || size_y == 1)) {
           return Error::RuntimeError()
                  << "The size of tensor a (" << size_x << ") must match the size of tensor b ("
@@ -4201,7 +4202,7 @@ class OneEmbeddingEmbeddingShuffleFunctor {
                            const std::string& embedding_name) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("embedding_size", "embedding_name");
     const int64_t num_axes = cur_rank_embeddings->shape()->NumAxes();
-    attrs.SetAllAttrs(cur_rank_embeddings->shape()->At(num_axes - 1), embedding_name);
+    attrs.SetAllAttrs(cur_rank_embeddings->shape()->At(num_axes - 1).val(), embedding_name);
     return OpInterpUtil::Dispatch<Tensor>(
         *op_,
         {cur_rank_embeddings, num_unique_matrix, cur_rank_inverse_indices,
@@ -4232,7 +4233,7 @@ class OneEmbeddingEmbeddingGradientShuffleFunctor {
                            const std::string& embedding_name) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("embedding_size", "embedding_name");
     const int64_t num_axes = embedding_grad->shape()->NumAxes();
-    attrs.SetAllAttrs(embedding_grad->shape()->At(num_axes - 1), embedding_name);
+    attrs.SetAllAttrs(embedding_grad->shape()->At(num_axes - 1).val(), embedding_name);
     return OpInterpUtil::Dispatch<Tensor>(
         *op_,
         {embedding_grad, num_unique_matrix, cur_rank_inverse_indices,

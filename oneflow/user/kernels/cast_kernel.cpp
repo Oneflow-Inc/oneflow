@@ -58,10 +58,10 @@ class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {
     if (ndim == 0 && elem_cnt == 1) {
       // 0-dim tensor
       // TODO: remove these when BroadcastElementwiseUnary primitive support 0-dim(scalar) tensor
-      Shape input_shape(DimVector{1});
-      Shape output_shape(DimVector{1});
-      Stride input_stride(DimVector{1});
-      Stride output_stride(DimVector{1});
+      std::array<int64_t, 1> input_shape({1});
+      std::array<int64_t, 1> output_shape({1});
+      std::array<int64_t, 1> input_stride({1});
+      std::array<int64_t, 1> output_stride({1});
       const size_t scalar_ndim = 1;
       broadcast_primitive->Launch(ctx->stream(), scalar_ndim, input_shape.data(),
                                   input_stride.data(), input->dptr(), scalar_ndim,

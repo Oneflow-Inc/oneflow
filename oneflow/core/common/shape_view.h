@@ -25,19 +25,36 @@ namespace oneflow {
 class ShapeProto;
 class Shape;
 
-class ShapeView : public ArrayRef<int64_t>, public ConstShapeMixIn<ShapeView> {
+class ShapeView : public ArrayRef<Dim>, public ConstShapeMixIn<ShapeView> {
  public:
   ShapeView() = default;
   // NOLINTNEXTLINE
-  ShapeView(const ShapeProto& shape_proto)
-      : ArrayRef<int64_t>(shape_proto.dim().data(), shape_proto.dim_size()){};
-  // NOLINTNEXTLINE
-  ShapeView(const Shape& shape)
-      : ArrayRef<int64_t>(shape.dim_vec().data(), shape.dim_vec().size()){};
+  ShapeView(const Shape& shape) : ArrayRef<Dim>(shape.dim_vec().data(), shape.dim_vec().size()){};
+  ShapeView(const int64_t* start, size_t size)
+      : ArrayRef<Dim>(reinterpret_cast<const Dim*>(start), size) {}
 
-  using ArrayRef<DimType>::ArrayRef;
+  using Base = ArrayRef<Dim>;
+  using ArrayRef<Dim>::ArrayRef;
 
-  const DimType* ptr() const { return this->data(); }
+  // NOTE(daquexian): At(int64_t index) returns int64_t instead of Dim for better
+  // compatibility with old code. Please use DimAt(int64_t index) if the element
+  // may not be an integer.
+  const int64_t& At(int64_t index) const;
+  // NOTE(daquexian): operator[](int64_t index) returns int64_t instead of Dim for better
+  // compatibility with old code. Please use DimAt(int64_t index) if the element
+  // may not be an integer.
+  const int64_t& operator[](int64_t index) const { return At(index); }
+  // NOTE(daquexian): data() returns int64_t* instead of Dim* for better
+  // compatibility with old code. It is recommended to use int64_ptr()
+  // whenever possible.
+  const int64_t* data() const {
+    CHECK(all_dims_known());
+    return reinterpret_cast<const int64_t*>(ArrayRef::data());
+  }
+  // NOTE(daquexian): ptr() returns int64_t* instead of Dim* for better
+  // compatibility with old code. It is recommended to use int64_ptr()
+  // whenever possible.
+  const int64_t* ptr() const { return data(); }
 
   void ToDimVector(DimVector* dim_vec) const;
   void ToShape(Shape* shape) const;
@@ -45,14 +62,48 @@ class ShapeView : public ArrayRef<int64_t>, public ConstShapeMixIn<ShapeView> {
 
 std::ostream& operator<<(std::ostream& out, ShapeView shape);
 
-class MutShapeView final : public MutableArrayRef<int64_t>, public MutShapeMixIn<MutShapeView> {
+class MutShapeView final : public MutableArrayRef<Dim>, public MutShapeMixIn<MutShapeView> {
  public:
-  using MutableArrayRef<DimType>::MutableArrayRef;
+  using Base = MutableArrayRef<Dim>;
+  using MutableArrayRef<Dim>::MutableArrayRef;
   // NOLINTNEXTLINE
   MutShapeView(Shape& shape)
-      : MutableArrayRef<int64_t>(shape.dim_vec().data(), shape.dim_vec().size()){};
+      : MutableArrayRef<Dim>(shape.dim_vec().data(), shape.dim_vec().size()){};
+  MutShapeView(int64_t* start, size_t size)
+      : MutableArrayRef<Dim>(reinterpret_cast<Dim*>(start), size) {}
 
-  int64_t* mut_ptr() const { return this->data(); }
+  const Dim& DimAt(int64_t index) const;
+  Dim& DimAt(int64_t index);
+  // NOTE(daquexian): At(int64_t index) returns int64_t instead of Dim for better
+  // compatibility with old code. Please use DimAt(int64_t index) if the element
+  // may not be an integer.
+  const int64_t& At(int64_t index) const;
+  // NOTE(daquexian): operator[](int64_t index) returns int64_t instead of Dim for better
+  // compatibility with old code. Please use DimAt(int64_t index) if the element
+  // may not be an integer.
+  const int64_t& operator[](int64_t index) const { return At(index); }
+  // NOTE(daquexian): At(int64_t index) returns int64_t instead of Dim for better
+  // compatibility with old code. Please use DimAt(int64_t index) if the element
+  // may not be an integer.
+  int64_t& At(int64_t index);
+  // NOTE(daquexian): operator[](int64_t index) returns int64_t instead of Dim for better
+  // compatibility with old code. Please use DimAt(int64_t index) if the element
+  // may not be an integer.
+  int64_t& operator[](int64_t index) { return At(index); }
+  // NOTE(daquexian): data() returns int64_t* instead of Dim* for better
+  // compatibility with old code. It is recommended to use int64_ptr()
+  // whenever possible.
+  const int64_t* data() const {
+    CHECK(all_dims_known());
+    return reinterpret_cast<const int64_t*>(MutableArrayRef::data());
+  }
+  // NOTE(daquexian): data() returns int64_t* instead of Dim* for better
+  // compatibility with old code. It is recommended to use int64_ptr()
+  // whenever possible.
+  int64_t* data() {
+    for (Dim dim : *this) { CHECK(dim.is_known()); }
+    return reinterpret_cast<int64_t*>(MutableArrayRef::data());
+  }
 
   void set_shape(ShapeView shape);
 };

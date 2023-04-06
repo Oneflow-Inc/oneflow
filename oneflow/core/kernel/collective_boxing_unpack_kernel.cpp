@@ -44,23 +44,23 @@ void CollectiveBoxingUnpackKernel::ForwardDataContent(KernelContext* ctx) const 
                                 || unpack_conf.src_sbp_parallel().has_partial_sum_parallel());
   if (need_transpose) {
     const int64_t src_split_axis = unpack_conf.src_sbp_parallel().split_parallel().axis();
-    DimVector transpose_in_dim_vec = logical_shape.dim_vec();
-    CHECK_EQ(transpose_in_dim_vec.at(src_split_axis) % num_ranks, 0);
-    transpose_in_dim_vec[src_split_axis] = transpose_in_dim_vec.at(src_split_axis) / num_ranks;
+    Shape transpose_in_shape = logical_shape;
+    CHECK_EQ(transpose_in_shape.at(src_split_axis) % num_ranks, 0);
+    transpose_in_shape[src_split_axis] = transpose_in_shape.at(src_split_axis) / num_ranks;
     if (unpack_conf.dst_sbp_parallel().has_split_parallel()) {
       const int64_t dst_split_axis = unpack_conf.dst_sbp_parallel().split_parallel().axis();
-      CHECK_EQ(transpose_in_dim_vec.at(dst_split_axis) % num_ranks, 0);
-      transpose_in_dim_vec[dst_split_axis] = transpose_in_dim_vec.at(dst_split_axis) / num_ranks;
+      CHECK_EQ(transpose_in_shape.at(dst_split_axis) % num_ranks, 0);
+      transpose_in_shape[dst_split_axis] = transpose_in_shape.at(dst_split_axis) / num_ranks;
     }
-    transpose_in_dim_vec.insert(transpose_in_dim_vec.begin(), num_ranks);
+    transpose_in_shape.insert(transpose_in_shape.begin(), num_ranks);
     std::vector<int32_t> perm;
-    FOR_RANGE(int64_t, i, 1, transpose_in_dim_vec.size()) { perm.emplace_back(i); }
+    FOR_RANGE(int64_t, i, 1, transpose_in_shape.size()) { perm.emplace_back(i); }
     perm.insert(perm.begin() + src_split_axis, 0);
     auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
-        ctx->stream()->device_type(), transpose_in_dim_vec.size());
+        ctx->stream()->device_type(), transpose_in_shape.size());
     CHECK(transpose);
-    transpose->Launch(ctx->stream(), in->data_type(), transpose_in_dim_vec.size(),
-                      transpose_in_dim_vec.data(), in->dptr(), perm.data(), out->mut_dptr());
+    transpose->Launch(ctx->stream(), in->data_type(), transpose_in_shape.size(),
+                      transpose_in_shape.int64_ptr(), in->dptr(), perm.data(), out->mut_dptr());
   } else {
     AutoMemcpy(ctx->stream(), out, in);
   }

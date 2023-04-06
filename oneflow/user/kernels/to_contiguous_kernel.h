@@ -40,6 +40,8 @@ class ToContiguousUtilParam {
   char* out_dptr;
 };
 
+using Int64Vector = std::vector<int64_t>;
+
 class ToContiguousUtilBase : public ToContiguousUtilParam {
  public:
   ToContiguousUtilBase(ep::Stream* stream, const ShapeView& in_shape,
@@ -67,7 +69,7 @@ class ToContiguousUtilBase : public ToContiguousUtilParam {
   int64_t block_size = 1;
   int64_t contiguous_dim = 0;
 
-  DimVector out_stride;
+  Int64Vector out_stride;
 
   int64_t in_offset = 0;
   int64_t out_offset = 0;

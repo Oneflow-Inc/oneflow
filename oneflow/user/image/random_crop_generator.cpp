@@ -79,7 +79,7 @@ void RandomCropGenerator::GenerateCropWindow(const Shape& shape, CropWindow* cro
         crop_window->shape = Shape({H, W});
       }
       float scale =
-          std::min(1.0f, max_area / (crop_window->shape.At(0) * crop_window->shape.At(1)));
+          std::min<float>(1.0f, max_area / (crop_window->shape.At(0) * crop_window->shape.At(1)));
       crop_window->shape.Set(0, std::max<int64_t>(1, crop_window->shape.At(0) * std::sqrt(scale)));
       crop_window->shape.Set(1, std::max<int64_t>(1, crop_window->shape.At(1) * std::sqrt(scale)));
     }

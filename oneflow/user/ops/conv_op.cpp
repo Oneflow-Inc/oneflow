@@ -42,13 +42,13 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(NDims, padding_before.size());
 
     user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
-    DimVector out_shape(NDims + 2);
+    Shape out_shape(NDims + 2);
     out_shape.at(0) = in.shape().At(0);
     const size_t c_dim = data_format == "channels_first" ? 1 : NDims + 1;
     out_shape.at(c_dim) = filters;
     for (int32_t i = 0; i < NDims; ++i) {
       JUST(CalcConvOut(in.shape().At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
-                       strides.at(i), padding_before.at(i), &out_shape.at(idx_offset + i)));
+                       strides.at(i), padding_before.at(i), &out_shape.DimAt(idx_offset + i)));
     }
     out->set_is_dynamic(in.is_dynamic());
     out->set_shape(Shape(out_shape));
@@ -82,7 +82,7 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
   bool has_bias = ctx->has_input("bias", 0);
   if (has_bias) {
     const user_op::TensorDesc& bias = ctx->InputTensorDesc("bias", 0);
-    CHECK_EQ_OR_RETURN(bias.shape(), Shape({filters}));
+    CHECK_EQ_OR_RETURN(bias.shape(), Shape{filters});
   }
 
   return Maybe<void>::Ok();
