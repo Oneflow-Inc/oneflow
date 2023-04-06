@@ -7,6 +7,7 @@ from oneflow.nn.functional import softmax
 from oneflow.nn.functional import dropout
 
 
+# ref https://github.com/pytorch/pytorch/blob/v1.10.1/torch/nn/functional.py#L4809
 def _scaled_dot_product_attention(
     q: Tensor,
     k: Tensor,
@@ -52,7 +53,7 @@ def _scaled_dot_product_attention(
     output = flow.bmm(attn, v)
     return output, attn
 
-
+# ref https://github.com/pytorch/pytorch/blob/v1.10.1/aten/src/ATen/native/Linear.cpp#L19
 def linear(input: Tensor, weight: Tensor, bias: Optional[Tensor] = None) -> Tensor:
     r"""
     Applies a linear transformation to the incoming data: :math:`y = xA^T + b`.
@@ -83,7 +84,7 @@ def linear(input: Tensor, weight: Tensor, bias: Optional[Tensor] = None) -> Tens
 # multihead attention
 #
 
-
+# ref https://github.com/pytorch/pytorch/blob/v1.10.1/torch/nn/functional.py#L4700
 def _in_projection_packed(
     q: Tensor, k: Tensor, v: Tensor, w: Tensor, b: Optional[Tensor] = None,
 ) -> List[Tensor]:
@@ -135,7 +136,7 @@ def _in_projection_packed(
             b_q, b_k, b_v = b.chunk(3)
         return linear(q, w_q, b_q), linear(k, w_k, b_k), linear(v, w_v, b_v)
 
-
+# ref https://github.com/pytorch/pytorch/blob/v1.10.1/torch/nn/functional.py#L4855
 def multi_head_attention_forward(
     query: Tensor,
     key: Tensor,
