@@ -771,7 +771,7 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
     if (ctx->user_op_conf().has_input("cos", 0))
       builder = builder.Broadcast(user_op::OpArg("cos", 0)).Broadcast(user_op::OpArg("sin", 0));
     if (ctx->user_op_conf().has_input("position_ids", 0))
-      builder = builder.Split(user_op::OpArg("position_ids", 0), x_b_split_axis);
+      builder = builder.Split(user_op::OpArg("position_ids", 0), 0);
     builder.Build();
   }
   if (x_h_split_axis >= 0 && o_h_split_axis >= 0) {

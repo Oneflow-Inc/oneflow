@@ -1210,8 +1210,6 @@ void LaunchKernel(ep::CudaStream* stream, const T* x, const T* cos, const T* sin
                   const IndexType x_h_stride, const IndexType x_offset,
                   const IndexType out_b_stride, const IndexType out_m_stride,
                   const IndexType out_h_stride, IndexType num_elements) {
-  DimVector kernel_x_shape(num_dims), kernel_sinuous_shape(num_dims);
-
   const IndexType k0 = rotary_size / rotary_emb_dim,
                   k1 = rotary_size;  // TODO: this only support 1d, 2d, rotary postional encoding
 
