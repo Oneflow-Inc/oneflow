@@ -91,6 +91,7 @@ __mlu_global__ void bang_scalar_pow_grad_kernel(int64_t n, const T* x, const T* 
   __nram__ T nram_x[nram_limit];
   __nram__ T nram_dx[nram_limit];
   __nram__ T nram_dy[nram_limit];
+  __nram__ T nram_temp[nram_limit];
 
   int64_t j = 0;
   for (; j < length - nram_limit + 1; j += nram_limit) {
@@ -98,7 +99,22 @@ __mlu_global__ void bang_scalar_pow_grad_kernel(int64_t n, const T* x, const T* 
     __memcpy_async(nram_dy, dy + start + j, nram_limit_bytes, GDRAM2NRAM);
     __sync_copy_dram_to_nram();
 
-    bang_pow_scalar(nram_dx, nram_x, exponent, nram_limit);
+    if (exponent == 0) {
+      __bang_ne_scalar(nram_temp, nram_x, static_cast<T>(0.0), nram_limit);
+      __bang_write_value(nram_dx, nram_limit, static_cast<T>(1.0));
+      __bang_mul(nram_dx, nram_dx, nram_temp, nram_limit);
+    } else if (exponent == 1.0) {
+      __bang_mul_scalar(nram_dx, nram_x, exponent, nram_limit);
+    } else if (exponent == 2.0) {
+      __bang_mul(nram_dx, nram_x, nram_x, nram_limit);
+    } else if (exponent == -1.0) {
+      __bang_active_recip(nram_dx, nram_x, nram_limit);
+    } else if (exponent == -2.0) {
+      __bang_active_recip(nram_dx, nram_x, nram_limit);
+      __bang_mul(nram_dx, nram_dx, nram_dx, nram_limit);
+    } else {
+      bang_pow_scalar(nram_dx, nram_x, exponent, nram_limit);
+    }
 
     __bang_mul(nram_dx, nram_dx, nram_dy, nram_limit);
     __bang_mul_scalar(nram_dx, nram_dx, value, nram_limit);
@@ -113,7 +129,22 @@ __mlu_global__ void bang_scalar_pow_grad_kernel(int64_t n, const T* x, const T* 
     __memcpy_async(nram_dy, dy + start + j, nram_rest_bytes, GDRAM2NRAM);
     __sync_copy_dram_to_nram();
 
-    bang_pow_scalar(nram_dx, nram_x, exponent, nram_rest);
+    if (exponent == 0) {
+      __bang_ne_scalar(nram_temp, nram_x, static_cast<T>(0.0), nram_rest);
+      __bang_write_value(nram_dx, nram_rest, static_cast<T>(1.0));
+      __bang_mul(nram_dx, nram_dx, nram_temp, nram_rest);
+    } else if (exponent == 1.0) {
+      __bang_mul_scalar(nram_dx, nram_x, exponent, nram_rest);
+    } else if (exponent == 2.0) {
+      __bang_mul(nram_dx, nram_x, nram_x, nram_rest);
+    } else if (exponent == -1.0) {
+      __bang_active_recip(nram_dx, nram_x, nram_rest);
+    } else if (exponent == -2.0) {
+      __bang_active_recip(nram_dx, nram_x, nram_rest);
+      __bang_mul(nram_dx, nram_dx, nram_dx, nram_rest);
+    } else {
+      bang_pow_scalar(nram_dx, nram_x, exponent, nram_rest);
+    }
 
     __bang_mul(nram_dx, nram_dx, nram_dy, nram_rest);
     __bang_mul_scalar(nram_dx, nram_dx, value, nram_rest);
