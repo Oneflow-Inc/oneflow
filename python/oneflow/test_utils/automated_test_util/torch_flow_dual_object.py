@@ -1138,6 +1138,7 @@ def check_tensor_equality(
             flow_tensor.grad is not None
         ), f"OneFlow tensor doesn't have grad while PyTorch tensor has one, PyTorch tensor is\n {torch_tensor}\n, OneFlow tensor is\n{flow_tensor} "
         torch_grad = torch_tensor.grad.detach().cpu().numpy()
+        # torch_grad = torch_tensor.grad.detach().cpu().numpy() if not torch_original.is_conj(torch_tensor.grad) else torch_original.resolve_conj(torch_tensor.grad.detach()).cpu().numpy()
         flow_grad = flow_tensor.grad.numpy()
         if not np.allclose(
             torch_grad, flow_grad, rtol=rtol, atol=atol, equal_nan=True,
@@ -1150,7 +1151,10 @@ def check_tensor_equality(
                 f"Grads are not equal. PyTorch grad: \n{torch_grad}\n, OneFlow grad: \n{flow_grad}"
             )
             return False
-    torch_numpy = torch_tensor.detach().cpu().numpy()
+    # error: module 'oneflow' has no attribute 'resolve_conj' and 'is_conj'
+    torch_numpy = torch_tensor.detach().cpu().numpy() if not torch_original.is_conj(torch_tensor) else torch_original.resolve_conj(torch_tensor.detach()).cpu().numpy()
+    # torch_numpy = torch_original.resolve_conj(torch_tensor.detach().cpu()).numpy()
+    # torch_numpy = torch_tensor.detach().cpu().numpy()
     oneflow_numpy = flow_tensor.numpy()
     equality_res = np.allclose(
         torch_numpy, oneflow_numpy, rtol=rtol, atol=atol, equal_nan=True,

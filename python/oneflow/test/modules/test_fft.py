@@ -1,433 +1,711 @@
-"""
-Copyright 2020 The OneFlow Authors. All rights reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
-"""
-Copyright 2023 The OneFlow Authors. All rights reserved.
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
+from numpy import random
+import torch
 import unittest
 from collections import OrderedDict
 
 import numpy as np
-import torch
-
-# import oneflow.unittest
-# from oneflow.test_utils.automated_test_util import *
-from oneflow.test_utils.test_util import GenArgList
+import re
 
 import oneflow as flow
+from oneflow.test_utils.test_util import GenArgList
+
+from oneflow.test_utils.automated_test_util import *
 
 
-def tensor_builder(params: dict, dtype=np.complex64):
-    input_shape = params["shape"]
 
-    # generate random input
-    if dtype in [np.complex64, np.complex128]:
-        x = np.random.randn(*input_shape) + 1.0j * np.random.randn(*input_shape)
-        x = x.astype(dtype)
+def is_cufft_available():
+    if flow.cuda.is_available():
+        (major, _minor) = flow.cuda.get_device_capability()
+        return major >= 7
     else:
-        x = np.random.randn(*input_shape).astype(dtype)
+        return False
 
-    # requires grad
-    x_torch = torch.from_numpy(x).requires_grad_(True)
-    x_flow = flow.tensor(x_torch.detach().cpu().numpy()).requires_grad_(True)
-    # x_flow = flow.from_numpy(x).requires_grad_(False)
-    # x_torch = torch.from_numpy(x).requires_grad_(False)
+def is_complex_dtype(dtype):
+    if dtype in [flow.complex64, flow.complex128, torch.complex64, torch.complex128]:
+        return True
+    return False
 
-    return x_flow, x_torch
-
-
-def compare_result(test_case, a, b, rtol=1e-5, atol=1e-8):
-    test_case.assertTrue(
-        np.allclose(a.numpy(), b.numpy(), rtol=rtol, atol=atol),
-        f"\na\n{a.numpy()}\n{'-' * 80}\nb:\n{b.numpy()}\n{'*' * 80}\ndiff:\n{a.numpy() - b.numpy()}",
-    )
-
-
-def _test_fft(test_case, dtype=np.complex64, params: dict = None):
-    print(f"========== Start Testing ==========")
-    print(f"tensor shape: {params['shape']}")
-    print(f"dtype: {dtype}")
-
-    x_flow, x_torch = tensor_builder(params=params, dtype=dtype)
-    n = params["n"]
-    dim = params["dim"]
-    norm = params["norm"]
-    print(f"fft n: {n}")
-    print(f"fft dim: {dim}")
-    print(f"fft norm: {norm}")
-    print(f"x_flow.dtype: {x_flow.dtype}")
-    print("x_torch.dtype: ", x_torch.dtype)
-
-    # forward
-    y_torch = torch.fft.fft(x_torch, n=n, dim=dim, norm=norm)
-    y_torch_sum = y_torch.sum()
-
-    # backward
-    y_torch_sum.backward()
-
-    # copy back to cpu memory
-    x_torch_grad = x_torch.grad.detach().cpu()
-    y_torch = y_torch.detach().cpu()
-
-    # forward
-    y_flow = flow._C.fft(x_flow, n=n, dim=dim, norm=norm)
-    y_flow_sum = y_flow.sum()
-
-    # backward
-    y_flow_sum.backward()
-
-    # copy back to cpu memory
-    x_flow_grad = x_flow.grad.detach().cpu()
-    y_flow = y_flow.detach().cpu()
-    if torch.is_conj(y_torch):
-        y_torch = torch.resolve_conj(y_torch)
-    if torch.is_conj(x_torch_grad):
-        x_torch_grad = torch.resolve_conj(x_torch_grad)
-
-    compare_result(test_case, y_flow, y_torch, 1e-5, 1e-5)
-    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-5)
-
-    print(f"============== PASSED =============")
-    print("\n")
-
-
-def _test_ifft(test_case, dtype=np.complex64, params: dict = None):
-    print(f"========== Start Testing ==========")
-    print(f"tensor shape: {params['shape']}")
-    print(f"dtype: {dtype}")
-
-    x_flow, x_torch = tensor_builder(params=params, dtype=dtype)
-    n = params["n"]
-    dim = params["dim"]
-    norm = params["norm"]
-    print(f"fft n: {n}")
-    print(f"fft dim: {dim}")
-    print(f"fft norm: {norm}")
-    print(f"x_flow.dtype: {x_flow.dtype}")
-    print("x_torch.dtype: ", x_torch.dtype)
-
-    # forward
-    y_torch = torch.fft.ifft(x_torch, n=n, dim=dim, norm=norm)
-    y_torch_sum = y_torch.sum()
-
-    # backward
-    y_torch_sum.backward()
-
-    # copy back to cpu memory
-    x_torch_grad = x_torch.grad.detach().cpu()
-    y_torch = y_torch.detach().cpu()
-
-    # forward
-    y_flow = flow._C.ifft(x_flow, n=n, dim=dim, norm=norm)
-    y_flow_sum = y_flow.sum()
-
-    # backward
-    y_flow_sum.backward()
-
-    # copy back to cpu memory
-    x_flow_grad = x_flow.grad.detach().cpu()
-    y_flow = y_flow.detach().cpu()
-    if torch.is_conj(y_torch):
-        y_torch = torch.resolve_conj(y_torch)
-    if torch.is_conj(x_torch_grad):
-        x_torch_grad = torch.resolve_conj(x_torch_grad)
-
-    compare_result(test_case, y_flow, y_torch, 1e-5, 1e-5)
-    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-5)
-
-    print(f"============== PASSED =============")
-    print("\n")
-
-
-def _test_rfft(test_case, dtype=np.float32, params: dict = None):
-    print(f"========== Start Testing ==========")
-    print(f"tensor shape: {params['shape']}")
-    print(f"dtype: {dtype}")
-
-    x_flow, x_torch = tensor_builder(params=params, dtype=dtype)
-    n = params["n"]
-    dim = params["dim"]
-    norm = params["norm"]
-    print(f"rfft n: {n}")
-    print(f"rfft dim: {dim}")
-    print(f"rfft norm: {norm}")
-    print(f"x_flow.dtype: {x_flow.dtype}")
-    print("x_torch.dtype: ", x_torch.dtype)
-
-    # forward
-    y_torch = torch.fft.rfft(x_torch, n=n, dim=dim, norm=norm)
-    y_torch_sum = y_torch.sum()
-
-    # backward
-    y_torch_sum.backward()
-
-    # copy back to cpu memory
-    x_torch_grad = x_torch.grad.detach().cpu()
-    y_torch = y_torch.detach().cpu()
-
-    # forward
-    y_flow = flow._C.rfft(x_flow, n=n, dim=dim, norm=norm)
-
-    y_flow_sum = y_flow.sum()
-
-    # backward
-    y_flow_sum.backward()
-
-    # copy back to cpu memory
-    x_flow_grad = x_flow.grad.detach().cpu()
-    y_flow = y_flow.detach().cpu()
-    if torch.is_conj(y_torch):
-        y_torch = torch.resolve_conj(y_torch)
-    if torch.is_conj(x_torch_grad):
-        x_torch_grad = torch.resolve_conj(x_torch_grad)
-
-    compare_result(test_case, y_flow, y_torch, 1e-5, 1e-5)
-    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-5)
-
-    print(f"============== PASSED =============")
-    print("\n")
-
-
-def _test_irfft(test_case, dtype=np.float32, params: dict = None):
-    print(f"========== Start Testing ==========")
-    print(f"tensor shape: {params['shape']}")
-    print(f"dtype: {dtype}")
-
-    x_flow, x_torch = tensor_builder(params=params, dtype=dtype)
-    n = params["n"]
-    dim = params["dim"]
-    norm = params["norm"]
-    print(f"irfft n: {n}")
-    print(f"irfft dim: {dim}")
-    print(f"irfft norm: {norm}")
-    print(f"x_flow.dtype: {x_flow.dtype}")
-    print("x_torch.dtype: ", x_torch.dtype)
-
-    # forward
-    y_torch = torch.fft.irfft(x_torch, n=n, dim=dim, norm=norm)
-    y_torch_sum = y_torch.sum()
-
-    # backward
-    y_torch_sum.backward()
-
-    # copy back to cpu memory
-    x_torch_grad = x_torch.grad.detach().cpu()
-    y_torch = y_torch.detach().cpu()
-
-    # forward
-    y_flow = flow._C.irfft(x_flow, n=n, dim=dim, norm=norm)
-    y_flow_sum = y_flow.sum()
-
-    # backward
-    y_flow_sum.backward()
-
-    # copy back to cpu memory
-    x_flow_grad = x_flow.grad.detach().cpu()
-    y_flow = y_flow.detach().cpu()
-    if torch.is_conj(y_torch):
-        y_torch = torch.resolve_conj(y_torch)
-    if torch.is_conj(x_torch_grad):
-        x_torch_grad = torch.resolve_conj(x_torch_grad)
-
-    compare_result(test_case, y_flow, y_torch, 1e-5, 1e-5)
-    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-5)
-
-    print(f"============== PASSED =============")
-    print("\n")
-
-
-def _test_hfft(test_case, dtype=np.complex64, params: dict = None):
-    print(f"========== Start Testing ==========")
-    print(f"tensor shape: {params['shape']}")
-    print(f"dtype: {dtype}")
-
-    x_flow, x_torch = tensor_builder(params=params, dtype=dtype)
-    n = params["n"]
-    dim = params["dim"]
-    norm = params["norm"]
-    print(f"hfft n: {n}")
-    print(f"hfft dim: {dim}")
-    print(f"hfft norm: {norm}")
-    print(f"x_flow.dtype: {x_flow.dtype}")
-    print("x_torch.dtype: ", x_torch.dtype)
-
-    # forward
-    y_torch = torch.fft.hfft(x_torch, n=n, dim=dim, norm=norm)
-    y_torch_sum = y_torch.sum()
-
-    # backward
-    y_torch_sum.backward()
-
-    # copy back to cpu memory
-    x_torch_grad = x_torch.grad.detach().cpu()
-    y_torch = y_torch.detach().cpu()
-
-    # forward
-    y_flow = flow._C.hfft(x_flow, n=n, dim=dim, norm=norm)
-
-    y_flow_sum = y_flow.sum()
-
-    # backward
-    y_flow_sum.backward()
-
-    # copy back to cpu memory
-    x_flow_grad = x_flow.grad.detach().cpu()
-    y_flow = y_flow.detach().cpu()
-    if torch.is_conj(y_torch):
-        y_torch = torch.resolve_conj(y_torch)
-    if torch.is_conj(x_torch_grad):
-        x_torch_grad = torch.resolve_conj(x_torch_grad)
-
-    compare_result(test_case, y_flow, y_torch, 1e-5, 1e-5)
-    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-5)
-
-    print(f"============== PASSED =============")
-    print("\n")
-
-
-def _test_ihfft(test_case, dtype=np.float32, params: dict = None):
-    print(f"========== Start Testing ==========")
-    print(f"tensor shape: {params['shape']}")
-    print(f"dtype: {dtype}")
-
-    x_flow, x_torch = tensor_builder(params=params, dtype=dtype)
-    n = params["n"]
-    dim = params["dim"]
-    norm = params["norm"]
-    print(f"ihfft n: {n}")
-    print(f"ihfft dim: {dim}")
-    print(f"ihfft norm: {norm}")
-    print(f"x_flow.dtype: {x_flow.dtype}")
-    print("x_torch.dtype: ", x_torch.dtype)
-
-    # forward
-    y_torch = torch.fft.ihfft(x_torch, n=n, dim=dim, norm=norm)
-    y_torch_sum = y_torch.sum()
-
-    # backward
-    y_torch_sum.backward()
-
-    # copy back to cpu memory
-    x_torch_grad = x_torch.grad.detach().cpu()
-    y_torch = y_torch.detach().cpu()
-
-    # forward
-    y_flow = flow._C.ihfft(x_flow, n=n, dim=dim, norm=norm)
-
-    y_flow_sum = y_flow.sum()
-
-    # backward
-    y_flow_sum.backward()
-
-    # copy back to cpu memory
-    x_flow_grad = x_flow.grad.detach().cpu()
-    y_flow = y_flow.detach().cpu()
-    if torch.is_conj(y_torch):
-        y_torch = torch.resolve_conj(y_torch)
-    if torch.is_conj(x_torch_grad):
-        x_torch_grad = torch.resolve_conj(x_torch_grad)
-
-    compare_result(test_case, y_flow, y_torch, 1e-5, 1e-5)
-    compare_result(test_case, x_flow_grad, x_torch_grad, 1e-5, 1e-5)
-
-    print(f"============== PASSED =============")
-    print("\n")
-
-
-class TestFft(flow.unittest.TestCase):
+class Test1DFft(flow.unittest.TestCase):
     def setUp(test_case):
         test_case.arg_dict = OrderedDict()
-        test_case.arg_dict["test_fun"] = [_test_fft, _test_ifft]
-        test_case.arg_dict["dtype"] = [
-            np.float32,
-            np.float64,
-            np.complex64,
-            np.complex128,
+        test_case.lower_n_dims = 1
+        test_case.upper_n_dims = 5
+        
+        test_case.dtype_list = [
+            torch.float32,
+            torch.float64,
+            torch.complex64,
+            torch.complex128,
         ]
-        # test_case.arg_dict["dtype"] = [
-        #     np.float32,
-        #     np.float64
-        # ]
+    
+    def gen_params(test_case):
+        num_dims = np.random.randint(test_case.lower_n_dims, test_case.upper_n_dims + 1)
+        shape = [np.random.randint(1, 11) * 2 for _ in range(num_dims)]
 
-    def test_gather(test_case):
-        test_case.arg_dict["params"] = []
-        lower_n_dims = 1
-        upper_n_dims = 5
-        for _ in range(30):
-            num_dims = np.random.randint(lower_n_dims, upper_n_dims)
-            shape = [np.random.randint(1, 11) * 2 for _ in range(num_dims)]
-            if np.random.randint(2) == 1:
-                dim = np.random.randint(low=-num_dims, high=num_dims - 1)
-            else:
-                dim = -1
+        if np.random.randint(2) == 1:
+            dim = np.random.randint(low=-num_dims, high=num_dims - 1)
+        else:
+            dim = -1
 
-            norm = np.random.choice(["backward", "forward", "ortho", None])
+        norm = np.random.choice(["backward", "forward", "ortho", None])
 
-            if np.random.randint(2) == 1:
-                n = None
-            else:
-                n = np.random.randint(low=1, high=shape[dim] * 2)
+        if np.random.randint(2) == 1:
+            n = None
+        else:
+            n = np.random.randint(low=1, high=shape[dim] * 2)
+            
+        params = {
+            "num_dims": num_dims,
+            "shape": shape,
+            "n": n,
+            "dim": dim,
+            "norm": norm
+        }
+        return params
+    
+    @autotest(n=40, auto_backward=True, rtol=1e-5, atol=1e-5, check_graph=False, check_grad_use_random_data=False)
+    def test_fft(test_case):
+        if is_cufft_available():
+            device = random_device()
+        else:
+            device = cpu_device()
 
-            # shape = (12, 4, 10, 2)
-            # n = 17
-            # dim = 2
-            # norm = None
+        params = test_case.gen_params()
+        print(params)
+        num_dims = params["num_dims"]
+        shape = params["shape"]
+        n = params["n"]
+        dim = params["dim"]
+        norm = params["norm"]
+        dtype = test_case.dtype_list[np.random.randint(0,4)]
+        
+        if is_complex_dtype(dtype):
+            x = random_tensor(num_dims, dtype=complex, *shape).to(device=device, dtype=dtype)
+        else:
+            x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
+        print(x.dtype)
+        y = torch.fft.fft(
+            x,
+            n,
+            dim,
+            norm
+        )
+        
+        return y
 
-            test_case.arg_dict["params"].append(
-                {"shape": shape, "n": n, "dim": dim, "norm": norm}
+    @autotest(n=40, auto_backward=True, rtol=1e-5, atol=1e-5, check_graph=False, check_grad_use_random_data=False)
+    def test_ifft(test_case):
+        if is_cufft_available():
+            device = random_device()
+        else:
+            device = cpu_device()
+
+        params = test_case.gen_params()
+        print(params)
+        num_dims = params["num_dims"]
+        shape = params["shape"]
+        n = params["n"]
+        dim = params["dim"]
+        norm = params["norm"]
+        dtype = test_case.dtype_list[np.random.randint(0,4)]
+        
+        if is_complex_dtype(dtype):
+            x = random_tensor(num_dims, dtype=complex, *shape).to(device=device, dtype=dtype)
+        else:
+            x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
+        print(x.dtype)
+        y = torch.fft.ifft(
+            x,
+            n,
+            dim,
+            norm
+        )
+        
+        return y
+
+    @autotest(n=20, auto_backward=True, rtol=1e-5, atol=1e-5, check_graph=False, check_grad_use_random_data=False)
+    def test_rfft(test_case):
+        if is_cufft_available():
+            device = random_device()
+        else:
+            device = cpu_device()
+
+        params = test_case.gen_params()
+        print(params)
+        num_dims = params["num_dims"]
+        shape = params["shape"]
+        n = params["n"]
+        dim = params["dim"]
+        norm = params["norm"]
+        dtype = test_case.dtype_list[np.random.randint(0,2)]
+        
+        if is_complex_dtype(dtype):
+            x = random_tensor(num_dims, dtype=complex, *shape).to(device=device, dtype=dtype)
+        else:
+            x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
+        print(x.dtype)
+        y = torch.fft.rfft(
+            x,
+            n,
+            dim,
+            norm
+        )
+        
+        return y
+
+    @autotest(n=20, auto_backward=True, rtol=1e-5, atol=1e-5, check_graph=False, check_grad_use_random_data=False)
+    def test_irfft(test_case):
+        if is_cufft_available():
+            device = random_device()
+        else:
+            device = cpu_device()
+
+        params = test_case.gen_params()
+        print(params)
+        num_dims = params["num_dims"]
+        shape = params["shape"]
+        n = params["n"]
+        dim = params["dim"]
+        norm = params["norm"]
+        dtype = test_case.dtype_list[np.random.randint(2,4)]
+        
+        if is_complex_dtype(dtype):
+            x = random_tensor(num_dims, dtype=complex, *shape).to(device=device, dtype=dtype)
+        else:
+            x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
+        print(x.dtype)
+        y = torch.fft.irfft(
+            x,
+            n,
+            dim,
+            norm
+        )
+        
+        return y
+
+    @autotest(n=20, auto_backward=True, rtol=1e-5, atol=1e-5, check_graph=False, check_grad_use_random_data=False)
+    def test_hfft(test_case):
+        if is_cufft_available():
+            device = random_device()
+        else:
+            device = cpu_device()
+
+        params = test_case.gen_params()
+        print(params)
+        num_dims = params["num_dims"]
+        shape = params["shape"]
+        n = params["n"]
+        dim = params["dim"]
+        norm = params["norm"]
+        dtype = test_case.dtype_list[np.random.randint(2,4)]
+        
+        if is_complex_dtype(dtype):
+            x = random_tensor(num_dims, dtype=complex, *shape).to(device=device, dtype=dtype)
+        else:
+            x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
+        print(x.dtype)
+        y = torch.fft.hfft(
+            x,
+            n,
+            dim,
+            norm
+        )
+        
+        return y
+
+    @autotest(n=20, auto_backward=True, rtol=1e-5, atol=1e-5, check_graph=False, check_grad_use_random_data=False)
+    def test_ihfft(test_case):
+        if is_cufft_available():
+            device = random_device()
+        else:
+            device = cpu_device()
+
+        params = test_case.gen_params()
+        print(params)
+        num_dims = params["num_dims"]
+        shape = params["shape"]
+        n = params["n"]
+        dim = params["dim"]
+        norm = params["norm"]
+        dtype = test_case.dtype_list[np.random.randint(0,2)]
+        
+        if is_complex_dtype(dtype):
+            x = random_tensor(num_dims, dtype=complex, *shape).to(device=device, dtype=dtype)
+        else:
+            x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
+        print(x.dtype)
+        y = torch.fft.ihfft(
+            x,
+            n,
+            dim,
+            norm
+        )
+        
+        return y
+
+class Test2DFft(flow.unittest.TestCase):
+    def setUp(test_case):
+        test_case.arg_dict = OrderedDict()
+        test_case.lower_n_dims = 2
+        test_case.upper_n_dims = 5
+        
+        test_case.dtype_list = [
+            torch.float32,
+            torch.float64,
+            torch.complex64,
+            torch.complex128,
+        ]
+    
+    def gen_params(test_case):
+        num_dims = np.random.randint(test_case.lower_n_dims, test_case.upper_n_dims)
+        shape = [np.random.randint(1, 11) * 2 for _ in range(num_dims)]
+        len_fft_dim = np.random.randint(low=1, high=num_dims + 1)
+
+        total_dims_range = np.arange(num_dims)
+        if np.random.randint(2) == 1:
+            dims = np.random.choice(
+                total_dims_range, size=len_fft_dim, replace=False
+            ).tolist()
+        else:
+            dims = (-2, -1)
+
+        norm = np.random.choice(["backward", "forward", "ortho", None])
+        len_fft_dim = len(dims)
+        if np.random.randint(2) == 1 and dims is not None:
+            n = []
+            for i in range(len_fft_dim):
+                n_ = (
+                    np.random.randint(low=1, high=2 * shape[i])
+                    if np.random.randint(2) == 1
+                    else -1
+                )
+                n.append(n_)
+        else:
+            n = None
+            
+        params = {
+            "num_dims": num_dims,
+            "shape": shape,
+            "n": n,
+            "dim": dims,
+            "norm": norm
+        }
+        return params
+    
+    @autotest(n=40, auto_backward=True, rtol=1e-5, atol=1e-3, check_graph=False, check_grad_use_random_data=False)
+    def test_fft2(test_case):
+        if is_cufft_available():
+            device = random_device()
+        else:
+            device = cpu_device()
+
+        params = test_case.gen_params()
+        print(params)
+        num_dims = params["num_dims"]
+        shape = params["shape"]
+        n = params["n"]
+        dim = params["dim"]
+        norm = params["norm"]
+        dtype = test_case.dtype_list[np.random.randint(0,4)]
+        
+        if is_complex_dtype(dtype):
+            x = random_tensor(num_dims, dtype=complex, *shape).to(device=device, dtype=dtype)
+        else:
+            x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
+        print(x.dtype)
+        y = torch.fft.fft2(
+            x,
+            n,
+            dim,
+            norm
+        )
+        
+        return y
+
+    @autotest(n=40, auto_backward=True, rtol=1e-5, atol=1e-3, check_graph=False, check_grad_use_random_data=False)
+    def test_ifft2(test_case):
+        if is_cufft_available():
+            device = random_device()
+        else:
+            device = cpu_device()
+
+        params = test_case.gen_params()
+        print(params)
+        num_dims = params["num_dims"]
+        shape = params["shape"]
+        n = params["n"]
+        dim = params["dim"]
+        norm = params["norm"]
+        dtype = test_case.dtype_list[np.random.randint(0,4)]
+        
+        if is_complex_dtype(dtype):
+            x = random_tensor(num_dims, dtype=complex, *shape).to(device=device, dtype=dtype)
+        else:
+            x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
+        print(x.dtype)
+        y = torch.fft.ifft2(
+            x,
+            n,
+            dim,
+            norm
+        )
+        
+        return y
+
+    @autotest(n=20, auto_backward=True, rtol=1e-5, atol=1e-3, check_graph=False, check_grad_use_random_data=False)
+    def test_rfft2(test_case):
+        if is_cufft_available():
+            device = random_device()
+        else:
+            device = cpu_device()
+
+        params = test_case.gen_params()
+        print(params)
+        num_dims = params["num_dims"]
+        shape = params["shape"]
+        n = params["n"]
+        dim = params["dim"]
+        norm = params["norm"]
+        dtype = test_case.dtype_list[np.random.randint(0,2)]
+        
+        if is_complex_dtype(dtype):
+            x = random_tensor(num_dims, dtype=complex, *shape).to(device=device, dtype=dtype)
+        else:
+            x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
+        print(x.dtype)
+        y = torch.fft.rfft2(
+            x,
+            n,
+            dim,
+            norm
+        )
+        
+        return y
+
+    @autotest(n=20, auto_backward=True, rtol=1e-5, atol=1e-3, check_graph=False, check_grad_use_random_data=False)
+    def test_irfft2(test_case):
+        if is_cufft_available():
+            device = random_device()
+        else:
+            device = cpu_device()
+
+        params = test_case.gen_params()
+        print(params)
+        num_dims = params["num_dims"]
+        shape = params["shape"]
+        n = params["n"]
+        dim = params["dim"]
+        norm = params["norm"]
+        dtype = test_case.dtype_list[np.random.randint(2,4)]
+        
+        if is_complex_dtype(dtype):
+            x = random_tensor(num_dims, dtype=complex, *shape).to(device=device, dtype=dtype)
+        else:
+            x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
+        print(x.dtype)
+        y = torch.fft.irfft2(
+            x,
+            n,
+            dim,
+            norm
+        )
+        
+        return y
+
+    @autotest(n=20, auto_backward=True, rtol=1e-5, atol=1e-3, check_graph=False, check_grad_use_random_data=False)
+    def test_hfft2(test_case):
+        if is_cufft_available():
+            device = random_device()
+        else:
+            device = cpu_device()
+
+        params = test_case.gen_params()
+        print(params)
+        num_dims = params["num_dims"]
+        shape = params["shape"]
+        n = params["n"]
+        dim = params["dim"]
+        norm = params["norm"]
+        dtype = test_case.dtype_list[np.random.randint(2,4)]
+        
+        if is_complex_dtype(dtype):
+            x = random_tensor(num_dims, dtype=complex, *shape).to(device=device, dtype=dtype)
+        else:
+            x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
+        print(x.dtype)
+        y = torch.fft.hfft2(
+            x,
+            n,
+            dim,
+            norm
+        )
+        
+        return y
+
+    @autotest(n=20, auto_backward=True, rtol=1e-5, atol=1e-3, check_graph=False, check_grad_use_random_data=False)
+    def test_ihfft2(test_case):
+        if is_cufft_available():
+            device = random_device()
+        else:
+            device = cpu_device()
+
+        params = test_case.gen_params()
+        print(params)
+        num_dims = params["num_dims"]
+        shape = params["shape"]
+        n = params["n"]
+        dim = params["dim"]
+        norm = params["norm"]
+        dtype = test_case.dtype_list[np.random.randint(0,2)]
+        
+        if is_complex_dtype(dtype):
+            x = random_tensor(num_dims, dtype=complex, *shape).to(device=device, dtype=dtype)
+        else:
+            x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
+        print(x.dtype)
+        y = torch.fft.ihfft2(
+            x,
+            n,
+            dim,
+            norm
+        )
+        
+        return y
+
+class TestNDFft(flow.unittest.TestCase):
+    def setUp(test_case):
+        test_case.arg_dict = OrderedDict()
+        test_case.lower_n_dims = 1
+        test_case.upper_n_dims = 5
+        
+        test_case.dtype_list = [
+            torch.float32,
+            torch.float64,
+            torch.complex64,
+            torch.complex128,
+        ]
+    
+    def gen_params(test_case):
+        num_dims = np.random.randint(test_case.lower_n_dims, test_case.upper_n_dims)
+        shape = [np.random.randint(1, 11) * 2 for _ in range(num_dims)]
+        len_fft_dim = np.random.randint(low=1, high=num_dims + 1)
+
+        total_dims_range = np.arange(num_dims)
+        if np.random.randint(2) == 1:
+            # dim = np.random.randint(low=-num_dims, high=num_dims-1)
+            dims = np.random.choice(
+                total_dims_range, size=len_fft_dim, replace=False
+            ).tolist()
+        else:
+            dims = None
+
+        norm = np.random.choice(["backward", "forward", "ortho", None])
+
+        if np.random.randint(2) == 1:
+            n = None
+        else:
+            n = []
+            len_fft_dim = (
+                len(dims)
+                if dims is not None
+                else np.random.randint(low=1, high=num_dims + 1)
             )
-        for arg in GenArgList(test_case.arg_dict):
-            arg[0](test_case, *arg[1:])
+            for i in range(len_fft_dim):
+                n_ = (
+                    np.random.randint(low=1, high=2 * shape[i])
+                    if np.random.randint(2) == 1
+                    else -1
+                )
+                n.append(n_)
+            
+        params = {
+            "num_dims": num_dims,
+            "shape": shape,
+            "n": n,
+            "dim": dims,
+            "norm": norm
+        }
+        return params
+    
+    @autotest(n=40, auto_backward=True, rtol=1e-5, atol=1e-3, check_graph=False, check_grad_use_random_data=False)
+    def test_fftn(test_case):
+        if is_cufft_available():
+            device = random_device()
+        else:
+            device = cpu_device()
 
+        params = test_case.gen_params()
+        print(params)
+        num_dims = params["num_dims"]
+        shape = params["shape"]
+        n = params["n"]
+        dim = params["dim"]
+        norm = params["norm"]
+        dtype = test_case.dtype_list[np.random.randint(0,4)]
+        
+        if is_complex_dtype(dtype):
+            x = random_tensor(num_dims, dtype=complex, *shape).to(device=device, dtype=dtype)
+        else:
+            x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
+        print(x.dtype)
+        y = torch.fft.fftn(
+            x,
+            n,
+            dim,
+            norm
+        )
+        
+        return y
 
-class TestRFft(TestFft):
-    def setUp(test_case):
-        test_case.arg_dict = OrderedDict()
-        test_case.arg_dict["test_fun"] = [_test_rfft]
-        test_case.arg_dict["dtype"] = [np.float32, np.float64]
+    @autotest(n=40, auto_backward=True, rtol=1e-5, atol=1e-3, check_graph=False, check_grad_use_random_data=False)
+    def test_ifftn(test_case):
+        if is_cufft_available():
+            device = random_device()
+        else:
+            device = cpu_device()
 
+        params = test_case.gen_params()
+        print(params)
+        num_dims = params["num_dims"]
+        shape = params["shape"]
+        n = params["n"]
+        dim = params["dim"]
+        norm = params["norm"]
+        dtype = test_case.dtype_list[np.random.randint(0,4)]
+        
+        if is_complex_dtype(dtype):
+            x = random_tensor(num_dims, dtype=complex, *shape).to(device=device, dtype=dtype)
+        else:
+            x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
+        print(x.dtype)
+        y = torch.fft.ifftn(
+            x,
+            n,
+            dim,
+            norm
+        )
+        
+        return y
 
-class TestIRFft(TestFft):
-    def setUp(test_case):
-        test_case.arg_dict = OrderedDict()
-        test_case.arg_dict["test_fun"] = [_test_irfft]
-        test_case.arg_dict["dtype"] = [np.complex64, np.complex128]
+    @autotest(n=20, auto_backward=True, rtol=1e-5, atol=1e-3, check_graph=False, check_grad_use_random_data=False)
+    def test_rfftn(test_case):
+        if is_cufft_available():
+            device = random_device()
+        else:
+            device = cpu_device()
 
+        params = test_case.gen_params()
+        print(params)
+        num_dims = params["num_dims"]
+        shape = params["shape"]
+        n = params["n"]
+        dim = params["dim"]
+        norm = params["norm"]
+        dtype = test_case.dtype_list[np.random.randint(0,2)]
+        
+        if is_complex_dtype(dtype):
+            x = random_tensor(num_dims, dtype=complex, *shape).to(device=device, dtype=dtype)
+        else:
+            x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
+        print(x.dtype)
+        y = torch.fft.rfftn(
+            x,
+            n,
+            dim,
+            norm
+        )
+        
+        return y
 
-class TestHFft(TestFft):
-    def setUp(test_case):
-        test_case.arg_dict = OrderedDict()
-        test_case.arg_dict["test_fun"] = [_test_hfft]
-        test_case.arg_dict["dtype"] = [np.complex64, np.complex128]
+    @autotest(n=20, auto_backward=True, rtol=1e-5, atol=1e-3, check_graph=False, check_grad_use_random_data=False)
+    def test_irfftn(test_case):
+        if is_cufft_available():
+            device = random_device()
+        else:
+            device = cpu_device()
 
+        params = test_case.gen_params()
+        print(params)
+        num_dims = params["num_dims"]
+        shape = params["shape"]
+        n = params["n"]
+        dim = params["dim"]
+        norm = params["norm"]
+        dtype = test_case.dtype_list[np.random.randint(2,4)]
+        
+        if is_complex_dtype(dtype):
+            x = random_tensor(num_dims, dtype=complex, *shape).to(device=device, dtype=dtype)
+        else:
+            x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
+        print(x.dtype)
+        y = torch.fft.irfftn(
+            x,
+            n,
+            dim,
+            norm
+        )
+        
+        return y
 
-class TestIHFft(TestFft):
-    def setUp(test_case):
-        test_case.arg_dict = OrderedDict()
-        test_case.arg_dict["test_fun"] = [_test_ihfft]
-        test_case.arg_dict["dtype"] = [np.float32, np.float64]
+    @autotest(n=20, auto_backward=True, rtol=1e-5, atol=1e-3, check_graph=False, check_grad_use_random_data=False)
+    def test_hfftn(test_case):
+        if is_cufft_available():
+            device = random_device()
+        else:
+            device = cpu_device()
 
+        params = test_case.gen_params()
+        print(params)
+        num_dims = params["num_dims"]
+        shape = params["shape"]
+        n = params["n"]
+        dim = params["dim"]
+        norm = params["norm"]
+        dtype = test_case.dtype_list[np.random.randint(2,4)]
+        
+        if is_complex_dtype(dtype):
+            x = random_tensor(num_dims, dtype=complex, *shape).to(device=device, dtype=dtype)
+        else:
+            x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
+        print(x.dtype)
+        y = torch.fft.hfftn(
+            x,
+            n,
+            dim,
+            norm
+        )
+        
+        return y
+
+    @autotest(n=20, auto_backward=True, rtol=1e-5, atol=1e-3, check_graph=False, check_grad_use_random_data=False)
+    def test_ihfftn(test_case):
+        if is_cufft_available():
+            device = random_device()
+        else:
+            device = cpu_device()
+
+        params = test_case.gen_params()
+        print(params)
+        num_dims = params["num_dims"]
+        shape = params["shape"]
+        n = params["n"]
+        dim = params["dim"]
+        norm = params["norm"]
+        dtype = test_case.dtype_list[np.random.randint(0,2)]
+        
+        if is_complex_dtype(dtype):
+            x = random_tensor(num_dims, dtype=complex, *shape).to(device=device, dtype=dtype)
+        else:
+            x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
+        print(x.dtype)
+        y = torch.fft.ihfftn(
+            x,
+            n,
+            dim,
+            norm
+        )
+        
+        return y
 
 if __name__ == "__main__":
     unittest.main()
