@@ -652,9 +652,8 @@ class FusedApplyRotaryEmbFunctor {
     CHECK_OR_RETURN((mode == "interval") || (mode == "plane"))
         << "mode should be \"intervel\" or \"plane\"";
 
-    ParseDims("x", *x->shape(), x_layout, Optional<int64_t>(),
-                k_size, &b, &m, &h, &k);
-    
+    ParseDims("x", *x->shape(), x_layout, Optional<int64_t>(), k_size, &b, &m, &h, &k);
+
     if (k_size) {
       CHECK_EQ_OR_RETURN(JUST(k_size), k)
           << "k_size if given should be equal to K of cos, sin and x.";
@@ -687,7 +686,8 @@ class FusedApplyRotaryEmbFunctor {
       CHECK_OR_RETURN(JUST(cos)->shape() == JUST(sin)->shape())
           << "Each dimension of cos & sin should be the same.";
       CHECK_EQ_OR_RETURN(JUST(cos)->shape()->At(1), actual_rotary_size)
-        << "The 1st dimension of cos & sin should equal to rotary_size // rotary_embedding_dimension.";
+          << "The 1st dimension of cos & sin should equal to rotary_size // "
+             "rotary_embedding_dimension.";
     } else if (!cos && !sin) {
       // do nothing
     } else {
@@ -696,18 +696,18 @@ class FusedApplyRotaryEmbFunctor {
 
     if (!position_ids) {
       if (cos && sin) {
-        CHECK_GE_OR_RETURN(JUST(cos)->shape()->At(0), m) << "M of cos & sin should be to no less than "
-                                                            "M of x when position_ids is not "
-                                                            "given.";  // K of cos & sin is checked
-                                                                       // inside ParseDims
+        CHECK_GE_OR_RETURN(JUST(cos)->shape()->At(0), m)
+            << "M of cos & sin should be to no less than "
+               "M of x when position_ids is not "
+               "given.";  // K of cos & sin is checked
+                          // inside ParseDims
       }
     }
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("x_layout", "output_layout", "mode",
                                                  "tensor_index", "k_size", "base", "rotary_size");
-    attrs.SetAllAttrs(x_layout, output_layout.value_or(x_layout), mode,
-                      tensor_index.value_or(0), k_size.value_or(k), base,
-                      rotary_size.value_or(k));
+    attrs.SetAllAttrs(x_layout, output_layout.value_or(x_layout), mode, tensor_index.value_or(0),
+                      k_size.value_or(k), base, rotary_size.value_or(k));
 
     if (position_ids) {
       if (cos && sin) {

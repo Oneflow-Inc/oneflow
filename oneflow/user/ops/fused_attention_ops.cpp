@@ -641,17 +641,19 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   const int64_t k_size = ctx->Attr<int64_t>("k_size");
   const int64_t tensor_index = ctx->Attr<int64_t>("tensor_index");
 
-  CHECK_OR_RETURN((tensor_index >= 0) && (tensor_index <= 2)) << "tensor_index should be in range [0, 2].";
-  CHECK_OR_RETURN((mode == "interval") || (mode == "plane")) << "mode should be either \"interval\" or \"plane\".";
+  CHECK_OR_RETURN((tensor_index >= 0) && (tensor_index <= 2))
+      << "tensor_index should be in range [0, 2].";
+  CHECK_OR_RETURN((mode == "interval") || (mode == "plane"))
+      << "mode should be either \"interval\" or \"plane\".";
 
-  CHECK_OR_RETURN(output_layout != "BM(H2K)" && output_layout != "BM(H3K)" 
-    && output_layout != "MB(H2K)" && output_layout != "MB(H3K)") << "output_layout should not be \"BM(H2k)\", \"BM(H3K)\", \"MB(H2K)\", \"MB(H3K)\".";
+  CHECK_OR_RETURN(output_layout != "BM(H2K)" && output_layout != "BM(H3K)"
+                  && output_layout != "MB(H2K)" && output_layout != "MB(H3K)")
+      << "output_layout should not be \"BM(H2k)\", \"BM(H3K)\", \"MB(H2K)\", \"MB(H3K)\".";
 
   int64_t b = 0, m = 0, h = 0, k = 0;
 
   JUST(ParseDims(x_desc.shape(), x_layout, Optional<int64_t>(),
-                   k_size ? Optional<int64_t>(k_size) : Optional<int64_t>(), &b, &m, &h, &k));
-  
+                 k_size ? Optional<int64_t>(k_size) : Optional<int64_t>(), &b, &m, &h, &k));
 
   CHECK_LE_OR_RETURN(rotary_size, k) << "rotary_size should be no more than K of input x.";
 
@@ -685,7 +687,8 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
     CHECK_OR_RETURN(cos_desc.shape() == sin_desc.shape())
         << "The dimensions of cos & sin should be the same.";
     CHECK_EQ_OR_RETURN(cos_desc.shape().At(1), actual_rotary_size)
-        << "The 1st dimension of cos & sin should equal to rotary_size // rotary_embedding_dimension.";
+        << "The 1st dimension of cos & sin should equal to rotary_size // "
+           "rotary_embedding_dimension.";
   } else if (!has_cos && !has_sin) {
     // Do nothing
   } else {
@@ -696,8 +699,8 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
     if (has_cos && has_sin) {
       const user_op::TensorDesc& cos_desc = ctx->InputTensorDesc("cos", 0);
       CHECK_GE_OR_RETURN(cos_desc.shape().At(0), m)
-          << "M of cos should be no less than M of x if position_ids is not given.";  
-          // K of cos & sin is checked inside ParseDims
+          << "M of cos should be no less than M of x if position_ids is not given.";
+      // K of cos & sin is checked inside ParseDims
     }
   }
 
@@ -724,20 +727,20 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   int64_t b = 0, m = 0, h = 0, k = 0;
   if (ctx->user_op_conf().has_input("cos", 0) && ctx->user_op_conf().has_input("sin", 0)) {
     const user_op::TensorDesc& cos = ctx->LogicalTensorDesc4InputArgNameAndIndex("cos", 0);
-    JUST(ParseDims(x.shape(), x_layout, Optional<int64_t>(),
-                   Optional<int64_t>(cos.shape().At(1)), &b, &m, &h, &k));
+    JUST(ParseDims(x.shape(), x_layout, Optional<int64_t>(), Optional<int64_t>(cos.shape().At(1)),
+                   &b, &m, &h, &k));
   } else {
     JUST(ParseDims(x.shape(), x_layout, Optional<int64_t>(),
                    k_size ? Optional<int64_t>(k_size) : Optional<int64_t>(), &b, &m, &h, &k));
   }
-  
+
   bool can_hk_split = (h % ctx->parallel_num()) == 0;
   int64_t x_b_split_axis = -1, x_h_split_axis = -1, out_b_split_axis = -1, out_h_split_axis = -1;
   JUST(ParseSplitAxis(x_layout, can_hk_split, &x_b_split_axis, &x_h_split_axis));
   JUST(ParseSplitAxis(output_layout, can_hk_split, &out_b_split_axis, &out_h_split_axis));
 
   if (x_h_split_axis >= 0 && out_h_split_axis >= 0) {
-      ctx->NewBuilder()
+    ctx->NewBuilder()
         .Split(user_op::OpArg("x", 0), x_h_split_axis)
         .Split(user_op::OpArg("out", 0), out_h_split_axis)
         .Broadcast(user_op::OpArg("sin", 0))
@@ -746,7 +749,8 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
         .Build();
   }
 
-  if (x_b_split_axis >= 0 && out_b_split_axis >= 0 && ctx->user_op_conf().has_input("position_ids", 0)) {
+  if (x_b_split_axis >= 0 && out_b_split_axis >= 0
+      && ctx->user_op_conf().has_input("position_ids", 0)) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("x", 0), x_b_split_axis)
         .Split(user_op::OpArg("out", 0), x_b_split_axis)

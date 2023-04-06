@@ -999,8 +999,8 @@ REGISTER_USER_KERNEL("fused_attention_concat_past_key_value")
     .SetCreateFn<FusedAttentionConcatPastKeyValueKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA));
 
-
-template<typename T, typename PositionType, typename IndexType, size_t num_dims, size_t rotary_emb_dim>
+template<typename T, typename PositionType, typename IndexType, size_t num_dims,
+         size_t rotary_emb_dim>
 struct FusedApplyRotaryEmbParam {
   const T* x;
   const T* cos;
@@ -1008,8 +1008,8 @@ struct FusedApplyRotaryEmbParam {
   const PositionType* position_ids;
   T* out;
   const T theta;
-  const float inv_actual_rotary_size; // 1.0 / (rotary_size per rotary dimension)
-  const IndexType actual_rotary_size; // rotary_size per rotary dimension
+  const float inv_actual_rotary_size;  // 1.0 / (rotary_size per rotary dimension)
+  const IndexType actual_rotary_size;  // rotary_size per rotary dimension
   const IndexType rotary_size;
   const IndexType rotate_stride;
   const IndexType k0;
@@ -1021,15 +1021,16 @@ struct FusedApplyRotaryEmbParam {
   IndexType ref_stride[num_dims];  // b, m, h, k
   IndexType out_stride[num_dims];  // ordered descendingly by stride
   IndexType x_stride[num_dims];
-  
+
   IndexType position_b_stride;
   IndexType position_rotate_stride;
 
   IndexType sinuous_m_stride;
 
   FusedApplyRotaryEmbParam(const T* x, const T* cos, const T* sin, const PositionType* position_ids,
-                           T* out, const T theta, const float inv_actual_rotary_size, const IndexType actual_rotary_size,
-                           const IndexType rotary_size, const IndexType rotate_stride, const IndexType num_elements,
+                           T* out, const T theta, const float inv_actual_rotary_size,
+                           const IndexType actual_rotary_size, const IndexType rotary_size,
+                           const IndexType rotate_stride, const IndexType num_elements,
                            const IndexType k, const IndexType k0, const IndexType k1,
                            const IndexType x_offset)
       : x(x),
@@ -1057,7 +1058,7 @@ __global__ void IntervalKernel(
        packed_offset < param.num_elements; packed_offset += blockDim.x * gridDim.x) {
     using LoadPack = cuda::elementwise::Packed<T, PackSize>;
     IndexType offset = packed_offset * PackSize;
-    IndexType index[num_dims]; // b, m, h, k
+    IndexType index[num_dims];  // b, m, h, k
 
     IndexType temp_offset = offset;
 
@@ -1101,8 +1102,8 @@ __global__ void IntervalKernel(
 #pragma unroll
         for (int i = 0; i < PackSize / 2; i++) {
           T val = position
-                      * expf(2.0f * static_cast<float>(((actual_k_index >> 1) + i))
-                             * param.inv_actual_rotary_size * logf(param.theta));
+                  * expf(2.0f * static_cast<float>(((actual_k_index >> 1) + i))
+                         * param.inv_actual_rotary_size * logf(param.theta));
           T cos_val = cosf(val);
           T sin_val = sinf(val);
           cos_vec.elem[i * 2] = cos_val;
@@ -1127,7 +1128,8 @@ __global__ void IntervalKernel(
   }
 }
 
-template<typename T, typename PositionType, typename IndexType, size_t num_dims, size_t rotary_emb_dim>
+template<typename T, typename PositionType, typename IndexType, size_t num_dims,
+         size_t rotary_emb_dim>
 __global__ void PlaneKernel(
     FusedApplyRotaryEmbParam<T, PositionType, IndexType, num_dims, rotary_emb_dim> param) {
   for (IndexType offset = threadIdx.x + blockIdx.x * blockDim.x; offset < param.num_elements;
@@ -1162,8 +1164,8 @@ __global__ void PlaneKernel(
       sin_val = *(param.sin + sinuous_offset);
     } else {
       T val = position
-                  * expf(2.0f * static_cast<float>(k_index % (param.actual_rotary_size >> 1)) * param.inv_actual_rotary_size
-                         * logf(param.theta));
+              * expf(2.0f * static_cast<float>(k_index % (param.actual_rotary_size >> 1))
+                     * param.inv_actual_rotary_size * logf(param.theta));
       cos_val = cosf(val);
       sin_val = sinf(val);
     }
@@ -1204,9 +1206,10 @@ void LaunchKernel(ep::CudaStream* stream, const T* x, const T* cos, const T* sin
                   const std::string& x_layout, const std::string& output_layout,
                   const std::string& mode, const T theta, const IndexType rotary_size,
                   const IndexType b, const IndexType m, const IndexType h, const IndexType k,
-                  const IndexType x_b_stride, const IndexType x_m_stride, const IndexType x_h_stride,
-                  const IndexType x_offset, const IndexType out_b_stride, const IndexType out_m_stride, const IndexType out_h_stride,
-                  IndexType num_elements) {
+                  const IndexType x_b_stride, const IndexType x_m_stride,
+                  const IndexType x_h_stride, const IndexType x_offset,
+                  const IndexType out_b_stride, const IndexType out_m_stride,
+                  const IndexType out_h_stride, IndexType num_elements) {
   DimVector kernel_x_shape(num_dims), kernel_sinuous_shape(num_dims);
 
   const IndexType k0 = rotary_size / rotary_emb_dim,
@@ -1218,8 +1221,8 @@ void LaunchKernel(ep::CudaStream* stream, const T* x, const T* cos, const T* sin
   const float inv_actual_rotary_size = 1.0 / actual_rotary_size;
 
   struct FusedApplyRotaryEmbParam<T, PositionType, IndexType, num_dims, rotary_emb_dim> param(
-      x, cos, sin, position_ids, out, theta, inv_actual_rotary_size, actual_rotary_size, rotary_size, rotate_stride, num_elements, 
-      k, k0, k1, x_offset);
+      x, cos, sin, position_ids, out, theta, inv_actual_rotary_size, actual_rotary_size,
+      rotary_size, rotate_stride, num_elements, k, k0, k1, x_offset);
 
   const IndexType ref_strides[num_dims] = {m * h * k, h * k, k, 1};
   const IndexType out_strides[num_dims] = {out_b_stride, out_m_stride, out_h_stride, 1};
@@ -1237,7 +1240,7 @@ void LaunchKernel(ep::CudaStream* stream, const T* x, const T* cos, const T* sin
   for (int i = 0; i < num_dims; i++) {
     param.ref_stride[i] = ref_strides[i];
     param.out_stride[i] = out_strides[i];
-    param.x_stride[i] = x_strides[i]; 
+    param.x_stride[i] = x_strides[i];
   }
 
   constexpr size_t blk_size = 128;
@@ -1254,14 +1257,16 @@ void LaunchKernel(ep::CudaStream* stream, const T* x, const T* cos, const T* sin
   }
 }
 
-template<typename T, typename PositionType, typename IndexType, size_t num_dims, size_t rotary_emb_dim>
+template<typename T, typename PositionType, typename IndexType, size_t num_dims,
+         size_t rotary_emb_dim>
 void DispatchPackSize(ep::CudaStream* stream, const T* x, const T* cos, const T* sin,
                       const PositionType* position_ids, T* out, const int64_t* position_shape,
                       const std::string& x_layout, const std::string& output_layout,
                       const std::string& mode, const T theta, const IndexType rotary_size,
                       const IndexType b, const IndexType m, const IndexType h, const IndexType k,
-                      const IndexType x_b_stride, const IndexType x_m_stride, const IndexType x_h_stride,
-                      const IndexType x_offset, const IndexType out_b_stride, const IndexType out_m_stride, 
+                      const IndexType x_b_stride, const IndexType x_m_stride,
+                      const IndexType x_h_stride, const IndexType x_offset,
+                      const IndexType out_b_stride, const IndexType out_m_stride,
                       const IndexType out_h_stride, IndexType num_elements) {
   const auto CheckPackSize = [&](const size_t PackSize) {
     bool r = (((reinterpret_cast<uintptr_t>(x) % (sizeof(T) * PackSize)) == 0)
@@ -1274,19 +1279,19 @@ void DispatchPackSize(ep::CudaStream* stream, const T* x, const T* cos, const T*
     num_elements /= 8;
     LaunchKernel<T, PositionType, IndexType, 8, num_dims, rotary_emb_dim>(
         stream, x, cos, sin, position_ids, out, position_shape, x_layout, output_layout, mode,
-        theta, rotary_size, b, m, h, k, x_b_stride, x_m_stride, x_h_stride, x_offset, out_b_stride, 
+        theta, rotary_size, b, m, h, k, x_b_stride, x_m_stride, x_h_stride, x_offset, out_b_stride,
         out_m_stride, out_h_stride, num_elements);
   } else if (CheckPackSize(4)) {
     num_elements /= 4;
     LaunchKernel<T, PositionType, IndexType, 4, num_dims, rotary_emb_dim>(
         stream, x, cos, sin, position_ids, out, position_shape, x_layout, output_layout, mode,
-        theta, rotary_size, b, m, h, k, x_b_stride, x_m_stride, x_h_stride, x_offset, out_b_stride, 
+        theta, rotary_size, b, m, h, k, x_b_stride, x_m_stride, x_h_stride, x_offset, out_b_stride,
         out_m_stride, out_h_stride, num_elements);
   } else {
     num_elements /= 2;
     LaunchKernel<T, PositionType, IndexType, 2, num_dims, rotary_emb_dim>(
         stream, x, cos, sin, position_ids, out, position_shape, x_layout, output_layout, mode,
-        theta, rotary_size, b, m, h, k, x_b_stride, x_m_stride, x_h_stride, x_offset, out_b_stride, 
+        theta, rotary_size, b, m, h, k, x_b_stride, x_m_stride, x_h_stride, x_offset, out_b_stride,
         out_m_stride, out_h_stride, num_elements);
   }
 }
@@ -1298,7 +1303,8 @@ void DispatchIndex(ep::CudaStream* stream, const T* x, const T* cos, const T* si
                    const std::string& mode, const T theta, const int64_t rotary_size,
                    const int64_t b, const int64_t m, const int64_t h, const int64_t k,
                    const int64_t x_b_stride, const int64_t x_m_stride, const int64_t x_h_stride,
-                   const int64_t x_offset, const int64_t out_b_stride, const int64_t out_m_stride, const int64_t out_h_stride) {
+                   const int64_t x_offset, const int64_t out_b_stride, const int64_t out_m_stride,
+                   const int64_t out_h_stride) {
   int64_t num_elements = b * m * h * k;
   if (num_elements < (1 << 30)) {
     DispatchPackSize<T, PositionType, int32_t, num_dims, rotary_emb_dim>(
@@ -1307,11 +1313,12 @@ void DispatchIndex(ep::CudaStream* stream, const T* x, const T* cos, const T* si
         static_cast<int32_t>(h), static_cast<int32_t>(k), static_cast<int32_t>(x_b_stride),
         static_cast<int32_t>(x_m_stride), static_cast<int32_t>(x_h_stride),
         static_cast<int32_t>(x_offset), static_cast<int32_t>(out_b_stride),
-        static_cast<int32_t>(out_m_stride), static_cast<int32_t>(out_h_stride), static_cast<int32_t>(num_elements));
+        static_cast<int32_t>(out_m_stride), static_cast<int32_t>(out_h_stride),
+        static_cast<int32_t>(num_elements));
   } else {
     DispatchPackSize<T, PositionType, int64_t, num_dims, rotary_emb_dim>(
         stream, x, cos, sin, position_ids, out, position_shape, x_layout, output_layout, mode,
-        theta, rotary_size, b, m, h, k, x_b_stride, x_m_stride, x_h_stride, x_offset, out_b_stride, 
+        theta, rotary_size, b, m, h, k, x_b_stride, x_m_stride, x_h_stride, x_offset, out_b_stride,
         out_m_stride, out_h_stride, num_elements);
   }
 }
@@ -1330,12 +1337,12 @@ void DispatchRotaryEmbeddingDimension(ep::CudaStream* stream, const T* x, const 
   if (rotary_emb_dim == 1) {
     DispatchIndex<T, PositionType, num_dims, 1>(
         stream, x, cos, sin, position_ids, out, position_shape, x_layout, output_layout, mode,
-        theta, rotary_size, b, m, h, k, x_b_stride, x_m_stride, x_h_stride, x_offset, out_b_stride, 
+        theta, rotary_size, b, m, h, k, x_b_stride, x_m_stride, x_h_stride, x_offset, out_b_stride,
         out_m_stride, out_h_stride);
   } else if (rotary_emb_dim == 2) {
     DispatchIndex<T, PositionType, num_dims, 2>(
         stream, x, cos, sin, position_ids, out, position_shape, x_layout, output_layout, mode,
-        theta, rotary_size, b, m, h, k, x_b_stride, x_m_stride, x_h_stride, x_offset, out_b_stride, 
+        theta, rotary_size, b, m, h, k, x_b_stride, x_m_stride, x_h_stride, x_offset, out_b_stride,
         out_m_stride, out_h_stride);
   }
 }
@@ -1380,10 +1387,10 @@ class FusedApplyRotaryEmbKernel final : public user_op::OpKernel {
     int64_t out_b_stride = 0, out_m_stride = 0, out_h_stride = 0, out_offset = 0;
     int64_t x_b_stride = 0, x_m_stride = 0, x_h_stride = 0, x_offset = 0;
 
-    ParseDims(out->shape_view(), output_layout, Optional<int64_t>(), k_size, 0, &b, &m, &h,
-              &k, &out_b_stride, &out_m_stride, &out_h_stride, &out_offset);
-    ParseDims(x->shape_view(), x_layout, Optional<int64_t>(), k_size, tensor_index, &b, &m, &h,
-              &k, &x_b_stride, &x_m_stride, &x_h_stride, &x_offset);
+    ParseDims(out->shape_view(), output_layout, Optional<int64_t>(), k_size, 0, &b, &m, &h, &k,
+              &out_b_stride, &out_m_stride, &out_h_stride, &out_offset);
+    ParseDims(x->shape_view(), x_layout, Optional<int64_t>(), k_size, tensor_index, &b, &m, &h, &k,
+              &x_b_stride, &x_m_stride, &x_h_stride, &x_offset);
 
     // TODO: hard code num_dims & seems redundant template problem...
     DispatchRotaryEmbeddingDimension<T, PositionType, ndims>(
