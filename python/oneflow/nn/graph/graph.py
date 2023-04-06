@@ -268,13 +268,7 @@ class Graph(object):
             return self._dynamic_input_graph_cache(*args, **kwargs)
 
         if not self._is_compiled:
-            if not self._build_with_shared_graph:
-                self._compile(*args, **kwargs)
-                self.__print(
-                    0, 2, lambda: f"{self.name} with operators:\n" + self.__repr__()
-                )
-            else:
-                self._compile_from_shared(*args, **kwargs)
+            self._compile(*args, **kwargs)
 
         return self.__run(*args, **kwargs)
 
@@ -837,6 +831,20 @@ class Graph(object):
         return a_graph
 
     def _compile(self, *args, **kwargs):
+        if not self._is_compiled:
+            if not self._build_with_shared_graph:
+                self._compile_new(*args, **kwargs)
+                self.__print(
+                    0, 2, lambda: f"{self.name} with operators:\n" + self.__repr__()
+                )
+            else:
+                self._compile_from_shared(*args, **kwargs)
+        else:
+            warnings.warn(
+                f"{self._shallow_repr()} has been compiled, no need to compile again."
+            )
+
+    def _compile_new(self, *args, **kwargs):
         if (
             len(args) != 0
             and isinstance(args, (tuple, list))
