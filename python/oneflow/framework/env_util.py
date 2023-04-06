@@ -32,6 +32,9 @@ def api_all_device_placement(device_type: str) -> oneflow._oneflow_internal.plac
 
     Returns a placement that contains all available devices.
 
+    Note:
+        It is recommended to use `oneflow.placement.all` instead of this function.
+
     Args:
         device_type (str): cuda or cpu
 
@@ -46,7 +49,7 @@ def api_all_device_placement(device_type: str) -> oneflow._oneflow_internal.plac
         p = flow.env.all_device_placement("cpu") # oneflow.placement(type="cpu", ranks=[0, 1, 2, 3])
 
     """
-    return oneflow._oneflow_internal.AllDevicePlacement(device_type)
+    return oneflow.placement.all(device_type)
 
 
 def check_non_localhost_proxy_and_print_warning():
@@ -153,7 +156,7 @@ def _FindFreePort():
         return s.getsockname()[1]
 
 
-def HasAllMultiClientEnvVars():
+def CheckAndWarnAbnormalEnvVars():
     env_var_names = ["MASTER_ADDR", "MASTER_PORT", "WORLD_SIZE", "RANK"]
     env_var_without_value = [x for x in env_var_names if os.getenv(x) is None]
     env_var_with_value = [x for x in env_var_names if os.getenv(x) is not None]
@@ -161,45 +164,35 @@ def HasAllMultiClientEnvVars():
         warnings.warn(
             f"Among four environment variables required for distributed training, only {', '.join('`{0}`'.format(x) for x in env_var_with_value)} are set, but {', '.join('`{0}`'.format(x) for x in env_var_without_value)} are not set."
         )
-    return len(env_var_without_value) == 0
-
-
-def SetDefaultMultiClientEnvVars():
-    os.environ["MASTER_ADDR"] = "127.0.0.1"
-    os.environ["MASTER_PORT"] = str(_FindFreePort())
-    os.environ["WORLD_SIZE"] = "1"
-    os.environ["RANK"] = "-1"
-    os.environ["LOCAL_RANK"] = "0"
 
 
 def _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto):
-    assert HasAllMultiClientEnvVars()
-
     def str2int(env_config):
         return int(env_config)
 
     bootstrap_conf = ctrl_bootstrap_pb.BootstrapConf()
     master_addr = ctrl_bootstrap_pb.Address()
-    master_addr.host = os.getenv("MASTER_ADDR")
-    master_addr.port = str2int(os.getenv("MASTER_PORT"))
+    master_addr.host = os.getenv("MASTER_ADDR", "127.0.0.1")
+    master_addr.port = str2int(os.getenv("MASTER_PORT", _FindFreePort()))
     bootstrap_conf.master_addr.CopyFrom(master_addr)
-    bootstrap_conf.world_size = str2int(os.getenv("WORLD_SIZE"))
-    bootstrap_conf.rank = str2int(os.getenv("RANK"))
+    bootstrap_conf.world_size = str2int(os.getenv("WORLD_SIZE", 1))
+    bootstrap_conf.rank = str2int(os.getenv("RANK", 0))
     env_proto.ctrl_bootstrap_conf.CopyFrom(bootstrap_conf)
     cpp_logging_conf = env_pb.CppLoggingConf()
     if os.getenv("GLOG_log_dir"):
         cpp_logging_conf.log_dir = os.getenv("GLOG_log_dir")
     if os.getenv("GLOG_logtostderr"):
-        cpp_logging_conf.logtostderr = int(os.getenv("GLOG_logtostderr"))
+        cpp_logging_conf.logtostderr = str2int(os.getenv("GLOG_logtostderr"))
     if os.getenv("GLOG_logbuflevel"):
-        cpp_logging_conf.logbuflevel = os.getenv("GLOG_logbuflevel")
+        cpp_logging_conf.logbuflevel = str2int(os.getenv("GLOG_logbuflevel"))
+    if os.getenv("GLOG_minloglevel"):
+        cpp_logging_conf.minloglevel = str2int(os.getenv("GLOG_minloglevel"))
     env_proto.cpp_logging_conf.CopyFrom(cpp_logging_conf)
 
 
 class EnvHolder(object):
     def __init__(self):
-        if not HasAllMultiClientEnvVars():
-            SetDefaultMultiClientEnvVars()
+        CheckAndWarnAbnormalEnvVars()
         self._env_cxt = create_env()
         self._shutting_down = [False]
 

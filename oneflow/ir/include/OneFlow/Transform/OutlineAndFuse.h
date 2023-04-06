@@ -21,12 +21,19 @@ limitations under the License.
 namespace mlir {
 
 namespace oneflow {
-std::unique_ptr<mlir::Pass> createConvertOFKLCalleeToLLVMPass();
-std::unique_ptr<mlir::Pass> createKernelLaunchFunctionPass();
+
+namespace wrap_mode {
+const std::string SIMPLE = "simple";
+const std::string CUDA_GRAPH = "cuda_graph";
+}  // namespace wrap_mode
+
+std::unique_ptr<mlir::Pass> createWrapOpsToKernelLaunchPass();
 std::unique_ptr<mlir::Pass> createOutlineJitFunctionPass();
 std::unique_ptr<mlir::Pass> createFuseIntoExistingOpPass();
 std::unique_ptr<mlir::Pass> createGroupMatMul();
 std::unique_ptr<mlir::Pass> createFuseForwardOps();
+std::unique_ptr<mlir::Pass> createFuseOpsWithBackwardImpl();
+std::unique_ptr<mlir::Pass> createFuseNormalizationOps();
 
 }  // namespace oneflow
 

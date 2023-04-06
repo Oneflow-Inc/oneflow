@@ -50,6 +50,8 @@ types_allowed = {
     "PyObject*",
     "ShapeList",
     "DataTypeList",
+    "Layout",
+    "MemoryFormat",
 }
 
 mangled_name = {
@@ -84,6 +86,8 @@ mangled_name = {
     "PyObject*": "Pyo",
     "ShapeList": "Shl",
     "DataTypeList": "Dtl",
+    "Layout": "Lo",
+    "MemoryFormat": "Mf",
 }
 
 generic_type_aliases = {
@@ -120,6 +124,8 @@ argument_type_aliases = {
     "PyObject*": "PyObject*",
     "ShapeList": "const std::vector<Shape>&",
     "DataTypeList": "const std::vector<Symbol<DType>>&",
+    "Layout": "const Symbol<Layout>&",
+    "MemoryFormat": "const Symbol<MemoryFormat>&",
     **generic_type_aliases,
 }
 
@@ -148,6 +154,8 @@ optional_argument_type_aliases = {
     "PyObject*": "const Optional<PyObject*>&",
     "ShapeList": "const Optional<std::vector<Shape>>&",
     "DataTypeList": "const Optional<std::vector<Symbol<DType>>>&",
+    "Layout": "const Optional<Symbol<Layout>>&",
+    "MemoryFormat": "const Optional<Symbol<MemoryFormat>>&",
     **{k: "const Optional<{0}>&".format(v) for k, v in generic_type_aliases.items()},
 }
 
@@ -171,6 +179,9 @@ value_aliases = {
     "kFloat": "DType::Float()",
     "kDouble": "DType::Double()",
     "kBool": "DType::Bool()",
+    "kStrided": "Layout::Strided()",
+    "kPreserve": "MemoryFormat::Preserve()",
+    "kContiguous": "MemoryFormat::Contiguous()",
 }
 
 
@@ -181,6 +192,11 @@ def _escape_quote(fmt):
 def _normalize(fmt):
     fmt = fmt.strip()
     return re.sub(r"\s+", " ", fmt)
+
+
+def _remove_square_brackets_and_content_inside(fmt):
+    # "TensorTuple[values], TensorTuple[indices]" -> "TensorTuple, TensorTuple"
+    return re.sub(r"\[[^()]*?\]", "", fmt)
 
 
 def _std_decay(fmt):
@@ -197,12 +213,13 @@ def parse_function_params(fmt):
         raise ValueError('Missing "(" in function def: ' + fmt)
 
     header = _normalize(fmt[0:open_paren])
-    items = header.split(" ")
+    items = _normalize(_remove_square_brackets_and_content_inside(header)).split(" ")
     if (len(items)) != 1:
         raise ValueError(
             "Missing return type or more than 1 return type in function def: " + fmt
         )
-    params.append(items[0])
+
+    params.append(header)
 
     close_paren = fmt.rfind(")")
     if close_paren == -1:
@@ -232,6 +249,29 @@ def render_file_if_different(target_file, content):
         if old_content is None or old_content != content:
             with open(target_file, "w") as f:
                 f.write(content)
+
+
+def generate_return_types_named_tuple(return_names, func_name, block_name):
+    param_names = ", ".join(
+        [
+            '{{const_cast<char*>("{}"), const_cast<char*>("")}}'.format(x)
+            for x in return_names
+        ]
+    )
+    code = f"""PyTypeObject* Get{func_name}NamedTuple() {{
+  static PyStructSequence_Field NamedTuple_fields[] = {{ {param_names},  {{nullptr}} }};
+  static PyTypeObject {func_name}NamedTuple;
+  static bool is_initialized = false;
+  static PyStructSequence_Desc desc = {{ const_cast<char*>("oneflow.return_types.{block_name}"), nullptr, NamedTuple_fields, {len(return_names)} }};
+  if (!is_initialized) {{
+      PyStructSequence_InitType(&{func_name}NamedTuple, &desc);
+      {func_name}NamedTuple.tp_repr = (reprfunc)returned_structseq_repr;
+      is_initialized = true;
+  }}
+  return &{func_name}NamedTuple;
+}}
+"""
+    return code
 
 
 class Argument:
@@ -305,7 +345,7 @@ class Argument:
 
 class Return:
     def __init__(self, fmt):
-        self._type = _normalize(fmt)
+        self._type, self._return_names = self.check_named_tuple(_normalize(fmt))
         assert self._type in types_allowed, "Unknow type: " + self._type
 
         if self._type in return_type_aliases:
@@ -319,6 +359,15 @@ class Return:
 
     def to_string(self, to_cpp=False):
         return self._cpp_type if to_cpp else self._type
+
+    def check_named_tuple(self, fmt):
+        matches = re.match(r"(.*?)\s*\[(.*?)\]", fmt)
+        if matches is None:
+            type, return_names = _normalize(fmt), None
+        else:
+            type = matches.group(1)
+            return_names = [_normalize(x) for x in matches.group(2).split(",")]
+        return type, return_names
 
 
 class FunctionSignature:
@@ -446,6 +495,9 @@ class Generator:
         schema_fmt = ""
         module_fmt = ""
         header_fmt = ""
+
+        return_type_fmt = ""
+        map_pairs = []
         for name, blocks in self._blocks.items():
             schema_types = []
             max_args_count = 0
@@ -551,9 +603,20 @@ class Generator:
                     for j in range(len(signature._args)):
                         cpp_type = _std_decay(signature._args[j]._cpp_type)
                         params.append("r[{0}].As<{1}>()".format(j, cpp_type))
-                    schema_fmt += "    return CastToPyObject(functional::{0}({1}));\n".format(
-                        signature._name, ", ".join(params)
-                    )
+                    if signature._ret._return_names is None:
+                        schema_fmt += "    return CastToPyObject(functional::{0}({1}));\n".format(
+                            signature._name, ", ".join(params)
+                        )
+                    else:
+                        schema_fmt += '    return WrapTensorTuple(functional::{0}({1}).GetOrThrow(), "{2}");\n'.format(
+                            signature._name, ", ".join(params), signature._name,
+                        )
+                        return_type_fmt += generate_return_types_named_tuple(
+                            signature._ret._return_names, signature._name, block._name,
+                        )
+                        map_pairs.append(
+                            f'    {{"{signature._name}", Get{signature._name}NamedTuple()}},'
+                        )
                     schema_fmt += "  }\n"
                     i += 1
                 schema_fmt += "  Py_RETURN_NONE;\n"
@@ -564,5 +627,8 @@ class Generator:
             target_pybind_header_file, pybind_header_fmt.format(header_fmt)
         )
         render_file_if_different(
-            target_pybind_source_file, pybind_source_fmt.format(schema_fmt, module_fmt)
+            target_pybind_source_file,
+            pybind_source_fmt.format(
+                schema_fmt, module_fmt, return_type_fmt, "\n".join(map_pairs)
+            ),
         )

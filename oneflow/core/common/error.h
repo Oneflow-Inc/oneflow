@@ -103,6 +103,8 @@ class StackedError final {
   std::shared_ptr<const ErrorProto> error_proto_;
 };
 
+std::string GetErrorString(const std::shared_ptr<StackedError>& error);
+
 class Error final {
  public:
   Error(const std::shared_ptr<StackedError>& stacked_error)

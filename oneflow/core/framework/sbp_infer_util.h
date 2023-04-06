@@ -77,6 +77,9 @@ void DfsGetNdSbpSignature(NdSbpSignature& nd_sbp_sig, int32_t depth, int32_t dim
                           const HashMap<int32_t, SbpSignatureList>& hierarchy_value2sbp_sig_list,
                           std::vector<NdSbpSignature>* nd_sbp_sig_list);
 
+void DeduplicateNdSbpSignatureList(std::vector<NdSbpSignature>* nd_sbp_sig_list,
+                                   const std::vector<std::string>& bns);
+
 // Compute storage for given NdSbp
 double Storage4NdSbp(const NdSbp& nd_sbp, Shape& logical_shape, const Shape& parallel_hierarchy);
 
@@ -112,7 +115,7 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
 // Decide the priority to infer sbp
 // 0: highest priority
 // 1.0: normal priority
-// 2.0: Penality, the same as infinity
+// 2.0: Penalty, the same as infinity
 double ComputeSbpInferPriority(const NdSbp& producer_sbp_parallel,
                                const NdSbp& consumer_sbp_parallel,
                                const ParallelDesc& producer_parallel_desc,
@@ -126,6 +129,10 @@ double Cost4GeneralBasicCommunication(const NdSbp& producer_sbp_parallel,
                                       const BlobDesc& logical_blob_desc,
                                       const ParallelDesc& producer_parallel_desc,
                                       const ParallelDesc& consumer_parallel_desc);
+
+int64_t TotalByteSize4BlobDesc(const BlobDesc& logical_blob_desc);
+int64_t MaxByteSize4BlobDescSbp(const BlobDesc& logical_blob_desc, const NdSbp& nd_sbp,
+                                const Shape& hierarchy);
 
 }  // namespace oneflow
 

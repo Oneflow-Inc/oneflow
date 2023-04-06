@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/ops/loss_op_util.h"
 #include "oneflow/core/framework/op_generated.h"
@@ -24,7 +25,8 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   const auto& input_desc = ctx->InputTensorDesc("input", 0);
   const auto& target_desc = ctx->InputTensorDesc("target", 0);
   CHECK_EQ_OR_RETURN(input_desc.is_dynamic(), target_desc.is_dynamic());
-  CHECK_EQ_OR_RETURN(input_desc.shape(), target_desc.shape());
+  CHECK_EQ_OR_RETURN(input_desc.shape(), target_desc.shape())
+      << "Input shape should be equal to Target shape. ";
   if (ctx->has_input("weight", 0)) {
     const auto& weight_desc = ctx->InputTensorDesc("weight", 0);
     CHECK_EQ_OR_RETURN(weight_desc.is_dynamic(), input_desc.is_dynamic());
@@ -44,22 +46,23 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
 Maybe<void> InferDataType_(user_op::InferContext* ctx) {
   const user_op::TensorDesc& input_desc = ctx->InputTensorDesc("input", 0);
   const user_op::TensorDesc& target_desc = ctx->InputTensorDesc("target", 0);
-  CHECK_EQ_OR_RETURN(input_desc.data_type(), target_desc.data_type())
-      << "InferDataType Failed. Expected " << DataType_Name(input_desc.data_type()) << ", but got "
-      << DataType_Name(target_desc.data_type());
+  CHECK_GE_OR_RETURN(DType::priority_order[input_desc.data_type()],
+                     DType::priority_order[DType::Float16()->data_type()]);
+  CHECK_GE_OR_RETURN(DType::priority_order[target_desc.data_type()],
+                     DType::priority_order[DType::Float16()->data_type()]);
   if (ctx->has_input("weight", 0)) {
     const auto& weight_desc = ctx->InputTensorDesc("weight", 0);
-    CHECK_EQ_OR_RETURN(weight_desc.data_type(), input_desc.data_type())
-        << "InferDataType Failed. Expected " << DataType_Name(input_desc.data_type())
+    CHECK_EQ_OR_RETURN(weight_desc.data_type(), target_desc.data_type())
+        << "InferDataType Failed. Expected " << DataType_Name(target_desc.data_type())
         << ", but got " << DataType_Name(weight_desc.data_type());
   }
   if (ctx->Attr<bool>("has_pos_weight")) {
     const auto& pos_weight_desc = ctx->InputTensorDesc("pos_weight", 0);
-    CHECK_EQ_OR_RETURN(pos_weight_desc.data_type(), input_desc.data_type())
-        << "InferDataType Failed. Expected " << DataType_Name(input_desc.data_type())
+    CHECK_EQ_OR_RETURN(pos_weight_desc.data_type(), target_desc.data_type())
+        << "InferDataType Failed. Expected " << DataType_Name(target_desc.data_type())
         << ", but got " << DataType_Name(pos_weight_desc.data_type());
   }
-  ctx->SetOutputDType("out", 0, ctx->InputDType("input", 0));
+  ctx->SetOutputDType("out", 0, ctx->InputDType("target", 0));
 
   return Maybe<void>::Ok();
 }
@@ -68,8 +71,10 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   const auto& target_desc = ctx->InputTensorDesc("target", 0);
   const auto& dy_desc = ctx->InputTensorDesc("dy", 0);
   CHECK_EQ_OR_RETURN(input_desc.is_dynamic(), target_desc.is_dynamic());
-  CHECK_EQ_OR_RETURN(input_desc.shape(), target_desc.shape());
-  CHECK_EQ_OR_RETURN(dy_desc.shape(), target_desc.shape());
+  CHECK_EQ_OR_RETURN(input_desc.shape(), target_desc.shape())
+      << "Input shape should be equal to Target shape. ";
+  CHECK_EQ_OR_RETURN(dy_desc.shape(), target_desc.shape())
+      << "Dy shape should be equal to Target shape. ";
   if (ctx->has_input("weight", 0)) {
     const auto& weight_desc = ctx->InputTensorDesc("weight", 0);
     CHECK_EQ_OR_RETURN(weight_desc.is_dynamic(), input_desc.is_dynamic());
@@ -89,22 +94,23 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
 Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& input_desc = ctx->InputTensorDesc("input", 0);
   const user_op::TensorDesc& target_desc = ctx->InputTensorDesc("target", 0);
-  CHECK_EQ_OR_RETURN(input_desc.data_type(), target_desc.data_type())
-      << "InferDataType Failed. Expected " << DataType_Name(input_desc.data_type()) << ", but got "
-      << DataType_Name(target_desc.data_type());
+  CHECK_GE_OR_RETURN(DType::priority_order[input_desc.data_type()],
+                     DType::priority_order[DType::Float16()->data_type()]);
+  CHECK_GE_OR_RETURN(DType::priority_order[target_desc.data_type()],
+                     DType::priority_order[DType::Float16()->data_type()]);
   if (ctx->has_input("weight", 0)) {
     const auto& weight_desc = ctx->InputTensorDesc("weight", 0);
-    CHECK_EQ_OR_RETURN(weight_desc.data_type(), input_desc.data_type())
+    CHECK_EQ_OR_RETURN(weight_desc.data_type(), target_desc.data_type())
         << "InferDataType Failed. Expected " << DataType_Name(weight_desc.data_type())
-        << ", but got " << DataType_Name(input_desc.data_type());
+        << ", but got " << DataType_Name(target_desc.data_type());
   }
   if (ctx->Attr<bool>("has_pos_weight")) {
     const auto& pos_weight_desc = ctx->InputTensorDesc("pos_weight", 0);
-    CHECK_EQ_OR_RETURN(pos_weight_desc.data_type(), input_desc.data_type())
-        << "InferDataType Failed. Expected " << DataType_Name(input_desc.data_type())
+    CHECK_EQ_OR_RETURN(pos_weight_desc.data_type(), target_desc.data_type())
+        << "InferDataType Failed. Expected " << DataType_Name(target_desc.data_type())
         << ", but got " << DataType_Name(pos_weight_desc.data_type());
   }
-  ctx->SetOutputDType("dx", 0, ctx->InputDType("dy", 0));
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("input", 0));
 
   return Maybe<void>::Ok();
 }

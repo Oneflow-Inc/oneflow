@@ -13,10 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "OneFlow/Transform/OutlineAndFuse.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "OneFlow/OKL/OKLDialect.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/Passes.h"
+#include "OneFlow/OneFlowPDLLPatterns.h"
+#include "OneFlow/OneFlowPatternUtils.h"
+#include "llvm/Support/Casting.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -40,27 +47,27 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
   }
 };
 
-class ConvertOFKLCalleeToLLVMPass
-    : public ConvertOFKLCalleeToLLVMPassBase<ConvertOFKLCalleeToLLVMPass> {
+class WrapOpsToKernelLaunchPass : public WrapOpsToKernelLaunchPassBase<WrapOpsToKernelLaunchPass> {
+ public:
+  WrapOpsToKernelLaunchPass() = default;
+  WrapOpsToKernelLaunchPass(const WrapOpsToKernelLaunchPass& other)
+      : WrapOpsToKernelLaunchPassBase(other) {}
+
   void getDependentDialects(DialectRegistry& registry) const override {
-    registry.insert<LLVM::LLVMDialect>();
+    registry.insert<oneflow::OneFlowDialect>();
   }
 
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    populateConvertOFKLCalleeToLLVMPasses(patterns);
+    populateWrapOpsToKernelLaunchPatterns(patterns, wrap_ops_mode_.c_str());
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
-};
 
-class KernelLaunchFunctionPass : public KernelLaunchFunctionPassBase<KernelLaunchFunctionPass> {
-  void runOnOperation() override {
-    Operation* op = getOperation();
-    RewritePatternSet patterns(op->getContext());
-    populateKernelWrapperPasses(patterns);
-    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
-  }
+ private:
+  Option<std::string> wrap_ops_mode_{*this, "mode",
+                                     llvm::cl::desc("the mode of this pass to wrap ops"),
+                                     llvm::cl::init(wrap_mode::SIMPLE)};
 };
 
 class FuseIntoExistingOpPass : public FuseIntoExistingOpPassBase<FuseIntoExistingOpPass> {
@@ -72,47 +79,54 @@ class FuseIntoExistingOpPass : public FuseIntoExistingOpPassBase<FuseIntoExistin
   }
 };
 
+namespace {
+
+BiasAddCompatible getBiasAddCompatibleOp(MatMulCompatible op) {
+  BiasAddCompatible bias_add;
+  auto self_bias_op = dyn_cast<BiasAddCompatible>(op.getOperation());
+  if (self_bias_op) /* matmul itself is also bias add op */ {
+    bias_add = self_bias_op;
+  } else /* there is bias add op */ {
+    for (auto u : op.matMulGetY().getUsers()) {
+      if (auto b = dyn_cast<BiasAddCompatible>(u)) {
+        bias_add = b;
+        break;
+      }
+    }
+  }
+  if (bias_add && bias_add.isLastDim()) {
+    return bias_add;
+  } else {
+    return BiasAddCompatible{};
+  }
+}
+
+}  // namespace
 struct GroupMatMulPattern : public mlir::OpInterfaceRewritePattern<MatMulCompatible> {
   explicit GroupMatMulPattern(mlir::MLIRContext* context)
       : OpInterfaceRewritePattern<MatMulCompatible>(context, /*benefit=*/1) {}
   mlir::LogicalResult matchAndRewrite(MatMulCompatible op,
                                       mlir::PatternRewriter& rewriter) const override {
     if (!op.isLinear()) { return failure(); }
-    BiasAddCompatible bias_add;
-    for (auto u : op.out().getUsers()) {
-      if (auto b = dyn_cast<BiasAddCompatible>(u)) {
-        bias_add = b;
-        break;
-      }
-    }
-    if (bias_add) {
-      if (!bias_add.isLastDim()) { return failure(); }
-    }
+    auto bias_add = getBiasAddCompatibleOp(op);
     llvm::SmallVector<MatMulCompatible, 4> all_matmuls{};
     llvm::SmallVector<BiasAddCompatible, 4> all_bias_adds{};
-    for (auto u : op.a().getUsers()) {
-      if (auto another_matmul = dyn_cast<MatMulCompatible>(u)) {
-        if (!another_matmul.isLinear()) { continue; }
-        bool has_another_bias_add = false;
-        for (auto u : another_matmul.out().getUsers()) {
-          if (auto another_bias_add = dyn_cast<BiasAddCompatible>(u)) {
-            if (!another_bias_add.isLastDim()) { continue; }
-            all_bias_adds.push_back(another_bias_add);
-            has_another_bias_add = true;
-            break;
-          }
-        }
-        if (!!bias_add == has_another_bias_add) { all_matmuls.push_back(another_matmul); }
+    for (auto xUser : op.matMulGetX().getUsers()) {
+      if (auto matmul = dyn_cast<MatMulCompatible>(xUser)) {
+        if (!matmul.isLinear()) { continue; }
+        auto each_bias_add = getBiasAddCompatibleOp(matmul);
+        if (each_bias_add) { all_bias_adds.push_back(each_bias_add); }
+        if (!!bias_add == !!each_bias_add) { all_matmuls.push_back(matmul); }
       }
     }
     // all_matmuls has only self, means no other matmul can be grouped
     if (all_matmuls.size() == 1) { return failure(); }
     llvm::SmallVector<Value, 4> operands{};
-    for (auto matmul : all_matmuls) { operands.push_back(matmul.a()); }
-    for (auto matmul : all_matmuls) { operands.push_back(matmul.b()); }
-    for (auto bias_adds : all_bias_adds) { operands.push_back(bias_adds.b()); }
+    for (auto matmul : all_matmuls) { operands.push_back(matmul.matMulGetX()); }
+    for (auto matmul : all_matmuls) { operands.push_back(matmul.matMulGetW()); }
+    for (auto bias_adds : all_bias_adds) { operands.push_back(bias_adds.biasAddGetBias()); }
     llvm::SmallVector<Type, 4> results{};
-    for (auto matmul : all_matmuls) { results.push_back(matmul.out().getType()); }
+    for (auto matmul : all_matmuls) { results.push_back(matmul.matMulGetY().getType()); }
     NamedAttrList attributes{};
     attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(),
                    OpTrait::IsOpConfCompatible<void>::getDeviceTag(op));
@@ -135,12 +149,12 @@ struct GroupMatMulPattern : public mlir::OpInterfaceRewritePattern<MatMulCompati
         rewriter.create<GroupedMatmulBiasOp>(op->getLoc(), results, operands, attributes);
     if (all_bias_adds.empty()) {
       for (const auto& matmul : llvm::enumerate(all_matmuls)) {
-        matmul.value().out().replaceAllUsesWith(grouped_matmul.ys()[matmul.index()]);
+        matmul.value().matMulGetY().replaceAllUsesWith(grouped_matmul.ys()[matmul.index()]);
       }
     } else {
       CHECK(all_bias_adds.size() == all_matmuls.size());
       for (const auto& bias_add : llvm::enumerate(all_bias_adds)) {
-        bias_add.value().out().replaceAllUsesWith(grouped_matmul.ys()[bias_add.index()]);
+        bias_add.value().biasAddGetOut().replaceAllUsesWith(grouped_matmul.ys()[bias_add.index()]);
       }
     }
     return success();
@@ -192,18 +206,35 @@ class FuseForwardOpsPass : public FuseForwardOpsBase<FuseForwardOpsPass> {
   }
 };
 
+class FuseOpsWithBackwardImplPass
+    : public FuseOpsWithBackwardImplBase<FuseOpsWithBackwardImplPass> {
+  void runOnOperation() override {
+    Operation* op = getOperation();
+    RewritePatternSet patterns(op->getContext());
+    populateFuseOpsWithBackwardImplPattern(patterns);
+    rewrites::populateRewrites(patterns);
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+  }
+};
+
+class FuseNormalizationOpsPass : public FuseNormalizationOpsBase<FuseNormalizationOpsPass> {
+  void runOnOperation() override {
+    Operation* op = getOperation();
+    RewritePatternSet patterns(op->getContext());
+    populateNormalizationOpPatterns(patterns);
+    rewrites::populateRewrites(patterns);
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+  }
+};
+
 }  // namespace
 
 std::unique_ptr<Pass> createOutlineJitFunctionPass() {
   return std::make_unique<OutlineJitFunctionPass>();
 }
 
-std::unique_ptr<Pass> createKernelLaunchFunctionPass() {
-  return std::make_unique<KernelLaunchFunctionPass>();
-}
-
-std::unique_ptr<mlir::Pass> createConvertOFKLCalleeToLLVMPass() {
-  return std::make_unique<ConvertOFKLCalleeToLLVMPass>();
+std::unique_ptr<Pass> createWrapOpsToKernelLaunchPass() {
+  return std::make_unique<WrapOpsToKernelLaunchPass>();
 }
 
 std::unique_ptr<Pass> createFuseIntoExistingOpPass() {
@@ -213,6 +244,13 @@ std::unique_ptr<Pass> createFuseIntoExistingOpPass() {
 std::unique_ptr<Pass> createGroupMatMul() { return std::make_unique<GroupMatMulPass>(); }
 
 std::unique_ptr<Pass> createFuseForwardOps() { return std::make_unique<FuseForwardOpsPass>(); }
+std::unique_ptr<Pass> createFuseOpsWithBackwardImpl() {
+  return std::make_unique<FuseOpsWithBackwardImplPass>();
+}
+
+std::unique_ptr<Pass> createFuseNormalizationOps() {
+  return std::make_unique<FuseNormalizationOpsPass>();
+}
 
 }  // namespace oneflow
 }  // namespace mlir

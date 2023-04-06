@@ -56,15 +56,6 @@ void check_from_to_in_range(int64_t from, int64_t to_inc) {
     constexpr auto digits = std::numeric_limits<scalar_t>::digits;
     WARN_OUT_OF_BOUNDS(from, "from", digits, GetDataType<scalar_t>::value);
     WARN_OUT_OF_BOUNDS(to_inc, "to - 1", digits, GetDataType<scalar_t>::value);
-  } else if (IsFloat16<scalar_t>::value) {
-    const auto min = static_cast<double>(std::numeric_limits<float16>::lowest());
-    const auto max = static_cast<double>(std::numeric_limits<float16>::max());
-    CHECK_OUT_OF_BOUNDS(from, "from", min, max, GetDataType<float16>::value);
-    CHECK_OUT_OF_BOUNDS(to_inc, "to - 1", min, max, GetDataType<float16>::value);
-
-    constexpr auto digits = std::numeric_limits<float16>::digits;
-    WARN_OUT_OF_BOUNDS(from, "from", digits, GetDataType<float16>::value);
-    WARN_OUT_OF_BOUNDS(to_inc, "to - 1", digits, GetDataType<float16>::value);
   } else if (IsIntegral<scalar_t>::value || IsUnsignedIntegral<scalar_t>::value) {
     const auto min = static_cast<int64_t>(std::numeric_limits<scalar_t>::lowest());
     const auto max = static_cast<int64_t>(std::numeric_limits<scalar_t>::max());

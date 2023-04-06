@@ -22,7 +22,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, rtol=1e-03, atol=1e-04, check_graph=False)
+@autotest(n=1, rtol=1e-03, atol=1e-04, check_graph=True)
 def _test_affine_grid_2d_with_random_data(test_case, placement, sbp):
     N = random(1, 3).to(int).value() * 8
     C = random(1, 8).to(int).value()
@@ -38,7 +38,7 @@ def _test_affine_grid_2d_with_random_data(test_case, placement, sbp):
     return output
 
 
-@autotest(n=1, rtol=1e-03, atol=1e-04, check_graph=False)
+@autotest(n=1, rtol=1e-03, atol=1e-04, check_graph=True)
 def _test_affine_grid_3d_with_random_data(test_case, placement, sbp):
     N = random(1, 3).to(int) * 8
     C = random(1, 8).to(int)

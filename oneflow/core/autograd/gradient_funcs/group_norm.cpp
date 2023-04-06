@@ -23,6 +23,8 @@ namespace one {
 struct GroupNormCaptureState : public AutoGradCaptureState {
   double epsilon = 1e-5;
   bool x_requires_grad = true;
+  bool gamma_requires_grad = true;
+  bool beta_requires_grad = true;
   bool affine = true;
   int32_t num_groups = 1;
   size_t x_index = 0;
@@ -66,6 +68,8 @@ Maybe<void> GroupNorm::Capture(GroupNormCaptureState* ctx, const TensorTuple& in
   ctx->activation = JUST(composed_attrs.GetAttr<std::string>("activation"));
   if (ctx->affine) {
     CHECK_EQ_OR_RETURN(inputs.size(), 3);  // NOLINT(maybe-need-error-msg)
+    ctx->gamma_requires_grad = inputs.at(1)->requires_grad();
+    ctx->beta_requires_grad = inputs.at(2)->requires_grad();
   } else {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);  // NOLINT(maybe-need-error-msg)
   }
@@ -98,10 +102,10 @@ Maybe<void> GroupNorm::Apply(const GroupNormCaptureState* ctx, const TensorTuple
   const auto& mean = saved_tensors.at(ctx->mean_index);
   const auto& inv_variance = saved_tensors.at(ctx->inv_variance_index);
 
-  if (ctx->affine) {
+  if (ctx->affine && (ctx->gamma_requires_grad || ctx->beta_requires_grad)) {
     const auto& results = JUST(functional::GroupNormParamGrad(dy, x, mean, inv_variance));
-    in_grads->at(1) = results->at(0);  // For gamma.
-    in_grads->at(2) = results->at(1);  // For beta.
+    if (ctx->gamma_requires_grad) { in_grads->at(1) = results->at(0); }  // For gamma.
+    if (ctx->beta_requires_grad) { in_grads->at(2) = results->at(1); }   // For beta.
   }
   if (ctx->x_requires_grad) {
     if (ctx->affine) {

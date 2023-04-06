@@ -22,6 +22,10 @@ namespace mlir {
 namespace oneflow {
 
 void populateForwardOpPatterns(RewritePatternSet& patterns);
+void populateNormalizationOpPatterns(RewritePatternSet& patterns);
+void populateElementwiseFusionPatterns(RewritePatternSet& patterns);
+void populateFuseConv2DBatchNormPattern(RewritePatternSet& patterns);
+void populateFuseOpsWithBackwardImplPattern(RewritePatternSet& patterns);
 
 }  // namespace oneflow
 

@@ -20,38 +20,39 @@ namespace oneflow {
 
 Maybe<void> FusedGetBounddingBoxesCoordOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x1 = ctx->InputTensorDesc("x1", 0);
+  Shape x1_shape = x1.shape();
 
   user_op::TensorDesc* b1_x1 = ctx->MutOutputTensorDesc("b1_x1", 0);
   b1_x1->set_is_dynamic(x1.is_dynamic());
-  b1_x1->set_shape(x1.shape());
+  b1_x1->set_shape(x1_shape);
 
   user_op::TensorDesc* b1_x2 = ctx->MutOutputTensorDesc("b1_x2", 0);
   b1_x2->set_is_dynamic(x1.is_dynamic());
-  b1_x2->set_shape(x1.shape());
+  b1_x2->set_shape(x1_shape);
 
   user_op::TensorDesc* b1_y1 = ctx->MutOutputTensorDesc("b1_y1", 0);
   b1_y1->set_is_dynamic(x1.is_dynamic());
-  b1_y1->set_shape(x1.shape());
+  b1_y1->set_shape(x1_shape);
 
   user_op::TensorDesc* b1_y2 = ctx->MutOutputTensorDesc("b1_y2", 0);
   b1_y2->set_is_dynamic(x1.is_dynamic());
-  b1_y2->set_shape(x1.shape());
+  b1_y2->set_shape(x1_shape);
 
   user_op::TensorDesc* b2_x1 = ctx->MutOutputTensorDesc("b2_x1", 0);
   b2_x1->set_is_dynamic(x1.is_dynamic());
-  b2_x1->set_shape(x1.shape());
+  b2_x1->set_shape(x1_shape);
 
   user_op::TensorDesc* b2_x2 = ctx->MutOutputTensorDesc("b2_x2", 0);
   b2_x2->set_is_dynamic(x1.is_dynamic());
-  b2_x2->set_shape(x1.shape());
+  b2_x2->set_shape(x1_shape);
 
   user_op::TensorDesc* b2_y1 = ctx->MutOutputTensorDesc("b2_y1", 0);
   b2_y1->set_is_dynamic(x1.is_dynamic());
-  b2_y1->set_shape(x1.shape());
+  b2_y1->set_shape(x1_shape);
 
   user_op::TensorDesc* b2_y2 = ctx->MutOutputTensorDesc("b2_y2", 0);
   b2_y2->set_is_dynamic(x1.is_dynamic());
-  b2_y2->set_shape(x1.shape());
+  b2_y2->set_shape(x1_shape);
 
   return Maybe<void>::Ok();
 }

@@ -28,7 +28,6 @@ numpy_dtype_to_oneflow_dtype_dict = {
     np.int64: flow.int64,
     np.int8: flow.int8,
     np.uint8: flow.uint8,
-    np.bool: flow.bool,
     np.float64: flow.float64,
     np.float32: flow.float32,
     np.float16: flow.float16,

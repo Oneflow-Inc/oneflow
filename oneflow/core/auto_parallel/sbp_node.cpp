@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <algorithm>
 #include <cstdlib>
 #include <functional>
 #include <iostream>
@@ -27,13 +28,17 @@ limitations under the License.
 #include "oneflow/core/auto_parallel/sbp_node.h"
 #include "oneflow/core/auto_parallel/sbp_edge.h"
 #include "oneflow/core/auto_parallel/sbp_graph.h"
+#include "oneflow/core/register/logical_blob_id.pb.h"
 
 namespace oneflow {
 namespace auto_parallel {
 
+// In dynamic programming, we can not minimize a vector (copy cost, memory cost)
+// Instead, we minimize the weighted sum of the vector, copy cost + kMemoryRatio * memory cost
+extern double kMemoryRatio;
+
 // function in cpp. Should be put in one file due to use of template
 // Otherwise we will need to declare specific template at the end of cpp file.
-
 SbpNode::SbpNode(SbpNode* first, SbpNode* second) {
   half_node_.resize(2);
   half_node_[0] = first;
@@ -54,28 +59,35 @@ SbpNode::SbpNode(SbpNode* first, SbpNode* second) {
 
   // Find all available merged-SbpSignature(edge's cost less than threshold).
   if (common_edge) {
-    double min_cost = GetMaxVal<float>();
-    for (const auto& row : common_edge->cost_) {
-      for (const double& c : row) min_cost = std::min(min_cost, c);
-    }
+    in_memory_support_ =
+        first->in_memory_support_ || second->in_memory_support_ || common_edge->in_memory_support_;
     // If there is no one case can choose, we will blow up
-    for (int32_t i = 0; i < first->cost_.size(); i++) {
-      for (int32_t j = 0; j < second->cost_.size(); j++) {
-        const double edge_cost =
-            common_edge->start_node_ == first ? common_edge->cost_[i][j] : common_edge->cost_[j][i];
-        if (edge_cost < GetValidMaxCopyCost()) {
-          merged_sig_id2children_sig_id_.emplace_back(std::make_pair(i, j));
-          cost_.emplace_back(edge_cost + first->cost_[i] + second->cost_[j]);
+    for (int32_t i = 0; i < first->weighted_cost_.size(); i++) {
+      for (int32_t j = 0; j < second->weighted_cost_.size(); j++) {
+        const double edge_weighted_cost = common_edge->start_node_ == first
+                                              ? common_edge->weighted_cost_[i][j]
+                                              : common_edge->weighted_cost_[j][i];
+        if (edge_weighted_cost < GetValidMaxCopyCost()) {
+          merged_sig_id2half_sig_id_.emplace_back(std::make_pair(i, j));
+          if (in_memory_support_) {
+            memory_.push_back((common_edge->start_node_ == first ? common_edge->GetMemory(i, j)
+                                                                 : common_edge->GetMemory(j, i))
+                              + first->GetMemory(i) + second->GetMemory(j));
+          }
+          weighted_cost_.emplace_back(edge_weighted_cost + first->weighted_cost_[i]
+                                      + second->weighted_cost_[j]);
         }
       }
     }
-    CHECK(merged_sig_id2children_sig_id_.size() > 0)
-        << "0 size for merge child edge, min cost: " << min_cost;
+    CHECK(merged_sig_id2half_sig_id_.size() > 0)
+        << "0 size for merge two half nodes with common edge!";
   } else {
-    for (int32_t i = 0; i < first->cost_.size(); i++) {
-      for (int32_t j = 0; j < second->cost_.size(); j++) {
-        merged_sig_id2children_sig_id_.emplace_back(std::make_pair(i, j));
-        cost_.emplace_back(first->cost_[i] + second->cost_[j]);
+    in_memory_support_ = first->in_memory_support_ || second->in_memory_support_;
+    for (int32_t i = 0; i < first->weighted_cost_.size(); i++) {
+      for (int32_t j = 0; j < second->weighted_cost_.size(); j++) {
+        merged_sig_id2half_sig_id_.emplace_back(std::make_pair(i, j));
+        if (in_memory_support_) { memory_.push_back(first->GetMemory(i) + second->GetMemory(j)); }
+        weighted_cost_.emplace_back(first->weighted_cost_[i] + second->weighted_cost_[j]);
       }
     }
   }
@@ -84,9 +96,9 @@ SbpNode::SbpNode(SbpNode* first, SbpNode* second) {
   // If the original sbp pair does not go through, then use 0 as default.
   final_sbp_sig_id_ = 0;
   // Track the original strategy
-  for (int32_t sig_id = 0; sig_id < merged_sig_id2children_sig_id_.size(); sig_id++) {
-    if (merged_sig_id2children_sig_id_[sig_id].first == first->final_sbp_sig_id_
-        && merged_sig_id2children_sig_id_[sig_id].second == second->final_sbp_sig_id_) {
+  for (int32_t sig_id = 0; sig_id < merged_sig_id2half_sig_id_.size(); sig_id++) {
+    if (merged_sig_id2half_sig_id_[sig_id].first == first->final_sbp_sig_id_
+        && merged_sig_id2half_sig_id_[sig_id].second == second->final_sbp_sig_id_) {
       final_sbp_sig_id_ = sig_id;
     }
   }
@@ -101,19 +113,19 @@ SbpNode::SbpNode(SbpNode* first, SbpNode* second) {
   edges_out_.insert(edges_out_.end(), second->edges_out_.begin(), second->edges_out_.end());
   // Merge SbpEdge Cost
   for (SbpEdge*& this_edge : first->edges_in_) {
-    this_edge->DuplicateCost(false, true, merged_sig_id2children_sig_id_);
+    this_edge->DuplicateCost(false, true, merged_sig_id2half_sig_id_);
     this_edge->end_node_ = this;
   }
   for (SbpEdge*& this_edge : first->edges_out_) {
-    this_edge->DuplicateCost(true, true, merged_sig_id2children_sig_id_);
+    this_edge->DuplicateCost(true, true, merged_sig_id2half_sig_id_);
     this_edge->start_node_ = this;
   }
   for (SbpEdge*& this_edge : second->edges_in_) {
-    this_edge->DuplicateCost(false, false, merged_sig_id2children_sig_id_);
+    this_edge->DuplicateCost(false, false, merged_sig_id2half_sig_id_);
     this_edge->end_node_ = this;
   }
   for (SbpEdge*& this_edge : second->edges_out_) {
-    this_edge->DuplicateCost(true, false, merged_sig_id2children_sig_id_);
+    this_edge->DuplicateCost(true, false, merged_sig_id2half_sig_id_);
     this_edge->start_node_ = this;
   }
   // Remove edges from original nodes
@@ -149,7 +161,6 @@ void SbpNode::InitializeSbp() {
 };
 
 // Let one node point to another
-
 void SbpNode::StartPointToEnd(SbpNode* start_node, SbpNode* end_node) {
   // generate the edge between them
   SbpEdge* e = new SbpEdge(start_node, end_node);
@@ -165,31 +176,46 @@ void SbpNode::SummarizeCost() {
   if (children_.size() == child_node_sbp_sig_.size()) { return; }
   int32_t previous_children_size = child_node_sbp_sig_.size();
   child_node_sbp_sig_.resize(children_.size());
+  in_memory_support_ =
+      in_memory_support_
+      || std::any_of(children_.begin() + previous_children_size, children_.end(),
+                     [](SbpNode* sbp_node) { return sbp_node->in_memory_support_; });
+  if (in_memory_support_) { memory_.resize(weighted_cost_.size(), 0); }
+  // Buffer
+  int64_t min_memory_cost = 0, memory_cost = 0;
+  double min_weighted_sum = 0.0, weighted_sum = 0.0;
+  int32_t min_sbp_child = 0;
   // Only deal with new children_
   for (int32_t child = previous_children_size; child < children_.size(); child++) {
-    child_node_sbp_sig_[child].resize(cost_.size());
+    child_node_sbp_sig_[child].resize(weighted_cost_.size());
 
-    for (int32_t sbp_this = 0; sbp_this < cost_.size(); sbp_this++) {
-      double min_cost = 0, curr_cost = 0;
-      for (int32_t sbp_child = 0; sbp_child < children_[child]->cost_.size(); sbp_child++) {
-        if (children_[child]->edges_in_.size()) {
+    for (int32_t sbp_this = 0; sbp_this < weighted_cost_.size(); sbp_this++) {
+      SbpNode* child_node = children_[child];
+      for (int32_t sbp_child = 0; sbp_child < child_node->weighted_cost_.size(); sbp_child++) {
+        if (child_node->edges_in_.size()) {
           // edge in graph: father -> child
-          curr_cost = children_[child]->edges_in_[0]->cost_[sbp_this][sbp_child]
-                      + children_[child]->cost_[sbp_child];
-
+          memory_cost = child_node->edges_in_[0]->GetMemory(sbp_this, sbp_child)
+                        + child_node->GetMemory(sbp_child);
+          weighted_sum = child_node->edges_in_[0]->weighted_cost_[sbp_this][sbp_child]
+                         + child_node->weighted_cost_[sbp_child];
         } else {
           // edge in graph: child -> father
-          curr_cost = children_[child]->edges_out_[0]->cost_[sbp_child][sbp_this]
-                      + children_[child]->cost_[sbp_child];
+          memory_cost = child_node->edges_out_[0]->GetMemory(sbp_child, sbp_this)
+                        + child_node->GetMemory(sbp_child);
+          weighted_sum = child_node->edges_out_[0]->weighted_cost_[sbp_child][sbp_this]
+                         + child_node->weighted_cost_[sbp_child];
         }
         // update min_cost with fixed SbpSignature for this node and child node
-        if (sbp_child == 0 || curr_cost < min_cost) {
-          min_cost = curr_cost;
-          child_node_sbp_sig_[child][sbp_this] = sbp_child;
+        if (sbp_child == 0 || weighted_sum < min_weighted_sum) {
+          min_memory_cost = memory_cost;
+          min_weighted_sum = weighted_sum;
+          min_sbp_child = sbp_child;
         }
       }
+      child_node_sbp_sig_[child][sbp_this] = min_sbp_child;
       // Add the cost for child node to this node
-      cost_[sbp_this] += min_cost;
+      if (in_memory_support_) { memory_[sbp_this] += min_memory_cost; }
+      weighted_cost_[sbp_this] += min_weighted_sum;
     }
   }
 }
@@ -216,11 +242,95 @@ bool SbpNode::EliminateItselfAsChild() {
   return false;
 }
 
+// Compute the weighted sum of the time and memory cost
+void SbpNode::ComputeWeightedCost() {
+  if (half_node_.empty()) {
+    // If this node is not generated from merging, it should have original cost
+    // weighted_cost_ = cost_;
+    weighted_cost_ = origin_cost_;
+    memory_ = origin_memory_;
+    if (in_memory_support_) {
+      for (int32_t sbp_id = 0; sbp_id < origin_memory_.size(); sbp_id++) {
+        weighted_cost_[sbp_id] += kMemoryRatio * origin_memory_[sbp_id];
+      }
+    }
+  } else {
+    half_node_[0]->ComputeWeightedCost();
+    half_node_[1]->ComputeWeightedCost();
+    // The edge between two half nodes
+    SbpEdge* edge_found = nullptr;
+    if (!half_node_[0]->edges_in_.empty()) {
+      edge_found = half_node_[0]->edges_in_[0];
+    } else if (!half_node_[0]->edges_out_.empty()) {
+      edge_found = half_node_[0]->edges_out_[0];
+    }
+    if (edge_found != nullptr) { edge_found->ComputeWeightedCost(); }
+    // Compute the weighted cost form half nodes
+    for (int32_t merged_sig_id = 0; merged_sig_id < merged_sig_id2half_sig_id_.size();
+         merged_sig_id++) {
+      const auto& pair = merged_sig_id2half_sig_id_[merged_sig_id];
+      if (in_memory_support_) {
+        memory_[merged_sig_id] =
+            half_node_[0]->GetMemory(pair.first) + half_node_[1]->GetMemory(pair.second);
+      }
+      weighted_cost_[merged_sig_id] =
+          half_node_[0]->weighted_cost_[pair.first] + half_node_[1]->weighted_cost_[pair.second];
+      if (edge_found != nullptr) {
+        // The dimension of weighted cost has been expand for the found edge.
+        // Both the dimension of weighted_cost_ is merged_sig_id2half_sig_id_.size().
+        // The start node and end node is changed to this for the found edge.
+        if (in_memory_support_) {
+          memory_[merged_sig_id] += edge_found->GetMemory(merged_sig_id, merged_sig_id);
+        }
+        weighted_cost_[merged_sig_id] += edge_found->weighted_cost_[merged_sig_id][merged_sig_id];
+      }
+    }
+  }
+  // Compute the weighted cost for children
+  for (auto& child_node : children_) {
+    child_node->ComputeWeightedCost();
+    for (auto& in_edge : child_node->edges_in_) { in_edge->ComputeWeightedCost(); }
+    for (auto* out_edge : child_node->edges_out_) { out_edge->ComputeWeightedCost(); }
+  }
+  // Compute the weighted cost from children
+  child_node_sbp_sig_.clear();
+  SummarizeCost();
+}
+
+// Generate the relationship between this merged node and its components
+void SbpNode::GenerateComponentRelationship() {
+  // Do nothing if not merged node or already generated
+  if (half_node_.empty() || !component2merged_sig_id2component_sig_id_.empty()) { return; }
+  // Add the map for two half nodes
+  auto& first_merged2component_id = component2merged_sig_id2component_sig_id_[half_node_[0]];
+  auto& second_merged2component_id = component2merged_sig_id2component_sig_id_[half_node_[1]];
+  int32_t total_sbp_num = weighted_cost_.size();
+  first_merged2component_id.resize(total_sbp_num);
+  second_merged2component_id.resize(total_sbp_num);
+  for (int32_t i = 0; i < total_sbp_num; i++) {
+    first_merged2component_id[i] = merged_sig_id2half_sig_id_[i].first;
+    second_merged2component_id[i] = merged_sig_id2half_sig_id_[i].second;
+  }
+  // Add the map for the half of the half nodes
+  for (int32_t i = 0; i < 2; i++) {
+    half_node_[i]->GenerateComponentRelationship();
+    auto& merged2half_id = component2merged_sig_id2component_sig_id_[half_node_[i]];
+    for (auto& pair : half_node_[i]->component2merged_sig_id2component_sig_id_) {
+      auto& merged2component_id = component2merged_sig_id2component_sig_id_[pair.first];
+      merged2component_id.resize(total_sbp_num);
+      auto& half2component_id = pair.second;
+      for (int32_t merged_id = 0; merged_id < total_sbp_num; merged_id++) {
+        merged2component_id[merged_id] = half2component_id[merged2half_id[merged_id]];
+      }
+    }
+  }
+}
+
 void SbpNode::FinalizeSbp() {
   if (!half_node_.empty()) {
     // Finalize Sbp of merged nodes
-    half_node_[0]->final_sbp_sig_id_ = merged_sig_id2children_sig_id_[final_sbp_sig_id_].first;
-    half_node_[1]->final_sbp_sig_id_ = merged_sig_id2children_sig_id_[final_sbp_sig_id_].second;
+    half_node_[0]->final_sbp_sig_id_ = merged_sig_id2half_sig_id_[final_sbp_sig_id_].first;
+    half_node_[1]->final_sbp_sig_id_ = merged_sig_id2half_sig_id_[final_sbp_sig_id_].second;
   }
 
   // Finalize Sbp of children_
@@ -255,7 +365,7 @@ double SbpNode::GreedyStrategy() {
   double original_cost = EvalNbhCost();
   double min_cost = original_cost;
   int32_t min_sbp = final_sbp_sig_id_;
-  for (int32_t sbp = 0; sbp < cost_.size(); sbp++) {
+  for (int32_t sbp = 0; sbp < weighted_cost_.size(); sbp++) {
     final_sbp_sig_id_ = sbp;
     curr_cost = EvalNbhCost();
     if (curr_cost < min_cost) {
@@ -269,13 +379,9 @@ double SbpNode::GreedyStrategy() {
 
 double SbpNode::EvalNbhCost() const {
   // Current Cost, Minimum Cost, Cost with original sbp
-  double curr_cost = cost_[final_sbp_sig_id_];
-  for (SbpEdge* this_edge : edges_in_) {
-    curr_cost += this_edge->cost_[this_edge->start_node_->final_sbp_sig_id_][final_sbp_sig_id_];
-  }
-  for (SbpEdge* this_edge : edges_out_) {
-    curr_cost += this_edge->cost_[final_sbp_sig_id_][this_edge->end_node_->final_sbp_sig_id_];
-  }
+  double curr_cost = GetWeightedCost();
+  for (SbpEdge* this_edge : edges_in_) { curr_cost += this_edge->GetWeightedCost(); }
+  for (SbpEdge* this_edge : edges_out_) { curr_cost += this_edge->GetWeightedCost(); }
   return curr_cost;
 }
 
@@ -284,26 +390,25 @@ double SbpNode::EvalOutNbhCost(
   // check if this node is in the node list
   CHECK(node_list_id_ >= 0) << "Compute out cost for a node out of the node list" << std::endl;
   // Cost with original sbp
-  double curr_cost = cost_[final_sbp_sig_id_];
+  double curr_cost = GetWeightedCost();
   for (SbpEdge* this_edge : edges_in_) {
     // if the start node is not in the neighborhood
     if (node_list_id2nbh_id.find(this_edge->start_node_->node_list_id_)
         == node_list_id2nbh_id.end()) {
-      curr_cost += this_edge->cost_[this_edge->start_node_->final_sbp_sig_id_][final_sbp_sig_id_];
+      curr_cost += this_edge->GetWeightedCost();
     }
   }
   for (SbpEdge* this_edge : edges_out_) {
     // if the end node is not in the neighborhood
     if (node_list_id2nbh_id.find(this_edge->end_node_->node_list_id_)
         == node_list_id2nbh_id.end()) {
-      curr_cost += this_edge->cost_[final_sbp_sig_id_][this_edge->end_node_->final_sbp_sig_id_];
+      curr_cost += this_edge->GetWeightedCost();
     }
   }
   return curr_cost;
 }
 
 // Compute the cost between this node and adjacent nodes with a lower order
-
 double SbpNode::EvalInNbhCost(const std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id,
                               const std::vector<int32_t>& nbh_id2order) const {
   // check if this node is in the node list
@@ -319,7 +424,7 @@ double SbpNode::EvalInNbhCost(const std::unordered_map<int32_t, int32_t>& node_l
     const auto& it = node_list_id2nbh_id.find(this_edge->start_node_->node_list_id_);
     // if the start node is in the neighborhood
     if (it != node_list_id2nbh_id.end() && nbh_id2order[it->second] < order) {
-      curr_cost += this_edge->cost_[this_edge->start_node_->final_sbp_sig_id_][final_sbp_sig_id_];
+      curr_cost += this_edge->GetWeightedCost();
       // End this function and return infinity.
       if (curr_cost > GetValidMaxCopyCost()) { return GetMaxVal<float>(); }
     }
@@ -328,7 +433,7 @@ double SbpNode::EvalInNbhCost(const std::unordered_map<int32_t, int32_t>& node_l
     const auto& it = node_list_id2nbh_id.find(this_edge->end_node_->node_list_id_);
     // if the end node is in the neighborhood
     if (it != node_list_id2nbh_id.end() && nbh_id2order[it->second] < order) {
-      curr_cost += this_edge->cost_[final_sbp_sig_id_][this_edge->end_node_->final_sbp_sig_id_];
+      curr_cost += this_edge->GetWeightedCost();
       if (curr_cost > GetValidMaxCopyCost()) { return GetMaxVal<float>(); }
     }
   }
@@ -350,14 +455,14 @@ double SbpNode::EvalMinInNbhCost(const std::unordered_map<int32_t, int32_t>& nod
     const auto& it = node_list_id2nbh_id.find(this_edge->start_node_->node_list_id_);
     // if the start node is in the neighborhood
     if (it != node_list_id2nbh_id.end() && nbh_id2order[it->second] > order) {
-      curr_cost += this_edge->GetMinCost();
+      curr_cost += this_edge->GetMinWeightedCost();
     }
   }
   for (SbpEdge* this_edge : edges_out_) {
     const auto& it = node_list_id2nbh_id.find(this_edge->end_node_->node_list_id_);
     // if the end node is in the neighborhood
     if (it != node_list_id2nbh_id.end() && nbh_id2order[it->second] > order) {
-      curr_cost += this_edge->GetMinCost();
+      curr_cost += this_edge->GetMinWeightedCost();
     }
   }
   return curr_cost;
@@ -379,7 +484,6 @@ void SbpNode::OneRingNeighborhood(std::vector<int32_t>& nbh_1ring) const {
 
 // Get the n ring neighborhood of this node
 // Pre-allocate buffer, which will be faster.
-
 void SbpNode::NRingNeighborhood(int32_t n, std::vector<int32_t>& nbh_n_ring,
                                 std::vector<int32_t>& nbh_1ring,
                                 const std::vector<SbpNode*>& node_list,
@@ -407,7 +511,6 @@ void SbpNode::NRingNeighborhood(int32_t n, std::vector<int32_t>& nbh_n_ring,
 }
 
 // Get or compute the minimum layer of this node
-
 int32_t SbpNode::GetMinLayer(
     const HashMap<std::string, SbpNode*>& op_name2sbp_node,
     const HashMap<const OpNode*, HashSet<std::string>>& op_node2mutable_op_ctrl_deps) {
@@ -440,7 +543,6 @@ int32_t SbpNode::GetMinLayer(
 }
 
 // Spread the minimum layer to compute the maximum layer of producers
-
 void SbpNode::SpreadMaxLayer(
     const HashMap<std::string, SbpNode*>& op_name2sbp_node,
     const HashMap<const OpNode*, HashSet<std::string>>& op_node2mutable_op_ctrl_deps) {
@@ -459,35 +561,34 @@ void SbpNode::SpreadMaxLayer(
   }
 }
 
-// Drop down the maximum layer with the minimum layer from consumer
-
+// Drop down the maximum layer with the minimum layer form consumer
 void SbpNode::DropMaxLayer(int32_t upper_bound) {
   if (upper_bound < max_layer_ || max_layer_ < 0) { max_layer_ = upper_bound; }
 }
+
 // Set max_layer_ = min_layer_ if this node does not have any consumer
 // This is the end of the whole graph
 // We could also set it to be the maximum of the min_layer_ in the graph. (It should be the same.)
-
 void SbpNode::LiftMaxLayer() {
   if (max_layer_ < min_layer_) { max_layer_ = min_layer_; }
 }
-// Set max_layer_ = upper_bound if this node does not have any consumer
 
+// Set max_layer_ = upper_bound if this node does not have any consumer
 void SbpNode::LiftMaxLayer(int32_t upper_bound) {
   if (max_layer_ < min_layer_) { max_layer_ = upper_bound; }
 }
 
 // Get the minimum element in Cost
-
 double SbpNode::GetMinCost() const {
   // Check the size of Cost
+  // Can not use weighted cost here since this function is used for find trunk.
+  // We have not initialize weighted cost at this moment
   CHECK(cost_.size() > 0) << "Cost not initialized!" << std::endl;
   // Compute the min_comp_cost
   return *std::min_element(cost_.begin(), cost_.end());
 }
 
 // Set the cut ratio
-
 double SbpNode::GetCutRatio() const {
   double curr_cut_ratio = 1.0;
   for (auto* this_edge : edges_in_) { curr_cut_ratio *= this_edge->GetCutRatio(); }
@@ -497,7 +598,6 @@ double SbpNode::GetCutRatio() const {
 
 // Judge if this node is on the trunk
 // If so, judge it for its producer/upstream nodes
-
 void SbpNode::SpreadTrunk(const HashMap<std::string, SbpNode*>& op_name2sbp_node) {
   // Skip it if this node is already judged.
   if (on_trunk_) { return; }
@@ -520,7 +620,6 @@ void SbpNode::SpreadTrunk(const HashMap<std::string, SbpNode*>& op_name2sbp_node
 }
 
 // Count consumers and any downstream nodes defined by control edges
-
 void SbpNode::RaiseConsumerNum(const HashMap<std::string, SbpNode*>& op_name2sbp_node) {
   // Should clear it before running.
   // skip the proxy nodes and the sources
@@ -533,7 +632,6 @@ void SbpNode::RaiseConsumerNum(const HashMap<std::string, SbpNode*>& op_name2sbp
 }
 
 // Compute the minimal available wait time for producers or upstream nodes
-
 void SbpNode::SpreadAvailWaitTime(const std::vector<double>& trunk_cost,
                                   const std::vector<double>& acc_trunk_cost,
                                   const HashMap<std::string, SbpNode*>& op_name2sbp_node,
@@ -607,16 +705,14 @@ void SbpNode::SpreadAvailWaitTime(const std::vector<double>& trunk_cost,
 }
 
 // Drop down the available wait time with the minimum cost from downstream
-
 void SbpNode::DropAvailWaitTime(double curr_trunk_cost) {
   if (acc_trunk_cost_ < 0.0 || acc_trunk_cost_ > curr_trunk_cost) {
     acc_trunk_cost_ = curr_trunk_cost;
   }
 }
 
-// Assemble copy cost for all the incoming edges
-
-void SbpNode::InitializeCopyCost(bool use_sbp_collector) {
+// Assemble copy cost and partial memory cost for all the incoming edges
+void SbpNode::InitCopyAndMemoryCost(bool use_sbp_collector, bool nccl_not_use_compute_stream) {
   for (SbpEdge* this_edge : edges_in_) {
     const auto* sbp_node_producer = this_edge->start_node_;
     OpNode* producer = sbp_node_producer->op_node_;
@@ -626,7 +722,7 @@ void SbpNode::InitializeCopyCost(bool use_sbp_collector) {
     // look through input blobs
     for (const std::string& ibn : op_node_->op().input_bns()) {
       if (producer->op().op_name() == op_node_->SrcNode4Ibn(ibn).op().op_name()) {
-        this_edge->InitializeCopyCost(ibn, use_sbp_collector);
+        this_edge->InitCopyAndMemoryCost(ibn, use_sbp_collector, nccl_not_use_compute_stream);
       }
     }
     // Add Wait time
@@ -639,8 +735,62 @@ void SbpNode::InitializeCopyCost(bool use_sbp_collector) {
   }
 }
 
-// Reduce and set the wait time for op in the trunk
+// Assemble memory cost
+void SbpNode::InitializeMemory(bool is_reusable, const HashMap<LogicalBlobId, int32_t>& lbi2id,
+                               const std::vector<int32_t>& id2count, bool nccl_use_compute_stream) {
+  const auto& curr_operator = op_node_->op();
+  // An edge should not be initialized twice
+  // During each initialization, we are computing sum(memory of consumer) - sum(memory of producer)
+  // This is why we need to pre-store memory of producer
+  HashMap<SbpEdge*, std::vector<int64_t>> sbp_edge2nd_sbp_sig2memory;
+  for (const auto& obn : curr_operator.output_bns()) {
+    const LogicalBlobId& lbi = curr_operator.BnInOp2Lbi(obn);
+    // Fixed memory or in the support of the reusable memory
+    if (!is_reusable || id2count.at(lbi2id.at(lbi)) > 0) {
+      // If not in support, memory_ would be empty.
+      in_memory_support_ = true;
+      memory_.resize(sbp_sig_list_.size(), 0);
+      const auto& logical_blob_desc = op_node_->LogicalBlobDesc4Lbi(lbi);
+      const auto& hierarchy = *CHECK_JUST(curr_operator.GetParallelDesc4BnInOp(obn))->hierarchy();
+      // There are some operators with a fixed sbp for some blobs, such as conv.
+      // {in: S0, kernel: B, out: S0}
+      // {in: B, kernel: B, out: B}
+      // The blob kernel have the same sbp for different signatures.
+      // We pre-store the results for the same sbp while accessing the same blobs.
+      HashMap<NdSbp, int64_t> nd_sbp2memory;
+      SbpEdge* edge_contain_lbi = nullptr;
+      for (const auto& edge_out : edges_out_) {
+        if (edge_out->SearchLbi(lbi)) { edge_contain_lbi = edge_out; }
+      }
+      // There exist some lbi which does not have a consumer
+      // At this moment edge_contain_lbi == nullptr
+      auto& nd_sbp_sig2memory = sbp_edge2nd_sbp_sig2memory[edge_contain_lbi];
+      nd_sbp_sig2memory.resize(sbp_sig_list_.size(), 0);
+      for (int32_t sbp_sig_id = 0; sbp_sig_id < sbp_sig_list_.size(); sbp_sig_id++) {
+        const NdSbp& nd_sbp = sbp_sig_list_[sbp_sig_id].bn_in_op2nd_sbp().at(obn);
+        auto it = nd_sbp2memory.find(nd_sbp);
+        if (it == nd_sbp2memory.end()) {
+          // This compute the memory at rank 0, the largest one.
+          // We could be faster if we just compute the average memory.
+          it = nd_sbp2memory
+                   .insert({nd_sbp, MaxByteSize4BlobDescSbp(logical_blob_desc, nd_sbp, hierarchy)})
+                   .first;
+        }
+        memory_[sbp_sig_id] += it->second;
+        nd_sbp_sig2memory[sbp_sig_id] += it->second;
+      }
+    }
+  }
+  // Even after the correction in the memory of edges, the relative error still have 0.73%.
+  if (nccl_use_compute_stream && in_memory_support_ && is_reusable) {
+    for (const auto& pair : sbp_edge2nd_sbp_sig2memory) {
+      // Init memory for each out-going edge
+      pair.first->InitializeMemory(lbi2id, id2count, pair.second);
+    }
+  }
+}
 
+// Reduce and set the wait time for op in the trunk
 void SbpNode::SetTrunkWaitTime(double trunk_wait_time) {
   // only reduce the wait time for operators in the trunk
   if (on_trunk_) {
@@ -654,14 +804,12 @@ void SbpNode::SetTrunkWaitTime(double trunk_wait_time) {
   }
 }
 
-// Drop down the maximum layer with the minimum layer from consumer
-
+// Drop down the maximum layer with the minimum layer form consumer
 void SbpNode::DropTributaryLayer(int32_t upper_bound) {
   if (upper_bound < tributary_layer_ || tributary_layer_ < 0) { tributary_layer_ = upper_bound; }
 }
 
 // Compute maximum layer for tributaries
-
 void SbpNode::SpreadTributaryLayer(const HashMap<std::string, SbpNode*>& op_name2sbp_node) {
   if (counter_ || min_layer_ <= 0) { return; }
   int32_t producer_max_lay = 0;
@@ -703,6 +851,24 @@ const NdSbpSignature& SbpNode::FinalSbpSignature() const {
   CHECK(!sbp_sig_list_.empty()) << "Asking for sbp signature for an empty node";
   return sbp_sig_list_[final_sbp_sig_id_];
 };
+
+int32_t SbpNode::GetComponentSbpId(int32_t merged_id, SbpNode* component_node) const {
+  if (this == component_node) { return merged_id; }
+  CHECK(!component2merged_sig_id2component_sig_id_.empty())
+      << "Check the component before initialization!" << std::endl;
+  return component2merged_sig_id2component_sig_id_.at(component_node).at(merged_id);
+}
+
+// Judge if sbp_node is a port of the current node
+bool SbpNode::IsComponent(SbpNode* sbp_node) const {
+  if (this == sbp_node) { return true; }
+  // If IsComponent() is call before we initialize component2merged_sig_id2component_sig_id_,
+  // we would also return false.
+  // Please do not call GenerateComponentRelationship() at here.
+  // Please see SbpEdge::SummarizeCost() for more details.
+  return component2merged_sig_id2component_sig_id_.find(sbp_node)
+         != component2merged_sig_id2component_sig_id_.end();
+}
 
 }  // namespace auto_parallel
 }  // namespace oneflow

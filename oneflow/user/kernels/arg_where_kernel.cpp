@@ -67,16 +67,38 @@ size_t GetWorkspaceBytesSize(int64_t elem_cnt) {
                                                                                    elem_cnt);
 }
 
-struct SwitchUtil {
+template<DeviceType device_type>
+struct SwitchUtil;
+
+template<>
+struct SwitchUtil<DeviceType::kCPU> {
 #define SWITCH_ENTRY(func_name, device, itype, otype, ndim) func_name<device, itype, otype, ndim>
 
   DEFINE_STATIC_SWITCH_FUNC(
-      size_t, GetWorkspaceBytesSize, SWITCH_ENTRY, MAKE_DEVICE_TYPE_CTRV_SEQ(DEVICE_TYPE_SEQ),
-      MAKE_DATA_TYPE_CTRV_SEQ(
-          ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ),
+      size_t, GetWorkspaceBytesSize, SWITCH_ENTRY,
+      MAKE_DEVICE_TYPE_CTRV_SEQ(OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU)),
+      MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ
+                                  FLOAT16_DATA_TYPE_SEQ),
       MAKE_DATA_TYPE_CTRV_SEQ(INDEX_DATA_TYPE_SEQ), MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
 #undef SWITCH_ENTRY
 };
+
+#ifdef WITH_CUDA
+
+template<>
+struct SwitchUtil<DeviceType::kCUDA> {
+#define SWITCH_ENTRY(func_name, device, itype, otype, ndim) func_name<device, itype, otype, ndim>
+
+  DEFINE_STATIC_SWITCH_FUNC(
+      size_t, GetWorkspaceBytesSize, SWITCH_ENTRY,
+      MAKE_DEVICE_TYPE_CTRV_SEQ(OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA)),
+      MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ
+                                  HALF_DATA_TYPE_SEQ),
+      MAKE_DATA_TYPE_CTRV_SEQ(INDEX_DATA_TYPE_SEQ), MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
+#undef SWITCH_ENTRY
+};
+
+#endif  // WITH_CUDA
 
 template<DeviceType device_type>
 size_t InferTempStorageBytesSize(user_op::InferContext* ctx) {
@@ -84,7 +106,7 @@ size_t InferTempStorageBytesSize(user_op::InferContext* ctx) {
   if (input_shape.NumAxes() == 0) { return 0; }
   DataType input_dtype = ctx->InputDType("input", 0);
   DataType output_dtype = ctx->OutputDType("output", 0);
-  return SwitchUtil::SwitchGetWorkspaceBytesSize(
+  return SwitchUtil<device_type>::SwitchGetWorkspaceBytesSize(
       SwitchCase(device_type, input_dtype, output_dtype, input_shape.NumAxes()),
       input_shape.elem_cnt());
 }
@@ -107,4 +129,11 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
     REGISTER_ARG_WHERE_KERNEL_WITH_DTYPE_PAIR, DEVICE_TYPE_SEQ,
     ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ARG_WHERE_KERNEL_WITH_DTYPE_PAIR, (DeviceType::kCPU),
+                                 FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+#ifdef WITH_CUDA
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ARG_WHERE_KERNEL_WITH_DTYPE_PAIR, (DeviceType::kCUDA),
+                                 HALF_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+#endif  // WITH_CUDA
 }  // namespace oneflow

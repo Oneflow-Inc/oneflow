@@ -28,6 +28,7 @@ class ActorMsgBus final {
 
   void SendMsg(const ActorMsg& msg);
   void SendMsgWithoutCommNet(const ActorMsg& msg);
+  void SendMsgsWithoutCommNet(const ActorMsg* msgs, size_t n, int64_t thrd_id);
 
  private:
   friend class Singleton<ActorMsgBus>;

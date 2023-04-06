@@ -16,13 +16,22 @@ limitations under the License.
 #include "oneflow/core/control/rpc_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/env_desc.h"
+#include "oneflow/core/common/env_var/bootstrap.h"
 
 namespace oneflow {
 
 namespace {
 
-const int32_t max_retry_num = 60;
-const int64_t sleep_seconds = 10;
+int64_t rpc_client_max_retry_times() {
+  static const int64_t rpc_client_max_retry_times =
+      EnvInteger<ONEFLOW_RPC_CLIENT_MAX_RETRY_TIMES>();
+  return rpc_client_max_retry_times;
+}
+
+int64_t rpc_client_sleep_seconds() {
+  static const int64_t rpc_client_sleep_seconds = EnvInteger<ONEFLOW_RPC_CLIENT_SLEEP_SECONDS>();
+  return rpc_client_sleep_seconds;
+}
 
 #define GRPC_CHECK(x) CHECK_EQ(x.error_code(), grpc::StatusCode::OK)
 
@@ -179,23 +188,28 @@ void RpcClient::LoadServer(const std::string& server_addr, CtrlService::Stub* st
 
 void RpcClient::LoadServer(const LoadServerRequest& request, CtrlService::Stub* stub) {
   int32_t retry_idx = 0;
-  for (; retry_idx < max_retry_num; ++retry_idx) {
+  int32_t skip_warning_times = 3;
+  for (; retry_idx < rpc_client_max_retry_times(); ++retry_idx) {
     grpc::ClientContext client_ctx;
     LoadServerResponse response;
     grpc::Status st = stub->CallMethod<CtrlMethod::kLoadServer>(&client_ctx, request, &response);
     if (st.error_code() == grpc::StatusCode::OK) {
-      VLOG(3) << "LoadServer " << request.addr() << " Successful at " << retry_idx << " times";
+      VLOG(3) << "LoadServer " << request.addr() << " Successful at " << retry_idx + 1 << " times";
       break;
     } else if (st.error_code() == grpc::StatusCode::UNAVAILABLE) {
-      LOG(WARNING) << "LoadServer " << request.addr() << " Failed at " << retry_idx << " times"
-                   << " error_code " << st.error_code() << " error_message " << st.error_message();
-      std::this_thread::sleep_for(std::chrono::seconds(sleep_seconds));
+      if (retry_idx >= skip_warning_times) {
+        LOG(WARNING) << "LoadServer " << request.addr() << " Failed at " << retry_idx + 1
+                     << " times"
+                     << " error_code: " << st.error_code()
+                     << " error_message: " << st.error_message();
+      }
+      std::this_thread::sleep_for(std::chrono::seconds(rpc_client_sleep_seconds()));
       continue;
     } else {
       LOG(FATAL) << st.error_message();
     }
   }
-  CHECK_LT(retry_idx, max_retry_num);
+  CHECK_LT(retry_idx, rpc_client_max_retry_times());
 }
 
 CtrlService::Stub* RpcClient::GetThisStub() { return stubs_[GlobalProcessCtx::Rank()].get(); }

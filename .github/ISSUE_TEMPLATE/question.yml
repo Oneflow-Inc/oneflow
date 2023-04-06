@@ -1,0 +1,30 @@
+name: Question
+description: Ask a question about OneFlow and discuss with community members.
+title: "[Question]: "
+labels: [Question]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Welcome to ask questions about OneFlow! This template will help us get your point.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Please describe your question here.
+      placeholder: Description
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: |
+        Please provide some alternative information here, if any.
+      placeholder: Alternatives
+    validations:
+      required: false
+  - type: markdown
+    attributes:
+      value: |
+        We are always willing to answer your questions!

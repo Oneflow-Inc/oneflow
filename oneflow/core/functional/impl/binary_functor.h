@@ -32,12 +32,18 @@ namespace impl {
 
 std::string TensorDeviceToString(const std::shared_ptr<Tensor>& tensor);
 
+Maybe<void> CastDeviceForCPUScalarTensor(std::shared_ptr<Tensor>& tensor,
+                                         std::shared_ptr<Tensor>& other, bool inplace);
+
 class BinaryFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
+    auto tensor_x = x;
+    auto tensor_y = y;
+    JUST(CastDeviceForCPUScalarTensor(tensor_x, tensor_y, /*inplace=*/false));
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({tensor_x, tensor_y}).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple);
   }
@@ -54,17 +60,13 @@ class BinaryFloatFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
     auto tensor_x = x;
-    if (IsScalarTensor(x)) {
-      // NOTE:If tensor x is scalar and it's device not equal to tensor y,
-      // then need move it to the target device first.(This behavior aligns to PyTorch)
-      std::string device_str = TensorDeviceToString(y);
-      tensor_x = JUST(functional::To(x, device_str));
-    }
+    auto tensor_y = y;
+    JUST(CastDeviceForCPUScalarTensor(tensor_x, tensor_y, /*inplace=*/false));
     TensorProcessor tensor_processor;
-    if (promoteTypes(tensor_x->dtype(), y->dtype())->is_integer()) {
-      tensor_processor.AddInputs({tensor_x, y}, DType::Float());
+    if (promoteTypes(tensor_x->dtype(), tensor_y->dtype())->is_integer()) {
+      tensor_processor.AddInputs({tensor_x, tensor_y}, DType::Float());
     } else {
-      tensor_processor.AddInputs({tensor_x, y})
+      tensor_processor.AddInputs({tensor_x, tensor_y})
           .PromoteInputsToCommonDtype(true)
           .PromoteIntegerInputsToFloatDtype(true);
     }
@@ -103,14 +105,10 @@ class InplaceableBinaryFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y, bool inplace) const {
     auto tensor_x = x;
-    if (IsScalarTensor(x)) {
-      // NOTE:If tensor x is scalar and it's device not equal to tensor y,
-      // then need move it to the target device first.(This behavior aligns to PyTorch)
-      std::string device_str = TensorDeviceToString(y);
-      tensor_x = JUST(functional::To(x, device_str));
-    }
+    auto tensor_y = y;
+    JUST(CastDeviceForCPUScalarTensor(tensor_x, tensor_y, inplace));
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({tensor_x, y}).Apply());
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({tensor_x, tensor_y}).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     if (inplace) {
       std::shared_ptr<one::Tensor>& x_cast = input_tuple.at(0);

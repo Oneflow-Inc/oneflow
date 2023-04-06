@@ -42,7 +42,7 @@ namespace oneflow {
 /*static*/ Maybe<void> TensorBufferToTensorOp::InferDataType(user_op::InferContext* ctx) {
   const auto data_type = ctx->Attr<DataType>("dtype");
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
-  CHECK_OR_RETURN(IsPODDataType(data_type));
+  CHECK_OR_RETURN(IsTriviallyCopyableDataType(data_type));
   out->set_data_type(data_type);
   return Maybe<void>::Ok();
 }
@@ -74,7 +74,7 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> TensorToTensorBufferOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
-  CHECK_OR_RETURN(IsPODDataType(in.data_type()));
+  CHECK_OR_RETURN(IsTriviallyCopyableDataType(in.data_type()));
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
   out->set_data_type(DataType::kTensorBuffer);
   return Maybe<void>::Ok();
@@ -132,7 +132,7 @@ namespace oneflow {
       << "InferDataType Failed. Expected " << DataType_Name(DataType::kTensorBuffer) << ", but got "
       << DataType_Name(in.data_type());
   const DataType out_dtype = ctx->Attr<DataType>("out_dtype");
-  CHECK_OR_RETURN(IsPODDataType(out_dtype));
+  CHECK_OR_RETURN(IsTriviallyCopyableDataType(out_dtype));
   int64_t num_tensor_buffers = ctx->outputs().size();
   for (int64_t i = 0; i < num_tensor_buffers; ++i) {
     user_op::TensorDesc* out_i = ctx->MutOutputTensorDesc("out", i);
@@ -188,7 +188,7 @@ namespace oneflow {
   const std::vector<DataType>& out_dtypes = ctx->Attr<std::vector<DataType>>("out_dtypes");
   int64_t num_tensor_buffers = ctx->outputs().size();
   for (int64_t i = 0; i < num_tensor_buffers; ++i) {
-    CHECK_OR_RETURN(IsPODDataType(out_dtypes[i]));
+    CHECK_OR_RETURN(IsTriviallyCopyableDataType(out_dtypes[i]));
     user_op::TensorDesc* out_i = ctx->MutOutputTensorDesc("out", i);
     out_i->set_data_type(out_dtypes[i]);
   }

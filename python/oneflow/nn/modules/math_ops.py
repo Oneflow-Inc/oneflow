@@ -18,7 +18,7 @@ from typing import Optional, Sequence, Union
 
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 from oneflow.nn.modules.utils import _check_axis
 from oneflow.ops.transpose_util import (
     get_inversed_perm,
@@ -253,45 +253,6 @@ def addmm_op(input, mat1, mat2, alpha=1, beta=1):
         oneflow.Size([3, 3])
     """
     return addmm(input, mat1, mat2, alpha, beta)
-
-
-class Topk(Module):
-    def __init__(
-        self, k, dim: int = None, largest: bool = True, sorted: bool = True
-    ) -> None:
-        super().__init__()
-        self.k = k
-        self.sorted = sorted
-        self.dim = dim
-        self.largest = largest
-
-    def forward(self, input):
-        if self.dim == None:
-            self.dim = -1
-        num_axes = len(input.shape)
-        axis = self.dim if self.dim >= 0 else self.dim + num_axes
-        assert 0 <= axis < num_axes, "axis out of range"
-        if axis == num_axes - 1:
-            if self.largest:
-                indices = flow._C.top_k(input, self.k)
-            else:
-                neg_input = flow.mul(input, -1)
-                indices = flow._C.top_k(neg_input, self.k)
-            return (flow.gather(input, axis, indices), indices)
-        else:
-            perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
-            x = flow._C.transpose(input, perm=perm)
-            if self.largest:
-                indices = flow._C.top_k(x, self.k)
-            else:
-                neg_input = flow.mul(x, -1)
-                indices = flow._C.top_k(neg_input, self.k)
-            indices = flow._C.transpose(indices, perm=get_inversed_perm(perm))
-            return (flow.gather(input, axis, indices), indices)
-
-
-def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True):
-    return Topk(k=k, dim=dim, largest=largest, sorted=sorted)(input)
 
 
 if __name__ == "__main__":

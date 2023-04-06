@@ -42,6 +42,7 @@ namespace oneflow {
 #define LOGICAL_REDUCE_BINARY_FUNC_NAME_SEQ (Any)(All)
 #define REDUCE_BINARY_FUNC_SEQ \
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, REDUCE_BINARY_FUNC_NAME_SEQ)
+#define REDUCE_COMPLEX_BINARY_FUNC_SEQ OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, (Sum))
 #define ARITHMETIC_REDUCE_BINARY_FUNC_SEQ \
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, ARITHMETIC_REDUCE_BINARY_FUNC_NAME_SEQ)
 #define LOGICAL_REDUCE_BINARY_FUNC_SEQ \
@@ -308,6 +309,24 @@ struct BinaryFuncXOR final {
   static OF_DEVICE_FUNC bool Invoke(const T x, const T y) { return (!x) != (!y); }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncXOR);
+
+template<typename T>
+struct BinaryFuncBitwiseAnd final {
+  static OF_DEVICE_FUNC T Invoke(const T x, const T y) { return x & y; }
+};
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncBitwiseAnd);
+
+template<typename T>
+struct BinaryFuncBitwiseOr final {
+  static OF_DEVICE_FUNC T Invoke(const T x, const T y) { return x | y; }
+};
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncBitwiseOr);
+
+template<typename T>
+struct BinaryFuncBitwiseXor final {
+  static OF_DEVICE_FUNC T Invoke(const T x, const T y) { return x ^ y; }
+};
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncBitwiseXor);
 
 #if defined(__CUDACC__)
 template<>

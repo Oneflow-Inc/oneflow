@@ -6,7 +6,7 @@
 // RUN: --convert-memref-to-llvm --convert-func-to-llvm \
 // RUN: -gpu-to-llvm --reconcile-unrealized-casts --print-after-all \
 // RUN: | tee %test_exec_root/$(basename %s).lower.mlir \
-// RUN: | oneflow-runner \
+// RUN: | python3 -m oneflow.test_utils.throttle --with-cuda=%with_cuda oneflow-runner \
 // RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_cuda_runtime%shlibext \
 // RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_runner_utils%shlibext \
 // RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_c_runner_utils%shlibext \
@@ -20,7 +20,7 @@
 // RUN: --convert-memref-to-llvm --convert-func-to-llvm \
 // RUN: -gpu-to-llvm --reconcile-unrealized-casts \
 // RUN: | tee %test_exec_root/$(basename %s).lower.mlir \
-// RUN: | oneflow-runner \
+// RUN: | python3 -m oneflow.test_utils.throttle --with-cuda=%with_cuda oneflow-runner \
 // RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_cuda_runtime%shlibext \
 // RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_runner_utils%shlibext \
 // RUN:   --entry-point-result=void

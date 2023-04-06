@@ -634,6 +634,8 @@ class UserOpGetNdSbpSignatureListContext : public user_op::GetNdSbpSignatureList
         nd_sbp_sig_list_(nd_sbp_sig_list) {}
   ~UserOpGetNdSbpSignatureListContext() override = default;
 
+  std::vector<NdSbpSignature>* MutNdSbpSignatureList() override { return nd_sbp_sig_list_; }
+
   void AddNdSbpSignature(NdSbpSignature& nd_sbp_sig) override {
     nd_sbp_sig_list_->emplace_back(nd_sbp_sig);
   }
@@ -990,6 +992,19 @@ Maybe<void> UserOp::InferNdSbpSignature(
     }
   }
   return Maybe<void>::Ok();
+}
+
+Maybe<void> UserOp::EnumerateNdSbpSignatures(
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list) const {
+  if (val_->enumerate_nd_sbp_signatures_fn) {
+    NdSbpSignature empty_sbp_signature;
+    UserOpGetNdSbpSignatureListContext user_op_get_nd_sbp_list_context(
+        this, LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list);
+    return val_->enumerate_nd_sbp_signatures_fn(&user_op_get_nd_sbp_list_context);
+  } else {
+    return Operator::EnumerateNdSbpSignatures(LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list);
+  }
 }
 
 Maybe<void> UserOp::GetNdSbpSignatureList(

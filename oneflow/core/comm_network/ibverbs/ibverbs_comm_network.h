@@ -28,19 +28,13 @@ limitations under the License.
 
 namespace oneflow {
 
-struct IBVerbsCommNetRMADesc {
-  uint64_t mem_ptr;
-  uint64_t mem_size;
-  uint32_t mr_rkey;
-};
-
 class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(IBVerbsCommNet);
   ~IBVerbsCommNet();
 
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
-  void RecvActorMsg(const ActorMsg& msg);
+  void RecvActorMsg(const IBVerbsActorMsgWrapper& msg_wrapper);
 
  private:
   friend class Singleton<IBVerbsCommNet>;

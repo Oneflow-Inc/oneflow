@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "fmt/core.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/wrap_dim_utils.h"
@@ -281,6 +282,39 @@ Maybe<void> BroadcastSeedToAllRanks(uint64_t* seed, int64_t root) {
       JUST(TransportToken::NewTransportToken(kTransportTokenTypeMeta));
   JUST(ccl::CpuBroadcast(seed, seed, sizeof(*seed), root, parallel_desc, meta_transport_token));
   return Maybe<void>::Ok();
+}
+
+Maybe<std::vector<int32_t>> GetPermWhenTransposeAxisToLastDim(const int32_t& ndim,
+                                                              const int32_t& axis) {
+  auto wrap_dim = JUST(maybe_wrap_dim(axis, ndim));
+  std::vector<int32_t> perm(ndim);
+  for (int i = 0; i < ndim - 1; i++) {
+    if (i < wrap_dim) {
+      perm[i] = i;
+    } else {
+      perm[i] = i + 1;
+    }
+  }
+  perm[ndim - 1] = wrap_dim;
+  return perm;
+}
+
+Maybe<std::vector<int32_t>> GetInversedPerm(const std::vector<int32_t>& perm) {
+  std::vector<int32_t> inversed_perm(perm.size());
+  for (int i = 0; i < perm.size(); i++) { inversed_perm[perm[i]] = i; }
+  return inversed_perm;
+}
+
+Maybe<std::tuple<std::shared_ptr<Tensor>, bool>> batchify(const std::shared_ptr<Tensor>& input,
+                                                          const int64_t num_spatial_dims,
+                                                          const std::string& func_name) {
+  const int64_t dim_count_no_batch = num_spatial_dims + 1;
+  const int64_t dim_count_batch = dim_count_no_batch + 1;
+  const bool is_batched = (input->ndim() == dim_count_batch);
+  CHECK_EQ_OR_RETURN(input->ndim() == dim_count_no_batch || is_batched, true) << fmt::format(
+      "Expected `{}`D (unbatched) or `{}`D (batched) input to `{}`, but got input of size: `{}`",
+      dim_count_no_batch, dim_count_batch, func_name, input->shape()->DebugStr());
+  return std::make_tuple(is_batched ? input : JUST(functional::Unsqueeze(input, 0)), is_batched);
 }
 
 }  // namespace functional

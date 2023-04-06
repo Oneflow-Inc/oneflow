@@ -49,12 +49,6 @@ def GetEnvContext(env_proto):
     return env_ctx
 
 
-def InitLazyGlobalSession(config_proto):
-    assert type(config_proto) is job_set_pb.ConfigProto
-    config_proto_str = text_format.MessageToString(config_proto)
-    oneflow._oneflow_internal.InitLazyGlobalSession(config_proto_str)
-
-
 def JobBuildAndInferCtx_Open(job_name):
     job_name = str(job_name)
     oneflow._oneflow_internal.JobBuildAndInferCtx_Open(job_name)

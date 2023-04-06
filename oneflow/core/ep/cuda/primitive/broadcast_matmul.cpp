@@ -78,14 +78,15 @@ cudaDataType_t GetComputeType(DataType data_type) {
   switch (data_type) {
     case kFloat: return CUDA_R_32F;
     case kDouble: return CUDA_R_64F;
-    case kFloat16:
-      const static bool allow_half_accumulation =
+    case kFloat16: {
+      const bool allow_half_accumulation =
           ParseBooleanFromEnv("ONEFLOW_MATMUL_ALLOW_HALF_PRECISION_ACCUMULATION", false);
       if (allow_half_accumulation) {
         return CUDA_R_16F;
       } else {
         return CUDA_R_32F;
       }
+    }
 #if CUDA_VERSION >= 11000
     case kBFloat16: return CUDA_R_32F;
 #endif  // CUDA_VERSION >= 11000

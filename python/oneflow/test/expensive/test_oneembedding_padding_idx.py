@@ -119,9 +119,7 @@ def _test_one_embedding_padding_idx(
 
     def np_to_global(np):
         t = flow.from_numpy(np)
-        return t.to_global(
-            placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.split(0)
-        )
+        return t.to_global(placement=flow.placement.all("cpu"), sbp=flow.sbp.split(0))
 
     with tempfile.TemporaryDirectory() as persistent_path:
         size_factor = 3 if test_opt == "Adam" else 1
@@ -133,7 +131,7 @@ def _test_one_embedding_padding_idx(
             size_factor,
             padding_idx,
         )
-        module.to_global(flow.env.all_device_placement("cuda"), flow.sbp.broadcast)
+        module.to_global(flow.placement.all("cuda"), flow.sbp.broadcast)
 
         if test_opt == "Adam":
             opt = flow.optim.Adam(module.parameters(), lr=0.1)

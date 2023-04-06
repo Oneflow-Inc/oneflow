@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow.nn.utils.container import *
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 
 
 class Sequential(get_seq(Module)):

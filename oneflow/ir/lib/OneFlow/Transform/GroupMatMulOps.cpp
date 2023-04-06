@@ -30,17 +30,55 @@ bool isLinearMatmulOp(OpTy op) {
 
 bool MatmulOp::isLinear() { return isLinearMatmulOp(*this); }
 
+Value MatmulOp::matMulGetX() { return a(); }
+
+Value MatmulOp::matMulGetW() { return b(); }
+
+Value MatmulOp::matMulGetY() { return out(); }
+
 bool BroadcastMatmulOp::isLinear() { return isLinearMatmulOp(*this); }
+
+Value BroadcastMatmulOp::matMulGetX() { return a(); }
+
+Value BroadcastMatmulOp::matMulGetW() { return b(); }
+
+Value BroadcastMatmulOp::matMulGetY() { return out(); }
 
 bool BiasAddOp::isLastDim() {
   return axis() == -1 || axis() == out().getType().cast<ShapedType>().getRank() - 1;
 }
 
-Value BroadcastAddOp::b() { return y(); }
+Value BiasAddOp::biasAddGetBias() { return b(); }
 
-Value BroadcastAddOp::out() { return z(); }
+Value BiasAddOp::biasAddGetOut() { return out(); }
+
+Value BroadcastAddOp::biasAddGetBias() { return y(); }
+
+Value BroadcastAddOp::biasAddGetOut() { return z(); }
 
 bool BroadcastAddOp::isLastDim() { return true; }
+
+Value FusedMatmulBiasOp::matMulGetX() { return x(); }
+
+Value FusedMatmulBiasOp::matMulGetW() { return weight(); }
+
+Value FusedMatmulBiasOp::matMulGetY() { return out(); }
+
+namespace {
+
+bool shouldGroupFusedMatmulBiasOp(FusedMatmulBiasOp& op) {
+  return !op._add_to_output() && op.device_tag() == "cuda" && op.alpha().convertToDouble() == 1.0;
+}
+
+}  // namespace
+
+bool FusedMatmulBiasOp::isLinear() { return shouldGroupFusedMatmulBiasOp(*this); }
+
+bool FusedMatmulBiasOp::isLastDim() { return shouldGroupFusedMatmulBiasOp(*this); }
+
+Value FusedMatmulBiasOp::biasAddGetBias() { return bias(); }
+
+Value FusedMatmulBiasOp::biasAddGetOut() { return out(); }
 
 }  // namespace oneflow
 

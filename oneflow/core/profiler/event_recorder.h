@@ -24,7 +24,7 @@ namespace profiler {
 
 class EventRecorder {
  public:
-  using ShapeGetterFuncType = std::function<std::vector<ShapeView>(void)>;
+  using DescriptionGetter = std::function<std::pair<std::string, int64_t>()>;
 
   OF_DISALLOW_COPY_AND_MOVE(EventRecorder);
 
@@ -41,6 +41,7 @@ class EventRecorder {
       event_.reset();
     }
   }
+
   static std::shared_ptr<EventRecorder> CreateCustomEventRecorder(const std::string& name);
 
   static Maybe<EventRecorder> CreateKernelEventRecorder(
@@ -48,7 +49,7 @@ class EventRecorder {
 #if defined(WITH_CUDA)
       const std::function<int64_t()>& memory_size_getter,
 #endif
-      const ShapeGetterFuncType& shape_getter);
+      const DescriptionGetter& input_shapes_getter, const DescriptionGetter& attrs_getter);
 
  private:
   std::shared_ptr<IEvent> event_;

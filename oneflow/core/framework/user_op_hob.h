@@ -78,6 +78,15 @@ ALWAYS_INLINE inline auto HobDeviceSubTag() {
   });
 }
 
+ALWAYS_INLINE inline auto HobEnvBool(const std::string& env_var, bool default_value) {
+  std::ostringstream string_stream;
+  string_stream << "environment variable \'" << env_var << "\'";
+  return hob::make_custom(string_stream.str(),
+                          [env_var, default_value](const KernelRegContext& ctx) -> bool {
+                            return ParseBooleanFromEnv(env_var, default_value);
+                          });
+}
+
 }  // namespace user_op
 
 }  // namespace oneflow

@@ -19,7 +19,7 @@ from typing import Tuple, Union
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
 from oneflow.nn import init
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 
 _shape_t = Union[int, Tuple[int], flow._oneflow_internal.Size]
 
@@ -156,7 +156,8 @@ def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-05):
                 f"Given normalized_shape={normalized_shape}, expected input with shape [*, {str(normalized_shape)[1:-1]}], but got input of size {input.shape}"
             )
 
-    if not input.is_cuda:
+    input_device_type = input.device.type if input.is_local else input.placement.type
+    if input_device_type == "cpu":
         reduce_axis = []
         for dim in range(len(input.shape)):
             if dim >= begin_norm_axis:

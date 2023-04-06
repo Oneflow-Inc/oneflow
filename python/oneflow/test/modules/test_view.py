@@ -86,7 +86,7 @@ class TestView(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(n=5, check_graph=False)
+    @autotest(n=5, check_graph=True)
     def test_view_with_0_dim_data(test_case):
         device = random_device()
         x = random_tensor(ndim=0).to(device)

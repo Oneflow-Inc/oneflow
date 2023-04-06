@@ -16,7 +16,6 @@ limitations under the License.
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowSupport.h"
-#include "OneFlow/Passes.h"
 #include "OneFlow/SBP/SBPAttributes.h"
 #include "OneFlow/Transform/TransposeHelpers.h"
 #include "llvm/ADT/StringRef.h"
@@ -270,62 +269,6 @@ void InputOp::getCanonicalizationPatterns(RewritePatternSet& results, MLIRContex
 
 void OutputOp::getCanonicalizationPatterns(RewritePatternSet& results, MLIRContext* context) {
   results.insert<ConcreteSystemOpPattern<OutputOp>>(context);
-}
-
-void NormalizationAddReluOp::build(::mlir::OpBuilder& odsBuilder, ::mlir::OperationState& odsState,
-                                   Value x, Value addend, Value moving_mean, Value moving_variance,
-                                   Value gamma, Value beta, StringRef op_name, StringRef device_tag,
-                                   ArrayAttr device_name, IntegerAttr scope_symbol_id,
-                                   ArrayAttr hierarchy, DenseElementsAttr operand_segment_sizes,
-                                   DenseElementsAttr result_segment_sizes, IntegerAttr axis,
-                                   FloatAttr epsilon, BoolAttr training, FloatAttr momentum) {
-  odsState.addOperands(x);
-  if (addend) odsState.addOperands(addend);
-  if (moving_mean) odsState.addOperands(moving_mean);
-  if (moving_variance) odsState.addOperands(moving_variance);
-  odsState.addOperands(gamma);
-  odsState.addOperands(beta);
-  odsState.addAttribute(operand_segment_sizesAttrName(odsState.name),
-                        odsBuilder.getI32VectorAttr({1, (addend ? 1 : 0), (moving_mean ? 1 : 0),
-                                                     (moving_variance ? 1 : 0), 1, 1}));
-
-  odsState.addAttribute(op_nameAttrName(odsState.name), odsBuilder.getStringAttr(op_name));
-  odsState.addAttribute(device_tagAttrName(odsState.name), odsBuilder.getStringAttr(device_tag));
-  odsState.addAttribute(device_nameAttrName(odsState.name), device_name);
-  if (scope_symbol_id) {
-    odsState.addAttribute(scope_symbol_idAttrName(odsState.name), scope_symbol_id);
-  }
-  if (hierarchy) { odsState.addAttribute(hierarchyAttrName(odsState.name), hierarchy); }
-  // TODO: remove the workaround if normalization_add_relu supports infererence mode
-  odsState.addAttribute(result_segment_sizesAttrName(odsState.name),
-                        odsBuilder.getI32VectorAttr({1, 1, 1, 1}));
-  odsState.addAttribute(axisAttrName(odsState.name), axis);
-  odsState.addAttribute(epsilonAttrName(odsState.name), epsilon);
-  odsState.addAttribute(trainingAttrName(odsState.name), training);
-  odsState.addAttribute(momentumAttrName(odsState.name), momentum);
-  auto y = x.getType();
-  odsState.addTypes(y);
-  // TODO: add real type infer, or get types from user of x and moving_mean, if it is a bn
-  /*reserve_space */ odsState.addTypes(x.getType());
-  /*mean */ odsState.addTypes(x.getType());
-  /*inv_variance */ odsState.addTypes(x.getType());
-}
-
-void RandomMaskLikeOp::build(mlir::OpBuilder& odsBuilder, mlir::OperationState& odsState,
-                             mlir::Value like, StringRef op_name, StringRef device_tag,
-                             ArrayAttr device_name, IntegerAttr scope_symbol_id,
-                             ArrayAttr hierarchy, mlir::FloatAttr rate, mlir::IntegerAttr seed) {
-  odsState.addOperands(like);
-  odsState.addAttribute(op_nameAttrName(odsState.name), odsBuilder.getStringAttr(op_name));
-  odsState.addAttribute(device_tagAttrName(odsState.name), odsBuilder.getStringAttr(device_tag));
-  odsState.addAttribute(device_nameAttrName(odsState.name), device_name);
-  if (scope_symbol_id) {
-    odsState.addAttribute(scope_symbol_idAttrName(odsState.name), scope_symbol_id);
-  }
-  if (hierarchy) { odsState.addAttribute(hierarchyAttrName(odsState.name), hierarchy); }
-  odsState.addAttribute(rateAttrName(odsState.name), rate);
-  odsState.addAttribute(seedAttrName(odsState.name), seed);
-  odsState.addTypes(like.getType());
 }
 
 std::string Add2Op::getOriginalOpTypeName() { return "add_n"; }

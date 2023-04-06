@@ -28,7 +28,7 @@ import oneflow.unittest
 
 def _test_global_transpose(test_case, placement, sbp):
     input = flow.tensor(np.random.randn(8, 16, 8, 16), dtype=flow.float32).to_global(
-        flow.env.all_device_placement("cpu"), flow.sbp.broadcast
+        flow.placement.all("cpu"), flow.sbp.broadcast
     )
     input = input.to_global(placement, sbp)
     of_out = flow.transpose(input, 0, 1)
@@ -38,7 +38,7 @@ def _test_global_transpose(test_case, placement, sbp):
 
 def _test_global_tensor_transpose(test_case, placement, sbp):
     input = flow.tensor(np.random.randn(8, 16, 8, 16), dtype=flow.float32).to_global(
-        flow.env.all_device_placement("cpu"), flow.sbp.broadcast
+        flow.placement.all("cpu"), flow.sbp.broadcast
     )
     input = input.to_global(placement, sbp)
     of_out = input.transpose(0, 1)
@@ -48,7 +48,7 @@ def _test_global_tensor_transpose(test_case, placement, sbp):
 
 def _test_global_tranpose_negative_dim(test_case, placement, sbp):
     input = flow.tensor(np.random.randn(8, 16, 8, 16), dtype=flow.float32).to_global(
-        flow.env.all_device_placement("cpu"), flow.sbp.broadcast
+        flow.placement.all("cpu"), flow.sbp.broadcast
     )
     input = input.to_global(placement, sbp)
     of_out = flow.transpose(input, -4, -3)
@@ -59,7 +59,7 @@ def _test_global_tranpose_negative_dim(test_case, placement, sbp):
 def _test_global_transpose_backward(test_case, placement, sbp):
     x = flow.tensor(
         np.random.randn(8, 16, 8, 16), dtype=flow.float32, requires_grad=True,
-    ).to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
+    ).to_global(flow.placement.all("cpu"), flow.sbp.broadcast)
     x = x.to_global(placement, sbp)
     x.retain_grad()
     y = flow.transpose(x, 0, 1).sum()
@@ -72,7 +72,7 @@ def _test_global_transpose_backward(test_case, placement, sbp):
 def _test_global_transpose_backward_v2(test_case, placement, sbp):
     x = flow.tensor(
         np.random.randn(8, 16, 8, 16), dtype=flow.float32, requires_grad=True,
-    ).to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
+    ).to_global(flow.placement.all("cpu"), flow.sbp.broadcast)
     x = x.to_global(placement, sbp)
     x.retain_grad()
     y = flow.transpose(x, 3, 1).sum()
@@ -82,14 +82,14 @@ def _test_global_transpose_backward_v2(test_case, placement, sbp):
     )
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_global_transpose_flow_with_random_data(test_case, placement, sbp):
     x = random_tensor(4, 8, 16, 24, 8).to_global(placement, sbp)
     y = torch.transpose(x, dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))
     return y
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_global_transpose_with_0_size_data(test_case, placement, sbp):
     device = random_device()
     x = random_tensor(4, 8, 16, 0, 8).to_global(placement, sbp)

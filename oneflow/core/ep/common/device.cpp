@@ -27,6 +27,8 @@ Event* Device::CreateEvent() {
 
 void Device::DestroyEvent(Event* event) { this->DestroyEvents(&event, 1); }
 
+bool Device::IsStreamOrderedMemoryAllocationSupported() const { return false; }
+
 }  // namespace ep
 
 }  // namespace oneflow

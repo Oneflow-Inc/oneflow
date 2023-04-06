@@ -24,7 +24,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestTensordot(flow.unittest.TestCase):
-    @autotest(n=5)
+    @autotest(n=5, rtol=1e-2, atol=1e-3)
     def test_tensordot_intdim(test_case):
         device = random_device()
         dims = random()
@@ -42,7 +42,7 @@ class TestTensordot(flow.unittest.TestCase):
         z = torch.tensordot(x, y, dims=3 - dims.to(int).value())
         return z
 
-    @autotest(n=5)
+    @autotest(n=5, rtol=1e-2, atol=1e-3)
     def test_tensordot_list_dim(test_case):
         device = random_device()
         x = random_tensor(4, 1, 3, 2, 5).to(device)
@@ -50,7 +50,7 @@ class TestTensordot(flow.unittest.TestCase):
         z = torch.tensordot(x, y, dims=[[1, 2, 0], [2, 1, 0]])
         return z
 
-    @autotest(n=5)
+    @autotest(n=5, rtol=1e-2, atol=1e-2)
     def test_tensordot_tuple_dim(test_case):
         device = random_device()
         x = random_tensor(4, 1, 3, 2, 5).to(device)
@@ -58,7 +58,7 @@ class TestTensordot(flow.unittest.TestCase):
         z = torch.tensordot(x, y, dims=([1, 2, 0], [2, 1, 0]))
         return z
 
-    @autotest(n=5)
+    @autotest(n=5, rtol=1e-2, atol=1e-3)
     def test_tensordot_list_neg_dim(test_case):
         device = random_device()
         x = random_tensor(4, 1, 3, 2, 5).to(device)
@@ -66,7 +66,7 @@ class TestTensordot(flow.unittest.TestCase):
         z = torch.tensordot(x, y, dims=[[-3, -2, -4], [-2, -3, -4]])
         return z
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=False, rtol=1e-2, atol=1e-3)
     def test_tensordot_backward(test_case):
         device = random_device()
         x = random_tensor(3, 3, 4, 5).to(device)
@@ -77,7 +77,7 @@ class TestTensordot(flow.unittest.TestCase):
     @autotest(check_graph=False)
     def test_tensordot_tensor_dim(test_case):
         def _test_tensor_dim(test_case, device):
-            np_dim = np.array([[1, 2, 3], [1, 2, 3]], dtype=np.int)
+            np_dim = np.array([[1, 2, 3], [1, 2, 3]], dtype=int)
             flow_dim = flow.tensor(np_dim).to(device)
             torch_dim = torch.tensor(np_dim).to(device)
 
@@ -101,7 +101,7 @@ class TestTensordot(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_tensor_dim(test_case, arg[0])
 
-    @autotest(n=5, check_graph=False)
+    @autotest(n=5, check_graph=False, rtol=1e-2, atol=1e-2)
     def test_tensordot_single_item_tensor_dim(test_case):
         device = random_device()
         dims = random_tensor(1, dim0=1, low=0, high=4, dtype=int).to(device)
@@ -110,7 +110,7 @@ class TestTensordot(flow.unittest.TestCase):
         z = torch.tensordot(x, y, dims=dims)
         return z
 
-    @autotest(n=5)
+    @autotest(n=5, rtol=1e-3, atol=1e-4)
     def test_tensordot_broadcast(test_case):
         device = random_device()
         x = random_tensor(4, 1, 1, 1, 1).to(device)

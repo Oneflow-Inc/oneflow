@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "fmt/core.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/tensor_util.h"
@@ -25,8 +24,11 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/user/kernels/random_mask_like_kernel.h"
 #include "oneflow/user/kernels/dropout_kernel.h"
-#include "oneflow/core/common/container_util.h"
 #include "oneflow/user/kernels/distributions/common.h"
+#include "oneflow/user/kernels/random_seed_util.h"
+
+#include "oneflow/core/common/container_util.h"
+#include "fmt/core.h"
 
 namespace oneflow {
 namespace one {
@@ -67,16 +69,26 @@ class ConvBaseFunctor {
  public:
   explicit ConvBaseFunctor(const int& num_spatial_dims) : num_spatial_dims_(num_spatial_dims) {
     bias_op_ = CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
-    enable_fused_conv_bias_ =
-        ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDNN_FUSED_CONV_BIAS", false);
+    enable_fused_conv_bias_ = ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_FUSED_CONV_BIAS", false);
   }
   virtual ~ConvBaseFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& weight,
                            const Optional<one::Tensor>& bias, const std::vector<int32_t>& stride,
                            const std::vector<int32_t>& padding,
                            const std::vector<int32_t>& dilation, const int32_t& groups,
                            const std::string& channel_pos) const {
+    std::shared_ptr<one::Tensor> unsqueezed_input;
+    bool is_batched = true;
+    std::string func_name;
+    if (num_spatial_dims_ == 1) {
+      func_name = "conv1d";
+    } else if (num_spatial_dims_ == 2) {
+      func_name = "conv2d";
+    } else {
+      func_name = "conv3d";
+    }
+    std::tie(unsqueezed_input, is_batched) = *JUST(batchify(input, num_spatial_dims_, func_name));
     std::vector<int32_t> kernel_size_vec(num_spatial_dims_);
     int32_t channel_idx = 1;
     int32_t kernel_idx_offset = 2;
@@ -94,14 +106,20 @@ class ConvBaseFunctor {
     conv_attrs.SetAllAttrs(static_cast<int32_t>(weight->shape()->At(0)), kernel_size_vec, padding,
                            stride, dilation, groups, channel_pos);
     if (bias && enable_fused_conv_bias_) {
-      return OpInterpUtil::Dispatch<Tensor>(*conv_bias_op_, {x, weight, JUST(bias)}, conv_attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*conv_bias_op_, {input, weight, JUST(bias)},
+                                            conv_attrs);
     }
     const std::shared_ptr<one::Tensor>& conv_out =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*conv_op_, {x, weight}, conv_attrs));
+        JUST(OpInterpUtil::Dispatch<Tensor>(*conv_op_, {unsqueezed_input, weight}, conv_attrs));
+    std::shared_ptr<one::Tensor> squeezed_conv_output = conv_out;
+    if (!is_batched) {
+      squeezed_conv_output = JUST(functional::Squeeze(conv_out, std::vector<int32_t>{0}));
+      channel_idx -= 1;
+    }
     if (bias) {
-      return functional::BiasAdd(conv_out, JUST(bias), channel_idx);
+      return functional::BiasAdd(squeezed_conv_output, JUST(bias), channel_idx);
     } else {
-      return conv_out;
+      return squeezed_conv_output;
     }
   }
 
@@ -149,13 +167,25 @@ class DeConvBaseFunctor {
     bias_op_ = CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
   }
   virtual ~DeConvBaseFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& weight,
                            const Optional<one::Tensor>& bias, const std::vector<int32_t>& stride,
                            const std::vector<int32_t>& padding,
                            const std::vector<int32_t>& output_padding, const int32_t& groups,
                            const std::vector<int32_t>& dilation,
                            const std::string& data_format) const {
+    std::shared_ptr<one::Tensor> unsqueezed_input;
+    bool is_batched = true;
+    std::string func_name;
+    if (num_spatial_dims_ == 1) {
+      func_name = "deconv1d";
+    } else if (num_spatial_dims_ == 2) {
+      func_name = "deconv2d";
+    } else {
+      func_name = "deconv3d";
+    }
+    std::tie(unsqueezed_input, is_batched) = *JUST(batchify(input, num_spatial_dims_, func_name));
+    int32_t channel_idx = 1;
     std::vector<int32_t> kernel_size_vec(num_spatial_dims_);
     int32_t kernel_idx_offset = 2;
     if (data_format == "channels_last") { kernel_idx_offset = 1; }
@@ -169,13 +199,19 @@ class DeConvBaseFunctor {
     deconv_attrs.SetAllAttrs(static_cast<int32_t>(weight->shape()->At(1) * groups), kernel_size_vec,
                              padding, output_padding, stride, dilation, groups, data_format);
     std::shared_ptr<one::Tensor> deconv_out =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*deconv_op_, {x, weight}, deconv_attrs));
+        JUST(OpInterpUtil::Dispatch<Tensor>(*deconv_op_, {unsqueezed_input, weight}, deconv_attrs));
+    std::shared_ptr<one::Tensor> squeezed_deconv_output = deconv_out;
+    if (!is_batched) {
+      squeezed_deconv_output = JUST(functional::Squeeze(deconv_out, std::vector<int32_t>{0}));
+      channel_idx -= 1;
+    }
     if (bias) {
       auto& bias_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis");
-      bias_attrs.SetAllAttrs(static_cast<int32_t>(1));
-      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {deconv_out, JUST(bias)}, bias_attrs);
+      bias_attrs.SetAllAttrs(static_cast<int32_t>(channel_idx));
+      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {squeezed_deconv_output, JUST(bias)},
+                                            bias_attrs);
     } else {
-      return deconv_out;
+      return squeezed_deconv_output;
     }
   }
 
@@ -650,6 +686,89 @@ class FusedMLPFunctor {
 #endif
 };
 
+class FusedMatmulBiasFunctor {
+ public:
+  FusedMatmulBiasFunctor() {
+    _with_add_to_output_op = CHECK_JUST(one::OpBuilder("fused_matmul_bias")
+                                            .Input("x")
+                                            .Input("weight")
+                                            .Input("bias")
+                                            .Input("_add_to_output")
+                                            .Output("out")
+                                            .Build());
+    _without_add_to_output_op = CHECK_JUST(one::OpBuilder("fused_matmul_bias")
+                                               .Input("x")
+                                               .Input("weight")
+                                               .Input("bias")
+                                               .Output("out")
+                                               .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& weight,
+                           const std::shared_ptr<one::Tensor>& bias,
+                           const Optional<one::Tensor>& _add_to_output, const double& alpha,
+                           const double& beta) const {
+    /*
+    x: (m_i, ... m_0, k)
+    weight: (n, k) need transpose
+    bias: (n)
+    */
+    const auto& x_shape = x->shape();
+    const int64_t k = x_shape->At(x->shape()->NumAxes() - 1);
+
+    const auto& weight_shape = weight->shape();
+    const auto& bias_shape = bias->shape();
+
+    CHECK_EQ_OR_RETURN(weight_shape->NumAxes(), 2)
+        << Error::RuntimeError() << "Weight's dim size should == 2";
+    CHECK_EQ_OR_RETURN(bias_shape->NumAxes(), 1)
+        << Error::RuntimeError() << "Bias's dim size should == 1";
+
+    const int64_t n = weight_shape->At(0);
+    CHECK_EQ_OR_RETURN(bias_shape->At(0), n)
+        << Error::RuntimeError() << "Bias's dim is not equal to weight's first dim. ";
+    CHECK_EQ_OR_RETURN(weight_shape->At(1), k)
+        << Error::RuntimeError() << "weight's second dim should be equal to input's second dim. ";
+
+#if CUDA_VERSION >= 11020
+    DeviceType device_type{};
+    if (x->is_global()) {
+      device_type = JUST(x->parallel_desc())->device_type();
+    } else {
+      device_type = JUST(x->device())->enum_type();
+    }
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("alpha", "beta");
+    attrs.SetAllAttrs(alpha, beta);
+    if (device_type == DeviceType::kCUDA) {
+      if (_add_to_output) {
+        return OpInterpUtil::Dispatch<Tensor>(*_with_add_to_output_op,
+                                              {x, weight, bias, JUST(_add_to_output)}, attrs);
+      } else {
+        return OpInterpUtil::Dispatch<Tensor>(*_without_add_to_output_op, {x, weight, bias}, attrs);
+      }
+    }
+#endif  // CUDA_VERSION >= 11020
+
+    auto matmul_bias = JUST(functional::BiasAdd(
+        JUST(functional::MatMul(x, weight, false, true, alpha)), bias, x->shape()->NumAxes() - 1));
+    if (_add_to_output && beta != 0.0) {
+      if (beta == 1.0) {
+        return JUST(functional::Add({matmul_bias, JUST(_add_to_output)}, false));
+      } else {
+        return JUST(functional::Add(
+            {matmul_bias, JUST(functional::ScalarMul(JUST(_add_to_output), beta, false))}, false));
+      }
+    } else {
+      return matmul_bias;
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> _with_add_to_output_op;
+  std::shared_ptr<OpExpr> _without_add_to_output_op;
+};
+
 class FusedMatmulBiasAddReluDropoutFunctor {
  public:
   FusedMatmulBiasAddReluDropoutFunctor() {
@@ -688,8 +807,6 @@ class FusedMatmulBiasAddReluDropoutFunctor {
     */
     const auto& x_shape = x->shape();
     k = x_shape->At(1);
-    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
     for (int64_t i = 0; i < weight_size; i++) {
       CHECK_GE_OR_RETURN(dropout_rate_list[i], 0.0f)
           << Error::RuntimeError() << "Dropout rate should be >= 0.0";
@@ -708,6 +825,8 @@ class FusedMatmulBiasAddReluDropoutFunctor {
       k = n;
     }
 
+    auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+
 #if CUDA_VERSION >= 11060
     DeviceType device_type{};
     if (x->is_global()) {
@@ -715,15 +834,19 @@ class FusedMatmulBiasAddReluDropoutFunctor {
     } else {
       device_type = JUST(x->device())->enum_type();
     }
-
     if ((device_type == DeviceType::kCUDA) && (weight_size <= kMaxInputCount)
         && (!ParseBooleanFromEnv("ONEFLOW_FUNCTOR_DISABLE_FUSED_MLP", false))) {
       TensorTuple input(2 * weight_size + 1);
       input[0] = x;
       std::copy(weights.begin(), weights.end(), input.begin() + 1);
       std::copy(biases.begin(), biases.end(), input.begin() + 1 + weight_size);
-      auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("skip_final_activation", "dropout_rate_list");
-      attrs.SetAllAttrs(skip_final_activation, dropout_rate_list);
+
+      gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
+      auto& attrs =
+          THREAD_CACHED_MUTABLE_ATTR_MAP("skip_final_activation", "seed", "dropout_rate_list");
+      attrs.SetAllAttrs(skip_final_activation, static_cast<int64_t>(gen->current_seed()),
+                        dropout_rate_list);
+      const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
       return OpInterpUtil::Dispatch<Tensor>(*fused_op_[weight_size], input,
                                             OpExprInterpContext(attrs, dropout_state));
     }
@@ -777,6 +900,129 @@ class LayerNormFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class SkipLayerNormFunctor {
+ public:
+  SkipLayerNormFunctor() {
+    std::vector<bool> bool_list = {true, false};
+
+    /* number of skip */
+    for (bool has_skip : bool_list) {
+      /* has_gamma */
+      for (bool has_gamma : bool_list) {
+        /* has_beta */
+        for (bool has_beta : bool_list) {
+          /* has_bias */
+          for (bool has_bias : bool_list) {
+            one::OpBuilder op_builder = one::OpBuilder("skip_layer_norm").Input("x");
+            if (has_gamma) { op_builder = op_builder.Input("gamma"); }
+            if (has_beta) { op_builder = op_builder.Input("beta"); }
+            if (has_bias) { op_builder = op_builder.Input("bias"); }
+            if (has_skip) { op_builder = op_builder.Input("skip"); }
+            op_builder = op_builder.Output("y").Output("mean").Output("inv_variance");
+
+            std::shared_ptr<OpExpr> op_expr = CHECK_JUST(op_builder.Build());
+            ops_.insert(std::pair<std::tuple<bool, bool, bool, bool>, std::shared_ptr<OpExpr>>(
+                std::tuple<bool, bool, bool, bool>(has_skip, has_gamma, has_beta, has_bias),
+                op_expr));
+          }  // has_bias
+        }    // has_beta
+      }      // has_gamma
+    }        // has_skip
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<one::Tensor>& gamma, const Optional<one::Tensor>& beta,
+                           const Optional<one::Tensor>& bias, const Optional<one::Tensor>& skip,
+                           const double& epsilon, const double& alpha) const {
+    // check shape of x
+    const auto& x_shape = *(x->shape());
+    CHECK_GE_OR_RETURN(x_shape.NumAxes(), 2)
+        << "number of axes of \'x\' should be greater than or equal to 2, yet get "
+        << x_shape.NumAxes();
+
+    if (gamma) {
+      const auto& gamma_shape = *(JUST(gamma)->shape());
+      CHECK_EQ_OR_RETURN(gamma_shape.NumAxes(), 1)
+          << "number of axes of \'gamma\' should have be equal to 1, yet get "
+          << gamma_shape.NumAxes();
+      CHECK_EQ_OR_RETURN(gamma_shape.At(0), x_shape.At(x_shape.NumAxes() - 1))
+          << "the size of \'gamma\'(" << gamma_shape.At(0)
+          << ") is not consistant with the last dimension of \'x\'("
+          << x_shape.At(x_shape.NumAxes() - 1) << ")";
+    }
+    if (beta) {
+      const auto& beta_shape = *(JUST(beta)->shape());
+      CHECK_EQ_OR_RETURN(beta_shape.NumAxes(), 1)
+          << "number of axes of \'beta\' should have be equal to 1, yet get "
+          << beta_shape.NumAxes();
+      CHECK_EQ_OR_RETURN(beta_shape.At(0), x_shape.At(x_shape.NumAxes() - 1))
+          << "dimension 1 of \'beta\'(" << beta_shape.At(0)
+          << ") is not consistant with the last dimension of \'x\'("
+          << x_shape.At(x_shape.NumAxes() - 1) << ")";
+    }
+    if (bias) {
+      const auto& bias_shape = *(JUST(bias)->shape());
+      CHECK_EQ_OR_RETURN(bias_shape.NumAxes(), 1)
+          << "number of axes of \'bias\' should have be equal to 1, yet get "
+          << bias_shape.NumAxes();
+      CHECK_EQ_OR_RETURN(bias_shape.At(0), x_shape.At(x_shape.NumAxes() - 1))
+          << "dimension 1 of \'bias\'(" << bias_shape.At(0)
+          << ") is not consistant with the last dimension of \'x\'("
+          << x_shape.At(x_shape.NumAxes() - 1) << ")";
+    }
+    if (skip) {
+      const auto& skip_shape = *(JUST(skip)->shape());
+      CHECK_EQ_OR_RETURN(skip_shape, x_shape) << "shape of \'skip\' is not the same as \'x\'";
+    }
+
+    // set attributes
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("epsilon", "alpha");
+    attrs.SetAllAttrs(epsilon, alpha);
+
+    // count number of all input tensors
+    size_t nb_inputs = 1;       // count x
+    if (skip) nb_inputs += 1;   // count skip
+    if (gamma) nb_inputs += 1;  // count gamma
+    if (beta) nb_inputs += 1;   // count beta
+    if (bias) nb_inputs += 1;   // count bias
+
+    // construct input tensor tuple
+    size_t tensor_index = 1;
+    TensorTuple input(nb_inputs);
+    bool has_gamma = false, has_beta = false, has_bias = false, has_skip = false;
+    input[0] = x;
+    if (gamma) {
+      input[tensor_index] = JUST(gamma);
+      tensor_index += 1;
+      has_gamma = true;
+    }
+    if (beta) {
+      input[tensor_index] = JUST(beta);
+      tensor_index += 1;
+      has_beta = true;
+    }
+    if (bias) {
+      input[tensor_index] = JUST(bias);
+      tensor_index += 1;
+      has_bias = true;
+    }
+    if (skip) {
+      input[tensor_index] = JUST(skip);
+      tensor_index += 1;
+      has_skip = true;
+    }
+
+    return OpInterpUtil::Dispatch<Tensor>(
+        *(ops_.find(std::tuple<bool, bool, bool, bool>(has_skip, has_gamma, has_beta, has_bias))
+              ->second),
+        input, attrs);
+  }
+
+ private:
+  /* (nb_skip, has_gamma, has_beta, has_bias) -> op */
+  std::map<std::tuple<bool, bool, bool, bool>, std::shared_ptr<OpExpr>> ops_;
 };
 
 class LayerNormAffineFunctor {
@@ -901,6 +1147,106 @@ class RMSNormFunctor {
  private:
   std::shared_ptr<OpExpr> op_;
   std::shared_ptr<OpExpr> op_affine_;
+};
+
+class SkipRMSNormFunctor {
+ public:
+  SkipRMSNormFunctor() {
+    std::vector<bool> bool_list = {true, false};
+
+    for (bool has_weight : bool_list) {
+      for (bool has_skip : bool_list) {
+        for (bool has_bias : bool_list) {
+          one::OpBuilder op_builder = one::OpBuilder("skip_rms_norm").Input("x");
+          if (has_weight) { op_builder = op_builder.Input("weight"); }
+          if (has_bias) { op_builder = op_builder.Input("bias"); }
+          if (has_skip) { op_builder = op_builder.Input("skip"); }
+          op_builder = op_builder.Output("y").Output("inv_rms");
+
+          std::shared_ptr<OpExpr> op_expr = CHECK_JUST(op_builder.Build());
+          ops_.insert(std::pair<std::tuple<bool, bool, bool>, std::shared_ptr<OpExpr>>(
+              std::tuple<bool, bool, bool>(has_weight, has_skip, has_bias), op_expr));
+        }  // has_bias
+      }    // has_skip
+    }      // has_weight
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<one::Tensor>& weight, const Optional<one::Tensor>& bias,
+                           const Optional<one::Tensor>& skip, const double& epsilon,
+                           const double& alpha) const {
+    // check shape of x
+    const auto& x_shape = *(x->shape());
+    CHECK_GE_OR_RETURN(x_shape.NumAxes(), 2)
+        << "number of axes of \'x\' should be greater than or equal to 2, yet get "
+        << x_shape.NumAxes();
+
+    if (weight) {
+      const auto& weight_shape = *(JUST(weight)->shape());
+      CHECK_EQ_OR_RETURN(weight_shape.NumAxes(), 1)
+          << "number of axes of \'weight\' should have be equal to 1, yet get "
+          << weight_shape.NumAxes();
+      CHECK_EQ_OR_RETURN(weight_shape.At(0), x_shape.At(x_shape.NumAxes() - 1))
+          << "dimension 1 of \'weight\'(" << weight_shape.At(0)
+          << ") is not consistant with the last dimension of \'x\'("
+          << x_shape.At(x_shape.NumAxes() - 1) << ")";
+    }
+
+    if (bias) {
+      const auto& bias_shape = *(JUST(bias)->shape());
+      CHECK_EQ_OR_RETURN(bias_shape.NumAxes(), 1)
+          << "number of axes of \'bias\' should have be equal to 1, yet get "
+          << bias_shape.NumAxes();
+      CHECK_EQ_OR_RETURN(bias_shape.At(0), x_shape.At(x_shape.NumAxes() - 1))
+          << "dimension 1 of \'bias\'(" << bias_shape.At(0)
+          << ") is not consistant with the last dimension of \'x\'("
+          << x_shape.At(x_shape.NumAxes() - 1) << ")";
+    }
+
+    if (skip) {
+      const auto& skip_shape = *(JUST(skip)->shape());
+      CHECK_EQ_OR_RETURN(skip_shape, x_shape) << "shape of \'skip\' is not the same as \'x\'";
+    }
+
+    // set attributes
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("epsilon", "alpha");
+    attrs.SetAllAttrs(epsilon, alpha);
+
+    // count number of all input tensors
+    size_t nb_inputs = 1;        // count x
+    if (skip) nb_inputs += 1;    // count skip
+    if (weight) nb_inputs += 1;  // count weight
+    if (bias) nb_inputs += 1;    // count bias
+
+    // construct input tensor tuple
+    size_t tensor_index = 1;
+    TensorTuple input(nb_inputs);
+    bool has_weight = false, has_bias = false, has_skip = false;
+    input[0] = x;
+    if (weight) {
+      input[tensor_index] = JUST(weight);
+      tensor_index += 1;
+      has_weight = true;
+    }
+    if (bias) {
+      input[tensor_index] = JUST(bias);
+      tensor_index += 1;
+      has_bias = true;
+    }
+    if (skip) {
+      input[tensor_index] = JUST(skip);
+      tensor_index += 1;
+      has_skip = true;
+    }
+
+    return OpInterpUtil::Dispatch<Tensor>(
+        *(ops_.find(std::tuple<bool, bool, bool>(has_weight, has_skip, has_bias))->second), input,
+        attrs);
+  }
+
+ private:
+  /* (has_weight, has_skip, has_bias) -> op */
+  std::map<std::tuple<bool, bool, bool>, std::shared_ptr<OpExpr>> ops_;
 };
 
 class PixelShuffleFunctor {
@@ -2019,14 +2365,35 @@ class CtcLossFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("max_target_length", "blank", "zero_infinity");
     attrs.SetAllAttrs(max_target_length, blank, zero_infinity);
     std::shared_ptr<one::Tensor> out;
+    DeviceType log_probs_device_type;  // NOLINT
+    if (log_probs->is_local()) {
+      log_probs_device_type = JUST(log_probs->device())->enum_type();
+    } else {
+      log_probs_device_type = JUST(log_probs->parallel_desc())->device_type();
+    }
+    const std::string& log_probs_device_str = *JUST(DeviceTag4DeviceType(log_probs_device_type));
+    std::shared_ptr<one::Tensor> target_lengths_on_log_probs_device =
+        JUST(functional::To(target_lengths, log_probs_device_str));
     if (targets->dtype()->data_type() == DataType::kInt32) {
       out = JUST(OpInterpUtil::Dispatch<Tensor>(
-          *op_, {log_probs, targets, input_lengths, target_lengths}, attrs));
+          *op_,
+          {
+              log_probs,
+              JUST(functional::To(targets, log_probs_device_str)),
+              JUST(functional::To(input_lengths, log_probs_device_str)),
+              target_lengths_on_log_probs_device,
+          },
+          attrs));
     } else {
       out = JUST(OpInterpUtil::Dispatch<Tensor>(
           *op_,
-          {log_probs, JUST(functional::Cast(targets, DType::Int64(), false)), input_lengths,
-           target_lengths},
+          {
+              log_probs,
+              JUST(functional::To(targets, Optional<std::string>(log_probs_device_str),
+                                  DType::Int64(), false)),
+              JUST(functional::To(input_lengths, log_probs_device_str)),
+              target_lengths_on_log_probs_device,
+          },
           attrs));
     }
     if (zero_infinity) {
@@ -2071,7 +2438,7 @@ class CtcLossFunctor {
           })
           .then(std::bind(functional::ReduceMean, std::placeholders::_1, std::vector<int32_t>({}),
                           false))
-          .call(target_lengths, Scalar(1), NullOpt);
+          .call(target_lengths_on_log_probs_device, Scalar(1), NullOpt);
     }
     return out;
   }
@@ -2213,7 +2580,7 @@ class NormalizationFunctor {
 
     CHECK_OR_RETURN((moving_mean && moving_variance) || (!moving_mean && !moving_variance))
         << Error::RuntimeError()
-        << "Both moving_mean and moving_variance should be None or Tensor.";
+        << "Both running_mean and running_variance should be None or Tensor.";
 
     const DataType dtype = x->dtype()->data_type();
 
@@ -2442,7 +2809,7 @@ class ConstantPadFunctor {
                                                  "integral_constant_value", "padding_before",
                                                  "padding_after");
     if (IsFloatingDataType(input->dtype()->data_type())
-        || input->dtype()->data_type() == DataType::kFloat16) {
+        || IsComplexDataType(input->dtype()->data_type())) {
       attrs.SetAllAttrs(pad, value.As<double>(), static_cast<int64_t>(0), pad_before, pad_after);
     } else if (IsIntegralDataType(input->dtype()->data_type())) {
       attrs.SetAllAttrs(pad, static_cast<double>(0), value.As<int64_t>(), pad_before, pad_after);
@@ -2689,25 +3056,27 @@ class DropoutFunctor {
       JUST(CheckInplaceValid(x));
       (*outputs)[0] = x;
     }
-    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+
+    auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
+    auto& dropout_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rate", "seed");
+    dropout_attrs.SetAllAttrs(p, static_cast<int64_t>(gen->current_seed()));
+
     const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
-    auto& dropout_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rate");
-    dropout_attrs.SetAllAttrs(p);
+    OpExprInterpContext ctx(dropout_attrs, dropout_state);
     if (addend) {
       if ((!training) || p == 0.0) {
         JUST(OpInterpUtil::Dispatch(*add_op_, {x, JUST(addend)}, outputs.get()));
       } else {
         outputs->resize(2);
-        JUST(OpInterpUtil::Dispatch(*dropout_addend_op_, {x, JUST(addend)}, outputs.get(),
-                                    OpExprInterpContext(dropout_attrs, dropout_state)));
+        JUST(OpInterpUtil::Dispatch(*dropout_addend_op_, {x, JUST(addend)}, outputs.get(), ctx));
       }
     } else {
       if (!training || p == 0.0) {
         return x;
       } else {
         outputs->resize(2);
-        JUST(OpInterpUtil::Dispatch(*dropout_op_, {x}, outputs.get(),
-                                    OpExprInterpContext(dropout_attrs, dropout_state)));
+        JUST(OpInterpUtil::Dispatch(*dropout_op_, {x}, outputs.get(), ctx));
       }
     }
     return (*outputs)[0];
@@ -2729,7 +3098,9 @@ Maybe<Tensor> MakeFeatureNoise(const std::shared_ptr<one::Tensor>& x) {
   sizes.push_back(x->shape()->At(0));
   sizes.push_back(x->shape()->At(1));
   for (int i = 2; i < ndim; i++) { sizes.push_back(1); }
-  return JUST(Empty(Shape(sizes), x->dtype(), JUST(x->device()), false));
+  return JUST(Empty(Shape(sizes), x->dtype(), JUST(x->device()),
+                    /*requires_grad=*/x->requires_grad(),
+                    /*pin_memory=*/false));
 }
 
 Maybe<Tensor> DropoutImpl(const std::shared_ptr<one::Tensor>& input, const float& p,
@@ -2740,14 +3111,13 @@ Maybe<Tensor> DropoutImpl(const std::shared_ptr<one::Tensor>& input, const float
   if (p == 1) {
     std::shared_ptr<Tensor> other =
         JUST(Constant(*input->shape(), Scalar(0.0), input->dtype(), JUST(input->device())));
-    return InplaceMul(input, other);
+    return Mul(input, other);
   }
   std::shared_ptr<Tensor> noise = JUST(MakeFeatureNoise(input));
   noise =
       JUST(BernoulliProb(noise, 1.0 - p, noise->dtype(), JUST(one::DefaultAutoGenerator()), false));
   noise = JUST(InplaceScalarDiv(noise, Scalar(1.0 - p)));
-  noise = JUST(InplaceMul(input, noise));
-  return noise;
+  return JUST(Mul(input, noise));
 }
 }  // namespace
 
@@ -2755,16 +3125,17 @@ class Dropout1dFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const float& p,
                            const bool& training) const {
-    CHECK_EQ_OR_RETURN(p < 0 || p > 1.0, true)
+    CHECK_EQ_OR_RETURN(p < 0 || p > 1.0, false)
         << "dropout probability has to be between 0 and 1, but got " << p;
     const int input_dim = input->ndim();
-    CHECK_EQ_OR_RETURN(input_dim != 2 && input_dim != 3, true)
-        << "dropout1d: Expected 2D or 3D input, but received a {inp_dim}D input. "
+    CHECK_EQ_OR_RETURN(input_dim != 2 && input_dim != 3, false)
+        << "dropout1d: Expected 2D or 3D input, but received a " << input_dim
+        << "D input. "
            "Note that dropout1d exists to provide channel-wise dropout on inputs with 1 "
            "spatial dimension, a channel dimension, and an optional batch dimension "
            "(i.e. 2D or 3D inputs).";
     bool is_batched = (input_dim == 3);
-    std::shared_ptr<one::Tensor> result;
+    std::shared_ptr<one::Tensor> result = input;
     if (!is_batched) { result = JUST(Unsqueeze(input, 0)); }
     result = JUST(DropoutImpl(result, p, training));
     if (!is_batched) { result = JUST(Squeeze(result, std::vector<int32_t>{0})); }
@@ -2776,21 +3147,26 @@ class Dropout2dFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const float& p,
                            const bool& training) const {
-    CHECK_EQ_OR_RETURN(p < 0 || p > 1.0, true)
+    CHECK_EQ_OR_RETURN(p < 0 || p > 1.0, false)
         << "dropout probability has to be between 0 and 1, but got " << p;
     const int input_dim = input->ndim();
-    CHECK_EQ_OR_RETURN(input_dim != 3 && input_dim != 4, true)
-        << "dropout2d: Received a {inp_dim}-D input to dropout2d, which is deprecated "
-           "and will result in an error in a future release. To retain the behavior "
-           "and silence this warning, please use dropout instead. Note that dropout2d "
-           "exists to provide channel-wise dropout on inputs with 2 spatial dimensions, "
-           "a channel dimension, and an optional batch dimension (i.e. 3D or 4D inputs).";
-    CHECK_EQ_OR_RETURN(input_dim == 3, true)
-        << "dropout2d: Received a 3D input to dropout2d and assuming that channel-wise "
-           "1D dropout behavior is desired - input is interpreted as shape (N, C, L), where C "
-           "is the channel dim. This behavior will change in a future release to interpret the "
-           "input as one without a batch dimension, i.e. shape (C, H, W). To maintain the 1D "
-           "channel-wise dropout behavior, please switch to using dropout1d instead.";
+    if (input_dim != 3 && input_dim != 4) {
+      LOG(WARNING)
+          << "dropout2d: Received a " << input_dim
+          << "-D input to dropout2d, which is deprecated "
+             "and will result in an error in a future release. To retain the behavior "
+             "and silence this warning, please use dropout instead. Note that dropout2d "
+             "exists to provide channel-wise dropout on inputs with 2 spatial dimensions, "
+             "a channel dimension, and an optional batch dimension (i.e. 3D or 4D inputs).";
+    }
+    if (input_dim == 3) {
+      LOG(WARNING)
+          << "dropout2d: Received a 3D input to dropout2d and assuming that channel-wise "
+             "1D dropout behavior is desired - input is interpreted as shape (N, C, L), where C "
+             "is the channel dim. This behavior will change in a future release to interpret the "
+             "input as one without a batch dimension, i.e. shape (C, H, W). To maintain the 1D "
+             "channel-wise dropout behavior, please switch to using dropout1d instead.";
+    }
     return JUST(DropoutImpl(input, p, training));
   }
 };
@@ -2799,17 +3175,20 @@ class Dropout3dFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const float& p,
                            const bool& training) const {
-    CHECK_EQ_OR_RETURN(p < 0 || p > 1.0, true)
+    CHECK_EQ_OR_RETURN(p < 0 || p > 1.0, false)
         << "dropout probability has to be between 0 and 1, but got " << p;
     const int input_dim = input->ndim();
-    CHECK_EQ_OR_RETURN(input_dim != 4 && input_dim != 5, true)
-        << "dropout3d: Received a {inp_dim}-D input to dropout3d, which is deprecated "
-           "and will result in an error in a future release. To retain the behavior "
-           "and silence this warning, please use dropout instead. Note that dropout3d "
-           "exists to provide channel-wise dropout on inputs with 3 spatial dimensions, "
-           "a channel dimension, and an optional batch dimension (i.e. 4D or 5D inputs).";
+    if (input_dim != 4 && input_dim != 5) {
+      LOG(WARNING)
+          << "dropout3d: Received a " << input_dim
+          << "-D input to dropout3d, which is deprecated "
+             "and will result in an error in a future release. To retain the behavior "
+             "and silence this warning, please use dropout instead. Note that dropout3d "
+             "exists to provide channel-wise dropout on inputs with 3 spatial dimensions, "
+             "a channel dimension, and an optional batch dimension (i.e. 4D or 5D inputs).";
+    }
     bool is_batched = (input_dim == 5);
-    std::shared_ptr<one::Tensor> result;
+    std::shared_ptr<one::Tensor> result = input;
     if (!is_batched) { result = JUST(Unsqueeze(input, 0)); }
     result = JUST(DropoutImpl(result, p, training));
     if (!is_batched) { result = JUST(Squeeze(result, std::vector<int32_t>{0})); }
@@ -3145,11 +3524,11 @@ class FusedScaleTrilSoftmaxMaskScaleFunctor {
                                 const int64_t diagonal, const float tril_scale_value,
                                 const float tril_fill_value,
                                 const Optional<one::Generator>& generator) const {
-    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
     auto& random_mask_like_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rate", "seed");
     random_mask_like_attrs.SetAllAttrs(p, static_cast<int64_t>(gen->current_seed()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
-
     const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(
         *random_mask_like_op_, {x},
         OpExprInterpContext(random_mask_like_attrs, random_mask_like_state)));
@@ -3250,7 +3629,8 @@ class FusedBiasAddDropoutFunctor {
       axis_val += num_axes;
     }
     if (p > 0.0) {
-      const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+      auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+      gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), a));
       auto& random_mask_like_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rate", "seed");
       random_mask_like_attrs.SetAllAttrs(p, static_cast<int64_t>(gen->current_seed()));
       const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
@@ -3278,6 +3658,142 @@ class FusedBiasAddDropoutFunctor {
  private:
   std::shared_ptr<OpExpr> random_mask_like_op_;
   std::shared_ptr<OpExpr> fused_bias_add_mask_scale_op_;
+};
+
+class FusedGluFunctor {
+ public:
+  FusedGluFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_glu")
+                         .Input("x")
+                         .Input("w")
+                         .Input("b")
+                         .Output("y")
+                         .Output("matmul_wx")
+                         .Build());
+
+    op_without_bias_ = CHECK_JUST(
+        one::OpBuilder("fused_glu").Input("x").Input("w").Output("y").Output("matmul_wx").Build());
+
+    split_op_ = CHECK_JUST(one::OpBuilder("fused_glu")
+                               .Input("x")
+                               .Input("w")
+                               .Input("b")
+                               .Input("v")
+                               .Input("c")
+                               .Output("y")
+                               .Output("matmul_wx")
+                               .Output("matmul_vx")
+                               .Build());
+
+    split_op_without_bias_ = CHECK_JUST(one::OpBuilder("fused_glu")
+                                            .Input("x")
+                                            .Input("w")
+                                            .Input("v")
+                                            .Output("y")
+                                            .Output("matmul_wx")
+                                            .Output("matmul_vx")
+                                            .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& w, const Optional<one::Tensor>& b,
+                           const Optional<one::Tensor>& v, const Optional<one::Tensor>& c,
+                           const std::string& activation) const {
+    // check whether the user provide weight tensor v
+    bool is_split_mode = false;
+    if (v) {
+      is_split_mode = true;
+    } else {
+      is_split_mode = false;
+    }
+
+    // check whether the user provide bias tensors
+    bool has_bias = false;
+    if (b) {
+      has_bias = true;
+      if (is_split_mode) {
+        CHECK_OR_RETURN(c) << "expected existance of c, when provide tensors w, v and b";
+      }
+    } else {
+      CHECK_OR_RETURN(!c) << "expected existance of b while providing c";
+      has_bias = false;
+    }
+
+    // obtain input shape
+    const auto& x_shape = *(x->shape());
+    const auto& w_shape = *(w->shape());
+    std::shared_ptr<const oneflow::Shape> b_shape = nullptr;
+    if (has_bias) { b_shape = (JUST(b)->shape()); }
+
+    // check number of axes of x, w and b
+    CHECK_GT_OR_RETURN(x_shape.NumAxes(), 1)
+        << "number of axes of \'x\' should have be greater than 1, yet get " << x_shape.NumAxes();
+    CHECK_EQ_OR_RETURN(w_shape.NumAxes(), 2)
+        << "number of axes of \'w\' should have be equal to 2, yet get " << w_shape.NumAxes();
+    if (has_bias) {
+      CHECK_EQ_OR_RETURN(b_shape->NumAxes(), 1)
+          << "number of axes of \'b\' should have be equal to 1, yet get " << b_shape->NumAxes();
+    }
+
+    // check input shapes of w and b
+    size_t x_num_axes = x_shape.NumAxes();
+    CHECK_EQ_OR_RETURN(w_shape.At(1), x_shape.At(x_num_axes - 1))
+        << "dimension 1 of \'w\'(" << w_shape.At(1)
+        << ") is not consistant with the last dimension of \'x\'(" << x_shape.At(x_num_axes - 1)
+        << ")";
+    if (has_bias) {
+      CHECK_EQ_OR_RETURN(b_shape->At(0), w_shape.At(0))
+          << "dimension 0 of \'b\'(" << b_shape->At(0)
+          << ") is not consistant with dimension 0 of \'w\'(" << w_shape.At(0) << ")";
+    }
+    if (!is_split_mode) {
+      CHECK_EQ_OR_RETURN(w_shape.At(1) % 2, 0) << "dimension 1 of \'w\' is not divisible by 2";
+    }
+
+    // check both dimensions and input shapes of v and c (optional)
+    if (is_split_mode) {
+      const auto& v_shape = *(JUST(v)->shape());
+      std::shared_ptr<const oneflow::Shape> c_shape = NULL;
+      if (has_bias) { c_shape = (JUST(c)->shape()); }
+
+      CHECK_EQ_OR_RETURN(v_shape.NumAxes(), 2)
+          << "number of axes of \'v\' should have be equal to 2, yet get " << v_shape.NumAxes();
+      if (has_bias) {
+        CHECK_EQ_OR_RETURN(c_shape->NumAxes(), 1)
+            << "number of axes of \'c\' should have be equal to 1, yet get " << c_shape->NumAxes();
+      }
+
+      CHECK_OR_RETURN(v_shape == w_shape) << "the shape of \'v\' is not consistant with \'w\'";
+      if (has_bias) {
+        CHECK_OR_RETURN((*c_shape) == (*b_shape))
+            << "the shape of \'c\' is not consistant with \'b\'";
+      }
+    }
+
+    // set activation attribute
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("activation", "has_bias", "is_split");
+    attrs.SetAllAttrs(activation, has_bias, is_split_mode);
+
+    // dispatch corresponding operator
+    if (is_split_mode && has_bias) {
+      return OpInterpUtil::Dispatch<one::Tensor>(*split_op_, {x, w, JUST(b), JUST(v), JUST(c)},
+                                                 attrs);
+    } else if (!is_split_mode && has_bias) {
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, w, JUST(b)}, attrs);
+    } else if (is_split_mode && !has_bias) {
+      return OpInterpUtil::Dispatch<one::Tensor>(*split_op_without_bias_, {x, w, JUST(v)}, attrs);
+    } else if (!is_split_mode && !has_bias) {
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_without_bias_, {x, w}, attrs);
+    } else {
+      UNIMPLEMENTED_THEN_RETURN();
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_without_bias_;
+  std::shared_ptr<OpExpr> split_op_;
+  std::shared_ptr<OpExpr> split_op_without_bias_;
 };
 
 class FusedScaleTrilFunctor {
@@ -3355,11 +3871,11 @@ class FusedScaleMaskSoftmaxDropoutFunctor {
                                 const Optional<one::Generator>& generator) const {
     float rate = p;
     if (!training) rate = 0.0;
-    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
     auto& random_mask_like_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rate", "seed");
     random_mask_like_attrs.SetAllAttrs(rate, static_cast<int64_t>(gen->current_seed()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
-
     const auto& dropout_mask = JUST(OpInterpUtil::Dispatch<Tensor>(
         *random_mask_like_op_, {x},
         OpExprInterpContext(random_mask_like_attrs, random_mask_like_state)));
@@ -3406,11 +3922,11 @@ class FusedBiasAddScaleMaskSoftmaxDropoutFunctor {
                                 const Optional<one::Generator>& generator) const {
     float rate = p;
     if (!training) rate = 0.0;
-    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
     auto& random_mask_like_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rate", "seed");
     random_mask_like_attrs.SetAllAttrs(rate, static_cast<int64_t>(gen->current_seed()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
-
     const auto& dropout_mask = JUST(OpInterpUtil::Dispatch<Tensor>(
         *random_mask_op_, {x},
         OpExprInterpContext(random_mask_like_attrs, random_mask_like_state)));
@@ -4580,36 +5096,6 @@ class BatchNormBackwardElemtFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class FusedMultiHeadAttentionInferenceFunctor {
- public:
-  FusedMultiHeadAttentionInferenceFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_multi_head_attention_inference")
-                         .Input("query")
-                         .Input("key")
-                         .Input("value")
-                         .Output("out")
-                         .Build());
-  }
-  Maybe<Tensor> operator()(
-      const std::shared_ptr<one::Tensor>& query, const std::shared_ptr<one::Tensor>& key,
-      const std::shared_ptr<one::Tensor>& value, const int64_t& num_heads, const bool& causal,
-      const int64_t& query_hidden_slice_start, const int64_t& query_hidden_slice_end,
-      const int64_t& key_hidden_slice_start, const int64_t& key_hidden_slice_end,
-      const int64_t& value_hidden_slice_start, const int64_t& value_hidden_slice_end) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("num_heads", "causal", "query_hidden_slice_start",
-                                                 "query_hidden_slice_end", "key_hidden_slice_start",
-                                                 "key_hidden_slice_end", "value_hidden_slice_start",
-                                                 "value_hidden_slice_end");
-    attrs.SetAllAttrs(num_heads, causal, query_hidden_slice_start, query_hidden_slice_end,
-                      key_hidden_slice_start, key_hidden_slice_end, value_hidden_slice_start,
-                      value_hidden_slice_end);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {query, key, value}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
 class FusedFastGeluMulFunctor {
  public:
   FusedFastGeluMulFunctor() {
@@ -4741,6 +5227,103 @@ class GroupedMatmulFunctor {
   std::vector<std::shared_ptr<OpExpr>> fused_op_;
 };
 
+class MultiTensorYoloV5WeightUpdateFunctor {
+ public:
+  MultiTensorYoloV5WeightUpdateFunctor() {
+    op_.resize(kMaxInputCount /*the maximum number of inputs*/);
+    for (int n = 0; n < op_.size(); ++n) {
+      op_[n] = CHECK_JUST(one::OpBuilder("multi_tensor_yolov5_weight_update")
+                              .Input("model", n + 1)
+                              .Input("model_update", n + 1)
+                              .Build());
+    }
+  }
+
+  Maybe<void> operator()(const TensorTuple& model, const TensorTuple& model_update,
+                         const float& d) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("d");
+    attrs.SetAllAttrs(d);
+    const int64_t weight_size = model.size();
+    for (int i = 0; i < weight_size; i += kMaxInputCount) {
+      size_t size = (i + kMaxInputCount) < weight_size ? kMaxInputCount : weight_size - i;
+      TensorTuple input(size * 2);
+      std::copy(model.begin() + i, model.begin() + i + size, input.begin());
+      std::copy(model_update.begin() + i, model_update.begin() + i + size,
+                input.begin() + 1 * size);
+      JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_[size - 1], input, attrs));
+    }
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> op_;
+};
+
+class FusedScaleMaskBiasSoftmaxFunctor {
+ public:
+  FusedScaleMaskBiasSoftmaxFunctor() {
+    op_with_bias_ = CHECK_JUST(one::OpBuilder("fused_scale_mask_bias_softmax")
+                                   .Input("x")
+                                   .Input("mask")
+                                   .Input("bias")
+                                   .Output("out")
+                                   .Build());
+    op_without_bias_ = CHECK_JUST(one::OpBuilder("fused_scale_mask_bias_softmax")
+                                      .Input("x")
+                                      .Input("mask")
+                                      .Output("out")
+                                      .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& mask,
+                           const Optional<one::Tensor>& bias, const float& scale,
+                           const bool& inplace = false) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "inplace");
+    attrs.SetAllAttrs(scale, inplace);
+    if (bias) {
+      if (inplace) {
+        std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+        outputs->at(0) = x;
+        JUST(OpInterpUtil::Dispatch(*op_with_bias_, {x, mask, JUST(bias)}, outputs.get(), attrs));
+        return outputs->at(0);
+      }
+      return OpInterpUtil::Dispatch<Tensor>(*op_with_bias_, {x, mask, JUST(bias)}, attrs);
+      ;
+    }
+    if (inplace) {
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = x;
+      JUST(OpInterpUtil::Dispatch(*op_without_bias_, {x, mask}, outputs.get(), attrs));
+      return outputs->at(0);
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_without_bias_, {x, mask}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_without_bias_;
+  std::shared_ptr<OpExpr> op_with_bias_;
+};
+
+class FusedScaleMaskBiasSoftmaxGradFunctor {
+ public:
+  FusedScaleMaskBiasSoftmaxGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_scale_mask_bias_softmax_grad")
+                         .Input("y")
+                         .Input("dy")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& dy, const float& scale) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale");
+    attrs.SetAllAttrs(scale);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {y, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -4761,8 +5344,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TensorDotFunctor>("TensorDot");
   m.add_functor<impl::TensorDotIntDimsFunctor>("TensorDotIntDims");
   m.add_functor<impl::FusedMLPFunctor>("FusedMLP");
+  m.add_functor<impl::FusedMatmulBiasFunctor>("FusedMatmulBias");
   m.add_functor<impl::FusedMatmulBiasAddReluDropoutFunctor>("FusedMatmulBiasAddReluDropout");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
+  m.add_functor<impl::SkipLayerNormFunctor>("SkipLayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
   m.add_functor<impl::GroupNormFunctor>("GroupNorm");
   m.add_functor<impl::TFAvgPool2DFunctor>("TFAvgPool2D");
@@ -4826,6 +5411,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::L2NormalizeGradFunctor>("L2NormalizeGrad");
   m.add_functor<impl::FusedBiasAddGeluFunctor>("FusedBiasAddGelu");
   m.add_functor<impl::FusedBiasAddGeluGradFunctor>("FusedBiasAddGeluGrad");
+  m.add_functor<impl::FusedGluFunctor>("FusedGlu");
   m.add_functor<impl::FusedBiasAddDropoutFunctor>("FusedBiasAddDropout");
   m.add_functor<impl::FusedScaleMaskSoftmaxFunctor>("FusedScaleMaskSoftmax");
   m.add_functor<impl::FusedScaleMaskSoftmaxDropoutFunctor>("FusedScaleMaskSoftmaxDropout");
@@ -4863,12 +5449,15 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BatchNormElemtFunctor>("BatchNormElemt");
   m.add_functor<impl::BatchNormBackwardReduceFunctor>("BatchNormBackwardReduce");
   m.add_functor<impl::BatchNormBackwardElemtFunctor>("BatchNormBackwardElemt");
-  m.add_functor<impl::FusedMultiHeadAttentionInferenceFunctor>("FusedMultiHeadAttentionInference");
   m.add_functor<impl::FusedFastGeluMulFunctor>("FusedFastGeluMul");
   m.add_functor<impl::FusedFastGeluMulGradFunctor>("FusedFastGeluMulGrad");
   m.add_functor<impl::GroupedMatmulBiasFunctor>("GroupedMatmulBias");
   m.add_functor<impl::GroupedMatmulFunctor>("GroupedMatmul");
   m.add_functor<impl::RMSNormFunctor>("RMSNorm");
+  m.add_functor<impl::SkipRMSNormFunctor>("SkipRMSNorm");
+  m.add_functor<impl::FusedScaleMaskBiasSoftmaxFunctor>("FusedScaleMaskBiasSoftmax");
+  m.add_functor<impl::FusedScaleMaskBiasSoftmaxGradFunctor>("FusedScaleMaskBiasSoftmaxGrad");
+  m.add_functor<impl::MultiTensorYoloV5WeightUpdateFunctor>("MultiTensorYoloV5WeightUpdate");
 }
 
 }  // namespace functional

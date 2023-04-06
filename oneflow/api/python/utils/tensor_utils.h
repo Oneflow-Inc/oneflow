@@ -83,7 +83,7 @@ inline static Maybe<PyObject*> EagerLocalTensorToNumpy(PyObject* py_tensor) {
   };
   auto btb = std::make_shared<BlockingThenBusy>();
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->SyncAccessBlobByCallback(tensor, btb, Callback, "mut");
+    return builder->SyncAccessBlobByCallback(tensor, btb, Callback, "const");
   }));
   JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
   return py::array(py::buffer_info(data_ptr, sizeof(T), py::format_descriptor<T>::format(), ndim,
@@ -138,10 +138,10 @@ inline Maybe<void> CopyBetweenLocalTensorAndNumpy(
   } else {
     Py_INCREF(array);
     NumPyArrayPtr array_ptr(array, [array]() {
-      CHECK_JUST(Singleton<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
+      // release array in main thread to eliminate the time-consuming gil request
+      CHECK_JUST(SingletonMaybe<VirtualMachine>())->add_main_thread_pending_task([array]() {
         Py_DECREF(array);
-        return Maybe<void>::Ok();
-      }));
+      });
     });
 
     JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {

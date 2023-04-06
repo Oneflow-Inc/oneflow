@@ -1248,37 +1248,25 @@ void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name) {
     }
   }
 
-  auto RegstId2TensorStr = [&](int64_t regst_id) {
-    std::string ret;
+  auto RegstId2TensorStr = [&](int64_t regst_id) -> std::string {
     CHECK(regst_id2proto.find(regst_id) != regst_id2proto.end())
         << " regst_id2proto cannot find: " << regst_id;
+    std::ostringstream ss;
+    ss << "{";
     const RegstDescProto& regst = regst_id2proto.at(regst_id);
-    ret += " regst_num: " + std::to_string(regst.register_num());
-    std::string mem;
-    switch (regst.mem_case().device_type()) {
-      case DeviceType::kCPU: {
-        mem = ", cpu ";
-        break;
-      }
-      case DeviceType::kCUDA: {
-        mem = ", cuda ";
-        break;
-      }
-      default: {
-        UNIMPLEMENTED() << "Unsupported device_type " << regst.mem_case().device_type();
-      }
-    }
-    ret += mem;
+    ss << "regust_num: " << std::to_string(regst.register_num());
+    ss << ", device: " << *CHECK_JUST(DeviceTag4DeviceType(regst.mem_case().device_type()));
     if (regst.regst_desc_type().has_data_regst_desc()) {
       const DataRegstDesc& data = regst.regst_desc_type().data_regst_desc();
-      ret += ", time_shape: " + Shape(data.time_shape()).ToString();
+      ss << ", time_shape: " << Shape(data.time_shape()).ToString();
       const BlobDescProto& blob = data.lbi2blob_desc(0).blob_desc();
-      ret += ", shape: " + Shape(blob.shape()).ToString()
-             + " , dtype: " + DataType_Name(blob.data_type());
+      ss << ", shape: " << Shape(blob.shape()).ToString();
+      ss << ", dtype: " << DataType_Name(blob.data_type());
     } else {
-      ret += ", ctrl ";
+      ss << ", ctrl";
     }
-    return ret;
+    ss << "}";
+    return ss.str();
   };
   std::vector<std::vector<const TaskProto*>> rank2ordered_task(GlobalProcessCtx::WorldSize(),
                                                                std::vector<const TaskProto*>());

@@ -50,7 +50,15 @@ class TestEq(flow.unittest.TestCase):
         shape = random_tensor().oneflow.shape
         x = random_tensor(len(shape), *shape, requires_grad=False).to(device)
         y = random_tensor(len(shape), *shape, requires_grad=False).to(device)
-        return torch.eq(x, y)
+        return torch.eq(x, oneof(y, random().to(int), random().to(float)))
+
+    @autotest(n=5, auto_backward=False, check_graph=True)
+    def test_flow_tensor_eq_with_random_data(test_case):
+        device = random_device()
+        shape = random_tensor().oneflow.shape
+        x = random_tensor(len(shape), *shape, requires_grad=False).to(device)
+        y = random_tensor(len(shape), *shape, requires_grad=False).to(device)
+        return x.eq(oneof(y, random().to(int), random().to(float)))
 
     @autotest(n=5, auto_backward=False, check_graph=True)
     def test_flow_eq_with_random_0d_data(test_case):

@@ -250,6 +250,7 @@ Pointwise Ops
     arctanh 
     atan2 
     ceil 
+    ceil_
     clamp 
     clamp_min
     clamp_max
@@ -264,8 +265,11 @@ Pointwise Ops
     expm1 
     floor 
     floor_ 
+    frac
+    frac_
     fmod 
     gelu
+    quick_gelu
     log 
     log1p 
     log2 
@@ -274,6 +278,10 @@ Pointwise Ops
     logical_not 
     logical_or 
     logical_xor 
+    bitwise_and
+    bitwise_or
+    bitwise_xor
+    bitwise_not
     mish
     mul 
     neg 
@@ -281,6 +289,7 @@ Pointwise Ops
     pow 
     reciprocal 
     round 
+    round_
     rsqrt 
     selu
     softmax
@@ -299,6 +308,9 @@ Pointwise Ops
     tanh
     trunc
     floor_divide
+    lerp
+    lerp_
+    quantile
 
 Reduction Ops
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -316,6 +328,7 @@ Reduction Ops
     min  
     mean  
     median
+    mode
     prod
     nansum
     std  
@@ -376,7 +389,6 @@ Other Ops
     cast
     cumprod 
     cumsum 
-    decode_onerec
     diag 
     diagonal 
     einsum 
@@ -397,6 +409,7 @@ Other Ops
     broadcast_shapes
     broadcast_tensors
     broadcast_to
+    unique
 
 BLAS and LAPACK Operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -406,7 +419,8 @@ BLAS and LAPACK Operations
     :nosignatures:
 
     addmm 
-    bmm 
+    bmm
+    baddbmm 
     dot 
     matmul
     mm

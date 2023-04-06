@@ -46,7 +46,7 @@ def _test_max(
         input_arr,
         dtype=flow.float32,
         requires_grad=True,
-        placement=flow.env.all_device_placement("cpu"),
+        placement=flow.placement.all("cpu"),
         sbp=flow.sbp.broadcast,
     )
     if dim is None:
@@ -75,26 +75,17 @@ class TestMaxModule(flow.unittest.TestCase):
             np_out, np_out_grad, input_arr = _np_max(*arg[1:])
             np_out = (
                 flow.tensor(np_out)
-                .to_global(
-                    placement=flow.env.all_device_placement("cpu"),
-                    sbp=flow.sbp.broadcast,
-                )
+                .to_global(placement=flow.placement.all("cpu"), sbp=flow.sbp.broadcast,)
                 .numpy()
             )
             np_out_grad = (
                 flow.tensor(np_out_grad)
-                .to_global(
-                    placement=flow.env.all_device_placement("cpu"),
-                    sbp=flow.sbp.broadcast,
-                )
+                .to_global(placement=flow.placement.all("cpu"), sbp=flow.sbp.broadcast,)
                 .numpy()
             )
             input_arr = (
                 flow.tensor(input_arr)
-                .to_global(
-                    placement=flow.env.all_device_placement("cpu"),
-                    sbp=flow.sbp.broadcast,
-                )
+                .to_global(placement=flow.placement.all("cpu"), sbp=flow.sbp.broadcast,)
                 .numpy()
             )
             for placement in all_placement():

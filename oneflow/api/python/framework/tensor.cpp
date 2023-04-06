@@ -55,29 +55,84 @@ namespace one {
 PyTypeObject* PyTensorObject_Type = NULL;
 PyTypeObject* PyParameterObject_Type = NULL;
 
+namespace {
+
+template<typename T>
+struct AllocType {};
+#define DEFINE_ALLOC_TYPE(type)  \
+  template<>                     \
+  struct AllocType<type> {       \
+    static PyTypeObject** value; \
+  };                             \
+  PyTypeObject** AllocType<type>::value = &Py##type##Object_Type
+
+DEFINE_ALLOC_TYPE(Tensor);
+DEFINE_ALLOC_TYPE(Parameter);
+#undef DEFINE_ALLOC_TYPE
+
+template<typename T>
+PyObject* PyTensor_wrap(const std::shared_ptr<T>& data, PyTensorObject* bind_pyobj) {
+  if (!data) { Py_RETURN_NONE; }
+  PyObject* py_tensor = (PyObject*)data->pyobject();
+  if (bind_pyobj == nullptr && py_tensor) {
+    // Has been wrapped by python before
+    if (data->owns_pyobj()) {
+      // PyTensor are not alive in python side, so we flip back the ownership to PyTensor
+      data->set_owns_pyobj(false);
+      ((PyTensorObject*)py_tensor)->data = data;
+      // NOTE: Needn't incref here, because the reference count of py_tensor is already increased
+      return py_tensor;
+    } else {
+      // PyTensor is alive, so we directly incref it and return it
+      Py_XINCREF(py_tensor);
+      return py_tensor;
+    }
+  } else {
+    // Has not been wrapped by python before, so we create a new PyTensor and give it the ownership
+    if (bind_pyobj == nullptr) {
+      bind_pyobj = (PyTensorObject*)PyTensorObject_Type->tp_alloc(*AllocType<T>::value, 0);
+    }
+    bind_pyobj->data = data;
+    if (py_tensor) {
+      // If it has bind pyobj, reset the shared_ptr in origin PyTensorObject
+      ((PyTensorObject*)py_tensor)->data.reset();
+    }
+    bind_pyobj->data->set_pyobject_ptr(std::unique_ptr<void, void (*)(void*)>(
+        bind_pyobj, [](void* ptr) { Py_DECREF((PyObject*)ptr); }));
+    bind_pyobj->data->set_owns_pyobj(false);
+    return (PyObject*)bind_pyobj;
+  }
+}
+
+bool PyTensor_tryResurrect(PyObject* py_tensor) {
+  auto* self = (PyTensorObject*)py_tensor;
+  if (self->data) {
+    // PyTensor holds the ownership, now we flip it back to C++ and resurrect python object
+    // temporarily
+    auto tensor = self->data;
+    self->data.reset();
+    tensor->set_owns_pyobj(true);
+    Py_XINCREF(py_tensor);
+    return true;
+  }
+  // Otherwise, PyTensor was already not alive in python side
+  return false;
+}
+
+}  // namespace
+
 static int PyTensorObject_init(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   auto* temp = functional::_legacy_tensor_ctor(NULL, args, kwargs);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
-  auto* _self = (PyTensorObject*)self;
-  _self->data = PyTensor_Unpack(temp);
-  _self->data->set_pyobject(self);
-
-  // reset temp data to prevent clearing the pyobject
-  // when the temp is deallocated
-  ((PyTensorObject*)temp)->data.reset();
-  Py_XDECREF(temp);
+  PyTensor_wrap<Tensor>(PyTensor_Unpack(temp), (PyTensorObject*)self);
   return 0;
   END_HANDLE_ERRORS_RET(-1)
 }
 
 static void PyTensorObject_dealloc(PyObject* self) {
-  auto* _self = (PyTensorObject*)self;
-  // clear pyobject
-  if (_self->data) {
-    _self->data->set_pyobject(NULL);
-    _self->data.reset();
-  }
+  if (PyTensor_tryResurrect(self)) { return; }
+
   // clear __dict__
   PyObject** dict_ptr = _PyObject_GetDictPtr(self);
   if (dict_ptr) { Py_CLEAR(*dict_ptr); }
@@ -96,9 +151,9 @@ static int PyParameterObject_init(PyObject* self, PyObject* args, PyObject* kwar
     return -1;
   }
   if (self) {
-    auto* _self = (PyTensorObject*)self;
-    _self->data = ASSERT_PTR(Parameter::MakeTensor(PyTensor_Unpack(data), requires_grad));
-    _self->data->set_pyobject(self);
+    PyTensor_wrap<Parameter>(
+        ASSERT_PTR(Parameter::MakeTensor(PyTensor_Unpack(data), requires_grad)),
+        (PyTensorObject*)self);
   }
   return 0;
   END_HANDLE_ERRORS_RET(-1)
@@ -183,6 +238,28 @@ static PyObject* PyTensorObject_pin_memory(PyObject* self, PyObject* unused) {
 static PyObject* PyTensorObject_is_pinned(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   return functional::CastToPyObject(CHECK_JUST(PyTensor_Unpack(self)->is_pinned()));
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_offload(PyObject* self, PyObject* unused) {
+  HANDLE_ERRORS
+  const auto& t = PyTensor_Unpack(self);
+  CHECK_JUST(t->offload());
+  Py_RETURN_NONE;
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_load(PyObject* self, PyObject* unused) {
+  HANDLE_ERRORS
+  const auto& t = PyTensor_Unpack(self);
+  CHECK_JUST(t->load());
+  Py_RETURN_NONE;
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_is_offloaded(PyObject* self, PyObject* unused) {
+  HANDLE_ERRORS
+  return functional::CastToPyObject(CHECK_JUST(PyTensor_Unpack(self)->is_offloaded()));
   END_HANDLE_ERRORS
 }
 
@@ -317,7 +394,7 @@ static PyObject* PyTensorObject_to_numpy(PyObject* self, PyObject* unused) {
   switch (data_type) {
 #define SWITCH_EAGER_TENSOR_TO_NUMPY(cpp_type, of_type) \
   case of_type: return ASSERT(EagerLocalTensorToNumpy<cpp_type>(self));
-    OF_PP_FOR_EACH_TUPLE(SWITCH_EAGER_TENSOR_TO_NUMPY, POD_DATA_TYPE_SEQ)
+    OF_PP_FOR_EACH_TUPLE(SWITCH_EAGER_TENSOR_TO_NUMPY, POD_DATA_TYPE_SEQ COMPLEX_DATA_TYPE_SEQ)
     case DataType::kFloat16: return ASSERT(EagerLocalTensorToNumpy<float16>(self));
     default: {
       return PyErr_Format(PyExc_RuntimeError,
@@ -335,7 +412,8 @@ static PyObject* PyTensorObject_item(PyObject* self, PyObject* unused) {
   switch (data_type) {
 #define CASE_SCALAR_TENSOR_TO_SCALAR(cpp_type, of_type) \
   case of_type: return ASSERT(EagerLocalTensorItem<cpp_type>(t));
-    OF_PP_FOR_EACH_TUPLE(CASE_SCALAR_TENSOR_TO_SCALAR, POD_AND_HALF_DATA_TYPE_SEQ);
+    OF_PP_FOR_EACH_TUPLE(CASE_SCALAR_TENSOR_TO_SCALAR,
+                         POD_AND_HALF_DATA_TYPE_SEQ COMPLEX_DATA_TYPE_SEQ);
     default: {
       return PyErr_Format(PyExc_RuntimeError,
                           ("Invalid datatype " + DataType_Name(data_type)).data());
@@ -454,6 +532,9 @@ static PyMethodDef PyTensorObject_methods[] = {
     {"contiguous_", PyTensorObject_contiguous_, METH_NOARGS, NULL},
     {"pin_memory", PyTensorObject_pin_memory, METH_NOARGS, NULL},
     {"is_pinned", PyTensorObject_is_pinned, METH_NOARGS, NULL},
+    {"offload", PyTensorObject_offload, METH_NOARGS, NULL},
+    {"load", PyTensorObject_load, METH_NOARGS, NULL},
+    {"is_offloaded", PyTensorObject_is_offloaded, METH_NOARGS, NULL},
     {"is_floating_point", PyTensorObject_is_floating_point, METH_NOARGS, NULL},
     {"requires_grad_", (PyCFunction)PyTensorObject_requires_grad_, METH_VARARGS | METH_KEYWORDS,
      NULL},
@@ -511,16 +592,6 @@ static int PyTensorObject_set_grad(PyObject* self, PyObject* grad, void* unused)
   }
   return 0;
   END_HANDLE_ERRORS_RET(-1)
-}
-
-static PyObject* PyTensorObject__is_grad_acc_inplace(PyObject* self, void* unused) {
-  return functional::CastToPyObject(PyTensor_Unpack(self)->autograd_meta()->is_grad_acc_inplace());
-}
-
-static int PyTensorObject_set__is_grad_acc_inplace(PyObject* self, PyObject* is_inplace,
-                                                   void* unused) {
-  PyTensor_Unpack(self)->mut_autograd_meta()->set_is_grad_acc_inplace(is_inplace);
-  return 0;
 }
 
 static PyObject* PyTensorObject_data(PyObject* self, void* unused) {
@@ -610,8 +681,6 @@ static PyGetSetDef PyTensorObject_properties[] = {
     {PYGETSET_NAME("is_cuda"), (getter)PyTensorObject_is_cuda, NULL, NULL, NULL},
     {PYGETSET_NAME("grad"), (getter)PyTensorObject_grad, (setter)PyTensorObject_set_grad, NULL,
      NULL},
-    {PYGETSET_NAME("_is_grad_acc_inplace"), (getter)PyTensorObject__is_grad_acc_inplace,
-     (setter)PyTensorObject_set__is_grad_acc_inplace, NULL, NULL},
     {PYGETSET_NAME("data"), (getter)PyTensorObject_data, (setter)PyTensorObject_set_data, NULL,
      NULL},
     {PYGETSET_NAME("grad_fn"), (getter)PyTensorObject_grad_fn, NULL, NULL, NULL},
@@ -719,35 +788,17 @@ static PyTypeObject* MakeParameterType() {
 }
 
 PyObject* PyTensor_New(const std::shared_ptr<Tensor>& data) {
-  if (!data) { Py_RETURN_NONE; }
-  if (data->pyobject()) { return PY_XINCREF((PyObject*)(data->pyobject())); }
-  auto* self = (PyTensorObject*)PyTensorObject_Type->tp_alloc(PyTensorObject_Type, 0);
-  if (self) {
-    self->data = data;
-    self->data->set_pyobject(self);
-  }
-  return (PyObject*)self;
+  return PyTensor_wrap<Tensor>(data, /*bind_pyobj=*/nullptr);
 }
 
 PyObject* PyParameter_New(const std::shared_ptr<Parameter>& data) {
-  if (!data) { Py_RETURN_NONE; }
-  if (data->pyobject()) { return PY_XINCREF((PyObject*)(data->pyobject())); }
-  auto* self = (PyTensorObject*)PyTensorObject_Type->tp_alloc(PyParameterObject_Type, 0);
-  if (self) {
-    self->data = data;
-    self->data->set_pyobject(self);
-  }
-  return (PyObject*)self;
+  return PyTensor_wrap<Parameter>(data, /*bind_pyobj=*/nullptr);
 }
 
 PyObject* PyParameter_New(const std::shared_ptr<Tensor>& data, bool requires_grad) {
   if (!data) { Py_RETURN_NONE; }
-  auto* self = (PyTensorObject*)PyTensorObject_Type->tp_alloc(PyParameterObject_Type, 0);
-  if (self) {
-    self->data = ASSERT_PTR(Parameter::MakeTensor(data, requires_grad));
-    self->data->set_pyobject(self);
-  }
-  return (PyObject*)self;
+  return PyTensor_wrap<Parameter>(ASSERT_PTR(Parameter::MakeTensor(data, requires_grad)),
+                                  /*bind_pyobj=*/nullptr);
 }
 
 }  // namespace one

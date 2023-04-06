@@ -45,7 +45,7 @@ file(
   "${PROJECT_SOURCE_DIR}/oneflow/user/*.*"
   "${PROJECT_SOURCE_DIR}/oneflow/api/*.*"
   "${PROJECT_SOURCE_DIR}/oneflow/maybe/*.*"
-  "${PROJECT_SOURCE_DIR}/oneflow/extension/python/*.*")
+  "${PROJECT_SOURCE_DIR}/oneflow/extension/*.*")
 
 foreach(oneflow_single_file ${oneflow_all_src})
   # Verify whether this file is for other platforms
@@ -96,8 +96,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
       set(group_this ON)
     endif()
 
-    if("${oneflow_single_file}" MATCHES
-       "^${PROJECT_SOURCE_DIR}/oneflow/extension/python/.*\\.(h|cpp)$")
+    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/extension/.*\\.(c|h|cpp)$")
       list(APPEND of_pyext_obj_cc ${oneflow_single_file})
       set(group_this ON)
     endif()
@@ -105,7 +104,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|maybe)/.*\\.cpp$")
     if("${oneflow_single_file}" MATCHES
-       "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|maybe)/.*_test\\.cpp$")
+       "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|maybe|thread)/.*_test\\.cpp$")
       # test file
       list(APPEND of_all_test_cc ${oneflow_single_file})
     elseif(APPLE AND "${oneflow_single_file}" MATCHES
@@ -191,7 +190,7 @@ generate_functional_api_and_pybind11_cpp(FUNCTIONAL_GENERATED_SRCS FUNCTIONAL_GE
                                          FUNCTIONAL_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
 oneflow_add_library(of_functional_obj STATIC ${FUNCTIONAL_GENERATED_SRCS}
                     ${FUNCTIONAL_GENERATED_HRCS})
-target_link_libraries(of_functional_obj LLVMSupportWithHeader glog::glog)
+target_link_libraries(of_functional_obj LLVMSupportWithHeader glog::glog fmt)
 add_dependencies(of_functional_obj prepare_oneflow_third_party)
 
 if(BUILD_PYTHON)
@@ -208,7 +207,7 @@ if(BUILD_PYTHON)
     of_functional_tensor_obj STATIC ${FUNCTIONAL_TENSOR_GENERATED_SRCS}
     ${FUNCTIONAL_TENSOR_GENERATED_HRCS} ${FUNCTIONAL_OPS_GENERATED_SRCS}
     ${FUNCTIONAL_OPS_GENERATED_HRCS})
-  target_link_libraries(of_functional_tensor_obj LLVMSupportWithHeader glog::glog)
+  target_link_libraries(of_functional_tensor_obj LLVMSupportWithHeader glog::glog fmt)
   add_dependencies(of_functional_tensor_obj prepare_oneflow_third_party)
   target_include_directories(of_functional_tensor_obj PRIVATE ${Python_INCLUDE_DIRS}
                                                               ${Python_NumPy_INCLUDE_DIRS})
@@ -254,20 +253,22 @@ if("${LLVM_MONO_REPO_URL}" STREQUAL
       "https://github.com/llvm/llvm-project/archive/6a9bbd9f20dcd700e28738788bb63a160c6c088c.zip"
    OR "${LLVM_MONO_REPO_URL}" STREQUAL
       "https://github.com/llvm/llvm-project/archive/32805e60c9de1f82887cd2af30d247dcabd2e1d3.zip"
+   OR "${LLVM_MONO_REPO_URL}" STREQUAL
+      "https://github.com/llvm/llvm-project/archive/6d6268dcbf0f48e43f6f9fe46b3a28c29ba63c7d.zip"
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "f2f17229cf21049663b8ef4f2b6b8062"
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "6b7c6506d5922de9632c8ff012b2f945"
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "e0ea669a9f0872d35bffda5ec6c5ac6f"
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "241a333828bba1efa35aff4c4fc2ce87"
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "075fbfdf06cb3f02373ea44971af7b03"
-   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "e412dc61159b5e929b0c94e44b11feb2")
+   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "e412dc61159b5e929b0c94e44b11feb2"
+   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "334997b4879aba15d9323a732356cf2a")
   unset(LLVM_MONO_REPO_URL CACHE)
   unset(LLVM_MONO_REPO_MD5 CACHE)
 endif()
-set(LLVM_MONO_REPO_URL
-    "https://github.com/llvm/llvm-project/archive/6d6268dcbf0f48e43f6f9fe46b3a28c29ba63c7d.zip"
+set(LLVM_MONO_REPO_URL "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-15.0.6.zip"
     CACHE STRING "")
 use_mirror(VARIABLE LLVM_MONO_REPO_URL URL ${LLVM_MONO_REPO_URL})
-set(LLVM_MONO_REPO_MD5 "334997b4879aba15d9323a732356cf2a" CACHE STRING "")
+set(LLVM_MONO_REPO_MD5 "1ccc00accc87a1a5d42a275d6e31cd8c" CACHE STRING "")
 set(ONEFLOW_BUILD_ROOT_DIR "${PROJECT_BINARY_DIR}")
 add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/ir)
 if(WITH_MLIR)
@@ -312,29 +313,38 @@ elseif(UNIX)
   if(BUILD_CUDA)
     target_link_libraries(oneflow CUDA::cudart_static)
   endif()
+  if(WITH_OMP)
+    if(OpenMP_CXX_FOUND)
+      target_link_libraries(oneflow OpenMP::OpenMP_CXX)
+    endif()
+  endif()
 elseif(WIN32)
   set(of_libs oneflow of_protoobj of_functional_obj of_op_schema)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:oneflow")
 endif()
 
 if(BUILD_CUDA)
-  foreach(CUDA_ARCH ${CMAKE_CUDA_ARCHITECTURES})
-    if(CUDA_ARCH MATCHES "^([0-9]+)\\-real$")
-      list(APPEND CUDA_REAL_ARCHS_LIST ${CMAKE_MATCH_1})
-    elseif(CUDA_ARCH MATCHES "^([0-9]+)$")
-      list(APPEND CUDA_REAL_ARCHS_LIST ${CMAKE_MATCH_1})
-    endif()
-  endforeach()
   string(JOIN "," CUDA_REAL_ARCHS ${CUDA_REAL_ARCHS_LIST})
   set_source_files_properties(${PROJECT_SOURCE_DIR}/oneflow/core/hardware/cuda_device_descriptor.cpp
                               PROPERTIES COMPILE_FLAGS "-DCUDA_REAL_ARCHS=\"${CUDA_REAL_ARCHS}\"")
 endif()
 
-if(BUILD_CUDA)
-  get_target_property(CUTLASS_FMHA_INCLUDE_DIR cutlass_fmha_headers INTERFACE_INCLUDE_DIRECTORIES)
-  set_property(
-    SOURCE ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/fused_multi_head_attention_inference_kernel.cu
-    APPEND PROPERTY INCLUDE_DIRECTORIES ${CUTLASS_FMHA_INCLUDE_DIR})
+if(BUILD_CUDA AND WITH_CUTLASS)
+  if(CUDA_VERSION VERSION_GREATER_EQUAL "10.1")
+    add_definitions(-DCUTLASS_ENABLE_TENSOR_CORE_MMA=1)
+  endif()
+
+  set_property(SOURCE ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/fused_attention_kernels.cu APPEND
+               PROPERTY INCLUDE_DIRECTORIES ${CUTLASS_INSTALL_DIR}/examples/xformers_fmha)
+  set_property(SOURCE ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/fused_glu_kernel.cu APPEND
+               PROPERTY INCLUDE_DIRECTORIES ${CUTLASS_INSTALL_DIR}/examples/45_dual_gemm)
+  if("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA")
+    set_property(
+      SOURCE
+        ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/fused_multi_head_attention_inference_kernel.cu
+      APPEND
+      PROPERTY COMPILE_OPTIONS "--use_fast_math")
+  endif()
 endif()
 
 # oneflow api common
@@ -363,6 +373,8 @@ if(BUILD_PYTHON)
   add_dependencies(of_pyext_obj oneflow)
 
   pybind11_add_module(oneflow_internal ${PYBIND11_SRCS} ${of_pybind_obj_cc} ${PYBIND_REGISTRY_CC})
+  set_property(TARGET oneflow_internal APPEND PROPERTY BUILD_RPATH "\$ORIGIN/../nvidia/cublas/lib")
+  set_property(TARGET oneflow_internal APPEND PROPERTY BUILD_RPATH "\$ORIGIN/../nvidia/cudnn/lib")
   set_compile_options_to_oneflow_target(oneflow_internal)
   set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
   add_dependencies(oneflow_internal of_functional_obj of_functional_tensor_obj of_op_schema)
@@ -375,7 +387,6 @@ if(BUILD_PYTHON)
   target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS}
                                                       ${Python_NumPy_INCLUDE_DIRS})
 
-  target_compile_definitions(oneflow_internal PRIVATE ONEFLOW_CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
   if(WITH_MLIR)
     add_dependencies(check-oneflow oneflow_internal)
   endif(WITH_MLIR)
@@ -543,6 +554,13 @@ if(BUILD_CPP_API)
   if(BUILD_CUDA)
     checkdirandappendslash(DIR ${NCCL_LIBRARY_DIR} OUTPUT NCCL_LIBRARY_DIR_APPENDED)
     list(APPEND LIBONEFLOW_THIRD_PARTY_DIRS ${NCCL_LIBRARY_DIR_APPENDED})
+    checkdirandappendslash(DIR ${TRT_FLASH_ATTENTION_LIBRARY_DIR} OUTPUT
+                           TRT_FLASH_ATTENTION_LIBRARY_DIR_APPENDED)
+    list(APPEND LIBONEFLOW_THIRD_PARTY_DIRS ${TRT_FLASH_ATTENTION_LIBRARY_DIR_APPENDED})
+    if(WITH_CUTLASS)
+      checkdirandappendslash(DIR ${CUTLASS_LIBRARY_DIR} OUTPUT CUTLASS_LIBRARY_DIR_APPENDED)
+      list(APPEND LIBONEFLOW_THIRD_PARTY_DIRS ${CUTLASS_LIBRARY_DIR_APPENDED})
+    endif()
   endif()
 
   install(

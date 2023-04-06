@@ -29,7 +29,7 @@ class DataChecker:
         "min",
         "max",
         "value",
-        "lambda",
+        "lambda_func",
     ]
 
     def __init__(self, **kwargs):
@@ -57,11 +57,11 @@ class DataChecker:
         if "value" in self.checkers:
             test_case.assertTrue(np.all(tensor.numpy() == self.checkers["value"]))
 
-        if "lambda" in self.checkers:
+        if "lambda_func" in self.checkers:
             test_case.assertTrue(
                 np.allclose(
                     tensor.numpy(),
-                    self.checkers["lambda"](tensor.shape),
+                    self.checkers["lambda_func"](tensor.shape),
                     rtol=1e-4,
                     atol=1e-4,
                 )
@@ -155,7 +155,12 @@ check_func_list = [
             min=-0.10825317547305482, max=0.10825317547305482, mean=0.0, std=0.0625
         ),
     },
-    # TODO: test more initializer
+    # oneflow.nn.init.eye_
+    {
+        "func": flow.nn.init.eye_,
+        "params": {},
+        "checker": DataChecker(lambda_func=lambda size: np.eye(*size)),
+    },
 ]
 
 

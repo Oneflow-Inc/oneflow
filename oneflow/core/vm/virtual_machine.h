@@ -52,6 +52,11 @@ class VirtualMachine final {
 
   size_t flying_instruction_cnt() const { return engine().flying_instruction_cnt(); }
 
+  void add_main_thread_pending_task(std::function<void()> task) {
+    std::unique_lock lock(main_thread_pending_tasks_mutex_);
+    main_thread_pending_tasks_.push_back(std::move(task));
+  }
+
  private:
   friend class InstructionsBuilder;
 
@@ -78,7 +83,12 @@ class VirtualMachine final {
 
   Maybe<void> NotifyOrRunScheduler();
 
-  bool disable_vm_threads_;
+  Maybe<void> CloseWorkerThreads();
+
+  void RunMainThreadPendingTasks();
+
+  bool multi_thread_;
+  bool threads_closed_;
   bool scheduler_stopped_;
   intrusive::shared_ptr<vm::VirtualMachineEngine> engine_;
 
@@ -97,6 +107,9 @@ class VirtualMachine final {
 
   std::thread schedule_thread_;
   Notifier pending_notifier_;
+
+  std::mutex main_thread_pending_tasks_mutex_;
+  std::vector<std::function<void()>> main_thread_pending_tasks_;
 };
 
 }  // namespace oneflow

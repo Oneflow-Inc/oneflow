@@ -16,6 +16,7 @@ limitations under the License.
 import os
 import unittest
 import types
+import warnings
 
 import numpy as np
 
@@ -136,6 +137,123 @@ class TestGraphBlock(flow.unittest.TestCase):
 
         linear_t_g(x)
 
+    def test_block_get_class_in_forward(test_case):
+        device = "cuda"
+        linear = flow.nn.Linear(3, 8)
+        linear = linear.to(device)
+        flow.nn.init.constant_(linear.weight, 2.068758)
+        flow.nn.init.constant_(linear.bias, 0.23)
+        of_sgd = flow.optim.SGD(linear.parameters(), lr=0.001, momentum=0.9)
+
+        x = flow.tensor(
+            [
+                [-0.94630778, -0.83378579, -0.87060891],
+                [2.0289922, -0.28708987, -2.18369248],
+                [0.35217619, -0.67095644, -1.58943879],
+                [0.08086036, -1.81075924, 1.20752494],
+                [0.8901075, -0.49976737, -1.07153746],
+                [-0.44872912, -1.07275683, 0.06256855],
+                [-0.22556897, 0.74798368, 0.90416439],
+                [0.48339456, -2.32742195, -0.59321527],
+            ],
+            dtype=flow.float32,
+            device=device,
+            requires_grad=False,
+        )
+
+        class CustomModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.linear = linear
+
+            def forward(self, x):
+                return self._forward_impl(x)
+
+            def _forward_impl(self, x):
+                test_case.assertTrue(isinstance(self.linear, flow.nn.Module))
+                test_case.assertTrue(isinstance(self.linear, flow.nn.Linear))
+                return self.linear(x)
+
+        class LinearTrainGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.m = CustomModule()
+                test_case.assertTrue(isinstance(self.m.linear, flow.nn.graph.Proxy))
+                self.add_optimizer(of_sgd)
+
+            def build(self, x):
+                test_case.assertTrue(isinstance(self.m.linear, flow.nn.Module))
+                test_case.assertTrue(isinstance(self.m.linear, flow.nn.Linear))
+                out = self.m(x)
+                out = out.sum()
+                out.backward()
+                test_case.assertTrue(self.m.linear.weight.is_lazy)
+                return out
+
+        linear_t_g = LinearTrainGraph()
+        test_case.assertTrue(isinstance(linear_t_g.m.linear, flow.nn.graph.Proxy))
+
+        linear_t_g(x)
+
+    def test_block_with_not_registered_module(test_case):
+        device = "cuda"
+        linear = flow.nn.Linear(3, 8)
+        linear = linear.to(device)
+        flow.nn.init.constant_(linear.weight, 2.068758)
+        flow.nn.init.constant_(linear.bias, 0.23)
+
+        x = flow.tensor(
+            [
+                [-0.94630778, -0.83378579, -0.87060891],
+                [2.0289922, -0.28708987, -2.18369248],
+                [0.35217619, -0.67095644, -1.58943879],
+                [0.08086036, -1.81075924, 1.20752494],
+                [0.8901075, -0.49976737, -1.07153746],
+                [-0.44872912, -1.07275683, 0.06256855],
+                [-0.22556897, 0.74798368, 0.90416439],
+                [0.48339456, -2.32742195, -0.59321527],
+            ],
+            dtype=flow.float32,
+            device=device,
+            requires_grad=False,
+        )
+
+        class CustomModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.dict = {"lin": linear}
+
+            def forward(self, x):
+                return self._forward_impl(x)
+
+            def _forward_impl(self, x):
+                test_case.assertTrue(isinstance(self.dict["lin"], flow.nn.Module))
+                return self.dict["lin"](x)
+
+        class LinearTrainGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.m = CustomModule()
+
+            def build(self, x):
+                out = self.m(x)
+                out = out.sum()
+                return out
+
+        linear_t_g = LinearTrainGraph()
+
+        with warnings.catch_warnings(record=True) as w:
+            # Here will print:
+            #     UserWarning: Linear(in_features=3, out_features=8, bias=True) is called in a nn.Graph, but not registered into a nn.Graph.
+            linear_t_g(x)
+
+            test_case.assertTrue(len(w) == 1)
+            test_case.assertTrue(issubclass(w[-1].category, UserWarning))
+            test_case.assertTrue(
+                "is called in a nn.Graph, but not registered into a nn.Graph"
+                in str(w[-1].message)
+            )
+
     def test_block_with_seq_container(test_case):
         class SubModule0(flow.nn.Module):
             def __init__(self):
@@ -237,6 +355,39 @@ class TestGraphBlock(flow.unittest.TestCase):
         # print(module_list_g)
         test_case.assertTrue(np.array_equal(output_m.numpy(), output_g.numpy()))
 
+    def test_module_list_slice(test_case):
+        class ModuleListSlice(nn.Module):
+            def __init__(self,):
+                super().__init__()
+                linear1 = nn.Linear(5, 5, bias=False)
+                linear2 = nn.Linear(5, 5, bias=False)
+                linear3 = nn.Linear(5, 5, bias=False)
+                self.modulelist = nn.ModuleList([linear1, linear2, linear3])
+
+            def forward(self, x):
+                sliced_m = self.modulelist[1:]
+                test_case.assertEqual(len(sliced_m), 2)
+                y = sliced_m[1](x)
+                return y
+
+        class GraphModuleListSlice(nn.Graph):
+            def __init__(self, m):
+                super().__init__()
+                self.m = m
+
+            def build(self, x):
+                return self.m(x)
+
+        in_tensor = flow.randn(5, 5)
+
+        m = ModuleListSlice()
+        eager_out = m(in_tensor)
+
+        g = GraphModuleListSlice(m)
+        graph_out = g(in_tensor)
+
+        test_case.assertTrue(np.array_equal(eager_out.numpy(), graph_out.numpy()))
+
     def test_block_with_dict_container(test_case):
         class SubModule0(flow.nn.Module):
             def __init__(self, out):
@@ -288,6 +439,63 @@ class TestGraphBlock(flow.unittest.TestCase):
         input = flow.tensor(np.random.randn(4, 10), dtype=flow.float32)
         output_m = module_dict_m(input)
         output_g = module_dict_g(input)
+
+        # print(module_dict_g)
+        test_case.assertTrue(np.array_equal(output_m.numpy(), output_g.numpy()))
+
+    def test_block_with_dict_container_nto1(test_case):
+        class SubModule0(flow.nn.Module):
+            def __init__(self, out):
+                super().__init__()
+                self.linear = flow.nn.Linear(10, out, False)
+
+            def forward(self, x):
+                if graph_build_util.lazy_mode.is_enabled():
+                    scope = scope_util.current_scope()
+                    scope_proto = graph_build_util.scope_to_proto(scope)
+                    ck_bool = scope_proto.attr_name2attr_value["checkpointing"].at_bool
+                    test_case.assertEqual(ck_bool, True)
+                out = self.linear(x)
+                return out
+
+        sub_m = SubModule0(10)
+        dict_of_m = {"0": sub_m, "1": sub_m}
+
+        class ModuleDictModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.linears = flow.nn.ModuleDict(dict_of_m)
+
+            def forward(self, x):
+                x = self.linears["0"](x)
+                x = self.linears["1"](x)
+                return x
+
+        class ModuleDictGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.linears = flow.nn.ModuleDict(dict_of_m)
+
+                # NOTE: ModuleDict doesn't have config.
+                # self.linears.to(GraphModule).activation_checkpointing = True
+                for k, _ in self.linears.items():
+                    self.linears[k].to(
+                        nn.graph.GraphModule
+                    ).activation_checkpointing = True
+
+            def build(self, x):
+                # ModuleDict can act as an iterable, or get using key
+                x = self.linears["0"](x)
+                x = self.linears["1"](x)
+                return x
+
+        module_dict_m = ModuleDictModule()
+        module_dict_g = ModuleDictGraph()
+
+        input = flow.tensor(np.random.randn(4, 10), dtype=flow.float32)
+        output_m = module_dict_m(input)
+        output_g = module_dict_g(input)
+        print(module_dict_g)
 
         # print(module_dict_g)
         test_case.assertTrue(np.array_equal(output_m.numpy(), output_g.numpy()))

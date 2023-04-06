@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/framework/shut_down_util.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/common/mem_util.h"
 
 #ifdef WITH_CUDA
 #include <cuda.h>
@@ -57,13 +58,13 @@ void RegisterCudaDeviceProperties(py::module& m) {
 #endif  // WITH_CUDA
 
 Maybe<void> SwitchToShuttingDownPhase(EnvGlobalObjectsScope* env, bool is_normal_exit) {
+  JUST(env->init_is_normal_exit(is_normal_exit));
+  SetShuttingDown(true);
   if (is_normal_exit) {
     JUST(vm::ClusterSync());
     auto* vm = JUST(SingletonMaybe<VirtualMachine>());
     JUST(vm->CloseVMThreads());
   }
-  JUST(env->init_is_normal_exit(is_normal_exit));
-  SetShuttingDown(true);
   return Maybe<void>::Ok();
 }
 
@@ -94,6 +95,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("SetCudaDeviceIndex", &SetCudaDeviceIndex);
   m.def("CudaSynchronize", &CudaSynchronize);
   m.def("GetCUDAMemoryUsed", &GetCUDAMemoryUsed);
+  m.def("GetCPUMemoryUsed", &GetCPUMemoryUsed);
   m.def(
       "_get_device_properties",
       [](int device) -> cudaDeviceProp* { return GetDeviceProperties(device); },

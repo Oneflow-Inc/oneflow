@@ -40,7 +40,7 @@ class TestSelect(flow.unittest.TestCase):
         return z
 
     # TODO:(zhaoluyang) some bug in as_strided backward to be fixed
-    @autotest(n=10, auto_backward=False, check_graph=False)
+    @autotest(n=10, auto_backward=False, check_graph=True)
     def test_flow_select_with_stride(test_case):
         device = random_device()
         x = random_tensor(

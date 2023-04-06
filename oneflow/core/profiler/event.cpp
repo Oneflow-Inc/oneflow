@@ -24,9 +24,7 @@ using json = nlohmann::json;
 namespace oneflow {
 
 namespace profiler {
-nlohmann::json IEvent::ToJson() {
-  return json{{"name", name_}, {"time", GetDuration<double>()}, {"input_shapes", "-"}};
-}
+nlohmann::json IEvent::ToJson() { return json{{"name", name_}, {"time", GetDuration<double>()}}; }
 
 void IEvent::SetStartedAt(double t) { started_at_ = t; }
 
@@ -45,8 +43,6 @@ bool IEvent::IsChildOf(const IEvent* e) {
 
 const std::string& IEvent::GetName() const { return name_; }
 
-std::string CustomEvent::Key() { return name_; }
-
 nlohmann::json CustomEvent::ToJson() {
   auto j = IEvent::ToJson();
   j["type"] = EventType::kCustom;
@@ -58,12 +54,12 @@ std::shared_ptr<CustomEvent> CustomEvent::Create(const std::string& name, Custom
   return std::shared_ptr<CustomEvent>(new CustomEvent(name, type));
 }
 
-std::string KernelEvent::Key() { return fmt::format("{}.{}", name_, GetFormatedInputShapes()); }
-
 nlohmann::json KernelEvent::ToJson() {
   auto j = IEvent::ToJson();
   j["type"] = EventType::kOneflowKernel;
-  j["input_shapes"] = GetFormatedInputShapes();
+  for (const auto& desc : description_) {
+    j["description"][desc.first] = {desc.second.first, desc.second.second};
+  }
 #if defined(WITH_CUDA)
   j["memory_size"] = memory_size_;
   if (!children_.empty()) { j["children"] = children_; }
@@ -71,22 +67,9 @@ nlohmann::json KernelEvent::ToJson() {
   return j;
 }
 
-std::shared_ptr<KernelEvent> KernelEvent::Create(
-    const std::string& name, const std::function<std::vector<ShapeView>(void)>& shape_getter) {
-  return std::shared_ptr<KernelEvent>(new KernelEvent(name, shape_getter));
-}
-
-void KernelEvent::RecordShape(const ShapeView& shape) { input_shapes_.emplace_back(shape); }
-
-std::string KernelEvent::GetFormatedInputShapes(size_t max_num_to_format) {
-  if (input_shapes_.size() == 0) { return "-"; }
-  std::vector<std::string> shapes_formated(std::min(input_shapes_.size(), max_num_to_format));
-  for (auto i = 0; i < shapes_formated.size(); ++i) {
-    const std::string current_shape = input_shapes_[i].ToString();
-    shapes_formated[i] = current_shape == "()" ? "scalar" : current_shape;
-  }
-  if (input_shapes_.size() > max_num_to_format) { shapes_formated.emplace_back("..."); }
-  return fmt::format("[{}]", fmt::join(shapes_formated, ", "));
+std::shared_ptr<KernelEvent> KernelEvent::Create(const std::string& name,
+                                                 const Description& description) {
+  return std::shared_ptr<KernelEvent>(new KernelEvent(name, description));
 }
 
 }  // namespace profiler

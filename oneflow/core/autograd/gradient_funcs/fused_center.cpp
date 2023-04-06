@@ -43,6 +43,7 @@ class FusedCenterGrad : public OpExprGradFunction<FusedCenterCaptureState> {
   Maybe<void> Apply(const FusedCenterCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    const auto& rho2_diff = out_grads.at(0);
 
     const auto& b1_x1 = ctx->SavedTensors().at(0);
     const auto& b1_x2 = ctx->SavedTensors().at(1);
@@ -54,8 +55,8 @@ class FusedCenterGrad : public OpExprGradFunction<FusedCenterCaptureState> {
     const auto& b2_y2 = ctx->SavedTensors().at(7);
 
     in_grads->resize(INPUT_LEN);
-    auto result =
-        JUST(functional::FusedCenterGrad(b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1, b2_y2));
+    auto result = JUST(functional::FusedCenterGrad(b1_x1, b1_x2, b2_x1, b2_x2, b1_y1, b1_y2, b2_y1,
+                                                   b2_y2, rho2_diff));
 
     CHECK_EQ_OR_RETURN(result->size(), INPUT_LEN);
     for (int i = 0; i < INPUT_LEN; i++) {

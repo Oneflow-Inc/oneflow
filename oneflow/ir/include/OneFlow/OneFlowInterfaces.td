@@ -126,10 +126,10 @@ def BiasAddCompatibleInterface : OpInterface<"BiasAddCompatible"> {
         "bool", "isLastDim", (ins)
     >,
     InterfaceMethod<"",
-        "mlir::Value", "b", (ins)
+        "mlir::Value", "biasAddGetBias", (ins)
     >,
     InterfaceMethod<"",
-        "mlir::Value", "out", (ins)
+        "mlir::Value", "biasAddGetOut", (ins)
     >,
   ];
   let cppNamespace = "::mlir::oneflow";
@@ -145,13 +145,13 @@ def MatMulCompatibleInterface : OpInterface<"MatMulCompatible"> {
         "bool", "isLinear", (ins)
     >,
     InterfaceMethod<"",
-        "mlir::Value", "a", (ins)
+        "mlir::Value", "matMulGetX", (ins)
     >,
     InterfaceMethod<"",
-        "mlir::Value", "b", (ins)
+        "mlir::Value", "matMulGetW", (ins)
     >,
     InterfaceMethod<"",
-        "mlir::Value", "out", (ins)
+        "mlir::Value", "matMulGetY", (ins)
     >,
   ];
   let cppNamespace = "::mlir::oneflow";
