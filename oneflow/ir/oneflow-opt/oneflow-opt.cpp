@@ -91,7 +91,6 @@ int32_t main(int32_t argc, char** argv) {
   registry.insert<mlir::AffineDialect>();
   registry.insert<mlir::tensor::TensorDialect>();
   registry.insert<mlir::NVVM::NVVMDialect>();
-  registry.insert<mlir::math::MathDialect>();
   registry.insert<mlir::bufferization::BufferizationDialect>();
   return failed(mlir::MlirOptMain(argc, argv, "OneFlow optimizer driver\n", registry));
 }
