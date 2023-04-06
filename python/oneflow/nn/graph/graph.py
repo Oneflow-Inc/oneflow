@@ -187,7 +187,6 @@ class Graph(object):
         self._debug_max_py_stack_depth = 2
         self._debug_op_repr_with_py_stack = False
         self._debug_only_user_py_stack = True
-        self._debug_ops_before_compile_runtime_flag = False
         self.debug(
             debug_v_level,
             ranks=debug_ranks,
@@ -673,7 +672,7 @@ class Graph(object):
 
     @property
     def _compiled_graph_proto(self):
-        if not self._is_compiled and not self._debug_ops_before_compile_runtime_flag:
+        if not self._is_compiled and self._compiled_job_proto is None:
             self.__print(
                 2,
                 0,
@@ -1294,7 +1293,6 @@ class Graph(object):
                 compiled_job_str = self._c_nn_graph.get_current_job_str()
                 self._compiled_job_proto = job_pb.Job()
                 self._compiled_job_proto.ParseFromString(compiled_job_str)
-                self._debug_ops_before_compile_runtime_flag = True
                 self.__print(
                     0, 2, lambda: f"{self.name} with operators:\n" + self.__repr__()
                 )
