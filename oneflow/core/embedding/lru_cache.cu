@@ -22,7 +22,8 @@ limitations under the License.
 #include <new>
 #include <cuda.h>
 
-#if CUDA_VERSION >= 11000 && ((!defined(__CUDA_ARCH__)) || (__CUDA_ARCH__ >= 700))
+#if CUDA_VERSION >= 11000 && ((!defined(__CUDA_ARCH__)) || (__CUDA_ARCH__ >= 700)) \
+    && !(defined(__clang__) && defined(__CUDA__))
 #include <cuda/std/semaphore>
 #endif
 
@@ -82,7 +83,8 @@ class WarpMutexAtomicImpl {
   int32_t flag_;
 };
 
-#if CUDA_VERSION >= 11000 && ((!defined(__CUDA_ARCH__)) || (__CUDA_ARCH__ >= 700))
+#if CUDA_VERSION >= 11000 && ((!defined(__CUDA_ARCH__)) || (__CUDA_ARCH__ >= 700)) \
+    && !(defined(__clang__) && defined(__CUDA__))
 
 class WarpMutexSemaphoreImpl {
  public:
@@ -118,11 +120,12 @@ struct LruCacheContext {
 };
 
 __global__ void InitCacheSetMutex(uint32_t n_set, void* mutex) {
-#if CUDA_VERSION >= 11000 && __CUDA_ARCH__ >= 700
+#if CUDA_VERSION >= 11000 && __CUDA_ARCH__ >= 700 && !(defined(__clang__) && defined(__CUDA__))
   using WarpMutex = WarpMutexSemaphoreImpl;
 #else
   using WarpMutex = WarpMutexAtomicImpl;
-#endif  // CUDA_VERSION >= 11000 && __CUDA_ARCH__ >= 700
+#endif  // CUDA_VERSION >= 11000 && __CUDA_ARCH__ >= 700 && !(defined(__clang__) &&
+        // defined(__CUDA__))
   const uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx < n_set) { new (reinterpret_cast<WarpMutex*>(mutex) + idx) WarpMutex; }
 }
@@ -145,7 +148,7 @@ void InitLruCacheContext(const CacheOptions& options, LruCacheContext<Key, Elem>
   int major = 0;
   OF_CUDA_CHECK(cudaDeviceGetAttribute(&major, cudaDevAttrComputeCapabilityMajor, device));
   size_t mutex_size_per_set = 0;
-#if CUDA_VERSION >= 11000
+#if CUDA_VERSION >= 11000 && !(defined(__clang__) && defined(__CUDA__))
   if (major >= 7) {
 #if !defined(__CUDA_ARCH__)
     mutex_size_per_set = sizeof(WarpMutexSemaphoreImpl);
@@ -157,7 +160,7 @@ void InitLruCacheContext(const CacheOptions& options, LruCacheContext<Key, Elem>
   }
 #else
   mutex_size_per_set = sizeof(WarpMutexAtomicImpl);
-#endif  // CUDA_VERSION >= 11000
+#endif  // CUDA_VERSION >= 11000 && !(defined(__clang__) && defined(__CUDA__))
   const size_t n_set = (options.capacity - 1 + kWarpSize) / kWarpSize;
   CHECK_GT(n_set, 0);
   ctx->n_set = n_set;
@@ -202,11 +205,12 @@ void DestroyLruCacheContext(LruCacheContext<Key, Elem>* ctx) {
 
 template<typename Key, typename Elem>
 struct SetContext {
-#if CUDA_VERSION >= 11000 && __CUDA_ARCH__ >= 700
+#if CUDA_VERSION >= 11000 && __CUDA_ARCH__ >= 700 && !(defined(__clang__) && defined(__CUDA__))
   using WarpMutex = WarpMutexSemaphoreImpl;
 #else
   using WarpMutex = WarpMutexAtomicImpl;
-#endif  // CUDA_VERSION >= 11000 && __CUDA_ARCH__ >= 700
+#endif  // CUDA_VERSION >= 11000 && __CUDA_ARCH__ >= 700 && !(defined(__clang__) &&
+        // defined(__CUDA__))
   __device__ SetContext(const LruCacheContext<Key, Elem>& ctx, uint32_t set_id)
       : keys(ctx.keys + set_id * kWarpSize),
         mutex(reinterpret_cast<WarpMutex*>(ctx.mutex) + set_id),
@@ -542,6 +546,7 @@ class LruCache : public Cache {
                               static_cast<Key*>(missing_keys), missing_indices);
   }
 
+  using Cache::Get;
   void Get(ep::Stream* stream, uint32_t n_keys, const void* keys, void* values, uint32_t* n_missing,
            void* missing_keys, uint32_t* missing_indices) override {
     CHECK_LE(n_keys, max_query_length_);

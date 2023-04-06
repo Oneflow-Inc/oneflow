@@ -17,7 +17,7 @@ import warnings
 
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
-from oneflow.nn.graph.util import ArgsTree
+from oneflow.framework.args_tree import ArgsTree
 from oneflow.utils.global_view.global_utils import to_local_tensor
 
 

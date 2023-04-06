@@ -32,7 +32,7 @@ class Stream;
 class StreamRecordEventInstructionPolicy final : public vm::InstructionPolicy {
  public:
   StreamRecordEventInstructionPolicy(
-      const small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>& dependences);
+      const small_vector<intrusive::shared_ptr<LocalDepObject>>& dependences);
   ~StreamRecordEventInstructionPolicy() = default;
 
   std::string DebugName(const vm::Instruction&) const override { return "StreamRecordEvent"; }
@@ -44,12 +44,10 @@ class StreamRecordEventInstructionPolicy final : public vm::InstructionPolicy {
   const DependenceVector& input_dependences() const override { return input_dependences_; }
   const DependenceVector& output_dependences() const override { return output_dependences_; }
 
-  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {}
-
   std::shared_ptr<EpEvent>& mut_ep_event() { return ep_event_; }
 
  private:
-  small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize> dependences_;
+  small_vector<intrusive::shared_ptr<LocalDepObject>> dependences_;
   DependenceVector input_dependences_;
   DependenceVector output_dependences_;
   std::shared_ptr<EpEvent> ep_event_;

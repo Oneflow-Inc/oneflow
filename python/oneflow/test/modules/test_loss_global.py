@@ -23,7 +23,7 @@ from oneflow.test_utils.test_util import GenArgList
 
 
 def get_sbp(device: str):
-    return flow.env.all_device_placement(device), flow.sbp.split(0)
+    return flow.placement.all(device), flow.sbp.split(0)
 
 
 shapes = {2: (128, 8), 3: (16, 8, 64), 4: (16, 8, 32, 32), 5: (16, 8, 16, 16, 16)}

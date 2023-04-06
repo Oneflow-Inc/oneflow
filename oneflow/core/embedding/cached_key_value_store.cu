@@ -243,7 +243,6 @@ void CacheKeyValueStoreImpl<Key, Elem>::LoadSnapshot(
     }
   });
   device->DestroyStream(stream);
-  store_->LoadSnapshot(name);
 }
 
 template<typename Key, typename Elem>

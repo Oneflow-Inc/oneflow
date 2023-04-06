@@ -16,6 +16,8 @@ limitations under the License.
 // this file should contains functions to get operands and results with user op name and index
 
 #include "OneFlow/UserOpReflection.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Casting.h"
 
 namespace mlir {
 
@@ -27,6 +29,8 @@ template<template<typename T> class Trait>
 const std::vector<std::string>* GetFullKeys(UserOpCompatible& uc, Operation* op);
 template<template<typename T> class Trait>
 std::vector<std::string> GetFullKeys(UserOp op);
+template<template<typename T> class Trait>
+std::vector<std::string> GetFullKeys(::llvm::StringRef op_type_name);
 
 template<>
 const std::vector<std::string>* GetFullKeys<OpTrait::AttrSizedOperandSegments>(UserOpCompatible& uc,
@@ -54,6 +58,18 @@ std::vector<std::string> GetFullKeys<OpTrait::AttrSizedOperandSegments>(UserOp o
 template<>
 std::vector<std::string> GetFullKeys<OpTrait::AttrSizedResultSegments>(UserOp op) {
   return mlir::oneflow::support::GetOutputKeys(op.op_type_name().str());
+}
+
+template<>
+std::vector<std::string> GetFullKeys<OpTrait::AttrSizedOperandSegments>(
+    ::llvm::StringRef op_type_name) {
+  return mlir::oneflow::support::GetInputKeys(op_type_name.str());
+}
+
+template<>
+std::vector<std::string> GetFullKeys<OpTrait::AttrSizedResultSegments>(
+    ::llvm::StringRef op_type_name) {
+  return mlir::oneflow::support::GetOutputKeys(op_type_name.str());
 }
 
 template<template<typename T> class Trait>
@@ -126,6 +142,42 @@ LogicalResult GetUserOpFilteredSegmentKeyAndSizes(UserOp op, std::vector<std::st
   return success();
 }
 
+Source GetOpSourceByName(Operation* op, const std::string& to_find) {
+  if (auto user_op = dyn_cast<UserOpCompatible>(op)) {
+    auto found = [&](std::vector<std::string> keys,
+                     bool find_in_results /*or in operands*/ = false) -> int {
+      auto offset = 0;
+      for (const auto& key : llvm::enumerate(keys)) {
+        if (key.value() == to_find) { return offset; }
+        offset += find_in_results ? user_op.getODSResultIndexAndLength(key.index()).second
+                                  : user_op.getODSOperandIndexAndLength(key.index()).second;
+      }
+      return -1;
+    };
+
+    if (auto alternative_name = dyn_cast<HasAlternativeOpTypeName>(op)) {
+      if (auto offset = found(*alternative_name.inputKeys()); offset != -1) {
+        return {Source::INPUT, offset};
+      }
+      if (auto offset = found(*alternative_name.outputKeys(), true); offset != -1) {
+        return {Source::OUTPUT, offset};
+      }
+    }
+
+    if (to_find == "tmp_buffer") { return {Source::BUFFER, 0}; }
+
+    if (auto offset = found(*user_op.inputKeys()); offset != -1) { return {Source::INPUT, offset}; }
+    if (auto offset = found(*user_op.outputKeys(), true); offset != -1) {
+      return {Source::OUTPUT, offset};
+    }
+
+    op->emitError(to_find + " not found in this op");
+    return {Source::INVALID, -1};
+  }
+  op->emitError("Not support op which is not user  op");
+  return {Source::INVALID, -1};
+}
+
 template<template<typename T> class Trait>
 LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::string>& keys,
                                             std::vector<int32_t>& sizes) {
@@ -173,10 +225,52 @@ LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::stri
   return success();
 }
 
+template<template<typename T> class Trait>
+LogicalResult GetFilteredSegmentKeyAndSizes(llvm::StringRef op_type_name, size_t valueSize,
+                                            DictionaryAttr attributes,
+                                            std::vector<std::string>& keys,
+                                            std::vector<int32_t>& sizes) {
+  const std::vector<std::string> full_keys = GetFullKeys<Trait>(op_type_name);
+  std::vector<int32_t> full_sizes{};
+  const StringRef attr_name = GetSegmentSizeAttr<Trait>();
+  if (auto size_attr = attributes.get(attr_name).dyn_cast_or_null<DenseIntElementsAttr>()) {
+    if (!size_attr) return failure();
+    auto segment_sizes = size_attr.getValues<int32_t>();
+    if (full_keys.size() != segment_sizes.size()) {
+      LOG(FATAL) << "fail to convert op inputs, attr_name: " << attr_name.str()
+                 << ", full_keys: " << full_keys.size()
+                 << ", segment_sizes: " << segment_sizes.size();
+      return failure();
+    };
+    full_sizes = {segment_sizes.begin(), segment_sizes.end()};
+  } else {
+    if (full_keys.size() == 1) {
+      full_sizes.push_back(valueSize);
+    } else {
+      LOG(FATAL) << "set attr: " << attr_name.str();
+    }
+  }
+  for (const auto& key_size_tuple : llvm::zip(full_keys, full_sizes)) {
+    const std::string& key = std::get<0>(key_size_tuple);
+    const int32_t size = std::get<1>(key_size_tuple);
+    if (size > 0) {
+      keys.push_back(key);
+      sizes.push_back(size);
+    }
+  }
+  return success();
+}
+
 template LogicalResult GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(
     Operation* op, std::vector<std::string>& keys, std::vector<int32_t>& sizes);
 template LogicalResult GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(
     Operation* op, std::vector<std::string>& keys, std::vector<int32_t>& sizes);
+template LogicalResult GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(
+    llvm::StringRef op_type_name, size_t valueSize, DictionaryAttr attributes,
+    std::vector<std::string>& keys, std::vector<int32_t>& sizes);
+template LogicalResult GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(
+    llvm::StringRef op_type_name, size_t valueSize, DictionaryAttr attributes,
+    std::vector<std::string>& keys, std::vector<int32_t>& sizes);
 
 template<template<typename T> class Trait>
 ArgIds<Trait>::ArgIds(Operation* op) {
@@ -188,7 +282,23 @@ ArgIds<Trait>::ArgIds(Operation* op) {
   }
   for (int i = 0; i < keys.size(); i += 1) {
     auto& key = keys[i];
-    for (size_t j = 0; j < sizes.size(); j += 1) {
+    for (size_t j = 0; j < sizes[i]; j += 1) {
+      ArgID id{key, j};
+      ids_.push_back(id);
+    }
+  }
+}
+
+template<template<typename T> class Trait>
+ArgIds<Trait>::ArgIds(llvm::StringRef op_type_name, size_t valueSize, DictionaryAttr attributes) {
+  std::vector<std::string> keys{};
+  std::vector<int32_t> sizes{};
+  CHECK(user_op::GetFilteredSegmentKeyAndSizes<Trait>(op_type_name, valueSize, attributes, keys,
+                                                      sizes)
+            .succeeded());
+  for (int i = 0; i < keys.size(); i += 1) {
+    auto& key = keys[i];
+    for (size_t j = 0; j < sizes[i]; j += 1) {
       ArgID id{key, j};
       ids_.push_back(id);
     }
@@ -197,6 +307,43 @@ ArgIds<Trait>::ArgIds(Operation* op) {
 
 template oneflow::user_op::ArgIds<OpTrait::AttrSizedOperandSegments>::ArgIds(Operation*);
 template oneflow::user_op::ArgIds<OpTrait::AttrSizedResultSegments>::ArgIds(Operation*);
+template oneflow::user_op::ArgIds<OpTrait::AttrSizedOperandSegments>::ArgIds(
+    llvm::StringRef op_type_name, size_t valueSize, DictionaryAttr attributes);
+template oneflow::user_op::ArgIds<OpTrait::AttrSizedResultSegments>::ArgIds(
+    llvm::StringRef op_type_name, size_t valueSize, DictionaryAttr attributes);
+
+llvm::Optional<std::string> GetOutputLbn(OpResult result) {
+  const auto def_op = result.getDefiningOp();
+  if (def_op->hasTrait<OpTrait::IsImportCompatible>()) {
+    return def_op
+        ->getAttrOfType<ArrayAttr>(
+            OpTrait::IsImportCompatible<void>::getOutputLBNsAttr())[result.getResultNumber()]
+        .dyn_cast<StringAttr>()
+        .getValue()
+        .str();
+  } else {
+    std::vector<std::string> def_op_keys{};
+    std::vector<int32_t> def_op_sizes{};
+    if (failed(user_op::GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(
+            def_op, def_op_keys, def_op_sizes))) {
+      def_op->emitError("fail to get output lbn");
+      return llvm::None;
+    }
+    const auto result_number = result.getResultNumber();
+    uint32_t size_sum = 0;
+    for (const auto& name_size_tuple : llvm::zip(def_op_keys, def_op_sizes)) {
+      auto name = std::get<0>(name_size_tuple);
+      auto size = std::get<1>(name_size_tuple);
+      if ((size_sum + size) > result_number) {
+        const uint32_t bn_i = result_number - size_sum;
+        return OpTrait::IsOpConfCompatible<void>::getOpName(def_op).str() + "/" + name + "_"
+               + std::to_string(bn_i);
+      }
+      size_sum += size;
+    }
+  }
+  return llvm::None;
+}
 
 }  // namespace user_op
 

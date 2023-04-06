@@ -15,9 +15,10 @@ limitations under the License.
 */
 #include "oneflow/core/framework/nn_graph.h"
 #include "oneflow/core/common/buffer_manager.h"
+#include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
-#include "oneflow/core/common/time_util.h"
+#include "oneflow/core/common/cost_util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/control/ctrl_client.h"
@@ -26,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/scope_util.h"
+#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/graph/op_graph.h"
@@ -36,6 +38,7 @@ limitations under the License.
 #include "oneflow/core/job/critical_section_instance.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/plan_util.h"
+#include "oneflow/core/job/utils/progress_bar.h"
 #include "oneflow/core/job_rewriter/job_completer.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/vm/virtual_machine.h"
@@ -69,6 +72,21 @@ Maybe<std::string> GetTensorMetaString(const std::shared_ptr<one::Tensor>& tenso
     ret += ", device=" + JUST(tensor->device())->ToString();
   }
   return ret;
+}
+
+template<typename T>
+Maybe<void> MakeEagerBlobObjectList(vm::EagerBlobObjectList* blob_list, const T& tensor_list) {
+  blob_list->reserve(tensor_list.size());
+  for (const auto& tensor : tensor_list) {
+    CHECK_OR_RETURN(tensor->is_eager())
+        << Error::RuntimeError() << "Tensors in nn.Graph should be eager";
+    if (tensor->is_global()) {
+      blob_list->emplace_back(JUST(JUST(tensor->cur_rank_phy_tensor())->eager_blob_object()));
+    } else {
+      blob_list->emplace_back(JUST(tensor->eager_blob_object()));
+    }
+  }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace
@@ -109,6 +127,10 @@ const std::vector<std::string>& NNGraph::outputs_tensor_meta_str() const {
 }
 
 int64_t NNGraph::variable_op_size() const { return variable_op_names_.size(); }
+
+const std::shared_ptr<vm::EagerBlobObjectList>& NNGraph::var_blobs() const {
+  return variable_op_blobs_;
+}
 
 Maybe<void> NNGraph::RegisterAdditionalVarOpNamesAndTensorsToBeLoaded(
     const std::vector<std::string>& additional_var_names,
@@ -195,6 +217,9 @@ Maybe<void> NNGraph::RegisterVariableOpNamesAndTensors(
       << "Number of variable names and tensors mismatch. "
          "Size of variable names: "
       << variable_op_names.size() << ", size of tensors: " << variable_tensors.size();
+  CHECK_ISNULL_OR_RETURN(variable_op_blobs_);
+  variable_op_blobs_ = std::make_shared<vm::EagerBlobObjectList>();
+  JUST(MakeEagerBlobObjectList(variable_op_blobs_.get(), variable_tensors));
   for (int32_t i = 0; i < variable_op_names.size(); ++i) {
     const std::shared_ptr<one::Tensor>& var = variable_tensors[i];
     CHECK_OR_RETURN(var->is_eager())
@@ -282,7 +307,7 @@ Maybe<void> NNGraph::RegisterNewVariableOpInJobPass() {
 }
 
 Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
-  std::set<std::string> variable_names = [&]() -> Maybe<std::set<std::string>> {
+  const auto& var_get_func = [&]() -> Maybe<std::set<std::string>> {
     std::set<std::string> variable_names_;
     OpGraph op_graph(job_);
     JUST(op_graph.MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
@@ -291,8 +316,8 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
       return Maybe<void>::Ok();
     }));
     return variable_names_;
-  }()
-                                                      .GetOrThrow();
+  };
+  std::set<std::string> variable_names = *JUST(var_get_func());
 
   auto mgr = Singleton<VariableTensorMgr>::Get();
   for (auto& name : mgr->DumpNames()) {
@@ -301,46 +326,113 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> NNGraph::CompileAndInitRuntime() {
-  CHECK_OR_RETURN(!runtime_inited_)
-      << Error::RuntimeError() << "nn.Graph runtime is already initialized";
+Maybe<void> NNGraph::AlignStatesAfterLogicalGraphCompile() {
+  auto compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
   JUST(RegisterFreeEagerTensorsToVariableOpNames());
   JUST(RegisterNewVariableOpInJobPass());
   JUST(DeleteOutdatedVariableInVariableTensorMgr());
-
   // NOTE(chengcheng): TensorNameScope need to be cleared after current graph is built.
   one::TensorNameScope::Global()->Clear();
   // Clear all backward pass scope
   ClearAllBackwardPassScope();
+  compile_tc->Count("[GraphCompile]" + name_ + " AlignStates", 0);
+  return Maybe<void>::Ok();
+}
 
-  // NOTE(chengcheng): Singleton<JobDesc> need be clear before GlobalJobDescScope construct.
-  if (Singleton<JobDesc>::Get() != nullptr) { Singleton<JobDesc>::Delete(); }
-
-  auto scope = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id_);
-
+Maybe<void> NNGraph::CompleteLogicalGraphForRuntime() {
+  auto compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
+  // A global variable to get graph configurations.
+  auto current_graph_config = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id());
   // NOTE(chengcheng): do job compeleter for each rank.
-  JUST(JobCompleter().Complete(&job_));
+  JUST(JobCompleter::Complete(&job_));
+  compile_tc->Count("[GraphCompile]" + name_ + " CompleteJob", 0);
+  return Maybe<void>::Ok();
+}
 
+Maybe<void> NNGraph::BuildWithNewInputFromSharedGraph(
+    const std::vector<std::string>& shared_inputs_op_names,
+    const std::vector<std::shared_ptr<one::Tensor>>& new_input_tensors,
+    const std::vector<std::string>& shared_op_names_from_ordered_original_graph,
+    const std::string& new_serialized_original_job) {
+  CHECK_EQ_OR_RETURN(shared_inputs_op_names.size(), new_input_tensors.size());  // NOLINE
+  auto compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
+  // Register inputs.
+  JUST(RegisterInputOpNamesAndTensors(shared_inputs_op_names, new_input_tensors));
+
+  // Generate new input tensor getter.
+  HashMap<std::string, std::shared_ptr<one::Tensor>> input_name2tensor;
+  for (int64_t idx = 0; idx < shared_inputs_op_names.size(); ++idx) {
+    input_name2tensor.emplace(shared_inputs_op_names[idx], new_input_tensors[idx]);
+  }
+  const auto& InputTensor4Name =
+      [&input_name2tensor](const std::string& op_name) -> Maybe<std::shared_ptr<one::Tensor>> {
+    auto iter = input_name2tensor.find(op_name);
+    CHECK_OR_RETURN(iter != input_name2tensor.end())
+        << "Can't find input tensor of " << op_name << ".";
+    return iter->second;
+  };
+
+  // Generate new OperatorConf getter.
+  Job new_build_original_job;
+  CHECK_OR_RETURN(new_build_original_job.ParseFromString(new_serialized_original_job))
+      << "nn.Graph " << name_ << " parse job proto of new build graph failed.";
+  CHECK_EQ_OR_RETURN(new_build_original_job.net().op_size(),
+                     shared_op_names_from_ordered_original_graph.size())
+      << "nn.Graph " << name_
+      << " new_build_original_job op size and shared_op_names_from_ordered_original_graph size are "
+         "not "
+         "equal.";
+  HashMap<std::string, const OperatorConf*> shared_op_name2_new_op;
+  for (int64_t op_idx = 0; op_idx < shared_op_names_from_ordered_original_graph.size(); ++op_idx) {
+    // Assume that the new graph and the shared graph from nn.Graph.build have the same op order.
+    const auto& op = new_build_original_job.mutable_net()->mutable_op()->at(op_idx);
+    shared_op_name2_new_op.emplace(shared_op_names_from_ordered_original_graph[op_idx], &op);
+  }
+  const auto& NewOp4SharedOpName =
+      [&shared_op_name2_new_op](const std::string& shared_op_name) -> Maybe<const OperatorConf*> {
+    auto iter = shared_op_name2_new_op.find(shared_op_name);
+    CHECK_OR_RETURN(iter != shared_op_name2_new_op.end())
+        << "Can't find new operator conf of " << shared_op_name << ".";
+    return iter->second;
+  };
+
+  // A global variable to get graph configurations.
+  auto current_graph_config = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id());
+  // NOTE(chengcheng): do job compeleter for each rank.
+  JUST(JobCompleter::UpdateSharedGraphForNewInput(&job_, InputTensor4Name, NewOp4SharedOpName));
+  compile_tc->Count("[GraphCompile]" + name_ + " CompleteJob", 0);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> NNGraph::CompilePlanForRuntime() {
+  auto compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
+  // A global variable to get graph configurations.
+  auto current_graph_config = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id());
   if (GlobalProcessCtx::IsThisProcessMaster()) {
-    auto compile_time_counter = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
     // TODO(chengcheng): new memory reused by chunk
     Compiler().Compile(&job_, &plan_);
+    auto sub_compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
     PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, variable_op_names_);
-    compile_time_counter->Count("Graph name: " + name_ + " compile plan", 1);
+    sub_compile_tc->Count("[GraphCompile]" + name_ + " GenMemBlockAndChunk", 1, true);
     if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("job_" + name_ + "_plan")->Write(plan_);
       PlanUtil::ToDotFile(plan_, "job_" + name_ + "_plan.dot");
     }
+    sub_compile_tc->Count("[GraphCompile]" + name_ + " LogPlan", 1, true);
     PlanUtil::GenRegisterHint(&plan_);
+    sub_compile_tc->Count("[GraphCompile]" + name_ + " GenRegisterHint", 1, true);
     // TODO(chengcheng): test collective boxing for multi-job.
     PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_);
-    // PlanUtil::SetForceInplaceMemBlock(&plan_); NOTE(chengcheng): only for ssp.
+    sub_compile_tc->Count("[GraphCompile]" + name_ + " GenCollectiveBoxingPlan", 1, true);
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
+    sub_compile_tc->Count("[GraphCompile]" + name_ + " DumpCtrlRegstInfoToPlan", 1, true);
     PlanUtil::PlanMemoryLog(&plan_, name_);
     if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       PlanUtil::GenLightPlan(&plan_, name_);
     }
+    sub_compile_tc->Count("[GraphCompile]" + name_ + " GenMemAndLightPlanLog", 1, true);
   }
+  compile_tc->Count("[GraphCompile]" + name_ + " CompilePlan", 0);
   if (GlobalProcessCtx::WorldSize() > 1) {
     std::string plan_name = "plan:" + job_name();
     if (GlobalProcessCtx::IsThisProcessMaster()) {
@@ -356,9 +448,17 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
       Singleton<CtrlClient>::Get()->ClearKV(plan_name);
     }
   }
+  compile_tc->Count("[GraphCompile]" + name_ + " SyncPlan", 0, true);
   // NOTE(chengcheng): recovery op_attr
   PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
+  return Maybe<void>::Ok();
+}
 
+Maybe<void> NNGraph::InitRuntime() {
+  CHECK_OR_RETURN(!runtime_inited_)
+      << Error::RuntimeError() << "nn.Graph runtime is already initialized";
+
+  auto compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
   NewRuntimeBuffers();
 
   JUST(GetVariableRealBlobAfterSyncPlan());
@@ -369,7 +469,18 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   JUST(vm->ShrinkAllMem());
 
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_object_));
+  compile_tc->Count("[GraphCompile]" + name_ + " InitRuntime", 0, true);
+  JUST(LogProgress("[GraphCompile]" + name_ + " Done", true));
+
   runtime_inited_ = true;
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> NNGraph::CompileAndInitRuntime() {
+  JUST(AlignStatesAfterLogicalGraphCompile());
+  JUST(CompleteLogicalGraphForRuntime());
+  JUST(CompilePlanForRuntime());
+  JUST(InitRuntime());
   return Maybe<void>::Ok();
 }
 
@@ -548,27 +659,7 @@ void NNGraph::CloseRuntimeBuffers() {
   }
 }
 
-namespace {
-
-Maybe<void> MakeEagerBlobObjectList(vm::EagerBlobObjectList* blob_list,
-                                    const one::TensorTuple& tensor_list) {
-  blob_list->reserve(tensor_list.size());
-  for (const auto& tensor : tensor_list) {
-    CHECK_OR_RETURN(tensor->is_eager())
-        << Error::RuntimeError() << "Tensors in nn.Graph should be eager";
-    if (tensor->is_global()) {
-      blob_list->emplace_back(JUST(JUST(tensor->cur_rank_phy_tensor())->eager_blob_object()));
-    } else {
-      blob_list->emplace_back(JUST(tensor->eager_blob_object()));
-    }
-  }
-  return Maybe<void>::Ok();
-}
-
-}  // namespace
-
 Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTuple& outputs,
-                           const one::TensorTuple& parameters,
                            const std::shared_ptr<NNGraph>& nn_graph) {
   CHECK_EQ_OR_RETURN(inputs.size(), nn_graph->inputs_op_names().size())
       << Error::RuntimeError()
@@ -586,7 +677,7 @@ Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTupl
   //   parameters not used in LaunchLazyJobInstrucntion;
   //   the args: parameters is all variable tensor hold by nn.Graph
   //   but the NNGraph::variable_op_size may has FreeEagerTensor as sepcial variable op.
-  CHECK_LE_OR_RETURN(parameters.size(), nn_graph->variable_op_size())
+  CHECK_LE_OR_RETURN(nn_graph->var_blobs()->size(), nn_graph->variable_op_size())
       << Error::RuntimeError() << "Parameter size should be less than or equal to variable size";
   for (int i = 0; i < inputs.size(); ++i) {
     // TODO(chengcheng, liufengwei):
@@ -598,7 +689,8 @@ Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTupl
         << "nn.Graph ONLY accepts static inputs tensor meta, please check whether your input "
         << "tensor meta each step is the same as the input of first call graph.\nThe excepted "
         << "tensor meta is: " << static_meta_str
-        << ", but the actual tensor meta is: " << tensor_meta_str;
+        << ", but the actual tensor meta is: " << tensor_meta_str << ". The input index is " << i
+        << ".";
   }
   for (int i = 0; i < outputs.size(); ++i) {
     CHECK_OR_RETURN(nn_graph->outputs_tensor_meta_str().at(i)
@@ -607,18 +699,14 @@ Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTupl
   }
   vm::EagerBlobObjectList input_blobs;
   vm::EagerBlobObjectList output_blobs;
-  vm::EagerBlobObjectList var_blobs;
   JUST(MakeEagerBlobObjectList(&input_blobs, inputs));
   JUST(MakeEagerBlobObjectList(&output_blobs, outputs));
-  JUST(MakeEagerBlobObjectList(&var_blobs, parameters));
   const auto& input_blob_list_ptr =
       std::make_shared<const vm::EagerBlobObjectList>(std::move(input_blobs));
   const auto& output_blob_list_ptr =
       std::make_shared<const vm::EagerBlobObjectList>(std::move(output_blobs));
-  const auto& var_blob_list_ptr =
-      std::make_shared<const vm::EagerBlobObjectList>(std::move(var_blobs));
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->LaunchLazyJob(input_blob_list_ptr, output_blob_list_ptr, var_blob_list_ptr,
+    return builder->LaunchLazyJob(input_blob_list_ptr, output_blob_list_ptr, nn_graph->var_blobs(),
                                   nn_graph);
   }));
   return Maybe<void>::Ok();

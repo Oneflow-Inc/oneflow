@@ -15,8 +15,8 @@ limitations under the License.
 """
 from typing import Callable, Dict, Iterator, List, Union
 import oneflow as flow
-from oneflow.nn.module import Module
-from oneflow.nn.optimizer.optimizer import Optimizer
+from oneflow.nn.modules.module import Module
+from oneflow.optim.optimizer import Optimizer
 from oneflow.nn.parameter import Parameter
 import json
 import datetime
@@ -33,7 +33,7 @@ def _check_initializer(initializer):
     assert isinstance(initializer, dict)
     assert initializer.__contains__("type")
     initializer_type = initializer["type"]
-    assert initializer_type in ["uniform", "normal", "constant"]
+    assert initializer_type in ["uniform", "normal", "constant", "trunc_normal"]
     if initializer_type == "uniform":
         assert initializer.__contains__("low")
         assert initializer.__contains__("high")
@@ -42,6 +42,11 @@ def _check_initializer(initializer):
         assert initializer.__contains__("std")
     elif initializer_type == "constant":
         assert initializer.__contains__("value")
+    elif initializer_type == "trunc_normal":
+        assert initializer.__contains__("mean")
+        assert initializer.__contains__("std")
+        assert initializer.__contains__("a")
+        assert initializer.__contains__("b")
     else:
         raise NotImplementedError("unsupported initializer_type")
 
@@ -719,7 +724,7 @@ def make_cached_host_mem_store_options(
     return options
 
 
-def make_uniform_initializer(low, high):
+def make_uniform_initializer(low=0.0, high=1.0):
     """make uniform initializer param of make_table_options
 
     Args:
@@ -741,7 +746,7 @@ def make_uniform_initializer(low, high):
     return {"type": "uniform", "low": low, "high": high}
 
 
-def make_normal_initializer(mean, std):
+def make_normal_initializer(mean=0.0, std=1.0):
     """make normal initializer param of make_table_options
 
     Args:
@@ -782,6 +787,30 @@ def make_constant_initializer(value):
         >>> # ...
     """
     return {"type": "constant", "value": value}
+
+
+def make_trunc_normal_initializer(mean=0.0, std=1.0, a=-2.0, b=2.0):
+    """make truncated normal initializer param of make_table_options
+
+    Args:
+        mean (float): A python scalar. Mean of the random values to generate.
+        std (float): A python scalar. Standard deviation of the random values to generate.
+        a (float): A python scalar. The minimum cutoff value.
+        b (float): A python scalar. The maximum cutoff value.
+
+    Returns:
+        dict: initializer param of make_table_options
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> initializer = flow.one_embedding.make_trunc_normal_initializer(mean=0, std=0.01, a=-0.02, b=0.02)
+        >>> # pass the initializer to flow.one_embedding.make_table_options
+        >>> # ...
+    """
+    return {"type": "trunc_normal", "mean": mean, "std": std, "a": a, "b": b}
 
 
 def make_table_options(param):
@@ -1112,8 +1141,8 @@ class Ftrl(Optimizer):
         for param_group in self.param_groups:
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
-                self._state[param] = dict()
-                self._state[param]["accumulator_value"] = flow.zeros_like(param).fill_(
+                self.state[param] = dict()
+                self.state[param]["accumulator_value"] = flow.zeros_like(param).fill_(
                     param_group["initial_accumulator_value"]
                 )
 
@@ -1150,11 +1179,11 @@ class Ftrl(Optimizer):
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
-                    if "z" not in self._state[param]:
-                        self._state[param]["z"] = flow.zeros_like(param)
+                    if "z" not in self.state[param]:
+                        self.state[param]["z"] = flow.zeros_like(param)
 
-                    accumulate_tensor = self._state[param]["accumulator_value"]
-                    z_tensor = self._state[param]["z"]
+                    accumulate_tensor = self.state[param]["accumulator_value"]
+                    z_tensor = self.state[param]["z"]
 
                     flow._C.dispatch_ftrl_update(
                         self._op,
@@ -1276,8 +1305,10 @@ class Optimizer(Optimizer):
         self.optimizer = optimizer
         self.embeddings = embeddings
         self.param_groups = optimizer.param_groups
-        self._default_options = optimizer._default_options
-        self._state = optimizer._state
+        # self._default_options = optimizer._default_options
+        # self._state = optimizer._state
+        self.defaults = optimizer.defaults
+        self.state = optimizer.state
         self.embedding_param_group_dict = {}
         for embedding in self.embeddings:
             for group in self.param_groups:
@@ -1290,7 +1321,7 @@ class Optimizer(Optimizer):
                 raise ValueError("embedding must in optimizers param_group")
 
     def step(self, closure: Callable = None):
-        step = self.optimizer._state["step"]
+        step = self.optimizer.state["step"]
         for embedding in self.embeddings:
             param_group = self.embedding_param_group_dict[embedding.embedding_name]
             if type(self.optimizer) is flow.nn.optimizer.sgd.SGD:

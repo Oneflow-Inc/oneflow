@@ -64,7 +64,6 @@ class CopyDataContentKernel final : public user_op::OpKernel, public user_op::Cu
 #define REGISTER_COPY_DATA_CONTENT_KERNEL(op_type_name)                              \
   REGISTER_USER_KERNEL(op_type_name)                                                 \
       .SetCreateFn<CopyDataContentKernel>()                                          \
-      .SetIsMatchedHob(user_op::HobTrue())                                           \
       .SetInplaceProposalFn(                                                         \
           [](const user_op::InferContext&,                                           \
              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> { \
@@ -74,7 +73,6 @@ class CopyDataContentKernel final : public user_op::OpKernel, public user_op::Cu
 
 REGISTER_COPY_DATA_CONTENT_KERNEL("squeeze");
 REGISTER_COPY_DATA_CONTENT_KERNEL("reshape_like");
-REGISTER_COPY_DATA_CONTENT_KERNEL("flatten");
 REGISTER_COPY_DATA_CONTENT_KERNEL("expand_dims");
 REGISTER_COPY_DATA_CONTENT_KERNEL("reshape");
 REGISTER_COPY_DATA_CONTENT_KERNEL("amp_white_identity");
@@ -85,6 +83,7 @@ REGISTER_COPY_DATA_CONTENT_KERNEL("parallel_cast");
 REGISTER_COPY_DATA_CONTENT_KERNEL("hierarchical_parallel_cast");
 REGISTER_COPY_DATA_CONTENT_KERNEL("hierarchical_parallel_cast_like");
 REGISTER_COPY_DATA_CONTENT_KERNEL("pinned_identity");
+REGISTER_COPY_DATA_CONTENT_KERNEL("depend");
 
 }  // namespace
 

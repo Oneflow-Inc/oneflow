@@ -157,6 +157,17 @@ class TestGraphLRSchedulerWithEager(flow.unittest.TestCase):
             total_iters=10,
         )
 
+    def test_linear_lr_end_factor(self):
+        _compare_graph_lr_scheduler_with_eager(
+            self,
+            base_lr=0.1,
+            iters=20,
+            lr_scheduler=flow.optim.lr_scheduler.LinearLR,
+            start_factor=0.1,
+            end_factor=0.9,
+            total_iters=10,
+        )
+
     def test_step_lr(self):
         _compare_graph_lr_scheduler_with_eager(
             self,

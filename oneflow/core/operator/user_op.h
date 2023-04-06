@@ -64,7 +64,11 @@ class UserOp final : public Operator {
       const ParallelDesc& parallel_desc) const override;
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const override;
+      int32_t hierarchy_value, SbpSignatureList* sbp_sig_list) const override;
+  Maybe<void> EnumerateNdSbpSignatures(
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const ParallelDesc& parallel_desc,
+      std::vector<NdSbpSignature>* nd_sbp_sig_list) const override;
   Maybe<void> GetNdSbpSignatureList(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc,

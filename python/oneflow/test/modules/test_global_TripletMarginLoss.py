@@ -23,7 +23,7 @@ import oneflow as flow
 import oneflow.unittest
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_global_triplet_marginloss_with_random_data(test_case, placement, sbp):
     margin = random().to(float)
     p = random().to(float)

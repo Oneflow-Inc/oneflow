@@ -15,15 +15,11 @@ limitations under the License.
 """
 import sys
 import oneflow
-from oneflow.mock_torch import (
-    ModuleWrapper,
-    OneflowImporter,
-)
+from oneflow.mock_torch import ModuleWrapper, enable
 
 
 def __getattr__(name: str):
     return ModuleWrapper(oneflow).__getattr__(name)
 
 
-# register importer in meta path
-sys.meta_path.insert(0, OneflowImporter())
+enable(_from_cli=True)

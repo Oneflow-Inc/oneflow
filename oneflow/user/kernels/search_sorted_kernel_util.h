@@ -18,7 +18,6 @@ limitations under the License.
 
 template<typename T, typename K>
 OF_DEVICE_FUNC K cus_lower_bound(K start, K end, const T val, const T* bd) {
-  const K orig_start = start;
   while (start < end) {
     const K mid = start + ((end - start) >> 1);
     const T mid_val = bd[mid];
@@ -33,7 +32,6 @@ OF_DEVICE_FUNC K cus_lower_bound(K start, K end, const T val, const T* bd) {
 
 template<typename T, typename K>
 OF_DEVICE_FUNC K cus_upper_bound(K start, K end, const T val, const T* bd) {
-  const K orig_start = start;
   while (start < end) {
     const K mid = start + ((end - start) >> 1);
     const T mid_val = bd[mid];

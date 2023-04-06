@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/tensor_util.h"
-
 #include "oneflow/core/common/blocking_then_busy.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor_name_scope.h"
@@ -22,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/symbol_storage.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
@@ -30,7 +30,7 @@ Maybe<void> SyncAccessTensorWithTimeOut(
     const std::shared_ptr<Tensor>& tensor,
     const std::function<void(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&)>& Callback,
     const std::string& modifier) {
-  auto btb = std::make_shared<BlockingThenBusy>(1);
+  auto btb = std::make_shared<BlockingThenBusy>();
   auto local_tensor = JUST(tensor->AsLocalTensor());
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->SyncAccessBlobByCallback(local_tensor, btb, Callback, modifier);
@@ -45,13 +45,14 @@ Maybe<void> CopyLocalTensorDataTo(const std::shared_ptr<Tensor>& input, void* me
   CHECK_OR_RETURN(input->is_contiguous()) << Error::RuntimeError() << kOfBugIssueUploadPrompt;
   CHECK_EQ_OR_RETURN(input->shape()->elem_cnt() * JUST(input->dtype()->bytes()), size)
       << Error::RuntimeError() << kOfBugIssueUploadPrompt;
+  if (input->nelement() == 1) { return GetItemInScalarTensor(input, mem_ptr, size); }
   std::shared_ptr<one::LocalTensor> local_tensor = JUST(input->AsLocalTensor());
   const auto& Callback = [&](ep::Stream* stream,
                              const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
     SyncAutoMemcpy(stream, mem_ptr, eager_blob_object->dptr(), size, memory::MakeHostMemCase(),
                    eager_blob_object->mem_case());
   };
-  auto btb = std::make_shared<BlockingThenBusy>(1);
+  auto btb = std::make_shared<BlockingThenBusy>();
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->SyncAccessBlobByCallback(local_tensor, btb, Callback, "const");
   }));
@@ -69,6 +70,37 @@ Maybe<Scope> GetTensorScope(const std::shared_ptr<Tensor>& tensor) {
   auto lbi = GenLogicalBlobId(lbn);
   const auto* op = JUST(infer_ctx->Op4OpName(lbi.op_name()));
   return Singleton<symbol::Storage<Scope>>::Get()->MaybeGetPtr(op->op_conf().scope_symbol_id());
+}
+
+Maybe<void> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor, void* scalar_ptr,
+                                  size_t size) {
+  CHECK_EQ_OR_RETURN(GetSizeOfDataType(scalar_tensor->dtype()->data_type()), size)
+      << "invalid size";
+  CHECK_OR_RETURN(scalar_tensor->is_eager()) << "Only eager scalar tensor support GetItem.";
+  CHECK_EQ_OR_RETURN(scalar_tensor->nelement(), 1)
+      << "can only convert a tensor of size 1 to a Python scalar";
+  std::shared_ptr<LocalTensor> local_tensor;
+  {
+    auto tensor = scalar_tensor;
+    if (tensor->is_global()) {
+      Symbol<ParallelDesc> parallel_desc;
+      {
+        const ParallelConf parallel_conf = GenParallelConfOfCpuOnAllRanks();
+        JUST(PhysicalRun(
+            [&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
+              parallel_desc = SymbolOf(*JUST(builder->GetParallelDescSymbol(parallel_conf)));
+              return Maybe<void>::Ok();
+            }));
+      }
+      const auto& broadcast_sbp = JUST(MakeBroadcastSbpParallel());
+      tensor = JUST(functional::ToGlobal(tensor, parallel_desc, {broadcast_sbp}, /*grad_sbp=*/{},
+                                         /*check_meta=*/false, /*copy=*/false));
+      tensor = JUST(functional::GlobalToLocal(tensor, /*copy=*/false));
+    }
+    local_tensor = JUST(tensor->AsLocalTensor());
+  }
+  JUST(SyncReadSmallMem(reinterpret_cast<char*>(scalar_ptr), size, local_tensor));
+  return Maybe<void>::Ok();
 }
 
 }  // namespace one

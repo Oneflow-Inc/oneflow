@@ -1030,6 +1030,14 @@ void FilterEmbeddingGradients(JobPassCtx* ctx, const OpGraph& op_graph, JobBuild
   }
 }
 
+bool IsRelatedOp(const OperatorConf& op) {
+  return op.has_user_conf() && (op.user_conf().op_type_name() == "one_embedding_fused_lookup");
+}
+
+bool NeedDoPass(const Job& job) {
+  return std::any_of(job.net().op().cbegin(), job.net().op().cend(), IsRelatedOp);
+}
+
 }  // namespace
 
 class ReplaceEmbeddingOps final : public JobPass {
@@ -1042,6 +1050,7 @@ class ReplaceEmbeddingOps final : public JobPass {
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
+    if (!NeedDoPass(*job)) { return Maybe<void>::Ok(); }
     const OpGraph op_graph(*job);
     JobBuilder job_builder(job);
     return Apply(op_graph, &job_builder, ctx);

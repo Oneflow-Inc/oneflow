@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/user/kernels/arange_kernel_util.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/job/nd_sbp_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 namespace user_op {
@@ -33,7 +34,7 @@ class ArangeOpKernelCache final : public user_op::OpKernelCache {
   const int32_t upper_;
 };
 template<DeviceType device_type, typename T>
-class ArangeKernel final : public OpKernel {
+class ArangeKernel final : public OpKernel, public CudaGraphSupport {
  public:
   ArangeKernel() = default;
   ~ArangeKernel() = default;
@@ -101,7 +102,8 @@ class ArangeKernel final : public OpKernel {
     } else {
       const auto* arange_cache = dynamic_cast<const ArangeOpKernelCache*>(cache);
       auto arange_len = arange_cache->upper() - arange_cache->lower();
-      ArangeFunctor<device_type, T>()(ctx->stream(), start + delta * arange_cache->lower(), delta,
+      ArangeFunctor<device_type, T>()(ctx->stream(),
+                                      static_cast<T>(start + delta * arange_cache->lower()), delta,
                                       arange_len, output);
     }
   }
@@ -125,7 +127,7 @@ class ArangeKernel final : public OpKernel {
 
 // Register CPU version
 REGISTER_ARANGE_KERNELS_WITH_DEVICE(DeviceType::kCPU);
-
+REGISTER_ARANGE_KERNEL(DeviceType::kCPU, float16);
 // Register GPU version
 #ifdef WITH_CUDA
 REGISTER_ARANGE_KERNELS_WITH_DEVICE(DeviceType::kCUDA);

@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/primitive/type_seq.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#include <cuda.h>
 
 namespace oneflow {
 namespace ep {
@@ -30,6 +31,94 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kGelu, Dst, Src> {
     return static_cast<Src>(0.5) * src
            * (static_cast<Src>(1.0) + erf(static_cast<Src>(M_SQRT1_2) * src));
   }
+};
+
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kFastGelu, Dst, Src> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    // ref to: https://mlfromscratch.com/activation-functions-explained/#gelu
+    const Src half = static_cast<Src>(0.5);
+    const Src one = static_cast<Src>(1);
+    const Src tanh_in = alpha * (src + beta * src * src * src);
+    return half * src * (one + tanh(tanh_in));
+  }
+
+ private:
+  // constant ref to:
+  // https://github.com/microsoft/onnxruntime/blob/main/onnxruntime/test/testdata/transform/fusion/fast_gelu.py
+  static constexpr Src alpha = static_cast<Src>(0.7978845608028654);
+  static constexpr Src beta = static_cast<Src>(0.044714998453855515);
+};
+
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kQuickGelu, Dst, Src> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    const Src sigmoid =
+        static_cast<Dst>(static_cast<Src>(1.0) / (static_cast<Src>(1.0) + exp(-src * alpha)));
+    return src * sigmoid;
+  }
+
+ private:
+  static constexpr Src alpha = static_cast<Src>(1.702);
+};
+
+namespace unary_functor_internal {
+
+namespace {
+
+OF_DEVICE_FUNC
+float TanhApprox(float x) {
+#if (__CUDA_ARCH__ >= 750 && CUDA_VERSION >= 11000)
+  float r;
+  asm("tanh.approx.f32 %0,%1; \n\t" : "=f"(r) : "f"(x));
+  return r;
+#else
+  return tanhf(x);
+#endif  // (__CUDA_ARCH__ >= 750 && CUDA_VERSION >= 11000)
+}
+
+}  // namespace
+
+}  // namespace unary_functor_internal
+
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kFastGelu, half, half> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) : float_functor(attr0, attr1) {}
+
+  OF_DEVICE_FUNC half operator()(half src) const {
+#if (__CUDA_ARCH__ >= 750 && CUDA_VERSION >= 11000)
+    const float tanh_in =
+        __half2float(__float2half_rn(alpha) * (src + __float2half_rn(beta) * src * src * src));
+    const float tanh_out = unary_functor_internal::TanhApprox(tanh_in);
+    return __float2half_rn(0.5F) * src * (__float2half_rn(1.0F) + __float2half_rn(tanh_out));
+#else
+    return static_cast<half>(float_functor(static_cast<float>(src)));
+#endif  // (__CUDA_ARCH__ >= 750 && CUDA_VERSION >= 11000)
+  }
+
+#if (__CUDA_ARCH__ >= 750 && CUDA_VERSION >= 11000)
+  __device__ void Apply2(half* dst, const half* src) const {
+    const half2 src2 = *(reinterpret_cast<const half2*>(src));
+    const float2 tanh_in = __half22float2(__hmul2(
+        __float2half2_rn(alpha),
+        __hadd2(src2, __hmul2(__hmul2(__hmul2(__float2half2_rn(beta), src2), src2), src2))));
+    float2 tanh_out;
+    tanh_out.x = unary_functor_internal::TanhApprox(tanh_in.x);
+    tanh_out.y = unary_functor_internal::TanhApprox(tanh_in.y);
+    const half2 dst2 = __hmul2(__hmul2(__float2half2_rn(0.5F), src2),
+                               __hadd2(__float2half2_rn(1.0F), __float22half2_rn(tanh_out)));
+    *reinterpret_cast<half2*>(dst) = dst2;
+  }
+#endif  // (__CUDA_ARCH__ >= 750 && CUDA_VERSION >= 11000)
+
+ private:
+  static constexpr float alpha = 0.7978845608028654F;
+  static constexpr float beta = 0.044714998453855515F;
+  UnaryFunctor<DeviceType::kCUDA, UnaryOp::kFastGelu, float, float> float_functor;
 };
 
 template<>
@@ -165,6 +254,75 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kAbs, nv_bfloat16, nv_bfloat16> 
 };
 #endif  // CUDA_VERSION >= 11000
 
+/*********half dtype support*********/
+template<typename Dst>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCast, Dst, half> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(half src) const { return static_cast<Dst>(__half2float(src)); }
+};
+
+template<typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCast, half, Src> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC half operator()(Src src) const { return __float2half(static_cast<float>(src)); }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCast, half, half> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC half operator()(half src) const { return src; }
+};
+
+/*********nv_bfloat16 dtype support*********/
+#if CUDA_VERSION >= 11000
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCast, nv_bfloat16, half> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC nv_bfloat16 operator()(half src) const {
+    return __float2bfloat16(__half2float(src));
+  }
+};
+
+template<typename Dst>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCast, Dst, nv_bfloat16> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(nv_bfloat16 src) const {
+    return static_cast<Dst>(__bfloat162float(src));
+  }
+};
+
+template<typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCast, nv_bfloat16, Src> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC nv_bfloat16 operator()(Src src) const {
+    return __float2bfloat16(static_cast<float>(src));
+  }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCast, half, nv_bfloat16> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC half operator()(nv_bfloat16 src) const {
+    return __float2half(__bfloat162float(src));
+  }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCast, nv_bfloat16, nv_bfloat16> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC nv_bfloat16 operator()(nv_bfloat16 src) const { return src; }
+};
+
+#endif  // CUDA_VERSION >= 11000
+
 #define SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(op)                                         \
   template<>                                                                                 \
   struct UnaryFunctor<DeviceType::kCUDA, op, half, half> {                                   \
@@ -196,6 +354,7 @@ SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kCosh);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kErf);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kErfc);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kExp);
+SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kExp2);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kExpm1);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kFloor);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kLgamma);
@@ -216,6 +375,7 @@ SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kTan);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kReciprocalNoNan);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kNotEqualZero);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kNanAssign);
+SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kQuickGelu);
 
 /*********nv_bfloat16_kernel*******/
 
@@ -260,6 +420,7 @@ SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kCosh);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kErf);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kErfc);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kExp);
+SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kExp2);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kExpm1);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kFloor);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kLgamma);
@@ -280,23 +441,25 @@ SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kTan);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kReciprocalNoNan);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kNotEqualZero);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kNanAssign);
+SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kFastGelu);
+SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kQuickGelu);
 
 template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsInf, bool, nv_bfloat16> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC bool operator()(nv_bfloat16 src) const { return isinf(__bfloat162float(src)); }
 };
 
 template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsNan, bool, nv_bfloat16> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC bool operator()(nv_bfloat16 src) const { return isnan(__bfloat162float(src)); }
 };
 template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsFinite, bool, nv_bfloat16> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC bool operator()(nv_bfloat16 src) const { return isfinite(__bfloat162float(src)); }
 };

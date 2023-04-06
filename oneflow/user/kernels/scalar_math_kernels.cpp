@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
 #include "oneflow/core/common/scalar.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -68,7 +69,7 @@ auto BroadcastElementwiseAttrBinaryPrimitiveExists() {
 }  // namespace
 
 template<ep::primitive::BinaryOp op>
-class ScalarMathKernel final : public user_op::OpKernel {
+class ScalarMathKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ScalarMathKernel() = default;
   ~ScalarMathKernel() = default;
@@ -87,6 +88,13 @@ class ScalarMathKernel final : public user_op::OpKernel {
     }
     int64_t elem_cnt = out->shape_view().elem_cnt();
     if (elem_cnt != 0) {
+      const bool is_add_sub_0 =
+          (op == ep::primitive::BinaryOp::kAdd || op == ep::primitive::BinaryOp::kSub)
+          && value.Value<double>() == 0.0;
+      const bool is_mul_div_1 =
+          (op == ep::primitive::BinaryOp::kMul || op == ep::primitive::BinaryOp::kDiv)
+          && value.Value<double>() == 1.0;
+      if ((is_add_sub_0 || is_mul_div_1) && in->dptr() == out->dptr()) { return; }
       std::unique_ptr<ep::primitive::BroadcastElementwiseBinary> primitive =
           NewBroadcastElementwiseBinaryPrimitive(ctx, op);
       CHECK(primitive);
@@ -142,9 +150,16 @@ class ScalarReverseMathKernel final : public user_op::OpKernel {
   OF_PP_MAKE_TUPLE_SEQ("scalar_fmod", ep::primitive::BinaryOp::kFmod)         \
   OF_PP_MAKE_TUPLE_SEQ("scalar_pow", ep::primitive::BinaryOp::kPow)
 
-#define REGISTER_UNARY_MATH_SCALAR_ELEMWISE_USER_KERNEL(op_name, binary_op)                 \
-  REGISTER_USER_KERNEL(op_name).SetCreateFn<ScalarMathKernel<binary_op>>().SetIsMatchedHob( \
-      (BroadcastElementwiseBinaryPrimitiveExists<binary_op>()));
+#define REGISTER_UNARY_MATH_SCALAR_ELEMWISE_USER_KERNEL(op_name, binary_op)          \
+  REGISTER_USER_KERNEL(op_name)                                                      \
+      .SetCreateFn<ScalarMathKernel<binary_op>>()                                    \
+      .SetIsMatchedHob((BroadcastElementwiseBinaryPrimitiveExists<binary_op>()))     \
+      .SetInplaceProposalFn(                                                         \
+          [](const user_op::InferContext& ctx,                                       \
+             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> { \
+            OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));        \
+            return Maybe<void>::Ok();                                                \
+          });
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_UNARY_MATH_SCALAR_ELEMWISE_USER_KERNEL, SCALAR_MATH_SEQ)
 

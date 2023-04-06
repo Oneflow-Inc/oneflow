@@ -34,9 +34,7 @@ def _compare_torch_and_oneflow(
         new_dict[k] = v.detach().numpy()
     m_flow.load_state_dict(new_dict)
 
-    m_flow = m_flow.to_global(
-        flow.env.all_device_placement("cpu"), flow.sbp.broadcast
-    ).to_global(
+    m_flow = m_flow.to_global(flow.placement.all("cpu"), flow.sbp.broadcast).to_global(
         placement=placement, sbp=[module_sbp for _ in range(len(placement.ranks.shape))]
     )
 
@@ -44,7 +42,7 @@ def _compare_torch_and_oneflow(
     x_torch = torch.tensor(x, dtype=torch.float32, requires_grad=True)
     x_flow = (
         flow.tensor(x, dtype=flow.float32, requires_grad=True)
-        .to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
+        .to_global(flow.placement.all("cpu"), flow.sbp.broadcast)
         .to_global(placement=placement, sbp=in_sbp)
     )
 

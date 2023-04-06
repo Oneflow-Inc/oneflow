@@ -45,7 +45,7 @@ class CopyKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("copy").SetCreateFn<CopyKernel>().SetIsMatchedHob(user_op::HobTrue());
+REGISTER_USER_KERNEL("copy").SetCreateFn<CopyKernel>();
 
 }  // namespace
 }  // namespace oneflow

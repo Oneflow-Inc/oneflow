@@ -166,6 +166,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.floor_,
+    """
+    See :func:`oneflow.floor_`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.flip,
     """
     See :func:`oneflow.flip`
@@ -194,6 +201,78 @@ add_docstr(
     oneflow.Tensor.numel,
     """
     See :func:`oneflow.numel`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.offload,
+    """
+    Transfer tensor data from GPU memory back to host (CPU) memory. If the tensor is already in host (CPU) memory, the operation does nothing and gives a warning.
+    Note that this operation only changes the storage of the tensor, and the tensor id will not change.
+
+    Note:
+    
+        Both global tensor and local tensor of oneflow are applicable to this operation.
+
+        Use with :func:`oneflow.Tensor.load` and :func:`oneflow.Tensor.is_offloaded`. 
+        The behavior of load() is the opposite of offload(), is_offloaded() returns a boolean indicating whether the tensor has been moved to CPU memory.     
+
+        In addition, support for offloading elements of :func:`oneflow.nn.Module.parameters` is provided.        
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+
+        >>> # local tensor
+        >>> x = flow.tensor(np.random.randn(1024, 1024, 100), dtype=flow.float32, device=flow.device("cuda"), )
+        >>> before_id = id(x)
+        >>> x.offload() # Move the Tensor from the GPU to the CPU
+        >>> after_id = id(x)
+        >>> after_id == before_id
+        True
+        >>> x.is_offloaded()
+        True
+        >>> x.load() # Move the Tensor from the cpu to the gpu
+        >>> x.is_offloaded()
+        False
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+
+        >>> # global tensor
+        >>> # Run on 2 ranks respectively
+        >>> placement = flow.placement("cuda", ranks=[0, 1])
+        >>> sbp = flow.sbp.broadcast
+        >>> x = flow.randn(1024, 1024, 100, dtype=flow.float32, placement=placement, sbp=sbp) # doctest: +SKIP
+        >>> before_id = id(x) # doctest: +SKIP
+        >>> x.offload() # doctest: +SKIP
+        >>> after_id = id(x) # doctest: +SKIP
+        >>> print(after_id == before_id) # doctest: +SKIP
+        >>> print(x.is_offloaded()) # doctest: +SKIP
+        >>> x.load() # doctest: +SKIP
+        >>> print(x.is_offloaded()) # doctest: +SKIP
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.load,
+    """
+    Load tensor data stored on the host (CPU) back to GPU memory. If the tensor is already in GPU memory, the operation does nothing and gives a warning.
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.is_offloaded,
+    """
+    Tensor.is_offloaded() -> bool
+
+    Determine whether the tensor has been moved to CPU memory and the CUDA device memory has been released.
+
     """,
 )
 
@@ -316,7 +395,7 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.local_to_global,
     """
-    Tensor.local_to_global(placement=None, sbp=None, *, check_meta=Ture) -> Tensor
+    Tensor.local_to_global(placement=None, sbp=None, *, check_meta=True, copy=False) -> Tensor
 
     Creates a global tensor from a local tensor.
 
@@ -328,7 +407,11 @@ add_docstr(
         The returned global tensor takes this tensor as its local component in the current rank.
 
         There is no data communication usually, but when sbp is ``oneflow.sbp.broadcast``, the data on rank 0 will be broadcast to other ranks.
-    
+
+    .. warning::
+        When the sbp is ``oneflow.sbp.broadcast``, the data on the non-0 rank will be modified. If you want to keep the input local tensor unchanged,
+        please set the arg copy to True.
+
     Args:
         placement (flow.placement, optional): the desired placement of returned global tensor. Default: None
         sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp of returned global tensor. Default: None
@@ -364,7 +447,7 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.global_to_global,
     """
-    Tensor.global_to_global(placement=None, sbp=None, *, grad_sbp=None, check_meta=False) -> Tensor
+    Tensor.global_to_global(placement=None, sbp=None, *, grad_sbp=None, check_meta=False, copy=False) -> Tensor
 
     Performs Tensor placement and/or sbp conversion.
 
@@ -431,7 +514,11 @@ add_docstr(
           At least one of placement and sbp is required.
 
           If placement and sbp are all the same as this tensor's own placement and sbp, then returns this tensor own.
-    
+
+    .. warning::
+        When the input tensor is a local tensor and sbp is ``oneflow.sbp.broadcast``, the data on the non-0 rank will be modified.
+        If you want to keep the input local tensor unchanged, please set the arg copy to True.
+
     Args:
         placement (flow.placement, optional): the desired placement of returned global tensor. Default: None
         sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp of returned global tensor. Default: None
@@ -556,6 +643,27 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.lerp,
+    """
+    See :func:`oneflow.lerp`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.lerp_,
+    """
+    See :func:`oneflow.lerp_`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.quantile,
+    """
+    See :func:`oneflow.quantile`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.sqrt,
     """
     See :func:`oneflow.sqrt`
@@ -586,7 +694,16 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.squeeze,
     """
+    Tensor.squeeze(dim=None) -> Tensor
     See :func:`oneflow.squeeze`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.squeeze_,
+    """
+    Tensor.squeeze_(dim=None) -> Tensor
+    In-place version of :func:`oneflow.Tensor.squeeze`
     """,
 )
 
@@ -666,7 +783,36 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.unsqueeze,
     """
+    Tensor.unsqueeze(dim) -> Tensor
+
     See :func:`oneflow.unsqueeze`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.unsqueeze_,
+    """
+    Tensor.unsqueeze_(dim) -> Tensor
+
+    In-place version of :func:`oneflow.Tensor.unsqueeze`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.as_strided,
+    """
+    Tensor.as_strided(size, stride, storage_offset=None) -> Tensor
+
+    See :func:`oneflow.as_strided`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.as_strided_,
+    """
+    Tensor.as_strided_(size, stride, storage_offset=None) -> Tensor
+
+    In-place version of :func:`oneflow.Tensor.as_strided`
     """,
 )
 
@@ -791,6 +937,20 @@ add_docstr(
     oneflow.Tensor.grad_fn,
     r"""
     Return the function that created this tensor if it's ``requires_grad`` is True.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.inverse,
+    """
+    See :func:`oneflow.linalg.inv`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.trunc,
+    """
+    See :func:`oneflow.trunc`
     """,
 )
 
@@ -1007,6 +1167,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.exp2,
+    """
+    See :func:`oneflow.exp2`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.erf,
     """
     Tensor.erf() -> Tensor
@@ -1042,6 +1209,13 @@ add_docstr(
     oneflow.Tensor.eq,
     """
     See :func:`oneflow.eq`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.equal,
+    """
+    See :func:`oneflow.equal`
     """,
 )
 
@@ -1115,6 +1289,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.gt_,
+    """Tensor.gt_(value) -> Tensor
+    In-place version of :func:`oneflow.Tensor.gt`.
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.log1p,
     """
     See :func:`oneflow.log1p`
@@ -1174,14 +1355,6 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow.Tensor.floor_,
-    r"""
-    In-place version of :func:`oneflow.floor`
-
-    """,
-)
-
-add_docstr(
     oneflow.Tensor.normal_,
     """
     normal_(mean=0, std=1, *, generator=None) -> Tensor
@@ -1225,6 +1398,13 @@ add_docstr(
     oneflow.Tensor.round,
     """
     See :func:`oneflow.round`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.round_,
+    """
+    See :func:`oneflow.round_`
     """,
 )
 
@@ -1743,6 +1923,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.logsumexp,
+    """
+    See :func:`oneflow.logsumexp`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.masked_fill,
     """
     See :func:`oneflow.masked_fill`
@@ -1782,6 +1969,13 @@ add_docstr(
     oneflow.Tensor.ceil,
     """
     See :func:`oneflow.ceil`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.ceil_,
+    """
+    See :func:`oneflow.ceil_`
     """,
 )
 
@@ -1851,6 +2045,13 @@ add_docstr(
     oneflow.Tensor.minimum,
     """
     See :func:`oneflow.minimum`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.mode,
+    """
+    See :func:`oneflow.mode`
     """,
 )
 
@@ -2401,5 +2602,171 @@ add_docstr(
         >>> x
         tensor([0., 0., 0.], dtype=oneflow.float32)
 
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.broadcast_to,
+    """
+    See :func:`oneflow.broadcast_to`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.unique,
+    """
+    See :func:`oneflow.unique`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([3, 1, 2, 0 ,2])
+        >>> x.unique()
+        tensor([0, 1, 2, 3], dtype=oneflow.int64)
+        >>> x, indices = x.unique(return_inverse=True)
+        >>> indices
+        tensor([3, 1, 2, 0, 2], dtype=oneflow.int32)
+        >>> x, counts = x.unique(return_counts=True)
+        >>> counts
+        tensor([1, 1, 1, 1], dtype=oneflow.int32)
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.clone,
+    """
+    See :func:`oneflow.clone`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1, 2, 3])
+        >>> x.clone()
+        tensor([1, 2, 3], dtype=oneflow.int64)
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.bitwise_and,
+    """
+    See :func:`oneflow.bitwise_and`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1, 2, 3])
+        >>> x.bitwise_and(4)
+        tensor([0, 0, 0], dtype=oneflow.int64)
+        >>> y = flow.tensor([2, 1, 0])
+        >>> x.bitwise_and(y)
+        tensor([0, 0, 0], dtype=oneflow.int64)
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.bitwise_or,
+    """
+    See :func:`oneflow.bitwise_or`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1, 2, 3])
+        >>> x.bitwise_or(4)
+        tensor([5, 6, 7], dtype=oneflow.int64)
+        >>> y = flow.tensor([2, 1, 0])
+        >>> x.bitwise_or(y)
+        tensor([3, 3, 3], dtype=oneflow.int64)
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.bitwise_xor,
+    """
+    See :func:`oneflow.bitwise_xor`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1, 2, 3])
+        >>> x.bitwise_xor(4)
+        tensor([5, 6, 7], dtype=oneflow.int64)
+        >>> y = flow.tensor([2, 1, 0])
+        >>> x.bitwise_xor(y)
+        tensor([3, 3, 3], dtype=oneflow.int64)
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.new,
+    """
+    Constructs a new tensor of the same data type and device (or placemant and sbp) as self tensor.
+
+    Any valid argument combination to the tensor constructor is accepted by this method,
+    including sizes, NumPy ndarray, Python Sequence, etc. See :func:`oneflow.Tensor` for more details.
+
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.randn(3, 2)
+        >>> x.new()
+        tensor([], dtype=oneflow.float32)
+        >>> x.new(1, 2).shape
+        oneflow.Size([1, 2])
+        >>> x.new([1, 2])
+        tensor([1., 2.], dtype=oneflow.float32)
+        >>> y = flow.randn(3, 3)
+        >>> x.new(y).shape
+        oneflow.Size([3, 3])
+
+    .. warning::
+        When y is global tensor, the invoking ``Tensor.new(y)`` will raise an error.
+        Consider use ``Tensor.new(y.size())`` to create a tensor that has
+        the same placement and sbp with Tensor and the same size with ``y``.
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.baddbmm,
+    """
+    See :func:`oneflow.baddbmm`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.randn(2, 3, 4)
+        >>> batch1 = flow.randn(2, 3, 5)
+        >>> batch2 = flow.randn(2, 5, 4)
+        >>> x.baddbmm(batch1, batch2, alpha=2, beta=2) # doctest: +SKIP
+    """,
+)
+
+
+add_docstr(
+    oneflow.Tensor.frac,
+    r"""
+    See :func:`oneflow.frac`.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.frac_,
+    r"""
+    In-place version of :func:`oneflow.Tensor.frac`.
     """,
 )

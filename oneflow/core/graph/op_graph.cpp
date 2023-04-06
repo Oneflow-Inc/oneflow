@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <string>
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/local_sig_infer_hint.h"
@@ -604,8 +603,7 @@ void OpGraph::PrintSBPGraphDebugInfo() const {
       const auto input_blob_modifier_ = op_node->op().InputBlobModifier4Ibn(ibn);
       bool is_same_sbp = input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable();
       if (is_same_sbp) std::cout << ", same SBP";
-      std::cout << ", "
-                << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn)).shape().elem_cnt();
+      std::cout << ", " << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn)).shape();
       std::cout << std::endl;
     }
     // Sort before printing
@@ -617,8 +615,7 @@ void OpGraph::PrintSBPGraphDebugInfo() const {
       std::cout << "Out Op:" << obn;
       const auto& this_sbp_parallel = op_node->NdSbp4BnInOp(obn);
       std::cout << ", " << NdSbpToString(this_sbp_parallel);
-      std::cout << ", "
-                << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(obn)).shape().elem_cnt();
+      std::cout << ", " << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(obn)).shape();
       std::cout << std::endl;
     }
     std::cout << std::endl;

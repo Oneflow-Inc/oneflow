@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <utility>
+#include "oneflow/core/auto_parallel/algorithm_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/decorator.h"
@@ -497,8 +498,8 @@ Maybe<const Shape> Operator::GetInputOutputFastestTimeShape() const {
 
 Maybe<void> Operator::GetSbpSignaturesIf(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const {
-  JUST(GetSbpSignatures(LogicalBlobDesc4Ibn, parallel_desc, sbp_sig_list));
+    int32_t hierarchy_value, SbpSignatureList* sbp_sig_list) const {
+  JUST(GetSbpSignatures(LogicalBlobDesc4Ibn, hierarchy_value, sbp_sig_list));
   SbpSignatureBuilder()
       .Broadcast(input_bns())
       .Broadcast(output_bns())
@@ -506,22 +507,43 @@ Maybe<void> Operator::GetSbpSignaturesIf(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> Operator::EnumerateNdSbpSignatures(
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list) const {
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> Operator::GetNdSbpSignatureList(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list) const {
   // Get 1D sbp signature list
-  SbpSignatureList sbp_sig_list;
-  JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, parallel_desc, &sbp_sig_list));
-  CHECK_GT_OR_RETURN(sbp_sig_list.sbp_signature_size(), 0)
-      << op_name() << " gets no sbp signature from GetSbpSignaturesIf function!";
+  HashMap<int32_t, SbpSignatureList> hierarchy_value2sbp_sig_list;
+  // hierarchy value is the value at the dimension corresponding to the current SBP
+  // For example, 2 machines, 4 gpus per machine, hierarchy = [2, 4]
+  // Suppose we have nd_sbp = (S0, B)
+  // The hierarchy value corresponding to S0 is 2
+  // The hierarchy value corresponding to B is 4.
+  for (int32_t hierarchy_value : *parallel_desc.hierarchy()) {
+    if (hierarchy_value2sbp_sig_list.find(hierarchy_value) == hierarchy_value2sbp_sig_list.end()) {
+      auto* sbp_sig_list = &hierarchy_value2sbp_sig_list[hierarchy_value];
+      JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, hierarchy_value, sbp_sig_list));
+      CHECK_GT_OR_RETURN(sbp_sig_list->sbp_signature_size(), 0)
+          << op_name()
+          << " gets no sbp signature from GetSbpSignaturesIf function for hierarchy value: "
+          << hierarchy_value;
+    }
+  }
 
   int32_t sbp_dimension = parallel_desc.hierarchy()->NumAxes();
   NdSbpSignature nd_sbp_sig;
-  SbpSignatureToNdSbpSignature(sbp_sig_list.sbp_signature(0), &nd_sbp_sig);
+  SbpSignatureToNdSbpSignature(hierarchy_value2sbp_sig_list.begin()->second.sbp_signature(0),
+                               &nd_sbp_sig);
   ResizeNdSbpSignature(nd_sbp_sig, sbp_dimension);
   // ND sbp signature list would be direct product of 1D sbp signatures
   CHECK_OR_RETURN(nd_sbp_sig_list->empty());
-  DfsGetNdSbpSignature(nd_sbp_sig, 0, sbp_dimension, sbp_sig_list, nd_sbp_sig_list);
+  DfsGetNdSbpSignature(nd_sbp_sig, 0, sbp_dimension, *parallel_desc.hierarchy(),
+                       hierarchy_value2sbp_sig_list, nd_sbp_sig_list);
+  JUST(EnumerateNdSbpSignatures(LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list));
   return Maybe<void>::Ok();
 }
 
@@ -752,6 +774,9 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
     for (int32_t i = 0; i < nd_sbp_sig_list.size(); ++i) {
       double total_copy_cost = 0.0;
       double sum_priority_ratio = 0.0;
+      // The initial ratio do not need to be a large one.
+      // Since any copy cost less than infinity would reset the min_sum_priority_ratio.
+      double min_sum_priority_ratio = 0.0;
       bool same_sbp_before_reduce = true;
       for (int32_t ibn_id = 0; ibn_id < input_bns().size(); ibn_id++) {
         const auto& ibn = input_bns().at(ibn_id);
@@ -764,7 +789,7 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
               producer_infer_hint4ibn->nd_sbp(),
               JUST(VectorAt(nd_sbp_sig_list, i)).bn_in_op2nd_sbp().at(ibn),
               producer_infer_hint4ibn->parallel_desc(), *JUST(GetParallelDesc4BnInOp(ibn)),
-              requires_same_sbp[ibn_id]);
+              requires_same_sbp[ibn_id], producer_infer_hint4ibn->logical_blob_desc().shape());
           sum_priority_ratio += priority_ratio;
           // We do not accept any blob which has a priority ratio greater than 1
           if (priority_ratio > 1.5) {
@@ -793,9 +818,12 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
         break;
       }
       // Otherwise, select the case with the lowest cost
-      if (total_copy_cost <= min_copy_cost) {
+      if (total_copy_cost < min_copy_cost * kFloatDeviationMinus      // Strict less than
+          || (total_copy_cost <= min_copy_cost * kFloatDeviationPlus  // Loose equal
+              && sum_priority_ratio < min_sum_priority_ratio)) {
         select_sbp_idx = i;
         min_copy_cost = total_copy_cost;
+        min_sum_priority_ratio = sum_priority_ratio;  // NOLINT(clang-analyzer-deadcode.DeadStores)
       }
     }
     // Can't find any available sbp
@@ -803,7 +831,7 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
       std::ostringstream err;
       err << "op: `" << op_name() << "` can't find available sbp signature." << std::endl;
       err << "candidate nd sbp signature are: "
-          << *JUST(NdSbpSignatureListAsString(nd_sbp_sig_list, input_bns(), output_bns()));
+          << *JUST(NdSbpSignatureListToString(nd_sbp_sig_list, input_bns(), output_bns()));
       err << ", but inputs sbp are:";
       for (int32_t ibn_id = 0; ibn_id < input_bns().size(); ibn_id++) {
         const auto& ibn = input_bns().at(ibn_id);
@@ -833,7 +861,9 @@ Maybe<void> Operator::InferSbpSignature(
   SbpSignatureList valid_sbp_sig_list;
   {
     SbpSignatureList sbp_sig_candidates;
-    JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, parallel_desc, &sbp_sig_candidates));
+    // For 1d sbp, hierarchy value = parallel num
+    JUST(
+        GetSbpSignaturesIf(LogicalBlobDesc4Ibn, parallel_desc.parallel_num(), &sbp_sig_candidates));
     // filter sbp signatures by logical shape
     JUST(FilterAndCheckValidSbpSignatureListByLogicalShape(sbp_sig_candidates, LogicalBlobDesc4Ibn,
                                                            parallel_desc, &valid_sbp_sig_list));
@@ -1631,26 +1661,17 @@ Maybe<Shape> GetNdHierarchyPhysicalShape(const Shape& logical_shape, const NdSbp
     const auto& sbp_parallel = nd_sbp.sbp_parallel(i);
     if (sbp_parallel.has_split_parallel()) {
       const int64_t split_axis = sbp_parallel.split_parallel().axis();
-      if (LazyMode::is_enabled()) {
-        CHECK_EQ_OR_RETURN(physical->At(split_axis) % parallel_hierarchy.At(i), 0)
-            << Error::RuntimeError() << "In nn.Graph, expected size at split axis (" << split_axis
-            << ") of logical shape must be divisible by parallel num, but got logical_shape: "
+      // Both the lazy and eager mode support unbalanced splitting now
+      if (physical->At(split_axis) > 0) {
+        CHECK_GE_OR_RETURN(physical->At(split_axis), parallel_hierarchy.At(i))
+            << Error::RuntimeError() << "Expected size at split axis (" << split_axis
+            << ") of logical shape must be be greater than or equal to parallel num, but got "
+               "logical_shape: "
             << logical_shape.ToString()
             << ", placement: " << *JUST(PlacementToString(SymbolOf(parallel_desc)))
             << ", nd_sbp: " << NdSbpToString(SymbolOf(nd_sbp));
-        physical->Set(split_axis, physical->At(split_axis) / parallel_hierarchy.At(i));
-      } else {
-        if (physical->At(split_axis) > 0) {
-          CHECK_GE_OR_RETURN(physical->At(split_axis), parallel_hierarchy.At(i))
-              << Error::RuntimeError() << "Expected size at split axis (" << split_axis
-              << ") of logical shape must be be greater than or equal to parallel num, but got "
-                 "logical_shape: "
-              << logical_shape.ToString()
-              << ", placement: " << *JUST(PlacementToString(SymbolOf(parallel_desc)))
-              << ", nd_sbp: " << NdSbpToString(SymbolOf(nd_sbp));
-          const BalancedSplitter bs(physical->At(split_axis), parallel_hierarchy.At(i));
-          physical->Set(split_axis, bs.At(CalcIndex4Axis(parallel_id, hierarch_stride, i)).size());
-        }
+        const BalancedSplitter bs(physical->At(split_axis), parallel_hierarchy.At(i));
+        physical->Set(split_axis, bs.At(CalcIndex4Axis(parallel_id, hierarch_stride, i)).size());
       }
     }
   }

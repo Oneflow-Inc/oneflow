@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/user/kernels/clip_by_value_kernel.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 #ifdef WITH_CUDA
 #include <cuda_fp16.h>
 #endif
@@ -84,7 +85,7 @@ struct ClipKernelUtil<DeviceType::kCPU, T> {
 };
 
 template<DeviceType device_type, typename T>
-class ClipByScalarKernel final : public user_op::OpKernel {
+class ClipByScalarKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ClipByScalarKernel() = default;
   ~ClipByScalarKernel() = default;
@@ -106,7 +107,7 @@ class ClipByScalarKernel final : public user_op::OpKernel {
 };
 
 template<DeviceType device_type, typename T>
-class ClipByScalarMinKernel final : public user_op::OpKernel {
+class ClipByScalarMinKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ClipByScalarMinKernel() = default;
   ~ClipByScalarMinKernel() = default;
@@ -125,7 +126,7 @@ class ClipByScalarMinKernel final : public user_op::OpKernel {
 };
 
 template<DeviceType device_type, typename T>
-class ClipByScalarMaxKernel final : public user_op::OpKernel {
+class ClipByScalarMaxKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ClipByScalarMaxKernel() = default;
   ~ClipByScalarMaxKernel() = default;
@@ -144,7 +145,7 @@ class ClipByScalarMaxKernel final : public user_op::OpKernel {
 };
 
 template<DeviceType device_type, typename T>
-class ClipByScalarGradKernel final : public user_op::OpKernel {
+class ClipByScalarGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ClipByScalarGradKernel() = default;
   ~ClipByScalarGradKernel() = default;
@@ -167,7 +168,7 @@ class ClipByScalarGradKernel final : public user_op::OpKernel {
 };
 
 template<DeviceType device_type, typename T>
-class ClipByScalarMinGradKernel final : public user_op::OpKernel {
+class ClipByScalarMinGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ClipByScalarMinGradKernel() = default;
   ~ClipByScalarMinGradKernel() = default;
@@ -187,7 +188,7 @@ class ClipByScalarMinGradKernel final : public user_op::OpKernel {
 };
 
 template<DeviceType device_type, typename T>
-class ClipByScalarMaxGradKernel final : public user_op::OpKernel {
+class ClipByScalarMaxGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ClipByScalarMaxGradKernel() = default;
   ~ClipByScalarMaxGradKernel() = default;

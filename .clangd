@@ -1,0 +1,9 @@
+# This .clangd configuration enables CUDA (nvcc) support.
+# NOTE: OneFlow's custom clangd NEED to be installed for "CommandMatch" and "Replace" to work.
+# or this configuration will not take any effect.
+# Download link: https://github.com/Oneflow-Inc/llvm-project/releases
+If:
+  CommandMatch: ^[^ ]*/nvcc
+CompileFlags:
+  Remove: [--diag_suppress=*, --generate-code=*, -forward-unknown-to-host-compiler, -Xcompiler, -Xcudafe, --use_fast_math]
+  Replace: ['^([^ ]*)/bin/nvcc', 'clang++ --cuda-path=\1', '-isystem=', '-isystem ', '-Xcompiler=', '']

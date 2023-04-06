@@ -33,7 +33,7 @@ def _randint(low, high):
 
 
 def _cpu_global_tensor(tensor):
-    return tensor.to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
+    return tensor.to_global(flow.placement.all("cpu"), flow.sbp.broadcast)
 
 
 def _assert_tensor_equal(test_case, tensor1, tensor2, atol=0.0, rtol=0.0):
@@ -259,7 +259,7 @@ def _test_advanced_indexing(test_case, placement, dtype):
 
     # pick a random valid indexer type
     def ri(indices):
-        choice = _randint(0, 2)
+        choice = _randint(0, 3)
         if choice == 0:
             return _cpu_global_tensor(flow.LongTensor(indices)).to_global(
                 placement, broadcast_for_placement
@@ -786,7 +786,8 @@ def _test_int_indices_broadcast(test_case, placement):
 
 def _test_empty_index(test_case, placement):
     broadcast_for_placement = [flow.sbp.broadcast,] * len(placement.ranks.shape)
-    sbp = random_sbp(placement, max_dim=2).value()
+    # TODO:(wangyinggang): masked_fill support sbp:partial_sum
+    sbp = random_sbp(placement, max_dim=2, except_partial_sum=True).value()
     x = global_broadcast_consec((8, 8)).to_global(placement, sbp)
     idx = _cpu_global_tensor(flow.tensor([], dtype=flow.long)).to_global(
         placement, broadcast_for_placement

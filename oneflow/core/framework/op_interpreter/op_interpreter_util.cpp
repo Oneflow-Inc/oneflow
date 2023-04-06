@@ -69,56 +69,60 @@ Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs, const OpExp
   static const auto& g_lazy_interpreter = BuildLazyInterpreter();
   static const auto& g_eager_global_interpreter = BuildEagerInterpreter(/*is_local=*/false);
   static const auto& g_eager_local_interpreter = BuildEagerInterpreter(/*is_local=*/true);
-  if (!LazyMode::is_enabled()) {
-    if (inputs.empty()) {
-      if (ctx.parallel_desc.has_value()) {
-        JUST(ctx.nd_sbp);
-        CHECK_OR_RETURN(!ctx.device.has_value());
-        return g_eager_global_interpreter;
-      } else {
-        CHECK_OR_RETURN(!ctx.nd_sbp.has_value());
-        return g_eager_local_interpreter;
-      }
+  bool is_local = true;
+  if (inputs.empty()) {
+    if (ctx.parallel_desc.has_value()) {
+      JUST(ctx.nd_sbp);
+      CHECK_OR_RETURN(!ctx.device.has_value());
+      is_local = false;
     } else {
-      if (inputs[0]->is_global()) {
-        if (inputs.size() == 1) {
-          // do nothing
-        } else if (inputs.size() == 2) {
-          CHECK_OR_RETURN(inputs[1]->is_global())      // NOLINT
-              << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
-        } else if (inputs.size() == 3) {
-          CHECK_OR_RETURN(inputs[1]->is_global())
-              << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
-          CHECK_OR_RETURN(inputs[2]->is_global())
-              << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
-        } else {
-          for (const auto& tensor : inputs) {
-            CHECK_OR_RETURN(tensor->is_global()) << ErrorString4Inputs(inputs, op_expr);
-          }
-        }
-        return g_eager_global_interpreter;
+      CHECK_OR_RETURN(!ctx.nd_sbp.has_value());
+    }
+  } else {
+    if (inputs[0]->is_global()) {
+      if (inputs.size() == 1) {
+        // do nothing
+      } else if (inputs.size() == 2) {
+        CHECK_OR_RETURN(inputs[1]->is_global())      // NOLINT
+            << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
+      } else if (inputs.size() == 3) {
+        CHECK_OR_RETURN(inputs[1]->is_global())
+            << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
+        CHECK_OR_RETURN(inputs[2]->is_global())
+            << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
       } else {
-        if (inputs.size() == 1) {
-          // do nothing
-        } else if (inputs.size() == 2) {
-          CHECK_OR_RETURN(inputs.at(1)->is_local())
-              << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
-        } else if (inputs.size() == 3) {
-          CHECK_OR_RETURN(inputs.at(1)->is_local())
-              << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
-          CHECK_OR_RETURN(inputs.at(2)->is_local())
-              << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
-        } else {
-          for (const auto& tensor : inputs) {
-            CHECK_OR_RETURN(tensor->is_local()) << ErrorString4Inputs(inputs, op_expr);
-          }
+        for (const auto& tensor : inputs) {
+          CHECK_OR_RETURN(tensor->is_global()) << ErrorString4Inputs(inputs, op_expr);
         }
-        return g_eager_local_interpreter;
+      }
+      is_local = false;
+    } else {
+      if (inputs.size() == 1) {
+        // do nothing
+      } else if (inputs.size() == 2) {
+        CHECK_OR_RETURN(inputs.at(1)->is_local())
+            << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
+      } else if (inputs.size() == 3) {
+        CHECK_OR_RETURN(inputs.at(1)->is_local())
+            << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
+        CHECK_OR_RETURN(inputs.at(2)->is_local())
+            << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
+      } else {
+        for (const auto& tensor : inputs) {
+          CHECK_OR_RETURN(tensor->is_local()) << ErrorString4Inputs(inputs, op_expr);
+        }
       }
     }
-    UNIMPLEMENTED_THEN_RETURN();
   }
-  return g_lazy_interpreter;
+  if (!LazyMode::is_enabled()) {
+    if (is_local) {
+      return g_eager_local_interpreter;
+    } else {
+      return g_eager_global_interpreter;
+    }
+  } else {
+    return g_lazy_interpreter;
+  }
 }
 
 }  // namespace

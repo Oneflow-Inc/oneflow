@@ -21,6 +21,7 @@ limitations under the License.
 #include <glog/logging.h>
 #include <type_traits>
 #include "oneflow/core/common/error.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/preprocessor.h"
 
@@ -128,7 +129,7 @@ typename std::remove_const<typename std::remove_reference<T>::type>::type&& Remo
     if (!::oneflow::private_details::JustIsOk(_just_value_to_check_)) {                            \
       thread_local static auto frame = ::oneflow::SymbolOf(                                        \
           ::oneflow::ErrorStackFrame(__FILE__, __LINE__, _just_closure_func_name_, #__VA_ARGS__)); \
-      LOG(FATAL) << ::oneflow::GetFormatedSerializedError(                                         \
+      THROW(RuntimeError) << ::oneflow::GetErrorString(                                            \
           ::oneflow::private_details::JustErrorAddStackFrame(                                      \
               ::oneflow::private_details::JustGetError(_just_value_to_check_), frame));            \
     }                                                                                              \
@@ -159,7 +160,7 @@ typename std::remove_const<typename std::remove_reference<T>::type>::type&& Remo
     if (!::oneflow::private_details::JustIsOk(_just_value_to_check_)) {                           \
       thread_local static auto frame = ::oneflow::SymbolOf(                                       \
           ::oneflow::ErrorStackFrame(__FILE__, __LINE__, _just_closure_func_name_, #value));      \
-      LOG(FATAL) << ::oneflow::GetFormatedSerializedError(                                        \
+      THROW(RuntimeError) << ::oneflow::GetErrorString(                                           \
           ::oneflow::private_details::JustErrorAddFrameMessage(                                   \
               ::oneflow::Error(::oneflow::private_details::JustGetError(_just_value_to_check_))   \
                   .AddStackFrame(frame),                                                          \

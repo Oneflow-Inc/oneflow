@@ -26,6 +26,11 @@ limitations under the License.
 #if CUDA_VERSION >= 11000
 #include <cuda_bf16.h>
 #endif  // CUDA_VERSION >= 11000
+#include <cudnn.h>
+
+#if (CUDNN_VERSION >= 7401)
+#define BN_ENABLE_EX_API
+#endif
 
 namespace oneflow {
 

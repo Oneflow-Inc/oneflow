@@ -22,6 +22,8 @@ limitations under the License.
 #include <vector>
 #include "oneflow/core/auto_parallel/binary_set.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/hash_container.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/auto_parallel/algorithm_util.h"
@@ -65,6 +67,10 @@ class SbpNode final {
 
   // Recompute Computation Cost after adding child nodes in it
   void SummarizeCost();
+  // Compute the weighted sum of the time and memory cost
+  void ComputeWeightedCost();
+  // Generate the relationship between this merged node and its components
+  void GenerateComponentRelationship();
   // Determine Final SbpSignature for attachment of this node
   void FinalizeSbp();
   // Use Greedy Strategy to pick the sbp signature with minimum cost for this
@@ -119,13 +125,35 @@ class SbpNode final {
   // Compute the minimal available wait time for producers or upstream nodes
   void SpreadAvailWaitTime(const std::vector<double>& trunk_cost,
                            const std::vector<double>& acc_trunk_cost,
-                           const HashMap<std::string, SbpNode*>& op_name2sbp_node, double wait_time,
-                           double transfer_cost);
+                           const HashMap<std::string, SbpNode*>& op_name2sbp_node,
+                           double wait_time);
   // Reduce and set the wait time for op in the trunk
   void SetTrunkWaitTime(double trunk_wait_time);
 
-  // Assemble copy cost for all the incoming edges
-  void InitializeCopyCost(bool compute_cost, bool use_sbp_collector);
+  // Assemble copy cost and partial memory cost for all the incoming edges
+  void InitCopyAndMemoryCost(bool use_sbp_collector, bool nccl_not_use_compute_stream);
+  // Assemble memory cost
+  void InitializeMemory(bool is_reusable, const HashMap<LogicalBlobId, int32_t>& lbi2id,
+                        const std::vector<int32_t>& id2count, bool nccl_use_compute_stream);
+
+  // Constant getter
+  int32_t GetMinLayer() const { return min_layer_; }
+  int32_t GetTributaryLayer() const { return tributary_layer_; }
+  OpNode* GetOperatorNode() const { return op_node_; }
+  const std::vector<SbpEdge*>& GetEdgesIn() const { return edges_in_; }
+  const std::vector<SbpEdge*>& GetEdgesOut() const { return edges_out_; }
+  int64_t GetMemory(int32_t i) const { return in_memory_support_ ? memory_[i] : 0; }
+  // Get the current memory with the current sbp signature index
+  int64_t GetMemory() const { return GetMemory(final_sbp_sig_id_); }
+  double GetWeightedCost(int32_t i) const { return weighted_cost_[i]; }
+  // Get the current weighted cost with the current sbp signature index
+  double GetWeightedCost() const { return GetWeightedCost(final_sbp_sig_id_); }
+  int32_t GetComponentSbpId(int32_t merged_id, SbpNode* component_node) const;
+  // Judge if sbp_node is a port of the current node
+  bool IsComponent(SbpNode* sbp_node) const;
+
+  // Setter
+  void SetInMemorySupport(bool in_memory_support) { in_memory_support_ = in_memory_support; }
 
  private:
   friend class SbpEdge;
@@ -148,6 +176,7 @@ class SbpNode final {
   std::vector<NdSbpSignature> sbp_sig_list_;
   // Cost[sbp] is Computation Cost when using sbp_sig_list_[sbp]
   std::vector<double> cost_;
+  std::vector<double> origin_cost_;
 
   // Child node list
   std::vector<SbpNode*> children_;
@@ -160,7 +189,7 @@ class SbpNode final {
   std::vector<SbpNode*> half_node_;
   // We should delete those merged-signatures which has very large cost for speed up
   // New sbp_sig_list_ index map to each half_node_'s sig_index
-  std::vector<std::pair<int32_t, int32_t>> merged_sig_id2children_sig_id_;
+  std::vector<std::pair<int32_t, int32_t>> merged_sig_id2half_sig_id_;
 
   std::vector<BinarySet> parallel_candidates_;
 
@@ -180,12 +209,25 @@ class SbpNode final {
   // Accumulate trunk cost from consumer to the end
   double acc_trunk_cost_ = -1.0;
 
+  // The produced blob belongs to the support of the total memory
+  bool in_memory_support_ = false;
+  // The consumed memory for different sbp strategies
+  std::vector<int64_t> memory_;
+  std::vector<int64_t> origin_memory_;
+  // The weighted sum of time cost and memory cost
+  // More specifically, weighted cost = time cost + kMemoryRatio * memory;
+  // We do not add any weight for the time cost since we need to judge if a cost is less than
+  // GetValidMaxCopyCost().
+  std::vector<double> weighted_cost_;
+  // Relationship between a merged node and its components
+  HashMap<SbpNode*, std::vector<int32_t>> component2merged_sig_id2component_sig_id_;
+
   // Let one node point to another
   void StartPointToEnd(SbpNode* start_node, SbpNode* end_node);
 
   // Evaluate summery of cost in 1-ring neighborhood.
   double EvalNbhCost() const;
-  // Drop down the maximum layer with the minimum layer form consumer
+  // Drop down the maximum layer with the minimum layer from consumer
   void DropMaxLayer(int32_t upper_bound);
   // Drop down the available wait time with the minimum cost from downstream
   void DropAvailWaitTime(double curr_trunk_cost);

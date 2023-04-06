@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/framework/stream_mgr.h"
+#include "oneflow/core/vm/stream_get_allocator_stream_type.h"
 
 namespace oneflow {
 
@@ -58,6 +59,12 @@ Maybe<Symbol<Stream>> RawGetDefaultStreamByPlacement(Symbol<ParallelDesc> parall
   return RawGetDefaultStreamByDevice(JUST(GetTensorDevice(parallel_desc)));
 }
 
+Maybe<Symbol<Stream>> RawGetAllocatorStream(Symbol<Stream> stream) {
+  StreamType allocator_stream_type = JUST(GetAllocatorStreamType::Visit(stream->stream_type()));
+  if (allocator_stream_type == stream->stream_type()) { return stream; }
+  return Stream::New(stream->device(), allocator_stream_type, stream->thread_uid());
+}
+
 }  // namespace
 
 int64_t Stream::kDefaultStreamThreadUid = 0;
@@ -67,5 +74,7 @@ decltype(GetDefaultStreamByDevice) GetDefaultStreamByDevice =
 
 decltype(GetDefaultStreamByPlacement) GetDefaultStreamByPlacement =
     DECORATE(&RawGetDefaultStreamByPlacement, ThreadLocal);
+
+decltype(GetAllocatorStream) GetAllocatorStream = DECORATE(&RawGetAllocatorStream, ThreadLocal);
 
 }  // namespace oneflow

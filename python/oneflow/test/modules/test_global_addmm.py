@@ -23,7 +23,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_addmm_with_random_data(test_case, placement, sbp):
     m = random(1, 3) * 8
     n = random(1, 3) * 8
@@ -39,7 +39,7 @@ def _test_addmm_with_random_data(test_case, placement, sbp):
     return y
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_addmm_broadcast_with_random_data(test_case, placement, sbp):
     m = random(1, 3) * 8
     n = random(1, 3) * 8

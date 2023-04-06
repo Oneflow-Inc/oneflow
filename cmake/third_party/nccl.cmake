@@ -47,6 +47,23 @@ else()
 
   list(APPEND NCCL_LIBRARIES ${NCCL_LIBRARY_DIR}/${NCCL_LIBRARY_NAME})
 
+  set(NCCL_ARCHS_LIST ${CUDA_REAL_ARCHS_LIST})
+
+  # remove redundant archs, https://github.com/NVIDIA/nccl/blob/cb111f764a6d46370f24f75101d6b219bb2dda54/makefiles/common.mk#L28
+  if("70" IN_LIST NCCL_ARCHS_LIST AND "75" IN_LIST NCCL_ARCHS_LIST)
+    list(REMOVE_ITEM NCCL_ARCHS_LIST "75")
+  endif()
+  if("80" IN_LIST NCCL_ARCHS_LIST AND "86" IN_LIST NCCL_ARCHS_LIST)
+    list(REMOVE_ITEM NCCL_ARCHS_LIST "86")
+  endif()
+  if("80" IN_LIST NCCL_ARCHS_LIST AND "89" IN_LIST NCCL_ARCHS_LIST)
+    list(REMOVE_ITEM NCCL_ARCHS_LIST "89")
+  endif()
+
+  foreach(arch ${NCCL_ARCHS_LIST})
+    string(APPEND NCCL_GENCODE "-gencode=arch=compute_${arch},code=sm_${arch} ")
+  endforeach()
+
   if(THIRD_PARTY)
 
     include(ProcessorCount)
@@ -60,6 +77,7 @@ else()
       CONFIGURE_COMMAND ""
       BUILD_IN_SOURCE 1
       BUILD_COMMAND make -j${PROC_NUM} src.build CUDA_HOME=${CUDATOOLKIT_BIN_ROOT}
+                    NVCC_GENCODE=${NCCL_GENCODE}
       INSTALL_COMMAND make src.install PREFIX=${NCCL_INSTALL_DIR}
       BUILD_BYPRODUCTS ${NCCL_LIBRARIES})
 

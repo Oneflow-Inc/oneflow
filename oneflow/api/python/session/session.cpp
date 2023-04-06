@@ -20,21 +20,12 @@ limitations under the License.
 #include "oneflow/core/job/session.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
-#include "oneflow/api/python/session/session.h"
 
 namespace py = pybind11;
 
 namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("IsSessionInited", &IsSessionInited);
-  m.def("InitLazyGlobalSession", &InitLazyGlobalSession);
-  m.def("InitEagerGlobalSession", &InitEagerGlobalSession);
-  m.def("DestroyLazyGlobalSession", &DestroyLazyGlobalSession);
-
-  m.def("StartLazyGlobalSession", &StartLazyGlobalSession);
-  m.def("StopLazyGlobalSession", &StopLazyGlobalSession);
-
   using namespace oneflow;
   py::class_<MultiClientSessionContext, std::shared_ptr<MultiClientSessionContext>>(
       m, "SessionContext")

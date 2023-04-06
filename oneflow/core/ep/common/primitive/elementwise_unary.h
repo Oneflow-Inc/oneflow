@@ -23,7 +23,9 @@ namespace oneflow {
 namespace ep {
 namespace primitive {
 
-#define UNARY_MATH_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRelu)
+#define UNARY_MATH_OP_SEQ              \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRelu) \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kIdentity)
 
 #define UNARY_FLOATING_MATH_OP_SEQ                \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kElu)             \
@@ -55,6 +57,7 @@ namespace primitive {
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kErf)             \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kErfc)            \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kExp)             \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kExp2)            \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kExpm1)           \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kFloor)           \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLgamma)          \
@@ -79,11 +82,15 @@ namespace primitive {
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kTan)             \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kTrunc)           \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kNotEqualZero)    \
-  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kNanAssign)
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kNanAssign)       \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kFastGelu)        \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kQuickGelu)
 
 #define UNARY_INT_MATH_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAbs)
 
 #define UNARY_LOGICAL_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLogicalNot)
+
+#define UNARY_BITWISE_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kBitwiseNot)
 
 #define UNARY_UTILS_OP_SEQ              \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kIsInf) \

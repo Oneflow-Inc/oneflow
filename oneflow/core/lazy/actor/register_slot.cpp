@@ -17,6 +17,13 @@ limitations under the License.
 
 namespace oneflow {
 
+int64_t RegstSlot::GetReadyRegstSize(int64_t regst_desc_id) const {
+  CHECK(is_inited_);
+  auto it = regst_desc_id2regsts_.find(regst_desc_id);
+  if (it == regst_desc_id2regsts_.end()) { return -1; }
+  return it->second.size();
+}
+
 bool RegstSlot::HasRegstDescId(int64_t regst_desc_id) const {
   CHECK(is_inited_);
   return regst_desc_id2regsts_.find(regst_desc_id) != regst_desc_id2regsts_.end();
@@ -89,8 +96,8 @@ void RegstSlot::InitedDone() {
   is_inited_ = true;
 }
 
-void RegstSlot::ForChosenFrontRegst(std::function<bool(int64_t)> IsChosenRegstDescId,
-                                    std::function<void(Regst*)> Handler) const {
+void RegstSlot::ForChosenFrontRegst(const std::function<bool(int64_t)>& IsChosenRegstDescId,
+                                    const std::function<void(Regst*)>& Handler) const {
   for (const auto& kv : regst_desc_id2regsts_) {
     if (IsChosenRegstDescId(kv.first)) {
       CHECK(kv.second.empty() == false);
@@ -100,8 +107,8 @@ void RegstSlot::ForChosenFrontRegst(std::function<bool(int64_t)> IsChosenRegstDe
 }
 
 void RegstSlot::ForChosenFrontRegst(
-    std::function<bool(int64_t)> IsChosenRegstDescId,
-    std::function<void(int64_t regst_desc_id, Regst*)> Handler) const {
+    const std::function<bool(int64_t)>& IsChosenRegstDescId,
+    const std::function<void(int64_t regst_desc_id, Regst*)>& Handler) const {
   for (const auto& kv : regst_desc_id2regsts_) {
     if (IsChosenRegstDescId(kv.first)) {
       CHECK(kv.second.empty() == false);
@@ -110,31 +117,33 @@ void RegstSlot::ForChosenFrontRegst(
   }
 }
 
-void RegstSlot::ForChosenRegstDeq(std::function<bool(int64_t)> IsChosenRegstDescId,
-                                  std::function<void(const std::deque<Regst*>&)> Handler) const {
+void RegstSlot::ForChosenRegstDeq(
+    const std::function<bool(int64_t)>& IsChosenRegstDescId,
+    const std::function<void(const std::deque<Regst*>&)>& Handler) const {
   for (const auto& kv : regst_desc_id2regsts_) {
     if (IsChosenRegstDescId(kv.first)) { Handler(kv.second); }
   }
 }
 
 void RegstSlot::ForChosenRegstDeq(
-    std::function<bool(int64_t)> IsChosenRegstDescId,
-    std::function<void(int64_t regst_desc_id, const std::deque<Regst*>&)> Handler) const {
+    const std::function<bool(int64_t)>& IsChosenRegstDescId,
+    const std::function<void(int64_t regst_desc_id, const std::deque<Regst*>&)>& Handler) const {
   for (const auto& kv : regst_desc_id2regsts_) {
     if (IsChosenRegstDescId(kv.first)) { Handler(kv.first, kv.second); }
   }
 }
 
-void RegstSlot::ForEachFrontRegst(std::function<void(Regst*)> Handler) const {
+void RegstSlot::ForEachFrontRegst(const std::function<void(Regst*)>& Handler) const {
   ForChosenFrontRegst([](int64_t) { return true; }, Handler);
 }
 
 void RegstSlot::ForEachFrontRegst(
-    std::function<void(int64_t regst_desc_id, Regst*)> Handler) const {
+    const std::function<void(int64_t regst_desc_id, Regst*)>& Handler) const {
   ForChosenFrontRegst([](int64_t) { return true; }, Handler);
 }
 
-void RegstSlot::ForEachRegstDeq(std::function<void(const std::deque<Regst*>&)> Handler) const {
+void RegstSlot::ForEachRegstDeq(
+    const std::function<void(const std::deque<Regst*>&)>& Handler) const {
   ForChosenRegstDeq([](int64_t) { return true; }, Handler);
 }
 

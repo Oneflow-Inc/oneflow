@@ -423,8 +423,6 @@ class RawReaderKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("raw_reader")
-    .SetCreateFn<RawReaderKernel>()
-    .SetIsMatchedHob(user_op::HobTrue());
+REGISTER_USER_KERNEL("raw_reader").SetCreateFn<RawReaderKernel>();
 
 }  // namespace oneflow

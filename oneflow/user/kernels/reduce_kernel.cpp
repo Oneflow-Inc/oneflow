@@ -185,11 +185,15 @@ REGISTER_REDUCE_NANSUM_KERNELS_BY_DEVICE(DeviceType::kCUDA)
   REGISTER_REDUCE_SUM_KERNELS(device, int32_t)        \
   REGISTER_REDUCE_SUM_KERNELS(device, int64_t)
 
+REGISTER_REDUCE_SUM_KERNELS(DeviceType::kCPU, std::complex<float>)
+REGISTER_REDUCE_SUM_KERNELS(DeviceType::kCPU, std::complex<double>)
+
 REGISTER_REDUCE_SUM_KERNELS_BY_DEVICE(DeviceType::kCPU)
 #ifdef WITH_CUDA
 REGISTER_REDUCE_SUM_KERNELS_BY_DEVICE(DeviceType::kCUDA)
 #endif
 REGISTER_REDUCE_SUM_KERNELS(DeviceType::kCPU, float)
+REGISTER_REDUCE_SUM_KERNELS(DeviceType::kCPU, float16)
 
 #define REGISTER_REDUCE_LOGICAL_KERNELS(device)                                    \
   REGISTER_REDUCE_LOGICAL_XPU_KERNEL("reduce_any", BinaryFuncAny, device, bool)    \

@@ -15,6 +15,8 @@ limitations under the License.
 */
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/cost_util.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/framework/to_string.h"
@@ -303,7 +305,8 @@ Maybe<void> JobBuildAndInferCtx::CheckOpBlobSplitability(Operator* op, int64_t p
       if (logical_blob_desc.shape().NumAxes() > 0) {
         CHECK_GE_OR_RETURN(logical_blob_desc.shape().At(axis), blob_parallel_num)
             << "op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
-            << " cannot split blob by parallel_num: " << std::to_string(blob_parallel_num);
+            << " shape: " << logical_blob_desc.shape()
+            << " cannot be splitted by parallel_num: " << blob_parallel_num << " at axis " << axis;
       }
     }
   } else {
@@ -317,10 +320,13 @@ Maybe<void> JobBuildAndInferCtx::CheckOpBlobSplitability(Operator* op, int64_t p
         if (sbp_parallel.has_split_parallel()) {
           const int64_t axis = sbp_parallel.split_parallel().axis();
           CHECK_GT_OR_RETURN(current_shape.At(axis), 0);
-          CHECK_EQ_OR_RETURN(current_shape.At(axis) % parallel_hierarchy->At(i), 0)
+          // Support unbalanced splitting
+          CHECK_GE_OR_RETURN(current_shape.At(axis), parallel_hierarchy->At(i))
               << "op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
-              << " cannot split blob by parallel_hierarchy: "
-              << std::to_string(parallel_hierarchy->At(i));
+              << " shape: " << logical_blob_desc.shape()
+              << " cannot be splitted by nd sbp: " << NdSbpToString(pair.second) << " at axis "
+              << axis << " with parallel_hierarchy: " << *parallel_hierarchy;
+          // Split and take the minimum one
           current_shape.Set(axis, current_shape.At(axis) / parallel_hierarchy->At(i));
         }
       }
@@ -911,9 +917,10 @@ Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateLocalLbiFromCompatible
 Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   CHECK_GT_OR_RETURN(job().net().op_size(), 0)
       << " Sorry, nn.Graph need at least 1 op in net, but get 0 now.";
+  auto compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
   CHECK_NOTNULL(Singleton<JobDesc>::Get());
-  Singleton<JobDesc>::Delete();
-  auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
+  // A global variable to get graph configurations.
+  auto current_graph_config = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
   JobPassCtx job_pass_ctx(GlobalJobDesc());
   const auto job_name = job().job_conf().job_name();
   auto LogJob = [&](const std::string& name_suffix) -> void {
@@ -937,6 +944,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   int32_t pass_cnt = 0;
   const int64_t prev_v = FLAGS_v;
   auto DoPass = [&](const std::string& pass_name, int32_t cnt = 0) -> Maybe<void> {
+    auto pass_tc = std::make_unique<CostCounter<std::chrono::milliseconds>>(true, true);
     VLOG(1) << job_name << " start compiling with pass"
             << " pass_cnt_" + std::to_string(pass_cnt) + "-" + pass_name
             << (cnt > 0 ? std::to_string(cnt) : "");
@@ -954,12 +962,12 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     VLOG(1) << job_name << " finish compiling with pass"
             << " pass_cnt_" + std::to_string(pass_cnt) + "-" + pass_name
             << (cnt > 0 ? std::to_string(cnt) : "");
+    pass_tc->Count("[GraphCompile]" + job_name + " " + pass_name, 1, true);
     ++pass_cnt;
     return Maybe<void>::Ok();
   };
 
-  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()
-      || Singleton<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     TeePersistentLogStream::Create(StrCat("forward_graph", job_id()))->Write(job());
     Singleton<OpGraph>::New(job());
     Singleton<OpGraph>::Get()->ToDotWithFilePath("forward_dlnet_" + std::to_string(job_id())
@@ -975,9 +983,10 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     // the autograd engine for those tensors that have no gradients
     JUST(DoPass("EliminateDeadNodesPass"));
     JUST(DoPass("NormalizationExponentialAverageAutoTickPass"));
-#ifdef WITH_CUDA
     JUST(DoPass("AutoMixedPrecision"));
-#endif
+    // prune depend OP and and add ctrl_in_op to op_conf accordingly
+    // to express the same semantics and avoid performance loss
+    JUST(DoPass("PruneDependOpPass"));
     JUST(DoPass("PruneAmpWhiteIdentityOpPass"));
     JUST(DoPass("OptimizerPlacementOptimizationPass"));
     // run FuseAddToOutputPass before IRRoundTripBeforeAD since add_2 maybe
@@ -1023,10 +1032,15 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("FixPipelineStageIdPass"));
     JUST(DoPass("PipelineBufferPass"));
     JUST(DoPass("AutoParallelPass"));
+    JUST(DoPass("DelayVariableOpExecutionPass"));
+#ifdef WITH_CUTLASS
+    JUST(DoPass("CutlassConvTuningWarmupPass"));
+#endif  // WITH_CUTLASS
     JUST(DoPass("DumpVariableInfoPass"));
   }
   JUST(DoPass("DumpBlobParallelConfPass"));
   JUST(CheckJob());
+  compile_tc->Count("[GraphCompile]" + job_name + " OptimizationLogicalGraph", 0);
   return Maybe<void>::Ok();
 }
 

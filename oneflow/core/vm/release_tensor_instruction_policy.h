@@ -25,11 +25,13 @@ limitations under the License.
 #include "oneflow/core/vm/ep_optional_event_record_status_querier.h"
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/eager/tensor_storage.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stream.h"
 #include "oneflow/core/vm/stream.h"
+#include "oneflow/core/framework/stream_need_soft_sync.h"
 
 namespace oneflow {
 
@@ -64,10 +66,6 @@ class ReleaseTensorInstructionPolicy : public InstructionPolicy {
     return stream_sequential_dependence_;
   }
 
-  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {
-    DoEach(eager_blob_object_.get());
-  }
-
  protected:
   void Release(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) const {
     CHECK_JUST(eager_blob_object->DeallocateBlobDataPtr());
@@ -89,6 +87,10 @@ class FastReleaseTensorInstructionPolicy final : public ReleaseTensorInstruction
  public:
   using ReleaseTensorInstructionPolicy::ReleaseTensorInstructionPolicy;
 
+  bool Prescheduleable(const vm::Stream* src, const vm::Stream* dst) const override {
+    return false;
+  }
+
  private:
   std::string DebugName(const vm::Instruction& instruction) const override {
     return "FastReleaseTensor";
@@ -96,7 +98,7 @@ class FastReleaseTensorInstructionPolicy final : public ReleaseTensorInstruction
 
   Maybe<void> Prepare(vm::Instruction* instruction) override {
     DataType data_type = eager_blob_object()->data_type();
-    CHECK_OR_RETURN(IsPODDataType(data_type));
+    CHECK_OR_RETURN(IsTriviallyCopyableDataType(data_type));
     if (eager_blob_object()->tensor_storage()->is_allocated_in_vm()) {
       Release(eager_blob_object());
     }
@@ -121,68 +123,71 @@ class SlowReleaseTensorInstructionPolicy final : public ReleaseTensorInstruction
 
   Maybe<void> Prepare(vm::Instruction* instruction) override { return Maybe<void>::Ok(); }
 
-  void Compute(vm::Instruction* instruction) override {
-    DataType data_type = eager_blob_object()->data_type();
-    CHECK(!IsPODDataType(data_type));
-    Release(eager_blob_object());
-  }
+  void Compute(vm::Instruction* instruction) override { Release(eager_blob_object()); }
 };
 
 struct MakeReleaseTensorInstructionPolicy
     : public StreamTypeVisitor<MakeReleaseTensorInstructionPolicy> {
   static Maybe<vm::InstructionPolicy> VisitCompute(
-      DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+      const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
-    return Make(data_type, eager_blob_object, stream);
+    return Make(eager_blob_object, stream);
   }
   static Maybe<vm::InstructionPolicy> VisitHost2Device(
-      DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+      const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
-    return Make(data_type, eager_blob_object, stream);
+    return Make(eager_blob_object, stream);
   }
   static Maybe<vm::InstructionPolicy> VisitDevice2Host(
-      DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+      const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
-    return Make(data_type, eager_blob_object, stream);
+    return Make(eager_blob_object, stream);
   }
   static Maybe<vm::InstructionPolicy> VisitCcl(
-      DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+      const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
-    return Make(data_type, eager_blob_object, stream);
+    return Make(eager_blob_object, stream);
   }
   static Maybe<vm::InstructionPolicy> VisitBarrier(
-      DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+      const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
     UNIMPLEMENTED_THEN_RETURN() << "ReleaseTensor instruction not supported in Barrier stream";
   }
   static Maybe<vm::InstructionPolicy> VisitCriticalSection(
-      DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+      const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
     UNIMPLEMENTED_THEN_RETURN()
         << "ReleaseTensor instruction not supported in CriticalSection stream";
   }
   static Maybe<vm::InstructionPolicy> VisitLazyJobLauncher(
-      DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+      const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
     UNIMPLEMENTED_THEN_RETURN()
         << "ReleaseTensor instruction not supported in LaunchLazyJob stream";
   }
   static Maybe<vm::InstructionPolicy> VisitPinnedCompute(
-      DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+      const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
-    return VisitCompute(data_type, eager_blob_object, stream);
+    return VisitCompute(eager_blob_object, stream);
   }
 
  private:
   static Maybe<vm::InstructionPolicy> Make(
-      DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+      const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
-    if (IsPODDataType(data_type)) {
-      return std::shared_ptr<vm::InstructionPolicy>(
-          new vm::FastReleaseTensorInstructionPolicy(eager_blob_object, stream));
-    } else {
+    DataType data_type = eager_blob_object->data_type();
+    if (!IsTriviallyCopyableDataType(data_type)) {
       return std::shared_ptr<vm::InstructionPolicy>(
           new vm::SlowReleaseTensorInstructionPolicy(eager_blob_object, stream));
+    }
+    Symbol<oneflow::Stream> last_used_stream = JUST(eager_blob_object->last_used_stream());
+    DeviceType device_type = last_used_stream->device()->enum_type();
+    if (NeedSoftSync::Visit(last_used_stream->stream_type(), device_type)) {
+      return std::shared_ptr<vm::InstructionPolicy>(
+          new vm::SlowReleaseTensorInstructionPolicy(eager_blob_object, stream));
+    } else {
+      return std::shared_ptr<vm::InstructionPolicy>(
+          new vm::FastReleaseTensorInstructionPolicy(eager_blob_object, stream));
     }
   }
 };

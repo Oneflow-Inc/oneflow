@@ -257,8 +257,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("__str__", PlacementToString)
       .def("__repr__", PlacementToString)
       .def(py::self == py::self)
-      .def(py::hash(py::self));
-  m.def("AllDevicePlacement", &PlacementSymbolExportUtil::AllDevicePlacement);
+      .def(py::hash(py::self))
+      .def_static("all", &PlacementSymbolExportUtil::AllDevicePlacement);
 }
 
 }  // namespace oneflow

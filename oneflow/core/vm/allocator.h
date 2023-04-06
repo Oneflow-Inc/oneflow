@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <cstddef>
 #include "oneflow/core/common/maybe.h"
+#include "glog/logging.h"
 
 namespace oneflow {
 namespace vm {
@@ -32,6 +33,22 @@ class Allocator {
 
  protected:
   Allocator() = default;
+};
+
+class UnimplementedAllocator final : public Allocator {
+ public:
+  explicit UnimplementedAllocator(const std::string& debug_str) : debug_str_(debug_str) {}
+  virtual ~UnimplementedAllocator() = default;
+
+  Maybe<void> Allocate(char** mem_ptr, std::size_t size) override {
+    UNIMPLEMENTED_THEN_RETURN() << debug_str_;
+  }
+
+  void Deallocate(char* mem_ptr, std::size_t size) override { LOG(FATAL) << debug_str_; }
+  void DeviceReset() override { LOG(FATAL) << debug_str_; }
+
+ private:
+  std::string debug_str_;
 };
 
 }  // namespace vm

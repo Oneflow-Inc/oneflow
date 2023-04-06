@@ -78,6 +78,7 @@ class EagerNcclTouchKernel final : public user_op::OpKernel {
   ~EagerNcclTouchKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override{
       // Do nothing.
@@ -102,6 +103,7 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
   }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
     auto* kernel_cache = dynamic_cast<const EagerNcclOpKernelCache*>(cache);

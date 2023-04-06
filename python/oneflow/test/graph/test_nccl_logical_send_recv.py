@@ -22,11 +22,8 @@ import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.test_util import GenArgList
 
-from oneflow.test_utils.automated_test_util import *
 import time
 import os
-
-os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "1"
 
 
 def _test_nccl_logical_send_recv_2d(test_case, src_nd_sbp, dst_nd_sbp):
@@ -103,6 +100,7 @@ def gen_2d_sbp():
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestNcclLogicalSendRecv2D(flow.unittest.TestCase):
     def test_nccl_logical_send_recv_2d(test_case):
+        os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "1"
         arg_dict = OrderedDict()
         arg_dict["src_nd_sbp"] = gen_2d_sbp()
         arg_dict["dst_nd_sbp"] = gen_2d_sbp()
@@ -175,6 +173,7 @@ def gen_1d_sbp():
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestNcclLogicalSendRecv1D(flow.unittest.TestCase):
     def test_nccl_logical_send_recv_1d(test_case):
+        os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "1"
         arg_dict = OrderedDict()
         arg_dict["src_nd_sbp"] = gen_1d_sbp()
         arg_dict["dst_nd_sbp"] = gen_1d_sbp()

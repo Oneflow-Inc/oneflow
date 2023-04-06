@@ -18,6 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+import torch as pytorch
 
 from oneflow.test_utils.automated_test_util import *
 from scipy import special
@@ -273,6 +274,37 @@ class TestGelu(flow.unittest.TestCase):
     def profile_gelu(test_case):
         torch.nn.functional.gelu(torch.ones(1, 128, 28, 28))
         torch.nn.functional.gelu(torch.ones(16, 128, 28, 28))
+
+
+@unittest.skipIf(
+    float(pytorch.__version__[:4]) < 1.12,
+    f"need pytorch version >= 1.12, got {pytorch.__version__}",
+)
+@flow.unittest.skip_unless_1n1d()
+class TestFastGelu(flow.unittest.TestCase):
+    @autotest(n=5)
+    def test_fast_gelu(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        y = torch.nn.functional.gelu(x, approximate="tanh")
+        return y
+
+    @autotest(n=5, atol=1e-2, rtol=1e-2)
+    def test_fast_gelu_fp16(test_case):
+        x = random_tensor().to(device=gpu_device(), dtype=torch.float16)
+        y = torch.nn.functional.gelu(x, approximate="tanh")
+        return y
+
+    @autotest(n=5)
+    def test_fast_gelu_scalar(test_case):
+        x = random_tensor(ndim=0).to(device=random_device())
+        y = torch.nn.functional.gelu(x, approximate="tanh")
+        return y
+
+    @profile(torch.nn.functional.gelu)
+    def profile_fast_gelu(test_case):
+        torch.nn.functional.gelu(torch.ones(1, 128, 28, 28), approximate="tanh")
+        torch.nn.functional.gelu(torch.ones(16, 128, 28, 28), approximate="tanh")
 
 
 @flow.unittest.skip_unless_1n1d()

@@ -19,7 +19,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_mv(test_case, placement, sbp):
     dim = random(1, 6)
     mat = random_tensor(2, dim1=dim).to_global(placement=placement, sbp=sbp)

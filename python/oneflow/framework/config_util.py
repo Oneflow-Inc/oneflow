@@ -116,6 +116,17 @@ def api_enable_cudnn_fused_normalization_add_relu(val: bool) -> None:
     _set_resource_attr(attrs, val, type_)
 
 
+def api_enable_cudnn_conv_heuristic_search_algo(val: bool) -> None:
+    """Whether enable cudnn conv operatioin to use heuristic search algorithm.
+
+    Args:
+        val (bool): whether enable or not, the default value is true.
+    """
+
+    attrs, type_ = api_attrs_and_type[api_enable_cudnn_conv_heuristic_search_algo]
+    _set_resource_attr(attrs, val, type_)
+
+
 def api_enable_fusion(val: bool = True) -> None:
     """Whether or not allow fusion the operators
 
@@ -274,6 +285,10 @@ api_attrs_and_type = {
     api_reserved_device_mem_mbyte: ("reserved_device_mem_mbyte", int),
     api_enable_cudnn_fused_normalization_add_relu: (
         ["cudnn_conf", "enable_cudnn_fused_normalization_add_relu"],
+        bool,
+    ),
+    api_enable_cudnn_conv_heuristic_search_algo: (
+        ["cudnn_conf", "cudnn_conv_heuristic_search_algo"],
         bool,
     ),
     api_enable_fusion: (["collective_boxing_conf", "enable_fusion"], bool),

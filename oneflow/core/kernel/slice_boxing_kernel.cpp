@@ -63,6 +63,10 @@ class SliceBoxingAddKernel final : public SliceBoxingKernel {
 
 void SliceBoxingKernel::VirtualKernelInit(KernelContext* ctx) {
   const SliceBoxingConf& conf = GetCustomizedBoxingConf();
+  if (/*is_0size_tensor=*/std::any_of(conf.out_shape().dim().begin(), conf.out_shape().dim().end(),
+                                      [](int64_t dim) { return dim == 0; })) {
+    return;
+  }
   const TensorSliceView out_slice(conf.out_slice());
   for (const TensorSliceViewProto& in_slice_proto : conf.in_slice()) {
     const TensorSliceView in_slice(in_slice_proto);
@@ -82,6 +86,7 @@ const SliceBoxingConf& SliceBoxingCopyKernel::GetCustomizedBoxingConf() const {
 
 void SliceBoxingCopyKernel::ForwardDataContent(KernelContext* ctx) const {
   Blob* out = ctx->BnInOp2Blob("out");
+  if (out->shape_view().elem_cnt() == 0) { return; }
   FOR_RANGE(int64_t, i, 0, this->op_attribute().input_bns().size()) {
     const Blob* in_i = ctx->BnInOp2Blob(GenRepeatedBn("in", i));
     this->tensor_slice_copier_vec().at(i)->Copy(ctx->stream(), out, in_i);
@@ -94,6 +99,7 @@ const SliceBoxingConf& SliceBoxingAddKernel::GetCustomizedBoxingConf() const {
 
 void SliceBoxingAddKernel::ForwardDataContent(KernelContext* ctx) const {
   Blob* out = ctx->BnInOp2Blob("out");
+  if (out->shape_view().elem_cnt() == 0) { return; }
   std::unique_ptr<ep::primitive::Add> primitive =
       ep::primitive::NewPrimitive<ep::primitive::AddFactory>(ctx->stream()->device_type(),
                                                              out->data_type());

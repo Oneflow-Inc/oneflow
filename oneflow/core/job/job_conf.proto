@@ -168,8 +168,14 @@ message PredictConf {
 
 message MemoryAllocationAlgorithmConf {
   optional bool use_mem_size_first_algo = 1 [default = true];
-  optional bool use_mutual_exclusion_first_algo = 2 [default = false];
+  optional bool use_lifetime_first_algo = 2 [default = false];
   optional bool use_time_line_algo = 3 [default = false];
+  optional bool use_mem_volume_first_algo = 4 [default = false];
+}
+
+message MemoryCompactInsertConf {
+  optional bool use_compact_insert = 1 [default = false];
+  optional bool use_non_compact_insert = 2 [default = true];
 }
 
 message QatConfig {
@@ -206,9 +212,19 @@ message JobSignatureDef {
 }
 
 enum StraightenAlgorithmTag {
-  kDisable = 1;                  
-  kOverlap4ModelParallelism = 2;  
-  kCompressMemory = 3;            
+  kDisableStraighten = 1;                  
+  kOverlap4Transfer = 2;  
+  kCompressMemory = 3;
+  kOverlap4CpuGpu = 4;
+  kDelayShortGpu = 5;            
+}
+
+enum AutoMemoryStrategy {
+  kDisableAutoMemory = 1;
+  kSlightAutoMemory = 2;
+  kModerateAutoMemory = 3;
+  kHeavyAutoMemory = 4;
+  kAdaptiveAutoMemory = 5;
 }
 
 message JobConfigProto {
@@ -225,6 +241,7 @@ message JobConfigProto {
   }
 
   optional MemoryAllocationAlgorithmConf memory_allocation_algorithm_conf = 102;
+  optional MemoryCompactInsertConf memory_compact_insert_conf = 103;
 
   optional IndexedSlicesOptimizerConf indexed_slices_optimizer_conf = 104;
   optional bool enable_fuse_model_update_ops = 105 [default = false];
@@ -256,6 +273,7 @@ message JobConfigProto {
   optional bool prune_parallel_cast_ops = 509 [default = true];
   optional bool prune_cast_to_static_shape_ops = 510 [default = true];
   optional bool prune_amp_white_identity_ops = 511 [default = true];
+  optional bool prune_depend_ops = 512 [default = true];
 
   optional bool cudnn_conv_enable_pseudo_half = 600 [default = true];
   optional bool enable_auto_mixed_precision = 602 [default = false];
@@ -267,12 +285,13 @@ message JobConfigProto {
   optional bool enable_auto_parallel = 700 [default = false];
   optional double auto_parallel_computation_cost_ratio = 701 [default = 0.05];
   optional double auto_parallel_wait_time = 702 [default = 1.65e4];
-  optional double auto_parallel_transfer_cost = 703 [default = 0.0];
-  optional bool enable_auto_parallel_mainstem_algo = 704 [default = true];
-  optional bool enable_auto_parallel_sbp_collector = 705 [default = false];
-  optional bool enable_auto_parallel_ignore_user_sbp_config = 706 [default = false];
+  optional bool enable_auto_parallel_trunk_algo = 703 [default = true];
+  optional bool enable_auto_parallel_sbp_collector = 704 [default = false];
+  optional bool enable_auto_parallel_ignore_user_sbp_config = 705 [default = false];
+  optional AutoMemoryStrategy enable_auto_memory = 706 [default = kAdaptiveAutoMemory];
   
   optional StraightenAlgorithmTag straighten_algorithm_tag_in_task_graph = 800 [default = kCompressMemory];
+  optional bool enable_compress_memory = 801 [default = false];
 
   optional int64 concurrency_width = 1000 [default = 128];
 

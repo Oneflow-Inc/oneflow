@@ -15,6 +15,7 @@ limitations under the License.
 """
 import unittest
 import numpy as np
+from pkg_resources import packaging
 import oneflow as flow
 import torch as ori_torch
 import oneflow.unittest
@@ -24,11 +25,11 @@ from oneflow.test_utils.test_util import GenArgList
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_maxpool1d_functional(test_case, placement, sbp):
     return_indices = random().to(bool).value()
-    dim0 = random().to(int).value() * 8
-    dim1 = random().to(int).value() * 8
+    dim0 = random(1, 4).to(int).value() * 8
+    dim1 = random(1, 4).to(int).value() * 8
     x = random_tensor(ndim=3, dim0=dim0, dim1=dim1, dim2=random(20, 22)).to_global(
         placement, sbp
     )
@@ -47,11 +48,11 @@ def _test_maxpool1d_functional(test_case, placement, sbp):
         return y
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_maxpool2d_functional(test_case, placement, sbp):
     return_indices = random().to(bool).value()
-    dim0 = random().to(int).value() * 8
-    dim1 = random().to(int).value() * 8
+    dim0 = random(1, 4).to(int).value() * 8
+    dim1 = random(1, 4).to(int).value() * 8
     x = random_tensor(
         ndim=4, dim0=dim0, dim1=dim1, dim2=random(20, 22), dim3=random(20, 22)
     ).to_global(placement, sbp)
@@ -71,7 +72,7 @@ def _test_maxpool2d_functional(test_case, placement, sbp):
         return y
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_maxpool3d_functional(test_case, placement, sbp):
     return_indices = random().to(bool).value()
     dim0 = random(high=4).to(int).value() * 8
@@ -100,11 +101,11 @@ def _test_maxpool3d_functional(test_case, placement, sbp):
         return y
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_maxpool1d(test_case, placement, sbp):
     return_indices = random().to(bool).value()
-    dim0 = random().to(int).value() * 8
-    dim1 = random().to(int).value() * 8
+    dim0 = random(1, 4).to(int).value() * 8
+    dim1 = random(1, 4).to(int).value() * 8
     m = torch.nn.MaxPool1d(
         kernel_size=random(4, 6).to(_size_1_t),
         stride=random(1, 3).to(_size_1_t),
@@ -124,7 +125,7 @@ def _test_maxpool1d(test_case, placement, sbp):
         return y
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_maxpool2d(test_case, placement, sbp):
     return_indices = random().to(bool).value()
     dim0 = random(1, 3).to(int).value() * 8
@@ -148,7 +149,7 @@ def _test_maxpool2d(test_case, placement, sbp):
         return y
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_maxpool3d(test_case, placement, sbp):
     return_indices = random().to(bool).value()
     dim0 = random(high=4).to(int).value() * 8
@@ -207,11 +208,12 @@ def _test_maxpool2d_channel_last(
         ceil_mode=ceil_mode,
     )
     y2 = m2(x2).permute(0, 2, 3, 1)
+    os.environ["ONEFLOW_ENABLE_NHWC"] = "1"
 
-    test_case.assertTrue(
-        np.allclose(y1.detach().cpu().numpy(), y2.detach().cpu().numpy(), 1e-4, 1e-4)
-    )
-    os.environ["ONEFLOW_ENABLE_NHWC"] = "0"
+    # It should be added after updating to torch1.13
+    # test_case.assertTrue(
+    #     np.allclose(y1.detach().cpu().numpy(), y2.detach().cpu().numpy(), 1e-4, 1e-4)
+    # )
 
 
 class TestMaxPool(flow.unittest.TestCase):
@@ -227,6 +229,13 @@ class TestMaxPool(flow.unittest.TestCase):
                 _test_maxpool3d(test_case, placement, sbp)
 
     @globaltest
+    @unittest.skipIf(
+        packaging.version.parse(ori_torch.__version__)
+        == packaging.version.parse("1.10.0"),
+        "skip when pytorch version == 1.10.0",
+    )
+    # NOTE:pytorch maxpool2d nhwc has bug in version of 1.10.0, so skip it in CI.
+    # detail:https://github.com/pytorch/pytorch/pull/76597
     def test_maxpool2d_channel_last(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_maxpool2d_channel_last]

@@ -36,11 +36,4 @@ struct NdarrayApplyUnaryCoreWrapper<DeviceType::kCUDA, T, unary_func> final {
   }
 };
 
-#define INSTANTIATE_NDARRAY_APPLY_UNARY_CORE(dtype_pair, unary_func)                            \
-  template struct NdarrayApplyUnaryCoreWrapper<DeviceType::kCUDA, OF_PP_PAIR_FIRST(dtype_pair), \
-                                               unary_func>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_APPLY_UNARY_CORE,
-                                 ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ,
-                                 ARITHMETIC_UNARY_FUNC_SEQ);
-
 }  // namespace oneflow

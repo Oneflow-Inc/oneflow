@@ -34,7 +34,9 @@ def GetDefaultSession():
 
 
 def NewDefaultSession(env):
-    new_default_sess = MultiClientSession(env, oneflow._oneflow_internal.NewSessionId())
+    session_id = oneflow._oneflow_internal.NewSessionId()
+    assert oneflow._oneflow_internal.RegsterSessionId(session_id)
+    new_default_sess = MultiClientSession(env, session_id)
     global _sess_id2sess
     assert new_default_sess.id not in _sess_id2sess
     _sess_id2sess[new_default_sess.id] = new_default_sess
@@ -46,6 +48,8 @@ def TryCloseDefaultSession():
     assert default_sess_id in _sess_id2sess
     if default_sess_id in _sess_id2sess:
         del _sess_id2sess[default_sess_id]
+    # Try clear to avoid using this outdated session.
+    oneflow._oneflow_internal.ClearSessionId(default_sess_id)
 
 
 def try_init_default_session(func):

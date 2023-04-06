@@ -19,9 +19,9 @@ namespace oneflow {
 
 namespace user_op {
 
-template<typename T>
-struct VarFunctor<DeviceType::kCPU, T> final {
-  void operator()(ep::Stream* stream, const T* in_ptr, T* out_ptr, T* tmp_buffer_ptr,
+template<typename T, typename ComputeType>
+struct VarFunctor<DeviceType::kCPU, T, ComputeType> final {
+  void operator()(ep::Stream* stream, const T* in_ptr, T* out_ptr, ComputeType* tmp_buffer_ptr,
                   const VarParam var_param) {
     // if var_param.parallel_num is 0, do nothing, return 0-size tensor
     if (IsNanOut(var_param)) {
@@ -32,13 +32,15 @@ struct VarFunctor<DeviceType::kCPU, T> final {
       for (size_t i = 0; i < var_param.parallel_num; i++) {
         const size_t input_offset = LinearIndex2Offset(
             i, var_param.dim_size_in_caxis, var_param.stride_in_caxis, var_param.caxis_size);
-        ComputeVarUsingWelford(&in_ptr[input_offset], &out_ptr[i], var_param);
+        ComputeVarUsingWelford<T, ComputeType>(&in_ptr[input_offset], &out_ptr[i], var_param);
       }
     }
   }
 };
 
-template struct VarFunctor<DeviceType::kCPU, float>;
-template struct VarFunctor<DeviceType::kCPU, double>;
+template struct VarFunctor<DeviceType::kCPU, float, double>;
+template struct VarFunctor<DeviceType::kCPU, double, double>;
+template struct VarFunctor<DeviceType::kCPU, float16, double>;
+template struct VarFunctor<DeviceType::kCPU, bfloat16, double>;
 }  // namespace user_op
 }  // namespace oneflow

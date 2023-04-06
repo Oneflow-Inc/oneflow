@@ -24,7 +24,7 @@ class StreamId {
  public:
   using stream_index_t = uint32_t;
 
-  constexpr static size_t kStreamIndexBits = 12;
+  constexpr static size_t kStreamIndexBits = 15;
   constexpr static stream_index_t kMaxStreamIndex =
       (stream_index_t{1} << kStreamIndexBits) - stream_index_t{1};
 

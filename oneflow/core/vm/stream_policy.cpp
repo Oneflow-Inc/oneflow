@@ -30,7 +30,8 @@ bool StreamPolicy::OnSchedulerThread(StreamType stream_type) const {
 }
 
 void StreamPolicy::RunIf(Instruction* instruction) const {
-  if (IsCommNetStream::Visit(instruction->stream().stream_type())) {
+  if (IsCommNetStream::Visit(instruction->stream().stream_type())
+      && ThreadLocalEnvBool<ONEFLOW_VM_MULTI_THREAD>()) {
     ThreadGlobalIdGuard guard{kThreadGlobalIdDefaultWorker};
     Run(instruction);
   } else {

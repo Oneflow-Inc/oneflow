@@ -1,0 +1,26 @@
+#include "OneFlowPDLLUtils.pdll"
+
+Pattern {
+  let device_name: Attr;
+  let device_tag: Attr;
+  let epsilon: Attr;
+  let moving_mean: Value;
+  let moving_variance: Value;
+  let beta: Value;
+  
+  let weight = op<oneflow.variable_ir>;
+  let gamma = op<oneflow.variable_ir>;
+
+  let conv = op<oneflow.conv2d>(x: Value, weight.0){device_name = device_name, device_tag = device_tag};
+  
+  let normalization = op<oneflow.normalization_infer>(conv, moving_mean, moving_variance, gamma.0, beta) {device_name = device_name, device_tag = device_tag, epsilon = epsilon} -> (y: Type);
+
+  rewrite normalization with{
+    let conv2d_bn = CreateConv2DBatchNorm(epsilon, conv, normalization);
+    replace normalization with CopyUserOpAttrs(normalization, conv2d_bn);
+  };
+  
+}
+
+
+

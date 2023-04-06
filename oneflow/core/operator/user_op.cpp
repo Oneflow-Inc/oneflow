@@ -345,8 +345,9 @@ class UserOpSbpContext : public user_op::SbpContext {
   using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
   UserOpSbpContext(const UserOp* op, SbpSignatureList* sbp_sig_list,
-                   std::function<Maybe<const BlobDesc&>(const std::string&)> LogicalBlobDesc4Ibn)
-      : op_(op), sbp_sig_list_(sbp_sig_list) {
+                   std::function<Maybe<const BlobDesc&>(const std::string&)> LogicalBlobDesc4Ibn,
+                   int32_t hierarchy_value)
+      : op_(op), sbp_sig_list_(sbp_sig_list), hierarchy_value_(hierarchy_value) {
     const auto& user_op_conf = op->op_conf().user_conf();
     for (auto it = user_op_conf.input().begin(); it != user_op_conf.input().end(); ++it) {
       const std::string& arg_name = it->first;
@@ -379,10 +380,13 @@ class UserOpSbpContext : public user_op::SbpContext {
     return CHECK_JUST(op_->GetOpParallelDesc())->parallel_num();
   }
 
+  int64_t hierarchy_value() const override { return hierarchy_value_; }
+
  private:
   const UserOp* op_;
   SbpSignatureList* sbp_sig_list_;
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
+  int32_t hierarchy_value_;
 };
 
 class UserOpInferSbpSignatureFnContext : public user_op::InferSbpSignatureFnContext {
@@ -630,6 +634,8 @@ class UserOpGetNdSbpSignatureListContext : public user_op::GetNdSbpSignatureList
         nd_sbp_sig_list_(nd_sbp_sig_list) {}
   ~UserOpGetNdSbpSignatureListContext() override = default;
 
+  std::vector<NdSbpSignature>* MutNdSbpSignatureList() override { return nd_sbp_sig_list_; }
+
   void AddNdSbpSignature(NdSbpSignature& nd_sbp_sig) override {
     nd_sbp_sig_list_->emplace_back(nd_sbp_sig);
   }
@@ -876,10 +882,10 @@ Maybe<void> UserOp::InferSbpSignature(
 
 Maybe<void> UserOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const {
+    int32_t hierarchy_value, SbpSignatureList* sbp_sig_list) const {
   CHECK_OR_RETURN(val_ != nullptr)
       << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in op registry!";
-  UserOpSbpContext sbp_ctx(this, sbp_sig_list, LogicalBlobDesc4Ibn);
+  UserOpSbpContext sbp_ctx(this, sbp_sig_list, LogicalBlobDesc4Ibn, hierarchy_value);
   JUST(val_->get_sbp_fn(&sbp_ctx));
   // Add Broadcast for source user op tick input
   if (val_->op_def.input_size() == 1 && input_bns().size() == 1
@@ -986,6 +992,19 @@ Maybe<void> UserOp::InferNdSbpSignature(
     }
   }
   return Maybe<void>::Ok();
+}
+
+Maybe<void> UserOp::EnumerateNdSbpSignatures(
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list) const {
+  if (val_->enumerate_nd_sbp_signatures_fn) {
+    NdSbpSignature empty_sbp_signature;
+    UserOpGetNdSbpSignatureListContext user_op_get_nd_sbp_list_context(
+        this, LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list);
+    return val_->enumerate_nd_sbp_signatures_fn(&user_op_get_nd_sbp_list_context);
+  } else {
+    return Operator::EnumerateNdSbpSignatures(LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list);
+  }
 }
 
 Maybe<void> UserOp::GetNdSbpSignatureList(

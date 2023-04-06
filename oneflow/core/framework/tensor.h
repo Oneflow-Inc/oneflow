@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/autograd/autograd_engine.h"
+#include "oneflow/core/job/global_mode.h"
 
 namespace oneflow {
 
@@ -91,6 +92,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual bool is_leaf() const = 0;
   virtual bool retain_grad() const = 0;
   virtual std::shared_ptr<const FunctionNode> grad_fn_node() const = 0;
+  virtual int32_t get_grad_fn_output_index() const = 0;
   virtual Maybe<Tensor> acc_grad() const = 0;
   virtual Maybe<TensorArg> current_grad() const = 0;
   virtual Maybe<Tensor> detach() const = 0;
@@ -102,6 +104,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual Maybe<void> set_retain_grad(bool retain_grad) = 0;
   virtual void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) = 0;
   virtual std::shared_ptr<FunctionNode> mut_grad_fn_node() = 0;
+  virtual void set_grad_fn_output_index(int32_t idx) = 0;
   virtual Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) = 0;
   virtual Maybe<Tensor> mut_acc_grad() = 0;
   virtual void set_is_leaf(bool is_leaf) = 0;
@@ -111,6 +114,11 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
 
   virtual user_op::TensorDesc* mut_tensor_meta() = 0;
   virtual Maybe<void> set_data(const std::shared_ptr<Tensor>& other) = 0;
+
+  // For offloading between devices
+  virtual Maybe<void> offload() = 0;
+  virtual Maybe<void> load() = 0;
+  virtual Maybe<bool> is_offloaded() const = 0;
 
   virtual Maybe<void> RegisterStorageDeleteHook(const std::function<void()>& hook) {
     OF_UNIMPLEMENTED();
@@ -123,14 +131,19 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   // The same tensor instance should share the python object to ensure that
   // their id are consistent in Python. That is if x and y are hold the same tensor,
   // then `id(x)` should equal to `id(y)`
-  void* pyobject() const { return pyobject_; }
-  void set_pyobject(void* object) { pyobject_ = object; }
+  void* pyobject() const { return pyobj_ptr_.get(); }
+  void set_pyobject_ptr(std::unique_ptr<void, void (*)(void*)>&& pyobj_ptr) {
+    pyobj_ptr_ = std::move(pyobj_ptr);
+  }
+  bool owns_pyobj() const { return owns_pyobj_; }
+  void set_owns_pyobj(bool owns_pyobj) { owns_pyobj_ = owns_pyobj; }
 
  protected:
-  Tensor() : pyobject_(nullptr) {}
+  Tensor() : pyobj_ptr_(nullptr, [](void*) {}), owns_pyobj_(false) {}
 
  private:
-  void* pyobject_;
+  std::unique_ptr<void, void (*)(void*)> pyobj_ptr_;
+  bool owns_pyobj_;
 };
 
 class StaticZerosTensor final : public Tensor {
@@ -217,6 +230,10 @@ class StaticZerosTensor final : public Tensor {
     PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
   }
+  int32_t get_grad_fn_output_index() const override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+    return 0;
+  }
   Maybe<Tensor> acc_grad() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<TensorArg> current_grad() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<Tensor> detach() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
@@ -237,6 +254,7 @@ class StaticZerosTensor final : public Tensor {
   void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) override {
     PRINT_BUG_PROMPT_AND_ABORT();
   }
+  void set_grad_fn_output_index(int32_t idx) override { PRINT_BUG_PROMPT_AND_ABORT(); }
   std::shared_ptr<FunctionNode> mut_grad_fn_node() override {
     PRINT_BUG_PROMPT_AND_ABORT();
     return *(std::shared_ptr<FunctionNode>*)nullptr;
@@ -265,6 +283,10 @@ class StaticZerosTensor final : public Tensor {
     RETURN_ERROR_WITH_BUG_PROMPT();
   }
 
+  Maybe<void> offload() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<void> load() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<bool> is_offloaded() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+
   Maybe<LocalTensor> AsLocalTensor() override;
   Maybe<GlobalTensor> AsGlobalTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
@@ -286,16 +308,19 @@ class TensorIf : public Tensor {
   // acc_grad is tensor's accumulated grad in more than once backward operation,
   // and current_grad is temporary grad to shared data with different FunctionNode
   std::shared_ptr<const FunctionNode> grad_fn_node() const override { return grad_fn_node_; }
+  int32_t get_grad_fn_output_index() const override { return grad_fn_output_index_; }
 
   // Setters for autograd
   void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) override {
     grad_fn_node_ = grad_fn_node;
   }
   std::shared_ptr<FunctionNode> mut_grad_fn_node() override { return grad_fn_node_; }
+  void set_grad_fn_output_index(int32_t idx) override { grad_fn_output_index_ = idx; }
 
  protected:
   TensorIf() = default;
   std::shared_ptr<FunctionNode> grad_fn_node_;
+  int32_t grad_fn_output_index_ = -1;
 };
 
 template<typename DerivedT>
@@ -410,6 +435,16 @@ class ProxyTensor : public TensorIf<DerivedT> {
     return Maybe<void>::Ok();
   }
 
+  virtual Maybe<void> offload() override {
+    JUST(tensor_->offload());
+    return Maybe<void>::Ok();
+  }
+  virtual Maybe<void> load() override {
+    JUST(tensor_->load());
+    return Maybe<void>::Ok();
+  }
+  Maybe<bool> is_offloaded() const override { return JUST(tensor_->is_offloaded()); }
+
   virtual Maybe<LocalTensor> AsLocalTensor() override {
     if (const auto& local_tensor = std::dynamic_pointer_cast<LocalTensor>(tensor_)) {
       return local_tensor;
@@ -436,12 +471,10 @@ class Parameter final : public ProxyTensor<Parameter> {
   bool is_leaf() const override { return true; }
   std::shared_ptr<Tensor> contiguous() const override;
   std::shared_ptr<Tensor> pin_memory() const override;
+  Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override;
 
  private:
-  Parameter(const std::shared_ptr<Tensor>& tensor, bool requires_grad)
-      : ProxyTensor<Parameter>(tensor) {
-    this->tensor_->set_requires_grad(requires_grad);
-  }
+  Parameter(const std::shared_ptr<Tensor>& tensor, bool requires_grad);
 };
 
 class LocalTensor final : public TensorIf<LocalTensor> {
@@ -549,6 +582,10 @@ class LocalTensor final : public TensorIf<LocalTensor> {
   }
   Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override;
 
+  Maybe<void> offload() override;
+  Maybe<void> load() override;
+  Maybe<bool> is_offloaded() const override { return is_offloaded_; }
+
   Maybe<void> set_impl(std::shared_ptr<LocalTensorImpl> impl) {
     impl_ = impl;
     return Maybe<void>::Ok();
@@ -565,6 +602,8 @@ class LocalTensor final : public TensorIf<LocalTensor> {
 
  private:
   std::shared_ptr<LocalTensorImpl> impl_;
+  std::shared_ptr<LocalTensorImpl> offloaded_impl_;
+  bool is_offloaded_{false};
 };
 
 class GlobalTensor final : public TensorIf<GlobalTensor> {
@@ -581,6 +620,11 @@ class GlobalTensor final : public TensorIf<GlobalTensor> {
   Maybe<Symbol<NdSbp>> nd_sbp() const override { return impl_->nd_sbp(); }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override { return impl_->parallel_desc(); }
   Maybe<Symbol<Device>> device() const override {
+    if (GlobalMode::is_enabled()) {
+      auto global_mode_gurad = GlobalMode::Guard(false);
+      const auto& device_tag = JUST(parallel_desc())->device_tag();
+      return JUST(Device::New(device_tag));
+    }
     OF_RUNTIME_ERROR() << "Only local tensors have 'device'. Please use "
                           "'.placement' for global tensors.";
   }
@@ -670,6 +714,10 @@ class GlobalTensor final : public TensorIf<GlobalTensor> {
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
   Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override;
 
+  Maybe<void> offload() override;
+  Maybe<void> load() override;
+  Maybe<bool> is_offloaded() const override { return is_offloaded_; }
+
   Maybe<LocalTensor> AsLocalTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<GlobalTensor> AsGlobalTensor() override {
     return std::dynamic_pointer_cast<GlobalTensor>(shared_from_this());
@@ -677,6 +725,8 @@ class GlobalTensor final : public TensorIf<GlobalTensor> {
 
  private:
   std::shared_ptr<GlobalTensorImpl> impl_;
+  std::shared_ptr<GlobalTensorImpl> offloaded_impl_;
+  bool is_offloaded_{false};
 };
 
 }  // namespace one

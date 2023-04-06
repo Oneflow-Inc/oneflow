@@ -38,7 +38,7 @@ class TensorArg final {
   bool Empty() const;
   void Release();
   Maybe<void> PushPartialTensor(const std::shared_ptr<Tensor>& partial_tensor);
-  Maybe<Tensor> GetAccTensor(const std::vector<AutogradMeta::Hook>& hooks);
+  Maybe<Tensor> GetAccTensor() const;
 
  private:
   std::shared_ptr<Tensor> acc_tensor_;

@@ -50,11 +50,13 @@ class CpuTriuKernel final : public user_op::OpKernel {
       (user_op::HobDeviceType() == DeviceType::kCPU)                                \
       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
+REGISTER_CPU_TRIU_KERNEL(float16)
 REGISTER_CPU_TRIU_KERNEL(float)
 REGISTER_CPU_TRIU_KERNEL(double)
 REGISTER_CPU_TRIU_KERNEL(uint8_t)
 REGISTER_CPU_TRIU_KERNEL(int8_t)
 REGISTER_CPU_TRIU_KERNEL(int32_t)
 REGISTER_CPU_TRIU_KERNEL(int64_t)
+REGISTER_CPU_TRIU_KERNEL(bool)
 
 }  // namespace oneflow

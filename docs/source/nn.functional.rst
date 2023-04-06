@@ -27,6 +27,15 @@ Convolution functions
     fold
     unfold
 
+BatchNorm functions
+--------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    batch_norm
+
 Pooling functions
 ----------------------------------
 
@@ -40,6 +49,9 @@ Pooling functions
     max_pool1d
     max_pool2d
     max_pool3d
+    max_unpool1d
+    max_unpool2d
+    max_unpool3d
     adaptive_avg_pool1d
     adaptive_avg_pool2d
     adaptive_avg_pool3d
@@ -66,6 +78,7 @@ Non-linear activation functions
     prelu
     glu
     gelu
+    quick_gelu
     logsigmoid
     hardshrink
     softsign
@@ -73,6 +86,7 @@ Non-linear activation functions
     softmax
     softshrink
     log_softmax
+    gumbel_softmax
     tanh
     sigmoid
     hardsigmoid
@@ -132,6 +146,7 @@ Loss functions
 
     sparse_softmax_cross_entropy
     cross_entropy
+    ctc_loss
     l1_loss
     mse_loss
     smooth_l1_loss

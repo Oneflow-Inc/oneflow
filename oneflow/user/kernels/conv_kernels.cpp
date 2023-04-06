@@ -517,6 +517,17 @@ class ConvCpuKernel final : public user_op::OpKernel {
     }
     CHECK(matmul);
 
+    float beta = 0;
+    if (ctx->has_input("_add_to_output", 0)) {
+      const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
+      CHECK_EQ(add_to_output->data_type(), out->data_type());
+      CHECK_EQ(add_to_output->shape_view(), out->shape_view());
+      Memcpy<DeviceType::kCPU>(
+          ctx->stream(), out->mut_dptr(), add_to_output->dptr(),
+          add_to_output->shape_view().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
+      beta = 1;
+    }
+
     for (int64_t i = 0; i < in->shape_view().At(0); ++i) {
       conv_cache->im2col_func_(GetImgDptr<T>(in, i), ShapeView(conv_cache->in_5d_shape_),
                                ShapeView(conv_cache->weight_5d_shape_),
@@ -531,7 +542,7 @@ class ConvCpuKernel final : public user_op::OpKernel {
                      conv_cache->weight_5d_shape_.At(0),                           // filter
                      conv_cache->out_5d_shape_.Count(idx_offset, idx_offset + 3),  // od * oh * ow
                      conv_cache->weight_5d_shape_.Count(1),  // ci * kd * kh * kw
-                     static_cast<T>(1), weight->dptr<T>(), col_buf_dptr, static_cast<T>(0),
+                     static_cast<T>(1), weight->dptr<T>(), col_buf_dptr, beta,
                      GetImgMutDptr<T>(out, i));
 
       const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
@@ -583,7 +594,15 @@ class ConvCpuKernel final : public user_op::OpKernel {
           tmp_buffer_size += bias_mul_cnt * sizeof(dtype);                                  \
         }                                                                                   \
         return tmp_buffer_size;                                                             \
-      })
+      })                                                                                    \
+      .SetInplaceProposalFn(                                                                \
+          [](const user_op::InferContext& ctx,                                              \
+             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {        \
+            if (ctx.has_input("_add_to_output", 0)) {                                       \
+              OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true)); \
+            }                                                                               \
+            return Maybe<void>::Ok();                                                       \
+          });
 
 REGISTER_CONV_KERNEL(conv1d, float, 1);
 REGISTER_CONV_KERNEL(conv2d, float, 2);

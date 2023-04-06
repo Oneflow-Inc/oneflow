@@ -28,8 +28,9 @@ class PrunePinnedIdentityOpPass final : public JobPass {
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override;
 };
 
-Maybe<std::string> PrunePinnedIdentityOp(JobBuilder* job_builder, const OpGraph& op_graph,
-                                         const std::string& lbn) {
+Maybe<std::string> PrunePinnedIdentityOp(JobBuilder* job_builder,
+                                         std::vector<std::string>* outdated_ops,
+                                         const OpGraph& op_graph, const std::string& lbn) {
   auto lbi = GenLogicalBlobId(lbn);
   const OpNode* op_node = op_graph.OpNode4OpName(lbi.op_name());
   CHECK_EQ_OR_RETURN(op_node->in_edges().size(), 1);  // NOLINT
@@ -59,7 +60,7 @@ Maybe<std::string> PrunePinnedIdentityOp(JobBuilder* job_builder, const OpGraph&
       }
     }
   });
-  job_builder->DelOps({op_conf.name()});
+  outdated_ops->push_back(op_conf.name());
   return GenLogicalBlobName(in_lbi);
 }
 
@@ -68,13 +69,15 @@ Maybe<void> PrunePinnedIdentityOpPass::Apply(Job* job, JobPassCtx* ctx) const {
   const OpGraph op_graph(*job);
   JobBuilder job_builder(job);
   HashMap<std::string, std::string> pruned_lbns;
+  std::vector<std::string> outdated_ops;
   TrainConf* train_conf = job->mutable_job_conf()->mutable_train_conf();
   // prune loss pinned identity
   for (int i = 0; i < train_conf->loss_lbn_size(); ++i) {
     const auto& pinned_loss_lbn = train_conf->loss_lbn(i);
     auto it = pruned_lbns.find(pinned_loss_lbn);
     if (it == pruned_lbns.end()) {
-      const auto& loss_lbn = JUST(PrunePinnedIdentityOp(&job_builder, op_graph, pinned_loss_lbn));
+      const auto& loss_lbn =
+          JUST(PrunePinnedIdentityOp(&job_builder, &outdated_ops, op_graph, pinned_loss_lbn));
       it = pruned_lbns.emplace(pinned_loss_lbn, *loss_lbn).first;
     }
     train_conf->set_loss_lbn(i, it->second);
@@ -85,7 +88,7 @@ Maybe<void> PrunePinnedIdentityOpPass::Apply(Job* job, JobPassCtx* ctx) const {
     auto it = pruned_lbns.find(pinned_loss_grad_lbn);
     if (it == pruned_lbns.end()) {
       const auto& loss_grad_lbn =
-          JUST(PrunePinnedIdentityOp(&job_builder, op_graph, pinned_loss_grad_lbn));
+          JUST(PrunePinnedIdentityOp(&job_builder, &outdated_ops, op_graph, pinned_loss_grad_lbn));
       it = pruned_lbns.emplace(pinned_loss_grad_lbn, *loss_grad_lbn).first;
     }
     train_conf->set_loss_grad_lbn(i, it->second);
@@ -98,13 +101,14 @@ Maybe<void> PrunePinnedIdentityOpPass::Apply(Job* job, JobPassCtx* ctx) const {
       if (pinned_variable_grad_lbn.empty()) { continue; }
       auto it = pruned_lbns.find(pinned_variable_grad_lbn);
       if (it == pruned_lbns.end()) {
-        const auto& variable_grad_lbn =
-            JUST(PrunePinnedIdentityOp(&job_builder, op_graph, pinned_variable_grad_lbn));
+        const auto& variable_grad_lbn = JUST(
+            PrunePinnedIdentityOp(&job_builder, &outdated_ops, op_graph, pinned_variable_grad_lbn));
         it = pruned_lbns.emplace(pinned_variable_grad_lbn, *variable_grad_lbn).first;
       }
       optimizer_conf->set_variable_grad_lbns(j, it->second);
     }
   }
+  job_builder.DelOps(outdated_ops);
   JUST(job_builder.MutOpTransactionCommit());
   return Maybe<void>::Ok();
 }

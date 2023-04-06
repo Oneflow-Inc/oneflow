@@ -28,9 +28,9 @@ namespace oneflow {
 namespace vm {
 class EpRecordEventInstructionPolicy final : public InstructionPolicy {
  public:
-  EpRecordEventInstructionPolicy(small_vector<intrusive::shared_ptr<LocalDepObject>,
-                                              kOpArgsReservedSize>&& compute_local_dep_objects,
-                                 const std::string& modifier)
+  EpRecordEventInstructionPolicy(
+      small_vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_objects,
+      const std::string& modifier)
       : compute_local_dep_objects_(std::move(compute_local_dep_objects)),
         modifier_(modifier),
         input_dependences_(),
@@ -64,7 +64,6 @@ class EpRecordEventInstructionPolicy final : public InstructionPolicy {
       for (const auto& dep : compute_local_dep_objects_) { DoEach(dep.get()); }
     }
   }
-  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {}
   InstructionFuseType fuse_type() const override { return kEnableInstructionFuseAsTailOnly; }
 
   void InitInstructionStatus(Instruction* instruction) override {
@@ -84,8 +83,7 @@ class EpRecordEventInstructionPolicy final : public InstructionPolicy {
   void Compute(vm::Instruction* instruction) override {}
 
  private:
-  small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>
-      compute_local_dep_objects_;
+  small_vector<intrusive::shared_ptr<LocalDepObject>> compute_local_dep_objects_;
   const std::string modifier_;
   DependenceVector input_dependences_;
   DependenceVector output_dependences_;

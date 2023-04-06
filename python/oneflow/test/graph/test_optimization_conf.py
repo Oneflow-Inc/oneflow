@@ -45,6 +45,7 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
 
         flow.backends.cudnn.set_reserved_mem_mbytes(1000)
         flow.backends.cudnn.enable_fused_normalization_add_relu(True)
+        flow.backends.cudnn.enable_conv_heuristic_search_algo(False)
 
         flow.utils.load_library("")
 

@@ -1,0 +1,30 @@
+name: Documentation Issue
+description: Report an issue about OneFlow ducumention or require a documention.
+title: "[Documention Issue]: "
+labels: [Documention Issue]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Welcome to suggest to OneFlow documention! This template will help us gather the information we need to improve it.
+  - type: textarea
+    id: brief-description
+    attributes:
+      label: Brief Description
+      description: Please describe the problem or the requst for new documention here.
+      placeholder: Description
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: |
+        Please provide some alternative information here, if any.
+      placeholder: Alternatives
+    validations:
+      required: false
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your contributing!

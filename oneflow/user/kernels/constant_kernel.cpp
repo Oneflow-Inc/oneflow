@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <complex>
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ep/include/primitive/fill.h"
 
@@ -35,9 +36,13 @@ class ConstantKernel final : public OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
+    bool is_complex_value = ctx->Attr<bool>("is_complex_value");
     bool is_floating_value = ctx->Attr<bool>("is_floating_value");
-    const Scalar value = is_floating_value ? Scalar(ctx->Attr<double>("floating_value"))
-                                           : Scalar(ctx->Attr<int64_t>("integer_value"));
+
+    const Scalar value = is_complex_value
+                             ? Scalar(ctx->Attr<std::complex<double>>("complex_value"))
+                             : (is_floating_value ? Scalar(ctx->Attr<double>("floating_value"))
+                                                  : Scalar(ctx->Attr<int64_t>("integer_value")));
     const int64_t elem_cnt = out_tensor->shape_view().elem_cnt();
     CHECK_GE(elem_cnt, 0);
     if (elem_cnt == 0) { return; }

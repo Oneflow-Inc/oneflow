@@ -18,6 +18,8 @@ limitations under the License.
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/tensor_arg.h"
 #include "oneflow/core/autograd/autograd_meta.h"
+#include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/eager/tensor_storage.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -63,16 +65,39 @@ AutogradMeta::AutogradMeta(bool requires_grad, bool is_leaf)
     : is_leaf_(is_leaf),
       requires_grad_(requires_grad),
       retain_grad_(false),
-      is_grad_acc_inplace_(false),
       current_grad_(new TensorArg) {}
 
 Maybe<void> AutogradMeta::set_acc_grad(const std::shared_ptr<Tensor>& grad) {
+  // NOTE(daquexian): update here if we support remat on global tensors
+  if (grad && acc_grad_ != nullptr && acc_grad_->is_eager() && acc_grad_->is_local()) {
+    // set old acc_grad evictable
+    if (auto rematable_storage = std::dynamic_pointer_cast<vm::RematableTensorStorage>(
+            JUST(acc_grad_->eager_blob_object())->tensor_storage())) {
+      rematable_storage->set_eviction_disabled(false);
+    }
+  }
   if (const auto& static_zeros_tensor = std::dynamic_pointer_cast<StaticZerosTensor>(grad)) {
     acc_grad_ = JUST(static_zeros_tensor->AsLocalTensor());
   } else {
     acc_grad_ = grad;
   }
+  if (acc_grad_ != nullptr && acc_grad_->is_eager() && acc_grad_->is_local()) {
+    // set new acc_grad non-evictable
+    if (auto rematable_storage = std::dynamic_pointer_cast<vm::RematableTensorStorage>(
+            JUST(acc_grad_->eager_blob_object())->tensor_storage())) {
+      rematable_storage->set_eviction_disabled(true);
+    }
+  }
   return Maybe<void>::Ok();
+}
+
+Maybe<Tensor> AutogradMeta::current_grad_value() const {
+  std::shared_ptr<Tensor> res = JUST(current_grad_->GetAccTensor());
+  for (const auto& hook : hooks_) {
+    const auto& new_tensor = hook(res);
+    if (new_tensor) { res = new_tensor; }
+  }
+  return res;
 }
 
 }  // namespace one

@@ -77,6 +77,13 @@ void CopyHdTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
   }
 }
 
+void CopyHdTaskNode::ProduceAllRegstsAndBindEdges() {
+  const bool enable_mem_reuse = ParseBooleanFromEnv("ONEFLOW_GRAPH_BOXING_ENABLE_MEM_REUSE", false)
+                                && (copy_type_ == CopyHdType::H2D);
+  std::shared_ptr<RegstDesc> out_regst = ProduceRegst("copy_out", enable_mem_reuse);
+  ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst("copy_out", out_regst); });
+}
+
 OperatorConf CopyHdTaskNode::NewCopyOpConf() {
   OperatorConf conf;
   conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(device_type())));

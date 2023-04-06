@@ -1,19 +1,19 @@
-*.cu @liujuncheng @guo-ran @MARD1NO
-*.py @BBuf @daquexian @jackalcooper
+*.cu @liujuncheng
+*.py @BBuf @daquexian
 /oneflow/core/cuda @liujuncheng
-/oneflow/core/eager @lixinqi @daquexian
+/oneflow/core/eager @daquexian
 /oneflow/core/framework @chengtbf @strint
 /oneflow/core/functional @hjchen2
 /oneflow/core/graph @chengtbf
-/oneflow/core/ndarray @lixinqi
-/oneflow/core/object_msg @lixinqi
+/oneflow/core/ndarray @daquexian
+/oneflow/core/object_msg @daquexian
 /oneflow/core/platform @jackalcooper
 /oneflow/core/ep @liujuncheng
 /oneflow/core/rpc @jackalcooper
 /oneflow/core/stream @liujuncheng
 /oneflow/core/hardware @liujuncheng
 /oneflow/core/transport @chengtbf
-/oneflow/core/vm @lixinqi
+/oneflow/core/vm @daquexian
 /oneflow/xrt @hjchen2
 /oneflow/ir @hjchen2 @BBuf @jackalcooper
 /ci @jackalcooper
@@ -22,4 +22,4 @@
 CMakeLists.txt @daquexian @jackalcooper
 /.github @jackalcooper
 /tools @jackalcooper
-/docs @doombeaker @jackalcooper
+/docs @doombeaker

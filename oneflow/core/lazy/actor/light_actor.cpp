@@ -191,6 +191,30 @@ size_t GetConsumerCount(const TaskProto& task) {
   return consumer_cnt;
 }
 
+bool NeedExecKernelWhenInplace(const TaskProto& task) {
+  int64_t data_regst_cnt = 0;
+  for (const auto& pair : task.produced_regst_desc()) {
+    if (pair.second.regst_desc_type().has_data_regst_desc()) {
+      if (data_regst_cnt != 0) { return true; }
+      data_regst_cnt += 1;
+      const DataRegstDesc& regst_desc = pair.second.regst_desc_type().data_regst_desc();
+      if (regst_desc.lbi2blob_desc().size() != 1) { return true; }
+      if (regst_desc.lbi2blob_desc().begin()->blob_desc().is_dynamic()) { return true; }
+    }
+  }
+  if (data_regst_cnt != 1) { return true; }
+  if (task.exec_sequence().exec_node().size() != 1) { return true; }
+  const OperatorConf& op_conf =
+      task.exec_sequence().exec_node(0).kernel_conf().op_attribute().op_conf();
+  if (!op_conf.has_user_conf()) { return true; }
+  const std::string& op_type = op_conf.user_conf().op_type_name();
+  const bool is_const_inplace_op_type = (op_type == "expand_dims") || (op_type == "squeeze")
+                                        || (op_type == "reshape") || (op_type == "reshape_like")
+                                        || (op_type == "transpose");
+  if (!is_const_inplace_op_type) { return true; }
+  return false;
+}
+
 #ifdef WITH_CUDA_GRAPHS
 
 bool IsCUDAGraphSupported(const Kernel* kernel) {
@@ -201,7 +225,7 @@ bool IsCUDAGraphSupported(const Kernel* kernel) {
 #endif  // WITH_CUDA_GRAPHS
 
 template<int exec_kernel, int inplace, typename IndexType, typename RegstIndex,
-         typename StateContainer>
+         typename StateContainer, bool dynamic_allocation>
 class LightActor : public ActorBase, public KernelContext, public ActorContextProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LightActor);
@@ -252,6 +276,28 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
     IndexType inplace_produced_index = -1;
     IndexType inplace_consumed_index = -1;
     int64_t inplace_consumed_regst_desc_id = -1;
+
+    for (const auto& pair : task_proto.produced_regst_desc()) {
+      const RegstDescProto& regst_desc = pair.second;
+      if (IsInplaceRegstDesc(regst_desc)) {
+        CHECK_EQ(inplace_consumed_regst_desc_id, -1);
+        inplace_consumed_regst_desc_id = regst_desc.inplace_consumed_regst_desc_id();
+      }
+    }
+
+    for (const auto& pair : task_proto.consumed_regst_desc_id()) {
+      for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
+        const IndexType index = regst_desc_id_index_.Add(regst_desc_id);
+        auto& state = index2state_.Get(index);
+        state.regst_type = RegstType::kConsumed;
+        state.consumed.ready = false;
+        state.consumed.eord = false;
+        remaining_eord_cnt_ += 1;
+        max_ready_consumed_ += 1;
+        if (regst_desc_id == inplace_consumed_regst_desc_id) { inplace_consumed_index = index; }
+      }
+    }
+
     for (const auto& pair : task_proto.produced_regst_desc()) {
       const RegstDescProto& regst_desc = pair.second;
       const IndexType index = regst_desc_id_index_.Add(regst_desc.regst_desc_id());
@@ -268,20 +314,6 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
       if (IsInplaceRegstDesc(regst_desc)) {
         CHECK_EQ(inplace_produced_index, -1);
         inplace_produced_index = index;
-        inplace_consumed_regst_desc_id = regst_desc.inplace_consumed_regst_desc_id();
-      }
-    }
-
-    for (const auto& pair : task_proto.consumed_regst_desc_id()) {
-      for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
-        const IndexType index = regst_desc_id_index_.Add(regst_desc_id);
-        auto& state = index2state_.Get(index);
-        state.regst_type = RegstType::kConsumed;
-        state.consumed.ready = false;
-        state.consumed.eord = false;
-        remaining_eord_cnt_ += 1;
-        max_ready_consumed_ += 1;
-        if (regst_desc_id == inplace_consumed_regst_desc_id) { inplace_consumed_index = index; }
       }
     }
 
@@ -399,6 +431,22 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
       auto& state = index2state_.Get(i);
       if (state.regst_type == RegstType::kProduced) {
         state.produced.reading_cnt = state.produced.max_reading_cnt;
+        if (dynamic_allocation && state.produced.max_reading_cnt == 0
+            && state.regst->regst_desc()->regst_desc_type().has_data_regst_desc()) {
+          if (state.regst->allocation_type() == RegstAllocationType::kStreamOrdered) {
+            if (inplace && i == inplace_produced_index_[0]) {
+              // do nothing
+            } else {
+              CHECK_JUST(
+                  actor_ctx_->stream_ctx()->stream()->FreeAsync(state.regst->body_mem_ptr()));
+            }
+            state.regst->ResetBodyMemPtr(nullptr);
+          } else if (state.regst->allocation_type() == RegstAllocationType::kStatic) {
+            // do nothing
+          } else {
+            UNIMPLEMENTED();
+          }
+        }
       } else if (state.regst_type == RegstType::kConsumed) {
         state.consumed.ready = false;
       } else {
@@ -412,8 +460,10 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
       HandleRegstMsg(msg);
     } else if (msg.msg_type() == ActorMsgType::kEordMsg) {
       HandleEordMsg(msg);
+    } else if (msg.msg_type() == ActorMsgType::kCmdMsg) {
+      CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
     } else {
-      UNIMPLEMENTED();
+      UNIMPLEMENTED() << msg.msg_type() << " " << actor_ctx_->task_proto().task_id();
     }
   }
 
@@ -437,6 +487,23 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
       state.produced.reading_cnt -= 1;
       CHECK_GT(total_reading_cnt_, 0);
       total_reading_cnt_ -= 1;
+
+      if (dynamic_allocation && state.produced.reading_cnt == 0
+          && state.regst->regst_desc()->regst_desc_type().has_data_regst_desc()) {
+        if (state.regst->allocation_type() == RegstAllocationType::kStreamOrdered) {
+          if (inplace && index == inplace_produced_index_[0]) {
+            // do nothing
+          } else {
+            CHECK_JUST(actor_ctx_->stream_ctx()->stream()->FreeAsync(state.regst->body_mem_ptr()));
+          }
+          state.regst->ResetBodyMemPtr(nullptr);
+        } else if (state.regst->allocation_type() == RegstAllocationType::kStatic) {
+          // do nothing
+        } else {
+          UNIMPLEMENTED();
+        }
+      }
+
       if (inplace && index == inplace_produced_index_[0] && state.produced.reading_cnt == 0) {
         return_inplace_consumed_fn_[0]();
       }
@@ -459,6 +526,29 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
       InitBnInOp2Blob();
       InitActMsg();
     }
+
+    for (IndexType i = 0; i < index2state_.Size(); ++i) {
+      auto& state = index2state_.Get(i);
+      if (dynamic_allocation && state.regst_type == RegstType::kProduced
+          && state.regst->regst_desc()->regst_desc_type().has_data_regst_desc()) {
+        if (state.regst->allocation_type() == RegstAllocationType::kStreamOrdered) {
+          CHECK(state.regst->body_mem_ptr() == nullptr);
+          void* body_ptr = nullptr;
+          if (inplace && i == inplace_produced_index_[0]) {
+            body_ptr = index2state_.Get(inplace_consumed_index_[0]).regst->body_mem_ptr();
+          } else {
+            CHECK_JUST(actor_ctx_->stream_ctx()->stream()->AllocAsync(
+                &body_ptr, state.regst->regst_desc()->BodyByteSize4OneRegst()));
+          }
+          state.regst->ResetBodyMemPtr(body_ptr);
+        } else if (state.regst->allocation_type() == RegstAllocationType::kStatic) {
+          // do nothing
+        } else {
+          UNIMPLEMENTED();
+        }
+      }
+    }
+
     if (exec_kernel) { LaunchKernel(); }
     ResetState();
     thread_->EnqueueActorMsg(sync_post_act_msgs_.cbegin(), sync_post_act_msgs_.cend());
@@ -611,7 +701,15 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
 template<int kernel_exec, int inplace, typename IndexType, typename RegstIndex,
          typename StateContainer>
 ActorBase* NewLightActor(ActorContext* actor_ctx) {
-  return new LightActor<kernel_exec, inplace, IndexType, RegstIndex, StateContainer>(actor_ctx);
+  const bool dynamic_allocation =
+      ParseBooleanFromEnv("ONEFLOW_GRAPH_ENABLE_STREAM_ORDERED_MEMORY_ALLOCATION", false);
+  if (dynamic_allocation) {
+    return new LightActor<kernel_exec, inplace, IndexType, RegstIndex, StateContainer, true>(
+        actor_ctx);
+  } else {
+    return new LightActor<kernel_exec, inplace, IndexType, RegstIndex, StateContainer, false>(
+        actor_ctx);
+  }
 }
 
 template<int kernel_exec, int inplace, typename IndexType>
@@ -663,7 +761,11 @@ ActorBase* DispatchNewLightActorInplace(ActorContext* actor_ctx) {
     }
   }
   if (inplace) {
-    return DispatchNewLightActorIndexType<kernel_exec, 1>(actor_ctx);
+    if (kernel_exec && NeedExecKernelWhenInplace(actor_ctx->task_proto())) {
+      return DispatchNewLightActorIndexType<1, 1>(actor_ctx);
+    } else {
+      return DispatchNewLightActorIndexType<0, 1>(actor_ctx);
+    }
   } else {
     return DispatchNewLightActorIndexType<kernel_exec, 0>(actor_ctx);
   }

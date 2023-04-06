@@ -27,7 +27,8 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 from oneflow.framework.tensor import Tensor, TensorTuple
-from oneflow.nn.graph.util import ArgsTree
+from oneflow.framework.args_tree import ArgsTree
+from oneflow.nn.graph import GraphModule
 
 
 class BaseOutput(OrderedDict):
@@ -158,6 +159,57 @@ class TestGraphIOCheck(flow.unittest.TestCase):
         test_case.assertEqual(ret[0][2], "mapped_str")
         test_case.assertEqual(id(ret[1]["kw"]), id(t4))
 
+    def test_io_node_with_simple_tuple_or_list_input(self):
+        x = np.ones((2, 2))
+        x = flow.tensor(x, dtype=flow.float32)
+
+        t2 = np.ones((2, 2))
+        t2 = flow.tensor(t2, dtype=flow.float32)
+        t3 = np.ones((2, 2))
+        t3 = flow.tensor(t3, dtype=flow.float32)
+        t4 = np.ones((2, 2))
+        t4 = flow.tensor(t4, dtype=flow.float32)
+        t5 = np.ones((2, 2))
+        t5 = flow.tensor(t4, dtype=flow.float32)
+        t6 = np.ones((2, 2))
+        t6 = flow.tensor(t4, dtype=flow.float32)
+
+        input_tuple = (x, t2, t3, t4)
+        input_list = [t5, t6]
+
+        def fn(args):
+            print("origin: ", args)
+
+            args_tree = ArgsTree(args, False)
+
+            for arg in args_tree.iter_nodes():
+                print(repr(arg))
+
+            def leaf_fn(value):
+                if isinstance(value, Tensor) and not value.is_contiguous():
+                    value.contiguous_()
+                return value
+
+            m_v = args_tree.map_tuple_leaf(leaf_fn)
+            print("mapped:", m_v)
+            return m_v
+
+        # input tuple
+        ret = fn(input_tuple)
+        print(ret)
+        self.assertTrue(isinstance(ret, tuple))
+        self.assertEqual(id(ret[0]), id(x))
+        self.assertEqual(id(ret[1]), id(t2))
+        self.assertEqual(id(ret[2]), id(t3))
+        self.assertEqual(id(ret[3]), id(t4))
+
+        # input list
+        ret = fn(input_list)
+        print(ret)
+        self.assertTrue(isinstance(ret, list))
+        self.assertEqual(id(ret[0]), id(t5))
+        self.assertEqual(id(ret[1]), id(t6))
+
     def test_custom_class(test_case):
         x = np.ones((2, 2))
         x = flow.tensor(x, dtype=flow.float32)
@@ -196,7 +248,7 @@ class TestGraphIOCheck(flow.unittest.TestCase):
             def __init__(self):
                 super().__init__()
                 self.m = CustomModuleIOCheck()
-                self.m.config.activation_checkpointing = True
+                self.m.to(GraphModule).activation_checkpointing = True
 
             def build(self, t, lt, n, **kwargs):
                 rt, rlt, n, ri, rs, dic = self.m(t, lt, n, 1, "2", **kwargs)

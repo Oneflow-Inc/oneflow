@@ -33,8 +33,7 @@ class ResourceDesc;
 
 Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf);
 
-Maybe<void> ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id,
-                                std::string* device_id_str);
+Maybe<std::pair<int64_t, std::string>> ParseDeviceNameConf(const std::string& device_name);
 
 class ParallelContext;
 class Device;
@@ -145,6 +144,8 @@ extern Maybe<std::string> (*PlacementToString)(Symbol<ParallelDesc> placement);
 extern Maybe<Symbol<Device>> (*GetTensorDevice)(Symbol<ParallelDesc> parallel_desc);
 extern Maybe<Symbol<ParallelDesc>> (*TxtStringToPlacement)(const std::string& parallel_conf_str);
 extern Maybe<void> (*CheckDeviceIdsIsValid)(Symbol<ParallelDesc> placement);
+
+extern Maybe<Symbol<ParallelDesc>> (*GetParallelDescOfThisRank)(const std::string& device_tag);
 
 inline bool operator==(const ParallelConf& lhs, const ParallelConf& rhs) {
   return ParallelDesc(lhs) == ParallelDesc(rhs);

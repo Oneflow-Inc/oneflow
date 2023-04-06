@@ -119,14 +119,21 @@ namespace oneflow {
   const auto axis = ctx->Attr<int64_t>("axis");
   const int64_t like_num_axes =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape().NumAxes();
-  FOR_RANGE(int64_t, i, 0, like_num_axes) {
-    if (i == axis || i < 1) { continue; }
-    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i - 1).Build();
-  }
   std::vector<user_op::OpArg> like_arg_vec;
   const size_t like_arg_size = ctx->outputs().size();
   like_arg_vec.reserve(like_arg_size);
   FOR_RANGE(int32_t, i, 0, like_arg_size) { like_arg_vec.emplace_back("like", i); }
+  FOR_RANGE(int64_t, i, 0, like_num_axes) {
+    if (i >= axis) {
+      ctx->NewBuilder()
+          .Split(like_arg_vec, i)
+          .Split(ctx->outputs(), i)
+          .Split(user_op::OpArg("in", 0), i + 1)
+          .Build();
+    } else {
+      ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+    }
+  }
   ctx->NewBuilder()
       .PartialSum(user_op::OpArg("in", 0))
       .PartialSum(like_arg_vec)

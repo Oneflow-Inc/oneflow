@@ -23,6 +23,39 @@ namespace oneflow {
 
 namespace {
 
+__device__ __forceinline__ void GetBilinearParamHalf(const bool align_corners, const int64_t h,
+                                                     const int64_t w, const int64_t in_height,
+                                                     const int64_t in_width, const double scale_h,
+                                                     const double scale_w,
+                                                     BilinearParam<half>* params) {
+  half h1r;
+  if (align_corners) {
+    h1r = static_cast<half>(scale_h * static_cast<double>(h));
+  } else {
+    h1r = h1r = static_cast<half>((static_cast<double>(h) + 0.5f) * scale_h - 0.5f);
+    h1r = h1r < static_cast<half>(0.0) ? static_cast<half>(0.0) : h1r;
+  }
+  const int64_t h1 = int(h1r);
+  const int64_t h1p = (h1 < in_height - 1) ? 1 : 0;
+
+  half w1r;
+  if (align_corners) {
+    w1r = static_cast<half>(scale_w * static_cast<double>(w));
+  } else {
+    w1r = static_cast<half>((static_cast<double>(w) + 0.5f) * scale_w - 0.5f);
+    w1r = w1r < static_cast<half>(0.0) ? static_cast<half>(0.0) : w1r;
+  }
+  const int64_t w1 = int(w1r);
+  const int64_t w1p = (w1 < in_width - 1) ? 1 : 0;
+
+  params->top_h_index = h1;
+  params->bottom_h_index = h1 + h1p;
+  params->h_lerp = h1r - static_cast<half>(h1 * 1.0);
+  params->left_w_index = w1;
+  params->right_w_index = w1 + w1p;
+  params->w_lerp = w1r - static_cast<half>(w1 * 1.0);
+}
+
 template<typename T>
 __global__ void UpsampleBilinear2DForward(const int64_t elem_cnt, const T* in_dptr,
                                           NdIndexOffsetHelper<int64_t, 4> in_helper,
@@ -47,6 +80,33 @@ __global__ void UpsampleBilinear2DForward(const int64_t elem_cnt, const T* in_dp
   }
 }
 
+template<>
+__global__ void UpsampleBilinear2DForward(const int64_t elem_cnt, const half* in_dptr,
+                                          NdIndexOffsetHelper<int64_t, 4> in_helper,
+                                          NdIndexOffsetHelper<int64_t, 4> out_helper,
+                                          const int64_t in_height, const int64_t in_width,
+                                          const half scale_h, const half scale_w,
+                                          const bool align_corners, half* out_dptr) {
+  CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
+    int64_t n, c, h, w;
+    out_helper.OffsetToNdIndex(index, n, c, h, w);
+    BilinearParam<half> params;
+    GetBilinearParamHalf(align_corners, h, w, in_height, in_width, scale_h, scale_w, &params);
+    const int64_t top_offset = in_helper.NdIndexToOffset(n, c, params.top_h_index, 0);
+    const int64_t bottom_offset = in_helper.NdIndexToOffset(n, c, params.bottom_h_index, 0);
+    const half top_left = in_dptr[top_offset + params.left_w_index];
+    const half top_right = in_dptr[top_offset + params.right_w_index];
+    const half bottom_left = in_dptr[bottom_offset + params.left_w_index];
+    const half bottom_right = in_dptr[bottom_offset + params.right_w_index];
+    out_dptr[index] =
+        (static_cast<half>(1.0) - params.h_lerp)
+            * ((static_cast<half>(1.0) - params.w_lerp) * top_left + params.w_lerp * top_right)
+        + params.h_lerp
+              * ((static_cast<half>(1.0) - params.w_lerp) * bottom_left
+                 + params.w_lerp * bottom_right);
+  }
+}
+
 template<typename T>
 __global__ void UpsampleBilinearBackward(const int64_t elem_cnt, const T* dy_dptr,
                                          NdIndexOffsetHelper<int64_t, 4> dy_helper,
@@ -64,16 +124,46 @@ __global__ void UpsampleBilinearBackward(const int64_t elem_cnt, const T* dy_dpt
     const T dy = dy_dptr[index];
     const T dbottom = params.h_lerp * dy;
     T* dx_dptr_bottom_offset = dx_dptr + bottom_offset;
-    cuda::atomic::Add(dx_dptr_bottom_offset + params.left_w_index,
-                      static_cast<T>((1 - params.w_lerp) * dbottom));
-    cuda::atomic::Add(dx_dptr_bottom_offset + params.right_w_index,
-                      static_cast<T>(params.w_lerp * dbottom));
+    cuda::atomic::FastAdd(dx_dptr_bottom_offset, params.left_w_index, elem_cnt,
+                          static_cast<T>((1 - params.w_lerp) * dbottom));
+    cuda::atomic::FastAdd(dx_dptr_bottom_offset, params.right_w_index, elem_cnt,
+                          static_cast<T>(params.w_lerp * dbottom));
     const T dtop = dy - dbottom;
     T* dx_dptr_top_offset = dx_dptr + top_offset;
-    cuda::atomic::Add(dx_dptr_top_offset + params.left_w_index,
-                      static_cast<T>((1 - params.w_lerp) * dtop));
-    cuda::atomic::Add(dx_dptr_top_offset + params.right_w_index,
-                      static_cast<T>(params.w_lerp * dtop));
+    cuda::atomic::FastAdd(dx_dptr_top_offset, params.left_w_index, elem_cnt,
+                          static_cast<T>((1 - params.w_lerp) * dtop));
+    cuda::atomic::FastAdd(dx_dptr_top_offset, params.right_w_index, elem_cnt,
+                          static_cast<T>(params.w_lerp * dtop));
+  }
+}
+
+template<>
+__global__ void UpsampleBilinearBackward(const int64_t elem_cnt, const half* dy_dptr,
+                                         NdIndexOffsetHelper<int64_t, 4> dy_helper,
+                                         NdIndexOffsetHelper<int64_t, 4> dx_helper,
+                                         const int64_t dx_height, const int64_t dx_width,
+                                         const half scale_h, const half scale_w,
+                                         const bool align_corners, half* dx_dptr) {
+  CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
+    int64_t n, c, h, w;
+    dy_helper.OffsetToNdIndex(index, n, c, h, w);
+    BilinearParam<half> params;
+    GetBilinearParamHalf(align_corners, h, w, dx_height, dx_width, scale_h, scale_w, &params);
+    const int64_t top_offset = dx_helper.NdIndexToOffset(n, c, params.top_h_index, 0);
+    const int64_t bottom_offset = dx_helper.NdIndexToOffset(n, c, params.bottom_h_index, 0);
+    const half dy = dy_dptr[index];
+    const half dbottom = params.h_lerp * dy;
+    half* dx_dptr_bottom_offset = dx_dptr + bottom_offset;
+    cuda::atomic::FastAdd(dx_dptr_bottom_offset, params.left_w_index, elem_cnt,
+                          static_cast<half>((static_cast<half>(1.0) - params.w_lerp) * dbottom));
+    cuda::atomic::FastAdd(dx_dptr_bottom_offset, params.right_w_index, elem_cnt,
+                          static_cast<half>(params.w_lerp * dbottom));
+    const half dtop = dy - dbottom;
+    half* dx_dptr_top_offset = dx_dptr + top_offset;
+    cuda::atomic::FastAdd(dx_dptr_top_offset, params.left_w_index, elem_cnt,
+                          static_cast<half>((static_cast<half>(1.0) - params.w_lerp) * dtop));
+    cuda::atomic::FastAdd(dx_dptr_top_offset, params.right_w_index, elem_cnt,
+                          static_cast<half>(params.w_lerp * dtop));
   }
 }
 
@@ -183,6 +273,7 @@ class UpsampleBilinear2DGradGPUKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
+REGISTER_UPSAMPLE_BILINEAR_2D_CUDA_KERNEL(half)
 REGISTER_UPSAMPLE_BILINEAR_2D_CUDA_KERNEL(float)
 REGISTER_UPSAMPLE_BILINEAR_2D_CUDA_KERNEL(double)
 

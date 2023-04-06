@@ -29,9 +29,6 @@ limitations under the License.
 #include <sys/syscall.h>
 #include <linux/aio_abi.h>
 #include <unistd.h>
-#ifdef WITH_LIBURING
-#include <liburing.h>
-#endif  // WITH_LIBURING
 
 #endif  // __linux__
 
@@ -196,59 +193,6 @@ class ChunkIteratorImpl : public PersistentTable::Iterator {
   const void* chunk_values_;
   uint64_t chunk_index_offset_;
 };
-
-#ifdef WITH_LIBURING
-
-class RingEngine final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(RingEngine);
-  RingEngine() : ring_{}, pending_submit_(0), num_readings_(0) {
-    PCHECK(io_uring_queue_init(kRingQueueDepth, &ring_, 0) == 0);
-  }
-  ~RingEngine() {
-    WaitUntilDone();
-    io_uring_queue_exit(&ring_);
-  }
-
-  void AsyncPread(int fd, void* buf, size_t count, off_t offset) {
-    if (num_readings_ == kRingQueueDepth) {
-      struct io_uring_cqe* cqe = nullptr;
-      PCHECK(io_uring_wait_cqe(&ring_, &cqe) == 0);
-      CHECK_GE(cqe->res, 0);
-      io_uring_cqe_seen(&ring_, cqe);
-    } else {
-      num_readings_ += 1;
-    }
-    io_uring_sqe* sqe = CHECK_NOTNULL(io_uring_get_sqe(&ring_));
-    io_uring_prep_read(sqe, fd, buf, count, offset);
-    pending_submit_ += 1;
-    if (pending_submit_ == kRingSubmitBatch) {
-      PCHECK(io_uring_submit(&ring_) == pending_submit_);
-      pending_submit_ = 0;
-    }
-  }
-
-  void WaitUntilDone() {
-    if (pending_submit_ > 0) {
-      PCHECK(io_uring_submit(&ring_) == pending_submit_);
-      pending_submit_ = 0;
-    }
-    while (num_readings_ != 0) {
-      struct io_uring_cqe* cqe = nullptr;
-      PCHECK(io_uring_wait_cqe(&ring_, &cqe) == 0);
-      CHECK_GE(cqe->res, 0);
-      io_uring_cqe_seen(&ring_, cqe);
-      num_readings_ -= 1;
-    }
-  }
-
- private:
-  io_uring ring_;
-  uint32_t pending_submit_;
-  uint32_t num_readings_;
-};
-
-#endif  // WITH_LIBURING
 
 class AioEngine final {
  public:
@@ -449,7 +393,7 @@ PersistentTableImpl<Key, Engine>::PersistentTableImpl(const PersistentTableOptio
     if (value_files_.size() <= chunk.first) { value_files_.resize(chunk.first + 1); }
     CHECK_EQ(value_files_.at(chunk.first).fd(), -1);
     const int flags = read_only_ ? (O_RDONLY | O_DIRECT) : (O_RDWR | O_DIRECT);
-    PosixFile value_file(chunk.second, O_RDWR | O_DIRECT, 0644);
+    PosixFile value_file(chunk.second, flags, 0644);
     value_files_.at(chunk.first) = std::move(value_file);
   }
   if (!value_files_.empty()) {
@@ -874,31 +818,8 @@ std::unique_ptr<PersistentTable> DispatchKeyType(const PersistentTableOptions& o
   }
 }
 
-bool IsRingIOSupported() {
-#ifdef WITH_LIBURING
-  struct io_uring ring {};
-  if (io_uring_queue_init(1, &ring, 0) == 0) {
-    io_uring_queue_exit(&ring);
-    return true;
-  } else {
-    return false;
-  }
-#else
-  return false;
-#endif
-}
-
 std::unique_ptr<PersistentTable> DispatchEngine(const PersistentTableOptions& options) {
-#ifdef WITH_LIBURING
-  static bool ring_io_supported = IsRingIOSupported();
-  if (ring_io_supported) {
-    return DispatchKeyType<RingEngine>(options);
-  } else {
-    return DispatchKeyType<AioEngine>(options);
-  }
-#else
   return DispatchKeyType<AioEngine>(options);
-#endif
 }
 
 }  // namespace

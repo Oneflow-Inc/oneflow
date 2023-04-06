@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
+#include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
 
 namespace oneflow {
 
@@ -40,18 +41,34 @@ class BroadcastDivGradKernel final : public user_op::OpKernel {
     XpuVarNdarray<const T> const_tmp(dz.shape(), tmp_buffer->dptr<T>());
     XpuVarNdarray<T> tmp(dz.shape(), tmp_buffer->mut_dptr<T>());
 
-    NdarrayUtil<device, T>::BroadcastDiv(
-        ctx->stream(), tmp,
-        XpuVarNdarray<const T>(z_tensor->shape_view(), z_tensor->dptr<T>(), num_axes),
-        XpuVarNdarray<const T>(y_tensor->shape_view(), y_tensor->dptr<T>(), num_axes));
-    NdarrayUtil<device, T>::BroadcastMul(ctx->stream(), tmp, dz, const_tmp);
+    auto bcast_div = ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
+        ctx->device_type(), ep::primitive::BinaryOp::kDiv, z_tensor->data_type(),
+        z_tensor->data_type(), z_tensor->shape_view().NumAxes());
+    CHECK(bcast_div);
+    bcast_div->Launch(ctx->stream(), z_tensor->shape_view().NumAxes(), z_tensor->shape_view().ptr(),
+                      z_tensor->dptr(), y_tensor->shape_view().NumAxes(),
+                      y_tensor->shape_view().ptr(), y_tensor->dptr<T>(), tmp_buffer->mut_dptr<T>());
+
+    auto bcast_mul = ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
+        ctx->device_type(), ep::primitive::BinaryOp::kMul, dz_tensor->data_type(),
+        dz_tensor->data_type(), dz_tensor->shape_view().NumAxes());
+    CHECK(bcast_mul);
+    bcast_mul->Launch(ctx->stream(), dz_tensor->shape_view().NumAxes(),
+                      dz_tensor->shape_view().ptr(), tmp_buffer->dptr(),
+                      dz_tensor->shape_view().NumAxes(), dz_tensor->shape_view().ptr(),
+                      dz_tensor->dptr<T>(), tmp_buffer->mut_dptr<T>());
+
     NdarrayUtil<device, T>::ReduceSum(
         ctx->stream(),
         XpuVarNdarray<T>(dy_tensor->shape_view(), dy_tensor->mut_dptr<T>(), num_axes), const_tmp,
         tmp);
-    NdarrayUtil<device, T>::InplaceNegative(
-        ctx->stream(),
-        XpuVarNdarray<T>(dy_tensor->shape_view(), dy_tensor->mut_dptr<T>(), num_axes));
+
+    auto negative = ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
+        ctx->device_type(), ep::primitive::UnaryOp::kNegative, dy_tensor->data_type(),
+        dy_tensor->data_type());
+    CHECK(negative);
+    negative->Launch(ctx->stream(), dy_tensor->dptr(), dy_tensor->mut_dptr(),
+                     dy_tensor->shape_view().elem_cnt());
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

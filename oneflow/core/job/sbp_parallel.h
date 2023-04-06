@@ -80,12 +80,28 @@ void SbpSignatureToNdSbpSignature(const SbpSignature& sbp_signature,
 
 void NdSbpSignatureToSbpSignature(const NdSbpSignature& nd_sbp_signature,
                                   SbpSignature* sbp_signature);
+
 void CheckSbpSignatureAndNdSbpEquals(const SbpSignature& sbp_sig, const NdSbpSignature& nd_sbp_sig);
-Maybe<std::string> NdSbpSignatureListAsString(const std::vector<NdSbpSignature>& nd_sbp_sig_list,
-                                              const PbRpf<std::string>& inputs,
-                                              const PbRpf<std::string>& outputs);
 
 bool NdSbpAllSameSplitParallel(const NdSbp& nd_sbp);
+
+// Print functions
+
+Maybe<std::string> NdSbpSignatureToString(const NdSbpSignature& nd_sbp_signature,
+                                          const std::vector<std::string>& inputs,
+                                          const std::vector<std::string>& outputs);
+
+Maybe<std::string> NdSbpSignatureToString(const NdSbpSignature& nd_sbp_signature,
+                                          const PbRpf<std::string>& inputs,
+                                          const PbRpf<std::string>& outputs);
+
+Maybe<std::string> NdSbpSignatureListToString(const std::vector<NdSbpSignature>& nd_sbp_sig_list,
+                                              const std::vector<std::string>& inputs,
+                                              const std::vector<std::string>& outputs);
+
+Maybe<std::string> NdSbpSignatureListToString(const std::vector<NdSbpSignature>& nd_sbp_sig_list,
+                                              const PbRpf<std::string>& inputs,
+                                              const PbRpf<std::string>& outputs);
 
 }  // namespace oneflow
 

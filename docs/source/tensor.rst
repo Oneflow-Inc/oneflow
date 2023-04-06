@@ -198,6 +198,7 @@ Tensor class reference
     Tensor.byte
     Tensor.cast
     Tensor.ceil
+    Tensor.ceil_
     Tensor.chunk
     Tensor.clamp
     Tensor.clamp_
@@ -226,11 +227,13 @@ Tensor class reference
     Tensor.dtype 
     Tensor.element_size
     Tensor.eq
+    Tensor.equal
     Tensor.erf
     Tensor.erfc
     Tensor.erfinv
     Tensor.erfinv_
     Tensor.exp
+    Tensor.exp2
     Tensor.expand
     Tensor.expand_as
     Tensor.expm1
@@ -247,9 +250,12 @@ Tensor class reference
     Tensor.get_device
     Tensor.grad_fn
     Tensor.gt
+    Tensor.gt_
     Tensor.half
     Tensor.in_top_k
     Tensor.index_select
+    Tensor.index_add
+    Tensor.index_add_
     Tensor.int
     Tensor.is_contiguous
     Tensor.is_floating_point
@@ -259,6 +265,8 @@ Tensor class reference
     Tensor.isnan
     Tensor.item
     Tensor.le
+    Tensor.lerp
+    Tensor.lerp_
     Tensor.log
     Tensor.log1p
     Tensor.log2
@@ -282,8 +290,11 @@ Tensor class reference
     Tensor.min
     Tensor.minimum
     Tensor.mish
+    Tensor.mode
     Tensor.mul
     Tensor.mul_
+    Tensor.frac
+    Tensor.frac_
     Tensor.nansum
     Tensor.narrow
     Tensor.ndimension
@@ -296,9 +307,13 @@ Tensor class reference
     Tensor.normal_
     Tensor.numel
     Tensor.numpy
+    Tensor.offload
+    Tensor.load
+    Tensor.is_offloaded
     Tensor.permute
     Tensor.pow
     Tensor.prod
+    Tensor.quantile
     Tensor.reciprocal
     Tensor.register_hook
     Tensor.relu
@@ -311,6 +326,7 @@ Tensor class reference
     Tensor.retain_grad
     Tensor.roll
     Tensor.round
+    Tensor.round_
     Tensor.rsqrt
     Tensor.selu
     Tensor.shape
@@ -329,9 +345,11 @@ Tensor class reference
     Tensor.sqrt
     Tensor.square
     Tensor.squeeze
+    Tensor.squeeze_
     Tensor.std
     Tensor.storage_offset
     Tensor.stride
+    Tensor.logsumexp
     Tensor.sum
     Tensor.swapaxes
     Tensor.swapdims
@@ -360,6 +378,9 @@ Tensor class reference
     Tensor.unfold
     Tensor.uniform_
     Tensor.unsqueeze
+    Tensor.unsqueeze_
+    Tensor.as_strided
+    Tensor.as_strided_
     Tensor.var
     Tensor.view
     Tensor.view_as
@@ -368,6 +389,7 @@ Tensor class reference
     Tensor.nms
     Tensor.pin_memory
     Tensor.is_pinned
+    Tensor.inverse
     Tensor.cross
     Tensor.scatter
     Tensor.scatter_
@@ -376,3 +398,11 @@ Tensor class reference
     Tensor.bernoulli
     Tensor.bernoulli_
     Tensor.bincount
+    Tensor.isclose
+    Tensor.allclose
+    Tensor.broadcast_to
+    Tensor.unique
+    Tensor.bitwise_and
+    Tensor.bitwise_or
+    Tensor.bitwise_xor
+    Tensor.baddbmm

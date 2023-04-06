@@ -92,6 +92,8 @@ llvm_config.with_environment(
 llvm_config.with_environment("ONEFLOW_MLIR_STDOUT", "1")
 llvm_config.with_environment("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS", "1")
 llvm_config.with_environment("ONEFLOW_MLIR_ENABLE_ROUND_TRIP", "1")
+llvm_config.with_environment("ONEFLOW_MLIR_CSE", "1")
+llvm_config.with_environment("ONEFLOW_MLIR_FUSE_FORWARD_OPS", "1")
 llvm_config.with_environment(
     "PYTHONPATH", os.path.join(config.oneflow_src_root, "python"), append_path=True,
 )

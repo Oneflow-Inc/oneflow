@@ -62,6 +62,32 @@ class Test_Copy_module(flow.unittest.TestCase):
         x.copy_(a)
         test_case.assertTrue(np.array_equal(x.numpy(), a))
 
+    def test_tensor_inplace_copy_with_diff_dtype(test_case):
+        x = flow.randn(4, 12).to(flow.int)
+        y = flow.randn(4, 12)
+        y.copy_(x)
+        test_case.assertTrue(np.array_equal(y.numpy(), x.numpy()))
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_tensor_inplace_copy_with_diff_dtype_and_device(test_case):
+        x = flow.randn(4, 12).to(flow.int)
+        y = flow.randn(4, 12).to("cuda")
+        y.copy_(x)
+        test_case.assertTrue(np.array_equal(y.numpy(), x.numpy()))
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_global_tensor_inplace_copy_with_diff_dtype_and_device(test_case):
+        x = (
+            flow.randn(4, 12)
+            .to(flow.int)
+            .to_global(placement=flow.placement.all("cpu"), sbp=flow.sbp.broadcast)
+        )
+        y = flow.randn(4, 12).to_global(
+            placement=flow.placement.all("cuda"), sbp=flow.sbp.broadcast
+        )
+        y.copy_(x)
+        test_case.assertTrue(np.array_equal(y.numpy(), x.numpy()))
+
 
 if __name__ == "__main__":
     unittest.main()

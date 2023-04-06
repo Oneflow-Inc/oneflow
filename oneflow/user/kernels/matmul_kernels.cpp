@@ -267,8 +267,6 @@ class BroadcastMatmulKernel final : public user_op::OpKernel, public user_op::Cu
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     double alpha = ctx->Attr<double>("alpha");
-    bool transpose_a = ctx->Attr<bool>("transpose_a");
-    bool transpose_b = ctx->Attr<bool>("transpose_b");
 
     const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
     const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);

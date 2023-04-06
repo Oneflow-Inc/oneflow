@@ -45,7 +45,7 @@ void CheckNdSbp(const Shape& hierarchy, int64_t gather_axis, const NdSbp& in_nd_
                 const NdSbp& indices_nd_sbp, const NdSbp& out_nd_sbp) {
   CHECK_EQ(hierarchy.NumAxes(), in_nd_sbp.sbp_parallel_size());
   CHECK_EQ(hierarchy.NumAxes(), indices_nd_sbp.sbp_parallel_size());
-  CHECK_EQ(hierarchy.NumAxes(), in_nd_sbp.sbp_parallel_size());
+  CHECK_EQ(hierarchy.NumAxes(), out_nd_sbp.sbp_parallel_size());
   if (hierarchy.elem_cnt() == 1) { return; }
   FOR_RANGE(int64_t, i, 0, hierarchy.NumAxes()) {
     const auto& in_sbp = in_nd_sbp.sbp_parallel(i);

@@ -169,18 +169,63 @@ class TestSliceUpdate(flow.unittest.TestCase):
         input[-1] = 1
         test_case.assertTrue(np.array_equal(input.numpy(), np_arr))
 
+    def test_slice_update_scalar_integer_tensor_index(test_case):
+        np_arr_a = np.random.rand(133, 1, 15)
+        np_arr_b = np.random.rand(133, 2, 1)
+
+        a_torch = torch.tensor(np_arr_a)
+        b_torch = torch.tensor(np_arr_b)
+        pos_torch = torch.tensor(0)
+        a_torch[:, 0, pos_torch] = b_torch[:, 1, 0]
+
+        a_flow = flow.tensor(np_arr_a)
+        b_flow = flow.tensor(np_arr_b)
+        pos_flow = flow.tensor(0)
+        a_flow[:, 0, pos_flow] = b_flow[:, 1, 0]
+
+        test_case.assertTrue(
+            np.allclose(a_flow.numpy(), a_torch.cpu().numpy(), rtol=1e-5, atol=1e-5,)
+        )
+
+    def test_slice_update_scalar_boolean_tensor_index(test_case):
+        np_arr_a = np.random.rand(2, 1, 2)
+        np_arr_b = np.random.rand(2, 2, 1)
+
+        a_torch = torch.tensor(np_arr_a)
+        b_torch = torch.tensor(np_arr_b)
+        pos_torch = torch.tensor(True)
+        a_torch[:, 0, pos_torch] = b_torch[:, 1, 0]
+
+        a_flow = flow.tensor(np_arr_a)
+        b_flow = flow.tensor(np_arr_b)
+        pos_flow = flow.tensor(True)
+        a_flow[:, 0, pos_flow] = b_flow[:, 1, 0]
+
+        test_case.assertTrue(
+            np.allclose(a_flow.numpy(), a_torch.cpu().numpy(), rtol=1e-5, atol=1e-5,)
+        )
+
     def test_slice_update_negative_index_graph(test_case):
         np_arr = np.zeros(shape=(2, 3, 4))
         input = flow.tensor(np_arr, dtype=flow.float32)
         np_arr[-1] = 1
 
-        @flow.nn.Graph.to_graph
+        @flow.nn.Graph.trace
         def test_func():
             input[-1] = 1
             return input
 
         out = test_func()
         test_case.assertTrue(np.array_equal(out.numpy(), np_arr))
+
+    def test_slice_update_different_dtype(test_case):
+        x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
+        for value_type in [np.int32, np.float64]:
+            input = flow.tensor(x)
+            update = flow.tensor(np.array([2, 3, 4]).astype(value_type))
+            output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
+            flow.slice_update(input, update, slice_tup_list=[[1, 4, 1]])
+            test_case.assertTrue(np.array_equal(input.numpy(), output))
 
     def test_slice_update_ellipsis_type(test_case):
         np_arr = np.zeros(shape=(2, 3, 4, 5, 6))
@@ -194,7 +239,7 @@ class TestSliceUpdate(flow.unittest.TestCase):
         input = flow.tensor(np_arr, dtype=flow.float32)
         np_arr[0, ::1, ..., 2:3] = 1
 
-        @flow.nn.Graph.to_graph
+        @flow.nn.Graph.trace
         def test_func():
             input[0, ::1, ..., 2:3] = 1
             return input
