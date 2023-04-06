@@ -19,27 +19,21 @@ limitations under the License.
 #include <cstdint>
 #include <utility>
 #include "oneflow/core/common/thread_local_guard.h"
-#include "oneflow/core/intrusive/base.h"
-#include "oneflow/core/intrusive/shared_ptr.h"
 
 namespace oneflow {
 
-class Frame : public intrusive::Base {
+class Frame {
  public:
   virtual ~Frame() = default;
-  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
-
- private:
-  intrusive::Ref intrusive_ref_;
 };
 
-using ForeignFrameThreadLocalGuard = ThreadLocalGuard<intrusive::shared_ptr<Frame>>;
+using ForeignFrameThreadLocalGuard = ThreadLocalGuard<std::shared_ptr<Frame>>;
 
 class ForeignStackGetter {
  public:
   virtual ~ForeignStackGetter() = default;
-  virtual intrusive::shared_ptr<Frame> GetCurrentFrame() const = 0;
-  virtual std::string GetFormattedStack(intrusive::shared_ptr<Frame> frame) const = 0;
+  virtual std::shared_ptr<Frame> GetCurrentFrame() const = 0;
+  virtual std::string GetFormattedStack(std::shared_ptr<Frame> frame) const = 0;
 };
 }  // namespace oneflow
 

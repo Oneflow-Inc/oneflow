@@ -63,8 +63,8 @@ Maybe<Tensor> CPUGeneratorImpl::GetState() const {
   JUST(CPUSynchronize());
   CPUGeneratorState state;
   const auto& device = JUST(Device::New("cpu"));
-  const auto& tensor_state =
-      JUST(functional::Empty(Shape{sizeof(state)}, DType::UInt8(), device, /*pin_memory=*/false));
+  const auto& tensor_state = JUST(functional::Empty(Shape{sizeof(state)}, DType::UInt8(), device,
+                                                    /*requires_grad=*/false, /*pin_memory=*/false));
 
   std::stringstream ss;
   ss << engine_;
@@ -208,8 +208,8 @@ Maybe<Tensor> CUDAGeneratorImpl::GetState() const {
   static const size_t offset_size = sizeof(int64_t);
   static const size_t total_size = states_size + seed_size + offset_size;
   const auto& device = JUST(Device::New("cpu"));
-  const auto& tensor_state =
-      JUST(functional::Empty(Shape{total_size}, DType::UInt8(), device, /*pin_memory=*/false));
+  const auto& tensor_state = JUST(functional::Empty(Shape{total_size}, DType::UInt8(), device,
+                                                    /*requires_grad=*/false, /*pin_memory=*/false));
 
   const auto& callback = [&](ep::Stream*,
                              const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
@@ -325,8 +325,8 @@ Maybe<Tensor> AutoGeneratorImpl::GetState() const {
     }
   }
   const auto& device = JUST(Device::New("cpu"));
-  const auto& tensor_state =
-      JUST(functional::Empty(Shape{total_size}, DType::UInt8(), device, /*pin_memory=*/false));
+  const auto& tensor_state = JUST(functional::Empty(Shape{total_size}, DType::UInt8(), device,
+                                                    /*requires_grad=*/false, /*pin_memory=*/false));
   const auto& callback = [&buffer, &total_size](
                              ep::Stream*,
                              const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
@@ -372,8 +372,8 @@ Maybe<void> AutoGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_st
   std::vector<std::shared_ptr<Tensor>> tensor_states(state.num);
   for (int i = 0; i < state.num; ++i) {
     int64_t state_size = JUST(VectorAt(state_sizes, i));
-    tensor_states[i] =
-        JUST(functional::Empty(Shape{state_size}, DType::UInt8(), device, /*pin_memory=*/false));
+    tensor_states[i] = JUST(functional::Empty(Shape{state_size}, DType::UInt8(), device,
+                                              /*requires_grad=*/false, /*pin_memory=*/false));
     const auto& callback = [&data, &state_size](
                                ep::Stream*,
                                const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {

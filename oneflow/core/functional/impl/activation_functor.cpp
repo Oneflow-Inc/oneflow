@@ -18,8 +18,10 @@ limitations under the License.
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
+#include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/functional/impl/binary_functor.h"
+#include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -28,10 +30,10 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/framework/tensor_tuple.h"
-#include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/autograd/autograd_mode.h"
-#include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/user/kernels/distributions/common.h"
+#include "oneflow/user/kernels/random_seed_util.h"
 
 namespace oneflow {
 namespace one {
@@ -435,9 +437,6 @@ class GumbelSoftmaxFunctor {
     const int64_t num_axes = in_shape->NumAxes();
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("tau", "seed", "hard");
-    attrs.SetAllAttrs(tau, static_cast<int64_t>(gen->current_seed()), hard);
-
     auto random_tensor =
         JUST(functional::Rand(*in_shape.get(), dtype, device, gen, /*requires_grad=*/false));
     auto gumbel_noise_tensor = JUST(functional::ScalarSub(
@@ -542,15 +541,21 @@ class RReluFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& lower,
                            const float& upper, bool training, bool inplace) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("lower", "upper", "training");
-    attrs.SetAllAttrs(lower, upper, training);
-    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(2);
     if (!training) { return JUST(functional::LeakyRelu(x, ((lower + upper) / 2), inplace)); }
+
+    auto gen = JUST(
+        GetGeneratorForLazyOrGlobal(JUST(one::DefaultAutoGenerator()), LazyMode::is_enabled(), x));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("seed", "lower", "upper", "training");
+    attrs.SetAllAttrs(static_cast<int64_t>(gen->current_seed()), lower, upper, training);
+    const auto& state = std::make_shared<DistributionKernelState>(gen);
+
+    OpExprInterpContext ctx(attrs, state);
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(2);
     if (inplace) {
       JUST(CheckInplaceValid(x));
       outputs->at(0) = x;
     }
-    JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+    JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), ctx));
     return outputs->at(0);
   }
 
@@ -727,9 +732,37 @@ class SoftShrinkGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FracFunctor {
+ public:
+  FracFunctor() { op_ = CHECK_JUST(one::OpBuilder("frac").Input("x").Output("y").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FracInplaceFunctor {
+ public:
+  FracInplaceFunctor() { op_ = CHECK_JUST(one::OpBuilder("frac").Input("x").Output("y").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    JUST(CheckInplaceValid(x));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = x;
+    JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), AttrMap{}));
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
+  m.add_functor<impl::FracFunctor>("Frac");
+  m.add_functor<impl::FracInplaceFunctor>("FracInplace");
   m.add_functor<impl::ReluFunctor>("Relu");
   m.add_functor<impl::ReluGradFunctor>("ReluGrad");
   m.add_functor<impl::PReluFunctor>("PRelu");

@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/api/python/functional/tensor_api.yaml.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
+#include "oneflow/core/eager/tensor_storage.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -53,6 +54,7 @@ class TensorWithDataFunctor {
     //  its a eager tensor by Run functional::Empty() in LazyMode::Grad(false)
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     if (GlobalMode::is_enabled()) {
+      auto global_mode_gurad = GlobalMode::Guard(false);
       return JUST(
           functional::GlobalTensorWithData(data, dtype, GetGlobalParallelDescFromDevice(device),
                                            *JUST(GetSbpList(GlobalMode::nd_sbp())), requires_grad));
@@ -208,7 +210,7 @@ class TensorWithShapeGenericCtorFunctor {
     } else {
       device_ = JUST(Device::New("cpu"));
     }
-    return functional::Empty(shape, dtype, device_, /*pin_memory=*/false);
+    return functional::Empty(shape, dtype, device_, /*requires_grad=*/false, /*pin_memory=*/false);
   }
 };
 
@@ -333,7 +335,7 @@ class LocalTensorSharedNumpyDataFunctor {
     };
 
     const auto array_size_in_bytes = PyArray_NBYTES(array);
-    auto tensor_data = std::make_shared<vm::OutsideVmTensorStorage>();
+    auto tensor_data = std::make_shared<vm::TensorStorage>(false, device);
     tensor_data->set_blob_dptr(
         std::unique_ptr<char, std::function<void(char*)>>(static_cast<char*>(data_ptr), Free),
         array_size_in_bytes);

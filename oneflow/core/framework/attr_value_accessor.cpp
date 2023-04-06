@@ -73,13 +73,14 @@ template<>
 Symbol<Device> AttrValueAccessor<Symbol<Device>>::Attr(const AttrValue& val) {
   auto pb_device = val.at_device();
   return CHECK_JUST(Device::New(*CHECK_JUST(DeviceTag4DeviceType(pb_device.device_type())),
-                                pb_device.device_id()));
+                                pb_device.device_id(), pb_device.rematable()));
 }
 
 template<>
 void AttrValueAccessor<Symbol<Device>>::Attr(const Symbol<Device>& cpp_val, AttrValue* attr_val) {
   attr_val->mutable_at_device()->set_device_type(cpp_val->enum_type());
   attr_val->mutable_at_device()->set_device_id(cpp_val->device_id());
+  attr_val->mutable_at_device()->set_rematable(cpp_val->rematable());
 }
 
 // List of Basic Attr
@@ -161,6 +162,18 @@ template<>
 void AttrValueAccessor<std::vector<std::string>>::Attr(const std::vector<std::string>& cpp_val,
                                                        AttrValue* attr_val) {
   *(attr_val->mutable_at_list_string()->mutable_val()) = StdVec2PbRpf<std::string>(cpp_val);
+}
+// ComplexDouble Attr
+template<>
+std::complex<double> AttrValueAccessor<std::complex<double>>::Attr(const AttrValue& val) {
+  std::complex<double> ret{val.at_complex_double().real(), val.at_complex_double().imag()};
+  return ret;
+}
+template<>
+void AttrValueAccessor<std::complex<double>>::Attr(const std::complex<double>& cpp_val,
+                                                   AttrValue* attr_val) {
+  attr_val->mutable_at_complex_double()->set_real(cpp_val.real());
+  attr_val->mutable_at_complex_double()->set_imag(cpp_val.imag());
 }
 
 template<typename ProtoT>

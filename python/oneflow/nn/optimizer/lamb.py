@@ -153,7 +153,7 @@ class LAMB(Optimizer):
 
             for param in param_list:
                 assert param.is_leaf, "parameters must be leaf tensor"
-                self._state[param] = dict()
+                self.state[param] = dict()
 
         self._op = (
             flow.stateful_op("lamb_update")
@@ -174,15 +174,16 @@ class LAMB(Optimizer):
         with flow.no_grad():
             loss = None
             if closure is not None:
-                loss = closure()
+                with flow.enable_grad():
+                    loss = closure()
 
             for param_group in self.param_groups:
                 if param_group["do_bias_correction"]:
                     param_group["bias_correction1"] = 1.0 - math.pow(
-                        param_group["betas"][0], self._state["step"] + 1
+                        param_group["betas"][0], self.state["step"] + 1
                     )
                     param_group["bias_correction2"] = 1.0 - math.pow(
-                        param_group["betas"][1], self._state["step"] + 1
+                        param_group["betas"][1], self.state["step"] + 1
                     )
 
                 kwargs = {
@@ -209,18 +210,18 @@ class LAMB(Optimizer):
                 for param in param_list:
                     if param.grad is None:
                         continue
-                    if "exp_avg" not in self._state[param]:
-                        self._state[param]["exp_avg"] = flow.zeros_like(param)
-                    if "exp_avg_sq" not in self._state[param]:
-                        self._state[param]["exp_avg_sq"] = flow.zeros_like(param)
-                    m_tensor = self._state[param]["exp_avg"]
-                    v_tensor = self._state[param]["exp_avg_sq"]
+                    if "exp_avg" not in self.state[param]:
+                        self.state[param]["exp_avg"] = flow.zeros_like(param)
+                    if "exp_avg_sq" not in self.state[param]:
+                        self.state[param]["exp_avg_sq"] = flow.zeros_like(param)
+                    m_tensor = self.state[param]["exp_avg"]
+                    v_tensor = self.state[param]["exp_avg_sq"]
 
                     flow._C.dispatch_lamb_update(
                         self._op, (param, param.grad, m_tensor, v_tensor), **kwargs
                     )
 
-            self._state["step"] += 1
+            self.state["step"] += 1
 
             return loss
 

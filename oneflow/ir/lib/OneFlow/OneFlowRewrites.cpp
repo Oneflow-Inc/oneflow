@@ -431,6 +431,10 @@ static LogicalResult IsScalarEqualSqrtDimReciprocal(PatternRewriter& rewriter, V
       < mha_scale_max_diff);
 }
 
+static Attribute GetReciprocal(PatternRewriter& rewriter, Attribute a) {
+  return rewriter.getF64FloatAttr(1 / a.cast<FloatAttr>().getValueAsDouble());
+}
+
 }  // namespace
 
 namespace rewrites {
@@ -445,6 +449,7 @@ void populateRewrites(RewritePatternSet& patterns) {
                                                     CreateConv2dAndErasePad);
   patterns.getPDLPatterns().registerRewriteFunction("CreateConv2DBatchNorm", CreateConv2DBatchNorm);
   patterns.getPDLPatterns().registerRewriteFunction("OutlineMulCast", OutlineMulCast);
+  patterns.getPDLPatterns().registerRewriteFunction("GetReciprocal", GetReciprocal);
 }
 
 mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {

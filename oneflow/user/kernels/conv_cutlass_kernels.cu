@@ -25,6 +25,7 @@ limitations under the License.
 #include <cutlass/library/handle.h>
 #include <cutlass/library/library.h>
 #include <cutlass/library/singleton.h>
+#include <nlohmann/json.hpp>
 
 namespace oneflow {
 
@@ -131,10 +132,26 @@ class Conv2dCutlassKernel final : public user_op::OpKernel, public user_op::Cuda
     arguments.alpha = &alpha;
     arguments.beta = &beta;
     arguments.pointer_mode = cutlass::library::ScalarPointerMode::kHost;
+    const cutlass::library::Operation* operation = nullptr;
+    operation = [&]() -> const cutlass::library::Operation* {
+      const std::string& tuning_cache = ctx->Attr<std::string>("tuning_cache");
+      if (tuning_cache.empty()) { return nullptr; }
+      auto tuning_cache_object = nlohmann::json::parse(tuning_cache);
+      if (!tuning_cache_object.is_object()) { return nullptr; }
+      auto it = tuning_cache_object.find("cutlass");
+      if (it == tuning_cache_object.end()) { return nullptr; }
+      if (!it->is_string()) { return nullptr; }
+      const std::string name = *it;
+      return CutlassConvTuner::Get().GetConv2dOperation(name, stream, key, configuraion, arguments,
+                                                        tmp_buffer->mut_dptr(),
+                                                        tmp_buffer->shape_view().elem_cnt());
+    }();
+    if (!operation) {
+      operation = CutlassConvTuner::Get().FindConv2dOperation(stream, key, configuraion, arguments,
+                                                              tmp_buffer->mut_dptr(),
+                                                              tmp_buffer->shape_view().elem_cnt());
+    }
 
-    const cutlass::library::Operation* operation = CutlassConvTuner::Get().FindConv2dOperation(
-        stream, key, configuraion, arguments, tmp_buffer->mut_dptr(),
-        tmp_buffer->shape_view().elem_cnt());
     CHECK(operation != nullptr);
     const size_t host_workspace_size = operation->get_host_workspace_size(&configuraion);
     std::vector<uint8_t> host_workspace(host_workspace_size, 0);

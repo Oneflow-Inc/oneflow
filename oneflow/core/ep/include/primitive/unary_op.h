@@ -57,6 +57,7 @@ enum class UnaryOp {
   kErf,
   kErfc,
   kExp,
+  kExp2,
   kExpm1,
   kFloor,
   kLgamma,

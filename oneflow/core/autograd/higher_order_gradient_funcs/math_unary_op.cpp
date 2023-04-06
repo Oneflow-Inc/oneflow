@@ -96,6 +96,7 @@ class UnaryMathGradGradWithZeroDDX : public OpExprGradFunction<UnaryMathGradGrad
   OF_PP_MAKE_TUPLE_SEQ("erf_grad", Erf)                           \
   OF_PP_MAKE_TUPLE_SEQ("erfc_grad", Erfc)                         \
   OF_PP_MAKE_TUPLE_SEQ("exp_grad", Exp)                           \
+  OF_PP_MAKE_TUPLE_SEQ("exp2_grad", Exp2)                         \
   OF_PP_MAKE_TUPLE_SEQ("expm1_grad", Expm1)                       \
   OF_PP_MAKE_TUPLE_SEQ("log_grad", Log)                           \
   OF_PP_MAKE_TUPLE_SEQ("log_sigmoid_grad", LogSigmoid)            \

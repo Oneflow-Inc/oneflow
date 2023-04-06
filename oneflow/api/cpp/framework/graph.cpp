@@ -353,7 +353,7 @@ of::Maybe<void> Graph::GraphImpl::BuildGraph() {
         variable_op_name_to_tensor_[op_conf.name()] = JUST(of::one::functional::Empty(
             of::Shape(variable_conf.shape()),
             JUST(of::DType::Get(static_cast<of::DataType>(variable_conf.data_type()))),
-            *device_.device_, /*pin_memory=*/false));
+            *device_.device_, /*requires_grad=*/false, /*pin_memory=*/false));
       }
       return of::Maybe<void>::Ok();
     });
@@ -384,7 +384,7 @@ of::Maybe<void> Graph::GraphImpl::BuildGraph() {
         output_name_to_tensor_[op_conf.name()] = JUST(of::one::functional::Empty(
             of::Shape(blob_conf.shape()),
             JUST(of::DType::Get(static_cast<of::DataType>(blob_conf.data_type()))),
-            *device_.device_, /*pin_memory=*/false));
+            *device_.device_, /*requires_grad=*/false, /*pin_memory=*/false));
       }
       return of::Maybe<void>::Ok();
     });

@@ -217,6 +217,13 @@ class ProxyModule(Proxy):
 
         return result
 
+    @property
+    def __class__(self):
+        if self.to(GraphModule)._belonged_graph._is_user_mode == True:
+            return self.to(Module).__class__
+        else:
+            return type(self)
+
     def __block_forward(self, *args, **kwargs):
         self.to(GraphModule)._is_executing_forward = True
         args, kwargs = self.__pre_forward_map(*args, **kwargs)

@@ -58,6 +58,23 @@ TEST(Maybe, JUST_MSG) {
   }
 }
 
+TEST(Maybe, CHECK_OR_RETURN) {
+  auto f = [](int x) -> Maybe<int> {
+    CHECK_OR_RETURN(x > 10);
+    return 233;
+  };
+
+  auto i = [&](float x) -> Maybe<int> { return JUST(f(x)); };
+
+  auto data = CHECK_JUST(i(20));
+  ASSERT_EQ(data, 233);
+
+  auto err = i(1).stacked_error();
+  ASSERT_GE(err->stack_frame().size(), 2);
+  ASSERT_EQ(err->stack_frame().at(0)->code_text(), "CHECK_OR_RETURN(x > 10)");
+  ASSERT_EQ(err->stack_frame().at(1)->code_text(), "f(x)");
+}
+
 TEST(Maybe, CHECK_OK) {
   auto f = [](int x) -> Maybe<int> {
     if (x > 10) { return Error::InvalidValueError() << "input value " << x; }

@@ -149,6 +149,14 @@ LogicalResult doConvertUserOpAttributes(llvm::StringRef op_type_name, Dictionary
         for (auto s : attr.dyn_cast<ArrayAttr>().getValue()) {
           user_attr.mutable_at_list_string()->add_val(s.dyn_cast<StringAttr>().getValue().str());
         }
+      } else if (attr_type == ::oneflow::kAtComplexDouble) {
+        // TODO(lml): use arrayattr to represent complex number is not safe, need improve.
+        user_attr.mutable_at_complex_double();
+        auto ref = attr.dyn_cast<ArrayAttr>();
+        user_attr.mutable_at_complex_double()->set_real(
+            ref.getValue()[0].dyn_cast<FloatAttr>().getValue().convertToDouble());
+        user_attr.mutable_at_complex_double()->set_imag(
+            ref.getValue()[1].dyn_cast<FloatAttr>().getValue().convertToDouble());
       } else {
         return failure();
       }
@@ -321,6 +329,14 @@ LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op
         for (auto s : attr.dyn_cast<ArrayAttr>().getValue()) {
           user_attr.mutable_at_list_string()->add_val(s.dyn_cast<StringAttr>().getValue().str());
         }
+      } else if (attr_type == ::oneflow::kAtComplexDouble) {
+        // TODO(lml): use arrayattr to represent complex number is not safe, need improve.
+        user_attr.mutable_at_complex_double();
+        auto ref = attr.dyn_cast<ArrayAttr>();
+        user_attr.mutable_at_complex_double()->set_real(
+            ref.getValue()[0].dyn_cast<FloatAttr>().getValue().convertToDouble());
+        user_attr.mutable_at_complex_double()->set_imag(
+            ref.getValue()[1].dyn_cast<FloatAttr>().getValue().convertToDouble());
       } else {
         op->emitError() << "fail to convert op attr of name: " + attr_name;
         return failure();

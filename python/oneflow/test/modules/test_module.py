@@ -400,6 +400,35 @@ class TestModule(flow.unittest.TestCase):
         _test_module_forward_forward_hook_removable(test_case)
 
     @flow.unittest.skip_unless_1n1d()
+    def test_register_state_dict_hook_hook(test_case):
+        destination_check = None
+
+        def state_dict_hook(module, destination, prefix, local_metadata):
+            for submodule_name, submodule in module.named_modules():
+                for attr_name, attr in submodule.__dict__.items():
+                    if isinstance(attr, torch.Tensor):
+                        mod_prefix = prefix + submodule_name
+                        key = mod_prefix + ("." if mod_prefix else "") + attr_name
+                        destination[key] = attr
+            nonlocal destination_check
+            destination_check = destination
+
+        class CustomModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.linear = nn.Linear(10, 5)
+                self._register_state_dict_hook(state_dict_hook)
+
+            def forward(self, x):
+                x = self.linear(x)
+                return x
+
+        m = CustomModule()
+        test_case.assertEqual(destination_check, None)
+        state_dict = m.state_dict()
+        test_case.assertEqual(destination_check, state_dict)
+
+    @flow.unittest.skip_unless_1n1d()
     def test_full_backward_hook(test_case):
         hook_triggered = False
 

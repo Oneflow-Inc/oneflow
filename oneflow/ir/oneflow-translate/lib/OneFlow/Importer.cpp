@@ -262,6 +262,13 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf&
       attr_vec.emplace_back(
           GetBuilder().getNamedAttr(name, GetBuilder().getArrayAttr(dense_attr_vector)));
     }
+    else if (value.has_at_complex_double()) {
+      std::vector<mlir::Attribute> dense_attr_vector{
+          GetBuilder().getF64FloatAttr(value.at_complex_double().real()),
+          GetBuilder().getF64FloatAttr(value.at_complex_double().imag())};
+      attr_vec.emplace_back(
+          GetBuilder().getNamedAttr(name, GetBuilder().getArrayAttr(dense_attr_vector)));
+    }
     else {
       GetModule().emitError("can't handle user op attr: " + name + ", op name: " + op.name()
                             + ", op type name: " + op.user_conf().op_type_name());

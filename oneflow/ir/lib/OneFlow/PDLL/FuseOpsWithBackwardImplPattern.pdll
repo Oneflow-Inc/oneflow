@@ -4,7 +4,7 @@ Pattern {
   let device_name: Attr;
   let device_tag: Attr;
 
-  let matmul_wx = op<oneflow.broadcast_matmul>(x: Value, w: Value){device_name = device_name, device_tag = device_tag};
+  let matmul_wx = op<oneflow.broadcast_matmul>(x: Value, w: Value){device_name = device_name, device_tag = device_tag, alpha = attr<"1.000000e+00 : f64">};
   let matmul_wx_add = op<oneflow.broadcast_add>(matmul_wx.0, b: Value){device_name = device_name, device_tag = device_tag} -> (matmul_wx_out: Type);
 
   let hidden_states = op<oneflow.narrow>(matmul_wx_add.0){device_name = device_name, device_tag = device_tag};
@@ -24,7 +24,7 @@ Pattern {
   let device_name: Attr;
   let device_tag: Attr;
 
-  let matmul_wx_add = op<oneflow.fused_matmul_bias>(x: Value, w: Value, b: Value){device_name = device_name, device_tag = device_tag} -> (matmul_wx_out: Type);
+  let matmul_wx_add = op<oneflow.fused_matmul_bias>(x: Value, w: Value, b: Value){device_name = device_name, device_tag = device_tag, alpha = attr<"1.000000e+00 : f64">} -> (matmul_wx_out: Type);
 
   let hidden_states = op<oneflow.narrow>(matmul_wx_add.0){device_name = device_name, device_tag = device_tag};
   let gate = op<oneflow.narrow>(matmul_wx_add.0){device_name = device_name, device_tag = device_tag};
