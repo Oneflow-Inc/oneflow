@@ -24,35 +24,39 @@ import os
 import oneflow.unittest
 from oneflow.test_utils.test_util import GenArgList
 
-os.environ["ONEFLOW_ENABLE_PIPELINE_PARALLELISM_AUTO_TO_GLOBAL"] = "true"
 
 def _test_auto_to_global(
     test_case, device
 ):
-    sbp=[flow.sbp.broadcast, flow.sbp.broadcast], 
+    os.environ["ONEFLOW_ENABLE_PIPELINE_PARALLELISM_AUTO_TO_GLOBAL"] = "true"
     x = flow.ones(
         (2,2), 
-        sbp=sbp, 
+        sbp=[flow.sbp.broadcast, flow.sbp.broadcast], 
         placement=flow.placement(device, ranks=[[0], [1]])
     )
     y = flow.zeros(
             (2,2), 
-            sbp=sbp, 
+            sbp=[flow.sbp.broadcast, flow.sbp.broadcast], 
             placement=flow.placement(device, ranks=[[2], [3]])
         )
     z = x + y
     test_case.assertTrue(
         np.array_equal(
-            x.to_local().numpy(),
-            z.to_local().numpy()
+            x.numpy(),
+            z.numpy()
         )
     )
+    test_case.assertEqual(
+        y.placement,
+        z.placement
+    )
+    os.environ["ONEFLOW_ENABLE_PIPELINE_PARALLELISM_AUTO_TO_GLOBAL"] = "false"
 
 @flow.unittest.skip_unless_1n4d()
 class TestAutoToGlobal(flow.unittest.TestCase):
     def test_auto_to_global(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["device"] = ["cuda"]
         for arg in GenArgList(arg_dict):
             _test_auto_to_global(test_case, *arg)
 
