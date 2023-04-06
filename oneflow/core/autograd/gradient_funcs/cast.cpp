@@ -48,9 +48,10 @@ class Cast : public OpExprGradFunction<CastCaptureState> {
   Maybe<void> Apply(const CastCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     in_grads->resize(1);
-    if (!IsComplexDataType(ctx->in_dtype->data_type()) && IsComplexDataType(ctx->out_dtype->data_type())){
+    if (!IsComplexDataType(ctx->in_dtype->data_type())
+        && IsComplexDataType(ctx->out_dtype->data_type())) {
       (*in_grads)[0] = JUST(functional::Real(out_grads[0]));
-    }else{
+    } else {
       (*in_grads)[0] = JUST(functional::Cast(out_grads[0], ctx->in_dtype, /*pin_memory=*/false));
     }
 

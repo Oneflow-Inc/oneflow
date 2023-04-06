@@ -115,10 +115,9 @@ static void conj_symmetry(T* data_out, const Shape& shape, const Stride& strides
 
 template<DeviceType device_type, typename T, typename = void>
 struct FftC2CKernelUtil {
-  static void FftC2CForward(ep::Stream* stream, const T* data_in,
-                            T* data_out, const Shape& input_shape,
-                            const Shape& output_shape, const Stride& input_stride,
-                            const Stride& output_stride, bool forward,
+  static void FftC2CForward(ep::Stream* stream, const T* data_in, T* data_out,
+                            const Shape& input_shape, const Shape& output_shape,
+                            const Stride& input_stride, const Stride& output_stride, bool forward,
                             const std::vector<int64_t>& dims, fft_norm_mode normalization);
 };
 
@@ -142,10 +141,10 @@ struct FftC2RKernelUtil {
 template<DeviceType device_type, typename T>
 struct FftStftKernelUtil {
   static void FftStftForward(ep::Stream* stream, const T* data_in, std::complex<T>* data_out,
-                            const Shape& input_shape, const Shape& output_shape,
-                            const Stride& input_stride, const Stride& output_stride, bool forward,
-                            const std::vector<int64_t>& axes, fft_norm_mode normalization, int64_t len,
-                            int64_t dims, int64_t batch);
+                             const Shape& input_shape, const Shape& output_shape,
+                             const Stride& input_stride, const Stride& output_stride, bool forward,
+                             const std::vector<int64_t>& axes, fft_norm_mode normalization,
+                             int64_t len, int64_t dims, int64_t batch);
 };
 
 }  // namespace oneflow

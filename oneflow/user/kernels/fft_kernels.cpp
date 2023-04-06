@@ -207,12 +207,12 @@ class StftCpuKernel final : public user_op::OpKernel {
     dtype_out* out_tmp_buffer = reinterpret_cast<dtype_out*>(tmp_buffer->mut_dptr<char>());
     Shape out_tmp_shape = Shape{len};
     Stride out_tmp_stride = Stride(out_tmp_shape);
-    std::vector<int64_t> axes (out_tmp_shape.size());
+    std::vector<int64_t> axes(out_tmp_shape.size());
     std::iota(axes.begin(), axes.end(), 0);
-    FftStftKernelUtil<device_type, dtype_in>::FftStftForward(ctx->stream(), data_in, out_tmp_buffer, out_tmp_shape, 
-                                                  out_tmp_shape, out_tmp_stride, out_tmp_stride, 
-                                                  true, /*axes=*/axes, /*normalization=*/normalization,
-                                                  /*len=*/len, /*dims=*/dims, /*batch=*/batch);
+    FftStftKernelUtil<device_type, dtype_in>::FftStftForward(
+        ctx->stream(), data_in, out_tmp_buffer, out_tmp_shape, out_tmp_shape, out_tmp_stride,
+        out_tmp_stride, true, /*axes=*/axes, /*normalization=*/normalization,
+        /*len=*/len, /*dims=*/dims, /*batch=*/batch);
 
     if (!onesized) {
       dtype_out* doublesided_tmp_buffer =
@@ -220,30 +220,29 @@ class StftCpuKernel final : public user_op::OpKernel {
       size_t last_dim_length = len / 2 + 1;
       size_t elem_conut = output_elem_cnt;
       convert_to_doublesized<dtype_in>(out_tmp_buffer, doublesided_tmp_buffer, last_dim_length,
-                                 elem_conut);
+                                       elem_conut);
       out_tmp_buffer = doublesided_tmp_buffer;
     }
 
     if (!return_complex) { comvert_to_real<dtype_in>(out_tmp_buffer, data_out, output_elem_cnt); }
-
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_STFT_CPU_KERNEL(dtype_in, dtype_out)                                           \
-  REGISTER_USER_KERNEL("stft")                                                              \
-      .SetCreateFn<StftCpuKernel<DeviceType::kCPU, dtype_in, dtype_out>>()                                        \
-      .SetIsMatchedHob((user_op::HobDeviceType() == kCPU)                                   \
+#define REGISTER_STFT_CPU_KERNEL(dtype_in, dtype_out)                                         \
+  REGISTER_USER_KERNEL("stft")                                                                \
+      .SetCreateFn<StftCpuKernel<DeviceType::kCPU, dtype_in, dtype_out>>()                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == kCPU)                                     \
                        && (user_op::HobDataType("input", 0) == GetDataType<dtype_in>::value)) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                   \
-        const Shape& output_shape = ctx->InputShape("output", 0);                           \
-        const bool return_complex = ctx->Attr<bool>("return_complex");                      \
-        const bool onesided = ctx->Attr<bool>("onesided");                                  \
-        int64_t output_elem_cnt =                                                           \
-            return_complex ? output_shape.elem_cnt() : output_shape.elem_cnt() / 2;         \
-        const int64_t output_bytes = (output_elem_cnt * sizeof(std::complex<dtype_in>));                   \
-        return onesided ? output_bytes : 2 * output_bytes;                                  \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                     \
+        const Shape& output_shape = ctx->InputShape("output", 0);                             \
+        const bool return_complex = ctx->Attr<bool>("return_complex");                        \
+        const bool onesided = ctx->Attr<bool>("onesided");                                    \
+        int64_t output_elem_cnt =                                                             \
+            return_complex ? output_shape.elem_cnt() : output_shape.elem_cnt() / 2;           \
+        const int64_t output_bytes = (output_elem_cnt * sizeof(std::complex<dtype_in>));      \
+        return onesided ? output_bytes : 2 * output_bytes;                                    \
       });
 
 REGISTER_STFT_CPU_KERNEL(double, std::complex<double>)
@@ -253,11 +252,10 @@ REGISTER_STFT_CPU_KERNEL(float, std::complex<float>)
 // REGISTER_STFT_CUDA_KERNEL(...)
 #endif
 
-
-#define REGISTER_FFTC2C_KERNELS(device, dtype)                                               \
+#define REGISTER_FFTC2C_KERNELS(device, dtype)                                                \
   REGISTER_USER_KERNEL("fft_c2c").SetCreateFn<FftC2CKernel<device, dtype>>().SetIsMatchedHob( \
       (user_op::HobDeviceType() == device)                                                    \
-      && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)        \
+      && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)                      \
       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))
 
 REGISTER_FFTC2C_KERNELS(DeviceType::kCPU, std::complex<float>);
@@ -267,11 +265,12 @@ REGISTER_FFTC2C_KERNELS(DeviceType::kCPU, std::complex<double>);
 // REGISTER_FFTC2C_KERNELS(DeviceType::kCUDA, ...)
 #endif
 
-#define REGISTER_FFTR2C_KERNELS(device, dtype_in, dtype_out)                                                \
-  REGISTER_USER_KERNEL("fft_r2c").SetCreateFn<FftR2CKernel<device, dtype_in, dtype_out>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == device)                                                    \
-      && (user_op::HobDataType("input", 0) == GetDataType<dtype_in>::value)                      \
-      && (user_op::HobDataType("out", 0) == GetDataType<dtype_out>::value))
+#define REGISTER_FFTR2C_KERNELS(device, dtype_in, dtype_out)                                 \
+  REGISTER_USER_KERNEL("fft_r2c")                                                            \
+      .SetCreateFn<FftR2CKernel<device, dtype_in, dtype_out>>()                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                  \
+                       && (user_op::HobDataType("input", 0) == GetDataType<dtype_in>::value) \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype_out>::value))
 
 REGISTER_FFTR2C_KERNELS(DeviceType::kCPU, float, std::complex<float>);
 REGISTER_FFTR2C_KERNELS(DeviceType::kCPU, double, std::complex<double>);
@@ -280,11 +279,12 @@ REGISTER_FFTR2C_KERNELS(DeviceType::kCPU, double, std::complex<double>);
 // REGISTER_FFTR2C_KERNELS(DeviceType::kCUDA, ...)
 #endif
 
-#define REGISTER_FFTC2R_KERNELS(device, dtype_in, dtype_out)                                                \
-  REGISTER_USER_KERNEL("fft_c2r").SetCreateFn<FftC2RKernel<device, dtype_in, dtype_out>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == device)                                                    \
-      && (user_op::HobDataType("input", 0) == GetDataType<dtype_in>::value)        \
-      && (user_op::HobDataType("out", 0) == GetDataType<dtype_out>::value))
+#define REGISTER_FFTC2R_KERNELS(device, dtype_in, dtype_out)                                 \
+  REGISTER_USER_KERNEL("fft_c2r")                                                            \
+      .SetCreateFn<FftC2RKernel<device, dtype_in, dtype_out>>()                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                  \
+                       && (user_op::HobDataType("input", 0) == GetDataType<dtype_in>::value) \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype_out>::value))
 
 REGISTER_FFTC2R_KERNELS(DeviceType::kCPU, std::complex<float>, float);
 REGISTER_FFTC2R_KERNELS(DeviceType::kCPU, std::complex<double>, double);

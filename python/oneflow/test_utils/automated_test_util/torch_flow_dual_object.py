@@ -1152,7 +1152,11 @@ def check_tensor_equality(
             )
             return False
     # error: module 'oneflow' has no attribute 'resolve_conj' and 'is_conj'
-    torch_numpy = torch_tensor.detach().cpu().numpy() if not torch_original.is_conj(torch_tensor) else torch_original.resolve_conj(torch_tensor.detach()).cpu().numpy()
+    torch_numpy = (
+        torch_tensor.detach().cpu().numpy()
+        if not torch_original.is_conj(torch_tensor)
+        else torch_original.resolve_conj(torch_tensor.detach()).cpu().numpy()
+    )
     # torch_numpy = torch_original.resolve_conj(torch_tensor.detach().cpu()).numpy()
     # torch_numpy = torch_tensor.detach().cpu().numpy()
     oneflow_numpy = flow_tensor.numpy()

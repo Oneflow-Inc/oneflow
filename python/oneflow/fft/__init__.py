@@ -1,5 +1,21 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from oneflow.framework.tensor import Tensor
 import oneflow as flow
+
 
 def fft(input, n=None, dim=-1, norm=None) -> Tensor:
     r"""
@@ -53,53 +69,70 @@ def fft(input, n=None, dim=-1, norm=None) -> Tensor:
     """
     return flow._C.fft(input, n, dim, norm)
 
+
 def ifft(input, n=None, dim=-1, norm=None) -> Tensor:
     return flow._C.ifft(input, n, dim, norm)
+
 
 def fft2(input, s=None, dim=(-2, -1), norm=None) -> Tensor:
     return flow._C.fft2(input, s, dim, norm)
 
+
 def ifft2(input, s=None, dim=(-2, -1), norm=None) -> Tensor:
     return flow._C.ifft2(input, s, dim, norm)
+
 
 def fftn(input, s=None, dim=None, norm=None) -> Tensor:
     return flow._C.fftn(input, s, dim, norm)
 
+
 def ifftn(input, s=None, dim=None, norm=None) -> Tensor:
     return flow._C.ifftn(input, s, dim, norm)
+
 
 def rfft(input, n=None, dim=-1, norm=None) -> Tensor:
     return flow._C.rfft(input, n, dim, norm)
 
+
 def irfft(input, n=None, dim=-1, norm=None) -> Tensor:
     return flow._C.irfft(input, n, dim, norm)
+
 
 def rfft2(input, s=None, dim=(-2, -1), norm=None) -> Tensor:
     return flow._C.rfft2(input, s, dim, norm)
 
+
 def irfft2(input, s=None, dim=(-2, -1), norm=None) -> Tensor:
     return flow._C.irfft2(input, s, dim, norm)
+
 
 def rfftn(input, s=None, dim=None, norm=None) -> Tensor:
     return flow._C.rfftn(input, s, dim, norm)
 
+
 def irfftn(input, s=None, dim=None, norm=None) -> Tensor:
     return flow._C.irfftn(input, s, dim, norm)
+
 
 def hfft(input, n=None, dim=-1, norm=None) -> Tensor:
     return flow._C.hfft(input, n, dim, norm)
 
+
 def ihfft(input, n=None, dim=-1, norm=None) -> Tensor:
     return flow._C.ihfft(input, n, dim, norm)
+
 
 def hfft2(input, s=None, dim=(-2, -1), norm=None) -> Tensor:
     return flow._C.hfft2(input, s, dim, norm)
 
+
 def ihfft2(input, s=None, dim=(-2, -1), norm=None) -> Tensor:
     return flow._C.ihfft2(input, s, dim, norm)
 
+
 def hfftn(input, s=None, dim=None, norm=None) -> Tensor:
     return flow._C.hfftn(input, s, dim, norm)
+
 
 def ihfftn(input, s=None, dim=None, norm=None) -> Tensor:
     return flow._C.ihfftn(input, s, dim, norm)

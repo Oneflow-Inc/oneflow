@@ -175,7 +175,6 @@ class FftC2R : public OpExprGradFunction<FftC2RCaptureState> {
     in_grads->at(0) = sliced_tensor;
     return Maybe<void>::Ok();
   }
-
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("fft_r2c", FftR2C);

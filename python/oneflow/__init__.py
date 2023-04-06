@@ -479,7 +479,7 @@ from . import (
     amp,
     hub,
     fx,
-    fft
+    fft,
 )
 import oneflow.utils.data
 import oneflow.framework.docstr as docstr

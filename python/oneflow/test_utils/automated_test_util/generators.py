@@ -375,7 +375,9 @@ class random_pytorch_tensor(generator):
                 res = res.pin_memory()
             return res
         elif dtype == complex:
-            np_arr = rng.uniform(low=low, high=high, size=shape) + 1.0j * rng.uniform(low=low, high=high, size=shape)
+            np_arr = rng.uniform(low=low, high=high, size=shape) + 1.0j * rng.uniform(
+                low=low, high=high, size=shape
+            )
             res = torch.Tensor(np_arr)
             if pin_memory:
                 res = res.pin_memory()
