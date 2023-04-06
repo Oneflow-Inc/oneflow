@@ -376,6 +376,7 @@ Utility functions in other modules
     :template: classtemplate.rst
 
     nn.Flatten
+    nn.Unflatten
 
 Quantized Functions
 --------------------
