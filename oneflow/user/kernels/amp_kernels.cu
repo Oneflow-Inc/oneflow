@@ -147,7 +147,7 @@ class MultiTensorAMPForEachNonFiniteCheckAndUnscaleGpuKernel final : public user
     TensorTupleParams<1> tensor_tuple_params{};
     int64_t count = 0;
     int64_t total_elem_cnt = 0;
-    for (int tensor_idx = 0; tensor_idx < in_num - 2; tensor_idx++) {
+    for (size_t tensor_idx = 0; tensor_idx < in_num - 2; tensor_idx++) {
       user_op::Tensor* tensor =
           ctx->Tensor4ArgNameAndIndex("scaled_grads_found_inf_inv_scale", tensor_idx);
       tensor_tuple_params.ptr[0][count] = tensor->mut_dptr();

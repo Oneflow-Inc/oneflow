@@ -650,7 +650,7 @@ template struct MultiTensorYoloV5WeightUpdateKernelUtil<DeviceType::kCUDA, float
 
 template<typename T>
 __global__ void MultiTensorAMPForEachNonFiniteCheckAndUnscaleGpu(
-    int32_t num_tensor, float* found_inf, const float* inv_scale,
+    int64_t num_tensor, float* found_inf, const float* inv_scale,
     TensorTupleParams<1> tensor_tuple_params) {
   int64_t v_block_id = blockIdx.x;
   const auto inv_scale_value = *inv_scale;
@@ -666,7 +666,7 @@ __global__ void MultiTensorAMPForEachNonFiniteCheckAndUnscaleGpu(
       for (int32_t ilp = 0; ilp < kUnrollSize; ilp++) {
         int64_t actual_idx = i + ilp * blockDim.x;
         if (actual_idx < tensor_elem_cnt) {
-          scaled_grad[i] =
+          scaled_grad[actual_idx] =
               inv_scale_value == 1.f ? scaled_grad[i] : scaled_grad[i] * inv_scale_value;
         }
       }
@@ -687,7 +687,8 @@ template<typename T>
 void MultiTensorAMPForEachNonFiniteCheckAndUnscaleGpuKernelUtil<DeviceType::kCUDA, T>::Update(
     ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, float* found_inf,
     const float* inv_scale, TensorTupleParams<1> tensor_tuple_params) {
-  const unsigned int grid_size = ComputeGridSize(stream, kBlockSize, elem_cnt);
+  const unsigned int grid_size =
+      ComputeGridSize(stream->As<ep::CudaStream>(), kBlockSize, elem_cnt);
   for (int i = 0; i < n_tensor; i++) {
     tensor_tuple_params.block_offset[i] =
         ((tensor_tuple_params.sizes[i] + kBlockSize * kUnrollSize - 1) / (kBlockSize * kUnrollSize))
