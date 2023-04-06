@@ -49,7 +49,7 @@ class ThreadMgr final {
 };
 
 // Use limit_thread_num to config the max thread num.
-// limit_thread_num == -1 means no limit, use the max avaliable thread num of the machine.
+// limit_thread_num == -1 means no limit, use the max avaliable thread num of the ThreadPool.
 // limit_thread_num == 0 means use the current thread.
 template<typename DoEachT>
 void MultiThreadLoop(size_t work_num, const DoEachT& DoEachWork, int64_t limit_thread_num = -1) {
