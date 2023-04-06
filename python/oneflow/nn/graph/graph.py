@@ -831,6 +831,9 @@ class Graph(object):
         return a_graph
 
     def _compile(self, *args, **kwargs):
+        if self._run_with_cache == True:
+            return self._dynamic_input_graph_cache._compile(*args, **kwargs)
+
         if not self._is_compiled:
             if not self._build_with_shared_graph:
                 self._compile_new(*args, **kwargs)
