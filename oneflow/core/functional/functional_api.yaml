@@ -30,6 +30,11 @@
     ]
   bind_python: true
 
+# this api just for test host memory input
+- name: "host_scalar_add_by_tensor"
+  signature: "Tensor (Tensor x, Tensor scalar) => HostScalarAddByTensor"
+  bind_python: true
+
 - name: "amin"
   signature: "Tensor (Tensor input, Int32List[1] dim=None, Bool keepdim=False) => Amin"
   bind_python: True
@@ -3404,26 +3409,10 @@
   signature: "Tensor (Tensor input) => Clone"
   bind_python: True
 
-- name: "real"
-  signature: "Tensor (Tensor x) => Real"
+- name: "frac"
+  signature: "Tensor (Tensor x) => Frac"
   bind_python: True
 
-- name: "real_grad"
-  signature: "Tensor (Tensor dout) => RealGrad"
-  bind_python: False
-
-- name: "imag"
-  signature: "Tensor (Tensor x) => Imag"
-  bind_python: True
-
-- name: "imag_grad"
-  signature: "Tensor (Tensor dout) => ImagGrad"
-  bind_python: False
-
-- name: "conj"
-  signature: "Tensor (Tensor x) => Conj"
-  bind_python: True
-
-- name: "conj_physical"
-  signature: "Tensor (Tensor x) => ConjPhysical"
+- name: "frac_"
+  signature: "Tensor (Tensor x) => FracInplace"
   bind_python: True

@@ -447,6 +447,9 @@ class SliceGradKernel final : public user_op::OpKernel, public user_op::CudaGrap
   REGISTER_SLICE_KERNEL(device, std::complex<float>) \
   REGISTER_SLICE_KERNEL(device, std::complex<double>)
 
+REGISTER_SLICE_KERNEL(DeviceType::kCPU, std::complex<float>)
+REGISTER_SLICE_KERNEL(DeviceType::kCPU, std::complex<double>)
+
 REGISTER_SLICE_KERNEL_WITH_DEVICE(DeviceType::kCPU)
 REGISTER_SLICE_KERNEL(DeviceType::kCPU, bfloat16)
 #ifdef WITH_CUDA
