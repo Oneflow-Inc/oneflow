@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_FFT_KERNEL_UTIL_H_
 
 #include <cstdint>
+#include <type_traits>
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
@@ -113,10 +114,10 @@ static void conj_symmetry(T* data_out, const Shape& shape, const Stride& strides
   func(data_out, shape, strides_vec, dims, elem_count);
 }
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type, typename T, typename = void>
 struct FftC2CKernelUtil {
-  static void FftC2CForward(ep::Stream* stream, const std::complex<T>* data_in,
-                            std::complex<T>* data_out, const Shape& input_shape,
+  static void FftC2CForward(ep::Stream* stream, const T* data_in,
+                            T* data_out, const Shape& input_shape,
                             const Shape& output_shape, const Stride& input_stride,
                             const Stride& output_stride, bool forward,
                             const std::vector<int64_t>& dims, fft_norm_mode normalization);
