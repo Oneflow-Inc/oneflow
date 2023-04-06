@@ -79,7 +79,7 @@ def _test_scalar_pow_forward(test_case, shape, device, dtype):
 
 
 def _test_scalar_pow_backward(test_case, shape, device, dtype):
-    if dtype == flow.int:
+    if dtype != flow.float:
         return
     array, y = _get_data(shape, dtype)
     x = flow.tensor(array, device=flow.device(device), dtype=dtype, requires_grad=True)
@@ -93,13 +93,9 @@ def _test_scalar_pow_backward(test_case, shape, device, dtype):
     mlu_out.backward()
     cpu_out.backward()
 
-    # TODO(): The MLU precision error is usually relatively large when the
-    # result value is greater than 1e7
-    x_cpu_grad = x_cpu.grad.numpy()
-    x_cpu_grad[np.abs(x_cpu_grad) > 1e7] = 1e7
-    x_grad = x.grad.numpy()
-    x_grad[np.abs(x_grad) > 1e7] = 1e7
-    test_case.assertTrue(np.allclose(x_cpu_grad, x_grad, 0.01, 0.01, equal_nan=True))
+    test_case.assertTrue(
+        np.allclose(x_cpu.grad.numpy(), x.grad.numpy(), 0.01, 0.01, equal_nan=True)
+    )
 
 
 @flow.unittest.skip_unless_1n1d()

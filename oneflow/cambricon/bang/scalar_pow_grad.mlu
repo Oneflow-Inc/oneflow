@@ -18,6 +18,7 @@ limitations under the License.
 namespace oneflow {
 
 static constexpr int32_t nram_limit = 1024;
+static constexpr float log_magic = 1.44269504089;  // log2(e)
 
 static __mlu_func__ void bang_mask_assign(float* dst, float* src, float* mask, int32_t elem_count) {
   __nram__ int32_t bitmask[nram_limit];
@@ -36,8 +37,6 @@ static __mlu_func__ void bang_mask_assign(float* dst, float* src, float* mask, i
 
 static __mlu_func__ void bang_pow_scalar(float* dst, float* src, float exponent,
                                          int32_t elem_count) {
-// TODO(): Dealing with precision issue when `exponent * log|src| > 17`.
-#if 1
   __nram__ float nram_temp[nram_limit];
   __nram__ float nram_scale[nram_limit];
   __nram__ float nram_mask_neg[nram_limit];
@@ -60,12 +59,9 @@ static __mlu_func__ void bang_pow_scalar(float* dst, float* src, float exponent,
 
   __bang_abs(nram_temp, src, elem_count);
   __bang_active_loghp(nram_temp, nram_temp, elem_count);
-  __bang_mul_scalar(nram_temp, nram_temp, exponent, elem_count);
-  __bang_active_exphp(nram_temp, nram_temp, elem_count);
+  __bang_mul_scalar(nram_temp, nram_temp, exponent * log_magic, elem_count);
+  __bang_pow2(nram_temp, nram_temp, elem_count);
   __bang_mul(dst, nram_temp, nram_scale, elem_count);
-#else
-  for (int i = 0; i < elem_count; ++i) { dst[i] = pow(src[i], exponent); }
-#endif
 }
 
 static __mlu_func__ void bang_pow_scalar(half* dst, half* src, float exponent, int32_t elem_count) {
@@ -91,7 +87,6 @@ __mlu_global__ void bang_scalar_pow_grad_kernel(int64_t n, const T* x, const T* 
   __nram__ T nram_x[nram_limit];
   __nram__ T nram_dx[nram_limit];
   __nram__ T nram_dy[nram_limit];
-  __nram__ T nram_temp[nram_limit];
 
   int64_t j = 0;
   for (; j < length - nram_limit + 1; j += nram_limit) {
@@ -100,9 +95,7 @@ __mlu_global__ void bang_scalar_pow_grad_kernel(int64_t n, const T* x, const T* 
     __sync_copy_dram_to_nram();
 
     if (exponent == 0) {
-      __bang_ne_scalar(nram_temp, nram_x, static_cast<T>(0.0), nram_limit);
-      __bang_write_value(nram_dx, nram_limit, static_cast<T>(1.0));
-      __bang_mul(nram_dx, nram_dx, nram_temp, nram_limit);
+      __bang_ne_scalar(nram_dx, nram_x, static_cast<T>(0.0), nram_limit);
     } else if (exponent == 1.0) {
       __bang_mul_scalar(nram_dx, nram_x, exponent, nram_limit);
     } else if (exponent == 2.0) {
@@ -130,9 +123,7 @@ __mlu_global__ void bang_scalar_pow_grad_kernel(int64_t n, const T* x, const T* 
     __sync_copy_dram_to_nram();
 
     if (exponent == 0) {
-      __bang_ne_scalar(nram_temp, nram_x, static_cast<T>(0.0), nram_rest);
-      __bang_write_value(nram_dx, nram_rest, static_cast<T>(1.0));
-      __bang_mul(nram_dx, nram_dx, nram_temp, nram_rest);
+      __bang_ne_scalar(nram_dx, nram_x, static_cast<T>(0.0), nram_rest);
     } else if (exponent == 1.0) {
       __bang_mul_scalar(nram_dx, nram_x, exponent, nram_rest);
     } else if (exponent == 2.0) {
