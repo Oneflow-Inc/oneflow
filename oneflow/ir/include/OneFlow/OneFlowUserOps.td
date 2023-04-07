@@ -10841,7 +10841,7 @@ def OneFlow_IsFiniteOp : OneFlow_BaseOp<"isfinite", [NoMemoryEffect, NoGrad, Dec
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_RealOp : OneFlow_BaseOp<"real", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_RealOp : OneFlow_BaseOp<"real", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x
   );
@@ -10854,7 +10854,7 @@ def OneFlow_RealOp : OneFlow_BaseOp<"real", [NoSideEffect, DeclareOpInterfaceMet
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_RealGradOp : OneFlow_BaseOp<"real_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_RealGradOp : OneFlow_BaseOp<"real_grad", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dout
   );
@@ -10867,7 +10867,7 @@ def OneFlow_RealGradOp : OneFlow_BaseOp<"real_grad", [NoSideEffect, DeclareOpInt
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_ImagOp : OneFlow_BaseOp<"imag", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ImagOp : OneFlow_BaseOp<"imag", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x
   );
@@ -10880,7 +10880,7 @@ def OneFlow_ImagOp : OneFlow_BaseOp<"imag", [NoSideEffect, DeclareOpInterfaceMet
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_ImagGradOp : OneFlow_BaseOp<"imag_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ImagGradOp : OneFlow_BaseOp<"imag_grad", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dout
   );
@@ -10893,7 +10893,7 @@ def OneFlow_ImagGradOp : OneFlow_BaseOp<"imag_grad", [NoSideEffect, DeclareOpInt
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_ConjPhysicalOp : OneFlow_BaseOp<"conj_physical", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ConjPhysicalOp : OneFlow_BaseOp<"conj_physical", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x
   );
