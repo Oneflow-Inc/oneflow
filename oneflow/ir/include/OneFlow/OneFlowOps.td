@@ -100,10 +100,10 @@ def OneFlow_VariableOp : OneFlow_ConcreteSystemOp<"variable", [OneFlow_TensorSou
   let custom_attrs = (ins
     ShapeAttr:$shape,
     OptionalAttr<OneFlow_DataType>:$data_type,
-    DefaultValuedAttr<StrAttr, "\"weight\"">:$model_name,
-    DefaultValuedAttr<F32Attr, "0.0f">:$l1_regularization,
-    DefaultValuedAttr<F32Attr, "0.0f">:$l2_regularization,
-    DefaultValuedAttr<BoolAttr, "true">:$trainable,
+    OptionalAttr<StrAttr>:$model_name,
+    OptionalAttr<F32Attr>:$l1_regularization,
+    OptionalAttr<F32Attr>:$l2_regularization,
+    OptionalAttr<BoolAttr>:$trainable,
     OptionalAttr<F32Attr>:$float_initializer,
     OptionalAttr<SI64Attr>:$integer_initializer,
     OptionalAttr<SBP_ParallelSignatureAttr>:$parallel

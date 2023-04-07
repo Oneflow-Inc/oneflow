@@ -579,19 +579,22 @@ LogicalResult ConvertVariableOpConf(VariableOp op, ::oneflow::OperatorConf* op_c
     }
   }
 
-  if (op->hasAttr("model_name")) { var_op_conf->set_model_name(op.getModelName().str()); }
+  if (auto model_name = op.getModelNameAttr()) {
+    var_op_conf->set_model_name(model_name.getValue().str());
+  }
 
-  if (op->hasAttr("l1_regularization")) {
+  if (auto l1_regularization = op.getL1RegularizationAttr()) {
+    LOG(ERROR) << op_conf->name();
     var_op_conf->mutable_regularizer()->mutable_l1_l2_conf()->set_l1(
-        op.getL1Regularization().convertToFloat());
+        l1_regularization.getValue().convertToFloat());
   }
 
-  if (op->hasAttr("l2_regularization")) {
+  if (auto l2_regularization = op.getL2RegularizationAttr()) {
     var_op_conf->mutable_regularizer()->mutable_l1_l2_conf()->set_l2(
-        op.getL2Regularization().convertToFloat());
+        l2_regularization.getValue().convertToFloat());
   }
 
-  if (op->hasAttr("trainable")) { var_op_conf->set_trainable(op.getTrainable()); }
+  if (auto trainable = op.getTrainableAttr()) { var_op_conf->set_trainable(trainable.getValue()); }
 
   for (auto output : op.getParallel()->getOutputs()) {
     if (auto nd_outputs = output.dyn_cast<ArrayAttr>()) {
