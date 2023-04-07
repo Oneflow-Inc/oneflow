@@ -194,6 +194,28 @@ std::set<std::string> MultiThreadBroadcastFromMasterToWorkers(size_t world_size,
       Singleton<CtrlClient>::Get()->PullRankKV(0, key, worker_data);
     }
 
+    // special hash test
+  } else if (broadcast_strategy && std::string(broadcast_strategy) == "HASH") {
+    const size_t split_num = std::sqrt(world_size);
+    BalancedSplitter bs(world_size, split_num);
+    if (GlobalProcessCtx::IsThisProcessMaster()) {
+      std::mutex mtx4keys;
+      // Unlike the implementation within the framework, here we directly transmit std::string.
+      const std::string& data = master_data;
+      MultiThreadLoop(
+          split_num,
+          [&](int i) {
+            std::string key = prefix + std::to_string(i);
+            Singleton<CtrlClient>::Get()->PushRankKV(i, key, data);
+            std::lock_guard<std::mutex> lock(mtx4keys);
+            CHECK(keys.insert(key).second);
+          },
+          thread_num);
+    } else {
+      const int64_t bs_index = bs.GetRangIndex(GlobalProcessCtx::Rank());
+      std::string key = prefix + std::to_string(bs_index);
+      Singleton<CtrlClient>::Get()->PullRankKV(bs_index, key, worker_data);
+    }
     // other broadcast case
   } else {
     const size_t split_num = std::sqrt(world_size);
