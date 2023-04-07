@@ -449,8 +449,8 @@ class UnflattenFunctor {
 
     auto inferred_size_ = infer_size_dv(sizes, in_shape[true_dim]);
     CHECK_OR_RETURN(inferred_size_.IsOk()) << "unflatten: Provided sizes " << sizes.ToString()
-                              << " don't multiply up to the size of dim " << true_dim << " ("
-                              << in_shape[true_dim] << ") in the input tensor";
+                                           << " don't multiply up to the size of dim " << true_dim
+                                           << " (" << in_shape[true_dim] << ") in the input tensor";
     DimVector inferred_size = *JUST(inferred_size_);
 
     DimVector dim_vec{in_shape.begin(), in_shape.end()};

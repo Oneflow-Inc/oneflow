@@ -13,9 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <vector>
-#include <sstream>
-#include <string>
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/common/shape.h"
@@ -41,10 +38,11 @@ static inline Maybe<void> infer_size_impl(const Shape& shape, int64_t numel, Dim
     }
   }
   CHECK_OR_RETURN(numel == newsize || (infer_dim >= 0 && newsize > 0 && numel % newsize == 0))
-    << "shape '" << shape.ToString() << "' is invalid for input of size " << numel;
-  if(infer_dim >= 0) {
-    CHECK_OR_RETURN(newsize != 0) << "cannot reshape tensor of 0 elements into shape " << shape.ToString()
-                                  << " because the unspecified dimension size -1 can be any value and is ambiguous";
+      << "shape '" << shape.ToString() << "' is invalid for input of size " << numel;
+  if (infer_dim >= 0) {
+    CHECK_OR_RETURN(newsize != 0)
+        << "cannot reshape tensor of 0 elements into shape " << shape.ToString()
+        << " because the unspecified dimension size -1 can be any value and is ambiguous";
     res[infer_dim] = numel / newsize;
   }
   return Maybe<void>::Ok();
