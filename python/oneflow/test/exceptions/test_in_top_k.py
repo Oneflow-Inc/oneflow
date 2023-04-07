@@ -28,7 +28,7 @@ class TestInTopK(flow.unittest.TestCase):
         arr = np.array([[0.8, 0.6, 0.3], [0.1, 0.6, 0.4]])
         predictions = flow.Tensor(arr)
         with test_case.assertRaises(RuntimeError) as ctx:
-            flow._C.in_top_k(targets, predictions, 1)
+            flow.in_top_k(targets, predictions, 1)
         test_case.assertTrue(
             "targets data type must be index type" in str(ctx.exception)
         )
