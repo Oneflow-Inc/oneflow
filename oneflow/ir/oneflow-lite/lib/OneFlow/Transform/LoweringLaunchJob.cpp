@@ -73,14 +73,14 @@ void LoweringLaunchJobPass::runOnOperation() {
   // TODO(): register backend converters
   for (Operation* op : launchOps) {
     auto launchOp = dyn_cast<oneflow::MlirJitOp>(op);
-    Operation* callee = symbolTable.lookup(launchOp.callee());
+    Operation* callee = symbolTable.lookup(launchOp.getCallee());
     if (!callee) {
-      llvm::errs() << "can not find a callee named " << launchOp.callee() << "\n";
+      llvm::errs() << "can not find a callee named " << launchOp.getCallee() << "\n";
       return signalPassFailure();
     }
     llvm::SmallVector<uint8_t, 4> loweringData;
-    if (failed(loweringLaunchJob(builder, callee, launchOp.device_tag(), &loweringData))) {
-      llvm::errs() << "failed to lowerring job " << launchOp.callee() << "\n";
+    if (failed(loweringLaunchJob(builder, callee, launchOp.getDeviceTag(), &loweringData))) {
+      llvm::errs() << "failed to lowerring job " << launchOp.getCallee() << "\n";
     }
     op->setAttr("mlir_assembly",
                 builder.getStringAttr(StringRef(reinterpret_cast<const char*>(loweringData.data()),
