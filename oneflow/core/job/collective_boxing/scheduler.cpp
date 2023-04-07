@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/job/collective_boxing/static_group_coordinator.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/job/collective_boxing/executor_backend.h"
+#include "oneflow/core/job/collective_boxing/executor_backend_manager.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
@@ -120,14 +120,15 @@ class ExecutorImpl : public Executor {
 void ExecutorImpl::Init(std::shared_ptr<RequestStore> request_store) {
   request_store_ = request_store;
   backends_.resize(DeviceType_ARRAYSIZE);
-  const auto& vaild_executor_device_types = VaildExecutorDeviceTypes();
+  const auto& vaild_executor_device_types = ExecutorBackendMgr::Get().vaild_executor_device_types();
   CHECK_EQ(vaild_executor_device_types.size(), 1)
       << "Currently only one backend is supported at the same time";
 
   for (DeviceType device_type : vaild_executor_device_types) {
     size_t dev_count = Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceCount(device_type);
     if (dev_count > 0) {
-      std::unique_ptr<ExecutorBackend> backend = NewExecutorBackend(device_type);
+      std::unique_ptr<ExecutorBackend> backend =
+          ExecutorBackendMgr::Get().NewExecutorBackend(device_type);
       CHECK(backend);
       backend->Init(request_store_);
       backends_.at(device_type) = std::move(backend);
@@ -136,7 +137,7 @@ void ExecutorImpl::Init(std::shared_ptr<RequestStore> request_store) {
 }
 
 void ExecutorImpl::InitJob(int64_t job_id) {
-  const auto& vaild_executor_device_types = VaildExecutorDeviceTypes();
+  const auto& vaild_executor_device_types = ExecutorBackendMgr::Get().vaild_executor_device_types();
   for (DeviceType device_type : vaild_executor_device_types) {
     CHECK(backends_.at(device_type));
     backends_.at(device_type)->InitJob(job_id);
@@ -144,7 +145,7 @@ void ExecutorImpl::InitJob(int64_t job_id) {
 }
 
 void ExecutorImpl::DeinitJob(int64_t job_id) {
-  const auto& vaild_executor_device_types = VaildExecutorDeviceTypes();
+  const auto& vaild_executor_device_types = ExecutorBackendMgr::Get().vaild_executor_device_types();
   for (DeviceType device_type : vaild_executor_device_types) {
     CHECK(backends_.at(device_type));
     backends_.at(device_type)->DeinitJob(job_id);
@@ -157,7 +158,7 @@ GroupToken* ExecutorImpl::CreateGroupToken(const std::vector<RequestId>& group,
 }
 
 void ExecutorImpl::DestroyGroupToken(GroupToken* group_token) {
-  const auto& vaild_executor_device_types = VaildExecutorDeviceTypes();
+  const auto& vaild_executor_device_types = ExecutorBackendMgr::Get().vaild_executor_device_types();
   for (DeviceType device_type : vaild_executor_device_types) {
     CHECK(backends_.at(device_type));
     backends_.at(device_type)->DestroyGroupToken(group_token->backend_group_token());

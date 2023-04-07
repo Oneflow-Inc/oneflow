@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/collective_boxing/nccl_executor_backend.h"
+#include "oneflow/core/job/collective_boxing/executor_backend_manager.h"
 #include "oneflow/core/job/collective_boxing/request_store.h"
 #include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"

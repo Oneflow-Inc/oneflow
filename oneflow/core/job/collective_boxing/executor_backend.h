@@ -47,22 +47,6 @@ class ExecutorBackend {
   virtual void DestroyGroupToken(void* group_token) = 0;
 };
 
-const std::vector<DeviceType>& VaildExecutorDeviceTypes();
-
-void RegisterExecutorDeviceType(DeviceType device_type);
-
-template<typename... Args>
-static std::unique_ptr<ExecutorBackend> NewExecutorBackend(DeviceType device_type, Args&&... args) {
-  std::unique_ptr<ExecutorBackend> executor_backend_entry =
-      NewObjUniquePtr<DeviceType, ExecutorBackend>(device_type, std::forward<Args>(args)...);
-  if (!executor_backend_entry) { return nullptr; }
-  return executor_backend_entry;
-}
-
-#define REGISTER_EXECUTOR_BACKEND(device, Derived) \
-  COMMAND(RegisterExecutorDeviceType(device));     \
-  REGISTER_CLASS(DeviceType, device, ExecutorBackend, Derived)
-
 }  // namespace collective
 
 }  // namespace boxing

@@ -13,7 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job/collective_boxing/executor_backend.h"
+
+#include "oneflow/core/job/collective_boxing/executor_backend_manager.h"
 
 namespace oneflow {
 
@@ -21,23 +22,11 @@ namespace boxing {
 
 namespace collective {
 
-namespace {
-
-std::vector<DeviceType>* GlobalVaildExecutorDeviceTypes() {
-  static std::vector<DeviceType> vaild_executor_device_types;
-  return &vaild_executor_device_types;
+ExecutorBackendMgr& ExecutorBackendMgr::Get() {
+  static ExecutorBackendMgr mgr;
+  return mgr;
 }
 
-}  // namespace
-
-const std::vector<DeviceType>& VaildExecutorDeviceTypes() {
-  return *GlobalVaildExecutorDeviceTypes();
-}
-
-void RegisterExecutorDeviceType(DeviceType device_type) {
-  auto* vaild_executor_device_types = GlobalVaildExecutorDeviceTypes();
-  vaild_executor_device_types->emplace_back(device_type);
-}
 }  // namespace collective
 
 }  // namespace boxing
