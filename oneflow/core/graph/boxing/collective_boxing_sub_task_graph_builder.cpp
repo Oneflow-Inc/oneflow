@@ -59,7 +59,7 @@ void NcclInitCollectiveNode(CollectiveBoxingGenericTaskNode* node,
   } else {
     CHECK_EQ(root, -1);
   }
-  op_desc->set_backend(Backend::kBackendNCCL);
+  op_desc->set_device_type(DeviceType::kCUDA);
   rank_desc->set_rank(parallel_id);
 
   const int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
