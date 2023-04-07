@@ -229,6 +229,7 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kDigamma, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src in) const {
+    // references https://github.com/pytorch/pytorch/blob/release/1.13/aten/src/ATen/native/cuda/Math.cuh#L3029-L3090
     static const double PI_f64 = 3.14159265358979323846;
     const Src PSI_10 = 2.25175258906672110764;
     const Src A[] = {
