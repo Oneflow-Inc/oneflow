@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <memory>
 #include <sstream>
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/op_interpreter.h"
@@ -76,7 +77,8 @@ Maybe<int> MaxRankNumber(Symbol<ParallelDesc> placement) {
 
 constexpr auto* GetMaxRankNumber = DECORATE(&MaxRankNumber, ThreadLocalCachedCopiable);
 
-Maybe<Symbol<ParallelDesc>> GetMaxRankTensorPlacement(const TensorTuple& inputs) {
+Maybe<Symbol<ParallelDesc>> MaxRankTensorPlacement(
+    const std::shared_ptr<GlobalTensorMetaInferArgs>& infer_args) {
   // Find the max rank tensor id in all input tensors.
   // e.g. if there are three tensor in inputs
   //        tensor        parallel_desc
@@ -84,18 +86,23 @@ Maybe<Symbol<ParallelDesc>> GetMaxRankTensorPlacement(const TensorTuple& inputs)
   // inputs[1] tensor b    [3, 4, 5]
   // inputs[2] tensor c    [2, 3, 4]
   // then max rank number is 5, max rank tensor is b, max rank tensor id is 1
-  CHECK_OR_RETURN(inputs.size() > 0);
+  const auto& global_tensor_metas = infer_args->input_global_tensor_metas();
+  CHECK_OR_RETURN(global_tensor_metas.size() > 0);
   int64_t max_rank_tensor_id = 0;
   int64_t max_rank = 0;
-  for (int64_t i = 0; i < inputs.size(); ++i) {
-    int64_t tensor_max_rank = JUST(GetMaxRankNumber(JUST(inputs[i]->parallel_desc())));
+  for (int64_t i = 0; i < global_tensor_metas.size(); ++i) {
+    int64_t tensor_max_rank = JUST(
+        GetMaxRankNumber(JUST(VectorAt(global_tensor_metas, i)).tensor_meta()->parallel_desc()));
     if (tensor_max_rank >= max_rank) {
       max_rank = tensor_max_rank;
       max_rank_tensor_id = i;
     }
   }
-  return JUST(inputs.at(max_rank_tensor_id)->parallel_desc());
+  return JUST(VectorAt(global_tensor_metas, max_rank_tensor_id)).tensor_meta()->parallel_desc();
 }
+
+constexpr auto* GetMaxRankTensorPlacement =
+    DECORATE(&MaxRankTensorPlacement, ThreadLocalCachedCopiable);
 
 Maybe<Symbol<ParallelDesc>> GetParallelDesc(const TensorTuple& inputs,
                                             const OpExprInterpContext& ctx,
@@ -195,9 +202,9 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     // true then traverse all input tensor use function GetBoxingOutput(), during this process,
     // each tensor will to_global with target parallel_desc
     if (IsEnvEnablePipelineParallelismAutoToGlobal() && !is_identical) {
-      parallel_desc = JUST(GetMaxRankTensorPlacement(inputs));
+      parallel_desc = JUST(GetMaxRankTensorPlacement(infer_args));
       Optional<int64_t> parallel_id;
-      JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &max_parallel_id));
+      JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
       for (int i = 0; i < inputs.size(); ++i) {
         const auto& input = inputs.at(i);
         Optional<int64_t> input_parallel_id;
