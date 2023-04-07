@@ -245,7 +245,7 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kDigammaBackwardWithDyX, Src, 
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
     // TODO:shijiaxing： This function is named trigamma, it will be implemented soon.
-    UNIMPLEMENTED();
+    assert(false);
     return static_cast<Dst>(0.0);
   }
 };
