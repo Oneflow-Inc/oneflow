@@ -32,11 +32,11 @@ user_op::Tensor* ComputeContext::CreateTensorWithArgNameAndIndex(const std::stri
     mlir::Value val = op->getResult(index + source.offset);
     auto use = *val.getUsers().begin();
     if (auto ret_op = llvm::dyn_cast_or_null<mlir::okl::GetTensorAsRetOp>(use)) {
-      return comp_ctx_->Tensor4ArgNameAndIndex("out", ret_op.index());
+      return comp_ctx_->Tensor4ArgNameAndIndex("out", ret_op.getIndex());
     }
     if (auto pool_op = llvm::dyn_cast_or_null<mlir::okl::TensorToPoolOp>(use)) {
       return tmp_buffer_.GetPoolTensor(TensorDesc4ArgNameAndIndex(arg_name, index),
-                                       pool_op.offset());
+                                       pool_op.getOffset());
     }
     op->emitError("Failed to find " + std::to_string(index) + "in outputs");
     exit(1);
@@ -48,14 +48,14 @@ user_op::Tensor* ComputeContext::CreateTensorWithArgNameAndIndex(const std::stri
     auto define_op = val.getDefiningOp();
     return llvm::TypeSwitch<::mlir::Operation*, user_op::Tensor*>(define_op)
         .Case([&](mlir::okl::GetTensorFromArgOp elem) {
-          return comp_ctx_->Tensor4ArgNameAndIndex("in", elem.index());
+          return comp_ctx_->Tensor4ArgNameAndIndex("in", elem.getIndex());
         })
         .Case([&](mlir::okl::GetTensorFromRetOp elem) {
-          return comp_ctx_->Tensor4ArgNameAndIndex("out", elem.index());
+          return comp_ctx_->Tensor4ArgNameAndIndex("out", elem.getIndex());
         })
         .Case([&](mlir::okl::PoolToTensorOp elem) {
           return tmp_buffer_.GetPoolTensor(TensorDesc4ArgNameAndIndex(arg_name, index),
-                                           elem.offset());
+                                           elem.getOffset());
         })
         .Default([&](::mlir::Operation* op) {
           op->dump();
@@ -66,10 +66,10 @@ user_op::Tensor* ComputeContext::CreateTensorWithArgNameAndIndex(const std::stri
 
   if (source.type == mlir::oneflow::user_op::Source::BUFFER) {
     auto wrap = op->getParentOfType<mlir::okl::WrapperKernelOp>();
-    for (auto& op : wrap.body().front()) {
+    for (auto& op : wrap.getBody().front()) {
       if (auto pool_to_buffer = llvm::dyn_cast_or_null<mlir::okl::PoolToBufferOp>(op)) {
         return tmp_buffer_.GetPoolBuffer(pool_to_buffer.getType().getShape()[0],
-                                         pool_to_buffer.offset());
+                                         pool_to_buffer.getOffset());
       }
     }
   }
