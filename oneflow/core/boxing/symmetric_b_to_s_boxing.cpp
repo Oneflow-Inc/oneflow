@@ -21,10 +21,48 @@ limitations under the License.
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/register/tensor_slice_view.h"
 #include "oneflow/core/job/nd_sbp_util.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
 
 namespace oneflow {
 
 namespace {
+
+class SliceKernelRegContext final : public user_op::KernelRegContext {
+ public:
+  explicit SliceKernelRegContext(DeviceType device_type) : device_type_(device_type) {}
+  ~SliceKernelRegContext() = default;
+
+  DeviceType device_type() const override { return device_type_; }
+  const ParallelContext& parallel_ctx() const override { PRINT_BUG_PROMPT_AND_ABORT(); }
+  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                        int32_t index) const override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+  }
+  const std::vector<std::pair<std::string, int32_t>>& inputs() const override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+  }
+  const std::vector<std::pair<std::string, int32_t>>& outputs() const override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+  }
+
+  const user_op::UserOpConfWrapper& user_op_conf() const override { PRINT_BUG_PROMPT_AND_ABORT(); }
+
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
+      const std::string& attr_name) const override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+  }
+
+ private:
+  DeviceType device_type_;
+};
+
+Maybe<bool> RawCheckSlicelKernelRegistered(DeviceType device_type) {
+  SliceKernelRegContext reg_ctx(device_type);
+  return user_op::UserOpRegistryMgr::Get().IsOpKernelRegistered("slice", reg_ctx);
+}
+
+static constexpr auto* CheckSliceKernelRegistered =
+    DECORATE(&RawCheckSlicelKernelRegistered, ThreadLocalCachedCopiable);
 
 bool RawIsBroadcastSbp(Symbol<SbpParallel> sbp_parallel) {
   return sbp_parallel->has_broadcast_parallel();
@@ -45,8 +83,7 @@ Maybe<void> RawCheckSymmetricB2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out
   CHECK_OR_RETURN(IsSplitSbp(SymbolOf(out->nd_sbp()->sbp_parallel(0))));
 
   CHECK_OR_RETURN(in->placement() == out->placement());
-  CHECK_OR_RETURN(in->placement()->device_type() == DeviceType::kCPU
-                  || in->placement()->device_type() == DeviceType::kCUDA);
+  CHECK_OR_RETURN(JUST(CheckSliceKernelRegistered(in->placement()->device_type())));
   return Maybe<void>::Ok();
 }
 // NOLINTEND(maybe-need-error-msg)
