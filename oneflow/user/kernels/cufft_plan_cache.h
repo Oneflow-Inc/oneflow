@@ -20,8 +20,12 @@ limitations under the License.
 #include <cufft.h>
 #include <cufftXt.h>
 #include <cuda_fp16.h>
+#include <cstdint>
+#include <functional>
+#include <numeric>
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/common/throw.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
@@ -116,6 +120,100 @@ public:
   }
 };
 
+// NOTE: The implementation of `CuFFTDataLayout`, `cufft_simple_embed` and `as_cufft_embed` are mostly taken from
+// pytorch.
+//       For more details pls refer to:
+//       https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/cuda/CuFFTPlanCache.h#L136
+//       https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/cuda/CuFFTPlanCache.h#L145
+//       https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/cuda/CuFFTPlanCache.h#L164
+using cufft_size_type = long long int;
+struct CuFFTDataLayout{
+  small_vector<cufft_size_type, 5> embed;
+  cufft_size_type stride, dist;
+  bool must_clone, simple;
+};
+
+// Returns a cufft embedding for a contiguous signal of the given size.
+// e.g. if the input is cloned, this will be the resulting data layout
+inline CuFFTDataLayout cufft_simple_embed(const std::vector<cufft_size_type>& sizes, bool onesided) {
+  CuFFTDataLayout layout;
+  layout.simple = true;
+  layout.must_clone = false;
+  layout.embed.assign(sizes.cbegin() + 1, sizes.cend());
+  if (onesided) {
+    layout.embed.back() = sizes.back() / 2 + 1;
+  }
+  layout.stride = 1;
+  layout.dist = 1;
+  for (const auto& len : layout.embed) {
+    layout.dist *= len;
+  }
+  return layout;
+}
+
+// Convert strides to a CuFFT embedded representation.
+// If strides cannot be embedded, returns a simple layout and sets must_clone flag
+inline CuFFTDataLayout as_cufft_embed(const std::vector<cufft_size_type>& strides, const std::vector<cufft_size_type>& sizes, bool onesided) {
+
+  const auto signal_ndim = strides.size() - 1;
+  CuFFTDataLayout layout;
+  auto last_stride = strides[signal_ndim];
+  layout.must_clone = (last_stride <= 0);
+
+  const auto last_dim_size = onesided ?
+      sizes[signal_ndim] / 2 + 1 : sizes[signal_ndim];
+  // const auto signal_numel = c10::multiply_integers(sizes.slice(1, sizes.size() - 2)) * last_dim_size;
+  const auto signal_numel = std::accumulate(sizes.begin() + 1, sizes.end() - 1, (cufft_size_type) 1, std::multiplies<cufft_size_type>()) * last_dim_size;
+  // Zero stides are not allowed, even if the batch size is one.
+  // If that happens just set a dummy case
+  if (sizes[0] == 1) {
+    layout.dist = signal_numel;
+  } else if (strides[0] == 0) {
+    layout.must_clone = true;
+  } else {
+    layout.dist = strides[0]; // 350
+  }
+
+  // Calculate the embedding shape, or set must_clone if the strides cannot be embedded
+  layout.embed.resize(signal_ndim);
+  for (auto i = signal_ndim - 1; !layout.must_clone && i > 0; i--) {
+    auto stride = strides[i];
+    if (sizes[i] == 1) {
+      layout.embed[i] = 1;
+    } else if (stride > 0 && stride % last_stride == 0) {
+      layout.embed[i] = stride / last_stride;
+      last_stride = stride;
+    } else {
+      layout.must_clone = true;
+    }
+  }
+  // must_clone == false
+  if (layout.must_clone) {
+    // If the input needs to be cloned, assume it will be contiguous
+    layout = cufft_simple_embed(sizes, onesided);
+    layout.must_clone = true;
+  } else {
+    layout.embed[0] = sizes[1]; // 10
+    layout.stride = strides[signal_ndim]; // 1
+    // Determine if layout represents a simple embedding (contiguous data)
+    layout.simple = [&] {
+      FOR_RANGE(int, i, 1, signal_ndim - 1){
+        if (layout.embed[i] != sizes[i + 1]) {
+          return false;
+        }
+      }
+      // for (const auto i : c10::irange(1, signal_ndim - 1)) {
+      //   if (layout.embed[i] != sizes[i + 1]) {
+      //     return false;
+      //   }
+      // }
+      return (layout.stride == 1 && layout.dist == signal_numel &&
+          layout.embed.back() == last_dim_size);
+    }();
+  }
+  return layout;
+}
+
 struct CuFFtParams {
   int32_t ndim;
   int32_t output_shape[max_rank + 1];
@@ -135,8 +233,8 @@ struct CuFFtParams {
               CUFFT_EXCUTETYPE type, DataType real) : ndim(dims), IsForward(is_forward), excute_type(type), real_data_type(real)
               {
         assert(ndim >= 1 && ndim <= max_rank);
-        assert(in_shape.size() == in_stride.size());
-        assert(out_shape.size() == out_stride.size());
+        assert(in_shape.size() == in_strides.size());
+        assert(out_shape.size() == out_strides.size());
 
         std::copy(in_strides.begin(), in_strides.end(), input_strides);
         std::copy(out_strides.begin(), out_strides.end(), output_strides);
