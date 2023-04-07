@@ -503,6 +503,26 @@ def _as_strided_inplace(self, size, stride, storage_offset=0):
     return flow._C.as_strided_(self, size, stride, storage_offset)
 
 
+def _logaddexp(self, other):
+    return flow._C.logaddexp(self, other)
+
+
+def _real(self):
+    return flow._C.real(self)
+
+
+def _imag(self):
+    return flow._C.imag(self)
+
+
+def _conj(self):
+    return flow._C.conj(self)
+
+
+def _conj_physical(self):
+    return flow._C.conj_physical(self)
+
+
 def RegisterMethods():
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _numpy
@@ -569,6 +589,11 @@ def RegisterMethods():
     Tensor.index_add_ = _index_add_inplace
     Tensor.as_strided = _as_strided
     Tensor.as_strided_ = _as_strided_inplace
+    Tensor.logaddexp = _logaddexp
+    Tensor.real = _real
+    Tensor.imag = _imag
+    Tensor.conj = _conj
+    Tensor.conj_physical = _conj_physical
 
 
 def register_tensor_op(op_name):
