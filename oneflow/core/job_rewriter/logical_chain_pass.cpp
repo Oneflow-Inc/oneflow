@@ -226,16 +226,9 @@ void InitPlacementLogicalChainsInfoFromSet(
     const std::function<bool(const OpNode*, const OpNode*)>& CmpOpNodeOrder) {
   auto* logical_chain_ordered_nodes = &logical_chain->ordered_op_nodes;
   CHECK(logical_chain_ordered_nodes->empty());
-
-  if (ParseBooleanFromEnv("DISABLE_LOGICAL_STRAIGHTEN", false)) {
-    logical_chain_ordered_nodes->assign(origin_logical_chain.begin(), origin_logical_chain.end());
-    std::sort(logical_chain_ordered_nodes->begin(), logical_chain_ordered_nodes->end(),
-              CmpOpNodeOrder);
-  } else {
-    std::vector<const OpNode*> sub_graph(origin_logical_chain.begin(), origin_logical_chain.end());
-    auto_parallel::StraightenSubGraph(sub_graph, logical_chain_ordered_nodes);
-  }
-
+  logical_chain_ordered_nodes->assign(origin_logical_chain.begin(), origin_logical_chain.end());
+  std::sort(logical_chain_ordered_nodes->begin(), logical_chain_ordered_nodes->end(),
+            CmpOpNodeOrder);
   const OpNode* begin_op = logical_chain_ordered_nodes->front();
   const OpNode* end_op = logical_chain_ordered_nodes->back();
   int64_t begin_op_global_order = op_node2global_order.at(begin_op);
