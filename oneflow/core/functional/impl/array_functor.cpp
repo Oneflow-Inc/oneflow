@@ -447,18 +447,11 @@ class UnflattenFunctor {
     const Shape& in_shape = *x->shape();
     int64_t true_dim = JUST(maybe_wrap_dim(dim, in_shape.size()));
 
-    DimVector inferred_size;
-    try {
-      inferred_size = *JUST(infer_size_dv(sizes, in_shape[true_dim]));
-    } catch (const std::runtime_error& e) {
-      if (!strstr(e.what(), "is invalid for input of size")) {
-        return Error::RuntimeError() << "unflatten got an unexpected error:\n" << e.what();
-      } else {
-        return Error::RuntimeError() << "unflatten: Provided sizes " << sizes.ToString()
-                                     << " don't multiply up to the size of dim " << true_dim << " ("
-                                     << in_shape[true_dim] << ") in the input tensor";
-      }
-    }
+    auto inferred_size_ = infer_size_dv(sizes, in_shape[true_dim]);
+    CHECK_OR_RETURN(inferred_size_.IsOk()) << "unflatten: Provided sizes " << sizes.ToString()
+                              << " don't multiply up to the size of dim " << true_dim << " ("
+                              << in_shape[true_dim] << ") in the input tensor";
+    DimVector inferred_size = *JUST(inferred_size_);
 
     DimVector dim_vec{in_shape.begin(), in_shape.end()};
     dim_vec.erase(dim_vec.begin() + true_dim);
