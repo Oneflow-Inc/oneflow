@@ -231,6 +231,10 @@ class EagerCclReduceKernel final : public user_op::OpKernel {
       CHECK_EQ(in->shape_view(), out->shape_view());
       CHECK_EQ(in->data_type(), out->data_type());
     }
+    if (out_ptr != nullptr) {
+      CHECK_EQ(in->shape_view(), out->shape_view());
+      CHECK_EQ(in->data_type(), out->data_type());
+    }
 
     ccl::ReduceType reduce_type = ccl::kSum;
     if (in->data_type() == kBool) { reduce_type = ccl::kMax; }
@@ -277,6 +281,11 @@ class EagerCclBroadcastKernel final : public user_op::OpKernel {
       CHECK_EQ(in->shape_view(), out->shape_view());
       CHECK_EQ(in->data_type(), out->data_type());
     }
+    if (in_ptr != nullptr) {
+      CHECK_EQ(in->shape_view(), out->shape_view());
+      CHECK_EQ(in->data_type(), out->data_type());
+    }
+
     std::unique_ptr<ccl::Broadcast> broadcast =
         ccl::NewCollectiveCommunication<ccl::Broadcast>(ctx->device_type(), out->data_type());
     broadcast->Launch(ctx->stream(), in_ptr, out->mut_dptr(), out->shape_view().elem_cnt(), root,
