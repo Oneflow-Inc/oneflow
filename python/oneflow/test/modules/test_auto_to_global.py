@@ -26,7 +26,7 @@ from oneflow.test_utils.test_util import GenArgList
 
 
 def _test_auto_to_global(test_case, device):
-    os.environ["ONEFLOW_ENABLE_PIPELINE_PARALLELISM_AUTO_TO_GLOBAL"] = "true"
+    os.environ["ONEFLOW_ENABLE_GLOBAL_INPUTS_WITH_INCONSISTENT_PLACEMENT"] = "true"
     x = flow.ones(
         (2, 2),
         sbp=[flow.sbp.broadcast, flow.sbp.broadcast],
@@ -40,7 +40,7 @@ def _test_auto_to_global(test_case, device):
     z = x + y
     test_case.assertTrue(np.array_equal(x.numpy(), z.numpy()))
     test_case.assertEqual(y.placement, z.placement)
-    os.environ["ONEFLOW_ENABLE_PIPELINE_PARALLELISM_AUTO_TO_GLOBAL"] = "false"
+    os.environ["ONEFLOW_ENABLE_GLOBAL_INPUTS_WITH_INCONSISTENT_PLACEMENT"] = "false"
 
 
 @flow.unittest.skip_unless_1n4d()

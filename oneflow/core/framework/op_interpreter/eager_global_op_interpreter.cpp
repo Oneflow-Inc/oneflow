@@ -45,7 +45,7 @@ namespace {
 
 bool IsEnvEnablePipelineParallelismAutoToGlobal() {
   static const bool env_enable_auto_to_global =
-      ParseBooleanFromEnv("ONEFLOW_ENABLE_PIPELINE_PARALLELISM_AUTO_TO_GLOBAL", false);
+      ParseBooleanFromEnv("ONEFLOW_ENABLE_GLOBAL_INPUTS_WITH_INCONSISTENT_PLACEMENT", false);
   return env_enable_auto_to_global;
 }
 
@@ -63,6 +63,9 @@ Maybe<bool> IsInputsParallelDescIdentical(const GlobalTensorMetaInferArgs& infer
   }
   return true;
 }
+
+constexpr auto* IsAllInputsParallelDescIdentical =
+    DECORATE(&IsInputsParallelDescIdentical, ThreadLocalCopiable);
 
 Maybe<int> MaxRankNumber(Symbol<ParallelDesc> placement) {
   // Find max rank number of a tensor's placement
@@ -163,9 +166,6 @@ Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<NdSb
 auto* GetBoxingOutput =
     DECORATE(DECORATE(&CalcBoxingOutput, CheckGlobalTensorMeta), DisableRecusiveBoxingCall);
 
-constexpr auto* IsAllInputsParallelDescIdentical =
-    DECORATE(&IsInputsParallelDescIdentical, ThreadLocalCopiable);
-
 Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                       TensorTuple* outputs, const OpExprInterpContext& ctx) {
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
@@ -196,15 +196,15 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     // each tensor will to_global with target parallel_desc
     if (IsEnvEnablePipelineParallelismAutoToGlobal() && !is_identical) {
       parallel_desc = JUST(GetMaxRankTensorPlacement(inputs));
-      Optional<int64_t> max_parallel_id;
+      Optional<int64_t> parallel_id;
       JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &max_parallel_id));
       for (int i = 0; i < inputs.size(); ++i) {
         const auto& input = inputs.at(i);
-        Optional<int64_t> parallel_id;
-        JUST(GetTensorDevice4CurrentProcessCtx(JUST(input->parallel_desc()), &parallel_id));
+        Optional<int64_t> input_parallel_id;
+        JUST(GetTensorDevice4CurrentProcessCtx(JUST(input->parallel_desc()), &input_parallel_id));
         const auto& final_input =
             JUST(GetBoxingOutput(input, JUST(inputs[i]->nd_sbp()), parallel_desc,
-                                 parallel_id.has_value() || max_parallel_id.has_value()));
+                                 input_parallel_id.has_value() || parallel_id.has_value()));
 
         boxing_inputs[i] = final_input;
       }
