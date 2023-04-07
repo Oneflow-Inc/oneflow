@@ -652,7 +652,8 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
 
   int64_t b = 0, m = 0, h = 0, k = 0;
 
-  JUST(ParseDims(x_desc.shape(), x_layout, Optional<int64_t>(), Optional<int64_t>(k_size), &b, &m, &h, &k));
+  JUST(ParseDims(x_desc.shape(), x_layout, Optional<int64_t>(), Optional<int64_t>(k_size), &b, &m,
+                 &h, &k));
 
   CHECK_LE_OR_RETURN(rotary_size, k) << "rotary_size should be no more than K of input x.";
 
