@@ -205,16 +205,18 @@ std::set<std::string> MultiThreadBroadcastFromMasterToWorkers(size_t world_size,
       MultiThreadLoop(
           split_num,
           [&](int i) {
-            std::string key = prefix + std::to_string(i);
-            Singleton<CtrlClient>::Get()->PushRankKV(i, key, data);
+            size_t target_rank = world_size - 1 - i;
+            std::string key = prefix + std::to_string(target_rank);
+            Singleton<CtrlClient>::Get()->PushRankKV(target_rank, key, data);
             std::lock_guard<std::mutex> lock(mtx4keys);
             CHECK(keys.insert(key).second);
           },
           thread_num);
     } else {
       const int64_t bs_index = bs.GetRangIndex(GlobalProcessCtx::Rank());
-      std::string key = prefix + std::to_string(bs_index);
-      Singleton<CtrlClient>::Get()->PullRankKV(bs_index, key, worker_data);
+      size_t target_rank = world_size - 1 - bs_index;
+      std::string key = prefix + std::to_string(target_rank);
+      Singleton<CtrlClient>::Get()->PullRankKV(target_rank, key, worker_data);
     }
     // other broadcast case
   } else {
