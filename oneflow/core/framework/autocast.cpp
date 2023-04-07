@@ -49,6 +49,17 @@ bool* cache_enabled() {
   return &cache_enabled;
 }
 
+inline Symbol<DType> get_lower_precision_fp_from_device_type(DeviceType device_type) {
+  switch (device_type) {
+    case DeviceType::kCUDA: return get_autocast_gpu_dtype();
+    case DeviceType::kCPU: return get_autocast_cpu_dtype();
+    default:
+      THROW(RuntimeError)
+          << "unknown device type for autocast in get_lower_precision_fp_from_device_type";
+  }
+  return DType::InvalidDataType();
+}
+
 using val_type = std::pair<std::weak_ptr<one::Tensor>, std::shared_ptr<one::Tensor>>;
 using key_type = std::pair<std::shared_ptr<one::Tensor>, DataType>;
 using cached_map = std::unordered_map<key_type, val_type>;
@@ -57,7 +68,6 @@ std::unordered_map<key_type, val_type>* cached_casts() {
   static thread_local std::unordered_map<key_type, val_type> cached_casts;
   return &cached_casts;
 }
-
 
 }  // namespace
 
@@ -78,15 +88,20 @@ void set_autocast_gpu_dtype(Symbol<DType> dtype) { *autocast_gpu_dtype() = dtype
 bool is_autocast_cache_enabled() { return *cache_enabled(); }
 void set_autocast_cache_enabled(bool enabled) { *cache_enabled() = enabled; }
 
-Maybe<one::Tensor> cached_cast(const std::shared_ptr<one::Tensor>& tensor, const Symbol<DType>& cast_type) {
-  bool use_cache = (tensor->requires_grad() && tensor->is_leaf() && is_autocast_cache_enabled());
+Maybe<one::Tensor> cached_cast(const std::shared_ptr<one::Tensor>& tensor, Symbol<DType> cast_type,
+                               DeviceType device_type) {
+  bool use_cache = (is_autocast_cache_enabled() && tensor->requires_grad()
+                    && cast_type == get_lower_precision_fp_from_device_type(device_type)
+                    && tensor->dtype()->data_type() == DataType::kFloat && tensor->is_leaf());
   if (use_cache) {
     auto it = cached_casts()->find(std::make_pair(tensor, cast_type->data_type()));
     if (it != cached_casts()->end()) {
       return it->second.second;
     } else {
-      const std::shared_ptr<one::Tensor>& result = JUST(one::functional::To(tensor, cast_type, /*copy*/ false));
-      cached_casts()->emplace(std::make_pair(tensor, cast_type->data_type()), std::make_pair(std::weak_ptr<one::Tensor>(tensor), result));
+      const std::shared_ptr<one::Tensor>& result =
+          JUST(one::functional::To(tensor, cast_type, /*copy*/ false));
+      cached_casts()->emplace(std::make_pair(tensor, cast_type->data_type()),
+                              std::make_pair(std::weak_ptr<one::Tensor>(tensor), result));
       return result;
     }
   } else {

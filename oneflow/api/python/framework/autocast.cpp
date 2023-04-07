@@ -58,9 +58,7 @@ class AutoCastMode {
     autocast::set_autocast_dtype(prev_dtype_);
     autocast::set_autocast_gpu_dtype(prev_gpu_dtype_);
     autocast::set_autocast_cpu_dtype(prev_cpu_dtype_);
-    if (!prev_enabled_) {
-      autocast::clear_cache();
-    }
+    if (!prev_enabled_) { autocast::clear_cache(); }
   }
 
  private:
