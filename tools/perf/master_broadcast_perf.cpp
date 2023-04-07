@@ -281,7 +281,7 @@ int main(int argc, char* argv[]) {
     if (rank == 0) {
       end_time = std::chrono::high_resolution_clock::now();
       duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-      total_duration += rank_duration;
+      total_duration += duration;
     }
   }
 
