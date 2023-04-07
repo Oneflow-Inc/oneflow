@@ -245,7 +245,29 @@ class Optimizer(object):
 
         self._parse_input_parameters(parameters)
 
-        self.step = _decorate_step(self.step)
+        all_remat = all(
+            p.is_local and p.device.rematable
+            for pg in self.param_groups
+            for p in pg.parameters
+        )
+        all_not_remat = all(
+            not p.is_local or not p.device.rematable
+            for pg in self.param_groups
+            for p in pg.parameters
+        )
+        if not all_remat and not all_not_remat:
+            raise ValueError(
+                "Parameters should be all on rematable device or all on non-rematable device."
+            )
+
+        if all_not_remat:
+            # _decorate_step makes mutable update interleaved with backward
+            # computation, producing wrong results in DTR if the original
+            # weight is used to recompute other tensors.
+            # Besides, it makes parameters remain in memory by unknown reasons
+            # even after parameters and optimizer are not hold by python
+            # interpreter.
+            self.step = _decorate_step(self.step)
         self._state_not_saved = [
             "_contiguous_parameters",
             "_parameters",
