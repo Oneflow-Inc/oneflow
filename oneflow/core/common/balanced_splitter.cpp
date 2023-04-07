@@ -21,7 +21,10 @@ BalancedSplitter::BalancedSplitter(int64_t total_num, int64_t split_num) {
   base_part_size_ = total_num / split_num;
   base_begin_idx_ = total_num % split_num;
   split_num_ = split_num;
+  CHECK_EQ(this->total_num(), total_num);
 }
+
+int64_t BalancedSplitter::total_num() const { return At(split_num_ - 1).end(); }
 
 Range BalancedSplitter::At(int64_t idx) const {
   CHECK_LT(idx, split_num_);
@@ -46,4 +49,14 @@ Range BalancedSplitter::At(int64_t first_idx, int64_t last_idx) const {
   return Range(first_range.begin(), last_range.end());
 }
 
+int64_t BalancedSplitter::GetRangeIndexForVal(int64_t value) const {
+  CHECK_GE(value, 0);
+  CHECK_LT(value, total_num());
+  int64_t base_size = (base_part_size_ + 1) * base_begin_idx_;
+  if (value < base_size) {
+    return value / (base_part_size_ + 1);
+  } else {
+    return base_begin_idx_ + (value - base_size) / base_part_size_;
+  }
+}
 }  // namespace oneflow
