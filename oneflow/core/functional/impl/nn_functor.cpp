@@ -769,6 +769,36 @@ class FusedMatmulBiasFunctor {
   std::shared_ptr<OpExpr> _without_add_to_output_op;
 };
 
+class FusedSinusoidalPositionalEncodeFunctor {
+ public:
+  FusedSinusoidalPositionalEncodeFunctor() {
+    _fused_sinusoidal_positional_encode_op =
+        CHECK_JUST(one::OpBuilder("fused_sinusoidal_positional_encode")
+                       .Input("positions")
+                       .Output("encoded_positions")
+                       .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& positions, const int embedding_dim,
+                           const int layout, const float downscale_freq_shift, const float scale,
+                           const int max_period) const {
+    const auto& positions_shape = positions->shape();
+
+    CHECK_GE_OR_RETURN(positions_shape->NumAxes(), 1)
+        << Error::RuntimeError() << "positions' dim size should >= 1";
+    CHECK_GT_OR_RETURN(embedding_dim, 0) << Error::RuntimeError() << "embedding_dim should > 0";
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("embedding_dim", "layout", "downscale_freq_shift",
+                                                 "scale", "max_period");
+    attrs.SetAllAttrs(embedding_dim, layout, downscale_freq_shift, scale, max_period);
+
+    return OpInterpUtil::Dispatch<Tensor>(*_fused_sinusoidal_positional_encode_op, {positions},
+                                          attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> _fused_sinusoidal_positional_encode_op;
+};
+
 class FusedMatmulBiasAddReluDropoutFunctor {
  public:
   FusedMatmulBiasAddReluDropoutFunctor() {
@@ -5345,6 +5375,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TensorDotIntDimsFunctor>("TensorDotIntDims");
   m.add_functor<impl::FusedMLPFunctor>("FusedMLP");
   m.add_functor<impl::FusedMatmulBiasFunctor>("FusedMatmulBias");
+  m.add_functor<impl::FusedSinusoidalPositionalEncodeFunctor>("FusedSinusoidalPositionalEncode");
   m.add_functor<impl::FusedMatmulBiasAddReluDropoutFunctor>("FusedMatmulBiasAddReluDropout");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::SkipLayerNormFunctor>("SkipLayerNorm");

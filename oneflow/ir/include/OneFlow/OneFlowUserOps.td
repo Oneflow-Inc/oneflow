@@ -2314,6 +2314,26 @@ def OneFlow_FusedLstmCellOp : OneFlow_BaseOp<"fused_lstm_cell", [NoSideEffect, A
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_FusedSinusoidalPositionalEncodeOp : OneFlow_BaseOp<"fused_sinusoidal_positional_encode", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$positions
+  );
+  let output = (outs
+    OneFlow_Tensor:$encoded_positions
+  );
+  let attrs = (ins
+    SI32Attr:$embedding_dim,
+    DefaultValuedAttr<SI32Attr, "0">:$layout,
+    DefaultValuedAttr<F32Attr, "1">:$downscale_freq_shift,
+    DefaultValuedAttr<F32Attr, "1">:$scale,
+    DefaultValuedAttr<SI32Attr, "10000">:$max_period
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_FusedLstmCellGradOp : OneFlow_BaseOp<"fused_lstm_cell_grad", [NoSideEffect, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$grad_hy,
