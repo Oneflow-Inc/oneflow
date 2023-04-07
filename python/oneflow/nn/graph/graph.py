@@ -836,16 +836,14 @@ class Graph(object):
 
         if not self._is_compiled:
             if not self._build_with_shared_graph:
-                self._compile_new(*args, **kwargs)
-                self.__print(
-                    0, 2, lambda: f"{self.name} with operators:\n" + self.__repr__()
-                )
+                return self._compile_new(*args, **kwargs)
             else:
-                self._compile_from_shared(*args, **kwargs)
+                return self._compile_from_shared(*args, **kwargs)
         else:
             warnings.warn(
                 f"{self._shallow_repr()} has been compiled, no need to compile again."
             )
+            return
 
     def _compile_new(self, *args, **kwargs):
         if (
