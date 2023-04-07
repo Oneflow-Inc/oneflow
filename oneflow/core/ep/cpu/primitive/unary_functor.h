@@ -126,7 +126,8 @@ struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kDigamma, float, float> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC float operator()(float src) const {
-    // references  https://github.com/pytorch/pytorch/blob/release/1.13/aten/src/ATen/native/Math.h#L434-L487
+    // references
+    // https://github.com/pytorch/pytorch/blob/release/1.13/aten/src/ATen/native/Math.h#L434-L487
     const auto& calc_digamma = [](float x) {
       std::function<float(float)> compute;
       compute = [&](float x) {
@@ -191,7 +192,8 @@ struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kDigamma, double, double> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC double operator()(double src) const {
-    // references  https://github.com/pytorch/pytorch/blob/release/1.13/aten/src/ATen/native/Math.h#L376-L428
+    // references
+    // https://github.com/pytorch/pytorch/blob/release/1.13/aten/src/ATen/native/Math.h#L376-L428
     const auto& calc_digamma = [](double x) {
       std::function<double(double)> compute;
       compute = [&](double x) {
