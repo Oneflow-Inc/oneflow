@@ -704,7 +704,7 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
     }
   }
 
-  Shape out_shape = LayoutToShape(b, m, h, k, output_layout);
+  Shape out_shape = *JUST(LayoutToShape(b, m, h, k, output_layout));
   ctx->SetOutputShape("out", 0, out_shape);
   return Maybe<void>::Ok();
 }
