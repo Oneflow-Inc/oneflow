@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/cambricon/collective_communication/cncl_executor_backend.h"
 #include "oneflow/core/job/collective_boxing/executor_backend_manager.h"
 #include "oneflow/core/job/collective_boxing/request_store.h"
 #include "oneflow/cambricon/collective_communication/cncl_util.h"
@@ -418,6 +417,26 @@ void AddCallbackAndResetRuntimeRequest(
 }
 
 }  // namespace
+
+class CnclExecutorBackend : public ExecutorBackend {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CnclExecutorBackend);
+  CnclExecutorBackend();
+  ~CnclExecutorBackend() override;
+
+ private:
+  void Init(std::shared_ptr<RequestStore> request_store) override;
+  void InitJob(int64_t job_id) override;
+  void DeinitJob(int64_t job_id) override;
+  void GroupRequests(const std::vector<RequestId>& request_ids,
+                     const std::function<void(std::vector<RequestId>&&, void*)>& Handler) override;
+  void ExecuteGroup(void* group_token) override;
+  void* CreateGroupToken(const std::vector<RequestId>& group) override;
+  void DestroyGroupToken(void* group_token) override;
+
+  struct Impl;
+  std::unique_ptr<Impl> impl_;
+};
 
 struct CnclExecutorBackend::Impl {
   Impl(const CollectiveBoxingConf& conf, std::shared_ptr<RequestStore> request_store)
