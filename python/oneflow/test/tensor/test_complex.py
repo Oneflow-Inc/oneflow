@@ -210,10 +210,12 @@ class TestTensorComplex64(unittest.TestCase):
         self.assertEqual(np_slice_b.dtype, self.np_dtype)
         assert np.allclose(np_slice_b, self.np_b[1])
 
-        c = flow.from_numpy(self.np_c)
+        c = flow.full((3, 2), 3.14 + 2j, dtype=self.dtype)
         np_slice_c = c[0:2, :].numpy()
         self.assertEqual(np_slice_c.dtype, self.np_dtype)
-        assert np.allclose(np_slice_c, self.np_c[0:2, :])
+        assert np.allclose(
+            np_slice_c, np.ones((2, 2), dtype=self.np_dtype) * (3.14 + 2j)
+        )
 
     def test_new_tensor(self):
         a = flow.tensor(self.a, dtype=self.dtype)
