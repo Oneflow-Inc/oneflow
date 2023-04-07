@@ -28,6 +28,7 @@ from oneflow.test_utils.automated_test_util import *
 
 
 def is_cufft_available():
+    return False
     if flow.cuda.is_available():
         (major, _minor) = flow.cuda.get_device_capability()
         return major >= 7

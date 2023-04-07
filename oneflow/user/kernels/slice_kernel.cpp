@@ -443,9 +443,7 @@ class SliceGradKernel final : public user_op::OpKernel, public user_op::CudaGrap
   REGISTER_SLICE_KERNEL(device, int32_t)             \
   REGISTER_SLICE_KERNEL(device, int64_t)             \
   REGISTER_SLICE_KERNEL(device, int8_t)              \
-  REGISTER_SLICE_KERNEL(device, uint8_t)             \
-  REGISTER_SLICE_KERNEL(device, std::complex<float>) \
-  REGISTER_SLICE_KERNEL(device, std::complex<double>)
+  REGISTER_SLICE_KERNEL(device, uint8_t)
 
 REGISTER_SLICE_KERNEL(DeviceType::kCPU, std::complex<float>)
 REGISTER_SLICE_KERNEL(DeviceType::kCPU, std::complex<double>)

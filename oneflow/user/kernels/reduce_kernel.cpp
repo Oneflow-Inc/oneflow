@@ -183,9 +183,7 @@ REGISTER_REDUCE_NANSUM_KERNELS_BY_DEVICE(DeviceType::kCUDA)
   REGISTER_REDUCE_SUM_KERNELS(device, int8_t)              \
   REGISTER_REDUCE_SUM_KERNELS(device, uint8_t)             \
   REGISTER_REDUCE_SUM_KERNELS(device, int32_t)             \
-  REGISTER_REDUCE_SUM_KERNELS(device, int64_t)             \
-  REGISTER_REDUCE_SUM_KERNELS(device, std::complex<float>) \
-  REGISTER_REDUCE_SUM_KERNELS(device, std::complex<double>)
+  REGISTER_REDUCE_SUM_KERNELS(device, int64_t)
 
 REGISTER_REDUCE_SUM_KERNELS(DeviceType::kCPU, std::complex<float>)
 REGISTER_REDUCE_SUM_KERNELS(DeviceType::kCPU, std::complex<double>)

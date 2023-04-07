@@ -262,7 +262,9 @@ REGISTER_FFTC2C_KERNELS(DeviceType::kCPU, std::complex<float>);
 REGISTER_FFTC2C_KERNELS(DeviceType::kCPU, std::complex<double>);
 #ifdef WITH_CUDA
 // TO-DO
-// REGISTER_FFTC2C_KERNELS(DeviceType::kCUDA, ...)
+// REGISTER_FFTC2C_KERNELS(DeviceType::kCUDA, ...)  ?
+// REGISTER_FFTC2C_KERNELS(DeviceType::kCUDA, cuComplex)
+// REGISTER_FFTC2C_KERNELS(DeviceType::kCUDA, cuDoubleComplex)
 #endif
 
 #define REGISTER_FFTR2C_KERNELS(device, dtype_in, dtype_out)                                 \
@@ -276,7 +278,10 @@ REGISTER_FFTR2C_KERNELS(DeviceType::kCPU, float, std::complex<float>);
 REGISTER_FFTR2C_KERNELS(DeviceType::kCPU, double, std::complex<double>);
 #ifdef WITH_CUDA
 // TO-DO
-// REGISTER_FFTR2C_KERNELS(DeviceType::kCUDA, ...)
+// REGISTER_FFTR2C_KERNELS(DeviceType::kCUDA, half, ...) ?
+// REGISTER_FFTR2C_KERNELS(DeviceType::kCUDA, nv_bfloa16, ...) ?
+// REGISTER_FFTR2C_KERNELS(DeviceType::kCUDA, float, cuComplex)
+// REGISTER_FFTR2C_KERNELS(DeviceType::kCUDA, double, cuDoubleComplex)
 #endif
 
 #define REGISTER_FFTC2R_KERNELS(device, dtype_in, dtype_out)                                 \
@@ -290,6 +295,9 @@ REGISTER_FFTC2R_KERNELS(DeviceType::kCPU, std::complex<float>, float);
 REGISTER_FFTC2R_KERNELS(DeviceType::kCPU, std::complex<double>, double);
 #ifdef WITH_CUDA
 // TO-DO
-// REGISTER_FFTC2R_KERNELS(DeviceType::kCUDA, ...)
+// REGISTER_FFTR2C_KERNELS(DeviceType::kCUDA, ..., half) ?
+// REGISTER_FFTR2C_KERNELS(DeviceType::kCUDA, ..., nv_bfloa16) ?
+// REGISTER_FFTR2C_KERNELS(DeviceType::kCUDA, cuComplex, float)
+// REGISTER_FFTR2C_KERNELS(DeviceType::kCUDA, cuDoubleComplex, double)
 #endif
 }  // namespace oneflow

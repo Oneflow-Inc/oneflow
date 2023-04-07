@@ -163,6 +163,9 @@ REGISTER_STFT_GPU_KERNEL(float, cufftComplex)
 REGISTER_STFT_GPU_KERNEL(double, cufftDoubleComplex)
 #endif
 
+// template<typename IN, typename OUT>
+// static void DoFFT(OUT* out, IN* in, )
+
 template<typename T>
 class FftC2CKernelUtil<DeviceType::kCUDA, T>{
   static void FftC2CForward(ep::Stream* stream, const T* data_in, T* data_out,

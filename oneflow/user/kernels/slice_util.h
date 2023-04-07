@@ -113,9 +113,7 @@ struct SliceKernelUtil {
   INSTANTIATE_SLICE_KERNEL_UTIL(device, int32_t)             \
   INSTANTIATE_SLICE_KERNEL_UTIL(device, int64_t)             \
   INSTANTIATE_SLICE_KERNEL_UTIL(device, int8_t)              \
-  INSTANTIATE_SLICE_KERNEL_UTIL(device, uint8_t)             \
-  INSTANTIATE_SLICE_KERNEL_UTIL(device, std::complex<float>) \
-  INSTANTIATE_SLICE_KERNEL_UTIL(device, std::complex<double>)
+  INSTANTIATE_SLICE_KERNEL_UTIL(device, uint8_t)             
 
 }  // namespace oneflow
 

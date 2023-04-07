@@ -277,8 +277,9 @@ void OpCallInstructionPolicy::Compute(vm::Instruction* instruction) {
   ##  CHECK_JUST(instruction->mut_stream()->mut_stream_policy()->stream()->Sync());
   ## }
   */
-  CHECK_JUST_MSG(OpCallInstructionUtil::Compute(this, instruction), instruction->DebugName());
-  CHECK_JUST(instruction->mut_stream()->mut_stream_policy()->stream()->Sync());
+CHECK_JUST_MSG(OpCallInstructionUtil::Compute(this, instruction->mut_stream(), true, false),
+                 instruction->DebugName());
+CHECK_JUST(instruction->mut_stream()->mut_stream_policy()->stream()->Sync());
 }
 
 std::string OpCallInstructionPolicy::DebugName(const vm::Instruction& instruction) const {
