@@ -163,6 +163,37 @@ std::set<std::string> MultiThreadBroadcastFromMasterToWorkers(size_t world_size,
       Singleton<CtrlClient>::Get()->PullRankKV(target_rank, key, worker_data);
     }
 
+  } else if (broadcast_strategy && std::string(broadcast_strategy) == "MASTER_SEND") {
+    if (GlobalProcessCtx::IsThisProcessMaster()) {
+      std::mutex mtx4keys;
+      const std::string& data = master_data;
+      MultiThreadLoop(
+          world_size,
+          [&](int i) {
+            std::string key = prefix + std::to_string(i);
+            Singleton<CtrlClient>::Get()->PushRankKV(i, key, data);
+            std::lock_guard<std::mutex> lock(mtx4keys);
+            CHECK(keys.insert(key).second);
+          },
+          thread_num);
+    } else {
+      const size_t rank = Singleton<GlobalProcessCtx>::Get()->Rank();
+      std::string key = prefix + std::to_string(rank);
+      Singleton<CtrlClient>::Get()->PullRankKV(rank, key, worker_data);
+    }
+
+  } else if (broadcast_strategy && std::string(broadcast_strategy) == "WORKER_RECV") {
+    if (GlobalProcessCtx::IsThisProcessMaster()) {
+      const std::string& data = master_data;
+      std::string key = prefix + std::to_string(0);
+      Singleton<CtrlClient>::Get()->PushRankKV(0, key, data);
+      CHECK(keys.insert(key).second);
+
+    } else {
+      std::string key = prefix + std::to_string(0);
+      Singleton<CtrlClient>::Get()->PullRankKV(0, key, worker_data);
+    }
+
     // other broadcast case
   } else {
     const size_t split_num = std::sqrt(world_size);
