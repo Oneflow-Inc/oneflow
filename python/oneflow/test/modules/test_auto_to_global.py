@@ -40,7 +40,6 @@ def _test_auto_to_global(test_case, device):
     z = x + y
     test_case.assertTrue(np.array_equal(x.numpy(), z.numpy()))
     test_case.assertEqual(y.placement, z.placement)
-    os.environ["ONEFLOW_ENABLE_GLOBAL_INPUTS_WITH_INCONSISTENT_PLACEMENT"] = "false"
 
 
 @flow.unittest.skip_unless_1n4d()

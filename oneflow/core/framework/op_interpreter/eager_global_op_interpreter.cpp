@@ -43,10 +43,10 @@ namespace one {
 
 namespace {
 
-bool IsEnvEnablePipelineParallelismAutoToGlobal() {
-  static const bool env_enable_auto_to_global =
+bool IsEnvEnableGlobalInputsWithInConsistentPlacement() {
+  static const bool env_enable_inconsistent_placement =
       ParseBooleanFromEnv("ONEFLOW_ENABLE_GLOBAL_INPUTS_WITH_INCONSISTENT_PLACEMENT", false);
-  return env_enable_auto_to_global;
+  return env_enable_inconsistent_placement;
 }
 
 Maybe<bool> IsInputsParallelDescIdentical(const GlobalTensorMetaInferArgs& infer_args) {
@@ -200,7 +200,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     // if is_identical is false and env 'ONEFLOW_ENABLE_PIPELINE_PARALLELISM_AUTO_TO_GLOBAL' set to
     // true then traverse all input tensor use function GetBoxingOutput(), during this process,
     // each tensor will to_global with target parallel_desc
-    if (IsEnvEnablePipelineParallelismAutoToGlobal() && !is_identical) {
+    if (IsEnvEnableGlobalInputsWithInConsistentPlacement() && !is_identical) {
       parallel_desc = JUST(GetMaxRankTensorPlacement(infer_args));
       Optional<int64_t> parallel_id;
       JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
