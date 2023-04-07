@@ -52,12 +52,12 @@ const std::vector<std::string>* GetFullKeys<OpTrait::AttrSizedResultSegments>(Us
 
 template<>
 std::vector<std::string> GetFullKeys<OpTrait::AttrSizedOperandSegments>(UserOp op) {
-  return mlir::oneflow::support::GetInputKeys(op.op_type_name().str());
+  return mlir::oneflow::support::GetInputKeys(op.getOpTypeName().str());
 }
 
 template<>
 std::vector<std::string> GetFullKeys<OpTrait::AttrSizedResultSegments>(UserOp op) {
-  return mlir::oneflow::support::GetOutputKeys(op.op_type_name().str());
+  return mlir::oneflow::support::GetOutputKeys(op.getOpTypeName().str());
 }
 
 template<>
@@ -118,12 +118,12 @@ ArrayAttr GetUserOpArgSizes(UserOp);
 
 template<>
 ArrayAttr GetUserOpArgSizes<OpTrait::AttrSizedOperandSegments>(UserOp op) {
-  return op.input_sizes();
+  return op.getInputSizes();
 }
 
 template<>
 ArrayAttr GetUserOpArgSizes<OpTrait::AttrSizedResultSegments>(UserOp op) {
-  return op.output_sizes();
+  return op.getOutputSizes();
 }
 
 template<template<typename T> class Trait>
@@ -194,9 +194,9 @@ LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::stri
   full_keys = GetFullKeys<Trait>(uc, op);
   if (op->hasTrait<Trait>()) {
     const StringRef attr_name = GetSegmentSizeAttr<Trait>();
-    const DenseIntElementsAttr& size_attr = op->getAttrOfType<DenseIntElementsAttr>(attr_name);
+    const DenseI32ArrayAttr& size_attr = op->getAttrOfType<DenseI32ArrayAttr>(attr_name);
     if (!size_attr) return failure();
-    auto segment_sizes = size_attr.getValues<int32_t>();
+    auto segment_sizes = size_attr.asArrayRef();
     if (full_keys->size() != segment_sizes.size()) {
       op->emitError() << "fail to convert op inputs, attr_name: " << attr_name
                       << ", full_keys: " << full_keys->size()
@@ -233,9 +233,9 @@ LogicalResult GetFilteredSegmentKeyAndSizes(llvm::StringRef op_type_name, size_t
   const std::vector<std::string> full_keys = GetFullKeys<Trait>(op_type_name);
   std::vector<int32_t> full_sizes{};
   const StringRef attr_name = GetSegmentSizeAttr<Trait>();
-  if (auto size_attr = attributes.get(attr_name).dyn_cast_or_null<DenseIntElementsAttr>()) {
+  if (auto size_attr = attributes.get(attr_name).dyn_cast_or_null<DenseI32ArrayAttr>()) {
     if (!size_attr) return failure();
-    auto segment_sizes = size_attr.getValues<int32_t>();
+    auto segment_sizes = size_attr.asArrayRef();
     if (full_keys.size() != segment_sizes.size()) {
       LOG(FATAL) << "fail to convert op inputs, attr_name: " << attr_name.str()
                  << ", full_keys: " << full_keys.size()
