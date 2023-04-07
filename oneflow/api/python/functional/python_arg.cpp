@@ -212,6 +212,8 @@ bool PythonArg::TypeCheck(ValueType type) const {
   if (tag_ == HAS_DEFAULT) { return default_val_->value_type() == type; }
   switch (type) {
     case kINT32:
+    case kINT16:
+    case kChar:
     case kUINT32:
     case kINT64:
     case kUINT64:
