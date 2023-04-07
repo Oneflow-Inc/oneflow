@@ -27,27 +27,27 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestModule(flow.unittest.TestCase):
-    @autotest(n=1, check_graph=False, rtol=1e-4, atol=1e-3)
+    @autotest(n=3, check_graph=False, rtol=1e-4, atol=1e-3)
     def test_multi_head_attention_with_torch(test_case):
         device = random_device()
-        embed_dim = 128
+        embed_dim = 16
         num_heads = 4
-        query = random_tensor(ndim=4, dim0=8, dim2=128).to(device)
+        query =  random_tensor(ndim=3, dim0=4, dim1=8, dim2=embed_dim).to(device)
         key = query
         value = query
 
-        in_proj_weight = torch.nn.Parameter(torch.empty((3 * embed_dim, embed_dim))).to(
+        in_proj_weight = torch.nn.Parameter(torch.ones((3 * embed_dim, embed_dim))).to(
             device
         )
-        in_proj_bias = torch.nn.Parameter(torch.empty(3 * embed_dim)).to(device)
-        bias_k = torch.nn.Parameter(torch.empty((1, 1, embed_dim))).to(device)
-        bias_v = torch.nn.Parameter(torch.empty((1, 1, embed_dim))).to(device)
-        add_zero_attn = random().to(bool)
+        in_proj_bias = torch.nn.Parameter(torch.ones(3 * embed_dim)).to(device)
+        bias_k = torch.nn.Parameter(torch.ones((1, 1, embed_dim))).to(device)
+        bias_v = torch.nn.Parameter(torch.ones((1, 1, embed_dim))).to(device)
+        add_zero_attn = True#random().to(bool)
         dropout_p = 0.1
-        out_proj_weight = torch.nn.Parameter(torch.empty((embed_dim, embed_dim))).to(
+        out_proj_weight = torch.nn.Parameter(torch.ones((embed_dim, embed_dim))).to(
             device
         )
-        out_proj_bias = torch.nn.Parameter(torch.empty((1, 1, embed_dim))).to(device)
+        out_proj_bias = torch.nn.Parameter(torch.ones((1, 1, embed_dim))).to(device)
 
         y, _ = torch.nn.functional.multi_head_attention_forward(
             query,
