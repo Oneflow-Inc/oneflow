@@ -652,12 +652,11 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
 
   int64_t b = 0, m = 0, h = 0, k = 0;
 
-  JUST(ParseDims(x_desc.shape(), x_layout, Optional<int64_t>(),
-                 k_size ? Optional<int64_t>(k_size) : Optional<int64_t>(), &b, &m, &h, &k));
+  JUST(ParseDims(x_desc.shape(), x_layout, Optional<int64_t>(), Optional<int64_t>(k_size), &b, &m, &h, &k));
 
   CHECK_LE_OR_RETURN(rotary_size, k) << "rotary_size should be no more than K of input x.";
 
-  int64_t rotary_emd_dim = 1;
+  int64_t rotary_emb_dim = 1;
 
   if (ctx->has_input("position_ids", 0)) {
     const user_op::TensorDesc& position_ids_desc = ctx->InputTensorDesc("position_ids", 0);
@@ -667,12 +666,12 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
         << "1st dim of position_ids should be equal to B.";
     CHECK_EQ_OR_RETURN(position_ids_desc.shape().At(2), m)
         << "3rd dim of position_ids should be equal to M.";
-    rotary_emd_dim = position_ids_desc.shape().At(1);
-    CHECK_OR_RETURN(rotary_emd_dim == 1 || rotary_emd_dim == 2)
+    rotary_emb_dim = position_ids_desc.shape().At(1);
+    CHECK_OR_RETURN(rotary_emb_dim == 1 || rotary_emb_dim == 2)
         << "2nd dim of position_ids should be 1 or 2.";
   }
 
-  const int64_t actual_rotary_size = rotary_size / rotary_emd_dim;
+  const int64_t actual_rotary_size = rotary_size / rotary_emb_dim;
   CHECK_EQ_OR_RETURN(actual_rotary_size % 2, 0)
       << "rotary_size should be a multiple of 2 * rotary_encoding_dim.";
 
@@ -704,12 +703,7 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
     }
   }
 
-  Shape out_shape = x_desc.shape();
-  if (output_layout == "MBHK") {
-    out_shape = Shape({m, b, h, k});
-  } else if (output_layout == "BMHK") {
-    out_shape = Shape({b, m, h, k});
-  }
+  Shape out_shape = LayoutToShape(b, m, h, k, output_layout);
   ctx->SetOutputShape("out", 0, out_shape);
   return Maybe<void>::Ok();
 }
