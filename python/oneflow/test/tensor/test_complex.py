@@ -35,9 +35,6 @@ flow.tensor()
 flow.ones()
 flow.zeros()
 flow.full()
-flow.new_ones()
-flow.new_zeros()
-flow.new_full()
 flow.add()
 flow.sub()
 flow.mul
@@ -45,16 +42,19 @@ flow.sum()
 flow.equal()
 flow.not_equal()
 flow.cast()
+Tensor.new_ones()
+Tensor.new_zeros()
+Tensor.new_full()
+Tensor.real()
+Tensor.imag()
+Tensor.conj()
+Tensor.conj_physical()
 
 To complete:
 flow.randn()
 flow.div()
 flow.pow()
-Tensor.real()
-Tensor.imag()
-Tensor.conj()
 Tensor.adjoint()
-Tensor.conj_physical()
 Tensor.conj_physical_()
 Tensor.resolve_conj()
 Tensor.chalf()
@@ -138,16 +138,12 @@ class TestTensorComplex64(unittest.TestCase):
         self.complex_dtype = flow.complex64
         self.np_dtype = np.complex64
         self.type_str = "ComplexFloatTensor"
+        self.real_dtype = flow.float
+        self.np_real_dtype = np.float32
         self.a = [1.0 + 1j, 2.0]
         self.np_a = np.array(self.a, dtype=self.np_dtype)
         self.b = [[1.0 + 1j, 2.0], [1.0, 2.0 - 1j], [-1.0, 1j]]
         self.np_b = np.array(self.b, dtype=self.np_dtype)
-        self.c = [
-            [3.14 + 2j, 3.14 + 2j],
-            [3.14 + 2j, 3.14 + 2j],
-            [3.14 + 2j, 3.14 + 2j],
-        ]
-        self.np_c = np.array(self.c, dtype=self.np_dtype)
 
         self.lower_n_dims = 2
         self.upper_n_dims = 5
@@ -214,10 +210,12 @@ class TestTensorComplex64(unittest.TestCase):
         self.assertEqual(np_slice_b.dtype, self.np_dtype)
         assert np.allclose(np_slice_b, self.np_b[1])
 
-        c = flow.from_numpy(self.np_c)
+        c = flow.full((3, 2), 3.14 + 2j, dtype=self.dtype)
         np_slice_c = c[0:2, :].numpy()
         self.assertEqual(np_slice_c.dtype, self.np_dtype)
-        assert np.allclose(np_slice_c, self.np_c[0:2, :])
+        assert np.allclose(
+            np_slice_c, np.ones((2, 2), dtype=self.np_dtype) * (3.14 + 2j)
+        )
 
     def test_new_tensor(self):
         a = flow.tensor(self.a, dtype=self.dtype)
@@ -276,7 +274,7 @@ class TestTensorComplex64(unittest.TestCase):
         self.assertEqual(c.type(), "oneflow." + self.type_str)
         np_c = c.numpy()
         self.assertEqual(np_c.dtype, self.np_dtype)
-        assert np.allclose(np_c, self.np_c)
+        assert np.allclose(np_c, np.ones((3, 2), dtype=self.np_dtype) * (3.14 + 2j))
 
     def test_new_full(self):
         a = flow.tensor(self.a, dtype=self.dtype)
@@ -285,7 +283,73 @@ class TestTensorComplex64(unittest.TestCase):
         self.assertEqual(c.type(), "oneflow." + self.type_str)
         np_c = c.numpy()
         self.assertEqual(np_c.dtype, self.np_dtype)
-        assert np.allclose(np_c, self.np_c)
+        assert np.allclose(np_c, np.ones((3, 2), dtype=self.np_dtype) * (3.14 + 2j))
+
+    def test_real(self):
+        c = flow.full((3, 2), 3.14 + 2j, dtype=self.dtype).real()
+        self.assertEqual(c.dtype, self.real_dtype)
+        np_c = c.numpy()
+        self.assertEqual(np_c.dtype, self.np_real_dtype)
+        assert np.allclose(np_c, np.ones((3, 2), dtype=self.np_real_dtype) * 3.14)
+
+    def test_imag(self):
+        c = flow.full((3, 2), 3.14 + 2j, dtype=self.dtype).imag()
+        self.assertEqual(c.dtype, self.real_dtype)
+        np_c = c.numpy()
+        self.assertEqual(np_c.dtype, self.np_real_dtype)
+        assert np.allclose(np_c, np.ones((3, 2), dtype=self.np_real_dtype) * 2)
+
+    def test_conj(self):
+        c = flow.full((3, 2), 3.14 + 2j, dtype=self.dtype).conj()
+        self.assertEqual(c.dtype, self.dtype)
+        self.assertEqual(c.type(), "oneflow." + self.type_str)
+        np_c = c.numpy()
+        self.assertEqual(np_c.dtype, self.np_dtype)
+        assert np.allclose(np_c, np.ones((3, 2), dtype=self.np_dtype) * (3.14 - 2j))
+
+    def test_conj_physical(self):
+        c = flow.full((3, 2), 3.14 + 2j, dtype=self.dtype).conj_physical()
+        self.assertEqual(c.dtype, self.dtype)
+        self.assertEqual(c.type(), "oneflow." + self.type_str)
+        np_c = c.numpy()
+        self.assertEqual(np_c.dtype, self.np_dtype)
+        assert np.allclose(np_c, np.ones((3, 2), dtype=self.np_dtype) * (3.14 - 2j))
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_real_cuda(self):
+        c = flow.full((3, 2), 3.14 + 2j, dtype=self.dtype, device="cuda").real()
+        self.assertEqual(c.dtype, self.real_dtype)
+        np_c = c.numpy()
+        self.assertEqual(np_c.dtype, self.np_real_dtype)
+        assert np.allclose(np_c, np.ones((3, 2), dtype=self.np_real_dtype) * 3.14)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_imag_cuda(self):
+        c = flow.full((3, 2), 3.14 + 2j, dtype=self.dtype, device="cuda").imag()
+        self.assertEqual(c.dtype, self.real_dtype)
+        np_c = c.numpy()
+        self.assertEqual(np_c.dtype, self.np_real_dtype)
+        assert np.allclose(np_c, np.ones((3, 2), dtype=self.np_real_dtype) * 2)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_conj_cuda(self):
+        c = flow.full((3, 2), 3.14 + 2j, dtype=self.dtype, device="cuda").conj()
+        self.assertEqual(c.dtype, self.dtype)
+        self.assertEqual(c.type(), "oneflow.cuda." + self.type_str)
+        np_c = c.numpy()
+        self.assertEqual(np_c.dtype, self.np_dtype)
+        assert np.allclose(np_c, np.ones((3, 2), dtype=self.np_dtype) * (3.14 - 2j))
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_conj_physical_cuda(self):
+        c = flow.full(
+            (3, 2), 3.14 + 2j, dtype=self.dtype, device="cuda"
+        ).conj_physical()
+        self.assertEqual(c.dtype, self.dtype)
+        self.assertEqual(c.type(), "oneflow.cuda." + self.type_str)
+        np_c = c.numpy()
+        self.assertEqual(np_c.dtype, self.np_dtype)
+        assert np.allclose(np_c, np.ones((3, 2), dtype=self.np_dtype) * (3.14 - 2j))
 
     def test_add(self):
         device = "cpu"
@@ -462,16 +526,13 @@ class TestTensorComplex128(TestTensorComplex64):
         self.complex_dtype = flow.complex128
         self.np_dtype = np.complex128
         self.type_str = "ComplexDoubleTensor"
+        self.real_dtype = flow.double
+        self.np_real_dtype = np.float64
         self.a = [1.0 + 1j, 2.0]
         self.np_a = np.array(self.a, dtype=self.np_dtype)
         self.b = [[1.0 + 1j, 2.0], [1.0, 2.0 - 1j], [-1.0, 1j]]
         self.np_b = np.array(self.b, dtype=self.np_dtype)
-        self.c = [
-            [3.14 + 2j, 3.14 + 2j],
-            [3.14 + 2j, 3.14 + 2j],
-            [3.14 + 2j, 3.14 + 2j],
-        ]
-        self.np_c = np.array(self.c, dtype=self.np_dtype)
+
         self.lower_n_dims = 2
         self.upper_n_dims = 5
         self.shape = []
@@ -479,6 +540,46 @@ class TestTensorComplex128(TestTensorComplex64):
             num_dims = np.random.randint(self.lower_n_dims, self.upper_n_dims)
             shape_ = [np.random.randint(1, 11) * 4 for _ in range(num_dims)]
             self.shape.append(shape_)
+
+
+class TestAutograd(unittest.TestCase):
+    def test_backward(self):
+        a = flow.tensor([1.0 + 2j, 2.0 - 3j, 1j], dtype=flow.cfloat)
+        a.requires_grad = True
+        b = flow.conj(a)
+        loss = flow.sum(a.real() + b.imag())
+        loss.backward()
+        assert np.allclose(a.grad.numpy(), np.ones((3,), dtype=np.complex64) * (1 - 1j))
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_backward_cuda(self):
+        a = flow.tensor([1.0 + 2j, 2.0 - 3j, 1j], dtype=flow.cfloat, device="cuda")
+        a.requires_grad = True
+        b = flow.conj(a)
+        loss = flow.sum(a.real() + b.imag())
+        loss.backward()
+        assert np.allclose(a.grad.numpy(), np.ones((3,), dtype=np.complex64) * (1 - 1j))
+
+    def test_grad(self):
+        a = flow.tensor([1.0 + 2j, 2.0 - 3j, 1j], dtype=flow.cfloat)
+        a.requires_grad = True
+        b = flow.conj(a)
+        c = a.real() + b.imag()
+        np_dc = np.ones((3,), dtype=np.float32)
+        dc = flow.tensor(np_dc)
+        (da,) = flow.autograd.grad(c, a, dc)
+        assert np.allclose(da.numpy(), np.ones((3,), dtype=np.complex64) * (1 - 1j))
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_grad_cuda(self):
+        a = flow.tensor([1.0 + 2j, 2.0 - 3j, 1j], dtype=flow.cfloat, device="cuda")
+        a.requires_grad = True
+        b = flow.conj(a)
+        c = a.real() + b.imag()
+        np_dc = np.ones((3,), dtype=np.float32)
+        dc = flow.tensor(np_dc)
+        (da,) = flow.autograd.grad(c, a, dc)
+        assert np.allclose(da.numpy(), np.ones((3,), dtype=np.complex64) * (1 - 1j))
 
 
 if __name__ == "__main__":

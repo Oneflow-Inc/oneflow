@@ -22,6 +22,7 @@ limitations under the License.
 #ifdef WITH_CUDA
 #include <cuda.h>
 #include <cuda_fp16.h>
+#include <cuComplex.h>
 
 #if CUDA_VERSION >= 11000
 #include <cuda_bf16.h>
@@ -38,6 +39,9 @@ limitations under the License.
 #define CUDA_PRIMITIVE_FLOAT_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat)
 #define CUDA_PRIMITIVE_DOUBLE_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
 #define CUDA_PRIMITIVE_FLOAT16_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(half, DataType::kFloat16)
+#define CUDA_PRIMITIVE_COMPLEX64_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(cuComplex, DataType::kComplex64)
+#define CUDA_PRIMITIVE_COMPLEX128_TYPE_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ(cuDoubleComplex, DataType::kComplex128)
 
 #if CUDA_VERSION >= 11000
 #define CUDA_PRIMITIVE_BFLOAT16_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(nv_bfloat16, DataType::kBFloat16)
@@ -56,6 +60,10 @@ limitations under the License.
   CUDA_PRIMITIVE_DOUBLE_TYPE_SEQ    \
   CUDA_PRIMITIVE_FLOAT16_TYPE_SEQ   \
   CUDA_PRIMITIVE_BFLOAT16_TYPE_SEQ
+
+#define CUDA_PRIMITIVE_COMPLEX_TYPE_SEQ \
+  CUDA_PRIMITIVE_COMPLEX64_TYPE_SEQ     \
+  CUDA_PRIMITIVE_COMPLEX128_TYPE_SEQ
 
 #define CUDA_PRIMITIVE_FLOATING_TYPE_SEQ \
   CUDA_PRIMITIVE_FLOAT_TYPE_SEQ          \
