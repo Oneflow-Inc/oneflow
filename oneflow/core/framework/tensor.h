@@ -471,12 +471,10 @@ class Parameter final : public ProxyTensor<Parameter> {
   bool is_leaf() const override { return true; }
   std::shared_ptr<Tensor> contiguous() const override;
   std::shared_ptr<Tensor> pin_memory() const override;
+  Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override;
 
  private:
-  Parameter(const std::shared_ptr<Tensor>& tensor, bool requires_grad)
-      : ProxyTensor<Parameter>(tensor) {
-    this->tensor_->set_requires_grad(requires_grad);
-  }
+  Parameter(const std::shared_ptr<Tensor>& tensor, bool requires_grad);
 };
 
 class LocalTensor final : public TensorIf<LocalTensor> {
