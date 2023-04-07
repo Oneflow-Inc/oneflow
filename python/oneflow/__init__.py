@@ -266,6 +266,7 @@ from oneflow._C import index_add, index_add_
 from oneflow._C import sort
 from oneflow._C import clone
 from oneflow._C import bitwise_and, bitwise_or, bitwise_xor, bitwise_not
+from oneflow._C import real, imag, conj, conj_physical
 
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
