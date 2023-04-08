@@ -141,19 +141,19 @@ class Module(object):
     """
 
     def __init__(self):
-        super().__setattr__('training', True)
-        super().__setattr__('_parameters', OrderedDict())
-        super().__setattr__('_buffers', OrderedDict())
-        super().__setattr__('_non_persistent_buffers_set', set())
-        super().__setattr__('_backward_hooks', OrderedDict())
-        super().__setattr__('_is_full_backward_hook', None)
-        super().__setattr__('_forward_hooks', OrderedDict())
-        super().__setattr__('_forward_pre_hooks', OrderedDict())
-        super().__setattr__('_state_dict_hooks', OrderedDict())
-        super().__setattr__('_load_state_dict_pre_hooks', OrderedDict())
-        super().__setattr__('_modules', OrderedDict())
-        super().__setattr__('_is_ddp_module', False)
-        super().__setattr__('_oneflow_internal_module_tensor_applied_dict__', None)
+        super().__setattr__("training", True)
+        super().__setattr__("_parameters", OrderedDict())
+        super().__setattr__("_buffers", OrderedDict())
+        super().__setattr__("_non_persistent_buffers_set", set())
+        super().__setattr__("_backward_hooks", OrderedDict())
+        super().__setattr__("_is_full_backward_hook", None)
+        super().__setattr__("_forward_hooks", OrderedDict())
+        super().__setattr__("_forward_pre_hooks", OrderedDict())
+        super().__setattr__("_state_dict_hooks", OrderedDict())
+        super().__setattr__("_load_state_dict_pre_hooks", OrderedDict())
+        super().__setattr__("_modules", OrderedDict())
+        super().__setattr__("_is_ddp_module", False)
+        super().__setattr__("_oneflow_internal_module_tensor_applied_dict__", None)
 
     def __getstate__(self):
         if not self._is_ddp_module:
