@@ -345,6 +345,48 @@ class TestGraphIOCheck(flow.unittest.TestCase):
         # test tensor
         test_output(x, Tensor)
 
+    def test_graph_return_dict_tuple(test_case):
+        def test_output(input):
+            print(input)
+
+            class CustomModule(flow.nn.Module):
+                def __init__(self):
+                    super().__init__()
+
+                def forward(self, t):
+                    return {"output": t}
+
+            class CustomGraphCheck1Ret(flow.nn.Graph):
+                def __init__(self):
+                    super().__init__()
+                    self.m = CustomModule()
+
+                def build(self, t):
+                    rt = self.m(t)
+                    return rt
+
+            model = CustomModule()
+            graph = CustomGraphCheck1Ret()
+
+            model_out = model(input)
+            graph_out = graph(input)
+
+            test_case.assertTrue(isinstance(model_out, dict))
+            test_case.assertTrue(isinstance(graph_out, dict))
+            test_case.assertEqual(len(model_out), 1)
+            test_case.assertEqual(len(graph_out), 1)
+            test_case.assertTrue("output" in model_out)
+            test_case.assertTrue("output" in graph_out)
+            test_case.assertTrue(
+                np.array_equal(model_out["output"].numpy(), graph_out["output"].numpy())
+            )
+
+        x = np.ones((1, 10))
+        x = flow.tensor(x, dtype=flow.float32)
+
+        # test tensor
+        test_output(x)
+
     def test_graph_outputs_buffer(test_case):
         class CustomModuleIOCheck(flow.nn.Module):
             def __init__(self):
