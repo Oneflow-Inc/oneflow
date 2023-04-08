@@ -42,6 +42,7 @@ def _test_different_dtype(test_case, device, shape):
     y7 = flow.ones(shape, dtype=flow.int8, device=flow.device(device))
     test_case.assertTrue(np.array_equal(np.ones(shape, dtype=np.int8), y7.numpy()))
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestConstantModule(flow.unittest.TestCase):
     @autotest(n=10, auto_backward=False, check_graph=True)
