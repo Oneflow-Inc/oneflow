@@ -36,10 +36,10 @@ static std::map<DataType, DataType> real_to_complex_map{{DataType::kFloat16, Dat
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> RealOp::InferDataType(user_op::InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(ctx->inputs().size(), 0)
+  CHECK_EQ_OR_RETURN(ctx->inputs().size(), 1)
       << Error::InvalidValueError()
       << "The input size of real op should be 1, but get:" << ctx->inputs().size();
-  CHECK_EQ_OR_RETURN(ctx->outputs().size(), 0)
+  CHECK_EQ_OR_RETURN(ctx->outputs().size(), 1)
       << Error::InvalidValueError()
       << "The output size of real op should be 1, but get:" << ctx->outputs().size();
   const std::pair<std::string, int32_t>& input_arg = ctx->inputs().at(0);
@@ -60,10 +60,10 @@ static std::map<DataType, DataType> real_to_complex_map{{DataType::kFloat16, Dat
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> RealGradOp::InferDataType(user_op::InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(ctx->inputs().size(), 0)
+  CHECK_EQ_OR_RETURN(ctx->inputs().size(), 1)
       << Error::InvalidValueError()
       << "The input size of real_grad op should be 1, but get:" << ctx->inputs().size();
-  CHECK_EQ_OR_RETURN(ctx->outputs().size(), 0)
+  CHECK_EQ_OR_RETURN(ctx->outputs().size(), 1)
       << Error::InvalidValueError()
       << "The output size of real_grad op should be 1, but get:" << ctx->outputs().size();
   const std::pair<std::string, int32_t>& input_arg = ctx->inputs().at(0);
@@ -84,10 +84,10 @@ static std::map<DataType, DataType> real_to_complex_map{{DataType::kFloat16, Dat
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ImagOp::InferDataType(user_op::InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(ctx->inputs().size(), 0)
+  CHECK_EQ_OR_RETURN(ctx->inputs().size(), 1)
       << Error::InvalidValueError()
       << "The input size of imag op should be 1, but get:" << ctx->inputs().size();
-  CHECK_EQ_OR_RETURN(ctx->outputs().size(), 0)
+  CHECK_EQ_OR_RETURN(ctx->outputs().size(), 1)
       << Error::InvalidValueError()
       << "The output size of imag op should be 1, but get:" << ctx->outputs().size();
   const std::pair<std::string, int32_t>& input_arg = ctx->inputs().at(0);
@@ -108,10 +108,10 @@ static std::map<DataType, DataType> real_to_complex_map{{DataType::kFloat16, Dat
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ImagGradOp::InferDataType(user_op::InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(ctx->inputs().size(), 0)
+  CHECK_EQ_OR_RETURN(ctx->inputs().size(), 1)
       << Error::InvalidValueError()
       << "The input size of imag_grad op should be 1, but get:" << ctx->inputs().size();
-  CHECK_EQ_OR_RETURN(ctx->outputs().size(), 0)
+  CHECK_EQ_OR_RETURN(ctx->outputs().size(), 1)
       << Error::InvalidValueError()
       << "The output size of imag_grad op should be 1, but get:" << ctx->outputs().size();
   const std::pair<std::string, int32_t>& input_arg = ctx->inputs().at(0);
