@@ -3334,3 +3334,11 @@
 - name: "frac_"
   signature: "Tensor (Tensor x) => FracInplace"
   bind_python: True
+
+- name: "digamma"
+  signature: "Tensor (Tensor x) => Digamma"
+  bind_python: True
+
+- name: "digamma_grad"
+  signature: "Tensor (Tensor x, Tensor dy) => DigammaGrad"
+  bind_python: False
