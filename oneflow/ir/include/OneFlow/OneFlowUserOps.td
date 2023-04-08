@@ -4585,7 +4585,7 @@ def OneFlow_LgammaGradOp : OneFlow_BaseOp<"lgamma_grad", [NoMemoryEffect, Declar
 }
 
 
-def OneFlow_DigammaOp : OneFlow_BaseOp<"digamma", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_DigammaOp : OneFlow_BaseOp<"digamma", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x
   );
@@ -4598,7 +4598,7 @@ def OneFlow_DigammaOp : OneFlow_BaseOp<"digamma", [NoSideEffect, DeclareOpInterf
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_DigammaGradOp : OneFlow_BaseOp<"digamma_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_DigammaGradOp : OneFlow_BaseOp<"digamma_grad", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x,
     OneFlow_Tensor:$dy
