@@ -30,7 +30,14 @@ using Env = std::map<std::string, std::shared_ptr<Tensor>>;
 Maybe<Env> InitEnv(const one::TensorTuple& graph_inputs, const std::shared_ptr<NNGraph>& graph) {
   Env env;
   for (const auto& [name, tensor] : graph->variable_op_name2tensor()) {
-    env.emplace(name + "/out", tensor);
+    if (tensor->is_global()) {
+      // FIXME(daquexian):
+      // It is a temporary hack to support global tensor in nn.Graph (mainly the learning rate).
+      // We should remove this hack after PR #10048 is merged.
+      env.emplace(name + "/out", JUST(tensor->cur_rank_phy_tensor()));
+    } else {
+      env.emplace(name + "/out", tensor);
+    }
   }
   for (size_t i = 0; i < graph->inputs_op_names().size(); ++i) {
     const auto& name = graph->inputs_op_names()[i];
@@ -170,7 +177,17 @@ Maybe<one::TensorTuple> InterpretJob(const one::TensorTuple& graph_inputs,
       OF_PROFILER_RANGE_GUARD(user_conf.op_type_name());
       TensorTuple inputs =
           *JUST(GetInputTensors(user_conf, env, [&op_conf](const std::shared_ptr<Tensor>& tensor) {
-            return CHECK_JUST(functional::To(tensor, op_conf.device_tag()));
+            // FIXME(daquexian):
+            // It is a temporary hack to support global tensor in nn.Graph (mainly the learning rate).
+            // We should remove this hack after PR #10048 is merged.
+            if (op_conf.device_tag() != "invalid_device") {
+              auto device = CHECK_JUST(tensor->device());
+              auto new_device = CHECK_JUST(
+                  Device::New(op_conf.device_tag(), device->device_id(), device->rematable()));
+              return CHECK_JUST(
+                  functional::To(tensor, Optional<Symbol<Device>>(new_device), NullOpt, false));
+            }
+            return tensor;
           }));
       OpArgsVector<std::string> output_names = GetOutputNamesOfOp(user_conf);
       if (IsViewOp(op)) {
@@ -181,6 +198,19 @@ Maybe<one::TensorTuple> InterpretJob(const one::TensorTuple& graph_inputs,
       for (const auto& name : outdated_tensors_after_op[i]) {
         CHECK_EQ_OR_RETURN(env.erase(name), 1);
       }
+    } else if (op_conf.has_learning_rate_schedule_conf()) {
+      // FIXME(daquexian):
+      // It is a temporary hack to support learning_rate_schedule op.
+      // Only the naive sgd without any lr decay is supported.
+      const auto& lr_conf = op_conf.learning_rate_schedule_conf();
+      env.emplace(
+          op_conf.name() + "/" + lr_conf.out(),
+          JUST(functional::Constant({1}, lr_conf.learning_rate(), DType::Float(), NullOpt)));
+    } else if (op_conf.has_identity_conf()) {
+      const auto& identity_conf = op_conf.identity_conf();
+      const auto& in = identity_conf.in();
+      const auto& out = op_conf.name() + "/" + identity_conf.out();
+      env.emplace(out, JUST(functional::Identity(JUST(MapAt(env, in)))));
     } else if (op_conf.has_output_conf()) {
       const auto& output_conf = op_conf.output_conf();
       graph_outputs.emplace_back(JUST(MapAt(env, output_conf.in())));
