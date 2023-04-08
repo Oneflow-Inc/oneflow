@@ -144,6 +144,7 @@ from oneflow._C import div, div_
 from oneflow._C import addcmul
 from oneflow._C import floor, floor_
 from oneflow._C import floor_divide
+from oneflow._C import frac, frac_
 from oneflow._C import mul
 from oneflow._C import negative
 from oneflow._C import negative as neg
@@ -264,6 +265,7 @@ from oneflow._C import index_add, index_add_
 from oneflow._C import sort
 from oneflow._C import clone
 from oneflow._C import bitwise_and, bitwise_or, bitwise_xor, bitwise_not
+from oneflow._C import real, imag, conj, conj_physical
 
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
@@ -477,6 +479,7 @@ from . import (
     amp,
     hub,
     fx,
+    special,
 )
 import oneflow.utils.data
 import oneflow.framework.docstr as docstr
@@ -486,6 +489,7 @@ import oneflow.asyncs
 import oneflow.one_embedding
 import oneflow.profiler
 import oneflow.mock_torch
+import oneflow.remat
 
 if oneflow._oneflow_internal.flags.with_mlir():
     oneflow_internal_path = oneflow._oneflow_internal.__file__
