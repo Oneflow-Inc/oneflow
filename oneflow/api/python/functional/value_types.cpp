@@ -72,8 +72,7 @@ HashMap<ValueType, std::string>* GetValueTypeNameMap() {
       {kCOMPLEX_FLOAT, "complex float"},
       {kCOMPLEX_DOUBLE, "complex double"},
       {kCHAR, "char"},
-      {kINT16, "int16"}
-  };
+      {kINT16, "int16"}};
   return &value_type_name_map;
 }
 
