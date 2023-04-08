@@ -513,7 +513,7 @@ def _test_with_position_sinuous(
 ):
     if device == "cpu":
         test_case.assertTrue(True)
-    
+
     B, M, H, K, merged_dims = parseDims(dims, x_layout)
 
     np.random.seed(3124)
@@ -711,7 +711,7 @@ def _test_with_position(
 ):
     if device == "cpu":
         test_case.assertTrue(True)
-    
+
     B, M, H, K, merged_dims = parseDims(dims, x_layout)
 
     x = np.random.uniform(low=-1, high=1, size=(*merged_dims,))
