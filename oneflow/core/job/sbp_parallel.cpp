@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/str_util.h"
 #include "oneflow/core/framework/nd_sbp.h"
 
 namespace oneflow {
@@ -191,6 +192,26 @@ void SortSbpSignatureListByCopyCost(
 bool IsValidSbpParallelString(const std::string& sbp_str) {
   SbpParallel sbp_parallel;
   return ParseSbpParallelFromString(sbp_str, &sbp_parallel);
+}
+
+bool ParseNdSbpFromLongString(const std::string& nd_sbp_str, NdSbp* nd_sbp) {
+  bool success = true;
+  Split(nd_sbp_str, ",", [&](std::string&& sbp_str) {
+    SbpParallel* sbp_parallel = nd_sbp->add_sbp_parallel();
+    bool ret = ParseSbpParallelFromString(sbp_str, sbp_parallel);
+    if (!ret) { success = false; }
+  });
+  if (nd_sbp->sbp_parallel_size() == 0) { return false; }
+  return success;
+}
+
+std::string NdSbpToLongString(const NdSbp& nd_sbp) {
+  std::string ret = "";
+  for (int32_t i = 0; i < nd_sbp.sbp_parallel_size(); ++i) {
+    if (i > 0) { ret += ","; }  // NOTE(chengcheng): Separator ','
+    ret += SbpToString(nd_sbp.sbp_parallel(i));
+  }
+  return ret;
 }
 
 bool ParseSbpParallelFromString(const std::string& sbp_str, SbpParallel* sbp_parallel) {
