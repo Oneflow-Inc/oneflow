@@ -178,8 +178,8 @@ Maybe<one::TensorTuple> InterpretJob(const one::TensorTuple& graph_inputs,
       TensorTuple inputs =
           *JUST(GetInputTensors(user_conf, env, [&op_conf](const std::shared_ptr<Tensor>& tensor) {
             // FIXME(daquexian):
-            // It is a temporary hack to support global tensor in nn.Graph (mainly the learning rate).
-            // We should remove this hack after PR #10048 is merged.
+            // It is a temporary hack to support global tensor in nn.Graph (mainly the learning
+            // rate). We should remove this hack after PR #10048 is merged.
             if (op_conf.device_tag() != "invalid_device") {
               auto device = CHECK_JUST(tensor->device());
               auto new_device = CHECK_JUST(
