@@ -706,7 +706,8 @@ class FusedMatmulBiasFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& weight,
                            const std::shared_ptr<one::Tensor>& bias,
-                           const Optional<one::Tensor>& _add_to_output) const {
+                           const Optional<one::Tensor>& _add_to_output, const double& alpha,
+                           const double& beta) const {
     /*
     x: (m_i, ... m_0, k)
     weight: (n, k) need transpose
@@ -737,21 +738,30 @@ class FusedMatmulBiasFunctor {
       device_type = JUST(x->device())->enum_type();
     }
 
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("alpha", "beta");
+    attrs.SetAllAttrs(alpha, beta);
     if (device_type == DeviceType::kCUDA) {
       if (_add_to_output) {
         return OpInterpUtil::Dispatch<Tensor>(*_with_add_to_output_op,
-                                              {x, weight, bias, JUST(_add_to_output)});
+                                              {x, weight, bias, JUST(_add_to_output)}, attrs);
+      } else {
+        return OpInterpUtil::Dispatch<Tensor>(*_without_add_to_output_op, {x, weight, bias}, attrs);
       }
-      return OpInterpUtil::Dispatch<Tensor>(*_without_add_to_output_op, {x, weight, bias});
     }
 #endif  // CUDA_VERSION >= 11020
 
     auto matmul_bias = JUST(functional::BiasAdd(
-        JUST(functional::MatMul(x, weight, false, true, 1.0)), bias, x->shape()->NumAxes() - 1));
-    if (_add_to_output) {
-      return JUST(functional::Add({matmul_bias, JUST(_add_to_output)}, false));
+        JUST(functional::MatMul(x, weight, false, true, alpha)), bias, x->shape()->NumAxes() - 1));
+    if (_add_to_output && beta != 0.0) {
+      if (beta == 1.0) {
+        return JUST(functional::Add({matmul_bias, JUST(_add_to_output)}, false));
+      } else {
+        return JUST(functional::Add(
+            {matmul_bias, JUST(functional::ScalarMul(JUST(_add_to_output), beta, false))}, false));
+      }
+    } else {
+      return matmul_bias;
     }
-    return matmul_bias;
   }
 
  private:
@@ -892,6 +902,129 @@ class LayerNormFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class SkipLayerNormFunctor {
+ public:
+  SkipLayerNormFunctor() {
+    std::vector<bool> bool_list = {true, false};
+
+    /* number of skip */
+    for (bool has_skip : bool_list) {
+      /* has_gamma */
+      for (bool has_gamma : bool_list) {
+        /* has_beta */
+        for (bool has_beta : bool_list) {
+          /* has_bias */
+          for (bool has_bias : bool_list) {
+            one::OpBuilder op_builder = one::OpBuilder("skip_layer_norm").Input("x");
+            if (has_gamma) { op_builder = op_builder.Input("gamma"); }
+            if (has_beta) { op_builder = op_builder.Input("beta"); }
+            if (has_bias) { op_builder = op_builder.Input("bias"); }
+            if (has_skip) { op_builder = op_builder.Input("skip"); }
+            op_builder = op_builder.Output("y").Output("mean").Output("inv_variance");
+
+            std::shared_ptr<OpExpr> op_expr = CHECK_JUST(op_builder.Build());
+            ops_.insert(std::pair<std::tuple<bool, bool, bool, bool>, std::shared_ptr<OpExpr>>(
+                std::tuple<bool, bool, bool, bool>(has_skip, has_gamma, has_beta, has_bias),
+                op_expr));
+          }  // has_bias
+        }    // has_beta
+      }      // has_gamma
+    }        // has_skip
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<one::Tensor>& gamma, const Optional<one::Tensor>& beta,
+                           const Optional<one::Tensor>& bias, const Optional<one::Tensor>& skip,
+                           const double& epsilon, const double& alpha) const {
+    // check shape of x
+    const auto& x_shape = *(x->shape());
+    CHECK_GE_OR_RETURN(x_shape.NumAxes(), 2)
+        << "number of axes of \'x\' should be greater than or equal to 2, yet get "
+        << x_shape.NumAxes();
+
+    if (gamma) {
+      const auto& gamma_shape = *(JUST(gamma)->shape());
+      CHECK_EQ_OR_RETURN(gamma_shape.NumAxes(), 1)
+          << "number of axes of \'gamma\' should have be equal to 1, yet get "
+          << gamma_shape.NumAxes();
+      CHECK_EQ_OR_RETURN(gamma_shape.At(0), x_shape.At(x_shape.NumAxes() - 1))
+          << "the size of \'gamma\'(" << gamma_shape.At(0)
+          << ") is not consistant with the last dimension of \'x\'("
+          << x_shape.At(x_shape.NumAxes() - 1) << ")";
+    }
+    if (beta) {
+      const auto& beta_shape = *(JUST(beta)->shape());
+      CHECK_EQ_OR_RETURN(beta_shape.NumAxes(), 1)
+          << "number of axes of \'beta\' should have be equal to 1, yet get "
+          << beta_shape.NumAxes();
+      CHECK_EQ_OR_RETURN(beta_shape.At(0), x_shape.At(x_shape.NumAxes() - 1))
+          << "dimension 1 of \'beta\'(" << beta_shape.At(0)
+          << ") is not consistant with the last dimension of \'x\'("
+          << x_shape.At(x_shape.NumAxes() - 1) << ")";
+    }
+    if (bias) {
+      const auto& bias_shape = *(JUST(bias)->shape());
+      CHECK_EQ_OR_RETURN(bias_shape.NumAxes(), 1)
+          << "number of axes of \'bias\' should have be equal to 1, yet get "
+          << bias_shape.NumAxes();
+      CHECK_EQ_OR_RETURN(bias_shape.At(0), x_shape.At(x_shape.NumAxes() - 1))
+          << "dimension 1 of \'bias\'(" << bias_shape.At(0)
+          << ") is not consistant with the last dimension of \'x\'("
+          << x_shape.At(x_shape.NumAxes() - 1) << ")";
+    }
+    if (skip) {
+      const auto& skip_shape = *(JUST(skip)->shape());
+      CHECK_EQ_OR_RETURN(skip_shape, x_shape) << "shape of \'skip\' is not the same as \'x\'";
+    }
+
+    // set attributes
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("epsilon", "alpha");
+    attrs.SetAllAttrs(epsilon, alpha);
+
+    // count number of all input tensors
+    size_t nb_inputs = 1;       // count x
+    if (skip) nb_inputs += 1;   // count skip
+    if (gamma) nb_inputs += 1;  // count gamma
+    if (beta) nb_inputs += 1;   // count beta
+    if (bias) nb_inputs += 1;   // count bias
+
+    // construct input tensor tuple
+    size_t tensor_index = 1;
+    TensorTuple input(nb_inputs);
+    bool has_gamma = false, has_beta = false, has_bias = false, has_skip = false;
+    input[0] = x;
+    if (gamma) {
+      input[tensor_index] = JUST(gamma);
+      tensor_index += 1;
+      has_gamma = true;
+    }
+    if (beta) {
+      input[tensor_index] = JUST(beta);
+      tensor_index += 1;
+      has_beta = true;
+    }
+    if (bias) {
+      input[tensor_index] = JUST(bias);
+      tensor_index += 1;
+      has_bias = true;
+    }
+    if (skip) {
+      input[tensor_index] = JUST(skip);
+      tensor_index += 1;
+      has_skip = true;
+    }
+
+    return OpInterpUtil::Dispatch<Tensor>(
+        *(ops_.find(std::tuple<bool, bool, bool, bool>(has_skip, has_gamma, has_beta, has_bias))
+              ->second),
+        input, attrs);
+  }
+
+ private:
+  /* (nb_skip, has_gamma, has_beta, has_bias) -> op */
+  std::map<std::tuple<bool, bool, bool, bool>, std::shared_ptr<OpExpr>> ops_;
+};
+
 class LayerNormAffineFunctor {
  public:
   LayerNormAffineFunctor() {
@@ -1014,6 +1147,106 @@ class RMSNormFunctor {
  private:
   std::shared_ptr<OpExpr> op_;
   std::shared_ptr<OpExpr> op_affine_;
+};
+
+class SkipRMSNormFunctor {
+ public:
+  SkipRMSNormFunctor() {
+    std::vector<bool> bool_list = {true, false};
+
+    for (bool has_weight : bool_list) {
+      for (bool has_skip : bool_list) {
+        for (bool has_bias : bool_list) {
+          one::OpBuilder op_builder = one::OpBuilder("skip_rms_norm").Input("x");
+          if (has_weight) { op_builder = op_builder.Input("weight"); }
+          if (has_bias) { op_builder = op_builder.Input("bias"); }
+          if (has_skip) { op_builder = op_builder.Input("skip"); }
+          op_builder = op_builder.Output("y").Output("inv_rms");
+
+          std::shared_ptr<OpExpr> op_expr = CHECK_JUST(op_builder.Build());
+          ops_.insert(std::pair<std::tuple<bool, bool, bool>, std::shared_ptr<OpExpr>>(
+              std::tuple<bool, bool, bool>(has_weight, has_skip, has_bias), op_expr));
+        }  // has_bias
+      }    // has_skip
+    }      // has_weight
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<one::Tensor>& weight, const Optional<one::Tensor>& bias,
+                           const Optional<one::Tensor>& skip, const double& epsilon,
+                           const double& alpha) const {
+    // check shape of x
+    const auto& x_shape = *(x->shape());
+    CHECK_GE_OR_RETURN(x_shape.NumAxes(), 2)
+        << "number of axes of \'x\' should be greater than or equal to 2, yet get "
+        << x_shape.NumAxes();
+
+    if (weight) {
+      const auto& weight_shape = *(JUST(weight)->shape());
+      CHECK_EQ_OR_RETURN(weight_shape.NumAxes(), 1)
+          << "number of axes of \'weight\' should have be equal to 1, yet get "
+          << weight_shape.NumAxes();
+      CHECK_EQ_OR_RETURN(weight_shape.At(0), x_shape.At(x_shape.NumAxes() - 1))
+          << "dimension 1 of \'weight\'(" << weight_shape.At(0)
+          << ") is not consistant with the last dimension of \'x\'("
+          << x_shape.At(x_shape.NumAxes() - 1) << ")";
+    }
+
+    if (bias) {
+      const auto& bias_shape = *(JUST(bias)->shape());
+      CHECK_EQ_OR_RETURN(bias_shape.NumAxes(), 1)
+          << "number of axes of \'bias\' should have be equal to 1, yet get "
+          << bias_shape.NumAxes();
+      CHECK_EQ_OR_RETURN(bias_shape.At(0), x_shape.At(x_shape.NumAxes() - 1))
+          << "dimension 1 of \'bias\'(" << bias_shape.At(0)
+          << ") is not consistant with the last dimension of \'x\'("
+          << x_shape.At(x_shape.NumAxes() - 1) << ")";
+    }
+
+    if (skip) {
+      const auto& skip_shape = *(JUST(skip)->shape());
+      CHECK_EQ_OR_RETURN(skip_shape, x_shape) << "shape of \'skip\' is not the same as \'x\'";
+    }
+
+    // set attributes
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("epsilon", "alpha");
+    attrs.SetAllAttrs(epsilon, alpha);
+
+    // count number of all input tensors
+    size_t nb_inputs = 1;        // count x
+    if (skip) nb_inputs += 1;    // count skip
+    if (weight) nb_inputs += 1;  // count weight
+    if (bias) nb_inputs += 1;    // count bias
+
+    // construct input tensor tuple
+    size_t tensor_index = 1;
+    TensorTuple input(nb_inputs);
+    bool has_weight = false, has_bias = false, has_skip = false;
+    input[0] = x;
+    if (weight) {
+      input[tensor_index] = JUST(weight);
+      tensor_index += 1;
+      has_weight = true;
+    }
+    if (bias) {
+      input[tensor_index] = JUST(bias);
+      tensor_index += 1;
+      has_bias = true;
+    }
+    if (skip) {
+      input[tensor_index] = JUST(skip);
+      tensor_index += 1;
+      has_skip = true;
+    }
+
+    return OpInterpUtil::Dispatch<Tensor>(
+        *(ops_.find(std::tuple<bool, bool, bool>(has_weight, has_skip, has_bias))->second), input,
+        attrs);
+  }
+
+ private:
+  /* (has_weight, has_skip, has_bias) -> op */
+  std::map<std::tuple<bool, bool, bool>, std::shared_ptr<OpExpr>> ops_;
 };
 
 class PixelShuffleFunctor {
@@ -2575,7 +2808,8 @@ class ConstantPadFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("padding", "floating_constant_value",
                                                  "integral_constant_value", "padding_before",
                                                  "padding_after");
-    if (IsFloatingDataType(input->dtype()->data_type())) {
+    if (IsFloatingDataType(input->dtype()->data_type())
+        || IsComplexDataType(input->dtype()->data_type())) {
       attrs.SetAllAttrs(pad, value.As<double>(), static_cast<int64_t>(0), pad_before, pad_after);
     } else if (IsIntegralDataType(input->dtype()->data_type())) {
       attrs.SetAllAttrs(pad, static_cast<double>(0), value.As<int64_t>(), pad_before, pad_after);
@@ -5113,6 +5347,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedMatmulBiasFunctor>("FusedMatmulBias");
   m.add_functor<impl::FusedMatmulBiasAddReluDropoutFunctor>("FusedMatmulBiasAddReluDropout");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
+  m.add_functor<impl::SkipLayerNormFunctor>("SkipLayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
   m.add_functor<impl::GroupNormFunctor>("GroupNorm");
   m.add_functor<impl::TFAvgPool2DFunctor>("TFAvgPool2D");
@@ -5219,6 +5454,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::GroupedMatmulBiasFunctor>("GroupedMatmulBias");
   m.add_functor<impl::GroupedMatmulFunctor>("GroupedMatmul");
   m.add_functor<impl::RMSNormFunctor>("RMSNorm");
+  m.add_functor<impl::SkipRMSNormFunctor>("SkipRMSNorm");
   m.add_functor<impl::FusedScaleMaskBiasSoftmaxFunctor>("FusedScaleMaskBiasSoftmax");
   m.add_functor<impl::FusedScaleMaskBiasSoftmaxGradFunctor>("FusedScaleMaskBiasSoftmaxGrad");
   m.add_functor<impl::MultiTensorYoloV5WeightUpdateFunctor>("MultiTensorYoloV5WeightUpdate");

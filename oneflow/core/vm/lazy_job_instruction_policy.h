@@ -96,8 +96,6 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
   Maybe<void> Prepare(Instruction* instruction) override { return Maybe<void>::Ok(); }
   void Compute(Instruction* instruction) override {
     auto* lazy_job_stream_policy = GetLazyJobStreamPolicy(instruction);
-
-    static thread_local int64_t run_id = 0;
     {
       OF_PROFILER_RANGE_GUARD("WaitUntilQueueEmptyIfFrontNNGraphNotEquals");
       lazy_job_stream_policy->WaitUntilQueueEmptyIfFrontNNGraphNotEquals(nn_graph_);
@@ -110,7 +108,6 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
       buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Push(job_instance);
       buffer_mgr->Get(GetSourceTickBufferName(job_name))->Push(job_instance);
     }
-    OF_UNUSED(run_id);  // disable compiler warning.
     OF_PROFILER_RANGE_GUARD("EnqueueNNGraph");
     lazy_job_stream_policy->EnqueueNNGraph(nn_graph_);
   }

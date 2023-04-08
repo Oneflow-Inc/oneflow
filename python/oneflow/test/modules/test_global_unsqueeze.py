@@ -24,21 +24,21 @@ import oneflow as flow
 import oneflow.unittest
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_flow_unsqueeze_with_random_data(test_case, placement, sbp):
     x = random_tensor(2, 8, 16).to_global(placement, sbp)
     y = torch.unsqueeze(x, random(0, 3).to(int))
     return y
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_tensor_unsqueeze_with_random_data(test_case, placement, sbp):
     x = random_tensor(2, 8, 16).to_global(placement, sbp)
     y = x.unsqueeze(random(0, 3).to(int))
     return y
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_unsqueeze_with_0_size_data(test_case, placement, sbp):
     x = random_tensor(3, 8, 16, 0).to_global(placement, sbp)
     y = torch.unsqueeze(x, random(0, 4).to(int))

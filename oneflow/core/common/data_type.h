@@ -21,6 +21,7 @@ limitations under the License.
 #if defined(WITH_CUDA)
 #include <cuda_fp16.h>
 #include <cuda.h>
+#include <cuComplex.h>
 #if CUDA_VERSION >= 11000
 #include <cuda_bf16.h>
 #endif  // CUDA_VERSION >= 11000
@@ -146,13 +147,21 @@ struct GetDataType<void> : std::integral_constant<DataType, DataType::kChar> {};
   template<>                                                                      \
   struct GetDataType<type_cpp> : std::integral_constant<DataType, type_proto> {}; \
   inline type_cpp GetTypeByDataType(std::integral_constant<DataType, type_proto>) { return {}; }
-OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE, ALL_DATA_TYPE_SEQ UNSIGNED_INT32_DATA_TYPE_SEQ
-                                                   FLOAT16_DATA_TYPE_SEQ BFLOAT16_DATA_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE,
+                     ALL_DATA_TYPE_SEQ UNSIGNED_INT32_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ
+                         BFLOAT16_DATA_TYPE_SEQ COMPLEX_DATA_TYPE_SEQ UNSIGNED_INT64_DATA_TYPE_SEQ);
 #undef SPECIALIZE_GET_DATA_TYPE
 
 template<typename T>
 struct GetDataType<T, typename std::enable_if<IsFloat16<T>::value>::type>
     : std::integral_constant<DataType, DataType::kFloat16> {};
+
+#ifdef WITH_CUDA
+template<>
+struct GetDataType<cuComplex> : std::integral_constant<DataType, DataType::kComplex64> {};
+template<>
+struct GetDataType<cuDoubleComplex> : std::integral_constant<DataType, DataType::kComplex128> {};
+#endif  // WITH_CUDA
 
 #if CUDA_VERSION >= 11000
 template<>
@@ -276,6 +285,14 @@ OF_DEVICE_FUNC T GetMinVal() {
   return *(T*)&ret;
 }
 
+#if CUDA_VERSION >= 11000
+template<>
+OF_DEVICE_FUNC nv_bfloat16 GetMinVal<nv_bfloat16>() {
+  uint16_t ret = 0xff7f;
+  return *(nv_bfloat16*)&ret;
+}
+#endif  // CUDA_VERSION >= 11000
+
 template<DeviceType, typename T>
 struct DevDType {
   typedef T type;
@@ -303,6 +320,7 @@ bool IsIntegralDataType(DataType data_type);
 bool IsFloatingDataType(DataType data_type);
 bool IsHalfDataType(DataType data_type);
 bool IsSupportRequireGradDataType(DataType data_type);
+bool IsComplexDataType(DataType data_type);
 bool IsTriviallyCopyableDataType(DataType data_type);
 bool IsIndexDataType(DataType data_type);
 bool NotSupportBoxingDataType(DataType data_type);

@@ -122,7 +122,7 @@ class StatefulOpKernel final {
   // so only group kernels by dtype
   std::array<std::vector<std::pair<const user_op::OpKernelRegistryResult*,
                                    std::shared_ptr<const user_op::OpKernel>>>,
-             DataType_MAX>
+             DataType_ARRAYSIZE>
       dtype2cached_kernels_;
   HashMap<const user_op::OpKernel*, std::shared_ptr<user_op::OpKernelState>> op_kernel_state_map_;
   HashMap<const user_op::OpKernel*, std::shared_ptr<user_op::OpKernelCache>> op_kernel_cache_map_;

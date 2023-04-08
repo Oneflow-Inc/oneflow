@@ -29,6 +29,8 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/job/nd_sbp_util.h"
+#include "oneflow/core/eager/tensor_storage.h"
+#include <complex>
 
 namespace oneflow {
 namespace one {
@@ -167,6 +169,7 @@ class TensorConstantFunctor {
     // NOTE: this op is an source op, so the value(scalar tensor) should not have autograd status.
     autograd::AutoGradMode mode(false);
     if (GlobalMode::is_enabled()) {
+      auto global_mode_gurad = GlobalMode::Guard(false);
       return JUST(functional::GlobalTensorConstant(shape, value, dtype,
                                                    GetGlobalParallelDescFromDevice(device),
                                                    *JUST(GetSbpList(GlobalMode::nd_sbp()))));
@@ -193,12 +196,18 @@ class GlobalConstantFunctor {
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "floating_value",
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "complex_value",
+                                                 "is_complex_value", "floating_value",
                                                  "is_floating_value", "integer_value", "nd_sbp");
-    if (IsIntegralDataType(dtype->data_type())) {
-      attrs.SetAllAttrs(shape, dtype->data_type(), NullOpt, false, value.As<int64_t>(), NullOpt);
+    if (IsComplexDataType(dtype->data_type())) {
+      attrs.SetAllAttrs(shape, dtype->data_type(), value.Value<std::complex<double>>(), true,
+                        NullOpt, false, NullOpt, NullOpt);
+    } else if (IsIntegralDataType(dtype->data_type())) {
+      attrs.SetAllAttrs(shape, dtype->data_type(), NullOpt, false, NullOpt, false,
+                        value.As<int64_t>(), NullOpt);
     } else {
-      attrs.SetAllAttrs(shape, dtype->data_type(), value.As<double>(), true, NullOpt, NullOpt);
+      attrs.SetAllAttrs(shape, dtype->data_type(), NullOpt, false, value.As<double>(), true,
+                        NullOpt, NullOpt);
     }
 
     auto dispatch_constant =
@@ -210,7 +219,7 @@ class GlobalConstantFunctor {
             nd_sbp[i] = SbpParallelToString(*sbp_tuple[i]);
           }
         }
-        attrs.SetAttr<5>(nd_sbp);
+        attrs.SetAttr<7>(nd_sbp);
       }
       const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
       return OpInterpUtil::Dispatch<Tensor>(*op_, {},
@@ -244,16 +253,23 @@ class ConstantFunctor {
   Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     if (GlobalMode::is_enabled()) {
+      auto global_mode_gurad = GlobalMode::Guard(false);
       return JUST(functional::GlobalConstant(shape, value, dtype,
                                              GetGlobalParallelDescFromDevice(device),
                                              *JUST(GetSbpList(GlobalMode::nd_sbp()))));
     }
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "floating_value",
-                                                 "is_floating_value", "integer_value");
-    if (IsIntegralDataType(dtype->data_type())) {
-      attrs.SetAllAttrs(shape, dtype->data_type(), NullOpt, false, value.As<int64_t>());
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "complex_value", "is_complex_value",
+                                       "floating_value", "is_floating_value", "integer_value");
+    if (IsComplexDataType(dtype->data_type())) {
+      attrs.SetAllAttrs(shape, dtype->data_type(), value.Value<std::complex<double>>(), true,
+                        NullOpt, false, NullOpt);
+    } else if (IsIntegralDataType(dtype->data_type())) {
+      attrs.SetAllAttrs(shape, dtype->data_type(), NullOpt, false, NullOpt, false,
+                        value.As<int64_t>());
     } else {
-      attrs.SetAllAttrs(shape, dtype->data_type(), value.As<double>(), true, NullOpt);
+      attrs.SetAllAttrs(shape, dtype->data_type(), NullOpt, false, value.As<double>(), true,
+                        NullOpt);
     }
     if (device.has_value()) {
       Symbol<Device> device_symbol = JUST(device);
@@ -275,6 +291,7 @@ class EmptyFunctor {
                            const bool pin_memory) const {
     std::shared_ptr<Tensor> empty;
     if (GlobalMode::is_enabled()) {
+      auto global_mode_gurad = GlobalMode::Guard(false);
       empty = JUST(functional::GlobalEmpty(shape, dtype, GetGlobalParallelDescFromDevice(device),
                                            *JUST(GetSbpList(GlobalMode::nd_sbp()))));
       if (dtype->is_floating_point()) { JUST(empty->set_requires_grad(requires_grad)); }
@@ -1768,6 +1785,13 @@ class CopyToDeviceFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, Symbol<Device> device,
                            const bool pin_memory) const {
+    if (x->is_local()) {
+      if (auto x_device = JUST(x->device()); x_device != device && x_device->rematable()) {
+        std::dynamic_pointer_cast<vm::RematableTensorStorage>(
+            JUST(x->eager_blob_object())->tensor_storage())
+            ->Remat();
+      }
+    }
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("device", "pin_memory");
     attrs.SetAllAttrs(device, pin_memory);
 
@@ -2234,6 +2258,25 @@ class TrilFunctor {
         THREAD_CACHED_MUTABLE_ATTR_MAP("diagonal", "is_floating_fill_value", "integer_fill_value");
     attrs.SetAllAttrs(diagonal, false, static_cast<int64_t>(0));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class InplaceTrilFunctor {
+ public:
+  InplaceTrilFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("tril").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& diagonal) const {
+    JUST(CheckInplaceValid(x));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("diagonal");
+    attrs.SetAllAttrs(diagonal);
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = x;
+    JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+    return outputs->at(0);
   }
 
  private:
@@ -4068,6 +4111,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::UnsortedSegmentSumLikeFunctor>("UnsortedSegmentSumLike");
   m.add_functor<impl::UnsortedSegmentSumFunctor>("UnsortedSegmentSum");
   m.add_functor<impl::TrilFunctor>("Tril");
+  m.add_functor<impl::InplaceTrilFunctor>("InplaceTril");
   m.add_functor<impl::TriuFunctor>("Triu");
   m.add_functor<impl::InplaceTriuFunctor>("InplaceTriu");
   m.add_functor<impl::DiagFunctor>("Diag");

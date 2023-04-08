@@ -121,16 +121,33 @@ bool SharedPtrShapeEqual(const std::shared_ptr<const Shape>& lhs,
   return (*lhs) == (*rhs);
 }
 
-bool NeedInsertBoxingBetweenOpNodes(const OpNode* a_node, const OpNode* b_node,
-                                    const OpEdge* edge) {
-  CHECK(a_node != b_node && (edge->src_node() == a_node || edge->src_node() == b_node)
-        && (edge->dst_node() == a_node || edge->dst_node() == b_node));
-  if (a_node->parallel_desc().parallel_num() > 1) {
-    for (const auto& lbi : edge->lbis()) {
-      if (a_node->NdSbp4Lbi(lbi) != b_node->NdSbp4Lbi(lbi)) { return true; }
+bool IsOpEdge121Connected(const OpNode* src_node, const OpNode* dst_node, const OpEdge* edge) {
+  CHECK(src_node != dst_node && (edge->src_node() == src_node || edge->src_node() == dst_node)
+        && (edge->dst_node() == src_node || edge->dst_node() == dst_node));
+  if (src_node->parallel_desc().parallel_num() != dst_node->parallel_desc().parallel_num()) {
+    return false;
+  }
+  if (src_node->parallel_desc().parallel_num() == 1) { return true; }
+  for (const auto& lbi : edge->lbis()) {
+    // NOTE(chengcheng): nd_sbp need to be reduction like from [P, P] to [P]
+    Shape src_reduced_hierarchy;
+    Shape dst_reduced_hierarchy;
+    NdSbp src_reduced_nd_sbp;
+    NdSbp dst_reduced_nd_sbp;
+
+    InOutParallelDimReduce(*src_node->parallel_desc().hierarchy(),
+                           *dst_node->parallel_desc().hierarchy(), src_node->NdSbp4Lbi(lbi),
+                           dst_node->NdSbp4Lbi(lbi), &src_reduced_hierarchy, &dst_reduced_hierarchy,
+                           &src_reduced_nd_sbp, &dst_reduced_nd_sbp,
+                           src_node->LogicalBlobDesc4Lbi(lbi).shape());
+    if (src_reduced_hierarchy != dst_reduced_hierarchy
+        || src_reduced_nd_sbp != dst_reduced_nd_sbp) {
+      // Not one to one
+      return false;
     }
   }
-  return false;
+
+  return true;
 }
 
 void GetLogicalChainsWithTimeShape(std::vector<HashSet<const OpNode*>>* ret,
@@ -162,7 +179,9 @@ void GetLogicalChainsWithTimeShape(std::vector<HashSet<const OpNode*>>* ret,
         if (visited.find(next_node) == visited.end() && (!IsBreakpointOpNode(next_node))
             && next_node->parallel_desc().EqualsIgnoringHierarchy(seed_parallel_desc)
             && SharedPtrShapeEqual(GetOpNodeFastestTimeShape(next_node), seed_time_shape)
-            && !NeedInsertBoxingBetweenOpNodes(cur_node, next_node, edge)) {
+            && next_node->op().op_conf().stream_name_hint()
+                   == seed_node->op().op_conf().stream_name_hint()
+            && IsOpEdge121Connected(cur_node, next_node, edge)) {
           CHECK(visited.insert(next_node).second);
           queued_nodes.push(next_node);
         }
@@ -228,7 +247,7 @@ void CreateAfterAccLogicalChain(const std::shared_ptr<LogicalChain>& after_acc_l
     if (visited.find(next_node) == visited.end() && (!IsBreakpointOpNode(next_node))
         && next_node->parallel_desc().EqualsIgnoringHierarchy(seed_parallel_desc)
         && SharedPtrShapeEqual(GetOpNodeFastestTimeShape(next_node), seed_time_shape)
-        && !NeedInsertBoxingBetweenOpNodes(cur_node, next_node, edge)) {
+        && IsOpEdge121Connected(cur_node, next_node, edge)) {
       CHECK(visited.insert(next_node).second);
       queued_nodes.push(next_node);
     }
@@ -263,27 +282,34 @@ void CreateAfterAccLogicalChain(const std::shared_ptr<LogicalChain>& after_acc_l
   }
 }
 
-void TryMergeAfterAccLogicalChainToLastLogicalChain(
+void TryMergeAfterAccLogicalChainToMaxLogicalChain(
     PlacementLogicalChainsInfo* info, HashMap<std::string, OperatorConf>* mut_op_name2conf,
     JobBuilder* job_builder,
     const std::function<bool(const std::string&, const std::string&)>& IsReachable) {
   if (!EnvBool<ENABLE_ACC_CHAIN_MERGE>()) { return; }
+  int64_t max_chain_index = 0;
+  for (int64_t i = 1; i < info->ordered_logical_chains.size(); ++i) {
+    if (info->ordered_logical_chains.at(i)->ordered_op_nodes.size()
+        > info->ordered_logical_chains.at(max_chain_index)->ordered_op_nodes.size()) {
+      max_chain_index = i;
+    }
+  }
 
   const int64_t acc_chain_id = info->after_acc_logical_chain->logical_chain_id;
   auto& acc_chain_order_ops = info->after_acc_logical_chain->ordered_op_nodes;
-  const auto& last_chain = info->ordered_logical_chains.back();
-  const OpNode* last_chain_src_op = last_chain->ordered_op_nodes.front();
-  const OpNode* last_chain_sink_op = last_chain->ordered_op_nodes.back();
-  HashSet<const OpNode*> last_chain_ops(last_chain->ordered_op_nodes.begin(),
-                                        last_chain->ordered_op_nodes.end());
+  const auto& max_chain = info->ordered_logical_chains.at(max_chain_index);
+  const OpNode* max_chain_src_op = max_chain->ordered_op_nodes.front();
+  const OpNode* max_chain_sink_op = max_chain->ordered_op_nodes.back();
+  HashSet<const OpNode*> max_chain_ops(max_chain->ordered_op_nodes.begin(),
+                                       max_chain->ordered_op_nodes.end());
 
   const OpNode* acc_chain_src_op = acc_chain_order_ops.front();
   const OpNode* acc_chain_sink_op = acc_chain_order_ops.back();
   // NOTE(chengcheng): find all nontrivial sink consumer ops
   HashSet<const OpNode*> nontrivial_sink_consumers;
-  for (const OpNode* chain_op : last_chain->ordered_op_nodes) {
+  for (const OpNode* chain_op : max_chain->ordered_op_nodes) {
     chain_op->ForEachNodeOnOutEdge([&](const OpNode* out_node) {
-      if (last_chain_ops.find(out_node) == last_chain_ops.end()
+      if (max_chain_ops.find(out_node) == max_chain_ops.end()
           && !IsTickOpConf(out_node->op().op_conf())
           && SharedPtrShapeEqual(GetOpNodeFastestTimeShape(out_node), info->seed_time_shape)) {
         nontrivial_sink_consumers.insert(out_node);
@@ -293,10 +319,10 @@ void TryMergeAfterAccLogicalChainToLastLogicalChain(
 
   // NOTE(chengcheng): find last op can insert acc ctrl tick.
   while ((!acc_chain_sink_op->op().op_conf().has_user_conf())
-         || IsReachable(acc_chain_sink_op->op().op_name(), last_chain_src_op->op().op_name())) {
-    VLOG(3) << " cannot insert acc ctrl edge between: [" << last_chain_src_op->op().op_name()
+         || IsReachable(acc_chain_sink_op->op().op_name(), max_chain_src_op->op().op_name())) {
+    VLOG(3) << " cannot insert acc ctrl edge between: [" << max_chain_src_op->op().op_name()
             << "] -> [" << acc_chain_sink_op->op().op_name() << "] , debug info :\n"
-            << last_chain_src_op->op().op_conf().DebugString() << "\n"
+            << max_chain_src_op->op().op_conf().DebugString() << "\n"
             << acc_chain_sink_op->op().op_conf().DebugString() << "\n";
 
     VLOG(3) << "remove op : " << acc_chain_sink_op->op().op_name()
@@ -312,10 +338,10 @@ void TryMergeAfterAccLogicalChainToLastLogicalChain(
   if (acc_chain_sink_op == nullptr) { return; }
 
   // NOTE(chengcheng): find last op can insert acc tick.
-  while (IsReachable(acc_chain_src_op->op().op_name(), last_chain_sink_op->op().op_name())) {
-    VLOG(3) << " cannot insert acc tick edge between: [" << last_chain_sink_op->op().op_name()
+  while (IsReachable(acc_chain_src_op->op().op_name(), max_chain_sink_op->op().op_name())) {
+    VLOG(3) << " cannot insert acc tick edge between: [" << max_chain_sink_op->op().op_name()
             << "] -> [" << acc_chain_src_op->op().op_name() << "] , debug info :\n"
-            << last_chain_sink_op->op().op_conf().DebugString() << "\n"
+            << max_chain_sink_op->op().op_conf().DebugString() << "\n"
             << acc_chain_src_op->op().op_conf().DebugString() << "\n";
 
     VLOG(3) << "remove op : " << acc_chain_src_op->op().op_name()
@@ -331,21 +357,21 @@ void TryMergeAfterAccLogicalChainToLastLogicalChain(
   if (acc_chain_src_op == nullptr) { return; }
 
   // NOTE(chengcheng):
-  //   1.add acc ctrl tick between last chain src to acc chain sink for memory lock.
+  //   1.add acc ctrl tick between max chain src to acc chain sink for memory lock.
   const int64_t acc_num = job_builder->job().job_conf().num_gradient_accumulation_steps();
   CHECK_GT(acc_num, 1);
-  const auto& fc_src_obns = last_chain_src_op->op().output_bns();
+  const auto& fc_src_obns = max_chain_src_op->op().output_bns();
   CHECK(!fc_src_obns.empty());
-  const std::string& last_chain_src_out_lbn =
-      GenLogicalBlobName(last_chain_src_op->op().BnInOp2Lbi(fc_src_obns.Get(0)));
+  const std::string& max_chain_src_out_lbn =
+      GenLogicalBlobName(max_chain_src_op->op().BnInOp2Lbi(fc_src_obns.Get(0)));
 
-  VLOG(3) << " last_chain_src_out_lbn : " << last_chain_src_out_lbn;
+  VLOG(3) << " max_chain_src_out_lbn : " << max_chain_src_out_lbn;
   user_op::UserOpConfWrapper acc_ctrl_tick_op =
-      user_op::UserOpConfWrapperBuilder("Sys-AccCtrlTick4MergeLastAccChain-" + NewUniqueId())
+      user_op::UserOpConfWrapperBuilder("Sys-AccCtrlTick4MergeMaxAccChain-" + NewUniqueId())
           .OpTypeName("acc_ctrl_tick")
-          .Input("in", last_chain_src_out_lbn)
+          .Input("in", max_chain_src_out_lbn)
           .Output("out")
-          .ScopeSymbolId(last_chain_src_op->op().op_conf().scope_symbol_id())
+          .ScopeSymbolId(max_chain_src_op->op().op_conf().scope_symbol_id())
           .Attr<int32_t>("max_acc_num", acc_num)
           .Build();
 
@@ -355,38 +381,38 @@ void TryMergeAfterAccLogicalChainToLastLogicalChain(
   (*acc_chain_sink_op_conf.mutable_user_conf()
         ->mutable_input())[user_op::kUserSourceOpTickInputArgName]
       .add_s(acc_ctrl_tick_op.output("out", 0));
-  CHECK_JUST(job_builder->AddOp(last_chain_src_op->parallel_desc().parallel_conf(),
+  CHECK_JUST(job_builder->AddOp(max_chain_src_op->parallel_desc().parallel_conf(),
                                 acc_ctrl_tick_op.op_conf()));
-  VLOG(3) << " Insert acc ctrl tick between: [" << last_chain_src_op->op().op_name() << "] -> ["
+  VLOG(3) << " Insert acc ctrl tick between: [" << max_chain_src_op->op().op_name() << "] -> ["
           << acc_chain_sink_op->op().op_name() << "]";
 
   // NOTE(chengcheng):
-  //   2.add acc tick between last chain sink to acc chain src for strict exec order.
-  const auto& fc_sink_obns = last_chain_sink_op->op().output_bns();
+  //   2.add acc tick between max chain sink to acc chain src for strict exec order.
+  const auto& fc_sink_obns = max_chain_sink_op->op().output_bns();
   CHECK(!fc_sink_obns.empty());
-  const std::string last_chain_sink_lbn =
-      GenLogicalBlobName(last_chain_sink_op->op().BnInOp2Lbi(fc_sink_obns.Get(0)));
-  VLOG(3) << " last_chain_sink_lbn : " << last_chain_sink_lbn;
+  const std::string max_chain_sink_lbn =
+      GenLogicalBlobName(max_chain_sink_op->op().BnInOp2Lbi(fc_sink_obns.Get(0)));
+  VLOG(3) << " max_chain_sink_lbn : " << max_chain_sink_lbn;
 
   user_op::UserOpConfWrapper cast_to_tick_op =
       user_op::UserOpConfWrapperBuilder("Sys-LogicalChainSink-CastToTick-" + NewUniqueId())
           .OpTypeName("cast_to_tick")
-          .Input("in", last_chain_sink_lbn)
+          .Input("in", max_chain_sink_lbn)
           .Output("out")
-          .ScopeSymbolId(last_chain_sink_op->op().op_conf().scope_symbol_id())
+          .ScopeSymbolId(max_chain_sink_op->op().op_conf().scope_symbol_id())
           .Build();
 
-  CHECK_JUST(job_builder->AddOp(last_chain_sink_op->parallel_desc().parallel_conf(),
+  CHECK_JUST(job_builder->AddOp(max_chain_sink_op->parallel_desc().parallel_conf(),
                                 cast_to_tick_op.op_conf()));
 
   std::string acc_tick_output_lbn = cast_to_tick_op.output("out", 0);
-  if (!IsAccOrPackOpNode(last_chain_sink_op)) {
+  if (!IsAccOrPackOpNode(max_chain_sink_op)) {
     // NOTE(chengcheng): Acc Op can be merged in fw/bw chain, if the last op is acc op,
     //  there is no need and CANNOT insert acc tick op.
 
     OperatorConf sink_acc_tick_conf;
     sink_acc_tick_conf.set_name(std::string("Sys-LogicalChainSink-AccTick_") + NewUniqueId());
-    sink_acc_tick_conf.set_scope_symbol_id(last_chain_sink_op->op().op_conf().scope_symbol_id());
+    sink_acc_tick_conf.set_scope_symbol_id(max_chain_sink_op->op().op_conf().scope_symbol_id());
     auto* acc_conf = sink_acc_tick_conf.mutable_acc_tick_conf();
     acc_conf->set_one(cast_to_tick_op.output("out", 0));
     acc_conf->set_acc("acc");
@@ -396,14 +422,14 @@ void TryMergeAfterAccLogicalChainToLastLogicalChain(
     VLOG(3) << " insert acc tick op : " << sink_acc_tick_conf.name()
             << " of last op in fw/bw chain.";
 
-    CHECK_JUST(job_builder->AddOp(last_chain_sink_op->parallel_desc().parallel_conf(),
-                                  sink_acc_tick_conf));
+    CHECK_JUST(
+        job_builder->AddOp(max_chain_sink_op->parallel_desc().parallel_conf(), sink_acc_tick_conf));
   }
 
   OperatorConf sink_final_tick_conf;
   sink_final_tick_conf.set_name(std::string("Sys-LogicalChainSink-FinalTick-DeviceTick_")
                                 + NewUniqueId());
-  sink_final_tick_conf.set_scope_symbol_id(last_chain_sink_op->op().op_conf().scope_symbol_id());
+  sink_final_tick_conf.set_scope_symbol_id(max_chain_sink_op->op().op_conf().scope_symbol_id());
   auto* tick_conf = sink_final_tick_conf.mutable_device_tick_conf();
   tick_conf->add_tick(acc_tick_output_lbn);
   tick_conf->set_out("out");
@@ -455,22 +481,22 @@ void TryMergeAfterAccLogicalChainToLastLogicalChain(
     tick_conf->add_tick(sink_consumer_acc_tick_lbn);
   }
 
-  CHECK_JUST(job_builder->AddOp(last_chain_sink_op->parallel_desc().parallel_conf(),
-                                sink_final_tick_conf));
+  CHECK_JUST(
+      job_builder->AddOp(max_chain_sink_op->parallel_desc().parallel_conf(), sink_final_tick_conf));
 
   CHECK_JUST(MapAt(*mut_op_name2conf, acc_chain_src_op->op().op_name()))
       .add_ctrl_in_op_name(sink_final_tick_conf.name());
 
-  VLOG(3) << " Insert acc tick between: [" << last_chain_sink_op->op().op_name() << "] -> ["
+  VLOG(3) << " Insert acc tick between: [" << max_chain_sink_op->op().op_name() << "] -> ["
           << acc_chain_src_op->op().op_name() << "]";
 
   // NOTE(chengcheng):
-  //   4. merge last chain and acc chain
+  //   4. merge max chain and acc chain
   MergedLogicalChainIdGroup* group = job_builder->add_logical_chain_groups();
-  group->add_logical_chain_id_list(last_chain->logical_chain_id);
+  group->add_logical_chain_id_list(max_chain->logical_chain_id);
   group->add_logical_chain_id_list(acc_chain_id);
   VLOG(3) << " Merge acc chain : " << acc_chain_id
-          << " to last logical chain : " << last_chain->logical_chain_id;
+          << " to max logical chain : " << max_chain->logical_chain_id;
 }
 
 Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
@@ -503,8 +529,6 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
   if (logical_chains.size() == 0) { return Maybe<void>::Ok(); }
 
   int64_t logical_chain_id = 0;
-  auto NewLogicalChainId = [&]() { return logical_chain_id++; };
-
   auto CmpOpNodeOrder = [&](const OpNode* lhs, const OpNode* rhs) {
     return op_node2global_order.at(lhs) < op_node2global_order.at(rhs);
   };
@@ -569,30 +593,6 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
     }
   };
 
-  auto FixLogicalChainOpStreamHint = [&](const std::vector<const OpNode*>& ordered_op_nodes) {
-    std::string stream_index_name = "";
-    for (const OpNode* op_node : ordered_op_nodes) {
-      const OperatorConf& op_conf = op_node->op().op_conf();
-      if (op_conf.has_stream_name_hint() && !op_conf.stream_name_hint().empty()) {
-        if (stream_index_name.empty()) {
-          stream_index_name = op_conf.stream_name_hint();
-        } else {
-          CHECK_EQ(stream_index_name, op_conf.stream_name_hint());
-        }
-      }
-    }
-
-    if (!stream_index_name.empty()) {
-      for (const OpNode* op_node : ordered_op_nodes) {
-        OperatorConf& op_conf = CHECK_JUST(MapAt(mut_op_name2conf, op_node->op().op_name()));
-        if (!op_conf.has_stream_name_hint()) {
-          op_conf.set_stream_name_hint(stream_index_name);
-          VLOG(3) << " Op: " << op_conf.name() << " fix stream name hint : " << stream_index_name;
-        }
-      }
-    }
-  };
-
   for (auto& pair : placement2logical_chains) {
     const auto& placement = pair.first;
     auto& info = pair.second;
@@ -601,10 +601,8 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
     // NOTE(chengcheng): set logical chain id for each op in each logical chain, and insert ctrl
     //   edge for order.
     for (auto& logical_chain : info.ordered_logical_chains) {
-      logical_chain->logical_chain_id = NewLogicalChainId();
+      logical_chain->logical_chain_id = logical_chain_id++;
       InsertLogicalChainId(logical_chain->ordered_op_nodes, logical_chain->logical_chain_id);
-      // TODO(chengcheng): rm fix hint and use thrd id in logical op node.
-      FixLogicalChainOpStreamHint(logical_chain->ordered_op_nodes);
       InsertCtrlEdgeInChain(logical_chain->ordered_op_nodes);
     }
 
@@ -615,13 +613,13 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
 
       for (int i = 0; i < logical_chain->ordered_op_nodes.size(); ++i) {
         const OpNode* ordered_op = JUST(VectorAt(logical_chain->ordered_op_nodes, i));
-        VLOG(3) << " ChainId: " << logical_chain_id << " order: " << i
+        VLOG(3) << " ChainId: " << logical_chain->logical_chain_id << " order: " << i
                 << " op_name: " << ordered_op->op().op_name()
                 << " global_order: " << JUST(MapAt(op_node2global_order, ordered_op));
       }
     }
 
-    // NOTE(chengcheng): create logical chain after acc, and merge with last logical chain.
+    // NOTE(chengcheng): create logical chain after acc, and merge with max logical chain.
     const std::vector<const OpNode*>& ordered_acc_op_nodes = info.ordered_acc_op_nodes;
     if (!ordered_acc_op_nodes.empty()) {
       info.after_acc_logical_chain = std::make_shared<LogicalChain>();
@@ -629,11 +627,11 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
                                  *info.seed_parallel_desc);
       auto& acc_chain_order_ops = info.after_acc_logical_chain->ordered_op_nodes;
       if (acc_chain_order_ops.size() > 1) {
-        info.after_acc_logical_chain->logical_chain_id = NewLogicalChainId();
+        info.after_acc_logical_chain->logical_chain_id = logical_chain_id++;
         std::sort(acc_chain_order_ops.begin(), acc_chain_order_ops.end(), CmpOpNodeOrder);
 
-        TryMergeAfterAccLogicalChainToLastLogicalChain(&info, &mut_op_name2conf, job_builder,
-                                                       IsReachable);
+        TryMergeAfterAccLogicalChainToMaxLogicalChain(&info, &mut_op_name2conf, job_builder,
+                                                      IsReachable);
 
         if (acc_chain_order_ops.size() <= 1) { continue; }
 
