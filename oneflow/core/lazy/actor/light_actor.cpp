@@ -77,6 +77,7 @@ struct DebugInfo {
   int64_t actor_id;
   std::string op_name;
   int64_t act_cnt;
+  DebugInfo() : actor_id(-1), op_name(""), act_cnt(-1) {}
 };
 
 template<typename IndexType, int max_size>
