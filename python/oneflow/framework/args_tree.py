@@ -229,15 +229,6 @@ class ArgsTree(object):
             elif isinstance(self._io_args, list):
                 return stack
 
-        # Cases handled: tuple(tuple(tuple(tensor, ...), tuple(tensor, ...), ), etc.
-        # Do not loop optimize, and continue to execute the recursive code (`_execute_mapping`).
-        elif (
-            len(self._io_args) > 0
-            and self._io_args[0] is not None
-            and not isinstance(self._io_args[0][0], Tensor)
-        ):
-            return self._execute_mapping(self._io_args, map_function)
-
         # Cases handled: tuple(tuple(tensor, ...), ), such as the output args of return.
         elif (
             len(self._io_args) > 0
