@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <unistd.h>
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/of_api_registry.h"
@@ -41,7 +42,8 @@ py::tuple GetDefaultGenerators() {
   }
   return default_cuda_generators;
 #else
-  return py::tuple();
+  static int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
+  return py::tuple(num_cores);
 #endif  // WITH_CUDA
 }
 
