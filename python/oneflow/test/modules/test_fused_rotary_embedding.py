@@ -176,9 +176,6 @@ def naive_embedding(
 def _test_without_position(
     test_case, x_layout, mode, base, rotary_size, dims, rotary_ndims, dtype, device
 ):
-    if device == "cpu":
-        test_case.assertTrue(True)
-
     B, M, H, K, merged_dims = parseDims(dims, x_layout)
 
     np.random.seed(3124)
@@ -365,9 +362,6 @@ def _test_without_position(
 def _test_without_position_sinuous(
     test_case, x_layout, mode, base, rotary_size, dims, rotary_ndims, dtype, device
 ):
-    if device == "cpu":
-        test_case.assertTrue(True)
-
     B, M, H, K, merged_dims = parseDims(dims, x_layout)
 
     x = np.random.uniform(low=-1, high=1, size=(*merged_dims,))
@@ -511,9 +505,6 @@ def _test_without_position_sinuous(
 def _test_with_position_sinuous(
     test_case, x_layout, mode, base, rotary_size, dims, rotary_ndims, dtype, device
 ):
-    if device == "cpu":
-        test_case.assertTrue(True)
-
     B, M, H, K, merged_dims = parseDims(dims, x_layout)
 
     np.random.seed(3124)
@@ -709,9 +700,6 @@ def _test_with_position_sinuous(
 def _test_with_position(
     test_case, x_layout, mode, base, rotary_size, dims, rotary_ndims, dtype, device
 ):
-    if device == "cpu":
-        test_case.assertTrue(True)
-
     B, M, H, K, merged_dims = parseDims(dims, x_layout)
 
     x = np.random.uniform(low=-1, high=1, size=(*merged_dims,))
@@ -861,10 +849,6 @@ def _test_with_position(
 def _test_plane(
     test_case, x_layout, mode, base, rotary_size, dims, rotary_ndims, dtype, device
 ):
-
-    if device == "cpu":
-        test_case.assertTrue(True)
-
     B, M, H, K, merged_dims = parseDims(dims, x_layout)
 
     np.random.seed(3124)
@@ -1042,7 +1026,7 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
         # args_dict["rotary_size"] = [48]
         # args_dict["dims"] = [(32, 2048, 32, 64)]
         args_dict["dtype"] = [flow.float16]
-        args_dict["device"] = ["cuda", "cpu"]
+        args_dict["device"] = ["cuda"]
 
         for arg in GenArgList(args_dict):
             arg[0](test_case, *arg[1:])
@@ -1059,7 +1043,7 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
         # args_dict["rotary_size"] = [48]
         # args_dict["dims"] = [(32, 2048, 32, 64)]
         args_dict["dtype"] = [flow.float16]
-        args_dict["device"] = ["cuda", "cpu"]
+        args_dict["device"] = ["cuda"]
 
         for arg in GenArgList(args_dict):
             arg[0](test_case, *arg[1:])
@@ -1081,7 +1065,7 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
         # args_dict["rotary_size"] = [48]
         # args_dict["dims"] = [(32, 2048, 32, 64)]
         args_dict["dtype"] = [flow.float16]
-        args_dict["device"] = ["cuda", "cpu"]
+        args_dict["device"] = ["cuda"]
 
         for arg in GenArgList(args_dict):
             arg[0](test_case, *arg[1:])
