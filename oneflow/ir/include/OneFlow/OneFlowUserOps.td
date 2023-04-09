@@ -11892,7 +11892,7 @@ def OneFlow_KernelLaunchOp : OneFlow_JITLikeOp<"kernel_launch"> {}
 
 #ifdef GET_ONEFLOW_EAGER_AMP_OP_DEFINITIONS
 
-def OneFlow_AMPUpdateScaleOp : OneFlow_BaseOp<"amp_update_scale", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AMPUpdateScaleOp : OneFlow_BaseOp<"amp_update_scale", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$current_scale,
     OneFlow_Tensor:$growth_tracker,
@@ -11910,7 +11910,7 @@ def OneFlow_AMPUpdateScaleOp : OneFlow_BaseOp<"amp_update_scale", [NoSideEffect,
   let has_input_arg_modify_fn = 1;
 }
 
-def OneFlow_AMPForEachNonFiniteCheckAndUnscaleOp : OneFlow_BaseOp<"amp_non_finite_check_and_unscale", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AMPForEachNonFiniteCheckAndUnscaleOp : OneFlow_BaseOp<"amp_non_finite_check_and_unscale", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     Variadic<OneFlow_Tensor>:$scaled_grads_found_inf_inv_scale
   );
@@ -11921,7 +11921,7 @@ def OneFlow_AMPForEachNonFiniteCheckAndUnscaleOp : OneFlow_BaseOp<"amp_non_finit
   let has_input_arg_modify_fn = 1;
 }
 
-def OneFlow_MultiTensorAMPForEachNonFiniteCheckAndUnscaleOp : OneFlow_BaseOp<"multi_tensor_amp_non_finite_check_and_unscale", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_MultiTensorAMPForEachNonFiniteCheckAndUnscaleOp : OneFlow_BaseOp<"multi_tensor_amp_non_finite_check_and_unscale", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     Variadic<OneFlow_Tensor>:$scaled_grads_found_inf_inv_scale
   );
