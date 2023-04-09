@@ -252,11 +252,11 @@ class GpuRadixSortTopKKernel final : public user_op::OpKernel {
     const int64_t instance_num = elem_cnt / instance_size;
     const int64_t k = std::min(static_cast<int64_t>(ctx->Attr<int32_t>("k")), instance_size);
 
-    if(k > 30 || instance_num == 1){
+    if (k > 30 || instance_num == 1) {
       user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
       TmpBufferManager<T> buf_manager(static_cast<int64_t>(tmp_buffer->shape_view().elem_cnt()),
                                       tmp_buffer->mut_dptr<void>(), in->shape_view());
-      
+
       InitializeIndices<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
           elem_cnt, buf_manager.IndicesPtr(), instance_size);
@@ -264,10 +264,10 @@ class GpuRadixSortTopKKernel final : public user_op::OpKernel {
                           buf_manager.TempStoragePtr(), buf_manager.TempStorageBytes(),
                           buf_manager.SortedInPtr(), buf_manager.SortedIndicesPtr(),
                           ctx->stream()->As<ep::CudaStream>()->cuda_stream());
-      OF_CUDA_CHECK(cudaMemcpy2DAsync(out->mut_dptr<int64_t>(), k * sizeof(int64_t),
-                                      buf_manager.SortedIndicesPtr(), instance_size * sizeof(int64_t),
-                                      k * sizeof(int64_t), instance_num, cudaMemcpyDefault,
-                                      ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+      OF_CUDA_CHECK(cudaMemcpy2DAsync(
+          out->mut_dptr<int64_t>(), k * sizeof(int64_t), buf_manager.SortedIndicesPtr(),
+          instance_size * sizeof(int64_t), k * sizeof(int64_t), instance_num, cudaMemcpyDefault,
+          ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
     } else {
       // Use as many heaps as possible (# of heaps == # of threads used in thread block).
       // Limitation 1: size of shared memory
@@ -287,7 +287,7 @@ class GpuRadixSortTopKKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CUDA_TOP_K_KERNEL(dtype)                                             \
+#define REGISTER_CUDA_TOP_K_KERNEL(dtype)                                                        \
   REGISTER_USER_KERNEL("top_k")                                                                  \
       .SetCreateFn<GpuRadixSortTopKKernel<dtype>>()                                              \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                           \
