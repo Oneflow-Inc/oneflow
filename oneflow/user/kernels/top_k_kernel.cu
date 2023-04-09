@@ -235,10 +235,10 @@ __global__ void InitializeIndices(int64_t elem_cnt, int64_t* indices_ptr, int64_
 }  // namespace
 
 template<typename T>
-class GpuRadixSortTopKKernel final : public user_op::OpKernel {
+class GpuTopKKernel final : public user_op::OpKernel {
  public:
-  GpuRadixSortTopKKernel() = default;
-  ~GpuRadixSortTopKKernel() = default;
+  GpuTopKKernel() = default;
+  ~GpuTopKKernel() = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -289,7 +289,7 @@ class GpuRadixSortTopKKernel final : public user_op::OpKernel {
 
 #define REGISTER_CUDA_TOP_K_KERNEL(dtype)                                                        \
   REGISTER_USER_KERNEL("top_k")                                                                  \
-      .SetCreateFn<GpuRadixSortTopKKernel<dtype>>()                                              \
+      .SetCreateFn<GpuTopKKernel<dtype>>()                                              \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                           \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))          \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
