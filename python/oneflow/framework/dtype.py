@@ -65,7 +65,7 @@ _ONEFLOW_DTYPE_TO_NUMPY_DTYPE = {
     oneflow.float64: np.double,
     oneflow.double: np.double,
     oneflow.int8: np.int8,
-    oneflow.char: np.int8,
+    oneflow.char: np.char,
     oneflow.int16: np.int16,
     oneflow.int32: np.int32,
     oneflow.int64: np.int64,
