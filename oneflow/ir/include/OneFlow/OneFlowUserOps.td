@@ -3815,6 +3815,31 @@ def OneFlow_EmbeddingOp : OneFlow_BaseOp<"embedding", [NoMemoryEffect, DeclareOp
   let has_input_arg_modify_fn = 1;
 }
 
+def OneFlow_FusedApplyRotaryEmbOp : OneFlow_BaseOp<"fused_apply_rotary_emb", [NoMemoryEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    Optional<OneFlow_Tensor>:$cos,
+    Optional<OneFlow_Tensor>:$sin,
+    Optional<OneFlow_Tensor>:$position_ids
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    DefaultValuedAttr<StrAttr, "\"BHMK\"">:$x_layout,
+    DefaultValuedAttr<StrAttr, "\"BHMK\"">:$output_layout,
+    DefaultValuedAttr<StrAttr, "\"plane\"">:$mode,
+    DefaultValuedAttr<SI64Attr, "0">:$tensor_index,
+    DefaultValuedAttr<F32Attr, "1e4">:$base,
+    DefaultValuedAttr<SI64Attr, "0">:$k_size,
+    DefaultValuedAttr<SI64Attr, "0">:$rotary_size
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_EmbeddingGradOp : OneFlow_BaseOp<"embedding_grad", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dy,
