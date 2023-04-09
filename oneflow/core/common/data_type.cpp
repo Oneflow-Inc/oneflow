@@ -69,7 +69,7 @@ bool IsTriviallyCopyableDataType(DataType data_type) {
   switch (data_type) {
 #define TRIVIALLY_COPY_CASE(type_cpp, type_proto) \
   case type_proto: return true;
-    OF_PP_FOR_EACH_TUPLE(TRIVIALLY_COPY_CASE, TRIVIALLY_COPY_DATA_TYPE_SEQ)
+    OF_PP_FOR_EACH_TUPLE(TRIVIALLY_COPY_CASE, TRIVIALLY_COPY_DATA_TYPE_SEQ INT16_DATA_TYPE_SEQ)
     default: return false;
   }
 #undef TRIVIALLY_COPY_CASE
