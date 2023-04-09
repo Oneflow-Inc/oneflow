@@ -213,7 +213,7 @@ bool PythonArg::TypeCheck(ValueType type) const {
   switch (type) {
     case kINT32:
     case kINT16:
-    case kChar:
+    case kCHAR:
     case kUINT32:
     case kINT64:
     case kUINT64:
