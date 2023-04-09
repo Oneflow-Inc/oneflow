@@ -268,13 +268,7 @@ class Graph(object):
             return self._dynamic_input_graph_cache(*args, **kwargs)
 
         if not self._is_compiled:
-            if not self._build_with_shared_graph:
-                self._compile(*args, **kwargs)
-                self.__print(
-                    0, 2, lambda: f"{self.name} with operators:\n" + self.__repr__()
-                )
-            else:
-                self._compile_from_shared(*args, **kwargs)
+            self._compile(*args, **kwargs)
 
         return self.__run(*args, **kwargs)
 
@@ -608,7 +602,7 @@ class Graph(object):
     def _ops_repr(self):
         r"""Generate operators' string representation of this graph
         """
-        if self._is_compiled and self._compiled_graph_proto is not None:
+        if self._compiled_graph_proto is not None:
             module_conf = self._compiled_graph_proto.module_name2module_conf[self.name]
             if self._oneflow_internal_graph_ir__ is None:
                 self._oneflow_internal_graph_ir__ = GraphIR(self._compiled_graph_proto)
@@ -675,7 +669,7 @@ class Graph(object):
 
     @property
     def _compiled_graph_proto(self):
-        if not self._is_compiled:
+        if not self._is_compiled and self._compiled_job_proto is None:
             self.__print(
                 2,
                 0,
@@ -837,6 +831,21 @@ class Graph(object):
         return a_graph
 
     def _compile(self, *args, **kwargs):
+        if self._run_with_cache == True:
+            return self._dynamic_input_graph_cache._compile(*args, **kwargs)
+
+        if not self._is_compiled:
+            if not self._build_with_shared_graph:
+                return self._compile_new(*args, **kwargs)
+            else:
+                return self._compile_from_shared(*args, **kwargs)
+        else:
+            warnings.warn(
+                f"{self._shallow_repr()} has been compiled, no need to compile again."
+            )
+            return
+
+    def _compile_new(self, *args, **kwargs):
         if (
             len(args) != 0
             and isinstance(args, (tuple, list))
@@ -1296,7 +1305,9 @@ class Graph(object):
                 compiled_job_str = self._c_nn_graph.get_current_job_str()
                 self._compiled_job_proto = job_pb.Job()
                 self._compiled_job_proto.ParseFromString(compiled_job_str)
-
+                self.__print(
+                    0, 1, lambda: f"{self.name} with operators:\n" + self.__repr__()
+                )
                 self._c_nn_graph.compile_plan_for_runtime()
                 self._c_nn_graph.init_runtime()
 
@@ -1853,6 +1864,7 @@ class Graph(object):
         .. code-block:: python
 
             >>> import oneflow as flow
+            >>> import numpy as np
             >>> class LinearGraph(flow.nn.Graph):
             ...     def __init__(self):
             ...         super().__init__()
@@ -1864,11 +1876,18 @@ class Graph(object):
 
 
         The block can be accessed as an attribute using the given name.
-            >>> g = LinearGraph()
-            >>> print(g.linear)
+            g = LinearGraph()
+            g(flow.Tensor(np.random.randn(8, 3)))
+            print(g.linear)
             (MODULE:linear:Linear(in_features=3, out_features=8, bias=False)): (
-              (PARAMETER:linear.weight:tensor(..., size=(8, 3), dtype=oneflow.float32, requires_grad=True)): ()
-              (GraphModule:linear()): ()
+              (INPUT:_linear_input.0.0_2:tensor(..., is_lazy='True', size=(8, 3), dtype=oneflow.float32))
+              (PARAMETER:linear.weight:tensor(..., size=(8, 3), dtype=oneflow.float32, grad_fn=<accumulate_grad>)): ()
+              (OUTPUT:_linear_output.0.0_2:tensor(..., is_lazy='True', size=(8, 8), dtype=oneflow.float32,
+                     grad_fn=<matmul_backward>))
+              (GraphModule:linear()): (
+                (OPERATOR: linear.weight() -> (out:sbp=(B), size=(8, 3), dtype=(oneflow.float32)), placement=(oneflow.placement(type="cpu", ranks=[0])))
+                (OPERATOR: linear-matmul-0(_LinearGraph_0_input.0.0_2/out:(sbp=(B), size=(8, 3), dtype=(oneflow.float32)), linear.weight/out:(sbp=(B), size=(8, 3), dtype=(oneflow.float32))) -> (linear-matmul-0/out_0:(sbp=(B), size=(8, 8), dtype=(oneflow.float32))), placement=(oneflow.placement(type="cpu", ranks=[0])))
+              )
             )
         """
         if "_name" not in self.__dict__:
