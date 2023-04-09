@@ -4148,7 +4148,6 @@ class MultiTensorAmpForEachNonFiniteCheckAndUnscaleFunctor {
   std::vector<std::shared_ptr<OpExpr>> ops_;
 };
 
-
 class FusedCenterGradFunctor {
  public:
   FusedCenterGradFunctor() {
