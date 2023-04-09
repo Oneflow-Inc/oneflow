@@ -76,4 +76,32 @@ Maybe<void> SetInputArgModifierMutable(const user_op::GetInputArgModifier& GetIn
   return Maybe<void>::Ok();
 }
 
+/* static */ Maybe<void> MultiTensorAMPForEachNonFiniteCheckAndUnscaleOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> MultiTensorAMPForEachNonFiniteCheckAndUnscaleOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> MultiTensorAMPForEachNonFiniteCheckAndUnscaleOp::GetSbp(
+    user_op::SbpContext* ctx) {
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> MultiTensorAMPForEachNonFiniteCheckAndUnscaleOp::InferDataType(
+    user_op::InferContext* ctx) {
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> MultiTensorAMPForEachNonFiniteCheckAndUnscaleOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  for (int64_t i = 0; i < conf.input_size("scaled_grads_found_inf_inv_scale"); i++) {
+    JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "scaled_grads_found_inf_inv_scale", i));
+  }
+  return Maybe<void>::Ok();
+}
+
 }  // namespace oneflow
