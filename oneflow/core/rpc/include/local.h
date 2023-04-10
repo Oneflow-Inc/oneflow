@@ -42,7 +42,7 @@ class LocalCtrlClient : public CtrlClient {
   void PushKV(const std::string& k, const std::string& v) override;
   void PushKV(const std::string& k, const PbMessage& msg) override;
   void PushMasterKV(const std::string& k, const PbMessage& msg) override;
-  // override the CtrlClient::PushRankKV
+  // This function pushes the key-value pair to the local hashmap.
   void PushRankKV(const size_t rank, const std::string& k,
                   std::function<void(std::string*)> VSetter) override;
   void PushRankKV(const size_t rank, const std::string& k, const std::string& v) override;
@@ -54,7 +54,8 @@ class LocalCtrlClient : public CtrlClient {
   void PullKV(const std::string& k, std::string* v) override;
   void PullKV(const std::string& k, PbMessage* msg) override;
   void PullMasterKV(const std::string& k, PbMessage* msg) override;
-  // override the CtrlClient::PullRankKV
+  // This function pulls the key-value pair from the locak hashmap
+  // and store the value.
   void PullRankKV(const size_t rank, const std::string& k,
                   std::function<void(const std::string&)> VGetter) override;
   void PullRankKV(const size_t rank, const std::string& k, std::string* v) override;

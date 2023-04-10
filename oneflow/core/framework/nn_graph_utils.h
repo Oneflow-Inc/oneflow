@@ -25,6 +25,8 @@ limitations under the License.
 #include "oneflow/core/rpc/include/base.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 
+// A templated function that broadcasts data from the master process to worker processes in a
+// multi-threaded manner. Return push/pull keys only in master process.
 namespace oneflow {
 template<typename X, typename Y>
 std::set<std::string> MultiThreadBroadcastFromMasterToWorkers(size_t world_size,

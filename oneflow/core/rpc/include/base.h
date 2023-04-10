@@ -85,7 +85,7 @@ class CtrlClient {
   typename std::enable_if<std::is_arithmetic<T>::value>::type PushKVT(const std::string& k, T v) {
     PushKV(k, std::to_string(v));
   }
-  // push kv to the server of rank
+  // This function pushes the key-value pair to the server with the specified rank.
   virtual void PushRankKV(const size_t rank, const std::string& k, std::function<void(std::string*)> VSetter) = 0;
   virtual void PushRankKV(const size_t rank, const std::string& k, const std::string& v) = 0;
 
@@ -102,7 +102,8 @@ class CtrlClient {
     PullKV(k, &v_str);
     *v = oneflow_cast<T>(v_str);
   }
-  // pull kv from the server of rank
+  // This function pulls the key-value pair from the server with the specified rank
+  // and store the value.
   virtual void PullRankKV(const size_t rank, const std::string& k, std::function<void(const std::string&)> VGetter) = 0;
   virtual void PullRankKV(const size_t rank, const std::string& k, std::string* v) = 0;
   virtual void PullRankKV(const size_t rank, const std::string& k, PbMessage* msg) = 0;

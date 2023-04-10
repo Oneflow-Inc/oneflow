@@ -39,7 +39,7 @@ class GrpcCtrlClient final : public CtrlClient {
   void PushKV(const std::string& k, const std::string& v) override;
   void PushKV(const std::string& k, const PbMessage& msg) override;
   void PushMasterKV(const std::string& k, const PbMessage& msg) override;
-  // push kv to the server of rank.
+  // This function pushes the key-value pair to the server with the specified rank.
   void PushRankKV(const size_t rank, const std::string& k,
                   std::function<void(std::string*)> VSetter) override;
   void PushRankKV(const size_t rank, const std::string& k, const std::string& v) override;
@@ -51,7 +51,8 @@ class GrpcCtrlClient final : public CtrlClient {
   void PullKV(const std::string& k, std::string* v) override;
   void PullKV(const std::string& k, PbMessage* msg) override;
   void PullMasterKV(const std::string& k, PbMessage* msg) override;
-  // pull kv from the server of rank.
+  // This function pulls the key-value pair from the server with the specified rank
+  // and store the value.
   void PullRankKV(const size_t rank, const std::string& k,
                   std::function<void(const std::string&)> VGetter) override;
   void PullRankKV(const size_t rank, const std::string& k, std::string* v) override;
