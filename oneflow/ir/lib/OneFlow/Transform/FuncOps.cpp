@@ -90,7 +90,7 @@ class OneFlowJobToFuncPass : public OneFlowJobToFuncPassBase<OneFlowJobToFuncPas
 };
 
 class FuncToOneFlowJobPass : public FuncToOneFlowJobPassBase<FuncToOneFlowJobPass> {
-  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+  void getDependentDialects(::mlir::DialectRegistry& registry) const override {
     registry.insert<oneflow::OneFlowDialect>();
   }
   void runOnOperation() override {
