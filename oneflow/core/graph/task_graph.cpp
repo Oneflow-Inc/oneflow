@@ -131,7 +131,7 @@ bool CanBeMergedInChain(const TaskNode* node) {
   if (IsTaskNodeProducedRegstHasMultiRegstNum(node)) { return false; }
   const auto* fw_comp_node = dynamic_cast<const NormalForwardCompTaskNode*>(node);
   if (fw_comp_node == nullptr) { return false; }
-  if (fw_comp_node->device_type() != DeviceType::kCUDA) { return false; }
+  if (fw_comp_node->device_type() == DeviceType::kCPU) { return false; }
   const Operator* op = fw_comp_node->op().get();
   if (IsSpecialOpNotConsiderMergeInChain(op)) { return false; }
   return true;
@@ -475,12 +475,27 @@ void GetHostInputLbis4OpNode(const OpNode* op_node,
   }
 }
 
+std::vector<CreateSubTskGphBuilderFn>* GlobalCreateSubTskGphBuilderFnList() {
+  static std::vector<CreateSubTskGphBuilderFn> global_create_sub_tsk_gph_builder_fn_list;
+  return &global_create_sub_tsk_gph_builder_fn_list;
+}
+
 }  // namespace
+
+Maybe<void> RegisterCreateSubTskGphBuilderFn(const CreateSubTskGphBuilderFn& fn) {
+  auto* create_sub_tsk_gph_builder_fn_list = GlobalCreateSubTskGphBuilderFnList();
+  create_sub_tsk_gph_builder_fn_list->emplace_back(fn);
+  return Maybe<void>::Ok();
+}
 
 TaskGraph::TaskGraph() {
   OpGraph* op_graph = Singleton<OpGraph>::Get();
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
   boxing_logger_ = CreateBoxingLogger();
+  const auto* create_sub_tsk_gph_builder_fn_list = GlobalCreateSubTskGphBuilderFnList();
+  for (const auto& fn : *create_sub_tsk_gph_builder_fn_list) {
+    sub_tsk_gph_builders_for_specific_device_.emplace_back(fn());
+  }
   hierarchical_sub_tsk_gph_builder_.reset(new DispatchHierarchicalSubTskGphBuilder());
   HashMap<const OpNode*, std::vector<CompTaskNode*>> op_node2sorted_comp_tasks;
 
@@ -764,7 +779,7 @@ void TaskGraph::ForEachGpuDeviceNodes(
     const std::function<void(const HashSet<TaskNode*>& dev_nodes)>& Handler) const {
   HashMap<std::pair<int64_t, int64_t>, HashSet<TaskNode*>> global_dev_phy_id2nodes;
   ForEachNode([&](TaskNode* task_node) {
-    if (task_node->device_type() != DeviceType::kCUDA) { return; }
+    if (task_node->device_type() == DeviceType::kCPU) { return; }
     int64_t dev_phy_id = task_node->stream_id().device_id().device_index();
     global_dev_phy_id2nodes[{task_node->machine_id(), dev_phy_id}].emplace(task_node);
   });
@@ -813,10 +828,23 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
             << " dst parallel conf: " << dst_parallel_desc.parallel_conf().DebugString()
             << " src_nd_sbp " << src_nd_sbp.DebugString() << " dst nd_sbp "
             << dst_nd_sbp.DebugString();
-    auto status = CHECK_JUST(hierarchical_sub_tsk_gph_builder_->Build(
-        sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes, &sorted_ctrl_tasks, src_parallel_desc,
-        dst_parallel_desc, lbi, blob_desc, src_nd_sbp, dst_nd_sbp,
-        *(CHECK_JUST(src_op_node->op().GetOpTimeShape()).get())));
+    Maybe<SubTskGphBuilderStatus> maybe_status = Error::BoxingNotSupportedError();
+    if (!sub_tsk_gph_builders_for_specific_device_.empty()) {
+      for (const auto& sub_tsk_gph_builder : sub_tsk_gph_builders_for_specific_device_) {
+        maybe_status = TRY(sub_tsk_gph_builder->Build(
+            sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes, &sorted_ctrl_tasks,
+            src_parallel_desc, dst_parallel_desc, lbi, blob_desc, src_nd_sbp, dst_nd_sbp,
+            *(CHECK_JUST(src_op_node->op().GetOpTimeShape()).get())));
+        if (maybe_status.IsOk()) { break; }
+      }
+    }
+    if (!maybe_status.IsOk()) {
+      maybe_status = TRY(hierarchical_sub_tsk_gph_builder_->Build(
+          sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes, &sorted_ctrl_tasks,
+          src_parallel_desc, dst_parallel_desc, lbi, blob_desc, src_nd_sbp, dst_nd_sbp,
+          *(CHECK_JUST(src_op_node->op().GetOpTimeShape()).get())));
+    }
+    auto status = CHECK_JUST(maybe_status);
     boxing_logger_->Log(*status, src_op_node->op().op_name(), dst_op_node->op().op_name(),
                         src_parallel_desc, dst_parallel_desc, src_nd_sbp, dst_nd_sbp, lbi,
                         blob_desc);
