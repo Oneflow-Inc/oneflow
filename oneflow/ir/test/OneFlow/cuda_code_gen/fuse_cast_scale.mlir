@@ -1,10 +1,12 @@
-// RUN: oneflow-opt %s -lower-oneflow-to-tosa -tosa-make-broadcastable -pass-pipeline="func.func(tosa-to-linalg)" -cse --linalg-fuse-elementwise-ops -linalg-bufferize -convert-linalg-to-parallel-loops -gpu-map-parallel-loops \
+// RUN: oneflow-opt %s -lower-oneflow-to-tosa -tosa-make-broadcastable \
+// RUN: | oneflow-opt -pass-pipeline="builtin.module(func.func(tosa-to-linalg))" \
+// RUN: | oneflow-opt -cse --linalg-fuse-elementwise-ops -linalg-bufferize -convert-linalg-to-parallel-loops -gpu-map-parallel-loops \
 // RUN: -convert-parallel-loops-to-gpu -gpu-kernel-outlining -buffer-host-register -canonicalize \
-// RUN: -pass-pipeline='gpu.module(strip-debuginfo,lower-affine,convert-gpu-to-nvvm,out-of-tree-gpu-to-cubin)' \
-// RUN: --func-bufferize -buffer-results-to-out-params -gpu-copy-arg --tensor-bufferize \
+// RUN: | oneflow-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,lower-affine,convert-gpu-to-nvvm,gpu-to-cubin))' \
+// RUN: | oneflow-opt --func-bufferize -buffer-results-to-out-params -gpu-copy-arg --tensor-bufferize \
 // RUN: --finalizing-bufferize \
 // RUN: --convert-memref-to-llvm --convert-func-to-llvm \
-// RUN: -gpu-to-llvm --reconcile-unrealized-casts --print-after-all \
+// RUN: -gpu-to-llvm  -expand-strided-metadata -convert-memref-to-llvm --reconcile-unrealized-casts --print-after-all \
 // RUN: | tee %test_exec_root/$(basename %s).lower.mlir \
 // RUN: | python3 -m oneflow.test_utils.throttle --with-cuda=%with_cuda oneflow-runner \
 // RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_cuda_runtime%shlibext \
@@ -12,13 +14,15 @@
 // RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_c_runner_utils%shlibext \
 // RUN:   --entry-point-result=void
 
-// RUN: oneflow-opt %s -lower-oneflow-to-tosa -tosa-make-broadcastable -pass-pipeline="func.func(tosa-to-linalg)" -cse --linalg-fuse-elementwise-ops -linalg-bufferize -convert-linalg-to-parallel-loops -gpu-map-parallel-loops \
+// RUN: oneflow-opt %s -lower-oneflow-to-tosa -tosa-make-broadcastable \
+// RUN: | oneflow-opt -pass-pipeline="builtin.module(func.func(tosa-to-linalg))" \
+// RUN: | oneflow-opt -cse --linalg-fuse-elementwise-ops -linalg-bufferize -convert-linalg-to-parallel-loops -gpu-map-parallel-loops \
 // RUN: -convert-parallel-loops-to-gpu -gpu-kernel-outlining -buffer-host-register -canonicalize \
-// RUN: -pass-pipeline='gpu.module(strip-debuginfo,lower-affine,convert-gpu-to-nvvm,out-of-tree-gpu-to-cubin)' \
-// RUN: --func-bufferize --tensor-bufferize \
+// RUN: | oneflow-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,lower-affine,convert-gpu-to-nvvm,gpu-to-cubin))' \
+// RUN: | oneflow-opt --func-bufferize --tensor-bufferize \
 // RUN: --finalizing-bufferize \
 // RUN: --convert-memref-to-llvm --convert-func-to-llvm \
-// RUN: -gpu-to-llvm --reconcile-unrealized-casts \
+// RUN: -gpu-to-llvm -expand-strided-metadata -convert-memref-to-llvm --reconcile-unrealized-casts \
 // RUN: | tee %test_exec_root/$(basename %s).lower.mlir \
 // RUN: | python3 -m oneflow.test_utils.throttle --with-cuda=%with_cuda oneflow-runner \
 // RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_cuda_runtime%shlibext \
