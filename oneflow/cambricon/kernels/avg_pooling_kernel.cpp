@@ -18,9 +18,9 @@ limitations under the License.
 #include "oneflow/cambricon/cnnl/cnnl_workspace.h"
 #include "oneflow/cambricon/common/mlu_util.h"
 #include "oneflow/cambricon/ep/mlu_stream.h"
+#include "oneflow/cambricon/kernels/convert_memory_format_util.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/ep/include/primitive/permute.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/user_op_tensor.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
@@ -29,37 +29,6 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
-
-template<typename Context>
-std::unique_ptr<ep::primitive::Permute> NewPermutePrimitive(Context* ctx, const int& num_dims) {
-  return ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(ctx->device_type(), num_dims);
-}
-
-std::vector<int32_t> ComputePermutation(int32_t ndim, cnnlTensorLayout_t layout) {
-  CHECK_GT(ndim, 2);
-  CHECK(layout == CNNL_LAYOUT_NHWC || layout == CNNL_LAYOUT_NCHW);
-  std::vector<int32_t> permute(ndim);
-  if (layout == CNNL_LAYOUT_NHWC) {
-    // NCHW -> NHWC
-    permute[0] = 0;
-    permute[ndim - 1] = 1;
-    for (int i = 0; i < ndim - 2; ++i) { permute[i + 1] = i + 2; }
-  } else {
-    // NHWC -> NCHW
-    permute[0] = 0;
-    permute[1] = ndim - 1;
-    for (int i = 0; i < ndim - 2; ++i) { permute[i + 2] = i + 1; }
-  }
-  return permute;
-}
-
-std::vector<int64_t> ComputePermuteShape(const ShapeView& shape,
-                                         const std::vector<int32_t>& permute) {
-  CHECK_EQ(shape.NumAxes(), permute.size());
-  std::vector<int64_t> permute_shape(shape.NumAxes());
-  for (int i = 0; i < permute.size(); ++i) { permute_shape[i] = shape[permute[i]]; }
-  return permute_shape;
-}
 
 std::vector<int32_t> GetCnnlPadding(int32_t ndim, const std::vector<int32_t>& padding) {
   int32_t offset = padding.size() - ndim;
@@ -132,6 +101,7 @@ class MluAvgPoolKernel final : public user_op::OpKernel {
         << "cambricon cnnl avg pool does not support divisor_override.";
 
     std::vector<int32_t> dilation(Nd, 1);
+    auto cnnl_data_type = ConvertToCnnlDataType(x->data_type());
     cnnlTensorLayout_t layout =
         (data_format == "channels_last") ? CNNL_LAYOUT_NHWC : CNNL_LAYOUT_NCHW;
     cnnlPoolingMode_t mode = params_3d.count_include_pad()
@@ -139,8 +109,8 @@ class MluAvgPoolKernel final : public user_op::OpKernel {
                                  : CNNL_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
     CnnlPoolingDescriptor pooling_desc;
     CnnlTensorDescriptor x_desc, y_desc;
-    x_desc.set(x, layout);
-    y_desc.set(y, layout);
+    x_desc.set(x->shape_view().size(), x->shape_view().data(), cnnl_data_type, layout);
+    y_desc.set(y->shape_view().size(), y->shape_view().data(), cnnl_data_type, layout);
 
     CHECK_EQ_OR_THROW(Nd, 2) << "cnnlGetPoolingWorkspaceSize only support 2D.";
     if (Nd == 2) {
@@ -249,8 +219,8 @@ class MluAvgPoolGradKernel final : public user_op::OpKernel {
     cnnlPoolingMode_t mode = params_3d.count_include_pad()
                                  ? CNNL_POOLING_AVERAGE_COUNT_INCLUDE_PADDING
                                  : CNNL_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
-    auto cnnl_data_type = ConvertToCnnlDataType(dx->data_type());
-    cnnlTensorLayout_t layout = CNNL_LAYOUT_NHWC;
+    auto data_type = x->data_type();
+    auto cnnl_data_type = ConvertToCnnlDataType(data_type);
     CnnlTensorDescriptor x_desc, dy_desc, dx_desc;
     CnnlPoolingDescriptor pooling_desc;
     if (Nd == 2) {
@@ -262,10 +232,8 @@ class MluAvgPoolGradKernel final : public user_op::OpKernel {
     } else {
       // TODO()
     }
-    size_t element_size = GetSizeOfDataType(dx->data_type());
-    const auto& x_shape = x->shape_view();
-    const auto& dy_shape = dy->shape_view();
-    const auto& dx_shape = dx->shape_view();
+    auto shape = Shape(x->shape_view());
+    auto dy_shape = Shape(dy->shape_view());
     const void* x_ptr = x->dptr();
     const void* dy_ptr = dy->dptr();
     void* dx_ptr = dx->mut_dptr();
@@ -273,33 +241,27 @@ class MluAvgPoolGradKernel final : public user_op::OpKernel {
     CnnlWorkspace temp_x(ctx->stream()->As<ep::MluStream>(), 0);
     CnnlWorkspace temp_dy(ctx->stream()->As<ep::MluStream>(), 0);
     CnnlWorkspace temp_dx(ctx->stream()->As<ep::MluStream>(), 0);
-    std::vector<int64_t> temp_dx_shape;
 
     if (params_3d.data_format() != "channels_last") {
-      temp_x.resize(x_shape.elem_cnt() * element_size);
+      size_t element_size = GetSizeOfDataType(data_type);
+      shape = mlu::ComputeShapeNchwToNhwc(shape);
+      dy_shape = mlu::ComputeShapeNchwToNhwc(dy_shape);
+      temp_x.resize(shape.elem_cnt() * element_size);
       temp_dy.resize(dy_shape.elem_cnt() * element_size);
-      temp_dx.resize(dx_shape.elem_cnt() * element_size);
+      temp_dx.resize(shape.elem_cnt() * element_size);
+      // convert x to NHWC
+      mlu::ConvertMemoryFormat(ctx->stream(), x->shape_view(), data_type, x->dptr(), temp_x.dptr(),
+                               MemoryFormat::kNCHW, MemoryFormat::kNHWC);
+      // convert dy to NHWC
+      mlu::ConvertMemoryFormat(ctx->stream(), dy->shape_view(), data_type, dy->dptr(),
+                               temp_dy.dptr(), MemoryFormat::kNCHW, MemoryFormat::kNHWC);
       x_ptr = temp_x.dptr();
       dy_ptr = temp_dy.dptr();
       dx_ptr = temp_dx.dptr();
-
-      // transpose input from NCHW to NHWC
-      auto permute = ComputePermutation(x_shape.NumAxes(), layout);
-      auto transpose = NewPermutePrimitive(ctx, x_shape.NumAxes());
-      CHECK(transpose);
-      transpose->Launch(ctx->stream(), x->data_type(), x_shape.NumAxes(), x_shape.data(), x->dptr(),
-                        permute.data(), temp_x.dptr());
-      transpose->Launch(ctx->stream(), dy->data_type(), dy_shape.NumAxes(), dy_shape.data(),
-                        dy->dptr(), permute.data(), temp_dy.dptr());
-
-      const auto& temp_x_shape = ComputePermuteShape(x_shape, permute);
-      x_desc.set(x_shape.NumAxes(), temp_x_shape.data(), cnnl_data_type, layout);
-      const auto& temp_dy_shape = ComputePermuteShape(dy_shape, permute);
-      dy_desc.set(dy_shape.NumAxes(), temp_dy_shape.data(), cnnl_data_type, layout);
-
-      temp_dx_shape = ComputePermuteShape(dx_shape, permute);
-      dx_desc.set(dx_shape.NumAxes(), temp_dx_shape.data(), cnnl_data_type, layout);
     }
+    x_desc.set(shape.NumAxes(), shape.data(), cnnl_data_type, CNNL_LAYOUT_NHWC);
+    dy_desc.set(dy_shape.NumAxes(), dy_shape.data(), cnnl_data_type, CNNL_LAYOUT_NHWC);
+    dx_desc.set(shape.NumAxes(), shape.data(), cnnl_data_type, CNNL_LAYOUT_NHWC);
 
     auto handle = ctx->stream()->As<ep::MluStream>()->cnnl_handle();
     OF_CNNL_CHECK(cnnlPoolingBackward(handle, pooling_desc.desc(), nullptr, /*y_desc*/ nullptr,
@@ -307,12 +269,9 @@ class MluAvgPoolGradKernel final : public user_op::OpKernel {
                                       nullptr, dx_desc.desc(), dx_ptr));
 
     if (params_3d.data_format() != "channels_last") {
-      // transpose output from NHWC to NCHW
-      auto permute = ComputePermutation(dx_shape.NumAxes(), CNNL_LAYOUT_NCHW);
-      auto transpose = NewPermutePrimitive(ctx, dx_shape.NumAxes());
-      CHECK(transpose);
-      transpose->Launch(ctx->stream(), dx->data_type(), dx_shape.NumAxes(), temp_dx_shape.data(),
-                        dx_ptr, permute.data(), dx->mut_dptr());
+      // convert dx to NCHW
+      mlu::ConvertMemoryFormat(ctx->stream(), shape, data_type, dx_ptr, dx->mut_dptr(),
+                               MemoryFormat::kNHWC, MemoryFormat::kNCHW);
     }
   }
 };

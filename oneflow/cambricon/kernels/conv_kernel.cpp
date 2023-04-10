@@ -13,25 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "cnnl.h"
 #include "oneflow/cambricon/cnnl/cnnl_workspace.h"
-#include "oneflow/cambricon/common/mlu_util.h"
-#include "oneflow/cambricon/ep/mlu_stream.h"
 #include "oneflow/cambricon/cnnl/cnnl_op_descriptor.h"
 #include "oneflow/cambricon/cnnl/cnnl_tensor_descriptor.h"
+#include "oneflow/cambricon/common/mlu_util.h"
+#include "oneflow/cambricon/ep/mlu_stream.h"
+#include "oneflow/cambricon/kernels/convert_memory_format_util.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/core/ep/include/primitive/permute.h"
 
 namespace oneflow {
-
-template<typename Context>
-std::unique_ptr<ep::primitive::Permute> NewPermutePrimitive(Context* ctx, const int& num_dims) {
-  return ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(ctx->device_type(), num_dims);
-}
 
 void UpdateConvParams(std::vector<int32_t>* paddings, std::vector<int32_t>* strides,
                       std::vector<int32_t>* dilation_rates, int kernel_size) {
@@ -56,32 +50,6 @@ void UpdateConvParams(std::vector<int32_t>* paddings, std::vector<int32_t>* stri
   }
 }
 
-std::vector<int32_t> ComputePermutation(int32_t ndim, cnnlTensorLayout_t layout) {
-  CHECK_GT(ndim, 2);
-  CHECK(layout == CNNL_LAYOUT_NHWC || layout == CNNL_LAYOUT_NCHW);
-  std::vector<int32_t> permute(ndim);
-  if (layout == CNNL_LAYOUT_NHWC) {
-    // NCHW -> NHWC
-    permute[0] = 0;
-    permute[ndim - 1] = 1;
-    for (int i = 0; i < ndim - 2; ++i) { permute[i + 1] = i + 2; }
-  } else {
-    // NHWC -> NCHW
-    permute[0] = 0;
-    permute[1] = ndim - 1;
-    for (int i = 0; i < ndim - 2; ++i) { permute[i + 2] = i + 1; }
-  }
-  return permute;
-}
-
-std::vector<int64_t> ComputePermuteShape(const ShapeView& shape,
-                                         const std::vector<int32_t>& permute) {
-  CHECK_EQ(shape.NumAxes(), permute.size());
-  std::vector<int64_t> permute_shape(shape.NumAxes());
-  for (int i = 0; i < permute.size(); ++i) { permute_shape[i] = shape[permute[i]]; }
-  return permute_shape;
-}
-
 template<typename T>
 class Conv2DKernel final : public user_op::OpKernel {
  public:
@@ -103,63 +71,49 @@ class Conv2DKernel final : public user_op::OpKernel {
     std::vector<int32_t> dilation_rates = ctx->Attr<std::vector<int32_t>>("dilation_rate");
     const std::string& data_format = ctx->Attr<std::string>("data_format");
 
-    const auto& in_shape = in->shape_view();
-    const auto& weight_shape = weight->shape_view();
-    const auto& out_shape = out->shape_view();
+    auto in_shape = Shape(in->shape_view());
+    auto weight_shape = Shape(weight->shape_view());
+    auto out_shape = Shape(out->shape_view());
+    const void* input_ptr = in->dptr();
+    const void* weight_ptr = weight->dptr();
+    void* output_ptr = out->mut_dptr();
 
     int32_t kernel_size = in_shape.NumAxes() - 2;
     UpdateConvParams(&paddings, &strides, &dilation_rates, kernel_size);
 
-    auto cnnl_data_type = ConvertToCnnlDataType(in->data_type());
+    auto data_type = in->data_type();
+    auto cnnl_data_type = ConvertToCnnlDataType(data_type);
     cnnlTensorLayout_t layout = CNNL_LAYOUT_NHWC;
     CnnlTensorDescriptor input_desc, weight_desc, bias_desc, output_desc;
     CnnlConvolutionDescriptor conv_desc;
     conv_desc.set(in_shape.NumAxes(), strides.data(), paddings.data(), dilation_rates.data(),
                   groups, cnnl_data_type);
 
-    const void* input_ptr = in->dptr();
-    const void* weight_ptr = weight->dptr();
-    void* output_ptr = out->mut_dptr();
-
-    CnnlWorkspace temp_input(ctx->stream()->As<ep::MluStream>(), 0);
-    CnnlWorkspace temp_weight(ctx->stream()->As<ep::MluStream>(), 0);
-    CnnlWorkspace temp_output(ctx->stream()->As<ep::MluStream>(), 0);
-
-    size_t element_size = GetSizeOfDataType(in->data_type());
-    std::vector<int64_t> temp_output_shape;
+    CnnlWorkspace temp_input(ctx->stream()->As<ep::MluStream>());
+    CnnlWorkspace temp_weight(ctx->stream()->As<ep::MluStream>());
+    CnnlWorkspace temp_output(ctx->stream()->As<ep::MluStream>());
 
     if (data_format != "channels_last") {
-      auto permute = ComputePermutation(out_shape.NumAxes(), layout);
+      size_t element_size = GetSizeOfDataType(data_type);
+      in_shape = mlu::ComputeShapeNchwToNhwc(in_shape);
+      weight_shape = mlu::ComputeShapeNchwToNhwc(weight_shape);
+      out_shape = mlu::ComputeShapeNchwToNhwc(out_shape);
       temp_input.resize(in_shape.elem_cnt() * element_size);
-      auto transpose = NewPermutePrimitive(ctx, in_shape.NumAxes());
-      CHECK(transpose);
-      // transpose input from NCHW to NHWC
-      const auto& temp_input_shape = ComputePermuteShape(in_shape, permute);
-      transpose->Launch(ctx->stream(), in->data_type(), in_shape.NumAxes(), in_shape.data(),
-                        in->dptr(), permute.data(), temp_input.dptr());
-      input_desc.set(in_shape.NumAxes(), temp_input_shape.data(), cnnl_data_type, layout);
-      input_ptr = temp_input.dptr();
-
-      auto weigth_transpose = NewPermutePrimitive(ctx, weight_shape.NumAxes());
-      CHECK(weigth_transpose);
       temp_weight.resize(weight_shape.elem_cnt() * element_size);
-      auto weigth_permute = ComputePermutation(weight_shape.NumAxes(), layout);
-      const auto& temp_weigth_shape = ComputePermuteShape(weight_shape, weigth_permute);
-      transpose->Launch(ctx->stream(), weight->data_type(), weight_shape.NumAxes(),
-                        weight_shape.data(), weight->dptr(), weigth_permute.data(),
-                        temp_weight.dptr());
-      weight_desc.set(weight_shape.NumAxes(), temp_weigth_shape.data(), cnnl_data_type, layout);
-      weight_ptr = temp_weight.dptr();
-
-      temp_output_shape = ComputePermuteShape(out_shape, permute);
-      output_desc.set(out_shape.NumAxes(), temp_output_shape.data(), cnnl_data_type, layout);
       temp_output.resize(out_shape.elem_cnt() * element_size);
+      // convert input to NHWC
+      mlu::ConvertMemoryFormat(ctx->stream(), in->shape_view(), data_type, in->dptr(),
+                               temp_input.dptr(), MemoryFormat::kNCHW, MemoryFormat::kNHWC);
+      // convert weight to NHWC
+      mlu::ConvertMemoryFormat(ctx->stream(), weight->shape_view(), data_type, weight->dptr(),
+                               temp_weight.dptr(), MemoryFormat::kNCHW, MemoryFormat::kNHWC);
+      input_ptr = temp_input.dptr();
+      weight_ptr = temp_weight.dptr();
       output_ptr = temp_output.dptr();
-    } else {
-      input_desc.set(in_shape.NumAxes(), in_shape.data(), cnnl_data_type, layout);
-      weight_desc.set(weight_shape.NumAxes(), weight_shape.data(), cnnl_data_type, layout);
-      output_desc.set(out_shape.NumAxes(), out_shape.data(), cnnl_data_type, layout);
     }
+    input_desc.set(in_shape.NumAxes(), in_shape.data(), cnnl_data_type, layout);
+    weight_desc.set(weight_shape.NumAxes(), weight_shape.data(), cnnl_data_type, layout);
+    output_desc.set(out_shape.NumAxes(), out_shape.data(), cnnl_data_type, layout);
 
     const void* bias_ptr = nullptr;
     if (bias) {
@@ -184,12 +138,9 @@ class Conv2DKernel final : public user_op::OpKernel {
         workspace.dptr(), workspace_size, nullptr, output_desc.desc(), output_ptr));
 
     if (data_format != "channels_last") {
-      auto transpose = NewPermutePrimitive(ctx, out_shape.NumAxes());
-      CHECK(transpose);
-      // transpose output from NHWC to NCHW
-      auto permute = ComputePermutation(out_shape.NumAxes(), CNNL_LAYOUT_NCHW);
-      transpose->Launch(ctx->stream(), out->data_type(), out_shape.NumAxes(),
-                        temp_output_shape.data(), output_ptr, permute.data(), out->mut_dptr());
+      // convert output to NCHW
+      mlu::ConvertMemoryFormat(ctx->stream(), out_shape, data_type, output_ptr, out->mut_dptr(),
+                               MemoryFormat::kNHWC, MemoryFormat::kNCHW);
     }
   }
 
@@ -226,66 +177,49 @@ class ConvDataGradKernel final : public user_op::OpKernel {
     std::vector<int32_t> dilation_rates = ctx->Attr<std::vector<int32_t>>("dilation_rate");
     const std::string& data_format = ctx->Attr<std::string>("data_format");
 
-    const auto& dy_shape = dy->shape_view();
-    const auto& filter_shape = filter->shape_view();
-    const auto& dx_shape = dx->shape_view();
+    auto dy_shape = Shape(dy->shape_view());
+    auto filter_shape = Shape(filter->shape_view());
+    auto dx_shape = Shape(dx->shape_view());
+    const void* dy_ptr = dy->dptr();
+    const void* filter_ptr = filter->dptr();
+    void* dx_ptr = dx->mut_dptr();
 
     int32_t kernel_dims = dx_shape.NumAxes() - 2;
     UpdateConvParams(&paddings, &strides, &dilation_rates, kernel_dims);
 
-    auto cnnl_data_type = ConvertToCnnlDataType(dy->data_type());
+    auto data_type = dy->data_type();
+    auto cnnl_data_type = ConvertToCnnlDataType(data_type);
     cnnlTensorLayout_t layout = CNNL_LAYOUT_NHWC;
     CnnlTensorDescriptor dy_desc, filter_desc, dx_desc;
     CnnlConvolutionDescriptor conv_desc;
     conv_desc.set(dx_shape.NumAxes(), strides.data(), paddings.data(), dilation_rates.data(),
                   groups, cnnl_data_type);
 
-    const void* dy_ptr = dy->dptr();
-    const void* filter_ptr = filter->dptr();
-    void* dx_ptr = dx->mut_dptr();
-
-    CnnlWorkspace temp_dy(ctx->stream()->As<ep::MluStream>(), 0);
-    CnnlWorkspace temp_filter(ctx->stream()->As<ep::MluStream>(), 0);
-    CnnlWorkspace temp_dx(ctx->stream()->As<ep::MluStream>(), 0);
-
-    size_t element_size = GetSizeOfDataType(dx->data_type());
-    std::vector<int64_t> temp_dx_shape;
+    CnnlWorkspace temp_dy(ctx->stream()->As<ep::MluStream>());
+    CnnlWorkspace temp_filter(ctx->stream()->As<ep::MluStream>());
+    CnnlWorkspace temp_dx(ctx->stream()->As<ep::MluStream>());
 
     if (data_format != "channels_last") {
+      size_t element_size = GetSizeOfDataType(dx->data_type());
+      dy_shape = mlu::ComputeShapeNchwToNhwc(dy_shape);
+      filter_shape = mlu::ComputeShapeNchwToNhwc(filter_shape);
+      dx_shape = mlu::ComputeShapeNchwToNhwc(dx_shape);
       temp_dy.resize(dy_shape.elem_cnt() * element_size);
       temp_filter.resize(filter_shape.elem_cnt() * element_size);
       temp_dx.resize(dx_shape.elem_cnt() * element_size);
+      // convert dy to NHWC
+      mlu::ConvertMemoryFormat(ctx->stream(), dy->shape_view(), data_type, dy->dptr(),
+                               temp_dy.dptr(), MemoryFormat::kNCHW, MemoryFormat::kNHWC);
+      // convert filter to NHWC
+      mlu::ConvertMemoryFormat(ctx->stream(), filter->shape_view(), data_type, filter->dptr(),
+                               temp_filter.dptr(), MemoryFormat::kNCHW, MemoryFormat::kNHWC);
       dy_ptr = temp_dy.dptr();
       filter_ptr = temp_filter.dptr();
       dx_ptr = temp_dx.dptr();
-
-      // transpose input from NCHW to NHWC
-      {
-        auto permute = ComputePermutation(dy_shape.NumAxes(), layout);
-        auto transpose = NewPermutePrimitive(ctx, dx_shape.NumAxes());
-        CHECK(transpose);
-        transpose->Launch(ctx->stream(), dy->data_type(), dy_shape.NumAxes(), dy_shape.data(),
-                          dy->dptr(), permute.data(), temp_dy.dptr());
-        const auto& temp_dy_shape = ComputePermuteShape(dy_shape, permute);
-        dy_desc.set(dy_shape.NumAxes(), temp_dy_shape.data(), cnnl_data_type, layout);
-
-        temp_dx_shape = ComputePermuteShape(dx_shape, permute);
-        dx_desc.set(dx_shape.NumAxes(), temp_dx_shape.data(), cnnl_data_type, layout);
-      }
-      {
-        auto permute = ComputePermutation(filter_shape.NumAxes(), layout);
-        auto transpose = NewPermutePrimitive(ctx, filter_shape.NumAxes());
-        CHECK(transpose);
-        transpose->Launch(ctx->stream(), filter->data_type(), filter_shape.NumAxes(),
-                          filter_shape.data(), filter->dptr(), permute.data(), temp_filter.dptr());
-        const auto& temp_filter_shape = ComputePermuteShape(filter_shape, permute);
-        filter_desc.set(filter_shape.NumAxes(), temp_filter_shape.data(), cnnl_data_type, layout);
-      }
-    } else {
-      dy_desc.set(dy_shape.NumAxes(), dy_shape.data(), cnnl_data_type, layout);
-      filter_desc.set(filter_shape.NumAxes(), filter_shape.data(), cnnl_data_type, layout);
-      dx_desc.set(dx_shape.NumAxes(), dx_shape.data(), cnnl_data_type, layout);
     }
+    dy_desc.set(dy_shape.NumAxes(), dy_shape.data(), cnnl_data_type, layout);
+    filter_desc.set(filter_shape.NumAxes(), filter_shape.data(), cnnl_data_type, layout);
+    dx_desc.set(dx_shape.NumAxes(), dx_shape.data(), cnnl_data_type, layout);
 
     cnnlConvolutionBwdDataAlgo_t algo;
     OF_CNNL_CHECK(cnnlGetConvolutionBackwardDataAlgorithm(
@@ -304,12 +238,9 @@ class ConvDataGradKernel final : public user_op::OpKernel {
         dx_desc.desc(), dx_ptr));
 
     if (data_format != "channels_last") {
-      // transpose output from NHWC to NCHW
-      auto permute = ComputePermutation(dx_shape.NumAxes(), CNNL_LAYOUT_NCHW);
-      auto transpose = NewPermutePrimitive(ctx, dx_shape.NumAxes());
-      CHECK(transpose);
-      transpose->Launch(ctx->stream(), dx->data_type(), dx_shape.NumAxes(), temp_dx_shape.data(),
-                        dx_ptr, permute.data(), dx->mut_dptr());
+      // convert dx to NCHW
+      mlu::ConvertMemoryFormat(ctx->stream(), dx_shape, data_type, dx_ptr, dx->mut_dptr(),
+                               MemoryFormat::kNHWC, MemoryFormat::kNCHW);
     }
   }
 
@@ -352,56 +283,50 @@ class ConvFilterGradKernel final : public user_op::OpKernel {
     std::vector<int32_t> dilation_rates = ctx->Attr<std::vector<int32_t>>("dilation_rate");
     const std::string& data_format = ctx->Attr<std::string>("data_format");
 
-    const auto& dy_shape = dy->shape_view();
-    const auto& x_shape = x->shape_view();
-    const auto& filter_diff_shape = filter_diff->shape_view();
+    auto dy_shape = Shape(dy->shape_view());
+    auto x_shape = Shape(x->shape_view());
+    auto filter_diff_shape = Shape(filter_diff->shape_view());
+    const void* dy_ptr = dy->dptr();
+    const void* x_ptr = x->dptr();
+    void* filter_diff_ptr = filter_diff->mut_dptr();
 
     int32_t kernel_dims = x_shape.NumAxes() - 2;
     UpdateConvParams(&paddings, &strides, &dilation_rates, kernel_dims);
 
-    auto cnnl_data_type = ConvertToCnnlDataType(dy->data_type());
+    auto data_type = dy->data_type();
+    auto cnnl_data_type = ConvertToCnnlDataType(data_type);
+    cnnlTensorLayout_t layout = CNNL_LAYOUT_NHWC;
     CnnlTensorDescriptor dy_desc, x_desc, filter_diff_desc;
     CnnlConvolutionDescriptor conv_desc;
     conv_desc.set(x_shape.NumAxes(), strides.data(), paddings.data(), dilation_rates.data(), groups,
                   cnnl_data_type);
 
-    const void* x_ptr = x->dptr();
-    const void* dy_ptr = dy->dptr();
+    CnnlWorkspace temp_dy(ctx->stream()->As<ep::MluStream>());
+    CnnlWorkspace temp_x(ctx->stream()->As<ep::MluStream>());
+    CnnlWorkspace temp_filter_diff(ctx->stream()->As<ep::MluStream>());
 
-    CnnlWorkspace temp_x(ctx->stream()->As<ep::MluStream>(), 0);
-    CnnlWorkspace temp_dy(ctx->stream()->As<ep::MluStream>(), 0);
-
-    cnnlTensorLayout_t layout = CNNL_LAYOUT_NHWC;
-    cnnlTensorLayout_t filter_diff_layout;
-
-    size_t element_size = GetSizeOfDataType(x->data_type());
-    std::vector<int64_t> temp_dy_shape;
     if (data_format != "channels_last") {
-      filter_diff_layout = CNNL_LAYOUT_NCHW;
-      auto permute = ComputePermutation(x_shape.NumAxes(), layout);
-      temp_x.resize(x_shape.elem_cnt() * element_size);
-      auto transpose = NewPermutePrimitive(ctx, x_shape.NumAxes());
-      CHECK(transpose);
-      // transpose input from NCHW to NHWC
-      transpose->Launch(ctx->stream(), x->data_type(), x_shape.NumAxes(), x_shape.data(), x->dptr(),
-                        permute.data(), temp_x.dptr());
-      const auto& permute_shape = ComputePermuteShape(x_shape, permute);
-      x_desc.set(x_shape.NumAxes(), permute_shape.data(), cnnl_data_type, layout);
-      x_ptr = temp_x.dptr();
-
+      size_t element_size = GetSizeOfDataType(data_type);
+      dy_shape = mlu::ComputeShapeNchwToNhwc(dy_shape);
+      x_shape = mlu::ComputeShapeNchwToNhwc(x_shape);
+      filter_diff_shape = mlu::ComputeShapeNchwToNhwc(filter_diff_shape);
       temp_dy.resize(dy_shape.elem_cnt() * element_size);
-      transpose->Launch(ctx->stream(), dy->data_type(), dy_shape.NumAxes(), dy_shape.data(),
-                        dy->dptr(), permute.data(), temp_dy.dptr());
-      temp_dy_shape = ComputePermuteShape(dy_shape, permute);
-      dy_desc.set(dy_shape.NumAxes(), temp_dy_shape.data(), cnnl_data_type, layout);
+      temp_x.resize(x_shape.elem_cnt() * element_size);
+      temp_filter_diff.resize(filter_diff_shape.elem_cnt() * element_size);
+      // convert dy to NHWC
+      mlu::ConvertMemoryFormat(ctx->stream(), dy->shape_view(), data_type, dy->dptr(),
+                               temp_dy.dptr(), MemoryFormat::kNCHW, MemoryFormat::kNHWC);
+      // convert x to NHWC
+      mlu::ConvertMemoryFormat(ctx->stream(), x->shape_view(), data_type, x->dptr(), temp_x.dptr(),
+                               MemoryFormat::kNCHW, MemoryFormat::kNHWC);
       dy_ptr = temp_dy.dptr();
-    } else {
-      filter_diff_layout = CNNL_LAYOUT_NHWC;
-      x_desc.set(x_shape.NumAxes(), x_shape.data(), cnnl_data_type, layout);
-      dy_desc.set(dy_shape.NumAxes(), dy_shape.data(), cnnl_data_type, layout);
+      x_ptr = temp_x.dptr();
+      filter_diff_ptr = temp_filter_diff.dptr();
     }
+    dy_desc.set(dy_shape.NumAxes(), dy_shape.data(), cnnl_data_type, layout);
+    x_desc.set(x_shape.NumAxes(), x_shape.data(), cnnl_data_type, layout);
     filter_diff_desc.set(filter_diff_shape.NumAxes(), filter_diff_shape.data(), cnnl_data_type,
-                         filter_diff_layout);
+                         layout);
 
     cnnlConvolutionBwdFilterAlgo_t algo;
     OF_CNNL_CHECK(cnnlGetConvolutionBackwardFilterAlgorithm(
@@ -417,7 +342,13 @@ class ConvFilterGradKernel final : public user_op::OpKernel {
     OF_CNNL_CHECK(cnnlConvolutionBackwardFilter(
         ctx->stream()->As<ep::MluStream>()->cnnl_handle(), nullptr, x_desc.desc(), x_ptr,
         dy_desc.desc(), dy_ptr, conv_desc.desc(), algo, workspace.dptr(), workspace_size, nullptr,
-        filter_diff_desc.desc(), filter_diff->mut_dptr()));
+        filter_diff_desc.desc(), filter_diff_ptr));
+
+    if (data_format != "channels_last") {
+      // convert filter_diff to NCHW
+      mlu::ConvertMemoryFormat(ctx->stream(), filter_diff_shape, data_type, filter_diff_ptr,
+                               filter_diff->mut_dptr(), MemoryFormat::kNHWC, MemoryFormat::kNCHW);
+    }
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
