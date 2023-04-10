@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "OneFlow/Conversion/OneFlowToTosa.h"
 #include "OneFlow/OneFlowDataTypeConversion.h"
 #include "OneFlow/Transform/FuncOps.h"
 #include "OneFlow/UserOpReflection.h"
@@ -812,6 +813,7 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   if (job_wrapper.IsLastIRPass()
       && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS", false)) {
     pm.addPass(oneflow::createOneFlowJobToFuncPass());
+    pm.addPass(oneflow::createConvertToSignlessForTosaPass());
     auto toTosa = oneflow::createLowerOneFlowToTosaPass();
     CHECK(toTosa->initializeOptions("full=0 lower-job=0").succeeded());
     pm.addPass(std::move(toTosa));
