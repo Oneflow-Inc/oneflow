@@ -134,6 +134,13 @@ bool CommNetIBEnabled() {
 
 #endif  // WITH_RDMA && OF_PLATFORM_POSIX
 
+std::vector<std::pair<CclMgrCreateOrDestroyFn, CclMgrCreateOrDestroyFn>>*
+GlobalCclMgrCreatorDestroyers() {
+  static std::vector<std::pair<CclMgrCreateOrDestroyFn, CclMgrCreateOrDestroyFn>>
+      ccl_mgr_creator_destroyer_list;
+  return &ccl_mgr_creator_destroyer_list;
+}
+
 }  // namespace
 
 EnvGlobalObjectsScope::EnvGlobalObjectsScope(const std::string& env_proto_str) {
@@ -193,11 +200,13 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Singleton<ThreadPool>::New(Singleton<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
   SetCpuDeviceManagerNumThreads();
 #ifdef WITH_CUDA
-  Singleton<EagerNcclCommMgr>::New();
   Singleton<CudnnConvAlgoCache>::New();
   Singleton<CudnnHandlePool>::New();
   Singleton<embedding::EmbeddingManager>::New();
 #endif
+  CHECK_EQ_OR_RETURN(GlobalCclMgrCreatorDestroyers()->size(), 1)
+      << "Only one collective communication manager is supported at the same time for now";
+  for (const auto& pair : *GlobalCclMgrCreatorDestroyers()) { CHECK_JUST(pair.first()); }
   Singleton<vm::VirtualMachineScope>::New(Singleton<ResourceDesc, ForSession>::Get()->resource());
 #ifdef __linux__
   Singleton<EpollCommNet>::New();
@@ -244,8 +253,8 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Singleton<embedding::EmbeddingManager>::Delete();
   Singleton<CudnnConvAlgoCache>::Delete();
   Singleton<CudnnHandlePool>::Delete();
-  Singleton<EagerNcclCommMgr>::Delete();
 #endif
+  for (const auto& pair : *GlobalCclMgrCreatorDestroyers()) { CHECK_JUST(pair.second()); }
   Singleton<ThreadPool>::Delete();
   Singleton<remat::AllocatorManager>::Delete();
   Singleton<ep::DeviceManagerRegistry>::Delete();
@@ -312,6 +321,12 @@ Maybe<void> DestoryRDMA() {
     }
   }
 #endif  // WITH_RDMA && OF_PLATFORM_POSIX
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> RegisterCclMgrCreatorDestroyer(CclMgrCreateOrDestroyFn creator,
+                                           CclMgrCreateOrDestroyFn destroyer) {
+  GlobalCclMgrCreatorDestroyers()->emplace_back(std::make_pair(creator, destroyer));
   return Maybe<void>::Ok();
 }
 
