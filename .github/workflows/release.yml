@@ -33,7 +33,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@nv-wheels
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@mlu
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -45,10 +45,7 @@ jobs:
             release
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           entries: |
-            cu118
-            cu117
-            cu116
-            cpu
+            mlu
 
   staging_release:
     env:
@@ -74,33 +71,9 @@ jobs:
           python3 -m pip install -U setuptools wheel --user
           python3 -m pip install oss2  --user
       - uses: actions/checkout@v2
-      - uses: Oneflow-Inc/get-oneflow@nv-wheels
+      - uses: Oneflow-Inc/get-oneflow@mlu
         name: Build ${{ matrix.entry }}
-        if: ${{ matrix.entry !='cpu' }}
-        with:
-          cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/release/cuda.cmake
-          build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc9.sh
-          oneflow-src: ${{ env.ONEFLOW_SRC }}
-          oneflow-build-env: manylinux
-          wheelhouse-dir: ${{ env.WHEELHOUSE_DIR }}
-          clear-wheelhouse-dir: true
-          self-hosted: true
-          compute-platform: ${{ matrix.entry }}
-          manylinux-cache-dir: ${{ env.MANYLINUX_CACHE_DIR }}
-          docker-run-use-system-http-proxy: false
-          docker-run-use-lld: false
-          retry-failed-build: true
-          clean-ccache: true
-          nightly: ${{ github.event_name == 'schedule' }}
-          use-nvidia-wheels: ${{ matrix.entry !='cu112' }}
-          python-versions: |
-            3.7
-            3.8
-            3.9
-            3.10
-      - uses: Oneflow-Inc/get-oneflow@nv-wheels
-        name: Build ${{ matrix.entry }}
-        if: ${{ matrix.entry =='cpu' }}
+        if: ${{ matrix.entry =='mlu' }}
         with:
           cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/release/cpu.cmake
           build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build.sh
