@@ -41,7 +41,7 @@ struct ReturnConversionToFunc final : public OpConversionPattern<ReturnOp> {
   LogicalResult matchAndRewrite(ReturnOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
     rewriter.replaceOpWithNewOp<func::ReturnOp>(op,
-                                                /* operands */ op.operands());
+                                                /* operands */ op.getOperands());
     return success();
   }
 };
@@ -66,7 +66,7 @@ struct ReturnConversionToOneFlow final : public OpConversionPattern<ReturnOp> {
   LogicalResult matchAndRewrite(ReturnOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
     rewriter.replaceOpWithNewOp<oneflow::ReturnOp>(op,
-                                                   /* operands */ op.operands());
+                                                   /* operands */ op.getOperands());
     return success();
   }
 };

@@ -109,8 +109,8 @@ class Outliner {
     cloneOpsToNewBody(op);
   }
 
-  BlockAndValueMapping mapping{};
-  BlockAndValueMapping mappingReversed{};
+  IRMapping mapping{};
+  IRMapping mappingReversed{};
   llvm::DenseSet<Value> entries{}, exits{};
 };
 
@@ -124,7 +124,7 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
   void runOnOperation() override {
     llvm::DenseSet<Operation*> entryOps, visitedOps;
     FunctionOpInterface job = getOperation();
-    auto& operations = job.getBody().front().getOperations();
+    auto& operations = job.getFunctionBody().front().getOperations();
 
     for (auto& op : operations) {
       if (llvm::dyn_cast<OneFlowDialect>(op.getDialect())) {

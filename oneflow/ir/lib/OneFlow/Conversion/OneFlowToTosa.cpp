@@ -416,7 +416,7 @@ Value transposeAndReshapeIfRequired(Location loc, ConversionPatternRewriter& rew
                                                  shape_type.getDimSize(1)};
       auto reshape_type = RankedTensorType::get(reshape_dims, shape_type.getElementType());
       return rewriter.create<tosa::ReshapeOp>(loc, reshape_type, matrix,
-                                              rewriter.getI64ArrayAttr(reshape_dims));
+                                              rewriter.getDenseI64ArrayAttr(reshape_dims));
     } else if (shape_type.getRank() == 3) {
       return CreateTransposeValue(loc, rewriter, matrix, {0, 2, 1});
     } else {
@@ -427,7 +427,7 @@ Value transposeAndReshapeIfRequired(Location loc, ConversionPatternRewriter& rew
                                                shape_type.getDimSize(1)};
     auto reshape_type = RankedTensorType::get(reshape_dims, shape_type.getElementType());
     return rewriter.create<tosa::ReshapeOp>(loc, reshape_type, matrix,
-                                            rewriter.getI64ArrayAttr(reshape_dims));
+                                            rewriter.getDenseI64ArrayAttr(reshape_dims));
   }
   return matrix;
 }
@@ -438,8 +438,8 @@ struct MatmulOpLowering final : public OpConversionPattern<MatmulOp> {
   using OpConversionPattern<MatmulOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(MatmulOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    auto a = transposeAndReshapeIfRequired(op->getLoc(), rewriter, op.a(), op.transpose_a());
-    auto b = transposeAndReshapeIfRequired(op->getLoc(), rewriter, op.b(), op.transpose_b());
+    auto a = transposeAndReshapeIfRequired(op->getLoc(), rewriter, op.getA(), op.getTransposeA());
+    auto b = transposeAndReshapeIfRequired(op->getLoc(), rewriter, op.getB(), op.getTransposeB());
 
     const auto out_shape_type = op.getOut().getType().cast<ShapedType>();
     const auto out_reshape_type =
@@ -460,9 +460,9 @@ struct BatchMatmulOpLowering final : public OpConversionPattern<BatchMatmulOp> {
   using OpConversionPattern<BatchMatmulOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(BatchMatmulOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    auto a = transposeAndReshapeIfRequired(op->getLoc(), rewriter, op.a(), op.transpose_a());
-    auto b = transposeAndReshapeIfRequired(op->getLoc(), rewriter, op.b(), op.transpose_b());
-    rewriter.replaceOpWithNewOp<tosa::MatMulOp>(op, op.out().getType(), a, b);
+    auto a = transposeAndReshapeIfRequired(op->getLoc(), rewriter, op.getA(), op.getTransposeA());
+    auto b = transposeAndReshapeIfRequired(op->getLoc(), rewriter, op.getB(), op.getTransposeB());
+    rewriter.replaceOpWithNewOp<tosa::MatMulOp>(op, op.getOut().getType(), a, b);
     return success();
   }
 };
@@ -597,15 +597,15 @@ struct TransposeOpLowering final : public OpConversionPattern<TransposeOp> {
   LogicalResult matchAndRewrite(TransposeOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
     llvm::SmallVector<int32_t, 4> perms{};
-    for (auto dim : op.perm().getAsValueRange<mlir::IntegerAttr>()) {
+    for (auto dim : op.getPerm().getAsValueRange<mlir::IntegerAttr>()) {
       perms.push_back(dim.getSExtValue());
     }
-    llvm::SmallVector<int64_t, 4> perms_shape(op.perm().size(), 1);
+    llvm::SmallVector<int64_t, 4> perms_shape(op.getPerm().size(), 1);
     auto perms_op = rewriter.create<tosa::ConstOp>(
         op->getLoc(), RankedTensorType::get(perms_shape, rewriter.getI32Type()),
         rewriter.getI32TensorAttr(perms));
-    rewriter.replaceOpWithNewOp<tosa::TransposeOp>(op, op.output().getType(), op.input(),
-                                                   perms_op.output());
+    rewriter.replaceOpWithNewOp<tosa::TransposeOp>(op, op.getOutput().getType(), op.getInput(),
+                                                   perms_op.getOutput());
     return success();
   }
 };
@@ -635,7 +635,7 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   MLIRContext* context = &getContext();
   ConversionTarget target(*context);
   target.addLegalDialect<memref::MemRefDialect, mlir::func::FuncDialect, tosa::TosaDialect,
-                         tensor::TensorDialect, arith::ArithmeticDialect, BuiltinDialect>();
+                         tensor::TensorDialect, arith::ArithDialect, BuiltinDialect>();
   if (fullyConvert) { target.addIllegalDialect<OneFlowDialect>(); }
 
   TypeConverter typeConverter;

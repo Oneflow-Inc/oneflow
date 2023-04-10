@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/Passes.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -27,20 +27,11 @@ namespace oneflow {
 
 namespace {
 
-// TODO: remove me after upgrading LLVM
-namespace utils {
-namespace IteratorType {
-using T = llvm::StringRef;
-static const auto parallel = "parallel";
-static const auto reduction = "reduction";
-}  // namespace IteratorType
-}  // namespace utils
-
-std::tuple<SmallVector<utils::IteratorType::T>, SmallVector<AffineMap>>
+std::tuple<SmallVector<::mlir::utils::IteratorType>, SmallVector<AffineMap>>
 computeIteratorTypesAndIndexingMaps(int64_t inputRank, int64_t dim, OpBuilder& builder,
                                     bool allParallel = false) {
-  SmallVector<utils::IteratorType::T> iteratorTypes(inputRank, utils::IteratorType::parallel);
-  if (!allParallel) iteratorTypes[dim] = utils::IteratorType::reduction;
+  SmallVector<::mlir::utils::IteratorType> iteratorTypes(inputRank, ::mlir::utils::IteratorType::parallel);
+  if (!allParallel) iteratorTypes[dim] = ::mlir::utils::IteratorType::reduction;
   auto identityMap = AffineMap::getMultiDimIdentityMap(inputRank, builder.getContext());
   SmallVector<AffineExpr, 2> affineExprs;
   for (int i = 0; i < inputRank; i++) {
@@ -144,15 +135,15 @@ struct SoftmaxOpLowering final : public OpConversionPattern<SoftmaxOp> {
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPoint(softmaxOp);
     Location loc = softmaxOp.getLoc();
-    Value input = softmaxOp.in();
+    Value input = softmaxOp.getIn();
     ShapedType inputType = input.getType().cast<ShapedType>();
     Type elementType = inputType.getElementType();
     int64_t reductionDim = inputType.getRank() - 1;
     SmallVector<OpFoldResult> dims = createDimValues(rewriter, loc, input);
-    Value outputNd = rewriter.create<linalg::InitTensorOp>(loc, dims, elementType);
+    Value outputNd = rewriter.create<tensor::EmptyOp>(loc, dims, elementType);
     dims.erase(dims.begin() + reductionDim);
     // Compute max along dim
-    Value output = rewriter.create<linalg::InitTensorOp>(loc, dims, elementType);
+    Value output = rewriter.create<tensor::EmptyOp>(loc, dims, elementType);
     Value largeNegative =
         rewriter.create<arith::ConstantOp>(loc, rewriter.getFloatAttr(elementType, -1.0e30));
     Value negativeInit =
@@ -177,7 +168,7 @@ struct OneFlowLoweringToLinalgPass
     MLIRContext* context = &getContext();
     ConversionTarget target(*context);
     target.addLegalDialect<memref::MemRefDialect, mlir::func::FuncDialect, tosa::TosaDialect,
-                           linalg::LinalgDialect, tensor::TensorDialect, arith::ArithmeticDialect,
+                           linalg::LinalgDialect, tensor::TensorDialect, arith::ArithDialect,
                            math::MathDialect>();
     RewritePatternSet patterns(context);
     patterns.add<SoftmaxOpLowering>(context);
