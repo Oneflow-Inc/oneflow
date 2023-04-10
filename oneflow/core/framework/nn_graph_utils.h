@@ -77,7 +77,15 @@ std::set<std::string> MultiThreadBroadcastFromMasterToWorkers(size_t world_size,
     }
 
   } else {
-    // other broadcast case
+    // default strategy:
+    // This strategy is to reduce the load of the master process and add several agent ranks to the
+    // broadcast path. This broadcast algorithm is called "tree broadcast". The number of agent
+    // ranks is "sqrt(world_size)". Suppose the number is m, then each agent rank will be
+    // responsible for m ranks, that is, the nodes of the tree have m children, which means that the
+    // depth of the tree is 2. Therefore, the broadcasting process can go through at most 2
+    // cross-machine transmissions. But the disadvantage is that this strategy does not take into
+    // account the speed difference between intra-machine transmission and cross-machine
+    // transmission.
     const size_t split_num = std::sqrt(world_size);
     BalancedSplitter bs(world_size, split_num);
     if (GlobalProcessCtx::IsThisProcessMaster()) {
