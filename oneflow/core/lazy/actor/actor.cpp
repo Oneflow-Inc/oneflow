@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/lazy/actor/actor.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/lazy/stream_context/include/stream_context.h"
@@ -133,11 +134,15 @@ void Actor::Init(const JobDesc* job_desc, ActorContext* actor_ctx) {
   actor_id_ = task_proto.task_id();
   thrd_id_ = ThrdId4ActorId(actor_id_);
   job_id_ = task_proto.job_id();
+  act_cnt_ = 0;
+  op_name_ = "NULL_OP";
+  debug_ = EnableActorDebugLog();
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
     ek.kernel_ctx.reset(new KernelContextImpl(actor_ctx));
     ek.kernel = ConstructKernel(node.kernel_conf(), ek.kernel_ctx.get());
     exec_kernel_vec_.emplace_back(std::move(ek));
+    op_name_ = node.kernel_conf().op_attribute().op_conf().name();
   }
 
   is_kernel_launch_synchronized_ =
@@ -370,6 +375,12 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
         }
       }
     }
+
+    if (debug_) {
+      LOG(INFO) << " Actor: " << actor_id_ << " op: " << op_name_ << " in act_cnt: [ " << act_cnt_
+                << " ] , Recv ActorMsg from: " << msg.src_actor_id()
+                << " to: " << msg.dst_actor_id() << " with regst: " << msg.regst_desc_id();
+    }
     ActUntilFail();
   } else if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
@@ -418,8 +429,20 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
 }
 
 void Actor::ActUntilFail() {
+  if (debug_) {
+    // NOTE(chengcheng): using if(debug_) code hack to minimize debug code cost when debug off.
+    LOG(INFO) << " Actor: " << actor_id_ << " op: " << op_name_ << " Try to act before act_cnt: [ "
+              << act_cnt_ << " ] . And IsReadReady: " << IsReadReady()
+              << " IsWriteReady: " << IsWriteReady();
+  }
   while (IsReadReady() && IsWriteReady()) {
     PrepareProducedNaiveInplaceDataRegst();
+
+    if (debug_) {
+      LOG(INFO) << " Actor: " << actor_id_ << " op: " << op_name_ << " Try to act act_cnt: [ "
+                << act_cnt_ << " ] before launch kernel.";
+    }
+
     Act();
 
     AsyncSendCustomizedProducedRegstMsgToConsumer();
@@ -431,6 +454,11 @@ void Actor::ActUntilFail() {
     AsyncRetInplaceConsumedRegstIfNoConsumer();
 
     AsyncSendQueuedMsg();
+
+    if (debug_) {
+      LOG(INFO) << " Actor: " << actor_id_ << " op: " << op_name_ << " Finish act act_cnt: [ "
+                << act_cnt_++ << " ].";
+    }
   }
   // NOTE(liujuncheng): return inplace consumed
   AsyncSendQueuedMsg();
@@ -698,6 +726,13 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   CHECK_GE(reading_cnt_it->second, 1);
   reading_cnt_it->second -= 1;
   total_reading_cnt_ -= 1;
+
+  if (debug_) {
+    LOG(INFO) << " Actor: " << actor_id_ << " op: " << op_name_ << " in act_cnt: [ " << act_cnt_
+              << " ] recv produce_regst: " << regst->regst_desc_id()
+              << " and the total_reading_cnt_ is : " << total_reading_cnt_ << " now.";
+  }
+
   if (reading_cnt_it->second != 0) { return 0; }
 
   if (inplace_produced_rs_.TryPushBackRegst(regst) == 0) {
@@ -733,6 +768,12 @@ void Actor::EnqueueAsyncMsg(const ActorMsg& msg) {
     sync_msg_queue_.emplace_back(msg);
   } else {
     async_msg_queue_.emplace_back(msg);
+  }
+
+  if (debug_ && msg.msg_type() == ActorMsgType::kRegstMsg) {
+    LOG(INFO) << " Actor: " << actor_id_ << " op: " << op_name_ << " in act_cnt: [ " << act_cnt_
+              << " ] post ActorMsg from: " << msg.src_actor_id() << " to: " << msg.dst_actor_id()
+              << " with regst: " << msg.regst_desc_id();
   }
 }
 
