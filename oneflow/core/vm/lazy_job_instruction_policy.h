@@ -95,14 +95,14 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
   std::string DebugName(const Instruction&) const override { return "LaunchLazyJob"; }
   Maybe<void> Prepare(Instruction* instruction) override { return Maybe<void>::Ok(); }
   void Compute(Instruction* instruction) override {
-    static thread_local int64_t run_cnt = 0;
-    VLOG(3) << " VM try launch Graph: " << nn_graph_->job_name() << " in run_cnt: " << run_cnt
-            << " START.";
+    VLOG(3) << " VM try launch Graph: " << nn_graph_->job_name()
+            << " in run_cnt: " << nn_graph_->run_cnt() << " START.";
     auto* lazy_job_stream_policy = GetLazyJobStreamPolicy(instruction);
     {
       OF_PROFILER_RANGE_GUARD("WaitUntilQueueEmptyIfFrontNNGraphNotEquals");
       lazy_job_stream_policy->WaitUntilQueueEmptyIfFrontNNGraphNotEquals(nn_graph_);
-      VLOG(3) << " VM launch Graph: " << nn_graph_->job_name() << " in run_cnt: " << run_cnt
+      VLOG(3) << " VM launch Graph: " << nn_graph_->job_name()
+              << " in run_cnt: " << nn_graph_->run_cnt()
               << " WaitUntilQueueEmptyIfFrontNNGraphNotEquals.";
     }
     {
@@ -112,15 +112,16 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
       auto* buffer_mgr = Singleton<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
       buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Push(job_instance);
       VLOG(3) << " VM Push CallbackNotifier to Graph: " << nn_graph_->job_name()
-              << " in run_cnt: " << run_cnt;
+              << " in run_cnt: " << nn_graph_->run_cnt();
       buffer_mgr->Get(GetSourceTickBufferName(job_name))->Push(job_instance);
       VLOG(3) << " VM Push SourceTick to Graph: " << nn_graph_->job_name()
-              << " in run_cnt: " << run_cnt;
+              << " in run_cnt: " << nn_graph_->run_cnt();
     }
     OF_PROFILER_RANGE_GUARD("EnqueueNNGraph");
     lazy_job_stream_policy->EnqueueNNGraph(nn_graph_);
-    VLOG(3) << " VM Enqueue Graph: " << nn_graph_->job_name() << " run_cnt: " << run_cnt++
-            << " END.";
+    VLOG(3) << " VM Enqueue Graph: " << nn_graph_->job_name()
+            << " run_cnt: " << nn_graph_->run_cnt() << " END.";
+    nn_graph_->NextRunCnt();
   }
 
  private:
