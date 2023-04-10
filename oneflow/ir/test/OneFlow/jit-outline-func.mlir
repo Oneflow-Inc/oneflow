@@ -1,5 +1,6 @@
 // RUN: oneflow-opt %s \
 // RUN: -ofjob-to-func \
+// RUN: -convert-to-signless-for-tosa \
 // RUN: -lower-oneflow-to-tosa="full=0 lower-job=0" \
 // RUN: --tosa-make-broadcastable \
 // RUN: -lower-oneflow-to-linalg \

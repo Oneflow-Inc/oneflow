@@ -705,7 +705,13 @@ struct ConvertFuncToSignlessPattern : public OpRewritePattern<func::FuncOp> {
     op.getRegion().cloneInto(&func.getRegion(), bvm);
     for (auto& block : func.getBody().getBlocks()) {
       for (auto arg : block.getArguments()) {
-        arg.setType(convertToSignless(op.getContext(), arg.getType()));
+        auto new_type = convertToSignless(op.getContext(), arg.getType());
+        arg.setType(new_type);
+        for (auto* use : arg.getUsers()) {
+          if (auto input = llvm::dyn_cast_or_null<InputOp>(use)) {
+            input.getOutput().setType(new_type);
+          }
+        }
       }
     }
     rewriter.eraseOp(op);
