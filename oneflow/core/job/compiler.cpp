@@ -107,7 +107,7 @@ void Compiler::Compile(Job* job, Plan* plan) const {
   (*job_id2job_conf)[GlobalJobDesc().job_id()] = GlobalJobDesc().job_conf();
   // NOTE(chengcheng): infer mem blob id & set inplace & add ctrl
   // TODO(chengcheng): set inplace hint for cpu regst
-  IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(plan, IsReachable);
+  IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(plan);
   PlanUtil::MergeMemBlockIdByLogicalChainId(plan, *job);
   PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(plan);
   PlanUtil::SetForceInplaceMemBlock(plan);
