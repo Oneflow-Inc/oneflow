@@ -21,11 +21,18 @@ limitations under the License.
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/framework/local_tensor_infer_cache.h"
+#include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
+#include "oneflow/core/boxing/eager_boxing_logger.h"
+#include "oneflow/core/framework/global_tensor_infer_cache.h"
+#include "oneflow/core/framework/consistency_check.h"
+#include "oneflow/core/framework/instructions_builder.h"
 
 namespace oneflow {
 namespace one {
 
 using Env = std::map<std::string, std::shared_ptr<Tensor>>;
+using NameToParallelDescType = std::map<std::string, Symbol<ParallelDesc>>;
 
 Maybe<Env> InitEnv(const one::TensorTuple& graph_inputs, const std::shared_ptr<NNGraph>& graph) {
   Env env;
@@ -156,15 +163,123 @@ Maybe<void> RunViewOp(const std::shared_ptr<UserOpExpr>& op, Env& env, const Ten
   return Maybe<void>::Ok();
 }
 
+Maybe<bool> IsAllZeroSizeTensorMeta(const std::vector<Symbol<GlobalTensorMeta>>& tensor_metas) {
+  if (tensor_metas.empty()) { return false; }
+  for (const auto& tensor_meta : tensor_metas) {
+    if (tensor_meta->shape().elem_cnt() != 0) { return false; }
+  }
+  return true;
+}
+
+constexpr auto* CachedIsAllZeroSizeTensorMeta =
+    DECORATE(&IsAllZeroSizeTensorMeta, ThreadLocalCopiable);
+
+template<typename Func>
+Maybe<void> RunGlobalNormalOp(const std::shared_ptr<UserOpExpr>& op, Env& env, const UserOpConf& user_conf, 
+                              const Func& preprocess, const TensorTuple& inputs, const OpArgsVector<std::string>& output_names, 
+                              const NdSbpSignature& ndsbp_signature, const Symbol<ParallelDesc>& op_paralleldesc) {
+  TensorTuple outputs(output_names.size());
+  static AttrMap empty_attr_map;
+  const OpExprInterpContext ctx(empty_attr_map);
+  CHECK_OR_RETURN(!inputs.empty());
+  const auto& parallel_desc = JUST(inputs.at(0)->parallel_desc());
+
+  std::shared_ptr<const GlobalTensorInferResult> result;
+  if (inputs.empty()) {
+    // check consistency placement and nd_sbp, do not check in non-src op because it is assumed that
+    // InferSbp in op is a deterministic algorithm
+    JUST(MetaInfoConsistencyCheck(parallel_desc, ctx.nd_sbp, 1, /* force_check */ false));
+    const auto& infer_args =
+        JUST(SrcOpGlobalTensorMetaInferArgs::New(ctx.attrs, parallel_desc, JUST(ctx.nd_sbp)));
+    result = JUST(op->mut_global_tensor_infer_cache()->GetOrInfer(*infer_args));
+  } else {
+    for (int i = 0; i < outputs.size(); ++i) {
+      if ((outputs)[i]) {
+        const auto& nd_sbp = JUST((outputs)[i]->nd_sbp());
+        JUST((outputs)[i]->set_consumer_nd_sbp_constraint(nd_sbp));
+      }
+    }
+    const auto& infer_args = JUST(GlobalTensorMetaInferArgs::New(ctx.attrs, inputs));
+    result = JUST(op->mut_global_tensor_infer_cache()->GetOrInfer(*infer_args));
+  }
+  const auto& output_tensor_metas = result->output_tensor_metas();
+  Optional<int64_t> parallel_id;
+  const auto& tensor_device = JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
+  for (int i = 0; i < outputs.size(); ++i) {
+    if (!outputs.at(i)) {
+      const auto& tensor_impl = JUST(EagerGlobalTensorImpl::New(
+          output_tensor_metas[i], tensor_device, parallel_id, false, false));
+      (outputs)[i].reset(new GlobalTensor(tensor_impl));
+    } else {
+      JUST((outputs)[i]->set_consumer_nd_sbp_constraint(NullOpt));
+    }
+  }
+
+  const auto& kernel = JUST(op->MutKernel4Stream(result->stream()));
+  if (unlikely(JUST(CachedIsAllZeroSizeTensorMeta(output_tensor_metas)))) {
+    return Maybe<void>::Ok();
+  }
+ 
+  vm::EagerBlobObjectList input_eager_blob_objects;
+  TensorTuple boxing_outputs;
+  const auto* mgr = Singleton<EagerBoxingInterpreterManager>::Get();
+  for (const auto& [ibn, ibs] : user_conf.input()) {
+    if (ibn == "UserSourceOpTickInput") { continue; }
+    const auto& tensor_names = ibs.s();
+    for (int i = 0; i < tensor_names.size(); ++i) {
+      std::shared_ptr<Tensor> input_tensor = preprocess(JUST(MapAt(env, tensor_names[i])));
+      std::string lbn = ibn + '_' + std::to_string(i);
+      const auto& logical_shape = input_tensor->shape();
+      CHECK_GT_OR_RETURN(logical_shape->elem_cnt(), 0);
+      const auto& in_nd_sbp = JUST(input_tensor->nd_sbp());
+      const auto& out_nd_sbp = JUST(MapAt(ndsbp_signature.bn_in_op2nd_sbp(), lbn));
+      const auto& in_parallel_desc = JUST(input_tensor->parallel_desc());
+      const auto& out_parallel_desc = op_paralleldesc;
+      CHECK_OR_RETURN(in_parallel_desc == out_parallel_desc);
+      if (in_parallel_desc->parallel_num() != 1 && in_nd_sbp != out_nd_sbp) {
+        const auto& boxing_interpreter = JUST(mgr->GetEagerBoxingInterpreter(
+            in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc, *logical_shape));
+        Singleton<const EagerBoxingLogger>::Get()->Log(
+            *JUST(boxing_interpreter->boxing_interpreter_status()), /* prefix */ "");
+        if (parallel_id.has_value()) {
+          input_tensor = JUST(boxing_interpreter->Interpret(input_tensor, in_nd_sbp, out_nd_sbp,
+                                                            in_parallel_desc, out_parallel_desc));
+        }
+        boxing_outputs.emplace_back(input_tensor);
+      }
+      const auto& local_tensor = JUST(input_tensor->cur_rank_phy_tensor());
+      input_eager_blob_objects.emplace_back(JUST(local_tensor->eager_blob_object()));
+    }
+  }
+
+  if (!parallel_id.has_value()) { return Maybe<void>::Ok(); }
+
+  vm::EagerBlobObjectList output_eager_blob_objects(outputs.size());
+  for (int i = 0; i < outputs.size(); ++i) {
+    const bool out_parallel_desc_eq = JUST(outputs.at(i)->parallel_desc()) == parallel_desc;
+    CHECK_OR_RETURN(out_parallel_desc_eq);
+    const auto& local_tensor = JUST(outputs.at(i)->cur_rank_phy_tensor());
+    output_eager_blob_objects.at(i) = JUST(local_tensor->eager_blob_object());
+  }
+
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    return builder->Call(kernel, std::move(input_eager_blob_objects),
+                         std::move(output_eager_blob_objects), result, ctx, result->stream());
+  }));
+
+  for (size_t i = 0; i < output_names.size(); ++i) {
+    env.emplace(output_names[i], JUST(VectorAt(outputs, i)));
+  }
+
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> RunNormalOp(const std::shared_ptr<UserOpExpr>& op, Env& env, const TensorTuple& inputs,
                         const OpArgsVector<std::string>& output_names) {
   TensorTuple outputs(output_names.size());
+  static EagerLocalInterpreter it;
   static AttrMap empty_attr_map;
-  if (JUST(GetEagerInterpreterType(inputs, op))) {
-    JUST(EagerLocalInterpreter().Apply(*op, inputs, &outputs, empty_attr_map));
-  } else {
-    JUST(EagerGlobalInterpreter().Apply(*op, inputs, &outputs, empty_attr_map));
-  }
+  JUST(it.Apply(*op, inputs, &outputs, empty_attr_map));
   for (size_t i = 0; i < output_names.size(); ++i) {
     env.emplace(output_names[i], JUST(VectorAt(outputs, i)));
   }
@@ -224,6 +339,19 @@ Maybe<one::TensorTuple> InterpretJob(const one::TensorTuple& graph_inputs,
   // See comments above GetOutdatedTensorsAfterOp's definition for more details
   const auto outdated_tensors_after_op = GetOutdatedTensorsAfterOp(job);
 
+  CHECK_OR_RETURN(job.has_placement()) << "no job placement";
+  const auto& job_placement = job.placement();
+  NameToParallelDescType op2paralleldesc;
+  for (const auto& blob_placement_group : job_placement.blob_placement_group()) {
+    const auto parallel_desc = SymbolOf(ParallelDesc(blob_placement_group.parallel_conf()));
+    for (const auto& logical_blob_id : blob_placement_group.lbi()) {
+      op2paralleldesc.emplace(logical_blob_id.op_name(), parallel_desc);
+    }
+  }
+  CHECK_OR_RETURN(job.has_job_parallel_view_conf()) << "no job parallel conf";
+  const auto& job_parallel_view_conf = job.job_parallel_view_conf();
+  const auto& op_name2nd_sbp_signature_conf = job_parallel_view_conf.op_name2nd_sbp_signature_conf();
+
   one::TensorTuple graph_outputs;
   for (int i = 0; i < job.net().op_size(); i++) {
     const auto& op_conf = job.net().op(i);
@@ -239,7 +367,17 @@ Maybe<one::TensorTuple> InterpretJob(const one::TensorTuple& graph_inputs,
       if (IsViewOp(op)) {
         JUST(RunViewOp(op, env, inputs, output_names));
       } else {
-        JUST(RunNormalOp(op, env, inputs, output_names));
+        if (JUST(GetEagerInterpreterType(inputs, op))) {
+          JUST(RunNormalOp(op, env, inputs, output_names));
+        } else {
+          const auto& op_paralleldesc = JUST(MapAt(op2paralleldesc, op_conf.name()));
+          const auto& nd_sbp_signature_conf = JUST(MapAt(op_name2nd_sbp_signature_conf, op_conf.name()));
+          auto preprocess = [&op_conf](const std::shared_ptr<Tensor>& tensor) {
+            return CHECK_JUST(functional::To(tensor, op_conf.device_tag()));
+          };
+          JUST(RunGlobalNormalOp(op, env, user_conf, preprocess, inputs, output_names, 
+                                 nd_sbp_signature_conf, op_paralleldesc));
+        }
       }
       for (const auto& name : outdated_tensors_after_op[i]) {
         CHECK_EQ_OR_RETURN(env.erase(name), 1);
