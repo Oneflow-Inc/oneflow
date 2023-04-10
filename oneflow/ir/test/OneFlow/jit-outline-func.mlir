@@ -4,11 +4,12 @@
 // RUN: --tosa-make-broadcastable \
 // RUN: -lower-oneflow-to-linalg \
 // RUN: -tosa-to-tensor \
-// RUN: -pass-pipeline="func.func(tosa-to-linalg-named)" \
-// RUN: -pass-pipeline="func.func(tosa-to-linalg)" \
+// RUN: | oneflow-opt -pass-pipeline="func.func(tosa-to-linalg-named,tosa-to-linalg)" \
+// RUN: -pass-pipeline="func.func()" \
 // RUN: -linalg-fuse-elementwise-ops \
 // RUN: -func-to-ofjob \
-// RUN: -pass-pipeline="oneflow.job(outline-jit-function)" -canonicalize \
+// RUN: | oneflow-opt -pass-pipeline="oneflow.job(outline-jit-function)" \
+// RUN: | oneflow-opt -canonicalize \
 // RUN: | FileCheck --dump-input=always %s
 
 // CHECK: linalg.generic
