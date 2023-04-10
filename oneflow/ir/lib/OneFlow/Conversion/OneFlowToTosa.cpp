@@ -610,13 +610,11 @@ struct TransposeOpLowering final : public OpConversionPattern<TransposeOp> {
   }
 };
 
-
 struct CastInputConversion final : public OpRewritePattern<InputOp> {
  public:
   explicit CastInputConversion(mlir::MLIRContext* context)
       : OpRewritePattern<InputOp>(context, /*benefit=*/0) {}
-  mlir::LogicalResult matchAndRewrite(InputOp op,
-                                      mlir::PatternRewriter& rewriter) const override {
+  mlir::LogicalResult matchAndRewrite(InputOp op, mlir::PatternRewriter& rewriter) const override {
     auto outType = op.getOutput().getType();
     if (isSignLessTensorOrOther(outType)) { return failure(); }
     if (op->hasOneUse()) {
