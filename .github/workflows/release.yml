@@ -75,7 +75,7 @@ jobs:
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry =='mlu' }}
         with:
-          cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/release/cpu.cmake
+          cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/release/mlu.cmake
           build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build.sh
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           oneflow-build-env: manylinux
