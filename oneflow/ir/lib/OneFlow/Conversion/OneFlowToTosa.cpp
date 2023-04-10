@@ -610,7 +610,48 @@ struct TransposeOpLowering final : public OpConversionPattern<TransposeOp> {
   }
 };
 
+
+struct CastInputConversion final : public OpRewritePattern<InputOp> {
+ public:
+  explicit CastInputConversion(mlir::MLIRContext* context)
+      : OpRewritePattern<InputOp>(context, /*benefit=*/0) {}
+  mlir::LogicalResult matchAndRewrite(InputOp op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    auto outType = op.getOutput().getType();
+    if (isSignLessTensorOrOther(outType)) { return failure(); }
+    if (op->hasOneUse()) {
+      if (auto cast =
+              llvm::dyn_cast<UnrealizedConversionCastOp>(op.getOutput().use_begin()->getOwner())) {
+        if (isSignLessTensorOrOther(cast.getResult(0).getType())) { return failure(); }
+      }
+    }
+    LOG(ERROR) << "ok4";
+    InputOp cloned = rewriter.create<InputOp>(op->getLoc(), op.getResultTypes(), op->getOperands(),
+                                              op->getAttrs());
+    auto m = op->getParentOp();
+    m->dump();
+    rewriter.replaceOpWithNewOp<UnrealizedConversionCastOp>(
+        op, convertToSignless(getContext(), op.getOutput().getType()), cloned.getOutput());
+    m->dump();
+    return success();
+  }
+};
+
 namespace {
+
+class CastOneFlowInputToSignlessPass
+    : public CastOneFlowInputToSignlessPassBase<CastOneFlowInputToSignlessPass> {
+  void getDependentDialects(::mlir::DialectRegistry& registry) const override {
+    registry.insert<oneflow::OneFlowDialect>();
+  }
+  void runOnOperation() override {
+    Operation* op = getOperation();
+    RewritePatternSet patterns(&getContext());
+    patterns.add<oneflow::CastInputConversion>(op->getContext());
+
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+  }
+};
 
 struct OneFlowLoweringToTosaPass : public LowerOneFlowToTosaPassBase<OneFlowLoweringToTosaPass> {
   void runOnOperation() override;
@@ -727,6 +768,10 @@ void ConvertToSignlessForTosaPass::runOnOperation() {
   RewritePatternSet patterns(op->getContext());
   patterns.add<ConvertFuncToSignlessPattern>(op->getContext());
   (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+}
+
+std::unique_ptr<Pass> createCastOneFlowInputToSignlessPass() {
+  return std::make_unique<CastOneFlowInputToSignlessPass>();
 }
 
 }  // namespace oneflow

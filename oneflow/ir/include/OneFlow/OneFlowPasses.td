@@ -35,6 +35,12 @@ def OneFlowJobToFuncPass : Pass<"ofjob-to-func", "ModuleOp"> {
   let dependentDialects = ["mlir::func::FuncDialect"];
 }
 
+def CastOneFlowInputToSignlessPass : Pass<"cast-ofinput-to-signless", "ModuleOp"> {
+  let summary = "cast oneflow input to singless";
+  let constructor = "mlir::oneflow::createCastOneFlowInputToSignlessPass()";
+  let dependentDialects = ["mlir::func::FuncDialect", "mlir::BuiltinDialect"];
+}
+
 def BufferHostRegisterPass : Pass<"buffer-host-register", "func::FuncOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createBufferHostRegisterPass()";
