@@ -5,6 +5,7 @@ import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/sequential.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/common/device.proto";
+import "oneflow/core/common/memory_format.proto";
 
 enum AttrType {
   kAtInt32 = 1;
@@ -24,6 +25,7 @@ enum AttrType {
   kAtStride = 15;
   kAtListStride = 16;
   kAtDevice = 17;
+  kAtMemoryFormat = 18;
 }
 
 message AttrValue {
@@ -67,6 +69,7 @@ message AttrValue {
     Int64ListProto at_stride = 15;
     ListStride at_list_stride = 16;
     DeviceProto at_device = 17;
+    MemoryFormat at_memory_format = 18;
   }
 }
 

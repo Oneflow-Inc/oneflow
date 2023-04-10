@@ -10630,6 +10630,19 @@ def OneFlow_ToContiguousOp : OneFlow_BaseOp<"to_contiguous", [NoSideEffect, Supp
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_ConvertMemoryFormatOp : OneFlow_BaseOp<"convert_memory_format", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$in
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_IsNanOp : OneFlow_BaseOp<"isnan", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in

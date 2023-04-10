@@ -95,8 +95,8 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                         const Stride& target_stride, const int64_t storage_offset) {
   auto device = JUST(input->device());
-  auto tensor_meta =
-      SymbolOf(LocalTensorMeta(target_shape, target_stride, input->dtype()->data_type(), device));
+  auto tensor_meta = SymbolOf(LocalTensorMeta(
+      target_shape, target_stride, input->dtype()->data_type(), input->memory_format(), device));
 
   CHECK_OR_RETURN(JUST(input->has_eager_blob_object()));
   // new output tensor
@@ -118,8 +118,9 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
 
 Maybe<void> InplaceView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                         const Stride& target_stride, const int64_t storage_offset) {
-  Symbol<LocalTensorMeta> new_tensor_meta = SymbolOf(LocalTensorMeta(
-      target_shape, target_stride, input->dtype()->data_type(), JUST(input->device())));
+  Symbol<LocalTensorMeta> new_tensor_meta =
+      SymbolOf(LocalTensorMeta(target_shape, target_stride, input->dtype()->data_type(),
+                               input->memory_format(), JUST(input->device())));
 
   bool requires_grad = (autograd::GradMode::is_enabled() && input->requires_grad());
   std::shared_ptr<EagerLocalTensorImpl> new_tensor_impl = std::make_shared<EagerLocalTensorImpl>(

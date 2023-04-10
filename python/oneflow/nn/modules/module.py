@@ -1382,6 +1382,15 @@ class Module(object):
         fn(self)
         return self
 
+    def _apply_memory_format(self, memory_format):
+        for module in self.children():
+            module._apply_memory_format(memory_format)
+        self.apply_memory_format(memory_format)
+        return self
+
+    def apply_memory_format(self, memory_format) -> None:
+        pass
+
     @overload
     def to(
         self: T,
@@ -1409,6 +1418,9 @@ class Module(object):
         .. function:: to(dtype)
            :noindex:
 
+        .. function:: to(memory_format=None)
+           :noindex:
+
         .. function:: to(tensor)
            :noindex:
 
@@ -1428,6 +1440,9 @@ class Module(object):
                 and buffers in this module
             dtype (:class:`oneflow.dtype`): the desired floating point dtype of
                 the parameters and buffers in this module
+            memory_format (:class:`oneflow.memory_format`): the desired memory
+                format for 4D parameters and buffers in this module (keyword
+                only argument)
             tensor (oneflow.Tensor): Tensor whose dtype and device are the desired
                 dtype and device for all parameters and buffers in this module
 
@@ -1464,6 +1479,7 @@ class Module(object):
 
         device = None
         dtype = None
+        memory_format = None
         if len(args) + len(kwargs) == 2:
             device = kwargs.pop("device", None) or args[0]
             dtype = kwargs.pop("dtype", None) or args[1]
@@ -1479,11 +1495,14 @@ class Module(object):
                 elif isinstance(arg, (flow.device, str, int)):
                     dtype = None
                     device = arg
+                elif isinstance(arg, flow.memory_format):
+                    memory_format = arg
                 else:
                     raise ValueError(f"Unsupported parameters in module.to: {arg}")
             else:
                 device = kwargs.pop("device", None)
                 dtype = kwargs.pop("dtype", None)
+                memory_format = kwargs.pop("memory_format", None)
                 tensor = kwargs.pop("tensor", None)
                 if tensor is not None:
                     device = tensor.device
@@ -1499,6 +1518,9 @@ class Module(object):
                     "nn.Module.to only accepts floating point "
                     "dtypes, but got desired dtype={}".format(dtype)
                 )
+
+        if memory_format is not None:
+            self._apply_memory_format(memory_format)
 
         def convert(t):
             return t.to(device, dtype if t.is_floating_point() else None)

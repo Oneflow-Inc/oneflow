@@ -1562,8 +1562,9 @@ class InplaceToContiguousFunctor {
     const auto& blob_object = JUST(input->eager_blob_object());
     Symbol<LocalTensorMeta> old_tensor_meta = JUST(input->local_tensor_meta());
 
-    Symbol<LocalTensorMeta> new_tensor_meta = SymbolOf(LocalTensorMeta(
-        old_tensor_meta->shape(), stride, old_tensor_meta->dtype(), old_tensor_meta->device()));
+    Symbol<LocalTensorMeta> new_tensor_meta =
+        SymbolOf(LocalTensorMeta(old_tensor_meta->shape(), stride, old_tensor_meta->dtype(),
+                                 old_tensor_meta->memory_format(), old_tensor_meta->device()));
 
     std::shared_ptr<EagerLocalTensorImpl> final_tensor_impl =
         std::make_shared<EagerLocalTensorImpl>(JUST(input->tensor_storage()),
@@ -3142,6 +3143,23 @@ class ToDeviceFunctor {
   }
 };
 
+class ToMemoryFormatFunctor {
+ public:
+  ToMemoryFormatFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("convert_memory_format").Input("in").Output("out").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, MemoryFormat memory_format) const {
+    if (input->memory_format() == memory_format) { return input; }
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("memory_format");
+    attrs.SetAllAttrs(memory_format);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class TopKFunctor {
  public:
   TopKFunctor() { op_ = CHECK_JUST(one::OpBuilder("top_k").Input("in").Output("out").Build()); }
@@ -4068,7 +4086,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MeshgridFunctor>("Meshgrid");
   m.add_functor<impl::IndexSelectFunctor>("IndexSelect");
   m.add_functor<impl::ToFunctor, impl::To2Functor, impl::To3Functor, impl::To4Functor,
-                impl::ToDeviceFunctor>("To");
+                impl::ToDeviceFunctor, impl::ToMemoryFormatFunctor>("To");
   m.add_functor<impl::TopKFunctor>("TopK");
   m.add_functor<impl::InTopKFunctor>("InTopK");
   m.add_functor<impl::TensorToTensorBufferFunctor>("TensorToTensorBuffer");

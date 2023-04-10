@@ -52,6 +52,10 @@ locals()["uint8"] = oneflow._oneflow_internal.uint8
 locals()["record"] = oneflow._oneflow_internal.record
 locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
 locals()["bfloat16"] = oneflow._oneflow_internal.bfloat16
+
+channels_first = oneflow._oneflow_internal.channels_first
+channels_last = oneflow._oneflow_internal.channels_last
+
 from oneflow.version import __version__
 from oneflow.version import __git_commit__
 

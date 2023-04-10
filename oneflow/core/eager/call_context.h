@@ -46,6 +46,7 @@ class TmpTensor final : public user_op::Tensor {
     UNIMPLEMENTED() << "TmpTensor::stride() is not implemented.";
   }
   DataType data_type() const override { return DataType::kChar; }
+  MemoryFormat memory_format() const override { return MemoryFormat::kUnused; }
   const MemoryCase& mem_case() const override { return *mem_case_; }
   const void* raw_dptr() const override { return tmp_buffer_ptr_; }
   void* mut_raw_dptr() override { return tmp_buffer_ptr_; }

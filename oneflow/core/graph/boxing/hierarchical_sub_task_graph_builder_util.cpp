@@ -78,7 +78,8 @@ Maybe<SubTskGphBuilderStatus> IntraGroupSubTskGphBuilder::Build(
         const int64_t axis = in_nd_sbp.sbp_parallel(0).split_parallel().axis();
         dim_vec.at(axis) /= hierarchy->At(0);
       }
-      BlobDesc new_blob_desc(Shape(dim_vec), logical_blob_desc.data_type());
+      BlobDesc new_blob_desc(Shape(dim_vec), logical_blob_desc.data_type(),
+                             logical_blob_desc.memory_format());
       std::shared_ptr<SubTskGphBuilderStatus> boxing_builder_status =
           JUST(sub_tsk_gph_builder_->Build(
               ctx, in_tasks, &out_tasks, &ctrl_tasks, ParallelDesc(in_parallel_conf),
@@ -146,7 +147,8 @@ Maybe<SubTskGphBuilderStatus> InterGroupSubTskGphBuilder::Build(
         const int64_t axis = in_nd_sbp.sbp_parallel(1).split_parallel().axis();
         dim_vec.at(axis) /= hierarchy->At(1);
       }
-      BlobDesc new_blob_desc(Shape(dim_vec), logical_blob_desc.data_type());
+      BlobDesc new_blob_desc(Shape(dim_vec), logical_blob_desc.data_type(),
+                             logical_blob_desc.memory_format());
       std::shared_ptr<SubTskGphBuilderStatus> boxing_builder_status =
           JUST(sub_tsk_gph_builder_->Build(
               ctx, in_tasks, &out_tasks, &ctrl_tasks, ParallelDesc(in_parallel_conf),
