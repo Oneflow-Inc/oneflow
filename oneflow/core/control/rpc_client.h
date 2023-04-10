@@ -44,6 +44,7 @@ class RpcClient {
   typename std::enable_if<std::is_arithmetic<T>::value>::type PushKVT(const std::string& k, T v) {
     PushKV(k, std::to_string(v));
   }
+  // push kv to the server of rank.
   void PushRankKV(const size_t rank, const std::string& k,
                   std::function<void(std::string*)> VSetter);
   void PushRankKV(const size_t rank, const std::string& k, const std::string& v);
@@ -62,6 +63,7 @@ class RpcClient {
     *v = oneflow_cast<T>(v_str);
   }
 
+  // pull kv from the server fo rank.
   void PullRankKV(const size_t rank, const std::string& k,
                   std::function<void(const std::string&)> VGetter);
   void PullRankKV(const size_t rank, const std::string& k, std::string* v);
