@@ -30,7 +30,8 @@ namespace {
 std::tuple<SmallVector<::mlir::utils::IteratorType>, SmallVector<AffineMap>>
 computeIteratorTypesAndIndexingMaps(int64_t inputRank, int64_t dim, OpBuilder& builder,
                                     bool allParallel = false) {
-  SmallVector<::mlir::utils::IteratorType> iteratorTypes(inputRank, ::mlir::utils::IteratorType::parallel);
+  SmallVector<::mlir::utils::IteratorType> iteratorTypes(inputRank,
+                                                         ::mlir::utils::IteratorType::parallel);
   if (!allParallel) iteratorTypes[dim] = ::mlir::utils::IteratorType::reduction;
   auto identityMap = AffineMap::getMultiDimIdentityMap(inputRank, builder.getContext());
   SmallVector<AffineExpr, 2> affineExprs;
