@@ -114,6 +114,11 @@ class GraphCache(object):
         with AvoidRecursiveCacheCall(graph):
             return graph(*args, **kwargs)
 
+    def _compile(self, *args, **kwargs):
+        graph = self.get_graph(*args, **kwargs)
+        with AvoidRecursiveCacheCall(graph):
+            return graph._compile(*args, **kwargs)
+
     def runtime_state_dict(
         self, destination=None, with_eager=False,
     ) -> Dict[str, Dict[str, Union[Dict[str, Tensor], str]]]:
