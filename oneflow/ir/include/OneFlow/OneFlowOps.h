@@ -59,7 +59,9 @@ inline std::string GetOpTypeName(T op) {
   if (auto alternative_name = dyn_cast<oneflow::HasAlternativeOpTypeName>(op)) {
     op_type_name = alternative_name.getOriginalOpTypeName();
   }
-  if (auto user_op = dyn_cast<oneflow::UserOp>(op)) { op_type_name = user_op.op_type_name().str(); }
+  if (auto user_op = dyn_cast<oneflow::UserOp>(op)) {
+    op_type_name = user_op.getOpTypeName().str();
+  }
   return op_type_name;
 }
 ResultRange GetDataOutputResults(Operation* op);

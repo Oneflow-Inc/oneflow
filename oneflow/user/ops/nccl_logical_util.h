@@ -92,6 +92,8 @@ Maybe<void> GetNcclLogicalNdSbpFromAttr(ContextT* ctx, const std::string& attr_n
   return Maybe<void>::Ok();
 }
 
+std::string GetCommKeyFromNcclType(const std::string& op_type_name);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_USER_OPS_NCCL_LOGICAL_UTIL_H_

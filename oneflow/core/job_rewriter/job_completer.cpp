@@ -158,6 +158,13 @@ Maybe<void> JobCompleter::Complete(Job* job) {
     // NOTE(chengcheng): this pass need as last pass for insert correct op with nccl boxing.
     JUST(JobPass4Name("InsertNcclLogicalOpPass")(job, &job_pass_ctx));
     compile_tc->Count("[GraphCompile]" + job_name + " InsertNcclLogicalOpPass", 1, true);
+    // NOTE(chengcheng): must do this pass after InsertNcclLogicalOpPass for nccl op fusion and
+    //    add ctrl stirct order.
+    JUST(JobPass4Name("NcclLogicalOpFusionPass")(job, &job_pass_ctx));
+    compile_tc->Count("[GraphCompile]" + job_name + " NcclLogicalOpFusionPass", 1, true);
+    JUST(JobPass4Name("NcclLogicalChainStrictOrderPass")(job, &job_pass_ctx));
+    compile_tc->Count("[GraphCompile]" + job_name + " NcclLogicalChainStrictOrderPass", 1, true);
+
     // NOTE(chengcheng): Because insert new logical nccl op, MUST dump time shape, sbp again.
     JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
     compile_tc->Count("[GraphCompile]" + job_name + " DumpBlobParallelConfPass", 1, true);
