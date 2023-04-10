@@ -19,6 +19,9 @@ limitations under the License.
 #include <cstdint>
 #include <type_traits>
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/common/shape_view.h"
+#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
 namespace oneflow {
@@ -115,25 +118,27 @@ static void conj_symmetry(T* data_out, const Shape& shape, const Stride& strides
 
 template<DeviceType device_type, typename T, typename = void>
 struct FftC2CKernelUtil {
-  static void FftC2CForward(ep::Stream* stream, const T* data_in, T* data_out,
-                            const Shape& input_shape, const Shape& output_shape,
-                            const Stride& input_stride, const Stride& output_stride, bool forward,
+  static void FftC2CForward(ep::Stream* stream, const T* data_in, T* data_out, T* tmp_buffer,
+                            const Shape& input_shape, const Shape& output_shape, const Shape& tmp_buffer_shape,
+                            const Stride& input_stride, const Stride& output_stride, const Stride& tmp_buffer_stride,
+                            bool forward,
                             const std::vector<int64_t>& dims, fft_norm_mode normalization);
 };
 
 template<DeviceType device_type, typename IN, typename OUT>
 struct FftR2CKernelUtil {
-  static void FftR2CForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
-                            const Shape& input_shape, const Shape& output_shape,
-                            const Stride& input_stride, const Stride& output_stride, bool forward,
+  static void FftR2CForward(ep::Stream* stream, const IN* data_in, OUT* data_out, OUT* tmp_buffer,
+                            const Shape& input_shape, const Shape& output_shape, const Shape& tmp_buffer_shape,
+                            const Stride& input_stride, const Stride& output_stride, const Shape& tmp_buffer_stride, 
+                            bool forward,
                             const std::vector<int64_t>& dims, fft_norm_mode normalization);
 };
 
 template<DeviceType device_type, typename IN, typename OUT>
 struct FftC2RKernelUtil {
-  static void FftC2RForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
-                            const Shape& input_shape, const Shape& output_shape,
-                            const Stride& input_stride, const Stride& output_stride,
+  static void FftC2RForward(ep::Stream* stream, const IN* data_in, OUT* data_out, IN* tmp_buffer,
+                            const Shape& input_shape, const Shape& output_shape, const Shape& tmp_buffer_shape,
+                            const Stride& input_stride, const Stride& output_stride, const Shape& tmp_buffer_stride,
                             int64_t last_dim_size, const std::vector<int64_t>& dims,
                             fft_norm_mode normalization);
 };

@@ -242,13 +242,13 @@ struct CuFFtParams {
 };
 
 template<typename IN, typename OUT>
-class CuFFtConfig {
+class CuFFTConfig {
  public:
-  CuFFtConfig(const CuFFtConfig&) = delete;
-  CuFFtConfig& operator=(CuFFtConfig const&) = delete;
-  ~CuFFtConfig() = default;
+  CuFFTConfig(const CuFFTConfig&) = delete;
+  CuFFTConfig& operator=(CuFFTConfig const&) = delete;
+  ~CuFFTConfig() = default;
 
-  explicit CuFFtConfig(CuFFtParams& params) {  // NOLINT
+  explicit CuFFTConfig(CuFFtParams& params) {  // NOLINT
     // cufftPlanMany(&plan_handle_, params.ndim, params.rank, params.input_shape,
     //               params.input_strides[0], params.input_strides[1], params.output_shape,
     //               params.output_strides[0], params.output_strides[1], exectype_, params.batch);

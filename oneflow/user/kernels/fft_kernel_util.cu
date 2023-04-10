@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 #if 1
 #include <cuda.h>
 
@@ -23,7 +24,7 @@ limitations under the License.
 
 namespace oneflow {
 
-#if 0
+#if 1
 namespace {
 
 template<typename IN, typename OUT>
@@ -163,17 +164,92 @@ REGISTER_STFT_GPU_KERNEL(float, cufftComplex)
 REGISTER_STFT_GPU_KERNEL(double, cufftDoubleComplex)
 #endif
 
-// template<typename IN, typename OUT>
-// static void DoFFT(OUT* out, IN* in, )
+// Execute a general fft operation (can be c2c, onesided r2c or onesided c2r)
+template<typename IN, typename OUT>
+static void DoFFT(IN* in, OUT* out,
+                  const Stride& in_stride, const Shape& in_shape, 
+                  std::vector<int64_t>& out_sizes, std::vector<int64_t>& fft_dims, bool forward)
+{
+  const int64_t ndim = in_stride.size();
+  const int64_t fft_ndim = fft_dims.size();
+  const int64_t batch_dims = ndim - fft_ndim;
+
+
+  // Permute dimensions to make batch dims come first, and this maximizes data locality
+  std::vector<int64_t> dim_permute(ndim);
+  std::iota(dim_permute.begin(), dim_permute.end(), int64_t(0));
+  std::vector<bool> is_transformed_dim(ndim, false);
+  for (const auto& dim : fft_dims){
+    is_transformed_dim[dim] = true;
+  }
+
+  auto batch_end = std::partition(dim_permute.begin(), dim_permute.end(),
+                                        [&](int64_t d) {return !is_transformed_dim[d];});
+  std::sort(dim_permute.begin(), batch_end,
+            [&](int64_t a, int64_t b) { return in_stride[a] > in_stride[b]; });
+  std::copy(fft_dims.begin(), fft_dims.end(), batch_end);
+  // permute
+  std::vector<int64_t> working_in_stride(dim_permute.size(), 0);
+  std::vector<int64_t> working_in_shape(dim_permute.size(), 0);
+  FOR_RANGE(int64_t, i, 0, dim_permute.size()){
+    working_in_shape[i] = in_shape[dim_permute[i]];
+    working_in_stride[i] = in_stride[dim_permute[i]];
+  }
+
+  std::vector<int64_t> batched_sizes(fft_ndim + 1);
+  int64_t batch = 1;
+  FOR_RANGE(int64_t, i, 0, working_in_shape.size() - fft_ndim){
+    batch *= working_in_shape[i];
+  }
+  // input = input.reshape(batched_sizes)
+  // maybe method:
+  // `1
+  // 1. judge if compact
+  // 2. if compact, no need to be contiguous
+  // 3. change working_in_shape and working_in_stride 
+  // `2
+  // 1. judge if compact
+  // 2. if compact, just change working_in_shape and working_in_stride
+  // 3. if not compact, construct `MemcpyFactory` like reshape kernel
+
+}
 
 template<typename T>
 class FftC2CKernelUtil<DeviceType::kCUDA, T>{
-  static void FftC2CForward(ep::Stream* stream, const T* data_in, T* data_out,
-                            const Shape& input_shape, const Shape& output_shape,
-                            const Stride& input_stride, const Stride& output_stride, bool forward,
+  static void FftC2CForward(ep::Stream* stream, const T* data_in, T* data_out, T* tmp_buffer,  
+                            const Shape& input_shape, const Shape& output_shape, const Shape& tmp_buffer_shape,
+                            const Stride& input_stride, const Stride& output_stride, const Stride& tmp_buffer_stride, 
+                            bool forward,
                             const std::vector<int64_t>& dims, fft_norm_mode normalization){
-    // TO-DO:
-    UNIMPLEMENTED();
+    std::vector<int64_t> sorted_dims(dims.begin(), dims.end());
+    Shape working_tensor_shape = input_shape;
+    Stride working_tensor_stride = input_stride;
+    T* working_data_ptr = data_in;
+
+    while (true){
+      std::sort(sorted_dims.begin(), sorted_dims.end(), 
+            [&](int64_t a, int64_t b) { return working_tensor_stride[a] > working_tensor_stride[b];});
+
+      size_t cur_fft_ndims = std::min(static_cast<size_t>(max_rank), sorted_dims.size());
+      std::vector<int64_t> cur_fft_dims(sorted_dims.end() - cur_fft_ndims, sorted_dims.end());
+
+      // DoFFT
+
+      // after DoFFT
+      sorted_dims.resize(sorted_dims.size() - cur_fft_ndims);
+
+      if (sorted_dims.empty()){
+        break;
+      }
+
+      if (working_data_ptr == data_in){
+          working_data_ptr = data_out;
+          // working_tensor_shape = 
+      }
+    }
+
+    // input -> c2c -> output -> c2c -> tmp_buffer
+
   }
 };
 
