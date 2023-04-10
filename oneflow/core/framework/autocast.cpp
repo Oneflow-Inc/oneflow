@@ -90,6 +90,7 @@ void set_autocast_cache_enabled(bool enabled) { *cache_enabled() = enabled; }
 
 Maybe<one::Tensor> cached_cast(const std::shared_ptr<one::Tensor>& tensor, Symbol<DType> cast_type,
                                DeviceType device_type) {
+  // TODO(WangYi): add check tensor.is_view
   bool use_cache = (is_autocast_cache_enabled() && tensor->requires_grad()
                     && cast_type == get_lower_precision_fp_from_device_type(device_type)
                     && tensor->dtype()->data_type() == DataType::kFloat && tensor->is_leaf());
@@ -109,10 +110,7 @@ Maybe<one::Tensor> cached_cast(const std::shared_ptr<one::Tensor>& tensor, Symbo
   }
 };
 
-void clear_cache() {
-  cached_casts()->clear();
-  // TODO(hjchen2)
-}
+void clear_cache() { cached_casts()->clear(); }
 
 AutoCastColor AutoCastMeta::autocast_color() const { return autocast_color_; }
 
