@@ -448,10 +448,10 @@ class UnflattenFunctor {
     int64_t true_dim = JUST(maybe_wrap_dim(dim, in_shape.size()));
 
     auto status = infer_size_dv(sizes, in_shape[true_dim]);
-    if(!status.IsOk()) {
+    if (!status.IsOk()) {
       return Error::RuntimeError() << "unflatten: Provided sizes " << sizes.ToString()
-                                   << " don't multiply up to the size of dim " << true_dim
-                                   << " (" << in_shape[true_dim] << ") in the input tensor";
+                                   << " don't multiply up to the size of dim " << true_dim << " ("
+                                   << in_shape[true_dim] << ") in the input tensor";
     }
     DimVector inferred_size = *JUST(status);
 
