@@ -55,7 +55,7 @@ void CclInitCollectiveNode(CollectiveBoxingGenericTaskNode* node, const Parallel
   } else {
     CHECK_EQ(root, -1);
   }
-  // op_desc->set_device_type(device_type);
+  op_desc->set_device_type(device_type);
   rank_desc->set_rank(parallel_id);
 
   const int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
