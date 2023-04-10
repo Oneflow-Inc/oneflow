@@ -118,6 +118,8 @@ enum ValueType : int {
   // Complex
   kCOMPLEX_FLOAT,
   kCOMPLEX_DOUBLE,
+  kCHAR,
+  kINT16
 };
 
 #define VALUE_TYPE_OF_IMPL(cpp_type, value_type)                                                 \
@@ -133,6 +135,8 @@ enum ValueType : int {
 
 VALUE_TYPE_OF_IMPL(void, kVOID);
 VALUE_TYPE_OF_IMPL(int32_t, kINT32);
+VALUE_TYPE_OF_IMPL(int16_t, kINT16);
+VALUE_TYPE_OF_IMPL(char, kCHAR);
 VALUE_TYPE_OF_IMPL(uint32_t, kUINT32);
 VALUE_TYPE_OF_IMPL(int64_t, kINT64);
 VALUE_TYPE_OF_IMPL(uint64_t, kUINT64);

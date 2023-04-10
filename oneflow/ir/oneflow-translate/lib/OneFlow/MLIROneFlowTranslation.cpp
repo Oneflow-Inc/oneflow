@@ -282,7 +282,7 @@ LogicalResult JobImporter::ProcessVariableOp(const ::oneflow::OperatorConf& op_c
   if (op_conf.variable_conf().has_data_type()) {
     attr_vec.emplace_back(GetBuilder().getNamedAttr(
         OpTrait::TensorSource<void>::getDataTypeAttrName(),
-        GetDataTypeAttr(GetMLIRContext(), op_conf.variable_conf().data_type()).getValue()));
+        GetDataTypeAttr(GetMLIRContext(), op_conf.variable_conf().data_type()).value()));
   }
   // attr model_name
   if (op_conf.variable_conf().has_model_name()) {
@@ -399,8 +399,7 @@ LogicalResult JobImporter::ProcessInputOp(const ::oneflow::OperatorConf& op_conf
   if (op_conf.input_conf().blob_conf().has_data_type()) {
     attr_vec.emplace_back(GetBuilder().getNamedAttr(
         OpTrait::TensorSource<void>::getDataTypeAttrName(),
-        GetDataTypeAttr(GetMLIRContext(), op_conf.input_conf().blob_conf().data_type())
-            .getValue()));
+        GetDataTypeAttr(GetMLIRContext(), op_conf.input_conf().blob_conf().data_type()).value()));
   }
   // attr is_dynamic
   if (op_conf.input_conf().blob_conf().has_is_dynamic()) {
@@ -482,8 +481,7 @@ LogicalResult JobImporter::ProcessOutputOp(const ::oneflow::OperatorConf& op_con
   if (op_conf.output_conf().blob_conf().has_data_type()) {
     attr_vec.emplace_back(GetBuilder().getNamedAttr(
         OpTrait::TensorSource<void>::getDataTypeAttrName(),
-        GetDataTypeAttr(GetMLIRContext(), op_conf.output_conf().blob_conf().data_type())
-            .getValue()));
+        GetDataTypeAttr(GetMLIRContext(), op_conf.output_conf().blob_conf().data_type()).value()));
   }
   // attr is_dynamic
   if (op_conf.output_conf().blob_conf().has_is_dynamic()) {
@@ -564,7 +562,7 @@ LogicalResult JobImporter::ProcessJob() {
   });
   if (!is_succeeded) { return failure(); }
 
-  auto func_type = GetBuilder().getFunctionType(input_types, llvm::None);
+  auto func_type = GetBuilder().getFunctionType(input_types, std::nullopt);
   auto job_op =
       GetBuilder().create<oneflow::Job>(GetRootLocation(), job_->job_conf().job_name(), func_type);
   auto* entryBlock = job_op.addEntryBlock();
@@ -595,7 +593,7 @@ LogicalResult JobImporter::ProcessJob() {
   if (!return_op) { GetBuilder().create<mlir::oneflow::ReturnOp>(GetRootLocation(), results); }
 
   func_type = GetBuilder().getFunctionType(input_types, result_types);
-  job_op.getOperation()->setAttr(oneflow::Job::getTypeAttrName(), TypeAttr::get(func_type));
+  job_op.setFunctionTypeAttr(TypeAttr::get(func_type));
   GetModule().push_back(job_op);
   return success();
 }
@@ -603,13 +601,13 @@ LogicalResult JobImporter::ProcessJob() {
 template<typename OpType, typename AdaptorType>
 void UpdatePlacement(OpType* op, AdaptorType& adaptor, ::oneflow::Job& job) {
   auto* pg = job.mutable_placement()->add_placement_group();
-  pg->mutable_op_set()->add_op_name(adaptor.op_name().str());
-  pg->mutable_parallel_conf()->set_device_tag(adaptor.device_tag().str());
-  for (auto p : adaptor.device_name()) {
+  pg->mutable_op_set()->add_op_name(adaptor.getOpName().str());
+  pg->mutable_parallel_conf()->set_device_tag(adaptor.getDeviceTag().str());
+  for (auto p : adaptor.getDeviceName()) {
     pg->mutable_parallel_conf()->add_device_name(
         p.template dyn_cast<StringAttr>().getValue().str());
   }
-  if (::llvm::Optional<ArrayAttr> hierarchy = adaptor.hierarchy()) {
+  if (::llvm::Optional<ArrayAttr> hierarchy = adaptor.getHierarchy()) {
     for (auto dim : hierarchy->getValue()) {
       pg->mutable_parallel_conf()->mutable_hierarchy()->add_dim(
           dim.template dyn_cast<IntegerAttr>().getInt());
@@ -628,7 +626,7 @@ LogicalResult JobImporter::TryToUpdateJob() {
 
   auto find_first_job = [&](oneflow::Job job) -> WalkResult {
     job_op = job.getOperation();
-    new_job.mutable_job_conf()->set_job_name(job.sym_name().str());
+    new_job.mutable_job_conf()->set_job_name(job.getSymName().str());
     return WalkResult::interrupt();
   };
 
@@ -682,7 +680,7 @@ LogicalResult JobImporter::TryToUpdateJob() {
   if (job_op->walk(ConvertOp).wasInterrupted()) { return failure(); }
 
   // add input op
-  auto arguments = llvm::dyn_cast<oneflow::Job>(job_op).body().front().getArguments();
+  auto arguments = llvm::dyn_cast<oneflow::Job>(job_op).getBody().front().getArguments();
   for (BlockArgument argument : arguments) {
     for (auto& use : argument.getUses()) {
       Operation* owner = use.getOwner();
@@ -710,7 +708,7 @@ LogicalResult JobImporter::TryToUpdateJob() {
 LogicalResult JobImporter::ConvertUserOp(Operation* op, ::oneflow::Job& job) {
   oneflow::ConfOpAdaptor conf_op_adaptor(op->getOperands(), op->getAttrDictionary());
   UpdatePlacement(op, conf_op_adaptor, job);
-  StringRef op_name = conf_op_adaptor.op_name();
+  StringRef op_name = conf_op_adaptor.getOpName();
 
   auto* op_conf = job.mutable_net()->add_op();
   auto* user_conf = op_conf->mutable_user_conf();
@@ -736,11 +734,11 @@ LogicalResult JobImporter::ConvertUserOp(Operation* op, ::oneflow::Job& job) {
 LogicalResult JobImporter::ConvertSystemOp(Operation* op, ::oneflow::Job& job) {
   oneflow::SystemOpAdaptor system_op_adaptor(op->getOperands(), op->getAttrDictionary());
   UpdatePlacement(op, system_op_adaptor, job);
-  auto op_name = system_op_adaptor.op_name().str();
+  auto op_name = system_op_adaptor.getOpName().str();
   ::oneflow::OperatorConf op_conf = job_wrapper_.OpConf4OpName(op_name);
   for (const auto& ibn : llvm::enumerate(op->getAttrOfType<ArrayAttr>("input_bns"))) {
     auto result = GetDataInputOperands(op)[ibn.index()].dyn_cast<OpResult>();
-    std::string new_val = user_op::GetOutputLbn(result).getValue();
+    std::string new_val = user_op::GetOutputLbn(result).value();
     job_wrapper_.ReplaceInputLbnInOpCustomizedConf(
         &op_conf, ibn.value().dyn_cast<StringAttr>().getValue().str(), new_val);
   }
@@ -1034,7 +1032,7 @@ void LoadJobFromIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::
 }
 
 void registerFromOneFlowJobTranslation() {
-  TranslateToMLIRRegistration fromOneFlowJob("import-oneflow-job",
+  TranslateToMLIRRegistration fromOneFlowJob("import-oneflow-job", "import oneflow from job",
                                              [](llvm::StringRef str, MLIRContext* context) {
                                                return TranslateOneFlowJobToModule(str, context);
                                              });
