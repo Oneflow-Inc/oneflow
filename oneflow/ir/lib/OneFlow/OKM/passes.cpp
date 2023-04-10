@@ -24,11 +24,11 @@ limitations under the License.
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "mlir-c/BuiltinTypes.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
@@ -127,7 +127,7 @@ struct WrapOKMKernelPattern : public mlir::OpRewritePattern<func::FuncOp> {
       int ret_index = -1;
       for (auto use : res.getUsers()) {
         if (auto to_ret = llvm::dyn_cast_or_null<TensorToRetOp>(use)) {
-          ret_index = to_ret.index();
+          ret_index = to_ret.getIndex();
           break;
         }
       }
@@ -141,19 +141,18 @@ struct WrapOKMKernelPattern : public mlir::OpRewritePattern<func::FuncOp> {
     return nullptr;
   }
 
-  static void CreateWrapOp(Operation* op, mlir::PatternRewriter& rewriter,
-                           BlockAndValueMapping& mapper,
+  static void CreateWrapOp(Operation* op, mlir::PatternRewriter& rewriter, IRMapping& mapper,
                            const llvm::SmallVector<Type>& mem_outs_types,
                            const llvm::SmallVector<Value>& map_ins) {
     auto wrapper_op = rewriter.create<WrapperOp>(op->getLoc(), mem_outs_types, ValueRange(map_ins));
     for (auto elem : llvm::zip(op->getResults(), wrapper_op->getResults())) {
       mapper.map(std::get<0>(elem), std::get<1>(elem));
     }
-    auto& wrap_block = wrapper_op.body().emplaceBlock();
+    auto& wrap_block = wrapper_op.getBody().emplaceBlock();
     OpBuilder::InsertionGuard insertGuard(rewriter);
     rewriter.setInsertionPointToStart(&wrap_block);
     ImplicitLocOpBuilder nb(rewriter.getUnknownLoc(), rewriter);
-    BlockAndValueMapping wrap_mapper;
+    IRMapping wrap_mapper;
     for (auto in : llvm::zip(op->getOperands(), wrapper_op.getOperands())) {
       auto to_tensor = rewriter.create<mlir::bufferization::ToTensorOp>(rewriter.getUnknownLoc(),
                                                                         std::get<1>(in));
@@ -175,8 +174,7 @@ struct WrapOKMKernelPattern : public mlir::OpRewritePattern<func::FuncOp> {
     rewriter.create<ReturnOp>(rewriter.getUnknownLoc(), ValueRange(outs));
   }
 
-  static void HandleOneFlowOp(Operation* op, mlir::PatternRewriter& rewriter,
-                              BlockAndValueMapping& mapper) {
+  static void HandleOneFlowOp(Operation* op, mlir::PatternRewriter& rewriter, IRMapping& mapper) {
     // record outs type
     llvm::SmallVector<Type> mem_outs_types;
     for (auto it : op->getResultTypes()) {
@@ -199,7 +197,7 @@ struct WrapOKMKernelPattern : public mlir::OpRewritePattern<func::FuncOp> {
           ++idx;
         }
         Operation* oneflow_op = nullptr;
-        auto& ops = wrap_op.body().front();
+        auto& ops = wrap_op.getBody().front();
         for (auto& op : ops) {
           if (oneflow::OneFlowDialect::getDialectNamespace().equals(
                   op.getDialect()->getNamespace())) {
@@ -240,18 +238,18 @@ struct WrapOKMKernelPattern : public mlir::OpRewritePattern<func::FuncOp> {
     rewriter.setInsertionPointToStart(&block);
 
     auto& ops = func.getBody().front();
-    BlockAndValueMapping mapper;
+    IRMapping mapper;
     for (auto& op : ops) {
       llvm::TypeSwitch<Operation*>(&op)
           .Case<ArgToTensorOp>([&](ArgToTensorOp op) {
             auto mem_type = MemRefType::get(op.getType().getShape(), op.getType().getElementType());
-            auto mem_op = rewriter.create<ArgToMemrefOp>(op->getLoc(), mem_type, op.index());
-            mapper.map(op, mem_op);
+            auto mem_op = rewriter.create<ArgToMemrefOp>(op->getLoc(), mem_type, op.getIndex());
+            mapper.map(Value(op), mem_op);
           })
           .Case<TensorToRetOp>([&](TensorToRetOp op) {
             auto mem_type = MemRefType::get(op.getType().getShape(), op.getType().getElementType());
-            rewriter.create<MemrefToRetOp>(op->getLoc(), mem_type, mapper.lookup(op.tensor()),
-                                           op.index());
+            rewriter.create<MemrefToRetOp>(op->getLoc(), mem_type, mapper.lookup(op.getTensor()),
+                                           op.getIndex());
           })
           .Default([&](Operation* op) {
             if (oneflow::OneFlowDialect::getDialectNamespace().equals(
@@ -378,7 +376,7 @@ class OptOKMMemrefPass : public OptOKMMemrefPassBase<OptOKMMemrefPass> {
     registry.insert<oneflow::OneFlowDialect>();
     registry.insert<OKMDialect>();
     registry.insert<bufferization::BufferizationDialect>();
-    registry.insert<arith::ArithmeticDialect>();
+    registry.insert<arith::ArithDialect>();
   }
 
   void runOnOperation() override {
@@ -395,11 +393,11 @@ struct ConvertOKMToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
   static void ConvertOpToOKL(mlir::Operation& it, func::FuncOp& wrap_func, WrapperOp wrap_mem_op,
                              mlir::PatternRewriter& rewriter, int& index) {
     auto wrap_okl_op = rewriter.create<okl::WrapperKernelOp>(rewriter.getUnknownLoc(), index++);
-    wrap_okl_op.body().emplaceBlock();
+    wrap_okl_op.getBody().emplaceBlock();
     OpBuilder::InsertionGuard insertGuard(rewriter);
-    rewriter.setInsertionPointToStart(&wrap_okl_op.body().front());
+    rewriter.setInsertionPointToStart(&wrap_okl_op.getBody().front());
 
-    BlockAndValueMapping mapper;
+    IRMapping mapper;
     auto ins_num = it.getNumOperands();
     auto outs_num = it.getNumResults() + ins_num;
     for (int idx = 0; idx < ins_num; ++idx) {
@@ -408,17 +406,17 @@ struct ConvertOKMToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
                        return rewriter.create<okl::GetTensorFromArgOp>(
                            rewriter.getUnknownLoc(),
                            memref::getTensorTypeFromMemRefType(op->getResult(0).getType()),
-                           wrap_func.getArgument(0), op.index());
+                           wrap_func.getArgument(0), op.getIndex());
                      })
                      .Case<RetToMemrefOp>([&](RetToMemrefOp op) {
                        return rewriter.create<okl::GetTensorFromRetOp>(
                            rewriter.getUnknownLoc(),
                            memref::getTensorTypeFromMemRefType(op->getResult(0).getType()),
-                           wrap_func.getArgument(0), op.index());
+                           wrap_func.getArgument(0), op.getIndex());
                      })
                      .Case<memref::ViewOp>([&](memref::ViewOp op) {
                        auto offset = rewriter.getI64IntegerAttr(
-                           llvm::dyn_cast<arith::ConstantIndexOp>(op.byte_shift().getDefiningOp())
+                           llvm::dyn_cast<arith::ConstantIndexOp>(op.getByteShift().getDefiningOp())
                                .value());
                        return rewriter.create<okl::PoolToTensorOp>(
                            rewriter.getUnknownLoc(),
@@ -436,11 +434,11 @@ struct ConvertOKMToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
             return rewriter.create<okl::GetTensorAsRetOp>(
                 rewriter.getUnknownLoc(),
                 memref::getTensorTypeFromMemRefType(op->getResult(0).getType()),
-                wrap_func.getArgument(0), new_op->getResult(idx - ins_num), op.index());
+                wrap_func.getArgument(0), new_op->getResult(idx - ins_num), op.getIndex());
           })
           .Case<memref::ViewOp>([&](memref::ViewOp op) {
             auto offset = rewriter.getI64IntegerAttr(
-                llvm::dyn_cast<arith::ConstantIndexOp>(op.byte_shift().getDefiningOp()).value());
+                llvm::dyn_cast<arith::ConstantIndexOp>(op.getByteShift().getDefiningOp()).value());
             return rewriter.create<okl::TensorToPoolOp>(
                 rewriter.getUnknownLoc(),
                 memref::getTensorTypeFromMemRefType(op->getResult(0).getType()),
@@ -452,7 +450,7 @@ struct ConvertOKMToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
       auto op = llvm::dyn_cast<memref::ViewOp>(wrap_mem_op->getOperand(outs_num).getDefiningOp());
 
       auto offset = rewriter.getI64IntegerAttr(
-          llvm::dyn_cast<arith::ConstantIndexOp>(op.byte_shift().getDefiningOp()).value());
+          llvm::dyn_cast<arith::ConstantIndexOp>(op.getByteShift().getDefiningOp()).value());
       rewriter.create<okl::PoolToBufferOp>(
           rewriter.getUnknownLoc(), memref::getTensorTypeFromMemRefType(op->getResult(0).getType()),
           wrap_func.getArgument(0), offset);
@@ -485,7 +483,7 @@ struct ConvertOKMToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
         }
       }
       if (auto wrap_mem_op = llvm::dyn_cast_or_null<WrapperOp>(op)) {
-        auto& wrap_ops = wrap_mem_op.body().front();
+        auto& wrap_ops = wrap_mem_op.getBody().front();
         for (auto& it : wrap_ops) {
           if (oneflow::OneFlowDialect::getDialectNamespace().equals(
                   it.getDialect()->getNamespace())) {
@@ -519,7 +517,7 @@ class ConvertOKMToOKLPass : public ConvertOKMToOKLPassBase<ConvertOKMToOKLPass> 
     registry.insert<oneflow::OneFlowDialect>();
     registry.insert<OKMDialect>();
     registry.insert<bufferization::BufferizationDialect>();
-    registry.insert<arith::ArithmeticDialect>();
+    registry.insert<arith::ArithDialect>();
     registry.insert<okl::OKLDialect>();
   }
 

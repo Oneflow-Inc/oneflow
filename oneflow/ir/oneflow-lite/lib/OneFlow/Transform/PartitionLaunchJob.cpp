@@ -19,7 +19,7 @@ limitations under the License.
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowOpTraits.h"
 
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/MLIRContext.h"
@@ -57,7 +57,7 @@ func::FuncOp PartitionLaunchJobPass::addCallableFunc(
   auto funcOp = builder.create<func::FuncOp>(block[0]->getLoc(), callee_name, funcType);
   auto* entryBlock = funcOp.addEntryBlock();
 
-  BlockAndValueMapping mapping;
+  IRMapping mapping;
   for (auto operand : llvm::enumerate(operands)) {
     mapping.map(operand.value(), entryBlock->getArgument(operand.index()));
   }
