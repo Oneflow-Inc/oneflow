@@ -13,27 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_FUNCOPS_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_FUNCOPS_H_
 
-#include "mlir/Dialect/PDL/IR/PDL.h"
-#include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
-#include "mlir/Parser/Parser.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassManager.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "OneFlow/OneFlowPDLLPatterns.h"
-
-using namespace mlir;
-
-#include "oneflow/ir/lib/OneFlow/PDLL/ElementwiseFusionPatterns.h.inc"
 
 namespace mlir {
 
 namespace oneflow {
 
-void populateElementwiseFusionPatterns(RewritePatternSet& patterns) {
-  populateGeneratedPDLLPatterns(patterns);
-}
+std::unique_ptr<mlir::Pass> createOneFlowJobToFuncPass();
+
+std::unique_ptr<mlir::Pass> createFuncToOneFlowJobPass();
 
 }  // namespace oneflow
 
 }  // namespace mlir
+
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_FUNCOPS_H_
