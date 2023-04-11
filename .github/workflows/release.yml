@@ -90,10 +90,9 @@ jobs:
           clean-ccache: false
           nightly: ${{ github.event_name == 'schedule' || github.ref == 'refs/heads/master'}}
           python-versions: |
+            3.6
             3.7
             3.8
-            3.9
-            3.10
       - name: Upload wheel
         uses: ./.github/actions/upload_oss
         with:
