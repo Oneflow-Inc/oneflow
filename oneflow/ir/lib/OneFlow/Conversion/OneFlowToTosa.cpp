@@ -365,18 +365,27 @@ struct MaxPool2DOpLowering final : public OpConversionPattern<MaxPool2DOp> {
     auto pad_pairs = get_pair_int64_from_array(op.getPadding());
 
     auto loc = op.getLoc();
-    auto perms = {0, 2, 3, 1};
 
     const auto kernel = rewriter.getDenseI64ArrayAttr({kernel_pairs.first, kernel_pairs.second});
     const auto stride = rewriter.getDenseI64ArrayAttr({stride_pairs.first, stride_pairs.second});
     const auto pad = rewriter.getDenseI64ArrayAttr(
         {pad_pairs.first, pad_pairs.second, pad_pairs.first, pad_pairs.second});
 
-    auto input = CreateTransposeValue(loc, rewriter, op.getX(), perms);
-    auto output = CreateTransposeType(op.getY().getType().cast<ShapedType>(), perms);
+    auto input = op.getX();
+    auto out_type = op.getY().getType().cast<ShapedType>();
 
-    auto max_pool2d = rewriter.create<tosa::MaxPool2dOp>(loc, output, input, kernel, stride, pad);
-    auto y = CreateTransposeValue(loc, rewriter, max_pool2d, {0, 3, 1, 2});
+    Value y;
+    if (op.IsNCHW()) {
+      auto perms = {0, 2, 3, 1};
+      auto reverse_perms = {0, 3, 1, 2};
+      input = CreateTransposeValue(loc, rewriter, input, perms);
+      out_type = CreateTransposeType(out_type, perms);
+      auto max_pool2d =
+          rewriter.create<tosa::MaxPool2dOp>(loc, out_type, input, kernel, stride, pad);
+      y = CreateTransposeValue(loc, rewriter, max_pool2d, reverse_perms);
+    } else {
+      y = rewriter.create<tosa::MaxPool2dOp>(loc, out_type, input, kernel, stride, pad);
+    }
 
     auto indice_output = convertToSignless(op->getContext(), op.getIndice().getType());
     auto value = DenseElementsAttr::get(indice_output, rewriter.getZeroAttr(rewriter.getI64Type()));
@@ -548,23 +557,37 @@ struct Conv2DOpLowering final : public OpConversionPattern<Conv2DOp> {
     auto loc = op.getLoc();
     if (!bias) {
       const auto output_shape = op.getOut().getType().cast<ShapedType>();
-      const auto output_channels = output_shape.getDimSize(1);
+      // support nhwc
+      const auto output_channels = output_shape.getDimSize(op.IsNCHW() ? 1 : 3);
       const auto bias_elem_type = output_shape.getElementType();
       const auto type = RankedTensorType::get(output_channels, bias_elem_type);
       bias = rewriter.create<tosa::ConstOp>(
           op.getLoc(), type, DenseElementsAttr::get(type, rewriter.getZeroAttr(bias_elem_type)));
     }
 
-    auto perms = {0, 2, 3, 1};
-    auto in = CreateTransposeValue(loc, rewriter, op.getIn(), perms);
-    auto weight = CreateTransposeValue(loc, rewriter, op.getWeight(), perms);
-    const auto output = CreateTransposeType(op.getOut().getType().cast<ShapedType>(), perms);
+    auto in = op.getIn();
+    auto weight = op.getWeight();
+    auto out_type = op.getOut().getType().cast<ShapedType>();
+    if (out_type.getRank() != 4) {
+      LOG(FATAL) << "Failed to lowering oneflow op";
+      op->dump();
+    }
+    // support nhwc
+    if (op.IsNCHW()) {
+      const auto perms = {0, 2, 3, 1};
+      const auto reverse_perms = {0, 3, 1, 2};
+      in = CreateTransposeValue(loc, rewriter, in, perms);
+      weight = CreateTransposeValue(loc, rewriter, weight, perms);
+      out_type = CreateTransposeType(out_type, perms);
+      auto conv2d =
+          rewriter.create<tosa::Conv2DOp>(loc, out_type, in, weight, bias, pad, stride, dilation);
 
-    auto conv2d =
-        rewriter.create<tosa::Conv2DOp>(loc, output, in, weight, bias, pad, stride, dilation);
-
-    auto res = CreateTransposeValue(loc, rewriter, conv2d, {0, 3, 1, 2});
-    rewriter.replaceOp(op, {res});
+      auto res = CreateTransposeValue(loc, rewriter, conv2d, reverse_perms);
+      rewriter.replaceOp(op, {res});
+    } else {
+      rewriter.replaceOpWithNewOp<tosa::Conv2DOp>(op, out_type, in, weight, bias, pad, stride,
+                                                  dilation);
+    }
     return success();
   }
 };
