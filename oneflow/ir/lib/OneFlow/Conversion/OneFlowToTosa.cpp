@@ -33,6 +33,7 @@ limitations under the License.
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/OpImplementation.h"
@@ -402,40 +403,66 @@ struct ReshapeOpLowering final : public OpConversionPattern<ReshapeOp> {
   }
 };
 
+// transpose the last two dims of the tensor. Reshape it to 3D if it is 2D.
+Value transposeAndReshapeIfRequired(Location loc, ConversionPatternRewriter& rewriter, Value matrix,
+                                    bool transpose) {
+  auto shape_type = matrix.getType().cast<ShapedType>();
+  CHECK(shape_type.getRank() == 2 || shape_type.getRank() == 3);
+  if (transpose) {
+    if (shape_type.getRank() == 2) {
+      matrix = CreateTransposeValue(loc, rewriter, matrix, {1, 0});
+      shape_type = matrix.getType().cast<ShapedType>();
+      llvm::SmallVector<int64_t, 4> reshape_dims{1, shape_type.getDimSize(0),
+                                                 shape_type.getDimSize(1)};
+      auto reshape_type = RankedTensorType::get(reshape_dims, shape_type.getElementType());
+      return rewriter.create<tosa::ReshapeOp>(loc, reshape_type, matrix,
+                                              rewriter.getDenseI64ArrayAttr(reshape_dims));
+    } else if (shape_type.getRank() == 3) {
+      return CreateTransposeValue(loc, rewriter, matrix, {0, 2, 1});
+    } else {
+      return Value{};
+    }
+  } else if (shape_type.getRank() == 2) {
+    llvm::SmallVector<int64_t, 4> reshape_dims{1, shape_type.getDimSize(0),
+                                               shape_type.getDimSize(1)};
+    auto reshape_type = RankedTensorType::get(reshape_dims, shape_type.getElementType());
+    return rewriter.create<tosa::ReshapeOp>(loc, reshape_type, matrix,
+                                            rewriter.getDenseI64ArrayAttr(reshape_dims));
+  }
+  return matrix;
+}
+
+// Reshape: 2D -> 3D -> tosa.matmul -> 3D -> 2D
 struct MatmulOpLowering final : public OpConversionPattern<MatmulOp> {
  public:
   using OpConversionPattern<MatmulOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(MatmulOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    // TODO: more throw for robust in matmul shape rank
-    auto loc = op.getLoc();
-
-    auto preprocess = [&](Value matrix, bool transpose) -> Value {
-      auto shape_type = matrix.getType().cast<ShapedType>();
-      if (transpose) { matrix = CreateTransposeValue(loc, rewriter, matrix, {1, 0}); }
-
-      shape_type = matrix.getType().cast<ShapedType>();
-      auto reshape_type = RankedTensorType::get(
-          {1, shape_type.getDimSize(0), shape_type.getDimSize(1)}, shape_type.getElementType());
-
-      return rewriter.create<tosa::ReshapeOp>(
-          op.getLoc(), reshape_type, matrix,
-          rewriter.getDenseI64ArrayAttr({1, shape_type.getDimSize(0), shape_type.getDimSize(1)}));
-    };
-
-    auto a = preprocess(op.getA(), op.getTransposeA());
-    auto b = preprocess(op.getB(), op.getTransposeB());
+    auto a = transposeAndReshapeIfRequired(op->getLoc(), rewriter, op.getA(), op.getTransposeA());
+    auto b = transposeAndReshapeIfRequired(op->getLoc(), rewriter, op.getB(), op.getTransposeB());
 
     const auto out_shape_type = op.getOut().getType().cast<ShapedType>();
     const auto out_reshape_type =
         RankedTensorType::get({1, out_shape_type.getDimSize(0), out_shape_type.getDimSize(1)},
                               out_shape_type.getElementType());
 
-    auto matmul = rewriter.create<tosa::MatMulOp>(loc, out_reshape_type, a, b);
+    auto matmul = rewriter.create<tosa::MatMulOp>(op.getLoc(), out_reshape_type, a, b);
     const auto new_shape =
         rewriter.getDenseI64ArrayAttr({out_shape_type.getDimSize(0), out_shape_type.getDimSize(1)});
 
     rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(op, out_shape_type, matmul, new_shape);
+    return success();
+  }
+};
+
+struct BatchMatmulOpLowering final : public OpConversionPattern<BatchMatmulOp> {
+ public:
+  using OpConversionPattern<BatchMatmulOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(BatchMatmulOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    auto a = transposeAndReshapeIfRequired(op->getLoc(), rewriter, op.getA(), op.getTransposeA());
+    auto b = transposeAndReshapeIfRequired(op->getLoc(), rewriter, op.getB(), op.getTransposeB());
+    rewriter.replaceOpWithNewOp<tosa::MatMulOp>(op, op.getOut().getType(), a, b);
     return success();
   }
 };
@@ -563,7 +590,66 @@ struct Conv2DOpLowering final : public OpConversionPattern<Conv2DOp> {
     return success();
   }
 };
+
+struct TransposeOpLowering final : public OpConversionPattern<TransposeOp> {
+ public:
+  using OpConversionPattern<TransposeOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(TransposeOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    llvm::SmallVector<int32_t, 4> perms{};
+    for (auto dim : op.getPerm().getAsValueRange<mlir::IntegerAttr>()) {
+      perms.push_back(dim.getSExtValue());
+    }
+    llvm::SmallVector<int64_t, 4> perms_shape(op.getPerm().size(), 1);
+    auto perms_op = rewriter.create<tosa::ConstOp>(
+        op->getLoc(), RankedTensorType::get(perms_shape, rewriter.getI32Type()),
+        rewriter.getI32TensorAttr(perms));
+    rewriter.replaceOpWithNewOp<tosa::TransposeOp>(op, op.getOutput().getType(), op.getInput(),
+                                                   perms_op.getOutput());
+    return success();
+  }
+};
+
+struct CastInputConversion final : public OpRewritePattern<InputOp> {
+ public:
+  explicit CastInputConversion(mlir::MLIRContext* context)
+      : OpRewritePattern<InputOp>(context, /*benefit=*/0) {}
+  mlir::LogicalResult matchAndRewrite(InputOp op, mlir::PatternRewriter& rewriter) const override {
+    auto outType = op.getOutput().getType();
+    if (isSignLessTensorOrOther(outType)) { return failure(); }
+    if (op->hasOneUse()) {
+      if (auto cast =
+              llvm::dyn_cast<UnrealizedConversionCastOp>(op.getOutput().use_begin()->getOwner())) {
+        if (isSignLessTensorOrOther(cast.getResult(0).getType())) { return failure(); }
+      }
+    }
+    LOG(ERROR) << "ok4";
+    InputOp cloned = rewriter.create<InputOp>(op->getLoc(), op.getResultTypes(), op->getOperands(),
+                                              op->getAttrs());
+    auto m = op->getParentOp();
+    m->dump();
+    rewriter.replaceOpWithNewOp<UnrealizedConversionCastOp>(
+        op, convertToSignless(getContext(), op.getOutput().getType()), cloned.getOutput());
+    m->dump();
+    return success();
+  }
+};
+
 namespace {
+
+class CastOneFlowInputToSignlessPass
+    : public CastOneFlowInputToSignlessPassBase<CastOneFlowInputToSignlessPass> {
+  void getDependentDialects(::mlir::DialectRegistry& registry) const override {
+    registry.insert<oneflow::OneFlowDialect>();
+  }
+  void runOnOperation() override {
+    Operation* op = getOperation();
+    RewritePatternSet patterns(&getContext());
+    patterns.add<oneflow::CastInputConversion>(op->getContext());
+
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+  }
+};
 
 struct OneFlowLoweringToTosaPass : public LowerOneFlowToTosaPassBase<OneFlowLoweringToTosaPass> {
   void runOnOperation() override;
@@ -588,8 +674,8 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   MLIRContext* context = &getContext();
   ConversionTarget target(*context);
   target.addLegalDialect<memref::MemRefDialect, mlir::func::FuncDialect, tosa::TosaDialect,
-                         tensor::TensorDialect, arith::ArithDialect>();
-  target.addIllegalDialect<OneFlowDialect>();
+                         tensor::TensorDialect, arith::ArithDialect, BuiltinDialect>();
+  if (fullyConvert) { target.addIllegalDialect<OneFlowDialect>(); }
 
   TypeConverter typeConverter;
   typeConverter.addConversion([context](Type type) { return convertToSignless(context, type); });
@@ -612,12 +698,15 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   } else {
     patterns.add<VariableOpToConstLowering>(typeConverter, context, this->variableAsConstant);
   }
-  patterns
-      .add<CastOpLowering, ScalarMulByTensorOpLowering, ReluOpLowering, Conv2DOpLowering,
-           AvgPool2DOpLowering, ReshapeOpLowering, Add2OpLowering, MaxPool2DOpLowering,
-           MatmulOpLowering, BroadcastAddOpLowering, JobLowering, ReturnOpLowering, InputOpLowering,
-           OutputOpLowering, NormalizationOpLowering, NormalizationInferenceOpLowering>(
-          typeConverter, context);
+  patterns.add<CastOpLowering, ScalarMulByTensorOpLowering, ReluOpLowering, Conv2DOpLowering,
+               AvgPool2DOpLowering, ReshapeOpLowering, Add2OpLowering, MaxPool2DOpLowering,
+               MatmulOpLowering, BatchMatmulOpLowering, BroadcastAddOpLowering,
+               NormalizationOpLowering, NormalizationInferenceOpLowering, TransposeOpLowering>(
+      typeConverter, context);
+  if (lowerJob) {
+    patterns.add<InputOpLowering, OutputOpLowering, JobLowering, ReturnOpLowering>(typeConverter,
+                                                                                   context);
+  }
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
     signalPassFailure();
     LOG(ERROR) << "Failed to lower OneFlow to Tosa";
@@ -655,7 +744,13 @@ struct ConvertFuncToSignlessPattern : public OpRewritePattern<func::FuncOp> {
     op.getRegion().cloneInto(&func.getRegion(), bvm);
     for (auto& block : func.getBody().getBlocks()) {
       for (auto arg : block.getArguments()) {
-        arg.setType(convertToSignless(op.getContext(), arg.getType()));
+        auto new_type = convertToSignless(op.getContext(), arg.getType());
+        arg.setType(new_type);
+        for (auto* use : arg.getUsers()) {
+          if (auto input = llvm::dyn_cast_or_null<InputOp>(use)) {
+            input.getOutput().setType(new_type);
+          }
+        }
       }
     }
     rewriter.eraseOp(op);
@@ -671,6 +766,10 @@ void ConvertToSignlessForTosaPass::runOnOperation() {
   RewritePatternSet patterns(op->getContext());
   patterns.add<ConvertFuncToSignlessPattern>(op->getContext());
   (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+}
+
+std::unique_ptr<Pass> createCastOneFlowInputToSignlessPass() {
+  return std::make_unique<CastOneFlowInputToSignlessPass>();
 }
 
 }  // namespace oneflow
