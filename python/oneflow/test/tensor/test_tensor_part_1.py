@@ -68,7 +68,7 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertEqual(tensor.stride(), (60, 20, 5, 1))
         test_case.assertEqual(tensor.is_cuda, False)
         test_case.assertTrue(tensor.is_contiguous())
-    
+
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_is_view(test_case):
         shape = (2, 3, 4, 5)
