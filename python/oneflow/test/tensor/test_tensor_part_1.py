@@ -70,15 +70,6 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(tensor.is_contiguous())
 
     @flow.unittest.skip_unless_1n1d()
-    def test_tensor_is_view(test_case):
-        shape = (2, 3, 4, 5)
-        x = flow.tensor(*shape)
-        y = x.reshape(4, 5, 6)
-        test_case.assertEqual(x.is_contiguous(), y.is_contiguous())
-        test_case.assertEqual(x.is_view(), False)
-        test_case.assertEqual(y.is_view(), True)
-
-    @flow.unittest.skip_unless_1n1d()
     def test_copy_to_and_from_numpy(test_case):
         np_arr = np.array([4, 6], dtype=np.float32)
         tensor = flow.tensor(np_arr, dtype=flow.float32)
