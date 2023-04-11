@@ -1077,12 +1077,6 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
 
 #endif  // WITH_MLIR_CUDA_CODEGEN
 
-void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
-  rewrites::populateRewrites(patterns);
-  constraints::populateConstraints(patterns);
-  populateElementwiseFusionPatterns(patterns);
-}
-
 void populateWrapOpsToKernelLaunchPatterns(::mlir::RewritePatternSet& patterns,
                                            const std::string& mode) {
   if (mode == wrap_mode::SIMPLE) {

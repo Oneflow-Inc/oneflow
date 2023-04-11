@@ -10,7 +10,35 @@ def LowerOneFlowToTosaPass : Pass<"lower-oneflow-to-tosa", "ModuleOp"> {
   let options = [
     Option<"variableAsConstant", "variable-as-constant", "int", "0",
            "convert variable op as const op of tosa">,
+    Option<"fullyConvert", "full", "bool",
+           /*default=*/"true", "Fully convert operations and make OneFlow dialect illegal target">,
+    Option<"lowerJob", "lower-job", "bool",
+           /*default=*/"true", "Convert oneflow.job to func.func">,
   ];
+}
+
+def LowerOneFlowToLinalgPass : Pass<"lower-oneflow-to-linalg", "ModuleOp"> {
+  let summary = "lower oneflow dialect to Linalg dialect";
+  let constructor = "mlir::oneflow::createLowerOneFlowToLinalgPass()";
+  let dependentDialects = ["linalg::LinalgDialect", "memref::MemRefDialect", "mlir::func::FuncDialect"];
+}
+
+def FuncToOneFlowJobPass : Pass<"func-to-ofjob", "ModuleOp"> {
+  let summary = "convert func Ops to oneflow Ops";
+  let constructor = "mlir::oneflow::createFuncToOneFlowJobPass()";
+  let dependentDialects = ["mlir::func::FuncDialect"];
+}
+
+def OneFlowJobToFuncPass : Pass<"ofjob-to-func", "ModuleOp"> {
+  let summary = "convert oneflow Ops to func Ops";
+  let constructor = "mlir::oneflow::createOneFlowJobToFuncPass()";
+  let dependentDialects = ["mlir::func::FuncDialect"];
+}
+
+def CastOneFlowInputToSignlessPass : Pass<"cast-ofinput-to-signless", "ModuleOp"> {
+  let summary = "cast oneflow input to singless";
+  let constructor = "mlir::oneflow::createCastOneFlowInputToSignlessPass()";
+  let dependentDialects = ["mlir::func::FuncDialect", "mlir::BuiltinDialect"];
 }
 
 def BufferHostRegisterPass : Pass<"buffer-host-register", "func::FuncOp"> {
@@ -25,7 +53,7 @@ def GpuCopyArgPass : Pass<"gpu-copy-arg", "func::FuncOp"> {
   let dependentDialects = ["memref::MemRefDialect", "gpu::GPUDialect"];
 }
 
-def OutlineJitFunctionPass : Pass<"outline-jit-function", "ModuleOp"> {
+def OutlineJitFunctionPass : InterfacePass<"outline-jit-function", "FunctionOpInterface"> {
   let summary = "move ops could be jitted to jit function";
   let constructor = "mlir::oneflow::createOutlineJitFunctionPass()";
   let dependentDialects = ["pdl_interp::PDLInterpDialect", "pdl::PDLDialect"];
