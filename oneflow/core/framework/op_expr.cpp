@@ -51,7 +51,6 @@ class DummyGradFunction : public OpExprGradFunction<AutoGradCaptureState> {
     return Error::UnimplementedError() << "The gradient function for op " << op_type_name_
                                        << " is not found. Please check whether it has been "
                                           "implemented and registered correctly.";
-    return Maybe<void>::Ok();
   }
 
  private:
