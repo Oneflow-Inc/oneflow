@@ -215,6 +215,13 @@ class DummyModule(ModuleType):
             print(f'"{self.__name__}" is a dummy object, and `{new_name}` is called.')
         return DummyModule(new_name)
 
+    def __bool__(self):
+        if _importer.verbose:
+            print(
+                f'"{self.__name__}" is a dummy object, and its bool value is accessed.'
+            )
+        return False
+
 
 class enable:
     def __init__(
