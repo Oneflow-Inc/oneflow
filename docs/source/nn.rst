@@ -67,6 +67,9 @@ nn.Module
     register_buffer
     register_forward_hook
     register_forward_pre_hook
+    register_backward_hook
+    register_full_backward_hook
+    register_state_dict_pre_hook
     register_parameter
     requires_grad_
     state_dict

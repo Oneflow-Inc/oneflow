@@ -33,7 +33,6 @@ static const int32_t kMinNodeInGraphForMerging = 4;
 }  // anonymous namespace
 
 // Generate a node
-
 SbpNode* SbpGraph::GenerateNode() {
   SbpNode* this_node = new SbpNode();
   node_list_.emplace_back(this_node);
@@ -280,7 +279,6 @@ int32_t SbpGraph::ChildElimination(SbpNode* this_node) {
 }
 
 // Merge two nodes
-
 int32_t SbpGraph::NodeMerging(SbpNode* first, SbpNode* second) {
   SbpNode* new_node = new SbpNode(first, second);
 
@@ -483,7 +481,6 @@ bool SbpGraph::DfsFindReasonableCost(std::vector<int32_t>& nbh_id2node_list_id,
 }
 
 // Find one strategy with finite cost for adjustment
-
 Maybe<void> SbpGraph::Find1Strategy4Greedy() const {
   std::vector<int32_t> nbh_id2node_list_id;
   std::vector<bool> not_visited(node_list_.size(), true);
@@ -546,7 +543,6 @@ Maybe<void> SbpGraph::Find1Strategy4Greedy() const {
 }
 
 // Use brute force to search for a strategy with minimum cost for a neighborhood
-
 double SbpGraph::NbhGreedyStrategy(std::vector<int32_t>& nbh_id2node_list_id) const {
   // number of nodes in the neighborhood
   int32_t num_nbh = nbh_id2node_list_id.size();
@@ -639,7 +635,6 @@ double SbpGraph::NbhGreedyStrategy(std::vector<int32_t>& nbh_id2node_list_id) co
 }
 
 // Select and Merge two nodes
-
 int32_t SbpGraph::PickAndMerge() {
   if (node_list_.size() < kMinNodeInGraphForMerging) { return 0; }
   // Pick the one with the smallest cut ratio
@@ -706,7 +701,6 @@ int32_t SbpGraph::PickAndMerge() {
 }
 
 // Clip an edge, remove it from graph
-
 void SbpGraph::ClipEdge(SbpEdge* this_edge) const {
   CheckAndRemoveFrom<SbpEdge*>(this_edge->end_node_->edges_in_, this_edge);
   CheckAndRemoveFrom<SbpEdge*>(this_edge->start_node_->edges_out_, this_edge);
@@ -714,7 +708,6 @@ void SbpGraph::ClipEdge(SbpEdge* this_edge) const {
 }
 
 // Compute the minimum and maximum layer of each node in the graph
-
 int32_t SbpGraph::ComputeLayer(
     HashMap<std::string, SbpNode*>& op_name2sbp_node,
     const HashMap<const OpNode*, HashSet<std::string>>& op_node2mutable_op_ctrl_deps) const {
@@ -735,8 +728,8 @@ int32_t SbpGraph::ComputeLayer(
   return max_min_layer;
 }
 
+// TODO: Remove the tributary layer here.
 // Find the trunk of the sbp graph, then reduce the wait time for tributaries
-
 void SbpGraph::FindTrunk(int32_t max_min_layer,
                          HashMap<std::string, SbpNode*>& op_name2sbp_node) const {
   // Summarize cost for each layer, on the trunk or tributaries

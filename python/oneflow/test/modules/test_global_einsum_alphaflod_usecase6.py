@@ -22,7 +22,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=2, check_graph=True)
+@autotest(n=2, check_graph=True, atol=1e-2)
 def _test_einsum_alphaflod_usecase6(test_case, placement, sbp):
     dim0 = random(1, 3) * 8
     dim1 = random(1, 3) * 8

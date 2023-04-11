@@ -32,5 +32,20 @@ class TestReshapeSbp(flow.unittest.TestCase):
         test_case.assertTrue(output.sbp[0] != flow.sbp.split(0))
 
 
+@flow.unittest.skip_unless_1n4d()
+class TestReshapeNdSbp(flow.unittest.TestCase):
+    def test_reshape_nd_sbp(test_case):
+        in_shape = (8, 4)
+        out_shape = (2, 4, 4)
+        P = flow.placement("cpu", [[0, 1], [2, 3]])
+        in_sbp = [flow.sbp.split(0), flow.sbp.split(0)]
+        input = flow.rand(*in_shape, placement=P, sbp=in_sbp)
+        output = input.view(*out_shape)
+        out_sbp = output.sbp
+        test_case.assertTrue(len(in_sbp) == len(out_sbp))
+        test_case.assertTrue(out_sbp[0] == flow.sbp.split(0))
+        test_case.assertTrue(out_sbp[1] == flow.sbp.split(1))
+
+
 if __name__ == "__main__":
     unittest.main()

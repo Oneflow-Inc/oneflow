@@ -435,10 +435,15 @@ class ProxyTensor : public TensorIf<DerivedT> {
     return Maybe<void>::Ok();
   }
 
-  virtual Maybe<void> offload() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  virtual Maybe<void> load() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
-
-  Maybe<bool> is_offloaded() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  virtual Maybe<void> offload() override {
+    JUST(tensor_->offload());
+    return Maybe<void>::Ok();
+  }
+  virtual Maybe<void> load() override {
+    JUST(tensor_->load());
+    return Maybe<void>::Ok();
+  }
+  Maybe<bool> is_offloaded() const override { return JUST(tensor_->is_offloaded()); }
 
   virtual Maybe<LocalTensor> AsLocalTensor() override {
     if (const auto& local_tensor = std::dynamic_pointer_cast<LocalTensor>(tensor_)) {
@@ -466,12 +471,10 @@ class Parameter final : public ProxyTensor<Parameter> {
   bool is_leaf() const override { return true; }
   std::shared_ptr<Tensor> contiguous() const override;
   std::shared_ptr<Tensor> pin_memory() const override;
+  Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override;
 
  private:
-  Parameter(const std::shared_ptr<Tensor>& tensor, bool requires_grad)
-      : ProxyTensor<Parameter>(tensor) {
-    this->tensor_->set_requires_grad(requires_grad);
-  }
+  Parameter(const std::shared_ptr<Tensor>& tensor, bool requires_grad);
 };
 
 class LocalTensor final : public TensorIf<LocalTensor> {
@@ -618,6 +621,7 @@ class GlobalTensor final : public TensorIf<GlobalTensor> {
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override { return impl_->parallel_desc(); }
   Maybe<Symbol<Device>> device() const override {
     if (GlobalMode::is_enabled()) {
+      auto global_mode_gurad = GlobalMode::Guard(false);
       const auto& device_tag = JUST(parallel_desc())->device_tag();
       return JUST(Device::New(device_tag));
     }

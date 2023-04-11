@@ -78,12 +78,12 @@ def generate_necessity_for_default_loss(placement):
     input_requires_grad = True
     target_requires_grad = random_bool().value()
     return (
-        random_tensor(ndim, *shape, requires_grad=input_requires_grad).to_global(
+        random_tensor(ndim, *shape, low=0, requires_grad=input_requires_grad).to_global(
             placement=placement, sbp=random_sbp(placement, max_dim=2)
         ),
-        random_tensor(ndim, *shape, requires_grad=target_requires_grad).to_global(
-            placement=placement, sbp=random_sbp(placement, max_dim=2)
-        ),
+        random_tensor(
+            ndim, *shape, low=0, requires_grad=target_requires_grad
+        ).to_global(placement=placement, sbp=random_sbp(placement, max_dim=2)),
     )
 
 
@@ -121,7 +121,13 @@ def generate_necessity_for_bce_loss(placement):
     target_requires_grad = False
     return (
         random_tensor(
-            ndim, batch_size, num_classes, *extra_dim, requires_grad=input_requires_grad
+            ndim,
+            batch_size,
+            num_classes,
+            low=0,
+            high=1,
+            *extra_dim,
+            requires_grad=input_requires_grad,
         ).to_global(placement=placement, sbp=random_sbp(placement, max_dim=1)),
         random_tensor(
             ndim,

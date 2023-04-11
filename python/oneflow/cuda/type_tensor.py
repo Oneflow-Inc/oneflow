@@ -25,6 +25,8 @@ ByteTensor = cuda.ByteTensor
 CharTensor = cuda.CharTensor
 IntTensor = cuda.IntTensor
 LongTensor = cuda.LongTensor
+ComplexFloatTensor = cuda.ComplexFloatTensor
+ComplexDoubleTensor = cuda.ComplexDoubleTensor
 
 
 __all__ = [
@@ -36,5 +38,7 @@ __all__ = [
     "CharTensor",
     "IntTensor",
     "LongTensor",
-    # TODO: Add support for BFloat16Tensor
+    "ComplexFloatTensor",
+    "ComplexDoubleTensor",
+    # TODO: Add support for BFloat16Tensor, ComplexHalfTensor
 ]

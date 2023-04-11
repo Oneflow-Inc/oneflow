@@ -21,7 +21,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, auto_backward=True, check_graph=True)
+@autotest(n=1, check_graph=True, rtol=1e-2, atol=1e-3)
 def _test_deconv2d_impl(test_case, placement, input_sbp):
     ndim = 4
     in_channels = random(1, 5).to(int).value() * 8

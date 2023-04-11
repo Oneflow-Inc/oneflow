@@ -22,8 +22,13 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 sys.path.append(os.path.abspath(os.path.dirname(__file__)) + "/..")
 
 # TODO(peihong): extract MLIR ir env variables into a single module to control.
+
+os.environ["ONEFLOW_MLIR_STDOUT"] = "1"
+os.environ["ONEFLOW_MLIR_CSE"] = "1"
+os.environ["ONEFLOW_MLIR_FUSE_FORWARD_OPS"] = "1"
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 os.environ["ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH"] = "1"
+os.environ["ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH"] = "1"
 
 import unittest
 import numpy as np

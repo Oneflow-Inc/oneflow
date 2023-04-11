@@ -33,8 +33,10 @@ Maybe<void> CheckIsDeviceSupportedByOp(const Device& device, const std::string& 
 }
 
 Maybe<void> CheckInputDeviceIdentical(const LocalTensorMetaInferArgs& infer_args,
-                                      Symbol<Device> default_device) {
+                                      Symbol<Device> default_device,
+                                      const UserOpExpr& user_op_expr) {
   for (int i = 0; i < infer_args.input_local_tensor_metas().size(); ++i) {
+    if (user_op_expr.IsHostMemoryInput(i)) { continue; }
     CHECK_OR_RETURN(default_device
                     == JUST(VectorAt(infer_args.input_local_tensor_metas(), i))->device())
         << Error::RuntimeError()
@@ -158,7 +160,7 @@ Maybe<void> LocalTensorMetaInferArgs::InitInputLocalTensorMetas(const TensorTupl
 /* static */ Maybe<const LocalTensorInferResult> LocalTensorInferCache::Infer(
     const UserOpExpr& user_op_expr, const LocalTensorMetaInferArgs& infer_args) {
   const auto& default_device = infer_args.default_device();
-  JUST(CheckInputDeviceIdentical(infer_args, default_device));
+  JUST(CheckInputDeviceIdentical(infer_args, default_device, user_op_expr));
   JUST(CheckIsDeviceSupportedByOp(*default_device, user_op_expr.op_type_name()));
 
   auto result = std::make_unique<LocalTensorInferResult>(user_op_expr.output_size());

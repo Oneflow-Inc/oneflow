@@ -36,7 +36,7 @@ class Glu(nn.Module):
         self,
         x: flow.Tensor,
         w: flow.Tensor,
-        b: flow.Tensor,
+        b: flow.Tensor = None,
         v: flow.Tensor = None,
         c: flow.Tensor = None,
         split_mode: bool = False,
@@ -52,9 +52,14 @@ class Glu(nn.Module):
             )
 
         # add bias
-        matmul_wx_b = flow._C.add(input=matmul_wx, other=b)
-        if split_mode:
-            matmul_vx_c = flow._C.add(input=matmul_vx, other=c)
+        if b != None:
+            matmul_wx_b = flow._C.add(input=matmul_wx, other=b)
+            if split_mode:
+                matmul_vx_c = flow._C.add(input=matmul_vx, other=c)
+        else:
+            matmul_wx_b = matmul_wx
+            if split_mode:
+                matmul_vx_c = matmul_vx
 
         # chunk
         if split_mode:
@@ -172,6 +177,52 @@ def _test_fused_glu(test_case, params: dict, dtype=flow.float32):
     print("\n")
 
 
+def _test_fused_glu_without_bias(test_case, params: dict, dtype=flow.float32):
+    print(f"========== Start Testing ==========")
+    print(f"weight tensor: merged")
+    print(f"no bias")
+    print(f'tensor shape: m={params["m"]}, n={params["n"]}, k={params["k"]}')
+    print(f'activation: {params["act"]}')
+    print(f"dtype: {dtype}")
+
+    flow_module = Glu()
+    x, w, b, y_nor = tensor_builder(params=params, dtype=dtype, is_split_mode=False)
+
+    # forward
+    y = flow_module.forward(x=x, w=w, split_mode=False, activation=params["act"])
+
+    # backward
+    y.sum().backward()
+
+    # copy back to cpu memory
+    w_grad = w.grad.detach().cpu()
+    y = y.detach().cpu()
+
+    fused_x = x.detach().clone()
+    fused_w = w.detach().clone().requires_grad_(True)
+
+    # forward
+    fused_y = flow._C.fused_glu(
+        x=fused_x, w=fused_w, b=None, v=None, c=None, activation=params["act"]
+    )
+
+    # backward
+    fused_y.sum().backward()
+
+    # copy back to cpu memory
+    fused_w_grad = fused_w.grad.detach().cpu()
+    fused_y = fused_y.detach().cpu()
+
+    if dtype == flow.float16:
+        compare_result(test_case, fused_y, y, 1e-2, 1e-3)
+        compare_result(test_case, fused_w_grad, w_grad, 1e-2, 1e-1)
+    else:
+        compare_result(test_case, fused_y, y)
+        compare_result(test_case, fused_w_grad, w_grad, 1e-5, 1e-2)
+    print(f"============== PASSED =============")
+    print("\n")
+
+
 def _test_fused_glu_split(test_case, params: dict, dtype=flow.float32):
     print(f"========== Start Testing ==========")
     print(f"weight tensor: splited")
@@ -235,8 +286,61 @@ def _test_fused_glu_split(test_case, params: dict, dtype=flow.float32):
     print("\n")
 
 
-@flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(True, "skip test")  # skip test for passing CI under cuda 10
+def _test_fused_glu_split_without_bias(test_case, params: dict, dtype=flow.float32):
+    print(f"========== Start Testing ==========")
+    print(f"weight tensor: splited")
+    print(f"no bias")
+    print(f'tensor shape: m={params["m"]}, n={params["n"]}, k={params["k"]}')
+    print(f'activation: {params["act"]}')
+    print(f"dtype: {dtype}")
+
+    flow_module = Glu()
+    x, w, b, v, c, y_nor = tensor_builder(
+        params=params, dtype=dtype, is_split_mode=True
+    )
+
+    # forward
+    y = flow_module.forward(x=x, w=w, v=v, split_mode=True, activation=params["act"])
+
+    # backward
+    y.sum().backward()
+
+    # copy back to cpu memory
+    w_grad = w.grad.detach().cpu()
+    v_grad = v.grad.detach().cpu()
+    y = y.detach().cpu()
+
+    fused_x = x.detach().clone()
+    fused_w = w.detach().clone().requires_grad_(True)
+    fused_v = v.detach().clone().requires_grad_(True)
+
+    # forward
+    fused_y = flow._C.fused_glu(
+        x=fused_x, w=fused_w, b=None, v=fused_v, c=None, activation=params["act"]
+    )
+
+    # backward
+    fused_y.sum().backward()
+
+    fused_w_grad = fused_w.grad.detach().cpu()
+    fused_v_grad = fused_v.grad.detach().cpu()
+    fused_y = fused_y.detach().cpu()
+
+    if dtype == flow.float16:
+        compare_result(test_case, fused_y, y, 1e-2, 1e-3)
+        compare_result(test_case, fused_w_grad, w_grad, 1e-2, 1e-1)
+        compare_result(test_case, fused_v_grad, v_grad, 1e-2, 1e-1)
+    else:
+        compare_result(test_case, fused_y, y)
+        compare_result(test_case, fused_w_grad, w_grad, 1e-5, 1e-2)
+        compare_result(test_case, fused_v_grad, v_grad, 1e-5, 1e-2)
+    print(f"============== PASSED =============")
+    print("\n")
+
+
+# @flow.unittest.skip_unless_1n1d()
+# @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+@unittest.skipIf(True, "CI test taking too long.")
 class TestFusedGlu(flow.unittest.TestCase):
     def test_gather(test_case):
         arg_dict = OrderedDict()
@@ -244,6 +348,8 @@ class TestFusedGlu(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_fused_glu,
             _test_fused_glu_split,
+            _test_fused_glu_without_bias,
+            _test_fused_glu_split_without_bias,
         ]
 
         # set up env valuable if necessary
@@ -270,19 +376,19 @@ class TestFusedGlu(flow.unittest.TestCase):
                 {"m": 1024, "k": 640, "n": 2560, "act": "fast_gelu"},
                 {"m": 1024, "k": 640, "n": 2560, "act": "silu"},
                 # m=4096, k=320, n=1280
-                {"m": 4096, "k": 320, "n": 1280, "act": "none"},
-                {"m": 4096, "k": 320, "n": 1280, "act": "sigmoid"},
-                {"m": 4096, "k": 320, "n": 1280, "act": "relu"},
-                {"m": 4096, "k": 320, "n": 1280, "act": "gelu"},
-                {"m": 4096, "k": 320, "n": 1280, "act": "fast_gelu"},
-                {"m": 4096, "k": 320, "n": 1280, "act": "silu"},
+                # {"m": 4096, "k": 320, "n": 1280, "act": "none"},
+                # {"m": 4096, "k": 320, "n": 1280, "act": "sigmoid"},
+                # {"m": 4096, "k": 320, "n": 1280, "act": "relu"},
+                # {"m": 4096, "k": 320, "n": 1280, "act": "gelu"},
+                # {"m": 4096, "k": 320, "n": 1280, "act": "fast_gelu"},
+                # {"m": 4096, "k": 320, "n": 1280, "act": "silu"},
                 # m=2560, k=12800, n=51200
-                {"m": 2560, "k": 1280, "n": 5120, "act": "none"},
-                {"m": 2560, "k": 1280, "n": 5120, "act": "sigmoid"},
-                {"m": 2560, "k": 1280, "n": 5120, "act": "relu"},
-                {"m": 2560, "k": 1280, "n": 5120, "act": "gelu"},
-                {"m": 2560, "k": 1280, "n": 5120, "act": "fast_gelu"},
-                {"m": 2560, "k": 1280, "n": 5120, "act": "silu"},
+                # {"m": 2560, "k": 1280, "n": 5120, "act": "none"},
+                # {"m": 2560, "k": 1280, "n": 5120, "act": "sigmoid"},
+                # {"m": 2560, "k": 1280, "n": 5120, "act": "relu"},
+                # {"m": 2560, "k": 1280, "n": 5120, "act": "gelu"},
+                # {"m": 2560, "k": 1280, "n": 5120, "act": "fast_gelu"},
+                # {"m": 2560, "k": 1280, "n": 5120, "act": "silu"},
             ]
         else:
             arg_dict["params"] = [

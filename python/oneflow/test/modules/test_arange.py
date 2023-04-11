@@ -31,6 +31,10 @@ def _test_arange(test_case, device):
     of_out = flow.arange(13, device=device, dtype=flow.float32)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
 
+    np_out = np.arange(13, dtype=np.float16)
+    of_out = flow.arange(13, device=device, dtype=flow.float16)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
+
 
 def _test_arange_step_prarm(test_case, device):
     np_out = np.arange(0, 20, 2)
@@ -51,17 +55,23 @@ def _test_arange_backward(test_case, device):
     y.backward()
     test_case.assertTrue(np.allclose(x.grad.numpy(), np.ones(13), 1e-05, 1e-05))
 
+    x = flow.arange(13, dtype=flow.float16, device=device)
+    x.requires_grad = True
+    y = x.sum()
+    y.backward()
+    test_case.assertTrue(np.allclose(x.grad.numpy(), np.ones(13), 1e-05, 1e-05))
+
 
 def _test_arange_input_tensor_type(test_case, device):
     x = flow.tensor([[1, 2], [3, 4]], dtype=flow.int64).to(device)
     y = flow.arange(start=flow.min(x), end=flow.max(x), device=device)
     test_case.assertTrue(np.allclose(y.numpy(), np.arange(1, 4)))
-    if device == "cuda":
-        x = flow.tensor([[1, 2], [3, 4]], dtype=flow.int64).to(device)
-        y = flow.arange(
-            start=flow.min(x), end=flow.max(x), device=device, dtype=flow.float16
-        )
-        test_case.assertTrue(np.allclose(y.numpy(), np.arange(1, 4)))
+
+    x = flow.tensor([[1, 2], [3, 4]], dtype=flow.int64).to(device)
+    y = flow.arange(
+        start=flow.min(x), end=flow.max(x), device=device, dtype=flow.float16
+    )
+    test_case.assertTrue(np.allclose(y.numpy(), np.arange(1, 4)))
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -104,6 +114,16 @@ class TestArange(flow.unittest.TestCase):
         start = random().to(float)
         end = start + random().to(float)
         x = torch.arange(start=torch.tensor(start), end=torch.tensor(end))
+        device = random_device()
+        x.to(device)
+        return x
+
+    @autotest(n=5, auto_backward=False, rtol=1e-5, atol=1e-5, check_graph=True)
+    def test_arange_input_float16_scalar_tensor(test_case):
+        start = random().to(float)
+        end = start + random().to(float)
+        start, end = torch.tensor(start).half(), torch.tensor(end).half()
+        x = torch.arange(start=start, end=end)
         device = random_device()
         x.to(device)
         return x

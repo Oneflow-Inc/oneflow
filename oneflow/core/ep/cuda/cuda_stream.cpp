@@ -241,6 +241,34 @@ Maybe<void> CudaStream::GetAsyncError() {
   }
 }
 
+Maybe<void> CudaStream::AllocAsync(void** ptr, size_t size) {
+#if CUDA_VERSION >= 11020
+  if (!device_->IsStreamOrderedMemoryAllocationSupported()) { UNIMPLEMENTED_THEN_RETURN(); }
+  cudaError_t err = cudaMallocFromPoolAsync(ptr, size, device_->mem_pool(), cuda_stream_);
+  if (err == cudaSuccess) {
+    return Maybe<void>::Ok();
+  } else {
+    return Error::RuntimeError() << cudaGetErrorString(err) << " (" << err << ") ";
+  }
+#else
+  UNIMPLEMENTED_THEN_RETURN();
+#endif  // CUDA_VERSION >= 11020
+}
+
+Maybe<void> CudaStream::FreeAsync(void* ptr) {
+#if CUDA_VERSION >= 11020
+  if (!device_->IsStreamOrderedMemoryAllocationSupported()) { UNIMPLEMENTED_THEN_RETURN(); }
+  cudaError_t err = cudaFreeAsync(ptr, cuda_stream_);
+  if (err == cudaSuccess) {
+    return Maybe<void>::Ok();
+  } else {
+    return Error::RuntimeError() << cudaGetErrorString(err) << " (" << err << ") ";
+  }
+#else
+  UNIMPLEMENTED_THEN_RETURN();
+#endif  // CUDA_VERSION >= 11020
+}
+
 cudaStream_t CudaStream::cuda_stream() const { return cuda_stream_; }
 
 cublasHandle_t CudaStream::cublas_handle() const { return cublas_handle_; }

@@ -193,3 +193,7 @@ def gather(
     assert group is None, "group is not supported yet"
     assert async_op is False, "async_op is not supported yet"
     return flow.comm.gather(tensor, gather_list, dst)
+
+
+def is_available():
+    return True

@@ -19,19 +19,29 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ auto FusedGluOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
-  // check existance of optional args
+  // check whether the user provide weight tensor v
   bool is_split_mode = false;
-  if (ctx->user_op_conf().has_input("v", 0) && ctx->user_op_conf().has_input("c", 0)) {
-    is_split_mode = true;
+  if (ctx->user_op_conf().has_input("v", 0)) { is_split_mode = true; }
+
+  bool has_b = ctx->user_op_conf().has_input("b", 0);
+  bool has_c = ctx->user_op_conf().has_input("c", 0);
+
+  // check whether the user provide bais tensors
+  CHECK_OR_RETURN(!(has_b && (is_split_mode && !has_c)))
+      << "expected existance of c, when provide tensors w, v and b";
+  bool has_bias = false;
+  if (has_b && (is_split_mode && has_c)) {
+    has_bias = true;
+  } else if (has_b && (!is_split_mode)) {
+    has_bias = true;
   } else {
-    CHECK(!(ctx->user_op_conf().has_input("v", 0) || ctx->user_op_conf().has_input("c", 0)))
-        << "\'v\' and \'c\' should have consistant existance";
+    has_bias = false;
   }
 
   // data parallelism
   for (int64_t i = 0; i < ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape().NumAxes() - 1;
        ++i) {
-    if (is_split_mode) {
+    if (is_split_mode && has_bias) {
       ctx->NewBuilder()
           .Split(user_op::OpArg("x", 0), i)
           .Broadcast(user_op::OpArg("w", 0))
@@ -40,24 +50,45 @@ namespace oneflow {
           .Broadcast(user_op::OpArg("c", 0))
           .Split(ctx->outputs(), i)
           .Build();
-    } else {
+    } else if (is_split_mode && !has_bias) {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("x", 0), i)
+          .Broadcast(user_op::OpArg("w", 0))
+          .Broadcast(user_op::OpArg("v", 0))
+          .Split(ctx->outputs(), i)
+          .Build();
+    } else if (!is_split_mode && has_bias) {
       ctx->NewBuilder()
           .Split(user_op::OpArg("x", 0), i)
           .Broadcast(user_op::OpArg("w", 0))
           .Broadcast(user_op::OpArg("b", 0))
           .Split(ctx->outputs(), i)
           .Build();
+    } else if (!is_split_mode && !has_bias) {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("x", 0), i)
+          .Broadcast(user_op::OpArg("w", 0))
+          .Split(ctx->outputs(), i)
+          .Build();
     }
   }
 
   // model parallelism
-  if (is_split_mode) {
+  if (is_split_mode && has_bias) {
     ctx->NewBuilder()
         .Broadcast(user_op::OpArg("x", 0))
         .Split(user_op::OpArg("w", 0), 0)
         .Split(user_op::OpArg("b", 0), 0)
         .Split(user_op::OpArg("v", 0), 0)
         .Split(user_op::OpArg("c", 0), 0)
+        .Split(ctx->outputs(),
+               ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0).shape().NumAxes() - 1)
+        .Build();
+  } else if (is_split_mode && !has_bias) {
+    ctx->NewBuilder()
+        .Broadcast(user_op::OpArg("x", 0))
+        .Split(user_op::OpArg("w", 0), 0)
+        .Split(user_op::OpArg("v", 0), 0)
         .Split(ctx->outputs(),
                ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0).shape().NumAxes() - 1)
         .Build();
@@ -70,14 +101,24 @@ namespace oneflow {
   // obtain input shape
   const Shape& x_shape = ctx->InputShape("x", 0);
   const Shape& w_shape = ctx->InputShape("w", 0);
-  const Shape& b_shape = ctx->InputShape("b", 0);
 
-  // check existance of optional args
+  // check whether the user provide weight tensor v
   bool is_split_mode = false;
-  if (ctx->has_input("v", 0) && ctx->has_input("c", 0)) {
-    is_split_mode = true;
+  if (ctx->has_input("v", 0)) { is_split_mode = true; }
+
+  bool has_b = ctx->has_input("b", 0);
+  bool has_c = ctx->has_input("c", 0);
+
+  // check whether the user provide bais tensors
+  CHECK_OR_RETURN(!(has_b && (is_split_mode && !has_c)))
+      << "expected existance of c, when provide tensors w, v and b";
+  bool has_bias = false;
+  if (has_b && (is_split_mode && has_c)) {
+    has_bias = true;
+  } else if (has_b && (!is_split_mode)) {
+    has_bias = true;
   } else {
-    CHECK(!(ctx->has_input("v", 0) || ctx->has_input("c", 0)));
+    has_bias = false;
   }
 
   // check dimensions of x, w and b
@@ -85,8 +126,11 @@ namespace oneflow {
       << "number of axes of \'x\' should have be greater than 1, yet get " << x_shape.NumAxes();
   CHECK_EQ_OR_RETURN(w_shape.NumAxes(), 2)
       << "number of axes of \'w\' should have be equal to 2, yet get " << w_shape.NumAxes();
-  CHECK_EQ_OR_RETURN(b_shape.NumAxes(), 1)
-      << "number of axes of \'b\' should have be equal to 1, yet get " << b_shape.NumAxes();
+  if (has_bias) {
+    const Shape& b_shape = ctx->InputShape("b", 0);
+    CHECK_EQ_OR_RETURN(b_shape.NumAxes(), 1)
+        << "number of axes of \'b\' should have be equal to 1, yet get " << b_shape.NumAxes();
+  }
 
   // check input shapes of w and b
   size_t x_num_axes = x_shape.NumAxes();
@@ -94,9 +138,12 @@ namespace oneflow {
       << "dimension 1 of \'w\'(" << w_shape.At(1)
       << ") is not consistant with the last dimension of \'x\'(" << x_shape.At(x_num_axes - 1)
       << ")";
-  CHECK_EQ_OR_RETURN(b_shape.At(0), w_shape.At(0))
-      << "dimension 0 of \'b\'(" << b_shape.At(0)
-      << ") is not consistant with dimension 0 of \'w\'(" << w_shape.At(0) << ")";
+  if (has_bias) {
+    const Shape& b_shape = ctx->InputShape("b", 0);
+    CHECK_EQ_OR_RETURN(b_shape.At(0), w_shape.At(0))
+        << "dimension 0 of \'b\'(" << b_shape.At(0)
+        << ") is not consistant with dimension 0 of \'w\'(" << w_shape.At(0) << ")";
+  }
   if (!is_split_mode) {
     CHECK_EQ_OR_RETURN(w_shape.At(1) % 2, 0) << "dimension 1 of \'w\' is not divisible by 2";
   }
@@ -104,15 +151,18 @@ namespace oneflow {
   // check both dimensions and input shapes of v and c (optional)
   if (is_split_mode) {
     const Shape& v_shape = ctx->InputShape("v", 0);
-    const Shape& c_shape = ctx->InputShape("c", 0);
 
     CHECK_EQ_OR_RETURN(v_shape.NumAxes(), 2)
         << "number of axes of \'v\' should have be equal to 2, yet get " << v_shape.NumAxes();
-    CHECK_EQ_OR_RETURN(c_shape.NumAxes(), 1)
-        << "number of axes of \'c\' should have be equal to 1, yet get " << c_shape.NumAxes();
-
     CHECK_OR_RETURN(v_shape == w_shape) << "the shape of \'v\' is not consistant with \'w\'";
-    CHECK_OR_RETURN(c_shape == b_shape) << "the shape of \'c\' is not consistant with \'b\'";
+
+    if (has_bias) {
+      const Shape& b_shape = ctx->InputShape("b", 0);
+      const Shape& c_shape = ctx->InputShape("c", 0);
+      CHECK_EQ_OR_RETURN(c_shape.NumAxes(), 1)
+          << "number of axes of \'c\' should have be equal to 1, yet get " << c_shape.NumAxes();
+      CHECK_OR_RETURN(c_shape == b_shape) << "the shape of \'c\' is not consistant with \'b\'";
+    }
   }
 
   // set shape of the output tensor y
@@ -147,20 +197,41 @@ namespace oneflow {
   // obtain input data types
   DataType x_dtype = ctx->InputDType("x", 0);
 
+  // check whether the user provide weight tensor v
+  bool is_split_mode = false;
+  if (ctx->has_input("v", 0)) { is_split_mode = true; }
+
+  bool has_b = ctx->has_input("b", 0);
+  bool has_c = ctx->has_input("c", 0);
+
+  // check whether the user provide bais tensors
+  CHECK_OR_RETURN(!(has_b && (is_split_mode && !has_c)))
+      << "expected existance of c, when provide tensors w, v and b";
+  bool has_bias = false;
+  if (has_b && (is_split_mode && has_c)) {
+    has_bias = true;
+  } else if (has_b && (!is_split_mode)) {
+    has_bias = true;
+  } else {
+    has_bias = false;
+  }
+
   // check types of x, w and b
   CHECK_EQ_OR_RETURN(ctx->InputDType("w", 0), x_dtype)
       << "data type of \'w\' is not consitant with \'x\'";
-  CHECK_EQ_OR_RETURN(ctx->InputDType("b", 0), x_dtype)
-      << "data type of \'b\' is not consitant with \'x\'";
-
-  bool is_split_mode = ctx->has_input("v", 0) && ctx->has_input("c", 0);
+  if (has_bias) {
+    CHECK_EQ_OR_RETURN(ctx->InputDType("b", 0), x_dtype)
+        << "data type of \'b\' is not consitant with \'x\'";
+  }
 
   // check types of v and c (optional)
   if (is_split_mode) {
     CHECK_EQ_OR_RETURN(ctx->InputDType("v", 0), x_dtype)
         << "data type of \'v\' is not consitant with \'x\'";
-    CHECK_EQ_OR_RETURN(ctx->InputDType("c", 0), x_dtype)
-        << "data type of \'c\' is not consitant with \'x\'";
+    if (has_bias) {
+      CHECK_EQ_OR_RETURN(ctx->InputDType("c", 0), x_dtype)
+          << "data type of \'c\' is not consitant with \'x\'";
+    }
   }
 
   // set output data type

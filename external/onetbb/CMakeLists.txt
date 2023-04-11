@@ -13,7 +13,18 @@ set(CMAKE_POLICY_DEFAULT_CMP0079 NEW)
 
 FetchContent_MakeAvailable(tbb)
 
+set(TBBBIND_LIBRARY_NAME)
+if(HWLOC_VERSION)
+  if(HWLOC_VERSION VERSION_LESS 2)
+    set(TBBBIND_LIBRARY_NAME tbbbind)
+  elseif(HWLOC_VERSION VERSION_LESS 2.5)
+    set(TBBBIND_LIBRARY_NAME tbbbind_2_0)
+  else()
+    set(TBBBIND_LIBRARY_NAME tbbbind_2_5)
+  endif()
+endif()
+
 add_custom_target(
-  install-tbb DEPENDS tbb tbbmalloc tbbmalloc_proxy
+  install-tbb DEPENDS tbb tbbmalloc tbbmalloc_proxy ${TBBBIND_LIBRARY_NAME}
   COMMAND "${CMAKE_COMMAND}" -DCMAKE_INSTALL_PREFIX=${ONETBB_INSTALL_DIR} -P
           "${tbb_BINARY_DIR}/cmake_install.cmake")

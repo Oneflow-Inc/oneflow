@@ -486,7 +486,7 @@ Maybe<void> InstructionsBuilder::TouchTensors(const vm::EagerBlobObjectListPtr& 
 namespace {
 
 template<typename T>
-using SmallSet = small_vector<T, kOpArgsReservedSize>;
+using SmallSet = small_vector<T>;
 
 template<typename T>
 std::pair<typename SmallSet<T>::iterator, bool> SmallSetInsert(SmallSet<T>* vec, const T& elem) {
@@ -507,7 +507,7 @@ Maybe<void> ForEachEagerBlobObjectsNeedingSoftSync(
       if (unlikely(!opt_last_used_stream.has_value())) { continue; }
       const auto& last_used_stream = JUST(opt_last_used_stream);
       if (last_used_stream != stream) {
-        small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize> dep_objects{
+        small_vector<intrusive::shared_ptr<LocalDepObject>> dep_objects{
             intrusive::shared_ptr<LocalDepObject>(
                 JUST(eager_blob_object->compute_local_dep_object()))};
         JUST(DoEach(last_used_stream, std::move(dep_objects)));
@@ -522,7 +522,7 @@ Maybe<void> ForEachEagerBlobObjectsNeedingSoftSync(
       if (last_used_stream != stream) { SmallSetInsert(&last_used_streams, last_used_stream); }
     }
     for (const auto& last_used_stream : last_used_streams) {
-      small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize> dep_objects{};
+      small_vector<intrusive::shared_ptr<LocalDepObject>> dep_objects{};
       for (const auto& eager_blob_object : eager_blob_objects) {
         const auto& opt_stream = eager_blob_object->last_used_stream();
         if (unlikely(!opt_stream.has_value())) { continue; }
@@ -572,8 +572,8 @@ bool SupportingStreamWait(Symbol<Stream> from_stream, Symbol<Stream> to_stream) 
 }  // namespace
 
 Maybe<void> InstructionsBuilder::SoftSyncStreamBetween(
-    small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&& dependences,
-    Symbol<Stream> from_stream, Symbol<Stream> to_stream) {
+    small_vector<intrusive::shared_ptr<LocalDepObject>>&& dependences, Symbol<Stream> from_stream,
+    Symbol<Stream> to_stream) {
   CHECK(from_stream != to_stream) << "synchronization is unnecessary";
   if (SupportingStreamWait(from_stream, to_stream)) {
     JUST(StreamWait(std::move(dependences), from_stream, to_stream));
@@ -584,8 +584,8 @@ Maybe<void> InstructionsBuilder::SoftSyncStreamBetween(
 }
 
 Maybe<void> InstructionsBuilder::StreamWait(
-    small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&& dependences,
-    Symbol<Stream> from_stream, Symbol<Stream> to_stream) {
+    small_vector<intrusive::shared_ptr<LocalDepObject>>&& dependences, Symbol<Stream> from_stream,
+    Symbol<Stream> to_stream) {
   auto* from_vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(from_stream));
   auto* to_vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(to_stream));
   if (from_vm_stream->mut_thread_ctx() != to_vm_stream->mut_thread_ctx()) {
@@ -609,8 +609,7 @@ Maybe<void> InstructionsBuilder::StreamWait(
 }
 
 Maybe<void> InstructionsBuilder::RecordEvent(
-    small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&&
-        compute_local_dep_objects,
+    small_vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_objects,
     Symbol<Stream> last_used_stream) {
   DeviceType device_type = last_used_stream->device()->enum_type();
   if (!NeedSoftSync::Visit(last_used_stream->stream_type(), device_type)) {

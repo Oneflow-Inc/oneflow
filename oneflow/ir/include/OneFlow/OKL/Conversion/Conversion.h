@@ -22,9 +22,6 @@ limitations under the License.
 namespace mlir {
 namespace okl {
 
-// convert oneflow.kernel_launch wrap function to okl dialect
-LogicalResult LowerWrapOpsToOKL(ModuleOp module);
-
 // convert okl dialect to llvm dialect
 LogicalResult LowerOKLComputeToLLVM(ModuleOp module);
 

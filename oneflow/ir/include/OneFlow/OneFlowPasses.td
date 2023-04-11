@@ -10,7 +10,35 @@ def LowerOneFlowToTosaPass : Pass<"lower-oneflow-to-tosa", "ModuleOp"> {
   let options = [
     Option<"variableAsConstant", "variable-as-constant", "int", "0",
            "convert variable op as const op of tosa">,
+    Option<"fullyConvert", "full", "bool",
+           /*default=*/"true", "Fully convert operations and make OneFlow dialect illegal target">,
+    Option<"lowerJob", "lower-job", "bool",
+           /*default=*/"true", "Convert oneflow.job to func.func">,
   ];
+}
+
+def LowerOneFlowToLinalgPass : Pass<"lower-oneflow-to-linalg", "ModuleOp"> {
+  let summary = "lower oneflow dialect to Linalg dialect";
+  let constructor = "mlir::oneflow::createLowerOneFlowToLinalgPass()";
+  let dependentDialects = ["linalg::LinalgDialect", "memref::MemRefDialect", "mlir::func::FuncDialect"];
+}
+
+def FuncToOneFlowJobPass : Pass<"func-to-ofjob", "ModuleOp"> {
+  let summary = "convert func Ops to oneflow Ops";
+  let constructor = "mlir::oneflow::createFuncToOneFlowJobPass()";
+  let dependentDialects = ["mlir::func::FuncDialect"];
+}
+
+def OneFlowJobToFuncPass : Pass<"ofjob-to-func", "ModuleOp"> {
+  let summary = "convert oneflow Ops to func Ops";
+  let constructor = "mlir::oneflow::createOneFlowJobToFuncPass()";
+  let dependentDialects = ["mlir::func::FuncDialect"];
+}
+
+def CastOneFlowInputToSignlessPass : Pass<"cast-ofinput-to-signless", "ModuleOp"> {
+  let summary = "cast oneflow input to singless";
+  let constructor = "mlir::oneflow::createCastOneFlowInputToSignlessPass()";
+  let dependentDialects = ["mlir::func::FuncDialect", "mlir::BuiltinDialect"];
 }
 
 def BufferHostRegisterPass : Pass<"buffer-host-register", "func::FuncOp"> {
@@ -25,7 +53,7 @@ def GpuCopyArgPass : Pass<"gpu-copy-arg", "func::FuncOp"> {
   let dependentDialects = ["memref::MemRefDialect", "gpu::GPUDialect"];
 }
 
-def OutlineJitFunctionPass : Pass<"outline-jit-function", "ModuleOp"> {
+def OutlineJitFunctionPass : InterfacePass<"outline-jit-function", "FunctionOpInterface"> {
   let summary = "move ops could be jitted to jit function";
   let constructor = "mlir::oneflow::createOutlineJitFunctionPass()";
   let dependentDialects = ["pdl_interp::PDLInterpDialect", "pdl::PDLDialect"];
@@ -39,21 +67,6 @@ def AggregateComputeOpsPass : Pass<"aggregate-compute-ops", "ModuleOp"> {
 def WrapOpsToKernelLaunchPass : Pass<"wrap-ops-to-kernel-launch", "ModuleOp"> {
   let summary = "wrap user ops with a single kernel launch op in OneFlow Job";
   let constructor = "mlir::oneflow::createWrapOpsToKernelLaunchPass()";
-}
-
-def ExtractKernelLaunchTensorPass : Pass<"extract-kernel-launch-tensor", "ModuleOp"> {
-  let summary = "extract kernel launch tensor from !okl.launcher_ctx";
-  let constructor = "mlir::oneflow::createExtractKernelLaunchTensorPass()";
-}
-
-def TrimReturnAsVoidPass : Pass<"trim-return-to-void", "ModuleOp"> {
-  let summary = "trim return types to void type";
-  let constructor = "mlir::oneflow::createTrimReturnAsVoidPass()";
-}
-
-def LowerToOKLPass : Pass<"lower-to-okl", "ModuleOp"> {
-  let summary = "lower oneflow dialect ops to okl dialect";
-  let constructor = "mlir::oneflow::createLowerToOKLPass()";
 }
 
 def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "ModuleOp"> {
@@ -127,6 +140,15 @@ def FuseForwardOps : Pass<"fuse-forward-only-ops", "ModuleOp"> {
   }];
   let constructor = "mlir::oneflow::createFuseForwardOps()";
   let dependentDialects = [];
+}
+
+def FuseOpsWithBackwardImpl : Pass<"fuse-ops-with-backward-impl", "ModuleOp"> {
+  let summary = "fuse ops with backward impl";
+  let description = [{
+    fuse ops with backward impl.
+  }];
+  let constructor = "mlir::oneflow::createFuseOpsWithBackwardImpl()";
+  let dependentDialects = ["pdl_interp::PDLInterpDialect", "pdl::PDLDialect"];
 }
 
 def FuseNormalizationOps : Pass<"fuse-normalization-ops", "ModuleOp"> {

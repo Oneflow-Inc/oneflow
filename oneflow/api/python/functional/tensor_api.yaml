@@ -21,6 +21,19 @@
     ]
   bind_python: True
 
+- name: "_legacy_tensor_generic_ctor"
+  signature: [
+      "Tensor (*, DataType dtype, Device device=None) => TensorEmptyGenericCtor",
+      "Tensor (*, DataType dtype, Placement placement, SbpList sbp) => GlobalTensorEmptyGenericCtor",
+      "Tensor (Tensor other, *, DataType dtype=None) => TensorWithOtherGenericCtor",
+      "Tensor (PyObject* data, *, DataType dtype, Device device=None) => TensorWithDataGenericCtor",
+      "Tensor (PyObject* data, *, DataType dtype, Placement placement, SbpList sbp) => GlobalTensorWithDataGenericCtor",
+      "Tensor (Shape size, *, DataType dtype, Device device=None) => TensorWithShapeGenericCtor",
+      "Tensor (Shape size, *, DataType dtype, Placement placement, SbpList sbp) => GlobalTensorWithShapeGenericCtor",
+  ]
+  bind_python: True
+
+
 - name: "_legacy_tensor_ctor"
   signature:
     [

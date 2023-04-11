@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/mem_util.h"
 #include "oneflow/core/ep/cpu/cpu_device.h"
 #include "oneflow/core/ep/cpu/cpu_event.h"
 #include "oneflow/core/ep/cpu/cpu_stream.h"
@@ -45,7 +46,10 @@ Maybe<void> CpuDevice::Alloc(const AllocationOptions& options, void** ptr, size_
     JUST(device->AllocPinned(options, ptr, size));
   } else {
     *ptr = aligned_alloc(kMaxAlignmentRequirement, RoundUp(size, kMaxAlignmentRequirement));
-    if (*ptr == nullptr) { return Error::RuntimeError() << "allocate failed"; }
+    if (*ptr == nullptr) {
+      return Error::RuntimeError()
+             << "CPU can't allocate memory. Tried to allocate " << FormatMemSize(size);
+    }
   }
   memset(*ptr, 0, size);
   return Maybe<void>::Ok();

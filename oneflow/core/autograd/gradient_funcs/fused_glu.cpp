@@ -22,6 +22,7 @@ namespace one {
 
 struct FusedGluGradCaptureState : public AutoGradCaptureState {
   bool is_split_mode = false;
+  bool has_bias = false;
   std::string activation = "none";
   bool w_requires_grad = false;
   bool v_requires_grad = false;
@@ -53,16 +54,23 @@ Maybe<void> FusedGluGrad::Capture(FusedGluGradCaptureState* ctx, const TensorTup
                                   const TensorTuple& outputs, const AttrMap& attrs) const {
   // check input size
   const size_t in_size = inputs.size();
-  CHECK_OR_RETURN(in_size == 3 || in_size == 5)
-      << "FusedGluGrad::Capture(): input tensor size must be 3 or 5";
-  if (in_size == 5) { ctx->is_split_mode = true; }
+  CHECK_OR_RETURN(in_size == 2 || in_size == 3 || in_size == 5)
+      << "FusedGluGrad::Capture(): input tensor size must be 2 or 3 or 5";
+
+  // check the input pattern:
+  ctx->has_bias = JUST(attrs.GetAttr<bool>("has_bias"));
+  ctx->is_split_mode = JUST(attrs.GetAttr<bool>("is_split"));
 
   // check whether input tensors need grad
   ctx->w_requires_grad = inputs[1]->requires_grad();
-  ctx->b_requires_grad = inputs[2]->requires_grad();
-  if (ctx->is_split_mode) {
-    ctx->v_requires_grad = inputs[3]->requires_grad();
-    ctx->c_requires_grad = inputs[4]->requires_grad();
+  if (ctx->has_bias) {
+    ctx->b_requires_grad = inputs[2]->requires_grad();
+    if (ctx->is_split_mode) {
+      ctx->v_requires_grad = inputs[3]->requires_grad();
+      ctx->c_requires_grad = inputs[4]->requires_grad();
+    }
+  } else {
+    if (ctx->is_split_mode) { ctx->v_requires_grad = inputs[2]->requires_grad(); }
   }
 
   // save tensors for backward
@@ -117,7 +125,11 @@ Maybe<void> FusedGluGrad::Apply(const FusedGluGradCaptureState* ctx, const Tenso
 
       // calculate the final gradient result of v (if necessary)
       if (ctx->v_requires_grad) {
-        (*in_grads)[3] = JUST(functional::BroadcastMatmulGradB(d_matmul_vx, x, 1.0));
+        if (ctx->has_bias) {
+          (*in_grads)[3] = JUST(functional::BroadcastMatmulGradB(d_matmul_vx, x, 1.0));
+        } else {
+          (*in_grads)[2] = JUST(functional::BroadcastMatmulGradB(d_matmul_vx, x, 1.0));
+        }
       }
 
       // calculate the final gradient result of c (if necessary)

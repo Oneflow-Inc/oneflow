@@ -9,6 +9,7 @@ R"OP_SCHEMA_INC(
 #include <string>
 #include <vector>
 #include <functional>
+#include <complex>
 
 class OperatorConf;
 class NdSbpSignature;
@@ -50,6 +51,9 @@ class {{opname}} : public OpDefinition<{{opname}}> {
   {% endif -%}
   {% if op.has_get_nd_sbp_fn -%}
   static Maybe<void> GetNdSbpSignatureList(user_op::GetNdSbpSignatureListContext* ctx);
+  {% endif -%}
+  {% if op.has_enumerate_nd_sbp_signatures_fn -%}
+  static Maybe<void> EnumerateNdSbpSignatures(user_op::GetNdSbpSignatureListContext* ctx);
   {% endif -%}
   {% if op.has_dump_nd_sbp_signature_for_op_conf_fn -%}
   static Maybe<void> DumpNdSbpSignatureForOpConfFn(const NdSbpSignature& nd_sbp_sig, OperatorConf* op_conf);

@@ -246,6 +246,14 @@ class ExpGradGradFunctor {
   }
 };
 
+class Exp2GradGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    return functional::ScalarMul(Scalar(std::log(2)), JUST(functional::Exp2Grad(x, dydx)));
+  }
+};
+
 class Expm1GradGradFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
@@ -468,12 +476,11 @@ class EluGradGradFunctor {
 class CeluGradGradFunctor {
  public:
   // y = max(0,x) + min(0,alpha∗(exp(x/alpha)−1))
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const std::shared_ptr<Tensor>& dydx,
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& y, const std::shared_ptr<Tensor>& dydx,
                            const double& alpha) const {
-    auto condition = JUST(functional::ScalarLogicalLess(x, Scalar(0)));
-    auto a = JUST(functional::CeluGrad(x, dydx, alpha));
-    auto b = JUST(functional::ScalarDiv(a, Scalar(alpha)));
-    auto r = functional::Where(condition, b, JUST(functional::ZerosLike(x)));
+    auto condition = JUST(functional::ScalarLogicalLess(y, Scalar(0)));
+    auto r = functional::Where(condition, JUST(functional::ScalarDiv(dydx, alpha)),
+                               JUST(functional::ZerosLike(y)));
     return r;
   }
 };
@@ -565,6 +572,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ErfGradGradFunctor>("ErfGradGrad");
   m.add_functor<impl::ErfcGradGradFunctor>("ErfcGradGrad");
   m.add_functor<impl::ExpGradGradFunctor>("ExpGradGrad");
+  m.add_functor<impl::Exp2GradGradFunctor>("Exp2GradGrad");
   m.add_functor<impl::Expm1GradGradFunctor>("Expm1GradGrad");
   m.add_functor<impl::LogGradGradFunctor>("LogGradGrad");
   m.add_functor<impl::Log2GradGradFunctor>("Log2GradGrad");

@@ -142,6 +142,7 @@ void OpSchemaEmitter<Target>::run(raw_ostream& os) {
     emitBit(def, "has_output_blob_time_shape_infer_fn", &op);
     emitBit(def, "has_sbp_signature_infer_fn", &op);
     emitBit(def, "has_get_nd_sbp_fn", &op);
+    emitBit(def, "has_enumerate_nd_sbp_signatures_fn", &op);
     emitBit(def, "has_dump_nd_sbp_signature_for_op_conf_fn", &op);
     emitBit(def, "has_compute_complexity_fn", &op);
     emitBit(def, "has_check_fn", &op);
@@ -195,7 +196,7 @@ void OpSchemaEmitter<Target>::emitAttrs(const Record* def, json* op) const {
     if ("callee" == NS && "FlatSymbolRefAttr" == AS) { continue; }
     json attr{{"name", NS}, {"type", emitType(AS)}};
 
-    if (auto DV = A->getValueAsOptionalString("defaultValue")) { attr["default"] = DV.getValue(); }
+    if (auto DV = A->getValueAsOptionalString("defaultValue")) { attr["default"] = DV.value(); }
 
     (*op)["attrs"].push_back(attr);
   }

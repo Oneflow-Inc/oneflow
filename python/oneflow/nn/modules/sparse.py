@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
 from typing import List, Optional, Tuple
 
 import oneflow as flow
@@ -115,7 +116,10 @@ class Embedding(Module):
         scale_grad_by_freq: bool = False,
         sparse: bool = False,
         _weight: Optional[Tensor] = None,
+        device=None,
+        dtype=None,
     ):
+        factory_kwargs = {"device": device, "dtype": dtype}
         super().__init__()
         self.num_embeddings = num_embeddings
         self.embedding_dim = embedding_dim
@@ -135,7 +139,9 @@ class Embedding(Module):
         self.scale_grad_by_freq = scale_grad_by_freq
         assert sparse is False, "Not support sparse=True yet!"
         if _weight is None:
-            self.weight = flow.nn.Parameter(Tensor(num_embeddings, embedding_dim))
+            self.weight = flow.nn.Parameter(
+                flow.empty((num_embeddings, embedding_dim), **factory_kwargs)
+            )
             self.reset_parameters()
         else:
             assert list(_weight.shape) == [
@@ -146,6 +152,8 @@ class Embedding(Module):
         self.sparse = sparse
 
     def reset_parameters(self) -> None:
+        if os.getenv("ONEFLOW_LINEAR_EMBEDDING_SKIP_INIT", "0") == "1":
+            return
         flow.nn.init.normal_(self.weight)
         self._fill_padding_idx_with_zero()
 

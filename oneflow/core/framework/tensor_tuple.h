@@ -27,7 +27,7 @@ namespace one {
 
 class Tensor;
 
-class TensorTuple final : public small_vector<std::shared_ptr<Tensor>, kOpArgsReservedSize>,
+class TensorTuple final : public small_vector<std::shared_ptr<Tensor>>,
                           public std::enable_shared_from_this<TensorTuple> {
  public:
   // TensorTuple(const TensorTuple&) = delete;

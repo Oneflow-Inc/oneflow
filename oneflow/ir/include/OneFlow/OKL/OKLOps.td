@@ -65,6 +65,31 @@ def GetTensorAsRetOp : OKL_Op<"get_tensor_as_ret"> {
   let results = (outs AnyTensor);
 }
 
+def PoolToTensorOp : OKL_Op<"pool_to_tensor"> {
+  let arguments = (ins
+    LauncherContextType:$launcher_ctx,
+    I64Attr:$offset
+  );
+  let results = (outs AnyTensor);
+}
+
+def PoolToBufferOp : OKL_Op<"pool_to_buffer"> {
+  let arguments = (ins
+    LauncherContextType:$launcher_ctx,
+    I64Attr:$offset
+  );
+  let results = (outs AnyTensor);
+}
+
+def TensorToPoolOp : OKL_Op<"tensor_to_pool"> {
+  let arguments = (ins
+    LauncherContextType:$launcher_ctx,
+    AnyTensor:$tensor,
+    I64Attr:$offset
+  );
+  let results = (outs AnyTensor);
+}
+
 def WrapperKernelOp : OKL_Op<"wrapper_kernel"> {
   let summary = "build reg context operation";
   let description = [{

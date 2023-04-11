@@ -39,6 +39,7 @@ rng = np.random.default_rng()
 annotation2default_generator = {}
 annotation2torch_to_flow_converter = {}
 NoneType = type(None)
+random_value_default_range = {int: (-10, 11), float: (-1, 1)}
 
 
 def data_generator(annotation):
@@ -288,8 +289,8 @@ class random_pytorch_tensor(generator):
         dim2=None,
         dim3=None,
         dim4=None,
-        low=0,
-        high=1,
+        low=None,
+        high=None,
         dtype=float,
         pin_memory=False,
     ):
@@ -337,9 +338,13 @@ class random_pytorch_tensor(generator):
         dim2 = self.dim2.value()
         dim3 = self.dim3.value()
         dim4 = self.dim4.value()
+        dtype = self.dtype.value()
         low = self.low.value()
         high = self.high.value()
-        dtype = self.dtype.value()
+        if low is None:
+            low = random_value_default_range[dtype][0]
+        if high is None:
+            high = random_value_default_range[dtype][1]
         pin_memory = self.pin_memory
 
         shape = rng.integers(low=1, high=8, size=ndim)

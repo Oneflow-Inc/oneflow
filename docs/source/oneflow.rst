@@ -250,6 +250,7 @@ Pointwise Ops
     arctanh 
     atan2 
     ceil 
+    ceil_
     clamp 
     clamp_min
     clamp_max
@@ -264,6 +265,8 @@ Pointwise Ops
     expm1 
     floor 
     floor_ 
+    frac
+    frac_
     fmod 
     gelu
     quick_gelu
@@ -286,6 +289,7 @@ Pointwise Ops
     pow 
     reciprocal 
     round 
+    round_
     rsqrt 
     selu
     softmax
@@ -304,6 +308,9 @@ Pointwise Ops
     tanh
     trunc
     floor_divide
+    lerp
+    lerp_
+    quantile
 
 Reduction Ops
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -383,7 +390,6 @@ Other Ops
     cdist
     cumprod 
     cumsum 
-    decode_onerec
     diag 
     diagonal 
     einsum 

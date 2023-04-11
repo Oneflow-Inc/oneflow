@@ -443,7 +443,7 @@ class Celu : public OpExprGradFunction<CeluCaptureState> {
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->alpha = JUST(composed_attrs.GetAttr<double>("alpha"));
-    ctx->SaveTensorForBackward(inputs.at(0));
+    ctx->SaveTensorForBackward(outputs.at(0));
     return Maybe<void>::Ok();
   }
 
@@ -452,8 +452,8 @@ class Celu : public OpExprGradFunction<CeluCaptureState> {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     in_grads->resize(1);
     if (ctx->requires_grad) {
-      const auto& x = ctx->SavedTensors().at(0);
-      in_grads->at(0) = JUST(functional::CeluGrad(x, out_grads.at(0), ctx->alpha));
+      const auto& y = ctx->SavedTensors().at(0);
+      in_grads->at(0) = JUST(functional::CeluGrad(y, out_grads.at(0), ctx->alpha));
     }
     return Maybe<void>::Ok();
   }
@@ -585,6 +585,40 @@ class Threshold : public OpExprGradFunction<ThresholdCaptureState> {
   AttrMap base_attrs_;
 };
 
+struct FracCaptureState : public AutoGradCaptureState {
+  bool requires_grad = false;
+};
+
+class Frac : public OpExprGradFunction<FracCaptureState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override {
+    const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Capture(FracCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrMap& attrs) const override {
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);
+    ctx->requires_grad = inputs.at(0)->requires_grad();
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const FracCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    in_grads->resize(1);
+    if (ctx->requires_grad) { in_grads->at(0) = out_grads.at(0); }
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  AttrMap base_attrs_;
+};
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("frac", Frac);
 REGISTER_OP_EXPR_GRAD_FUNCTION("silu", Silu);
 REGISTER_OP_EXPR_GRAD_FUNCTION("mish", Mish);
 REGISTER_OP_EXPR_GRAD_FUNCTION("selu", Selu);

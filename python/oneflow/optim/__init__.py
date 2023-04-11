@@ -21,6 +21,7 @@ from oneflow.nn.optimizer.sgd import SGD
 from oneflow.nn.optimizer.adagrad import Adagrad
 from oneflow.nn.optimizer.lamb import LAMB
 from oneflow.nn.optimizer.adadelta import Adadelta
-from oneflow.nn.optimizer import swa_utils
+from oneflow.nn.optimizer.lbfgs import LBFGS
 
 from . import lr_scheduler
+from . import swa_utils

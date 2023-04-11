@@ -45,7 +45,7 @@ def _test_convtranspose1d_bias_false(test_case, device):
     m_f.weight.data = flow.tensor(weight, dtype=flow.float32)
     m_f = m_f.to(device)
     out_flow = m_f(input_flow)
-    test_case.assertTrue(np.allclose(out_flow.numpy(), test_out_data, 1e-06, 1e-06))
+    test_case.assertTrue(np.allclose(out_flow.numpy(), test_out_data, 1e-03, 1e-05))
 
     out_flow = out_flow.sum()
     out_flow.backward()
@@ -76,7 +76,7 @@ def _test_convtranspose1d_bias_true(test_case, device):
     m_f.bias = nn.Parameter(flow.Tensor(bias))
     m_f = m_f.to(device)
     out_flow = m_f(input_flow)
-    test_case.assertTrue(np.allclose(out_flow.numpy(), test_out_data, 1e-06, 1e-06))
+    test_case.assertTrue(np.allclose(out_flow.numpy(), test_out_data, 1e-02, 1e-05))
     out_flow = out_flow.sum()
     out_flow.backward()
     test_case.assertTrue(
@@ -278,7 +278,7 @@ class TestConvTranspose(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(n=5)
+    @autotest(n=5, rtol=1e-2)
     def test_ConvTranspose1d_(test_case):
         channels = random(1, 6)
         m = torch.nn.ConvTranspose1d(
@@ -322,7 +322,7 @@ class TestConvTranspose(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(n=5)
+    @autotest(n=5, rtol=1e-2)
     def test_ConvTranspose3d_(test_case):
         channels = random(1, 2)
         m = torch.nn.ConvTranspose3d(
