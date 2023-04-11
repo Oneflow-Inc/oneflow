@@ -625,9 +625,11 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
 
   auto InsertLogicalChainId = [&](const std::vector<const OpNode*>& ordered_op_nodes,
                                   const int64_t logical_chain_id) {
+    int64_t order = 0;
     for (const OpNode* op_node : ordered_op_nodes) {
-      CHECK_JUST(MapAt(mut_op_name2conf, op_node->op().op_name()))
-          .set_logical_chain_id(logical_chain_id);
+      auto& conf = CHECK_JUST(MapAt(mut_op_name2conf, op_node->op().op_name()));
+      conf.set_logical_chain_id(logical_chain_id);
+      conf.set_order_in_logical_chain(order++);
     }
   };
 
