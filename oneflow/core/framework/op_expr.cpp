@@ -36,7 +36,7 @@ namespace {
 class DummyGradFunction : public OpExprGradFunction<AutoGradCaptureState> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DummyGradFunction);
-  DummyGradFunction(const std::string& op_type_name) : op_type_name_(op_type_name) {}
+  explicit DummyGradFunction(const std::string& op_type_name) : op_type_name_(op_type_name) {}
   ~DummyGradFunction() = default;
 
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
