@@ -34,6 +34,8 @@ class NNGraphIf {
   virtual const std::vector<std::string>& outputs_op_names() const = 0;
   virtual const std::vector<bool>& inputs_valid() const = 0;
   virtual const std::vector<bool>& outputs_valid() const = 0;
+  virtual int64_t run_cnt() const = 0;
+  virtual void NextRunCnt() = 0;
 
  protected:
   NNGraphIf() = default;

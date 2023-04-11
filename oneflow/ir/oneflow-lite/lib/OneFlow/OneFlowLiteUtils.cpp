@@ -63,7 +63,7 @@ StringAttr getValueDevice(Value value) {
   StringAttr device;
   Operation* op = value.getDefiningOp();
   if (auto copyOp = dyn_cast<CopyOp>(op)) {
-    device = copyOp.device_typeAttr();
+    device = copyOp.getDeviceTypeAttr();
   } else {
     device = value.getDefiningOp()->getAttrOfType<StringAttr>(
         OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr());
@@ -225,7 +225,7 @@ void serializeDataTypesAttr(FlatbufferBuilder& builder, Attribute attribute) {
       llvm::errs() << "error data type: " << v << "\n";
       exit(1);
     }
-    dtypes.push_back(dtype.getValue());
+    dtypes.push_back(dtype.value());
   }
   oneflow_lite_StringsDef_value_add(builder, builder.createStringVec(dtypes));
   oneflow_lite_StringsDef_end_as_root(builder);
