@@ -616,7 +616,7 @@ void TaskGraph::MergeChainAndAddOrderingCtrlEdgeInSameChain() {
 
 void TaskGraph::InitOrderedTaskNodes() {
   // NOTE(chengcheng): Warning, ordered_task_nodes_ by topo is NOT valid in process
-  //  parallel compile, because the current rank task graph in Incomplete.
+  //  parallel compile, because the current rank task graph is Incomplete.
   TopoForEachNode([&](TaskNode* task_node) { ordered_task_nodes_.emplace_back(task_node); });
 }
 
