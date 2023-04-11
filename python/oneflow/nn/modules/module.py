@@ -141,6 +141,12 @@ class Module(object):
     """
 
     def __init__(self):
+        """
+        Calls super().__setattr__('a', a) instead of the typical self.a = a
+        to avoid Module.__setattr__ overhead. Module's __setattr__ has special
+        handling for parameters, submodules, and buffers but simply calls into
+        super().__setattr__ for all other attributes.
+        """
         super().__setattr__("training", True)
         super().__setattr__("_parameters", OrderedDict())
         super().__setattr__("_buffers", OrderedDict())
