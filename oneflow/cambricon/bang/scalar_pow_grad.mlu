@@ -150,14 +150,14 @@ template<typename T>
 void bang_scalar_pow_gradient_kernel(BangHandle& handle, int64_t n, const T* x, const T* dy,
                                      const float value, T* dx) {
   cnrtDim3_t dim = {handle.nclusters * handle.ncores_per_cluster, 1, 1};
-  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION4;
+  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
   bang_scalar_pow_grad_kernel<<<dim, func_type, handle.queue>>>(n, x, dy, value, dx);
 }
 
 void bang_scalar_pow_gradient_half_kernel(BangHandle& handle, int64_t n, const void* x,
                                           const void* dy, const float value, void* dx) {
   cnrtDim3_t dim = {handle.nclusters * handle.ncores_per_cluster, 1, 1};
-  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION4;
+  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
   bang_scalar_pow_grad_kernel<<<dim, func_type, handle.queue>>>(
       n, static_cast<const half*>(x), static_cast<const half*>(dy), value, static_cast<half*>(dx));
 }

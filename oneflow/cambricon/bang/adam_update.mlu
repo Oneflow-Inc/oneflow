@@ -210,7 +210,7 @@ void bang_adam_update_kernel(BangHandle& handle, int64_t n, T scale, float l1, f
                              const float* bias_correction2_ptr, const T* model_diff, T* model,
                              void* model_copy, T* m, T* v, T* max_v) {
   cnrtDim3_t dim = {handle.nclusters * handle.ncores_per_cluster, 1, 1};
-  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION4;
+  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
   bang_adam_update_internal<<<dim, func_type, handle.queue>>>(
       n, scale, l1, l2, beta1, beta2, epsilon, weight_decay, amsgrad, do_bias_correction,
       learning_rate, lr_scale, bias_correction1, bias_correction2, learning_rate_ptr, scale_by_ptr,
@@ -228,7 +228,7 @@ void bang_adam_update_half_kernel(BangHandle& handle, int64_t n, T scale, float 
                                   const float* bias_correction2_ptr, const void* model_diff,
                                   T* model, void* model_copy, T* m, T* v, T* max_v) {
   cnrtDim3_t dim = {handle.nclusters * handle.ncores_per_cluster, 1, 1};
-  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION4;
+  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
   bang_adam_update_internal<<<dim, func_type, handle.queue>>>(
       n, scale, l1, l2, beta1, beta2, epsilon, weight_decay, amsgrad, do_bias_correction,
       learning_rate, lr_scale, bias_correction1, bias_correction2, learning_rate_ptr, scale_by_ptr,

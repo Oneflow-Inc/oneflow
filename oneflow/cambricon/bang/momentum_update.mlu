@@ -150,7 +150,7 @@ void bang_momentum_update_kernel(BangHandle& handle, int64_t n, T scale, float l
                                  const float* learning_rate_ptr, const T* scale_by_ptr,
                                  const int64_t* skip_if, const T* model_diff, T* model,
                                  T* momentum) {
-  cnrtDim3_t dim = {handle.nclusters, handle.ncores_per_cluster, 1};
+  cnrtDim3_t dim = {handle.nclusters * handle.ncores_per_cluster, 1, 1};
   cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
   bang_momentum_update_internal<<<dim, func_type, handle.queue>>>(
       n, scale, l1, l2, beta, dampening, nesterov, maximize, weight_decay, learning_rate, lr_scale,
@@ -164,7 +164,7 @@ void bang_momentum_update_half_kernel(BangHandle& handle, int64_t n, T scale, fl
                                       const float* learning_rate_ptr, const T* scale_by_ptr,
                                       const int64_t* skip_if, const void* model_diff, T* model,
                                       T* momentum) {
-  cnrtDim3_t dim = {handle.nclusters, handle.ncores_per_cluster, 1};
+  cnrtDim3_t dim = {handle.nclusters * handle.ncores_per_cluster, 1, 1};
   cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
   bang_momentum_update_internal<<<dim, func_type, handle.queue>>>(
       n, scale, l1, l2, beta, dampening, nesterov, maximize, weight_decay, learning_rate, lr_scale,
