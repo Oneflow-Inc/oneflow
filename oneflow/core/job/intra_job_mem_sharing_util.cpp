@@ -140,29 +140,6 @@ void InitMemoryChains(Plan* plan,
   }
 }
 
-bool TryMergeMemChain2MergedChains(
-    std::vector<MemoryChain*>* merged_chains, MemoryChain* mem_chain,
-    const std::function<bool(const MemoryChain*, const MemoryChain*)>& IsStrictOrderL2R) {
-  Shape meta_shape({1, 1});
-  std::sort(merged_chains->begin(), merged_chains->end(), [&](MemoryChain* lhs, MemoryChain* rhs) {
-    return lhs->total_mem_reused_size > rhs->total_mem_reused_size;
-  });
-  for (MemoryChain* merged_chain : *merged_chains) {
-    if (merged_chain->time_shape == meta_shape && mem_chain->time_shape == meta_shape) {
-      if (IsStrictOrderL2R(merged_chain, mem_chain)) {
-        merged_chain->sorted_tasks.insert(merged_chain->sorted_tasks.end(),
-                                          mem_chain->sorted_tasks.begin(),
-                                          mem_chain->sorted_tasks.end());
-        merged_chain->mem_reused_regsts.insert(mem_chain->mem_reused_regsts.begin(),
-                                               mem_chain->mem_reused_regsts.end());
-        merged_chain->total_mem_reused_size += mem_chain->total_mem_reused_size;
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
 bool IsReachableToAnyOtherTask(const TaskProto* src_task, const HashSet<int64_t>& task_ids) {
   for (const auto& pair : src_task->produced_regst_desc()) {
     for (int64_t consumer : pair.second.consumer_task_id()) {
@@ -182,9 +159,7 @@ bool IsTaskConnectedL2R(const TaskProto* src, const TaskProto* dst) {
 }
 
 void GenMemChainTasksAndRegsts(
-    Plan* plan,
-    const std::function<bool(const std::string&, const std::string&)>& IsOpNameDataOrCtrlReachable,
-    HashMap<int64_t, std::vector<TaskProto*>>* mem_chain2sorted_tasks,
+    Plan* plan, HashMap<int64_t, std::vector<TaskProto*>>* mem_chain2sorted_tasks,
     HashMap<int64_t, std::vector<RegstDescProto*>>* mem_chain2mem_reused_regsts,
     HashMap<int64_t, HashMap<int64_t, RegstDescProto*>>* mem_chain2regst_desc_id2reuse_regst_desc,
     HashMap<RegstDescProto*, size_t>* mem_reused_regst2size) {
@@ -193,73 +168,29 @@ void GenMemChainTasksAndRegsts(
   HashMap<int64_t, HashMap<int64_t, MemoryChain>> device2chain2mem_chain;
   InitMemoryChains(plan, &device2chain2mem_chain, mem_reused_regst2size);
 
-  auto TryGetTaskNodeLogicalOpName = [&](const TaskProto* task_proto,
-                                         std::string* op_name) -> bool {
-    if (task_proto->task_type() == TaskType::kNormalForward
-        && task_proto->exec_sequence().exec_node_size() == 1) {
-      *op_name = PlanUtil::GetOpAttribute(plan, task_proto->job_id(),
-                                          task_proto->exec_sequence().exec_node(0).kernel_conf())
-                     .op_conf()
-                     .name();
-      return true;
-    }
-    return false;
-  };
-
-  auto IsStrictOrderL2R = [&](const MemoryChain* lhs, const MemoryChain* rhs) -> bool {
-    const TaskProto* l_chain_sink_task_node = lhs->sorted_tasks.back();
-    const TaskProto* r_chain_source_task_node = rhs->sorted_tasks.front();
-    std::string l_op_name;
-    std::string r_op_name;
-    if (TryGetTaskNodeLogicalOpName(l_chain_sink_task_node, &l_op_name)
-        && TryGetTaskNodeLogicalOpName(r_chain_source_task_node, &r_op_name)) {
-      return IsOpNameDataOrCtrlReachable(l_op_name, r_op_name);
-    }
-    return false;
-  };
-
   int64_t mem_chain_id = 0;
-
-  bool enable_mem_chain_merge =
-      Singleton<ResourceDesc, ForSession>::Get()->resource().enable_mem_chain_merge();
 
   for (auto& device_chain_pair : device2chain2mem_chain) {
     if (device_chain_pair.second.empty()) { continue; }
     // sort
     std::vector<MemoryChain*> mem_chains;
     mem_chains.reserve(device_chain_pair.second.size());
-    std::vector<MemoryChain*> merged_chains;
     for (auto& pair : device_chain_pair.second) { mem_chains.emplace_back(&pair.second); }
-    std::sort(mem_chains.begin(), mem_chains.end(), [&](MemoryChain* lhs, MemoryChain* rhs) {
-      int64_t lhs_order_in_graph = lhs->sorted_tasks.front()->task_set_info().order_in_graph();
-      int64_t rhs_order_in_graph = rhs->sorted_tasks.front()->task_set_info().order_in_graph();
-      CHECK_NE(lhs_order_in_graph, rhs_order_in_graph);
-      return lhs_order_in_graph < rhs_order_in_graph;
-    });
-    if (enable_mem_chain_merge) {
-      for (MemoryChain* mem_chain : mem_chains) {
-        if (!TryMergeMemChain2MergedChains(&merged_chains, mem_chain, IsStrictOrderL2R)) {
-          merged_chains.emplace_back(mem_chain);
-        }
-      }
-    } else {
-      merged_chains.swap(mem_chains);
-    }
-    for (MemoryChain* merged_chain : merged_chains) {
+    for (MemoryChain* mem_chain : mem_chains) {
       std::vector<TaskProto*>* sorted_tasks = &((*mem_chain2sorted_tasks)[mem_chain_id]);
       CHECK(sorted_tasks->empty());
-      sorted_tasks->insert(sorted_tasks->end(), merged_chain->sorted_tasks.begin(),
-                           merged_chain->sorted_tasks.end());
+      sorted_tasks->insert(sorted_tasks->end(), mem_chain->sorted_tasks.begin(),
+                           mem_chain->sorted_tasks.end());
       std::vector<RegstDescProto*>* mem_reused_regsts =
           &((*mem_chain2mem_reused_regsts)[mem_chain_id]);
       CHECK(mem_reused_regsts->empty());
-      mem_reused_regsts->insert(mem_reused_regsts->end(), merged_chain->mem_reused_regsts.begin(),
-                                merged_chain->mem_reused_regsts.end());
+      mem_reused_regsts->insert(mem_reused_regsts->end(), mem_chain->mem_reused_regsts.begin(),
+                                mem_chain->mem_reused_regsts.end());
       // Merge HashSet mem_chain2mem_reused_regsts and HashMap regst_desc_id2reuse_regst_desc
       auto& regst_desc_id2reuse_regst_desc =
           (*mem_chain2regst_desc_id2reuse_regst_desc)[mem_chain_id];
       CHECK(regst_desc_id2reuse_regst_desc.empty());
-      for (auto& mem_reused_regst : merged_chain->mem_reused_regsts) {
+      for (auto& mem_reused_regst : mem_chain->mem_reused_regsts) {
         regst_desc_id2reuse_regst_desc[mem_reused_regst->regst_desc_id()] = mem_reused_regst;
       }
       ++mem_chain_id;
@@ -548,9 +479,7 @@ void InitAlgo2Result(
 
 }  // namespace
 
-void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
-    Plan* plan, const std::function<bool(const std::string&, const std::string&)>&
-                    IsOpNameDataOrCtrlReachable) {
+void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan) {
   // 1 device 1 mem chain
   HashMap<int64_t, std::vector<TaskProto*>> mem_chain2sorted_tasks;
   HashMap<int64_t, std::vector<RegstDescProto*>> mem_chain2mem_reused_regsts;
@@ -558,9 +487,8 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
   //      There are no duplicated registers in different memory chains.
   HashMap<int64_t, HashMap<int64_t, RegstDescProto*>> mem_chain2regst_desc_id2reuse_regst_desc;
   HashMap<RegstDescProto*, size_t> mem_reused_regst2size;
-  GenMemChainTasksAndRegsts(plan, IsOpNameDataOrCtrlReachable, &mem_chain2sorted_tasks,
-                            &mem_chain2mem_reused_regsts, &mem_chain2regst_desc_id2reuse_regst_desc,
-                            &mem_reused_regst2size);
+  GenMemChainTasksAndRegsts(plan, &mem_chain2sorted_tasks, &mem_chain2mem_reused_regsts,
+                            &mem_chain2regst_desc_id2reuse_regst_desc, &mem_reused_regst2size);
   if (mem_chain2mem_reused_regsts.empty()) { return; }
   HashSet<int64_t> mem_chains;
   for (const auto& pair : mem_chain2mem_reused_regsts) { mem_chains.insert(pair.first); }

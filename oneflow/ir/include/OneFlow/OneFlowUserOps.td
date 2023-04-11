@@ -3815,6 +3815,31 @@ def OneFlow_EmbeddingOp : OneFlow_BaseOp<"embedding", [NoMemoryEffect, DeclareOp
   let has_input_arg_modify_fn = 1;
 }
 
+def OneFlow_FusedApplyRotaryEmbOp : OneFlow_BaseOp<"fused_apply_rotary_emb", [NoMemoryEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    Optional<OneFlow_Tensor>:$cos,
+    Optional<OneFlow_Tensor>:$sin,
+    Optional<OneFlow_Tensor>:$position_ids
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    DefaultValuedAttr<StrAttr, "\"BHMK\"">:$x_layout,
+    DefaultValuedAttr<StrAttr, "\"BHMK\"">:$output_layout,
+    DefaultValuedAttr<StrAttr, "\"plane\"">:$mode,
+    DefaultValuedAttr<SI64Attr, "0">:$tensor_index,
+    DefaultValuedAttr<F32Attr, "1e4">:$base,
+    DefaultValuedAttr<SI64Attr, "0">:$k_size,
+    DefaultValuedAttr<SI64Attr, "0">:$rotary_size
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_EmbeddingGradOp : OneFlow_BaseOp<"embedding_grad", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dy,
@@ -6472,8 +6497,27 @@ def OneFlow__ncclLogicalSendRecvOp : OneFlow_BaseOp<"_nccl_logical_send_recv", [
     OneFlow_Tensor:$out
   );
   let attrs = (ins
-    StrArrayAttr:$src_nd_sbp,
-    StrArrayAttr:$dst_nd_sbp
+    StrArrayAttr:$src_reduced_nd_sbp,
+    StrArrayAttr:$dst_reduced_nd_sbp
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
+  let has_nd_sbp_infer_fn = 1;
+}
+
+def OneFlow__ncclLogicalFusionOp : OneFlow_BaseOp<"_nccl_logical_fusion", [NoMemoryEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    Variadic<OneFlow_Tensor>:$in
+  );
+  let output = (outs
+    Variadic<OneFlow_Tensor>:$out
+  );
+  let attrs = (ins
+    StrArrayAttr:$src_nd_sbp_str_list,
+    StrArrayAttr:$dst_nd_sbp_str_list,
+    StrArrayAttr:$nccl_type_list
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;

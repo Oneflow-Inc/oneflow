@@ -26,9 +26,7 @@ limitations under the License.
 namespace oneflow {
 
 struct IntraJobMemSharingUtil {
-  static void InferMemBlockId4MemReusedRegst(
-      Plan* plan, const std::function<bool(const std::string&, const std::string&)>&
-                      IsOpNameDataOrCtrlReachable);
+  static void InferMemBlockId4MemReusedRegst(Plan* plan);
 };
 
 template<class T>
