@@ -69,7 +69,7 @@ template<typename T, typename K>
 void bang_unsorted_segment_sum_kernel(BangHandle& handle, const T* input, int64_t batch, int64_t N,
                                       int64_t length, const K* segment, int64_t segment_size,
                                       T* output, int64_t offset) {
-  cnrtDim3_t dim = {handle.nclusters, handle.ncores_per_cluster, 1};
+  cnrtDim3_t dim = {handle.nclusters * handle.ncores_per_cluster, 1, 1};
   cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
   bang_unsorted_segment_sum_internal<<<dim, func_type, handle.queue>>>(
       input, batch, N, length, segment, segment_size, output, offset);
@@ -79,7 +79,7 @@ template<typename K>
 void bang_unsorted_segment_sum_half_kernel(BangHandle& handle, const void* input, int64_t batch,
                                            int64_t N, int64_t length, const K* segment,
                                            int64_t segment_size, void* output, int64_t offset) {
-  cnrtDim3_t dim = {handle.nclusters, handle.ncores_per_cluster, 1};
+  cnrtDim3_t dim = {handle.nclusters * handle.ncores_per_cluster, 1, 1};
   cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
   bang_unsorted_segment_sum_internal<<<dim, func_type, handle.queue>>>(
       static_cast<const half*>(input), batch, N, length, segment, segment_size,

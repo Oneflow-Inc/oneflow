@@ -148,7 +148,7 @@ void bang_multi_reduce_sum_pow_abs_kernel(BangHandle& handle, int64_t n, const T
   T* workspace_ptr = static_cast<T*>(workspace);
 
   cnrtDim3_t dim = {handle.nclusters * handle.ncores_per_cluster, 1, 1};
-  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION4;
+  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
 
   for (int64_t i = 0; i < n; i += BATCH) {
     int32_t num = (n - i) > BATCH ? BATCH : (n - i);

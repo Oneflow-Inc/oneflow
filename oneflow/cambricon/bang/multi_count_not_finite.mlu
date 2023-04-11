@@ -75,9 +75,8 @@ void bang_multi_count_not_finite_kernel(BangHandle& handle, int64_t n, const T**
   // TODO(): check workspace_size == n * sizeof(int64_t)
   int64_t* workspace_ptr = static_cast<int64_t*>(workspace);
 
-  // cnrtDim3_t dim = {handle.nclusters, handle.ncores_per_cluster, 1};
   cnrtDim3_t dim = {handle.ncores_per_cluster * handle.nclusters, 1, 1};
-  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION4;
+  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
 
   for (int64_t i = 0; i < n; i += BATCH) {
     int32_t num = (n - i) > BATCH ? BATCH : (n - i);

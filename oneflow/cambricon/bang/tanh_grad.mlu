@@ -65,14 +65,14 @@ __mlu_global__ void bang_tanh_grad_kernel(int64_t n, const T* x, const T* dy, T*
 template<typename T>
 void bang_tanh_gradient_kernel(BangHandle& handle, int64_t n, const T* x, const T* dy, T* dx) {
   cnrtDim3_t dim = {handle.nclusters * handle.ncores_per_cluster, 1, 1};
-  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION4;
+  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
   bang_tanh_grad_kernel<<<dim, func_type, handle.queue>>>(n, x, dy, dx);
 }
 
 void bang_tanh_gradient_half_kernel(BangHandle& handle, int64_t n, const void* x, const void* dy,
                                     void* dx) {
   cnrtDim3_t dim = {handle.nclusters * handle.ncores_per_cluster, 1, 1};
-  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION4;
+  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
   bang_tanh_grad_kernel<<<dim, func_type, handle.queue>>>(
       n, static_cast<const half*>(x), static_cast<const half*>(dy), static_cast<half*>(dx));
 }

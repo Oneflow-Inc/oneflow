@@ -80,7 +80,7 @@ __mlu_global__ void bang_regularize_gradient_internal(int64_t n, const T* model,
 template<typename T>
 void bang_regularize_gradient_kernel(BangHandle& handle, int64_t n, const T* model,
                                      const T* model_diff, T* out, float l1, float l2) {
-  cnrtDim3_t dim = {handle.nclusters, handle.ncores_per_cluster, 1};
+  cnrtDim3_t dim = {handle.nclusters * handle.ncores_per_cluster, 1, 1};
   cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
   bang_regularize_gradient_internal<<<dim, func_type, handle.queue>>>(n, model, model_diff, out, l1,
                                                                       l2);
@@ -88,7 +88,7 @@ void bang_regularize_gradient_kernel(BangHandle& handle, int64_t n, const T* mod
 
 void bang_regularize_gradient_half_kernel(BangHandle& handle, int64_t n, const void* model,
                                           const void* model_diff, void* out, float l1, float l2) {
-  cnrtDim3_t dim = {handle.nclusters, handle.ncores_per_cluster, 1};
+  cnrtDim3_t dim = {handle.nclusters * handle.ncores_per_cluster, 1, 1};
   cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
   bang_regularize_gradient_internal<<<dim, func_type, handle.queue>>>(
       n, static_cast<const half*>(model), static_cast<const half*>(model_diff),
