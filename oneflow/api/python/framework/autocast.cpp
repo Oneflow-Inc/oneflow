@@ -24,7 +24,7 @@ namespace py = pybind11;
 namespace oneflow {
 
 size_t* nested_count() {
-  static thread_local size_t _nested_count = true;
+  static thread_local size_t _nested_count = 0;
   return &_nested_count;
 }
 

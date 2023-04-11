@@ -61,7 +61,7 @@ inline Symbol<DType> get_lower_precision_fp_from_device_type(DeviceType device_t
 }
 
 using val_type = std::pair<std::weak_ptr<one::Tensor>, std::shared_ptr<one::Tensor>>;
-using key_type = std::pair<std::shared_ptr<one::Tensor>, DataType>;
+using key_type = std::pair<const one::EagerLocalTensorImpl*, DataType>;
 using cached_map = std::unordered_map<key_type, val_type>;
 
 std::unordered_map<key_type, val_type>* cached_casts() {
@@ -95,15 +95,22 @@ Maybe<one::Tensor> cached_cast(const std::shared_ptr<one::Tensor>& tensor, Symbo
                     && cast_type == get_lower_precision_fp_from_device_type(device_type)
                     && tensor->dtype()->data_type() == DataType::kFloat && tensor->is_leaf());
   if (use_cache) {
-    auto it = cached_casts()->find(std::make_pair(tensor, cast_type->data_type()));
-    if (it != cached_casts()->end()) {
-      return it->second.second;
-    } else {
+    auto it = cached_casts()->find(
+        std::make_pair(JUST(tensor->mut_eager_local_tensor_impl()), cast_type->data_type()));
+    if (it == cached_casts()->end() || it->second.first.lock() == nullptr) {
       const std::shared_ptr<one::Tensor>& result =
           JUST(one::functional::To(tensor, cast_type, /*copy*/ false));
-      cached_casts()->emplace(std::make_pair(tensor, cast_type->data_type()),
-                              std::make_pair(std::weak_ptr<one::Tensor>(tensor), result));
+      if (it == cached_casts()->end()) {
+        cached_casts()->emplace(
+            std::make_pair(JUST(tensor->mut_eager_local_tensor_impl()), cast_type->data_type()),
+            std::make_pair(tensor->weak_from_this(), result));
+      } else {
+        it->second.first = tensor->weak_from_this();
+        it->second.second = result;
+      }
       return result;
+    } else {
+      return it->second.second;
     }
   } else {
     return one::functional::To(tensor, cast_type, /*copy*/ false);
