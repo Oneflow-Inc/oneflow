@@ -34,7 +34,6 @@ def _test_is_view(test_case, device):
     test_case.assertEqual(xx.is_view(), False)
 
 
-
 @flow.unittest.skip_unless_1n1d()
 class TestTensorIsView(flow.unittest.TestCase):
     def test_is_view(test_case):
