@@ -645,8 +645,9 @@ struct CastVariableConversion final : public OpRewritePattern<VariableOp> {
         if (isSignLessTensorOrOther(cast.getResult(0).getType())) { return failure(); }
       }
     }
-    VariableOp cloned = rewriter.create<VariableOp>(op->getLoc(), op.getResultTypes(), op->getOperands(),
-                                              op->getAttrs());
+    if (op.getOutput().getUses().empty()) { return failure(); }
+    VariableOp cloned = rewriter.create<VariableOp>(op->getLoc(), op.getResultTypes(),
+                                                    op->getOperands(), op->getAttrs());
     rewriter.replaceOpWithNewOp<UnrealizedConversionCastOp>(
         op, convertToSignless(getContext(), op.getOutput().getType()), cloned.getOutput());
     return success();
@@ -711,10 +712,12 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
 
   const auto mgr = ::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get();
   // check if the pass is triggered by python based on the presence of variable tensor manger
-  if (mgr) {
-    patterns.add<VariableOpLowering>(typeConverter, context);
-  } else {
-    patterns.add<VariableOpToConstLowering>(typeConverter, context, this->variableAsConstant);
+  if (fullyConvert) {
+    if (mgr) {
+      patterns.add<VariableOpLowering>(typeConverter, context);
+    } else {
+      patterns.add<VariableOpToConstLowering>(typeConverter, context, this->variableAsConstant);
+    }
   }
   patterns.add<CastOpLowering, ScalarMulByTensorOpLowering, ReluOpLowering, Conv2DOpLowering,
                AvgPool2DOpLowering, ReshapeOpLowering, Add2OpLowering, MaxPool2DOpLowering,
