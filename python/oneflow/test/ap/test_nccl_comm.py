@@ -25,12 +25,29 @@ from oneflow.test_utils.test_util import GenArgList
 import time
 import os
 
+def _reset_session():
+    # Close session to avoid the buffer name duplicate error.
+    oneflow.framework.session_context.TryCloseDefaultSession()
+    time.sleep(1)
+    flow.framework.session_context.NewDefaultSession(flow._oneflow_global_unique_env)
+
+
+def _with_new_session(fn):
+    def new_fn(*args, **kwargs):
+        _reset_session()
+        out = fn(*args, **kwargs)
+        _reset_session()
+        return out
+
+    return new_fn
+
 def _get_specific_global_tensor_mem(placement, sbp, tensor):
     size_tensor = tensor.clone().detach().to_local()
     cnt_size = size_tensor.element_size() * flow.numel(size_tensor)
-    return cnt_size / 1024 / 1024
+    return cnt_size
 
-def _test_nccl_comm_1d(test_case, src_nd_sbp, dst_nd_sbp):
+@_with_new_session
+def _test_nccl_comm_1d(test_case, src_nd_sbp, dst_nd_sbp, data_num = 1):
     # can not process p in dst
     if flow.sbp.partial_sum() in dst_nd_sbp:
         return
@@ -40,10 +57,12 @@ def _test_nccl_comm_1d(test_case, src_nd_sbp, dst_nd_sbp):
         return
 
     # input
-    placement = flow.placement("cuda", ranks=[0, 1])
-    local_np = np.arange(1024 * 1024 * 20).reshape(1024, 1024, 20)
+    placement = flow.placement("cuda", ranks=[0, 1, 2, 3])
+    dim0 = 4
+    dim1 = 4
+    local_np = np.arange(dim0 * dim1 * data_num).reshape(dim0, dim1, data_num)
     x = flow.tensor(local_np, sbp=src_nd_sbp, placement=placement)
-    print("input tensor size ", _get_specific_global_tensor_mem(placement, src_nd_sbp, x), "MB")
+    print("input tensor size ", _get_specific_global_tensor_mem(placement, src_nd_sbp, x), "B")
 
     # check graph boxing
     flow.boxing.nccl.enable_use_compute_stream(True)
@@ -60,13 +79,14 @@ def _test_nccl_comm_1d(test_case, src_nd_sbp, dst_nd_sbp):
 
     graph = TestNcclLogicalComm1DGraph()
     # graph.debug(0)
-    for i in range(10):
+    for i in range(100):
         y = graph(x)
+    print("output tensor size ", _get_specific_global_tensor_mem(placement, dst_nd_sbp, y), "B")
     out_np = y.numpy()
     in_np = x.numpy()
     if flow.env.get_rank() == 0:
        print("src sbp ", src_nd_sbp, ", dst sbp ", dst_nd_sbp)
-       print(graph)
+       # print(graph)
        equal = np.array_equal(out_np, in_np)
        if not equal:
            print("in ", in_np)
@@ -104,7 +124,7 @@ def gen_dst_1d_sbp():
         )
     return nd_sbp_list
 
-@flow.unittest.skip_unless_1n2d()
+@flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestNcclComm1D(flow.unittest.TestCase):
     def test_nccl_comm_1d(test_case):
@@ -115,7 +135,10 @@ class TestNcclComm1D(flow.unittest.TestCase):
         print("=====")
         for arg in GenArgList(arg_dict):
             print("------", arg)
-            _test_nccl_comm_1d(test_case, *arg)
+            for index in range(20, 0, -1):
+                data_num = int(2 ** (index / 2))
+                print("data num ", data_num) 
+                _test_nccl_comm_1d(test_case, *arg, data_num = data_num)
 
 
 if __name__ == "__main__":
