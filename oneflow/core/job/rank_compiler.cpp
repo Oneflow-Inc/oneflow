@@ -125,8 +125,7 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
   auto* job_id2job_conf = plan->mutable_job_confs()->mutable_job_id2job_conf();
   (*job_id2job_conf)[GlobalJobDesc().job_id()] = GlobalJobDesc().job_conf();
   // NOTE(chengcheng): infer mem blob id & set inplace & add ctrl
-  // TODO(chengcheng): set inplace hint for cpu regst
-  IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(plan, IsReachable);
+  IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(plan);
   PlanUtil::MergeMemBlockIdByLogicalChainId(plan, *job, rank_);
   PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(plan);
   PlanUtil::SetForceInplaceMemBlock(plan, rank_);

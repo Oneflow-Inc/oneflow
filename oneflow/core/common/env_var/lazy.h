@@ -21,8 +21,13 @@ limitations under the License.
 
 namespace oneflow {
 
-// Default compilation mode and default number of threads during compilation.
+// Default compilation mode during graph compilation. There 4 modes to choose:
+// "naive", master rank compile the full plan.
+// "rank_per_process", multi process(rank) run seperation compile.
+// "rank_per_iter", one thread run seperation compile. Just for debug.
+// "rank_per_thread", multi thread run seperation compile. Just for debug.
 DEFINE_THREAD_LOCAL_ENV_STRING(ONEFLOW_LAZY_COMPILE_MODE, "naive");
+// Default number of threads during graph compilation.
 DEFINE_THREAD_LOCAL_ENV_INTEGER(ONEFLOW_LAZY_COMPILE_RPC_THREAD_NUM, 16);
 
 }  // namespace oneflow
