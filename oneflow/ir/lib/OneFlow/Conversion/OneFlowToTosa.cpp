@@ -473,26 +473,15 @@ struct NormalizationInferenceOpLowering final
   using OpConversionPattern<NormalizationInferenceOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(NormalizationInferenceOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    auto reshape_dim = [&](Type type, Value value) -> Value {
-      RankedTensorType in_type = value.getType().dyn_cast<RankedTensorType>();
-      RankedTensorType out_type = type.cast<RankedTensorType>();
-      SmallVector<int64_t> new_shape = {in_type.getShape()[0]};
-      for (auto i = 2; i < out_type.getRank(); ++i) new_shape.push_back(1);
-      auto new_type = RankedTensorType::get(new_shape, out_type.getElementType());
-      return rewriter.create<tosa::ReshapeOp>(op->getLoc(), new_type, value,
-                                              rewriter.getDenseI64ArrayAttr(new_shape));
-    };
-
     auto loc = op->getLoc();
-    const auto out_type = op.getY().getType();
 
     const auto epsilon_type = RankedTensorType::get({}, rewriter.getF32Type());
     auto epsilon = rewriter.create<tosa::ConstOp>(
         loc, epsilon_type, DenseElementsAttr::get(epsilon_type, op.getEpsilon()));
-    auto mean = reshape_dim(out_type, op.getMovingMean());
-    auto variance = reshape_dim(out_type, op.getMovingVariance());
-    auto gamma = reshape_dim(out_type, op.getGamma());
-    auto beta = reshape_dim(out_type, op.getBeta());
+    auto mean = op.getMovingMean();
+    auto variance = op.getMovingVariance();
+    auto gamma = op.getGamma();
+    auto beta = op.getBeta();
     auto output = op.getY();
     auto x = op.getX();
 
@@ -508,31 +497,20 @@ struct NormalizationOpLowering final : public OpConversionPattern<NormalizationO
   using OpConversionPattern<NormalizationOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(NormalizationOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    auto reshape_dim = [&](Type type, Value value) -> Value {
-      const RankedTensorType in_type = value.getType().dyn_cast<RankedTensorType>();
-      const RankedTensorType out_type = type.cast<RankedTensorType>();
-      SmallVector<int64_t> new_shape = {in_type.getShape()[0]};
-      for (auto i = 2; i < out_type.getRank(); ++i) new_shape.push_back(1);
-      const auto new_type = RankedTensorType::get(new_shape, out_type.getElementType());
-      return rewriter.create<tosa::ReshapeOp>(op->getLoc(), new_type, value,
-                                              rewriter.getDenseI64ArrayAttr(new_shape));
-    };
-
     auto loc = op->getLoc();
-    const auto out_type = op.getY().getType();
 
     const auto epsilon_type = RankedTensorType::get({}, rewriter.getF32Type());
     // epsilon   = reshape(epsilon, shape_1)
     auto epsilon = rewriter.create<tosa::ConstOp>(
         loc, epsilon_type, DenseElementsAttr::get(epsilon_type, op.getEpsilon()));
     //  mean = reshape(mean, shape_0)
-    auto mean = reshape_dim(out_type, op.getMovingMean());
+    auto mean = op.getMovingMean();
     //  variance= reshape(variance, shape_0)
-    auto variance = reshape_dim(out_type, op.getMovingVariance());
+    auto variance = op.getMovingVariance();
     // scale = reshape(scale, shape_0)
-    auto gamma = reshape_dim(out_type, op.getGamma());
+    auto gamma = op.getGamma();
     // beta = reshape(beta, shape_0)
-    auto beta = reshape_dim(out_type, op.getBeta());
+    auto beta = op.getBeta();
     auto output = op.getY();
     auto x = op.getX();
 
