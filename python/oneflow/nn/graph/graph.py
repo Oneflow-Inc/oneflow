@@ -924,14 +924,14 @@ class Graph(object):
 
         # Create op name vectors from shared graph and this graph.
         assert len(self._forward_job_proto.net.op) == len(
-            self._shared_graph._forward_graph_proto.net.op
+            self._shared_graph._forward_job_proto.net.op
         )
         # This graph and the shared graph's original graph have same operators and operator order.
         # We use this to find the corresponding operator in shared graph.
         shared_op_names_from_ordered_original_graph = []
         for op_idx in range(len(self._forward_job_proto.net.op)):
             shared_op_names_from_ordered_original_graph.append(
-                self._shared_graph._forward_graph_proto.net.op[op_idx].name
+                self._shared_graph._forward_job_proto.net.op[op_idx].name
             )
 
         # Copy the completed graph from the shared graphwo and reuse it.
