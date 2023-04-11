@@ -15,6 +15,8 @@ limitations under the License.
 */
 #include "oneflow/core/graph/task_graph.h"
 #include <cstddef>
+#include "oneflow/core/common/just.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/container_util.h"
@@ -630,7 +632,7 @@ void TaskGraph::MergeChainAndAddOrderingCtrlEdgeInSameChain() {
 
 void TaskGraph::InitOrderedTaskNodes() {
   // NOTE(chengcheng): Warning, ordered_task_nodes_ by topo is NOT valid in process
-  //  parallel compile, because the current rank task graph in Incomplete.
+  //  parallel compile, because the current rank task graph is Incomplete.
   TopoForEachNode([&](TaskNode* task_node) { ordered_task_nodes_.emplace_back(task_node); });
 }
 
@@ -1235,13 +1237,13 @@ Maybe<CompTaskNode*> RankTaskGraph::CreateOrFindRankCompTaskNodeByParallelId(con
   if (comp_task_node != nullptr) { return comp_task_node; }
   auto** comp_task_node_ptr = &op_node2comp_task_node_[op_node];
   if (*comp_task_node_ptr != nullptr) { return *comp_task_node_ptr; }
-  const TaskId task_id = [&] {
+  const TaskId task_id = *JUST([&]() -> Maybe<TaskId> {
     const auto& map = boxing_task_graph_proto_->boxing_unrelated_op_name2task_ids();
     const auto& iter = map.find(op_node->op().op_name());
-    CHECK(iter != map.end());
-    CHECK_LT(parallel_id, iter->second.task_id_size());
+    CHECK_OR_RETURN(iter != map.end());
+    CHECK_LT_OR_RETURN(parallel_id, iter->second.task_id_size());
     return DecodeTaskIdFromInt64(iter->second.task_id().Get(parallel_id));
-  }();
+  }());
   const auto& GetStreamIdFromMaster = [&](const OpNode* op_node, int64_t parallel_id, TaskType) {
     return task_id.stream_id();
   };
@@ -1405,8 +1407,8 @@ Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names) {
   JUST(AddTransportTaskEdgesFromProto());
   JUST(InitTransportTaskNodesFromProto());
   JUST(InitRegstDescsConsumers());
-  // Note that tasks currently added in above code are from BoxingTaskGraph, so they are all boxing
-  // related.
+  // Note that tasks currently added in above code are from BoxingTaskGraph, so they are all
+  // boxing related.
   OpGraph* op_graph = Singleton<OpGraph>::Get();
   JUST(op_graph->MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
     JUST(DoRankDuty(op_node->parallel_desc(), [&](int64_t rank) -> Maybe<void> {
@@ -1415,8 +1417,8 @@ Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names) {
     }));
     if (var_op_names.count(op_node->op().op_name()) > 0
         && !IsDutyRank(op_node->parallel_desc(), current_rank_)) {
-      // To makes sure all ranks know all var_op_names, at least one task for variable op is needed
-      // in the plan.
+      // To makes sure all ranks know all var_op_names, at least one task for variable op is
+      // needed in the plan.
       JUST(CreateOrFindRankCompTaskNodeByParallelId(op_node, /*parallel_id=*/0));
     }
     return Maybe<void>::Ok();

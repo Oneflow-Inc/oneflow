@@ -1311,8 +1311,10 @@ void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name, int64_t li
           << " task_id2name cannot find" << task_id;
       int64_t thrd_id = task->thrd_id();
       StreamId stream_id = DecodeStreamIdFromInt64(thrd_id);
-      file_stream << " actor id : " << std::to_string(task_id)
-                  << " name : " << task_id2name.at(task_id) << " thrd : " << std::to_string(thrd_id)
+      file_stream << "i : " << std::to_string(i) << " , actor id : " << std::to_string(task_id)
+                  << " thrd : " << std::to_string(thrd_id) << " name : " << task_id2name.at(task_id)
+                  << "\n  chain_id : " << std::to_string(task->chain_id())
+                  << " order_in_chain : " << std::to_string(task->order_in_chain())
                   << " device_type : " << DeviceType_Name(stream_id.device_type())
                   << " stream_index : " << std::to_string(stream_id.stream_index()) << " {\n";
       for (const auto& key2consume_regst : task->consumed_regst_desc_id()) {

@@ -89,7 +89,7 @@ void TaskNode::set_chain_id(int64_t val) {
   chain_id_ = val;
 }
 
-void TaskNode::set_order_in_chain(int64_t val, const std::string& debug) {
+void TaskNode::set_order_in_chain(int64_t val) {
   CHECK_EQ(order_in_chain_, -1);
   order_in_chain_ = val;
 }

@@ -25,7 +25,7 @@ limitations under the License.
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -83,7 +83,7 @@ struct WrapperKernelOpLowering final : public OpConversionPattern<WrapperKernelO
     auto launch_func = DeclareLaunchFunc(rewriter, &module);
     auto launcher_ctx = op->getParentOfType<func::FuncOp>().getBody().getArgument(0);
     auto index_op = rewriter.create<LLVM::ConstantOp>(op->getLoc(), rewriter.getI64Type(),
-                                                      rewriter.getIndexAttr(op.index()));
+                                                      rewriter.getIndexAttr(op.getIndex()));
     auto new_op = rewriter.create<LLVM::CallOp>(op->getLoc(), launch_func,
                                                 ValueRange{launcher_ctx, index_op});
     rewriter.replaceOp(op, new_op.getResults());
@@ -98,7 +98,7 @@ struct RewriteFunctionArgsPattern final : public mlir::OpRewritePattern<func::Fu
     auto func_type = rewriter.getFunctionType({GetPtrType(rewriter)}, {});
     auto func = rewriter.create<mlir::func::FuncOp>(op.getLoc(), op.getSymName(), func_type);
     func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
-    BlockAndValueMapping bvm;
+    IRMapping bvm;
     op.getRegion().cloneInto(&func.getRegion(), bvm);
     auto& block = func.getBody().getBlocks().front();
     auto launcher_ctx = block.getArgument(0);

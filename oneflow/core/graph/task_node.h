@@ -79,8 +79,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void set_machine_id(int64_t val);
   void set_thrd_id(int64_t val);
   void set_chain_id(int64_t val);
-  // TODO(strint): rm debug after fix thread run bug
-  void set_order_in_chain(int64_t val, const std::string& debug = "None");
+  void set_order_in_chain(int64_t val);
 
   // Build
   virtual void ProduceAllRegstsAndBindEdges() = 0;

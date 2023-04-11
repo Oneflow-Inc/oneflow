@@ -21,53 +21,54 @@ namespace oneflow {
 
 template<typename OpTy>
 bool isLinearMatmulOp(OpTy op) {
-  const bool isAlphaOne = op.alpha().convertToDouble() == 1.0;
-  const bool isLinear = op.transpose_a() == false && op.transpose_b() == true;
-  const bool hasNoAddToOutput = !op._add_to_output();
-  const bool isCUDA = op.device_tag() == "cuda";
+  const bool isAlphaOne = op.getAlpha().convertToDouble() == 1.0;
+  const bool isLinear = op.getTransposeA() == false && op.getTransposeB() == true;
+  const bool hasNoAddToOutput = !op.get_addToOutput();
+  const bool isCUDA = op.getDeviceTag() == "cuda";
   return isAlphaOne && isLinear && hasNoAddToOutput && isCUDA;
 }
 
 bool MatmulOp::isLinear() { return isLinearMatmulOp(*this); }
 
-Value MatmulOp::matMulGetX() { return a(); }
+Value MatmulOp::matMulGetX() { return getA(); }
 
-Value MatmulOp::matMulGetW() { return b(); }
+Value MatmulOp::matMulGetW() { return getB(); }
 
-Value MatmulOp::matMulGetY() { return out(); }
+Value MatmulOp::matMulGetY() { return getOut(); }
 
 bool BroadcastMatmulOp::isLinear() { return isLinearMatmulOp(*this); }
 
-Value BroadcastMatmulOp::matMulGetX() { return a(); }
+Value BroadcastMatmulOp::matMulGetX() { return getA(); }
 
-Value BroadcastMatmulOp::matMulGetW() { return b(); }
+Value BroadcastMatmulOp::matMulGetW() { return getB(); }
 
-Value BroadcastMatmulOp::matMulGetY() { return out(); }
+Value BroadcastMatmulOp::matMulGetY() { return getOut(); }
 
 bool BiasAddOp::isLastDim() {
-  return axis() == -1 || axis() == out().getType().cast<ShapedType>().getRank() - 1;
+  return getAxis() == -1 || getAxis() == getOut().getType().cast<ShapedType>().getRank() - 1;
 }
 
-Value BiasAddOp::biasAddGetBias() { return b(); }
+Value BiasAddOp::biasAddGetBias() { return getB(); }
 
-Value BiasAddOp::biasAddGetOut() { return out(); }
+Value BiasAddOp::biasAddGetOut() { return getOut(); }
 
-Value BroadcastAddOp::biasAddGetBias() { return y(); }
+Value BroadcastAddOp::biasAddGetBias() { return getY(); }
 
-Value BroadcastAddOp::biasAddGetOut() { return z(); }
+Value BroadcastAddOp::biasAddGetOut() { return getZ(); }
 
 bool BroadcastAddOp::isLastDim() { return true; }
 
-Value FusedMatmulBiasOp::matMulGetX() { return x(); }
+Value FusedMatmulBiasOp::matMulGetX() { return getX(); }
 
-Value FusedMatmulBiasOp::matMulGetW() { return weight(); }
+Value FusedMatmulBiasOp::matMulGetW() { return getWeight(); }
 
-Value FusedMatmulBiasOp::matMulGetY() { return out(); }
+Value FusedMatmulBiasOp::matMulGetY() { return getOut(); }
 
 namespace {
 
 bool shouldGroupFusedMatmulBiasOp(FusedMatmulBiasOp& op) {
-  return !op._add_to_output() && op.device_tag() == "cuda" && op.alpha().convertToDouble() == 1.0;
+  return !op.get_addToOutput() && op.getDeviceTag() == "cuda"
+         && op.getAlpha().convertToDouble() == 1.0;
 }
 
 }  // namespace
@@ -76,9 +77,9 @@ bool FusedMatmulBiasOp::isLinear() { return shouldGroupFusedMatmulBiasOp(*this);
 
 bool FusedMatmulBiasOp::isLastDim() { return shouldGroupFusedMatmulBiasOp(*this); }
 
-Value FusedMatmulBiasOp::biasAddGetBias() { return bias(); }
+Value FusedMatmulBiasOp::biasAddGetBias() { return getBias(); }
 
-Value FusedMatmulBiasOp::biasAddGetOut() { return out(); }
+Value FusedMatmulBiasOp::biasAddGetOut() { return getOut(); }
 
 }  // namespace oneflow
 

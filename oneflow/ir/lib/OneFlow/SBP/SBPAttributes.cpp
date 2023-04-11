@@ -17,13 +17,15 @@ limitations under the License.
 #include "OneFlow/SBP/SBPAttributes.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Casting.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/Support/LogicalResult.h"
 
 using namespace mlir;
 
-LogicalResult parseSBP(AsmParser& parser, FailureOr<ArrayAttr>& args) {
+LogicalResult parseSBP(AsmParser& parser, ArrayAttr& args) {
   if (failed(parser.parseLSquare())) { return failure(); }
   if (succeeded(parser.parseOptionalRSquare())) {
     args = parser.getBuilder().getArrayAttr({});

@@ -158,9 +158,7 @@ bool IsTaskConnectedL2R(const TaskProto* src, const TaskProto* dst) {
 }
 
 void GenMemChainTasksAndRegsts(
-    Plan* plan,
-    const std::function<bool(const std::string&, const std::string&)>& IsOpNameDataOrCtrlReachable,
-    HashMap<int64_t, std::vector<TaskProto*>>* mem_chain2sorted_tasks,
+    Plan* plan, HashMap<int64_t, std::vector<TaskProto*>>* mem_chain2sorted_tasks,
     HashMap<int64_t, std::vector<RegstDescProto*>>* mem_chain2mem_reused_regsts,
     HashMap<int64_t, HashMap<int64_t, RegstDescProto*>>* mem_chain2regst_desc_id2reuse_regst_desc,
     HashMap<RegstDescProto*, size_t>* mem_reused_regst2size) {
@@ -176,7 +174,6 @@ void GenMemChainTasksAndRegsts(
     std::vector<MemoryChain*> mem_chains;
     mem_chains.reserve(device_chain_pair.second.size());
     for (auto& pair : device_chain_pair.second) { mem_chains.emplace_back(&pair.second); }
-
     for (MemoryChain* mem_chain : mem_chains) {
       std::vector<TaskProto*>* sorted_tasks = &((*mem_chain2sorted_tasks)[mem_chain_id]);
       CHECK(sorted_tasks->empty());
@@ -483,9 +480,7 @@ void InitAlgo2Result(
 
 }  // namespace
 
-void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
-    Plan* plan, const std::function<bool(const std::string&, const std::string&)>&
-                    IsOpNameDataOrCtrlReachable) {
+void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan) {
   // 1 device 1 mem chain
   HashMap<int64_t, std::vector<TaskProto*>> mem_chain2sorted_tasks;
   HashMap<int64_t, std::vector<RegstDescProto*>> mem_chain2mem_reused_regsts;
@@ -493,9 +488,8 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
   //      There are no duplicated registers in different memory chains.
   HashMap<int64_t, HashMap<int64_t, RegstDescProto*>> mem_chain2regst_desc_id2reuse_regst_desc;
   HashMap<RegstDescProto*, size_t> mem_reused_regst2size;
-  GenMemChainTasksAndRegsts(plan, IsOpNameDataOrCtrlReachable, &mem_chain2sorted_tasks,
-                            &mem_chain2mem_reused_regsts, &mem_chain2regst_desc_id2reuse_regst_desc,
-                            &mem_reused_regst2size);
+  GenMemChainTasksAndRegsts(plan, &mem_chain2sorted_tasks, &mem_chain2mem_reused_regsts,
+                            &mem_chain2regst_desc_id2reuse_regst_desc, &mem_reused_regst2size);
   if (mem_chain2mem_reused_regsts.empty()) { return; }
   HashSet<int64_t> mem_chains;
   for (const auto& pair : mem_chain2mem_reused_regsts) { mem_chains.insert(pair.first); }
