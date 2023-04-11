@@ -15,7 +15,6 @@ Rewrite CreatScaleTrilOp(x: Value, diagonal: Attr, floating_fill_value: Attr, in
 }
 
 Rewrite CreateConv2DBatchNorm(epsilon: Attr, conv: Op, bn: Op) -> Op;
-Rewrite OutlineMulCast(mul: Op, cast: Op) -> Op;
 
 Constraint IsPaddingCouldBeAssimilatedIntoConv(padding_before: Attr, padding_after: Attr, data_format:Attr);
 Constraint IsNotNestedInJit(mul: Op);
