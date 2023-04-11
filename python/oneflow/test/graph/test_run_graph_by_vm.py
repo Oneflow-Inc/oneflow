@@ -100,7 +100,7 @@ def test_data_parallel_run_by_vm():
     assert graph_output.sbp == eager_output.sbp
     assert graph_output.shape == eager_output.shape
     assert graph_output.placement == eager_output.placement
-    # assert np.allclose(graph_output, eager_output)
+    assert np.allclose(graph_output, eager_output)
 
     os.environ["ONEFLOW_RUN_GRAPH_BY_VM"] = "0"
     os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "0"
@@ -134,7 +134,7 @@ def test_module_parallel_run_by_vm():
     assert graph_output.sbp == eager_output.sbp
     assert graph_output.shape == eager_output.shape
     assert graph_output.placement == eager_output.placement
-    # assert np.allclose(graph_output, eager_output)
+    assert np.allclose(graph_output, eager_output)
 
     os.environ["ONEFLOW_RUN_GRAPH_BY_VM"] = "0"
     os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "0"
@@ -171,7 +171,7 @@ def test_boxing_data_parallel_run_by_vm():
     assert graph_output.sbp == eager_output.sbp
     assert graph_output.shape == eager_output.shape
     assert graph_output.placement == eager_output.placement
-    # assert np.allclose(graph_output, eager_output)
+    assert np.allclose(graph_output, eager_output)
 
     os.environ["ONEFLOW_RUN_GRAPH_BY_VM"] = "0"
     os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "0"
