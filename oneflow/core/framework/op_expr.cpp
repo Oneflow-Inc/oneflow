@@ -41,8 +41,8 @@ class DummyGradFunction : public OpExprGradFunction<AutoGradCaptureState> {
 
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
-  Maybe<void> Capture(AutoGradCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const AttrMap& attrs) const override {
+  Maybe<void> Capture(AutoGradCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
     return Maybe<void>::Ok();
   }
 
