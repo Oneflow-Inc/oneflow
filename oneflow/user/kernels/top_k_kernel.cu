@@ -289,7 +289,7 @@ class GpuTopKKernel final : public user_op::OpKernel {
 
 #define REGISTER_CUDA_TOP_K_KERNEL(dtype)                                                        \
   REGISTER_USER_KERNEL("top_k")                                                                  \
-      .SetCreateFn<GpuTopKKernel<dtype>>()                                              \
+      .SetCreateFn<GpuTopKKernel<dtype>>()                                                       \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                           \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))          \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
