@@ -44,11 +44,6 @@ message RegstDescIdSet {
   repeated int64 regst_desc_id = 1;
 }
 
-message TaskSetInfo {
-  required int64 chain_id = 4;
-  required int64 order_in_graph = 5;
-}
-
 message TaskProto {
   // common
   required TaskType task_type = 1;
@@ -56,11 +51,12 @@ message TaskProto {
   required int64 thrd_id = 3;
   required int64 task_id = 4;
   required int64 job_id = 5;
-  required TaskSetInfo task_set_info = 6;
   required ExecSequence exec_sequence = 7;
   map<string, RegstDescProto> produced_regst_desc = 8;
   map<string, RegstDescIdSet> consumed_regst_desc_id = 9;
   optional bool all_register_num_eq_one_hint = 10 [default = false];
+  required int64 chain_id = 20;
+  required int64 order_in_chain = 21;
   // compute task
   optional ParallelContext parallel_ctx = 1000; // CompTask
 };
