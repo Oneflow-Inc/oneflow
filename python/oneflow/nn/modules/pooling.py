@@ -248,10 +248,12 @@ class MaxPool2d(Module):
 
     def forward(self, x):
         ndim = x.ndim
-        assert ndim == 3 or ndim == 4, "Expect 3D or 4D tensor as input, but got {ndim}D tensor."
+        assert (
+            ndim == 3 or ndim == 4
+        ), "Expect 3D or 4D tensor as input, but got {ndim}D tensor."
         if not self.return_indices:
             y = flow._C.max_pool2d(
-                x if ndim==4 else x.unsqueeze(0),
+                x if ndim == 4 else x.unsqueeze(0),
                 kernel_size=self.kernel_size,
                 stride=self.stride,
                 padding=self.padding,
@@ -260,10 +262,10 @@ class MaxPool2d(Module):
                 ceil_mode=self.ceil_mode,
                 data_format=self.channel_pos,
             )[0]
-            return y if ndim==4 else y.squeeze(0)
+            return y if ndim == 4 else y.squeeze(0)
         else:
             (y, indices) = flow._C.max_pool2d(
-                x if ndim==4 else x.unsqueeze(0),
+                x if ndim == 4 else x.unsqueeze(0),
                 kernel_size=self.kernel_size,
                 stride=self.stride,
                 padding=self.padding,
@@ -272,8 +274,7 @@ class MaxPool2d(Module):
                 ceil_mode=self.ceil_mode,
                 data_format=self.channel_pos,
             )
-            return (y, indices) if ndim==4 else(y.squeeze(0), indices.squeeze(0))
-
+            return (y, indices) if ndim == 4 else (y.squeeze(0), indices.squeeze(0))
 
     def extra_repr(self) -> str:
         return "kernel_size={}, stride={}, padding={}, dilation={}".format(

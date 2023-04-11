@@ -107,7 +107,7 @@ class TestMaxPooling(flow.unittest.TestCase):
             return y[0]
         else:
             return y
-    
+
     @autotest(n=5)
     def test_maxpool2d_with_3d_input_tensor(test_case):
         return_indices = random().to(bool).value()
