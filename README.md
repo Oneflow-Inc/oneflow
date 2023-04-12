@@ -49,51 +49,14 @@ OneFlow is a deep learning framework designed to be **user-friendly, scalable an
 
   - Please upgrade your Nvidia driver to version 440.33 or above and install OneFlow for CUDA 10.2 if possible.
 
-### Install with Pip Package
-
-- To install latest stable release of OneFlow with CUDA support:
-
-  ```bash
-  python3 -m pip install oneflow
-  ```
-
-- To install nightly release of OneFlow with CUDA support:
-
-  ```bash
-  python3 -m pip install --pre oneflow -f https://staging.oneflow.info/branch/master/cu102
-  ```
-
-- To install other available builds for different variants:
-
-  - Stable
-    ```bash
-    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.8.0+[PLATFORM]
-    ```
-  - Nightly
-    ```
-    python3 -m pip install --pre oneflow -f https://staging.oneflow.info/branch/master/[PLATFORM]
-    ```
-  - All available `[PLATFORM]`:
-    | Platform |CUDA Driver Version| Supported GPUs |
-    |---|---|---|
-    | cu112 | >= 450.80.02 | GTX 10xx, RTX 20xx, A100, RTX 30xx |
-    | cu102 | >= 440.33 | GTX 10xx, RTX 20xx |
-    | cpu | N/A | N/A |
-
-- If you are in China, you could run this to have pip download packages from domestic mirror of pypi:
-  ```
-  python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
-  ```
-  For more information on this, please refer to [pypi 镜像使用帮助](https://mirror.tuna.tsinghua.edu.cn/help/pypi/)
-
-### Use docker image
-
-```
-docker pull oneflowinc/oneflow:nightly-cuda10.2
-docker pull oneflowinc/oneflow:nightly-cuda11.2
-```
 
 ### Build from Source
+
+> Add these options for cmake:
+> ```
+>     -DUSE_SYSTEM_NCCL=ON \
+>     -DNCCL_ROOT_DIR=path-to-occl/build \
+> ```
 
 <details>
 <summary>Clone Source Code</summary>
