@@ -14,7 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/ep/common/primitive/binary_functor.h"
-
+// #include "oneflow/core/ep/include/primitive/elementwise_unary.h"
+#include "oneflow/core/ep/cpu/primitive/unary_functor.h"
 namespace oneflow {
 
 namespace ep {
@@ -353,13 +354,30 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kErfcBackwardWithDyX, Src, Dst>
   }
 };
 
-template<typename Src, typename Dst>
-struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kDigammaBackwardWithDyX, Src, Dst> {
+template<>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kDigammaBackwardWithDyX, float, float> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
-  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-    // TODO:shijiaxing： This function is named trigamma, it will be implemented soon.
-    UNIMPLEMENTED();
-    return 0;
+  OF_DEVICE_FUNC float operator()(float dy, float x) const {
+    // auto trigamma = ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
+    //     DeviceType::kCPU, ep::primitive::UnaryOp::kTrigamma, DataType::kFloat, DataType::kFloat);
+    // CHECK(trigamma);
+    // float trigamma_result = 0;
+    // trigamma->Launch(ctx->stream(), &x, &trigamma_result, 1);
+
+    // return dy * trigamma_result;
+    UnaryFunctor<DeviceType::kCPU, UnaryOp::kTrigamma, float, float>  trigamma_functor(0,0);
+    float trigamma_result=trigamma_functor(x);
+    return trigamma_result*dy;
+  }
+};
+
+template<>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kDigammaBackwardWithDyX, double, double> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC double operator()(double dy, double x) const {
+    UnaryFunctor<DeviceType::kCPU, UnaryOp::kTrigamma, double, double>  trigamma_functor(0,0);
+    double trigamma_result=trigamma_functor(x);
+    return trigamma_result*dy;
   }
 };
 

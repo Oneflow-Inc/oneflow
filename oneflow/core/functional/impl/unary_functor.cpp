@@ -157,6 +157,7 @@ OF_PP_FOR_EACH_TUPLE(FLOAT_UNARY_BWD_WITH_FILL_FUNCTORS, FLOAT_UNARY_FUNC_BWD_WI
 
 UNARY_ELEMENTWISE_FUNCTOR("negative", Negative, FloatUnaryFunctor)
 UNARY_ELEMENTWISE_FUNCTOR("bitwise_not", BitwiseNot, UnaryFunctor)
+UNARY_ELEMENTWISE_FUNCTOR("trigamma",Trigamma,FloatUnaryFunctor)
 
 }  // namespace impl
 
@@ -214,6 +215,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<InplaceFloorFunctor>("Floor_");
   m.add_functor<InplaceCeilFunctor>("Ceil_");
   m.add_functor<InplaceRoundFunctor>("Round_");
+  m.add_functor<TrigammaFunctor>("Trigamma");
 };
 
 #undef ADD_UNARY_FUNCTOR_WITH_DY_X
