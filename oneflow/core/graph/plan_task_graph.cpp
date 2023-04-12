@@ -51,4 +51,29 @@ void PlanTaskGraph::TryConnect(PlanTaskNode* src, PlanTaskNode* dst) {
 const TaskProto* PlanTaskGraph::TaskProto4TaskId(int64_t task_id) const {
   return CHECK_JUST(MapAt(task_id2plan_task_node_, task_id))->task_proto();
 }
+
+RankPlanTaskGraph::RankPlanTaskGraph(
+    const Plan& plan,
+    const HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>& reachable_cb_pairs)
+    : PlanTaskGraph(plan) {
+  CHECK(!FindFirstNontrivialSCC());
+  InitCtrlEdges(reachable_cb_pairs);
+  CHECK(!FindFirstNontrivialSCC())
+      << "loop detected. caused by reachable collective boxing task pairs";
+}
+
+PlanTaskNode* RankPlanTaskGraph::MutTaskNode4TaskId(int64_t task_id) {
+  return CHECK_JUST(MapAt(task_id2plan_task_node_, task_id));
+}
+
+void RankPlanTaskGraph::TryConnectByTaskId(int64_t src_task_id, int64_t dst_task_id) {
+  TryConnect(MutTaskNode4TaskId(src_task_id), MutTaskNode4TaskId(dst_task_id));
+}
+
+void RankPlanTaskGraph::InitCtrlEdges(
+    const HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>&
+        reachable_cb_pairs) {
+  for (const auto& edge : reachable_cb_pairs) { TryConnectByTaskId(edge.first, edge.second); }
+}
+
 }  // namespace oneflow

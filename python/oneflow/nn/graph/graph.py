@@ -153,7 +153,6 @@ class Graph(object):
         self._unique_global_op_dict = dict()
         self._unique_identity_op_dict = dict()
 
-        # Graph compilation related.
         # forward graph job proto
         self._forward_job_proto = None
         # forward, backward and optimized graph job proto
@@ -164,11 +163,6 @@ class Graph(object):
         self._args_repr = []
         self._outs_repr = []
         self._oneflow_internal_graph_ir__ = None
-        plan_compile_mode = os.environ.get("ONEFLOW_LAZY_COMPILE_MODE")
-        if plan_compile_mode != None and plan_compile_mode != "naive":
-            # Seperation compile mode only works with nccl use compute stream and logical chain.
-            os.environ["ENABLE_LOGICAL_CHAIN"] = "1"
-            oneflow.boxing.nccl.enable_use_compute_stream(True)
 
         self._session = session_ctx.GetDefaultSession()
         assert type(self._session) is MultiClientSession

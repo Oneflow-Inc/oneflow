@@ -63,6 +63,27 @@ class PlanTaskGraph : public Graph<const PlanTaskNode, PlanTaskEdge> {
   HashMap<int64_t, PlanTaskNode*> task_id2plan_task_node_;
   HashSet<std::pair<PlanTaskNode*, PlanTaskNode*>> edges_;
 };
+
+class GlobalPlanTaskGraph final : public PlanTaskGraph {
+ public:
+  using PlanTaskGraph::PlanTaskGraph;
+  ~GlobalPlanTaskGraph() override = default;
+};
+
+class RankPlanTaskGraph final : public PlanTaskGraph {
+ public:
+  RankPlanTaskGraph(const Plan& plan,
+                    const HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>&
+                        reachable_cb_pairs);
+  ~RankPlanTaskGraph() override = default;
+
+ private:
+  void InitCtrlEdges(const HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>&
+                         reachable_cb_pairs);
+  void TryConnectByTaskId(int64_t src_task_id, int64_t dst_task_id);
+  PlanTaskNode* MutTaskNode4TaskId(int64_t task_id);
+};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_GRAPH_PLAN_TASK_GRAPH_H_
