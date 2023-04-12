@@ -32,7 +32,7 @@ arg_dict["H_out"] = [9, 10, 11]
 arg_dict["W_out"] = [11, 12, 13]
 
 
-def _test_dimention_error_msg(test_case, N, C, H_in, H_out):
+def _test_dimention_error_msg_impl(test_case, N, C, H_in, H_out):
     inputval = oneflow.ones(N, C, H_in,)
     grid = oneflow.ones(N, H_out, 1)
     with test_case.assertRaises(RuntimeError) as ctx:
@@ -78,7 +78,7 @@ def _test_5d_gird_shape_error_msg_impl(
     test_case.assertTrue("Grid shape MUST (N, H_out, W_out, 3)" in str(ctx.exception))
 
 
-def _test_5d_grid_input_not_same_shape_error_msg(
+def _test_5d_grid_input_not_same_shape_error_msg_impl(
     test_case, N, C, D_in, H_in, W_in, D_out, H_out, W_out
 ):
     inputval = oneflow.ones(N, C, D_in, H_in, W_in)
@@ -95,7 +95,7 @@ def _test_5d_grid_input_not_same_shape_error_msg(
 class TestGridSample(flow.unittest.TestCase):
     def test_dimention_error_msg(test_case):
         for arg in GenArgList(arg_dict):
-            _test_dimention_error_msg(test_case, arg[0], arg[1], arg[3], arg[6])
+            _test_dimention_error_msg_impl(test_case, arg[0], arg[1], arg[3], arg[6])
 
     def test_4d_gird_shape_error_msg(test_case):
         for arg in GenArgList(arg_dict):
@@ -115,7 +115,7 @@ class TestGridSample(flow.unittest.TestCase):
 
     def test_5d_grid_input_not_same_shape_error_msg(test_case):
         for arg in GenArgList(arg_dict):
-            _test_5d_grid_input_not_same_shape_error_msg(test_case, *arg[0:])
+            _test_5d_grid_input_not_same_shape_error_msg_impl(test_case, *arg[0:])
 
 
 if __name__ == "__main__":
