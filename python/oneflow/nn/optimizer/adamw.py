@@ -157,7 +157,7 @@ class AdamW(Optimizer):
 
             for param in param_list:
                 assert param.is_leaf, "parameters must be leaf tensor"
-                self._state[param] = dict()
+                self.state[param] = dict()
 
                 if param_group["fused"] and param_group["amsgrad"]:
                     warnings.warn("Fused Adamw is not supported when amsgrad=True.")
@@ -207,18 +207,18 @@ class AdamW(Optimizer):
             if param.grad is None:
                 continue
 
-            if "exp_avg" not in self._state[param]:
-                self._state[param]["exp_avg"] = flow.zeros_like(param)
-            if "exp_avg_sq" not in self._state[param]:
-                self._state[param]["exp_avg_sq"] = flow.zeros_like(param)
+            if "exp_avg" not in self.state[param]:
+                self.state[param]["exp_avg"] = flow.zeros_like(param)
+            if "exp_avg_sq" not in self.state[param]:
+                self.state[param]["exp_avg_sq"] = flow.zeros_like(param)
             if param_group["amsgrad"]:
-                if "max_exp_avg_sq" not in self._state[param]:
-                    self._state[param]["max_exp_avg_sq"] = flow.zeros_like(param)
-            m_tensor = self._state[param]["exp_avg"]
-            v_tensor = self._state[param]["exp_avg_sq"]
+                if "max_exp_avg_sq" not in self.state[param]:
+                    self.state[param]["max_exp_avg_sq"] = flow.zeros_like(param)
+            m_tensor = self.state[param]["exp_avg"]
+            v_tensor = self.state[param]["exp_avg_sq"]
 
             if param_group["amsgrad"]:
-                max_v_tensor = self._state[param]["max_exp_avg_sq"]
+                max_v_tensor = self.state[param]["max_exp_avg_sq"]
                 flow._C.dispatch_adam_update(
                     self._op_with_amsgrad,
                     (param, param.grad, m_tensor, v_tensor, max_v_tensor),
@@ -241,18 +241,18 @@ class AdamW(Optimizer):
             if param.grad is None:
                 continue
 
-            if "exp_avg" not in self._state[param]:
-                self._state[param]["exp_avg"] = flow.zeros_like(param)
-            if "exp_avg_sq" not in self._state[param]:
-                self._state[param]["exp_avg_sq"] = flow.zeros_like(param)
+            if "exp_avg" not in self.state[param]:
+                self.state[param]["exp_avg"] = flow.zeros_like(param)
+            if "exp_avg_sq" not in self.state[param]:
+                self.state[param]["exp_avg_sq"] = flow.zeros_like(param)
             if param_group["amsgrad"]:
-                if "max_exp_avg_sq" not in self._state[param]:
-                    self._state[param]["max_exp_avg_sq"] = flow.zeros_like(param)
+                if "max_exp_avg_sq" not in self.state[param]:
+                    self.state[param]["max_exp_avg_sq"] = flow.zeros_like(param)
 
             param_list.append(param)
             param_grad_list.append(param.grad)
-            m_tensor_list.append(self._state[param]["exp_avg"])
-            v_tensor_list.append(self._state[param]["exp_avg_sq"])
+            m_tensor_list.append(self.state[param]["exp_avg"])
+            v_tensor_list.append(self.state[param]["exp_avg_sq"])
 
         flow._C.multi_tensor_adam_update(
             model=param_list,
@@ -281,15 +281,16 @@ class AdamW(Optimizer):
         with flow.no_grad():
             loss = None
             if closure is not None:
-                loss = closure()
+                with flow.enable_grad():
+                    loss = closure()
 
             for param_group in self.param_groups:
                 if param_group["do_bias_correction"]:
                     param_group["bias_correction1"] = 1.0 - math.pow(
-                        param_group["betas"][0], self._state["step"] + 1
+                        param_group["betas"][0], self.state["step"] + 1
                     )
                     param_group["bias_correction2"] = 1.0 - math.pow(
-                        param_group["betas"][1], self._state["step"] + 1
+                        param_group["betas"][1], self.state["step"] + 1
                     )
 
                 if param_group["fused"]:
@@ -297,7 +298,7 @@ class AdamW(Optimizer):
                 else:
                     self._single_tensor_update(param_group)
 
-            self._state["step"] += 1
+            self.state["step"] += 1
             return loss
 
     def _generate_conf_for_graph(self, train_conf, vars_conf):

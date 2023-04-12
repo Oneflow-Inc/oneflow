@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/mem_util.h"
 #include "oneflow/core/ep/cuda/cuda_device.h"
 #include "oneflow/core/ep/cuda/cuda_event.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
@@ -157,7 +158,8 @@ Maybe<void> CudaDevice::Alloc(const AllocationOptions& options, void** ptr, size
   if (err != cudaSuccess) {
     if (err == cudaErrorMemoryAllocation) {
       // NOTE:return out of memory error, so vm will try to shrink memory and rerun
-      return Error::OutOfMemoryError() << cudaGetErrorString(err);
+      return Error::OutOfMemoryError()
+             << "CUDA " << cudaGetErrorString(err) << ". Tried to allocate " << FormatMemSize(size);
     }
     return Error::RuntimeError() << cudaGetErrorString(err);
   } else {

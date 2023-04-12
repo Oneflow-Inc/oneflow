@@ -19,8 +19,9 @@ import oneflow as flow
 import oneflow.unittest
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestAddcmul(flow.unittest.TestCase):
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_addcmul(test_case):
         device = random_device()
         ndim = random(low=2).to(int).value()
@@ -33,7 +34,7 @@ class TestAddcmul(flow.unittest.TestCase):
         output = torch.addcmul(input, tensor1, tensor2, value=value)
         return output
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_tensor_addcmul(test_case):
         device = random_device()
         ndim = random(low=2).to(int).value()
@@ -46,7 +47,7 @@ class TestAddcmul(flow.unittest.TestCase):
         output = input.addcmul(tensor1, tensor2, value=value)
         return output
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_tensor_addcmul_inplace(test_case):
         device = random_device()
         ndim = random(low=2).to(int).value()

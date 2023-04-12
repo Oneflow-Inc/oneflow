@@ -43,32 +43,24 @@ std::string PyUnicodeToStdString(const PyObject* py_str) {
 }
 }  // namespace
 
-class PyFrame final
-    : public Frame,
-      public intrusive::EnableObjectPool<PyFrame, intrusive::kThreadUnsafeAndDisableDestruct> {
+class PyFrame final : public Frame {
  public:
-  PyFrame()
-      : EnableObjectPool(),
-        filename(nullptr),
-        funcname(nullptr),
-        cpython_frame(nullptr),
-        lineno(0) {}
-  void __Init__(PyFrameObject* frame, intrusive::shared_ptr<PyFrame> back) {
-    // There is no need to increase the reference count of these cpython objects
-    // because they must be alive during the lifetime of `PyFrame`.
-    this->filename = frame->f_code->co_filename;
-    this->funcname = frame->f_code->co_name;
-    this->cpython_frame = frame;
-    this->back = std::move(back);
-  }
-  OF_DISALLOW_COPY_AND_MOVE(PyFrame);
+  // There is no need to increase the reference count of these cpython objects
+  // because they must be alive during the lifetime of `PyFrame`.
+  PyFrame(PyFrameObject* frame, std::shared_ptr<PyFrame> back)
+      : filename(frame->f_code->co_filename),
+        funcname(frame->f_code->co_name),
+        cpython_frame(frame),
+        lineno(0),
+        back(std::move(back)) {}
   ~PyFrame() = default;
+  OF_DISALLOW_COPY_AND_MOVE(PyFrame);
 
   PyObject* filename;
   PyObject* funcname;
   PyFrameObject* cpython_frame;
   int lineno;
-  intrusive::shared_ptr<PyFrame> back;
+  std::shared_ptr<PyFrame> back;
 };
 
 class PyStackGetter final : public ForeignStackGetter {
@@ -77,18 +69,18 @@ class PyStackGetter final : public ForeignStackGetter {
     auto* frame = PyEval_GetFrame();
     // Get the first frame. It assumes `import oneflow` is called in global scope,
     while (frame->f_back != nullptr) { frame = frame->f_back; }
-    current_frame_ = object_pool_.make_shared(frame, nullptr);
+    current_frame_ = std::make_shared<PyFrame>(frame, nullptr);
   }
   // indended to be called in main thread.
-  intrusive::shared_ptr<Frame> GetCurrentFrame() const override {
+  std::shared_ptr<Frame> GetCurrentFrame() const override {
     if (IsShuttingDown() || !current_frame_) { return nullptr; }
     // See `RecordAndEvalFrame` for documentation.
     current_frame_->lineno = PyFrame_GetLineNumber(current_frame_->cpython_frame);
-    return intrusive::shared_ptr<Frame>(current_frame_.get());
+    return current_frame_;
   }
 
   // bad path, performance is not a concern.
-  std::string GetFormattedStack(intrusive::shared_ptr<Frame> frame) const override {
+  std::string GetFormattedStack(std::shared_ptr<Frame> frame) const override {
     if (frame == nullptr) { return "  <unknown>\n"; }
     std::string buffer;
     const auto* py_frame = dynamic_cast<const PyFrame*>(frame.get());
@@ -140,13 +132,11 @@ class PyStackGetter final : public ForeignStackGetter {
   }
 
  private:
-  intrusive::shared_ptr<PyFrame> current_frame_;
-
-  intrusive::ObjectPool<PyFrame, intrusive::kThreadUnsafeAndDisableDestruct> object_pool_;
+  std::shared_ptr<PyFrame> current_frame_;
 
   void PushFrame(PyFrameObject* frame) {
     if (auto* f = frame->f_back) { current_frame_->lineno = PyFrame_GetLineNumber(f); }
-    current_frame_ = object_pool_.make_shared(frame, current_frame_);
+    current_frame_ = std::make_shared<PyFrame>(frame, current_frame_);
   }
   void PopFrame() {
     CHECK_NOTNULL(current_frame_);

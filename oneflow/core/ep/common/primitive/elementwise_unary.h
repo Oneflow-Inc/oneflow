@@ -57,6 +57,7 @@ namespace primitive {
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kErf)             \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kErfc)            \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kExp)             \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kExp2)            \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kExpm1)           \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kFloor)           \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLgamma)          \

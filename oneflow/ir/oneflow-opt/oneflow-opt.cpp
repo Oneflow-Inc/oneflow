@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/InitAllDialects.h"
@@ -59,9 +62,13 @@ int32_t main(int32_t argc, char** argv) {
   mlir::registerTestOneFlowTraitsPass();
   mlir::registerConvertToSignlessForTosaPassPass();
   mlir::registerLowerOneFlowToTosaPassPass();
+  mlir::registerLowerOneFlowToLinalgPassPass();
   mlir::registerGpuMapParallelLoopsPassPass();
   mlir::registerBufferHostRegisterPassPass();
   mlir::registerGpuCopyArgPassPass();
+  mlir::registerOneFlowJobToFuncPassPass();
+  mlir::registerCastOneFlowInputToSignlessPassPass();
+  mlir::registerFuncToOneFlowJobPassPass();
 #ifdef WITH_MLIR_CUDA_CODEGEN
   mlir::oneflow::registerGpuSerializeToCubinPass();
 #endif  // WITH_MLIR_CUDA_CODEGEN
@@ -87,6 +94,9 @@ int32_t main(int32_t argc, char** argv) {
   registry.insert<mlir::LLVM::LLVMDialect>();
   registry.insert<mlir::gpu::GPUDialect>();
   registry.insert<mlir::AffineDialect>();
+  registry.insert<mlir::tensor::TensorDialect>();
+  registry.insert<mlir::NVVM::NVVMDialect>();
   registry.insert<mlir::bufferization::BufferizationDialect>();
+  registry.insert<mlir::math::MathDialect>();
   return failed(mlir::MlirOptMain(argc, argv, "OneFlow optimizer driver\n", registry));
 }

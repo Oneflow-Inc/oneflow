@@ -75,10 +75,8 @@ if(BUILD_CUDA)
 
   # NOTE: if you want to use source PTX with a version different from produced PTX/binary, you should add flags
   if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-    list(APPEND CMAKE_CUDA_ARCHITECTURES 60-real)
-
     # Tesla P40/P4, Quadro Pxxx/Pxxxx, GeForce GTX 10xx, TITAN X/Xp
-    list(APPEND CMAKE_CUDA_ARCHITECTURES 61-real)
+    list(APPEND CMAKE_CUDA_ARCHITECTURES 60-real)
 
     # V100, TITAN V
     list(APPEND CMAKE_CUDA_ARCHITECTURES 70-real)

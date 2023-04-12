@@ -64,9 +64,15 @@ def empty_op(
 
     if placement is not None:
         tensor = flow._C.global_empty(shape, dtype=dtype, placement=placement, sbp=sbp)
+        tensor.requires_grad_(requires_grad)
     else:
-        tensor = flow._C.empty(shape, dtype=dtype, device=device, pin_memory=pin_memory)
-    tensor.requires_grad_(requires_grad)
+        tensor = flow._C.empty(
+            shape,
+            dtype=dtype,
+            device=device,
+            requires_grad=requires_grad,
+            pin_memory=pin_memory,
+        )
     return tensor
 
 

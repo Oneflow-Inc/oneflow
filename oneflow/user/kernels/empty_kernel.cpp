@@ -28,11 +28,10 @@ class EmptyKernel final : public OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    auto* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    auto dtype = out->data_type();
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
     // None POD type need check
-    if (!IsTriviallyCopyableDataType(dtype)) {
+    if (!IsTriviallyCopyableDataType(out->data_type())) {
       CHECK(out->shape_view().NumAxes() > 0 && out->shape_view().elem_cnt() == 0)
           << "None POD Tensor created by empty op must be 0-Size tensor.";
     }

@@ -21,7 +21,7 @@ from oneflow.test_utils.automated_test_util import *
 import oneflow.unittest
 
 
-@autotest(n=5, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_pad_1d_impl(test_case, placement, sbp):
     pad = [random(0, 5).to(int) for i in range(2)]
     x = random_tensor(
@@ -31,7 +31,7 @@ def _test_pad_1d_impl(test_case, placement, sbp):
     return y
 
 
-@autotest(n=5, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_pad_2d_impl(test_case, placement, sbp):
     pad = [random(0, 5).to(int) for i in range(4)]
     x = random_tensor(

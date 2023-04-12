@@ -113,6 +113,7 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object =
       JUST(view_tensor->eager_blob_object());
   view_eager_blob_object->set_storage_offset(JUST(view_tensor->storage_offset()));
+  view_eager_blob_object->set_input_of_view_op(blob_object);
   return std::static_pointer_cast<Tensor>(view_tensor);
 }
 
@@ -448,6 +449,65 @@ Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const Shape& expand_s
   return output;
 }
 
+Maybe<void> InplaceExpand(const std::shared_ptr<Tensor>& input, const Shape& expand_shape) {
+  const Shape& input_shape = *input->shape();
+  const Stride& input_stride = *JUST(input->stride());
+  size_t lpad = expand_shape.size() - input_shape.size();
+  CHECK_GE_OR_RETURN(lpad, 0);  // NOLINT(maybe-need-error-msg)
+
+  Stride expand_stride(expand_shape.size(), 0);
+  std::vector<int32_t> reduce_dims;
+  reduce_dims.reserve(expand_shape.size());
+
+  for (int i = expand_shape.size() - 1; i >= 0; --i) {
+    int64_t dim = i < lpad ? 1 : input_shape[i - lpad];
+    if (dim == expand_shape[i]) {
+      if (i >= lpad) {
+        expand_stride[i] = input_stride[i - lpad];
+      } else if (i < expand_shape.size() - 1) {
+        expand_stride[i] = expand_stride[i + 1] * expand_shape[i + 1];
+      }
+    } else {
+      CHECK_EQ_OR_RETURN(dim, 1);  // NOLINT(maybe-need-error-msg)
+      reduce_dims.push_back(i);
+    }
+  }
+
+  if (input_shape.size() == 0) {
+    // handle scalar expand backward reduce dims
+    reduce_dims.clear();
+    for (int32_t axis = 0; axis < expand_shape.size(); ++axis) { reduce_dims.push_back(axis); }
+  }
+
+  int64_t storage_offset = JUST(JUST(input->AsLocalTensor())->storage_offset());
+  JUST(view::InplaceView(input, expand_shape, expand_stride, storage_offset));
+
+  if (autograd::GradMode::is_enabled() && input->requires_grad()) {
+    auto backward_fn = std::make_shared<BackwardFunction>();
+    backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                            bool create_graph) -> Maybe<void> {
+      autograd::AutoGradMode mode(create_graph);
+      CHECK_EQ_OR_RETURN(out_grads.size(), 1)
+          << "out grad size should be 1, but got " << out_grads.size();
+      in_grads->resize(1);
+      in_grads->at(0) = out_grads[0];
+      bool keep_dims = (input_shape.size() > 0);
+      if (reduce_dims.size() > 0) {
+        in_grads->at(0) = JUST(functional::ReduceSum(in_grads->at(0), reduce_dims, keep_dims));
+      }
+      if (lpad > 0 && keep_dims) {
+        in_grads->at(0) = JUST(functional::Flatten(in_grads->at(0), 0, lpad));
+      }
+      return Maybe<void>::Ok();
+    };
+    backward_fn->status = []() { return true; };
+    TensorTuple outputs{input};
+    JUST(GetThreadLocalAutogradEngine()->AddNode("view::expand_backward", backward_fn, {input},
+                                                 &outputs));
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t dim, const int64_t start,
                      const int64_t length) {
   const auto& shape = input->shape();
@@ -475,8 +535,10 @@ Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t dim, co
       autograd::AutoGradMode mode(create_graph);
       CHECK_EQ_OR_RETURN(out_grads.size(), 1)
           << "out grad size should be 1, but got " << out_grads.size();
-      auto like = JUST(functional::Empty(Shape(input->shape()->dim_vec()), input->dtype(),
-                                         JUST(input->device()), /*pin_memory=*/false));
+      auto like =
+          JUST(functional::Empty(Shape(input->shape()->dim_vec()), input->dtype(),
+                                 JUST(input->device()), /*requires_grad=*/input->requires_grad(),
+                                 /*pin_memory=*/false));
       in_grads->resize(1);
       (*in_grads)[0] = JUST(functional::NarrowGrad(out_grads[0], like, dim, start, length));
       return Maybe<void>::Ok();

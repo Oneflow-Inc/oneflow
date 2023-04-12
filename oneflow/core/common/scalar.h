@@ -18,7 +18,7 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_SCALAR_H_
 
 #include <type_traits>
-
+#include <complex>
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/maybe.h"
 
@@ -27,6 +27,11 @@ namespace oneflow {
 class Scalar {
  public:
   Scalar() : Scalar(int32_t(0)) {}
+
+  template<typename T, typename std::enable_if<std::is_same<std::complex<float>, T>::value
+                                                   || std::is_same<std::complex<double>, T>::value,
+                                               int>::type = 0>
+  Scalar(const T& value) : value_{.c = {value.real(), value.imag()}}, active_tag_(HAS_C) {}
 
   template<typename T, typename std::enable_if<std::is_same<T, bool>::value, int>::type = 0>
   OF_DEVICE_FUNC Scalar(const T& value) : value_{.b = value}, active_tag_(HAS_B) {}
@@ -72,11 +77,20 @@ class Scalar {
     return As<T>();
   }
 
+  template<typename T, typename std::enable_if<std::is_same<std::complex<float>, T>::value
+                                                   || std::is_same<std::complex<double>, T>::value,
+                                               int>::type = 0>
+  T Value() const {
+    if (!IsComplex()) { return T(As<double>(), 0.0); }
+    return T(value_.c.real, value_.c.imag);
+  }
+
   bool IsBool() const { return active_tag_ == HAS_B; }
   bool IsIntegral() const { return active_tag_ == HAS_S || active_tag_ == HAS_U; }
   bool IsFloatingPoint() const { return active_tag_ == HAS_D; }
   bool IsSigned() const { return active_tag_ == HAS_S || active_tag_ == HAS_D; }
   bool IsUnsigned() const { return active_tag_ == HAS_U; }
+  bool IsComplex() const { return active_tag_ == HAS_C; }
 
   Scalar operator+(const Scalar& other) const;
   Scalar operator-(const Scalar& other) const;
@@ -94,8 +108,12 @@ class Scalar {
     int64_t s;
     uint64_t u;
     double d;
+    struct {
+      double real;
+      double imag;
+    } c;
   } value_;
-  enum { HAS_B, HAS_S, HAS_U, HAS_D, HAS_NONE } active_tag_;
+  enum { HAS_B, HAS_S, HAS_U, HAS_D, HAS_C, HAS_NONE } active_tag_;
 };
 
 }  // namespace oneflow

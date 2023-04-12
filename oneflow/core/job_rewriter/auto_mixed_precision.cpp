@@ -53,7 +53,8 @@ bool FindInNoCastRegisry(const std::string& op_type, const OpArg& op_arg) {
 std::function<bool(OpNode*)> MakePredicatorIsAllowedToRunWithHalf(const OpGraph& op_graph) {
   auto allowed_set = std::make_shared<HashSet<OpNode*>>();
   op_graph.ForEachNode([&](OpNode* node) {
-    if (node->parallel_desc().device_type() != DeviceType::kCUDA) { return; }
+    // half computation is not supported on cpu
+    if (node->parallel_desc().device_type() == DeviceType::kCPU) { return; }
     if (node->op().output_bns().size() > 0
         || IsUserOpWithTypeName(node->op().op_conf(), "one_embedding_fused_lookup_grad")) {
       INSERT_CHECK(allowed_set->insert(node));
@@ -163,8 +164,13 @@ class AutoMixedPrecision final : public JobPass {
   ~AutoMixedPrecision() = default;
 
   bool IsEnabled(const JobPassCtx& ctx) const {
+#if defined(WITH_CUDA) && defined(CUDA_VERSION) && CUDA_VERSION < 10000
+    return false;
+#else
     return ctx.job_desc().enable_auto_mixed_precision();
+#endif
   }
+
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override;
 
  private:
@@ -310,9 +316,7 @@ void AutoMixedPrecision::InsertCastOp(const OpGraph& op_graph, const HashSet<OpN
   InsertCastOpImpl(false, op_graph, white_set, mixed_precision_data_type, job_builder);
 }
 
-#if defined(WITH_CUDA) && defined(CUDA_VERSION) && CUDA_VERSION >= 10000
 REGISTER_JOB_PASS("AutoMixedPrecision", AutoMixedPrecision);
-#endif  // WITH_CUDA
 
 }  // namespace
 

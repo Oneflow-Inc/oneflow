@@ -45,7 +45,7 @@ def _test_flow_global_var_one_dim_with_random_data(test_case, placement, sbp):
     return y
 
 
-@autotest(n=1, auto_backward=True, check_graph=False)
+@autotest(n=1, auto_backward=True, check_graph=True)
 def _test_flow_var_0_size_data_with_random_data(test_case, placement, sbp):
     x = random_tensor(3, 8, 0, 8).to_global(placement, sbp)
     y = torch.var(
