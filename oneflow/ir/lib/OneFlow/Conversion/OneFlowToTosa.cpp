@@ -132,7 +132,6 @@ Value CreateBNOp(Location loc, ConversionPatternRewriter& rewriter, Value output
   // nhwc
   bool isNhwc = x_type.getDimSize(3) == mean_type.getDimSize(0);
   if (!isNhwc) {
-    if (x_type.getDimSize(1) == mean_type.getDimSize(0)) { LOG(FATAL) << "failec to create bn op"; }
     auto perms = {0, 2, 3, 1};
     x = CreateTransposeValue(loc, rewriter, x, perms);
     output_type = CreateTransposeType(output_type, perms);
