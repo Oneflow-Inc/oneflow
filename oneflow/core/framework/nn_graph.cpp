@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/scope_util.h"
+#include "oneflow/core/framework/nn_graph_utils.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/functional/functional.h"
@@ -463,38 +464,6 @@ Maybe<void> NNGraph::MasterRankCompile() {
 }
 
 namespace {
-
-// A templated function that broadcasts data from the master process to worker processes in a
-// multi-threaded manner. Return push/pull keys only in master process.
-template<typename X, typename Y>
-std::set<std::string> MultiThreadBroadcastFromMasterToWorkers(size_t world_size,
-                                                              const std::string& prefix,
-                                                              const X& master_data,
-                                                              Y* worker_data) {
-  const size_t thread_num = ThreadLocalEnvInteger<ONEFLOW_LAZY_COMPILE_RPC_THREAD_NUM>();
-  const size_t split_num = std::sqrt(world_size);
-  BalancedSplitter bs(world_size, split_num);
-  std::set<std::string> keys;
-  if (GlobalProcessCtx::IsThisProcessMaster()) {
-    std::mutex mtx4keys;
-    std::string data;
-    master_data.SerializeToString(&data);
-    MultiThreadLoop(
-        split_num,
-        [&](int i) {
-          std::string key = prefix + std::to_string(i);
-          Singleton<CtrlClient>::Get()->PushKV(key, data);
-          std::lock_guard<std::mutex> lock(mtx4keys);
-          CHECK(keys.insert(key).second);
-        },
-        thread_num);
-  } else {
-    const int64_t bs_index = bs.GetRangeIndexForVal(GlobalProcessCtx::Rank());
-    std::string key = prefix + std::to_string(bs_index);
-    Singleton<CtrlClient>::Get()->PullKV(key, worker_data);
-  }
-  return keys;
-}
 
 // A templated function that pulls data from worker processes to the master process in a
 // multi-threaded manner. Return push/pull keys only in master process.

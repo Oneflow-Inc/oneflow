@@ -98,6 +98,14 @@ void LocalCtrlClient::PushMasterKV(const std::string& k, const PbMessage& msg) {
   PushKV(k, [&](std::string* o) { msg.SerializeToString(o); });
 }
 
+void LocalCtrlClient::PushRankKV(const size_t rank, const std::string& k,
+                                 std::function<void(std::string*)> VSetter) {
+  PushKV(k, VSetter);
+}
+void LocalCtrlClient::PushRankKV(const size_t rank, const std::string& k, const std::string& v) {
+  PushKV(k, v);
+}
+
 void LocalCtrlClient::ClearKV(const std::string& k) {
   std::unique_lock<std::mutex> lck(kv_mtx_);
   kv_.erase(k);
@@ -130,6 +138,18 @@ void LocalCtrlClient::PullKV(const std::string& k, PbMessage* msg) {
 
 void LocalCtrlClient::PullMasterKV(const std::string& k, PbMessage* msg) {
   PullKV(k, [&](const std::string& i) { msg->ParseFromString(i); });
+}
+
+void LocalCtrlClient::PullRankKV(const size_t rank, const std::string& k,
+                                 std::function<void(const std::string&)> VGetter) {
+  PullKV(k, VGetter);
+}
+void LocalCtrlClient::PullRankKV(const size_t rank, const std::string& k, std::string* v) {
+  PullKV(k, v);
+}
+
+void LocalCtrlClient::PullRankKV(const size_t rank, const std::string& k, PbMessage* msg) {
+  PullKV(k, msg);
 }
 
 void LocalCtrlClient::Clear() {
@@ -199,6 +219,13 @@ class DryRunCtrlClient : public CtrlClient {
   void PushMasterKV(const std::string& k, const PbMessage& msg) override {
     local_ctrl_client_->PushMasterKV(k, msg);
   }
+  void PushRankKV(const size_t rank, const std::string& k,
+                  std::function<void(std::string*)> VSetter) override {
+    local_ctrl_client_->PushRankKV(rank, k, VSetter);
+  }
+  void PushRankKV(const size_t rank, const std::string& k, const std::string& v) override {
+    local_ctrl_client_->PushRankKV(rank, k, v);
+  }
 
   void ClearKV(const std::string& k) override { local_ctrl_client_->ClearKV(k); }
   void ClearMasterKV(const std::string& k) override { local_ctrl_client_->ClearMasterKV(k); }
@@ -211,6 +238,18 @@ class DryRunCtrlClient : public CtrlClient {
   void PullMasterKV(const std::string& k, PbMessage* msg) override {
     local_ctrl_client_->PullMasterKV(k, msg);
   }
+
+  void PullRankKV(const size_t rank, const std::string& k,
+                  std::function<void(const std::string&)> VGetter) override {
+    local_ctrl_client_->PullRankKV(rank, k, VGetter);
+  }
+  void PullRankKV(const size_t rank, const std::string& k, std::string* v) override {
+    local_ctrl_client_->PullRankKV(rank, k, v);
+  }
+  void PullRankKV(const size_t rank, const std::string& k, PbMessage* msg) override {
+    local_ctrl_client_->PullRankKV(rank, k, msg);
+  }
+
   void Clear() override { local_ctrl_client_->Clear(); }
   int32_t IncreaseCount(const std::string& k, int32_t v) override {
     return local_ctrl_client_->IncreaseCount(k, v);

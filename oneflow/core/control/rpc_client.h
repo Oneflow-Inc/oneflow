@@ -44,6 +44,10 @@ class RpcClient {
   typename std::enable_if<std::is_arithmetic<T>::value>::type PushKVT(const std::string& k, T v) {
     PushKV(k, std::to_string(v));
   }
+  // This function pushes the key-value pair to the server with the specified rank.
+  void PushRankKV(const size_t rank, const std::string& k, const std::string& v);
+  void PushRankKV(const size_t rank, const std::string& k,
+                  std::function<void(std::string*)> VSetter);
 
   void ClearKV(const std::string& k);
   void ClearMasterKV(const std::string& k);
@@ -58,6 +62,13 @@ class RpcClient {
     PullKV(k, &v_str);
     *v = oneflow_cast<T>(v_str);
   }
+
+  // This function pulls the key-value pair from the server with the specified rank
+  // and store the value.
+  void PullRankKV(const size_t rank, const std::string& k, std::string* v);
+  void PullRankKV(const size_t rank, const std::string& k,
+                  std::function<void(const std::string&)> VGetter);
+  void PullRankKV(const size_t, const std::string& k, PbMessage* msg);
 
   void Clear();
 

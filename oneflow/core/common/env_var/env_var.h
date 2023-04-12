@@ -81,6 +81,8 @@ const std::string& ThreadLocalEnvString();
     return value;                                                                               \
   }
 
+DEFINE_THREAD_LOCAL_ENV_STRING(ONEFLOW_BROADCAST_STRATEGY, "");
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_ENV_VAR_ENV_VAR_H_

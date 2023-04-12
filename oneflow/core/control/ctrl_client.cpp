@@ -86,6 +86,15 @@ void GrpcCtrlClient::PushMasterKV(const std::string& k, const PbMessage& msg) {
   rpc_client_.PushMasterKV(k, msg);
 }
 
+void GrpcCtrlClient::PushRankKV(const size_t rank, const std::string& k,
+                                std::function<void(std::string*)> VSetter) {
+  rpc_client_.PushRankKV(rank, k, VSetter);
+}
+
+void GrpcCtrlClient::PushRankKV(const size_t rank, const std::string& k, const std::string& v) {
+  rpc_client_.PushRankKV(rank, k, v);
+}
+
 void GrpcCtrlClient::ClearKV(const std::string& k) { rpc_client_.ClearKV(k); }
 
 void GrpcCtrlClient::ClearMasterKV(const std::string& k) { rpc_client_.ClearMasterKV(k); }
@@ -100,6 +109,19 @@ void GrpcCtrlClient::PullKV(const std::string& k, std::function<void(const std::
 
 void GrpcCtrlClient::PullMasterKV(const std::string& k, PbMessage* msg) {
   rpc_client_.PullMasterKV(k, msg);
+}
+
+void GrpcCtrlClient::PullRankKV(const size_t rank, const std::string& k,
+                                std::function<void(const std::string&)> VGetter) {
+  rpc_client_.PullRankKV(rank, k, VGetter);
+}
+
+void GrpcCtrlClient::PullRankKV(const size_t rank, const std::string& k, std::string* v) {
+  rpc_client_.PullRankKV(rank, k, v);
+}
+
+void GrpcCtrlClient::PullRankKV(const size_t rank, const std::string& k, PbMessage* msg) {
+  rpc_client_.PullRankKV(rank, k, msg);
 }
 
 void GrpcCtrlClient::Clear() { rpc_client_.Clear(); }
