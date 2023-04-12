@@ -52,35 +52,49 @@ def modified_environ(*remove, **update):
         env.update(update_after)
         [env.pop(k) for k in remove_after]
 
+
 def run_testcase_with_sep_compile(test_case_cls):
     new_cls = type("SeparationCompile_" + test_case_cls.__name__, (test_case_cls,), {})
-    with modified_environ(ONEFLOW_LAZY_COMPILE_MODE="rank_per_process", ENABLE_LOGICAL_CHAIN="1"):
+    with modified_environ(
+        ONEFLOW_LAZY_COMPILE_MODE="rank_per_process", ENABLE_LOGICAL_CHAIN="1"
+    ):
         assert os.environ.get("ONEFLOW_LAZY_COMPILE_MODE") == "rank_per_process"
         assert os.environ.get("ENABLE_LOGICAL_CHAIN") == "1"
-        unittest.TextTestRunner().run(unittest.TestLoader().loadTestsFromTestCase(new_cls))
+        unittest.TextTestRunner().run(
+            unittest.TestLoader().loadTestsFromTestCase(new_cls)
+        )
+
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n4d()
 class TestSeparationCompile(oneflow.unittest.TestCase):
     def test_test_alexnet_auto_parallel(test_case):
-        from oneflow.test.graph.test_alexnet_auto_parallel import TestAlexnetAutoParallel
+        from oneflow.test.graph.test_alexnet_auto_parallel import (
+            TestAlexnetAutoParallel,
+        )
+
         run_testcase_with_sep_compile(TestAlexnetAutoParallel)
-    
+
     def test_comb1to2d(test_case):
         from oneflow.test.graph.test_comb1to2d import TestLazyAllSbpCombinationTesting
+
         run_testcase_with_sep_compile(TestLazyAllSbpCombinationTesting)
-    
+
     def test_graph_zero(test_case):
         from oneflow.test.graph.test_graph_zero import TestLinearTrainGraph2DWithZeRO
+
         run_testcase_with_sep_compile(TestLinearTrainGraph2DWithZeRO)
-    
+
     def test_graph_clip_grad_norm(test_case):
         from oneflow.test.graph.test_graph_clip_grad_norm import TestGraphClipGradNorm
+
         run_testcase_with_sep_compile(TestGraphClipGradNorm)
 
     def test_graph_pipeline_grad_acc_and_activatioin_checkpointing(test_case):
         from oneflow.test.graph.test_graph_pipeline import TestGraphPipeline
+
         run_testcase_with_sep_compile(TestGraphPipeline)
+
 
 if __name__ == "__main__":
     unittest.main()
