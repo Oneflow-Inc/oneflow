@@ -140,15 +140,16 @@ inline bool IsDimsEquals(size_t num_src0_dims, const int64_t* src0_dims, size_t 
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAtanhBackwardWithDyX) \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kCosBackwardWithDyX)
 
-#define BINARY_MATH_BACKWARD_OP_SEQ_1                    \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kCoshBackwardWithDyX)   \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kErfBackwardWithDyX)    \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kErfcBackwardWithDyX)   \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kExpBackwardWithDyX)    \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kExp2BackwardWithDyX)   \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kExpm1BackwardWithDyX)  \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLgammaBackwardWithDyX) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogBackwardWithDyX)    \
+#define BINARY_MATH_BACKWARD_OP_SEQ_1                     \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kCoshBackwardWithDyX)    \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kErfBackwardWithDyX)     \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kErfcBackwardWithDyX)    \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kExpBackwardWithDyX)     \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kExp2BackwardWithDyX)    \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kExpm1BackwardWithDyX)   \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLgammaBackwardWithDyX)  \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kDigammaBackwardWithDyX) \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogBackwardWithDyX)     \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLog2BackwardWithDyX)
 
 #define BINARY_MATH_BACKWARD_OP_SEQ_2                             \

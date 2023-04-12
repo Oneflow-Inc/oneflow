@@ -225,6 +225,7 @@ Tensor class reference
     Tensor.div_
     Tensor.double
     Tensor.dtype 
+    Tensor.digamma
     Tensor.element_size
     Tensor.eq
     Tensor.equal
