@@ -96,7 +96,7 @@ class _TestGraph(nn.Graph):
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
-    def test_lazy_boxing_2d_all_combination_diff_hierarchy(test_case):
+    def test_lazy_boxing_2d_all_combination(test_case):
         os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "0"
         os.environ["ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION"] = "0"
 
@@ -120,7 +120,7 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
         graph_diff_placement = _TestGraph(model_diff_placement)
         z = graph_diff_placement(x)
 
-    def test_lazy_boxing_2d_all_combination_diff_placement(test_case):
+    def test_lazy_boxing_2d_all_combination_diff_placement_with_nccl_logical(test_case):
         os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "0"
         os.environ["ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION"] = "0"
 
