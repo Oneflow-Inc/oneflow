@@ -204,8 +204,9 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Singleton<CudnnHandlePool>::New();
   Singleton<embedding::EmbeddingManager>::New();
 #endif
-  CHECK_EQ_OR_RETURN(GlobalCclMgrCreatorDestroyers()->size(), 1)
-      << "Only one collective communication manager is supported at the same time for now";
+  CHECK_LE_OR_RETURN(GlobalCclMgrCreatorDestroyers()->size(), 1)
+      << "Only one kind collective communication manager is supported at most at the same time for "
+         "now!";
   for (const auto& pair : *GlobalCclMgrCreatorDestroyers()) { CHECK_JUST(pair.first()); }
   Singleton<vm::VirtualMachineScope>::New(Singleton<ResourceDesc, ForSession>::Get()->resource());
 #ifdef __linux__
