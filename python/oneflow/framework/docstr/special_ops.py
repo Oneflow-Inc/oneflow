@@ -17,6 +17,13 @@ import oneflow
 from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
+    oneflow.special.digamma,
+    """
+    Alias for :func:`oneflow.digamma`. 
+    """,
+)
+
+add_docstr(
     oneflow.special.erf,
     """
     Alias for :func:`oneflow.erf`. 
@@ -83,5 +90,12 @@ add_docstr(
     oneflow.special.softmax,
     """
     Alias for :func:`oneflow.softmax`. 
+    """,
+)
+
+add_docstr(
+    oneflow.special.psi,
+    """
+    Alias for :func:`oneflow.special.digamma`. 
     """,
 )
