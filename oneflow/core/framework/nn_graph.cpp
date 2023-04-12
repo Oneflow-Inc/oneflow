@@ -15,7 +15,9 @@ limitations under the License.
 */
 #include "oneflow/core/framework/nn_graph.h"
 #include "oneflow/core/common/buffer_manager.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
 #include "oneflow/core/common/hash_container.h"
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/cost_util.h"
@@ -52,7 +54,6 @@ limitations under the License.
 #include "oneflow/core/framework/variable_tensor_mgr.h"
 #include "oneflow/core/common/env_var/lazy.h"
 #include "oneflow/core/job/compile_mode.h"
-#include "oneflow/core/common/id_pairs.h"
 #include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
@@ -335,33 +336,6 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
   return Maybe<void>::Ok();
 }
 
-namespace {
-
-template<typename T>
-void MergeByMod(size_t index, size_t n, std::vector<HashSet<T>>* data) {
-  index = index % n;
-  if (data->size() <= n) { return; }
-  for (int j = index + n; j < data->size(); j += n) {
-    (*data)[index].insert((*data)[j].begin(), (*data)[j].end());
-  }
-}
-
-// Use multi-thread to merge std::vector<HashSet> into the HashSet at vector[0].
-template<typename T>
-void MergeIntoFirst(std::vector<HashSet<T>>* data) {
-  const auto& MergeInto = [&](size_t n) {
-    MultiThreadLoop(n, [&](size_t i) { MergeByMod(i, n, data); });
-    data->resize(n);
-  };
-  int n = data->size();
-  if (n > 128) { MergeInto(n = 64); }
-  if (n > 32) { MergeInto(n = 16); }
-  if (n > 8) { MergeInto(n = 4); }
-  MergeInto(n = 1);
-}
-
-}  // namespace
-
 // This function is an intermediate state used for debugging purposes and can be ignored when doing
 // code review.
 // MasterRankCompile is used for separate compilation on the master rank, compiling the task graph
@@ -369,6 +343,11 @@ void MergeIntoFirst(std::vector<HashSet<T>>* data) {
 // (ThreadNumLimit is 0) and parallel compilation (ThreadNumLimit is -1).
 template<int64_t ThreadNumLimit>
 Maybe<void> NNGraph::MasterRankCompile() {
+  // Seperation compile mode only works with nccl use compute stream and logical chain.
+  CHECK_OR_RETURN(EnableLogicalChain());
+  // Note that nccl use compute stream mode has not need to generate CollectiveBoxingPlan.
+  CHECK_OR_RETURN((Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()));
+
   constexpr int kWorkerStartRank = 1;
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     OpGraphSingletonGuard op_graph_guard(job_);
@@ -408,39 +387,14 @@ Maybe<void> NNGraph::MasterRankCompile() {
       PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names_);
 
       PlanUtil::GenRegisterHint(plan);
-      plan->mutable_collective_boxing_plan();
-      // PlanUtil::SetForceInplaceMemBlock(plan); NOTE(chengcheng): only for ssp.
       PlanUtil::DumpCtrlRegstInfoToPlan(plan);
-      if (i >= kWorkerStartRank /*skip master*/) {
-        // Generate reachable collective boxing task pairs
-        PlanUtil::GenReachableCollectiveBoxingTaskPairs(*plan, &reachable_cb_pairs[i]);
-        std::string plan_name = "plan:" + job_name() + ":" + std::to_string(i);
-        Singleton<CtrlClient>::Get()->PushKV(plan_name, *plan);
-      }
     });
-    // use multi-thread to merge reachable collective boxing task pairs into
-    // (*reachable_cb_pairs)[0], which is belong to master .
-    MergeIntoFirst(&reachable_cb_pairs);
-    // TODO(chengcheng): test collective boxing for multi-job.
-    PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_, [&] {
-      return std::make_unique<RankPlanTaskGraph>(plan_, reachable_cb_pairs.at(0));
-    });
-    std::string collective_boxing_info;
-    plan_.collective_boxing_plan().SerializeToString(&collective_boxing_info);
-    for (int i = kWorkerStartRank /*skip master*/; i < GlobalProcessCtx::WorldSize(); ++i) {
-      std::string name = "collective_boxing_info:" + job_name() + ":" + std::to_string(i);
-      Singleton<CtrlClient>::Get()->PushKV(name, collective_boxing_info);
-    }
     return Maybe<void>::Ok();
   } else {
     const std::string rank = std::to_string(GlobalProcessCtx::Rank());
     {
       std::string name = "plan:" + job_name() + ":" + rank;
       Singleton<CtrlClient>::Get()->PullKV(name, &plan_);
-    }
-    {
-      std::string name = "collective_boxing_info:" + job_name() + ":" + rank;
-      Singleton<CtrlClient>::Get()->PullKV(name, plan_.mutable_collective_boxing_plan());
     }
   }
   PlanUtil::PlanMemoryLog(&plan_, name_);
@@ -451,10 +405,6 @@ Maybe<void> NNGraph::MasterRankCompile() {
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     for (int i = kWorkerStartRank /*skip master*/; i < GlobalProcessCtx::WorldSize(); ++i) {
       std::string name = "plan:" + job_name() + ":" + std::to_string(i);
-      Singleton<CtrlClient>::Get()->ClearKV(name);
-    }
-    for (int i = kWorkerStartRank /*skip master*/; i < GlobalProcessCtx::WorldSize(); ++i) {
-      std::string name = "collective_boxing_info:" + job_name() + ":" + std::to_string(i);
       Singleton<CtrlClient>::Get()->ClearKV(name);
     }
   }
@@ -492,34 +442,6 @@ std::set<std::string> MultiThreadBroadcastFromMasterToWorkers(size_t world_size,
     const int64_t bs_index = bs.GetRangeIndexForVal(GlobalProcessCtx::Rank());
     std::string key = prefix + std::to_string(bs_index);
     Singleton<CtrlClient>::Get()->PullKV(key, worker_data);
-  }
-  return keys;
-}
-
-// A templated function that pulls data from worker processes to the master process in a
-// multi-threaded manner. Return push/pull keys only in master process.
-template<typename T, typename DoEachT>
-std::set<std::string> MultiThreadPullFromWorkersToMaster(const std::string& prefix, const T& data,
-                                                         const DoEachT& DoEach) {
-  const size_t thread_num = ThreadLocalEnvInteger<ONEFLOW_LAZY_COMPILE_RPC_THREAD_NUM>();
-  constexpr int kWorkerStartRank = 1;
-  std::set<std::string> keys{};
-  if (GlobalProcessCtx::IsThisProcessMaster()) {
-    std::mutex mtx4keys;
-    MultiThreadLoop(
-        GlobalProcessCtx::WorldSize(),
-        [&](int i) {
-          if (i < kWorkerStartRank) { return; }
-          T data;
-          std::string key = prefix + std::to_string(i);
-          Singleton<CtrlClient>::Get()->PullKV(key, &data);
-          DoEach(data);
-          std::lock_guard<std::mutex> lock(mtx4keys);
-          CHECK(keys.emplace(key).second) << "redundant pull key: " << key;
-        },
-        thread_num);
-  } else {
-    Singleton<CtrlClient>::Get()->PushKV(prefix + std::to_string(GlobalProcessCtx::Rank()), data);
   }
   return keys;
 }
@@ -577,9 +499,12 @@ void DumpCalculationPassName(Job* job) {
 //      done on master rank.
 //   c. Each rank compile it's related task node with RankCompiler. RankCompiler compile with the
 //      BoxingTaskGraph and the job.
-//   d. Master CollectiveBoxingPlan and then broadcast to all the workers.
-
 Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
+  // Seperation compile mode only works with nccl use compute stream and logical chain.
+  CHECK_OR_RETURN(EnableLogicalChain());
+  // Note that nccl use compute stream mode has not need to generate CollectiveBoxingPlan.
+  CHECK_OR_RETURN((Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()));
+
   // for async deallocating big objects.
   AsyncDeallocateContext deallocate_ctx{};
   std::set<std::string> push_pull_keys{};
@@ -640,42 +565,7 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
     PlanUtil::ToDotFile(*plan, "job_" + name_ + "_plan" + std::to_string(rank) + ".dot");
   }
   PlanUtil::GenRegisterHint(plan);
-
-  // d. Master CollectiveBoxingPlan and then broadcast to all the workers.
-  plan->mutable_collective_boxing_plan();
   PlanUtil::DumpCtrlRegstInfoToPlan(plan);
-  // Reachable collective boxing task pairs,
-  auto reachable_cb_pairs =
-      std::make_shared<HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>>();
-  // Generate reachable collective boxing task pairs
-  PlanUtil::GenReachableCollectiveBoxingTaskPairs(*plan, reachable_cb_pairs.get());
-  {
-    // Merge collective boxing task id pairs from workers.
-    // Used for storing the task ID pairs with reachability relation.
-    IdPairs id_pairs{};
-    if (!GlobalProcessCtx::IsThisProcessMaster()) { InitIdPairs(*reachable_cb_pairs, &id_pairs); }
-    const auto& MergePairs = [&](const IdPairs& pairs) {
-      CHECK(GlobalProcessCtx::IsThisProcessMaster());
-      static std::mutex mutex;
-      std::unique_lock<std::mutex> lock(mutex);
-      MergeIdPairs(pairs, reachable_cb_pairs.get());
-    };
-    MergeCommKeys(MultiThreadPullFromWorkersToMaster(
-        name_ + std::string(__FUNCTION__) + "_reachable_cb_pairs", id_pairs, MergePairs));
-  }
-  if (GlobalProcessCtx::IsThisProcessMaster()) {
-    // CollectiveBoxingPlan needs to know the reachable relation of collective boxing nodes.
-    // TODO(strint): Optimize the reachable_cb_pairs if it cost a lot.
-    PlanUtil::GenCollectiveBoxingPlan(&deallocate_ctx, &job_, &plan_, [&] {
-      return std::make_unique<RankPlanTaskGraph>(plan_, *reachable_cb_pairs);
-    });
-  }
-  // async deallocate `boxing_task_graph_proto`.
-  deallocate_ctx.Deallocate(std::move(reachable_cb_pairs));
-  MergeCommKeys(MultiThreadBroadcastFromMasterToWorkers(
-      world_size, std::string(__FUNCTION__) + "_collective_boxing_plan",
-      plan_.collective_boxing_plan(), plan_.mutable_collective_boxing_plan()));
-
   PlanUtil::PlanMemoryLog(&plan_, name_);
   if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     PlanUtil::GenLightPlan(&plan_, name_, rank);
@@ -699,8 +589,7 @@ Maybe<void> NNGraph::NaiveCompile() {
     PlanUtil::GenRegisterHint(&plan_);
     sub_compile_tc->Count("[PlanCompile]" + name_ + " GenRegisterHint", 1);
     // TODO(chengcheng): test collective boxing for multi-job.
-    PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_,
-                                      [&] { return std::make_unique<GlobalPlanTaskGraph>(plan_); });
+    PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_);
     // PlanUtil::SetForceInplaceMemBlock(&plan_); NOTE(chengcheng): only for ssp.
     sub_compile_tc->Count("[PlanCompile]" + name_ + " GenCollectiveBoxingPlan", 1);
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);

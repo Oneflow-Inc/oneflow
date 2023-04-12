@@ -43,15 +43,7 @@ struct PlanUtil {
   static std::function<RegstDescProto*(int64_t)> MakeMutRegstDesc4Id(Plan* plan);
   static void SetForceInplaceMemBlock(Plan* plan, int64_t limited_rank = -1);
   static void DumpCtrlRegstInfoToPlan(Plan* plan);
-  static void GenCollectiveBoxingPlan(
-      DeallocateContext* deallocate_ctx, Job* job, Plan* plan,
-      const std::function<std::unique_ptr<PlanTaskGraph>()>& GetPlanTaskGraph);
-  static void GenCollectiveBoxingPlan(
-      Job* job, Plan* plan,
-      const std::function<std::unique_ptr<PlanTaskGraph>()>& GetPlanTaskGraph) {
-    NaiveDeallocateContext deallocate_ctx;
-    return GenCollectiveBoxingPlan(&deallocate_ctx, job, plan, GetPlanTaskGraph);
-  }
+  static void GenCollectiveBoxingPlan(Job* job, Plan* plan);
   static void GenRegisterHint(Plan* plan);
   // Generate readable plan log from plan proto.
   // Use filter_rank to choose which rank to generate. When filter_rank is -1, all rank will be
@@ -66,13 +58,6 @@ struct PlanUtil {
       const PbMap<int64_t, ::oneflow::OpAttributeRefTable>& job_id2op_attribute_ref_table);
   static StreamId GetStreamId(const TaskProto& task);
   static int64_t GetDeviceIndex(const TaskProto& task);
-
-  static bool IsCollectiveBoxingTaskProto(const TaskProto& task_proto);
-  // This function generates a set of reachable task pairs of collective boxing tasks in the given
-  // Plan object.
-  static void GenReachableCollectiveBoxingTaskPairs(
-      const Plan& plan,
-      HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>* reachable_task_pairs);
 };
 
 }  // namespace oneflow

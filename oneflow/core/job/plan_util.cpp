@@ -917,9 +917,7 @@ void GetDeviceDesc(const TaskProto* task_proto, boxing::collective::DeviceDesc* 
 
 }  // namespace
 
-void PlanUtil::GenCollectiveBoxingPlan(
-    DeallocateContext* deallocate_ctx, Job* job, Plan* plan,
-    const std::function<std::unique_ptr<PlanTaskGraph>()>& GetPlanTaskGraph) {
+void PlanUtil::GenCollectiveBoxingPlan(Job* job, Plan* plan) {
   using namespace boxing::collective;
 
   RequestSet* request_set = &(*plan->mutable_collective_boxing_plan()
@@ -928,8 +926,8 @@ void PlanUtil::GenCollectiveBoxingPlan(
       plan->task().cbegin(), plan->task().cend(),
       [](const TaskProto& task) { return IsCollectiveBoxingTaskType(task.task_type()); });
   if (cb_task_count == 0) { return; }
-  auto plan_task_graph_ptr = GetPlanTaskGraph();
-  auto& plan_task_graph = *plan_task_graph_ptr;
+
+  PlanTaskGraph plan_task_graph(*plan);
   int64_t dependency_depth = 0;
   int64_t order = 0;
   HashSet<const PlanTaskNode*> all_visited;
@@ -1023,7 +1021,6 @@ void PlanUtil::GenCollectiveBoxingPlan(
     all_visited.insert(visited.begin(), visited.end());
     ++dependency_depth;
   }
-  deallocate_ctx->Deallocate(std::shared_ptr<PlanTaskGraph>(std::move(plan_task_graph_ptr)));
 }
 
 void PlanUtil::GenRegisterHint(Plan* plan) {
@@ -1408,36 +1405,6 @@ void PlanUtil::PopulateOpAttribute(
 
 /*static*/ int64_t PlanUtil::GetDeviceIndex(const TaskProto& task) {
   return GetStreamId(task).device_id().device_index();
-}
-
-/*static*/ void PlanUtil::GenReachableCollectiveBoxingTaskPairs(
-    const Plan& plan,
-    HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>* reachable_task_pairs) {
-  GlobalPlanTaskGraph plan_task_graph(plan);
-  // cb stands for CollectiveBoxing
-  HashMap<const PlanTaskNode*, std::set<const PlanTaskNode*>> node2predecessor_cb_nodes;
-  plan_task_graph.TopoForEachNode([&](const PlanTaskNode* task_node) {
-    auto* set = &node2predecessor_cb_nodes[task_node];
-    if (IsCollectiveBoxingTaskProto(*task_node->task_proto())) {
-      int64_t dst_task_id = task_node->task_proto()->task_id();
-      task_node->ForEachNodeOnInEdge([&](PlanTaskNode* in_task_node) {
-        for (const auto* pre_cb_node : node2predecessor_cb_nodes[in_task_node]) {
-          int64_t src_task_id = pre_cb_node->task_proto()->task_id();
-          reachable_task_pairs->insert(std::make_pair(src_task_id, dst_task_id));
-        }
-      });
-      set->insert(task_node);
-    } else {
-      task_node->ForEachNodeOnInEdge([&](PlanTaskNode* in_task_node) {
-        const auto& nearests = node2predecessor_cb_nodes[in_task_node];
-        set->insert(nearests.begin(), nearests.end());
-      });
-    }
-  });
-}
-
-/*static*/ bool PlanUtil::IsCollectiveBoxingTaskProto(const TaskProto& task_proto) {
-  return IsCollectiveBoxingTaskType(task_proto.task_type());
 }
 
 }  // namespace oneflow
