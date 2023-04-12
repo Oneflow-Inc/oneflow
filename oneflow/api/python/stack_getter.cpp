@@ -34,7 +34,11 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
     auto* stack_getter = Singleton<ForeignStackGetter>::Get();
     return stack_getter->GetFormattedStack(stack_getter->GetCurrentFrame());
   });
-  m.def("RegisterSignalHandler", []() { Singleton<backward::SignalHandling>::New(); });
+  m.def("RegisterSignalHandler", []() {
+    if (ParseBooleanFromEnv("ONEFLOW_ENABLE_SIGNAL_HANDLER", true)) {
+      Singleton<backward::SignalHandling>::New();
+    }
+  });
 }
 
 }  // namespace oneflow
