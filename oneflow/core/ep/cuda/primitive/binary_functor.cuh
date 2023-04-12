@@ -240,6 +240,16 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kIsClose, Src, Dst> {
   float atol, rtol;
 };
 
+template<typename Src, typename Dst>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kDigammaBackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    // TODO:shijiaxing： This function is named trigamma, it will be implemented soon.
+    assert(false);
+    return static_cast<Dst>(0.0);
+  }
+};
+
 #define SPECIALIZATION_INTEGRAL_CLOSENESS_BINARY_FUNCTOR(op, type)                            \
   template<typename Dst>                                                                      \
   struct BinaryFunctor<DeviceType::kCUDA, op, type, Dst> {                                    \

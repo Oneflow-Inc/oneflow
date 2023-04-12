@@ -2770,3 +2770,10 @@ add_docstr(
     In-place version of :func:`oneflow.Tensor.frac`.
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.digamma,
+    """
+    See :func:`oneflow.digamma`
+    """,
+)
