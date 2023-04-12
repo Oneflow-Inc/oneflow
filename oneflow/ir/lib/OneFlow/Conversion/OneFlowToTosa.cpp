@@ -120,22 +120,8 @@ RankedTensorType CreateTransposeType(ShapedType output, ArrayRef<int32_t> perms)
   return RankedTensorType::get(ranked_type, output.getElementType());
 };
 
-Value CreateBNOp(Location loc, ConversionPatternRewriter& rewriter, Value output, Value x,
+Value CreateBNOp(Location loc, ConversionPatternRewriter& rewriter, Type output_type, Value x,
                  Value mean, Value variance, Value epsilon, Value gamma, Value beta) {
-  auto output_type = output.getType();
-  RankedTensorType mean_type, x_type;
-  if (!(mean_type = llvm::dyn_cast_or_null<RankedTensorType>(mean.getType()))
-      || !(x_type = llvm::dyn_cast_or_null<RankedTensorType>(x.getType()))
-      || mean_type.getRank() != 1 || x_type.getRank() != 4) {
-    LOG(FATAL) << "failec to create bn op";
-  }
-  // nhwc
-  bool isNhwc = x_type.getDimSize(3) == mean_type.getDimSize(0);
-  if (!isNhwc) {
-    auto perms = {0, 2, 3, 1};
-    x = CreateTransposeValue(loc, rewriter, x, perms);
-    output_type = CreateTransposeType(output_type, perms);
-  }
   // sub_op = sub(input, mean)
   auto sub_op0 = rewriter.create<tosa::SubOp>(loc, output_type, x, mean);
   // add_op0 = add(var, epsilon)
@@ -148,10 +134,6 @@ Value CreateBNOp(Location loc, ConversionPatternRewriter& rewriter, Value output
   auto mul_op1 = rewriter.create<tosa::MulOp>(loc, output_type, mul_op0, gamma, 0);
   // op6 = add(mul_op1, beta)
   Value batch_norm = rewriter.create<tosa::AddOp>(loc, output_type, mul_op1, beta);
-  if (!isNhwc) {
-    auto reverse_perms = {0, 3, 1, 2};
-    batch_norm = CreateTransposeValue(loc, rewriter, batch_norm, reverse_perms);
-  }
   return batch_norm;
 };
 
@@ -508,11 +490,22 @@ struct NormalizationInferenceOpLowering final
     auto variance = op.getMovingVariance();
     auto gamma = op.getGamma();
     auto beta = op.getBeta();
-    auto output = op.getY();
+    auto output_type = op.getY().getType();
     auto x = op.getX();
 
+    if (op.IsNCHW()) {
+      const auto perms = {0, 2, 3, 1};
+      x = CreateTransposeValue(loc, rewriter, x, perms);
+      output_type = CreateTransposeType(output_type, perms);
+    }
+
     auto batch_norm =
-        oneflow::CreateBNOp(loc, rewriter, output, x, mean, variance, epsilon, gamma, beta);
+        oneflow::CreateBNOp(loc, rewriter, output_type, x, mean, variance, epsilon, gamma, beta);
+
+    if (op.IsNCHW()) {
+      const auto reverse_perms = {0, 3, 1, 2};
+      batch_norm = CreateTransposeValue(loc, rewriter, batch_norm, reverse_perms);
+    }
     rewriter.replaceOp(op, {batch_norm});
     return success();
   }
@@ -526,22 +519,28 @@ struct NormalizationOpLowering final : public OpConversionPattern<NormalizationO
     auto loc = op->getLoc();
 
     const auto epsilon_type = RankedTensorType::get({}, rewriter.getF32Type());
-    // epsilon   = reshape(epsilon, shape_1)
     auto epsilon = rewriter.create<tosa::ConstOp>(
         loc, epsilon_type, DenseElementsAttr::get(epsilon_type, op.getEpsilon()));
-    //  mean = reshape(mean, shape_0)
     auto mean = op.getMovingMean();
-    //  variance= reshape(variance, shape_0)
     auto variance = op.getMovingVariance();
-    // scale = reshape(scale, shape_0)
     auto gamma = op.getGamma();
-    // beta = reshape(beta, shape_0)
     auto beta = op.getBeta();
-    auto output = op.getY();
+    auto output_type = op.getY().getType();
     auto x = op.getX();
 
+    if (op.IsNCHW()) {
+      const auto perms = {0, 2, 3, 1};
+      x = CreateTransposeValue(loc, rewriter, x, perms);
+      output_type = CreateTransposeType(output_type, perms);
+    }
+
     auto batch_norm =
-        oneflow::CreateBNOp(loc, rewriter, output, x, mean, variance, epsilon, gamma, beta);
+        oneflow::CreateBNOp(loc, rewriter, output_type, x, mean, variance, epsilon, gamma, beta);
+
+    if (op.IsNCHW()) {
+      const auto reverse_perms = {0, 3, 1, 2};
+      batch_norm = CreateTransposeValue(loc, rewriter, batch_norm, reverse_perms);
+    }
     auto moving_mean = op.getMovingMean();
     auto moving_variance = op.getMovingVariance();
 
