@@ -134,10 +134,7 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
             ),
         )
 
-        # use nccl logical can pass test
         flow.boxing.nccl.enable_use_compute_stream(True)
-        # Got stuck.
-        # flow.boxing.nccl.enable_use_compute_stream(False)
 
         model_diff_placement = _TestModuleDiffPlacement()
         graph_diff_placement = _TestGraph(model_diff_placement)
