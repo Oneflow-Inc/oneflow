@@ -92,6 +92,7 @@ enum class BinaryOp {
   kExp2BackwardWithDyX,
   kExpm1BackwardWithDyX,
   kLgammaBackwardWithDyX,
+  kDigammaBackwardWithDyX,
   kLogBackwardWithDyX,
   kLog2BackwardWithDyX,
   kLog10BackwardWithDyX,

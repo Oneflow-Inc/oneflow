@@ -111,6 +111,7 @@ from oneflow._C import batch_matmul as bmm
 from oneflow._C import baddbmm
 from oneflow._C import broadcast_like
 from oneflow._C import chunk
+from oneflow._C import digamma
 from oneflow._C import split
 from oneflow._C import sign
 from oneflow._C import sinh
