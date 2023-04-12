@@ -730,8 +730,7 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
 
   // check if the pass is triggered by python based on the presence of variable tensor manger
   if (fullyConvert) {
-    const auto mgr = ::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get();
-    if (mgr) {
+    if (::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get()) {
       patterns.add<VariableOpLowering>(typeConverter, context);
     } else {
       patterns.add<VariableOpToConstLowering>(typeConverter, context, this->variableAsConstant);
