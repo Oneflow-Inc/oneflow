@@ -122,7 +122,21 @@ RankedTensorType CreateTransposeType(ShapedType output, ArrayRef<int32_t> perms)
 
 Value CreateBNOp(Location loc, ConversionPatternRewriter& rewriter, Value output, Value x,
                  Value mean, Value variance, Value epsilon, Value gamma, Value beta) {
-  const auto output_type = output.getType();
+  auto output_type = output.getType();
+  RankedTensorType mean_type, x_type;
+  if (!(mean_type = llvm::dyn_cast_or_null<RankedTensorType>(mean.getType()))
+      || !(x_type = llvm::dyn_cast_or_null<RankedTensorType>(x.getType()))
+      || mean_type.getRank() != 1 || x_type.getRank() != 4) {
+    LOG(FATAL) << "failec to create bn op";
+  }
+  // nhwc
+  bool isNhwc = x_type.getDimSize(3) == mean_type.getDimSize(0);
+  if (!isNhwc) {
+    if (x_type.getDimSize(1) == mean_type.getDimSize(0)) { LOG(FATAL) << "failec to create bn op"; }
+    auto perms = {0, 2, 3, 1};
+    x = CreateTransposeValue(loc, rewriter, x, perms);
+    output_type = CreateTransposeType(output_type, perms);
+  }
   // sub_op = sub(input, mean)
   auto sub_op0 = rewriter.create<tosa::SubOp>(loc, output_type, x, mean);
   // add_op0 = add(var, epsilon)
@@ -134,7 +148,11 @@ Value CreateBNOp(Location loc, ConversionPatternRewriter& rewriter, Value output
   // op5 = mul(mul_op0, gamma)
   auto mul_op1 = rewriter.create<tosa::MulOp>(loc, output_type, mul_op0, gamma, 0);
   // op6 = add(mul_op1, beta)
-  auto batch_norm = rewriter.create<tosa::AddOp>(loc, output_type, mul_op1, beta);
+  Value batch_norm = rewriter.create<tosa::AddOp>(loc, output_type, mul_op1, beta);
+  if (!isNhwc) {
+    auto reverse_perms = {0, 3, 1, 2};
+    batch_norm = CreateTransposeValue(loc, rewriter, batch_norm, reverse_perms);
+  }
   return batch_norm;
 };
 
