@@ -63,9 +63,7 @@ class _TestModuleDiffPlacement(nn.Module):
             flow.sbp.split(1),
             flow.sbp.split(2),
         ]
-
         for sbp1 in sbp_1ds:
-
             for sbp2 in sbp_1ds:
                 for sbp3 in sbp_1ds:
                     # (2, 2) -> 3
@@ -98,7 +96,7 @@ class _TestGraph(nn.Graph):
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
-    def test_lazy_boxing_2d_all_combination(test_case):
+    def test_lazy_boxing_2d_all_combination_diff_hierarchy(test_case):
         os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "0"
         os.environ["ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION"] = "0"
 
@@ -121,6 +119,30 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
         model_diff_placement = _TestModuleDiffPlacement()
         graph_diff_placement = _TestGraph(model_diff_placement)
         z = graph_diff_placement(x)
+
+    def test_lazy_boxing_2d_all_combination_diff_placement(test_case):
+        os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "0"
+        os.environ["ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION"] = "0"
+
+        x = flow.ones(
+            4,
+            12,
+            4,
+            sbp=[flow.sbp.broadcast, flow.sbp.broadcast],
+            placement=flow.placement(
+                type="cuda", ranks=np.array(range(4)).reshape(2, 2)
+            ),
+        )
+
+        # use nccl logical can pass test
+        flow.boxing.nccl.enable_use_compute_stream(True)
+        # Got stuck.
+        # flow.boxing.nccl.enable_use_compute_stream(False)
+
+        model_diff_placement = _TestModuleDiffPlacement()
+        graph_diff_placement = _TestGraph(model_diff_placement)
+        z = graph_diff_placement(x)
+        test_case.assertTrue(np.allclose(x.numpy(), z.numpy(), 1e-05, 1e-05))
 
 
 if __name__ == "__main__":
