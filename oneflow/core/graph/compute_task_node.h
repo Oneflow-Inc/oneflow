@@ -30,8 +30,8 @@ class CompTaskNode : public TaskNode, public FakeConsumedRegstProvider {
   CompTaskNode() = default;
   virtual ~CompTaskNode() = default;
 
-  virtual void InitFromProtoExceptConsumedRegsts(const TaskProto&) override;
   virtual void ToProto(TaskProto*, bool check) const override;
+  virtual void InitFromProtoExceptConsumedRegsts(const TaskProto&) override;
   void ConsumeFakeRegstsIf() override;
   void EraseFakeRegstsIf() override;
 

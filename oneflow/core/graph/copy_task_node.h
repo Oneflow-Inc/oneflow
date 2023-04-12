@@ -18,9 +18,9 @@ limitations under the License.
 
 #include "oneflow/core/graph/copy_hd_type.pb.h"
 #include "oneflow/core/graph/transport_task_node.h"
+#include "oneflow/core/graph/boxing_task_graph.pb.h"
 
 namespace oneflow {
-
 class CopyTaskNode : public TransportTaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CopyTaskNode);

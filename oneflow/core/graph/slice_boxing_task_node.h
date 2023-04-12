@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_SLICE_BOXING_TASK_NODE_H_
 #define ONEFLOW_CORE_GRAPH_SLICE_BOXING_TASK_NODE_H_
 
-#include "oneflow/core/graph/slice_boxing_task_mode.pb.h"
+#include "oneflow/core/graph/boxing_task_graph.pb.h"
 #include "oneflow/core/graph/transport_task_node.h"
 #include "oneflow/core/register/tensor_slice_view.h"
 #include "oneflow/core/memory/memory_zone.h"

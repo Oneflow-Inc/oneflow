@@ -1,9 +1,0 @@
-syntax = "proto2";
-package oneflow;
-
-enum SliceBoxingTaskMode {
-  kSliceBoxingTaskModeInvalid = 0;
-  kSliceBoxingTaskModeCopy = 1;
-  kSliceBoxingTaskModeAdd = 2;
-}
-

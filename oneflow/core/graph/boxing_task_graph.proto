@@ -4,8 +4,6 @@ package oneflow;
 import "oneflow/core/register/logical_blob_id.proto";
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
-import "oneflow/core/graph/copy_hd_type.proto";
-import "oneflow/core/graph/slice_boxing_task_mode.proto";
 import "oneflow/core/job/sbp_parallel.proto";
 import "oneflow/core/job/task.proto";
 import "oneflow/core/job/placement.proto";
@@ -35,6 +33,11 @@ message NcclSendRecvBoxingTaskProto {
   required string stream_name = 11;
 }
 
+enum CopyHdType {
+  H2D = 0;
+  D2H = 1;
+}
+
 message CopyHdTaskProto {
   required CopyHdType copy_type = 1;
 }
@@ -46,6 +49,12 @@ message BoxingZerosTaskProto {
   required ShapeProto shape = 1;
   required DataType data_type = 2;
   required ShapeProto time_shape = 3;
+}
+
+enum SliceBoxingTaskMode {
+  kSliceBoxingTaskModeInvalid = 0;
+  kSliceBoxingTaskModeCopy = 1;
+  kSliceBoxingTaskModeAdd = 2;
 }
 
 message SliceBoxingTaskProto {

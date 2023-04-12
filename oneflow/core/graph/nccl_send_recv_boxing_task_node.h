@@ -17,6 +17,8 @@ limitations under the License.
 #define ONEFLOW_CORE_GRAPH_NCCL_SEND_RECV_BOXING_TASK_NODE_H_
 
 #include "oneflow/core/graph/transport_task_node.h"
+#include "oneflow/core/graph/boxing_task_graph.pb.h"
+#include "oneflow/core/job/placement.pb.h"
 
 namespace oneflow {
 

@@ -129,6 +129,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
     return *new_task_id_;
   }
   void update_new_task_id(const TaskId& task_id);
+  bool has_new_task_id() const { return static_cast<bool>(new_task_id_); }
 
  protected:
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, bool enable_reuse_mem);
@@ -156,7 +157,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
                             const) const;
   size_t GetEdgesSize(void (TaskNode::*ForEachEdge)(const std::function<void(TaskEdge*)>&)
                           const) const;
-  bool has_new_task_id() const { return static_cast<bool>(new_task_id_); }
 
  private:
   void UpdateTaskId();
@@ -200,6 +200,10 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
   Maybe<void> InitFromProto(const TaskEdgeProto& proto,
                             const TaskGraphRebuildCtx& task_graph_rebuild_ctx);
 
+  void ToProto(TaskEdgeProto* proto) const;
+
+  Maybe<void> InitFromProto(const TaskEdgeProto& proto,
+                            const TaskGraphRebuildCtx& task_graph_rebuild_ctx);
   void ToProto(TaskEdgeProto* proto) const;
 
  private:
