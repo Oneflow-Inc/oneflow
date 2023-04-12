@@ -40,7 +40,7 @@ void ForEachDataEdge(const std::unordered_set<TaskEdge*>& edges,
 }  // namespace
 
 TaskNode::TaskNode()
-    : machine_id_(-1), thrd_id_(-1), task_id_(-1), chain_id_(-1), order_in_graph_(-1) {}
+    : machine_id_(-1), thrd_id_(-1), task_id_(-1), chain_id_(-1), order_in_chain_(-1) {}
 
 std::shared_ptr<RegstDesc> TaskNode::GetProducedRegst(const std::string& name) {
   auto produced_regsts_it = produced_regsts_.find(name);
@@ -88,9 +88,9 @@ void TaskNode::set_chain_id(int64_t val) {
   chain_id_ = val;
 }
 
-void TaskNode::set_order_in_graph(int64_t val) {
-  CHECK_EQ(order_in_graph_, -1);
-  order_in_graph_ = val;
+void TaskNode::set_order_in_chain(int64_t val) {
+  CHECK_EQ(order_in_chain_, -1);
+  order_in_chain_ = val;
 }
 
 void TaskNode::PinConsumedRegst() {
@@ -209,8 +209,8 @@ void TaskNode::ToProto(TaskProto* task_proto) const {
   task_proto->set_thrd_id(thrd_id_);
   task_proto->set_task_id(task_id_);
   task_proto->set_job_id(GlobalJobDesc().job_id());
-  task_proto->mutable_task_set_info()->set_chain_id(chain_id_);
-  task_proto->mutable_task_set_info()->set_order_in_graph(order_in_graph_);
+  task_proto->set_chain_id(chain_id_);
+  task_proto->set_order_in_chain(order_in_chain_);
 
   // Step2: process exec_gph.
   exec_gph_.ToExecSequence(parallel_ctx(), task_proto->mutable_exec_sequence());
