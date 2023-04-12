@@ -188,8 +188,6 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
         model_diff_hierarchy = _TestModuleDiffHierarchy()
         graph_diff_hierarchy = _TestGraph(model_diff_hierarchy)
         y = graph_diff_hierarchy(x)
-        print("====0", y.numpy())
-        print("fininsh 0")
 
     def test_lazy_boxing_2d_all_combination_diff_placement(test_case):
         os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "0"
