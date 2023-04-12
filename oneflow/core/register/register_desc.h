@@ -99,10 +99,7 @@ class RegstDesc final {
 
   // util
   void EraseUninitializedShapeBlob();
-<<<<<<< HEAD
   void InitFromProtoExceptConsumers(const RegstDescProto& proto);
-=======
->>>>>>> 62dee178fa4e789e68522158c9a1858550e66cdc
   void ToProto(RegstDescProto* proto) const { ToProto(proto, /*check*/ true); }
   void ToProto(RegstDescProto*, bool check) const;
   bool HasSameBlobDescs(const RegstDesc*);

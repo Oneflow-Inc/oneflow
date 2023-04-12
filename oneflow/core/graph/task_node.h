@@ -199,11 +199,6 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
 
   Maybe<void> InitFromProto(const TaskEdgeProto& proto,
                             const TaskGraphRebuildCtx& task_graph_rebuild_ctx);
-
-  void ToProto(TaskEdgeProto* proto) const;
-
-  Maybe<void> InitFromProto(const TaskEdgeProto& proto,
-                            const TaskGraphRebuildCtx& task_graph_rebuild_ctx);
   void ToProto(TaskEdgeProto* proto) const;
 
  private:
