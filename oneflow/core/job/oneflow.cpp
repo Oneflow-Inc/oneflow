@@ -196,8 +196,7 @@ Maybe<void> CompileCurJobOnMaster(Job* job, Plan* plan, bool need_job_complete) 
       TeePersistentLogStream::Create(StrCat("subplan_job_", job_desc.job_id()))->Write(*plan);
     }
   }
-  PlanUtil::GenCollectiveBoxingPlan(job, plan,
-                                    [&] { return std::make_unique<PlanTaskGraph>(*plan); });
+  PlanUtil::GenCollectiveBoxingPlan(job, plan);
   PlanUtil::GenRegisterHint(plan);
   return Maybe<void>::Ok();
 }

@@ -589,8 +589,7 @@ Maybe<void> NNGraph::NaiveCompile() {
     PlanUtil::GenRegisterHint(&plan_);
     sub_compile_tc->Count("[PlanCompile]" + name_ + " GenRegisterHint", 1);
     // TODO(chengcheng): test collective boxing for multi-job.
-    PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_,
-                                      [&] { return std::make_unique<PlanTaskGraph>(plan_); });
+    PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_);
     // PlanUtil::SetForceInplaceMemBlock(&plan_); NOTE(chengcheng): only for ssp.
     sub_compile_tc->Count("[PlanCompile]" + name_ + " GenCollectiveBoxingPlan", 1);
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);

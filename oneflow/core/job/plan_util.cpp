@@ -917,9 +917,7 @@ void GetDeviceDesc(const TaskProto* task_proto, boxing::collective::DeviceDesc* 
 
 }  // namespace
 
-void PlanUtil::GenCollectiveBoxingPlan(
-    DeallocateContext* deallocate_ctx, Job* job, Plan* plan,
-    const std::function<std::unique_ptr<PlanTaskGraph>()>& GetPlanTaskGraph) {
+void PlanUtil::GenCollectiveBoxingPlan(Job* job, Plan* plan) {
   using namespace boxing::collective;
 
   RequestSet* request_set = &(*plan->mutable_collective_boxing_plan()
@@ -928,8 +926,8 @@ void PlanUtil::GenCollectiveBoxingPlan(
       plan->task().cbegin(), plan->task().cend(),
       [](const TaskProto& task) { return IsCollectiveBoxingTaskType(task.task_type()); });
   if (cb_task_count == 0) { return; }
-  auto plan_task_graph_ptr = GetPlanTaskGraph();
-  auto& plan_task_graph = *plan_task_graph_ptr;
+
+  PlanTaskGraph plan_task_graph(*plan);
   int64_t dependency_depth = 0;
   int64_t order = 0;
   HashSet<const PlanTaskNode*> all_visited;
@@ -1023,7 +1021,6 @@ void PlanUtil::GenCollectiveBoxingPlan(
     all_visited.insert(visited.begin(), visited.end());
     ++dependency_depth;
   }
-  deallocate_ctx->Deallocate(std::shared_ptr<PlanTaskGraph>(std::move(plan_task_graph_ptr)));
 }
 
 void PlanUtil::GenRegisterHint(Plan* plan) {
