@@ -86,7 +86,7 @@ Maybe<Symbol<ParallelDesc>> MaxRankTensorPlacement(
   // inputs[2] tensor c    [2, 3, 4]
   // then max rank number is 5, max rank tensor is b, max rank tensor id is 1
   const auto& global_tensor_metas = infer_args->input_global_tensor_metas();
-  CHECK_OR_RETURN(global_tensor_metas.size() > 0);
+  CHECK_OR_RETURN(global_tensor_metas.size() > 0);  // NOLINT
   int64_t max_rank_tensor_id = 0;
   int64_t max_rank = 0;
   for (int64_t i = 0; i < global_tensor_metas.size(); ++i) {
