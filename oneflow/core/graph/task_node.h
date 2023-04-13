@@ -71,7 +71,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   DeviceType device_type() const;
   virtual const ParallelContext* parallel_ctx() const { return nullptr; }
 
-  // Different types of ExecNode choose different output BlobDesc inference methods
+  // Different types of TaskNode/Compile Mode choose different output BlobDesc inference methods
   virtual ExecNode::InferBlobDescsMethod GetInferBlobDescsMethod() const = 0;
 
   // Setters
