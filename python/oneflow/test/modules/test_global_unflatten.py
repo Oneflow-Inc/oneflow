@@ -17,6 +17,8 @@ limitations under the License.
 import unittest
 import oneflow as flow
 import oneflow.unittest
+from packaging import version
+import torch as torch_original
 
 from oneflow.test_utils.automated_test_util import *
 
@@ -34,6 +36,10 @@ def do_test_unflatten_impl(test_case, ndim, placement, sbp):
     return z
 
 
+@unittest.skipIf(
+    version.parse(torch_original.__version__) <= version.parse("1.13.0"),
+    "Pytorch less than 1.13.0 do not have unflatten module",
+)
 class TestUnflattenGlobal(flow.unittest.TestCase):
     @globaltest
     def test_unflatten(test_case):
