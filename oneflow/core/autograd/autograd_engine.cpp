@@ -44,7 +44,7 @@ namespace {
 
 void GatherFunctionNodes(FunctionNode* node, std::stack<std::shared_ptr<FunctionNode>>& stack) {
   for (auto& prev_node : node->next_functions()) {
-    auto &prev_node_fun = std::get<0>(prev_node);
+    auto prev_node_fun = std::get<0>(prev_node);
     if (prev_node_fun) {
       if (prev_node_fun.use_count() == 1) { stack.push(prev_node_fun); }
     }
