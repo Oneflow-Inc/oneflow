@@ -397,8 +397,9 @@ Maybe<void> GraphTask::ComputeDependenciesAndPruneNode(const TensorTuple& inputs
         continue;  // recurse
       }
     } else {
-      for (auto & fn : frame.node_->next_functions()) {
-        grad_fn2exec_info_[frame.node_].need_execute |= grad_fn2exec_info_[std::get<0>(fn).get()].need_execute;
+      for (auto& fn : frame.node_->next_functions()) {
+        grad_fn2exec_info_[frame.node_].need_execute |=
+            grad_fn2exec_info_[std::get<0>(fn).get()].need_execute;
       }
       seen.insert(frame.node_);
       stack.pop();
