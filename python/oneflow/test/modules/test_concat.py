@@ -162,6 +162,12 @@ def _test_concat_single_input_type(test_case, device):
     flow_cat_list = flow.cat(flow_list)
     test_case.assertTrue(flow_cat_list.dtype is oneflow.int64)
 
+def _test_concat_grad_fn_name(test_case, device):
+    x1 = flow.randn(2, 3, requires_grad=True, device=device)
+    x2 = flow.randn(2, 3, requires_grad=True, device=device)
+    cat = flow.cat([x1, x2], dim=1)
+    grad_fn_name = cat.grad_fn.name()
+    test_case.assertEqual(grad_fn_name, "catBackward")
 
 @flow.unittest.skip_unless_1n1d()
 class TestModule(flow.unittest.TestCase):
