@@ -50,6 +50,10 @@ int GetThreadNum(const cudaDeviceProp& prop) {
 
 CUDAGenerator::CUDAGenerator(uint64_t seed, int device_index)
     : RandomGenerator(), seed_(seed), device_index_(device_index), philox_offset_per_thread_(0) {
+  int device_count;
+  OF_CUDA_CHECK(cudaGetDeviceCount(&device_count));
+  CHECK_LT_OR_THROW(device_index, device_count)
+      << "only " << device_count << " cuda devices are visible.";
   cudaDeviceProp prop;  // NOLINT
   OF_CUDA_CHECK(cudaGetDeviceProperties(&prop, device_index));
   max_block_num_ = prop.multiProcessorCount;

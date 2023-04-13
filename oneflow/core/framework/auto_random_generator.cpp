@@ -153,8 +153,12 @@ Maybe<ep::RandomGenerator> AutoGenerator::GetOrCreate(const std::string& device,
   auto device_key = JUST(Device::New(device, device_index));
   auto it = generators_.find(device_key);
   if (it == generators_.end()) {
-    auto device_mgr = Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceManager(
-        ep::DeviceManagerRegistry::GetDeviceTypeByDeviceTypeName(device));
+    auto device_type = ep::DeviceManagerRegistry::GetDeviceTypeByDeviceTypeName(device);
+    if (device_type == DeviceType::kInvalidDevice) {
+      return Error::RuntimeError() << "Expected one of " << PrintGeneratorAvailableDevices()
+                                   << " device type at start of device string: " << device;
+    }
+    auto device_mgr = Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceManager(device_type);
     it = generators_.emplace(device_key, device_mgr->CreateRandomGenerator(seed_, device_index))
              .first;
   }
