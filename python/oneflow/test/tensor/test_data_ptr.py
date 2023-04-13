@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,22 +12,25 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWPDLLPATTERNS_H_
-#define ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWPDLLPATTERNS_H_
-#include "mlir/IR/PatternMatch.h"
+"""
+import unittest
+import oneflow as flow
+import oneflow.unittest
 
-namespace mlir {
 
-namespace oneflow {
+@flow.unittest.skip_unless_1n1d()
+class TestDataPtr(unittest.TestCase):
+    def test_equality(test_case):
+        x = flow.ones(2, 3)
+        y = flow.ones(2, 3)
+        test_case.assertNotEqual(x.data_ptr(), y.data_ptr())
 
-void populateForwardOpPatterns(RewritePatternSet& patterns);
-void populateNormalizationOpPatterns(RewritePatternSet& patterns);
-void populateFuseConv2DBatchNormPattern(RewritePatternSet& patterns);
-void populateFuseOpsWithBackwardImplPattern(RewritePatternSet& patterns);
+        test_case.assertEqual(x.data_ptr(), x.data.data_ptr())
 
-}  // namespace oneflow
+        x_ptr = x.data_ptr()
+        x[:] = 2
+        test_case.assertEqual(x_ptr, x.data_ptr())
 
-}  // namespace mlir
 
-#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWPDLLPATTERNS_H_
+if __name__ == "__main__":
+    unittest.main()
