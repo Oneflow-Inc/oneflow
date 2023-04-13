@@ -1609,7 +1609,7 @@ class Module(object):
         Args:
             target (str): The name of submodule to find.
 
-        Example:
+        .. code-block:: python
 
             >>> from oneflow import nn
             >>> class Net3(nn.Module):
@@ -1655,13 +1655,13 @@ class Module(object):
         for submodule_name in submodule_names:
             if not hasattr(mod, submodule_name):
                 raise AttributeError(
-                    f"`{'.'.join(curr_module_name)}` doesn't have sub-module `{submodule_name}`"
+                    f"`{'.'.join(curr_module_name)}` doesn't have submodule `{submodule_name}`"
                 )
             mod = getattr(mod, submodule_name)
             curr_module_name.append(submodule_name)
             if not isinstance(mod, flow.nn.Module):
                 raise TypeError(
-                    f"`{submodule_name}` isn't a oneflow.Module, but {type(mod)}"
+                    f"`{'.'.join(curr_module_name)}` isn't an oneflow.Module, but a {type(mod)}"
                 )
         return mod
 
@@ -1670,6 +1670,32 @@ class Module(object):
 
         Args:
             target (str): The name of parameter to find.
+
+        .. code-block:: python
+
+            >>> from oneflow import nn
+            >>> class Net3(nn.Module):
+            >>>     def __init__(self):
+            >>>         super().__init__()
+            >>>         self.linear = nn.Linear(3, 3)
+            >>>
+            >>> class Net2(nn.Module):
+            >>>     def __init__(self):
+            >>>         super().__init__()
+            >>>         self.net3 = Net3()
+            >>>         self.linear = nn.Linear(2, 2)
+            >>>
+            >>> class Net1(nn.Module):
+            >>>     def __init__(self):
+            >>>         super().__init__()
+            >>>         self.net2 = Net2()
+            >>>         self.linear = nn.Linear(1, 1)
+            >>>
+            >>> net = Net1()
+            >>> print(net.get_parameter("linear.weight").shape)
+            oneflow.Size([1, 1])
+            >>> print(net.get_parameter("net2.linear.weight").shape)
+            oneflow.Size([2, 2])
 
         Returns:
             oneflow.nn.Parameter: The parameter referenced by ``target``
@@ -1685,14 +1711,13 @@ class Module(object):
             parameter = getattr(sub_module, parameter_name)
         else:
             raise AttributeError(
-                f"`{sub_module._get_name()}` doesn't have attribute `{parameter_name}`"
+                f"`{sub_module_name}` doesn't have attribute `{parameter_name}`"
             )
         if not isinstance(parameter, flow.Tensor):
             raise TypeError(
-                f"`{target}` is not a oneflow.Tensor, but {type(parameter)}"
+                f"`{target}` is not an oneflow.Tensor, but {type(parameter)}"
             )
         return parameter
-
 
     def extra_repr(self) -> str:
         """Set the extra representation of the module

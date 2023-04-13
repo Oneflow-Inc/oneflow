@@ -406,13 +406,9 @@ class TestModule(flow.unittest.TestCase):
         tensor0 = flow.nn.Parameter(flow.Tensor(2, 3).to(dtype=flow.float32))
         tensor1 = flow.nn.Parameter(flow.Tensor(2, 3).to(dtype=flow.float32))
         m = CustomModule(tensor0, tensor1)
-        test_case.assertTrue(
-            np.array_equal(m.get_parameter("param1").numpy(), tensor0.numpy())
-        )
-        test_case.assertTrue(
-            np.array_equal(m.get_parameter("param2").numpy(), tensor1.numpy())
-        )
-        
+        test_case.assertTrue(m.get_parameter("param1") is tensor0)
+        test_case.assertTrue(m.get_parameter("param2") is tensor1)
+
     def test_module_delattr(test_case):
         class ConvBNModule(nn.Module):
             def __init__(self):
