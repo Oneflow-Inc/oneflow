@@ -49,13 +49,14 @@ bool IsEnvEnableGlobalInputsWithInConsistentPlacement() {
   return env_enable_inconsistent_placement;
 }
 
-Maybe<bool> IsInputsParallelDescIdentical(const GlobalTensorMetaInferArgs& infer_args) {
-  if (infer_args.input_global_tensor_metas().empty()) { return true; }
+Maybe<bool> IsInputsParallelDescIdentical(
+    const std::shared_ptr<GlobalTensorMetaInferArgs>& infer_args) {
+  if (infer_args->input_global_tensor_metas().empty()) { return true; }
   Symbol<ParallelDesc> default_parallel_desc =
-      JUST(VectorAt(infer_args.input_global_tensor_metas(), 0)).tensor_meta()->parallel_desc();
+      JUST(VectorAt(infer_args->input_global_tensor_metas(), 0)).tensor_meta()->parallel_desc();
 
-  for (int i = 1; i < infer_args.input_global_tensor_metas().size(); ++i) {
-    const auto& parallel_desc = JUST(VectorAt(infer_args.input_global_tensor_metas(), i))
+  for (int i = 1; i < infer_args->input_global_tensor_metas().size(); ++i) {
+    const auto& parallel_desc = JUST(VectorAt(infer_args->input_global_tensor_metas(), i))
                                     .tensor_meta()
                                     ->parallel_desc()
                                     ->data();
@@ -175,7 +176,7 @@ auto* GetBoxingOutput =
 Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                       TensorTuple* outputs, const OpExprInterpContext& ctx) {
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
-  auto parallel_desc = JUST(GetParallelDesc(inputs, ctx, user_op_expr));
+  Symbol<oneflow::ParallelDesc> parallel_desc = JUST(GetParallelDesc(inputs, ctx, user_op_expr));
   std::shared_ptr<const GlobalTensorInferResult> result;
   NonRecursiveMetaInfoConsistencyCheckScope scope;
   // extand lifetime of boxing outputs to the end of this function
@@ -188,15 +189,16 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
         JUST(SrcOpGlobalTensorMetaInferArgs::New(ctx.attrs, parallel_desc, JUST(ctx.nd_sbp)));
     result = JUST(user_op_expr.mut_global_tensor_infer_cache()->GetOrInfer(*infer_args));
   } else {
-    auto infer_args = JUST(GlobalTensorMetaInferArgs::New(ctx.attrs, inputs));
     for (int i = 0; i < outputs->size(); ++i) {
       if ((*outputs)[i]) {
         const auto& nd_sbp = JUST((*outputs)[i]->nd_sbp());
         JUST((*outputs)[i]->set_consumer_nd_sbp_constraint(nd_sbp));
       }
     }
+    std::shared_ptr<GlobalTensorMetaInferArgs> infer_args =
+        JUST(GlobalTensorMetaInferArgs::New(ctx.attrs, boxing_inputs));
     // is_identical is true indicating all inputs tensor have same parallel_desc
-    const bool is_identical = JUST(IsAllInputsParallelDescIdentical(*infer_args));
+    const bool is_identical = JUST(IsAllInputsParallelDescIdentical(infer_args));
     // if is_identical is false and env 'ONEFLOW_ENABLE_PIPELINE_PARALLELISM_AUTO_TO_GLOBAL' set to
     // true then traverse all input tensor use function GetBoxingOutput(), during this process,
     // each tensor will to_global with target parallel_desc
@@ -241,9 +243,9 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   CHECK_EQ_OR_RETURN(kernel->output_tuple_indexes4mut2_obns().size(), 0)
       << Error::UnimplementedError() << GetDynamicOpGlobalFailedDebugString(user_op_expr, *kernel);
 
+  vm::EagerBlobObjectList input_eager_blob_objects(boxing_inputs.size());
   // extand lifetime of boxing outputs to the end of this function
   TensorTuple boxing_outputs;
-  vm::EagerBlobObjectList input_eager_blob_objects(inputs.size());
   for (int i = 0; i < boxing_inputs.size(); ++i) {
     std::shared_ptr<Tensor> input = boxing_inputs.at(i);
     const auto& infered_input_meta = result->input_tensor_metas().at(i);
