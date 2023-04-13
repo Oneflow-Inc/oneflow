@@ -59,12 +59,12 @@ struct OpCallInstructionUtil final {
       JUST(TryAllocateTempStorage(op_call_instruction_policy, allocator));
     }
     ep::Stream* stream = vm_stream->mut_stream_policy()->stream();
-    user_op::OpKernelState* state = nullptr;
+    user_op::OpKernelState* state2 = nullptr;
     user_op::OpKernelCache* cache = nullptr;
     if (op_call_instruction_policy->user_opkernel()->has_state_or_cache()) {
-      TryInitOpKernelStateAndCache(op_call_instruction_policy, stream, &state, &cache);
+      TryInitOpKernelStateAndCache(op_call_instruction_policy, stream, &state2, &cache);
     }
-    OpKernelCompute(op_call_instruction_policy, stream, state, cache);
+    OpKernelCompute(op_call_instruction_policy, stream, state2, cache);
     if (unlikely(op_call_instruction_policy->need_temp_storage())) {
       DeallocateTempStorage(op_call_instruction_policy, allocator);
     }
