@@ -77,9 +77,7 @@ class TestGraphRemat(flow.unittest.TestCase):
     # test basic remat comparing loss and remat num with graph and eager
     @memory_budget(12, "cpu")
     def test_graph_basic_remat(self,device):
-  
-        loss_eager=[]
-        loss_graph=[]
+
         class basicModule(nn.Module):
             def __init__(self):
                 super().__init__()
@@ -90,7 +88,7 @@ class TestGraphRemat(flow.unittest.TestCase):
                 x3= x2*0.1
                 return x3
 
-        model=basicModule()
+        model=basicModule().to(device)
         class GraphMy(nn.Graph):
             def __init__(self):
                 super().__init__()
@@ -109,7 +107,48 @@ class TestGraphRemat(flow.unittest.TestCase):
             del loss
         num_graph=flow._oneflow_internal.remat.recomputation_num()-num_eager-1
         self.assertEqual(num_eager,num_graph)
+    
+    # test basic remat comparing loss with rematable graph and unrematable graph
+    @memory_budget(12, "cpu")
+    def test_graph_basic_remat2(self,device):
+        loss_graph_remat=[]
+        loss_graph_ori=[]
 
+        class basicModule(nn.Module):
+            def __init__(self):
+                super().__init__()
+        
+            def forward(self, input):
+                x1 = input*-2
+                x2 = x1-2
+                x3= x2*0.1
+                return x3
 
+        model=basicModule().to(device)
+        class GraphMy(nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.model=model
+            def build(self,x):
+                out=self.model(x)
+                return out
+        graph=GraphMy()
+        input = flow.ones(1024*1024, device=device)
+
+        for _ in range(10):
+            loss=graph(input).sum()
+            loss_graph_remat.append(loss.numpy())
+            del loss
+            
+        # graph with no remat
+        device="cpu"
+        input = flow.ones(1024*1024, device=device)
+        for _ in range(10):
+            loss=graph(input).sum()
+            loss_graph_ori.append(loss.numpy())
+            del loss
+        
+
+        self.assertEqual(loss_graph_remat,loss_graph_ori)
 if __name__ == "__main__":
     unittest.main()
