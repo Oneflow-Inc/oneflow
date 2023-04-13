@@ -105,7 +105,7 @@ Maybe<void> CheckPhysicalBlobDesc(
 
 }  // namespace
 
-void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx) {
+void ExecNode::InferBlobDescsByInputs(const ParallelContext* parallel_ctx) {
   auto GetBlobDesc4BnInOp = GetBlobDesc4BnInOpFunc();
   const OpNode* op_node = Singleton<OpGraph>::Get()->OpNode4OpName(op()->op_name());
   const NdSbpSignature* nd_sbp_signature = nullptr;
@@ -128,7 +128,7 @@ void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx) {
   CHECK_JUST_MSG(op_->InferInplaceObn2IbnIf(&mut_inplace_obn2ibn_, &con_inplace_obn2ibn_,
                                             GetBlobDesc4BnInOp, parallel_ctx),
                  std::stringstream()
-                     << " infer inplace obn to ibn if failed, op name " << op_->op_loc());
+                     << " infer inplace obn to ibn is failed, op name " << op_->op_loc());
 }
 
 std::function<BlobDesc*(const std::string&)> ExecNode::GetBlobDesc4BnInOpFunc() const {
