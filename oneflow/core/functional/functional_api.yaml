@@ -3297,3 +3297,7 @@
 - name: "clone"
   signature: "Tensor (Tensor input) => Clone"
   bind_python: True
+
+- name: "toyadd"
+  signature: "Tensor (Tensor x,Tensor y) =>ToyAdd"
+  bind_python: True
