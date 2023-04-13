@@ -127,6 +127,32 @@ Maybe<void> InferPhysicalBlobDesc(
 
 }  // namespace
 
+void ExecNode::InferBlobDescsByInputs(const ParallelContext* parallel_ctx) {
+  auto GetBlobDesc4BnInOp = GetBlobDesc4BnInOpFunc();
+  const OpNode* op_node = Singleton<OpGraph>::Get()->OpNode4OpName(op()->op_name());
+  const NdSbpSignature* nd_sbp_signature = nullptr;
+  if (op_node != nullptr) { nd_sbp_signature = &op_node->nd_sbp_signature(); }
+
+  if (op_node != nullptr && parallel_ctx->parallel_num() > 1 && nd_sbp_signature != nullptr) {
+    CHECK_JUST(CheckPhysicalBlobDesc(
+        *op(), op()->input_bns(),
+        std::bind(&Operator::GetLogicalBlobDesc4Ibn, op().get(), std::placeholders::_1),
+        nd_sbp_signature, parallel_ctx, GetBlobDesc4BnInOp));
+  }
+  CHECK_JUST_MSG(op_->InferBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, &GlobalJobDesc()),
+                 std::stringstream() << " infer blob descs is failed, op name " << op_->op_loc());
+  if (op_node != nullptr && parallel_ctx->parallel_num() > 1 && nd_sbp_signature != nullptr) {
+    CHECK_JUST(CheckPhysicalBlobDesc(
+        *op(), op()->output_bns(),
+        std::bind(&Operator::GetLogicalBlobDesc4Obn, op().get(), std::placeholders::_1),
+        nd_sbp_signature, parallel_ctx, GetBlobDesc4BnInOp));
+  }
+  CHECK_JUST_MSG(op_->InferInplaceObn2IbnIf(&mut_inplace_obn2ibn_, &con_inplace_obn2ibn_,
+                                            GetBlobDesc4BnInOp, parallel_ctx),
+                 std::stringstream()
+                     << " infer inplace obn to ibn is failed, op name " << op_->op_loc());
+}
+
 void ExecNode::InferBlobDescsByNdSbp(const ParallelContext* parallel_ctx) {
   const HashSet<std::string> ibns{op()->input_bns().begin(), op()->input_bns().end()};
   HashMap<std::string, BlobDesc> ibn2blob_desc{};
@@ -168,32 +194,6 @@ void ExecNode::InferBlobDescsByNdSbp(const ParallelContext* parallel_ctx) {
                                             GetBlobDesc4BnInOp, parallel_ctx),
                  std::stringstream()
                      << " infer inplace obn to ibn is failed, op name " << op_->op_loc());
-}
-
-void ExecNode::InferBlobDescsByInputs(const ParallelContext* parallel_ctx) {
-  auto GetBlobDesc4BnInOp = GetBlobDesc4BnInOpFunc();
-  const OpNode* op_node = Singleton<OpGraph>::Get()->OpNode4OpName(op()->op_name());
-  const NdSbpSignature* nd_sbp_signature = nullptr;
-  if (op_node != nullptr) { nd_sbp_signature = &op_node->nd_sbp_signature(); }
-
-  if (op_node != nullptr && parallel_ctx->parallel_num() > 1 && nd_sbp_signature != nullptr) {
-    CHECK_JUST(CheckPhysicalBlobDesc(
-        *op(), op()->input_bns(),
-        std::bind(&Operator::GetLogicalBlobDesc4Ibn, op().get(), std::placeholders::_1),
-        nd_sbp_signature, parallel_ctx, GetBlobDesc4BnInOp));
-  }
-  CHECK_JUST_MSG(op_->InferBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, &GlobalJobDesc()),
-                 std::stringstream() << " infer blob descs is failed, op name " << op_->op_loc());
-  if (op_node != nullptr && parallel_ctx->parallel_num() > 1 && nd_sbp_signature != nullptr) {
-    CHECK_JUST(CheckPhysicalBlobDesc(
-        *op(), op()->output_bns(),
-        std::bind(&Operator::GetLogicalBlobDesc4Obn, op().get(), std::placeholders::_1),
-        nd_sbp_signature, parallel_ctx, GetBlobDesc4BnInOp));
-  }
-  CHECK_JUST_MSG(op_->InferInplaceObn2IbnIf(&mut_inplace_obn2ibn_, &con_inplace_obn2ibn_,
-                                            GetBlobDesc4BnInOp, parallel_ctx),
-                 std::stringstream()
-                     << " infer inplace obn to ibn if failed, op name " << op_->op_loc());
 }
 
 std::function<BlobDesc*(const std::string&)> ExecNode::GetBlobDesc4BnInOpFunc() const {

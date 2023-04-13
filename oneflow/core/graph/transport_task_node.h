@@ -47,6 +47,7 @@ class TransportTaskNode : public TaskNode {
  private:
   virtual Maybe<void> InitTransportTaskFromProto(const TransportTaskProto&,
                                                  const TaskGraphRebuildCtx& ctx) = 0;
+
   virtual void ToTransportTaskProto(TransportTaskProto*) const = 0;
   LogicalBlobId lbi_;
 };
