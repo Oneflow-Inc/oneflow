@@ -387,6 +387,14 @@ static PyObject* PyTensorObject_check_meta_consistency(PyObject* self, PyObject*
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_data_ptr(PyObject* self, PyObject* unused) {
+  HANDLE_ERRORS
+  const auto& t = PyTensor_Unpack(self);
+  return functional::CastToPyObject(
+      reinterpret_cast<int64_t>(ASSERT(GetTensorDataPtr(ASSERT_PTR(t->AsLocalTensor())))));
+  END_HANDLE_ERRORS
+}
+
 static PyObject* PyTensorObject_to_numpy(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   const auto& t = PyTensor_Unpack(self);
@@ -394,7 +402,8 @@ static PyObject* PyTensorObject_to_numpy(PyObject* self, PyObject* unused) {
   switch (data_type) {
 #define SWITCH_EAGER_TENSOR_TO_NUMPY(cpp_type, of_type) \
   case of_type: return ASSERT(EagerLocalTensorToNumpy<cpp_type>(self));
-    OF_PP_FOR_EACH_TUPLE(SWITCH_EAGER_TENSOR_TO_NUMPY, POD_DATA_TYPE_SEQ COMPLEX_DATA_TYPE_SEQ)
+    OF_PP_FOR_EACH_TUPLE(SWITCH_EAGER_TENSOR_TO_NUMPY,
+                         POD_DATA_TYPE_SEQ INT16_DATA_TYPE_SEQ COMPLEX_DATA_TYPE_SEQ)
     case DataType::kFloat16: return ASSERT(EagerLocalTensorToNumpy<float16>(self));
     default: {
       return PyErr_Format(PyExc_RuntimeError,
@@ -549,6 +558,7 @@ static PyMethodDef PyTensorObject_methods[] = {
     {"global_id", PyTensorObject_global_id, METH_NOARGS, NULL},
     {"check_meta_consistency", PyTensorObject_check_meta_consistency, METH_NOARGS, NULL},
     {"to_numpy", PyTensorObject_to_numpy, METH_NOARGS, NULL},
+    {"data_ptr", PyTensorObject_data_ptr, METH_NOARGS, NULL},
     {"item", PyTensorObject_item, METH_NOARGS, NULL},
     {"type", (PyCFunction)PyTensorObject_type, METH_VARARGS | METH_KEYWORDS, NULL},
     {"_copy_to_numpy", PyTensorObject__copy_to_numpy, METH_O, NULL},

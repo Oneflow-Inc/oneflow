@@ -18,6 +18,7 @@ oneflow_add_mlir_library(
   MLIRTranslateLib
   MLIRSupport
   MLIROneFlow
+  MLIRTosaToTensor
   oneflow)
 
 if(BUILD_SHARED_LIBS)

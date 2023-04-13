@@ -38,8 +38,8 @@ class PlanTaskNode final : public Node<PlanTaskNode, PlanTaskEdge> {
 
   const TaskProto* task_proto() const { return task_proto_; }
   int64_t task_id() const { return task_proto_->task_id(); }
-  int64_t chain_id() const;
-  int64_t order_in_graph() const { return task_proto_->task_set_info().order_in_graph(); }
+  int64_t chain_id() const { return task_proto_->chain_id(); }
+  int64_t order_in_chain() const { return task_proto_->order_in_chain(); }
 
  private:
   const TaskProto* task_proto_;

@@ -49,7 +49,7 @@ struct OpCallInstructionUtil final {
                                     vm::Stream* vm_stream, bool first, bool recompute) {
     Allocator* allocator = vm_stream->mut_stream_policy()->mut_allocator();
     const auto [remat_helper, inputs_rematable, outputs_rematable] =
-        get_remat_(op_call_instruction_policy, vm_stream);
+        InitRematInfo(op_call_instruction_policy, vm_stream);
     VLOG(1) << "op: " << op_call_instruction_policy->opkernel().op_type_name() << std::endl;
     VLOG(1) << "input_rematable: " << inputs_rematable
             << ", output_rematable: " << outputs_rematable << std::endl;
@@ -152,7 +152,7 @@ struct OpCallInstructionUtil final {
     return Compute(op_call_instruction_policy, vm_stream, false, true);
   }
 
-  static inline std::tuple<std::unique_ptr<RematHelper>, bool, bool> get_remat_(
+  static inline std::tuple<std::unique_ptr<RematHelper>, bool, bool> InitRematInfo(
       OpCallInstructionPolicy* op_call_instruction_policy, vm::Stream* vm_stream) {
     bool inputs_rematable = false;
     bool outputs_rematable = false;
@@ -170,6 +170,8 @@ struct OpCallInstructionUtil final {
       remat_helper = std::make_unique<RematHelper>(*op_call_instruction_policy, inputs_rematable,
                                                    outputs_rematable);
     }
+    Singleton<remat::Env>::Get()->current_op_type_name =
+        op_call_instruction_policy->opkernel().op_type_name();
     return std::make_tuple(std::move(remat_helper), inputs_rematable, outputs_rematable);
   }
 };
