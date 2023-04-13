@@ -21,6 +21,12 @@ limitations under the License.
 
 namespace oneflow {
 
+/*
+ * math constants
+ */
+template<typename T>
+constexpr T pi = static_cast<T>(3.141592653589793238462643383279502);
+
 int64_t Gcd(int64_t m, int64_t n);
 
 int64_t Lcm(int64_t m, int64_t n);

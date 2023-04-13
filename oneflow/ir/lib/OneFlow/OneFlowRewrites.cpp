@@ -80,16 +80,12 @@ static Operation* BuildFusedBiasAddMaskScaleOpWithRate(PatternRewriter& rewriter
   operands.push_back(a);
   operands.push_back(b);
   operands.push_back(mask);
-  NamedAttrList attributes = dropout_op->getAttrs();
+  NamedAttrList attributes;
   attributes.set("axis", axis);
-  attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
-                 rewriter.getStringAttr(OpTrait::IsOpConfCompatible<void>::getOpName(dropout).str()
-                                        + "-fuse-bias-add"));
   float scale = 1.0f;
   float rate_float = rate.cast<FloatAttr>().getValueAsDouble();
   if (rate_float < 1.0f) { scale = 1.0f / (1.0f - rate_float); }
   attributes.set("scale", rewriter.getF32FloatAttr(scale));
-  attributes.erase(dropout_op.getRateAttrName());
   return rewriter.create<FusedBiasAddMaskScaleOp>(
       dropout_op->getLoc(), dropout_op.getOut().getType(), operands, attributes);
 }
@@ -241,128 +237,6 @@ static Operation* CreateConv2DBatchNorm(PatternRewriter& rewriter, Attribute eps
   return new_conv_op;
 }
 
-// TODO: cfg/multi block support
-func::FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc,
-                               StringRef func_name, ValueRange operands, ValueRange results,
-                               SmallVector<Operation*, 4> ops) {
-  IRMapping mapping;
-  SmallVector<Type, 4> argument_types;
-  argument_types.reserve(operands.size());
-  SmallVector<Type, 4> result_types;
-  result_types.reserve(results.size());
-  for (auto argument : operands) { argument_types.push_back(argument.getType()); }
-  for (auto result : results) { result_types.push_back(result.getType()); }
-  auto func_type = rewriter.getFunctionType(argument_types, result_types);
-  auto first_op = *ops.begin();
-  auto parent_func_op = first_op->getParentOfType<oneflow::Job>();
-  if (!parent_func_op) {
-    emitError(loc) << "null parent oneflow::Job " << *first_op;
-    return nullptr;
-  }
-  auto parent_module_op = parent_func_op->getParentOfType<ModuleOp>();
-  if (!parent_module_op) {
-    emitError(loc) << "null ModuleOp " << *first_op;
-    return nullptr;
-  }
-  SymbolTable symbol_table(parent_module_op);
-  OpBuilder::InsertionGuard guard(rewriter);
-  Block::iterator insertPt(parent_func_op->getNextNode());
-  rewriter.setInsertionPointToStart(parent_module_op.getBody());
-  if (parent_func_op->hasAttr("llvm.emit_c_interface")) {
-    emitError(loc) << "parent should not has attr of llvm.emit_c_interface " << *parent_func_op;
-    return nullptr;
-  }
-  auto function = rewriter.create<func::FuncOp>(loc, func_name, func_type);
-  function->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
-  function.getBody().emplaceBlock();
-  for (auto& arg : argument_types) { function.getBody().addArguments(arg, loc); }
-  for (auto argument_pair : llvm::zip(operands, function.getBody().getArguments())) {
-    mapping.map(std::get<0>(argument_pair), std::get<1>(argument_pair));
-  }
-  rewriter.setInsertionPointToStart(&function.getBody().front());
-  ImplicitLocOpBuilder nb(loc, rewriter);
-  for (auto op : ops) { nb.clone(*op, mapping); }
-  SmallVector<::mlir::Value, 4> mapped_results;
-  for (auto result : results) { mapped_results.push_back(mapping.lookup(result)); }
-  rewriter.create<func::ReturnOp>(loc, mapped_results);
-  if (symbol_table.lookup(func_name)) {
-    emitError(loc) << func_name << " should not be at symbol table of ModuleOp";
-    return nullptr;
-  }
-  return function;
-}
-
-NamedAttrList GetJitOpAttributes(PatternRewriter& rewriter, StringRef op_name, int32_t input_size,
-                                 int32_t output_size, Operation* op) {
-  NamedAttrList attributes;
-  attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(),
-                 OpTrait::IsOpConfCompatible<void>::getDeviceTag(op));
-  attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
-                 OpTrait::IsOpConfCompatible<void>::getDeviceName(op));
-  if (auto hierarchy = OpTrait::IsOpConfCompatible<void>::getHierarchy(op)) {
-    attributes.set(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(), hierarchy);
-  }
-  attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
-                 rewriter.getStringAttr(op_name));
-  if (auto scope_symbol_id = OpTrait::IsOpConfCompatible<void>::getScopeSymbolID(op)) {
-    attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(), scope_symbol_id);
-  }
-  return attributes;
-}
-
-template<typename T>
-LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, T op, StringRef func_name) {
-  // TODO: now we only need one JIT engine
-  auto parent_func_op = op->template getParentOfType<oneflow::Job>();
-  if (!parent_func_op) { return failure(); }
-  auto parent_module_op = parent_func_op->template getParentOfType<ModuleOp>();
-  if (!parent_module_op) { return failure(); }
-  SymbolTable symbol_table(parent_module_op);
-  std::string mlir;
-  llvm::raw_string_ostream os_mlir(mlir);
-  if (auto found = symbol_table.lookup(func_name)) {
-    found->print(os_mlir);
-  } else {
-    parent_module_op->dump();
-    return op.emitError("symbol of jit function not found: " + op.getOpName());
-  }
-  op->setAttr("mlir_assembly", rewriter.getStringAttr(mlir));
-  return success();
-}
-
-static Operation* OutlineMulCast(PatternRewriter& rewriter, Operation* mul, Operation* cast) {
-  auto mul_op = llvm::dyn_cast<ScalarMulByTensorOp>(mul);
-  if (!mul_op->hasTrait<OpTrait::IsOpConfCompatible>()) {
-    mul->emitError("not OpConf compatible");
-    exit(1);
-  }
-  auto cast_op = llvm::dyn_cast<CastOp>(cast);
-  // TODO: extract a function to generate op name for jit op from ops being fused
-  SmallString<64> op_name_storage;
-  auto op_name =
-      (cast_op.getOpName() + "__FUSE__"
-       + mul_op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
-             .getValue()
-             .str())
-          .toStringRef(op_name_storage);
-  SmallString<16> tempBuffer;
-  op_name = SanitizeIdentifier(op_name, tempBuffer);
-  SmallVector<::mlir::Value, 2> operands;
-  operands.push_back(cast_op.getIn());
-  operands.push_back(mul_op.getScalar());
-  SmallVector<Value, 1> results;
-  results.push_back(mul_op.getY());
-  NamedAttrList attributes =
-      GetJitOpAttributes(rewriter, op_name, operands.size(), results.size(), mul_op);
-  SmallVector<Operation*, 4> ops = {cast_op, mul_op};
-  auto function = GetOrInsertFuncOp(rewriter, mul_op->getLoc(), op_name, operands, results, ops);
-  auto created = rewriter.create<MlirJitOp>(mul_op->getLoc(), function, attributes, operands);
-  if (failed(DumpAssembly(rewriter, created, created.getOpName()))) { exit(1); }
-  cast_op->dropAllUses();
-  cast_op.erase();
-  return created;
-}
-
 static LogicalResult IsPaddingCouldBeAssimilatedIntoConv(PatternRewriter& rewriter,
                                                          Attribute padding_before,
                                                          Attribute padding_after,
@@ -450,7 +324,6 @@ void populateRewrites(RewritePatternSet& patterns) {
   patterns.getPDLPatterns().registerRewriteFunction("CreateConv2dAndErasePad",
                                                     CreateConv2dAndErasePad);
   patterns.getPDLPatterns().registerRewriteFunction("CreateConv2DBatchNorm", CreateConv2DBatchNorm);
-  patterns.getPDLPatterns().registerRewriteFunction("OutlineMulCast", OutlineMulCast);
   patterns.getPDLPatterns().registerRewriteFunction("GetReciprocal", GetReciprocal);
 }
 
