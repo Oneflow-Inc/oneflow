@@ -197,7 +197,6 @@ void IBVerbsCommNet::PollCQ() {
     CHECK_GE(found_wc_num, 0);
     FOR_RANGE(int32_t, i, 0, found_wc_num) {
       const ibv_wc& wc = wc_vec.at(i);
-      OF_UNIMPLEMENTED() << wc.opcode;
       CHECK_EQ(wc.status, IBV_WC_SUCCESS) << wc.opcode;
       WorkRequestId* wr_id = reinterpret_cast<WorkRequestId*>(wc.wr_id);
       IBVerbsQP* qp = wr_id->qp;
