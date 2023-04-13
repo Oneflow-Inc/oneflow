@@ -218,7 +218,11 @@ static PyObject* PyTensorObject_is_contiguous(PyObject* self, PyObject* unused) 
 
 static PyObject* PyTensorObject_is_view(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
-  return functional::CastToPyObject(PyTensor_Unpack(self)->is_view());
+  if (PyTensor_Unpack(self)->is_view()) {
+    Py_RETURN_TRUE;
+  } else {
+    Py_RETURN_FALSE;
+  }
   END_HANDLE_ERRORS
 }
 

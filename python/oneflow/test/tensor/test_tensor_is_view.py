@@ -17,7 +17,6 @@ import unittest
 import random
 import numpy as np
 from collections import OrderedDict
-import torch
 
 import oneflow as flow
 
