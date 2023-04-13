@@ -35,7 +35,6 @@ class TransportTaskNode : public TaskNode {
 
   Maybe<void> InitTransportTaskFromProtoIf(const TransportTaskProto& transport_task_proto,
                                            const TaskGraphRebuildCtx& ctx);
-
   void ToTransportTaskProtoIf(TransportTaskProto*) const;
 
   ExecNode::InferBlobDescsMethod GetInferBlobDescsMethod() const override {
