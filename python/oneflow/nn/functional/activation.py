@@ -352,12 +352,18 @@ def multi_head_attention_forward(
     # add zero attention along batch dimension (now first)
     if add_zero_attn:
         zero_attn_shape = (bsz * num_heads, 1, head_dim)
-        k = flow.cat(
-            [k, flow.zeros(zero_attn_shape, dtype=k.dtype, device=k.device)], dim=1
-        )
-        v = flow.cat(
-            [v, flow.zeros(zero_attn_shape, dtype=v.dtype, device=v.device)], dim=1
-        )
+        if k.is_local:
+            param_k = dict(dtype=k.dtype, device=k.device)
+        else:
+            param_k = dict(dtype=k.dtype, placement=k.placement, sbp=k.sbp)
+        k = flow.cat([k, flow.zeros(zero_attn_shape, **param_k)], dim=1)
+
+        if v.is_local:
+            param_v = dict(dtype=v.dtype, device=v.device)
+        else:
+            param_v = dict(dtype=v.dtype, placement=v.placement, sbp=v.sbp)
+        v = flow.cat([v, flow.zeros(zero_attn_shape, **param_v)], dim=1)
+
         if attn_mask is not None:
             attn_mask = pad(attn_mask, (0, 1))
         if key_padding_mask is not None:
