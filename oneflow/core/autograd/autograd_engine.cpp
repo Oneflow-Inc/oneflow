@@ -44,8 +44,9 @@ namespace {
 
 void GatherFunctionNodes(FunctionNode* node, std::stack<std::shared_ptr<FunctionNode>>& stack) {
   for (auto& prev_node : node->next_functions()) {
-    if (prev_node) {
-      if (prev_node.use_count() == 1) { stack.push(prev_node); }
+    auto &prev_node_fun = std::get<0>(prev_node);
+    if (prev_node_fun) {
+      if (prev_node_fun.use_count() == 1) { stack.push(prev_node_fun); }
     }
   }
 }
@@ -250,7 +251,7 @@ GraphFunctionNode::GraphFunctionNode(const std::string& name,
   for (int i = 0; i < inputs.size(); ++i) {
     if (inputs.at(i)->requires_grad()) {
       input_meta_data_.at(i) = inputs.at(i)->mut_autograd_meta();
-      next_functions_.emplace_back(inputs.at(i)->mut_grad_fn_node());
+      next_functions_.emplace_back(inputs.at(i)->mut_grad_fn_node(), 0);
     }
   }
 
@@ -314,7 +315,7 @@ Maybe<void> GraphTask::WriteGraphToDotFile(const std::string& file_name) const {
     // write edge
     for (const auto& next_fn : node->next_functions()) {
       lines.emplace_back(fmt::format("\t\"{}\" -> \"{}\";", static_cast<const void*>(node),
-                                     static_cast<const void*>(next_fn.get())));
+                                     static_cast<const void*>(std::get<0>(next_fn).get())));
     }
   }
   lines.emplace_back("}");
@@ -337,7 +338,7 @@ Maybe<void> GraphTask::ComputeDependencies() {
     stack.pop();
     if (/*bool has_seen=*/!seen.insert(node).second) { continue; }
     for (const auto& next_grad_fn : node->next_functions()) {
-      FunctionNode* next_node = next_grad_fn.get();
+      FunctionNode* next_node = std::get<0>(next_grad_fn).get();
       ExecInfo& exec_info = grad_fn2exec_info_[next_node];
       exec_info.dependencies += 1;
       exec_info.need_execute = true;
@@ -358,7 +359,7 @@ Maybe<void> GraphTask::ComputeDependenciesAndPruneNode(const TensorTuple& inputs
     FunctionNode* GetNextFunction() {
       if (next_function_idx_ < node_->next_functions().size()) {
         next_function_idx_ += 1;
-        return node_->next_functions().at(next_function_idx_ - 1).get();
+        return std::get<0>(node_->next_functions().at(next_function_idx_ - 1)).get();
       } else {
         return nullptr;
       }
@@ -396,11 +397,9 @@ Maybe<void> GraphTask::ComputeDependenciesAndPruneNode(const TensorTuple& inputs
         continue;  // recurse
       }
     } else {
-      grad_fn2exec_info_[frame.node_].need_execute |=
-          std::any_of(frame.node_->next_functions().begin(), frame.node_->next_functions().end(),
-                      [&](const std::shared_ptr<FunctionNode>& fn) {
-                        return grad_fn2exec_info_[fn.get()].need_execute;
-                      });
+      for (auto & fn : frame.node_->next_functions()) {
+        grad_fn2exec_info_[frame.node_].need_execute |= grad_fn2exec_info_[std::get<0>(fn).get()].need_execute;
+      }
       seen.insert(frame.node_);
       stack.pop();
     }
@@ -439,7 +438,7 @@ Maybe<void> GraphTask::Apply(bool save_grad_for_leaf) {
     if (!retain_graph_) { node->ReleaseData(); }
 
     for (const auto& next_grad_fn : node->next_functions()) {
-      FunctionNode* next_node = next_grad_fn.get();
+      FunctionNode* next_node = std::get<0>(next_grad_fn).get();
       int32_t& dependencies = grad_fn2exec_info_[next_node].dependencies;
       dependencies -= 1;
       if (dependencies == 0) { queue.push(next_node); }
@@ -517,7 +516,7 @@ Maybe<void> AddAccumulateFunctionNode(const std::shared_ptr<Tensor>& tensor) {
                           bool create_graph) -> Maybe<void> { return Maybe<void>::Ok(); };
   backward_fn->status = []() { return false; };
   tensor->set_grad_fn_node(GraphFunctionNode::New(
-      "accumulate_grad", backward_fn, /*inputs=*/TensorTuple{}, /*outputs*/ TensorTuple{tensor}));
+      "accumulategrad", backward_fn, /*inputs=*/TensorTuple{}, /*outputs*/ TensorTuple{tensor}));
   tensor->set_grad_fn_output_index(0);
   if (LazyMode::is_enabled()) {
     tensor->mut_grad_fn_node()->set_scope(JUST(GetTensorScope(tensor)));

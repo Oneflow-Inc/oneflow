@@ -168,6 +168,7 @@ def _test_concat_grad_fn_name(test_case, device):
     cat = flow.cat([x1, x2], dim=1)
     grad_fn_name = cat.grad_fn.name()
     test_case.assertEqual(grad_fn_name, "catBackward")
+    test_case.assertEqual(cat.grad_fn.next_functions[0][0].name(), "accumulategrad")
 
 @flow.unittest.skip_unless_1n1d()
 class TestModule(flow.unittest.TestCase):
@@ -181,6 +182,7 @@ class TestModule(flow.unittest.TestCase):
             _test_concat_with_three_tensor_backward,
             _test_concat_grad_and_no_grad,
             _test_concat_single_input_type,
+            _test_concat_grad_fn_name,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):

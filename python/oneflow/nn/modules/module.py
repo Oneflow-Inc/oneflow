@@ -1206,7 +1206,7 @@ class Module(object):
             # At this point the grad_output part of the hook will most likely be correct
             inputs_grad_fn = {i.grad_fn for i in args if i.grad_fn is not None}
 
-            next_functions = {grad_fn.next_functions[0]}
+            next_functions = {grad_fn.next_functions[0][0]}
 
             if inputs_grad_fn != next_functions:
                 warnings.warn(
