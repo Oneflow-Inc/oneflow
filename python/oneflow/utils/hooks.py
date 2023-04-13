@@ -165,7 +165,7 @@ class BackwardHook(object):
             raise RuntimeError(
                 "Cannot set Module backward hook for a Module with no input Tensors."
             )
-        
+
         grad_fns = [
             t.grad_fn
             for t in new_tensors
