@@ -61,10 +61,10 @@ class TestUnflattenModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @unittest.skipIf(True, "Pytorch 1.10.0 do not have unflatten module")
-    @profile(torch.unflatten)
-    def profile_unflatten(test_case):
-        torch.unflatten(torch.ones(1000, 1000), 1, (10, 10, 10))
+    # Pytorch 1.10.0 do not have unflatten module, so skip this profile test
+    # @profile(torch.unflatten)
+    # def profile_unflatten(test_case):
+    #    torch.unflatten(torch.ones(1000, 1000), 1, (10, 10, 10))
 
 
 if __name__ == "__main__":
