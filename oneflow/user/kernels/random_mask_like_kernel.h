@@ -16,9 +16,10 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_RANDOM_MASK_LIKE_KERNEL_H_
 #define ONEFLOW_USER_KERNELS_RANDOM_MASK_LIKE_KERNEL_H_
 
-#include "oneflow/user/kernels/random_mask_generator.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/user/kernels/random_mask_generator.h"
+#include "oneflow/user/kernels/random_seed_util.h"
 #include "oneflow/core/ep/include/device.h"
 
 namespace oneflow {
@@ -45,7 +46,8 @@ class RandomMaskLikeKernel final : public user_op::OpKernel, public user_op::Cud
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     const auto& generator = CHECK_JUST(one::MakeGenerator(device_type));
-    generator->set_current_seed(ctx->Attr<int64_t>("seed"));
+    generator->set_current_seed(
+        CHECK_JUST(GetOpKernelRandomSeedInCurrentRank(ctx, ctx->Attr<int64_t>("seed"))));
     return std::make_shared<RandomMaskLikeKernelState>(generator);
   }
 
@@ -54,7 +56,7 @@ class RandomMaskLikeKernel final : public user_op::OpKernel, public user_op::Cud
                const user_op::OpKernelCache*) const override {
     const user_op::Tensor* like = ctx->Tensor4ArgNameAndIndex("like", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int64_t elem_cnt = like->shape().elem_cnt();
+    int64_t elem_cnt = like->shape_view().elem_cnt();
     bool* mask = out->mut_dptr<bool>();
     auto* random_mask_like_state = dynamic_cast<RandomMaskLikeKernelState*>(state);
     CHECK_NOTNULL(random_mask_like_state);

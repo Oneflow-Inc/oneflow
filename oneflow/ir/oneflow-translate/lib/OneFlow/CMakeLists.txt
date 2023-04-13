@@ -14,10 +14,11 @@ oneflow_add_mlir_library(
   MLIRIR
   MLIRParser
   MLIRPass
-  MLIRSPIRV
-  MLIRTranslation
+  MLIRSPIRVDialect
+  MLIRTranslateLib
   MLIRSupport
   MLIROneFlow
+  MLIRTosaToTensor
   oneflow)
 
 if(BUILD_SHARED_LIBS)

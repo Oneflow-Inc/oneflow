@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_LAZY_ACTOR_ACTOR_CONTEXT_H_
 #define ONEFLOW_CORE_LAZY_ACTOR_ACTOR_CONTEXT_H_
 
-#include "oneflow/core/stream/include/stream_context.h"
+#include "oneflow/core/lazy/stream_context/include/stream_context.h"
 #include "oneflow/core/job/task.pb.h"
 
 namespace oneflow {

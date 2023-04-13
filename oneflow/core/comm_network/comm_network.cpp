@@ -84,7 +84,7 @@ void CommNet::AddWorkToStream(void* actor_read_id, const std::function<void()>& 
 
 CommNet::CommNet() {
   int64_t this_machine_id = GlobalProcessCtx::Rank();
-  for (int64_t i : Global<ResourceDesc, ForSession>::Get()->process_ranks()) {
+  for (int64_t i : Singleton<ResourceDesc, ForSession>::Get()->process_ranks()) {
     if (i == this_machine_id) { continue; }
     peer_machine_id_.insert(i);
   }

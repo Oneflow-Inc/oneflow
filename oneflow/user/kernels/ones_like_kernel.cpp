@@ -41,7 +41,7 @@ class OnesLikeKernel final : public user_op::OpKernel {
         ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream()->device_type(),
                                                                 out->data_type());
     CHECK(fill);
-    fill->Launch(ctx->stream(), out->mut_dptr(), 1, out->shape().elem_cnt());
+    fill->Launch(ctx->stream(), out->mut_dptr(), 1, out->shape_view().elem_cnt());
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

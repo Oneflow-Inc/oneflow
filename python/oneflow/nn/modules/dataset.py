@@ -17,18 +17,20 @@ import os
 import random
 import sys
 import traceback
+from google.protobuf import text_format
 from typing import List, Optional, Sequence, Tuple, Union
 
 import oneflow as flow
 import oneflow._oneflow_internal._C as _C
 from oneflow.framework.tensor import Tensor
+from oneflow.framework.scope_util import current_scope
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _size_any_t
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 from oneflow.nn.modules.utils import _pair, _reverse_repeat_tuple, _single, _triple
 import oneflow.framework.id_util as id_util
 
 
-def mirrored_gen_random_seed(seed=None):
+def local_gen_random_seed(seed=None):
     if seed is None:
         seed = -1
         has_seed = False
@@ -86,7 +88,7 @@ class OFRecordReader(Module):
 
         self.sbp = sbp
 
-        (self.seed, self.has_seed) = mirrored_gen_random_seed(random_seed)
+        (self.seed, self.has_seed) = local_gen_random_seed(random_seed)
         self._op = flow.stateful_op("OFRecordReader").Output("out").Build()
 
     def forward(self):
@@ -164,6 +166,36 @@ class OFRecordRawDecoder(Module):
 
 
 class CoinFlip(Module):
+    r"""
+    CoinFlip(batch_size=1, random_seed=None, probability=0.5, device=None, placement=None, sbp=None)
+
+    Generates random boolean values following a bernoulli distribution.
+
+    The probability of generating a value 1 (true) is determined by the ``probability`` argument.
+
+    The shape of the generated data can be either specified explicitly with a ``shape`` argument,
+    or chosen to match the shape of the input, if provided. If none are present, a single value per
+    sample is generated.
+
+    The documentation is referenced from:
+    https://docs.nvidia.com/deeplearning/dali/user-guide/docs/supported_ops_legacy.html#nvidia.dali.ops.CoinFlip.
+
+    Args:
+        batch_size (int, optional): Maximum batch size of the pipeline. Negative values for this parameter 
+            are invalid - the default value may only be used with serialized pipeline (the value stored in 
+            serialized pipeline is used instead). In most cases, the actual batch size of the pipeline will be 
+            equal to the maximum one. Default: 1
+        random_seed (int, optional): Random seed. Default: None
+        probability (float, optional): Probability of value 1. Default: 0.5
+        device (oneflow.device, optional): Desired device of returned tensor. Default: if None, uses the 
+            current device for the default tensor type.
+        placement (oneflow.placement, optional):  Desired placement of returned global tensor. 
+            Default: if None, the returned tensor is local one using the argument `device`.
+        sbp (oneflow.sbp.sbp or tuple of oneflow.sbp.sbp, optional): Desired sbp descriptor of returned 
+            global tensor. Default: if None, the returned tensor is local one using the argument `device`.
+
+    """
+
     def __init__(
         self,
         batch_size: int = 1,
@@ -202,7 +234,7 @@ class CoinFlip(Module):
 
         self.sbp = sbp
 
-        (self.seed, self.has_seed) = mirrored_gen_random_seed(random_seed)
+        (self.seed, self.has_seed) = local_gen_random_seed(random_seed)
 
         self._op = flow.stateful_op("coin_flip").Output("out").Build()
 
@@ -230,6 +262,41 @@ class CoinFlip(Module):
 
 
 class CropMirrorNormalize(Module):
+    r"""
+    CropMirrorNormalize(color_space="BGR", output_layout="NCHW", crop_h=0, crop_w=0, crop_pos_y=0.5, crop_pos_x=0.5, mean= [0.0], std= [1.0], output_dtype=oneflow.float)
+
+    Performs fused cropping, normalization, format conversion
+    (NHWC to NCHW) if desired, and type casting.
+
+    Normalization takes the input images and produces the output by using the following formula:
+    
+    .. math::
+        output = (input - mean) / std
+
+    .. note::
+        If no cropping arguments are specified, only mirroring and normalization will occur.
+
+    This operator allows sequence inputs and supports volumetric data.
+
+    The documentation is referenced from:
+    https://docs.nvidia.com/deeplearning/dali/user-guide/docs/supported_ops_legacy.html#nvidia.dali.ops.CropMirrorNormalize.
+
+    Args:
+        color_space (str, optional): The color space of the input image. Default: "BGR"
+        output_layout (str, optional): Tensor data layout for the output. Default: "NCHW"
+        crop_h (int, optional): Cropping the window height (in pixels). Default: 0
+        crop_w (int, optional): Cropping window width (in pixels). Default: 0
+        crop_pos_y (float, optional): Normalized (0.0 - 1.0) vertical position of the start of the cropping 
+            window (typically, the upper left corner). Default: 0.5
+        crop_pos_x (float, optional): Normalized (0.0 - 1.0) horizontal position of the cropping window 
+            (upper left corner). Default: 0.5
+        mean (float or list of float, optional): Mean pixel values for image normalization. Default: [0.0],
+        std (float or list of float, optional): Standard deviation values for image normalization. 
+            Default: [1.0]
+        output_dtype (oneflow.dtype, optional): Output data type. Default: ``oneflow.float``
+
+    """
+
     def __init__(
         self,
         color_space: str = "BGR",
@@ -374,7 +441,7 @@ class OFRecordImageDecoderRandomCrop(Module):
         self.num_attempts = num_attempts
         self.random_area = random_area
         self.random_aspect_ratio = random_aspect_ratio
-        (self.seed, self.has_seed) = mirrored_gen_random_seed(random_seed)
+        (self.seed, self.has_seed) = local_gen_random_seed(random_seed)
         self._op = (
             flow.stateful_op("ofrecord_image_decoder_random_crop")
             .Input("in")
@@ -439,12 +506,18 @@ class OFRecordImageGpuDecoderRandomCropResize(Module):
         self.warmup_size = warmup_size
         self.max_num_pixels = max_num_pixels
         gpu_decoder_conf = (
-            flow._oneflow_internal.oneflow.core.operator.op_conf.ImageDecoderRandomCropResizeOpConf()
+            flow.core.operator.op_conf_pb2.ImageDecoderRandomCropResizeOpConf()
         )
-        gpu_decoder_conf.set_in("error_input_need_to_be_replaced")
-        gpu_decoder_conf.set_out("out")
+        # parse failed when excu clang format if use `gpu_decoder_conf.in = "error_input_need_to_be_replaced"`
+        setattr(gpu_decoder_conf, "in", "error_input_need_to_be_replaced")
+        gpu_decoder_conf.out = "out"
+        gpu_decoder_conf.target_width = (
+            -1
+        )  # Set the default value, otherwise the parsing fails
+        gpu_decoder_conf.target_height = -1
+        gpu_decoder_conf_str = text_format.MessageToString(gpu_decoder_conf)
         self._op = flow._oneflow_internal.one.ImageDecoderRandomCropResizeOpExpr(
-            id_util.UniqueStr("ImageGpuDecoder"), gpu_decoder_conf, ["in"], ["out"]
+            id_util.UniqueStr("ImageGpuDecoder"), gpu_decoder_conf_str, ["in"], ["out"]
         )
 
     def forward(self, input):
@@ -836,7 +909,7 @@ class COCOReader(Module):
             # local apply
             outputs = _C.dispatch_coco_reader(
                 self._op,
-                session_id=flow.current_scope().session_id,
+                session_id=current_scope().session_id,
                 annotation_file=self.annotation_file,
                 image_dir=self.image_dir,
                 batch_size=self.batch_size,
@@ -851,7 +924,7 @@ class COCOReader(Module):
             # consistent apply
             outputs = _C.dispatch_coco_reader(
                 self._op,
-                session_id=flow.current_scope().session_id,
+                session_id=current_scope().session_id,
                 annotation_file=self.annotation_file,
                 image_dir=self.image_dir,
                 batch_size=self.batch_size,
@@ -947,112 +1020,6 @@ class OFRecordBytesDecoder(Module):
         return _C.dispatch_ofrecord_bytes_decoder(self._op, input, name=self.blob_name)
 
 
-class OneRecReader(Module):
-    r"""
-    nn.OneRecReader read from OneRec format files into a Tensor carrying TensorBuffer which can be decoded by decode_onerec API afterwards.
-
-    Parameters:
-        files (List[str]): The file list to be read from filesystem
-        batch_size (int): batch size
-        shuffle (bool): shuffle or not
-        shuffle_mode (str): can be "batch" or "instance"
-        shuffle_buffer_size (int): shuffle buffer size, default to 1024
-        shuffle_after_epoch (bool): if shuffle after each epoch
-        verify_example (bool): if verify example, defaults to True
-        placement (Optional[oneflow._oneflow_internal.placement]): The placement attribute allows you to specify which physical device the output tensor is stored on.
-        sbp (Optional[Union[oneflow._oneflow_internal.sbp.sbp, List[oneflow._oneflow_internal.sbp.sbp]]]): When creating a global tensor, specify the SBP of the output tensor.
-
-    For example:
-
-    .. code-block:: python
-
-        import oneflow as flow
-        files = ['file01.onerec', 'file02.onerec']
-        onerec_reader = flow.nn.OneRecReader(files, 10, True, "batch")
-        readdata_1 = onerec_reader()
-
-        # then decode readdata_1 ...
-
-    .. code-block:: python
-
-        import oneflow as flow
-        files = ['file01.onerec', 'file02.onerec']
-        onerec_reader2 = flow.nn.OneRecReader(
-            files,
-            batch_size=10,
-            shuffle=True,
-            shuffle_mode="batch",
-            placement=flow.env.all_device_placement("cpu") ,
-            sbp=[flow.sbp.split(0)],
-        )
-        readdata_2 = onerec_reader2()
-
-        # then decode readdata_2 ...
-
-    """
-
-    def __init__(
-        self,
-        files: List[str],
-        batch_size: int,
-        shuffle: bool,
-        shuffle_mode: str,
-        random_seed: Optional[int] = None,
-        shuffle_buffer_size: int = 1024,
-        shuffle_after_epoch: bool = False,
-        verify_example: bool = True,
-        placement: flow.placement = None,
-        sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
-    ):
-
-        super().__init__()
-
-        _handle_shuffle_args(self, shuffle, random_seed)
-        _handle_distributed_args(self, None, placement, sbp)
-
-        if shuffle_mode not in ["batch", "instance"]:
-            raise ValueError("shuffle_mode should be 'batch' or 'instance'")
-
-        self.files = files
-        self.batch_size = batch_size
-        self.shuffle_mode = shuffle_mode
-        self.shuffle_buffer_size = shuffle_buffer_size
-        self.shuffle_after_epoch = shuffle_after_epoch
-        self.verify_example = verify_example
-
-        self.op = flow.stateful_op("OneRecReader").Output("out").Build()
-
-    def forward(self):
-        if self.placement is None:
-            output = _C.dispatch_onerec_reader(
-                self.op,
-                files=self.files,
-                batch_size=self.batch_size,
-                random_shuffle=self.shuffle,
-                shuffle_mode=self.shuffle_mode,
-                shuffle_buffer_size=self.shuffle_buffer_size,
-                shuffle_after_epoch=self.shuffle_after_epoch,
-                random_seed=self.random_seed,
-                verify_example=self.verify_example,
-                device=self.device,
-            )
-        else:
-            output = _C.dispatch_onerec_reader(
-                self.op,
-                files=self.files,
-                batch_size=self.batch_size,
-                random_shuffle=self.shuffle,
-                shuffle_mode=self.shuffle_mode,
-                shuffle_buffer_size=self.shuffle_buffer_size,
-                shuffle_after_epoch=self.shuffle_after_epoch,
-                random_seed=self.random_seed,
-                verify_example=self.verify_example,
-                placement=self.placement,
-                sbp=self.sbp,
-            )
-        return output
-
-
 class GPTIndexedBinDataReader(Module):
     def __init__(
         self,
@@ -1128,6 +1095,63 @@ class GPTIndexedBinDataReader(Module):
                 random_seed=self.random_seed,
                 split_sizes=self.split_sizes,
                 split_index=self.split_index,
+                placement=self.placement,
+                sbp=self.sbp,
+            )
+        return output
+
+
+class RawReader(Module):
+    def __init__(
+        self,
+        files: List[str],
+        shape: Sequence[int],
+        dtype: flow.dtype,
+        batch_size: int,
+        random_shuffle: bool = True,
+        shuffle_block_size: int = 0,
+        random_seed: Optional[int] = None,
+        placement: flow.placement = None,
+        sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
+    ):
+
+        super().__init__()
+
+        _handle_shuffle_args(self, random_shuffle, random_seed)
+        _handle_distributed_args(self, None, placement, sbp)
+
+        self.files = files
+        self.shape = shape
+        self.dtype = dtype
+        self.batch_size = batch_size
+        self.shuffle_block_size = shuffle_block_size
+
+        self.op = flow.stateful_op("raw_reader").Output("out").Build()
+
+    def forward(self):
+        if self.placement is None:
+
+            output = _C.dispatch_raw_reader(
+                self.op,
+                files=self.files,
+                shape=self.shape,
+                data_type=self.dtype,
+                batch_size=self.batch_size,
+                random_shuffle=self.shuffle,
+                shuffle_block_size=self.shuffle_block_size,
+                random_seed=self.random_seed,
+                device=self.device,
+            )
+        else:
+            output = _C.dispatch_raw_reader(
+                self.op,
+                files=self.files,
+                shape=self.shape,
+                data_type=self.dtype,
+                batch_size=self.batch_size,
+                random_shuffle=self.shuffle,
+                shuffle_block_size=self.shuffle_block_size,
+                random_seed=self.random_seed,
                 placement=self.placement,
                 sbp=self.sbp,
             )

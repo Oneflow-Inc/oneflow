@@ -22,10 +22,80 @@ namespace ep {
 namespace primitive {
 
 enum class UnaryOp {
+  kIdentity,
+  // activation op
+  kElu,
+  kCelu,
   kRelu,
   kGelu,
+  kHardSwish,
+  kHardSigmoid,
+  kHardShrink,
+  kHardTanh,
+  kLeakyRelu,
+  kMish,
+  kSelu,
+  kSilu,
+  kSoftShrink,
+  kSoftSign,
+  kSoftPlus,
   kTanh,
+  kThreshold,
+  kFastGelu,
+  kQuickGelu,
+  // math op
+  kAbs,
+  kAcos,
+  kAcosh,
+  kAsin,
+  kAsinh,
+  kAtan,
+  kAtanh,
+  kCeil,
+  kCos,
+  kCosh,
+  kDigamma,
+  kErf,
+  kErfc,
+  kExp,
+  kExp2,
+  kExpm1,
+  kFloor,
+  kLgamma,
+  kLog,
+  kLog2,
+  kLog10,
+  kLog1p,
+  kLogSigmoid,
+  kNegative,
+  kReciprocal,
+  kReciprocalNoNan,
+  kRint,
+  kRound,
+  kRsqrt,
+  kSigmoid,
+  kSign,
+  kSin,
+  kSinh,
+  kSqrt,
+  kSquare,
+  kTan,
+  kTrunc,
+  kNotEqualZero,
+  // logical op
   kLogicalNot,
+
+  // cast op
+  kCast,
+
+  // utils op
+  kIsInf,
+  kIsNan,
+  kIsFinite,
+  kNanAssign,
+
+  // bitwise op
+  kBitwiseNot,
 };
 
 }

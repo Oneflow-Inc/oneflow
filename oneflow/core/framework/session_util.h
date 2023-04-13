@@ -17,39 +17,12 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_SESSION_UTIL_H_
 
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/vm/instruction.cfg.h"
-#include "oneflow/core/vm/instruction.h"
 
 namespace oneflow {
 
-class Session {
- public:
-  Session(int64_t id);
-  Session(const Session&) = delete;
-  Session(Session&&) = delete;
-  ~Session() = default;
-
-  int64_t id() const;
-  const std::shared_ptr<vm::InstructionMsgList>& instruction_list() const;
-
-  std::shared_ptr<const std::vector<bool>> is_mirrored_strategy_enabled_stack() const {
-    return is_mirrored_strategy_enabled_stack_;
-  }
-  Maybe<void> PushMirroredStrategyEnabled(bool is_mirrored);
-  Maybe<void> PopMirroredStrategyEnabled();
-  Maybe<bool> IsMirroredStrategyEnabled() const;
-  Maybe<bool> IsConsistentStrategyEnabled() const;
-
- private:
-  int64_t id_;
-  std::shared_ptr<vm::InstructionMsgList> instruction_list_;
-  std::shared_ptr<std::vector<bool>> is_mirrored_strategy_enabled_stack_;
-};
-
 Maybe<int64_t> GetDefaultSessionId();
-Maybe<Session> RegsiterSession(int64_t id);
-Maybe<Session> GetDefaultSession();
-Maybe<void> ClearSessionById(int64_t id);
+bool RegsterSessionId(int64_t session_id);
+bool ClearSessionId(int64_t session_id);
 
 }  // namespace oneflow
 

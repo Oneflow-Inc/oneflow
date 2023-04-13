@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/user/ops/comm_net_device_infer_util.h"
 #include "oneflow/core/framework/op_generated.h"
@@ -23,54 +24,61 @@ limitations under the License.
 
 namespace oneflow {
 
-/* static */ Maybe<void> EagerNcclAllReduceOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+/* static */ Maybe<void> EagerCclAllReduceOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> EagerNcclAllReduceOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> EagerCclAllReduceOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> EagerNcclAllReduceOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> EagerCclAllReduceOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder().PartialSum(user_op::OpArg("in", 0)).Broadcast(user_op::OpArg("out", 0)).Build();
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> EagerNcclAllReduceOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+/* static */ Maybe<void> EagerCclAllReduceOp::InferDataType(user_op::InferContext* ctx) {
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Stream>> EagerNcclAllReduceOp::InferDeviceAndStream(
+/* static */ Maybe<Symbol<Stream>> EagerCclAllReduceOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&IsAsyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
-/* static */ Maybe<void> EagerNcclBroadcastOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+/* static */ Maybe<void> EagerCclBroadcastOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  size_t size = ctx->input_size("in");
+  const std::vector<Shape>& shape_list = ctx->Attr<std::vector<Shape>>("shape_list");
+  CHECK_EQ_OR_RETURN(size, ctx->output_size("out"))
+      << "the size of input tensor tuple should equal the size of output tensor tuple.";
+  for (int i = 0; i < size; ++i) { ctx->SetOutputShape("out", i, JUST(VectorAt(shape_list, i))); }
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> EagerNcclBroadcastOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> EagerCclBroadcastOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> EagerNcclBroadcastOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder().PartialSum(user_op::OpArg("in", 0)).Broadcast(user_op::OpArg("out", 0)).Build();
-  ctx->NewBuilder().Broadcast(user_op::OpArg("in", 0)).Broadcast(user_op::OpArg("out", 0)).Build();
-  ctx->NewBuilder().Split(user_op::OpArg("in", 0), 0).Broadcast(user_op::OpArg("out", 0)).Build();
+/* static */ Maybe<void> EagerCclBroadcastOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder().PartialSum(ctx->inputs()).Broadcast(ctx->outputs()).Build();
+  ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
+  ctx->NewBuilder().Split(ctx->inputs(), 0).Broadcast(ctx->outputs()).Build();
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> EagerNcclBroadcastOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+/* static */ Maybe<void> EagerCclBroadcastOp::InferDataType(user_op::InferContext* ctx) {
+  size_t size = ctx->input_size("in");
+  CHECK_EQ_OR_RETURN(size, ctx->output_size("out"))
+      << "the size of input tensor tuple should equal the size of output tensor tuple.";
+  for (int i = 0; i < size; ++i) { ctx->SetOutputDType("out", i, ctx->InputDType("in", i)); }
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Stream>> EagerNcclBroadcastOp::InferDeviceAndStream(
+/* static */ Maybe<Symbol<Stream>> EagerCclBroadcastOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&IsAsyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
 /* static */ Maybe<void> EagerNcclTouchOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
@@ -92,61 +100,60 @@ namespace oneflow {
 
 /* static */ Maybe<Symbol<Stream>> EagerNcclTouchOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&IsAsyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
-/* static */ Maybe<void> EagerNcclReduceOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+/* static */ Maybe<void> EagerCclReduceOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> EagerNcclReduceOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> EagerCclReduceOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> EagerNcclReduceOp::GetSbp(user_op::SbpContext* ctx) {
-  UNIMPLEMENTED_THEN_RETURN() << "consistent tensor are not supported";
+/* static */ Maybe<void> EagerCclReduceOp::GetSbp(user_op::SbpContext* ctx) {
+  UNIMPLEMENTED_THEN_RETURN() << "global tensor are not supported";
 }
 
-/* static */ Maybe<void> EagerNcclReduceOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+/* static */ Maybe<void> EagerCclReduceOp::InferDataType(user_op::InferContext* ctx) {
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Stream>> EagerNcclReduceOp::InferDeviceAndStream(
+/* static */ Maybe<Symbol<Stream>> EagerCclReduceOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
-/* static */ Maybe<void> EagerNcclReduceScatterOp::InferLogicalTensorDesc(
+/* static */ Maybe<void> EagerCclReduceScatterOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> EagerNcclReduceScatterOp::InferPhysicalTensorDesc(
+/* static */ Maybe<void> EagerCclReduceScatterOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
-  const Shape& in_shape = ctx->InputShape("in", 0);
-  Shape* out_shape = ctx->OutputShape("out", 0);
-  const int64_t& parallel_num = ctx->parallel_ctx().parallel_num();
-  if (parallel_num > 1) {
-    const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
-    const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
-    const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
-    const Shape& physical_shape =
-        GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, in_shape, parallel_id).shape();
-    *out_shape = physical_shape;
-  } else {
-    *out_shape = in_shape;
-  }
+  const auto& input_shape = ctx->InputShape("in", 0);
+  const auto& shape = ctx->Attr<Shape>("output_shape");
+  Symbol<ParallelDesc> parallel_desc =
+      JUST(TxtStringToPlacement(ctx->Attr<std::string>("parallel_conf")));
+  CHECK_EQ_OR_RETURN(input_shape.elem_cnt(), shape.elem_cnt() * parallel_desc->parallel_num())
+      << Error::RuntimeError()
+      << "output tensor size must be equal to world_size times input tensor size";
+  CHECK_EQ_OR_RETURN(ctx->InputDType("in", 0), ctx->Attr<DataType>("output_dtype"))
+      << Error::RuntimeError() << "output tensor must have the same type as input tensor";
+  ctx->SetOutputShape("out", 0, ctx->Attr<Shape>("output_shape"));
+  ctx->SetOutputDType("out", 0, ctx->Attr<DataType>("output_dtype"));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> EagerNcclReduceScatterOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> EagerCclReduceScatterOp::GetSbp(user_op::SbpContext* ctx) {
   return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
 }
 
-/* static */ Maybe<void> EagerNcclReduceScatterOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
+/* static */ Maybe<void> EagerCclReduceScatterOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
   const NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
   NdSbp* in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
   NdSbp* out_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
@@ -167,31 +174,44 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> EagerNcclReduceScatterOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+/* static */ Maybe<void> EagerCclReduceScatterOp::InferDataType(user_op::InferContext* ctx) {
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Stream>> EagerNcclReduceScatterOp::InferDeviceAndStream(
+/* static */ Maybe<Symbol<Stream>> EagerCclReduceScatterOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
-/* static */ Maybe<void> EagerNcclAllGatherOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-  *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+/* static */ Maybe<void> EagerCclAllGatherOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> EagerNcclAllGatherOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
+/*static*/ Maybe<void> EagerCclAllGatherOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  const auto& input_shape = ctx->InputShape("in", 0);
+  const auto& shape = ctx->Attr<Shape>("output_shape");
+  Symbol<ParallelDesc> parallel_desc =
+      JUST(TxtStringToPlacement(ctx->Attr<std::string>("parallel_conf")));
+  CHECK_EQ_OR_RETURN(input_shape.elem_cnt() * parallel_desc->parallel_num(), shape.elem_cnt())
+      << Error::RuntimeError()
+      << "output tensor size must be equal to world_size times input tensor size";
+  CHECK_EQ_OR_RETURN(ctx->InputDType("in", 0), ctx->Attr<DataType>("output_dtype"))
+      << Error::RuntimeError() << Error::RuntimeError()
+      << "output tensor must have the same type as input tensor";
+  ctx->SetOutputShape("out", 0, ctx->Attr<Shape>("output_shape"));
+  ctx->SetOutputDType("out", 0, ctx->Attr<DataType>("output_dtype"));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
+  return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> EagerNcclAllGatherOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> EagerCclAllGatherOp::GetSbp(user_op::SbpContext* ctx) {
   return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
 }
 
-/* static */ Maybe<void> EagerNcclAllGatherOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
+/* static */ Maybe<void> EagerCclAllGatherOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
   const NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
   NdSbp* in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
   NdSbp* out_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
@@ -214,19 +234,19 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> EagerNcclAllGatherOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+/* static */ Maybe<void> EagerCclAllGatherOp::InferDataType(user_op::InferContext* ctx) {
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Stream>> EagerNcclAllGatherOp::InferDeviceAndStream(
+/* static */ Maybe<Symbol<Stream>> EagerCclAllGatherOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
 /* static */ Maybe<void> EagerNcclS2sOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-  *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -260,13 +280,13 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EagerNcclS2sOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<Symbol<Stream>> EagerNcclS2sOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
 }  // namespace oneflow

@@ -18,11 +18,6 @@ limitations under the License.
 namespace oneflow {
 
 IDMgr::IDMgr() {
-  CHECK_LT((Global<ResourceDesc, ForSession>::Get()->process_ranks().size()),
-           static_cast<int64_t>(1) << machine_id_bit_num_);
-  gpu_device_num_ = Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum();
-  cpu_device_num_ = Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum();
-  CHECK_LT(gpu_device_num_ + cpu_device_num_, (static_cast<int64_t>(1) << thread_id_bit_num_) - 3);
   regst_desc_id_count_ = 0;
   mem_block_id_count_ = 0;
   chunk_id_count_ = 0;

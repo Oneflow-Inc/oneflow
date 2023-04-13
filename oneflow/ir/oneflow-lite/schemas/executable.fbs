@@ -1,0 +1,100 @@
+// Copyright 2020 The OneFlow Authors. All rights reserved.
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// 
+//     http://www.apache.org/licenses/LICENSE-2.0
+// 
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+namespace oneflow_lite;
+
+// Buffer segment can be regarded as the device memory block
+table BufferSegmentDef {
+  size:long;
+  // Device the segment belongs
+  device:int;
+  alignment:int;
+}
+
+table TensorDef {
+  // Type should be one of the primary data type
+  // i8,i16,i32,i64,u8,u16,u32,u64,f8,f16,bf16,f32,f64,bool
+  type:string;
+  layout:string;
+  sizes:[long];
+  strides:[long];
+
+  // Memory planning information about this tensor
+  segment_id:int;
+  segment_offset:long;
+}
+
+table ParameterDef {
+  // Type should be one of the primary data type
+  // i8,i16,i32,i64,u8,u16,u32,u64,f8,f16,bf16,f32,f64,bool
+  type:string;
+  sizes:[long];
+  buffer:[byte];
+}
+
+table AttrDef {
+  // Type should be one of the primary data type
+  // i8,i16,i32,i64,u8,u16,u32,u64,f8,f16,bf16,f32,f64,bool,str,param,etc.
+  // or a list of them i8s,i16s,i32s,i64s,u8s,u16s,u32s,u64s,
+  // f8s,f16s,bf16s,f32s,f64s,bools,strs
+  type:string;
+  key:string;
+  value:[byte];
+}
+
+table OpFunctionDef {
+  name:string;
+  // Code generated for AOT codegen. 
+  body:[byte];
+  // Signature of the function call. Signature can be empty to use the
+  // default function signature
+  // "(t0, t1, ..., tN, r0, r1, ..., rM) -> (tN+1, tN+2, ..., tN+T)"
+  // in which t means Tensor and r means op attributes
+  signature:string;
+}
+
+table OpDef {
+  // The operator type name, such as "conv2d", "softmax"
+  name:string;
+  // Input operand indices
+  inputs:[int];
+  // Output operand indices
+  outputs:[int];
+  // Attributes the operator has
+  attrs:[AttrDef];
+  // Device that executes the operator
+  device:int;
+}
+
+table ExecutableDef {
+  version:int;
+  name:string;
+
+  // Devices used in this executable
+  devices:[string];
+  ops:[OpDef];
+  operands:[TensorDef];
+  inputs:[int];
+  outputs:[int];
+  input_names:[string];
+  output_names:[string];
+  segments:[BufferSegmentDef];
+
+  // Functions will be registered in the global function table and will
+  // be used firstly, even if those operators functions are available
+  // in the runtime library
+  functions:[OpFunctionDef];
+}
+
+root_type ExecutableDef;

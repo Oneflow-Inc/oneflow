@@ -82,14 +82,65 @@ def _test_masked_select_broadcast(test_case, device):
     test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-05, 1e-05))
 
 
+def _test_masked_select_input_zero(test_case, device):
+    x = flow.tensor(
+        [[26, 14, 18, 14, 5, 18, 5, 18, 4, 18, 15, 18, 22, 18, 0]],
+        device=flow.device(device),
+        dtype=flow.int64,
+    )
+    f_mask = flow.tensor(
+        [
+            [
+                True,
+                True,
+                True,
+                True,
+                True,
+                True,
+                True,
+                True,
+                True,
+                True,
+                True,
+                True,
+                True,
+                True,
+                True,
+            ]
+        ],
+        device=flow.device(device),
+        dtype=flow.bool,
+    )
+    y = x.masked_select(f_mask)
+    test_case.assertTrue(
+        np.allclose(
+            y.numpy(),
+            [26, 14, 18, 14, 5, 18, 5, 18, 4, 18, 15, 18, 22, 18, 0],
+            1e-05,
+            1e-05,
+        )
+    )
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestMaskedSelect(flow.unittest.TestCase):
     def test_masked_select(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_masked_select, _test_masked_select_broadcast]
+        arg_dict["test_fun"] = [
+            _test_masked_select,
+            _test_masked_select_broadcast,
+            _test_masked_select_input_zero,
+        ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    def test_masked_select_broadcast(test_case):
+        x = flow.ones(2, 3, 3)
+        mask = flow.triu(flow.ones(3, 3), 1)
+        flow_res = flow.masked_select(x, mask)
+        np_res = [1, 1, 1, 1, 1, 1]
+        test_case.assertTrue(np.allclose(flow_res.numpy(), np_res, 1e-05, 1e-05))
 
 
 if __name__ == "__main__":

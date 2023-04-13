@@ -13,6 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import warnings
+from collections import OrderedDict
+from dataclasses import dataclass, fields
+from typing import Any, Tuple
+from collections import OrderedDict
 import os
 import unittest
 import sys
@@ -22,7 +27,92 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 from oneflow.framework.tensor import Tensor, TensorTuple
-from oneflow.nn.graph.util import IONodeType, IONode
+from oneflow.framework.args_tree import ArgsTree
+from oneflow.nn.graph import GraphModule
+
+
+class BaseOutput(OrderedDict):
+    def __post_init__(self):
+        class_fields = fields(self)
+
+        # Safety and consistency checks
+        if not len(class_fields):
+            raise ValueError(f"{self.__class__.__name__} has no fields.")
+
+        first_field = getattr(self, class_fields[0].name)
+        other_fields_are_none = all(
+            getattr(self, field.name) is None for field in class_fields[1:]
+        )
+
+        if other_fields_are_none and isinstance(first_field, dict):
+            for key, value in first_field.items():
+                self[key] = value
+        else:
+            for field in class_fields:
+                v = getattr(self, field.name)
+                if v is not None:
+                    self[field.name] = v
+
+    def __delitem__(self, *args, **kwargs):
+        raise Exception(
+            f"You cannot use ``__delitem__`` on a {self.__class__.__name__} instance."
+        )
+
+    def setdefault(self, *args, **kwargs):
+        raise Exception(
+            f"You cannot use ``setdefault`` on a {self.__class__.__name__} instance."
+        )
+
+    def pop(self, *args, **kwargs):
+        raise Exception(
+            f"You cannot use ``pop`` on a {self.__class__.__name__} instance."
+        )
+
+    def update(self, *args, **kwargs):
+        raise Exception(
+            f"You cannot use ``update`` on a {self.__class__.__name__} instance."
+        )
+
+    def __getitem__(self, k):
+        if isinstance(k, str):
+            inner_dict = {k: v for (k, v) in self.items()}
+            if (
+                self.__class__.__name__
+                in ["StableDiffusionPipelineOutput", "ImagePipelineOutput"]
+                and k == "sample"
+            ):
+                warnings.warn(
+                    "The keyword 'samples' is deprecated and will be removed in version 0.4.0. Please use `.images` or"
+                    " `'images'` instead.",
+                    DeprecationWarning,
+                )
+                return inner_dict["images"]
+            return inner_dict[k]
+        else:
+            return self.to_tuple()[k]
+
+    def __setattr__(self, name, value):
+        if name in self.keys() and value is not None:
+            # Don't call self.__setitem__ to avoid recursion errors
+            super().__setitem__(name, value)
+        super().__setattr__(name, value)
+
+    def __setitem__(self, key, value):
+        # Will raise a KeyException if needed
+        super().__setitem__(key, value)
+        # Don't call self.__setattr__ to avoid recursion errors
+        super().__setattr__(key, value)
+
+    def to_tuple(self) -> Tuple[Any]:
+        """
+        Convert self to a tuple containing all the attributes/keys that are not `None`.
+        """
+        return tuple(self[k] for k in self.keys())
+
+
+@dataclass
+class CustomDataClass(BaseOutput):
+    sample: flow.Tensor
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -50,17 +140,17 @@ class TestGraphIOCheck(flow.unittest.TestCase):
             inp = (args, kwargs)
             print("origin: ", inp)
 
-            io_node = IONode(None, 0, inp, "Graph_0")
+            args_tree = ArgsTree(inp, True, "Graph_0", None)
 
-            for (name, node) in list(io_node.named_nodes()):
-                print(name, repr(node))
+            for (name, arg) in args_tree.iter_named_nodes():
+                print(name, repr(arg))
 
-            def leaf_fn(node):
-                if isinstance(node._value, str):
+            def leaf_fn(arg):
+                if isinstance(arg.value(), str):
                     return "mapped_str"
-                return node._value
+                return arg.value()
 
-            m_v = io_node.map_leaf(leaf_fn)
+            m_v = args_tree.map_leaf(leaf_fn)
             print("mapped:", m_v)
             return m_v[0], m_v[1]
 
@@ -68,6 +158,83 @@ class TestGraphIOCheck(flow.unittest.TestCase):
         print(ret)
         test_case.assertEqual(ret[0][2], "mapped_str")
         test_case.assertEqual(id(ret[1]["kw"]), id(t4))
+
+    def test_io_node_with_simple_tuple_or_list_input(self):
+        x = np.ones((2, 2))
+        x = flow.tensor(x, dtype=flow.float32)
+
+        t2 = np.ones((2, 2))
+        t2 = flow.tensor(t2, dtype=flow.float32)
+        t3 = np.ones((2, 2))
+        t3 = flow.tensor(t3, dtype=flow.float32)
+        t4 = np.ones((2, 2))
+        t4 = flow.tensor(t4, dtype=flow.float32)
+        t5 = np.ones((2, 2))
+        t5 = flow.tensor(t4, dtype=flow.float32)
+        t6 = np.ones((2, 2))
+        t6 = flow.tensor(t4, dtype=flow.float32)
+
+        input_tuple = (x, t2, t3, t4)
+        input_list = [t5, t6]
+
+        def fn(args):
+            print("origin: ", args)
+
+            args_tree = ArgsTree(args, False)
+
+            for arg in args_tree.iter_nodes():
+                print(repr(arg))
+
+            def leaf_fn(value):
+                if isinstance(value, Tensor) and not value.is_contiguous():
+                    value.contiguous_()
+                return value
+
+            m_v = args_tree.map_tuple_leaf(leaf_fn)
+            print("mapped:", m_v)
+            return m_v
+
+        # input tuple
+        ret = fn(input_tuple)
+        print(ret)
+        self.assertTrue(isinstance(ret, tuple))
+        self.assertEqual(id(ret[0]), id(x))
+        self.assertEqual(id(ret[1]), id(t2))
+        self.assertEqual(id(ret[2]), id(t3))
+        self.assertEqual(id(ret[3]), id(t4))
+
+        # input list
+        ret = fn(input_list)
+        print(ret)
+        self.assertTrue(isinstance(ret, list))
+        self.assertEqual(id(ret[0]), id(t5))
+        self.assertEqual(id(ret[1]), id(t6))
+
+    def test_custom_class(test_case):
+        x = np.ones((2, 2))
+        x = flow.tensor(x, dtype=flow.float32)
+        ordered_d = CustomDataClass(sample=x)
+
+        def fn(*args, **kwargs):
+            inp = (args, kwargs)
+            print("origin: ", inp)
+
+            args_tree = ArgsTree(inp, True, "Graph_0", None)
+
+            for (name, arg) in args_tree.iter_named_nodes():
+                print(name, repr(arg))
+
+            def leaf_fn(arg):
+                if isinstance(arg.value(), dict):
+                    return "replaced"
+                return arg.value()
+
+            m_v = args_tree.map_leaf(leaf_fn)
+            print("mapped:", m_v)
+            return m_v[0], m_v[1]
+
+        ret = fn(ordered_d)
+        print(ret)
 
     def test_non_tensor_types_of_module(test_case):
         class CustomModuleIOCheck(flow.nn.Module):
@@ -81,7 +248,7 @@ class TestGraphIOCheck(flow.unittest.TestCase):
             def __init__(self):
                 super().__init__()
                 self.m = CustomModuleIOCheck()
-                self.m.config.activation_checkpointing = True
+                self.m.to(GraphModule).activation_checkpointing = True
 
             def build(self, t, lt, n, **kwargs):
                 rt, rlt, n, ri, rs, dic = self.m(t, lt, n, 1, "2", **kwargs)
@@ -140,7 +307,7 @@ class TestGraphIOCheck(flow.unittest.TestCase):
                 def forward(self, t):
                     return t[0]
 
-            class CustomGraph(flow.nn.Graph):
+            class CustomGraphCheck1Ret(flow.nn.Graph):
                 def __init__(self):
                     super().__init__()
                     self.m = CustomModule()
@@ -150,7 +317,7 @@ class TestGraphIOCheck(flow.unittest.TestCase):
                     return rt
 
             model = CustomModule()
-            graph = CustomGraph()
+            graph = CustomGraphCheck1Ret()
 
             model_out = model(input)
             graph_out = graph(input)
@@ -177,6 +344,48 @@ class TestGraphIOCheck(flow.unittest.TestCase):
 
         # test tensor
         test_output(x, Tensor)
+
+    def test_graph_return_dict_tuple(test_case):
+        def test_output(input):
+            print(input)
+
+            class CustomModule(flow.nn.Module):
+                def __init__(self):
+                    super().__init__()
+
+                def forward(self, t):
+                    return {"output": t}
+
+            class CustomGraphCheck1Ret(flow.nn.Graph):
+                def __init__(self):
+                    super().__init__()
+                    self.m = CustomModule()
+
+                def build(self, t):
+                    rt = self.m(t)
+                    return rt
+
+            model = CustomModule()
+            graph = CustomGraphCheck1Ret()
+
+            model_out = model(input)
+            graph_out = graph(input)
+
+            test_case.assertTrue(isinstance(model_out, dict))
+            test_case.assertTrue(isinstance(graph_out, dict))
+            test_case.assertEqual(len(model_out), 1)
+            test_case.assertEqual(len(graph_out), 1)
+            test_case.assertTrue("output" in model_out)
+            test_case.assertTrue("output" in graph_out)
+            test_case.assertTrue(
+                np.array_equal(model_out["output"].numpy(), graph_out["output"].numpy())
+            )
+
+        x = np.ones((1, 10))
+        x = flow.tensor(x, dtype=flow.float32)
+
+        # test tensor
+        test_output(x)
 
     def test_graph_outputs_buffer(test_case):
         class CustomModuleIOCheck(flow.nn.Module):

@@ -2,7 +2,9 @@ syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/common/shape.proto";
+import "oneflow/core/common/sequential.proto";
 import "oneflow/core/common/data_type.proto";
+import "oneflow/core/common/device.proto";
 
 enum AttrType {
   kAtInt32 = 1;
@@ -19,6 +21,10 @@ enum AttrType {
   kAtListDataType = 12;
   kAtListShape = 13;
   kAtListString = 14;
+  kAtStride = 15;
+  kAtListStride = 16;
+  kAtDevice = 17;
+  kAtComplexDouble = 18;
 }
 
 message AttrValue {
@@ -37,9 +43,16 @@ message AttrValue {
   message ListShape {
     repeated ShapeProto val = 1;
   }
+  message ListStride {
+    repeated Int64ListProto val = 1;
+  }
   // order and naming convention of the oneof field must be consistent with the enum AttrType
   message ListString {
     repeated string val = 1;
+  }
+  message ComplexDouble {
+    required double real = 1;
+    required double imag = 2;
   }
   oneof value {
     int32 at_int32 = 1;
@@ -56,6 +69,10 @@ message AttrValue {
     ListDataType at_list_data_type = 12;
     ListShape at_list_shape = 13;
     ListString at_list_string = 14;
+    Int64ListProto at_stride = 15;
+    ListStride at_list_stride = 16;
+    DeviceProto at_device = 17;
+    ComplexDouble at_complex_double = 18;
   }
 }
 

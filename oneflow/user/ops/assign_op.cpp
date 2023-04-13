@@ -68,7 +68,9 @@ Maybe<void> InputArgModifierFn(const user_op::GetInputArgModifier& GetInputArgMo
 Maybe<void> InferDataType_(user_op::InferContext* ctx) {
   const user_op::TensorDesc& ref_desc = ctx->InputTensorDesc("ref", 0);
   const user_op::TensorDesc& value_desc = ctx->InputTensorDesc("value", 0);
-  CHECK_OR_RETURN(ref_desc.data_type() == value_desc.data_type());
+  CHECK_OR_RETURN(ref_desc.data_type() == value_desc.data_type())
+      << Error::RuntimeError() << DataType_Name(ref_desc.data_type()) << " vs."
+      << DataType_Name(value_desc.data_type());
   if (ctx->has_input("condition", 0)) {
     const user_op::TensorDesc& condition = ctx->InputTensorDesc("condition", 0);
     CHECK_OR_RETURN(IsIndexDataType(condition.data_type()));

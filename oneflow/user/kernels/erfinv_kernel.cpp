@@ -27,7 +27,7 @@ class CpuErfinvKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const int32_t elem_cnt = x->shape().elem_cnt();
+    const int32_t elem_cnt = x->shape_view().elem_cnt();
     const T* x_ptr = x->dptr<T>();
     T* y_ptr = y->mut_dptr<T>();
     constexpr float central_range = 0.7;

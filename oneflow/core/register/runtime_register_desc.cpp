@@ -14,11 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/register/runtime_register_desc.h"
+#include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 
-RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
+RtRegstDesc::RtRegstDesc(const RegstDescProto& proto)
+    : one_regst_header_size_(0), one_regst_body_size_(0) {
   regst_desc_id_ = proto.regst_desc_id();
   producer_actor_id_ = proto.producer_task_id();
   consumers_actor_id_ = PbRf2StdVec(proto.consumer_task_id());
@@ -44,8 +46,12 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
   } else {
     sorted_blob_desc_vec_.emplace_back(std::make_unique<const BlobDesc>(BlobDesc(DataType::kChar)));
   }
+  for (const auto& blob_desc_ : sorted_blob_desc_vec_) {
+    one_regst_header_size_ += blob_desc_->AlignedByteSizeOfBlobHeader();
+    one_regst_body_size_ += blob_desc_->AlignedByteSizeOfBlobBody();
+  }
 
-  if ((proto.mem_case().has_device_cuda_mem())
+  if ((!memory::IsHostMem(proto.mem_case()))
       || (proto.has_variable_op_name() && !proto.variable_op_name().empty())) {
     // NOTE(chengcheng): When this regst is shared with EagerBlobObject, header is ALWAYS separated.
     has_separated_header_ = true;
@@ -86,20 +92,28 @@ const BlobDesc* RtRegstDesc::GetSoleBlobDesc() const {
 }
 
 size_t RtRegstDesc::TotalByteSize4AllRegst() const {
-  return GetSoleBlobDesc()->AlignedTotalByteSize() * register_num_;
+  return (one_regst_header_size_ + one_regst_body_size_) * register_num_;
 }
 
 size_t RtRegstDesc::TotalMainByteSize4AllRegst() const {
   return MainByteSize4OneRegst() * register_num_;
 }
 
+size_t RtRegstDesc::TotalBodyByteSize4AllRegst() const {
+  return BodyByteSize4OneRegst() * register_num_;
+}
+
 size_t RtRegstDesc::MainByteSize4OneRegst() const {
   if (has_separated_header_) {
-    return GetSoleBlobDesc()->AlignedByteSizeOfBlobBody();
+    return one_regst_body_size_;
   } else {
-    return GetSoleBlobDesc()->AlignedTotalByteSize();
+    return one_regst_body_size_ + one_regst_header_size_;
   }
 }
+
+size_t RtRegstDesc::BodyByteSize4OneRegst() const { return one_regst_body_size_; }
+
+size_t RtRegstDesc::HeaderByteSize4OneRegst() const { return one_regst_header_size_; }
 
 size_t RtRegstDesc::TotalSeparatedHeaderByteSize4AllRegst() const {
   return SeparatedHeaderByteSize4OneRegst() * register_num_;
@@ -108,7 +122,7 @@ size_t RtRegstDesc::TotalSeparatedHeaderByteSize4AllRegst() const {
 size_t RtRegstDesc::SeparatedHeaderByteSize4OneRegst() const {
   if (has_separated_header_) {
     // NOTE(chengcheng): Header size need to be aligned for XRT memory allocate
-    return GetSoleBlobDesc()->AlignedByteSizeOfBlobHeader();
+    return one_regst_header_size_;
   } else {
     return 0;
   }

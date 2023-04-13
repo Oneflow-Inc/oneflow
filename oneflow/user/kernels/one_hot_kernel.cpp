@@ -29,7 +29,7 @@ class CpuOneHotKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const int64_t num_indices = indices->shape().elem_cnt();
+    const int64_t num_indices = indices->shape_view().elem_cnt();
     const int64_t depth = ctx->Attr<int64_t>("depth");
     const DataType dtype = ctx->Attr<DataType>("dtype");
     const T on_value = IsFloatingDataType(dtype)
@@ -44,7 +44,7 @@ class CpuOneHotKernel final : public user_op::OpKernel {
         ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream()->device_type(),
                                                                 out->data_type());
     CHECK(fill);
-    fill->Launch(ctx->stream(), out->mut_dptr(), off_value, out->shape().elem_cnt());
+    fill->Launch(ctx->stream(), out->mut_dptr(), off_value, out->shape_view().elem_cnt());
     FOR_RANGE(int64_t, i, 0, num_indices) {
       const int64_t idx = indices_dptr[i];
       CHECK_GE(idx, 0);

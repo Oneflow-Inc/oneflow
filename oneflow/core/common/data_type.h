@@ -20,7 +20,14 @@ limitations under the License.
 #include <type_traits>
 #if defined(WITH_CUDA)
 #include <cuda_fp16.h>
+#include <cuda.h>
+#include <cuComplex.h>
+#if CUDA_VERSION >= 11000
+#include <cuda_bf16.h>
+#endif  // CUDA_VERSION >= 11000
 #endif
+#include "oneflow/core/common/bfloat16.h"
+#include "oneflow/core/common/bfloat16_math.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/data_type_seq.h"
 #include "oneflow/core/record/record.pb.h"
@@ -28,57 +35,105 @@ limitations under the License.
 #include "oneflow/core/common/device_type.h"
 #include <half.hpp>
 
-namespace oneflow {
+namespace std {
 
-typedef half_float::half float16;
-
-template<typename T>
-struct IsFloat16;
-
-template<>
-struct IsFloat16<float16> : std::true_type {};
-
+// Extend numeric_limits<half> for the C++ standard library.
 #ifdef WITH_CUDA
 
 template<>
-struct IsFloat16<half> : std::true_type {};
+struct numeric_limits<half> {
+  static constexpr int digits = std::numeric_limits<half_float::half>::digits;
+
+  static constexpr half_float::half lowest() {
+    return std::numeric_limits<half_float::half>::lowest();
+  }
+
+  static constexpr half_float::half max() { return std::numeric_limits<half_float::half>::max(); }
+};
 
 #endif  // WITH_CUDA
 
+}  // namespace std
+
+namespace oneflow {
+
+namespace detail {
+
+template<typename>
+struct IsFloat16Helper : std::false_type {};
+
+template<typename>
+struct IsFloatingHelper : std::false_type {};
+
+template<typename>
+struct IsIntegralHelper : std::false_type {};
+
+template<typename>
+struct IsUnsignedIntegralHelper : std::false_type {};
+
+}  // namespace detail
+
+using float16 = half_float::half;
+
+#define DEFINE_SPEC(Trait, Type, Value) \
+  template<>                            \
+  struct Trait<Type> : std::integral_constant<bool, Value> {};
+
+// Type Trait: IsFloat16
+
+DEFINE_SPEC(detail::IsFloat16Helper, float16, true)
+#ifdef WITH_CUDA
+DEFINE_SPEC(detail::IsFloat16Helper, half, true)
+#endif  // WITH_CUDA
+
 template<typename T>
-struct IsFloat16 : std::false_type {};
+struct IsFloat16
+    : std::integral_constant<bool,
+                             (detail::IsFloat16Helper<typename std::remove_cv<T>::type>::value)> {};
 
 // Type Trait: IsFloating
-template<typename T>
-struct IsFloating : std::integral_constant<bool, false> {};
 
 #define SPECIALIZE_TRUE_FLOATING(type_cpp, type_proto) \
-  template<>                                           \
-  struct IsFloating<type_cpp> : std::integral_constant<bool, true> {};
+  DEFINE_SPEC(detail::IsFloatingHelper, type_cpp, true)
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_FLOATING, FLOATING_DATA_TYPE_SEQ);
 #undef SPECIALIZE_TRUE_FLOATING
+DEFINE_SPEC(detail::IsFloatingHelper, float16, true)
+#ifdef WITH_CUDA
+DEFINE_SPEC(detail::IsFloatingHelper, half, true)
+#endif  // WITH_CUDA
+
+template<typename T>
+struct IsFloating
+    : std::integral_constant<bool,
+                             (detail::IsFloatingHelper<typename std::remove_cv<T>::type>::value)> {
+};
 
 // Type Trait: IsIntegral
 
-template<typename T>
-struct IsIntegral : std::integral_constant<bool, false> {};
-
 #define SPECIALIZE_TRUE_INTEGRAL(type_cpp, type_proto) \
-  template<>                                           \
-  struct IsIntegral<type_cpp> : std::integral_constant<bool, true> {};
+  DEFINE_SPEC(detail::IsIntegralHelper, type_cpp, true)
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_INTEGRAL, INT_DATA_TYPE_SEQ);
 #undef SPECIALIZE_TRUE_INTEGRAL
 
+template<typename T>
+struct IsIntegral
+    : std::integral_constant<bool,
+                             (detail::IsIntegralHelper<typename std::remove_cv<T>::type>::value)> {
+};
+
 // Type Trait: IsUnsignedIntegral
 
-template<typename T>
-struct IsUnsignedIntegral : std::integral_constant<bool, false> {};
-
 #define SPECIALIZE_TRUE_INTEGRAL(type_cpp, type_proto) \
-  template<>                                           \
-  struct IsUnsignedIntegral<type_cpp> : std::integral_constant<bool, true> {};
+  DEFINE_SPEC(detail::IsUnsignedIntegralHelper, type_cpp, true)
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_INTEGRAL, UNSIGNED_INT_DATA_TYPE_SEQ);
 #undef SPECIALIZE_TRUE_INTEGRAL
+
+template<typename T>
+struct IsUnsignedIntegral
+    : std::integral_constant<
+          bool, (detail::IsUnsignedIntegralHelper<typename std::remove_cv<T>::type>::value)> {};
+
+#undef DEFINE_SPEC
 
 // Type Trait: GetDataType
 
@@ -92,12 +147,27 @@ struct GetDataType<void> : std::integral_constant<DataType, DataType::kChar> {};
   template<>                                                                      \
   struct GetDataType<type_cpp> : std::integral_constant<DataType, type_proto> {}; \
   inline type_cpp GetTypeByDataType(std::integral_constant<DataType, type_proto>) { return {}; }
-OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE, ALL_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE,
+                     ALL_DATA_TYPE_SEQ UNSIGNED_INT32_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ
+                         BFLOAT16_DATA_TYPE_SEQ COMPLEX_DATA_TYPE_SEQ UNSIGNED_INT64_DATA_TYPE_SEQ
+                             INT16_DATA_TYPE_SEQ);
 #undef SPECIALIZE_GET_DATA_TYPE
 
 template<typename T>
 struct GetDataType<T, typename std::enable_if<IsFloat16<T>::value>::type>
     : std::integral_constant<DataType, DataType::kFloat16> {};
+
+#ifdef WITH_CUDA
+template<>
+struct GetDataType<cuComplex> : std::integral_constant<DataType, DataType::kComplex64> {};
+template<>
+struct GetDataType<cuDoubleComplex> : std::integral_constant<DataType, DataType::kComplex128> {};
+#endif  // WITH_CUDA
+
+#if CUDA_VERSION >= 11000
+template<>
+struct GetDataType<nv_bfloat16> : std::integral_constant<DataType, DataType::kBFloat16> {};
+#endif
 
 template<DataType type>
 using DataTypeToType = decltype(GetTypeByDataType(std::integral_constant<DataType, type>{}));
@@ -216,6 +286,14 @@ OF_DEVICE_FUNC T GetMinVal() {
   return *(T*)&ret;
 }
 
+#if CUDA_VERSION >= 11000
+template<>
+OF_DEVICE_FUNC nv_bfloat16 GetMinVal<nv_bfloat16>() {
+  uint16_t ret = 0xff7f;
+  return *(nv_bfloat16*)&ret;
+}
+#endif  // CUDA_VERSION >= 11000
+
 template<DeviceType, typename T>
 struct DevDType {
   typedef T type;
@@ -227,16 +305,24 @@ struct DevDType<DeviceType::kCUDA, float16> {
   static_assert(sizeof(float16) == sizeof(half), "sizeof(float16) != sizeof(half)");
   typedef half type;
 };
-#endif
+#if CUDA_VERSION >= 11000
+template<>
+struct DevDType<DeviceType::kCUDA, bfloat16> {
+  static_assert(sizeof(bfloat16) == sizeof(nv_bfloat16), "sizeof(bfloat16) != sizeof(nv_bfloat16)");
+  typedef nv_bfloat16 type;
+};
+#endif  // CUDA_VERSION >= 11000
+#endif  // defined(WITH_CUDA)
 
 // Func
 
 bool IsBoolDataType(DataType data_type);
 bool IsIntegralDataType(DataType data_type);
 bool IsFloatingDataType(DataType data_type);
+bool IsHalfDataType(DataType data_type);
 bool IsSupportRequireGradDataType(DataType data_type);
-bool IsPODDataType(DataType data_type);
-bool IsPODAndHalfDataType(DataType data_type);
+bool IsComplexDataType(DataType data_type);
+bool IsTriviallyCopyableDataType(DataType data_type);
 bool IsIndexDataType(DataType data_type);
 bool NotSupportBoxingDataType(DataType data_type);
 size_t GetSizeOfDataType(DataType data_type);

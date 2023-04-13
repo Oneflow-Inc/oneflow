@@ -40,7 +40,7 @@ class MaskedFill : public OpExprGradFunction<MaskedFillCaptureState> {
   Maybe<void> Apply(const MaskedFillCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
     const std::shared_ptr<oneflow::one::Tensor>& mask = ctx->SavedTensors().at(1);
 

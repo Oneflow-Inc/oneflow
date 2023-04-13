@@ -28,10 +28,9 @@ class ParallelDesc;
 class EnvGlobalObjectsScope final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EnvGlobalObjectsScope);
-  EnvGlobalObjectsScope() = default;
+  explicit EnvGlobalObjectsScope(const std::string& env_proto_str);
+  explicit EnvGlobalObjectsScope(const EnvProto& env_proto);
   ~EnvGlobalObjectsScope();
-
-  Maybe<void> Init(const EnvProto& env_proto);
 
   Maybe<void> init_is_normal_exit(bool is_normal_exit) {
     CHECK_OR_RETURN(!is_normal_exit_.has_value());
@@ -40,8 +39,17 @@ class EnvGlobalObjectsScope final {
   }
 
  private:
+  Maybe<void> Init(const EnvProto& env_proto);
+
+ private:
   Optional<bool> is_normal_exit_;
 };
+
+Maybe<void> InitRDMA();
+
+Maybe<bool> RDMAIsInitialized();
+
+Maybe<void> DestoryRDMA();
 
 }  // namespace oneflow
 

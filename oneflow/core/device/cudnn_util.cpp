@@ -177,6 +177,45 @@ size_t GetCudnnDataTypeByteSize(cudnnDataType_t data_type) {
   return byte_size;
 }
 
+CudnnHandlePool::~CudnnHandlePool() {
+  for (auto& pair : handle_list_map_) {
+    int64_t device_id = pair.first;
+    auto& handle_list = pair.second;
+    CudaCurrentDeviceGuard guard(device_id);
+    while (!handle_list.empty()) {
+      cudnnHandle_t handle = handle_list.back();
+      handle_list.pop_back();
+      OF_CUDNN_CHECK(cudnnDestroy(handle));
+    }
+  }
+  handle_list_map_.clear();
+}
+
+cudnnHandle_t CudnnHandlePool::Get() {
+  int device_id;
+  OF_CUDA_CHECK(cudaGetDevice(&device_id));
+  {
+    std::unique_lock<std::mutex> lock(mutex_);
+    std::vector<cudnnHandle_t>& handle_list = handle_list_map_[device_id];
+    if (!handle_list.empty()) {
+      cudnnHandle_t handle = handle_list.back();
+      handle_list.pop_back();
+      return handle;
+    }
+  }
+  cudnnHandle_t handle;
+  OF_CUDNN_CHECK(cudnnCreate(&handle));
+  return handle;
+}
+
+void CudnnHandlePool::Put(cudnnHandle_t handle) {
+  int device_id;
+  OF_CUDA_CHECK(cudaGetDevice(&device_id));
+  std::unique_lock<std::mutex> lock(mutex_);
+  std::vector<cudnnHandle_t>& handle_list = handle_list_map_[device_id];
+  handle_list.push_back(handle);
+}
+
 #endif  // WITH_CUDA
 
 template<typename T>
@@ -204,5 +243,35 @@ template const void* CudnnSPOnePtr<float16>();
 template const void* CudnnSPZeroPtr<float>();
 template const void* CudnnSPZeroPtr<double>();
 template const void* CudnnSPZeroPtr<float16>();
+
+const void* CudnnSPOnePtr(const DataType dtype) {
+  if (dtype == kDouble) {
+    return CudnnSPOnePtr<double>();
+  } else if (dtype == kFloat) {
+    return CudnnSPOnePtr<float>();
+  } else if (dtype == kFloat16) {
+    return CudnnSPOnePtr<float16>();
+  } else if (dtype == kBFloat16) {
+    // NOTE(guoran): kBFloat16 use float OnePtr
+    return CudnnSPOnePtr<float>();
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+const void* CudnnSPZeroPtr(const DataType dtype) {
+  if (dtype == kDouble) {
+    return CudnnSPZeroPtr<double>();
+  } else if (dtype == kFloat) {
+    return CudnnSPZeroPtr<float>();
+  } else if (dtype == kFloat16) {
+    return CudnnSPZeroPtr<float16>();
+  } else if (dtype == kBFloat16) {
+    // NOTE(guoran): kBFloat16 use float ZeroPtr
+    return CudnnSPZeroPtr<float>();
+  } else {
+    UNIMPLEMENTED();
+  }
+}
 
 }  // namespace oneflow

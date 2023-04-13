@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/str_util.h"
 #include "oneflow/core/framework/nd_sbp.h"
 
 namespace oneflow {
@@ -193,6 +194,26 @@ bool IsValidSbpParallelString(const std::string& sbp_str) {
   return ParseSbpParallelFromString(sbp_str, &sbp_parallel);
 }
 
+bool ParseNdSbpFromLongString(const std::string& nd_sbp_str, NdSbp* nd_sbp) {
+  bool success = true;
+  Split(nd_sbp_str, ",", [&](std::string&& sbp_str) {
+    SbpParallel* sbp_parallel = nd_sbp->add_sbp_parallel();
+    bool ret = ParseSbpParallelFromString(sbp_str, sbp_parallel);
+    if (!ret) { success = false; }
+  });
+  if (nd_sbp->sbp_parallel_size() == 0) { return false; }
+  return success;
+}
+
+std::string NdSbpToLongString(const NdSbp& nd_sbp) {
+  std::string ret = "";
+  for (int32_t i = 0; i < nd_sbp.sbp_parallel_size(); ++i) {
+    if (i > 0) { ret += ","; }  // NOTE(chengcheng): Separator ','
+    ret += SbpToString(nd_sbp.sbp_parallel(i));
+  }
+  return ret;
+}
+
 bool ParseSbpParallelFromString(const std::string& sbp_str, SbpParallel* sbp_parallel) {
   bool success = false;
   if (sbp_str.length() >= 1) {
@@ -270,9 +291,62 @@ void CheckSbpSignatureAndNdSbpEquals(const SbpSignature& sbp_sig,
   }
 }
 
-Maybe<std::string> NdSbpSignatureListAsString(const std::vector<NdSbpSignature>& nd_sbp_sig_list,
-                                              const PbRpf<std::string>& inputs,
-                                              const PbRpf<std::string>& outputs) {
+bool NdSbpAllSameSplitParallel(const NdSbp& nd_sbp) {
+  CHECK_GT(nd_sbp.sbp_parallel_size(), 0);
+  const SbpParallel& first_sbp = nd_sbp.sbp_parallel(0);
+  if (!first_sbp.has_split_parallel()) { return false; }
+  FOR_RANGE(int64_t, i, 1, nd_sbp.sbp_parallel_size()) {
+    if (nd_sbp.sbp_parallel(i) != first_sbp) { return false; }
+  }
+  return true;
+}
+
+Maybe<std::string> NdSbpSignatureToString(const NdSbpSignature& nd_sbp_signature,
+                                          const std::vector<std::string>& inputs,
+                                          const std::vector<std::string>& outputs) {
+  std::ostringstream ss;
+
+  auto AppendBnNdSbpString = [&](const std::string& bn) -> Maybe<void> {
+    auto iter = nd_sbp_signature.bn_in_op2nd_sbp().find(bn);
+    if (iter == nd_sbp_signature.bn_in_op2nd_sbp().end()) {
+      return Error::RuntimeError()
+             << "can't find " << bn << " in NdSbpSignature: " << nd_sbp_signature.DebugString();
+    }
+    ss << " " << NdSbpToString(iter->second);
+    return Maybe<void>::Ok();
+  };
+
+  int bn_index = 0;
+  for (const auto& ibn : inputs) {
+    if (bn_index > 0) { ss << ", "; }
+    ss << ibn;
+    JUST(AppendBnNdSbpString(ibn));
+    bn_index++;
+  }
+
+  ss << " -> ";
+  bn_index = 0;
+  for (const auto& obn : outputs) {
+    if (bn_index > 0) { ss << ", "; }
+    ss << obn;
+    JUST(AppendBnNdSbpString(obn));
+    bn_index++;
+  }
+
+  return ss.str();
+}
+
+Maybe<std::string> NdSbpSignatureToString(const NdSbpSignature& nd_sbp_signature,
+                                          const PbRpf<std::string>& inputs,
+                                          const PbRpf<std::string>& outputs) {
+  return NdSbpSignatureToString(nd_sbp_signature,
+                                std::vector<std::string>{inputs.begin(), inputs.end()},
+                                std::vector<std::string>{outputs.begin(), outputs.end()});
+}
+
+Maybe<std::string> NdSbpSignatureListToString(const std::vector<NdSbpSignature>& nd_sbp_sig_list,
+                                              const std::vector<std::string>& inputs,
+                                              const std::vector<std::string>& outputs) {
   std::ostringstream ss;
   if (nd_sbp_sig_list.empty()) { return ss.str(); }
 
@@ -292,6 +366,7 @@ Maybe<std::string> NdSbpSignatureListAsString(const std::vector<NdSbpSignature>&
     return Maybe<void>::Ok();
   };
 
+  ss << "\n";
   JUST(WalkIO([](const std::string& bn) -> Maybe<std::string> { return bn; }));
   ss << ": ";
 
@@ -302,7 +377,7 @@ Maybe<std::string> NdSbpSignatureListAsString(const std::vector<NdSbpSignature>&
       auto it = nd_sbp_sig.bn_in_op2nd_sbp().find(bn);
       if (it == nd_sbp_sig.bn_in_op2nd_sbp().end()) {
         return Error::RuntimeError()
-               << "can't find " << bn << "in NdSbpSignature: " << nd_sbp_sig.DebugString();
+               << "can't find " << bn << " in NdSbpSignature: " << nd_sbp_sig.DebugString();
       }
       return NdSbpToString(it->second);
     }));
@@ -312,14 +387,12 @@ Maybe<std::string> NdSbpSignatureListAsString(const std::vector<NdSbpSignature>&
   return ss.str();
 }
 
-bool NdSbpAllSameSplitParallel(const NdSbp& nd_sbp) {
-  CHECK_GT(nd_sbp.sbp_parallel_size(), 0);
-  const SbpParallel& first_sbp = nd_sbp.sbp_parallel(0);
-  if (!first_sbp.has_split_parallel()) { return false; }
-  FOR_RANGE(int64_t, i, 1, nd_sbp.sbp_parallel_size()) {
-    if (nd_sbp.sbp_parallel(i) != first_sbp) { return false; }
-  }
-  return true;
+Maybe<std::string> NdSbpSignatureListToString(const std::vector<NdSbpSignature>& nd_sbp_sig_list,
+                                              const PbRpf<std::string>& inputs,
+                                              const PbRpf<std::string>& outputs) {
+  return NdSbpSignatureListToString(nd_sbp_sig_list,
+                                    std::vector<std::string>{inputs.begin(), inputs.end()},
+                                    std::vector<std::string>{outputs.begin(), outputs.end()});
 }
 
 }  // namespace oneflow

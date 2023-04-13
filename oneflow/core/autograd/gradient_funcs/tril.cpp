@@ -39,7 +39,7 @@ class Tril : public OpExprGradFunction<TrilCaptureState> {
 
 Maybe<void> Tril::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
@@ -55,7 +55,7 @@ Maybe<void> Tril::Capture(TrilCaptureState* ctx, const TensorTuple& inputs,
 
 Maybe<void> Tril::Apply(const TrilCaptureState* ctx, const TensorTuple& out_grads,
                         TensorTuple* in_grads) const {
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
   in_grads->resize(1);
   if (ctx->requires_grad) {
     in_grads->at(0) = JUST(functional::Tril(out_grads.at(0), ctx->diagonal));

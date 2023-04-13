@@ -1,0 +1,20 @@
+name: Update Benchmark History
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - master
+
+env:
+  OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+  OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+
+jobs:
+  if_merged:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: Oneflow-Inc/get-oneflow/update-benchmark-history@nv-wheels
+        name: Update benchmark history
+        timeout-minutes: 10

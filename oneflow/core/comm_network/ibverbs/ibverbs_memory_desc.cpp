@@ -26,10 +26,10 @@ IBVerbsMemDesc::IBVerbsMemDesc(ibv_pd* pd, void* mem_ptr, size_t byte_size)
   mr_ = ibv::wrapper.ibv_reg_mr_wrap(
       pd, mem_ptr, byte_size,
       IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
-  CHECK(mr_);
+  PCHECK(mr_);
 }
 
-IBVerbsMemDesc::~IBVerbsMemDesc() { CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr_), 0); }
+IBVerbsMemDesc::~IBVerbsMemDesc() { PCHECK(ibv::wrapper.ibv_dereg_mr(mr_) == 0); }
 
 }  // namespace oneflow
 

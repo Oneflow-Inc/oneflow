@@ -20,13 +20,11 @@ from oneflow.framework.sysconfig import (
     get_include,
     get_lib,
     get_link_flags,
+    get_liboneflow_link_flags,
     has_rpc_backend_grpc,
     has_rpc_backend_local,
     with_cuda,
     get_cuda_version,
-    with_xla,
-    with_openvino,
-    with_tensorrt,
     with_rdma,
 )
 

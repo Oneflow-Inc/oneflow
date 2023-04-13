@@ -17,13 +17,26 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_RANDOM_SEED_UTIL_H_
 
 #include "oneflow/core/framework/op_kernel.h"
+#include "oneflow/core/framework/random_generator.h"
 
 namespace oneflow {
 
-Maybe<int64_t> GetOpKernelRandomSeed(const user_op::KernelInitContext* ctx);
+Maybe<uint64_t> GetRandomSeedForRank(const ParallelDesc& placement, const NdSbp& nd_sbp,
+                                     uint64_t init_seed, int64_t rank_id);
 
-Maybe<int64_t> GetOpKernelRandomSeedInCurrentRank(const user_op::KernelInitContext* ctx,
-                                                  int64_t init_seed);
+Maybe<uint64_t> GetOpKernelRandomSeed(const user_op::KernelInitContext* ctx);
+Maybe<uint64_t> GetOpKernelRandomSeedInCurrentRank(const user_op::KernelInitContext* ctx,
+                                                   uint64_t init_seed,
+                                                   const user_op::OpArg& arg = {"out", 0});
+
+Maybe<one::Generator> GetGeneratorForLazyOrGlobal(const std::shared_ptr<one::Generator>& generator,
+                                                  bool is_lazy,
+                                                  const Optional<Symbol<ParallelDesc>>& placement,
+                                                  const Optional<Symbol<NdSbp>>& nd_sbp);
+
+Maybe<one::Generator> GetGeneratorForLazyOrGlobal(const std::shared_ptr<one::Generator>& generator,
+                                                  bool is_lazy,
+                                                  const std::shared_ptr<one::Tensor>& input);
 
 }  // namespace oneflow
 

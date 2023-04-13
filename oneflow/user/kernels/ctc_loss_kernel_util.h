@@ -21,26 +21,26 @@ limitations under the License.
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T, typename IDX>
+template<DeviceType device_type, typename T, typename TARGET, typename IDX>
 struct CtcLossKernelUtil final {
-  static void CtcLossForward(ep::Stream* stream, const T* log_probs_ptr, const int* targets_ptr,
+  static void CtcLossForward(ep::Stream* stream, const T* log_probs_ptr, const TARGET* targets_ptr,
                              const IDX* input_lengths_ptr, const IDX* target_lengths_ptr,
                              T* alpha_ptr, T* loss_ptr,
                              NdIndexOffsetHelper<int64_t, 3>& input_helper,
                              NdIndexOffsetHelper<int64_t, 3>& alpha_helper,
                              const int64_t batch_size, const int64_t max_input_length,
-                             const int64_t max_target_length, const int blank,
+                             const int64_t max_target_length, const int64_t blank,
                              const int32_t targets_ndim);
 
   static void CtcLossBackward(ep::Stream* stream, const T* grad_out_ptr, const T* loss_ptr,
-                              const T* alpha_ptr, const T* log_probs_ptr, const int* targets_ptr,
+                              const T* alpha_ptr, const T* log_probs_ptr, const TARGET* targets_ptr,
                               const IDX* input_lengths_ptr, const IDX* target_lengths_ptr,
                               T* beta_ptr, T* grad_ptr,
                               NdIndexOffsetHelper<int64_t, 3>& input_helper,
                               NdIndexOffsetHelper<int64_t, 3>& beta_helper,
                               const int64_t batch_size, const int64_t max_input_length,
                               const int64_t max_target_length, const int64_t num_labels,
-                              const int blank, const bool zero_infinity,
+                              const int64_t blank, const bool zero_infinity,
                               const int32_t targets_ndim);
 };
 

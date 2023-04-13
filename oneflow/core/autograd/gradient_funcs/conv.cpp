@@ -26,6 +26,8 @@ namespace one {
 struct ConvolutionNdCaptureState : public AutoGradCaptureState {
   bool input_requires_grad = false;
   bool weight_requires_grad = false;
+  bool has_bias = false;
+  bool bias_requires_grad = false;
   size_t input_index;
   size_t weight_index;
 
@@ -51,17 +53,24 @@ class ConvolutionNd : public OpExprGradFunction<ConvolutionNdCaptureState> {
 
 Maybe<void> ConvolutionNd::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
 
 Maybe<void> ConvolutionNd::Capture(ConvolutionNdCaptureState* ctx, const TensorTuple& inputs,
                                    const TensorTuple& outputs, const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(inputs.size(), 2);
+  CHECK_OR_RETURN(inputs.size() == 2 || inputs.size() == 3);  // NOLINT(maybe-need-error-msg)
   ctx->input_requires_grad = inputs.at(0)->requires_grad();
   ctx->weight_requires_grad = inputs.at(1)->requires_grad();
-  if (!ctx->input_requires_grad && !ctx->weight_requires_grad) { return Maybe<void>::Ok(); }
+  if (inputs.size() == 3) {
+    ctx->has_bias = true;
+    ctx->bias_requires_grad = inputs.at(2)->requires_grad();
+  }
+
+  if (!ctx->input_requires_grad && !ctx->weight_requires_grad && !ctx->bias_requires_grad) {
+    return Maybe<void>::Ok();
+  }
   if (ctx->input_requires_grad) {
     ctx->weight_index = ctx->SaveTensorForBackward(inputs.at(1));  // weight
   }
@@ -79,7 +88,11 @@ Maybe<void> ConvolutionNd::Capture(ConvolutionNdCaptureState* ctx, const TensorT
 
 Maybe<void> ConvolutionNd::Apply(const ConvolutionNdCaptureState* ctx, const TensorTuple& out_grads,
                                  TensorTuple* in_grads) const {
-  in_grads->resize(2);
+  if (ctx->has_bias) {
+    in_grads->resize(3);
+  } else {
+    in_grads->resize(2);
+  }
   size_t num_spatial_dims = ctx->kernel_size.size();
   if (ctx->input_requires_grad) {
     const auto& weight = ctx->SavedTensors().at(ctx->weight_index);
@@ -93,6 +106,18 @@ Maybe<void> ConvolutionNd::Apply(const ConvolutionNdCaptureState* ctx, const Ten
     in_grads->at(1) = JUST(functional::ConvFilterGrad(
         out_grads.at(0), input, num_spatial_dims, ctx->kernel_size, ctx->strides,
         ctx->padding_before, ctx->dilation_rate, ctx->groups, ctx->data_format));
+  }
+  if (ctx->bias_requires_grad) {
+    std::vector<int32_t> dim;
+    for (int i = 0; i < out_grads.at(0)->shape()->NumAxes(); ++i) {
+      if ((ctx->data_format == "channels_first" && i == 1)
+          || (ctx->data_format == "channels_last"
+              && i == out_grads.at(0)->shape()->NumAxes() - 1)) {
+        continue;
+      }
+      dim.push_back(i);
+    }
+    in_grads->at(2) = JUST(functional::ReduceSum(out_grads.at(0), dim, false));
   }
   return Maybe<void>::Ok();
 }

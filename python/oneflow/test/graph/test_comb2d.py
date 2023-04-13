@@ -23,8 +23,10 @@ import numpy as np
 
 import oneflow.unittest
 
+flow.boxing.nccl.enable_use_compute_stream(False)
 
-class TestModule(nn.Module):
+
+class _TestModule(nn.Module):
     def forward(self, x):
         sbp_1ds = [
             flow.sbp.broadcast,
@@ -32,7 +34,6 @@ class TestModule(nn.Module):
             flow.sbp.split(0),
             flow.sbp.split(1),
             flow.sbp.split(2),
-            flow.sbp.split(3),
         ]
         y = x
 
@@ -40,6 +41,9 @@ class TestModule(nn.Module):
             for sbp2 in sbp_1ds:
 
                 for sbp3 in sbp_1ds:
+                    # in this case, use intra group boxing
+                    if sbp1 == sbp3:
+                        continue
                     for sbp4 in sbp_1ds:
                         # (2, 2) -> (2, 2)
                         x = x.to_global(sbp=[sbp1, sbp2])
@@ -48,7 +52,7 @@ class TestModule(nn.Module):
         return x
 
 
-class TestGraph(nn.Graph):
+class _TestGraph(nn.Graph):
     def __init__(self, model):
         super().__init__()
         self.model = model
@@ -62,11 +66,13 @@ class TestGraph(nn.Graph):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
     def test_lazy_boxing_2d_all_combination(test_case):
-        model = TestModule()
-        graph = TestGraph(model)
+        os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "0"
+        os.environ["ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION"] = "0"
+
+        model = _TestModule()
+        graph = _TestGraph(model)
 
         x = flow.ones(
-            4,
             4,
             4,
             4,

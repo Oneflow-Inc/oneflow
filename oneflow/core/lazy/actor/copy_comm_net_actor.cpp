@@ -56,13 +56,15 @@ class CopyCommNetActor final : public Actor {
   int64_t in_regst_desc_id_;
 };
 
-CopyCommNetActor::~CopyCommNetActor() { Global<CommNet>::Get()->DeleteActorReadId(actor_read_id_); }
+CopyCommNetActor::~CopyCommNetActor() {
+  Singleton<CommNet>::Get()->DeleteActorReadId(actor_read_id_);
+}
 
 void CopyCommNetActor::VirtualActorInit(const TaskProto& task_proto) {
   is_in_eord_ = false;
   next_sequence_number_ = 0;
   in_regst_desc_id_ = Name2SoleRegstDescId("copy_in");
-  actor_read_id_ = Global<CommNet>::Get()->NewActorReadId();
+  actor_read_id_ = Singleton<CommNet>::Get()->NewActorReadId();
   OF_SET_MSG_HANDLER(&CopyCommNetActor::HandlerNormal);
 }
 
@@ -98,7 +100,8 @@ void CopyCommNetActor::Act() {
   } else {
     void* writeable_token = writeable_regst->comm_net_token();
     // Async
-    Global<CommNet>::Get()->Read(actor_read_id_, src_machine_id, readable_token, writeable_token);
+    Singleton<CommNet>::Get()->Read(actor_read_id_, src_machine_id, readable_token,
+                                    writeable_token);
   }
 }
 
@@ -127,7 +130,7 @@ void CopyCommNetActor::AsyncReturnAllCustomizedReadableRegst() {
 }
 
 void CopyCommNetActor::AddCallback(std::function<void()> callback) {
-  Global<CommNet>::Get()->AddReadCallBack(actor_read_id_, callback);
+  Singleton<CommNet>::Get()->AddReadCallBack(actor_read_id_, callback);
 }
 
 REGISTER_ACTOR(TaskType::kCopyCommNet, CopyCommNetActor);

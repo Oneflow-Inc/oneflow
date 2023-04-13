@@ -47,7 +47,7 @@ struct CudnnGridSampleKernelUtil {
         || ctx->Attr<std::string>("padding_mode") != "zeros" || !ctx->Attr<bool>("align_corners")) {
       return false;
     }
-    const ShapeView& input_shape = ctx->Tensor4ArgNameAndIndex("input", 0)->shape();
+    const ShapeView& input_shape = ctx->Tensor4ArgNameAndIndex("input", 0)->shape_view();
     if (input_shape.NumAxes() != 4 || input_shape.At(1) > 1024) { return false; }
 
     return true;
@@ -57,8 +57,8 @@ struct CudnnGridSampleKernelUtil {
     const user_op::Tensor* input = ctx->Tensor4ArgNameAndIndex("input", 0);
     const user_op::Tensor* grid = ctx->Tensor4ArgNameAndIndex("grid", 0);
     user_op::Tensor* output = ctx->Tensor4ArgNameAndIndex("output", 0);
-    const ShapeView& input_shape = input->shape();
-    const ShapeView& output_shape = output->shape();
+    const ShapeView& input_shape = input->shape_view();
+    const ShapeView& output_shape = output->shape_view();
     const DataType dtype = input->data_type();
 
     CudnnTensorDesc input_desc(dtype, input_shape, "channels_first");
@@ -77,9 +77,9 @@ struct CudnnGridSampleKernelUtil {
     const user_op::Tensor* grid = ctx->Tensor4ArgNameAndIndex("grid", 0);
     user_op::Tensor* dinput = ctx->Tensor4ArgNameAndIndex("dinput", 0);
     user_op::Tensor* dgrid = ctx->Tensor4ArgNameAndIndex("dgrid", 0);
-    const ShapeView& input_shape = input->shape();
-    const ShapeView& output_shape = doutput->shape();
-    const ShapeView& dinput_shape = dinput->shape();
+    const ShapeView& input_shape = input->shape_view();
+    const ShapeView& output_shape = doutput->shape_view();
+    const ShapeView& dinput_shape = dinput->shape_view();
     const DataType dtype = input->data_type();
 
     CudnnTensorDesc input_desc(dtype, input_shape, "channels_first");

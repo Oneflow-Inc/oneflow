@@ -21,6 +21,12 @@ limitations under the License.
 
 namespace oneflow {
 
+enum class RegstAllocationType {
+  kInvalid = 0,
+  kStatic = 1,
+  kStreamOrdered = 2,
+};
+
 class Regst final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Regst);
@@ -32,6 +38,8 @@ class Regst final {
     return regst_desc_->regst_desc_id();
   }
 
+  void Init(void* header_mem_ptr);
+  void ResetBodyMemPtr(void* body_mem_ptr);
   int64_t producer_actor_id() const { return regst_desc_->producer_actor_id(); }
   const std::vector<int64_t>& consumers_actor_id() const;
   const RtRegstDesc* regst_desc() const { return regst_desc_; }
@@ -41,26 +49,29 @@ class Regst final {
   Blob* GetMutSoleBlob();
   int64_t GetBlobSize() const { return static_cast<int64_t>(sorted_blob_vec_.size()); }
 
-  void* main_mem_ptr() const { return main_mem_ptr_; }
-  void set_main_mem_ptr(void* ptr) { main_mem_ptr_ = ptr; }
-  void* separated_header_mem_ptr() const { return separated_header_mem_ptr_; }
-  void set_separated_header_mem_ptr(void* ptr) { separated_header_mem_ptr_ = ptr; }
   void* comm_net_token();
+
+  void* header_mem_ptr() const { return header_mem_ptr_; }
+
+  void* body_mem_ptr() const { return body_mem_ptr_; }
+
+  RegstAllocationType allocation_type() const { return allocation_type_; }
 
  private:
   friend class RegstMgr;
-  Regst();
+  Regst(const RtRegstDesc* regst_desc, RegstAllocationType allocation_type);
 
-  void set_regst_desc(const RtRegstDesc* regst_desc);
   void SetBlobByOrdinal(int64_t ordinal, std::unique_ptr<Blob>&& blob);
 
   const RtRegstDesc* regst_desc_;
   std::vector<std::unique_ptr<Blob>> sorted_blob_vec_;
-  void* main_mem_ptr_;
-  void* separated_header_mem_ptr_;
+
+  void* header_mem_ptr_;
+  void* body_mem_ptr_;
 
   std::atomic<void*> comm_net_token_;
   std::mutex comm_net_token_mutex_;
+  RegstAllocationType allocation_type_;
 };
 
 }  // namespace oneflow

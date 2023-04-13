@@ -20,12 +20,16 @@ limitations under the License.
 #include "oneflow/core/vm/vm_object.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/small_vector.h"
+#include "oneflow/core/common/op_args_reserved_size.h"
 #include "oneflow/core/framework/device.h"
 
 namespace oneflow {
 
 // LocalDepObject helps VirtualMachineEngine building instruction edges
-using LocalDepObject = vm::MirroredObject;
+using LocalDepObject = vm::Dependence;
+
+using DependenceVector = small_vector<LocalDepObject*>;
 
 intrusive::shared_ptr<LocalDepObject> NewLocalDepObject();
 

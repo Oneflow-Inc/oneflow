@@ -40,9 +40,9 @@ class MaskedFillKernel final : public user_op::OpKernel {
     } else {
       UNIMPLEMENTED() << "The scalar in MaskedFill should be float or int.";
     }
-    WhereKernelUtil<device_type, T, CondT>::WhereXScalar(ctx->stream(), out->shape().elem_cnt(),
-                                                         mask->dptr<CondT>(), scalar_operand,
-                                                         x->dptr<T>(), out->mut_dptr<T>());
+    WhereKernelUtil<device_type, T, CondT>::WhereXScalar(
+        ctx->stream(), out->shape_view().elem_cnt(), mask->dptr<CondT>(), scalar_operand,
+        x->dptr<T>(), out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

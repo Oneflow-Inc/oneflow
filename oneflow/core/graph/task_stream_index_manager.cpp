@@ -69,7 +69,7 @@ Maybe<StreamId::stream_index_t> TaskStreamIndexGetterRegistry::Dispatch(
 StreamId::stream_index_t GenerateComputeTaskStreamIndex(DeviceType device_type,
                                                         StreamIndexGenerator* generator) {
   if (device_type == DeviceType::kCPU) {
-    size_t cpu_device_num = Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum();
+    size_t cpu_device_num = Singleton<ResourceDesc, ForSession>::Get()->CpuDeviceNum();
     return generator->GenerateNamedRoundRobin("CPU_COMPUTE", cpu_device_num);
   } else {
     return generator->GenerateNamed("COMPUTE");

@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> MishOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -36,16 +36,15 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> MishOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> MishGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
   const Shape& dy_shape = ctx->InputShape("dy", 0);
-  Shape* dx_shape = ctx->OutputShape("dx", 0);
   CHECK_OR_RETURN(dy_shape == x_shape);
-  *dx_shape = dy_shape;
+  ctx->SetOutputShape("dx", 0, dy_shape);
   return Maybe<void>::Ok();
 }
 
@@ -66,26 +65,11 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> MishGradOp::InferDataType(user_op::InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(ctx->InputDType("dy", 0), ctx->InputDType("x", 0));
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("dy", 0), ctx->InputDType("x", 0))
+      << "InferDataType Failed. Expected " << DataType_Name(ctx->InputDType("dy", 0))
+      << ", but got " << DataType_Name(ctx->InputDType("x", 0));
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("mish").SetBackwardOpConfGenFn(
-    [](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
-      const auto mish_grad_op_name = ctx->FwOp().op_name() + "_grad";
-      ctx->DefineOp(mish_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("mish_grad")
-            .InputBind("x", ctx->FwOp().input("in", 0))
-            .InputBind("dy", ctx->FwOp().output_grad("out", 0))
-            .Output("dx")
-            .Build();
-      });
-      ctx->FwOp().InputGradBind(user_op::OpArg("in", 0),
-                                [&ctx, &mish_grad_op_name]() -> const std::string& {
-                                  return ctx->GetOp(mish_grad_op_name).output("dx", 0);
-                                });
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

@@ -35,15 +35,15 @@ class Narrow : public OpExprGradFunction<NarrowCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Capture(NarrowCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1);
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);   // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
     ctx->requires_grad = inputs.at(0)->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
@@ -67,11 +67,12 @@ class Narrow : public OpExprGradFunction<NarrowCaptureState> {
       if (LazyMode::is_enabled()) {
         like = ctx->SavedTensors().at(0);
       } else if (dy->is_local()) {
-        like = JUST(functional::Empty(ctx->shape, dy->dtype(), JUST(dy->device())));
+        like = JUST(functional::Empty(ctx->shape, dy->dtype(), JUST(dy->device()),
+                                      ctx->requires_grad, /*pin_memory=*/false));
       } else {
         like = JUST(
-            functional::ConsistentEmpty(ctx->shape, dy->dtype(), JUST(dy->parallel_desc()),
-                                        *JUST(private_details::RawGetSbpList(JUST(dy->nd_sbp())))));
+            functional::GlobalEmpty(ctx->shape, dy->dtype(), JUST(dy->parallel_desc()),
+                                    *JUST(private_details::RawGetSbpList(JUST(dy->nd_sbp())))));
       }
       in_grads->resize(1);
       in_grads->at(0) = JUST(functional::NarrowGrad(dy, like, ctx->dim, ctx->start, ctx->length));

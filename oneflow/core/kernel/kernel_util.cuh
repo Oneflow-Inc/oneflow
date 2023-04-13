@@ -15,7 +15,10 @@ limitations under the License.
 */
 #ifndef ONEFLOW_CORE_KERNEL_KERNEL_UTIL_CUH_
 #define ONEFLOW_CORE_KERNEL_KERNEL_UTIL_CUH_
+#include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/core/device/cuda_pseudo_half.h"
+#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 

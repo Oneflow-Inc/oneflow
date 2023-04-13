@@ -37,14 +37,14 @@ class AssignIfGPUKernel final : public user_op::OpKernel {
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* condition = ctx->Tensor4ArgNameAndIndex("condition", 0);
-    CHECK_EQ(condition->shape().NumAxes(), 1);
-    CHECK_EQ(condition->shape().At(0), 1);
+    CHECK_EQ(condition->shape_view().NumAxes(), 1);
+    CHECK_EQ(condition->shape_view().At(0), 1);
     const user_op::Tensor* value = ctx->Tensor4ArgNameAndIndex("value", 0);
     user_op::Tensor* ref = ctx->Tensor4ArgNameAndIndex("ref", 0);
     if (value->dptr() == ref->dptr()) { return; }
-    CHECK_EQ(value->shape(), ref->shape());
+    CHECK_EQ(value->shape_view(), ref->shape_view());
     CHECK_EQ(value->data_type(), ref->data_type());
-    const size_t elem_cnt = ref->shape().elem_cnt();
+    const size_t elem_cnt = ref->shape_view().elem_cnt();
     AssignGpu<assign_if, C, T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                                  ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         elem_cnt, condition->dptr<C>(), value->dptr<T>(), ref->mut_dptr<T>());

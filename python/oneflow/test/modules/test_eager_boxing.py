@@ -2663,7 +2663,7 @@ def _test_eager_boxing_b_to_s(
 ):
     np_arr = np.random.uniform(-1e-05, 1e-05, shape)
     # use cuda to avoid slice boxing here
-    placement_with_all_cuda_device = flow.env.all_device_placement("cuda")
+    placement_with_all_cuda_device = flow.placement.all("cuda")
 
     x = flow.tensor(np_arr, device="cuda", dtype=flow.float32)
     x = x.to_global(placement_with_all_cuda_device, flow.sbp.broadcast)
@@ -2704,7 +2704,7 @@ def _test_eager_boxing_s_to_b(
 ):
     np_arr = np.random.uniform(-1e-05, 1e-05, shape)
     # use cuda to avoid slice boxing here
-    placement_with_all_cuda_device = flow.env.all_device_placement("cuda")
+    placement_with_all_cuda_device = flow.placement.all("cuda")
 
     x = flow.tensor(np_arr, device="cuda", dtype=flow.float32)
     x = x.to_global(placement_with_all_cuda_device, flow.sbp.broadcast)
@@ -2730,7 +2730,7 @@ def _test_eager_boxing_p_to_s(
 ):
     np_arr = np.random.uniform(-1e-05, 1e-05, shape)
     # use cuda to avoid slice boxing here
-    placement_with_all_cuda_device = flow.env.all_device_placement("cuda")
+    placement_with_all_cuda_device = flow.placement.all("cuda")
 
     x = flow.tensor(np_arr, device="cuda", dtype=flow.float32)
     x = x.to_global(placement_with_all_cuda_device, flow.sbp.broadcast)
@@ -2772,7 +2772,7 @@ def _test_eager_boxing_p_to_b(
 ):
     np_arr = np.random.uniform(-1e-05, 1e-05, shape)
     # use cuda to avoid slice boxing here
-    placement_with_all_cuda_device = flow.env.all_device_placement("cuda")
+    placement_with_all_cuda_device = flow.placement.all("cuda")
 
     x = flow.tensor(np_arr, device="cuda", dtype=flow.float32)
     x = x.to_global(placement_with_all_cuda_device, flow.sbp.broadcast)
@@ -2801,7 +2801,7 @@ def _test_eager_naive_boxing_s_to_s(
     out_split_axis,
 ):
     np_arr = np.random.uniform(-1e-05, 1e-05, shape)
-    placement_with_all_cuda_device = flow.env.all_device_placement(device_type)
+    placement_with_all_cuda_device = flow.placement.all(device_type)
 
     x = flow.tensor(np_arr, device=device_type, dtype=flow.float32)
 
@@ -3201,7 +3201,7 @@ class TestEagerNaiveBoxingSToS(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n2d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class TestEagerConsistentCastWithSamePlacementAndSBP(flow.unittest.TestCase):
+class TestEagerGlobalCastWithSamePlacementAndSBP(flow.unittest.TestCase):
     def test_eager_global_cast_with_same_placement_and_sbp(test_case):
         x = np.ones((4, 8), dtype=np.int32)
         placement = flow.placement("cuda", ranks=[0, 1])
@@ -3218,7 +3218,7 @@ class TestEagerConsistentCastWithSamePlacementAndSBP(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class TestEagerConsistentCast1DTo2DSBP(flow.unittest.TestCase):
+class TestEagerGlobalCast1DTo2DSBP(flow.unittest.TestCase):
     def test_eager_global_cast_1d_to_2d_sbp(test_case):
         x = np.ones((4, 8), dtype=np.int32)
         placement1 = flow.placement("cuda", ranks=[0, 1, 2, 3])
@@ -3241,7 +3241,7 @@ class TestEagerConsistentCast1DTo2DSBP(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class TestEagerConsistentCast2DTo1DSBP(flow.unittest.TestCase):
+class TestEagerGlobalCast2DTo1DSBP(flow.unittest.TestCase):
     def test_eager_global_cast_2d_to_1d_sbp(test_case):
         x = np.ones((4, 8), dtype=np.int32)
         placement1 = flow.placement("cuda", ranks=[0, 1, 2, 3])
@@ -3309,7 +3309,7 @@ def _test_eager_global_cast_1d_uneven_split(test_case, device_type, shape):
 
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class TestEagerConsistentCastOneDUnevenSplit(flow.unittest.TestCase):
+class TestEagerGlobalCastOneDUnevenSplit(flow.unittest.TestCase):
     def test_eager_global_cast_1d_uneven_split(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "cuda"]
@@ -3342,7 +3342,7 @@ def _test_eager_global_n_dim_reduce(test_case, device_type, src_sbp, dst_sbp):
 
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class TestEagerConsistentCastNDimReduceBoxing(flow.unittest.TestCase):
+class TestEagerGlobalCastNDimReduceBoxing(flow.unittest.TestCase):
     def test_eager_global_n_dim_reduce(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "cuda"]
@@ -3352,7 +3352,7 @@ class TestEagerConsistentCastNDimReduceBoxing(flow.unittest.TestCase):
             _test_eager_global_n_dim_reduce(test_case, *arg)
 
 
-def _test_eager_consistent_with_0_size_data(
+def _test_eager_global_with_0_size_data(
     test_case,
     shape,
     in_device_type,
@@ -3374,7 +3374,7 @@ def _test_eager_consistent_with_0_size_data(
 
 @flow.unittest.skip_unless_1n4d()
 class TestEagerNaiveBoxingSToS(flow.unittest.TestCase):
-    def test_eager_consistent_with_0_size_data(test_case):
+    def test_eager_global_with_0_size_data(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(8, 0, 4), (5, 0, 7)]
         arg_dict["in_device_type"] = ["cpu", "cuda"]
@@ -3394,7 +3394,7 @@ class TestEagerNaiveBoxingSToS(flow.unittest.TestCase):
             (flow.sbp.partial_sum,),
         ]
         for arg in GenArgList(arg_dict):
-            _test_eager_consistent_with_0_size_data(test_case, *arg)
+            _test_eager_global_with_0_size_data(test_case, *arg)
 
 
 def _test_eager_boxing_one_to_n_with_diff_dim(
@@ -3489,7 +3489,7 @@ class TestEagerBoxingAsymmetricMix1d2dWithRandomPlacement(flow.unittest.TestCase
     def test_eager_boxing_asymmetric_mix_1d_2d_with_random_placement(test_case):
         arg_dict = OrderedDict()
         sbp_dict = OrderedDict()
-        arg_dict["shape"] = [(12, 24), (12, 24, 12)]
+        arg_dict["shape"] = [(12, 24), (17, 13, 19)]
 
         arg_dict["in_device_type"] = ["cpu", "cuda"]
         arg_dict["out_device_type"] = ["cpu", "cuda"]
@@ -3560,6 +3560,23 @@ class TestEagerBoxingAsymmetricMix1d2dWithRandomPlacement(flow.unittest.TestCase
                         )
             else:
                 raise NotImplementedError
+
+
+@flow.unittest.skip_unless_1n4d()
+class TestEagerBoxing2DLocalToGlobalWithBalancedSplitSize(flow.unittest.TestCase):
+    def test_eager_boxing_2d_local_to_globa_with_balanced_size(test_case):
+        placement = flow.placement(type="cpu", ranks=np.arange(4).reshape((2, 2)))
+        sbp = (flow.sbp.split(0), flow.sbp.split(1))
+        x = flow.tensor(np.arange(25).reshape((5, 5)), placement=placement, sbp=sbp)
+        y = x.to_local()
+        z = y.to_global(placement=placement, sbp=sbp)
+
+        test_case.assertEqual(z.placement, placement)
+        test_case.assertEqual(z.sbp, sbp)
+        test_case.assertEqual(z.size(), (5, 5))
+        test_case.assertTrue(
+            np.allclose(z.numpy(), np.arange(25).reshape((5, 5)), 1e-5, 1e-5)
+        )
 
 
 if __name__ == "__main__":

@@ -35,9 +35,9 @@ class CollectiveBoxingKernelState final : public KernelState {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CollectiveBoxingKernelState);
   explicit CollectiveBoxingKernelState(const RankDesc& rank_desc)
-      : request_handle_(Global<Scheduler>::Get()->CreateRequestHandle(rank_desc)) {}
+      : request_handle_(Singleton<Scheduler>::Get()->CreateRequestHandle(rank_desc)) {}
   ~CollectiveBoxingKernelState() override {
-    Global<Scheduler>::Get()->DestroyRequestHandle(request_handle_);
+    Singleton<Scheduler>::Get()->DestroyRequestHandle(request_handle_);
   }
   RequestHandle* request_handle() { return request_handle_; }
 

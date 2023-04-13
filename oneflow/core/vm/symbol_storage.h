@@ -19,6 +19,7 @@ limitations under the License.
 #include <mutex>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 
@@ -31,9 +32,6 @@ class ParallelConf;
 class JobDesc;
 class JobConfigProto;
 
-class OpNodeSignatureDesc;
-class OpNodeSignature;
-
 class Scope;
 class ScopeProto;
 
@@ -42,11 +40,6 @@ namespace symbol {
 template<typename T>
 struct ConstructArgType4Symbol final {
   using type = T;
-};
-
-template<>
-struct ConstructArgType4Symbol<OpNodeSignatureDesc> final {
-  using type = OpNodeSignature;
 };
 
 template<>
@@ -92,10 +85,6 @@ template<>
 Maybe<Scope> NewSymbol<Scope>(int64_t symbol_id,
                               const typename ConstructArgType4Symbol<Scope>::type& data);
 
-template<>
-Maybe<OpNodeSignatureDesc> NewSymbol<OpNodeSignatureDesc>(
-    int64_t symbol_id, const typename ConstructArgType4Symbol<OpNodeSignatureDesc>::type& data);
-
 }  // namespace detail
 
 template<typename T>
@@ -112,15 +101,36 @@ class Storage final {
     return symbol_id2symbol_.find(symbol_id) != symbol_id2symbol_.end();
   }
 
+  bool Has(const typename ConstructArgType4Symbol<T>::type& symbol_data) const {
+    std::unique_lock<std::mutex> lock(mutex_);
+    const auto& iter = data2symbol_id_.find(symbol_data);
+    return iter != data2symbol_id_.end();
+  }
+
   Maybe<const T&> MaybeGet(int64_t symbol_id) const { return *JUST(MaybeGetPtr(symbol_id)); }
 
+  Maybe<const T&> MaybeGet(const typename ConstructArgType4Symbol<T>::type& data) const {
+    return *JUST(MaybeGetPtr(data));
+  }
+
   const T& Get(int64_t symbol_id) const { return *GetPtr(symbol_id); }
+
+  const T& Get(const typename ConstructArgType4Symbol<T>::type& data) const {
+    return *GetPtr(data);
+  }
 
   Maybe<T> MaybeGetPtr(int64_t symbol_id) const {
     std::unique_lock<std::mutex> lock(mutex_);
     const auto& iter = symbol_id2symbol_.find(symbol_id);
     CHECK_OR_RETURN(iter != symbol_id2symbol_.end()) << "symbol_id: " << symbol_id;
     return iter->second;
+  }
+
+  Maybe<T> MaybeGetPtr(const typename ConstructArgType4Symbol<T>::type& data) const {
+    std::unique_lock<std::mutex> lock(mutex_);
+    const auto& iter = data2symbol_id_.find(data);
+    CHECK_OR_RETURN(iter != data2symbol_id_.end());
+    return JUST(MapAt(symbol_id2symbol_, iter->second));
   }
 
   const std::shared_ptr<T>& GetPtr(int64_t symbol_id) const {
@@ -130,11 +140,19 @@ class Storage final {
     return iter->second;
   }
 
+  const std::shared_ptr<T>& GetPtr(const typename ConstructArgType4Symbol<T>::type& data) const {
+    std::unique_lock<std::mutex> lock(mutex_);
+    const auto& iter = data2symbol_id_.find(data);
+    CHECK(iter != data2symbol_id_.end());
+    return CHECK_JUST(MapAt(symbol_id2symbol_, iter->second));
+  }
+
   Maybe<void> Add(int64_t symbol_id, const typename ConstructArgType4Symbol<T>::type& data) {
     CHECK_GT_OR_RETURN(symbol_id, 0);
     const auto& ptr = JUST(detail::NewSymbol<T>(symbol_id, data));
     std::unique_lock<std::mutex> lock(mutex_);
     CHECK_OR_RETURN(symbol_id2symbol_.emplace(symbol_id, ptr).second);
+    data2symbol_id_[data] = symbol_id;
     return Maybe<void>::Ok();
   }
 
@@ -143,23 +161,45 @@ class Storage final {
     const auto& ptr = JUST(detail::NewSymbol<T>(symbol_id, data));
     std::unique_lock<std::mutex> lock(mutex_);
     const auto& iter = symbol_id2symbol_.find(symbol_id);
-    if (iter != symbol_id2symbol_.end()) { return Maybe<void>::Ok(); }
+    if (iter != symbol_id2symbol_.end()) {
+      CHECK_OR_RETURN(data2symbol_id_.find(data) != data2symbol_id_.end());
+      return Maybe<void>::Ok();
+    }
     CHECK_OR_RETURN(symbol_id2symbol_.emplace(symbol_id, ptr).second);
+    data2symbol_id_[data] = symbol_id;
     return Maybe<void>::Ok();
+  }
+
+  Maybe<T> FindOrCreate(const typename ConstructArgType4Symbol<T>::type& symbol_data,
+                        const std::function<Maybe<int64_t>()>& Create) {
+    int64_t symbol_id = JUST(Create());
+    const auto& ptr = JUST(detail::NewSymbol<T>(symbol_id, symbol_data));
+    std::unique_lock<std::mutex> lock(mutex_);
+    const auto& iter = data2symbol_id_.find(symbol_data);
+    if (iter != data2symbol_id_.end()) { return JUST(MapAt(symbol_id2symbol_, iter->second)); }
+    CHECK_OR_RETURN(symbol_id2symbol_.emplace(symbol_id, ptr).second);
+    data2symbol_id_[symbol_data] = symbol_id;
+    return JUST(MapAt(symbol_id2symbol_, symbol_id));
   }
 
   void Clear(int64_t symbol_id) {
     std::unique_lock<std::mutex> lock(mutex_);
-    symbol_id2symbol_.erase(symbol_id);
+    auto iter = symbol_id2symbol_.find(symbol_id);
+    if (iter != symbol_id2symbol_.end()) {
+      data2symbol_id_.erase(iter->second->data());
+      symbol_id2symbol_.erase(symbol_id);
+    }
   }
   void ClearAll() {
     std::unique_lock<std::mutex> lock(mutex_);
     symbol_id2symbol_.clear();
+    data2symbol_id_.clear();
   }
 
  private:
   mutable std::mutex mutex_;
   HashMap<int64_t, std::shared_ptr<T>> symbol_id2symbol_;
+  HashMap<typename ConstructArgType4Symbol<T>::type, int64_t> data2symbol_id_;
 };
 
 }  // namespace symbol

@@ -24,7 +24,7 @@ limitations under the License.
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.h"
-#include "oneflow/core/job/mirrored_parallel.pb.h"
+#include "oneflow/core/job/local_parallel.pb.h"
 #include "oneflow/core/operator/op_conf_util.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/job_builder.h"
@@ -34,7 +34,7 @@ limitations under the License.
 
 namespace oneflow {
 
-class MirroredSigInferHint;
+class LocalSigInferHint;
 class OpNodeSignature;
 class Scope;
 
@@ -146,33 +146,48 @@ class Operator {
   Maybe<void> InferSbpSignatureIf(
       const SbpSignature& sbp_sig_conf,
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-      std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+      const std::function<Maybe<const SbpInferHint*>(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc);
   Maybe<void> InferNdSbpSignatureIf(
       const NdSbpSignature& nd_sbp_constraints, const ParallelDesc& parallel_desc,
       std::function<Maybe<const NdSbpInferHint*>(const std::string&)> NdSbpInferHint4Ibn);
-  // Infer blob's MirroredSignature
-  Maybe<void> InferMirroredSignatureIf(
-      std::function<Maybe<const MirroredSigInferHint*>(const std::string&)>
-          MirroredSigInferHint4Ibn,
-      bool is_mirrored_parallel_view_conf, const ParallelDesc& parallel_desc);
+
+  // The function that how to dump nd_sbp for op_conf
+  using DumpNdSbpSignatureForOpConfFn =
+      std::function<Maybe<void>(const NdSbpSignature& nd_sbp_sig, OperatorConf* op_conf)>;
+  virtual DumpNdSbpSignatureForOpConfFn GetDumpNdSbpSignatureForOpConfFn() const;
+
+  // Infer blob's LocalSignature
+  Maybe<void> InferLocalSignatureIf(
+      std::function<Maybe<const LocalSigInferHint*>(const std::string&)> LocalSigInferHint4Ibn,
+      bool is_local_parallel_view_conf, const ParallelDesc& parallel_desc);
+
   void GenKernelConf(const std::function<const BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
                      const ParallelContext*, KernelConf*) const;
   const InputBlobModifier& InputBlobModifier4Ibn(const std::string& ibn) const;
   const OutputBlobModifier& OutputBlobModifier4Obn(const std::string& obn) const;
   Maybe<const SbpParallel*> SbpParallel4BnInOp(const std::string& bn_in_op) const;
   Maybe<const NdSbp*> NdSbp4BnInOp(const std::string& bn_in_op) const;
-  Maybe<const OptMirroredParallel*> OptMirroredParallel4BnInOp(const std::string& bn_in_op) const;
+  Maybe<const OptLocalParallel*> OptLocalParallel4BnInOp(const std::string& bn_in_op) const;
 
   Maybe<void> GetSbpSignaturesIf(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const;
+      int32_t hierarchy_value, SbpSignatureList* sbp_sig_list) const;
+  virtual Maybe<void> EnumerateNdSbpSignatures(
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list) const;
   virtual Maybe<void> GetNdSbpSignatureList(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list) const;
+  virtual Maybe<double> GetComputeComplexity(
+      NdSbpSignature* sbp_signature,
+      std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn,
+      const ParallelDesc& parallel_desc) const;
+  // TODO: Will infer blob shape before inferring sbp and delete the check_output later
   Maybe<void> GetValidNdSbpSignatureList(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list) const;
+      const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list,
+      bool check_output) const;
 
   void ForEachBnInOp(const std::function<void(const std::string&)>&) const;
 
@@ -202,7 +217,7 @@ class Operator {
       const ParallelContext* parallel_ctx, const JobDesc* job_desc) const;
   virtual Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const {
+      int32_t hierarchy_value, SbpSignatureList* sbp_sig_list) const {
     return GetSbpSignatures(LogicalBlobDesc4Ibn, sbp_sig_list);
   }
   virtual Maybe<void> GetSbpSignatures(
@@ -222,10 +237,9 @@ class Operator {
   virtual Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
     OF_UNIMPLEMENTED() << " GetSbpSignatures unimplemented, op name: " << op_name();
   }
-  virtual Maybe<void> InferMirroredSignature(
-      std::function<Maybe<const MirroredSigInferHint*>(const std::string&)>
-          MirroredSigInferHint4Ibn,
-      bool is_mirrored_parallel_view_conf, const ParallelDesc& parallel_desc);
+  virtual Maybe<void> InferLocalSignature(
+      std::function<Maybe<const LocalSigInferHint*>(const std::string&)> LocalSigInferHint4Ibn,
+      bool is_local_parallel_view_conf, const ParallelDesc& parallel_desc);
 
   virtual Maybe<void> InferInplaceObn2Ibn(
       HashMap<std::string, std::string>* mut_inplace_obn2ibn,
@@ -274,7 +288,7 @@ class Operator {
 
   InputBlobModifier* MutInputBlobModifier4Ibn(const std::string& ibn);
   OutputBlobModifier* MutOutputBlobModifier4Obn(const std::string& obn);
-  OptMirroredParallel* MutOptMirroredParallel(const std::string& bn_in_op);
+  OptLocalParallel* MutOptLocalParallel(const std::string& bn_in_op);
 
  private:
   enum BlobNameTag {
@@ -288,7 +302,8 @@ class Operator {
   // TODO(wyg): 1d and nd sbp use this function to filter and check
   Maybe<void> FilterNdSbpSignatureListByLogicalShape(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list) const;
+      const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list,
+      bool check_output) const;
   Maybe<void> GreedilyFindMinCopyCostNdSbp(
       NdSbpSignature* nd_sbp_signature,
       const std::function<Maybe<const NdSbpInferHint*>(const std::string&)>& NdSbpInferHint4Ibn,
@@ -320,7 +335,7 @@ class Operator {
   ArgModifierSignature arg_modifier_signature_;
   std::unique_ptr<BlobLastUsedSignature> blob_last_used_signature_;
   std::unique_ptr<BlobBackwardUsedSignature> blob_backward_used_signature_;
-  std::unique_ptr<MirroredSignature> mirrored_signature_;
+  std::unique_ptr<LocalSignature> local_signature_;
 
   HashMap<std::string, std::pair<BlobNameTag, int32_t>> bn2index_pair_;
   HashMap<LogicalBlobId, int32_t> lbi2output_index_;
@@ -372,6 +387,14 @@ struct RuntimeRegstNum4OpSameOutputBlob final {
 #define REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(op_type_case, num)                 \
   REGISTER_CLASS_CREATOR(int32_t, op_type_case, RuntimeRegstNum4OpSameOutputBlob, \
                          ([] { return new RuntimeRegstNum4OpSameOutputBlob(num); }))
+
+#define REGISTER_USER_OP_SAME_OUTPUT_BLOB_REGST_NUM(op_type_name, num)                \
+  REGISTER_CLASS_CREATOR(std::string, op_type_name, RuntimeRegstNum4OpSameOutputBlob, \
+                         ([] { return new RuntimeRegstNum4OpSameOutputBlob(num); }))
+
+#define REGISTER_USER_OP_SAME_OUTPUT_BLOB_REGST_NUM_WITH_FUNC(op_type_name, func)     \
+  REGISTER_CLASS_CREATOR(std::string, op_type_name, RuntimeRegstNum4OpSameOutputBlob, \
+                         ([] { return new RuntimeRegstNum4OpSameOutputBlob(func); }));
 
 struct IsInterfaceOpConf4OpTypeCase final {};
 
@@ -429,12 +452,6 @@ bool operator==(const OperatorConf& lhs, const OperatorConf& rhs);
 Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
                                     const OpNodeSignature& upstream_signature, const Scope& scope);
 
-namespace cfg {
-
-class NdSbp;
-
-}
-
 Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
                               const ParallelDesc& parallel_desc,
                               const ParallelContext& parallel_ctx);
@@ -451,7 +468,7 @@ namespace std {
 
 template<>
 struct hash<oneflow::OperatorConf> final {
-  size_t operator()(const oneflow::OperatorConf& op_conf) {
+  size_t operator()(const oneflow::OperatorConf& op_conf) const {
     std::string serialized;
     op_conf.SerializeToString(&serialized);
     return std::hash<std::string>()(serialized);

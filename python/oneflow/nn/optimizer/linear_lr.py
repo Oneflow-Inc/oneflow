@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from .optimizer import Optimizer
+from ...optim.optimizer import Optimizer
 from .lr_scheduler import LRScheduler
 
 
@@ -80,12 +80,13 @@ class LinearLR(LRScheduler):
                 step / self.total_iters
             )
         else:
-            multiplier = 1
+            multiplier = self.end_factor
 
         return base_lr * multiplier
 
     def _generate_conf_for_graph(self, lr_conf):
-        linear_lr_conf = lr_conf.mutable_linear_lr_conf()
-        linear_lr_conf.set_start_factor(self.start_factor)
-        linear_lr_conf.set_end_factor(self.end_factor)
-        linear_lr_conf.set_total_iters(self.total_iters)
+        lr_conf.linear_lr_conf.SetInParent()
+        linear_lr_conf = lr_conf.linear_lr_conf
+        linear_lr_conf.start_factor = self.start_factor
+        linear_lr_conf.end_factor = self.end_factor
+        linear_lr_conf.total_iters = self.total_iters

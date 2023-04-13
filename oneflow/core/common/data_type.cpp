@@ -41,28 +41,38 @@ bool IsFloatingDataType(DataType data_type) {
   switch (data_type) {
 #define FLOATING_CASE(type_cpp, type_proto) \
   case type_proto: return true;
-    OF_PP_FOR_EACH_TUPLE(FLOATING_CASE, FLOATING_DATA_TYPE_SEQ)
+    OF_PP_FOR_EACH_TUPLE(FLOATING_CASE,
+                         FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ BFLOAT16_DATA_TYPE_SEQ)
     default: return false;
   }
 #undef FLOATING_CASE
 }
-bool IsPODDataType(DataType data_type) {
+bool IsHalfDataType(DataType data_type) {
   switch (data_type) {
-#define POD_CASE(type_cpp, type_proto) \
+#define HALF_CASE(type_cpp, type_proto) \
   case type_proto: return true;
-    OF_PP_FOR_EACH_TUPLE(POD_CASE, POD_DATA_TYPE_SEQ)
+    OF_PP_FOR_EACH_TUPLE(HALF_CASE, FLOAT16_DATA_TYPE_SEQ BFLOAT16_DATA_TYPE_SEQ)
     default: return false;
   }
-#undef POD_CASE
+#undef HALF_CASE
 }
-bool IsPODAndHalfDataType(DataType data_type) {
+bool IsComplexDataType(DataType data_type) {
   switch (data_type) {
-#define POD_AND_HALF_CASE(type_cpp, type_proto) \
+#define COMPLEX_CASE(type_cpp, type_proto) \
   case type_proto: return true;
-    OF_PP_FOR_EACH_TUPLE(POD_AND_HALF_CASE, POD_AND_HALF_DATA_TYPE_SEQ)
+    OF_PP_FOR_EACH_TUPLE(COMPLEX_CASE, COMPLEX_DATA_TYPE_SEQ)
     default: return false;
   }
-#undef POD_AND_HALF_CASE
+#undef COMPLEX_CASE
+}
+bool IsTriviallyCopyableDataType(DataType data_type) {
+  switch (data_type) {
+#define TRIVIALLY_COPY_CASE(type_cpp, type_proto) \
+  case type_proto: return true;
+    OF_PP_FOR_EACH_TUPLE(TRIVIALLY_COPY_CASE, TRIVIALLY_COPY_DATA_TYPE_SEQ INT16_DATA_TYPE_SEQ)
+    default: return false;
+  }
+#undef TRIVIALLY_COPY_CASE
 }
 bool IsIndexDataType(DataType data_type) {
   switch (data_type) {
@@ -77,7 +87,9 @@ bool IsSupportRequireGradDataType(DataType data_type) {
   switch (data_type) {
 #define REQUIRE_GRAD_CASE(type_cpp, type_proto) \
   case type_proto: return true;
-    OF_PP_FOR_EACH_TUPLE(REQUIRE_GRAD_CASE, FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
+    OF_PP_FOR_EACH_TUPLE(
+        REQUIRE_GRAD_CASE,
+        FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ BFLOAT16_DATA_TYPE_SEQ COMPLEX_DATA_TYPE_SEQ)
     default: return false;
   }
 #undef REQUIRE_GRAD_CASE

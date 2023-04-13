@@ -20,7 +20,7 @@ limitations under the License.
 #include <memory>
 #include <type_traits>
 #include <utility>
-#include "oneflow/core/common/error.cfg.h"
+#include "oneflow/core/common/error.pb.h"
 #include "oneflow/core/common/type_traits.h"
 #include "oneflow/core/common/just.h"
 

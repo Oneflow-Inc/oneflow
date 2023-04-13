@@ -29,7 +29,7 @@ class FusedCastScaleCpuKernel final : public user_op::OpKernel {
     const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const double scale_val = ctx->Attr<double>("scale");
-    const int64_t n = x->shape().elem_cnt();
+    const int64_t n = x->shape_view().elem_cnt();
     const T scale = *(scale_by_tensor->dptr<T>()) * scale_val;
     const U* x_ptr = x->dptr<U>();
     T* y_ptr = y->mut_dptr<T>();

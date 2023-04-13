@@ -30,7 +30,7 @@ struct PtrStructField {
 
   static T* StructPtr4FieldPtr(const F* field_ptr) {
     int offset_value = reinterpret_cast<long long>(&(((T*)nullptr)->*ptr2member));
-    return (T*)(((char*)field_ptr) - offset_value);
+    return (T*)((const_cast<char*>(reinterpret_cast<const char*>(field_ptr))) - offset_value);
   }
   static F* FieldPtr4StructPtr(const T* struct_ptr) {
     return &(const_cast<T*>(struct_ptr)->*ptr2member);
@@ -44,10 +44,10 @@ struct OffsetStructField {
   static const int offset_value = offset;
 
   static T* StructPtr4FieldPtr(const F* field_ptr) {
-    return (T*)(((char*)field_ptr) - offset_value);
+    return (T*)((const_cast<char*>(reinterpret_cast<const char*>(field_ptr))) - offset_value);
   }
   static F* FieldPtr4StructPtr(const T* struct_ptr) {
-    return (F*)(((char*)struct_ptr) + offset_value);
+    return (F*)((const_cast<char*>(reinterpret_cast<const char*>(struct_ptr))) + offset_value);
   }
 };
 

@@ -17,17 +17,31 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/include/primitive/permute.h"
+#include "oneflow/core/ep/common/primitive/permute.h"
+
 namespace oneflow {
 
 namespace user_op {
 
 namespace {
-bool IsIdentity(const std::vector<int32_t>& perm) {
-  for (auto i = 0; i < perm.size(); i++) {
-    if (perm[i] != i) { return false; }
+
+bool IsIdentity(const ShapeView& in_shape, const std::vector<int32_t>& perm) {
+  constexpr int kMaxNumDims = 12;
+  CHECK_LE(in_shape.NumAxes(), kMaxNumDims);
+  CHECK_EQ(in_shape.NumAxes(), perm.size());
+
+  size_t simplified_num_dims{};
+  int64_t simplified_src_dims[kMaxNumDims]{};
+  int simplified_permutation[kMaxNumDims]{};
+  ep::primitive::permute::SimplifyPermutation<kMaxNumDims>(
+      in_shape.NumAxes(), in_shape.ptr(), perm.data(), &simplified_num_dims, simplified_src_dims,
+      simplified_permutation);
+  for (int i = 0; i < simplified_num_dims; ++i) {
+    if (simplified_permutation[i] != i) { return false; }
   }
   return true;
 }
+
 }  // namespace
 
 template<typename Context>
@@ -50,15 +64,15 @@ class TransposeKernel final : public OpKernel, public user_op::CudaGraphSupport 
     const Tensor* tensor_in = ctx->Tensor4ArgNameAndIndex("input", 0);
     Tensor* tensor_out = ctx->Tensor4ArgNameAndIndex("output", 0);
     const auto& perm = ctx->Attr<std::vector<int32_t>>("perm");
-    const ShapeView& in_shape = tensor_in->shape();
+    const ShapeView& in_shape = tensor_in->shape_view();
     DataType dtype = tensor_out->data_type();
-    size_t num_dims = tensor_in->shape().NumAxes();
+    size_t num_dims = tensor_in->shape_view().NumAxes();
     const int64_t* src_dims = in_shape.ptr();
 
-    int64_t elem_cnt = tensor_out->shape().elem_cnt();
+    int64_t elem_cnt = tensor_out->shape_view().elem_cnt();
 
     if (elem_cnt != 0) {
-      if (IsIdentity(perm)) {
+      if (IsIdentity(in_shape, perm)) {
         // if permute vector is 0,1,...,n, do data copy directly
         AutoMemcpy(ctx->stream(), tensor_out->mut_dptr(), tensor_in->dptr(),
                    elem_cnt * GetSizeOfDataType(dtype), tensor_out->mem_case(),
@@ -84,7 +98,16 @@ auto PermutePrimitiveExists() {
 
 REGISTER_USER_KERNEL("transpose")
     .SetCreateFn<TransposeKernel>()
-    .SetIsMatchedHob(PermutePrimitiveExists() == true);
+    .SetIsMatchedHob(PermutePrimitiveExists() == true)
+    .SetInplaceProposalFn([](const user_op::InferContext& ctx,
+                             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
+      const ShapeView input_shape(ctx.InputShape("input", 0));
+      const auto& perm = ctx.Attr<std::vector<int32_t>>("perm");
+      if (IsIdentity(input_shape, perm)) {
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("output", 0, "input", 0, false));
+      }
+      return Maybe<void>::Ok();
+    });
 
 }  // namespace user_op
 }  // namespace oneflow

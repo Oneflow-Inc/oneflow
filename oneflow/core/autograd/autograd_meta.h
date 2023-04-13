@@ -36,7 +36,7 @@ namespace one {
 
 class Tensor;
 class TensorArg;
-class MirroredTensor;
+class LocalTensor;
 
 class AutogradMeta final {
  public:
@@ -46,7 +46,8 @@ class AutogradMeta final {
   // Getters
   const std::shared_ptr<Tensor>& acc_grad() const { return acc_grad_; }
   const std::shared_ptr<TensorArg>& current_grad() const { return current_grad_; }
-  bool is_grad_acc_inplace() const { return is_grad_acc_inplace_; }
+  // get current grad processed by hooks
+  Maybe<Tensor> current_grad_value() const;
   bool requires_grad() const { return requires_grad_; }
   bool is_leaf() const { return is_leaf_; }
   bool retain_grad() const { return retain_grad_; }
@@ -59,7 +60,6 @@ class AutogradMeta final {
   // Setters
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad);
   std::shared_ptr<Tensor> mut_acc_grad() { return acc_grad_; }
-  void set_is_grad_acc_inplace(bool is_inplace) { is_grad_acc_inplace_ = is_inplace; }
   void set_requires_grad(bool requires_grad) { requires_grad_ = requires_grad; }
   void set_retain_grad(bool retain_grad) { retain_grad_ = retain_grad; }
   void set_is_leaf(bool is_leaf) { is_leaf_ = is_leaf; }
@@ -76,10 +76,6 @@ class AutogradMeta final {
 
   // Only meaningful on non_leaf Tensors (must be false otherwise)
   bool retain_grad_;
-
-  // Control whether grad accumulation is inplace. Don't change it
-  // unless you know what you are doing
-  bool is_grad_acc_inplace_;
 
   std::shared_ptr<Tensor> acc_grad_;
   std::shared_ptr<TensorArg> current_grad_;
@@ -104,8 +100,8 @@ class TensorInfo final {
   std::shared_ptr<const Shape> shape_;
   Symbol<DType> dtype_;
   Optional<Symbol<Device>> device_;               // for local tensor
-  Optional<Symbol<ParallelDesc>> parallel_desc_;  // for consistent tensor
-  Optional<Symbol<NdSbp>> nd_sbp_;                // for consistent tensor
+  Optional<Symbol<ParallelDesc>> parallel_desc_;  // for global tensor
+  Optional<Symbol<NdSbp>> nd_sbp_;                // for global tensor
 };
 
 }  // namespace one

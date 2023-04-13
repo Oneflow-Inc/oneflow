@@ -30,20 +30,22 @@ class RegstSlot final {
   size_t total_regst_desc_cnt() const { return regst_desc_id2regsts_.size(); }
   size_t available_regst_desc_cnt() const { return available_regst_desc_cnt_; }
 
+  int64_t GetReadyRegstSize(int64_t regst_desc_id) const;
   bool IsCurSlotReady() const { return available_regst_desc_cnt() == total_regst_desc_cnt(); }
   bool HasRegstDescId(int64_t regst_desc_id) const;
   const std::deque<Regst*>& RegstDeq4RegstDescId(int64_t regst_desc_id) const;
-  void ForEachFrontRegst(std::function<void(Regst*)>) const;
-  void ForEachFrontRegst(std::function<void(int64_t regst_desc_id, Regst*)>) const;
-  void ForEachRegstDeq(std::function<void(const std::deque<Regst*>&)>) const;
-  void ForChosenFrontRegst(std::function<bool(int64_t)>, std::function<void(Regst*)>) const;
-  void ForChosenFrontRegst(std::function<bool(int64_t)>,
-                           std::function<void(int64_t regst_desc_id, Regst*)>) const;
-  void ForChosenRegstDeq(std::function<bool(int64_t)>,
-                         std::function<void(const std::deque<Regst*>&)>) const;
+  void ForEachFrontRegst(const std::function<void(Regst*)>&) const;
+  void ForEachFrontRegst(const std::function<void(int64_t regst_desc_id, Regst*)>&) const;
+  void ForEachRegstDeq(const std::function<void(const std::deque<Regst*>&)>&) const;
+  void ForChosenFrontRegst(const std::function<bool(int64_t)>&,
+                           const std::function<void(Regst*)>&) const;
+  void ForChosenFrontRegst(const std::function<bool(int64_t)>&,
+                           const std::function<void(int64_t regst_desc_id, Regst*)>&) const;
+  void ForChosenRegstDeq(const std::function<bool(int64_t)>&,
+                         const std::function<void(const std::deque<Regst*>&)>&) const;
   void ForChosenRegstDeq(
-      std::function<bool(int64_t)>,
-      std::function<void(int64_t regst_desc_id, const std::deque<Regst*>&)>) const;
+      const std::function<bool(int64_t)>&,
+      const std::function<void(int64_t regst_desc_id, const std::deque<Regst*>&)>&) const;
 
   Regst* Front(int64_t regst_desc_id) const;
   Regst* SoleFront() const;

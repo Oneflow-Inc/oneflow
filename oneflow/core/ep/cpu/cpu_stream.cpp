@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/ep/cpu/cpu_stream.h"
+#include "oneflow/core/thread/thread_runtime_factory.h"
 
 namespace oneflow {
 
@@ -21,11 +22,29 @@ namespace ep {
 
 DeviceType CpuStream::device_type() const { return DeviceType::kCPU; }
 
-Device* CpuStream::device() const { return device_; }
+CpuDevice* CpuStream::device() const { return device_; }
 
 Maybe<void> CpuStream::Sync() { return Maybe<void>::Ok(); }
 
 void CpuStream::RecordEvent(Event* /*event*/) {}
+
+Maybe<void> CpuStream::InitThreadRuntime() {
+  const auto thread_runtime_type = GetStringFromEnv("OF_THREADING_RUNTIME", [] {
+    if (thread::IsTbbEnabled()) { return "TBB"; }
+    if (thread::IsOmpEnabled()) { return "OMP"; }
+    return "SEQ";
+  }());
+  thread_runtime_ = JUST(thread::RuntimeFactory::Create(thread_runtime_type));
+  return Maybe<void>::Ok();
+}
+
+#ifdef WITH_ONEDNN
+
+const std::unique_ptr<ep::OneDnnExecutor>& CpuStream::onednn_executor() const {
+  return onednn_executor_;
+}
+
+#endif
 
 }  // namespace ep
 

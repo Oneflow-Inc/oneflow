@@ -129,6 +129,7 @@ void OpSchemaEmitter<Target>::run(raw_ostream& os) {
     emitAttrs(def, &op);
     emitInt(def, "same_output_regst_num", &op);
     emitTrait(def, "no_grad", "NoGrad", &op);
+    emitTrait(def, "support_non_contiguous", "SupportNonContiguous", &op);
     emitTrait(def, "cpu_only", "CpuOnly", &op);
     emitBit(def, "has_nd_sbp_infer_fn", &op);
     emitBit(def, "has_get_sbp_fn", &op);
@@ -140,6 +141,10 @@ void OpSchemaEmitter<Target>::run(raw_ostream& os) {
     emitBit(def, "has_output_arg_modify_fn", &op);
     emitBit(def, "has_output_blob_time_shape_infer_fn", &op);
     emitBit(def, "has_sbp_signature_infer_fn", &op);
+    emitBit(def, "has_get_nd_sbp_fn", &op);
+    emitBit(def, "has_enumerate_nd_sbp_signatures_fn", &op);
+    emitBit(def, "has_dump_nd_sbp_signature_for_op_conf_fn", &op);
+    emitBit(def, "has_compute_complexity_fn", &op);
     emitBit(def, "has_check_fn", &op);
     ops[op_name.str()] = op;
   }
@@ -149,7 +154,7 @@ void OpSchemaEmitter<Target>::run(raw_ostream& os) {
   filename = filename != "-" ? filename : "";
   json data{{"filename", filename}, {"ops", ops}};
 
-  if (Target == FileTarget::kSource) { data["include"] = sourceIncludeFilename; }
+  if (Target == FileTarget::kSource) { data["include"] = sourceIncludeFilename.getValue(); }
   if (!dumpJson.empty()) {
     std::ofstream file(dumpJson);
     file << data.dump();
@@ -187,9 +192,11 @@ void OpSchemaEmitter<Target>::emitAttrs(const Record* def, json* op) const {
       AS = A->getValueAsDef("baseAttr")->getNameInitAsString();
     }
     auto NS = attrs->getArgName(i)->getAsUnquotedString();
+    // FlatSymbolRefAttr:$callee,
+    if ("callee" == NS && "FlatSymbolRefAttr" == AS) { continue; }
     json attr{{"name", NS}, {"type", emitType(AS)}};
 
-    if (auto DV = A->getValueAsOptionalString("defaultValue")) { attr["default"] = DV.getValue(); }
+    if (auto DV = A->getValueAsOptionalString("defaultValue")) { attr["default"] = DV.value(); }
 
     (*op)["attrs"].push_back(attr);
   }

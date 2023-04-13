@@ -19,8 +19,10 @@ import os
 import oneflow as flow
 from oneflow.nn import init
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 from oneflow.nn.modules.utils import _pair, _single, _triple
+
+from typing import Union
 
 
 def slice(x, begin, size):
@@ -71,13 +73,34 @@ class ConvUtil(object):
         return result_list
 
 
-class Conv1d(Module):
-    """The interface is consistent with PyTorch.    
-    The documentation is referenced from: https://pytorch.org/docs/master/generated/torch.nn.Conv1d.html#conv1d
-    
-    Applies a 1D convolution over an input signal composed of several input
-    planes.
+def get_padding(padding, kernel_size, dilation, stride):
+    valid_padding_strings = {"same", "valid"}
+    if isinstance(padding, str):
+        if padding not in valid_padding_strings:
+            raise ValueError(
+                "Invalid padding string {!r}, should be one of {}".format(
+                    padding, valid_padding_strings
+                )
+            )
+        if padding == "same" and any(s != 1 for s in list(stride)):
+            raise ValueError("padding='same' is not supported for strided convolutions")
 
+    out_padding = [0] * len(kernel_size)
+    if padding == "same":
+        for d, k, i in zip(dilation, kernel_size, range(len(kernel_size) - 1, -1, -1)):
+            total_padding = d * (k - 1)
+            left_pad = total_padding // 2
+            out_padding[i] = left_pad
+    return out_padding
+
+
+class Conv1d(Module):
+    """Applies a 1D convolution over an input signal composed of several input
+    planes.
+    
+    The interface is consistent with PyTorch.    
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.Conv1d.html.
+    
     In the simplest case, the output value of the layer with input size
     :math:`(N, C_{\\text{in}}, L)` and output :math:`(N, C_{\\text{out}}, L_{\\text{out}})` can be
     precisely described as:
@@ -168,7 +191,7 @@ class Conv1d(Module):
         out_channels: int,
         kernel_size: _size_1_t,
         stride: _size_1_t = 1,
-        padding: _size_1_t = 0,
+        padding: Union[str, _size_1_t] = 0,
         dilation: _size_1_t = 1,
         groups: int = 1,
         bias: bool = True,
@@ -179,8 +202,12 @@ class Conv1d(Module):
         self.padding_mode = padding_mode
         self.kernel_size = _single(kernel_size)
         self.stride = _single(stride)
-        self.padding = _single(padding)
         self.dilation = _single(dilation)
+        self.padding = (
+            get_padding(padding, self.kernel_size, self.dilation, self.stride)
+            if isinstance(padding, str)
+            else _single(padding)
+        )
         self.groups = groups
         self.channel_pos = "channels_first"
         assert in_channels % groups == 0
@@ -203,17 +230,20 @@ class Conv1d(Module):
             bound = 1 / math.sqrt(fan_in)
             init.uniform_(self.bias, -bound, bound)
 
-    def forward(self, x):
+    def _conv_forward(self, x, weight, bias):
         return flow._C.conv1d(
             x,
-            self.weight,
-            self.bias,
+            weight,
+            bias,
             stride=self.stride,
             padding=self.padding,
             dilation=self.dilation,
             groups=self.groups,
             channel_pos=self.channel_pos,
         )
+
+    def forward(self, x):
+        return self._conv_forward(x, self.weight, self.bias)
 
     def extra_repr(self):
         s = "{in_channels}, {out_channels}, kernel_size={kernel_size}, stride={stride}"
@@ -231,11 +261,10 @@ class Conv1d(Module):
 
 
 class Conv2d(Module):
-    """The interface is consistent with PyTorch.    
-    The documentation is referenced from: https://pytorch.org/docs/master/generated/torch.nn.Conv2d.html#conv2d
-    
-    Applies a 2D convolution over an input signal composed of several input
+    """Applies a 2D convolution over an input signal composed of several input
     planes.
+    The interface is consistent with PyTorch.    
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.Conv2d.html.
 
     In the simplest case, the output value of the layer with input size
     :math:`(N, C_{\\text{in}}, H, W)` and output :math:`(N, C_{\\text{out}}, H_{\\text{out}}, W_{\\text{out}})`
@@ -353,7 +382,7 @@ class Conv2d(Module):
         out_channels: int,
         kernel_size: _size_2_t,
         stride: _size_2_t = 1,
-        padding: _size_2_t = 0,
+        padding: Union[str, _size_2_t] = 0,
         dilation: _size_2_t = 1,
         groups: int = 1,
         bias: bool = True,
@@ -364,8 +393,12 @@ class Conv2d(Module):
         self.padding_mode = padding_mode
         self.kernel_size = _pair(kernel_size)
         self.stride = _pair(stride)
-        self.padding = _pair(padding)
         self.dilation = _pair(dilation)
+        self.padding = (
+            get_padding(padding, self.kernel_size, self.dilation, self.stride)
+            if isinstance(padding, str)
+            else _pair(padding)
+        )
         self.groups = groups
 
         if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
@@ -399,25 +432,20 @@ class Conv2d(Module):
             bound = 1 / math.sqrt(fan_in)
             init.uniform_(self.bias, -bound, bound)
 
-    def forward(self, x):
-        if self.channel_pos == "channels_first":
-            in_channel_axis = 1
-        else:
-            in_channel_axis = 3
-        if x.shape[in_channel_axis] != self.in_channels:
-            raise ValueError(
-                f"The input channels {x.shape[in_channel_axis]} should be equal to self.in_channels {self.in_channels}."
-            )
+    def _conv_forward(self, x, weight, bias):
         return flow._C.conv2d(
             x,
-            self.weight,
-            self.bias,
+            weight,
+            bias,
             stride=self.stride,
             padding=self.padding,
             dilation=self.dilation,
             groups=self.groups,
             channel_pos=self.channel_pos,
         )
+
+    def forward(self, x):
+        return self._conv_forward(x, self.weight, self.bias)
 
     def extra_repr(self):
         s = "{in_channels}, {out_channels}, kernel_size={kernel_size}, stride={stride}"
@@ -435,11 +463,11 @@ class Conv2d(Module):
 
 
 class Conv3d(Module):
-    r"""The interface is consistent with PyTorch.    
-    The documentation is referenced from: https://pytorch.org/docs/master/generated/torch.nn.Conv3d.html#conv3d
-    
-    Applies a 3D convolution over an input signal composed of several input
+    r"""Applies a 3D convolution over an input signal composed of several input
     planes.
+    
+    The interface is consistent with PyTorch.    
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.Conv3d.html.
 
     In the simplest case, the output value of the layer with input size :math:`(N, C_{in}, D, H, W)`
     and output :math:`(N, C_{out}, D_{out}, H_{out}, W_{out})` can be precisely described as:
@@ -535,7 +563,7 @@ class Conv3d(Module):
         out_channels: int,
         kernel_size: _size_3_t,
         stride: _size_3_t = 1,
-        padding: _size_3_t = 0,
+        padding: Union[str, _size_3_t] = 0,
         dilation: _size_3_t = 1,
         groups: int = 1,
         bias: bool = True,
@@ -547,8 +575,12 @@ class Conv3d(Module):
         self.padding_mode = padding_mode
         self.kernel_size = _triple(kernel_size)
         self.stride = _triple(stride)
-        self.padding = _triple(padding)
         self.dilation = _triple(dilation)
+        self.padding = (
+            get_padding(padding, self.kernel_size, self.dilation, self.stride)
+            if isinstance(padding, str)
+            else _triple(padding)
+        )
         self.groups = groups
         self.channel_pos = "channels_first"
         assert in_channels % groups == 0, "in_channels must be divisible by groups"
@@ -571,19 +603,20 @@ class Conv3d(Module):
             bound = 1 / math.sqrt(fan_in)
             init.uniform_(self.bias, -bound, bound)
 
-    def forward(self, x):
-        if x.shape[1] != self.in_channels:
-            raise ValueError("The input channels should be equal to self.in_channels")
+    def _conv_forward(self, x, weight, bias):
         return flow._C.conv3d(
             x,
-            self.weight,
-            self.bias,
+            weight,
+            bias,
             stride=self.stride,
             padding=self.padding,
             dilation=self.dilation,
             groups=self.groups,
             channel_pos=self.channel_pos,
         )
+
+    def forward(self, x):
+        return self._conv_forward(x, self.weight, self.bias)
 
     def extra_repr(self):
         s = "{in_channels}, {out_channels}, kernel_size={kernel_size}, stride={stride}"
@@ -730,14 +763,12 @@ class ConvTranspose1d(Module):
             x,
             self.weight,
             self.bias,
-            self.filters,
-            self.padding,
-            "channels_first",
-            self.kernel_size,
-            self.output_padding,
             self.stride,
-            self.dilation,
+            self.padding,
+            self.output_padding,
             self.groups,
+            self.dilation,
+            "channels_first",
         )
 
 
@@ -857,14 +888,12 @@ class ConvTranspose2d(Module):
             x,
             self.weight,
             self.bias,
-            self.filters,
-            self.padding,
-            "channels_first",
-            self.kernel_size,
-            self.output_padding,
             self.stride,
-            self.dilation,
+            self.padding,
+            self.output_padding,
             self.groups,
+            self.dilation,
+            "channels_first",
         )
         return res
 
@@ -1020,14 +1049,12 @@ class ConvTranspose3d(Module):
             x,
             self.weight,
             self.bias,
-            self.filters,
-            self.padding,
-            "channels_first",
-            self.kernel_size,
-            self.output_padding,
             self.stride,
-            self.dilation,
+            self.padding,
+            self.output_padding,
             self.groups,
+            self.dilation,
+            "channels_first",
         )
 
 

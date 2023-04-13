@@ -23,9 +23,9 @@ namespace oneflow {
 namespace {
 
 Maybe<void> InferReduceDeviceStageDtypeFn(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-  *ctx->OutputDType("mask", 0) = DataType::kBool;
-  *ctx->OutputDType("count", 0) = DataType::kInt32;
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
+  ctx->SetOutputDType("mask", 0, DataType::kBool);
+  ctx->SetOutputDType("count", 0, DataType::kInt32);
   return Maybe<void>::Ok();
 }
 
@@ -33,9 +33,9 @@ Maybe<void> InferReduceDeviceStageLogicalTensorDescFn(user_op::InferContext* ctx
   const Shape& input_shape = ctx->InputShape("in", 0);
   const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
   const int64_t num_axes = input_shape.NumAxes();
-  Shape* output_shape = ctx->OutputShape("out", 0);
+  Shape output_shape;
   if (axis.empty()) {
-    *output_shape = Shape::Ones(num_axes);
+    output_shape = Shape::Ones(num_axes);
   } else {
     const ParallelDesc& parallel_desc = ctx->parallel_desc();
     const NdSbp& in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
@@ -60,11 +60,11 @@ Maybe<void> InferReduceDeviceStageLogicalTensorDescFn(user_op::InferContext* ctx
         }
       }
     }
-    *output_shape = Shape(dim_vec);
+    output_shape = Shape(dim_vec);
   }
-
-  *ctx->OutputShape("mask", 0) = input_shape;
-  *ctx->OutputShape("count", 0) = *output_shape;
+  ctx->SetOutputShape("out", 0, output_shape);
+  ctx->SetOutputShape("mask", 0, input_shape);
+  ctx->SetOutputShape("count", 0, output_shape);
 
   return Maybe<void>::Ok();
 }
@@ -72,38 +72,46 @@ Maybe<void> InferReduceDeviceStageLogicalTensorDescFn(user_op::InferContext* ctx
 Maybe<void> InferReduceDeviceStagePhysicalTensorDescFn(user_op::InferContext* ctx) {
   const Shape& input_shape = ctx->InputShape("in", 0);
   const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
-  Shape* output_shape = ctx->OutputShape("out", 0);
+  Shape output_shape;
   if (axis.empty()) {
-    *output_shape = Shape::Ones(input_shape.NumAxes());
+    output_shape = Shape::Ones(input_shape.NumAxes());
   } else {
     const AxisVector axis_vec = {axis.begin(), axis.end()};
     const Shape& reduced_shape = CreateReducedShape(input_shape, axis_vec);
-    *output_shape = reduced_shape;
+    output_shape = reduced_shape;
   }
 
-  *ctx->OutputShape("mask", 0) = input_shape;
-  *ctx->OutputShape("count", 0) = *output_shape;
+  ctx->SetOutputShape("out", 0, output_shape);
+  ctx->SetOutputShape("mask", 0, input_shape);
+  ctx->SetOutputShape("count", 0, output_shape);
+  ;
 
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferReduceDeviceStageGradDtypeFn(user_op::InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kBool);
-  CHECK_EQ_OR_RETURN(ctx->InputDType("count", 0), DataType::kInt32);
-  *ctx->OutputDType("in_diff", 0) = ctx->InputDType("out_diff", 0);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kBool)
+      << "InferDataType Failed. Expected " << DataType_Name(DataType::kBool) << ", but got "
+      << DataType_Name(ctx->InputDType("mask", 0));
+  CHECK_EQ_OR_RETURN(ctx->InputDType("count", 0), DataType::kInt32)
+      << "InferDataType Failed. Expected " << DataType_Name(DataType::kInt32) << ", but got "
+      << DataType_Name(ctx->InputDType("count", 0));
+  ctx->SetOutputDType("in_diff", 0, ctx->InputDType("out_diff", 0));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferReduceDeviceStageGradTensorDescFn(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputShape("out_diff", 0), ctx->InputShape("count", 0));
-  *ctx->OutputShape("in_diff", 0) = ctx->InputShape("mask", 0);
+  ctx->SetOutputShape("in_diff", 0, ctx->InputShape("mask", 0));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferReduceGlobalStageDtypeFn(user_op::InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(ctx->InputDType("device_count", 0), DataType::kInt32);
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-  *ctx->OutputDType("mask", 0) = DataType::kBool;
+  CHECK_EQ_OR_RETURN(ctx->InputDType("device_count", 0), DataType::kInt32)
+      << "InferDataType Failed. Expected " << DataType_Name(DataType::kInt32) << ", but got "
+      << DataType_Name(ctx->InputDType("device_count", 0));
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
+  ctx->SetOutputDType("mask", 0, DataType::kBool);
 
   return Maybe<void>::Ok();
 }
@@ -114,33 +122,38 @@ Maybe<void> InferReduceGlobalStageTensorDescFn(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(input_shape, device_count_shape);
   const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
   bool keepdims = ctx->Attr<bool>("keepdims");
-  Shape* output_shape = ctx->OutputShape("out", 0);
+  Shape output_shape;
   if (axis.empty()) {
     if (keepdims) {
-      *output_shape = Shape::Ones(input_shape.NumAxes());
+      output_shape = Shape::Ones(input_shape.NumAxes());
     } else {
-      *output_shape = Shape({1});
+      output_shape = Shape({1});
     }
   } else {
     const AxisVector axis_vec = {axis.begin(), axis.end()};
     const Shape& reduced_shape = CreateReducedShape(input_shape, axis_vec);
     if (keepdims) {
-      *output_shape = reduced_shape;
+      output_shape = reduced_shape;
     } else {
-      *output_shape = reduced_shape.RemoveOnes(axis_vec);
+      output_shape = reduced_shape.RemoveOnes(axis_vec);
     }
   }
 
-  *ctx->OutputShape("mask", 0) = input_shape;
+  ctx->SetOutputShape("out", 0, output_shape);
+  ctx->SetOutputShape("mask", 0, input_shape);
 
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferReduceGlobalStageGradDtypeFn(user_op::InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kBool);
-  CHECK_EQ_OR_RETURN(ctx->InputDType("device_count", 0), DataType::kInt32);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kBool)
+      << "InferDataType Failed. Expected " << DataType_Name(DataType::kBool) << ", but got "
+      << DataType_Name(ctx->InputDType("mask", 0));
+  CHECK_EQ_OR_RETURN(ctx->InputDType("device_count", 0), DataType::kInt32)
+      << "InferDataType Failed. Expected " << DataType_Name(DataType::kInt32) << ", but got "
+      << DataType_Name(ctx->InputDType("device_count", 0));
 
-  *ctx->OutputDType("in_diff", 0) = ctx->InputDType("out_diff", 0);
+  ctx->SetOutputDType("in_diff", 0, ctx->InputDType("out_diff", 0));
 
   return Maybe<void>::Ok();
 }
@@ -149,7 +162,7 @@ Maybe<void> InferReduceGlobalStageGradTensorDescFn(user_op::InferContext* ctx) {
   const Shape& mask_shape = ctx->InputShape("mask", 0);
   const Shape& device_count_shape = ctx->InputShape("device_count", 0);
   CHECK_EQ_OR_RETURN(device_count_shape, mask_shape);
-  *ctx->OutputShape("in_diff", 0) = mask_shape;
+  ctx->SetOutputShape("in_diff", 0, mask_shape);
   return Maybe<void>::Ok();
 }
 
@@ -235,34 +248,6 @@ IMPLEMENT_REDUCE_DEVICE_STAGE_USER_GRAD_OP_FUNCS(ReduceMinDeviceStage)
 IMPLEMENT_REDUCE_DEVICE_STAGE_USER_GRAD_OP_FUNCS(ReduceMaxDeviceStage)
 #undef IMPLEMENT_REDUCE_DEVICE_STAGE_USER_GRAD_OP_FUNCS
 
-Maybe<void> GenBackwardOpConf4ReduceDeviceStage(const std::string& op_type_name,
-                                                const user_op::UserOpWrapper& op,
-                                                user_op::AddOpFn AddOp) {
-  if (op.NeedGenGradTensor4OpInput("in", 0)) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    user_op::UserOpConfWrapper grad_op =
-        builder.Op(op_type_name)
-            .Input("mask", op.output("mask", 0))
-            .Input("count", op.output("count", 0))
-            .Input("out_diff", op.GetGradTensorWithOpOutput("out", 0))
-            .Output("in_diff")
-            .Attr("axis", op.attr<std::vector<int32_t>>("axis"))
-            .Build();
-    op.BindGradTensorWithOpInput(grad_op.output("in_diff", 0), "in", 0);
-    AddOp(grad_op);
-  }
-  return Maybe<void>::Ok();
-}
-
-#define REGISTER_REDUCE_DEVICE_STAGE_USER_OP_GRAD(op_type_name, grad_op_type_name)      \
-  REGISTER_USER_OP_GRAD(op_type_name)                                                   \
-      .SetGenBackwardOpConfFn(                                                          \
-          [](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) -> Maybe<void> { \
-            return GenBackwardOpConf4ReduceDeviceStage(grad_op_type_name, op, AddOp);   \
-          });
-REGISTER_REDUCE_DEVICE_STAGE_USER_OP_GRAD("reduce_min_device_stage", "reduce_min_device_stage_grad")
-REGISTER_REDUCE_DEVICE_STAGE_USER_OP_GRAD("reduce_max_device_stage", "reduce_max_device_stage_grad")
-
 #define IMPLEMENT_REDUCE_GLOBAL_STAGE_OP_FUNCS(op_name)                                          \
   /*static*/ Maybe<void> op_name##Op::GetSbp(user_op::SbpContext* ctx) {                         \
     ctx->NewBuilder()                                                                            \
@@ -316,34 +301,5 @@ IMPLEMENT_REDUCE_GLOBAL_STAGE_OP_FUNCS(ReduceMaxGlobalStage)
 IMPLEMENT_REDUCE_GLOBAL_STAGE_GRAD_OP_FUNCS(ReduceMinGlobalStage)
 IMPLEMENT_REDUCE_GLOBAL_STAGE_GRAD_OP_FUNCS(ReduceMaxGlobalStage)
 #undef IMPLEMENT_REDUCE_GLOBAL_STAGE_GRAD_OP_FUNCS
-
-Maybe<void> GenBackwardOpConf4ReduceGlobalStage(const std::string& op_type_name,
-                                                const user_op::UserOpWrapper& op,
-                                                user_op::AddOpFn AddOp) {
-  if (op.NeedGenGradTensor4OpInput("in", 0)) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    user_op::UserOpConfWrapper grad_op =
-        builder.Op(op_type_name)
-            .Input("mask", op.output("mask", 0))
-            .Input("device_count", op.input("device_count", 0))
-            .Input("out_diff", op.GetGradTensorWithOpOutput("out", 0))
-            .Output("in_diff")
-            .Attr("axis", op.attr<std::vector<int32_t>>("axis"))
-            .Attr("keepdims", op.attr<bool>("keepdims"))
-            .Build();
-    op.BindGradTensorWithOpInput(grad_op.output("in_diff", 0), "in", 0);
-    AddOp(grad_op);
-  }
-  return Maybe<void>::Ok();
-}
-
-#define REGISTER_REDUCE_GLOBAL_STAGE_USER_OP_GRAD(op_type_name, grad_op_type_name)      \
-  REGISTER_USER_OP_GRAD(op_type_name)                                                   \
-      .SetGenBackwardOpConfFn(                                                          \
-          [](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) -> Maybe<void> { \
-            return GenBackwardOpConf4ReduceGlobalStage(grad_op_type_name, op, AddOp);   \
-          });
-REGISTER_REDUCE_GLOBAL_STAGE_USER_OP_GRAD("reduce_min_global_stage", "reduce_min_global_stage_grad")
-REGISTER_REDUCE_GLOBAL_STAGE_USER_OP_GRAD("reduce_max_global_stage", "reduce_max_global_stage_grad")
 
 }  // namespace oneflow

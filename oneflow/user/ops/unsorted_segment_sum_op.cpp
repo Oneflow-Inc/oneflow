@@ -52,7 +52,6 @@ namespace oneflow {
   const Shape& data_shape = ctx->InputShape("data", 0);
   const int64_t axis = ctx->Attr<int64_t>("axis");
   const int64_t num_segments = ctx->Attr<int64_t>("num_segments");
-  Shape* out_shape = ctx->OutputShape("out", 0);
   const Shape& segment_ids_shape = ctx->InputShape("segment_ids", 0);
 
   DimVector dim_vec;
@@ -61,7 +60,7 @@ namespace oneflow {
   dim_vec.emplace_back(num_segments);
   dim_vec.insert(dim_vec.end(), data_shape.dim_vec().cbegin() + axis + segment_ids_shape.NumAxes(),
                  data_shape.dim_vec().end());
-  *out_shape = Shape(dim_vec);
+  ctx->SetOutputShape("out", 0, Shape(dim_vec));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UnsortedSegmentSumOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -69,7 +68,7 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> UnsortedSegmentSumOp::InferDataType(user_op::InferContext* ctx) {
   CHECK_OR_RETURN(IsIndexDataType(ctx->InputDType("segment_ids", 0)));
-  *ctx->OutputDType("out", 0) = ctx->InputDType("data", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("data", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UnsortedSegmentSumOp::ModifyInputArg(
@@ -79,25 +78,6 @@ namespace oneflow {
   segment_ids_modifier->set_requires_grad(false);
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("unsorted_segment_sum")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      bool need_grad_data = op.NeedGenGradTensor4OpInput("data", 0);
-      if (need_grad_data) {
-        user_op::UserOpConfWrapperBuilder data_grad_builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper data_grad_op =
-            data_grad_builder.Op("gather")
-                .Input("in", op.GetGradTensorWithOpOutput("out", 0))
-                .Input("indices", op.input("segment_ids", 0))
-                .Output("out")
-                .Attr("axis", op.attr<int64_t>("axis"))
-                .Build();
-        op.BindGradTensorWithOpInput(data_grad_op.output("out", 0), "data", 0);
-        AddOp(data_grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
 
 /*static*/ Maybe<void> UnsortedSegmentSumLikeOp::GetSbp(user_op::SbpContext* ctx) {
   const int64_t data_num_axes =
@@ -163,8 +143,8 @@ REGISTER_USER_OP_GRAD("unsorted_segment_sum")
   FOR_RANGE(int64_t, i, axis + 1, like_shape.NumAxes()) {
     CHECK_EQ_OR_RETURN(like_shape.At(i), data_shape.At(i + segment_ids_shape.NumAxes() - 1));
   }
-  *ctx->OutputShape("out", 0) = ctx->InputShape("like", 0);
-  *ctx->IsDynamic4ArgNameAndIndex("out", 0) = ctx->InputIsDynamic("like", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("like", 0));
+  ctx->SetIsDynamic4ArgNameAndIndex("out", 0, ctx->InputIsDynamic("like", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UnsortedSegmentSumLikeOp::InferPhysicalTensorDesc(
@@ -174,9 +154,11 @@ REGISTER_USER_OP_GRAD("unsorted_segment_sum")
 /*static*/ Maybe<void> UnsortedSegmentSumLikeOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& data = ctx->InputTensorDesc("data", 0);
   const user_op::TensorDesc& like = ctx->InputTensorDesc("like", 0);
-  CHECK_EQ_OR_RETURN(data.data_type(), like.data_type());
+  CHECK_EQ_OR_RETURN(data.data_type(), like.data_type())
+      << "InferDataType Failed. Expected " << DataType_Name(like.data_type()) << ", but got "
+      << DataType_Name(data.data_type());
   CHECK_OR_RETURN(IsIndexDataType(ctx->InputDType("segment_ids", 0)));
-  *ctx->OutputDType("out", 0) = ctx->InputDType("like", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("data", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UnsortedSegmentSumLikeOp::ModifyInputArg(

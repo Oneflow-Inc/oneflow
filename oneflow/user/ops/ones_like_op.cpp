@@ -33,14 +33,15 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> OnesLikeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("like", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("like", 0));
+  ctx->SetOutputStride("out", 0, ctx->InputStride("like", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> OnesLikeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return OnesLikeOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> OnesLikeOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("like", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("like", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> OnesLikeOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {

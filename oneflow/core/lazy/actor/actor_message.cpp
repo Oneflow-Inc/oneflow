@@ -135,17 +135,6 @@ int64_t ActorMsg::eord_regst_desc_id() const {
   return eord_regst_desc_id_;
 }
 
-void ActorMsg::AddUserData(uint8_t size, const void* data) {
-  CHECK_EQ(user_data_size_, 0);
-  CHECK_LE(size, kActorMsgUserDataMaxSize);
-  user_data_size_ = size;
-  std::memcpy(user_data_, data, size);
-}
-
-uint8_t ActorMsg::user_data_size() const { return user_data_size_; }
-
-const void* ActorMsg::user_data() const { return user_data_; }
-
 bool ActorMsg::IsDataRegstMsgToConsumer() const {
   return msg_type_ == ActorMsgType::kRegstMsg && regst_wrapper_.is_data_regst_to_consumer;
 }

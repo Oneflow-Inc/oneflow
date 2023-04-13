@@ -29,7 +29,9 @@ void CollectiveBoxingGenericTaskNode::Init(int64_t machine_id, int64_t thrd_id,
 void CollectiveBoxingGenericTaskNode::ProduceAllRegstsAndBindEdges() {
   if (boxing::collective::GenericOpHasOutput(
           op_conf_.collective_boxing_generic_conf().rank_desc())) {
-    std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", false, 1, 1);
+    const bool enable_mem_reuse =
+        ParseBooleanFromEnv("ONEFLOW_GRAPH_BOXING_ENABLE_MEM_REUSE", false);
+    std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", enable_mem_reuse, 1, 1);
     this->ForEachOutDataEdge([&](TaskEdge* out_dege) { out_dege->AddRegst("out", out_regst); });
   }
 }

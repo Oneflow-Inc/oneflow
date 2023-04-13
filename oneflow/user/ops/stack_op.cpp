@@ -18,41 +18,13 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace {
-
-Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) {
-  bool need_grad = false;
-  const int32_t in_size = op.input_size("in");
-  FOR_RANGE(int32_t, i, 0, in_size) {
-    if (op.NeedGenGradTensor4OpInput("in", i)) { need_grad = true; }
-  }
-  if (need_grad) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    builder = builder.Op("stack_backward");
-    FOR_RANGE(int32_t, i, 0, in_size) { builder = builder.Input("like", op.input("in", i)); }
-    user_op::UserOpConfWrapper grad_op = builder.Input("in", op.GetGradTensorWithOpOutput("out", 0))
-                                             .Output("out", in_size)
-                                             .Attr("axis", op.attr<int64_t>("axis"))
-                                             .Build();
-
-    FOR_RANGE(int32_t, i, 0, in_size) {
-      if (op.NeedGenGradTensor4OpInput("in", i)) {
-        op.BindGradTensorWithOpInput(grad_op.output("out", i), "in", i);
-      }
-    }
-    AddOp(grad_op);
-  }
-  return Maybe<void>::Ok();
-}
-
-}  // namespace
-
 /* static */ Maybe<void> StackOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& first_in_desc = ctx->InputTensorDesc("in", 0);
   const int64_t axis = ctx->Attr<int64_t>("axis");
   CHECK_GE_OR_RETURN(axis, 0) << "The axis should be greater than or equal to 0.";
   const int64_t in_num_axes = first_in_desc.shape().NumAxes();
-  CHECK_LE_OR_RETURN(axis, in_num_axes) "The axis should be less than or equal to input num axes.";
+  CHECK_LE_OR_RETURN(axis, in_num_axes)
+      << "The axis should be less than or equal to input num axes.";
   DimVector out_dim_vec(in_num_axes + 1);
   for (int i = 0; i < in_num_axes + 1; i++) {
     if (i == axis) {
@@ -85,7 +57,7 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
       }
     }
   }
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   const int64_t max_dim_size = ctx->Attr<int64_t>("max_dim_size");
   CHECK_LE_OR_RETURN(out_dim_vec.at(axis), max_dim_size)
       << "The out shape at axis " << axis << " should be less equal to " << max_dim_size;
@@ -95,7 +67,7 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
     out_desc->set_is_dynamic(true);
     out_dim_vec.at(axis) = max_dim_size;
   }
-  *out_desc->mut_shape() = Shape(out_dim_vec);
+  out_desc->set_shape(Shape(out_dim_vec));
   return Maybe<void>::Ok();
 }
 
@@ -107,8 +79,16 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
   const int64_t axis = ctx->Attr<int64_t>("axis");
   const user_op::TensorDesc& first_in_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
   FOR_RANGE(int64_t, i, 0, first_in_desc.shape().NumAxes()) {
-    if (i >= axis) { continue; }
-    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+    /*
+    Stack can be view as expand_dims + concat.
+    For stack([(2, 4, 6), (2, 4, 6), axis=1]), it equals to [2, 4, 6]->[2, 1, 4, 6]. concat([2, 1,
+    4, 6], [2, 1, 4, 6], concat_dim=1) Concat split all the axis except the concat_dim.
+    */
+    if (i >= axis) {
+      ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i + 1).Build();
+    } else {
+      ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+    }
   }
   ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
   return Maybe<void>::Ok();
@@ -120,10 +100,11 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
     const user_op::TensorDesc& in_desc =
         ctx->InputTensorDesc(in_arg_pair.first, in_arg_pair.second);
     CHECK_EQ_OR_RETURN(in_desc.data_type(), first_in_desc.data_type())
-        << "The input's data type should be equal to first input's data type. ";
+        << "InferDataType Failed. Expected " << DataType_Name(first_in_desc.data_type())
+        << ", but got " << DataType_Name(in_desc.data_type());
   }
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
-  *out_desc->mut_data_type() = first_in_desc.data_type();
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
+  out_desc->set_data_type(first_in_desc.data_type());
   return Maybe<void>::Ok();
 }
 
@@ -136,29 +117,22 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
 
 /*static*/ Maybe<void> StackGradOp::GetSbp(user_op::SbpContext* ctx) {
   const auto axis = ctx->Attr<int64_t>("axis");
-  const int64_t in_num_axes =
-      ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape().NumAxes();
   const int64_t like_num_axes =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape().NumAxes();
-  FOR_RANGE(int64_t, i, 0, like_num_axes) {
-    if (i == axis) { continue; }
-    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
-  }
   std::vector<user_op::OpArg> like_arg_vec;
   const size_t like_arg_size = ctx->outputs().size();
   like_arg_vec.reserve(like_arg_size);
   FOR_RANGE(int32_t, i, 0, like_arg_size) { like_arg_vec.emplace_back("like", i); }
-  FOR_RANGE(int64_t, i, like_num_axes, in_num_axes) {
-    ctx->NewBuilder()
-        .Split(user_op::OpArg("in", 0), i)
-        .Broadcast(like_arg_vec)
-        .Split(ctx->outputs(), i)
-        .Build();
-    ctx->NewBuilder()
-        .Split(user_op::OpArg("in", 0), i)
-        .PartialSum(like_arg_vec)
-        .Split(ctx->outputs(), i)
-        .Build();
+  FOR_RANGE(int64_t, i, 0, like_num_axes) {
+    if (i >= axis) {
+      ctx->NewBuilder()
+          .Split(like_arg_vec, i)
+          .Split(ctx->outputs(), i)
+          .Split(user_op::OpArg("in", 0), i + 1)
+          .Build();
+    } else {
+      ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+    }
   }
   ctx->NewBuilder()
       .PartialSum(user_op::OpArg("in", 0))
@@ -190,7 +164,7 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
       << "The axis should be less equal than num axes of `like` tensor. ";
   FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
     const user_op::TensorDesc& like_i_desc = ctx->InputTensorDesc("like", i);
-    user_op::TensorDesc* out_i_desc = ctx->OutputTensorDesc("out", i);
+    user_op::TensorDesc* out_i_desc = ctx->MutOutputTensorDesc("out", i);
     CHECK_EQ_OR_RETURN(like_i_desc.shape().NumAxes(), like_num_axes)
         << "The num axes of `like` tensor at index " << i
         << " should be equal to first `like` tensor. ";
@@ -216,7 +190,7 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
       }
     }
     DimVector out_i_dim_vec = like_i_desc.shape().dim_vec();
-    *out_i_desc->mut_shape() = Shape(out_i_dim_vec);
+    out_i_desc->set_shape(Shape(out_i_dim_vec));
     out_i_desc->set_is_dynamic(like_i_desc.is_dynamic());
   }
   if (dynamic_dim_size == 0) {
@@ -236,8 +210,8 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
 /*static*/ Maybe<void> StackGradOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
   FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
-    user_op::TensorDesc* out_i_desc = ctx->OutputTensorDesc("out", i);
-    *out_i_desc->mut_data_type() = in_desc.data_type();
+    user_op::TensorDesc* out_i_desc = ctx->MutOutputTensorDesc("out", i);
+    out_i_desc->set_data_type(in_desc.data_type());
   }
   return Maybe<void>::Ok();
 }
@@ -259,7 +233,5 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
       << "The count of out tensor should be greater than or equal to 1. ";
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("Stack").SetGenBackwardOpConfFn(GenGradOp);
 
 }  // namespace oneflow

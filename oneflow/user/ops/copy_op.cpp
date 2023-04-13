@@ -17,31 +17,42 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/common/env_var/stream.h"
 
 namespace oneflow {
 
 namespace {
 
+StreamType GetH2DStreamType() {
+  if (ThreadLocalEnvBool<ONEFLOW_STREAM_ENABLE_H2D_STREAM>()) {
+    return StreamType::kHost2Device;
+  } else {
+    return StreamType::kCompute;
+  }
+}
+
 Maybe<Symbol<Stream>> MakeCopyStream(const Symbol<Device>& in_device,
-                                     const Symbol<Device>& out_device) {
-  if (in_device->type() == "cuda" && out_device->type() == "cpu") {
-    const auto device = JUST(Device::New("cuda", in_device->device_id()));
-    return Stream::New(device, StreamRole::kDevice2Host);
-  } else if (in_device->type() == "cpu" && out_device->type() == "cuda") {
-    const auto device = JUST(Device::New("cuda", out_device->device_id()));
-    return Stream::New(device, StreamRole::kHost2Device);
+                                     const Symbol<Device>& out_device, const bool pin_memory) {
+  if (in_device->type() != "cpu" && out_device->type() == "cpu") {
+    return Stream::New(in_device, StreamType::kDevice2Host);
+  } else if (in_device->type() == "cpu" && out_device->type() != "cpu") {
+    return Stream::New(out_device, GetH2DStreamType());
+  } else if (in_device->type() == "cpu" && out_device->type() == "cpu" && pin_memory) {
+    // TODO:(zhaoluyang) Parsing pin-memory-device from python
+    auto pin_device = JUST(Device::New("cuda"));
+    return Stream::New(pin_device, StreamType::kPinnedCompute);
   } else {
     CHECK_EQ_OR_RETURN(in_device->type(), out_device->type());
-    const auto device = JUST(Device::New(out_device->type(), out_device->device_id()));
-    return Stream::New(device, StreamRole::kCompute);
+    return Stream::New(out_device, StreamType::kCompute);
   }
 }
 
 }  // namespace
 
 /* static */ Maybe<void> CopyOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-  *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
+  ctx->SetOutputStride("out", 0, ctx->InputStride("in", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -62,17 +73,17 @@ Maybe<Symbol<Stream>> MakeCopyStream(const Symbol<Device>& in_device,
 }
 
 /* static */ Maybe<void> CopyOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<Symbol<Stream>> CopyOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  Symbol<Device> out_device =
-      JUST(Device::New(ctx->Attr<std::string>("device_type"), ctx->Attr<int64_t>("device_id")));
+  Symbol<Device> out_device = ctx->Attr<Symbol<Device>>("device");
   *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) = out_device;
   const Symbol<Device>& in_device = ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
-  return MakeCopyStream(in_device, out_device);
+  const bool pin_memory = ctx->Attr<bool>("pin_memory");
+  return MakeCopyStream(in_device, out_device, pin_memory);
 }
 
 }  // namespace oneflow

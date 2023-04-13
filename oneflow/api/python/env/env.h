@@ -19,40 +19,28 @@ limitations under the License.
 #include <string>
 #include <google/protobuf/text_format.h>
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/job/cluster.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/job/cluster_instruction.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/resource_desc.h"
-#include "oneflow/core/job/graph_verbose_step_lr_util.h"
+#include "oneflow/core/job/graph_scope_vars.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/rpc/include/base.h"
+#include "oneflow/core/ep/include/device_manager_registry.h"
+#include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/vm/virtual_machine.h"
 
 namespace oneflow {
 
 inline Maybe<std::string> CurrentResource() {
-  CHECK_NOTNULL_OR_RETURN((Global<ResourceDesc, ForSession>::Get()));
-  return PbMessage2TxtString(Global<ResourceDesc, ForSession>::Get()->resource());
+  CHECK_NOTNULL_OR_RETURN((Singleton<ResourceDesc, ForSession>::Get()));
+  return PbMessage2TxtString(Singleton<ResourceDesc, ForSession>::Get()->resource());
 }
 
 inline Maybe<std::string> EnvResource() {
-  CHECK_NOTNULL_OR_RETURN((Global<ResourceDesc, ForEnv>::Get()));
-  return PbMessage2TxtString(Global<ResourceDesc, ForEnv>::Get()->resource());
-}
-
-inline Maybe<void> EnableEagerEnvironment(bool enable_eager_execution) {
-  CHECK_NOTNULL_OR_RETURN((Global<bool, EagerExecution>::Get()));
-  *Global<bool, EagerExecution>::Get() = enable_eager_execution;
-  return Maybe<void>::Ok();
-}
-
-inline Maybe<EnvGlobalObjectsScope> CreateEnv(const std::string& env_proto_str) {
-  EnvProto env_proto;
-  CHECK_OR_RETURN(TxtString2PbMessage(env_proto_str, &env_proto))
-      << "failed to parse env_proto" << env_proto_str;
-  auto env = std::make_shared<EnvGlobalObjectsScope>();
-  JUST(env->Init(env_proto));
-  return env;
+  CHECK_NOTNULL_OR_RETURN((Singleton<ResourceDesc, ForEnv>::Get()));
+  return PbMessage2TxtString(Singleton<ResourceDesc, ForEnv>::Get()->resource());
 }
 
 inline Maybe<long long> CurrentMachineId() { return GlobalProcessCtx::Rank(); }
@@ -62,8 +50,9 @@ inline Maybe<size_t> GetWorldSize() { return GlobalProcessCtx::WorldSize(); }
 inline Maybe<size_t> GetNodeSize() { return GlobalProcessCtx::NodeSize(); }
 inline Maybe<size_t> GetLocalRank() { return GlobalProcessCtx::LocalRank(); }
 inline Maybe<size_t> CudaGetDeviceCount() {
-  return Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum();
+  return Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceCount(DeviceType::kCUDA);
 }
+
 inline Maybe<void> SetFLAGS_alsologtostderr(bool flag) {
   FLAGS_alsologtostderr = flag;
   return Maybe<void>::Ok();
@@ -76,11 +65,20 @@ inline Maybe<void> SetFLAGS_v(int32_t v_level) {
   return Maybe<void>::Ok();
 }
 inline Maybe<int32_t> GetFLAGS_v() { return FLAGS_v; }
+
+inline Maybe<void> EmptyCache() {
+  JUST(vm::CurrentRankSync());
+  auto* vm = JUST(SingletonMaybe<VirtualMachine>());
+  JUST(vm->ShrinkAllMem());
+  return Maybe<void>::Ok();
+}
+
 inline Maybe<void> SetGraphLRVerbose(bool verbose) {
   SetGraphVerboseStepLr(verbose);
   return Maybe<void>::Ok();
 }
 inline bool GetGraphLRVerbose() { return IsOpenGraphVerboseStepLr(); }
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_API_PYTHON_ENV_ENV_H_

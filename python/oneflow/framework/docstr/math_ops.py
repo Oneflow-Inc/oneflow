@@ -39,11 +39,23 @@ add_docstr(
 
 add_docstr(
     oneflow.add,
-    r"""Computes the addition of `input` by `other` for each element, scalar and broadcast promotation are supported.
-    The formula is:
+    r"""
+    oneflow.add(input, other, *, alpha=1) -> Tensor
+    
+    Adds `other`, scaled by `alpha`, to `input`. Scalar and broadcast promotation are supported.
 
     .. math::
-        out = input + other
+        out = input + alpha \times other
+        
+    Args:
+        input (Union[int, float, oneflow.Tensor]): the input tensor.
+        other (Union[int, float, oneflow.Tensor]): the tensor or number to add to input.
+    
+    Keyword args:
+        alpha (Number, optional): the multiplier for `other`.
+
+    Returns:
+        oneflow.Tensor: the output Tensor.
 
     For example:
 
@@ -72,6 +84,14 @@ add_docstr(
         >>> out = flow.add(x, y).numpy()
         >>> out.shape
         (2, 3)
+        
+        # use alpha
+        >>> x = flow.zeros(2, 3)
+        >>> y = flow.ones(2, 3)
+        >>> out = flow.add(x, y, alpha=10)
+        >>> out
+        tensor([[10., 10., 10.],
+                [10., 10., 10.]], dtype=oneflow.float32)
 
     """,
 )
@@ -121,7 +141,10 @@ add_docstr(
 
 add_docstr(
     oneflow.div,
-    r"""Computes the division of input by other for each element, scalar and broadcast promotation are supported.
+    r"""
+    div(x, y, *, rounding_mode=None)
+
+    Computes the division of input by other for each element, scalar and broadcast promotation are supported.
     The formula is:
 
     .. math::
@@ -130,6 +153,10 @@ add_docstr(
     Args:
         input (Union[int, float, oneflow.Tensor]): input.
         other (Union[int, float, oneflow.Tensor]): other.
+
+    Keyword Arguments:
+        rounding_mode (str, optional): It can be set as ``"floor"`` (roudning the results down)
+            or ``"trunc"`` (rounding the results towards zero). None for default (no rounding).
 
     For example:
 
@@ -159,6 +186,14 @@ add_docstr(
         >>> out.shape
         (2, 3)
 
+        # rounding_mode
+        >>> x = flow.tensor([ 0.3810,  1.2774, -0.2972, -0.3719,  0.4637])
+        >>> flow.div(x, 0.5)
+        tensor([ 0.7620,  2.5548, -0.5944, -0.7438,  0.9274], dtype=oneflow.float32)
+        >>> flow.div(x, 0.5, rounding_mode="floor")
+        tensor([ 0.,  2., -1., -1.,  0.], dtype=oneflow.float32)
+        >>> flow.div(x, 0.5, rounding_mode="trunc")
+        tensor([0., 2., -0., -0., 0.], dtype=oneflow.float32)
     """,
 )
 
@@ -404,6 +439,9 @@ add_docstr(
     """,
 )
 
+add_docstr(oneflow.ceil_, r"""In-place version of :func:`oneflow.ceil`""")
+
+
 add_docstr(
     oneflow.negative,
     r"""This operator computes the negative value of Tensor.
@@ -481,6 +519,39 @@ add_docstr(
         >>> y = flow.exp(x)
         >>> y
         tensor([ 2.7183,  7.3891, 20.0855], dtype=oneflow.float32)
+
+    """,
+)
+
+add_docstr(
+    oneflow.exp2,
+    r"""
+
+    This operator computes the base two exponential of Tensor.
+
+    The equation is:
+
+    .. math::
+
+        out = 2^x
+
+    Args:
+        x (oneflow.Tensor): A Tensor
+
+    Returns:
+        oneflow.Tensor: The result Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+
+        >>> x = flow.tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
+        >>> y = flow.exp2(x)
+        >>> y
+        tensor([2., 4., 8.], dtype=oneflow.float32)
 
     """,
 )
@@ -952,6 +1023,34 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.log10,
+    """
+    oneflow.log10(input) -> Tensor
+
+    Returns a new tensor with the natural logarithm to the base 10 of the elements of :attr:`input`.
+
+    .. math::
+        y_{i} = \\log10_{e} (x_{i})
+
+    Args:
+        input (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.ones(3, 3) * 10
+        >>> output = flow.log10(x)
+        >>> output
+        tensor([[1., 1., 1.],
+                [1., 1., 1.],
+                [1., 1., 1.]], dtype=oneflow.float32)
+
+    """,
+)
+
+add_docstr(
     oneflow.minimum,
     r"""Computes the element-wise minimum of x and y.
 
@@ -996,21 +1095,184 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.median,
+    r"""
+    median(input) -> Tensor
+
+    Returns the median of the values in input.
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.median.html#torch.median
+
+    .. note::
+        The median is not unique for :attr:`input` tensors with an even number
+        of elements. In this case the lower of the two medians is returned.
+
+    Args:
+        input (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor((1, 2, -1), dtype=flow.float32)
+        >>> flow.median(x)
+        tensor(1., dtype=oneflow.float32)
+
+    .. function:: median(input, dim=-1, keepdim=False, *, out=None) -> (Tensor, LongTensor)
+        :noindex:
+
+    Returns a tuple ``(values, indices)`` where ``values`` contains the median of each row of :attr:`input`
+    in the dimension :attr:`dim`, and ``indices`` contains the index of the median values found in the dimension :attr:`dim`.
+
+    By default, :attr:`dim` is the last dimension of the :attr:`input` tensor.
+
+    If :attr:`keepdim` is ``True``, the output tensors are of the same size
+    as :attr:`input` except in the dimension :attr:`dim` where they are of size 1.
+    Otherwise, :attr:`dim` is squeezed (see :func:`flow.squeeze`), resulting in
+    the outputs tensor having 1 fewer dimension than :attr:`input`.
+
+    .. note::
+        The median is not unique for :attr:`input` tensors with an even number
+        of elements in the dimension :attr:`dim`. In this case the lower of the
+        two medians is returned.
+
+    Args:
+        input (Tensor): the input tensor.
+        dim (int): the dimension to reduce.
+        keepdim (bool): whether the output tensor has :attr:`dim` retained or not.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> a = flow.tensor([[ 0.2505, -0.3982, -0.9948,  0.3518, -1.3131],
+        ...    [ 0.3180, -0.6993,  1.0436,  0.0438,  0.2270],
+        ...    [-0.2751,  0.7303,  0.2192,  0.3321,  0.2488],
+        ...    [ 1.0778, -1.9510,  0.7048,  0.4742, -0.7125]])
+        >>> result=flow.median(a, 1)
+        >>> result.values
+        tensor([-0.3982,  0.2270,  0.2488,  0.4742], dtype=oneflow.float32)
+        >>> result.indices
+        tensor([1, 4, 4, 3], dtype=oneflow.int64)
+        
+    ..
+        Feature Stage of Operator [index_select].
+        - Maintainer List [@simonJJJ]
+        - Current Stage [pre Alpha]
+        - Alpha Stage Check List [ ]
+          - API(Compatible with PyTorch 1.11, anything incompatible must be noted in API Doc.)[Yes]
+          - Doc(API Doc must be provided and showed normally on the web page.)[Yes]
+          - Functionality and its' Test [ ]
+            - Functionality is highly compatiable with PyTorch 1.11. [Yes]
+            - eager local [Yes] [@simonJJJ]
+              - forward [Yes]
+              - backward [Yes]
+              - gpu [Yes]
+              - cpu [Yes]
+            - graph local [ ] [@simonJJJ]
+              - forward [Yes]
+              - backward [ ]
+              - gpu [Yes]
+              - cpu [Yes]
+          - Exception Handling
+            - Exception Message and Hint must be provided [Yes]
+        - Beta Stage Check List [ ]
+          - API(High compatibility with PyTorch 1.11, shouldn't have anything incompatible for a naive reason.)[ ]
+          - Doc(Same standard as Alpha Stage)[Yes]
+          - Functionality and its' Test [ ]
+            - eager global [Yes] [@simonJJJ]
+              - forward [Yes]
+              - backward [Yes]
+              - gpu [Yes]
+              - cpu [Yes]
+            - graph gloal [ ]
+              - forward [ ]
+              - backward [ ]
+              - gpu [ ]
+              - cpu [ ]
+          - Performance and Scalability(Must be evaluated.)[ ]
+            - CUDA kernel [ ]
+            - CPU kernel [ ]
+            - N nodes M devices [ ]
+          - Exception Handling [ ]
+            - Exception Message and Hint must be provided [ ]
+            - Try you best to do Exception Recovery [ ]
+        - Stable Stage Check List [ ]
+          - API(Same standard as Beta Stage)[ ]
+          - Doc(Same standard as Beta Stage)[ ]
+          - Functionality and its' Test [ ]
+            - fp16 and AMP [ ]
+            - NHWC [ ]
+          - Performance and Scalability(Must be evaluated.)[ ]
+          - Exception Handling [ ]
+    """,
+)
+
+add_docstr(
+    oneflow.mode,
+    r"""
+    oneflow.mode(input, dim=-1, keepdim=False)
+
+    Returns a namedtuple (values, indices) where values is the mode value of each row of 
+    the input tensor in the given dimension dim, i.e. a value which appears most often in 
+    that row, and indices is the index location of each mode value found.
+    
+    By default, :attr:`dim` is the last dimension of the :attr:`input` tensor.
+
+    If :attr:`keepdim` is ``True``, the output tensors are of the same size
+    as :attr:`input` except in the dimension :attr:`dim` where they are of size 1.
+    Otherwise, :attr:`dim` is squeezed (see :func:`flow.squeeze`), resulting in
+    the outputs tensor having 1 fewer dimension than :attr:`input`.
+    
+    Args:
+        input (Tensor): the input tensor.
+        dim (int): the dimension to reduce. Default: `-1`
+        keepdim (bool): whether the output tensor has dim retained or not. Default: `False`
+
+    Returns:
+        Tuple(oneflow.Tensor, oneflow.Tensor(dtype=int64)): the result tuple of two output
+        tensors (values, indices) 
+        
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+
+        >>> x = flow.tensor([6, 2, 5, 3, 3, 5, 4, 3])
+        >>> result = flow.mode(x)
+        >>> result.values
+        tensor(3, dtype=oneflow.int64)
+        >>> result.indices
+        tensor(7, dtype=oneflow.int64)
+        >>> x = flow.Tensor([[2, 1, 2, 3], [2, 4, 3, 3]])
+        >>> result = flow.mode(x, dim=0)
+        >>> result.values
+        tensor([2., 1., 2., 3.], dtype=oneflow.float32)
+        >>> result.indices
+        tensor([1, 0, 0, 1], dtype=oneflow.int64)
+        
+    """,
+)
+
+add_docstr(
     oneflow.pow,
     r"""Takes the power of each element in input with exponent and returns a tensor with the result. Exponent can be either a single float number, a single int number, or a tensor with the same shape as input.
     When exponent is a scalar value, the operation applied is:
 
     .. math::
-        \\text{out}_i = x_i ^ \\text{exponent}
-\u200b
+        \text{out}_i = x_i ^ \text{exponent}
+
     When exponent is a tensor, the operation applied is:
 
     .. math::
-        \\text{out}_i = x_i ^ {\\text{exponent}_i}
+        \text{out}_i = x_i ^ {\text{exponent}_i}
 
     Args:
-        - input (Tensor): the input tensor.
-        - exponent (int, float, Tensor): the exponent.
+        input (Tensor): the input tensor.
+        exponent (int, float, Tensor): the exponent.
 
     Returns:
         Tensor: The result of variance on the specified axis of input Tensor
@@ -1142,8 +1404,80 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.mv,
+    r"""
+    mv(input, vec) -> Tensor
+
+    Performs a matrix-vector product of the matrix :attr:`input` and the vector :attr:`vec`.
+
+    If :attr:`input` is a :math:`(n \times m)` tensor, :attr:`vec` is a
+    1-D tensor of size `m`, :attr:`out` will be a 1-D tensor of size `n`.
+    
+    .. note:: This function does not broadcast.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.mv.html.
+
+    Args:
+        input (oneflow.Tensor): matrix to be matrix multiplied
+        vec (oneflow.Tensor): vector to be matrix multiplied
+    Returns:
+        oneflow.Tensor: the output Tensor
+    
+    For example:
+
+    .. code-block:: python
+    
+        >>> import oneflow as flow
+        >>> mat = flow.randn(2, 3)
+        >>> vec = flow.randn(3)
+        >>> out = flow.mv(mat, vec)
+        >>> out.shape
+        oneflow.Size([2])
+    """,
+)
+
+add_docstr(
+    oneflow.mm,
+    r"""
+    mm(input, mat2) -> Tensor
+    
+    Performs a matrix multiplication of the matrices :attr:`input` and :attr:`mat2`.
+
+    If :attr:`input` is a :math:`(n \times m)` tensor, :attr:`mat2` is a
+    :math:`(m \times p)` tensor, :attr:`out` will be a :math:`(n \times p)` tensor.
+
+    .. note:: This function does not broadcast.
+            For broadcasting matrix products, see :func:`oneflow.matmul`.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.mm.html.
+
+    Args:
+        input (oneflow.Tensor): the first matrix to be matrix multiplied
+        mat2 (oneflow.Tensor): the second matrix to be matrix multiplied
+
+    Returns:
+        oneflow.Tensor: The result Tensor
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> mat1 = flow.randn(2, 3)
+        >>> mat2 = flow.randn(3, 3)
+        >>> of_out = flow.mm(mat1, mat2)
+        >>> of_out.shape
+        oneflow.Size([2, 3])
+    """,
+)
+
+add_docstr(
     oneflow.round,
     r"""This operator rounds the value of Blob to the nearest integer.
+    
+    .. note::
+        This function implements the "round half to even" to break ties when a number is equidistant from two integers (e.g. `round(2.5)` is 2).
+    
     Args:
         input (oneflow.Tensor): A Tensor
     Returns:
@@ -1166,6 +1500,8 @@ add_docstr(
     """,
 )
 
+add_docstr(oneflow.round_, r"""In-place version of :func:`oneflow.round`.""")
+
 add_docstr(
     oneflow.std,
     r"""
@@ -1182,7 +1518,7 @@ add_docstr(
 
     Args:
         input (Tensor): the input tensor.
-        dim (int or tuple of python:ints): the dimension or dimensions to reduce.
+        dim (int or tuple of ints): the dimension or dimensions to reduce.
         unbiased (bool): whether to use the unbiased estimation or not
         keepdim (bool): whether the output tensor has `dim` retained or not.
 
@@ -1212,7 +1548,7 @@ add_docstr(
 
     Args:
         input (Tensor): the input tensor.
-        dim (int or tuple of python:ints): the dimension or dimensions to reduce. Defaults to None.
+        dim (int or tuple of ints): the dimension or dimensions to reduce. Defaults to None.
         unbiased (bool, optional): whether to use Bessel’s correction (:math:`\delta N = 1`). Defaults to True.
         keepdim (bool, optional): whether the output tensor has dim retained or not. Defaults to False.
 
@@ -1232,31 +1568,6 @@ add_docstr(
     """,
 )
 
-add_docstr(
-    oneflow.logical_not,
-    r"""
-    Computes the element-wise logical NOT of the given input tensors.
-    Zeros are treated as False and nonzeros are treated as True.
-    Args:
-        input (oneflow.Tensor): The input Tensor
-        other (oneflow.Tensor): The Tensor to compute NOT with
-
-    Returns:
-        oneflow.Tensor: The output Tensor
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-
-        >>> input = flow.tensor([1, 0, -1], dtype=flow.float32)
-        >>> out = flow.logical_not(input)
-        >>> out
-        tensor([False,  True, False], dtype=oneflow.bool)
-
-    """,
-)
 
 add_docstr(
     oneflow.dot,
@@ -1322,7 +1633,7 @@ add_docstr(
     Moves the dimension(s) of input at the position(s) in source to the position(s) in destination.
     Other dimensions of input that are not explicitly moved remain in their original order and appear at the positions not specified in destination.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.movedim.html#torch.movedim.
+    https://pytorch.org/docs/1.10/generated/torch.movedim.html.
 
     Args:
         input (Tensor): the input tensor.
@@ -1352,9 +1663,10 @@ add_docstr(
 add_docstr(
     oneflow.as_strided,
     r"""
+    as_strided(input, size, stride, storage_offset=None) -> Tensor
     Create a view of an existing oneflow.Tensor input with specified size, stride and storage_offset.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.as_strided.html#torch.as_strided.
+    https://pytorch.org/docs/1.10/generated/torch.as_strided.html.
 
     Args:
         input (Tensor): the input tensor.
@@ -1375,6 +1687,45 @@ add_docstr(
         >>> output = flow.as_strided(input, (2,3,3), (1,2,3), 1)
         >>> output.size()
         oneflow.Size([2, 3, 3])
+    """,
+)
+
+add_docstr(
+    oneflow.addcmul,
+    r"""
+    oneflow.addcmul(input, tensor1, tensor2, *, value=1) -> Tensor
+
+    Performs the element-wise multiplication of tensor1 by tensor2, multiply the result
+    by the scalar value and add it to input.
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.addcmul.html
+    
+    .. math::
+        \text{out}_i = \text{input}_i + value \times\  \text{tensor1}_i \times\ \text{tensor2}_i
+        
+    Args:
+        input (Tensor): the tensor to be added.
+        tensor1 (Tensor): the tensor to be multiplied.
+        tensor2 (Tensor): the tensor to be multiplied.
+    
+    Keyword args:
+        value (Number, optional): multiplier for :math:`tensor1 * tensor2`.
+
+    Returns:
+        oneflow.Tensor: the output Tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        
+        >>> input = flow.rand(2, 3, 4)
+        >>> tensor1 = flow.rand(2, 3, 4)
+        >>> tensor2 = flow.rand(2, 3, 4)
+        >>> out = flow.addcmul(input, tensor1, tensor2, value=2)
+        >>> out.size()
+        oneflow.Size([2, 3, 4])
     """,
 )
 
@@ -1421,7 +1772,7 @@ add_docstr(
     Splits a tensor into multiple sub-tensors, all of which are views of input, along dimension
     dim according to the indices or number of sections specified by indices_or_sections .
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.tensor_split.html#torch.tensor_split
+    https://pytorch.org/docs/1.10/generated/torch.tensor_split.html.
 
     Args:
         input (Tensor): the input tensor.
@@ -1458,25 +1809,22 @@ add_docstr(
 add_docstr(
     oneflow.hsplit,
     r"""
-    Splits input, a tensor with one or more dimensions, into multiple tensors horizontally according to indices_or_sections.
-    Each split is a view of input.
-    If input is one dimensional this is equivalent to calling torch.tensor_split(input, indices_or_sections, dim=0) 
-    (the split dimension is zero), and if input has two or more dimensions it’s equivalent to calling 
-    torch.tensor_split(input, indices_or_sections, dim=1) (the split dimension is 1), except that if indices_or_sections
-    is an integer it must evenly divide the split dimension or a runtime error will be thrown.
+    hsplit(input, indices_or_sections) -> List of Tensors
+
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.hsplit.html#torch.hsplit
+    https://pytorch.org/docs/1.10/generated/torch.hsplit.html.
+
+    Splits `input`, a tensor with one or more dimensions, into multiple tensors horizontally according to `indices_or_sections`.
+    Each split is a view of `input`.
+
+    If `input` is one dimensional this is equivalent to calling oneflow.tensor_split(input, indices_or_sections, dim=0) 
+    (the split dimension is zero), and if `input` has two or more dimensions it’s equivalent to calling 
+    oneflow.tensor_split(input, indices_or_sections, dim=1) (the split dimension is 1), except that if `indices_or_sections`
+    is an integer it must evenly divide the split dimension or a runtime error will be thrown.
 
     Args:
         input (Tensor): the input tensor.
-        indices_or_sections (int or a list): If indices_or_sections is an integer n , input is split into n sections 
-            along dimension dim.If input is divisible by n along dimension dim, each section will be of equal size, 
-            input.size (dim) / n. If input is not divisible by n, the sizes of the first int(input.size(dim) % n).
-            sections will have size int(input.size(dim) / n) + 1, and the rest will have size int(input.size(dim) / n).
-            If indices_or_sections is a list or tuple of ints, then input is split along dimension dim at each of the indices in 
-            the list, tuple or tensor. For instance, indices_or_sections=[2, 3] and dim=0 would result in the tensors 
-            input[:2], input[2:3], and input[3:].If indices_or_sections is a tensor, it must be a zero-dimensional or
-            one-dimensional long tensor on the CPU.
+        indices_or_sections (int or a list): See argument in :func:`oneflow.tensor_split()`.
 
     Returns:
         oneflow.TensorTuple: the output TensorTuple.
@@ -1503,10 +1851,10 @@ add_docstr(
     r"""
     Splits input, a tensor with two or more dimensions, into multiple tensors vertically according to indices_or_sections.
     Each split is a view of input.
-    This is equivalent to calling torch.tensor_split(input, indices_or_sections, dim=0) (the split dimension is 0),
+    This is equivalent to calling oneflow.tensor_split(input, indices_or_sections, dim=0) (the split dimension is 0),
     except that if indices_or_sections is an integer it must evenly divide the split dimension or a runtime error will be thrown.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.vsplit.html#torch.vsplit
+    https://pytorch.org/docs/1.10/generated/torch.vsplit.html.
 
     Args:
         input (Tensor): the input tensor.
@@ -1528,8 +1876,8 @@ add_docstr(
 
         >>> import oneflow as flow
 
-        >>> input = flow.rand(3,4,5,6)
-        >>> output = flow.vsplit(input,(1,3))
+        >>> input = flow.rand(4, 4, 5, 6)
+        >>> output = flow.vsplit(input, (1, 3))
         >>> output[0].size()
         oneflow.Size([1, 4, 5, 6])
         >>> output[1].size()
@@ -1599,5 +1947,50 @@ add_docstr(
         >>> input=flow.tensor([1, 2, 3])
         >>> flow.cumprod(input, dim=0)
         tensor([1, 2, 6], dtype=oneflow.int64)
+    """,
+)
+
+
+add_docstr(
+    oneflow.trunc,
+    r"""trunc(input) -> Tensor
+
+    The interface is consistent with PyTorch.    
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.trunc.html
+
+    Returns a new tensor with the truncated integer values of
+    the elements of :attr:`input`.
+
+    Args:
+        input(Tensor): the input tensor.
+
+    Example::
+
+        >>> import oneflow as flow
+        >>> a = flow.tensor([ 3.4742,  0.5466, -0.8008, -0.9079])
+        >>> flow.trunc(a)
+        tensor([3., 0., -0., -0.], dtype=oneflow.float32)
+    """,
+)
+
+add_docstr(
+    oneflow.digamma,
+    r"""digamma(input) -> Tensor
+
+    .. math::
+    \digamma(x) = \frac{d}{dx} \ln\left(\Gamma\left(x\right)\right) = \frac{\Gamma'(x)}{\Gamma(x)}
+
+    Args:
+        input (Tensor): the tensor to compute the digamma function on
+        
+    .. note::  This function is similar to SciPy's `scipy.special.digamma`.
+
+    Example::
+
+        >>> import oneflow as flow
+        >>> a = flow.tensor([1, 0.5])
+        >>> flow.digamma(a)
+        tensor([-0.5772, -1.9635], dtype=oneflow.float32)
+        
     """,
 )

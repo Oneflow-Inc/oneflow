@@ -35,9 +35,9 @@ class BroadcastLikeKernel final : public user_op::OpKernel, public user_op::Cuda
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
     const auto& axis = ctx->Attr<std::vector<int32_t>>("broadcast_axes");
     const Shape& reduced_shape =
-        CreateReducedShapeOrOnesShape(like_tensor->shape(), {axis.begin(), axis.end()});
+        CreateReducedShapeOrOnesShape(like_tensor->shape_view(), {axis.begin(), axis.end()});
     NdarrayUtil<device_type, T>::BroadcastTo(
-        ctx->stream(), XpuVarNdarray<T>(out_tensor->shape(), out_tensor->mut_dptr<T>()),
+        ctx->stream(), XpuVarNdarray<T>(out_tensor->shape_view(), out_tensor->mut_dptr<T>()),
         XpuVarNdarray<const T>(reduced_shape, in_tensor->dptr<T>()));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -67,5 +67,7 @@ REGISTER_BROADCAST_LIKE_KERNEL(bool)
 REGISTER_BROADCAST_LIKE_KERNEL(int8_t)
 REGISTER_BROADCAST_LIKE_KERNEL(int32_t)
 REGISTER_BROADCAST_LIKE_KERNEL(int64_t)
+REGISTER_BROADCAST_LIKE_XPU_KERNEL(DeviceType::kCPU, std::complex<float>)
+REGISTER_BROADCAST_LIKE_XPU_KERNEL(DeviceType::kCPU, std::complex<double>)
 
 }  // namespace oneflow

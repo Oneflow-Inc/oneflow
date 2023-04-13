@@ -33,7 +33,7 @@ class SquareSumKernel final : public user_op::OpKernel, public user_op::CudaGrap
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
 
-    SquareSumKernelUtil<device_type, T>::SquareSum(ctx->stream(), x->shape().elem_cnt(),
+    SquareSumKernelUtil<device_type, T>::SquareSum(ctx->stream(), x->shape_view().elem_cnt(),
                                                    x->dptr<T>(), y->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -60,7 +60,7 @@ class MultiSquareSumKernel final : public user_op::OpKernel, public user_op::Cud
     params.resize(ctx->input_size("x"));
     for (int64_t i = 0; i < params.size(); ++i) {
       const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", i);
-      params[i].count = x->shape().elem_cnt();
+      params[i].count = x->shape_view().elem_cnt();
       params[i].ptr = x->dptr<T>();
     }
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);

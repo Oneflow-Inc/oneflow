@@ -16,6 +16,9 @@ message NaiveModelUpdateConf {
 
 message MomentumModelUpdateConf {
   optional float beta = 1 [default = 0.9];
+  optional float dampening = 2 [default = 0.0];
+  optional bool nesterov = 3 [default = false];
+  optional bool maximize = 4 [default = false];
 }
 
 message RMSPropModelUpdateConf {
@@ -36,6 +39,7 @@ message AdamModelUpdateConf {
   optional float epsilon = 3 [default = 1e-8];
   optional bool do_bias_correction = 4 [default = true];
   optional bool amsgrad = 5 [default = false];
+  optional bool smart_decay = 6 [default = false];
 }
 
 message LazyAdamModelUpdateConf {
@@ -59,9 +63,23 @@ message AdagradModelUpdateConf {
   required float epsilon = 3 [default = 1e-10];
 }
 
+message FtrlModelUpdateConf {
+  required float initial_accumulator_value = 1 [default = 0.1];
+  required float lr_power = 2 [default = 0.5];
+  optional float lambda1 = 3 [default = 0.0];
+  optional float lambda2 = 4 [default = 0.0];
+  optional float beta = 5 [default = 0.0];
+}
+
+message AdadeltaModelUpdateConf {
+  required float rho = 1 [default = 0.9];
+  required float epsilon = 2 [default = 1e-6];
+  required bool maximize = 3 [default = false];
+}
+
 message ClipByGlobalNormConf {
-  required float clip_norm = 1;
-  optional float global_norm = 2;
+  optional float max_norm = 1 [default = 1.0];
+  optional double norm_type = 2 [default = 2.0];
 }
 
 message ClipConf {
@@ -85,10 +103,12 @@ message WeightDecayConf {
 message OptimizerConf {
   repeated string variable_op_names = 1;
   optional float base_learning_rate = 2;
+  repeated string variable_grad_lbns = 3;
   optional LearningRateDecayConf learning_rate_decay = 4;
   optional string learning_rate_lbn = 5;
   optional ClipConf clip_conf = 6;
   optional WeightDecayConf weight_decay_conf = 7;
+  optional float lr_scale = 8 [default = 1.0];
   oneof normal_mdupdt {
     NaiveModelUpdateConf naive_conf = 1000;
     MomentumModelUpdateConf momentum_conf = 1001;
@@ -98,6 +118,8 @@ message OptimizerConf {
     LazyAdamModelUpdateConf lazy_adam_conf = 1005;
     LambModelUpdateConf lamb_conf = 1006;
     AdagradModelUpdateConf adagrad_conf = 1007;
+    FtrlModelUpdateConf ftrl_conf = 1008;
+    AdadeltaModelUpdateConf adadelta_conf = 1009; 
   }
 }
 
@@ -114,6 +136,7 @@ message NormalModelUpdateOpUserConf {
     LazyAdamModelUpdateConf lazy_adam_conf = 1005;
     LambModelUpdateConf lamb_conf = 1006;
     AdagradModelUpdateConf adagrad_conf = 1007;
+    FtrlModelUpdateConf ftrl_conf = 1008;
   }
 }
 
@@ -126,6 +149,7 @@ message DynamicLossScalePolicy {
 message TrainConf {
   repeated OptimizerConf optimizer_conf = 1;
   repeated string loss_lbn = 2;
+  repeated string loss_grad_lbn = 6;
   optional string train_step_lbn = 3;
   oneof loss_scale_policy {
     float loss_scale_factor = 4 [default = 1];
@@ -144,24 +168,14 @@ message PredictConf {
 
 message MemoryAllocationAlgorithmConf {
   optional bool use_mem_size_first_algo = 1 [default = true];
-  optional bool use_mutual_exclusion_first_algo = 2 [default = true];
+  optional bool use_lifetime_first_algo = 2 [default = false];
   optional bool use_time_line_algo = 3 [default = false];
+  optional bool use_mem_volume_first_algo = 4 [default = false];
 }
 
-message XrtConfig {
-  message XlaConfig {
-    // TODO
-  }
-  message TensorRTConfig {
-    optional bool use_fp16 = 1 [default = false];
-    optional bool use_int8 = 2 [default = false];
-    optional string int8_calibration = 3;
-  }
-  optional bool use_xla_jit = 1 [default = false];
-  optional bool use_tensorrt = 2 [default = false];
-  optional bool use_openvino = 5 [default = false];
-  optional XlaConfig xla_config = 3;
-  optional TensorRTConfig tensorrt_config = 4;
+message MemoryCompactInsertConf {
+  optional bool use_compact_insert = 1 [default = false];
+  optional bool use_non_compact_insert = 2 [default = true];
 }
 
 message QatConfig {
@@ -197,6 +211,22 @@ message JobSignatureDef {
   map<string, JobOutputDef> outputs = 2;
 }
 
+enum StraightenAlgorithmTag {
+  kDisableStraighten = 1;                  
+  kOverlap4Transfer = 2;  
+  kCompressMemory = 3;
+  kOverlap4CpuGpu = 4;
+  kDelayShortGpu = 5;            
+}
+
+enum AutoMemoryStrategy {
+  kDisableAutoMemory = 1;
+  kSlightAutoMemory = 2;
+  kModerateAutoMemory = 3;
+  kHeavyAutoMemory = 4;
+  kAdaptiveAutoMemory = 5;
+}
+
 message JobConfigProto {
   required string job_name = 1;
 
@@ -211,14 +241,14 @@ message JobConfigProto {
   }
 
   optional MemoryAllocationAlgorithmConf memory_allocation_algorithm_conf = 102;
-
-  optional XrtConfig xrt_config = 103;
+  optional MemoryCompactInsertConf memory_compact_insert_conf = 103;
 
   optional IndexedSlicesOptimizerConf indexed_slices_optimizer_conf = 104;
   optional bool enable_fuse_model_update_ops = 105 [default = false];
   optional bool enable_gradients_stats_aggregation = 106 [default = true];
   optional string optimizer_placement_optimization_mode = 107;
   optional int64 optimizer_placement_optimization_threshold = 108 [default = 1024];
+  optional int64 optimizer_placement_optimization_shard_restore_level = 110 [default = 2];
 
   optional QatConfig qat_config = 109;
 
@@ -243,11 +273,26 @@ message JobConfigProto {
   optional bool prune_parallel_cast_ops = 509 [default = true];
   optional bool prune_cast_to_static_shape_ops = 510 [default = true];
   optional bool prune_amp_white_identity_ops = 511 [default = true];
+  optional bool prune_depend_ops = 512 [default = true];
 
   optional bool cudnn_conv_enable_pseudo_half = 600 [default = true];
   optional bool enable_auto_mixed_precision = 602 [default = false];
   optional bool enable_quantization_aware_training = 603 [default = false];
+  optional DataType mixed_precision_data_type = 604 [default = kFloat16]; // kFloat16 or kBFloat16
+  optional bool enable_multi_tensor_update = 605 [default = false];
+  optional bool enable_fused_model_update_cast = 606 [default = false];
+
+  optional bool enable_auto_parallel = 700 [default = false];
+  optional double auto_parallel_computation_cost_ratio = 701 [default = 0.05];
+  optional double auto_parallel_wait_time = 702 [default = 1.65e4];
+  optional bool enable_auto_parallel_trunk_algo = 703 [default = true];
+  optional bool enable_auto_parallel_sbp_collector = 704 [default = false];
+  optional bool enable_auto_parallel_ignore_user_sbp_config = 705 [default = false];
+  optional AutoMemoryStrategy enable_auto_memory = 706 [default = kAdaptiveAutoMemory];
   
+  optional StraightenAlgorithmTag straighten_algorithm_tag_in_task_graph = 800 [default = kCompressMemory];
+  optional bool enable_compress_memory = 801 [default = false];
+
   optional int64 concurrency_width = 1000 [default = 128];
 
   map<string, AttrValue> flag_name2flag_value = 2000;

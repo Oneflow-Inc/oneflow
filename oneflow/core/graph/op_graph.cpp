@@ -13,11 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <string>
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_builder.h"
-#include "oneflow/core/job/mirrored_sig_infer_hint.h"
+#include "oneflow/core/job/local_sig_infer_hint.h"
 #include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/auto_parallel/algorithm_util.h"
+#include "oneflow/core/framework/nd_sbp.h"
 
 namespace oneflow {
 
@@ -322,27 +323,25 @@ void OpGraph::InferOpNodeNdSbpSignature(OpNode* op_node,
   op_node->InitLbi2NdSbp();
 }
 
-Maybe<void> OpGraph::InferOpNodeMirroredSignature(OpNode* op_node, bool is_mirrored_conf) const {
-  HashMap<std::string, MirroredSigInferHint> ibn2mirrored_sig_infer_hint;
+Maybe<void> OpGraph::InferOpNodeLocalSignature(OpNode* op_node, bool is_local_conf) const {
+  HashMap<std::string, LocalSigInferHint> ibn2local_sig_infer_hint;
   for (const std::string& ibn : op_node->op().input_bns()) {
     const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
     const auto* producer = op_node->MutSrcNode4Ibn(ibn);
     const ParallelDesc* parallel_desc = &producer->parallel_desc();
     const auto& producer_obn = *JUST(producer->op().obn4lbi(lbi));
-    const auto& opt_mirrored_parallel =
-        *JUST(producer->op().OptMirroredParallel4BnInOp(producer_obn));
-    MirroredSigInferHint infer_ctx(parallel_desc, opt_mirrored_parallel.has_mirrored_parallel());
-    ibn2mirrored_sig_infer_hint.emplace(ibn, infer_ctx);
+    const auto& opt_local_parallel = *JUST(producer->op().OptLocalParallel4BnInOp(producer_obn));
+    LocalSigInferHint infer_ctx(parallel_desc, opt_local_parallel.has_local_parallel());
+    ibn2local_sig_infer_hint.emplace(ibn, infer_ctx);
   }
-  const auto& MirroredSigInferHint4Ibn =
-      [&](const std::string& ibn) -> Maybe<const MirroredSigInferHint*> {
-    const auto& iter = ibn2mirrored_sig_infer_hint.find(ibn);
-    CHECK_OR_RETURN(iter != ibn2mirrored_sig_infer_hint.end())
-        << "input blob not found. ibn: " << ibn;
+  const auto& LocalSigInferHint4Ibn =
+      [&](const std::string& ibn) -> Maybe<const LocalSigInferHint*> {
+    const auto& iter = ibn2local_sig_infer_hint.find(ibn);
+    CHECK_OR_RETURN(iter != ibn2local_sig_infer_hint.end()) << "input blob not found. ibn: " << ibn;
     return &iter->second;
   };
-  JUST(op_node->mut_op()->InferMirroredSignatureIf(MirroredSigInferHint4Ibn, is_mirrored_conf,
-                                                   op_node->parallel_desc()));
+  JUST(op_node->mut_op()->InferLocalSignatureIf(LocalSigInferHint4Ibn, is_local_conf,
+                                                op_node->parallel_desc()));
   return Maybe<void>::Ok();
 }
 
@@ -363,14 +362,14 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
     JUST(op_node->mut_op()->FillLogicalInBlobDesc(LogicalBlobDesc4InputIndex));
     // Infer ParallelSignature
     JUST(op_node->mut_op()->InferParallelSignatureIf());
-    // Infer mirrored_signature
-    bool is_mirrored_conf = false;
+    // Infer local_signature
+    bool is_local_conf = false;
     {
-      const auto& op_name2is_mirrored = job_parallel_view_conf.op_name2is_mirrored_parallel_view();
-      const auto& iter = op_name2is_mirrored.find(op_node->op().op_name());
-      if (iter != op_name2is_mirrored.end()) { is_mirrored_conf = iter->second; }
+      const auto& op_name2is_local = job_parallel_view_conf.op_name2is_local_parallel_view();
+      const auto& iter = op_name2is_local.find(op_node->op().op_name());
+      if (iter != op_name2is_local.end()) { is_local_conf = iter->second; }
     }
-    JUST(InferOpNodeMirroredSignature(op_node, is_mirrored_conf));
+    JUST(InferOpNodeLocalSignature(op_node, is_local_conf));
     NdSbpSignature nd_sbp_sig_conf;
     {
       const auto& op_name2nd_sbp_sig_conf = job_parallel_view_conf.op_name2nd_sbp_signature_conf();
@@ -443,6 +442,9 @@ void OpGraph::ForEachDataAndCtrlInNode(OpNode* node,
                                        const std::function<void(OpNode*)>& Handler) const {
   node->ForEachNodeOnInEdge(Handler);
   for (const auto& ctrl_in_op_name : node->op().op_conf().ctrl_in_op_name()) {
+    CHECK(op_name2op_node_.find(ctrl_in_op_name) != op_name2op_node_.end())
+        << " cannot find ctrl_in_op_name: [" << ctrl_in_op_name << "] of op: ["
+        << node->op().op_name() << "] in OpGraph. ";
     Handler(op_name2op_node_.at(ctrl_in_op_name));
   }
 }
@@ -453,6 +455,9 @@ void OpGraph::ForEachDataAndCtrlOutNode(OpNode* node,
   const auto& op_name_it = producer_op_name2ctrl_consumer_op_names_.find(node->op().op_name());
   if (op_name_it == producer_op_name2ctrl_consumer_op_names_.end()) { return; }
   for (const std::string& ctrl_consumer_op_name : op_name_it->second) {
+    CHECK(op_name2op_node_.find(ctrl_consumer_op_name) != op_name2op_node_.end())
+        << " cannot find ctrl_consumer_op_name: [" << ctrl_consumer_op_name << "] of op: ["
+        << node->op().op_name() << "] in OpGraph.";
     Handler(op_name2op_node_.at(ctrl_consumer_op_name));
   }
 }
@@ -466,8 +471,7 @@ void OpGraph::TopoForEachNodeWithCtrlEdge(const std::function<void(OpNode*)>& No
                                               const std::function<void(OpNode*)>& Handler) {
     ForEachDataAndCtrlOutNode(node, Handler);
   };
-  TopoForEachNode(DataOrCtrlSourceNodes(), OpGraphForEachInDataAndCtrlNode,
-                  OpGraphForEachOutDataAndCtrlNode, NodeHandler);
+  TopoForEachNode(OpGraphForEachInDataAndCtrlNode, OpGraphForEachOutDataAndCtrlNode, NodeHandler);
 }
 
 std::function<bool(const std::string&, const std::string&)>
@@ -560,6 +564,62 @@ Maybe<void> OpGraph::ForEachOpNode(const std::function<Maybe<void>(const OpNode&
     JUST(DoEach(op_node));
   }
   return Maybe<void>::Ok();
+}
+
+// Print the graph with SBP in order
+void OpGraph::PrintSBPGraphDebugInfo() const {
+  // test debug
+  std::cout << "Get Into Print Op Graph" << std::endl;
+  // Collect op_node
+  std::vector<OpNode*> NodeList;
+  ForEachNode([&](OpNode* op_node) { NodeList.push_back(op_node); });
+
+  // test debug
+  std::cout << "Deciding order" << std::endl;
+  // Decide the order to vist the op
+  std::vector<int32_t> order;
+  auto_parallel::DecideOrder(NodeList, order, [&](OpNode* a, OpNode* b) {
+    return a->op().op_name().compare(b->op().op_name()) > 0;
+  });
+  std::vector<int32_t> str_order;
+
+  // test debug
+  std::cout << "Finish deciding order" << std::endl;
+
+  for (int32_t i = 0; i < NodeList.size(); i++) {
+    OpNode* op_node = NodeList[order[i]];
+    std::cout << op_node->op().op_name() << " (^_^):" << std::endl;
+    // Sort before printing
+    const auto& op_input_bns = op_node->op().input_bns();
+    auto comp = [](const std::string& a, const std::string& b) { return a.compare(b) > 0; };
+    auto_parallel::DecideOrder(op_input_bns, str_order, comp);
+    // Print out SBP information for input operator
+    for (int32_t j : str_order) {
+      const auto& ibn = op_input_bns[j];
+      auto producer_node = op_node->MutSrcNode4Ibn(ibn);
+      std::cout << "Pre Op:" << producer_node->op().op_name() << ": " << ibn;
+      const auto& this_sbp_parallel = op_node->NdSbp4BnInOp(ibn);
+      std::cout << ", " << NdSbpToString(this_sbp_parallel);
+      const auto input_blob_modifier_ = op_node->op().InputBlobModifier4Ibn(ibn);
+      bool is_same_sbp = input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable();
+      if (is_same_sbp) std::cout << ", same SBP";
+      std::cout << ", " << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn)).shape();
+      std::cout << std::endl;
+    }
+    // Sort before printing
+    const auto& op_output_bns = op_node->op().output_bns();
+    auto_parallel::DecideOrder(op_output_bns, str_order, comp);
+    // Print out SBP information for output blobs
+    for (int32_t j : str_order) {
+      const auto& obn = op_output_bns[j];
+      std::cout << "Out Op:" << obn;
+      const auto& this_sbp_parallel = op_node->NdSbp4BnInOp(obn);
+      std::cout << ", " << NdSbpToString(this_sbp_parallel);
+      std::cout << ", " << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(obn)).shape();
+      std::cout << std::endl;
+    }
+    std::cout << std::endl;
+  }
 }
 
 }  // namespace oneflow

@@ -28,9 +28,10 @@ from oneflow.test_utils.automated_test_util import *
 
 def _test_randn(test_case, device, shape):
     y1 = flow.randn(*shape, device=flow.device(device))
-    y2 = flow.randn(*shape, device=flow.device(device))
+    y2 = flow.randn(size=shape, device=flow.device(device))
     test_case.assertTrue(not np.allclose(y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
     test_case.assertTrue(shape == y1.shape)
+    test_case.assertTrue(shape == y2.shape)
 
 
 def _test_0d_rand(test_case, device, shape):
@@ -123,6 +124,18 @@ class TestRandnModule(flow.unittest.TestCase):
 
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_half_randn(test_case):
+        for device in ["cuda", "cpu"]:
+            x = flow.randn(2, 3, dtype=flow.float16, device=flow.device(device))
+            test_case.assertTrue(x.dtype == flow.float16)
+            test_case.assertTrue(x.shape == flow.Size((2, 3)))
+
+    # Just check if `layout` param in api is available, there's no related implementation about it
+    # TODO(WangYi): remove this test when randn **really** supports `layout`
+    def test_randn_layout_param(test_case):
+        x = flow.randn(2, 3, layout=flow.strided)
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")

@@ -16,7 +16,9 @@ limitations under the License.
 import os
 import unittest
 import oneflow as flow
+from oneflow.test_utils.automated_test_util.generators import nothing, oneof
 import oneflow.unittest
+import torch
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -30,6 +32,28 @@ class TestEnv(flow.unittest.TestCase):
 
     def test_cuda_is_available(test_case):
         test_case.assertEqual(flow.cuda.is_available(), True)
+
+    def test_cuda_synchronize(test_case):
+        flow.cuda.synchronize()
+        flow.cuda.synchronize("cuda")
+        flow.cuda.synchronize("cuda:0")
+        flow.cuda.synchronize("cuda:1")
+        flow.cuda.synchronize(0)
+        flow.cuda.synchronize(1)
+        flow.cuda.synchronize(flow.device("cuda:0"))
+        flow.cuda.synchronize(flow.device("cuda:1"))
+
+        with test_case.assertRaisesRegex(ValueError, "Expected a cuda device, but"):
+            flow.cuda.synchronize(flow.device("cpu"))
+
+        with test_case.assertRaisesRegex(ValueError, "Expected a cuda device, but"):
+            flow.cuda.synchronize("cpu")
+
+    def test_cuda_get_device_name(test_case):
+        return torch.cuda.get_device_name(oneof(0, nothing()))
+
+    def test_cuda_get_device_capability(test_case):
+        return torch.cuda.get_device_capability(oneof(0, nothing()))
 
 
 if __name__ == "__main__":

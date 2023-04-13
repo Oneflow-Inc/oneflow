@@ -24,6 +24,7 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("pow", Pow)           \
   OF_PP_MAKE_TUPLE_SEQ("atan2", Atan2)       \
   OF_PP_MAKE_TUPLE_SEQ("floordiv", FloorDiv) \
+  OF_PP_MAKE_TUPLE_SEQ("truncdiv", TruncDiv) \
   OF_PP_MAKE_TUPLE_SEQ("xdivy", Xdivy)       \
   OF_PP_MAKE_TUPLE_SEQ("xlogy", Xlogy)
 
@@ -31,6 +32,7 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("pow", Pow)           \
   OF_PP_MAKE_TUPLE_SEQ("atan2", Atan2)       \
   OF_PP_MAKE_TUPLE_SEQ("floordiv", Floordiv) \
+  OF_PP_MAKE_TUPLE_SEQ("truncdiv", Truncdiv) \
   OF_PP_MAKE_TUPLE_SEQ("xdivy", Xdivy)       \
   OF_PP_MAKE_TUPLE_SEQ("xlogy", Xlogy)
 

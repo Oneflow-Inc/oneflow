@@ -38,7 +38,13 @@ set(ONEFLOW_OP_GROUPS
     "TRIGONOMETRIC"
     "UNARY"
     "UPSAMPLE"
-    "ONE_EMBEDDING")
+    "ONE_EMBEDDING"
+    "LINEAR_ALGEBRA"
+    "SYSTEM")
+if(WITH_MLIR)
+  list(APPEND ONEFLOW_OP_GROUPS "MLIR_JIT")
+endif(WITH_MLIR)
+
 foreach(OP_GROUP_NAME IN LISTS ONEFLOW_OP_GROUPS)
   list(APPEND ONEFLOW_SCHEMA_TABLEGEN_FLAGS "-DGET_ONEFLOW_${OP_GROUP_NAME}_OP_DEFINITIONS")
 endforeach()
@@ -81,6 +87,5 @@ set_source_files_properties(${GENERATED_OP_SCHEMA_H} ${GENERATED_OP_SCHEMA_CPP} 
                                                                                            TRUE)
 
 oneflow_add_library(of_op_schema OBJECT ${GENERATED_OP_SCHEMA_H} ${GENERATED_OP_SCHEMA_CPP})
-target_link_libraries(of_op_schema glog::glog)
-add_dependencies(of_op_schema of_cfgobj)
+target_link_libraries(of_op_schema LLVMSupportWithHeader glog::glog fmt)
 add_dependencies(of_op_schema prepare_oneflow_third_party)

@@ -142,6 +142,17 @@ class TestGridSample(flow.unittest.TestCase):
         )
         return output
 
+    @profile(torch.nn.functional.grid_sample)
+    def profile_grid_sample(test_case):
+        input = torch.ones(32, 3, 128, 128)
+        grid = torch.ones(32, 64, 64, 2)
+        torch.nn.functional.grid_sample(input, grid)
+        torch.nn.functional.grid_sample(input, grid, align_corners=True)
+        torch.nn.functional.grid_sample(input, grid, mode="nearest", align_corners=True)
+        torch.nn.functional.grid_sample(input, grid, mode="bicubic", align_corners=True)
+        torch.nn.functional.grid_sample(input, grid, padding_mode="border")
+        torch.nn.functional.grid_sample(input, grid, padding_mode="reflection")
+
 
 if __name__ == "__main__":
     unittest.main()

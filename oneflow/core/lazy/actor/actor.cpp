@@ -14,9 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/lazy/actor/actor.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/runtime_job_descs.h"
-#include "oneflow/core/stream/include/stream_context.h"
+#include "oneflow/core/lazy/stream_context/include/stream_context.h"
 
 namespace oneflow {
 
@@ -69,42 +70,43 @@ class KernelContextImpl : public KernelContext, public ActorContextProvider {
 };
 
 void KernelContextImpl::WillForward(KernelContext* kernel_ctx, const Kernel* kernel) {
-  Global<KernelObserver>::Get()->WillForward(kernel_ctx, kernel);
+  Singleton<KernelObserver>::Get()->WillForward(kernel_ctx, kernel);
   if (stream_kernel_observer_ != nullptr) {
     stream_kernel_observer_->WillForward(kernel_ctx, kernel);
   }
 }
 
 void KernelContextImpl::DidForward(KernelContext* kernel_ctx, const Kernel* kernel) {
-  Global<KernelObserver>::Get()->DidForward(kernel_ctx, kernel);
+  CHECK_JUST_MSG(kernel_ctx->stream()->GetAsyncError(), kernel->op_conf().name());
+  Singleton<KernelObserver>::Get()->DidForward(kernel_ctx, kernel);
   if (stream_kernel_observer_ != nullptr) {
     stream_kernel_observer_->DidForward(kernel_ctx, kernel);
   }
 }
 
 void KernelContextImpl::WillForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) {
-  Global<KernelObserver>::Get()->WillForwardHeader(kernel_ctx, kernel);
+  Singleton<KernelObserver>::Get()->WillForwardHeader(kernel_ctx, kernel);
   if (stream_kernel_observer_ != nullptr) {
     stream_kernel_observer_->WillForwardHeader(kernel_ctx, kernel);
   }
 }
 
 void KernelContextImpl::DidForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) {
-  Global<KernelObserver>::Get()->DidForwardHeader(kernel_ctx, kernel);
+  Singleton<KernelObserver>::Get()->DidForwardHeader(kernel_ctx, kernel);
   if (stream_kernel_observer_ != nullptr) {
     stream_kernel_observer_->DidForwardHeader(kernel_ctx, kernel);
   }
 }
 
 void KernelContextImpl::WillForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) {
-  Global<KernelObserver>::Get()->WillForwardDataContent(kernel_ctx, kernel);
+  Singleton<KernelObserver>::Get()->WillForwardDataContent(kernel_ctx, kernel);
   if (stream_kernel_observer_ != nullptr) {
     stream_kernel_observer_->WillForwardDataContent(kernel_ctx, kernel);
   }
 }
 
 void KernelContextImpl::DidForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) {
-  Global<KernelObserver>::Get()->DidForwardDataContent(kernel_ctx, kernel);
+  Singleton<KernelObserver>::Get()->DidForwardDataContent(kernel_ctx, kernel);
   if (stream_kernel_observer_ != nullptr) {
     stream_kernel_observer_->DidForwardDataContent(kernel_ctx, kernel);
   }
@@ -132,11 +134,15 @@ void Actor::Init(const JobDesc* job_desc, ActorContext* actor_ctx) {
   actor_id_ = task_proto.task_id();
   thrd_id_ = ThrdId4ActorId(actor_id_);
   job_id_ = task_proto.job_id();
+  act_cnt_ = 0;
+  op_name_ = "NULL_OP";
+  debug_ = EnableActorDebugLog();
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
     ek.kernel_ctx.reset(new KernelContextImpl(actor_ctx));
     ek.kernel = ConstructKernel(node.kernel_conf(), ek.kernel_ctx.get());
     exec_kernel_vec_.emplace_back(std::move(ek));
+    op_name_ = node.kernel_conf().op_attribute().op_conf().name();
   }
 
   is_kernel_launch_synchronized_ =
@@ -149,7 +155,7 @@ void Actor::Init(const JobDesc* job_desc, ActorContext* actor_ctx) {
   eord_regst_desc_ids_.clear();
 
   for (const auto& pair : task_proto.produced_regst_desc()) {
-    Global<RegstMgr>::Get()->NewRegsts(pair.second, [this](Regst* regst) {
+    Singleton<RegstMgr>::Get()->NewRegsts(pair.second, [this](Regst* regst) {
       produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
     });
     int64_t regst_desc_id = pair.second.regst_desc_id();
@@ -261,11 +267,11 @@ void Actor::InitBnInOp2BlobInfo(const TaskProto& task_proto) {
       const std::string& bn = pair.first;
       auto regst_desc_id_it = node.bn_in_op2regst_desc_id().find(bn);
       if (regst_desc_id_it != node.bn_in_op2regst_desc_id().end()
-          && Global<RegstMgr>::Get()->HasRegstDescId(regst_desc_id_it->second)) {
+          && Singleton<RegstMgr>::Get()->HasRegstDescId(regst_desc_id_it->second)) {
         const int64_t regst_desc_id = regst_desc_id_it->second;
         blob_info.regst_desc_id = regst_desc_id;
         const RtRegstDesc& regst_desc =
-            Global<RegstMgr>::Get()->RegstDesc4RegstDescId(regst_desc_id);
+            Singleton<RegstMgr>::Get()->RegstDesc4RegstDescId(regst_desc_id);
         blob_info.ordinal = regst_desc.GetOrdinalForLbi(blob_info.lbi);
         if (naive_produced_rs_.HasRegstDescId(regst_desc_id)) {
           blob_info.rs = &naive_produced_rs_;
@@ -317,7 +323,7 @@ void Actor::IncreaseReadingCnt4ProducedRegst(Regst* regst, int64_t val) {
 
 void Actor::ForEachCurNaiveReadableDataRegst(const std::function<void(const Regst*)>& func) const {
   naive_consumed_rs_.ForEachFrontRegst([func](int64_t regst_desc_id, Regst* regst) {
-    if (Global<RegstMgr>::Get()->HasProducerTaskId4RegstDescId(regst_desc_id)) { return; }
+    if (Singleton<RegstMgr>::Get()->HasProducerTaskId4RegstDescId(regst_desc_id)) { return; }
     if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) { func(regst); }
   });
 }
@@ -349,9 +355,6 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
         }
       } else if (inplace_consumed_rs_.HasRegstDescId(regst->regst_desc_id())) {
         CHECK_EQ(0, inplace_consumed_rs_.TryPushBackRegst(regst));
-        int64_t out_regst_desc_id = inplace_regst_desc_id_in2out_.at(regst->regst_desc_id());
-        CHECK(regst->GetSoleBlob()->dptr()
-              == inplace_produced_rs_.Front(out_regst_desc_id)->GetSoleBlob()->dptr());
       } else if (TryUpdtStateAsProducedRegst(regst) == 0) {
         // do nothing
       } else {
@@ -363,7 +366,7 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
         if (IsConsumedCtrlRegstDescId(msg.regst_desc_id())) {
           Regst* regst = msg.regst();
           CHECK(naive_consumed_rs_.HasRegstDescId(msg.regst_desc_id()));
-          CHECK(Global<RegstMgr>::Get()->HasProducerTaskId4RegstDescId(msg.regst_desc_id()));
+          CHECK(Singleton<RegstMgr>::Get()->HasProducerTaskId4RegstDescId(msg.regst_desc_id()));
           CHECK_EQ(0, naive_consumed_rs_.TryPushBackRegst(regst, msg.regst_desc_id()));
           const auto& rdeq = naive_consumed_rs_.RegstDeq4RegstDescId(msg.regst_desc_id());
           CHECK(rdeq.empty() == false);
@@ -371,6 +374,12 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
           CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
         }
       }
+    }
+
+    if (debug_) {
+      LOG(INFO) << " Actor: " << actor_id_ << " op: " << op_name_ << " in act_cnt: [ " << act_cnt_
+                << " ] , Recv ActorMsg from: " << msg.src_actor_id()
+                << " to: " << msg.dst_actor_id() << " with regst: " << msg.regst_desc_id();
     }
     ActUntilFail();
   } else if (msg.msg_type() == ActorMsgType::kCmdMsg) {
@@ -420,7 +429,20 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
 }
 
 void Actor::ActUntilFail() {
+  if (debug_) {
+    // NOTE(chengcheng): using if(debug_) code hack to minimize debug code cost when debug off.
+    LOG(INFO) << " Actor: " << actor_id_ << " op: " << op_name_ << " Try to act before act_cnt: [ "
+              << act_cnt_ << " ] . And IsReadReady: " << IsReadReady()
+              << " IsWriteReady: " << IsWriteReady();
+  }
   while (IsReadReady() && IsWriteReady()) {
+    PrepareProducedNaiveInplaceDataRegst();
+
+    if (debug_) {
+      LOG(INFO) << " Actor: " << actor_id_ << " op: " << op_name_ << " Try to act act_cnt: [ "
+                << act_cnt_ << " ] before launch kernel.";
+    }
+
     Act();
 
     AsyncSendCustomizedProducedRegstMsgToConsumer();
@@ -432,6 +454,11 @@ void Actor::ActUntilFail() {
     AsyncRetInplaceConsumedRegstIfNoConsumer();
 
     AsyncSendQueuedMsg();
+
+    if (debug_) {
+      LOG(INFO) << " Actor: " << actor_id_ << " op: " << op_name_ << " Finish act act_cnt: [ "
+                << act_cnt_++ << " ].";
+    }
   }
   // NOTE(liujuncheng): return inplace consumed
   AsyncSendQueuedMsg();
@@ -487,16 +514,16 @@ void Actor::AsyncSendConsumedCtrlRegstMsgToProducer() {
   };
 
   tmp_regst_desc_id_vec_.clear();
-  naive_consumed_rs_.ForChosenRegstDeq(
-      IsChosenRegstDescId, [&](int64_t regst_desc_id, const std::deque<Regst*>& reg_deq) {
-        CHECK(reg_deq.empty() == false);
-        auto producer_task_id = Global<RegstMgr>::Get()->ProducerTaskId4RegstDescId(regst_desc_id);
-        Regst* regst = reg_deq.front();
-        CHECK_GE(reg_deq.size(), 1);
-        // must access regst before sending it to producer
-        tmp_regst_desc_id_vec_.emplace_back(regst_desc_id);
-        EnqueueAsyncMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, producer_task_id, regst));
-      });
+  naive_consumed_rs_.ForChosenRegstDeq(IsChosenRegstDescId, [&](int64_t regst_desc_id,
+                                                                const std::deque<Regst*>& reg_deq) {
+    CHECK(reg_deq.empty() == false);
+    auto producer_task_id = Singleton<RegstMgr>::Get()->ProducerTaskId4RegstDescId(regst_desc_id);
+    Regst* regst = reg_deq.front();
+    CHECK_GE(reg_deq.size(), 1);
+    // must access regst before sending it to producer
+    tmp_regst_desc_id_vec_.emplace_back(regst_desc_id);
+    EnqueueAsyncMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, producer_task_id, regst));
+  });
   naive_consumed_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
 }
 
@@ -519,8 +546,10 @@ int64_t Actor::HandleRegstToConsumer(Regst* regst) {
   CHECK_EQ(regst_reading_cnt_it->second, 0);
 
   int64_t real_consumer_cnt = 0;
+  ActorMsg tpl_msg = ActorMsg::BuildRegstMsgToConsumer(actor_id_, 0, regst);
   for (int64_t consumer : regst->consumers_actor_id()) {
-    EnqueueAsyncMsg(ActorMsg::BuildRegstMsgToConsumer(actor_id_, consumer, regst));
+    tpl_msg.set_dst_actor_id(consumer);
+    EnqueueAsyncMsg(tpl_msg);
     real_consumer_cnt += 1;
   }
   total_reading_cnt_ += real_consumer_cnt;
@@ -570,12 +599,56 @@ void Actor::AsyncLaunchKernel() {
   });
 }
 
+void Actor::PrepareProducedNaiveInplaceDataRegst() {
+  naive_produced_rs_.ForEachFrontRegst([&](Regst* regst) {
+    if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) {
+      if (regst->allocation_type() == RegstAllocationType::kStreamOrdered) {
+        CHECK(regst->body_mem_ptr() == nullptr);
+        void* body_ptr = nullptr;
+        CHECK_JUST(actor_ctx_->stream_ctx()->stream()->AllocAsync(
+            &body_ptr, regst->regst_desc()->BodyByteSize4OneRegst()));
+        regst->ResetBodyMemPtr(body_ptr);
+      } else if (regst->allocation_type() == RegstAllocationType::kStatic) {
+        // do nothing
+      } else {
+        UNIMPLEMENTED();
+      }
+    }
+  });
+
+  inplace_produced_rs_.ForEachFrontRegst([&](Regst* regst) {
+    CHECK(regst->regst_desc()->regst_desc_type().has_data_regst_desc());
+    const int64_t in_regst_desc_id = inplace_regst_desc_id_out2in_.at(regst->regst_desc_id());
+    Regst* in_regst = inplace_consumed_rs_.Front(in_regst_desc_id);
+    CHECK(in_regst != nullptr);
+    if (regst->allocation_type() == RegstAllocationType::kStreamOrdered) {
+      CHECK(regst->body_mem_ptr() == nullptr);
+      regst->ResetBodyMemPtr(in_regst->body_mem_ptr());
+    } else if (regst->allocation_type() == RegstAllocationType::kStatic) {
+      // do nothing
+    } else {
+      UNIMPLEMENTED();
+    }
+  });
+}
+
 void Actor::HandleProducedNaiveDataRegstToConsumer() {
   tmp_regst_desc_id_vec_.clear();
   naive_produced_rs_.ForEachFrontRegst([&](Regst* regst) {
     if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) {
       int64_t real_consumer_cnt = HandleRegstToConsumer(regst);
-      if (real_consumer_cnt > 0) { tmp_regst_desc_id_vec_.emplace_back(regst->regst_desc_id()); }
+      if (real_consumer_cnt > 0) {
+        tmp_regst_desc_id_vec_.emplace_back(regst->regst_desc_id());
+      } else {
+        if (regst->allocation_type() == RegstAllocationType::kStreamOrdered) {
+          CHECK_JUST(actor_ctx_->stream_ctx()->stream()->FreeAsync(regst->body_mem_ptr()));
+          regst->ResetBodyMemPtr(nullptr);
+        } else if (regst->allocation_type() == RegstAllocationType::kStatic) {
+          // do nothing
+        } else {
+          UNIMPLEMENTED();
+        }
+      }
     }
   });
   naive_produced_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
@@ -586,7 +659,17 @@ void Actor::HandleProducedInplaceDataRegstToConsumer() {
   inplace_produced_rs_.ForEachFrontRegst([&](Regst* regst) {
     CHECK(regst->regst_desc()->regst_desc_type().has_data_regst_desc());
     int64_t real_consumer_cnt = HandleRegstToConsumer(regst);
-    if (real_consumer_cnt > 0) { tmp_regst_desc_id_vec_.emplace_back(regst->regst_desc_id()); }
+    if (real_consumer_cnt > 0) {
+      tmp_regst_desc_id_vec_.emplace_back(regst->regst_desc_id());
+    } else {
+      if (regst->allocation_type() == RegstAllocationType::kStreamOrdered) {
+        regst->ResetBodyMemPtr(nullptr);
+      } else if (regst->allocation_type() == RegstAllocationType::kStatic) {
+        // do nothing
+      } else {
+        UNIMPLEMENTED();
+      }
+    }
   });
   inplace_produced_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
 }
@@ -611,7 +694,7 @@ void Actor::AsyncSendEORDMsgForAllProducedRegstDesc() {
     const RtRegstDesc* regst_desc = pair.second.front()->regst_desc();
     AddCallback([regst_desc]() {
       for (int64_t consumer : regst_desc->consumers_actor_id()) {
-        Global<ActorMsgBus>::Get()->SendMsg(
+        Singleton<ActorMsgBus>::Get()->SendMsg(
             ActorMsg::BuildEordMsg(consumer, regst_desc->regst_desc_id()));
       }
     });
@@ -643,15 +726,38 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   CHECK_GE(reading_cnt_it->second, 1);
   reading_cnt_it->second -= 1;
   total_reading_cnt_ -= 1;
+
+  if (debug_) {
+    LOG(INFO) << " Actor: " << actor_id_ << " op: " << op_name_ << " in act_cnt: [ " << act_cnt_
+              << " ] recv produce_regst: " << regst->regst_desc_id()
+              << " and the total_reading_cnt_ is : " << total_reading_cnt_ << " now.";
+  }
+
   if (reading_cnt_it->second != 0) { return 0; }
 
   if (inplace_produced_rs_.TryPushBackRegst(regst) == 0) {
     int64_t in_regst_desc_id = inplace_regst_desc_id_out2in_.at(regst->regst_desc_id());
     Regst* in_regst = inplace_consumed_rs_.Front(in_regst_desc_id);
     CHECK(in_regst);
+    if (regst->allocation_type() == RegstAllocationType::kStreamOrdered) {
+      regst->ResetBodyMemPtr(nullptr);
+    } else if (regst->allocation_type() == RegstAllocationType::kStatic) {
+      // do nothing
+    } else {
+      UNIMPLEMENTED();
+    }
     AsyncSendRegstMsgToProducer(in_regst);
     CHECK_EQ(0, inplace_consumed_rs_.TryPopFrontRegst(in_regst_desc_id));
-  } else if (naive_produced_rs_.TryPushBackRegst(regst) != 0) {
+  } else if (naive_produced_rs_.TryPushBackRegst(regst) == 0) {
+    if (regst->allocation_type() == RegstAllocationType::kStreamOrdered) {
+      CHECK_JUST(actor_ctx_->stream_ctx()->stream()->FreeAsync(regst->body_mem_ptr()));
+      regst->ResetBodyMemPtr(nullptr);
+    } else if (regst->allocation_type() == RegstAllocationType::kStatic) {
+      // do nothing
+    } else {
+      UNIMPLEMENTED();
+    }
+  } else {
     UpdtStateAsCustomizedProducedRegst(regst);
   }
   return 0;
@@ -659,9 +765,15 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
 
 void Actor::EnqueueAsyncMsg(const ActorMsg& msg) {
   if (is_kernel_launch_synchronized_ && thrd_id_ == ThrdId4ActorId(msg.dst_actor_id())) {
-    Global<ActorMsgBus>::Get()->SendMsg(msg);
+    sync_msg_queue_.emplace_back(msg);
   } else {
     async_msg_queue_.emplace_back(msg);
+  }
+
+  if (debug_ && msg.msg_type() == ActorMsgType::kRegstMsg) {
+    LOG(INFO) << " Actor: " << actor_id_ << " op: " << op_name_ << " in act_cnt: [ " << act_cnt_
+              << " ] post ActorMsg from: " << msg.src_actor_id() << " to: " << msg.dst_actor_id()
+              << " with regst: " << msg.regst_desc_id();
   }
 }
 
@@ -686,11 +798,16 @@ Regst* Actor::GetNaiveCurWriteable(int64_t regst_desc_id) const {
 }
 
 void Actor::AsyncSendQueuedMsg() {
+  if (!sync_msg_queue_.empty()) {
+    Singleton<ActorMsgBus>::Get()->SendMsgsWithoutCommNet(sync_msg_queue_.data(),
+                                                          sync_msg_queue_.size(), thrd_id_);
+    sync_msg_queue_.clear();
+  }
   if (!async_msg_queue_.empty()) {
     std::deque<ActorMsg> msgs;
     msgs.swap(async_msg_queue_);
     AddCallback([msgs]() {
-      for (const ActorMsg& msg : msgs) { Global<ActorMsgBus>::Get()->SendMsg(msg); }
+      for (const ActorMsg& msg : msgs) { Singleton<ActorMsgBus>::Get()->SendMsg(msg); }
     });
   }
 }

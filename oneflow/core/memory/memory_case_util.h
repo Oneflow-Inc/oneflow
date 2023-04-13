@@ -16,41 +16,27 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_MEMORY_MEMORY_CASE_UTIL_H_
 #define ONEFLOW_CORE_MEMORY_MEMORY_CASE_UTIL_H_
 
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/memory/memory_case.pb.h"
-#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
-inline bool operator==(const MemoryCase& lhs, const MemoryCase& rhs) {
-  if (lhs.has_host_mem() && rhs.has_host_mem()) {
-    const HostMemory& lhs_host_mem = lhs.host_mem();
-    const HostMemory& rhs_host_mem = rhs.host_mem();
-    if (lhs_host_mem.has_cuda_pinned_mem() && rhs_host_mem.has_cuda_pinned_mem()) {
-      return lhs_host_mem.cuda_pinned_mem().device_id()
-             == rhs_host_mem.cuda_pinned_mem().device_id();
-    } else {
-      return (!lhs_host_mem.has_cuda_pinned_mem()) && (!rhs_host_mem.has_cuda_pinned_mem());
-    }
-  }
-  if (lhs.has_device_cuda_mem() && rhs.has_device_cuda_mem()) {
-    return lhs.device_cuda_mem().device_id() == rhs.device_cuda_mem().device_id();
-  }
-  return false;
-}
+namespace memory {
 
-struct MemoryCaseUtil {
-  static bool GetCommonMemoryCase(const MemoryCase& a, const MemoryCase& b, MemoryCase* common);
+bool EqualsIgnorePinnedDevice(const MemoryCase& a, const MemoryCase& b);
+void GetPinnedHostMemoryCase(const MemoryCase& mem_case, MemoryCase* ret);
+MemoryCase GetPinnedHostMemoryCase(const MemoryCase& mem_case);
+int64_t GetMemCaseId(const MemoryCase& mem_case);
+int64_t GetUniqueMemCaseId(int64_t machine_id, const MemoryCase& mem_case);
+std::shared_ptr<MemoryCase> MakeMemCaseShared(const DeviceType device_type,
+                                              const int64_t device_id);
+MemoryCase MakeHostMemCase();
+bool IsHostMem(const MemoryCase& mem_case);
 
-  static MemoryCase GetHostMemoryCaseForRegstSeparatedHeader(const MemoryCase& mem_case);
+}  // namespace memory
 
-  static int64_t GenMemZoneUniqueId(int64_t machine_id, const MemoryCase& mem_case);
-
-  static int64_t GenMemZoneId(const MemoryCase& mem_case);
-
-  static std::shared_ptr<MemoryCase> MakeMemCase(const DeviceType device_type,
-                                                 const int64_t device_id);
-};
+bool operator==(const MemoryCase& lhs, const MemoryCase& rhs);
 
 }  // namespace oneflow
 

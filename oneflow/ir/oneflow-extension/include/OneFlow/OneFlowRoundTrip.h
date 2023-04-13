@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_ROUNDTRIP_H_
+#define ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_ROUNDTRIP_H_
+
 #include "oneflow/core/job_rewriter/job_pass.h"
 
 namespace oneflow {
@@ -29,3 +32,5 @@ class IRRoundTrip final : public JobPass {
 };
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_ROUNDTRIP_H_

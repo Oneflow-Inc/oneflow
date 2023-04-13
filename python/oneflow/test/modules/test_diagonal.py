@@ -57,6 +57,14 @@ class TestDiagonal(flow.unittest.TestCase):
         z = torch.diagonal(x, offset, dim1, dim2)
         return z
 
+    @profile(torch.diagonal)
+    def profile_diagonal(test_case):
+        input1 = torch.ones(128, 128)
+        input2 = torch.ones(16, 10, 128, 128)
+        torch.diagonal(input1, 0)
+        torch.diagonal(input1, 1)
+        torch.diagonal(input2, offset=-1, dim1=1, dim2=2)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -38,7 +38,7 @@ OperatorConf GenerateRmspropHelperVariableOpConf(const VariableOp& op, const std
 }
 
 void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
-                             const std::string& model_diff_lbn, const OptimizerConf optimizer_conf,
+                             const std::string& model_diff_lbn, const OptimizerConf& optimizer_conf,
                              JobBuilder* job_builder) {
   const VariableOp* var_op = dynamic_cast<const VariableOp*>(&var_op_node.op());
   CHECK_NOTNULL(var_op);
@@ -58,6 +58,11 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
       .Attr<float>("decay_rate", rmsprop_conf.decay_rate())
       .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(optimizer_conf, *var_op))
       .ScopeSymbolId(var_op->op_conf().scope_symbol_id());
+
+  if (optimizer_conf.has_lr_scale()) {
+    rmsprop_update_op_builder.Attr<float>("learning_rate_scale", optimizer_conf.lr_scale());
+  }
+
   SetDynamicLossScaleSkipIf(ctx, &rmsprop_update_op_builder);
 
   if (centered) {

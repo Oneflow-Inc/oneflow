@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/data_type.h"
 
 namespace oneflow {
@@ -82,6 +83,7 @@ class TensorBuffer final {
 
   bool is_allocated() const { return bool(impl_); }
   const Shape& shape() const;
+  ShapeView shape_view() const { return shape(); }
   DataType data_type() const;
   int64_t elem_cnt() const { return shape().elem_cnt(); }
   size_t nbytes() const { return elem_cnt() * GetSizeOfDataType(data_type()); }

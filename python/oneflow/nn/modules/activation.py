@@ -17,10 +17,7 @@ import warnings
 from typing import Optional
 
 import oneflow as flow
-import oneflow._oneflow_internal
-from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
-from oneflow.nn.modules.utils import _check_inplace_valid
+from oneflow.nn.modules.module import Module
 
 
 class PReLU(Module):
@@ -116,8 +113,6 @@ class ReLU(Module):
         self.inplace = inplace
 
     def forward(self, x):
-        if self.inplace:
-            _check_inplace_valid(x)
         return flow._C.relu(x, self.inplace)
 
     def extra_repr(self):
@@ -226,14 +221,8 @@ class Tanh(Module):
 
 
 class ELU(Module):
-    """Applies the element-wise function:
-
-    .. math::
-
-        \\text{ELU}(x) = \\begin{cases}
-				x & \\text{ if } x \\gt 0  \\\\
-                \\alpha*(exp(x)-1) & \\text{ if } x \\le 0 \\\\
-    		    \\end{cases}
+    """Applies the element-wise function 
+        :math:`\\text{ELU}(x) = \\begin{cases}x & \\text{ if } x \\gt 0  \\\\\\alpha*(exp(x)-1) & \\text{ if } x \\le 0 \\\\\\end{cases}`
 
     Args:
         alpha: the :math:`\\alpha` value for the ELU formulation. Default: 1.0
@@ -321,8 +310,6 @@ class CELU(Module):
         self.inplace = inplace
 
     def forward(self, x):
-        if self.inplace:
-            _check_inplace_valid(x)
         return flow._C.celu(x, alpha=self.alpha, inplace=self.inplace)
 
     def extra_repr(self):
@@ -332,18 +319,28 @@ class CELU(Module):
 
 
 class GELU(Module):
-    """Gelu activation operator.
+    """
+    GELU(approximate='none') -> Tensor
 
-    The equation is:
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.GELU.html.
 
-    .. math::
-        out = 0.5 * x * (1 + tanh(\\sqrt{\\frac{2}{\\pi}} * (x + 0.044715x^{3})))
+    Applies the Gaussian Error Linear Units function:
+
+    .. math:: \\text{GELU}(x) = x * \Phi(x)
+
+    where :math:`\Phi(x)` is the Cumulative Distribution Function for Gaussian Distribution.
+
+    When the approximate argument is 'tanh', Gelu is estimated with:
+
+    .. math:: \\text{GELU}(x) = 0.5 * x * (1 + \\text{Tanh}(\sqrt(2 / \pi) * (x + 0.044715 * x^3)))
 
     Args:
-        x (oneflow.Tensor): Input Tensor
+        input (oneflow.Tensor): Input Tensor
+        approximate (string, optional): the gelu approximation algorithm to use:
+            ``'none'`` | ``'tanh'``. Default: ``'none'``
 
     Returns:
-        oneflow.Tensor: A Tensor.
+        oneflow.Tensor: A Tensor has same shape as the input.
 
     For example:
 
@@ -362,11 +359,52 @@ class GELU(Module):
 
     """
 
+    def __init__(self, approximate: str = "none"):
+        super().__init__()
+        self.approximate = approximate
+
+    def forward(self, input):
+        if self.approximate == "none" or self.approximate == "tanh":
+            return flow._C.gelu_with_approximate(input, self.approximate)
+        else:
+            raise NotImplementedError
+
+
+class QuickGELU(Module):
+    """
+    QuickGELU() -> Tensor
+
+    Applies GELU approximation that is fast but somewhat inaccurate. See: https://github.com/hendrycks/GELUs
+
+    .. math::
+        \\text{QuickGELU}(x) = x * \\sigma(1.702x) = x * \\frac{1}{1 + \\exp(-1.702x)}
+
+    Args:
+        input (oneflow.Tensor): Input Tensor
+
+    Returns:
+        oneflow.Tensor: A Tensor has same shape as the input.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        
+        >>> input = flow.Tensor([-0.5, 0, 0.5])
+        >>> gelu = flow.nn.QuickGELU()
+
+        >>> out = gelu(input)
+        >>> out
+        tensor([-0.1496,  0.0000,  0.3504], dtype=oneflow.float32)
+
+    """
+
     def __init__(self):
         super().__init__()
 
     def forward(self, x):
-        return flow._C.gelu(x)
+        return flow._C.quick_gelu(x)
 
 
 class Sigmoid(Module):
@@ -449,6 +487,57 @@ class Hardsigmoid(Module):
     def extra_repr(self):
         inplace_str = "inplace=True" if self.inplace else ""
         return inplace_str
+
+
+class Hardshrink(Module):
+    r"""
+    The Hardshrink activation.
+
+    The formula is:
+
+    .. math::
+        \text{Hardshrink}(x) =
+        \begin{cases}
+        x, & \text{ if } x > \lambda \\
+        x, & \text{ if } x < -\lambda \\
+        0, & \text{ otherwise }
+        \end{cases}
+
+    Args:
+        lambd: the :math:`\lambda` value for the Hardshrink formulation. Default: 0.5
+        inplace: can optionally do the operation in-place. Default: ``False``
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+
+    For example:
+
+    .. code-block:: python
+    
+        >>> import numpy as np
+        >>> import oneflow as flow
+        >>> x = np.array([-1.1, 0, 0.2, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> hardshrink = flow.nn.Hardshrink(lambd=0.5)
+        >>> out = hardshrink(input)
+        >>> out
+        tensor([-1.1000,  0.0000,  0.0000,  0.0000], dtype=oneflow.float32)
+    """
+
+    def __init__(self, lambd: float = 0.5, inplace: bool = False):
+        super().__init__()
+        self.inplace = inplace
+        self.lambd = lambd
+
+    def forward(self, x):
+        return flow._C.hardshrink(x, lambd=self.lambd, inplace=self.inplace)
+
+    def extra_repr(self) -> str:
+        param_str = f"lambd={self.lambd}"
+        param_str += ", inplace=True" if self.inplace else ""
+        return param_str
 
 
 class Softmax(Module):
@@ -641,8 +730,8 @@ class Softplus(Module):
 
 
 class Hardswish(Module):
-    """Applies the hardswish function, element-wise, as described in the paper:
-    `Searching for MobileNetV3`_.
+    """Applies the hardswish function, element-wise, as described in the paper `Searching for MobileNetV3
+    <https://arxiv.org/abs/1905.02244>`__.
 
     .. math::
         \\text{Hardswish}(x) = \\begin{cases}
@@ -671,9 +760,7 @@ class Hardswish(Module):
         >>> out = hardswish(input)
         >>> out
         tensor([-0.2083,  0.0000,  0.2917], dtype=oneflow.float32)
-
-    .. _`Searching for MobileNetV3`:
-        https://arxiv.org/abs/1905.02244
+        
     """
 
     def __init__(self, inplace: bool = False):
@@ -809,12 +896,68 @@ class LeakyReLU(Module):
         self.inplace = inplace
 
     def forward(self, x):
-        if self.inplace:
-            warnings.warn("LeakyReLU module do not support inplace now")
-        return flow._C.leaky_relu(x, alpha=self.negative_slope)
+        return flow._C.leaky_relu(x, alpha=self.negative_slope, inplace=self.inplace)
 
     def extra_repr(self):
         param_str = f"negative_slope={self.negative_slope}"
+        param_str += ", inplace=True" if self.inplace else ""
+        return param_str
+
+
+class RReLU(Module):
+    """Applies the randomized leaky rectified liner unit function, element-wise:
+
+    .. math::
+        \\text{RReLU}(x) = \\begin{cases}
+            x, & \\text{ if } x \\geq 0 \\\\
+            a \\times x, & \\text{ otherwise }
+        \\end{cases}
+        
+    where :math:`a` is randomly sampled from uniform distribution
+    :math:`\mathcal{U}(\text{lower}, \text{upper})`.
+    
+    .. note::
+        See `Empirical Evaluation of Rectified Activations in Convolution Network: <https://arxiv.org/pdf/1505.00853.pdf>`_
+
+    Args:
+        lower: lower bound of the uniform distribution. Default: :math:`\frac{1}{8}`
+        upper: upper bound of the uniform distribution. Default: :math:`\frac{1}{3}`
+        inplace: can optionally do the operation in-place. Default: ``False``
+
+    Shape:
+        - Input: :math:`(*)`, where :math:`*` means any number of dimensions.
+        - Output: :math:`(N, *)`, same shape as the input
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        
+        >>> m = flow.nn.RReLU(0.1, 0.3)
+        >>> arr = np.array([0.2, -0.3, -3.0, 4.0, 0.5, -2.2])
+        >>> x = flow.Tensor(arr)
+        >>> out = m(x) 
+        >>> print(out) # doctest: +SKIP
+        tensor([ 0.2000, -0.0824, -0.5418,  4.0000,  0.5000, -0.4213], dtype=oneflow.float32) # doctest: +SKIP
+            
+    """
+
+    def __init__(
+        self, lower: float = 1.0 / 8, upper: float = 1.0 / 3, inplace: bool = False
+    ):
+        super().__init__()
+        self.lower = lower
+        self.upper = upper
+        self.inplace = inplace
+
+    def forward(self, x):
+        return flow._C.rrelu(x, self.lower, self.upper, self.training, self.inplace)
+
+    def extra_repr(self):
+        param_str = f"lower={self.lower}"
+        param_str += f"upper={self.upper}"
         param_str += ", inplace=True" if self.inplace else ""
         return param_str
 
@@ -952,9 +1095,6 @@ class SELU(Module):
 
 class Softshrink(Module):
     r"""
-    The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.Softshrink.html?highlight=softshrink#torch.nn.Softshrink.
-
     The Softshrink activation.
 
     The formula is:
@@ -967,6 +1107,9 @@ class Softshrink(Module):
         x + \lambd, & \text{ if } x < -\lambda \\
         0, & \text{ otherwise }
         \end{cases}
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.Softshrink.html.
 
     Args:
         lambd: the :math:`\lambda` value for the Softshrink formulation. Default: 0.5
@@ -1089,7 +1232,7 @@ class Threshold(Module):
     r"""The Threshold Activation. Return ``x`` if ``x`` is greater than ``threshold``, else return ``value``.
 
     The interface is consistent with PyTorch.
-    The documentation is referenced from https://pytorch.org/docs/stable/generated/torch.nn.Threshold.html.
+    The documentation is referenced from https://pytorch.org/docs/1.10/generated/torch.nn.Threshold.html.
 
     The formula is:
 

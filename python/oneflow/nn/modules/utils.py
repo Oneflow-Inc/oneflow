@@ -47,6 +47,8 @@ _quadruple = _ntuple(4)
 
 
 def _handle_size_arg(size):
+    if len(size) == 0:
+        return size
     assert len(size) > 0, "size of tensor doesn't exists"
     if isinstance(size[0], (list, tuple, flow.Size)):
         assert (
@@ -94,13 +96,6 @@ def _check_axis(axis, shape):
         if axis[i] < 0:
             axis[i] = axis[i] + ndim
     return axis
-
-
-def _check_inplace_valid(x):
-    if x.is_leaf and x.requires_grad:
-        raise RuntimeError(
-            "a leaf Tensor that requires grad is being used in an in-place operation"
-        )
 
 
 def _generate_output_size(input_size, output_size):

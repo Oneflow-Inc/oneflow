@@ -82,6 +82,12 @@ def NoGrad : OpInterface<"NoGrad"> {
   let cppNamespace = "::mlir::oneflow";
 }
 
+def SupportNonContiguous : OpInterface<"SupportNonContiguous"> {
+  let description = [{
+  }];
+  let cppNamespace = "::mlir::oneflow";
+}
+
 def CpuOnly : OpInterface<"CpuOnly"> {
   let description = [{
   }];
@@ -105,6 +111,47 @@ def NCHWCompatibleInterface : OpInterface<"NCHWCompatible"> {
     >,
     InterfaceMethod<"",
         "llvm::DenseSet<mlir::Value>", "ResultsToTranspose", (ins)
+    >,
+  ];
+  let cppNamespace = "::mlir::oneflow";
+}
+
+def BiasAddCompatibleInterface : OpInterface<"BiasAddCompatible"> {
+  let description = [{
+    Interface of ops used as bias add
+  }];
+
+  let methods = [
+    InterfaceMethod<"",
+        "bool", "isLastDim", (ins)
+    >,
+    InterfaceMethod<"",
+        "mlir::Value", "biasAddGetBias", (ins)
+    >,
+    InterfaceMethod<"",
+        "mlir::Value", "biasAddGetOut", (ins)
+    >,
+  ];
+  let cppNamespace = "::mlir::oneflow";
+}
+
+def MatMulCompatibleInterface : OpInterface<"MatMulCompatible"> {
+  let description = [{
+    Interface of ops used as matmul
+  }];
+
+  let methods = [
+    InterfaceMethod<"is this a transpose_a=false, transpose_b=true matmul",
+        "bool", "isLinear", (ins)
+    >,
+    InterfaceMethod<"",
+        "mlir::Value", "matMulGetX", (ins)
+    >,
+    InterfaceMethod<"",
+        "mlir::Value", "matMulGetW", (ins)
+    >,
+    InterfaceMethod<"",
+        "mlir::Value", "matMulGetY", (ins)
     >,
   ];
   let cppNamespace = "::mlir::oneflow";

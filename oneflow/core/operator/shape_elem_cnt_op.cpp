@@ -60,7 +60,7 @@ namespace {
 Maybe<void> InferBlobDescs(const OperatorConf& op_conf,
                            const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
   BlobDesc4BnInOp("y")->set_data_type(op_conf.shape_elem_cnt_conf().data_type());
-  BlobDesc4BnInOp("y")->mut_shape() = Shape({});
+  BlobDesc4BnInOp("y")->set_shape(Shape({}));
   return Maybe<void>::Ok();
 }
 

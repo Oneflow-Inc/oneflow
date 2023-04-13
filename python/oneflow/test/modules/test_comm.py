@@ -15,6 +15,7 @@ limitations under the License.
 """
 
 import unittest
+from threading import Thread
 
 import numpy as np
 import os
@@ -94,6 +95,25 @@ class TestComm(flow.unittest.TestCase):
         test_case._test_send_recv_without_sending_meta(x0, 2, 3)
         x0 = x0.to("cuda")
         test_case._test_send_recv_without_sending_meta(x0, 3, 1)
+
+    @flow.unittest.skip_unless_1n2d()
+    def test_comm_in_thread(test_case):
+        def threaded_function():
+            rank = flow.env.get_rank()
+            rev = flow.framework.check_point_v2._broadcast_py_object(rank, 0)
+            test_case.assertEqual(rev, 0)
+
+            x = flow.tensor([rank, rank + 1]).to_global(
+                placement=flow.placement.all("cpu"), sbp=flow.sbp.split(0)
+            )
+            test_case.assertTrue(np.array_equal(x.numpy(), np.array([0, 1, 1, 2])))
+            x = flow.tensor([rank, rank + 1])
+            flow.comm.all_reduce(x)
+            test_case.assertTrue(np.array_equal(x.numpy(), np.array([1, 3])))
+
+        thread = Thread(target=threaded_function)
+        thread.start()
+        thread.join()
 
 
 if __name__ == "__main__":

@@ -20,13 +20,12 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> UniformOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  Shape* out_shape = ctx->OutputShape("out", 0);
   const Shape& shape = ctx->Attr<Shape>("shape");
   DimVector dim_vec;
   if (shape.NumAxes() > 0) {
     dim_vec.insert(dim_vec.end(), shape.dim_vec().cbegin(), shape.dim_vec().cend());
   }
-  *out_shape = Shape(dim_vec);
+  ctx->SetOutputShape("out", 0, Shape(dim_vec));
   return Maybe<void>::Ok();
 }
 
@@ -35,15 +34,20 @@ namespace oneflow {
   const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
   const Shape& logical_shape = ctx->Attr<Shape>("shape");
   const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
-  const Shape& physical_shape =
-      GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, parallel_id).shape();
+  const auto tensor_slice_view =
+      GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, parallel_id);
+  const Shape& physical_shape = tensor_slice_view.shape();
 
-  *ctx->OutputShape("out", 0) = physical_shape;
+  ctx->SetOutputShape("out", 0, physical_shape);
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> UniformOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
+  const Shape& logical_shape = ctx->Attr<Shape>("shape");
+  int64_t num_axes = logical_shape.NumAxes();
+  for (int i = 0; i < num_axes; ++i) {
+    ctx->NewBuilder().Broadcast(ctx->inputs()).Split(ctx->outputs(), i).Build();
+  }
   return Maybe<void>::Ok();
 }
 
@@ -55,8 +59,13 @@ namespace oneflow {
 
 /* static */ Maybe<void> UniformOp::InferDataType(user_op::InferContext* ctx) {
   auto dtype = ctx->Attr<DataType>("dtype");
-  *ctx->OutputDType("out", 0) = dtype;
+  ctx->SetOutputDType("out", 0, dtype);
   return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> UniformOp::DumpNdSbpSignatureForOpConfFn(const NdSbpSignature& nd_sbp_sig,
+                                                                  OperatorConf* op_conf) {
+  return user_op::SetSrcOpNdSbp(nd_sbp_sig, "out_0", op_conf);
 }
 
 }  // namespace oneflow

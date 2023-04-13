@@ -27,13 +27,6 @@ const static std::string kProducedLbi2ConsumedDiffLbi = "produced_lbi2consumed_d
 std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4OpName(
     const Placement& placement);
 
-namespace cfg {
-class SbpParallel;
-class SbpSignature;
-class NdSbp;
-class NdSbpSignature;
-}  // namespace cfg
-
 class SbpParallel;
 class LogicalBlobId;
 class Operator;
@@ -50,6 +43,8 @@ class JobBuilder final {
     return job_->mutable_job_parallel_view_conf();
   }
 
+  MergedLogicalChainIdGroup* add_logical_chain_groups() { return job_->add_logical_chain_groups(); }
+
   Maybe<const OperatorConf&> OpConf4OpName(const std::string& op_name) const;
   Maybe<OperatorConf*> MutableOpConf4OpName(const std::string& op_name);
 
@@ -59,7 +54,7 @@ class JobBuilder final {
   void MutOpsOnlyOnce(const std::vector<OperatorConf>& op_confs);
   // Mut op with transaction
   Maybe<bool> IsInMutOpTransaction(const std::string& op_name) const;
-  Maybe<OperatorConf*> MutOpTransactionGet(const std::string& op_name);
+  Maybe<OperatorConf&> MutOpTransactionGet(const std::string& op_name);
   Maybe<void> MutOpTransactionMut(const OperatorConf& op_conf);
   Maybe<void> MutOpTransactionCommit();
   void MutParallelConfOnlyOnce(const std::string& op_name, const ParallelConf& parallel_conf);
@@ -88,6 +83,7 @@ class JobBuilder final {
  private:
   void AddOpNamesToPlacementGroup(const std::vector<std::string>& op_names,
                                   const ParallelConf& parallel_conf);
+  void AddOpToModuleConf(const OperatorConf& op_conf);
 
   Job* job_;
   HashMap<std::string, OperatorConf*> op_name2op_conf_;

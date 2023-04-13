@@ -19,6 +19,12 @@ limitations under the License.
 #include <string>
 #include <vector>
 
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/MLIRContext.h"
+#include "OneFlow/OneFlowEnums.h.inc"
+#include "oneflow/core/common/shape.h"
+#include "oneflow/core/framework/tensor.h"
 // This include is not necessary now, but it is here for testing the namespace collision
 #include "oneflow/core/framework/user_op_registry_manager.h"
 
@@ -28,6 +34,7 @@ namespace oneflow {
 
 namespace support {
 
+const ::oneflow::UserOpDef& getUserOpDef(const std::string& op_type_name);
 static const std::vector<std::string>* inputKeys() {
   static std::vector<std::string> val({"in"});
   return &val;
@@ -36,6 +43,20 @@ static const std::vector<std::string>* inputKeys() {
 std::vector<std::string> GetInputKeys(const std::string& op_type_name);
 
 std::vector<std::string> GetOutputKeys(const std::string& op_type_name);
+
+mlir::DenseElementsAttr TensorToDenseElementsAttr(
+    const std::shared_ptr<::oneflow::one::Tensor>& tensor, MLIRContext* ctx);
+
+std::shared_ptr<::oneflow::one::Tensor> DenseElementsAttrToTensor(
+    const mlir::Attribute& attr, const mlir::Attribute& device_tag,
+    const mlir::Attribute& device_name);
+void DenseElementsAttrToTensor(const mlir::Attribute& attr, const mlir::Attribute& device_tag,
+                               const mlir::Attribute& device_name,
+                               std::shared_ptr<::oneflow::one::Tensor>& tensor);
+
+FailureOr<::oneflow::DataType> FromMLIRTypeToOFDataType(Type mlir_type);
+FailureOr<::oneflow::DataType> FromMLIRDataTypeToOFDataType(::mlir::oneflow::DataType data_type);
+FailureOr<::oneflow::DataType> FromMLIRAttrToOFDataType(Attribute attr);
 
 }  // namespace support
 

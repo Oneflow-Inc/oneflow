@@ -19,15 +19,15 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow._C.triplet_margin_loss,
     r"""    
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.functional.triplet_margin_loss.html?highlight=triplet_margin_loss
-
     Creates a criterion that measures the triplet loss given an input
     tensors :math:`x1`, :math:`x2`, :math:`x3` and a margin with a value greater than :math:`0`.
     This is used for measuring a relative similarity between samples. A triplet
     is composed by `a`, `p` and `n` (i.e., `anchor`, `positive examples` and `negative
     examples` respectively). The shapes of all input tensors should be
     :math:`(N, D)`.
-
+    
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.triplet_margin_loss.html.
+    
     The distance swap is described in detail in the paper `Learning shallow
     convolutional feature descriptors with triplet losses <http://www.bmva.org/bmvc/2016/papers/paper119/index.html>`__ by
     V. Balntas, E. Riba et al.
@@ -81,9 +81,12 @@ add_docstr(
 add_docstr(
     oneflow._C.cross_entropy,
     r"""
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.functional.cross_entropy.html?highlight=nn%20functional%20cross_entropy#torch.nn.functional.cross_entropy
+    cross_entropy(input, target, weight=None, ignore_index=-100, reduction="mean", label_smoothing=0.0)
 
     See :class:`~oneflow.nn.CrossEntropyLoss` for details.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.cross_entropy.html.
+
 
     Args:
         input (Tensor) : :math:`(N, C)` where `C = number of classes` or :math:`(N, C, H, W)`
@@ -107,6 +110,11 @@ add_docstr(
             elements in the output, ``'sum'``: the output will be summed. Note: :attr:`size_average`
             and :attr:`reduce` are in the process of being deprecated, and in the meantime,
             specifying either of those two args will override :attr:`reduction`. Default: ``'mean'``
+        label_smoothing (float, optinoal): A float in [0.0, 1.0]. Specifies the amount
+            of smoothing when computing the loss, where 0.0 means no smoothing.
+            The targets become a mixture of the original ground truth and a uniform
+            distribution as described in `Rethinking the Inception Architecture for Computer Vision <https://arxiv.org/abs/1512.00567>`_.
+            Default: :math:`0.0`.
 
     For example:
 
@@ -119,6 +127,199 @@ add_docstr(
         >>> loss = F.cross_entropy(input, target)
         >>> loss.backward()
 
+
+    """,
+)
+
+add_docstr(
+    oneflow._C.l1_loss,
+    r"""
+    l1_loss(input, target, reduction="mean") -> Tensor
+
+    This operator computes the L1 loss between each element in input and target.
+
+    see :class:`~oneflow.nn.L1Loss` for details.
+
+    Args:
+        input (Tensor): The input Tensor.
+        target (Tensor): The target Tensor.
+        reduction (string, optional): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
+    
+    Examples::
+
+        >>> import oneflow as flow
+        >>> import oneflow.nn.functional as F
+        >>> input = flow.randn(3, 4, requires_grad=True)
+        >>> target = flow.rand(3, 4, requires_grad=False)
+        >>> loss = F.l1_loss(input, target)
+        >>> loss.backward()
+
+    """,
+)
+
+add_docstr(
+    oneflow._C.mse_loss,
+    r"""
+    mse_loss(input, target, reduction="mean") -> Tensor
+
+    This operator computes the mean squared error (squared L2 norm) 
+    loss between each element in input and target.
+
+    see :class:`~oneflow.nn.MSELoss` for details.
+
+    Args:
+        input (Tensor): The input Tensor.
+        target (Tensor): The target Tensor.
+        reduction (string, optional): Specifies the reduction to apply to the output:
+            ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
+            ``'mean'``: the sum of the output will be divided by the number of
+            elements in the output, ``'sum'``: the output will be summed. Default: ``'mean'``
+
+    Examples::
+
+        >>> import oneflow as flow
+        >>> import oneflow.nn.functional as F
+        >>> input = flow.randn(3, 4, requires_grad=True)
+        >>> target = flow.rand(3, 4, requires_grad=False)
+        >>> loss = F.mse_loss(input, target)
+        >>> loss.backward()
+
+    """,
+)
+
+add_docstr(
+    oneflow._C.smooth_l1_loss,
+    """
+    smooth_l1_loss(input: Tensor, target: Tensor, size_average: bool=True, reduce: bool=True, reduction: str='mean', beta: float=1.0) -> Tensor
+
+    Function that uses a squared term if the absolute
+    element-wise error falls below beta and an L1 term otherwise.
+
+    See :class:`~oneflow.nn.SmoothL1Loss` for details.
+    """,
+)
+
+add_docstr(
+    oneflow._C.binary_cross_entropy_loss,
+    r"""
+    binary_cross_entropy(input, target, weight=None, reduction='mean')
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.binary_cross_entropy.html.
+    
+    Function that measures the Binary Cross Entropy between the target and input probabilities.
+
+    See :class:`~oneflow.nn.BCELoss` for details.
+
+    Args:
+        input: Tensor of arbitrary shape as probabilities.
+        target: Tensor of the same shape as input with values between 0 and 1.
+        weight (Tensor, optional): a manual rescaling weight
+                if provided it's repeated to match input tensor shape
+        reduction (string, optional): Specifies the reduction to apply to the output:
+            ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
+            ``'mean'``: the sum of the output will be divided by the number of
+            elements in the output, ``'sum'``: the output will be summed. Note: :attr:`size_average`
+            and :attr:`reduce` are in the process of being deprecated, and in the meantime,
+            specifying either of those two args will override :attr:`reduction`. Default: ``'mean'``
+
+    Examples::
+
+        >>> import oneflow as flow
+        >>> import oneflow.nn.functional as F
+        >>> input = flow.randn(3, 2, requires_grad=True)
+        >>> target = flow.rand(3, 2, requires_grad=False)
+        >>> loss = F.binary_cross_entropy(flow.sigmoid(input), target)
+        >>> loss.backward()
+    """,
+)
+
+add_docstr(
+    oneflow._C.binary_cross_entropy_with_logits_loss,
+    r"""
+    binary_cross_entropy_with_logits(input, target, weight=None, reduction='mean', pos_weight=None)
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.binary_cross_entropy_with_logits.html.
+
+    Function that measures Binary Cross Entropy between target and input logits.
+
+    See :class:`~oneflow.nn.BCEWithLogitsLoss` for details.
+
+    Args:
+        input: Tensor of arbitrary shape as unnormalized scores (often referred to as logits).
+        target: Tensor of the same shape as input with values between 0 and 1
+        weight (Tensor, optional): a manual rescaling weight
+            if provided it's repeated to match input tensor shape
+        reduction (string, optional): Specifies the reduction to apply to the output:
+            ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
+            ``'mean'``: the sum of the output will be divided by the number of
+            elements in the output, ``'sum'``: the output will be summed. Note: :attr:`size_average`
+            and :attr:`reduce` are in the process of being deprecated, and in the meantime,
+            specifying either of those two args will override :attr:`reduction`. Default: ``'mean'``
+        pos_weight (Tensor, optional): a weight of positive examples.
+                Must be a vector with length equal to the number of classes.
+
+    Examples::
+
+        >>> import oneflow as flow
+        >>> import oneflow.nn.functional as F
+        >>> input = flow.randn(3, requires_grad=True)
+        >>> target = flow.randn(3)
+        >>> target[target >= 0] = 1
+        >>> target[target < 0] = 0
+        >>> loss = F.binary_cross_entropy_with_logits(input, target)
+        >>> loss.backward()
+    """,
+)
+
+add_docstr(
+    oneflow._C.kl_div_loss,
+    r"""
+    kl_div_loss(input, target, reduction="mean", log_target=False)
+
+    `The Kullback-Leibler divergence loss measure <https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence>`_
+
+    See :class:`~oneflow.nn.KLDivLoss` for details.
+
+    Args:
+        reduction (string, optional): Specifies the reduction to apply to the output:
+            ``'none'`` | ``'batchmean'`` | ``'sum'`` | ``'mean'``.
+            ``'none'``: no reduction will be applied.
+            ``'batchmean'``: the sum of the output will be divided by batchsize.
+            ``'sum'``: the output will be summed.
+            ``'mean'``: the output will be divided by the number of elements in the output.
+            Default: ``'mean'``
+        log_target (bool, optional): Specifies whether `target` is passed in the log space.
+            Default: ``False``
+
+    .. note::
+        :attr:`reduction` = ``'mean'`` doesn't return the true kl divergence value, please use
+        :attr:`reduction` = ``'batchmean'`` which aligns with KL math definition.
+        In the next major release, ``'mean'`` will be changed to be the same as ``'batchmean'``.
+
+    Shape:
+        - Input: :math:`(N, *)` where :math:`*` means, any number of additional
+          dimensions
+        - Target: :math:`(N, *)`, same shape as the input
+        - Output: scalar by default. If :attr:``reduction`` is ``'none'``, then :math:`(N, *)`,
+          the same shape as the input
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> input = flow.tensor([-0.9021705, 0.08798598, 1.04686249], dtype=flow.float32)
+        >>> target = flow.tensor([1.22386942, -0.89729659, 0.01615712], dtype=flow.float32)
+        >>> out = flow.nn.functional.kl_div(input, target, reduction="none", log_target=False)
+        >>> out
+        tensor([ 1.3514,  0.0000, -0.0836], dtype=oneflow.float32)
+        >>> out = flow.nn.functional.kl_div(input, target, reduction="mean", log_target=False)
+        >>> out
+        tensor(0.4226, dtype=oneflow.float32)
+        >>> out = flow.nn.functional.kl_div(input, target, reduction="sum", log_target=True)
+        >>> out
+        tensor(5.7801, dtype=oneflow.float32)
 
     """,
 )

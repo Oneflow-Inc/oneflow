@@ -33,8 +33,8 @@ import oneflow._oneflow_internal
 import oneflow.framework.dtype as dtype_util
 from oneflow.framework.function_util import FunctionConfig as ExecutionConfig
 from oneflow.framework.tensor import Tensor
-from oneflow.nn.module import Module
-from oneflow.nn.optimizer.optimizer import Optimizer as OOPOptimizer
+from oneflow.nn.modules.module import Module
+from oneflow.optim.optimizer import Optimizer as OOPOptimizer
 
 
 class DataModule(Module):

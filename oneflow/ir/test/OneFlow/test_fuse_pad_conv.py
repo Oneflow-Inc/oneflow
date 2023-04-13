@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-# RUN: python3 %s | FileCheck %s
+# RUN: python3 -m oneflow.test_utils.throttle --with-cuda=%with_cuda python3 %s | FileCheck %s
 # CHECK-NOT: oneflow.pad
 
 import unittest
@@ -22,9 +22,14 @@ import numpy as np
 import os
 
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-
+os.environ["ONEFLOW_MLIR_FUSE_FORWARD_OPS"] = "1"
+os.environ["ONEFLOW_MLIR_STDOUT"] = "1"
+os.environ["ONEFLOW_MLIR_ENABLE_TIMING"] = "1"
+os.environ["ONEFLOW_MLIR_PRINT_STATS"] = "1"
+os.environ["ONEFLOW_MLIR_ENABLE_IR_PRINTING"] = "1"
 import oneflow as flow
 import oneflow.unittest
+import oneflow.sysconfig
 
 
 def do_pad_conv_graph(test_case, with_cuda, with_bias, with_nchw=True):
@@ -62,12 +67,15 @@ def do_pad_conv_graph(test_case, with_cuda, with_bias, with_nchw=True):
 
 @flow.unittest.skip_unless_1n1d()
 class TestFusePadConv(oneflow.unittest.TestCase):
-    def test_pad_conv_graph(test_case):
+    @unittest.skipUnless(oneflow.sysconfig.with_cuda(), "needs -DBUILD_CUDA=ON")
+    def test_pad_conv_graph_cuda(test_case):
         do_pad_conv_graph(test_case, True, True)
-        do_pad_conv_graph(test_case, False, True)
         do_pad_conv_graph(test_case, True, False)
-        do_pad_conv_graph(test_case, False, False)
         do_pad_conv_graph(test_case, True, False, True)
+
+    def test_pad_conv_graph_cpu(test_case):
+        do_pad_conv_graph(test_case, False, True)
+        do_pad_conv_graph(test_case, False, False)
         do_pad_conv_graph(test_case, False, False, True)
 
 

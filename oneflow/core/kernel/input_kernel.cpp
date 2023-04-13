@@ -34,14 +34,14 @@ class InputKernel final : public Kernel {
     CHECK(this->op_conf().input_conf().has_job_name());
     const auto& job_name = this->op_conf().input_conf().job_name();
     const auto& op_name = this->op_conf().name();
-    auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
+    auto* buffer_mgr = Singleton<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
     auto* buffer = buffer_mgr->Get(GetInputBufferName(job_name, op_name));
     std::shared_ptr<CriticalSectionInstance> critical_section_instance;
     BufferStatus buffer_status = buffer->TryReceive(&critical_section_instance);
     CHECK_NE(buffer_status, kBufferStatusEmpty);
     if (buffer_status == kBufferStatusSuccess) {
-      OfBlob ofblob(ctx->stream(), ctx->BnInOp2Blob("out"));
-      critical_section_instance->AccessBlobByOpName(reinterpret_cast<uint64_t>(&ofblob), op_name);
+      critical_section_instance->AccessBlobByOpName(ctx->stream(), ctx->BnInOp2Blob("out"),
+                                                    op_name);
     }
   }
   void ForwardHeader(KernelContext* ctx) const override {}

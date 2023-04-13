@@ -19,18 +19,26 @@ limitations under the License.
 #include "oneflow/core/lazy/actor/actor.h"
 #include "oneflow/core/lazy/actor/light_actor.h"
 #include "oneflow/core/profiler/profiler.h"
-#include "oneflow/core/stream/include/stream_context.h"
+#include "oneflow/core/lazy/stream_context/include/stream_context.h"
 #include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/lazy/stream_context/include/generic_stream_context.h"
+#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 
 Thread::Thread(const StreamId& stream_id) : thrd_id_(EncodeStreamIdToInt64(stream_id)) {
   local_msg_queue_enabled_ = ParseBooleanFromEnv("ONEFLOW_THREAD_ENABLE_LOCAL_MESSAGE_QUEUE", true);
   light_actor_enabled_ = ParseBooleanFromEnv("ONEFLOW_ACTOR_ENABLE_LIGHT_ACTOR", true);
-  StreamContext* stream_ctx =
-      NewObj<int, StreamContext, const StreamId&>(stream_id.device_id().device_type(), stream_id);
-  stream_ctx_.reset(stream_ctx);
+  if (IsClassRegistered<int, StreamContext, const StreamId&>(stream_id.device_id().device_type(),
+                                                             stream_id)) {
+    stream_ctx_.reset(NewObj<int, StreamContext, const StreamId&>(
+        stream_id.device_id().device_type(), stream_id));
+  } else {
+    stream_ctx_.reset(new GenericStreamContext(stream_id));
+  }
+
   actor_thread_ = std::thread([this, stream_id]() {
+    LazyMode::Guard guard(true);
     OF_PROFILER_NAME_THIS_HOST_THREAD("_" + ToString(stream_id.device_id().device_type())
                                       + std::to_string(stream_id.device_id().device_index())
                                       + "_actor");
@@ -60,7 +68,9 @@ void Thread::PollMsgChannel() {
     local_msg_queue_.pop();
     if (msg.msg_type() == ActorMsgType::kCmdMsg) {
       if (msg.actor_cmd() == ActorCmd::kStopThread) {
-        CHECK(id2actor_ptr_.empty());
+        CHECK(id2actor_ptr_.empty())
+            << " RuntimeError! Thread: " << thrd_id_
+            << " NOT empty when stop with actor num: " << id2actor_ptr_.size();
         break;
       } else if (msg.actor_cmd() == ActorCmd::kConstructActor) {
         ConstructActor(msg.dst_actor_id());
@@ -79,7 +89,7 @@ void Thread::PollMsgChannel() {
       const int64_t job_id = job_id_it->second;
       id2job_id_.erase(job_id_it);
       id2actor_ptr_.erase(actor_it);
-      Global<RuntimeCtx>::Get()->DecreaseCounter(GetRunningActorCountKeyByJobId(job_id));
+      Singleton<RuntimeCtx>::Get()->DecreaseCounter(GetRunningActorCountKeyByJobId(job_id));
     } else {
       CHECK_EQ(process_msg_ret, 0);
     }
@@ -106,7 +116,7 @@ void Thread::ConstructActor(int64_t actor_id) {
             .second);
   CHECK(id2job_id_.emplace(actor_id, task.job_id()).second);
   id2task_.erase(task_it);
-  Global<RuntimeCtx>::Get()->DecreaseCounter("constructing_actor_cnt");
+  Singleton<RuntimeCtx>::Get()->DecreaseCounter("constructing_actor_cnt");
 }
 
 }  // namespace oneflow

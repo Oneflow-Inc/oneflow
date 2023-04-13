@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/embedding/persistent_table.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/embedding/hash_functions.cuh"
 
 #ifdef __linux__
 
@@ -28,9 +29,6 @@ limitations under the License.
 #include <sys/syscall.h>
 #include <linux/aio_abi.h>
 #include <unistd.h>
-#ifdef WITH_LIBURING
-#include <liburing.h>
-#endif  // WITH_LIBURING
 
 #endif  // __linux__
 
@@ -196,59 +194,6 @@ class ChunkIteratorImpl : public PersistentTable::Iterator {
   uint64_t chunk_index_offset_;
 };
 
-#ifdef WITH_LIBURING
-
-class RingEngine final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(RingEngine);
-  RingEngine() : ring_{}, pending_submit_(0), num_readings_(0) {
-    PCHECK(io_uring_queue_init(kRingQueueDepth, &ring_, 0) == 0);
-  }
-  ~RingEngine() {
-    WaitUntilDone();
-    io_uring_queue_exit(&ring_);
-  }
-
-  void AsyncPread(int fd, void* buf, size_t count, off_t offset) {
-    if (num_readings_ == kRingQueueDepth) {
-      struct io_uring_cqe* cqe = nullptr;
-      PCHECK(io_uring_wait_cqe(&ring_, &cqe) == 0);
-      CHECK_GE(cqe->res, 0);
-      io_uring_cqe_seen(&ring_, cqe);
-    } else {
-      num_readings_ += 1;
-    }
-    io_uring_sqe* sqe = CHECK_NOTNULL(io_uring_get_sqe(&ring_));
-    io_uring_prep_read(sqe, fd, buf, count, offset);
-    pending_submit_ += 1;
-    if (pending_submit_ == kRingSubmitBatch) {
-      PCHECK(io_uring_submit(&ring_) == pending_submit_);
-      pending_submit_ = 0;
-    }
-  }
-
-  void WaitUntilDone() {
-    if (pending_submit_ > 0) {
-      PCHECK(io_uring_submit(&ring_) == pending_submit_);
-      pending_submit_ = 0;
-    }
-    while (num_readings_ != 0) {
-      struct io_uring_cqe* cqe = nullptr;
-      PCHECK(io_uring_wait_cqe(&ring_, &cqe) == 0);
-      CHECK_GE(cqe->res, 0);
-      io_uring_cqe_seen(&ring_, cqe);
-      num_readings_ -= 1;
-    }
-  }
-
- private:
-  io_uring ring_;
-  uint32_t pending_submit_;
-  uint32_t num_readings_;
-};
-
-#endif  // WITH_LIBURING
-
 class AioEngine final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AioEngine);
@@ -298,19 +243,10 @@ class AioEngine final {
 constexpr size_t kCacheLineSize = 64;
 
 template<typename Engine>
-using ForRange = std::function<void(Engine* engine, size_t start, size_t end)>;
+using IoTask = std::function<void(Engine* engine)>;
 
 template<typename Engine>
-struct ParallelForTask {
-  ParallelForTask(size_t num_workers, size_t total, const ForRange<Engine>* for_range)
-      : counter(0), total(total), for_range(for_range), bc(num_workers) {}
-  union alignas(kCacheLineSize) {
-    std::atomic<size_t> counter;
-  };
-  size_t total;
-  const ForRange<Engine>* for_range;
-  BlockingCounter bc;
-};
+using ForRange = std::function<void(Engine* engine, size_t start, size_t end)>;
 
 template<typename Engine>
 class Worker final {
@@ -322,32 +258,27 @@ class Worker final {
     thread_.join();
   }
 
-  void Schedule(ParallelForTask<Engine>* task) { tasks_.Send(task); }
+  void Schedule(IoTask<Engine> task) { tasks_.Send(std::move(task)); }
 
   void Shutdown() { tasks_.Close(); }
 
  private:
   void PullTask() {
     while (true) {
-      ParallelForTask<Engine>* task = nullptr;
+      IoTask<Engine> task;
       const ChannelStatus status = tasks_.Receive(&task);
       if (status == ChannelStatus::kChannelStatusErrorClosed) { break; }
       CHECK_EQ(status, ChannelStatus::kChannelStatusSuccess);
-      while (true) {
-        const size_t start = task->counter.fetch_add(kParallelForStride, std::memory_order_relaxed);
-        if (start >= task->total) { break; }
-        const size_t next_start = start + kParallelForStride;
-        const size_t end = std::min(next_start, task->total);
-        (*task->for_range)(&engine_, start, end);
-      }
-      engine_.WaitUntilDone();
-      task->bc.Decrease();
+      task(&engine_);
     }
   }
-  Channel<ParallelForTask<Engine>*> tasks_;
+  Channel<IoTask<Engine>> tasks_;
   Engine engine_;
   std::thread thread_;
 };
+
+template<typename Key, typename Engine>
+class SnapshotIteratorImpl;
 
 template<typename Key, typename Engine>
 class PersistentTableImpl : public PersistentTable {
@@ -371,8 +302,10 @@ class PersistentTableImpl : public PersistentTable {
   void LoadSnapshot(const std::string& name,
                     const std::function<void(Iterator* iter)>& Hook) override;
   void SaveSnapshot(const std::string& name) override;
+  Iterator* ReadSnapshot(const std::string& name) override;
 
  private:
+  friend class SnapshotIteratorImpl<Key, Engine>;
   std::string KeyFilePath(uint64_t chunk_id) const;
   std::string ValueFilePath(uint64_t chunk_id) const;
   std::string IndexFilePath(const std::string& name, uint64_t chunk_id) const;
@@ -391,6 +324,7 @@ class PersistentTableImpl : public PersistentTable {
   uint64_t num_logical_blocks_per_chunk_;
   uint64_t num_values_per_chunk_;
   uint32_t num_values_per_block_;
+  uint32_t physical_block_size_;
   uint32_t logical_block_size_;
 
   std::vector<std::unique_ptr<Worker<Engine>>> workers_;
@@ -405,6 +339,7 @@ class PersistentTableImpl : public PersistentTable {
   PosixFile writable_key_file_;
   uint64_t writable_key_file_chunk_id_;
   PosixFileLockGuard lock_;
+  bool read_only_;
 };
 
 template<typename Key, typename Engine>
@@ -412,16 +347,22 @@ PersistentTableImpl<Key, Engine>::PersistentTableImpl(const PersistentTableOptio
     : root_dir_(options.path),
       key_size_(options.key_size),
       value_size_(options.value_size),
+      physical_block_size_(options.physical_block_size),
       logical_block_size_(GetLogicalBlockSize(options.physical_block_size, value_size_)),
       blocks_buffer_(options.physical_block_size),
-      writable_key_file_chunk_id_(-1) {
+      writable_key_file_chunk_id_(-1),
+      read_only_(options.read_only) {
   const uint64_t capacity_hint = ParseIntegerFromEnv(
       "ONEFLOW_ONE_EMBEDDING_PERSISTENT_TABLE_CAPACITY_HINT", options.capacity_hint);
   if (capacity_hint > 0) { row_id_mapping_.reserve(capacity_hint); }
   PosixFile::RecursiveCreateDirectory(options.path, 0755);
   const std::string lock_filename = PosixFile::JoinPath(options.path, kLockFileName);
   const bool init = !PosixFile::FileExists(lock_filename);
-  lock_ = PosixFileLockGuard(PosixFile(lock_filename, O_CREAT | O_RDWR, 0644));
+  if (read_only_) {
+    CHECK(!init) << "The table must be initialized in read only mode";
+  } else {
+    lock_ = PosixFileLockGuard(PosixFile(lock_filename, O_CREAT | O_RDWR, 0644));
+  }
   const uint64_t target_chunk_size = options.target_chunk_size_mb * 1024 * 1024;
   CHECK_GE(target_chunk_size, logical_block_size_);
   num_logical_blocks_per_chunk_ = target_chunk_size / logical_block_size_,
@@ -451,7 +392,8 @@ PersistentTableImpl<Key, Engine>::PersistentTableImpl(const PersistentTableOptio
   for (auto& chunk : chunks) {
     if (value_files_.size() <= chunk.first) { value_files_.resize(chunk.first + 1); }
     CHECK_EQ(value_files_.at(chunk.first).fd(), -1);
-    PosixFile value_file(chunk.second, O_RDWR | O_DIRECT, 0644);
+    const int flags = read_only_ ? (O_RDONLY | O_DIRECT) : (O_RDWR | O_DIRECT);
+    PosixFile value_file(chunk.second, flags, 0644);
     value_files_.at(chunk.first) = std::move(value_file);
   }
   if (!value_files_.empty()) {
@@ -506,7 +448,8 @@ void PersistentTableImpl<Key, Engine>::Get(uint32_t num_keys, const void* keys, 
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   offsets_buffer_.resize(num_keys);
   void* blocks_ptr = nullptr;
-  if (value_size_ == logical_block_size_) {
+  if (value_size_ == logical_block_size_
+      && reinterpret_cast<uintptr_t>(values) % physical_block_size_ == 0) {
     blocks_ptr = values;
   } else {
     blocks_buffer_.Resize(num_keys * logical_block_size_);
@@ -531,60 +474,68 @@ void PersistentTableImpl<Key, Engine>::Get(uint32_t num_keys, const void* keys, 
 template<typename Key, typename Engine>
 void PersistentTableImpl<Key, Engine>::PutBlocks(uint32_t num_keys, const void* keys,
                                                  const void* blocks) {
+  CHECK(!read_only_);
   std::lock_guard<std::recursive_mutex> lock(mutex_);
-  const uint32_t num_blocks = RoundUp(num_keys, num_values_per_block_);
+  const uint32_t num_blocks = RoundUp(num_keys, num_values_per_block_) / num_values_per_block_;
   const uint32_t num_padded_keys = num_blocks * num_values_per_block_;
   const uint64_t start_index = physical_table_size_;
   physical_table_size_ += num_padded_keys;
   CHECK_EQ(start_index % num_values_per_block_, 0);
   const uint64_t start_block_id = start_index / num_values_per_block_;
+  uint64_t written_blocks = 0;
+  const uint64_t block_keys_size = num_values_per_block_ * sizeof(Key);
+  BlockingCounter bc(1);
+  workers_.at(0)->Schedule([&](Engine*) {
+    while (written_blocks < num_blocks) {
+      const uint64_t batch_start_block_id = start_block_id + written_blocks;
+      const uint64_t batch_chunk_id = batch_start_block_id / num_logical_blocks_per_chunk_;
+      if (batch_chunk_id == value_files_.size()) {
+        value_files_.emplace_back(ValueFilePath(batch_chunk_id), O_CREAT | O_RDWR | O_DIRECT, 0644);
+      } else {
+        CHECK_LE(batch_chunk_id, value_files_.size());
+      }
+      if ((!writable_key_file_.IsOpen()) || writable_key_file_chunk_id_ != batch_chunk_id) {
+        writable_key_file_ = PosixFile(KeyFilePath(batch_chunk_id), O_CREAT | O_RDWR, 0644);
+      }
+      PosixFile& value_file = value_files_.at(batch_chunk_id);
+      const uint64_t block_id_in_chunk =
+          batch_start_block_id - batch_chunk_id * num_logical_blocks_per_chunk_;
+      const uint64_t blocks_to_write =
+          std::min(num_blocks - written_blocks,
+                   (batch_chunk_id + 1) * num_logical_blocks_per_chunk_ - batch_start_block_id);
+      const uint64_t values_bytes = blocks_to_write * logical_block_size_;
+      const uint64_t values_offset_in_file = block_id_in_chunk * logical_block_size_;
+      CHECK_LE(value_file.Size(), values_offset_in_file);
+      value_file.Truncate(values_offset_in_file + values_bytes);
+      PCHECK(pwrite(value_file.fd(), BytesOffset(blocks, written_blocks * logical_block_size_),
+                    values_bytes, values_offset_in_file)
+             == values_bytes);
+      const uint64_t keys_offset_in_file = block_id_in_chunk * block_keys_size;
+      writable_key_file_.Truncate(keys_offset_in_file + blocks_to_write * block_keys_size);
+      const uint64_t keys_bytes = std::min(num_keys - written_blocks * num_values_per_block_,
+                                           blocks_to_write * num_values_per_block_)
+                                  * sizeof(Key);
+      PCHECK(pwrite(writable_key_file_.fd(), BytesOffset(keys, written_blocks * block_keys_size),
+                    keys_bytes, keys_offset_in_file)
+             == keys_bytes);
+      written_blocks += blocks_to_write;
+    }
+    bc.Decrease();
+  });
   for (uint64_t i = 0; i < num_keys; ++i) {
     row_id_mapping_[static_cast<const Key*>(keys)[i]] = start_index + i;
   }
-  uint64_t written_blocks = 0;
-  const uint64_t block_keys_size = num_values_per_block_ * sizeof(Key);
-  while (written_blocks < num_blocks) {
-    const uint64_t batch_start_block_id = start_block_id + written_blocks;
-    const uint64_t batch_chunk_id = batch_start_block_id / num_logical_blocks_per_chunk_;
-    if (batch_chunk_id == value_files_.size()) {
-      value_files_.emplace_back(ValueFilePath(batch_chunk_id), O_CREAT | O_RDWR | O_DIRECT, 0644);
-    } else {
-      CHECK_LE(batch_chunk_id, value_files_.size());
-    }
-    if ((!writable_key_file_.IsOpen()) || writable_key_file_chunk_id_ != batch_chunk_id) {
-      writable_key_file_ = PosixFile(KeyFilePath(batch_chunk_id), O_CREAT | O_RDWR, 0644);
-    }
-    PosixFile& value_file = value_files_.at(batch_chunk_id);
-    const uint64_t block_id_in_chunk =
-        batch_start_block_id - batch_chunk_id * num_logical_blocks_per_chunk_;
-    const uint64_t blocks_to_write =
-        std::min(num_blocks - written_blocks,
-                 (batch_chunk_id + 1) * num_logical_blocks_per_chunk_ - batch_start_block_id);
-    const uint64_t values_bytes = blocks_to_write * logical_block_size_;
-    const uint64_t values_offset_in_file = block_id_in_chunk * logical_block_size_;
-    CHECK_LE(value_file.Size(), values_offset_in_file);
-    value_file.Truncate(values_offset_in_file + values_bytes);
-    PCHECK(pwrite(value_file.fd(), BytesOffset(blocks, written_blocks * logical_block_size_),
-                  values_bytes, values_offset_in_file)
-           == values_bytes);
-    const uint64_t keys_offset_in_file = block_id_in_chunk * block_keys_size;
-    writable_key_file_.Truncate(keys_offset_in_file + blocks_to_write * block_keys_size);
-    const uint64_t keys_bytes = std::min(num_keys - written_blocks * num_values_per_block_,
-                                         blocks_to_write * num_values_per_block_)
-                                * sizeof(Key);
-    PCHECK(pwrite(writable_key_file_.fd(), BytesOffset(keys, written_blocks * block_keys_size),
-                  keys_bytes, keys_offset_in_file)
-           == keys_bytes);
-    written_blocks += blocks_to_write;
-  }
+  bc.WaitForeverUntilCntEqualZero();
 }
 
 template<typename Key, typename Engine>
 void PersistentTableImpl<Key, Engine>::Put(uint32_t num_keys, const void* keys,
                                            const void* values) {
+  CHECK(!read_only_);
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   const void* blocks_ptr = nullptr;
-  if (value_size_ == logical_block_size_) {
+  if (value_size_ == logical_block_size_
+      && reinterpret_cast<uintptr_t>(values) % physical_block_size_ == 0) {
     blocks_ptr = values;
   } else {
     const uint32_t num_blocks = RoundUp(num_keys, num_values_per_block_);
@@ -658,6 +609,7 @@ void PersistentTableImpl<Key, Engine>::LoadSnapshotImpl(const std::string& name)
 
 template<typename Key, typename Engine>
 void PersistentTableImpl<Key, Engine>::SaveSnapshotImpl(const std::string& name) {
+  CHECK(!read_only_);
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   PosixFile::RecursiveCreateDirectory(SnapshotDirPath(name), 0755);
   std::ofstream list_ofs(SnapshotListFilePath(name));
@@ -706,6 +658,11 @@ template<typename Key, typename Engine>
 void PersistentTableImpl<Key, Engine>::LoadSnapshot(
     const std::string& name, const std::function<void(Iterator* iter)>& Hook) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
+  int mmap_flags = MAP_SHARED;
+  if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_PERSISTENT_TABLE_SNAPSHOT_LOAD_MAP_POPULATE",
+                          true)) {
+    mmap_flags |= MAP_POPULATE;
+  }
   const std::string snapshot_base = SnapshotDirPath(name);
   const std::string snapshot_list = SnapshotListFilePath(name);
   row_id_mapping_.clear();
@@ -718,9 +675,9 @@ void PersistentTableImpl<Key, Engine>::LoadSnapshot(
     CHECK_EQ(index_file_size % sizeof(uint64_t), 0);
     if (index_file_size == 0) { return; }
     const size_t n_entries = index_file_size / sizeof(uint64_t);
-    PosixMappedFile mapped_index(std::move(index_file), index_file_size, PROT_READ);
+    PosixMappedFile mapped_index(std::move(index_file), index_file_size, PROT_READ, mmap_flags);
     PosixFile key_file(KeyFilePath(chunk_id), O_RDONLY, 0644);
-    PosixMappedFile mapped_key(std::move(key_file), key_file.Size(), PROT_READ);
+    PosixMappedFile mapped_key(std::move(key_file), key_file.Size(), PROT_READ, mmap_flags);
     const uint64_t* indices = static_cast<const uint64_t*>(mapped_index.ptr());
     const Key* keys = static_cast<const Key*>(mapped_key.ptr());
     const uint64_t chunk_start_index = chunk_id * num_values_per_chunk_;
@@ -730,7 +687,7 @@ void PersistentTableImpl<Key, Engine>::LoadSnapshot(
     }
     if (Hook) {
       PosixFile value_file(ValueFilePath(chunk_id), O_RDONLY, 0644);
-      PosixMappedFile mapped_value(std::move(value_file), value_file.Size(), PROT_READ);
+      PosixMappedFile mapped_value(std::move(value_file), value_file.Size(), PROT_READ, mmap_flags);
       ChunkIteratorImpl<Key> chunk_iterator(value_size_, logical_block_size_, num_values_per_block_,
                                             num_values_per_chunk_, chunk_id, n_entries, keys,
                                             indices, mapped_value.ptr());
@@ -745,12 +702,109 @@ void PersistentTableImpl<Key, Engine>::SaveSnapshot(const std::string& name) {
 }
 
 template<typename Key, typename Engine>
+PersistentTable::Iterator* PersistentTableImpl<Key, Engine>::ReadSnapshot(const std::string& name) {
+  return new SnapshotIteratorImpl<Key, Engine>(this, name, value_size_, logical_block_size_,
+                                               num_values_per_block_, num_values_per_chunk_);
+}
+
+template<typename Key, typename Engine>
 void PersistentTableImpl<Key, Engine>::ParallelFor(size_t total,
                                                    const ForRange<Engine>& for_range) {
-  ParallelForTask<Engine> task(workers_.size(), total, &for_range);
-  for (size_t i = 0; i < workers_.size(); ++i) { workers_.at(i)->Schedule(&task); }
-  task.bc.WaitForeverUntilCntEqualZero();
+  BlockingCounter bc(workers_.size());
+  std::atomic<size_t> counter(0);
+  for (size_t i = 0; i < workers_.size(); ++i) {
+    workers_.at(i)->Schedule([&](Engine* engine) {
+      while (true) {
+        const size_t start = counter.fetch_add(kParallelForStride, std::memory_order_relaxed);
+        if (start >= total) { break; }
+        const size_t next_start = start + kParallelForStride;
+        const size_t end = std::min(next_start, total);
+        for_range(engine, start, end);
+      }
+      engine->WaitUntilDone();
+      bc.Decrease();
+    });
+  }
+  bc.WaitForeverUntilCntEqualZero();
 }
+
+template<typename Key, typename Engine>
+class SnapshotIteratorImpl : public PersistentTable::Iterator {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(SnapshotIteratorImpl);
+  SnapshotIteratorImpl(PersistentTableImpl<Key, Engine>* table, const std::string& snapshot_name,
+                       uint32_t value_size, uint32_t logical_block_size,
+                       uint32_t num_values_per_block, uint64_t num_values_per_chunk)
+      : table_(table),
+        snapshot_name_(snapshot_name),
+        value_size_(value_size),
+        logical_block_size_(logical_block_size),
+        num_values_per_block_(num_values_per_block),
+        num_values_per_chunk_(num_values_per_chunk),
+        current_chunk_(0) {
+    const std::string snapshot_list = table_->SnapshotListFilePath(snapshot_name);
+    std::ifstream list_if(snapshot_list);
+    std::string index_filename;
+    while (std::getline(list_if, index_filename)) { indices_names_.push_back(index_filename); }
+  }
+  ~SnapshotIteratorImpl() override = default;
+
+  void Next(uint32_t num_keys, uint32_t* return_keys, void* keys, void* values) override {
+    *return_keys = 0;
+    while (current_chunk_ < indices_names_.size()) {
+      if (!chunk_iterator_) {
+        const std::string snapshot_base = table_->SnapshotDirPath(snapshot_name_);
+        const uint64_t chunk_id = GetChunkId(indices_names_[current_chunk_], kIndexFileNamePrefix);
+        PosixFile index_file(PosixFile::JoinPath(snapshot_base, indices_names_[current_chunk_]),
+                             O_RDONLY, 0644);
+        const size_t index_file_size = index_file.Size();
+        CHECK_EQ(index_file_size % sizeof(uint64_t), 0);
+        if (index_file_size == 0) {
+          current_chunk_ += 1;
+          continue;
+        }
+        const size_t n_entries = index_file_size / sizeof(uint64_t);
+        indices_file_.reset(new PosixMappedFile(std::move(index_file), index_file_size, PROT_READ));
+        PosixFile key_file(table_->KeyFilePath(chunk_id), O_RDONLY, 0644);
+        keys_file_.reset(new PosixMappedFile(std::move(key_file), key_file.Size(), PROT_READ));
+        PosixFile value_file(table_->ValueFilePath(chunk_id), O_RDONLY, 0644);
+        values_file_.reset(
+            new PosixMappedFile(std::move(value_file), value_file.Size(), PROT_READ));
+        chunk_iterator_.reset(new ChunkIteratorImpl<Key>(
+            value_size_, logical_block_size_, num_values_per_block_, num_values_per_chunk_,
+            chunk_id, n_entries, static_cast<const Key*>(keys_file_->ptr()),
+            static_cast<const uint64_t*>(indices_file_->ptr()), values_file_->ptr()));
+      }
+      chunk_iterator_->Next(num_keys, return_keys, keys, values);
+      if (*return_keys == 0) {
+        chunk_iterator_.reset();
+        keys_file_.reset();
+        values_file_.reset();
+        indices_file_.reset();
+        current_chunk_ += 1;
+        continue;
+      } else {
+        return;
+      }
+    }
+  }
+
+  void Reset() override { UNIMPLEMENTED(); }
+
+ private:
+  PersistentTableImpl<Key, Engine>* table_;
+  std::string snapshot_name_;
+  uint32_t value_size_;
+  uint32_t logical_block_size_;
+  uint32_t num_values_per_block_;
+  uint64_t num_values_per_chunk_;
+  size_t current_chunk_;
+  std::vector<std::string> indices_names_;
+  std::unique_ptr<PosixMappedFile> keys_file_;
+  std::unique_ptr<PosixMappedFile> values_file_;
+  std::unique_ptr<PosixMappedFile> indices_file_;
+  std::unique_ptr<ChunkIteratorImpl<Key>> chunk_iterator_;
+};
 
 template<typename Engine>
 std::unique_ptr<PersistentTable> DispatchKeyType(const PersistentTableOptions& options) {
@@ -764,31 +818,8 @@ std::unique_ptr<PersistentTable> DispatchKeyType(const PersistentTableOptions& o
   }
 }
 
-bool IsRingIOSupported() {
-#ifdef WITH_LIBURING
-  struct io_uring ring {};
-  if (io_uring_queue_init(1, &ring, 0) == 0) {
-    io_uring_queue_exit(&ring);
-    return true;
-  } else {
-    return false;
-  }
-#else
-  return false;
-#endif
-}
-
 std::unique_ptr<PersistentTable> DispatchEngine(const PersistentTableOptions& options) {
-#ifdef WITH_LIBURING
-  static bool ring_io_supported = IsRingIOSupported();
-  if (ring_io_supported) {
-    return DispatchKeyType<RingEngine>(options);
-  } else {
-    return DispatchKeyType<AioEngine>(options);
-  }
-#else
   return DispatchKeyType<AioEngine>(options);
-#endif
 }
 
 }  // namespace

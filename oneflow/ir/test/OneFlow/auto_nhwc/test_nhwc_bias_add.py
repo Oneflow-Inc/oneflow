@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-# RUN: python3 %s | FileCheck %s
+# RUN: python3 -m oneflow.test_utils.throttle --with-cuda=%with_cuda python3 %s | FileCheck %s
 # CHECK: oneflow.transpose
 
 import unittest
@@ -56,7 +56,10 @@ def do_nhwc_bias_add(test_case, with_cuda):
 @flow.unittest.skip_unless_1n1d()
 class TestNhwcBiasAdd(oneflow.unittest.TestCase):
     def test_nhwc_bias_add_graph(test_case):
-        do_nhwc_bias_add(test_case, True)
+        import oneflow.sysconfig
+
+        if oneflow.sysconfig.with_cuda():
+            do_nhwc_bias_add(test_case, True)
         do_nhwc_bias_add(test_case, False)
 
 

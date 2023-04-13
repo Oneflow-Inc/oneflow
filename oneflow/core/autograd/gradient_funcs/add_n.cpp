@@ -39,7 +39,7 @@ class AddN : public OpExprGradFunction<AddNCaptureState> {
 
   Maybe<void> Apply(const AddNCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     in_grads->resize(ctx->input_num);
     for (int i = 0; i < ctx->input_num; ++i) {
       if (ctx->requires_grad.at(i)) { in_grads->at(i) = out_grads.at(0); }

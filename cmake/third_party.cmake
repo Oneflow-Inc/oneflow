@@ -25,95 +25,14 @@ if(RPC_BACKEND MATCHES "GRPC")
   include(grpc)
 endif()
 include(flatbuffers)
-include(lz4)
-include(string_view)
-
-if(WITH_XLA)
-  include(tensorflow)
-endif()
-
-if(WITH_OPENVINO)
-  include(openvino)
-endif()
-
-if(WITH_TENSORRT)
-  include(tensorrt)
-endif()
 
 include(hwloc)
-include(liburing)
 if(WITH_ONEDNN)
   include(oneDNN)
 endif()
 
 set_mirror_url_with_hash(INJA_URL https://github.com/pantor/inja/archive/refs/tags/v3.3.0.zip
                          611e6b7206d0fb89728a3879f78b4775)
-
-option(CUDA_STATIC "" ON)
-
-if(BUILD_CUDA)
-  if((NOT CUDA_STATIC) OR WITH_XLA OR BUILD_SHARED_LIBS)
-    set(OF_CUDA_LINK_DYNAMIC_LIBRARY ON)
-  else()
-    set(OF_CUDA_LINK_DYNAMIC_LIBRARY OFF)
-  endif()
-  if(DEFINED CUDA_TOOLKIT_ROOT_DIR)
-    message(WARNING "CUDA_TOOLKIT_ROOT_DIR is deprecated, use CUDAToolkit_ROOT instead")
-    set(CUDAToolkit_ROOT ${CUDA_TOOLKIT_ROOT_DIR})
-  endif(DEFINED CUDA_TOOLKIT_ROOT_DIR)
-  find_package(CUDAToolkit REQUIRED)
-  message(STATUS "CUDAToolkit_FOUND: ${CUDAToolkit_FOUND}")
-  message(STATUS "CUDAToolkit_VERSION: ${CUDAToolkit_VERSION}")
-  message(STATUS "CUDAToolkit_VERSION_MAJOR: ${CUDAToolkit_VERSION_MAJOR}")
-  message(STATUS "CUDAToolkit_VERSION_MINOR: ${CUDAToolkit_VERSION_MINOR}")
-  message(STATUS "CUDAToolkit_VERSION_PATCH: ${CUDAToolkit_VERSION_PATCH}")
-  message(STATUS "CUDAToolkit_BIN_DIR: ${CUDAToolkit_BIN_DIR}")
-  message(STATUS "CUDAToolkit_INCLUDE_DIRS: ${CUDAToolkit_INCLUDE_DIRS}")
-  message(STATUS "CUDAToolkit_LIBRARY_DIR: ${CUDAToolkit_LIBRARY_DIR}")
-  message(STATUS "CUDAToolkit_LIBRARY_ROOT: ${CUDAToolkit_LIBRARY_ROOT}")
-  message(STATUS "CUDAToolkit_TARGET_DIR: ${CUDAToolkit_TARGET_DIR}")
-  message(STATUS "CUDAToolkit_NVCC_EXECUTABLE: ${CUDAToolkit_NVCC_EXECUTABLE}")
-  if(CUDA_NVCC_GENCODES)
-    message(FATAL_ERROR "CUDA_NVCC_GENCODES is deprecated, use CMAKE_CUDA_ARCHITECTURES instead")
-  endif()
-  add_definitions(-DWITH_CUDA)
-  # NOTE: For some unknown reason, CUDAToolkit_VERSION may become empty when running cmake again
-  set(CUDA_VERSION ${CUDAToolkit_VERSION} CACHE STRING "")
-  if(NOT CUDA_VERSION)
-    message(FATAL_ERROR "CUDA_VERSION empty")
-  endif()
-  message(STATUS "CUDA_VERSION: ${CUDA_VERSION}")
-  if(OF_CUDA_LINK_DYNAMIC_LIBRARY)
-    list(APPEND VENDOR_CUDA_LIBRARIES CUDA::cublas)
-    list(APPEND VENDOR_CUDA_LIBRARIES CUDA::curand)
-    if(CUDA_VERSION VERSION_GREATER_EQUAL "10.1")
-      list(APPEND VENDOR_CUDA_LIBRARIES CUDA::cublasLt)
-    endif()
-    if(CUDA_VERSION VERSION_GREATER_EQUAL "10.2")
-      list(APPEND VENDOR_CUDA_LIBRARIES CUDA::nvjpeg)
-      list(APPEND VENDOR_CUDA_LIBRARIES CUDA::nppc)
-      list(APPEND VENDOR_CUDA_LIBRARIES CUDA::nppig)
-    endif()
-  else()
-    list(APPEND VENDOR_CUDA_LIBRARIES CUDA::cublas_static)
-    list(APPEND VENDOR_CUDA_LIBRARIES CUDA::curand_static)
-    if(CUDA_VERSION VERSION_GREATER_EQUAL "10.1")
-      list(APPEND VENDOR_CUDA_LIBRARIES CUDA::cublasLt_static)
-    endif()
-    if(CUDA_VERSION VERSION_GREATER_EQUAL "10.2")
-      list(APPEND VENDOR_CUDA_LIBRARIES CUDA::nvjpeg_static)
-      list(APPEND VENDOR_CUDA_LIBRARIES CUDA::nppig_static)
-      # Must put nppc_static after nppig_static in CUDA 10.2
-      list(APPEND VENDOR_CUDA_LIBRARIES CUDA::nppc_static)
-    endif()
-  endif()
-  message(STATUS "VENDOR_CUDA_LIBRARIES: ${VENDOR_CUDA_LIBRARIES}")
-  # add a cache entry if want to use a ccache/sccache wrapped nvcc
-  set(CMAKE_CUDA_COMPILER ${CUDAToolkit_NVCC_EXECUTABLE} CACHE STRING "")
-  message(STATUS "CMAKE_CUDA_COMPILER: ${CMAKE_CUDA_COMPILER}")
-  set(CMAKE_CUDA_STANDARD 14)
-  find_package(CUDNN REQUIRED)
-endif()
 
 if(NOT WIN32)
   set(BLA_STATIC ON)
@@ -146,16 +65,12 @@ set(oneflow_third_party_libs
     ${OPENSSL_STATIC_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
     ${FLATBUFFERS_STATIC_LIBRARIES}
-    ${LZ4_STATIC_LIBRARIES}
-    nlohmann_json::nlohmann_json
-    string-view-lite)
+    nlohmann_json::nlohmann_json)
 if(WITH_ONEDNN)
   set(oneflow_third_party_libs ${oneflow_third_party_libs} ${ONEDNN_STATIC_LIBRARIES})
 endif()
 
-if(NOT WITH_XLA)
-  list(APPEND oneflow_third_party_libs ${RE2_LIBRARIES})
-endif()
+list(APPEND oneflow_third_party_libs ${RE2_LIBRARIES})
 
 if(WITH_ZLIB)
   list(APPEND oneflow_third_party_libs zlib_imported)
@@ -174,9 +89,7 @@ set(oneflow_third_party_dependencies
     re2
     opencv
     install_libpng_headers
-    flatbuffers
-    lz4_copy_libs_to_destination
-    lz4_copy_headers_to_destination)
+    flatbuffers)
 if(WITH_ONEDNN)
   list(APPEND oneflow_third_party_dependencies onednn)
 endif()
@@ -199,6 +112,7 @@ list(
   ${ZLIB_INCLUDE_DIR}
   ${PROTOBUF_INCLUDE_DIR}
   ${GRPC_INCLUDE_DIR}
+  ${GLOG_INCLUDE_DIR}
   ${LIBJPEG_INCLUDE_DIR}
   ${OPENCV_INCLUDE_DIR}
   ${LIBPNG_INCLUDE_DIR}
@@ -207,18 +121,16 @@ list(
   ${HALF_INCLUDE_DIR}
   ${ABSL_INCLUDE_DIR}
   ${OPENSSL_INCLUDE_DIR}
-  ${FLATBUFFERS_INCLUDE_DIR}
-  ${LZ4_INCLUDE_DIR})
+  ${FLATBUFFERS_INCLUDE_DIR})
 if(WITH_ONEDNN)
   list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${ONEDNN_INCLUDE_DIR})
 endif()
 
-if(NOT WITH_XLA)
-  list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${RE2_INCLUDE_DIR})
-endif()
+list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${RE2_INCLUDE_DIR})
 
 if(BUILD_CUDA)
-  if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
+  # Always use third_party/cub for Clang CUDA in case of compatibility issues
+  if("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA" AND CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
     if(CMAKE_CXX_STANDARD LESS 14)
       add_definitions(-DTHRUST_IGNORE_DEPRECATED_CPP_DIALECT)
       add_definitions(-DCUB_IGNORE_DEPRECATED_CPP11)
@@ -231,6 +143,8 @@ if(BUILD_CUDA)
     list(APPEND oneflow_third_party_dependencies cub_copy_headers_to_destination)
   endif()
   include(nccl)
+  include(cutlass)
+  include(trt_flash_attention)
 
   list(APPEND oneflow_third_party_libs ${NCCL_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
@@ -240,6 +154,16 @@ if(BUILD_CUDA)
 
   list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${CUDNN_INCLUDE_DIRS} ${CUB_INCLUDE_DIR}
        ${NCCL_INCLUDE_DIR})
+
+  if(WITH_CUTLASS)
+    list(APPEND oneflow_third_party_dependencies cutlass)
+    list(APPEND oneflow_third_party_dependencies cutlass_copy_examples_to_destination)
+    list(APPEND oneflow_third_party_libs ${CUTLASS_LIBRARIES})
+    list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${CUTLASS_INCLUDE_DIR})
+  endif()
+  list(APPEND oneflow_third_party_dependencies trt_flash_attention)
+  list(APPEND oneflow_third_party_libs ${TRT_FLASH_ATTENTION_LIBRARIES})
+  list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${TRT_FLASH_ATTENTION_INCLUDE_DIR})
 endif()
 
 if(BUILD_RDMA)
@@ -265,28 +189,7 @@ if(BUILD_HWLOC)
   add_definitions(-DWITH_HWLOC)
 endif()
 
-if(WITH_LIBURING)
-  list(APPEND oneflow_third_party_dependencies liburing)
-  list(APPEND oneflow_third_party_libs ${LIBURING_STATIC_LIBRARIES})
-  list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${LIBURING_INCLUDE_DIR})
-  add_definitions(-DWITH_LIBURING)
-endif()
-
 include_directories(SYSTEM ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})
-
-if(WITH_XLA)
-  list(APPEND oneflow_third_party_dependencies tensorflow_copy_libs_to_destination)
-  list(APPEND oneflow_third_party_dependencies tensorflow_symlink_headers)
-  list(APPEND oneflow_third_party_libs ${TENSORFLOW_XLA_LIBRARIES})
-endif()
-
-if(WITH_TENSORRT)
-  list(APPEND oneflow_third_party_libs ${TENSORRT_LIBRARIES})
-endif()
-
-if(WITH_OPENVINO)
-  list(APPEND oneflow_third_party_libs ${OPENVINO_LIBRARIES})
-endif()
 
 foreach(oneflow_third_party_lib IN LISTS oneflow_third_party_libs)
   if(NOT "${oneflow_third_party_lib}" MATCHES "^-l.+"

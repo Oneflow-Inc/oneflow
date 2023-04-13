@@ -55,7 +55,7 @@ void FlipImage(TensorBuffer* image_buffer, FlipCode flip_code) {
 template<typename T>
 void FlipBoxes(TensorBuffer* boxes_buffer, int32_t image_width, int32_t image_height,
                FlipCode flip_code) {
-  int num_boxes = boxes_buffer->shape().At(0);
+  int num_boxes = boxes_buffer->shape_view().At(0);
   FOR_RANGE(int, i, 0, num_boxes) {
     T* cur_box_ptr = boxes_buffer->mut_data<T>() + i * 4;
     if (flip_code & FlipCode::kHorizontalFlip) {
@@ -81,7 +81,7 @@ DEFINE_STATIC_SWITCH_FUNC(void, FlipBoxes, MAKE_FLIP_BOXES_SWITCH_ENTRY,
 
 template<typename T>
 void ScaleBoxes(TensorBuffer* boxes_buffer, T scale_w, T scale_h) {
-  int num_boxes = boxes_buffer->shape().At(0);
+  int num_boxes = boxes_buffer->shape_view().At(0);
   FOR_RANGE(int, i, 0, num_boxes) {
     T* cur_box_ptr = boxes_buffer->mut_data<T>() + i * 4;
     cur_box_ptr[0] *= scale_w;
@@ -100,7 +100,7 @@ DEFINE_STATIC_SWITCH_FUNC(void, ScaleBoxes, MAKE_SCALE_BOXES_SWITCH_ENTRY,
 template<typename T>
 void FlipPolygons(TensorBuffer* polygons_buffer, int32_t image_width, int32_t image_height,
                   FlipCode flip_code) {
-  int num_points = polygons_buffer->shape().At(0);
+  int num_points = polygons_buffer->shape_view().At(0);
   FOR_RANGE(int, i, 0, num_points) {
     T* cur_poly_ptr = polygons_buffer->mut_data<T>() + i * 2;
     if (flip_code & FlipCode::kHorizontalFlip) { cur_poly_ptr[0] = image_width - cur_poly_ptr[0]; }
@@ -116,7 +116,7 @@ DEFINE_STATIC_SWITCH_FUNC(void, FlipPolygons, MAKE_FLIP_POLYGONS_SWITCH_ENTRY,
 
 template<typename T>
 void ScalePolygons(TensorBuffer* poly_buffer, T scale_w, T scale_h) {
-  int num_pts = poly_buffer->shape().At(0);
+  int num_pts = poly_buffer->shape_view().At(0);
   FOR_RANGE(int, i, 0, num_pts) {
     T* cur_pt = poly_buffer->mut_data<T>() + i * 2;
     cur_pt[0] *= scale_w;
@@ -133,10 +133,10 @@ DEFINE_STATIC_SWITCH_FUNC(void, ScalePolygons, MAKE_SCALE_POLYGONS_SWITCH_ENTRY,
 template<typename T>
 void ImageNormalizeByChannel(TensorBuffer* image_buffer, const std::vector<float>& std_vec,
                              const std::vector<float>& mean_vec) {
-  CHECK_EQ(image_buffer->shape().NumAxes(), 3);
-  int h = image_buffer->shape().At(0);
-  int w = image_buffer->shape().At(1);
-  int c = image_buffer->shape().At(2);
+  CHECK_EQ(image_buffer->shape_view().NumAxes(), 3);
+  int h = image_buffer->shape_view().At(0);
+  int w = image_buffer->shape_view().At(1);
+  int c = image_buffer->shape_view().At(2);
   CHECK_EQ(std_vec.size(), c);
   CHECK_EQ(mean_vec.size(), c);
   FOR_RANGE(int, i, 0, (h * w)) {
@@ -154,12 +154,12 @@ DEFINE_STATIC_SWITCH_FUNC(void, ImageNormalizeByChannel, MAKE_IMAGE_NORMALIZE_SW
 template<typename T, typename I>
 void PolygonsToMask(const TensorBuffer& polys, const TensorBuffer& polys_nd_index,
                     TensorBuffer* masks, int32_t im_w, int32_t im_h) {
-  CHECK_EQ(polys.shape().NumAxes(), 2);
-  CHECK_EQ(polys.shape().At(1), 2);
-  CHECK_EQ(polys_nd_index.shape().NumAxes(), 2);
-  CHECK_EQ(polys_nd_index.shape().At(1), 3);
-  int num_points = polys.shape().At(0);
-  CHECK_EQ(polys_nd_index.shape().At(0), num_points);
+  CHECK_EQ(polys.shape_view().NumAxes(), 2);
+  CHECK_EQ(polys.shape_view().At(1), 2);
+  CHECK_EQ(polys_nd_index.shape_view().NumAxes(), 2);
+  CHECK_EQ(polys_nd_index.shape_view().At(1), 3);
+  int num_points = polys.shape_view().At(0);
+  CHECK_EQ(polys_nd_index.shape_view().At(0), num_points);
 
   std::vector<std::vector<cv::Point>> poly_point_vec;
   std::vector<cv::Mat> mask_mat_vec;
@@ -225,12 +225,12 @@ class ImageFlipKernel final : public user_op::OpKernel {
     const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* flip_code_tensor = ctx->Tensor4ArgNameAndIndex("flip_code", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int num_images = in_tensor->shape().elem_cnt();
-    CHECK_EQ(out_tensor->shape().elem_cnt(), num_images);
+    int num_images = in_tensor->shape_view().elem_cnt();
+    CHECK_EQ(out_tensor->shape_view().elem_cnt(), num_images);
 
     MultiThreadLoop(num_images, [&](size_t i) {
       const TensorBuffer& in_buffer = in_tensor->dptr<TensorBuffer>()[i];
-      CHECK_EQ(in_buffer.shape().NumAxes(), 3);
+      CHECK_EQ(in_buffer.shape_view().NumAxes(), 3);
       TensorBuffer* out_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
       out_buffer->CopyFrom(in_buffer);
       FlipCode flip_code = static_cast<FlipCode>(flip_code_tensor->dptr<int8_t>()[i]);
@@ -252,16 +252,16 @@ class ObjectBboxFlipKernel final : public user_op::OpKernel {
     const user_op::Tensor* flip_code_tensor = ctx->Tensor4ArgNameAndIndex("flip_code", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
 
-    int num_images = bbox_tensor->shape().elem_cnt();
+    int num_images = bbox_tensor->shape_view().elem_cnt();
     CHECK_GT(num_images, 0);
-    CHECK_EQ(out_tensor->shape().elem_cnt(), num_images);
-    CHECK_EQ(image_size_tensor->shape().At(0), num_images);
-    CHECK_EQ(flip_code_tensor->shape().elem_cnt(), num_images);
+    CHECK_EQ(out_tensor->shape_view().elem_cnt(), num_images);
+    CHECK_EQ(image_size_tensor->shape_view().At(0), num_images);
+    CHECK_EQ(flip_code_tensor->shape_view().elem_cnt(), num_images);
 
     MultiThreadLoop(num_images, [&](size_t i) {
       const TensorBuffer& bbox_buffer = bbox_tensor->dptr<TensorBuffer>()[i];
-      CHECK_EQ(bbox_buffer.shape().NumAxes(), 2);
-      CHECK_EQ(bbox_buffer.shape().At(1), 4);
+      CHECK_EQ(bbox_buffer.shape_view().NumAxes(), 2);
+      CHECK_EQ(bbox_buffer.shape_view().At(1), 4);
       TensorBuffer* out_bbox_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
       out_bbox_buffer->CopyFrom(bbox_buffer);
       int32_t image_width = image_size_tensor->dptr<int32_t>()[i * 2 + 0];
@@ -285,15 +285,15 @@ class ObjectBboxScaleKernel final : public user_op::OpKernel {
     const user_op::Tensor* scale_tensor = ctx->Tensor4ArgNameAndIndex("scale", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
 
-    int num_images = bbox_tensor->shape().elem_cnt();
+    int num_images = bbox_tensor->shape_view().elem_cnt();
     CHECK_GT(num_images, 0);
-    CHECK_EQ(scale_tensor->shape().At(0), num_images);
-    CHECK_EQ(out_tensor->shape().elem_cnt(), num_images);
+    CHECK_EQ(scale_tensor->shape_view().At(0), num_images);
+    CHECK_EQ(out_tensor->shape_view().elem_cnt(), num_images);
 
     MultiThreadLoop(num_images, [&](size_t i) {
       const TensorBuffer& bbox_buffer = bbox_tensor->dptr<TensorBuffer>()[i];
-      CHECK_EQ(bbox_buffer.shape().NumAxes(), 2);
-      CHECK_EQ(bbox_buffer.shape().At(1), 4);
+      CHECK_EQ(bbox_buffer.shape_view().NumAxes(), 2);
+      CHECK_EQ(bbox_buffer.shape_view().At(1), 4);
       TensorBuffer* out_bbox_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
       out_bbox_buffer->CopyFrom(bbox_buffer);
       float scale_w = scale_tensor->dptr<float>()[i * 2 + 0];
@@ -316,16 +316,16 @@ class ObjectSegmentationPolygonFlipKernel final : public user_op::OpKernel {
     const user_op::Tensor* flip_code_tensor = ctx->Tensor4ArgNameAndIndex("flip_code", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
 
-    int num_images = polygon_tensor->shape().elem_cnt();
+    int num_images = polygon_tensor->shape_view().elem_cnt();
     CHECK_GT(num_images, 0);
-    CHECK_EQ(out_tensor->shape().elem_cnt(), num_images);
-    CHECK_EQ(image_size_tensor->shape().At(0), num_images);
-    CHECK_EQ(flip_code_tensor->shape().elem_cnt(), num_images);
+    CHECK_EQ(out_tensor->shape_view().elem_cnt(), num_images);
+    CHECK_EQ(image_size_tensor->shape_view().At(0), num_images);
+    CHECK_EQ(flip_code_tensor->shape_view().elem_cnt(), num_images);
 
     MultiThreadLoop(num_images, [&](size_t i) {
       const TensorBuffer& polygons_buffer = polygon_tensor->dptr<TensorBuffer>()[i];
-      CHECK_EQ(polygons_buffer.shape().NumAxes(), 2);
-      CHECK_EQ(polygons_buffer.shape().At(1), 2);
+      CHECK_EQ(polygons_buffer.shape_view().NumAxes(), 2);
+      CHECK_EQ(polygons_buffer.shape_view().At(1), 2);
       TensorBuffer* out_polygons_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
       out_polygons_buffer->CopyFrom(polygons_buffer);
       int32_t image_width = image_size_tensor->dptr<int32_t>()[i * 2 + 0];
@@ -349,15 +349,15 @@ class ObjectSegmentationPolygonScaleKernel final : public user_op::OpKernel {
     const user_op::Tensor* scale_tensor = ctx->Tensor4ArgNameAndIndex("scale", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
 
-    int num_images = poly_tensor->shape().elem_cnt();
+    int num_images = poly_tensor->shape_view().elem_cnt();
     CHECK_GT(num_images, 0);
-    CHECK_EQ(scale_tensor->shape().At(0), num_images);
-    CHECK_EQ(out_tensor->shape().elem_cnt(), num_images);
+    CHECK_EQ(scale_tensor->shape_view().At(0), num_images);
+    CHECK_EQ(out_tensor->shape_view().elem_cnt(), num_images);
 
     MultiThreadLoop(num_images, [&](size_t i) {
       const TensorBuffer& poly_buffer = poly_tensor->dptr<TensorBuffer>()[i];
-      CHECK_EQ(poly_buffer.shape().NumAxes(), 2);
-      CHECK_EQ(poly_buffer.shape().At(1), 2);
+      CHECK_EQ(poly_buffer.shape_view().NumAxes(), 2);
+      CHECK_EQ(poly_buffer.shape_view().At(1), 2);
       TensorBuffer* out_poly_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
       out_poly_buffer->CopyFrom(poly_buffer);
       float scale_w = scale_tensor->dptr<float>()[i * 2 + 0];
@@ -378,14 +378,14 @@ class ImageNormalize final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int num_images = in_tensor->shape().elem_cnt();
-    CHECK_EQ(out_tensor->shape().elem_cnt(), num_images);
+    int num_images = in_tensor->shape_view().elem_cnt();
+    CHECK_EQ(out_tensor->shape_view().elem_cnt(), num_images);
     const auto& std_vec = ctx->Attr<std::vector<float>>("std");
     const auto& mean_vec = ctx->Attr<std::vector<float>>("mean");
 
     MultiThreadLoop(num_images, [&](size_t i) {
       const TensorBuffer& in_buffer = in_tensor->dptr<TensorBuffer>()[i];
-      CHECK_EQ(in_buffer.shape().NumAxes(), 3);
+      CHECK_EQ(in_buffer.shape_view().NumAxes(), 3);
       TensorBuffer* out_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
       out_buffer->CopyFrom(in_buffer);
       SwitchImageNormalizeByChannel(SwitchCase(out_buffer->data_type()), out_buffer, std_vec,
@@ -407,11 +407,11 @@ class ObjectSegmentationPolygonToMask final : public user_op::OpKernel {
     const user_op::Tensor* image_size_tensor = ctx->Tensor4ArgNameAndIndex("image_size", 0);
     user_op::Tensor* mask_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
 
-    int num_images = poly_tensor->shape().elem_cnt();
+    int num_images = poly_tensor->shape_view().elem_cnt();
     CHECK_GT(num_images, 0);
-    CHECK_EQ(poly_index_tensor->shape().elem_cnt(), num_images);
-    CHECK_EQ(image_size_tensor->shape().At(0), num_images);
-    CHECK_EQ(mask_tensor->shape().elem_cnt(), num_images);
+    CHECK_EQ(poly_index_tensor->shape_view().elem_cnt(), num_images);
+    CHECK_EQ(image_size_tensor->shape_view().At(0), num_images);
+    CHECK_EQ(mask_tensor->shape_view().elem_cnt(), num_images);
 
     MultiThreadLoop(num_images, [&](size_t i) {
       const TensorBuffer& poly_buffer = poly_tensor->dptr<TensorBuffer>()[i];

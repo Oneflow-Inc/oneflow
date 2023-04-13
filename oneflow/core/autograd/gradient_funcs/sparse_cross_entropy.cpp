@@ -33,14 +33,14 @@ class SparseCrossEntropy : public OpExprGradFunction<SparseCrossEntropyCaptureSt
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(op_expr);
+    CHECK_NOTNULL_OR_RETURN(op_expr);  // NOLINT(maybe-need-error-msg)
     base_attrs_ = MakeAttrMapFromUserOpConf(op_expr->proto());
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Capture(SparseCrossEntropyCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 2);
+    CHECK_EQ_OR_RETURN(inputs.size(), 2);  // NOLINT(maybe-need-error-msg)
     ctx->requires_grad = inputs.at(0)->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
@@ -55,7 +55,7 @@ class SparseCrossEntropy : public OpExprGradFunction<SparseCrossEntropyCaptureSt
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     const auto& prediction = ctx->SavedTensors().at(ctx->prediction_index);
     const auto& label = ctx->SavedTensors().at(ctx->label_index);
     in_grads->resize(2);

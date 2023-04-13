@@ -34,7 +34,7 @@ class SoftmaxCrossEntropy : public OpExprGradFunction<SoftmaxCrossEntropyGradSta
 
 Maybe<void> SoftmaxCrossEntropy::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
 
@@ -44,8 +44,8 @@ Maybe<void> SoftmaxCrossEntropy::Capture(SoftmaxCrossEntropyGradState* ctx,
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
-  CHECK_EQ_OR_RETURN(inputs.size(), 2);
-  CHECK_EQ_OR_RETURN(outputs.size(), 2);
+  CHECK_EQ_OR_RETURN(inputs.size(), 2);       // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(outputs.size(), 2);      // NOLINT(maybe-need-error-msg)
   ctx->SaveTensorForBackward(inputs.at(1));   // label
   ctx->SaveTensorForBackward(outputs.at(1));  // prob
 
@@ -56,7 +56,7 @@ Maybe<void> SoftmaxCrossEntropy::Apply(const SoftmaxCrossEntropyGradState* ctx,
                                        const TensorTuple& out_grads, TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
-  CHECK_EQ_OR_RETURN(out_grads.size(), 2);  // out, prob(no grad)
+  CHECK_EQ_OR_RETURN(out_grads.size(), 2);  // NOLINT(maybe-need-error-msg)
   const auto& dy = out_grads.at(0);
   const auto& label = ctx->SavedTensors().at(0);
   const auto& prob = ctx->SavedTensors().at(1);

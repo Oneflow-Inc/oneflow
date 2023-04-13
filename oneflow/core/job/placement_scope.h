@@ -29,10 +29,7 @@ class PlacementScope final {
   PlacementScope(Symbol<ParallelDesc> device_parallel_desc, Symbol<ParallelDesc> host_parallel_desc)
       : device_parallel_desc_(device_parallel_desc), host_parallel_desc_(host_parallel_desc) {}
 
-  size_t hash_value() const {
-    const auto& hash_functor = std::hash<Symbol<ParallelDesc>>();
-    return hash_functor(device_parallel_desc_) ^ hash_functor(host_parallel_desc_);
-  }
+  size_t hash_value() const { return Hash(device_parallel_desc_, host_parallel_desc_); }
 
   bool operator==(const PlacementScope& other) const {
     return this->device_parallel_desc_ == other.device_parallel_desc_

@@ -14,89 +14,70 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/vm/instruction.h"
-#include "oneflow/core/vm/stream_type.h"
-#include "oneflow/core/vm/instruction_type.h"
+#include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/virtual_machine_engine.h"
+#include "oneflow/core/framework/stream_get_stream_type_name.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/cpp_attribute.h"
+#include "oneflow/extension/stack/foreign_stack_getter.h"
 #include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace vm {
 
-std::string InstructionMsg::DebugName() const {
-  std::string op_type_name = instr_type_id().instruction_type().DebugOpTypeName(*this);
-  return op_type_name + ":" + instr_type_name();
+std::string Instruction::DebugName() const {
+  std::string instr_name = instruction_policy().DebugName(*this);
+  return instr_name + ":s_" + GetStreamTypeName::Visit(stream().stream_type());
 }
 
-void InstructionMsg::__Init__() { *mut_instr_type_name() = ""; }
-
-void InstructionMsg::__Init__(const std::string& instr_type_name) {
-  __Init__();
-  mut_instr_type_id()->CopyFrom(LookupInstrTypeId(instr_type_name));
-  *mut_instr_type_name() = instr_type_name;
-}
-
-void InstructionMsg::__Init__(VirtualMachineEngine* vm, const std::string& instr_type_name,
-                              const std::shared_ptr<const ParallelDesc>& phy_instr_parallel_desc,
-                              const std::shared_ptr<PhyInstrOperand>& phy_instr_operand) {
-  __Init__();
-  // There are instructions without concept of ParallelDesc, like LaunchLazyJob,
-  // ComputeGlobalFrontSeqBarrier. If phy_instr_parallel_desc is empty, Instructions are run on the
-  // sole stream within the StreamRtDesc.
-  if (likely(phy_instr_parallel_desc)) {
-    int device_id = phy_instr_parallel_desc->parallel_id2device_id().at(0);
-    vm->GetCachedInstrTypeIdAndPhyInstrStream(instr_type_name, device_id, mut_instr_type_id(),
-                                              &phy_instr_stream_);
-  } else {
-    vm->GetInstrTypeIdAndSoleStream(instr_type_name, mut_instr_type_id(), &phy_instr_stream_);
+void Instruction::__Init__(Stream* stream,
+                           std::shared_ptr<InstructionPolicy>&& instruction_policy) {
+  stream_ = stream;
+  instruction_policy_ = std::move(instruction_policy);
+  if (IsMainThread()) {
+    if (auto* stack_getter = Singleton<ForeignStackGetter>::Get()) {
+      foreign_frame_ = stack_getter->GetCurrentFrame();
+    }
   }
-  *mut_instr_type_name() = instr_type_name;
-  phy_instr_parallel_desc_ = phy_instr_parallel_desc;
-  phy_instr_operand_ = phy_instr_operand;
 }
 
-void InstructionMsg::__Init__(const InstructionMsg& instr_msg) {
-  __Init__();
-  mut_instr_type_id()->CopyFrom(instr_msg.instr_type_id());
-  *mut_instr_type_name() = instr_msg.instr_type_name();
-  const auto& parallel_desc = instr_msg.phy_instr_parallel_desc();
-  if (parallel_desc) { phy_instr_parallel_desc_ = parallel_desc; }
-  phy_instr_operand_ = instr_msg.phy_instr_operand();
-  if (instr_msg.phy_instr_stream() != nullptr) { phy_instr_stream_ = instr_msg.phy_instr_stream(); }
+void Instruction::InitStatus() { instruction_policy_->InitInstructionStatusIf(this); }
+
+Maybe<void> Instruction::Prepare() {
+  ForeignFrameThreadLocalGuard guard(foreign_frame_);
+  return instruction_policy_->PrepareIf(this);
+}
+void Instruction::Compute() {
+  ForeignFrameThreadLocalGuard guard(foreign_frame_);
+  instruction_policy_->ComputeIf(this);
 }
 
-intrusive::shared_ptr<InstructionMsg> InstructionMsg::Clone() const {
-  return intrusive::make_shared<InstructionMsg>(*this);
+void Instruction::DeleteStatusAndCheckEdges() {
+  OF_PROFILER_RANGE_GUARD("Instruction::DeleteStatusAndCheckEdges");
+  instruction_policy_->DeleteInstructionStatusIf(this);
+  INTRUSIVE_FOR_EACH_PTR(edge, mut_in_edges()) {
+    Instruction* in_instruction = edge->mut_src_instruction();
+    LOG(FATAL) << "unerased edge: " << in_instruction->DebugName() << " -> " << this->DebugName();
+  }
+  INTRUSIVE_FOR_EACH_PTR(edge, mut_out_edges()) {
+    Instruction* out_instruction = edge->mut_dst_instruction();
+    LOG(FATAL) << "unerased edge: " << this->DebugName() << " -> " << out_instruction->DebugName();
+  }
 }
 
-void Instruction::Init(InstructionMsg* instr_msg, Stream* stream,
-                       const std::shared_ptr<const ParallelDesc>& parallel_desc) {
-  __Init__();
-  reset_instr_msg(instr_msg);
-  set_stream(stream);
-  instr_msg->instr_type_id().instruction_type().InitInstructionStatusIf(this);
-  *mut_parallel_desc() = parallel_desc;
-}
-
-void Instruction::Delete() {
-  OF_PROFILER_RANGE_PUSH("Instruction::Delete");
-  instr_msg().instr_type_id().instruction_type().DeleteInstructionStatusIf(this);
-  OF_PROFILER_RANGE_PUSH("ClearInstrMsg");
-  clear_instr_msg();
-  OF_PROFILER_RANGE_POP();
-  mut_in_edges()->Clear();
-  mut_out_edges()->Clear();
-  OF_PROFILER_RANGE_POP();
+bool Instruction::Launched() const {
+  return stream_policy().QueryInstructionStatusLaunched(stream(), status_buffer());
 }
 
 bool Instruction::Done() const {
-  return stream_type().QueryInstructionStatusDone(stream(), status_buffer());
+  return stream_policy().QueryInstructionStatusDone(stream(), status_buffer());
 }
 
-const StreamType& Instruction::stream_type() const { return stream().stream_type(); }
+StreamPolicy* Instruction::mut_stream_policy() { return mut_stream()->mut_stream_policy(); }
+
+const StreamPolicy& Instruction::stream_policy() const { return stream().stream_policy(); }
 
 }  // namespace vm
 }  // namespace oneflow

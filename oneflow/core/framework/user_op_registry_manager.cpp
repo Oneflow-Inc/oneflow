@@ -17,11 +17,14 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/infer_util.h"
-#include "oneflow/core/framework/tensor_desc.h"
+#include "oneflow/core/common/tensor_desc.h"
 #include "oneflow/core/kernel/kernel.pb.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/common/env_var/env_var.h"
 
 namespace oneflow {
+
+DEFINE_ENV_BOOL(ONEFLOW_KERNEL_ENABLE_PRIORITY_EXPERIMENTAL, false);
 
 namespace user_op {
 
@@ -46,25 +49,6 @@ Maybe<void> UserOpRegistryMgr::Register(OpRegistryResult result) {
 const OpRegistryResult* UserOpRegistryMgr::GetOpRegistryResult(const std::string& op_type_name) {
   auto it = op_reg_result_.find(op_type_name);
   if (it != op_reg_result_.end()) { return &(it->second); }
-  return nullptr;
-}
-
-OpGradRegistry UserOpRegistryMgr::CheckAndGetOpGradRegistry(const std::string& op_type_name) {
-  CHECK(!op_type_name.empty());
-  auto it = op_grad_reg_result_.find(op_type_name);
-  CHECK(it == op_grad_reg_result_.end());
-  return OpGradRegistry().Name(op_type_name);
-}
-
-Maybe<void> UserOpRegistryMgr::Register(OpGradRegistryResult result) {
-  CHECK_OR_RETURN(op_grad_reg_result_.emplace(result.op_type_name, result).second);
-  return Maybe<void>::Ok();
-}
-
-const OpGradRegistryResult* UserOpRegistryMgr::GetOpGradRegistryResult(
-    const std::string& op_type_name) {
-  auto it = op_grad_reg_result_.find(op_type_name);
-  if (it != op_grad_reg_result_.end()) { return &(it->second); }
   return nullptr;
 }
 
@@ -103,41 +87,91 @@ Maybe<const OpKernelRegistryResult*> UserOpRegistryMgr::GetOpKernelRegistryResul
     const std::string& op_type_name, const KernelRegContext& ctx) {
   auto it = op_kernel_reg_result_.find(op_type_name);
   if (it == op_kernel_reg_result_.end()) {
-    return Error::OpKernelNotFoundError("There is no kernel registered for Current OperatorConf. ",
-                                        {})
+    return Error::OpKernelNotFoundError({})
+           << "There is no kernel registered for Current OperatorConf. "
            << GetErrorMsgOfSearchedOp(ctx);
   }
 
   const OpKernelRegistryResult* ret = nullptr;
+  int32_t cur_priority = kKernelPriorityFallback;
+  const bool enable_priority_experimental = EnvBool<ONEFLOW_KERNEL_ENABLE_PRIORITY_EXPERIMENTAL>();
   for (const auto& reg_val : it->second) {
+    if (reg_val.priority >= kKernelPriorityExperimental && (!enable_priority_experimental)) {
+      continue;
+    }
     if (reg_val.is_matched_hob->get(ctx)) {
-      if (ret != nullptr) {
-        std::vector<std::string> debug_msgs;
-        for (const auto& local_reg_val : it->second) {
-          if (local_reg_val.is_matched_hob->get(ctx)) {
-            debug_msgs.emplace_back(local_reg_val.is_matched_hob->DebugStr(ctx));
-          }
-        }
-        return Error::MultipleOpKernelsMatchedError(
-                   "There are more than one kernels matching Current OperatorConf. ", debug_msgs)
-               << GetErrorMsgOfSearchedOp(ctx);
+      if (ret == nullptr || reg_val.priority > cur_priority) {
+        ret = &reg_val;
+        cur_priority = reg_val.priority;
+      } else if (ret != nullptr && reg_val.priority == cur_priority) {
+        LOG(WARNING)
+            << "There are more than one kernels with same priority matching Current OperatorConf. "
+            << GetErrorMsgOfSearchedOp(ctx);
+      } else {
+        // do nothing
       }
-      ret = &reg_val;
     }
   }
+
   if (ret == nullptr) {
     std::vector<std::string> debug_msgs;
     for (const auto& reg_val : it->second) {
       debug_msgs.emplace_back(reg_val.is_matched_hob->DebugStr(ctx));
     }
-    return Error::OpKernelNotFoundError("Cannot find the kernel matching Current OperatorConf. ",
-                                        debug_msgs)
+    return Error::OpKernelNotFoundError(debug_msgs)
+           << "Cannot find the kernel matching Current OperatorConf. "
            << GetErrorMsgOfSearchedOp(ctx);
   }
 
   return ret;
 }
 
-}  // namespace user_op
+Maybe<bool> UserOpRegistryMgr::IsOpKernelRegistered(const std::string& op_type_name,
+                                                    const KernelRegContext& ctx) {
+  auto it = op_kernel_reg_result_.find(op_type_name);
+  if (it == op_kernel_reg_result_.end()) { return false; }
+  const bool enable_priority_experimental = EnvBool<ONEFLOW_KERNEL_ENABLE_PRIORITY_EXPERIMENTAL>();
+  for (const auto& reg_val : it->second) {
+    if (reg_val.priority >= kKernelPriorityExperimental && (!enable_priority_experimental)) {
+      continue;
+    }
+    if (reg_val.is_matched_hob->get(ctx)) { return true; }
+  }
+  return false;
+}
 
+UserOpHostMemoryInputRegistry& UserOpHostMemoryInputRegistry::Get() {
+  static UserOpHostMemoryInputRegistry mgr;
+  return mgr;
+}
+
+Maybe<void> UserOpHostMemoryInputRegistry::SetHostMemoryInput4Op(const std::string& op_type_name,
+                                                                 const std::string& arg_name,
+                                                                 int32_t index) {
+  auto it = op_type_name2host_memory_input_args_.find(op_type_name);
+  if (it == op_type_name2host_memory_input_args_.end()) {
+    auto pair = op_type_name2host_memory_input_args_.emplace(
+        op_type_name, small_vector<std::pair<std::string, int32_t>>());
+    CHECK_OR_RETURN(pair.second);
+    it = pair.first;
+  }
+  it->second.emplace_back(std::make_pair(arg_name, index));
+  return Maybe<void>::Ok();
+}
+
+bool UserOpHostMemoryInputRegistry::IsHostMemoryInput4Op(const std::string& op_type_name,
+                                                         const std::string& arg_name,
+                                                         int32_t index) const {
+  auto it = op_type_name2host_memory_input_args_.find(op_type_name);
+  if (it == op_type_name2host_memory_input_args_.end()) { return false; }
+  return std::find(it->second.begin(), it->second.end(), std::make_pair(arg_name, index))
+         != it->second.end();
+}
+
+bool UserOpHostMemoryInputRegistry::HasHostMemoryInput(const std::string& op_type_name) const {
+  return op_type_name2host_memory_input_args_.find(op_type_name)
+         != op_type_name2host_memory_input_args_.end();
+}
+
+}  // namespace user_op
 }  // namespace oneflow

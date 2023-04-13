@@ -18,26 +18,19 @@ limitations under the License.
 
 #include <glog/logging.h>
 #include "oneflow/core/common/device_type.h"
-#include "oneflow/core/common/stream_role.h"
+#include "oneflow/core/common/stream_type.h"
 
 namespace oneflow {
 
-struct NeedSoftSync {
-  static bool Case(StreamRoleCase<StreamRole::kInvalid>, DeviceType) {  // NOLINT
-    LOG(FATAL);
-  }
-  static bool Case(StreamRoleCase<StreamRole::kCompute>, DeviceType device_type) {
-    return device_type != kCPU;
-  }
-  static bool Case(StreamRoleCase<StreamRole::kHost2Device>, DeviceType) { return false; }
-  static bool Case(StreamRoleCase<StreamRole::kDevice2Host>, DeviceType) { return false; }
-  static bool Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>, DeviceType device_type) {
-    return device_type != kCPU;
-  }
-  static bool Case(StreamRoleCase<StreamRole::kAsyncedLaunchedCommNet>, DeviceType) {
-    return false;
-  }
-  static bool Case(StreamRoleCase<StreamRole::kCriticalSection>, DeviceType) { return false; }
+struct NeedSoftSync : public StreamTypeVisitor<NeedSoftSync> {
+  static bool VisitCompute(DeviceType device_type) { return device_type != kCPU; }
+  static bool VisitHost2Device(DeviceType) { return false; }
+  static bool VisitDevice2Host(DeviceType) { return false; }
+  static bool VisitCcl(DeviceType device_type) { return false; }
+  static bool VisitBarrier(DeviceType) { return false; }
+  static bool VisitCriticalSection(DeviceType) { return false; }
+  static bool VisitLazyJobLauncher(DeviceType) { return false; }
+  static bool VisitPinnedCompute(DeviceType device_type) { return VisitCompute(device_type); }
 };
 
 }  // namespace oneflow

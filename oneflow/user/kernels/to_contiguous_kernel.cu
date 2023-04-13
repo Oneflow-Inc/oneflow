@@ -77,7 +77,7 @@ __global__ void ToContiguousForwardGpuParallel(IndexType count, const StridePara
 template<typename T, typename IndexType>
 void LaunchToContiguousKernel(ep::Stream* stream, IndexType count, const size_t ndim,
                               IndexType block_size, const std::vector<int64_t>& in_stride,
-                              const StrideVector& out_stride, const char* in_dptr, char* out_dptr) {
+                              const DimVector& out_stride, const char* in_dptr, char* out_dptr) {
   const int32_t num_blocks = get_num_blocks(count);
   constexpr int32_t num_threads = get_min_threads_num();
   constexpr int32_t block_work_size = get_block_work_size();
@@ -152,9 +152,9 @@ struct ToContiguousUtil<DeviceType::kCUDA, T> : ToContiguousUtilBase {
   }
 };
 
-#define INSTANTIATE_TO_CONTIGUOUS_UTILS_FOR_CUDA(T) \
-  template struct ToContiguousUtil<DeviceType::kCUDA, T>;
+#define INSTANTIATE_TO_CONTIGUOUS_UTILS_FOR_CUDA(cpp_type, data_type) \
+  template struct ToContiguousUtil<DeviceType::kCUDA, cpp_type>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_TO_CONTIGUOUS_UTILS_FOR_CUDA,
-                     TO_CONTIGUOUS_TYPES TO_CONTIGUOUS_CUDA_SPECIAL_TYPE)
+                     TO_CONTIGUOUS_COMMON_TYPES TO_CONTIGUOUS_CUDA_SPECIAL_TYPE)
 
 }  // namespace oneflow

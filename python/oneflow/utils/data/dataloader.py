@@ -13,8 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import sys
-import traceback
 import warnings
 import os
 import threading
@@ -25,40 +23,9 @@ from typing import Any, Callable, TypeVar, Generic, Sequence, List, Optional
 import multiprocessing as python_multiprocessing
 
 import oneflow.multiprocessing as multiprocessing
+from oneflow._utils import ExceptionWrapper
 import oneflow as flow
-from oneflow.utils.data import _utils
-
-
-class ExceptionWrapper(object):
-    r"""Wraps an exception plus traceback to communicate across threads"""
-
-    def __init__(self, exc_info=None, where="in background"):
-        # It is important that we don't store exc_info, see
-        # NOTE [ Python Traceback Reference Cycle Problem ]
-        if exc_info is None:
-            exc_info = sys.exc_info()
-        self.exc_type = exc_info[0]
-        self.exc_msg = "".join(traceback.format_exception(*exc_info))
-        self.where = where
-
-    def reraise(self):
-        r"""Reraises the wrapped exception in the current thread"""
-        # Format a message such as: "Caught ValueError in DataLoader worker
-        # process 2. Original Traceback:", followed by the traceback.
-        msg = "Caught {} {}.\nOriginal {}".format(
-            self.exc_type.__name__, self.where, self.exc_msg
-        )
-        if self.exc_type == KeyError:
-            # KeyError calls repr() on its argument (usually a dict key). This
-            # makes stack traces unreadable. It will not be changed in Python
-            # (https://bugs.python.org/issue2651), so we work around it.
-            msg = KeyErrorMessage(msg)
-        elif getattr(self.exc_type, "message", None):
-            # Some exceptions have first argument as non-str but explicitly
-            # have message field
-            raise self.exc_type(message=msg)
-        raise self.exc_type(msg)
-
+import numpy as np
 
 string_classes = (str, bytes)
 
@@ -129,11 +96,13 @@ class DataLoader(Generic[T_co]):
     Data loader. Combines a dataset and a sampler, and provides an iterable over
     the given dataset.
 
-    The :class:`~flow.utils.data.DataLoader` supports both map-style and
+    The :class:`~oneflow.utils.data.DataLoader` supports both map-style and
     iterable-style datasets with single- or multi-process loading, customizing
     loading order and optional automatic batching (collation) and memory pinning.
 
-    See :py:mod:`flow.utils.data` documentation page for more details.
+    See :py:mod:`oneflow.utils.data` documentation page for more details.
+
+    In consideration of compatibility, the design of our dataloader is consistent with pytorch, ref: https://github.com/pytorch/pytorch/tree/v1.7.0
 
     Args:
         dataset (Dataset): dataset from which to load the data.
@@ -153,6 +122,10 @@ class DataLoader(Generic[T_co]):
         collate_fn (callable, optional): merges a list of samples to form a
             mini-batch of Tensor(s).  Used when using batched loading from a
             map-style dataset.
+        pin_memory (bool, optional): If ``True``, the data loader will copy Tensors
+            into CUDA pinned memory before returning them.  If your data elements
+            are a custom type, or your :attr:`collate_fn` returns a batch that is a custom type,
+            see the example below. (default: ``False``)
         drop_last (bool, optional): set to ``True`` to drop the last incomplete batch,
             if the dataset size is not divisible by the batch size. If ``False`` and
             the size of dataset is not divisible by the batch size, then the last batch
@@ -165,9 +138,12 @@ class DataLoader(Generic[T_co]):
         prefetch_factor (int, optional, keyword-only arg): Number of samples loaded
             in advance by each worker. ``2`` means there will be a total of
             2 * num_workers samples prefetched across all workers. (default: ``2``)
-        persistent_workers (bool, optional): If ``True``, the data loader will not shutdown
-            the worker processes after a dataset has been consumed once. This allows to
-            maintain the workers `Dataset` instances alive. (default: ``False``)
+        persistent_workers (bool, optional): If ``True``, the data loader will immediately 
+            initialize worker preocesses and not shutdown them after a dataset has been 
+            consumed once. This allows to maintain the workers `Dataset` instances alive. 
+            If you are using oneflow with RDMA support in distributed training, the
+            ``persistent_workers`` must be ``True`` otherwise will encounter segmentation
+            fault. (default: ``False``)
 
 
     .. warning:: If the ``spawn`` start method is used, :attr:`worker_init_fn`
@@ -191,6 +167,7 @@ class DataLoader(Generic[T_co]):
     dataset: Dataset[T_co]
     batch_size: Optional[int]
     num_workers: int
+    pin_memory: bool
     drop_last: bool
     timeout: float
     sampler: Sampler
@@ -207,6 +184,7 @@ class DataLoader(Generic[T_co]):
         batch_sampler: Optional[Sampler[Sequence[int]]] = None,
         num_workers: int = 0,
         collate_fn: Optional[_collate_fn_t] = None,
+        pin_memory: bool = False,
         drop_last: bool = False,
         timeout: float = 0,
         worker_init_fn: Optional[_worker_init_fn_t] = None,
@@ -240,6 +218,7 @@ class DataLoader(Generic[T_co]):
 
         self.dataset = dataset
         self.prefetch_factor = prefetch_factor
+        self.pin_memory = pin_memory
         self.timeout = timeout
         self.worker_init_fn = worker_init_fn
         self.multiprocessing_context = multiprocessing_context
@@ -354,7 +333,7 @@ class DataLoader(Generic[T_co]):
             None  # See NOTE [ IterableDataset and __len__ ]
         )
 
-        self._iterator = None
+        self._iterator = self._get_iterator() if self.persistent_workers else None
 
     def _get_iterator(self) -> "_BaseDataLoaderIter":
         if self.num_workers == 0:
@@ -390,7 +369,7 @@ class DataLoader(Generic[T_co]):
         if self.persistent_workers and self.num_workers > 0:
             if self._iterator is None:
                 self._iterator = self._get_iterator()
-            else:
+            elif not self._iterator._status_reset:
                 self._iterator._reset(self)
             return self._iterator
         else:
@@ -519,23 +498,26 @@ class _BaseDataLoaderIter(object):
         self._index_sampler = loader._index_sampler
         self._num_workers = loader.num_workers
         self._prefetch_factor = loader.prefetch_factor
-        self._pin_memory = False
+        self._pin_memory = loader.pin_memory and flow.cuda.is_available()
         self._timeout = loader.timeout
         self._collate_fn = loader.collate_fn
         self._sampler_iter = iter(self._index_sampler)
-        self._generator = loader.generator
-        self._base_seed = flow.tensor([0], dtype=flow.int64).uniform_().numpy().item()
         # self._base_seed = flow.empty((), dtype=flow.int64).random_(generator=loader.generator).item()
+        self._base_seed = flow.randint(
+            0, np.iinfo(np.int64).max, (), generator=loader.generator
+        ).item()
         self._persistent_workers = loader.persistent_workers
         self._num_yielded = 0
         self._profile_name = "enumerate(DataLoader)#{}.__next__".format(
             self.__class__.__name__
         )
+        self._status_reset = True
 
     def __iter__(self) -> "_BaseDataLoaderIter":
         return self
 
     def _reset(self, loader, first_iter=False):
+        self._status_reset = True
         self._sampler_iter = iter(self._index_sampler)
         self._num_yielded = 0
         self._IterableDataset_len_called = loader._IterableDataset_len_called
@@ -547,6 +529,7 @@ class _BaseDataLoaderIter(object):
         raise NotImplementedError
 
     def __next__(self) -> Any:
+        self._status_reset = False
         if self._sampler_iter is None:
             self._reset()
         data = self._next_data()
@@ -563,6 +546,7 @@ class _BaseDataLoaderIter(object):
             if self._num_workers > 1:
                 warn_msg += "Multiprocessing dataloader is not support yet!"
             warnings.warn(warn_msg)
+
         return data
 
     next = __next__
@@ -590,9 +574,10 @@ class _SingleProcessDataLoaderIter(_BaseDataLoaderIter):
 
     def _next_data(self):
         index = self._next_index()  # may raise StopIteration
+        data = self._dataset_fetcher.fetch(index)  # may raise StopIteration
         if self._pin_memory:
-            raise NotImplementedError("Dataloader pin memory is not support yet!")
-        return self._dataset_fetcher.fetch(index)
+            data = _utils.pin_memory.pin_memory(data)
+        return data
 
 
 class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
@@ -907,7 +892,12 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
 
     def __init__(self, loader):
         super(_MultiProcessingDataLoaderIter, self).__init__(loader)
-
+        assert not flow.env.rdma_is_initialized(), (
+            "RDMA is initialized! Could not create _MultiProcessingDataLoaderIter any more. "
+            "Please make sure Dataloader is created before invoking oneflow.env.init_rdma(). "
+            "If this condition is met, you can pass the arg persistent_workers=True in "
+            "Dataloader to avoid this error!"
+        )
         assert self._num_workers > 0
         assert self._prefetch_factor > 0
 
@@ -944,7 +934,6 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                     self._auto_collation,
                     self._collate_fn,
                     self._drop_last,
-                    self._generator,
                     self._base_seed,
                     self._worker_init_fn,
                     i,
@@ -964,7 +953,6 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
             self._workers.append(w)
 
         if self._pin_memory:
-            raise NotImplementedError("Dataloader pin memory is not support yet!")
             self._pin_memory_thread_done_event = threading.Event()
 
             # Queue is not type-annotated
@@ -974,7 +962,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                 args=(
                     self._worker_result_queue,
                     self._data_queue,
-                    flow.cuda.current_device(),  # TODO:flow.cuda.current_device()
+                    flow.cuda.current_device(),
                     self._pin_memory_thread_done_event,
                 ),
             )
@@ -1223,9 +1211,15 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         # Called when shutting down this `_MultiProcessingDataLoaderIter`.
         # See NOTE [ Data Loader Multiprocessing Shutdown Logic ] for details on
         # the logic of this function.
-        python_exit_status = _utils.python_exit_status
+
+        # See (2) of the note. If Python is shutting down, do no-op.
+        try:
+            python_exit_status = _utils.python_exit_status
+        except AttributeError:
+            # Python is shutting down and `_utils` has been freed
+            assert _utils is None
+            return
         if python_exit_status is True or python_exit_status is None:
-            # See (2) of the note. If Python is shutting down, do no-op.
             return
         # Normal exit when last reference is gone / iterator is depleted.
         # See (1) and the second half of the note.

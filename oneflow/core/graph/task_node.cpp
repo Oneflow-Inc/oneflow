@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/memory/memory_case_util.h"
 
 namespace oneflow {
 
@@ -39,7 +40,7 @@ void ForEachDataEdge(const std::unordered_set<TaskEdge*>& edges,
 }  // namespace
 
 TaskNode::TaskNode()
-    : machine_id_(-1), thrd_id_(-1), task_id_(-1), chain_id_(-1), order_in_graph_(-1) {}
+    : machine_id_(-1), thrd_id_(-1), task_id_(-1), chain_id_(-1), order_in_chain_(-1) {}
 
 std::shared_ptr<RegstDesc> TaskNode::GetProducedRegst(const std::string& name) {
   auto produced_regsts_it = produced_regsts_.find(name);
@@ -83,13 +84,13 @@ void TaskNode::set_thrd_id(int64_t val) {
 }
 
 void TaskNode::set_chain_id(int64_t val) {
-  CHECK_EQ(chain_id_, -1);
+  CHECK(!IsValidChainId(chain_id_));
   chain_id_ = val;
 }
 
-void TaskNode::set_order_in_graph(int64_t val) {
-  CHECK_EQ(order_in_graph_, -1);
-  order_in_graph_ = val;
+void TaskNode::set_order_in_chain(int64_t val) {
+  CHECK_EQ(order_in_chain_, -1);
+  order_in_chain_ = val;
 }
 
 void TaskNode::PinConsumedRegst() {
@@ -203,14 +204,13 @@ bool TaskNode::IsMeaningLess() { return produced_regsts_.empty() && consumed_reg
 
 void TaskNode::ToProto(TaskProto* task_proto) const {
   // Step1: process some scalar items.
-  CHECK_NE(chain_id_, -1);
   task_proto->set_task_type(GetTaskType());
   task_proto->set_machine_id(machine_id_);
   task_proto->set_thrd_id(thrd_id_);
   task_proto->set_task_id(task_id_);
   task_proto->set_job_id(GlobalJobDesc().job_id());
-  task_proto->mutable_task_set_info()->set_chain_id(chain_id_);
-  task_proto->mutable_task_set_info()->set_order_in_graph(order_in_graph_);
+  task_proto->set_chain_id(chain_id_);
+  task_proto->set_order_in_chain(order_in_chain_);
 
   // Step2: process exec_gph.
   exec_gph_.ToExecSequence(parallel_ctx(), task_proto->mutable_exec_sequence());
@@ -308,20 +308,19 @@ void TaskNode::InitProducedRegstMemCase(RegstDesc* regst) {
 }
 
 void TaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
-  if (device_type() == DeviceType::kCPU) {
-    mem_case->mutable_host_mem();
-  } else if (device_type() == DeviceType::kCUDA) {
-    mem_case->mutable_device_cuda_mem()->set_device_id(stream_id().device_id().device_index());
-  } else {
-    UNIMPLEMENTED();
-  }
+  mem_case->set_device_type(device_type());
+  mem_case->set_device_id(stream_id().device_id().device_index());
 }
 
 void TaskNode::PinConsumedRegstMemCase(MemoryCase* mem_case) {
-  if (mem_case->has_host_mem() && device_type() == DeviceType::kCUDA) {
-    mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(
-        stream_id().device_id().device_index());
-  }
+  // When a node located on non-cpu device consumes a cpu regst,
+  // the regst memory should be pinned on host memory (locked page memory).
+  // When the regst is not on host, skip pinning
+  if (!memory::IsHostMem(*mem_case)) { return; }
+  // When the node is located on host, skip pinning
+  if (device_type() == DeviceType::kCPU) { return; }
+  mem_case->set_pinned_device_type(device_type());
+  mem_case->set_pinned_device_id(stream_id().device_id().device_index());
 }
 
 void TaskNode::ConsumeRegst(const std::string& name) {
@@ -337,7 +336,8 @@ void TaskNode::UpdateTaskId() {
   CHECK_NE(machine_id_, -1);
   CHECK_NE(thrd_id_, -1);
   StreamId stream_id = DecodeStreamIdFromInt64(thrd_id_);
-  new_task_id_.reset(new TaskId(Global<IDMgr>::Get()->GetTaskIdGenerator()->Generate(stream_id)));
+  new_task_id_.reset(
+      new TaskId(Singleton<IDMgr>::Get()->GetTaskIdGenerator()->Generate(stream_id)));
   task_id_ = EncodeTaskIdToInt64(*new_task_id_);
 }
 

@@ -18,9 +18,9 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/user_op_registry.h"
-#include "oneflow/core/framework/user_op_grad_registry.h"
 #include "oneflow/core/framework/user_op_kernel_registry.h"
 #include "oneflow/core/common/registry_error.h"
+#include "oneflow/core/common/op_args_reserved_size.h"
 
 namespace oneflow {
 
@@ -40,14 +40,11 @@ class UserOpRegistryMgr final {
   Maybe<void> Register(OpRegistryResult result);
   const OpRegistryResult* GetOpRegistryResult(const std::string& op_type_name);
 
-  OpGradRegistry CheckAndGetOpGradRegistry(const std::string& op_type_name);
-  Maybe<void> Register(OpGradRegistryResult result);
-  const OpGradRegistryResult* GetOpGradRegistryResult(const std::string& op_type_name);
-
   OpKernelRegistry CheckAndGetOpKernelRegistry(const std::string& op_type_name);
   Maybe<void> Register(OpKernelRegistryResult result);
   Maybe<const OpKernelRegistryResult*> GetOpKernelRegistryResult(const std::string& op_type_name,
                                                                  const KernelRegContext& ctx);
+  Maybe<bool> IsOpKernelRegistered(const std::string& op_type_name, const KernelRegContext& ctx);
 
   const HashMap<std::string, OpRegistryResult>& GetAllOpRegistryResults() {
     return op_reg_result_;
@@ -55,7 +52,6 @@ class UserOpRegistryMgr final {
 
  private:
   HashMap<std::string, OpRegistryResult> op_reg_result_;
-  HashMap<std::string, OpGradRegistryResult> op_grad_reg_result_;
   HashMap<std::string, std::vector<OpKernelRegistryResult>> op_kernel_reg_result_;
 };
 
@@ -68,9 +64,34 @@ struct UserOpRegisterTrigger final {
   }
 };
 
+class UserOpHostMemoryInputRegistry final {
+ public:
+  UserOpHostMemoryInputRegistry(UserOpHostMemoryInputRegistry const&) = delete;
+  UserOpHostMemoryInputRegistry& operator=(UserOpHostMemoryInputRegistry const&) = delete;
+  ~UserOpHostMemoryInputRegistry() = default;
+
+  static UserOpHostMemoryInputRegistry& Get();
+
+  Maybe<void> SetHostMemoryInput4Op(const std::string& op_type_name, const std::string& arg_name,
+                                    int32_t index);
+  bool IsHostMemoryInput4Op(const std::string& op_type_name, const std::string& arg_name,
+                            int32_t index) const;
+
+  bool HasHostMemoryInput(const std::string& op_type_name) const;
+
+ private:
+  UserOpHostMemoryInputRegistry() {}
+  HashMap<std::string, small_vector<std::pair<std::string, int32_t>>>
+      op_type_name2host_memory_input_args_;
+};
+
 }  // namespace user_op
 
 }  // namespace oneflow
+
+#define REGISTER_OP_HOST_MEMORY_INPUT(op_type_name, arg_name, index)                      \
+  COMMAND(CHECK_JUST(user_op::UserOpHostMemoryInputRegistry::Get().SetHostMemoryInput4Op( \
+      op_type_name, arg_name, index)));
 
 #define REGISTER_USER_OP(name)                                                                \
   static ::oneflow::user_op::UserOpRegisterTrigger<::oneflow::user_op::OpRegistry> OF_PP_CAT( \
@@ -82,11 +103,6 @@ struct UserOpRegisterTrigger final {
 #define REGISTER_NO_GRAD_USER_OP(name) REGISTER_USER_OP(name).NoGrad()
 
 #define REGISTER_NO_GRAD_CPU_ONLY_USER_OP(name) REGISTER_NO_GRAD_USER_OP(name).SupportCpuOnly()
-
-#define REGISTER_USER_OP_GRAD(name)                                                               \
-  static ::oneflow::user_op::UserOpRegisterTrigger<::oneflow::user_op::OpGradRegistry> OF_PP_CAT( \
-      g_register_trigger, __COUNTER__) =                                                          \
-      ::oneflow::user_op::UserOpRegistryMgr::Get().CheckAndGetOpGradRegistry(name)
 
 #define REGISTER_USER_KERNEL(name)                                                       \
   static ::oneflow::user_op::UserOpRegisterTrigger<::oneflow::user_op::OpKernelRegistry> \

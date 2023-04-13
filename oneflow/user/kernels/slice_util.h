@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_SLICE_UTIL_H_
 #define ONEFLOW_USER_KERNELS_SLICE_UTIL_H_
 
+#include <sstream>
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/ep/include/stream.h"
@@ -39,11 +40,12 @@ inline int64_t RegulateSliceStop(int64_t stop, int64_t size) {
 constexpr size_t kSliceMaxDims = 8;
 
 struct SliceParams {
-  int64_t ndim;
-  int64_t dims[kSliceMaxDims];
-  int64_t start[kSliceMaxDims];
-  int64_t step[kSliceMaxDims];
-  int64_t size[kSliceMaxDims];
+  int64_t ndim = 0;
+  int64_t dims[kSliceMaxDims]{0};
+  int64_t stride[kSliceMaxDims]{0};
+  int64_t start[kSliceMaxDims]{0};
+  int64_t step[kSliceMaxDims]{0};
+  int64_t size[kSliceMaxDims]{0};
 
   int64_t elem_cnt() const {
     if (ndim == 0) { return 0; }
@@ -59,6 +61,15 @@ struct SliceParams {
     if (start[dim] != 0) { return false; }
     if (size[dim] != dims[dim]) { return false; }
     return true;
+  }
+
+  std::string ToString() const {
+    std::stringstream ss("SliceParams:");
+    for (int i = 0; i < ndim; ++i) {
+      ss << "\n\tdim: " << i << ", start: " << start[i] << ", step: " << step[i]
+         << ", stride: " << stride[i] << ", size: " << size[i] << ", dims: " << dims[i];
+    }
+    return ss.str();
   }
 };
 
@@ -87,6 +98,8 @@ OF_DEVICE_FUNC int64_t SliceOffsetToEntireOffset(int64_t offset, const SlicePara
 template<DeviceType device_type, typename T>
 struct SliceKernelUtil {
   static void Forward(ep::Stream* stream, const SliceParams& params, const T* entire, T* sliced);
+  static void Forward(ep::Stream* stream, const SliceParams& entire_params,
+                      const SliceParams& sliced_params, const T* entire, T* sliced);
   static void Backward(ep::Stream* stream, const SliceParams& params, const T* sliced, T* entire);
 };
 
@@ -94,6 +107,7 @@ struct SliceKernelUtil {
 
 #define INSTANTIATE_SLICE_KERNEL_UTIL_WITH_DEVICE(device) \
   INSTANTIATE_SLICE_KERNEL_UTIL(device, bool)             \
+  INSTANTIATE_SLICE_KERNEL_UTIL(device, float16)          \
   INSTANTIATE_SLICE_KERNEL_UTIL(device, float)            \
   INSTANTIATE_SLICE_KERNEL_UTIL(device, double)           \
   INSTANTIATE_SLICE_KERNEL_UTIL(device, int32_t)          \

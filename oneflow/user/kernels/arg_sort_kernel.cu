@@ -78,11 +78,11 @@ class GpuArgSortKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    TmpBufferManager<T> buf_manager(static_cast<int32_t>(tmp_buffer->shape().elem_cnt()),
-                                    tmp_buffer->mut_dptr<void>(), in->shape());
+    TmpBufferManager<T> buf_manager(static_cast<int32_t>(tmp_buffer->shape_view().elem_cnt()),
+                                    tmp_buffer->mut_dptr<void>(), in->shape_view());
 
-    const int32_t elem_cnt = in->shape().elem_cnt();
-    const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
+    const int32_t elem_cnt = in->shape_view().elem_cnt();
+    const int32_t instance_size = in->shape_view().At(in->shape_view().NumAxes() - 1);
     const int32_t instance_num = elem_cnt / instance_size;
     const std::string& direction = ctx->Attr<std::string>("direction");
     InitializeIndices<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
@@ -143,5 +143,6 @@ REGISTER_CUDA_ARG_SORT_KERNEL(int8_t)
 REGISTER_CUDA_ARG_SORT_KERNEL(uint8_t)
 REGISTER_CUDA_ARG_SORT_KERNEL(int32_t)
 REGISTER_CUDA_ARG_SORT_KERNEL(int64_t)
+REGISTER_CUDA_ARG_SORT_KERNEL(half)
 
 }  // namespace oneflow

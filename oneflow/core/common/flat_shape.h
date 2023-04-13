@@ -33,6 +33,7 @@ FLAT_MSG_BEGIN(FlatShape);
   static Maybe<FlatShape> New(const Shape& shape);
   Maybe<void> Init(const Shape& shape);
   Maybe<void> Check(const Shape& shape) const;
+  Maybe<void> Check(const FlatShape& flat_shape) const;
   Maybe<Shape> ToShape() const;
   Maybe<void> ToShape(Shape* shape) const;
   int64_t At(int i) const { return dim(i); }

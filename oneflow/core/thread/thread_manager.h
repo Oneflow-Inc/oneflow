@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_THREAD_THREAD_MANAGER_H_
 #define ONEFLOW_CORE_THREAD_THREAD_MANAGER_H_
 
+#include <mutex>
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/auto_registration_factory.h"
@@ -36,39 +37,56 @@ class ThreadMgr final {
   ThreadMgr() = default;
   ~ThreadMgr();
 
-  void AddPlan(const Plan& plan);
+  void AddThreads(const HashSet<int64_t>& thread_ids);
+  void DeleteThreads(const HashSet<int64_t>& thread_ids);
   Thread* GetThrd(int64_t thrd_id);
 
  private:
-  friend class Global<ThreadMgr>;
+  friend class Singleton<ThreadMgr>;
 
   HashMap<int64_t, std::unique_ptr<Thread>> threads_;
+  std::mutex mutex4del_threads_;
 };
 
-void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback);
-
+// Use limit_thread_num to config the max thread num.
+// limit_thread_num == -1 means no limit, use the max avaliable thread num of the ThreadPool.
+// limit_thread_num == 0 means use the current thread.
 template<typename DoEachT>
-void MultiThreadLoop(size_t num, const DoEachT& DoEach) {
-  if (num == 0) { return; }
-  if (unlikely(pthread_fork::IsForkedSubProcess())) {
-    SingleThreadLoop(num, DoEach);
+void MultiThreadLoop(size_t work_num, const DoEachT& DoEachWork, int64_t limit_thread_num = -1) {
+  if (work_num == 0) { return; }
+  if (unlikely(pthread_fork::IsForkedSubProcess() || Singleton<ThreadPool>::Get() == nullptr
+               || limit_thread_num == 0)) {
+    FOR_RANGE(size_t, i, 0, work_num) { DoEachWork(i); }
     return;
   }
-  size_t thread_num = Global<ThreadPool>::Get()->thread_num();
-  thread_num = std::min(num, thread_num);
-  BalancedSplitter bs(num, thread_num);
+  size_t thread_num = Singleton<ThreadPool>::Get()->thread_num();
+  if (limit_thread_num > 0) {
+    thread_num = std::min(thread_num, static_cast<size_t>(limit_thread_num));
+  }
+  thread_num = std::min(work_num, thread_num);
+  BalancedSplitter bs(work_num, thread_num);
   BlockingCounter bc(thread_num);
   FOR_RANGE(size_t, range_id, 0, thread_num) {
-    Global<ThreadPool>::Get()->AddWork([&bc, &bs, range_id, DoEach] {
+    Singleton<ThreadPool>::Get()->AddWork([&bc, &bs, range_id, DoEachWork] {
       size_t start = bs.At(range_id).begin();
       size_t end = bs.At(range_id).end();
-      FOR_RANGE(size_t, i, start, end) { DoEach(i); }
+      FOR_RANGE(size_t, i, start, end) { DoEachWork(i); }
       bc.Decrease();
     });
   }
-  // buzy loop wait.
+  // busy loop wait.
   bc.WaitForeverUntilCntEqualZero();
 }
+
+inline bool* MutIsMainThread() {
+  thread_local bool is_main_thread = false;
+  return &is_main_thread;
+}
+
+inline bool IsMainThread() { return *MutIsMainThread(); }
+inline void SetIsMainThread(bool is_main_thread) { *MutIsMainThread() = is_main_thread; }
+
+COMMAND(SetIsMainThread(true));
 
 }  // namespace oneflow
 

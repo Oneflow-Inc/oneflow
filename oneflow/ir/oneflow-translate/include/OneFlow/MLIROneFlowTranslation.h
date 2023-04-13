@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+#include "OneFlow/SBP/SBPImporter.h"
 
 #include "OneFlow/OneFlowOps.h"
 
@@ -39,20 +40,18 @@ namespace oneflow {
 
 // TODO: wrap in a helper namespace
 
-LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
+LogicalResult IsAttrBelong2Op(const std::string& op_type_name, const std::string& attr_name);
+
+LogicalResult ConvertUserOpInputs(Operation* op, StringRef op_name,
                                   ::oneflow::UserOpConf* user_conf);
-LogicalResult ConvertUserOpOutputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
+LogicalResult ConvertUserOpOutputs(Operation* op, StringRef op_name,
                                    ::oneflow::UserOpConf* user_conf);
 LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf);
-llvm::Optional<std::string> GetOutputLbn(OpResult result);
 llvm::Optional<mlir::oneflow::DataTypeAttr> GetDataTypeAttr(MLIRContext* context,
                                                             ::oneflow::DataType oneflow_value);
-LogicalResult ConvertVariableOpConf(Operation* op, oneflow::VariableOpAdaptor& adaptor,
-                                    ::oneflow::OperatorConf* op_conf);
-LogicalResult ConvertInputOpConf(Operation* op, oneflow::InputOpAdaptor& adaptor,
-                                 ::oneflow::OperatorConf* op_conf);
-LogicalResult ConvertOutputOpConf(Operation* op, oneflow::OutputOpAdaptor& adaptor,
-                                  ::oneflow::OperatorConf* op_conf);
+LogicalResult ConvertVariableOpConf(VariableOp op, ::oneflow::OperatorConf* op_conf);
+LogicalResult ConvertInputOpConf(InputOp op, ::oneflow::OperatorConf* op_conf);
+LogicalResult ConvertOutputOpConf(OutputOp op, ::oneflow::OperatorConf* op_conf);
 
 LogicalResult ParseNdSbpFromAttr(ArrayAttr nd_sbp_attr, ::oneflow::NdSbp* nd_sbp);
 Attribute ConvertNdSbpToAttr(Builder& builder, const ::oneflow::NdSbp& nd_sbp);
@@ -108,14 +107,13 @@ class Importer {
   }
 
   ArrayAttr GetAttrFromShape(const ::oneflow::ShapeProto& shape);
-  llvm::Optional<Type> GetTypeFromOneFlowDataType(::oneflow::DataType dt);
+  ArrayAttr GetAttrFromStride(const ::oneflow::Int64ListProto& stride);
   OpBuilder& GetBuilder() { return builder_; }
   MLIRContext* GetMLIRContext() { return context_; }
   ModuleOp& GetModule() { return module_; }
   Location& GetRootLocation() { return unknown_loc_; }
   virtual Type GetTensorTypeOfLbn(const std::string& lbn) = 0;
-  LogicalResult ConvertUserOpAttributes(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
-                                        ::oneflow::OperatorConf& op_conf);
+  void SetOpStateLoc(const ::oneflow::OperatorConf&, OperationState&);
 
  private:
   OpBuilder builder_;
@@ -153,7 +151,9 @@ void RoundTripOneFlowJob(
 
 void registerFromOneFlowJobTranslation();
 
+std::string ConvertJobToTosaIR(RoundTripOneFlowJobWrapperInterface& job_wrapper);
 void SaveJobToIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::string& path);
+std::string ConvertJobToIR(RoundTripOneFlowJobWrapperInterface& job_wrapper);
 void LoadJobFromIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::string& path);
 
 }  // namespace oneflow

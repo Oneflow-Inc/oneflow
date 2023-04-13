@@ -17,39 +17,13 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/operator/op_attribute.pb.h"
-#include "oneflow/core/operator/op_attribute.cfg.h"
-
-#include "oneflow/core/operator/op_conf.cfg.h"
-#include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/framework/dtype.h"
 
 namespace py = pybind11;
 
 namespace oneflow {
 
-namespace {
-
-Maybe<cfg::OperatorConf> MakeOpConf(const std::string& serialized_str) {
-  OperatorConf op_conf;
-  CHECK_OR_RETURN(TxtString2PbMessage(serialized_str, &op_conf)) << "op_conf parse failed";
-  return std::make_shared<cfg::OperatorConf>(op_conf);
-}
-
-Maybe<cfg::OpAttribute> MakeOpAttribute(const std::string& op_attribute_str) {
-  OpAttribute op_attribute;
-  CHECK_OR_RETURN(TxtString2PbMessage(op_attribute_str, &op_attribute))
-      << "op_attribute parse failed";
-  return std::make_shared<cfg::OpAttribute>(op_attribute);
-}
-
-}  // namespace
-
 ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
-  m.def("MakeOpConfByString", [](const std::string& str) { return MakeOpConf(str); });
-
-  m.def("MakeOpAttributeByString", [](const std::string& str) { return MakeOpAttribute(str); });
-
   m.def("GetProtoDtype4OfDtype",
         [](const Symbol<DType>& x) { return static_cast<int>(x->data_type()); });
 

@@ -103,6 +103,7 @@ class TestDefaultGenerator(flow.unittest.TestCase):
             cuda_gen = flow.Generator(device="cuda")
             state = cuda_gen.get_state()
 
+    @unittest.skip("the curandstate is no longer used by normal kernel")
     def test_generator_setstate(test_case):
         cpu_gen = flow.default_generator
         flow.randn(100, 100, dtype=flow.float32, device="cpu", generator=cpu_gen)
@@ -156,6 +157,21 @@ class TestDefaultGenerator(flow.unittest.TestCase):
         flow.set_rng_state(state)
         new_state = flow.get_rng_state()
         test_case.assertTrue(np.allclose(new_state.numpy(), state.numpy()))
+
+    # NOTE: according to https://github.com/Oneflow-Inc/oneflow/pull/9102#discussion_r973811389
+    # tensor init function fallback to `flow.default_generator.seed()`, and this test will be normal while tensor init functions reconstructed.(using op/kernel)
+    # @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    @unittest.skipIf(True, "tensor init functions need to be reconstructed!")
+    def test_tensor_init(test_case):
+        flow.manual_seed(0)
+        x = flow.ones(2)
+        x.uniform_()
+
+        flow.manual_seed(0)
+        y = flow.ones(2).to("cuda")
+        y.uniform_()
+
+        test_case.assertTrue(np.allclose(x.numpy(), y.numpy()))
 
 
 if __name__ == "__main__":

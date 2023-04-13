@@ -19,10 +19,10 @@ from typing import Optional, Tuple, Union
 
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 
 
-class Interpolate(Module):
+class Interpolate:
     def __init__(
         self,
         size: Optional[Union[int, Tuple[int, ...]]] = None,
@@ -31,7 +31,6 @@ class Interpolate(Module):
         align_corners: Optional[bool] = None,
         recompute_scale_factor: Optional[bool] = None,
     ):
-        super().__init__()
         self.size = size
         if isinstance(scale_factor, tuple):
             self.scale_factor = tuple((float(factor) for factor in scale_factor))
@@ -71,6 +70,19 @@ class Interpolate(Module):
             raise ValueError('interpolation "nearest" does not support align_corners.')
 
     def forward(self, x):
+        if len(x.shape) == 3 and self.mode == "bilinear":
+            raise NotImplementedError("Got 3D input, but bilinear mode needs 4D input")
+        if len(x.shape) == 3 and self.mode == "trilinear":
+            raise NotImplementedError("Got 3D input, but trilinear mode needs 5D input")
+        if len(x.shape) == 4 and self.mode == "linear":
+            raise NotImplementedError("Got 4D input, but linear mode needs 3D input")
+        if len(x.shape) == 4 and self.mode == "trilinear":
+            raise NotImplementedError("Got 4D input, but trilinear mode needs 5D input")
+        if len(x.shape) == 5 and self.mode == "linear":
+            raise NotImplementedError("Got 5D input, but linear mode needs 3D input")
+        if len(x.shape) == 5 and self.mode == "bilinear":
+            raise NotImplementedError("Got 5D input, but bilinear mode needs 4D input")
+
         dim = len(x.shape) - 2
         if self.size is not None and self.scale_factor is not None:
             raise ValueError("only one of size or scale_factor should be defined")
@@ -121,13 +133,17 @@ class Interpolate(Module):
                 scale_factors.append(output_size[i] / x.shape[2 + i])
         if len(x.shape) == 3 and self.mode == "nearest":
             return flow._C.upsample_nearest_1d(
-                x, scale_factor=scale_factors[0], data_format="channels_first"
+                x,
+                scale_factor=scale_factors[0],
+                output_size=output_size,
+                data_format="channels_first",
             )
         if len(x.shape) == 4 and self.mode == "nearest":
             return flow._C.upsample_nearest_2d(
                 x,
                 height_scale=scale_factors[0],
                 width_scale=scale_factors[1],
+                output_size=output_size,
                 data_format="channels_first",
             )
         if len(x.shape) == 5 and self.mode == "nearest":
@@ -136,6 +152,7 @@ class Interpolate(Module):
                 depth_scale=scale_factors[0],
                 height_scale=scale_factors[1],
                 width_scale=scale_factors[2],
+                output_size=output_size,
                 data_format="channels_first",
             )
         if len(x.shape) == 3 and self.mode == "area":
@@ -153,6 +170,7 @@ class Interpolate(Module):
                 x,
                 scale_factor=scale_factors[0],
                 align_corners=self.align_corners,
+                output_size=output_size,
                 data_format="channels_first",
             )
         if len(x.shape) == 4 and self.mode == "bilinear":
@@ -162,6 +180,7 @@ class Interpolate(Module):
                 height_scale=scale_factors[0],
                 width_scale=scale_factors[1],
                 align_corners=self.align_corners,
+                output_size=output_size,
                 data_format="channels_first",
             )
         if len(x.shape) == 4 and self.mode == "bicubic":
@@ -171,6 +190,7 @@ class Interpolate(Module):
                 height_scale=scale_factors[0],
                 width_scale=scale_factors[1],
                 align_corners=self.align_corners,
+                output_size=output_size,
                 data_format="channels_first",
             )
         if len(x.shape) == 5 and self.mode == "trilinear":
@@ -181,8 +201,15 @@ class Interpolate(Module):
                 height_scale=scale_factors[1],
                 width_scale=scale_factors[2],
                 align_corners=self.align_corners,
+                output_size=output_size,
                 data_format="channels_first",
             )
+
+        raise NotImplementedError(
+            "Input Error: Only 3D, 4D and 5D input Tensors supported"
+            " (got {}D) for the modes: nearest | linear | bilinear | bicubic | trilinear | area"
+            " (got {})".format(len(x.shape), self.mode)
+        )
 
 
 def interpolate(
@@ -195,7 +222,7 @@ def interpolate(
 ):
     """The interface is consistent with PyTorch.    
     
-    The documentation is referenced from: https://pytorch.org/docs/1.9.0/_modules/torch/nn/functional.html#interpolate
+    The documentation is referenced from: https://pytorch.org/docs/1.10/_modules/torch/nn/functional.html#interpolate.
     
 
     Down/up samples the input to either the given :attr:`size` or the given
@@ -280,7 +307,7 @@ def interpolate(
         mode=mode,
         align_corners=align_corners,
         recompute_scale_factor=recompute_scale_factor,
-    )(input)
+    ).forward(input)
 
 
 if __name__ == "__main__":

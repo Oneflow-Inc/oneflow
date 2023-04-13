@@ -18,10 +18,9 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+from random import shuffle
 
 from oneflow.test_utils.automated_test_util import *
-from oneflow.test_utils.test_util import GenArgList
-
 import oneflow as flow
 import oneflow.unittest
 
@@ -34,6 +33,16 @@ class TestSwapaxes(flow.unittest.TestCase):
         x = random_tensor(ndim=3).to(device)
         y = torch.swapaxes(x, random(0, 2).to(int), random(0, 2).to(int))
         return y
+
+    @autotest(n=10)
+    def test_swapaxes_flow_with_stride(test_case):
+        device = random_device()
+        x = random_tensor(ndim=3).to(device)
+        perm = [0, 1, 2]
+        shuffle(perm)
+        y = x.permute(perm)
+        z = torch.swapaxes(y, random(0, 2).to(int), random(0, 2).to(int))
+        return z
 
 
 if __name__ == "__main__":

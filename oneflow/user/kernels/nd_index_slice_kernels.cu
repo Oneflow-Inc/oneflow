@@ -21,22 +21,34 @@ namespace oneflow {
 namespace {
 
 template<typename T, typename I>
-__global__ void CudaGatherNd(NdIndexSliceArgs<T, I> args, const I* indices, const T* dense,
-                             T* slices) {
+__global__ void CudaGatherNd(NdIndexSliceArgs args, const I* indices, const T* dense, T* slices) {
   DoGatherNd(args.num_slices * args.slice_size, args.slice_size, args.index_ndims, args.dense_shape,
              indices, dense, slices);
 }
 
 template<typename T, typename I>
-__global__ void CudaScatterNdAdd(NdIndexSliceArgs<T, I> args, const I* indices, const T* slices,
+__global__ void CudaScatterNdAdd(NdIndexSliceArgs args, const I* indices, const T* slices,
                                  T* dense) {
   DoScatterNdAdd<DeviceType::kCUDA>(args.num_slices * args.slice_size, args.slice_size,
                                     args.index_ndims, args.dense_shape, indices, slices, dense);
 }
 
 template<typename T, typename I>
-__global__ void CudaFillByNdIndex(NdIndexSliceArgs<T, I> args, const I* indices, T* dense,
-                                  T value) {
+__global__ void CudaScatterNdUpdate(NdIndexSliceArgs args, const I* indices, const T* slices,
+                                    T* dense) {
+  DoScatterNdUpdate<DeviceType::kCUDA>(args.num_slices * args.slice_size, args.slice_size,
+                                       args.index_ndims, args.dense_shape, indices, slices, dense);
+}
+
+template<typename T, typename I>
+__global__ void CudaScatterNdUpdateWithStride(NdIndexSliceArgs args, const I* indices,
+                                              const T* slices, T* dense) {
+  DoScatterNdUpdateWithStride<DeviceType::kCUDA>(args.num_slices * args.slice_size, args, indices,
+                                                 slices, dense);
+}
+
+template<typename T, typename I>
+__global__ void CudaFillByNdIndex(NdIndexSliceArgs args, const I* indices, T* dense, T value) {
   DoFillByNdIndex(args.num_slices * args.slice_size, args.slice_size, args.index_ndims,
                   args.dense_shape, indices, dense, value);
 }
@@ -45,7 +57,7 @@ __global__ void CudaFillByNdIndex(NdIndexSliceArgs<T, I> args, const I* indices,
 
 template<typename T, typename I>
 struct GatherNdFunctor<DeviceType::kCUDA, T, I> final {
-  void operator()(ep::Stream* stream, const NdIndexSliceArgs<T, I>& args, const I* indices,
+  void operator()(ep::Stream* stream, const NdIndexSliceArgs& args, const I* indices,
                   const T* dense, T* slices) const {
     RUN_CUDA_KERNEL((CudaGatherNd<T, I>), stream, args.num_slices * args.slice_size, args, indices,
                     dense, slices);
@@ -54,7 +66,7 @@ struct GatherNdFunctor<DeviceType::kCUDA, T, I> final {
 
 template<typename T, typename I>
 struct ScatterNdAddFunctor<DeviceType::kCUDA, T, I> final {
-  void operator()(ep::Stream* stream, const NdIndexSliceArgs<T, I>& args, const I* indices,
+  void operator()(ep::Stream* stream, const NdIndexSliceArgs& args, const I* indices,
                   const T* slices, T* dense) const {
     RUN_CUDA_KERNEL((CudaScatterNdAdd<T, I>), stream, args.num_slices * args.slice_size, args,
                     indices, slices, dense);
@@ -62,9 +74,27 @@ struct ScatterNdAddFunctor<DeviceType::kCUDA, T, I> final {
 };
 
 template<typename T, typename I>
+struct ScatterNdUpdateFunctor<DeviceType::kCUDA, T, I> final {
+  void operator()(ep::Stream* stream, const NdIndexSliceArgs& args, const I* indices,
+                  const T* slices, T* dense) const {
+    RUN_CUDA_KERNEL((CudaScatterNdUpdate<T, I>), stream, args.num_slices * args.slice_size, args,
+                    indices, slices, dense);
+  }
+};
+
+template<typename T, typename I>
+struct ScatterNdUpdateWithStrideFunctor<DeviceType::kCUDA, T, I> final {
+  void operator()(ep::Stream* stream, const NdIndexSliceArgs& args, const I* indices,
+                  const T* slices, T* dense) const {
+    RUN_CUDA_KERNEL((CudaScatterNdUpdateWithStride<T, I>), stream,
+                    args.num_slices * args.slice_size, args, indices, slices, dense);
+  }
+};
+
+template<typename T, typename I>
 struct FillByNdIndexFunctor<DeviceType::kCUDA, T, I> final {
-  void operator()(ep::Stream* stream, const NdIndexSliceArgs<T, I>& args, const I* indices,
-                  T* dense, T value) const {
+  void operator()(ep::Stream* stream, const NdIndexSliceArgs& args, const I* indices, T* dense,
+                  T value) const {
     RUN_CUDA_KERNEL((CudaFillByNdIndex<T, I>), stream, args.num_slices * args.slice_size, args,
                     indices, dense, value);
   }
@@ -129,8 +159,6 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_TENSOR_GATHER_ND_ADD_KERNELS, (DeviceType::kCUDA),
                                  CUDA_ATOMIC_ADD_SUPPORTED_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700 && CUDA_VERSION >= 10000
-
 template<>
 struct DeviceAdd<DeviceType::kCUDA, float16> {
   __device__ __forceinline__ static void Invoke(const float16* x, float16* y) {
@@ -144,6 +172,19 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_ND_INDEX_SLICE_FUNCTORS, (DeviceTyp
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ND_INDEX_SLICE_KERNELS, (DeviceType::kCUDA),
                                  FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
+#if defined(__CUDA_BF16_TYPES_EXIST__)
+template<>
+struct DeviceAdd<DeviceType::kCUDA, bfloat16> {
+  __device__ __forceinline__ static void Invoke(const bfloat16* x, bfloat16* y) {
+    cuda::atomic::Add(reinterpret_cast<nv_bfloat16*>(y),
+                      *(reinterpret_cast<const nv_bfloat16*>(x)));
+  }
+};
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_ND_INDEX_SLICE_FUNCTORS, (DeviceType::kCUDA),
+                                 BFLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ND_INDEX_SLICE_KERNELS, (DeviceType::kCUDA),
+                                 BFLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 #endif
 
 }  // namespace oneflow

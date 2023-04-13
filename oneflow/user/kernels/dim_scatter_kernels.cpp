@@ -37,7 +37,7 @@ class DimScatterKernel final : public user_op::OpKernel {
     const IDX_T* index = index_tensor->dptr<IDX_T>();
     IN_T* output = out_tensor->mut_dptr<IN_T>();
     size_t out_bytes_size =
-        out_tensor->shape().elem_cnt() * GetSizeOfDataType(out_tensor->data_type());
+        out_tensor->shape_view().elem_cnt() * GetSizeOfDataType(out_tensor->data_type());
 
     Tensor* like_tensor = ctx->Tensor4ArgNameAndIndex("like", 0);
     const IN_T* src = src_tensor->dptr<IN_T>();
@@ -50,29 +50,26 @@ class DimScatterKernel final : public user_op::OpKernel {
       UNIMPLEMENTED() << "Input tensor and like tensor cannot be empty simultaneously.";
     }
 
-    const int ndim = src_tensor->shape().NumAxes();
-    fixed_vector<IDX_T, kDimGatherMaxDimCount> shape_vec(ndim);
-    auto shape2dims = [&shape_vec, &ndim](const ShapeView& tensor_shape) -> void {
-      std::transform(tensor_shape.ptr(), tensor_shape.ptr() + ndim, shape_vec.begin(),
-                     [](int32_t dim) -> IDX_T { return static_cast<IDX_T>(dim); });
-    };
-    shape2dims(src_tensor->shape());
-    DimOpIndexNdHelper<IDX_T> src_nd_helper(shape_vec.data(), ndim);
-    shape2dims(index_tensor->shape());
-    DimOpIndexNdHelper<IDX_T> idx_nd_helper(shape_vec.data(), ndim);
-    shape2dims(out_tensor->shape());
-    DimOpIndexNdHelper<IDX_T> output_nd_helper(shape_vec.data(), ndim);
+    const Shape src_shape = ExpandDimIf0D(src_tensor->shape_view());
+    const Shape index_shape = ExpandDimIf0D(index_tensor->shape_view());
+    const int ndim = src_shape.NumAxes();
+    DimOpIndexNdHelper<IDX_T> src_nd_helper(src_shape.data(), ndim);
+    DimOpIndexNdHelper<IDX_T> idx_nd_helper(index_shape.data(), ndim);
+    DimOpIndexNdHelper<IDX_T> output_nd_helper(out_tensor->shape_view().data(), ndim);
 
-    int64_t upper_bound = 0;
-    if (input_tensor) {
-      upper_bound = input_tensor->shape().At(dim);  // ensure the idx is smaller than upperbound
-    } else {
-      upper_bound = like_tensor->shape().At(dim);  // ensure the idx is smaller than upperbound
-    }
+    const int64_t upper_bound = [&]() {
+      if (input_tensor) {
+        const Shape input_shape = ExpandDimIf0D(input_tensor->shape_view());
+        return input_shape.At(dim);
+      } else {
+        const Shape like_shape = ExpandDimIf0D(like_tensor->shape_view());
+        return like_shape.At(dim);
+      }
+    }();
 
     DimScatterFunctor<device_type, IN_T, IDX_T, Opt>()(
-        ctx->stream(), src_nd_helper, idx_nd_helper, output_nd_helper, ndim,
-        index_tensor->shape().elem_cnt(), dim, upper_bound, index, src, output);
+        ctx->stream(), src_nd_helper, idx_nd_helper, output_nd_helper, ndim, index_shape.elem_cnt(),
+        dim, upper_bound, index, src, output);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -88,20 +85,24 @@ class DimScatterKernel final : public user_op::OpKernel {
   REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCPU, bool, int32_t, opt);    \
   REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCPU, float, int32_t, opt);   \
   REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCPU, double, int32_t, opt);  \
+  REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCPU, float16, int32_t, opt); \
   REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCPU, int32_t, int32_t, opt); \
   REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCPU, bool, int64_t, opt);    \
   REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCPU, float, int64_t, opt);   \
   REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCPU, double, int64_t, opt);  \
+  REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCPU, float16, int64_t, opt); \
   REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCPU, int32_t, int64_t, opt);
 
 #define REGISTER_DIM_SCATTER_LIKE_CUDA_KERNELS(op_type, opt)                           \
   REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCUDA, bool, int32_t, opt);    \
   REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCUDA, float, int32_t, opt);   \
   REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCUDA, double, int32_t, opt);  \
+  REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCUDA, half, int32_t, opt);    \
   REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCUDA, int32_t, int32_t, opt); \
   REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCUDA, bool, int64_t, opt);    \
   REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCUDA, float, int64_t, opt);   \
   REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCUDA, double, int64_t, opt);  \
+  REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCUDA, half, int64_t, opt);    \
   REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCUDA, int32_t, int64_t, opt);
 
 #define REGISTER_DIM_SCATTER_KERNEL(op_type, device, dtype_pair, itype_pair, opt)             \
@@ -115,25 +116,31 @@ class DimScatterKernel final : public user_op::OpKernel {
 #define REGISTER_DIM_SCATTER_CPU_KERNELS(dtype_pair, itype_pair)                            \
   REGISTER_DIM_SCATTER_KERNEL(dim_scatter_add, DeviceType::kCPU, dtype_pair, itype_pair,    \
                               BinOpAddFunctor);                                             \
+  REGISTER_DIM_SCATTER_KERNEL(dim_scatter_mul, DeviceType::kCPU, dtype_pair, itype_pair,    \
+                              BinOpMulFunctor);                                             \
   REGISTER_DIM_SCATTER_KERNEL(dim_scatter_update, DeviceType::kCPU, dtype_pair, itype_pair, \
                               BinOpUpdateFunctor);
 
 #define REGISTER_DIM_SCATTER_CUDA_KERNELS(dtype_pair, itype_pair)                            \
   REGISTER_DIM_SCATTER_KERNEL(dim_scatter_add, DeviceType::kCUDA, dtype_pair, itype_pair,    \
                               BinOpAddFunctor);                                              \
+  REGISTER_DIM_SCATTER_KERNEL(dim_scatter_mul, DeviceType::kCUDA, dtype_pair, itype_pair,    \
+                              BinOpMulFunctor);                                              \
   REGISTER_DIM_SCATTER_KERNEL(dim_scatter_update, DeviceType::kCUDA, dtype_pair, itype_pair, \
                               BinOpUpdateFunctor);
 
 REGISTER_DIM_SCATTER_LIKE_CPU_KERNELS("dim_scatter_add_like", BinOpAddFunctor);
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-    REGISTER_DIM_SCATTER_CPU_KERNELS,
-    ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DIM_SCATTER_CPU_KERNELS,
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
+                                     BOOL_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ,
+                                 INDEX_DATA_TYPE_SEQ)
 
 #ifdef WITH_CUDA
 REGISTER_DIM_SCATTER_LIKE_CUDA_KERNELS("dim_scatter_add_like", BinOpAddFunctor);
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-    REGISTER_DIM_SCATTER_CUDA_KERNELS,
-    ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DIM_SCATTER_CUDA_KERNELS,
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
+                                     BOOL_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ,
+                                 INDEX_DATA_TYPE_SEQ)
 #endif  // WITH_CUDA
 
 }  // namespace user_op

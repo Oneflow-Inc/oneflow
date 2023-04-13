@@ -28,14 +28,14 @@ class ToContiguous : public OpExprGradFunction<ToContiguousCaptureState> {
 
   Maybe<void> Capture(ToContiguousCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1);
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);  // NOLINT(maybe-need-error-msg)
     ctx->requires_grad = inputs[0]->requires_grad();
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const ToContiguousCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     in_grads->resize(1);
     if (ctx->requires_grad) { (*in_grads)[0] = out_grads[0]; }
     return Maybe<void>::Ok();

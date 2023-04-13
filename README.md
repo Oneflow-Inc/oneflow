@@ -1,6 +1,9 @@
 # OneFlow
 
-**OneFlow is a performance-centered and open-source deep learning framework.**
+OneFlow is a deep learning framework designed to be **user-friendly, scalable and efficient**. With OneFlow, it is easy to:
+- program a model with [**PyTorch-like API**](https://oneflow.readthedocs.io/en/master/)
+- scale a model to n-dimensional-parallel execution with the [**Global Tensor**](https://docs.oneflow.org/en/master/cookies/global_tensor.html)
+- accelerate/deploy a model with the [**Graph Compiler**](https://oneflow.readthedocs.io/en/master/graph.html).
 
 [![Simple CI](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml/badge.svg)](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml)
 [![Nightly Docker Image](https://github.com/Oneflow-Inc/docker-images/actions/workflows/oneflow-nightly.yml/badge.svg)](https://github.com/Oneflow-Inc/docker-images/actions/workflows/oneflow-nightly.yml)
@@ -9,10 +12,8 @@
 
 ## Latest News
 
-- Version 0.7.0 is out!
-  - Introducing global tensor
-  - Semi-auto parallelization has landed
-  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.7.0)
+- Version 0.9.0 is out!
+  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.9.0)
 
 ## Publication
 
@@ -34,7 +35,8 @@
 
 ### System Requirements
 
-- Python 3.6, 3.7, 3.8, 3.9, 3.10
+- Linux. As for now, there is no pre-built release for macOS, Windows.
+- Python 3.7, 3.8, 3.9, 3.10
 - (**Highly recommended**) Upgrade pip
 
   ```
@@ -52,20 +54,20 @@
 - To install latest stable release of OneFlow with CUDA support:
 
   ```bash
-  python3 -m pip install -f https://release.oneflow.info oneflow==0.7.0+cu102
+  python3 -m pip install oneflow
   ```
 
 - To install nightly release of OneFlow with CUDA support:
 
   ```bash
-  python3 -m pip install --pre oneflow -f https://staging.oneflow.info/branch/master/cu102
+  python3 -m pip install --pre oneflow -f https://staging.oneflow.info/branch/master/cu117
   ```
 
 - To install other available builds for different variants:
 
   - Stable
     ```bash
-    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.7.0+[PLATFORM]
+    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.9.0+cu117
     ```
   - Nightly
     ```
@@ -74,7 +76,7 @@
   - All available `[PLATFORM]`:
     | Platform |CUDA Driver Version| Supported GPUs |
     |---|---|---|
-    | cu112 | >= 450.80.02 | GTX 10xx, RTX 20xx, A100, RTX 30xx |
+    | cu117 | >= 450.80.02 | GTX 10xx, RTX 20xx, A100, RTX 30xx |
     | cu102 | >= 440.33 | GTX 10xx, RTX 20xx |
     | cpu | N/A | N/A |
 
@@ -87,8 +89,7 @@
 ### Use docker image
 
 ```
-docker pull oneflowinc/oneflow:nightly-cuda10.2
-docker pull oneflowinc/oneflow:nightly-cuda11.2
+docker pull oneflowinc/oneflow:nightly-cuda11.7
 ```
 
 ### Build from Source
@@ -206,11 +207,7 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
 
 ### Advanced features
 
-<details>
-<summary>XRT</summary>
-
-- You can check this [doc](oneflow/xrt/README.md) to obtain more details about how to use XLA and TensorRT with OneFlow.
-</details>
+- [OneFlow-XRT](https://github.com/Oneflow-Inc/oneflow-xrt): An extension for OneFlow to target third-party compiler, such as XLA, TensorRT and OpenVINO etc.
 
 ## Getting Started
 

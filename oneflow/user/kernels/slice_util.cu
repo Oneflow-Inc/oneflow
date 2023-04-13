@@ -16,6 +16,9 @@ limitations under the License.
 #include "oneflow/user/kernels/slice_util.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#if CUDA_VERSION >= 11000
+#include <cuda_bf16.h>
+#endif  // CUDA_VERSION >= 11000
 
 namespace oneflow {
 
@@ -29,6 +32,22 @@ __global__ void SliceForwardGpu(const int n, SliceParams params,
   CUDA_1D_KERNEL_LOOP(i, n) {
     int64_t offset = SliceOffsetToEntireOffset<NDIM>(i, params, entire_idx_cvtr, sliced_idx_cvtr);
     sliced[i] = entire[offset];
+  }
+}
+
+template<typename T, int NDIM>
+__global__ void SliceForwardGpu(const int n, SliceParams entire_params, SliceParams sliced_params,
+                                SliceIndexHelper<NDIM> entire_splitted_large_idx_cvtr,
+                                SliceIndexHelper<NDIM> sliced_splitted_large_idx_cvtr,
+                                SliceIndexHelper<NDIM> entire_full_small_idx_cvtr,
+                                SliceIndexHelper<NDIM> sliced_full_small_idx_cvtr, const T* entire,
+                                T* sliced) {
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    int64_t entire_offset = SliceOffsetToEntireOffset<NDIM>(
+        i, entire_params, entire_splitted_large_idx_cvtr, sliced_splitted_large_idx_cvtr);
+    int64_t sliced_offset = SliceOffsetToEntireOffset<NDIM>(
+        i, sliced_params, entire_full_small_idx_cvtr, sliced_full_small_idx_cvtr);
+    sliced[sliced_offset] = entire[entire_offset];
   }
 }
 
@@ -56,12 +75,33 @@ void LaunchSliceForward(ep::Stream* stream, const SliceParams& params, const T* 
 }
 
 template<typename T, int NDIM>
+void LaunchSliceForward(ep::Stream* stream, const SliceParams& entire_params,
+                        const SliceParams& sliced_params, const T* entire, T* sliced) {
+  CHECK_EQ(entire_params.ndim, NDIM);
+  CHECK_EQ(sliced_params.ndim, NDIM);
+  int64_t elem_cnt = entire_params.elem_cnt();
+  if (elem_cnt == 0) { return; }
+  SliceIndexHelper<NDIM> entire_splitted_large_idx_cvtr =
+      NdIndexStrideOffsetHelper<int64_t, NDIM>(entire_params.stride);
+  SliceIndexHelper<NDIM> sliced_splitted_large_idx_cvtr(entire_params.size);
+  SliceIndexHelper<NDIM> entire_full_small_idx_cvtr =
+      NdIndexStrideOffsetHelper<int64_t, NDIM>(sliced_params.stride);
+  SliceIndexHelper<NDIM> sliced_full_small_idx_cvtr(sliced_params.size);
+  SliceForwardGpu<T, NDIM><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                             stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      elem_cnt, entire_params, sliced_params, entire_splitted_large_idx_cvtr,
+      sliced_splitted_large_idx_cvtr, entire_full_small_idx_cvtr, sliced_full_small_idx_cvtr,
+      entire, sliced);
+}
+
+template<typename T, int NDIM>
 void LaunchSliceBackward(ep::Stream* stream, const SliceParams& params, const T* sliced,
                          T* entire) {
   CHECK_EQ(params.ndim, NDIM);
   int64_t elem_cnt = params.elem_cnt();
   SliceIndexHelper<NDIM> entire_idx_cvtr(params.dims);
   SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
+  if (elem_cnt == 0) { return; }
   SliceBackwardGpu<T, NDIM><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                               stream->As<ep::CudaStream>()->cuda_stream()>>>(
       elem_cnt, params, entire_idx_cvtr, sliced_idx_cvtr, entire, sliced);
@@ -153,6 +193,12 @@ struct SliceKernelUtil<DeviceType::kCUDA, T> {
     }
   }
 
+  static void Forward(ep::Stream* stream, const SliceParams& entire_params,
+                      const SliceParams& sliced_params, const T* entire, T* sliced) {
+    SliceSwitchUtil<T>::SwitchLaunchSliceForward(SwitchCase(entire_params.ndim), stream,
+                                                 entire_params, sliced_params, entire, sliced);
+  }
+
   static void Backward(ep::Stream* stream, const SliceParams& params, const T* sliced, T* entire) {
     SliceParams fold_slice_params = FoldContiguousFullSliceDimensions(params);
     size_t pack_size;
@@ -185,6 +231,8 @@ struct SliceKernelUtil<DeviceType::kCUDA, T> {
 };
 
 INSTANTIATE_SLICE_KERNEL_UTIL_WITH_DEVICE(DeviceType::kCUDA)
-INSTANTIATE_SLICE_KERNEL_UTIL(DeviceType::kCUDA, float16)
+#if CUDA_VERSION >= 11000
+INSTANTIATE_SLICE_KERNEL_UTIL(DeviceType::kCUDA, nv_bfloat16)
+#endif
 
 }  // namespace oneflow

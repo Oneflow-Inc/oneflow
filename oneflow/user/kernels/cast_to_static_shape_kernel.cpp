@@ -20,7 +20,6 @@ namespace oneflow {
 
 namespace {
 
-template<DeviceType device_type>
 class CastToStaticShapeKernel final : public user_op::OpKernel {
  public:
   CastToStaticShapeKernel() = default;
@@ -31,31 +30,29 @@ class CastToStaticShapeKernel final : public user_op::OpKernel {
     const user_op::Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("input", 0);
     const Shape& input_static_shape = ctx->TensorDesc4ArgNameAndIndex("input", 0)->shape();
     user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("output", 0);
-    CHECK(input_tensor->shape() == ShapeView(input_static_shape));
-    CHECK_EQ(output_tensor->shape(), input_tensor->shape());
+    CHECK(input_tensor->shape_view() == ShapeView(input_static_shape));
+    CHECK_EQ(output_tensor->shape_view(), input_tensor->shape_view());
     size_t output_tensor_size =
-        output_tensor->shape().elem_cnt() * GetSizeOfDataType(output_tensor->data_type());
-    Memcpy<device_type>(ctx->stream(), output_tensor->mut_dptr(), input_tensor->dptr(),
-                        output_tensor_size);
+        output_tensor->shape_view().elem_cnt() * GetSizeOfDataType(output_tensor->data_type());
+    std::unique_ptr<ep::primitive::Memcpy> primitive =
+        ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(ctx->stream()->device_type(),
+                                                                  ep::primitive::MemcpyKind::kDtoD);
+    CHECK(primitive) << "Can not create Memcpy primitive for device type "
+                     << ctx->stream()->device_type();
+    primitive->Launch(ctx->stream(), output_tensor->mut_dptr(), input_tensor->dptr(),
+                      output_tensor_size);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 }  // namespace
 
-#define REGISTER_CAST_TO_STATIC_SHAPE_KERNEL(device)                                            \
-  REGISTER_USER_KERNEL("cast_to_static_shape")                                                  \
-      .SetCreateFn<CastToStaticShapeKernel<device>>()                                           \
-      .SetIsMatchedHob(user_op::HobDeviceType() == device)                                      \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("output", 0, "input", 0, false));                \
-        return Maybe<void>::Ok();                                                               \
-      });
-
-REGISTER_CAST_TO_STATIC_SHAPE_KERNEL(DeviceType::kCPU)
-#ifdef WITH_CUDA
-REGISTER_CAST_TO_STATIC_SHAPE_KERNEL(DeviceType::kCUDA)
-#endif
+REGISTER_USER_KERNEL("cast_to_static_shape")
+    .SetCreateFn<CastToStaticShapeKernel>()
+    .SetInplaceProposalFn([](const user_op::InferContext&,
+                             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
+      OF_RETURN_IF_ERROR(AddInplaceArgPairFn("output", 0, "input", 0, false));
+      return Maybe<void>::Ok();
+    });
 
 }  // namespace oneflow

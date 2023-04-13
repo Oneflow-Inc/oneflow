@@ -48,7 +48,7 @@ class DeConvolutionNd : public OpExprGradFunction<DeConvolutionNdCaptureState> {
 
 Maybe<void> DeConvolutionNd::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
@@ -91,19 +91,19 @@ Maybe<void> DeConvolutionNd::Apply(const DeConvolutionNdCaptureState* ctx,
       std::shared_ptr<Tensor> result = JUST(functional::Conv1d(
           out_grads.at(0), weight, Optional<Tensor>(), ctx->strides, ctx->padding_before,
           ctx->dilation_rate, ctx->groups, ctx->data_format));
-      result = JUST(functional::Slice(result, start, stop, step));
+      result = JUST(functional::Slice(result, start, stop, step, /*enable_view_slice=*/false));
       in_grads->at(0) = result;
     } else if (ctx->ndims == 2) {
       std::shared_ptr<Tensor> result = JUST(functional::Conv2d(
           out_grads.at(0), weight, Optional<Tensor>(), ctx->strides, ctx->padding_before,
           ctx->dilation_rate, ctx->groups, ctx->data_format));
-      result = JUST(functional::Slice(result, start, stop, step));
+      result = JUST(functional::Slice(result, start, stop, step, /*enable_view_slice=*/false));
       in_grads->at(0) = result;
     } else if (ctx->ndims == 3) {
       std::shared_ptr<Tensor> result = JUST(functional::Conv3d(
           out_grads.at(0), weight, Optional<Tensor>(), ctx->strides, ctx->padding_before,
           ctx->dilation_rate, ctx->groups, ctx->data_format));
-      result = JUST(functional::Slice(result, start, stop, step));
+      result = JUST(functional::Slice(result, start, stop, step, /*enable_view_slice=*/false));
       in_grads->at(0) = result;
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Invalid ndim " << ctx->ndims << " for conv functor";

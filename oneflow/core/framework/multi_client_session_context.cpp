@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/load_library.h"
 #include "oneflow/core/job/resource.pb.h"
@@ -36,6 +37,7 @@ limitations under the License.
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/job/collective_boxing/scheduler.h"
 #include "oneflow/core/graph/task_stream_index_manager.h"
+#include "oneflow/core/framework/variable_tensor_mgr.h"
 #ifdef WITH_CUDA
 #include <cuda.h>
 #endif  // WITH_CUDA
@@ -44,19 +46,25 @@ namespace oneflow {
 
 namespace {
 
-int32_t GetGpuDeviceNum() {
-#ifndef WITH_CUDA
-  return 0;
-#else
-  int device_count = 0;
-  cudaGetDeviceCount(&device_count);
-  return device_count;
-#endif
-}
-
 int32_t GetCpuDeviceNum() { return std::thread::hardware_concurrency(); }
 
 }  // namespace
+
+MultiClientSessionContext::MultiClientSessionContext(
+    const std::shared_ptr<EnvGlobalObjectsScope>& env_ctx)
+    : env_ctx_(env_ctx) {
+  CHECK(Singleton<MultiClientSessionContext>::Get() == nullptr)
+      << "Duplicate multi client session context";
+  Singleton<MultiClientSessionContext>::SetAllocated(this);
+}
+
+MultiClientSessionContext::~MultiClientSessionContext() {
+  CHECK_JUST(TryClose());
+  if (Singleton<MultiClientSessionContext>::Get() != nullptr) {
+    Singleton<MultiClientSessionContext>::SetAllocated(nullptr);
+  }
+  env_ctx_.reset();
+}
 
 Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) {
   if (!is_inited_) {
@@ -66,50 +74,44 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
 
     {
       // NOTE(chengcheng):
-      //   In multi-client, user can NOT config gpu_device_num and cpu_device_num.
+      //   In multi-client, user can NOT config cpu_device_num.
       //
       //   cpu_device_num is a confusing name, it should be explained as:
       //       in current rank, assign CPU actor compute stream in this optional range.
       //       That is, the number of independent CPU devices that can be abstracted from
       //       this machine and this process.
-      //   gpu_device_num is the number of visible GPUs one current machine.
       //
-      //   NOTE: gpu_device_num and cpu_device_num NOT necessarily equal to the num of process
+      //   NOTE: cpu_device_num NOT necessarily equal to the num of process
       //       on this machine.
       resource.set_machine_num(GlobalProcessCtx::NodeSize());
-      resource.set_gpu_device_num(GetGpuDeviceNum());
       resource.set_cpu_device_num(GetCpuDeviceNum());
     }
 
     // NOTE(chengcheng): detele first because in EnvGlobalObjectScope has created ResourceDesc.
-    if (Global<ResourceDesc, ForSession>::Get() != nullptr) {
+    if (Singleton<ResourceDesc, ForSession>::Get() != nullptr) {
       // TODO(chengcheng): reorganize dependency of all Global objects.
-      Global<ResourceDesc, ForSession>::Delete();
+      Singleton<ResourceDesc, ForSession>::Delete();
     }
-    Global<ResourceDesc, ForSession>::New(resource, GlobalProcessCtx::NumOfProcessPerNode());
-    Global<IDMgr>::New();
-    Global<TaskStreamIndexManager>::New();
+    Singleton<ResourceDesc, ForSession>::New(resource, GlobalProcessCtx::NumOfProcessPerNode());
+    Singleton<IDMgr>::New();
+    Singleton<TaskStreamIndexManager>::New();
     // TODO(chengcheng): refactor JobBuildAndInferCtxMgr
-    Global<LazyJobBuildAndInferCtxMgr>::New();
-
-    for (const std::string& lib_path : config_proto.load_lib_path()) {
-      // TODO(chengcheng): remove load_lib_path in config proto. using LoadLibraryNow
-      JUST(LoadLibrary(lib_path));
-    }
+    Singleton<LazyJobBuildAndInferCtxMgr>::New();
 
     {
       // NOTE(chengcheng): init runtime global objects
-      Global<BufferMgr<std::shared_ptr<JobInstance>>>::New();
-      Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::New();
-      Global<RuntimeCtx>::New();
-      Global<MemoryAllocator>::New();
-      Global<ChunkMgr>::New();
-      Global<RegstMgr>::New();
-      Global<ActorMsgBus>::New();
-      Global<ThreadMgr>::New();
-      Global<RuntimeJobDescs>::New();
-      Global<summary::EventsWriter>::New();
-      Global<boxing::collective::Scheduler>::New();
+      Singleton<BufferMgr<std::shared_ptr<JobInstance>>>::New();
+      Singleton<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::New();
+      Singleton<RuntimeCtx>::New();
+      Singleton<MemoryAllocator>::New();
+      Singleton<ChunkMgr>::New();
+      Singleton<RegstMgr>::New();
+      Singleton<ActorMsgBus>::New();
+      Singleton<ThreadMgr>::New();
+      Singleton<RuntimeJobDescs>::New();
+      Singleton<summary::EventsWriter>::New();
+      Singleton<boxing::collective::Scheduler>::New();
+      Singleton<VariableTensorMgr>::New();
     }
 
     is_inited_ = true;
@@ -117,55 +119,60 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
   return Maybe<void>::Ok();
 }
 
+Maybe<void> MultiClientSessionContext::TryInit(const std::string& config_proto_str) {
+  ConfigProto config_proto;
+  CHECK_OR_RETURN(TxtString2PbMessage(config_proto_str, &config_proto))
+      << Error::RuntimeError() << "failed to parse config_proto: " << config_proto_str;
+  return TryInit(config_proto);
+}
+
 Maybe<void> MultiClientSessionContext::UpdateResource(const Resource& reso_proto) {
-  CHECK_NOTNULL_OR_RETURN((Global<ResourceDesc, ForSession>::Get()));
-  Global<ResourceDesc, ForSession>::Get()->Update(reso_proto);
+  CHECK_OR_RETURN(is_inited_) << Error::RuntimeError()
+                              << " session must be inited when updating resource.";
+  CHECK_NOTNULL_OR_RETURN((Singleton<ResourceDesc, ForSession>::Get()))
+      << Error::RuntimeError() << "ResourceDesc get failed!";
+  Singleton<ResourceDesc, ForSession>::Get()->Update(reso_proto);
   return Maybe<void>::Ok();
 }
 
-Maybe<void> MultiClientSessionContext::AddCGraph(
-    const std::shared_ptr<oneflow::NNGraph>& c_graph_ptr) {
-  graphs_.emplace_back(c_graph_ptr);
-  return Maybe<void>::Ok();
+Maybe<void> MultiClientSessionContext::UpdateResource(const std::string& reso_proto_str) {
+  Resource reso_proto;
+  CHECK_OR_RETURN(TxtString2PbMessage(reso_proto_str, &reso_proto))
+      << Error::RuntimeError() << "failed to parse config_proto: " << reso_proto_str;
+  return UpdateResource(reso_proto);
 }
 
 Maybe<void> MultiClientSessionContext::TryClose() {
   if (is_inited_) {
     VLOG(1) << "Try to delete multi client session context." << std::endl;
-
-    // sync before NNGraph release to ensure LaunchLazyJob instruction was completed and released
-    JUST(vm::ClusterSync());
-    for (const auto& graph : graphs_) {
-      VLOG(1) << "Try to close graph: " << graph->job_name() << std::endl;
-      JUST(graph->Close());
-    }
-    graphs_.clear();
     {
       // NOTE(chengcheng): delete runtime global objects
-      Global<boxing::collective::Scheduler>::Delete();
-      Global<summary::EventsWriter>::Delete();
-      Global<RuntimeJobDescs>::Delete();
-      Global<ThreadMgr>::Delete();
-      Global<ActorMsgBus>::Delete();
-      Global<RegstMgr>::Delete();
-      Global<ChunkMgr>::Delete();
-      Global<MemoryAllocator>::Delete();
-      Global<RuntimeCtx>::Delete();
-      Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Delete();
-      Global<BufferMgr<std::shared_ptr<JobInstance>>>::Delete();
+      Singleton<boxing::collective::Scheduler>::Delete();
+      Singleton<summary::EventsWriter>::Delete();
+      Singleton<RuntimeJobDescs>::Delete();
+      Singleton<ThreadMgr>::Delete();
+      Singleton<ActorMsgBus>::Delete();
+      Singleton<RegstMgr>::Delete();
+      Singleton<ChunkMgr>::Delete();
+      Singleton<MemoryAllocator>::Delete();
+      Singleton<RuntimeCtx>::Delete();
+      Singleton<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Delete();
+      Singleton<BufferMgr<std::shared_ptr<JobInstance>>>::Delete();
+      Singleton<VariableTensorMgr>::Delete();
     }
 
-    Global<LazyJobBuildAndInferCtxMgr>::Delete();
-    Global<TaskStreamIndexManager>::Delete();
-    Global<IDMgr>::Delete();
+    Singleton<LazyJobBuildAndInferCtxMgr>::Delete();
+    Singleton<TaskStreamIndexManager>::Delete();
+    Singleton<IDMgr>::Delete();
 
     // TODO(chengcheng): remove template ForEnv and ForSession
-    Global<ResourceDesc, ForSession>::Delete();
+    Singleton<ResourceDesc, ForSession>::Delete();
     // NOTE(chengcheng): New after delete because in EnvGlobalObjectScope once created ResourceDesc.
-    Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource(),
-                                          GlobalProcessCtx::NumOfProcessPerNode());
+    Singleton<ResourceDesc, ForSession>::New(Singleton<ResourceDesc, ForEnv>::Get()->resource(),
+                                             GlobalProcessCtx::NumOfProcessPerNode());
+    VLOG(1) << "Finish delete multi client session context." << std::endl;
+    is_inited_ = false;
   }
-  VLOG(1) << "Finish delete multi client session context." << std::endl;
   return Maybe<void>::Ok();
 }
 

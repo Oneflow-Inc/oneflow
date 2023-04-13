@@ -23,7 +23,7 @@ template<typename T>
 void NormalDistribution<DeviceType::kCPU, T>::operator()(
     ep::Stream* stream, const int64_t elem_cnt, T* dptr,
     const std::shared_ptr<one::Generator>& generator) const {
-  CHECK_GE(elem_cnt, 0);
+  CHECK_GE(elem_cnt, 0) << "elem_cnt must be non-negative, but got " << elem_cnt;
   auto gen = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
   std::normal_distribution<T> random_distribution(mean_, std_);
   for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = random_distribution(gen->engine()); }
@@ -35,5 +35,18 @@ void NormalDistribution<DeviceType::kCPU, T>::operator()(
       const std::shared_ptr<one::Generator>& generator) const;
 
 OF_PP_FOR_EACH_TUPLE(INITIATE_CPU_NORMAL_DISTRIBUTION, FLOATING_DATA_TYPE_SEQ)
+
+// specialization for half
+template<>
+void NormalDistribution<DeviceType::kCPU, float16>::operator()(
+    ep::Stream* stream, const int64_t elem_cnt, float16* dptr,
+    const std::shared_ptr<one::Generator>& generator) const {
+  CHECK_GE(elem_cnt, 0) << "elem_cnt must be non-negative, but got " << elem_cnt;
+  auto gen = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
+  std::normal_distribution<float> random_distribution(mean_, std_);
+  for (int64_t i = 0; i < elem_cnt; ++i) {
+    dptr[i] = static_cast<float16>(random_distribution(gen->engine()));
+  }
+}
 
 }  // namespace oneflow

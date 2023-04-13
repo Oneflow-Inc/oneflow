@@ -17,7 +17,9 @@ limitations under the License.
 import random
 import unittest
 
+import torch
 import numpy as np
+
 import oneflow as flow
 import oneflow.unittest
 
@@ -58,11 +60,15 @@ class TestFromNumpy(flow.unittest.TestCase):
                 test_case.assertTrue(np.array_equal(np_arr, tensor.numpy()))
 
     def test_non_contiguous_input(test_case):
-        np_arr = np.random.randn(4, 5)
-        np_arr = np_arr.transpose(1, 0)
-        tensor = flow.from_numpy(np_arr)
-        # TODO(wyg): support non-contiguous input
-        test_case.assertTrue(tensor.is_contiguous())
+        np_arr = np.random.randn(2, 3, 4, 5).transpose(2, 0, 3, 1)
+        flow_tensor = flow.from_numpy(np_arr)
+        torch_tensor = torch.from_numpy(np_arr)
+        test_case.assertTrue(flow_tensor.shape == torch_tensor.shape)
+        test_case.assertTrue(flow_tensor.stride() == torch_tensor.stride())
+        test_case.assertTrue(
+            flow_tensor.is_contiguous() == torch_tensor.is_contiguous()
+        )
+        test_case.assertTrue(np.array_equal(flow_tensor.numpy(), torch_tensor.numpy()))
 
 
 if __name__ == "__main__":

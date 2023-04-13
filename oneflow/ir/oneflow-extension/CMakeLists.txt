@@ -1,7 +1,12 @@
+include_directories(${PROJECT_SOURCE_DIR}/oneflow-extension/include)
+
 oneflow_add_mlir_library(
   MLIROneFlowExtension
-  extension.cpp
+  mlir_jit_op.cpp
+  mlir_jit_op_kernel.cpp
   ir_pass.cpp
+  lr_jit.cpp
+  mlir_gen.cpp
   DEPENDS
   LINK_LIBS
   PUBLIC
@@ -11,8 +16,8 @@ oneflow_add_mlir_library(
   MLIRIR
   MLIRParser
   MLIRPass
-  MLIRSPIRV
-  MLIRTranslation
+  MLIRSPIRVDialect
+  MLIRTranslateLib
   MLIRSupport
   MLIROneFlow
   oneflow

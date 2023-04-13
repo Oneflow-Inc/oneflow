@@ -26,10 +26,18 @@ from oneflow.test_utils.test_util import GenArgList
 import oneflow as flow
 import oneflow.unittest
 
+import torch as torch_original
+from packaging import version
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestFmodModule(flow.unittest.TestCase):
-    @autotest(auto_backward=False)
+    # other.grad in torch.fmod(input, other) was not implemented before pytorch 1.11.0
+    grad_implemented = version.parse(torch_original.__version__) >= version.parse(
+        "1.11.0"
+    )
+
+    @autotest(n=1, auto_backward=grad_implemented)
     def test_flow_fmod_element_with_random_data(test_case):
         device = random_device()
         dim1 = random().to(int)
@@ -38,14 +46,14 @@ class TestFmodModule(flow.unittest.TestCase):
         other = random_tensor(ndim=3, dim1=dim1, dim2=dim2).to(device)
         return torch.fmod(input, other)
 
-    @autotest(auto_backward=False)
+    @autotest(n=1, auto_backward=grad_implemented)
     def test_flow_fmod_element_with_0dim_data(test_case):
         device = random_device()
         input = random_tensor(ndim=0).to(device)
         other = random_tensor(ndim=0).to(device)
         return torch.fmod(input, other)
 
-    @autotest(auto_backward=False)
+    @autotest(n=1, auto_backward=grad_implemented)
     def test_flow_fmod_broadcast_with_random_data(test_case):
         device = random_device()
         dim1 = random().to(int)
@@ -54,7 +62,7 @@ class TestFmodModule(flow.unittest.TestCase):
         other = random_tensor(ndim=3, dim1=dim1, dim2=constant(1)).to(device)
         return torch.fmod(input, other)
 
-    @autotest(auto_backward=True)
+    @autotest(n=1, auto_backward=True)
     def test_flow_fmod_scalar_with_random_data(test_case):
         device = random_device()
         dim1 = random().to(int)
@@ -63,12 +71,17 @@ class TestFmodModule(flow.unittest.TestCase):
         other = 3
         return torch.fmod(input, other)
 
-    @autotest(auto_backward=False)
+    @autotest(n=1, auto_backward=True)
     def test_fmod_with_0_size_data(test_case):
         device = random_device()
         x = random_tensor(4, 2, 1, 0, 3).to(device)
         y = torch.fmod(x, 2)
         return y
+
+    @profile(torch.fmod)
+    def profile_fmod(test_case):
+        torch.fmod(torch.ones(100, 100, 100), 1)
+        torch.fmod(torch.ones(100, 100, 100), -0.5)
 
 
 if __name__ == "__main__":

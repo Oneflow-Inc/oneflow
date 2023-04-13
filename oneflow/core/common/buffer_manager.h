@@ -37,62 +37,54 @@ class BufferMgr final {
   }
 
  private:
-  friend class Global<BufferMgr>;
+  friend class Singleton<BufferMgr>;
   BufferMgr() = default;
 
   HashMap<std::string, std::unique_ptr<Buffer<T>>> name2buffer_;
 };
 
 static const std::string kBufferNameGlobalWaitJobId = "GlobalWaitJobId";
+static const std::string kCallbackNotifierBufferNamePrefix = "CallbackNotifier-";
+static const std::string kInputCriticalSectionWaitBufferNamePrefix = "InputCriticalSectionWait-";
+static const std::string kInputCriticalSectionCallbackBufferNamePrefix =
+    "InputCriticalSectionCallback-";
+static const std::string kOutputCriticalSectionWaitBufferNamePrefix = "OutputCriticalSectionWait-";
+static const std::string kOutputCriticalSectionCallbackBufferNamePrefix =
+    "OutputCriticalSectionCallback-";
+static const std::string kInputBufferNamePrefix = "Input-";
+static const std::string kOutputBufferNamePrefix = "Output-";
+static const std::string kSourceTickBufferNamePrefix = "SourceTick-";
 
 inline std::string GetCallbackNotifierBufferName(const std::string& job_name) {
-  static const std::string prefix = "CallbackNotifier-";
-  return prefix + job_name;
+  return kCallbackNotifierBufferNamePrefix + job_name;
 }
 
 inline std::string GetInputCriticalSectionWaitBufferName(const std::string& job_name) {
-  static const std::string prefix = "InputCriticalSectionWait-";
-  return prefix + job_name;
+  return kInputCriticalSectionWaitBufferNamePrefix + job_name;
 }
 
 inline std::string GetInputCriticalSectionCallbackBufferName(const std::string& job_name) {
-  static const std::string prefix = "InputCriticalSectionCallback-";
-  return prefix + job_name;
+  return kInputCriticalSectionCallbackBufferNamePrefix + job_name;
 }
 
 inline std::string GetOutputCriticalSectionWaitBufferName(const std::string& job_name) {
-  static const std::string prefix = "OutputCriticalSectionWait-";
-  return prefix + job_name;
+  return kOutputCriticalSectionWaitBufferNamePrefix + job_name;
 }
 
 inline std::string GetOutputCriticalSectionCallbackBufferName(const std::string& job_name) {
-  static const std::string prefix = "OutputCriticalSectionCallback-";
-  return prefix + job_name;
-}
-
-inline std::string GetForeignInputBufferName(const std::string& job_name) {
-  static const std::string prefix = "ForeignInput-";
-  return prefix + job_name;
-}
-
-inline std::string GetForeignOutputBufferName(const std::string& job_name) {
-  static const std::string prefix = "ForeignOutput-";
-  return prefix + job_name;
+  return kOutputCriticalSectionCallbackBufferNamePrefix + job_name;
 }
 
 inline std::string GetInputBufferName(const std::string& job_name, const std::string& op_name) {
-  static const std::string prefix = "ForeignInput-";
-  return prefix + job_name + "-" + op_name;
+  return kInputBufferNamePrefix + job_name + "-" + op_name;
 }
 
 inline std::string GetOutputBufferName(const std::string& job_name, const std::string& op_name) {
-  static const std::string prefix = "ForeignOutput-";
-  return prefix + job_name + "-" + op_name;
+  return kOutputBufferNamePrefix + job_name + "-" + op_name;
 }
 
 inline std::string GetSourceTickBufferName(const std::string& job_name) {
-  static const std::string prefix = "SourceTick-";
-  return prefix + job_name;
+  return kSourceTickBufferNamePrefix + job_name;
 }
 
 }  // namespace oneflow

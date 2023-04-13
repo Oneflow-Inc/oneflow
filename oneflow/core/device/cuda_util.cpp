@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include <mutex>
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/hardware/node_device_descriptor_manager.h"
 #include "oneflow/core/hardware/cuda_device_descriptor.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/platform/include/pthread_fork.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/vm/vm_util.h"
 
 #ifdef WITH_CUDA
 
@@ -51,8 +52,8 @@ const char* CublasGetErrorString(cublasStatus_t error) {
 #if CUDA_VERSION >= 6050
     case CUBLAS_STATUS_LICENSE_ERROR: return "CUBLAS_STATUS_LICENSE_ERROR";
 #endif
+    default: return "Unknown cublas status";
   }
-  return "Unknown cublas status";
 }
 
 const char* CurandGetErrorString(curandStatus_t error) {
@@ -70,9 +71,26 @@ const char* CurandGetErrorString(curandStatus_t error) {
     case CURAND_STATUS_INITIALIZATION_FAILED: return "CURAND_STATUS_INITIALIZATION_FAILED";
     case CURAND_STATUS_ARCH_MISMATCH: return "CURAND_STATUS_ARCH_MISMATCH";
     case CURAND_STATUS_INTERNAL_ERROR: return "CURAND_STATUS_INTERNAL_ERROR";
+    default: return "Unknown curand status";
   }
-  return "Unknown curand status";
 }
+
+#if CUDA_VERSION >= 11000
+const char* CusovlerGetErrorString(cusolverStatus_t error) {
+  switch (error) {
+    case CUSOLVER_STATUS_SUCCESS: return "CUSOLVER_STATUS_SUCCESS";
+    case CUSOLVER_STATUS_NOT_INITIALIZED: return "CUSOLVER_STATUS_NOT_INITIALIZED";
+    case CUSOLVER_STATUS_ALLOC_FAILED: return "CUSOLVER_STATUS_ALLOC_FAILED";
+    case CUSOLVER_STATUS_INVALID_VALUE: return "CUSOLVER_STATUS_INVALID_VALUE";
+    case CUSOLVER_STATUS_ARCH_MISMATCH: return "CUSOLVER_STATUS_ARCH_MISMATCH";
+    case CUSOLVER_STATUS_EXECUTION_FAILED: return "CUSOLVER_STATUS_EXECUTION_FAILED";
+    case CUSOLVER_STATUS_INTERNAL_ERROR: return "CUSOLVER_STATUS_INTERNAL_ERROR";
+    case CUSOLVER_STATUS_MATRIX_TYPE_NOT_SUPPORTED:
+      return "CUSOLVER_STATUS_MATRIX_TYPE_NOT_SUPPORTED";
+    default: return "Unknown cusolver status";
+  }
+}
+#endif
 
 #if CUDA_VERSION >= 10020
 
@@ -89,8 +107,8 @@ const char* NvjpegGetErrorString(nvjpegStatus_t error) {
     case NVJPEG_STATUS_INTERNAL_ERROR: return "NVJPEG_STATUS_INTERNAL_ERROR";
     case NVJPEG_STATUS_IMPLEMENTATION_NOT_SUPPORTED:
       return "NVJPEG_STATUS_IMPLEMENTATION_NOT_SUPPORTED";
+    default: return "Unknown nvjpeg status";
   }
-  return "Unknown nvjpeg status";
 }
 
 #endif
@@ -105,7 +123,7 @@ namespace {
 
 std::function<cudaError_t(void**, size_t)> GetCudaMallocHostFn(int32_t dev) {
   auto default_fn = [](void** ptr, size_t size) { return cudaMallocHost(ptr, size); };
-  auto manager = Global<hardware::NodeDeviceDescriptorManager>::Get();
+  auto manager = Singleton<hardware::NodeDeviceDescriptorManager>::Get();
   if (manager == nullptr) { return default_fn; }
   auto node_desc = manager->GetLocalNodeDeviceDescriptor();
   auto cuda_device = std::dynamic_pointer_cast<const hardware::CudaDeviceDescriptor>(
@@ -160,6 +178,13 @@ void CublasMathModeGuard::SetMathMode(cublasMath_t new_mode) {
   if (new_mode_ != saved_mode_) { OF_CUBLAS_CHECK(cublasSetMathMode(handle_, new_mode_)); }
 }
 
+void CudaSynchronize(int device_id) {
+  CudaCurrentDeviceGuard dev_guard(device_id);
+  OF_CUDA_CHECK(cudaDeviceSynchronize());
+}
+
+void SetCudaDeviceIndex(int device_id) { OF_CUDA_CHECK(cudaSetDevice(device_id)); }
+
 int GetCudaDeviceIndex() { return GlobalProcessCtx::LocalRank(); }
 
 int GetCudaDeviceCount() {
@@ -167,6 +192,52 @@ int GetCudaDeviceCount() {
   CudaCurrentDeviceGuard dev_guard(GetCudaDeviceIndex());
   OF_CUDA_CHECK(cudaGetDeviceCount(&cuda_device_count));
   return cuda_device_count;
+}
+
+// NOTE(lixiang): Get the memory of the current device.
+Maybe<double> GetCUDAMemoryUsed() {
+  JUST(vm::CurrentRankSync());
+
+  int deviceCount = 0;
+  cudaError_t error_id = cudaGetDeviceCount(&deviceCount);
+  if (error_id != cudaSuccess) {
+    return Error::RuntimeError() << "Error: GetCUDAMemoryUsed fails :"
+                                 << cudaGetErrorString(error_id);
+  }
+
+  CHECK_OR_RETURN(deviceCount > 0) << "GPU device does not exist";
+
+  size_t gpu_total_size;
+  size_t gpu_free_size;
+
+  cudaError_t cuda_status = cudaMemGetInfo(&gpu_free_size, &gpu_total_size);
+
+  CHECK_OR_RETURN(cudaSuccess == cuda_status)
+      << "Error: GetCUDAMemoryUsed fails :" << cudaGetErrorString(cuda_status);
+
+  double total_memory = double(gpu_total_size) / (1024.0 * 1024.0);
+  double free_memory = double(gpu_free_size) / (1024.0 * 1024.0);
+  return (total_memory - free_memory);
+}
+
+static std::once_flag prop_init_flag;
+static std::vector<cudaDeviceProp> device_props;
+
+void InitDevicePropVectorSize() {
+  int device_count = GetCudaDeviceCount();
+  device_props.resize(device_count);
+}
+
+void InitDeviceProperties(int device_id) {
+  std::call_once(prop_init_flag, InitDevicePropVectorSize);
+  cudaDeviceProp prop{};
+  OF_CUDA_CHECK(cudaGetDeviceProperties(&prop, device_id));
+  device_props[device_id] = prop;
+}
+
+cudaDeviceProp* GetDeviceProperties(int device_id) {
+  InitCudaContextOnce(device_id);
+  return &device_props[device_id];
 }
 
 void InitCudaContextOnce(int device_id) {
@@ -177,6 +248,7 @@ void InitCudaContextOnce(int device_id) {
   std::call_once(init_flags[device_id], [&]() {
     OF_CUDA_CHECK(cudaSetDevice(device_id));
     OF_CUDA_CHECK(cudaDeviceSynchronize());
+    InitDeviceProperties(device_id);
   });
 }
 

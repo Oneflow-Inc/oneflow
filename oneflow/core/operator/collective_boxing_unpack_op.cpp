@@ -69,7 +69,7 @@ Maybe<void> CollectiveBoxingUnpackOp::InferOutBlobDescs(
     out_shape.Set(dst_split_axis, out_shape.At(dst_split_axis) / unpack_conf.num_ranks());
   }
   CHECK_EQ_OR_RETURN(out_shape.elem_cnt(), in_blob_desc->shape().elem_cnt());
-  out_blob_desc->mut_shape() = out_shape;
+  out_blob_desc->set_shape(out_shape);
   return Maybe<void>::Ok();
 }
 

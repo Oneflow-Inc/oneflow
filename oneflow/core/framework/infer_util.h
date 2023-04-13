@@ -18,8 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/user_op_conf.h"
-#include "oneflow/core/framework/tensor_desc.h"
-#include "oneflow/core/framework/attr_value.h"
+#include "oneflow/core/common/tensor_desc.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -31,6 +30,13 @@ class JobDesc;
 class Device;
 
 namespace user_op {
+class AttrVal;
+}  // namespace user_op
+
+template<typename T>
+extern const T& AttrValueCast(const user_op::AttrVal& val);
+
+namespace user_op {
 
 class UserOpDefWrapper;
 
@@ -39,15 +45,25 @@ class InferContext {
   virtual ~InferContext() = default;
 
   virtual const TensorDesc& InputTensorDesc(const std::string&, int32_t) const = 0;
-  virtual TensorDesc* OutputTensorDesc(const std::string&, int32_t) = 0;
+  virtual const TensorDesc& OutputTensorDesc(const std::string&, int32_t) const = 0;
+  virtual TensorDesc* MutOutputTensorDesc(const std::string&, int32_t) = 0;
   virtual const TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string&,
                                                               int32_t) const = 0;
   virtual const Shape& InputShape(const std::string&, int32_t) const = 0;
-  virtual Shape* OutputShape(const std::string&, int32_t) = 0;
-  virtual Shape* Shape4ArgNameAndIndex(const std::string&, int32_t) = 0;
-  virtual const DataType& InputDType(const std::string&, int32_t) const = 0;
-  virtual DataType* OutputDType(const std::string&, int32_t) = 0;
-  virtual DataType* Dtype4ArgNameAndIndex(const std::string&, int32_t) = 0;
+  virtual const Shape& OutputShape(const std::string&, int32_t) const = 0;
+  virtual void SetOutputShape(const std::string&, int32_t, const Shape&) = 0;
+  virtual const Shape& Shape4ArgNameAndIndex(const std::string&, int32_t) const = 0;
+  virtual void SetShape4ArgNameAndIndex(const std::string&, int32_t, const Shape&) = 0;
+  virtual const Stride& InputStride(const std::string&, int32_t) const = 0;
+  virtual const Stride& OutputStride(const std::string&, int32_t) const = 0;
+  virtual void SetOutputStride(const std::string&, int32_t, const Stride&) = 0;
+  virtual const Stride& Stride4ArgNameAndIndex(const std::string&, int32_t) const = 0;
+  virtual void SetStride4ArgNameAndIndex(const std::string&, int32_t, const Stride&) = 0;
+  virtual DataType InputDType(const std::string&, int32_t) const = 0;
+  virtual DataType OutputDType(const std::string&, int32_t) const = 0;
+  virtual void SetOutputDType(const std::string&, int32_t, DataType) = 0;
+  virtual DataType Dtype4ArgNameAndIndex(const std::string&, int32_t) const = 0;
+  virtual void SetDtype4ArgNameAndIndex(const std::string&, int32_t, DataType) = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
   virtual const std::string& input(const std::string& arg_name, int32_t index) const = 0;
@@ -58,7 +74,6 @@ class InferContext {
   virtual int32_t output_size(const std::string& arg_name) const = 0;
   virtual const std::string& op_name() const = 0;
   virtual const std::string& op_type_name() const = 0;
-  virtual const std::string& device_tag() const = 0;
   virtual const std::string& op_loc() const = 0;
 
   template<typename T>
@@ -78,8 +93,10 @@ class InferContext {
   virtual const NdSbp& NdSbp4ArgNameAndIndex(const std::string&, int32_t) const = 0;
 
   virtual bool InputIsDynamic(const std::string&, int32_t) const = 0;
-  virtual bool* OutputIsDynamic(const std::string&, int32_t) = 0;
-  virtual bool* IsDynamic4ArgNameAndIndex(const std::string&, int32_t) = 0;
+  virtual bool OutputIsDynamic(const std::string&, int32_t) const = 0;
+  virtual void SetOutputIsDynamic(const std::string&, int32_t, bool) = 0;
+  virtual bool IsDynamic4ArgNameAndIndex(const std::string&, int32_t) const = 0;
+  virtual void SetIsDynamic4ArgNameAndIndex(const std::string&, int32_t, bool) = 0;
 
   virtual int64_t parallel_num() const = 0;
 

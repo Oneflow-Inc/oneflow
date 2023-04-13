@@ -14,12 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#ifndef ONEFLOW_CORE_KERNEL_CUDA_GRAPH_SUPPORT_H_
+#define ONEFLOW_CORE_KERNEL_CUDA_GRAPH_SUPPORT_H_
+
 namespace oneflow {
 
 namespace user_op {
 
 class KernelInitContext;
+class KernelComputeContext;
 class OpKernelState;
+class OpKernelCache;
 
 class CudaGraphSupport {
  public:
@@ -29,8 +34,15 @@ class CudaGraphSupport {
   virtual bool IsCudaGraphSupported(KernelInitContext* ctx, OpKernelState* state) const {
     return true;
   }
+
+  virtual bool IsReadyForCapture(KernelComputeContext* ctx, OpKernelState* state,
+                                 const OpKernelCache* cache) const {
+    return true;
+  }
 };
 
 }  // namespace user_op
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_KERNEL_CUDA_GRAPH_SUPPORT_H_

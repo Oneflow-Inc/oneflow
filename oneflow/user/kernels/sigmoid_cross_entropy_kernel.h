@@ -66,7 +66,7 @@ class SigmoidCrossEntropyKernel final : public user_op::OpKernel {
     const user_op::Tensor* prediction = ctx->Tensor4ArgNameAndIndex("prediction", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     user_op::Tensor* loss = ctx->Tensor4ArgNameAndIndex("loss", 0);
-    const auto n = prediction->shape().elem_cnt();
+    const auto n = prediction->shape_view().elem_cnt();
     ElemwiseSigmoidCrossEntropyFunctor<device_type, Opt, PredT, LabelT>()(
         ctx->stream(), n, loss->mut_dptr<PredT>(), prediction->dptr<PredT>(),
         label->dptr<LabelT>());
@@ -96,7 +96,7 @@ class SigmoidCrossEntropyGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* loss_diff = ctx->Tensor4ArgNameAndIndex("loss_diff", 0);
     const user_op::Tensor* prediction = ctx->Tensor4ArgNameAndIndex("prediction", 0);
     user_op::Tensor* prediction_diff = ctx->Tensor4ArgNameAndIndex("prediction_diff", 0);
-    const int64_t n = prediction->shape().elem_cnt();
+    const int64_t n = prediction->shape_view().elem_cnt();
     ElemwiseSigmoidCrossEntropyGradFunctor<device_type, Opt, PredT, LabelT>()(
         ctx->stream(), n, prediction_diff->mut_dptr<PredT>(), prediction->dptr<PredT>(),
         label->dptr<LabelT>(), loss_diff->dptr<PredT>());

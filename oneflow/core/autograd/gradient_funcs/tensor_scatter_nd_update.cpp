@@ -30,8 +30,8 @@ class TensorScatterNdUpdate : public OpExprGradFunction<TensorScatterNdUpdateCap
 
   Maybe<void> Capture(TensorScatterNdUpdateCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 3);
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    CHECK_EQ_OR_RETURN(inputs.size(), 3);   // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
     ctx->tensor_requires_grad = inputs.at(0)->requires_grad();
     ctx->update_requires_grad = inputs.at(2)->requires_grad();
     if (ctx->update_requires_grad || ctx->tensor_requires_grad) {
@@ -45,7 +45,7 @@ class TensorScatterNdUpdate : public OpExprGradFunction<TensorScatterNdUpdateCap
 
   Maybe<void> Apply(const TensorScatterNdUpdateCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     in_grads->resize(3);
     if (ctx->update_requires_grad) {
       const auto& indices = ctx->SavedTensors().at(0);

@@ -13,14 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/user/kernels/cublas_fused_mlp_util.cuh"
 // CUBLAS_AUX_EPILOGUE only support in cuda11.4 or higher version, in cuda11.4 it need static link.
-#if CUDA_VERSION >= 11040
+#if CUDA_VERSION >= 11060
 
 namespace oneflow {
 
+namespace {
+
 template<typename T>
-class CublasFusedMLPKernel final : public user_op::OpKernel {
+class CublasFusedMLPKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   CublasFusedMLPKernel() = default;
   ~CublasFusedMLPKernel() override = default;
@@ -65,7 +68,7 @@ class CublasFusedMLPKernel final : public user_op::OpKernel {
 
     // Currently only support 2D matmul.
     DimVector in_shape(2);
-    x->shape().ToDimVector(&in_shape);
+    x->shape_view().ToDimVector(&in_shape);
 
     DimVector weight_shape(2);
 
@@ -75,8 +78,8 @@ class CublasFusedMLPKernel final : public user_op::OpKernel {
       const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("biases", idx);
       user_op::Tensor* cublas_aux = ctx->Tensor4ArgNameAndIndex("cublas_aux", idx);
 
-      int64_t out_feature = weight->shape().At(0);
-      weight->shape().ToDimVector(&weight_shape);
+      int64_t out_feature = weight->shape_view().At(0);
+      weight->shape_view().ToDimVector(&weight_shape);
 
       InferMatmulCublasMNK(in_shape, weight_shape,
                            /*transpose_a=*/ep::primitive::BlasTransposeType::N,
@@ -130,6 +133,8 @@ REGISTER_CUBLAS_FUSED_MLP_KERNEL_GPU(float, DataType::kFloat);
 REGISTER_CUBLAS_FUSED_MLP_KERNEL_GPU(half, DataType::kFloat16);
 REGISTER_CUBLAS_FUSED_MLP_KERNEL_GPU(nv_bfloat16, DataType::kBFloat16);
 
+}  // namespace
+
 }  // namespace oneflow
 
-#endif  // CUDA_VERSION >= 11040
+#endif  // CUDA_VERSION >= 11060

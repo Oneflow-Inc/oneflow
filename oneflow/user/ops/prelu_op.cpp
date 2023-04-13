@@ -40,17 +40,16 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> PreluOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
-  Shape* y_shape = ctx->OutputShape("y", 0);
   const Shape& alpha_shape = ctx->InputShape("alpha", 0);
   CHECK_EQ_OR_RETURN(alpha_shape.NumAxes(), 1);
-  *y_shape = x_shape;
+  ctx->SetOutputShape("y", 0, x_shape);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> PreluOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> PreluOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -91,54 +90,21 @@ namespace oneflow {
 /*static*/ Maybe<void> PreluGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
   const Shape& dy_shape = ctx->InputShape("dy", 0);
-  Shape* dx_shape = ctx->OutputShape("dx", 0);
-  Shape* alpha_diff_shape = ctx->OutputShape("alpha_diff", 0);
   const Shape& alpha_shape = ctx->InputShape("alpha", 0);
   CHECK_EQ_OR_RETURN(alpha_shape.NumAxes(), 1);
   CHECK_OR_RETURN((alpha_shape.At(0) == x_shape.At(1)) || (alpha_shape.At(0) == 1));
   CHECK_EQ_OR_RETURN(dy_shape, x_shape);
-  *dx_shape = x_shape;
-  *alpha_diff_shape = alpha_shape;
+  ctx->SetOutputShape("dx", 0, x_shape);
+  ctx->SetOutputShape("alpha_diff", 0, alpha_shape);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> PreluGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> PreluGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
-  *ctx->OutputDType("alpha_diff", 0) = ctx->InputDType("alpha", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("x", 0));
+  ctx->SetOutputDType("alpha_diff", 0, ctx->InputDType("alpha", 0));
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("prelu").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                         user_op::AddOpFn AddOp) -> Maybe<void> {
-  if (op.NeedGenGradTensor4OpInput("x", 0) || op.NeedGenGradTensor4OpInput("alpha", 0)) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    user_op::UserOpConfWrapper grad_op =
-        builder.Op("prelu_grad")
-            .Input("x", op.input("x", 0))
-            .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-            .Input("alpha", op.input("alpha", 0))
-            .Output("dx")
-            .Output("alpha_diff")
-            .Attr("alpha_requires_grad", op.NeedGenGradTensor4OpInput("alpha", 0))
-            .Build();
-    AddOp(grad_op);
-
-    if (op.NeedGenGradTensor4OpInput("x", 0)) {
-      op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-    }
-    if (op.NeedGenGradTensor4OpInput("alpha", 0)) {
-      auto alpha_identity_op = user_op::UserOpConfWrapperBuilder(op.op_name() + "_alpha_identity")
-                                   .Op("identity")
-                                   .Input("in", grad_op.output("alpha_diff", 0))
-                                   .Output("out")
-                                   .Build();
-      AddOp(alpha_identity_op);
-      op.BindGradTensorWithOpInput(alpha_identity_op.output("out", 0), "alpha", 0);
-    }
-  }
-  return Maybe<void>::Ok();
-});
 
 }  // namespace oneflow

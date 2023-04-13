@@ -22,7 +22,8 @@ namespace oneflow {
 namespace one {
 
 struct SmoothL1LossCaptureState : public AutoGradCaptureState {
-  bool requires_grad = false;
+  bool input_requires_grad = false;
+  bool target_requires_grad = false;
   float beta = 0.0;
 };
 
@@ -30,20 +31,20 @@ class SmoothL1Loss : public OpExprGradFunction<SmoothL1LossCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Capture(SmoothL1LossCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    ctx->requires_grad = inputs.at(0)->requires_grad();  // prediction
-    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+    CHECK_EQ_OR_RETURN(inputs.size(), 2);  // NOLINT(maybe-need-error-msg)
 
-    CHECK_EQ_OR_RETURN(inputs.size(), 2);
+    ctx->input_requires_grad = inputs.at(0)->requires_grad();   // input
+    ctx->target_requires_grad = inputs.at(1)->requires_grad();  // target
 
-    ctx->SaveTensorForBackward(inputs.at(0));  // prediction
-    ctx->SaveTensorForBackward(inputs.at(1));  // label
+    ctx->SaveTensorForBackward(inputs.at(0));  // input
+    ctx->SaveTensorForBackward(inputs.at(1));  // target
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->beta = JUST(composed_attrs.GetAttr<float>("beta"));
@@ -52,15 +53,15 @@ class SmoothL1Loss : public OpExprGradFunction<SmoothL1LossCaptureState> {
 
   Maybe<void> Apply(const SmoothL1LossCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);            // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(ctx->SavedTensors().size(), 2);  // NOLINT(maybe-need-error-msg)
     in_grads->resize(2);
+    const auto& input = ctx->SavedTensors().at(0);
+    const auto& target = ctx->SavedTensors().at(1);
+    const auto& grad = JUST(functional::SmoothL1LossGrad(out_grads[0], input, target, ctx->beta));
 
-    const auto& prediction = ctx->SavedTensors().at(0);
-    const auto& label = ctx->SavedTensors().at(1);
-    in_grads->at(0) =
-        JUST(functional::SmoothL1LossGrad(out_grads.at(0), prediction, label, ctx->beta));
+    if (ctx->input_requires_grad) { (*in_grads)[0] = grad; }
+    if (ctx->target_requires_grad) { (*in_grads)[1] = JUST(functional::Negative(grad)); }
     return Maybe<void>::Ok();
   }
 

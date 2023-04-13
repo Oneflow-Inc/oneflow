@@ -15,12 +15,10 @@ limitations under the License.
 */
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/job/scope.h"
-#include "oneflow/core/job/scope.cfg.h"
 #include "oneflow/core/job/scope.pb.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/instructions_builder.h"
-#include "oneflow/core/framework/symbol_id_cache.h"
 
 namespace oneflow {
 
@@ -41,11 +39,11 @@ Maybe<Scope> Scope::New(int64_t symbol_id, const ScopeProto& scope_proto) {
 
 Maybe<void> Scope::Init() {
   {
-    const auto& storage = *Global<symbol::Storage<JobDesc>>::Get();
+    const auto& storage = *Singleton<symbol::Storage<JobDesc>>::Get();
     job_desc_ = JUST(storage.MaybeGetPtr(scope_proto_.job_desc_symbol_id()));
   }
   {
-    const auto& storage = *Global<symbol::Storage<ParallelDesc>>::Get();
+    const auto& storage = *Singleton<symbol::Storage<ParallelDesc>>::Get();
     const auto& device_parallel_desc =
         SymbolOf(*JUST(storage.MaybeGetPtr(scope_proto_.device_parallel_desc_symbol_id())));
     const auto& host_parallel_desc =
@@ -53,7 +51,7 @@ Maybe<void> Scope::Init() {
     placement_scope_ = SymbolOf(PlacementScope(device_parallel_desc, host_parallel_desc));
   }
   {
-    const auto& storage = *Global<symbol::Storage<Scope>>::Get();
+    const auto& storage = *Singleton<symbol::Storage<Scope>>::Get();
     if (scope_proto_.has_parent_scope_symbol_id()) {
       parent_scope_symbol_ = JUST(storage.MaybeGetPtr(scope_proto_.parent_scope_symbol_id()));
     }
@@ -87,33 +85,25 @@ const AttrValue& Scope::GetAttrValue(const std::string& attr_name) const {
   return def_iter->second.default_val();
 }
 
-Maybe<cfg::ScopeProto> Scope::MakeChildScopeProto() const {
-  auto child = std::make_shared<cfg::ScopeProto>(scope_proto_);
+Maybe<ScopeProto> Scope::MakeChildScopeProto() const {
+  auto child = std::make_shared<ScopeProto>(scope_proto_);
   child->set_parent_scope_symbol_id(JUST(symbol_id()));
   return child;
 }
 
 Maybe<int64_t> NewScopeSymbolId(
     int64_t old_scope_symbol_id,
-    const std::function<void(std::shared_ptr<cfg::ScopeProto> new_scope)>& InitNewScopeProto) {
-  CHECK_OR_RETURN(Global<symbol::Storage<Scope>>::Get()->Has(old_scope_symbol_id));
-  const Scope& old_scope = Global<symbol::Storage<Scope>>::Get()->Get(old_scope_symbol_id);
-  std::shared_ptr<cfg::ScopeProto> new_scope = JUST(old_scope.MakeChildScopeProto());
+    const std::function<void(std::shared_ptr<ScopeProto> new_scope)>& InitNewScopeProto) {
+  CHECK_OR_RETURN(Singleton<symbol::Storage<Scope>>::Get()->Has(old_scope_symbol_id));  // NOLINT
+  const Scope& old_scope = Singleton<symbol::Storage<Scope>>::Get()->Get(old_scope_symbol_id);
+  std::shared_ptr<ScopeProto> new_scope = JUST(old_scope.MakeChildScopeProto());
   InitNewScopeProto(new_scope);
-  int64_t symbol_id = 0;
+  std::shared_ptr<Scope> new_scope_symbol;
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    symbol_id = JUST(builder->FindOrCreateSymbolId<cfg::ScopeProto>(*new_scope));
+    new_scope_symbol = JUST(builder->GetScopeSymbol(*new_scope));
     return Maybe<void>::Ok();
   }));
-  auto* id_cache = Global<symbol::IdCache<cfg::ScopeProto>>::Get();
-  if (!id_cache->Has(*new_scope)) {
-    JUST(
-        id_cache->FindOrCreate(*new_scope, [&symbol_id]() -> Maybe<int64_t> { return symbol_id; }));
-    ScopeProto scope_proto;
-    new_scope->ToProto(&scope_proto);
-    JUST(Global<symbol::Storage<Scope>>::Get()->TryAdd(symbol_id, scope_proto));
-  }
-  return symbol_id;
+  return JUST(new_scope_symbol->symbol_id());
 }
 
 }  // namespace oneflow

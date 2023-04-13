@@ -14,74 +14,135 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/eager/tensor_storage.h"
 #include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/shut_down_util.h"
 #include "oneflow/core/common/shape_vec.h"
+#include "oneflow/core/common/tensor_meta.h"
 
 namespace oneflow {
+
 namespace vm {
 
-EagerBlobObject::EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
-                                 const std::shared_ptr<Shape>& shape, DataType data_type,
-                                 const std::shared_ptr<TensorStorage>& tensor_storage,
-                                 const intrusive::shared_ptr<LocalDepObject>& dep_object)
-    : BlobObject(mem_case, shape, data_type),
+EagerBlobObject::EagerBlobObject(
+    const std::shared_ptr<MemoryCase>& mem_case,
+    const Symbol<one::LocalTensorMeta>& static_local_tensor_meta,
+    const std::shared_ptr<const one::MutLocalTensorMeta>& dynamic_local_tensor_meta,
+    DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage,
+    const intrusive::shared_ptr<LocalDepObject>& dep_object)
+    : is_dynamic_(false),
+      mem_case_(mem_case),
+      data_type_(data_type),
+      storage_offset_(0),
       tensor_storage_(tensor_storage),
-      is_shape_synced_(true),
-      compute_local_dep_object_(dep_object) {
-  CHECK(static_cast<bool>(shape));
+      compute_local_dep_object_(dep_object),
+      static_local_tensor_meta_(static_local_tensor_meta),
+      dynamic_local_tensor_meta_(dynamic_local_tensor_meta) {
   CHECK(static_cast<bool>(tensor_storage));
 }
 
-Maybe<void> EagerBlobObject::TryInitBlob() {
-  if (!blob_) { JUST(InitBlob()); }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> EagerBlobObject::InitBlob() { return InitBlobWithOffset(0); }
-
-Maybe<void> EagerBlobObject::InitBlobWithOffset(const int64_t offset) {
-  CHECK_NE_OR_RETURN(blob_desc_.data_type(), DataType::kInvalidDataType);
-  if (!blob_desc_.shape().is_initialized()) { blob_desc_.set_shape(Shape(DimVector{})); }
-  {
-    header_buffer_.reset();
-    int64_t header_byte_size = blob_desc_.AlignedByteSizeOfBlobHeader();
-    header_buffer_ = std::make_unique<char[]>(header_byte_size);
+// user_op::TensorDesc overrides
+const Shape& EagerBlobObject::shape() const {
+  if (dynamic_local_tensor_meta_) {
+    return dynamic_local_tensor_meta_->shape();
+  } else {
+    return static_local_tensor_meta_->shape();
   }
-  blob_.reset(new Blob(*mem_case_, &blob_desc_, header_buffer_.get(), nullptr, offset));
-  return Maybe<void>::Ok();
+}
+const Stride& EagerBlobObject::stride() const {
+  if (dynamic_local_tensor_meta_) {
+    return dynamic_local_tensor_meta_->stride();
+  } else {
+    return static_local_tensor_meta_->stride();
+  }
 }
 
-Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
-  vm::Allocator* allocator = device_ctx->mut_allocator();
-  CHECK_NOTNULL_OR_RETURN(allocator);
-  Blob* blob = mut_blob();
-  CHECK_NOTNULL_OR_RETURN(blob);
-  size_t required_body_bytes = blob->AlignedByteSizeOfBlobBody();
+void EagerBlobObject::set_shape(const Shape& shape) {
+  CHECK(dynamic_local_tensor_meta_);
+  std::const_pointer_cast<one::MutLocalTensorMeta>(dynamic_local_tensor_meta_)->set_shape(shape);
+}
+void EagerBlobObject::set_stride(const Stride& stride) {
+  CHECK(dynamic_local_tensor_meta_);
+  std::const_pointer_cast<one::MutLocalTensorMeta>(dynamic_local_tensor_meta_)->set_stride(stride);
+}
+
+MutShapeView EagerBlobObject::mut_shape_view() {
+  CHECK(dynamic_local_tensor_meta_);
+  return *const_cast<Shape*>(dynamic_local_tensor_meta_->shape_ptr().get());
+}
+
+std::shared_ptr<const Shape> EagerBlobObject::shape_ptr() const {
+  if (dynamic_local_tensor_meta_) {
+    return dynamic_local_tensor_meta_->shape_ptr();
+  } else {
+    return static_local_tensor_meta_->shape_ptr();
+  }
+}
+std::shared_ptr<const Stride> EagerBlobObject::stride_ptr() const {
+  if (dynamic_local_tensor_meta_) {
+    return dynamic_local_tensor_meta_->stride_ptr();
+  } else {
+    return static_local_tensor_meta_->stride_ptr();
+  }
+}
+
+int64_t EagerBlobObject::storage_offset() const { return storage_offset_; }
+
+void EagerBlobObject::set_storage_offset(const int64_t offset) { storage_offset_ = offset; }
+
+Maybe<bool> EagerBlobObject::TryAllocateBlobBodyMemory(vm::Allocator* allocator) {
+  size_t required_body_bytes = AlignedByteSizeOfBlobBody();
   if (required_body_bytes == 0) {
     CHECK_ISNULL_OR_RETURN(tensor_storage_->blob_dptr());
-    return Maybe<void>::Ok();
-  }
-  if (tensor_storage_->blob_dptr() != nullptr) {
-    CHECK_GE_OR_RETURN(tensor_storage_->blob_bytes(), required_body_bytes);
-    return Maybe<void>::Ok();
-  }
-  {
+  } else if (tensor_storage_->blob_dptr() != nullptr) {
+    CHECK_GE_OR_RETURN(tensor_storage_->blob_bytes(), ByteSizeOfBlobBody())
+        << "This blob has been allocated memory, but less than needed space.";
+  } else {
+    char* dptr = nullptr;
+    JUST(allocator->Allocate(&dptr, required_body_bytes));
     // reset tensor_storage_;
     const auto& Free = [allocator, required_body_bytes](char* dptr) {
       if (IsShuttingDown()) { return; }
       allocator->Deallocate(dptr, required_body_bytes);
     };
-    char* dptr = nullptr;
-    allocator->Allocate(&dptr, required_body_bytes);
     tensor_storage_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free),
                                    required_body_bytes);
-
-    blob->reset_dptr(dptr);
-    InitNonPODTypeBlobIfNeed(tensor_storage_->non_pod_allocator(), blob_.get());
+    InitNonPODTypeEagerBlobObjectIfNeed(tensor_storage_->non_pod_allocator(), this);
+    return true;
   }
+  return false;
+}
+
+const void* EagerBlobObject::raw_dptr() const {
+  char* ptr = tensor_storage_->blob_dptr();
+  if (tensor_storage_->blob_bytes() > 0) { CHECK_NOTNULL(ptr); }
+  return ptr + storage_offset_ * GetSizeOfDataType(data_type_);
+}
+
+Maybe<void> EagerBlobObject::DeallocateBlobDataPtr() {
+  tensor_storage_->Release();
   return Maybe<void>::Ok();
+}
+
+void EagerBlobObject::RegisterStorageDeleteHook(const std::function<void()>& hook) {
+  tensor_storage_->RegisterStorageDeleteHook(hook);
+}
+
+const Optional<Symbol<::oneflow::Stream>>& EagerBlobObject::producer_stream() const {
+  return tensor_storage_->producer_stream();
+}
+
+Maybe<void> EagerBlobObject::init_producer_stream(Symbol<::oneflow::Stream> producer_stream) {
+  return tensor_storage_->init_producer_stream(producer_stream);
+}
+
+const Optional<Symbol<::oneflow::Stream>>& EagerBlobObject::last_used_stream() const {
+  return tensor_storage_->last_used_stream();
+}
+
+void EagerBlobObject::set_last_used_stream(Symbol<::oneflow::Stream> last_used_stream) {
+  tensor_storage_->set_last_used_stream(last_used_stream);
 }
 
 }  // namespace vm

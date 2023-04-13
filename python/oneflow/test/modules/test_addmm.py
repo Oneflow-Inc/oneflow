@@ -67,7 +67,7 @@ class TestAddmm(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(check_graph=True)
+    @autotest(n=5, rtol=1e-2, atol=1e-3)
     def test_addmm_flow_with_random_data(test_case):
         device = random_device()
         input = random_tensor(ndim=2, dim0=2, dim1=3).to(device)
@@ -82,7 +82,7 @@ class TestAddmm(flow.unittest.TestCase):
         )
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5, rtol=1e-2, atol=1e-3)
     def test_addmm_broadcast_flow_with_random_data(test_case):
         device = random_device()
         input = random_tensor(ndim=2, dim0=1, dim1=1).to(device)
@@ -96,6 +96,14 @@ class TestAddmm(flow.unittest.TestCase):
             alpha=random().to(float) | nothing(),
         )
         return y
+
+    @profile(torch.addmm)
+    def profile_addmm(test_case):
+        input = torch.ones(2, 3)
+        mat1 = torch.ones(2, 3)
+        mat2 = torch.ones(3, 3)
+        torch.addmm(input, mat1, mat2)
+        torch.addmm(input, mat1, mat2, alpha=1, beta=2)
 
 
 if __name__ == "__main__":

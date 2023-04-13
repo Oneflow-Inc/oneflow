@@ -95,21 +95,21 @@ class TestModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_reshape_flow_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=4).to(device)
         y = torch.reshape(x, shape=(-1,))
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_reshape_flow_with_0dim_data(test_case):
         device = random_device()
         x = random_tensor(ndim=0).to(device)
         y = torch.reshape(x, shape=(-1,))
         return y
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_reshape_with_0_size_data(test_case):
         device = random_device()
         x = random_tensor(4, 2, 0, 3).to(device)
@@ -118,12 +118,48 @@ class TestModule(flow.unittest.TestCase):
         )
         return y
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_reshape_flow_bool_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=4).to(device=device, dtype=torch.bool)
         y = torch.reshape(x, shape=(-1,))
         return y
+
+    @autotest(n=2, auto_backward=False, check_graph=True)
+    def test_reshape_like(test_case):
+        device = random_device()
+        shape = [random(1, 5).to(int).value() for _ in range(4)]
+        like_shape = np.random.choice(
+            np.array(shape), len(shape), replace=False
+        ).tolist()
+        x = (
+            random_tensor(4, *shape, requires_grad=False)
+            .to(device=device)
+            .requires_grad_()
+        )
+        y = (
+            random_tensor(4, *like_shape)
+            .to(device=device)
+            .requires_grad_(random_bool())
+        )
+        # forward
+        of_z = flow._C.reshape_like(x.oneflow, y.oneflow)
+        torch_z = torch.pytorch.reshape(x.pytorch, like_shape)
+        test_case.assertTrue(
+            np.array_equal(of_z.numpy(), torch_z.detach().cpu().numpy())
+        )
+        # backward
+        of_z.sum().backward()
+        torch_z.sum().backward()
+        test_case.assertTrue(
+            np.array_equal(
+                x.grad.oneflow.numpy(), x.grad.pytorch.detach().cpu().numpy()
+            )
+        )
+
+    @profile(torch.reshape)
+    def profile_reshape(test_case):
+        torch.reshape(torch.ones(50, 20), (20, 50))
 
 
 if __name__ == "__main__":

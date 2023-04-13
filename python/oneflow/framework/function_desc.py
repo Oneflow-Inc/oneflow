@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow._oneflow_internal
-import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
+import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.framework.hob as hob
 import oneflow.framework.session_context as session_ctx
 import oneflow.support.enable_if as enable_if
@@ -30,18 +30,18 @@ class FunctionAttribute(object):
 class FunctionDesc(object):
     def __init__(self, job_func=None, job_config_proto=None, function_attribute=None):
         if job_config_proto is None:
-            job_config_proto = job_conf_cfg.JobConfigProto()
+            job_config_proto = job_conf_pb.JobConfigProto()
         if function_attribute is None:
             function_attribute = FunctionAttribute()
         self.job_func = job_func
         self.job_config_proto = job_config_proto
-        self.job_config_proto.mutable_predict_conf()
+        self.job_config_proto.predict_conf.SetInParent()
         self.function_attribute = function_attribute
 
     def IsTrainable(self):
-        if self.job_config_proto.has_train_conf():
+        if self.job_config_proto.HasField("train_conf"):
             return True
-        if self.job_config_proto.has_predict_conf():
+        if self.job_config_proto.HasField("predict_conf"):
             return False
         raise NotImplementedError
 
@@ -49,17 +49,17 @@ class FunctionDesc(object):
         if attr_name == "flag_name2flag_value":
             return False
         name2default = session_ctx.GetDefaultSession().function_flag_name2default_val
-        if attr_name in self.job_config_proto.flag_name2flag_value():
+        if attr_name in self.job_config_proto.flag_name2flag_value:
             return True
-        return getattr(self.job_config_proto, "has_" + attr_name)()
+        return self.job_config_proto.HasField(attr_name)
 
     def __getattr__(self, attr_name):
         assert attr_name != "flag_name2flag_value"
-        flag_name2flag_value = self.job_config_proto.flag_name2flag_value()
+        flag_name2flag_value = self.job_config_proto.flag_name2flag_value
         name2default = session_ctx.GetDefaultSession().function_flag_name2default_val
         if attr_name not in name2default:
-            assert getattr(self.job_config_proto, "has_" + attr_name)()
-            return getattr(self.job_config_proto, attr_name)()
+            assert self.job_config_proto.HasField(attr_name)
+            return getattr(self.job_config_proto, attr_name)
         attr_value = name2default[attr_name]
         if attr_name in flag_name2flag_value:
             attr_value = flag_name2flag_value[attr_name]

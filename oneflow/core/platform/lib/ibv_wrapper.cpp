@@ -117,6 +117,10 @@ int ibv_query_device(struct ibv_context* context, struct ibv_device_attr* device
   return LoadSymbol(__func__, &wrapper.ibv_query_device)(context, device_attr);
 }
 
+const char* ibv_get_device_name(struct ibv_device* device) {
+  return LoadSymbol(__func__, &wrapper.ibv_get_device_name)(device);
+}
+
 }  // namespace _stubs
 
 IBV wrapper = {

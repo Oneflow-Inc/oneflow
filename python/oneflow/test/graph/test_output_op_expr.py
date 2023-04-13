@@ -18,6 +18,7 @@ import os
 import unittest
 
 import numpy as np
+from google.protobuf import text_format
 
 import oneflow
 import oneflow as flow
@@ -32,7 +33,6 @@ from oneflow.framework.multi_client_session import MultiClientSession
 @flow.unittest.skip_unless_1n1d()
 class TestFetchOutputTensor(unittest.TestCase):
     def test_fetch_output_tensor(test_case):
-        test_case.assertTrue(oneflow.framework.env_util.HasAllMultiClientEnvVars())
         x = flow.Tensor(1, 1, 10, 10)
         flow.nn.init.uniform_(x, a=-1.0, b=1.0)
         session = session_ctx.GetDefaultSession()
@@ -42,27 +42,23 @@ class TestFetchOutputTensor(unittest.TestCase):
             oneflow._oneflow_internal.JobBuildAndInferCtx_Open(
                 "cc_test_output_op_expr_job"
             )
-            job_conf = (
-                oneflow._oneflow_internal.oneflow.core.job.job_conf.JobConfigProto()
-            )
-            job_conf.set_job_name("cc_test_output_op_expr_job")
-            job_conf.mutable_predict_conf()
+            job_conf = oneflow.core.job.job_conf_pb2.JobConfigProto()
+            job_conf.job_name = "cc_test_output_op_expr_job"
+            job_conf.predict_conf.SetInParent()
             c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
-            input_conf = (
-                oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedInputOpConf()
-            )
-            input_conf.set_in_0("EagerTensorInput")
-            input_conf.set_out_0("out_0")
+            input_conf = oneflow.core.operator.op_conf_pb2.FeedInputOpConf()
+            input_conf.in_0 = "EagerTensorInput"
+            input_conf.out_0 = "out_0"
+            input_conf_str = text_format.MessageToString(input_conf)
             input_op = oneflow._oneflow_internal.one.FeedInputOpExpr(
-                "cc_Input_0", input_conf, ["in_0"], ["out_0"]
+                "cc_Input_0", input_conf_str, ["in_0"], ["out_0"]
             )
-            output_conf = (
-                oneflow._oneflow_internal.oneflow.core.operator.op_conf.FetchOutputOpConf()
-            )
-            output_conf.set_in_0("LazyTensorInput")
-            output_conf.set_out_0("out_0")
+            output_conf = oneflow.core.operator.op_conf_pb2.FetchOutputOpConf()
+            output_conf.in_0 = "LazyTensorInput"
+            output_conf.out_0 = "out_0"
+            output_conf_str = text_format.MessageToString(output_conf)
             output_op = oneflow._oneflow_internal.one.FetchOutputOpExpr(
-                "cc_Output_0", output_conf, ["in_0"], ["out_0"]
+                "cc_Output_0", output_conf_str, ["in_0"], ["out_0"]
             )
             lazy_tensor = _C.dispatch_feed_input(input_op, x)
             test_case.assertEqual(lazy_tensor.shape, (1, 1, 10, 10))

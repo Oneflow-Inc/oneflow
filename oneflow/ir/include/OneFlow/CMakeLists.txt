@@ -16,7 +16,7 @@ mlir_tablegen(OneFlowPatterns.cpp.inc -gen-rewriters)
 add_public_tablegen_target(MLIROneFlowPatternsIncGen)
 
 # NOTE: seperate conversion and opt with --name
-set(LLVM_TARGET_DEFINITIONS OneFlowOps.td)
+set(LLVM_TARGET_DEFINITIONS OneFlowPasses.td)
 mlir_tablegen(OneFlowPasses.h.inc -gen-pass-decls)
 add_public_tablegen_target(MLIROneFlowPassIncGen)
 
@@ -26,7 +26,7 @@ add_mlir_interface(OneFlowInterfaces)
 set(LLVM_TARGET_DEFINITIONS OneFlowOpGetGen.td)
 
 set(ONEFLOW_OP_GROUPS
-    "ASSIGN;BINARY;BROADCAST;CONV;CROSS_ENTROPY;CUDA;DATASET;DETECTION;EAGER;FUSED;IDEMPOTENT;IDENTITY;IMAGE;INDICES;INVOLUTION;LOSS;MATH;MATMUL;MISC;NCCL;NORMALIZATION;OPTIMIZER;PADDING;PARALLEL_CAST;POOL;QUANTIZATION;REDUCE;RESHAPE;SCALAR;SOFTMAX;SUMMARY;TENSOR_BUFFER;TEST;TRIGONOMETRIC;UNARY;UPSAMPLE;ONE_EMBEDDING"
+    "ASSIGN;BINARY;BROADCAST;CONV;CROSS_ENTROPY;CUDA;DATASET;DETECTION;EAGER;FUSED;IDEMPOTENT;IDENTITY;IMAGE;INDICES;INVOLUTION;LOSS;MATH;MATMUL;MISC;NCCL;NORMALIZATION;OPTIMIZER;PADDING;PARALLEL_CAST;POOL;QUANTIZATION;REDUCE;RESHAPE;SCALAR;SOFTMAX;SUMMARY;TENSOR_BUFFER;TEST;TRIGONOMETRIC;UNARY;UPSAMPLE;ONE_EMBEDDING;LINEAR_ALGEBRA;SYSTEM;MLIR_JIT"
 )
 foreach(OP_GROUP_NAME IN LISTS ONEFLOW_OP_GROUPS)
   message(STATUS "Enable OneFlow MLIR op group: ${OP_GROUP_NAME}")
@@ -45,11 +45,43 @@ set(LLVM_TABLEGEN_FLAGS "${FULL_LLVM_TABLEGEN_FLAGS}")
 mlir_tablegen(OneFlow.gen_ops.h.inc -gen-op-decls)
 add_public_tablegen_target(MLIROneFlowOpGroupDeclsIncGen)
 
+set(LLVM_TARGET_DEFINITIONS SBP/SBPOps.td)
+mlir_tablegen(SBPDialect.h.inc -gen-dialect-decls)
+mlir_tablegen(SBPDialect.cpp.inc -gen-dialect-defs)
+mlir_tablegen(SBPAttributes.h.inc -gen-attrdef-decls)
+mlir_tablegen(SBPAttributes.cpp.inc -gen-attrdef-defs)
+add_public_tablegen_target(MLIRSBPIncGen)
+
+set(LLVM_TARGET_DEFINITIONS OKL/OKLOps.td)
+mlir_tablegen(OKLDialect.h.inc -gen-dialect-decls -dialect=okl)
+mlir_tablegen(OKLDialect.cpp.inc -gen-dialect-defs -dialect=okl)
+mlir_tablegen(OKLOps.h.inc -gen-op-decls)
+mlir_tablegen(OKLOps.cpp.inc -gen-op-defs)
+mlir_tablegen(OKLTypes.h.inc -gen-typedef-decls)
+mlir_tablegen(OKLTypes.cpp.inc -gen-typedef-defs)
+mlir_tablegen(OKLPasses.h.inc -gen-pass-decls)
+mlir_tablegen(OKLEnums.h.inc -gen-enum-decls)
+mlir_tablegen(OKLEnums.cpp.inc -gen-enum-defs)
+mlir_tablegen(OKLAttributes.h.inc -gen-attrdef-decls)
+mlir_tablegen(OKLAttributes.cpp.inc -gen-attrdef-defs)
+add_public_tablegen_target(MLIROKLIncGen)
+
+set(LLVM_TARGET_DEFINITIONS OKM/OKMOps.td)
+mlir_tablegen(OKMDialect.h.inc -gen-dialect-decls -dialect=okm)
+mlir_tablegen(OKMDialect.cpp.inc -gen-dialect-defs -dialect=okm)
+mlir_tablegen(OKMOps.h.inc -gen-op-decls)
+mlir_tablegen(OKMOps.cpp.inc -gen-op-defs)
+mlir_tablegen(OKMPasses.h.inc -gen-pass-decls)
+mlir_tablegen(OKMAttributes.h.inc -gen-attrdef-decls)
+mlir_tablegen(OKMAttributes.cpp.inc -gen-attrdef-defs)
+add_public_tablegen_target(MLIROKMIncGen)
+
 set(LLVM_TABLEGEN_FLAGS "")
 add_mlir_dialect(
   OneFlowOps
   oneflow
   DEPENDS
+  MLIRSBPIncGen
   MLIROneFlowEnumsIncGen
   MLIROneFlowPatternsIncGen
   MLIROneFlowPassIncGen

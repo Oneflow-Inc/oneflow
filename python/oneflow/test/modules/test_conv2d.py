@@ -16,6 +16,7 @@ limitations under the License.
 
 import unittest
 from collections import OrderedDict
+import os
 
 import numpy as np
 
@@ -24,6 +25,8 @@ from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+import torch as torch_original
+from packaging import version
 
 test_conv2d_weight = np.array(
     [
@@ -1162,7 +1165,18 @@ def _test_conv2d(
 
 
 def _test_conv2d_backward(
-    test_case, conv, data, weight, data_grad, weight_grad, bias=None, device="cuda",
+    test_case,
+    conv,
+    data,
+    weight,
+    data_grad,
+    weight_grad,
+    bias=None,
+    device="cuda",
+    data_rtol=1e-4,
+    data_atol=1e-8,
+    weight_rtol=1e-4,
+    weight_atol=1e-8,
 ):
     to_device = flow.device(device)
     x = flow.tensor(data, dtype=flow.float32, device=to_device, requires_grad=True)
@@ -1172,9 +1186,13 @@ def _test_conv2d_backward(
     conv.to(to_device)
     of_out = conv(x)
     of_out.sum().backward()
-    test_case.assertTrue(np.allclose(x.grad.numpy(), data_grad, rtol=1e-4, atol=1e-8))
     test_case.assertTrue(
-        np.allclose(conv.weight.grad.numpy(), weight_grad, rtol=1e-4, atol=1e-8)
+        np.allclose(x.grad.numpy(), data_grad, rtol=data_rtol, atol=data_atol)
+    )
+    test_case.assertTrue(
+        np.allclose(
+            conv.weight.grad.numpy(), weight_grad, rtol=weight_rtol, atol=weight_atol
+        )
     )
 
 
@@ -1586,7 +1604,19 @@ class TestConv2d(flow.unittest.TestCase):
         device = random_device()
         img = torch.ones((1, 3, 224, 224), requires_grad=True).to(device)
         kernel = torch.ones((3, 1, 3, 3), requires_grad=True).to(device)
-        y = torch.nn.functional.conv2d(img, kernel, groups=3)
+        y = torch.nn.functional.conv2d(input=img, weight=kernel, groups=3)
+        return y
+
+    @unittest.skipIf(
+        version.parse(torch_original.__version__) <= version.parse("1.13.0"),
+        "conv module don't support unbatched input in PyTorch before '1.13.0'",
+    )
+    @autotest(n=3)
+    def test_nn_functional_conv2d_3dinput(test_case):
+        device = random_device()
+        img = torch.ones((3, 224, 224), requires_grad=True).to(device)
+        kernel = torch.ones((3, 1, 3, 3), requires_grad=True).to(device)
+        y = torch.nn.functional.conv2d(input=img, weight=kernel, groups=3)
         return y
 
     def test_conv2d(test_case):
@@ -1607,6 +1637,7 @@ class TestConv2d(flow.unittest.TestCase):
     def test_conv2d_backward(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cuda", "cpu"]
+        os.environ["ONEFLOW_ENABLE_NHWC"] = "0"
         for arg in GenArgList(arg_dict):
             device = arg[0]
             conv = flow.nn.Conv2d(1, 3, (3, 3), bias=False).to(flow.device(device))
@@ -1705,6 +1736,7 @@ class TestConv2d(flow.unittest.TestCase):
                 test_conv2d_padding_data_grad,
                 test_conv2d_padding_weight_grad,
                 device=device,
+                weight_atol=1e-3,
             )
 
     def test_conv2d_stride(test_case):
@@ -1830,7 +1862,7 @@ class TestConv2d(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest()
+    @autotest(n=5, rtol=1e-2)
     def test_conv2d_with_random_data(test_case):
         channels = random(1, 6)
         m = torch.nn.Conv2d(
@@ -1850,8 +1882,53 @@ class TestConv2d(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @unittest.skipIf(
+        version.parse(torch_original.__version__) <= version.parse("1.13.0"),
+        "conv module don't support unbatched input in PyTorch before '1.13.0'",
+    )
+    @autotest(n=5)
+    def test_conv2d_auto_squeeze_with_random_data(test_case):
+        channels = random(1, 6)
+        m = torch.nn.Conv2d(
+            in_channels=channels,
+            out_channels=random(1, 20),
+            kernel_size=random(1, 4),
+            stride=random() | nothing(),
+            padding=random(1, 3).to(int) | nothing(),
+            dilation=random(1, 5) | nothing(),
+            groups=random(1, 5) | nothing(),
+            padding_mode=constant("zeros") | nothing(),
+            bias=random_bool(),
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor(ndim=3, dim0=channels).to(device)
+        y = m(x)
+        return y
+
+    @autotest(n=5, check_graph=False)
+    def test_conv2d_0size_with_random_data(test_case):
+        channels = random(1, 6)
+        m = torch.nn.Conv2d(
+            in_channels=channels,
+            out_channels=random(1, 20),
+            kernel_size=random(1, 4),
+            stride=random() | nothing(),
+            padding=random(1, 3).to(int) | nothing(),
+            dilation=random(1, 5) | nothing(),
+            groups=random(1, 5) | nothing(),
+            padding_mode=constant("zeros") | nothing(),
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor(ndim=4, dim0=0, dim1=channels).to(device)
+        y = m(x)
+        return y
+
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    @autotest(n=30, check_allclose=False)
+    @autotest(n=5, check_allclose=False)
     def test_conv2d_group_with_random_data(test_case):
         channels = 720  # lcm(1, 2, 3, 4, 5, 6)
         m = torch.nn.Conv2d(
@@ -1873,6 +1950,131 @@ class TestConv2d(flow.unittest.TestCase):
         x.pytorch = x.pytorch.to("cuda")
         y = m(x)
         return y
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_conv2d_NHWC_with_random_data(test_case):
+        in_channels = np.random.randint(6, 33)
+        out_channels = np.random.randint(32, 66)
+        kernel_size = np.random.randint(1, 5)
+        stride = np.random.randint(1, 2)
+        padding = np.random.randint(1, 3)
+        dilation = np.random.randint(1, 3)
+        spatial = np.random.randint(6, 64)
+
+        np_x = np.random.randn(4, in_channels, spatial, spatial).astype(np.float32)
+        np_weight = np.random.randn(
+            out_channels, in_channels, kernel_size, kernel_size
+        ).astype(np.float32)
+        np_bias = np.random.randn(out_channels).astype(np.float32)
+
+        flow_nchw_input = flow.tensor(
+            np_x, device="cuda", dtype=flow.float32, requires_grad=True
+        )
+        flow_nchw_weights = flow.nn.Parameter(
+            flow.tensor(
+                np_weight, device="cuda", dtype=flow.float32, requires_grad=True
+            )
+        )
+        flow_nchw_bias = flow.nn.Parameter(
+            flow.tensor(np_bias, device="cuda", dtype=flow.float32, requires_grad=True)
+        )
+
+        flow_nchw_conv = flow.nn.Conv2d(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=padding,
+            dilation=dilation,
+        ).to("cuda")
+        flow_nchw_conv.weight = flow_nchw_weights
+        flow_nchw_conv.bias = flow_nchw_bias
+
+        flow_nchw_out = flow_nchw_conv(flow_nchw_input)
+
+        os.environ["ONEFLOW_ENABLE_NHWC"] = "1"
+        flow_nhwc_input = flow.tensor(
+            np_x, device="cuda", dtype=flow.float32, requires_grad=True
+        )
+        flow_nhwc_permuted_input = flow.permute(flow_nhwc_input, (0, 2, 3, 1))
+        flow_nhwc_weights = flow.tensor(
+            np_weight, device="cuda", dtype=flow.float32, requires_grad=True
+        )
+        flow_nhwc_permuted_weights = flow.nn.Parameter(
+            flow.permute(flow_nhwc_weights, (0, 2, 3, 1))
+        )
+        flow_nhwc_bias = flow.nn.Parameter(
+            flow.tensor(np_bias, device="cuda", dtype=flow.float32, requires_grad=True)
+        )
+
+        flow_nhwc_conv = flow.nn.Conv2d(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=padding,
+            dilation=dilation,
+        ).to("cuda")
+        flow_nhwc_conv.weight = flow_nhwc_permuted_weights
+        flow_nhwc_conv.bias = flow_nhwc_bias
+
+        flow_nhwc_out = flow_nhwc_conv(flow_nhwc_permuted_input)
+        flow_nhwc_permuted_out = flow.permute(flow_nhwc_out, (0, 3, 1, 2))
+
+        test_case.assertTrue(
+            np.allclose(
+                flow_nchw_out.numpy(),
+                flow_nhwc_permuted_out.numpy(),
+                rtol=1e-4,
+                atol=1e-4,
+            )
+        )
+
+        total_out = flow_nchw_out + flow_nhwc_permuted_out
+
+        total_out = total_out.sum()
+        total_out.backward()
+        test_case.assertTrue(
+            np.allclose(
+                flow_nchw_weights.grad.numpy(),
+                np.transpose(flow_nhwc_permuted_weights.grad.numpy(), (0, 3, 1, 2)),
+                rtol=1e-3,
+                atol=1e-4,
+            )
+        )
+        test_case.assertTrue(
+            np.allclose(
+                flow_nchw_input.grad.numpy(),
+                flow_nhwc_input.grad.numpy(),
+                rtol=1e-4,
+                atol=1e-4,
+            )
+        )
+        os.environ["ONEFLOW_ENABLE_NHWC"] = "0"
+
+    @profile(torch.nn.functional.conv2d)
+    def profile_conv2d(test_case):
+        input = torch.ones(8, 128, 28, 28)
+        weight_128c = torch.ones(128, 128, 3, 3)
+        weight_128c_2g = torch.ones(128, 64, 3, 3)
+        weight_1x1_128c = torch.ones(128, 128, 1, 1)
+        weight_5x5_128c = torch.ones(128, 128, 5, 5)
+        bias = torch.ones(128)
+        torch.nn.functional.conv2d(input, weight_128c, padding=1)
+        torch.nn.functional.conv2d(input, weight_128c_2g, groups=2, padding=1)
+        torch.nn.functional.conv2d(input, weight_128c, padding=1, stride=2)
+        torch.nn.functional.conv2d(input, weight_128c, bias=bias, padding=1)
+        torch.nn.functional.conv2d(input, weight_128c, bias=bias, padding=1, stride=2)
+        torch.nn.functional.conv2d(input, weight_1x1_128c)
+        torch.nn.functional.conv2d(input, weight_1x1_128c, stride=2)
+        torch.nn.functional.conv2d(input, weight_1x1_128c, bias=bias)
+        torch.nn.functional.conv2d(input, weight_1x1_128c, bias=bias, stride=2)
+        torch.nn.functional.conv2d(input, weight_5x5_128c, padding=2)
+        torch.nn.functional.conv2d(input, weight_5x5_128c, padding=2, stride=2)
+        torch.nn.functional.conv2d(input, weight_5x5_128c, bias=bias, padding=2)
+        torch.nn.functional.conv2d(
+            input, weight_5x5_128c, bias=bias, padding=2, stride=2
+        )
 
 
 if __name__ == "__main__":

@@ -35,12 +35,16 @@ Maybe<py::bytes> CpuBroadcast(py::bytes* in, int64_t root) {
     CHECK_NOTNULL_OR_RETURN(in);
     PyBytes_AsStringAndSize(in->ptr(), &buffer, &length);
   }
-  JUST(ccl::Broadcast<DeviceType::kCPU>(&length, &length, sizeof(length), DataType::kChar, root,
-                                        parallel_desc, nullptr));
+  const auto& meta_transport_token =
+      JUST(TransportToken::NewTransportToken(kTransportTokenTypeMeta));
+  JUST(ccl::CpuBroadcast(&length, &length, sizeof(length), root, parallel_desc,
+                         meta_transport_token));
 
+  const auto& data_transport_token =
+      JUST(TransportToken::NewTransportToken(kTransportTokenTypeData));
   if (GlobalProcessCtx::Rank() == root) {
-    JUST(ccl::Broadcast<DeviceType::kCPU>(buffer, buffer, length, DataType::kChar, root,  // NOLINT
-                                          parallel_desc, nullptr));
+    JUST(ccl::CpuBroadcast(buffer, buffer, length, root, parallel_desc,  // NOLINT
+                           data_transport_token));                       // NOLINT
     return *in;
   } else {
     // https://github.com/pybind/pybind11/issues/1236#issuecomment-527730864
@@ -51,8 +55,7 @@ Maybe<py::bytes> CpuBroadcast(py::bytes* in, int64_t root) {
     bytesObject->ob_shash = -1;
     bytesObject->ob_sval[length] = '\0';
     buffer = bytesObject->ob_sval;
-    JUST(ccl::Broadcast<DeviceType::kCPU>(nullptr, buffer, length, DataType::kChar, root,
-                                          parallel_desc, nullptr));
+    JUST(ccl::CpuBroadcast(nullptr, buffer, length, root, parallel_desc, data_transport_token));
     return py::reinterpret_steal<py::bytes>(reinterpret_cast<PyObject*>(bytesObject));
   }
 }

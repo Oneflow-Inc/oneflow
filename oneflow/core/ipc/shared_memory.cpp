@@ -113,8 +113,8 @@ Maybe<std::set<std::string>> GetContentsOfShmDirectory() {
 }  // namespace
 
 SharedMemoryManager& SharedMemoryManager::get() {
-  // Must be a static singleton variable instead of Global<SharedMemoryManager>.
-  // Subprocesses don't have chance to call `Global<SharedMemoryManager>::Delete()`
+  // Must be a static singleton variable instead of Singleton<SharedMemoryManager>.
+  // Subprocesses don't have chance to call `Singleton<SharedMemoryManager>::Delete()`
   static SharedMemoryManager shared_memory_manager;
   return shared_memory_manager;
 }

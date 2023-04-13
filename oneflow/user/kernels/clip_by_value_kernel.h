@@ -24,7 +24,7 @@ namespace oneflow {
 template<typename T>
 OF_DEVICE_FUNC T DeviceMin(T a, T b) {
 #if defined(__CUDA_ARCH__)
-  return min(a, b);
+  return a < b ? a : b;
 #else
   return std::min(a, b);
 #endif
@@ -33,7 +33,7 @@ OF_DEVICE_FUNC T DeviceMin(T a, T b) {
 template<typename T>
 OF_DEVICE_FUNC T DeviceMax(T a, T b) {
 #if defined(__CUDA_ARCH__)
-  return max(a, b);
+  return a > b ? a : b;
 #else
   return std::max(a, b);
 #endif

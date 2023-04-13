@@ -48,6 +48,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   const char* TypeName() const override { return "TaskGraph"; }
   void RemoveEmptyRegsts();
   void MergeChainAndAddOrderingCtrlEdgeInSameChain();
+  void DecideExecutionOrder();
 
   void EnableInplaceMemSharing(const std::function<bool(const std::string&, const std::string&)>&
                                    IsOpNameDataOrCtrlReachable);
@@ -75,13 +76,15 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphNormalForwardToDecodeH2D);
 
  private:
-  void BuildTaskPath(TaskNode* src_node, TaskNode* dst_node, const LogicalBlobId& lbi);
+  void BuildTaskPath(TaskNode* src_node, TaskNode* dst_node, const LogicalBlobId& lbi,
+                     bool is_host_mem_input);
 
   void ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_nodes,
                         const std::vector<CompTaskNode*>& dst_task_nodes);
 
-  void SetOrderInGraphForEachNode();
-  void MergeChain();
+  void InitOrderedTaskNodes();
+  void MergeChainByPhysicalTaskGraph();
+  void MergeChainByLogicalChainId();
   void BuildCtrlRegstDescInSameChain();
 
   // inplace
@@ -117,8 +120,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
     struct Hasher {
       inline size_t operator()(const ProxyKey& key) const {
-        return std::hash<TaskNode*>{}(key.src_node) ^ std::hash<LogicalBlobId>{}(key.lbi)
-               ^ key.dst_mem_zone_id.hash();
+        return Hash(key.src_node, key.lbi, key.dst_mem_zone_id.hash());
       }
     };
   };

@@ -19,11 +19,11 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
-#include "oneflow/core/framework/op_arg_util.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace one {
@@ -39,7 +39,7 @@ Maybe<void> LazyInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inp
   APPLY_IF(FeedVariableOp);
   APPLY_IF(FetchOutputOp);
   APPLY_IF(UserOp);
-  APPLY_IF(ConsistentToConsistentOp);
+  APPLY_IF(GlobalToGlobalOp);
   APPLY_IF(FunctionOp);
   APPLY_IF(ImageDecoderRandomCropResizeOp);
 #undef APPLY_IF
@@ -50,6 +50,13 @@ Maybe<void> LazyInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inp
 
 Maybe<void> EagerInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                                     TensorTuple* outputs, const OpExprInterpContext& ctx) const {
+  // In the op interpreter, judge whether to open the global mode to avoid recursion caused by
+  // GlobalMode.
+  // The global mode is enabled only if it was enabled and the current operation is a local
+  // operation.
+  auto global_mode_gurad = GlobalMode::Guard(GlobalMode::is_enabled() && is_local_,
+                                             GlobalMode::nd_sbp(), GlobalMode::parallel_desc());
+
 #define APPLY_IF(op_type)                                              \
   if (const auto* op = dynamic_cast<const op_type##Expr*>(&op_expr)) { \
     return ApplyImpl(*op, inputs, outputs, ctx);                       \
@@ -57,11 +64,11 @@ Maybe<void> EagerInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& in
 
   APPLY_IF(UserOp);
   APPLY_IF(VariableOp);
-  APPLY_IF(CastToMirroredOp);
-  APPLY_IF(CastFromMirroredOp);
-  APPLY_IF(ConsistentToConsistentOp);
-  APPLY_IF(CastToConsistentOp);
-  APPLY_IF(CastFromConsistentOp);
+  APPLY_IF(CastToLocalOp);
+  APPLY_IF(CastFromLocalOp);
+  APPLY_IF(GlobalToGlobalOp);
+  APPLY_IF(LocalToGlobalOp);
+  APPLY_IF(GlobalToLocalOp);
   APPLY_IF(DistributeSplitOp);
   APPLY_IF(DistributeCloneOp);
   APPLY_IF(DistributeConcatOp);
@@ -97,23 +104,34 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
   }
   // Lazy mode will construct backward compute graph in passes, so disable autograd if lazy mode.
   std::shared_ptr<OpExprGradClosure> grad_closure(nullptr);
-  if (requires_grad && !LazyMode::is_enabled()) {
+  if (requires_grad) {
+    OF_PROFILER_RANGE_PUSH("autograd.GetOrCreateOpGradClosure");
     grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
-    auto backward_fn =
-        std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
-            [=](const TensorTuple& out_grads, TensorTuple* in_grads,
-                bool create_graph) -> Maybe<void> {
-              autograd::AutoGradMode mode(create_graph);
-              JUST(grad_closure->Apply(out_grads, in_grads));
-              return Maybe<void>::Ok();
-            });
-    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(op_expr.op_type_name() + "_backward",
-                                                            backward_fn, inputs, outputs));
+    auto backward_fn = std::make_shared<BackwardFunction>();
+    backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                            bool create_graph) -> Maybe<void> {
+      autograd::AutoGradMode mode(create_graph);
+      JUST(grad_closure->Apply(out_grads, in_grads));
+      return Maybe<void>::Ok();
+    };
+    backward_fn->status = [=]() { return grad_closure->state()->SavedTensors().size() > 0; };
+    OF_PROFILER_RANGE_POP();
+    OF_PROFILER_RANGE_PUSH("autograd.AddNode");
+    JUST(GetThreadLocalAutogradEngine()->AddNode(op_expr.op_type_name() + "_backward", backward_fn,
+                                                 inputs, outputs));
+    OF_PROFILER_RANGE_POP();
+  }
+
+  if (requires_grad) {
+    OF_PROFILER_RANGE_GUARD("autograd.Capture");
+    // Capture inputs and outputs after `AddNode` because of that grad function
+    // node has been attached to them.
+    JUST(grad_closure->Capture(inputs, *outputs, ctx));
   }
   // Update outputs autograd meta
   // Note: if requires_grad is True, we will create a new autograd meta for each output
-  // in `AddBackwardFuncPtr` to support inplace operation, so the update should after
-  // `AddBackwardFuncPtr`
+  // in `AddNode` to support inplace operation, so the update should after
+  // `AddNode`
   for (auto& output : *outputs) {
     output->set_is_leaf(inputs.size() == 0 || !requires_grad);
     // If the output `requires_grad` is true, it means that the output is inplaced.
@@ -140,11 +158,6 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
       JUST(output->set_requires_grad(
           requires_grad && IsSupportRequireGradDataType(output->dtype()->data_type())));
     }
-  }
-  if (requires_grad && !LazyMode::is_enabled()) {
-    // Capture inputs and outputs after `AddBackwardFuncPtr` because of that grad function
-    // node has been attached to them.
-    JUST(grad_closure->Capture(inputs, *outputs, ctx));
   }
   return Maybe<void>::Ok();
 }

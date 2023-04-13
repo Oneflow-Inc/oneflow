@@ -17,7 +17,7 @@ from typing import Optional
 
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 from oneflow.nn.modules.constant import _ConstantBase
 
 
@@ -33,7 +33,7 @@ class _WeightedLoss(_Loss):
         self, weight: Optional[Tensor] = None, reduction: str = "mean"
     ) -> None:
         super(_WeightedLoss, self).__init__(reduction=reduction)
-        self.weight = weight
+        self.register_buffer("weight", weight)
 
 
 class L1Loss(_Loss):
@@ -99,35 +99,104 @@ class L1Loss(_Loss):
 
 
 class CrossEntropyLoss(_WeightedLoss):
-    """This criterion combines :class:`~flow.nn.LogSoftmax` and :class:`~flow.nn.NLLLoss` in one single class.
+    r"""
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.nn.CrossEntropyLoss.html.
+
+    This criterion combines :class:`~flow.nn.LogSoftmax` and :class:`~flow.nn.NLLLoss` in one single class.
 
     It is useful when training a classification problem with `C` classes.
+    If provided, the optional argument `weight` should be a 1D Tensor assigning weight to each of the classes.
+    This is particularly useful when you have an unbalanced training set.
 
     The `input` is expected to contain raw, unnormalized scores for each class.
-
     `input` has to be a Tensor of size either :math:`(minibatch, C)` or
     :math:`(minibatch, C, d_1, d_2, ..., d_K)`
-    with :math:`K \\geq 1` for the `K`-dimensional case (described later).
+    with :math:`K \geq 1` for the `K`-dimensional case (described later).
 
-    This criterion expects a class index in the range :math:`[0, C-1]` as the
-    `target` for each value of a 1D tensor of size `minibatch`;
+    The target that this criterion expects should contain either:
 
-    The loss can be described as:
+    - Class indices in the range :math:`[0, C)` where :math:`C` is the number of classes; if
+      `ignore_index` is specified, this loss also accepts this class index (this index
+      may not necessarily be in the class range). The unreduced (i.e. with :attr:`reduction`
+      set to ``'none'``) loss for this case can be described as:
 
-    .. math::
-        \\text{loss}(x, class) = -\\log\\left(\\frac{\\exp(x[class])}{\\sum_j \\exp(x[j])}\\right)
-                       = -x[class] + \\log\\left(\\sum_j \\exp(x[j])\\right)
+      .. math::
+          \ell(x, y) = L = \{l_1,\dots,l_N\}^\top, \quad
+          l_n = - w_{y_n} \log \frac{\exp(x_{n,y_n})}{\sum_{c=1}^C \exp(x_{n,c})}
+          \cdot \mathbb{1}\{y_n \not= \text{ignore_index}\}
 
-    Can also be used for higher dimension inputs, such as 2D images, by providing
-    an input of size :math:`(minibatch, C, d_1, d_2, ..., d_K)` with :math:`K \\geq 1`,
-    where :math:`K` is the number of dimensions, and a target of appropriate shape
-    (see below).
+      where :math:`x` is the input, :math:`y` is the target, :math:`w` is the weight,
+      :math:`C` is the number of classes, and :math:`N` spans the minibatch dimension as well as
+      :math:`d_1, ..., d_k` for the `K`-dimensional case. If
+      :attr:`reduction` is not ``'none'`` (default ``'mean'``), then
+
+      .. math::
+          \ell(x, y) = \begin{cases}
+              \sum_{n=1}^N \frac{1}{\sum_{n=1}^N w_{y_n} \cdot \mathbb{1}\{y_n \not= \text{ignore_index}\}} l_n, &
+               \text{if reduction} = \text{'mean';}\\
+                \sum_{n=1}^N l_n,  &
+                \text{if reduction} = \text{'sum'.}
+            \end{cases}
+
+      Note that this case is equivalent to the combination of :class:`~torch.nn.LogSoftmax` and
+      :class:`~torch.nn.NLLLoss`.
+
+    - Probabilities for each class; useful when labels beyond a single class per minibatch item
+      are required, such as for blended labels, label smoothing, etc. The unreduced (i.e. with
+      :attr:`reduction` set to ``'none'``) loss for this case can be described as:
+
+      .. math::
+          \ell(x, y) = L = \{l_1,\dots,l_N\}^\top, \quad
+          l_n = - \sum_{c=1}^C w_c \log \frac{\exp(x_{n,c})}{\sum_{i=1}^C \exp(x_{n,i})} y_{n,c}
+
+      where :math:`x` is the input, :math:`y` is the target, :math:`w` is the weight,
+      :math:`C` is the number of classes, and :math:`N` spans the minibatch dimension as well as
+      :math:`d_1, ..., d_k` for the `K`-dimensional case. If
+      :attr:`reduction` is not ``'none'`` (default ``'mean'``), then
+
+      .. math::
+          \ell(x, y) = \begin{cases}
+              \frac{\sum_{n=1}^N l_n}{N}, &
+               \text{if reduction} = \text{'mean';}\\
+                \sum_{n=1}^N l_n,  &
+                \text{if reduction} = \text{'sum'.}
+            \end{cases}
+
 
     Args:
+        weight (oneflow.Tensor, optional): a manual rescaling weight given to each class.
+            If given, has to be a Tensor of size `C`
+        ignore_index (int, optional): Specifies a target value that is ignored and does not
+            contribute to the input gradient. When ``reduction`` is ``mean``, the loss is averaged
+            over non-ignored targets. Note that ``ignore_index`` is only applicable when the target
+            contains class indices.
         reduction (string, optional): Specifies the reduction to apply to the output:
             ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will
             be applied, ``'mean'``: the weighted mean of the output is taken,
             ``'sum'``: the output will be summed. Default: ``'mean'``
+        label_smoothing (float, optinoal): A float in [0.0, 1.0]. Specifies the amount
+            of smoothing when computing the loss, where 0.0 means no smoothing.
+            The targets become a mixture of the original ground truth and a uniform
+            distribution as described in `Rethinking the Inception Architecture for Computer Vision <https://arxiv.org/abs/1512.00567>`_.
+            Default: :math:`0.0`.
+
+    Shape:
+        - Input: Shape ::math:`(N, C)` or :math:`(N, C, d_1, d_2, ..., d_K)` with :math:`K \geq 1`
+          in the case of `K`-dimensional loss.
+        - Target: If containing class indices, shape :math:`(N)` or :math:`(N, d_1, d_2, ..., d_K)` with
+          :math:`K \geq 1` in the case of K-dimensional loss where each value should be between :math:`[0, C)`.
+          If containing class probabilities, same shape as the input and each value should be between :math:`[0, 1]`.
+        - Output: If reduction is 'none', same shape as the target. Otherwise, scalar.
+
+        where:
+
+        .. math::
+            \begin{aligned}
+                C ={} & \text{number of classes} \\
+                N ={} & \text{batch size} \\
+            \end{aligned}
+
 
     For example:
 
@@ -150,6 +219,18 @@ class CrossEntropyLoss(_WeightedLoss):
         >>> out_mean = flow.nn.CrossEntropyLoss(reduction="mean")(input, target)
         >>> out_mean
         tensor(0.7590, dtype=oneflow.float32)
+        >>> out_ignore_0 = flow.nn.CrossEntropyLoss(reduction="none", ignore_index=0)(input, target)
+        >>> out_ignore_0
+        tensor([0.0000, 1.1167, 0.3583], dtype=oneflow.float32)
+        >>> out_label_smoothing = flow.nn.CrossEntropyLoss(reduction="none", label_smoothing=0.5)(input, target)
+        >>> out_label_smoothing
+        tensor([1.0586, 1.1654, 0.8864], dtype=oneflow.float32)
+        >>> probs = flow.tensor([[ 0.99495536,  0.28255007, -0.2775054 ],
+        ...    [ 0.42397153,  0.01075112,  0.56527734],
+        ...    [ 0.72356546, -0.1304398 ,  0.4068744 ]], dtype=flow.float32)
+        >>> out = flow.nn.CrossEntropyLoss()(input, probs)
+        >>> out
+        tensor(1.3305, dtype=oneflow.float32)
 
     """
 
@@ -158,13 +239,24 @@ class CrossEntropyLoss(_WeightedLoss):
         weight: Optional[Tensor] = None,
         ignore_index: int = -100,
         reduction: str = "mean",
+        label_smoothing: float = 0.0,
     ) -> None:
         super(CrossEntropyLoss, self).__init__(weight, reduction)
         self.ignore_index = ignore_index
+        self.label_smoothing = label_smoothing
+        if self.label_smoothing < 0.0 or self.label_smoothing > 1.0:
+            raise ValueError(
+                "label_smoothing must be between 0.0 and 1.0. Got: ", label_smoothing
+            )
 
     def forward(self, input, target):
         return flow._C.cross_entropy(
-            input, target, self.weight, self.ignore_index, self.reduction
+            input,
+            target,
+            self.weight,
+            self.ignore_index,
+            self.reduction,
+            self.label_smoothing,
         )
 
 
@@ -335,10 +427,7 @@ class NLLLoss(_WeightedLoss):
 
 
 class KLDivLoss(_Loss):
-    """The interface is consistent with PyTorch.
-    The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.nn.KLDivLoss.html?highlight=kldivloss#torch.nn.KLDivLoss
-
+    """
     The Kullback-Leibler divergence loss measure
 
     `Kullback-Leibler divergence`_ is a useful distance measure for continuous
@@ -374,6 +463,10 @@ class KLDivLoss(_Loss):
     ``'batchmean'`` in the next major release.
 
     .. _`kullback-leibler divergence`: https://en.wikipedia.org/wiki/Kullback-Leibler_divergence
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.nn.KLDivLoss.html.
 
     Args:
         reduction (string, optional): Specifies the reduction to apply to the output:
@@ -422,7 +515,12 @@ class KLDivLoss(_Loss):
     """
 
     def __init__(self, reduction: str = "mean", log_target: bool = False) -> None:
-        super(KLDivLoss, self).__init__(reduction)
+        if reduction == "batchmean":
+            super(KLDivLoss, self).__init__("sum")
+            self.reduction = "batchmean"
+        else:
+            super(KLDivLoss, self).__init__(reduction)
+
         self.log_target = log_target
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
@@ -430,10 +528,7 @@ class KLDivLoss(_Loss):
 
 
 class MSELoss(_Loss):
-    """The interface is consistent with PyTorch.
-    The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.nn.MSELoss.html?highlight=mseloss#torch.nn.MSELoss
-
+    """
     Creates a criterion that measures the mean squared error (squared L2 norm) between
     each element in the input :math:`x` and target :math:`y`.
 
@@ -459,6 +554,10 @@ class MSELoss(_Loss):
     The mean operation still operates over all the elements, and divides by :math:`n`.
 
     The division by :math:`n` can be avoided if one sets ``reduction = 'sum'``.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.nn.MSELoss.html.
 
     Args:
         reduction (string, optional): Specifies the reduction to apply to the output:
@@ -575,7 +674,7 @@ class CTCLoss(_Loss):
     """The Connectionist Temporal Classification loss.
     The interface is consistent with PyTorch.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.nn.CTCLoss.html#torch.nn.CTCLoss
+    https://pytorch.org/docs/1.10/generated/torch.nn.CTCLoss.html.
 
     Calculates loss between a continuous (unsegmented) time series and a target sequence. CTCLoss sums over the
     probability of possible alignments of input to target, producing a loss value which is differentiable
@@ -779,7 +878,7 @@ class SmoothL1Loss(_Loss):
     element-wise error falls below beta and an L1 term otherwise.
     The interface is consistent with PyTorch.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.nn.SmoothL1Loss.html
+    https://pytorch.org/docs/1.10/generated/torch.nn.SmoothL1Loss.html.
 
     It is less sensitive to outliers than :class:`torch.nn.MSELoss` and in some cases
     prevents exploding gradients (e.g. see the paper `Fast R-CNN <https://openaccess.thecvf.com/content_iccv_2015/papers/Girshick_Fast_R-CNN_ICCV_2015_paper.pdf>`__ by Ross Girshick)..
@@ -881,10 +980,19 @@ class SmoothL1Loss(_Loss):
 
 
 class CombinedMarginLoss(Module):
-    """The operation implements "margin_softmax" in InsightFace:
+    r"""The operation implements "margin_softmax" in InsightFace:
     https://github.com/deepinsight/insightface/blob/master/recognition/arcface_mxnet/train.py
     The implementation of margin_softmax in InsightFace is composed of multiple operators.
     We fuse them for speed up.
+
+    Applies the function:
+
+    .. math::
+
+        {\rm CombinedMarginLoss}(x_i, label) =
+        \left\{\begin{matrix} \cos(m_1\cdot\arccos x_i+m_2) - m_3 & {\rm if} \ i == label \\
+        x_i & {\rm otherwise} \end{matrix}\right.
+
 
     Args:
         x (oneflow.Tensor): A Tensor
@@ -892,6 +1000,16 @@ class CombinedMarginLoss(Module):
         m1 (float): loss m1 parameter
         m2 (float): loss m2 parameter
         m3 (float): loss m3 parameter
+
+    .. note::
+
+        Here are some special cases:
+
+        - when :math:`m_1=1, m_2\neq 0, m_3=0`, CombineMarginLoss has the same parameter as `ArcFace <https://arxiv.org/abs/1801.07698>`__ .
+
+        - when :math:`m_1=1, m_2=0, m_3\neq 0`, CombineMarginLoss has the same parameter as `CosFace (a.k.a AM-Softmax) <https://arxiv.org/abs/1801.09414>`__ .
+
+        - when :math:`m_1\gt 1, m_2=m_3=0`, CombineMarginLoss has the same parameter as `A-Softmax <https://arxiv.org/abs/1704.08063>`__.
 
     Returns:
         oneflow.Tensor: A Tensor

@@ -51,8 +51,8 @@ struct OpExprInterpContext {
 
   AttrMap attrs;
   Optional<Symbol<Device>> device;               // for local op
-  Optional<Symbol<ParallelDesc>> parallel_desc;  // for consistent op
-  Optional<Symbol<NdSbp>> nd_sbp;                // for consistent op
+  Optional<Symbol<ParallelDesc>> parallel_desc;  // for global op
+  Optional<Symbol<NdSbp>> nd_sbp;                // for global op
   std::shared_ptr<user_op::OpKernelState> state;
 };
 
@@ -78,11 +78,11 @@ class OpExprInterpreter {
   _macro(UserOp);                    \
   _macro(SelectTopNOp);              \
   _macro(VariableOp);                \
-  _macro(CastToMirroredOp);          \
-  _macro(CastFromMirroredOp);        \
-  _macro(ConsistentToConsistentOp);  \
-  _macro(CastToConsistentOp);        \
-  _macro(CastFromConsistentOp);      \
+  _macro(CastToLocalOp);             \
+  _macro(CastFromLocalOp);           \
+  _macro(GlobalToGlobalOp);          \
+  _macro(LocalToGlobalOp);           \
+  _macro(GlobalToLocalOp);           \
   _macro(DistributeSplitOp);         \
   _macro(DistributeCloneOp);         \
   _macro(DistributeConcatOp);        \
@@ -117,13 +117,13 @@ class LazyInterpreter : public OpExprInterpreter {
   DECLARE_NORMAL_APPLY_FUNC(FeedVariableOp);
   DECLARE_NORMAL_APPLY_FUNC(FetchOutputOp);
   DECLARE_NORMAL_APPLY_FUNC(FunctionOp);
-  DECLARE_NORMAL_APPLY_FUNC(ConsistentToConsistentOp);
+  DECLARE_NORMAL_APPLY_FUNC(GlobalToGlobalOp);
   DECLARE_NORMAL_APPLY_FUNC(ImageDecoderRandomCropResizeOp);
 };
 
 class EagerInterpreter : public OpExprInterpreter {
  public:
-  EagerInterpreter() : OpExprInterpreter() {}
+  EagerInterpreter(bool is_local) : OpExprInterpreter(), is_local_(is_local) {}
   virtual ~EagerInterpreter() = default;
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
@@ -134,24 +134,30 @@ class EagerInterpreter : public OpExprInterpreter {
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
                     const OpExprInterpContext& ctx) const override;
 
+ protected:
+  // NOTE(lixiang): To ensure the correctness of GlobalMode, check whether it is a local operation
+  // and initialize it as true when using EagerLocalInterpreter.
+  //   Used by Maybe<void> EagerInterpreter::Apply.
+  bool is_local_;
+
  private:
   FOR_EACH_BUILTIN_OPS(DECLARE_PURE_VIRTUAL_APPLY_FUNC);
   DECLARE_NORMAL_APPLY_FUNC(FunctionOp);
 };
 
-class EagerConsistentInterpreter : public EagerInterpreter {
+class EagerGlobalInterpreter : public EagerInterpreter {
  public:
-  EagerConsistentInterpreter() : EagerInterpreter() {}
-  virtual ~EagerConsistentInterpreter() = default;
+  EagerGlobalInterpreter() : EagerInterpreter(false) {}
+  virtual ~EagerGlobalInterpreter() = default;
 
  private:
   FOR_EACH_BUILTIN_OPS(DECLARE_OVERRIDE_APPLY_FUNC);
 };
 
-class EagerMirroredInterpreter : public EagerInterpreter {
+class EagerLocalInterpreter : public EagerInterpreter {
  public:
-  EagerMirroredInterpreter() : EagerInterpreter() {}
-  virtual ~EagerMirroredInterpreter() = default;
+  EagerLocalInterpreter() : EagerInterpreter(true) {}
+  virtual ~EagerLocalInterpreter() = default;
 
  private:
   FOR_EACH_BUILTIN_OPS(DECLARE_OVERRIDE_APPLY_FUNC);

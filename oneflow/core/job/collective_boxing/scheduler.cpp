@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/job/collective_boxing/nccl_executor_backend.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
@@ -119,21 +120,28 @@ void ExecutorImpl::Init(std::shared_ptr<RequestStore> request_store) {
   request_store_ = request_store;
   backends_.resize(Backend_ARRAYSIZE);
 #ifdef WITH_CUDA
-  std::unique_ptr<ExecutorBackend> nccl_backend = std::make_unique<NcclExecutorBackend>();
-  nccl_backend->Init(request_store_);
-  backends_.at(Backend::kBackendNCCL) = std::move(nccl_backend);
+  int cuda_dev_count = 0;
+  cudaError_t err = cudaGetDeviceCount(&cuda_dev_count);
+  if (err != cudaErrorNoDevice && err != cudaErrorInsufficientDriver) { OF_CUDA_CHECK(err); }
+  if (cuda_dev_count > 0) {
+    std::unique_ptr<ExecutorBackend> nccl_backend = std::make_unique<NcclExecutorBackend>();
+    nccl_backend->Init(request_store_);
+    backends_.at(Backend::kBackendNCCL) = std::move(nccl_backend);
+  }
 #endif
 }
 
 void ExecutorImpl::InitJob(int64_t job_id) {
 #ifdef WITH_CUDA
-  backends_.at(Backend::kBackendNCCL)->InitJob(job_id);
+  if (backends_.at(Backend::kBackendNCCL)) { backends_.at(Backend::kBackendNCCL)->InitJob(job_id); }
 #endif
 }
 
 void ExecutorImpl::DeinitJob(int64_t job_id) {
 #ifdef WITH_CUDA
-  backends_.at(Backend::kBackendNCCL)->DeinitJob(job_id);
+  if (backends_.at(Backend::kBackendNCCL)) {
+    backends_.at(Backend::kBackendNCCL)->DeinitJob(job_id);
+  }
 #endif
 }
 
@@ -152,7 +160,7 @@ void ExecutorImpl::GroupRequests(
     const std::function<void(std::vector<RequestId>&&, GroupToken*)>& Handler) {
   if (request_ids.empty()) { return; }
   const CollectiveBoxingConf& conf =
-      Global<ResourceDesc, ForSession>::Get()->collective_boxing_conf();
+      Singleton<ResourceDesc, ForSession>::Get()->collective_boxing_conf();
   auto BackendHandler = [&](std::vector<RequestId>&& group, void* backend_group_token) {
     GroupToken* group_token = CreateGroupToken(group, backend_group_token);
     Handler(std::move(group), group_token);

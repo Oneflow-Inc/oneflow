@@ -42,13 +42,13 @@ class FuseAddToOutputPass final : public JobPass {
 
 Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   const HashMap<std::string, user_op::OpArg> supported_op_type_name2output_arg(
-      {{"conv_data_grad", user_op::OpArg("dx", 0)},
-       {"normalization", user_op::OpArg("y", 0)},
+      {{"normalization", user_op::OpArg("y", 0)},
        {"dropout", user_op::OpArg("out", 0)},
        {"matmul", user_op::OpArg("out", 0)},
        {"layer_norm_grad", user_op::OpArg("dx", 0)},
        {"batch_matmul", user_op::OpArg("out", 0)},
        {"fused_bias_add_mask_scale", user_op::OpArg("out", 0)},
+       {"fused_matmul_bias", user_op::OpArg("out", 0)},
        {"broadcast_matmul", user_op::OpArg("out", 0)},
        {"broadcast_matmul_grad_b", user_op::OpArg("out", 0)}});
   HashSet<std::string> consumer_op_names;
@@ -126,7 +126,7 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
     // Make a new_add_to_op to fuse add_n into this op.
     if (JUST(job_builder->IsInMutOpTransaction(add_to_node->op().op_name()))) {
       OperatorConf& new_add_to_op_conf =
-          *JUST(job_builder->MutOpTransactionGet(add_to_node->op().op_name()));
+          JUST(job_builder->MutOpTransactionGet(add_to_node->op().op_name()));
       *(*(new_add_to_op_conf.mutable_user_conf()->mutable_input()))["_add_to_output"]
            .mutable_s()
            ->Add() = GenLogicalBlobName(*add_to_lbi);
@@ -149,8 +149,7 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
       // Make add_n op's consumer to consume the new_add_to_op
       for (const std::string& ibn : consumer->op().input_bns()) {
         if (consumer->op().BnInOp2Lbi(ibn) == out) {
-          OperatorConf& consumer_op_conf =
-              *JUST(job_builder->MutOpTransactionGet(consumer_op_name));
+          OperatorConf& consumer_op_conf = JUST(job_builder->MutOpTransactionGet(consumer_op_name));
           const auto& new_val = GenLogicalBlobName(*sum_lbi);
           const auto& old_val = ReplaceInputLbnInOpCustomizedConf(&consumer_op_conf, ibn, new_val);
           CHECK_EQ(GenLogicalBlobName(out), old_val);

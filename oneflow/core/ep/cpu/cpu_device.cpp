@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/mem_util.h"
 #include "oneflow/core/ep/cpu/cpu_device.h"
 #include "oneflow/core/ep/cpu/cpu_event.h"
 #include "oneflow/core/ep/cpu/cpu_stream.h"
@@ -42,15 +43,16 @@ Maybe<void> CpuDevice::Alloc(const AllocationOptions& options, void** ptr, size_
         this->device_manager()->registry()->GetDevice(options.GetPinnedDeviceType(),    // NOLINT
                                                       options.GetPinnedDeviceIndex());  // NOLINT
     CHECK_OR_RETURN(device);
-    return device->AllocPinned(options, ptr, size);
+    JUST(device->AllocPinned(options, ptr, size));
   } else {
-    *ptr = aligned_alloc(kMaxAlignmentRequirement, size);
+    *ptr = aligned_alloc(kMaxAlignmentRequirement, RoundUp(size, kMaxAlignmentRequirement));
     if (*ptr == nullptr) {
-      return Error::RuntimeError() << "allocate failed";
-    } else {
-      return Maybe<void>::Ok();
+      return Error::RuntimeError()
+             << "CPU can't allocate memory. Tried to allocate " << FormatMemSize(size);
     }
   }
+  memset(*ptr, 0, size);
+  return Maybe<void>::Ok();
 }
 
 void CpuDevice::Free(const AllocationOptions& options, void* ptr) {
@@ -66,10 +68,16 @@ void CpuDevice::Free(const AllocationOptions& options, void* ptr) {
 }
 
 Maybe<void> CpuDevice::AllocPinned(const AllocationOptions& options, void** ptr, size_t size) {
-  UNIMPLEMENTED_THEN_RETURN();
+  AllocationOptions new_options = options;
+  new_options.ClearPinnedDevice();
+  return Alloc(new_options, ptr, size);
 }
 
-void CpuDevice::FreePinned(const AllocationOptions& options, void* ptr) { UNIMPLEMENTED(); }
+void CpuDevice::FreePinned(const AllocationOptions& options, void* ptr) {
+  AllocationOptions new_options = options;
+  new_options.ClearPinnedDevice();
+  return Free(new_options, ptr);
+}
 
 }  // namespace ep
 

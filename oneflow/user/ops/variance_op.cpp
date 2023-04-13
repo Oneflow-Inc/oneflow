@@ -27,12 +27,13 @@ Maybe<void> VarOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const AxisVector reduce_axes_vec = {reduce_axes.begin(), reduce_axes.end()};
   const Shape& reduce_shape = CreateReducedShape(input_shape, reduce_axes_vec);
   const bool keepdim = ctx->Attr<bool>("keepdim");
-  Shape* output_shape = ctx->OutputShape("output", 0);
+  Shape output_shape;
   if (keepdim) {
-    *output_shape = reduce_shape;
+    output_shape = reduce_shape;
   } else {
-    *output_shape = reduce_shape.RemoveOnes(reduce_axes_vec);
+    output_shape = reduce_shape.RemoveOnes(reduce_axes_vec);
   }
+  ctx->SetOutputShape("output", 0, output_shape);
   return Maybe<void>::Ok();
 }
 
@@ -41,7 +42,7 @@ Maybe<void> VarOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> VarOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("output", 0) = ctx->InputDType("input", 0);
+  ctx->SetOutputDType("output", 0, ctx->InputDType("input", 0));
   return Maybe<void>::Ok();
 }
 

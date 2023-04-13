@@ -30,7 +30,7 @@ class BoxingCollector final {
 
   ~BoxingCollector() = default;
 
-  // A constructor with init, designed for uncustomized boxing collector
+  // A constructor with init, designed for non-customized boxing collector
   BoxingCollector(int32_t max_axis);
 
   // Set default Sbp list
@@ -66,7 +66,7 @@ class BoxingCollector final {
   void PrintBoxingTables();
   // Ask if the boxing algorithm accepts the current sbp combination
   // If is_customized is true and we can not find a middle node list with
-  // resonable cost, error occurs.
+  // reasonable cost, error occurs.
   // If compute_cost is true, then no error occur even if no suitable middle nodes paths found.
   // For different placements, we would return a diagonal node.
   // Before this diagonal node (< *diag_node_pos), we use the parallel description of the producer.
@@ -129,10 +129,19 @@ class BoxingCollector final {
                                             BoxingCollector* boxing_collector_producer,
                                             BoxingCollector* boxing_collector_consumer,
                                             const std::vector<std::vector<int32_t>>& diag_nodes);
+  // Ask for sbp combination for general basic communication
+  Maybe<void> AskSbpCombination4GeneralBasicCommunication(
+      const NdSbp& sbp_producer, const NdSbp& sbp_consumer, const BlobDesc& logical_blob_desc,
+      const ParallelDesc& producer_parallel_desc, const ParallelDesc& consumer_parallel_desc,
+      std::vector<NdSbp>& middle_sbps, int32_t* diag_node_pos);
+  // Ask for a all-split sbp which is closed to the original one
+  Maybe<void> AskCloseAllSplitSbp(const NdSbp& nd_sbp, const ParallelDesc& parallel_desc,
+                                  const BlobDesc& logical_blob_desc,
+                                  std::vector<NdSbp>& middle_sbps);
   // Stores all the possible SbpParallel.
-  HashMap<::oneflow::SbpParallel, int32_t> sbp_parallel_universe_;
+  HashMap<SbpParallel, int32_t> sbp_parallel_universe_;
   // Relationship between id and Sbp Parallel
-  std::vector<::oneflow::SbpParallel> id2sbp_parallel_;
+  std::vector<SbpParallel> id2sbp_parallel_;
   // minimum cost
   // minimum_copy_cost[producer][consumer]
   std::vector<std::vector<double>> minimum_copy_cost_;
@@ -142,18 +151,23 @@ class BoxingCollector final {
   // nodes that needs to be inserted
   std::vector<std::vector<std::vector<std::vector<int32_t>>>> middle_nodes_;
   // Stores all the possible NdSbp.
-  std::unordered_map<::oneflow::NdSbp, int32_t> nd_sbp_universe_;
+  std::unordered_map<NdSbp, int32_t> nd_sbp_universe_;
   // Relationship between id and Nd Sbp
   std::vector<NdSbp> nd_sbp_lists_;
-  // The diagonal middle node for differe placements
+  // The diagonal middle node for different placements
   std::vector<std::vector<std::vector<std::vector<int32_t>>>> diag_node_diff_placement_;
-  // The diagonal middle node for differe hierarchies in the same placement
+  // The diagonal middle node for different hierarchies in the same placement
   std::vector<std::vector<std::vector<std::vector<int32_t>>>> diag_node_diff_hierarchy_;
   // Id Map from 1d sbp to 2d sbp
   // For example: B -> (B, B), S0 -> (S0, S0)
   std::vector<int32_t> id_1d_2_nd_;
   // The sbp size in the combination table
   int32_t hierarchy_num_;
+  // How the boxing collector is initialized
+  int32_t init_type_ = -1;
+  // Enable general basic communication or not
+  const bool enable_general_basic_communication =
+      ParseBooleanFromEnv("ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION", false);
 };  // class BoxingCollector
 
 }  // namespace oneflow

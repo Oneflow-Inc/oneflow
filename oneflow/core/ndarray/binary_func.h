@@ -42,10 +42,12 @@ namespace oneflow {
 #define LOGICAL_REDUCE_BINARY_FUNC_NAME_SEQ (Any)(All)
 #define REDUCE_BINARY_FUNC_SEQ \
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, REDUCE_BINARY_FUNC_NAME_SEQ)
+#define REDUCE_COMPLEX_BINARY_FUNC_SEQ OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, (Sum))
 #define ARITHMETIC_REDUCE_BINARY_FUNC_SEQ \
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, ARITHMETIC_REDUCE_BINARY_FUNC_NAME_SEQ)
 #define LOGICAL_REDUCE_BINARY_FUNC_SEQ \
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, LOGICAL_REDUCE_BINARY_FUNC_NAME_SEQ)
+#define NANSUM_REDUCE_BINARY_FUNC_SEQ OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, (NanSum))
 
 #define NO_HALF_UTIL_FOUND         \
   printf("cuda arch must >= 530"); \
@@ -65,6 +67,20 @@ struct BinaryFuncTrait final {
       return func_struct<T>::Invoke(x, y);                                                    \
     }                                                                                         \
   }
+
+template<typename T>
+struct BinaryFuncNanSum final {
+  static OF_DEVICE_FUNC T Invoke(const T x, const T y) {
+#if defined(__CUDACC__)
+    if (isnan(x)) return isnan(y) ? T{0} : y;
+    return isnan(y) ? x : x + y;
+#else
+    if (std::isnan(x)) return std::isnan(y) ? T{0} : y;
+    return std::isnan(y) ? x : x + y;
+#endif
+  }
+};
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncNanSum);
 
 template<typename T>
 struct BinaryFuncAdd final {
@@ -259,6 +275,16 @@ struct BinaryFuncLE final {
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncLE);
 
 template<typename T>
+struct BinaryFuncIEN final {
+  // placeholder, no definition required, the type is only used to generate Op
+};
+
+template<typename T>
+struct BinaryFuncINN final {
+  // placeholder, no definition required, the type is only used to generate Op
+};
+
+template<typename T>
 struct BinaryFuncAND final {
   static OF_DEVICE_FUNC bool Invoke(const T x, const T y) { return x && y; }
 };
@@ -284,10 +310,36 @@ struct BinaryFuncXOR final {
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncXOR);
 
+template<typename T>
+struct BinaryFuncBitwiseAnd final {
+  static OF_DEVICE_FUNC T Invoke(const T x, const T y) { return x & y; }
+};
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncBitwiseAnd);
+
+template<typename T>
+struct BinaryFuncBitwiseOr final {
+  static OF_DEVICE_FUNC T Invoke(const T x, const T y) { return x | y; }
+};
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncBitwiseOr);
+
+template<typename T>
+struct BinaryFuncBitwiseXor final {
+  static OF_DEVICE_FUNC T Invoke(const T x, const T y) { return x ^ y; }
+};
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncBitwiseXor);
+
 #if defined(__CUDACC__)
 template<>
 struct BinaryFuncAdd<half> final {
   static __device__ __forceinline__ half Invoke(const half x, const half y) { return __hadd(x, y); }
+};
+
+template<>
+struct BinaryFuncNanSum<half> final {
+  static __device__ __forceinline__ half Invoke(const half x, const half y) {
+    if (isnan(__half2float(x))) return isnan(__half2float(y)) ? half(0.0) : y;
+    return isnan(__half2float(y)) ? __hadd(x, y) : x;
+  }
 };
 
 template<>
@@ -516,6 +568,7 @@ struct UnitOfBinaryFunc;
     static OF_DEVICE_FUNC T Val() { return get_val<T>(); }   \
   };
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncAdd, GetZeroVal);
+SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncNanSum, GetZeroVal);
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncSum, GetZeroVal);
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncMul, GetOneVal);
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncProd, GetOneVal);

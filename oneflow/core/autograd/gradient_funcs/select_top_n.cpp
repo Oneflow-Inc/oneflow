@@ -45,7 +45,7 @@ class SelectTopN : public OpExprGradFunction<SelectTopNCaptureState> {
 
   Maybe<void> Apply(const SelectTopNCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    CHECK_EQ_OR_RETURN(ctx->top_n, out_grads.size());
+    CHECK_EQ_OR_RETURN(ctx->top_n, out_grads.size());  // NOLINT(maybe-need-error-msg)
     for (int i = 0; i < ctx->top_n; ++i) {
       if (!ctx->requires_grad.at(i)) { continue; }
       in_grads->at(i) = out_grads.at(i);

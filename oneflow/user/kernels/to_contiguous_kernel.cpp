@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/user/kernels/to_contiguous_kernel.h"
-#include "oneflow/core/framework/stride.h"
+#include "oneflow/core/common/stride.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
 namespace oneflow {
@@ -85,12 +85,12 @@ class ToContiguousKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
-    const ShapeView& in_shape = in->shape();
-    CHECK_EQ(out->shape(), in_shape);
+    const ShapeView& in_shape = in->shape_view();
+    CHECK_EQ(out->shape_view(), in_shape);
     const DataType in_data_type = in->data_type();
     CHECK_EQ(out->data_type(), in_data_type);
 
-    const auto& in_stride = ctx->Attr<std::vector<int64_t>>("stride");
+    std::vector<int64_t> in_stride(in->stride().begin(), in->stride().end());
 
     const char* in_dptr = static_cast<const char*>(in->raw_dptr());
     char* out_dptr = static_cast<char*>(out->mut_raw_dptr());
@@ -100,21 +100,23 @@ class ToContiguousKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_TO_CONTIGUOUS_KERNEL(device_type, T)            \
-  REGISTER_USER_KERNEL("to_contiguous")                          \
-      .SetCreateFn<ToContiguousKernel<device_type, T>>()         \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device_type) \
-                       && (user_op::HobDataType("in", 0) == GetDataType<T>::value));
+#define REGISTER_TO_CONTIGUOUS_KERNEL(device_type, cpp_type, data_type) \
+  REGISTER_USER_KERNEL("to_contiguous")                                 \
+      .SetCreateFn<ToContiguousKernel<device_type, cpp_type>>()         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type)        \
+                       && (user_op::HobDataType("in", 0) == data_type));
 
-#define REGISTER_TO_CONTIGUOUS_CPU_KERNEL(T) REGISTER_TO_CONTIGUOUS_KERNEL(DeviceType::kCPU, T)
-#define REGISTER_TO_CONTIGUOUS_CUDA_KERNEL(T) REGISTER_TO_CONTIGUOUS_KERNEL(DeviceType::kCUDA, T)
+#define REGISTER_TO_CONTIGUOUS_CPU_KERNEL(cpp_type, data_type) \
+  REGISTER_TO_CONTIGUOUS_KERNEL(DeviceType::kCPU, cpp_type, data_type)
+#define REGISTER_TO_CONTIGUOUS_CUDA_KERNEL(cpp_type, data_type) \
+  REGISTER_TO_CONTIGUOUS_KERNEL(DeviceType::kCUDA, cpp_type, data_type)
 
 #define REGISTER_TO_CONTIGUOUS_KERNEL_FOR_CPU_TYPES \
-  OF_PP_FOR_EACH_TUPLE(REGISTER_TO_CONTIGUOUS_CPU_KERNEL, TO_CONTIGUOUS_TYPES)
+  OF_PP_FOR_EACH_TUPLE(REGISTER_TO_CONTIGUOUS_CPU_KERNEL, TO_CONTIGUOUS_CPU_TYPES)
 
 #define REGISTER_TO_CONTIGUOUS_KERNEL_FOR_CUDA_TYPES       \
   OF_PP_FOR_EACH_TUPLE(REGISTER_TO_CONTIGUOUS_CUDA_KERNEL, \
-                       TO_CONTIGUOUS_TYPES TO_CONTIGUOUS_CUDA_SPECIAL_TYPE)
+                       TO_CONTIGUOUS_COMMON_TYPES TO_CONTIGUOUS_CUDA_SPECIAL_TYPE)
 
 REGISTER_TO_CONTIGUOUS_KERNEL_FOR_CPU_TYPES
 #ifdef WITH_CUDA

@@ -17,14 +17,13 @@ import os
 import socket
 import traceback
 from contextlib import closing
+import warnings
 
 import oneflow._oneflow_internal
 import oneflow.core.control.ctrl_bootstrap_pb2 as ctrl_bootstrap_pb
 import oneflow.core.job.env_pb2 as env_pb
 import oneflow.core.job.resource_pb2 as resource_util
 import oneflow.framework.c_api_util as c_api_util
-import oneflow.framework.scope_util as scope_util
-import oneflow.framework.session_context as session_ctx
 
 
 def api_all_device_placement(device_type: str) -> oneflow._oneflow_internal.placement:
@@ -32,6 +31,9 @@ def api_all_device_placement(device_type: str) -> oneflow._oneflow_internal.plac
     oneflow.env.all_device_placement(device_type) -> oneflow.placement
 
     Returns a placement that contains all available devices.
+
+    Note:
+        It is recommended to use `oneflow.placement.all` instead of this function.
 
     Args:
         device_type (str): cuda or cpu
@@ -42,12 +44,12 @@ def api_all_device_placement(device_type: str) -> oneflow._oneflow_internal.plac
 
         # Runs on 4 ranks
         import oneflow as flow
-        
+
         p = flow.env.all_device_placement("cuda") # oneflow.placement(type="cuda", ranks=[0, 1, 2, 3])
         p = flow.env.all_device_placement("cpu") # oneflow.placement(type="cpu", ranks=[0, 1, 2, 3])
 
     """
-    return oneflow._oneflow_internal.AllDevicePlacement(device_type)
+    return oneflow.placement.all(device_type)
 
 
 def check_non_localhost_proxy_and_print_warning():
@@ -77,7 +79,7 @@ def create_env():
     CompleteEnvProto(default_env_proto)
     if default_env_proto.ctrl_bootstrap_conf.world_size > 1:
         check_non_localhost_proxy_and_print_warning()
-    return c_api_util.CreateEnv(default_env_proto)
+    return c_api_util.GetEnvContext(default_env_proto)
 
 
 def CompleteEnvProto(env_proto):
@@ -154,46 +156,65 @@ def _FindFreePort():
         return s.getsockname()[1]
 
 
-def HasAllMultiClientEnvVars():
-    env_var_names = ["MASTER_ADDR", "MASTER_PORT", "WORLD_SIZE", "RANK", "LOCAL_RANK"]
-    env_var_values = [os.getenv(x) for x in env_var_names]
-    has_no_env_vars = not any(env_var_values)
-    has_all_env_vars = all(env_var_values)
-    assert has_no_env_vars or has_all_env_vars, list(zip(env_var_names, env_var_values))
-    return has_all_env_vars
-
-
-def SetDefaultMultiClientEnvVars():
-    os.environ["MASTER_ADDR"] = "127.0.0.1"
-    os.environ["MASTER_PORT"] = str(_FindFreePort())
-    os.environ["WORLD_SIZE"] = "1"
-    os.environ["RANK"] = "0"
-    os.environ["LOCAL_RANK"] = "0"
+def CheckAndWarnAbnormalEnvVars():
+    env_var_names = ["MASTER_ADDR", "MASTER_PORT", "WORLD_SIZE", "RANK"]
+    env_var_without_value = [x for x in env_var_names if os.getenv(x) is None]
+    env_var_with_value = [x for x in env_var_names if os.getenv(x) is not None]
+    if len(env_var_with_value) != 0 and len(env_var_without_value) != 0:
+        warnings.warn(
+            f"Among four environment variables required for distributed training, only {', '.join('`{0}`'.format(x) for x in env_var_with_value)} are set, but {', '.join('`{0}`'.format(x) for x in env_var_without_value)} are not set."
+        )
 
 
 def _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto):
-    assert HasAllMultiClientEnvVars()
-
     def str2int(env_config):
-        assert env_config.isdigit()
         return int(env_config)
 
     bootstrap_conf = ctrl_bootstrap_pb.BootstrapConf()
     master_addr = ctrl_bootstrap_pb.Address()
-    master_addr.host = os.getenv("MASTER_ADDR")
-    master_addr.port = str2int(os.getenv("MASTER_PORT"))
+    master_addr.host = os.getenv("MASTER_ADDR", "127.0.0.1")
+    master_addr.port = str2int(os.getenv("MASTER_PORT", _FindFreePort()))
     bootstrap_conf.master_addr.CopyFrom(master_addr)
-    bootstrap_conf.world_size = str2int(os.getenv("WORLD_SIZE"))
-    bootstrap_conf.rank = str2int(os.getenv("RANK"))
+    bootstrap_conf.world_size = str2int(os.getenv("WORLD_SIZE", 1))
+    bootstrap_conf.rank = str2int(os.getenv("RANK", 0))
     env_proto.ctrl_bootstrap_conf.CopyFrom(bootstrap_conf)
     cpp_logging_conf = env_pb.CppLoggingConf()
     if os.getenv("GLOG_log_dir"):
         cpp_logging_conf.log_dir = os.getenv("GLOG_log_dir")
     if os.getenv("GLOG_logtostderr"):
-        cpp_logging_conf.logtostderr = int(os.getenv("GLOG_logtostderr"))
+        cpp_logging_conf.logtostderr = str2int(os.getenv("GLOG_logtostderr"))
     if os.getenv("GLOG_logbuflevel"):
-        cpp_logging_conf.logbuflevel = os.getenv("GLOG_logbuflevel")
+        cpp_logging_conf.logbuflevel = str2int(os.getenv("GLOG_logbuflevel"))
+    if os.getenv("GLOG_minloglevel"):
+        cpp_logging_conf.minloglevel = str2int(os.getenv("GLOG_minloglevel"))
     env_proto.cpp_logging_conf.CopyFrom(cpp_logging_conf)
+
+
+class EnvHolder(object):
+    def __init__(self):
+        CheckAndWarnAbnormalEnvVars()
+        self._env_cxt = create_env()
+        self._shutting_down = [False]
+
+    def is_shutting_down(self):
+        """
+        Whether the interpreter is currently shutting down.
+        For use in finalizers, __del__ methods, and similar; it is advised
+        to early bind this function rather than look it up when calling it,
+        since at shutdown module globals may be cleared.
+
+        Please refer to: https://github.com/Oneflow-Inc/OneTeam/issues/1219#issuecomment-1092370402
+        This solution is obtained from cupy code: https://github.com/cupy/cupy/pull/2809
+        """
+        return self._shutting_down[0]
+
+    def switch_to_shutting_down(self, is_normal_exit=True):
+        self._shutting_down[0] = True
+        self._env_cxt.SwitchToShuttingDownPhase(is_normal_exit)
+
+
+def GetEnv():
+    return EnvHolder()
 
 
 device_tag2default_parallel_conf = {}

@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_EMBEDDING_HASH_FUNCTION_H_
 
 #include <stdint.h>
+#include "oneflow/core/common/data_type.h"
 
 namespace oneflow {
 
@@ -38,14 +39,14 @@ static const uint64_t PRIME64_5 =
 
 #define XXH_rotl64(x, r) (((x) << (r)) | ((x) >> (64 - (r))))
 
-__device__ __host__ __forceinline__ uint64_t XXH64_round(uint64_t acc, uint64_t input) {
+OF_DEVICE_FUNC uint64_t XXH64_round(uint64_t acc, uint64_t input) {
   acc += input * PRIME64_2;
   acc = XXH_rotl64(acc, 31);
   acc *= PRIME64_1;
   return acc;
 }
 
-__device__ __host__ __forceinline__ uint64_t xxh64_uint64(uint64_t v, uint64_t seed) {
+OF_DEVICE_FUNC uint64_t xxh64_uint64(uint64_t v, uint64_t seed) {
   uint64_t acc = seed + PRIME64_5;
   acc += sizeof(uint64_t);
   acc = acc ^ XXH64_round(0, v);
@@ -68,33 +69,30 @@ static const size_t kLruCacheHashSeed = 5;
 }  // namespace
 
 struct ShardingHash {
-  __device__ __host__ __forceinline__ size_t operator()(uint64_t v) {
-    return xxh64_uint64(v, kShardingHashSeed);
+  OF_DEVICE_FUNC size_t operator()(uint64_t v) { return xxh64_uint64(v, kShardingHashSeed); }
+  OF_DEVICE_FUNC size_t operator()(uint32_t v) { return xxh64_uint64(v, kShardingHashSeed); }
+  OF_DEVICE_FUNC size_t operator()(int32_t v) {
+    return xxh64_uint64(static_cast<uint32_t>(v), kShardingHashSeed);
+  }
+  OF_DEVICE_FUNC size_t operator()(int64_t v) {
+    return xxh64_uint64(static_cast<uint64_t>(v), kShardingHashSeed);
   }
 };
 
 struct LocalUniqueHash {
-  __device__ __host__ __forceinline__ size_t operator()(uint64_t v) {
-    return xxh64_uint64(v, kLocalUniqueHashSeed);
-  }
+  OF_DEVICE_FUNC size_t operator()(uint64_t v) { return xxh64_uint64(v, kLocalUniqueHashSeed); }
 };
 
 struct GlobalUniqueHash {
-  __device__ __host__ __forceinline__ size_t operator()(uint64_t v) {
-    return xxh64_uint64(v, kGlobalUniqueHashSeed);
-  }
+  OF_DEVICE_FUNC size_t operator()(uint64_t v) { return xxh64_uint64(v, kGlobalUniqueHashSeed); }
 };
 
 struct FullCacheHash {
-  __device__ __host__ __forceinline__ size_t operator()(uint64_t v) {
-    return xxh64_uint64(v, kFullCacheHashSeed);
-  }
+  OF_DEVICE_FUNC size_t operator()(uint64_t v) { return xxh64_uint64(v, kFullCacheHashSeed); }
 };
 
 struct LruCacheHash {
-  __device__ __host__ __forceinline__ size_t operator()(uint64_t v) {
-    return xxh64_uint64(v, kLruCacheHashSeed);
-  }
+  OF_DEVICE_FUNC size_t operator()(uint64_t v) { return xxh64_uint64(v, kLruCacheHashSeed); }
 };
 
 }  // namespace embedding

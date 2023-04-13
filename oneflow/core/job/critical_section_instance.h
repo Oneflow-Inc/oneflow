@@ -16,9 +16,16 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_JOB_CRITICAL_SECTION_INSTANCE_H_
 #define ONEFLOW_CORE_JOB_CRITICAL_SECTION_INSTANCE_H_
 
-#include "oneflow/core/register/ofblob.h"
+#include <string>
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
+
+class Blob;
+
+namespace ep {
+class Stream;
+}
 
 class CriticalSectionInstance {
  public:
@@ -28,7 +35,8 @@ class CriticalSectionInstance {
 
   virtual ~CriticalSectionInstance() = default;
 
-  virtual void AccessBlobByOpName(uint64_t ofblob_ptr, const std::string& op_name) const {
+  virtual void AccessBlobByOpName(ep::Stream* stream, Blob* blob,
+                                  const std::string& op_name) const {
     UNIMPLEMENTED();
   }
   virtual void Finish() const { UNIMPLEMENTED(); }

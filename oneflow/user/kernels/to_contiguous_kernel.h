@@ -67,7 +67,7 @@ class ToContiguousUtilBase : public ToContiguousUtilParam {
   int64_t block_size = 1;
   int64_t contiguous_dim = 0;
 
-  StrideVector out_stride;
+  DimVector out_stride;
 
   int64_t in_offset = 0;
   int64_t out_offset = 0;
@@ -83,14 +83,29 @@ struct ToContiguousUtil : ToContiguousUtilBase {
 
 }  // namespace oneflow
 
-#define TO_CONTIGUOUS_TYPES     \
-  OF_PP_MAKE_TUPLE_SEQ(bool)    \
-  OF_PP_MAKE_TUPLE_SEQ(float)   \
-  OF_PP_MAKE_TUPLE_SEQ(double)  \
-  OF_PP_MAKE_TUPLE_SEQ(int32_t) \
-  OF_PP_MAKE_TUPLE_SEQ(int64_t) \
-  OF_PP_MAKE_TUPLE_SEQ(int8_t)  \
-  OF_PP_MAKE_TUPLE_SEQ(uint8_t)
-#define TO_CONTIGUOUS_CUDA_SPECIAL_TYPE OF_PP_MAKE_TUPLE_SEQ(float16)
+#define TO_CONTIGUOUS_COMMON_TYPES                  \
+  OF_PP_MAKE_TUPLE_SEQ(bool, DataType::kBool)       \
+  OF_PP_MAKE_TUPLE_SEQ(char, DataType::kChar)       \
+  OF_PP_MAKE_TUPLE_SEQ(int8_t, DataType::kInt8)     \
+  OF_PP_MAKE_TUPLE_SEQ(uint8_t, DataType::kUInt8)   \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)   \
+  OF_PP_MAKE_TUPLE_SEQ(uint32_t, DataType::kUInt32) \
+  OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)   \
+  OF_PP_MAKE_TUPLE_SEQ(uint64_t, DataType::kUInt64) \
+  OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat)     \
+  OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
 
+#define TO_CONTIGUOUS_CPU_TYPES                                                \
+  TO_CONTIGUOUS_COMMON_TYPES OF_PP_MAKE_TUPLE_SEQ(float16, DataType::kFloat16) \
+      OF_PP_MAKE_TUPLE_SEQ(bfloat16, DataType::kBFloat16)
+
+#ifdef WITH_CUDA
+#if CUDA_VERSION >= 11000
+#define TO_CONTIGUOUS_CUDA_SPECIAL_TYPE          \
+  OF_PP_MAKE_TUPLE_SEQ(half, DataType::kFloat16) \
+  OF_PP_MAKE_TUPLE_SEQ(nv_bfloat16, DataType::kBFloat16)
+#else
+#define TO_CONTIGUOUS_CUDA_SPECIAL_TYPE OF_PP_MAKE_TUPLE_SEQ(half, DataType::kFloat16)
+#endif  // CUDA_VERSION >= 11000
+#endif  // WITH_CUDA
 #endif  // ONEFLOW_USER_KERNELS_TO_CONTIGUOUS_KERNEL_H_

@@ -19,9 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> LeakyReluOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const Shape& x_shape = ctx->InputShape("x", 0);
-  Shape* y_shape = ctx->OutputShape("y", 0);
-  *y_shape = x_shape;
+  ctx->SetOutputShape("y", 0, ctx->InputShape("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -38,16 +36,15 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> LeakyReluOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> LeakyReluGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
   const Shape& dy_shape = ctx->InputShape("dy", 0);
-  Shape* dx_shape = ctx->OutputShape("dx", 0);
   CHECK_OR_RETURN(dy_shape == x_shape);
-  *dx_shape = dy_shape;
+  ctx->SetOutputShape("dx", 0, dy_shape);
   return Maybe<void>::Ok();
 }
 
@@ -73,26 +70,11 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> LeakyReluGradOp::InferDataType(user_op::InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(ctx->InputDType("x", 0), ctx->InputDType("dy", 0));
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("x", 0), ctx->InputDType("dy", 0))
+      << "InferDataType Failed. Expected " << DataType_Name(ctx->InputDType("dy", 0))
+      << ", but got " << DataType_Name(ctx->InputDType("x", 0));
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("dy", 0));
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("leaky_relu")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op = builder.Op("leaky_relu_grad")
-                                                 .Input("x", op.input("x", 0))
-                                                 .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-                                                 .Output("dx")
-                                                 .Attr("alpha", op.attr<float>("alpha"))
-                                                 .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

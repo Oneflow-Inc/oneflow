@@ -18,7 +18,11 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/job/sbp_parallel.pb.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/vm/symbol_storage.h"
+#include "oneflow/core/framework/scope_util.h"
 
 namespace oneflow {
 
@@ -169,6 +173,7 @@ Maybe<void> JobBuilder::AddOp(const ParallelConf& parallel_conf, const OperatorC
   OperatorConf* mut_op_conf = job_->mutable_net()->add_op();
   *mut_op_conf = op_conf;
   CHECK_OR_RETURN(op_name2op_conf_.emplace(op_conf.name(), mut_op_conf).second);
+  AddOpToModuleConf(op_conf);
   AddOpNamesToPlacementGroup({op_conf.name()}, parallel_conf);
   return Maybe<void>::Ok();
 }
@@ -184,8 +189,33 @@ void JobBuilder::AddOps(const ParallelConf& parallel_conf,
     *mut_op_conf = op_conf;
     CHECK(op_name2op_conf_.emplace(op_conf.name(), mut_op_conf).second);
     op_names.emplace_back(op_conf.name());
+    AddOpToModuleConf(op_conf);
   }
   AddOpNamesToPlacementGroup(op_names, parallel_conf);
+}
+
+void JobBuilder::AddOpToModuleConf(const OperatorConf& op_conf) {
+  // set up the module config
+  if (Singleton<symbol::Storage<Scope>>::Get()->Has(op_conf.scope_symbol_id())) {
+    const auto& scope = Singleton<symbol::Storage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
+    if (scope.scope_proto().has_module_name()) {
+      const auto& module_name = scope.scope_proto().module_name();
+      auto* module_name2module_conf = job_->mutable_module_name2module_conf();
+      if (!(*module_name2module_conf)[module_name].has_name()) {
+        (*module_name2module_conf)[module_name].set_name(scope.scope_proto().module_name());
+      }
+
+      *((*module_name2module_conf)[module_name].add_ops()) = op_conf.name();
+      return;
+    }
+  }
+  const auto& module_name = job_->job_conf().job_name();
+  auto* module_name2module_conf = job_->mutable_module_name2module_conf();
+  if (!(*module_name2module_conf)[module_name].has_name()) {
+    (*module_name2module_conf)[module_name].set_name(module_name);
+  }
+
+  *((*module_name2module_conf)[module_name].add_ops()) = op_conf.name();
 }
 
 void JobBuilder::AddOpNamesToPlacementGroup(const std::vector<std::string>& op_names,
@@ -228,6 +258,21 @@ void JobBuilder::RemoveOpByName(const std::unordered_set<std::string>& removing_
   job_->mutable_net()->clear_op();
   for (const OperatorConf& op_conf : net.op()) {
     if (removing_names.count(op_conf.name()) == 0) { *(job_->mutable_net()->add_op()) = op_conf; }
+  }
+  // Update module conf
+  auto module_confs_map = job_->module_name2module_conf();
+  job_->clear_module_name2module_conf();
+  for (const auto& module_conf_pair : module_confs_map) {
+    const auto& module_name = module_conf_pair.first;
+    auto* module_name2module_conf = job_->mutable_module_name2module_conf();
+    if (!(*module_name2module_conf)[module_name].has_name()) {
+      (*module_name2module_conf)[module_name].set_name(module_name);
+    }
+    for (const auto& op_name : module_conf_pair.second.ops()) {
+      if (removing_names.count(op_name) == 0) {
+        *((*module_name2module_conf)[module_name].add_ops()) = op_name;
+      }
+    }
   }
   // Update placement
   auto placement_group = job_->placement().placement_group();
@@ -299,8 +344,8 @@ Maybe<bool> JobBuilder::IsInMutOpTransaction(const std::string& op_name) const {
   return find_iter != mut_op_transaction_name2op_conf_.end();
 }
 
-Maybe<OperatorConf*> JobBuilder::MutOpTransactionGet(const std::string& op_name) {
-  return JUST(MapAt(&mut_op_transaction_name2op_conf_, op_name));
+Maybe<OperatorConf&> JobBuilder::MutOpTransactionGet(const std::string& op_name) {
+  return JUST(MapAt(mut_op_transaction_name2op_conf_, op_name));
 }
 
 Maybe<void> JobBuilder::MutOpTransactionMut(const OperatorConf& op_conf) {

@@ -19,7 +19,6 @@ limitations under the License.
 #include <string>
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/operator/op_conf.cfg.h"
 
 namespace oneflow {
 
@@ -32,13 +31,13 @@ class OperatorConfSymbol final {
   ~OperatorConfSymbol() = default;
 
   const OperatorConf& op_conf() const { return op_conf_; }
+  const OperatorConf& data() const { return op_conf_; }
   const Optional<int64_t>& symbol_id() const { return symbol_id_; }
-  std::shared_ptr<cfg::OperatorConf> data() const { return data_; }
 
  private:
   Optional<int64_t> symbol_id_;
   OperatorConf op_conf_;
-  std::shared_ptr<cfg::OperatorConf> data_;
+  std::shared_ptr<OperatorConf> data_;
 };
 
 }  // namespace oneflow

@@ -84,11 +84,11 @@ class CombinedMarginLossCpuKernel final : public user_op::OpKernel {
     if (cache != nullptr) {
       auto* kernel_cache = dynamic_cast<const CombinedMarginLossOpKernelCache*>(cache);
       CHECK_NOTNULL(kernel_cache);
-      CHECK_EQ(x->shape().Count(1), kernel_cache->upper() - kernel_cache->lower());
+      CHECK_EQ(x->shape_view().Count(1), kernel_cache->upper() - kernel_cache->lower());
       lower_bound = kernel_cache->lower();
     }
-    const int64_t num_classes = x->shape().Count(1);
-    FOR_RANGE(int32_t, i, 0, x->shape().elem_cnt()) {
+    const int64_t num_classes = x->shape_view().Count(1);
+    FOR_RANGE(int32_t, i, 0, x->shape_view().elem_cnt()) {
       const int32_t row_id = i / num_classes;
       const int32_t col_id = i - row_id * num_classes;
       const T in_data = x_ptr[i];
@@ -144,12 +144,12 @@ class CombinedMarginLossGradCpuKernel final : public user_op::OpKernel {
     if (cache != nullptr) {
       auto* kernel_cache = dynamic_cast<const CombinedMarginLossOpKernelCache*>(cache);
       CHECK_NOTNULL(kernel_cache);
-      CHECK_EQ(dy->shape().Count(1), kernel_cache->upper() - kernel_cache->lower());
+      CHECK_EQ(dy->shape_view().Count(1), kernel_cache->upper() - kernel_cache->lower());
       lower_bound = kernel_cache->lower();
     }
 
-    const int64_t num_classes = dy->shape().Count(1);
-    FOR_RANGE(int32_t, i, 0, dy->shape().elem_cnt()) {
+    const int64_t num_classes = dy->shape_view().Count(1);
+    FOR_RANGE(int32_t, i, 0, dy->shape_view().elem_cnt()) {
       const int32_t row_id = i / num_classes;
       const int32_t col_id = i - row_id * num_classes;
       K label = label_ptr[row_id] - lower_bound;

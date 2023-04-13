@@ -85,17 +85,15 @@ namespace std {
 template<>
 struct hash<oneflow::BoxingInterpreterStatus> {
   size_t operator()(const oneflow::BoxingInterpreterStatus& status) const {
+    using namespace oneflow;
     size_t ret = 0;
-    for (const auto& boxing_name : *status.sorted_boxing_names()) {
-      ret ^= std::hash<string>()(boxing_name);
-    }
-    const auto& placed_nd_sbp_hash = std::hash<oneflow::PlacedNdSbp>();
-    ret ^= placed_nd_sbp_hash(*status.src_placed_nd_sbp());
+    for (const auto& boxing_name : *status.sorted_boxing_names()) { AddHash(&ret, boxing_name); }
+    AddHash(&ret, *status.src_placed_nd_sbp());
     for (const auto& mid_placed_nd_sbp : *status.mid_placed_nd_sbp()) {
-      ret ^= placed_nd_sbp_hash(*mid_placed_nd_sbp);
+      AddHash(&ret, *mid_placed_nd_sbp);
     }
-    ret ^= placed_nd_sbp_hash(*status.dst_placed_nd_sbp());
-    return hash<size_t>()(ret);
+    AddHash(&ret, *status.dst_placed_nd_sbp());
+    return ret;
   }
 };
 

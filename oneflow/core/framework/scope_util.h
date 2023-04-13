@@ -23,6 +23,9 @@ namespace oneflow {
 
 Maybe<Scope> MakeScope(const JobConfigProto& config_proto, const Device& device);
 
+Maybe<Scope> MakeInitialScope(const JobConfigProto& job_conf, Symbol<ParallelDesc> placement,
+                              bool is_local);
+
 Maybe<Scope> GetCurrentScope();
 
 Maybe<void> InitThreadLocalScopeStack(const std::shared_ptr<Scope>& scope);
@@ -30,6 +33,19 @@ Maybe<void> InitThreadLocalScopeStack(const std::shared_ptr<Scope>& scope);
 Maybe<void> ThreadLocalScopeStackPush(const std::shared_ptr<Scope>& scope);
 
 Maybe<void> ThreadLocalScopeStackPop();
+
+class BackwardPassScopeGuard {
+ public:
+  BackwardPassScopeGuard();
+  explicit BackwardPassScopeGuard(const std::shared_ptr<Scope>& scope);
+  ~BackwardPassScopeGuard();
+
+ private:
+  std::shared_ptr<Scope> backward_pass_scope_;
+};
+
+Maybe<Scope> FindOrCreateBackwardPassScope(const std::shared_ptr<Scope>& scope);
+void ClearAllBackwardPassScope();
 
 }  // namespace oneflow
 

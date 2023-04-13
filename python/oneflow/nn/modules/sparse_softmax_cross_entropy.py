@@ -65,7 +65,7 @@ def sparse_softmax_cross_entropy(labels, logits):
         ...     labels=labels, logits=logits
         ... )
         >>> output
-        tensor([0.2975, 1.1448, -0.0000], dtype=oneflow.float32)
+        tensor([ 2.9751e-01,  1.1448e+00, -1.4305e-06], dtype=oneflow.float32)
     """
     return flow._C.sparse_softmax_cross_entropy(logits, labels)
 

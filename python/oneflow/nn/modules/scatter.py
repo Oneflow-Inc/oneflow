@@ -16,12 +16,12 @@ limitations under the License.
 
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 
 __all__ = ["scatter", "scatter_add", "scatter_nd", "tensor_scatter_nd_update"]
 
 
-def scatter(input, dim, index, src):
+def scatter(input, dim, index, src, *, reduce=None):
     r"""This operator writes the elements specified by `index` along with the axis 
     `dim` from the `src` into the `input`.
 
@@ -35,14 +35,39 @@ def scatter(input, dim, index, src):
 
     input, index and src (if it is a Tensor) should all have the same number of dimensions. 
     It is also required that index.shape(d) <= src.shape(d) for all dimensions d, 
-    and that index.shape(d) <= self.shape(d) for all dimensions d != dim.
+    and that index.shape(d) <= input.shape(d) for all dimensions d != dim.
     Note that index and src do not broadcast.
+
+    .. warning::
+        When indices are not unique, the behavior is non-deterministic (one of the values from src will be picked arbitrarily) 
+        and the gradient will be incorrect (it will be propagated to all locations in the source that correspond to the same index)!
+    
+    .. note::
+        The backward pass is implemented only for ``src.shape == index.shape``.
+    
+    Additionally accepts an optional ``reduce`` argument that allows specification of an optional reduction operation, 
+    which is applied to all values in the tensor ``src`` into ``input`` at the indicies specified in the ``index``. 
+    For each value in ``src``, the reduction operation is applied to an index in ``input`` which is specified by its index in ``src`` for ``dimension != dim`` 
+    and by the corresponding value in ``index`` for ``dimension = dim``.
+
+    Given a 3-D tensor and reduction using the multiplication operation, input is updated as:
+
+    .. code-block:: python
+
+        input[index[i][j][k]][j][k] *= src[i][j][k]  # if dim == 0
+        input[i][index[i][j][k]][k] *= src[i][j][k]  # if dim == 1
+        input[i][j][index[i][j][k]] *= src[i][j][k]  # if dim == 2
+
+    Reducing with the addition operation is the same as using :func:`oneflow.scatter_add()`.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.Tensor.scatter\_.html.
 
     Args:
         input (Tensor): The input blob.
         dim (int): The axis along which to index
         index (Tensor): The index blob of elements to scatter. 
         src (Tensor or float): The source blob whose elements will be scatterd and updated to output.
+        reduce (str, optional): Reduction operation to apply, can be either ``add`` or ``multiply``.
 
     Returns:
         Tensor: The scatterd Tensor. 
@@ -64,8 +89,7 @@ def scatter(input, dim, index, src):
                 [ 2.,  2.,  2.,  2.,  2.]], dtype=oneflow.float32)
 
     """
-
-    return flow._C.scatter(input, dim, index, src)
+    return flow._C.scatter(input, dim, index, src, reduce=reduce)
 
 
 def scatter_add(input, dim, index, src):

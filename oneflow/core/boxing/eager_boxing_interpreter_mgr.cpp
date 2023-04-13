@@ -32,22 +32,27 @@ Maybe<bool> IgnoringDeviceTypeEqual(Symbol<ParallelDesc> lhs, Symbol<ParallelDes
 namespace {
 
 Maybe<BoxingExprIf> OptionalCudaCopy(const std::shared_ptr<BoxingExprIf>& core_boxing_expr) {
-  return JUST(BoxingExpr(
-      JUST(ReplaceInDeviceType(DeviceType::kCUDA)), JUST(OptionalBoxing("cuda-copy-h2d")),
-      JUST(BoxingExpr(JUST(ReplaceOutDeviceType(DeviceType::kCUDA)), core_boxing_expr,
-                      JUST(OptionalBoxing("cuda-copy-d2h"))))));
+  return JUST(BoxingExpr(JUST(ReplaceInDeviceType(DeviceType::kCUDA)),
+                         JUST(OptionalBoxing("copy-h2d")),
+                         JUST(BoxingExpr(JUST(ReplaceOutDeviceType(DeviceType::kCUDA)),
+                                         core_boxing_expr, JUST(OptionalBoxing("copy-d2h"))))));
+}
+
+Maybe<BoxingExprIf> OptionalCpuCopy(const std::shared_ptr<BoxingExprIf>& core_boxing_expr) {
+  return JUST(BoxingExpr(JUST(ReplaceInDeviceType(DeviceType::kCPU)),
+                         JUST(OptionalBoxing("copy-d2h")),
+                         JUST(BoxingExpr(JUST(ReplaceOutDeviceType(DeviceType::kCPU)),
+                                         core_boxing_expr, JUST(OptionalBoxing("copy-h2d"))))));
 }
 
 Maybe<BoxingExprIf> SymmetricOneDimSxToBBoxingExpr() {
-  return JUST(BoxingExpr(JUST(InPlacementAndSplit(0)),
-                         JUST(OptionalBoxing("nccl-s-to-s")) | JUST(OptionalBoxing("ccl-s-to-s")),
-                         JUST(BoxingExpr("nccl-s-to-b")) | JUST(BoxingExpr("ccl-s-to-b"))));
+  return JUST(BoxingExpr(JUST(InPlacementAndSplit(0)), JUST(OptionalBoxing("ccl-s-to-s")),
+                         JUST(BoxingExpr("ccl-s-to-b"))));
 }
 
 Maybe<BoxingExprIf> SymmetricOneDimPToSxBoxingExpr() {
-  return JUST(BoxingExpr(JUST(OutPlacementAndSplit(0)),
-                         JUST(BoxingExpr("nccl-p-to-s")) | JUST(BoxingExpr("ccl-p-to-s")),
-                         JUST(OptionalBoxing("nccl-s-to-s")) | JUST(OptionalBoxing("ccl-s-to-s"))));
+  return JUST(BoxingExpr(JUST(OutPlacementAndSplit(0)), JUST(BoxingExpr("ccl-p-to-s")),
+                         JUST(OptionalBoxing("ccl-s-to-s"))));
 }
 
 Maybe<BoxingExprIf> SymmetricCyclicNDimToNDimBoxingExpr() {
@@ -77,26 +82,28 @@ Maybe<BoxingExprIf> SymmetricNDimToOneDimBoxingExpr() {
 
 Maybe<BoxingExprIf> NToOneBoxingExpr() {
   return JUST(BoxingExpr(JUST(InPlacementAndBroadcast()),
-                         JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("ccl-p-to-b"))
+                         JUST(BoxingExpr("identity")) | JUST(BoxingExpr("ccl-p-to-b"))
                              | JUST(SymmetricOneDimSxToBBoxingExpr())
-                             | JUST(SymmetricNDimToNDimBoxingExpr()) | JUST(BoxingExpr("identity")),
+                             | JUST(BoxingExpr("naive-p-to-b")) | JUST(BoxingExpr("naive-s-to-b"))
+                             | JUST(SymmetricNDimToNDimBoxingExpr())
+                             | JUST(BoxingExpr("generic-symmetric-nd-sbp-to-nd-sbp")),
                          JUST(BoxingExpr("naive-b-to-1"))));
 }
 
 Maybe<BoxingExprIf> OneToNBoxingExpr() {
   return JUST(BoxingExpr(JUST(OutPlacementAndPartialSum()), JUST(BoxingExpr("naive-1-to-p")),
-                         JUST(BoxingExpr("identity")) | JUST(BoxingExpr("nccl-p-to-b"))
-                             | JUST(BoxingExpr("ccl-p-to-b"))
+                         JUST(BoxingExpr("identity")) | JUST(BoxingExpr("ccl-p-to-b"))
                              | JUST(SymmetricOneDimPToSxBoxingExpr())
-                             | JUST(SymmetricNDimToNDimBoxingExpr())));
+                             | JUST(BoxingExpr("naive-p-to-b")) | JUST(BoxingExpr("naive-p-to-s"))
+                             | JUST(SymmetricNDimToNDimBoxingExpr())
+                             | JUST(BoxingExpr("generic-symmetric-nd-sbp-to-nd-sbp"))));
 }
 
 Maybe<BoxingExprIf> SymmetricOneDimXToBBoxingExpr() {
-  return JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("ccl-p-to-b"))
+  return JUST(BoxingExpr("ccl-p-to-b"))
          | JUST(BoxingExpr(JUST(InPlacementAndSplit(0)),
-                           JUST(BoxingExpr("identity")) | JUST(BoxingExpr("nccl-s-to-s"))
-                               | JUST(BoxingExpr("ccl-s-to-s")),
-                           JUST(BoxingExpr("nccl-s-to-b")) | JUST(BoxingExpr("ccl-s-to-b"))));
+                           JUST(BoxingExpr("identity")) | JUST(BoxingExpr("ccl-s-to-s")),
+                           JUST(BoxingExpr("ccl-s-to-b"))));
 }
 
 Maybe<BoxingExprIf> ASymmetricOneDimXToBBoxingExpr() {
@@ -125,11 +132,9 @@ Maybe<BoxingExprIf> GenericBoxingExpr() {
 Maybe<BoxingExprIf> RawMainBoxingExpr() {
   // clang-format off
   const auto& core = JUST(BoxingExpr("identity"))
-                     | JUST(BoxingExpr("cuda-copy-h2d"))
-                     | JUST(BoxingExpr("cuda-copy-d2h"))
-                     | JUST(BoxingExpr("nccl-p-to-b"))
+                     | JUST(BoxingExpr("copy-h2d"))
+                     | JUST(BoxingExpr("copy-d2h"))
                      | JUST(BoxingExpr("ccl-p-to-b"))
-                     | JUST(BoxingExpr("nccl-s-to-s"))
                      | JUST(BoxingExpr("ccl-s-to-s"))
                      | JUST(SymmetricOneDimSxToBBoxingExpr())
                      | JUST(SymmetricOneDimPToSxBoxingExpr())
@@ -149,11 +154,12 @@ Maybe<BoxingExprIf> RawMainBoxingExpr() {
                      | JUST(BoxingExpr("naive-s-to-p"))
                      | JUST(BoxingExpr("nd-sbp-dim-reduce"))
                      | JUST(SymmetricNDimToNDimBoxingExpr())
+                     | JUST(BoxingExpr("generic-symmetric-nd-sbp-to-nd-sbp"))
                      | JUST(SymmetricOneDimToNDimBoxingExpr())
                      | JUST(SymmetricNDimToOneDimBoxingExpr())
                      | JUST(GenericBoxingExpr());
   // clang-format on
-  return core | JUST(OptionalCudaCopy(core));
+  return core | JUST(OptionalCudaCopy(core)) | JUST(OptionalCpuCopy(core));
 }
 
 }  // namespace
@@ -175,8 +181,7 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<NdSbp> in_nd_sbp,
         new NaiveEagerBoxingInterpreter(boxing_func, JUST(status)));
   }
 
-  UNIMPLEMENTED_THEN_RETURN() << Error::BoxingNotSupportedError()
-                              << "consistent-to-consistent not supported"
+  UNIMPLEMENTED_THEN_RETURN() << Error::RuntimeError() << "global-to-global not supported"
                               << ". from_nd_sbp: " << NdSbpToString(in_nd_sbp)
                               << ", to_nd_sbp: " << NdSbpToString(out_nd_sbp)
                               << ", from_placement: " << *JUST(PlacementToString(in_parallel_desc))
@@ -195,6 +200,7 @@ Maybe<EagerBoxingInterpreter> EagerBoxingInterpreterManager::GetEagerBoxingInter
                                          logical_shape));
 }
 
-COMMAND(Global<EagerBoxingInterpreterManager>::SetAllocated(new EagerBoxingInterpreterManager()));
+COMMAND(
+    Singleton<EagerBoxingInterpreterManager>::SetAllocated(new EagerBoxingInterpreterManager()));
 
 }  // namespace oneflow

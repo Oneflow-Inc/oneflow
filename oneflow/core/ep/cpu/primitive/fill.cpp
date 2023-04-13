@@ -34,6 +34,11 @@ float16 GetValue<float16>(Scalar value) {
   return static_cast<float16>(GetValue<float>(value));
 }
 
+template<>
+bfloat16 GetValue<bfloat16>(Scalar value) {
+  return static_cast<bfloat16>(GetValue<float>(value));
+}
+
 template<typename T>
 class FillImpl : public Fill {
  public:
@@ -61,7 +66,8 @@ class FillFactoryImpl : public FillFactory {
 #define MAKE_NEW_FILL_ENTRY(type_cpp, type_proto) {type_proto, NewFill<type_cpp>},
 
     static const std::map<DataType, std::function<std::unique_ptr<Fill>()>> new_fill_handle{
-        OF_PP_FOR_EACH_TUPLE(MAKE_NEW_FILL_ENTRY, CPU_PRIMITIVE_ALL_TYPE_SEQ)};
+        OF_PP_FOR_EACH_TUPLE(MAKE_NEW_FILL_ENTRY,
+                             CPU_PRIMITIVE_ALL_TYPE_SEQ CPU_PRIMITIVE_INT16_TYPE_SEQ)};
 #undef MAKE_NEW_ADD_ENTRY
     const auto it = new_fill_handle.find(data_type);
     if (it != new_fill_handle.end()) {

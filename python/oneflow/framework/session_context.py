@@ -17,6 +17,7 @@ import functools
 
 import oneflow
 import oneflow._oneflow_internal
+from oneflow.framework.multi_client_session import MultiClientSession
 
 
 class SessionStatus:
@@ -32,10 +33,13 @@ def GetDefaultSession():
     return _sess_id2sess[default_sess_id]
 
 
-def OpenDefaultSession(sess):
+def NewDefaultSession(env):
+    session_id = oneflow._oneflow_internal.NewSessionId()
+    assert oneflow._oneflow_internal.RegsterSessionId(session_id)
+    new_default_sess = MultiClientSession(env, session_id)
     global _sess_id2sess
-    assert sess.id not in _sess_id2sess
-    _sess_id2sess[sess.id] = sess
+    assert new_default_sess.id not in _sess_id2sess
+    _sess_id2sess[new_default_sess.id] = new_default_sess
 
 
 def TryCloseDefaultSession():
@@ -43,8 +47,9 @@ def TryCloseDefaultSession():
     default_sess_id = oneflow._oneflow_internal.GetDefaultSessionId()
     assert default_sess_id in _sess_id2sess
     if default_sess_id in _sess_id2sess:
-        _sess_id2sess[default_sess_id].TryClose()
-    del _sess_id2sess[default_sess_id]
+        del _sess_id2sess[default_sess_id]
+    # Try clear to avoid using this outdated session.
+    oneflow._oneflow_internal.ClearSessionId(default_sess_id)
 
 
 def try_init_default_session(func):

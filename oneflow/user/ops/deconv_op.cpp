@@ -42,7 +42,7 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(NDims, strides.size());
     CHECK_EQ_OR_RETURN(NDims, output_padding.size());
 
-    user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+    user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
     DimVector out_shape(NDims + 2);
     out_shape.at(0) = in.shape().At(0);
     const size_t c_dim = data_format == "channels_first" ? 1 : NDims + 1;
@@ -53,14 +53,16 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
                                      - 2 * padding_before.at(i) + output_padding.at(i)
                                      + effective_filter_size;
     }
-    for (int i = 0; i < out_shape.size(); i++) {
-      CHECK_GT_OR_RETURN(out_shape[i], 0)
-          << "RuntimeError: Given input size per channel: (" << Shape(in.shape())
-          << "). Calculated output size per channel: (" << Shape(out_shape)
-          << "). Output size is too small";
+    if (in.shape().At(0) != 0) {
+      for (int i = 0; i < out_shape.size(); i++) {
+        CHECK_GT_OR_RETURN(out_shape[i], 0)
+            << "RuntimeError: Given input size per channel: (" << Shape(in.shape())
+            << "). Calculated output size per channel: (" << Shape(out_shape)
+            << "). Output size is too small";
+      }
     }
-    *out->mut_is_dynamic() = in.is_dynamic();
-    *out->mut_shape() = Shape(out_shape);
+    out->set_is_dynamic(in.is_dynamic());
+    out->set_shape(Shape(out_shape));
   }
 
   {
@@ -83,7 +85,7 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferDataType_(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -141,61 +143,6 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
   } else {
     return oneflow::Error::CheckFailedError() << err.str();
   }
-}
-
-Maybe<void> GenerateBackwardOpConf4DeConv(const user_op::UserOpWrapper& op,
-                                          user_op::AddOpFn AddOp) {
-  const std::string& data_format = op.attr<std::string>("data_format");
-  const auto& padding_before = op.attr<std::vector<int32_t>>("padding_before");
-  const auto& kernel_size = op.attr<std::vector<int32_t>>("kernel_size");
-  const auto& strides = op.attr<std::vector<int32_t>>("strides");
-  const auto& dilation_rate = op.attr<std::vector<int32_t>>("dilation_rate");
-  const Shape& weight_shape = op.TensorDesc4ArgNameAndIndex("weight", 0).shape();
-  int32_t groups = op.attr<int32_t>("groups");
-
-  const int32_t ndims = kernel_size.size();
-  CHECK_EQ_OR_RETURN(ndims, strides.size());
-  CHECK_EQ_OR_RETURN(ndims, dilation_rate.size());
-
-  if (op.NeedGenGradTensor4OpInput("weight", 0)) {
-    auto filter_grad_op =
-        user_op::UserOpConfWrapperBuilder("System-AutoGrad-" + op.op_name() + "-FilterGrad")
-            .Op("conv_filter_grad")
-            .Input("dy", op.input("in", 0))
-            .Input("x", op.GetGradTensorWithOpOutput("out", 0))
-            .Output("filter_diff")
-            .Attr<int32_t>("num_spatial_dims", ndims)
-            .Attr<std::vector<int32_t>>("padding_before", padding_before)
-            .Attr<std::string>("data_format", data_format)
-            .Attr<std::vector<int32_t>>("kernel_size", kernel_size)
-            .Attr<std::vector<int32_t>>("strides", strides)
-            .Attr<std::vector<int32_t>>("dilation_rate", dilation_rate)
-            .Attr<int32_t>("groups", groups)
-            .Build();
-    op.BindGradTensorWithOpInput(filter_grad_op.output("filter_diff", 0), "weight", 0);
-    AddOp(filter_grad_op);
-  }
-
-  if (op.NeedGenGradTensor4OpInput("in", 0)) {
-    std::string ndims_str = std::to_string(ndims);
-    auto data_grad_op =
-        user_op::UserOpConfWrapperBuilder("System-AutoGrad-" + op.op_name() + "-DataGrad")
-            .Op("conv" + ndims_str + "d")
-            .Input("in", op.GetGradTensorWithOpOutput("out", 0))
-            .Input("weight", op.input("weight", 0))
-            .Output("out")
-            .Attr<int32_t>("filters", weight_shape.At(0))
-            .Attr<std::string>("data_format", data_format)
-            .Attr<std::vector<int32_t>>("padding_before", padding_before)
-            .Attr<std::vector<int32_t>>("kernel_size", kernel_size)
-            .Attr<std::vector<int32_t>>("strides", strides)
-            .Attr<std::vector<int32_t>>("dilation_rate", dilation_rate)
-            .Attr<int32_t>("groups", groups)
-            .Build();
-    op.BindGradTensorWithOpInput(data_grad_op.output("out", 0), "in", 0);
-    AddOp(data_grad_op);
-  }
-  return Maybe<void>::Ok();
 }
 
 }  // namespace
@@ -262,9 +209,5 @@ Maybe<void> GenerateBackwardOpConf4DeConv(const user_op::UserOpWrapper& op,
 /* static */ Maybe<void> Deconv3DOp::InferDataType(user_op::InferContext* ctx) {
   return InferDataType_(ctx);
 }
-
-REGISTER_USER_OP_GRAD("deconv1d").SetGenBackwardOpConfFn(GenerateBackwardOpConf4DeConv);
-REGISTER_USER_OP_GRAD("deconv2d").SetGenBackwardOpConfFn(GenerateBackwardOpConf4DeConv);
-REGISTER_USER_OP_GRAD("deconv3d").SetGenBackwardOpConfFn(GenerateBackwardOpConf4DeConv);
 
 }  // namespace oneflow

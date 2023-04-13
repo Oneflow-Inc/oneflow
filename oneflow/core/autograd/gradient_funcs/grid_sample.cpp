@@ -36,14 +36,14 @@ class GridSample : public OpExprGradFunction<GridSampleInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Capture(GridSampleInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 2);
+    CHECK_EQ_OR_RETURN(inputs.size(), 2);  // NOLINT(maybe-need-error-msg)
     ctx->input_requires_grad = inputs.at(0)->requires_grad();
     ctx->grid_requires_grad = inputs.at(1)->requires_grad();
     ctx->requires_grad = ctx->input_requires_grad || ctx->grid_requires_grad;
@@ -63,7 +63,7 @@ class GridSample : public OpExprGradFunction<GridSampleInterpState> {
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
 
     const auto& input = ctx->SavedTensors().at(ctx->input_index);
     const auto& grid = ctx->SavedTensors().at(ctx->grid_index);

@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job_rewriter/pass_util.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -33,6 +34,7 @@ class DoParallelCastBeforeWideningTypeCast final : public JobPass {
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
+    if (GlobalProcessCtx::WorldSize() == 1) { return Maybe<void>::Ok(); }
     const OpGraph op_graph(*job);
     JobBuilder job_builder(job);
     return Apply(op_graph, &job_builder);
@@ -62,7 +64,7 @@ Maybe<void> DoParallelCastBeforeWideningTypeCast::Apply(const OpGraph& op_graph,
     const auto cast_in_lbi = cast_node->SoleInEdge()->lbis().front();
     const auto cast_in_dtype = cast_node->LogicalBlobDesc4Lbi(cast_in_lbi).data_type();
     const auto cast_out_dtype = cast_conf_wrapper.attr<DataType>("dtype");
-    if (!(cast_in_dtype == DataType::kFloat16
+    if (!((cast_in_dtype == DataType::kFloat16 || cast_in_dtype == DataType::kBFloat16)
           && (cast_out_dtype == DataType::kFloat || cast_out_dtype == DataType::kDouble))) {
       return;
     }

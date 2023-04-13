@@ -290,9 +290,9 @@ class TestLrScheduler(flow.unittest.TestCase):
         for _ in range(random.randint(1, 10)):
             lr_scheduler.step()
         # save
-        with tempfile.TemporaryDirectory() as save_dir:
-            flow.save(lr_scheduler.state_dict(), save_dir)
-            state_dict = flow.load(save_dir)
+        with tempfile.NamedTemporaryFile() as f:
+            flow.save(lr_scheduler.state_dict(), f.name)
+            state_dict = flow.load(f.name)
 
         # load
         param2 = flow.nn.Parameter(flow.ones(3, 4))
@@ -737,6 +737,44 @@ class LinearLRTestCase(flow.unittest.TestCase):
             0.1,
             0.1,
             0.1,
+        ]
+        lrs = [linear_lr.get_last_lr()[0]]
+        for _ in range(len(expected_lrs)):
+            linear_lr.step()
+            lrs.append(linear_lr.get_last_lr()[0])
+
+        lrs = lrs[:-1]
+        test_case.assertTrue(
+            np.allclose(lrs, expected_lrs),
+            f"\nexpected_lrs: {expected_lrs}\nvs.\ncalculated lrs: {lrs}",
+        )
+
+    def test_end_factor(test_case):
+        param = flow.nn.Parameter(flow.ones(3, 4))
+        optimizer = flow.optim.SGD([param], lr=0.1)
+        linear_lr = flow.optim.lr_scheduler.LinearLR(optimizer, 0.1, 0.9, 10)
+        expected_lrs = [
+            0.01,
+            0.018,
+            0.026,
+            0.034,
+            0.042,
+            0.05,
+            0.058,
+            0.066,
+            0.074,
+            0.082,
+            0.09,
+            0.09,
+            0.09,
+            0.09,
+            0.09,
+            0.09,
+            0.09,
+            0.09,
+            0.09,
+            0.09,
+            0.09,
         ]
         lrs = [linear_lr.get_last_lr()[0]]
         for _ in range(len(expected_lrs)):

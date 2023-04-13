@@ -47,16 +47,10 @@ class Factory {
 template<typename FactoryType, typename... Args>
 static std::unique_ptr<typename FactoryType::PrimitiveType> NewPrimitive(DeviceType device_type,
                                                                          Args&&... args) {
+  if (!IsClassRegistered<DeviceType, FactoryType>(device_type)) { return nullptr; }
   std::unique_ptr<FactoryType> factory = NewObjUniquePtr<DeviceType, FactoryType>(device_type);
   if (!factory) { return nullptr; }
   return factory->New(std::forward<Args>(args)...);
-}
-
-template<typename FactoryType, typename... Args>
-static std::unique_ptr<typename FactoryType::PrimitiveType> NewPrimitive(
-    const std::string& device_tag, Args&&... args) {
-  const DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(device_tag));
-  return NewPrimitive<FactoryType, Args...>(device_type, std::forward<Args>(args)...);
 }
 
 #define REGISTER_PRIMITIVE_FACTORY(device, Base, Derived) \

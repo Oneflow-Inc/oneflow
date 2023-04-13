@@ -71,39 +71,37 @@ IBVerbsCommNet::~IBVerbsCommNet() {
   for (IBVerbsQP* qp : qp_vec_) {
     if (qp) { delete qp; }
   }
-  CHECK_EQ(ibv::wrapper.ibv_destroy_cq(cq_), 0);
-  CHECK_EQ(ibv::wrapper.ibv_dealloc_pd(pd_), 0);
-  CHECK_EQ(ibv::wrapper.ibv_close_device(context_), 0);
+  PCHECK(ibv::wrapper.ibv_destroy_cq(cq_) == 0);
+  PCHECK(ibv::wrapper.ibv_dealloc_pd(pd_) == 0);
+  CHECK_EQ(ibv::wrapper.ibv_close_device(context_), 0)
+      << "Error, failed to close the IB device "
+      << ibv::wrapper.ibv_get_device_name(context_->device);
 }
 
 void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
-  ActorMsg new_msg = msg;
+  IBVerbsActorMsgWrapper msg_wrapper;
+  msg_wrapper.msg = msg;
   if (msg.IsDataRegstMsgToConsumer()) {
-    CHECK_EQ(msg.user_data_size(), 0);
     auto* mem_desc = reinterpret_cast<IBVerbsMemDesc*>(msg.regst()->comm_net_token());
     CHECK(mem_desc != nullptr);
-    IBVerbsCommNetRMADesc rma_desc{};
-    rma_desc.mem_ptr = reinterpret_cast<uint64_t>(mem_desc->mem_ptr());
-    rma_desc.mem_size = mem_desc->mem_size();
-    rma_desc.mr_rkey = mem_desc->mr()->rkey;
-    static_assert(sizeof(IBVerbsCommNetRMADesc) <= kActorMsgUserDataMaxSize, "");
-    new_msg.AddUserData(sizeof(IBVerbsCommNetRMADesc), &rma_desc);
+    msg_wrapper.rma_desc.mem_ptr = reinterpret_cast<uint64_t>(mem_desc->mem_ptr());
+    msg_wrapper.rma_desc.mem_size = mem_desc->mem_size();
+    msg_wrapper.rma_desc.mr_rkey = mem_desc->mr()->rkey;
   }
-  qp_vec_.at(dst_machine_id)->PostSendRequest(new_msg);
+  qp_vec_.at(dst_machine_id)->PostSendRequest(msg_wrapper);
 }
 
-void IBVerbsCommNet::RecvActorMsg(const ActorMsg& msg) {
-  ActorMsg new_msg = msg;
-  if (msg.IsDataRegstMsgToConsumer()) {
+void IBVerbsCommNet::RecvActorMsg(const IBVerbsActorMsgWrapper& msg_wrapper) {
+  ActorMsg new_msg = msg_wrapper.msg;
+  if (msg_wrapper.msg.IsDataRegstMsgToConsumer()) {
     std::lock_guard<std::mutex> lock(remote_regst2rma_desc_mutex_);
-    auto& desc = remote_regst2rma_desc_[std::make_pair(msg.src_actor_id(),
-                                                       reinterpret_cast<uint64_t>(msg.regst()))];
+    auto& desc = remote_regst2rma_desc_[std::make_pair(
+        msg_wrapper.msg.src_actor_id(), reinterpret_cast<uint64_t>(msg_wrapper.msg.regst()))];
     if (!desc) { desc.reset(new IBVerbsCommNetRMADesc); }
-    CHECK_EQ(msg.user_data_size(), sizeof(IBVerbsCommNetRMADesc));
-    std::memcpy(desc.get(), msg.user_data(), sizeof(IBVerbsCommNetRMADesc));
+    *desc = msg_wrapper.rma_desc;
     new_msg.set_comm_net_token(desc.get());
   }
-  Global<ActorMsgBus>::Get()->SendMsgWithoutCommNet(new_msg);
+  Singleton<ActorMsgBus>::Get()->SendMsgWithoutCommNet(new_msg);
 }
 
 IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT) {
@@ -127,26 +125,27 @@ IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT
     CHECK(device != nullptr) << "No IB device match " << user_device;
   }
   context_ = ibv::wrapper.ibv_open_device(device);
-  CHECK(context_);
+  CHECK(context_ != NULL) << "Error, failed to open the IB device "
+                          << ibv::wrapper.ibv_get_device_name(device);
   ibv::wrapper.ibv_free_device_list(device_list);
   pd_ = ibv::wrapper.ibv_alloc_pd(context_);
-  CHECK(pd_);
+  CHECK(pd_) << "Error, ibv_alloc_pd() allocates a Protection Domain (PD) failed";
   ibv_device_attr device_attr{};
-  CHECK_EQ(ibv::wrapper.ibv_query_device(context_, &device_attr), 0);
+  PCHECK(ibv::wrapper.ibv_query_device(context_, &device_attr) == 0);
   cq_ = ibv::wrapper.ibv_create_cq(context_, device_attr.max_cqe, nullptr, nullptr, 0);
-  CHECK(cq_);
+  PCHECK(cq_);
   ibv_port_attr port_attr{};
   const uint8_t port = user_port == 0 ? 1 : user_port;
-  CHECK_EQ(ibv::wrapper.ibv_query_port_wrap(context_, port, &port_attr), 0);
+  PCHECK(ibv::wrapper.ibv_query_port_wrap(context_, port, &port_attr) == 0);
   ibv_gid gid{};
   const int64_t gid_index = ParseIntegerFromEnv("ONEFLOW_COMM_NET_IB_GID_INDEX", 0);
-  CHECK_EQ(ibv::wrapper.ibv_query_gid(context_, port, gid_index, &gid), 0);
+  PCHECK(ibv::wrapper.ibv_query_gid(context_, port, gid_index, &gid) == 0);
   VLOG(1) << "Using IB device " << device->name << " port " << static_cast<int32_t>(port)
           << " gid index " << gid_index;
   int64_t this_machine_id = GlobalProcessCtx::Rank();
-  qp_vec_.assign(Global<ResourceDesc, ForEnv>::Get()->process_ranks().size(), nullptr);
+  qp_vec_.assign(Singleton<ResourceDesc, ForEnv>::Get()->process_ranks().size(), nullptr);
   for (int64_t peer_id : peer_machine_id()) {
-    IBVerbsQP* cur_qp = new IBVerbsQP(context_, pd_, port, cq_, cq_);
+    IBVerbsQP* cur_qp = new IBVerbsQP(context_, pd_, port_attr, port, cq_, cq_);
     qp_vec_.at(peer_id) = cur_qp;
     IBVerbsConnectionInfo conn_info;
     conn_info.set_lid(port_attr.lid);
@@ -155,11 +154,11 @@ IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT
     conn_info.set_interface_id(gid.global.interface_id);
     conn_info.set_port_num(port);
     conn_info.set_mtu(static_cast<int>(port_attr.active_mtu));
-    Global<CtrlClient>::Get()->PushKV(GenConnInfoKey(this_machine_id, peer_id), conn_info);
+    Singleton<CtrlClient>::Get()->PushKV(GenConnInfoKey(this_machine_id, peer_id), conn_info);
   }
   for (int64_t peer_id : peer_machine_id()) {
     IBVerbsConnectionInfo conn_info;
-    Global<CtrlClient>::Get()->PullKV(GenConnInfoKey(peer_id, this_machine_id), &conn_info);
+    Singleton<CtrlClient>::Get()->PullKV(GenConnInfoKey(peer_id, this_machine_id), &conn_info);
     if (conn_info.lid() == 0) {
       VLOG(2) << "Connecting to peer " << peer_id << " port " << conn_info.port_num() << " qpn "
               << conn_info.qp_num() << " gid index " << gid_index << " spn "
@@ -176,7 +175,7 @@ IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT
   OF_ENV_BARRIER();
   for (int64_t peer_id : peer_machine_id()) {
     qp_vec_.at(peer_id)->PostAllRecvRequest();
-    Global<CtrlClient>::Get()->ClearKV(GenConnInfoKey(this_machine_id, peer_id));
+    Singleton<CtrlClient>::Get()->ClearKV(GenConnInfoKey(this_machine_id, peer_id));
   }
   OF_ENV_BARRIER();
   poll_thread_ = std::thread(&IBVerbsCommNet::PollCQ, this);

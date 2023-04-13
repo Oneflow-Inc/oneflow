@@ -16,12 +16,13 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/scope.h"
-#include "oneflow/core/job/scope.cfg.h"
 #include "oneflow/core/job_rewriter/calculation_pass.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
 
 namespace oneflow {
 
@@ -46,15 +47,16 @@ class CheckpointingPass final : public JobPass {
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
 };
 
-const std::string kCheckpointingFakeOpNamePrefix = "OneFlow-System-Checkpointing-Fake-Fw-Op_";
-const std::string kCheckpointingBadOpName = "OneFlow-System-CheckpointPassBadEndOpName";
+const std::string kCheckpointingFakeOpNamePrefix = "Sys-Checkpointing-Fake-Fw-Op_";
+const std::string kCheckpointingIdentityOpName = "Sys-Checkpointing-Identity";
+const std::string kCheckpointingBadOpName = "Sys-CheckpointPassBadEndOpName";
 
 const Scope& Scope4OpNode(const OpNode* op_node) {
   int64_t scope_symbol_id = op_node->op().op_conf().scope_symbol_id();
-  CHECK(Global<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id))
+  CHECK(Singleton<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id))
       << "rank[" << GlobalProcessCtx::Rank() << "] "
       << "scope_symbol_id: " << scope_symbol_id;
-  return Global<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
+  return Singleton<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
 }
 
 bool IsForwardPassScope(const Scope& scope) {
@@ -149,6 +151,7 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
   //   so we need collect bw consumer between subgraphs, and update them in job builder only once.
   HashMap<std::string, OperatorConf> total_bw_consumers_op_name2conf;
 
+  int32_t subgraph_id = 0;
   for (auto& subgraph : checkpointing_subgraphs) {
     // step 3.1 ignore this subgraph if there is no direct edge to backward pass op.
     HashSet<const OpNode*> bw_consumers;
@@ -161,6 +164,8 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
       });
     }
     if (bw_consumers.empty()) { continue; }
+
+    HashSet<LogicalBlobId> checkpointing_tensor;
 
     HashMap<std::string, const OpNode*> subgraph_op_name2op_node;
     ParallelConf parallel_conf;
@@ -179,7 +184,7 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
       const int64_t old_scope_symbol_id = fake_op_conf.scope_symbol_id();
       // update fake op conf scope from fw to bw
       const int64_t new_scope_symbol_id = JUST(
-          NewScopeSymbolId(old_scope_symbol_id, [](std::shared_ptr<cfg::ScopeProto> new_scope) {
+          NewScopeSymbolId(old_scope_symbol_id, [](const std::shared_ptr<ScopeProto>& new_scope) {
             CHECK_EQ(new_scope->calculation_pass_name(), kForwardPass);
             new_scope->set_calculation_pass_name(kBackwardPass);
           }));
@@ -217,6 +222,7 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
             list_s.set_s(i, kCheckpointingFakeOpNamePrefix + old_lbn);
           } else {
             source_node_in_fake_subgraph.insert(fake_op_name);
+            checkpointing_tensor.insert(old_lbi);
           }
         }
       }
@@ -272,17 +278,53 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     CHECK(first_bw_consumer != nullptr);
     std::string end_op_name = kCheckpointingBadOpName;
     int32_t end_order = -1;
+    const OpNode* end_op_node = nullptr;
     first_bw_consumer->ForEachNodeOnInEdge([&](const OpNode* end_node) {
       CHECK(op_node2order.find(end_node) != op_node2order.end());
       int32_t this_order = op_node2order.at(end_node);
       if (this_order > end_order) {
         end_order = this_order;
         end_op_name = end_node->op().op_name();
+        end_op_node = end_node;
       }
     });
     CHECK_NE(end_order, -1);
     CHECK_NE(end_op_name, kCheckpointingBadOpName);
     CHECK_LT(end_order, first_bw_order);
+    CHECK(end_op_node != nullptr);
+    // NOTE(chengcheng): if end_op placement is different with first_bw_consumer, the ctrl edge
+    //   cannot be directly connected.
+    if (!first_bw_consumer->parallel_desc().EqualsIgnoringHierarchy(end_op_node->parallel_desc())) {
+      std::string lbn = "";
+      LogicalBlobId lbi;
+      const OpEdge* end_op_edge = nullptr;
+      for (const OpEdge* in_edge : first_bw_consumer->in_edges()) {
+        if (in_edge->src_node() == end_op_node) {
+          lbi = in_edge->lbis().front();
+          lbn = GenLogicalBlobName(lbi);
+          end_op_edge = in_edge;
+          break;
+        }
+      }
+      CHECK(!lbn.empty());
+
+      auto id_op = user_op::UserOpConfWrapperBuilder(kCheckpointingIdentityOpName + NewUniqueId())
+                       .Op("identity")
+                       .Input("in", lbn)
+                       .Output("out")
+                       .ScopeSymbolId(first_bw_consumer->op().op_conf().scope_symbol_id())
+                       .Build();
+
+      std::string id_out = id_op.output("out", 0);
+      for (const std::string& ibn : end_op_edge->lbi2ibns().at(lbi)) {
+        std::string old_lbn = ReplaceInputLbnInOpCustomizedConf(
+            &(total_bw_consumers_op_name2conf.at(first_bw_consumer->op().op_name())), ibn, id_out);
+        CHECK_EQ(old_lbn, lbn);
+      }
+
+      JUST(job_builder->AddOp(first_bw_consumer->parallel_desc().parallel_conf(), id_op.op_conf()));
+      end_op_name = id_op.op_name();
+    }
     for (const auto& source_op_name : source_node_in_fake_subgraph) {
       fake_op_name2conf.at(source_op_name).add_ctrl_in_op_name(end_op_name);
     }
@@ -291,6 +333,22 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     std::vector<OperatorConf> fake_op_confs;
     for (auto& pair : fake_op_name2conf) { fake_op_confs.emplace_back(pair.second); }
     job_builder->AddOps(parallel_conf, fake_op_confs);
+
+    // step 3.6 log checkpointing tensor flow debug.
+    if (IsInDebugMode()) {
+      VLOG(2) << " In subgraph: " << subgraph_id
+              << " has checkpointing tensor num = " << checkpointing_tensor.size();
+      for (const auto& lbi : checkpointing_tensor) {
+        const OpNode* node = op_graph.OpNode4OpName(lbi.op_name());
+        const BlobDesc& blob = node->LogicalBlobDesc4Lbi(lbi);
+        VLOG(2) << "Checkpointing tensor: " << GenLogicalBlobName(lbi)
+                << " ,shape: " << blob.shape().ToString()
+                << " ,dtype: " << DataType_Name(blob.data_type())
+                << " ,placement: " << *JUST(PlacementToString(SymbolOf(node->parallel_desc())))
+                << " ,sbp: " << NdSbpToString(node->NdSbp4Lbi(lbi));
+      }
+      subgraph_id++;
+    }
   }
 
   // step 4. update bw consumers in job builder only once

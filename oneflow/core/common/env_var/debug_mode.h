@@ -25,6 +25,28 @@ DEFINE_ENV_BOOL(ONEFLOW_DEBUG, false);
 
 inline bool IsInDebugMode() { return EnvBool<ONEFLOW_DEBUG_MODE>() || EnvBool<ONEFLOW_DEBUG>(); }
 
+DEFINE_ENV_BOOL(ENABLE_ACTOR_DEBUG_LOG, false);
+inline bool EnableActorDebugLog() { return EnvBool<ENABLE_ACTOR_DEBUG_LOG>(); }
+
+DEFINE_ENV_BOOL(ENABLE_LOGICAL_CHAIN, true);
+inline bool EnableLogicalChain() { return EnvBool<ENABLE_LOGICAL_CHAIN>(); }
+
+DEFINE_ENV_BOOL(ENABLE_NCCL_LOGICAL_FUSION, true);
+inline bool EnableNcclLogicalFusion() { return EnvBool<ENABLE_NCCL_LOGICAL_FUSION>(); }
+
+inline bool IsPythonStackGetterEnabledByDebugBuild() {
+  if (std::getenv("ONEFLOW_DEBUG_MODE") == nullptr && std::getenv("ONEFLOW_DEBUG") == nullptr
+      && std::getenv("ONEFLOW_PYTHON_STACK_GETTER") == nullptr) {
+    return std::string(OF_PP_STRINGIZE(ONEFLOW_CMAKE_BUILD_TYPE)) == "Debug";
+  }
+  return false;
+}
+
+inline bool IsPythonStackGetterEnabled() {
+  if (IsPythonStackGetterEnabledByDebugBuild()) { return true; }
+  return ParseBooleanFromEnv("ONEFLOW_PYTHON_STACK_GETTER", IsInDebugMode());
+}
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_ENV_VAR_DEBUG_MODE_H_

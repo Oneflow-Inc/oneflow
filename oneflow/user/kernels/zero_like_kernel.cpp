@@ -14,11 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/ep/include/primitive/memset.h"
 
 namespace oneflow {
 
-template<DeviceType device_type>
+namespace {
+
 class ZeroLikeKernel final : public user_op::OpKernel {
  public:
   ZeroLikeKernel() = default;
@@ -27,20 +29,21 @@ class ZeroLikeKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    Memset<device_type>(ctx->stream(), out->mut_dptr(), 0,
-                        out->shape().elem_cnt() * GetSizeOfDataType(out->data_type()));
+    const int64_t elem_cnt = out->shape_view().elem_cnt();
+    if (elem_cnt > 0) {
+      std::unique_ptr<ep::primitive::Memset> primitive =
+          ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(ctx->stream()->device_type());
+      CHECK(primitive) << "Can not create Memset primitive for device type "
+                       << ctx->stream()->device_type();
+      primitive->Launch(ctx->stream(), out->mut_dptr(), 0,
+                        elem_cnt * GetSizeOfDataType(out->data_type()));
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_ZERO_LIKE_KERNEL(device_type_v)    \
-  REGISTER_USER_KERNEL("zero_like")                 \
-      .SetCreateFn<ZeroLikeKernel<device_type_v>>() \
-      .SetIsMatchedHob(user_op::HobDeviceType() == device_type_v);
+REGISTER_USER_KERNEL("zero_like").SetCreateFn<ZeroLikeKernel>();
 
-REGISTER_ZERO_LIKE_KERNEL(DeviceType::kCPU)
-#ifdef WITH_CUDA
-REGISTER_ZERO_LIKE_KERNEL(DeviceType::kCUDA)
-#endif
+}  // namespace
 
 }  // namespace oneflow

@@ -23,9 +23,11 @@ namespace {
       (user_op::HobDeviceType() == device)                                                     \
       && (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
 
+REGISTER_UNIFORM_KERNEL(DeviceType::kCPU, float16)
 REGISTER_UNIFORM_KERNEL(DeviceType::kCPU, float)
 REGISTER_UNIFORM_KERNEL(DeviceType::kCPU, double)
 #ifdef WITH_CUDA
+REGISTER_UNIFORM_KERNEL(DeviceType::kCUDA, half)
 REGISTER_UNIFORM_KERNEL(DeviceType::kCUDA, float)
 REGISTER_UNIFORM_KERNEL(DeviceType::kCUDA, double)
 #endif  // WITH_CUDA

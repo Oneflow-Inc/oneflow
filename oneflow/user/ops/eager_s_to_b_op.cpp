@@ -24,7 +24,7 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> EagerSToBOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = Shape(ctx->Attr<Shape>("shape").dim_vec());
+  ctx->SetOutputShape("out", 0, Shape(ctx->Attr<Shape>("shape").dim_vec()));
   return Maybe<void>::Ok();
 }
 
@@ -33,21 +33,21 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EagerSToBOp::GetSbp(user_op::SbpContext* ctx) {
-  return Error::TypeError() << "eager_s_to_b op doesn't support consistent tensor!";
+  return Error::TypeError() << "eager_s_to_b op doesn't support global tensor!";
 }
 
 /* static */ Maybe<void> EagerSToBOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
-  return Error::TypeError() << "eager_s_to_b op doesn't support consistent tensor!";
+  return Error::TypeError() << "eager_s_to_b op doesn't support global tensor!";
 }
 
 /* static */ Maybe<void> EagerSToBOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<Symbol<Stream>> EagerSToBOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
 }  // namespace oneflow

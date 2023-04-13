@@ -17,6 +17,8 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_ALLOCATOR_H_
 
 #include <cstddef>
+#include "oneflow/core/common/maybe.h"
+#include "glog/logging.h"
 
 namespace oneflow {
 namespace vm {
@@ -25,11 +27,28 @@ class Allocator {
  public:
   virtual ~Allocator() = default;
 
-  virtual void Allocate(char** mem_ptr, std::size_t size) = 0;
+  virtual Maybe<void> Allocate(char** mem_ptr, std::size_t size) = 0;
   virtual void Deallocate(char* mem_ptr, std::size_t size) = 0;
+  virtual void DeviceReset() = 0;
 
  protected:
   Allocator() = default;
+};
+
+class UnimplementedAllocator final : public Allocator {
+ public:
+  explicit UnimplementedAllocator(const std::string& debug_str) : debug_str_(debug_str) {}
+  virtual ~UnimplementedAllocator() = default;
+
+  Maybe<void> Allocate(char** mem_ptr, std::size_t size) override {
+    UNIMPLEMENTED_THEN_RETURN() << debug_str_;
+  }
+
+  void Deallocate(char* mem_ptr, std::size_t size) override { LOG(FATAL) << debug_str_; }
+  void DeviceReset() override { LOG(FATAL) << debug_str_; }
+
+ private:
+  std::string debug_str_;
 };
 
 }  // namespace vm

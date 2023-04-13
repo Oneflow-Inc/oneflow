@@ -83,11 +83,11 @@ def parse_args():
         "--redirect_stdout_and_stderr",
         default=False,
         action="store_true",
-        help=f"write the stdout and stderr to files\n                    '{stdout_filename}' and '{stderr_filename}'. Only available when logdir is set",
+        help=f"write the stdout and stderr to files\n                    '{stdout_filename}' and '{stderr_filename}' in logdir.",
     )
     parser.add_argument(
         "--logdir",
-        default=None,
+        default="log",
         type=str,
         help=f"Relative path to write subprocess logs to. Passing in a relative\n        path will create a directory if needed. Note that\n        successive runs with the same path to write logs to will overwrite existing logs,\n        so be sure to save logs as needed.",
     )
@@ -108,6 +108,12 @@ def main():
     current_env["MASTER_PORT"] = str(args.master_port)
     current_env["WORLD_SIZE"] = str(dist_world_size)
 
+    if args.master_port is None or args.master_port >= 2 ** 16:
+        raise ValueError(
+            f"The port number of the master endpoint '{args.master_addr}:{args.master_port}' must be an integer "
+            "between 0 and 65536."
+        )
+
     if "OMP_NUM_THREADS" not in os.environ and args.nproc_per_node > 1:
         current_env["OMP_NUM_THREADS"] = str(1)
         print(
@@ -122,12 +128,14 @@ def main():
         )
 
     processes: List[Any] = []
-    if args.logdir:
-        if os.path.exists(args.logdir):
-            if not os.path.isdir(args.logdir):
-                raise ValueError("argument --logdir must be a path to a directory.")
-        else:
-            os.mkdir(os.path.join(os.getcwd(), args.logdir))
+
+    if (
+        args.redirect_stdout_and_stderr
+        and os.path.exists(args.logdir)
+        and not os.path.isdir(args.logdir)
+    ):
+        raise ValueError("argument --logdir must be a path to a directory.")
+
     subprocess_file_handles = []
     for local_rank in range(0, args.nproc_per_node):
         dist_rank = args.nproc_per_node * args.node_rank + local_rank
@@ -147,20 +155,15 @@ def main():
         cmd.extend(args.training_script_args)
         stdout_handle: Optional[IO]
         stderr_handle: Optional[IO]
-        if args.logdir:
-            directory_path = os.path.join(
-                os.getcwd(), args.logdir, f"local_rank_{local_rank}"
-            )
-            os.makedirs(directory_path, exist_ok=True)
-            current_env["GLOG_log_dir"] = directory_path
+        log_directory_path = os.path.join(
+            os.getcwd(), args.logdir, f"local_rank_{local_rank}"
+        )
+        current_env["GLOG_log_dir"] = log_directory_path
         if args.redirect_stdout_and_stderr:
-            if not args.logdir:
-                raise ValueError(
-                    "'redirect_stdout_and_stderr' is only available when 'logdir' is set."
-                )
+            os.makedirs(log_directory_path, exist_ok=True)
             node_rank = args.node_rank
-            stdout_handle = open(os.path.join(directory_path, stdout_filename), "w")
-            stderr_handle = open(os.path.join(directory_path, stderr_filename), "w")
+            stdout_handle = open(os.path.join(log_directory_path, stdout_filename), "w")
+            stderr_handle = open(os.path.join(log_directory_path, stderr_filename), "w")
             subprocess_file_handles.append((stdout_handle, stderr_handle))
             stdout_name = stdout_handle.name
             stderr_name = stderr_handle.name

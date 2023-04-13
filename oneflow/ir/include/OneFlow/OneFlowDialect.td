@@ -11,8 +11,11 @@ def OneFlow_Dialect : Dialect {
     }];
     let cppNamespace = "::mlir::oneflow";
     let dependentDialects = [
-        "StandardOpsDialect"
+        "sbp::SBPDialect",
+        "func::FuncDialect"
     ];
+    let hasConstantMaterializer = 1;
+    let useDefaultTypePrinterParser = 1;
 }
 
 #endif // ONEFLOW_DIALECT

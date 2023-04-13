@@ -26,8 +26,9 @@ namespace {
 static const int kLimitParallelConfString = 1024 * 64;
 struct FlatParallelConf {
   size_t available_size() const {
-    CHECK_GE(this->buffer_size, 0);
-    CHECK_LT(this->buffer_size, kLimitParallelConfString);
+    CHECK_GE(this->buffer_size, 0) << "Buffer size should be non-negative";
+    CHECK_LT(this->buffer_size, kLimitParallelConfString)
+        << "Buffer size should be less than " << kLimitParallelConfString;
     return sizeof(FlatParallelConf) - kLimitParallelConfString + this->buffer_size;
   }
 
@@ -42,22 +43,33 @@ struct FlatParallelConf {
   Maybe<void> Init(uint64_t symbol_id, Symbol<ParallelDesc> parallel_desc) {
     const auto& parallel_conf = parallel_desc->parallel_conf();
     int64_t byte_size = parallel_conf.ByteSize();
-    CHECK_LE_OR_RETURN(byte_size, kLimitParallelConfString);
+    CHECK_LE_OR_RETURN(byte_size, kLimitParallelConfString)
+        << Error::InvalidValueError() << "Byte size of parallel description should be less than "
+        << kLimitParallelConfString << ", but got " << byte_size;
     this->symbol_id = symbol_id;
     this->buffer_size = byte_size;
-    CHECK_OR_RETURN(parallel_conf.SerializeToArray(this->buffer, kLimitParallelConfString));
+    CHECK_OR_RETURN(parallel_conf.SerializeToArray(this->buffer, kLimitParallelConfString))
+        << Error::RuntimeError()
+        << "Error serializing parallel description: " << parallel_conf.ShortDebugString();
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Check(uint64_t symbol_id, Symbol<ParallelDesc> parallel_desc) const {
     const auto& parallel_conf = parallel_desc->parallel_conf();
     int64_t byte_size = parallel_conf.ByteSize();
-    CHECK_LE_OR_RETURN(byte_size, kLimitParallelConfString);
-    CHECK_EQ_OR_RETURN(this->symbol_id, symbol_id);
-    CHECK_EQ_OR_RETURN(this->buffer_size, byte_size);
+    const auto& debugString = parallel_conf.ShortDebugString();
+    CHECK_LE_OR_RETURN(byte_size, kLimitParallelConfString)
+        << Error::InvalidValueError() << "Byte size of parallel description should be less than "
+        << kLimitParallelConfString << ", but got " << byte_size;
+    CHECK_EQ_OR_RETURN(this->symbol_id, symbol_id) << Error::RuntimeError() << "expected symbol id "
+                                                   << symbol_id << ", but got " << this->symbol_id;
+    CHECK_EQ_OR_RETURN(this->buffer_size, byte_size)
+        << Error::RuntimeError() << "Inconsistent parallel description: " << debugString;
     std::vector<char> serialized(byte_size);
-    CHECK_OR_RETURN(parallel_conf.SerializeToArray(serialized.data(), kLimitParallelConfString));
-    CHECK_EQ_OR_RETURN(std::memcmp(serialized.data(), this->buffer, byte_size), 0);
+    CHECK_OR_RETURN(parallel_conf.SerializeToArray(serialized.data(), kLimitParallelConfString))
+        << Error::RuntimeError() << "Error serializing parallel description: " << debugString;
+    CHECK_EQ_OR_RETURN(std::memcmp(serialized.data(), this->buffer, byte_size), 0)
+        << Error::RuntimeError() << "Inconsistent parallel description: " << debugString;
     return Maybe<void>::Ok();
   }
 

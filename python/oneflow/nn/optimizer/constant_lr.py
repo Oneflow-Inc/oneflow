@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from .optimizer import Optimizer
+from ...optim.optimizer import Optimizer
 from .lr_scheduler import LRScheduler
 
 
@@ -70,6 +70,7 @@ class ConstantLR(LRScheduler):
         return base_lr
 
     def _generate_conf_for_graph(self, lr_conf):
-        constant_lr_conf = lr_conf.mutable_constant_lr_conf()
-        constant_lr_conf.set_factor(self.factor)
-        constant_lr_conf.set_total_iters(self.total_iters)
+        lr_conf.constant_lr_conf.SetInParent()
+        constant_lr_conf = lr_conf.constant_lr_conf
+        constant_lr_conf.factor = self.factor
+        constant_lr_conf.total_iters = self.total_iters

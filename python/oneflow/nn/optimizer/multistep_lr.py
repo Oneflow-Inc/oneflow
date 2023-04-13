@@ -15,14 +15,14 @@ limitations under the License.
 """
 import bisect
 
-from .optimizer import Optimizer
+from ...optim.optimizer import Optimizer
 from .lr_scheduler import LRScheduler
 
 
 class MultiStepLR(LRScheduler):
     """
-    Decays the learning rate of each parameter group by gamma once the number of step 
-    reaches one of the milestones. Notice that such decay can happen simultaneously with 
+    Decays the learning rate of each parameter group by gamma once the number of step
+    reaches one of the milestones. Notice that such decay can happen simultaneously with
     other changes to the learning rate from outside this scheduler.When last_step=-1, sets initial lr as lr.
 
     Args:
@@ -69,7 +69,8 @@ class MultiStepLR(LRScheduler):
         return base_lr * factor
 
     def _generate_conf_for_graph(self, lr_conf):
-        multi_step_conf = lr_conf.mutable_multi_step_conf()
+        lr_conf.multi_step_conf.SetInParent()
+        multi_step_conf = lr_conf.multi_step_conf
         for milestone in self.milestones:
-            multi_step_conf.add_milestones(milestone)
-        multi_step_conf.set_gamma(self.gamma)
+            multi_step_conf.milestones.append(milestone)
+        multi_step_conf.gamma = self.gamma

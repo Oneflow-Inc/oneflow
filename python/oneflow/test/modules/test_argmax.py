@@ -101,6 +101,11 @@ class TestArgmax(flow.unittest.TestCase):
         y = torch.argmax(x, dim=random(0, ndim).to(int), keepdim=random().to(bool))
         return y
 
+    @profile(torch.argmax)
+    def profile_argmax(test_case):
+        torch.argmax(torch.ones(100000))
+        torch.argmax(torch.ones(1000000))
+
 
 if __name__ == "__main__":
     unittest.main()

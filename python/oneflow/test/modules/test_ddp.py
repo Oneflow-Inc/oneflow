@@ -15,7 +15,11 @@ limitations under the License.
 """
 import unittest
 import oneflow as flow
+
+# Test import from oneflow.nn.parallel.distributed
+from oneflow.nn.parallel.distributed import DistributedDataParallel
 from oneflow.nn.parallel import DistributedDataParallel as ddp
+from oneflow.test_utils.test_util import GenCartesianProduct
 import oneflow.unittest
 
 import numpy as np
@@ -64,7 +68,7 @@ class TestDDP(flow.unittest.TestCase):
         for dev_type in test_device:
             test_case._test_ddp_basic(dev_type)
 
-    def _test_ddp_multiple_buckets(test_case, dev_type):
+    def _test_ddp_multiple_buckets(test_case, dev_type, use_bucket):
         class Mul(flow.nn.Module):
             def __init__(self):
                 super().__init__()
@@ -88,7 +92,7 @@ class TestDDP(flow.unittest.TestCase):
 
         x = x.to(dev_type)
         m = Mul().to(dev_type)
-        m = ddp(m, bucket_size=3)
+        m = ddp(m, bucket_size=3, use_bucket=use_bucket)
 
         y = m(x)
         y.sum().backward()
@@ -102,8 +106,8 @@ class TestDDP(flow.unittest.TestCase):
             )
 
     def test_ddp_multiple_buckets(test_case):
-        for dev_type in test_device:
-            test_case._test_ddp_multiple_buckets(dev_type)
+        for dev_type, use_bucket in GenCartesianProduct((test_device, [True, False])):
+            test_case._test_ddp_multiple_buckets(dev_type, use_bucket)
 
     def _test_ddp_with_unused_param(test_case, dev_type):
         class Model(flow.nn.Module):

@@ -68,7 +68,7 @@ void set_num_threads(int num) {
   }
 
   auto cpu_device = std::static_pointer_cast<ep::CpuDevice>(
-      Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCPU, 0));
+      Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCPU, 0));
   cpu_device->SetNumThreads(num);
 }
 

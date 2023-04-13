@@ -76,6 +76,11 @@ OpRegistry& OpRegistry::SupportCpuOnly() {
   return *this;
 }
 
+OpRegistry& OpRegistry::SupportNonContiguous() {
+  result_.non_contiguous_supported = true;
+  return *this;
+}
+
 OpRegistry& OpRegistry::NoGrad() {
   result_.no_grad = true;
   return *this;
@@ -203,6 +208,27 @@ OpRegistry& OpRegistry::SetDeviceAndStreamInferFn(
   return *this;
 }
 
+OpRegistry& OpRegistry::SetComputeComplexityFn(ComputeComplexityFn compute_complexity_fn) {
+  result_.compute_complexity_fn = std::move(compute_complexity_fn);
+  return *this;
+}
+
+OpRegistry& OpRegistry::SetGetNdSbpSignatureListFn(GetNdSbpSignatureListFn get_nd_sbp_list_fn) {
+  result_.get_nd_sbp_list_fn = std::move(get_nd_sbp_list_fn);
+  return *this;
+}
+
+OpRegistry& OpRegistry::SetEnumerateNdSbpSignaturesFn(EnumerateNdSbpSignaturesFn fn) {
+  result_.enumerate_nd_sbp_signatures_fn = std::move(fn);
+  return *this;
+}
+
+OpRegistry& OpRegistry::SetDumpNdSbpSignatureForOpConfFn(
+    Operator::DumpNdSbpSignatureForOpConfFn fn) {
+  result_.dump_nd_sbp_signature_for_op_conf_fn = std::move(fn);
+  return *this;
+}
+
 Maybe<OpRegistry&> OpRegistry::Finish() {
   CHECK_OR_RETURN(result_.logical_tensor_desc_infer_fn != nullptr)
       << "No TensorDescInfer function for " << result_.op_type_name;
@@ -223,11 +249,12 @@ Maybe<OpRegistry&> OpRegistry::Finish() {
                           == in_physical.shape());
         }
         for (const auto& pair : ctx->outputs()) {
-          TensorDesc* desc = ctx->OutputTensorDesc(pair.first, pair.second);
+          TensorDesc* desc = ctx->MutOutputTensorDesc(pair.first, pair.second);
           *desc = *ctx->LogicalTensorDesc4ArgNameAndIndex(pair.first, pair.second);
           const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex(pair.first, pair.second);
-          *desc->mut_shape() = *JUST(
-              GetPhysicalShape(desc->shape(), nd_sbp, ctx->parallel_desc(), ctx->parallel_ctx()));
+          desc->set_shape(*JUST(
+              GetPhysicalShape(desc->shape(), nd_sbp, ctx->parallel_desc(), ctx->parallel_ctx())));
+          desc->set_stride(Stride(desc->shape()));
         }
       }
       return Maybe<void>::Ok();
@@ -255,7 +282,7 @@ Maybe<OpRegistry&> OpRegistry::Finish() {
       for (const auto& pair : ctx->outputs()) {
         *ctx->OutputTensorDevice4ArgNameAndIndex(pair.first, pair.second) = default_device;
       }
-      return Stream::New(default_device, StreamRole::kCompute);
+      return Stream::New(default_device, StreamType::kCompute);
     };
   }
   return *this;

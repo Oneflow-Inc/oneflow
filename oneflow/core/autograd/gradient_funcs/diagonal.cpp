@@ -39,14 +39,14 @@ class Diagonal : public OpExprGradFunction<DiagonalInterpState> {
 
 Maybe<void> Diagonal::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
 
 Maybe<void> Diagonal::Capture(DiagonalInterpState* ctx, const TensorTuple& inputs,
                               const TensorTuple& outputs, const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(outputs.size(), 1);
+  CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
@@ -57,7 +57,7 @@ Maybe<void> Diagonal::Capture(DiagonalInterpState* ctx, const TensorTuple& input
 
 Maybe<void> Diagonal::Apply(const DiagonalInterpState* ctx, const TensorTuple& out_grads,
                             TensorTuple* in_grads) const {
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
   in_grads->resize(2);
   if (ctx->requires_grad) {
     const auto& x = ctx->SavedTensors().at(0);

@@ -110,13 +110,6 @@
   signature: "Tensor (OpExpr op, Tensor input, String name) => DispatchOfrecordBytesDecoder"
   bind_python: True
 
-- name: "dispatch_onerec_reader"
-  signature: [
-    "Tensor (OpExpr op, StringList files, Int64 batch_size, Bool random_shuffle, String shuffle_mode, Int32 shuffle_buffer_size=1024, Bool shuffle_after_epoch=False, Int64 random_seed=-1, Bool verify_example=True, Device device=None) => DispatchOneRecReader",
-    "Tensor (OpExpr op, StringList files, Int64 batch_size, Bool random_shuffle, String shuffle_mode, Int32 shuffle_buffer_size=1024, Bool shuffle_after_epoch=False, Int64 random_seed=-1, Bool verify_example=True, Placement placement, SbpList sbp) => DispatchOneRecReader",
-  ]
-  bind_python: True
-
 - name: "dispatch_megatron_gpt_mmap_data_loader"
   signature: [
       "Tensor (OpExpr op, String data_file_prefix, Int64 seq_length, Int64 label_length=1, Int64 num_samples, Int64 batch_size, DataType dtype, Int64List split_sizes, Int64 split_index, Bool shuffle, Int64 random_seed, Device device=None) => DispatchMegatronGptMmapDataLoader",
@@ -137,7 +130,7 @@
   bind_python: True
 
 - name: "dispatch_momentum_update"
-  signature: "Void (OpExpr op, TensorTuple inputs, Float learning_rate=0, Double scale=1.0, Float l1=0, Float l2=0, Float beta=0.9, Float weight_decay=0) => DispatchMomentumUpdate"
+  signature: "Void (OpExpr op, TensorTuple inputs, Float learning_rate=0, Double scale=1.0, Float l1=0, Float l2=0, Float beta=0.9, Float dampening=0.0, Bool nesterov=False, Bool maximize=False, Float weight_decay=0) => DispatchMomentumUpdate"
   bind_python: True
 
 - name: "dispatch_sgd_update"
@@ -148,6 +141,22 @@
   signature: "Void (OpExpr op, TensorTuple inputs, Float learning_rate=0, Float bias_correction1=1.0, Float bias_correction2=1.0, Double scale=1.0, Float l1=0, Float l2=0, Float beta1=0.9, Float beta2=0.999, Float epsilon=1e-8, Float weight_decay=0, Bool do_bias_correction=True) => DispatchLambUpdate"
   bind_python: True
 
-- name: "dispatch_eager_nccl_all_reduce"
-  signature: "Tensor (OpExpr op, Tensor input, String parallel_conf, Bool async_launch=False) => DispatchEagerNcclAllReduce"
+- name: "dispatch_ftrl_update"
+  signature: "Void (OpExpr op, TensorTuple inputs, Float learning_rate=0, Double scale=1.0, Float l1=0, Float l2=0, Float lr_power, Float lambda1, Float lambda2, Float beta, Float weight_decay=0) => DispatchFtrlUpdate"
+  bind_python: True
+
+- name: "dispatch_adadelta_update"
+  signature: "Void (OpExpr op, TensorTuple inputs, Float learning_rate=0, Double scale=1.0, Float l1=0, Float l2=0, Float rho, Float epsilon, Bool maximize, Float weight_decay=0) => DispatchAdadeltaUpdate"
+  bind_python: True
+
+
+- name: "dispatch_eager_ccl_all_reduce"
+  signature: "Tensor (OpExpr op, Tensor input, String parallel_conf) => DispatchEagerCclAllReduce"
+  bind_python: True
+
+- name: "dispatch_raw_reader"
+  signature: [
+    "Tensor (OpExpr op, StringList files, Shape shape, DataType data_type, Int64 batch_size, Bool random_shuffle,  Int64 shuffle_block_size,  Int64 random_seed=-1,  Device device=None) => DispatchRawReader",
+    "Tensor (OpExpr op, StringList files, Shape shape, DataType data_type, Int64 batch_size, Bool random_shuffle,  Int64 shuffle_block_size, Int64 random_seed=-1, Placement placement, SbpList sbp) => DispatchRawReader",
+  ]
   bind_python: True

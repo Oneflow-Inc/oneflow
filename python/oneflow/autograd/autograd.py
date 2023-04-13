@@ -30,10 +30,10 @@ def grad(
     create_graph: bool = False,
 ) -> Tuple[Tensor]:
     r"""
-    The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.autograd.grad.html#torch.autograd.grad
-
     Computes and returns the sum of gradients of outputs with respect to the inputs.
+
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.autograd.grad.html.
 
     The graph is differentiated using the chain rule. ``grad_outputs`` should be a sequence of
     length matching ``outputs``, containing the "vector" in the Jacobian-vector product.
@@ -73,10 +73,10 @@ def backward(
     create_graph: bool = False,
 ) -> None:
     r"""
-    The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.autograd.backward.html#torch.autograd.backward
-
     Computes the sum of gradients of given tensors with respect to graph leaves.
+
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.autograd.backward.html.
 
     The graph is differentiated using the chain rule. If any of ``tensors`` are non-scalar (i.e.
     their data has more than one element) and require gradient, then the Jacobian-vector product

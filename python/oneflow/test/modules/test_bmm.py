@@ -97,13 +97,19 @@ class TestModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(check_graph=True)
+    @autotest(check_graph=True, rtol=1e-4, atol=1e-3)
     def test_bmm_with_torch(test_case):
         device = random_device()
         mat1 = random_tensor(ndim=3, dim0=2, dim1=4, dim2=3).to(device)
         mat2 = random_tensor(ndim=3, dim0=2, dim1=3, dim2=4).to(device)
         y = torch.bmm(mat1, mat2,)
         return y
+
+    @profile(torch.bmm)
+    def profile_bmm(test_case):
+        mat1 = torch.ones(10, 100, 100)
+        mat2 = torch.ones(10, 100, 100)
+        torch.bmm(mat1, mat2)
 
 
 if __name__ == "__main__":

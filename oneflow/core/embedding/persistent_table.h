@@ -29,6 +29,7 @@ struct PersistentTableOptions {
   uint64_t target_chunk_size_mb = 4 * 1024;
   uint16_t physical_block_size = 4096;
   uint64_t capacity_hint = 0;
+  bool read_only = false;
 };
 
 class PersistentTable {
@@ -60,6 +61,7 @@ class PersistentTable {
   virtual void LoadSnapshot(const std::string& name,
                             const std::function<void(Iterator* iter)>& Hook) = 0;
   virtual void SaveSnapshot(const std::string& name) = 0;
+  virtual Iterator* ReadSnapshot(const std::string& name) = 0;
 };
 
 std::unique_ptr<PersistentTable> NewPersistentTable(const PersistentTableOptions& options);

@@ -27,14 +27,14 @@ import oneflow.unittest
 class TestStatefulKernelWithInpersistentState(flow.unittest.TestCase):
     def test_stateful_kernel_with_inpersistent_state(test_case):
         x = flow.arange(4).reshape(2, 2)
-        x = x.to_global(flow.env.all_device_placement("cuda"), flow.sbp.split(0))
-        y = flow._C.logical_slice(x, [0, 0], [3, 1], [1, 1])
+        x = x.to_global(flow.placement.all("cuda"), flow.sbp.split(0))
+        y = x[0:3, 0:1]
         y_np = np.array([[0], [2], [0]])
         test_case.assertTrue(
             np.array_equal(y.to_global(sbp=flow.sbp.broadcast).to_local().numpy(), y_np)
         )
         x = x.to_global(sbp=flow.sbp.split(1))
-        y = flow._C.logical_slice(x, [0, 0], [3, 1], [1, 1])
+        y = x[0:3, 0:1]
         test_case.assertTrue(
             np.array_equal(y.to_global(sbp=flow.sbp.broadcast).to_local().numpy(), y_np)
         )

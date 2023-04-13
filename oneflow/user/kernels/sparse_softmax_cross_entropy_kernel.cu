@@ -48,7 +48,7 @@ __global__ void ComputeSparseSoftmaxCrossEntropyResultGpu(const int64_t num_inst
                                                           const int64_t depth,
                                                           const int64_t lower_bound,
                                                           const K* labels, const T* prob, T* out) {
-  CUDA_1D_KERNEL_LOOP(i, num_instances) {
+  CUDA_1D_KERNEL_LOOP_T(int64_t, i, num_instances) {
     assert(labels[i] >= 0);
     assert(labels[i] < depth);
     K label = labels[i] - lower_bound;
@@ -100,9 +100,9 @@ class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel,
     user_op::Tensor* prob = ctx->Tensor4ArgNameAndIndex("prob", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
-    const int64_t num_instances = label->shape().elem_cnt();
-    CHECK_EQ(prediction->shape().elem_cnt() % num_instances, 0);
-    const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
+    const int64_t num_instances = label->shape_view().elem_cnt();
+    CHECK_EQ(prediction->shape_view().elem_cnt() % num_instances, 0);
+    const int64_t num_classes = prediction->shape_view().elem_cnt() / num_instances;
     const int64_t lower_bound = 0;
     const int64_t depth = ctx->Attr<int64_t>("depth");
 

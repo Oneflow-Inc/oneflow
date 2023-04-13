@@ -39,7 +39,8 @@ extern "C" typedef struct IBV {
   _(ibv_create_qp)        \
   _(ibv_dereg_mr)         \
   _(ibv_create_cq)        \
-  _(ibv_query_device)
+  _(ibv_query_device)     \
+  _(ibv_get_device_name)
 
 #define DECLARE_ONE(name) decltype(&name) name;
   IBV_APIS(DECLARE_ONE)

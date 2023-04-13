@@ -58,9 +58,9 @@ void TensorToNumpy(const user_op::Tensor* tensor, PyObject** arg_ptr) {
   int type_num = CHECK_JUST(numpy::OFDataTypeToNumpyType(tensor->data_type()));
   VLOG(3) << "Tensor data type " << DataType_Name(tensor->data_type()) << " Numpy type "
           << type_num;
-  int dim_size = tensor->shape().NumAxes();
+  int dim_size = tensor->shape_view().NumAxes();
   npy_intp dims[dim_size];
-  FOR_RANGE(size_t, i, 0, dim_size) { dims[i] = tensor->shape().At(i); }
+  FOR_RANGE(size_t, i, 0, dim_size) { dims[i] = tensor->shape_view().At(i); }
 
   void* data = TensorToMem(tensor);
   auto* np_array =
@@ -105,9 +105,9 @@ void NumpyToTensor(PyObject* arg, user_op::Tensor* tensor) {
 
   int64_t array_elem_cnt = 1;
   FOR_RANGE(int, i, 0, PyArray_NDIM(array)) { array_elem_cnt *= PyArray_SHAPE(array)[i]; }
-  CHECK_EQ(array_elem_cnt, tensor->shape().elem_cnt())
+  CHECK_EQ(array_elem_cnt, tensor->shape_view().elem_cnt())
       << "Numpy array element count " << array_elem_cnt
-      << " is not equal to OneFlow tensor element count " << tensor->shape().elem_cnt();
+      << " is not equal to OneFlow tensor element count " << tensor->shape_view().elem_cnt();
 
   void* array_data_ptr = PyArray_DATA(array);
   MemToTensor(array_data_ptr, array_elem_cnt, tensor);

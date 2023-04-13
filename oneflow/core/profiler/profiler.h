@@ -46,8 +46,9 @@ class RangeGuard final {
   std::shared_ptr<RangeGuardCtx> ctx_;
 };
 
-#ifdef OF_ENABLE_PROFILER
 #define OF_PROFILER_NAME_THIS_HOST_THREAD(name) ::oneflow::profiler::NameThisHostThread(name)
+
+#ifdef OF_ENABLE_PROFILER
 #define OF_PROFILER_ONLY_CODE(...) __VA_ARGS__
 #define OF_PROFILER_RANGE_PUSH(name) ::oneflow::profiler::RangePush(name)
 #define OF_PROFILER_RANGE_POP() ::oneflow::profiler::RangePop()
@@ -59,9 +60,18 @@ class RangeGuard final {
 #define OF_PROFILER_RANGE_PUSH(name)
 #define OF_PROFILER_RANGE_POP()
 #define OF_PROFILER_RANGE_GUARD(name)
-#define OF_PROFILER_NAME_THIS_HOST_THREAD(name)
 #define OF_PROFILER_LOG_HOST_MEMORY_USAGE(name)
 #endif
+
+void EnableProfiler(bool use_cpu, bool use_cuda, bool record_shapes, bool record_attrs,
+                    bool record_bandwidth);
+
+// DisableProfilerAndReturnResult will return a json of profile results.
+Maybe<std::string> DisableProfilerAndReturnResult();
+
+Maybe<std::string> StartRecord(const std::string& name);
+
+Maybe<void> EndRecord(const std::string& event_recorder_key);
 
 }  // namespace profiler
 

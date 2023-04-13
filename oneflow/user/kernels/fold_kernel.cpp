@@ -71,9 +71,10 @@ class FoldKernel final : public OpKernel {
     const std::vector<int32_t> stride = ctx->Attr<std::vector<int32_t>>("strides");
 
     const auto& state_ptr = CreateFoldOpKernelState<INDEX_T, NDIM, SDIM>(
-        input->shape(), output_size, kernel_size, padding, stride, dilation);
+        input->shape_view(), output_size, kernel_size, padding, stride, dilation);
     const FoldParams<INDEX_T, NDIM, SDIM> params = state_ptr->params();
-    size_t out_bytes_size = output->shape().elem_cnt() * GetSizeOfDataType(output->data_type());
+    size_t out_bytes_size =
+        output->shape_view().elem_cnt() * GetSizeOfDataType(output->data_type());
     Memset<device_type>(ctx->stream(), output->mut_dptr<T>(), 0, out_bytes_size);
     FoldKernelUtil<device_type, T, INDEX_T, NDIM, SDIM>::Forward(
         ctx->stream(), &params, input->dptr<T>(), output->mut_dptr<T>());

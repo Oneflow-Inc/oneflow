@@ -54,4 +54,31 @@ void DfsTopoGraphTraversal(const OpGraph& graph, bool reversed,
   });
 }
 
+std::function<bool(const OpNode* op_node)> MakePredicatorIsSafeToDelete(const OpGraph& op_graph) {
+  HashSet<std::string> ctrl_in_op_names;
+  op_graph.ForEachNode([&](const OpNode* op_node) {
+    for (const std::string& ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
+      ctrl_in_op_names.insert(ctrl_in_op_name);
+    }
+  });
+  return [=](const OpNode* op_node) {
+    if (op_node->out_edges().size() > 1) { return false; }
+    if (!op_node->op().op_conf().ctrl_in_op_name().empty()) { return false; }
+    if (ctrl_in_op_names.find(op_node->op().op_conf().name()) != ctrl_in_op_names.end()) {
+      return false;
+    }
+    return true;
+  };
+}
+
+bool IsUserOpWithTypeName(const OperatorConf& op_conf, const std::string& op_type_name) {
+  return op_conf.has_user_conf() && op_conf.user_conf().op_type_name() == op_type_name;
+}
+
+std::string GenParallelConfKey(const ParallelConf& conf) {
+  std::string ret = conf.device_tag();
+  for (const auto& name : conf.device_name()) { ret += ("-" + name); }
+  return ret;
+}
+
 }  // namespace oneflow

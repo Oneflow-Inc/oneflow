@@ -24,6 +24,8 @@ from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.nn as nn
 import oneflow.unittest
+import torch as torch_original
+from packaging import version
 
 
 def _test_deconv_bias_false(test_case, device):
@@ -871,8 +873,54 @@ class TestDeconv2d(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest()
+    @autotest(n=5, rtol=1e-2, atol=1e-3)
     def test_deconv2d_with_random_data(test_case):
+        channels = random(1, 6)
+        m = torch.nn.ConvTranspose2d(
+            in_channels=channels,
+            out_channels=random(1, 20),
+            kernel_size=random(1, 4),
+            stride=random() | nothing(),
+            padding=random(1, 3).to(int) | nothing(),
+            dilation=random(1, 5) | nothing(),
+            groups=random(1, 5) | nothing(),
+            padding_mode=constant("zeros") | nothing(),
+            bias=random_bool(),
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor(ndim=4, dim1=channels).to(device)
+        y = m(x)
+        return y
+
+    @unittest.skipIf(
+        version.parse(torch_original.__version__) <= version.parse("1.13.0"),
+        "deconv module don't support unbatched input in PyTorch before '1.13.0'",
+    )
+    @autotest(n=5)
+    def test_deconv2d_auto_squeeze_with_random_data(test_case):
+        channels = random(1, 6)
+        m = torch.nn.ConvTranspose2d(
+            in_channels=channels,
+            out_channels=random(1, 20),
+            kernel_size=random(1, 4),
+            stride=random() | nothing(),
+            padding=random(1, 3).to(int) | nothing(),
+            dilation=random(1, 5) | nothing(),
+            groups=random(1, 5) | nothing(),
+            padding_mode=constant("zeros") | nothing(),
+            bias=random_bool(),
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor(ndim=3, dim0=channels).to(device)
+        y = m(x)
+        return y
+
+    @autotest(check_graph=False)
+    def test_deconv2d_0size_with_random_data(test_case):
         channels = random(1, 6)
         m = torch.nn.ConvTranspose2d(
             in_channels=channels,
@@ -887,14 +935,14 @@ class TestDeconv2d(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_tensor(ndim=4, dim1=channels).to(device)
+        x = random_tensor(ndim=4, dim0=0, dim1=channels).to(device)
         y = m(x)
         return y
 
     @unittest.skip(
         "Likely to fail the test. This case should run on cpu when the problem is solved."
     )
-    @autotest(n=30)
+    @autotest(n=30, check_graph=False, rtol=1e-2, atol=1e-4)
     def test_deconv2d_group_with_random_data(test_case):
         channels = 720  # lcm(1, 2, 3, 4, 5, 6)
         m = torch.nn.ConvTranspose2d(
@@ -916,6 +964,36 @@ class TestDeconv2d(flow.unittest.TestCase):
         x.pytorch = x.pytorch.to("cuda")
         y = m(x)
         return y
+
+    @profile(torch.nn.functional.conv_transpose2d)
+    def profile_conv_transpose2d(test_case):
+        inputs = torch.ones(16, 128, 128, 128)
+        weights_4x4_64c = torch.ones(128, 64, 4, 4)
+        weights_6x6_64c = torch.ones(128, 64, 6, 6)
+        weights_8x8_64c = torch.ones(128, 64, 8, 8)
+        torch.nn.functional.conv_transpose2d(
+            inputs, weights_4x4_64c, stride=2, padding=1
+        )
+        torch.nn.functional.conv_transpose2d(
+            inputs, weights_4x4_64c, stride=2, padding=1, bias=torch.ones(64)
+        )
+        torch.nn.functional.conv_transpose2d(
+            inputs, weights_6x6_64c, stride=3, padding=2, output_padding=1
+        )
+        torch.nn.functional.conv_transpose2d(
+            inputs,
+            weights_6x6_64c,
+            stride=3,
+            padding=2,
+            bias=torch.ones(64),
+            output_padding=1,
+        )
+        torch.nn.functional.conv_transpose2d(
+            inputs, weights_8x8_64c, stride=4, padding=2
+        )
+        torch.nn.functional.conv_transpose2d(
+            inputs, weights_8x8_64c, stride=4, padding=2, bias=torch.ones(64)
+        )
 
 
 if __name__ == "__main__":

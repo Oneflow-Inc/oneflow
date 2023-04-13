@@ -18,7 +18,7 @@ import math
 from typing import Callable, Dict, Iterator, List, Tuple, Union
 
 import oneflow as flow
-from oneflow.nn.optimizer.optimizer import Optimizer, ParamGroup
+from oneflow.optim.optimizer import Optimizer, ParamGroup
 from oneflow.nn.parameter import Parameter
 
 
@@ -43,6 +43,9 @@ class Adagrad(Optimizer):
             weight_decay (float, optional): The weight decay. Defaults to 0.
             initial_accumulator_value (float, optional): The initial value of S. Defaults to 0.0.
             eps (float, optional): A small constant terms added to the denominator to improve numerical stability. Defaults to 1e-10.
+            contiguous_params (bool, optional): whether to use contiguous ParamGroup 
+                which puts all parameters of the same type, device and group into the
+                same tensor and update them together. (default: False)
         
         For example: 
 
@@ -98,6 +101,7 @@ class Adagrad(Optimizer):
         weight_decay: float = 0,
         initial_accumulator_value: float = 0.0,
         eps: float = 1e-10,
+        contiguous_params: bool = False,
     ):
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
@@ -112,14 +116,20 @@ class Adagrad(Optimizer):
         options["lr_decay"] = lr_decay
         options["weight_decay"] = weight_decay
         options["eps"] = eps
+        options["contiguous_params"] = contiguous_params
         super().__init__(params, options)
 
         for param_group in self.param_groups:
-            for param in param_group.parameters:
+            if param_group["contiguous_params"]:
+                param_list = param_group.contiguous_parameters
+            else:
+                param_list = param_group.parameters
+
+            for param in param_list:
                 assert param.is_leaf, "parameters must be leaf tensor"
-                self._state[param] = dict()
-                self._state[param]["sum"] = flow.zeros_like(param).fill_(
-                    initial_accumulator_value
+                self.state[param] = dict()
+                self.state[param]["sum"] = flow.zeros_like(param).fill_(
+                    param_group["initial_accumulator_value"]
                 )
 
         self._op = (
@@ -140,30 +150,42 @@ class Adagrad(Optimizer):
         with flow.no_grad():
             loss = None
             if closure is not None:
-                loss = closure()
+                with flow.enable_grad():
+                    loss = closure()
+
             for param_group in self.param_groups:
                 kwargs = {
                     "learning_rate": param_group["lr"],
                     "l2": param_group["weight_decay"],
                     "epsilon": param_group["eps"],
                     "lr_decay": param_group["lr_decay"],
-                    "train_step_val": self._state["step"] + 1,
+                    "train_step_val": self.state["step"] + 1,
                 }
-                for param in param_group.parameters:
+
+                if param_group["contiguous_params"]:
+                    param_list = param_group.contiguous_parameters
+                else:
+                    param_list = param_group.parameters
+
+                for param in param_list:
                     if param.grad is None:
                         continue
-                    sum_tensor = self._state[param]["sum"]
+                    sum_tensor = self.state[param]["sum"]
                     flow._C.dispatch_adagrad_update(
                         self._op, (param, param.grad, sum_tensor), **kwargs
                     )
 
-            self._state["step"] = self._state["step"] + 1
+            self.state["step"] = self.state["step"] + 1
             return loss
 
     def _generate_conf_for_graph(self, train_conf, vars_conf):
         new_opt_confs = []
         for param_group in self.param_groups:
-            optimizer_conf = train_conf.mutable_optimizer_conf().Add()
+            assert (
+                param_group["contiguous_params"] != True
+            ), "contiguous_params cannot be used in graph"
+
+            optimizer_conf = train_conf.optimizer_conf.add()
 
             lr = (
                 param_group["initial_lr"]
@@ -175,19 +197,21 @@ class Adagrad(Optimizer):
             lr_decay = param_group["lr_decay"]
             epsilon = param_group["eps"]
 
-            optimizer_conf.set_base_learning_rate(lr)
-            optimizer_conf.mutable_adagrad_conf().set_initial_accumulator_value(
+            optimizer_conf.base_learning_rate = lr
+            self._generate_lr_scale_for_optim_conf(param_group, optimizer_conf)
+
+            optimizer_conf.adagrad_conf.initial_accumulator_value = (
                 initial_accumulator_value
             )
-            optimizer_conf.mutable_adagrad_conf().set_lr_decay(lr_decay)
-            optimizer_conf.mutable_adagrad_conf().set_epsilon(epsilon)
+            optimizer_conf.adagrad_conf.lr_decay = lr_decay
+            optimizer_conf.adagrad_conf.epsilon = epsilon
 
             self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
 
             for param in param_group.parameters:
                 vars_conf[param].l2 = l2
                 if param.requires_grad:
-                    optimizer_conf.add_variable_op_names(vars_conf[param].name)
+                    optimizer_conf.variable_op_names.append(vars_conf[param].name)
 
             new_opt_confs.append(optimizer_conf)
         return new_opt_confs

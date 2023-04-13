@@ -21,8 +21,8 @@ limitations under the License.
 namespace oneflow {
 
 bool IsThreadLocalCacheEnabled() {
-  if (Global<ResourceDesc, ForSession>::Get() == nullptr) { return true; }
-  return Global<ResourceDesc, ForSession>::Get()->enable_thread_local_cache();
+  if (Singleton<ResourceDesc, ForSession>::Get() == nullptr) { return true; }
+  return Singleton<ResourceDesc, ForSession>::Get()->enable_thread_local_cache();
 }
 
 }  // namespace oneflow

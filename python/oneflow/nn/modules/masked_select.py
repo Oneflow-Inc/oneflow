@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-from oneflow.framework.tensor import register_tensor_op
 
 
 def masked_select_op(input, mask):
@@ -42,9 +41,6 @@ def masked_select_op(input, mask):
         tensor([0.3139, 0.3898], dtype=oneflow.float32)
     """
 
-    assert len(input.shape) == len(
-        mask.shape
-    ), f"The dim of masked_select module's inputs can not match, please check!"
     assert input.is_global == mask.is_global, (
         f"input tensor is %s tensor, but mask is %s tensor"
         % (
@@ -52,10 +48,26 @@ def masked_select_op(input, mask):
             "global" if mask.is_global else "local",
         )
     )
-    res = flow._C.mul(input, mask)
+    broadcast_shape = []
+    input_shape_len = len(input.shape)
+    mask_shape_len = len(mask.shape)
+    input_shape = [input.shape[i] for i in range(input_shape_len)]
+    input_shape.reverse()
+    mask_shape = [mask.shape[i] for i in range(mask_shape_len)]
+    mask_shape.reverse()
+    for i in range(max(input_shape_len, mask_shape_len)):
+        if i < input_shape_len and i < mask_shape_len:
+            broadcast_shape.append(max(input_shape[i], mask_shape[i]))
+        elif i < input_shape_len:
+            broadcast_shape.append(input_shape[i])
+        else:
+            broadcast_shape.append(mask_shape[i])
+    broadcast_shape.reverse()
+    broadcast_input = input.expand(broadcast_shape)
+    broadcast_mask = mask.expand(broadcast_shape)
 
-    indices = flow.argwhere(res)
-    gather_res = flow._C.gather_nd(res, indices)
+    indices = flow.argwhere(broadcast_mask)
+    gather_res = flow._C.gather_nd(broadcast_input, indices)
 
     return gather_res.flatten()
 

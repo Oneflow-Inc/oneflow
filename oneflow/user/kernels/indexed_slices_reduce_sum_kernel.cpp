@@ -35,9 +35,9 @@ class IndexedSlicesReduceSumKernel final : public user_op::OpKernel {
     user_op::Tensor* num_unique = ctx->Tensor4ArgNameAndIndex("num_unique", 0);
     user_op::Tensor* tmp = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     void* tmp_ptr = tmp ? tmp->mut_dptr() : nullptr;
-    int64_t tmp_size = tmp ? tmp->shape().elem_cnt() * GetSizeOfDataType(tmp->data_type()) : 0;
-    const int64_t n = x_indices->shape().elem_cnt();
-    const int64_t m = x_values->shape().elem_cnt() / n;
+    int64_t tmp_size = tmp ? tmp->shape_view().elem_cnt() * GetSizeOfDataType(tmp->data_type()) : 0;
+    const int64_t n = x_indices->shape_view().elem_cnt();
+    const int64_t m = x_values->shape_view().elem_cnt() / n;
     IndexedSlicesReduceSumKernelUtil<device_type, K, T, int64_t>::ReduceSum(
         ctx->stream(), n, m, x_indices->dptr<K>(), x_values->dptr<T>(),
         num_unique->mut_dptr<int64_t>(), y_indices->mut_dptr<K>(), y_values->mut_dptr<T>(), tmp_ptr,

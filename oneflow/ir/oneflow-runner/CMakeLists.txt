@@ -16,7 +16,7 @@ target_link_libraries(
           MLIRExecutionEngine
           MLIRIR
           MLIRJitRunner
-          MLIRLLVMIR
+          MLIRLLVMIRTransforms
           MLIRLLVMToLLVMIRTranslation
           MLIRToLLVMIRTranslationRegistration
           MLIRParser

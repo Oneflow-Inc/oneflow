@@ -9,10 +9,11 @@ set(OPENCV_LIBRARY_DIR ${OPENCV_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR})
 set(OPENCV_3RDPARTY_LIBRARY_DIR ${OPENCV_INSTALL_DIR}/share/OpenCV/3rdparty/${CMAKE_INSTALL_LIBDIR})
 
 set(OPENCV_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/src)
-set(OPENCV_URL https://github.com/Oneflow-Inc/opencv/archive/51cef2651.tar.gz)
+set(OPENCV_URL
+    https://github.com/opencv/opencv/archive/83391ac59d270f2148fc99a62ae279b04d37f5d0.tar.gz)
 use_mirror(VARIABLE OPENCV_URL URL ${OPENCV_URL})
 
-set(OPENCV_LIBRARY_NAMES libopencv_imgproc.a libopencv_imgcodecs.a libopencv_core.a)
+set(OPENCV_LIBRARY_NAMES libopencv_imgcodecs.a libopencv_imgproc.a libopencv_core.a)
 set(OPENCV_3RDPARTY_LIBRARY_NAMES libIlmImf.a liblibjasper.a liblibpng.a liblibtiff.a liblibwebp.a)
 
 foreach(LIBRARY_NAME ${OPENCV_LIBRARY_NAMES})
@@ -44,7 +45,7 @@ if(THIRD_PARTY)
     DEPENDS libjpeg_copy_headers_to_destination libjpeg_copy_libs_to_destination
     PREFIX opencv
     URL ${OPENCV_URL}
-    URL_MD5 59870e55385f5202c1aa178fe37ed2de
+    URL_MD5 b09dc79dec7766a3550907bcafc8bbf5
     UPDATE_COMMAND ""
     PATCH_COMMAND cmake -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/build
     BUILD_IN_SOURCE 0

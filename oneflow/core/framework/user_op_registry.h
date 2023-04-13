@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/operator/op_attribute.pb.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -39,6 +40,8 @@ class InferSbpSignatureFnContext;
 class InferOutputBlobTimeShapeFnContext;
 class InferNdSbpFnContext;
 class DeviceAndStreamInferContext;
+class ComputeComplexityFnContext;
+class GetNdSbpSignatureListContext;
 
 using CheckAttrFn = std::function<Maybe<void>(const UserOpDefWrapper&, const UserOpConfWrapper&)>;
 using TensorDescInferFn = std::function<Maybe<void>(InferContext*)>;
@@ -58,14 +61,23 @@ using OutputArgModifyFn =
     std::function<Maybe<void>(const GetOutputArgModifier&, const UserOpConfWrapper&)>;
 using OutputBlobTimeShapeInferFn = std::function<Maybe<void>(InferOutputBlobTimeShapeFnContext*)>;
 using NdSbpInferFn = std::function<Maybe<void>(InferNdSbpFnContext*)>;
+using ComputeComplexityFn = std::function<Maybe<double>(ComputeComplexityFnContext*)>;
+// TODO: set up another context
+using GetNdSbpSignatureListFn = std::function<Maybe<void>(GetNdSbpSignatureListContext*)>;
+using EnumerateNdSbpSignaturesFn = std::function<Maybe<void>(GetNdSbpSignatureListContext*)>;
 
 struct OpRegistryResult {
-  OpRegistryResult() : cpu_only_supported(false), no_grad(false), same_output_regst_num(-1) {}
+  OpRegistryResult()
+      : cpu_only_supported(false),
+        no_grad(false),
+        non_contiguous_supported(false),
+        same_output_regst_num(-1) {}
   ~OpRegistryResult() = default;
 
   std::string op_type_name;
   bool cpu_only_supported;
   bool no_grad;
+  bool non_contiguous_supported;
   int32_t same_output_regst_num;
   UserOpDef op_def;
   CheckAttrFn check_fn;
@@ -81,6 +93,10 @@ struct OpRegistryResult {
   OutputArgModifyFn output_arg_modify_fn;
   OutputBlobTimeShapeInferFn output_blob_time_shape_infer_fn;
   NdSbpInferFn nd_sbp_infer_fn;
+  ComputeComplexityFn compute_complexity_fn;
+  GetNdSbpSignatureListFn get_nd_sbp_list_fn;
+  EnumerateNdSbpSignaturesFn enumerate_nd_sbp_signatures_fn;
+  Operator::DumpNdSbpSignatureForOpConfFn dump_nd_sbp_signature_for_op_conf_fn;
 };
 
 class OpRegistry final {
@@ -102,6 +118,7 @@ class OpRegistry final {
   OpRegistry& OptionalOutputWithMinimum(const std::string& name, int32_t min_num);
 
   OpRegistry& SupportCpuOnly();
+  OpRegistry& SupportNonContiguous();
   OpRegistry& NoGrad();
   OpRegistry& SetOutputBufferNum(int32_t num);
 
@@ -126,6 +143,10 @@ class OpRegistry final {
   OpRegistry& SetCheckAttrFn(CheckAttrFn fn);
   OpRegistry& SetDataTypeInferFn(DataTypeInferFn fn);
   OpRegistry& SetDeviceAndStreamInferFn(DeviceAndStreamInferFn fn);
+  OpRegistry& SetComputeComplexityFn(ComputeComplexityFn fn);
+  OpRegistry& SetGetNdSbpSignatureListFn(GetNdSbpSignatureListFn fn);
+  OpRegistry& SetEnumerateNdSbpSignaturesFn(EnumerateNdSbpSignaturesFn fn);
+  OpRegistry& SetDumpNdSbpSignatureForOpConfFn(Operator::DumpNdSbpSignatureForOpConfFn fn);
 
   Maybe<OpRegistry&> Finish();
   OpRegistryResult GetResult() { return result_; }

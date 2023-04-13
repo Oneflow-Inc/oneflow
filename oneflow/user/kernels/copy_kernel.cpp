@@ -29,13 +29,13 @@ class CopyKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const ShapeView& in_shape = in->shape();
-    CHECK_EQ(out->shape(), in_shape);
+    const ShapeView& in_shape = in->shape_view();
+    CHECK_EQ(out->shape_view(), in_shape);
     const DataType in_data_type = in->data_type();
     CHECK_EQ(out->data_type(), in_data_type);
     if (in_shape.elem_cnt() == 0) {
-      CHECK_ISNULL(in->raw_dptr());
-      CHECK_ISNULL(out->mut_raw_dptr());
+      // 0 shape tensor do not need copy
+      return;
     } else {
       AutoMemcpy(ctx->stream(), out->mut_raw_dptr(), in->raw_dptr(),
                  in_shape.elem_cnt() * GetSizeOfDataType(in_data_type), out->mem_case(),
@@ -45,7 +45,7 @@ class CopyKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("copy").SetCreateFn<CopyKernel>().SetIsMatchedHob(user_op::HobTrue());
+REGISTER_USER_KERNEL("copy").SetCreateFn<CopyKernel>();
 
 }  // namespace
 }  // namespace oneflow

@@ -31,7 +31,8 @@ config.host_arch = "@HOST_ARCH@"
 config.oneflow_src_root = "@CMAKE_SOURCE_DIR@"
 config.oneflow_obj_root = "@CMAKE_BINARY_DIR@"
 config.oneflow_ir_obj_root = "@PROJECT_BINARY_DIR@"
-config.WITH_MLIR_CUDA_CODEGEN = "@WITH_MLIR_CUDA_CODEGEN@"
+config.WITH_MLIR_CUDA_CODEGEN = @WITH_MLIR_CUDA_CODEGEN@
+config.BUILD_CUDA = @BUILD_CUDA@
 
 # Support substitution of the tools_dir with user parameters. This is
 # used when we can't determine the tool dir at configuration time.

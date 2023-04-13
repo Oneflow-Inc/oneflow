@@ -46,7 +46,7 @@ class GpuOneHotKernel final : public user_op::OpKernel, public user_op::CudaGrap
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const int64_t num_indices = indices->shape().elem_cnt();
+    const int64_t num_indices = indices->shape_view().elem_cnt();
     const int64_t depth = ctx->Attr<int64_t>("depth");
     const DataType dtype = ctx->Attr<DataType>("dtype");
     const T on_value = IsFloatingDataType(dtype)

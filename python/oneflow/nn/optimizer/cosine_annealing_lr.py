@@ -15,14 +15,12 @@ limitations under the License.
 """
 import math
 
-from .optimizer import Optimizer
+from ...optim.optimizer import Optimizer
 from .lr_scheduler import LRScheduler
 
 
 class CosineAnnealingLR(LRScheduler):
     r"""
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.CosineAnnealingLR.html?highlight=cosine#torch.optim.lr_scheduler.CosineAnnealingLR
-
     Set the learning rate of each parameter group using a cosine annealing
     schedule, where :math:`\eta_{max}` is set to the initial lr and
     :math:`T_{cur}` is the number of epochs since the last restart in SGDR:
@@ -49,6 +47,8 @@ class CosineAnnealingLR(LRScheduler):
     It has been proposed in
     `SGDR: Stochastic Gradient Descent with Warm Restarts`_. Note that this only
     implements the cosine annealing part of SGDR, and not the restarts.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.optim.lr_scheduler.CosineAnnealingLR.html.
 
     Args:
         optimizer (Optimizer): Wrapped optimizer.
@@ -79,6 +79,7 @@ class CosineAnnealingLR(LRScheduler):
         return self.eta_min + (base_lr - self.eta_min) * cos_decay
 
     def _generate_conf_for_graph(self, lr_conf):
-        cosine_annealing_conf = lr_conf.mutable_cosine_annealing_conf()
-        cosine_annealing_conf.set_t_max(self.T_max)
-        cosine_annealing_conf.set_eta_min(self.eta_min)
+        lr_conf.cosine_annealing_conf.SetInParent()
+        cosine_annealing_conf = lr_conf.cosine_annealing_conf
+        cosine_annealing_conf.t_max = self.T_max
+        cosine_annealing_conf.eta_min = self.eta_min

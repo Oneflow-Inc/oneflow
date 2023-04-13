@@ -89,7 +89,7 @@ static void initStride(STRIDE& stride, const SHAPE& dim_vec, const int32_t dims)
 }
 
 static void transformShifts(int32_t* shifts, int32_t* shape, int n) {
-  for (int i = 0; i < n; ++i) { shifts[i] = shifts[i] % shape[i]; }
+  for (int i = 0; i < n; ++i) { shifts[i] = shifts[i] % shape[i]; }  // NOLINT
 }
 
 static void computeParams(const ShapeView& in_shape, const std::vector<int32_t>& shifts,

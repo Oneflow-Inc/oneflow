@@ -32,15 +32,18 @@ Maybe<void> TensorDescInferFnUtil::Unchanged(InferContext* ctx) {
     const std::pair<std::string, int32_t>& input_arg = ctx->inputs().at(i);
     if (first_tensor_desc) {
       const TensorDesc& tensor_desc = ctx->InputTensorDesc(input_arg.first, input_arg.second);
-      CHECK_EQ_OR_RETURN(tensor_desc.shape(), first_tensor_desc->shape());
+      CHECK_EQ_OR_RETURN(tensor_desc.shape(), first_tensor_desc->shape())
+          << Error::RuntimeError() << "Tensor descriptions should have the same shape: expected "
+          << first_tensor_desc->shape() << " but got " << tensor_desc.shape();
     } else {
       first_tensor_desc = &ctx->InputTensorDesc(input_arg.first, input_arg.second);
     }
   }
   for (size_t i = 0; i < ctx->outputs().size(); ++i) {
     const std::pair<std::string, int32_t>& output_arg = ctx->outputs().at(i);
-    *ctx->OutputIsDynamic(output_arg.first, output_arg.second) = first_tensor_desc->is_dynamic();
-    *ctx->OutputShape(output_arg.first, output_arg.second) = first_tensor_desc->shape();
+    ctx->SetOutputIsDynamic(output_arg.first, output_arg.second,                           // NOLINT
+                            first_tensor_desc->is_dynamic());                              // NOLINT
+    ctx->SetOutputShape(output_arg.first, output_arg.second, first_tensor_desc->shape());  // NOLINT
   }
   return Maybe<void>::Ok();
 }
@@ -51,24 +54,31 @@ Maybe<void> TensorDescInferFnUtil::UnchangedDataType(InferContext* ctx) {
     const std::pair<std::string, int32_t>& input_arg = ctx->inputs().at(i);
     if (first_tensor_desc) {
       const TensorDesc& tensor_desc = ctx->InputTensorDesc(input_arg.first, input_arg.second);
-      CHECK_EQ_OR_RETURN(tensor_desc.data_type(), first_tensor_desc->data_type());
+      CHECK_EQ_OR_RETURN(tensor_desc.data_type(), first_tensor_desc->data_type())
+          << Error::TypeError() << "Tensor descriptions should have the same type. Expected "
+          << DataType_Name(first_tensor_desc->data_type()) << ", but got "
+          << DataType_Name(tensor_desc.data_type());
     } else {
       first_tensor_desc = &ctx->InputTensorDesc(input_arg.first, input_arg.second);
     }
   }
   for (size_t i = 0; i < ctx->outputs().size(); ++i) {
     const std::pair<std::string, int32_t>& output_arg = ctx->outputs().at(i);
-    *ctx->OutputDType(output_arg.first, output_arg.second) = first_tensor_desc->data_type();
+    ctx->SetOutputDType(output_arg.first, output_arg.second,  // NOLINT
+                        first_tensor_desc->data_type());      // NOLINT
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> TensorDescInferFnUtil::InOutCorrespond(InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(ctx->inputs().size(), ctx->outputs().size());
+  CHECK_EQ_OR_RETURN(ctx->inputs().size(), ctx->outputs().size())
+      << Error::InvalidValueError()
+      << "Different input and output size. Input size :" << ctx->inputs().size()
+      << ", output size: " << ctx->outputs().size();
   for (size_t i = 0; i < ctx->inputs().size(); ++i) {
     const auto& input_arg = ctx->inputs().at(i);
     const auto& output_arg = ctx->outputs().at(i);
-    *ctx->OutputTensorDesc(output_arg.first, output_arg.second) =
+    *ctx->MutOutputTensorDesc(output_arg.first, output_arg.second) =
         ctx->InputTensorDesc(input_arg.first, input_arg.second);
   }
   return Maybe<void>::Ok();

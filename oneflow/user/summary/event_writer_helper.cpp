@@ -60,7 +60,7 @@ Maybe<void> FillHistogramInSummary(const user_op::Tensor& value, const std::stri
   v->set_tag(tag);
   *v->mutable_metadata() = metadata;
   summary::Histogram histo;
-  for (int64_t i = 0; i < value.shape().elem_cnt(); i++) {
+  for (int64_t i = 0; i < value.shape_view().elem_cnt(); i++) {
     double double_val = value.dptr<T>()[i];
     histo.AppendValue(double_val);
   }
@@ -117,20 +117,21 @@ bool WriteImageToBuffer(const uint8_t* image, int width, int height, int depth,
 Maybe<void> FillImageInSummary(const user_op::Tensor& tensor, const std::string& tag, Summary* s) {
   SummaryMetadata metadata;
   SetPluginData(&metadata, kImagePluginName);
-  if (!(tensor.shape().NumAxes() == 4
-        && (tensor.shape().At(3) == 1 || tensor.shape().At(3) == 3 || tensor.shape().At(3) == 4))) {
+  if (!(tensor.shape_view().NumAxes() == 4
+        && (tensor.shape_view().At(3) == 1 || tensor.shape_view().At(3) == 3
+            || tensor.shape_view().At(3) == 4))) {
     UNIMPLEMENTED();
   }
-  if (!(tensor.shape().At(0) < (1LL << 31) && tensor.shape().At(1) < (1LL << 31)
-        && tensor.shape().At(2) < (1LL << 31)
-        && (tensor.shape().At(1) * tensor.shape().At(2)) < (1LL << 29))) {
+  if (!(tensor.shape_view().At(0) < (1LL << 31) && tensor.shape_view().At(1) < (1LL << 31)
+        && tensor.shape_view().At(2) < (1LL << 31)
+        && (tensor.shape_view().At(1) * tensor.shape_view().At(2)) < (1LL << 29))) {
     UNIMPLEMENTED();
   }
-  const int64_t batch_size = static_cast<int64_t>(tensor.shape().At(0));
-  const int64_t h = static_cast<int64_t>(tensor.shape().At(1));
-  const int64_t w = static_cast<int64_t>(tensor.shape().At(2));
+  const int64_t batch_size = static_cast<int64_t>(tensor.shape_view().At(0));
+  const int64_t h = static_cast<int64_t>(tensor.shape_view().At(1));
+  const int64_t w = static_cast<int64_t>(tensor.shape_view().At(2));
   const int64_t hw = h * w;
-  const int64_t depth = static_cast<int64_t>(tensor.shape().At(3));
+  const int64_t depth = static_cast<int64_t>(tensor.shape_view().At(3));
   if (tensor.data_type() == DataType::kUInt8) {
     auto ith_image = [&tensor, hw, depth](int i) {
       auto images = tensor.dptr<uint8_t>();
@@ -167,7 +168,7 @@ struct EventWriterHelper<DeviceType::kCPU, T> {
     e->set_step(step);
     e->set_wall_time(GetWallTime());
     *e->mutable_summary() = sum;
-    Global<EventsWriter>::Get()->AppendQueue(std::move(e));
+    Singleton<EventsWriter>::Get()->AppendQueue(std::move(e));
   }
 
   static void WriteScalarToFile(int64_t step, float value, const std::string& tag) {
@@ -175,7 +176,7 @@ struct EventWriterHelper<DeviceType::kCPU, T> {
     e->set_step(step);
     e->set_wall_time(GetWallTime());
     CHECK_JUST(FillScalarInSummary(value, tag, e->mutable_summary()));
-    Global<EventsWriter>::Get()->AppendQueue(std::move(e));
+    Singleton<EventsWriter>::Get()->AppendQueue(std::move(e));
   }
 
   static void WriteHistogramToFile(int64_t step, const user_op::Tensor& value,
@@ -184,7 +185,7 @@ struct EventWriterHelper<DeviceType::kCPU, T> {
     e->set_step(step);
     e->set_wall_time(GetWallTime());
     CHECK_JUST(FillHistogramInSummary<T>(value, tag, e->mutable_summary()));
-    Global<EventsWriter>::Get()->AppendQueue(std::move(e));
+    Singleton<EventsWriter>::Get()->AppendQueue(std::move(e));
   }
 
   static void WriteImageToFile(int64_t step, const user_op::Tensor& tensor,
@@ -193,7 +194,7 @@ struct EventWriterHelper<DeviceType::kCPU, T> {
     e->set_step(step);
     e->set_wall_time(GetWallTime());
     CHECK_JUST(FillImageInSummary(tensor, tag, e->mutable_summary()));
-    Global<EventsWriter>::Get()->AppendQueue(std::move(e));
+    Singleton<EventsWriter>::Get()->AppendQueue(std::move(e));
   }
 };
 

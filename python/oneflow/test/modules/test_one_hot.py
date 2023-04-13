@@ -24,7 +24,7 @@ from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 
 
-def _test_onehot(test_case, device, num_classes, size, on_value, off_value):
+def _test_one_hot(test_case, device, num_classes, size, on_value, off_value):
     x = np.random.randint(9, size=size)
     input = flow.tensor(x, device=flow.device(device), dtype=flow.int64)
     output = flow.nn.functional.one_hot(input, num_classes, on_value, off_value)
@@ -41,7 +41,7 @@ class TestOnehot(flow.unittest.TestCase):
     def test_onehot(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _test_onehot,
+            _test_one_hot,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["num_classes"] = [-1, 10, 11]
@@ -50,6 +50,12 @@ class TestOnehot(flow.unittest.TestCase):
         arg_dict["off_value"] = [-2, -0.5, 0, 0.5, 2]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest(auto_backward=False)
+    def test_one_hot_scalar(test_case):
+        x = torch.tensor(2)
+        y = torch.nn.functional.one_hot(x, num_classes=5)
+        return y
 
 
 if __name__ == "__main__":

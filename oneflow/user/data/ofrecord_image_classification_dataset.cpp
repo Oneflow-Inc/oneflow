@@ -103,7 +103,7 @@ void DecodeWorker(const std::string& image_feature_name, const std::string& labe
     CHECK(receive_status == kBufferStatusSuccess);
     OFRecord record;
     CHECK(record.ParseFromArray(serialized_record.data<char>(),
-                                serialized_record.shape().elem_cnt()));
+                                serialized_record.shape_view().elem_cnt()));
     ImageClassificationDataInstance instance;
     DecodeImageFromOFRecord(record, image_feature_name, color_space, &instance.image);
     DecodeLabelFromFromOFRecord(record, label_feature_name, &instance.label);
@@ -118,7 +118,7 @@ int32_t GetNumLocalDecodeThreads(int32_t num_decode_threads_per_machine,
                                  const ParallelContext& parallel_ctx) {
   if (num_decode_threads_per_machine == 0) {
     num_decode_threads_per_machine =
-        Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize();
+        Singleton<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize();
   }
   int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_ctx.parallel_id()));
   int64_t parallel_num_on_this_machine = parallel_desc.sorted_dev_phy_ids(machine_id).size();

@@ -22,30 +22,41 @@ bool CompareLbiBlobDescPair(const LbiBlobDescPair& lhs, const LbiBlobDescPair& r
 }
 
 BlobDesc::BlobDesc(const Shape& shape, DataType dtype, bool is_dynamic)
-    : shape_(std::make_shared<Shape>(shape)), data_type_(dtype), is_dynamic_(is_dynamic) {}
-
-BlobDesc::BlobDesc(const std::shared_ptr<Shape>& shape, DataType dtype, bool is_dynamic)
-    : shape_(shape), data_type_(dtype), is_dynamic_(is_dynamic) {}
-
-BlobDesc::BlobDesc(const Shape& shape, DataType dtype) : BlobDesc(shape, dtype, false) {}
-BlobDesc::BlobDesc(const std::shared_ptr<Shape>& shape, DataType dtype)
-    : BlobDesc(shape, dtype, false) {}
-BlobDesc::BlobDesc(DataType dtype) : BlobDesc(Shape(), dtype, false) {}
+    : shape_(SymbolOf(shape)),
+      stride_(SymbolOf(Stride(shape))),
+      data_type_(dtype),
+      is_dynamic_(is_dynamic) {}
+BlobDesc::BlobDesc(const Shape& shape, const Stride& stride, DataType dtype, bool is_dynamic)
+    : shape_(SymbolOf(shape)),
+      stride_(SymbolOf(stride)),
+      data_type_(dtype),
+      is_dynamic_(is_dynamic) {}
+BlobDesc::BlobDesc(Symbol<Shape> shape, Symbol<Stride> stride, DataType dtype, bool is_dynamic)
+    : shape_(shape), stride_(stride), data_type_(dtype), is_dynamic_(is_dynamic) {}
+BlobDesc::BlobDesc(const Shape& shape, DataType dtype)
+    : BlobDesc(shape, Stride(shape), dtype, false) {}
+BlobDesc::BlobDesc(const Shape& shape, const Stride& stride, DataType dtype)
+    : BlobDesc(shape, stride, dtype, false) {}
+BlobDesc::BlobDesc(Symbol<Shape> shape, Symbol<Stride> stride, DataType dtype)
+    : BlobDesc(shape, stride, dtype, false) {}
+BlobDesc::BlobDesc(DataType dtype) : BlobDesc(Shape(), Stride(), dtype, false) {}
 
 BlobDesc::BlobDesc(const BlobDescProto& proto) {
-  shape_ = std::make_shared<Shape>(proto.shape());
+  shape_ = SymbolOf(Shape(proto.shape()));
+  stride_ = SymbolOf(Stride(proto.stride()));
   data_type_ = proto.data_type();
   is_dynamic_ = proto.is_dynamic();
 }
 
-BlobDesc::BlobDesc(const BlobDesc& other) {
-  shape_ = std::make_shared<Shape>(other.shape());
-  data_type_ = other.data_type();
-  is_dynamic_ = other.is_dynamic();
-}
+BlobDesc::BlobDesc(const BlobDesc& other)
+    : shape_(other.shape_),
+      stride_(other.stride_),
+      data_type_(other.data_type()),
+      is_dynamic_(other.is_dynamic()) {}
 
 void BlobDesc::ToProto(BlobDescProto* proto) const {
   shape().ToProto(proto->mutable_shape());
+  stride().ToProto(proto->mutable_stride());
   proto->set_data_type(data_type_);
   proto->set_is_dynamic(is_dynamic_);
 }
@@ -57,6 +68,7 @@ BlobDesc& BlobDesc::operator=(const BlobDesc& rhs) {
 
 void BlobDesc::CopyFrom(const BlobDesc& other) {
   set_shape(other.shape());
+  set_stride(other.stride());
   set_data_type(other.data_type());
   set_is_dynamic(other.is_dynamic());
 }
@@ -64,7 +76,7 @@ void BlobDesc::CopyFrom(const BlobDesc& other) {
 void BlobDesc::set_is_dynamic(bool is_dynamic) { is_dynamic_ = is_dynamic; }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
-  return (shape() == rhs.shape()) && (data_type() == rhs.data_type())
+  return (shape() == rhs.shape()) && (stride() == rhs.stride()) && (data_type() == rhs.data_type())
          && (is_dynamic() == rhs.is_dynamic());
 }
 
@@ -74,8 +86,8 @@ size_t BlobDesc::ByteSizeOfBlobHeader() const {
 
 size_t BlobDesc::AlignedByteSizeOfBlobHeader() const {
   return shape().is_initialized()
-             ? RoundUp(shape().NumAxes() * sizeof(int64_t), BlobDesc::kHeaderAlignSize)
-             : RoundUp(0, BlobDesc::kHeaderAlignSize);
+             ? RoundUp(shape().NumAxes() * sizeof(int64_t), kBlobHeaderAlignSize)
+             : RoundUp(0, kBlobHeaderAlignSize);
 }
 
 size_t BlobDesc::ByteSizeOfBlobBody() const {
@@ -83,7 +95,7 @@ size_t BlobDesc::ByteSizeOfBlobBody() const {
 }
 
 size_t BlobDesc::AlignedByteSizeOfBlobBody() const {
-  return RoundUp(ByteSizeOfBlobBody(), BlobDesc::kBodyAlignSize);
+  return RoundUp(ByteSizeOfBlobBody(), kBlobBodyAlignSize);
 }
 
 size_t BlobDesc::AlignedTotalByteSize() const {

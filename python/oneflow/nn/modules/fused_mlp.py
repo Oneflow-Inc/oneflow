@@ -18,7 +18,7 @@ import math
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.init import _calculate_fan_in_and_fan_out
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 from typing import Tuple
 
 
@@ -31,6 +31,10 @@ class FusedMLP(Module):
         hidden_features: A tuple of each Linear layer hidden size
 
         out_features: The final Linear layer hidden size
+
+        hidden_dropout_rate: A tuple of each hidden layer's dropout rate
+
+        out_dropout_rate: The final Linear layer's dropout rate
 
     Shape:
         - Input: :math:`(N, *, H_{in})` where :math:`*` means any number of
@@ -63,6 +67,8 @@ class FusedMLP(Module):
         in_features: int,
         hidden_features: Tuple[int],
         out_features: int,
+        hidden_dropout_rate: Tuple[float] = None,
+        out_dropout_rate: float = 0.0,
         skip_final_activation=False,
     ) -> None:
         super().__init__()
@@ -72,11 +78,24 @@ class FusedMLP(Module):
         # TODO(zzk): Add more activation support.
         self.skip_final_activation = skip_final_activation
         self.hidden_layer_num = len(hidden_features)
-
+        self.dropout_rate_list = (
+            hidden_dropout_rate
+            if hidden_dropout_rate
+            else [0.0] * (self.hidden_layer_num)
+        )
+        self.dropout_rate_list += [out_dropout_rate]
         self.add_parameters()
         self.reset_parameters()
+        self.use_dropout = False
+        for i in range(self.hidden_layer_num + 1):
+            if self.dropout_rate_list[i] != 0.0:
+                self.use_dropout = True
+                break
 
     def add_parameters(self) -> None:
+        """Register parameter in FusedMLP module. 
+
+        """
         if self.hidden_layer_num != 0:
             # First layer.
             self.register_parameter(
@@ -129,18 +148,33 @@ class FusedMLP(Module):
             )
 
     def weight(self, i):
+        """Returns the ith weight. 
+
+        """
         return getattr(self, f"weight_{i}")
 
     def weights(self):
+        """Returns the weight list in FusedMLP module. 
+
+        """
         return [self.weight(i) for i in range(self.hidden_layer_num + 1)]
 
     def bias(self, i):
+        """Return the ith bias. 
+
+        """
         return getattr(self, f"bias_{i}")
 
     def biases(self):
+        """Returns the bias list in FusedMLP module. 
+
+        """
         return [self.bias(i) for i in range(self.hidden_layer_num + 1)]
 
     def reset_parameters(self) -> None:
+        """Reset the parameters in FusedMLP module. 
+
+        """
         for layer_idx in range(self.hidden_layer_num + 1):
             flow.nn.init.kaiming_uniform_(self.weight(layer_idx), a=math.sqrt(5))
             (fan_in, _) = _calculate_fan_in_and_fan_out(self.weight(layer_idx))
@@ -148,10 +182,18 @@ class FusedMLP(Module):
             flow.nn.init.uniform_(self.bias(layer_idx), -bound, bound)
 
     def forward(self, x):
-        res = flow._C.fused_mlp(
-            x, self.weights(), self.biases(), self.skip_final_activation
-        )
-        return res
+        if not self.training or not self.use_dropout:
+            return flow._C.fused_mlp(
+                x, self.weights(), self.biases(), self.skip_final_activation
+            )
+        else:
+            return flow._C.fused_matmul_bias_add_relu_dropout(
+                x,
+                self.weights(),
+                self.biases(),
+                self.skip_final_activation,
+                self.dropout_rate_list,
+            )
 
     def extra_repr(self) -> str:
         return "in_features={}, hidden_features={}, out_features={}, skip_final_activation={}".format(

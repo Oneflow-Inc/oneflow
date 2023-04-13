@@ -42,8 +42,8 @@ void IdentityKernel::ForwardHeader(KernelContext* ctx) const {
 
 REGISTER_KERNEL(OperatorConf::kIdentityConf, IdentityKernel);
 REGISTER_KERNEL(OperatorConf::kCopyConf, IdentityKernel);
-REGISTER_KERNEL(OperatorConf::kCastToMirroredConf, IdentityKernel);
-REGISTER_KERNEL(OperatorConf::kCastFromMirroredConf, IdentityKernel);
+REGISTER_KERNEL(OperatorConf::kCastToLocalConf, IdentityKernel);
+REGISTER_KERNEL(OperatorConf::kCastFromLocalConf, IdentityKernel);
 REGISTER_KERNEL(OperatorConf::kBoxingIdentityConf, IdentityKernel);
 
 }  // namespace oneflow

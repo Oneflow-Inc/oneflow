@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 Transport::Transport() {
-  comm_net_ = Global<EpollCommNet>::Get();
+  comm_net_ = Singleton<EpollCommNet>::Get();  // NOLINT
   this_machine_id_ = GlobalProcessCtx::Rank();
   CHECK(comm_net_ != nullptr);
   // maybe need new read id for each dst machine id, maybe need 2 * machine num read ids

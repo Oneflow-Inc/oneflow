@@ -25,6 +25,6 @@ set_target_properties(
 llvm_update_compile_flags(oneflow-translate)
 
 target_link_libraries(oneflow-translate PRIVATE ${dialect_libs} ${translation_libs}
-                      PUBLIC MLIRTranslation MLIROneFlowTranslation)
+                      PUBLIC MLIRTranslateLib MLIROneFlowTranslation)
 
 mlir_check_link_libraries(oneflow-translate)

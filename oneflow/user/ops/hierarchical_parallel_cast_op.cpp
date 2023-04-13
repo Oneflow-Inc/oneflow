@@ -21,8 +21,8 @@ namespace oneflow {
 
 /* static */ Maybe<void> HierarchicalParallelCastOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-  *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -50,15 +50,31 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
+/* static */ Maybe<void> HierarchicalParallelCastOp::GetNdSbpSignatureList(
+    user_op::GetNdSbpSignatureListContext* ctx) {
+  const auto& conf = ctx->Attr<std::vector<std::string>>("nd_sbp");
+  NdSbpSignature nd_sbp_signature;
+  for (const std::string& sbp_str : conf) {
+    SbpParallel sbp_parallel;
+    CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_str, &sbp_parallel));
+    *(*nd_sbp_signature.mutable_bn_in_op2nd_sbp())[GenRepeatedBn("in", 0)].add_sbp_parallel() =
+        sbp_parallel;
+    *(*nd_sbp_signature.mutable_bn_in_op2nd_sbp())[GenRepeatedBn("out", 0)].add_sbp_parallel() =
+        sbp_parallel;
+  }
+  ctx->AddNdSbpSignature(nd_sbp_signature);
+  return Maybe<void>::Ok();
+}
+
 /* static */ Maybe<void> HierarchicalParallelCastOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> HierarchicalParallelCastLikeOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-  *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -84,48 +100,8 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> HierarchicalParallelCastLikeOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("hierarchical_parallel_cast")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
-      if (ctx->FwOp().NeedGenGradTensor4OpInput("in", 0)) {
-        const auto& grad_mode = ctx->FwOp().attr<std::string>("grad_mode");
-        if (grad_mode == "identity") {
-          ctx->FwOp().BindGradTensorWithOpInput(ctx->FwOp().GetGradTensorWithOpOutput("out", 0),
-                                                "in", 0);
-        } else if (grad_mode == "manual") {
-          const std::string grad_op_name = "System-AutoGrad-" + ctx->FwOp().op_name();
-          ctx->DefineOp(grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
-            return builder.OpTypeName("hierarchical_parallel_cast")
-                .InputBind("in", ctx->FwOp().output_grad("out", 0))
-                .Output("out")
-                .Attr<std::vector<std::string>>(
-                    "nd_sbp", ctx->FwOp().attr<std::vector<std::string>>("grad_nd_sbp"))
-                .Attr<std::vector<std::string>>("grad_nd_sbp", std::vector<std::string>())
-                .Build();
-          });
-          ctx->FwOp().InputGradBind(user_op::OpArg("in", 0), [&]() -> const std::string& {
-            return ctx->GetOp(grad_op_name).output("out", 0);
-          });
-        } else if (grad_mode == "restore") {
-          const std::string grad_op_name = "System-AutoGrad-" + ctx->FwOp().op_name();
-          ctx->DefineOp(grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
-            return builder.OpTypeName("hierarchical_parallel_cast_like")
-                .InputBind("in", ctx->FwOp().output_grad("out", 0))
-                .InputBind("like", ctx->FwOp().input("in", 0))
-                .Output("out")
-                .Build();
-          });
-          ctx->FwOp().InputGradBind(user_op::OpArg("in", 0), [&]() -> const std::string& {
-            return ctx->GetOp(grad_op_name).output("out", 0);
-          });
-        } else {
-          UNIMPLEMENTED();
-        }
-      }
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

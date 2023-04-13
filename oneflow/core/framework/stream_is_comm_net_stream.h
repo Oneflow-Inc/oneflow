@@ -17,20 +17,19 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_STREAM_IS_COMM_NET_STREAM_H_
 
 #include <glog/logging.h>
-#include "oneflow/core/common/stream_role.h"
+#include "oneflow/core/common/stream_type.h"
 
 namespace oneflow {
 
-struct IsCommNetStream {
-  static bool Case(StreamRoleCase<StreamRole::kInvalid>) {  // NOLINT
-    LOG(FATAL);
-  }
-  static bool Case(StreamRoleCase<StreamRole::kCompute>) { return false; }
-  static bool Case(StreamRoleCase<StreamRole::kHost2Device>) { return false; }
-  static bool Case(StreamRoleCase<StreamRole::kDevice2Host>) { return false; }
-  static bool Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>) { return true; }
-  static bool Case(StreamRoleCase<StreamRole::kAsyncedLaunchedCommNet>) { return true; }
-  static bool Case(StreamRoleCase<StreamRole::kCriticalSection>) { return false; }
+struct IsCommNetStream final : public StreamTypeVisitor<IsCommNetStream> {
+  static bool VisitCompute() { return false; }
+  static bool VisitHost2Device() { return false; }
+  static bool VisitDevice2Host() { return false; }
+  static bool VisitCcl() { return true; }
+  static bool VisitBarrier() { return false; }
+  static bool VisitCriticalSection() { return false; }
+  static bool VisitLazyJobLauncher() { return false; }
+  static bool VisitPinnedCompute() { return VisitCompute(); }
 };
 
 }  // namespace oneflow

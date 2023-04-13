@@ -14,3 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow._oneflow_internal._C import *
+import oneflow._C._nn as _nn
+import warnings
+
+
+def allclose(input, other, atol=1e-08, rtol=1e-05, equal_nan=False):
+    return isclose(input, other, atol, rtol, equal_nan).all().item()
+
+
+def _log_api_usage_once(event):
+    warnings.warn("_log_api_usage_once is not implemented in oneflow")

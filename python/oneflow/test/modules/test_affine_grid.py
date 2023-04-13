@@ -119,6 +119,13 @@ class TestAffineGrid(flow.unittest.TestCase):
         ).to(device)
         return output
 
+    @profile(torch.nn.functional.affine_grid)
+    def profile_affine_grid(test_case):
+        input = torch.tensor(np.arange(1.0, 7).reshape((1, 2, 3)), dtype=torch.float32)
+        torch.nn.functional.affine_grid(
+            input, torch.Size([1, 1, 2, 2]), align_corners=True
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
