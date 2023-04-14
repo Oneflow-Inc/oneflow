@@ -1011,7 +1011,9 @@ jobs:
         timeout-minutes: 60
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) }}
         run: |
-          docker exec -e ONEFLOW_TEST_DIR=diff ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
+          docker exec -e ONEFLOW_TEST_DIR=diff \
+            -e ONEFLOW_TEST_FILES="$(git diff --diff-filter=d --name-only master..HEAD -- oneflow/**/test*.py)" \
+            ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
       - name: Module API test
         timeout-minutes: 60
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) }}
