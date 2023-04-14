@@ -353,6 +353,16 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kErfcBackwardWithDyX, Src, Dst>
   }
 };
 
+template<typename Src, typename Dst>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kDigammaBackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    // TODO:shijiaxing： This function is named trigamma, it will be implemented soon.
+    UNIMPLEMENTED();
+    return 0;
+  }
+};
+
 #define SPECIALIZATION_CPU_BINARY_FUNCTOR(op, type)                                          \
   template<>                                                                                 \
   struct BinaryFunctor<DeviceType::kCPU, op, type, type> {                                   \

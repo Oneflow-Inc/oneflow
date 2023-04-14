@@ -52,6 +52,9 @@ locals()["uint8"] = oneflow._oneflow_internal.uint8
 locals()["record"] = oneflow._oneflow_internal.record
 locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
 locals()["bfloat16"] = oneflow._oneflow_internal.bfloat16
+locals()["char"] = oneflow._oneflow_internal.char
+locals()["short"] = oneflow._oneflow_internal.int16
+locals()["int16"] = oneflow._oneflow_internal.int16
 
 locals()["cfloat"] = oneflow._oneflow_internal.cfloat
 locals()["complex64"] = oneflow._oneflow_internal.complex64
@@ -103,6 +106,7 @@ from oneflow._C import batch_matmul as bmm
 from oneflow._C import baddbmm
 from oneflow._C import broadcast_like
 from oneflow._C import chunk
+from oneflow._C import digamma
 from oneflow._C import split
 from oneflow._C import sign
 from oneflow._C import sinh

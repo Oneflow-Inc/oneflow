@@ -24,7 +24,6 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__)) + "/..")
 # TODO(peihong): extract MLIR ir env variables into a single module to control.
 
 os.environ["ONEFLOW_MLIR_STDOUT"] = "1"
-os.environ["ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"] = "1"
 os.environ["ONEFLOW_MLIR_CSE"] = "1"
 os.environ["ONEFLOW_MLIR_FUSE_FORWARD_OPS"] = "1"
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
