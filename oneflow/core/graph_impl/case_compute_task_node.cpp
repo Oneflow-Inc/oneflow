@@ -36,7 +36,6 @@ class CaseCompTaskNode final : public CompTaskNode {
 };
 
 void CaseCompTaskNode::ConsumeAllRegsts() { ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst()); }
-void CaseCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
 
 void CaseCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
 

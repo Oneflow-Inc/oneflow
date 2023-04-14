@@ -40,8 +40,6 @@ void AccTickCompTaskNode::ConsumeAllRegsts() {
 }
 void AccTickCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
 
-void AccTickCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
-
 void AccTickCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");

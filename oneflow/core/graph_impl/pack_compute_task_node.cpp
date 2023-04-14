@@ -40,7 +40,6 @@ void PackCompTaskNode::ProduceAllRegstsAndBindEdges() {
 }
 
 void PackCompTaskNode::ConsumeAllRegsts() { ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst()); }
-void PackCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
 
 void PackCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
 
