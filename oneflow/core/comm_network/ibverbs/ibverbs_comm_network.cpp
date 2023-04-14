@@ -213,7 +213,7 @@ void IBVerbsCommNet::PollCQ() {
           qp->RecvDone(wr_id);
           break;
         }
-        default: UNIMPLEMENTED() << wc.opcode;
+        default: UNIMPLEMENTED() << " opcode: " << wc.opcode;
       }
     }
   }
