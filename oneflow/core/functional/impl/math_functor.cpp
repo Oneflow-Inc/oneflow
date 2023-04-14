@@ -1628,7 +1628,13 @@ class CastFunctor {
     if (x->dtype() == dtype) { return x; }
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "pin_memory");
     attrs.SetAllAttrs(dtype->data_type(), pin_memory);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    // refers to pytorch's tensor.to (to_impl function at
+    // aten/src/ATen/native/TensorConversions.cpp)
+    if (JUST(IsNonOverlappingAndDense(x))) {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    }
   }
 
  private:
@@ -4465,6 +4471,86 @@ class FusedGetConvexDiagonalSquaredGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class RealFunctor {
+ public:
+  RealFunctor() { op_ = CHECK_JUST(one::OpBuilder("real").Input("x").Output("out").Build()); }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class RealGradFunctor {
+ public:
+  RealGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("real_grad").Input("dout").Output("dx").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dout) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dout});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ImagFunctor {
+ public:
+  ImagFunctor() { op_ = CHECK_JUST(one::OpBuilder("imag").Input("x").Output("out").Build()); }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ImagGradFunctor {
+ public:
+  ImagGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("imag_grad").Input("dout").Output("dx").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dout) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dout});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ConjFunctor {
+ public:
+  ConjFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("conj_physical").Input("x").Output("out").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ConjPhysicalFunctor {
+ public:
+  ConjPhysicalFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("conj_physical").Input("x").Output("out").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 using namespace impl;
@@ -4611,6 +4697,12 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ScalarBitwiseAndFunctor, impl::ScalarBitwiseAnd2Functor>("ScalarBitwiseAnd");
   m.add_functor<impl::ScalarBitwiseOrFunctor, impl::ScalarBitwiseOr2Functor>("ScalarBitwiseOr");
   m.add_functor<impl::ScalarBitwiseXorFunctor, impl::ScalarBitwiseXor2Functor>("ScalarBitwiseXor");
+  m.add_functor<impl::RealFunctor>("Real");
+  m.add_functor<impl::RealGradFunctor>("RealGrad");
+  m.add_functor<impl::ImagFunctor>("Imag");
+  m.add_functor<impl::ImagGradFunctor>("ImagGrad");
+  m.add_functor<impl::ConjFunctor>("Conj");
+  m.add_functor<impl::ConjPhysicalFunctor>("ConjPhysical");
 };
 
 }  // namespace functional

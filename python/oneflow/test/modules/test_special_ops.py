@@ -113,6 +113,24 @@ class TestSpecialOps(flow.unittest.TestCase):
         y = torch.special.logsumexp(x, dim=np.random.randint(0, 3))
         return y
 
+    # TODO:shijiaxing  When the grad function be implemented, rm "auto_backward=False"
+    @autotest(n=5, auto_backward=False)
+    def test_flow_digamma_with_random_data(test_case):
+        device = random_device()
+        x_dtype = random_dtype(["arithmetic", "half"])
+        x = random_tensor().to(device).to(x_dtype)
+        y = torch.special.digamma(x)
+        return y
+
+    # TODO:shijiaxing  When the grad function be implemented, rm "auto_backward=False"
+    @autotest(n=5, auto_backward=False)
+    def test_flow_psi_with_random_data(test_case):
+        device = random_device()
+        x_dtype = random_dtype(["arithmetic", "half"])
+        x = random_tensor().to(device).to(x_dtype)
+        y = torch.special.psi(x)
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()

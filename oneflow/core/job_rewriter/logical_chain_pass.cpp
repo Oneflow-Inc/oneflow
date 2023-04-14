@@ -30,6 +30,7 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/env_var/env_var.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 
@@ -158,6 +159,7 @@ void GetLogicalChainsWithTimeShape(std::vector<HashSet<const OpNode*>>* ret,
     if (visited.find(seed_node) != visited.end()) { continue; }
     CHECK(visited.insert(seed_node).second);
     const ParallelDesc& seed_parallel_desc = seed_node->parallel_desc();
+    if (seed_node->op().op_conf().has_logical_chain_id()) { continue; }
     // TODO(chengcheng): support cpu chain.
     if (seed_parallel_desc.device_type() == DeviceType::kCPU) { continue; }
     if (!SharedPtrShapeEqual(GetOpNodeFastestTimeShape(seed_node), seed_time_shape)) { continue; }
@@ -177,6 +179,7 @@ void GetLogicalChainsWithTimeShape(std::vector<HashSet<const OpNode*>>* ret,
       auto SearchToNextNode = [&](const OpNode* cur_node, const OpNode* next_node,
                                   const OpEdge* edge) {
         if (visited.find(next_node) == visited.end() && (!IsBreakpointOpNode(next_node))
+            && (!next_node->op().op_conf().has_logical_chain_id()) /* skip logical chain id */
             && next_node->parallel_desc().EqualsIgnoringHierarchy(seed_parallel_desc)
             && SharedPtrShapeEqual(GetOpNodeFastestTimeShape(next_node), seed_time_shape)
             && next_node->op().op_conf().stream_name_hint()
@@ -205,7 +208,7 @@ void GetLogicalChainsWithTimeShape(std::vector<HashSet<const OpNode*>>* ret,
 struct LogicalChain {
   int64_t logical_chain_id;
   std::vector<const OpNode*> ordered_op_nodes;
-  LogicalChain() : logical_chain_id(-1) {}
+  explicit LogicalChain(int64_t val) : logical_chain_id(val) { CHECK_GE(val, 0); }
 };
 
 struct PlacementLogicalChainsInfo {
@@ -213,7 +216,6 @@ struct PlacementLogicalChainsInfo {
   std::vector<const OpNode*> ordered_acc_op_nodes;
   std::shared_ptr<LogicalChain> after_acc_logical_chain;
   const ParallelDesc* seed_parallel_desc;
-  std::shared_ptr<const Shape> seed_time_shape;
   PlacementLogicalChainsInfo() : seed_parallel_desc(nullptr) {}
 };
 
@@ -239,14 +241,14 @@ void CreateAfterAccLogicalChain(const std::shared_ptr<LogicalChain>& after_acc_l
                                 const std::vector<const OpNode*>& ordered_acc_op_nodes,
                                 const ParallelDesc& seed_parallel_desc) {
   // Meta time shape (1, 1)
-  std::shared_ptr<const Shape> seed_time_shape = std::make_shared<const Shape>(Shape({1, 1}));
+  std::shared_ptr<const Shape> meta_time_shape = std::make_shared<const Shape>(Shape({1, 1}));
   HashSet<const OpNode*> visited;
   HashSet<const OpNode*> after_acc_chain_ops;
   std::queue<const OpNode*> queued_nodes;
   auto SearchToNextNode = [&](const OpNode* cur_node, const OpNode* next_node, const OpEdge* edge) {
     if (visited.find(next_node) == visited.end() && (!IsBreakpointOpNode(next_node))
         && next_node->parallel_desc().EqualsIgnoringHierarchy(seed_parallel_desc)
-        && SharedPtrShapeEqual(GetOpNodeFastestTimeShape(next_node), seed_time_shape)
+        && SharedPtrShapeEqual(GetOpNodeFastestTimeShape(next_node), meta_time_shape)
         && IsOpEdge121Connected(cur_node, next_node, edge)) {
       CHECK(visited.insert(next_node).second);
       queued_nodes.push(next_node);
@@ -285,7 +287,8 @@ void CreateAfterAccLogicalChain(const std::shared_ptr<LogicalChain>& after_acc_l
 void TryMergeAfterAccLogicalChainToMaxLogicalChain(
     PlacementLogicalChainsInfo* info, HashMap<std::string, OperatorConf>* mut_op_name2conf,
     JobBuilder* job_builder,
-    const std::function<bool(const std::string&, const std::string&)>& IsReachable) {
+    const std::function<bool(const std::string&, const std::string&)>& IsReachable,
+    const std::shared_ptr<const Shape>& seed_time_shape) {
   if (!EnvBool<ENABLE_ACC_CHAIN_MERGE>()) { return; }
   int64_t max_chain_index = 0;
   for (int64_t i = 1; i < info->ordered_logical_chains.size(); ++i) {
@@ -311,7 +314,7 @@ void TryMergeAfterAccLogicalChainToMaxLogicalChain(
     chain_op->ForEachNodeOnOutEdge([&](const OpNode* out_node) {
       if (max_chain_ops.find(out_node) == max_chain_ops.end()
           && !IsTickOpConf(out_node->op().op_conf())
-          && SharedPtrShapeEqual(GetOpNodeFastestTimeShape(out_node), info->seed_time_shape)) {
+          && SharedPtrShapeEqual(GetOpNodeFastestTimeShape(out_node), seed_time_shape)) {
         nontrivial_sink_consumers.insert(out_node);
       }
     });
@@ -500,10 +503,25 @@ void TryMergeAfterAccLogicalChainToMaxLogicalChain(
 }
 
 Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+  const int64_t acc_num = job_builder->job().job_conf().num_gradient_accumulation_steps();
+  bool has_acc = acc_num > 1;
+  int64_t max_logical_chain_id = -1;
+
+  HashMap<std::string, PlacementLogicalChainsInfo> placement2logical_chains;
+  auto FindOrCreatePlacementLogicalChainsInfo = [&](const OpNode* node) {
+    const ParallelDesc& this_parallel_desc = node->parallel_desc();
+    std::string key = GenParallelConfKey(this_parallel_desc.parallel_conf());
+    auto it = placement2logical_chains.find(key);
+    if (it == placement2logical_chains.end()) {
+      it = placement2logical_chains.emplace(key, PlacementLogicalChainsInfo()).first;
+      it->second.seed_parallel_desc = &this_parallel_desc;
+    }
+    return &(it->second);
+  };
+
   std::vector<const OpNode*> ordered_op_nodes;
   HashMap<const OpNode*, int64_t> op_node2global_order;
   HashMap<std::string, OperatorConf> mut_op_name2conf;
-  // TODO(chengcheng) : better order for memory.
   std::shared_ptr<const Shape> seed_time_shape = std::make_shared<const Shape>(Shape({1, 1}));
   if (ParseBooleanFromEnv("DISABLE_LOGICAL_STRAIGHTEN", false)) {
     op_graph.TopoForEachNodeWithCtrlEdge(
@@ -513,22 +531,50 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
   }
 
   for (int32_t global_order = 0; global_order < ordered_op_nodes.size(); global_order++) {
-    auto& node = ordered_op_nodes[global_order];
+    const OpNode* node = JUST(VectorAt(ordered_op_nodes, global_order));
     op_node2global_order.emplace(node, global_order);
     std::shared_ptr<const Shape> this_time_shape = GetOpNodeFastestTimeShape(node);
     if (this_time_shape->elem_cnt() > seed_time_shape->elem_cnt()) {
       seed_time_shape = this_time_shape;
     }
     mut_op_name2conf.emplace(node->op().op_name(), node->op().op_conf());
+    // NOTE(chengcheng): handle logical chain id set by nccl logical pass
+    if (node->op().op_conf().has_logical_chain_id()) {
+      const int64_t logical_chain_id = node->op().op_conf().logical_chain_id();
+      max_logical_chain_id = std::max(max_logical_chain_id, logical_chain_id);
+      PlacementLogicalChainsInfo* info = FindOrCreatePlacementLogicalChainsInfo(node);
+      if (has_acc && this_time_shape->elem_cnt() == 1) {
+        // acc logical chain
+        if (info->after_acc_logical_chain.get() == nullptr) {
+          info->after_acc_logical_chain = std::make_shared<LogicalChain>(logical_chain_id);
+        }
+        info->after_acc_logical_chain->ordered_op_nodes.push_back(node);
+        CHECK_EQ(info->after_acc_logical_chain->logical_chain_id, logical_chain_id);
+      } else {
+        // fw/bw logical chain
+        bool find_chain = false;
+        for (const auto& logical_chain : info->ordered_logical_chains) {
+          if (logical_chain->logical_chain_id == logical_chain_id) {
+            logical_chain->ordered_op_nodes.push_back(node);
+            find_chain = true;
+            break;
+          }
+        }
+        if (!find_chain) {
+          info->ordered_logical_chains.push_back(std::make_shared<LogicalChain>(logical_chain_id));
+          info->ordered_logical_chains.back()->ordered_op_nodes.push_back(node);
+          CHECK_EQ(info->ordered_logical_chains.back()->logical_chain_id, logical_chain_id);
+        }
+      }
+    }
   }
 
   VLOG(2) << " seed time shape = " << seed_time_shape->ToString();
 
   std::vector<HashSet<const OpNode*>> logical_chains;
   GetLogicalChainsWithTimeShape(&logical_chains, ordered_op_nodes, seed_time_shape);
-  if (logical_chains.size() == 0) { return Maybe<void>::Ok(); }
+  if (logical_chains.empty() && placement2logical_chains.empty()) { return Maybe<void>::Ok(); }
 
-  int64_t logical_chain_id = 0;
   auto CmpOpNodeOrder = [&](const OpNode* lhs, const OpNode* rhs) {
     return op_node2global_order.at(lhs) < op_node2global_order.at(rhs);
   };
@@ -540,20 +586,12 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
   };
   auto IsReachable = op_graph.MakePredicatorIsOpNameDataOrCtrlReachable();
 
-  HashMap<std::string, PlacementLogicalChainsInfo> placement2logical_chains;
   for (const auto& origin_logical_chain : logical_chains) {
     const OpNode* rand_node = *origin_logical_chain.begin();
-    const ParallelDesc& this_parallel_desc = rand_node->parallel_desc();
-    std::string key = GenParallelConfKey(this_parallel_desc.parallel_conf());
-    auto it = placement2logical_chains.find(key);
-    if (it == placement2logical_chains.end()) {
-      it = placement2logical_chains.emplace(key, PlacementLogicalChainsInfo()).first;
-      it->second.seed_parallel_desc = &this_parallel_desc;
-      it->second.seed_time_shape = seed_time_shape;
-    }
-    auto& info = it->second;
-    info.ordered_logical_chains.emplace_back(std::make_shared<LogicalChain>());
-    InitPlacementLogicalChainsInfoFromSet(info.ordered_logical_chains.back(), origin_logical_chain,
+    PlacementLogicalChainsInfo* info = FindOrCreatePlacementLogicalChainsInfo(rand_node);
+    info->ordered_logical_chains.emplace_back(
+        std::make_shared<LogicalChain>(++max_logical_chain_id));
+    InitPlacementLogicalChainsInfoFromSet(info->ordered_logical_chains.back(), origin_logical_chain,
                                           op_node2global_order, CmpOpNodeOrder);
   }
 
@@ -587,12 +625,15 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
 
   auto InsertLogicalChainId = [&](const std::vector<const OpNode*>& ordered_op_nodes,
                                   const int64_t logical_chain_id) {
+    int64_t order = 0;
     for (const OpNode* op_node : ordered_op_nodes) {
-      CHECK_JUST(MapAt(mut_op_name2conf, op_node->op().op_name()))
-          .set_logical_chain_id(logical_chain_id);
+      auto& conf = CHECK_JUST(MapAt(mut_op_name2conf, op_node->op().op_name()));
+      conf.set_logical_chain_id(logical_chain_id);
+      conf.set_order_in_logical_chain(order++);
     }
   };
 
+  HashSet<int64_t> exist_chain_ids;
   for (auto& pair : placement2logical_chains) {
     const auto& placement = pair.first;
     auto& info = pair.second;
@@ -601,7 +642,8 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
     // NOTE(chengcheng): set logical chain id for each op in each logical chain, and insert ctrl
     //   edge for order.
     for (auto& logical_chain : info.ordered_logical_chains) {
-      logical_chain->logical_chain_id = logical_chain_id++;
+      CHECK_GE(logical_chain->logical_chain_id, 0);
+      CHECK(exist_chain_ids.insert(logical_chain->logical_chain_id).second);
       InsertLogicalChainId(logical_chain->ordered_op_nodes, logical_chain->logical_chain_id);
       InsertCtrlEdgeInChain(logical_chain->ordered_op_nodes);
     }
@@ -622,16 +664,19 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
     // NOTE(chengcheng): create logical chain after acc, and merge with max logical chain.
     const std::vector<const OpNode*>& ordered_acc_op_nodes = info.ordered_acc_op_nodes;
     if (!ordered_acc_op_nodes.empty()) {
-      info.after_acc_logical_chain = std::make_shared<LogicalChain>();
-      CreateAfterAccLogicalChain(info.after_acc_logical_chain, ordered_acc_op_nodes,
-                                 *info.seed_parallel_desc);
+      if (info.after_acc_logical_chain.get() == nullptr) {
+        info.after_acc_logical_chain = std::make_shared<LogicalChain>(++max_logical_chain_id);
+        CreateAfterAccLogicalChain(info.after_acc_logical_chain, ordered_acc_op_nodes,
+                                   *info.seed_parallel_desc);
+      }
+      CHECK_GE(info.after_acc_logical_chain->logical_chain_id, 0);
+      CHECK(exist_chain_ids.insert(info.after_acc_logical_chain->logical_chain_id).second);
       auto& acc_chain_order_ops = info.after_acc_logical_chain->ordered_op_nodes;
       if (acc_chain_order_ops.size() > 1) {
-        info.after_acc_logical_chain->logical_chain_id = logical_chain_id++;
         std::sort(acc_chain_order_ops.begin(), acc_chain_order_ops.end(), CmpOpNodeOrder);
 
         TryMergeAfterAccLogicalChainToMaxLogicalChain(&info, &mut_op_name2conf, job_builder,
-                                                      IsReachable);
+                                                      IsReachable, seed_time_shape);
 
         if (acc_chain_order_ops.size() <= 1) { continue; }
 
