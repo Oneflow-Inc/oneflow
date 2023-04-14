@@ -364,7 +364,7 @@ Maybe<std::tuple<std::shared_ptr<Tensor>, bool>> pooling_batchify(
   const bool is_batched = (input->ndim() == dim_count_batch);
   CHECK_EQ_OR_RETURN(input->ndim() == dim_count_no_batch || is_batched, true)
       << fmt::format("non-empty {}D (unbatched) or {}D (batche mode) tensor expected for input of "
-                     "{}, but got:{}D",
+                     "{}, but got {}D input.",
                      dim_count_no_batch, dim_count_batch, func_name, input->ndim());
   return std::make_tuple(is_batched ? input : JUST(functional::Unsqueeze(input, 0)), is_batched);
 }
