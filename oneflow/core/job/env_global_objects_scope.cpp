@@ -113,6 +113,7 @@ void ClearAllSymbol() {
   Singleton<symbol::Storage<Scope>>::Get()->ClearAll();
   Singleton<symbol::Storage<JobDesc>>::Get()->ClearAll();
   Singleton<symbol::Storage<ParallelDesc>>::Get()->ClearAll();
+  Singleton<symbol::Storage<OperatorConfSymbol>>::Get()->ClearAll();
 }
 
 #if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)

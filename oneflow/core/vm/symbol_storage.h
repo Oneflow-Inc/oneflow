@@ -23,6 +23,7 @@ limitations under the License.
 
 namespace oneflow {
 
+class OperatorConfSymbol;
 class OperatorConf;
 
 class ParallelDesc;
@@ -39,6 +40,11 @@ namespace symbol {
 template<typename T>
 struct ConstructArgType4Symbol final {
   using type = T;
+};
+
+template<>
+struct ConstructArgType4Symbol<OperatorConfSymbol> final {
+  using type = OperatorConf;
 };
 
 template<>
@@ -62,6 +68,10 @@ template<typename T>
 Maybe<T> NewSymbol(int64_t symbol_id, const typename ConstructArgType4Symbol<T>::type& data) {
   return std::make_shared<T>(data);
 }
+
+template<>
+Maybe<OperatorConfSymbol> NewSymbol<OperatorConfSymbol>(
+    int64_t symbol_id, const typename ConstructArgType4Symbol<OperatorConfSymbol>::type& data);
 
 template<>
 Maybe<ParallelDesc> NewSymbol<ParallelDesc>(

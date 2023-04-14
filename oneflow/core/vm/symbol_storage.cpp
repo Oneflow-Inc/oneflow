@@ -43,6 +43,12 @@ Maybe<Scope> NewSymbol<Scope>(int64_t symbol_id,
   return Scope::New(symbol_id, data);
 }
 
+template<>
+Maybe<OperatorConfSymbol> NewSymbol<OperatorConfSymbol>(
+    int64_t symbol_id, const typename ConstructArgType4Symbol<OperatorConfSymbol>::type& data) {
+  return std::make_shared<OperatorConfSymbol>(symbol_id, data);
+}
+
 }  // namespace detail
 
 }  // namespace symbol
