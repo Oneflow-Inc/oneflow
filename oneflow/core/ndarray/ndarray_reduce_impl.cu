@@ -379,6 +379,8 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_IMPL,
                                  ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
                                      BOOL_DATA_TYPE_SEQ,
                                  LOGICAL_REDUCE_BINARY_FUNC_SEQ);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_IMPL, COMPLEX_DATA_TYPE_SEQ,
+                                 REDUCE_BINARY_FUNC_SEQ);
 
 #define INSTANTIATE_NDARRAY_REDUCE_CORE_WRAPPER(dtype_pair, NDIMS, binary_func)                    \
   template struct NdarrayReduceCoreWrapper<DeviceType::kCUDA, OF_PP_PAIR_FIRST(dtype_pair), NDIMS, \
@@ -394,5 +396,6 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_CORE_WRAPPER,
                                  ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
                                      BOOL_DATA_TYPE_SEQ,
                                  DIM_SEQ, LOGICAL_REDUCE_BINARY_FUNC_SEQ);
-
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_CORE_WRAPPER, COMPLEX_DATA_TYPE_SEQ,
+                                 DIM_SEQ, REDUCE_COMPLEX_BINARY_FUNC_SEQ);
 }  // namespace oneflow

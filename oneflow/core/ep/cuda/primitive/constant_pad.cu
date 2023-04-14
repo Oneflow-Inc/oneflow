@@ -232,7 +232,7 @@ class ConstantPadFactoryImpl : public ConstantPadFactory {
 
     static const std::map<DataType, std::function<std::unique_ptr<ConstantPad>()>>
         new_constant_pad_handle{
-            OF_PP_FOR_EACH_TUPLE(MAKE_NEW_CONSTANT_PAD_ENTRY, CUDA_PRIMITIVE_ALL_TYPE_SEQ)};
+            OF_PP_FOR_EACH_TUPLE(MAKE_NEW_CONSTANT_PAD_ENTRY, CUDA_PRIMITIVE_REAL_TYPE_SEQ)};
 
 #undef MAKE_NEW_CONSTANT_PAD_ENTRY
 
