@@ -8,7 +8,6 @@ ONEFLOW_TEST_DIR=${ONEFLOW_TEST_DIR:-"$PWD/python/oneflow/test/modules"}
 ONEFLOW_TEST_TASKS_PER_GPU=${ONEFLOW_TEST_TASKS_PER_GPU:-"4"}
 
 
-```
 if [ "$ONEFLOW_TEST_DIR" = "diff" ]; then
   DIFF_FILES="$(git diff --diff-filter=d --name-only master..HEAD -- oneflow/**/test*.py)
   ONEFLOW_TEST_FILES="${DIFF_FILES}"
@@ -19,7 +18,6 @@ else
   ONEFLOW_TEST_FILES_WILD="${ONEFLOW_TEST_DIR}/**/test_*.py"
   ONEFLOW_TEST_REPEAT_TIMES=""
 fi
-```
 
 if [ -z "$ONEFLOW_TEST_CPU_ONLY" ]
 then
