@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/graph/task_type.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
 #include "oneflow/core/memory/chunk_manager.h"

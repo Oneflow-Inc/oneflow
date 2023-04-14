@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/graph/plan_task_graph.h"
-#include "oneflow/core/graph/task_type.h"
 
 namespace oneflow {
 

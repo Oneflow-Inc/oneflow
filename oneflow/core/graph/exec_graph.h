@@ -74,7 +74,6 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
 
   typedef void (ExecNode::*InferBlobDescsMethod)(const ParallelContext*);
 
-  void InferBlobDescsByNdSbp(const ParallelContext* parallel_ctx);
   void InferBlobDescsByInputs(const ParallelContext* parallel_ctx);
   void InferBlobDescsByNdSbp(const ParallelContext* parallel_ctx);
 
