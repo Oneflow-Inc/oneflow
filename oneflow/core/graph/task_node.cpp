@@ -237,7 +237,6 @@ Maybe<void> TaskNode::InitConsumedRegstsFromProto(
 
 void TaskNode::ToProto(TaskProto* task_proto, bool check) const {
   // Step1: process some scalar items.
-  // if (check) { CHECK_NE(chain_id_, -1); }
   task_proto->set_task_type(GetTaskType());
   task_proto->set_machine_id(machine_id_);
   task_proto->set_thrd_id(thrd_id_);
