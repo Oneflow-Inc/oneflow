@@ -9,7 +9,7 @@ ONEFLOW_TEST_TASKS_PER_GPU=${ONEFLOW_TEST_TASKS_PER_GPU:-"4"}
 
 
 if [ "$ONEFLOW_TEST_DIR" = "diff" ]; then
-  DIFF_FILES="$(git diff --diff-filter=d --name-only master..HEAD -- oneflow/**/test*.py)
+  DIFF_FILES="$(git diff --diff-filter=d --name-only master..HEAD -- oneflow/**/test*.py)"
   ONEFLOW_TEST_FILES="${DIFF_FILES}"
   ONEFLOW_TEST_FILES_WILD="${DIFF_FILES}"
   ONEFLOW_TEST_REPEAT_TIMES="--repeat 100"
