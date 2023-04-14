@@ -523,6 +523,7 @@ def is_file_and_support_pytorch_format(
     try:
         with flow.mock_torch.disable():
             import torch
+
             content = torch.load(path, map_location="cpu")
             return True, (content,)
     except:
@@ -536,6 +537,7 @@ def load_from_pytorch_file(
     if torch_obj is not None:
         with flow.mock_torch.disable():
             import torch
+
             def torch_tensor_to_flow(x):
                 if isinstance(x, torch.Tensor):
                     return flow.utils.tensor.from_torch(x)
@@ -628,7 +630,7 @@ def load(
             if _is_path(path):
                 err_msg = f'Cannot load file "{path}"'
             else:
-                err_msg = 'Cannot load the data'
+                err_msg = "Cannot load the data"
             raise ValueError(err_msg)
     else:
         i = _broadcast_py_object(None, global_src_rank)
