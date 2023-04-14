@@ -153,6 +153,7 @@ Non-linear Activations (weighted sum, nonlinearity)
     nn.Hardtanh 
     nn.LeakyReLU 
     nn.LogSigmoid 
+    nn.MultiheadAttention
     nn.PReLU 
     nn.ReLU
     nn.ReLU6 
@@ -218,6 +219,20 @@ Recurrent Layers
     nn.RNNCell
     nn.LSTMCell
     nn.GRUCell
+
+Transformer Layers
+----------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: classtemplate.rst
+
+    nn.Transformer
+    nn.TransformerEncoder
+    nn.TransformerDecoder
+    nn.TransformerEncoderLayer
+    nn.TransformerDecoderLayer
 
 Linear Layers
 ----------------------------------
