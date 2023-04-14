@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/slice_boxing_task_node.h"
+
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/graph/task_graph_rebuild_ctx.h"
-#include "oneflow/core/graph/boxing_task_graph.pb.h"
 
 namespace oneflow {
 
