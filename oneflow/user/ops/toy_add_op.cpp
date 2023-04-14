@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {
 
@@ -39,6 +40,7 @@ namespace oneflow {
   FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("x", 0), i)
+        .Split(user_op::OpArg("y",0),i)
         .Split(user_op::OpArg("output", 0), i)
         .Build();
   }

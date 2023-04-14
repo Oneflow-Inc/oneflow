@@ -11725,7 +11725,7 @@ def OneFlow_CopyD2HOp : OneFlow_BaseOp<"copy_d2h", [NoSideEffect, NoGrad, Declar
 
 #endif // GET_ONEFLOW_SYSTEM_OP_DEFINITIONS
 
-def OneFlow_ToyAdd : OneFlow_BaseOp<"toy_add", [NoSideEffect,NoGrad,DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ToyAdd : OneFlow_BaseOp<"toy_add", [NoSideEffect,DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
       OneFlow_Tensor:$x,
       OneFlow_Tensor:$y
