@@ -1,0 +1,16 @@
+#include "OneFlow/OneFlowOps.td"
+
+Constraint IsFuncArguments(value: Value) [{
+  return success(nullptr !=
+    llvm::dyn_cast_or_null<func::FuncOp>(value.getDefiningOp()));
+}];
+
+Pattern {
+  let alloc = op<memref.alloc>();
+  let copy = op<memref.copy>(alloc.0, arg: IsFuncArguments);
+
+  rewrite alloc with {
+    erase copy;
+    replace alloc with arg;
+  };
+}

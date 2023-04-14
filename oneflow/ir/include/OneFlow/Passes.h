@@ -34,6 +34,7 @@ limitations under the License.
 #include "OneFlow/Transform/AggregateOps.h"
 #include "OneFlow/Transform/FuncOps.h"
 #include "OneFlow/Transform/CSEWithAttributesIgnored.h"
+#include "OneFlow/Transform/EliminateAllocOps.h"
 
 #ifdef WITH_MLIR_CUDA_CODEGEN
 #include "OneFlow/Conversion/PTXToCubin.h"

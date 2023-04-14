@@ -60,6 +60,7 @@ oneflow_add_mlir_dialect_library(
   Transform/AutoNhwc.cpp
   Transform/ConvertInferenceOp.cpp
   Transform/AggregateOps.cpp
+  Transform/EliminateAllocOps.cpp
   Transform/FuncOps.cpp
   Transform/CSEWithAttributesIgnored.cpp
   Transform/GroupMatMulOps.cpp
