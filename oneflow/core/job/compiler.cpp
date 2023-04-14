@@ -27,6 +27,7 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
 void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
   auto* job_id2op_attribute_ref_table = plan->mutable_job_id2op_attribute_ref_table();
   CHECK(task_proto->exec_sequence().exec_node_size() == 1);
@@ -47,6 +48,8 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
   kernel_conf->set_allocated_op_attribute(nullptr);
 }
 
+}  // namespace
+
 void Compiler::Compile(Job* job, Plan* plan) const {
   const auto& job_name = job->job_conf().job_name();
   auto compile_tc = std::make_unique<CostCounter<std::chrono::seconds>>(true, true);
@@ -57,7 +60,7 @@ void Compiler::Compile(Job* job, Plan* plan) const {
 
   // Step2: build task_gph.
   // TODO(levi): we can rewrite this part of code in visitor pattern.
-  auto task_gph = std::make_unique<TaskGraph>();
+  auto task_gph = CHECK_JUST(GlobalTaskGraph::New());
   using std::placeholders::_1;
   LazyMode::Guard guard(true);
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));

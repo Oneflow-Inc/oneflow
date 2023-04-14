@@ -45,6 +45,7 @@ class Graph {
       std::function<Maybe<void>(NodeType*)> NodeHandler) const;
   void ReverseTopoForEachNode(std::function<void(NodeType*)> NodeHandler) const;
   void ForEachEdge(std::function<void(EdgeType*)> EdgeHandler) const;
+  Maybe<void> MaybeForEachEdge(std::function<Maybe<void>(EdgeType*)> EdgeHandler) const;
 
   void SortedTopoForEachNode(std::function<bool(const EdgeType* lhs, const EdgeType* rhs)> LessThan,
                              std::function<void(NodeType*)> NodeHandler) const;
@@ -290,6 +291,16 @@ void Graph<NodeType, EdgeType>::ForEachEdge(std::function<void(EdgeType*)> EdgeH
     if (x->src_node() == nullptr && x->dst_node() == nullptr) { continue; }
     EdgeHandler(x.get());
   }
+}
+
+template<typename NodeType, typename EdgeType>
+Maybe<void> Graph<NodeType, EdgeType>::MaybeForEachEdge(
+    std::function<Maybe<void>(EdgeType*)> EdgeHandler) const {
+  for (auto& x : edges_) {
+    if (x->src_node() == nullptr && x->dst_node() == nullptr) { continue; }
+    JUST(EdgeHandler(x.get()));
+  }
+  return Maybe<void>::Ok();
 }
 
 template<typename NodeType, typename EdgeType>

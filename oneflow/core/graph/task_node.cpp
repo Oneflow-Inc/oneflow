@@ -391,6 +391,13 @@ void TaskNode::UpdateTaskId() {
   task_id_ = EncodeTaskIdToInt64(*new_task_id_);
 }
 
+void TaskNode::update_new_task_id(const TaskId& task_id) {
+  CHECK(static_cast<bool>(new_task_id_));
+  CHECK(new_task_id_->stream_id() == task_id.stream_id());
+  *new_task_id_ = task_id;
+  task_id_ = EncodeTaskIdToInt64(*new_task_id_);
+}
+
 void TaskNode::EraseConsumedRegstsByName(const std::string& name) {
   if (consumed_regsts_.find(name) != consumed_regsts_.end()) {
     for (auto& regst : consumed_regsts_[name]) { regst->DeleteConsumer(this); }

@@ -123,6 +123,11 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   TaskEdge* SoleOutDataEdge() const;
   size_t in_data_edges_size() const;
   size_t out_data_edges_size() const;
+  const TaskId& new_task_id() const {
+    CHECK(has_new_task_id());
+    return *new_task_id_;
+  }
+  void update_new_task_id(const TaskId& task_id);
   bool has_new_task_id() const { return static_cast<bool>(new_task_id_); }
 
  protected:
