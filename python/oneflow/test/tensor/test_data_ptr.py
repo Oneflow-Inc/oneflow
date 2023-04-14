@@ -13,17 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
+import oneflow as flow
+import oneflow.unittest
 
 
-from .special_ops import erf
-from .special_ops import erfc
-from .special_ops import erfinv
-from .special_ops import exp2
-from .special_ops import expm1
-from .special_ops import log1p
-from .special_ops import log_softmax
-from .special_ops import logsumexp
-from .special_ops import round
-from .special_ops import softmax
-from .special_ops import digamma
-from .special_ops import psi
+@flow.unittest.skip_unless_1n1d()
+class TestDataPtr(unittest.TestCase):
+    def test_equality(test_case):
+        x = flow.ones(2, 3)
+        y = flow.ones(2, 3)
+        test_case.assertNotEqual(x.data_ptr(), y.data_ptr())
+
+        test_case.assertEqual(x.data_ptr(), x.data.data_ptr())
+
+        x_ptr = x.data_ptr()
+        x[:] = 2
+        test_case.assertEqual(x_ptr, x.data_ptr())
+
+
+if __name__ == "__main__":
+    unittest.main()
