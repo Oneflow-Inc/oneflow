@@ -390,8 +390,10 @@ static PyObject* PyTensorObject_check_meta_consistency(PyObject* self, PyObject*
 static PyObject* PyTensorObject_data_ptr(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   const auto& t = PyTensor_Unpack(self);
+  const std::shared_ptr<LocalTensor> local_tensor =
+      t->is_local() ? ASSERT_PTR(t->AsLocalTensor()) : ASSERT_PTR(t->cur_rank_phy_tensor());
   return functional::CastToPyObject(
-      reinterpret_cast<int64_t>(ASSERT(GetTensorDataPtr(ASSERT_PTR(t->AsLocalTensor())))));
+      reinterpret_cast<int64_t>(ASSERT(GetTensorDataPtr(local_tensor))));
   END_HANDLE_ERRORS
 }
 
