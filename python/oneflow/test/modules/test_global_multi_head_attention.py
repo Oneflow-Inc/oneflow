@@ -24,7 +24,7 @@ import torch
 
 
 def _test_multi_head_attention_with_random_data(
-    test_case, placement, input_sbp, m, name, embed_dim, query
+    test_case, placement, input_sbp, m, name, embed_dim, query, graph
 ):
     query = (
         m.from_numpy(query).to(m.float32).to_global(placement=placement, sbp=input_sbp)
@@ -70,7 +70,7 @@ def _test_multi_head_attention_with_random_data(
         else m.ones((embed_dim))
     )
 
-    y1, y2 = m.nn.functional.multi_head_attention_forward(
+    param = [
         query,
         key,
         value,
@@ -84,7 +84,22 @@ def _test_multi_head_attention_with_random_data(
         dropout_p,
         out_proj_weight,
         out_proj_bias,
-    )
+    ]
+
+    if graph:
+
+        class GraphModel(flow.nn.Graph):
+            def __init__(self, *args):
+                super().__init__()
+                self.args = args
+
+            def build(self, input=None):
+                return m.nn.functional.multi_head_attention_forward(*self.args)
+
+        func = GraphModel(*param)
+        return func()
+
+    y1, y2 = m.nn.functional.multi_head_attention_forward(*param)
     return y1, y2
 
 
@@ -94,45 +109,48 @@ class TestMultiHeadAttentionModule(flow.unittest.TestCase):
         embed_dim = 16
         for placement in all_placement():
             for input_sbp in all_sbp(placement, max_dim=2):
-                query = np.random.rand(4, 8, embed_dim)
-                y1_flow, y2_flow = _test_multi_head_attention_with_random_data(
-                    test_case,
-                    placement,
-                    input_sbp,
-                    flow,
-                    "flow",
-                    embed_dim,
-                    query.copy(),
-                )
-                y1_torch, y2_torch = _test_multi_head_attention_with_random_data(
-                    test_case,
-                    placement,
-                    input_sbp,
-                    torch,
-                    "torch",
-                    embed_dim,
-                    query.copy(),
-                )
-
-                test_case.assertTrue(
-                    np.allclose(
-                        y1_torch.detach().cpu().numpy(),
-                        y1_flow.detach().cpu().numpy(),
-                        rtol=1e-4,
-                        atol=1e-3,
+                for graph in [False, True]:
+                    query = np.random.rand(4, 8, embed_dim)
+                    y1_flow, y2_flow = _test_multi_head_attention_with_random_data(
+                        test_case,
+                        placement,
+                        input_sbp,
+                        flow,
+                        "flow",
+                        embed_dim,
+                        query.copy(),
+                        graph,
                     )
-                )
-                if y2_torch is None:
-                    test_case.assertTrue(y2_flow is None)
-                else:
+                    y1_torch, y2_torch = _test_multi_head_attention_with_random_data(
+                        test_case,
+                        placement,
+                        input_sbp,
+                        torch,
+                        "torch",
+                        embed_dim,
+                        query.copy(),
+                        False,
+                    )
+
                     test_case.assertTrue(
                         np.allclose(
-                            y2_torch.detach().cpu().numpy(),
-                            y2_flow.detach().cpu().numpy(),
+                            y1_torch.detach().cpu().numpy(),
+                            y1_flow.detach().cpu().numpy(),
                             rtol=1e-4,
                             atol=1e-3,
                         )
                     )
+                    if y2_torch is None:
+                        test_case.assertTrue(y2_flow is None)
+                    else:
+                        test_case.assertTrue(
+                            np.allclose(
+                                y2_torch.detach().cpu().numpy(),
+                                y2_flow.detach().cpu().numpy(),
+                                rtol=1e-4,
+                                atol=1e-3,
+                            )
+                        )
 
 
 if __name__ == "__main__":
