@@ -89,6 +89,8 @@ class OpEdge final : public Edge<OpNode, OpEdge> {
   const std::vector<LogicalBlobId>& lbis() const { return *lbis_; }
   const HashMap<LogicalBlobId, std::string>& lbi2obn() const { return *lbi2obn_; }
   const HashMap<LogicalBlobId, std::vector<std::string>>& lbi2ibns() const { return *lbi2ibns_; }
+
+  bool NeedBoxing() const;
   std::string VisualStr() const override;
 
  private:
