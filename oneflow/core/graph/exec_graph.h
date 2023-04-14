@@ -76,6 +76,7 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
 
   void InferBlobDescsByNdSbp(const ParallelContext* parallel_ctx);
   void InferBlobDescsByInputs(const ParallelContext* parallel_ctx);
+  void InferBlobDescsByNdSbp(const ParallelContext* parallel_ctx);
 
   const HashMap<std::string, std::string>& mut_inplace_obn2ibn() const {
     return mut_inplace_obn2ibn_;
