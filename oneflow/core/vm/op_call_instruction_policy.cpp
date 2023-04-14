@@ -50,9 +50,14 @@ struct OpCallInstructionUtil final {
     Allocator* allocator = vm_stream->mut_stream_policy()->mut_allocator();
     const auto [remat_helper, inputs_rematable, outputs_rematable] =
         InitRematInfo(op_call_instruction_policy, vm_stream);
-    VLOG(1) << "op: " << op_call_instruction_policy->opkernel().op_type_name() << std::endl;
-    VLOG(1) << "input_rematable: " << inputs_rematable
-            << ", output_rematable: " << outputs_rematable << std::endl;
+    const auto& current_op_type_name = op_call_instruction_policy->opkernel().op_type_name();
+    ThreadLocalGuard<remat::CurrentOpTypeName> current_op_type_name_guard({current_op_type_name});
+    if (inputs_rematable || outputs_rematable) {
+      VLOG(2) << "set current op type name to " << current_op_type_name << std::endl;
+      VLOG(2) << "op: " << op_call_instruction_policy->opkernel().op_type_name() << std::endl;
+      VLOG(2) << "input_rematable: " << inputs_rematable
+              << ", output_rematable: " << outputs_rematable << std::endl;
+    }
     if (inputs_rematable) { JUST(remat_helper->RematInputs(vm_stream, first, ComputeFnForRemat)); }
     JUST(AllocateOutputBlobsMemory(op_call_instruction_policy, allocator, vm_stream));
     if (unlikely(op_call_instruction_policy->need_temp_storage())) {
@@ -170,8 +175,6 @@ struct OpCallInstructionUtil final {
       remat_helper = std::make_unique<RematHelper>(*op_call_instruction_policy, inputs_rematable,
                                                    outputs_rematable);
     }
-    Singleton<remat::Env>::Get()->current_op_type_name =
-        op_call_instruction_policy->opkernel().op_type_name();
     return std::make_tuple(std::move(remat_helper), inputs_rematable, outputs_rematable);
   }
 };
