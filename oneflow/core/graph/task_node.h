@@ -100,10 +100,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual TaskType GetTaskType() const { return TaskType::kInvalid; }
   std::string VisualStr() const override;
   virtual bool IsMeaningLess();
-  virtual void InitFromProtoExceptConsumedRegsts(const TaskProto& task_proto);
-  Maybe<void> InitConsumedRegstsFromProto(
-      const TaskProto& task_proto,
-      const std::function<Maybe<RegstDesc>(int64_t regst_desc_id)>& RegstDesc4Id);
   void ToProto(TaskProto* task_proto) const { ToProto(task_proto, /*check*/ true); }
   virtual void InitFromProtoExceptConsumedRegsts(const TaskProto& task_proto);
   Maybe<void> InitConsumedRegstsFromProto(
