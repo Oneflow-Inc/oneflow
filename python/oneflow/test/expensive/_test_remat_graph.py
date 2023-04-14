@@ -105,172 +105,116 @@ class SubModule(nn.Module):
         return x3
 
 
+class NanoGraph(nn.Graph):
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
+
+    def build(self, x):
+        out = self.model(x)
+        return out
+
+
+class SubGraph(nn.Graph):
+    def __init__(self, model, optimizer):
+        super().__init__()
+        self.model = model
+        self.add_optimizer(optimizer)
+
+    def build(self, input):
+        loss = self.model(input).sum()
+        loss.backward()
+        return loss
+
+
+def test_remat_forward_backward(model, graph, input, task, B=False):
+    loss_graph_remat = []
+    loss_graph_ori = []
+    num_eager, num_graph = 0, 0
+    if task == "num":
+        for _ in range(10):
+            loss = model(input).sum()
+            if B == True:
+                loss.backward()
+            del loss
+        num_eager = get_num_remat()
+
+    if task == "loss":
+        device = "cpu"
+        graph = NanoGraph(model)
+        input = flow.ones(1024*1024, device=device)
+        if B == True:
+            input = flow.rand(4, 3, 1024, 1024).to(device)
+        for _ in range(10):
+            loss = graph(input).sum()
+            loss_graph_ori.append(loss.numpy())
+            del loss
+
+    for _ in range(10):
+        loss = graph(input).sum()
+        if task == "loss":
+            loss_graph_remat.append(loss.numpy())
+        del loss
+    if task == "num":
+        num_graph = get_num_remat()
+
+    return num_eager, num_graph, loss_graph_remat, loss_graph_ori
+
+
 class TestGraphRemat(flow.unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         flow.remat.set_budget("2000MB")
         flow.remat.set_small_pieces_optimization(False)
 
-    # test basic remat comparing loss and remat num with graph and eager
+    # test remat num in nano module graph and eager
     @memory_budget(12, "cpu")
     def test_graph_basic_remat(self, device):
-
-        class basicModule(nn.Module):
-            def __init__(self):
-                super().__init__()
-
-            def forward(self, input):
-                x1 = input*-2
-                x2 = x1-2
-                x3 = x2*0.1
-                return x3
-
-        model = basicModule().to(device)
-
-        class GraphMy(nn.Graph):
-            def __init__(self):
-                super().__init__()
-                self.model = model
-
-            def build(self, x):
-                out = self.model(x)
-                return out
-        graph = GraphMy()
         input = flow.ones(1024*1024, device=device)  # 4MB
-        for _ in range(10):
-            loss = model(input).sum()
-            del loss
-        num_eager = get_num_remat()
 
-        for _ in range(10):
-            loss = graph(input).sum()
-            del loss
+        model = NanoModule().to(device)
+        graph = NanoGraph(model)
 
-        num_graph = get_num_remat()
+        num_eager, num_graph, _, _ = test_remat_forward_backward(
+            model, graph, input, "num")
+
         self.assertEqual(num_eager, num_graph-1)
 
-    # test basic remat comparing loss with rematable graph and unrematable graph
+    # test loss equality  with rematable graph and unrematable graph
     @memory_budget(12, "cpu")
     def test_graph_basic_remat2(self, device):
-        loss_graph_remat = []
-        loss_graph_ori = []
-
-        class basicModule(nn.Module):
-            def __init__(self):
-                super().__init__()
-
-            def forward(self, input):
-                x1 = input*-2
-                x2 = x1-2
-                x3 = x2*0.1
-                return x3
-
-        model = basicModule().to(device)
-
-        class GraphMy(nn.Graph):
-            def __init__(self):
-                super().__init__()
-                self.model = model
-
-            def build(self, x):
-                out = self.model(x)
-                return out
-        graph = GraphMy()
         input = flow.ones(1024*1024, device=device)
 
-        for _ in range(10):
-            loss = graph(input).sum()
-            loss_graph_remat.append(loss.numpy())
-            del loss
-        get_num_remat()
+        model = NanoModule().to(device)
+        graph = NanoGraph(model)
+        _, _, loss_graph_remat, loss_graph_ori = test_remat_forward_backward(
+            model, graph, input, "loss")
 
-        # graph with no remat
-        device = "cpu"
-        input = flow.ones(1024*1024, device=device)
-        for _ in range(10):
-            loss = graph(input).sum()
-            loss_graph_ori.append(loss.numpy())
-            del loss
-        get_num_remat()
         self.assertEqual(loss_graph_remat, loss_graph_ori)
 
     # test backward advanced remat comparing loss with rematable graph and unrematable graph
     def test_graph_backward_remat(self):
         device = "cpu+remat"
         flow.remat.set_budget("500MB")
-        loss_graph_remat = []
-        loss_graph_ori = []
-
-        class ModuleMyAdvanced(nn.Module):
-            def __init__(self):
-                super().__init__()
-                self.conv2d = nn.Conv2d(3, 32, 3, 2, 1)
-                self.bn = nn.BatchNorm2d(32)
-                self.relu = nn.ReLU(inplace=False)
-
-            def forward(self, input):
-                x1 = self.conv2d(input)
-                x2 = self.bn(x1)
-                x3 = self.relu(x2)
-                return x3
-
-        class GraphMyBackward(nn.Graph):
-            def __init__(self,):
-                super().__init__()
-                self.model = model
-                self.add_optimizer(optimizer)
-
-            def build(self, input):
-                loss = self.model(input).sum()
-                loss.backward()
-                optimizer.step()
-                optimizer.zero_grad()
-                return loss
 
         flow.manual_seed(1213)
-        model = ModuleMyAdvanced().to(device)
+        model = SubModule().to(device)
         for p in model.parameters():
             p.grad = flow.zeros_like(p).to(device)
         optimizer = flow.optim.SGD(model.parameters(), lr=0.1, momentum=0)
-        input = flow.rand(4, 3, 1024, 1024).to(device)
-        graph = GraphMyBackward()
-        for _ in range(10):
-            loss = graph(input).sum()
-            loss_graph_remat.append(loss.numpy())
-            del loss
-        num_graph = get_num_remat()
+        graph = SubGraph(model, optimizer)
 
-        # eager with remat
-        flow.manual_seed(1213)
-        device = "cpu+remat"
-        model = ModuleMyAdvanced().to(device)
-        for p in model.parameters():
-            p.grad = flow.zeros_like(p).to(device)
-        optimizer = flow.optim.SGD(model.parameters(), lr=0.1, momentum=0)
         input = flow.rand(4, 3, 1024, 1024).to(device)
-        for _ in range(10):
-            loss = model(input).sum()
-            loss.backward()
-            del loss
-        num_eager = get_num_remat()
 
-        # graph with no remat
-        device = "cpu"
-        flow.manual_seed(1213)
-        model = ModuleMyAdvanced().to(device)
-        for p in model.parameters():
-            p.grad = flow.zeros_like(p).to(device)
-        optimizer = flow.optim.SGD(model.parameters(), lr=0.1, momentum=0)
-        input = flow.rand(4, 3, 1024, 1024).to(device)
-        graph = GraphMyBackward()
-        for _ in range(10):
-            loss = graph(input.to(device)).sum()
-            loss_graph_ori.append(loss.numpy())
-            del loss
+        num_eager, num_graph, _, _ = test_remat_forward_backward(
+            model, graph, input, "num", B=True)
+        self.assertEqual(num_eager, num_graph)
+
+        model = SubModule().to("cpu")
+        _, _, loss_graph_remat, loss_graph_ori = test_remat_forward_backward(
+            model, graph, input, "loss", B=True)
 
         self.assertEqual(loss_graph_remat, loss_graph_ori)
-
-        self.assertEqual(num_eager, num_graph)
 
 
 if __name__ == "__main__":
