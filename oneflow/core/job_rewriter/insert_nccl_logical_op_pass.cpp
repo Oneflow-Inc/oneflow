@@ -34,6 +34,8 @@ limitations under the License.
 
 namespace oneflow {
 
+DEFINE_ENV_INTEGER(ONEFLOW_GRAPH_MAX_NCCL_COMPUTE_STREAM, 8);
+
 namespace {
 
 class InsertNcclLogicalOpPass final : public JobPass {
@@ -639,8 +641,6 @@ void InitInsertNcclSubGraphInfoFromSet(
   CHECK_LT(nccl_subgraph_info->begin_op_global_order, nccl_subgraph_info->end_op_global_order);
 }
 
-constexpr uint32_t kMaxNcclComputeStreamCount = 8;
-
 std::string GetStreamIndexName(uint32_t id) { return "NCCL_COMPUTE_" + std::to_string(id); }
 
 int64_t InsertNcclLogicalOpsInSubGraph(const OpGraph& op_graph, JobBuilder* job_builder,
@@ -678,7 +678,8 @@ int64_t InsertNcclLogicalOpsInSubGraph(const OpGraph& op_graph, JobBuilder* job_
 
   // NOTE(chengcheng): For NCCL logical correct exec order in pipeline multi-subgraph.
   if (nccl_op_confs.empty()) { return 0; }
-  if ((*nccl_compute_stream_id) >= kMaxNcclComputeStreamCount) {
+  const int64_t max_nccl_stream_count = EnvInteger<ONEFLOW_GRAPH_MAX_NCCL_COMPUTE_STREAM>();
+  if ((*nccl_compute_stream_id) >= max_nccl_stream_count) {
     return 0;  // NOTE(chengcheng): ONLY support kMaxNcclComputeStreamCount insert nccl subgraphs.
   }
   std::string stream_index_name = GetStreamIndexName(*nccl_compute_stream_id);

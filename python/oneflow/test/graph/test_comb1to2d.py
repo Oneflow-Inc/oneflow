@@ -124,6 +124,7 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
         os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "0"
         os.environ["ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION"] = "0"
 
+        os.environ["ONEFLOW_GRAPH_MAX_NCCL_COMPUTE_STREAM"] = "1"
         x = flow.ones(
             4,
             12,
@@ -140,6 +141,7 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
         graph_diff_placement = _TestGraph(model_diff_placement)
         z = graph_diff_placement(x)
         test_case.assertTrue(np.allclose(x.numpy(), z.numpy(), 1e-05, 1e-05))
+        os.environ["ONEFLOW_GRAPH_MAX_NCCL_COMPUTE_STREAM"] = "8"
 
 
 if __name__ == "__main__":
