@@ -38,6 +38,9 @@ class CpuDeviceManager : public DeviceManager {
   void SetActiveDeviceByIndex(size_t device_index) override;
   void SetDeviceNumThreads(size_t num_threads);
 
+  std::shared_ptr<RandomGenerator> CreateRandomGenerator(uint64_t seed,
+                                                         size_t device_index) override;
+
  private:
   size_t device_num_threads_;
   std::mutex device_mutex_;
