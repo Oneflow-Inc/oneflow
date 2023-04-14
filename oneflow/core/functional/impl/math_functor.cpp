@@ -4463,11 +4463,14 @@ class FusedGetConvexDiagonalSquaredGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ToyAddFunctor{
-public:
-  ToyAddFunctor() { op_ = CHECK_JUST(one::OpBuilder("toy_add").Input("x").Input("y").Output("output").Build()); }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,const std::shared_ptr<one::Tensor>& y) const {
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x,y});
+class ToyAddFunctor {
+ public:
+  ToyAddFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("toy_add").Input("x").Input("y").Output("output").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, y});
   }
 
  private:

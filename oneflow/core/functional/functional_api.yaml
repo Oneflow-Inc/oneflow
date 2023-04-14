@@ -3301,3 +3301,7 @@
 - name: "toyadd"
   signature: "Tensor (Tensor x,Tensor y) =>ToyAdd"
   bind_python: True
+
+- name: "toyadd_grad"
+  signature: "Tensor (Tensor x, Tensor dy, Float alpha) => ToyAddGrad"
+  bind_python: False
