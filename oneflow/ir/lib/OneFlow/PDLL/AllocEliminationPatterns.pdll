@@ -2,7 +2,7 @@
 
 Constraint IsFuncArguments(value: Value) [{
   return success(nullptr !=
-    llvm::dyn_cast_or_null<func::FuncOp>(value.getDefiningOp()));
+    llvm::dyn_cast_or_null<mlir::BlockArgument>(value));
 }];
 
 Pattern {

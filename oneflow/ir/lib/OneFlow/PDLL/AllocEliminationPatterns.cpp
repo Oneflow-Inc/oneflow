@@ -22,6 +22,7 @@ limitations under the License.
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "OneFlow/OneFlowPDLLPatterns.h"
+#include "mlir/IR/Value.h"
 
 using namespace mlir;
 
