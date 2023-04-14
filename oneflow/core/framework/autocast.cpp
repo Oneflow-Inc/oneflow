@@ -50,14 +50,8 @@ bool* cache_enabled() {
 }
 
 inline Symbol<DType> get_lower_precision_fp_from_device_type(DeviceType device_type) {
-  switch (device_type) {
-    case DeviceType::kCUDA: return get_autocast_gpu_dtype();
-    case DeviceType::kCPU: return get_autocast_cpu_dtype();
-    default:
-      THROW(RuntimeError)
-          << "unknown device type for autocast in get_lower_precision_fp_from_device_type";
-  }
-  return DType::InvalidDataType();
+  if (device_type == DeviceType::kCPU) { return get_autocast_cpu_dtype(); };
+  return get_autocast_gpu_dtype();
 }
 
 using val_type = std::pair<std::weak_ptr<one::Tensor>, std::shared_ptr<one::Tensor>>;
