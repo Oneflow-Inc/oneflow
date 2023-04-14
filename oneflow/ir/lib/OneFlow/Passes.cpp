@@ -1028,8 +1028,8 @@ void AddLowerToLinalgMemRefPasses(PassManager& pm) {
   pm.addPass(bufferization::createEmptyTensorToAllocTensorPass());  // empty-tensor-to-alloc-tensor
   pm.addNestedPass<func::FuncOp>(createTensorBufferizePass());      // tensor-bufferize
   pm.addPass(func::createFuncBufferizePass());                      // func-bufferize
-  pm.addPass(mlir::oneflow::createEliminateAllocOpsPass());         // eliminate-alloc-ops
   pm.addPass(bufferization::createBufferResultsToOutParamsPass());  // buffer-results-to-out-params
+  pm.addPass(mlir::oneflow::createEliminateAllocOpsPass());         // eliminate-alloc-ops
   pm.addPass(createCanonicalizerPass());                            // canonicalize
   pm.addNestedPass<func::FuncOp>(
       mlir::bufferization::createFinalizingBufferizePass());  // finalizing-bufferize
