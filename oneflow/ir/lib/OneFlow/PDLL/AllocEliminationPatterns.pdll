@@ -1,8 +1,7 @@
 #include "OneFlow/OneFlowOps.td"
 
 Constraint IsFuncArguments(value: Value) [{
-  return success(nullptr !=
-    llvm::dyn_cast_or_null<mlir::BlockArgument>(value));
+  return success(llvm::dyn_cast<mlir::BlockArgument>(value));
 }];
 
 Pattern {
