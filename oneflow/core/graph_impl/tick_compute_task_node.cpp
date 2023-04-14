@@ -51,7 +51,6 @@ void TickCompTaskNode::BuildExecGphAndRegst() {
   node->mut_op() = op();
   const std::list<std::shared_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");
   for (const std::string& ibn : node->op()->input_bns()) {
-    const auto& lbi = node->op()->BnInOp2Lbi(ibn);
     node->BindBnWithOneOfTheRegsts(ibn, in_regsts);
   }
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
