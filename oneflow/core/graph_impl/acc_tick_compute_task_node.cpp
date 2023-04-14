@@ -38,6 +38,7 @@ void AccTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void AccTickCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst());
 }
+void AccTickCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
 
 void AccTickCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
 

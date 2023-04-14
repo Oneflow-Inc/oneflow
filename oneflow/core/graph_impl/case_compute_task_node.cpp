@@ -38,6 +38,8 @@ class CaseCompTaskNode final : public CompTaskNode {
 void CaseCompTaskNode::ConsumeAllRegsts() { ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst()); }
 void CaseCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
 
+void CaseCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
+
 void CaseCompTaskNode::ProduceAllRegstsAndBindEdges() {
   HashMap<LogicalBlobId, int64_t> lbi2obn_id;
   FOR_RANGE(int64_t, obn_id, 0, op()->output_bns().size()) {
