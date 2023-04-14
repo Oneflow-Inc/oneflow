@@ -82,7 +82,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_nodes,
                         const std::vector<CompTaskNode*>& dst_task_nodes);
 
-  void SetOrderInGraphForEachNode();
+  void InitOrderedTaskNodes();
   void MergeChainByPhysicalTaskGraph();
   void MergeChainByLogicalChainId();
   void BuildCtrlRegstDescInSameChain();
