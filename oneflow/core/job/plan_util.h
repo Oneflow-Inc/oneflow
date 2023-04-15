@@ -41,6 +41,8 @@ struct PlanUtil {
   static void CleanUselessMemBlockAndCheckValid(Plan* plan);
   static void ToDotFile(const Plan& plan, const std::string& filepath);
   static std::function<RegstDescProto*(int64_t)> MakeMutRegstDesc4Id(Plan* plan);
+  // limited_rank equals -1 means taking care of all ranks.
+  // Otherwise, only take care of rank limited_rank.
   static void SetForceInplaceMemBlock(Plan* plan, int64_t limited_rank = -1);
   static void DumpCtrlRegstInfoToPlan(Plan* plan);
   static void GenCollectiveBoxingPlan(Job* job, Plan* plan);
