@@ -1294,19 +1294,19 @@ class PixelUnShuffleFunctor {
     const int64_t width = x->shape()->At(3);
     std::shared_ptr<one::Tensor> out;
     CHECK_OR_RETURN(height % h_downscale_factor == 0)
-        << Error::RuntimeError()
-        << "The height of input tensor: " << height << "must be divisible by h_downscale_factor, but get " << h_downscale_factor;
+        << Error::RuntimeError() << "The height of input tensor: " << height
+        << "must be divisible by h_downscale_factor, but get " << h_downscale_factor;
     CHECK_OR_RETURN(width % w_downscale_factor == 0)
-        << Error::RuntimeError()
-        << "The width of input tensor: " << width << "must be divisible by w_downscale_factor, but get " << w_downscale_factor;
+        << Error::RuntimeError() << "The width of input tensor: " << width
+        << "must be divisible by w_downscale_factor, but get " << w_downscale_factor;
     const int64_t new_h = static_cast<int>(height / h_downscale_factor);
     const int64_t new_w = static_cast<int>(width / w_downscale_factor);
     std::vector<int32_t> permute_vec = {0, 1, 3, 5, 2, 4};
-    std::vector<int64_t> reshape_vec_1 = {batch, channel, new_h, h_downscale_factor,
+    std::vector<int64_t> reshape_vec_1 = {batch, channel,           new_h, h_downscale_factor,
                                           new_w, w_downscale_factor};
     Shape reshape_1(DimVector(reshape_vec_1.begin(), reshape_vec_1.end()));
-    std::vector<int64_t> reshape_vec_2 = {batch, channel * h_downscale_factor * w_downscale_factor, new_h, 
-                                          new_w};
+    std::vector<int64_t> reshape_vec_2 = {batch, channel * h_downscale_factor * w_downscale_factor,
+                                          new_h, new_w};
     Shape reshape_2(DimVector(reshape_vec_2.begin(), reshape_vec_2.end()));
     out = JUST(Reshape(x, reshape_1));
     out = JUST(Permute(out, permute_vec));
