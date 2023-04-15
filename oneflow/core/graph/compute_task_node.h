@@ -69,12 +69,6 @@ class CompTaskNode : public TaskNode, public FakeConsumedRegstProvider {
  private:
   struct InferBlobDescsMethodGetter final : public CompileModeVisitor<InferBlobDescsMethodGetter> {
     static ExecNode::InferBlobDescsMethod VisitNaive() { return &ExecNode::InferBlobDescsByInputs; }
-    static ExecNode::InferBlobDescsMethod VisitRankPerIter() {
-      return &ExecNode::InferBlobDescsByNdSbp;
-    }
-    static ExecNode::InferBlobDescsMethod VisitRankPerThread() {
-      return &ExecNode::InferBlobDescsByNdSbp;
-    }
     static ExecNode::InferBlobDescsMethod VisitRankPerProcess() {
       return &ExecNode::InferBlobDescsByNdSbp;
     }

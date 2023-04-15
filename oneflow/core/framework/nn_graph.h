@@ -108,9 +108,6 @@ class NNGraph final : public NNGraphIf {
  private:
   // Compile the full task graph for all ranks and then broadcast to all ranks.
   Maybe<void> NaiveCompile();
-  template<int64_t ThreadNumLimit>
-  // Compile the task graph for each rank at rank 0 and then send to all ranks.
-  Maybe<void> MasterRankCompile();
   // Each rank compile it's task graph.
   Maybe<void> MasterAndWorkerRanksCompile();
   Maybe<void> RegisterFreeEagerTensorsToVariableOpNames();
