@@ -136,10 +136,7 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
 
         model_diff_placement = _TestModuleDiffPlacement()
         graph_diff_placement = _TestGraph(model_diff_placement)
-        print("ccdebuglog: before graph_diff_placement run")
         z = graph_diff_placement(x)
-        print("ccdebuglog: after graph_diff_placement run")
-        # test_case.assertTrue(np.allclose(x.numpy(), z.numpy(), 1e-05, 1e-05))
 
         os.environ["ONEFLOW_GRAPH_MAX_NCCL_COMPUTE_STREAM"] = "8"
         flow.boxing.nccl.enable_use_compute_stream(False)
