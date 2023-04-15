@@ -42,8 +42,9 @@ def _test_auto_to_global(test_case, device):
     test_case.assertEqual(y.placement, z.placement)
 
 
-@flow.unittest.skip_unless_1n4d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestAutoToGlobal(flow.unittest.TestCase):
+    @flow.unittest.skip_unless_1n4d()
     def test_auto_to_global(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cuda"]
