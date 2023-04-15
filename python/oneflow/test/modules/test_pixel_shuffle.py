@@ -96,7 +96,7 @@ class TestPixelShuffleModule(flow.unittest.TestCase):
         x = random_tensor(ndim=4, dim1=num_channels).to(device)
         y = m(x)
         return y
-    
+
     @autotest()
     def test_pixel_unshuffle_with_random_data(test_case):
         downscale_factor = random().to(int)
