@@ -141,19 +141,25 @@ class Module(object):
     """
 
     def __init__(self):
-        self.training = True
-        self._parameters = OrderedDict()
-        self._buffers = OrderedDict()
-        self._non_persistent_buffers_set = set()
-        self._backward_hooks = OrderedDict()
-        self._is_full_backward_hook = None
-        self._forward_hooks = OrderedDict()
-        self._forward_pre_hooks = OrderedDict()
-        self._state_dict_hooks = OrderedDict()
-        self._load_state_dict_pre_hooks = OrderedDict()
-        self._modules = OrderedDict()
-        self._is_ddp_module = False
-        self._oneflow_internal_module_tensor_applied_dict__ = None
+        """
+        Calls super().__setattr__('a', a) instead of the typical self.a = a
+        to avoid Module.__setattr__ overhead. Module's __setattr__ has special
+        handling for parameters, submodules, and buffers but simply calls into
+        super().__setattr__ for all other attributes.
+        """
+        super().__setattr__("training", True)
+        super().__setattr__("_parameters", OrderedDict())
+        super().__setattr__("_buffers", OrderedDict())
+        super().__setattr__("_non_persistent_buffers_set", set())
+        super().__setattr__("_backward_hooks", OrderedDict())
+        super().__setattr__("_is_full_backward_hook", None)
+        super().__setattr__("_forward_hooks", OrderedDict())
+        super().__setattr__("_forward_pre_hooks", OrderedDict())
+        super().__setattr__("_state_dict_hooks", OrderedDict())
+        super().__setattr__("_load_state_dict_pre_hooks", OrderedDict())
+        super().__setattr__("_modules", OrderedDict())
+        super().__setattr__("_is_ddp_module", False)
+        super().__setattr__("_oneflow_internal_module_tensor_applied_dict__", None)
 
     def __getstate__(self):
         if not self._is_ddp_module:
