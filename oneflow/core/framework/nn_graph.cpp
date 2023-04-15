@@ -882,8 +882,7 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
     CHECK_OR_RETURN(variable_op_name2eager_blob_object_.emplace(var_name, var_blob).second)
         << Error::RuntimeError() << kOfBugIssueUploadPrompt;
   }
-  // Initialize or check mem_ptr_for_allocation_computation_pipelining by TouchTensors
-  // instruction.
+  // Initialize or check mem_ptr_for_allocation_computation_pipelining by TouchTensors instruction.
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     auto eager_blob_objects = std::make_shared<vm::EagerBlobObjectList>();
     for (const auto& pair : variable_op_name2eager_blob_object_) {
@@ -899,10 +898,8 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
 
 void NNGraph::NewRuntimeBuffers() {
   // NOTE(chengcheng):
-  //   1. The BufferSize comes from job_conf.concurrency_width configured by user (default =
-  //   128)
-  //   2. In Pipeline Parallelism, this value need greater than pipeline stage num for
-  //   pipelining.
+  //   1. The BufferSize comes from job_conf.concurrency_width configured by user (default = 128)
+  //   2. In Pipeline Parallelism, this value need greater than pipeline stage num for pipelining.
   size_t concurrency_width = job_.job_conf().concurrency_width();
   {
     auto* buffer_mgr = Singleton<BufferMgr<std::shared_ptr<JobInstance>>>::Get();

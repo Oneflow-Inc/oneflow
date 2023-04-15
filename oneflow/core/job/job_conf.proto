@@ -212,11 +212,11 @@ message JobSignatureDef {
 }
 
 enum StraightenAlgorithmTag {
-  kDisableStraighten = 0;                  
-  kOverlap4Transfer = 1;  
-  kCompressMemory = 2;
-  kOverlap4CpuGpu = 3;
-  kDelayShortGpu = 4;            
+  kDisableStraighten = 1;
+  kOverlap4Transfer = 2;
+  kCompressMemory = 3;
+  kOverlap4CpuGpu = 4;
+  kDelayShortGpu = 5;
 }
 
 enum AutoMemoryStrategy {

@@ -226,8 +226,8 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
 
 EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   VLOG(2) << "Try to close env global objects scope." << std::endl;
-  if (is_normal_exit_.has_value() && !CHECK_JUST(is_normal_exit_)) { return; }
   OF_ENV_BARRIER();
+  if (is_normal_exit_.has_value() && !CHECK_JUST(is_normal_exit_)) { return; }
   TensorBufferPool::Delete();
   Singleton<KernelObserver>::Delete();
 #ifdef __linux__

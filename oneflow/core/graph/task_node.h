@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/memory/memory_zone.h"
-#include "oneflow/core/register/register_desc.h"
 
 namespace std {
 
