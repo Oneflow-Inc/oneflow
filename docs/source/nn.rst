@@ -293,7 +293,10 @@ Vision Layers
     :nosignatures:
     :template: classtemplate.rst
 
-    nn.PixelShuffle 
+    nn.PixelShuffle
+    nn.PixelUnShuffle
+    nn.modules.pixelshuffle.PixelShufflev2
+    nn.modules.pixelshuffle.PixelUnShufflev2
     nn.Upsample 
     nn.UpsamplingBilinear2d 
     nn.UpsamplingNearest2d

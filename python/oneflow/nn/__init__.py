@@ -134,6 +134,7 @@ from oneflow.nn.modules.padding import (
     ZeroPad2d,
 )
 from oneflow.nn.modules.pixelshuffle import PixelShufflev2 as PixelShuffle
+from oneflow.nn.modules.pixelshuffle import PixelUnShufflev2 as PixelUnShuffle
 from oneflow.nn.modules.pooling import (
     AvgPool1d,
     AvgPool2d,

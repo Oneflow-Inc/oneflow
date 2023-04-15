@@ -2881,6 +2881,10 @@
   signature: "Tensor (Tensor input, Int64 h_upscale_factor, Int64 w_upscale_factor) => PixelShuffle"
   bind_python: True
 
+- name: "pixel_unshuffle"
+  signature: "Tensor (Tensor input, Int64 h_downscale_factor, Int64 w_downscale_factor) => PixelUnShuffle"
+  bind_python: True
+
 - name: "isnan"
   signature: "Tensor (Tensor input) => IsNan"
   bind_python: True
