@@ -23,7 +23,6 @@ limitations under the License.
 #include "oneflow/core/common/cost_util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/container_util.h"
-#include "oneflow/core/common/async_deallocate_context.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/eager/eager_blob_object.h"
@@ -505,8 +504,6 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
   // Note that nccl use compute stream mode has not need to generate CollectiveBoxingPlan.
   CHECK_OR_RETURN((Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()));
 
-  // for async deallocating big objects.
-  AsyncDeallocateContext deallocate_ctx{};
   std::set<std::string> push_pull_keys{};
   const auto& MergeCommKeys = [&](std::set<std::string>&& keys) {
     push_pull_keys.insert(keys.begin(), keys.end());
@@ -548,16 +545,11 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
   MergeCommKeys(MultiThreadPushFromMasterToWorkers(
       name_ + std::string(__FUNCTION__) + "_boxing_task_graph", boxing_task_graph_proto.get(),
       PrepareWorkerBoxingTaskGraphProto));
-  // Async deallocate `boxing_task_graph`.
-  deallocate_ctx.Deallocate(std::move(boxing_task_graph));
 
   // c. Each rank compile it's related task node with RankCompiler. RankCompiler compile with the
   //    BoxingTaskGraph and the job.
   auto* plan = &plan_;
-  CHECK_JUST(RankCompiler(boxing_task_graph_proto, rank)
-                 .Compile(variable_op_names_, &job_, plan, &deallocate_ctx));
-  // Async deallocate `boxing_task_graph_proto`.
-  deallocate_ctx.Deallocate(std::move(boxing_task_graph_proto));
+  CHECK_JUST(RankCompiler(boxing_task_graph_proto, rank).Compile(variable_op_names_, &job_, plan));
   PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names_);
 
   if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {

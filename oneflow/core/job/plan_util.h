@@ -19,7 +19,6 @@ limitations under the License.
 #include <functional>
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/deallocate_context.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/graph/stream_id.h"

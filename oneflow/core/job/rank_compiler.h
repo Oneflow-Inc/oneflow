@@ -14,7 +14,6 @@ limitations under the License.
 #define ONEFLOW_CORE_JOB_RANK_COMPILER_H_
 
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/common/deallocate_context.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/boxing_task_graph.pb.h"
 #include "oneflow/core/job/plan.pb.h"
@@ -29,12 +28,7 @@ class RankCompiler final {
       : boxing_task_graph_proto_(boxing_task_graph_proto), rank_(rank) {}
   ~RankCompiler() = default;
 
-  Maybe<void> Compile(const HashSet<std::string>& var_op_names, Job*, Plan*,
-                      DeallocateContext* deallocate_ctx) const;
-  Maybe<void> Compile(const HashSet<std::string>& var_op_names, Job* job, Plan* plan) const {
-    NaiveDeallocateContext deallocate_ctx{};
-    return Compile(var_op_names, job, plan, &deallocate_ctx);
-  }
+  Maybe<void> Compile(const HashSet<std::string>& var_op_names, Job* job, Plan* plan) const;
 
  private:
   std::shared_ptr<BoxingTaskGraphProto> boxing_task_graph_proto_;

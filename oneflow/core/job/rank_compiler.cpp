@@ -51,8 +51,8 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
 
 }  // namespace
 
-Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job* job, Plan* plan,
-                                  DeallocateContext* deallocate_ctx) const {
+Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job* job,
+                                  Plan* plan) const {
 #ifdef WITH_CUDA
   // Use the right device when some plan compilation needs cuda to avoid creating unnecessary cuda
   // context on cuda:0.
@@ -119,7 +119,6 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
     }
     plan->mutable_task()->Add(std::move(task_proto));
   });
-  deallocate_ctx->Deallocate(std::move(task_gph));
 
   // post-process for plan and delete Singleton<OpGraph>.
   auto* job_id2job_conf = plan->mutable_job_confs()->mutable_job_id2job_conf();
