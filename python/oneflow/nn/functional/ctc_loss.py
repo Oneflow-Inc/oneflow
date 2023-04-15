@@ -63,7 +63,7 @@ def ctc_loss(
         >>> target_lengths = flow.tensor([3, 3], dtype=flow.int32)
         >>> out = F.ctc_loss(log_probs, targets, input_lengths, target_lengths)
         >>> out
-        tensor(1.1376, dtype=oneflow.float32, grad_fn=<scalar_mul_backward>)
+        tensor(1.1376, dtype=oneflow.float32, grad_fn=<scalar_mulBackward>)
         
     """
     max_target_length = 0
