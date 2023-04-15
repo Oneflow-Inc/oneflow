@@ -10,7 +10,6 @@ import "oneflow/core/register/blob_desc.proto";
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/job/sbp_parallel.proto";
 import "oneflow/core/job/module_conf.proto";
-import "oneflow/core/job/scope.proto";
 
 message JobParallelViewConf {
   map<string, SbpSignature> op_name2sbp_signature_conf = 1;
