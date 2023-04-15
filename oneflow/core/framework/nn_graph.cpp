@@ -52,7 +52,7 @@ limitations under the License.
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/framework/variable_tensor_mgr.h"
-#include "oneflow/core/common/env_var/lazy.h"
+#include "oneflow/core/common/env_var/env_var.h"
 #include "oneflow/core/job/compile_mode.h"
 #include "oneflow/core/thread/thread_manager.h"
 
