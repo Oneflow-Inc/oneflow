@@ -33,7 +33,9 @@ class TestDataPtr(unittest.TestCase):
 
     @flow.unittest.skip_unless_1n2d()
     def test_global_tensor(test_case):
-        x = flow.randn(2, 3, placement=flow.placement.all('cpu'), sbp=flow.sbp.broadcast)
+        x = flow.randn(
+            2, 3, placement=flow.placement.all("cpu"), sbp=flow.sbp.broadcast
+        )
         test_case.assertEqual(x.data_ptr(), x.to_local().data_ptr())
 
 
