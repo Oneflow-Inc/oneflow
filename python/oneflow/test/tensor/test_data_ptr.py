@@ -13,11 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow._oneflow_internal
-import oneflow.framework.check_point_v2 as check_point_v2
-import oneflow.framework.tensor as tensor_util
+import unittest
+import oneflow as flow
+import oneflow.unittest
 
 
-def RegisterMethod4Class():
-    tensor_util.RegisterMethods()
-    check_point_v2.RegisterMethods()
+@flow.unittest.skip_unless_1n1d()
+class TestDataPtr(unittest.TestCase):
+    def test_equality(test_case):
+        x = flow.ones(2, 3)
+        y = flow.ones(2, 3)
+        test_case.assertNotEqual(x.data_ptr(), y.data_ptr())
+
+        test_case.assertEqual(x.data_ptr(), x.data.data_ptr())
+
+        x_ptr = x.data_ptr()
+        x[:] = 2
+        test_case.assertEqual(x_ptr, x.data_ptr())
+
+
+if __name__ == "__main__":
+    unittest.main()

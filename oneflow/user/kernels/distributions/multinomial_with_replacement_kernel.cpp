@@ -67,7 +67,7 @@ class MultinomialWithReplacementCpuKernel final : public user_op::OpKernel {
     CHECK_NOTNULL(distribution_state);
     const auto& generator = distribution_state->generator();
     CHECK_NOTNULL(generator);
-    auto cpu_gen = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
+    auto cpu_gen = CHECK_JUST(generator->Get<ep::CPUGenerator>());
     std::lock_guard<std::mutex> lock(cpu_gen->mutex_);
 
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
@@ -88,7 +88,7 @@ class MultinomialWithReplacementCpuKernel final : public user_op::OpKernel {
     int64_t result_dist_stride_0 = out->shape_view().NumAxes() > 1 ? out->stride().at(0) : 0;
     int64_t result_dist_stride_1 = out->stride().at(out->shape_view().NumAxes() - 1);
 
-    one::pytorch_mt19937_engine& engine = cpu_gen->torch_engine();
+    ep::pytorch_mt19937_engine& engine = cpu_gen->torch_engine();
 
     for (int i = 0; i < n_dist; ++i) {
       /* Get normalized cumulative distribution from prob distribution */
