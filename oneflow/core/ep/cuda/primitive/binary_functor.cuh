@@ -15,8 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/ep/common/primitive/binary_functor.h"
-// #include "oneflow/core/ep/cuda/primitive/unary_functor.cuh"
-// #include "oneflow/core/ep/cuda/primitive/unary_functor.cuh"
+#include "oneflow/core/ep/cuda/primitive/unary_functor.cuh"
 namespace oneflow {
 namespace ep {
 namespace primitive {
@@ -253,9 +252,9 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kDigammaBackwardWithDyX, Src, 
     // trigamma->Launch(ctx->stream(), &x, &trigamma_result, 1);
 
     // // return dy * trigamma_result;
-    // UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTrigamma, Src, Dst>  trigamma_functor(0,0);
-    // Src trigamma_result=trigamma_functor(x);
-    // return trigamma_result*dy;
+    ep::primitive::UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTrigamma, Src, Dst>  trigamma_functor(0,0);
+    Src trigamma_result=trigamma_functor(x);
+    return trigamma_result*dy;
     return 0.0;
   }
 };

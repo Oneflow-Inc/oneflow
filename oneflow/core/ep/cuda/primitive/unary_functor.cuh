@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+#ifndef ONEFLOW_CORE_EP_CUDA_PRIMITIVE_UNARY_FUNCTOR_CUH
+#define ONEFLOW_CORE_EP_CUDA_PRIMITIVE_UNARY_FUNCTOR_CUH
 #include "oneflow/core/ep/common/primitive/unary_functor.h"
 #include "oneflow/core/ep/cuda/primitive/type_seq.h"
 #include "oneflow/core/cuda/elementwise.cuh"
@@ -23,6 +26,7 @@ limitations under the License.
 namespace oneflow {
 namespace ep {
 namespace primitive {
+  
 
 template<typename Dst, typename Src>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kGelu, Dst, Src> {
@@ -573,3 +577,4 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTrunc, nv_bfloat16, nv_bfloat16
 }  // namespace primitive
 }  // namespace ep
 }  // namespace oneflow
+#endif 
