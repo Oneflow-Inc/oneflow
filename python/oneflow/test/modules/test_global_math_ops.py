@@ -172,8 +172,8 @@ def _test_atan2(test_case, placement, sbp, ndim):
     return z
 
 
-# TODO:shijiaxing  When the grad function be implemented, rm "auto_backward=False"
-@autotest(n=1, auto_backward=False)
+
+@autotest(n=1)
 def _test_digamma(test_case, placement, sbp, ndim):
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
     x = random_tensor(ndim, *dim_list, low=0, high=10).to_global(placement, sbp)
