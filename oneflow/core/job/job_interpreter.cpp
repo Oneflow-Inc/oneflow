@@ -63,16 +63,19 @@ Maybe<UserOpExpr> OpConfToUserOpExpr(const OperatorConf& op_conf) {
 }
 
 template<typename Func>
-Maybe<TensorTuple> GetInputTensors(const UserOpConf& user_conf, const Env& env,
-                                   const Func& preprocess) {
+Maybe<std::pair<TensorTuple, OpArgsVector<std::string>>>
+GetInputTensors(const UserOpConf& user_conf, const Env& env, const Func& preprocess) {
   TensorTuple inputs;
-  for (const auto& pair : user_conf.input()) {
-    if (pair.first == "UserSourceOpTickInput") { continue; }
-    for (const auto& name : pair.second.s()) {
-      inputs.emplace_back(preprocess(JUST(MapAt(env, name))));
+  OpArgsVector<std::string> ibns;
+  for (const auto& [ibn, ibs] : user_conf.input()) {
+    if (ibn == "UserSourceOpTickInput") { continue; }
+    const auto& tensor_names = ibs.s();
+    for (int i = 0; i < tensor_names.size(); ++i) {
+      inputs.emplace_back(preprocess(JUST(MapAt(env, tensor_names[i]))));
+      ibns.emplace_back(ibn + '_' + std::to_string(i));
     }
   }
-  return inputs;
+  return std::make_pair(inputs, ibns);
 }
 
 OpArgsVector<std::string> GetOutputNamesOfOp(const UserOpConf& user_conf) {
@@ -180,8 +183,9 @@ constexpr auto* CachedIsAllZeroSizeTensorMeta =
 
 Maybe<void> RawRunGlobalNormalOp(const std::shared_ptr<UserOpExpr>& op, const TensorTuple& inputs, TensorTuple* outputs,
                                  std::map<std::string, std::shared_ptr<Tensor>>& env, const OperatorConf& op_conf, 
-                                 const UserOpConf& user_conf, const OpArgsVector<std::string>& output_names, 
-                                 const NdSbpSignature& ndsbp_signature, const Symbol<ParallelDesc>& op_paralleldesc) {
+                                 const UserOpConf& user_conf, const OpArgsVector<std::string>& ibns, 
+                                 const OpArgsVector<std::string>& output_names, const NdSbpSignature& ndsbp_signature, 
+                                 const Symbol<ParallelDesc>& op_paralleldesc) {
   static AttrMap empty_attr_map;
   const OpExprInterpContext ctx(empty_attr_map);
   CHECK_OR_RETURN(!inputs.empty());
@@ -226,33 +230,30 @@ Maybe<void> RawRunGlobalNormalOp(const std::shared_ptr<UserOpExpr>& op, const Te
   vm::EagerBlobObjectList input_eager_blob_objects;
   TensorTuple boxing_outputs;
   const auto* mgr = Singleton<EagerBoxingInterpreterManager>::Get();
-  for (const auto& [ibn, ibs] : user_conf.input()) {
-    if (ibn == "UserSourceOpTickInput") { continue; }
-    const auto& tensor_names = ibs.s();
-    for (int i = 0; i < tensor_names.size(); ++i) {
-      std::shared_ptr<Tensor> input_tensor = JUST(functional::To(JUST(MapAt(env, tensor_names[i])), op_conf.device_tag()));
-      std::string lbn = ibn + '_' + std::to_string(i);
-      const auto& logical_shape = input_tensor->shape();
-      CHECK_GT_OR_RETURN(logical_shape->elem_cnt(), 0);
-      const auto& in_nd_sbp = JUST(input_tensor->nd_sbp());
-      const auto& out_nd_sbp = SymbolOf(JUST(MapAt(ndsbp_signature.bn_in_op2nd_sbp(), lbn)));
-      const auto& in_parallel_desc = JUST(input_tensor->parallel_desc());
-      const auto& out_parallel_desc = op_paralleldesc;
-      CHECK_OR_RETURN(in_parallel_desc == out_parallel_desc);
-      if (in_parallel_desc->parallel_num() != 1 && in_nd_sbp != out_nd_sbp) {
-        const auto& boxing_interpreter = JUST(mgr->GetEagerBoxingInterpreter(
-            in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc, *logical_shape));
-        Singleton<const EagerBoxingLogger>::Get()->Log(
-            *JUST(boxing_interpreter->boxing_interpreter_status()), /* prefix */ "");
-        if (parallel_id.has_value()) {
-          input_tensor = JUST(boxing_interpreter->Interpret(input_tensor, in_nd_sbp, out_nd_sbp,
-                                                            in_parallel_desc, out_parallel_desc));
-        }
-        boxing_outputs.emplace_back(input_tensor);
+  CHECK_EQ_OR_RETURN(inputs.size(), ibns.size());
+  for (int i = 0; i < inputs.size(); ++i) {
+    std::shared_ptr<Tensor> input_tensor = inputs[i];
+    std::string lbn = JUST(VectorAt(ibns, i));
+    const auto& logical_shape = input_tensor->shape();
+    CHECK_GT_OR_RETURN(logical_shape->elem_cnt(), 0);
+    const auto& in_nd_sbp = JUST(input_tensor->nd_sbp());
+    const auto& out_nd_sbp = SymbolOf(JUST(MapAt(ndsbp_signature.bn_in_op2nd_sbp(), lbn)));
+    const auto& in_parallel_desc = JUST(input_tensor->parallel_desc());
+    const auto& out_parallel_desc = op_paralleldesc;
+    CHECK_OR_RETURN(in_parallel_desc == out_parallel_desc);
+    if (in_parallel_desc->parallel_num() != 1 && in_nd_sbp != out_nd_sbp) {
+      const auto& boxing_interpreter = JUST(mgr->GetEagerBoxingInterpreter(
+          in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc, *logical_shape));
+      Singleton<const EagerBoxingLogger>::Get()->Log(
+          *JUST(boxing_interpreter->boxing_interpreter_status()), /* prefix */ "");
+      if (parallel_id.has_value()) {
+        input_tensor = JUST(boxing_interpreter->Interpret(input_tensor, in_nd_sbp, out_nd_sbp,
+                                                          in_parallel_desc, out_parallel_desc));
       }
-      const auto& local_tensor = JUST(input_tensor->cur_rank_phy_tensor());
-      input_eager_blob_objects.emplace_back(JUST(local_tensor->eager_blob_object()));
+      boxing_outputs.emplace_back(input_tensor);
     }
+    const auto& local_tensor = JUST(input_tensor->cur_rank_phy_tensor());
+    input_eager_blob_objects.emplace_back(JUST(local_tensor->eager_blob_object()));
   }
 
   if (!parallel_id.has_value()) { return Maybe<void>::Ok(); }
@@ -281,11 +282,11 @@ auto* RunGlobalNormalOpThenInitGlobalId = DECORATE(&RawRunGlobalNormalOp, NonRec
 
 } // namespace
 
-Maybe<void> RunGlobalNormalOp(const std::shared_ptr<UserOpExpr>& op, Env& env, const OperatorConf& op_conf, 
-                              const UserOpConf& user_conf, const TensorTuple& inputs, const OpArgsVector<std::string>& output_names, 
+Maybe<void> RunGlobalNormalOp(const std::shared_ptr<UserOpExpr>& op, const TensorTuple& inputs, Env& env, const OperatorConf& op_conf,
+                              const UserOpConf& user_conf, const OpArgsVector<std::string>& ibns, const OpArgsVector<std::string>& output_names, 
                               const NdSbpSignature& ndsbp_signature, const Symbol<ParallelDesc>& op_paralleldesc) {
   TensorTuple outputs(output_names.size());
-  return RunGlobalNormalOpThenInitGlobalId(op, inputs, &outputs, env, op_conf, user_conf, output_names, ndsbp_signature, op_paralleldesc);
+  return RunGlobalNormalOpThenInitGlobalId(op, inputs, &outputs, env, op_conf, user_conf, ibns, output_names, ndsbp_signature, op_paralleldesc);
 }
 
 Maybe<void> RunNormalOp(const std::shared_ptr<UserOpExpr>& op, Env& env, const TensorTuple& inputs,
@@ -373,7 +374,7 @@ Maybe<one::TensorTuple> InterpretJob(const one::TensorTuple& graph_inputs,
       auto op = CHECK_NOTNULL(graph->cached_op_exprs[i]);
       const auto& user_conf = op_conf.user_conf();
       OF_PROFILER_RANGE_GUARD(user_conf.op_type_name());
-      TensorTuple inputs =
+      auto [inputs, ibns] =
           *JUST(GetInputTensors(user_conf, env, [&op_conf](const std::shared_ptr<Tensor>& tensor) {
             return CHECK_JUST(functional::To(tensor, op_conf.device_tag()));
           }));
@@ -386,7 +387,7 @@ Maybe<one::TensorTuple> InterpretJob(const one::TensorTuple& graph_inputs,
         } else {
           const auto& op_paralleldesc = JUST(MapAt(op2paralleldesc, op_conf.name()));
           const auto& nd_sbp_signature_conf = JUST(MapAt(op_name2nd_sbp_signature_conf, op_conf.name()));
-          JUST(RunGlobalNormalOp(op, env, op_conf, user_conf, inputs, output_names, 
+          JUST(RunGlobalNormalOp(op, inputs, env, op_conf, user_conf, ibns, output_names, 
                                  nd_sbp_signature_conf, op_paralleldesc));
         }
       }
