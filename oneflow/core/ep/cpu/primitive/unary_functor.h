@@ -259,6 +259,8 @@ struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kTrigamma, double, double> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC double operator()(double x) const {
+    // references
+    // https://github.com/pytorch/pytorch/blob/release/1.13/aten/src/ATen/native/Math.h#L336-L352
     double sign = +1;
     double result = 0;
     if (x < 0.5) {
@@ -282,21 +284,23 @@ struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kTrigamma, float, float> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC float operator()(float x) const {
+    // references
+    // https://github.com/pytorch/pytorch/blob/release/1.13/aten/src/ATen/native/Math.h#L354-L370
     float sign = +1;
-  float result = 0;
-  if (x < 0.5f) {
-    sign = -1;
-    const float sin_pi_x = sinf(pi<float> * x);
-    result -= (pi<float> * pi<float>) / (sin_pi_x * sin_pi_x);
-    x = 1 - x;
-  }
-  for (int i = 0; i < 6; ++i) {
-    result += 1 / (x * x);
-    x += 1;
-  }
-  const float ixx = 1 / (x*x);
-  result += (1 + 1 / (2*x) + ixx * (1.f/6 - ixx * (1.f/30 - ixx * (1.f/42)))) / x;
-  return sign * result;
+    float result = 0;
+    if (x < 0.5f) {
+      sign = -1;
+      const float sin_pi_x = sinf(pi<float> * x);
+      result -= (pi<float> * pi<float>) / (sin_pi_x * sin_pi_x);
+      x = 1 - x;
+    }
+    for (int i = 0; i < 6; ++i) {
+      result += 1 / (x * x);
+      x += 1;
+    }
+    const float ixx = 1 / (x * x);
+    result += (1 + 1 / (2 * x) + ixx * (1.f / 6 - ixx * (1.f / 30 - ixx * (1.f / 42)))) / x;
+    return sign * result;
   }
 };
 

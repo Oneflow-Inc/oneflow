@@ -157,7 +157,7 @@ OF_PP_FOR_EACH_TUPLE(FLOAT_UNARY_BWD_WITH_FILL_FUNCTORS, FLOAT_UNARY_FUNC_BWD_WI
 
 UNARY_ELEMENTWISE_FUNCTOR("negative", Negative, FloatUnaryFunctor)
 UNARY_ELEMENTWISE_FUNCTOR("bitwise_not", BitwiseNot, UnaryFunctor)
-UNARY_ELEMENTWISE_FUNCTOR("trigamma",Trigamma,FloatUnaryFunctor)
+UNARY_ELEMENTWISE_FUNCTOR("trigamma", Trigamma, FloatUnaryFunctor)
 
 }  // namespace impl
 

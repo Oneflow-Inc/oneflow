@@ -26,7 +26,6 @@ limitations under the License.
 namespace oneflow {
 namespace ep {
 namespace primitive {
-  
 
 template<typename Dst, typename Src>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kGelu, Dst, Src> {
@@ -292,6 +291,8 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTrigamma, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src x) const {
+    // references
+    // https://github.com/pytorch/pytorch/blob/release/1.13/aten/src/ATen/native/cuda/Math.cuh#L387-L410
     const Src PI{3.14159265358979323846};
     Src sign = 1;
     Src result = 0;
@@ -309,8 +310,10 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTrigamma, Dst, Src> {
     }
 
     const Src one{1};
-    const Src ixx = one / (x*x);
-    result += (one + one / (Src{2}*x) + ixx * (one/Src{6} - ixx * (one/Src{30} - ixx * (one/Src{42})))) / x;
+    const Src ixx = one / (x * x);
+    result += (one + one / (Src{2} * x)
+               + ixx * (one / Src{6} - ixx * (one / Src{30} - ixx * (one / Src{42}))))
+              / x;
     return sign * result;
   }
 };
@@ -577,4 +580,4 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTrunc, nv_bfloat16, nv_bfloat16
 }  // namespace primitive
 }  // namespace ep
 }  // namespace oneflow
-#endif 
+#endif

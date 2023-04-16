@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/ep/common/primitive/binary_functor.h"
 #include "oneflow/core/ep/cuda/primitive/unary_functor.cuh"
+
 namespace oneflow {
 namespace ep {
 namespace primitive {
@@ -243,23 +244,15 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kIsClose, Src, Dst> {
 template<typename Src, typename Dst>
 struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kDigammaBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
-   //UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTrigamma, Src, Dst> trigamma_functor(0,0);
-  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-    // auto trigamma = ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
-    //     DeviceType::kCUDA, ep::primitive::UnaryOp::kTrigamma,GetDataType<Src>(),GetDataType<Src>());
-    // CHECK(trigamma);
-    // Src trigamma_result = Src{0};
-    // trigamma->Launch(ctx->stream(), &x, &trigamma_result, 1);
 
-    // // return dy * trigamma_result;
-    ep::primitive::UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTrigamma, Src, Dst>  trigamma_functor(0,0);
-    Src trigamma_result=trigamma_functor(x);
-    return trigamma_result*dy;
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    ep::primitive::UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTrigamma, Src, Dst> trigamma_functor(
+        0, 0);
+    Src trigamma_result = trigamma_functor(x);
+    return trigamma_result * dy;
     return 0.0;
   }
 };
-
- 
 
 #define SPECIALIZATION_INTEGRAL_CLOSENESS_BINARY_FUNCTOR(op, type)                            \
   template<typename Dst>                                                                      \

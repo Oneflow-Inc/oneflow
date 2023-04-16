@@ -936,7 +936,6 @@ class TestTensor(flow.unittest.TestCase):
         )
         test_case.assertTrue(y_default_dtype.dtype == flow.int32)
 
-
     @autotest(n=5)
     def test_digamma_tensor_with_random_data(test_case):
         device = random_device()
