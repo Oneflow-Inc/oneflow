@@ -379,17 +379,17 @@ Maybe<one::TensorTuple> InterpretJob(const one::TensorTuple& graph_inputs,
             return CHECK_JUST(functional::To(tensor, op_conf.device_tag()));
           }));
       OpArgsVector<std::string> output_names = GetOutputNamesOfOp(user_conf);
-      if (IsViewOp(op)) {
-        JUST(RunViewOp(op, env, inputs, output_names));
-      } else {
-        if (JUST(GetEagerInterpreterType(inputs, op))) {
-          JUST(RunNormalOp(op, env, inputs, output_names));
+      if (JUST(GetEagerInterpreterType(inputs, op))) {
+        if (IsViewOp(op)) {
+          JUST(RunViewOp(op, env, inputs, output_names));
         } else {
-          const auto& op_paralleldesc = JUST(MapAt(op2paralleldesc, op_conf.name()));
-          const auto& nd_sbp_signature_conf = JUST(MapAt(op_name2nd_sbp_signature_conf, op_conf.name()));
-          JUST(RunGlobalNormalOp(op, inputs, env, op_conf, user_conf, ibns, output_names, 
-                                 nd_sbp_signature_conf, op_paralleldesc));
+          JUST(RunNormalOp(op, env, inputs, output_names));
         }
+      } else {
+        const auto& op_paralleldesc = JUST(MapAt(op2paralleldesc, op_conf.name()));
+        const auto& nd_sbp_signature_conf = JUST(MapAt(op_name2nd_sbp_signature_conf, op_conf.name()));
+        JUST(RunGlobalNormalOp(op, inputs, env, op_conf, user_conf, ibns, output_names, 
+                               nd_sbp_signature_conf, op_paralleldesc));
       }
       for (const auto& name : outdated_tensors_after_op[i]) {
         CHECK_EQ_OR_RETURN(env.erase(name), 1);
