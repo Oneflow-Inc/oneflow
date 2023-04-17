@@ -95,7 +95,9 @@ llvm::SmallVector<Value, 4> BroadcastAddOp::NchwToNhwc(llvm::SmallVector<Value, 
 
 bool NormalizationOp::IsNCHW() { return this->getAxisAttr().getValue().getSExtValue() == 1; }
 
-bool NormalizationInferenceOp::IsNCHW() { return this->getAxisAttr().getValue().getSExtValue() == 1; }
+bool NormalizationInferenceOp::IsNCHW() {
+  return this->getAxisAttr().getValue().getSExtValue() == 1;
+}
 
 llvm::DenseSet<Value> NormalizationOp::OperandsToTranspose() { return {this->getX()}; }
 
@@ -129,7 +131,7 @@ llvm::SmallVector<Value, 4> NormalizationOp::NchwToNhwc(llvm::SmallVector<Value,
 }
 
 llvm::SmallVector<Value, 4> NormalizationInferenceOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
-                                                        PatternRewriter& rewriter) {
+                                                                 PatternRewriter& rewriter) {
   auto normalization_op = *this;
   SmallVector<Value, 4> operands;
   operands.push_back(value[0]);
