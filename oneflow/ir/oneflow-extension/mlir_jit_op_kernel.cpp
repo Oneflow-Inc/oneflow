@@ -136,8 +136,7 @@ void WithMlirContext(
       GetMLIRCInterfaceArgs(ctx);
   llvm::SmallVector<void*> packed_args{};
   for (auto& arg /* arg must be a reference*/ : args) { packed_args.push_back(&arg); }
-  auto cuda_stream = dynamic_cast<ep::CudaStream*>(stream);
-  packed_args.push_back(cuda_stream->cuda_stream());
+  packed_args.push_back(stream->As<ep::CudaStream>()->cuda_stream());
   auto error = jit->invokePacked(GetMLIRCInterface(ctx->op_name()), packed_args);
   CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
 }
