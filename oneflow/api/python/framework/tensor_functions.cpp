@@ -200,6 +200,7 @@ PyNumberMethods PyTensorObject_as_number = {
   }
 
 UNARY_METHOD(PyTensorObject_abs, functional::Abs);
+UNARY_METHOD(PyTensorObject_digamma, functional::Digamma);
 UNARY_METHOD(PyTensorObject_exp, functional::Exp);
 UNARY_METHOD(PyTensorObject_exp2, functional::Exp2);
 UNARY_METHOD(PyTensorObject_floor, functional::Floor);
@@ -1102,6 +1103,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
 
     // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},
+    {"digamma", PyTensorObject_digamma, METH_NOARGS, NULL},
     {"exp", PyTensorObject_exp, METH_NOARGS, NULL},
     {"exp2", PyTensorObject_exp2, METH_NOARGS, NULL},
     {"floor", PyTensorObject_floor, METH_NOARGS, NULL},

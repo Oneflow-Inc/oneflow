@@ -98,7 +98,7 @@ auto CopyNdPrimitiveExists() {
 
 }  // namespace
 
-REGISTER_USER_KERNEL("concat").SetCreateFn<ConcatKernel>().SetIsMatchedHob(CopyNdPrimitiveExists()
-                                                                           == true);
+REGISTER_USER_KERNEL("cat").SetCreateFn<ConcatKernel>().SetIsMatchedHob(CopyNdPrimitiveExists()
+                                                                        == true);
 
 }  // namespace oneflow
