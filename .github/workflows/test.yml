@@ -42,13 +42,14 @@ jobs:
       - name: Python diff
         id: py-diff
         run: |
-          ONEFLOW_TEST_FILES="$(git diff --diff-filter=d --name-only ${{ github.event.pull_request.base.sha }} -- python/oneflow/test/**/test_*.py | grep -v expensive)"
-          ONEFLOW_TEST_FILES=$(echo $ONEFLOW_TEST_FILES | tr '\n' ' ')
-          echo "changed python tests: ${ONEFLOW_TEST_FILES}"
+          ONEFLOW_TEST_FILES="$(git diff --diff-filter=d --name-only ${{ github.event.pull_request.base.sha }}  -- python/oneflow/test/**/test_*.py | { grep -v expensive || true; })"
+          ONEFLOW_TEST_FILES=$(echo "${ONEFLOW_TEST_FILES}" | xargs)
           if [ -z "$ONEFLOW_TEST_FILES" ]; then
-            echo "has_changed_python_tests=false" >> $GITHUB_OUTPUT
+              echo "no changed python tests"
+              echo "has_changed_python_tests=false"
           else
-            echo "has_changed_python_tests=true" >> $GITHUB_OUTPUT
+              echo "changed python tests: ${ONEFLOW_TEST_FILES}"
+              echo "has_changed_python_tests=true"
           fi
           echo "changed_python_tests=${ONEFLOW_TEST_FILES}" >> $GITHUB_OUTPUT
     outputs:
