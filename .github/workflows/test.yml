@@ -45,9 +45,15 @@ jobs:
           ONEFLOW_TEST_FILES="$(git diff --diff-filter=d --name-only ${{ github.event.pull_request.base.sha }} -- python/oneflow/test/**/test_*.py | grep -v expensive)"
           ONEFLOW_TEST_FILES=$(echo $ONEFLOW_TEST_FILES | tr '\n' ' ')
           echo "changed python tests: ${ONEFLOW_TEST_FILES}"
+          if [ -z "$string" ]; then
+            echo "has_changed_python_tests=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changed_python_tests=true" >> $GITHUB_OUTPUT
+          fi
           echo "changed_python_tests=${ONEFLOW_TEST_FILES}" >> $GITHUB_OUTPUT
     outputs:
       changed_python_tests: ${{ steps.py-diff.outputs.changed_python_tests }}
+      has_changed_python_tests: ${{ steps.py-diff.outputs.has_changed_python_tests }}
 
   check-priority-pr:
     name: "Check priority PR"
@@ -1030,7 +1036,7 @@ jobs:
             })
       - name: Run tests in changed files compared to default branch 100 times
         timeout-minutes: 60
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) }}
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) && fromJson(needs.source_info.outputs.has_changed_python_tests) }}
         run: |
           docker exec -e ONEFLOW_TEST_DIR=diff \
             -e ONEFLOW_TEST_FILES="${{needs.source_info.outputs.changed_python_tests}}" \
