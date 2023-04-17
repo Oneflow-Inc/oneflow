@@ -142,6 +142,21 @@ size_t getResultSize(DictionaryAttr attributes) {
                                         regions, inferredReturnTypes);
 }
 
+::mlir::LogicalResult NormalizationReluOp::refineReturnTypes(
+    ::mlir::MLIRContext* context, ::llvm::Optional<::mlir::Location> location,
+    ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes, ::mlir::RegionRange regions,
+    ::llvm::SmallVectorImpl<::mlir::Type>& inferredReturnTypes) {
+  return success();
+}
+
+::mlir::LogicalResult NormalizationReluOp::inferReturnTypes(
+    ::mlir::MLIRContext* context, ::llvm::Optional<::mlir::Location> location,
+    ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes, ::mlir::RegionRange regions,
+    ::llvm::SmallVectorImpl<::mlir::Type>& inferredReturnTypes) {
+  return inferReturnTypesWithOpTypeName("normalization_relu", context, operands, attributes,
+                                        regions, inferredReturnTypes);
+}
+
 }  // namespace oneflow
 
 }  // namespace mlir
