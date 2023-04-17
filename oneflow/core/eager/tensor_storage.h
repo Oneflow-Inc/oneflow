@@ -130,12 +130,12 @@ class RematableTensorStorage final : public TensorStorageBase {
 
 class TensorStorage : public TensorStorageBase {
  public:
-  explicit TensorStorage(Symbol<Device> device);
-  OF_DISALLOW_COPY_AND_MOVE(TensorStorage);
-  ~TensorStorage() override;
+  explicit TensorStorage(bool is_allocated_in_vm, Symbol<Device> device)
+      : TensorStorageBase(is_allocated_in_vm, device) {}
 
-  void Release() override;
+  ~TensorStorage() override = default;
 };
+
 
 }  // namespace vm
 }  // namespace oneflow
