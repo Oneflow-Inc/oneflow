@@ -24,27 +24,42 @@ env:
   ONEFLOW_IREE_COMMIT: 42fd479de7047e6af1d42c6e62b9b056e0a762aa
   ONE_FX_SRC: one-fx
   ONE_FX_COMMIT: da4051c7f1ace7a20b3f54395b580cd102fc99da
-  TEST_WITH_TORCH_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.10.0-cuda11.3-cudnn8-runtime:67505df94022a6b4b979f013e2cbd3e0cdac3828
+  TEST_WITH_TORCH_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.10.0-cuda11.3-cudnn8-runtime:25817b5c0e1dd79bef8fdd43d729b98af381e7d5
   MLIR_DOCKER_ARGS: "-e ONEFLOW_MLIR_ENABLE_ROUND_TRIP=1 -e ONEFLOW_MLIR_PREFER_NHWC=0 -e ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION=1"
 
 jobs:
-  check-priority-pr:
-    name: "Check priority PR"
-    runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+  source_info:
+    name: Collect information about PR and source
+    runs-on: ubuntu-20.04
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
     steps:
-      - uses: Oneflow-Inc/get-oneflow/priority-pr@torch1.13
-        name: Check priority PR closed
-        id: save-cache
-        timeout-minutes: 5
+      - name: Check out OneFlow
+        uses: actions/checkout@v2
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          repository: ${{github.event.pull_request.head.repo.full_name}}
+          fetch-depth: 0
+      - name: Python diff
+        id: py-diff
+        run: |
+          ONEFLOW_TEST_FILES="$(git diff --diff-filter=d --name-only ${{ github.event.pull_request.base.sha }}  -- python/oneflow/test/**/test_*.py | { grep -v expensive || true; })"
+          ONEFLOW_TEST_FILES=$(echo "${ONEFLOW_TEST_FILES}" | xargs)
+          if [ -z "$ONEFLOW_TEST_FILES" ]; then
+              echo "no changed python tests"
+              echo "has_changed_python_tests=false" >> $GITHUB_OUTPUT
+          else
+              echo "changed python tests: ${ONEFLOW_TEST_FILES}"
+              echo "has_changed_python_tests=true" >> $GITHUB_OUTPUT
+          fi
+          echo "changed_python_tests=${ONEFLOW_TEST_FILES}" >> $GITHUB_OUTPUT
+    outputs:
+      changed_python_tests: ${{ steps.py-diff.outputs.changed_python_tests }}
+      has_changed_python_tests: ${{ steps.py-diff.outputs.has_changed_python_tests == 'true' }}
 
   mirror_third_party:
     name: Mirror third party dependencies
     runs-on: ubuntu-20.04
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
-    needs: [check-priority-pr]
     steps:
       - uses: actions/checkout@v2
       - name: Mirror dependencies to aliyun
@@ -63,7 +78,6 @@ jobs:
     name: License and format
     runs-on: ubuntu-20.04
     if: github.event.pull_request.draft == false
-    needs: [check-priority-pr]
     steps:
       - uses: actions/checkout@v2
         with:
@@ -180,7 +194,6 @@ jobs:
     name: "Find build cache"
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
     runs-on: ubuntu-latest
-    needs: [check-priority-pr]
     env:
       ONEFLOW_SRC: .
     outputs:
@@ -654,7 +667,7 @@ jobs:
 
   test:
     name: Test suite
-    needs: [wait_for_gpu_slot, find-test-cache]
+    needs: [wait_for_gpu_slot, find-test-cache, source_info]
     timeout-minutes: 120
     runs-on: ${{ matrix.runs-on }}
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
@@ -1007,6 +1020,13 @@ jobs:
               repo: context.repo.repo,
               body: "<details>\n <summary>Speed stats:</summary>\n\n ``` \n${{ steps.speed.outputs.stats }}\n ``` \n\n</details>".replace(/\\n/g, '\n')
             })
+      - name: Run tests in changed files compared to default branch 100 times
+        timeout-minutes: 60
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) && needs.source_info.outputs.has_changed_python_tests }}
+        run: |
+          docker exec -e ONEFLOW_TEST_DIR=diff \
+            -e ONEFLOW_TEST_FILES="${{needs.source_info.outputs.changed_python_tests}}" \
+            ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
       - name: Module API test
         timeout-minutes: 60
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) }}
@@ -1130,7 +1150,6 @@ jobs:
     name: Static analysis with clang on diff
     runs-on: ubuntu-20.04
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
-    needs: [check-priority-pr]
     steps:
       - name: Check out OneFlow
         uses: actions/checkout@v2
