@@ -29,8 +29,7 @@ from oneflow.test_utils.automated_test_util import *
 class TestParamGroup(flow.unittest.TestCase):
     def test_ParamGroup(test_case):
         parameters = {
-            "params": [flow.rand(1), flow.rand(2)],
-            "bias": flow.rand(1),
+            "params": [flow.ones(10), flow.ones(5)],
         }
         default_options = {
             "test_float": 1e-3,
@@ -50,6 +49,12 @@ class TestParamGroup(flow.unittest.TestCase):
         )
         test_case.assertTrue(pg["test_str"] == "test")
         test_case.assertTrue("params" in pg.keys())
+        test_case.assertTrue(
+            np.array_equal(pg["params"][0].numpy(), flow.ones(10).numpy())
+        )
+        test_case.assertTrue(
+            np.array_equal(pg["params"][1].numpy(), flow.ones(5).numpy())
+        )
 
 
 if __name__ == "__main__":
