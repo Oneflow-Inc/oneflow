@@ -58,6 +58,10 @@ Maybe<void> TensorStorageBase::init_producer_stream(Symbol<::oneflow::Stream> pr
   return Maybe<void>::Ok();
 }
 
+
+TensorStorage::TensorStorage(Symbol<Device> device)
+    : TensorStorageBase(false, device){};
+
 RematableTensorStorage::RematableTensorStorage(Symbol<Device> device)
     : TensorStorageBase(true, device),
       node(std::make_shared<remat::DisjNode>(0)),
@@ -191,6 +195,8 @@ double RematableTensorStorage::approx_neighbor_cost() const {
   const auto compute_op = this->compute_op();
   return cal_cost(compute_op.inputs()) + cal_cost(compute_op.outputs()) + compute_time_;
 }
+
+
 
 }  // namespace vm
 }  // namespace oneflow
