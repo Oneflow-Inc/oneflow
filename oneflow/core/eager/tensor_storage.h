@@ -136,7 +136,6 @@ class TensorStorage : public TensorStorageBase {
   ~TensorStorage() override = default;
 };
 
-
 }  // namespace vm
 }  // namespace oneflow
 
