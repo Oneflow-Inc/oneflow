@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/framework/user_op_tensor.h"
+#include "oneflow/user/kernels/to_contiguous_kernel.h"
 #if 1
 #include <cuda.h>
 
@@ -68,6 +71,20 @@ __global__ void convert_doublesided(const FFTTYPE* src, FFTTYPE* dst, size_t len
       dst[i].y = -src[index].y;
     }
   }
+}
+
+bool isCompact(const std::vector<int64_t>& strides, const std::vector<int64_t>& shape){
+  if (strides.size() != shape.size()){
+    return false;
+  }
+  Shape shape_(shape);
+  Stride stride_(shape_);
+  FOR_RANGE(int64_t, i, 0, strides.size()){
+    if (strides[i] != stride_[i]){
+      return false;
+    }
+  }
+  return true;
 }
 
 }  // namespace
@@ -163,10 +180,10 @@ class StftGpuKernel final : public user_op::OpKernel {
 REGISTER_STFT_GPU_KERNEL(float, cufftComplex)
 REGISTER_STFT_GPU_KERNEL(double, cufftDoubleComplex)
 #endif
-
+#if 0
 // Execute a general fft operation (can be c2c, onesided r2c or onesided c2r)
 template<typename IN, typename OUT>
-static void DoFFT(IN* in, OUT* out,
+static void DoFFT(ep::Stream* stream, IN* in, OUT* out,
                   const Stride& in_stride, const Shape& in_shape, 
                   std::vector<int64_t>& out_sizes, std::vector<int64_t>& fft_dims, bool forward)
 {
@@ -188,6 +205,7 @@ static void DoFFT(IN* in, OUT* out,
   std::sort(dim_permute.begin(), batch_end,
             [&](int64_t a, int64_t b) { return in_stride[a] > in_stride[b]; });
   std::copy(fft_dims.begin(), fft_dims.end(), batch_end);
+
   // permute
   std::vector<int64_t> working_in_stride(dim_permute.size(), 0);
   std::vector<int64_t> working_in_shape(dim_permute.size(), 0);
@@ -205,60 +223,51 @@ static void DoFFT(IN* in, OUT* out,
   // maybe method:
   // `1
   // 1. judge if compact
-  // 2. if compact, no need to be contiguous
+  // 2. if compact, no need to be contiguous, else be contiguous
   // 3. change working_in_shape and working_in_stride 
   // `2
   // 1. judge if compact
   // 2. if compact, just change working_in_shape and working_in_stride
   // 3. if not compact, construct `MemcpyFactory` like reshape kernel
-
-}
-
-template<typename T>
-class FftC2CKernelUtil<DeviceType::kCUDA, T>{
-  static void FftC2CForward(ep::Stream* stream, const T* data_in, T* data_out, T* tmp_buffer,  
-                            const Shape& input_shape, const Shape& output_shape, const Shape& tmp_buffer_shape,
-                            const Stride& input_stride, const Stride& output_stride, const Stride& tmp_buffer_stride, 
-                            bool forward,
-                            const std::vector<int64_t>& dims, fft_norm_mode normalization){
-    std::vector<int64_t> sorted_dims(dims.begin(), dims.end());
-    Shape working_tensor_shape = input_shape;
-    Stride working_tensor_stride = input_stride;
-    T* working_data_ptr = data_in;
-
-    while (true){
-      std::sort(sorted_dims.begin(), sorted_dims.end(), 
-            [&](int64_t a, int64_t b) { return working_tensor_stride[a] > working_tensor_stride[b];});
-
-      size_t cur_fft_ndims = std::min(static_cast<size_t>(max_rank), sorted_dims.size());
-      std::vector<int64_t> cur_fft_dims(sorted_dims.end() - cur_fft_ndims, sorted_dims.end());
-
-      // DoFFT
-
-      // after DoFFT
-      sorted_dims.resize(sorted_dims.size() - cur_fft_ndims);
-
-      if (sorted_dims.empty()){
-        break;
-      }
-
-      if (working_data_ptr == data_in){
-          working_data_ptr = data_out;
-          // working_tensor_shape = 
-      }
-    }
-
-    // input -> c2c -> output -> c2c -> tmp_buffer
+  if (!isCompact(/*strides=*/working_in_stride, /*shape=*/working_in_shape)){
+    ToContiguousUtil<DeviceType::kCUDA, IN>(stream, )
+  }
+  else{
 
   }
+
+
+}
+#endif
+
+template<typename T, typename FCT_TYPE>
+class FftC2CKernelUtil<DeviceType::kCUDA, T, FCT_TYPE>{
+  static void FftC2CForward(ep::Stream* stream, const T* data_in, T* data_out, 
+                            const Shape& input_shape, const Shape& output_shape,
+                            const Stride& input_stride, const Stride& output_stride, 
+                            bool forward, const std::vector<int64_t>& dims, FCT_TYPE normalization,
+                            DataType real_type){
+    CuFFTParams params(input_shape, output_shape, input_stride, output_stride, 
+                      dims.size(), forward, CUFFT_EXCUTETYPE::C2C, real_type);
+    CuFFTConfig config(params);
+    auto& plan = config.plan();
+    CUFFT_CHECK(cufftSetStream(plan, stream->As<ep::CudaStream>()->cuda_stream()));
+    void* workspace{};
+    OF_CUDA_CHECK(cudaMalloc(&workspace, config.workspace_size()));
+    CUFFT_CHECK(cufftSetWorkArea(plan, workspace));
+
+    config.excute((void*)data_in, (void*)data_out, forward);
+    OF_CUDA_CHECK(cudaFree(workspace));
+  }
 };
+
 
 template<typename IN, typename OUT>
 struct FftR2CKernelUtil<DeviceType::kCUDA, IN, OUT> {
   static void FftR2CForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
                             const Shape& input_shape, const Shape& output_shape,
                             const Stride& input_stride, const Stride& output_stride, bool forward,
-                            const std::vector<int64_t>& dims, fft_norm_mode normalization){
+                            const std::vector<int64_t>& dims, IN normalization){
     // TO-DO:
     UNIMPLEMENTED();
   }
@@ -270,11 +279,14 @@ struct FftC2RKernelUtil<DeviceType::kCUDA, IN, OUT> {
                             const Shape& input_shape, const Shape& output_shape,
                             const Stride& input_stride, const Stride& output_stride,
                             int64_t last_dim_size, const std::vector<int64_t>& dims,
-                            fft_norm_mode normalization){
+                            OUT normalization){
     // TO-DO:
     UNIMPLEMENTED();
   }
 };
+
+template struct FftC2CKernelUtil<DeviceType::kCUDA, cuComplex, float>;
+template struct FftC2CKernelUtil<DeviceType::kCUDA, cuDoubleComplex, double>;
 
 }  // namespace oneflow
 

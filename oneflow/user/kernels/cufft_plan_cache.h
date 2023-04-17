@@ -215,7 +215,7 @@ inline CuFFTDataLayout as_cufft_embed(const cufft_dim_vector& strides, const cuf
   return layout;
 }
 
-struct CuFFtParams {
+struct CuFFTParams {
   int64_t ndim;
   cufft_dim_vector output_shape;
   cufft_dim_vector input_shape;
@@ -225,8 +225,8 @@ struct CuFFtParams {
   CUFFT_EXCUTETYPE excute_type;
   DataType real_data_type;
 
-  CuFFtParams() = default;
-  CuFFtParams(const Shape& in_shape, const Shape& out_shape, const Stride& in_strides,
+  CuFFTParams() = default;
+  CuFFTParams(const Shape& in_shape, const Shape& out_shape, const Stride& in_strides,
               const Stride& out_strides, int64_t dims, const bool is_forward,
               CUFFT_EXCUTETYPE type, DataType real) : ndim(dims), excute_type(type), real_data_type(real)
               {
@@ -241,14 +241,13 @@ struct CuFFtParams {
   }
 };
 
-template<typename IN, typename OUT>
 class CuFFTConfig {
  public:
   CuFFTConfig(const CuFFTConfig&) = delete;
   CuFFTConfig& operator=(CuFFTConfig const&) = delete;
   ~CuFFTConfig() = default;
 
-  explicit CuFFTConfig(CuFFtParams& params) {  // NOLINT
+  explicit CuFFTConfig(CuFFTParams& params) {  // NOLINT
     // cufftPlanMany(&plan_handle_, params.ndim, params.rank, params.input_shape,
     //               params.input_strides[0], params.input_strides[1], params.output_shape,
     //               params.output_strides[0], params.output_strides[1], exectype_, params.batch);
@@ -286,6 +285,9 @@ class CuFFTConfig {
   }
 
   size_t workspace_size() const { return work_size_; }
+  const cufftHandle& plan() const {
+    return plan_handle_.get();
+  }
 
   void excute(void* input, void* output, bool forward){
     CUFFT_CHECK(cufftXtExec(plan_handle_.get(), input, output,

@@ -1145,6 +1145,15 @@ def check_tensor_equality(
         ):
             print_note_fake_program(detail=True)
             print("---------Grad Shape--------")
+            # print("torch_grad norm = ", np.linalg.norm(torch_grad))
+            # print("flow_grad norm = ", np.linalg.norm(flow_grad))
+            # boolean_indices = (torch_grad - flow_grad > 1e-3) | (torch_grad - flow_grad < -1e-3)
+            # diff = torch_grad - flow_grad
+            # print("count = ", np.sum(boolean_indices))
+            # print("where = ", np.where(boolean_indices == True))
+            # print("error = ", np.sum(diff[boolean_indices]))
+            # print("diff[0,6,0,0] = ", diff[0,6,0,0])
+            # print("diff[0,16,0,0] = ", diff[0,16,0,0])
             print(torch_grad.shape)
             print(flow_grad.shape)
             print(

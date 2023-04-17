@@ -3260,6 +3260,11 @@
     'Tensor (Tensor input, Int64 n_fft,Int64 hop_length=None, Int64 win_length=None, Tensor window=None,Bool center=True,String pad_mode="reflect",Bool normalized=False,Bool onesided=True,Bool return_complex=False) =>Stft'
   bind_python: True
 
+# - name: "fft_normalize"
+#   signature:
+#     'Tensor (Tensor input, String norm_str, Bool forward, Bool is_grad_fn) => FftNorm'
+#   bind_python: False
+
 - name: "fft_c2c"
   signature:
     'Tensor (Tensor input, Int64List n=None, Int64List dims=None, String norm_str="backward", Bool forward=True, Bool is_grad_fn=False) => FftC2C'
@@ -3270,7 +3275,6 @@
     'Tensor (Tensor input, Int64List n=None, Int64List dims=None, String norm_str="backward", Bool onesided=False, Bool forward=True) => FftR2C'
   bind_python: False
 
-# TO-DO
 - name: "fft_c2r"
   signature:
     'Tensor (Tensor input, Int64List n=None, Int64List dims=None, String norm_str="backward", Bool forward=True) =>FftC2R'

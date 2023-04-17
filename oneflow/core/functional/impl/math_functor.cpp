@@ -3882,6 +3882,50 @@ class InplaceAddCDivFunctor {
   }
 };
 
+namespace{
+enum class fft_norm_mode {
+  none = 0,   // No normalization
+  by_root_n,  // Divide by sqrt(signal_size)
+  by_n,       // Divide by signal_size
+};
+
+// Convert NumPy compatible normalization mode string to enum values
+// In Numpy, "forward" translates to `by_n` for a forward transform and `none` for backward.
+static fft_norm_mode fft_norm_from_string(const Optional<std::string>& norm_op, bool forward) {
+  std::string norm_str = norm_op.value_or("backward");
+  if (norm_str == "backward") {
+    return forward ? fft_norm_mode::none : fft_norm_mode::by_n;
+  } else if (norm_str == "forward") {
+    return forward ? fft_norm_mode::by_n : fft_norm_mode::none;
+  } else if (norm_str == "ortho") {
+    return fft_norm_mode::by_root_n;
+  }
+  
+  return fft_norm_mode::none;
+}
+
+template<typename T>
+static T fft_compute_fct(int64_t size, fft_norm_mode normalization) {
+  constexpr auto one = static_cast<T>(1);
+  switch (normalization) {
+    case fft_norm_mode::none: return one;
+    case fft_norm_mode::by_n: return one / static_cast<T>(size);
+    case fft_norm_mode::by_root_n: return one / std::sqrt(static_cast<T>(size));
+  }
+  return static_cast<T>(0);
+}
+
+template<typename T>
+static T fft_compute_fct(const Shape& in_shape, const std::vector<int64_t>& dims,
+                     fft_norm_mode normalization) {
+  if (normalization == fft_norm_mode::none) { return static_cast<T>(1); }
+  int64_t n = 1;
+  for (int64_t idx : dims) { n *= in_shape.At(idx); }
+  return fft_compute_fct<T>(n, normalization);
+}
+} // namespace
+
+
 class FftBaseFunctor {
  public:
   explicit FftBaseFunctor(std::string op_name) {
@@ -3988,7 +4032,7 @@ class FftBaseFunctor {
                                             std::vector<int64_t>& fft_dims) const {
     if (dims.has_value()) {
       fft_dims = *JUST(dims);
-      maybe_wrap_dims(fft_dims, x->ndim());
+      JUST(maybe_wrap_dims(fft_dims, x->ndim()));
       std::vector<int64_t> copy = fft_dims;
       std::sort(copy.begin(), copy.end());
       auto duplicate = std::adjacent_find(copy.begin(), copy.end());
@@ -4033,7 +4077,7 @@ class FftBaseFunctor {
     if (dims.has_value() && (*JUST(dims)).size() == 1) {
       // 1D-discrete fourier transform
       wrapped_dims = *JUST(dims);
-      maybe_wrap_dims(wrapped_dims, x->ndim());
+      JUST(maybe_wrap_dims(wrapped_dims, x->ndim()));
       fft_len.resize(wrapped_dims.size());
       fft_len[0] = n.has_value() == true ? (*JUST(n))[0] : x->dim(wrapped_dims[0]);
       if (fft_len[0] == -1) { fft_len[0] = x->dim(wrapped_dims[0]); }
@@ -4049,15 +4093,27 @@ class FftBaseFunctor {
       wrapped_dims[0] = x->ndim() - 1;
     } else {
       // ND-discrete fourier transform
-      calculate_fftn_shape_and_dims(x, n, dims, fft_len, wrapped_dims);
+      JUST(calculate_fftn_shape_and_dims(x, n, dims, fft_len, wrapped_dims));
     }
 
     return Maybe<void>::Ok();
   }
 
+  
+
  protected:
   std::shared_ptr<OpExpr> op_;
 };
+
+// class FftNormFunctor{
+//   public:
+//     FftNormFunctor(){
+//       op_ = CHECK_JUST(one::OpBuilder("fft_normalize").Input("in").Output("out").Build());
+//     }
+
+//   private:
+//     std::shared_ptr<OpExpr> op_;
+// }
 
 class FftC2CFunctor : public FftBaseFunctor {
  public:
@@ -4071,15 +4127,143 @@ class FftC2CFunctor : public FftBaseFunctor {
     std::vector<int64_t> fft_len(x->ndim(), 0);
     std::vector<int64_t> wrapped_dims(x->ndim(), 0);
 
-    parse_input_n_and_dims(x, n, dims, fft_len, wrapped_dims);
+    JUST(parse_input_n_and_dims(x, n, dims, fft_len, wrapped_dims));
     auto resized_tensor =
         n.has_value() == true ? JUST(resize_fft_input(x, wrapped_dims, fft_len)) : x;
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "forward", "is_grad_fn");
-    attrs.SetAllAttrs(wrapped_dims, norm_str, forward, is_grad_fn);
+    DeviceType input_device{};
+    if (x->is_global()) {
+      input_device = JUST(x->parallel_desc())->device_type();
+    } else {
+      input_device = JUST(x->device())->enum_type();
+    }
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {resized_tensor}, attrs);
+    fft_norm_mode norm_mode = fft_norm_mode::none;
+    if (!is_grad_fn) {
+      norm_mode = fft_norm_from_string(norm_str, forward);
+    } else {
+      norm_mode = fft_norm_from_string(norm_str, !forward);
+    }
+    double norm_fct = fft_compute_fct<double>(*(resized_tensor->shape()), wrapped_dims, norm_mode);
+
+    
+    if (input_device == DeviceType::kCPU){
+      auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "forward", "norm", "norm_fct");
+      attrs.SetAllAttrs(wrapped_dims, forward, norm_str, norm_fct);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {resized_tensor}, attrs);
+    }
+    else if (input_device == DeviceType::kCUDA){
+      if (wrapped_dims.empty()){
+        return x;
+      }
+
+      const auto& out_sizes = *(resized_tensor->shape());
+      std::vector<int64_t> sorted_dims(wrapped_dims.begin(), wrapped_dims.end());
+      auto working_tensor = resized_tensor;
+      const int64_t cufft_max_ndim = 3; // must keep Equal to `oneflow/user/kernels/cufft_plan_cache.h:max_rank`
+      std::shared_ptr<Tensor> output;
+      while (true){
+        // Sort Dimemsions every iteration
+        auto strides = *JUST(working_tensor->stride());
+        std::sort(sorted_dims.begin(), sorted_dims.end(),
+                  [&](int64_t a, int64_t b) { return strides[a] > strides[b]; });
+
+        const auto max_dims = std::min(static_cast<size_t>(cufft_max_ndim), sorted_dims.size());
+        std::vector<int64_t> first_dims(sorted_dims.end() - max_dims, sorted_dims.end());
+
+        auto input = JUST(permute_and_reshape(working_tensor, out_sizes, first_dims));
+
+        std::vector<int64_t> fft_dims(input->ndim() - 1); // must >= 1
+        std::iota(fft_dims.begin(), fft_dims.end(), int64_t(1));
+        auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "forward", "norm", "norm_fct");
+        attrs.SetAllAttrs(fft_dims, forward, norm_str, norm_fct);
+        output = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs));
+        sorted_dims.resize(sorted_dims.size() - max_dims);
+
+        if (sorted_dims.empty()){
+          break;
+        }
+
+        if (working_tensor == resized_tensor){
+          // fisrt loop
+          working_tensor = std::move(output);
+          // no need to allocate memory for output, **which is different with PyTorch**
+        }
+        else{
+          // in PyTorch:
+          // std::swap(output, working_tensor);
+          // but we don't need allocate output manually for next loop, so no need to **swap**
+          working_tensor = std::move(output);
+        }
+      }
+
+      JUST(functional::ScalarMul(output, Scalar(norm_fct), true));  // TO-DO : check data_type of **in-place** operation
+      return output;
+    }
+    else{
+      UNIMPLEMENTED_THEN_RETURN() << "FFTC2C: Only support cpu and cuda device.";
+    }
   }
+
+  // Maybe<Tensor> excute_c2c(const std::shared_ptr<Tensor>& self, const Shape& out_sizes, const std::vector<int64_t>& fft_dims,
+  //                         const std::string& norm_str, bool forward, bool is_grad_fn){
+  Maybe<Tensor> permute_and_reshape(const std::shared_ptr<Tensor>& self, const Shape& out_sizes, const std::vector<int64_t>& fft_dims) const{
+    // Permute and reshape `self` Tensor.
+    // This can maximizes data locality
+    const int64_t ndim = self->ndim();
+    const int64_t fft_ndim = fft_dims.size();
+    const int64_t batch_dims = ndim - fft_ndim;
+    const auto& in_stride = JUST(self->stride());
+    // Permute dimensions to make batch dims come first, and this maximizes data locality
+    std::vector<int32_t> dim_permute(ndim);
+    std::iota(dim_permute.begin(), dim_permute.end(), int32_t(0));
+    std::vector<bool> is_transformed_dim(ndim, false);
+    for (const auto& dim : fft_dims){
+      is_transformed_dim[dim] = true;
+    }
+
+    auto batch_end = std::partition(dim_permute.begin(), dim_permute.end(),
+                                          [&](int64_t d) {return !is_transformed_dim[d];});
+    std::sort(dim_permute.begin(), batch_end,
+              [&](int64_t a, int64_t b) { return in_stride->at(a) > in_stride->at(b); });
+    std::copy(fft_dims.begin(), fft_dims.end(), batch_end);
+
+    // permute
+    auto input = JUST(functional::Permute(self, dim_permute));
+
+    std::vector<int64_t> batched_sizes(fft_ndim + 1);
+    batched_sizes[0] = -1;
+    std::copy(input->shape()->begin() + batch_dims, input->shape()->end(), batched_sizes.begin() + 1);
+    // reshape
+    Shape batched_shape(batched_sizes);
+    input = JUST(functional::Reshape(input, batched_shape));
+
+    const auto batch_size = input->shape()->At(0);
+    std::vector<int64_t> fft_shape(fft_ndim + 1);
+    fft_shape[0] = batch_size;
+    FOR_RANGE(int64_t, i, 0, fft_ndim) {
+      auto in_size = input->shape()->at(i + 1);
+      auto out_size = out_sizes.at(fft_dims[i]);
+      fft_shape[i + 1] = std::max(in_size, out_size);
+      CHECK_OR_THROW(in_size == fft_shape[i + 1] ||
+                            in_size == (fft_shape[i + 1] / 2) + 1);
+      CHECK_OR_THROW(out_size == fft_shape[i + 1] ||
+                            out_size == (fft_shape[i + 1] / 2) + 1);
+    }
+
+    // TO-DO: maybe not used
+    // =======
+    batched_sizes[0] = batch_size;
+    std::vector<int64_t> batched_out_sizes(batched_sizes.begin(), batched_sizes.end());
+    FOR_RANGE(int64_t, i, 0, fft_dims.size()) {
+      batched_out_sizes[i + 1] = out_sizes[fft_dims[i]];
+    }
+    // =======
+
+    return input;
+  }
+
+
 };
 
 class FftR2CFunctor : public FftBaseFunctor {
@@ -4103,13 +4287,21 @@ class FftR2CFunctor : public FftBaseFunctor {
 
     std::vector<int64_t> fft_len(input_tensor->ndim(), 0);
     std::vector<int64_t> wrapped_dims(input_tensor->ndim(), 0);
-    parse_input_n_and_dims(input_tensor, n, dims, fft_len, wrapped_dims);
+    JUST(parse_input_n_and_dims(input_tensor, n, dims, fft_len, wrapped_dims));
     auto resized_tensor = n.has_value() == true
                               ? JUST(resize_fft_input(input_tensor, wrapped_dims, fft_len))
                               : input_tensor;
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "onesided", "forward");
-    attrs.SetAllAttrs(wrapped_dims, norm_str, onesided, forward);
+    fft_norm_mode norm_mode = fft_norm_from_string(norm_str, forward);
+    // if (onesided){
+    //   int64_t last_dim = wrapped_dims.back();
+    //   int64_t last_dim_halfsize = resized_tensor->dim(last_dim) / 2 + 1;
+    // }
+    double norm_fct = fft_compute_fct<double>(*(resized_tensor->shape()), wrapped_dims, norm_mode);
+
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "norm_fct", "onesided", "forward");
+    attrs.SetAllAttrs(wrapped_dims, norm_str, norm_fct, onesided, forward);
 
     auto output = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {resized_tensor}, attrs));
     if (!forward) {
@@ -4140,15 +4332,20 @@ class FftC2RFunctor : public FftBaseFunctor {
     std::vector<int64_t> wrapped_dims(x->ndim(), 0);
     std::vector<int64_t> fft_len(x->ndim(), 0);
     int64_t last_dim_size = 0;
-    parse_c2r_input_n_and_dims(x, n, dims, last_dim_size, fft_len, wrapped_dims);
+    JUST(parse_c2r_input_n_and_dims(x, n, dims, last_dim_size, fft_len, wrapped_dims));
 
     auto resized_tensor =
         n.has_value() == true ? JUST(resize_fft_input(x, wrapped_dims, fft_len)) : x;
 
     if (forward) { resized_tensor = JUST(functional::ConjPhysical(resized_tensor)); }
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "last_dim_size", "forward");
-    attrs.SetAllAttrs(wrapped_dims, norm_str, last_dim_size, forward);
+    fft_norm_mode norm_mode = fft_norm_from_string(norm_str, forward);
+    Shape out_shape = *(resized_tensor->shape());
+    out_shape[wrapped_dims.back()] = last_dim_size;
+    double norm_fct = fft_compute_fct<double>(out_shape, wrapped_dims, norm_mode);
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "norm_fct", "last_dim_size", "forward");
+    attrs.SetAllAttrs(wrapped_dims, norm_str, norm_fct, last_dim_size, forward);
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {resized_tensor}, attrs);
   }
@@ -4158,7 +4355,7 @@ class FftC2RFunctor : public FftBaseFunctor {
                                          const Optional<std::vector<int64_t>>& dims,
                                          int64_t& last_dim_size, std::vector<int64_t>& fft_len,
                                          std::vector<int64_t>& wrapped_dims) const {
-    parse_input_n_and_dims(x, n, dims, fft_len, wrapped_dims);
+    JUST(parse_input_n_and_dims(x, n, dims, fft_len, wrapped_dims));
     last_dim_size = 0;
     if (!n.has_value() || JUST(n)->back() == -1) {
       int64_t last_dim = wrapped_dims.back();
@@ -5248,6 +5445,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TruncFunctor>("Trunc");
 
   m.add_functor<StftFunctor>("Stft");  // disable Stft, TO-DO: compat Stft into fft
+  // m.add_functor(impl::FftNormFunctor)("FftNorm");
   m.add_functor<impl::FftC2CFunctor>("FftC2C");
   m.add_functor<impl::FftR2CFunctor>("FftR2C");
   m.add_functor<impl::FftC2RFunctor>("FftC2R");

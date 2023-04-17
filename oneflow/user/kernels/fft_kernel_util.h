@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <cstdint>
 #include <type_traits>
+#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/data_type.h"
@@ -26,46 +27,46 @@ limitations under the License.
 
 namespace oneflow {
 
-enum class fft_norm_mode {
-  none = 0,   // No normalization
-  by_root_n,  // Divide by sqrt(signal_size)
-  by_n,       // Divide by signal_size
-};
+// enum class fft_norm_mode {
+//   none = 0,   // No normalization
+//   by_root_n,  // Divide by sqrt(signal_size)
+//   by_n,       // Divide by signal_size
+// };
 
 // Convert NumPy compatible normalization mode string to enum values
 // In Numpy, "forward" translates to `by_n` for a forward transform and `none` for backward.
-inline fft_norm_mode norm_from_string(const Optional<std::string>& norm_op, bool forward) {
-  std::string norm_str = norm_op.value_or("backward");
-  if (norm_str == "backward") {
-    return forward ? fft_norm_mode::none : fft_norm_mode::by_n;
-  } else if (norm_str == "forward") {
-    return forward ? fft_norm_mode::by_n : fft_norm_mode::none;
-  } else if (norm_str == "ortho") {
-    return fft_norm_mode::by_root_n;
-  }
+// inline fft_norm_mode norm_from_string(const Optional<std::string>& norm_op, bool forward) {
+//   std::string norm_str = norm_op.value_or("backward");
+//   if (norm_str == "backward") {
+//     return forward ? fft_norm_mode::none : fft_norm_mode::by_n;
+//   } else if (norm_str == "forward") {
+//     return forward ? fft_norm_mode::by_n : fft_norm_mode::none;
+//   } else if (norm_str == "ortho") {
+//     return fft_norm_mode::by_root_n;
+//   }
 
-  return fft_norm_mode::none;
-}
+//   return fft_norm_mode::none;
+// }
 
-template<typename T>
-inline T compute_fct(int64_t size, fft_norm_mode normalization) {
-  constexpr auto one = static_cast<T>(1);
-  switch (normalization) {
-    case fft_norm_mode::none: return one;
-    case fft_norm_mode::by_n: return one / static_cast<T>(size);
-    case fft_norm_mode::by_root_n: return one / std::sqrt(static_cast<T>(size));
-  }
-  return static_cast<T>(0);
-}
+// template<typename T>
+// inline T compute_fct(int64_t size, fft_norm_mode normalization) {
+//   constexpr auto one = static_cast<T>(1);
+//   switch (normalization) {
+//     case fft_norm_mode::none: return one;
+//     case fft_norm_mode::by_n: return one / static_cast<T>(size);
+//     case fft_norm_mode::by_root_n: return one / std::sqrt(static_cast<T>(size));
+//   }
+//   return static_cast<T>(0);
+// }
 
-template<typename T>
-inline T compute_fct(const Shape& in_shape, const std::vector<int64_t>& dims,
-                     fft_norm_mode normalization) {
-  if (normalization == fft_norm_mode::none) { return static_cast<T>(1); }
-  int64_t n = 1;
-  for (int64_t idx : dims) { n *= in_shape.At(idx); }
-  return compute_fct<T>(n, normalization);
-}
+// template<typename T>
+// inline T compute_fct(const Shape& in_shape, const std::vector<int64_t>& dims,
+//                      fft_norm_mode normalization) {
+//   if (normalization == fft_norm_mode::none) { return static_cast<T>(1); }
+//   int64_t n = 1;
+//   for (int64_t idx : dims) { n *= in_shape.At(idx); }
+//   return compute_fct<T>(n, normalization);
+// }
 
 template<typename T, int NDIM>
 static void _conj_symmetry(T* data_out, const Shape& shape, const std::vector<int64_t>& strides,
@@ -116,41 +117,48 @@ static void conj_symmetry(T* data_out, const Shape& shape, const Stride& strides
   func(data_out, shape, strides_vec, dims, elem_count);
 }
 
-template<DeviceType device_type, typename T, typename = void>
+// template<DeviceType device_type, typename T, typename = void>
+// struct FftC2CKernelUtil {
+//   static void FftC2CForward(ep::Stream* stream, const T* data_in, T* data_out, T* tmp_buffer,
+//                             const Shape& input_shape, const Shape& output_shape, const Shape& tmp_buffer_shape,
+//                             const Stride& input_stride, const Stride& output_stride, const Stride& tmp_buffer_stride,
+//                             bool forward,
+//                             const std::vector<int64_t>& dims, fft_norm_mode normalization);
+// };
+
+template<DeviceType device_type, typename T, typename FCT_TYPE>
 struct FftC2CKernelUtil {
-  static void FftC2CForward(ep::Stream* stream, const T* data_in, T* data_out, T* tmp_buffer,
-                            const Shape& input_shape, const Shape& output_shape, const Shape& tmp_buffer_shape,
-                            const Stride& input_stride, const Stride& output_stride, const Stride& tmp_buffer_stride,
-                            bool forward,
-                            const std::vector<int64_t>& dims, fft_norm_mode normalization);
+  static void FftC2CForward(ep::Stream* stream, const T* data_in, T* data_out, 
+                            const Shape& input_shape, const Shape& output_shape,
+                            const Stride& input_stride, const Stride& output_stride,
+                            bool forward, const std::vector<int64_t>& dims, FCT_TYPE norm_fct, DataType real_type);
 };
 
 template<DeviceType device_type, typename IN, typename OUT>
 struct FftR2CKernelUtil {
-  static void FftR2CForward(ep::Stream* stream, const IN* data_in, OUT* data_out, OUT* tmp_buffer,
-                            const Shape& input_shape, const Shape& output_shape, const Shape& tmp_buffer_shape,
-                            const Stride& input_stride, const Stride& output_stride, const Shape& tmp_buffer_stride, 
-                            bool forward,
-                            const std::vector<int64_t>& dims, fft_norm_mode normalization);
+  static void FftR2CForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
+                            const Shape& input_shape, const Shape& output_shape,
+                            const Stride& input_stride, const Stride& output_stride, 
+                            bool forward, const std::vector<int64_t>& dims, IN norm_fct);
 };
 
 template<DeviceType device_type, typename IN, typename OUT>
 struct FftC2RKernelUtil {
-  static void FftC2RForward(ep::Stream* stream, const IN* data_in, OUT* data_out, IN* tmp_buffer,
-                            const Shape& input_shape, const Shape& output_shape, const Shape& tmp_buffer_shape,
-                            const Stride& input_stride, const Stride& output_stride, const Shape& tmp_buffer_stride,
+  static void FftC2RForward(ep::Stream* stream, const IN* data_in, OUT* data_out, 
+                            const Shape& input_shape, const Shape& output_shape, 
+                            const Stride& input_stride, const Stride& output_stride, 
                             int64_t last_dim_size, const std::vector<int64_t>& dims,
-                            fft_norm_mode normalization);
+                            OUT norm_fct);
 };
 
-template<DeviceType device_type, typename IN, typename OUT>
-struct FftStftKernelUtil {
-  static void FftStftForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
-                             const Shape& input_shape, const Shape& output_shape,
-                             const Stride& input_stride, const Stride& output_stride, bool forward,
-                             const std::vector<int64_t>& axes, fft_norm_mode normalization,
-                             int64_t len, int64_t dims, int64_t batch);
-};
+// template<DeviceType device_type, typename IN, typename OUT>
+// struct FftStftKernelUtil {
+//   static void FftStftForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
+//                              const Shape& input_shape, const Shape& output_shape,
+//                              const Stride& input_stride, const Stride& output_stride, bool forward,
+//                              const std::vector<int64_t>& axes, fft_norm_mode normalization,
+//                              int64_t len, int64_t dims, int64_t batch);
+// };
 
 }  // namespace oneflow
 #endif  // ONEFLOW_USER_KERNELS_FFT_KERNEL_UTIL_H_
