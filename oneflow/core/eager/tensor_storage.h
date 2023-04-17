@@ -130,11 +130,13 @@ class RematableTensorStorage final : public TensorStorageBase {
 
 class TensorStorage : public TensorStorageBase {
  public:
-  explicit TensorStorage(bool is_allocated_in_vm, Symbol<Device> device)
-      : TensorStorageBase(is_allocated_in_vm, device) {}
+
+  explicit TensorStorage(const std::shared_ptr<TensorStorage>& tensor_storage)
+      : TensorStorageBase(tensor_storage->is_allocated_in_vm(), tensor_storage->device()){}
 
   ~TensorStorage() override = default;
 };
+
 
 
 }  // namespace vm
