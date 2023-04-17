@@ -18,8 +18,8 @@ import oneflow as flow
 import oneflow.unittest
 
 
-@flow.unittest.skip_unless_1n1d()
 class TestDataPtr(unittest.TestCase):
+    @flow.unittest.skip_unless_1n1d()
     def test_equality(test_case):
         x = flow.ones(2, 3)
         y = flow.ones(2, 3)
@@ -30,6 +30,13 @@ class TestDataPtr(unittest.TestCase):
         x_ptr = x.data_ptr()
         x[:] = 2
         test_case.assertEqual(x_ptr, x.data_ptr())
+
+    @flow.unittest.skip_unless_1n2d()
+    def test_global_tensor(test_case):
+        x = flow.randn(
+            2, 3, placement=flow.placement.all("cpu"), sbp=flow.sbp.broadcast
+        )
+        test_case.assertEqual(x.data_ptr(), x.to_local().data_ptr())
 
 
 if __name__ == "__main__":
