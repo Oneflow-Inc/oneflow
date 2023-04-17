@@ -145,7 +145,8 @@ def main():
     files = []
     for f in args.files:
         for ff in f.strip().split(" "):
-            files += list(glob.glob(ff, recursive=True))
+            if len(ff) > 0:
+                files += list(glob.glob(ff, recursive=True))
     print("total files:", len(files))
     files = sorted(
         files,
