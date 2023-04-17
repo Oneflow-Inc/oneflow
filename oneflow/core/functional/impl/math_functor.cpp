@@ -1628,7 +1628,13 @@ class CastFunctor {
     if (x->dtype() == dtype) { return x; }
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "pin_memory");
     attrs.SetAllAttrs(dtype->data_type(), pin_memory);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    // refers to pytorch's tensor.to (to_impl function at
+    // aten/src/ATen/native/TensorConversions.cpp)
+    if (JUST(IsNonOverlappingAndDense(x))) {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    }
   }
 
  private:
