@@ -21,7 +21,7 @@ import numpy as np
 import oneflow as flow
 import os
 
-import oneflow.unittest
+from oneflow.test_utils.automated_test_util.torch_flow_dual_object import globaltest
 from oneflow.test_utils.test_util import GenArgList
 
 
@@ -44,6 +44,7 @@ def _test_auto_to_global(test_case, device):
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestAutoToGlobal(flow.unittest.TestCase):
+    @globaltest
     @flow.unittest.skip_unless_1n4d()
     def test_auto_to_global(test_case):
         arg_dict = OrderedDict()
