@@ -334,6 +334,7 @@ def _test_linear_multi_graph_load(return_dict, device, with_reshape, state_dict)
 
 
 def _graph_save(return_dict, filename, with_eager):
+    os.environ["ID_START"] = "0"
     state_dict = _test_linear_multi_graph_save(
         return_dict, flow.device("cuda"), True, with_eager
     )
@@ -345,6 +346,9 @@ def _graph_save(return_dict, filename, with_eager):
 
 
 def _graph_load(return_dict, filename):
+    os.environ["ID_START"] = "3000"
+    os.environ["JOB_ID"] = "3000"
+    os.environ["TASK_ID"] = "3000"
     state_dict_loaded = flow.load(filename)
     # load with nn.Graph
     _test_linear_multi_graph_load(

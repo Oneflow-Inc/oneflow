@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_TASK_ID_GENERATOR_H_
 #define ONEFLOW_CORE_GRAPH_TASK_ID_GENERATOR_H_
 
+#include <string>
 #include "oneflow/core/graph/task_id.h"
 
 namespace oneflow {
@@ -35,6 +36,10 @@ class TaskIdGenerator final {
 };
 
 inline TaskId TaskIdGenerator::Generate(const StreamId& stream_id) {
+  char *hack_task_id = std::getenv("TASK_ID");
+  if (hack_task_id && stream_id2task_index_counter_.count(stream_id) == 0) {
+    stream_id2task_index_counter_[stream_id] = std::stoi(hack_task_id);
+  }
   task_index_t task_index = stream_id2task_index_counter_[stream_id]++;
   return TaskId{stream_id, task_index};
 }

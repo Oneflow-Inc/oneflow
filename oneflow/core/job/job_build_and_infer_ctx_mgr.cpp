@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include <string>
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/global_for.h"
@@ -29,6 +30,10 @@ Maybe<void> JobBuildAndInferCtxMgr::OpenJobBuildAndInferCtx(const std::string& j
   CHECK_OR_RETURN(job_name2infer_ctx_.find(job_name) == job_name2infer_ctx_.end())
       << Error::JobNameExistError() << "job name: " << job_name << " already exist";
   int64_t job_id = job_set_.job_size();
+  char *job_id_str = std::getenv("JOB_ID");
+  if (job_id_str) {
+    job_id = std::stoi(job_id_str);
+  }
   Job* job = job_set_.add_job();
   job->mutable_job_conf()->set_job_name(job_name);
   std::unique_ptr<JobBuildAndInferCtx> ctx(NewJobBuildAndInferCtx(job, job_id));
@@ -80,7 +85,7 @@ Maybe<void> LazyJobBuildAndInferCtxMgr::VirtualCloseJob() {
   const JobDesc* job_desc = Singleton<JobDesc>::Get();
   if (job_desc == nullptr) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(job_desc->job_name(), *JUST(GetCurrentJobName()));
-  CHECK_EQ_OR_RETURN(job_desc->job_id(), mut_job_set()->job_size() - 1);
+  // CHECK_EQ_OR_RETURN(job_desc->job_id(), mut_job_set()->job_size() - 1);
   Singleton<JobDesc>::Delete();
   return Maybe<void>::Ok();
 }

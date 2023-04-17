@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/id_manager.h"
+#include <string>
 
 namespace oneflow {
 
@@ -21,6 +22,13 @@ IDMgr::IDMgr() {
   regst_desc_id_count_ = 0;
   mem_block_id_count_ = 0;
   chunk_id_count_ = 0;
+  char* id_count_start = std::getenv("ID_START");
+  if (id_count_start) {
+    auto id_start = std::stoi(id_count_start);
+    regst_desc_id_count_ = id_start;
+    mem_block_id_count_ = id_start;
+    chunk_id_count_ = id_start;
+  }
 }
 
 }  // namespace oneflow
