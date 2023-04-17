@@ -144,7 +144,7 @@ def main():
     # find files and chuck them
     files = []
     for f in args.files:
-        for ff in f.split(" "):
+        for ff in f.strip().split(" "):
             files += list(glob.glob(ff, recursive=True))
     print("total files:", len(files))
     files = sorted(
