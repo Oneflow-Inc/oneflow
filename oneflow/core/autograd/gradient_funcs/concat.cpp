@@ -79,7 +79,7 @@ Maybe<void> Concat::Apply(const ConcatCaptureState* ctx, const TensorTuple& out_
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("concat", Concat);
+REGISTER_OP_EXPR_GRAD_FUNCTION("cat", Concat);
 
 }  // namespace one
 }  // namespace oneflow
