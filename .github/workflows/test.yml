@@ -43,6 +43,7 @@ jobs:
         id: py-diff
         run: |
           ONEFLOW_TEST_FILES="$(git diff --diff-filter=d --name-only ${{ github.event.pull_request.base.sha }} -- python/oneflow/test/**/test_*.py | grep -v expensive)"
+          ONEFLOW_TEST_FILES=$(echo $ONEFLOW_TEST_FILES | tr '\n' ' ')
           echo "changed_python_tests=${ONEFLOW_TEST_FILES}" >> $GITHUB_OUTPUT
     outputs:
       changed_python_tests: ${{ steps.py-diff.outputs.changed_python_tests }}
