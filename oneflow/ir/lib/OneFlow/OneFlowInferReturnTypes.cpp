@@ -80,6 +80,7 @@ size_t getResultSize(DictionaryAttr attributes) {
   std::unordered_map<std::string, std::unique_ptr<::oneflow::BlobDesc>> lbi2logical_blob_desc_;
   auto operand_ids =
       user_op::ArgIds<OpTrait::AttrSizedOperandSegments>(op_type_name, operands.size(), attributes);
+  auto operand_index = 0;
   for (const auto& idOperand : llvm::zip(operand_ids, operands)) {
     const auto& arg_name = std::get<0>(idOperand).first;
     const auto& arg_id = std::get<0>(idOperand).second;
