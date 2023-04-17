@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/permutation_iterator.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/ep/cuda/primitive/type_seq.h"
 
 namespace cub {
 struct Prod {
@@ -50,6 +51,14 @@ struct NanSum {
   }
 };
 
+__device__ __forceinline__ ::cuComplex operator+(const ::cuComplex& lhs, const ::cuComplex& rhs) {
+  return ::cuComplex{lhs.x + rhs.x, lhs.y + rhs.y};
+}
+
+__device__ __forceinline__ ::cuDoubleComplex operator+(const ::cuDoubleComplex& lhs,
+                                                       const ::cuDoubleComplex& rhs) {
+  return ::cuDoubleComplex{lhs.x + rhs.x, lhs.y + rhs.y};
+}
 }  // namespace cub
 
 namespace oneflow {
@@ -379,6 +388,8 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_IMPL,
                                  ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
                                      BOOL_DATA_TYPE_SEQ,
                                  LOGICAL_REDUCE_BINARY_FUNC_SEQ);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_IMPL, CUDA_PRIMITIVE_COMPLEX_TYPE_SEQ,
+                                 REDUCE_COMPLEX_BINARY_FUNC_SEQ);
 
 #define INSTANTIATE_NDARRAY_REDUCE_CORE_WRAPPER(dtype_pair, NDIMS, binary_func)                    \
   template struct NdarrayReduceCoreWrapper<DeviceType::kCUDA, OF_PP_PAIR_FIRST(dtype_pair), NDIMS, \
@@ -394,5 +405,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_CORE_WRAPPER,
                                  ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
                                      BOOL_DATA_TYPE_SEQ,
                                  DIM_SEQ, LOGICAL_REDUCE_BINARY_FUNC_SEQ);
-
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_CORE_WRAPPER,
+                                 CUDA_PRIMITIVE_COMPLEX_TYPE_SEQ, DIM_SEQ,
+                                 REDUCE_COMPLEX_BINARY_FUNC_SEQ);
 }  // namespace oneflow
