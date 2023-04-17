@@ -117,6 +117,18 @@ void bang_tanh_gradient_kernel(BangHandle& handle, int64_t n, const T* x, const 
 void bang_tanh_gradient_half_kernel(BangHandle& handle, int64_t n, const void* x, const void* dy,
                                     void* dx);
 
+template<typename T>
+void bang_fast_gelu_kernel(BangHandle& handle, int64_t n, const T* in, T* out);
+
+void bang_fast_gelu_half_kernel(BangHandle& handle, int64_t n, const void* in, void* out);
+
+template<typename T>
+void bang_fast_gelu_grad_kernel(BangHandle& handle, int64_t n, const T* out_grad, const T* in,
+                                T* in_grad);
+
+void bang_fast_gelu_grad_half_kernel(BangHandle& handle, int64_t n, const void* out_grad,
+                                     const void* in, void* in_grad);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CAMBRICON_BANG_BANG_KERNELS_H_

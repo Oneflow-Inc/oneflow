@@ -1521,19 +1521,19 @@
   bind_python: False
 
 - name: "adaptive_avg_pool1d"
-  signature: "Tensor (Tensor x, Int64List[1] output_size) => AdaptiveAvgPool1D"
+  signature: 'Tensor (Tensor x, Int64List[1] output_size, String data_format="channels_first") => AdaptiveAvgPool1D'
   bind_python: True
 
 - name: "adaptive_avg_pool2d"
-  signature: "Tensor (Tensor x, Int64List[2] output_size) => AdaptiveAvgPool2D"
+  signature: 'Tensor (Tensor x, Int64List[2] output_size, String data_format="channels_first") => AdaptiveAvgPool2D'
   bind_python: True
 
 - name: "adaptive_avg_pool3d"
-  signature: "Tensor (Tensor x, Int64List[3] output_size) => AdaptiveAvgPool3D"
+  signature: 'Tensor (Tensor x, Int64List[3] output_size, String data_format="channels_first") => AdaptiveAvgPool3D'
   bind_python: True
 
 - name: "adaptive_pool_grad"
-  signature: "Tensor (Tensor x, Tensor dy, String mode, Int32 ndims) => AdaptivePoolNdGrad"
+  signature: 'Tensor (Tensor x, Tensor dy, String mode, Int32 ndims, String data_format="channels_first") => AdaptivePoolNdGrad'
 
 - name: "tf_pool_grad"
   signature:

@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/cambricon/bang/bang_internal.h"
 #include "oneflow/cambricon/bang/bang_kernels.h"
 
 namespace oneflow {
@@ -95,7 +96,7 @@ __mlu_global__ void bang_scalar_pow_grad_kernel(int64_t n, const T* x, const T* 
     __sync_copy_dram_to_nram();
 
     if (exponent == 0) {
-      __bang_ne_scalar(nram_dx, nram_x, static_cast<T>(0.0), nram_limit);
+      __bang_ne_scalar(nram_dx, nram_x, bang_static_cast<T>(0.0), nram_limit);
     } else if (exponent == 1.0) {
       __bang_mul_scalar(nram_dx, nram_x, exponent, nram_limit);
     } else if (exponent == 2.0) {
@@ -123,7 +124,7 @@ __mlu_global__ void bang_scalar_pow_grad_kernel(int64_t n, const T* x, const T* 
     __sync_copy_dram_to_nram();
 
     if (exponent == 0) {
-      __bang_ne_scalar(nram_dx, nram_x, static_cast<T>(0.0), nram_rest);
+      __bang_ne_scalar(nram_dx, nram_x, bang_static_cast<T>(0.0), nram_rest);
     } else if (exponent == 1.0) {
       __bang_mul_scalar(nram_dx, nram_x, exponent, nram_rest);
     } else if (exponent == 2.0) {

@@ -737,20 +737,38 @@ class AdaptiveAvgPool2d(Module):
 
     """
 
-    def __init__(self, output_size) -> None:
+    def __init__(self, output_size, data_format=None) -> None:
         super().__init__()
         assert output_size is not None, "'output_size' cannot be NoneType"
         self.output_size = _pair(output_size)
+        if data_format:
+            if not data_format in ["channels_first", "channels_last"]:
+                raise ValueError(
+                    f"data_format must be one of ['channels_first', 'channels_last'], but got {data_format}"
+                )
+            self.channel_pos = data_format
+        elif os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
+            self.channel_pos = "channels_last"
+        else:
+            self.channel_pos = "channels_first"
+
+    def apply_memory_format(self, memory_format) -> None:
+        if memory_format is flow.channels_last:
+            self.channel_pos = "channels_last"
+        elif memory_format is flow.channels_first:
+            self.channel_pos = "channels_first"
 
     def forward(self, x):
         assert (
             len(x.shape) == 4
         ), f"expected 4-dimensional tensor, but got {len(x.shape)}-dimensional tensor"
         new_output_size = _generate_output_size(x.shape, self.output_size)
-        return flow._C.adaptive_avg_pool2d(x, output_size=new_output_size)
+        return flow._C.adaptive_avg_pool2d(
+            x, output_size=new_output_size, data_format=self.channel_pos
+        )
 
 
-def adaptive_avg_pool2d(input, output_size):
+def adaptive_avg_pool2d(input, output_size, data_format=None):
     """Applies a 2D adaptive average pooling over an input signal composed of several input planes.
 
     See :mod:`oneflow.nn.AdaptiveAvgPool2d`
@@ -759,7 +777,7 @@ def adaptive_avg_pool2d(input, output_size):
         input: input tensor
         output_size: the target output size (single integer or double-integer tuple)
     """
-    return AdaptiveAvgPool2d(output_size)(input)
+    return AdaptiveAvgPool2d(output_size, data_format)(input)
 
 
 class AdaptiveAvgPool3d(Module):

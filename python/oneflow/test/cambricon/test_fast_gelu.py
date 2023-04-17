@@ -1,0 +1,58 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
+import unittest
+from collections import OrderedDict
+
+import numpy as np
+
+from oneflow.test_utils.test_util import GenArgList
+
+import oneflow as flow
+import oneflow.unittest
+
+
+def _test_fast_gelu(test_case, shape, dtype):
+    input = np.random.randn(*shape) * 100
+    x_cpu = flow.tensor(input, dtype=dtype).requires_grad_()
+    y_cpu = flow.nn.functional.gelu(x_cpu, approximate="tanh")
+    y_cpu.sum().backward()
+
+    x_mlu = flow.tensor(input, dtype=dtype, device="mlu").requires_grad_()
+    y_mlu = flow.nn.functional.gelu(x_mlu, approximate="tanh")
+    y_mlu.sum().backward()
+
+    test_case.assertTrue(np.allclose(y_cpu.numpy(), y_mlu.cpu().numpy(), 0.01, 0.01))
+    test_case.assertTrue(
+        np.allclose(x_cpu.grad.numpy(), x_mlu.grad.cpu().numpy(), 0.01, 0.01)
+    )
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestFastGeluCambriconModule(flow.unittest.TestCase):
+    def test_fast_gelu(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_fast_gelu,
+        ]
+        arg_dict["shape"] = [(1,), (100,), (100, 1000)]
+        arg_dict["dtype"] = [flow.float]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+
+if __name__ == "__main__":
+    unittest.main()

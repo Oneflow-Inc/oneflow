@@ -89,6 +89,7 @@ class MluDropoutKernel final : public user_op::OpKernel {
       });
 
 REGISTER_MLU_DROPOUT_KERNEL(float)
+REGISTER_MLU_DROPOUT_KERNEL(float16)
 
 template<typename T>
 class MluDropoutGradKernel final : public user_op::OpKernel {
@@ -133,5 +134,6 @@ class MluDropoutGradKernel final : public user_op::OpKernel {
       });
 
 REGISTER_MLU_DROPOUT_GRAD_KERNEL(float)
+REGISTER_MLU_DROPOUT_GRAD_KERNEL(float16)
 
 }  // namespace oneflow
