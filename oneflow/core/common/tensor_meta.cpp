@@ -90,6 +90,10 @@ LocalTensorMeta::LocalTensorMeta(Symbol<Shape> shape, Symbol<Stride> stride, Dat
                                  Symbol<Device> device)
     : ConstTensorMeta(shape, stride, dtype), device_(device) {}
 
+LocalTensorMeta::LocalTensorMeta(Symbol<Shape> shape, Symbol<Stride> stride, DataType dtype,
+                                 Symbol<Device> device, bool is_view)
+    : ConstTensorMeta(shape, stride, dtype), device_(device), is_view_(is_view) {}
+
 bool LocalTensorMeta::operator==(const LocalTensorMeta& other) const {
   // It's correct to ignore is_dynamic_ field.
   return *this->shape_ptr() == *other.shape_ptr() && this->dtype() == other.dtype()
