@@ -87,7 +87,8 @@ Maybe<one::Tensor> cached_cast(const std::shared_ptr<one::Tensor>& tensor, Symbo
   // TODO(WangYi): add check tensor.is_view
   bool use_cache = (is_autocast_cache_enabled() && tensor->requires_grad()
                     && cast_type == get_lower_precision_fp_from_device_type(device_type)
-                    && tensor->dtype()->data_type() == DataType::kFloat && tensor->is_leaf());
+                    && tensor->dtype()->data_type() == DataType::kFloat && tensor->is_leaf()
+                    && !tensor->is_view());
   if (use_cache) {
     auto it = cached_casts()->find(
         std::make_pair(JUST(tensor->mut_eager_local_tensor_impl()), cast_type->data_type()));
