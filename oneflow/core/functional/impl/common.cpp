@@ -356,6 +356,19 @@ Maybe<std::tuple<std::shared_ptr<Tensor>, bool>> batchify(const std::shared_ptr<
   return std::make_tuple(is_batched ? input : JUST(functional::Unsqueeze(input, 0)), is_batched);
 }
 
+Maybe<std::tuple<std::shared_ptr<Tensor>, bool>> pooling_batchify(
+    const std::shared_ptr<Tensor>& input, const int64_t num_spatial_dims,
+    const std::string& func_name) {
+  const int64_t dim_count_no_batch = num_spatial_dims + 1;
+  const int64_t dim_count_batch = dim_count_no_batch + 1;
+  const bool is_batched = (input->ndim() == dim_count_batch);
+  CHECK_EQ_OR_RETURN(input->ndim() == dim_count_no_batch || is_batched, true)
+      << fmt::format("non-empty {}D (unbatched) or {}D (batche mode) tensor expected for input of "
+                     "{}, but got {}D input.",
+                     dim_count_no_batch, dim_count_batch, func_name, input->ndim());
+  return std::make_tuple(is_batched ? input : JUST(functional::Unsqueeze(input, 0)), is_batched);
+}
+
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow
