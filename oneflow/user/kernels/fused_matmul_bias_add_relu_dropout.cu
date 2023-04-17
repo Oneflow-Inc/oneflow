@@ -219,10 +219,11 @@ unsigned int ComputeGridSize(ep::Stream* stream, Func func, const int64_t elem_c
 uint64_t RoundUp(uint64_t x, uint64_t y) { return (x + y - 1) / y * y; }
 
 template<typename T, bool relu>
-cudaError_t LaunchFusedReluDropoutKernel(
-    ep::CudaStream* stream, const std::shared_ptr<one::CUDAGeneratorImpl>& cuda_generator,
-    const int64_t elem_cnt, const int32_t aux_ld, const int64_t rows, const int64_t cols,
-    float rate, float scale, T* x, int32_t* mask) {
+cudaError_t LaunchFusedReluDropoutKernel(ep::CudaStream* stream,
+                                         const std::shared_ptr<ep::CUDAGenerator>& cuda_generator,
+                                         const int64_t elem_cnt, const int32_t aux_ld,
+                                         const int64_t rows, const int64_t cols, float rate,
+                                         float scale, T* x, int32_t* mask) {
   uint64_t offset = 0;
   uint64_t seed = cuda_generator->current_seed();
   const uint32_t uint_rate = UINT_MAX * rate;
@@ -343,8 +344,8 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel {
     const auto& generator = fused_dropout_kernel_state->generator();
     CHECK_NOTNULL(generator);
     const auto device_index = ctx->stream()->device()->device_index();
-    std::shared_ptr<one::CUDAGeneratorImpl> cuda_generator =
-        CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>(device_index));
+    std::shared_ptr<ep::CUDAGenerator> cuda_generator =
+        CHECK_JUST(generator->Get<ep::CUDAGenerator>(device_index));
     const std::vector<float> dropout_rate_list = ctx->Attr<std::vector<float>>("dropout_rate_list");
 
     const DataType data_type = out->data_type();

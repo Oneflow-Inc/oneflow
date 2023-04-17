@@ -54,7 +54,7 @@ class FunctionNode {
   // `Apply` in second time
   virtual void ReleaseData() = 0;
 
-  const std::vector<std::shared_ptr<FunctionNode>>& next_functions() const {
+  const std::vector<std::tuple<std::shared_ptr<FunctionNode>, int>>& next_functions() const {
     return next_functions_;
   }
   const std::string& name() const { return name_; }
@@ -73,7 +73,7 @@ class FunctionNode {
       : name_(name), backward_fn_(backward_fn), scope_(nullptr) {}
 
   const std::string name_;
-  std::vector<std::shared_ptr<FunctionNode>> next_functions_;
+  std::vector<std::tuple<std::shared_ptr<FunctionNode>, int>> next_functions_;
 
   std::vector<std::shared_ptr<AutogradMeta>> input_meta_data_;
   std::vector<std::shared_ptr<AutogradMeta>> output_meta_data_;
