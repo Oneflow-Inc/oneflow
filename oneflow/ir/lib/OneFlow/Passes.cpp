@@ -15,6 +15,8 @@ limitations under the License.
 */
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "OneFlow/Transform/OneFlowStream.h"
+#include "OneFlow/Transform/EliminateAllocOps.h"
+#include "OneFlow/Transform/AppendOneFlowStream.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/common/data_type.pb.h"
@@ -1029,6 +1031,7 @@ void AddLowerToLinalgMemRefPasses(PassManager& pm) {
   pm.addNestedPass<func::FuncOp>(createTensorBufferizePass());      // tensor-bufferize
   pm.addPass(func::createFuncBufferizePass());                      // func-bufferize
   pm.addPass(bufferization::createBufferResultsToOutParamsPass());  // buffer-results-to-out-params
+  pm.addPass(mlir::oneflow::createEliminateAllocOpsPass());         // eliminate-alloc-ops
   pm.addPass(createCanonicalizerPass());                            // canonicalize
   pm.addNestedPass<func::FuncOp>(
       mlir::bufferization::createFinalizingBufferizePass());  // finalizing-bufferize

@@ -623,14 +623,10 @@ struct CastInputConversion final : public OpRewritePattern<InputOp> {
         if (isSignLessTensorOrOther(cast.getResult(0).getType())) { return failure(); }
       }
     }
-    LOG(ERROR) << "ok4";
     InputOp cloned = rewriter.create<InputOp>(op->getLoc(), op.getResultTypes(), op->getOperands(),
                                               op->getAttrs());
-    auto m = op->getParentOp();
-    m->dump();
     rewriter.replaceOpWithNewOp<UnrealizedConversionCastOp>(
         op, convertToSignless(getContext(), op.getOutput().getType()), cloned.getOutput());
-    m->dump();
     return success();
   }
 };
