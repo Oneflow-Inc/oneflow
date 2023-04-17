@@ -80,7 +80,6 @@ size_t getResultSize(DictionaryAttr attributes) {
   std::unordered_map<std::string, std::unique_ptr<::oneflow::BlobDesc>> lbi2logical_blob_desc_;
   auto operand_ids =
       user_op::ArgIds<OpTrait::AttrSizedOperandSegments>(op_type_name, operands.size(), attributes);
-  auto operand_index = 0;
   for (const auto& idOperand : llvm::zip(operand_ids, operands)) {
     const auto& arg_name = std::get<0>(idOperand).first;
     const auto& arg_id = std::get<0>(idOperand).second;
@@ -111,7 +110,7 @@ size_t getResultSize(DictionaryAttr attributes) {
   };
   ::oneflow::ParallelConf parallel_conf = user_op::getParallelConfFromAttrDictionary(attributes);
   ::oneflow::ParallelDesc parallel_desc{parallel_conf};
-  op->FillOpParallelDesc(parallel_desc);
+  CHECK_JUST(op->FillOpParallelDesc(parallel_desc));
   CHECK_JUST(op->InferLogicalOutBlobDescs(GetLogicalBlobDesc4BnInOp, parallel_desc));
   for (const auto& result_id : result_ids) {
     const auto& arg_name = result_id.first;
