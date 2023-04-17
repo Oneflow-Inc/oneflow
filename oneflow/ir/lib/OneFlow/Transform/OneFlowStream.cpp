@@ -56,7 +56,7 @@ struct MgpuToOneFlowStreamPattern final : public OpRewritePattern<LLVM::CallOp> 
                 rewriter.replaceOp(target, {stream});
               }}},
             {"mgpuStreamSynchronize",
-             {[](LLVM::CallOp& op, Value& stream) { return true; },
+             {[](LLVM::CallOp& op, Value& stream) { return false; },
               [](mlir::PatternRewriter& rewriter, LLVM::CallOp& op, Value& stream) {
                 rewriter.eraseOp(op);
               }}},

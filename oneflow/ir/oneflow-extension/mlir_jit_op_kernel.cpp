@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/ir/include/OneFlow/Passes.h"
 #include "oneflow/ir/include/OneFlow/Extension.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -135,7 +136,8 @@ void WithMlirContext(
       GetMLIRCInterfaceArgs(ctx);
   llvm::SmallVector<void*> packed_args{};
   for (auto& arg /* arg must be a reference*/ : args) { packed_args.push_back(&arg); }
-  packed_args.push_back(stream);
+  auto cuda_stream = dynamic_cast<ep::CudaStream*>(stream);
+  packed_args.push_back(cuda_stream->cuda_stream());
   auto error = jit->invokePacked(GetMLIRCInterface(ctx->op_name()), packed_args);
   CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
 }
