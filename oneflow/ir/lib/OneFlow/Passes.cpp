@@ -16,7 +16,7 @@ limitations under the License.
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "OneFlow/Transform/OneFlowStream.h"
 #include "OneFlow/Transform/EliminateAllocOps.h"
-#include "OneFlow/Transform/AppendOneFlowStream.h"
+#include "OneFlow/Transform/OneFlowStream.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/common/data_type.pb.h"
