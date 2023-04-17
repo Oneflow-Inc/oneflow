@@ -31,24 +31,6 @@ namespace {
 
 constexpr size_t kMaxNumDims = 8;
 
-union CnnlScale {
-  CnnlScale() : s(0.f) {}
-  float s;
-  float16 h;
-};
-
-CnnlScale ConvertCnnlScale(Scalar scale, cnnlDataType_t compute_type) {
-  CnnlScale cnnl_scale;
-  if (compute_type == CNNL_DTYPE_HALF) {
-    cnnl_scale.h = static_cast<float16>(scale.Value<float>());
-  } else if (compute_type == CNNL_DTYPE_FLOAT) {
-    cnnl_scale.s = scale.Value<float>();
-  } else {
-    UNIMPLEMENTED();
-  }
-  return cnnl_scale;
-}
-
 void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType transpose_a,
                            BlasTransposeType transpose_b, int64_t num_batch_dims,
                            const int64_t* broadcast_batch_dims, const int64_t* a_batch_dims,
@@ -65,8 +47,8 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
   matmul_desc.set_attr(CNNL_MATMUL_DESC_TRANSA, &is_trans_a, sizeof(int32_t));
   matmul_desc.set_attr(CNNL_MATMUL_DESC_TRANSB, &is_trans_b, sizeof(int32_t));
 
-  CnnlScale cnnl_alpha = ConvertCnnlScale(alpha, cnnl_data_type);
-  CnnlScale cnnl_beta = ConvertCnnlScale(beta, cnnl_data_type);
+  float cnnl_alpha = alpha.Value<float>();
+  float cnnl_beta = beta.Value<float>();
 
   cnnlMatMulAlgo_t algo;
   cnnlMatMulHeuristicResult_t result;

@@ -49,8 +49,10 @@ class MluNormalizationKernel final : public user_op::OpKernel {
     const bool training = ctx->Attr<bool>("training");
 
     const DataType data_type = x->data_type();
+    const DataType param_data_type = gamma->data_type();
     CHECK_EQ(x->shape_view(), y->shape_view());
     CHECK_EQ(y->data_type(), data_type);
+    CHECK_EQ(beta->data_type(), param_data_type);
     CHECK_LT(axis, x->shape_view().NumAxes());
     // axis is equal to 1 for NCHW and equal to 3 for NHWC
     CHECK(axis == 1 || axis == 3);
@@ -62,6 +64,8 @@ class MluNormalizationKernel final : public user_op::OpKernel {
       CHECK(ctx->has_input("moving_variance", 0));
       auto* moving_mean = ctx->Tensor4ArgNameAndIndex("moving_mean", 0);
       auto* moving_variance = ctx->Tensor4ArgNameAndIndex("moving_variance", 0);
+      CHECK_EQ(moving_mean->data_type(), param_data_type);
+      CHECK_EQ(moving_variance->data_type(), param_data_type);
       moving_mean_ptr = moving_mean->mut_dptr();
       moving_variance_ptr = moving_variance->mut_dptr();
     }
@@ -87,12 +91,15 @@ class MluNormalizationKernel final : public user_op::OpKernel {
     x_desc.set(ndim, shape.data(), cnnl_data_type, CNNL_LAYOUT_NHWC);
     y_desc.set(ndim, shape.data(), cnnl_data_type, CNNL_LAYOUT_NHWC);
     int64_t dims[1] = {shape[ndim - 1]};
-    weight_bias_mean_var_desc.set(1, dims, cnnl_data_type, CNNL_LAYOUT_ARRAY);
+    weight_bias_mean_var_desc.set(1, dims, ConvertToCnnlDataType(param_data_type),
+                                  CNNL_LAYOUT_ARRAY);
 
     if constexpr (Type == BatchNormType::kTraining) {
       CHECK(training);
       auto* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
       auto* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
+      CHECK_EQ(mean->data_type(), param_data_type);
+      CHECK_EQ(inv_variance->data_type(), param_data_type);
       const auto momentum = ctx->Attr<float>("momentum");
       OF_CNNL_CHECK(cnnlBatchNormForwardTraining(
           stream->cnnl_handle(), nullptr, nullptr, x_desc.desc(), x_ptr,
