@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/boxing/eager_boxing_logger.h"
+#include "oneflow/core/framework/global_tensor_infer_cache.h"
 
 namespace oneflow {
 namespace one {
@@ -78,12 +79,18 @@ GetInputTensors(const UserOpConf& user_conf, const Env& env, const Func& preproc
   return std::make_pair(inputs, ibns);
 }
 
-OpArgsVector<std::string> GetOutputNamesOfOp(const UserOpConf& user_conf) {
+Maybe<std::pair<OpArgsVector<std::string>, OpArgsVector<std::string>>>
+GetOutputNamesOfOp(const UserOpConf& user_conf) {
   OpArgsVector<std::string> output_names;
-  for (const auto& pair : user_conf.output()) {
-    for (const auto& name : pair.second.s()) { output_names.emplace_back(name); }
+  OpArgsVector<std::string> obns;
+  for (const auto& [obn, obs] : user_conf.output()) {
+    const auto& tensor_names = obs.s();
+    for (int i = 0; i < tensor_names.size(); ++i) {
+      output_names.emplace_back(tensor_names[i]);
+      obns.emplace_back(obn + '_' + std::to_string(i));
+    }
   }
-  return output_names;
+  return std::make_pair(output_names, obns);
 }
 
 // Only support a limited subset of view ops for now
@@ -181,55 +188,77 @@ Maybe<bool> IsAllZeroSizeTensorMeta(const std::vector<Symbol<GlobalTensorMeta>>&
 constexpr auto* CachedIsAllZeroSizeTensorMeta =
     DECORATE(&IsAllZeroSizeTensorMeta, ThreadLocalCopiable);
 
+/* static */ Maybe<Symbol<Stream>> InferDeviceAndStream(
+    const UserOpExpr& user_op_expr, const GlobalTensorMetaInferArgs& infer_args) {
+  if (!user_op_expr.device_and_stream_infer_fn()) {
+    Symbol<ParallelDesc> parallel_desc =
+        infer_args.input_global_tensor_metas()[0].tensor_meta()->parallel_desc();
+    return GetDefaultStreamByPlacement(parallel_desc);
+  } else {
+    UNIMPLEMENTED_THEN_RETURN();
+  }
+}
+
 Maybe<void> RawRunGlobalNormalOp(const std::shared_ptr<UserOpExpr>& op, const TensorTuple& inputs, TensorTuple* outputs,
                                  std::map<std::string, std::shared_ptr<Tensor>>& env, const OperatorConf& op_conf, 
-                                 const UserOpConf& user_conf, const OpArgsVector<std::string>& ibns, 
+                                 const UserOpConf& user_conf, const OpArgsVector<std::string>& ibns, const OpArgsVector<std::string>& obns, 
                                  const OpArgsVector<std::string>& output_names, const NdSbpSignature& ndsbp_signature, 
                                  const Symbol<ParallelDesc>& op_paralleldesc) {
+  CHECK_EQ_OR_RETURN(outputs->size(), op->output_size());
   static AttrMap empty_attr_map;
   const OpExprInterpContext ctx(empty_attr_map);
   CHECK_OR_RETURN(!inputs.empty());
   const auto& parallel_desc = JUST(inputs.at(0)->parallel_desc());
 
-  std::shared_ptr<const GlobalTensorInferResult> result;
-  if (inputs.empty()) {
-    // check consistency placement and nd_sbp, do not check in non-src op because it is assumed that
-    // InferSbp in op is a deterministic algorithm
-    JUST(MetaInfoConsistencyCheck(parallel_desc, ctx.nd_sbp, 1, /* force_check */ false));
-    const auto& infer_args =
-        JUST(SrcOpGlobalTensorMetaInferArgs::New(ctx.attrs, parallel_desc, JUST(ctx.nd_sbp)));
-    result = JUST(op->mut_global_tensor_infer_cache()->GetOrInfer(*infer_args));
-  } else {
-    for (int i = 0; i < outputs->size(); ++i) {
-      if ((*outputs)[i]) {
-        const auto& nd_sbp = JUST((*outputs)[i]->nd_sbp());
-        JUST((*outputs)[i]->set_consumer_nd_sbp_constraint(nd_sbp));
-      }
-    }
-    const auto& infer_args = JUST(GlobalTensorMetaInferArgs::New(ctx.attrs, inputs));
-    result = JUST(op->mut_global_tensor_infer_cache()->GetOrInfer(*infer_args));
-  }
-  const auto& output_tensor_metas = result->output_tensor_metas();
   Optional<int64_t> parallel_id;
   const auto& tensor_device = JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
+  const auto& infer_args_ptr = JUST(GlobalTensorMetaInferArgs::New(ctx.attrs, inputs));
+  const auto& infer_args = *infer_args_ptr;
+  auto mut_result = std::make_unique<GlobalTensorInferResult>(op->input_size(), op->output_size());
+  CHECK_EQ_OR_RETURN(outputs->size(), obns.size());
+  CHECK_EQ_OR_RETURN(outputs->size(), op->output_size());
+  CHECK_GT_OR_RETURN(infer_args.input_global_tensor_metas().size(), 0);
+  for (int i = 0; i < outputs->size(); ++i) {
+    if ((*outputs)[i]) {
+      const auto& nd_sbp = JUST((*outputs)[i]->nd_sbp());
+      JUST((*outputs)[i]->set_consumer_nd_sbp_constraint(nd_sbp));
+    }
+  }
+  std::vector<OpArgMutGlobalTensorMeta> output_mut_metas(op->output_size());
+  {
+    // Infer OpArgMutGlobalTensorMeta.
+    const auto& input_metas = infer_args.input_global_tensor_metas();
+    JUST(op->InferLogicalTensorDesc(
+        infer_args.attrs(), parallel_desc,
+        [&](int32_t i) { return &*input_metas.at(i).tensor_meta(); },
+        [&](int32_t i) { return output_mut_metas.at(i).mut_tensor_meta(); }));
+  }
+  const auto& output_metas = mut_result->mut_output_tensor_metas();
+  CHECK_EQ_OR_RETURN(outputs->size(), output_metas->size());
   for (int i = 0; i < outputs->size(); ++i) {
     if (!outputs->at(i)) {
+      const auto& output_mut_meta = JUST(VectorAt(output_mut_metas, i));
+      const auto& shape = output_mut_meta.tensor_meta().shape();
+      DataType data_type = output_mut_meta.tensor_meta().data_type();
+      std::string lbn = JUST(VectorAt(obns, i));
+      const auto& nd_sbp = SymbolOf(JUST(MapAt(ndsbp_signature.bn_in_op2nd_sbp(), lbn)));
+      GlobalTensorMeta output_meta(shape, data_type, nd_sbp, op_paralleldesc);
       const auto& tensor_impl = JUST(EagerGlobalTensorImpl::New(
-          output_tensor_metas[i], tensor_device, parallel_id, false, false));
+          SymbolOf(output_meta), tensor_device, parallel_id, false, false));
       (*outputs)[i].reset(new GlobalTensor(tensor_impl));
+
+      GlobalTensorMeta tensor_meta(shape, data_type, nd_sbp, parallel_desc);
+      output_metas->at(i) = SymbolOf(tensor_meta);
     } else {
       JUST((*outputs)[i]->set_consumer_nd_sbp_constraint(NullOpt));
     }
   }
-
-  const auto& kernel = JUST(op->MutKernel4Stream(result->stream()));
-  if (unlikely(JUST(CachedIsAllZeroSizeTensorMeta(output_tensor_metas)))) {
-    return Maybe<void>::Ok();
-  }
+  mut_result->set_stream(JUST(InferDeviceAndStream(*op, infer_args)));
  
   vm::EagerBlobObjectList input_eager_blob_objects;
   TensorTuple boxing_outputs;
   const auto* mgr = Singleton<EagerBoxingInterpreterManager>::Get();
+  auto* input_metas = mut_result->mut_input_tensor_metas();
   CHECK_EQ_OR_RETURN(inputs.size(), ibns.size());
   for (int i = 0; i < inputs.size(); ++i) {
     std::shared_ptr<Tensor> input_tensor = inputs[i];
@@ -254,6 +283,12 @@ Maybe<void> RawRunGlobalNormalOp(const std::shared_ptr<UserOpExpr>& op, const Te
     }
     const auto& local_tensor = JUST(input_tensor->cur_rank_phy_tensor());
     input_eager_blob_objects.emplace_back(JUST(local_tensor->eager_blob_object()));
+
+    const auto& old_global_tensor_meta = infer_args.input_global_tensor_metas()[i].tensor_meta();
+    GlobalTensorMeta global_tensor_meta(old_global_tensor_meta->shape(),
+                                        old_global_tensor_meta->dtype(), in_nd_sbp,
+                                        old_global_tensor_meta->parallel_desc());
+    (*input_metas)[i] = SymbolOf(global_tensor_meta);
   }
 
   if (!parallel_id.has_value()) { return Maybe<void>::Ok(); }
@@ -264,6 +299,13 @@ Maybe<void> RawRunGlobalNormalOp(const std::shared_ptr<UserOpExpr>& op, const Te
     CHECK_OR_RETURN(out_parallel_desc_eq);
     const auto& local_tensor = JUST(outputs->at(i)->cur_rank_phy_tensor());
     output_eager_blob_objects.at(i) = JUST(local_tensor->eager_blob_object());
+  }
+  
+  std::shared_ptr<const GlobalTensorInferResult> result = std::shared_ptr<const GlobalTensorInferResult>(std::move(mut_result));
+  const auto& kernel = JUST(op->MutKernel4Stream(result->stream()));
+  const auto& output_tensor_metas = result->output_tensor_metas();
+  if (unlikely(JUST(CachedIsAllZeroSizeTensorMeta(output_tensor_metas)))) {
+    return Maybe<void>::Ok();
   }
 
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
@@ -283,10 +325,11 @@ auto* RunGlobalNormalOpThenInitGlobalId = DECORATE(&RawRunGlobalNormalOp, NonRec
 } // namespace
 
 Maybe<void> RunGlobalNormalOp(const std::shared_ptr<UserOpExpr>& op, const TensorTuple& inputs, Env& env, const OperatorConf& op_conf,
-                              const UserOpConf& user_conf, const OpArgsVector<std::string>& ibns, const OpArgsVector<std::string>& output_names, 
-                              const NdSbpSignature& ndsbp_signature, const Symbol<ParallelDesc>& op_paralleldesc) {
+                              const UserOpConf& user_conf, const OpArgsVector<std::string>& ibns, const OpArgsVector<std::string>& obns,
+                              const OpArgsVector<std::string>& output_names, const NdSbpSignature& ndsbp_signature, 
+                              const Symbol<ParallelDesc>& op_paralleldesc) {
   TensorTuple outputs(output_names.size());
-  return RunGlobalNormalOpThenInitGlobalId(op, inputs, &outputs, env, op_conf, user_conf, ibns, output_names, ndsbp_signature, op_paralleldesc);
+  return RunGlobalNormalOpThenInitGlobalId(op, inputs, &outputs, env, op_conf, user_conf, ibns, obns, output_names, ndsbp_signature, op_paralleldesc);
 }
 
 Maybe<void> RunNormalOp(const std::shared_ptr<UserOpExpr>& op, Env& env, const TensorTuple& inputs,
@@ -374,11 +417,11 @@ Maybe<one::TensorTuple> InterpretJob(const one::TensorTuple& graph_inputs,
       auto op = CHECK_NOTNULL(graph->cached_op_exprs[i]);
       const auto& user_conf = op_conf.user_conf();
       OF_PROFILER_RANGE_GUARD(user_conf.op_type_name());
-      auto [inputs, ibns] =
+      const auto [inputs, ibns] =
           *JUST(GetInputTensors(user_conf, env, [&op_conf](const std::shared_ptr<Tensor>& tensor) {
             return CHECK_JUST(functional::To(tensor, op_conf.device_tag()));
           }));
-      OpArgsVector<std::string> output_names = GetOutputNamesOfOp(user_conf);
+      const auto [output_names, obns] = *JUST(GetOutputNamesOfOp(user_conf));
       if (JUST(GetEagerInterpreterType(inputs, op))) {
         if (IsViewOp(op)) {
           JUST(RunViewOp(op, env, inputs, output_names));
@@ -388,7 +431,7 @@ Maybe<one::TensorTuple> InterpretJob(const one::TensorTuple& graph_inputs,
       } else {
         const auto& op_paralleldesc = JUST(MapAt(op2paralleldesc, op_conf.name()));
         const auto& nd_sbp_signature_conf = JUST(MapAt(op_name2nd_sbp_signature_conf, op_conf.name()));
-        JUST(RunGlobalNormalOp(op, inputs, env, op_conf, user_conf, ibns, output_names, 
+        JUST(RunGlobalNormalOp(op, inputs, env, op_conf, user_conf, ibns, obns, output_names, 
                                nd_sbp_signature_conf, op_paralleldesc));
       }
       for (const auto& name : outdated_tensors_after_op[i]) {
