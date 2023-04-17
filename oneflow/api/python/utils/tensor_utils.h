@@ -60,6 +60,20 @@ namespace one {
 
 Maybe<void> EagerLocalTensorZeros(const std::shared_ptr<Tensor>& t);
 
+inline Maybe<void*> GetTensorDataPtr(const std::shared_ptr<LocalTensor>& tensor) {
+  void* data_ptr = nullptr;
+  const auto& Callback = [&](ep::Stream*,
+                             const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+    data_ptr = eager_blob_object->mut_raw_dptr();
+  };
+  auto btb = std::make_shared<BlockingThenBusy>();
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    return builder->SyncAccessBlobByCallback(tensor, btb, Callback, "const");
+  }));
+  JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+  return data_ptr;
+}
+
 template<typename T>
 inline static Maybe<PyObject*> EagerLocalTensorToNumpy(PyObject* py_tensor) {
   const auto& t = PyTensor_Unpack(py_tensor);
@@ -76,16 +90,8 @@ inline static Maybe<PyObject*> EagerLocalTensorToNumpy(PyObject* py_tensor) {
   const auto stride =
       numpy::OFStrideToNumpyStride(*JUST(tensor->stride()), tensor->dtype()->data_type());
 
-  T* data_ptr = nullptr;
-  const auto& Callback = [&](ep::Stream*,
-                             const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
-    data_ptr = eager_blob_object->mut_dptr<T>();
-  };
-  auto btb = std::make_shared<BlockingThenBusy>();
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->SyncAccessBlobByCallback(tensor, btb, Callback, "const");
-  }));
-  JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+  void* data_ptr = JUST(GetTensorDataPtr(tensor));
+
   return py::array(py::buffer_info(data_ptr, sizeof(T), py::format_descriptor<T>::format(), ndim,
                                    shape, stride),
                    handle)

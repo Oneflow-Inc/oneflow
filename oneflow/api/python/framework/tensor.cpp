@@ -216,6 +216,16 @@ static PyObject* PyTensorObject_is_contiguous(PyObject* self, PyObject* unused) 
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_is_view(PyObject* self, PyObject* unused) {
+  HANDLE_ERRORS
+  if (PyTensor_Unpack(self)->is_view()) {
+    Py_RETURN_TRUE;
+  } else {
+    Py_RETURN_FALSE;
+  }
+  END_HANDLE_ERRORS
+}
+
 static PyObject* PyTensorObject_contiguous(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   return PyTensor_New(PyTensor_Unpack(self)->contiguous());
@@ -387,6 +397,14 @@ static PyObject* PyTensorObject_check_meta_consistency(PyObject* self, PyObject*
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_data_ptr(PyObject* self, PyObject* unused) {
+  HANDLE_ERRORS
+  const auto& t = PyTensor_Unpack(self);
+  return functional::CastToPyObject(
+      reinterpret_cast<int64_t>(ASSERT(GetTensorDataPtr(ASSERT_PTR(t->AsLocalTensor())))));
+  END_HANDLE_ERRORS
+}
+
 static PyObject* PyTensorObject_to_numpy(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   const auto& t = PyTensor_Unpack(self);
@@ -529,6 +547,7 @@ static PyMethodDef PyTensorObject_methods[] = {
     {"storage_offset", PyTensorObject_storage_offset, METH_NOARGS, NULL},
     {"stride", PyTensorObject_stride, METH_NOARGS, NULL},
     {"is_contiguous", PyTensorObject_is_contiguous, METH_NOARGS, NULL},
+    {"is_view", PyTensorObject_is_view, METH_NOARGS, NULL},
     {"contiguous", PyTensorObject_contiguous, METH_NOARGS, NULL},
     {"contiguous_", PyTensorObject_contiguous_, METH_NOARGS, NULL},
     {"pin_memory", PyTensorObject_pin_memory, METH_NOARGS, NULL},
@@ -550,6 +569,7 @@ static PyMethodDef PyTensorObject_methods[] = {
     {"global_id", PyTensorObject_global_id, METH_NOARGS, NULL},
     {"check_meta_consistency", PyTensorObject_check_meta_consistency, METH_NOARGS, NULL},
     {"to_numpy", PyTensorObject_to_numpy, METH_NOARGS, NULL},
+    {"data_ptr", PyTensorObject_data_ptr, METH_NOARGS, NULL},
     {"item", PyTensorObject_item, METH_NOARGS, NULL},
     {"type", (PyCFunction)PyTensorObject_type, METH_VARARGS | METH_KEYWORDS, NULL},
     {"_copy_to_numpy", PyTensorObject__copy_to_numpy, METH_O, NULL},

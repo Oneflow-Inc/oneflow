@@ -25,6 +25,8 @@ if "CUDA_MODULE_LOADING" not in os.environ:
 
 import oneflow._oneflow_internal
 
+oneflow._oneflow_internal.RegisterSignalHandler()
+
 oneflow_python_base_dir = os.path.dirname(os.path.realpath(__file__))
 oneflow._oneflow_internal.InitPythonPathsToBeKeptAndFilteredForDebugging(
     oneflow_python_base_dir
@@ -106,6 +108,7 @@ from oneflow._C import batch_matmul as bmm
 from oneflow._C import baddbmm
 from oneflow._C import broadcast_like
 from oneflow._C import chunk
+from oneflow._C import digamma
 from oneflow._C import split
 from oneflow._C import sign
 from oneflow._C import sinh

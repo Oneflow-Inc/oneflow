@@ -64,7 +64,8 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("sqrt", Sqrt)                 \
   OF_PP_MAKE_TUPLE_SEQ("square", Square)             \
   OF_PP_MAKE_TUPLE_SEQ("tan", Tan)                   \
-  OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)
+  OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)                 \
+  OF_PP_MAKE_TUPLE_SEQ("digamma", Digamma)
 
 #define FLOAT_UNARY_PRIMITIVE_FUNC_BWD_WITH_DY_Y_SEQ OF_PP_MAKE_TUPLE_SEQ("sigmoid", Sigmoid)
 
@@ -179,6 +180,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<CeilFunctor>("Ceil");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Cos, "Cos");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Cosh, "Cosh");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Digamma, "Digamma");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Erf, "Erf");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Erfc, "Erfc");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Exp, "Exp");
