@@ -45,7 +45,7 @@ jobs:
           ONEFLOW_TEST_FILES="$(git diff --diff-filter=d --name-only ${{ github.event.pull_request.base.sha }} -- python/oneflow/test/**/test_*.py | grep -v expensive)"
           ONEFLOW_TEST_FILES=$(echo $ONEFLOW_TEST_FILES | tr '\n' ' ')
           echo "changed python tests: ${ONEFLOW_TEST_FILES}"
-          if [ -z "$string" ]; then
+          if [ -z "$ONEFLOW_TEST_FILES" ]; then
             echo "has_changed_python_tests=false" >> $GITHUB_OUTPUT
           else
             echo "has_changed_python_tests=true" >> $GITHUB_OUTPUT
