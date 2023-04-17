@@ -28,6 +28,25 @@ env:
   MLIR_DOCKER_ARGS: "-e ONEFLOW_MLIR_ENABLE_ROUND_TRIP=1 -e ONEFLOW_MLIR_PREFER_NHWC=0 -e ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION=1"
 
 jobs:
+  source_info:
+    name: Collect information about PR and source
+    runs-on: ubuntu-20.04
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
+    steps:
+      - name: Check out OneFlow
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          repository: ${{github.event.pull_request.head.repo.full_name}}
+          fetch-depth: 0
+      - name: Python diff
+        id: py-diff
+        run: |
+          ONEFLOW_TEST_FILES="$(git diff --diff-filter=d --name-only ${{ github.event.pull_request.base.sha }} -- python/oneflow/test/**/test_*.py | grep -v expensive)"
+          echo "{changed_python_tests}=${ONEFLOW_TEST_FILES}" >> $GITHUB_OUTPUT
+    outputs:
+      changed_python_tests: ${{ steps.py-diff.outputs.changed_python_tests }}
+
   check-priority-pr:
     name: "Check priority PR"
     runs-on: ubuntu-latest
@@ -654,7 +673,7 @@ jobs:
 
   test:
     name: Test suite
-    needs: [wait_for_gpu_slot, find-test-cache]
+    needs: [wait_for_gpu_slot, find-test-cache, source_info]
     timeout-minutes: 120
     runs-on: ${{ matrix.runs-on }}
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
@@ -1012,7 +1031,7 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) }}
         run: |
           docker exec -e ONEFLOW_TEST_DIR=diff \
-            -e ONEFLOW_TEST_FILES="$(git diff --diff-filter=d --name-only ${{ github.event.pull_request.base.sha }} -- python/oneflow/test/**/test_*.py | grep -v expensive)" \
+            -e ONEFLOW_TEST_FILES="${{needs.source_info.outputs.changed_python_tests}}" \
             ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
       - name: Module API test
         timeout-minutes: 60
