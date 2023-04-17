@@ -297,6 +297,18 @@ set_property(TARGET LLVMSupportWithHeader PROPERTY INTERFACE_INCLUDE_DIRECTORIES
 
 list(APPEND oneflow_third_party_libs LLVMSupportWithHeader)
 
+# for stack backtrace
+find_package(BFD)
+if(BFD_FOUND)
+  add_definitions(-DBACKWARD_HAS_BFD=1)
+  list(APPEND oneflow_third_party_libs bfd::bfd)
+endif()
+find_package(Unwind)
+if(Unwind_FOUND)
+  add_definitions(-DBACKWARD_HAS_LIBUNWIND=1)
+  list(APPEND oneflow_third_party_libs unwind::unwind)
+endif()
+
 include(op_schema)
 
 get_property(EXTERNAL_TARGETS GLOBAL PROPERTY EXTERNAL_TARGETS)
