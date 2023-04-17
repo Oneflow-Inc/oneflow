@@ -32,7 +32,7 @@ void MaskAndScale(ep::Stream* stream, const int64_t n, float scale, const T* x, 
 
 template<typename T>
 void FusedDropoutKernel(ep::Stream* stream, const int64_t elem_cnt,
-                        const std::shared_ptr<one::CPUGeneratorImpl>& cpu_gen, const float rate,
+                        const std::shared_ptr<ep::CPUGenerator>& cpu_gen, const float rate,
                         float scale, const T* x, bool* mask, T* y) {
   /*
   `uniform_real_distribution` interval is [a, b).
@@ -74,8 +74,8 @@ class DropoutKernelCPU final : public user_op::OpKernel {
     CHECK_NOTNULL(fused_dropout_kernel_state);
     const auto& generator = fused_dropout_kernel_state->generator();
     CHECK_NOTNULL(generator);
-    std::shared_ptr<one::CPUGeneratorImpl> cpu_generator =
-        CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
+    std::shared_ptr<ep::CPUGenerator> cpu_generator =
+        CHECK_JUST(generator->Get<ep::CPUGenerator>());
 
     FusedDropoutKernel<T>(ctx->stream(), in->shape_view().elem_cnt(), cpu_generator, rate, scale,
                           in->dptr<T>(), mask->mut_dptr<bool>(), out->mut_dptr<T>());

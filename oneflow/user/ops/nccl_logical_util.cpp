@@ -14,26 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "mlir/Dialect/PDL/IR/PDL.h"
-#include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
-#include "mlir/Parser/Parser.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassManager.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "OneFlow/OneFlowPDLLPatterns.h"
-
-using namespace mlir;
-
-#include "oneflow/ir/lib/OneFlow/PDLL/ElementwiseFusionPatterns.h.inc"
-
-namespace mlir {
+#include "oneflow/user/ops/nccl_logical_util.h"
 
 namespace oneflow {
 
-void populateElementwiseFusionPatterns(RewritePatternSet& patterns) {
-  populateGeneratedPDLLPatterns(patterns);
+std::string GetCommKeyFromNcclType(const std::string& op_type_name) {
+  if (op_type_name == "_nccl_logical_2D_same_dim0_all_reduce"
+      || op_type_name == "_nccl_logical_2D_same_dim0_all_gather"
+      || op_type_name == "_nccl_logical_2D_same_dim0_all_gather_noncontinuous"
+      || op_type_name == "_nccl_logical_2D_same_dim0_all2all") {
+    return "SameDim0";
+  }
+  if (op_type_name == "_nccl_logical_2D_same_dim1_all_reduce") { return "SameDim1"; }
+  return "";
 }
 
 }  // namespace oneflow
-
-}  // namespace mlir

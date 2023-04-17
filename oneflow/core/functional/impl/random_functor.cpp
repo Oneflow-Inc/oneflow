@@ -188,6 +188,7 @@ class RandFunctor {
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
     if (GlobalMode::is_enabled()) {
+      auto global_mode_gurad = GlobalMode::Guard(false);
       return JUST(functional::GlobalRand(shape, GetGlobalParallelDescFromDevice(device),
                                          *JUST(GetSbpList(GlobalMode::nd_sbp())), dtype, generator,
                                          requires_grad));
@@ -264,6 +265,7 @@ class RandNFunctor {
                            const Optional<one::Generator>& generator, const bool& requires_grad,
                            const Symbol<Layout>& layout) const {
     if (GlobalMode::is_enabled()) {
+      auto global_mode_gurad = GlobalMode::Guard(false);
       return JUST(functional::GlobalRandN(shape, GetGlobalParallelDescFromDevice(device),
                                           *JUST(GetSbpList(GlobalMode::nd_sbp())), dtype, generator,
                                           requires_grad));
@@ -476,6 +478,7 @@ class RandIntFunctor {
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
     if (GlobalMode::is_enabled()) {
+      auto global_mode_gurad = GlobalMode::Guard(false);
       return JUST(functional::GlobalRandInt(
           low, high, shape, GetGlobalParallelDescFromDevice(device),
           *JUST(GetSbpList(GlobalMode::nd_sbp())), dtype, generator, requires_grad));
@@ -618,6 +621,7 @@ class RandPermFunctor {
                            const Symbol<DType>& dtype, const Optional<Symbol<Device>>& device,
                            const bool& requires_grad) const {
     if (GlobalMode::is_enabled()) {
+      auto global_mode_gurad = GlobalMode::Guard(false);
       return JUST(functional::GlobalRandPerm(n, GetGlobalParallelDescFromDevice(device),
                                              *JUST(GetSbpList(GlobalMode::nd_sbp())), generator,
                                              dtype, requires_grad));

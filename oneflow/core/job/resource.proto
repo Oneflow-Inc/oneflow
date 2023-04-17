@@ -46,8 +46,6 @@ message Resource {
   optional int64 thread_local_cache_max_size = 17 [default = 67108864]; // 64M
   optional bool enable_debug_mode = 18 [default = false];
   optional bool enable_tensor_float_32_compute = 20 [default = true];
-  // NOTE(chengcheng): mem chain merge has an implicit correctness bug under boundary conditions.
-  optional bool enable_mem_chain_merge = 21 [default = false];
   
   optional CollectiveBoxingConf collective_boxing_conf = 19;
 

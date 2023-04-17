@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include <cuda.h>
+#include "oneflow/core/common/math_util.h"
 
 namespace oneflow {
 namespace ep {
@@ -223,6 +224,65 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTrunc, double, double> {
   OF_DEVICE_FUNC double operator()(double src) const { return trunc(src); }
 };
 
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kDigamma, Dst, Src> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src in) const {
+    // references
+    // https://github.com/pytorch/pytorch/blob/release/1.13/aten/src/ATen/native/cuda/Math.cuh#L3029-L3090
+    static const double PI_f64 = 3.14159265358979323846;
+    const Src PSI_10 = 2.25175258906672110764;
+    const Src A[] = {
+        8.33333333333333333333E-2,  -2.10927960927960927961E-2, 7.57575757575757575758E-3,
+        -4.16666666666666666667E-3, 3.96825396825396825397E-3,  -8.33333333333333333333E-3,
+        8.33333333333333333333E-2,
+    };
+
+    Src x = static_cast<Src>(in);
+    if (x == static_cast<Src>(0)) {
+      // As per C++ standard for gamma related functions and SciPy,
+      // If the argument is ±0, ±∞ is returned
+      return std::copysign(static_cast<Src>(INFINITY), -x);
+    }
+
+    bool x_is_integer = x == trunc(x);
+    Src result = static_cast<Src>(0);
+    if (x < 0) {
+      if (x_is_integer) {
+        // As per C++ standard for gamma related functions and SciPy,
+        // If the argument is a negative integer, NaN is returned
+        return static_cast<Src>(NAN);
+      }
+      // Extracts the fractional part of x as r, since tan(pi * r) is more numerically
+      // accurate than tan(pi * x). While these operations are mathematically equivalent
+      // since both x and r are in radians and tan() has a periodicity of pi, in practice
+      // the computation of pi * x is a source of error (when |x| > 1).
+      double q, r;
+      r = modf(static_cast<double>(x), &q);
+      result = static_cast<Src>(-PI_f64 / tan(PI_f64 * r));
+      x = static_cast<Src>(1) - x;
+    }
+
+    while (x < 10) {
+      result -= static_cast<Src>(1) / x;
+      x += 1;
+    }
+    if (x == static_cast<Src>(10)) { return static_cast<Src>(result + PSI_10); }
+
+    Src y = 0;
+    if (x < 1.0e17) {
+      Src z = static_cast<Src>(1) / (x * x);
+
+      Src polevl_result = 0;
+      for (int i = 0; i <= 6; i++) { polevl_result = polevl_result * z + A[i]; }
+      y = z * polevl_result;
+    }
+
+    return static_cast<Src>(log(x) - (static_cast<Src>(0.5) / x) - y + result);
+  }
+};
+
 template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kAbs, half, half> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
@@ -351,6 +411,7 @@ SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kAtanh);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kCeil);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kCos);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kCosh);
+SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kDigamma);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kErf);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kErfc);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kExp);
@@ -443,6 +504,7 @@ SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kNotEqualZero);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kNanAssign);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kFastGelu);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kQuickGelu);
+SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kDigamma);
 
 template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsInf, bool, nv_bfloat16> {
