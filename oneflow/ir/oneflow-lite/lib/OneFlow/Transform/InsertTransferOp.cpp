@@ -74,7 +74,7 @@ void InsertTransferOpPass::runOnOperation() {
             builder.create<oneflow::CopyOp>(op->getLoc(), op->getResultTypes(), operands, attrs);
 
         for (OpOperand* operand : it.second) {
-          operand->getOwner()->setOperand(operand->getOperandNumber(), copy_op.out());
+          operand->getOwner()->setOperand(operand->getOperandNumber(), copy_op.getOut());
         }
       }
     }

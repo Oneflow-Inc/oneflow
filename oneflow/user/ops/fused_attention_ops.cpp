@@ -632,4 +632,178 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   return Maybe<void>::Ok();
 }
 
+/* static */ Maybe<void> FusedApplyRotaryEmbOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
+  const std::string& x_layout = ctx->Attr<std::string>("x_layout");
+  const std::string& output_layout = ctx->Attr<std::string>("output_layout");
+  const std::string& mode = ctx->Attr<std::string>("mode");
+  const int64_t rotary_size = ctx->Attr<int64_t>("rotary_size");
+  const int64_t k_size = ctx->Attr<int64_t>("k_size");
+  const int64_t tensor_index = ctx->Attr<int64_t>("tensor_index");
+
+  CHECK_OR_RETURN((tensor_index >= 0) && (tensor_index <= 2))
+      << "tensor_index should be in range [0, 2].";
+  CHECK_OR_RETURN((mode == "interval") || (mode == "plane"))
+      << "mode should be either \"interval\" or \"plane\".";
+
+  CHECK_OR_RETURN(output_layout != "BM(H2K)" && output_layout != "BM(H3K)"
+                  && output_layout != "MB(H2K)" && output_layout != "MB(H3K)")
+      << "output_layout should not be \"BM(H2k)\", \"BM(H3K)\", \"MB(H2K)\", \"MB(H3K)\".";
+
+  int64_t b = 0, m = 0, h = 0, k = 0;
+
+  JUST(ParseDims(x_desc.shape(), x_layout, Optional<int64_t>(), Optional<int64_t>(k_size), &b, &m,
+                 &h, &k));
+
+  CHECK_LE_OR_RETURN(rotary_size, k) << "rotary_size should be no more than K of input x.";
+
+  int64_t rotary_emb_dim = 1;
+
+  if (ctx->has_input("position_ids", 0)) {
+    const user_op::TensorDesc& position_ids_desc = ctx->InputTensorDesc("position_ids", 0);
+    CHECK_EQ_OR_RETURN(position_ids_desc.shape().NumAxes(), 3)
+        << "ndims of position_ids should be equal to 3, either in form of B1M or B2M.";
+    CHECK_EQ_OR_RETURN(position_ids_desc.shape().At(0), b)
+        << "1st dim of position_ids should be equal to B.";
+    CHECK_EQ_OR_RETURN(position_ids_desc.shape().At(2), m)
+        << "3rd dim of position_ids should be equal to M.";
+    rotary_emb_dim = position_ids_desc.shape().At(1);
+    CHECK_OR_RETURN(rotary_emb_dim == 1 || rotary_emb_dim == 2)
+        << "2nd dim of position_ids should be 1 or 2.";
+  }
+
+  const int64_t actual_rotary_size = rotary_size / rotary_emb_dim;
+  CHECK_EQ_OR_RETURN(actual_rotary_size % 2, 0)
+      << "rotary_size should be a multiple of 2 * rotary_encoding_dim.";
+
+  bool has_cos = ctx->has_input("cos", 0);
+  bool has_sin = ctx->has_input("sin", 0);
+  // TODO: fused_apply_rotary_emb have same logic no matter name
+  if (has_cos && has_sin) {
+    const user_op::TensorDesc& cos_desc = ctx->InputTensorDesc("cos", 0);
+    const user_op::TensorDesc& sin_desc = ctx->InputTensorDesc("sin", 0);
+    CHECK_EQ_OR_RETURN(cos_desc.shape().NumAxes(), 2)
+        << "The number of dimensions of cos should be equal to 2.";
+    CHECK_OR_RETURN(cos_desc.shape() == sin_desc.shape())
+        << "The dimensions of cos & sin should be the same.";
+    CHECK_EQ_OR_RETURN(cos_desc.shape().At(1), actual_rotary_size)
+        << "The 1st dimension of cos & sin should equal to rotary_size // "
+           "rotary_embedding_dimension.";
+  } else if (!has_cos && !has_sin) {
+    // Do nothing
+  } else {
+    UNIMPLEMENTED_THEN_RETURN();
+  }
+
+  if (!ctx->has_input("position_ids", 0)) {
+    if (has_cos && has_sin) {
+      const user_op::TensorDesc& cos_desc = ctx->InputTensorDesc("cos", 0);
+      CHECK_GE_OR_RETURN(cos_desc.shape().At(0), m)
+          << "M of cos should be no less than M of x if position_ids is not given.";
+      // K of cos & sin is checked inside ParseDims
+    }
+  }
+
+  Shape out_shape = *JUST(LayoutToShape(b, m, h, k, output_layout));
+  ctx->SetOutputShape("out", 0, out_shape);
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> FusedApplyRotaryEmbOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> FusedApplyRotaryEmbOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& x_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+  int num_heads = -1;
+  const int64_t k_size = ctx->Attr<int64_t>("k_size");
+  const std::string& x_layout = ctx->Attr<std::string>("x_layout");
+  const std::string& output_layout = ctx->Attr<std::string>("output_layout");
+  if (x_desc.shape().NumAxes() == 2) {
+    if (x_layout == "(BM)(HK)") {
+      CHECK_EQ_OR_RETURN(x_desc.shape().At(1) % k_size, 0);
+      num_heads = x_desc.shape().At(1) / k_size;
+    } else if (x_layout == "(BM)(H3K)") {
+      CHECK_EQ_OR_RETURN(x_desc.shape().At(1) % (k_size * 3), 0);
+      num_heads = x_desc.shape().At(1) / (k_size * 3);
+    } else {
+      UNIMPLEMENTED_THEN_RETURN();
+    }
+  } else if (x_desc.shape().NumAxes() == 3) {
+    if (x_layout == "BM(HK)" || x_layout == "MB(HK)") {
+      CHECK_EQ_OR_RETURN(x_desc.shape().At(2) % k_size, 0);
+      num_heads = x_desc.shape().At(2) / k_size;
+    } else if (x_layout == "BM(H3K)" || x_layout == "MB(H3K)") {
+      CHECK_EQ_OR_RETURN(x_desc.shape().At(2) % (k_size * 3), 0);
+      num_heads = x_desc.shape().At(2) / (k_size * 3);
+    } else if (x_layout == "(BM)HK") {
+      num_heads = x_desc.shape().At(1);
+    } else {
+      UNIMPLEMENTED_THEN_RETURN();
+    }
+  } else if (x_desc.shape().NumAxes() == 4) {
+    if (x_layout == "BMHK") {
+      num_heads = x_desc.shape().At(2);
+    } else if (x_layout == "BHMK") {
+      num_heads = x_desc.shape().At(1);
+    } else {
+      UNIMPLEMENTED_THEN_RETURN();
+    }
+  } else {
+    UNIMPLEMENTED_THEN_RETURN();
+  }
+  const bool can_hk_split = num_heads % ctx->parallel_num() == 0;
+  int64_t x_b_split_axis = -1;
+  int64_t x_h_split_axis = -1;
+  JUST(ParseSplitAxis(x_layout, can_hk_split, &x_b_split_axis, &x_h_split_axis));
+  int64_t o_b_split_axis = -1;
+  int64_t o_h_split_axis = -1;
+  JUST(ParseSplitAxis(output_layout, can_hk_split, &o_b_split_axis, &o_h_split_axis));
+  if (x_b_split_axis >= 0 && o_b_split_axis >= 0) {
+    auto builder = ctx->NewBuilder()
+                       .Split(user_op::OpArg("x", 0), x_b_split_axis)
+                       .Split(user_op::OpArg("out", 0), o_b_split_axis);
+    if (ctx->user_op_conf().has_input("cos", 0))
+      builder = builder.Broadcast(user_op::OpArg("cos", 0)).Broadcast(user_op::OpArg("sin", 0));
+    if (ctx->user_op_conf().has_input("position_ids", 0))
+      builder = builder.Split(user_op::OpArg("position_ids", 0), 0);
+    builder.Build();
+  }
+  if (x_h_split_axis >= 0 && o_h_split_axis >= 0) {
+    auto builder = ctx->NewBuilder()
+                       .Split(user_op::OpArg("x", 0), x_h_split_axis)
+                       .Split(user_op::OpArg("out", 0), o_h_split_axis);
+    if (ctx->user_op_conf().has_input("cos", 0))
+      builder = builder.Broadcast(user_op::OpArg("cos", 0)).Broadcast(user_op::OpArg("sin", 0));
+    if (ctx->user_op_conf().has_input("position_ids", 0))
+      builder = builder.Broadcast(user_op::OpArg("position_ids", 0));
+    builder.Build();
+  }
+
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> FusedApplyRotaryEmbOp::InferDataType(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& first_in_desc = ctx->InputTensorDesc("x", 0);
+
+  bool has_sinuous = ctx->has_input("cos", 0);
+
+  if (has_sinuous) {
+    const user_op::TensorDesc& cos_desc = ctx->InputTensorDesc("cos", 0);
+    const user_op::TensorDesc& sin_desc = ctx->InputTensorDesc("sin", 0);
+
+    CHECK_EQ_OR_RETURN(cos_desc.data_type(), first_in_desc.data_type())
+        << "InferDataType Failed. Expected " << DataType_Name(first_in_desc.data_type())
+        << ", but got " << DataType_Name(cos_desc.data_type());
+    CHECK_EQ_OR_RETURN(sin_desc.data_type(), first_in_desc.data_type())
+        << "InferDataType Failed. Expected " << DataType_Name(first_in_desc.data_type())
+        << ", but got " << DataType_Name(sin_desc.data_type());
+  }
+
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
+  out_desc->set_data_type(first_in_desc.data_type());
+
+  return Maybe<void>::Ok();
+}
+
 }  // namespace oneflow

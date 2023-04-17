@@ -167,7 +167,7 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "relu_grad",
                                "transpose",
                                "random_mask_like",
-                               "concat",
+                               "cat",
                                "split_like",
                                "pad",
                                "same_padding",

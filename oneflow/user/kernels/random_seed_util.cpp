@@ -77,9 +77,9 @@ Maybe<one::Generator> GetGeneratorForLazyOrGlobal(const std::shared_ptr<one::Gen
   bool is_global = placement.has_value() && nd_sbp.has_value();
   if (!is_lazy && !is_global) { return generator; }
 
-  auto cpu_gen_impl = JUST(generator->Get<one::CPUGeneratorImpl>(0));
-  CHECK_OR_RETURN(cpu_gen_impl) << "expect a CPUGeneratorImpl";
-  uint64_t init_seed = cpu_gen_impl->engine()();
+  auto cpu_gen = JUST(generator->Get<ep::CPUGenerator>(0));
+  CHECK_OR_RETURN(cpu_gen) << "expect a CPUGenerator";
+  uint64_t init_seed = cpu_gen->engine()();
   auto new_gen = JUST(one::MakeGenerator(JUST(generator->device())->type()));
   if (is_lazy) {
     new_gen->set_current_seed(init_seed);

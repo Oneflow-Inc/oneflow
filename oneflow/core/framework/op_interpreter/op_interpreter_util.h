@@ -57,9 +57,6 @@ class OpInterpUtil {
   static Maybe<void> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
                               TensorTuple* outputs, const OpExprInterpContext& ctx);
 
-  static Maybe<OpAttribute> AddOpAndInferOpAttribute(const OperatorConf& op_conf,
-                                                     const bool is_local_strategy_enabled);
-
   static Maybe<OperatorConf> GenBuiltinOpConf(const BuiltinOpExpr& op_expr, const AttrMap& attrs);
 };
 

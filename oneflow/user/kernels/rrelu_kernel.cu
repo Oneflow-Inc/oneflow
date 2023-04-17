@@ -105,8 +105,8 @@ class CudaRReluKernel final : public user_op::OpKernel {
     CHECK_NOTNULL(generator);
     ep::CudaStream* cuda_stream = ctx->stream()->As<ep::CudaStream>();
     const auto device_index = ctx->stream()->device()->device_index();
-    std::shared_ptr<one::CUDAGeneratorImpl> cuda_gen =
-        CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>(device_index));
+    std::shared_ptr<ep::CUDAGenerator> cuda_gen =
+        CHECK_JUST(generator->Get<ep::CUDAGenerator>(device_index));
     auto execution_policy = cuda_gen->CalcExecutionPolicy(size, cuda_stream);
     auto counter_offset = std::get<0>(execution_policy);
     uint64_t seed = cuda_gen->current_seed();

@@ -15,6 +15,8 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
 
+#include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/eager/tensor_storage.h"
 #include "oneflow/core/framework/saved_tensor_hooks.h"
 
 namespace oneflow {
@@ -41,6 +43,12 @@ size_t AutoGradCaptureState::SaveTensorForBackward(const std::shared_ptr<Tensor>
     return offset;
   } else {
     size_t offset = saved_tensors_.size();
+    if (tensor->is_local() && tensor->is_eager()) {
+      if (auto rematable_storage = std::dynamic_pointer_cast<vm::RematableTensorStorage>(
+              CHECK_JUST(tensor->eager_blob_object())->tensor_storage())) {
+        rematable_storage->set_needed_by_backward();
+      }
+    }
     saved_tensors_.emplace_back(tensor);
     return offset;
   }
