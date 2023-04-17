@@ -54,7 +54,7 @@ jobs:
           echo "changed_python_tests=${ONEFLOW_TEST_FILES}" >> $GITHUB_OUTPUT
     outputs:
       changed_python_tests: ${{ steps.py-diff.outputs.changed_python_tests }}
-      has_changed_python_tests: ${{ steps.py-diff.outputs.has_changed_python_tests }}
+      has_changed_python_tests: ${{ steps.py-diff.outputs.has_changed_python_tests == 'true' }}
 
   mirror_third_party:
     name: Mirror third party dependencies
@@ -1022,7 +1022,7 @@ jobs:
             })
       - name: Run tests in changed files compared to default branch 100 times
         timeout-minutes: 60
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) && needs.source_info.outputs.has_changed_python_tests == 'true' }}
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) && needs.source_info.outputs.has_changed_python_tests }}
         run: |
           docker exec -e ONEFLOW_TEST_DIR=diff \
             -e ONEFLOW_TEST_FILES="${{needs.source_info.outputs.changed_python_tests}}" \
