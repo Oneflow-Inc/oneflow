@@ -38,7 +38,7 @@ void NormalDistribution<DeviceType::kCUDA, T>::operator()(
   CHECK_GE(elem_cnt, 0);
   if (elem_cnt == 0) return;
   const auto device_index = stream->device()->device_index();
-  auto gen = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>(device_index));
+  auto gen = CHECK_JUST(generator->Get<ep::CUDAGenerator>(device_index));
 
   ep::CudaStream* cuda_stream = stream->As<ep::CudaStream>();
   auto execution_policy = gen->CalcExecutionPolicy(elem_cnt, cuda_stream);
