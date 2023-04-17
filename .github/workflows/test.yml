@@ -46,10 +46,10 @@ jobs:
           ONEFLOW_TEST_FILES=$(echo "${ONEFLOW_TEST_FILES}" | xargs)
           if [ -z "$ONEFLOW_TEST_FILES" ]; then
               echo "no changed python tests"
-              echo "has_changed_python_tests=false"
+              echo "has_changed_python_tests=false" >> $GITHUB_OUTPUT
           else
               echo "changed python tests: ${ONEFLOW_TEST_FILES}"
-              echo "has_changed_python_tests=true"
+              echo "has_changed_python_tests=true" >> $GITHUB_OUTPUT
           fi
           echo "changed_python_tests=${ONEFLOW_TEST_FILES}" >> $GITHUB_OUTPUT
     outputs:
