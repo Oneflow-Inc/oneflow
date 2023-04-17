@@ -54,6 +54,7 @@ class TensorWithDataFunctor {
     //  its a eager tensor by Run functional::Empty() in LazyMode::Grad(false)
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     if (GlobalMode::is_enabled()) {
+      auto global_mode_gurad = GlobalMode::Guard(false);
       return JUST(
           functional::GlobalTensorWithData(data, dtype, GetGlobalParallelDescFromDevice(device),
                                            *JUST(GetSbpList(GlobalMode::nd_sbp())), requires_grad));
@@ -334,7 +335,7 @@ class LocalTensorSharedNumpyDataFunctor {
     };
 
     const auto array_size_in_bytes = PyArray_NBYTES(array);
-    auto tensor_data = std::make_shared<vm::TensorStorage>(false);
+    auto tensor_data = std::make_shared<vm::TensorStorage>(false, device);
     tensor_data->set_blob_dptr(
         std::unique_ptr<char, std::function<void(char*)>>(static_cast<char*>(data_ptr), Free),
         array_size_in_bytes);

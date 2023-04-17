@@ -140,7 +140,7 @@ static flatbuffers_vec_ref_t createLiteVariableOpAttrs(FlatbufferBuilder& builde
     oneflow_lite_AttrDef_type_add(builder, builder.createString("dtype"));
     oneflow_lite_AttrDef_key_add(builder, builder.createString("dtype"));
     FlatbufferBuilder attrBuilder;
-    serializeDataTypeAttr(attrBuilder, op.data_typeAttr());
+    serializeDataTypeAttr(attrBuilder, op.getDataTypeAttr());
     oneflow_lite_AttrDef_value_add(builder, builder.streamUint8Vec([&](llvm::raw_ostream& stream) {
       if (failed(attrBuilder.copyToStream(stream))) { return false; }
       return true;
@@ -152,7 +152,7 @@ static flatbuffers_vec_ref_t createLiteVariableOpAttrs(FlatbufferBuilder& builde
     oneflow_lite_AttrDef_type_add(builder, builder.createString("shape"));
     oneflow_lite_AttrDef_key_add(builder, builder.createString("shape"));
     FlatbufferBuilder attrBuilder;
-    serializeShapeAttr(attrBuilder, op.shapeAttr());
+    serializeShapeAttr(attrBuilder, op.getShapeAttr());
     oneflow_lite_AttrDef_value_add(builder, builder.streamUint8Vec([&](llvm::raw_ostream& stream) {
       if (failed(attrBuilder.copyToStream(stream))) { return false; }
       return true;
@@ -165,7 +165,7 @@ static flatbuffers_vec_ref_t createLiteVariableOpAttrs(FlatbufferBuilder& builde
   oneflow_lite_AttrDef_key_add(builder, builder.createString("value"));
 
   llvm::SmallString<128> inputFilename;
-  llvm::sys::path::native(checkpointDir + "/" + op.op_name() + "/out", inputFilename);
+  llvm::sys::path::native(checkpointDir + "/" + op.getOpName() + "/out", inputFilename);
   std::string errorMessage;
   auto input = mlir::openInputFile(inputFilename, &errorMessage);
   if (!input) {
@@ -188,13 +188,13 @@ static oneflow_lite_OpDef_ref_t createLiteVariableOpDef(
   oneflow_lite_OpDef_name_add(builder, builder.createString("constant"));
   oneflow_lite_OpDef_inputs_add(builder, 0);
 
-  auto index = valueOrdering.try_emplace(op.output(), valueOrdering.size()).first->second;
+  auto index = valueOrdering.try_emplace(op.getOutput(), valueOrdering.size()).first->second;
   oneflow_lite_OpDef_outputs_add(builder,
                                  builder.createInt32Vec(llvm::SmallVector<int32_t, 4>{index}));
 
   oneflow_lite_OpDef_attrs_add(builder, createLiteVariableOpAttrs(builder, op, checkpointDir));
 
-  auto it = deviceOrdering.find(op.device_tag());
+  auto it = deviceOrdering.find(op.getDeviceTag());
   assert(it != deviceOrdering.end());
   oneflow_lite_OpDef_device_add(builder, it->second);
   return oneflow_lite_OpDef_end(builder);
@@ -314,13 +314,13 @@ LogicalResult ConvertToLiteExecutable(MLIRContext* context, ModuleOp module, Con
   entryJobOp->walk([&](Operation* op) {
     if (!op->hasTrait<OpTrait::IsOpConfCompatible>()) { return; }
     if (auto inputOp = llvm::dyn_cast<InputOp>(op)) {
-      auto it = valueOrdering.try_emplace(inputOp.output(), valueOrdering.size()).first;
+      auto it = valueOrdering.try_emplace(inputOp.getOutput(), valueOrdering.size()).first;
       inputValueOrdering.push_back(it->second);
       inputValueNames.push_back(
           op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
               .getValue());
     } else if (auto outputOp = llvm::dyn_cast<OutputOp>(op)) {
-      auto it = valueOrdering.try_emplace(outputOp.input(), valueOrdering.size()).first;
+      auto it = valueOrdering.try_emplace(outputOp.getInput(), valueOrdering.size()).first;
       outputValueOrdering.push_back(it->second);
       outputValueNames.push_back(
           op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())

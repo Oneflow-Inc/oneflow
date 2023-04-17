@@ -33,6 +33,14 @@ def _test_different_dtype(test_case, device, shape):
     test_case.assertTrue(np.array_equal(np.ones(shape, dtype=np.uint8), y2.numpy()))
     y3 = flow.ones(shape, dtype=flow.float64, device=flow.device(device))
     test_case.assertTrue(np.array_equal(np.ones(shape, dtype=np.float64), y3.numpy()))
+    y4 = flow.ones(shape, dtype=flow.short, device=flow.device(device))
+    test_case.assertTrue(np.array_equal(np.ones(shape, dtype=np.short), y4.numpy()))
+    y5 = flow.ones(shape, dtype=flow.int16, device=flow.device(device))
+    test_case.assertTrue(np.array_equal(np.ones(shape, dtype=np.int16), y5.numpy()))
+    y6 = flow.ones(shape, dtype=flow.char, device=flow.device(device))
+    test_case.assertTrue(np.array_equal(np.ones(shape, dtype=np.int8), y6.numpy()))
+    y7 = flow.ones(shape, dtype=flow.int8, device=flow.device(device))
+    test_case.assertTrue(np.array_equal(np.ones(shape, dtype=np.int8), y7.numpy()))
 
 
 @flow.unittest.skip_unless_1n1d()

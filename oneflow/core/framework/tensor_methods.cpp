@@ -95,8 +95,8 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                         const Stride& target_stride, const int64_t storage_offset) {
   auto device = JUST(input->device());
-  auto tensor_meta =
-      SymbolOf(LocalTensorMeta(target_shape, target_stride, input->dtype()->data_type(), device));
+  auto tensor_meta = SymbolOf(LocalTensorMeta(
+      target_shape, target_stride, input->dtype()->data_type(), device, /*is_view=*/true));
 
   CHECK_OR_RETURN(JUST(input->has_eager_blob_object()));
   // new output tensor
@@ -113,6 +113,7 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object =
       JUST(view_tensor->eager_blob_object());
   view_eager_blob_object->set_storage_offset(JUST(view_tensor->storage_offset()));
+  view_eager_blob_object->set_input_of_view_op(blob_object);
   return std::static_pointer_cast<Tensor>(view_tensor);
 }
 
