@@ -5060,7 +5060,7 @@ def OneFlow_ErfInvOp : OneFlow_BaseOp<"erfinv", [NoMemoryEffect, DeclareOpInterf
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FftC2COp : OneFlow_BaseOp<"fft_c2c", [SupportNonContiguous,NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FftC2COp : OneFlow_BaseOp<"fft_c2c", [SupportNonContiguous, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$input
   );
@@ -5081,7 +5081,7 @@ def OneFlow_FftC2COp : OneFlow_BaseOp<"fft_c2c", [SupportNonContiguous,NoSideEff
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FftR2COp : OneFlow_BaseOp<"fft_r2c", [SupportNonContiguous,NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FftR2COp : OneFlow_BaseOp<"fft_r2c", [SupportNonContiguous, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$input
   );
@@ -5103,7 +5103,7 @@ def OneFlow_FftR2COp : OneFlow_BaseOp<"fft_r2c", [SupportNonContiguous,NoSideEff
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FftC2ROp : OneFlow_BaseOp<"fft_c2r", [SupportNonContiguous,NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FftC2ROp : OneFlow_BaseOp<"fft_c2r", [SupportNonContiguous, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$input
   );
@@ -5125,7 +5125,7 @@ def OneFlow_FftC2ROp : OneFlow_BaseOp<"fft_c2r", [SupportNonContiguous,NoSideEff
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_StftOp : OneFlow_BaseOp<"stft", [SupportNonContiguous,NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_StftOp : OneFlow_BaseOp<"stft", [SupportNonContiguous, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$input,
     Optional<OneFlow_Tensor>:$window
