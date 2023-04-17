@@ -65,7 +65,7 @@ RematableTensorStorage::RematableTensorStorage(Symbol<Device> device)
       num_pinned_(0),
       last_access_time_(0),
       compute_time_(0) {
-      CHECK(!device_->rematable());
+  CHECK(!device_->rematable());
   VLOG(1) << "create rematable storage " << id_;
 }
 
