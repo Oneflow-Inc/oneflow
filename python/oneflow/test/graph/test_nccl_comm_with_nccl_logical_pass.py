@@ -96,9 +96,8 @@ class _TestGraph(nn.Graph):
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
-    def test_lazy_boxing_2d_all_combination(test_case):
-        os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "0"
-        os.environ["ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION"] = "0"
+    def test_lazy_boxing_2d_all_combination_diff_hierarchy(test_case):
+        os.environ["ONEFLOW_GRAPH_MAX_NCCL_COMPUTE_STREAM"] = "1"
 
         x = flow.ones(
             4,
@@ -110,15 +109,37 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
             ),
         )
 
-        flow.boxing.nccl.enable_use_compute_stream(False)
+        flow.boxing.nccl.enable_use_compute_stream(True)
 
         model_diff_hierarchy = _TestModuleDiffHierarchy()
         graph_diff_hierarchy = _TestGraph(model_diff_hierarchy)
         y = graph_diff_hierarchy(x)
 
+        os.environ["ONEFLOW_GRAPH_MAX_NCCL_COMPUTE_STREAM"] = "8"
+        flow.boxing.nccl.enable_use_compute_stream(False)
+
+    def test_lazy_boxing_2d_all_combination_diff_placement(test_case):
+        os.environ["ONEFLOW_GRAPH_MAX_NCCL_COMPUTE_STREAM"] = "1"
+
+        x = flow.ones(
+            4,
+            12,
+            4,
+            sbp=[flow.sbp.broadcast, flow.sbp.broadcast],
+            placement=flow.placement(
+                type="cuda", ranks=np.array(range(4)).reshape(2, 2)
+            ),
+        )
+
+        flow.boxing.nccl.enable_use_compute_stream(True)
+
         model_diff_placement = _TestModuleDiffPlacement()
         graph_diff_placement = _TestGraph(model_diff_placement)
         z = graph_diff_placement(x)
+
+        os.environ["ONEFLOW_GRAPH_MAX_NCCL_COMPUTE_STREAM"] = "8"
+        flow.boxing.nccl.enable_use_compute_stream(False)
+
 
 if __name__ == "__main__":
     unittest.main()
