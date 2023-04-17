@@ -175,6 +175,8 @@ value_aliases = {
     "kFloat": "DType::Float()",
     "kDouble": "DType::Double()",
     "kBool": "DType::Bool()",
+    "kNHWC": "MemoryFormat::kNHWC",
+    "kNCHW": "MemoryFormat::kNCHW",
 }
 
 

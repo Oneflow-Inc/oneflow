@@ -1258,9 +1258,10 @@ class AdaptivePoolNDFunctor {
   AdaptivePoolNDFunctor() = default;
   virtual ~AdaptivePoolNDFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::vector<int64_t>& output_size) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("output_size");
-    attrs.SetAllAttrs(output_size);
+                           const std::vector<int64_t>& output_size,
+                           const std::string& data_format) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("output_size", "data_format");
+    attrs.SetAllAttrs(output_size, data_format);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 

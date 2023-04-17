@@ -363,6 +363,7 @@ class OneFlow_AdaptivePoolBaseOp<string mnemonic, list<Trait> traits = []> :
   );
   let output = (outs AnyType:$y);
   let attrs = (ins
+    StrAttr:$data_format,
     SI64ArrayAttr:$output_size
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -380,6 +381,7 @@ class OneFlow_AdaptivePoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
   );
   let output = (outs AnyType:$dx);
   let attrs = (ins
+    StrAttr:$data_format,
     SI64ArrayAttr:$output_size
   );
   let has_logical_tensor_desc_infer_fn = 1;
