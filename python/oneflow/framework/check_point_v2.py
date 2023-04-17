@@ -703,6 +703,8 @@ def save(
         _save_graph(obj, path_or_buffer)
         return
 
+    if isinstance(path_or_buffer, str):
+        path_or_buffer = Path(path_or_buffer)
     # this `path` is only used for `ContextData` and is set to empty when `path_or_buffer` is IO[bytes] or BinaryIO
     path: Path = Path(path_or_buffer if _is_path(path_or_buffer) else "")
     obj = {"protocol_version": PROTOCOL_VERSION, ONEFLOW_MAGIC_KEY: None, "data": obj}
@@ -711,7 +713,6 @@ def save(
         pickled_bytes = pickle.dumps(obj)
 
     if _is_path(path_or_buffer) and save_as_external_data:
-        path_or_buffer: Path = Path(path_or_buffer)
         path_or_buffer.mkdir(exist_ok=True)
         path_or_buffer = path_or_buffer / PICKLE_FILENAME
 
