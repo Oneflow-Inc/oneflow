@@ -697,6 +697,9 @@ def save(
         save_as_external_data (bool): useful only if path_or_buffer is a string or
            os.PathLike object containing a file name
     """
+    if isinstance(path_or_buffer, str):
+        path_or_buffer = Path(path_or_buffer)
+
     if isinstance(obj, graph_util.Graph):
         if not _is_path(path_or_buffer):
             raise ValueError(
@@ -705,8 +708,6 @@ def save(
         _save_graph(obj, path_or_buffer)
         return
 
-    if isinstance(path_or_buffer, str):
-        path_or_buffer = Path(path_or_buffer)
     # this `path` is only used for `ContextData` and is set to empty when `path_or_buffer` is IO[bytes] or BinaryIO
     path: Path = Path(path_or_buffer if _is_path(path_or_buffer) else "")
     obj = {"protocol_version": PROTOCOL_VERSION, ONEFLOW_MAGIC_KEY: None, "data": obj}
