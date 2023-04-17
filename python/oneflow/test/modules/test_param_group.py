@@ -48,7 +48,7 @@ class TestParamGroup(flow.unittest.TestCase):
         test_case.assertTrue(
             np.array_equal(pg.get("test_tensor").numpy(), flow.ones(10).numpy())
         )
-        test_case.assertTrue(pg["test_str"] == "test")
+        test_case.assertEqual(pg["test_str"], "test")
         test_case.assertTrue("params" in pg.keys())
         test_case.assertTrue(
             np.array_equal(pg["params"][0].numpy(), flow.ones(10).numpy())
