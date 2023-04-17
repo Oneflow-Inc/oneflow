@@ -114,7 +114,6 @@ struct UnaryFuncExp<half> final {
   }
 };
 
-
 template<>
 struct UnaryFuncNegative<cuComplex> final {
   static __device__ __forceinline__ const cuComplex Invoke(const cuComplex x) {

@@ -399,13 +399,15 @@ struct BinaryFuncMin<half> final {
 
 template<>
 struct BinaryFuncAdd<cuComplex> final {
-  static __device__ __forceinline__ cuComplex Invoke(const cuComplex x, const cuComplex y) { return cuComplex{x.x + y.x, x.y + y.y}; }
+  static __device__ __forceinline__ cuComplex Invoke(const cuComplex x, const cuComplex y) {
+    return cuComplex{x.x + y.x, x.y + y.y};
+  }
 };
 
 template<>
 struct BinaryFuncSub<cuComplex> final {
   static __device__ __forceinline__ cuComplex Invoke(const cuComplex x, const cuComplex y) {
-    return cuComplex{x.x - y.x, x.y - y.y}; 
+    return cuComplex{x.x - y.x, x.y - y.y};
   }
 };
 
@@ -418,19 +420,24 @@ struct BinaryFuncMul<cuComplex> final {
 
 template<>
 struct BinaryFuncAdd<cuDoubleComplex> final {
-  static __device__ __forceinline__ cuDoubleComplex Invoke(const cuDoubleComplex x, const cuDoubleComplex y) { return cuDoubleComplex{x.x + y.x, x.y + y.y}; }
+  static __device__ __forceinline__ cuDoubleComplex Invoke(const cuDoubleComplex x,
+                                                           const cuDoubleComplex y) {
+    return cuDoubleComplex{x.x + y.x, x.y + y.y};
+  }
 };
 
 template<>
 struct BinaryFuncSub<cuDoubleComplex> final {
-  static __device__ __forceinline__ cuDoubleComplex Invoke(const cuDoubleComplex x, const cuDoubleComplex y) {
-    return cuDoubleComplex{x.x - y.x, x.y - y.y}; 
+  static __device__ __forceinline__ cuDoubleComplex Invoke(const cuDoubleComplex x,
+                                                           const cuDoubleComplex y) {
+    return cuDoubleComplex{x.x - y.x, x.y - y.y};
   }
 };
 
 template<>
 struct BinaryFuncMul<cuDoubleComplex> final {
-  static __device__ __forceinline__ cuDoubleComplex Invoke(const cuDoubleComplex x, const cuDoubleComplex y) {
+  static __device__ __forceinline__ cuDoubleComplex Invoke(const cuDoubleComplex x,
+                                                           const cuDoubleComplex y) {
     return cuCmul(x, y);
   }
 };

@@ -125,11 +125,15 @@ def _test_ZeroPad2d(test_case, shape, padding, value, device):
     layer = flow.nn.ZeroPad2d(padding=padding)
     of_out = layer(of_input)
     np_out = np.pad(np_input, np_boundary, mode="constant", constant_values=value)
-    test_case.assertTrue(np.allclose(of_out.cpu().detach().numpy(), np_out, 1e-05, 1e-05))
+    test_case.assertTrue(
+        np.allclose(of_out.cpu().detach().numpy(), np_out, 1e-05, 1e-05)
+    )
     of_out = of_out.sum()
     of_out.backward()
     np_out_grad = _np_zero_pad2d_grad(np_out, np_input, layer.padding)
-    test_case.assertTrue(np.allclose(of_input.grad.cpu().detach().numpy(), np_out_grad, 1e-05, 1e-05))
+    test_case.assertTrue(
+        np.allclose(of_input.grad.cpu().detach().numpy(), np_out_grad, 1e-05, 1e-05)
+    )
 
 
 class TestTensorComplex64(unittest.TestCase):
@@ -216,7 +220,7 @@ class TestTensorComplex64(unittest.TestCase):
         assert np.allclose(
             np_slice_c, np.ones((2, 2), dtype=self.np_dtype) * (3.14 + 2j)
         )
-        
+
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_slice_cuda(self):
         a = flow.from_numpy(self.np_a).cuda()
@@ -416,8 +420,12 @@ class TestTensorComplex64(unittest.TestCase):
 
             # backward
             flow_ret.sum().backward()
-            compare_result(flow_x.grad.cpu().detach().numpy(), np.ones(input_shape), 1e-5, 1e-2)
-            compare_result(flow_y.grad.cpu().detach().numpy(), np.ones(input_shape), 1e-5, 1e-2)
+            compare_result(
+                flow_x.grad.cpu().detach().numpy(), np.ones(input_shape), 1e-5, 1e-2
+            )
+            compare_result(
+                flow_y.grad.cpu().detach().numpy(), np.ones(input_shape), 1e-5, 1e-2
+            )
 
     def test_sub(self):
         device = "cpu"
@@ -465,8 +473,12 @@ class TestTensorComplex64(unittest.TestCase):
 
             # backward
             flow_ret.sum().backward()
-            compare_result(flow_x.grad.cpu().detach().numpy(), np.ones(input_shape), 1e-5, 1e-2)
-            compare_result(flow_y.grad.cpu().detach().numpy(), -np.ones(input_shape), 1e-5, 1e-2)
+            compare_result(
+                flow_x.grad.cpu().detach().numpy(), np.ones(input_shape), 1e-5, 1e-2
+            )
+            compare_result(
+                flow_y.grad.cpu().detach().numpy(), -np.ones(input_shape), 1e-5, 1e-2
+            )
 
     def test_mul(self):
         device = "cpu"
@@ -514,8 +526,12 @@ class TestTensorComplex64(unittest.TestCase):
 
             # backward
             flow_ret.sum().backward()
-            compare_result(flow_x.grad.cpu().detach().numpy(), flow_y.numpy(), 1e-5, 1e-2)
-            compare_result(flow_y.grad.cpu().detach().numpy(), flow_x.numpy(), 1e-5, 1e-2)
+            compare_result(
+                flow_x.grad.cpu().detach().numpy(), flow_y.numpy(), 1e-5, 1e-2
+            )
+            compare_result(
+                flow_y.grad.cpu().detach().numpy(), flow_x.numpy(), 1e-5, 1e-2
+            )
 
     def test_sum(self):
         device = "cpu"
@@ -564,8 +580,9 @@ class TestTensorComplex64(unittest.TestCase):
 
             # backward
             flow_ret.sum().backward()
-            compare_result(flow_x.grad.cpu().detach().numpy(), np.ones(input_shape), 1e-5, 1e-3)
-
+            compare_result(
+                flow_x.grad.cpu().detach().numpy(), np.ones(input_shape), 1e-5, 1e-3
+            )
 
     def test_equal(self):
         device = "cpu"
@@ -626,14 +643,18 @@ class TestTensorComplex64(unittest.TestCase):
             compare_result(flow_ret, np.ones(flow_x.shape).astype(bool), 1e-5, 1e-2)
 
             flow_ret = flow.not_equal(flow_x, flow_z)
-            compare_result(flow_ret.cpu().detach(), np.zeros(flow_x.shape).astype(bool), 1e-5, 1e-2)
+            compare_result(
+                flow_ret.cpu().detach(), np.zeros(flow_x.shape).astype(bool), 1e-5, 1e-2
+            )
 
     def test_constant_pad(self):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(1, 2, 3, 4), (8, 3, 4, 4)]
         arg_dict["padding"] = [2, (1, 1, 2, 2)]
         arg_dict["value"] = [0.0]
-        arg_dict["device"] = ["cpu", "cuda"] if os.getenv("ONEFLOW_TEST_CPU_ONLY") is None else ["cpu"]
+        arg_dict["device"] = (
+            ["cpu", "cuda"] if os.getenv("ONEFLOW_TEST_CPU_ONLY") is None else ["cpu"]
+        )
         for arg in GenArgList(arg_dict):
             _test_ZeroPad2d(self, *arg)
 
@@ -703,6 +724,7 @@ class TestTensorComplex64(unittest.TestCase):
         np_out = np_out.astype(np.complex64)
         flow_out = flow.cast(flow_out, dtype=flow.complex64)
         self.assertTrue(np.array_equal(flow_out.cpu().detach().numpy(), np_out))
+
 
 class TestTensorComplex128(TestTensorComplex64):
     def setUp(self):

@@ -51,11 +51,12 @@ struct NanSum {
   }
 };
 
-__device__ __forceinline__ ::cuComplex operator+(const ::cuComplex& lhs, const ::cuComplex& rhs){
+__device__ __forceinline__ ::cuComplex operator+(const ::cuComplex& lhs, const ::cuComplex& rhs) {
   return ::cuComplex{lhs.x + rhs.x, lhs.y + rhs.y};
 }
 
-__device__ __forceinline__ ::cuDoubleComplex operator+(const ::cuDoubleComplex& lhs, const ::cuDoubleComplex& rhs){
+__device__ __forceinline__ ::cuDoubleComplex operator+(const ::cuDoubleComplex& lhs,
+                                                       const ::cuDoubleComplex& rhs) {
   return ::cuDoubleComplex{lhs.x + rhs.x, lhs.y + rhs.y};
 }
 }  // namespace cub
@@ -404,6 +405,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_CORE_WRAPPER,
                                  ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
                                      BOOL_DATA_TYPE_SEQ,
                                  DIM_SEQ, LOGICAL_REDUCE_BINARY_FUNC_SEQ);
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_CORE_WRAPPER, CUDA_PRIMITIVE_COMPLEX_TYPE_SEQ,
-                                 DIM_SEQ, REDUCE_COMPLEX_BINARY_FUNC_SEQ);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_CORE_WRAPPER,
+                                 CUDA_PRIMITIVE_COMPLEX_TYPE_SEQ, DIM_SEQ,
+                                 REDUCE_COMPLEX_BINARY_FUNC_SEQ);
 }  // namespace oneflow
