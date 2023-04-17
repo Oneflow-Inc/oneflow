@@ -597,6 +597,37 @@ class TestTensorComplex64(unittest.TestCase):
             flow_ret = flow.not_equal(flow_x, flow_z)
             compare_result(flow_ret, np.zeros(flow_x.shape).astype(bool), 1e-5, 1e-2)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_equal_cuda(self):
+        device = "cuda"
+        for i, input_shape in enumerate(self.shape):
+
+            np_x = np.random.randn(*input_shape) + 1.0j * np.random.randn(*input_shape)
+            np_x = np_x.astype(self.np_dtype)
+
+            np_y = np.random.randn(*input_shape) + 1.0j * np.random.randn(*input_shape)
+            np_y = np_y.astype(self.np_dtype)
+
+            np_z = np.copy(np_x)
+
+            flow_x = flow.from_numpy(np_x).to(device).requires_grad_(False)
+            flow_y = flow.from_numpy(np_y).to(device).requires_grad_(False)
+            flow_z = flow.from_numpy(np_z).to(device).requires_grad_(False)
+            self.assertEqual(flow_x.dtype, self.dtype)
+            self.assertEqual(flow_y.dtype, self.dtype)
+            self.assertEqual(flow_z.dtype, self.dtype)
+
+            # forward
+            flow_ret = flow.equal(flow_x, flow_y)
+            np_ret = np.equal(np_x, np_y)
+            compare_result(flow_ret, np_ret, 1e-5, 1e-2)
+
+            flow_ret = flow.equal(flow_x, flow_z)
+            compare_result(flow_ret, np.ones(flow_x.shape).astype(bool), 1e-5, 1e-2)
+
+            flow_ret = flow.not_equal(flow_x, flow_z)
+            compare_result(flow_ret.cpu().detach(), np.zeros(flow_x.shape).astype(bool), 1e-5, 1e-2)
+
     def test_constant_pad(self):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(1, 2, 3, 4), (8, 3, 4, 4)]

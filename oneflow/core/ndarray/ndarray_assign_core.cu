@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/ndarray/ndarray_assign_core.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/ep/cuda/primitive/type_seq.h"
 
 namespace oneflow {
 

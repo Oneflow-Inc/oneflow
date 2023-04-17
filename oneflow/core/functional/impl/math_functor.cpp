@@ -504,26 +504,6 @@ class ReduceSumFunctor {
     JUST(tensor_processor.AddInputs({x}, /*lowest_dtype=*/DType::Int64()).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
-    // if (x->is_cuda() && IsComplexDataType(x->dtype()->data_type())){
-    //   // Problem: real cast to complex will not produce imag part
-    //   // The real and imaginary parts are reduce summed separately and added together
-
-    //   auto real_part = JUST(functional::Real(x));
-    //   auto imag_part = JUST(functional::Imag(x));
-    //   real_part = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {real_part}, attrs));
-    //   imag_part = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {imag_part}, attrs));
-
-    //   TensorProcessor tensor_processor;
-    //   JUST(tensor_processor.AddInputs({imag_part}, /*lowest_dtype=*/x->dtype()).Apply());
-    //   imag_part = JUST(tensor_processor.GetInputs())[0];
-    //   return functional::Add(real_part, imag_part, /*alpha=*/1.0, /*inplace=*/false);
-    // }
-    // else{
-    //   TensorProcessor tensor_processor;
-    //   JUST(tensor_processor.AddInputs({x}, /*lowest_dtype=*/DType::Int64()).Apply());
-    //   TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
-    //   return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
-    // }
   }
 
  private:

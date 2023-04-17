@@ -585,6 +585,14 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCast, cuComplex, half> {
   OF_DEVICE_FUNC cuComplex operator()(half src) const { return make_cuComplex((__half2float(src)), 0.0); }
 };
 
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIdentity, cuComplex, cuComplex> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC cuComplex operator()(cuComplex src) const { return src; }
+};
+
+
 /*********double complex dtype support*********/
 template<typename Src>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCast, cuDoubleComplex, Src> {
@@ -614,6 +622,14 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCast, cuDoubleComplex, half> {
 
   OF_DEVICE_FUNC cuDoubleComplex operator()(half src) const { return make_cuDoubleComplex(static_cast<double>(__half2float(src)), 0.0); }
 };
+
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIdentity, cuDoubleComplex, cuDoubleComplex> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC cuDoubleComplex operator()(cuDoubleComplex src) const { return src; }
+};
+
 
 }  // namespace primitive
 }  // namespace ep
