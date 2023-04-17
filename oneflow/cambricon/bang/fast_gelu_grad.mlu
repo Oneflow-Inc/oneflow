@@ -1,0 +1,134 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+#include "oneflow/cambricon/bang/bang_internal.h"
+#include "oneflow/cambricon/bang/bang_kernels.h"
+
+namespace oneflow {
+
+static constexpr int32_t nram_limit = 1024;
+
+template<typename T>
+__mlu_global__ void bang_fast_gelu_grad_kernel(int64_t n, const T* out_grad, const T* in,
+                                               T* in_grad) {
+  int64_t step = (n + taskDim - 1) / taskDim;
+  int64_t start = step * taskId;
+  int64_t end = start + step;
+  if (end > n) { end = n; }
+  int64_t length = start < end ? end - start : 0;
+  int64_t nram_rest = (length & (nram_limit - 1));  // length % nram_limit2
+  int32_t nram_limit_bytes = nram_limit * sizeof(T);
+
+  T alpha = bang_static_cast<T>(0.7978845608028654);
+  T beta = bang_static_cast<T>(0.044714998453855515);
+  T beta2 = bang_static_cast<T>(0.044714998453855515 * 1.5);
+  __nram__ T nram_out_grad[nram_limit];
+  __nram__ T nram_in[nram_limit];
+  __nram__ T nram_pow3[nram_limit];
+  __nram__ T nram_tanh[nram_limit];
+  __nram__ T nram_dtanh[nram_limit];
+  __nram__ T nram_temp[nram_limit];
+
+  int64_t j = 0;
+  for (; j < length - nram_limit + 1; j += nram_limit) {
+    __memcpy_async(nram_in, in + start + j, nram_limit_bytes, GDRAM2NRAM);
+    __sync_copy_dram_to_nram();
+    __memcpy_async(nram_out_grad, out_grad + start + j, nram_limit_bytes, GDRAM2NRAM);
+
+    __bang_mul(nram_pow3, nram_in, nram_in, nram_limit);
+    __bang_mul(nram_pow3, nram_pow3, nram_in, nram_limit);
+
+    __bang_mul_scalar(nram_tanh, nram_pow3, beta, nram_limit);
+    __bang_fusion(FUSION_FAM, nram_tanh, nram_tanh, nram_in, alpha, nram_limit, nram_limit);
+    __bang_active_tanh(nram_tanh, nram_tanh, nram_limit);
+
+    __bang_mul_scalar(nram_dtanh, nram_pow3, beta2, nram_limit);
+    __bang_mul_scalar(nram_temp, nram_in, bang_static_cast<T>(0.5), nram_limit);
+    __bang_fusion(FUSION_FAM, nram_dtanh, nram_dtanh, nram_temp, alpha, nram_limit, nram_limit);
+
+    __bang_fusion(FUSION_FMS, nram_temp, nram_tanh, nram_tanh, bang_static_cast<T>(1.0), nram_limit,
+                  nram_limit);
+    __bang_mul(nram_dtanh, nram_dtanh, nram_temp, nram_limit);
+    __bang_fusion(FUSION_FMS, nram_temp, nram_tanh, bang_static_cast<T>(0.5), nram_dtanh,
+                  nram_limit, nram_limit);
+
+    __sync_copy_dram_to_nram();
+    __bang_fusion(FUSION_FAM, nram_temp, nram_temp, bang_static_cast<T>(0.5), nram_out_grad,
+                  nram_limit, nram_limit);
+
+    __sync_compute();
+    __memcpy_async(in_grad + start + j, nram_temp, nram_limit_bytes, NRAM2GDRAM);
+    __sync_copy_nram_to_dram();
+  }
+
+  if (nram_rest > 0) {
+    int32_t nram_rest_bytes = nram_rest * sizeof(T);
+    __memcpy_async(nram_in, in + start + j, nram_rest_bytes, GDRAM2NRAM);
+    __sync_copy_dram_to_nram();
+    __memcpy_async(nram_out_grad, out_grad + start + j, nram_rest_bytes, GDRAM2NRAM);
+
+    __bang_mul(nram_pow3, nram_in, nram_in, nram_rest);
+    __bang_mul(nram_pow3, nram_pow3, nram_in, nram_rest);
+
+    __bang_mul_scalar(nram_tanh, nram_pow3, beta, nram_rest);
+    __bang_fusion(FUSION_FAM, nram_tanh, nram_tanh, nram_in, alpha, nram_rest, nram_rest);
+    __bang_active_tanh(nram_tanh, nram_tanh, nram_rest);
+
+    __bang_mul_scalar(nram_dtanh, nram_pow3, beta2, nram_rest);
+    __bang_mul_scalar(nram_temp, nram_in, bang_static_cast<T>(0.5), nram_rest);
+    __bang_fusion(FUSION_FAM, nram_dtanh, nram_dtanh, nram_temp, alpha, nram_rest, nram_rest);
+
+    __bang_fusion(FUSION_FMS, nram_temp, nram_tanh, nram_tanh, bang_static_cast<T>(1.0), nram_rest,
+                  nram_rest);
+    __bang_mul(nram_dtanh, nram_dtanh, nram_temp, nram_rest);
+    __bang_fusion(FUSION_FMS, nram_temp, nram_tanh, bang_static_cast<T>(0.5), nram_dtanh, nram_rest,
+                  nram_rest);
+
+    __sync_copy_dram_to_nram();
+    __bang_fusion(FUSION_FAM, nram_temp, nram_temp, bang_static_cast<T>(0.5), nram_out_grad,
+                  nram_rest, nram_rest);
+
+    __sync_compute();
+    __memcpy_async(in_grad + start + j, nram_temp, nram_rest_bytes, NRAM2GDRAM);
+    __sync_copy_nram_to_dram();
+  }
+}
+
+template<typename T>
+void bang_fast_gelu_grad_kernel(BangHandle& handle, int64_t n, const T* out_grad, const T* in,
+                                T* in_grad) {
+  cnrtDim3_t dim = {handle.nclusters * handle.ncores_per_cluster, 1, 1};
+  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
+  bang_fast_gelu_grad_kernel<<<dim, func_type, handle.queue>>>(n, out_grad, in, in_grad);
+}
+
+void bang_fast_gelu_grad_half_kernel(BangHandle& handle, int64_t n, const void* out_grad,
+                                     const void* in, void* in_grad) {
+  cnrtDim3_t dim = {handle.nclusters * handle.ncores_per_cluster, 1, 1};
+  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
+  bang_fast_gelu_grad_kernel<<<dim, func_type, handle.queue>>>(
+      n, static_cast<const half*>(out_grad), static_cast<const half*>(in),
+      static_cast<half*>(in_grad));
+}
+
+#define INSTANCE_BANG_FAST_GELU_KERNEL(T)                                                        \
+  template void bang_fast_gelu_grad_kernel<T>(BangHandle & handle, int64_t n, const T* out_grad, \
+                                              const T* in, T* in_grad);
+
+INSTANCE_BANG_FAST_GELU_KERNEL(float)
+
+#undef INSTANCE_BANG_FAST_GELU_KERNEL
+
+}  // namespace oneflow

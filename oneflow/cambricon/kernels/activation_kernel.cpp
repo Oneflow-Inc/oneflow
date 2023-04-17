@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/cambricon/bang/bang_kernels.h"
 #include "oneflow/cambricon/cnnl/cnnl_op_descriptor.h"
 #include "oneflow/cambricon/cnnl/cnnl_tensor_descriptor.h"
 #include "oneflow/cambricon/common/mlu_util.h"
@@ -25,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/kernel/new_kernel_util.h"
 
 namespace oneflow {
+namespace {
 
 class MluActivationKernel final : public user_op::OpKernel {
  public:
@@ -55,6 +57,21 @@ void CnnlActivationForward(user_op::KernelComputeContext* ctx, const user_op::Te
                                       in->dptr(), nullptr, output_desc.desc(), out->mut_dptr()));
 }
 
+void CnnlActivationBackwardWithX(user_op::KernelComputeContext* ctx, const user_op::Tensor* in0,
+                                 const user_op::Tensor* in1, user_op::Tensor* out,
+                                 const CnnlActivationDescriptor& activation_desc) {
+  CnnlTensorDescriptor diff_y_desc(in0), x_desc(in1), diff_x_desc(out);
+  OF_CNNL_CHECK(cnnlActivationBackward(ctx->stream()->As<ep::MluStream>()->cnnl_handle(),
+                                       activation_desc.desc(),
+                                       /*alpha*/ nullptr,
+                                       /*y_desc*/ nullptr,
+                                       /*y*/ nullptr, diff_y_desc.desc(),
+                                       /*diff_y*/ in0->dptr(), x_desc.desc(),
+                                       /*x. when op=relu_grad, replace x with y*/ in1->dptr(),
+                                       /*beta*/ nullptr, diff_x_desc.desc(),
+                                       /*diff_x*/ out->mut_dptr()));
+}
+
 inline auto BaseActivationIsMatched(const std::string& input_name) {
   return (user_op::HobDeviceType() == DeviceType::kMLU)
          && ((user_op::HobDataType(input_name, 0) == kFloat)
@@ -74,6 +91,25 @@ REGISTER_USER_KERNEL("relu")
     })
     .SetIsMatchedHob(BaseActivationIsMatched("x"));
 
+REGISTER_USER_KERNEL("relu_grad")
+    .SetCreateFn([]() {
+      return user_op::NewOpKernel<MluActivationKernel>([](user_op::KernelComputeContext* ctx) {
+        user_op::Tensor* output = ctx->Tensor4ArgNameAndIndex("dx", 0);
+        const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+        const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+        CnnlActivationDescriptor activation_desc;
+        activation_desc.set(CNNL_ACTIVATION_RELU, CNNL_ACTIVATION_HIGH_PRECISION,
+                            CNNL_NOT_PROPAGATE_NAN, /*coef*/ 0.0);
+        CnnlActivationBackwardWithX(ctx, dy, y, output, activation_desc);
+      });
+    })
+    .SetIsMatchedHob(BaseActivationIsMatched("dx"))
+    .SetInplaceProposalFn([](const user_op::InferContext&,
+                             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
+      OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "dy", 0, true));
+      return Maybe<void>::Ok();
+    });
+
 REGISTER_USER_KERNEL("gelu")
     .SetCreateFn([]() {
       return user_op::NewOpKernel<MluActivationKernel>([](user_op::KernelComputeContext* ctx) {
@@ -87,92 +123,19 @@ REGISTER_USER_KERNEL("gelu")
     })
     .SetIsMatchedHob(BaseActivationIsMatched("in"));
 
-static void CnnlActivationBackwardWithX(user_op::KernelComputeContext* ctx,
-                                        const CnnlActivationDescriptor& activation_desc,
-                                        const user_op::Tensor* input_a_tensor,
-                                        const user_op::Tensor* input_b_tensor,
-                                        user_op::Tensor* output_tensor) {
-  CnnlTensorDescriptor diff_y_desc;
-  diff_y_desc.set(input_a_tensor);
-  CnnlTensorDescriptor x_desc;
-  x_desc.set(input_b_tensor);
-  CnnlTensorDescriptor diff_x_desc;
-  diff_x_desc.set(output_tensor);
-  OF_CNNL_CHECK(cnnlActivationBackward(
-      ctx->stream()->As<ep::MluStream>()->cnnl_handle(), activation_desc.desc(),
-      /*alpha*/ nullptr,
-      /*y_desc*/ nullptr,
-      /*y*/ nullptr, diff_y_desc.desc(),
-      /*diff_y*/ input_a_tensor->dptr(), x_desc.desc(),
-      /*x. when op=relu_grad, replace x with y*/ input_b_tensor->dptr(),
-      /*beta*/ nullptr, diff_x_desc.desc(),
-      /*diff_x*/ output_tensor->mut_dptr()));
-}
-
-template<typename T>
-class ActivationGradKernelMlu final : public user_op::OpKernel {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(ActivationGradKernelMlu);
-  ActivationGradKernelMlu() = default;
-  ~ActivationGradKernelMlu() = default;
-  using BackwardGradImpl = std::function<void(user_op::KernelComputeContext* ctx)>;
-  ActivationGradKernelMlu(BackwardGradImpl backward_grad_impl)
-      : backward_grad_impl_(backward_grad_impl) {}
-
- private:
-  using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx) const override { backward_grad_impl_(ctx); }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  BackwardGradImpl backward_grad_impl_;
-};
-
-inline auto ActivationGradIsMatched(const std::string& name1, const std::string& name2,
-                                    const std::string& name3, DataType dtype) {
-  return (user_op::HobDeviceType() == DeviceType::kMLU) && (user_op::HobDataType(name1, 0) == dtype)
-         && (user_op::HobDataType(name2, 0) == dtype) && (user_op::HobDataType(name3, 0) == dtype);
-}
-
-#define REGISTER_RELU_GRAD_USER_KERNEL(data_type)                                               \
-  REGISTER_USER_KERNEL("relu_grad")                                                             \
-      .SetCreateFn([]() {                                                                       \
-        return user_op::NewOpKernel<ActivationGradKernelMlu<data_type>>(                        \
-            [](user_op::KernelComputeContext* ctx) {                                            \
-              user_op::Tensor* output = ctx->Tensor4ArgNameAndIndex("dx", 0);                   \
-              const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);                 \
-              const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);                   \
-              CnnlActivationDescriptor activation_desc;                                         \
-              activation_desc.set(CNNL_ACTIVATION_RELU, CNNL_ACTIVATION_HIGH_PRECISION,         \
-                                  CNNL_NOT_PROPAGATE_NAN, /*coef*/ 0.0);                        \
-              CnnlActivationBackwardWithX(ctx, activation_desc, dy, y, output);                 \
-            });                                                                                 \
-      })                                                                                        \
-      .SetIsMatchedHob(ActivationGradIsMatched("dx", "dy", "y", GetDataType<data_type>::value)) \
-      .SetInplaceProposalFn(                                                                    \
-          [](const user_op::InferContext&,                                                      \
-             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {            \
-            OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "dy", 0, true));                    \
-            return Maybe<void>::Ok();                                                           \
-          });
-REGISTER_RELU_GRAD_USER_KERNEL(float)
-REGISTER_RELU_GRAD_USER_KERNEL(float16)
-
-#define REGISTER_GELU_GRAD_USER_KERNEL(data_type)                                       \
-  REGISTER_USER_KERNEL("gelu_grad")                                                     \
-      .SetCreateFn([]() {                                                               \
-        return user_op::NewOpKernel<ActivationGradKernelMlu<data_type>>(                \
-            [](user_op::KernelComputeContext* ctx) {                                    \
-              user_op::Tensor* output = ctx->Tensor4ArgNameAndIndex("dx", 0);           \
-              const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);         \
-              const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);           \
-              CnnlActivationDescriptor activation_desc;                                 \
-              activation_desc.set(CNNL_ACTIVATION_GELU, CNNL_ACTIVATION_HIGH_PRECISION, \
-                                  CNNL_NOT_PROPAGATE_NAN, /*coef*/ 0.0);                \
-              CnnlActivationBackwardWithX(ctx, activation_desc, dy, x, output);         \
-            });                                                                         \
-      })                                                                                \
-      .SetIsMatchedHob(ActivationGradIsMatched("dx", "dy", "x", GetDataType<data_type>::value));
-REGISTER_GELU_GRAD_USER_KERNEL(float)
-REGISTER_GELU_GRAD_USER_KERNEL(float16)
+REGISTER_USER_KERNEL("gelu_grad")
+    .SetCreateFn([]() {
+      return user_op::NewOpKernel<MluActivationKernel>([](user_op::KernelComputeContext* ctx) {
+        user_op::Tensor* output = ctx->Tensor4ArgNameAndIndex("dx", 0);
+        const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+        const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+        CnnlActivationDescriptor activation_desc;
+        activation_desc.set(CNNL_ACTIVATION_GELU, CNNL_ACTIVATION_HIGH_PRECISION,
+                            CNNL_NOT_PROPAGATE_NAN, /*coef*/ 0.0);
+        CnnlActivationBackwardWithX(ctx, dy, x, output, activation_desc);
+      });
+    })
+    .SetIsMatchedHob(BaseActivationIsMatched("dx"));
 
 REGISTER_USER_KERNEL("tanh")
     .SetCreateFn([]() {
@@ -187,4 +150,44 @@ REGISTER_USER_KERNEL("tanh")
     })
     .SetIsMatchedHob(BaseActivationIsMatched("x"));
 
+REGISTER_USER_KERNEL("fast_gelu")
+    .SetCreateFn([]() {
+      return user_op::NewOpKernel<MluActivationKernel>([](user_op::KernelComputeContext* ctx) {
+        const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+        user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+        auto* stream = ctx->stream()->As<ep::MluStream>();
+        BangHandle handle(stream->mlu_stream(), stream->device()->nclusters(),
+                          stream->device()->ncores_per_cluster());
+        if (in->data_type() == DataType::kFloat16) {
+          bang_fast_gelu_half_kernel(handle, in->shape_view().elem_cnt(), in->dptr(),
+                                     out->mut_dptr());
+        } else {
+          bang_fast_gelu_kernel(handle, in->shape_view().elem_cnt(), in->dptr<float>(),
+                                out->mut_dptr<float>());
+        }
+      });
+    })
+    .SetIsMatchedHob(BaseActivationIsMatched("in"));
+
+REGISTER_USER_KERNEL("fast_gelu_grad")
+    .SetCreateFn([]() {
+      return user_op::NewOpKernel<MluActivationKernel>([](user_op::KernelComputeContext* ctx) {
+        const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+        const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+        user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+        auto* stream = ctx->stream()->As<ep::MluStream>();
+        BangHandle handle(stream->mlu_stream(), stream->device()->nclusters(),
+                          stream->device()->ncores_per_cluster());
+        if (dx->data_type() == DataType::kFloat16) {
+          bang_fast_gelu_grad_half_kernel(handle, dx->shape_view().elem_cnt(), dy->dptr(),
+                                          x->dptr(), dx->mut_dptr());
+        } else {
+          bang_fast_gelu_grad_kernel(handle, dx->shape_view().elem_cnt(), dy->dptr<float>(),
+                                     x->dptr<float>(), dx->mut_dptr<float>());
+        }
+      });
+    })
+    .SetIsMatchedHob(BaseActivationIsMatched("dx"));
+
+}  // namespace
 }  // namespace oneflow

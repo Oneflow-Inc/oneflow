@@ -26,6 +26,16 @@ struct AddressList {
   int64_t sizes[N];
 };
 
+template<typename T>
+__mlu_func__ T bang_static_cast(float scalar) {
+  return static_cast<T>(scalar);
+}
+
+template<>
+__mlu_func__ half bang_static_cast<half>(float scalar) {
+  return __float2half_rd(scalar);
+}
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CAMBRICON_BANG_BANG_INTERNAL_H_
