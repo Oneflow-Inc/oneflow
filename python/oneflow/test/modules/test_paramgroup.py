@@ -49,7 +49,7 @@ class TestParamGroup(flow.unittest.TestCase):
             np.array_equal(pg.get("test_tensor").numpy(), flow.ones(10).numpy())
         )
         test_case.assertTrue(pg["test_str"] == "test")
-        test_case.assertTrue(pg.get("params", False))
+        test_case.assertTrue("params" in pg.keys())
 
 
 if __name__ == "__main__":
