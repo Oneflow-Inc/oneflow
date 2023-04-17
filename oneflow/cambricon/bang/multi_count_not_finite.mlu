@@ -13,44 +13,83 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <cstring>
+#include <string.h>  // memcpy
+#include <assert.h>
 #include "oneflow/cambricon/bang/bang_internal.h"
 #include "oneflow/cambricon/bang/bang_kernels.h"
 
 namespace oneflow {
 
 static constexpr int32_t BATCH = 256;
-static __mlu_shared__ int64_t s_count[1024];
+static constexpr int32_t nram_limit = 2048;
 
 template<typename T>
-__mlu_global__ void bang_multi_count_not_finite_kernel_internal(int64_t n,
-                                                                AddressList<BATCH> inputs_info,
-                                                                int64_t* workspace) {
-  int32_t core_dim = taskDim / clusterDim;
-  int32_t core_id = taskId % core_dim;
-
-  int64_t count = 0;
-  for (int64_t i = clusterId; i < n; i += clusterDim) {
-    const T* input = static_cast<const T*>(inputs_info.address[i]);
-    int64_t size = inputs_info.sizes[i];
-    int64_t step = (size + core_dim - 1) / core_dim;
-    int64_t start = step * core_id;
-    int64_t end = start + step;
-    if (end > size) { end = size; }
-
-    for (int32_t j = start; j < end; ++j) {
-      T x = input[j];
-      count += (isnan(x) || isinf(x));
+__mlu_func__ void load_input(T* nram_input, int64_t start, int64_t length, int32_t input_num,
+                             const void** inputs, const int64_t* input_sizes) {
+  int64_t input_id = -1;
+  int64_t offset = 0;
+  for (int32_t i = 0; i < input_num; ++i) {
+    offset += input_sizes[i];
+    if (offset > start) {
+      input_id = i;
+      break;
     }
   }
-  int32_t offset = clusterId * core_dim;
-  s_count[offset + core_id] = count;
-  __sync_cluster();
+  if (input_id == -1) { return; }
 
-  if (clusterId < n && core_id == 0) {
-    int64_t count = s_count[offset];
-    for (int i = 1; i < core_dim; ++i) { count += s_count[offset + i]; }
-    workspace[clusterId] += count;
+  int64_t start_pos = start - offset + input_sizes[input_id];
+  int64_t copied_total_size = 0;
+  for (; input_id < input_num; ++input_id) {
+    int64_t input_size = input_sizes[input_id];
+    int64_t rest = input_size - start_pos;
+    int64_t copy_size = length - copied_total_size;
+    if (copy_size > rest) { copy_size = rest; }
+    __memcpy_async(nram_input + copied_total_size,
+                   static_cast<const T*>(inputs[input_id]) + start_pos, copy_size * sizeof(T),
+                   GDRAM2NRAM);
+    copied_total_size += copy_size;
+    if (copied_total_size >= length) { break; }
+    start_pos = 0;
+  }
+}
+
+template<typename T>
+__mlu_global__ void bang_multi_count_not_finite_kernel_internal(int32_t input_num,
+                                                                AddressList<BATCH> inputs_info,
+                                                                int64_t total_element_size,
+                                                                int64_t* workspace, bool update) {
+  int64_t step = (total_element_size + taskDim - 1) / taskDim;
+  int64_t start = step * taskId;
+  int64_t end = start + step;
+  if (end > total_element_size) { end = total_element_size; }
+  int64_t length = start < end ? end - start : 0;
+  int64_t nram_rest = (length & (nram_limit - 1));  // length % nram_limit
+  int64_t count = 0;
+
+  __nram__ T nram_input[nram_limit];
+  __nram__ T nram_result[nram_limit];
+
+  int64_t j = 0;
+  for (; j < length - nram_limit + 1; j += nram_limit) {
+    load_input(nram_input, start + j, nram_limit, input_num, inputs_info.address,
+               inputs_info.sizes);
+    __sync_copy_dram_to_nram();
+    __bang_band_scalar(nram_result, nram_input, bang_static_cast<T>(INFINITY), nram_limit);
+    __bang_eq_scalar(nram_result, nram_result, bang_static_cast<T>(INFINITY), nram_limit);
+    count += __bang_count(nram_result, nram_limit);
+  }
+  if (nram_rest > 0) {
+    load_input(nram_input, start + j, nram_rest, input_num, inputs_info.address, inputs_info.sizes);
+    __sync_copy_dram_to_nram();
+    __bang_band_scalar(nram_result, nram_input, bang_static_cast<T>(INFINITY), nram_rest);
+    __bang_eq_scalar(nram_result, nram_result, bang_static_cast<T>(INFINITY), nram_rest);
+    count += __bang_count(nram_result, nram_rest);
+  }
+
+  if (update) {
+    workspace[taskId] = count;
+  } else {
+    workspace[taskId] += count;
   }
 }
 
@@ -70,27 +109,27 @@ void bang_multi_count_not_finite_kernel(BangHandle& handle, int64_t n, const T**
     cnrtMemsetAsync(output, 0, sizeof(int64_t), handle.queue);
     return;
   }
-  cnrtMemsetAsync(workspace, 0, workspace_size, handle.queue);
-
-  // TODO(): check workspace_size == n * sizeof(int64_t)
+  uint32_t ncores = handle.ncores_per_cluster * handle.nclusters;
+  assert(workspace_size >= ncores);
   int64_t* workspace_ptr = static_cast<int64_t*>(workspace);
 
-  cnrtDim3_t dim = {handle.ncores_per_cluster * handle.nclusters, 1, 1};
+  cnrtDim3_t dim = {ncores, 1, 1};
   cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
 
   for (int64_t i = 0; i < n; i += BATCH) {
-    int32_t num = (n - i) > BATCH ? BATCH : (n - i);
+    int32_t input_num = (n - i) > BATCH ? BATCH : (n - i);
     AddressList<BATCH> inputs_info;
-    memcpy(inputs_info.address, inputs + i, num * sizeof(void*));
-    memcpy(inputs_info.sizes, sizes + i, num * sizeof(int64_t));
-
-    bang_multi_count_not_finite_kernel_internal<T>
-        <<<dim, func_type, handle.queue>>>(num, inputs_info, workspace_ptr);
+    memcpy(inputs_info.address, inputs + i, input_num * sizeof(void*));
+    memcpy(inputs_info.sizes, sizes + i, input_num * sizeof(int64_t));
+    int64_t total_element_size = 0;
+    for (int32_t j = 0; j < input_num; ++j) { total_element_size += sizes[i + j]; }
+    bang_multi_count_not_finite_kernel_internal<T><<<dim, func_type, handle.queue>>>(
+        input_num, inputs_info, total_element_size, workspace_ptr, i == 0);
   }
 
   dim = {1, 1, 1};
   bang_multi_count_not_finite_kernel_internal_final<<<dim, CNRT_FUNC_TYPE_BLOCK, handle.queue>>>(
-      n, workspace_ptr, output);
+      ncores, workspace_ptr, output);
 }
 
 void bang_multi_count_not_finite_half_kernel(BangHandle& handle, int64_t n, const void** inputs,

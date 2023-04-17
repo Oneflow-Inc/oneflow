@@ -41,11 +41,12 @@ class MluMultiCountNotFiniteKernel final : public user_op::OpKernel {
       sizes[i] = x->shape_view().elem_cnt();
     }
     auto* stream = ctx->stream()->As<ep::MluStream>();
-    size_t workspace_size = input_num * sizeof(int64_t);
-    CnnlWorkspace workspace(stream, workspace_size);
-
     BangHandle handle(stream->mlu_stream(), stream->device()->nclusters(),
                       stream->device()->ncores_per_cluster());
+    size_t workspace_size =
+        stream->device()->nclusters() * stream->device()->ncores_per_cluster() * sizeof(int64_t);
+    CnnlWorkspace workspace(stream, workspace_size);
+
     if constexpr (std::is_same<T, float16>::value) {
       bang_multi_count_not_finite_half_kernel(
           handle, input_num, reinterpret_cast<const void**>(inputs.data()), sizes.data(),

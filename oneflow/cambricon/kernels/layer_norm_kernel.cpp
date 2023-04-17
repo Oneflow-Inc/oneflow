@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/cambricon/cnnl/cnnl_workspace.h"
 #include "oneflow/cambricon/ep/mlu_stream.h"
 #include "oneflow/cambricon/common/mlu_util.h"
+#include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/util.h"
@@ -44,7 +45,6 @@ class LayerNormMluKernel final : public user_op::OpKernel {
     input_desc.set(in, ConvertToCnnlDataType(data_type));
     output_desc.set(out, ConvertToCnnlDataType(data_type));
     mean_rstd_desc.set(mean, ConvertToCnnlDataType(data_type));
-    mean_rstd_desc.set(inv_variance, ConvertToCnnlDataType(data_type));
 
     const void* gamma_dptr = nullptr;
     const void* beta_dptr = nullptr;
@@ -108,7 +108,8 @@ class MluLayerNormGradRelatedKernel final : public user_op::OpKernel {
       axis = ctx->Attr<int64_t>("begin_params_axis");
     }
 
-    CnnlTensorDescriptor x_desc(x), dy_desc(dy), gamma_desc, mean_desc(mean), dx_desc;
+    CnnlTensorDescriptor x_desc(x), dy_desc(dy), gamma_desc,
+        mean_desc(mean, ConvertToCnnlDataType(x->data_type())), dx_desc;
 
     const auto stream = ctx->stream()->As<ep::MluStream>();
     CnnlWorkspace gamma_worksacpe(stream),
@@ -157,6 +158,18 @@ class MluLayerNormGradRelatedKernel final : public user_op::OpKernel {
         cnnl_handle, x_desc.desc(), x->dptr(), axis, dy_desc.desc(), dy->dptr(), gamma_desc.desc(),
         gamma_dptr, mean_desc.desc(), mean->dptr(), inv_variance->dptr(), cnnl_workspace.dptr(),
         workspace_size, dx_desc.desc(), dx_mut_dptr, gamma_diff_mut_dptr, beta_diff_mut_dptr));
+
+    if (dx_mut_dptr && ctx->has_input("_add_to_output", 0)) {
+      const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
+      auto bcast_add =
+          ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
+              ctx->device_type(), ep::primitive::BinaryOp::kAdd, x->data_type(),
+              add_to_output->data_type(), x->shape_view().NumAxes());
+      CHECK(bcast_add);
+      bcast_add->Launch(ctx->stream(), x->shape_view().NumAxes(), x->shape_view().ptr(),
+                        dx_mut_dptr, add_to_output->shape_view().NumAxes(),
+                        add_to_output->shape_view().ptr(), add_to_output->dptr(), dx_mut_dptr);
+    }
   }
 };
 
