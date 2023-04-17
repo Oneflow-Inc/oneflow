@@ -55,23 +55,10 @@ jobs:
       changed_python_tests: ${{ steps.py-diff.outputs.changed_python_tests }}
       has_changed_python_tests: ${{ steps.py-diff.outputs.has_changed_python_tests }}
 
-  check-priority-pr:
-    name: "Check priority PR"
-    runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
-    steps:
-      - uses: Oneflow-Inc/get-oneflow/priority-pr@torch1.13
-        name: Check priority PR closed
-        id: save-cache
-        timeout-minutes: 5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
   mirror_third_party:
     name: Mirror third party dependencies
     runs-on: ubuntu-20.04
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
-    needs: [check-priority-pr]
     steps:
       - uses: actions/checkout@v2
       - name: Mirror dependencies to aliyun
@@ -90,7 +77,6 @@ jobs:
     name: License and format
     runs-on: ubuntu-20.04
     if: github.event.pull_request.draft == false
-    needs: [check-priority-pr]
     steps:
       - uses: actions/checkout@v2
         with:
@@ -207,7 +193,6 @@ jobs:
     name: "Find build cache"
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
     runs-on: ubuntu-latest
-    needs: [check-priority-pr]
     env:
       ONEFLOW_SRC: .
     outputs:
@@ -1164,7 +1149,6 @@ jobs:
     name: Static analysis with clang on diff
     runs-on: ubuntu-20.04
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
-    needs: [check-priority-pr]
     steps:
       - name: Check out OneFlow
         uses: actions/checkout@v2
