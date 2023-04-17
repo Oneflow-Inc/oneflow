@@ -31,7 +31,9 @@ struct CastFunctor {
 };
 
 template<typename To>
-struct CastFunctor<To, half, typename std::enable_if<!std::is_same<To, half>::value>::type> {
+struct CastFunctor<To, half, typename std::enable_if<!(std::is_same<To, half>::value
+                                                       || std::is_same<To, cuComplex>::value
+                                                       || std::is_same<To, cuDoubleComplex>::value)>::type> {
   __device__ To operator()(half from) const { return static_cast<To>(static_cast<float>(from)); }
 
   __device__ void Apply2(To* to, const half* from) const {
@@ -60,7 +62,9 @@ struct CastFunctor<half, From, typename std::enable_if<!std::is_same<From, half>
 template<typename To>
 struct CastFunctor<To, nv_bfloat16,
                    typename std::enable_if<!(std::is_same<To, nv_bfloat16>::value
-                                             || std::is_same<To, half>::value)>::type> {
+                                             || std::is_same<To, half>::value
+                                             || std::is_same<To, cuComplex>::value
+                                             || std::is_same<To, cuDoubleComplex>::value)>::type> {
   __device__ To operator()(nv_bfloat16 from) const {
     return static_cast<To>(static_cast<float>(from));
   }
@@ -123,8 +127,11 @@ class CastFactoryImpl : public CastFactory {
    NewCast<OF_PP_PAIR_FIRST(from_pair), OF_PP_PAIR_FIRST(to_pair)>},
 
     static const std::map<std::pair<DataType, DataType>, std::function<std::unique_ptr<Cast>()>>
-        new_cast_handle{OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-            MAKE_NEW_CAST_ENTRY, CUDA_PRIMITIVE_CAST_TYPE_SEQ, CUDA_PRIMITIVE_CAST_TYPE_SEQ)};
+        new_cast_handle{
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE( MAKE_NEW_CAST_ENTRY, 
+            CUDA_PRIMITIVE_CAST_TYPE_SEQ, CUDA_PRIMITIVE_CAST_TYPE_SEQ)
+            // OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE( MAKE_NEW_CAST_ENTRY, 
+            };
 
 #undef MAKE_NEW_CAST_ENTRY
 

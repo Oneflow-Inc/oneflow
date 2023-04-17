@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/permutation_iterator.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/ep/cuda/primitive/type_seq.h"
 
 namespace cub {
 struct Prod {
@@ -396,6 +397,6 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_CORE_WRAPPER,
                                  ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
                                      BOOL_DATA_TYPE_SEQ,
                                  DIM_SEQ, LOGICAL_REDUCE_BINARY_FUNC_SEQ);
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_CORE_WRAPPER, COMPLEX_DATA_TYPE_SEQ,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_CORE_WRAPPER, CUDA_PRIMITIVE_COMPLEX_TYPE_SEQ,
                                  DIM_SEQ, REDUCE_COMPLEX_BINARY_FUNC_SEQ);
 }  // namespace oneflow

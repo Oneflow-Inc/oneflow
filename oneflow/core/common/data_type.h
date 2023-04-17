@@ -71,6 +71,11 @@ struct IsIntegralHelper : std::false_type {};
 template<typename>
 struct IsUnsignedIntegralHelper : std::false_type {};
 
+#ifdef WITH_CUDA
+template<typename>
+struct IsCudaComplexHelper : std::false_type {};
+#endif // WITH_CUDA
+
 }  // namespace detail
 
 using float16 = half_float::half;
@@ -90,6 +95,18 @@ template<typename T>
 struct IsFloat16
     : std::integral_constant<bool,
                              (detail::IsFloat16Helper<typename std::remove_cv<T>::type>::value)> {};
+
+// Type Trait: IsCudaComplex
+#ifdef WITH_CUDA
+DEFINE_SPEC(detail::IsCudaComplexHelper, cuComplex, true)
+DEFINE_SPEC(detail::IsCudaComplexHelper, cuDoubleComplex, true)
+
+template<typename T>
+struct IsCudaComplex
+    : std::integral_constant<bool,
+                             (detail::IsCudaComplexHelper<typename std::remove_cv<T>::type>::value)> {};
+#endif  // WITH_CUDA
+
 
 // Type Trait: IsFloating
 
@@ -178,6 +195,17 @@ using DataTypeToType = decltype(GetTypeByDataType(std::integral_constant<DataTyp
 #define OF_DEVICE_FUNC inline
 #endif
 
+#ifdef WITH_CUDA
+template<typename T, typename std::enable_if<!(IsFloat16<T>::value || IsCudaComplex<T>::value)>::type* = nullptr>
+OF_DEVICE_FUNC T GetZeroVal() {
+  return static_cast<T>(0);
+}
+
+template<typename T, typename std::enable_if<!(IsFloat16<T>::value || IsCudaComplex<T>::value)>::type* = nullptr>
+OF_DEVICE_FUNC T GetOneVal() {
+  return static_cast<T>(1);
+}
+#else
 template<typename T, typename std::enable_if<!IsFloat16<T>::value>::type* = nullptr>
 OF_DEVICE_FUNC T GetZeroVal() {
   return static_cast<T>(0);
@@ -187,6 +215,7 @@ template<typename T, typename std::enable_if<!IsFloat16<T>::value>::type* = null
 OF_DEVICE_FUNC T GetOneVal() {
   return static_cast<T>(1);
 }
+#endif  // WITH_CUDA
 
 template<typename T, typename std::enable_if<!IsFloat16<T>::value>::type* = nullptr>
 OF_DEVICE_FUNC T GetMinVal();
@@ -268,11 +297,34 @@ OF_DEVICE_FUNC T GetZeroVal() {
   return *(T*)&ret;
 }
 
+#ifdef WITH_CUDA
+template<typename T, typename std::enable_if<std::is_same<T, cuComplex>::value>::type* = nullptr>
+OF_DEVICE_FUNC T GetZeroVal() {
+  return make_cuFloatComplex((float)0.0, (float)0.0);
+}
+template<typename T, typename std::enable_if<std::is_same<T, cuDoubleComplex>::value>::type* = nullptr>
+OF_DEVICE_FUNC T GetZeroVal() {
+  return make_cuDoubleComplex((double)0.0, (double)0.0);
+}
+#endif // WITH_CUDA
+
 template<typename T, typename std::enable_if<IsFloat16<T>::value>::type* = nullptr>
 OF_DEVICE_FUNC T GetOneVal() {
   uint16_t ret = 0x3c00;  // Decimal: 15360; Binary: 0 01111 0000000000
   return *(T*)&ret;
 }
+
+#ifdef WITH_CUDA
+template<typename T, typename std::enable_if<std::is_same<T, cuComplex>::value>::type* = nullptr>
+OF_DEVICE_FUNC T GetOneVal() {
+  return make_cuFloatComplex((float)1.0, (float)1.0);
+}
+
+template<typename T, typename std::enable_if<std::is_same<T, cuDoubleComplex>::value>::type* = nullptr>
+OF_DEVICE_FUNC T GetOneVal() {
+  return make_cuDoubleComplex((double)1.0, (double)1.0);
+}
+#endif // WITH_CUDA
 
 template<typename T, typename std::enable_if<IsFloat16<T>::value>::type* = nullptr>
 OF_DEVICE_FUNC T GetMaxVal() {

@@ -89,7 +89,7 @@ bool IsSupportRequireGradDataType(DataType data_type) {
   case type_proto: return true;
     OF_PP_FOR_EACH_TUPLE(
         REQUIRE_GRAD_CASE,
-        FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ BFLOAT16_DATA_TYPE_SEQ COMPLEX_DATA_TYPE_SEQ)    // TO-DO: if add cuComplex, will cause DataType::kComplex64 duplicate
+        FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ BFLOAT16_DATA_TYPE_SEQ COMPLEX_DATA_TYPE_SEQ)
     default: return false;
   }
 #undef REQUIRE_GRAD_CASE
