@@ -31,12 +31,12 @@ namespace vm {
 class OpCallInstructionPolicy;
 class DtrOpCallInstructionPolicy;
 
-class TensorStorage {
+class TensorStorageBase {
  public:
-  explicit TensorStorage(bool is_allocated_in_vm, Symbol<Device> device);
-  OF_DISALLOW_COPY_AND_MOVE(TensorStorage);
+  explicit TensorStorageBase(bool is_allocated_in_vm, Symbol<Device> device);
+  OF_DISALLOW_COPY_AND_MOVE(TensorStorageBase);
 
-  virtual ~TensorStorage();
+  virtual ~TensorStorageBase();
 
   bool is_allocated_in_vm() const { return is_allocated_in_vm_; }
 
@@ -82,7 +82,7 @@ class TensorStorage {
   bool is_allocated_in_vm_;
 };
 
-class RematableTensorStorage final : public TensorStorage {
+class RematableTensorStorage final : public TensorStorageBase {
  public:
   explicit RematableTensorStorage(Symbol<Device> device);
   OF_DISALLOW_COPY_AND_MOVE(RematableTensorStorage);
@@ -126,6 +126,15 @@ class RematableTensorStorage final : public TensorStorage {
   bool is_needed_by_backward_ = false;
 
   void LogEviction(bool eager_eviction) const;
+};
+
+class TensorStorage : public TensorStorageBase {
+ public:
+  explicit TensorStorage(Symbol<Device> device);
+  OF_DISALLOW_COPY_AND_MOVE(TensorStorage);
+  ~TensorStorage() override;
+
+  void Release() override;
 };
 
 }  // namespace vm
