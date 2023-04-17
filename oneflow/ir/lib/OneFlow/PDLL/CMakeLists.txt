@@ -1,4 +1,4 @@
-add_mlir_pdll_library(MLIROneFlowAllocEliminaionPatternsIncGen AllocEliminationPatterns.pdll
+add_mlir_pdll_library(MLIROneFlowPDLLAllocEliminaionPatternsIncGen AllocEliminationPatterns.pdll
                       AllocEliminationPatterns.h.inc)
 add_mlir_pdll_library(MLIROneFlowPDLLForwardOpPatternsIncGen ForwardOpPatterns.pdll
                       ForwardOpPatterns.h.inc)
@@ -16,7 +16,7 @@ oneflow_add_mlir_dialect_library(
   FuseConv2DBatchNormPattern.cpp
   FuseOpsWithBackwardImplPattern.cpp
   DEPENDS
-  MLIROneFlowAllocEliminaionPatternsIncGen
+  MLIROneFlowPDLLAllocEliminaionPatternsIncGen
   MLIROneFlowPDLLForwardOpPatternsIncGen
   MLIROneFlowPDLLNormalizationPatternsIncGen
   MLIROneFlowPDLLFuseConv2DBatchNormPatternIncGen
