@@ -120,5 +120,6 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
         graph_diff_placement = _TestGraph(model_diff_placement)
         z = graph_diff_placement(x)
 
+
 if __name__ == "__main__":
     unittest.main()
