@@ -301,6 +301,7 @@ class TestRandOpInGraph(oneflow.unittest.TestCase):
         x2 = flow.rand(4, 16)
         _test_rand_op_in_graph(self, flow.bernoulli, x2)
 
+    @unittest.skip("skip for now, becase it failed 4 times in past week")
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_random_mask_like(self):
         x = flow.randn(4, 16, 128, 128).to("cuda")
@@ -349,6 +350,7 @@ class TestRandOpInFRB(oneflow.unittest.TestCase):
         x2 = flow.rand(4, 16)
         _test_rand_op_in_FRB(self, flow.bernoulli, x2)
 
+    @unittest.skip("skip for now, becase it failed 4 times in past week")
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_random_mask_like(self):
         x = flow.randn(4, 16, 128, 128).to("cuda")
