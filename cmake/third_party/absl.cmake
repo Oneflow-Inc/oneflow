@@ -14,7 +14,6 @@ if(WIN32)
   set(ABSL_BUILD_LIBRARY_DIR ${ABSL_INSTALL}/${CMAKE_INSTALL_LIBDIR})
   set(ABSL_LIBRARY_NAMES
       absl_spinlock_wait.lib
-      absl_dynamic_annotations.lib
       absl_malloc_internal.lib
       absl_throw_delegate.lib
       absl_int128.lib
@@ -27,7 +26,6 @@ else()
   set(ABSL_BUILD_LIBRARY_DIR ${ABSL_INSTALL}/${CMAKE_INSTALL_LIBDIR})
   set(ABSL_LIBRARY_NAMES
       libabsl_spinlock_wait.a
-      libabsl_dynamic_annotations.a
       libabsl_malloc_internal.a
       libabsl_throw_delegate.a
       libabsl_int128.a
