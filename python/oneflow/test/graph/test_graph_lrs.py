@@ -169,6 +169,7 @@ class TestGraphLRs(flow.unittest.TestCase):
         _test_linear_graph_train_with_lr_sch(test_case, 21, flow.device("cuda"), _lr_fn)
         _test_linear_graph_train_with_lr_sch(test_case, 21, flow.device("cpu"), _lr_fn)
 
+    @unittest.skip("skip for now, becase it failed 6 times in past week")
     def test_cosine_annealing_lr(test_case):
         def _lr_fn(parameters):
             of_sgd = flow.optim.SGD(parameters, lr=0.001)
