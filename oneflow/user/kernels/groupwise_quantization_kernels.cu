@@ -86,39 +86,45 @@ struct Cast<int8_t, Dst, pack_size> {
   }
 };
 
-template<typename Src, typename Dst, size_t pack_size, size_t bits>
+template<typename Src, typename Dst, size_t pack_size, size_t bits, typename S = void>
 struct LoadCast;
 
 template<typename Dst, size_t pack_size>
-struct LoadCast<uint8_t, Dst, pack_size, 8> {
+struct LoadCast<
+    uint8_t, Dst, pack_size, 8,
+    typename std::enable_if<pack_size % 4 != 0 || !std::is_same<Dst, half>::value, void>::type> {
   __device__ void operator()(const void* src, AlignedArray<Dst, pack_size>* dst) {
-    if constexpr (pack_size % 4 == 0 && std::is_same<Dst, half>::value) {
-      AlignedArray<uint32_t, pack_size / 4> src_u32 =
-          *reinterpret_cast<const AlignedArray<uint32_t, pack_size / 4>*>(src);
-      AlignedArray<half2, pack_size / 2>* dst_h2 =
-          reinterpret_cast<AlignedArray<half2, pack_size / 2>*>(dst);
-      for (int i = 0; i < pack_size / 4; ++i) {
-        union {
-          uint32_t u32;
-          half2 h2;
-        } u32_h2[2];
-        asm volatile("prmt.b32 %0,%1,%2,%3;\n"
-                     : "=r"(u32_h2[0].u32)
-                     : "r"(src_u32.elem[i]), "n"(0x64), "n"(0x4140));
-        asm volatile("prmt.b32 %0,%1,%2,%3;\n"
-                     : "=r"(u32_h2[1].u32)
-                     : "r"(src_u32.elem[i]), "n"(0x64), "n"(0x4342));
-        half2 h2_1024 = __float2half2_rn(1024);
-        u32_h2[0].h2 = __hsub2(u32_h2[0].h2, h2_1024);
-        u32_h2[1].h2 = __hsub2(u32_h2[1].h2, h2_1024);
-        dst_h2->elem[i * 2] = u32_h2[0].h2;
-        dst_h2->elem[i * 2 + 1] = u32_h2[1].h2;
-      }
-    } else {
-      AlignedArray<uint8_t, pack_size> src_arr =
-          *reinterpret_cast<const AlignedArray<uint8_t, pack_size>*>(src);
+    AlignedArray<uint8_t, pack_size> src_arr =
+        *reinterpret_cast<const AlignedArray<uint8_t, pack_size>*>(src);
 #pragma unroll
-      for (int i = 0; i < pack_size; ++i) { dst->elem[i] = static_cast<Dst>(src_arr.elem[i]); }
+    for (int i = 0; i < pack_size; ++i) { dst->elem[i] = static_cast<Dst>(src_arr.elem[i]); }
+  }
+};
+
+template<size_t pack_size>
+struct LoadCast<uint8_t, half, pack_size, 8,
+                typename std::enable_if<pack_size % 4 == 0, void>::type> {
+  __device__ void operator()(const void* src, AlignedArray<half, pack_size>* dst) {
+    AlignedArray<uint32_t, pack_size / 4> src_u32 =
+        *reinterpret_cast<const AlignedArray<uint32_t, pack_size / 4>*>(src);
+    AlignedArray<half2, pack_size / 2>* dst_h2 =
+        reinterpret_cast<AlignedArray<half2, pack_size / 2>*>(dst);
+    for (int i = 0; i < pack_size / 4; ++i) {
+      union {
+        uint32_t u32;
+        half2 h2;
+      } u32_h2[2];
+      asm volatile("prmt.b32 %0,%1,%2,%3;\n"
+                   : "=r"(u32_h2[0].u32)
+                   : "r"(src_u32.elem[i]), "n"(0x64), "n"(0x4140));
+      asm volatile("prmt.b32 %0,%1,%2,%3;\n"
+                   : "=r"(u32_h2[1].u32)
+                   : "r"(src_u32.elem[i]), "n"(0x64), "n"(0x4342));
+      half2 h2_1024 = __float2half2_rn(1024);
+      u32_h2[0].h2 = __hsub2(u32_h2[0].h2, h2_1024);
+      u32_h2[1].h2 = __hsub2(u32_h2[1].h2, h2_1024);
+      dst_h2->elem[i * 2] = u32_h2[0].h2;
+      dst_h2->elem[i * 2 + 1] = u32_h2[1].h2;
     }
   }
 };
