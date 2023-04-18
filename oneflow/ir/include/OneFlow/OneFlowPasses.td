@@ -80,6 +80,11 @@ def AppendOneFlowStreamPass : Pass<"append-ofstream", "ModuleOp"> {
   let constructor = "mlir::oneflow::createAppendOneFlowStreamPass()";
 }
 
+def MgpuToOneFlowStreamPass : Pass<"mgpu-to-ofstream", "ModuleOp"> {
+  let summary = "convert mlir abi about mgpu to oneflow stream, this pass should be invoked after append-ofstream pass";
+  let constructor = "mlir::oneflow::createMgpuToOneFlowStreamPass()";
+}
+
 def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "ModuleOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createFuseIntoExistingOpPass()";

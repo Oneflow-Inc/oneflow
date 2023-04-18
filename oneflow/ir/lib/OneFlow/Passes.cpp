@@ -14,8 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
+#include "OneFlow/Transform/OneFlowStream.h"
 #include "OneFlow/Transform/EliminateAllocOps.h"
-#include "OneFlow/Transform/AppendOneFlowStream.h"
+#include "OneFlow/Transform/OneFlowStream.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/common/data_type.pb.h"
@@ -1074,6 +1075,7 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   pm.addNestedPass<func::FuncOp>(createGpuCopyArgPass());                // buffer-host-register
   pm.addPass(createAppendOneFlowStreamPass());                           // append-ofstream
   pm.addPass(createGpuToLLVMConversionPass());                           // gpu-to-llvm
+  pm.addPass(createMgpuToOneFlowStreamPass());                           // gpu-to-llvm
   pm.addPass(memref::createExpandStridedMetadataPass());                 // expand-strided-metadata
   pm.addPass(createMemRefToLLVMConversionPass());                        // convert-memref-to-llvm
   pm.addPass(createReconcileUnrealizedCastsPass());  // reconcile-unrealized-casts
