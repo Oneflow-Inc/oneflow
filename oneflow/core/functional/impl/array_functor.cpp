@@ -692,7 +692,7 @@ class ConcatFunctor {
   ConcatFunctor() {
     ops_.resize(kMaxInputCount);
     for (int n = 0; n < ops_.size(); ++n) {
-      ops_[n] = CHECK_JUST(one::OpBuilder("concat").Input("in", n + 1).Output("out").Build());
+      ops_[n] = CHECK_JUST(one::OpBuilder("cat").Input("in", n + 1).Output("out").Build());
     }
   }
   Maybe<Tensor> operator()(const TensorTuple& inputs, const int64_t& dim) const {

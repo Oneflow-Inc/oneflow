@@ -31,6 +31,8 @@ static constexpr size_t kMaxOutputCount = 128;
 bool IsStaticZerosTensor(const std::shared_ptr<Tensor>& x);
 bool IsInplaceValid(const std::shared_ptr<Tensor>& x);
 bool IsScalarTensor(const std::shared_ptr<Tensor>& x);
+Maybe<bool> ComputeNonOverlappingAndDense(const std::shared_ptr<Tensor>& x);
+Maybe<bool> IsNonOverlappingAndDense(const std::shared_ptr<Tensor>& x);
 
 Maybe<std::vector<int32_t>> CheckAxis(const std::vector<int32_t>& axis, const int32_t& ndim);
 Maybe<void> CheckInplaceValid(const std::shared_ptr<Tensor>& x);
@@ -57,6 +59,10 @@ Maybe<std::vector<int32_t>> GetInversedPerm(const std::vector<int32_t>& perm);
 Maybe<std::tuple<std::shared_ptr<Tensor>, bool>> batchify(const std::shared_ptr<Tensor>& input,
                                                           const int64_t num_spatial_dims,
                                                           const std::string& func_name);
+
+Maybe<std::tuple<std::shared_ptr<Tensor>, bool>> pooling_batchify(
+    const std::shared_ptr<Tensor>& input, const int64_t num_spatial_dims,
+    const std::string& func_name);
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow
