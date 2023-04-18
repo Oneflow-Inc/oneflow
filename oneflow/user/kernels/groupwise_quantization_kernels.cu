@@ -102,15 +102,12 @@ struct LoadCast<uint8_t, Dst, pack_size, 8> {
           uint32_t u32;
           half2 h2;
         } u32_h2[2];
-        static constexpr uint32_t mask_for_elt_01 = 0x4140;
-        static constexpr uint32_t mask_for_elt_23 = 0x4342;
-        static constexpr uint32_t start_byte_for_fp16 = 0x64;
         asm volatile("prmt.b32 %0,%1,%2,%3;\n"
                      : "=r"(u32_h2[0].u32)
-                     : "r"(src_u32.elem[i]), "n"(start_byte_for_fp16), "n"(mask_for_elt_01));
+                     : "r"(src_u32.elem[i]), "n"(0x64), "n"(0x4140));
         asm volatile("prmt.b32 %0,%1,%2,%3;\n"
                      : "=r"(u32_h2[1].u32)
-                     : "r"(src_u32.elem[i]), "n"(start_byte_for_fp16), "n"(mask_for_elt_23));
+                     : "r"(src_u32.elem[i]), "n"(0x64), "n"(0x4342));
         half2 h2_1024 = __float2half2_rn(1024);
         u32_h2[0].h2 = __hsub2(u32_h2[0].h2, h2_1024);
         u32_h2[1].h2 = __hsub2(u32_h2[1].h2, h2_1024);
