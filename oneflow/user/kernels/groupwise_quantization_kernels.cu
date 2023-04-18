@@ -93,20 +93,24 @@ template<typename Dst, size_t pack_size>
 struct LoadCast<
     uint8_t, Dst, pack_size, 8,
     typename std::enable_if<pack_size % 4 != 0 || !std::is_same<Dst, half>::value, void>::type> {
-  __device__ void operator()(const void* src, AlignedArray<Dst, pack_size>* dst) {
-    AlignedArray<uint8_t, pack_size> src_arr =
-        *reinterpret_cast<const AlignedArray<uint8_t, pack_size>*>(src);
+  using LoadType = AlignedArray<uint8_t, pack_size>;
+  __device__ void Load(const void* src, LoadType* dst) {
+    *dst = *reinterpret_cast<const LoadType*>(src);
+  }
+  __device__ void Cast(const LoadType& src, AlignedArray<Dst, pack_size>* dst) {
 #pragma unroll
-    for (int i = 0; i < pack_size; ++i) { dst->elem[i] = static_cast<Dst>(src_arr.elem[i]); }
+    for (int i = 0; i < pack_size; ++i) { dst->elem[i] = static_cast<Dst>(src.elem[i]); }
   }
 };
 
 template<size_t pack_size>
 struct LoadCast<uint8_t, half, pack_size, 8,
                 typename std::enable_if<pack_size % 4 == 0, void>::type> {
-  __device__ void operator()(const void* src, AlignedArray<half, pack_size>* dst) {
-    AlignedArray<uint32_t, pack_size / 4> src_u32 =
-        *reinterpret_cast<const AlignedArray<uint32_t, pack_size / 4>*>(src);
+  using LoadType = AlignedArray<uint32_t, pack_size / 4>;
+  __device__ void Load(const void* src, LoadType* dst) {
+    *dst = *reinterpret_cast<const LoadType*>(src);
+  }
+  __device__ void Cast(const LoadType& src, AlignedArray<half, pack_size>* dst) {
     AlignedArray<half2, pack_size / 2>* dst_h2 =
         reinterpret_cast<AlignedArray<half2, pack_size / 2>*>(dst);
     for (int i = 0; i < pack_size / 4; ++i) {
@@ -116,10 +120,10 @@ struct LoadCast<uint8_t, half, pack_size, 8,
       } u32_h2[2];
       asm volatile("prmt.b32 %0,%1,%2,%3;\n"
                    : "=r"(u32_h2[0].u32)
-                   : "r"(src_u32.elem[i]), "n"(0x64), "n"(0x4140));
+                   : "r"(src.elem[i]), "n"(0x64), "n"(0x4140));
       asm volatile("prmt.b32 %0,%1,%2,%3;\n"
                    : "=r"(u32_h2[1].u32)
-                   : "r"(src_u32.elem[i]), "n"(0x64), "n"(0x4342));
+                   : "r"(src.elem[i]), "n"(0x64), "n"(0x4342));
       half2 h2_1024 = __float2half2_rn(1024);
       u32_h2[0].h2 = __hsub2(u32_h2[0].h2, h2_1024);
       u32_h2[1].h2 = __hsub2(u32_h2[1].h2, h2_1024);
@@ -131,12 +135,14 @@ struct LoadCast<uint8_t, half, pack_size, 8,
 
 template<typename Dst, size_t pack_size>
 struct LoadCast<uint8_t, Dst, pack_size, 4> {
-  __device__ void operator()(const void* src, AlignedArray<Dst, pack_size>* dst) {
-    AlignedArray<uint8_t, pack_size / 2> src_arr =
-        *reinterpret_cast<const AlignedArray<uint8_t, pack_size / 2>*>(src);
+  using LoadType = AlignedArray<uint8_t, pack_size / 2>;
+  __device__ void Load(const void* src, LoadType* dst) {
+    *dst = *reinterpret_cast<const LoadType*>(src);
+  }
+  __device__ void Cast(const LoadType& src, AlignedArray<Dst, pack_size>* dst) {
 #pragma unroll
     for (int i = 0; i < pack_size / 2; ++i) {
-      const uint8_t q = src_arr.elem[i];
+      const uint8_t q = src.elem[i];
       const uint8_t hi = (q >> 4);
       const uint8_t lo = (q & 0xF);
       dst->elem[i * 2 + 0] = static_cast<Dst>(hi);
@@ -147,22 +153,26 @@ struct LoadCast<uint8_t, Dst, pack_size, 4> {
 
 template<typename Dst, size_t pack_size>
 struct LoadCast<int8_t, Dst, pack_size, 8> {
-  __device__ void operator()(const void* src, AlignedArray<Dst, pack_size>* dst) {
-    AlignedArray<int8_t, pack_size> src_arr =
-        *reinterpret_cast<const AlignedArray<int8_t, pack_size>*>(src);
+  using LoadType = AlignedArray<int8_t, pack_size>;
+  __device__ void Load(const void* src, LoadType* dst) {
+    *dst = *reinterpret_cast<const LoadType*>(src);
+  }
+  __device__ void Cast(const LoadType& src, AlignedArray<Dst, pack_size>* dst) {
 #pragma unroll
-    for (int i = 0; i < pack_size; ++i) { dst->elem[i] = static_cast<Dst>(src_arr.elem[i]); }
+    for (int i = 0; i < pack_size; ++i) { dst->elem[i] = static_cast<Dst>(src.elem[i]); }
   }
 };
 
 template<typename Dst, size_t pack_size>
 struct LoadCast<int8_t, Dst, pack_size, 4> {
-  __device__ void operator()(const void* src, AlignedArray<Dst, pack_size>* dst) {
-    AlignedArray<int8_t, pack_size / 2> src_arr =
-        *reinterpret_cast<const AlignedArray<int8_t, pack_size / 2>*>(src);
+  using LoadType = AlignedArray<int8_t, pack_size / 2>;
+  __device__ void Load(const void* src, LoadType* dst) {
+    *dst = *reinterpret_cast<const LoadType*>(src);
+  }
+  __device__ void Cast(const LoadType& src, AlignedArray<Dst, pack_size>* dst) {
 #pragma unroll
     for (int i = 0; i < pack_size / 2; ++i) {
-      const int8_t q = src_arr.elem[i];
+      const int8_t q = src.elem[i];
       const int8_t hi = (q >> 4);
       int8_t lo = (q << 4);
       lo = (lo >> 4);
@@ -710,7 +720,9 @@ __global__ void QuantizedMatmulBiasGroupK(int32_t M, int32_t N, int32_t K, int32
         }
         auto xs = x_m[k];
         AlignedArray<T, d_pack_size> weights;
-        LoadCast<U, T, d_pack_size, bits>()(w_n + k, &weights);
+        typename LoadCast<U, T, d_pack_size, bits>::LoadType loaded;
+        LoadCast<U, T, d_pack_size, bits>().Load(w_n + k, &loaded);
+        LoadCast<U, T, d_pack_size, bits>().Cast(loaded, &weights);
         InplaceFmaScalar<T, d_pack_size>()(&weights, group_scale, group_zero);
         MultiplyAccumulate<T, C, d_pack_size>()(xs, weights, &t_sum);
       }
