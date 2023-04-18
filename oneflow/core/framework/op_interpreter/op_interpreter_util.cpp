@@ -158,19 +158,6 @@ template<>
       ->Apply(op_expr, processor.inputs(), processor.outputs(), ctx);
 }
 
-/* static */ Maybe<OpAttribute> OpInterpUtil::AddOpAndInferOpAttribute(
-    const OperatorConf& op_conf, const bool is_local_strategy_enabled) {
-  std::shared_ptr<OpAttribute> op_attribute = JUST([&]() -> Maybe<OpAttribute> {
-    auto infer_ctx = JUST(GetCurInferCtx());
-    if (is_local_strategy_enabled) {
-      return infer_ctx->AddAndInferLocalOp(op_conf);
-    } else {
-      return infer_ctx->AddAndInferGlobalOp(op_conf);
-    }
-  }());
-  return op_attribute;
-}
-
 /* static */ Maybe<OperatorConf> OpInterpUtil::GenBuiltinOpConf(const BuiltinOpExpr& op_expr,
                                                                 const AttrMap& attrs) {
   auto op_conf = std::make_shared<OperatorConf>();

@@ -16,20 +16,27 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_RANDOM_GENERATOR_H_
 #define ONEFLOW_CORE_FRAMEWORK_RANDOM_GENERATOR_H_
 
-#include "oneflow/core/framework/random_generator_impl.h"
+#include <mutex>
+
+#include "oneflow/core/ep/include/random_generator.h"
+#include "oneflow/core/framework/auto_random_generator.h"
+#include "oneflow/core/framework/device.h"
+
+#include "oneflow/core/ep/cpu/cpu_random_generator.h"
+#include "oneflow/core/ep/cuda/cuda_random_generator.h"
 
 namespace oneflow {
 namespace one {
-
-class Tensor;
 
 // The default seed is selected to be a large number
 // with good distribution of 0s and 1s in bit representation.
 static constexpr uint64_t default_rng_seed_val = 67280421310721;
 
+class Tensor;
+
 class Generator final {
  public:
-  explicit Generator(const std::shared_ptr<GeneratorImpl>& impl);
+  explicit Generator(const std::shared_ptr<ep::RandomGenerator>& internal);
 
   ~Generator() = default;
 
@@ -40,53 +47,52 @@ class Generator final {
   // Reset current generator by a non-deterministic random seed, and returns it.
   uint64_t seed();
 
-  Maybe<Symbol<Device>> device() const { return impl_->device(); }
+  Maybe<Symbol<Device>> device() const;
 
-  Maybe<Tensor> GetState() const { return impl_->GetState(); }
-  Maybe<void> SetState(const std::shared_ptr<Tensor>& state) { return impl_->SetState(state); }
+  Maybe<Tensor> GetState() const;
+  Maybe<void> SetState(const std::shared_ptr<Tensor>& state);
 
-  const std::shared_ptr<GeneratorImpl>& impl() const { return impl_; }
+  const std::shared_ptr<ep::RandomGenerator>& internal() const { return internal_; }
 
   template<typename T>
   Maybe<T> Get(int device_index = -1) const {
-    if (auto* impl = dynamic_cast<AutoGeneratorImpl*>(impl_.get())) {
-      return impl->GetOrCreate<T>(device_index);
+    if (auto* internal = dynamic_cast<AutoGenerator*>(internal_.get())) {
+      return internal->GetOrCreate<T>(device_index);
     }
-    auto impl = std::dynamic_pointer_cast<T>(impl_);
-    CHECK_NOTNULL_OR_RETURN(impl);
+    auto internal = std::dynamic_pointer_cast<T>(internal_);
+    CHECK_NOTNULL_OR_RETURN(internal);
     if (device_index != -1) {
-      CHECK_EQ_OR_RETURN(device_index, impl->device_index())
+      CHECK_EQ_OR_RETURN(device_index, internal->device_index())
           << "Invalid device index " << device_index << " since the generator's device index is "
-          << impl->device_index();
+          << internal->device_index();
     }
-    return impl;
+    return internal;
   }
 
  private:
-  std::shared_ptr<GeneratorImpl> impl_;
+  mutable std::mutex mutex_;
+  std::shared_ptr<ep::RandomGenerator> internal_;
 };
+
+Maybe<Generator> MakeGenerator(const std::string& device, int device_index = -1);
+Maybe<Generator> MakeGenerator(DeviceType device, int device_index = -1);
+
+Maybe<Generator> MakeAutoGenerator();
+Maybe<Generator> MakeCPUGenerator();
+Maybe<Generator> MakeCUDAGenerator();
+
+Maybe<Generator> DefaultAutoGenerator();
+Maybe<Generator> DefaultCPUGenerator();
+Maybe<Generator> DefaultCUDAGenerator(int device_index = -1);
+
+Maybe<Generator> DefaultGenerator(const std::string& device, int device_index = -1);
+Maybe<Generator> DefaultGenerator(DeviceType device, int device_index = -1);
 
 Maybe<Generator> ManualSeed(uint64_t seed);
 
 Maybe<void> ManualSeed(uint64_t seed, const std::string& device, int device_index = -1);
 Maybe<void> ManualSeed(uint64_t seed, DeviceType device, int device_index = -1);
 
-Maybe<Generator> DefaultGenerator(const std::string& device, int device_index = -1);
-Maybe<Generator> DefaultGenerator(DeviceType device, int device_index = -1);
-
-Maybe<Generator> MakeGenerator(const std::string& device, int device_index = -1);
-Maybe<Generator> MakeGenerator(DeviceType device, int device_index = -1);
-
-Maybe<Generator> DefaultAutoGenerator();
-Maybe<Generator> MakeAutoGenerator();
-
-Maybe<Generator> DefaultCPUGenerator();
-Maybe<Generator> MakeCPUGenerator();
-
-#ifdef WITH_CUDA
-Maybe<Generator> DefaultCUDAGenerator(int device_index = -1);
-Maybe<Generator> MakeCUDAGenerator();
-#endif  // WITH_CUDA
 Maybe<void> ManualSeedAllCudaGenerator(uint64_t seed);
 
 }  // namespace one
