@@ -675,17 +675,22 @@ void DispatchMatmulBiasGroupNPackSize(ep::CudaStream* stream, int64_t m, int64_t
   }
 }
 
+constexpr int32_t kWarpSize = 32;
+
 template<typename T, typename C, typename U, int block_size, size_t d_pack_size, size_t q_pack_size,
-         int bits, bool symmetric, bool single_group, size_t k_unroll>
+         int bits, bool symmetric, bool single_group, size_t unroll_k>
 __global__ void QuantizedMatmulBiasGroupK(int32_t M, int32_t N, int32_t K, int32_t group_size,
                                           int32_t num_groups_per_n,
                                           const AlignedArray<T, d_pack_size>* __restrict__ x,
                                           const AlignedArray<U, q_pack_size>* __restrict__ w,
                                           const T* __restrict__ scale, const T* __restrict__ zero,
                                           const T* __restrict__ bias, T* __restrict__ out) {
+  constexpr int32_t num_warp = block_size / kWarpSize;
+  const int32_t warp_id = threadIdx.x / kWarpSize;
+  const int32_t lane_id = threadIdx.x % kWarpSize;
   for (int32_t m = blockIdx.x; m < M; m += gridDim.x) {
     const auto* x_m = x + m * K;
-    for (int32_t n = blockIdx.y; n < N; n += gridDim.y) {
+    for (int32_t n = blockIdx.y * num_warp + warp_id; n < N; n += gridDim.y * num_warp) {
       C t_sum = 0;
       const auto* w_n = w + n * K;
       const auto* scale_n = scale + n * num_groups_per_n;
@@ -703,22 +708,22 @@ __global__ void QuantizedMatmulBiasGroupK(int32_t M, int32_t N, int32_t K, int32
         } else {
           group_zero = zero_n[0];
         }
-        for (int32_t k = threadIdx.x; k < K; k += block_size * k_unroll) {
-          AlignedArray<T, d_pack_size> xs[k_unroll];
-          typename LoadCast<U, T, d_pack_size, bits>::LoadType ws[k_unroll];
-          for (int i = 0; i < k_unroll; ++i) {
-            xs[i] = x_m[k + i * block_size];
-            LoadCast<U, T, d_pack_size, bits>().Load(w_n + k + i * block_size, &ws[i]);
+        for (int32_t k = lane_id; k < K; k += kWarpSize * unroll_k) {
+          AlignedArray<T, d_pack_size> xs[unroll_k];
+          typename LoadCast<U, T, d_pack_size, bits>::LoadType ws[unroll_k];
+          for (int i = 0; i < unroll_k; ++i) {
+            xs[i] = x_m[k + i * kWarpSize];
+            LoadCast<U, T, d_pack_size, bits>().Load(w_n + k + i * kWarpSize, &ws[i]);
           }
           AlignedArray<T, d_pack_size> w;
-          for (int i = 0; i < k_unroll; ++i) {
+          for (int i = 0; i < unroll_k; ++i) {
             LoadCast<U, T, d_pack_size, bits>().Cast(ws[i], &w);
             InplaceFmaScalar<T, d_pack_size>()(&w, group_scale, group_zero);
             MultiplyAccumulate<T, C, d_pack_size>()(xs[i], w, &t_sum);
           }
         }
       } else {
-        for (int32_t k = threadIdx.x; k < K; k += block_size) {
+        for (int32_t k = lane_id; k < K; k += kWarpSize) {
           auto group_id = k / group_size;
           group_scale = static_cast<T>(scale_n[group_id]);
           if (symmetric) {
@@ -739,10 +744,10 @@ __global__ void QuantizedMatmulBiasGroupK(int32_t M, int32_t N, int32_t K, int32
           MultiplyAccumulate<T, C, d_pack_size>()(xs, weights, &t_sum);
         }
       }
-      using BlockReduce = cub::BlockReduce<C, block_size>;
-      __shared__ typename BlockReduce::TempStorage temp_storage;
-      C sum = BlockReduce(temp_storage).Sum(t_sum);
-      if (threadIdx.x == 0) {
+      using WarpReduce = cub::WarpReduce<C>;
+      __shared__ typename WarpReduce::TempStorage temp_storage[num_warp];
+      C sum = WarpReduce(temp_storage[warp_id]).Sum(t_sum);
+      if (lane_id == 0) {
         if (bias != nullptr) { sum += static_cast<C>(bias[n]); }
         out[m * N + n] = static_cast<T>(sum);
       }
