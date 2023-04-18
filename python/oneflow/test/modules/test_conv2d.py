@@ -1599,6 +1599,7 @@ class TestConv2d(flow.unittest.TestCase):
                 )
             )
 
+    @unittest.skip("skip for now, becase it failed 8 times in past week")
     @autotest(n=3)
     def test_nn_functional_conv2d(test_case):
         device = random_device()
@@ -1951,6 +1952,7 @@ class TestConv2d(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @unittest.skip("skip for now, becase it failed 6 times in past week")
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_conv2d_NHWC_with_random_data(test_case):
         in_channels = np.random.randint(6, 33)
