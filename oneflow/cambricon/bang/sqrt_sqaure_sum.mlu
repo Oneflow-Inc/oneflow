@@ -1,0 +1,87 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+#include "oneflow/cambricon/bang/bang_kernels.h"
+
+namespace oneflow {
+
+static constexpr int32_t nram_limit = 1024;
+static __mlu_shared__ char s_buffer[1024];
+
+inline __mlu_func__ void bang_sqrt_square_sum_internal(float* temp_nram, const float* nram_in,
+                                                       int num_align) {
+  __bang_sumpool(temp_nram, nram_in,
+                 /*channel*/ 32, /*height*/ 1, /*width*/ num_align / 32,
+                 /*kernel_height*/ 1, /*kernel_width*/ num_align / 32,
+                 /*stride_height*/ 1, /*stride_width*/ 1);
+  __bang_reduce_sum(temp_nram, temp_nram, 32);
+}
+
+template<typename T>
+__mlu_global__ void bang_sqrt_square_sum_kernel(int64_t n, const T* in, T* out) {
+  int64_t step = (n + taskDim - 1) / taskDim;
+  int64_t start = step * taskId;
+  int64_t end = start + step;
+  if (end > n) { end = n; }
+  int64_t length = start < end ? end - start : 0;
+  int64_t nram_rest = (length & (nram_limit - 1));  // length % nram_limit
+  int32_t nram_limit_bytes = nram_limit * sizeof(T);
+
+  __nram__ T nram_in[nram_limit];
+  __nram__ char temp_nram[128];
+
+  T* temp_sum = (T*)temp_nram;
+  T result = 0;
+  int64_t j = 0;
+  for (; j < length - nram_limit + 1; j += nram_limit) {
+    __memcpy_async(nram_in, in + start + j, nram_limit_bytes, GDRAM2NRAM);
+    __sync_copy_dram_to_nram();
+    bang_sqrt_square_sum_internal(temp_sum, nram_in, nram_limit);
+    result += *temp_sum;
+  }
+  if (nram_rest > 0) {
+    int32_t nram_rest_bytes = nram_rest * sizeof(T);
+    __bang_write_zero(nram_in, nram_limit);
+    __memcpy_async(nram_in, in + start + j, nram_rest_bytes, GDRAM2NRAM);
+    __sync_copy_dram_to_nram();
+    bang_sqrt_square_sum_internal(temp_sum, nram_in, nram_limit);
+    result += *temp_sum;
+  }
+
+  T* s_result = (T*)s_buffer;
+  s_result[taskId] = result;
+  __sync_cluster();
+
+  if (taskId == 0) {
+    for (int i = 1; i < taskDim; ++i) { result += s_result[i]; }
+    *out = sqrt(result);
+  }
+}
+
+template<typename T>
+void bang_sqrt_square_sum_kernel(BangHandle& handle, int64_t n, const T* in, T* out) {
+  cnrtDim3_t dim = {handle.ncores_per_cluster, 1, 1};
+  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_BLOCK;
+  bang_sqrt_square_sum_kernel<<<dim, func_type, handle.queue>>>(n, in, out);
+}
+
+#define INSTANCE_BANG_TANH_GRAD_KERNEL(T) \
+  template void bang_sqrt_square_sum_kernel<T>(BangHandle & handle, int64_t n, const T* in, T* out);
+
+INSTANCE_BANG_TANH_GRAD_KERNEL(float)
+
+#undef INSTANCE_BANG_TANH_GRAD_KERNEL
+
+}  // namespace oneflow

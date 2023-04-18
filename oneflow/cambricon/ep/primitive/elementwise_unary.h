@@ -37,6 +37,11 @@ namespace mlu {
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kReciprocalNoNan) \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRsqrt)
 
+#define MLU_UNARY_UTILS_OP_SEQ          \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kIsInf) \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kIsNan) \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kIsFinite)
+
 template<UnaryOp unary_op>
 class ElementwiseUnaryImpl : public ElementwiseUnary {
  public:
@@ -76,6 +81,16 @@ class ElementwiseUnaryImpl : public ElementwiseUnary {
     } else if constexpr (unary_op == UnaryOp::kRsqrt) {
       OF_CNNL_CHECK(cnnlRsqrt_v2(cnnl_handle, CNNL_COMPUTATION_HIGH_PRECISION, input_desc.desc(),
                                  src_ptr, output_desc.desc(), dst_ptr));
+    } else if constexpr (unary_op == UnaryOp::kIsNan) {
+      OF_CNNL_CHECK(
+          cnnlIsNan(cnnl_handle, input_desc.desc(), src_ptr, output_desc.desc(), dst_ptr));
+    } else if constexpr (unary_op == UnaryOp::kIsInf) {
+      OF_CNNL_CHECK(cnnlIsInf(cnnl_handle, input_desc.desc(), src_ptr, CNNL_INF, /*reduce=*/false,
+                              /*workspace=*/nullptr, /*workspace_size*/ 0, output_desc.desc(),
+                              dst_ptr));
+    } else if constexpr (unary_op == UnaryOp::kIsFinite) {
+      OF_CNNL_CHECK(
+          cnnlIsFinite(cnnl_handle, input_desc.desc(), src_ptr, output_desc.desc(), dst_ptr));
     } else {
       UNIMPLEMENTED();
     }

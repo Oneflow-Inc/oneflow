@@ -129,6 +129,9 @@ void bang_fast_gelu_grad_kernel(BangHandle& handle, int64_t n, const T* out_grad
 void bang_fast_gelu_grad_half_kernel(BangHandle& handle, int64_t n, const void* out_grad,
                                      const void* in, void* in_grad);
 
+template<typename T>
+void bang_sqrt_square_sum_kernel(BangHandle& handle, int64_t n, const T* in, T* out);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CAMBRICON_BANG_BANG_KERNELS_H_
