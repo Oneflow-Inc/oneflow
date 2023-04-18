@@ -51,6 +51,7 @@ struct MgpuToOneFlowStreamPattern final : public OpRewritePattern<LLVM::CallOp> 
                 auto target = op.getOperand(idx - 3).getDefiningOp();
                 rewriter.replaceOp(target, {stream});
               }}},
+            // this sync operation is created by gpu-to-llvm-pass from gpu.launch_func op.
             {"mgpuStreamSynchronize",
              {[](LLVM::CallOp& op, Value& stream) { return true; },
               [](mlir::PatternRewriter& rewriter, LLVM::CallOp& op, Value& stream) {
