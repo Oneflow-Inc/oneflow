@@ -936,6 +936,13 @@ class TestTensor(flow.unittest.TestCase):
         )
         test_case.assertTrue(y_default_dtype.dtype == flow.int32)
 
+    # TODO:shijiaxing  When the grad function be implemented, rm "auto_backward=False"
+    @autotest(n=5, auto_backward=False)
+    def test_digamma_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        return x.digamma()
+
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestTensorNumpy(flow.unittest.TestCase):

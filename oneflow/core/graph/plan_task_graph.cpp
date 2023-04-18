@@ -17,11 +17,6 @@ limitations under the License.
 
 namespace oneflow {
 
-int64_t PlanTaskNode::chain_id() const {
-  int64_t chain_id = task_proto_->task_set_info().chain_id();
-  return chain_id;
-}
-
 PlanTaskGraph::PlanTaskGraph(const Plan& plan) : plan_(&plan) {
   InitNodes();
   InitEdges();

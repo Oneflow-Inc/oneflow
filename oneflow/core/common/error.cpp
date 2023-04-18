@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/common/error_util.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
 #include "oneflow/extension/stack/foreign_stack_getter.h"
+#include "oneflow/extension/stack/stacktrace.h"
 #include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
@@ -46,6 +47,15 @@ std::shared_ptr<StackedError>* MutThreadLocalError() {
 
 Error&& Error::AddStackFrame(Symbol<ErrorStackFrame> error_stack_frame) {
   stacked_error_->add_stack_frame(error_stack_frame);
+  return std::move(*this);
+}
+
+Error&& Error::GetStackTrace(int64_t depth, int64_t skip_n_firsts) {
+  backward::StackTrace st;
+  st.load_here(depth);
+  st.skip_n_firsts(skip_n_firsts);
+  backward::Printer p;
+  p.print(st, stderr);
   return std::move(*this);
 }
 
