@@ -13,25 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import subprocess
-import sys
-import os
+
 import unittest
-import oneflow as flow
 import oneflow.unittest
+import oneflow as flow
+import numpy as np
 
 
-class TestRemat(flow.unittest.TestCase):
-    @unittest.skip("skip for now, becase it failed 4 times in past week")
-    def test_remat_in_single_threaded_vm(test_case):
-        env = os.environ.copy()
-        env["ONEFLOW_VM_MULTI_THREAD"] = "0"
-        p = subprocess.run(
-            [sys.executable, "_test_remat.py"],
-            cwd=os.path.dirname(os.path.realpath(__file__)),
-            env=env,
+class TestInTopK(flow.unittest.TestCase):
+    def test_in_top_k_error_msg(test_case):
+        arr = np.array([1, 1])
+        targets = flow.Tensor(arr)
+        targets = flow.cast(targets, flow.float)
+        arr = np.array([[0.8, 0.6, 0.3], [0.1, 0.6, 0.4]])
+        predictions = flow.Tensor(arr)
+        with test_case.assertRaises(RuntimeError) as ctx:
+            flow.in_top_k(targets, predictions, 1)
+        test_case.assertTrue(
+            "targets data type must be index type" in str(ctx.exception)
         )
-        test_case.assertEqual(p.returncode, 0)
 
 
 if __name__ == "__main__":

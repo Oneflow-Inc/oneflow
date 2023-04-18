@@ -342,6 +342,7 @@ def _test_fused_glu_split_without_bias(test_case, params: dict, dtype=flow.float
 # @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @unittest.skipIf(True, "CI test taking too long.")
 class TestFusedGlu(flow.unittest.TestCase):
+    @unittest.skip("skip for now, becase it failed 4 times in past week")
     def test_gather(test_case):
         arg_dict = OrderedDict()
         # set up test functions
