@@ -54,6 +54,10 @@ class ElementwiseUnaryFactoryImpl : public ElementwiseUnaryFactory {
   {std::make_tuple(unary_op, OF_PP_PAIR_SECOND(dtype_pair), OF_PP_PAIR_SECOND(dtype_pair)), \
    NewElementwiseUnary<unary_op>},
 
+#define MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY(unary_op, src_type_pair, dst_dtype_pair)  \
+  {std::make_tuple(unary_op, OF_PP_PAIR_SECOND(src_type_pair), OF_PP_PAIR_SECOND(dst_dtype_pair)), \
+   NewElementwiseUnary<unary_op>},
+
     static const std::map<
         std::tuple<UnaryOp, DataType, DataType>,
         std::function<std::unique_ptr<ElementwiseUnary>(Scalar, Scalar, DataType, DataType)>>
@@ -61,9 +65,14 @@ class ElementwiseUnaryFactoryImpl : public ElementwiseUnaryFactory {
             // For Float Type OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
                 MAKE_NEW_SAME_DTYPE_ELEMENTWISE_UNARY_ENTRY, MLU_UNARY_FLOATING_MATH_OP_SEQ,
-                CPU_PRIMITIVE_FLOATING_TYPE_SEQ CPU_PRIMITIVE_FLOAT16_TYPE_SEQ)};
+                CPU_PRIMITIVE_FLOATING_TYPE_SEQ CPU_PRIMITIVE_FLOAT16_TYPE_SEQ)
+            // For Utils OP
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY,
+                                             MLU_UNARY_UTILS_OP_SEQ, UTIL_OPS_DATA_TYPE_SEQ,
+                                             CPU_PRIMITIVE_BOOL_TYPE_SEQ)};
 
 #undef MAKE_NEW_SAME_DTYPE_ELEMENTWISE_UNARY_ENTRY
+#undef MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY
 
     const auto it =
         new_elementwise_unary_handle.find(std::make_tuple(unary_op, src_type, dst_dtype));

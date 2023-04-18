@@ -106,11 +106,26 @@ def _test_where_dim4(test_case, device):
 
 
 def _test_where_scalar(test_case, device):
-    x = flow.randn(5, 5)
+    x = flow.randn(400, 2000, device=device)
     y = flow.where(x > 0, x, 0.0)
-    test_case.assertTrue(np.array_equal(y.size(), (5, 5)))
+    y_ref = np.where(x.numpy() > 0, x.numpy(), 0.0)
+    test_case.assertTrue(np.allclose(y.numpy(), y_ref, 1e-05, 1e-05))
+
     y = flow.where(x > 0, 0.0, x)
-    test_case.assertTrue(np.array_equal(y.size(), (5, 5)))
+    y_ref = np.where(x.numpy() > 0, 0.0, x.numpy())
+    test_case.assertTrue(np.allclose(y.numpy(), y_ref, 1e-05, 1e-05))
+
+
+def _test_where_scalar_tensor(test_case, device):
+    scalar_zero = flow.Tensor(1, device=device).fill_(0.0)
+    x = flow.randn(400, 2000, device=device)
+    y = flow.where(x > 0, x, scalar_zero)
+    y_ref = np.where(x.numpy() > 0, x.numpy(), 0.0)
+    test_case.assertTrue(np.allclose(y.numpy(), y_ref, 1e-05, 1e-05))
+
+    y = flow.where(x > 0, scalar_zero, x)
+    y_ref = np.where(x.numpy() > 0, 0.0, x.numpy())
+    test_case.assertTrue(np.allclose(y.numpy(), y_ref, 1e-05, 1e-05))
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -123,6 +138,7 @@ class TestWhereCambriconModule(flow.unittest.TestCase):
             _test_where_scalar,
             _test_where_dim4,
             _test_where_scalar,
+            _test_where_scalar_tensor,
         ]
         arg_dict["device"] = ["mlu"]
         for arg in GenArgList(arg_dict):
