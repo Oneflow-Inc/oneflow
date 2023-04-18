@@ -22,10 +22,10 @@ namespace oneflow {
   const user_op::TensorDesc& targets = ctx->InputTensorDesc("targets", 0);
   const user_op::TensorDesc& predictions = ctx->InputTensorDesc("predictions", 0);
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
-  CHECK_EQ_OR_RETURN(targets.shape().NumAxes(), 1);
-  CHECK_EQ_OR_RETURN(predictions.shape().NumAxes(), 2);
+  CHECK_EQ_OR_RETURN(targets.shape().NumAxes(), 1);      // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(predictions.shape().NumAxes(), 2);  // NOLINT(maybe-need-error-msg)
   const bool is_dynamic = targets.is_dynamic();
-  CHECK_EQ_OR_RETURN(is_dynamic, predictions.is_dynamic());
+  CHECK_EQ_OR_RETURN(is_dynamic, predictions.is_dynamic());  // NOLINT(maybe-need-error-msg)
   out->set_is_dynamic(is_dynamic);
   out->set_shape(targets.shape());
   return Maybe<void>::Ok();
@@ -42,7 +42,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> InTopKOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& targets = ctx->InputTensorDesc("targets", 0);
-  CHECK_OR_RETURN(IsIndexDataType(targets.data_type()));
+  CHECK_OR_RETURN(IsIndexDataType(targets.data_type())) << " targets data type must be index type";
   const user_op::TensorDesc& predictions = ctx->InputTensorDesc("predictions", 0);
   CHECK_EQ_OR_RETURN(predictions.data_type(), DataType::kFloat)
       << "InferDataType Failed. Expected " << DataType_Name(DataType::kFloat) << ", but got "
