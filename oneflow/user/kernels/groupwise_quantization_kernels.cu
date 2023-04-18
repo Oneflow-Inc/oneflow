@@ -703,8 +703,6 @@ __global__ void QuantizedMatmulBiasGroupK(int32_t M, int32_t N, int32_t K, int32
         } else {
           group_zero = zero_n[0];
         }
-      }
-      if (single_group) {
         for (int32_t k = threadIdx.x; k < K; k += block_size * k_unroll) {
           AlignedArray<T, d_pack_size> xs[k_unroll];
           typename LoadCast<U, T, d_pack_size, bits>::LoadType ws[k_unroll];
@@ -766,7 +764,7 @@ void LaunchMatmulBiasGroupK(ep::CudaStream* stream, int64_t m, int64_t n, int64_
     UNIMPLEMENTED();
   }
   if constexpr (sizeof(T) * d_pack_size <= 16 && q_pack_size > 0) {
-    if ((k / d_pack_size) % 2 == 0) {
+    if ((k / d_pack_size) % (2 * block_size) == 0) {
       QuantizedMatmulBiasGroupK<T, C, U, block_size, d_pack_size, q_pack_size, num_bits, symmetric,
                                 single_group, 2>
           <<<dim3(std::min<int64_t>(m, max_grid_size), std::min<int64_t>(n, max_grid_size)),
