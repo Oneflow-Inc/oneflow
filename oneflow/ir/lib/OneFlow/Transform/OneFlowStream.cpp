@@ -31,10 +31,6 @@ struct MgpuToOneFlowStreamPattern final : public OpRewritePattern<LLVM::CallOp> 
       LOG(ERROR) << "failed to find stream in llvm.func block arguments";
       return failure();
     }
-    // llvm.func @mgpuStreamCreate() -> !llvm.ptr<i8>
-    // llvm.func @mgpuLaunchKernel(!llvm.ptr<i8>, i64, i64, i64, i64, i64, i64, i32, !llvm.ptr<i8>,
-    // !llvm.ptr<ptr<i8>>, !llvm.ptr<ptr<i8>>) llvm.func @mgpuStreamSynchronize(!llvm.ptr<i8>)
-    // llvm.func @mgpuStreamDestroy(!llvm.ptr<i8>)
 
     DenseMap<StringRef,
              std::pair<std::function<bool(LLVM::CallOp&, Value&)>,
@@ -56,7 +52,7 @@ struct MgpuToOneFlowStreamPattern final : public OpRewritePattern<LLVM::CallOp> 
                 rewriter.replaceOp(target, {stream});
               }}},
             {"mgpuStreamSynchronize",
-             {[](LLVM::CallOp& op, Value& stream) { return false; },
+             {[](LLVM::CallOp& op, Value& stream) { return true; },
               [](mlir::PatternRewriter& rewriter, LLVM::CallOp& op, Value& stream) {
                 rewriter.eraseOp(op);
               }}},
