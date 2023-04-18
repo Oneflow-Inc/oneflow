@@ -51,6 +51,7 @@ def _rand_input(placement=None, sbp=None):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class GraphSparseOptimizerTest(oneflow.unittest.TestCase):
+    @unittest.skip("skip for now, becase it failed 6 times in past week")
     def test(test_case):
         PLC = flow.placement("cuda", ranks=[0])
         SBP = flow.sbp.broadcast
