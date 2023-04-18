@@ -381,7 +381,6 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCast, nv_bfloat16, nv_bfloat16>
   OF_DEVICE_FUNC nv_bfloat16 operator()(nv_bfloat16 src) const { return src; }
 };
 
-// TO-DO: Add complex half?
 template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCast, cuComplex, nv_bfloat16> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
@@ -585,7 +584,6 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCast, cuComplex, cuDoubleComple
   }
 };
 
-// TO-DO: Add complex half?
 template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCast, cuComplex, half> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
@@ -628,7 +626,6 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCast, cuDoubleComplex, cuComple
   }
 };
 
-// TO-DO: Add complex half?
 template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCast, cuDoubleComplex, half> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
