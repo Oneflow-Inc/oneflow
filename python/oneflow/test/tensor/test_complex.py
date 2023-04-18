@@ -585,7 +585,7 @@ class TestTensorComplex64(unittest.TestCase):
                 flow_x.grad.cpu().detach().numpy(), np.ones(input_shape), 1e-5, 1e-3
             )
 
-    def test_equal(self):
+    def test_equal_cpu(self):
         device = "cpu"
         for i, input_shape in enumerate(self.shape):
 
