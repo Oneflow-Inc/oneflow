@@ -44,7 +44,7 @@ class TestGlobalInterpreter(flow.unittest.TestCase):
 
         m = DataParallelMul(placement).eval()
         g = Graph(m)
-        
+
         input = flow.randn(4, 5, placement=placement, sbp=flow.sbp.split(0))
         graph_output = g(input)
         eager_output = m(input)
@@ -66,7 +66,7 @@ class TestGlobalInterpreter(flow.unittest.TestCase):
         placement = flow.placement("cuda", [0, 1])
         m = ModuleParallelMul(placement).eval()
         g = Graph(m)
-        
+
         input = flow.randn(4, 5, placement=placement, sbp=flow.sbp.broadcast)
         graph_output = g(input)
         eager_output = m(input)
@@ -91,7 +91,7 @@ class TestGlobalInterpreter(flow.unittest.TestCase):
         placement = flow.placement("cuda", [0, 1])
         m = BoxingModuleParallelMul(placement).eval()
         g = Graph(m)
-        
+
         input = flow.randn(4, 5, placement=placement, sbp=flow.sbp.broadcast)
         graph_output = g(input)
         eager_output = m(input)
@@ -100,6 +100,7 @@ class TestGlobalInterpreter(flow.unittest.TestCase):
         test_case.assertTrue(graph_output.shape == eager_output.shape)
         test_case.assertTrue(graph_output.placement == eager_output.placement)
         test_case.assertTrue(np.allclose(graph_output, eager_output))
+
 
 if __name__ == "__main__":
     os.environ["ONEFLOW_RUN_GRAPH_BY_VM"] = "1"
