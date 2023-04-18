@@ -58,6 +58,7 @@ Maybe<void> TensorStorageBase::init_producer_stream(Symbol<::oneflow::Stream> pr
   return Maybe<void>::Ok();
 }
 
+
 RematableTensorStorage::RematableTensorStorage(Symbol<Device> device)
     : TensorStorageBase(true, device),
       node(std::make_shared<remat::DisjNode>(0)),

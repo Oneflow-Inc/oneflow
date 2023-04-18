@@ -128,14 +128,13 @@ class RematableTensorStorage final : public TensorStorageBase {
   void LogEviction(bool eager_eviction) const;
 };
 
-class TensorStorage : public TensorStorageBase {
- public:
-
-  explicit TensorStorage(const std::shared_ptr<TensorStorage>& tensor_storage)
-      : TensorStorageBase(tensor_storage->is_allocated_in_vm(), tensor_storage->device()){}
-
-  ~TensorStorage() override = default;
-};
+class TensorStorage final : public TensorStorageBase {
+  public:
+    explicit TensorStorage(bool is_allocated_in_vm, Symbol<Device> device)
+        : TensorStorageBase(is_allocated_in_vm, device) {}
+    OF_DISALLOW_COPY_AND_MOVE(TensorStorage);
+    ~TensorStorage() override = default;
+  };
 
 }  // namespace vm
 }  // namespace oneflow
