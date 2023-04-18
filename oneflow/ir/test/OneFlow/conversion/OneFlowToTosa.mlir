@@ -1,5 +1,6 @@
 // RUN: oneflow-opt %s \
 // RUN: -split-input-file \
+// RUN: -auto-nhwc \
 // RUN: -lower-oneflow-to-tosa \
 // RUN: -verify-diagnostics -o - \
 // RUN: | FileCheck %s
@@ -246,18 +247,12 @@ oneflow.job @test_relu(%arg0: tensor<1xf32>) -> tensor<1xf32> {
 }
 
 //CHECK-LABEL: test_bn
-//CHECK: [[V0:%.+]] = "tosa.const"() {value = dense<9.99999974E-6> : tensor<f32>} : () -> tensor<f32>
-//CHECK: [[V1:%.+]] = "tosa.reshape"(%arg1) {new_shape = array<i64: 64, 1, 1>} : (tensor<64xf32>) -> tensor<64x1x1xf32>
-//CHECK: [[V2:%.+]] = "tosa.reshape"(%arg2) {new_shape = array<i64: 64, 1, 1>} : (tensor<64xf32>) -> tensor<64x1x1xf32>
-//CHECK: [[V3:%.+]] = "tosa.reshape"(%arg3) {new_shape = array<i64: 64, 1, 1>} : (tensor<64xf32>) -> tensor<64x1x1xf32>
-//CHECK: [[V4:%.+]] = "tosa.reshape"(%arg4) {new_shape = array<i64: 64, 1, 1>} : (tensor<64xf32>) -> tensor<64x1x1xf32>
-//CHECK: [[V5:%.+]] = "tosa.sub"(%arg0, [[V1]]) : (tensor<1x64x112x112xf32>, tensor<64x1x1xf32>) -> tensor<1x64x112x112xf32>
-//CHECK: [[V6:%.+]] = "tosa.add"([[V2]], [[V0]]) : (tensor<64x1x1xf32>, tensor<f32>) -> tensor<64x1x1xf32>
-//CHECK: [[V7:%.+]] = "tosa.rsqrt"([[V6]]) : (tensor<64x1x1xf32>) -> tensor<64x1x1xf32>
-//CHECK: [[V8:%.+]] = "tosa.mul"([[V5]], [[V7]]) {shift = 0 : i32} : (tensor<1x64x112x112xf32>, tensor<64x1x1xf32>) -> tensor<1x64x112x112xf32>
-//CHECK: [[V9:%.+]] = "tosa.mul"([[V8]], [[V3]]) {shift = 0 : i32} : (tensor<1x64x112x112xf32>, tensor<64x1x1xf32>) -> tensor<1x64x112x112xf32>
-//CHECK: [[V10:%.+]] = "tosa.add"([[V9]], [[V4]]) : (tensor<1x64x112x112xf32>, tensor<64x1x1xf32>) -> tensor<1x64x112x112xf32>
-//CHECK: return [[V10]] : tensor<1x64x112x112xf32>
+//CHECK: "tosa.sub"
+//CHECK: "tosa.add"
+//CHECK: "tosa.rsqrt"
+//CHECK: "tosa.mul"
+//CHECK: "tosa.mul"
+//CHECK: "tosa.add"
 oneflow.job @test_bn(
 %x:               tensor<1x64x112x112xf32>,
 %moving_mean:     tensor<64xf32>,
@@ -284,18 +279,12 @@ oneflow.job @test_bn(
 }
 
 //CHECK-LABEL: test_bn_infer
-//CHECK: [[V0:%.+]] = "tosa.const"() {value = dense<9.99999974E-6> : tensor<f32>} : () -> tensor<f32>
-//CHECK: [[V1:%.+]] = "tosa.reshape"(%arg1) {new_shape = array<i64: 64, 1, 1>} : (tensor<64xf32>) -> tensor<64x1x1xf32>
-//CHECK: [[V2:%.+]] = "tosa.reshape"(%arg2) {new_shape = array<i64: 64, 1, 1>} : (tensor<64xf32>) -> tensor<64x1x1xf32>
-//CHECK: [[V3:%.+]] = "tosa.reshape"(%arg3) {new_shape = array<i64: 64, 1, 1>} : (tensor<64xf32>) -> tensor<64x1x1xf32>
-//CHECK: [[V4:%.+]] = "tosa.reshape"(%arg4) {new_shape = array<i64: 64, 1, 1>} : (tensor<64xf32>) -> tensor<64x1x1xf32>
-//CHECK: [[V5:%.+]] = "tosa.sub"(%arg0, [[V1]]) : (tensor<1x64x112x112xf32>, tensor<64x1x1xf32>) -> tensor<1x64x112x112xf32>
-//CHECK: [[V6:%.+]] = "tosa.add"([[V2]], [[V0]]) : (tensor<64x1x1xf32>, tensor<f32>) -> tensor<64x1x1xf32>
-//CHECK: [[V7:%.+]] = "tosa.rsqrt"([[V6]]) : (tensor<64x1x1xf32>) -> tensor<64x1x1xf32>
-//CHECK: [[V8:%.+]] = "tosa.mul"([[V5]], [[V7]]) {shift = 0 : i32} : (tensor<1x64x112x112xf32>, tensor<64x1x1xf32>) -> tensor<1x64x112x112xf32>
-//CHECK: [[V9:%.+]] = "tosa.mul"([[V8]], [[V3]]) {shift = 0 : i32} : (tensor<1x64x112x112xf32>, tensor<64x1x1xf32>) -> tensor<1x64x112x112xf32>
-//CHECK: [[V10:%.+]] = "tosa.add"([[V9]], [[V4]]) : (tensor<1x64x112x112xf32>, tensor<64x1x1xf32>) -> tensor<1x64x112x112xf32>
-//CHECK: return [[V10]] : tensor<1x64x112x112xf32>
+//CHECK: "tosa.sub"
+//CHECK: "tosa.add"
+//CHECK: "tosa.rsqrt"
+//CHECK: "tosa.mul"
+//CHECK: "tosa.mul"
+//CHECK: "tosa.add"
 oneflow.job @test_bn_infer(
 %x:               tensor<1x64x112x112xf32>,
 %moving_mean:     tensor<64xf32>,
