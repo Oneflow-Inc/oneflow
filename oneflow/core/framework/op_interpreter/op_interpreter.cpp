@@ -117,7 +117,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
     backward_fn->status = [=]() { return grad_closure->state()->SavedTensors().size() > 0; };
     OF_PROFILER_RANGE_POP();
     OF_PROFILER_RANGE_PUSH("autograd.AddNode");
-    JUST(GetThreadLocalAutogradEngine()->AddNode(op_expr.op_type_name() + "_backward", backward_fn,
+    JUST(GetThreadLocalAutogradEngine()->AddNode(op_expr.op_type_name() + "Backward", backward_fn,
                                                  inputs, outputs));
     OF_PROFILER_RANGE_POP();
   }

@@ -14,29 +14,32 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-
+import random
 import numpy as np
+from collections import OrderedDict
 
 import oneflow as flow
+
 import oneflow.unittest
-from oneflow.test_utils.automated_test_util import *
+from oneflow.test_utils.test_util import GenArgList
 
 
-@autotest(n=2, check_graph=True, rtol=1e-3)
-def _test_einsum_matrix_column_sum(test_case, placement, sbp):
-    x = random_tensor(ndim=2, dim0=random(1, 3) * 8, dim1=random(1, 3) * 8,)
-    g_x = x.to_global(placement=placement, sbp=sbp)
-    z = torch.einsum("ij->j", g_x)
-    return z
+def _test_is_view(test_case, device):
+    shape = (2, 3, 4, 5)
+    xx = flow.randn(shape, device=device)
+    yy = xx.reshape(4, 5, 6)
+    test_case.assertEqual(xx.is_contiguous(), yy.is_contiguous())
+    test_case.assertEqual(yy.is_view(), True)
+    test_case.assertEqual(xx.is_view(), False)
 
 
-class TestEinsumGlobal(flow.unittest.TestCase):
-    @unittest.skip("skip for now, becase it failed 8 times in past week")
-    @globaltest
-    def test_einsum_matrix_column_sum(test_case):
-        for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=2):
-                _test_einsum_matrix_column_sum(test_case, placement, sbp)
+@flow.unittest.skip_unless_1n1d()
+class TestTensorIsView(flow.unittest.TestCase):
+    def test_is_view(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["cuda", "cpu"]
+        for arg in GenArgList(arg_dict):
+            _test_is_view(test_case, *arg[0:])
 
 
 if __name__ == "__main__":
