@@ -21,8 +21,6 @@ import numpy as np
 from typing import Type, Any, Callable, Union, List, Optional
 import os
 
-os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-os.environ["ONEFLOW_MLIR_PREFER_NHWC"] = "1"
 
 import oneflow as flow
 import oneflow.unittest
@@ -346,7 +344,12 @@ def do_resnet(test_case):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestResNet(oneflow.unittest.TestCase):
+class TestResNet(oneflow.unittest.MLIRTestCase):
+    def setUp(self):
+
+        os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+        os.environ["ONEFLOW_MLIR_PREFER_NHWC"] = "1"
+
     def test_nhwc_resnet_graph(test_case):
         do_resnet(test_case)
 
