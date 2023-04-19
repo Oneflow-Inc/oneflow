@@ -1056,6 +1056,14 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
         run: |
           docker exec -w $PWD/${{ env.ONEFLOW_IREE_SRC }} ${{ env.TEST_CONTAINER_NAME }} python3 -m pytest examples
+      - name: IR tests
+        timeout-minutes: 45
+        if: ${{ !fromJson(matrix.cache-hit) && (matrix.test-type == 'speed-test' || (matrix.test-type == 'misc' && matrix.device == 'cpu')) && !fromJson(matrix.is-distributed) }}
+        run: |
+          docker exec \
+            -e ONEFLOW_TEST_TENSOR_SIZE_LIMIT_MB=1024 \
+            -e ONEFLOW_TEST_DIR=$PWD/oneflow/ir/test \
+            ${{ env.TEST_CONTAINER_NAME }} bash ci/test/expensive_generic_test_multi_client.sh
       - name: Expensive tests (models, cases require exclusive access to GPU)
         timeout-minutes: 45
         if: ${{ !fromJson(matrix.cache-hit) && (matrix.test-type == 'speed-test' || (matrix.test-type == 'misc' && matrix.device == 'cpu')) && !fromJson(matrix.is-distributed) }}
