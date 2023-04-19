@@ -120,6 +120,7 @@ class Error final {
   void Merge(const Error& other);
 
   Error&& AddStackFrame(Symbol<ErrorStackFrame> error_stack_frame);
+  Error&& GetStackTrace(int64_t depth = 32, int64_t skip_n_firsts = 1);
 
   static Error Ok();
   static Error ProtoParseFailedError();
