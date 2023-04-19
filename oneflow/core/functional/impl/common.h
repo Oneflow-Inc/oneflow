@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FUNCTIONAL_IMPL_COMMON_H_
 #define ONEFLOW_CORE_FUNCTIONAL_IMPL_COMMON_H_
 
+#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/common/maybe.h"
@@ -63,6 +64,8 @@ Maybe<std::tuple<std::shared_ptr<Tensor>, bool>> batchify(const std::shared_ptr<
 Maybe<std::tuple<std::shared_ptr<Tensor>, bool>> pooling_batchify(
     const std::shared_ptr<Tensor>& input, const int64_t num_spatial_dims,
     const std::string& func_name);
+
+Maybe<DataType>  GetScalarDataType(const Scalar& x);
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow
