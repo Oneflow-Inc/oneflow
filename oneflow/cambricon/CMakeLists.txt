@@ -16,5 +16,5 @@ add_dependencies(oneflow_mlu oneflow)
 target_include_directories(oneflow_mlu PRIVATE ${ONEFLOW_MLU_INCLUDE_DIRS})
 target_link_libraries(oneflow_mlu oneflow ${ONEFLOW_MLU_LIBS})
 
-set_property(GLOBAL APPEND PROPERTY EXTERNAL_BACKEND_TARGETS -Wl,--no-as-needed oneflow_mlu
+set_property(GLOBAL APPEND PROPERTY ONEFLOW_BACKEND_LIBS -Wl,--no-as-needed oneflow_mlu
                                     -Wl,--as-needed)

@@ -315,8 +315,8 @@ if(BUILD_MLU)
   add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/cambricon)
 endif()
 
+get_property(ONEFLOW_BACKEND_LIBS GLOBAL PROPERTY ONEFLOW_BACKEND_LIBS)
 get_property(EXTERNAL_TARGETS GLOBAL PROPERTY EXTERNAL_TARGETS)
-get_property(EXTERNAL_BACKEND_TARGETS GLOBAL PROPERTY EXTERNAL_BACKEND_TARGETS)
 
 if(APPLE)
   set(of_libs -Wl,-force_load oneflow of_op_schema)
@@ -412,7 +412,7 @@ if(BUILD_PYTHON)
             ${oneflow_third_party_libs}
             of_pyext_obj
             glog::glog
-            ${EXTERNAL_BACKEND_TARGETS})
+            ${ONEFLOW_BACKEND_LIBS})
   target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS}
                                                       ${Python_NumPy_INCLUDE_DIRS})
 
@@ -638,7 +638,7 @@ if(BUILD_CPP_API)
     ${MLIR_RELATED_TARGETS}
     ${LLVM_RELATED_TARGETS}
     ${EXTERNAL_TARGETS}
-    ${${EXTERNAL_BACKEND_TARGETS}})
+    ${${ONEFLOW_BACKEND_LIBS}})
 
   if(BUILD_TESTING AND BUILD_SHARED_LIBS)
     list(APPEND LIBONEFLOW_TARGETS gtest_main gtest)
