@@ -643,7 +643,6 @@ class handle {
 namespace {
 static std::unordered_map<std::string, size_t> class2keepsize{
     {"std::vector", 1},
-    {"std::functional", 1},
     {"Maybe", 1},
 };
 
