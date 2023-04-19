@@ -54,6 +54,12 @@ inline Symbol<DType> get_lower_precision_fp_from_device_type(DeviceType device_t
   return get_autocast_gpu_dtype();
 }
 
+// The structure below is referenced from PyTorch:
+// https://github.com/pytorch/pytorch/blob/41d79695907cd4105b8e7167cf8a57ba48e1f079/aten/src/ATen/autocast_mode.cpp#L60-L63
+// The weakref keeps the source's TensorImpl from being deleted.  We need to because we're
+// using the source TensorImpl* as the key.  If it were deleted, another random Tensor could
+// be allocated whose TensorImpl* happened to have the same value.  This TensorImpl* would
+// then mistakenly hit in cache: a rare, intermittent, unpredictable bug.
 using val_type = std::pair<std::weak_ptr<one::Tensor>, std::shared_ptr<one::Tensor>>;
 using key_type = std::pair<const one::EagerLocalTensorImpl*, DataType>;
 using cached_map = std::unordered_map<key_type, val_type>;
