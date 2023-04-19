@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/job/global_mode.h"
 #include "oneflow/core/kernel/kernel_util.h"
@@ -131,6 +132,8 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
                                       const bool requires_grad, const bool pin_memory) {
   bool is_bfloat16_dtype = dtype ? JUST(dtype)->data_type() == DataType::kBFloat16 : false;
   bool is_cuda_device = device ? JUST(device)->enum_type() == DeviceType::kCUDA : false;
+  if (GetGlobalDefaultDevice()->enum_type() == DeviceType::kCUDA) is_cuda_device = true;
+
   if (is_bfloat16_dtype && is_cuda_device) {
 #if CUDA_VERSION < 11000
     return Error::RuntimeError()
@@ -172,7 +175,7 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
   if (device) {
     device_ = JUST(device);
   } else {
-    device_ = JUST(Device::New("cpu"));
+    device_ = GetGlobalDefaultDevice();
   }
   std::shared_ptr<Tensor> tensor =
       JUST(functional::Empty(shape, JUST(DType::Get(np_data_type)), device_,
