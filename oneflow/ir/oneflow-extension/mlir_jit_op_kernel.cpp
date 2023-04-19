@@ -82,6 +82,9 @@ std::string GetMLIRCInterface(const std::string& func_name) {
 llvm::SmallVector<OpaqueMemRefDescriptor> GetMLIRCInterfaceArgs(
     user_op::KernelComputeContext* ctx) {
   llvm::SmallVector<OpaqueMemRefDescriptor> args{};
+  auto tensor = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+  args.push_back(
+      SwitchCreateMemRefDescriptor(SwitchCase(tensor->shape_view().NumAxes(), kInt8), tensor));
   for (auto& pair : ctx->inputs()) {
     auto tensor = ctx->Tensor4ArgNameAndIndex(pair.first, pair.second);
     auto ref = SwitchCreateMemRefDescriptor(
