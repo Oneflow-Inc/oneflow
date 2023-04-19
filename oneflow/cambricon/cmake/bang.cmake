@@ -15,7 +15,8 @@ if(NOT BANG_FOUND)
 endif()
 
 # cncc gflags
-set(BANG_CNCC_FLAGS "-Wall -Werror -fPIC -std=c++11 -pthread")
+set(BANG_CNCC_FLAGS
+    "-Wall -Werror -fPIC -std=c++11 -pthread --neuware-path=${NEUWARE_MODULE_DIR}/../..")
 if(CMAKE_BUILD_TYPE MATCHES "debug" OR CMAKE_BUILD_TYPE MATCHES "DEBUG")
   set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -O0 -g")
 else()
