@@ -2388,6 +2388,8 @@ class CtcLossFunctor {
                            const std::shared_ptr<one::Tensor>& target_lengths,
                            const int64_t& max_target_length, const int64_t& blank,
                            const bool& zero_infinity, const std::string& reduction) const {
+    const auto& input_lengths_flatten = JUST(functional::Flatten(input_lengths, 0, -1));
+    const auto& target_lengths_flatten = JUST(functional::Flatten(target_lengths, 0, -1));
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("max_target_length", "blank", "zero_infinity");
     attrs.SetAllAttrs(max_target_length, blank, zero_infinity);
     std::shared_ptr<one::Tensor> out;
@@ -2399,14 +2401,14 @@ class CtcLossFunctor {
     }
     const std::string& log_probs_device_str = *JUST(DeviceTag4DeviceType(log_probs_device_type));
     std::shared_ptr<one::Tensor> target_lengths_on_log_probs_device =
-        JUST(functional::To(target_lengths, log_probs_device_str));
+        JUST(functional::To(target_lengths_flatten, log_probs_device_str));
     if (targets->dtype()->data_type() == DataType::kInt32) {
       out = JUST(OpInterpUtil::Dispatch<Tensor>(
           *op_,
           {
               log_probs,
               JUST(functional::To(targets, log_probs_device_str)),
-              JUST(functional::To(input_lengths, log_probs_device_str)),
+              JUST(functional::To(input_lengths_flatten, log_probs_device_str)),
               target_lengths_on_log_probs_device,
           },
           attrs));
@@ -2417,7 +2419,7 @@ class CtcLossFunctor {
               log_probs,
               JUST(functional::To(targets, Optional<std::string>(log_probs_device_str),
                                   DType::Int64(), false)),
-              JUST(functional::To(input_lengths, log_probs_device_str)),
+              JUST(functional::To(input_lengths_flatten, log_probs_device_str)),
               target_lengths_on_log_probs_device,
           },
           attrs));
