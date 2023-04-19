@@ -1,5 +1,13 @@
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${NEUWARE_ROOT_DIR}/cmake/modules
-                      $ENV{NEUWARE_HOME}/cmake/modules $ENV{NEUWARE_PATH}/cmake/modules)
+find_path(NEUWARE_MODULE_DIR FindBANG.cmake PATHS ${NEUWARE_ROOT_DIR} $ENV{NEUWARE_HOME}
+                                                  $ENV{NEUWARE_PATH}
+          PATH_SUFFIXES cmake/modules neuware/cmake/modules)
+if(NOT NEUWARE_MODULE_DIR)
+  message(
+    FATAL_ERROR
+      "Cambricon neuware cmake modules are not found. Please set NEUWARE_ROOT_DIR to specify the search path."
+  )
+endif()
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${NEUWARE_MODULE_DIR})
 
 find_package(BANG)
 if(NOT BANG_FOUND)
