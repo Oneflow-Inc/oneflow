@@ -95,9 +95,17 @@ llvm::SmallVector<Value, 4> BroadcastAddOp::NchwToNhwc(llvm::SmallVector<Value, 
 
 bool NormalizationOp::IsNCHW() { return this->getAxisAttr().getValue().getSExtValue() == 1; }
 
+bool NormalizationInferenceOp::IsNCHW() {
+  return this->getAxisAttr().getValue().getSExtValue() == 1;
+}
+
 llvm::DenseSet<Value> NormalizationOp::OperandsToTranspose() { return {this->getX()}; }
 
+llvm::DenseSet<Value> NormalizationInferenceOp::OperandsToTranspose() { return {this->getX()}; }
+
 llvm::DenseSet<Value> NormalizationOp::ResultsToTranspose() { return {this->getY()}; }
+
+llvm::DenseSet<Value> NormalizationInferenceOp::ResultsToTranspose() { return {this->getY()}; }
 
 llvm::SmallVector<Value, 4> NormalizationOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
                                                         PatternRewriter& rewriter) {
@@ -115,6 +123,29 @@ llvm::SmallVector<Value, 4> NormalizationOp::NchwToNhwc(llvm::SmallVector<Value,
   auto res =
       rewriter
           .create<oneflow::NormalizationOp>(
+              normalization_op.getLoc(), getNHWCResultTypes(normalization_op), operands, attributes)
+          ->getResults();
+  llvm::SmallVector<Value, 4> results;
+  results.push_back(res[0]);
+  return results;
+}
+
+llvm::SmallVector<Value, 4> NormalizationInferenceOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
+                                                                 PatternRewriter& rewriter) {
+  auto normalization_op = *this;
+  SmallVector<Value, 4> operands;
+  operands.push_back(value[0]);
+  if (normalization_op.getMovingMean()) operands.push_back(normalization_op.getMovingMean());
+  if (normalization_op.getMovingVariance())
+    operands.push_back(normalization_op.getMovingVariance());
+  operands.push_back(normalization_op.getGamma());
+  operands.push_back(normalization_op.getBeta());
+  if (normalization_op.get_addToOutput()) operands.push_back(normalization_op.get_addToOutput());
+  NamedAttrList attributes = normalization_op->getAttrs();
+  attributes.set(normalization_op.getAxisAttrName(), rewriter.getSI32IntegerAttr(3));
+  auto res =
+      rewriter
+          .create<oneflow::NormalizationInferenceOp>(
               normalization_op.getLoc(), getNHWCResultTypes(normalization_op), operands, attributes)
           ->getResults();
   llvm::SmallVector<Value, 4> results;

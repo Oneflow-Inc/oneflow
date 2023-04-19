@@ -13,30 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import unittest
-import oneflow as flow
 import oneflow.unittest
+import oneflow as flow
+import numpy as np
 
 
-class TestDataPtr(unittest.TestCase):
-    @flow.unittest.skip_unless_1n1d()
-    def test_equality(test_case):
-        x = flow.ones(2, 3)
-        y = flow.ones(2, 3)
-        test_case.assertNotEqual(x.data_ptr(), y.data_ptr())
-
-        test_case.assertEqual(x.data_ptr(), x.data.data_ptr())
-
-        x_ptr = x.data_ptr()
-        x[:] = 2
-        test_case.assertEqual(x_ptr, x.data_ptr())
-
-    @flow.unittest.skip_unless_1n2d()
-    def test_global_tensor(test_case):
-        x = flow.randn(
-            2, 3, placement=flow.placement.all("cpu"), sbp=flow.sbp.broadcast
+class TestInTopK(flow.unittest.TestCase):
+    def test_in_top_k_error_msg(test_case):
+        arr = np.array([1, 1])
+        targets = flow.Tensor(arr)
+        targets = flow.cast(targets, flow.float)
+        arr = np.array([[0.8, 0.6, 0.3], [0.1, 0.6, 0.4]])
+        predictions = flow.Tensor(arr)
+        with test_case.assertRaises(RuntimeError) as ctx:
+            flow.in_top_k(targets, predictions, 1)
+        test_case.assertTrue(
+            "targets data type must be index type" in str(ctx.exception)
         )
-        test_case.assertEqual(x.data_ptr(), x.to_local().data_ptr())
 
 
 if __name__ == "__main__":
