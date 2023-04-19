@@ -13,8 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
-#include <sstream>
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -88,8 +86,8 @@ Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<NdSb
   const auto& logical_shape = input->shape();
   // If the input is a tensor of size 0, construct the output directly.
   if (unlikely(logical_shape->elem_cnt() == 0)) {
-    GlobalTensorMeta tensor_meta(*logical_shape, input->dtype()->data_type(), out_nd_sbp,
-                                 out_parallel_desc);
+    GlobalTensorMeta tensor_meta(*logical_shape, input->dtype()->data_type(),
+                                 input->memory_format(), out_nd_sbp, out_parallel_desc);
     const auto& tensor_impl =
         JUST(EagerGlobalTensorImpl::New(SymbolOf(tensor_meta), input->requires_grad(), false));
     std::shared_ptr<Tensor> output = std::make_shared<GlobalTensor>(tensor_impl);
@@ -240,8 +238,8 @@ Maybe<void> RawGlobalToGlobal(const GlobalToGlobalOpExpr& op_expr, const TensorT
     CHECK_OR_RETURN(parallel_desc == out_parallel_desc);
     outputs->at(0) = tensor;
   } else {
-    GlobalTensorMeta tensor_meta(*tensor->shape(), tensor->dtype()->data_type(), out_nd_sbp,
-                                 out_parallel_desc);
+    GlobalTensorMeta tensor_meta(*tensor->shape(), tensor->dtype()->data_type(),
+                                 tensor->memory_format(), out_nd_sbp, out_parallel_desc);
     const auto& tensor_impl =
         JUST(EagerGlobalTensorImpl::New(SymbolOf(tensor_meta), tensor->requires_grad(), false));
     (*outputs)[0].reset(new GlobalTensor(tensor_impl));

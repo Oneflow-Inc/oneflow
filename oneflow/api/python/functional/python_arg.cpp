@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/api/python/framework/tensor.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/indexing.h"
+#include "oneflow/api/python/framework/memory_format.h"
 #include "oneflow/extension/python/numpy.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/dtype.h"
@@ -206,6 +207,11 @@ std::vector<std::string> PythonArg::ObjectAs<std::vector<std::string>>() const {
 
 INSTANCE_OBJECT_AS_SHARED_PTR(std::vector<std::string>)
 
+template<>
+MemoryFormat PythonArg::ObjectAs<MemoryFormat>() const {
+  return PyMemoryFormat_Unpack(object_);
+}
+
 #undef INSTANCE_OBJECT_AS_SHARED_PTR
 
 bool PythonArg::TypeCheck(ValueType type) const {
@@ -264,6 +270,7 @@ bool PythonArg::TypeCheck(ValueType type) const {
              || numpy::PyArrayCheckComplexScalar(object_) || numpy::PyArrayCheckFloatScalar(object_)
              || numpy::PyArrayCheckLongScalar(object_) || PyComplexScalarTensorCheck(object_)
              || PyFloatScalarTensorCheck(object_) || PyIntegerScalarTensorCheck(object_);
+    case kMEMORY_FORMAT: return PyMemoryFormat_Check(object_);
     default: {
       THROW(RuntimeError) << "Can not check type " << ValueTypeName(type);
     }

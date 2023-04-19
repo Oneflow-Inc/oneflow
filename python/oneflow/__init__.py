@@ -63,12 +63,9 @@ locals()["complex64"] = oneflow._oneflow_internal.complex64
 locals()["cdouble"] = oneflow._oneflow_internal.cdouble
 locals()["complex128"] = oneflow._oneflow_internal.complex128
 
-locals()["layout"] = oneflow._oneflow_internal.layout
-locals()["strided"] = oneflow._oneflow_internal.strided
+channels_first = oneflow._oneflow_internal.channels_first
+channels_last = oneflow._oneflow_internal.channels_last
 
-locals()["memory_format"] = oneflow._oneflow_internal.memory_format
-locals()["contiguous_format"] = oneflow._oneflow_internal.contiguous_format
-locals()["preserve_format"] = oneflow._oneflow_internal.preserve_format
 from oneflow.version import __version__
 from oneflow.version import __git_commit__
 

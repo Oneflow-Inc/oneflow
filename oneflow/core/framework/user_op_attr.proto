@@ -5,6 +5,7 @@ import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/sequential.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/common/device.proto";
+import "oneflow/core/common/memory_format.proto";
 
 enum AttrType {
   kAtInt32 = 1;
@@ -25,6 +26,7 @@ enum AttrType {
   kAtListStride = 16;
   kAtDevice = 17;
   kAtComplexDouble = 18;
+  kAtMemoryFormat = 19;
 }
 
 message AttrValue {
@@ -72,7 +74,11 @@ message AttrValue {
     Int64ListProto at_stride = 15;
     ListStride at_list_stride = 16;
     DeviceProto at_device = 17;
+<<<<<<< HEAD
     ComplexDouble at_complex_double = 18;
+=======
+    MemoryFormat at_memory_format = 18;
+>>>>>>> 6aea13623... support memory format (#122)
   }
 }
 
