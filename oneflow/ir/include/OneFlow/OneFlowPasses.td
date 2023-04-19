@@ -70,7 +70,7 @@ def WrapOpsToKernelLaunchPass : Pass<"wrap-ops-to-kernel-launch", "ModuleOp"> {
 }
 
 def EliminateAllocOpsPass : Pass<"eliminate-alloc-ops", "ModuleOp"> {
-  let summary = "";
+  let summary = "eliminate memref.alloc and memref.copy which target is a block argument";
   let constructor = "mlir::oneflow::createEliminateAllocOpsPass()";
   let dependentDialects = ["pdl_interp::PDLInterpDialect", "pdl::PDLDialect"];
 }
