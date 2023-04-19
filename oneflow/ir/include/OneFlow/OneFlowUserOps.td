@@ -6899,6 +6899,48 @@ def OneFlow_NormalOp : OneFlow_BaseOp<"normal", [NoMemoryEffect, NoGrad, Declare
   let has_nd_sbp_infer_fn = 1;
 }
 
+def OneFlow_NormalTensorTensorOp : OneFlow_BaseOp<"normal_tensor_tensor", [NoMemoryEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$mean,
+    OneFlow_Tensor:$std
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+}
+
+def OneFlow_NormalTensorFloatOp : OneFlow_BaseOp<"normal_tensor_float", [NoMemoryEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$mean,
+    DefaultValuedAttr<F64Attr, "1.">:$std
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+}
+
+def OneFlow_NormalFloatTensorOp : OneFlow_BaseOp<"normal_float_tensor", [NoMemoryEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    DefaultValuedAttr<F64Attr, "0.">:$mean,
+    OneFlow_Tensor:$std
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+}
+
 def OneFlow_NormalizationOp : OneFlow_NormalizationBaseOp<"normalization", [AttrSizedResultSegments, DeclareOpInterfaceMethods<NCHWCompatibleInterface>]> {
   let hasCanonicalizer = 1;
 }
