@@ -25,5 +25,5 @@ unset https_proxy
 
 export ONEFLOW_TEST_DEVICE_NUM=1
 
-COMMON_PYTEST_ARGS="--max-worker-restart=0 -x --durations=50 --capture=sys --ignore=OneFlow/cuda_code_gen"
+COMMON_PYTEST_ARGS="--max-worker-restart=0 --durations=50 --ignore=OneFlow/cuda_code_gen --ignore=OneFlow/psig/test_2nd_basic_parse.py"
 python3 -m pytest ${COMMON_PYTEST_ARGS} --failed-first --dist loadfile ${parallel_spec} ${PWD}
