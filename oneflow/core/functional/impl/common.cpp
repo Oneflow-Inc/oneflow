@@ -369,41 +369,6 @@ Maybe<std::tuple<std::shared_ptr<Tensor>, bool>> pooling_batchify(
   return std::make_tuple(is_batched ? input : JUST(functional::Unsqueeze(input, 0)), is_batched);
 }
 
-
-Maybe<DataType>  GetScalarDataType(const Scalar& x){
-  DataType dtype = DataType::kInvalidDataType;
-  if (x.IsBool()) {
-    dtype = DataType::kBool;
-  } else if(x.IsFloatingPoint()){
-    double x_val = x.As<double>();
-    if (x_val >= GetMinVal<DataTypeToType<DataType::kFloat>>()
-        && x_val <= GetMaxVal<DataTypeToType<DataType::kFloat>>()) {
-      dtype = DataType::kFloat;
-    } else {
-      dtype = DataType::kDouble;
-    }
-  } else if(x.IsIntegral()){
-    if(x.IsUnsigned()){
-      uint64_t x_val = x.As<uint64_t>();
-      if (x_val <= GetMaxVal<DataTypeToType<DataType::kUInt32>>()) {
-        dtype = DataType::kUInt32;
-      } else {
-        dtype = DataType::kUInt64;
-      }
-    }else{
-      int64_t x_val = x.As<int64_t>();
-      if (x_val >= GetMinVal<DataTypeToType<DataType::kInt32>>()
-            && x_val <= GetMaxVal<DataTypeToType<DataType::kInt32>>()) {
-          dtype = DataType::kInt32;
-        } else {
-          dtype = DataType::kInt64;
-        }
-    }
-  } else{
-    UNIMPLEMENTED_THEN_RETURN() << "Unrecognized type for Scalar x";
-  }
-  return dtype;
-}
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow

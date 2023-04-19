@@ -16,7 +16,6 @@ limitations under the License.
 
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
-#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -413,31 +412,6 @@ class Max2Functor {
     (*outputs)[0] = JUST(ReduceMax(x, {axis}, keepdims));
     (*outputs)[1] = JUST(ArgMax(x, dim, keepdims, NullOpt));
     return outputs;
-  }
-};
-
-class ScalarXMaxFunctor {
-  public:
-  Maybe<Tensor> operator()(const Scalar& x, const std::shared_ptr<one::Tensor>& y) const {
-    std::shared_ptr<Tensor> x_tensor = JUST(functional::Constant(Shape({}), x, DType(JUST(GetScalarDataType(x))), NullOpt));
-    return JUST(functional::Maximum(x_tensor, y));
-  }
-};
-
-class ScalarYMaxFunctor {
-  public:
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& y) const {
-    std::shared_ptr<Tensor> y_tensor = JUST(functional::Constant(Shape({}), y, DType(JUST(GetScalarDataType(y))), NullOpt));
-    return JUST(functional::Maximum(x, y_tensor));
-  }
-};
-
-class ScalarXYMaxFunctor {
-  public:
-  Maybe<Tensor> operator()(const Scalar& x, const Scalar& y) const {
-    std::shared_ptr<Tensor> x_tensor = JUST(functional::Constant(Shape({}), x, DType(JUST(GetScalarDataType(x))), NullOpt));
-    std::shared_ptr<Tensor> y_tensor = JUST(functional::Constant(Shape({}), y, DType(JUST(GetScalarDataType(y))), NullOpt));
-    return JUST(functional::Maximum(x_tensor, y_tensor));
   }
 };
 
@@ -4597,7 +4571,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarPowGradFunctor>("ScalarPowGrad");
   m.add_functor<ScalarReversePowGradFunctor>("ScalarReversePowGrad");
   m.add_functor<ReduceMaxFunctor>("ReduceMax");
-  m.add_functor<MaxFunctor, Max2Functor, ScalarXMaxFunctor, ScalarYMaxFunctor, ScalarXYMaxFunctor>("Max");
+  m.add_functor<MaxFunctor, Max2Functor>("Max");
   m.add_functor<ReduceMeanFunctor>("ReduceMean");
   m.add_functor<ReduceMeanWholeFunctor>("ReduceMeanWhole");
   m.add_functor<ReduceMinFunctor>("ReduceMin");
