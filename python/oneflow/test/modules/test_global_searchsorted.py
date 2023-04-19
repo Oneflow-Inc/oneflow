@@ -54,6 +54,7 @@ def _test_search_sorted_scalar(test_case, placement, sbp):
 
 
 class TestSearchSortedScalar_Global(flow.unittest.TestCase):
+    @unittest.skip("skip for now, becase it failed 8 times in past week")
     @globaltest
     def test_search_sorted_scalar(test_case):
         for placement in all_placement():

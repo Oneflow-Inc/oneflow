@@ -1388,6 +1388,18 @@ class Module(object):
         fn(self)
         return self
 
+    def to_empty(self: T, *, device: Union[str, flow.device]) -> T:
+        r"""Moves the parameters and buffers to the specified device without copying storage.
+
+        Args:
+            device (:class:`oneflow.device`): the desired device of the parameters
+                and buffers in this module
+        
+        Returns:
+            Module: self
+        """
+        return self._apply(lambda t: flow.empty_like(t, device=device))
+
     @overload
     def to(
         self: T,
