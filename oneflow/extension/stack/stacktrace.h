@@ -641,9 +641,10 @@ class handle {
 };
 
 namespace {
+// how many args to keep in template params
+// e.g. {std::vector, 1} means std::vector<T0, T1, T2, ..., Tn> -> std::vector<T0>
 static std::unordered_map<std::string, size_t> class2keepsize{
     {"std::vector", 1},
-    {"std::functional", 1},
     {"Maybe", 1},
 };
 
