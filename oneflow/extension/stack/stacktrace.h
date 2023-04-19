@@ -764,8 +764,7 @@ std::string replace_each(const std::string& signature, const std::string& src,
   std::string result;
   std::string::size_type substr_begin = 0;
   for (std::string::size_type pos = 0;
-       signature.npos != (pos = signature.find(src.data(), pos, src.length()));
-       pos += src.length()) {
+       signature.npos != (pos = signature.find(src.data(), pos, src.length()));) {
     result.insert(result.end(), signature.begin() + substr_begin, signature.begin() + pos);
     result += dst;
     substr_begin = pos + src.length();
