@@ -244,17 +244,17 @@ namespace oneflow {
   return DeviceAndStreamInferFn(ctx);
 }
 
-/* static */ Maybe<void> EagerNcclS2sOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+/* static */ Maybe<void> EagerCclS2SOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
   ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> EagerNcclS2sOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> EagerCclS2SOp::GetSbp(user_op::SbpContext* ctx) {
   return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
 }
 
-/* static */ Maybe<void> EagerNcclS2sOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
+/* static */ Maybe<void> EagerCclS2SOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
   const int64_t in_split_axis = ctx->user_op_conf().attr<int64_t>("in_split_axis");
   const int64_t out_split_axis = ctx->user_op_conf().attr<int64_t>("out_split_axis");
   const NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
@@ -279,12 +279,12 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> EagerNcclS2sOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> EagerCclS2SOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Stream>> EagerNcclS2sOp::InferDeviceAndStream(
+/* static */ Maybe<Symbol<Stream>> EagerCclS2SOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
   return DeviceAndStreamInferFn(ctx);
 }

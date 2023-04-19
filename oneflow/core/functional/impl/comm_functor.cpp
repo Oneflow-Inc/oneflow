@@ -129,9 +129,9 @@ Maybe<one::UserOpExpr> EagerCclAllGather(Symbol<ParallelDesc> parallel_desc) {
 
 static constexpr auto* CachedEagerCclAllGatherOpExpr = DECORATE(&EagerCclAllGather, ThreadLocal);
 
-Maybe<one::UserOpExpr> EagerNcclS2S(Symbol<ParallelDesc> parallel_desc, Symbol<SbpParallel> src_sbp,
-                                    Symbol<SbpParallel> dst_sbp) {
-  return one::OpBuilder("eager_nccl_s2s", *JUST(UniqueStr("eager_nccl_s2s")))
+Maybe<one::UserOpExpr> EagerCclS2S(Symbol<ParallelDesc> parallel_desc, Symbol<SbpParallel> src_sbp,
+                                   Symbol<SbpParallel> dst_sbp) {
+  return one::OpBuilder("eager_ccl_s2s", *JUST(UniqueStr("eager_ccl_s2s")))
       .Input("in")
       .Output("out")
       .Attr<int64_t>("in_split_axis", src_sbp->split_parallel().axis())
@@ -140,7 +140,7 @@ Maybe<one::UserOpExpr> EagerNcclS2S(Symbol<ParallelDesc> parallel_desc, Symbol<S
       .Build();
 }
 
-auto* CachedEagerNcclS2SOpExpr = DECORATE(&EagerNcclS2S, ThreadLocal);
+auto* CachedEagerCclS2SOpExpr = DECORATE(&EagerCclS2S, ThreadLocal);
 
 Maybe<one::UserOpExpr> EagerCclReduce(Symbol<ParallelDesc> parallel_desc, int64_t root) {
   CHECK_OR_RETURN(JUST(CheckCclKernelRegistered("eager_ccl_reduce", parallel_desc->device_type())))
@@ -413,9 +413,9 @@ class GlobalS2SFunctor {
       CHECK_NE_OR_RETURN(in_nd_sbp->sbp_parallel(0).split_parallel().axis(),
                          out_nd_sbp->sbp_parallel(0).split_parallel().axis());
     }
-    std::shared_ptr<OpExpr> op_expr = JUST(
-        CachedEagerNcclS2SOpExpr(JUST(x->parallel_desc()), SymbolOf(in_nd_sbp->sbp_parallel(0)),
-                                 SymbolOf(out_nd_sbp->sbp_parallel(0))));
+    std::shared_ptr<OpExpr> op_expr =
+        JUST(CachedEagerCclS2SOpExpr(JUST(x->parallel_desc()), SymbolOf(in_nd_sbp->sbp_parallel(0)),
+                                     SymbolOf(out_nd_sbp->sbp_parallel(0))));
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
   }
 };
