@@ -829,6 +829,7 @@ struct demangler_impl<system_tag::current_tag> {
         abi::__cxa_demangle(funcname, _demangle_buffer.get(), &_demangle_buffer_length, nullptr);
     if (result) {
       _demangle_buffer.update(result);
+      // Modify: simplify func signature
       return simplify(result);
       // return result;
     }
