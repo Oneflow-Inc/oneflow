@@ -327,11 +327,16 @@ def _gen_tensor_str_template(tensor, is_meta):
     indent = len(prefix)
     suffixes = []
 
+    meta_device_flag = False
     # tensor is local or global
     if tensor.is_global:
+        if tensor.placement.type == "meta":
+            meta_device_flag = True
         suffixes.append(f"placement={str(tensor.placement)}")
         suffixes.append(f"sbp={str(tensor.sbp)}")
     elif tensor.device.type != "cpu":
+        if tensor.device.type == "meta":
+            meta_device_flag = True
         suffixes.append("device='" + str(tensor.device) + "'")
     if tensor.is_lazy:
         suffixes.append("is_lazy='True'")
@@ -342,7 +347,7 @@ def _gen_tensor_str_template(tensor, is_meta):
         if tensor.dim() != 1:
             suffixes.append("size=" + str(tuple(tensor.shape)))
         tensor_str = "[]"
-    elif is_meta:
+    elif is_meta or meta_device_flag:
         tensor_str = "..."
         suffixes.append("size=" + str(tuple(tensor.shape)))
     else:
