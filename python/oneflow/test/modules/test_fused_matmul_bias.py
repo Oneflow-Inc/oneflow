@@ -57,20 +57,40 @@ def _test_fused_matmul_add_bias(
             add_to_output, dtype=dtype, device=device, requires_grad=False
         )
 
+    navie_y = _matmul_bias(naive_x, naive_weight, naive_bias, naive_add_to_output)
     fused_y = flow._C.fused_matmul_bias(
         fused_x, fused_weight, fused_bias, fused_add_to_output
     )
+
+    y = navie_y.sum() + fused_y.sum()
+    y.backward()
 
     # TODO: relative error might be too high...
     # Test output equality
     if _add_to_output:
         test_case.assertTrue(
-            True
+            np.allclose(navie_y.numpy(), fused_y.numpy(), atol=5e-2, rtol=1e-4)
         )
     else:
         test_case.assertTrue(
-            True
+            np.allclose(navie_y.numpy(), fused_y.numpy(), atol=5e-2, rtol=1e-4)
         )
+
+    # Test grad equality
+    test_case.assertTrue(
+        np.allclose(naive_x.grad.numpy(), fused_x.grad.numpy(), atol=5e-2, rtol=1e-4)
+    )
+
+    test_case.assertTrue(
+        np.allclose(
+            naive_weight.grad.numpy(), fused_weight.grad.numpy(), atol=5e-2, rtol=1e-4
+        )
+    )
+    test_case.assertTrue(
+        np.allclose(
+            naive_bias.grad.numpy(), fused_bias.grad.numpy(), atol=1e-4, rtol=1e-4
+        )
+    )
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -80,12 +100,17 @@ class TestFusedMatmulBiasAddRelu(flow.unittest.TestCase):
         args_dict["test_fun"] = [_test_fused_matmul_add_bias]
         args_dict["batchsize"] = [
             (1,),
+            (4,),
+            (8,),
+            (2, 4),
+            (2, 4, 8),
+            (2, 4, 4, 4, 8),
         ]
-        args_dict["in_feature"] = [5120]
-        args_dict["out_feature"] = [5120*2]
+        args_dict["in_feature"] = [96, 128]
+        args_dict["out_feature"] = [512, 1024, 288, 1]
         args_dict["_add_to_output"] = [True]
-        args_dict["dtype"] = [flow.float32]
-        args_dict["device"] = ["cuda"]
+        args_dict["dtype"] = [flow.float32, flow.float64]
+        args_dict["device"] = ["cuda", "cpu"]
 
         for arg in GenArgList(args_dict):
             arg[0](test_case, *arg[1:])
