@@ -339,6 +339,7 @@ def do_resnet(test_case):
     graph_to_run = GraphToRun()
     lazy_res = graph_to_run(x)
     test_case.assertTrue(
+        # TODO(yuhao): High precision loss
         np.allclose(eager_res.numpy(), lazy_res.numpy(), rtol=1e-4, atol=1e-1)
     )
 
