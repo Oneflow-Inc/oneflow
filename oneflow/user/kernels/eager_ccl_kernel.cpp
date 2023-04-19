@@ -291,4 +291,23 @@ REGISTER_USER_KERNEL("eager_ccl_broadcast")
     .SetCreateFn<EagerCclBroadcastKernel>()
     .SetIsMatchedHob(BroadcastCollectiveCommunicationExists());
 
+class EagerCclTouchKernel final : public user_op::OpKernel {
+ public:
+  EagerCclTouchKernel() = default;
+  ~EagerCclTouchKernel() override = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override{
+      // Do nothing.
+  };
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
+};
+
+REGISTER_USER_KERNEL("eager_ccl_touch")
+    .SetCreateFn<EagerCclTouchKernel>()
+    .SetIsMatchedHob(!(user_op::HobDeviceType() == DeviceType::kInvalidDevice)
+                     && !(user_op::HobDeviceType() == DeviceType::kMockDevice));
+
 }  // namespace oneflow

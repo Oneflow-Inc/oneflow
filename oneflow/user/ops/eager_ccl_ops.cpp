@@ -81,24 +81,24 @@ namespace oneflow {
   return DeviceAndStreamInferFn(ctx);
 }
 
-/* static */ Maybe<void> EagerNcclTouchOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+/* static */ Maybe<void> EagerCclTouchOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> EagerNcclTouchOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> EagerCclTouchOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> EagerNcclTouchOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> EagerCclTouchOp::GetSbp(user_op::SbpContext* ctx) {
   // local only
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> EagerNcclTouchOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> EagerCclTouchOp::InferDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Stream>> EagerNcclTouchOp::InferDeviceAndStream(
+/* static */ Maybe<Symbol<Stream>> EagerCclTouchOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
   return DeviceAndStreamInferFn(ctx);
 }

@@ -74,23 +74,6 @@ void InitEagerCclOpKernelCache(user_op::KernelCacheContext* ctx,
 }
 }  // namespace
 
-class EagerCclTouchKernel final : public user_op::OpKernel {
- public:
-  EagerCclTouchKernel() = default;
-  ~EagerCclTouchKernel() override = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
-               const user_op::OpKernelCache* cache) const override{
-      // Do nothing.
-  };
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
-};
-
-REGISTER_USER_KERNEL("eager_nccl_touch")
-    .SetCreateFn<EagerCclTouchKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU);
-
 template<typename T>
 class EagerCclS2SKernel final : public user_op::OpKernel {
  public:

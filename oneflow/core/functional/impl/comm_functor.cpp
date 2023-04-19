@@ -233,7 +233,7 @@ class CommBroadcastTensorsFunctor {
 namespace {
 
 Maybe<one::UserOpExpr> RawStreamTouchFunctorOpExpr(size_t input_size) {
-  return one::OpBuilder("eager_nccl_touch", *JUST(UniqueStr("eager_nccl_touch")))
+  return one::OpBuilder("eager_ccl_touch", *JUST(UniqueStr("eager_ccl_touch")))
       .Input("in", input_size)
       .Build();
 }
