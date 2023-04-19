@@ -475,16 +475,19 @@ void GetHostInputLbis4OpNode(const OpNode* op_node,
   }
 }
 
-std::vector<CreateSubTskGphBuilderFn>* GlobalCreateSubTskGphBuilderFnList() {
-  static std::vector<CreateSubTskGphBuilderFn> global_create_sub_tsk_gph_builder_fn_list;
-  return &global_create_sub_tsk_gph_builder_fn_list;
+HashMap<DeviceType, CreateSubTskGphBuilderFn>* GlobalDeviceType2CreateSubTskGphBuilderFn() {
+  static HashMap<DeviceType, CreateSubTskGphBuilderFn>
+      global_device_type_create_sub_tsk_gph_builder_fn;
+  return &global_device_type_create_sub_tsk_gph_builder_fn;
 }
 
 }  // namespace
 
-Maybe<void> RegisterCreateSubTskGphBuilderFn(const CreateSubTskGphBuilderFn& fn) {
-  auto* create_sub_tsk_gph_builder_fn_list = GlobalCreateSubTskGphBuilderFnList();
-  create_sub_tsk_gph_builder_fn_list->emplace_back(fn);
+Maybe<void> RegisterCreateSubTskGphBuilderFn(DeviceType device_type,
+                                             const CreateSubTskGphBuilderFn& fn) {
+  auto* global_device_type_create_sub_tsk_gph_builder_fn =
+      GlobalDeviceType2CreateSubTskGphBuilderFn();
+  global_device_type_create_sub_tsk_gph_builder_fn->emplace(device_type, fn);
   return Maybe<void>::Ok();
 }
 
@@ -492,9 +495,10 @@ TaskGraph::TaskGraph() {
   OpGraph* op_graph = Singleton<OpGraph>::Get();
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
   boxing_logger_ = CreateBoxingLogger();
-  const auto* create_sub_tsk_gph_builder_fn_list = GlobalCreateSubTskGphBuilderFnList();
-  for (const auto& fn : *create_sub_tsk_gph_builder_fn_list) {
-    sub_tsk_gph_builders_for_specific_device_.emplace_back(fn());
+  const auto* global_device_type_create_sub_tsk_gph_builder_fn =
+      GlobalDeviceType2CreateSubTskGphBuilderFn();
+  for (const auto& pair : *global_device_type_create_sub_tsk_gph_builder_fn) {
+    device_type2sub_tsk_gph_builder_.emplace(pair.first, pair.second());
   }
   hierarchical_sub_tsk_gph_builder_.reset(new DispatchHierarchicalSubTskGphBuilder());
   HashMap<const OpNode*, std::vector<CompTaskNode*>> op_node2sorted_comp_tasks;
@@ -841,13 +845,20 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
             << " src_nd_sbp " << src_nd_sbp.DebugString() << " dst nd_sbp "
             << dst_nd_sbp.DebugString();
     Maybe<SubTskGphBuilderStatus> maybe_status = Error::BoxingNotSupportedError();
-    if (!sub_tsk_gph_builders_for_specific_device_.empty()) {
-      for (const auto& sub_tsk_gph_builder : sub_tsk_gph_builders_for_specific_device_) {
-        maybe_status = TRY(sub_tsk_gph_builder->Build(
-            sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes, &sorted_ctrl_tasks,
-            src_parallel_desc, dst_parallel_desc, lbi, blob_desc, src_nd_sbp, dst_nd_sbp,
-            *(CHECK_JUST(src_op_node->op().GetOpTimeShape()).get())));
-        if (maybe_status.IsOk()) { break; }
+    if (!device_type2sub_tsk_gph_builder_.empty()) {
+      const DeviceType device_type = [&src_parallel_desc, &dst_parallel_desc]() {
+        return src_parallel_desc.device_type() != DeviceType::kCPU
+                   ? src_parallel_desc.device_type()
+                   : dst_parallel_desc.device_type();
+      }();
+      if (device_type != DeviceType::kCPU
+          && device_type2sub_tsk_gph_builder_.find(device_type)
+                 != device_type2sub_tsk_gph_builder_.end()) {
+        maybe_status = TRY(device_type2sub_tsk_gph_builder_.at(device_type)
+                               ->Build(sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes,
+                                       &sorted_ctrl_tasks, src_parallel_desc, dst_parallel_desc,
+                                       lbi, blob_desc, src_nd_sbp, dst_nd_sbp,
+                                       *(CHECK_JUST(src_op_node->op().GetOpTimeShape()).get())));
       }
     }
     if (!maybe_status.IsOk()) {
