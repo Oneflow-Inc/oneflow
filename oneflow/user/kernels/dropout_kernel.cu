@@ -330,7 +330,7 @@ unsigned int ComputeGridSize(ep::Stream* stream, const int32_t block_size, const
 }
 
 template<typename T, bool has_addend>
-void DispatchTail(ep::Stream* stream, const std::shared_ptr<one::CUDAGeneratorImpl>& cuda_generator,
+void DispatchTail(ep::Stream* stream, const std::shared_ptr<ep::CUDAGenerator>& cuda_generator,
                   const int64_t elem_cnt, float rate, float scale, const T* x, bool* mask,
                   const T* addend, T* y) {
   constexpr int pack_size = GetDropoutPackSize<T>();
@@ -408,8 +408,8 @@ class DropoutKernelGPU final : public user_op::OpKernel {
     CHECK_NOTNULL(generator);
     auto* stream = ctx->stream();
     const auto device_index = stream->device()->device_index();
-    std::shared_ptr<one::CUDAGeneratorImpl> cuda_generator =
-        CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>(device_index));
+    std::shared_ptr<ep::CUDAGenerator> cuda_generator =
+        CHECK_JUST(generator->Get<ep::CUDAGenerator>(device_index));
 
     const float rate = ctx->Attr<float>("rate");
     float scale = 0.0;
