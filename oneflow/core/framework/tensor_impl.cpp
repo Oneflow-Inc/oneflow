@@ -142,6 +142,7 @@ Maybe<void> EagerLocalTensorImpl::InitEagerBlobObject(
 }
 
 Maybe<bool> EagerLocalTensorImpl::is_pinned() const {
+  if (this->device() == JUST(Device::New("meta"))) { return false; }
   if (!eager_blob_object_) { return false; }
   return IsStreamAllocatorPinned::Visit(JUST(eager_blob_object_->producer_stream())->stream_type());
 }
