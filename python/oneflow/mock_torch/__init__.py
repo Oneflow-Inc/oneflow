@@ -305,7 +305,10 @@ class disable:
         if self.enable:
             _importer._enable(
                 # When re-enabling mock torch, from_cli shoule always be False
-                self.globals, self.lazy, self.verbose, from_cli=False
+                self.globals,
+                self.lazy,
+                self.verbose,
+                from_cli=False,
             )
 
 
