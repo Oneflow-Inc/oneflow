@@ -134,11 +134,18 @@ bool CommNetIBEnabled() {
 
 #endif  // WITH_RDMA && OF_PLATFORM_POSIX
 
-std::vector<std::pair<CclMgrCreateOrDestroyFn, CclMgrCreateOrDestroyFn>>*
-GlobalCclMgrCreatorDestroyers() {
-  static std::vector<std::pair<CclMgrCreateOrDestroyFn, CclMgrCreateOrDestroyFn>>
-      ccl_mgr_creator_destroyer_list;
-  return &ccl_mgr_creator_destroyer_list;
+struct CclCommunicatorMgrSingletonBuilder {
+  CclCommunicatorMgrSingletonBuilder(CclMgrCreateOrDestroyFn create,
+                                     CclMgrCreateOrDestroyFn destory)
+      : create(create), destory(destory) {}
+  CclMgrCreateOrDestroyFn create;
+  CclMgrCreateOrDestroyFn destory;
+};
+
+std::vector<CclCommunicatorMgrSingletonBuilder>* AllCclCommunicatorMgrSingletonBuilders() {
+  static std::vector<CclCommunicatorMgrSingletonBuilder>
+      ccl_communicator_mgr_singleton_builder_list;
+  return &ccl_communicator_mgr_singleton_builder_list;
 }
 
 }  // namespace
@@ -204,10 +211,12 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Singleton<CudnnHandlePool>::New();
   Singleton<embedding::EmbeddingManager>::New();
 #endif
-  CHECK_LE_OR_RETURN(GlobalCclMgrCreatorDestroyers()->size(), 1)
+  CHECK_LE_OR_RETURN(AllCclCommunicatorMgrSingletonBuilders()->size(), 1)
       << "Only one kind collective communication manager is supported at most at the same time for "
          "now!";
-  for (const auto& pair : *GlobalCclMgrCreatorDestroyers()) { CHECK_JUST(pair.first()); }
+  for (const auto& ccl_comm_mgr_singleton_builder : *AllCclCommunicatorMgrSingletonBuilders()) {
+    CHECK_JUST(ccl_comm_mgr_singleton_builder.create());
+  }
   Singleton<vm::VirtualMachineScope>::New(Singleton<ResourceDesc, ForSession>::Get()->resource());
 #ifdef __linux__
   Singleton<EpollCommNet>::New();
@@ -255,7 +264,9 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Singleton<CudnnConvAlgoCache>::Delete();
   Singleton<CudnnHandlePool>::Delete();
 #endif
-  for (const auto& pair : *GlobalCclMgrCreatorDestroyers()) { CHECK_JUST(pair.second()); }
+  for (const auto& ccl_comm_mgr_singleton_builder : *AllCclCommunicatorMgrSingletonBuilders()) {
+    CHECK_JUST(ccl_comm_mgr_singleton_builder.destory());
+  }
   Singleton<ThreadPool>::Delete();
   Singleton<remat::AllocatorManager>::Delete();
   Singleton<ep::DeviceManagerRegistry>::Delete();
@@ -327,7 +338,8 @@ Maybe<void> DestoryRDMA() {
 
 Maybe<void> RegisterCclMgrCreatorDestroyer(CclMgrCreateOrDestroyFn creator,
                                            CclMgrCreateOrDestroyFn destroyer) {
-  GlobalCclMgrCreatorDestroyers()->emplace_back(std::make_pair(creator, destroyer));
+  AllCclCommunicatorMgrSingletonBuilders()->emplace_back(
+      CclCommunicatorMgrSingletonBuilder(creator, destroyer));
   return Maybe<void>::Ok();
 }
 
