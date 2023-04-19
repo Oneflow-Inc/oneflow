@@ -14,6 +14,7 @@ inline const std::string MEMPOOL_ATTR_NAME = "memory pool";
 }  // namespace mempool
 }  // namespace codegen
 
+std::unique_ptr<mlir::Pass> createFoldAllocToSubviewPass();
 std::unique_ptr<mlir::Pass> createInsertOneFlowMemPoolPass();
 
 }  // namespace oneflow

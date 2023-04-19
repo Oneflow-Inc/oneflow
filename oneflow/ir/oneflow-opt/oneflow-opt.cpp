@@ -66,6 +66,8 @@ int32_t main(int32_t argc, char** argv) {
   mlir::registerGpuMapParallelLoopsPassPass();
   mlir::registerBufferHostRegisterPassPass();
   mlir::registerGpuCopyArgPassPass();
+  mlir::registerInsertOneFlowMemPoolPass();
+  mlir::registerFoldAllocToSubviewPass();
   mlir::registerOneFlowJobToFuncPassPass();
   mlir::registerCastOneFlowOpsToSignlessPassPass();
   mlir::registerFuncToOneFlowJobPassPass();
