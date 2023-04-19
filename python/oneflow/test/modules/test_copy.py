@@ -75,6 +75,7 @@ class Test_Copy_module(flow.unittest.TestCase):
         y.copy_(x)
         test_case.assertTrue(np.array_equal(y.numpy(), x.numpy()))
 
+    @unittest.skip("skip for now, becase it failed 6 times in past week")
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_global_tensor_inplace_copy_with_diff_dtype_and_device(test_case):
         x = (
