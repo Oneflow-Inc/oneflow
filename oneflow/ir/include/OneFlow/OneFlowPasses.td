@@ -75,6 +75,12 @@ def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "ModuleOp"> {
   let dependentDialects = ["pdl_interp::PDLInterpDialect", "pdl::PDLDialect"];
 }
 
+def InsertOneFlowMemPoolPass : Pass<"insert-ofmempool", "ModuleOp"> {
+  let summary = "insert oneflow tmp buffer as a memory pool in mlir codegen";
+  let constructor = "mlir::oneflow::createInsertOneFlowMemPoolPass()";
+}
+
+
 def AutoNhwcPass : Pass<"auto-nhwc", "ModuleOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createAutoNhwcPass()";
