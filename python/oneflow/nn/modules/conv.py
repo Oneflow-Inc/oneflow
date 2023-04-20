@@ -432,6 +432,18 @@ class Conv2d(Module):
             bound = 1 / math.sqrt(fan_in)
             init.uniform_(self.bias, -bound, bound)
 
+    def apply_memory_format(self, memory_format) -> None:
+        if self.channel_pos == "channels_first" and memory_format is flow.channels_last:
+            self.channel_pos = "channels_last"
+            with flow.no_grad():
+                self.weight.data = self.weight.to(memory_format=flow.channels_last)
+        elif (
+            self.channel_pos == "channels_last" and memory_format is flow.channels_first
+        ):
+            self.channel_pos = "channels_first"
+            with flow.no_grad():
+                self.weight.data = self.weight.to(memory_format=flow.channels_first)
+
     def _conv_forward(self, x, weight, bias):
         return flow._C.conv2d(
             x,
@@ -602,6 +614,18 @@ class Conv3d(Module):
             fan_in, _ = init._calculate_fan_in_and_fan_out(self.weight)
             bound = 1 / math.sqrt(fan_in)
             init.uniform_(self.bias, -bound, bound)
+
+    def apply_memory_format(self, memory_format) -> None:
+        if self.channel_pos == "channels_first" and memory_format is flow.channels_last:
+            self.channel_pos = "channels_last"
+            with flow.no_grad():
+                self.weight.data = self.weight.to(memory_format=flow.channels_last)
+        elif (
+            self.channel_pos == "channels_last" and memory_format is flow.channels_first
+        ):
+            self.channel_pos = "channels_first"
+            with flow.no_grad():
+                self.weight.data = self.weight.to(memory_format=flow.channels_first)
 
     def _conv_forward(self, x, weight, bias):
         return flow._C.conv3d(

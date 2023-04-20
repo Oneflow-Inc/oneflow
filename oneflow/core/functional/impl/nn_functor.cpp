@@ -1373,6 +1373,50 @@ class MaxPoolNDFunctor {
   std::shared_ptr<OpExpr> tf_maxpool_op_;
 };
 
+class AvgPoolNDFunctor {
+ public:
+  AvgPoolNDFunctor() = default;
+  virtual ~AvgPoolNDFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::vector<int32_t>& kernel_size,
+                           const Optional<std::vector<int32_t>>& stride,
+                           const std::vector<int32_t>& padding, const bool& ceil_mode,
+                           const bool& count_include_pad, const int32_t& divisor_override,
+                           const std::string& data_format) const {
+    // legacy tf style avgpool2d , use cudnn implementation with high performance but not support
+    // count_include_pad and divisor_override.
+    if ((x->is_cpu() || x->is_cuda()) && x->ndim() == 4 && data_format == "channels_last") {
+      CHECK_OR_THROW(count_include_pad)
+          << "AvgPool2d with channels_last data format don't support count_include_pad for now.";
+      CHECK_EQ_OR_THROW(divisor_override, 0)
+          << "AvgPool2d with channels_last data format don't support divisor_override for now.";
+
+      std::vector<int32_t> padding_before{padding.at(0), padding.at(1)};
+      std::vector<int32_t> padding_after{padding.at(0), padding.at(1)};
+
+      auto& attrs =
+          THREAD_CACHED_MUTABLE_ATTR_MAP("pool_size", "strides", "padding", "padding_before",
+                                         "padding_after", "data_format", "ceil_mode");
+      attrs.SetAllAttrs(kernel_size, stride ? *JUST(stride) : kernel_size,
+                        std::string("customized"), padding_before, padding_after, data_format,
+                        ceil_mode);
+      return JUST(OpInterpUtil::Dispatch<Tensor>(*tf_avgpool_op_, {x}, attrs));
+    }
+
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("kernel_size", "padding", "stride", "data_format",
+                                       "ceil_mode", "count_include_pad", "divisor_override");
+    // If stride is None, we set it as kernel_size to align Pytorch.
+    attrs.SetAllAttrs(kernel_size, padding, stride ? *JUST(stride) : kernel_size, data_format,
+                      ceil_mode, count_include_pad, divisor_override);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> tf_avgpool_op_;
+};
+
 class TFAvgPool2DFunctor : public TFPoolNDFunctor {
  public:
   TFAvgPool2DFunctor() {
@@ -1399,6 +1443,28 @@ class MaxPool3DFunctor : public MaxPoolNDFunctor {
  public:
   MaxPool3DFunctor() : MaxPoolNDFunctor(/*num_spatial_dims_=*/3) {
     op_ = CHECK_JUST(one::OpBuilder("max_pool_3d").Input("x").Output("y").Output("indice").Build());
+  }
+};
+
+class AvgPool1DFunctor : public AvgPoolNDFunctor {
+ public:
+  AvgPool1DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("avg_pool_1d").Input("x").Output("y").Build());
+  }
+};
+
+class AvgPool2DFunctor : public AvgPoolNDFunctor {
+ public:
+  AvgPool2DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("avg_pool_2d").Input("x").Output("y").Build());
+    tf_avgpool_op_ = CHECK_JUST(one::OpBuilder("tf_avg_pool_2d").Input("x").Output("y").Build());
+  }
+};
+
+class AvgPool3DFunctor : public AvgPoolNDFunctor {
+ public:
+  AvgPool3DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("avg_pool_3d").Input("x").Output("y").Build());
   }
 };
 
@@ -3238,50 +3304,6 @@ class DropoutGradFunctor {
 
  private:
   std::shared_ptr<OpExpr> dropout_grad_op_;
-};
-
-class AvgPoolNDFunctor {
- public:
-  AvgPoolNDFunctor() = default;
-  virtual ~AvgPoolNDFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::vector<int32_t>& kernel_size,
-                           const Optional<std::vector<int32_t>>& stride,
-                           const std::vector<int32_t>& padding, const bool& ceil_mode,
-                           const bool& count_include_pad, const int32_t& divisor_override,
-                           const std::string& data_format) const {
-    auto& attrs =
-        THREAD_CACHED_MUTABLE_ATTR_MAP("kernel_size", "padding", "stride", "data_format",
-                                       "ceil_mode", "count_include_pad", "divisor_override");
-    // If stride is None, we set it as kernel_size to align Pytorch.
-    attrs.SetAllAttrs(kernel_size, padding, stride ? *JUST(stride) : kernel_size, data_format,
-                      ceil_mode, count_include_pad, divisor_override);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-  }
-
- protected:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class AvgPool1DFunctor : public AvgPoolNDFunctor {
- public:
-  AvgPool1DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("avg_pool_1d").Input("x").Output("y").Build());
-  }
-};
-
-class AvgPool2DFunctor : public AvgPoolNDFunctor {
- public:
-  AvgPool2DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("avg_pool_2d").Input("x").Output("y").Build());
-  }
-};
-
-class AvgPool3DFunctor : public AvgPoolNDFunctor {
- public:
-  AvgPool3DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("avg_pool_3d").Input("x").Output("y").Build());
-  }
 };
 
 class UnfoldFunctor {

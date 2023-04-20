@@ -246,6 +246,12 @@ class MaxPool2d(Module):
         else:
             self.channel_pos = "channels_first"
 
+    def apply_memory_format(self, memory_format) -> None:
+        if memory_format is flow.channels_last:
+            self.channel_pos = "channels_last"
+        elif memory_format is flow.channels_first:
+            self.channel_pos = "channels_first"
+
     def forward(self, x):
         if not self.return_indices:
             return flow._C.max_pool2d(
@@ -514,69 +520,30 @@ class AvgPool2d(Module):
         self.kernel_size = _pair(kernel_size)
         self.stride = _pair(stride) if (stride is not None) else _pair(kernel_size)
         self.ceil_mode = ceil_mode
-
+        self.channel_pos = "channels_first"
         if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
-            self.data_format = "NHWC"
+            self.channel_pos = "channels_flast"
+        self.padding = _pair(padding)
+        self.count_include_pad = count_include_pad
+        self.divisor_override = int(divisor_override)
+
+    def apply_memory_format(self, memory_format) -> None:
+        if memory_format is flow.channels_last:
             self.channel_pos = "channels_last"
-            assert isinstance(padding, int) or isinstance(
-                padding, tuple
-            ), "padding can only int int or tuple of 2 ints."
-            padding = _pair(padding)
-            if len(padding) == 2:
-                if self.data_format == "NCHW":
-                    padding = (0, 0, padding[0], padding[1])
-                elif self.data_format == "NHWC":
-                    padding = (0, padding[0], padding[1], 0)
-                else:
-                    raise ValueError("error padding param!")
-            self.padding = padding
-
-            if not count_include_pad:
-                raise ValueError(
-                    "AvgPool2d with NHWC data format don't support count_include_pad for now."
-                )
-            if divisor_override != 0:
-                raise ValueError(
-                    "AvgPool2d with NHWC data format don't support divisor_override for now."
-                )
-
-            # TODO(yaochi): align with pytorch when padding is asymmetric
-            self._padding_type, _pads_list = calc_pool_padding(
-                padding, get_dhw_offset(self.channel_pos), 2
-            )
-            self._padding_before = [pad[0] for pad in _pads_list]
-            self._padding_after = [pad[1] for pad in _pads_list]
-
-        else:
-            self.data_format = "NCHW"
+        elif memory_format is flow.channels_first:
             self.channel_pos = "channels_first"
-            self.padding = _pair(padding)
-            self.count_include_pad = count_include_pad
-            self.divisor_override = int(divisor_override)
 
     def forward(self, x):
-        if self.data_format == "NCHW":
-            return flow._C.avg_pool2d(
-                x,
-                kernel_size=self.kernel_size,
-                stride=self.stride,
-                padding=self.padding,
-                ceil_mode=self.ceil_mode,
-                count_include_pad=self.count_include_pad,
-                divisor_override=self.divisor_override,
-                data_format=self.channel_pos,
-            )
-        else:
-            return flow._C.avg_pool2d_nhwc(
-                x,
-                kernel_size=self.kernel_size,
-                stride=self.stride,
-                padding=self._padding_type,
-                padding_before=self._padding_before,
-                padding_after=self._padding_after,
-                ceil_mode=self.ceil_mode,
-                data_format=self.channel_pos,
-            )
+        return flow._C.avg_pool2d(
+            x,
+            kernel_size=self.kernel_size,
+            stride=self.stride,
+            padding=self.padding,
+            ceil_mode=self.ceil_mode,
+            count_include_pad=self.count_include_pad,
+            divisor_override=self.divisor_override,
+            data_format=self.channel_pos,
+        )
 
     def extra_repr(self) -> str:
         return (

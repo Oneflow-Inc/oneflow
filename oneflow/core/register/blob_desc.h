@@ -35,14 +35,16 @@ class BlobDesc final {
 
   // NOTE(chengcheng): Cannot using std::make_shared in header file, because it will cause
   //  Segmentation fault with unknown reason.
-  BlobDesc(const Shape& shape, DataType dtype, bool is_dynamic);
-  BlobDesc(const Shape& shape, const Stride& stride, DataType dtype, bool is_dynamic);
-  BlobDesc(Symbol<Shape> shape, Symbol<Stride> stride, DataType dtype, bool is_dynamic);
+  BlobDesc(const Shape& shape, DataType dtype, MemoryFormat memory_format, bool is_dynamic);
+  BlobDesc(const Shape& shape, const Stride& stride, DataType dtype, MemoryFormat memory_format,
+           bool is_dynamic);
+  BlobDesc(Symbol<Shape> shape, Symbol<Stride> stride, DataType dtype, MemoryFormat memory_format,
+           bool is_dynamic);
 
-  BlobDesc(const Shape& shape, DataType dtype);
-  BlobDesc(const Shape& shape, const Stride& stride, DataType dtype);
-  BlobDesc(Symbol<Shape> shape, Symbol<Stride> stride, DataType dtype);
-  explicit BlobDesc(DataType dtype);
+  BlobDesc(const Shape& shape, DataType dtype, MemoryFormat memory_format);
+  BlobDesc(const Shape& shape, const Stride& stride, DataType dtype, MemoryFormat memory_format);
+  BlobDesc(Symbol<Shape> shape, Symbol<Stride> stride, DataType dtype, MemoryFormat memory_format);
+  explicit BlobDesc(DataType dtype, MemoryFormat memory_format);
   explicit BlobDesc(const BlobDescProto& proto);
   explicit BlobDesc(const BlobDesc&);
 
@@ -65,6 +67,9 @@ class BlobDesc final {
   DataType data_type() const { return data_type_; }
   void set_data_type(DataType data_type) { data_type_ = data_type; }
 
+  MemoryFormat memory_format() const { return memory_format_; }
+  void set_memory_format(MemoryFormat memory_format) { memory_format_ = memory_format; }
+
   bool is_dynamic() const { return is_dynamic_; }
   void set_is_dynamic(bool is_dynamic);
 
@@ -83,6 +88,7 @@ class BlobDesc final {
   Symbol<Shape> shape_;
   Symbol<Stride> stride_;
   DataType data_type_;
+  MemoryFormat memory_format_;
   bool is_dynamic_;
 };
 

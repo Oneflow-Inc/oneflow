@@ -190,7 +190,8 @@ Maybe<void> LocalTensorMetaInferArgs::InitInputLocalTensorMetas(const TensorTupl
         << Error::RuntimeError() << "device not infered";
     mut_output_tensor_metas->at(i) = SymbolOf(
         LocalTensorMeta(output_mut_metas.at(i).shape(), output_mut_metas.at(i).stride(),
-                        output_mut_metas.at(i).data_type(), output_mut_metas.at(i).device()));
+                        output_mut_metas.at(i).data_type(), output_mut_metas.at(i).memory_format(),
+                        output_mut_metas.at(i).device()));
   }
   return std::shared_ptr<const LocalTensorInferResult>(std::move(result));
 }

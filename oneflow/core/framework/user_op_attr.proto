@@ -5,6 +5,7 @@ import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/sequential.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/common/device.proto";
+import "oneflow/core/common/memory_format.proto";
 
 enum AttrType {
   kAtInt32 = 1;

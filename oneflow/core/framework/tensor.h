@@ -78,6 +78,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual Maybe<TensorStorage> tensor_storage() const { OF_UNIMPLEMENTED(); }
   virtual Maybe<const Stride> stride() const { OF_UNIMPLEMENTED(); }
   virtual Maybe<int64_t> storage_offset() const { OF_UNIMPLEMENTED(); }
+  virtual MemoryFormat memory_format() const = 0;
 
   // Getters/Setters valid only for EagerGlobalTensor
   virtual Maybe<const Optional<Symbol<NdSbp>>&> consumer_nd_sbp_constraint() const {
@@ -150,8 +151,10 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
 class StaticZerosTensor final : public Tensor {
  public:
   static Maybe<StaticZerosTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
-                                             DataType dtype, Symbol<Device> device) {
-    return std::shared_ptr<StaticZerosTensor>(new StaticZerosTensor(shape, dtype, device));
+                                             DataType dtype, MemoryFormat memory_format,
+                                             Symbol<Device> device) {
+    return std::shared_ptr<StaticZerosTensor>(
+        new StaticZerosTensor(shape, dtype, memory_format, device));
   }
   // Getters
   std::shared_ptr<const Shape> shape() const override { return shape_; }
@@ -199,6 +202,7 @@ class StaticZerosTensor final : public Tensor {
   Maybe<TensorStorage> tensor_storage() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<const Stride> stride() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<int64_t> storage_offset() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  MemoryFormat memory_format() const override { return memory_format_; }
 
   // Getters/Setters valid only for EagerGlobalTensor
   Maybe<const Optional<Symbol<NdSbp>>&> consumer_nd_sbp_constraint() const override {
@@ -246,7 +250,6 @@ class StaticZerosTensor final : public Tensor {
   std::shared_ptr<Tensor> contiguous() const override {
     return std::const_pointer_cast<Tensor>(shared_from_this());
   }
-
   // Setters for autograd
   Maybe<void> set_requires_grad(bool requires_grad) override {
     PRINT_BUG_PROMPT_AND_ABORT();
@@ -297,10 +300,11 @@ class StaticZerosTensor final : public Tensor {
 
  private:
   StaticZerosTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                    Symbol<Device> device)
-      : shape_(shape), dtype_(dtype), device_(device) {}
+                    MemoryFormat memory_format, Symbol<Device> device)
+      : shape_(shape), dtype_(dtype), memory_format_(memory_format), device_(device) {}
   const std::shared_ptr<const Shape> shape_;
   DataType dtype_;
+  MemoryFormat memory_format_;
   Symbol<Device> device_;
 };
 
@@ -386,6 +390,7 @@ class ProxyTensor : public TensorIf<DerivedT> {
   virtual Maybe<TensorStorage> tensor_storage() const override { return tensor_->tensor_storage(); }
   virtual Maybe<const Stride> stride() const override { return tensor_->stride(); }
   virtual Maybe<int64_t> storage_offset() const override { return tensor_->storage_offset(); }
+  virtual MemoryFormat memory_format() const override { return tensor_->memory_format(); }
 
   virtual Maybe<const Optional<Symbol<NdSbp>>&> consumer_nd_sbp_constraint() const override {
     return tensor_->consumer_nd_sbp_constraint();
@@ -533,6 +538,7 @@ class LocalTensor final : public TensorIf<LocalTensor> {
   Maybe<bool> has_eager_blob_object() const override { return impl_->has_eager_blob_object(); }
   Maybe<const Stride> stride() const override { return impl_->stride(); }
   Maybe<int64_t> storage_offset() const override { return impl_->storage_offset(); }
+  MemoryFormat memory_format() const override { return impl_->memory_format(); }
 
   // Getters for autograd
   Maybe<Tensor> acc_grad() const override { return impl_->acc_grad(); }
@@ -578,8 +584,8 @@ class LocalTensor final : public TensorIf<LocalTensor> {
 
   static Maybe<LocalTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
                                        const std::shared_ptr<const Stride>& stride, DataType dtype,
-                                       const Symbol<Device>& device, bool is_lazy,
-                                       bool requires_grad, bool is_leaf);
+                                       MemoryFormat memory_format, const Symbol<Device>& device,
+                                       bool is_lazy, bool requires_grad, bool is_leaf);
   LocalTensorImpl* mut_impl() { return impl_.get(); }
   Maybe<EagerLocalTensorImpl*> mut_eager_local_tensor_impl() override {
     return impl_->mut_eager_local_tensor_impl();
@@ -648,6 +654,7 @@ class GlobalTensor final : public TensorIf<GlobalTensor> {
   std::shared_ptr<Tensor> contiguous() const override;
   Maybe<Tensor> data() override { return this->detach(); }
   Maybe<const Stride> stride() const override { return impl_->stride(); }
+  MemoryFormat memory_format() const override { return impl_->memory_format(); }
   std::shared_ptr<Tensor> pin_memory() const override;
 
   // Getters valid only for EagerLocalTensor
@@ -710,8 +717,9 @@ class GlobalTensor final : public TensorIf<GlobalTensor> {
   Maybe<Tensor> clone() const override;
 
   static Maybe<GlobalTensor> MakeTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                                        Symbol<NdSbp> nd_sbp, Symbol<ParallelDesc> parallel_desc,
-                                        bool is_lazy, bool requires_grad, bool is_leaf);
+                                        MemoryFormat memory_format, Symbol<NdSbp> nd_sbp,
+                                        Symbol<ParallelDesc> parallel_desc, bool is_lazy,
+                                        bool requires_grad, bool is_leaf);
 
   GlobalTensorImpl* mut_impl() { return impl_.get(); }
 

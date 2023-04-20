@@ -116,7 +116,8 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
         if (kernel->output_is_mut2_type(i)) {
           mut_tensor_meta = std::make_shared<MutLocalTensorMeta>(
               output_tensor_metas.at(i)->shape(), output_tensor_metas.at(i)->stride(),
-              output_tensor_metas.at(i)->dtype(), output_tensor_metas.at(i)->device());
+              output_tensor_metas.at(i)->dtype(), output_tensor_metas.at(i)->memory_format(),
+              output_tensor_metas.at(i)->device());
         }
       }
       std::shared_ptr<EagerLocalTensorImpl> tensor_impl =
@@ -165,9 +166,9 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     }));
     JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
     const auto& mut_tensor_meta = const_cast<EagerLocalTensorImpl*>(tensor_impl)->mut_tensor_meta();
-    Symbol<LocalTensorMeta> new_tensor_meta =
-        SymbolOf(LocalTensorMeta(mut_tensor_meta->shape(), mut_tensor_meta->stride(),
-                                 mut_tensor_meta->dtype(), mut_tensor_meta->device()));
+    Symbol<LocalTensorMeta> new_tensor_meta = SymbolOf(LocalTensorMeta(
+        mut_tensor_meta->shape(), mut_tensor_meta->stride(), mut_tensor_meta->dtype(),
+        mut_tensor_meta->memory_format(), mut_tensor_meta->device()));
     std::shared_ptr<EagerLocalTensorImpl> final_tensor_impl =
         std::make_shared<EagerLocalTensorImpl>(JUST(tensor_impl->tensor_storage()),
                                                JUST(tensor_impl->storage_offset()), false, false);
@@ -328,7 +329,8 @@ Maybe<void> RawLocalToGlobal(const LocalToGlobalOpExpr& op_expr, const TensorTup
     const auto& parallel_desc = JUST(ctx.parallel_desc);
     const auto& logical_shape = JUST(ctx.attrs.GetAttr<Shape>("shape"));
     DataType dtype = JUST(ctx.attrs.GetAttr<DataType>("dtype"));
-    GlobalTensorMeta tensor_meta(logical_shape, dtype, nd_sbp, parallel_desc);
+    MemoryFormat memory_format = JUST(ctx.attrs.GetAttr<MemoryFormat>("memory_format"));
+    GlobalTensorMeta tensor_meta(logical_shape, dtype, memory_format, nd_sbp, parallel_desc);
     Optional<int64_t> parallel_id{};
     const auto& device = JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
     const auto& global_tensor_impl = JUST(EagerGlobalTensorImpl::New(
