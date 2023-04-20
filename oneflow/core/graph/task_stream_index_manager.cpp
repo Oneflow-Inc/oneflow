@@ -25,8 +25,8 @@ StreamIndexGenerator* TaskStreamIndexManager::GetGenerator(const DeviceId& devic
   auto iter = generators_.find(device_id);
   if (iter == generators_.end()) {
     auto init_stream_index = Singleton<IdStateMgr>::Get()->GetStreamIndexState(device_id);
-    iter =
-        generators_.emplace(device_id, std::make_unique<StreamIndexGenerator>(init_stream_index)).first;
+    iter = generators_.emplace(device_id, std::make_unique<StreamIndexGenerator>(init_stream_index))
+               .first;
   }
   return iter->second.get();
 }

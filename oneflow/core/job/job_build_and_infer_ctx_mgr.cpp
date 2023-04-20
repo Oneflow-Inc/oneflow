@@ -30,10 +30,8 @@ Maybe<void> JobBuildAndInferCtxMgr::OpenJobBuildAndInferCtx(const std::string& j
   CHECK_OR_RETURN(job_name2infer_ctx_.find(job_name) == job_name2infer_ctx_.end())
       << Error::JobNameExistError() << "job name: " << job_name << " already exist";
   int64_t job_id = job_set_.job_size();
-  char *job_id_str = std::getenv("JOB_ID");
-  if (job_id_str) {
-    job_id = std::stoi(job_id_str);
-  }
+  char* job_id_str = std::getenv("JOB_ID");
+  if (job_id_str) { job_id = std::stoi(job_id_str); }
   Job* job = job_set_.add_job();
   job->mutable_job_conf()->set_job_name(job_name);
   std::unique_ptr<JobBuildAndInferCtx> ctx(NewJobBuildAndInferCtx(job, job_id));

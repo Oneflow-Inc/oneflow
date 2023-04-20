@@ -44,7 +44,8 @@ class TaskIdGenerator final {
 
 inline TaskId TaskIdGenerator::Generate(const StreamId& stream_id) {
   if (stream_id2task_index_counter_.count(stream_id) == 0) {
-    stream_id2task_index_counter_[stream_id] = Singleton<IdStateMgr>::Get()->GetTaskIndexState(stream_id);
+    stream_id2task_index_counter_[stream_id] =
+        Singleton<IdStateMgr>::Get()->GetTaskIndexState(stream_id);
   }
   task_index_t task_index = stream_id2task_index_counter_[stream_id]++;
   return TaskId{stream_id, task_index};
