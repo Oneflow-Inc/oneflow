@@ -52,14 +52,13 @@ struct NanSum {
 };
 
 template<>
-__host__ __device__ __forceinline__ cuComplex cub::Sum::operator()(const cuComplex& a,
-                                                                   const cuComplex& b) const {
+OF_DEVICE_FUNC cuComplex cub::Sum::operator()(const cuComplex& a, const cuComplex& b) const {
   return cuComplex{a.x + b.x, a.y + b.y};
 }
 
 template<>
-__host__ __device__ __forceinline__ cuDoubleComplex
-cub::Sum::operator()(const cuDoubleComplex& a, const cuDoubleComplex& b) const {
+OF_DEVICE_FUNC cuDoubleComplex cub::Sum::operator()(const cuDoubleComplex& a,
+                                                    const cuDoubleComplex& b) const {
   return cuDoubleComplex{a.x + b.x, a.y + b.y};
 }
 }  // namespace cub
