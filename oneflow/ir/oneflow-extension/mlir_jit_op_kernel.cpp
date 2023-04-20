@@ -103,7 +103,8 @@ llvm::SmallVector<OpaqueMemRefDescriptor> GetMLIRCInterfaceArgs(
 void WithMlirContext(
     user_op::KernelComputeContext* ctx, const llvm::SmallVector<llvm::StringRef, 4>& ext_libs,
     const std::function<mlir::OwningOpRef<mlir::ModuleOp>(mlir::MLIRContext* mlir_ctx)>& parse,
-    const std::function<void(mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module)>& lower) {
+    const std::function<void(mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module)>& lower,
+    ep::Stream* stream) {
   mlir::DialectRegistry registry;
   registry
       .insert<mlir::oneflow::OneFlowDialect, mlir::func::FuncDialect, mlir::memref::MemRefDialect,
@@ -137,6 +138,7 @@ void WithMlirContext(
       GetMLIRCInterfaceArgs(ctx);
   llvm::SmallVector<void*> packed_args{};
   for (auto& arg /* arg must be a reference*/ : args) { packed_args.push_back(&arg); }
+  packed_args.push_back(stream);
   auto error = jit->invokePacked(GetMLIRCInterface(ctx->op_name()), packed_args);
   CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
 }
@@ -160,7 +162,8 @@ class MlirJitCpuKernel final : public user_op::OpKernel {
         [](mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module) {
           CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToLLVM(mlir_ctx, module)))
               << "fail to lower OneFlow to LLVM";
-        });
+        },
+        ctx->stream());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -203,7 +206,8 @@ class MlirJitGpuKernel final : public user_op::OpKernel {
         [](mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module) {
           CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToCUDALLVM(mlir_ctx, module)))
               << "fail to lower OneFlow to CUDA LLVM";
-        });
+        },
+        ctx->stream());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

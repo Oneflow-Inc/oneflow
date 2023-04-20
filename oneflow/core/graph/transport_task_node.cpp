@@ -13,22 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWPDLLPATTERNS_H_
-#define ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWPDLLPATTERNS_H_
-#include "mlir/IR/PatternMatch.h"
-
-namespace mlir {
+#include "oneflow/core/graph/transport_task_node.h"
+#include "oneflow/core/graph/boxing_task_graph.pb.h"
 
 namespace oneflow {
 
-void populateAllocEliminationPatterns(RewritePatternSet& patterns);
-void populateForwardOpPatterns(RewritePatternSet& patterns);
-void populateNormalizationOpPatterns(RewritePatternSet& patterns);
-void populateFuseConv2DBatchNormPattern(RewritePatternSet& patterns);
-void populateFuseOpsWithBackwardImplPattern(RewritePatternSet& patterns);
+Maybe<void> TransportTaskNode::InitTransportTaskFromProtoIf(
+    const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) {
+  CHECK(has_new_task_id());
+  JUST(InitTransportTaskFromProto(transport_task_proto, ctx));
+  lbi_ = transport_task_proto.lbi();
+  return Maybe<void>::Ok();
+}
+
+void TransportTaskNode::ToTransportTaskProtoIf(TransportTaskProto* transport_task_proto) const {
+  ToTransportTaskProto(transport_task_proto);
+  *transport_task_proto->mutable_lbi() = lbi_;
+}
 
 }  // namespace oneflow
-
-}  // namespace mlir
-
-#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWPDLLPATTERNS_H_
