@@ -333,7 +333,7 @@ def _test_linear_multi_graph_load(return_dict, device, with_reshape, state_dict)
     return_dict["load2"] = test_case2
 
 
-def _graph_save(return_dict, filename, with_eager):
+def _graph_save(return_dict, filename, id_state_filename, with_eager):
     state_dict = _test_linear_multi_graph_save(
         return_dict, flow.device("cuda"), True, with_eager
     )
@@ -342,9 +342,11 @@ def _graph_save(return_dict, filename, with_eager):
         _get_state_dict_tensor_size(state_dict),
     )
     flow.save(state_dict, filename)
+    flow.save_id_state(id_state_filename)
 
 
-def _graph_load(return_dict, filename):
+def _graph_load(return_dict, filename, id_state_filename):
+    flow.load_id_state(id_state_filename)
     state_dict_loaded = flow.load(filename)
     # load with nn.Graph
     _test_linear_multi_graph_load(
@@ -354,19 +356,19 @@ def _graph_load(return_dict, filename):
 
 def _test_linear_multi_graph_save_load_gpu(test_case, with_eager):
     # A graph runtime state dict
-    with tempfile.NamedTemporaryFile() as f:
+    with tempfile.NamedTemporaryFile() as f, tempfile.NamedTemporaryFile() as id_state_file:
         # Save a graph
         manager = multiprocessing.Manager()
         return_dict = manager.dict()
         save_p = multiprocessing.get_context("spawn").Process(
-            target=_graph_save, args=(return_dict, f.name, with_eager)
+            target=_graph_save, args=(return_dict, f.name, id_state_file.name, with_eager)
         )
         save_p.start()
         save_p.join()
 
         # Resume a graph from a graph runtime state dict
         load_p = multiprocessing.get_context("spawn").Process(
-            target=_graph_load, args=(return_dict, f.name)
+            target=_graph_load, args=(return_dict, f.name, id_state_file.name)
         )
         load_p.start()
         load_p.join()
