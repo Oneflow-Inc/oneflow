@@ -1137,37 +1137,24 @@ def check_tensor_equality(
         assert (
             flow_tensor.grad is not None
         ), f"OneFlow tensor doesn't have grad while PyTorch tensor has one, PyTorch tensor is\n {torch_tensor}\n, OneFlow tensor is\n{flow_tensor} "
-        torch_grad = torch_tensor.grad.detach().cpu().numpy()
-        # torch_grad = torch_tensor.grad.detach().cpu().numpy() if not torch_original.is_conj(torch_tensor.grad) else torch_original.resolve_conj(torch_tensor.grad.detach()).cpu().numpy()
+        torch_grad = torch_tensor.grad.detach().cpu().numpy() if not torch_original.is_conj(torch_tensor.grad) else torch_original.resolve_conj(torch_tensor.grad.detach()).cpu().numpy()
         flow_grad = flow_tensor.grad.numpy()
         if not np.allclose(
             torch_grad, flow_grad, rtol=rtol, atol=atol, equal_nan=True,
         ):
             print_note_fake_program(detail=True)
             print("---------Grad Shape--------")
-            # print("torch_grad norm = ", np.linalg.norm(torch_grad))
-            # print("flow_grad norm = ", np.linalg.norm(flow_grad))
-            # boolean_indices = (torch_grad - flow_grad > 1e-3) | (torch_grad - flow_grad < -1e-3)
-            # diff = torch_grad - flow_grad
-            # print("count = ", np.sum(boolean_indices))
-            # print("where = ", np.where(boolean_indices == True))
-            # print("error = ", np.sum(diff[boolean_indices]))
-            # print("diff[0,6,0,0] = ", diff[0,6,0,0])
-            # print("diff[0,16,0,0] = ", diff[0,16,0,0])
             print(torch_grad.shape)
             print(flow_grad.shape)
             print(
                 f"Grads are not equal. PyTorch grad: \n{torch_grad}\n, OneFlow grad: \n{flow_grad}"
             )
             return False
-    # error: module 'oneflow' has no attribute 'resolve_conj' and 'is_conj'
     torch_numpy = (
         torch_tensor.detach().cpu().numpy()
         if not torch_original.is_conj(torch_tensor)
         else torch_original.resolve_conj(torch_tensor.detach()).cpu().numpy()
     )
-    # torch_numpy = torch_original.resolve_conj(torch_tensor.detach().cpu()).numpy()
-    # torch_numpy = torch_tensor.detach().cpu().numpy()
     oneflow_numpy = flow_tensor.numpy()
     equality_res = np.allclose(
         torch_numpy, oneflow_numpy, rtol=rtol, atol=atol, equal_nan=True,
