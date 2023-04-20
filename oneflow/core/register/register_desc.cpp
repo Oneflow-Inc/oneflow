@@ -120,7 +120,6 @@ void RegstDesc::EraseUninitializedShapeBlob() {
       });
 }
 
-<<<<<<< HEAD
 void RegstDesc::InitFromProtoExceptConsumers(const RegstDescProto& proto) {
   regst_desc_id_ = proto.regst_desc_id();
   CHECK_EQ(proto.producer_task_id(), producer_->task_id());
@@ -147,8 +146,6 @@ void RegstDesc::InitFromProtoExceptConsumers(const RegstDescProto& proto) {
   force_inplace_consumed_regst_desc_id_ = proto.force_inplace_consumed_regst_desc_id();
 }
 
-=======
->>>>>>> 2d5436543068a2667ac229393a425980d473932b
 void RegstDesc::ToProto(RegstDescProto* ret, bool check) const {
   ret->set_regst_desc_id(regst_desc_id_);
   ret->set_producer_task_id(producer_->task_id());
