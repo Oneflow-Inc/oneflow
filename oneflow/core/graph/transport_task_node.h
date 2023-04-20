@@ -37,9 +37,16 @@ class TransportTaskNode : public TaskNode {
                                            const TaskGraphRebuildCtx& ctx);
   void ToTransportTaskProtoIf(TransportTaskProto*) const;
 
+  ExecNode::InferBlobDescsMethod GetInferBlobDescsMethod() const override {
+    // TransportTaskNode infers output BlobDesc based on input BlobDesc, because it can't infers
+    // output BlobDesc with SBP.
+    return &ExecNode::InferBlobDescsByInputs;
+  }
+
  private:
   virtual Maybe<void> InitTransportTaskFromProto(const TransportTaskProto&,
                                                  const TaskGraphRebuildCtx& ctx) = 0;
+
   virtual void ToTransportTaskProto(TransportTaskProto*) const = 0;
   LogicalBlobId lbi_;
 };
