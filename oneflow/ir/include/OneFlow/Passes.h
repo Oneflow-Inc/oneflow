@@ -27,6 +27,7 @@ limitations under the License.
 #include "mlir/Pass/Pass.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "OneFlow/Conversion/OneFlowToTosa.h"
+#include "OneFlow/Transform/OneFlowMemPool.h"
 #include "OneFlow/Transform/BufferHostRegister.h"
 #include "OneFlow/Transform/ConvertInferenceOp.h"
 #include "OneFlow/Transform/OutlineAndFuse.h"
