@@ -716,7 +716,7 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
 /* static */ Maybe<void> FusedApplyRotaryEmbOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& x_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   int num_heads = -1;
-  const int k_size = ctx->Attr<int>("k_size");
+  const int64_t k_size = ctx->Attr<int64_t>("k_size");
   const std::string& x_layout = ctx->Attr<std::string>("x_layout");
   const std::string& output_layout = ctx->Attr<std::string>("output_layout");
   if (x_desc.shape().NumAxes() == 2) {
