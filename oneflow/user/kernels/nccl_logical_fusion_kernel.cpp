@@ -168,8 +168,9 @@ class NcclLogicalFusionKernelState : public user_op::OpKernelState {
       UNIMPLEMENTED();
     }
 
-    EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get());
-    comm_ = comm_mgr->GetCommForDeviceAndStreamName(device_set, stream_name_);
+    EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
+    comm_ =
+        comm_mgr->As<EagerNcclCommMgr>()->GetCommForDeviceAndStreamName(device_set, stream_name_);
     is_init_ = true;
   }
 
@@ -295,7 +296,7 @@ class NcclLogicalFusionKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache*) const override;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
-    EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get());
+    EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
     return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
   }
 };

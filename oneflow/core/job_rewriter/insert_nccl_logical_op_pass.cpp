@@ -857,7 +857,7 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
                       "launch upper limit."
                    << " So the nccl logical kernel will from async to sync exec, which may affect "
                       "performance.";
-      EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get());
+      EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
       comm_mgr->SetAsyncLaunchNcclLogicalKernel(false);
     }
 

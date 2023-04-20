@@ -48,7 +48,9 @@ class EagerNcclOpKernelCache final : public user_op::OpKernelCache {
       int64_t device_id = CHECK_JUST(parallel_desc_->DeviceId4ParallelId(parallel_id));
       device_set.emplace(std::make_pair(machine_id, device_id));
     }
-    comm_ = CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set);
+    comm_ = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get())
+                ->As<EagerNcclCommMgr>()
+                ->GetCommForDevice(device_set);
   }
 
   Symbol<ParallelDesc> parallel_desc_;
@@ -185,7 +187,7 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_EAGER_NCCL_S2S_KERNEL(dtype)                                            \
+#define REGISTER_CUDA_EAGER_CCL_S2S_KERNEL(dtype)                                        \
   REGISTER_USER_KERNEL("eager_ccl_s2s")                                                  \
       .SetCreateFn<EagerNcclS2SKernel<dtype>>()                                          \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                   \
@@ -193,13 +195,13 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferEagerNcclS2SKernelTmpBufferSize);
 
-REGISTER_EAGER_NCCL_S2S_KERNEL(int8_t)
-REGISTER_EAGER_NCCL_S2S_KERNEL(int32_t)
-REGISTER_EAGER_NCCL_S2S_KERNEL(int64_t)
-REGISTER_EAGER_NCCL_S2S_KERNEL(bool)
-REGISTER_EAGER_NCCL_S2S_KERNEL(float)
-REGISTER_EAGER_NCCL_S2S_KERNEL(double)
-REGISTER_EAGER_NCCL_S2S_KERNEL(float16)
+REGISTER_CUDA_EAGER_CCL_S2S_KERNEL(int8_t)
+REGISTER_CUDA_EAGER_CCL_S2S_KERNEL(int32_t)
+REGISTER_CUDA_EAGER_CCL_S2S_KERNEL(int64_t)
+REGISTER_CUDA_EAGER_CCL_S2S_KERNEL(bool)
+REGISTER_CUDA_EAGER_CCL_S2S_KERNEL(float)
+REGISTER_CUDA_EAGER_CCL_S2S_KERNEL(double)
+REGISTER_CUDA_EAGER_CCL_S2S_KERNEL(float16)
 }  // namespace oneflow
 
 #endif  // WITH_CUDA && NCCL_VERSION_CODE > 2700

@@ -33,7 +33,7 @@ limitations under the License.
 #include "oneflow/core/vm/virtual_machine_scope.h"
 #include "oneflow/core/vm/remat/util.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
-#include "oneflow/core/job/eager_nccl_comm_manager.h"
+#include "oneflow/core/job/eager_ccl_comm_manager.h"
 #include "oneflow/core/device/cudnn_conv_util.h"
 #include "oneflow/core/rpc/include/manager.h"
 #include "oneflow/core/transport/transport.h"
@@ -134,20 +134,6 @@ bool CommNetIBEnabled() {
 
 #endif  // WITH_RDMA && OF_PLATFORM_POSIX
 
-struct CclCommunicatorMgrSingletonBuilder {
-  CclCommunicatorMgrSingletonBuilder(CclMgrCreateOrDestroyFn create,
-                                     CclMgrCreateOrDestroyFn destory)
-      : create(create), destory(destory) {}
-  CclMgrCreateOrDestroyFn create;
-  CclMgrCreateOrDestroyFn destory;
-};
-
-std::vector<CclCommunicatorMgrSingletonBuilder>* AllCclCommunicatorMgrSingletonBuilders() {
-  static std::vector<CclCommunicatorMgrSingletonBuilder>
-      ccl_communicator_mgr_singleton_builder_list;
-  return &ccl_communicator_mgr_singleton_builder_list;
-}
-
 }  // namespace
 
 EnvGlobalObjectsScope::EnvGlobalObjectsScope(const std::string& env_proto_str) {
@@ -211,12 +197,14 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Singleton<CudnnHandlePool>::New();
   Singleton<embedding::EmbeddingManager>::New();
 #endif
-  CHECK_LE_OR_RETURN(AllCclCommunicatorMgrSingletonBuilders()->size(), 1)
+  const auto& vaild_ccl_comm_mgr_device_types =
+      EagerCclCommMgrBuilder::Get().vaild_ccl_comm_mgr_device_types();
+  CHECK_LE_OR_RETURN(vaild_ccl_comm_mgr_device_types.size(), 1)
       << "Only one kind collective communication manager is supported at most at the same time for "
          "now!";
-  for (const auto& ccl_comm_mgr_singleton_builder : *AllCclCommunicatorMgrSingletonBuilders()) {
-    CHECK_JUST(ccl_comm_mgr_singleton_builder.create());
-  }
+  Singleton<EagerCclCommMgr>::SetAllocated(
+      EagerCclCommMgrBuilder::Get().NewCclCommMgr(vaild_ccl_comm_mgr_device_types.front()));
+
   Singleton<vm::VirtualMachineScope>::New(Singleton<ResourceDesc, ForSession>::Get()->resource());
 #ifdef __linux__
   Singleton<EpollCommNet>::New();
@@ -264,9 +252,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Singleton<CudnnConvAlgoCache>::Delete();
   Singleton<CudnnHandlePool>::Delete();
 #endif
-  for (const auto& ccl_comm_mgr_singleton_builder : *AllCclCommunicatorMgrSingletonBuilders()) {
-    CHECK_JUST(ccl_comm_mgr_singleton_builder.destory());
-  }
+  Singleton<EagerCclCommMgr>::Delete();
   Singleton<ThreadPool>::Delete();
   Singleton<remat::AllocatorManager>::Delete();
   Singleton<ep::DeviceManagerRegistry>::Delete();
@@ -333,13 +319,6 @@ Maybe<void> DestoryRDMA() {
     }
   }
 #endif  // WITH_RDMA && OF_PLATFORM_POSIX
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> RegisterCclMgrCreatorDestroyer(CclMgrCreateOrDestroyFn creator,
-                                           CclMgrCreateOrDestroyFn destroyer) {
-  AllCclCommunicatorMgrSingletonBuilders()->emplace_back(
-      CclCommunicatorMgrSingletonBuilder(creator, destroyer));
   return Maybe<void>::Ok();
 }
 

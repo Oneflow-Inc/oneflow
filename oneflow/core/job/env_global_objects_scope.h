@@ -51,14 +51,6 @@ Maybe<bool> RDMAIsInitialized();
 
 Maybe<void> DestoryRDMA();
 
-using CclMgrCreateOrDestroyFn = std::function<Maybe<void>()>;
-
-Maybe<void> RegisterCclMgrCreatorDestroyer(CclMgrCreateOrDestroyFn creator,
-                                           CclMgrCreateOrDestroyFn destroyer);
-
-#define REGISTER_CCL_MGR_CREATE_AND_DESTORY_FN(create_fn, destory_fn) \
-  COMMAND(CHECK_JUST(RegisterCclMgrCreatorDestroyer(create_fn, destory_fn)))
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_JOB_CLUSTER_OBJECTS_SCOPE_H_

@@ -218,14 +218,7 @@ void EagerNcclCommMgr::CreateCommFromPlan(const Plan& plan) {
   }
 }
 
-REGISTER_CCL_MGR_CREATE_AND_DESTORY_FN(([]() -> Maybe<void> {
-                                         Singleton<EagerNcclCommMgr>::New();
-                                         return Maybe<void>::Ok();
-                                       }),
-                                       ([]() -> Maybe<void> {
-                                         Singleton<EagerNcclCommMgr>::Delete();
-                                         return Maybe<void>::Ok();
-                                       }));
+REGISTER_CCL_COMM_MGR(DeviceType::kCUDA, EagerNcclCommMgr);
 
 }  // namespace oneflow
 
