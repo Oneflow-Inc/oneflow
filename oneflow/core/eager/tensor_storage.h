@@ -31,12 +31,12 @@ namespace vm {
 class OpCallInstructionPolicy;
 class DtrOpCallInstructionPolicy;
 
-class TensorStorageBase {
+class TensorStorage {
  public:
-  explicit TensorStorageBase(bool is_allocated_in_vm, Symbol<Device> device);
-  OF_DISALLOW_COPY_AND_MOVE(TensorStorageBase);
+  explicit TensorStorage(bool is_allocated_in_vm, Symbol<Device> device);
+  OF_DISALLOW_COPY_AND_MOVE(TensorStorage);
 
-  virtual ~TensorStorageBase();
+  virtual ~TensorStorage() = 0;  // 将析构函数声明为纯虚函数
 
   bool is_allocated_in_vm() const { return is_allocated_in_vm_; }
 
@@ -61,7 +61,7 @@ class TensorStorageBase {
   }
 
   void _Release();
-  virtual void Release();
+  virtual void Release() = 0;  // 将Release函数声明为纯虚函数
 
   void RegisterStorageDeleteHook(const std::function<void()>& hook) {
     storage_delete_hooks_.emplace_back(hook);
@@ -82,7 +82,10 @@ class TensorStorageBase {
   bool is_allocated_in_vm_;
 };
 
-class RematableTensorStorage final : public TensorStorageBase {
+TensorStorage::~TensorStorage() {}  // 纯虚函数的实现
+
+
+class RematableTensorStorage final : public TensorStorage {
  public:
   explicit RematableTensorStorage(Symbol<Device> device);
   OF_DISALLOW_COPY_AND_MOVE(RematableTensorStorage);
@@ -128,12 +131,15 @@ class RematableTensorStorage final : public TensorStorageBase {
   void LogEviction(bool eager_eviction) const;
 };
 
-class TensorStorage final : public TensorStorageBase {
+class NaiveTensorStorage : public TensorStorage {
  public:
-  explicit TensorStorage(bool is_allocated_in_vm, Symbol<Device> device)
-      : TensorStorageBase(is_allocated_in_vm, device) {}
-  OF_DISALLOW_COPY_AND_MOVE(TensorStorage);
-  ~TensorStorage() override = default;
+  explicit NaiveTensorStorage(bool is_allocated_in_vm, Symbol<Device> device) : TensorStorage(is_allocated_in_vm, device) {}
+
+  ~NaiveTensorStorage() override {}
+
+  void Release() override {
+    // 具体的实现
+  }
 };
 
 }  // namespace vm
