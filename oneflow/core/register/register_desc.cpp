@@ -120,7 +120,7 @@ void RegstDesc::EraseUninitializedShapeBlob() {
       });
 }
 
-void RegstDesc::ToProto(RegstDescProto* ret) const {
+void RegstDesc::ToProto(RegstDescProto* ret, bool check) const {
   ret->set_regst_desc_id(regst_desc_id_);
   ret->set_producer_task_id(producer_->task_id());
   for (const TaskNode* consumer : consumers_) { ret->add_consumer_task_id(consumer->task_id()); }
@@ -133,8 +133,10 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
       *(pb_pair->mutable_lbi()) = pair.first;
       pair.second->ToProto(pb_pair->mutable_blob_desc());
     }
-    CHECK(data_regst_time_shape_);
-    data_regst_time_shape_->ToProto(data_regst_desc_proto->mutable_time_shape());
+    if (check) { CHECK(data_regst_time_shape_); }
+    if (data_regst_time_shape_) {
+      data_regst_time_shape_->ToProto(data_regst_desc_proto->mutable_time_shape());
+    }
   } else if (regst_desc_type_.has_ctrl_regst_desc()) {
     // do nothing
   } else {
@@ -147,8 +149,10 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_enable_reuse_mem(enable_reuse_mem_);
   ret->set_mem_block_id(mem_block_id_);
   ret->set_mem_block_offset(mem_block_offset_);
-  CHECK(hint_inplace_consumed_regst_desc_id_ == -1 || force_inplace_consumed_regst_desc_id_ == -1)
-      << "They are oneof fields";
+  if (check) {
+    CHECK(hint_inplace_consumed_regst_desc_id_ == -1 || force_inplace_consumed_regst_desc_id_ == -1)
+        << "They are oneof fields";
+  }
   if (hint_inplace_consumed_regst_desc_id_ != -1) {
     ret->set_hint_inplace_consumed_regst_desc_id(hint_inplace_consumed_regst_desc_id_);
   } else if (force_inplace_consumed_regst_desc_id_ != -1) {

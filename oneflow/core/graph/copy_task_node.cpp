@@ -122,4 +122,30 @@ OperatorConf CopyCommNetTaskNode::NewCopyOpConf() {
   return conf;
 }
 
+Maybe<void> CopyHdTaskNode::InitTransportTaskFromProto(
+    const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) {
+  CHECK_OR_RETURN(transport_task_proto.has_copy_hd_task())
+      << "not a serialized CopyHdTaskNode. debug string: " << transport_task_proto.DebugString();
+  copy_type_ = transport_task_proto.copy_hd_task().copy_type();
+  return Maybe<void>::Ok();
+}
+
+void CopyHdTaskNode::ToTransportTaskProto(TransportTaskProto* transport_task_proto) const {
+  ToProto(transport_task_proto->mutable_task_proto(), /*check=*/false);
+  transport_task_proto->mutable_copy_hd_task()->set_copy_type(copy_type_);
+}
+
+Maybe<void> CopyCommNetTaskNode::InitTransportTaskFromProto(
+    const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) {
+  CHECK_OR_RETURN(transport_task_proto.has_copy_comm_net_task())
+      << "not a serialized CopyCommNetTaskNode. debug string: "
+      << transport_task_proto.DebugString();
+  return Maybe<void>::Ok();
+}
+
+void CopyCommNetTaskNode::ToTransportTaskProto(TransportTaskProto* transport_task_proto) const {
+  ToProto(transport_task_proto->mutable_task_proto(), /*check=*/false);
+  transport_task_proto->mutable_copy_comm_net_task();
+}
+
 }  // namespace oneflow
