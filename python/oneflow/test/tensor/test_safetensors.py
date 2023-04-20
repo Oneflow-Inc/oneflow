@@ -19,10 +19,7 @@ import unittest
 import tempfile
 import oneflow as flow
 import oneflow.unittest
-
-flow.mock_torch.enable()
-from safetensors import safe_open
-from safetensors.torch import save_file
+import oneflow.mock_torch as mock
 
 tensors = {
     "weight1": flow.zeros((1024, 1024)),
@@ -33,15 +30,19 @@ tensors = {
 
 
 def _test_save_safetensors(save_path):
+    with mock.enable():
+        from safetensors.torch import save_file
     save_file(tensors, save_path)
 
 
 def _test_load_safetensors(load_path):
-    tensors_load = {}
-    with safe_open(load_path, framework="pt", device="cpu") as f:
-        for key in f.keys():
-            tensors_load[key] = f.get_tensor(key)
-    return tensors_load
+    with mock.enable():
+        from safetensors import safe_open
+        tensors_load = {}
+        with safe_open(load_path, framework="pt", device="cpu") as f:
+            for key in f.keys():
+                tensors_load[key] = f.get_tensor(key)
+        return tensors_load
 
 
 class TestSafetensors(flow.unittest.TestCase):
