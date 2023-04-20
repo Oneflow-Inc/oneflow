@@ -161,7 +161,11 @@ class MlirJitCpuKernel final : public user_op::OpKernel {
           CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToLLVM(mlir_ctx, module)))
               << "fail to lower OneFlow to LLVM";
         },
+#ifdef WITH_CUDA
         ctx->stream()->As<ep::CudaStream>()->cuda_stream());
+#else
+        nullptr);
+#endif  // WITH_CUDA
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
