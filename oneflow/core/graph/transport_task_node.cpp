@@ -13,23 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_CONVERSION_ONEFLOWTOTOSA_H_
-#define ONEFLOW_IR_INCLUDE_ONEFLOW_CONVERSION_ONEFLOWTOTOSA_H_
-
-#include "mlir/Dialect/Tosa/IR/TosaOps.h"
-#include "mlir/Pass/Pass.h"
-
-namespace mlir {
+#include "oneflow/core/graph/transport_task_node.h"
+#include "oneflow/core/graph/boxing_task_graph.pb.h"
 
 namespace oneflow {
 
-std::unique_ptr<mlir::Pass> createLowerOneFlowToTosaPass();
-std::unique_ptr<mlir::Pass> createLowerOneFlowToLinalgPass();
-std::unique_ptr<mlir::Pass> createConvertToSignlessForTosaPass();
-std::unique_ptr<mlir::Pass> createCastOneFlowOpsToSignlessPass();
+Maybe<void> TransportTaskNode::InitTransportTaskFromProtoIf(
+    const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) {
+  CHECK(has_new_task_id());
+  JUST(InitTransportTaskFromProto(transport_task_proto, ctx));
+  lbi_ = transport_task_proto.lbi();
+  return Maybe<void>::Ok();
+}
+
+void TransportTaskNode::ToTransportTaskProtoIf(TransportTaskProto* transport_task_proto) const {
+  ToTransportTaskProto(transport_task_proto);
+  *transport_task_proto->mutable_lbi() = lbi_;
+}
 
 }  // namespace oneflow
-
-}  // namespace mlir
-
-#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_CONVERSION_ONEFLOWTOTOSA_H_

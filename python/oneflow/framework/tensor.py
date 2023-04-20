@@ -384,6 +384,13 @@ def _numpy(self):
     assert (
         not self.is_lazy
     ), "tensor.numpy() is not allowed to be called in nn.Graph.build(*args) or be called by lazy tensor."
+    if self.is_global:
+        if self.placement.type == "meta":
+            raise TypeError("can't convert meta device type global tensor to numpy.")
+    else:
+        if self.device.type == "meta":
+            raise TypeError("can't convert meta device type local tensor to numpy.")
+
     if self.dtype == flow.tensor_buffer:
         shapes, dtypes = self._tensor_buffer_shapes_and_dtypes
         tensors = flow.tensor_buffer_to_list_of_tensors(self, shapes, dtypes)
