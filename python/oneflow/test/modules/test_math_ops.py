@@ -611,8 +611,7 @@ class TestLog10Module(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestDigammaModule(flow.unittest.TestCase):
-    # TODO:shijiaxing  When the grad function be implemented, rm "auto_backward=False"
-    @autotest(n=5, auto_backward=False)
+    @autotest(n=5)
     def test_digamma_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)

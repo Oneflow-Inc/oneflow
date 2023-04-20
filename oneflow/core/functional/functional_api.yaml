@@ -3346,3 +3346,8 @@
 - name: "digamma_grad"
   signature: "Tensor (Tensor x, Tensor dy) => DigammaGrad"
   bind_python: False
+
+- name: "trigamma"
+  signature: "Tensor (Tensor x) => Trigamma"
+  bind_python: False
+  
