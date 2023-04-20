@@ -32,12 +32,14 @@ tensors = {
 def _test_save_safetensors(save_path):
     with mock.enable():
         from safetensors.torch import save_file
+
         save_file(tensors, save_path)
 
 
 def _test_load_safetensors(load_path):
     with mock.enable():
         from safetensors import safe_open
+
         tensors_load = {}
         with safe_open(load_path, framework="pt", device="cpu") as f:
             for key in f.keys():
