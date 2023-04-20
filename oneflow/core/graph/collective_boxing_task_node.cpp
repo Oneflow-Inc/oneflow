@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/graph/boxing_task_graph.pb.h"
 #include "oneflow/core/graph/collective_boxing_task_node.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
 
@@ -54,12 +55,27 @@ void CollectiveBoxingGenericTaskNode::BuildExecGphAndRegst() {
     node->BindBnWithRegst(obn, out_regst);
     out_regst->AddLbi(boxing_op->BnInOp2Lbi(obn));
   }
-  node->InferBlobDescs(nullptr);
+  (node->*GetInferBlobDescsMethod())(nullptr);
 }
 
 void CollectiveBoxingGenericTaskNode::InferProducedDataRegstTimeShape() {
   auto out_regst = GetProducedRegst("out");
   if (out_regst != nullptr) { out_regst->mut_data_regst_time_shape()->reset(new Shape({1, 1})); }
+}
+
+Maybe<void> CollectiveBoxingGenericTaskNode::InitTransportTaskFromProto(
+    const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) {
+  CHECK_OR_RETURN(transport_task_proto.has_collective_boxing_generic_task())
+      << "not a serialized CollectiveBoxingGenericTaskNode. debug string: "
+      << transport_task_proto.DebugString();
+  op_conf_ = transport_task_proto.collective_boxing_generic_task().op_conf();
+  return Maybe<void>::Ok();
+}
+
+void CollectiveBoxingGenericTaskNode::ToTransportTaskProto(
+    TransportTaskProto* transport_task_proto) const {
+  ToProto(transport_task_proto->mutable_task_proto(), /*check=*/false);
+  *transport_task_proto->mutable_collective_boxing_generic_task()->mutable_op_conf() = op_conf_;
 }
 
 }  // namespace oneflow
