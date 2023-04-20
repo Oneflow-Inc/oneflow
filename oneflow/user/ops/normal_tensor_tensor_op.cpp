@@ -24,11 +24,27 @@ namespace oneflow {
 /* static */ Maybe<void> NormalTensorTensorOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& mean_shape = ctx->InputShape("mean", 0);
   const Shape& std_shape = ctx->InputShape("std", 0);
-  CHECK_EQ_OR_RETURN(mean_shape.elem_cnt(), std_shape.elem_cnt());
   size_t dimsA = mean_shape.NumAxes();
   size_t dimsB = std_shape.NumAxes();
-  const Shape& out_shape =  dimsA > dimsB ? mean_shape : std_shape;
-  ctx->SetOutputShape("out", 0, out_shape);
+  size_t ndim = dimsA > dimsB ? dimsA : dimsB;
+  Shape expandedSizes(ndim);
+  // Use ptrdiff_t to ensure signed comparison.
+  for (ptrdiff_t i = (ptrdiff_t)ndim - 1; i >= 0; --i) {
+    ptrdiff_t offset = ndim - 1 - i;
+    ptrdiff_t dimA = dimsA - 1 - offset;
+    ptrdiff_t dimB = dimsB - 1 - offset;
+    auto sizeA = (dimA >= 0) ? mean_shape.At(dimA) : 1;
+    auto sizeB = (dimB >= 0) ? std_shape.At(dimB) : 1;
+    CHECK_OR_RETURN(
+        sizeA == sizeB || sizeA == 1 || sizeB == 1)
+        << "The size of tensor a (" << sizeA << ") must match the size of tensor b (" << sizeB
+        << ") at non-singleton dimension " << i;
+      // 1s map to the other size (even 0).
+      expandedSizes.Set(i, sizeA == 1 ? sizeB : sizeA);
+  }
+
+  
+  ctx->SetOutputShape("out", 0, expandedSizes);
   ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("mean", 0));
   return Maybe<void>::Ok();
 }

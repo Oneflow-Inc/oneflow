@@ -13,11 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <glog/logging.h>
+#include <cstdint>
+#include "oneflow/core/common/just.h"
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/framework/layout.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
+#include "oneflow/core/framework/user_op_kernel_registry.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/job/global_mode.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -370,6 +378,62 @@ class Normal2Functor {
                   requires_grad);
   }
 };
+
+
+class NormalWithTensorTensorFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& mean, const std::shared_ptr<one::Tensor>& std, 
+                          const Optional<one::Tensor>& out,
+                          const Optional<one::Generator>& optional_generator,
+                          const bool& requires_grad) const {
+    int64_t dimsA = mean->ndim();
+    int64_t dimsB = std->ndim();
+    int64_t ndim = dimsA > dimsB ? dimsA:dimsB;
+    Shape  out_shape(ndim);
+
+    // Use ptrdiff_t to ensure signed comparison.
+    for (ptrdiff_t i = (ptrdiff_t)ndim - 1; i >= 0; --i) {
+      ptrdiff_t offset = ndim - 1 - i;
+      ptrdiff_t dimA = dimsA - 1 - offset;
+      ptrdiff_t dimB = dimsB - 1 - offset;
+      auto sizeA = (dimA >= 0) ? mean->dim(dimA) : 1;
+      auto sizeB = (dimB >= 0) ? std->dim(dimB) : 1;
+
+      CHECK_OR_THROW(sizeA == sizeB || sizeA == 1 || sizeB == 1) << "The size of tensor a (" << sizeA <<
+          ") must match the size of tensor b (" << sizeB <<
+          ") at non-singleton dimension " << i;
+
+      // 1s map to the other size (even 0).
+      out_shape.Set(i, sizeA == 1 ? std::move(sizeB) : std::move(sizeA));
+    }                    
+    auto output = JUST(Normal(0,1,out_shape,out,mean->dtype(),mean->device(),optional_generator,requires_grad));
+    // mean + output * std
+     return JUST(InplaceAddcmul(mean,output,std,1));
+  }
+
+};
+
+
+// class NormalWithTensorFloatFunctor {
+//  public:
+//   Maybe<Tensor> operator()(const Tensor& mean, const float& std, const Optional<one::Tensor>& out,
+//                            const Optional<Symbol<DType>>& optional_dtype,
+//                            const Optional<one::Generator>& optional_generator,
+//                            const bool& requires_grad) const {
+//     return Normal(mean, std, out, optional_dtype, optional_generator, requires_grad);
+//   }
+// };
+
+// class NormalWithFloatTensorFunctor {
+//  public:
+//   Maybe<Tensor> operator()(const float& mean, const Tensor& std, const Optional<one::Tensor>& out,
+//                            const Optional<Symbol<DType>>& optional_dtype,
+//                            const Optional<one::Generator>& optional_generator,
+//                            const bool& requires_grad) const {
+//     return Normal(mean, std, out, optional_dtype, optional_generator, requires_grad);
+//   }
+// }; 
+
 
 class GlobalNormalFunctor {
  public:
@@ -835,6 +899,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<GlobalRandNFunctor>("GlobalRandN");
   m.add_functor<impl::NormalFunctor>("Normal");
   m.add_functor<impl::Normal2Functor>("Normal2");
+  m.add_functor<impl::NormalWithTensorTensorFunctor>("NormalWithTensorTensor");
+  m.add_functor<impl::NormalWithTensorFloatFunctor>("NormalWithTensorFloat");
+  m.add_functor<impl::NormalWithFloatTensorFunctor>("NormalWithFloatTensor");
   m.add_functor<impl::GlobalNormalFunctor>("GlobalNormal");
   m.add_functor<impl::GlobalNormal2Functor>("GlobalNormal2");
   m.add_functor<RandnLikeFunctor>("RandnLike");
