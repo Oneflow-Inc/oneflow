@@ -361,6 +361,7 @@ import oneflow.nn.image
 
 from oneflow.framework.check_point_v2 import load
 from oneflow.framework.check_point_v2 import save
+from oneflow.framework.check_point_v2 import frombuffer
 from oneflow.framework.dtype import convert_oneflow_dtype_to_numpy_dtype, dtypes
 from oneflow.framework.function_util import FunctionConfig
 from oneflow.framework.function_util import FunctionConfig as function_config
