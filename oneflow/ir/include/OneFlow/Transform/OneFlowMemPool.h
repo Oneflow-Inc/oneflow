@@ -9,7 +9,7 @@ namespace oneflow {
 namespace codegen {
 namespace mempool {
 
-inline const std::string MEMPOOL_ATTR_NAME = "memory pool";
+inline const std::string MEMPOOL_ATTR_NAME = "oneflow.mempool";
 
 }  // namespace mempool
 }  // namespace codegen

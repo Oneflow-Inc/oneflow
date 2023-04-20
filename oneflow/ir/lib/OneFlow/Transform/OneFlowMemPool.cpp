@@ -7,6 +7,7 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Visitors.h"
@@ -129,7 +130,8 @@ struct InsertOneFlowMemPoolPattern final : public OpRewritePattern<func::FuncOp>
       : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
   mlir::LogicalResult matchAndRewrite(func::FuncOp op,
                                       mlir::PatternRewriter& rewriter) const override {
-    if (op->getAttr(codegen::mempool::MEMPOOL_ATTR_NAME)) return success();
+    auto module = op->getParentOfType<ModuleOp>();
+    if (module && module->getAttr(codegen::mempool::MEMPOOL_ATTR_NAME)) return success();
 
     auto [is_legal, alloc_op] = getAllocOp(op);
     if (!is_legal) {
@@ -155,8 +157,8 @@ struct InsertOneFlowMemPoolPattern final : public OpRewritePattern<func::FuncOp>
     IRMapping bvm;
     op.getRegion().cloneInto(&func.getRegion(), bvm);
     rewriter.eraseOp(op);
-    func->setAttr(codegen::mempool::MEMPOOL_ATTR_NAME,
-                  rewriter.getUI32IntegerAttr(type.getDimSize(0)));
+    module->setAttr(codegen::mempool::MEMPOOL_ATTR_NAME,
+                  rewriter.getI64IntegerAttr(type.getDimSize(0)));
     return success();
   }
 };
