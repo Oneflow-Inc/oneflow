@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/tensor_util.h"
@@ -1307,15 +1308,16 @@ class TFPoolNDFunctor {
 
 class MaxPoolNDFunctor {
  public:
-  MaxPoolNDFunctor() = default;
+  explicit MaxPoolNDFunctor(const int& num_spatial_dims) : num_spatial_dims_(num_spatial_dims) {}
   virtual ~MaxPoolNDFunctor() = default;
-  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& input,
                                 const std::vector<int32_t>& kernel_size,
                                 const Optional<std::vector<int32_t>>& stride,
                                 const std::vector<int32_t>& padding,
                                 const std::vector<int32_t>& dilation, const bool& return_indices,
                                 const bool& ceil_mode, const std::string& data_format) const {
-    if (x->ndim() == 4 && data_format == "channels_last") {
+    // channels_last case
+    if (num_spatial_dims_ == 2 && data_format == "channels_last") {
       if (!return_indices && dilation.at(0) == 1 && dilation.at(1) == 1) {
         // legacy tf style maxpool2d , use cudnn implementation
         // with high performance but do not support dilation/return_indices
@@ -1329,20 +1331,44 @@ class MaxPoolNDFunctor {
                           std::string("customized"), padding_before, padding_after, data_format,
                           ceil_mode);
         TensorTuple output;
-        output.emplace_back(JUST(OpInterpUtil::Dispatch<Tensor>(*tf_maxpool_op_, {x}, attrs)));
+        output.emplace_back(JUST(OpInterpUtil::Dispatch<Tensor>(*tf_maxpool_op_, {input}, attrs)));
         return output;
       }
     }
+
+    std::shared_ptr<one::Tensor> unsqueezed_input;
+    bool is_batched = true;
+    std::string func_name;
+    if (num_spatial_dims_ == 1) {
+      func_name = "max_pool1d";
+    } else if (num_spatial_dims_ == 2) {
+      func_name = "max_pool2d";
+    } else {
+      func_name = "max_pool3d";
+    }
+    std::tie(unsqueezed_input, is_batched) =
+        *JUST(pooling_batchify(input, num_spatial_dims_, func_name));
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("kernel_size", "padding", "stride", "dilation",
                                                  "data_format", "return_indices", "ceil_mode");
     // If stride is None, we set it as kernel_size to align Pytorch.
     attrs.SetAllAttrs(kernel_size, padding, stride ? *JUST(stride) : kernel_size, dilation,
                       data_format, return_indices, ceil_mode);
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs);
+    const auto& pooling_out =
+        JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {unsqueezed_input}, attrs));
+    if (!is_batched) {
+      TensorTuple squeezed_pooling_out;  // (y,indices)
+      squeezed_pooling_out.emplace_back(
+          JUST(functional::Squeeze(pooling_out->at(0), std::vector<int32_t>{0})));
+      squeezed_pooling_out.emplace_back(
+          JUST(functional::Squeeze(pooling_out->at(1), std::vector<int32_t>{0})));
+      return squeezed_pooling_out;
+    }
+    return pooling_out;
   }
 
  protected:
+  int32_t num_spatial_dims_;
   std::shared_ptr<OpExpr> op_;
   std::shared_ptr<OpExpr> tf_maxpool_op_;
 };
@@ -1356,14 +1382,14 @@ class TFAvgPool2DFunctor : public TFPoolNDFunctor {
 
 class MaxPool1DFunctor : public MaxPoolNDFunctor {
  public:
-  MaxPool1DFunctor() {
+  MaxPool1DFunctor() : MaxPoolNDFunctor(/*num_spatial_dims_=*/1) {
     op_ = CHECK_JUST(one::OpBuilder("max_pool_1d").Input("x").Output("y").Output("indice").Build());
   }
 };
 
 class MaxPool2DFunctor : public MaxPoolNDFunctor {
  public:
-  MaxPool2DFunctor() {
+  MaxPool2DFunctor() : MaxPoolNDFunctor(/*num_spatial_dims_=*/2) {
     op_ = CHECK_JUST(one::OpBuilder("max_pool_2d").Input("x").Output("y").Output("indice").Build());
     tf_maxpool_op_ = CHECK_JUST(one::OpBuilder("tf_max_pool_2d").Input("x").Output("y").Build());
   }
@@ -1371,7 +1397,7 @@ class MaxPool2DFunctor : public MaxPoolNDFunctor {
 
 class MaxPool3DFunctor : public MaxPoolNDFunctor {
  public:
-  MaxPool3DFunctor() {
+  MaxPool3DFunctor() : MaxPoolNDFunctor(/*num_spatial_dims_=*/3) {
     op_ = CHECK_JUST(one::OpBuilder("max_pool_3d").Input("x").Output("y").Output("indice").Build());
   }
 };
@@ -2362,6 +2388,7 @@ class CtcLossFunctor {
                            const std::shared_ptr<one::Tensor>& target_lengths,
                            const int64_t& max_target_length, const int64_t& blank,
                            const bool& zero_infinity, const std::string& reduction) const {
+    // FIXME: global ctc loss sometimes segfaults
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("max_target_length", "blank", "zero_infinity");
     attrs.SetAllAttrs(max_target_length, blank, zero_infinity);
     std::shared_ptr<one::Tensor> out;

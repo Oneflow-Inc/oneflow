@@ -263,7 +263,7 @@ class TestTensorOps(flow.unittest.TestCase):
         y = torch.tensor(x.item())
         return y
 
-    # Not check graph because of 2 reason.
+    # Not check graph because of 2 reasons
     # Reason 1, nn.Graph.build()'s input/output item only support types: Tensor/None.
     # Reason 2, This op needs to convert the EagerTensor to a numpy array，so this op only supports eager mode.
     # Please refer to File "oneflow/api/python/utils/tensor_utils.h", line 49, in EagerTensorToNumpy.
@@ -276,7 +276,7 @@ class TestTensorOps(flow.unittest.TestCase):
         y = torch.tensor(x.tolist())
         return y
 
-    # Not check graph because of 2 reason.
+    # Not check graph because of 2 reasons
     # Reason 1, nn.Graph.build()'s input/output item only support types: Tensor/None.
     # Reason 2, This op needs to convert the EagerTensor to a numpy array，so this op only supports eager mode.
     # Please refer to File "oneflow/api/python/utils/tensor_utils.h", line 49, in EagerTensorToNumpy.
