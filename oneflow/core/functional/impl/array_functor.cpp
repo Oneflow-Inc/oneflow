@@ -1801,7 +1801,7 @@ class CopyToDeviceFunctor {
   }
 
  private:
-  void TouchEpDevice(Symbol<Device> device) {
+  void TouchEpDevice(Symbol<Device> device) const {
     ep::DeviceManager* device_mgr =
         Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceManagerOrNull(device->enum_type());
     if (!device_mgr) { return; }

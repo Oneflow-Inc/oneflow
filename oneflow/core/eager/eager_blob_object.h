@@ -41,6 +41,8 @@ class MutLocalTensorMeta;
 
 namespace vm {
 
+class Allocator;
+
 class EagerBlobObject final : public user_op::Tensor,
                               public user_op::TensorDesc,
                               public std::enable_shared_from_this<EagerBlobObject> {
