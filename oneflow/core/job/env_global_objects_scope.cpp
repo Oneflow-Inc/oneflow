@@ -202,8 +202,10 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   CHECK_LE_OR_RETURN(vaild_ccl_comm_mgr_device_types.size(), 1)
       << "Only one kind collective communication manager is supported at most at the same time for "
          "now!";
-  Singleton<EagerCclCommMgr>::SetAllocated(
-      EagerCclCommMgrBuilder::Get().NewCclCommMgr(vaild_ccl_comm_mgr_device_types.front()));
+  if (!vaild_ccl_comm_mgr_device_types.empty()) {
+    Singleton<EagerCclCommMgr>::SetAllocated(
+        EagerCclCommMgrBuilder::Get().NewCclCommMgr(vaild_ccl_comm_mgr_device_types.front()));
+  }
 
   Singleton<vm::VirtualMachineScope>::New(Singleton<ResourceDesc, ForSession>::Get()->resource());
 #ifdef __linux__
@@ -252,7 +254,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Singleton<CudnnConvAlgoCache>::Delete();
   Singleton<CudnnHandlePool>::Delete();
 #endif
-  Singleton<EagerCclCommMgr>::Delete();
+  if (Singleton<EagerCclCommMgr>::Get() != nullptr) { Singleton<EagerCclCommMgr>::Delete(); }
   Singleton<ThreadPool>::Delete();
   Singleton<remat::AllocatorManager>::Delete();
   Singleton<ep::DeviceManagerRegistry>::Delete();

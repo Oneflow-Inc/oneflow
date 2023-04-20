@@ -65,9 +65,9 @@ class EagerCclCommMgrBuilder {
   }
 
  private:
-  EagerCclCommMgrBuilder() { ccl_comm_mgr_reg_result_.reset(new HashMap<DeviceType, Creator>); }
+  EagerCclCommMgrBuilder() { ccl_comm_mgr_reg_result_.reset(new std::map<DeviceType, Creator>); }
 
-  std::unique_ptr<HashMap<DeviceType, Creator>> ccl_comm_mgr_reg_result_;
+  std::unique_ptr<std::map<DeviceType, Creator>> ccl_comm_mgr_reg_result_;
   std::vector<DeviceType> vaild_ccl_comm_mgr_device_types_;
 };
 
