@@ -22,14 +22,6 @@ import oneflow.unittest
 import oneflow.mock_torch as mock
 
 
-class MockCtx(object):
-    def __enter__(self):
-        mock.enable()
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        mock.disable()
-
-
 tensors = {
     "weight1": flow.zeros((1024, 1024)),
     "weight2": flow.ones((1024, 1024)),
@@ -39,14 +31,14 @@ tensors = {
 
 
 def _test_save_safetensors(save_path):
-    with MockCtx():
+    with mock.enable():
         from safetensors.torch import save_file
 
         save_file(tensors, save_path)
 
 
 def _test_load_safetensors(load_path):
-    with MockCtx():
+    with mock.enable():
         from safetensors import safe_open
 
         tensors_load = {}
