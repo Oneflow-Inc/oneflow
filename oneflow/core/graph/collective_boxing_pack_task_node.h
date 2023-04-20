@@ -31,6 +31,10 @@ class CollectiveBoxingPackTaskNode : public TransportTaskNode {
             const SbpParallel& dst_sbp_parallel, const int64_t parallel_num);
   TaskType GetTaskType() const override { return TaskType::kCollectiveBoxingPack; }
 
+  Maybe<void> InitTransportTaskFromProto(const TransportTaskProto& transport_task_proto,
+                                         const TaskGraphRebuildCtx& ctx) override;
+  void ToTransportTaskProto(TransportTaskProto*) const override;
+
  private:
   void BuildExecGphAndRegst() override;
   void ProduceAllRegstsAndBindEdges() override;
