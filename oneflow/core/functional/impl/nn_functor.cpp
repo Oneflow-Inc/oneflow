@@ -1347,7 +1347,7 @@ class MaxPoolNDFunctor {
       func_name = "max_pool3d";
     }
     std::tie(unsqueezed_input, is_batched) =
-        *JUST(pooling_batchify(input, num_spatial_dims_, func_name));
+        *JUST(batchify(input, num_spatial_dims_, func_name));
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("kernel_size", "padding", "stride", "dilation",
                                                  "data_format", "return_indices", "ceil_mode");
