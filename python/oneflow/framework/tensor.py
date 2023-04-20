@@ -25,8 +25,8 @@ Tensor = flow._oneflow_internal.Tensor
 TensorTuple = flow._oneflow_internal.TensorTuple
 
 from oneflow._oneflow_internal import (
-    set_global_default_device,
-    get_global_default_device,
+    set_default_device,
+    get_default_device,
 )
 
 

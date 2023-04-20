@@ -40,13 +40,13 @@ class CustomModule(nn.Module):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestTensor(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
-    def test_creating_tensor_by_global_default_device(test_case):
-        default_device = flow.get_global_default_device()
+    def test_creating_tensor_by_default_device(test_case):
+        default_device = flow.get_default_device()
         test_case.assertEqual(default_device, flow.device("cpu"))
 
         def test_func(test_case, default_device="cpu"):
-            flow.set_global_default_device(flow.device(default_device))
-            default_device = flow.get_global_default_device()
+            flow.set_default_device(flow.device(default_device))
+            default_device = flow.get_default_device()
             test_case.assertEqual(default_device, flow.device(default_device))
             x1 = flow.zeros(2, 3)
             x2 = flow.empty(2, 3)
@@ -63,19 +63,19 @@ class TestTensor(flow.unittest.TestCase):
 
         test_func(test_case, "meta")
         test_func(test_case, "cuda")
-        flow.set_global_default_device(flow.device("cpu"))
+        flow.set_default_device(flow.device("cpu"))
 
     @flow.unittest.skip_unless_1n1d()
     def test_creating_tensor_with_different_priority(test_case):
-        flow.set_global_default_device(flow.device("meta"))
+        flow.set_default_device(flow.device("meta"))
         x1 = flow.tensor([3, 4])
         x2 = flow.tensor([3, 4], device="cpu")
         test_case.assertEqual(x1.device, flow.device("meta"))
         test_case.assertEqual(x2.device, flow.device("cpu"))
-        flow.set_global_default_device(flow.device("cpu"))
+        flow.set_default_device(flow.device("cpu"))
 
     @flow.unittest.skip_unless_1n1d()
-    def test_skip_init_by_global_default_device(test_case):
+    def test_skip_init_by_default_device(test_case):
         goal_device = "cpu"
         x = flow.nn.utils.skip_init(CustomModule, 4, 3)
         y = CustomModule(4, 3, device=goal_device)

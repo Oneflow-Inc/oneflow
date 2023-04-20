@@ -833,9 +833,9 @@ PyObject* PyParameter_New(const std::shared_ptr<Tensor>& data, bool requires_gra
 using namespace oneflow::one;
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("get_global_default_device", []() { return GetGlobalDefaultDevice(); });
-  m.def("set_global_default_device", [](const oneflow::Symbol<oneflow::Device>& device) {
-    SetGlobalDefaultDevice(device).GetOrThrow();
+  m.def("get_default_device", []() { return GetDefaultDevice(); });
+  m.def("set_default_device", [](const oneflow::Symbol<oneflow::Device>& device) {
+    SetDefaultDevice(device).GetOrThrow();
   });
   PyTensorObject_Type = MakeTensorType();
   PyParameterObject_Type = MakeParameterType();

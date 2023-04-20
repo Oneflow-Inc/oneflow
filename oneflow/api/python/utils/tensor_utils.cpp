@@ -130,9 +130,9 @@ Maybe<py::tuple> TensorGetPyTupleOfSbp(const Tensor& tensor) {
 Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
                                       const Optional<Symbol<Device>>& device,
                                       const bool requires_grad, const bool pin_memory) {
+  auto device_ = device.value_or(GetDefaultDevice());
   bool is_bfloat16_dtype = dtype ? JUST(dtype)->data_type() == DataType::kBFloat16 : false;
-  bool is_cuda_device = device ? JUST(device)->enum_type() == DeviceType::kCUDA : false;
-  if (GetGlobalDefaultDevice()->enum_type() == DeviceType::kCUDA) is_cuda_device = true;
+  bool is_cuda_device = (device_->enum_type() == DeviceType::kCUDA);
 
   if (is_bfloat16_dtype && is_cuda_device) {
 #if CUDA_VERSION < 11000
@@ -171,12 +171,6 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
   const Shape shape(DimVector(dims_ptr, dims_ptr + PyArray_NDIM(np_arr)));
   DataType np_data_type = JUST(numpy::GetOFDataTypeFromNpArray(np_arr));
 
-  Symbol<Device> device_;
-  if (device) {
-    device_ = JUST(device);
-  } else {
-    device_ = GetGlobalDefaultDevice();
-  }
   std::shared_ptr<Tensor> tensor =
       JUST(functional::Empty(shape, JUST(DType::Get(np_data_type)), device_,
                              /*requires_grad=*/false, /*pin_memory=*/pin_memory));

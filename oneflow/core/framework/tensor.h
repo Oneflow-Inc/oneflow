@@ -40,8 +40,8 @@ class FunctionNode;
 class GlobalTensor;
 class LocalTensor;
 
-Symbol<Device> GetGlobalDefaultDevice();
-Maybe<void> SetGlobalDefaultDevice(const Symbol<Device>& device);
+Symbol<Device> GetDefaultDevice();
+Maybe<void> SetDefaultDevice(const Symbol<Device>& device);
 
 class Tensor : public std::enable_shared_from_this<Tensor> {
  public:

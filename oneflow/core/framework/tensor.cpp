@@ -47,12 +47,12 @@ Symbol<Device>* GetMutDefaultDeviceSymbol() {
 
 }  // namespace
 
-Symbol<Device> GetGlobalDefaultDevice() {
+Symbol<Device> GetDefaultDevice() {
   std::lock_guard<std::mutex> locker(default_device_mutex);
   return *GetMutDefaultDeviceSymbol();
 }
 
-Maybe<void> SetGlobalDefaultDevice(const Symbol<Device>& device) {
+Maybe<void> SetDefaultDevice(const Symbol<Device>& device) {
   std::lock_guard<std::mutex> locker(default_device_mutex);
   *GetMutDefaultDeviceSymbol() = device;
   return Maybe<void>::Ok();

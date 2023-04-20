@@ -67,7 +67,7 @@ def empty_op(
         tensor.requires_grad_(requires_grad)
     else:
         if device is None:
-            device = flow.get_global_default_device()
+            device = flow.get_default_device()
         tensor = flow._C.empty(
             shape,
             dtype=dtype,

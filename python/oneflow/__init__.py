@@ -349,8 +349,8 @@ from oneflow.framework.dtype import (
 )
 
 from oneflow.framework.tensor import (
-    set_global_default_device,
-    get_global_default_device,
+    set_default_device,
+    get_default_device,
 )
 
 import oneflow._C

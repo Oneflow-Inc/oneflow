@@ -210,7 +210,7 @@ class TensorWithShapeGenericCtorFunctor {
     if (device) {
       device_ = JUST(device);
     } else {
-      device_ = GetGlobalDefaultDevice();
+      device_ = GetDefaultDevice();
     }
     return functional::Empty(shape, dtype, device_, /*requires_grad=*/false, /*pin_memory=*/false);
   }
