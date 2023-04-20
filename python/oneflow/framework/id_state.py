@@ -18,19 +18,16 @@ import pickle
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 from pathlib import Path
 
-def save_id_state(
-    path: Union[str, Path]
-):
+
+def save_id_state(path: Union[str, Path]):
     path: Path = Path(path)
-    obj =  oneflow._oneflow_internal.save_id_state()
+    obj = oneflow._oneflow_internal.save_id_state()
     pickled_bytes = pickle.dumps(obj)
     path.write_bytes(pickled_bytes)
 
-def load_id_state(
-    path: Union[str, Path]
-):
+
+def load_id_state(path: Union[str, Path]):
     path: Path = Path(path)
     pickled_bytes = path.read_bytes()
     obj = pickle.loads(pickled_bytes)
     oneflow._oneflow_internal.load_id_state(obj)
-    
