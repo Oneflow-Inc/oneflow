@@ -30,6 +30,10 @@ class BoxingZerosTaskNode : public TransportTaskNode {
             DataType data_type, const Shape& time_shape);
   TaskType GetTaskType() const override { return TaskType::kBoxingZeros; }
 
+  Maybe<void> InitTransportTaskFromProto(const TransportTaskProto& transport_task_proto,
+                                         const TaskGraphRebuildCtx& ctx) override;
+  void ToTransportTaskProto(TransportTaskProto*) const override;
+
  private:
   void BuildExecGphAndRegst() override;
   void ProduceAllRegstsAndBindEdges() override;

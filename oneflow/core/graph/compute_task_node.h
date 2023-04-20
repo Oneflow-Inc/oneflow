@@ -28,7 +28,7 @@ class CompTaskNode : public TaskNode {
   CompTaskNode() = default;
   virtual ~CompTaskNode() = default;
 
-  virtual void ToProto(TaskProto*) const override;
+  virtual void ToProto(TaskProto*, bool check) const override;
 
   // parallel_ctx_
   int64_t parallel_id() const { return parallel_ctx_.parallel_id(); }
