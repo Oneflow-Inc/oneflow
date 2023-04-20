@@ -30,7 +30,7 @@ class TestCase : public ::testing::Test {
   void SetUp() override {
     for (const auto& device_type : device_manager_registry_.GetRegisteredDeviceTypes()) {
       // ignore mock device
-      if (device_type == DeviceType::kMockDevice) { continue; }
+      if (device_type == DeviceType::kMockDevice || device_type == DeviceType::kMeta) { continue; }
       if (device_manager_registry_.GetDeviceManager(device_type)->GetDeviceCount() > 0) {
         available_device_types_.insert(device_type);
       }
