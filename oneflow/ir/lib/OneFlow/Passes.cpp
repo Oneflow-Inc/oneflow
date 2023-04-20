@@ -16,6 +16,7 @@ limitations under the License.
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "OneFlow/Transform/EliminateAllocOps.h"
 #include "OneFlow/Transform/AppendOneFlowStream.h"
+#include "OneFlow/Transform/OneFlowMemPool.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/common/data_type.pb.h"
@@ -1064,14 +1065,14 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   pm.addPass(createParallelLoopToGpuPass());                        // convert-parallel-loops-to-gpu
   pm.addPass(createGpuLauchSinkIndexComputationsPass());
   pm.addPass(createGpuKernelOutliningPass());                      // gpu-kernel-outlining
-  pm.addNestedPass<func::FuncOp>(createBufferHostRegisterPass());  // buffer-host-register
   pm.addPass(createCanonicalizerPass());                           // canonicalize
+  pm.addPass(createFoldAllocToSubviewPass());                           // fold-alloc-to-subview
+  pm.addPass(createInsertOneFlowMemPoolPass());                           // insert-ofmempool 
   // -pass-pipeline='gpu.module([PASS1][PASS2]...)'
   pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());        // strip-debuginfo
   pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());           // lower-affine
   pm.addNestedPass<gpu::GPUModuleOp>(createLowerGpuOpsToNVVMOpsPass());  // convert-gpu-to-nvvm
   pm.addNestedPass<gpu::GPUModuleOp>(createSerializeToCubinPass());      // out-of-tree-gpu-to-cubin
-  pm.addNestedPass<func::FuncOp>(createGpuCopyArgPass());                // buffer-host-register
   pm.addPass(createAppendOneFlowStreamPass());                           // append-ofstream
   pm.addPass(createGpuToLLVMConversionPass());                           // gpu-to-llvm
   pm.addPass(memref::createExpandStridedMetadataPass());                 // expand-strided-metadata
