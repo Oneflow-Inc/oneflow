@@ -84,7 +84,6 @@ class TensorStorage {
 
 TensorStorage::~TensorStorage() {}  // 纯虚函数的实现
 
-
 class RematableTensorStorage final : public TensorStorage {
  public:
   explicit RematableTensorStorage(Symbol<Device> device);
@@ -133,7 +132,8 @@ class RematableTensorStorage final : public TensorStorage {
 
 class NaiveTensorStorage : public TensorStorage {
  public:
-  explicit NaiveTensorStorage(bool is_allocated_in_vm, Symbol<Device> device) : TensorStorage(is_allocated_in_vm, device) {}
+  explicit NaiveTensorStorage(bool is_allocated_in_vm, Symbol<Device> device)
+      : TensorStorage(is_allocated_in_vm, device) {}
 
   ~NaiveTensorStorage() override {}
 
