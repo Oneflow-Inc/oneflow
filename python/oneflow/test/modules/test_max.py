@@ -21,6 +21,7 @@ from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
 
+
 def _test_scalar_max(test_case, device):
     y = flow.max(flow.tensor(1.0, device=device), flow.tensor([2], device=device))
     test_case.assertTrue(np.allclose(y.numpy(), [2], 1e-05, 1e-05))
@@ -28,6 +29,7 @@ def _test_scalar_max(test_case, device):
     test_case.assertTrue(np.allclose(y.numpy(), [2], 1e-05, 1e-05))
     y = flow.max(flow.tensor([1.0], device=device), flow.tensor(2, device=device))
     test_case.assertTrue(np.allclose(y.numpy(), [2], 1e-05, 1e-05))
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestMaxModule(flow.unittest.TestCase):
