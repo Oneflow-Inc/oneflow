@@ -105,6 +105,7 @@ std::shared_ptr<Tensor> Parameter::pin_memory() const {
   }
 }
 
+bool LocalTensor::is_cpu() const { return CHECK_JUST(device())->type() == "cpu"; }
 bool LocalTensor::is_cuda() const { return CHECK_JUST(device())->type() == "cuda"; }
 
 Maybe<Tensor> LocalTensor::detach() const {
@@ -144,8 +145,8 @@ Maybe<void> LocalTensor::set_data(const std::shared_ptr<Tensor>& other) {
 }
 
 #define TENSOR_OFFLOAD_CHECK(is_offloaded, msg)                  \
-  if (!is_cuda()) {                                              \
-    LOG(WARNING) << "Only cuda tensor can be offloaded.";        \
+  if (is_cpu()) {                                                \
+    LOG(WARNING) << "Only non-cpu tensor can be offloaded.";     \
     return Maybe<void>::Ok();                                    \
   }                                                              \
   if (is_offloaded_ != is_offloaded) {                           \
@@ -233,6 +234,9 @@ Maybe<GlobalTensor> GlobalTensor::MakeTensor(const std::shared_ptr<const Shape>&
   return std::make_shared<GlobalTensor>(impl);
 }
 
+bool GlobalTensor::is_cpu() const {
+  return CHECK_JUST(parallel_desc())->device_type() == DeviceType::kCPU;
+}
 bool GlobalTensor::is_cuda() const {
   return CHECK_JUST(parallel_desc())->device_type() == DeviceType::kCUDA;
 }
