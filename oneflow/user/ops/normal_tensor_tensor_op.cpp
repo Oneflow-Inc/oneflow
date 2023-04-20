@@ -1,5 +1,20 @@
 /*
 Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -35,15 +50,13 @@ namespace oneflow {
     ptrdiff_t dimB = dimsB - 1 - offset;
     auto sizeA = (dimA >= 0) ? mean_shape.At(dimA) : 1;
     auto sizeB = (dimB >= 0) ? std_shape.At(dimB) : 1;
-    CHECK_OR_RETURN(
-        sizeA == sizeB || sizeA == 1 || sizeB == 1)
+    CHECK_OR_RETURN(sizeA == sizeB || sizeA == 1 || sizeB == 1)
         << "The size of tensor a (" << sizeA << ") must match the size of tensor b (" << sizeB
         << ") at non-singleton dimension " << i;
-      // 1s map to the other size (even 0).
-      expandedSizes.Set(i, sizeA == 1 ? sizeB : sizeA);
+    // 1s map to the other size (even 0).
+    expandedSizes.Set(i, sizeA == 1 ? sizeB : sizeA);
   }
 
-  
   ctx->SetOutputShape("out", 0, expandedSizes);
   ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("mean", 0));
   return Maybe<void>::Ok();
@@ -53,12 +66,9 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 
-
 /* static */ Maybe<void> NormalTensorTensorOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("out", 0, ctx->InputDType("mean", 0));
   return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow
-
-
