@@ -427,6 +427,63 @@ SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kAtanhBackwardWithDyX);
 SPECIALIZATION_HALF_COMPARISON_BINARY_FUNCTOR(BinaryOp::kIsCloseEqualNan)
 SPECIALIZATION_HALF_COMPARISON_BINARY_FUNCTOR(BinaryOp::kIsClose)
 
+template<>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kMul, cuComplex, cuComplex> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC cuComplex operator()(cuComplex src0, cuComplex src1) const {
+    return cuCmulf(src0, src1);
+  }
+};
+
+template<>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kMul, cuDoubleComplex, cuDoubleComplex> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC cuDoubleComplex operator()(cuDoubleComplex src0, cuDoubleComplex src1) const {
+    return cuCmul(src0, src1);
+  }
+};
+
+#define SPECIALIZATION_COMPLEX_ARITHMETIC_BINARY_FUNCTOR(op, complex_type, real_type)        \
+  template<>                                                                                 \
+  struct BinaryFunctor<DeviceType::kCUDA, op, complex_type, complex_type> {                  \
+    OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : real_functor(attr0, attr1) {} \
+    BinaryFunctor<DeviceType::kCUDA, op, real_type, real_type> real_functor;                 \
+    OF_DEVICE_FUNC complex_type operator()(complex_type src0, complex_type src1) const {     \
+      return complex_type{real_functor(src0.x, src1.x), real_functor(src0.y, src1.y)};       \
+    }                                                                                        \
+  };
+
+SPECIALIZATION_COMPLEX_ARITHMETIC_BINARY_FUNCTOR(BinaryOp::kAdd, cuComplex, float);
+SPECIALIZATION_COMPLEX_ARITHMETIC_BINARY_FUNCTOR(BinaryOp::kSub, cuComplex, float);
+SPECIALIZATION_COMPLEX_ARITHMETIC_BINARY_FUNCTOR(BinaryOp::kAdd, cuDoubleComplex, double);
+SPECIALIZATION_COMPLEX_ARITHMETIC_BINARY_FUNCTOR(BinaryOp::kSub, cuDoubleComplex, double);
+
+#define SPECIALIZATION_COMPLEX_EQAUL_BINARY_FUNCTOR(complex_type, real_type)                 \
+  template<typename Dst>                                                                     \
+  struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kEqual, complex_type, Dst> {             \
+    OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : real_functor(attr0, attr1) {} \
+    BinaryFunctor<DeviceType::kCUDA, BinaryOp::kEqual, real_type, Dst> real_functor;         \
+    OF_DEVICE_FUNC Dst operator()(complex_type src0, complex_type src1) const {              \
+      return static_cast<Dst>(real_functor(src0.x, src1.x) && real_functor(src0.y, src1.y)); \
+    }                                                                                        \
+  };
+SPECIALIZATION_COMPLEX_EQAUL_BINARY_FUNCTOR(cuComplex, float);
+SPECIALIZATION_COMPLEX_EQAUL_BINARY_FUNCTOR(cuDoubleComplex, double);
+
+#define SPECIALIZATION_COMPLEX_NOT_EQAUL_BINARY_FUNCTOR(complex_type, real_type)             \
+  template<typename Dst>                                                                     \
+  struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kNotEqual, complex_type, Dst> {          \
+    OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : real_functor(attr0, attr1) {} \
+    BinaryFunctor<DeviceType::kCUDA, BinaryOp::kNotEqual, real_type, Dst> real_functor;      \
+    OF_DEVICE_FUNC Dst operator()(complex_type src0, complex_type src1) const {              \
+      return static_cast<Dst>(real_functor(src0.x, src1.x) || real_functor(src0.y, src1.y)); \
+    }                                                                                        \
+  };
+SPECIALIZATION_COMPLEX_NOT_EQAUL_BINARY_FUNCTOR(cuComplex, float);
+SPECIALIZATION_COMPLEX_NOT_EQAUL_BINARY_FUNCTOR(cuDoubleComplex, double);
+
 #define SPECIALIZATION_GPU_BINARY_FUNCTOR(op, type)                                          \
   template<>                                                                                 \
   struct BinaryFunctor<DeviceType::kCUDA, op, type, type> {                                  \
