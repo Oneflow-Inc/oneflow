@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/graph/slice_boxing_task_node.h"
+#include "oneflow/core/graph/task_graph_rebuild_ctx.h"
 
 namespace oneflow {
 
@@ -63,7 +64,7 @@ void SliceBoxingTaskNode::BuildExecGphAndRegst() {
   out_regst->AddLbi(lbi());
   node->BindBnWithRegst(op->SoleObn(), out_regst);
   node->AddBnToRegstAndBindIt(&Operator::tmp_bns, GetProducedRegst("tmp"));
-  node->InferBlobDescs(parallel_ctx());
+  (node->*GetInferBlobDescsMethod())(parallel_ctx());
 }
 
 void SliceBoxingTaskNode::InferProducedDataRegstTimeShape() {
@@ -106,6 +107,41 @@ OperatorConf SliceBoxingTaskNode::GetBoxingOpConf() {
     UNIMPLEMENTED();
   }
   return op_conf;
+}
+
+Maybe<void> SliceBoxingTaskNode::InitTransportTaskFromProto(
+    const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) {
+  CHECK_OR_RETURN(transport_task_proto.has_slice_boxing_task())
+      << "not a serialized SliceBoxingTaskNode. debug string: "
+      << transport_task_proto.DebugString();
+  const auto& proto = transport_task_proto.slice_boxing_task();
+  for (const auto& pair : proto.in_data_edge_uid2slice()) {
+    const auto* edge = JUST(ctx.TaskEdge4Uid(pair.first));
+    CHECK_OR_RETURN(in_data_edge2slice_.emplace(edge, pair.second).second)
+        << "redundant edge found. edge_uid: " << pair.first;
+  }
+  for (int64_t edge_uid : proto.ordered_in_data_edge_uid()) {
+    ordered_in_data_edges_.push_back(JUST(ctx.TaskEdge4Uid(edge_uid)));
+  }
+  out_slice_ = TensorSliceView(proto.out_slice());
+  out_shape_ = Shape(proto.out_shape());
+  mode_ = proto.mode();
+  return Maybe<void>::Ok();
+}
+
+void SliceBoxingTaskNode::ToTransportTaskProto(TransportTaskProto* transport_task_proto) const {
+  ToProto(transport_task_proto->mutable_task_proto(), /*check=*/false);
+  auto* proto = transport_task_proto->mutable_slice_boxing_task();
+  for (const auto& pair : in_data_edge2slice_) {
+    int64_t edge_uid = reinterpret_cast<int64_t>(pair.first);
+    pair.second.ToProto(&(*proto->mutable_in_data_edge_uid2slice())[edge_uid]);
+  }
+  for (const auto* edge : ordered_in_data_edges_) {
+    proto->add_ordered_in_data_edge_uid(reinterpret_cast<int64_t>(edge));
+  }
+  out_slice_.ToProto(proto->mutable_out_slice());
+  out_shape_.ToProto(proto->mutable_out_shape());
+  proto->set_mode(mode_);
 }
 
 }  // namespace oneflow
