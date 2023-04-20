@@ -129,6 +129,7 @@ class DtrCallContext {
     const Symbol<one::LocalTensorMeta> local_tensor_meta;
     const std::shared_ptr<const one::MutLocalTensorMeta> dynamic_local_tensor_meta;
     const DataType data_type;
+    const MemoryFormat memory_format;
   };
   using EBOInfoList = small_vector<EBOInfo, vm::WeakEagerBlobObjectList::kInitialSize>;
 

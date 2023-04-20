@@ -1385,7 +1385,7 @@ class AvgPoolNDFunctor {
                            const std::string& data_format) const {
     // legacy tf style avgpool2d , use cudnn implementation with high performance but not support
     // count_include_pad and divisor_override.
-    if ((x->is_cpu() || x->is_cuda()) && x->ndim() == 4 && data_format == "channels_last") {
+    if (x->is_cuda() && x->ndim() == 4 && data_format == "channels_last") {
       CHECK_OR_THROW(count_include_pad)
           << "AvgPool2d with channels_last data format don't support count_include_pad for now.";
       CHECK_EQ_OR_THROW(divisor_override, 0)

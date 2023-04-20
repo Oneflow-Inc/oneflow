@@ -198,7 +198,8 @@ class NcclCollectiveBoxingP2SNoncontinuousSubTskGphBuilder final : public SubTsk
         auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
         NcclInitCollectiveNode(
             collective_node, in_parallel_desc, i, op_name, lbi,
-            BlobDesc({logical_blob_desc.shape().elem_cnt()}, logical_blob_desc.data_type()),
+            BlobDesc({logical_blob_desc.shape().elem_cnt()}, logical_blob_desc.data_type(),
+                     logical_blob_desc.memory_format()),
             OpType::kOpTypeReduceScatter, -1);
         ctx->task_graph()->ConnectWithLbi(pack_node, collective_node, lbi);
 
@@ -297,7 +298,8 @@ class NcclCollectiveBoxingS2BNoncontinuousSubTskGphBuilder final : public SubTsk
         auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
         NcclInitCollectiveNode(
             collective_node, out_parallel_desc, i, op_name, lbi,
-            BlobDesc({logical_blob_desc.shape().elem_cnt()}, logical_blob_desc.data_type()),
+            BlobDesc({logical_blob_desc.shape().elem_cnt()}, logical_blob_desc.data_type(),
+                     logical_blob_desc.memory_format()),
             OpType::kOpTypeAllGather, -1);
         ctx->task_graph()->ConnectWithLbi(pack_node, collective_node, lbi);
         CollectiveBoxingUnpackTaskNode* unpack_node =

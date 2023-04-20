@@ -23,7 +23,6 @@ limitations under the License.
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/layout.h"
-#include "oneflow/core/framework/memory_format.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/tensor.h"
@@ -250,7 +249,7 @@ bool PythonArg::TypeCheck(ValueType type) const {
     case kTENSOR_TUPLE: return PyTensorTupleCheck(object_) || PyTensorSequenceCheck(object_);
     case kDTYPE: return PyDTypeCheck(object_);
     case kLAYOUT: return PyLayoutCheck(object_);
-    case kMEMORYFORMAT: return PyMemoryFormatCheck(object_);
+    case kMEMORY_FORMAT: return PyMemoryFormat_Check(object_);
     case kSHAPE: return PyLongSequenceCheck(object_);
     case kGENERATOR:
     case kGENERATOR_REF: return PyGeneratorCheck(object_);

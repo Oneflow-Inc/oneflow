@@ -26,6 +26,7 @@ enum AttrType {
   kAtListStride = 16;
   kAtDevice = 17;
   kAtComplexDouble = 18;
+  kAtMemoryFormat = 19;
 }
 
 message AttrValue {
@@ -74,6 +75,7 @@ message AttrValue {
     ListStride at_list_stride = 16;
     DeviceProto at_device = 17;
     ComplexDouble at_complex_double = 18;
+    MemoryFormat at_memory_format = 19;
   }
 }
 

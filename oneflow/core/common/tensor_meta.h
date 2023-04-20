@@ -159,18 +159,21 @@ class LocalTensorMeta : public ConstTensorMeta {
   // uninitialized LocalTensorMeta.
   LocalTensorMeta();
   LocalTensorMeta(const LocalTensorMeta&) = default;
-  LocalTensorMeta(Symbol<Shape> shape, DataType dtype, Symbol<Device> device);
-  LocalTensorMeta(Symbol<Shape> shape, Symbol<Stride> stride, DataType dtype,
+  LocalTensorMeta(Symbol<Shape> shape, DataType dtype, MemoryFormat memory_format,
                   Symbol<Device> device);
-  LocalTensorMeta(Symbol<Shape> shape, Symbol<Stride> stride, DataType dtype, Symbol<Device> device,
-                  bool is_view);
-  LocalTensorMeta(const Shape& shape, DataType dtype, Symbol<Device> device)
-      : LocalTensorMeta(SymbolOf(shape), dtype, device) {}
-  LocalTensorMeta(const Shape& shape, const Stride& stride, DataType dtype, Symbol<Device> device)
-      : LocalTensorMeta(SymbolOf(shape), SymbolOf(stride), dtype, device) {}
-  LocalTensorMeta(const Shape& shape, const Stride& stride, DataType dtype, Symbol<Device> device,
-                  const bool is_view)
-      : LocalTensorMeta(SymbolOf(shape), SymbolOf(stride), dtype, device, is_view) {}
+  LocalTensorMeta(Symbol<Shape> shape, Symbol<Stride> stride, DataType dtype,
+                  MemoryFormat memory_format, Symbol<Device> device);
+  LocalTensorMeta(Symbol<Shape> shape, Symbol<Stride> stride, DataType dtype,
+                  MemoryFormat memory_format, Symbol<Device> device, bool is_view);
+  LocalTensorMeta(const Shape& shape, DataType dtype, MemoryFormat memory_format,
+                  Symbol<Device> device)
+      : LocalTensorMeta(SymbolOf(shape), dtype, memory_format, device) {}
+  LocalTensorMeta(const Shape& shape, const Stride& stride, DataType dtype,
+                  MemoryFormat memory_format, Symbol<Device> device)
+      : LocalTensorMeta(SymbolOf(shape), SymbolOf(stride), dtype, memory_format, device) {}
+  LocalTensorMeta(const Shape& shape, const Stride& stride, DataType dtype,
+                  MemoryFormat memory_format, Symbol<Device> device, const bool is_view)
+      : LocalTensorMeta(SymbolOf(shape), SymbolOf(stride), dtype, memory_format, device, is_view) {}
   virtual ~LocalTensorMeta() = default;
 
   const Symbol<Device>& device() const { return device_; }
