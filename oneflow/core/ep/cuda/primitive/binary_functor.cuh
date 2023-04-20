@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/ep/common/primitive/binary_functor.h"
+#include "oneflow/core/ep/cuda/primitive/unary_functor.cuh"
 
 namespace oneflow {
 namespace ep {
@@ -243,10 +244,13 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kIsClose, Src, Dst> {
 template<typename Src, typename Dst>
 struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kDigammaBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-    // TODO:shijiaxing： This function is named trigamma, it will be implemented soon.
-    assert(false);
-    return static_cast<Dst>(0.0);
+    ep::primitive::UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTrigamma, Src, Dst> trigamma_functor(
+        0, 0);
+    Src trigamma_result = trigamma_functor(x);
+    return trigamma_result * dy;
+    return 0.0;
   }
 };
 
