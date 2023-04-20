@@ -273,7 +273,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     const auto& local_tensor = JUST(outputs->at(i)->cur_rank_phy_tensor());
     output_eager_blob_objects.at(i) = JUST(local_tensor->eager_blob_object());
   }
-
+  if (tensor_device->enum_type() == DeviceType::kMeta) { return Maybe<void>::Ok(); }
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->Call(kernel, std::move(input_eager_blob_objects),
                          std::move(output_eager_blob_objects), result, ctx, result->stream());
