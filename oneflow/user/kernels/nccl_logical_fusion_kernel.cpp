@@ -297,7 +297,7 @@ class NcclLogicalFusionKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
     EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
-    return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
+    return comm_mgr->IsAsyncLaunchCclLogicalKernel();
   }
 };
 

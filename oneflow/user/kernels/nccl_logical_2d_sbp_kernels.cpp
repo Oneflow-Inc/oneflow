@@ -144,7 +144,7 @@ class NcclLogical2DSameDim0AllReduce final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
     const EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
-    return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
+    return comm_mgr->IsAsyncLaunchCclLogicalKernel();
   }
 };
 
@@ -177,7 +177,7 @@ class NcclLogical2DSameDim0AllGather final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
     const EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
-    return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
+    return comm_mgr->IsAsyncLaunchCclLogicalKernel();
   }
 };
 
@@ -248,7 +248,7 @@ class NcclLogical2DSameDim0AllGatherNoncontinuous final : public user_op::OpKern
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
     const EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
-    return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
+    return comm_mgr->IsAsyncLaunchCclLogicalKernel();
   }
 };
 
@@ -381,7 +381,7 @@ class NcclLogical2DSameDim0All2All final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
     const EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
-    return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
+    return comm_mgr->IsAsyncLaunchCclLogicalKernel();
   }
 };
 
@@ -479,7 +479,7 @@ class NcclLogical2DSameDim1AllReduce final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
     const EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
-    return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
+    return comm_mgr->IsAsyncLaunchCclLogicalKernel();
   }
 };
 

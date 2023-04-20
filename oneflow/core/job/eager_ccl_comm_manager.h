@@ -27,8 +27,8 @@ class EagerCclCommMgr {
   virtual ~EagerCclCommMgr() = default;
 
   virtual void CreateCommFromPlan(const Plan& plan) = 0;
-  virtual bool IsAsyncLaunchNcclLogicalKernel() const = 0;
-  virtual void SetAsyncLaunchNcclLogicalKernel(bool val) = 0;
+  virtual bool IsAsyncLaunchCclLogicalKernel() const = 0;
+  virtual void SetAsyncLaunchCclLogicalKernel(bool val) = 0;
 
   template<typename T>
   T* As() {

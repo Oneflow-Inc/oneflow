@@ -135,7 +135,7 @@ class NcclLogicalAllReduceKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
     const EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
-    return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
+    return comm_mgr->IsAsyncLaunchCclLogicalKernel();
   }
 };
 
@@ -170,7 +170,7 @@ class NcclLogicalReduceScatterKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
     const EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
-    return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
+    return comm_mgr->IsAsyncLaunchCclLogicalKernel();
   }
 };
 
@@ -203,7 +203,7 @@ class NcclLogicalAllGatherKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
     const EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
-    return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
+    return comm_mgr->IsAsyncLaunchCclLogicalKernel();
   }
 };
 
@@ -272,7 +272,7 @@ class NcclLogicalAllGatherNoncontinuous final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
     const EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
-    return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
+    return comm_mgr->IsAsyncLaunchCclLogicalKernel();
   }
 };
 
@@ -344,7 +344,7 @@ class NcclLogicalReduceScatterNoncontinuous final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
     const EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
-    return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
+    return comm_mgr->IsAsyncLaunchCclLogicalKernel();
   }
 };
 
@@ -478,7 +478,7 @@ class NcclLogicalS2SKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
     const EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
-    return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
+    return comm_mgr->IsAsyncLaunchCclLogicalKernel();
   }
 };
 

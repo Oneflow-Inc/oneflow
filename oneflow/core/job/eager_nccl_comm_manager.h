@@ -38,13 +38,12 @@ class EagerNcclCommMgr final : public EagerCclCommMgr {
                                            const std::string& stream_name);
 
   void CreateCommFromPlan(const Plan& plan) override;
-  bool IsAsyncLaunchNcclLogicalKernel() const override { return async_launch_nccl_logical_kernel_; }
-  void SetAsyncLaunchNcclLogicalKernel(bool val) override {
+  bool IsAsyncLaunchCclLogicalKernel() const override { return async_launch_nccl_logical_kernel_; }
+  void SetAsyncLaunchCclLogicalKernel(bool val) override {
     async_launch_nccl_logical_kernel_ = val;
   }
 
  private:
-  friend class Singleton<EagerNcclCommMgr>;
   friend class EagerCclCommMgrBuilder;
   // NOTE(chengcheng): default async launch nccl logical kernel is true for better performence.
   EagerNcclCommMgr() : EagerCclCommMgr(), async_launch_nccl_logical_kernel_(true) {}

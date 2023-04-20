@@ -17,7 +17,6 @@ limitations under the License.
 #include <string>
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
-#include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/job/id_manager.h"
