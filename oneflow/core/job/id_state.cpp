@@ -13,16 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/singleton.h"
+#include "oneflow/core/graph/task_stream_index_manager.h"
 #include "oneflow/core/job/id_manager.h"
-#include <string>
 #include "oneflow/core/job/id_state.h"
 
 namespace oneflow {
 
-IDMgr::IDMgr() {
-  regst_desc_id_count_ = Singleton<IdStateMgr>::Get()->GetRegstDescIdState();
-  mem_block_id_count_ = Singleton<IdStateMgr>::Get()->GetMemBlockIdState();
-  chunk_id_count_ = Singleton<IdStateMgr>::Get()->GetChunkIdState();
+IdState IdStateMgr::SaveIdState() {
+  Singleton<IDMgr>::Get()->SaveId();
+  Singleton<TaskStreamIndexManager>::Get()->SaveTaskStreamIndex();
+  return id_state_;
 }
+
+void IdStateMgr::LoadIdState(const IdState& id_state) { id_state_ = id_state; }
 
 }  // namespace oneflow

@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,17 +12,25 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#include "oneflow/core/job/id_manager.h"
-#include <string>
-#include "oneflow/core/job/id_state.h"
+"""
+import oneflow
+import pickle
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Union
+from pathlib import Path
 
-namespace oneflow {
+def save_id_state(
+    path: Union[str, Path]
+):
+    path: Path = Path(path)
+    obj =  oneflow._oneflow_internal.save_id_state()
+    pickled_bytes = pickle.dumps(obj)
+    path.write_bytes(pickled_bytes)
 
-IDMgr::IDMgr() {
-  regst_desc_id_count_ = Singleton<IdStateMgr>::Get()->GetRegstDescIdState();
-  mem_block_id_count_ = Singleton<IdStateMgr>::Get()->GetMemBlockIdState();
-  chunk_id_count_ = Singleton<IdStateMgr>::Get()->GetChunkIdState();
-}
-
-}  // namespace oneflow
+def load_id_state(
+    path: Union[str, Path]
+):
+    path: Path = Path(path)
+    pickled_bytes = path.read_bytes()
+    obj = pickle.loads(pickled_bytes)
+    oneflow._oneflow_internal.load_id_state(obj)
+    

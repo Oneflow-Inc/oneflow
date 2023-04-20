@@ -353,6 +353,8 @@ from oneflow.autograd import (
 )
 import oneflow.nn.image
 
+from oneflow.framework.id_state import load_id_state
+from oneflow.framework.id_state import save_id_state
 from oneflow.framework.check_point_v2 import load
 from oneflow.framework.check_point_v2 import save
 from oneflow.framework.dtype import convert_oneflow_dtype_to_numpy_dtype, dtypes

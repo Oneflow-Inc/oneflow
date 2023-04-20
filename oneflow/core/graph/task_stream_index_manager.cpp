@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/graph/task_stream_index_manager.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/id_state.h"
 #include "oneflow/core/job/resource_desc.h"
 
 namespace oneflow {
@@ -23,7 +24,9 @@ StreamIndexGenerator* TaskStreamIndexManager::GetGenerator(const DeviceId& devic
   std::unique_lock<std::mutex> lck(mtx_);
   auto iter = generators_.find(device_id);
   if (iter == generators_.end()) {
-    iter = generators_.emplace(device_id, std::make_unique<StreamIndexGenerator>()).first;
+    auto init_stream_index = Singleton<IdStateMgr>::Get()->GetStreamIndexState(device_id);
+    iter =
+        generators_.emplace(device_id, std::make_unique<StreamIndexGenerator>(init_stream_index)).first;
   }
   return iter->second.get();
 }
@@ -46,6 +49,13 @@ TaskStreamIndexManager::stream_index_t TaskStreamIndexManager::GetNamedTaskStrea
     const DeviceId& device_id, const std::string& name) {
   auto* generator = GetGenerator(device_id);
   return generator->GenerateNamed(name);
+}
+
+void TaskStreamIndexManager::SaveTaskStreamIndex() {
+  for (auto& pair : generators_) {
+    Singleton<IdStateMgr>::Get()->SetStreamIndexState(pair.first,
+                                                      pair.second->GetCurrStreamIndex());
+  }
 }
 
 void TaskStreamIndexGetterRegistry::Register(const key_t& key, const stream_index_getter& getter) {
