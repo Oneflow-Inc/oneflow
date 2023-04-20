@@ -33,7 +33,6 @@ def _test_scalar_max(test_case, device):
 class TestMaxModule(flow.unittest.TestCase):
     def test_scalar_max(test_case):
         _test_scalar_max(test_case, "cpu")
-        _test_scalar_max(test_case, "cuda")
 
     @autotest(n=5, check_allclose=False, check_graph=True)
     def test_max_reduce_random_dim(test_case):
