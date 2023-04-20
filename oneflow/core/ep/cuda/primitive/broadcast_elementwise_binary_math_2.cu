@@ -27,7 +27,7 @@ namespace broadcast_elementwise_binary {
       Scalar attr0, Scalar attr1);
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
-                                 BINARY_MATH_OP_SEQ_2, CUDA_PRIMITIVE_ALL_TYPE_SEQ);
+                                 BINARY_MATH_OP_SEQ_2, CUDA_PRIMITIVE_REAL_TYPE_SEQ);
 
 }  // namespace broadcast_elementwise_binary
 }  // namespace primitive
