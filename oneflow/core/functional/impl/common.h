@@ -60,9 +60,6 @@ Maybe<std::tuple<std::shared_ptr<Tensor>, bool>> batchify(const std::shared_ptr<
                                                           const int64_t num_spatial_dims,
                                                           const std::string& func_name);
 
-Maybe<std::tuple<std::shared_ptr<Tensor>, bool>> pooling_batchify(
-    const std::shared_ptr<Tensor>& input, const int64_t num_spatial_dims,
-    const std::string& func_name);
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow
