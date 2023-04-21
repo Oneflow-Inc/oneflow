@@ -29,6 +29,10 @@ class CollectiveBoxingGenericTaskNode : public TransportTaskNode {
   void Init(int64_t machine_id, int64_t thrd_id, const LogicalBlobId& lbi,
             const OperatorConf& op_conf);
 
+  Maybe<void> InitTransportTaskFromProto(const TransportTaskProto& transport_task_proto,
+                                         const TaskGraphRebuildCtx& ctx) override;
+  void ToTransportTaskProto(TransportTaskProto*) const override;
+
  private:
   void BuildExecGphAndRegst() override;
   void ProduceAllRegstsAndBindEdges() override;

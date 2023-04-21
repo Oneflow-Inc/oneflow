@@ -54,7 +54,6 @@ class Cast : public OpExprGradFunction<CastCaptureState> {
     } else {
       (*in_grads)[0] = JUST(functional::Cast(out_grads[0], ctx->in_dtype, /*pin_memory=*/false));
     }
-
     return Maybe<void>::Ok();
   }
 };
