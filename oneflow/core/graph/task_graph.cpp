@@ -844,30 +844,25 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
             << " dst parallel conf: " << dst_parallel_desc.parallel_conf().DebugString()
             << " src_nd_sbp " << src_nd_sbp.DebugString() << " dst nd_sbp "
             << dst_nd_sbp.DebugString();
-    Maybe<SubTskGphBuilderStatus> maybe_status = Error::BoxingNotSupportedError();
-    if (!device_type2sub_tsk_gph_builder_.empty()) {
-      const DeviceType device_type = [&src_parallel_desc, &dst_parallel_desc]() {
-        return src_parallel_desc.device_type() != DeviceType::kCPU
-                   ? src_parallel_desc.device_type()
-                   : dst_parallel_desc.device_type();
-      }();
-      if (device_type != DeviceType::kCPU
-          && device_type2sub_tsk_gph_builder_.find(device_type)
-                 != device_type2sub_tsk_gph_builder_.end()) {
-        maybe_status = TRY(device_type2sub_tsk_gph_builder_.at(device_type)
-                               ->Build(sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes,
-                                       &sorted_ctrl_tasks, src_parallel_desc, dst_parallel_desc,
-                                       lbi, blob_desc, src_nd_sbp, dst_nd_sbp,
-                                       *(CHECK_JUST(src_op_node->op().GetOpTimeShape()).get())));
-      }
-    }
-    if (!maybe_status.IsOk()) {
-      maybe_status = TRY(hierarchical_sub_tsk_gph_builder_->Build(
+    SubTskGphBuilderStatus status;
+    const DeviceType device_type = [&src_parallel_desc, &dst_parallel_desc]() {
+      return src_parallel_desc.device_type() != DeviceType::kCPU ? src_parallel_desc.device_type()
+                                                                 : dst_parallel_desc.device_type();
+    }();
+    if (device_type != DeviceType::kCPU
+        && device_type2sub_tsk_gph_builder_.find(device_type)
+               != device_type2sub_tsk_gph_builder_.end()) {
+      status = CHECK_JUST(device_type2sub_tsk_gph_builder_.at(device_type)
+                              ->Build(sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes,
+                                      &sorted_ctrl_tasks, src_parallel_desc, dst_parallel_desc, lbi,
+                                      blob_desc, src_nd_sbp, dst_nd_sbp,
+                                      *(CHECK_JUST(src_op_node->op().GetOpTimeShape()).get())));
+    } else {
+      status = CHECK_JUST(hierarchical_sub_tsk_gph_builder_->Build(
           sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes, &sorted_ctrl_tasks,
           src_parallel_desc, dst_parallel_desc, lbi, blob_desc, src_nd_sbp, dst_nd_sbp,
           *(CHECK_JUST(src_op_node->op().GetOpTimeShape()).get())));
     }
-    auto status = CHECK_JUST(maybe_status);
     boxing_logger_->Log(*status, src_op_node->op().op_name(), dst_op_node->op().op_name(),
                         src_parallel_desc, dst_parallel_desc, src_nd_sbp, dst_nd_sbp, lbi,
                         blob_desc);
