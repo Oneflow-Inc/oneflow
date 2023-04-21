@@ -1242,7 +1242,8 @@ class OneEmbeddingFusedLookupKernelState final : public user_op::OpKernelState {
     }
     EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
     ncclComm_t comm;
-    comm = comm_mgr->GetCommForDeviceAndStreamName(device_set, stream_name_);
+    comm =
+        comm_mgr->As<EagerNcclCommMgr>()->GetCommForDeviceAndStreamName(device_set, stream_name_);
     comm_.reset(new Comm(comm));
   }
 
