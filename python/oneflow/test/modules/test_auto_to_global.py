@@ -50,7 +50,9 @@ class TestAutoToGlobal(flow.unittest.TestCase):
     def tearDown(self):
         super().tearDown()
         for key in os.environ.keys():
-            if key.startswith("ONEFLOW_ENABLE_GLOBAL_INPUTS_WITH_INCONSISTENT_PLACEMENT"):
+            if key.startswith(
+                "ONEFLOW_ENABLE_GLOBAL_INPUTS_WITH_INCONSISTENT_PLACEMENT"
+            ):
                 os.environ.pop(key)
 
     @globaltest
