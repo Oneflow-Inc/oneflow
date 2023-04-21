@@ -6901,10 +6901,11 @@ def OneFlow_NormalOp : OneFlow_BaseOp<"normal", [NoMemoryEffect, NoGrad, Declare
 
 def OneFlow_NormalTensorFloatOp : OneFlow_BaseOp<"normal_tensor_float", [NoMemoryEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    OneFlow_Tensor:$mean,
+    OneFlow_Tensor:$mean
   );
-   let attrs = (ins
-    DefaultValuedAttr<F64Attr, "1.">:$std
+  let attrs = (ins
+    DefaultValuedAttr<F64Attr, "1.">:$std,
+    DefaultValuedAttr<SI64Attr, "0">:$seed
   );
   let output = (outs
     OneFlow_Tensor:$out
@@ -6917,8 +6918,11 @@ def OneFlow_NormalTensorFloatOp : OneFlow_BaseOp<"normal_tensor_float", [NoMemor
 
 def OneFlow_NormalFloatTensorOp : OneFlow_BaseOp<"normal_float_tensor", [NoMemoryEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    DefaultValuedAttr<F64Attr, "0.">:$mean,
     OneFlow_Tensor:$std
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F64Attr,  "0.">:$mean,
+    DefaultValuedAttr<SI64Attr, "0">:$seed
   );
   let output = (outs
     OneFlow_Tensor:$out

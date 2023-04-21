@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/throw.h"
+#include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/layout.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/nd_sbp.h"
@@ -405,35 +406,63 @@ class NormalWithTensorTensorFunctor {
 
       // 1s map to the other size (even 0).
       out_shape.Set(i, sizeA == 1 ? std::move(sizeB) : std::move(sizeA));
-    }                    
-    auto output = JUST(Normal(0,1,out_shape,out,mean->dtype(),mean->device(),optional_generator,requires_grad));
+    }  
+    auto output = JUST(Normal(0,1,out_shape,out,Symbol<DType>(mean->dtype()),JUST(mean->device()),optional_generator,requires_grad));
     // mean + output * std
-     return JUST(InplaceAddcmul(mean,output,std,1));
+    output = JUST(InplaceMul(output,std));
+    output = JUST(Add(mean, output,1,true));
+    JUST(output->set_requires_grad(requires_grad));
+    return output;
   }
 
 };
 
+class NormalWithTensorFloatFunctor {
+ public:
+ NormalWithTensorFloatFunctor(){op_ = CHECK_JUST(one::OpBuilder("normal_tensor_float").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& mean, const float& std, const Optional<one::Tensor>& out,
+                           const Optional<Symbol<DType>>& optional_dtype,
+                           const Optional<one::Generator>& optional_generator,
+                           const bool& requires_grad) const {
 
-// class NormalWithTensorFloatFunctor {
-//  public:
-//   Maybe<Tensor> operator()(const Tensor& mean, const float& std, const Optional<one::Tensor>& out,
-//                            const Optional<Symbol<DType>>& optional_dtype,
-//                            const Optional<one::Generator>& optional_generator,
-//                            const bool& requires_grad) const {
-//     return Normal(mean, std, out, optional_dtype, optional_generator, requires_grad);
-//   }
-// };
+    auto gen = optional_generator.value_or(JUST(one::DefaultAutoGenerator()));
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), NullOpt, NullOpt));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("std", "seed");
+    attrs.SetAllAttrs( static_cast<double>(std), static_cast<int64_t>(gen->current_seed()));
+    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+    OpExprInterpContext ctx(attrs, JUST(mean->device()), distribution_state);
 
-// class NormalWithFloatTensorFunctor {
-//  public:
-//   Maybe<Tensor> operator()(const float& mean, const Tensor& std, const Optional<one::Tensor>& out,
-//                            const Optional<Symbol<DType>>& optional_dtype,
-//                            const Optional<one::Generator>& optional_generator,
-//                            const bool& requires_grad) const {
-//     return Normal(mean, std, out, optional_dtype, optional_generator, requires_grad);
-//   }
-// }; 
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {mean}, ctx));
+    JUST(result->set_requires_grad(requires_grad));
+    return result;
+  }
+  private:
+    std::shared_ptr<OpExpr> op_;
 
+};
+
+class NormalWithFloatTensorFunctor {
+ public:
+  NormalWithFloatTensorFunctor(){ op_ = CHECK_JUST(one::OpBuilder("normal_float_tensor").Output("out").Build()); }
+
+  Maybe<Tensor> operator()(const float& mean, const std::shared_ptr<one::Tensor>& std, const Optional<one::Tensor>& out,
+                           const Optional<Symbol<DType>>& optional_dtype,
+                           const Optional<one::Generator>& optional_generator,
+                           const bool& requires_grad) const {
+    auto gen = optional_generator.value_or(JUST(one::DefaultAutoGenerator()));
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), NullOpt, NullOpt));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("mean", "seed");
+    attrs.SetAllAttrs( static_cast<double>(mean), static_cast<int64_t>(gen->current_seed()));
+    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+    OpExprInterpContext ctx(attrs, JUST(std->device()), distribution_state);
+
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {std}, ctx));
+    JUST(result->set_requires_grad(requires_grad));
+    return result;
+  }
+  private:
+  std::shared_ptr<OpExpr> op_;
+}; 
 
 class GlobalNormalFunctor {
  public:
@@ -900,8 +929,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::NormalFunctor>("Normal");
   m.add_functor<impl::Normal2Functor>("Normal2");
   m.add_functor<impl::NormalWithTensorTensorFunctor>("NormalWithTensorTensor");
-  m.add_functor<impl::NormalWithTensorFloatFunctor>("NormalWithTensorFloat");
-  m.add_functor<impl::NormalWithFloatTensorFunctor>("NormalWithFloatTensor");
+  // m.add_functor<impl::NormalWithTensorFloatFunctor>("NormalWithTensorFloat");
+  // m.add_functor<impl::NormalWithFloatTensorFunctor>("NormalWithFloatTensor");
   m.add_functor<impl::GlobalNormalFunctor>("GlobalNormal");
   m.add_functor<impl::GlobalNormal2Functor>("GlobalNormal2");
   m.add_functor<RandnLikeFunctor>("RandnLike");

@@ -16,26 +16,26 @@ limitations under the License.
 
 namespace oneflow {
 
-/* static */ Maybe<void> NormalTensorFloatOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> NormalFloatTensorOp::GetSbp(user_op::SbpContext* ctx) {
    ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> NormalTensorFloatOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const Shape& out_shape = ctx->InputShape("mean", 0);
+/* static */ Maybe<void> NormalFloatTensorOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& out_shape = ctx->InputShape("std", 0);
   ctx->SetOutputShape("out", 0, out_shape);
-  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("mean", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("std", 0));
   
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> NormalTensorFloatOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> NormalFloatTensorOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
 
-/* static */ Maybe<void> NormalTensorFloatOp::InferDataType(user_op::InferContext* ctx) {
-  ctx->SetOutputDType("out", 0, ctx->InputDType("mean", 0));
+/* static */ Maybe<void> NormalFloatTensorOp::InferDataType(user_op::InferContext* ctx) {
+  ctx->SetOutputDType("out", 0, ctx->InputDType("std", 0));
   return Maybe<void>::Ok();
 }
 
