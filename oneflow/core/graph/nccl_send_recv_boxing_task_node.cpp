@@ -85,7 +85,7 @@ void NcclSendRecvBoxingTaskNode::BuildExecGphAndRegst() {
     node->BindBnWithRegst(sole_op->SoleObn(), out_regst);
   }
   node->AddBnToRegstAndBindIt(&Operator::tmp_bns, GetProducedRegst("tmp"));
-  node->InferBlobDescs(parallel_ctx());
+  (node->*GetInferBlobDescsMethod())(parallel_ctx());
 }
 
 void NcclSendRecvBoxingTaskNode::InferProducedDataRegstTimeShape() {
