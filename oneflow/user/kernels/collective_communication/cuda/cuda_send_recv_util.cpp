@@ -29,7 +29,9 @@ std::pair<ncclComm_t, int64_t> RawGetNcclCommAndPeerNcclRank(int64_t peer_proces
   const int64_t peer_nccl_rank = (peer_process_id > rank) ? 1 : 0;
   device_set.emplace(rank, GlobalProcessCtx::LocalRank());
   device_set.emplace(peer_process_id, GlobalProcessCtx::LocalRank(peer_process_id));
-  return {CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set),
+  return {CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get())
+              ->As<EagerNcclCommMgr>()
+              ->GetCommForDevice(device_set),
           peer_nccl_rank};
 }
 
