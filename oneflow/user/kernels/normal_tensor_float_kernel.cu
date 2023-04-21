@@ -68,4 +68,3 @@ REGISTER_CUDA_NORMAL_TENSOR_FLOAT_KERNEL(DeviceType::kCUDA, float)
 REGISTER_CUDA_NORMAL_TENSOR_FLOAT_KERNEL(DeviceType::kCUDA, double)
 
 }  // namespace oneflow
-

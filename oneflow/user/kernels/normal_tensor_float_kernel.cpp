@@ -25,7 +25,7 @@ class CpuNormalTensorFloatKernel final : public user_op::OpKernel {
  public:
   CpuNormalTensorFloatKernel() = default;
   ~CpuNormalTensorFloatKernel() = default;
- 
+
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     const auto& generator = CHECK_JUST(one::MakeGenerator(device_type));
@@ -53,10 +53,10 @@ class CpuNormalTensorFloatKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_NORMAL_TENSOR_FLOAT_KERNEL(device,dtype)                              \
-  REGISTER_USER_KERNEL("normal_tensor_float")                                       \
-      .SetCreateFn<CpuNormalTensorFloatKernel<device,dtype>>()                             \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)               \
+#define REGISTER_CPU_NORMAL_TENSOR_FLOAT_KERNEL(device, dtype)  \
+  REGISTER_USER_KERNEL("normal_tensor_float")                   \
+      .SetCreateFn<CpuNormalTensorFloatKernel<device, dtype>>() \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)     \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_CPU_NORMAL_TENSOR_FLOAT_KERNEL(DeviceType::kCPU, float16)

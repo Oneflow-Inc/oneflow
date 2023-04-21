@@ -380,17 +380,17 @@ class Normal2Functor {
   }
 };
 
-
 class NormalWithTensorTensorFunctor {
  public:
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& mean, const std::shared_ptr<one::Tensor>& std, 
-                          const Optional<one::Tensor>& out,
-                          const Optional<one::Generator>& optional_generator,
-                          const bool& requires_grad) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& mean,
+                           const std::shared_ptr<one::Tensor>& std,
+                           const Optional<one::Tensor>& out,
+                           const Optional<one::Generator>& optional_generator,
+                           const bool& requires_grad) const {
     int64_t dimsA = mean->ndim();
     int64_t dimsB = std->ndim();
-    int64_t ndim = dimsA > dimsB ? dimsA:dimsB;
-    Shape  out_shape(ndim);
+    int64_t ndim = dimsA > dimsB ? dimsA : dimsB;
+    Shape out_shape(ndim);
 
     // Use ptrdiff_t to ensure signed comparison.
     for (ptrdiff_t i = (ptrdiff_t)ndim - 1; i >= 0; --i) {
@@ -400,9 +400,9 @@ class NormalWithTensorTensorFunctor {
       auto sizeA = (dimA >= 0) ? mean->dim(dimA) : 1;
       auto sizeB = (dimB >= 0) ? std->dim(dimB) : 1;
 
-      CHECK_OR_THROW(sizeA == sizeB || sizeA == 1 || sizeB == 1) << "The size of tensor a (" << sizeA <<
-          ") must match the size of tensor b (" << sizeB <<
-          ") at non-singleton dimension " << i;
+      CHECK_OR_THROW(sizeA == sizeB || sizeA == 1 || sizeB == 1)
+          << "The size of tensor a (" << sizeA << ") must match the size of tensor b (" << sizeB
+          << ") at non-singleton dimension " << i;
 
       // 1s map to the other size (even 0).
       out_shape.Set(i, sizeA == 1 ? std::move(sizeB) : std::move(sizeA));
@@ -414,7 +414,6 @@ class NormalWithTensorTensorFunctor {
     JUST(output->set_requires_grad(requires_grad));
     return output;
   }
-
 };
 
 class NormalWithTensorFloatFunctor {
@@ -929,8 +928,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::NormalFunctor>("Normal");
   m.add_functor<impl::Normal2Functor>("Normal2");
   m.add_functor<impl::NormalWithTensorTensorFunctor>("NormalWithTensorTensor");
-  // m.add_functor<impl::NormalWithTensorFloatFunctor>("NormalWithTensorFloat");
-  // m.add_functor<impl::NormalWithFloatTensorFunctor>("NormalWithFloatTensor");
+  m.add_functor<impl::NormalWithTensorFloatFunctor>("NormalWithTensorFloat");
+  m.add_functor<impl::NormalWithFloatTensorFunctor>("NormalWithFloatTensor");
   m.add_functor<impl::GlobalNormalFunctor>("GlobalNormal");
   m.add_functor<impl::GlobalNormal2Functor>("GlobalNormal2");
   m.add_functor<RandnLikeFunctor>("RandnLike");
