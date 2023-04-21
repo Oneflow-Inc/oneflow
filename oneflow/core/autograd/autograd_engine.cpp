@@ -236,8 +236,7 @@ void GraphFunctionNode::ReleaseData() {
 
 /*static*/ std::shared_ptr<GraphFunctionNode> GraphFunctionNode::New(
     const std::string& name, const std::shared_ptr<BackwardFunction>& backward_fn,
-    const TensorTuple& inputs,
-    const TensorTuple& outputs) {
+    const TensorTuple& inputs, const TensorTuple& outputs) {
   auto node = std::shared_ptr<GraphFunctionNode>(
       new GraphFunctionNode(name, backward_fn, inputs, outputs), FunctionNodeDeleter);
   return node;
