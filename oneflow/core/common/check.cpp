@@ -16,7 +16,6 @@ limitations under the License.
 
 #include "oneflow/core/common/throw.h"
 namespace oneflow {
-void Check(bool value) { CHECK_OR_THROW(value); }
-
+void GlogCHECK(bool value) { CHECK_OR_THROW(value); }
 void GlogLOGFATAL(const char* error_msg) { LOG(FATAL) << error_msg; }
 }  // namespace oneflow

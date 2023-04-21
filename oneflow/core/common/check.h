@@ -15,7 +15,6 @@ limitations under the License.
 */
 
 namespace oneflow {
-void Check(bool);
-
+void GlogCHECK(bool);
 void GlogLOGFATAL(const char*);
 }  // namespace oneflow

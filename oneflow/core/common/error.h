@@ -19,7 +19,6 @@ limitations under the License.
 #include <sstream>
 #include <vector>
 #include <functional>
-// #include <glog/logging.h>
 #include "oneflow/core/common/error.pb.h"
 #include "oneflow/core/common/check.h"
 #include "oneflow/core/common/symbol.h"
@@ -242,8 +241,5 @@ inline Error&& operator<<(Error&& error, std::ostream& (*os)(std::ostream&)) {
 extern const char* kOfBugIssueUploadPrompt;
 
 }  // namespace oneflow
-
-// #define PRINT_BUG_PROMPT_AND_ABORT() LOG(FATAL) << kOfBugIssueUploadPrompt
-// #define PRINT_BUG_PROMPT_AND_ABORT() GlogLOGFATAL(kOfBugIssueUploadPrompt)
 
 #endif  // ONEFLOW_CORE_COMMON_ERROR_H_
