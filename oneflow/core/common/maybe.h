@@ -52,9 +52,6 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
   Maybe(Maybe&& other) : data_or_error_(std::move(other.data_or_error_)) {}
   ~Maybe() = default;
 
-  void operator=(const Maybe& rhs) { data_or_error_ = rhs.data_or_error_; }
-  void operator=(Maybe&& rhs) { data_or_error_ = std::move(rhs.data_or_error_); }
-
   bool IsOk() const { return data_or_error_.template Has<T>(); }
   std::shared_ptr<T> Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {
     return data_or_error_.template Get<T>();
