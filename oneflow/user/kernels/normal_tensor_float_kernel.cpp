@@ -42,13 +42,13 @@ class CpuNormalTensorFloatKernel final : public user_op::OpKernel {
     const double std = ctx->Attr<double>("std");
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int32_t elem_cnt = mean->shape_view().elem_cnt();
-    
-    normal_out_impl<device_type,T>(ctx,state,out,mean,std);
-    
+
+    normal_out_impl<device_type, T>(ctx, state, out, mean, std);
+
     const T* mean_ptr = mean->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
     //  mean + output * std
-    FOR_RANGE(int32_t, i, 0, elem_cnt) { out_ptr[i] = mean[i] + std *  out_ptr[i]; }
+    FOR_RANGE(int32_t, i, 0, elem_cnt) { out_ptr[i] = mean[i] + std * out_ptr[i]; }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

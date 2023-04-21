@@ -406,11 +406,12 @@ class NormalWithTensorTensorFunctor {
 
       // 1s map to the other size (even 0).
       out_shape.Set(i, sizeA == 1 ? std::move(sizeB) : std::move(sizeA));
-    }  
-    auto output = JUST(Normal(0,1,out_shape,out,Symbol<DType>(mean->dtype()),JUST(mean->device()),optional_generator,requires_grad));
+    }
+    auto output = JUST(Normal(0, 1, out_shape, out, Symbol<DType>(mean->dtype()),
+                              JUST(mean->device()), optional_generator, requires_grad));
     // mean + output * std
-    output = JUST(InplaceMul(output,std));
-    output = JUST(Add(mean, output,1,true));
+    output = JUST(InplaceMul(output, std));
+    output = JUST(Add(mean, output, 1, true));
     JUST(output->set_requires_grad(requires_grad));
     return output;
   }
@@ -418,16 +419,18 @@ class NormalWithTensorTensorFunctor {
 
 class NormalWithTensorFloatFunctor {
  public:
- NormalWithTensorFloatFunctor(){op_ = CHECK_JUST(one::OpBuilder("normal_tensor_float").Output("out").Build()); }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& mean, const float& std, const Optional<one::Tensor>& out,
+  NormalWithTensorFloatFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("normal_tensor_float").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& mean, const float& std,
+                           const Optional<one::Tensor>& out,
                            const Optional<Symbol<DType>>& optional_dtype,
                            const Optional<one::Generator>& optional_generator,
                            const bool& requires_grad) const {
-
     auto gen = optional_generator.value_or(JUST(one::DefaultAutoGenerator()));
     gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), NullOpt, NullOpt));
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("std", "seed");
-    attrs.SetAllAttrs( static_cast<double>(std), static_cast<int64_t>(gen->current_seed()));
+    attrs.SetAllAttrs(static_cast<double>(std), static_cast<int64_t>(gen->current_seed()));
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     OpExprInterpContext ctx(attrs, JUST(mean->device()), distribution_state);
 
@@ -435,23 +438,26 @@ class NormalWithTensorFloatFunctor {
     JUST(result->set_requires_grad(requires_grad));
     return result;
   }
-  private:
-    std::shared_ptr<OpExpr> op_;
 
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class NormalWithFloatTensorFunctor {
  public:
-  NormalWithFloatTensorFunctor(){ op_ = CHECK_JUST(one::OpBuilder("normal_float_tensor").Output("out").Build()); }
+  NormalWithFloatTensorFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("normal_float_tensor").Output("out").Build());
+  }
 
-  Maybe<Tensor> operator()(const float& mean, const std::shared_ptr<one::Tensor>& std, const Optional<one::Tensor>& out,
+  Maybe<Tensor> operator()(const float& mean, const std::shared_ptr<one::Tensor>& std,
+                           const Optional<one::Tensor>& out,
                            const Optional<Symbol<DType>>& optional_dtype,
                            const Optional<one::Generator>& optional_generator,
                            const bool& requires_grad) const {
     auto gen = optional_generator.value_or(JUST(one::DefaultAutoGenerator()));
     gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), NullOpt, NullOpt));
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("mean", "seed");
-    attrs.SetAllAttrs( static_cast<double>(mean), static_cast<int64_t>(gen->current_seed()));
+    attrs.SetAllAttrs(static_cast<double>(mean), static_cast<int64_t>(gen->current_seed()));
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     OpExprInterpContext ctx(attrs, JUST(std->device()), distribution_state);
 
@@ -459,9 +465,10 @@ class NormalWithFloatTensorFunctor {
     JUST(result->set_requires_grad(requires_grad));
     return result;
   }
-  private:
+
+ private:
   std::shared_ptr<OpExpr> op_;
-}; 
+};
 
 class GlobalNormalFunctor {
  public:

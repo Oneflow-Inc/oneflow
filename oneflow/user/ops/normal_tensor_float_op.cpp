@@ -40,14 +40,13 @@ namespace oneflow {
   const Shape& out_shape = ctx->InputShape("std", 0);
   ctx->SetOutputShape("out", 0, out_shape);
   ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("std", 0));
-  
+
   return Maybe<void>::Ok();
 }
 
 /*static*/ Maybe<void> NormalFloatTensorOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
-
 
 /* static */ Maybe<void> NormalFloatTensorOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("out", 0, ctx->InputDType("std", 0));

@@ -29,9 +29,10 @@ class CpuNormalFloatTensorKernel final : public user_op::OpKernel {
  public:
   CpuNormalFloatTensorKernel() = default;
   ~CpuNormalFloatTensorKernel() = default;
- 
+
   /*
-  CreateOpKernelState creates a new OpKernelState object and sets the current seed for the generator.
+  CreateOpKernelState creates a new OpKernelState object and sets the current seed for the
+  generator.
   */
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
@@ -48,31 +49,27 @@ class CpuNormalFloatTensorKernel final : public user_op::OpKernel {
   */
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-
     const double mean = ctx->Attr<double>("mean");
     const user_op::Tensor* std = ctx->Tensor4ArgNameAndIndex("std", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
-    normal_out_impl<device_type,T>(ctx,state,out,mean,std);
+    normal_out_impl<device_type, T>(ctx, state, out, mean, std);
     //  mean + output * std
     int64_t elem_cnt = out->shape_view().elem_cnt();
     T* out_dptr = out->mut_dptr<T>();
-    FOR_RANGE(int32_t, i, 0, elem_cnt) { out_dptr[i] = mean + std[i] *  out_dptr[i]; }
-
+    FOR_RANGE(int32_t, i, 0, elem_cnt) { out_dptr[i] = mean + std[i] * out_dptr[i]; }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-
-#define REGISTER_CPU_NORMAL_FLOAT_TENSOR_KERNEL(device,dtype)                              \
-  REGISTER_USER_KERNEL("normal_float_tensor")                                       \
-      .SetCreateFn<CpuNormalFloatTensorKernel<device,dtype>>()                             \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)               \
+#define REGISTER_CPU_NORMAL_FLOAT_TENSOR_KERNEL(device, dtype)  \
+  REGISTER_USER_KERNEL("normal_float_tensor")                   \
+      .SetCreateFn<CpuNormalFloatTensorKernel<device, dtype>>() \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)     \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_CPU_NORMAL_FLOAT_TENSOR_KERNEL(DeviceType::kCPU, float16)
 REGISTER_CPU_NORMAL_FLOAT_TENSOR_KERNEL(DeviceType::kCPU, float)
 REGISTER_CPU_NORMAL_FLOAT_TENSOR_KERNEL(DeviceType::kCPU, double)
-
 
 }  // namespace oneflow
