@@ -104,7 +104,7 @@ Maybe<double> GetDatasetComputeTime(const json& j, const vm::OpCallInstructionPo
       "reshape", "reshape_like", "squeeze", "transpose", "nll", "nll_grad", "uniform",
       "uniform_int", "fill_", "slice_update", "normal",
       // ddp
-      "eager_ccl_broadcast", "eager_ccl_all_reduce", "eager_nccl_touch", "scalar_mul",
+      "eager_ccl_broadcast", "eager_ccl_all_reduce", "eager_ccl_touch", "scalar_mul",
 
       // "adaptive_avg_pool2d",
       // "adaptive_avg_pool2d_grad"
