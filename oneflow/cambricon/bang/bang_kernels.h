@@ -20,6 +20,8 @@ limitations under the License.
 
 namespace oneflow {
 
+void bang_memset_kernel(BangHandle& handle, void* ptr, int value, size_t num);
+
 // input is a 3D tensor with shape [batch, N, length]
 // indices is a 1D tensor with shape [index_size]
 // output is a 3D tensor with shape [batch, index_size, length]
