@@ -745,6 +745,25 @@ def _save_graph(obj: graph_util.Graph, path: Union[str, Path]):
     save_one_embedding_info(obj.state_dict(), path)
 
 
+def frombuffer(
+    buffer: object,
+    dtype: oneflow.dtype,
+    count: int = -1,
+    offset: int = 0,
+    requires_grad: bool = False,
+):
+    return oneflow.tensor(
+        np.frombuffer(
+            buffer,
+            dtype_util.convert_oneflow_dtype_to_numpy_dtype(dtype),
+            count,
+            offset,
+        ),
+        dtype=dtype,
+        requires_grad=requires_grad,
+    )
+
+
 class ContextData:
     def __init__(
         self,
