@@ -32,6 +32,7 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("cos", Cos)                           \
   OF_PP_MAKE_TUPLE_SEQ("cosh", Cosh)                         \
   OF_PP_MAKE_TUPLE_SEQ("digamma", Digamma)                   \
+  OF_PP_MAKE_TUPLE_SEQ("trigamma", Trigamma)                 \
   OF_PP_MAKE_TUPLE_SEQ("erf", Erf)                           \
   OF_PP_MAKE_TUPLE_SEQ("erfc", Erfc)                         \
   OF_PP_MAKE_TUPLE_SEQ("exp", Exp)                           \
