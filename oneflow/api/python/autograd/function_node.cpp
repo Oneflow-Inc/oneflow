@@ -52,7 +52,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("requires_grad", []() { TODO(); })
       .def("register_hook", &one::FunctionNode::add_post_hook)
       .def("name", [](const one::FunctionNode& func_node) { return func_node.name(); })
-      .def_property_readonly("variable", [](const one::FunctionNode& func_node) { return func_node.Variable(); });
+      .def_property_readonly(
+          "variable", [](const one::FunctionNode& func_node) { return func_node.Variable(); });
 }
 
 }  // namespace oneflow

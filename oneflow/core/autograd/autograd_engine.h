@@ -61,9 +61,7 @@ class FunctionNode {
 
   const std::shared_ptr<Scope>& scope() const { return scope_; }
   void set_scope(const std::shared_ptr<Scope>& scope) { scope_ = scope; }
-  const Maybe<std::shared_ptr<Tensor>> Variable() const{
-    return variable_;
-  }
+  const Maybe<std::shared_ptr<Tensor>> Variable() const { return variable_; }
 
   using Hook = std::function<Optional<std::vector<std::shared_ptr<Tensor>>>(const TensorTuple&,
                                                                             const TensorTuple&)>;
@@ -72,7 +70,8 @@ class FunctionNode {
  protected:
   friend class GraphTask;
   explicit FunctionNode(const std::string& name,
-                        const std::shared_ptr<BackwardFunction>& backward_fn, const std::shared_ptr<Tensor>& variable)
+                        const std::shared_ptr<BackwardFunction>& backward_fn,
+                        const std::shared_ptr<Tensor>& variable)
       : name_(name), backward_fn_(backward_fn), variable_(variable), scope_(nullptr) {}
 
   const std::string name_;
@@ -128,8 +127,9 @@ class GraphFunctionNode final : public FunctionNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GraphFunctionNode);
   static std::shared_ptr<GraphFunctionNode> New(
-      const std::string& name, const std::shared_ptr<BackwardFunction>& backward_fn, const std::shared_ptr<Tensor>& variable,
-      const TensorTuple& inputs, const TensorTuple& outputs);
+      const std::string& name, const std::shared_ptr<BackwardFunction>& backward_fn,
+      const std::shared_ptr<Tensor>& variable, const TensorTuple& inputs,
+      const TensorTuple& outputs);
 
   GraphFunctionNode() = delete;
   ~GraphFunctionNode() override = default;
@@ -137,8 +137,9 @@ class GraphFunctionNode final : public FunctionNode {
   void ReleaseData() override;
 
  private:
-  GraphFunctionNode(const std::string& name, const std::shared_ptr<BackwardFunction>& backward_fn, const std::shared_ptr<Tensor>& variable,
-                    const TensorTuple& inputs, const TensorTuple& outputs);
+  GraphFunctionNode(const std::string& name, const std::shared_ptr<BackwardFunction>& backward_fn,
+                    const std::shared_ptr<Tensor>& variable, const TensorTuple& inputs,
+                    const TensorTuple& outputs);
 };
 
 class GraphTask final {
