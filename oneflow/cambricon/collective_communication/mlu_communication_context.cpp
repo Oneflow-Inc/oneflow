@@ -28,7 +28,9 @@ void MluCommunicationContext::Init(Symbol<ParallelDesc> parallel_desc) {
     device_set.emplace(std::make_pair(machine_id, device_id));
     rank2cncl_index_.emplace(machine_id, parallel_id);
   }
-  cncl_comm_ = CHECK_NOTNULL(Singleton<EagerCnclCommMgr>::Get())->GetCommForDevice(device_set);
+  cncl_comm_ = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get())
+                   ->As<EagerCnclCommMgr>()
+                   ->GetCommForDevice(device_set);
 }
 
 REGISTER_COLLECTIVE_COMMUNICATION_COMMUNICATOR(DeviceType::kMLU, MluCommunicationContext);

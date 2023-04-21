@@ -34,6 +34,7 @@ limitations under the License.
 #include "oneflow/core/device/cudnn_conv_util.h"
 #include "oneflow/core/rpc/include/manager.h"
 #include "oneflow/core/transport/transport.h"
+#include "oneflow/core/job/eager_ccl_comm_manager.h"
 #include "oneflow/core/hardware/node_device_descriptor_manager.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
@@ -198,7 +199,15 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Singleton<CudnnHandlePool>::New();
   Singleton<embedding::EmbeddingManager>::New();
 #endif
-  for (const auto& pair : *GlobalCclMgrCreatorDestroyers()) { CHECK_JUST(pair.first()); }
+  const auto& vaild_ccl_comm_mgr_device_types =
+      EagerCclCommMgrBuilder::Get().vaild_ccl_comm_mgr_device_types();
+  CHECK_LE_OR_RETURN(vaild_ccl_comm_mgr_device_types.size(), 1)
+      << "Only one kind collective communication manager is supported at most at the same time for "
+         "now!";
+  if (!vaild_ccl_comm_mgr_device_types.empty()) {
+    Singleton<EagerCclCommMgr>::SetAllocated(
+        EagerCclCommMgrBuilder::Get().NewCclCommMgr(vaild_ccl_comm_mgr_device_types.front()));
+  }
   Singleton<vm::VirtualMachineScope>::New(Singleton<ResourceDesc, ForSession>::Get()->resource());
 #ifdef __linux__
   Singleton<EpollCommNet>::New();
@@ -246,7 +255,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Singleton<CudnnConvAlgoCache>::Delete();
   Singleton<CudnnHandlePool>::Delete();
 #endif
-  for (const auto& pair : *GlobalCclMgrCreatorDestroyers()) { CHECK_JUST(pair.second()); }
+  if (Singleton<EagerCclCommMgr>::Get() != nullptr) { Singleton<EagerCclCommMgr>::Delete(); }
   Singleton<ThreadPool>::Delete();
   Singleton<ep::DeviceManagerRegistry>::Delete();
   if (Singleton<ResourceDesc, ForSession>::Get() != nullptr) {
