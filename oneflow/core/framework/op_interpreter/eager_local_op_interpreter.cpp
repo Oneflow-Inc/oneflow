@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
@@ -147,6 +148,8 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       // output_tensor_metas->at(i)->stride());
     }
   }
+
+  if (default_device->enum_type() == DeviceType::kMeta) { return Maybe<void>::Ok(); }
 
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->Call(kernel, std::move(input_eager_blob_objects),

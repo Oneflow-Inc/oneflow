@@ -55,6 +55,7 @@ enum class UnaryOp {
   kCos,
   kCosh,
   kDigamma,
+  kTrigamma,
   kErf,
   kErfc,
   kExp,
