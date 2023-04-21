@@ -44,7 +44,7 @@ namespace one {
 namespace {
 
 bool IsEnvEnableGlobalInputsWithInConsistentPlacement() {
-  static const bool env_enable_inconsistent_placement =
+  const bool env_enable_inconsistent_placement =
       ParseBooleanFromEnv("ONEFLOW_ENABLE_GLOBAL_INPUTS_WITH_INCONSISTENT_PLACEMENT", false);
   return env_enable_inconsistent_placement;
 }

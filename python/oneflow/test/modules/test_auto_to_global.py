@@ -26,6 +26,7 @@ from oneflow.test_utils.test_util import GenArgList
 
 
 def _test_auto_to_global(test_case, device):
+    os.environ["ONEFLOW_ENABLE_GLOBAL_INPUTS_WITH_INCONSISTENT_PLACEMENT"] = "true"
     x = flow.ones(
         (2, 2),
         sbp=[flow.sbp.broadcast, flow.sbp.broadcast],
@@ -39,20 +40,11 @@ def _test_auto_to_global(test_case, device):
     z = x + y
     test_case.assertTrue(np.array_equal(x.numpy(), z.numpy()))
     test_case.assertEqual(y.placement, z.placement)
+    os.environ["ONEFLOW_ENABLE_GLOBAL_INPUTS_WITH_INCONSISTENT_PLACEMENT"] = "false"
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestAutoToGlobal(flow.unittest.TestCase):
-    def setUp(self):
-        super().setUp()
-        os.environ["ONEFLOW_ENABLE_GLOBAL_INPUTS_WITH_INCONSISTENT_PLACEMENT"] = "1"
-
-    def tearDown(self):
-        super().tearDown()
-        for key in os.environ.keys():
-            if key.startswith("ONEFLOW_ENABLE_GLOBAL_INPUTS_WITH_INCONSISTENT_PLACEMENT"):
-                os.environ.pop(key)
-
     @globaltest
     @flow.unittest.skip_unless_1n4d()
     def test_auto_to_global(test_case):
