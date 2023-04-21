@@ -576,7 +576,6 @@ struct BinaryFunctor<device, BinaryOp::kExpm1BackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const { return dy * exp(x); }
 };
 
-
 template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kLogBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}

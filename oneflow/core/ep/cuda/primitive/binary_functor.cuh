@@ -257,13 +257,12 @@ template<typename Src, typename Dst>
 struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kLgammaBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-    ep::primitive::UnaryFunctor<DeviceType::kCUDA, UnaryOp::kDigamma, Src, Dst>
-        digamma_functor(0, 0);
+    ep::primitive::UnaryFunctor<DeviceType::kCUDA, UnaryOp::kDigamma, Src, Dst> digamma_functor(0,
+                                                                                                0);
     Dst digamma_result = digamma_functor(x);
     return digamma_result * dy;
   }
 };
-
 
 #define SPECIALIZATION_INTEGRAL_CLOSENESS_BINARY_FUNCTOR(op, type)                            \
   template<typename Dst>                                                                      \
