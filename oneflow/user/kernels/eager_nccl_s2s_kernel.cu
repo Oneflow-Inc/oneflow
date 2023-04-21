@@ -72,10 +72,6 @@ void InitEagerNcclOpKernelCache(user_op::KernelCacheContext* ctx,
 }
 }  // namespace
 
-REGISTER_USER_KERNEL("eager_nccl_touch")
-    .SetCreateFn<EagerNcclTouchKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA);
-
 template<typename T>
 class EagerNcclS2SKernel final : public user_op::OpKernel {
  public:

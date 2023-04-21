@@ -38,7 +38,7 @@ class EagerNcclCommMgr final : public EagerCclCommMgr {
                                            const std::string& stream_name);
 
   void CreateCommFromPlan(const Plan& plan) override;
-  bool IsAsyncLaunchCclLogicalKernel() const override { return async_launch_cncl_logical_kernel_; }
+  bool IsAsyncLaunchCclLogicalKernel() const override { return async_launch_nccl_logical_kernel_; }
   void SetAsyncLaunchCclLogicalKernel(bool val) override {
     async_launch_nccl_logical_kernel_ = val;
   }

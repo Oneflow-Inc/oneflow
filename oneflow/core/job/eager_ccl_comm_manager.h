@@ -49,9 +49,15 @@ class EagerCclCommMgrBuilder {
 
   template<typename Derived>
   void RegisterEagerCclCommMgrType(DeviceType device_type) {
-    ccl_comm_mgr_reg_result_->emplace(device_type,
-                                      []() -> EagerCclCommMgr* { return new Derived; });
-    vaild_ccl_comm_mgr_device_types_.emplace_back(device_type);
+    if (ccl_comm_mgr_reg_result_
+            ->emplace(device_type, []() -> EagerCclCommMgr* { return new Derived; })
+            .second) {
+      vaild_ccl_comm_mgr_device_types_.emplace_back(device_type);
+    } else {
+      LOG(WARNING) << "Register EagerCclCommMgr failed! Device_type: "
+                   << DeviceType_Name(device_type)
+                   << ", EagerCclCommMgr class: " << typeid(Derived).name();
+    }
   }
 
   EagerCclCommMgr* NewCclCommMgr(DeviceType device_type) const {
