@@ -844,7 +844,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
             << " dst parallel conf: " << dst_parallel_desc.parallel_conf().DebugString()
             << " src_nd_sbp " << src_nd_sbp.DebugString() << " dst nd_sbp "
             << dst_nd_sbp.DebugString();
-    SubTskGphBuilderStatus status;
+    std::shared_ptr<SubTskGphBuilderStatus> status;
     const DeviceType device_type = [&src_parallel_desc, &dst_parallel_desc]() {
       return src_parallel_desc.device_type() != DeviceType::kCPU ? src_parallel_desc.device_type()
                                                                  : dst_parallel_desc.device_type();
