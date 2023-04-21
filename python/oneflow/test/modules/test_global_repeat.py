@@ -32,6 +32,7 @@ def _test_repeat_impl(test_case, ndim, placement, sbp):
 
 
 class TestRepeatGlobal(flow.unittest.TestCase):
+    @unittest.skip("skip for now, becase it failed 2 times in past week")
     @globaltest
     def test_repeat(test_case):
         # random ndim in range [1,3]
