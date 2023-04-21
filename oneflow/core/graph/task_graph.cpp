@@ -846,18 +846,17 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
             << dst_nd_sbp.DebugString();
     SubTskGphBuilderStatus status;
     const DeviceType device_type = [&src_parallel_desc, &dst_parallel_desc]() {
-      return src_parallel_desc.device_type() != DeviceType::kCPU
-                 ? src_parallel_desc.device_type()
-                 : dst_parallel_desc.device_type();
+      return src_parallel_desc.device_type() != DeviceType::kCPU ? src_parallel_desc.device_type()
+                                                                 : dst_parallel_desc.device_type();
     }();
     if (device_type != DeviceType::kCPU
         && device_type2sub_tsk_gph_builder_.find(device_type)
                != device_type2sub_tsk_gph_builder_.end()) {
       status = CHECK_JUST(device_type2sub_tsk_gph_builder_.at(device_type)
-                             ->Build(sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes,
-                                     &sorted_ctrl_tasks, src_parallel_desc, dst_parallel_desc,
-                                     lbi, blob_desc, src_nd_sbp, dst_nd_sbp,
-                                     *(CHECK_JUST(src_op_node->op().GetOpTimeShape()).get())));
+                              ->Build(sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes,
+                                      &sorted_ctrl_tasks, src_parallel_desc, dst_parallel_desc, lbi,
+                                      blob_desc, src_nd_sbp, dst_nd_sbp,
+                                      *(CHECK_JUST(src_op_node->op().GetOpTimeShape()).get())));
     } else {
       status = CHECK_JUST(hierarchical_sub_tsk_gph_builder_->Build(
           sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes, &sorted_ctrl_tasks,
