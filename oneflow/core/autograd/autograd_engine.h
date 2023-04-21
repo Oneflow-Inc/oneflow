@@ -61,6 +61,7 @@ class FunctionNode {
 
   const std::shared_ptr<Scope>& scope() const { return scope_; }
   void set_scope(const std::shared_ptr<Scope>& scope) { scope_ = scope; }
+  void set_variable(const std::shared_ptr<Tensor>& variable) { variable_ = variable; }
   const Maybe<std::shared_ptr<Tensor>> Variable() const { return variable_; }
 
   using Hook = std::function<Optional<std::vector<std::shared_ptr<Tensor>>>(const TensorTuple&,
@@ -70,9 +71,8 @@ class FunctionNode {
  protected:
   friend class GraphTask;
   explicit FunctionNode(const std::string& name,
-                        const std::shared_ptr<BackwardFunction>& backward_fn,
-                        const std::shared_ptr<Tensor>& variable)
-      : name_(name), backward_fn_(backward_fn), variable_(variable), scope_(nullptr) {}
+                        const std::shared_ptr<BackwardFunction>& backward_fn)
+      : name_(name), backward_fn_(backward_fn), scope_(nullptr) {}
 
   const std::string name_;
   std::vector<std::tuple<std::shared_ptr<FunctionNode>, int>> next_functions_;
@@ -128,7 +128,7 @@ class GraphFunctionNode final : public FunctionNode {
   OF_DISALLOW_COPY_AND_MOVE(GraphFunctionNode);
   static std::shared_ptr<GraphFunctionNode> New(
       const std::string& name, const std::shared_ptr<BackwardFunction>& backward_fn,
-      const std::shared_ptr<Tensor>& variable, const TensorTuple& inputs,
+      const TensorTuple& inputs,
       const TensorTuple& outputs);
 
   GraphFunctionNode() = delete;
@@ -138,7 +138,7 @@ class GraphFunctionNode final : public FunctionNode {
 
  private:
   GraphFunctionNode(const std::string& name, const std::shared_ptr<BackwardFunction>& backward_fn,
-                    const std::shared_ptr<Tensor>& variable, const TensorTuple& inputs,
+                    const TensorTuple& inputs,
                     const TensorTuple& outputs);
 };
 

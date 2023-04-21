@@ -236,18 +236,17 @@ void GraphFunctionNode::ReleaseData() {
 
 /*static*/ std::shared_ptr<GraphFunctionNode> GraphFunctionNode::New(
     const std::string& name, const std::shared_ptr<BackwardFunction>& backward_fn,
-    const std::shared_ptr<Tensor>& variable, const TensorTuple& inputs,
+    const TensorTuple& inputs,
     const TensorTuple& outputs) {
   auto node = std::shared_ptr<GraphFunctionNode>(
-      new GraphFunctionNode(name, backward_fn, variable, inputs, outputs), FunctionNodeDeleter);
+      new GraphFunctionNode(name, backward_fn, inputs, outputs), FunctionNodeDeleter);
   return node;
 }
 
 GraphFunctionNode::GraphFunctionNode(const std::string& name,
                                      const std::shared_ptr<BackwardFunction>& backward_fn,
-                                     const std::shared_ptr<Tensor>& variable,
                                      const TensorTuple& inputs, const TensorTuple& outputs)
-    : FunctionNode(name, backward_fn, variable) {
+    : FunctionNode(name, backward_fn) {
   input_meta_data_.resize(inputs.size());
   next_functions_.reserve(inputs.size());
   for (int i = 0; i < inputs.size(); ++i) {
@@ -268,7 +267,6 @@ GraphFunctionNode::GraphFunctionNode(const std::string& name,
   }
 
   backward_fn_ = backward_fn;
-  variable_ = variable;
 }
 
 GraphTask::GraphTask(const TensorTuple& outputs, bool retain_graph, bool create_graph)
@@ -498,7 +496,7 @@ Maybe<FunctionNode> GraphAutogradEngine::AddNode(
   OF_PROFILER_RANGE_POP();
   OF_PROFILER_RANGE_PUSH("set_grad_fn_node");
   std::shared_ptr<FunctionNode> func_node =
-      GraphFunctionNode::New(name, backward_fn, nullptr, inputs, *outputs);
+      GraphFunctionNode::New(name, backward_fn, inputs, *outputs);
   for (int i = 0; i < outputs->size(); ++i) {
     const std::shared_ptr<Tensor>& out_tensor = JUST(VectorAt(*outputs, i));
     out_tensor->set_grad_fn_node(func_node);
@@ -519,9 +517,10 @@ Maybe<void> AddAccumulateFunctionNode(const std::shared_ptr<Tensor>& tensor) {
   backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
                           bool create_graph) -> Maybe<void> { return Maybe<void>::Ok(); };
   backward_fn->status = []() { return false; };
-  tensor->set_grad_fn_node(GraphFunctionNode::New("accumulategrad", backward_fn, tensor,
+  tensor->set_grad_fn_node(GraphFunctionNode::New("accumulategrad", backward_fn,
                                                   /*inputs=*/TensorTuple{},
                                                   /*outputs*/ TensorTuple{tensor}));
+  tensor->mut_grad_fn_node()->set_variable(tensor);
   tensor->set_grad_fn_output_index(0);
   if (LazyMode::is_enabled()) {
     tensor->mut_grad_fn_node()->set_scope(JUST(GetTensorScope(tensor)));
