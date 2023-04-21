@@ -30,6 +30,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
@@ -49,63 +50,11 @@ struct CuFFTDataTypeDesc{
 }
 
 
-// NOTE: The implementation of `_cudaGetErrorEnum`  are mostly taken from
-// pytorch.
-//       For more details pls refer to:
-//       https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/cuda/CuFFTUtils.h#L17
-static inline std::string _cudaGetErrorEnum(cufftResult error)
-{
-  switch (error)
-  {
-    case CUFFT_SUCCESS:
-      return "CUFFT_SUCCESS";
-    case CUFFT_INVALID_PLAN:
-      return "CUFFT_INVALID_PLAN";
-    case CUFFT_ALLOC_FAILED:
-      return "CUFFT_ALLOC_FAILED";
-    case CUFFT_INVALID_TYPE:
-      return "CUFFT_INVALID_TYPE";
-    case CUFFT_INVALID_VALUE:
-      return "CUFFT_INVALID_VALUE";
-    case CUFFT_INTERNAL_ERROR:
-      return "CUFFT_INTERNAL_ERROR";
-    case CUFFT_EXEC_FAILED:
-      return "CUFFT_EXEC_FAILED";
-    case CUFFT_SETUP_FAILED:
-      return "CUFFT_SETUP_FAILED";
-    case CUFFT_INVALID_SIZE:
-      return "CUFFT_INVALID_SIZE";
-    case CUFFT_UNALIGNED_DATA:
-      return "CUFFT_UNALIGNED_DATA";
-    case CUFFT_INCOMPLETE_PARAMETER_LIST:
-      return "CUFFT_INCOMPLETE_PARAMETER_LIST";
-    case CUFFT_INVALID_DEVICE:
-      return "CUFFT_INVALID_DEVICE";
-    case CUFFT_PARSE_ERROR:
-      return "CUFFT_PARSE_ERROR";
-    case CUFFT_NO_WORKSPACE:
-      return "CUFFT_NO_WORKSPACE";
-    case CUFFT_NOT_IMPLEMENTED:
-      return "CUFFT_NOT_IMPLEMENTED";
-    case CUFFT_NOT_SUPPORTED:
-      return "CUFFT_NOT_SUPPORTED";
-    default:
-      std::ostringstream ss;
-      ss << "unknown error " << error;
-      return ss.str();
-  }
-}
-
-static inline void CUFFT_CHECK(cufftResult error)
-{
-  CHECK_OR_THROW(error == CUFFT_SUCCESS) << "cuFFT error: " << _cudaGetErrorEnum(error);
-}
-
 class CuFFTHandle{
   cufftHandle handle;
 public:
   CuFFTHandle(){
-    CUFFT_CHECK(cufftCreate(&handle));
+    OF_CUFFT_CHECK(cufftCreate(&handle));
   }
 
   cufftHandle& get(){
@@ -126,8 +75,8 @@ public:
 //       https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/cuda/CuFFTPlanCache.h#L136
 //       https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/cuda/CuFFTPlanCache.h#L145
 //       https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/cuda/CuFFTPlanCache.h#L164
-using cufft_size_type = long long int;
-using cufft_dim_vector = small_vector<cufft_size_type, max_rank + 1>;
+typedef long long cufft_size_type;
+typedef small_vector<cufft_size_type, max_rank + 1> cufft_dim_vector;
 struct CuFFTDataLayout{
   small_vector<cufft_size_type, 5> embed;
   cufft_size_type stride, dist;
@@ -221,18 +170,21 @@ struct CuFFTParams {
   cufft_dim_vector input_shape;
   cufft_dim_vector input_strides;
   cufft_dim_vector output_strides;
-  // bool IsForward;
   CUFFT_EXCUTETYPE excute_type;
   DataType real_data_type;
 
   CuFFTParams() = default;
   CuFFTParams(const Shape& in_shape, const Shape& out_shape, const Stride& in_strides,
-              const Stride& out_strides, int64_t dims, const bool is_forward,
+              const Stride& out_strides, int64_t dims,
               CUFFT_EXCUTETYPE type, DataType real) : ndim(dims), excute_type(type), real_data_type(real)
               {
         assert(ndim >= 1 && ndim <= max_rank);
         assert(in_shape.size() == in_strides.size());
         assert(out_shape.size() == out_strides.size());
+        input_shape.resize(in_shape.size());
+        input_strides.resize(in_strides.size());
+        output_shape.resize(out_shape.size());
+        output_strides.resize(out_strides.size());
 
         std::copy(in_strides.begin(), in_strides.end(), input_strides.begin());
         std::copy(out_strides.begin(), out_strides.end(), output_strides.begin());
@@ -248,9 +200,6 @@ class CuFFTConfig {
   ~CuFFTConfig() = default;
 
   explicit CuFFTConfig(CuFFTParams& params) {  // NOLINT
-    // cufftPlanMany(&plan_handle_, params.ndim, params.rank, params.input_shape,
-    //               params.input_strides[0], params.input_strides[1], params.output_shape,
-    //               params.output_strides[0], params.output_strides[1], exectype_, params.batch);
 
     if (params.real_data_type == kBFloat16 || params.real_data_type == kFloat16){
       // CuFFT support half data type, but there are some limits:
@@ -264,20 +213,20 @@ class CuFFTConfig {
     const bool is_layout_simple = input_layout.simple && output_layout.simple;
 
     // disable cuFFT the default behavior of allocating work area at plan generating time
-    CUFFT_CHECK(cufftSetAutoAllocation(plan_handle_.get(), 0));
+    OF_CUFFT_CHECK(cufftSetAutoAllocation(plan_handle_.get(), 0));
     infer_cufft_type_(params.excute_type, params.real_data_type);
 
     // exclude input_shape[0] whtich is batch dim
     cufft_dim_vector fft_shape(params.input_shape.begin() + 1, params.input_shape.end());
     cufft_size_type batch = params.input_shape[0];
     if (is_layout_simple){
-      CUFFT_CHECK(cufftXtMakePlanMany(plan_handle_.get(), params.ndim, fft_shape.data(), 
+      OF_CUFFT_CHECK(cufftXtMakePlanMany(plan_handle_.get(), params.ndim, fft_shape.data(), 
                 /*inembed=*/nullptr, /*istride=*/1, /*idist=*/1, /*inputtype=*/data_type_desc_.inputtype, 
                 /*onembed=*/nullptr, /*ostride=*/1, /*odist=*/1, /*outputtype=*/data_type_desc_.outputtype, 
                 /*batch=*/batch, /*workSize=*/&work_size_, /*executiontype=*/data_type_desc_.executiontype));
     }
     else{
-      CUFFT_CHECK(cufftXtMakePlanMany(plan_handle_.get(), params.ndim, fft_shape.data(), 
+      OF_CUFFT_CHECK(cufftXtMakePlanMany(plan_handle_.get(), params.ndim, fft_shape.data(), 
                 /*inembed=*/input_layout.embed.data(), /*istride=*/input_layout.stride, /*idist=*/input_layout.dist, /*inputtype=*/data_type_desc_.inputtype, 
                 /*onembed=*/output_layout.embed.data(), /*ostride=*/output_layout.stride, /*odist=*/output_layout.dist, /*outputtype=*/data_type_desc_.outputtype, 
                 /*batch=*/batch, /*workSize=*/&work_size_, /*executiontype=*/data_type_desc_.executiontype));
@@ -290,7 +239,7 @@ class CuFFTConfig {
   }
 
   void excute(void* input, void* output, bool forward){
-    CUFFT_CHECK(cufftXtExec(plan_handle_.get(), input, output,
+    OF_CUFFT_CHECK(cufftXtExec(plan_handle_.get(), input, output,
                         forward ? CUFFT_FORWARD : CUFFT_INVERSE));
   }
 

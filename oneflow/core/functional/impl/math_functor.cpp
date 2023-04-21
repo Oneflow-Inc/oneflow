@@ -4105,115 +4105,9 @@ class FftBaseFunctor {
     return Maybe<void>::Ok();
   }
 
-  
 
- protected:
-  std::shared_ptr<OpExpr> op_;
-};
 
-// class FftNormFunctor{
-//   public:
-//     FftNormFunctor(){
-//       op_ = CHECK_JUST(one::OpBuilder("fft_normalize").Input("in").Output("out").Build());
-//     }
-
-//   private:
-//     std::shared_ptr<OpExpr> op_;
-// }
-
-class FftC2CFunctor : public FftBaseFunctor {
- public:
-  FftC2CFunctor() : FftBaseFunctor("fft_c2c") {}
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const Optional<std::vector<int64_t>>& n,
-                           const Optional<std::vector<int64_t>>& dims, const std::string& norm_str,
-                           bool forward, bool is_grad_fn) const {
-    CHECK_OR_THROW(x->dtype()->is_complex())
-        << "expects the dtype of input Tensor  is Complex, but gets " << x->dtype()->name();
-    std::vector<int64_t> fft_len(x->ndim(), 0);
-    std::vector<int64_t> wrapped_dims(x->ndim(), 0);
-
-    JUST(parse_input_n_and_dims(x, n, dims, fft_len, wrapped_dims));
-    auto resized_tensor =
-        n.has_value() == true ? JUST(resize_fft_input(x, wrapped_dims, fft_len)) : x;
-
-    DeviceType input_device{};
-    if (x->is_global()) {
-      input_device = JUST(x->parallel_desc())->device_type();
-    } else {
-      input_device = JUST(x->device())->enum_type();
-    }
-
-    fft_norm_mode norm_mode = fft_norm_mode::none;
-    if (!is_grad_fn) {
-      norm_mode = fft_norm_from_string(norm_str, forward);
-    } else {
-      norm_mode = fft_norm_from_string(norm_str, !forward);
-    }
-    double norm_fct = fft_compute_fct<double>(*(resized_tensor->shape()), wrapped_dims, norm_mode);
-
-    
-    if (input_device == DeviceType::kCPU){
-      auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "forward", "norm", "norm_fct");
-      attrs.SetAllAttrs(wrapped_dims, forward, norm_str, norm_fct);
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {resized_tensor}, attrs);
-    }
-    else if (input_device == DeviceType::kCUDA){
-      if (wrapped_dims.empty()){
-        return x;
-      }
-
-      const auto& out_sizes = *(resized_tensor->shape());
-      std::vector<int64_t> sorted_dims(wrapped_dims.begin(), wrapped_dims.end());
-      auto working_tensor = resized_tensor;
-      const int64_t cufft_max_ndim = 3; // must keep Equal to `oneflow/user/kernels/cufft_plan_cache.h:max_rank`
-      std::shared_ptr<Tensor> output;
-      while (true){
-        // Sort Dimemsions every iteration
-        auto strides = *JUST(working_tensor->stride());
-        std::sort(sorted_dims.begin(), sorted_dims.end(),
-                  [&](int64_t a, int64_t b) { return strides[a] > strides[b]; });
-
-        const auto max_dims = std::min(static_cast<size_t>(cufft_max_ndim), sorted_dims.size());
-        std::vector<int64_t> first_dims(sorted_dims.end() - max_dims, sorted_dims.end());
-
-        auto input = JUST(permute_and_reshape(working_tensor, out_sizes, first_dims));
-
-        std::vector<int64_t> fft_dims(input->ndim() - 1); // must >= 1
-        std::iota(fft_dims.begin(), fft_dims.end(), int64_t(1));
-        auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "forward", "norm", "norm_fct");
-        attrs.SetAllAttrs(fft_dims, forward, norm_str, norm_fct);
-        output = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs));
-        sorted_dims.resize(sorted_dims.size() - max_dims);
-
-        if (sorted_dims.empty()){
-          break;
-        }
-
-        if (working_tensor == resized_tensor){
-          // fisrt loop
-          working_tensor = std::move(output);
-          // no need to allocate memory for output, **which is different with PyTorch**
-        }
-        else{
-          // in PyTorch:
-          // std::swap(output, working_tensor);
-          // but we don't need allocate output manually for next loop, so no need to **swap**
-          working_tensor = std::move(output);
-        }
-      }
-
-      JUST(functional::ScalarMul(output, Scalar(norm_fct), true));  // TO-DO : check data_type of **in-place** operation
-      return output;
-    }
-    else{
-      UNIMPLEMENTED_THEN_RETURN() << "FFTC2C: Only support cpu and cuda device.";
-    }
-  }
-
-  // Maybe<Tensor> excute_c2c(const std::shared_ptr<Tensor>& self, const Shape& out_sizes, const std::vector<int64_t>& fft_dims,
-  //                         const std::string& norm_str, bool forward, bool is_grad_fn){
-  Maybe<Tensor> permute_and_reshape(const std::shared_ptr<Tensor>& self, const Shape& out_sizes, const std::vector<int64_t>& fft_dims) const{
+  Maybe<Tensor> permute_and_reshape(const std::shared_ptr<Tensor>& self, const std::vector<int64_t>& out_sizes, const std::vector<int64_t>& fft_dims, std::vector<int64_t>& out_strides) const{
     // Permute and reshape `self` Tensor.
     // This can maximizes data locality
     const int64_t ndim = self->ndim();
@@ -4257,18 +4151,114 @@ class FftC2CFunctor : public FftBaseFunctor {
                             out_size == (fft_shape[i + 1] / 2) + 1);
     }
 
-    // TO-DO: maybe not used
-    // =======
     batched_sizes[0] = batch_size;
     std::vector<int64_t> batched_out_sizes(batched_sizes.begin(), batched_sizes.end());
     FOR_RANGE(int64_t, i, 0, fft_dims.size()) {
       batched_out_sizes[i + 1] = out_sizes[fft_dims[i]];
     }
-    // =======
+
+    // Inplace reshaping to original batch shape and inverting the dimension permutation
+    out_strides.resize(ndim, 0);
+
+    int64_t batch_numel = 1;
+    Stride contiguous_out_strides = Stride(batched_out_sizes);
+    for (int64_t i = batch_dims - 1; i >= 0; --i) {
+      out_strides[dim_permute[i]] = batch_numel * contiguous_out_strides[0];
+      batch_numel *= out_sizes[dim_permute[i]];
+    }
+    FOR_RANGE(int64_t, i, batch_dims, ndim){
+      out_strides[dim_permute[i]] = contiguous_out_strides[1 + (i - batch_dims)];
+    }
 
     return input;
   }
 
+ protected:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FftC2CFunctor : public FftBaseFunctor {
+ public:
+  FftC2CFunctor() : FftBaseFunctor("fft_c2c") {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<std::vector<int64_t>>& n,
+                           const Optional<std::vector<int64_t>>& dims, const std::string& norm_str,
+                           bool forward, bool is_grad_fn) const {
+    CHECK_OR_THROW(x->dtype()->is_complex())
+        << "expects the dtype of input Tensor  is Complex, but gets " << x->dtype()->name();
+    std::vector<int64_t> fft_len(x->ndim(), 0);
+    std::vector<int64_t> wrapped_dims(x->ndim(), 0);
+
+    JUST(parse_input_n_and_dims(x, n, dims, fft_len, wrapped_dims));
+    auto resized_tensor =
+        n.has_value() == true ? JUST(resize_fft_input(x, wrapped_dims, fft_len)) : x;
+
+    DeviceType input_device{};
+    if (x->is_global()) {
+      input_device = JUST(x->parallel_desc())->device_type();
+    } else {
+      input_device = JUST(x->device())->enum_type();
+    }
+
+    fft_norm_mode norm_mode = fft_norm_mode::none;
+    if (!is_grad_fn) {
+      norm_mode = fft_norm_from_string(norm_str, forward);
+    } else {
+      norm_mode = fft_norm_from_string(norm_str, !forward);
+    }
+    double norm_fct = fft_compute_fct<double>(*(resized_tensor->shape()), wrapped_dims, norm_mode);
+
+    
+    if (input_device == DeviceType::kCPU){
+      auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "forward", "norm", "norm_fct");
+      attrs.SetAllAttrs(wrapped_dims, forward, norm_str, norm_fct);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {resized_tensor}, attrs);
+    }
+    else if (input_device == DeviceType::kCUDA){
+      if (wrapped_dims.empty()){
+        return x;
+      }
+
+      std::vector<int64_t> out_sizes(resized_tensor->shape()->dim_vec().begin(), resized_tensor->shape()->dim_vec().end());
+      std::vector<int64_t> sorted_dims(wrapped_dims.begin(), wrapped_dims.end());
+      auto working_tensor = resized_tensor;
+      const int64_t cufft_max_ndim = 3; // must keep Equal to `oneflow/user/kernels/cufft_plan_cache.h:max_rank`
+      std::vector<int64_t> out_strides;
+      std::shared_ptr<Tensor> output;
+      while (true){
+        // Sort Dimemsions every iteration
+        auto strides = *JUST(working_tensor->stride());
+        std::sort(sorted_dims.begin(), sorted_dims.end(),
+                  [&](int64_t a, int64_t b) { return strides[a] > strides[b]; });
+
+        const auto max_dims = std::min(static_cast<size_t>(cufft_max_ndim), sorted_dims.size());
+        std::vector<int64_t> first_dims(sorted_dims.end() - max_dims, sorted_dims.end());
+
+        auto input = JUST(permute_and_reshape(working_tensor, out_sizes, first_dims, out_strides));
+
+        std::vector<int64_t> fft_dims(input->ndim() - 1); // must >= 1
+        std::iota(fft_dims.begin(), fft_dims.end(), int64_t(1));
+        auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "forward", "norm", "norm_fct");
+        attrs.SetAllAttrs(fft_dims, forward, norm_str, norm_fct);
+        output = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs));
+        output = JUST(functional::AsStrided(output, out_sizes, out_strides, JUST(output->storage_offset())));
+
+        sorted_dims.resize(sorted_dims.size() - max_dims);
+
+        if (sorted_dims.empty()){
+          break;
+        }
+
+        working_tensor = std::move(output);
+      }
+
+      JUST(functional::ScalarMul(output, Scalar(norm_fct), true));  // TO-DO : check data_type of **in-place** operation
+      return output;
+    }
+    else{
+      UNIMPLEMENTED_THEN_RETURN() << "FFTC2C: Only support cpu and cuda device.";
+    }
+  }
 
 };
 
@@ -5451,7 +5441,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TruncFunctor>("Trunc");
 
   m.add_functor<StftFunctor>("Stft");  // disable Stft, TO-DO: compat Stft into fft
-  // m.add_functor(impl::FftNormFunctor)("FftNorm");
   m.add_functor<impl::FftC2CFunctor>("FftC2C");
   m.add_functor<impl::FftR2CFunctor>("FftR2C");
   m.add_functor<impl::FftC2RFunctor>("FftC2R");

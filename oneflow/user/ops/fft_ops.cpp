@@ -21,10 +21,9 @@ namespace oneflow {
 
 /* static */ Maybe<void> FftC2COp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("input", 0);
-  const Stride& in_stride = ctx->InputStride("input", 0);
-
+  Stride out_stride = Stride(in_shape); // contiguous
   ctx->SetOutputShape("out", 0, in_shape);
-  ctx->SetOutputStride("out", 0, in_stride);
+  ctx->SetOutputStride("out", 0, out_stride);
   ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("input", 0));
   return Maybe<void>::Ok();
 }
@@ -57,9 +56,9 @@ namespace oneflow {
   Shape out_shape = in_shape;
   auto last_dim = dims.back();
   if (onesided) { out_shape[last_dim] = out_shape[last_dim] / 2 + 1; }
-
+  Stride out_stride = Stride(out_shape);
   ctx->SetOutputShape("out", 0, out_shape);
-  ctx->SetOutputStride("out", 0, in_stride);
+  ctx->SetOutputStride("out", 0, out_stride);
   ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("input", 0));
   return Maybe<void>::Ok();
 }

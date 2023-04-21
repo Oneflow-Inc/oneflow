@@ -24,12 +24,6 @@ namespace oneflow {
 
 template<typename T, typename FCT_TYPE>
 struct FftC2CKernelUtil<DeviceType::kCPU, T, FCT_TYPE> {
-  // static void FftC2CForward(ep::Stream* stream, 
-  //                           const std::complex<float>* data_in, std::complex<float>* data_out, std::complex<float>* tmp_buffer, 
-  //                           const Shape& input_shape, const Shape& output_shape, const Shape& tmp_buffer_shape,
-  //                           const Stride& input_stride, const Stride& output_stride, const Stride& tmp_buffer_stride,
-  //                           bool forward,
-  //                           const std::vector<int64_t>& dims, fft_norm_mode normalization) {
   static void FftC2CForward(ep::Stream* stream, 
                             const T* data_in, T* data_out,
                             const Shape& input_shape, const Shape& output_shape,
@@ -71,27 +65,6 @@ struct FftC2RKernelUtil<DeviceType::kCPU, IN, OUT> {
   }
 };
 
-// template<typename IN, typename OUT>
-// struct FftStftKernelUtil<DeviceType::kCPU, IN, OUT> {
-//   static void FftStftForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
-//                              const Shape& input_shape, const Shape& output_shape,
-//                              const Stride& input_stride, const Stride& output_stride, bool forward,
-//                              const std::vector<int64_t>& axes, fft_norm_mode normalization,
-//                              int64_t len, int64_t dims, int64_t batch) {
-//     PocketFFtParams<IN> params(input_shape, output_shape, input_stride, output_stride, axes, forward,
-//                               compute_fct<IN>(len, normalization) /*1.f*/, FFT_EXCUTETYPE::R2C);
-//     PocketFFtConfig<IN> config(params);
-//     int64_t in_offset = len;
-//     int64_t out_offset = len / 2 + 1;
-//     for (int j = 0; j < dims; j++) {
-//       for (int i = 0; i < batch; i++) {
-//         const IN* in = data_in + j * batch * in_offset + i * in_offset;
-//         OUT* out = data_out + j * batch * out_offset + i * out_offset;
-//         config.excute(in, out);
-//       }
-//     }
-//   }
-// };
 
 template struct FftC2CKernelUtil<DeviceType::kCPU, std::complex<float>, float>;
 template struct FftC2CKernelUtil<DeviceType::kCPU, std::complex<double>, double>;
@@ -102,6 +75,4 @@ template struct FftR2CKernelUtil<DeviceType::kCPU, double, std::complex<double>>
 template struct FftC2RKernelUtil<DeviceType::kCPU, std::complex<float>, float>;
 template struct FftC2RKernelUtil<DeviceType::kCPU, std::complex<double>, double>;
 
-// template struct FftStftKernelUtil<DeviceType::kCPU, float, std::complex<float>>;
-// template struct FftStftKernelUtil<DeviceType::kCPU, double, std::complex<double>>;
 }  // namespace oneflow
