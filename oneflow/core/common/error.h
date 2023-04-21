@@ -203,7 +203,7 @@ Error& operator<<(Error& error, const T& x) {
     error->set_msg(ss.str());
     error.set_msg_collecting_mode(Error::kMergeMessage);
   } else {
-    GlogLOGFATAL("UNIMPLEMENTED");
+    GLOGLOGFATAL("UNIMPLEMENTED");
   }
   return error;
 }

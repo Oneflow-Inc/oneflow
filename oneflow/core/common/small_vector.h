@@ -32,11 +32,11 @@ class small_vector : public llvm::SmallVector<T, N> {
   using Base::Base;
 
   typename Base::reference at(typename Base::size_type idx) {
-    GlogCHECK(idx < Base::size());
+    GLOGCHECK(idx < Base::size());
     return (*this)[idx];
   }
   typename Base::const_reference at(typename Base::size_type idx) const {
-    GlogCHECK(idx < Base::size());
+    GLOGCHECK(idx < Base::size());
     return (*this)[idx];
   }
   typename Base::reference operator[](typename Base::size_type idx) { return this->data()[idx]; }
