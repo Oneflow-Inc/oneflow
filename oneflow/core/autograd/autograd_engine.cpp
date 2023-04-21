@@ -246,7 +246,7 @@ GraphFunctionNode::GraphFunctionNode(const std::string& name,
                                      const std::shared_ptr<BackwardFunction>& backward_fn,
                                      const std::shared_ptr<Tensor>& variable,
                                      const TensorTuple& inputs, const TensorTuple& outputs)
-    : FunctionNode(name, backward_fn, nullptr) {
+    : FunctionNode(name, backward_fn, variable) {
   input_meta_data_.resize(inputs.size());
   next_functions_.reserve(inputs.size());
   for (int i = 0; i < inputs.size(); ++i) {
@@ -267,6 +267,7 @@ GraphFunctionNode::GraphFunctionNode(const std::string& name,
   }
 
   backward_fn_ = backward_fn;
+  variable_ = variable;
 }
 
 GraphTask::GraphTask(const TensorTuple& outputs, bool retain_graph, bool create_graph)
