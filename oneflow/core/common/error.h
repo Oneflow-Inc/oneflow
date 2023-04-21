@@ -233,6 +233,7 @@ inline Error&& operator<<(Error&& error, const Error& other) {
   return std::move(error);
 }
 
+// handle CHECK_OR_THROW(expr) << ... << std::endl;
 inline Error&& operator<<(Error&& error, std::ostream& (*os)(std::ostream&)) {
   error << os;
   return std::move(error);

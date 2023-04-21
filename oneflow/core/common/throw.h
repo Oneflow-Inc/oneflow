@@ -34,6 +34,7 @@ struct Throw final {
 
 #define PRINT_BUG_PROMPT_AND_ABORT() LOG(FATAL) << kOfBugIssueUploadPrompt
 
+// use CHECK_XX_OR_THROW instead of glog CHECK to get more information of stack when check failed
 #undef CHECK
 #undef CHECK_LT
 #undef CHECK_LE
