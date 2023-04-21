@@ -13,10 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_INTRUSIVE_ATTRIBUTE_H_
-#define ONEFLOW_CORE_COMMON_INTRUSIVE_ATTRIBUTE_H_
 
-#define INTRUSIVE_PREDICT_TRUE GOOGLE_PREDICT_TRUE
-#define INTRUSIVE_PREDICT_FALSE GOOGLE_PREDICT_FALSE
+#include "oneflow/core/common/throw.h"
+namespace oneflow {
+void Check(bool value) { CHECK_OR_THROW(value); }
 
-#endif  // ONEFLOW_CORE_COMMON_INTRUSIVE_ATTRIBUTE_H_
+void GlogLOGFATAL(const char* error_msg) { LOG(FATAL) << error_msg; }
+}  // namespace oneflow

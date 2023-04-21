@@ -16,7 +16,9 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_THROW_H_
 #define ONEFLOW_CORE_COMMON_THROW_H_
 
+#include <glog/logging.h>
 #include "oneflow/core/common/error.h"
+#include "oneflow/core/common/preprocessor.h"
 
 namespace oneflow {
 
@@ -30,6 +32,24 @@ struct Throw final {
 
 }  // namespace oneflow
 
+#define PRINT_BUG_PROMPT_AND_ABORT() LOG(FATAL) << kOfBugIssueUploadPrompt
+
+#undef CHECK
+#undef CHECK_LT
+#undef CHECK_LE
+#undef CHECK_EQ
+#undef CHECK_NE
+#undef CHECK_GT
+#undef CHECK_GE
+
+#define CHECK CHECK_OR_THROW
+#define CHECK_LT CHECK_LT_OR_THROW
+#define CHECK_LE CHECK_LE_OR_THROW
+#define CHECK_EQ CHECK_EQ_OR_THROW
+#define CHECK_NE CHECK_NE_OR_THROW
+#define CHECK_GT CHECK_GT_OR_THROW
+#define CHECK_GE CHECK_GE_OR_THROW
+
 #define THROW(err_type)                                                                    \
   ::oneflow::details::Throw() =                                                            \
       ::oneflow::Error::err_type().AddStackFrame([](const char* function) {                \
@@ -38,15 +58,10 @@ struct Throw final {
         return frame;                                                                      \
       }(__FUNCTION__))
 
-#define CHECK_OR_THROW(expr)                                                               \
-  if (!(expr))                                                                             \
-  ::oneflow::details::Throw() =                                                            \
-      ::oneflow::Error::CheckFailedError().AddStackFrame([](const char* function) {        \
-        thread_local static auto frame =                                                   \
-            ::oneflow::SymbolOf(::oneflow::ErrorStackFrame(__FILE__, __LINE__, function)); \
-        return frame;                                                                      \
-      }(__FUNCTION__))                                                                     \
-      << "Check failed: " << OF_PP_STRINGIZE(expr) << ": "
+#define CHECK_OR_THROW(expr)                                                         \
+  if (!(expr))                                                                       \
+  ::oneflow::details::Throw() = ::oneflow::Error::CheckFailedError().GetStackTrace() \
+                                << "Check failed: " << OF_PP_STRINGIZE(expr) << ": "
 
 #define CHECK_EQ_OR_THROW(lhs, rhs) \
   CHECK_OR_THROW((lhs) == (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "

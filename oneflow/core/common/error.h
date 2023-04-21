@@ -19,8 +19,9 @@ limitations under the License.
 #include <sstream>
 #include <vector>
 #include <functional>
-#include <glog/logging.h>
+// #include <glog/logging.h>
 #include "oneflow/core/common/error.pb.h"
+#include "oneflow/core/common/check.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/small_vector.h"
 #include "oneflow/core/common/hash.h"
@@ -203,7 +204,7 @@ Error& operator<<(Error& error, const T& x) {
     error->set_msg(ss.str());
     error.set_msg_collecting_mode(Error::kMergeMessage);
   } else {
-    LOG(FATAL) << "UNIMPLEMENTED";
+    GlogLOGFATAL("UNIMPLEMENTED");
   }
   return error;
 }
@@ -233,10 +234,16 @@ inline Error&& operator<<(Error&& error, const Error& other) {
   return std::move(error);
 }
 
+inline Error&& operator<<(Error&& error, std::ostream& (*os)(std::ostream&)) {
+  error << os;
+  return std::move(error);
+}
+
 extern const char* kOfBugIssueUploadPrompt;
 
 }  // namespace oneflow
 
-#define PRINT_BUG_PROMPT_AND_ABORT() LOG(FATAL) << kOfBugIssueUploadPrompt
+// #define PRINT_BUG_PROMPT_AND_ABORT() LOG(FATAL) << kOfBugIssueUploadPrompt
+// #define PRINT_BUG_PROMPT_AND_ABORT() GlogLOGFATAL(kOfBugIssueUploadPrompt)
 
 #endif  // ONEFLOW_CORE_COMMON_ERROR_H_
