@@ -77,6 +77,7 @@
 // REGISTER_CUDA_NORMAL_FLOAT_TENSOR_KERNEL(DeviceType::kCUDA, double)
 // } // namespace
 
+<<<<<<< HEAD
 // }  // namespace oneflow
 // /*
 // +---------------------+
@@ -95,3 +96,6 @@
 // | Template                |
 // +------------------------+
 // */
+=======
+}  // namespace oneflow
+>>>>>>> 30c8c177857ed8f2855cb7954a1a8426636a7a0d
