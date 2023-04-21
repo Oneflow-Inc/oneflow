@@ -250,9 +250,20 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kDigammaBackwardWithDyX, Src, 
         0, 0);
     Src trigamma_result = trigamma_functor(x);
     return trigamma_result * dy;
-    return 0.0;
   }
 };
+
+template<typename Src, typename Dst>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kLgammaBackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    ep::primitive::UnaryFunctor<DeviceType::kCUDA, UnaryOp::kDigamma, Src, Dst>
+        digamma_functor(0, 0);
+    Dst digamma_result = digamma_functor(x);
+    return digamma_result * dy;
+  }
+};
+
 
 #define SPECIALIZATION_INTEGRAL_CLOSENESS_BINARY_FUNCTOR(op, type)                            \
   template<typename Dst>                                                                      \
@@ -341,6 +352,7 @@ SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kTanBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kSigmoidBackwardWithDyY);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kSigmoidBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kAtanhBackwardWithDyX);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kLgammaBackwardWithDyX);
 
 #define SPECIALIZATION_BFLOAT16_COMPARISON_BINARY_FUNCTOR(op)                                 \
   template<typename Dst>                                                                      \
@@ -413,6 +425,7 @@ SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kTanBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kSigmoidBackwardWithDyY);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kSigmoidBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kAtanhBackwardWithDyX);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kLgammaBackwardWithDyX);
 
 #define SPECIALIZATION_HALF_COMPARISON_BINARY_FUNCTOR(op)                                     \
   template<typename Dst>                                                                      \

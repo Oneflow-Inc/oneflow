@@ -576,15 +576,6 @@ struct BinaryFunctor<device, BinaryOp::kExpm1BackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const { return dy * exp(x); }
 };
 
-template<DeviceType device, typename Src, typename Dst>
-struct BinaryFunctor<device, BinaryOp::kLgammaBackwardWithDyX, Src, Dst> {
-  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
-  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-    // TODO(chengcheng): return: dy * digamma(x)
-    assert(false);
-    return 0.0;
-  }
-};
 
 template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kLogBackwardWithDyX, Src, Dst> {
