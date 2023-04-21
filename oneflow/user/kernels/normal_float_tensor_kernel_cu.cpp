@@ -13,29 +13,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 // */
-// #include "oneflow/core/device/cuda_util.h"
+
 // #include "oneflow/core/framework/framework.h"
-// #include "oneflow/core/cuda/elementwise.cuh"
 // #include "oneflow/user/kernels/normal_with_tensor_kernel_util.h"
 
 // namespace oneflow {
-// namespace  {
+// namespace {
 // template<typename T>
 // struct GpuNormalFloatTensorFunctor {
 //   T std_;
 //   explicit GpuNormalFloatTensorFunctor(T std) : std_(std) {}
-//   OF_DEVICE_FUNCTION T operator()(T output_val, T mean_val) const {
+//    OF_DEVICE_FUNC T operator()(T output_val, T mean_val) const {
 //     // Add the two input values and return the result
 //     return mean_val + output_val * std_;
 //   }
 // };
 
+// }  // namespace
 
 // template<DeviceType device_type, typename T>
-// class CudaNormalFloatTensorKernel final : public user_op::OpKernel {
+// class GpuNormalFloatTensorKernel final : public user_op::OpKernel {
 //  public:
-//   CudaNormalFloatTensorKernel() = default;
-//   ~CudaNormalFloatTensorKernel() = default;
+//   GpuNormalFloatTensorKernel() = default;
+//   ~GpuNormalFloatTensorKernel() = default;
+
 //   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
 //       user_op::KernelInitContext* ctx) const override {
 //     const auto& generator = CHECK_JUST(one::MakeGenerator(device_type));
@@ -48,50 +49,32 @@
 //  private:
 //   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
 //                const user_op::OpKernelCache*) const override {
-//     const double mean = ctx->Attr<double>("mean");
 //     const user_op::Tensor* std = ctx->Tensor4ArgNameAndIndex("std", 0);
+//     const double mean = ctx->Attr<double>("mean");
 //     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     
+//     // mean_tensor + output * std
 //     normal_out_impl<device_type, T>(ctx, state, out, mean, std);
 
-//     T* out_dptr = out->mut_dptr<T>();
-//     const int64_t elem_cnt = std->shape_view().elem_cnt();
-//     cudaMemcpy(out_copy->mut_dptr(), out->dptr(), out->shape().elem_cnt() * sizeof(T), cudaMemcpyDeviceToDevice);
-//     GpuNormalFloatTensorFunctor<T> func(static_cast<T>(mean));
-//     OF_CUDA_CHECK((cuda::elementwise::Unary(func, elem_cnt, out_dptr,
-//                                           std->dptr<T>(),
-//                                         ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
-
+//     // // Use CUDA Elementwise Template.
+//     // T* out_dptr = out->mut_dptr<T>();
+//     // const int64_t elem_cnt = std->shape_view().elem_cnt();
+//     // GpuNormalFloatTensorFunctor<T> func(static_cast<T>(mean));
+//     // OF_CUDA_CHECK((cuda::elementwise::Binary(func, elem_cnt, out_dptr,
+//     //                                     out_dptr , std->dptr<T>(),
+//     //                                     ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
 //   }
 //   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 // };
 
-// #define REGISTER_CUDA_NORMAL_FLOAT_TENSOR_KERNEL(device, dtype)  \
-//   REGISTER_USER_KERNEL("normal_float_tensor")                     \
-//       .SetCreateFn<CudaNormalFloatTensorKernel<device, dtype>>() \
-//       .SetIsMatchedHob((user_op::HobDeviceType() == device)       \
+// #define REGISTER_CUDA_NORMAL_FLOAT_TENSOR_KERNEL(device, dtype)            \
+//   REGISTER_USER_KERNEL("normal_float_tensor")                              \
+//       .SetCreateFn<GpuNormalFloatTensorKernel<device,dtype>>()              \
+//       .SetIsMatchedHob((user_op::HobDeviceType() == device)                \
 //                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 // REGISTER_CUDA_NORMAL_FLOAT_TENSOR_KERNEL(DeviceType::kCUDA, half)
 // REGISTER_CUDA_NORMAL_FLOAT_TENSOR_KERNEL(DeviceType::kCUDA, float)
 // REGISTER_CUDA_NORMAL_FLOAT_TENSOR_KERNEL(DeviceType::kCUDA, double)
-// } // namespace
 
 // }  // namespace oneflow
-// /*
-// +---------------------+
-// | Retrieve input data |
-// +---------------------+
-//            |
-//            v
-// +------------------------+
-// | Compute normal dist.    |
-// +------------------------+
-//            |
-//            v
-// +------------------------+
-// | Compute output          |
-// | using CUDA Elementwise  |
-// | Template                |
-// +------------------------+
-// */
