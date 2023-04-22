@@ -193,8 +193,102 @@ add_docstr(
 add_docstr(
     oneflow._C.normal,
     r"""
-    normal(mean, std, size, *, out=None, placement=None, sbp=None, generator=None, dtype=None, device=None, requires_grad=False) -> Tensor
+    normal(mean, std, *, generator=None, out=None) -> Tensor
 
+    Returns a tensor of random numbers drawn from separate normal distributions
+    whose mean and standard deviation are given.
+
+    The :attr:`mean` is a tensor with the mean of
+    each output element's normal distribution
+
+    The :attr:`std` is a tensor with the standard deviation of
+    each output element's normal distribution
+
+    The shapes of :attr:`mean` and :attr:`std` don't need to match, but the
+    total number of elements in each tensor need to be the same.
+
+    .. note:: When the shapes do not match, the shape of :attr:`mean`
+              is used as the shape for the returned output tensor
+
+    Args:
+        mean (Tensor): the tensor of per-element means
+        std (Tensor): the tensor of per-element standard deviations
+
+    Keyword args:
+        generator (Generator, optional): Random number generator. Defaults to `oneflow::DefaultGenerator` if not provided.
+        out (Tensor, optional): Output tensor, will be resized and filled with the result. If not provided, a new tensor is created.  
+
+    Example::
+
+    .. code-block:: python
+        
+        >>> import oneflow as flow
+        >>> generator = flow.Generator()
+        >>> generator.manual_seed(0) #doctest: +ELLIPSIS
+        <oneflow._oneflow_internal.Generator object at ...>
+        >>> z = flow.normal(mean=flow.arange(1., 11.), std=flow.arange(1, 0, -0.1), generator=generator)
+        >>> z[:5]
+        tensor([3.2122, 3.0468, 3.6192, 4.3387, 5.6261], dtype=oneflow.float32)
+  
+    normal(mean: Tensor, std: double, *, generator: Optional[Generator] = None, out: Optional[Tensor] = None) -> Tensor  
+
+    Returns a tensor of random numbers drawn from separate normal distributions
+    whose mean and standard deviation are given.  
+
+    The :attr:`mean` is a tensor with the mean of  
+    each output element's normal distribution  
+
+    :attr:`std` is a double with the standard deviation of  
+    each output element's normal distribution  
+
+    Args:  
+        mean (Tensor): the tensor of per-element means  
+        std (double): the standard deviation  
+
+    Keyword args:  
+        generator (Generator, optional): Random number generator. Defaults to `oneflow::DefaultGenerator` if not provided.
+        out (Tensor, optional): Output tensor, will be resized and filled with the result. If not provided, a new tensor is created.  
+
+    Example:
+    
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> flow.normal(mean=0.5, std=flow.arange(1., 6.)).shape
+        oneflow.Size([5])
+       
+    
+    normal(mean, std, *, generator=None, out=None) -> Tensor
+
+    Returns a tensor of random numbers drawn from separate normal distributions
+    whose mean and standard deviation are given.  
+
+    The :attr:`mean` is a tensor with the mean of  
+    each output element's normal distribution  
+
+    :attr:`std` is a double with the standard deviation of  
+    each output element's normal distribution  
+
+    Args:  
+        mean (Tensor): the tensor of per-element means  
+        std (double): the standard deviation  
+
+    Keyword args:  
+        generator (Generator, optional): Random number generator. Defaults to `oneflow::DefaultGenerator` if not provided.  
+        out (Tensor): The output tensor
+
+    Returns:
+        Tensor: The output tensor, with random normal values.
+
+    Example:
+    
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> flow.normal(mean=flow.arange(1., 6.)).shape
+        oneflow.Size([5])
+
+    normal(mean, std, size, *, out=None, placement=None, sbp=None, generator=None, dtype=None, device=None, requires_grad=False) -> Tensor
     Returns a tensor of random numbers drawn from separate normal distributions whose mean and standard deviation are given.
 
     Args:
