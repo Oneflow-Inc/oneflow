@@ -35,7 +35,7 @@ if(BUILD_HWLOC)
         https://gitlab.freedesktop.org/xorg/util/macros/-/archive/util-macros-1.19.1/macros-util-macros-1.19.1.tar.gz
     )
     use_mirror(VARIABLE XORG_MACROS_TAR_URL URL ${XORG_MACROS_TAR_URL})
-    set(XORG_MACROS_URL_HASH 37afda9e9b44ecb9b2c16293bacd0e21)
+    set(XORG_MACROS_URL_HASH 764fb1647d7ebd1c8c5d707db525832f)
     set(XORG_MACROS_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/xorg-macros)
     set(XORG_MACROS_PKG_CONFIG_DIR ${XORG_MACROS_INSTALL}/share/pkgconfig)
 
@@ -54,7 +54,7 @@ if(BUILD_HWLOC)
         https://gitlab.freedesktop.org/xorg/lib/libpciaccess/-/archive/libpciaccess-0.16/libpciaccess-libpciaccess-0.16.tar.gz
     )
     use_mirror(VARIABLE PCIACCESS_TAR_URL URL ${PCIACCESS_TAR_URL})
-    set(PCIACCESS_URL_HASH 92e2b604e294a9160bc977c000507340)
+    set(PCIACCESS_URL_HASH 93554c189796c27dfc72af17a367a0b4)
     set(PCIACCESS_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/pciaccess)
 
     set(PCIACCESS_CFLAGS "-O3 -fPIC")
