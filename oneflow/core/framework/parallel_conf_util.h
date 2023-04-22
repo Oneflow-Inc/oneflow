@@ -24,12 +24,12 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<std::tuple<std::string, std::vector<std::string>, std::shared_ptr<ShapeProto>>>
-GetDeviceTagAndMachineDeviceIdsAndHierarchy(const ParallelConf& parallel_conf);
+std::tuple<std::string, std::vector<std::string>, std::shared_ptr<ShapeProto>, bool>
+ParseParallelConf(const ParallelConf& parallel_conf);
 
 Maybe<ParallelConf> MakeParallelConf(const std::string& device_tag,
                                      const std::vector<std::string>& machine_device_ids,
-                                     const std::shared_ptr<Shape>& hierarchy);
+                                     const std::shared_ptr<Shape>& hierarchy, bool rematable);
 
 }  // namespace oneflow
 

@@ -47,6 +47,7 @@ struct OpCallInstructionUtil final {
 
   static inline Maybe<void> Compute(OpCallInstructionPolicy* op_call_instruction_policy,
                                     vm::Stream* vm_stream, bool first, bool recompute) {
+    VLOG(1) << "compute " << op_call_instruction_policy->opkernel().op_type_name() << std::endl;
     Allocator* allocator = vm_stream->mut_stream_policy()->mut_allocator();
     const auto [remat_helper, inputs_rematable, outputs_rematable] =
         InitRematInfo(op_call_instruction_policy, vm_stream);

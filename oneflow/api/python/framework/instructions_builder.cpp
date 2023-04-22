@@ -67,9 +67,6 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
           },
           py::arg("session_id").none(false), py::arg("job_conf_str").none(false),
           py::arg("placement").none(false), py::arg("is_local").none(false))
-      .def("BuildScopeWithNewParallelDesc", &InstructionsBuilder::BuildScopeWithNewParallelDesc,
-           py::arg("scope").none(false), py::arg("device_tag").none(false),
-           py::arg("machine_device_ids").none(false), py::arg("hierarchy").none(true))
       .def("BuildScopeWithNewParallelConf",
            [](const std::shared_ptr<InstructionsBuilder>& builder,
               const std::shared_ptr<Scope>& scope,

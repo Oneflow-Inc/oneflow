@@ -107,7 +107,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<Scope> BuildScopeWithNewParallelDesc(const std::shared_ptr<Scope>& scope,
                                              const std::string& device_tag,
                                              const std::vector<std::string>& machine_device_ids,
-                                             const std::shared_ptr<Shape>& hierarchy);
+                                             const std::shared_ptr<Shape>& hierarchy, bool rematable);
 
   Maybe<Scope> BuildScopeWithNewParallelConf(const std::shared_ptr<Scope>& scope,
                                              const ParallelConf& parallel_conf);

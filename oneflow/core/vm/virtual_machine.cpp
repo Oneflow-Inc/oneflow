@@ -307,6 +307,8 @@ Maybe<void> VirtualMachine::CloseWorkerThreads() {
 }
 
 Maybe<void> VirtualMachine::RunInCurrentThread(vm::InstructionList* instr_list) {
+  static std::mutex mutex;
+  std::unique_lock lck(mutex);
   CHECK_OR_RETURN(engine_->SchedulerEmpty())
       << "vm scheduler not empty. May be a fatal error occured";
   JUST(engine_->Receive(instr_list));

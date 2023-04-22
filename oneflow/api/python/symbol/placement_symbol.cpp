@@ -52,9 +52,9 @@ struct PlacementSymbolExportUtil {
 
   static Maybe<ParallelDesc> CreateParallelDesc(
       const std::string& type, const std::vector<std::string>& formated_machine_device_ids,
-      const std::shared_ptr<Shape>& hierarchy_shape) {
+      const std::shared_ptr<Shape>& hierarchy_shape, bool rematable) {
     JUST(CheckDeviceTag(type));
-    auto parallel_conf = JUST(MakeParallelConf(type, formated_machine_device_ids, hierarchy_shape));
+    auto parallel_conf = JUST(MakeParallelConf(type, formated_machine_device_ids, hierarchy_shape, rematable));
     std::shared_ptr<ParallelDesc> parallel_desc;
     JUST(PhysicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
       parallel_desc = JUST(builder->GetParallelDescSymbol(*parallel_conf));
@@ -134,33 +134,34 @@ struct PlacementSymbolExportUtil {
 
   static Maybe<Symbol<ParallelDesc>> CreateParallelDescSymbol(
       const std::string& type, const py::dict& device_ids,
-      const std::shared_ptr<Shape>& hierarchy) {
+      const std::shared_ptr<Shape>& hierarchy, bool rematable) {
     const auto& formated_machine_device_ids = JUST(ParseAndFormatRanks(device_ids));
-    return SymbolOf(*JUST(CreateParallelDesc(type, *formated_machine_device_ids, hierarchy)));
+    return SymbolOf(*JUST(CreateParallelDesc(type, *formated_machine_device_ids, hierarchy, rematable)));
   }
 
   // create Symbol<ParallelDesc> object through given device_type and ranks parameters
   static Maybe<Symbol<ParallelDesc>> CreateParallelDescSymbol(const std::string& type,
-                                                              const py::object& ranks) {
+                                                              const py::object& ranks, bool rematable) {
     auto* obj = reinterpret_cast<PyArrayObject*>(PyArray_FromAny(
         ranks.ptr(), nullptr, 0, 0, NPY_ARRAY_DEFAULT | NPY_ARRAY_ENSURECOPY, nullptr));
     if (!obj) { return Error::RuntimeError() << "placement ranks shoule be an array of long int"; }
 
     const auto& shape = JUST(GetRanksShape(obj));
     const auto& formated_machine_device_ids = JUST(ParseAndFormatRanks(obj));
-    return SymbolOf(*JUST(CreateParallelDesc(type, *formated_machine_device_ids, shape)));
+    return SymbolOf(*JUST(CreateParallelDesc(type, *formated_machine_device_ids, shape, rematable)));
   }
 
   static Maybe<Symbol<ParallelDesc>> CreateParallelDescSymbol(const std::string& proto_str) {
     return SymbolOf(*JUST(CreateParallelDesc(proto_str)));
   }
 
-  static Maybe<Symbol<ParallelDesc>> AllDevicePlacement(const std::string& type) {
-    static thread_local HashMap<std::string, Symbol<ParallelDesc>> device_tag2placement;
+  static Maybe<Symbol<ParallelDesc>> AllDevicePlacement(const std::string& device_str) {
+    static thread_local HashMap<std::string, Symbol<ParallelDesc>> device_str2placement;
     CHECK_NOTNULL((Singleton<ResourceDesc, ForEnv>::Get()));
+    auto [type, _, rematable] = *JUST(ParseDeviceString(device_str));
     JUST(CheckDeviceTag(type));
-    auto it = device_tag2placement.find(type);
-    if (it == device_tag2placement.end()) {
+    auto it = device_str2placement.find(device_str);
+    if (it == device_str2placement.end()) {
       int64_t node_size = GlobalProcessCtx::NodeSize();
       int64_t device_num = GlobalProcessCtx::NumOfProcessPerNode();
       if (type != "cpu") {
@@ -176,8 +177,8 @@ struct PlacementSymbolExportUtil {
         machine_device_ids.emplace_back(device_name);
       }
       Symbol<ParallelDesc> placement =
-          SymbolOf(*JUST(CreateParallelDesc(type, machine_device_ids, std::shared_ptr<Shape>())));
-      it = device_tag2placement.emplace(type, placement).first;
+          SymbolOf(*JUST(CreateParallelDesc(type, machine_device_ids, std::shared_ptr<Shape>(), rematable)));
+      it = device_str2placement.emplace(type, placement).first;
     }
     return it->second;
   }
@@ -209,7 +210,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                  "versions. Please use oneflow.placement(type=str, ranks=int array) instead",
                  1);
              return PlacementSymbolExportUtil::CreateParallelDescSymbol(device_type, device_ids,
-                                                                        hierarchy)
+                                                                        hierarchy, false)
                  .GetOrThrow();
            }),
            py::arg("device_type"), py::arg("device_ids"), py::arg("hierarchy"))
@@ -223,14 +224,14 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
              DimVector shape_dims{};
              for (const auto& dim : hierarchy) { shape_dims.emplace_back(dim.cast<int64_t>()); }
              return PlacementSymbolExportUtil::CreateParallelDescSymbol(
-                        device_type, device_ids, std::make_shared<Shape>(shape_dims))
+                        device_type, device_ids, std::make_shared<Shape>(shape_dims), false)
                  .GetOrThrow();
            }),
            py::arg("device_type"), py::arg("device_ids"), py::arg("hierarchy") = py::tuple())
-      .def(py::init([](const std::string& type, const py::object& ranks) {
-             return PlacementSymbolExportUtil::CreateParallelDescSymbol(type, ranks).GetOrThrow();
+      .def(py::init([](const std::string& type, const py::object& ranks, bool rematable) {
+             return PlacementSymbolExportUtil::CreateParallelDescSymbol(type, ranks, rematable).GetOrThrow();
            }),
-           py::arg("type"), py::arg("ranks"))
+           py::arg("type"), py::arg("ranks"), py::arg("rematable") = false)
       .def(py::init([](const std::string& proto_str) {
              return PlacementSymbolExportUtil::CreateParallelDescSymbol(proto_str).GetOrThrow();
            }),

@@ -89,7 +89,14 @@ Maybe<ParallelDesc> ParallelDesc::New(int64_t symbol_id, const ParallelConf& par
 Maybe<ParallelDesc> ParallelDesc::New(const std::string& device_tag,
                                       const std::vector<std::string>& machine_device_ids,
                                       const std::shared_ptr<Shape>& hierarchy) {
-  const auto parallel_conf = JUST(MakeParallelConf(device_tag, machine_device_ids, hierarchy));
+  return New(device_tag, machine_device_ids, hierarchy, false);
+}
+
+Maybe<ParallelDesc> ParallelDesc::New(const std::string& device_tag,
+                                      const std::vector<std::string>& machine_device_ids,
+                                      const std::shared_ptr<Shape>& hierarchy, bool rematable) {
+  const auto parallel_conf =
+      JUST(MakeParallelConf(device_tag, machine_device_ids, hierarchy, rematable));
   std::shared_ptr<ParallelDesc> parallel_desc;
   JUST(PhysicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
     parallel_desc = JUST(builder->GetParallelDescSymbol(*parallel_conf));
