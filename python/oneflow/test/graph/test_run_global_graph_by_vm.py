@@ -32,6 +32,10 @@ class Graph(flow.nn.Graph):
 @flow.unittest.skip_unless_1n2d()
 class TestGlobalInterpreter(flow.unittest.TestCase):
     def test_data_parallel_run_by_vm(test_case):
+        os.environ["ONEFLOW_RUN_GRAPH_BY_VM"] = "1"
+        os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+        os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "1"
+
         class DataParallelMul(flow.nn.Module):
             def __init__(self, placement) -> None:
                 super().__init__()
@@ -54,7 +58,15 @@ class TestGlobalInterpreter(flow.unittest.TestCase):
         test_case.assertTrue(graph_output.placement == eager_output.placement)
         test_case.assertTrue(np.allclose(graph_output, eager_output))
 
+        os.environ["ONEFLOW_RUN_GRAPH_BY_VM"] = "0"
+        os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "0"
+        os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "0"
+
     def test_module_parallel_run_by_vm(test_case):
+        os.environ["ONEFLOW_RUN_GRAPH_BY_VM"] = "1"
+        os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+        os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "1"
+
         class ModuleParallelMul(flow.nn.Module):
             def __init__(self, placement) -> None:
                 super().__init__()
@@ -76,7 +88,15 @@ class TestGlobalInterpreter(flow.unittest.TestCase):
         test_case.assertTrue(graph_output.placement == eager_output.placement)
         test_case.assertTrue(np.allclose(graph_output, eager_output))
 
+        os.environ["ONEFLOW_RUN_GRAPH_BY_VM"] = "0"
+        os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "0"
+        os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "0"
+
     def test_boxing_data_parallel_run_by_vm(test_case):
+        os.environ["ONEFLOW_RUN_GRAPH_BY_VM"] = "1"
+        os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+        os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "1"
+
         class BoxingModuleParallelMul(flow.nn.Module):
             def __init__(self, placement) -> None:
                 super().__init__()
@@ -101,14 +121,10 @@ class TestGlobalInterpreter(flow.unittest.TestCase):
         test_case.assertTrue(graph_output.placement == eager_output.placement)
         test_case.assertTrue(np.allclose(graph_output, eager_output))
 
+        os.environ["ONEFLOW_RUN_GRAPH_BY_VM"] = "0"
+        os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "0"
+        os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "0"
+
 
 if __name__ == "__main__":
-    os.environ["ONEFLOW_RUN_GRAPH_BY_VM"] = "1"
-    os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-    os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "1"
-
     unittest.main()
-
-    os.environ["ONEFLOW_RUN_GRAPH_BY_VM"] = "0"
-    os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "0"
-    os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "0"
