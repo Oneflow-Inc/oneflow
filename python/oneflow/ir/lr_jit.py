@@ -102,7 +102,7 @@ def _test_current_lr_jit(test_case):
 
 
 @oneflow.unittest.skip_unless_1n1d()
-class TestCurrentLRJIT(oneflow.unittest.TestCase):
+class TestCurrentLRJIT(oneflow.unittest.MLIRTestCase):
     def test_current_lr_jit(test_case):
         _test_current_lr_jit(test_case)
 
