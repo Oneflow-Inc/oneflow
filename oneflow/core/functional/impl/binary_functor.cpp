@@ -56,9 +56,9 @@ Maybe<void> CastDeviceForCPUScalarTensor(std::shared_ptr<Tensor>& tensor,
                                          std::shared_ptr<Tensor>& other, bool inplace) {
   if (TensorDeviceToString(tensor) != TensorDeviceToString(other)) {
     if (IsCPUScalarTensor(other)) {
-      other = JUST(functional::To(other, TensorDeviceToString(tensor)));
+      other = JUST(functional::To(other, TensorDeviceToString(tensor), /*non_blocking=*/false));
     } else if (!inplace && IsCPUScalarTensor(tensor)) {
-      tensor = JUST(functional::To(tensor, TensorDeviceToString(other)));
+      tensor = JUST(functional::To(tensor, TensorDeviceToString(other), /*non_blocking=*/false));
     }
   }
   return Maybe<void>::Ok();

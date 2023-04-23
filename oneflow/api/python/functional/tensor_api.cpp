@@ -134,7 +134,8 @@ class TensorWithOtherGenericCtorFunctor {
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     bool is_pinned = false;
     if (other->is_local()) { is_pinned = JUST(CHECK_JUST(other->AsLocalTensor())->is_pinned()); }
-    return To(JUST(MakeTensorFromOtherTensor(other, is_pinned)), dtype, false);
+    return To(JUST(MakeTensorFromOtherTensor(other, is_pinned)), dtype, /*non_blocking=*/false,
+              /*copy=*/false);
   }
 };
 
@@ -236,7 +237,9 @@ class AssignLocalTensorFunctor {
     // JUST(CheckInplaceValid(y)); // align check to torch
     CHECK_OR_RETURN(y->is_local() && x->is_local()) << "Both x and y must be local tensor.";
     std::shared_ptr<one::Tensor> src = x;
-    if (y->dtype() != src->dtype()) { src = JUST(To(src, y->dtype(), false)); }
+    if (y->dtype() != src->dtype()) {
+      src = JUST(To(src, y->dtype(), /*non_blocking=*/false, /*copy=*/false));
+    }
 
     auto device = JUST(y->device());
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("device", "pin_memory");

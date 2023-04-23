@@ -2399,14 +2399,14 @@ class CtcLossFunctor {
     }
     const std::string& log_probs_device_str = *JUST(DeviceTag4DeviceType(log_probs_device_type));
     std::shared_ptr<one::Tensor> target_lengths_on_log_probs_device =
-        JUST(functional::To(target_lengths, log_probs_device_str));
+        JUST(functional::To(target_lengths, log_probs_device_str, /*non_blocking=*/false));
     if (targets->dtype()->data_type() == DataType::kInt32) {
       out = JUST(OpInterpUtil::Dispatch<Tensor>(
           *op_,
           {
               log_probs,
-              JUST(functional::To(targets, log_probs_device_str)),
-              JUST(functional::To(input_lengths, log_probs_device_str)),
+              JUST(functional::To(targets, log_probs_device_str, /*non_blocking=*/false)),
+              JUST(functional::To(input_lengths, log_probs_device_str, /*non_blocking=*/false)),
               target_lengths_on_log_probs_device,
           },
           attrs));
@@ -2416,8 +2416,8 @@ class CtcLossFunctor {
           {
               log_probs,
               JUST(functional::To(targets, Optional<std::string>(log_probs_device_str),
-                                  DType::Int64(), false)),
-              JUST(functional::To(input_lengths, log_probs_device_str)),
+                                  DType::Int64(), /*non_blocking=*/false, /*copy=*/false)),
+              JUST(functional::To(input_lengths, log_probs_device_str, /*non_blocking=*/false)),
               target_lengths_on_log_probs_device,
           },
           attrs));

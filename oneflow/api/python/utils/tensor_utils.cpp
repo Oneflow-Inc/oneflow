@@ -183,11 +183,12 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
 
   Py_DECREF(array);
   if (dtype && JUST(dtype)->data_type() != np_data_type) {
-    tensor = JUST(functional::To(tensor, JUST(dtype), false));
+    tensor = JUST(functional::To(tensor, JUST(dtype), /*non_blocking=*/false, /*copy=*/false));
   } else if (!dtype && !PyArray_Check(data) && tensor->dtype()->is_floating_point()
              && GetDefaultDType() != tensor->dtype()) {
     // If it not assign dtype and created from PySequence, cast tensor to default floating dtype
-    tensor = JUST(functional::To(tensor, JUST(DType::Get(DataType::kFloat)), false));
+    tensor = JUST(functional::To(tensor, JUST(DType::Get(DataType::kFloat)), /*non_blocking=*/false,
+                                 /*copy=*/false));
   }
   JUST(tensor->set_requires_grad(requires_grad));
   return tensor;

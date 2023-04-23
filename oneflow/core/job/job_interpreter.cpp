@@ -170,7 +170,7 @@ Maybe<one::TensorTuple> InterpretJob(const one::TensorTuple& graph_inputs,
       OF_PROFILER_RANGE_GUARD(user_conf.op_type_name());
       TensorTuple inputs =
           *JUST(GetInputTensors(user_conf, env, [&op_conf](const std::shared_ptr<Tensor>& tensor) {
-            return CHECK_JUST(functional::To(tensor, op_conf.device_tag()));
+            return CHECK_JUST(functional::To(tensor, op_conf.device_tag(), /*non_blocking=*/false));
           }));
       OpArgsVector<std::string> output_names = GetOutputNamesOfOp(user_conf);
       if (IsViewOp(op)) {

@@ -355,7 +355,8 @@ DIRECT_PASS_FUNC(PyTensorObject_logaddexp, functional::logaddexp)
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
-  return PyTensor_New(ASSERT_PTR(functional::To(PyTensor_Unpack(self), DType::UInt8(), false)));
+  return PyTensor_New(ASSERT_PTR(functional::To(PyTensor_Unpack(self), DType::UInt8(),
+                                                /*non_blocking=*/false, /*copy=*/false)));
   END_HANDLE_ERRORS
 }
 
@@ -489,7 +490,8 @@ static PyObject* PyTensorObject_reshape_as(PyObject* self, PyObject* args, PyObj
 static PyObject* PyTensorObject_cpu(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   Optional<std::string> device = "cpu";
-  return PyTensor_New(ASSERT_PTR(functional::To(PyTensor_Unpack(self), device, NullOpt, false)));
+  return PyTensor_New(ASSERT_PTR(functional::To(PyTensor_Unpack(self), device, NullOpt,
+                                                /*non_blocking=*/false, /*copy=*/false)));
   END_HANDLE_ERRORS
 }
 
@@ -504,7 +506,8 @@ static PyObject* PyTensorObject_cuda(PyObject* self, PyObject* args, PyObject* k
   auto tensor = PyTensor_Unpack(self);
   if (functional::PyDeviceCheck(device_obj)) {
     Optional<Symbol<Device>> device = functional::PyUnpackDevice(device_obj);
-    return PyTensor_New(ASSERT_PTR(functional::To(tensor, device, NullOpt, false)));
+    return PyTensor_New(ASSERT_PTR(
+        functional::To(tensor, device, NullOpt, /*non_blocking=*/false, /*copy=*/false)));
   }
   Optional<std::string> device_str;
   if (device_obj == Py_None) {
@@ -512,7 +515,8 @@ static PyObject* PyTensorObject_cuda(PyObject* self, PyObject* args, PyObject* k
   } else if (PyLong_Check(device_obj)) {
     device_str = "cuda:" + std::to_string(PyLong_AsLongLong(device_obj));
   }
-  return PyTensor_New(ASSERT_PTR(functional::To(tensor, device_str, tensor->dtype(), false)));
+  return PyTensor_New(ASSERT_PTR(
+      functional::To(tensor, device_str, tensor->dtype(), /*non_blocking=*/false, /*copy=*/false)));
   END_HANDLE_ERRORS
 }
 
@@ -623,12 +627,13 @@ REDUCE_FUNC(PyTensorObject_all, functional::reduce_all, functional::ReduceAllWho
 REDUCE_FUNC(PyTensorObject_sum, functional::reduce_sum, functional::ReduceSumWhole)
 REDUCE_FUNC(PyTensorObject_mean, functional::reduce_mean, functional::ReduceMeanWhole)
 
-#define DATATYPE_FUNC(func_name, dtype)                                    \
-  static PyObject* func_name(PyObject* self, PyObject* unused) {           \
-    HANDLE_ERRORS                                                          \
-    auto tensor = PyTensor_Unpack(self);                                   \
-    return PyTensor_New(ASSERT_PTR(functional::To(tensor, dtype, false))); \
-    END_HANDLE_ERRORS                                                      \
+#define DATATYPE_FUNC(func_name, dtype)                                                     \
+  static PyObject* func_name(PyObject* self, PyObject* unused) {                            \
+    HANDLE_ERRORS                                                                           \
+    auto tensor = PyTensor_Unpack(self);                                                    \
+    return PyTensor_New(                                                                    \
+        ASSERT_PTR(functional::To(tensor, dtype, /*non_blocking=*/false, /*copy=*/false))); \
+    END_HANDLE_ERRORS                                                                       \
   }
 
 DATATYPE_FUNC(PyTensorObject_bool, DType::Bool());
@@ -832,13 +837,14 @@ static PyObject* PyTensorObject_type_as(PyObject* self, PyObject* args, PyObject
     if (self_tensor->is_global()) {
       self_tensor = ASSERT_PTR(functional::GlobalToLocal(self_tensor, /*copy=*/false));
     }
-    return PyTensor_New(
-        ASSERT_PTR(functional::To(self_tensor, device, other_tensor->dtype(), /*copy=*/false)));
+    return PyTensor_New(ASSERT_PTR(functional::To(self_tensor, device, other_tensor->dtype(),
+                                                  /*non_blocking=*/false, /*copy=*/false)));
   }
 
   // target is global
   std::shared_ptr<Tensor> value_tensor;
-  value_tensor = ASSERT_PTR(functional::To(self_tensor, other_tensor->dtype(), /*copy=*/false));
+  value_tensor = ASSERT_PTR(
+      functional::To(self_tensor, other_tensor->dtype(), /*non_blocking=*/false, /*copy=*/false));
   Symbol<ParallelDesc> placement = ASSERT(other_tensor->parallel_desc());
   std::vector<Symbol<SbpParallel>> sbp;
   auto ndsbp = ASSERT(other_tensor->nd_sbp());
@@ -960,8 +966,8 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
             << Error::RuntimeError()
             << "tensor_setitem(): value must be a local tensor when self is local";
         Optional<Symbol<Device>> device = ASSERT(tensor->device());
-        value_tensor =
-            ASSERT_PTR(functional::To(value_tensor, device, value_tensor->dtype(), false));
+        value_tensor = ASSERT_PTR(functional::To(value_tensor, device, value_tensor->dtype(),
+                                                 /*non_blocking=*/false, /*copy=*/false));
       }
     }
   }

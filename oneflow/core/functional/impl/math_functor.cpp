@@ -867,7 +867,7 @@ class MedianFunctor {
           JUST(functional::Constant(Shape({1}).RemoveOnes({0}),
                                     Scalar(std::numeric_limits<float>::quiet_NaN()),
                                     JUST(DType::Get(DataType::kFloat)), NullOpt)),
-          x, false);
+          x, /*non_blocking=*/false, /*copy=*/false);
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
   }
@@ -988,7 +988,7 @@ class LogSumExpFunctor {
                            const bool& keepdims) const {
     if (x->ndim() == 0) {
       // can't take amax of 0-dim tensor
-      return To(x, JUST(DType::Get(DataType::kFloat)), false);
+      return To(x, JUST(DType::Get(DataType::kFloat)), /*non_blocking=*/false, /*copy=*/false);
     } else if (x->nelement() == 0) {
       // can't take amax of empty tensor
       std::shared_ptr<one::Tensor> exp_out = JUST(Exp(x));
