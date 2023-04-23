@@ -69,6 +69,7 @@ int32_t main(int32_t argc, char** argv) {
   mlir::registerAppendOneFlowStreamPassPass();
   mlir::registerInsertOneFlowMemPoolPass();
   mlir::registerFoldAllocToSubviewPass();
+  mlir::registerMgpuToOneFlowStreamPassPass();
   mlir::registerOneFlowJobToFuncPassPass();
   mlir::registerCastOneFlowOpsToSignlessPassPass();
   mlir::registerFuncToOneFlowJobPassPass();

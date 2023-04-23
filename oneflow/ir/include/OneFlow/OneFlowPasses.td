@@ -70,7 +70,7 @@ def WrapOpsToKernelLaunchPass : Pass<"wrap-ops-to-kernel-launch", "ModuleOp"> {
 }
 
 def EliminateAllocOpsPass : Pass<"eliminate-alloc-ops", "ModuleOp"> {
-  let summary = "";
+  let summary = "eliminate memref.alloc and memref.copy which target is a block argument";
   let constructor = "mlir::oneflow::createEliminateAllocOpsPass()";
   let dependentDialects = ["pdl_interp::PDLInterpDialect", "pdl::PDLDialect"];
 }
@@ -78,6 +78,11 @@ def EliminateAllocOpsPass : Pass<"eliminate-alloc-ops", "ModuleOp"> {
 def AppendOneFlowStreamPass : Pass<"append-ofstream", "ModuleOp"> {
   let summary = "append oneflow stream to gpu function arguments";
   let constructor = "mlir::oneflow::createAppendOneFlowStreamPass()";
+}
+
+def MgpuToOneFlowStreamPass : Pass<"mgpu-to-ofstream", "ModuleOp"> {
+  let summary = "convert mlir abi about mgpu to oneflow stream, this pass should be invoked after append-ofstream pass";
+  let constructor = "mlir::oneflow::createMgpuToOneFlowStreamPass()";
 }
 
 def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "ModuleOp"> {

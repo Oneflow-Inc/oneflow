@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/ir/include/OneFlow/Passes.h"
 #include "oneflow/ir/include/OneFlow/Extension.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -131,7 +132,7 @@ void WithMlirContext(
 
   mlir::ExecutionEngineOptions jitOptions;
   jitOptions.transformer = {};
-  jitOptions.jitCodeGenOptLevel = llvm::None;
+  jitOptions.jitCodeGenOptLevel = std::nullopt;
   jitOptions.sharedLibPaths = ext_libs;
 
   auto jit_or_error = mlir::ExecutionEngine::create(*module, jitOptions);
@@ -142,7 +143,7 @@ void WithMlirContext(
       GetMLIRCInterfaceArgs(ctx);
   llvm::SmallVector<void*> packed_args{};
   for (auto& arg /* arg must be a reference*/ : args) { packed_args.push_back(&arg); }
-  packed_args.push_back(stream);
+  packed_args.push_back(&stream);
   auto error = jit->invokePacked(GetMLIRCInterface(ctx->op_name()), packed_args);
   CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
 }
@@ -167,7 +168,11 @@ class MlirJitCpuKernel final : public user_op::OpKernel {
           CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToLLVM(mlir_ctx, module)))
               << "fail to lower OneFlow to LLVM";
         },
-        ctx->stream());
+#ifdef WITH_CUDA
+        ctx->stream()->As<ep::CudaStream>()->cuda_stream());
+#else
+        nullptr);
+#endif  // WITH_CUDA
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -211,7 +216,7 @@ class MlirJitGpuKernel final : public user_op::OpKernel {
           CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToCUDALLVM(mlir_ctx, module)))
               << "fail to lower OneFlow to CUDA LLVM";
         },
-        ctx->stream());
+        nullptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
