@@ -156,6 +156,10 @@ def _test_fused_multi_head_attention_inference(
 
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipUnless(oneflow.sysconfig.with_cuda(), "needs -DBUILD_CUDA=ON")
+# TODO: skip for GTX1080 in CI
+@unittest.skipUnless(
+    flow.cuda.get_device_capability()[0] >= 7, "needs CUDA compatibility >= 7"
+)
 class TestFusedMultiHeadAttentionInference(flow.unittest.MLIRTestCase):
     def setUp(self):
         os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
