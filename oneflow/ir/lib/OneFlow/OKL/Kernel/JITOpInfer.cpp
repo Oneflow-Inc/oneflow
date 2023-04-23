@@ -47,12 +47,14 @@ namespace jit {
 
 static Maybe<mlir::FunctionType> GetFunctionType(user_op::InferContext* ctx,
                                                  mlir::OwningOpRef<mlir::ModuleOp>& module) {
+  // if the raw graph is existent, we should load function from the raw_graph.
   auto raw_graph = (*module)->getAttr(mlir::oneflow::jit::RAW_GRAPH).cast<mlir::StringAttr>();
-  CHECK_OR_RETURN(raw_graph) << "Fail to find raw graph of jit module";
-  mlir::OwningOpRef<mlir::ModuleOp> raw_module =
-      mlir::parseSourceString<mlir::ModuleOp>(raw_graph.strref(), module->getContext());
+
+  mlir::ModuleOp raw_module =
+      raw_graph ? *mlir::parseSourceString<mlir::ModuleOp>(raw_graph.strref(), module->getContext())
+                : *module;
   mlir::func::FuncOp funcOp = mlir::SymbolTable::lookupNearestSymbolFrom<mlir::func::FuncOp>(
-      raw_module.get(), mlir::SymbolRefAttr::get(raw_module->getContext(), ctx->op_name()));
+      raw_module, mlir::SymbolRefAttr::get(raw_module->getContext(), ctx->op_name()));
   CHECK_OR_RETURN(funcOp) << "Fail to find funcOp of symbol " << ctx->op_name();
   const auto funcType = funcOp.getFunctionType();
   CHECK_EQ_OR_RETURN(funcType.getNumInputs(), ctx->input_size("in"))
