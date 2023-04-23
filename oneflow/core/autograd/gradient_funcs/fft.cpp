@@ -30,7 +30,7 @@ struct FftR2CCaptureState : public AutoGradCaptureState {
   bool forward;
   std::vector<int64_t> dims;
   DimVector input_shape_vec;
-  std::string norm_str;
+  int32_t norm_mode;
 };
 
 class FftR2C : public OpExprGradFunction<FftR2CCaptureState> {
@@ -48,7 +48,7 @@ class FftR2C : public OpExprGradFunction<FftR2CCaptureState> {
     ctx->onesided = JUST(attrs.GetAttr<bool>("onesided"));
     ctx->forward = JUST(attrs.GetAttr<bool>("forward"));
     ctx->dims = JUST(attrs.GetAttr<std::vector<int64_t>>("dims"));
-    ctx->norm_str = JUST(attrs.GetAttr<std::string>("norm"));
+    ctx->norm_mode = JUST(attrs.GetAttr<int32_t>("norm_mode"));
     ctx->input_shape_vec = inputs.at(0)->shape()->dim_vec();
 
     return Maybe<void>::Ok();
@@ -61,8 +61,8 @@ class FftR2C : public OpExprGradFunction<FftR2CCaptureState> {
     if (!ctx->onesided) {
       std::cout << "=========== [FftR2C Op Backward] !ctx->onesided ===========" << std::endl;
       auto complex_grad =
-          JUST(functional::FftC2C(out_grads.at(0), NullOpt, ctx->dims, ctx->norm_str,
-                                  /*forward*/ !(ctx->forward), /*is_grad_fn*/ true));
+          JUST(functional::FftC2C(out_grads.at(0), NullOpt, ctx->dims, ctx->norm_mode,
+                                  /*forward*/ !(ctx->forward)));
       in_grads->at(0) = JUST(functional::Real(complex_grad));
     } else {
       std::cout << "=========== [FftR2C Op Backward] ctx->onesided ===========" << std::endl;
@@ -71,8 +71,8 @@ class FftR2C : public OpExprGradFunction<FftR2CCaptureState> {
       std::vector<int64_t> fft_shapes(fft_dims.size(), 0);
       FOR_RANGE(size_t, i, 0, fft_dims.size()) { fft_shapes[i] = input_shape[fft_dims[i]]; }
       auto complex_full_grad =
-          JUST(functional::FftC2C(out_grads.at(0), fft_shapes, ctx->dims, ctx->norm_str,
-                                  /*forward*/ !(ctx->forward), /*is_grad_fn*/ true));
+          JUST(functional::FftC2C(out_grads.at(0), fft_shapes, ctx->dims, ctx->norm_mode,
+                                  /*forward*/ !(ctx->forward)));
       in_grads->at(0) = JUST(functional::Real(complex_full_grad));
     }
 
@@ -84,7 +84,7 @@ struct FftC2CCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   bool forward;
   std::vector<int64_t> dims;
-  std::string norm_str;
+  int32_t norm_mode;
 };
 
 class FftC2C : public OpExprGradFunction<FftC2CCaptureState> {
@@ -103,7 +103,7 @@ class FftC2C : public OpExprGradFunction<FftC2CCaptureState> {
 
     ctx->forward = JUST(attrs.GetAttr<bool>("forward"));
     ctx->dims = JUST(attrs.GetAttr<std::vector<int64_t>>("dims"));
-    ctx->norm_str = JUST(attrs.GetAttr<std::string>("norm"));
+    ctx->norm_mode = JUST(attrs.GetAttr<int32_t>("norm_mode"));
 
     return Maybe<void>::Ok();
   }
@@ -112,8 +112,8 @@ class FftC2C : public OpExprGradFunction<FftC2CCaptureState> {
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
-    in_grads->at(0) = JUST(functional::FftC2C(out_grads.at(0), NullOpt, ctx->dims, ctx->norm_str,
-                                              /*forward*/ !(ctx->forward), /*is_grad_fn*/ true));
+    in_grads->at(0) = JUST(functional::FftC2C(out_grads.at(0), NullOpt, ctx->dims, ctx->norm_mode,
+                                              /*forward*/ !(ctx->forward)));
     return Maybe<void>::Ok();
   }
 };
@@ -122,7 +122,7 @@ struct FftC2RCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   bool forward;
   std::vector<int64_t> dims;
-  std::string norm_str;
+  int32_t norm_mode;
   int64_t last_dim_size;
   DimVector input_shape_vec;
 };
@@ -141,7 +141,7 @@ class FftC2R : public OpExprGradFunction<FftC2RCaptureState> {
     ctx->requires_grad = inputs.at(0)->requires_grad();
     ctx->forward = JUST(attrs.GetAttr<bool>("forward"));
     ctx->dims = JUST(attrs.GetAttr<std::vector<int64_t>>("dims"));
-    ctx->norm_str = JUST(attrs.GetAttr<std::string>("norm"));
+    ctx->norm_mode = JUST(attrs.GetAttr<int32_t>("norm_mode"));
     ctx->last_dim_size = JUST(attrs.GetAttr<int64_t>("last_dim_size"));
     ctx->input_shape_vec = inputs.at(0)->shape()->dim_vec();
 
@@ -152,7 +152,7 @@ class FftC2R : public OpExprGradFunction<FftC2RCaptureState> {
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
-    auto complex_grad = JUST(functional::FftR2C(out_grads.at(0), NullOpt, ctx->dims, ctx->norm_str,
+    auto complex_grad = JUST(functional::FftR2C(out_grads.at(0), NullOpt, ctx->dims, ctx->norm_mode,
                                                 /*onesided=*/true, ctx->forward));
     Shape input_shape(ctx->input_shape_vec);
     int64_t last_dim = ctx->dims.back();

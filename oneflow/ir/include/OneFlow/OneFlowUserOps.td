@@ -5084,7 +5084,7 @@ def OneFlow_FftC2COp : OneFlow_BaseOp<"fft_c2c", [SupportNonContiguous, DeclareO
   let attrs = (ins
     SI64ArrayAttr:$dims,
     BoolAttr:$forward,
-    StrAttr:$norm,
+    DefaultValuedAttr<SI32Attr, "0">:$norm_mode,
     DefaultValuedAttr<F64Attr, "1.">:$norm_fct    
   );
 
@@ -5104,7 +5104,7 @@ def OneFlow_FftR2COp : OneFlow_BaseOp<"fft_r2c", [SupportNonContiguous, DeclareO
 
   let attrs = (ins
     SI64ArrayAttr:$dims,
-    StrAttr:$norm,
+    DefaultValuedAttr<SI32Attr, "0">:$norm_mode,
     DefaultValuedAttr<F64Attr, "1.">:$norm_fct,
     BoolAttr:$onesided,
     BoolAttr:$forward
@@ -5126,7 +5126,7 @@ def OneFlow_FftC2ROp : OneFlow_BaseOp<"fft_c2r", [SupportNonContiguous, DeclareO
 
   let attrs = (ins
     SI64ArrayAttr:$dims,
-    StrAttr:$norm,
+    DefaultValuedAttr<SI32Attr, "0">:$norm_mode,
     DefaultValuedAttr<F64Attr, "1.">:$norm_fct,
     SI64Attr:$last_dim_size,
     BoolAttr:$forward

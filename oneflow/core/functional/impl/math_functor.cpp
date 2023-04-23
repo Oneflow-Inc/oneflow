@@ -4193,8 +4193,8 @@ class FftC2CFunctor : public FftBaseFunctor {
  public:
   FftC2CFunctor() : FftBaseFunctor("fft_c2c") {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const Optional<std::vector<int64_t>>& n,
-                           const Optional<std::vector<int64_t>>& dims, const std::string& norm_str,
+                           const std::vector<int64_t>& dims,
+                           int32_t norm_mode, int32_t norm_mode,
                            bool forward, bool is_grad_fn) const {
     CHECK_OR_THROW(x->dtype()->is_complex())
         << "expects the dtype of input Tensor  is Complex, but gets " << x->dtype()->name();
@@ -4279,7 +4279,7 @@ class FftR2CFunctor : public FftBaseFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const Optional<std::vector<int64_t>>& n,
-                           const Optional<std::vector<int64_t>>& dims, const std::string& norm_str,
+                           const Optional<std::vector<int64_t>>& dims, int32_t norm_mode,
                            bool onesided, bool forward) const {
     CHECK_OR_THROW(!(x->dtype()->is_complex()))
         << "expects the dtype of input Tensor  is Real, but gets " << x->dtype()->name();
@@ -4310,7 +4310,7 @@ class FftR2CFunctor : public FftBaseFunctor {
     //   int64_t last_dim = wrapped_dims.back();
     //   int64_t last_dim_halfsize = resized_tensor->dim(last_dim) / 2 + 1;
     // }
-    double norm_fct = fft_compute_fct<double>(*(resized_tensor->shape()), wrapped_dims, norm_mode);
+    double norm_fct = fft_compute_fct<double>(*(resized_tensor->shape()), wrapped_dims, static_cast<fft_norm_mode>(norm_mode));
 
     std::shared_ptr<Tensor> output;
     // get last dim half size
@@ -4422,7 +4422,7 @@ class FftC2RFunctor : public FftBaseFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const Optional<std::vector<int64_t>>& n,
-                           const Optional<std::vector<int64_t>>& dims, const std::string& norm_str,
+                           const Optional<std::vector<int64_t>>& dims, int32_t norm_mode,
                            bool forward) const {
     CHECK_OR_THROW(x->dtype()->is_complex())
         << "expects the dtype of input Tensor is Complex, but gets " << x->dtype()->name();
@@ -4443,15 +4443,53 @@ class FftC2RFunctor : public FftBaseFunctor {
 
     if (forward) { resized_tensor = JUST(functional::ConjPhysical(resized_tensor)); }
 
-    fft_norm_mode norm_mode = fft_norm_from_string(norm_str, forward);
+
     Shape out_shape = *(resized_tensor->shape());
     out_shape[wrapped_dims.back()] = last_dim_size;
-    double norm_fct = fft_compute_fct<double>(out_shape, wrapped_dims, norm_mode);
+    double norm_fct = fft_compute_fct<double>(out_shape, wrapped_dims, static_cast<fft_norm_mode>(norm_mode));
 
+    DeviceType input_device{};
+    if (x->is_global()) {
+      input_device = JUST(x->parallel_desc())->device_type();
+    } else {
+      input_device = JUST(x->device())->enum_type();
+    }
+
+    if (input_device = DeviceType::kCPU){
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "norm_fct", "last_dim_size", "forward");
     attrs.SetAllAttrs(wrapped_dims, norm_str, norm_fct, last_dim_size, forward);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {resized_tensor}, attrs);
+    }
+    else if (input_device == DeviceType::kCUDA) {
+      std::shared_ptr<Tensor> output;
+      if (use_optimized_cufft_path(wrapped_dims)){
+        resized_tensor = JUST(functional::ToContiguous(resized_tensor));
+        std::vector<int64_t> out_sizes(out_shape.dim_vec().begin(), out_shape.dim_vec().end());
+        std::vector<int64_t> out_strides;
+        auto input = JUST(permute_and_reshape(resized_tensor, out_sizes, wrapped_dims, out_strides));
+        std::vector<int64_t> fft_dims(input->ndim() - 1); // must >= 1
+        std::iota(fft_dims.begin(), fft_dims.end(), int64_t(1));
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {resized_tensor}, attrs);
+        auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm", "norm_fct", "last_dim_size", "forward");
+        attrs.SetAllAttrs(wrapped_dims, norm_str, norm_fct, last_dim_size, /*forward=*/false);
+        output = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs));
+        output = JUST(functional::AsStrided(output, out_sizes, out_strides, JUST(output->storage_offset())));
+        JUST(functional::ScalarMul(output, Scalar(norm_fct), true));
+        return output;
+      }
+      else{
+        // First complete any C2C transforms
+
+        // Finally, do a 1D C2R transforms in last dim
+
+      }
+
+
+    }
+    else {
+      UNIMPLEMENTED_THEN_RETURN() << "FFTC2R: Only support cpu and cuda device.";
+    }
+
   }
 
   Maybe<void> parse_c2r_input_n_and_dims(const std::shared_ptr<Tensor>& x,
@@ -4481,19 +4519,23 @@ class FftFunctor {
                            int64_t dim, const Optional<std::string>& norm) const {
     std::string norm_str = norm.value_or("backward");
     std::vector<int64_t> fft_dim{dim};
+
+    bool forward = true;
+    fft_norm_mode norm_mode = fft_norm_mode::none;
+    norm_mode = fft_norm_from_string(norm_str, forward);
+
     if (n.has_value()) {
       std::vector<int64_t> len{JUST(n)};
       return input->dtype()->is_complex()
-                 ? functional::FftC2C(input, len, fft_dim, norm_str, /*forward=*/true,
-                                      /*is_grad_fn*/ false)
-                 : functional::FftR2C(input, len, fft_dim, norm_str, /*onesided=*/false,
-                                      /*forward=*/true);
+                 ? functional::FftC2C(input, len, fft_dim, static_cast<int32_t>(norm_mode), /*forward=*/forward)
+                 : functional::FftR2C(input, len, fft_dim, static_cast<int32_t>(norm_mode), /*onesided=*/false,
+                                      /*forward=*/forward);
     } else {
       return input->dtype()->is_complex()
                  ? functional::FftC2C(input, NullOpt, fft_dim, norm_str, /*forward=*/true,
-                                      /*is_grad_fn*/ false)
-                 : functional::FftR2C(input, NullOpt, fft_dim, norm_str, /*onesided=*/false,
-                                      /*forward=*/true);
+                 ? functional::FftC2C(input, NullOpt, fft_dim, static_cast<int32_t>(norm_mode), /*forward=*/forward)
+                 : functional::FftR2C(input, NullOpt, fft_dim, static_cast<int32_t>(norm_mode), /*onesided=*/false,
+                                      /*forward=*/forward);
     }
   }
 };
@@ -4504,19 +4546,21 @@ class IFftFunctor {
                            int64_t dim, const Optional<std::string>& norm) const {
     auto norm_str = norm.value_or("backward");
     std::vector<int64_t> fft_dim{dim};
+
+    bool forward = false;
+    fft_norm_mode norm_mode = fft_norm_mode::none;
+    norm_mode = fft_norm_from_string(norm_str, forward);
     if (n.has_value()) {
       std::vector<int64_t> len{JUST(n)};
       return input->dtype()->is_complex()
-                 ? functional::FftC2C(input, len, fft_dim, norm_str, /*forward=*/false,
-                                      /*is_grad_fn*/ false)
-                 : functional::FftR2C(input, len, fft_dim, norm_str, /*onesided=*/false,
-                                      /*forward=*/false);
+                 ? functional::FftC2C(input, len, fft_dim, static_cast<int32_t>(norm_mode), /*forward=*/forward)
+                 : functional::FftR2C(input, len, fft_dim, static_cast<int32_t>(norm_mode), /*onesided=*/false,
+                                      /*forward=*/forward);
     } else {
       return input->dtype()->is_complex()
-                 ? functional::FftC2C(input, NullOpt, fft_dim, norm_str, /*forward=*/false,
-                                      /*is_grad_fn*/ false)
-                 : functional::FftR2C(input, NullOpt, fft_dim, norm_str, /*onesided=*/false,
-                                      /*forward=*/false);
+                 ? functional::FftC2C(input, NullOpt, fft_dim, static_cast<int32_t>(norm_mode), /*forward=*/forward)
+                 : functional::FftR2C(input, NullOpt, fft_dim, static_cast<int32_t>(norm_mode), /*onesided=*/false,
+                                      /*forward=*/forward);
     }
   }
 };
@@ -4546,6 +4590,9 @@ class FftNFunctor {
                            const Optional<std::vector<int64_t>>& dim,
                            const Optional<std::string>& norm) const {
     std::string norm_str = norm.value_or("backward");
+    bool forward = true;
+    fft_norm_mode norm_mode = fft_norm_mode::none;
+    norm_mode = fft_norm_from_string(norm_str, forward);
 
     if (!(input->dtype()->is_complex())) {
       // cast to complex
@@ -4558,11 +4605,9 @@ class FftNFunctor {
       }
       JUST(tensor_processor.AddInputs({input}, {complex_dtype}).Apply());
       TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
-      return functional::FftC2C(input_tuple.at(0), s, dim, norm_str, /*forward=*/true,
-                                /*is_grad_fn*/ false);
+      return functional::FftC2C(input_tuple.at(0), s, dim, static_cast<int32_t>(norm_mode), /*forward=*/forward);
     } else {
-      return functional::FftC2C(input, s, dim, norm_str, /*forward=*/true,
-                                /*is_grad_fn*/ false);
+      return functional::FftC2C(input, s, dim, static_cast<int32_t>(norm_mode), /*forward=*/forward);
     }
   }
 };
@@ -4574,6 +4619,9 @@ class IFftNFunctor {
                            const Optional<std::vector<int64_t>>& dim,
                            const Optional<std::string>& norm) const {
     std::string norm_str = norm.value_or("backward");
+    bool forward = false;
+    fft_norm_mode norm_mode = fft_norm_mode::none;
+    norm_mode = fft_norm_from_string(norm_str, forward);
 
     if (!(input->dtype()->is_complex())) {
       // cast to complex
@@ -4586,11 +4634,9 @@ class IFftNFunctor {
       }
       JUST(tensor_processor.AddInputs({input}, {complex_dtype}).Apply());
       TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
-      return functional::FftC2C(input_tuple.at(0), s, dim, norm_str, /*forward=*/false,
-                                /*is_grad_fn*/ false);
+      return functional::FftC2C(input_tuple.at(0), s, dim, static_cast<int32_t>(norm_mode), /*forward=*/forward);
     } else {
-      return functional::FftC2C(input, s, dim, norm_str, /*forward=*/false,
-                                /*is_grad_fn*/ false);
+      return functional::FftC2C(input, s, dim, static_cast<int32_t>(norm_mode), /*forward=*/forward);
     }
   }
 };
@@ -4604,12 +4650,16 @@ class RFftFunctor {
 
     std::string norm_str = norm.value_or("backward");
     std::vector<int64_t> fft_dim{dim};
+    bool forward = true;
+    fft_norm_mode norm_mode = fft_norm_mode::none;
+    norm_mode = fft_norm_from_string(norm_str, forward);
+    
     if (n.has_value()) {
       std::vector<int64_t> len{JUST(n)};
       return functional::FftR2C(input, len, fft_dim, norm_str, /*onesided=*/true, /*forward=*/true);
     } else {
-      return functional::FftR2C(input, NullOpt, fft_dim, norm_str, /*onesided=*/true,
-                                /*forward=*/true);
+      return functional::FftR2C(input, NullOpt, fft_dim, static_cast<int32_t>(norm_mode), /*onesided=*/true,
+                                /*forward=*/forward);
     }
   }
 };
@@ -4620,11 +4670,16 @@ class IRFftFunctor {
                            int64_t dim, const Optional<std::string>& norm) const {
     std::string norm_str = norm.value_or("backward");
     std::vector<int64_t> fft_dim{dim};
+
+    bool forward = false;
+    fft_norm_mode norm_mode = fft_norm_mode::none;
+    norm_mode = fft_norm_from_string(norm_str, forward);
+
     if (n.has_value()) {
       std::vector<int64_t> len{JUST(n)};
-      return functional::FftC2R(input, len, fft_dim, norm_str, /*forward=*/false);
+      return functional::FftC2R(input, len, fft_dim, static_cast<int32_t>(norm_mode), /*forward=*/forward);
     } else {
-      return functional::FftC2R(input, NullOpt, fft_dim, norm_str, /*forward=*/false);
+      return functional::FftC2R(input, NullOpt, fft_dim, static_cast<int32_t>(norm_mode), /*forward=*/forward);
     }
   }
 };
@@ -4657,7 +4712,11 @@ class RFftNFunctor {
         << "expects the dtype of input Tensor  is Real, but gets " << input->dtype()->name();
 
     std::string norm_str = norm.value_or("backward");
-    return functional::FftR2C(input, s, dim, norm_str, /*onesided=*/true, /*forward=*/true);
+    bool forward = true;
+    fft_norm_mode norm_mode = fft_norm_mode::none;
+    norm_mode = fft_norm_from_string(norm_str, forward);
+
+    return functional::FftR2C(input, s, dim, static_cast<int32_t>(norm_mode), /*onesided=*/true, /*forward=*/forward);
   }
 };
 
@@ -4668,7 +4727,11 @@ class IRFftNFunctor {
                            const Optional<std::vector<int64_t>>& dim,
                            const Optional<std::string>& norm) const {
     std::string norm_str = norm.value_or("backward");
-    return functional::FftC2R(input, s, dim, norm_str, /*forward=*/false);
+    bool forward = false;
+    fft_norm_mode norm_mode = fft_norm_mode::none;
+    norm_mode = fft_norm_from_string(norm_str, forward);
+
+    return functional::FftC2R(input, s, dim, static_cast<int32_t>(norm_mode), /*forward=*/forward);
   }
 };
 
@@ -4681,11 +4744,16 @@ class HFftFunctor {
 
     std::string norm_str = norm.value_or("backward");
     std::vector<int64_t> fft_dim{dim};
+
+    bool forward = true;
+    fft_norm_mode norm_mode = fft_norm_mode::none;
+    norm_mode = fft_norm_from_string(norm_str, forward);
+
     if (n.has_value()) {
       std::vector<int64_t> len{JUST(n)};
-      return functional::FftC2R(input, len, fft_dim, norm_str, /*onesided=*/true);
+      return functional::FftC2R(input, len, fft_dim, static_cast<int32_t>(norm_mode), /*forward=*/forward);
     } else {
-      return functional::FftC2R(input, NullOpt, fft_dim, norm_str, /*onesided=*/true);
+      return functional::FftC2R(input, NullOpt, fft_dim, static_cast<int32_t>(norm_mode), /*forward=*/forward);
     }
   }
 };
@@ -4699,13 +4767,18 @@ class IHFftFunctor {
 
     std::string norm_str = norm.value_or("backward");
     std::vector<int64_t> fft_dim{dim};
+
+    bool forward = false;
+    fft_norm_mode norm_mode = fft_norm_mode::none;
+    norm_mode = fft_norm_from_string(norm_str, forward);
+
     if (n.has_value()) {
       std::vector<int64_t> len{JUST(n)};
-      return functional::FftR2C(input, len, fft_dim, norm_str, /*onesided=*/true,
-                                /*forward=*/false);
+      return functional::FftR2C(input, len, fft_dim, static_cast<int32_t>(norm_mode), /*onesided=*/true,
+                                /*forward=*/forward);
     } else {
-      return functional::FftR2C(input, NullOpt, fft_dim, norm_str, /*onesided=*/true,
-                                /*forward=*/false);
+      return functional::FftR2C(input, NullOpt, fft_dim, static_cast<int32_t>(norm_mode), /*onesided=*/true,
+                                /*forward=*/forward);
     }
   }
 };
@@ -4738,7 +4811,11 @@ class HFftNFunctor {
         << "expects the dtype of input Tensor is Complex, but gets " << input->dtype()->name();
 
     std::string norm_str = norm.value_or("backward");
-    return functional::FftC2R(input, s, dim, norm_str, /*onesided=*/true);
+
+    bool forward = true;
+    fft_norm_mode norm_mode = fft_norm_mode::none;
+    norm_mode = fft_norm_from_string(norm_str, forward);
+    return functional::FftC2R(input, s, dim, static_cast<int32_t>(norm_mode), /*forward=*/forward);
   }
 };
 
@@ -4752,7 +4829,10 @@ class IHFftNFunctor {
         << "expects the dtype of input Tensor is Real, but gets " << input->dtype()->name();
 
     std::string norm_str = norm.value_or("backward");
-    return functional::FftR2C(input, s, dim, norm_str, /*onesided=*/true, /*forward=*/false);
+    bool forward = false;
+    fft_norm_mode norm_mode = fft_norm_mode::none;
+    norm_mode = fft_norm_from_string(norm_str, forward);
+    return functional::FftR2C(input, s, dim, static_cast<int32_t>(norm_mode), /*onesided=*/true, /*forward=*/forward);
   }
 };
 
