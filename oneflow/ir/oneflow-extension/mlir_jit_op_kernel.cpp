@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/ir/include/OneFlow/Passes.h"
 #include "oneflow/ir/include/OneFlow/Extension.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -99,7 +100,8 @@ llvm::SmallVector<OpaqueMemRefDescriptor> GetMLIRCInterfaceArgs(
 
 void WithMlirContext(
     user_op::KernelComputeContext* ctx, const llvm::SmallVector<llvm::StringRef, 4>& ext_libs,
-    const std::function<mlir::OwningOpRef<mlir::ModuleOp>(mlir::MLIRContext* mlir_ctx)>& parse) {
+    const std::function<mlir::OwningOpRef<mlir::ModuleOp>(mlir::MLIRContext* mlir_ctx)>& parse,
+    void* stream) {
   mlir::DialectRegistry registry;
   registry
       .insert<mlir::oneflow::OneFlowDialect, mlir::func::FuncDialect, mlir::memref::MemRefDialect,
@@ -123,6 +125,7 @@ void WithMlirContext(
       GetMLIRCInterfaceArgs(ctx);
   llvm::SmallVector<void*> packed_args{};
   for (auto& arg /* arg must be a reference*/ : args) { packed_args.push_back(&arg); }
+  packed_args.push_back(&stream);
   auto error = jit->invokePacked(GetMLIRCInterface(ctx->op_name()), packed_args);
   CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
 }
@@ -140,7 +143,12 @@ class MlirJitCpuKernel final : public user_op::OpKernel {
     WithMlirContext(ctx, ext_libs, [&ctx](mlir::MLIRContext* mlir_ctx) {
       return mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
                                                      mlir_ctx);
-    });
+    },
+#ifdef WITH_CUDA
+        ctx->stream()->As<ep::CudaStream>()->cuda_stream());
+#else
+        nullptr);
+#endif  // WITH_CUDA
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -177,7 +185,8 @@ class MlirJitGpuKernel final : public user_op::OpKernel {
     WithMlirContext(ctx, ext_libs, [&ctx](mlir::MLIRContext* mlir_ctx) {
       return mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
                                                      mlir_ctx);
-    });
+    },
+        nullptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
