@@ -21,16 +21,28 @@ import oneflow.unittest
 import torch
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestSaveLoad(flow.unittest.TestCase):
-    @flow.unittest.skip_unless_1n1d()
     def test_support_pytorch_with_global_src_rank(test_case):
         conv_torch = torch.nn.Conv2d(3, 3, 3)
         conv_flow = flow.nn.Conv2d(3, 3, 3)
         with tempfile.NamedTemporaryFile() as f:
             torch.save(conv_torch.state_dict(), f.name)
-            with test_case.assertRaises(NotImplementedError) as ctx:
-                conv_flow.load_state_dict(flow.load(f.name, support_pytorch=False))
-        test_case.assertTrue("No valid load method found" in str(ctx.exception))
+            with test_case.assertRaises(ValueError) as ctx:
+                conv_flow.load_state_dict(
+                    flow.load(f.name, support_pytorch_format=False)
+                )
+        test_case.assertTrue("Cannot load file" in str(ctx.exception))
+
+    def test_load_invalid_file(test_case):
+        f = tempfile.NamedTemporaryFile()
+        f.write(b"invalid file")
+        f.flush()
+        with test_case.assertRaises(ValueError) as ctx:
+            flow.load(f.name)
+        test_case.assertTrue("Cannot load file" in str(ctx.exception))
+
+        f.close()
 
 
 if __name__ == "__main__":
