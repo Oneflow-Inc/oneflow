@@ -122,8 +122,6 @@ class FftR2CKernel final : public user_op::OpKernel {
     Shape input_shape(input->shape_view());
     Shape out_shape(out->shape_view());
 
-
-
     if (input->data_type() == kFloat || input->data_type() == kDouble) {
       FftR2CKernelUtil<device_type, dtype_in, dtype_out>::FftR2CForward(
           ctx->stream(), input_ptr, out_ptr, 

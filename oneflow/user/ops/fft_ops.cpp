@@ -50,7 +50,6 @@ namespace oneflow {
   const Shape& in_shape = ctx->InputShape("input", 0);
   const Stride& in_stride = ctx->InputStride("input", 0);
   const auto& dims = ctx->Attr<std::vector<int64_t>>("dims");
-  // const int64_t norm = ctx->Attr<int64_t>("norm");
   bool onesided = ctx->Attr<bool>("onesided");
 
   Shape out_shape = in_shape;

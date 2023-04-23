@@ -3271,7 +3271,7 @@
 
 - name: "fft_c2c"
   signature:
-    'Tensor (Tensor input, Int64List dims, Int32 norm_mode=0, Bool forward=True) => FftC2C'
+    'Tensor (Tensor input, Int64List wrapped_dims, Int32 norm_mode=0, Bool forward=True) => FftC2C'
   bind_python: False
 
 - name: "fft_c2c_wrapper"
