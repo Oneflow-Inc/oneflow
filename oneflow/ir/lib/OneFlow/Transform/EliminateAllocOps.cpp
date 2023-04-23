@@ -13,22 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWPDLLPATTERNS_H_
-#define ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWPDLLPATTERNS_H_
-#include "mlir/IR/PatternMatch.h"
+#include "OneFlow/OneFlowPDLLPatterns.h"
+#include "OneFlow/Passes.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
-
 namespace oneflow {
 
-void populateAllocEliminationPatterns(RewritePatternSet& patterns);
-void populateForwardOpPatterns(RewritePatternSet& patterns);
-void populateNormalizationOpPatterns(RewritePatternSet& patterns);
-void populateFuseConv2DBatchNormPattern(RewritePatternSet& patterns);
-void populateFuseOpsWithBackwardImplPattern(RewritePatternSet& patterns);
+namespace {
+class EliminateAllocOpsPass : public EliminateAllocOpsPassBase<EliminateAllocOpsPass> {
+  void runOnOperation() override {
+    Operation* op = getOperation();
+    RewritePatternSet patterns(op->getContext());
+    mlir::oneflow::populateAllocEliminationPatterns(patterns);
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+  }
+};
+
+}  // namespace
+
+std::unique_ptr<Pass> createEliminateAllocOpsPass() {
+  return std::make_unique<EliminateAllocOpsPass>();
+}
 
 }  // namespace oneflow
-
 }  // namespace mlir
-
-#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWPDLLPATTERNS_H_
