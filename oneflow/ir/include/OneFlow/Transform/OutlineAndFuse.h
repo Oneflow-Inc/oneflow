@@ -28,7 +28,7 @@ inline const std::string CUDA_GRAPH = "cuda_graph";
 }  // namespace wrap_mode
 
 namespace jit {
-inline const std:: string RAW_GRAPH = "oneflow.raw_graph";
+inline const std::string RAW_GRAPH = "oneflow.raw_graph";
 }
 
 std::unique_ptr<mlir::Pass> createWrapOpsToKernelLaunchPass();

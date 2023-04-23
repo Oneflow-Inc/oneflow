@@ -140,10 +140,12 @@ class MlirJitCpuKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     llvm::SmallVector<llvm::StringRef, 4> ext_libs(
         {SharedLibPaths()->begin(), SharedLibPaths()->end()});
-    WithMlirContext(ctx, ext_libs, [&ctx](mlir::MLIRContext* mlir_ctx) {
-      return mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
-                                                     mlir_ctx);
-    },
+    WithMlirContext(
+        ctx, ext_libs,
+        [&ctx](mlir::MLIRContext* mlir_ctx) {
+          return mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
+                                                         mlir_ctx);
+        },
 #ifdef WITH_CUDA
         ctx->stream()->As<ep::CudaStream>()->cuda_stream());
 #else
@@ -182,10 +184,12 @@ class MlirJitGpuKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     llvm::SmallVector<llvm::StringRef, 4> ext_libs(
         {SharedLibPaths()->begin(), SharedLibPaths()->end()});
-    WithMlirContext(ctx, ext_libs, [&ctx](mlir::MLIRContext* mlir_ctx) {
-      return mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
-                                                     mlir_ctx);
-    },
+    WithMlirContext(
+        ctx, ext_libs,
+        [&ctx](mlir::MLIRContext* mlir_ctx) {
+          return mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
+                                                         mlir_ctx);
+        },
         nullptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
