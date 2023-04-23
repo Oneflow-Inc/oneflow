@@ -84,6 +84,7 @@ oneflow_add_mlir_dialect_library(
   MLIRReconcileUnrealizedCasts
   ${MLIR_GPU_LIBS}
   MLIRIR
+  MLIRBytecodeWriter
   MLIROneFlowPDLLPatterns
   MLIRExecutionEngine
   oneflow)

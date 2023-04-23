@@ -162,6 +162,7 @@ std::string convertFuncToLLVM(func::FuncOp func, StringAttr device_tag) {
   getLowerFunction(device_tag)(&mlir_ctx, *module);
   if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { func->print(llvm::outs()); }
 
+  module->dump();
   std::string byte;
   llvm::raw_string_ostream os_byte(byte);
   mlir::writeBytecodeToFile(*module, os_byte);
@@ -231,7 +232,8 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
               GetJitOpAttributes(builder, name, argumentTypes.size(), resultTypes.size(),
                                  entryOp->getOperand(0).getDefiningOp());
           auto byte = convertFuncToLLVM(
-              function, attributes.get(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr()));
+              function, attributes.get(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr())
+                            .cast<StringAttr>());
           auto jitOp = builder.create<MlirJitOp>(entryOp->getLoc(), function, attributes, entries);
           jitOp->setAttr("mlir_assembly", builder.getStringAttr(byte));
           for (const auto& old : llvm::enumerate(exits)) {
