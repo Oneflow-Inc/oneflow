@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "OneFlow/OneFlowDialect.h"
+#include "OneFlow/Passes.h"
 #include "OneFlow/OneFlowSupport.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/device_type.pb.h"
@@ -46,8 +47,12 @@ namespace jit {
 
 static Maybe<mlir::FunctionType> GetFunctionType(user_op::InferContext* ctx,
                                                  mlir::OwningOpRef<mlir::ModuleOp>& module) {
+  auto raw_graph = (*module)->getAttr(mlir::oneflow::jit::RAW_GRAPH).cast<mlir::StringAttr>();
+  CHECK_OR_RETURN(raw_graph) << "Fail to find raw graph of jit module";
+  mlir::OwningOpRef<mlir::ModuleOp> raw_module =
+      mlir::parseSourceString<mlir::ModuleOp>(raw_graph.strref(), module->getContext());
   mlir::func::FuncOp funcOp = mlir::SymbolTable::lookupNearestSymbolFrom<mlir::func::FuncOp>(
-      module.get(), mlir::SymbolRefAttr::get(module->getContext(), ctx->op_name()));
+      raw_module.get(), mlir::SymbolRefAttr::get(raw_module->getContext(), ctx->op_name()));
   CHECK_OR_RETURN(funcOp) << "Fail to find funcOp of symbol " << ctx->op_name();
   const auto funcType = funcOp.getFunctionType();
   CHECK_EQ_OR_RETURN(funcType.getNumInputs(), ctx->input_size("in"))

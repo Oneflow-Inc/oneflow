@@ -154,15 +154,15 @@ std::string convertFuncToLLVM(func::FuncOp func, StringAttr device_tag) {
 
   std::string mlir;
   llvm::raw_string_ostream os_mlir(mlir);
-  func->print(os_mlir);
+  mlir::writeBytecodeToFile(func, os_mlir);
   mlir::OwningOpRef<mlir::ModuleOp> module =
       ::mlir::parseSourceString<mlir::ModuleOp>(mlir, &mlir_ctx);
   mlir::registerLLVMDialectTranslation(registry);
   if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { func->print(llvm::outs()); }
   getLowerFunction(device_tag)(&mlir_ctx, *module);
   if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { func->print(llvm::outs()); }
+  (*module)->setAttr(jit::RAW_GRAPH, StringAttr::get(&mlir_ctx, mlir));
 
-  module->dump();
   std::string byte;
   llvm::raw_string_ostream os_byte(byte);
   mlir::writeBytecodeToFile(*module, os_byte);
