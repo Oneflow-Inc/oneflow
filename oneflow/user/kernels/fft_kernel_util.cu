@@ -72,21 +72,147 @@ __global__ void convert_doublesided(const FFTTYPE* src, FFTTYPE* dst, size_t len
   }
 }
 
-bool isCompact(const std::vector<int64_t>& strides, const std::vector<int64_t>& shape){
-  if (strides.size() != shape.size()){
-    return false;
+template<int NDIM>
+struct FillConjSymmetricParams {
+  int64_t last_dim;
+  int64_t elem_count;
+  oneflow::NdIndexStrideOffsetHelper<int64_t, NDIM> helper;
+  int64_t last_dim_size;
+  int64_t last_dim_half;
+
+  FillConjSymmetricParams() = default;
+  FillConjSymmetricParams(const Shape& shape, const Stride& strides, 
+                          int64_t last_dim_, int64_t elemcnt) : last_dim(last_dim_), 
+                          elem_count(elemcnt), helper(strides.data(), NDIM)
+  {
+    assert(strides.size() == shape.size());
+    assert(NDIM == strides.size());
+    last_dim_size = shape[last_dim];
+    last_dim_half = last_dim_size / 2;
   }
-  Shape shape_(shape);
-  Stride stride_(shape_);
-  FOR_RANGE(int64_t, i, 0, strides.size()){
-    if (strides[i] != stride_[i]){
-      return false;
-    }
-  }
-  return true;
-}
+};
 
 }  // namespace
+
+template<typename T, int NDIM>
+__global__ void _conj_symmetry_cuda(T* data_out, FillConjSymmetricParams<NDIM> param) {
+  CUDA_1D_KERNEL_LOOP_T(int64_t, offset, param.elem_count){
+    int64_t indices[NDIM];
+    param.helper.OffsetToNdIndex(offset, indices, NDIM);
+    if (indices[param.last_dim] <= param.last_dim_half){
+      continue;
+    }
+    int64_t cur_last_dim_index = indices[param.last_dim];
+    // get symmetric
+    indices[param.last_dim] = param.last_dim_size - cur_last_dim_index;
+    int64_t symmetric_offset = param.helper.NdIndexToOffset(indices, NDIM);
+
+    // conj
+    data_out[offset] = T{data_out[symmetric_offset].x, - data_out[symmetric_offset].y};
+  }
+
+}
+
+template<typename T>
+struct FillConjSymmetryUtil<DeviceType::kCPU, T>{
+  static void FillConjSymmetryForward(ep::Stream* stream, T* data_out, const Shape& shape, const Stride& strides,
+                                      const int64_t last_dim, int64_t elem_count){
+    switch (shape.size()) {
+      case 1:{
+        FillConjSymmetricParams<1> param(shape, strides, last_dim, elem_count);
+        _conj_symmetry_cuda<T, 1><<<BlocksNum4ThreadsNum(elem_count), kCudaThreadsNumPerBlock, 0,
+                             stream->As<ep::CudaStream>()->cuda_stream()>>>(
+                                    data_out, param);
+        };
+        break;
+      case 2:{
+        FillConjSymmetricParams<2> param(shape, strides, last_dim, elem_count);
+        _conj_symmetry_cuda<T, 2><<<BlocksNum4ThreadsNum(elem_count), kCudaThreadsNumPerBlock, 0,
+                             stream->As<ep::CudaStream>()->cuda_stream()>>>(
+                                    data_out, param);
+        };
+        break;
+      case 3:{
+        FillConjSymmetricParams<3> param(shape, strides, last_dim, elem_count);
+        _conj_symmetry_cuda<T, 3><<<BlocksNum4ThreadsNum(elem_count), kCudaThreadsNumPerBlock, 0,
+                             stream->As<ep::CudaStream>()->cuda_stream()>>>(
+                                    data_out, param);
+        };
+        break;
+      case 4:{
+        FillConjSymmetricParams<4> param(shape, strides, last_dim, elem_count);
+        _conj_symmetry_cuda<T, 4><<<BlocksNum4ThreadsNum(elem_count), kCudaThreadsNumPerBlock, 0,
+                             stream->As<ep::CudaStream>()->cuda_stream()>>>(
+                                    data_out, param);
+        };
+        break;
+      case 4:{
+        FillConjSymmetricParams<4> param(shape, strides, last_dim, elem_count);
+        _conj_symmetry_cuda<T, 4><<<BlocksNum4ThreadsNum(elem_count), kCudaThreadsNumPerBlock, 0,
+                             stream->As<ep::CudaStream>()->cuda_stream()>>>(
+                                    data_out, param);
+        };
+        break;
+      case 5:{
+        FillConjSymmetricParams<5> param(shape, strides, last_dim, elem_count);
+        _conj_symmetry_cuda<T, 5><<<BlocksNum4ThreadsNum(elem_count), kCudaThreadsNumPerBlock, 0,
+                             stream->As<ep::CudaStream>()->cuda_stream()>>>(
+                                    data_out, param);
+        };
+        break;
+      case 6:{
+        FillConjSymmetricParams<6> param(shape, strides, last_dim, elem_count);
+        _conj_symmetry_cuda<T, 6><<<BlocksNum4ThreadsNum(elem_count), kCudaThreadsNumPerBlock, 0,
+                             stream->As<ep::CudaStream>()->cuda_stream()>>>(
+                                    data_out, param);
+        };
+        break;
+      case 7:{
+        FillConjSymmetricParams<7> param(shape, strides, last_dim, elem_count);
+        _conj_symmetry_cuda<T, 7><<<BlocksNum4ThreadsNum(elem_count), kCudaThreadsNumPerBlock, 0,
+                             stream->As<ep::CudaStream>()->cuda_stream()>>>(
+                                    data_out, param);
+        };
+        break;
+      case 8:{
+        FillConjSymmetricParams<8> param(shape, strides, last_dim, elem_count);
+        _conj_symmetry_cuda<T, 8><<<BlocksNum4ThreadsNum(elem_count), kCudaThreadsNumPerBlock, 0,
+                             stream->As<ep::CudaStream>()->cuda_stream()>>>(
+                                    data_out, param);
+        };
+        break;
+      case 9:{
+        FillConjSymmetricParams<9> param(shape, strides, last_dim, elem_count);
+        _conj_symmetry_cuda<T, 9><<<BlocksNum4ThreadsNum(elem_count), kCudaThreadsNumPerBlock, 0,
+                             stream->As<ep::CudaStream>()->cuda_stream()>>>(
+                                    data_out, param);
+        };
+        break;
+      case 10:{
+        FillConjSymmetricParams<10> param(shape, strides, last_dim, elem_count);
+        _conj_symmetry_cuda<T, 10><<<BlocksNum4ThreadsNum(elem_count), kCudaThreadsNumPerBlock, 0,
+                             stream->As<ep::CudaStream>()->cuda_stream()>>>(
+                                    data_out, param);
+        };
+        break;
+      case 11:{
+        FillConjSymmetricParams<11> param(shape, strides, last_dim, elem_count);
+        _conj_symmetry_cuda<T, 11><<<BlocksNum4ThreadsNum(elem_count), kCudaThreadsNumPerBlock, 0,
+                             stream->As<ep::CudaStream>()->cuda_stream()>>>(
+                                    data_out, param);
+        };
+        break;
+      case 12:{
+        FillConjSymmetricParams<12> param(shape, strides, last_dim, elem_count);
+        _conj_symmetry_cuda<T, 12><<<BlocksNum4ThreadsNum(elem_count), kCudaThreadsNumPerBlock, 0,
+                             stream->As<ep::CudaStream>()->cuda_stream()>>>(
+                                    data_out, param);
+        };
+        break;
+      default: UNIMPLEMENTED(); break;
+    }
+  }
+};
 
 template<typename T, typename FCT_TYPE>
 class FftC2CKernelUtil<DeviceType::kCUDA, T, FCT_TYPE>{

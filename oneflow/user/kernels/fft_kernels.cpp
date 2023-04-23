@@ -122,12 +122,7 @@ class FftR2CKernel final : public user_op::OpKernel {
     Shape input_shape(input->shape_view());
     Shape out_shape(out->shape_view());
 
-    // get last dim half size
-    if (onesided) {
-      int64_t last_dim = dims.back();
-      int64_t last_dim_halfsize = (input_shape[last_dim]) / 2 + 1;
-      out_shape[last_dim] = last_dim_halfsize;
-    }
+
 
     if (input->data_type() == kFloat || input->data_type() == kDouble) {
       FftR2CKernelUtil<device_type, dtype_in, dtype_out>::FftR2CForward(
@@ -138,7 +133,11 @@ class FftR2CKernel final : public user_op::OpKernel {
       Error::RuntimeError() << "expects kFloat or kDouble, but gets " << input->data_type();
     }
 
-    if (!onesided) { conj_symmetry(out_ptr, out_shape, out->stride(), dims, out_shape.elem_cnt()); }
+    // if (!onesided) { conj_symmetry(out_ptr, out_shape, out->stride(), dims, out_shape.elem_cnt()); }
+    if (!onesided){
+      FillConjSymmetryUtil<device_type, dtype_out>::FillConjSymmetryForward(
+        ctx->stream(), out_ptr, out_shape, out->stride(), dims.back(), out_shape.elem_cnt());
+    }
   }
 };
 
@@ -189,6 +188,7 @@ class FftR2CCudaKernel final : public user_op::OpKernel {
     if (!onesided) { conj_symmetry(out_ptr, out_shape, out->stride(), dims, out_shape.elem_cnt()); }
   }
 };
+#endif
 
 template<DeviceType device_type, typename dtype_in, typename dtype_out>
 class FftC2RKernel final : public user_op::OpKernel {

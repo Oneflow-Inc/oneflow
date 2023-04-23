@@ -27,54 +27,12 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename T, int NDIM>
-static void _conj_symmetry(T* data_out, const Shape& shape, const std::vector<int64_t>& strides,
-                           const std::vector<int64_t>& dims, int64_t elem_count) {
-  const oneflow::NdIndexStrideOffsetHelper<int64_t, NDIM> helper(strides.data(), NDIM);
-  // NOTE: dims must be sorted
-  int64_t last_dim = dims.back();
-  int64_t last_dim_size = shape[last_dim];
-  int64_t last_dim_half = last_dim_size / 2;
 
-  std::vector<int64_t> indices(shape.size());
-  for (int offset = 0; offset < elem_count; offset++) {
-    helper.OffsetToNdIndex(offset, indices.data(), indices.size());
-    if (indices[last_dim] <= last_dim_half) { continue; }
-
-    int64_t cur_last_dim_index = indices[last_dim];
-    // get symmetric
-    indices[last_dim] = last_dim_size - cur_last_dim_index;
-    int64_t symmetric_offset = helper.NdIndexToOffset(indices.data(), indices.size());
-
-    // conj
-    data_out[offset] = std::conj(data_out[symmetric_offset]);
-  }
-}
-
-template<typename T>
-static void conj_symmetry(T* data_out, const Shape& shape, const Stride& strides,
-                          const std::vector<int64_t>& dims, int64_t elem_count) {
-  void (*func)(T* /*data_out*/, const Shape& /*shape*/, const std::vector<int64_t>& /*strides*/,
-               const std::vector<int64_t>& /*dims*/, int64_t /*elem_count*/) = nullptr;
-
-  switch (shape.size()) {
-    case 1: func = _conj_symmetry<T, 1>; break;
-    case 2: func = _conj_symmetry<T, 2>; break;
-    case 3: func = _conj_symmetry<T, 3>; break;
-    case 4: func = _conj_symmetry<T, 4>; break;
-    case 5: func = _conj_symmetry<T, 5>; break;
-    case 6: func = _conj_symmetry<T, 6>; break;
-    case 7: func = _conj_symmetry<T, 7>; break;
-    case 8: func = _conj_symmetry<T, 8>; break;
-    case 9: func = _conj_symmetry<T, 9>; break;
-    case 10: func = _conj_symmetry<T, 10>; break;
-    case 11: func = _conj_symmetry<T, 11>; break;
-    case 12: func = _conj_symmetry<T, 12>; break;
-    default: UNIMPLEMENTED(); break;
-  }
-  std::vector<int64_t> strides_vec(strides.begin(), strides.end());
-  func(data_out, shape, strides_vec, dims, elem_count);
-}
+template<DeviceType device_type, typename T>
+struct FillConjSymmetryUtil{
+  static void FillConjSymmetryForward(ep::Stream* stream, T* data_out, const Shape& shape, const Stride& strides,
+                                      const int64_t last_dim, int64_t elem_count);
+};
 
 template<DeviceType device_type, typename T, typename FCT_TYPE>
 struct FftC2CKernelUtil {
