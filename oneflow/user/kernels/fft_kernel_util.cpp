@@ -93,7 +93,8 @@ struct FftR2CKernelUtil<DeviceType::kCPU, IN, OUT> {
   static void FftR2CForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
                             const Shape& input_shape, const Shape& output_shape,
                             const Stride& input_stride, const Stride& output_stride,
-                            bool forward, const std::vector<int64_t>& dims, IN norm_fct) {
+                            bool forward, const std::vector<int64_t>& dims, IN norm_fct,
+                            DataType real_type) {
     PocketFFtParams<IN> params(input_shape, output_shape, input_stride, output_stride, dims, forward,
                               norm_fct /*1.f*/, FFT_EXCUTETYPE::R2C);
     PocketFFtConfig<IN> config(params);
@@ -107,7 +108,7 @@ struct FftC2RKernelUtil<DeviceType::kCPU, IN, OUT> {
                             const Shape& input_shape, const Shape& output_shape,
                             const Stride& input_stride, const Stride& output_stride,
                             int64_t last_dim_size, const std::vector<int64_t>& dims,
-                            OUT norm_fct) {
+                            OUT norm_fct, DataType real_type) {
     PocketFFtParams<OUT> params(
         input_shape, output_shape, input_stride, output_stride, dims, /*is_forward=*/false,
         norm_fct /*1.f*/, FFT_EXCUTETYPE::C2R);

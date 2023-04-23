@@ -47,7 +47,7 @@ struct FftR2CKernelUtil {
   static void FftR2CForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
                             const Shape& input_shape, const Shape& output_shape,
                             const Stride& input_stride, const Stride& output_stride, 
-                            bool forward, const std::vector<int64_t>& dims, IN norm_fct);
+                            bool forward, const std::vector<int64_t>& dims, IN norm_fct, DataType real_type);
 };
 
 template<DeviceType device_type, typename IN, typename OUT>
@@ -56,7 +56,7 @@ struct FftC2RKernelUtil {
                             const Shape& input_shape, const Shape& output_shape, 
                             const Stride& input_stride, const Stride& output_stride, 
                             int64_t last_dim_size, const std::vector<int64_t>& dims,
-                            OUT norm_fct);
+                            OUT norm_fct, DataType real_type);
 };
 
 

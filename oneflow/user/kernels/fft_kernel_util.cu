@@ -241,9 +241,18 @@ struct FftR2CKernelUtil<DeviceType::kCUDA, IN, OUT> {
   static void FftR2CForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
                             const Shape& input_shape, const Shape& output_shape,
                             const Stride& input_stride, const Stride& output_stride, bool forward,
-                            const std::vector<int64_t>& dims, IN normalization){
-    // TO-DO:
-    UNIMPLEMENTED();
+                            const std::vector<int64_t>& dims, IN normalization, DataType real_type){
+    CuFFTParams params(input_shape, output_shape, input_stride, output_stride, 
+                      dims.size(), CUFFT_EXCUTETYPE::R2C, real_type);
+    CuFFTConfig config(params);
+    auto& plan = config.plan();
+    OF_CUFFT_CHECK(cufftSetStream(plan, stream->As<ep::CudaStream>()->cuda_stream()));
+    void* workspace{};
+    OF_CUDA_CHECK(cudaMalloc(&workspace, config.workspace_size()));
+    OF_CUFFT_CHECK(cufftSetWorkArea(plan, workspace));
+
+    config.excute((void*)data_in, (void*)data_out, forward);
+    OF_CUDA_CHECK(cudaFree(workspace));    
   }
 };
 
@@ -253,7 +262,7 @@ struct FftC2RKernelUtil<DeviceType::kCUDA, IN, OUT> {
                             const Shape& input_shape, const Shape& output_shape,
                             const Stride& input_stride, const Stride& output_stride,
                             int64_t last_dim_size, const std::vector<int64_t>& dims,
-                            OUT normalization){
+                            OUT normalization, DataType real_type){
     // TO-DO:
     UNIMPLEMENTED();
   }

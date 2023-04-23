@@ -128,7 +128,7 @@ class FftR2CKernel final : public user_op::OpKernel {
       FftR2CKernelUtil<device_type, dtype_in, dtype_out>::FftR2CForward(
           ctx->stream(), input_ptr, out_ptr, 
           input_shape, out_shape, input->stride(), out->stride(), 
-          /*forward=*/true, dims, norm_fct);
+          /*forward=*/true, dims, norm_fct, /*real_type=*/input->data_type());
     } else {
       Error::RuntimeError() << "expects kFloat or kDouble, but gets " << input->data_type();
     }
@@ -220,7 +220,7 @@ class FftC2RKernel final : public user_op::OpKernel {
       FftC2RKernelUtil<device_type, dtype_in, dtype_out>::FftC2RForward(
           ctx->stream(), input_ptr, out_ptr, input_shape, out_shape, 
           input->stride(), out->stride(),
-          /*last_dim_size=*/last_dim_size, dims, norm_fct);
+          /*last_dim_size=*/last_dim_size, dims, norm_fct, /*real_type=*/output->data_type());
     } else {
       Error::RuntimeError() << "expects kComplex64 or kComplex128, but gets " << input->data_type();
     }
