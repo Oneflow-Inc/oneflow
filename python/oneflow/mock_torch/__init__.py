@@ -296,7 +296,6 @@ class disable:
         self.globals = globals
         self.lazy = _importer.lazy
         self.verbose = _importer.verbose
-        self.from_cli = _importer.from_cli
         _importer._disable(globals)
 
     def __enter__(self):
@@ -305,7 +304,11 @@ class disable:
     def __exit__(self, exception_type, exception_value, traceback):
         if self.enable:
             _importer._enable(
-                self.globals, self.lazy, self.verbose, from_cli=self.from_cli
+                # When re-enabling mock torch, from_cli shoule always be False
+                self.globals,
+                self.lazy,
+                self.verbose,
+                from_cli=False,
             )
 
 
