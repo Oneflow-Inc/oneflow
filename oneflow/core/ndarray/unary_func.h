@@ -113,6 +113,32 @@ struct UnaryFuncExp<half> final {
     return __float2half(std::exp(__half2float(x)));
   }
 };
+
+template<>
+struct UnaryFuncNegative<cuComplex> final {
+  static __device__ __forceinline__ const cuComplex Invoke(const cuComplex x) {
+    return cuComplex{-x.x, -x.y};
+  }
+};
+template<>
+struct UnaryFuncExp<cuComplex> final {
+  static __device__ __forceinline__ const cuComplex Invoke(const cuComplex x) {
+    return cuComplex{exp(x.x) * cos(x.y), exp(x.x) * sin(x.y)};
+  }
+};
+
+template<>
+struct UnaryFuncNegative<cuDoubleComplex> final {
+  static __device__ __forceinline__ const cuDoubleComplex Invoke(const cuDoubleComplex x) {
+    return cuDoubleComplex{-x.x, -x.y};
+  }
+};
+template<>
+struct UnaryFuncExp<cuDoubleComplex> final {
+  static __device__ __forceinline__ const cuDoubleComplex Invoke(const cuDoubleComplex x) {
+    return cuDoubleComplex{exp(x.x) * cos(x.y), exp(x.x) * sin(x.y)};
+  }
+};
 #endif
 
 template<typename T>
