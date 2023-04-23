@@ -24,13 +24,6 @@ import oneflow.unittest
 import oneflow.nn as nn
 from flowvision.models.resnet import resnet50
 
-os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-os.environ["ONEFLOW_MLIR_PREFER_NHWC"] = "1"
-os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "1"
-os.environ["ONEFLOW_MLIR_FUSE_FORWARD_OPS"] = "1"
-os.environ["ONEFLOW_MLIR_FUSE_NORMALIZATION_OPS"] = "1"
-os.environ["ONEFLOW_MLIR_PRINT_STATS"] = "1"
-
 
 def _test_fuse_conv_bn(test_case, with_cuda):
     data = flow.randn(1, 3, 224, 224)
@@ -60,7 +53,15 @@ def _test_fuse_conv_bn(test_case, with_cuda):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestFuseConvBn(oneflow.unittest.TestCase):
+class TestFuseConvBn(oneflow.unittest.MLIRTestCase):
+    def setUp(self):
+        os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+        os.environ["ONEFLOW_MLIR_PREFER_NHWC"] = "1"
+        os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "1"
+        os.environ["ONEFLOW_MLIR_FUSE_FORWARD_OPS"] = "1"
+        os.environ["ONEFLOW_MLIR_FUSE_NORMALIZATION_OPS"] = "1"
+        os.environ["ONEFLOW_MLIR_PRINT_STATS"] = "1"
+
     @unittest.skipUnless(oneflow.sysconfig.with_cuda(), "only test cpu cases")
     def test_fuse_conv_bn_cuda(test_case):
         _test_fuse_conv_bn(test_case, True)
