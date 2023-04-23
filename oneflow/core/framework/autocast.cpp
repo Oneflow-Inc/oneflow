@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/autocast.h"
 #include "oneflow/core/job_rewriter/auto_mixed_precision.h"
 #include "oneflow/core/job_rewriter/auto_mixed_precision_lists.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace autocast {
@@ -48,6 +49,26 @@ bool* cache_enabled() {
   return &cache_enabled;
 }
 
+inline Symbol<DType> get_lower_precision_fp_from_device_type(DeviceType device_type) {
+  if (device_type == DeviceType::kCPU) { return get_autocast_cpu_dtype(); };
+  return get_autocast_gpu_dtype();
+}
+
+// The structure below is referenced from PyTorch:
+// https://github.com/pytorch/pytorch/blob/41d79695907cd4105b8e7167cf8a57ba48e1f079/aten/src/ATen/autocast_mode.cpp#L60-L63
+// The weakref keeps the source's TensorImpl from being deleted.  We need to because we're
+// using the source TensorImpl* as the key.  If it were deleted, another random Tensor could
+// be allocated whose TensorImpl* happened to have the same value.  This TensorImpl* would
+// then mistakenly hit in cache: a rare, intermittent, unpredictable bug.
+using val_type = std::pair<std::weak_ptr<one::Tensor>, std::shared_ptr<one::Tensor>>;
+using key_type = std::pair<const one::EagerLocalTensorImpl*, DataType>;
+using cached_map = std::unordered_map<key_type, val_type>;
+
+std::unordered_map<key_type, val_type>* cached_casts() {
+  static thread_local std::unordered_map<key_type, val_type> cached_casts;
+  return &cached_casts;
+}
+
 }  // namespace
 
 bool is_enabled() { return *autocast_enabled(); }
@@ -66,9 +87,37 @@ void set_autocast_gpu_dtype(Symbol<DType> dtype) { *autocast_gpu_dtype() = dtype
 
 bool is_autocast_cache_enabled() { return *cache_enabled(); }
 void set_autocast_cache_enabled(bool enabled) { *cache_enabled() = enabled; }
-void clear_cache() {
-  // TODO(hjchen2)
-}
+
+Maybe<one::Tensor> cached_cast(const std::shared_ptr<one::Tensor>& tensor, Symbol<DType> cast_type,
+                               DeviceType device_type) {
+  bool use_cache = (is_autocast_cache_enabled() && tensor->requires_grad()
+                    && cast_type == get_lower_precision_fp_from_device_type(device_type)
+                    && tensor->dtype()->data_type() == DataType::kFloat && tensor->is_leaf()
+                    && !tensor->is_view());
+  if (use_cache) {
+    auto it = cached_casts()->find(
+        std::make_pair(JUST(tensor->mut_eager_local_tensor_impl()), cast_type->data_type()));
+    if (it == cached_casts()->end() || it->second.first.lock() == nullptr) {
+      const std::shared_ptr<one::Tensor>& result =
+          JUST(one::functional::To(tensor, cast_type, /*copy*/ false));
+      if (it == cached_casts()->end()) {
+        cached_casts()->emplace(
+            std::make_pair(JUST(tensor->mut_eager_local_tensor_impl()), cast_type->data_type()),
+            std::make_pair(tensor->weak_from_this(), result));
+      } else {
+        it->second.first = tensor->weak_from_this();
+        it->second.second = result;
+      }
+      return result;
+    } else {
+      return it->second.second;
+    }
+  } else {
+    return one::functional::To(tensor, cast_type, /*copy*/ false);
+  }
+};
+
+void clear_cache() { cached_casts()->clear(); }
 
 AutoCastColor AutoCastMeta::autocast_color() const { return autocast_color_; }
 
