@@ -47,14 +47,8 @@ namespace jit {
 
 static Maybe<mlir::FunctionType> GetFunctionType(user_op::InferContext* ctx,
                                                  mlir::OwningOpRef<mlir::ModuleOp>& module) {
-  // if the raw graph is existent, we should load function from the raw_graph.
-  auto raw_graph = (*module)->getAttr(mlir::oneflow::jit::RAW_GRAPH).cast<mlir::StringAttr>();
-
-  mlir::ModuleOp raw_module =
-      raw_graph ? *mlir::parseSourceString<mlir::ModuleOp>(raw_graph.strref(), module->getContext())
-                : *module;
   mlir::func::FuncOp funcOp = mlir::SymbolTable::lookupNearestSymbolFrom<mlir::func::FuncOp>(
-      raw_module, mlir::SymbolRefAttr::get(raw_module->getContext(), ctx->op_name()));
+      module.get(), mlir::SymbolRefAttr::get(module->getContext(), ctx->op_name()));
   CHECK_OR_RETURN(funcOp) << "Fail to find funcOp of symbol " << ctx->op_name();
   const auto funcType = funcOp.getFunctionType();
   CHECK_EQ_OR_RETURN(funcType.getNumInputs(), ctx->input_size("in"))
@@ -98,6 +92,10 @@ Maybe<void> SetTensorDataType(user_op::InferContext* ctx) {
     exit(1);
   }
 
+  auto raw_graph = (*module)->getAttr(mlir::oneflow::jit::RAW_GRAPH).cast<mlir::StringAttr>();
+  if (raw_graph)
+    module = mlir::parseSourceString<mlir::ModuleOp>(raw_graph.strref(), module->getContext());
+
   auto funcType = *JUST(GetFunctionType(ctx, module));
   int32_t res_i = 0;
   for (mlir::Type res_type : funcType.getResults()) {
@@ -131,6 +129,11 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
     LOG(ERROR) << "Fail to load mlir assembly";
     exit(1);
   }
+
+  auto raw_graph = (*module)->getAttr(mlir::oneflow::jit::RAW_GRAPH).cast<mlir::StringAttr>();
+  if (raw_graph)
+    module = mlir::parseSourceString<mlir::ModuleOp>(raw_graph.strref(), module->getContext());
+
   auto funcType = *JUST(GetFunctionType(ctx, module));
   int32_t res_i = 0;
   for (mlir::Type res_type : funcType.getResults()) {

@@ -99,8 +99,7 @@ llvm::SmallVector<OpaqueMemRefDescriptor> GetMLIRCInterfaceArgs(
 
 void WithMlirContext(
     user_op::KernelComputeContext* ctx, const llvm::SmallVector<llvm::StringRef, 4>& ext_libs,
-    const std::function<mlir::OwningOpRef<mlir::ModuleOp>(mlir::MLIRContext* mlir_ctx)>& parse,
-    const std::function<void(mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module)>& lower) {
+    const std::function<mlir::OwningOpRef<mlir::ModuleOp>(mlir::MLIRContext* mlir_ctx)>& parse) {
   mlir::DialectRegistry registry;
   registry
       .insert<mlir::oneflow::OneFlowDialect, mlir::func::FuncDialect, mlir::memref::MemRefDialect,
@@ -110,20 +109,10 @@ void WithMlirContext(
   mlir::OwningOpRef<mlir::ModuleOp> module = parse(&mlir_ctx);
   CHECK(!!module) << "fail to parse MLIR, op: " << ctx->op_name();
   if (ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module->print(llvm::outs()); }
-  llvm::InitializeNativeTarget();
-  llvm::InitializeNativeTargetAsmPrinter();
-  lower(&mlir_ctx, *module);
-  if (ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module->print(llvm::outs()); }
-  if (ParseBooleanFromEnv("ONEFLOW_MLIR_DUMP_IR", false)) {
-    std::string mlir;
-    llvm::raw_string_ostream os_mlir(mlir);
-    module->print(os_mlir);
-    TeePersistentLogStream::Create(JoinPath("jit", ctx->op_name() + ".mlir"))->Write(mlir);
-  }
 
   mlir::ExecutionEngineOptions jitOptions;
   jitOptions.transformer = {};
-  jitOptions.jitCodeGenOptLevel = llvm::None;
+  jitOptions.jitCodeGenOptLevel = std::nullopt;
   jitOptions.sharedLibPaths = ext_libs;
 
   auto jit_or_error = mlir::ExecutionEngine::create(*module, jitOptions);
@@ -148,16 +137,10 @@ class MlirJitCpuKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     llvm::SmallVector<llvm::StringRef, 4> ext_libs(
         {SharedLibPaths()->begin(), SharedLibPaths()->end()});
-    WithMlirContext(
-        ctx, ext_libs,
-        [&ctx](mlir::MLIRContext* mlir_ctx) {
-          return mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
-                                                         mlir_ctx);
-        },
-        [](mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module) {
-          CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToLLVM(mlir_ctx, module)))
-              << "fail to lower OneFlow to LLVM";
-        });
+    WithMlirContext(ctx, ext_libs, [&ctx](mlir::MLIRContext* mlir_ctx) {
+      return mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
+                                                     mlir_ctx);
+    });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -191,16 +174,10 @@ class MlirJitGpuKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     llvm::SmallVector<llvm::StringRef, 4> ext_libs(
         {SharedLibPaths()->begin(), SharedLibPaths()->end()});
-    WithMlirContext(
-        ctx, ext_libs,
-        [&ctx](mlir::MLIRContext* mlir_ctx) {
-          return mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
-                                                         mlir_ctx);
-        },
-        [](mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module) {
-          CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToCUDALLVM(mlir_ctx, module)))
-              << "fail to lower OneFlow to CUDA LLVM";
-        });
+    WithMlirContext(ctx, ext_libs, [&ctx](mlir::MLIRContext* mlir_ctx) {
+      return mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
+                                                     mlir_ctx);
+    });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
