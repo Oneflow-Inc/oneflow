@@ -43,6 +43,10 @@ class CompTaskNode : public TaskNode {
   // op
   std::shared_ptr<const Operator> op() const { return op_node_->shared_op(); }
 
+  ExecNode::InferBlobDescsMethod GetInferBlobDescsMethod() const override {
+    return &ExecNode::InferBlobDescsByInputs;
+  }
+
  protected:
   const OpNode* GetOneSuccOpNodeOnEdge(TaskEdge* edge);
   const OpNode* GetOnePredOpNodeOnEdge(TaskEdge* edge);

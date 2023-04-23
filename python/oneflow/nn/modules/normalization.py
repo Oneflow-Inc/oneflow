@@ -156,8 +156,7 @@ def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-05):
                 f"Given normalized_shape={normalized_shape}, expected input with shape [*, {str(normalized_shape)[1:-1]}], but got input of size {input.shape}"
             )
 
-    input_device_type = input.device.type if input.is_local else input.placement.type
-    if input_device_type == "cpu":
+    if input.is_cpu:
         reduce_axis = []
         for dim in range(len(input.shape)):
             if dim >= begin_norm_axis:
