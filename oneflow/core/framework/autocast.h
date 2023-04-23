@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
+#include "oneflow/core/framework/tensor.h"
 
 namespace oneflow {
 namespace autocast {
@@ -39,6 +40,8 @@ void set_autocast_gpu_dtype(Symbol<DType> dtype);
 bool is_autocast_cache_enabled();
 void set_autocast_cache_enabled(bool enabled);
 void clear_cache();
+Maybe<one::Tensor> cached_cast(const std::shared_ptr<one::Tensor>& tensor, Symbol<DType> cast_type,
+                               DeviceType device_type);
 
 enum AutoCastColor { kNoColor, kWhite, kGray, kClear, kBlack };
 
