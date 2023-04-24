@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/user/ops/math_unary_elementwise_seq.h"
@@ -101,24 +103,25 @@ class TanhCls final : public OpExprGradFunction<UnaryMathCaptureState> {
 
   Maybe<void> Capture(UnaryMathCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    ctx->x_requires_grad = inputs.at(0)->requires_grad();
-    ctx->SaveTensorForBackward(outputs.at(0));
+    ctx->x_requires_grad = JUST(VectorAt(inputs, 0))->requires_grad();
+    ctx->SaveTensorForBackward(JUST(VectorAt(outputs, 0)));
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const UnaryMathCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     if (!ctx->x_requires_grad) { return Maybe<void>::Ok(); }
-    const auto& y = ctx->SavedTensors().at(0);
-    in_grads->at(0) = JUST(functional::sequence_function(functional::Square)
-                               .then([](const std::shared_ptr<Tensor>& y_square) {
-                                 return functional::ScalarSub(Scalar(1), y_square, /* alpha */ 1.0);
-                               })
-                               .then([out_grads](const std::shared_ptr<Tensor>& y_result) {
-                                 return functional::Mul(out_grads.at(0), y_result);
-                               })
-                               .call(y));
-    // JUST(BwFunc(y, out_grads.at(0)));
+    const auto& y = JUST(VectorAt(ctx->SavedTensors(), 0));
+    const auto& dy = JUST(VectorAt(out_grads, 0));
+    JUST(VectorAt(*in_grads, 0)) =
+        JUST(functional::sequence_function(functional::Square)
+                 .then([](const std::shared_ptr<Tensor>& y_square) {
+                   return functional::ScalarSub(Scalar(1), y_square, /* alpha */ 1.0);
+                 })
+                 .then([dy](const std::shared_ptr<Tensor>& y_result) {
+                   return functional::Mul(dy, y_result);
+                 })
+                 .call(y));
     return Maybe<void>::Ok();
   }
 
