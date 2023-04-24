@@ -166,6 +166,11 @@ def _test_inplace_add_with_type_promotion(test_case, shape, device):
     x += y
     test_case.assertTrue(x.dtype == flow.float16)
 
+def _test_inplace_add_0_size_tensor(test_case, shape, device):
+    x = flow.randn(0, 256, device=device)
+    y = flow.randn(1, 256, device=device)
+    x += y
+    test_case.assertTrue(x.size() == (0, 256))
 
 @flow.unittest.skip_unless_1n1d()
 class TestAddModule(flow.unittest.TestCase):
@@ -176,6 +181,7 @@ class TestAddModule(flow.unittest.TestCase):
             _test_add_backward,
             _test_inplace_add,
             _test_inplace_add_with_type_promotion,
+            _test_inplace_add_0_size_tensor,
         ]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
         arg_dict["device"] = ["cpu", "cuda"]
