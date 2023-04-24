@@ -207,8 +207,9 @@ add_docstr(
     The shapes of :attr:`mean` and :attr:`std` don't need to match, but the
     total number of elements in each tensor need to be the same.
 
-    .. note:: When the shapes do not match, the shape of :attr:`mean`
-              is used as the shape for the returned output tensor
+    .. note:: Infers the output shape from input arrays :attr:`mean` and :attr:`std`.
+    The output shape will have a dimensionality equal to the max of :attr:`mean` and :attr:`std`.
+    Dimensions with size 1 in either :attr:`mean` or :attr:`std` are expanded to match the other.
 
     Args:
         mean (Tensor): the tensor of per-element means

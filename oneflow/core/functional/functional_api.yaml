@@ -846,11 +846,11 @@
 - name: "normal"
   signature: [
       "Tensor (Tensor mean, Tensor std, *, Tensor out=None, 
-      Generator generator=None, Bool requires_grad=False) => NormalTensorTensor",
+      Generator generator=None, Bool requires_grad=False) => TensorTensorNormal",
       "Tensor (Tensor mean, Float std=1.0, *, Tensor out=None, 
-      Generator generator=None, Bool requires_grad=False) => NormalTensorFloat",
+      Generator generator=None, Bool requires_grad=False) => TensorScalarNormal",
       "Tensor (Float mean, Tensor std, *, Tensor out=None, 
-      Generator generator=None, Bool requires_grad=False) => NormalFloatTensor",
+      Generator generator=None, Bool requires_grad=False) => ScalarTensorNormal",
       "Tensor (Float mean, Float std, Shape size, *, Tensor out=None, DataType dtype=None, Device device=None,
       Generator generator=None, Bool requires_grad=False) => Normal",
       "Tensor (Float mean, Float std, Int32 size, *, Tensor out=None, DataType dtype=None, Device device=None,
