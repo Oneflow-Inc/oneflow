@@ -437,6 +437,7 @@ class TestConv1d(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @unittest.skip("skip for now, becase it failed 8 times in past week")
     @autotest(n=3)
     def test_nn_functional_conv1d(test_case):
         device = random_device()

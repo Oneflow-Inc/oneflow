@@ -206,7 +206,7 @@ def OneFlow_ReturnOp : Op<OneFlow_Dialect, "return", [NoMemoryEffect, HasParent<
   let hasVerifier = 1;
 }
 
-def OneFlow_NormalizationInferenceOp : OneFlow_NormalizationBaseOp<"normalization_infer", [DeclareOpInterfaceMethods<AlternativeOpTypeNameInterface>]> {
+def OneFlow_NormalizationInferenceOp : OneFlow_NormalizationBaseOp<"normalization_infer", [DeclareOpInterfaceMethods<AlternativeOpTypeNameInterface>, DeclareOpInterfaceMethods<NCHWCompatibleInterface>]> {
   let output = (outs
     OneFlow_Tensor:$y
   );

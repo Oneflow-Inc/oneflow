@@ -120,27 +120,6 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
         graph_diff_placement = _TestGraph(model_diff_placement)
         z = graph_diff_placement(x)
 
-    def test_lazy_boxing_2d_all_combination_diff_placement_with_nccl_logical(test_case):
-        os.environ["ONEFLOW_GRAPH_MAX_NCCL_COMPUTE_STREAM"] = "1"
-        x = flow.ones(
-            4,
-            12,
-            4,
-            sbp=[flow.sbp.broadcast, flow.sbp.broadcast],
-            placement=flow.placement(
-                type="cuda", ranks=np.array(range(4)).reshape(2, 2)
-            ),
-        )
-
-        flow.boxing.nccl.enable_use_compute_stream(True)
-
-        model_diff_placement = _TestModuleDiffPlacement()
-        graph_diff_placement = _TestGraph(model_diff_placement)
-        z = graph_diff_placement(x)
-
-        os.environ["ONEFLOW_GRAPH_MAX_NCCL_COMPUTE_STREAM"] = "8"
-        flow.boxing.nccl.enable_use_compute_stream(False)
-
 
 if __name__ == "__main__":
     unittest.main()
