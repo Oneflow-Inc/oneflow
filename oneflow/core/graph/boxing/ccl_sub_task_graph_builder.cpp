@@ -26,7 +26,6 @@ namespace oneflow {
 
 using namespace boxing::collective;
 
-// NOLINTBEGIN(maybe-need-error-msg)
 namespace {
 
 void CclInitCollectiveNode(CollectiveBoxingGenericTaskNode* node, const ParallelDesc& parallel_desc,
@@ -98,7 +97,7 @@ Maybe<SubTskGphBuilderStatus> CclAllReduceSubTskGphBuilder::Build(
       && SubTskGphBuilderUtil::IsBoxingP2B(in_sbp_parallel, out_sbp_parallel)) {
     const std::string op_name = "System-Boxing-CclBoxingAllReduce-" + NewUniqueId();
     FOR_RANGE(int64_t, i, 0, in_parallel_desc.parallel_num()) {
-      TaskNode* in_node = sorted_in_tasks.at(i);
+      TaskNode* in_node = sorted_in_tasks.at(i);  // NOLINTBEGIN
       auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
       CclInitCollectiveNode(collective_node, in_parallel_desc, i, op_name, lbi, logical_blob_desc,
                             OpType::kOpTypeAllReduce, device_type_, -1);
@@ -127,7 +126,7 @@ Maybe<SubTskGphBuilderStatus> CclReduceScatterSubTskGphBuilder::Build(
       && out_sbp_parallel.split_parallel().axis() == 0) {
     const std::string op_name = "System-Boxing-CclBoxingReduceScatter-" + NewUniqueId();
     FOR_RANGE(int64_t, i, 0, in_parallel_desc.parallel_num()) {
-      TaskNode* in_node = sorted_in_tasks.at(i);
+      TaskNode* in_node = sorted_in_tasks.at(i);  // NOLINTBEGIN
       auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
       CclInitCollectiveNode(collective_node, in_parallel_desc, i, op_name, lbi, logical_blob_desc,
                             OpType::kOpTypeReduceScatter, device_type_, -1);
@@ -162,7 +161,7 @@ Maybe<SubTskGphBuilderStatus> CclP2SNoncontinuousSubTskGphBuilder::Build(
       const int64_t device_index = CHECK_JUST(in_parallel_desc.DeviceId4ParallelId(i));
       const int64_t thrd_id = EncodeStreamIdToInt64(
           GenerateComputeTaskStreamId(machine_id, device_type_, device_index));
-      TaskNode* in_node = sorted_in_tasks.at(i);
+      TaskNode* in_node = sorted_in_tasks.at(i);  // NOLINTBEGIN
       CollectiveBoxingPackTaskNode* pack_node =
           ctx->task_graph()->NewNode<CollectiveBoxingPackTaskNode>();
       pack_node->Init(machine_id, thrd_id, lbi, logical_blob_desc.shape(), in_sbp_parallel,
@@ -206,7 +205,7 @@ Maybe<SubTskGphBuilderStatus> CclAllGatherSubTskGphBuilder::Build(
       && in_sbp_parallel.split_parallel().axis() == 0) {
     const std::string op_name = "System-Boxing-CclBoxingAllGather-" + NewUniqueId();
     FOR_RANGE(int64_t, i, 0, in_parallel_desc.parallel_num()) {
-      TaskNode* in_node = sorted_in_tasks.at(i);
+      TaskNode* in_node = sorted_in_tasks.at(i);  // NOLINTBEGIN
       TaskNode* in_node_proxy = ctx->task_graph()->GetProxyNode(in_node, lbi, out_parallel_desc, i);
       auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
       CclInitCollectiveNode(collective_node, out_parallel_desc, i, op_name, lbi, logical_blob_desc,
@@ -241,7 +240,7 @@ Maybe<SubTskGphBuilderStatus> CclS2BNoncontinuousSubTskGphBuilder::Build(
       const int64_t device_index = CHECK_JUST(out_parallel_desc.DeviceId4ParallelId(i));
       const int64_t thrd_id = EncodeStreamIdToInt64(
           GenerateComputeTaskStreamId(machine_id, device_type_, device_index));
-      TaskNode* in_node = sorted_in_tasks.at(i);
+      TaskNode* in_node = sorted_in_tasks.at(i);  // NOLINTBEGIN
       TaskNode* in_node_proxy = ctx->task_graph()->GetProxyNode(in_node, lbi, out_parallel_desc, i);
       CollectiveBoxingPackTaskNode* pack_node =
           ctx->task_graph()->NewNode<CollectiveBoxingPackTaskNode>();
@@ -285,7 +284,7 @@ Maybe<SubTskGphBuilderStatus> CclReduceSubTskGphBuilder::Build(
     const std::string op_name = "System-Boxing-CclBoxingReduce-" + NewUniqueId();
     sorted_ctrl_tasks->resize(out_parallel_desc.parallel_num());
     FOR_RANGE(int64_t, i, 0, in_parallel_desc.parallel_num()) {
-      TaskNode* in_node = sorted_in_tasks.at(i);
+      TaskNode* in_node = sorted_in_tasks.at(i);  // NOLINTBEGIN
       auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
       CclInitCollectiveNode(collective_node, in_parallel_desc, i, op_name, lbi, logical_blob_desc,
                             OpType::kOpTypeReduce, device_type_, root_parallel_id);
@@ -293,7 +292,7 @@ Maybe<SubTskGphBuilderStatus> CclReduceSubTskGphBuilder::Build(
       if (i == root_parallel_id) {
         sorted_out_tasks->emplace_back(collective_node);
       } else {
-        sorted_ctrl_tasks->at(0).emplace_back(collective_node);
+        sorted_ctrl_tasks->at(0).emplace_back(collective_node);  // NOLINTBEGIN
       }
     }
     return TRY(BuildSubTskGphBuilderStatus("CclBoxingReduceSubTskGphBuilder", ""));
@@ -325,11 +324,11 @@ Maybe<SubTskGphBuilderStatus> CclScatterThenAllGatherSubTskGphBuilder::Build(
         GetTensorSliceView(out_parallel_desc.parallel_num(), split_sbp_parallel, logical_blob_desc);
     const std::string op_name = "System-Boxing-CclBoxingAllGather-" + NewUniqueId();
     FOR_RANGE(int64_t, out_id, 0, out_parallel_desc.parallel_num()) {
-      const TensorSliceView& out_slice = out_slices.at(out_id);
+      const TensorSliceView& out_slice = out_slices.at(out_id);  // NOLINTBEGIN
       const int64_t nearest_in_parallel_id = SubTskGphBuilderUtil::FindNearestSrcParallelId(
           in_parallel_desc, out_parallel_desc, out_id);
 
-      TaskNode* in_node = sorted_in_tasks.at(nearest_in_parallel_id);
+      TaskNode* in_node = sorted_in_tasks.at(nearest_in_parallel_id);  // NOLINTBEGIN
       SliceBoxingTaskNode* slice_node = ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
       // slice on cpu
       const auto in_machine_id = CHECK_JUST(in_parallel_desc.MachineId4ParallelId(0));
@@ -431,7 +430,7 @@ Maybe<SubTskGphBuilderStatus> CclAll2AllSubTskGphBuilder::Build(
       const int64_t device_index = CHECK_JUST(in_parallel_desc.DeviceId4ParallelId(i));
       const int64_t thrd_id = EncodeStreamIdToInt64(
           GenerateComputeTaskStreamId(machine_id, device_type_, device_index));
-      TaskNode* in_node = sorted_in_tasks.at(i);
+      TaskNode* in_node = sorted_in_tasks.at(i);  // NOLINTBEGIN
       CollectiveBoxingPackTaskNode* pack_node =
           ctx->task_graph()->NewNode<CollectiveBoxingPackTaskNode>();
       pack_node->Init(machine_id, thrd_id, lbi, logical_blob_desc.shape(), in_sbp_parallel,
@@ -455,6 +454,5 @@ Maybe<SubTskGphBuilderStatus> CclAll2AllSubTskGphBuilder::Build(
     return Error::BoxingNotSupportedError();
   }
 }
-// NOLINTEND(maybe-need-error-msg)
 
 }  // namespace oneflow

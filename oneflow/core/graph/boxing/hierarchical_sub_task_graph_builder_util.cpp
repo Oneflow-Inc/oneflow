@@ -17,7 +17,6 @@ limitations under the License.
 
 namespace oneflow {
 
-// NOLINTBEGIN(maybe-need-error-msg)
 Maybe<SubTskGphBuilderStatus> FlatSubTskGphBuilder::Build(
     SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
     std::vector<TaskNode*>* sorted_out_tasks,
@@ -66,7 +65,7 @@ Maybe<SubTskGphBuilderStatus> IntraGroupSubTskGphBuilder::Build(
       out_parallel_conf.mutable_hierarchy()->add_dim(group_size);
       FOR_RANGE(int64_t, j, 0, group_size) {
         const int64_t parallel_id = i * group_size + j;
-        in_tasks.emplace_back(sorted_in_tasks.at(parallel_id));
+        in_tasks.emplace_back(sorted_in_tasks.at(parallel_id));  // NOLINTBEGIN
         in_parallel_conf.add_device_name(
             "@" + std::to_string(JUST(in_parallel_desc.MachineId4ParallelId(parallel_id))) + ":"
             + std::to_string(JUST(in_parallel_desc.DeviceId4ParallelId(parallel_id))));
@@ -89,10 +88,10 @@ Maybe<SubTskGphBuilderStatus> IntraGroupSubTskGphBuilder::Build(
       CHECK_EQ_OR_RETURN(out_tasks.size(), group_size);
       FOR_RANGE(int64_t, j, 0, group_size) {
         const int64_t parallel_id = i * group_size + j;
-        sorted_out_tasks->at(parallel_id) = out_tasks.at(j);
+        sorted_out_tasks->at(parallel_id) = out_tasks.at(j);  // NOLINTBEGIN
         if (!ctrl_tasks.empty()) {
-          for (TaskNode* ctrl_node : ctrl_tasks.at(j)) {
-            sorted_ctrl_tasks->at(parallel_id).emplace_back(ctrl_node);
+          for (TaskNode* ctrl_node : ctrl_tasks.at(j)) {                 // NOLINTBEGIN
+            sorted_ctrl_tasks->at(parallel_id).emplace_back(ctrl_node);  // NOLINTBEGIN
           }
         }
       }
@@ -134,7 +133,7 @@ Maybe<SubTskGphBuilderStatus> InterGroupSubTskGphBuilder::Build(
       out_parallel_conf.mutable_hierarchy()->add_dim(num_groups);
       FOR_RANGE(int64_t, j, 0, num_groups) {
         const int64_t parallel_id = j * group_size + i;
-        in_tasks.emplace_back(sorted_in_tasks.at(parallel_id));
+        in_tasks.emplace_back(sorted_in_tasks.at(parallel_id));  // NOLINTBEGIN
         in_parallel_conf.add_device_name(
             "@" + std::to_string(JUST(in_parallel_desc.MachineId4ParallelId(parallel_id))) + ":"
             + std::to_string(JUST(in_parallel_desc.DeviceId4ParallelId(parallel_id))));
@@ -157,10 +156,10 @@ Maybe<SubTskGphBuilderStatus> InterGroupSubTskGphBuilder::Build(
       CHECK_EQ_OR_RETURN(out_tasks.size(), num_groups);
       FOR_RANGE(int64_t, j, 0, num_groups) {
         const int64_t parallel_id = j * group_size + i;
-        sorted_out_tasks->at(parallel_id) = out_tasks.at(j);
+        sorted_out_tasks->at(parallel_id) = out_tasks.at(j);  // NOLINTBEGIN
         if (!ctrl_tasks.empty()) {
-          for (TaskNode* ctrl_node : ctrl_tasks.at(j)) {
-            sorted_ctrl_tasks->at(parallel_id).emplace_back(ctrl_node);
+          for (TaskNode* ctrl_node : ctrl_tasks.at(j)) {                 // NOLINTBEGIN
+            sorted_ctrl_tasks->at(parallel_id).emplace_back(ctrl_node);  // NOLINTBEGIN
           }
         }
       }
@@ -170,6 +169,5 @@ Maybe<SubTskGphBuilderStatus> InterGroupSubTskGphBuilder::Build(
     return Error::BoxingNotSupportedError();
   }
 }
-// NOLINTEND(maybe-need-error-msg)
 
 }  // namespace oneflow
