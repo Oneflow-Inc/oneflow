@@ -421,5 +421,21 @@ class BroadcastFMod : public BroadcastBinaryGrad {
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_fmod", BroadcastFMod);
 
+class BroadcastZeta : public BroadcastBinaryGrad {
+ public:
+  Maybe<void> Apply(const BroadcastBinaryCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    return Maybe<void>::Ok();
+  }
+
+ protected:
+  Maybe<void> SaveTensorForBackward(BroadcastBinaryCaptureState* ctx, const TensorTuple& inputs,
+                                    const TensorTuple& outputs) const override {
+    return Maybe<void>::Ok();
+  }
+};
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_zeta", BroadcastZeta);
+
 }  // namespace one
 }  // namespace oneflow

@@ -285,6 +285,11 @@ struct BinaryFuncINN final {
 };
 
 template<typename T>
+struct BinaryFuncZeta final {
+  // placeholder, no definition required, the type is only used to generate Op
+};
+
+template<typename T>
 struct BinaryFuncAND final {
   static OF_DEVICE_FUNC bool Invoke(const T x, const T y) { return x && y; }
 };
