@@ -300,12 +300,12 @@ class GlobalRandNFunctor {
 class NormalFunctor {
  public:
   NormalFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
-  Maybe<Tensor> operator()(const float& mean, const float& std, const Shape& shape,
+  Maybe<Tensor> operator()(const float& mean, const float std, const Shape& shape,
                            const Optional<one::Tensor>& out,
                            const Optional<Symbol<DType>>& optional_dtype,
                            const Optional<Symbol<Device>>& optional_device,
                            const Optional<one::Generator>& optional_generator,
-                           const bool& requires_grad) const {
+                           const bool requires_grad) const {
     Symbol<DType> dtype = GetDefaultDType();
     if (optional_dtype.has_value()) {
       if (!JUST(optional_dtype)->is_floating_point()) {
@@ -366,12 +366,12 @@ class NormalFunctor {
 
 class Normal2Functor {
  public:
-  Maybe<Tensor> operator()(const float& mean, const float& std, const int32_t& shape,
+  Maybe<Tensor> operator()(const float mean, const float std, const int32_t& shape,
                            const Optional<one::Tensor>& out,
                            const Optional<Symbol<DType>>& optional_dtype,
                            const Optional<Symbol<Device>>& optional_device,
                            const Optional<one::Generator>& optional_generator,
-                           const bool& requires_grad) const {
+                           const bool requires_grad) const {
     const Shape size = Shape({shape});
     return Normal(mean, std, size, out, optional_dtype, optional_device, optional_generator,
                   requires_grad);
@@ -393,7 +393,7 @@ class TensorTensorNormalFunctor {
                            const std::shared_ptr<one::Tensor>& std,
                            const Optional<one::Tensor>& out,
                            const Optional<one::Generator>& optional_generator,
-                           const bool& requires_grad) const {
+                           const bool requires_grad) const {
     JUST(CheckNormalTensorStd(std));
     auto out_shape = *JUST(InferUnifiedShapeForBroadcasting({*mean->shape(), *std->shape()}));
     auto output = JUST(Normal(0, 1, out_shape, out, Symbol<DType>(mean->dtype()),
@@ -411,7 +411,7 @@ class TensorScalarNormalFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& mean, const float std,
                            const Optional<one::Tensor>& out,
                            const Optional<one::Generator>& optional_generator,
-                           const bool& requires_grad) const {
+                           const bool requires_grad) const {
     JUST(CheckNormalTensorStd(std));
     auto output = JUST(Normal(0, std, *(mean->shape()), out, mean->dtype(), JUST(mean->device()),
                               optional_generator, requires_grad));
@@ -426,7 +426,7 @@ class ScalarTensorNormalFunctor {
   Maybe<Tensor> operator()(const float mean, const std::shared_ptr<one::Tensor>& std,
                            const Optional<one::Tensor>& out,
                            const Optional<one::Generator>& optional_generator,
-                           const bool& requires_grad) const {
+                           const bool requires_grad) const {
     JUST(CheckNormalTensorStd(std));
     auto output = JUST(Normal(0.0, 1.0, *(std->shape()), out, std->dtype(), JUST(std->device()),
                               optional_generator, requires_grad));
