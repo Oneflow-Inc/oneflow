@@ -178,7 +178,9 @@ Maybe<void> RawRunGlobalNormalOp(
     Env& env, const OpArgsVector<std::string>& ibns, const OpArgsVector<std::string>& output_names, 
     const NdSbpSignature& ndsbp_signature, const Symbol<ParallelDesc>& op_parallel_desc) {
   CHECK_OR_RETURN(!inputs.empty());
+  const auto& parallel_desc = JUST(inputs.at(0)->parallel_desc());
   Optional<int64_t> parallel_id;
+  const auto& tensor_device = JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
   const auto* mgr = Singleton<EagerBoxingInterpreterManager>::Get();
   CHECK_EQ_OR_RETURN(inputs.size(), ibns.size());
   for (int i = 0; i < inputs.size(); ++i) {
