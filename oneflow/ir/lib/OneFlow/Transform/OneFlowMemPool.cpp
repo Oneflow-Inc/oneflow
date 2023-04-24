@@ -64,8 +64,7 @@ struct FoldAllocToSubviewPattern final : public OpRewritePattern<func::FuncOp> {
         if (auto launch_func = llvm::dyn_cast<gpu::LaunchFuncOp>(use)) {
           start_lifetime = std::min(start_lifetime, lifetime[launch_func]);
           end_lifetime = std::max(end_lifetime, lifetime[launch_func] + 1);
-        } else
-          return {false, ret};
+        }
       }
       ret.push_back({alloc, start_lifetime, end_lifetime, size});
     }
@@ -106,7 +105,9 @@ struct FoldAllocToSubviewPattern final : public OpRewritePattern<func::FuncOp> {
     ::oneflow::MemBlockResultInfo<Operation*> ret;
 
     ::oneflow::MemReusedMemSizeFirstAlgo(false, val2lifetime, val2size, &ret);
+    LOG(ERROR) << 1;
     replaceAllocwithSubview(op, rewriter, ret);
+    LOG(ERROR) << 2;
     return success();
   }
 };
