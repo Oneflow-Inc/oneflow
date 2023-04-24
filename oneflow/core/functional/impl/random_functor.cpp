@@ -13,27 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
-#include "oneflow/core/common/data_type.pb.h"
-#include "oneflow/core/common/just.h"
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/scalar.h"
-#include "oneflow/core/common/shape.h"
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/framework/device.h"
-#include "oneflow/core/framework/dtype.h"
+#include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/framework/layout.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/functional/function_library.h"
-#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/job/global_mode.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/functional/functional.h"
 #include "oneflow/user/kernels/distributions/common.h"
 #include "oneflow/user/kernels/random_seed_util.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
@@ -330,10 +319,9 @@ class NormalFunctor {
     if (out.has_value()) {
       auto out_tensor = JUST(out);
 
-      CHECK_OR_RETURN(shape == (*out_tensor->shape()))  
+      CHECK_OR_RETURN(shape == (*out_tensor->shape()))
           << "Shape of out_tensor does not match shape. "
-          << "Expected shape: " << shape 
-          << ", actual shape: " << *out_tensor->shape();
+          << "Expected shape: " << shape << ", actual shape: " << *out_tensor->shape();
 
       Symbol<DType> output_tensor_dtype = out_tensor->dtype();
       if (optional_dtype.has_value()) {
@@ -392,60 +380,10 @@ class Normal2Functor {
 
 class InplaceNormalFuctor {
  public:
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& mean,
-                           const float& std,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float mean, const float std,
                            const Optional<one::Generator>& optional_generator) const {
     return Normal(mean, std, *x->shape(), x, x->dtype(), JUST(x->device()), optional_generator,
                   x->requires_grad());
-  }
-};
-
-class NormalTools {
- public:
-  template<typename T>
-  static T GetTensorItemValue(const std::shared_ptr<one::Tensor>& input) {
-    CHECK_EQ(input->nelement(), 1) << "Input tensor must have exactly one element";
-    std::unique_ptr<T> ptr(new T());
-    const auto& callback = [&](ep::Stream* stream,
-                               const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
-      SyncAutoMemcpy(stream, ptr.get(), eager_blob_object->dptr(), sizeof(T),
-                     memory::MakeHostMemCase(), eager_blob_object->mem_case());
-    };
-    SyncAccessTensorWithTimeOut(input, callback, "const").GetOrThrow();
-    return *ptr;
-  }
-
-  static Shape TensorBroadcastShape(const std::shared_ptr<one::Tensor>& mean,
-                                    const std::shared_ptr<one::Tensor>& std) {
-    int64_t dimsA = mean->ndim();
-    int64_t dimsB = std->ndim();
-    int64_t ndim = dimsA > dimsB ? dimsA : dimsB;
-    Shape out_shape(ndim);
-
-    // Use ptrdiff_t to ensure signed comparison.
-    for (ptrdiff_t i = (ptrdiff_t)ndim - 1; i >= 0; --i) {
-      ptrdiff_t offset = ndim - 1 - i;
-      ptrdiff_t dimA = dimsA - 1 - offset;
-      ptrdiff_t dimB = dimsB - 1 - offset;
-      int64_t sizeA = (dimA >= 0) ? mean->dim(dimA) : 1;
-      int64_t sizeB = (dimB >= 0) ? std->dim(dimB) : 1;
-
-      CHECK_OR_THROW(sizeA == sizeB || sizeA == 1 || sizeB == 1)
-          << "The size of tensor a (" << sizeA << ") must match the size of tensor b (" << sizeB
-          << ") at non-singleton dimension " << i;
-
-      // 1s map to the other size (even 0).
-      out_shape.Set(i, sizeA == 1 ? sizeB : sizeA);
-    }
-    return out_shape;
-  }
-
-  static bool CheckNormalTensorStd(const std::shared_ptr<one::Tensor>& std) {
-    CHECK(!std->dtype()->is_complex()) << "normal expects standard deviation to be non-complex";
-    if (std->nelement() == 0) { return true; }
-    auto std_check = CHECK_JUST(ScalarLogicalGreaterEqual(CHECK_JUST(Min(std)), Scalar(0.0)));
-    CHECK(GetTensorItemValue<bool>(std_check)) << "normal expects all elements of std >= 0.0";
-    return true;
   }
 };
 
@@ -456,8 +394,8 @@ class TensorTensorNormalFunctor {
                            const Optional<one::Tensor>& out,
                            const Optional<one::Generator>& optional_generator,
                            const bool& requires_grad) const {
-    auto out_shape = impl::NormalTools::TensorBroadcastShape(mean, std);
-    impl::NormalTools::CheckNormalTensorStd(std);  // NOLINT
+    JUST(CheckNormalTensorStd(std));
+    auto out_shape = *JUST(InferUnifiedShapeForBroadcasting({*mean->shape(), *std->shape()}));
     auto output = JUST(Normal(0, 1, out_shape, out, Symbol<DType>(mean->dtype()),
                               JUST(mean->device()), optional_generator, requires_grad));
     // mean + output * std
@@ -470,12 +408,11 @@ class TensorTensorNormalFunctor {
 
 class TensorScalarNormalFunctor {
  public:
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& mean, const float& std,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& mean, const float std,
                            const Optional<one::Tensor>& out,
                            const Optional<one::Generator>& optional_generator,
                            const bool& requires_grad) const {
-    CHECK_GE_OR_RETURN(std, 0.0) << "normal expects std >= 0.0, but found std " << (std)
-                                 << ". This may cause an error.";
+    JUST(CheckNormalTensorStd(std));
     auto output = JUST(Normal(0, std, *(mean->shape()), out, mean->dtype(), JUST(mean->device()),
                               optional_generator, requires_grad));
     JUST(Add(output, mean, 1, true));
@@ -486,11 +423,11 @@ class TensorScalarNormalFunctor {
 
 class ScalarTensorNormalFunctor {
  public:
-  Maybe<Tensor> operator()(const float& mean, const std::shared_ptr<one::Tensor>& std,
+  Maybe<Tensor> operator()(const float mean, const std::shared_ptr<one::Tensor>& std,
                            const Optional<one::Tensor>& out,
                            const Optional<one::Generator>& optional_generator,
                            const bool& requires_grad) const {
-    impl::NormalTools::CheckNormalTensorStd(std);  // NOLINT
+    JUST(CheckNormalTensorStd(std));
     auto output = JUST(Normal(0.0, 1.0, *(std->shape()), out, std->dtype(), JUST(std->device()),
                               optional_generator, requires_grad));
     JUST(InplaceMul(output, std));
