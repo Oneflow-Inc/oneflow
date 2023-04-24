@@ -330,8 +330,10 @@ class NormalFunctor {
     if (out.has_value()) {
       auto out_tensor = JUST(out);
 
-      CHECK_OR_RETURN(shape == (*out_tensor->shape()))
-          << Error::RuntimeError() << "Shape of out_tensor does not match shape";
+      CHECK_OR_RETURN(shape == (*out_tensor->shape()))  
+          << "Shape of out_tensor does not match shape. "
+          << "Expected shape: " << shape 
+          << ", actual shape: " << *out_tensor->shape();
 
       Symbol<DType> output_tensor_dtype = out_tensor->dtype();
       if (optional_dtype.has_value()) {
