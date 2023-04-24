@@ -86,8 +86,7 @@ llvm::SmallVector<OpaqueMemRefDescriptor> GetMLIRCInterfaceArgs(
     user_op::KernelComputeContext* ctx) {
   llvm::SmallVector<OpaqueMemRefDescriptor> args{};
   auto tensor = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-  args.push_back(
-      SwitchCreateMemRefDescriptor(SwitchCase(tensor->shape_view().NumAxes(), kInt8), tensor));
+  args.push_back(SwitchCreateMemRefDescriptor(SwitchCase(1, kInt8), tensor));
   for (auto& pair : ctx->inputs()) {
     auto tensor = ctx->Tensor4ArgNameAndIndex(pair.first, pair.second);
     auto ref = SwitchCreateMemRefDescriptor(
@@ -139,6 +138,22 @@ void WithMlirContext(
   CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
 }
 
+size_t inferOneFlowMemPoolSize(user_op::InferContext* ctx) {
+  using namespace user_op;
+  mlir::MLIRContext mlir_ctx(oneflow::okl::GetRegistry());
+  auto mlir =
+      mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx);
+
+  auto module = mlir.get();
+  if (auto mempool = module->getAttr(mlir::oneflow::codegen::mempool::MEMPOOL_ATTR_NAME)
+                         .cast<mlir::IntegerAttr>()) {
+    return mempool.getInt();
+  }
+  // Note: we should ensure the tmp buffer should be fetched in the mlir jit op in case of null
+  // object error.
+  return 1;
+}
+
 template<typename T>
 class MlirJitCpuKernel final : public user_op::OpKernel {
  public:
@@ -160,14 +175,15 @@ class MlirJitCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_MLIR_JIT_CPU_KERNEL(dtype)                                                     \
-  REGISTER_USER_KERNEL("mlir_jit")                                                              \
-      .SetCreateFn<MlirJitCpuKernel<dtype>>()                                                   \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
-                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        return Maybe<void>::Ok();                                                               \
+#define REGISTER_MLIR_JIT_CPU_KERNEL(dtype)                                                       \
+  REGISTER_USER_KERNEL("mlir_jit")                                                                \
+      .SetCreateFn<MlirJitCpuKernel<dtype>>()                                                     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                             \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))          \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) { return inferOneFlowMemPoolSize(ctx); }) \
+      .SetInplaceProposalFn([](const user_op::InferContext&,                                      \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {   \
+        return Maybe<void>::Ok();                                                                 \
       });
 
 REGISTER_MLIR_JIT_CPU_KERNEL(float)
@@ -204,19 +220,6 @@ class MlirJitGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-size_t inferOneFlowMemPoolSize(user_op::InferContext* ctx) {
-  using namespace user_op;
-  mlir::MLIRContext mlir_ctx(oneflow::okl::GetRegistry());
-  auto mlir =
-      mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx);
-
-  auto module = mlir.get();
-  if (auto mempool = module->getAttr(mlir::oneflow::codegen::mempool::MEMPOOL_ATTR_NAME)
-                         .cast<mlir::IntegerAttr>()) {
-    return mempool.getInt();
-  }
-  return 0;
-}
 #define REGISTER_MLIR_JIT_GPU_KERNEL(dtype)                                                       \
   REGISTER_USER_KERNEL("mlir_jit")                                                                \
       .SetCreateFn<MlirJitGpuKernel<dtype>>()                                                     \

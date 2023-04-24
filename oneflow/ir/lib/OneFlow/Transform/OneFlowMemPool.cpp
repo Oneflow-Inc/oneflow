@@ -69,7 +69,7 @@ struct FoldAllocToSubviewPattern final : public OpRewritePattern<func::FuncOp> {
       }
       ret.push_back({alloc, start_lifetime, end_lifetime, size});
     }
-    return {true, ret};
+    return {ret.size(), ret};
   }
 
   void replaceAllocwithSubview(func::FuncOp func, mlir::PatternRewriter& rewriter,
@@ -125,6 +125,10 @@ struct InsertOneFlowMemPoolPattern final : public OpRewritePattern<func::FuncOp>
     return {true, ret};
   }
 
+  MemRefType getNullMemType(mlir::PatternRewriter& rewriter) const {
+    return MemRefType::get({1}, getMemPoolElemType(rewriter.getContext()));
+  }
+
  public:
   explicit InsertOneFlowMemPoolPattern(mlir::MLIRContext* context)
       : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
@@ -139,7 +143,8 @@ struct InsertOneFlowMemPoolPattern final : public OpRewritePattern<func::FuncOp>
       return failure();
     }
 
-    auto type = alloc_op->getResult(0).getType().dyn_cast_or_null<MemRefType>();
+    auto type = alloc_op ? alloc_op->getResult(0).getType().dyn_cast_or_null<MemRefType>()
+                         : getNullMemType(rewriter);
     if (type.getRank() != 1 && type.getElementType() != getMemPoolElemType(op->getContext())) {
       LOG(FATAL) << "the alloc op fail to matching memref<?xi8>";
       return failure();
@@ -153,12 +158,12 @@ struct InsertOneFlowMemPoolPattern final : public OpRewritePattern<func::FuncOp>
     auto func = rewriter.create<func::FuncOp>(op.getLoc(), op.getName(), function_type);
     for (auto pair : op->getDialectAttrs()) { func->setAttr(pair.getName(), pair.getValue()); }
     op.getBody().insertArgument(unsigned(0), type, op->getLoc());
-    rewriter.replaceOp(alloc_op, {op.getArgument(0)});
+    if (alloc_op) rewriter.replaceOp(alloc_op, {op.getArgument(0)});
     IRMapping bvm;
     op.getRegion().cloneInto(&func.getRegion(), bvm);
     rewriter.eraseOp(op);
     module->setAttr(codegen::mempool::MEMPOOL_ATTR_NAME,
-                  rewriter.getI64IntegerAttr(type.getDimSize(0)));
+                    rewriter.getI64IntegerAttr(type.getDimSize(0)));
     return success();
   }
 };
