@@ -14,6 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// The functions in this header file are used to replace `CHECK` and `LOG(FATAL)` macros of glog
+// in those header files included by oneflow/core/common/throw.h, so those header files
+// do not need to include <glog/logging.h>, and we can undef CHECK series macro of
+// glog in oneflow/core/common/throw.h and use another impl instead with less modification.
 namespace oneflow {
 void GLOGCHECK(bool);
 void GLOGLOGFATAL(const char*);
