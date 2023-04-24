@@ -345,14 +345,18 @@ def _graph_save(return_dict, filename, id_state_filename, with_eager):
         _get_state_dict_tensor_size(state_dict),
     )
     flow.save(state_dict, filename)
+    print("====> save process done")
 
 
 def _graph_load(return_dict, filename, id_state_filename):
+    # TODO(pangguojian): job_id
+    os.environ["JOB_ID"] = "3000"
     state_dict_loaded = flow.load(filename)
     # load with nn.Graph
     _test_linear_multi_graph_load(
         return_dict, flow.device("cuda"), True, state_dict_loaded, id_state_filename,
     )
+    print("====> load process done")
 
 
 def _test_linear_multi_graph_save_load_gpu(test_case, with_eager):

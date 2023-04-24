@@ -20,9 +20,23 @@ limitations under the License.
 namespace oneflow {
 
 IDMgr::IDMgr() {
-  regst_desc_id_count_ = Singleton<IdStateMgr>::Get()->GetRegstDescIdState();
-  mem_block_id_count_ = Singleton<IdStateMgr>::Get()->GetMemBlockIdState();
-  chunk_id_count_ = Singleton<IdStateMgr>::Get()->GetChunkIdState();
+  regst_desc_id_count_ = 0;
+  mem_block_id_count_ = 0;
+  chunk_id_count_ = 0;
+}
+
+void IDMgr::SaveId() {
+  Singleton<IdStateMgr>::Get()->SetMemBlockIdState(mem_block_id_count_);
+  Singleton<IdStateMgr>::Get()->SetRegstDescIdState(regst_desc_id_count_);
+  Singleton<IdStateMgr>::Get()->SetChunkIdState(chunk_id_count_);
+  task_id_gen_.SaveId();
+}
+
+void IDMgr::LoadId(int64_t regst_desc_id_count, int64_t mem_block_id_count,
+                   int64_t chunk_id_count) {
+  regst_desc_id_count_ = regst_desc_id_count;
+  mem_block_id_count_ = mem_block_id_count;
+  chunk_id_count_ = chunk_id_count;
 }
 
 }  // namespace oneflow

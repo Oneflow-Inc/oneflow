@@ -94,8 +94,8 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
       Singleton<ResourceDesc, ForSession>::Delete();
     }
     Singleton<ResourceDesc, ForSession>::New(resource, GlobalProcessCtx::NumOfProcessPerNode());
-    Singleton<IdStateMgr>::New();
     Singleton<IDMgr>::New();
+    Singleton<IdStateMgr>::New();
     Singleton<TaskStreamIndexManager>::New();
     // TODO(chengcheng): refactor JobBuildAndInferCtxMgr
     Singleton<LazyJobBuildAndInferCtxMgr>::New();
@@ -165,8 +165,8 @@ Maybe<void> MultiClientSessionContext::TryClose() {
 
     Singleton<LazyJobBuildAndInferCtxMgr>::Delete();
     Singleton<TaskStreamIndexManager>::Delete();
-    Singleton<IDMgr>::Delete();
     Singleton<IdStateMgr>::Delete();
+    Singleton<IDMgr>::Delete();
 
     // TODO(chengcheng): remove template ForEnv and ForSession
     Singleton<ResourceDesc, ForSession>::Delete();

@@ -28,6 +28,11 @@ IdState IdStateMgr::SaveIdState() {
   return id_state_;
 }
 
-void IdStateMgr::LoadIdState(const IdState& id_state) { id_state_ = id_state; }
+void IdStateMgr::LoadIdState(const IdState& id_state) {
+  id_state_ = id_state;
+  CHECK(Singleton<IDMgr>::Get() != nullptr);
+  Singleton<IDMgr>::Get()->LoadId(id_state_.regst_desc_id_state_, id_state.mem_block_id_state_,
+                                  id_state.chunk_id_state_);
+}
 
 }  // namespace oneflow

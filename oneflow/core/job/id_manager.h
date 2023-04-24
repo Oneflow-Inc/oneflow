@@ -36,12 +36,8 @@ class IDMgr final {
 
   TaskIdGenerator* GetTaskIdGenerator() { return &task_id_gen_; }
 
-  void SaveId() {
-    Singleton<IdStateMgr>::Get()->SetMemBlockIdState(mem_block_id_count_);
-    Singleton<IdStateMgr>::Get()->SetRegstDescIdState(regst_desc_id_count_);
-    Singleton<IdStateMgr>::Get()->SetChunkIdState(chunk_id_count_);
-    task_id_gen_.SaveId();
-  }
+  void SaveId();
+  void LoadId(int64_t regst_desc_id_count, int64_t mem_block_id_count, int64_t chunk_id_count);
 
  private:
   friend class Singleton<IDMgr>;
