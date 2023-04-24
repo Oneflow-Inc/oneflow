@@ -111,11 +111,13 @@ class TanhCls final : public OpExprGradFunction<UnaryMathCaptureState> {
     if (!ctx->x_requires_grad) { return Maybe<void>::Ok(); }
     const auto& y = ctx->SavedTensors().at(0);
     in_grads->at(0) = JUST(functional::sequence_function(functional::Square)
-                 .then([](const std::shared_ptr<Tensor>& y_square) {
-                   return functional::ScalarSub(Scalar(1), y_square, /* alpha */ 1.0);
-                 })
-                 .then([out_grads](const std::shared_ptr<Tensor>& y_result) { return functional::Mul(out_grads.at(0), y_result); })
-                 .call(y));
+                               .then([](const std::shared_ptr<Tensor>& y_square) {
+                                 return functional::ScalarSub(Scalar(1), y_square, /* alpha */ 1.0);
+                               })
+                               .then([out_grads](const std::shared_ptr<Tensor>& y_result) {
+                                 return functional::Mul(out_grads.at(0), y_result);
+                               })
+                               .call(y));
     // JUST(BwFunc(y, out_grads.at(0)));
     return Maybe<void>::Ok();
   }
