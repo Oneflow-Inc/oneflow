@@ -59,28 +59,45 @@ struct Throw final {
         return frame;                                                                      \
       }(__FUNCTION__))
 
-#define CHECK_OR_THROW(expr)                                                         \
-  if (!(expr))                                                                       \
-  ::oneflow::details::Throw() = ::oneflow::Error::CheckFailedError().GetStackTrace() \
-                                << "Check failed: " << OF_PP_STRINGIZE(expr) << ": "
+#define CHECK_OR_THROW_INTERNAL(expr, error_msg)                                      \
+  if (!(expr))                                                                        \
+  ::oneflow::details::Throw() =                                                       \
+      ::oneflow::Error::CheckFailedError()                                            \
+          .AddStackFrame([](const char* function) {                                   \
+            thread_local static auto frame = ::oneflow::SymbolOf(                     \
+                ::oneflow::ErrorStackFrame(__FILE__, __LINE__, function, error_msg)); \
+            return frame;                                                             \
+          }(__FUNCTION__))                                                            \
+          .GetStackTrace()                                                            \
+      << "Check failed: " << OF_PP_STRINGIZE(expr) << ": "
 
-#define CHECK_EQ_OR_THROW(lhs, rhs) \
-  CHECK_OR_THROW((lhs) == (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
+#define CHECK_OR_THROW(expr)                                           \
+  CHECK_OR_THROW_INTERNAL(expr, OF_PP_STRINGIZE(CHECK_OR_THROW(expr))) \
+      << "Check failed: " << OF_PP_STRINGIZE(expr) << ": "
 
-#define CHECK_GE_OR_THROW(lhs, rhs) \
-  CHECK_OR_THROW((lhs) >= (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
+#define CHECK_EQ_OR_THROW(lhs, rhs)                                                 \
+  CHECK_OR_THROW_INTERNAL((lhs) == (rhs), OF_PP_STRINGIZE(CHECK_EQ_OR_THROW(expr))) \
+      << "(" << (lhs) << " vs " << (rhs) << ") "
 
-#define CHECK_GT_OR_THROW(lhs, rhs) \
-  CHECK_OR_THROW((lhs) > (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
+#define CHECK_GE_OR_THROW(lhs, rhs)                                                 \
+  CHECK_OR_THROW_INTERNAL((lhs) >= (rhs), OF_PP_STRINGIZE(CHECK_GE_OR_THROW(expr))) \
+      << "(" << (lhs) << " vs " << (rhs) << ") "
 
-#define CHECK_LE_OR_THROW(lhs, rhs) \
-  CHECK_OR_THROW((lhs) <= (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
+#define CHECK_GT_OR_THROW(lhs, rhs)                                                \
+  CHECK_OR_THROW_INTERNAL((lhs) > (rhs), OF_PP_STRINGIZE(CHECK_GT_OR_THROW(expr))) \
+      << "(" << (lhs) << " vs " << (rhs) << ") "
 
-#define CHECK_LT_OR_THROW(lhs, rhs) \
-  CHECK_OR_THROW((lhs) < (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
+#define CHECK_LE_OR_THROW(lhs, rhs)                                                 \
+  CHECK_OR_THROW_INTERNAL((lhs) <= (rhs), OF_PP_STRINGIZE(CHECK_LE_OR_THROW(expr))) \
+      << "(" << (lhs) << " vs " << (rhs) << ") "
 
-#define CHECK_NE_OR_THROW(lhs, rhs) \
-  CHECK_OR_THROW((lhs) != (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
+#define CHECK_LT_OR_THROW(lhs, rhs)                                                \
+  CHECK_OR_THROW_INTERNAL((lhs) < (rhs), OF_PP_STRINGIZE(CHECK_LT_OR_THROW(expr))) \
+      << "(" << (lhs) << " vs " << (rhs) << ") "
+
+#define CHECK_NE_OR_THROW(lhs, rhs)                                                 \
+  CHECK_OR_THROW_INTERNAL((lhs) != (rhs), OF_PP_STRINGIZE(CHECK_NE_OR_THROW(expr))) \
+      << "(" << (lhs) << " vs " << (rhs) << ") "
 
 #define CHECK_STREQ_OR_THROW(lhs, rhs) CHECK_EQ_OR_THROW(std::string(lhs), std::string(rhs))
 
