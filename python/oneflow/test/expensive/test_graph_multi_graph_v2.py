@@ -151,7 +151,7 @@ def _get_state_dict_tensor_size(sd):
 
 
 @_with_new_session
-def _test_linear_multi_graph_save(return_dict, device, with_reshape, with_eager):
+def _test_linear_multi_graph_save(return_dict, device, with_reshape, id_state_filename, with_eager):
     linear = flow.nn.Linear(3, 8, False)
     linear = linear.to(device)
     np_weight = np.ones((3, 8)).astype(np.float32)
@@ -244,11 +244,12 @@ def _test_linear_multi_graph_save(return_dict, device, with_reshape, with_eager)
 
     state_dict = linear_g.runtime_state_dict(with_eager=with_eager)
     print("====> saved graphs", state_dict.keys())
+    flow.save_id_state(id_state_filename)
     return state_dict
 
 
 @_with_new_session
-def _test_linear_multi_graph_load(return_dict, device, with_reshape, state_dict):
+def _test_linear_multi_graph_load(return_dict, device, with_reshape, state_dict, id_state_filename):
     linear = flow.nn.Linear(3, 8, False)
     linear = linear.to(device)
     np_weight = np.ones((3, 8)).astype(np.float32)
@@ -281,6 +282,8 @@ def _test_linear_multi_graph_load(return_dict, device, with_reshape, state_dict)
 
     linear_g = LinearGraph()
     print("====> load")
+    # TODO(pangguojian): when to load id_state
+    flow.load_id_state(id_state_filename)
     linear_g.load_runtime_state_dict(state_dict)
     print("====> load finish")
 
@@ -335,22 +338,20 @@ def _test_linear_multi_graph_load(return_dict, device, with_reshape, state_dict)
 
 def _graph_save(return_dict, filename, id_state_filename, with_eager):
     state_dict = _test_linear_multi_graph_save(
-        return_dict, flow.device("cuda"), True, with_eager
+        return_dict, flow.device("cuda"), True, id_state_filename, with_eager, 
     )
     print(
         f"state_dict(with_eager={with_eager}) tensors size ",
         _get_state_dict_tensor_size(state_dict),
     )
     flow.save(state_dict, filename)
-    flow.save_id_state(id_state_filename)
 
 
 def _graph_load(return_dict, filename, id_state_filename):
-    flow.load_id_state(id_state_filename)
     state_dict_loaded = flow.load(filename)
     # load with nn.Graph
     _test_linear_multi_graph_load(
-        return_dict, flow.device("cuda"), True, state_dict_loaded,
+        return_dict, flow.device("cuda"), True, state_dict_loaded, id_state_filename,
     )
 
 

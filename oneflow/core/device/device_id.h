@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_DEVICE_DEVICE_ID_H_
 #define ONEFLOW_CORE_DEVICE_DEVICE_ID_H_
 
+#include <cstdint>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/device_type.h"
 
@@ -74,6 +75,9 @@ class DeviceId {
   device_type_t device_type_;
   device_index_t device_index_;
 };
+
+int64_t EncodeDeviceIdToInt64(const DeviceId& device_id);
+DeviceId DecodeDeviceIdFromInt64(int64_t device_id_val);
 
 }  // namespace oneflow
 

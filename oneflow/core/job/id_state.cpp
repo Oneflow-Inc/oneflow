@@ -21,6 +21,8 @@ limitations under the License.
 namespace oneflow {
 
 IdState IdStateMgr::SaveIdState() {
+  CHECK(Singleton<IDMgr>::Get() != nullptr);
+  CHECK(Singleton<TaskStreamIndexManager>::Get() != nullptr);
   Singleton<IDMgr>::Get()->SaveId();
   Singleton<TaskStreamIndexManager>::Get()->SaveTaskStreamIndex();
   return id_state_;

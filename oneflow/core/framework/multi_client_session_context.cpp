@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/load_library.h"
+#include "oneflow/core/job/id_state.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/job/version.h"
 #include "oneflow/core/job/global_for.h"
@@ -93,6 +94,7 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
       Singleton<ResourceDesc, ForSession>::Delete();
     }
     Singleton<ResourceDesc, ForSession>::New(resource, GlobalProcessCtx::NumOfProcessPerNode());
+    Singleton<IdStateMgr>::New();
     Singleton<IDMgr>::New();
     Singleton<TaskStreamIndexManager>::New();
     // TODO(chengcheng): refactor JobBuildAndInferCtxMgr
@@ -164,6 +166,7 @@ Maybe<void> MultiClientSessionContext::TryClose() {
     Singleton<LazyJobBuildAndInferCtxMgr>::Delete();
     Singleton<TaskStreamIndexManager>::Delete();
     Singleton<IDMgr>::Delete();
+    Singleton<IdStateMgr>::Delete();
 
     // TODO(chengcheng): remove template ForEnv and ForSession
     Singleton<ResourceDesc, ForSession>::Delete();
