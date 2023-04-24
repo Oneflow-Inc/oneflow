@@ -145,7 +145,8 @@ std::function<void(mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module)> getLower
   LOG(FATAL) << "Fail to match lowering function with device tag name: " << device_tag_str;
 }
 
-std::string convertFuncToLLVM(func::FuncOp func, StringAttr device_tag) {
+std::string convertFuncToByte(func::FuncOp& func, const StringAttr& device_tag,
+                              bool compile_to_llvm) {
   mlir::DialectRegistry registry;
   registry
       .insert<mlir::oneflow::OneFlowDialect, mlir::func::FuncDialect, mlir::memref::MemRefDialect,
@@ -155,6 +156,7 @@ std::string convertFuncToLLVM(func::FuncOp func, StringAttr device_tag) {
   std::string mlir;
   llvm::raw_string_ostream os_mlir(mlir);
   mlir::writeBytecodeToFile(func, os_mlir);
+  if (!compile_to_llvm) return mlir;
   mlir::OwningOpRef<mlir::ModuleOp> module =
       ::mlir::parseSourceString<mlir::ModuleOp>(mlir, &mlir_ctx);
   mlir::registerLLVMDialectTranslation(registry);
@@ -231,9 +233,11 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
           NamedAttrList attributes =
               GetJitOpAttributes(builder, name, argumentTypes.size(), resultTypes.size(),
                                  entryOp->getOperand(0).getDefiningOp());
-          auto byte = convertFuncToLLVM(
-              function, attributes.get(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr())
-                            .cast<StringAttr>());
+          const auto byte = convertFuncToByte(
+              function,
+              attributes.get(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr())
+                  .cast<StringAttr>(),
+              compileToLLVM.getValue());
           auto jitOp = builder.create<MlirJitOp>(entryOp->getLoc(), function, attributes, entries);
           jitOp->setAttr("mlir_assembly", builder.getStringAttr(byte));
           for (const auto& old : llvm::enumerate(exits)) {
