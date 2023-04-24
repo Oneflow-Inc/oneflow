@@ -19,6 +19,7 @@ limitations under the License.
 #include <glog/logging.h>
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/preprocessor.h"
+#include "oneflow/core/common/to_string.h"
 
 namespace oneflow {
 
@@ -79,32 +80,32 @@ struct Throw final {
 #define CHECK_EQ_OR_THROW(lhs, rhs)                                                     \
   CHECK_OR_THROW_INTERNAL((lhs) == (rhs), OF_PP_STRINGIZE(CHECK_EQ_OR_THROW(lhs, rhs))) \
       << "Check failed: "                                                               \
-      << "(" << (lhs) << " == " << (rhs) << "): "
+      << "(" << ToStringIfApplicable(lhs) << " == " << ToStringIfApplicable(rhs) << "): "
 
 #define CHECK_GE_OR_THROW(lhs, rhs)                                                     \
   CHECK_OR_THROW_INTERNAL((lhs) >= (rhs), OF_PP_STRINGIZE(CHECK_GE_OR_THROW(lhs, rhs))) \
       << "Check failed: "                                                               \
-      << "(" << (lhs) << " >= " << (rhs) << "): "
+      << "(" << ToStringIfApplicable(lhs) << " >= " << ToStringIfApplicable(rhs) << "): "
 
 #define CHECK_GT_OR_THROW(lhs, rhs)                                                    \
   CHECK_OR_THROW_INTERNAL((lhs) > (rhs), OF_PP_STRINGIZE(CHECK_GT_OR_THROW(lhs, rhs))) \
       << "Check failed: "                                                              \
-      << "(" << (lhs) << " > " << (rhs) << "): "
+      << "(" << ToStringIfApplicable(lhs) << " > " << ToStringIfApplicable(rhs) << "): "
 
 #define CHECK_LE_OR_THROW(lhs, rhs)                                                     \
   CHECK_OR_THROW_INTERNAL((lhs) <= (rhs), OF_PP_STRINGIZE(CHECK_LE_OR_THROW(lhs, rhs))) \
       << "Check failed: "                                                               \
-      << "(" << (lhs) << " <= " << (rhs) << "): "
+      << "(" << ToStringIfApplicable(lhs) << " <= " << ToStringIfApplicable(rhs) << "): "
 
 #define CHECK_LT_OR_THROW(lhs, rhs)                                                    \
   CHECK_OR_THROW_INTERNAL((lhs) < (rhs), OF_PP_STRINGIZE(CHECK_LT_OR_THROW(lhs, rhs))) \
       << "Check failed: "                                                              \
-      << "(" << (lhs) << " < " << (rhs) << "): "
+      << "(" << ToStringIfApplicable(lhs) << " < " << ToStringIfApplicable(rhs) << "): "
 
 #define CHECK_NE_OR_THROW(lhs, rhs)                                                     \
   CHECK_OR_THROW_INTERNAL((lhs) != (rhs), OF_PP_STRINGIZE(CHECK_NE_OR_THROW(lhs, rhs))) \
       << "Check failed: "                                                               \
-      << "(" << (lhs) << " != " << (rhs) << "): "
+      << "(" << ToStringIfApplicable(lhs) << " != " << ToStringIfApplicable(rhs) << "): "
 
 #define CHECK_STREQ_OR_THROW(lhs, rhs) CHECK_EQ_OR_THROW(std::string(lhs), std::string(rhs))
 
