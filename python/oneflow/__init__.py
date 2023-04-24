@@ -381,6 +381,7 @@ from oneflow.framework.generator import (
 # from oneflow.framework.model import Model
 import oneflow.utils.tensor
 import oneflow.utils.global_view
+import oneflow.utils.model_zoo
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import is_nonzero
 from oneflow._oneflow_internal import to_dlpack
