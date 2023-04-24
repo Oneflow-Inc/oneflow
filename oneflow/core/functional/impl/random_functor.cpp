@@ -408,6 +408,7 @@ class TensorTensorNormalFunctor {
 
 class TensorScalarNormalFunctor {
  public:
+  // TODO : performance optimizing Write as a kenerl
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& mean, const float std,
                            const Optional<one::Tensor>& out,
                            const Optional<one::Generator>& optional_generator,
@@ -423,6 +424,7 @@ class TensorScalarNormalFunctor {
 
 class ScalarTensorNormalFunctor {
  public:
+  // TODO : performance optimizing one multiplication and one addition Write as a kenerl
   Maybe<Tensor> operator()(const float mean, const std::shared_ptr<one::Tensor>& std,
                            const Optional<one::Tensor>& out,
                            const Optional<one::Generator>& optional_generator,
