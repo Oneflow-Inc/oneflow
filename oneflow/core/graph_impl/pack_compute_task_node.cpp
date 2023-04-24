@@ -50,7 +50,7 @@ void PackCompTaskNode::BuildExecGphAndRegst() {
   out_regst->AddLbi(op()->BnInOp2Lbi(op()->SoleObn()));
   exec_node->BindBnWithRegst(op()->SoleObn(), out_regst);
 
-  exec_node->InferBlobDescs(parallel_ctx());
+  (exec_node->*GetInferBlobDescsMethod())(parallel_ctx());
 }
 
 REGISTER_COMP_TASK_STREAM_INDEX_GETTER(TaskType::kPack);

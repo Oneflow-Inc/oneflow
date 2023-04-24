@@ -64,7 +64,7 @@ void SliceBoxingTaskNode::BuildExecGphAndRegst() {
   out_regst->AddLbi(lbi());
   node->BindBnWithRegst(op->SoleObn(), out_regst);
   node->AddBnToRegstAndBindIt(&Operator::tmp_bns, GetProducedRegst("tmp"));
-  node->InferBlobDescs(parallel_ctx());
+  (node->*GetInferBlobDescsMethod())(parallel_ctx());
 }
 
 void SliceBoxingTaskNode::InferProducedDataRegstTimeShape() {
