@@ -27,14 +27,6 @@ namespace oneflow {
 
 namespace {
 
-Maybe<bool> RawCheckSlicelKernelRegistered(DeviceType device_type) {
-  SliceKernelRegContext reg_ctx(device_type);
-  return user_op::UserOpRegistryMgr::Get().IsOpKernelRegistered("slice", reg_ctx);
-}
-
-static constexpr auto* CheckSliceKernelRegistered =
-    DECORATE(&RawCheckSlicelKernelRegistered, ThreadLocalCachedCopiable);
-
 bool RawIsBroadcastSbp(Symbol<SbpParallel> sbp_parallel) {
   return sbp_parallel->has_broadcast_parallel();
 }
