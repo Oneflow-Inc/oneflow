@@ -35,9 +35,9 @@ def OneFlowJobToFuncPass : Pass<"ofjob-to-func", "ModuleOp"> {
   let dependentDialects = ["mlir::func::FuncDialect"];
 }
 
-def CastOneFlowInputToSignlessPass : Pass<"cast-ofinput-to-signless", "ModuleOp"> {
-  let summary = "cast oneflow input to singless";
-  let constructor = "mlir::oneflow::createCastOneFlowInputToSignlessPass()";
+def CastOneFlowOpsToSignlessPass : Pass<"cast-ofops-to-signless", "ModuleOp"> {
+  let summary = "cast oneflow ops to singless";
+  let constructor = "mlir::oneflow::createCastOneFlowOpsToSignlessPass()";
   let dependentDialects = ["mlir::func::FuncDialect", "mlir::BuiltinDialect"];
 }
 
@@ -67,6 +67,22 @@ def AggregateComputeOpsPass : Pass<"aggregate-compute-ops", "ModuleOp"> {
 def WrapOpsToKernelLaunchPass : Pass<"wrap-ops-to-kernel-launch", "ModuleOp"> {
   let summary = "wrap user ops with a single kernel launch op in OneFlow Job";
   let constructor = "mlir::oneflow::createWrapOpsToKernelLaunchPass()";
+}
+
+def EliminateAllocOpsPass : Pass<"eliminate-alloc-ops", "ModuleOp"> {
+  let summary = "eliminate memref.alloc and memref.copy which target is a block argument";
+  let constructor = "mlir::oneflow::createEliminateAllocOpsPass()";
+  let dependentDialects = ["pdl_interp::PDLInterpDialect", "pdl::PDLDialect"];
+}
+
+def AppendOneFlowStreamPass : Pass<"append-ofstream", "ModuleOp"> {
+  let summary = "append oneflow stream to gpu function arguments";
+  let constructor = "mlir::oneflow::createAppendOneFlowStreamPass()";
+}
+
+def MgpuToOneFlowStreamPass : Pass<"mgpu-to-ofstream", "ModuleOp"> {
+  let summary = "convert mlir abi about mgpu to oneflow stream, this pass should be invoked after append-ofstream pass";
+  let constructor = "mlir::oneflow::createMgpuToOneFlowStreamPass()";
 }
 
 def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "ModuleOp"> {

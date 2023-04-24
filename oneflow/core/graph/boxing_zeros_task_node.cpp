@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/graph/boxing_zeros_task_node.h"
+#include "oneflow/core/graph/boxing_task_graph.pb.h"
 
 namespace oneflow {
 
@@ -50,11 +51,30 @@ void BoxingZerosTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   out_regst->AddLbi(sole_op->BnInOp2Lbi(sole_op->SoleObn()));
   node->BindBnWithRegst(sole_op->SoleObn(), out_regst);
-  node->InferBlobDescs(nullptr);
+  (node->*GetInferBlobDescsMethod())(nullptr);
 }
 
 void BoxingZerosTaskNode::InferProducedDataRegstTimeShape() {
   GetProducedRegst("out")->mut_data_regst_time_shape()->reset(new Shape(time_shape_));
+}
+Maybe<void> BoxingZerosTaskNode::InitTransportTaskFromProto(
+    const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) {
+  CHECK_OR_RETURN(transport_task_proto.has_boxing_zeros_task())
+      << "not a serialized BoxingZerosTaskNode. debug string: "
+      << transport_task_proto.DebugString();
+  const auto& proto = transport_task_proto.boxing_zeros_task();
+  shape_ = Shape(proto.shape());
+  data_type_ = proto.data_type();
+  time_shape_ = Shape(proto.time_shape());
+  return Maybe<void>::Ok();
+}
+
+void BoxingZerosTaskNode::ToTransportTaskProto(TransportTaskProto* transport_task_proto) const {
+  ToProto(transport_task_proto->mutable_task_proto(), /*check=*/false);
+  auto* proto = transport_task_proto->mutable_boxing_zeros_task();
+  shape_.ToProto(proto->mutable_shape());
+  proto->set_data_type(data_type_);
+  time_shape_.ToProto(proto->mutable_time_shape());
 }
 
 }  // namespace oneflow

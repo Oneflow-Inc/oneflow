@@ -20,9 +20,7 @@ import os
 import unittest
 import numpy as np
 
-os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-os.environ["ONEFLOW_MLIR_FUSE_FORWARD_OPS"] = "1"
-os.environ["ONEFLOW_MLIR_STDOUT"] = "1"
+
 import oneflow as flow
 from collections import OrderedDict
 from oneflow.test_utils.test_util import GenArgDict
@@ -58,7 +56,12 @@ def _test_fused_scale_tril(
 
 
 @flow.unittest.skip_unless_1n1d()
-class FusedScaleTrilTestCase(flow.unittest.TestCase):
+class FusedScaleTrilTestCase(flow.unittest.MLIRTestCase):
+    def setUp(self):
+        os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+        os.environ["ONEFLOW_MLIR_FUSE_FORWARD_OPS"] = "1"
+        os.environ["ONEFLOW_MLIR_STDOUT"] = "1"
+
     def test_fused_scale_tril(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(5, 5), (4, 6)]

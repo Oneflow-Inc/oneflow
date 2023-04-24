@@ -66,9 +66,12 @@ int32_t main(int32_t argc, char** argv) {
   mlir::registerGpuMapParallelLoopsPassPass();
   mlir::registerBufferHostRegisterPassPass();
   mlir::registerGpuCopyArgPassPass();
+  mlir::registerAppendOneFlowStreamPassPass();
+  mlir::registerMgpuToOneFlowStreamPassPass();
   mlir::registerOneFlowJobToFuncPassPass();
-  mlir::registerCastOneFlowInputToSignlessPassPass();
+  mlir::registerCastOneFlowOpsToSignlessPassPass();
   mlir::registerFuncToOneFlowJobPassPass();
+  mlir::registerAutoNhwcPass();
 #ifdef WITH_MLIR_CUDA_CODEGEN
   mlir::oneflow::registerGpuSerializeToCubinPass();
 #endif  // WITH_MLIR_CUDA_CODEGEN
@@ -77,6 +80,7 @@ int32_t main(int32_t argc, char** argv) {
   mlir::registerOutlineJitFunctionPassPass();
   mlir::oneflow::registerCSEPasses(global_cse_state);
   mlir::registerFuseForwardOpsPass();
+  mlir::registerEliminateAllocOpsPassPass();
   mlir::registerFuseIntoExistingOpPassPass();
   mlir::registerFuseNormalizationOpsPass();
   mlir::registerFuseOpsWithBackwardImplPass();

@@ -59,5 +59,5 @@ OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_FILL,
 // Negative's grad function = negative(dy), so here register negative op separately.
 MATH_ELEMENTWISE_DEFAULT_SET_FUNC(NegativeOp)
 MATH_ELEMENTWISE_DEFAULT_SET_FUNC(BitwiseNotOp)
-
+MATH_ELEMENTWISE_DEFAULT_SET_FUNC(TrigammaOp)
 }  // namespace oneflow

@@ -1346,8 +1346,7 @@ class MaxPoolNDFunctor {
     } else {
       func_name = "max_pool3d";
     }
-    std::tie(unsqueezed_input, is_batched) =
-        *JUST(pooling_batchify(input, num_spatial_dims_, func_name));
+    std::tie(unsqueezed_input, is_batched) = *JUST(batchify(input, num_spatial_dims_, func_name));
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("kernel_size", "padding", "stride", "dilation",
                                                  "data_format", "return_indices", "ceil_mode");
@@ -2388,6 +2387,7 @@ class CtcLossFunctor {
                            const std::shared_ptr<one::Tensor>& target_lengths,
                            const int64_t& max_target_length, const int64_t& blank,
                            const bool& zero_infinity, const std::string& reduction) const {
+    // FIXME: global ctc loss sometimes segfaults
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("max_target_length", "blank", "zero_infinity");
     attrs.SetAllAttrs(max_target_length, blank, zero_infinity);
     std::shared_ptr<one::Tensor> out;
