@@ -1025,7 +1025,8 @@ void AddLowerToLinalgMemRefPasses(PassManager& pm) {
   pm.addPass(createCSEPass());                                 // cse
   pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());  // tosa-to-linalg-on-tensors
   // pm.addNestedPass<func::FuncOp>(
-  //     createLinalgElementwiseOpFusionPass());                       // linalg-fuse-elementwise-ops
+  //     createLinalgElementwiseOpFusionPass());                       //
+  //     linalg-fuse-elementwise-ops
   pm.addNestedPass<func::FuncOp>(createLinalgBufferizePass());      // linalg-bufferize
   pm.addPass(bufferization::createEmptyTensorToAllocTensorPass());  // empty-tensor-to-alloc-tensor
   pm.addNestedPass<func::FuncOp>(createTensorBufferizePass());      // tensor-bufferize
@@ -1064,10 +1065,10 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   pm.addNestedPass<func::FuncOp>(createGpuMapParallelLoopsPass());  // gpu-map-parallel-loops
   pm.addPass(createParallelLoopToGpuPass());                        // convert-parallel-loops-to-gpu
   pm.addPass(createGpuLauchSinkIndexComputationsPass());
-  pm.addPass(createGpuKernelOutliningPass());                      // gpu-kernel-outlining
-  pm.addPass(createCanonicalizerPass());                           // canonicalize
-  pm.addPass(createFoldAllocToSubviewPass());                           // fold-alloc-to-subview
-  pm.addPass(createInsertOneFlowMemPoolPass());                           // insert-ofmempool 
+  pm.addPass(createGpuKernelOutliningPass());    // gpu-kernel-outlining
+  pm.addPass(createCanonicalizerPass());         // canonicalize
+  pm.addPass(createFoldAllocToSubviewPass());    // fold-alloc-to-subview
+  pm.addPass(createInsertOneFlowMemPoolPass());  // insert-ofmempool
   // -pass-pipeline='gpu.module([PASS1][PASS2]...)'
   pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());        // strip-debuginfo
   pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());           // lower-affine

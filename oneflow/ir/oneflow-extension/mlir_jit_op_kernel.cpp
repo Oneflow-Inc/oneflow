@@ -101,7 +101,6 @@ llvm::SmallVector<OpaqueMemRefDescriptor> GetMLIRCInterfaceArgs(
   return args;
 }
 
-
 mlir::DialectRegistry getDialectRegistry() {
   mlir::DialectRegistry registry;
   registry
@@ -209,11 +208,11 @@ size_t inferOneFlowMemPoolSize(user_op::InferContext* ctx) {
   // mlir::MLIRContext mlir_ctx(getDialectRegistry());
 
   // auto module =
-  //     mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx);
+  //     mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
+  //     &mlir_ctx);
   // CHECK(module) << "fail to parse MLIR, op: " << ctx->op_name();
   // if (ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module->print(llvm::outs()); }
   return 0;
-
 }
 #define REGISTER_MLIR_JIT_GPU_KERNEL(dtype)                                                       \
   REGISTER_USER_KERNEL("mlir_jit")                                                                \
