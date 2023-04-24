@@ -822,7 +822,7 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
     pm.addPass(tosa::createTosaToTensor());
     pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalgNamed());
     pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());
-    pm.addPass(createLinalgElementwiseOpFusionPass());
+    // pm.addPass(createLinalgElementwiseOpFusionPass());
     pm.addPass(oneflow::createFuncToOneFlowJobPass());
     pm.addNestedPass<Job>(oneflow::createOutlineJitFunctionPass());
     pm.addPass(createCanonicalizerPass());

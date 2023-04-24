@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
-#include "OneFlow/Transform/OneFlowStream.h"
+#include "OneFlow/Transform/OneFlowMemPool.h"
 #include "OneFlow/Transform/EliminateAllocOps.h"
 #include "OneFlow/Transform/OneFlowStream.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
@@ -1024,8 +1024,8 @@ void AddLowerToLinalgMemRefPasses(PassManager& pm) {
       tosa::createTosaMakeBroadcastablePass());                // tosa-make-broadcastable
   pm.addPass(createCSEPass());                                 // cse
   pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());  // tosa-to-linalg-on-tensors
-  pm.addNestedPass<func::FuncOp>(
-      createLinalgElementwiseOpFusionPass());                       // linalg-fuse-elementwise-ops
+  // pm.addNestedPass<func::FuncOp>(
+  //     createLinalgElementwiseOpFusionPass());                       // linalg-fuse-elementwise-ops
   pm.addNestedPass<func::FuncOp>(createLinalgBufferizePass());      // linalg-bufferize
   pm.addPass(bufferization::createEmptyTensorToAllocTensorPass());  // empty-tensor-to-alloc-tensor
   pm.addNestedPass<func::FuncOp>(createTensorBufferizePass());      // tensor-bufferize
@@ -1065,8 +1065,9 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   pm.addPass(createParallelLoopToGpuPass());                        // convert-parallel-loops-to-gpu
   pm.addPass(createGpuLauchSinkIndexComputationsPass());
   pm.addPass(createGpuKernelOutliningPass());                      // gpu-kernel-outlining
-  pm.addNestedPass<func::FuncOp>(createBufferHostRegisterPass());  // buffer-host-register
   pm.addPass(createCanonicalizerPass());                           // canonicalize
+  pm.addPass(createFoldAllocToSubviewPass());                           // fold-alloc-to-subview
+  pm.addPass(createInsertOneFlowMemPoolPass());                           // insert-ofmempool 
   // -pass-pipeline='gpu.module([PASS1][PASS2]...)'
   pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());        // strip-debuginfo
   pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());           // lower-affine
