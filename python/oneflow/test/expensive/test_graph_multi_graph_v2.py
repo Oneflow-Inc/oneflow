@@ -151,7 +151,9 @@ def _get_state_dict_tensor_size(sd):
 
 
 @_with_new_session
-def _test_linear_multi_graph_save(return_dict, device, with_reshape, id_state_filename, with_eager):
+def _test_linear_multi_graph_save(
+    return_dict, device, with_reshape, id_state_filename, with_eager
+):
     linear = flow.nn.Linear(3, 8, False)
     linear = linear.to(device)
     np_weight = np.ones((3, 8)).astype(np.float32)
@@ -249,7 +251,9 @@ def _test_linear_multi_graph_save(return_dict, device, with_reshape, id_state_fi
 
 
 @_with_new_session
-def _test_linear_multi_graph_load(return_dict, device, with_reshape, state_dict, id_state_filename):
+def _test_linear_multi_graph_load(
+    return_dict, device, with_reshape, state_dict, id_state_filename
+):
     linear = flow.nn.Linear(3, 8, False)
     linear = linear.to(device)
     np_weight = np.ones((3, 8)).astype(np.float32)
@@ -338,7 +342,7 @@ def _test_linear_multi_graph_load(return_dict, device, with_reshape, state_dict,
 
 def _graph_save(return_dict, filename, id_state_filename, with_eager):
     state_dict = _test_linear_multi_graph_save(
-        return_dict, flow.device("cuda"), True, id_state_filename, with_eager, 
+        return_dict, flow.device("cuda"), True, id_state_filename, with_eager,
     )
     print(
         f"state_dict(with_eager={with_eager}) tensors size ",
