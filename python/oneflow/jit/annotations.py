@@ -13,17 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.framework.unittest import (
-    TestCase,
-    num_nodes_required,
-    register_test_cases,
-    skip_unless_1n1d,
-    skip_unless_1n2d,
-    skip_unless_1n4d,
-    skip_unless_2n1d,
-    skip_unless_2n2d,
-    skip_unless_2n4d,
-)
+from typing import Tuple
 
-from . import env
-from .mlir import MLIRTestCase
+BroadcastingList2 = Tuple

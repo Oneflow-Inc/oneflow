@@ -1022,7 +1022,7 @@ jobs:
             })
       - name: Run tests in changed files compared to default branch 100 times
         timeout-minutes: 60
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) && steps.py-diff.outputs.has_changed_python_tests == 'true' }}
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) && steps.py-diff.outputs.has_changed_python_tests }}
         run: |
           docker exec -e ONEFLOW_TEST_DIR=diff \
             -e ONEFLOW_TEST_FILES="${{needs.source_info.outputs.changed_python_tests}}" \
@@ -1056,9 +1056,16 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
         run: |
           docker exec -w $PWD/${{ env.ONEFLOW_IREE_SRC }} ${{ env.TEST_CONTAINER_NAME }} python3 -m pytest examples
+      - name: IR tests
+        timeout-minutes: 45
+        if: ${{ !fromJson(matrix.cache-hit) && (matrix.test-type == 'misc' && matrix.device == 'cuda') && !fromJson(matrix.is-distributed) }}
+        run: |
+          docker exec \
+            -e ONEFLOW_TEST_TENSOR_SIZE_LIMIT_MB=1024 \
+            ${{ env.TEST_CONTAINER_NAME }} bash ci/test/ir_tests.sh
       - name: Expensive tests (models, cases require exclusive access to GPU)
         timeout-minutes: 45
-        if: ${{ !fromJson(matrix.cache-hit) && (matrix.test-type == 'speed-test' || (matrix.test-type == 'misc' && matrix.device == 'cpu')) && !fromJson(matrix.is-distributed) }}
+        if: ${{ !fromJson(matrix.cache-hit) && (matrix.test-type == 'speed-test' || (matrix.test-type == 'misc' && matrix.device == 'cuda')) && !fromJson(matrix.is-distributed) }}
         run: |
           docker exec \
             -e ONEFLOW_TEST_TENSOR_SIZE_LIMIT_MB=1024 \
