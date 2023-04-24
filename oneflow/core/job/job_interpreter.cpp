@@ -173,10 +173,12 @@ Maybe<void> RunViewOp(const std::shared_ptr<UserOpExpr>& op, Env& env, const Ten
 
 namespace {
 
-Maybe<void> RawRunGlobalNormalOp(
-    const std::shared_ptr<UserOpExpr>& op, TensorTuple& inputs, TensorTuple* outputs,
-    Env& env, const OpArgsVector<std::string>& ibns, const OpArgsVector<std::string>& output_names, 
-    const NdSbpSignature& ndsbp_signature, const Symbol<ParallelDesc>& op_parallel_desc) {
+Maybe<void> RawRunGlobalNormalOp(const std::shared_ptr<UserOpExpr>& op, TensorTuple& inputs,
+                                 TensorTuple* outputs, Env& env,
+                                 const OpArgsVector<std::string>& ibns,
+                                 const OpArgsVector<std::string>& output_names,
+                                 const NdSbpSignature& ndsbp_signature,
+                                 const Symbol<ParallelDesc>& op_parallel_desc) {
   CHECK_OR_RETURN(!inputs.empty());
   Optional<int64_t> parallel_id;
   const auto* mgr = Singleton<EagerBoxingInterpreterManager>::Get();
@@ -198,7 +200,7 @@ Maybe<void> RawRunGlobalNormalOp(
           *JUST(boxing_interpreter->boxing_interpreter_status()), /* prefix */ "");
       if (parallel_id.has_value()) {
         inputs.at(i) = JUST(boxing_interpreter->Interpret(input_tensor, in_nd_sbp, out_nd_sbp,
-                                                               in_parallel_desc, out_parallel_desc));
+                                                          in_parallel_desc, out_parallel_desc));
       }
     }
   }
@@ -215,13 +217,14 @@ auto* RunGlobalNormalOpThenInitGlobalId = DECORATE(&RawRunGlobalNormalOp, NonRec
 
 }  // namespace
 
-Maybe<void> RunGlobalNormalOp(const std::shared_ptr<UserOpExpr>& op, TensorTuple& inputs,
-                              Env& env, const OpArgsVector<std::string>& ibns,
+Maybe<void> RunGlobalNormalOp(const std::shared_ptr<UserOpExpr>& op, TensorTuple& inputs, Env& env,
+                              const OpArgsVector<std::string>& ibns,
                               const OpArgsVector<std::string>& output_names,
                               const NdSbpSignature& ndsbp_signature,
                               const Symbol<ParallelDesc>& op_parallel_desc) {
   TensorTuple outputs(output_names.size());
-  return RunGlobalNormalOpThenInitGlobalId(op, inputs, &outputs, env, ibns, output_names, ndsbp_signature, op_parallel_desc);
+  return RunGlobalNormalOpThenInitGlobalId(op, inputs, &outputs, env, ibns, output_names,
+                                           ndsbp_signature, op_parallel_desc);
 }
 
 Maybe<void> RunNormalOp(const std::shared_ptr<UserOpExpr>& op, Env& env, const TensorTuple& inputs,
@@ -324,7 +327,8 @@ Maybe<one::TensorTuple> InterpretJob(const one::TensorTuple& graph_inputs,
         const auto& op_parallel_desc = JUST(MapAt(op2paralleldesc, op_conf.name()));
         const auto& nd_sbp_signature_conf =
             JUST(MapAt(op_name2nd_sbp_signature_conf, op_conf.name()));
-        JUST(RunGlobalNormalOp(op, inputs, env, ibns, output_names, nd_sbp_signature_conf, op_parallel_desc));
+        JUST(RunGlobalNormalOp(op, inputs, env, ibns, output_names, nd_sbp_signature_conf,
+                               op_parallel_desc));
       }
       for (const auto& name : outdated_tensors_after_op[i]) {
         CHECK_EQ_OR_RETURN(env.erase(name), 1);
