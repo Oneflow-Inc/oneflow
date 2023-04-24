@@ -400,8 +400,10 @@ static PyObject* PyTensorObject_check_meta_consistency(PyObject* self, PyObject*
 static PyObject* PyTensorObject_data_ptr(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   const auto& t = PyTensor_Unpack(self);
+  const std::shared_ptr<LocalTensor> local_tensor =
+      t->is_local() ? ASSERT_PTR(t->AsLocalTensor()) : ASSERT_PTR(t->cur_rank_phy_tensor());
   return functional::CastToPyObject(
-      reinterpret_cast<int64_t>(ASSERT(GetTensorDataPtr(ASSERT_PTR(t->AsLocalTensor())))));
+      reinterpret_cast<int64_t>(ASSERT(GetTensorDataPtr(local_tensor))));
   END_HANDLE_ERRORS
 }
 
@@ -592,6 +594,10 @@ static PyObject* PyTensorObject_dtype(PyObject* self, void* unused) {
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_is_cpu(PyObject* self, void* unused) {
+  return functional::CastToPyObject(PyTensor_Unpack(self)->is_cpu());
+}
+
 static PyObject* PyTensorObject_is_cuda(PyObject* self, void* unused) {
   return functional::CastToPyObject(PyTensor_Unpack(self)->is_cuda());
 }
@@ -699,6 +705,7 @@ static PyGetSetDef PyTensorObject_properties[] = {
     {PYGETSET_NAME("ndim"), (getter)PyTensorObject_ndim, NULL, NULL, NULL},
     {PYGETSET_NAME("shape"), (getter)PyTensorObject_shape, NULL, NULL, NULL},
     {PYGETSET_NAME("dtype"), (getter)PyTensorObject_dtype, NULL, NULL, NULL},
+    {PYGETSET_NAME("is_cpu"), (getter)PyTensorObject_is_cpu, NULL, NULL, NULL},
     {PYGETSET_NAME("is_cuda"), (getter)PyTensorObject_is_cuda, NULL, NULL, NULL},
     {PYGETSET_NAME("grad"), (getter)PyTensorObject_grad, (setter)PyTensorObject_set_grad, NULL,
      NULL},

@@ -59,6 +59,7 @@ Maybe<std::vector<int32_t>> GetInversedPerm(const std::vector<int32_t>& perm);
 Maybe<std::tuple<std::shared_ptr<Tensor>, bool>> batchify(const std::shared_ptr<Tensor>& input,
                                                           const int64_t num_spatial_dims,
                                                           const std::string& func_name);
+
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow

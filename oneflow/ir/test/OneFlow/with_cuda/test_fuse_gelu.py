@@ -24,9 +24,6 @@ import numpy as np
 
 import os
 
-os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-os.environ["ONEFLOW_MLIR_STDOUT"] = "1"
-os.environ["ONEFLOW_MLIR_FUSE_OPS_WITH_BACKWARD_IMPL"] = "1"
 
 import oneflow as flow
 import oneflow.nn as nn
@@ -79,7 +76,12 @@ def do_fused_gelu_graph(test_case, dev, fuse_linear=False):
 
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipUnless(oneflow.sysconfig.with_cuda(), "needs -DBUILD_CUDA=ON")
-class TestFusedGelu(oneflow.unittest.TestCase):
+class TestFusedGelu(oneflow.unittest.MLIRTestCase):
+    def setUp(self):
+        os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+        os.environ["ONEFLOW_MLIR_STDOUT"] = "1"
+        os.environ["ONEFLOW_MLIR_FUSE_OPS_WITH_BACKWARD_IMPL"] = "1"
+
     def test_fused_gelu_graph(test_case):
         do_fused_gelu_graph(test_case, "cuda", fuse_linear=True)
         do_fused_gelu_graph(test_case, "cuda", fuse_linear=False)

@@ -48,8 +48,8 @@ PyObject* concat_self(PyObject* self, PyObject* args) {
 PyObject* ndarray_judgment_and_compatibility(PyObject* self, PyObject* other) {
   if (PyArray_Check(other)) {
     const auto& tensor = PyTensor_Unpack(self);
-    CHECK_OR_THROW(!tensor->is_cuda())
-        << Error::RuntimeError() << "Can't convert cuda device type tensor to numpy";
+    CHECK_OR_THROW(tensor->is_cpu())
+        << Error::RuntimeError() << "Can't convert non-cpu device tensor to numpy";
     if (tensor->is_global()) {
       Symbol<ParallelDesc> placement = ASSERT(tensor->parallel_desc());
       auto ndsbp = ASSERT(tensor->nd_sbp());
