@@ -113,8 +113,7 @@ mlir::DialectRegistry getDialectRegistry() {
 void WithMlirContext(
     user_op::KernelComputeContext* ctx, const llvm::SmallVector<llvm::StringRef, 4>& ext_libs,
     const std::function<mlir::OwningOpRef<mlir::ModuleOp>(mlir::MLIRContext* mlir_ctx)>& parse,
-    const std::function<void(mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module)>& lower,
-    ep::Stream* stream) {
+    void* stream) {
   mlir::MLIRContext mlir_ctx(getDialectRegistry());
   mlir::OwningOpRef<mlir::ModuleOp> module = parse(&mlir_ctx);
   CHECK(module) << "fail to parse MLIR, op: " << ctx->op_name();
@@ -154,11 +153,7 @@ class MlirJitCpuKernel final : public user_op::OpKernel {
           return mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
                                                          mlir_ctx);
         },
-#ifdef WITH_CUDA
-        ctx->stream()->As<ep::CudaStream>()->cuda_stream());
-#else
         nullptr);
-#endif  // WITH_CUDA
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -198,7 +193,11 @@ class MlirJitGpuKernel final : public user_op::OpKernel {
           return mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
                                                          mlir_ctx);
         },
+#ifdef WITH_CUDA
+        ctx->stream()->As<ep::CudaStream>()->cuda_stream());
+#else
         nullptr);
+#endif  // WITH_CUDA
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

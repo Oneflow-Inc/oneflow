@@ -144,26 +144,27 @@ std::function<void(mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module)> getLower
   LOG(FATAL) << "Fail to match lowering function with device tag name: " << device_tag_str;
 }
 
-std::string convertFuncToByte(func::FuncOp& func, const StringAttr& device_tag,
-                              bool compile_to_llvm) {
+std::string convertFuncToByte(func::FuncOp& func) {
+  std::string byte;
+  llvm::raw_string_ostream os_byte(byte);
+  mlir::writeBytecodeToFile(func, os_byte);
+  return byte;
+}
+
+std::string lowerFuncToLLVMByte(const std::string& raw_byte, const StringAttr& device_tag) {
   mlir::DialectRegistry registry;
   registry
       .insert<mlir::oneflow::OneFlowDialect, mlir::func::FuncDialect, mlir::memref::MemRefDialect,
               mlir::tosa::TosaDialect, mlir::linalg::LinalgDialect, mlir::tensor::TensorDialect>();
   mlir::MLIRContext mlir_ctx(registry);
 
-  std::string mlir;
-  llvm::raw_string_ostream os_mlir(mlir);
-  mlir::writeBytecodeToFile(func, os_mlir);
-  if (!compile_to_llvm) return mlir;
-
   mlir::OwningOpRef<mlir::ModuleOp> module =
-      ::mlir::parseSourceString<mlir::ModuleOp>(mlir, &mlir_ctx);
+      ::mlir::parseSourceString<mlir::ModuleOp>(raw_byte, &mlir_ctx);
   mlir::registerLLVMDialectTranslation(registry);
-  if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { func->print(llvm::outs()); }
+  if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module->print(llvm::outs()); }
   getLowerFunction(device_tag)(&mlir_ctx, *module);
-  if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { func->print(llvm::outs()); }
-  (*module)->setAttr(jit::RAW_GRAPH, StringAttr::get(&mlir_ctx, mlir));
+  if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module->print(llvm::outs()); }
+  (*module)->setAttr(jit::RAW_GRAPH, StringAttr::get(&mlir_ctx, raw_byte));
 
   std::string byte;
   llvm::raw_string_ostream os_byte(byte);
@@ -233,11 +234,12 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
           NamedAttrList attributes =
               GetJitOpAttributes(builder, name, argumentTypes.size(), resultTypes.size(),
                                  entryOp->getOperand(0).getDefiningOp());
-          const auto byte = convertFuncToByte(
-              function,
-              attributes.get(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr())
-                  .cast<StringAttr>(),
-              compileToLLVM.getValue());
+          std::string byte = convertFuncToByte(function);
+          if (compileToLLVM.getValue()) {
+            byte = lowerFuncToLLVMByte(
+                byte, attributes.get(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr())
+                          .cast<StringAttr>());
+          }
           auto jitOp = builder.create<MlirJitOp>(entryOp->getLoc(), function, attributes, entries);
           jitOp->setAttr("mlir_assembly", builder.getStringAttr(byte));
           for (const auto& old : llvm::enumerate(exits)) {
