@@ -1018,20 +1018,20 @@ struct KernelLaunchWithCudaGraphPattern : public KernelLaunchSimplePattern {
 void AddLowerToLinalgMemRefPasses(PassManager& pm) {
   pm.addPass(createConvertToSignlessForTosaPass());  // convert-to-signless-for-tosa
   pm.addNestedPass<func::FuncOp>(LLVM::createRequestCWrappersPass());  // llvm-request-c-wrappers
-  pm.addPass(createConvertToSignlessForTosaPass());            // convert-to-signless-for-tosa
-  pm.addPass(createLowerOneFlowToTosaPass());                  // lower-oneflow-to-tosa
+  pm.addPass(createConvertToSignlessForTosaPass());             // convert-to-signless-for-tosa
+  pm.addPass(createLowerOneFlowToTosaPass());                   // lower-oneflow-to-tosa
   pm.addNestedPass<func::FuncOp>(
-      tosa::createTosaMakeBroadcastablePass());                // tosa-make-broadcastable
-  pm.addPass(createCSEPass());                                 // cse
-  pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());  // tosa-to-linalg-on-tensors
-  // pm.addNestedPass<func::FuncOp>(
-  //     createLinalgElementwiseOpFusionPass());                       //
-  //     linalg-fuse-elementwise-ops
-  pm.addNestedPass<func::FuncOp>(createLinalgBufferizePass());      // linalg-bufferize
+      tosa::createTosaMakeBroadcastablePass());                 // tosa-make-broadcastable
+  pm.addPass(createCSEPass());                                  // cse
+  pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());   // tosa-to-linalg-on-tensors
+  pm.addNestedPass<func::FuncOp>(
+      createLinalgElementwiseOpFusionPass());                   //     linalg-fuse-elementwise-ops
+  pm.addNestedPass<func::FuncOp>(createLinalgBufferizePass());  // linalg-bufferize
   pm.addPass(bufferization::createEmptyTensorToAllocTensorPass());  // empty-tensor-to-alloc-tensor
   pm.addNestedPass<func::FuncOp>(createTensorBufferizePass());      // tensor-bufferize
   pm.addPass(func::createFuncBufferizePass());                      // func-bufferize
   pm.addPass(bufferization::createBufferResultsToOutParamsPass());  // buffer-results-to-out-params
+  pm.addPass(createCanonicalizerPass());                            // canonicalize
   pm.addPass(mlir::oneflow::createEliminateAllocOpsPass());         // eliminate-alloc-ops
   pm.addPass(createCanonicalizerPass());                            // canonicalize
   pm.addNestedPass<func::FuncOp>(
