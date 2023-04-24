@@ -30,4 +30,3 @@ def load_id_state(
 ):
     obj = flow.load(path)
     oneflow._oneflow_internal.load_id_state(obj)
-    

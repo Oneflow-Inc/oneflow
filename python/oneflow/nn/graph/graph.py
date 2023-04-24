@@ -890,7 +890,9 @@ class Graph(object):
         # Generate new config.
         if self._shared_graph._is_from_runtime_state_dict == True:
             # To avoid same graph name with the loaded graphs.
-            self._name = self._name + "_of_shared_from_loaded_" + self._shared_graph.name
+            self._name = (
+                self._name + "_of_shared_from_loaded_" + self._shared_graph.name
+            )
         self._generate_config_proto()
         # Deal with parameter and buffer
         self._create_states_builder()
@@ -1118,7 +1120,7 @@ class Graph(object):
 
         build_graph_start = time.perf_counter()
 
-        self._is_from_runtime_state_dict = True 
+        self._is_from_runtime_state_dict = True
         self._name = state_dict["graph_name"]
         if "oneflow_version" not in state_dict:
             state_dict["oneflow_version"] = "none"
@@ -1178,7 +1180,9 @@ class Graph(object):
             self._build_eager_outputs = self._eager_outputs
             self._out2name = dict()
             for output_idx in range(len(self._output_op_names)):
-                self._out2name[self._outputs_tensor_tuple[output_idx]] = self._output_op_names[output_idx]
+                self._out2name[
+                    self._outputs_tensor_tuple[output_idx]
+                ] = self._output_op_names[output_idx]
 
         # Load state tensor of modules
         if "oneflow_with_eager_tensor" in state_dict:
