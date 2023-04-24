@@ -59,6 +59,8 @@ struct Throw final {
         return frame;                                                                      \
       }(__FUNCTION__))
 
+// use __FILE__ __LINE__ etc. macros to get last frame, so this macro can show
+// the file name and line where CHECK_OR_THROW located even if these is no debug info
 #define CHECK_OR_THROW_INTERNAL(expr, error_msg)                                      \
   if (!(expr))                                                                        \
   ::oneflow::details::Throw() =                                                       \
