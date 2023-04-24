@@ -36,9 +36,9 @@ namespace oneflow {
   const int64_t group_dim = ctx->Attr<int64_t>("group_dim");
   if (scale_shape.At(group_dim) == 1) {
     ctx->NewBuilder()
-        .Split(user_op::OpArg("in", 0), scale_shape.NumAxes())
+        .Split(user_op::OpArg("in", 0), group_dim)
         .Broadcast(scale_zero_args)
-        .Split(user_op::OpArg("out", 0), scale_shape.NumAxes())
+        .Split(user_op::OpArg("out", 0), group_dim)
         .Build();
   }
   return Maybe<void>::Ok();

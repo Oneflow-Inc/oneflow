@@ -23,6 +23,15 @@ namespace py = pybind11;
 
 namespace oneflow {
 
+size_t* nested_count() {
+  static thread_local size_t _nested_count = 0;
+  return &_nested_count;
+}
+
+bool is_nested_count_zero() { return (*nested_count()) == 0; }
+void increase_nested_count() { (*nested_count())++; }
+void decrease_nested_count() { (*nested_count())--; }
+
 class AutoCastMode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AutoCastMode);
@@ -36,6 +45,7 @@ class AutoCastMode {
         prev_gpu_dtype_(autocast::get_autocast_gpu_dtype()),
         prev_cpu_dtype_(autocast::get_autocast_cpu_dtype()) {
     // update autocast state
+    increase_nested_count();
     autocast::set_enabled(enabled);
     autocast::set_autocast_cache_enabled(cache_enabled);
     if (device_type == "cpu") {
@@ -52,12 +62,16 @@ class AutoCastMode {
   }
 
   ~AutoCastMode() {
+    decrease_nested_count();
     autocast::set_enabled(prev_enabled_);
     autocast::set_autocast_cache_enabled(prev_cache_enabled_);
     autocast::set_autocast_device_type(prev_device_type_);
     autocast::set_autocast_dtype(prev_dtype_);
     autocast::set_autocast_gpu_dtype(prev_gpu_dtype_);
     autocast::set_autocast_cpu_dtype(prev_cpu_dtype_);
+    if ((!prev_enabled_ || !prev_cache_enabled_) && is_nested_count_zero()) {
+      autocast::clear_cache();
+    }
   }
 
  private:
