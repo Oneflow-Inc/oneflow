@@ -26,6 +26,7 @@ namespace oneflow {
 
 using namespace boxing::collective;
 
+// NOLINTBEGIN(maybe-need-error-msg)
 namespace {
 
 void CclInitCollectiveNode(CollectiveBoxingGenericTaskNode* node, const ParallelDesc& parallel_desc,
@@ -454,5 +455,6 @@ Maybe<SubTskGphBuilderStatus> CclAll2AllSubTskGphBuilder::Build(
     return Error::BoxingNotSupportedError();
   }
 }
+// NOLINTEND(maybe-need-error-msg)
 
 }  // namespace oneflow

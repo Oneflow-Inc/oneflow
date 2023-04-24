@@ -17,6 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
+// NOLINTBEGIN(maybe-need-error-msg)
 Maybe<SubTskGphBuilderStatus> FlatSubTskGphBuilder::Build(
     SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
     std::vector<TaskNode*>* sorted_out_tasks,
@@ -169,5 +170,6 @@ Maybe<SubTskGphBuilderStatus> InterGroupSubTskGphBuilder::Build(
     return Error::BoxingNotSupportedError();
   }
 }
+// NOLINTEND(maybe-need-error-msg)
 
 }  // namespace oneflow
