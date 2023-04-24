@@ -110,6 +110,7 @@ struct FoldAllocToSubviewPattern final : public OpRewritePattern<func::FuncOp> {
   mlir::LogicalResult matchAndRewrite(func::FuncOp op,
                                       mlir::PatternRewriter& rewriter) const override {
     auto [is_legal, list] = getAllocInfoList(op);
+    // TODO(yuhao): this list should be treated about tmp variable copy operation.
     if (!is_legal) { return failure(); }
 
     ::oneflow::HashMap<Operation*, std::pair<int32_t, int32_t>> val2lifetime;
