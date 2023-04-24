@@ -13,8 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <google/protobuf/map_entry_lite.h>
-#include <cstdint>
+
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/maybe.h"
@@ -403,7 +402,7 @@ class NormalTools {
  public:
   template<typename T>
   static T GetTensorItemValue(const std::shared_ptr<one::Tensor>& input) {
-    // CHECK_EQ(input->nelement(), 1) << "Input tensor must have exactly one element";
+    CHECK_EQ(input->nelement(), 1) << "Input tensor must have exactly one element";
     std::unique_ptr<T> ptr(new T());
     const auto& callback = [&](ep::Stream* stream,
                                const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
@@ -440,10 +439,10 @@ class NormalTools {
   }
 
   static bool CheckNormalTensorStd(const std::shared_ptr<one::Tensor>& std) {
+    CHECK(!std->dtype()->is_complex())<<"normal expects standard deviation to be non-complex";
     if (std->nelement() == 0) { return true; }
     GetTensorItemValue<float>(CHECK_JUST(Min(std)));
     auto std_check = CHECK_JUST(ScalarLogicalGreaterEqual(CHECK_JUST(Min(std)), Scalar(0.0)));
-    GetTensorItemValue<bool>(std_check);
     CHECK(GetTensorItemValue<bool>(std_check)) << "normal expects all elements of std >= 0.0";
     return true;
   }
