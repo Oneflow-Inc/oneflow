@@ -81,7 +81,9 @@ endif()
 
 message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 
-set(COMPILER_VERSION_ERROR_MSG "At least gcc 9, clang 5 or Apple clang 12 is supported.")
+set(COMPILER_VERSION_ERROR_MSG
+    "At least gcc 9, clang 5 or Apple clang 12 is supported. Current version ${CMAKE_CXX_COMPILER_VERSION}."
+)
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   if("${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 9)

@@ -104,7 +104,16 @@ class Graph(object):
     """
     _child_init_cnt = dict()
 
-    def __init__(self, enable_get_runtime_state_dict: bool = False):
+    def __init__(
+        self,
+        *,
+        enable_get_runtime_state_dict: bool = False,
+        debug_v_level: int = -1,
+        debug_ranks: Optional[Union[int, List[int]]] = None,
+        debug_max_py_stack_depth: int = 2,
+        debug_only_user_py_stack=True,
+        debug_op_repr_with_py_stack=False,
+    ):
         """
         Initializes internal Graph states. It MUST be called in ``__init__`` method of subclass.
 
@@ -137,12 +146,6 @@ class Graph(object):
         self._is_simple_tuple_input = False
         self._is_simple_tuple_output = False
 
-        self._debug = False
-        self._debug_min_s_level = 2
-        self._debug_max_v_level = 0
-        self._debug_max_py_stack_depth = 2
-        self._debug_op_repr_with_py_stack = False
-        self._debug_only_user_py_stack = True
         self._outputs_buffer_size = 2
         self._cur_index_of_ouputs_buffer = 0
 
@@ -176,6 +179,21 @@ class Graph(object):
 
         # For run graph with dynamic shape cache
         self._run_with_cache = False
+
+        # For debug
+        self._debug = False
+        self._debug_min_s_level = 2
+        self._debug_max_v_level = 0
+        self._debug_max_py_stack_depth = 2
+        self._debug_op_repr_with_py_stack = False
+        self._debug_only_user_py_stack = True
+        self.debug(
+            debug_v_level,
+            ranks=debug_ranks,
+            max_py_stack_depth=debug_max_py_stack_depth,
+            only_user_py_stack=debug_only_user_py_stack,
+            op_repr_with_py_stack=debug_op_repr_with_py_stack,
+        )
 
     def build(self, *args, **kwargs):
         r"""The ``build()`` method must be overridden to define neural network
@@ -250,13 +268,7 @@ class Graph(object):
             return self._dynamic_input_graph_cache(*args, **kwargs)
 
         if not self._is_compiled:
-            if not self._build_with_shared_graph:
-                self._compile(*args, **kwargs)
-                self.__print(
-                    0, 2, lambda: f"{self.name} with operators:\n" + self.__repr__()
-                )
-            else:
-                self._compile_from_shared(*args, **kwargs)
+            self._compile(*args, **kwargs)
 
         return self.__run(*args, **kwargs)
 
@@ -590,7 +602,7 @@ class Graph(object):
     def _ops_repr(self):
         r"""Generate operators' string representation of this graph
         """
-        if self._is_compiled and self._compiled_graph_proto is not None:
+        if self._compiled_graph_proto is not None:
             module_conf = self._compiled_graph_proto.module_name2module_conf[self.name]
             if self._oneflow_internal_graph_ir__ is None:
                 self._oneflow_internal_graph_ir__ = GraphIR(self._compiled_graph_proto)
@@ -613,6 +625,9 @@ class Graph(object):
                     print(msg, flush=True)
                 elif isinstance(msg, Callable):
                     print(msg(), flush=True)
+
+    def _print(self, s_level=2, v_level=0, msg=None):
+        self.__print(s_level, v_level, msg)
 
     @property
     def _config_proto(self):
@@ -654,7 +669,7 @@ class Graph(object):
 
     @property
     def _compiled_graph_proto(self):
-        if not self._is_compiled:
+        if not self._is_compiled and self._compiled_job_proto is None:
             self.__print(
                 2,
                 0,
@@ -709,6 +724,7 @@ class Graph(object):
                 self._variables_conf[state_tensor] = VariableConfig(op_name)
 
         self._state_tensor_tuple = convert_to_tensor_tuple(state_tensors)
+        self._eager_state_op_names = deepcopy(state_op_names)
         return state_op_names
 
     def _generate_config_proto(self):
@@ -815,6 +831,21 @@ class Graph(object):
         return a_graph
 
     def _compile(self, *args, **kwargs):
+        if self._run_with_cache == True:
+            return self._dynamic_input_graph_cache._compile(*args, **kwargs)
+
+        if not self._is_compiled:
+            if not self._build_with_shared_graph:
+                return self._compile_new(*args, **kwargs)
+            else:
+                return self._compile_from_shared(*args, **kwargs)
+        else:
+            warnings.warn(
+                f"{self._shallow_repr()} has been compiled, no need to compile again."
+            )
+            return
+
+    def _compile_new(self, *args, **kwargs):
         if (
             len(args) != 0
             and isinstance(args, (tuple, list))
@@ -855,6 +886,10 @@ class Graph(object):
         self._build_with_shared_graph = True
 
     def _compile_from_shared(self, *args, **kwargs):
+        self.__print(
+            0, 0, self._shallow_repr() + " start building a shared graph and plan."
+        )
+        build_graph_start = time.perf_counter()
         self.__ensure_input_tensors_contiguous(*args, **kwargs)
 
         self.__ensure_state_tensors_contiguous()
@@ -962,6 +997,16 @@ class Graph(object):
         self._c_nn_graph.compile_plan_for_runtime()
         self._c_nn_graph.init_runtime()
         self._is_compiled = True
+        build_graph_end = time.perf_counter()
+        self.__print(
+            0,
+            0,
+            self._shallow_repr()
+            + " building a shared graph and plan Done! Cost time: "
+            + str(round(build_graph_end - build_graph_start, 2))
+            + "s."
+            + "\n",
+        )
 
         return (seq_to_func_return(self._eager_outputs_buffer[0], True),)
 
@@ -976,13 +1021,15 @@ class Graph(object):
             self._enable_save_runtime_state_dict = False
 
     def runtime_state_dict(
-        self, destination=None
+        self, destination=None, with_eager=False
     ) -> Union[
         Dict[str, Union[Dict[str, Tensor], str]],
         Dict[str, Dict[str, Union[Dict[str, Tensor], str]]],
     ]:
         if self._run_with_cache == True:
-            return self._dynamic_input_graph_cache.runtime_state_dict()
+            return self._dynamic_input_graph_cache.runtime_state_dict(
+                with_eager=with_eager
+            )
 
         assert (
             self._enable_save_runtime_state_dict
@@ -1032,10 +1079,28 @@ class Graph(object):
         )
         destination["outputs"] = outputs_sub_destination
 
+        destination["oneflow_with_eager_tensor"] = with_eager
         if not self._build_with_shared_graph:
+            _state_tensor_tuple4save = []
+            if with_eager:
+                _state_tensor_tuple4save = self._state_tensor_tuple
+            else:
+                assert len(self._state_tensor_tuple) == len(self._state_op_names)
+                for state_idx in range(len(self._state_tensor_tuple)):
+                    if self._state_op_names[state_idx] in self._eager_state_op_names:
+                        # This state tensor is from eager module. Just save a dummy tensor here.
+                        _state_tensor_tuple4save.append(
+                            oneflow.Tensor().to(
+                                self._state_tensor_tuple[state_idx].device
+                            )
+                        )
+                    else:
+                        _state_tensor_tuple4save.append(
+                            self._state_tensor_tuple[state_idx]
+                        )
             states_sub_destination = OrderedDict()
             _fill_sub_destination(
-                states_sub_destination, self._state_op_names, self._state_tensor_tuple
+                states_sub_destination, self._state_op_names, _state_tensor_tuple4save
             )
             destination["states"] = states_sub_destination
 
@@ -1053,6 +1118,8 @@ class Graph(object):
         if self._run_with_cache == True:
             return self._dynamic_input_graph_cache.load_runtime_state_dict(state_dict)
 
+        build_graph_start = time.perf_counter()
+
         self._name = state_dict["graph_name"]
         if "oneflow_version" not in state_dict:
             state_dict["oneflow_version"] = "none"
@@ -1064,6 +1131,7 @@ class Graph(object):
             )
         # Generate new config.
         self._generate_config_proto()
+        self.__print(0, 0, self._shallow_repr() + " start loading a graph and plan.")
         self._job_id = state_dict["job_id"]
         # Create a c nn graph to run with lazy runtime.
         self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(
@@ -1102,6 +1170,13 @@ class Graph(object):
             get_tensor_in_tuple, *_eager_outputs_index
         )
         self._eager_outputs = _eager_outputs
+
+        # Load state tensor of modules
+        if "oneflow_with_eager_tensor" in state_dict:
+            with_eager = state_dict["oneflow_with_eager_tensor"]
+        else:
+            with_eager = True
+
         if self._build_with_shared_graph:
             self._state_op_names = self._shared_graph._state_op_names
             self._state_tensor_tuple = self._shared_graph._state_tensor_tuple
@@ -1122,11 +1197,23 @@ class Graph(object):
                 for s_idx, s_name in enumerate(self._state_op_names):
                     if s_name in states_from_eager:
                         state_tensor_from_eager = states_from_eager[s_name]
-                        # Note: compare value has extra cost.
-                        assert oneflow.allclose(
-                            state_tensor_from_eager, self._state_tensor_tuple[s_idx]
+                        assert (
+                            state_tensor_from_eager.device
+                            == self._state_tensor_tuple[s_idx].device
                         )
+                        if with_eager:
+                            assert oneflow.allclose(
+                                state_tensor_from_eager, self._state_tensor_tuple[s_idx]
+                            )
                         self._state_tensor_tuple[s_idx] = state_tensor_from_eager
+                if not with_eager:
+                    for s_idx, s_name in enumerate(self._state_op_names):
+                        if (oneflow.numel(self._state_tensor_tuple[s_idx]) == 0) and (
+                            s_name not in states_from_eager
+                        ):
+                            warnings.warn(
+                                f"Current graph is missing parameter {s_name}, but load_runtime_state_dict needs it. This may cause error later."
+                            )
 
         self.__build_outputs_buffer()
 
@@ -1142,6 +1229,16 @@ class Graph(object):
         self._c_nn_graph.align_states_after_logical_graph_compile()
         self._c_nn_graph.init_runtime()
         self._is_compiled = True
+        build_graph_end = time.perf_counter()
+        self.__print(
+            0,
+            0,
+            self._shallow_repr()
+            + " load a graph and plan Done! Cost time: "
+            + str(round(build_graph_end - build_graph_start, 2))
+            + "s."
+            + "\n",
+        )
 
     def build_graph(self, *args, **kwargs):
         # Build graph
@@ -1208,7 +1305,9 @@ class Graph(object):
                 compiled_job_str = self._c_nn_graph.get_current_job_str()
                 self._compiled_job_proto = job_pb.Job()
                 self._compiled_job_proto.ParseFromString(compiled_job_str)
-
+                self.__print(
+                    0, 1, lambda: f"{self.name} with operators:\n" + self.__repr__()
+                )
                 self._c_nn_graph.compile_plan_for_runtime()
                 self._c_nn_graph.init_runtime()
 
@@ -1765,6 +1864,7 @@ class Graph(object):
         .. code-block:: python
 
             >>> import oneflow as flow
+            >>> import numpy as np
             >>> class LinearGraph(flow.nn.Graph):
             ...     def __init__(self):
             ...         super().__init__()
@@ -1776,11 +1876,18 @@ class Graph(object):
 
 
         The block can be accessed as an attribute using the given name.
-            >>> g = LinearGraph()
-            >>> print(g.linear)
+            g = LinearGraph()
+            g(flow.Tensor(np.random.randn(8, 3)))
+            print(g.linear)
             (MODULE:linear:Linear(in_features=3, out_features=8, bias=False)): (
-              (PARAMETER:linear.weight:tensor(..., size=(8, 3), dtype=oneflow.float32, requires_grad=True)): ()
-              (GraphModule:linear()): ()
+              (INPUT:_linear_input.0.0_2:tensor(..., is_lazy='True', size=(8, 3), dtype=oneflow.float32))
+              (PARAMETER:linear.weight:tensor(..., size=(8, 3), dtype=oneflow.float32, grad_fn=<accumulate_grad>)): ()
+              (OUTPUT:_linear_output.0.0_2:tensor(..., is_lazy='True', size=(8, 8), dtype=oneflow.float32,
+                     grad_fn=<matmulBackward>))
+              (GraphModule:linear()): (
+                (OPERATOR: linear.weight() -> (out:sbp=(B), size=(8, 3), dtype=(oneflow.float32)), placement=(oneflow.placement(type="cpu", ranks=[0])))
+                (OPERATOR: linear-matmul-0(_LinearGraph_0_input.0.0_2/out:(sbp=(B), size=(8, 3), dtype=(oneflow.float32)), linear.weight/out:(sbp=(B), size=(8, 3), dtype=(oneflow.float32))) -> (linear-matmul-0/out_0:(sbp=(B), size=(8, 8), dtype=(oneflow.float32))), placement=(oneflow.placement(type="cpu", ranks=[0])))
+              )
             )
         """
         if "_name" not in self.__dict__:
@@ -1901,7 +2008,7 @@ class Graph(object):
         return flattened_args
 
     @staticmethod
-    def with_dynamic_input_shape(size: int = 10):
+    def with_dynamic_input_shape(*, size: int = 10, enable_shared: bool = True):
         def deco_with_config(graph_init_func):
             @wraps(graph_init_func)
             def deco_func(self, *args, **kwargs):
@@ -1910,7 +2017,9 @@ class Graph(object):
                 import oneflow.nn.graph.cache as cache
 
                 self._dynamic_input_graph_cache = cache.GraphCache(
-                    weakref.proxy(self), cache_size=size
+                    weakref.proxy(self),
+                    cache_size=size,
+                    enable_graph_shared=enable_shared,
                 )
                 self._cached_init_args = args
                 self._cached_init_kwargs = kwargs

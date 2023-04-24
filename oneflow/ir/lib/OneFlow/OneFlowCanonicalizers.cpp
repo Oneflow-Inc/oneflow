@@ -28,10 +28,10 @@ struct PutSeed : public OpRewritePattern<RandomMaskLikeOp> {
       : OpRewritePattern<RandomMaskLikeOp>(context, /*benefit=*/1) {}
   LogicalResult matchAndRewrite(oneflow::RandomMaskLikeOp op,
                                 PatternRewriter& rewriter) const override {
-    if (op->hasAttr(op.seedAttrName())) {
+    if (op->hasAttr(op.getSeedAttrName())) {
       return failure();
     } else {
-      op->setAttr(op.seedAttrName(), rewrites::GetDefaultSeed(rewriter));
+      op->setAttr(op.getSeedAttrName(), rewrites::GetDefaultSeed(rewriter));
       return success();
     }
   }

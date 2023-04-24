@@ -60,7 +60,7 @@ void InitDecideParameters(StraightenAlgorithmTag sat,
 
 // Maximum overlap number
 // While running an overlap operator, we would run some other operators simultaneously.
-int32_t MaximumOverlapNum(StraightenAlgorithmTag sat);
+int32_t MaximumOverlapNum(StraightenAlgorithmTag sat, bool nccl_use_compute_stream);
 
 template<class HashMapType>
 void UpdateSat(const HashMapType& node2topo_struct, StraightenAlgorithmTag* sat) {
@@ -83,7 +83,10 @@ void UpdateSat(const HashMapType& node2topo_struct, StraightenAlgorithmTag* sat)
   }
 }
 
-void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task_nodes);
+// Make sure that we use the same boolean value nccl_use_compute_stream through the straighten
+// algorithm
+void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task_nodes,
+                     bool nccl_use_compute_stream);
 
 }  // namespace oneflow
 

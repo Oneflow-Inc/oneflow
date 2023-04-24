@@ -61,6 +61,18 @@ half GetValue<half>(Scalar value) {
   return static_cast<half>(GetValue<float>(value));
 }
 
+template<>
+cuComplex GetValue<cuComplex>(Scalar value) {
+  const std::complex<float> cpp_value = GetValue<std::complex<float>>(value);
+  return cuComplex{cpp_value.real(), cpp_value.imag()};
+}
+
+template<>
+cuDoubleComplex GetValue<cuDoubleComplex>(Scalar value) {
+  const std::complex<double> cpp_value = GetValue<std::complex<double>>(value);
+  return cuDoubleComplex{cpp_value.real(), cpp_value.imag()};
+}
+
 #if CUDA_VERSION >= 11000
 
 template<>
@@ -127,7 +139,9 @@ class FillFactoryImpl : public FillFactory {
 #define MAKE_NEW_FILL_ENTRY(type_cpp, type_proto) {type_proto, NewFill<type_cpp>},
 
     static const std::map<DataType, std::function<std::unique_ptr<Fill>()>> new_fill_handle{
-        OF_PP_FOR_EACH_TUPLE(MAKE_NEW_FILL_ENTRY, CUDA_PRIMITIVE_ALL_TYPE_SEQ)};
+        OF_PP_FOR_EACH_TUPLE(MAKE_NEW_FILL_ENTRY,
+                             CUDA_PRIMITIVE_REAL_TYPE_SEQ CUDA_PRIMITIVE_COMPLEX_TYPE_SEQ
+                                 CUDA_PRIMITIVE_INT16_TYPE_SEQ)};
 
 #undef MAKE_NEW_FILL_ENTRY
 

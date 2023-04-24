@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/ndarray/ndarray_assign_core.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/ep/cuda/primitive/type_seq.h"
 
 namespace oneflow {
 
@@ -58,5 +59,8 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
     ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ, DIM_SEQ);
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_ASSIGN, HALF_DATA_TYPE_SEQ, HALF_DATA_TYPE_SEQ,
                                  DIM_SEQ);
-
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_ASSIGN, CUDA_PRIMITIVE_COMPLEX64_TYPE_SEQ,
+                                 CUDA_PRIMITIVE_COMPLEX64_TYPE_SEQ, DIM_SEQ);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_ASSIGN, CUDA_PRIMITIVE_COMPLEX128_TYPE_SEQ,
+                                 CUDA_PRIMITIVE_COMPLEX128_TYPE_SEQ, DIM_SEQ);
 }  // namespace oneflow

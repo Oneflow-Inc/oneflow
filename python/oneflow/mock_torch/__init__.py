@@ -32,7 +32,13 @@ error_msg = """ is not implemented, please submit an issue at
 'https://github.com/Oneflow-Inc/oneflow/issues' including the log information of the error, the 
 minimum reproduction code, and the system information."""
 
-HAZARD_LIST = ["_distutils_hack", "importlib", "regex", "tokenizers"]
+hazard_list = [
+    "_distutils_hack",
+    "importlib",
+    "regex",
+    "tokenizers",
+    "safetensors._safetensors_rust",
+]
 
 # module wrapper with checks for existence of methods
 class ModuleWrapper(ModuleType):
@@ -179,7 +185,11 @@ class OneflowImporter(MetaPathFinder, Loader):
                 for alias in aliases:
                     del globals[alias]
             name = k if "." not in k else k[: k.find(".")]
-            if not name in HAZARD_LIST and k in self.delete_list:
+            if (
+                not name in hazard_list
+                and not k in hazard_list
+                and k in self.delete_list
+            ):
                 aliases = list(filter(lambda alias: globals[alias] is v, globals))
                 self.enable_mod_cache.update({k: (v, aliases)})
                 del sys.modules[k]
@@ -231,6 +241,13 @@ class DummyModule(ModuleType):
             print(f'"{self.__name__}" is a dummy object, and `{new_name}` is called.')
         return DummyModule(new_name)
 
+    def __bool__(self):
+        if _importer.verbose:
+            print(
+                f'"{self.__name__}" is a dummy object, and its bool value is accessed.'
+            )
+        return False
+
 
 class enable:
     def __init__(
@@ -279,7 +296,6 @@ class disable:
         self.globals = globals
         self.lazy = _importer.lazy
         self.verbose = _importer.verbose
-        self.from_cli = _importer.from_cli
         _importer._disable(globals)
 
     def __enter__(self):
@@ -288,7 +304,11 @@ class disable:
     def __exit__(self, exception_type, exception_value, traceback):
         if self.enable:
             _importer._enable(
-                self.globals, self.lazy, self.verbose, from_cli=self.from_cli
+                # When re-enabling mock torch, from_cli shoule always be False
+                self.globals,
+                self.lazy,
+                self.verbose,
+                from_cli=False,
             )
 
 

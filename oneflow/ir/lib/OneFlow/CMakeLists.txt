@@ -52,15 +52,20 @@ oneflow_add_mlir_dialect_library(
   UserOpConversion.cpp
   OneFlowOpFolders.cpp
   Conversion/OneFlowToTosa.cpp
+  Conversion/OneFlowToLinalg.cpp
   Conversion/PTXToCubin.cpp
   Transform/BufferHostRegister.cpp
   Transform/OutlineAndFuse.cpp
+  Transform/JITPasses.cpp
   Transform/AutoNhwc.cpp
   Transform/ConvertInferenceOp.cpp
   Transform/AggregateOps.cpp
+  Transform/EliminateAllocOps.cpp
+  Transform/FuncOps.cpp
   Transform/CSEWithAttributesIgnored.cpp
   Transform/GroupMatMulOps.cpp
   Transform/AutoNHWCOps.cpp
+  Transform/OneFlowStream.cpp
   TransposeHelpers.cpp
   Passes.cpp
   OneFlowCanonicalizers.cpp

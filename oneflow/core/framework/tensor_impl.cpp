@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <type_traits>
 #include "oneflow/core/common/blocking_then_busy.h"
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/stream_type.h"
 #include "oneflow/core/common/tensor_meta.h"
 #include "oneflow/core/vm/virtual_machine.h"
@@ -27,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/eager/tensor_storage.h"
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/eager/tensor_storage.h"
 #include "oneflow/core/vm/vm_util.h"
@@ -40,8 +42,8 @@ namespace one {
 Maybe<void> TensorImpl::set_requires_grad(bool requires_grad) {
   if (requires_grad) {
     const DataType tensor_dtype = dtype();
-    CHECK_OR_RETURN(IsFloatingDataType(tensor_dtype))
-        << "RuntimeError: only Tensors of floating point can require gradients";
+    CHECK_OR_RETURN(IsSupportRequireGradDataType(tensor_dtype))
+        << "RuntimeError: only Tensors of floating point or complex can require gradients";
   }
   autograd_meta_->set_requires_grad(requires_grad);
   return Maybe<void>::Ok();
@@ -128,15 +130,19 @@ Maybe<void> EagerLocalTensorImpl::InitEagerBlobObject(
         mem_case, local_tensor_meta, mut_local_tensor_meta, local_tensor_meta->dtype(),
         tensor_storage, dep_object);
   } else {
-    const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
-        mem_case, local_tensor_meta, mut_local_tensor_meta, local_tensor_meta->dtype(),
-        std::make_shared<vm::TensorStorage>(true), dep_object);
+    auto device = local_tensor_meta->device();
+    auto storage = device->rematable() ? std::make_shared<vm::RematableTensorStorage>(device)
+                                       : std::make_shared<vm::TensorStorage>(true, device);
+    const auto& eager_blob_object =
+        std::make_shared<vm::EagerBlobObject>(mem_case, local_tensor_meta, mut_local_tensor_meta,
+                                              local_tensor_meta->dtype(), storage, dep_object);
     JUST(set_eager_blob_object(eager_blob_object));
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<bool> EagerLocalTensorImpl::is_pinned() const {
+  if (this->device() == JUST(Device::New("meta"))) { return false; }
   if (!eager_blob_object_) { return false; }
   return IsStreamAllocatorPinned::Visit(JUST(eager_blob_object_->producer_stream())->stream_type());
 }

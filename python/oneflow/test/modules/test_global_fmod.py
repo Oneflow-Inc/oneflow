@@ -27,7 +27,7 @@ from packaging import version
 grad_implemented = version.parse(torch_original.__version__) >= version.parse("1.11.0")
 
 
-@autotest(n=1, auto_backward=grad_implemented, check_graph=False)
+@autotest(n=1, auto_backward=grad_implemented, check_graph=True)
 def do_test_fmod_impl(test_case, ndim, placement, sbp):
     dims = [random(1, 4) * 8 for i in range(ndim)]
     x = random_tensor(ndim, *dims)

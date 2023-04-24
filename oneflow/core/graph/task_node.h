@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/graph/exec_graph.h"
 #include "oneflow/core/job/task.pb.h"
+#include "oneflow/core/graph/task_edge.pb.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/memory/memory_zone.h"
@@ -56,7 +57,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t task_id() const { return task_id_; }
   const StreamId& stream_id() const;
   int64_t chain_id() const { return chain_id_; }
-  int64_t order_in_graph() const { return order_in_graph_; }
+  int64_t order_in_chain() const { return order_in_chain_; }
   const ExecGraph& exec_gph() const { return exec_gph_; }
   std::shared_ptr<RegstDesc> GetProducedRegst(const std::string& name);
   const std::list<std::shared_ptr<RegstDesc>>& GetConsumedRegst(const std::string& name);
@@ -70,11 +71,14 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   DeviceType device_type() const;
   virtual const ParallelContext* parallel_ctx() const { return nullptr; }
 
+  // Different types of TaskNode/Compile Mode choose different output BlobDesc inference methods
+  virtual ExecNode::InferBlobDescsMethod GetInferBlobDescsMethod() const = 0;
+
   // Setters
   void set_machine_id(int64_t val);
   void set_thrd_id(int64_t val);
   void set_chain_id(int64_t val);
-  void set_order_in_graph(int64_t val);
+  void set_order_in_chain(int64_t val);
 
   // Build
   virtual void ProduceAllRegstsAndBindEdges() = 0;
@@ -95,7 +99,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual TaskType GetTaskType() const { return TaskType::kInvalid; }
   std::string VisualStr() const override;
   virtual bool IsMeaningLess();
-  virtual void ToProto(TaskProto*) const;
+  void ToProto(TaskProto* task_proto) const { ToProto(task_proto, /*check*/ true); }
+  virtual void ToProto(TaskProto* task_proto, bool check) const;
   void BindEdgeWithProducedRegst(TaskEdge*, const std::string& name);
   virtual MemZoneId MemZoneId121() const;
   bool BuildCtrlRegstDescIfNeed(TaskNode* dst_node, std::string* name);
@@ -114,6 +119,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   TaskEdge* SoleOutDataEdge() const;
   size_t in_data_edges_size() const;
   size_t out_data_edges_size() const;
+  bool has_new_task_id() const { return static_cast<bool>(new_task_id_); }
 
  protected:
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, bool enable_reuse_mem);
@@ -149,13 +155,15 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t thrd_id_;
   int64_t task_id_;
   int64_t chain_id_;
-  int64_t order_in_graph_;
+  int64_t order_in_chain_;
   std::unique_ptr<TaskId> new_task_id_;
 
   ExecGraph exec_gph_;
   HashMap<std::string, std::shared_ptr<RegstDesc>> produced_regsts_;
   HashMap<std::string, std::list<std::shared_ptr<RegstDesc>>> consumed_regsts_;
 };
+
+class TaskGraphRebuildCtx;
 
 class TaskEdge final : public Edge<TaskNode, TaskEdge> {
  public:
@@ -173,6 +181,10 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
   void AddLbis(const std::vector<LogicalBlobId>& lbis) { lbis_.insert(lbis.begin(), lbis.end()); }
 
   void CheckRegstLbiValid() const;
+
+  Maybe<void> InitFromProto(const TaskEdgeProto& proto,
+                            const TaskGraphRebuildCtx& task_graph_rebuild_ctx);
+  void ToProto(TaskEdgeProto* proto) const;
 
  private:
   HashSet<LogicalBlobId> lbis_;
