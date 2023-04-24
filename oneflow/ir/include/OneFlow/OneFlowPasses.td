@@ -56,7 +56,11 @@ def GpuCopyArgPass : Pass<"gpu-copy-arg", "func::FuncOp"> {
 def OutlineJitFunctionPass : InterfacePass<"outline-jit-function", "FunctionOpInterface"> {
   let summary = "move ops could be jitted to jit function";
   let constructor = "mlir::oneflow::createOutlineJitFunctionPass()";
-  let dependentDialects = ["pdl_interp::PDLInterpDialect", "pdl::PDLDialect"];
+  let dependentDialects = ["pdl_interp::PDLInterpDialect", "pdl::PDLDialect", "LLVM::LLVMDialect"];
+  let options = [
+    Option<"compileToLLVM", "compile-to-llvm", "bool",
+           /*default=*/"true", "Convert to llvm dialect in this pass">,
+  ];
 }
 
 def AggregateComputeOpsPass : Pass<"aggregate-compute-ops", "ModuleOp"> {

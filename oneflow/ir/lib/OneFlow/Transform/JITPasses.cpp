@@ -19,6 +19,11 @@ limitations under the License.
 #include "OneFlow/OneFlowUtils.h"
 #include "OneFlow/Passes.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Parser/Parser.h"
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Bytecode/BytecodeWriter.h"
+
 namespace mlir {
 namespace oneflow {
 
@@ -120,6 +125,54 @@ int64_t getCountJITFunction() {
   return countJITFunction.fetch_add(1);
 }
 
+namespace {
+
+std::function<void(mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module)> getLowerFunction(
+    const StringAttr& device_tag) {
+  auto device_tag_str = device_tag.str();
+  if (device_tag_str == "cuda") {
+    return [](mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module) {
+      CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToCUDALLVM(mlir_ctx, module)))
+          << "fail to lower OneFlow to CUDA LLVM";
+    };
+  } else if (device_tag_str == "cpu") {
+    return [](mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module) {
+      CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToLLVM(mlir_ctx, module)))
+          << "fail to lower OneFlow to LLVM";
+    };
+  }
+  LOG(FATAL) << "Fail to match lowering function with device tag name: " << device_tag_str;
+}
+
+std::string convertFuncToByte(func::FuncOp& func, const StringAttr& device_tag,
+                              bool compile_to_llvm) {
+  mlir::DialectRegistry registry;
+  registry
+      .insert<mlir::oneflow::OneFlowDialect, mlir::func::FuncDialect, mlir::memref::MemRefDialect,
+              mlir::tosa::TosaDialect, mlir::linalg::LinalgDialect, mlir::tensor::TensorDialect>();
+  mlir::MLIRContext mlir_ctx(registry);
+
+  std::string mlir;
+  llvm::raw_string_ostream os_mlir(mlir);
+  mlir::writeBytecodeToFile(func, os_mlir);
+  if (!compile_to_llvm) return mlir;
+
+  mlir::OwningOpRef<mlir::ModuleOp> module =
+      ::mlir::parseSourceString<mlir::ModuleOp>(mlir, &mlir_ctx);
+  mlir::registerLLVMDialectTranslation(registry);
+  if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { func->print(llvm::outs()); }
+  getLowerFunction(device_tag)(&mlir_ctx, *module);
+  if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { func->print(llvm::outs()); }
+  (*module)->setAttr(jit::RAW_GRAPH, StringAttr::get(&mlir_ctx, mlir));
+
+  std::string byte;
+  llvm::raw_string_ostream os_byte(byte);
+  mlir::writeBytecodeToFile(*module, os_byte);
+  return byte;
+}
+
+}  // namespace
+
 class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunctionPass> {
   void runOnOperation() override {
     llvm::DenseSet<Operation*> entryOps, visitedOps;
@@ -180,11 +233,13 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
           NamedAttrList attributes =
               GetJitOpAttributes(builder, name, argumentTypes.size(), resultTypes.size(),
                                  entryOp->getOperand(0).getDefiningOp());
-          std::string mlir;
-          llvm::raw_string_ostream os_mlir(mlir);
-          function->print(os_mlir);
+          const auto byte = convertFuncToByte(
+              function,
+              attributes.get(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr())
+                  .cast<StringAttr>(),
+              compileToLLVM.getValue());
           auto jitOp = builder.create<MlirJitOp>(entryOp->getLoc(), function, attributes, entries);
-          jitOp->setAttr("mlir_assembly", builder.getStringAttr(mlir));
+          jitOp->setAttr("mlir_assembly", builder.getStringAttr(byte));
           for (const auto& old : llvm::enumerate(exits)) {
             old.value().replaceAllUsesWith(jitOp->getResult(old.index()));
           }

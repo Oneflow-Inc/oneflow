@@ -101,6 +101,7 @@ llvm::SmallVector<OpaqueMemRefDescriptor> GetMLIRCInterfaceArgs(
   return args;
 }
 
+
 mlir::DialectRegistry getDialectRegistry() {
   mlir::DialectRegistry registry;
   registry
@@ -119,16 +120,6 @@ void WithMlirContext(
   mlir::OwningOpRef<mlir::ModuleOp> module = parse(&mlir_ctx);
   CHECK(module) << "fail to parse MLIR, op: " << ctx->op_name();
   if (ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module->print(llvm::outs()); }
-  llvm::InitializeNativeTarget();
-  llvm::InitializeNativeTargetAsmPrinter();
-  lower(&mlir_ctx, *module);
-  if (ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module->print(llvm::outs()); }
-  if (ParseBooleanFromEnv("ONEFLOW_MLIR_DUMP_IR", false)) {
-    std::string mlir;
-    llvm::raw_string_ostream os_mlir(mlir);
-    module->print(os_mlir);
-    TeePersistentLogStream::Create(JoinPath("jit", ctx->op_name() + ".mlir"))->Write(mlir);
-  }
 
   mlir::ExecutionEngineOptions jitOptions;
   jitOptions.transformer = {};
@@ -163,10 +154,6 @@ class MlirJitCpuKernel final : public user_op::OpKernel {
         [&ctx](mlir::MLIRContext* mlir_ctx) {
           return mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
                                                          mlir_ctx);
-        },
-        [](mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module) {
-          CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToLLVM(mlir_ctx, module)))
-              << "fail to lower OneFlow to LLVM";
         },
 #ifdef WITH_CUDA
         ctx->stream()->As<ep::CudaStream>()->cuda_stream());
@@ -211,10 +198,6 @@ class MlirJitGpuKernel final : public user_op::OpKernel {
         [&ctx](mlir::MLIRContext* mlir_ctx) {
           return mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
                                                          mlir_ctx);
-        },
-        [](mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module) {
-          CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToCUDALLVM(mlir_ctx, module)))
-              << "fail to lower OneFlow to CUDA LLVM";
         },
         nullptr);
   }
