@@ -439,9 +439,8 @@ class NormalTools {
   }
 
   static bool CheckNormalTensorStd(const std::shared_ptr<one::Tensor>& std) {
-    CHECK(!std->dtype()->is_complex())<<"normal expects standard deviation to be non-complex";
+    CHECK(!std->dtype()->is_complex()) << "normal expects standard deviation to be non-complex";
     if (std->nelement() == 0) { return true; }
-    GetTensorItemValue<float>(CHECK_JUST(Min(std)));
     auto std_check = CHECK_JUST(ScalarLogicalGreaterEqual(CHECK_JUST(Min(std)), Scalar(0.0)));
     CHECK(GetTensorItemValue<bool>(std_check)) << "normal expects all elements of std >= 0.0";
     return true;
