@@ -37,7 +37,7 @@ struct FoldAllocToSubviewPattern final : public OpRewritePattern<func::FuncOp> {
     size_t size_ = 0;
   };
 
-  std::pair<bool, std::vector<AllocOpInfo>> getAllocInfoList(func::FuncOp func) const {
+  std::vector<AllocOpInfo> getAllocInfoList(func::FuncOp func) const {
     std::vector<memref::AllocOp> list;
     DenseMap<gpu::LaunchFuncOp, int> lifetime;
     auto& ops = func.getBody().front();
@@ -68,11 +68,12 @@ struct FoldAllocToSubviewPattern final : public OpRewritePattern<func::FuncOp> {
       }
       ret.push_back({alloc, start_lifetime, end_lifetime, size});
     }
-    return {ret.size(), ret};
+    return ret;
   }
 
   void replaceAllocwithSubview(func::FuncOp func, mlir::PatternRewriter& rewriter,
                                const ::oneflow::MemBlockResultInfo<Operation*>& ret) const {
+    func->dump();
     // create the uni memref.alloc op
     rewriter.setInsertionPointToStart(&func.getBody().front());
     auto output_type = MemRefType::get({static_cast<long>(ret.mem_block_size)},
@@ -88,13 +89,24 @@ struct FoldAllocToSubviewPattern final : public OpRewritePattern<func::FuncOp> {
     }
   }
 
+  bool isMemPool(Operation* op) const {
+    auto alloc = dyn_cast<memref::AllocOp>(op);
+    if (!alloc) return false;
+    MemRefType type = alloc->getOpResult(0).getType().cast<MemRefType>();
+    if (!type) return false;
+    return type.getRank() == 1 && type.getElementType() == getMemPoolElemType(op->getContext());
+  }
+
  public:
   explicit FoldAllocToSubviewPattern(mlir::MLIRContext* context)
       : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
   mlir::LogicalResult matchAndRewrite(func::FuncOp op,
                                       mlir::PatternRewriter& rewriter) const override {
-    auto [is_legal, list] = getAllocInfoList(op);
-    if (!is_legal) { return failure(); }
+    auto list = getAllocInfoList(op);
+    // Note: no malloc op should be folded.
+    if (!list.size()) { return success(); }
+    // Note: the single malloc op with out type of memref<?xi8> means it has been folded.
+    if (list.size() == 1 && isMemPool(list.front().val_)) { return success(); }
 
     ::oneflow::HashMap<Operation*, std::pair<int32_t, int32_t>> val2lifetime;
     ::oneflow::HashMap<Operation*, size_t> val2size;
@@ -105,9 +117,7 @@ struct FoldAllocToSubviewPattern final : public OpRewritePattern<func::FuncOp> {
     ::oneflow::MemBlockResultInfo<Operation*> ret;
 
     ::oneflow::MemReusedMemSizeFirstAlgo(false, val2lifetime, val2size, &ret);
-    LOG(ERROR) << 1;
     replaceAllocwithSubview(op, rewriter, ret);
-    LOG(ERROR) << 2;
     return success();
   }
 };
@@ -146,7 +156,7 @@ struct InsertOneFlowMemPoolPattern final : public OpRewritePattern<func::FuncOp>
 
     auto type = alloc_op ? alloc_op->getResult(0).getType().dyn_cast_or_null<MemRefType>()
                          : getNullMemType(rewriter);
-    if (type.getRank() != 1 && type.getElementType() != getMemPoolElemType(op->getContext())) {
+    if (type.getRank() != 1 || type.getElementType() != getMemPoolElemType(op->getContext())) {
       LOG(FATAL) << "the alloc op fail to matching memref<?xi8>";
       return failure();
     }
