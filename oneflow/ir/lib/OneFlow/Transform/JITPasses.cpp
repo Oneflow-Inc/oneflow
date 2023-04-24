@@ -135,8 +135,7 @@ std::function<void(mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module)> getLower
       CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToCUDALLVM(mlir_ctx, module)))
           << "fail to lower OneFlow to CUDA LLVM";
     };
-  }
-  if (device_tag_str == "cpu") {
+  } else if (device_tag_str == "cpu") {
     return [](mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module) {
       CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToLLVM(mlir_ctx, module)))
           << "fail to lower OneFlow to LLVM";
@@ -157,6 +156,7 @@ std::string convertFuncToByte(func::FuncOp& func, const StringAttr& device_tag,
   llvm::raw_string_ostream os_mlir(mlir);
   mlir::writeBytecodeToFile(func, os_mlir);
   if (!compile_to_llvm) return mlir;
+
   mlir::OwningOpRef<mlir::ModuleOp> module =
       ::mlir::parseSourceString<mlir::ModuleOp>(mlir, &mlir_ctx);
   mlir::registerLLVMDialectTranslation(registry);
