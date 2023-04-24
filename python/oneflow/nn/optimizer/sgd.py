@@ -138,7 +138,7 @@ class SGD(Optimizer):
 
             for param in param_list:
                 assert param.is_leaf, "parameters must be leaf tensor"
-                self._state[param] = dict()
+                self.state[param] = dict()
 
                 if param_group["fused"] and not param.is_cuda:
                     warnings.warn("Fused SGD only support cuda parameters.")
@@ -173,9 +173,9 @@ class SGD(Optimizer):
                     self._sgd, (param, param.grad), learning_rate=lr, l2=l2
                 )
             else:
-                if "momentum_buf" not in self._state[param]:
-                    self._state[param]["momentum_buf"] = flow.zeros_like(param)
-                momentum_buf = self._state[param]["momentum_buf"]
+                if "momentum_buf" not in self.state[param]:
+                    self.state[param]["momentum_buf"] = flow.zeros_like(param)
+                momentum_buf = self.state[param]["momentum_buf"]
                 beta = param_group["momentum"]
                 dampening = param_group["dampening"]
                 nesterov = param_group["nesterov"]
@@ -205,9 +205,9 @@ class SGD(Optimizer):
             param_grad_list.append(param.grad)
 
             if use_momentum:
-                if "momentum_buf" not in self._state[param]:
-                    self._state[param]["momentum_buf"] = flow.zeros_like(param)
-                momentum_buf_list.append(self._state[param]["momentum_buf"])
+                if "momentum_buf" not in self.state[param]:
+                    self.state[param]["momentum_buf"] = flow.zeros_like(param)
+                momentum_buf_list.append(self.state[param]["momentum_buf"])
 
         if not use_momentum:
             flow._C.multi_tensor_sgd_update(
@@ -249,7 +249,7 @@ class SGD(Optimizer):
                 else:
                     self._single_tensor_update(param_group)
 
-        self._state["step"] = self._state["step"] + 1
+        self.state["step"] = self.state["step"] + 1
         return loss
 
     def _generate_conf_for_graph(self, train_conf, vars_conf):

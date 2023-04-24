@@ -84,6 +84,29 @@ GetSbpFn MakeGetSbpFn(GetSbpFn extra) {
   return DataTypeInferFn(ctx);
 }
 
+/*static*/ Maybe<void> HostScalarAddByTensorOp::GetSbp(user_op::SbpContext* ctx) {
+  return MakeGetSbpFn([](user_op::SbpContext* ctx) {
+    ctx->NewBuilder()
+        .PartialSum(user_op::OpArg("x", 0))
+        .PartialSum(user_op::OpArg("scalar", 0))
+        .PartialSum(user_op::OpArg("y", 0))
+        .Build();
+    return Maybe<void>::Ok();
+  })(ctx);
+}
+/*static*/ Maybe<void> HostScalarAddByTensorOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return TensorDescInferFn(ctx);
+}
+/*static*/ Maybe<void> HostScalarAddByTensorOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> HostScalarAddByTensorOp::InferDataType(user_op::InferContext* ctx) {
+  return DataTypeInferFn(ctx);
+}
+
+REGISTER_OP_HOST_MEMORY_INPUT("host_scalar_add_by_tensor", "scalar", 0);
+
 /*static*/ Maybe<void> ScalarSubByTensorOp::GetSbp(user_op::SbpContext* ctx) {
   return MakeGetSbpFn([](user_op::SbpContext* ctx) {
     ctx->NewBuilder()

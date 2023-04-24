@@ -144,7 +144,7 @@ class ConcatKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
 
 }  // namespace
 
-REGISTER_USER_KERNEL("concat")
+REGISTER_USER_KERNEL("cat")
     .SetCreateFn<ConcatKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
                      && (user_op::HobInputSize("in") == 2))

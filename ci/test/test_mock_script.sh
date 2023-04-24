@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-MOCK_TORCH=$PWD/python/oneflow/test/misc/test_mock_simple.py
+MOCK_TORCH=$PWD/python/oneflow/test/misc/mock_example.py
 
 same_or_exit() {
     if [[ "$(python3 $MOCK_TORCH)" != *"$1"* ]]; then

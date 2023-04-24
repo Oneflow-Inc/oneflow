@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/ccl/ccl.h"
 #include "oneflow/core/job/rank_group.h"
+#include "oneflow/core/common/small_vector.h"
 
 namespace oneflow {
 namespace one {
@@ -102,6 +103,44 @@ bool IsScalarTensor(const std::shared_ptr<Tensor>& x) {
   return x->shape()->NumAxes() == 0 && x->shape()->elem_cnt() == 1;
 }
 
+Maybe<bool> ComputeNonOverlappingAndDense(const std::shared_ptr<Tensor>& x) {
+  // A function used to check whether the tensor is non-overlapping and dense, reference: (pytorch)
+  // c10/core/TensorImpl.cpp
+  const int64_t ndim = x->ndim();
+  const auto& shape = x->shape();
+  const auto& stride = JUST(x->stride());
+
+  // If 1D tensor and shape(0) < 2 or stride(0) == 1 then true
+  if (ndim == 1) { return shape->at(0) < 2 || stride->at(0) == 1; }
+  small_vector<int64_t, 5> perm;
+  perm.resize(ndim);
+  for (int64_t i = 0; i < ndim; ++i) { perm[i] = i; }
+  // Sort by strides, leaving 0 and 1 sized dims at the end of the array
+  std::sort(perm.begin(), perm.end(), [&](int64_t a, int64_t b) {
+    if (shape->at(a) < 2) {
+      return false;
+    } else if (shape->at(b) < 2) {
+      return true;
+    }
+    return stride->at(a) < stride->at(b);
+  });
+  // CHeck if tareget stride == required stride
+  auto require_stride = 1;
+  for (int64_t i = 0; i < ndim; ++i) {
+    const auto size_perm_i = shape->at(perm[i]);
+    if (size_perm_i < 2) { return true; }
+    if (stride->at(perm[i]) != require_stride) { return false; }
+    require_stride *= size_perm_i;
+  }
+  return true;
+}
+
+Maybe<bool> IsNonOverlappingAndDense(const std::shared_ptr<Tensor>& x) {
+  // if tensor is_contiguous or ComputeNonOverlappingAndDense = True, then indicates it's memory
+  // layout is non-overlapping and dense.
+  return x->is_contiguous() || JUST(ComputeNonOverlappingAndDense(x));
+}
+
 Maybe<std::vector<int32_t>> CheckAxis(const std::vector<int32_t>& axis, const int32_t& ndim) {
   const int32_t naxis = axis.size();
   int32_t reduce_ndim = naxis;
@@ -147,8 +186,8 @@ Maybe<void> CheckInplaceShapeCanExpandTo(const Shape& shape, const Shape& expand
       int dim_a = expand_shape.At(i);
       int dim_b = shape.At(index);
       // NOTE(lixiang): When a dimension of tensor a and tensor b are not equal in size, dim_a needs
-      // to be greater than 0, and dim_b should be equal to 1.
-      CHECK_OR_RETURN(!(dim_a != dim_b && (dim_a <= 0 || dim_b != 1)))
+      // to be greater than or equal 0, and dim_b should be equal to 1.
+      CHECK_OR_RETURN(!(dim_a != dim_b && (dim_a < 0 || dim_b != 1)))
           << Error::RuntimeError() << "Tensor with shape " << expand_shape.ToString()
           << " doesn't match the broadcast shape in an inplace operation";
     } else {

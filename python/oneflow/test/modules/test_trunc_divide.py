@@ -24,7 +24,7 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestTruncDivide(flow.unittest.TestCase):
-    @autotest(n=5, check_allclose=False, check_graph=False)
+    @autotest(n=5, check_allclose=False, check_graph=True)
     def test_elementwise_trunc_divide_random_data(test_case):
         device = random_device()
         dim0 = random(1, 8)
@@ -71,7 +71,7 @@ class TestTruncDivide(flow.unittest.TestCase):
             )
         )
 
-    @autotest(n=5, check_allclose=False, check_graph=False)
+    @autotest(n=5, check_allclose=False, check_graph=True)
     def test_tensor_truncdiv_scalar_random_data(test_case):
         device = random_device()
         x = random_tensor(

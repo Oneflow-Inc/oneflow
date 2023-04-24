@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/graph/boxing_task_graph.pb.h"
 #include "oneflow/core/graph/collective_boxing_unpack_task_node.h"
 
 namespace oneflow {
@@ -59,11 +60,34 @@ void CollectiveBoxingUnpackTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   out_regst->AddLbi(sole_op->BnInOp2Lbi(sole_op->SoleObn()));
   node->BindBnWithRegst(sole_op->SoleObn(), out_regst);
-  node->InferBlobDescs(nullptr);
+  (node->*GetInferBlobDescsMethod())(nullptr);
 }
 
 void CollectiveBoxingUnpackTaskNode::InferProducedDataRegstTimeShape() {
   NaiveInferProducedDataRegstTimeShape();
+}
+
+Maybe<void> CollectiveBoxingUnpackTaskNode::InitTransportTaskFromProto(
+    const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) {
+  CHECK_OR_RETURN(transport_task_proto.has_collective_boxing_unpack_task())
+      << "not a serialized CollectiveBoxingUnpackTaskNode. debug string: "
+      << transport_task_proto.DebugString();
+  const auto& proto = transport_task_proto.collective_boxing_unpack_task();
+  logical_shape_ = Shape(proto.logical_shape());
+  src_sbp_parallel_ = proto.src_sbp_parallel();
+  dst_sbp_parallel_ = proto.dst_sbp_parallel();
+  parallel_num_ = proto.parallel_num();
+  return Maybe<void>::Ok();
+}
+
+void CollectiveBoxingUnpackTaskNode::ToTransportTaskProto(
+    TransportTaskProto* transport_task_proto) const {
+  ToProto(transport_task_proto->mutable_task_proto(), /*check=*/false);
+  auto* proto = transport_task_proto->mutable_collective_boxing_unpack_task();
+  logical_shape_.ToProto(proto->mutable_logical_shape());
+  *proto->mutable_src_sbp_parallel() = src_sbp_parallel_;
+  *proto->mutable_dst_sbp_parallel() = dst_sbp_parallel_;
+  proto->set_parallel_num(parallel_num_);
 }
 
 }  // namespace oneflow

@@ -42,6 +42,7 @@ namespace oneflow {
 #define LOGICAL_REDUCE_BINARY_FUNC_NAME_SEQ (Any)(All)
 #define REDUCE_BINARY_FUNC_SEQ \
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, REDUCE_BINARY_FUNC_NAME_SEQ)
+#define REDUCE_COMPLEX_BINARY_FUNC_SEQ OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, (Sum))
 #define ARITHMETIC_REDUCE_BINARY_FUNC_SEQ \
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, ARITHMETIC_REDUCE_BINARY_FUNC_NAME_SEQ)
 #define LOGICAL_REDUCE_BINARY_FUNC_SEQ \
@@ -393,6 +394,51 @@ struct BinaryFuncMin<half> final {
 #else
     NO_HALF_UTIL_FOUND;
 #endif
+  }
+};
+
+template<>
+struct BinaryFuncAdd<cuComplex> final {
+  static __device__ __forceinline__ cuComplex Invoke(const cuComplex x, const cuComplex y) {
+    return cuComplex{x.x + y.x, x.y + y.y};
+  }
+};
+
+template<>
+struct BinaryFuncSub<cuComplex> final {
+  static __device__ __forceinline__ cuComplex Invoke(const cuComplex x, const cuComplex y) {
+    return cuComplex{x.x - y.x, x.y - y.y};
+  }
+};
+
+template<>
+struct BinaryFuncMul<cuComplex> final {
+  static __device__ __forceinline__ cuComplex Invoke(const cuComplex x, const cuComplex y) {
+    return cuCmulf(x, y);
+  }
+};
+
+template<>
+struct BinaryFuncAdd<cuDoubleComplex> final {
+  static __device__ __forceinline__ cuDoubleComplex Invoke(const cuDoubleComplex x,
+                                                           const cuDoubleComplex y) {
+    return cuDoubleComplex{x.x + y.x, x.y + y.y};
+  }
+};
+
+template<>
+struct BinaryFuncSub<cuDoubleComplex> final {
+  static __device__ __forceinline__ cuDoubleComplex Invoke(const cuDoubleComplex x,
+                                                           const cuDoubleComplex y) {
+    return cuDoubleComplex{x.x - y.x, x.y - y.y};
+  }
+};
+
+template<>
+struct BinaryFuncMul<cuDoubleComplex> final {
+  static __device__ __forceinline__ cuDoubleComplex Invoke(const cuDoubleComplex x,
+                                                           const cuDoubleComplex y) {
+    return cuCmul(x, y);
   }
 };
 

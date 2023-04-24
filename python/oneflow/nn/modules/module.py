@@ -141,19 +141,25 @@ class Module(object):
     """
 
     def __init__(self):
-        self.training = True
-        self._parameters = OrderedDict()
-        self._buffers = OrderedDict()
-        self._non_persistent_buffers_set = set()
-        self._backward_hooks = OrderedDict()
-        self._is_full_backward_hook = None
-        self._forward_hooks = OrderedDict()
-        self._forward_pre_hooks = OrderedDict()
-        self._state_dict_hooks = OrderedDict()
-        self._load_state_dict_pre_hooks = OrderedDict()
-        self._modules = OrderedDict()
-        self._is_ddp_module = False
-        self._oneflow_internal_module_tensor_applied_dict__ = None
+        """
+        Calls super().__setattr__('a', a) instead of the typical self.a = a
+        to avoid Module.__setattr__ overhead. Module's __setattr__ has special
+        handling for parameters, submodules, and buffers but simply calls into
+        super().__setattr__ for all other attributes.
+        """
+        super().__setattr__("training", True)
+        super().__setattr__("_parameters", OrderedDict())
+        super().__setattr__("_buffers", OrderedDict())
+        super().__setattr__("_non_persistent_buffers_set", set())
+        super().__setattr__("_backward_hooks", OrderedDict())
+        super().__setattr__("_is_full_backward_hook", None)
+        super().__setattr__("_forward_hooks", OrderedDict())
+        super().__setattr__("_forward_pre_hooks", OrderedDict())
+        super().__setattr__("_state_dict_hooks", OrderedDict())
+        super().__setattr__("_load_state_dict_pre_hooks", OrderedDict())
+        super().__setattr__("_modules", OrderedDict())
+        super().__setattr__("_is_ddp_module", False)
+        super().__setattr__("_oneflow_internal_module_tensor_applied_dict__", None)
 
     def __getstate__(self):
         if not self._is_ddp_module:
@@ -1206,7 +1212,7 @@ class Module(object):
             # At this point the grad_output part of the hook will most likely be correct
             inputs_grad_fn = {i.grad_fn for i in args if i.grad_fn is not None}
 
-            next_functions = {grad_fn.next_functions[0]}
+            next_functions = {grad_fn.next_functions[0][0]}
 
             if inputs_grad_fn != next_functions:
                 warnings.warn(
@@ -1381,6 +1387,18 @@ class Module(object):
             module.apply(fn)
         fn(self)
         return self
+
+    def to_empty(self: T, *, device: Union[str, flow.device]) -> T:
+        r"""Moves the parameters and buffers to the specified device without copying storage.
+
+        Args:
+            device (:class:`oneflow.device`): the desired device of the parameters
+                and buffers in this module
+        
+        Returns:
+            Module: self
+        """
+        return self._apply(lambda t: flow.empty_like(t, device=device))
 
     @overload
     def to(
@@ -1602,6 +1620,122 @@ class Module(object):
 
     def _get_name(self):
         return self.__class__.__name__
+
+    def get_submodule(self, target: str):
+        r"""Get submodule accroding to the name of submodule.
+
+        Args:
+            target (str): The name of submodule to find.
+
+        .. code-block:: python
+
+            >>> from oneflow import nn
+            >>> class Net3(nn.Module):
+            >>>     def __init__(self):
+            >>>         super().__init__()
+            >>>         self.linear = nn.Linear(3, 2)
+            >>>
+            >>> class Net2(nn.Module):
+            >>>     def __init__(self):
+            >>>         super().__init__()
+            >>>         self.net3 = Net3()
+            >>>
+            >>> class Net1(nn.Module):
+            >>>     def __init__(self):
+            >>>         super().__init__()
+            >>>         self.net2 = Net2()
+            >>>
+            >>> net = Net1()
+            >>> print(net.get_submodule("net2.net3"))
+            Net3(
+            (linear): Linear(in_features=3, out_features=2, bias=True)
+            )
+            >>> print(net.get_submodule("net2"))
+            Net2(
+            (net3): Net3(
+                (linear): Linear(in_features=3, out_features=2, bias=True)
+                )
+            )
+
+        Returns:
+            oneflow.nn.Module: The submodule referenced by ``target``
+
+        Raises:
+            AttributeError: If the module can't reference the submodule accroding to ``target``
+            TypeError: If the result referenced by ``target`` is not an ``nn.Module``
+
+        """
+        if target == "":
+            return self
+        curr_module_name = [self._get_name()]
+        submodule_names = target.split(".")
+        mod = self
+        for submodule_name in submodule_names:
+            if not hasattr(mod, submodule_name):
+                raise AttributeError(
+                    f"`{'.'.join(curr_module_name)}` doesn't have submodule `{submodule_name}`"
+                )
+            mod = getattr(mod, submodule_name)
+            curr_module_name.append(submodule_name)
+            if not isinstance(mod, flow.nn.Module):
+                raise TypeError(
+                    f"`{'.'.join(curr_module_name)}` isn't an oneflow.Module, but a {type(mod)}"
+                )
+        return mod
+
+    def get_parameter(self, target: str):
+        r"""Return the parameter refenreced by ``target``.
+
+        Args:
+            target (str): The name of parameter to find.
+
+        .. code-block:: python
+
+            >>> from oneflow import nn
+            >>> class Net3(nn.Module):
+            >>>     def __init__(self):
+            >>>         super().__init__()
+            >>>         self.linear = nn.Linear(3, 3)
+            >>>
+            >>> class Net2(nn.Module):
+            >>>     def __init__(self):
+            >>>         super().__init__()
+            >>>         self.net3 = Net3()
+            >>>         self.linear = nn.Linear(2, 2)
+            >>>
+            >>> class Net1(nn.Module):
+            >>>     def __init__(self):
+            >>>         super().__init__()
+            >>>         self.net2 = Net2()
+            >>>         self.linear = nn.Linear(1, 1)
+            >>>
+            >>> net = Net1()
+            >>> print(net.get_parameter("linear.weight").shape)
+            oneflow.Size([1, 1])
+            >>> print(net.get_parameter("net2.linear.weight").shape)
+            oneflow.Size([2, 2])
+
+        Returns:
+            oneflow.nn.Parameter: The parameter referenced by ``target``
+
+        Raises:
+            AttributeError: If the module can't reference the parameter according to ``target``
+            TypeError: If the result refererenced by ``target`` is not an ``nn.Parameter``
+
+        """
+        sub_module_name, _, parameter_name = target.rpartition(".")
+        sub_module = self.get_submodule(sub_module_name)
+        if hasattr(sub_module, parameter_name):
+            parameter = getattr(sub_module, parameter_name)
+        else:
+            raise AttributeError(
+                f"`{sub_module_name}` doesn't have attribute `{parameter_name}`"
+            )
+        if not isinstance(parameter, flow.Tensor):
+            raise TypeError(
+                f"`{target}` is not an oneflow.Tensor, but {type(parameter)}"
+            )
+        return parameter
 
     def extra_repr(self) -> str:
         """Set the extra representation of the module

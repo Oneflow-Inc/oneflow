@@ -2755,3 +2755,25 @@ add_docstr(
         >>> x.baddbmm(batch1, batch2, alpha=2, beta=2) # doctest: +SKIP
     """,
 )
+
+
+add_docstr(
+    oneflow.Tensor.frac,
+    r"""
+    See :func:`oneflow.frac`.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.frac_,
+    r"""
+    In-place version of :func:`oneflow.Tensor.frac`.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.digamma,
+    """
+    See :func:`oneflow.digamma`
+    """,
+)

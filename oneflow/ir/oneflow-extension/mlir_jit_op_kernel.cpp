@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
@@ -28,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/ir/include/OneFlow/Passes.h"
 #include "oneflow/ir/include/OneFlow/Extension.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -99,11 +101,12 @@ llvm::SmallVector<OpaqueMemRefDescriptor> GetMLIRCInterfaceArgs(
 void WithMlirContext(
     user_op::KernelComputeContext* ctx, const llvm::SmallVector<llvm::StringRef, 4>& ext_libs,
     const std::function<mlir::OwningOpRef<mlir::ModuleOp>(mlir::MLIRContext* mlir_ctx)>& parse,
-    const std::function<void(mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module)>& lower) {
+    const std::function<void(mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module)>& lower,
+    void* stream) {
   mlir::DialectRegistry registry;
   registry
       .insert<mlir::oneflow::OneFlowDialect, mlir::func::FuncDialect, mlir::memref::MemRefDialect,
-              mlir::tosa::TosaDialect, mlir::linalg::LinalgDialect>();
+              mlir::tosa::TosaDialect, mlir::linalg::LinalgDialect, mlir::tensor::TensorDialect>();
   mlir::registerLLVMDialectTranslation(registry);
   mlir::MLIRContext mlir_ctx(registry);
   mlir::OwningOpRef<mlir::ModuleOp> module = parse(&mlir_ctx);
@@ -122,7 +125,7 @@ void WithMlirContext(
 
   mlir::ExecutionEngineOptions jitOptions;
   jitOptions.transformer = {};
-  jitOptions.jitCodeGenOptLevel = llvm::None;
+  jitOptions.jitCodeGenOptLevel = std::nullopt;
   jitOptions.sharedLibPaths = ext_libs;
 
   auto jit_or_error = mlir::ExecutionEngine::create(*module, jitOptions);
@@ -133,6 +136,7 @@ void WithMlirContext(
       GetMLIRCInterfaceArgs(ctx);
   llvm::SmallVector<void*> packed_args{};
   for (auto& arg /* arg must be a reference*/ : args) { packed_args.push_back(&arg); }
+  packed_args.push_back(&stream);
   auto error = jit->invokePacked(GetMLIRCInterface(ctx->op_name()), packed_args);
   CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
 }
@@ -156,7 +160,12 @@ class MlirJitCpuKernel final : public user_op::OpKernel {
         [](mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module) {
           CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToLLVM(mlir_ctx, module)))
               << "fail to lower OneFlow to LLVM";
-        });
+        },
+#ifdef WITH_CUDA
+        ctx->stream()->As<ep::CudaStream>()->cuda_stream());
+#else
+        nullptr);
+#endif  // WITH_CUDA
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -199,7 +208,8 @@ class MlirJitGpuKernel final : public user_op::OpKernel {
         [](mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module) {
           CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToCUDALLVM(mlir_ctx, module)))
               << "fail to lower OneFlow to CUDA LLVM";
-        });
+        },
+        nullptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

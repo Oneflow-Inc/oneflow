@@ -136,7 +136,7 @@ class TestLogicalReduce(flow.unittest.TestCase):
         )
         return torch.all(x, dim)
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_max_bool_input_with_random_data(test_case):
         device = random_device()
         dim = random(1, 4).to(int)
@@ -145,7 +145,7 @@ class TestLogicalReduce(flow.unittest.TestCase):
         )
         return torch.max(x, dim)
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_min_bool_input_with_random_data(test_case):
         device = random_device()
         dim = random(1, 4).to(int)

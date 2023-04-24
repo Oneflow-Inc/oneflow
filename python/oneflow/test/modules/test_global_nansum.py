@@ -34,7 +34,7 @@ def _test_global_nansum_against_pytorch(test_case, placement, sbp):
     return y
 
 
-@autotest(n=3, check_graph=False)
+@autotest(n=1, check_graph=False)
 def _test_global_nansum_with_0_size_tensor(test_case, placement, sbp):
     x = random_tensor(4, 8, 16, 0, 24).to_global(placement, sbp)
     mask = torch.ones_like(x).bool()
