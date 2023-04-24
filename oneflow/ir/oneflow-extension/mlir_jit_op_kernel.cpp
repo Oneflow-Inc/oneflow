@@ -13,15 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Parser/Parser.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
-#include "mlir/ExecutionEngine/ExecutionEngine.h"
-#include "mlir/ExecutionEngine/MemRefUtils.h"
-#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
-#include "llvm/Support/TargetSelect.h"
 #include "OneFlow/OneFlowDialect.h"
+#include "OneFlow/OKL/Kernel/LauncherState.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/framework/framework.h"
@@ -30,6 +23,15 @@ limitations under the License.
 #include "oneflow/ir/include/OneFlow/Passes.h"
 #include "oneflow/ir/include/OneFlow/Extension.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Parser/Parser.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/ExecutionEngine/ExecutionEngine.h"
+#include "mlir/ExecutionEngine/MemRefUtils.h"
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "llvm/Support/TargetSelect.h"
 
 namespace oneflow {
 
@@ -204,13 +206,15 @@ class MlirJitGpuKernel final : public user_op::OpKernel {
 
 size_t inferOneFlowMemPoolSize(user_op::InferContext* ctx) {
   using namespace user_op;
-  // mlir::MLIRContext mlir_ctx(getDialectRegistry());
+  mlir::MLIRContext mlir_ctx(oneflow::okl::GetRegistry());
+  auto mlir =
+      mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx);
 
-  // auto module =
-  //     mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
-  //     &mlir_ctx);
-  // CHECK(module) << "fail to parse MLIR, op: " << ctx->op_name();
-  // if (ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module->print(llvm::outs()); }
+  auto module = mlir.get();
+  if (auto mempool = module->getAttr(mlir::oneflow::codegen::mempool::MEMPOOL_ATTR_NAME)
+                         .cast<mlir::IntegerAttr>()) {
+    return mempool.getInt();
+  }
   return 0;
 }
 #define REGISTER_MLIR_JIT_GPU_KERNEL(dtype)                                                       \
