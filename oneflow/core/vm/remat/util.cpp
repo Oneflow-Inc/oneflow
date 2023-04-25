@@ -314,10 +314,6 @@ Maybe<void> RematHelper::RematInputs(
     vm::Stream* vm_stream, bool first,
     const std::function<Maybe<void>(OpCallInstructionPolicy*, vm::Stream*)>& compute_fn) {
   CHECK_OR_RETURN(!ThreadLocalEnvBool<ONEFLOW_VM_MULTI_THREAD>());
-  Singleton<remat::Env>::Get()->current_op_type_name =
-      op_call_instruction_policy_.opkernel().op_type_name();
-  VLOG_REMAT(2) << "set current op type name to " << Singleton<remat::Env>::Get()->current_op_type_name
-          << std::endl;
   if (first) { JUST(IncReferenceNumOfRecomputedTensor()); }
   VLOG_REMAT(1) << "compute " << op_call_instruction_policy_.opkernel().op_type_name() << std::endl;
   VLOG_REMAT(1) << "input num " << op_call_instruction_policy_.inputs().size() << std::endl;
@@ -397,7 +393,6 @@ Maybe<void> RematHelper::UpdateRematInfo(bool first, bool recompute, bool includ
   if (recompute) { Singleton<remat::Env>::Get()->add_recomputation_num(); }
   Singleton<remat::Env>::Get()->add_time(JUST(remat::GetComputeTime(op_call_instruction_policy_)));
   VLOG_REMAT(1) << "end compute " << op_call_instruction_policy_.opkernel().op_type_name() << std::endl;
-  Singleton<remat::Env>::Get()->current_op_type_name = "None";
   return Maybe<void>::Ok();
 }
 
