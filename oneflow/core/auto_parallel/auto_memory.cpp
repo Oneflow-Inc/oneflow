@@ -257,6 +257,34 @@ void ComputeAllMemoryIncrement(std::vector<TopoStruct*>& topo_structs,
   id2consumer_topo_structs.resize(id2blob_size.size());
 }
 
+// Find the minimum life time of the task graph,
+// which is the maximum of the minimum layer among all the consumers.
+// The function must be executed after generating min layer
+void FindMinLifetime(std::vector<TopoStruct*>* topo_structs) {
+  // Find the maximum consumer layer
+  for (auto& topo_struct : *topo_structs) {
+    int32_t curr_min_layer = topo_struct->min_layer;
+    for (auto& in : topo_struct->in_topo_structs) {
+      if (in->min_lifetime < curr_min_layer) { in->min_lifetime = curr_min_layer; }
+    }
+  }
+  // Compute the life time
+  for (auto& topo_struct : *topo_structs) {
+    if (topo_struct->min_layer >= topo_struct->min_lifetime) {
+      // No consumer, the register will be killed after the execution of the current operator
+      // The life time is 1 (including the current operator)
+      topo_struct->min_lifetime = 1;
+    } else {
+      // The life time is the distance between two operators + 1
+      // For example, a ---(x)---> b
+      // Register x is created while executing a, and x is killed after the execution of b.
+      // The life time is 2 (including a and b) == b.lifetime - a.lifetime
+      topo_struct->min_lifetime -= topo_struct->min_layer - 1;
+    }
+    topo_struct->ComputeMemoryVolume();
+  }
+}
+
 void UpdateSat(const std::vector<TopoStruct*>& topo_structs, StraightenAlgorithmTag* sat) {
   *sat = GlobalJobDesc().job_conf().straighten_algorithm_tag_in_task_graph();
   if (*sat == StraightenAlgorithmTag::kOverlap4CpuGpu) {
@@ -353,6 +381,9 @@ void InitAllParameters(std::vector<TopoStruct*>* topo_structs,
   // Compute the memory increment for all the topological structures
   ComputeAllMemoryIncrement(*topo_structs, *lbi2id, *id2consumer_topo_structs, *id2blob_size);
 
+  // Compute the memory volume
+  FindMinLifetime(topo_structs);
+
   // Update sat, since sat might be changed in previous jobs
   UpdateSat(*topo_structs, &sat);
 
@@ -401,34 +432,6 @@ void StraightenOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_struct,
 
   // straightening
   while (!waiting_list.empty()) { execute(); }
-}
-
-// Find the minimum life time of the task graph,
-// which is the maximum of the minimum layer among all the consumers.
-// The function must be executed after generating min layer
-void FindMinLifetime(HashMap<const OpNode*, TopoStruct>* op_node2topo_struct) {
-  // Find the maximum consumer layer
-  for (auto& pair : *op_node2topo_struct) {
-    int32_t curr_min_layer = pair.second.min_layer;
-    for (auto& in : pair.second.in_topo_structs) {
-      if (in->min_lifetime < curr_min_layer) { in->min_lifetime = curr_min_layer; }
-    }
-  }
-  // Compute the life time
-  for (auto& pair : *op_node2topo_struct) {
-    if (pair.second.min_layer >= pair.second.min_lifetime) {
-      // No consumer, the register will be killed after the execution of the current operator
-      // The life time is 1 (including the current operator)
-      pair.second.min_lifetime = 1;
-    } else {
-      // The life time is the distance between two operators + 1
-      // For example, a ---(x)---> b
-      // Register x is created while executing a, and x is killed after the execution of b.
-      // The life time is 2 (including a and b) == b.lifetime - a.lifetime
-      pair.second.min_lifetime -= pair.second.min_layer - 1;
-    }
-    pair.second.ComputeMemoryVolume();
-  }
 }
 
 }  // anonymous namespace
