@@ -1030,6 +1030,8 @@ jobs:
       - name: Setup tmate session
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) }}
         uses: mxschmitt/action-tmate@v3
+        with:
+          install-dependencies: false
       - name: Module API test
         timeout-minutes: 60
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) }}
