@@ -43,6 +43,8 @@ class TopoStruct {
   // TODO: remove tributary layer
   // This node should be finished before tributary layer
   int32_t tributary_layer = -1;
+  int32_t min_lifetime = -1;
+  int64_t memory_volume = -1;
 
   HashSet<TopoStruct*> in_topo_structs;
   HashSet<TopoStruct*> out_topo_structs;
@@ -60,6 +62,8 @@ class TopoStruct {
   void ComputeIsReusable();
   // Exceed time = time of cpu - time of gpu
   void ComputeExceedTime();
+  // Memory volume is memory * lifetime, but we might change the formula
+  void ComputeMemoryVolume();
 
   // deciding parameter
   // kTributaryLayerAscend = 0,     // small tributary layers go first
@@ -150,6 +154,7 @@ int64_t TopoStruct::GetDecidingParameter(StraightenOrder so) const {
     case StraightenOrder::kLayerAscend: return sign * min_layer;
     case StraightenOrder::kMemoryIncrementAscend: return sign * memory_increment;
     case StraightenOrder::kExceedTimeAscend: return sign * exceed_time;
+    case StraightenOrder::kMemoryVolumeAscend: return sign * memory_volume;
     default: return 0;
   }
 }
@@ -199,6 +204,17 @@ int32_t TopoStruct::ComputeTributaryLayer(int32_t max_min_layer) {
 }
 
 void TopoStruct::ComputeIsReusable() { is_reusable = IsProducedRegisterReusable(op_node->op()); }
+
+// Memory volume is memory * lifetime, but we might change the formula
+void TopoStruct::ComputeMemoryVolume() {
+  static float lifetime_order = ParseFloatFromEnv("LifetimeOrder", 1.0);
+  // We might get a large tensor multiply by a long life time, we need some rescaling
+  memory_volume = static_cast<int64_t>(
+      (memory_increment * pow(static_cast<double>(min_lifetime), lifetime_order)) / 1000.0);
+  // We need to distinguish zero or negative memory increment from slight positive memory increment.
+  // Make sure that we execute -0.1, 0, -0.003 before 0.1, 0.2
+  if (memory_increment > 0) { memory_volume += 1; }
+}
 
 // Compute the memory increment for all the topological structures
 void ComputeAllMemoryIncrement(std::vector<TopoStruct*>& topo_structs,
@@ -385,6 +401,34 @@ void StraightenOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_struct,
 
   // straightening
   while (!waiting_list.empty()) { execute(); }
+}
+
+// Find the minimum life time of the task graph,
+// which is the maximum of the minimum layer among all the consumers.
+// The function must be executed after generating min layer
+void FindMinLifetime(HashMap<const OpNode*, TopoStruct>* op_node2topo_struct) {
+  // Find the maximum consumer layer
+  for (auto& pair : *op_node2topo_struct) {
+    int32_t curr_min_layer = pair.second.min_layer;
+    for (auto& in : pair.second.in_topo_structs) {
+      if (in->min_lifetime < curr_min_layer) { in->min_lifetime = curr_min_layer; }
+    }
+  }
+  // Compute the life time
+  for (auto& pair : *op_node2topo_struct) {
+    if (pair.second.min_layer >= pair.second.min_lifetime) {
+      // No consumer, the register will be killed after the execution of the current operator
+      // The life time is 1 (including the current operator)
+      pair.second.min_lifetime = 1;
+    } else {
+      // The life time is the distance between two operators + 1
+      // For example, a ---(x)---> b
+      // Register x is created while executing a, and x is killed after the execution of b.
+      // The life time is 2 (including a and b) == b.lifetime - a.lifetime
+      pair.second.min_lifetime -= pair.second.min_layer - 1;
+    }
+    pair.second.ComputeMemoryVolume();
+  }
 }
 
 }  // anonymous namespace
