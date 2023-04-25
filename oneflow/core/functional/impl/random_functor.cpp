@@ -366,7 +366,7 @@ class NormalFunctor {
 
 class Normal2Functor {
  public:
-  Maybe<Tensor> operator()(const float mean, const float std, const int32_t& shape,
+  Maybe<Tensor> operator()(const float mean, const float std, const int32_t shape,
                            const Optional<one::Tensor>& out,
                            const Optional<Symbol<DType>>& optional_dtype,
                            const Optional<Symbol<Device>>& optional_device,
