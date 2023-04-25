@@ -130,12 +130,15 @@ namespace {
 std::function<void(mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module)> getLowerFunction(
     const StringAttr& device_tag) {
   auto device_tag_str = device_tag.str();
+#ifdef WITH_MLIR_CUDA_CODEGEN
   if (device_tag_str == "cuda") {
     return [](mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module) {
       CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToCUDALLVM(mlir_ctx, module)))
           << "fail to lower OneFlow to CUDA LLVM";
     };
-  } else if (device_tag_str == "cpu") {
+  }
+#endif // WITH_MLIR_CUDA_CODEGEN
+  if (device_tag_str == "cpu") {
     return [](mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module) {
       CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToLLVM(mlir_ctx, module)))
           << "fail to lower OneFlow to LLVM";
