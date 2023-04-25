@@ -484,7 +484,7 @@ class LocalToGlobalFunctor {
     DisableCheckGlobalTensorMetaScope scope{};
     std::shared_ptr<Tensor> tensor;
     DeviceType device_type = parallel_desc->device_type();
-    if (ccl::IsBroadcastRegistered(device_type) || !sync_data) {
+    if (ccl::IsBroadcastRegistered(device_type) || !sync_data || device_type == DeviceType::kMeta) {
       tensor = JUST(LocalToGlobal(x, parallel_desc, sbp_parallels, shape, dtype->data_type(), op_,
                                   /* check_meta */ false, sync_data, copy));
     } else {
