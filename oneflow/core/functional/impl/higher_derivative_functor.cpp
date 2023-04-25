@@ -109,7 +109,6 @@ class AsinGradGradFunctor {
     return r;
   }
 };
-
 class AcosGradGradFunctor {
  public:
   // dx = -1/sqrt(1-x*x)=-rsqrt(1-x*x), ddx = rsqrt_grad(1-x*x)*(2x)

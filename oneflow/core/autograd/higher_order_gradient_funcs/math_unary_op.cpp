@@ -16,9 +16,11 @@ limitations under the License.
 
 #include <memory>
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
@@ -91,26 +93,33 @@ class TanhGradGradCls : public OpExprGradFunction<UnaryMathGradGradState> {
     ctx->input_requires_grad = inputs[0]->requires_grad();
     ctx->grad_requires_grad = inputs[1]->requires_grad();
     ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 0)));
-    if (ctx->input_requires_grad) { ctx->SaveTensorForBackward(JUST(VectorAt(outputs, 0))); }
+    if (ctx->input_requires_grad) { ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 1))); }
     return Maybe<void>::Ok();
   }
   Maybe<void> Apply(const UnaryMathGradGradState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     in_grads->resize(2);
     const auto& input = JUST(VectorAt(ctx->SavedTensors(), 0));
+    const auto& out_grad = JUST(VectorAt(out_grads, 0));
 
     if (ctx->input_requires_grad) {
-      const auto& tanh_grad = JUST(VectorAt(ctx->SavedTensors(), 1));
+      const auto& dy = JUST(VectorAt(ctx->SavedTensors(), 1));
       (*in_grads)[0] = JUST(functional::sequence_function(functional::Mul)
                                 .then([](const std::shared_ptr<Tensor>& input) {
                                   return functional::ScalarMul(Scalar(-2), input);
                                 })
-                                .call(tanh_grad, input));
+                                .then([dy](const std::shared_ptr<Tensor>& input) {
+                                  return functional::Mul(dy, input);
+                                })
+                                .call(input, out_grad));
     }
     if (ctx->grad_requires_grad) {
       (*in_grads)[1] = JUST(functional::sequence_function(functional::Square)
                                 .then([](const std::shared_ptr<Tensor>& input) {
                                   return functional::ScalarSub(Scalar(1), input, /* alpha */ 1);
+                                })
+                                .then([out_grad](const std::shared_ptr<Tensor>& input) {
+                                  return functional::Mul(input, out_grad);
                                 })
                                 .call(input));
     }
