@@ -160,36 +160,6 @@ jobs:
         run: |
           python3 tools/check_src.py
 
-  wait_for_gpu_slot:
-    name: Wait for GPU slots
-    runs-on: ubuntu-latest
-    concurrency:
-      group: build-and-test-wait-for-gpu-slot
-      cancel-in-progress: false
-    needs: [build-oneflow]
-    if: github.event.pull_request.draft == false && github.base_ref == 'master'
-    continue-on-error: true
-    steps:
-      - name: Check if secrets accessible
-        env:
-          CI_PERSONAL_ACCESS_TOKEN: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
-        run: |
-          set -x
-          if [ -z "$CI_PERSONAL_ACCESS_TOKEN" ]
-          then
-            exit 0
-          fi
-          echo "is_secrets_accessible=1" >> $GITHUB_ENV
-      - name: Wait for GPU slot
-        uses: Oneflow-Inc/get-oneflow/wait-for-gpu@torch1.13
-        if: env.is_secrets_accessible == '1'
-        timeout-minutes: 90
-        continue-on-error: true
-        with:
-          token: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
-          timeout-minutes: 3
-          max-try-times: 30
-
   find-build-cache:
     name: "Find build cache"
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
@@ -213,7 +183,7 @@ jobs:
           runner-labels: |
             self-hosted
             linux
-            build
+            builder
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           entries: |
             cu116
@@ -236,7 +206,7 @@ jobs:
       ONEFLOW_SRC: .
       MANYLINUX_CACHE_DIR: ~/manylinux-cache-dir/${{ matrix.entry }}
       WHEELHOUSE_DIR: manylinux-wheelhouse
-      SSH_TANK_HOST: 192.168.1.13
+      SSH_TANK_HOST: 192.168.1.40
       SSH_TANK_PATH: /tank
     steps:
       - name: Fix permissions
@@ -455,7 +425,7 @@ jobs:
 
   test-distributed:
     name: Distributed test suite
-    needs: [wait_for_gpu_slot, find-test-cache-distributed, test]
+    needs: [find-test-cache-distributed, test]
     runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 120
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.labels.*.name, 'need-test-distributed')
@@ -469,7 +439,7 @@ jobs:
     env:
       ONEFLOW_SRC: .
       TEST_CONTAINER_NAME: "ci-test-distributed"
-      SSH_TANK_HOST: 192.168.1.13
+      SSH_TANK_HOST: 192.168.1.40
       SSH_TANK_PATH: /tank
     steps:
       - name: Fix permissions
@@ -667,7 +637,7 @@ jobs:
 
   test:
     name: Test suite
-    needs: [wait_for_gpu_slot, find-test-cache, source_info]
+    needs: [find-test-cache, source_info]
     timeout-minutes: 120
     runs-on: ${{ matrix.runs-on }}
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
@@ -681,7 +651,7 @@ jobs:
       TEST_MANYLINUX_CONTAINER_NAME: "pr-${{ github.event.pull_request.number }}-run-id-${{ github.run_id }}-${{ matrix.entry }}-test-manylinux"
       TEST_WITH_TF_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-tf-2.3.0:2f831e9354298a11447578e869d983959feb046f
       TEST_MANYLINUX_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/manylinux2014_x86_64_cuda11.6:328e477069c80035adb3cd4db9632997e6284edd
-      SSH_TANK_HOST: 192.168.1.13
+      SSH_TANK_HOST: 192.168.1.40
       SSH_TANK_PATH: /tank
       METRICS_DIR: metrics
     steps:
