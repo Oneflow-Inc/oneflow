@@ -65,7 +65,7 @@ class Outliner {
   void cloneOpsToNewBody(Operation* op, bool defer = false) {
     if (visitedOps.contains(op)) { return; }
     for (auto operand : op->getOperands()) {
-      if (!mapping.lookup(operand)) {
+      if (!mapping.lookupOrNull(operand)) {
         if (auto defOp = operand.getDefiningOp()) {
           if (isOneFlowOp(defOp)) {
             entries.insert(operand);
