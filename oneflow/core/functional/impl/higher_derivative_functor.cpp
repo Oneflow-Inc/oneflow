@@ -91,30 +91,6 @@ class CoshGradGradFunctor {
   }
 };
 
-class TanhGradGradFunctor {
- public:
-  // dx = sech^2(x), ddx = -2*sech^2(x)*tanh(x) = tanh_grad(x)*tanh(x)*(-2) = dydx * (1 - tanh(x) ^
-  // 2) * tanh(x) * (-2)
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
-                           const std::shared_ptr<Tensor>& dydx) const {
-    auto t = JUST(functional::Tanh(x));
-    auto r =
-        sequence_function(functional::Square)
-            .then([](const std::shared_ptr<Tensor>& input) {
-              return functional::ScalarMul(Scalar(-2), input);
-            })
-            .then([&t](const std::shared_ptr<Tensor>& input) { return functional::Mul(input, t); })
-            .then([dydx](const std::shared_ptr<Tensor>& input) {
-              return functional::Mul(dydx, input);
-            })
-            .then([](const std::shared_ptr<Tensor>& input) {
-              return functional::ScalarSub(Scalar(1), input, /* alpha */ 1.0);
-            })
-            .call(t);
-    return r;
-  }
-};
-
 class AsinGradGradFunctor {
  public:
   // dx = 1/sqrt(1-x*x)=rsqrt(1-x*x), ddx = rsqrt_grad(1-x*x)*(-2x)
@@ -133,6 +109,7 @@ class AsinGradGradFunctor {
     return r;
   }
 };
+
 class AcosGradGradFunctor {
  public:
   // dx = -1/sqrt(1-x*x)=-rsqrt(1-x*x), ddx = rsqrt_grad(1-x*x)*(2x)
@@ -573,7 +550,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TanGradGradFunctor>("TanGradGrad");
   m.add_functor<impl::SinhGradGradFunctor>("SinhGradGrad");
   m.add_functor<impl::CoshGradGradFunctor>("CoshGradGrad");
-  m.add_functor<impl::TanhGradGradFunctor>("TanhGradGrad");
   m.add_functor<impl::AsinGradGradFunctor>("AsinGradGrad");
   m.add_functor<impl::AcosGradGradFunctor>("AcosGradGrad");
   m.add_functor<impl::AtanGradGradFunctor>("AtanGradGrad");

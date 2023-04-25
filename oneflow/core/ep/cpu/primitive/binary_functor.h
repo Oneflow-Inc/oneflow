@@ -294,7 +294,7 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kQuickGeluBackwardWithDyX, Src,
 };
 
 template<typename Src, typename Dst>
-struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kTanhBackwardWithDyX, Src, Dst> {
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kTanhBackwardWithDyY, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src dy, Src y) const {

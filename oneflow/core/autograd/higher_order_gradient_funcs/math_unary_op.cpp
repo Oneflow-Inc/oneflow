@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <memory>
+#include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/functional/functional.h"
@@ -79,6 +82,44 @@ class UnaryMathGradGradWithZeroDDX : public OpExprGradFunction<UnaryMathGradGrad
   }
 };
 
+class TanhGradGradCls : public OpExprGradFunction<UnaryMathGradGradState> {
+  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
+  Maybe<void> Capture(UnaryMathGradGradState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    CHECK_EQ_OR_RETURN(inputs.size(), 2);   // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
+    ctx->input_requires_grad = inputs[0]->requires_grad();
+    ctx->grad_requires_grad = inputs[1]->requires_grad();
+    ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 0)));
+    if (ctx->input_requires_grad) { ctx->SaveTensorForBackward(JUST(VectorAt(outputs, 0))); }
+    return Maybe<void>::Ok();
+  }
+  Maybe<void> Apply(const UnaryMathGradGradState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    in_grads->resize(2);
+    const auto& input = JUST(VectorAt(ctx->SavedTensors(), 0));
+
+    if (ctx->input_requires_grad) {
+      const auto& tanh_grad = JUST(VectorAt(ctx->SavedTensors(), 1));
+      (*in_grads)[0] = JUST(functional::sequence_function(functional::Mul)
+                                .then([](const std::shared_ptr<Tensor>& input) {
+                                  return functional::ScalarMul(Scalar(-2), input);
+                                })
+                                .call(tanh_grad, input));
+    }
+    if (ctx->grad_requires_grad) {
+      (*in_grads)[1] = JUST(functional::sequence_function(functional::Square)
+                                .then([](const std::shared_ptr<Tensor>& input) {
+                                  return functional::ScalarSub(Scalar(1), input, /* alpha */ 1);
+                                })
+                                .call(input));
+    }
+    return Maybe<void>::Ok();
+  }
+};
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("tanh_grad", TanhGradGradCls);
+
 // TODO: Lgamma, first order backward unimplemented
 #define MATH_UNARY_ELEMENTWISE_GRAD_GRAD_DY_X_FUNC_SEQ            \
   OF_PP_MAKE_TUPLE_SEQ("sin_grad", Sin)                           \
@@ -86,7 +127,6 @@ class UnaryMathGradGradWithZeroDDX : public OpExprGradFunction<UnaryMathGradGrad
   OF_PP_MAKE_TUPLE_SEQ("tan_grad", Tan)                           \
   OF_PP_MAKE_TUPLE_SEQ("sinh_grad", Sinh)                         \
   OF_PP_MAKE_TUPLE_SEQ("cosh_grad", Cosh)                         \
-  OF_PP_MAKE_TUPLE_SEQ("tanh_grad", Tanh)                         \
   OF_PP_MAKE_TUPLE_SEQ("asin_grad", Asin)                         \
   OF_PP_MAKE_TUPLE_SEQ("acos_grad", Acos)                         \
   OF_PP_MAKE_TUPLE_SEQ("atan_grad", Atan)                         \

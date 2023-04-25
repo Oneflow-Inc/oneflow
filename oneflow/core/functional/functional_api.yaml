@@ -3117,10 +3117,6 @@
   signature: "Tensor (Tensor x, Tensor dydx) =>  CoshGradGrad"
   bind_python: False
 
-- name: "tanh_grad_grad"
-  signature: "Tensor (Tensor x, Tensor dydx) =>  TanhGradGrad"
-  bind_python: False
-
 - name: "acos_grad_grad"
   signature: "Tensor (Tensor x, Tensor dydx) =>  AcosGradGrad"
   bind_python: False
