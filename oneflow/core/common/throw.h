@@ -23,7 +23,7 @@ namespace oneflow {
 namespace details {
 
 struct Throw final {
-  void operator=(Error&& error) { ThrowError(error.stacked_error()); }
+  [[noreturn]] void operator=(Error&& error) { ThrowError(error.stacked_error()); }
 };
 
 }  // namespace details

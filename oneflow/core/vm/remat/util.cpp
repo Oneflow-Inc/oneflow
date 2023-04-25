@@ -180,7 +180,7 @@ class SingleDeviceOpComputeComplexityFnContext : public user_op::ComputeComplexi
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) override {
     RETURN_IF_FOUND(input_tensors_, output_tensors_, ->mut_tensor_meta().get())
-    return nullptr;
+    UNIMPLEMENTED_THEN_THROW();
   }
   const Shape& Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     RETURN_IF_FOUND(input_tensors_, output_tensors_, ->shape())
@@ -203,8 +203,8 @@ class SingleDeviceOpComputeComplexityFnContext : public user_op::ComputeComplexi
     return nd_sbp;
   }
 
-  const ArgVec& inputs() const override { return inputs_; }
-  const ArgVec& outputs() const override { return outputs_; }
+  const ArgVec& inputs() const override { UNIMPLEMENTED_THEN_THROW(); }
+  const ArgVec& outputs() const override { UNIMPLEMENTED_THEN_THROW(); }
   const ParallelDesc& parallel_desc() const override {
     auto shape = std::make_shared<Shape>();
     shape->push_back(1);
@@ -214,8 +214,6 @@ class SingleDeviceOpComputeComplexityFnContext : public user_op::ComputeComplexi
   const NdSbpSignature* GetNdSbpSignature() const override { UNIMPLEMENTED_THEN_THROW(); }
 
  private:
-  ArgVec inputs_;
-  ArgVec outputs_;
   const vm::EagerBlobObjectList& input_tensors_;
   const vm::EagerBlobObjectList& output_tensors_;
   const ArgTuple* input_arg_tuple_;

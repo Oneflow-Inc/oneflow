@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/user/kernels/stateful_opkernel.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
+#include "oneflow/core/framework/compute_complexity_fn_context.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/eager/eager_blob_object.h"
@@ -744,6 +745,14 @@ class UserKernelInitAndCacheContext final : public user_op::KernelInitContext,
   eager::CallContext* call_ctx_;
   ep::Stream* stream_;
 };
+
+int32_t TryGetTensorTupleIndex(const std::unordered_map<std::string, std::vector<int32_t>>&
+                                          arg_name2bn_index2tensor_tuple_index,
+                                      const std::string& arg_name, const int32_t arg_index) {
+  auto it = arg_name2bn_index2tensor_tuple_index.find(arg_name);
+  if (it != arg_name2bn_index2tensor_tuple_index.end()) { return it->second.at(arg_index); }
+  return -1;
+}
 
 namespace {
 
