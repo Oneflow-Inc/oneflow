@@ -47,7 +47,8 @@ class ModuleWrapper(ModuleType):
 
     def __setattr__(self, name, value):
         super().__setattr__(name, value)
-        setattr(self.module, name, value)
+        if name != 'module':
+            setattr(self.module, name, value)
 
     def __getattr__(self, name: str) -> Any:
         if not hasattr(self.module, name):

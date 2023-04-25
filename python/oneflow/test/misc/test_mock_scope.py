@@ -189,6 +189,10 @@ class TestMock(flow.unittest.TestCase):
                 torch.nn.Linear_forward_before_lora, torch.nn.Linear.forward
             )
 
+    def test_import_pytorch_lightning(test_case):
+        with mock.enable(lazy=True):
+            import pytorch_lightning as pl
+
 
 # MUST use pytest to run this test
 def test_verbose(capsys):
