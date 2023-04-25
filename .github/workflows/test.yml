@@ -26,6 +26,8 @@ env:
   ONE_FX_COMMIT: da4051c7f1ace7a20b3f54395b580cd102fc99da
   TEST_WITH_TORCH_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.10.0-cuda11.3-cudnn8-runtime:25817b5c0e1dd79bef8fdd43d729b98af381e7d5
   MLIR_DOCKER_ARGS: "-e ONEFLOW_MLIR_ENABLE_ROUND_TRIP=1 -e ONEFLOW_MLIR_PREFER_NHWC=0 -e ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION=1"
+  SSH_TANK_HOST: 192.168.1.40
+  SSH_TANK_PATH: /data/tank
 
 jobs:
   source_info:
@@ -206,8 +208,6 @@ jobs:
       ONEFLOW_SRC: .
       MANYLINUX_CACHE_DIR: ~/manylinux-cache-dir/${{ matrix.entry }}
       WHEELHOUSE_DIR: manylinux-wheelhouse
-      SSH_TANK_HOST: 192.168.1.40
-      SSH_TANK_PATH: /tank
     steps:
       - name: Fix permissions
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
@@ -439,8 +439,6 @@ jobs:
     env:
       ONEFLOW_SRC: .
       TEST_CONTAINER_NAME: "ci-test-distributed"
-      SSH_TANK_HOST: 192.168.1.40
-      SSH_TANK_PATH: /tank
     steps:
       - name: Fix permissions
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
@@ -651,8 +649,6 @@ jobs:
       TEST_MANYLINUX_CONTAINER_NAME: "pr-${{ github.event.pull_request.number }}-run-id-${{ github.run_id }}-${{ matrix.entry }}-test-manylinux"
       TEST_WITH_TF_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-tf-2.3.0:2f831e9354298a11447578e869d983959feb046f
       TEST_MANYLINUX_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/manylinux2014_x86_64_cuda11.6:328e477069c80035adb3cd4db9632997e6284edd
-      SSH_TANK_HOST: 192.168.1.40
-      SSH_TANK_PATH: /tank
       METRICS_DIR: metrics
     steps:
       - name: Fix permissions
