@@ -179,7 +179,7 @@ class SingleDeviceOpComputeComplexityFnContext : public user_op::ComputeComplexi
 
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) override {
-    RETURN_IF_FOUND(input_tensors_, output_tensors_, ->mut_tensor_meta().get())
+    RETURN_IF_FOUND(input_tensors_, output_tensors_, ->tensor_meta().shared_from_symbol().get());
     UNIMPLEMENTED_THEN_THROW();
   }
   const Shape& Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
@@ -206,9 +206,12 @@ class SingleDeviceOpComputeComplexityFnContext : public user_op::ComputeComplexi
   const ArgVec& inputs() const override { UNIMPLEMENTED_THEN_THROW(); }
   const ArgVec& outputs() const override { UNIMPLEMENTED_THEN_THROW(); }
   const ParallelDesc& parallel_desc() const override {
-    auto shape = std::make_shared<Shape>();
-    shape->push_back(1);
-    static ParallelDesc parallel_desc = *CHECK_JUST(ParallelDesc::New("cpu", {"0:0-0"}, shape));
+    static ParallelDesc parallel_desc = []() {
+      ParallelConf parallel_conf;
+      parallel_conf.set_device_tag("cpu");
+      parallel_conf.add_device_name("0:0-0");
+      return ParallelDesc(parallel_conf);
+    }();
     return parallel_desc;
   }
   const NdSbpSignature* GetNdSbpSignature() const override { UNIMPLEMENTED_THEN_THROW(); }
