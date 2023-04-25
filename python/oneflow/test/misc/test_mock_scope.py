@@ -195,10 +195,12 @@ class TestMock(flow.unittest.TestCase):
 
     def test_hasattr_and_getattr_in_lazy_mode(test_case):
         with mock.enable(lazy=True):
-            test_case.assertFalse(hasattr(torch, 'not_exist'))
-            test_case.assertFalse(hasattr(torch.nn.functional, 'not_exist'))
+            test_case.assertFalse(hasattr(torch, "not_exist"))
+            test_case.assertFalse(hasattr(torch.nn.functional, "not_exist"))
             test_case.assertTrue(isinstance(torch.not_exist, mock.DummyModule))
-            test_case.assertTrue(isinstance(torch.nn.functional.not_exist, mock.DummyModule))
+            test_case.assertTrue(
+                isinstance(torch.nn.functional.not_exist, mock.DummyModule)
+            )
 
 
 # MUST use pytest to run this test

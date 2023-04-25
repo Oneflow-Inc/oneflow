@@ -47,16 +47,20 @@ hazard_list = [
 # 2. hasattr(torch, "not_exist") still returns False
 _builtin_hasattr = builtins.hasattr
 if not isinstance(_builtin_hasattr, types.BuiltinFunctionType):
-    raise Exception('hasattr already patched by someone else!')
+    raise Exception("hasattr already patched by someone else!")
+
 
 def hasattr(obj, name):
     return _builtin_hasattr(obj, name)
 
+
 builtins.hasattr = hasattr
+
 
 def probably_called_from_hasattr():
     frame = currentframe().f_back.f_back
     return frame.f_code is hasattr.__code__
+
 
 # module wrapper with checks for existence of methods
 class ModuleWrapper(ModuleType):
@@ -83,7 +87,7 @@ class ModuleWrapper(ModuleType):
                 return DummyModule(new_name)
             else:
                 if _importer.lazy and _importer.verbose:
-                    print(f'hasattr({self.module.__name__}, {name}) returns False')
+                    print(f"hasattr({self.module.__name__}, {name}) returns False")
                 raise AttributeError(new_name + error_msg)
         attr = getattr(self.module, name)
         if ismodule(attr):
