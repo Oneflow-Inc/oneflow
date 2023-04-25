@@ -137,7 +137,7 @@ std::function<void(mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module)> getLower
           << "fail to lower OneFlow to CUDA LLVM";
     };
   }
-#endif // WITH_MLIR_CUDA_CODEGEN
+#endif  // WITH_MLIR_CUDA_CODEGEN
   if (device_tag_str == "cpu") {
     return [](mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module) {
       CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToLLVM(mlir_ctx, module)))
