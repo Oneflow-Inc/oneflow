@@ -1240,9 +1240,10 @@ class OneEmbeddingFusedLookupKernelState final : public user_op::OpKernelState {
       int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
       device_set.emplace(std::make_pair(machine_id, device_id));
     }
-    EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get());
+    EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
     ncclComm_t comm;
-    comm = comm_mgr->GetCommForDeviceAndStreamName(device_set, stream_name_);
+    comm =
+        comm_mgr->As<EagerNcclCommMgr>()->GetCommForDeviceAndStreamName(device_set, stream_name_);
     comm_.reset(new Comm(comm));
   }
 

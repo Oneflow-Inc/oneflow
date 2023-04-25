@@ -65,6 +65,7 @@ config.excludes = [
     "test_util.py",
     "test_mlir_opt.mlir.py",
     "lit.cfg.py",
+    "saved_model",
 ]
 
 # test_source_root: The root path where tests are located.

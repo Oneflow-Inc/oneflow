@@ -21,8 +21,6 @@ import numpy as np
 
 import os
 
-os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-os.environ["ONEFLOW_MLIR_PREFER_NHWC"] = "1"
 
 import oneflow as flow
 import oneflow.unittest
@@ -58,7 +56,11 @@ def do_nhwc_bacth_norm(test_case, with_cuda):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestNhwcConv(oneflow.unittest.TestCase):
+class TestNhwcConv(oneflow.unittest.MLIRTestCase):
+    def setUp(self):
+        os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+        os.environ["ONEFLOW_MLIR_PREFER_NHWC"] = "1"
+
     def test_nhwc_conv_graph(test_case):
         import oneflow.sysconfig
 
