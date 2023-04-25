@@ -64,10 +64,11 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("sqrt", Sqrt)                 \
   OF_PP_MAKE_TUPLE_SEQ("square", Square)             \
   OF_PP_MAKE_TUPLE_SEQ("tan", Tan)                   \
-  OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)                 \
   OF_PP_MAKE_TUPLE_SEQ("digamma", Digamma)
 
-#define FLOAT_UNARY_PRIMITIVE_FUNC_BWD_WITH_DY_Y_SEQ OF_PP_MAKE_TUPLE_SEQ("sigmoid", Sigmoid)
+#define FLOAT_UNARY_PRIMITIVE_FUNC_BWD_WITH_DY_Y_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ("sigmoid", Sigmoid)           \
+  OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)
 
 #define UNARY_FUNC_BWD_WITH_FILL_SEQ   \
   OF_PP_MAKE_TUPLE_SEQ("rint", Rint)   \
@@ -208,7 +209,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   ADD_UNARY_FUNCTOR_WITH_DY_X(Sqrt, "Sqrt");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Square, "Square");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Tan, "Tan");
-  ADD_UNARY_FUNCTOR_WITH_DY_X(Tanh, "Tanh");
+  ADD_UNARY_FUNCTOR_WITH_DY_Y(Tanh, "Tanh");
   m.add_functor<NotEqualZeroFunctor>("NotEqualZero");
   m.add_functor<LogicalNotFunctor>("LogicalNot");
   m.add_functor<InplaceSinFunctor>("Sin_");

@@ -153,9 +153,8 @@ template<typename Src, typename Dst>
 struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kTanhBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-    Src tanh_val = tanh(x);
-    return static_cast<Dst>(dy * (static_cast<Src>(1.0) - tanh_val * tanh_val));
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src y) const {
+    return static_cast<Dst>(dy * (static_cast<Src>(1.0) - y * y));
   }
 };
 

@@ -538,7 +538,7 @@ REGISTER_USER_KERNEL("tanh")
 REGISTER_USER_KERNEL("tanh_grad")
     .SetCreateFn([]() {
       return user_op::NewOpKernel<BinaryPrimitiveKernel>(
-          "dx", "dy", "x", [](user_op::KernelComputeContext* ctx) {
+          "dx", "dy", "y", [](user_op::KernelComputeContext* ctx) {
             const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
             const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
             return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
