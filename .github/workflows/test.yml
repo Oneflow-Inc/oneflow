@@ -547,7 +547,7 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         working-directory: ${{ env.ONEFLOW_SRC }}
         run: |
-          docker run --gpu=all -d --rm --privileged --shm-size=8g \
+          docker run --gpus=all -d --rm --privileged --shm-size=8g \
             --pids-limit 2000 \
             --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
             -v /dataset:/dataset:ro -v /model_zoo:/model_zoo:ro \
@@ -816,7 +816,7 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         working-directory: ${{ env.ONEFLOW_SRC }}
         run: |
-          docker run --gpu=all -d --rm --privileged --shm-size=8g \
+          docker run --gpus=all -d --rm --privileged --shm-size=8g \
             --pids-limit ${{ env.THREAD_LIMIT }} \
             --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
             -v /dataset:/dataset:ro -v /model_zoo:/model_zoo:ro \
