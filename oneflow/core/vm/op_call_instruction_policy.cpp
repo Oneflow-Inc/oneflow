@@ -38,7 +38,7 @@ namespace vm {
 struct OpCallInstructionUtil final {
   static inline Maybe<void> Prepare(OpCallInstructionPolicy* op_call_instruction_policy,
                                     Instruction* instruction) {
-    VLOG(1) << "prepare " << op_call_instruction_policy->opkernel().op_type_name() << std::endl;
+    VLOG_REMAT(1) << "prepare " << op_call_instruction_policy->opkernel().op_type_name() << std::endl;
     if (unlikely(op_call_instruction_policy->need_temp_storage())) {
       InferTempStorageSize(op_call_instruction_policy);
     }
@@ -50,8 +50,8 @@ struct OpCallInstructionUtil final {
     Allocator* allocator = vm_stream->mut_stream_policy()->mut_allocator();
     const auto [remat_helper, inputs_rematable, outputs_rematable] =
         get_remat_(op_call_instruction_policy, vm_stream);
-    VLOG(1) << "op: " << op_call_instruction_policy->opkernel().op_type_name() << std::endl;
-    VLOG(1) << "input_rematable: " << inputs_rematable
+    VLOG_REMAT(1) << "op: " << op_call_instruction_policy->opkernel().op_type_name() << std::endl;
+    VLOG_REMAT(1) << "input_rematable: " << inputs_rematable
             << ", output_rematable: " << outputs_rematable << std::endl;
     if (inputs_rematable) { JUST(remat_helper->RematInputs(vm_stream, first, ComputeFnForRemat)); }
     JUST(AllocateOutputBlobsMemory(op_call_instruction_policy, allocator, vm_stream));
@@ -278,7 +278,7 @@ std::string OpCallInstructionPolicy::DebugName(const vm::Instruction& instructio
 }
 
 Maybe<void> Recompute(OpCallInstructionPolicy* op_call_instruction_policy, vm::Stream* vm_stream) {
-  VLOG(1) << "recompute " << op_call_instruction_policy->opkernel().op_type_name() << " manually";
+  VLOG_REMAT(1) << "recompute " << op_call_instruction_policy->opkernel().op_type_name() << " manually";
   return OpCallInstructionUtil::Compute(op_call_instruction_policy, vm_stream, true, true);
 }
 
