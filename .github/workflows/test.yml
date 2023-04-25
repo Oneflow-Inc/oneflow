@@ -899,7 +899,7 @@ jobs:
             --name ${TEST_MANYLINUX_CONTAINER_NAME} \
             ${{ env.EXTRA_DOCKER_ARGS }} \
             ${{ env.TEST_MANYLINUX_IMG_TAG }} \
-            sleep 7200
+            sleep 99999999
       - name: Exe test
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
         timeout-minutes: 20
@@ -1027,6 +1027,9 @@ jobs:
           docker exec -e ONEFLOW_TEST_DIR=diff \
             -e ONEFLOW_TEST_FILES="${{needs.source_info.outputs.changed_python_tests}}" \
             ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
+      - name: Setup tmate session
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) }}
+        uses: mxschmitt/action-tmate@v3
       - name: Module API test
         timeout-minutes: 60
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) }}
