@@ -114,7 +114,7 @@ __global__ void _conj_symmetry_cuda(T* data_out, FillConjSymmetricParams<NDIM> p
 }
 
 template<typename T>
-struct FillConjSymmetryUtil<DeviceType::kCPU, T>{
+struct FillConjSymmetryUtil<DeviceType::kCUDA, T>{
   static void FillConjSymmetryForward(ep::Stream* stream, T* data_out, const Shape& shape, const Stride& strides,
                                       const int64_t last_dim, int64_t elem_count){
     switch (shape.size()) {
@@ -135,13 +135,6 @@ struct FillConjSymmetryUtil<DeviceType::kCPU, T>{
       case 3:{
         FillConjSymmetricParams<3> param(shape, strides, last_dim, elem_count);
         _conj_symmetry_cuda<T, 3><<<BlocksNum4ThreadsNum(elem_count), kCudaThreadsNumPerBlock, 0,
-                             stream->As<ep::CudaStream>()->cuda_stream()>>>(
-                                    data_out, param);
-        };
-        break;
-      case 4:{
-        FillConjSymmetricParams<4> param(shape, strides, last_dim, elem_count);
-        _conj_symmetry_cuda<T, 4><<<BlocksNum4ThreadsNum(elem_count), kCudaThreadsNumPerBlock, 0,
                              stream->As<ep::CudaStream>()->cuda_stream()>>>(
                                     data_out, param);
         };
@@ -268,9 +261,14 @@ struct FftC2RKernelUtil<DeviceType::kCUDA, IN, OUT> {
   }
 };
 
+template struct FillConjSymmetryUtil<DeviceType::kCUDA, cuComplex>;
+template struct FillConjSymmetryUtil<DeviceType::kCUDA, cuDoubleComplex>;
+
 template struct FftC2CKernelUtil<DeviceType::kCUDA, cuComplex, float>;
 template struct FftC2CKernelUtil<DeviceType::kCUDA, cuDoubleComplex, double>;
 
+template struct FftR2CKernelUtil<DeviceType::kCUDA, float, cuComplex>;
+template struct FftR2CKernelUtil<DeviceType::kCUDA, double, cuDoubleComplex>;
 }  // namespace oneflow
 
 #endif

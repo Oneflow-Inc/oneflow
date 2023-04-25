@@ -5073,7 +5073,7 @@ def OneFlow_ErfInvOp : OneFlow_BaseOp<"erfinv", [NoMemoryEffect, DeclareOpInterf
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FftC2COp : OneFlow_BaseOp<"fft_c2c", [SupportNonContiguous, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FftC2COp : OneFlow_BaseOp<"fft_c2c", [SupportNonContiguous, NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$input
   );
@@ -5106,8 +5106,7 @@ def OneFlow_FftR2COp : OneFlow_BaseOp<"fft_r2c", [SupportNonContiguous, DeclareO
     SI64ArrayAttr:$dims,
     DefaultValuedAttr<SI32Attr, "0">:$norm_mode,
     DefaultValuedAttr<F64Attr, "1.">:$norm_fct,
-    BoolAttr:$onesided,
-    BoolAttr:$forward
+    BoolAttr:$onesided
   );
 
   let has_logical_tensor_desc_infer_fn = 1;

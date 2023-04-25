@@ -112,7 +112,6 @@ class FftR2CKernel final : public user_op::OpKernel {
 
     const user_op::Tensor* input = ctx->Tensor4ArgNameAndIndex("input", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    bool forward = ctx->Attr<bool>("forward");
     bool onesided = ctx->Attr<bool>("onesided");
     double norm_fct = ctx->Attr<double>("norm_fct");
     const std::vector<int64_t>& dims = ctx->Attr<std::vector<int64_t>>("dims");
@@ -218,7 +217,7 @@ class FftC2RKernel final : public user_op::OpKernel {
       FftC2RKernelUtil<device_type, dtype_in, dtype_out>::FftC2RForward(
           ctx->stream(), input_ptr, out_ptr, input_shape, out_shape, 
           input->stride(), out->stride(),
-          /*last_dim_size=*/last_dim_size, dims, norm_fct, /*real_type=*/output->data_type());
+          /*last_dim_size=*/last_dim_size, dims, norm_fct, /*real_type=*/out->data_type());
     } else {
       Error::RuntimeError() << "expects kComplex64 or kComplex128, but gets " << input->data_type();
     }
@@ -285,6 +284,8 @@ REGISTER_FFTC2C_KERNELS(DeviceType::kCUDA, cuDoubleComplex, double);
 REGISTER_FFTR2C_KERNELS(DeviceType::kCPU, float, std::complex<float>);
 REGISTER_FFTR2C_KERNELS(DeviceType::kCPU, double, std::complex<double>);
 #ifdef WITH_CUDA
+REGISTER_FFTR2C_KERNELS(DeviceType::kCUDA, float, cuComplex);
+REGISTER_FFTR2C_KERNELS(DeviceType::kCUDA, double, cuDoubleComplex);
 #endif
 
 #define REGISTER_FFTC2R_KERNELS(device_type, dtype_in, dtype_out)                                 \

@@ -208,8 +208,8 @@ class CuFFTConfig {
     }
 
     CuFFTDataLayout input_layout = as_cufft_embed(params.input_strides, params.input_shape, params.excute_type == CUFFT_EXCUTETYPE::C2R);
-    CuFFTDataLayout output_layout = as_cufft_embed(params.output_strides, params.output_shape, params.excute_type == CUFFT_EXCUTETYPE::R2C);
-    bool clone_input = input_layout.must_clone;
+    CuFFTDataLayout output_layout = as_cufft_embed(params.output_strides, params.input_shape, params.excute_type == CUFFT_EXCUTETYPE::R2C);
+    bool clone_input = input_layout.must_clone; // that means: input should be contiguous because original input can't be embeded
     const bool is_layout_simple = input_layout.simple && output_layout.simple;
 
     // disable cuFFT the default behavior of allocating work area at plan generating time

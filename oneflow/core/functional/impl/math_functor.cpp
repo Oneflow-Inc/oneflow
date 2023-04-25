@@ -4183,6 +4183,27 @@ class FftBaseFunctor {
       out_strides[dim_permute[i]] = contiguous_out_strides[1 + (i - batch_dims)];
     }
 
+    // Judge must clone input
+    int64_t signal_ndim = input->shape()->size() - 1;
+    auto last_stride = JUST(input->stride())->at(signal_ndim);
+    bool must_clone_input = false;
+    if (JUST(input->stride())->at(0) == 0){
+      must_clone_input = true;
+    }
+    for (auto i = signal_ndim - 1; !must_clone_input && i > 0; i--) {
+      auto stride = JUST(input->stride())->at(i);
+      if (input->shape()->at(i) == 1) {
+        continue;
+      } else if (stride > 0 && stride % last_stride == 0) {
+        last_stride = stride;
+      } else {
+        must_clone_input = true;
+      }
+    }
+
+    if (must_clone_input){
+      input = JUST(functional::ToContiguous(input));
+    }
     return input;
   }
 
@@ -4262,7 +4283,6 @@ class FftC2CFunctor : public FftBaseFunctor {
 
 class FftC2CWrapperFunctor : public FftBaseFunctor {
  public:
-  // FftC2CWrapperFunctor() : FftBaseFunctor("fft_c2c") {}
   FftC2CWrapperFunctor() : FftBaseFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const Optional<std::vector<int64_t>>& n,
@@ -4284,14 +4304,9 @@ class FftC2CWrapperFunctor : public FftBaseFunctor {
       input_device = JUST(x->device())->enum_type();
     }
 
-    // fft_norm_mode norm_mode = fft_norm_mode::none;
-    // if (!is_grad_fn) {
-    //   norm_mode = fft_norm_from_string(norm_str, forward);
-    // } else {
-    //   norm_mode = fft_norm_from_string(norm_str, !forward);
-    // }
 
-    // double norm_fct = fft_compute_fct<double>(*(resized_tensor->shape()), wrapped_dims, static_cast<fft_norm_mode>(norm_mode));
+
+    double norm_fct = fft_compute_fct<double>(*(resized_tensor->shape()), wrapped_dims, static_cast<fft_norm_mode>(norm_mode));
 
     
     if (input_device == DeviceType::kCPU){
@@ -4362,8 +4377,8 @@ class FftR2CFunctor : public FftBaseFunctor {
     // }
     
     if (input_device == DeviceType::kCPU){
-      auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm_mode", "norm_fct", "onesided", "forward");
-      attrs.SetAllAttrs(wrapped_dims, norm_mode, norm_fct, onesided, forward);
+      auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm_mode", "norm_fct", "onesided");
+      attrs.SetAllAttrs(wrapped_dims, norm_mode, norm_fct, onesided);
       output = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {resized_tensor}, attrs));
     }
     else if (input_device == DeviceType::kCUDA){
@@ -4382,8 +4397,8 @@ class FftR2CFunctor : public FftBaseFunctor {
         std::vector<int64_t> fft_dims(input->ndim() - 1); // must >= 1
         std::iota(fft_dims.begin(), fft_dims.end(), int64_t(1));
 
-        auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm_mode", "norm_fct", "onesided", "forward");
-        attrs.SetAllAttrs(wrapped_dims, norm_mode, norm_fct, onesided, forward);
+        auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm_mode", "norm_fct", "onesided");
+        attrs.SetAllAttrs(fft_dims, norm_mode, norm_fct, onesided);
         output = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs));
         output = JUST(functional::AsStrided(output, out_sizes, out_strides, JUST(output->storage_offset())));
         JUST(functional::ScalarMul(output, Scalar(norm_fct), true));
@@ -4395,11 +4410,12 @@ class FftR2CFunctor : public FftBaseFunctor {
           std::vector<int64_t> out_strides;
           auto input = JUST(permute_and_reshape(/*self=*/working_tensor, /*out_sizes=*/onesided_sizes, 
                                                     /*fft_dims=*/{wrapped_dims.back()}, /*out_strides=*/out_strides));
-          std::vector<int64_t> fft_dims(input->ndim() - 1); // must >= 1
-          std::iota(fft_dims.begin(), fft_dims.end(), int64_t(1));
 
-          auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm_mode", "norm_fct", "onesided", "forward");
-          attrs.SetAllAttrs(wrapped_dims.back(), norm_mode, norm_fct, /*onesided=*/true, /*forward=*/true);
+
+          auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm_mode", "norm_fct", "onesided");
+          int64_t last_dim = input->shape()->size() - 1;
+          std::vector<int64_t> fft_last_dim_vec = {last_dim};
+          attrs.SetAllAttrs(fft_last_dim_vec, norm_mode, norm_fct, /*onesided=*/true);
           output = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs));
           output = JUST(functional::AsStrided(output, out_sizes, out_strides, JUST(output->storage_offset())));
         }
@@ -4435,7 +4451,10 @@ class FftR2CFunctor : public FftBaseFunctor {
 
         // Then any remaining C2C transforms
         std::vector<int64_t> sorted_dims(wrapped_dims.begin(), wrapped_dims.end() - 1);
-        if (sorted_dims.empty()){
+        if (!sorted_dims.empty()){
+          output = JUST(functional::FftC2C(output, sorted_dims, norm_mode, /*forward=*/true));
+        }
+        // do normalize
           JUST(functional::ScalarMul(output, Scalar(norm_fct), true));
         }
         else{
@@ -4495,7 +4514,7 @@ class FftC2RFunctor : public FftBaseFunctor {
       input_device = JUST(x->device())->enum_type();
     }
 
-    if (input_device = DeviceType::kCPU){
+    if (input_device == DeviceType::kCPU){
       auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm_mode", "norm_fct", "last_dim_size", "forward");
       attrs.SetAllAttrs(wrapped_dims, norm_mode, norm_fct, last_dim_size, forward);
       return OpInterpUtil::Dispatch<Tensor>(*op_, {resized_tensor}, attrs);
@@ -4518,6 +4537,7 @@ class FftC2RFunctor : public FftBaseFunctor {
         return output;
       }
       else{
+        // TO-DO
         // First complete any C2C transforms
 
         // Finally, do a 1D C2R transforms in last dim
@@ -4567,7 +4587,7 @@ class FftFunctor {
     if (n.has_value()) {
       std::vector<int64_t> len{JUST(n)};
       return input->dtype()->is_complex()
-                 ? functional::FftC2C(input, len, fft_dim, static_cast<int32_t>(norm_mode), /*forward=*/forward)
+                 ? functional::FftC2CWrapper(input, len, fft_dim, static_cast<int32_t>(norm_mode), /*forward=*/forward)
                  : functional::FftR2C(input, len, fft_dim, static_cast<int32_t>(norm_mode), /*onesided=*/false,
                                       /*forward=*/forward);
     } else {
@@ -4597,7 +4617,7 @@ class IFftFunctor {
                                       /*forward=*/forward);
     } else {
       return input->dtype()->is_complex()
-                 ? functional::FftC2C(input, NullOpt, fft_dim, static_cast<int32_t>(norm_mode), /*forward=*/forward)
+                 ? functional::FftC2CWrapper(input, NullOpt, fft_dim, static_cast<int32_t>(norm_mode), /*forward=*/forward)
                  : functional::FftR2C(input, NullOpt, fft_dim, static_cast<int32_t>(norm_mode), /*onesided=*/false,
                                       /*forward=*/forward);
     }
@@ -4646,7 +4666,7 @@ class FftNFunctor {
       TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
       return functional::FftC2C(input_tuple.at(0), s, dim, static_cast<int32_t>(norm_mode), /*forward=*/forward);
     } else {
-      return functional::FftC2C(input, s, dim, static_cast<int32_t>(norm_mode), /*forward=*/forward);
+      return functional::FftC2CWrapper(input, s, dim, static_cast<int32_t>(norm_mode), /*forward=*/forward);
     }
   }
 };
@@ -4675,7 +4695,7 @@ class IFftNFunctor {
       TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
       return functional::FftC2C(input_tuple.at(0), s, dim, static_cast<int32_t>(norm_mode), /*forward=*/forward);
     } else {
-      return functional::FftC2C(input, s, dim, static_cast<int32_t>(norm_mode), /*forward=*/forward);
+      return functional::FftC2CWrapper(input, s, dim, static_cast<int32_t>(norm_mode), /*forward=*/forward);
     }
   }
 };

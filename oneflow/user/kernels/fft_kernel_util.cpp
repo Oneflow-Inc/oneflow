@@ -120,6 +120,7 @@ struct FftC2RKernelUtil<DeviceType::kCPU, IN, OUT> {
 template struct FillConjSymmetryUtil<DeviceType::kCPU, std::complex<float>>;
 template struct FillConjSymmetryUtil<DeviceType::kCPU, std::complex<double>>;
 
+
 template struct FftC2CKernelUtil<DeviceType::kCPU, std::complex<float>, float>;
 template struct FftC2CKernelUtil<DeviceType::kCPU, std::complex<double>, double>;
 
