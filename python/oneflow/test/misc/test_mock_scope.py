@@ -180,6 +180,12 @@ class TestMock(flow.unittest.TestCase):
         test_case.assertTrue("safetensors._safetensors_rust" in sys.modules)
         import safetensors
 
+    def test_setattr(test_case):
+        with mock.enable():
+            import torch
+            torch.nn.Linear_forward_before_lora = torch.nn.Linear.forward
+            test_case.assertEqual(torch.nn.Linear_forward_before_lora, torch.nn.Linear.forward)
+
 
 # MUST use pytest to run this test
 def test_verbose(capsys):

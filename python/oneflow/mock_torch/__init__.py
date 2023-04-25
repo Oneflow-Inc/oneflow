@@ -45,6 +45,10 @@ class ModuleWrapper(ModuleType):
     def __init__(self, module):
         self.module = module
 
+    def __setattr__(self, name, value):
+        super().__setattr__(name, value)
+        setattr(self.module, name, value)
+
     def __getattr__(self, name: str) -> Any:
         if not hasattr(self.module, name):
             if name == "__path__":
