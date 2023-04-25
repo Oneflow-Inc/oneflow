@@ -85,7 +85,7 @@ Maybe<SubTskGphBuilderStatus> IntraGroupSubTskGphBuilder::Build(
               ParallelDesc(out_parallel_conf), lbi, new_blob_desc, in_nd_sbp.sbp_parallel(1),
               out_nd_sbp.sbp_parallel(1), time_shape));
       status.emplace_back(*boxing_builder_status);
-      CHECK_EQ_OR_RETURN(out_tasks.size(), group_size);
+      CHECK_EQ_OR_RETURN(out_tasks.size(), group_size);  // NOLINT
       FOR_RANGE(int64_t, j, 0, group_size) {
         const int64_t parallel_id = i * group_size + j;
         sorted_out_tasks->at(parallel_id) = out_tasks.at(j);  // NOLINT
@@ -153,7 +153,7 @@ Maybe<SubTskGphBuilderStatus> InterGroupSubTskGphBuilder::Build(
               ParallelDesc(out_parallel_conf), lbi, new_blob_desc, in_nd_sbp.sbp_parallel(0),
               out_nd_sbp.sbp_parallel(0), time_shape));
       status.emplace_back(*boxing_builder_status);
-      CHECK_EQ_OR_RETURN(out_tasks.size(), num_groups);
+      CHECK_EQ_OR_RETURN(out_tasks.size(), num_groups);  // NOLINT
       FOR_RANGE(int64_t, j, 0, num_groups) {
         const int64_t parallel_id = j * group_size + i;
         sorted_out_tasks->at(parallel_id) = out_tasks.at(j);  // NOLINT
