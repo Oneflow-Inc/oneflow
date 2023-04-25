@@ -224,8 +224,8 @@ Maybe<void> RematHelper::RematInputs(
   CHECK_OR_RETURN(!ThreadLocalEnvBool<ONEFLOW_VM_MULTI_THREAD>());
   Singleton<remat::Env>::Get()->current_op_type_name =
       op_call_instruction_policy_.opkernel().op_type_name();
-  VLOG_REMAT(2) << "set current op type name to " << Singleton<remat::Env>::Get()->current_op_type_name
-          << std::endl;
+  VLOG_REMAT(2) << "set current op type name to "
+                << Singleton<remat::Env>::Get()->current_op_type_name << std::endl;
   if (first) { JUST(IncReferenceNumOfRecomputedTensor()); }
   VLOG_REMAT(1) << "compute " << op_call_instruction_policy_.opkernel().op_type_name() << std::endl;
   VLOG_REMAT(1) << "input num " << op_call_instruction_policy_.inputs().size() << std::endl;
@@ -234,7 +234,7 @@ Maybe<void> RematHelper::RematInputs(
     auto& storage = input_storages_[i];
     if (!storage->is_in_memory()) {
       VLOG_REMAT(1) << "recompute No." << i << " input by " << storage->compute_op_type_name()
-              << ". Storage id: " << storage->id();
+                    << ". Storage id: " << storage->id();
       OpCallInstructionPolicy tmp_op = storage->compute_op();
       JUST(compute_fn(&tmp_op, vm_stream));
     }
@@ -273,7 +273,7 @@ Maybe<void> RematHelper::UpdateRematInfo(bool first, bool recompute, bool includ
         if (storage->is_eviction_disabled()) { continue; }
         if (storage_is_initialized_[i] && !recompute) {
           VLOG_REMAT(1) << "storage->is_initialized(), op is " << storage->compute_op_type_name()
-                  << std::endl;
+                        << std::endl;
           compute_op = std::make_unique<OpCallInstructionPolicy>(
               Singleton<remat::Env>::Get()->update_tensor_with_storage(
                   storage.get(), op_call_instruction_policy_));
@@ -304,7 +304,8 @@ Maybe<void> RematHelper::UpdateRematInfo(bool first, bool recompute, bool includ
 
   if (recompute) { Singleton<remat::Env>::Get()->add_recomputation_num(); }
   Singleton<remat::Env>::Get()->add_time(JUST(remat::GetComputeTime(op_call_instruction_policy_)));
-  VLOG_REMAT(1) << "end compute " << op_call_instruction_policy_.opkernel().op_type_name() << std::endl;
+  VLOG_REMAT(1) << "end compute " << op_call_instruction_policy_.opkernel().op_type_name()
+                << std::endl;
   Singleton<remat::Env>::Get()->current_op_type_name = "None";
   return Maybe<void>::Ok();
 }
