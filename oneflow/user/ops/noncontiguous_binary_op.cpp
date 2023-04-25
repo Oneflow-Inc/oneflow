@@ -24,7 +24,6 @@ limitations under the License.
 namespace oneflow {
 
 /*static*/ Maybe<void> NonContiguousBinaryOp::GetSbp(user_op::SbpContext* ctx) {
-  const bool inplace = ctx->Attr<bool>("inplace");
   ctx->NewBuilder()
       .Broadcast(user_op::OpArg("lhs", 0))
       .Broadcast(user_op::OpArg("rhs", 0))
@@ -36,8 +35,8 @@ namespace oneflow {
 /*static*/ Maybe<void> NonContiguousBinaryOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& lhs = ctx->InputShape("lhs", 0);
   const Shape& rhs = ctx->InputShape("rhs", 0);
-  CHECK_EQ_OR_RETURN(lhs.NumAxes(), rhs.NumAxes());
-  for (int i = 0; i < lhs.NumAxes(); i++) CHECK_EQ_OR_RETURN(lhs.At(i), rhs.At(i));
+  CHECK_EQ(lhs.NumAxes(), rhs.NumAxes());
+  for (int i = 0; i < lhs.NumAxes(); i++) CHECK_EQ(lhs.At(i), rhs.At(i));
   ctx->SetOutputShape("y", 0, lhs);
   const bool inplace = ctx->Attr<bool>("inplace");
   if (inplace)
@@ -57,7 +56,6 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> NonContiguousBinaryOpGrad::GetSbp(user_op::SbpContext* ctx) {
-  const bool inplace = ctx->Attr<bool>("inplace");
   ctx->NewBuilder()
       .Broadcast(user_op::OpArg("lhs", 0))
       .Broadcast(user_op::OpArg("rhs", 0))
@@ -72,8 +70,8 @@ namespace oneflow {
     user_op::InferContext* ctx) {
   const Shape& lhs = ctx->InputShape("lhs", 0);
   const Shape& rhs = ctx->InputShape("rhs", 0);
-  CHECK_EQ_OR_RETURN(lhs.NumAxes(), rhs.NumAxes());
-  for (int i = 0; i < lhs.NumAxes(); i++) CHECK_EQ_OR_RETURN(lhs.At(i), rhs.At(i));
+  CHECK_EQ(lhs.NumAxes(), rhs.NumAxes());
+  for (int i = 0; i < lhs.NumAxes(); i++) CHECK_EQ(lhs.At(i), rhs.At(i));
   ctx->SetOutputShape("dlhs", 0, lhs);
   ctx->SetOutputStride("dlhs", 0, ctx->InputStride("lhs", 0));
   ctx->SetOutputShape("drhs", 0, rhs);

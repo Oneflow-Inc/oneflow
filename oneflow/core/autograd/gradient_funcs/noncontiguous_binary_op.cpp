@@ -29,8 +29,8 @@ namespace one {
 struct NonContiguousBinaryOpCaptureState : public AutoGradCaptureState {
   bool lhs_requires_grad = false;
   bool rhs_requires_grad = false;
-  std::string op="add";
-  bool inplace=false;
+  std::string op = "add";
+  bool inplace = false;
 };
 
 class NonContiguousBinaryOp : public OpExprGradFunction<NonContiguousBinaryOpCaptureState> {
