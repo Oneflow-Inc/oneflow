@@ -89,7 +89,7 @@ def _train_with_graph(iter_num=3):
 
     train_data_loader = OFRecordDataLoader(
         ofrecord_root=flow.unittest.dataset_dir("ImageNet/ofrecord"),
-        mode="train",
+        mode="validation",
         dataset_size=400,
         batch_size=4,
         placement=P0,
