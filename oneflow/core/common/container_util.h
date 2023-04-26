@@ -31,21 +31,10 @@ scalar_or_const_ref_t<typename MapT::mapped_type> MapAt(const MapT& map, const K
   return iter->second;
 }
 
-template<typename T>
-constexpr auto printable(int)
-    -> decltype(std::declval<std::stringstream>() << std::declval<T>(), bool()) {
-  return true;
-}
-
-template<typename T>
-constexpr bool printable(...) {
-  return false;
-}
-
 template<typename MapT, typename KeyT>
 Maybe<scalar_or_const_ref_t<typename MapT::mapped_type>> MapAt(const MapT& map, const KeyT& key) {
   const auto& iter = map.find(key);
-  if constexpr (printable<KeyT>(0)) {
+  if constexpr (printable<KeyT>()) {
     CHECK_OR_RETURN(iter != map.end()) << "Key \"" << key << "\" not found";
   } else {
     CHECK_OR_RETURN(iter != map.end())
@@ -58,7 +47,7 @@ Maybe<scalar_or_const_ref_t<typename MapT::mapped_type>> MapAt(const MapT& map, 
 template<typename MapT, typename KeyT>
 Maybe<typename MapT::mapped_type&> MapAt(MapT& map, const KeyT& key) {
   const auto& iter = map.find(key);
-  if constexpr (printable<KeyT>(0)) {
+  if constexpr (printable<KeyT>()) {
     CHECK_OR_RETURN(iter != map.end()) << "Key \"" << key << "\" not found";
   } else {
     CHECK_OR_RETURN(iter != map.end())
