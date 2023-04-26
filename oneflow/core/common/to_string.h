@@ -17,12 +17,24 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_TO_STRING_H_
 
 #include <string>
+#include "oneflow/core/common/type_traits.h"
 
 namespace oneflow {
 
 template<typename T>
 inline std::string ToString(const T& value) {
   return std::to_string(value);
+}
+
+template<typename T>
+inline std::string ToStringIfApplicable(const T& value) {
+  if constexpr (printable<T>()) {
+    std::stringstream ss;
+    ss << value;
+    return ss.str();
+  } else {
+    return "<non-printable>";
+  }
 }
 
 }  // namespace oneflow
