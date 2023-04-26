@@ -52,10 +52,45 @@ Error&& Error::AddStackFrame(Symbol<ErrorStackFrame> error_stack_frame) {
 
 Error&& Error::GetStackTrace(int64_t depth, int64_t skip_n_firsts) {
   backward::StackTrace st;
+  backward::SnippetFactory snippets;
+  backward::TraceResolver resolver;
   st.load_here(depth);
   st.skip_n_firsts(skip_n_firsts);
-  backward::Printer p;
-  p.print(st, stderr);
+  resolver.load_stacktrace(st);
+
+  for (int i = 0; i < st.size(); i++) {
+    const auto& trace = resolver.resolve(st[i]);
+    if (!backward::Printer::is_oneflow_file(trace.object_filename)) { continue; }
+
+    //  without debug info
+    if (!trace.source.filename.size()) {
+      stacked_error_->add_stack_frame(
+          SymbolOf(ErrorStackFrame(trace.object_filename, -1, trace.object_function)));
+    }
+
+    //  with debug info
+    if (trace.source.filename.size()) {
+      const backward::ResolvedTrace::SourceLoc& source_loc = trace.source;
+      backward::SnippetFactory::lines_t lines =
+          snippets.get_snippet(source_loc.filename, source_loc.line, static_cast<unsigned>(1));
+      std::string code_text = lines[0].second;
+      const auto pos = code_text.find_first_not_of(" \t");
+      code_text = code_text.substr(pos, code_text.size() - pos);
+      stacked_error_->add_stack_frame(SymbolOf(
+          ErrorStackFrame(source_loc.filename, source_loc.line, source_loc.function, code_text)));
+    }
+
+    for (size_t inliner_idx = 0; inliner_idx < trace.inliners.size(); ++inliner_idx) {
+      const backward::ResolvedTrace::SourceLoc& source_loc = trace.inliners[inliner_idx];
+      backward::SnippetFactory::lines_t lines =
+          snippets.get_snippet(source_loc.filename, source_loc.line, static_cast<unsigned>(1));
+      std::string code_text = lines[0].second;
+      const auto pos = code_text.find_first_not_of(" \t");
+      code_text = code_text.substr(pos, code_text.size() - pos);
+      stacked_error_->add_stack_frame(SymbolOf(
+          ErrorStackFrame(source_loc.filename, source_loc.line, source_loc.function, code_text)));
+    }
+  }
   return std::move(*this);
 }
 

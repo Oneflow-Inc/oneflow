@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_STREAM_ON_INDEPENDENT_THREAD_H_
 #define ONEFLOW_CORE_FRAMEWORK_STREAM_ON_INDEPENDENT_THREAD_H_
 
-#include <glog/logging.h>
 #include "oneflow/core/common/stream_type.h"
 
 namespace oneflow {
