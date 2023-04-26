@@ -133,7 +133,7 @@ class NVVMToCubinPass : public NVVMToCubinPassBase<NVVMToCubinPass> {
     std::string targetISA;
     llvm::raw_string_ostream stream(targetISA);
 
-    {  // Drop pstream after this to prevent the ISA from being stuck buffering
+    {  // Note: Drop pstream after this to prevent the ISA from being stuck buffering
       llvm::buffer_ostream pstream(stream);
       llvm::legacy::PassManager codegenPasses;
 
@@ -168,7 +168,7 @@ class NVVMToCubinPass : public NVVMToCubinPassBase<NVVMToCubinPass> {
 
     RETURN_ON_CUDA_ERROR(cuInit(0));
 
-    // Linking requires a device context.
+    // Note: Linking requires a device context.
     CUdevice device;
     RETURN_ON_CUDA_ERROR(cuDeviceGet(&device, 0));
     CUcontext context;
@@ -199,7 +199,6 @@ class NVVMToCubinPass : public NVVMToCubinPassBase<NVVMToCubinPass> {
     char* cubinAsChar = static_cast<char*>(cubinData);
     auto result = std::make_unique<std::vector<char>>(cubinAsChar, cubinAsChar + cubinSize);
 
-    // This will also destroy the cubin data.
     RETURN_ON_CUDA_ERROR(cuLinkDestroy(linkState));
     RETURN_ON_CUDA_ERROR(cuCtxDestroy(context));
 
