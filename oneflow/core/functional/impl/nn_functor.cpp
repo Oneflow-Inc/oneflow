@@ -1826,7 +1826,8 @@ class NLLLossFunctor {
 
     if (reduction == "sum") { return sum; }
 
-    auto total_weight = JUST(functional::ReduceSum(JUST(VectorAt(*nll_result, 1)), {}, false, NullOpt));
+    auto total_weight =
+        JUST(functional::ReduceSum(JUST(VectorAt(*nll_result, 1)), {}, false, NullOpt));
     return functional::Div(sum, total_weight);
   }
 
@@ -1907,7 +1908,8 @@ class CrossEntropyFunctor {
     auto sum = JUST(functional::ReduceSum(output, {}, false, NullOpt));
     if (reduction == "sum") { return sum; }
 
-    auto total_weight = JUST(functional::ReduceSum(JUST(VectorAt(*nll_result, 1)), {}, false, NullOpt));
+    auto total_weight =
+        JUST(functional::ReduceSum(JUST(VectorAt(*nll_result, 1)), {}, false, NullOpt));
     return functional::Div(sum, total_weight);
   }
 

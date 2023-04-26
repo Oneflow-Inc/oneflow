@@ -434,7 +434,8 @@ Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const Shape& expand_s
       in_grads->at(0) = out_grads[0];
       bool keep_dims = (input_shape.size() > 0);
       if (reduce_dims.size() > 0) {
-        in_grads->at(0) = JUST(functional::ReduceSum(in_grads->at(0), reduce_dims, keep_dims, NullOpt));
+        in_grads->at(0) =
+            JUST(functional::ReduceSum(in_grads->at(0), reduce_dims, keep_dims, NullOpt));
       }
       if (lpad > 0 && keep_dims) {
         in_grads->at(0) = JUST(functional::Flatten(in_grads->at(0), 0, lpad));
@@ -493,7 +494,8 @@ Maybe<void> InplaceExpand(const std::shared_ptr<Tensor>& input, const Shape& exp
       in_grads->at(0) = out_grads[0];
       bool keep_dims = (input_shape.size() > 0);
       if (reduce_dims.size() > 0) {
-        in_grads->at(0) = JUST(functional::ReduceSum(in_grads->at(0), reduce_dims, keep_dims, NullOpt));
+        in_grads->at(0) =
+            JUST(functional::ReduceSum(in_grads->at(0), reduce_dims, keep_dims, NullOpt));
       }
       if (lpad > 0 && keep_dims) {
         in_grads->at(0) = JUST(functional::Flatten(in_grads->at(0), 0, lpad));

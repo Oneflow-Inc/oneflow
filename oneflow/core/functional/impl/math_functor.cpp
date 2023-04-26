@@ -469,7 +469,8 @@ class ReduceSumWholeFunctor {
     op_ = CHECK_JUST(
         one::OpBuilder("reduce_sum").Input("input_tensor").Output("output_tensor").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<Symbol<DType>>& dtype) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<Symbol<DType>>& dtype) const {
     std::shared_ptr<one::Tensor> tensor = x;
     if (dtype.has_value() && (dtype != x->dtype())) {
       tensor = JUST(Cast(x, JUST(dtype), /*pin_memory=*/false));
@@ -1008,7 +1009,8 @@ class LogSumExpFunctor {
       JUST(MaskedFillInplace(maxes_squeezed,
                              JUST(ScalarLogicalEqual(JUST(Abs(maxes_squeezed)), INFINITY)), 0));
       std::shared_ptr<one::Tensor> exp_out = JUST(Exp(JUST(Sub(x, maxes, 1, false))));
-      return Add(JUST(Log(JUST(ReduceSum(exp_out, axis, keepdims, NullOpt)))), maxes_squeezed, 1, false);
+      return Add(JUST(Log(JUST(ReduceSum(exp_out, axis, keepdims, NullOpt)))), maxes_squeezed, 1,
+                 false);
     }
   }
 
@@ -1843,9 +1845,9 @@ class VectorNormFunctor {
                  && x->requires_grad() == false) {
         res = JUST(SqrtSquareSum(x));
       } else {
-        res =
-            JUST(ScalarPow(JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), ord, false)), dim, keepdim, NullOpt)),
-                           Scalar(1.0) / ord, false));
+        res = JUST(ScalarPow(
+            JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), ord, false)), dim, keepdim, NullOpt)),
+            Scalar(1.0) / ord, false));
       }
       res = JUST(Cast(res, dtype_val, /*pin_memory=*/false));
       return res;
@@ -2879,8 +2881,9 @@ class StandardDeviationFunctor {
       const auto& sum = JUST(functional::ScalarDiv(
           JUST(functional::ReduceSum(JUST(functional::Square(input)), axis, keepdims, NullOpt)),
           Scalar((double)reduce_count)));
-      const auto& square = JUST(functional::Square(JUST(functional::ScalarDiv(
-          JUST(functional::ReduceSum(input, axis, keepdims, NullOpt)), Scalar((double)reduce_count)))));
+      const auto& square = JUST(functional::Square(
+          JUST(functional::ScalarDiv(JUST(functional::ReduceSum(input, axis, keepdims, NullOpt)),
+                                     Scalar((double)reduce_count)))));
       const auto& sub = JUST(functional::Sub(sum, square, /*alpha=*/1.0, /*inplace=*/false));
       if (unbias) {
         return functional::Sqrt(JUST(functional::ScalarMul(
@@ -2909,12 +2912,13 @@ class StandardDeviationFunctor {
       //  https://github.com/Oneflow-Inc/oneflow/issues/6526
       const auto& double_input =
           JUST(functional::Cast(input, DType::Double(), /*pin_memory=*/false));
-      const auto& sum = JUST(functional::ScalarDiv(
-          JUST(functional::ReduceSum(JUST(functional::Square(double_input)), axis, keepdims, NullOpt)),
-          Scalar((double)reduce_count)));
-      const auto& square = JUST(functional::Square(
-          JUST(functional::ScalarDiv(JUST(functional::ReduceSum(double_input, axis, keepdims, NullOpt)),
-                                     Scalar((double)reduce_count)))));
+      const auto& sum = JUST(
+          functional::ScalarDiv(JUST(functional::ReduceSum(JUST(functional::Square(double_input)),
+                                                           axis, keepdims, NullOpt)),
+                                Scalar((double)reduce_count)));
+      const auto& square = JUST(functional::Square(JUST(
+          functional::ScalarDiv(JUST(functional::ReduceSum(double_input, axis, keepdims, NullOpt)),
+                                Scalar((double)reduce_count)))));
       const auto& sub = JUST(functional::Sub(sum, square, /*alpha=*/1.0, /*inplace=*/false));
       if (unbias) {
         return functional::Cast(
