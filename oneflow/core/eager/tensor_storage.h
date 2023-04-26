@@ -36,7 +36,7 @@ class TensorStorage {
   explicit TensorStorage(bool is_allocated_in_vm, Symbol<Device> device);
   OF_DISALLOW_COPY_AND_MOVE(TensorStorage);
 
-  virtual ~TensorStorage();
+  virtual ~TensorStorage() = 0;  // 将析构函数声明为纯虚函数
 
   bool is_allocated_in_vm() const { return is_allocated_in_vm_; }
 
@@ -61,7 +61,7 @@ class TensorStorage {
   }
 
   void _Release();
-  virtual void Release();
+  virtual void Release() = 0;  // 将Release函数声明为纯虚函数
 
   void RegisterStorageDeleteHook(const std::function<void()>& hook) {
     storage_delete_hooks_.emplace_back(hook);
@@ -81,6 +81,8 @@ class TensorStorage {
   std::vector<std::function<void()>> storage_delete_hooks_;
   bool is_allocated_in_vm_;
 };
+
+TensorStorage::~TensorStorage() {}  // 纯虚函数的实现
 
 class RematableTensorStorage final : public TensorStorage {
  public:
@@ -126,6 +128,18 @@ class RematableTensorStorage final : public TensorStorage {
   bool is_needed_by_backward_ = false;
 
   void LogEviction(bool eager_eviction) const;
+};
+
+class NaiveTensorStorage : public TensorStorage {
+ public:
+  explicit NaiveTensorStorage(bool is_allocated_in_vm, Symbol<Device> device)
+      : TensorStorage(is_allocated_in_vm, device) {}
+
+  ~NaiveTensorStorage() override {}
+
+  void Release() override {
+    // 具体的实现
+  }
 };
 
 }  // namespace vm

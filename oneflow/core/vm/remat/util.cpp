@@ -222,8 +222,6 @@ Maybe<void> RematHelper::RematInputs(
     vm::Stream* vm_stream, bool first,
     const std::function<Maybe<void>(OpCallInstructionPolicy*, vm::Stream*)>& compute_fn) {
   CHECK_OR_RETURN(!ThreadLocalEnvBool<ONEFLOW_VM_MULTI_THREAD>());
-  Singleton<remat::Env>::Get()->current_op_type_name =
-      op_call_instruction_policy_.opkernel().op_type_name();
   VLOG(2) << "set current op type name to " << Singleton<remat::Env>::Get()->current_op_type_name
           << std::endl;
   if (first) { JUST(IncReferenceNumOfRecomputedTensor()); }
