@@ -36,7 +36,7 @@ class TestOFRecordModule(flow.unittest.TestCase):
         rgb_mean = [123.68, 116.779, 103.939]
         rgb_std = [58.393, 57.12, 57.375]
         record_reader = flow.nn.OFRecordReader(
-            oneflow.unittest.dataset_dir("imagenette/ofrecord"),
+            flow.unittest.dataset_dir("imagenette/ofrecord"),
             batch_size=batch_size,
             data_part_num=1,
             part_name_suffix_length=5,
@@ -67,15 +67,13 @@ class TestOFRecordModule(flow.unittest.TestCase):
         image_raw_buffer = record_image_decoder(val_record)
         image_raw_buffer_nd = image_raw_buffer.numpy()
         gt_np = cv2.imread(
-            oneflow.unittest.dataset_dir(
-                "imagenette/ofrecord/gt_tensor_buffer_image.png"
-            )
+            flow.unittest.dataset_dir("imagenette/ofrecord/gt_tensor_buffer_image.png")
         )
         test_case.assertTrue(np.array_equal(image_raw_buffer_nd[0], gt_np))
         image = resize(image_raw_buffer)[0]
         resized_image_raw_buffer_nd = image.numpy()
         gt_np = cv2.imread(
-            oneflow.unittest.dataset_dir(
+            flow.unittest.dataset_dir(
                 "imagenette/ofrecord/gt_tensor_buffer_resized_image.png"
             )
         )
@@ -88,7 +86,7 @@ class TestOFRecordModule(flow.unittest.TestCase):
         image_np = cv2.cvtColor(np.float32(image_np), cv2.COLOR_RGB2BGR)
         image_np = image_np.astype(np.uint8)
         gt_np = cv2.imread(
-            oneflow.unittest.dataset_dir("imagenette/ofrecord/gt_val_image.png")
+            flow.unittest.dataset_dir("imagenette/ofrecord/gt_val_image.png")
         )
         test_case.assertEqual(label.numpy(), 5)
         test_case.assertTrue(np.array_equal(image_np, gt_np))
@@ -105,7 +103,7 @@ class TestGlobalOFRecordModule(flow.unittest.TestCase):
         rgb_mean = [123.68, 116.779, 103.939]
         rgb_std = [58.393, 57.12, 57.375]
         record_reader = flow.nn.OfrecordReader(
-            oneflow.unittest.dataset_dir("imagenette/ofrecord"),
+            flow.unittest.dataset_dir("imagenette/ofrecord"),
             batch_size=batch_size,
             data_part_num=1,
             part_name_suffix_length=5,
@@ -144,15 +142,13 @@ class TestGlobalOFRecordModule(flow.unittest.TestCase):
         image_raw_buffer = record_image_decoder(val_record)
         image_raw_buffer_nd = image_raw_buffer.to_local().numpy()
         gt_np = cv2.imread(
-            oneflow.unittest.dataset_dir(
-                "imagenette/ofrecord/gt_tensor_buffer_image.png"
-            )
+            flow.unittest.dataset_dir("imagenette/ofrecord/gt_tensor_buffer_image.png")
         )
         test_case.assertTrue(np.array_equal(image_raw_buffer_nd[0], gt_np))
         image = resize(image_raw_buffer)[0]
         resized_image_raw_buffer_nd = image.to_local().numpy()
         gt_np = cv2.imread(
-            oneflow.unittest.dataset_dir(
+            flow.unittest.dataset_dir(
                 "imagenette/ofrecord/gt_tensor_buffer_resized_image.png"
             )
         )
@@ -165,7 +161,7 @@ class TestGlobalOFRecordModule(flow.unittest.TestCase):
         image_np = cv2.cvtColor(np.float32(image_np), cv2.COLOR_RGB2BGR)
         image_np = image_np.astype(np.uint8)
         gt_np = cv2.imread(
-            oneflow.unittest.dataset_dir("imagenette/ofrecord/gt_val_image.png")
+            flow.unittest.dataset_dir("imagenette/ofrecord/gt_val_image.png")
         )
         test_case.assertEqual(label.to_local().numpy(), 5)
         test_case.assertTrue(np.array_equal(image_np, gt_np))
@@ -316,10 +312,10 @@ def _segm_poly_list_to_tensor(img_segm_poly_list):
 @flow.unittest.skip_unless_1n1d()
 class TestCocoReader(flow.unittest.TestCase):
     def test_coco_reader(test_case):
-        anno_file = oneflow.unittest.dataset_dir(
+        anno_file = flow.unittest.dataset_dir(
             "mscoco_2017/annotations/instances_val2017.json"
         )
-        image_dir = oneflow.unittest.dataset_dir("mscoco_2017/val2017")
+        image_dir = flow.unittest.dataset_dir("mscoco_2017/val2017")
         num_iterations = 10
         coco_reader = flow.nn.COCOReader(
             annotation_file=anno_file,
@@ -369,7 +365,7 @@ class TestOFRecordBytesDecoder(flow.unittest.TestCase):
     def test_OFRecordBytesDecoder(test_case):
         batch_size = 16
         record_reader = flow.nn.OFRecordReader(
-            oneflow.unittest.dataset_dir("imagenette/ofrecord"),
+            flow.unittest.dataset_dir("imagenette/ofrecord"),
             batch_size=batch_size,
             part_name_suffix_length=5,
         )
@@ -381,9 +377,7 @@ class TestOFRecordBytesDecoder(flow.unittest.TestCase):
 
         image_raw_buffer_nd = image_raw_buffer.numpy()[0]
         gt_np = cv2.imread(
-            oneflow.unittest.dataset_dir(
-                "imagenette/ofrecord/gt_tensor_buffer_image.png"
-            )
+            flow.unittest.dataset_dir("imagenette/ofrecord/gt_tensor_buffer_image.png")
         )
         img = cv2.imdecode(image_raw_buffer_nd, cv2.IMREAD_COLOR)
         test_case.assertTrue(np.array_equal(img, gt_np))

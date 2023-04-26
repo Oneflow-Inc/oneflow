@@ -75,7 +75,7 @@ def _parse_args():
     parser.add_argument(
         "--ofrecord_path",
         type=str,
-        default=oneflow.unittest.dataset_dir("imagenette/ofrecord"),
+        default=flow.unittest.dataset_dir("imagenette/ofrecord"),
         help="dataset path",
     )
     # training hyper-parameters
@@ -215,7 +215,9 @@ class TestAlexnetAutoParallel(oneflow.unittest.TestCase):
     def test_alexnet_auto_parallel_1d_sbp(test_case):
         args, unknown_args = _parse_args()
         placement = flow.placement.all("cuda")
-        sbp = [flow.sbp.broadcast,] * len(placement.ranks.shape)
+        sbp = [
+            flow.sbp.broadcast,
+        ] * len(placement.ranks.shape)
         _test_alexnet_graph(test_case, args, placement, sbp)
 
 
