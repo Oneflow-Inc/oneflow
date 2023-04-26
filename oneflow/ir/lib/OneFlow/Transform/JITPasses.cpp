@@ -157,7 +157,7 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
 
       for (auto argument : block->getArguments()) {
         if (auto found =
-                outliner.mappingReversed.lookupOrNull(static_cast<::mlir::Value>(argument))) {
+                outliner.mappingReversed.lookupOrNull(argument)) {
           entries.push_back(found);
           argumentTypes.push_back(argument.getType());
         } else {
