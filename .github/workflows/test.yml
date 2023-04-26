@@ -529,6 +529,7 @@ jobs:
           fi
           echo "EXTRA_DOCKER_ARGS=${extra_docker_args}" >> $GITHUB_ENV
           echo "ONEFLOW_TEST_CACHE_DIR=$HOME/ci-cache/test_cache" >> $GITHUB_ENV
+          echo "ONEFLOW_TEST_DATASET_DIR=$HOME/dataset" >> $GITHUB_ENV
 
           echo "ONEFLOW_WHEEL_PATH=${{ steps.download-digest.outputs.entry-dir }}/whl" >> $GITHUB_ENV
           echo "ONEFLOW_CPACK_PATH=${{ steps.download-digest.outputs.entry-dir }}/cpack" >> $GITHUB_ENV
@@ -550,7 +551,7 @@ jobs:
           docker run --gpus=all -d --rm --privileged --shm-size=8g \
             --pids-limit 2000 \
             --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
-            -v /dataset:/dataset:ro -v /model_zoo:/model_zoo:ro \
+            -v ${ONEFLOW_TEST_DATASET_DIR}:/dataset:ro \
             -v ${ONEFLOW_WHEEL_PATH}:${ONEFLOW_WHEEL_PATH}:ro \
             -v $HOME/test-container-cache/dot-local:/root/.local \
             -v $HOME/test-container-cache/dot-cache:/root/.cache \
@@ -562,6 +563,7 @@ jobs:
             -w $PWD \
             -v ${ONEFLOW_TEST_CACHE_DIR}:${ONEFLOW_TEST_CACHE_DIR} \
             -e ONEFLOW_TEST_CACHE_DIR=${ONEFLOW_TEST_CACHE_DIR} \
+            -e ONEFLOW_TEST_DATASET_DIR=${ONEFLOW_TEST_DATASET_DIR} \
             -e ONEFLOW_TIMEOUT_SECONDS=${{ env.ONEFLOW_TIMEOUT_SECONDS }} \
             -e ONEFLOW_THRAED_LOCAL_CACHED_SIZE=${{ env.ONEFLOW_THRAED_LOCAL_CACHED_SIZE }} \
             ${{ env.MLIR_DOCKER_ARGS }} \
@@ -774,6 +776,7 @@ jobs:
           fi
           echo "EXTRA_DOCKER_ARGS=${extra_docker_args}" >> $GITHUB_ENV
           echo "ONEFLOW_TEST_CACHE_DIR=$HOME/ci-cache/test_cache" >> $GITHUB_ENV
+          echo "ONEFLOW_TEST_DATASET_DIR=$HOME/dataset" >> $GITHUB_ENV
 
           echo "ONEFLOW_WHEEL_PATH=${{ steps.download-digest.outputs.entry-dir }}/whl" >> $GITHUB_ENV
           echo "ONEFLOW_CPACK_PATH=${{ steps.download-digest.outputs.entry-dir }}/cpack" >> $GITHUB_ENV
@@ -819,7 +822,7 @@ jobs:
           docker run --gpus=all -d --rm --privileged --shm-size=8g \
             --pids-limit ${{ env.THREAD_LIMIT }} \
             --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
-            -v /dataset:/dataset:ro -v /model_zoo:/model_zoo:ro \
+            -v ${ONEFLOW_TEST_DATASET_DIR}:/dataset:ro \
             -v ${ONEFLOW_WHEEL_PATH}:${ONEFLOW_WHEEL_PATH}:ro \
             -v $HOME/test-container-cache/dot-local:/root/.local \
             -v $HOME/test-container-cache/dot-cache:/root/.cache \
@@ -829,6 +832,7 @@ jobs:
             -w $PWD \
             -v ${ONEFLOW_TEST_CACHE_DIR}:${ONEFLOW_TEST_CACHE_DIR} \
             -e ONEFLOW_TEST_CACHE_DIR=${ONEFLOW_TEST_CACHE_DIR} \
+            -e ONEFLOW_TEST_DATASET_DIR=${ONEFLOW_TEST_DATASET_DIR} \
             -e ONEFLOW_TIMEOUT_SECONDS=${{ env.ONEFLOW_TIMEOUT_SECONDS }} \
             -e ONEFLOW_THRAED_LOCAL_CACHED_SIZE=${{ env.ONEFLOW_THRAED_LOCAL_CACHED_SIZE }} \
             ${{ env.MLIR_DOCKER_ARGS }} \
@@ -845,7 +849,7 @@ jobs:
           docker run -d --rm --privileged --shm-size=8g \
             --pids-limit ${{ env.THREAD_LIMIT }} \
             --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
-            -v /dataset:/dataset:ro -v /model_zoo:/model_zoo:ro \
+            -v ${ONEFLOW_TEST_DATASET_DIR}:/dataset:ro \
             -v ${ONEFLOW_WHEEL_PATH}:${ONEFLOW_WHEEL_PATH}:ro \
             -v $HOME/test-container-cache/dot-local:/root/.local \
             -v $HOME/test-container-cache/dot-cache:/root/.cache \
@@ -856,6 +860,7 @@ jobs:
             -w $PWD \
             -v ${ONEFLOW_TEST_CACHE_DIR}:${ONEFLOW_TEST_CACHE_DIR} \
             -e ONEFLOW_TEST_CACHE_DIR=${ONEFLOW_TEST_CACHE_DIR} \
+            -e ONEFLOW_TEST_DATASET_DIR=${ONEFLOW_TEST_DATASET_DIR} \
             -e ONEFLOW_TIMEOUT_SECONDS=${{ env.ONEFLOW_TIMEOUT_SECONDS }} \
             -e ONEFLOW_THRAED_LOCAL_CACHED_SIZE=${{ env.ONEFLOW_THRAED_LOCAL_CACHED_SIZE }} \
             ${{ env.MLIR_DOCKER_ARGS }} \
