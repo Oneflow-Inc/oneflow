@@ -195,6 +195,8 @@ class DummyModule(ModuleType):
             return []
         if name == "__file__":
             return None
+        if name == "__mro_entries__":
+            return lambda x: ()
         return DummyModule(self.__name__ + "." + name)
 
     def __getitem__(self, name):
