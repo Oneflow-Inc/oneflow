@@ -825,6 +825,7 @@ jobs:
             -e ONEFLOW_WHEEL_PATH=${ONEFLOW_WHEEL_PATH} \
             -e ONEFLOW_CI=1 \
             -e NVIDIA_TF32_OVERRIDE=0 \
+            -e NCCL_P2P_DISABLE=1 \
             -v $PWD:$PWD \
             -w $PWD \
             -v ${ONEFLOW_TEST_CACHE_DIR}:${ONEFLOW_TEST_CACHE_DIR} \
