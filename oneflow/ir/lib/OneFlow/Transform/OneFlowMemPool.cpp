@@ -125,7 +125,7 @@ struct FoldAllocToSubviewPattern final : public OpRewritePattern<func::FuncOp> {
 
     ::oneflow::HashMap<Operation*, std::pair<int32_t, int32_t>> val2lifetime;
     ::oneflow::HashMap<Operation*, size_t> val2size;
-    for (auto info : list) {
+    for (const auto& info : list) {
       val2lifetime[info.val_] = {info.start_lifetime_, info.end_lifetime_};
       val2size[info.val_] = info.size_;
     }
