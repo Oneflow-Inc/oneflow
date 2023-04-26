@@ -119,7 +119,6 @@ LogicalResult linkLibdevice(llvm::Module& llvmModule, llvm::LLVMContext& llvmCon
   return success();
 }
 
-
 std::optional<std::string> translateToISA(llvm::Module& llvmModule,
                                           llvm::TargetMachine& targetMachine) {
   llvmModule.setDataLayout(targetMachine.createDataLayout());
@@ -263,11 +262,8 @@ void InitializeLLVMNVPTXBackend() {
 
 namespace mlir {
 
-const std::string& getArchVersion() {
-  return "[unsupported]"
-}
+const std::string& getArchVersion() { return "[unsupported]" }
 
 }  // namespace mlir
-
 
 #endif  // WITH_MLIR_CUDA_CODEGEN
