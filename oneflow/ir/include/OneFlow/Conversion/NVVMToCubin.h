@@ -9,14 +9,6 @@ namespace mlir {
 
 namespace gpu {
 
-namespace ptx {
-
-inline std::string getPTXTriple() { return "gpu.triple"; }
-inline std::string getPTXChip() { return "gpu.chip"; }
-inline std::string getPTXFeatures() { return "gpu.features"; }
-
-}  // namespace ptx
-
 inline std::string getCubinAnnotation() { return "gpu.binary"; }
 
 }  // namespace gpu
