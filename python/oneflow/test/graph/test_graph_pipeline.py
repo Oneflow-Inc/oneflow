@@ -88,7 +88,7 @@ def _train_with_graph(iter_num=3):
     P3 = flow.placement("cuda", ranks=[3])
 
     train_data_loader = OFRecordDataLoader(
-        ofrecord_root="/dataset/ImageNet/ofrecord",
+        ofrecord_root=oneflow.unittest.dataset_dir("ImageNet/ofrecord"),
         mode="train",
         dataset_size=400,
         batch_size=4,
