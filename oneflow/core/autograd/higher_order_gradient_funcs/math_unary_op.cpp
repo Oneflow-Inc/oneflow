@@ -14,13 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <memory>
 #include "oneflow/core/common/container_util.h"
-#include "oneflow/core/common/just.h"
-#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
@@ -105,20 +101,20 @@ class TanhGradGradCls : public OpExprGradFunction<UnaryMathGradGradState> {
     if (ctx->input_requires_grad) {
       const auto& dy = JUST(VectorAt(ctx->SavedTensors(), 1));
       (*in_grads)[0] = JUST(functional::sequence_function(functional::Mul)
-                                .then([](const std::shared_ptr<Tensor>& input) {
+                                .then([](const std::shared_ptr<one::Tensor>& input) {
                                   return functional::ScalarMul(Scalar(-2), input);
                                 })
-                                .then([dy](const std::shared_ptr<Tensor>& input) {
+                                .then([dy](const std::shared_ptr<one::Tensor>& input) {
                                   return functional::Mul(dy, input);
                                 })
                                 .call(input, out_grad));
     }
     if (ctx->grad_requires_grad) {
       (*in_grads)[1] = JUST(functional::sequence_function(functional::Square)
-                                .then([](const std::shared_ptr<Tensor>& input) {
+                                .then([](const std::shared_ptr<one::Tensor>& input) {
                                   return functional::ScalarSub(Scalar(1), input, /* alpha */ 1);
                                 })
-                                .then([out_grad](const std::shared_ptr<Tensor>& input) {
+                                .then([out_grad](const std::shared_ptr<one::Tensor>& input) {
                                   return functional::Mul(input, out_grad);
                                 })
                                 .call(input));
