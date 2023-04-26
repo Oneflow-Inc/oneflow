@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <glog/logging.h>
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/graph/collective_boxing_task_node.h"
 #include "oneflow/core/graph/nccl_send_recv_boxing_task_node.h"
