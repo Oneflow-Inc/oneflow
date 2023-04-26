@@ -825,6 +825,7 @@ jobs:
             -e ONEFLOW_WHEEL_PATH=${ONEFLOW_WHEEL_PATH} \
             -e ONEFLOW_CI=1 \
             -e NCCL_IB_DISABLE=1 \
+            -e TF_NVIDIA_TF32=0 \
             -v $PWD:$PWD \
             -w $PWD \
             -v ${ONEFLOW_TEST_CACHE_DIR}:${ONEFLOW_TEST_CACHE_DIR} \
