@@ -434,7 +434,7 @@ Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const Shape& expand_s
       in_grads->at(0) = out_grads[0];
       bool keep_dims = (input_shape.size() > 0);
       if (reduce_dims.size() > 0) {
-        in_grads->at(0) = JUST(functional::ReduceSum(in_grads->at(0), reduce_dims, keep_dims));
+        in_grads->at(0) = JUST(functional::ReduceSum(in_grads->at(0), reduce_dims, keep_dims, NullOpt));
       }
       if (lpad > 0 && keep_dims) {
         in_grads->at(0) = JUST(functional::Flatten(in_grads->at(0), 0, lpad));
@@ -493,7 +493,7 @@ Maybe<void> InplaceExpand(const std::shared_ptr<Tensor>& input, const Shape& exp
       in_grads->at(0) = out_grads[0];
       bool keep_dims = (input_shape.size() > 0);
       if (reduce_dims.size() > 0) {
-        in_grads->at(0) = JUST(functional::ReduceSum(in_grads->at(0), reduce_dims, keep_dims));
+        in_grads->at(0) = JUST(functional::ReduceSum(in_grads->at(0), reduce_dims, keep_dims, NullOpt));
       }
       if (lpad > 0 && keep_dims) {
         in_grads->at(0) = JUST(functional::Flatten(in_grads->at(0), 0, lpad));
@@ -570,7 +570,7 @@ Maybe<Tensor> AsStridedGrad(const std::shared_ptr<one::Tensor>& dy,
     } else if (size_i == 1) {
       grad = JUST(functional::Squeeze(grad, std::vector<int32_t>{int(i)}));
     } else if (stride_i == 0) {
-      grad = JUST(functional::ReduceSum(grad, std::vector<int32_t>{int(i)}, false));
+      grad = JUST(functional::ReduceSum(grad, std::vector<int32_t>{int(i)}, false, NullOpt));
     } else {
       out_sizes_.insert(out_sizes_.begin(), size_i);
       out_strides_.insert(out_strides_.begin(), stride_i);

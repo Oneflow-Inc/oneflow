@@ -84,6 +84,13 @@ class TestSumModule(flow.unittest.TestCase):
         x = random_tensor(4, random(0, 5), 2).to(device)
         y = torch.sum(x)
         return y
+    
+    @autotest(check_graph=True, auto_backward=False)
+    def test_sum_dtype(test_case):
+        device = random_device()
+        x = random_tensor(4, requires_grad=False).to(device)
+        y = torch.sum(x, dtype=torch.int64)
+        return y
 
     @autotest(auto_backward=False, check_graph=True)
     def test_sum_with_0_size_tensor(test_case):

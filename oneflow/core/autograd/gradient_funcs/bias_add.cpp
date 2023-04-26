@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cstddef>
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -59,7 +60,7 @@ class BiasAdd : public OpExprGradFunction<BiasAddCaptureState> {
         if (i != ctx->axis) { reduce_axes_vec.emplace_back(i); }
       }
       if (ctx->bias_requires_grad) {
-        in_grads->at(1) = JUST(functional::ReduceSum(out_grads.at(0), reduce_axes_vec, false));
+        in_grads->at(1) = JUST(functional::ReduceSum(out_grads.at(0), reduce_axes_vec, false, NullOpt));
       }
     }
     if (ctx->input_requires_grad) { in_grads->at(0) = out_grads.at(0); }

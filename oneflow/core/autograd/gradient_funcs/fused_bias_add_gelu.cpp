@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cstddef>
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
 
@@ -66,7 +67,7 @@ class FusedBiasAddGelu : public OpExprGradFunction<FusedBiasAddGeluInterpState> 
         if (i != ctx->axis) { reduce_axes_vec.emplace_back(i); }
       }
       in_grads->at(1) =
-          JUST(functional::ReduceSum(fused_bias_add_gelu_grad, reduce_axes_vec, false));
+          JUST(functional::ReduceSum(fused_bias_add_gelu_grad, reduce_axes_vec, false, NullOpt));
     }
     if (ctx->input_requires_grad) { in_grads->at(0) = fused_bias_add_gelu_grad; }
     return Maybe<void>::Ok();

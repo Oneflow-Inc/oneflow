@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cstddef>
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -168,7 +169,7 @@ Maybe<void> ReduceMaxOrMin::Apply(const ReduceMaxOrMinCaptureState* ctx,
 
   const auto& bcast_like_div =
       JUST(functional::SequenceFunction<Maybe<Tensor>()>(
-               [&]() { return functional::ReduceSum(cast_like, ctx->axis, ctx->keepdims); })
+               [&]() { return functional::ReduceSum(cast_like, ctx->axis, ctx->keepdims, NullOpt); })
                .then(std::bind(functional::Div, dy, std::placeholders::_1))
                .then(std::bind(functional::BroadcastLike, std::placeholders::_1, input, ctx->axis))
                .call());
