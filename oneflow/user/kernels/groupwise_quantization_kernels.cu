@@ -134,7 +134,8 @@ struct LoadCast<uint8_t, half, pack_size, 8,
 };
 
 template<typename Dst, size_t pack_size>
-struct LoadCast<uint8_t, Dst, pack_size, 4> {
+struct LoadCast<uint8_t, Dst, pack_size, 4,
+    typename std::enable_if<pack_size % 8 != 0 || !std::is_same<Dst, half>::value, void>::type> {
   using LoadType = AlignedArray<uint8_t, pack_size / 2>;
   __device__ void Load(const void* src, LoadType* dst) {
     *dst = *reinterpret_cast<const LoadType*>(src);
@@ -147,6 +148,78 @@ struct LoadCast<uint8_t, Dst, pack_size, 4> {
       const uint8_t lo = (q & 0xF);
       dst->elem[i * 2 + 0] = static_cast<Dst>(hi);
       dst->elem[i * 2 + 1] = static_cast<Dst>(lo);
+    }
+  }
+};
+
+template<size_t pack_size>
+struct LoadCast<uint8_t, half, pack_size, 4, typename std::enable_if<pack_size % 8 == 0, void>::type> {
+  using LoadType = AlignedArray<uint32_t, pack_size / 8>;
+  __device__ void Load(const void* src, LoadType* dst) {
+    *dst = *reinterpret_cast<const LoadType*>(src);
+  }
+  __device__ void Cast(const LoadType& src, AlignedArray<half, pack_size>* dst) {
+    static constexpr uint32_t immLut                = (0xf0 & 0xcc) | 0xaa;
+    static constexpr uint32_t MASK                  = 0x000f000f;
+    static constexpr uint32_t I4s_TO_F16s_MAGIC_NUM = 0x64006400;
+
+    AlignedArray<half2, pack_size / 2>* dst_h2 =
+        reinterpret_cast<AlignedArray<half2, pack_size / 2>*>(dst);
+#pragma unroll
+    for (int i = 0; i < pack_size / 8; ++i) {
+      union {
+        uint32_t u32;
+        half2 h2;
+      } u32_h2[4];
+
+      const uint32_t lsb0_4   = src.elem[i];
+      const uint32_t lsb4_8   = src.elem[i] >> 4;
+      const uint32_t lsb8_12  = src.elem[i] >> 8;
+      const uint32_t lsb12_16 = src.elem[i] >> 12;
+
+      // Extract elt_04 (lsb0_4 & 0x000f000f) | 0x64006400
+      asm volatile("lop3.b32 %0, %1, %2, %3, %4;\n"
+                    : "=r"(u32_h2[0].u32)
+                    : "r"(lsb0_4), "n"(MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
+      // Extract elt_15 (lsb4_8 & 0x000f000f) | 0x64006400
+      asm volatile("lop3.b32 %0, %1, %2, %3, %4;\n"
+                    : "=r"(u32_h2[1].u32)
+                    : "r"(lsb4_8), "n"(MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
+      // Extract elt_26 (lsb8_12 & 0x000f000f) | 0x64006400
+      asm volatile("lop3.b32 %0, %1, %2, %3, %4;\n"
+                    : "=r"(u32_h2[2].u32)
+                    : "r"(lsb8_12), "n"(MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
+      // Extract elt_37 (lsb12_16 & 0x000f000f) | 0x64006400
+      asm volatile("lop3.b32 %0, %1, %2, %3, %4;\n"
+                    : "=r"(u32_h2[3].u32)
+                    : "r"(lsb12_16), "n"(MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
+
+      asm volatile("sub.f16x2 %0, %1, %2;\n" : "=r"(u32_h2[0].u32) : "r"(u32_h2[0].u32), "r"(I4s_TO_F16s_MAGIC_NUM));
+      asm volatile("sub.f16x2 %0, %1, %2;\n" : "=r"(u32_h2[1].u32) : "r"(u32_h2[1].u32), "r"(I4s_TO_F16s_MAGIC_NUM));
+      asm volatile("sub.f16x2 %0, %1, %2;\n" : "=r"(u32_h2[2].u32) : "r"(u32_h2[2].u32), "r"(I4s_TO_F16s_MAGIC_NUM));
+      asm volatile("sub.f16x2 %0, %1, %2;\n" : "=r"(u32_h2[3].u32) : "r"(u32_h2[3].u32), "r"(I4s_TO_F16s_MAGIC_NUM));
+
+      union {
+        uint32_t u32;
+        half2 h2;
+      } t;
+
+      asm volatile("prmt.b32 %0,%1,%2,%3;\n"
+                   : "=r"(t.u32)
+                   : "r"(u32_h2[0].u32), "r"(u32_h2[1].u32), "n"(0x1054));
+      dst_h2->elem[4 * i] = t.h2;
+      asm volatile("prmt.b32 %0,%1,%2,%3;\n"
+                   : "=r"(t.u32)
+                   : "r"(u32_h2[2].u32), "r"(u32_h2[3].u32), "n"(0x1054));
+      dst_h2->elem[4 * i + 1] = t.h2;
+      asm volatile("prmt.b32 %0,%1,%2,%3;\n"
+                   : "=r"(t.u32)
+                   : "r"(u32_h2[0].u32), "r"(u32_h2[1].u32), "n"(0x3276));
+      dst_h2->elem[4 * i + 2] = t.h2;
+      asm volatile("prmt.b32 %0,%1,%2,%3;\n"
+                   : "=r"(t.u32)
+                   : "r"(u32_h2[2].u32), "r"(u32_h2[3].u32), "n"(0x3276));
+      dst_h2->elem[4 * i + 3] = t.h2;
     }
   }
 };
@@ -685,6 +758,7 @@ __global__ void QuantizedMatmulBiasGroupK(int32_t M, int32_t N, int32_t K, int32
                                           const AlignedArray<U, q_pack_size>* __restrict__ w,
                                           const T* __restrict__ scale, const T* __restrict__ zero,
                                           const T* __restrict__ bias, T* __restrict__ out) {
+  const int32_t tid = threadIdx.x + blockIdx.x * blockDim.x;
   constexpr int32_t num_warp = block_size / kWarpSize;
   const int32_t warp_id = threadIdx.x / kWarpSize;
   const int32_t lane_id = threadIdx.x % kWarpSize;
