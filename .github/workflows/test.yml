@@ -547,7 +547,7 @@ jobs:
           docker run --gpus=all -d --rm --privileged --shm-size=8g \
             --pids-limit 2000 \
             --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
-            -v ${ONEFLOW_TEST_DATASET_DIR}:/dataset:ro \
+            -v ${ONEFLOW_TEST_DATASET_DIR}:${ONEFLOW_TEST_DATASET_DIR}:ro \
             -v ${ONEFLOW_WHEEL_PATH}:${ONEFLOW_WHEEL_PATH}:ro \
             -v $HOME/test-container-cache/dot-local:/root/.local \
             -v $HOME/test-container-cache/dot-cache:/root/.cache \
@@ -818,7 +818,7 @@ jobs:
           docker run --gpus=all -d --rm --privileged --shm-size=8g \
             --pids-limit ${{ env.THREAD_LIMIT }} \
             --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
-            -v ${ONEFLOW_TEST_DATASET_DIR}:/dataset:ro \
+            -v ${ONEFLOW_TEST_DATASET_DIR}:${ONEFLOW_TEST_DATASET_DIR}:ro \
             -v ${ONEFLOW_WHEEL_PATH}:${ONEFLOW_WHEEL_PATH}:ro \
             -v $HOME/test-container-cache/dot-local:/root/.local \
             -v $HOME/test-container-cache/dot-cache:/root/.cache \
@@ -845,7 +845,7 @@ jobs:
           docker run --gpus=all -d --rm --privileged --shm-size=8g \
             --pids-limit ${{ env.THREAD_LIMIT }} \
             --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
-            -v ${ONEFLOW_TEST_DATASET_DIR}:/dataset:ro \
+            -v ${ONEFLOW_TEST_DATASET_DIR}:${ONEFLOW_TEST_DATASET_DIR}:ro \
             -v ${ONEFLOW_WHEEL_PATH}:${ONEFLOW_WHEEL_PATH}:ro \
             -v $HOME/test-container-cache/dot-local:/root/.local \
             -v $HOME/test-container-cache/dot-cache:/root/.cache \
