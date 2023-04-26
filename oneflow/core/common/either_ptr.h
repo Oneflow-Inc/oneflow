@@ -16,8 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_EITHER_PTR_H_
 #define ONEFLOW_CORE_COMMON_EITHER_PTR_H_
 
-#include <glog/logging.h>
 #include <memory>
+#include "oneflow/core/common/throw.h"
 
 namespace oneflow {
 
