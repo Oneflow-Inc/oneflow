@@ -35,6 +35,7 @@ limitations under the License.
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
@@ -69,7 +70,7 @@ namespace mlir {
 
 const char* getArchVersion() {
   static std::string version;
-  if (version.size()) return version.c_str();
+  if (!version.empty()) return version.c_str();
   cudaDeviceProp prop{};
   cudaError_t err = cudaGetDeviceProperties(&prop, 0);
   if (err != cudaSuccess) {
@@ -84,11 +85,14 @@ namespace {
 
 const std::string& getLibDevice() {
   static std::string p;
-  if (p.size() > 0) return p;
+  if (!p.empty()) return p;
   const auto toolkit_env_name = "CUDA_TOOLKIT_ROOT_DIR";
   p = ::oneflow::GetStringFromEnv(toolkit_env_name, "/usr/local/cuda/")
       + "nvvm/libdevice/libdevice.10.bc";
-  return p;
+  if (llvm::sys::fs::exists(p)) return p;
+  LOG(FATAL) << "Could not find file: " << p
+             << ". Please check you cuda toolkit directory and set CUDA_TOOLKIT_ROOT_DIR "
+                "correctly as an environment variable";
 }
 
 LogicalResult linkLibdevice(llvm::Module& llvmModule, llvm::LLVMContext& llvmContext) {
