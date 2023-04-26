@@ -226,7 +226,7 @@ void TaskNode::InitFromProtoExceptConsumedRegsts(const TaskProto& task_proto) {
 Maybe<void> TaskNode::InitConsumedRegstsFromProto(
     const TaskProto& task_proto,
     const std::function<Maybe<RegstDesc>(int64_t regst_desc_id)>& RegstDesc4Id) {
-  // Step3: init consumed_regst.
+  // init consumed_regst.
   for (const auto& pair : task_proto.consumed_regst_desc_id()) {
     for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
       ConsumeRegst(pair.first, JUST(RegstDesc4Id(regst_desc_id)));
