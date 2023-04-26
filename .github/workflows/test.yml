@@ -1027,8 +1027,9 @@ jobs:
           docker exec -e ONEFLOW_TEST_DIR=diff \
             -e ONEFLOW_TEST_FILES="${{needs.source_info.outputs.changed_python_tests}}" \
             ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
-      - name: Setup upterm session
-        uses: lhotari/action-upterm@v1
+      - name: Sleep
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) }}
+        run: sleep 99999999
       - name: Module API test
         timeout-minutes: 60
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) }}
