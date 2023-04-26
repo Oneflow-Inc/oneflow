@@ -18,7 +18,6 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_JUST_H_
 
 #include <sstream>
-#include <glog/logging.h>
 #include <type_traits>
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/throw.h"

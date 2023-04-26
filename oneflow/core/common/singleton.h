@@ -19,7 +19,7 @@ limitations under the License.
 #include <mutex>
 #include <map>
 #include <memory>
-#include <glog/logging.h>
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/constant.h"
 
