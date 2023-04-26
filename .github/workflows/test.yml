@@ -289,6 +289,9 @@ jobs:
           python-versions: |
             3.7
             3.8
+      - name: Sleep
+        if: ${{ (matrix.entry == 'cpu-asan-ubsan' || matrix.entry == 'cpu-tsan') && !matrix.cache-hit }}
+        run: sleep 99999999
       - uses: Oneflow-Inc/get-oneflow@torch1.13
         name: Build manylinux ${{ matrix.entry }}
         id: build-cpu-sanitizers
