@@ -40,7 +40,7 @@ std::shared_ptr<DisjNode> DisjointSet::find_father(std::shared_ptr<DisjNode>& x)
     auto fa = x->parent();
     auto y = find_father(fa);
     x->set_parent(y);
-    return std::move(y);
+    return y;
   }
 }
 
