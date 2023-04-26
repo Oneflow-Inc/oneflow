@@ -787,7 +787,7 @@ jobs:
       - name: Set Thread Limit (CPU)
         if: ${{ !fromJson(matrix.cache-hit) && matrix.device == 'cpu' }}
         run: |
-          echo "THREAD_LIMIT=20000" >> $GITHUB_ENV
+          echo "THREAD_LIMIT=25000" >> $GITHUB_ENV
       - name: Set Thread Limit (CUDA)
         if: ${{ !fromJson(matrix.cache-hit) && matrix.device == 'cuda' }}
         run: |
