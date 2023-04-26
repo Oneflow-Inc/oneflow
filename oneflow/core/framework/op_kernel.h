@@ -18,7 +18,7 @@ limitations under the License.
 
 #include <memory>
 
-#include <glog/logging.h>
+#include "oneflow/core/common/throw.h"
 
 #include "oneflow/core/framework/util.h"
 #include "oneflow/core/framework/user_op_tensor.h"

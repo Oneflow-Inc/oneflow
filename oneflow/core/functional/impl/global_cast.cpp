@@ -46,6 +46,7 @@ limitations under the License.
 #include "oneflow/core/ccl/ccl.h"
 #include "oneflow/core/common/constant.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
+#include "oneflow/user/kernels/collective_communication/include/broadcast.h"
 
 namespace oneflow {
 namespace one {
@@ -396,7 +397,8 @@ Maybe<Tensor> GlobalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDe
     op = JUST(GetGlobalToGlobalOpExpr(grad_sbp_parallels));
   }
   if (!LazyMode::is_enabled() && JUST(x->nd_sbp()) == nd_sbp
-      && JUST(x->parallel_desc()) == parallel_desc && grad_sbp_parallels.size() == 0) {
+      && JUST(x->parallel_desc()) == parallel_desc
+      && (grad_sbp_parallels.size() == 0 || !autograd::GradMode::is_enabled())) {
     if (copy) { return functional::Identity(x); }
     return x;
   }
@@ -412,12 +414,14 @@ Maybe<Tensor> GlobalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDe
 
 Maybe<Tensor> LocalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDesc> parallel_desc,
                             const std::vector<Symbol<SbpParallel>>& sbp_parallels,
-                            const std::shared_ptr<OpExpr>& op, bool check_meta_hint, bool copy) {
+                            const Optional<Shape>& opt_shape, const Optional<DataType>& opt_dtype,
+                            const std::shared_ptr<OpExpr>& op, bool check_meta_hint, bool sync_data,
+                            bool copy) {
   CHECK_OR_RETURN(!x->is_lazy())
       << Error::RuntimeError()
       << "local_tensor.to_global() is not supported within nn.Graph for now";
   CHECK_OR_RETURN(x->is_local()) << Error::RuntimeError() << "local tensors supported only";
-  std::shared_ptr<one::Tensor> input = x;
+  std::shared_ptr<one::Tensor> input = x->contiguous();
   // copy to right device first if input's device type is wrong
   if (JUST(input->device())->type() != parallel_desc->device_tag()) {
     VLOG(2) << "The device_type of the input tensor is different from placement, now copy it to "
@@ -442,14 +446,21 @@ Maybe<Tensor> LocalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDes
   CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank())
       << Error::UnimplementedError() << "tensor must be on default device of the current rank.";
   Symbol<NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
-  const auto& shape = std::make_shared<Shape>();
   DataType dtype = x->dtype()->data_type();
-  bool sync_and_check_meta = NeedSyncAndCheckShapeAndDtype(check_meta_hint);
-  JUST(GetLogicalShapeAndDataType(shape.get(), &dtype, x->shape(), parallel_desc, nd_sbp,
-                                  sync_and_check_meta));
+
+  std::shared_ptr<Shape> shape = std::make_shared<Shape>();
+  if (opt_shape.has_value() && opt_dtype.has_value()) {
+    shape = JUST(opt_shape);
+    dtype = JUST(opt_dtype);
+  } else {
+    bool sync_and_check_meta = NeedSyncAndCheckShapeAndDtype(check_meta_hint);
+    JUST(GetLogicalShapeAndDataType(shape.get(), &dtype, x->shape(), parallel_desc, nd_sbp,
+                                    sync_and_check_meta));
+  }
+
   auto& attrs =
       THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "sync_data", "inplace_when_sync_data");
-  attrs.SetAllAttrs(*shape, dtype, true, !copy);
+  attrs.SetAllAttrs(*shape, dtype, sync_data, !copy);
   const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(
       *op, {input}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
   return output;
@@ -471,35 +482,26 @@ class LocalToGlobalFunctor {
     JUST(CheckDeviceIdsIsValid(parallel_desc));
     NonRecursiveMetaInfoConsistencyCheckScope no_recursive_meta_info_conisitency_check_scope;
     JUST(MetaInfoConsistencyCheck(parallel_desc, sbp_parallels, 1, /* force_check */ false));
-    CHECK_OR_RETURN(x->is_local())
-        << Error::RuntimeError()
-        << "Expected local tensor for local_to_global but got global tensor!";
-    std::shared_ptr<one::Tensor> input = x->contiguous();
-    // copy to right device first if input's device type is wrong
-    if (JUST(input->device())->type() != parallel_desc->device_tag()) {
-      VLOG(2) << "The device_type of the input tensor is different from placement, now copy it to "
-              << parallel_desc->device_tag();
-      input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank(),
-                                    /*pin_memory=*/false));
-    }
-    // copy to default device of the current rank if input's device type is right but not on default
-    // device
-    bool device_mismatch = JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank();
-    if (copy || device_mismatch) {
-      if (device_mismatch) {
-        VLOG(2) << "The tensor isn't on default device of the current rank, now copy it to "
-                << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
-      }
-      input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank(),
-                                    /*pin_memory=*/false));
-    }
-    Symbol<NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
-    auto& attrs =
-        THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "sync_data", "inplace_when_sync_data");
-    attrs.SetAllAttrs(shape, dtype->data_type(), sync_data, !copy);
     DisableCheckGlobalTensorMetaScope scope{};
-    const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-        *op_, {input}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
+    std::shared_ptr<Tensor> tensor;
+    DeviceType device_type = parallel_desc->device_type();
+    if (ccl::IsBroadcastRegistered(device_type) || !sync_data || device_type == DeviceType::kMeta) {
+      tensor = JUST(LocalToGlobal(x, parallel_desc, sbp_parallels, shape, dtype->data_type(), op_,
+                                  /* check_meta */ false, sync_data, copy));
+    } else {
+      // Assuming that the newly adapted hardware device does not support collective
+      // communication, since local to global may need to synchronize data (through the
+      // broadcast API), if device_type is neither cpu nor cuda, generate global tensor
+      // with the corresponding cpu placement first, then convert the cpu global tensor
+      // to the desired placement.
+      Symbol<ParallelDesc> cpu_parallel_desc =
+          JUST(ReplaceDeviceType(parallel_desc, DeviceType::kCPU));
+      std::shared_ptr<Tensor> cpu_tensor =
+          JUST(LocalToGlobal(x, cpu_parallel_desc, sbp_parallels, shape, dtype->data_type(), op_,
+                             /* check_meta */ false, sync_data, copy));
+      tensor =
+          JUST(GlobalToGlobal(cpu_tensor, parallel_desc, sbp_parallels, GetNoneSbpList(), copy));
+    }
     return tensor;
   }
 
@@ -528,9 +530,9 @@ class ToGlobalFunctor {
       tensor = JUST(GlobalToGlobal(x, parallel_desc, sbp_parallels, grad_sbp_parallels, copy));
     } else {
       DeviceType device_type = parallel_desc->device_type();
-      if (device_type == DeviceType::kCPU || device_type == DeviceType::kCUDA) {
-        tensor = JUST(
-            LocalToGlobal(x, parallel_desc, sbp_parallels, local_to_global_op_, check_meta, copy));
+      if (ccl::IsBroadcastRegistered(device_type)) {
+        tensor = JUST(LocalToGlobal(x, parallel_desc, sbp_parallels, NullOpt, NullOpt,
+                                    local_to_global_op_, check_meta, /* sync_data */ true, copy));
       } else {
         // Assuming that the newly adapted hardware device does not support collective
         // communication, since local to global may need to synchronize data (through the
@@ -539,8 +541,9 @@ class ToGlobalFunctor {
         // to the desired placement.
         Symbol<ParallelDesc> cpu_parallel_desc =
             JUST(ReplaceDeviceType(parallel_desc, DeviceType::kCPU));
-        std::shared_ptr<Tensor> cpu_tensor = JUST(LocalToGlobal(
-            x, cpu_parallel_desc, sbp_parallels, local_to_global_op_, check_meta, copy));
+        std::shared_ptr<Tensor> cpu_tensor =
+            JUST(LocalToGlobal(x, cpu_parallel_desc, sbp_parallels, NullOpt, NullOpt,
+                               local_to_global_op_, check_meta, /* sync_data */ true, copy));
         tensor =
             JUST(GlobalToGlobal(cpu_tensor, parallel_desc, sbp_parallels, GetNoneSbpList(), copy));
       }
