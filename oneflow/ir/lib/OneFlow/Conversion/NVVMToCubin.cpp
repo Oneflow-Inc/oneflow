@@ -118,123 +118,130 @@ const std::string& getArchVersion() {
   return version;
 }
 
+std::optional<std::string> translateToISA(llvm::Module& llvmModule,
+                                          llvm::TargetMachine& targetMachine) {
+  llvmModule.setDataLayout(targetMachine.createDataLayout());
+
+  // TODO(yuhao): optimizeLlvm
+
+  std::string targetISA;
+  llvm::raw_string_ostream stream(targetISA);
+
+  {  // Note: Drop pstream after this to prevent the ISA from being stuck buffering
+    llvm::buffer_ostream pstream(stream);
+    llvm::legacy::PassManager codegenPasses;
+
+    if (targetMachine.addPassesToEmitFile(codegenPasses, pstream, nullptr, llvm::CGFT_AssemblyFile))
+      return std::nullopt;
+
+    codegenPasses.run(llvmModule);
+  }
+  return stream.str();
+}
+
 class NVVMToCubinPass : public NVVMToCubinPassBase<NVVMToCubinPass> {
   std::unique_ptr<llvm::Module> translateToLLVMIR(llvm::LLVMContext& llvmContext) {
     return translateModuleToLLVMIR(getOperation(), llvmContext, "LLVMDialectModule");
   }
 
  public:
-  std::optional<std::string> translateToISA(llvm::Module& llvmModule,
-                                            llvm::TargetMachine& targetMachine) {
-    llvmModule.setDataLayout(targetMachine.createDataLayout());
+  std::unique_ptr<llvm::TargetMachine> createTargetMachine();
+  std::unique_ptr<std::vector<char>> serializeISA(const std::string& isa);
 
-    // TODO: optimizeLlvm
-
-    std::string targetISA;
-    llvm::raw_string_ostream stream(targetISA);
-
-    {  // Note: Drop pstream after this to prevent the ISA from being stuck buffering
-      llvm::buffer_ostream pstream(stream);
-      llvm::legacy::PassManager codegenPasses;
-
-      if (targetMachine.addPassesToEmitFile(codegenPasses, pstream, nullptr,
-                                            llvm::CGFT_AssemblyFile))
-        return std::nullopt;
-
-      codegenPasses.run(llvmModule);
-    }
-    return stream.str();
-  }
-  std::unique_ptr<llvm::TargetMachine> createTargetMachine() {
-    Location loc = getOperation().getLoc();
-    std::string error;
-    const llvm::Target* target = ::llvm::TargetRegistry::lookupTarget(triple.str(), error);
-    if (!target) {
-      emitError(loc, Twine("failed to lookup target: ") + error);
-      return {};
-    }
-    llvm::TargetMachine* machine =
-        target->createTargetMachine(triple.str(), chip.str(), features.str(), {}, {});
-    if (!machine) {
-      emitError(loc, "failed to create target machine");
-      return {};
-    }
-
-    return std::unique_ptr<llvm::TargetMachine>{machine};
-  }
-  std::unique_ptr<std::vector<char>> serializeISA(const std::string& isa) {
-    Location loc = getOperation().getLoc();
-    char jitErrorBuffer[4096] = {0};
-
-    RETURN_ON_CUDA_ERROR(cuInit(0));
-
-    // Note: Linking requires a device context.
-    CUdevice device;
-    RETURN_ON_CUDA_ERROR(cuDeviceGet(&device, 0));
-    CUcontext context;
-    RETURN_ON_CUDA_ERROR(cuCtxCreate(&context, 0, device));
-    CUlinkState linkState;
-
-    CUjit_option jitOptions[] = {CU_JIT_ERROR_LOG_BUFFER, CU_JIT_ERROR_LOG_BUFFER_SIZE_BYTES};
-    void* jitOptionsVals[] = {jitErrorBuffer, reinterpret_cast<void*>(sizeof(jitErrorBuffer))};
-
-    RETURN_ON_CUDA_ERROR(cuLinkCreate(2,              /* number of jit options */
-                                      jitOptions,     /* jit options */
-                                      jitOptionsVals, /* jit option values */
-                                      &linkState));
-
-    auto kernelName = getOperation().getName().str();
-    RETURN_ON_CUDA_ERROR(cuLinkAddData(linkState, CUjitInputType::CU_JIT_INPUT_PTX,
-                                       const_cast<void*>(static_cast<const void*>(isa.c_str())),
-                                       isa.length(), kernelName.c_str(),
-                                       0,       /* number of jit options */
-                                       nullptr, /* jit options */
-                                       nullptr  /* jit option values */
-                                       ));
-
-    void* cubinData;
-    size_t cubinSize;
-    RETURN_ON_CUDA_ERROR(cuLinkComplete(linkState, &cubinData, &cubinSize));
-
-    char* cubinAsChar = static_cast<char*>(cubinData);
-    auto result = std::make_unique<std::vector<char>>(cubinAsChar, cubinAsChar + cubinSize);
-
-    RETURN_ON_CUDA_ERROR(cuLinkDestroy(linkState));
-    RETURN_ON_CUDA_ERROR(cuCtxDestroy(context));
-
-    return result;
-  }
-
-  void runOnOperation() override {
-    llvm::LLVMContext llvmContext;
-    std::unique_ptr<llvm::Module> llvmModule = translateToLLVMIR(llvmContext);
-    if (!llvmModule) return signalPassFailure();
-    if (failed(linkLibdevice(*llvmModule, llvmContext))) { return signalPassFailure(); }
-
-    // Lower the LLVM IR module to target ISA.
-    std::unique_ptr<llvm::TargetMachine> targetMachine = createTargetMachine();
-    if (!targetMachine) return signalPassFailure();
-
-    std::optional<std::string> maybeTargetISA = translateToISA(*llvmModule, *targetMachine);
-
-    if (!maybeTargetISA.has_value()) return signalPassFailure();
-
-    std::string targetISA = std::move(*maybeTargetISA);
-
-    // Serialize the target ISA.
-    std::unique_ptr<std::vector<char>> blob = serializeISA(targetISA);
-    if (!blob) return signalPassFailure();
-
-    // Add the blob as module attribute.
-    auto attr = StringAttr::get(&getContext(), StringRef(blob->data(), blob->size()));
-    getOperation()->setAttr(gpu::getCubinAnnotation(), attr);
-  }
+  void runOnOperation() override;
 
   void getDependentDialects(::mlir::DialectRegistry& registry) const override {
     registerLLVMDialectTranslation(registry);
     registerNVVMDialectTranslation(registry);
   }
 };
+
+std::unique_ptr<llvm::TargetMachine> NVVMToCubinPass::createTargetMachine() {
+  Location loc = getOperation().getLoc();
+  std::string error;
+  const llvm::Target* target = ::llvm::TargetRegistry::lookupTarget(triple.str(), error);
+  if (!target) {
+    emitError(loc, Twine("failed to lookup target: ") + error);
+    return {};
+  }
+  llvm::TargetMachine* machine =
+      target->createTargetMachine(triple.str(), chip.str(), features.str(), {}, {});
+  if (!machine) {
+    emitError(loc, "failed to create target machine");
+    return {};
+  }
+
+  return std::unique_ptr<llvm::TargetMachine>{machine};
+}
+
+std::unique_ptr<std::vector<char>> NVVMToCubinPass::serializeISA(const std::string& isa) {
+  Location loc = getOperation().getLoc();
+  char jitErrorBuffer[4096] = {0};
+
+  RETURN_ON_CUDA_ERROR(cuInit(0));
+
+  // Note: Linking requires a device context.
+  CUdevice device;
+  RETURN_ON_CUDA_ERROR(cuDeviceGet(&device, 0));
+  CUcontext context;
+  RETURN_ON_CUDA_ERROR(cuCtxCreate(&context, 0, device));
+  CUlinkState linkState;
+
+  CUjit_option jitOptions[] = {CU_JIT_ERROR_LOG_BUFFER, CU_JIT_ERROR_LOG_BUFFER_SIZE_BYTES};
+  void* jitOptionsVals[] = {jitErrorBuffer, reinterpret_cast<void*>(sizeof(jitErrorBuffer))};
+
+  RETURN_ON_CUDA_ERROR(cuLinkCreate(2,              /* number of jit options */
+                                    jitOptions,     /* jit options */
+                                    jitOptionsVals, /* jit option values */
+                                    &linkState));
+
+  auto kernelName = getOperation().getName().str();
+  RETURN_ON_CUDA_ERROR(cuLinkAddData(linkState, CUjitInputType::CU_JIT_INPUT_PTX,
+                                     const_cast<void*>(static_cast<const void*>(isa.c_str())),
+                                     isa.length(), kernelName.c_str(),
+                                     0,       /* number of jit options */
+                                     nullptr, /* jit options */
+                                     nullptr  /* jit option values */
+                                     ));
+
+  void* cubinData;
+  size_t cubinSize;
+  RETURN_ON_CUDA_ERROR(cuLinkComplete(linkState, &cubinData, &cubinSize));
+
+  char* cubinAsChar = static_cast<char*>(cubinData);
+  auto result = std::make_unique<std::vector<char>>(cubinAsChar, cubinAsChar + cubinSize);
+
+  RETURN_ON_CUDA_ERROR(cuLinkDestroy(linkState));
+  RETURN_ON_CUDA_ERROR(cuCtxDestroy(context));
+
+  return result;
+}
+
+void NVVMToCubinPass::runOnOperation() {
+  llvm::LLVMContext llvmContext;
+  std::unique_ptr<llvm::Module> llvmModule = translateToLLVMIR(llvmContext);
+  if (!llvmModule) return signalPassFailure();
+  if (failed(linkLibdevice(*llvmModule, llvmContext))) { return signalPassFailure(); }
+
+  // Note: Lower the LLVM IR module to target ISA.
+  std::unique_ptr<llvm::TargetMachine> targetMachine = createTargetMachine();
+  if (!targetMachine) return signalPassFailure();
+
+  std::optional<std::string> maybeTargetISA = translateToISA(*llvmModule, *targetMachine);
+
+  if (!maybeTargetISA.has_value()) return signalPassFailure();
+
+  std::string targetISA = std::move(*maybeTargetISA);
+
+  // Note: Serialize the target ISA.
+  std::unique_ptr<std::vector<char>> blob = serializeISA(targetISA);
+  if (!blob) return signalPassFailure();
+
+  // Note: Add the blob as module attribute.
+  auto attr = StringAttr::get(&getContext(), StringRef(blob->data(), blob->size()));
+  getOperation()->setAttr(gpu::getCubinAnnotation(), attr);
+}
+
 }  // namespace
 
 std::unique_ptr<mlir::Pass> createNVVMToCubinPass() { return std::make_unique<NVVMToCubinPass>(); }
@@ -247,4 +254,5 @@ void InitializeLLVMNVPTXBackend() {
 }
 
 }  // namespace mlir
+
 #endif  // WITH_MLIR_CUDA_CODEGEN
