@@ -64,7 +64,6 @@ limitations under the License.
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
-#include <glog/logging.h>
 #include <numeric>
 #include <any>
 #include <functional>
