@@ -7,6 +7,8 @@
 
 namespace mlir {
 
+const std::string& getArchVersion();
+
 namespace gpu {
 
 inline std::string getCubinAnnotation() { return "gpu.binary"; }

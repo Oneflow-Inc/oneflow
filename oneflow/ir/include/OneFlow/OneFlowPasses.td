@@ -8,7 +8,7 @@ def NVVMToCubinPass : InterfacePass<"nvvm-to-cubin", "SymbolOpInterface"> {
   let constructor = "mlir::createNVVMToCubinPass()";
   let options = [
     Option<"triple", "triple", "StringRef", "\"nvptx64-nvidia-cuda\"", "Target triple">,
-    Option<"chip", "chip", "StringRef", "\"sm_35\"", "Target architecture">,
+    Option<"chip", "chip", "StringRef", "\"sm_\" + getArchVersion()", "Target architecture">,
     Option<"features", "features", "StringRef", "\"+ptx60\"", "Target features">,
   ];
 }

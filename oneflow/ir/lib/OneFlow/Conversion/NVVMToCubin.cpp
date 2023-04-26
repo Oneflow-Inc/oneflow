@@ -29,6 +29,7 @@
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
 
 #include <cuda.h>
+#include <cuda_runtime_api.h>
 
 static void emitCudaError(const llvm::Twine& expr, const char* buffer, CUresult result,
                           mlir::Location loc) {
@@ -87,6 +88,19 @@ LogicalResult linkLibdevice(llvm::Module& llvmModule, llvm::LLVMContext& llvmCon
   }
 
   return success();
+}
+
+const std::string& getArchVersion() {
+  static std::string version;
+  if (version.size()) return version;
+  cudaDeviceProp prop{};
+  cudaError_t err = cudaGetDeviceProperties(&prop, 0);
+  if (err != cudaSuccess) {
+    printf("%s\n", cudaGetErrorString(err));
+    exit(1);
+  }
+  version = std::to_string(prop.major) + std::to_string(prop.minor);
+  return version;
 }
 
 class NVVMToCubinPass : public NVVMToCubinPassBase<NVVMToCubinPass> {
