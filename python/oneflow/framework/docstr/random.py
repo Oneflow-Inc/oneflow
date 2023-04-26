@@ -193,6 +193,7 @@ add_docstr(
 add_docstr(
     oneflow._C.normal,
     r"""
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.normal.html
     normal(mean, std, *, generator=None, out=None) -> Tensor
 
     Returns a tensor of random numbers drawn from separate normal distributions
