@@ -842,7 +842,7 @@ jobs:
         # For unknown reason we need to disable the requirement from nvidia docker
         # by -e NVIDIA_DISABLE_REQUIRE=true
         run: |
-          docker run -d --rm --privileged --shm-size=8g \
+          docker run --gpus=all -d --rm --privileged --shm-size=8g \
             --pids-limit ${{ env.THREAD_LIMIT }} \
             --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
             -v ${ONEFLOW_TEST_DATASET_DIR}:/dataset:ro \
