@@ -75,7 +75,8 @@ Maybe<one::Generator> GetGeneratorForLazyOrGlobal(const std::shared_ptr<one::Gen
                                                   const Optional<Symbol<ParallelDesc>>& placement,
                                                   const Optional<Symbol<NdSbp>>& nd_sbp) {
   bool is_global = placement.has_value() && nd_sbp.has_value();
-  if (!is_lazy && !is_global) { return generator; }
+  auto make_new_generator = ParseBooleanFromEnv("ONEFLOW_GLOBAL_MAKE_NEW_GENERATOR", true);
+  if (!is_lazy && (!is_global || (!make_new_generator))) { return generator; }
 
   auto cpu_gen = JUST(generator->Get<ep::CPUGenerator>(0));
   CHECK_OR_RETURN(cpu_gen) << "expect a CPUGenerator";

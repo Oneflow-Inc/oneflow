@@ -23,10 +23,13 @@ limitations under the License.
 #include "oneflow/user/kernels/collective_communication/include/broadcast.h"
 #include "oneflow/core/ep/include/primitive/permute.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
 namespace {
+bool NcclUseCopy() { return ParseBooleanFromEnv("ONEFLOW_EAGER_NCCL_USE_COPY", false); }
 
 auto AllReduceCollectiveCommunicationExists() {
   return hob::make_custom("AllReduceCollectiveCommunicationExists",
@@ -123,6 +126,11 @@ class EagerCclAllReduceKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->shape_view(), out->shape_view()) << kOfBugIssueUploadPrompt;
     CHECK_EQ(in->data_type(), out->data_type()) << kOfBugIssueUploadPrompt;
+    if (NcclUseCopy() && ctx->device_type() == DeviceType::kCUDA) {
+      Memcpy<DeviceType::kCUDA>(ctx->stream(), out->mut_dptr(), in->dptr(),
+                                in->shape_view().elem_cnt() * GetSizeOfDataType(in->data_type()));
+      return;
+    }
 
     ccl::ReduceType reduce_type = ccl::kSum;
     if (in->data_type() == kBool) { reduce_type = ccl::kMax; }
@@ -196,6 +204,11 @@ class EagerCclAllGatherKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->data_type(), out->data_type()) << kOfBugIssueUploadPrompt;
+    if (NcclUseCopy() && ctx->device_type() == DeviceType::kCUDA) {
+      Memset<DeviceType::kCUDA>(ctx->stream(), out->mut_dptr(), 0,
+                                out->shape_view().elem_cnt() * GetSizeOfDataType(out->data_type()));
+      return;
+    }
     std::unique_ptr<ccl::AllGather> all_gather =
         ccl::NewCollectiveCommunication<ccl::AllGather>(ctx->device_type(), in->data_type());
     all_gather->Launch(ctx->stream(), in->dptr(), out->mut_dptr(), in->shape_view().elem_cnt(),

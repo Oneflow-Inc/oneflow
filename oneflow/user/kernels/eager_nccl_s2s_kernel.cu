@@ -21,13 +21,14 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/ep/include/primitive/permute.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
-
+#include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/common/util.h"
 #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
 
 namespace oneflow {
 
 namespace {
-
+bool NcclUseCopy() { return ParseBooleanFromEnv("ONEFLOW_EAGER_NCCL_USE_COPY", false); }
 class EagerNcclOpKernelCache final : public user_op::OpKernelCache {
  public:
   explicit EagerNcclOpKernelCache(user_op::KernelCacheContext* ctx) { Init(ctx); }
@@ -112,6 +113,11 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
     const int64_t elem_cnt = in->shape_view().elem_cnt();
     const int64_t in_split_axis = ctx->Attr<int64_t>("in_split_axis");
     const int64_t out_split_axis = ctx->Attr<int64_t>("out_split_axis");
+    if (NcclUseCopy()) {
+      Memset<DeviceType::kCUDA>(ctx->stream(), out->mut_dptr(), 0,
+                                out->shape_view().elem_cnt() * GetSizeOfDataType(out->data_type()));
+      return;
+    }
 
     DimVector logical_shape_dim_vec;
     in->shape_view().ToDimVector(&logical_shape_dim_vec);
