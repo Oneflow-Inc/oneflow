@@ -15,7 +15,12 @@ limitations under the License.
 */
 #pragma once
 
+#include "oneflow/core/common/env_var/remat.h"
 #include "oneflow/core/common/util.h"
+
+#define VLOG_REMAT(verbose_level) \
+  if (Singleton<remat::Env>::Get()->log_enabled()) \
+    VLOG(verbose_level)
 
 namespace oneflow {
 
@@ -64,6 +69,8 @@ class Env {
 
   void set_small_pieces_optimization(bool enabled) { small_pieces_optimization_ = enabled; }
   bool is_small_pieces_optimization_enabled() const { return small_pieces_optimization_; }
+
+  bool log_enabled() const { return EnvBool<ONEFLOW_REMAT_LOG>(); }
 
  private:
   double time_now_ = 0;

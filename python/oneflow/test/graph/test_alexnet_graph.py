@@ -223,6 +223,7 @@ class TestAlexnetGraph(oneflow.unittest.TestCase):
         args.device = "cuda"
         _test_alexnet_graph_repr(test_case, args)
 
+    @unittest.skip("skip for now, becase it failed 2 times in past week")
     def test_alexnet_graph_gpu(test_case):
         args, unknown_args = _parse_args()
         args.device = "cuda"

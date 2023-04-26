@@ -594,6 +594,10 @@ static PyObject* PyTensorObject_dtype(PyObject* self, void* unused) {
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_is_cpu(PyObject* self, void* unused) {
+  return functional::CastToPyObject(PyTensor_Unpack(self)->is_cpu());
+}
+
 static PyObject* PyTensorObject_is_cuda(PyObject* self, void* unused) {
   return functional::CastToPyObject(PyTensor_Unpack(self)->is_cuda());
 }
@@ -701,6 +705,7 @@ static PyGetSetDef PyTensorObject_properties[] = {
     {PYGETSET_NAME("ndim"), (getter)PyTensorObject_ndim, NULL, NULL, NULL},
     {PYGETSET_NAME("shape"), (getter)PyTensorObject_shape, NULL, NULL, NULL},
     {PYGETSET_NAME("dtype"), (getter)PyTensorObject_dtype, NULL, NULL, NULL},
+    {PYGETSET_NAME("is_cpu"), (getter)PyTensorObject_is_cpu, NULL, NULL, NULL},
     {PYGETSET_NAME("is_cuda"), (getter)PyTensorObject_is_cuda, NULL, NULL, NULL},
     {PYGETSET_NAME("grad"), (getter)PyTensorObject_grad, (setter)PyTensorObject_set_grad, NULL,
      NULL},
