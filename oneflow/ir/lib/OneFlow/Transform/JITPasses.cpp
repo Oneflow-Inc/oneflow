@@ -156,8 +156,7 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
       builder.create<func::ReturnOp>(entryOp->getLoc(), mappedExits);
 
       for (auto argument : block->getArguments()) {
-        if (auto found =
-                outliner.mappingReversed.lookupOrNull(argument)) {
+        if (auto found = outliner.mappingReversed.lookupOrNull(argument)) {
           entries.push_back(found);
           argumentTypes.push_back(argument.getType());
         } else {
