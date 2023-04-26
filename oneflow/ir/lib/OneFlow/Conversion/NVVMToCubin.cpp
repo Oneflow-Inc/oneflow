@@ -90,9 +90,8 @@ const std::string& getLibDevice() {
   p = ::oneflow::GetStringFromEnv(toolkit_env_name, "/usr/local/cuda/")
       + "nvvm/libdevice/libdevice.10.bc";
   if (llvm::sys::fs::exists(p)) return p;
-  LOG(FATAL) << "Could not find file: " << p
-             << ". Please check you cuda toolkit directory and set CUDA_TOOLKIT_ROOT_DIR "
-                "correctly as an environment variable";
+  LOG(FATAL) << "Could not find file: " << p << ". Please check you cuda toolkit directory and set "
+             << toolkit_env_name << " correctly as an environment variable";
 }
 
 LogicalResult linkLibdevice(llvm::Module& llvmModule, llvm::LLVMContext& llvmContext) {
