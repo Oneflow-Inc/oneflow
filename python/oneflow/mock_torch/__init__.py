@@ -248,6 +248,24 @@ class DummyModule(ModuleType):
             )
         return False
 
+    def __enter__(self):
+        if _importer.verbose:
+            print(
+                f'"{self.__name__}" is a dummy object, and does not support __enter__.'
+            )
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        if _importer.verbose:
+            print(
+                f'"{self.__name__}" is a dummy object, and does not support __exit__.'
+            )
+
+    def __subclasscheck__(self, subclass):
+        return False
+
+    def __instancecheck__(self, instance):
+        return False
+
 
 class enable:
     def __init__(

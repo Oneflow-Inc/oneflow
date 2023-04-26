@@ -180,6 +180,12 @@ class TestMock(flow.unittest.TestCase):
         test_case.assertTrue("safetensors._safetensors_rust" in sys.modules)
         import safetensors
 
+    def test_isinstance(test_case):
+        with mock.enable(lazy=True):
+            import torch
+
+            test_case.assertFalse(isinstance(int, torch._six.string_class))
+
 
 # MUST use pytest to run this test
 def test_verbose(capsys):
