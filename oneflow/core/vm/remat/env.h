@@ -72,7 +72,7 @@ class Env {
   int forced_eviction_num_ = 0;
   int recomputation_num_ = 0;
 
-  int budget_in_bytes_ = 0;
+  size_t budget_in_bytes_ = 0;
   bool small_pieces_optimization_ = true;
 };
 
