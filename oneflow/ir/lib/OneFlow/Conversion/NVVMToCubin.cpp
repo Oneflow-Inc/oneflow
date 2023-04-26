@@ -66,6 +66,20 @@ static void emitCudaError(const llvm::Twine& expr, const char* buffer, CUresult 
   } while (false)
 
 namespace mlir {
+
+const char* getArchVersion() {
+  static std::string version;
+  if (version.size()) return version.c_str();
+  cudaDeviceProp prop{};
+  cudaError_t err = cudaGetDeviceProperties(&prop, 0);
+  if (err != cudaSuccess) {
+    printf("%s\n", cudaGetErrorString(err));
+    exit(1);
+  }
+  version = "sm_" + std::to_string(prop.major) + std::to_string(prop.minor);
+  return version.c_str();
+}
+
 namespace {
 
 const std::string& getLibDevice() {
@@ -105,18 +119,6 @@ LogicalResult linkLibdevice(llvm::Module& llvmModule, llvm::LLVMContext& llvmCon
   return success();
 }
 
-const std::string& getArchVersion() {
-  static std::string version;
-  if (version.size()) return version;
-  cudaDeviceProp prop{};
-  cudaError_t err = cudaGetDeviceProperties(&prop, 0);
-  if (err != cudaSuccess) {
-    printf("%s\n", cudaGetErrorString(err));
-    exit(1);
-  }
-  version = std::to_string(prop.major) + std::to_string(prop.minor);
-  return version;
-}
 
 std::optional<std::string> translateToISA(llvm::Module& llvmModule,
                                           llvm::TargetMachine& targetMachine) {
@@ -254,5 +256,18 @@ void InitializeLLVMNVPTXBackend() {
 }
 
 }  // namespace mlir
+
+#else
+
+#include <string>
+
+namespace mlir {
+
+const std::string& getArchVersion() {
+  return "[unsupported]"
+}
+
+}  // namespace mlir
+
 
 #endif  // WITH_MLIR_CUDA_CODEGEN

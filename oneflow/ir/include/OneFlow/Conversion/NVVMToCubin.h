@@ -22,7 +22,7 @@ limitations under the License.
 
 namespace mlir {
 
-const std::string& getArchVersion();
+const char* getArchVersion();
 
 namespace gpu {
 
