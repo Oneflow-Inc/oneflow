@@ -46,12 +46,12 @@ def _grouped(xs, weights, biases):
 def _test_grouped_matmul_bias(test_case, dtype, problems, bias):
 
     xs = [
-        flow.randn((m, k), device="cuda", dtype=dtype) for (m, n, k) in problems
-    ] / 10.0
+        flow.randn((m, k), device="cuda", dtype=dtype) / 10.0 for (m, n, k) in problems
+    ]
     ws = [
-        flow.randn((n, k), device="cuda", dtype=dtype) for (m, n, k) in problems
-    ] / 10.0
-    bs = [flow.randn((n), device="cuda", dtype=dtype) for (m, n, k) in problems] / 10.0
+        flow.randn((n, k), device="cuda", dtype=dtype) / 10.0 for (m, n, k) in problems
+    ]
+    bs = [flow.randn((n), device="cuda", dtype=dtype) / 10.0 for (m, n, k) in problems]
 
     ref_out = _ref(xs, ws, bs if bias else None)
     grouped_out = _grouped(xs, ws, bs if bias else None)
