@@ -65,7 +65,7 @@ class Outliner {
   void cloneOpsToNewBody(Operation* op, bool defer = false) {
     if (visitedOps.contains(op)) { return; }
     for (auto operand : op->getOperands()) {
-      if (!mapping.lookup(operand)) {
+      if (!mapping.lookupOrNull(operand)) {
         if (auto defOp = operand.getDefiningOp()) {
           if (isOneFlowOp(defOp)) {
             entries.insert(operand);
@@ -156,7 +156,7 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
       builder.create<func::ReturnOp>(entryOp->getLoc(), mappedExits);
 
       for (auto argument : block->getArguments()) {
-        if (auto found = outliner.mappingReversed.lookup(argument.cast<::mlir::Value>())) {
+        if (auto found = outliner.mappingReversed.lookupOrNull(static_cast<::mlir::Value>(argument))) {
           entries.push_back(found);
           argumentTypes.push_back(argument.getType());
         } else {
