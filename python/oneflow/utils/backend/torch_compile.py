@@ -42,10 +42,12 @@ def register_ofrt():
         if not enable_graph:
             oneflow_fn = of_gm.forward
         else:
+
             @flow.nn.Graph.trace
             def oneflow_fn(inputs):
                 outs = of_gm.forward(inputs)
                 return outs
+
             oneflow_fn.debug(1)
 
         def from_to_torch(inputs):

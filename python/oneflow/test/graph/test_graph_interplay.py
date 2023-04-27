@@ -42,6 +42,7 @@ def _test_relu(test_case, device):
     eager_out = torch.relu(x)
 
     os.environ["ofrt_enable_graph"] = "1"
+
     @torch.compile(backend="ofrt")
     def fn(x):
         y = torch.relu(x)
