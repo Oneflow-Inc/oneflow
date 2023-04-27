@@ -19,7 +19,9 @@ limitations under the License.
 #include "OneFlow/OneFlowUtils.h"
 #include "OneFlow/Passes.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+
 namespace mlir {
+
 namespace oneflow {
 
 namespace {
@@ -207,4 +209,5 @@ std::unique_ptr<Pass> createOutlineJitFunctionPass() {
 }
 
 }  // namespace oneflow
+
 }  // namespace mlir

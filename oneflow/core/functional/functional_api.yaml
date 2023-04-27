@@ -389,8 +389,8 @@
 - name: "reduce_sum"
   signature:
     [
-      "Tensor (Tensor x, Int32List[1] dim, Bool keepdim=False) => ReduceSum",
-      "Tensor (Tensor x) => ReduceSumWhole",
+      "Tensor (Tensor x, Int32List[1] dim, Bool keepdim=False, *, DataType dtype=None) => ReduceSum",
+      "Tensor (Tensor x, *, DataType dtype=None) => ReduceSumWhole",
     ]
   bind_python: True
 
