@@ -19,8 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 
 #define VLOG_REMAT(verbose_level) \
-  if (Singleton<remat::Env>::Get()->log_enabled()) \
-    VLOG(verbose_level)
+  if (Singleton<remat::Env>::Get()->log_enabled()) VLOG(verbose_level)
 
 namespace oneflow {
 
