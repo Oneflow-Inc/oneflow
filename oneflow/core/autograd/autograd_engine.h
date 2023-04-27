@@ -63,7 +63,7 @@ class FunctionNode {
   const std::shared_ptr<Scope>& scope() const { return scope_; }
   void set_scope(const std::shared_ptr<Scope>& scope) { scope_ = scope; }
   void set_variable(const std::weak_ptr<Tensor>& variable) { variable_ = variable; }
-  const Maybe<std::shared_ptr<Tensor>> Variable() const {
+  const Maybe<Tensor> Variable() const {
     if (!variable_.lock()) { THROW(RuntimeError) << "The tensor has already been deleted!"; }
     return variable_.lock();
   }
