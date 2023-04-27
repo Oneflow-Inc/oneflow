@@ -27,8 +27,8 @@ import oneflow.unittest
 class TestImageDecode(flow.unittest.TestCase):
     def test_image_decode(test_case):
         images = [
-            "/dataset/mscoco_2017/val2017/000000000139.jpg",
-            "/dataset/mscoco_2017/val2017/000000000632.jpg",
+            flow.unittest.dataset_dir("mscoco_2017/val2017/000000000139.jpg"),
+            flow.unittest.dataset_dir("mscoco_2017/val2017/000000000632.jpg"),
         ]
         image_files = [open(im, "rb") for im in images]
         images_bytes = [imf.read() for imf in image_files]
