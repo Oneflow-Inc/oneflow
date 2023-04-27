@@ -3,6 +3,18 @@
 
 include "OneFlow/OneFlowOps.td"
 
+#ifdef WITH_MLIR_CUDA_CODEGEN
+def NVVMToCubinPass : InterfacePass<"nvvm-to-cubin", "SymbolOpInterface"> {
+  let summary = "convert nvvm ir to cubin";
+  let constructor = "mlir::createNVVMToCubinPass()";
+  let options = [
+    Option<"triple", "triple", "StringRef", "\"nvptx64-nvidia-cuda\"", "Target triple">,
+    Option<"chip", "chip", "StringRef", "getArchVersion()", "Target architecture">,
+    Option<"features", "features", "StringRef", "\"+ptx60\"", "Target features">,
+  ];
+}
+#endif // WITH_MLIR_CUDA_CODEGEN
+
 def LowerOneFlowToTosaPass : Pass<"lower-oneflow-to-tosa", "ModuleOp"> {
   let summary = "lower oneflow dialect to tosa dialect";
   let constructor = "mlir::oneflow::createLowerOneFlowToTosaPass()";
