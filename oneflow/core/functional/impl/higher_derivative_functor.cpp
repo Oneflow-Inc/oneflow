@@ -91,6 +91,20 @@ class CoshGradGradFunctor {
   }
 };
 
+class TanhGradGradFunctor {
+ public:
+  // dx = sech^2(x), ddx = -2*sech^2(x)*tanh(x) = dydx*tanh(x)*(-2)
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    auto r = sequence_function(functional::Mul)
+                 .then([](const std::shared_ptr<Tensor>& input) {
+                   return functional::ScalarMul(Scalar(-2), input);
+                 })
+                 .call(dydx, x);
+    return r;
+  }
+};
+
 class AsinGradGradFunctor {
  public:
   // dx = 1/sqrt(1-x*x)=rsqrt(1-x*x), ddx = rsqrt_grad(1-x*x)*(-2x)
@@ -549,6 +563,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TanGradGradFunctor>("TanGradGrad");
   m.add_functor<impl::SinhGradGradFunctor>("SinhGradGrad");
   m.add_functor<impl::CoshGradGradFunctor>("CoshGradGrad");
+  m.add_functor<impl::TanhGradGradFunctor>("TanhGradGrad");
   m.add_functor<impl::AsinGradGradFunctor>("AsinGradGrad");
   m.add_functor<impl::AcosGradGradFunctor>("AcosGradGrad");
   m.add_functor<impl::AtanGradGradFunctor>("AtanGradGrad");

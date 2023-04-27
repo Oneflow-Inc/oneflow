@@ -99,15 +99,8 @@ class TanhGradGradCls : public OpExprGradFunction<UnaryMathGradGradState> {
     const auto& out_grad = JUST(VectorAt(out_grads, 0));
 
     if (ctx->input_requires_grad) {
-      const auto& dy = JUST(VectorAt(ctx->SavedTensors(), 1));
-      (*in_grads)[0] = JUST(functional::sequence_function(functional::Mul)
-                                .then([](const std::shared_ptr<one::Tensor>& input) {
-                                  return functional::ScalarMul(Scalar(-2), input);
-                                })
-                                .then([dy](const std::shared_ptr<one::Tensor>& input) {
-                                  return functional::Mul(dy, input);
-                                })
-                                .call(input, out_grad));
+      const auto& dydx = JUST(VectorAt(ctx->SavedTensors(), 1));
+      (*in_grads)[0] = JUST(functional::Mul(out_grad, JUST(functional::TanhGradGrad(input, dydx))));
     }
     if (ctx->grad_requires_grad) {
       (*in_grads)[1] = JUST(functional::sequence_function(functional::Square)
