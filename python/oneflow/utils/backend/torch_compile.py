@@ -13,12 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
 import oneflow
 from .torch_fx_to_oneflow import to_of_transform
 
 
-def register_oneflowrt():
-    from typing import List
+def register_ofrt():
+    from typing import List, Optional, Dict, Any
     import torch
     from torch import fx
     from torch._dynamo.backends.registry import register_backend
@@ -26,7 +27,7 @@ def register_oneflowrt():
 
     @register_backend
     @fake_tensor_unsupported
-    def oneflowrt(gm: torch.fx.GraphModule, example_inputs: List[torch.Tensor]):
+    def ofrt(gm: torch.fx.GraphModule, example_inputs: List[torch.Tensor]):
         # TODO(): fxGraphModule to nn.Graph
         print("my_compiler() called with FX graph:")
         gm.graph.print_tabular()
@@ -36,12 +37,16 @@ def register_oneflowrt():
 
         of_gm = to_of_transform(gm)
 
-        @flow.nn.Graph.trace
-        def oneflow_fn(inputs):
-            outs = of_gm.forward(inputs)
-            return outs
+        enable_graph = bool(os.environ.get("ofrt_enable_graph", False))
 
-        oneflow_fn.debug(1)
+        if not enable_graph:
+            oneflow_fn = of_gm.forward
+        else:
+            @flow.nn.Graph.trace
+            def oneflow_fn(inputs):
+                outs = of_gm.forward(inputs)
+                return outs
+            oneflow_fn.debug(1)
 
         def from_to_torch(inputs):
             flow_inputs = flow.utils.tensor.from_torch(inputs)

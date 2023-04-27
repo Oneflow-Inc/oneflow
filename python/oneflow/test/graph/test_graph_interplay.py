@@ -23,7 +23,7 @@ import oneflow.unittest
 def _test_relu(test_case, device):
     from typing import List
     import torch
-    from oneflow.utils.backend.torch_compile import register_oneflowrt
+    from oneflow.utils.backend.torch_compile import register_ofrt
 
     input_arr = np.array(
         [
@@ -41,7 +41,8 @@ def _test_relu(test_case, device):
     x = torch.tensor(input_arr, device=device)
     eager_out = torch.relu(x)
 
-    @torch.compile(backend="oneflowrt")
+    os.environ["ofrt_enable_graph"] = "1"
+    @torch.compile(backend="ofrt")
     def fn(x):
         y = torch.relu(x)
         return y
@@ -68,7 +69,7 @@ def _test_relu(test_case, device):
 def _test_linear(test_case, device):
     from typing import List
     import torch
-    from oneflow.utils.backend.torch_compile import register_oneflowrt
+    from oneflow.utils.backend.torch_compile import register_ofrt
 
     linear = torch.nn.Linear(3, 8, False)
     linear = linear.to(device)
@@ -89,7 +90,7 @@ def _test_linear(test_case, device):
     torch.nn.init.constant_(linear.weight, 2.3)
     eager_out = linear(x)
 
-    @torch.compile(backend="oneflowrt")
+    @torch.compile(backend="ofrt")
     def fn(x):
         y = linear(x)
         return y
