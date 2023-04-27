@@ -104,7 +104,7 @@ Maybe<double> GetDatasetComputeTime(const json& j, const vm::OpCallInstructionPo
       "reshape", "reshape_like", "squeeze", "transpose", "nll", "nll_grad", "uniform",
       "uniform_int", "fill_", "slice_update", "normal",
       // ddp
-      "eager_ccl_broadcast", "eager_ccl_all_reduce", "eager_nccl_touch", "scalar_mul",
+      "eager_ccl_broadcast", "eager_ccl_all_reduce", "eager_ccl_touch", "scalar_mul",
 
       // "adaptive_avg_pool2d",
       // "adaptive_avg_pool2d_grad"
@@ -222,10 +222,6 @@ Maybe<void> RematHelper::RematInputs(
     vm::Stream* vm_stream, bool first,
     const std::function<Maybe<void>(OpCallInstructionPolicy*, vm::Stream*)>& compute_fn) {
   CHECK_OR_RETURN(!ThreadLocalEnvBool<ONEFLOW_VM_MULTI_THREAD>());
-  Singleton<remat::Env>::Get()->current_op_type_name =
-      op_call_instruction_policy_.opkernel().op_type_name();
-  VLOG(2) << "set current op type name to " << Singleton<remat::Env>::Get()->current_op_type_name
-          << std::endl;
   if (first) { JUST(IncReferenceNumOfRecomputedTensor()); }
   VLOG(1) << "compute " << op_call_instruction_policy_.opkernel().op_type_name() << std::endl;
   VLOG(1) << "input num " << op_call_instruction_policy_.inputs().size() << std::endl;
@@ -305,7 +301,6 @@ Maybe<void> RematHelper::UpdateRematInfo(bool first, bool recompute, bool includ
   if (recompute) { Singleton<remat::Env>::Get()->add_recomputation_num(); }
   Singleton<remat::Env>::Get()->add_time(JUST(remat::GetComputeTime(op_call_instruction_policy_)));
   VLOG(1) << "end compute " << op_call_instruction_policy_.opkernel().op_type_name() << std::endl;
-  Singleton<remat::Env>::Get()->current_op_type_name = "None";
   return Maybe<void>::Ok();
 }
 }  // namespace vm

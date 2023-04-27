@@ -356,8 +356,8 @@
   signature:
     [
       "Tensor (Tensor input) => Max",
-      "TensorTuple[values, indices] (Tensor input, Int32 dim, Bool keepdim=False) => Max",
       "Tensor (Tensor input, Tensor other) => Max",
+      "TensorTuple[values, indices] (Tensor input, Int32 dim, Bool keepdim=False) => Max",
     ]
   bind_python: True
 
@@ -3347,3 +3347,8 @@
 - name: "digamma_grad"
   signature: "Tensor (Tensor x, Tensor dy) => DigammaGrad"
   bind_python: False
+
+- name: "trigamma"
+  signature: "Tensor (Tensor x) => Trigamma"
+  bind_python: False
+  

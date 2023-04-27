@@ -400,9 +400,11 @@ class Conv2d(Module):
             else _pair(padding)
         )
         self.groups = groups
+        self.transposed = False
 
         if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
             self.channel_pos = "channels_last"
+            self.transposed = True
         else:
             self.channel_pos = "channels_first"
 
@@ -765,6 +767,8 @@ class ConvTranspose1d(Module):
         self.groups = groups
         assert in_channels % groups == 0
         assert out_channels % groups == 0
+        self.in_channels = in_channels
+        self.out_channels = out_channels
         self.weight = flow.nn.Parameter(
             flow.Tensor(in_channels, out_channels // groups, *self.kernel_size)
         )
@@ -888,6 +892,8 @@ class ConvTranspose2d(Module):
         self.groups = groups
         assert in_channels % groups == 0
         assert out_channels % groups == 0
+        self.in_channels = in_channels
+        self.out_channels = out_channels
         self.weight = flow.nn.Parameter(
             flow.Tensor(in_channels, out_channels // groups, *self.kernel_size)
         )
@@ -1049,6 +1055,8 @@ class ConvTranspose3d(Module):
         self.dilation = _triple(dilation)
         self.output_padding = _triple(output_padding)
         self.groups = groups
+        self.in_channels = in_channels
+        self.out_channels = out_channels
         assert in_channels % groups == 0
         assert out_channels % groups == 0
         self.weight = flow.nn.Parameter(
