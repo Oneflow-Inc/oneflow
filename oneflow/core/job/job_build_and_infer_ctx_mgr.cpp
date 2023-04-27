@@ -80,9 +80,7 @@ std::string JobBuildAndInferCtxMgr::structure_graph() const {
   return json_array.dump();
 }
 
-void JobBuildAndInferCtxMgr::LoadJobIdCount(int64_t id_count) {
-  job_id_count_ = id_count;
-}
+void JobBuildAndInferCtxMgr::LoadJobIdCount(int64_t id_count) { job_id_count_ = id_count; }
 
 void JobBuildAndInferCtxMgr::SaveJobIdCount() {
   Singleton<IdStateMgr>::Get()->SetJobIdState(job_id_count_);
