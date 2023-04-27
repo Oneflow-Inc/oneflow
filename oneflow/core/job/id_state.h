@@ -29,6 +29,7 @@ class IdState {
   int64_t regst_desc_id_state_{};
   int64_t mem_block_id_state_{};
   int64_t chunk_id_state_{};
+  int64_t job_id_state_{};
   HashMap<int64_t, uint32_t> task_index_state_{};
   HashMap<int64_t, uint32_t> stream_index_state_{};
 };
@@ -42,13 +43,16 @@ class IdStateMgr final {
   void LoadIdState(const IdState& id_state);
 
   void SetRegstDescIdState(int64_t id) { id_state_.regst_desc_id_state_ = id; }
-  int64_t GetRegstDescIdState() { return id_state_.regst_desc_id_state_; }
+  int64_t GetRegstDescIdState() const { return id_state_.regst_desc_id_state_; }
 
   void SetMemBlockIdState(int64_t id) { id_state_.mem_block_id_state_ = id; }
-  int64_t GetMemBlockIdState() { return id_state_.mem_block_id_state_; }
+  int64_t GetMemBlockIdState() const { return id_state_.mem_block_id_state_; }
 
   void SetChunkIdState(int64_t id) { id_state_.chunk_id_state_ = id; }
-  int64_t GetChunkIdState() { return id_state_.chunk_id_state_; }
+  int64_t GetChunkIdState() const { return id_state_.chunk_id_state_; }
+
+  void SetJobIdState(int64_t id) { id_state_.job_id_state_ = id; }
+  int64_t GetJobIdState() const { return id_state_.job_id_state_; }
 
   void SetTaskIndexState(const StreamId& stream_id, uint32_t idx) {
     id_state_.task_index_state_[EncodeStreamIdToInt64(stream_id)] = idx;

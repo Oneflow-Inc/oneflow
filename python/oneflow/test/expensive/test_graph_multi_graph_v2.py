@@ -286,7 +286,7 @@ def _test_linear_multi_graph_load(
 
     linear_g = LinearGraph()
     print("====> load")
-    # TODO(pangguojian): when to load id_state
+    # TODO(pangguojian): when to load id_state, it must after graph init
     flow.load_id_state(id_state_filename)
     linear_g.load_runtime_state_dict(state_dict)
     print("====> load finish")
@@ -353,8 +353,6 @@ def _graph_save(return_dict, filename, id_state_filename, with_eager):
 
 
 def _graph_load(return_dict, filename, id_state_filename):
-    # TODO(pangguojian): job_id
-    os.environ["JOB_ID"] = "3000"
     state_dict_loaded = flow.load(filename)
     # load with nn.Graph
     _test_linear_multi_graph_load(
