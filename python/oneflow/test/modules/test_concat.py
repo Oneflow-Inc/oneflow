@@ -170,6 +170,14 @@ def _test_concat_grad_fn_name(test_case, device):
     grad_fn_name = cat.grad_fn.name()
     test_case.assertEqual(grad_fn_name, "catBackward")
     test_case.assertEqual(cat.grad_fn.next_functions[0][0].name(), "accumulategrad")
+    next_fn = cat.grad_fn.next_functions[0]
+    test_case.assertTrue(
+        np.allclose(next_fn[0].variable.numpy(), x1.numpy(), 0.0001, 0.0001)
+    )
+    next_fn = cat.grad_fn.next_functions[1]
+    test_case.assertTrue(
+        np.allclose(next_fn[0].variable.numpy(), x2.numpy(), 0.0001, 0.0001)
+    )
 
 
 @flow.unittest.skip_unless_1n1d()
