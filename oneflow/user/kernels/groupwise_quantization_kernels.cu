@@ -180,18 +180,18 @@ struct LoadCast<uint8_t, half, pack_size, 4, typename std::enable_if<pack_size %
       asm volatile("lop3.b32 %0, %1, %2, %3, %4;\n"
                     : "=r"(u32_h2[0].u32)
                     : "r"(lsb0_4), "n"(BOTTOM_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
-      // Extract elt_15 (lsb4_8 & 0x000f000f) | 0x64006400
+      // Extract elt_15 (lsb0_4 & 0x00f000f0) | 0x64006400
       asm volatile("lop3.b32 %0, %1, %2, %3, %4;\n"
                     : "=r"(u32_h2[1].u32)
-                    : "r"(lsb4_8), "n"(TOP_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
+                    : "r"(lsb0_4), "n"(TOP_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
       // Extract elt_26 (lsb8_12 & 0x000f000f) | 0x64006400
       asm volatile("lop3.b32 %0, %1, %2, %3, %4;\n"
                     : "=r"(u32_h2[2].u32)
                     : "r"(lsb8_12), "n"(BOTTOM_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
-      // Extract elt_37 (lsb12_16 & 0x000f000f) | 0x64006400
+      // Extract elt_37 (lsb8_12 & 0x00f000f0) | 0x64006400
       asm volatile("lop3.b32 %0, %1, %2, %3, %4;\n"
                     : "=r"(u32_h2[3].u32)
-                    : "r"(lsb12_16), "n"(TOP_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
+                    : "r"(lsb8_12), "n"(TOP_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
 
       // This is the half2 {1024, 1024} represented as an integer.
       static constexpr uint32_t FP16_TOP_MAGIC_NUM = 0x64006400;
