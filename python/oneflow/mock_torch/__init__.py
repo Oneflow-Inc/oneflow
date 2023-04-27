@@ -249,16 +249,14 @@ class DummyModule(ModuleType):
         return False
 
     def __enter__(self):
-        if _importer.verbose:
-            print(
-                f'"{self.__name__}" is a dummy object, and does not support __enter__.'
-            )
+        raise RuntimeError(
+            f'"{self.__name__}" is a dummy object, and does not support "with" statement.'
+        )
 
     def __exit__(self, exception_type, exception_value, traceback):
-        if _importer.verbose:
-            print(
-                f'"{self.__name__}" is a dummy object, and does not support __exit__.'
-            )
+        raise RuntimeError(
+            f'"{self.__name__}" is a dummy object, and does not support "with" statement.'
+        )
 
     def __subclasscheck__(self, subclass):
         return False
