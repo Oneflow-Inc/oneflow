@@ -264,7 +264,7 @@ class UserOpInferContext final : public user_op::InferContext {
   MemoryFormat MemoryFormat4ArgNameAndIndex(const std::string& arg_name,
                                             int32_t index) const override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
-    if (it == arg2tensor_desc_.end()) { return MemoryFormat::kUnused; };
+    if (it == arg2tensor_desc_.end()) { return MemoryFormat::kContiguous; };
     return it->second.memory_format();
   }
   void SetMemoryFormat4ArgNameAndIndex(const std::string& arg_name, int32_t index,
@@ -744,7 +744,7 @@ Maybe<void> UserOp::InferInternalBlobDescs(
     BlobDesc* tmp_buffer_blob = GetBlobDesc4BnInOp(GenRepeatedBn("tmp_buffer", 0));
     CHECK_NOTNULL_OR_RETURN(tmp_buffer_blob);
     tmp_buffer_blob->set_data_type(DataType::kChar);
-    tmp_buffer_blob->set_memory_format(MemoryFormat::kUnused);
+    tmp_buffer_blob->set_memory_format(MemoryFormat::kContiguous);
     tmp_buffer_blob->set_shape(Shape({static_cast<int64_t>(tmp_size)}));
     tmp_buffer_blob->set_stride(Stride({static_cast<int64_t>(tmp_size)}));
   }

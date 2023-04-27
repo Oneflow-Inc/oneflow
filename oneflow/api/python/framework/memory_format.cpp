@@ -25,11 +25,11 @@ namespace oneflow {
 
 static PyObject* PyMemoryFormat_repr(PyMemoryFormatObject* self) {
   auto memory_format = PyMemoryFormat_Unpack((PyObject*)self);
-  if (memory_format == MemoryFormat::kUnused) {
+  if (memory_format == MemoryFormat::kContiguous) {
     return PyUnicode_FromString("oneflow.memory_format_unused");
-  } else if (memory_format == MemoryFormat::kNCHW) {
+  } else if (memory_format == MemoryFormat::kContiguous) {
     return PyUnicode_FromString("oneflow.channels_first");
-  } else if (memory_format == MemoryFormat::kNHWC) {
+  } else if (memory_format == MemoryFormat::kChannelsLast) {
     return PyUnicode_FromString("oneflow.channels_last");
   } else {
     THROW(TypeError) << "invalid memory format";
@@ -75,8 +75,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   Py_INCREF(&PyMemoryFormat_Type);
   if (PyModule_AddObject(m.ptr(), "memory_format", (PyObject*)&PyMemoryFormat_Type) < 0) { return; }
 
-  PyMemoryFormat_channels_first = PyMemoryFormat_New(MemoryFormat::kNCHW);
-  PyMemoryFormat_channels_last = PyMemoryFormat_New(MemoryFormat::kNHWC);
+  PyMemoryFormat_channels_first = PyMemoryFormat_New(MemoryFormat::kContiguous);
+  PyMemoryFormat_channels_last = PyMemoryFormat_New(MemoryFormat::kChannelsLast);
   if (PyModule_AddObject(m.ptr(), "channels_first", PyMemoryFormat_channels_first) < 0) { return; }
   if (PyModule_AddObject(m.ptr(), "channels_last", PyMemoryFormat_channels_last) < 0) { return; }
 }

@@ -31,7 +31,7 @@ std::unique_ptr<::oneflow::BlobDesc> getBlobDescFromTensorType(TensorType tensor
     auto shape_from_mlir = new ::oneflow::Shape(llvm::SmallVector<int64_t, 4>(
         {tensor_type.getShape().begin(), tensor_type.getShape().end()}));
     return std::make_unique<::oneflow::BlobDesc>(*shape_from_mlir, data_type.value(),
-                                                 ::oneflow::MemoryFormat::kUnused);
+                                                 ::oneflow::MemoryFormat::kContiguous);
   }
   tensor_type.dump();
   LOG(FATAL) << "fail to get BlobDesc from TensorType";
@@ -98,7 +98,7 @@ size_t getResultSize(DictionaryAttr attributes) {
     const auto& arg_id = result_id.second;
     const auto bn = ::oneflow::GenRepeatedBn(arg_name, arg_id);
     auto blob_desc = std::make_unique<::oneflow::BlobDesc>(::oneflow::kInvalidDataType,
-                                                           ::oneflow::MemoryFormat::kUnused);
+                                                           ::oneflow::MemoryFormat::kContiguous);
     lbi2logical_blob_desc_.emplace(bn, std::move(blob_desc));
     (*op_conf.mutable_user_conf()->mutable_output())[arg_name].add_s(
         ::oneflow::GenLogicalBlobName(op_conf.name(), bn));

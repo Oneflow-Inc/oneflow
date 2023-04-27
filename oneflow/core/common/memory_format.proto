@@ -2,9 +2,9 @@ syntax = "proto2";
 package oneflow;
 
 enum MemoryFormat {
-  kUnused = 0;
-  kNCHW = 1;
-  kNHWC = 2;
+  kContiguous = 0;
+  kChannelsLast = 1;
+  kPreserve = 2;
 
   MemoryFormat_Max = 3;
 };

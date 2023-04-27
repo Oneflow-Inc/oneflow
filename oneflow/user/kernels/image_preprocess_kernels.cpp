@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/memory_format.pb.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/blocking_counter.h"
@@ -27,18 +28,23 @@ namespace oneflow {
 
 namespace {
 
+enum TensorLayout {
+  kContiguous = 0,
+  kChannelsLast = 1,
+};
+
 template<MemoryFormat layout>
 inline int64_t GetOffset(int64_t h, int64_t w, int64_t c, int64_t H, int64_t W, int64_t C);
 
 template<>
-inline int64_t GetOffset<MemoryFormat::kNCHW>(int64_t h, int64_t w, int64_t c, int64_t H, int64_t W,
-                                              int64_t C) {
+inline int64_t GetOffset<MemoryFormat::kContiguous>(int64_t h, int64_t w, int64_t c, int64_t H,
+                                                    int64_t W, int64_t C) {
   return c * H * W + h * W + w;  // C, H, W
 }
 
 template<>
-inline int64_t GetOffset<MemoryFormat::kNHWC>(int64_t h, int64_t w, int64_t c, int64_t H, int64_t W,
-                                              int64_t C) {
+inline int64_t GetOffset<MemoryFormat::kChannelsLast>(int64_t h, int64_t w, int64_t c, int64_t H,
+                                                      int64_t W, int64_t C) {
   return h * W * C + w * C + c;  // H, W, C
 }
 
@@ -68,7 +74,7 @@ void CMN1Sample(int64_t C, int64_t in_H, int64_t in_W, int64_t out_H, int64_t ou
       int64_t in_h = (in_H - out_H) * crop_pos_y + out_h;
       for (int64_t out_w = 0; out_w < out_W; ++out_w) {
         int64_t in_w = GetInputW<mirror>(out_w, out_W, in_W, crop_pos_x);
-        int64_t in_offset = GetOffset<MemoryFormat::kNHWC>(in_h, in_w, c, in_H, in_W, C);
+        int64_t in_offset = GetOffset<MemoryFormat::kChannelsLast>(in_h, in_w, c, in_H, in_W, C);
         int64_t out_offset = GetOffset<output_layout>(out_h, out_w, c, out_H, out_W, C);
         out_dptr[out_offset] = (static_cast<float>(in_dptr[in_offset]) - mean) * inv_std;
       }
@@ -160,11 +166,11 @@ class CropMirrorNormalizeFromStaticShapeToFloatKernel final : public user_op::Op
       int64_t out_image_elem_cnt = C * out_H * out_W;
       MultiThreadLoop(record_num, [&](size_t i) {
         if (mirror.at(i)) {
-          CMN1Sample<MemoryFormat::kNCHW, true>(
+          CMN1Sample<MemoryFormat::kContiguous, true>(
               C, in_H, in_W, out_H, out_W, crop_pos_y, crop_pos_x, in_dptr + in_image_elem_cnt * i,
               out_dptr + out_image_elem_cnt * i, mean_vec, inv_std_vec);
         } else {
-          CMN1Sample<MemoryFormat::kNCHW, false>(
+          CMN1Sample<MemoryFormat::kContiguous, false>(
               C, in_H, in_W, out_H, out_W, crop_pos_y, crop_pos_x, in_dptr + in_image_elem_cnt * i,
               out_dptr + out_image_elem_cnt * i, mean_vec, inv_std_vec);
         }
@@ -176,11 +182,11 @@ class CropMirrorNormalizeFromStaticShapeToFloatKernel final : public user_op::Op
       int64_t out_image_elem_cnt = C * out_H * out_W;
       MultiThreadLoop(record_num, [&](size_t i) {
         if (mirror.at(i)) {
-          CMN1Sample<MemoryFormat::kNHWC, true>(
+          CMN1Sample<MemoryFormat::kChannelsLast, true>(
               C, in_H, in_W, out_H, out_W, crop_pos_y, crop_pos_x, in_dptr + in_image_elem_cnt * i,
               out_dptr + out_image_elem_cnt * i, mean_vec, inv_std_vec);
         } else {
-          CMN1Sample<MemoryFormat::kNHWC, false>(
+          CMN1Sample<MemoryFormat::kChannelsLast, false>(
               C, in_H, in_W, out_H, out_W, crop_pos_y, crop_pos_x, in_dptr + in_image_elem_cnt * i,
               out_dptr + out_image_elem_cnt * i, mean_vec, inv_std_vec);
         }
@@ -245,11 +251,11 @@ class CropMirrorNormalizeFromTensorBufferToFloatKernel final : public user_op::O
         int64_t in_W = in_shape.At(1);
         CHECK_EQ(C, in_shape.At(2));
         if (mirror.at(i)) {
-          CMN1Sample<MemoryFormat::kNCHW, true>(
+          CMN1Sample<MemoryFormat::kContiguous, true>(
               C, in_H, in_W, out_H, out_W, crop_pos_y, crop_pos_x, in_buffer->data<uint8_t>(),
               out_dptr + out_image_elem_cnt * i, mean_vec, inv_std_vec);
         } else {
-          CMN1Sample<MemoryFormat::kNCHW, false>(
+          CMN1Sample<MemoryFormat::kContiguous, false>(
               C, in_H, in_W, out_H, out_W, crop_pos_y, crop_pos_x, in_buffer->data<uint8_t>(),
               out_dptr + out_image_elem_cnt * i, mean_vec, inv_std_vec);
         }
@@ -267,11 +273,11 @@ class CropMirrorNormalizeFromTensorBufferToFloatKernel final : public user_op::O
         int64_t in_W = in_shape.At(1);
         CHECK_EQ(C, in_shape.At(2));
         if (mirror.at(i)) {
-          CMN1Sample<MemoryFormat::kNHWC, true>(
+          CMN1Sample<MemoryFormat::kChannelsLast, true>(
               C, in_H, in_W, out_H, out_W, crop_pos_y, crop_pos_x, in_buffer->data<uint8_t>(),
               out_dptr + out_image_elem_cnt * i, mean_vec, inv_std_vec);
         } else {
-          CMN1Sample<MemoryFormat::kNHWC, false>(
+          CMN1Sample<MemoryFormat::kChannelsLast, false>(
               C, in_H, in_W, out_H, out_W, crop_pos_y, crop_pos_x, in_buffer->data<uint8_t>(),
               out_dptr + out_image_elem_cnt * i, mean_vec, inv_std_vec);
         }
