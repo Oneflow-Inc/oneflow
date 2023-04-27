@@ -813,7 +813,7 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   if (job_wrapper.IsLastIRPass()
       && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS", false)) {
     pm.addPass(oneflow::createOneFlowJobToFuncPass());
-    pm.addPass(oneflow::createCastOneFlowInputToSignlessPass());
+    pm.addPass(oneflow::createCastOneFlowOpsToSignlessPass());
     auto toTosa = oneflow::createLowerOneFlowToTosaPass();
     CHECK(toTosa->initializeOptions("full=0 lower-job=0").succeeded());
     pm.addPass(std::move(toTosa));

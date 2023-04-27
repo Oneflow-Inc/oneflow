@@ -28,7 +28,7 @@ class CompTaskNode : public TaskNode {
   CompTaskNode() = default;
   virtual ~CompTaskNode() = default;
 
-  virtual void ToProto(TaskProto*) const override;
+  virtual void ToProto(TaskProto*, bool check) const override;
 
   // parallel_ctx_
   int64_t parallel_id() const { return parallel_ctx_.parallel_id(); }
@@ -42,6 +42,10 @@ class CompTaskNode : public TaskNode {
 
   // op
   std::shared_ptr<const Operator> op() const { return op_node_->shared_op(); }
+
+  ExecNode::InferBlobDescsMethod GetInferBlobDescsMethod() const override {
+    return &ExecNode::InferBlobDescsByInputs;
+  }
 
  protected:
   const OpNode* GetOneSuccOpNodeOnEdge(TaskEdge* edge);

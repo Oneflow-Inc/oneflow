@@ -47,6 +47,7 @@ def _test_add_with_0size(test_case, ndim, zerodim, placement, sbp):
 
 
 class TestAddModule(flow.unittest.TestCase):
+    @unittest.skip("skip for now, becase it failed 2 times in past week")
     @globaltest
     def test_add_with_alpha(test_case):
         ndim = random(1, 4).to(int).value()
