@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,11 +12,15 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#ifndef ONEFLOW_CORE_COMMON_INTRUSIVE_ATTRIBUTE_H_
-#define ONEFLOW_CORE_COMMON_INTRUSIVE_ATTRIBUTE_H_
+"""
+import os
 
-#define INTRUSIVE_PREDICT_TRUE GOOGLE_PREDICT_TRUE
-#define INTRUSIVE_PREDICT_FALSE GOOGLE_PREDICT_FALSE
 
-#endif  // ONEFLOW_CORE_COMMON_INTRUSIVE_ATTRIBUTE_H_
+def dataset_dir(sub_dir=None):
+    base_dir = os.getenv("ONEFLOW_TEST_DATASET_DIR")
+    if base_dir == None:
+        base_dir = "/dataset"
+    if sub_dir == None:
+        return base_dir
+    else:
+        return os.path.join(base_dir, sub_dir)
