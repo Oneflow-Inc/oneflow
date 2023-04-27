@@ -4183,7 +4183,7 @@ class FftBaseFunctor {
       out_strides[dim_permute[i]] = contiguous_out_strides[1 + (i - batch_dims)];
     }
 
-    // Judge must clone input
+    // Judge if the input needs to be cloned
     int64_t signal_ndim = input->shape()->size() - 1;
     auto last_stride = JUST(input->stride())->at(signal_ndim);
     bool must_clone_input = false;
@@ -4387,7 +4387,6 @@ class FftR2CFunctor : public FftBaseFunctor {
         }
 
         // Then any remaining C2C transforms
-      #if 0
         std::vector<int64_t> sorted_dims(wrapped_dims.begin(), wrapped_dims.end() - 1);
         if (!sorted_dims.empty()){
           output = JUST(functional::FftC2C(output, sorted_dims, norm_mode, /*forward=*/true));
@@ -4502,7 +4501,6 @@ class FftC2RFunctor : public FftBaseFunctor {
         attrs.SetAllAttrs(fft_dims, norm_mode, norm_fct, last_dim_size);
         output = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs));
         output = JUST(functional::AsStrided(output, out_sizes, out_strides, JUST(output->storage_offset())));
-        JUST(functional::ScalarMul(output, Scalar(norm_fct), true));
         return output;
       }
       else{
