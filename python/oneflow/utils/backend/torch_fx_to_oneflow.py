@@ -17,12 +17,14 @@ import oneflow
 import torch
 from torch import fx
 
-def to_of_transform(gm: torch.fx.GraphModule,
-          tracer_class : type = fx.Tracer) -> torch.fx.GraphModule:
+
+def to_of_transform(
+    gm: torch.fx.GraphModule, tracer_class: type = fx.Tracer
+) -> torch.fx.GraphModule:
     for node in gm.graph.nodes:
         # Checks if we're calling a function (i.e:
         # torch.add)
-        if node.op == 'call_function':
+        if node.op == "call_function":
             # The target attribute is the function
             # that call_function calls.
             if node.target == torch.relu:

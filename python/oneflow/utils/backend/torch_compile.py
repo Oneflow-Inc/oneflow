@@ -16,6 +16,7 @@ limitations under the License.
 import oneflow
 from .torch_fx_to_oneflow import to_of_transform
 
+
 def register_oneflowc():
     from typing import List
     import torch
@@ -47,6 +48,6 @@ def register_oneflowc():
             flow_outs = oneflow_fn(flow_inputs)
             # TODO(): general output process
             outs = flow.utils.tensor.to_torch(flow_outs[0])
-            return (outs, )
+            return (outs,)
 
         return from_to_torch
