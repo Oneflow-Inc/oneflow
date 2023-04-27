@@ -132,7 +132,7 @@ Maybe<double> GetDatasetComputeTime(const json& j, const vm::OpCallInstructionPo
   return j[key].get<double>();
 }
 
-static Maybe<double> GetEstimatedComputeTime(const vm::OpCallInstructionPolicy& operand) {
+static Maybe<double> GetComputeComplexityEstimatedBySize(const vm::OpCallInstructionPolicy& operand) {
   const auto& inputs = operand.inputs();
   const auto& outputs = operand.outputs();
   size_t estimated_compute_time = 0;
@@ -180,7 +180,7 @@ class SingleDeviceOpComputeComplexityFnContext : public user_op::ComputeComplexi
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) override {
     RETURN_IF_FOUND(input_tensors_, output_tensors_, ->tensor_meta().shared_from_symbol().get());
-    UNIMPLEMENTED_THEN_THROW();
+    return nullptr;
   }
   const Shape& Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     RETURN_IF_FOUND(input_tensors_, output_tensors_, ->shape())
@@ -223,7 +223,7 @@ class SingleDeviceOpComputeComplexityFnContext : public user_op::ComputeComplexi
   const ArgTuple* output_arg_tuple_;
 };
 
-Maybe<double> GetFLOPs(const vm::OpCallInstructionPolicy& operand) {
+Maybe<double> GetComputeComplexity(const vm::OpCallInstructionPolicy& operand) {
   const auto& op_conf = operand.opkernel().op_conf();
   auto registry =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf.user_conf().op_type_name());
@@ -234,7 +234,7 @@ Maybe<double> GetFLOPs(const vm::OpCallInstructionPolicy& operand) {
                                                  operand.opkernel().output_arg_tuple());
     return registry->compute_complexity_fn(&ctx);
   } else {
-    return GetEstimatedComputeTime(operand);
+    return GetComputeComplexityEstimatedBySize(operand);
   }
 }
 }  // namespace
@@ -242,7 +242,7 @@ Maybe<double> GetFLOPs(const vm::OpCallInstructionPolicy& operand) {
 Maybe<double> GetComputeTime(const vm::OpCallInstructionPolicy& operand) {
   const static json time_dataset = LoadTimeDataset();
   if (!time_dataset.empty()) { return GetDatasetComputeTime(time_dataset, operand); }
-  return GetFLOPs(operand);
+  return GetComputeComplexity(operand);
 }
 
 }  // namespace remat
@@ -399,7 +399,6 @@ Maybe<void> RematHelper::UpdateRematInfo(bool first, bool recompute, bool includ
   return Maybe<void>::Ok();
 }
 
-namespace {}
 }  // namespace vm
 
 }  // namespace oneflow
