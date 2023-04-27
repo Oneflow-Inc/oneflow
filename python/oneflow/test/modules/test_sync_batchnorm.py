@@ -47,13 +47,7 @@ class TestSyncBatchNorm(flow.unittest.TestCase):
         of_res.sum().backward()
 
         test_case.assertTrue(np.allclose(torch_out, of_res.numpy(), atol=1e-8))
-        test_case.assertTrue(
-            np.allclose(
-                torch_grad,
-                of_input.grad.numpy(),
-                atol=1e-8,
-            )
-        )
+        test_case.assertTrue(np.allclose(torch_grad, of_input.grad.numpy(), atol=1e-8,))
 
     def test_sync_batchnorm2d(test_case):
         data_path = ensure_datas()
@@ -76,13 +70,7 @@ class TestSyncBatchNorm(flow.unittest.TestCase):
         of_res.sum().backward()
 
         test_case.assertTrue(np.allclose(torch_out, of_res.numpy(), atol=1e-8))
-        test_case.assertTrue(
-            np.allclose(
-                torch_grad,
-                of_input.grad.numpy(),
-                atol=1e-8,
-            )
-        )
+        test_case.assertTrue(np.allclose(torch_grad, of_input.grad.numpy(), atol=1e-8,))
 
     def test_sync_batchnorm1d(test_case):
         data_path = ensure_datas()
@@ -105,13 +93,7 @@ class TestSyncBatchNorm(flow.unittest.TestCase):
         of_res.sum().backward()
 
         test_case.assertTrue(np.allclose(torch_out, of_res.numpy(), atol=1e-8))
-        test_case.assertTrue(
-            np.allclose(
-                torch_grad,
-                of_input.grad.numpy(),
-                atol=1e-8,
-            )
-        )
+        test_case.assertTrue(np.allclose(torch_grad, of_input.grad.numpy(), atol=1e-8,))
 
 
 if __name__ == "__main__":
