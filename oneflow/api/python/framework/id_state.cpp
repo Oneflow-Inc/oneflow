@@ -59,6 +59,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("set_id_state", [](const IdState& id_state) {
     Singleton<MultiClientSessionContext>::Get()->GetIdStateMgr()->SetIdState(id_state);
   });
-  m.def("get_id_state",
-        []() { return Singleton<MultiClientSessionContext>::Get()->GetIdStateMgr()->GetIdState(); });
+  m.def("get_id_state", []() {
+    return Singleton<MultiClientSessionContext>::Get()->GetIdStateMgr()->GetIdState();
+  });
 }
