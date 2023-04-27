@@ -23,9 +23,7 @@ import oneflow.unittest
 def _test_relu(test_case, device):
     from typing import List
     import torch
-    from torch._dynamo.backends.registry import register_backend
-    from torch._dynamo.backends.common import fake_tensor_unsupported
-    from torch import fx
+    from oneflow.utils.backend.torch_compile import register_oneflowc
 
     input_arr = np.array(
         [
@@ -42,52 +40,6 @@ def _test_relu(test_case, device):
     )
     x = torch.tensor(input_arr, device=device)
     eager_out = torch.relu(x)
-
-    def to_of_transform(gm: torch.fx.GraphModule,
-              tracer_class : type = fx.Tracer) -> torch.fx.GraphModule:
-        for node in gm.graph.nodes:
-            # Checks if we're calling a function (i.e:
-            # torch.add)
-            if node.op == 'call_function':
-                # The target attribute is the function
-                # that call_function calls.
-                if node.target == torch.relu:
-                    node.target = oneflow.relu
-
-        gm.graph.lint()
-        gm.recompile()
-        return gm
-
-    @register_backend
-    @fake_tensor_unsupported
-    def oneflowc(gm: torch.fx.GraphModule, example_inputs: List[torch.Tensor]):
-        # TODO(): fxGraphModule to nn.Graph
-        print("my_compiler() called with FX graph:")
-        gm.graph.print_tabular()
-        print("gm ", gm)
-
-        import oneflow as flow
-
-        of_gm = to_of_transform(gm)
-
-        @flow.nn.Graph.trace
-        def oneflow_fn(inputs):
-            # with flow.mock_torch.enable(lazy=True):
-            #     import torch
-            #     outs = torch.relu(inputs)
-            outs = of_gm.forward(inputs)
-            return outs
-
-        oneflow_fn.debug(1)
-
-        def from_to_torch(inputs):
-            flow_inputs = flow.utils.tensor.from_torch(inputs)
-            flow_outs = oneflow_fn(flow_inputs)
-            # TODO(): general output process
-            outs = flow.utils.tensor.to_torch(flow_outs[0])
-            return (outs, )
-
-        return from_to_torch
 
     @torch.compile(backend="oneflowc")
     def fn(x):
