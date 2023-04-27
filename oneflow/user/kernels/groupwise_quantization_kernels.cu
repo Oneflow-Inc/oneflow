@@ -225,7 +225,8 @@ struct LoadCast<uint8_t, half, pack_size, 4, typename std::enable_if<pack_size %
 };
 
 template<typename Dst, size_t pack_size>
-struct LoadCast<int8_t, Dst, pack_size, 8> {
+struct LoadCast<int8_t, Dst, pack_size, 8,
+    typename std::enable_if<pack_size % 4 != 0 || !std::is_same<Dst, half>::value, void>::type> {
   using LoadType = AlignedArray<int8_t, pack_size>;
   __device__ void Load(const void* src, LoadType* dst) {
     *dst = *reinterpret_cast<const LoadType*>(src);
@@ -233,6 +234,44 @@ struct LoadCast<int8_t, Dst, pack_size, 8> {
   __device__ void Cast(const LoadType& src, AlignedArray<Dst, pack_size>* dst) {
 #pragma unroll
     for (int i = 0; i < pack_size; ++i) { dst->elem[i] = static_cast<Dst>(src.elem[i]); }
+  }
+};
+
+template<size_t pack_size>
+struct LoadCast<int8_t, half, pack_size, 8,
+    typename std::enable_if<pack_size % 4 == 0, void>::type> {
+  using LoadType = AlignedArray<uint32_t, pack_size / 4>;
+  __device__ void Load(const void* src, LoadType* dst) {
+    *dst = *reinterpret_cast<const LoadType*>(src);
+  }
+  __device__ void Cast(const LoadType& src, AlignedArray<half, pack_size>* dst) {
+    AlignedArray<half2, pack_size / 2>* dst_h2 =
+        reinterpret_cast<AlignedArray<half2, pack_size / 2>*>(dst);
+
+    //翻转int8的符号位，等价于把有符号数+128来转化为无符号数
+    for (int i = 0; i < pack_size / 4; ++i) {
+      union {
+        uint32_t u32;
+        half2 h2;
+      } u32_h2[2];
+
+      uint32_t elem = src.elem[i];
+
+      asm volatile("xor.b32 %0,%1,%2;\n"
+                   : "=r"(elem)
+                   : "r"(elem), "n"(0x80808080));
+      asm volatile("prmt.b32 %0,%1,%2,%3;\n"
+                   : "=r"(u32_h2[0].u32)
+                   : "r"(elem), "n"(0x64), "n"(0x4140));
+      asm volatile("prmt.b32 %0,%1,%2,%3;\n"
+                   : "=r"(u32_h2[1].u32)
+                   : "r"(elem), "n"(0x64), "n"(0x4342));
+      half2 h2_1152 = __float2half2_rn(1152);
+      u32_h2[0].h2 = __hsub2(u32_h2[0].h2, h2_1152);
+      u32_h2[1].h2 = __hsub2(u32_h2[1].h2, h2_1152);
+      dst_h2->elem[i * 2] = u32_h2[0].h2;
+      dst_h2->elem[i * 2 + 1] = u32_h2[1].h2;
+    }
   }
 };
 
