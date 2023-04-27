@@ -167,7 +167,6 @@ Maybe<void> MultiClientSessionContext::TryClose() {
 
     Singleton<LazyJobBuildAndInferCtxMgr>::Delete();
     Singleton<TaskStreamIndexManager>::Delete();
-    // Singleton<IdStateMgr>::Delete();
     Singleton<IDMgr>::Delete();
 
     // TODO(chengcheng): remove template ForEnv and ForSession
