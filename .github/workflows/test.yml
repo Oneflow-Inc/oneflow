@@ -1048,8 +1048,7 @@ jobs:
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/misc ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
       - name: Dataloader API test
         timeout-minutes: 45
-        # TODO(luyang): dataset check fails
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && false}}
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc'}}
         run: |
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/dataloader ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
       - name: Tensor API test
