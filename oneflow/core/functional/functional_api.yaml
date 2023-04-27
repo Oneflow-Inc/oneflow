@@ -3281,12 +3281,22 @@
 
 - name: "fft_r2c"
   signature:
-    'Tensor (Tensor input, Int64List n=None, Int64List dims=None, Int32 norm_mode=0, Bool onesided=False, Bool forward=True) => FftR2C'
+    'Tensor (Tensor input, Int64List wrapped_dims, Int32 norm_mode=0, Bool onesided=False) => FftR2C'
+  bind_python: False
+
+- name: "fft_r2c_wrapper"
+  signature:
+    'Tensor (Tensor input, Int64List n=None, Int64List dims=None, Int32 norm_mode=0, Bool onesided=False, Bool forward=True) => FftR2CWrapper'
   bind_python: False
 
 - name: "fft_c2r"
   signature:
-    'Tensor (Tensor input, Int64List n=None, Int64List dims=None, Int32 norm_mode=0, Bool forward=True) =>FftC2R'
+    'Tensor (Tensor input, Int64List wrapped_dims, Int32 norm_mode=0, Int64 last_dim_size=0) =>FftC2R'
+  bind_python: False
+
+- name: "fft_c2r_wrapper"
+  signature:
+    'Tensor (Tensor input, Int64List n=None, Int64List dims=None, Int32 norm_mode=0, Bool forward=True) =>FftC2RWrapper'
   bind_python: False
 
 - name: "fft"

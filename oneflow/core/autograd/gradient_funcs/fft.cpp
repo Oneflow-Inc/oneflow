@@ -57,7 +57,8 @@ class FftR2C : public OpExprGradFunction<FftR2CCaptureState> {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
     if (!ctx->onesided) {
-      std::cout << "=========== [FftR2C Op Backward] !ctx->onesided ===========" << std::endl;
+      std::cout << "ctx->norm_mode = " << ctx->norm_mode << std::endl; 
+      std::cout << "ctx has no attrs of name \" forward \"" << std::endl; 
       auto complex_grad =
           JUST(functional::FftC2C(out_grads.at(0), ctx->dims, ctx->norm_mode,
                                   /*forward*/ false));
@@ -73,8 +74,6 @@ class FftR2C : public OpExprGradFunction<FftR2CCaptureState> {
       auto x_sizes = out_grads.at(0)->shape()->dim_vec();
       std::vector<int64_t> pad_amount(x_sizes.size() * 2, 0);
       int64_t last_dim = ctx->dims.back();
-      std::cout << "last_dim = " << last_dim << std::endl;
-      std::cout << "ctx->input_shape_vec.size() = " << ctx->input_shape_vec.size() << std::endl;
       if (x_sizes[last_dim] < ctx->input_shape_vec[last_dim]){
         must_copy = true;
         auto pad_idx = pad_amount.size() - 2 * last_dim - 1;
@@ -163,8 +162,7 @@ class FftC2R : public OpExprGradFunction<FftC2RCaptureState> {
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
-    auto complex_grad = JUST(functional::FftR2C(out_grads.at(0), NullOpt, ctx->dims, ctx->norm_mode,
-                                                /*onesided=*/true, ctx->forward));
+    auto complex_grad = JUST(functional::FftR2C(out_grads.at(0), ctx->dims, ctx->norm_mode, /*onesided=*/true)); // no need conj
     Shape input_shape(ctx->input_shape_vec);
     int64_t last_dim = ctx->dims.back();
     auto double_length = out_grads.at(0)->dim(last_dim) - complex_grad->dim(last_dim);
@@ -174,7 +172,7 @@ class FftC2R : public OpExprGradFunction<FftC2RCaptureState> {
     if (double_length > 0) {
       in_grad = JUST(functional::Narrow(complex_grad, last_dim, 1,
                                         double_length));  // will change shape of in_grad
-      in_grad = JUST(functional::ScalarMul(in_grad, 2, /*inplace*/ true));
+      in_grad = JUST(functional::ScalarMul(in_grad, 2, /*inplace=*/true));
     }
 
     std::vector<int64_t> slice_st(input_shape.size(), 0);
