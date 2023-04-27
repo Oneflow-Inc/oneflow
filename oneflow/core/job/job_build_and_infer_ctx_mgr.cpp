@@ -19,6 +19,7 @@ limitations under the License.
 
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/id_state.h"
 #include "oneflow/core/job/lazy_mode.h"
@@ -83,7 +84,7 @@ std::string JobBuildAndInferCtxMgr::structure_graph() const {
 void JobBuildAndInferCtxMgr::LoadJobIdCount(int64_t id_count) { job_id_count_ = id_count; }
 
 void JobBuildAndInferCtxMgr::SaveJobIdCount() {
-  Singleton<IdStateMgr>::Get()->SetJobIdState(job_id_count_);
+  Singleton<MultiClientSessionContext>::Get()->GetIdStateMgr()->SetJobIdState(job_id_count_);
 }
 
 Maybe<void> LazyJobBuildAndInferCtxMgr::VirtualCloseJob() {

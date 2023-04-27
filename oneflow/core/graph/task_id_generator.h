@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_TASK_ID_GENERATOR_H_
 #define ONEFLOW_CORE_GRAPH_TASK_ID_GENERATOR_H_
 
+#include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/graph/task_id.h"
 #include "oneflow/core/job/id_state.h"
 
@@ -33,7 +34,8 @@ class TaskIdGenerator final {
 
   void SaveId() {
     for (const auto& pair : stream_id2task_index_counter_) {
-      Singleton<IdStateMgr>::Get()->SetTaskIndexState(pair.first, pair.second);
+      Singleton<MultiClientSessionContext>::Get()->GetIdStateMgr()->SetTaskIndexState(pair.first,
+                                                                                      pair.second);
     }
   }
 
@@ -44,7 +46,7 @@ class TaskIdGenerator final {
 inline TaskId TaskIdGenerator::Generate(const StreamId& stream_id) {
   if (stream_id2task_index_counter_.count(stream_id) == 0) {
     stream_id2task_index_counter_[stream_id] =
-        Singleton<IdStateMgr>::Get()->GetTaskIndexState(stream_id);
+        Singleton<MultiClientSessionContext>::Get()->GetIdStateMgr()->GetTaskIndexState(stream_id);
   }
   task_index_t task_index = stream_id2task_index_counter_[stream_id]++;
   return TaskId{stream_id, task_index};

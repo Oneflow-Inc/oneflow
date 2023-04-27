@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/task_stream_index_manager.h"
+#include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/id_state.h"
 #include "oneflow/core/job/resource_desc.h"
@@ -24,7 +25,9 @@ StreamIndexGenerator* TaskStreamIndexManager::GetGenerator(const DeviceId& devic
   std::unique_lock<std::mutex> lck(mtx_);
   auto iter = generators_.find(device_id);
   if (iter == generators_.end()) {
-    auto init_stream_index = Singleton<IdStateMgr>::Get()->GetStreamIndexState(device_id);
+    auto init_stream_index =
+        Singleton<MultiClientSessionContext>::Get()->GetIdStateMgr()->GetStreamIndexState(
+            device_id);
     iter = generators_.emplace(device_id, std::make_unique<StreamIndexGenerator>(init_stream_index))
                .first;
   }
@@ -53,8 +56,8 @@ TaskStreamIndexManager::stream_index_t TaskStreamIndexManager::GetNamedTaskStrea
 
 void TaskStreamIndexManager::SaveTaskStreamIndex() {
   for (auto& pair : generators_) {
-    Singleton<IdStateMgr>::Get()->SetStreamIndexState(pair.first,
-                                                      pair.second->GetCurrStreamIndex());
+    Singleton<MultiClientSessionContext>::Get()->GetIdStateMgr()->SetStreamIndexState(
+        pair.first, pair.second->GetCurrStreamIndex());
   }
 }
 

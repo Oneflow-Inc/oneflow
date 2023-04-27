@@ -36,6 +36,7 @@ class IdState {
 
 class IdStateMgr final {
  public:
+  IdStateMgr() = default;
   OF_DISALLOW_COPY_AND_MOVE(IdStateMgr);
   ~IdStateMgr() = default;
 
@@ -73,8 +74,6 @@ class IdStateMgr final {
   }
 
  private:
-  friend class Singleton<IdStateMgr>;
-  IdStateMgr() = default;
 
   IdState id_state_{};
 };

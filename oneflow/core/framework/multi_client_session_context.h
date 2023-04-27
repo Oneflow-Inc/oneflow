@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_MULTI_CLIENT_SESSION_CONTEXT_H_
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/job/id_state.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/tensor.h"
@@ -37,6 +38,8 @@ class MultiClientSessionContext {
 
   Maybe<void> TryClose();
 
+  IdStateMgr* GetIdStateMgr() const { return id_state_mgr_.get(); }
+
   // NOTE(chengcheng): for nn.Graph catch free EagerTensor in Graph.build().
   //   NNGraph should NOT hold ANY shared_ptr<Tensor> because NNGraph will send to VM stream in
   //   RunLazyNNGraphInstruction, the tensor in NNGraph will Never be released for hold in VM
@@ -52,6 +55,7 @@ class MultiClientSessionContext {
  private:
   bool is_inited_ = false;
   std::shared_ptr<EnvGlobalObjectsScope> env_ctx_;
+  std::unique_ptr<IdStateMgr> id_state_mgr_{nullptr};
   HashMap<std::string, std::vector<std::pair<std::string, std::shared_ptr<one::Tensor>>>>
       graph_name2free_eager_tensors_;
 };

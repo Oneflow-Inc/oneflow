@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/job/id_manager.h"
 #include <string>
+#include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/job/id_state.h"
 
 namespace oneflow {
@@ -26,9 +27,10 @@ IDMgr::IDMgr() {
 }
 
 void IDMgr::SaveId() {
-  Singleton<IdStateMgr>::Get()->SetMemBlockIdState(mem_block_id_count_);
-  Singleton<IdStateMgr>::Get()->SetRegstDescIdState(regst_desc_id_count_);
-  Singleton<IdStateMgr>::Get()->SetChunkIdState(chunk_id_count_);
+  auto* id_state_mgr = Singleton<MultiClientSessionContext>::Get()->GetIdStateMgr();
+  id_state_mgr->SetMemBlockIdState(mem_block_id_count_);
+  id_state_mgr->SetRegstDescIdState(regst_desc_id_count_);
+  id_state_mgr->SetChunkIdState(chunk_id_count_);
   task_id_gen_.SaveId();
 }
 

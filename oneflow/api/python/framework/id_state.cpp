@@ -21,6 +21,7 @@ limitations under the License.
 #include <cstdint>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/singleton.h"
+#include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/job/id_state.h"
 
 namespace py = pybind11;
@@ -55,7 +56,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
             return id_state;
           }));
 
-  m.def("set_id_state",
-        [](const IdState& id_state) { Singleton<IdStateMgr>::Get()->SetIdState(id_state); });
-  m.def("get_id_state", []() { return Singleton<IdStateMgr>::Get()->GetIdState(); });
+  m.def("set_id_state", [](const IdState& id_state) {
+    Singleton<MultiClientSessionContext>::Get()->GetIdStateMgr()->SetIdState(id_state);
+  });
+  m.def("get_id_state",
+        []() { return Singleton<MultiClientSessionContext>::Get()->GetIdStateMgr(); });
 }
