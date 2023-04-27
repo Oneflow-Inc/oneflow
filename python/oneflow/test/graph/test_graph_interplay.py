@@ -66,6 +66,7 @@ def _test_relu(test_case, device):
         )
     )
 
+
 def _test_linear(test_case, device):
     from typing import List
     import torch
@@ -113,6 +114,7 @@ def _test_linear(test_case, device):
             1e-05,
         )
     )
+
 
 def __test_linear(test_case, device):
     from typing import List
