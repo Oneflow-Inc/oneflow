@@ -13,21 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_CONVERSION_PTXTOCUBIN_H_
-#define ONEFLOW_IR_INCLUDE_ONEFLOW_CONVERSION_PTXTOCUBIN_H_
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_CONVERSION_NVVMTOCUBIN_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_CONVERSION_NVVMTOCUBIN_H_
+
+#ifdef WITH_MLIR_CUDA_CODEGEN
 
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
 
-namespace oneflow {
+const char* getArchVersion();
 
-std::unique_ptr<mlir::Pass> createSerializeToCubinPass();
+namespace gpu {
+
+inline std::string getCubinAnnotation() { return "gpu.binary"; }
+
+}  // namespace gpu
+
 void InitializeLLVMNVPTXBackend();
-void registerGpuSerializeToCubinPass();
-
-}  // namespace oneflow
+std::unique_ptr<mlir::Pass> createNVVMToCubinPass();
 
 }  // namespace mlir
 
-#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_CONVERSION_PTXTOCUBIN_H_
+#endif  // WITH_MLIR_CUDA_CODEGEN
+
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_CONVERSION_NVVMTOCUBIN_H_

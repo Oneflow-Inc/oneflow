@@ -39,7 +39,7 @@ limitations under the License.
 #include "OneFlow/Transform/EliminateAllocOps.h"
 
 #ifdef WITH_MLIR_CUDA_CODEGEN
-#include "OneFlow/Conversion/PTXToCubin.h"
+#include "OneFlow/Conversion/NVVMToCubin.h"
 #endif  // WITH_MLIR_CUDA_CODEGEN
 
 namespace mlir {
