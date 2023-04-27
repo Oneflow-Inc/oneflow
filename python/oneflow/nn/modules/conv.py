@@ -438,11 +438,11 @@ class Conv2d(Module):
             with flow.no_grad():
                 self.weight.data = self.weight.to(memory_format=flow.channels_last)
         elif (
-            self.channel_pos == "channels_last" and memory_format is flow.channels_first
+            self.channel_pos == "channels_last" and memory_format is flow.contiguous_format
         ):
             self.channel_pos = "channels_first"
             with flow.no_grad():
-                self.weight.data = self.weight.to(memory_format=flow.channels_first)
+                self.weight.data = self.weight.to(memory_format=flow.contiguous_format)
 
     def _conv_forward(self, x, weight, bias):
         return flow._C.conv2d(
@@ -621,11 +621,11 @@ class Conv3d(Module):
             with flow.no_grad():
                 self.weight.data = self.weight.to(memory_format=flow.channels_last)
         elif (
-            self.channel_pos == "channels_last" and memory_format is flow.channels_first
+            self.channel_pos == "channels_last" and memory_format is flow.contiguous_format
         ):
             self.channel_pos = "channels_first"
             with flow.no_grad():
-                self.weight.data = self.weight.to(memory_format=flow.channels_first)
+                self.weight.data = self.weight.to(memory_format=flow.contiguous_format)
 
     def _conv_forward(self, x, weight, bias):
         return flow._C.conv3d(
