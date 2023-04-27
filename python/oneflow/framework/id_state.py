@@ -26,6 +26,7 @@ def save_id_state(path: Union[str, Path]):
     obj = oneflow._oneflow_internal.get_id_state()
     flow.save(obj, path)
 
+
 @try_init_default_session
 def load_id_state(path: Union[str, Path]):
     obj = flow.load(path)
