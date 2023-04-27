@@ -58,7 +58,7 @@ jobs:
     needs: [generate-build-matrix]
     name: Staging Release
     timeout-minutes: 180
-    runs-on: [self-hosted, linux, builder]
+    runs-on: [self-hosted, linux, release]
     if: github.repository == 'Oneflow-Inc/oneflow'
     strategy:
       fail-fast: false
