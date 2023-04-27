@@ -195,7 +195,6 @@ struct CuFFTParams {
           auto in_size = input_shape[i+1];
           auto out_size = output_shape[i+1];
           data_shape[i + 1] = std::max(in_size, out_size);
-          std::cout << "i = " << i << ", in_size = " << in_size << ", out_size = " <<  out_size << std::endl;
           CHECK_OR_THROW(in_size == data_shape[i + 1] ||
                                 in_size == (data_shape[i + 1] / 2) + 1);
           CHECK_OR_THROW(out_size == data_shape[i + 1] ||
