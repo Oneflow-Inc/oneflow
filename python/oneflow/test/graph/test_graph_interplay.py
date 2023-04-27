@@ -43,12 +43,13 @@ def _test_relu(test_case, device):
     x = torch.tensor(input_arr, device=device)
     eager_out = torch.relu(x)
 
-    def to_of_transform(gm: torch.fx.GraphModule,
-              tracer_class : type = fx.Tracer) -> torch.fx.GraphModule:
+    def to_of_transform(
+        gm: torch.fx.GraphModule, tracer_class: type = fx.Tracer
+    ) -> torch.fx.GraphModule:
         for node in gm.graph.nodes:
             # Checks if we're calling a function (i.e:
             # torch.add)
-            if node.op == 'call_function':
+            if node.op == "call_function":
                 # The target attribute is the function
                 # that call_function calls.
                 if node.target == torch.relu:
@@ -85,7 +86,7 @@ def _test_relu(test_case, device):
             flow_outs = oneflow_fn(flow_inputs)
             # TODO(): general output process
             outs = flow.utils.tensor.to_torch(flow_outs[0])
-            return (outs, )
+            return (outs,)
 
         return from_to_torch
 
