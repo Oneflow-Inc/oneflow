@@ -59,8 +59,6 @@ class Env {
 
   std::set<vm::RematableTensorStorage*> need_eager_eviction_storages;
 
-  std::string current_op_type_name;
-
   void set_budget_in_bytes(int64_t budget_in_bytes) { budget_in_bytes_ = budget_in_bytes; }
   int64_t budget_in_bytes() const { return budget_in_bytes_; }
 
@@ -76,6 +74,10 @@ class Env {
 
   int budget_in_bytes_ = 0;
   bool small_pieces_optimization_ = true;
+};
+
+struct CurrentOpTypeName {
+  std::string value;
 };
 
 }  // namespace remat
