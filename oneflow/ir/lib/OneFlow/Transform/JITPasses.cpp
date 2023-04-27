@@ -25,6 +25,7 @@ limitations under the License.
 #include "mlir/Bytecode/BytecodeWriter.h"
 
 namespace mlir {
+
 namespace oneflow {
 
 namespace {
@@ -266,4 +267,5 @@ std::unique_ptr<Pass> createOutlineJitFunctionPass() {
 }
 
 }  // namespace oneflow
+
 }  // namespace mlir
