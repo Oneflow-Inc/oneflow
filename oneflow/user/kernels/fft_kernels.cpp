@@ -138,54 +138,6 @@ class FftR2CKernel final : public user_op::OpKernel {
   }
 };
 
-#if 0
-template<typename dtype_in, typename dtype_out>
-class FftR2CCudaKernel final : public user_op::OpKernel {
- public:
-  FftR2CCudaKernel() = default;
-  ~FftR2CCudaKernel() = default;
-
- private:
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    std::cout << "=========== [FftR2CCudaKernel] in ==================" << std::endl;
-
-    const user_op::Tensor* input = ctx->Tensor4ArgNameAndIndex("input", 0);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    bool forward = ctx->Attr<bool>("forward");
-    bool onesided = ctx->Attr<bool>("onesided");
-    const std::string& norm_str = ctx->Attr<std::string>("norm");
-    const std::vector<int64_t>& dims = ctx->Attr<std::vector<int64_t>>("dims");
-    const dtype_in* input_ptr = input->dptr<dtype_in>();
-    dtype_out* out_ptr = out->mut_dptr<dtype_out>();
-    // TO-DO:
-    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    // =================
-
-
-    Shape input_shape(input->shape_view());
-    Shape out_shape(out->shape_view());
-    fft_norm_mode norm_mode = norm_from_string(norm_str, forward);
-
-    // get last dim half size
-    if (onesided) {
-      int64_t last_dim = dims.back();
-      int64_t last_dim_halfsize = (input_shape[last_dim]) / 2 + 1;
-      out_shape[last_dim] = last_dim_halfsize;
-    }
-
-    if (input->data_type() == kFloat || input->data_type() == kDouble) {
-      FftR2CKernelUtil<DeviceType::kCPU, dtype_in, dtype_out>::FftR2CForward(
-          ctx->stream(), input_ptr, out_ptr, input_shape, out_shape, input->stride(), out->stride(),
-          /*forward=*/true, dims, norm_mode);
-    } else {
-      Error::RuntimeError() << "expects kFloat or kDouble, but gets " << input->data_type();
-    }
-
-    if (!onesided) { conj_symmetry(out_ptr, out_shape, out->stride(), dims, out_shape.elem_cnt()); }
-  }
-};
-#endif
 
 template<DeviceType device_type, typename dtype_in, typename dtype_out>
 class FftC2RKernel final : public user_op::OpKernel {
@@ -216,7 +168,7 @@ class FftC2RKernel final : public user_op::OpKernel {
     if (input->data_type() == kComplex64 || input->data_type() == kComplex128) {
       FftC2RKernelUtil<device_type, dtype_in, dtype_out>::FftC2RForward(
           ctx->stream(), input_ptr, out_ptr, input_shape, out_shape, 
-          input->stride(), out->stride(),
+          input->stride(), out->stride(), /*forward=*/false,
           /*last_dim_size=*/last_dim_size, dims, norm_fct, /*real_type=*/out->data_type());
     } else {
       Error::RuntimeError() << "expects kComplex64 or kComplex128, but gets " << input->data_type();
@@ -298,5 +250,7 @@ REGISTER_FFTR2C_KERNELS(DeviceType::kCUDA, double, cuDoubleComplex);
 REGISTER_FFTC2R_KERNELS(DeviceType::kCPU, std::complex<float>, float);
 REGISTER_FFTC2R_KERNELS(DeviceType::kCPU, std::complex<double>, double);
 #ifdef WITH_CUDA
+REGISTER_FFTC2R_KERNELS(DeviceType::kCUDA, cuComplex, float);
+REGISTER_FFTC2R_KERNELS(DeviceType::kCUDA, cuDoubleComplex, double);
 #endif
 }  // namespace oneflow

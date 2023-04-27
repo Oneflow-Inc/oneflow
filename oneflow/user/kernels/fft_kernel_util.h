@@ -54,7 +54,7 @@ template<DeviceType device_type, typename IN, typename OUT>
 struct FftC2RKernelUtil {
   static void FftC2RForward(ep::Stream* stream, const IN* data_in, OUT* data_out, 
                             const Shape& input_shape, const Shape& output_shape, 
-                            const Stride& input_stride, const Stride& output_stride, 
+                            const Stride& input_stride, const Stride& output_stride, bool forward,
                             int64_t last_dim_size, const std::vector<int64_t>& dims,
                             OUT norm_fct, DataType real_type);
 };

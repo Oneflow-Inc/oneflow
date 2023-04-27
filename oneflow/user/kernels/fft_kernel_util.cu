@@ -214,6 +214,7 @@ class FftC2CKernelUtil<DeviceType::kCUDA, T, FCT_TYPE>{
                             const Stride& input_stride, const Stride& output_stride, 
                             bool forward, const std::vector<int64_t>& dims, FCT_TYPE normalization,
                             DataType real_type){
+    // NOTE: before calling `FftC2CKernelUtil<DeviceType::kCUDA, T, FCT_TYPE>`, input must be batched out already
     CuFFTParams params(input_shape, output_shape, input_stride, output_stride, 
                       dims.size(), CUFFT_EXCUTETYPE::C2C, real_type);
     CuFFTConfig config(params);
@@ -235,6 +236,7 @@ struct FftR2CKernelUtil<DeviceType::kCUDA, IN, OUT> {
                             const Shape& input_shape, const Shape& output_shape,
                             const Stride& input_stride, const Stride& output_stride, bool forward,
                             const std::vector<int64_t>& dims, IN normalization, DataType real_type){
+    // NOTE: before calling `FftR2CKernelUtil<DeviceType::kCUDA, IN, OUT>`, input must be batched out already
     CuFFTParams params(input_shape, output_shape, input_stride, output_stride, 
                       dims.size(), CUFFT_EXCUTETYPE::R2C, real_type);
     CuFFTConfig config(params);
@@ -253,22 +255,36 @@ template<typename IN, typename OUT>
 struct FftC2RKernelUtil<DeviceType::kCUDA, IN, OUT> {
   static void FftC2RForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
                             const Shape& input_shape, const Shape& output_shape,
-                            const Stride& input_stride, const Stride& output_stride,
+                            const Stride& input_stride, const Stride& output_stride, bool forward,
                             int64_t last_dim_size, const std::vector<int64_t>& dims,
                             OUT normalization, DataType real_type){
-    // TO-DO:
-    UNIMPLEMENTED();
+
+    // NOTE: before calling `FftC2RKernelUtil<DeviceType::kCUDA, IN, OUT>`, input must be batched out already
+    CuFFTParams params(input_shape, output_shape, input_stride, output_stride, 
+                      dims.size(), CUFFT_EXCUTETYPE::C2R, real_type);
+    CuFFTConfig config(params);
+    auto& plan = config.plan();
+    OF_CUFFT_CHECK(cufftSetStream(plan, stream->As<ep::CudaStream>()->cuda_stream()));
+    void* workspace{};
+    OF_CUDA_CHECK(cudaMalloc(&workspace, config.workspace_size()));
+    OF_CUFFT_CHECK(cufftSetWorkArea(plan, workspace));
+
+    config.excute((void*)data_in, (void*)data_out, forward);
+    OF_CUDA_CHECK(cudaFree(workspace));    
   }
 };
 
 template struct FillConjSymmetryUtil<DeviceType::kCUDA, cuComplex>;
 template struct FillConjSymmetryUtil<DeviceType::kCUDA, cuDoubleComplex>;
 
-template struct FftC2CKernelUtil<DeviceType::kCUDA, cuComplex, float>;
-template struct FftC2CKernelUtil<DeviceType::kCUDA, cuDoubleComplex, double>;
+template struct FftC2CKernelUtil<DeviceType::kCUDA, cuComplex, /*FCT_TYPE=*/float>;
+template struct FftC2CKernelUtil<DeviceType::kCUDA, cuDoubleComplex, /*FCT_TYPE=*/double>;
 
 template struct FftR2CKernelUtil<DeviceType::kCUDA, float, cuComplex>;
 template struct FftR2CKernelUtil<DeviceType::kCUDA, double, cuDoubleComplex>;
+
+template struct FftC2RKernelUtil<DeviceType::kCUDA, cuComplex, float>;
+template struct FftC2RKernelUtil<DeviceType::kCUDA, cuDoubleComplex, double>;
 }  // namespace oneflow
 
 #endif

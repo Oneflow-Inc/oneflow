@@ -112,8 +112,9 @@ inline CuFFTDataLayout as_cufft_embed(const cufft_dim_vector& strides, const cuf
 
   const auto last_dim_size = onesided ?
       sizes[signal_ndim] / 2 + 1 : sizes[signal_ndim];
-  // const auto signal_numel = c10::multiply_integers(sizes.slice(1, sizes.size() - 2)) * last_dim_size;
+
   const auto signal_numel = std::accumulate(sizes.begin() + 1, sizes.end() - 1, (cufft_size_type) 1, std::multiplies<cufft_size_type>()) * last_dim_size;
+
   // Zero stides are not allowed, even if the batch size is one.
   // If that happens just set a dummy case
   if (sizes[0] == 1) {
@@ -121,7 +122,7 @@ inline CuFFTDataLayout as_cufft_embed(const cufft_dim_vector& strides, const cuf
   } else if (strides[0] == 0) {
     layout.must_clone = true;
   } else {
-    layout.dist = strides[0]; // 350
+    layout.dist = strides[0];
   }
 
   // Calculate the embedding shape, or set must_clone if the strides cannot be embedded
@@ -143,8 +144,10 @@ inline CuFFTDataLayout as_cufft_embed(const cufft_dim_vector& strides, const cuf
     layout = cufft_simple_embed(sizes, onesided);
     layout.must_clone = true;
   } else {
-    layout.embed[0] = sizes[1]; // 10
-    layout.stride = strides[signal_ndim]; // 1
+    
+    layout.embed[0] = sizes[1];
+    layout.stride = strides[signal_ndim];
+
     // Determine if layout represents a simple embedding (contiguous data)
     layout.simple = [&] {
       FOR_RANGE(int, i, 1, signal_ndim - 1){
@@ -152,11 +155,6 @@ inline CuFFTDataLayout as_cufft_embed(const cufft_dim_vector& strides, const cuf
           return false;
         }
       }
-      // for (const auto i : c10::irange(1, signal_ndim - 1)) {
-      //   if (layout.embed[i] != sizes[i + 1]) {
-      //     return false;
-      //   }
-      // }
       return (layout.stride == 1 && layout.dist == signal_numel &&
           layout.embed.back() == last_dim_size);
     }();
@@ -170,6 +168,7 @@ struct CuFFTParams {
   cufft_dim_vector input_shape;
   cufft_dim_vector input_strides;
   cufft_dim_vector output_strides;
+  cufft_dim_vector data_shape;
   CUFFT_EXCUTETYPE excute_type;
   DataType real_data_type;
 
@@ -181,6 +180,7 @@ struct CuFFTParams {
         assert(ndim >= 1 && ndim <= max_rank);
         assert(in_shape.size() == in_strides.size());
         assert(out_shape.size() == out_strides.size());
+        data_shape.resize(ndim + 1);
         input_shape.resize(in_shape.size());
         input_strides.resize(in_strides.size());
         output_shape.resize(out_shape.size());
@@ -190,6 +190,17 @@ struct CuFFTParams {
         std::copy(out_strides.begin(), out_strides.end(), output_strides.begin());
         std::copy(in_shape.begin(), in_shape.end(), input_shape.begin());
         std::copy(out_shape.begin(), out_shape.end(), output_shape.begin());
+        data_shape[0] = input_shape[0]; // batch size
+        FOR_RANGE(int64_t, i, 0, ndim) {
+          auto in_size = input_shape[i+1];
+          auto out_size = output_shape[i+1];
+          data_shape[i + 1] = std::max(in_size, out_size);
+          std::cout << "i = " << i << ", in_size = " << in_size << ", out_size = " <<  out_size << std::endl;
+          CHECK_OR_THROW(in_size == data_shape[i + 1] ||
+                                in_size == (data_shape[i + 1] / 2) + 1);
+          CHECK_OR_THROW(out_size == data_shape[i + 1] ||
+                                out_size == (data_shape[i + 1] / 2) + 1);
+        }
   }
 };
 
@@ -207,8 +218,9 @@ class CuFFTConfig {
       // TO-DO : do some check
     }
 
-    CuFFTDataLayout input_layout = as_cufft_embed(params.input_strides, params.input_shape, params.excute_type == CUFFT_EXCUTETYPE::C2R);
-    CuFFTDataLayout output_layout = as_cufft_embed(params.output_strides, params.input_shape, params.excute_type == CUFFT_EXCUTETYPE::R2C);
+    CuFFTDataLayout input_layout = as_cufft_embed(params.input_strides, params.data_shape, params.excute_type == CUFFT_EXCUTETYPE::C2R);
+    CuFFTDataLayout output_layout = as_cufft_embed(params.output_strides, params.data_shape, params.excute_type == CUFFT_EXCUTETYPE::R2C);
+
     bool clone_input = input_layout.must_clone; // that means: input should be contiguous because original input can't be embeded
     const bool is_layout_simple = input_layout.simple && output_layout.simple;
 
@@ -217,8 +229,8 @@ class CuFFTConfig {
     infer_cufft_type_(params.excute_type, params.real_data_type);
 
     // exclude input_shape[0] whtich is batch dim
-    cufft_dim_vector fft_shape(params.input_shape.begin() + 1, params.input_shape.end());
-    cufft_size_type batch = params.input_shape[0];
+    cufft_dim_vector fft_shape(params.data_shape.begin() + 1, params.data_shape.end());
+    cufft_size_type batch = params.data_shape[0];
     if (is_layout_simple){
       OF_CUFFT_CHECK(cufftXtMakePlanMany(plan_handle_.get(), params.ndim, fft_shape.data(), 
                 /*inembed=*/nullptr, /*istride=*/1, /*idist=*/1, /*inputtype=*/data_type_desc_.inputtype, 
