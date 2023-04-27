@@ -5,7 +5,7 @@ export PYTHONUNBUFFERED=1
 
 src_dir=${ONEFLOW_SRC_DIR:-"$PWD"}
 ONEFLOW_TEST_DIR=${ONEFLOW_TEST_DIR:-"$PWD/python/oneflow/test/modules"}
-ONEFLOW_TEST_TASKS_PER_GPU=${ONEFLOW_TEST_TASKS_PER_GPU:-"4"}
+ONEFLOW_TEST_TASKS_PER_GPU=${ONEFLOW_TEST_TASKS_PER_GPU:-"8"}
 
 
 if [ -z "$ONEFLOW_TEST_FILES" ]; then
@@ -28,7 +28,7 @@ then
     multi_launch_device_num=${gpu_num}
 else
     parallel_spec="-n auto"
-    multi_launch_device_num=8
+    multi_launch_device_num=16
 fi
 
 unset HTTP_PROXY
