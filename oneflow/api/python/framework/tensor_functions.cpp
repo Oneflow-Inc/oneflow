@@ -48,8 +48,8 @@ PyObject* concat_self(PyObject* self, PyObject* args) {
 PyObject* ndarray_judgment_and_compatibility(PyObject* self, PyObject* other) {
   if (PyArray_Check(other)) {
     const auto& tensor = PyTensor_Unpack(self);
-    CHECK_OR_THROW(!tensor->is_cuda())
-        << Error::RuntimeError() << "Can't convert cuda device type tensor to numpy";
+    CHECK_OR_THROW(tensor->is_cpu())
+        << Error::RuntimeError() << "Can't convert non-cpu device tensor to numpy";
     if (tensor->is_global()) {
       Symbol<ParallelDesc> placement = ASSERT(tensor->parallel_desc());
       auto ndsbp = ASSERT(tensor->nd_sbp());
@@ -200,6 +200,7 @@ PyNumberMethods PyTensorObject_as_number = {
   }
 
 UNARY_METHOD(PyTensorObject_abs, functional::Abs);
+UNARY_METHOD(PyTensorObject_digamma, functional::Digamma);
 UNARY_METHOD(PyTensorObject_exp, functional::Exp);
 UNARY_METHOD(PyTensorObject_exp2, functional::Exp2);
 UNARY_METHOD(PyTensorObject_floor, functional::Floor);
@@ -1102,6 +1103,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
 
     // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},
+    {"digamma", PyTensorObject_digamma, METH_NOARGS, NULL},
     {"exp", PyTensorObject_exp, METH_NOARGS, NULL},
     {"exp2", PyTensorObject_exp2, METH_NOARGS, NULL},
     {"floor", PyTensorObject_floor, METH_NOARGS, NULL},

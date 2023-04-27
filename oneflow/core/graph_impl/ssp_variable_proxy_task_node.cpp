@@ -74,7 +74,7 @@ class SspVariableProxyCompTaskNode final : public CompTaskNode {
     BuildExecGphStructAndBindInRegst();
     BuildOutRegst();
     mut_exec_gph().TopoForEachNode(
-        [this](ExecNode* node) { node->InferBlobDescs(parallel_ctx()); });
+        [this](ExecNode* node) { (node->*GetInferBlobDescsMethod())(parallel_ctx()); });
   }
 
   void BuildExecGphStructAndBindInRegst() {

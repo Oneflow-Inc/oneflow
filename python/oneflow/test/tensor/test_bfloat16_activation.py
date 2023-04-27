@@ -691,6 +691,21 @@ class TestBfloat16Activatian(flow.unittest.TestCase):
             )
         )
 
+    def test_digamma_with_random_data(test_case):
+        np_array = np.random.rand(4, 4)
+        x = flow.tensor(np_array, dtype=flow.bfloat16, device="cpu")
+        fp32_x = x.float()
+        y = flow.digamma(x)
+        fp32_y = flow.digamma(fp32_x)
+        test_case.assertTrue(
+            np.allclose(
+                y.float().numpy(),
+                fp32_y.bfloat16().float().numpy(),
+                atol=1e-4,
+                rtol=1e-4,
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

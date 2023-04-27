@@ -14,9 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "OneFlow/Conversion/OneFlowToTosa.h"
 #include "OneFlow/OneFlowDataTypeConversion.h"
+#include "OneFlow/Transform/FuncOps.h"
 #include "OneFlow/UserOpReflection.h"
 #include "OneFlow/Transform/AggregateOps.h"
+#include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
+#include "mlir/Conversion/TosaToTensor/TosaToTensor.h"
+#include "mlir/Dialect/Linalg/Passes.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
@@ -790,10 +795,6 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   mlir::oneflow::CheckEnableIRPrinting(pm);
   // this canonicalizer should create concrete ops and create fuse opportunities
   pm.addPass(createCanonicalizerPass());
-  if (job_wrapper.IsLastIRPass()
-      && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS", false)) {
-    pm.addPass(oneflow::createOutlineJitFunctionPass());
-  }
   // we must do auto nhwc and eliminate redundant transpose op first, avoid insert redundant
   // transpose op due to fuse pattern like normlazation_add_relu.
   pm.addPass(oneflow::createAutoNhwcPass());
@@ -811,7 +812,20 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   }
   if (job_wrapper.IsLastIRPass()
       && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS", false)) {
-    pm.addPass(oneflow::createOutlineJitFunctionPass());
+    pm.addPass(oneflow::createOneFlowJobToFuncPass());
+    pm.addPass(oneflow::createCastOneFlowOpsToSignlessPass());
+    auto toTosa = oneflow::createLowerOneFlowToTosaPass();
+    CHECK(toTosa->initializeOptions("full=0 lower-job=0").succeeded());
+    pm.addPass(std::move(toTosa));
+    pm.addNestedPass<func::FuncOp>(tosa::createTosaMakeBroadcastablePass());
+    pm.addPass(oneflow::createLowerOneFlowToLinalgPass());
+    pm.addPass(tosa::createTosaToTensor());
+    pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalgNamed());
+    pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());
+    pm.addPass(createLinalgElementwiseOpFusionPass());
+    pm.addPass(oneflow::createFuncToOneFlowJobPass());
+    pm.addNestedPass<Job>(oneflow::createOutlineJitFunctionPass());
+    pm.addPass(createCanonicalizerPass());
   }
   if (!job_wrapper.IsLastIRPass()
       && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_FUSE_OPS_WITH_BACKWARD_IMPL", false)) {

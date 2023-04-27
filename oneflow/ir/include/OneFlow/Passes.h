@@ -32,7 +32,10 @@ limitations under the License.
 #include "OneFlow/Transform/OutlineAndFuse.h"
 #include "OneFlow/Transform/AutoNhwc.h"
 #include "OneFlow/Transform/AggregateOps.h"
+#include "OneFlow/Transform/FuncOps.h"
 #include "OneFlow/Transform/CSEWithAttributesIgnored.h"
+#include "OneFlow/Transform/OneFlowStream.h"
+#include "OneFlow/Transform/EliminateAllocOps.h"
 
 #ifdef WITH_MLIR_CUDA_CODEGEN
 #include "OneFlow/Conversion/PTXToCubin.h"
@@ -50,7 +53,6 @@ LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module);
 #ifdef WITH_MLIR_CUDA_CODEGEN
 LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module);
 #endif  // WITH_MLIR_CUDA_CODEGEN
-void populateFuserPasses(::mlir::RewritePatternSet& patterns);
 void populateWrapOpsToKernelLaunchPatterns(::mlir::RewritePatternSet& patterns,
                                            const std::string& mode);
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns);

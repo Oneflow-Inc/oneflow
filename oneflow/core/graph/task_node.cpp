@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/memory/memory_case_util.h"
+#include "oneflow/core/graph/task_graph_rebuild_ctx.h"
 
 namespace oneflow {
 
@@ -40,7 +41,7 @@ void ForEachDataEdge(const std::unordered_set<TaskEdge*>& edges,
 }  // namespace
 
 TaskNode::TaskNode()
-    : machine_id_(-1), thrd_id_(-1), task_id_(-1), chain_id_(-1), order_in_graph_(-1) {}
+    : machine_id_(-1), thrd_id_(-1), task_id_(-1), chain_id_(-1), order_in_chain_(-1) {}
 
 std::shared_ptr<RegstDesc> TaskNode::GetProducedRegst(const std::string& name) {
   auto produced_regsts_it = produced_regsts_.find(name);
@@ -88,9 +89,9 @@ void TaskNode::set_chain_id(int64_t val) {
   chain_id_ = val;
 }
 
-void TaskNode::set_order_in_graph(int64_t val) {
-  CHECK_EQ(order_in_graph_, -1);
-  order_in_graph_ = val;
+void TaskNode::set_order_in_chain(int64_t val) {
+  CHECK_EQ(order_in_chain_, -1);
+  order_in_chain_ = val;
 }
 
 void TaskNode::PinConsumedRegst() {
@@ -202,15 +203,15 @@ std::string TaskNode::VisualStr() const {
 
 bool TaskNode::IsMeaningLess() { return produced_regsts_.empty() && consumed_regsts_.empty(); }
 
-void TaskNode::ToProto(TaskProto* task_proto) const {
+void TaskNode::ToProto(TaskProto* task_proto, bool check) const {
   // Step1: process some scalar items.
   task_proto->set_task_type(GetTaskType());
   task_proto->set_machine_id(machine_id_);
   task_proto->set_thrd_id(thrd_id_);
   task_proto->set_task_id(task_id_);
   task_proto->set_job_id(GlobalJobDesc().job_id());
-  task_proto->mutable_task_set_info()->set_chain_id(chain_id_);
-  task_proto->mutable_task_set_info()->set_order_in_graph(order_in_graph_);
+  task_proto->set_chain_id(chain_id_);
+  task_proto->set_order_in_chain(order_in_chain_);
 
   // Step2: process exec_gph.
   exec_gph_.ToExecSequence(parallel_ctx(), task_proto->mutable_exec_sequence());
@@ -219,7 +220,7 @@ void TaskNode::ToProto(TaskProto* task_proto) const {
   auto* produced_regst_proto = task_proto->mutable_produced_regst_desc();
   for (auto& pair : produced_regsts_) {
     RegstDescProto regst_desc_proto;
-    pair.second->ToProto(&regst_desc_proto);
+    pair.second->ToProto(&regst_desc_proto, check);
     CHECK(produced_regst_proto->insert({pair.first, regst_desc_proto}).second);
   }
 
@@ -459,5 +460,30 @@ TaskEdge* TaskNode::SoleOutDataEdge() const { return GetSoleEdge(&TaskNode::ForE
 size_t TaskNode::in_data_edges_size() const { return GetEdgesSize(&TaskNode::ForEachInDataEdge); }
 
 size_t TaskNode::out_data_edges_size() const { return GetEdgesSize(&TaskNode::ForEachOutDataEdge); }
+
+Maybe<void> TaskEdge::InitFromProto(const TaskEdgeProto& proto,
+                                    const TaskGraphRebuildCtx& task_graph_rebuild_ctx) {
+  CHECK_NE_OR_RETURN(proto.src_task_id(), proto.dst_task_id()) << "self-loop are not supported";
+  JUST(task_graph_rebuild_ctx.TaskNode4Id(proto.src_task_id()));
+  JUST(task_graph_rebuild_ctx.TaskNode4Id(proto.dst_task_id()));
+  // Note that edge id from proto is ignored.
+  lbis_.insert(proto.lbi().begin(), proto.lbi().end());
+  for (const auto& pair : proto.name_in_producer2regst_desc_id()) {
+    AddRegst(pair.first, JUST(task_graph_rebuild_ctx.RegstDesc4Id(pair.second)));
+  }
+  return Maybe<void>::Ok();
+}
+
+void TaskEdge::ToProto(TaskEdgeProto* proto) const {
+  // proto->set_task_edge_uid(edge_id());
+  proto->set_task_edge_uid(reinterpret_cast<int64_t>(this));
+  proto->set_src_task_id(src_node()->task_id());
+  proto->set_dst_task_id(dst_node()->task_id());
+  *proto->mutable_lbi() = {lbis_.begin(), lbis_.end()};
+  auto* map = proto->mutable_name_in_producer2regst_desc_id();
+  for (const auto& pair : name_in_producer2regst_) {
+    CHECK(map->insert({pair.first, pair.second->regst_desc_id()}).second);
+  }
+}
 
 }  // namespace oneflow

@@ -25,6 +25,8 @@ if "CUDA_MODULE_LOADING" not in os.environ:
 
 import oneflow._oneflow_internal
 
+oneflow._oneflow_internal.RegisterSignalHandler()
+
 oneflow_python_base_dir = os.path.dirname(os.path.realpath(__file__))
 oneflow._oneflow_internal.InitPythonPathsToBeKeptAndFilteredForDebugging(
     oneflow_python_base_dir
@@ -52,6 +54,9 @@ locals()["uint8"] = oneflow._oneflow_internal.uint8
 locals()["record"] = oneflow._oneflow_internal.record
 locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
 locals()["bfloat16"] = oneflow._oneflow_internal.bfloat16
+locals()["char"] = oneflow._oneflow_internal.char
+locals()["short"] = oneflow._oneflow_internal.int16
+locals()["int16"] = oneflow._oneflow_internal.int16
 
 locals()["cfloat"] = oneflow._oneflow_internal.cfloat
 locals()["complex64"] = oneflow._oneflow_internal.complex64
@@ -103,6 +108,7 @@ from oneflow._C import batch_matmul as bmm
 from oneflow._C import baddbmm
 from oneflow._C import broadcast_like
 from oneflow._C import chunk
+from oneflow._C import digamma
 from oneflow._C import split
 from oneflow._C import sign
 from oneflow._C import sinh
@@ -357,6 +363,7 @@ import oneflow.nn.image
 
 from oneflow.framework.check_point_v2 import load
 from oneflow.framework.check_point_v2 import save
+from oneflow.framework.check_point_v2 import frombuffer
 from oneflow.framework.dtype import convert_oneflow_dtype_to_numpy_dtype, dtypes
 from oneflow.framework.function_util import FunctionConfig
 from oneflow.framework.function_util import FunctionConfig as function_config
@@ -374,6 +381,7 @@ from oneflow.framework.generator import (
 # from oneflow.framework.model import Model
 import oneflow.utils.tensor
 import oneflow.utils.global_view
+import oneflow.utils.model_zoo
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import is_nonzero
 from oneflow._oneflow_internal import to_dlpack
@@ -493,8 +501,4 @@ import oneflow.remat
 
 if oneflow._oneflow_internal.flags.with_mlir():
     oneflow_internal_path = oneflow._oneflow_internal.__file__
-    if os.getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS") or os.getenv(
-        "ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH"
-    ):
-        print("MLIR JIT engine will load:", oneflow_internal_path, file=sys.stderr)
-        oneflow._oneflow_internal.ir.load_jit_shared_lib(oneflow_internal_path)
+    oneflow._oneflow_internal.ir.load_jit_shared_lib(oneflow_internal_path)

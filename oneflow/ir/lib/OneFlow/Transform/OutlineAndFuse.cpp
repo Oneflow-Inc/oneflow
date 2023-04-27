@@ -38,15 +38,6 @@ namespace oneflow {
 
 namespace {
 
-class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunctionPass> {
-  void runOnOperation() override {
-    Operation* op = getOperation();
-    RewritePatternSet patterns(op->getContext());
-    populateFuserPasses(patterns);
-    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
-  }
-};
-
 class WrapOpsToKernelLaunchPass : public WrapOpsToKernelLaunchPassBase<WrapOpsToKernelLaunchPass> {
  public:
   WrapOpsToKernelLaunchPass() = default;
@@ -229,10 +220,6 @@ class FuseNormalizationOpsPass : public FuseNormalizationOpsBase<FuseNormalizati
 };
 
 }  // namespace
-
-std::unique_ptr<Pass> createOutlineJitFunctionPass() {
-  return std::make_unique<OutlineJitFunctionPass>();
-}
 
 std::unique_ptr<Pass> createWrapOpsToKernelLaunchPass() {
   return std::make_unique<WrapOpsToKernelLaunchPass>();

@@ -65,6 +65,7 @@ config.excludes = [
     "test_util.py",
     "test_mlir_opt.mlir.py",
     "lit.cfg.py",
+    "saved_model",
 ]
 
 # test_source_root: The root path where tests are located.
@@ -90,7 +91,6 @@ llvm_config.with_environment(
 )
 
 llvm_config.with_environment("ONEFLOW_MLIR_STDOUT", "1")
-llvm_config.with_environment("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS", "1")
 llvm_config.with_environment("ONEFLOW_MLIR_ENABLE_ROUND_TRIP", "1")
 llvm_config.with_environment("ONEFLOW_MLIR_CSE", "1")
 llvm_config.with_environment("ONEFLOW_MLIR_FUSE_FORWARD_OPS", "1")

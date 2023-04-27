@@ -609,5 +609,14 @@ class TestLog10Module(flow.unittest.TestCase):
         return torch.log10(x)
 
 
+@flow.unittest.skip_unless_1n1d()
+class TestDigammaModule(flow.unittest.TestCase):
+    @autotest(n=5)
+    def test_digamma_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        return torch.digamma(x)
+
+
 if __name__ == "__main__":
     unittest.main()

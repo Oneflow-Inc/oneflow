@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,28 +12,13 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
+"""
+import os
+import unittest
 
-#include "mlir/Dialect/PDL/IR/PDL.h"
-#include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
-#include "mlir/Parser/Parser.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassManager.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "OneFlow/OneFlowPDLLPatterns.h"
 
-using namespace mlir;
-
-#include "oneflow/ir/lib/OneFlow/PDLL/ElementwiseFusionPatterns.h.inc"
-
-namespace mlir {
-
-namespace oneflow {
-
-void populateElementwiseFusionPatterns(RewritePatternSet& patterns) {
-  populateGeneratedPDLLPatterns(patterns);
-}
-
-}  // namespace oneflow
-
-}  // namespace mlir
+class MLIRTestCase(unittest.TestCase):
+    def tearDown(self):
+        for key in os.environ.keys():
+            if key.startswith("ONEFLOW_MLIR"):
+                os.environ.pop(key)

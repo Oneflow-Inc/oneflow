@@ -107,8 +107,8 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
         test_case.assertEqual(linear_dp.weight.sbp[0], S0)
         test_case.assertEqual(linear_mp.weight.sbp[0], S0)
 
-        # In evaluation graph, paramters's sbp are flow.sbp.split(0).
-        # But their consumer will consum them as flow.sbp.broadcast.
+        # In evaluation graph, parameter's sbp are flow.sbp.split(0).
+        # But their consumer will consume them as flow.sbp.broadcast.
         one_eval_iter()
 
     iter_num = 1
