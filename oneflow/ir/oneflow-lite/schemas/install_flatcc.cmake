@@ -21,6 +21,7 @@ set(FLATCC_SRCS
     "${FLATCC_ROOT}/config/config.h")
 set(FLATCC_INCLUDE_DIR ${FLATCC_ROOT}/include)
 add_library(flatcc-runtime STATIC ${FLATCC_SRCS})
+remove_sanitizer_flags(flatcc-runtime)
 target_include_directories(flatcc-runtime SYSTEM PUBLIC ${FLATCC_INCLUDE_DIR})
 
 add_executable(
@@ -53,6 +54,7 @@ add_executable(
   "${FLATCC_ROOT}/src/runtime/refmap.c")
 target_include_directories(flatcc-cli PRIVATE "${FLATCC_ROOT}/external" "${FLATCC_ROOT}/include"
                                               "${FLATCC_ROOT}/config")
+remove_sanitizer_flags(flatcc-cli)
 
 #set(FLATCC_EXE ${CMAKE_CURRENT_BINARY_DIR}/flatcc-cli PARENT_SCOPE)
 set(FLATCC_EXE ${CMAKE_CURRENT_BINARY_DIR}/flatcc-cli)
