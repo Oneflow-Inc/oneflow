@@ -41,6 +41,12 @@ def _test_cast_int2float(test_case, device, shape):
     np_out = np_arr.astype(np.float32)
     test_case.assertTrue(np.array_equal(output.numpy(), np_out))
 
+def _test_cast_bool2int16(test_case, device, shape):
+    np_arr = np.random.randn(*shape).astype(np.float32)
+    input = flow.tensor(np_arr, dtype=flow.bool, device=flow.device(device))
+    output = flow.cast(input, flow.int16)
+    np_out = np_arr.astype(bool).astype(np.int16)
+    test_case.assertTrue(np.array_equal(output.numpy(), np_out))
 
 def _test_cast_with_non_contiguous_input(test_case, device, shape):
     np_arr = np.random.randn(*shape).astype(np.int8)
@@ -81,6 +87,7 @@ class TestCast(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_cast_float2int,
             _test_cast_int2float,
+            _test_cast_bool2int16,
             _test_cast_backward,
             # _test_cast_with_non_contiguous_input,
         ]
