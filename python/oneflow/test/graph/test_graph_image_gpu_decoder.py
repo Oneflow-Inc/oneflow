@@ -27,7 +27,7 @@ class OFRecordDataLoader(flow.nn.Module):
         batch_size = 4
         image_size = 224
         self.train_record_reader = flow.nn.OFRecordReader(
-            "/dataset/imagenette/ofrecord",
+            flow.unittest.dataset_dir("imagenette/ofrecord"),
             batch_size=batch_size,
             data_part_num=1,
             part_name_suffix_length=5,
