@@ -12,6 +12,7 @@ FetchContent_Declare(inja URL ${INJA_URL} URL_HASH MD5=${INJA_URL_HASH})
 FetchContent_MakeAvailable(json inja)
 
 add_tablegen(oneflow_tblgen llvm tablegen.cpp op_schema_emitter.cpp)
+remove_sanitizer_flags(oneflow_tblgen)
 
 if(LLVM_ENABLE_OBJLIB)
   set(OF_TBLGEN_TARGET obj.oneflow_tblgen)
