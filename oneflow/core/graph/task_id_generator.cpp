@@ -25,7 +25,7 @@ void TaskIdGenerator::SaveId() {
   }
 }
 
-inline TaskId TaskIdGenerator::Generate(const StreamId& stream_id) {
+TaskId TaskIdGenerator::Generate(const StreamId& stream_id) {
   if (stream_id2task_index_counter_.count(stream_id) == 0) {
     stream_id2task_index_counter_[stream_id] =
         Singleton<MultiClientSessionContext>::Get()->GetIdStateMgr()->GetTaskIndexState(stream_id);
