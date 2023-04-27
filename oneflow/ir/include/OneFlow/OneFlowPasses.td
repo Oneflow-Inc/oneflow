@@ -13,7 +13,7 @@ def NVVMToCubinPass : InterfacePass<"nvvm-to-cubin", "SymbolOpInterface"> {
     Option<"features", "features", "StringRef", "\"+ptx60\"", "Target features">,
   ];
 }
-#endif
+#endif // WITH_MLIR_CUDA_CODEGEN
 
 def LowerOneFlowToTosaPass : Pass<"lower-oneflow-to-tosa", "ModuleOp"> {
   let summary = "lower oneflow dialect to tosa dialect";
