@@ -164,9 +164,9 @@ inline CuFFTDataLayout as_cufft_embed(const cufft_dim_vector& strides, const cuf
 
 struct CuFFTParams {
   int64_t ndim;
-  cufft_dim_vector output_shape;
   cufft_dim_vector input_shape;
   cufft_dim_vector input_strides;
+  cufft_dim_vector output_shape;
   cufft_dim_vector output_strides;
   cufft_dim_vector data_shape;
   CUFFT_EXCUTETYPE excute_type;
@@ -178,6 +178,8 @@ struct CuFFTParams {
               CUFFT_EXCUTETYPE type, DataType real) : ndim(dims), excute_type(type), real_data_type(real)
               {
         assert(ndim >= 1 && ndim <= max_rank);
+        assert(in_shape.size() == ndim + 1);
+        assert(out_shape.size() == ndim + 1);
         assert(in_shape.size() == in_strides.size());
         assert(out_shape.size() == out_strides.size());
         data_shape.resize(ndim + 1);

@@ -130,7 +130,6 @@ class FftC2C : public OpExprGradFunction<FftC2CCaptureState> {
 
 struct FftC2RCaptureState : public AutoGradCaptureState {
   bool requires_grad;
-  bool forward;
   std::vector<int64_t> dims;
   int32_t norm_mode;
   int64_t last_dim_size;
@@ -149,7 +148,6 @@ class FftC2R : public OpExprGradFunction<FftC2RCaptureState> {
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     ctx->requires_grad = inputs.at(0)->requires_grad();
-    ctx->forward = JUST(attrs.GetAttr<bool>("forward"));
     ctx->dims = JUST(attrs.GetAttr<std::vector<int64_t>>("dims"));
     ctx->norm_mode = JUST(attrs.GetAttr<int32_t>("norm_mode"));
     ctx->last_dim_size = JUST(attrs.GetAttr<int64_t>("last_dim_size"));

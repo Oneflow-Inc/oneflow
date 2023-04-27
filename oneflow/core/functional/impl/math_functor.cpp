@@ -4152,17 +4152,6 @@ class FftBaseFunctor {
     input = JUST(functional::Reshape(input, batched_shape));
 
     const auto batch_size = input->shape()->At(0);
-    std::vector<int64_t> fft_shape(fft_ndim + 1);
-    fft_shape[0] = batch_size;
-    FOR_RANGE(int64_t, i, 0, fft_ndim) {
-      auto in_size = input->shape()->at(i + 1);
-      auto out_size = out_sizes.at(fft_dims[i]);
-      fft_shape[i + 1] = std::max(in_size, out_size);
-      CHECK_OR_THROW(in_size == fft_shape[i + 1] ||
-                            in_size == (fft_shape[i + 1] / 2) + 1);
-      CHECK_OR_THROW(out_size == fft_shape[i + 1] ||
-                            out_size == (fft_shape[i + 1] / 2) + 1);
-    }
 
     batched_sizes[0] = batch_size;
     std::vector<int64_t> batched_out_sizes(batched_sizes.begin(), batched_sizes.end());

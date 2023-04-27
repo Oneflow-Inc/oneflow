@@ -150,7 +150,6 @@ class FftC2RKernel final : public user_op::OpKernel {
     const user_op::Tensor* input = ctx->Tensor4ArgNameAndIndex("input", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t last_dim_size = ctx->Attr<int64_t>("last_dim_size");
-    bool forward = ctx->Attr<bool>("forward");
     double norm_fct = ctx->Attr<double>("norm_fct");
     const std::vector<int64_t>& dims = ctx->Attr<std::vector<int64_t>>("dims");
 
