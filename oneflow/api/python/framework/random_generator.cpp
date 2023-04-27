@@ -43,7 +43,12 @@ py::tuple GetDefaultGenerators() {
   return default_cuda_generators;
 #else
   static int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
-  return py::tuple(num_cores);
+  py::tuple default_cpu_generators(num_cores);
+  FOR_RANGE(int, device_id, 0, num_cores) {
+    const auto& cpu_gen = one::DefaultCPUGenerator();
+    default_cpu_generators[device_id] = py::cast(cpu_gen);
+  }
+  return default_cpu_generators;
 #endif  // WITH_CUDA
 }
 
