@@ -530,6 +530,11 @@ def _conj_physical(self):
     return flow._C.conj_physical(self)
 
 
+@property
+def _layout(self):
+    return flow.strided
+
+
 def RegisterMethods():
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _numpy
@@ -601,6 +606,7 @@ def RegisterMethods():
     Tensor.imag = _imag
     Tensor.conj = _conj
     Tensor.conj_physical = _conj_physical
+    Tensor.layout = _layout
 
 
 def register_tensor_op(op_name):

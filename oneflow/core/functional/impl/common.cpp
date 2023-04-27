@@ -186,8 +186,8 @@ Maybe<void> CheckInplaceShapeCanExpandTo(const Shape& shape, const Shape& expand
       int dim_a = expand_shape.At(i);
       int dim_b = shape.At(index);
       // NOTE(lixiang): When a dimension of tensor a and tensor b are not equal in size, dim_a needs
-      // to be greater than 0, and dim_b should be equal to 1.
-      CHECK_OR_RETURN(!(dim_a != dim_b && (dim_a <= 0 || dim_b != 1)))
+      // to be greater than or equal 0, and dim_b should be equal to 1.
+      CHECK_OR_RETURN(!(dim_a != dim_b && (dim_a < 0 || dim_b != 1)))
           << Error::RuntimeError() << "Tensor with shape " << expand_shape.ToString()
           << " doesn't match the broadcast shape in an inplace operation";
     } else {
@@ -353,19 +353,6 @@ Maybe<std::tuple<std::shared_ptr<Tensor>, bool>> batchify(const std::shared_ptr<
   CHECK_EQ_OR_RETURN(input->ndim() == dim_count_no_batch || is_batched, true) << fmt::format(
       "Expected `{}`D (unbatched) or `{}`D (batched) input to `{}`, but got input of size: `{}`",
       dim_count_no_batch, dim_count_batch, func_name, input->shape()->DebugStr());
-  return std::make_tuple(is_batched ? input : JUST(functional::Unsqueeze(input, 0)), is_batched);
-}
-
-Maybe<std::tuple<std::shared_ptr<Tensor>, bool>> pooling_batchify(
-    const std::shared_ptr<Tensor>& input, const int64_t num_spatial_dims,
-    const std::string& func_name) {
-  const int64_t dim_count_no_batch = num_spatial_dims + 1;
-  const int64_t dim_count_batch = dim_count_no_batch + 1;
-  const bool is_batched = (input->ndim() == dim_count_batch);
-  CHECK_EQ_OR_RETURN(input->ndim() == dim_count_no_batch || is_batched, true)
-      << fmt::format("non-empty {}D (unbatched) or {}D (batche mode) tensor expected for input of "
-                     "{}, but got {}D input.",
-                     dim_count_no_batch, dim_count_batch, func_name, input->ndim());
   return std::make_tuple(is_batched ? input : JUST(functional::Unsqueeze(input, 0)), is_batched);
 }
 

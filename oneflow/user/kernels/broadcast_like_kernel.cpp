@@ -69,5 +69,8 @@ REGISTER_BROADCAST_LIKE_KERNEL(int32_t)
 REGISTER_BROADCAST_LIKE_KERNEL(int64_t)
 REGISTER_BROADCAST_LIKE_XPU_KERNEL(DeviceType::kCPU, std::complex<float>)
 REGISTER_BROADCAST_LIKE_XPU_KERNEL(DeviceType::kCPU, std::complex<double>)
-
+#ifdef WITH_CUDA
+REGISTER_BROADCAST_LIKE_XPU_KERNEL(DeviceType::kCUDA, cuComplex)
+REGISTER_BROADCAST_LIKE_XPU_KERNEL(DeviceType::kCUDA, cuDoubleComplex)
+#endif
 }  // namespace oneflow
