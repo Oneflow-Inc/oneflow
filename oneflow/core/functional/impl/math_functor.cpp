@@ -498,7 +498,7 @@ class ReduceSumFunctor {
         one::OpBuilder("reduce_sum").Input("input_tensor").Output("output_tensor").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
-                           const bool& keepdims, const Optional<Symbol<DType>>& dtype) const {
+                           const bool keepdims, const Optional<Symbol<DType>>& dtype) const {
     std::shared_ptr<one::Tensor> tensor = x;
     if (dtype.has_value() && (dtype != x->dtype())) {
       tensor = JUST(Cast(x, JUST(dtype), /*pin_memory=*/false));
