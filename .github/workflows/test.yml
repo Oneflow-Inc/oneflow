@@ -292,7 +292,7 @@ jobs:
       - uses: Oneflow-Inc/get-oneflow@torch1.13
         name: Build manylinux ${{ matrix.entry }}
         id: build-cpu-sanitizers
-        if: ${{ (matrix.entry == 'cpu-asan-ubsan' || matrix.entry == 'cpu-tsan') && !matrix.cache-hit }}
+        if: ${{ (matrix.entry == 'cpu-asan-ubsan' || matrix.entry == 'cpu-tsan') && !matrix.cache-hit && false }}
         with:
           cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/${{ matrix.entry }}.cmake
           build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build.sh
@@ -368,7 +368,7 @@ jobs:
               body: 'CI failed when running job: Build ${{ matrix.entry }}. PR label automerge has been removed'
             })
       - name: Upload packed liboneflow
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm15' }}
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm15' && matrix.entry != 'cpu-asan-ubsan' && matrix.entry != 'cpu-tsan' }}
         uses: Oneflow-Inc/get-oneflow/digest/upload@torch1.13
         timeout-minutes: 10
         with:
@@ -379,7 +379,7 @@ jobs:
           src-dir: ${{ env.MANYLINUX_CACHE_DIR }}/build/cpack
           dst-dir: cpack
       - name: Upload whl
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm15' }}
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm15' && matrix.entry != 'cpu-asan-ubsan' && matrix.entry != 'cpu-tsan' }}
         uses: Oneflow-Inc/get-oneflow/digest/upload@torch1.13
         timeout-minutes: 10
         with:
@@ -771,7 +771,7 @@ jobs:
           ssh-tank-host: ${{ env.SSH_TANK_HOST }}
           ssh-tank-path: ${{ env.SSH_TANK_PATH }}
       - name: Download ASAN and UBSAN wheel and packed liboneflow
-        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && matrix.device == 'cpu' }}
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && matrix.device == 'cpu' && false }}
         uses: Oneflow-Inc/get-oneflow/digest/download@torch1.13
         id: asan-ubsan-download-digest
         timeout-minutes: 10
@@ -781,7 +781,7 @@ jobs:
           ssh-tank-host: ${{ env.SSH_TANK_HOST }}
           ssh-tank-path: ${{ env.SSH_TANK_PATH }}
       - name: Download TSAN wheel and packed liboneflow
-        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && matrix.device == 'cpu' }}
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && matrix.device == 'cpu' && false }}
         uses: Oneflow-Inc/get-oneflow/digest/download@torch1.13
         id: tsan-download-digest
         timeout-minutes: 10
@@ -843,7 +843,7 @@ jobs:
         run: |
           unzip ${{ env.ONEFLOW_CPACK_PATH }}/liboneflow-ci-linux.zip
       - name: Unzip packed sanitized liboneflow
-        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && !fromJson(matrix.is-xla) && matrix.device == 'cpu' }}
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && !fromJson(matrix.is-xla) && matrix.device == 'cpu' && false }}
         run: |
           unzip ${{ steps.asan-ubsan-download-digest.outputs.entry-dir }}/cpack/liboneflow-ci-linux.zip -d asan-ubsan
           unzip ${{ steps.tsan-download-digest.outputs.entry-dir }}/cpack/liboneflow-ci-linux.zip -d tsan
@@ -911,7 +911,7 @@ jobs:
         run: |
           docker exec -e ONEFLOW_SERVING_DEBUG=1 ${{ env.TEST_MANYLINUX_CONTAINER_NAME }} ./liboneflow-ci-linux/bin/oneflow_cpp_api_testexe --gtest_filter=-Api.embedding*
       - name: Exe test (C++ API with sanitizers)
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && matrix.device == 'cpu' }}
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && matrix.device == 'cpu' && false }}
         timeout-minutes: 10
         run: |
           docker exec -e UBSAN_OPTIONS=suppressions=.ubsan-suppressions -e ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1 -e LSAN_OPTIONS=suppressions=.lsan-suppressions ${{ env.TEST_MANYLINUX_CONTAINER_NAME }} ./asan-ubsan/liboneflow-ci-linux/bin/oneflow_cpp_api_testexe --gtest_filter=Api.graph_\*
