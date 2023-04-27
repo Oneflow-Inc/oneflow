@@ -17,7 +17,7 @@ import oneflow
 from .torch_fx_to_oneflow import to_of_transform
 
 
-def register_oneflowc():
+def register_oneflowrt():
     from typing import List
     import torch
     from torch import fx
@@ -26,7 +26,7 @@ def register_oneflowc():
 
     @register_backend
     @fake_tensor_unsupported
-    def oneflowc(gm: torch.fx.GraphModule, example_inputs: List[torch.Tensor]):
+    def oneflowrt(gm: torch.fx.GraphModule, example_inputs: List[torch.Tensor]):
         # TODO(): fxGraphModule to nn.Graph
         print("my_compiler() called with FX graph:")
         gm.graph.print_tabular()

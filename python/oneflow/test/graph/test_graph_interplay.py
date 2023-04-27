@@ -23,7 +23,7 @@ import oneflow.unittest
 def _test_relu(test_case, device):
     from typing import List
     import torch
-    from oneflow.utils.backend.torch_compile import register_oneflowc
+    from oneflow.utils.backend.torch_compile import register_oneflowrt
 
     input_arr = np.array(
         [
@@ -41,7 +41,7 @@ def _test_relu(test_case, device):
     x = torch.tensor(input_arr, device=device)
     eager_out = torch.relu(x)
 
-    @torch.compile(backend="oneflowc")
+    @torch.compile(backend="oneflowrt")
     def fn(x):
         y = torch.relu(x)
         return y
@@ -65,8 +65,55 @@ def _test_relu(test_case, device):
         )
     )
 
-
 def _test_linear(test_case, device):
+    from typing import List
+    import torch
+    from oneflow.utils.backend.torch_compile import register_oneflowrt
+
+    linear = torch.nn.Linear(3, 8, False)
+    linear = linear.to(device)
+    input_arr = np.array(
+        [
+            [-0.94630778, -0.83378579, -0.87060891],
+            [2.0289922, -0.28708987, -2.18369248],
+            [0.35217619, -0.67095644, -1.58943879],
+            [0.08086036, -1.81075924, 1.20752494],
+            [0.8901075, -0.49976737, -1.07153746],
+            [-0.44872912, -1.07275683, 0.06256855],
+            [-0.22556897, 0.74798368, 0.90416439],
+            [0.48339456, -2.32742195, -0.59321527],
+        ],
+        dtype=np.float32,
+    )
+    x = torch.tensor(input_arr, device=device)
+    torch.nn.init.constant_(linear.weight, 2.3)
+    eager_out = linear(x)
+
+    @torch.compile(backend="oneflowrt")
+    def fn(x):
+        y = linear(x)
+        return y
+
+    compile_out = fn(x)
+    test_case.assertTrue(
+        np.allclose(
+            compile_out.cpu().detach().numpy(),
+            eager_out.cpu().detach().numpy(),
+            1e-05,
+            1e-05,
+        )
+    )
+    compile_out = fn(x)
+    test_case.assertTrue(
+        np.allclose(
+            compile_out.cpu().detach().numpy(),
+            eager_out.cpu().detach().numpy(),
+            1e-05,
+            1e-05,
+        )
+    )
+
+def __test_linear(test_case, device):
     from typing import List
     import torch
     from torch._dynamo.backends.registry import register_backend
@@ -125,13 +172,13 @@ def _test_linear(test_case, device):
 
     @register_backend
     @fake_tensor_unsupported
-    def oneflowc(gm: torch.fx.GraphModule, example_inputs: List[torch.Tensor]):
+    def oneflowrt(gm: torch.fx.GraphModule, example_inputs: List[torch.Tensor]):
         print("my_compiler() called with FX graph:")
         gm.graph.print_tabular()
         gm.forward = torch_interplay
         return gm.forward  # return a python callable
 
-    @torch.compile(backend="oneflowc")
+    @torch.compile(backend="oneflowrt")
     def fn(x):
         y = linear(x)
         return y
