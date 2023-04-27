@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/auto_parallel/auto_memory.h"
 #include "oneflow/core/auto_parallel/sbp_constructor.h"
+#include "oneflow/core/auto_parallel/straighten_memory.h"
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
@@ -96,29 +97,6 @@ struct comp {
     return a->op_node->op().op_name() < b->op_node->op().op_name();
   }
 };
-
-bool IsProducedRegisterReusable(const Operator& op) {
-  // The repeat, acc, pack and unpack operators have non-reusable registers
-  // and a -1 register num at this moment.
-  if (op.op_conf().has_user_conf()) {
-    const auto& op_type_name = op.op_conf().user_conf().op_type_name();
-    // We record the frequency in swin-transformer on the right hand side
-    // and adjust the position accordingly.
-    if (op_type_name == "repeat"     // 213
-        || op_type_name == "acc"     // 173
-        || op_type_name == "unpack"  // 2
-        || op_type_name == "pack"    // 1
-    ) {
-      return false;
-    }
-  }
-  // NOTE: Please refer to oneflow/core/graph_impl/normal_forward_compute_task_node.cpp
-  // NormalForwardCompTaskNode::ProduceOutRegstByNameAndBlockNum
-  // for detail.
-  // We can not use <= 0 here since RegstNum4Op returns a number with type size_t.
-  // -1 is actually 18446744073709551615 here.
-  return RegstNum4Op(op) == -1;
-}
 
 TopoStruct::TopoStruct(SbpNode* sbp_node_)
     : sbp_node(sbp_node_), op_node(sbp_node_->GetOperatorNode()) {
@@ -592,6 +570,31 @@ void StraightenOpGraph(const OpGraph& op_graph, std::vector<const OpNode*>* orde
   op_graph.ForEachNode([&](OpNode* node) { sub_graph.push_back(node); });
 
   StraightenSubGraph(sub_graph, ordered_op_nodes);
+
+  StraightenMemoryOpGraph(op_graph, ordered_op_nodes);
+}
+
+bool IsProducedRegisterReusable(const Operator& op) {
+  // The repeat, acc, pack and unpack operators have non-reusable registers
+  // and a -1 register num at this moment.
+  if (op.op_conf().has_user_conf()) {
+    const auto& op_type_name = op.op_conf().user_conf().op_type_name();
+    // We record the frequency in swin-transformer on the right hand side
+    // and adjust the position accordingly.
+    if (op_type_name == "repeat"     // 213
+        || op_type_name == "acc"     // 173
+        || op_type_name == "unpack"  // 2
+        || op_type_name == "pack"    // 1
+    ) {
+      return false;
+    }
+  }
+  // NOTE: Please refer to oneflow/core/graph_impl/normal_forward_compute_task_node.cpp
+  // NormalForwardCompTaskNode::ProduceOutRegstByNameAndBlockNum
+  // for detail.
+  // We can not use <= 0 here since RegstNum4Op returns a number with type size_t.
+  // -1 is actually 18446744073709551615 here.
+  return RegstNum4Op(op) == -1;
 }
 
 }  // namespace auto_parallel
