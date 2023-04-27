@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_STREAM_INDEX_GENERATOR_H_
 #define ONEFLOW_CORE_GRAPH_STREAM_INDEX_GENERATOR_H_
 
-#include <cstdint>
 #include "oneflow/core/graph/stream_id.h"
 #include "oneflow/core/job/id_state.h"
 

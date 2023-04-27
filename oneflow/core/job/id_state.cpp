@@ -21,7 +21,7 @@ limitations under the License.
 
 namespace oneflow {
 
-IdState IdStateMgr::SaveIdState() {
+IdState IdStateMgr::GetIdState() {
   CHECK(Singleton<IDMgr>::Get() != nullptr);
   CHECK(Singleton<TaskStreamIndexManager>::Get() != nullptr);
   CHECK(Singleton<LazyJobBuildAndInferCtxMgr>::Get() != nullptr);
@@ -31,7 +31,7 @@ IdState IdStateMgr::SaveIdState() {
   return id_state_;
 }
 
-void IdStateMgr::LoadIdState(const IdState& id_state) {
+void IdStateMgr::SetIdState(const IdState& id_state) {
   id_state_ = id_state;
   CHECK(Singleton<IDMgr>::Get() != nullptr);
   CHECK(Singleton<LazyJobBuildAndInferCtxMgr>::Get() != nullptr);

@@ -39,8 +39,8 @@ class IdStateMgr final {
   OF_DISALLOW_COPY_AND_MOVE(IdStateMgr);
   ~IdStateMgr() = default;
 
-  IdState SaveIdState();
-  void LoadIdState(const IdState& id_state);
+  IdState GetIdState();
+  void SetIdState(const IdState& id_state);
 
   void SetRegstDescIdState(int64_t id) { id_state_.regst_desc_id_state_ = id; }
   int64_t GetRegstDescIdState() const { return id_state_.regst_desc_id_state_; }

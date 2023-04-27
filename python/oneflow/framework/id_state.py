@@ -15,16 +15,18 @@ limitations under the License.
 """
 import oneflow
 import oneflow as flow
+from oneflow.framework.session_context import try_init_default_session
 import pickle
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 from pathlib import Path
 
 
+@try_init_default_session
 def save_id_state(path: Union[str, Path]):
-    obj = oneflow._oneflow_internal.save_id_state()
+    obj = oneflow._oneflow_internal.get_id_state()
     flow.save(obj, path)
 
-
+@try_init_default_session
 def load_id_state(path: Union[str, Path]):
     obj = flow.load(path)
-    oneflow._oneflow_internal.load_id_state(obj)
+    oneflow._oneflow_internal.set_id_state(obj)

@@ -55,7 +55,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
             return id_state;
           }));
 
-  m.def("load_id_state",
-        [](const IdState& id_state) { Singleton<IdStateMgr>::Get()->LoadIdState(id_state); });
-  m.def("save_id_state", []() { return Singleton<IdStateMgr>::Get()->SaveIdState(); });
+  m.def("set_id_state",
+        [](const IdState& id_state) { Singleton<IdStateMgr>::Get()->SetIdState(id_state); });
+  m.def("get_id_state", []() { return Singleton<IdStateMgr>::Get()->GetIdState(); });
 }

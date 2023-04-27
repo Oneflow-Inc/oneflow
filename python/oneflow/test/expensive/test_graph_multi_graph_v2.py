@@ -254,6 +254,7 @@ def _test_linear_multi_graph_save(
 def _test_linear_multi_graph_load(
     return_dict, device, with_reshape, state_dict, id_state_filename
 ):
+    flow.load_id_state(id_state_filename)
     linear = flow.nn.Linear(3, 8, False)
     linear = linear.to(device)
     np_weight = np.ones((3, 8)).astype(np.float32)
@@ -286,8 +287,6 @@ def _test_linear_multi_graph_load(
 
     linear_g = LinearGraph()
     print("====> load")
-    # TODO(pangguojian): when to load id_state, it must after graph init
-    flow.load_id_state(id_state_filename)
     linear_g.load_runtime_state_dict(state_dict)
     print("====> load finish")
 

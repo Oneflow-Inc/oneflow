@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_DEVICE_DEVICE_ID_H_
 #define ONEFLOW_CORE_DEVICE_DEVICE_ID_H_
 
-#include <cstdint>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/device_type.h"
 
