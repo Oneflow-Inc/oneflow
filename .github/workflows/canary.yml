@@ -18,7 +18,7 @@ jobs:
   canary_release:
     name: Canary Release
     timeout-minutes: 120
-    runs-on: [self-hosted, linux, release]
+    runs-on: [self-hosted, linux, builder]
     if: github.repository == 'Oneflow-Inc/oneflow'
     strategy:
       max-parallel: 1
