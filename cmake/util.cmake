@@ -298,19 +298,3 @@ function(mark_targets_as_system)
                                                "${include_dir}")
   endforeach()
 endfunction()
-
-function(remove_sanitizer_flags target)
-  get_target_property(compile_opts ${target} COMPILE_OPTIONS)
-  if(compile_opts)
-    list(REMOVE_ITEM compile_opts -fsanitize=address -fno-omit-frame-pointer -fsanitize=undefined
-         -fsanitize=thread)
-    set_property(TARGET ${target} PROPERTY COMPILE_OPTIONS ${compile_opts})
-  endif()
-
-  get_target_property(link_opts ${target} LINK_OPTIONS)
-  if(link_opts)
-    list(REMOVE_ITEM link_opts -fsanitize=address -fno-omit-frame-pointer -fsanitize=undefined
-         -fsanitize=thread)
-    set_property(TARGET ${target} PROPERTY LINK_OPTIONS ${link_opts})
-  endif()
-endfunction()
