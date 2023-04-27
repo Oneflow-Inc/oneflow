@@ -94,7 +94,8 @@ Maybe<void> FillTensor::Apply(const FillCaptureState* ctx, const TensorTuple& ou
     int32_t num_axes = out_grads[0]->shape()->NumAxes();
     std::vector<int32_t> axes_vec(num_axes);
     std::iota(axes_vec.begin(), axes_vec.end(), 0);
-    (*in_grads)[1] = JUST(functional::ReduceSum(out_grads[0], axes_vec, /*keepdims=*/false));
+    (*in_grads)[1] =
+        JUST(functional::ReduceSum(out_grads[0], axes_vec, /*keepdims=*/false, NullOpt));
   }
   if (ctx->in_requires_grad) { (*in_grads)[0] = JUST(functional::Fill(out_grads[0], 0)); }
   return Maybe<void>::Ok();
