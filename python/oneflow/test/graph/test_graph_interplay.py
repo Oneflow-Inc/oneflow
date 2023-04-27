@@ -19,6 +19,7 @@ import numpy as np
 
 import oneflow.unittest
 
+
 def _test_relu(test_case, device):
     from typing import List
     import torch
@@ -55,29 +56,45 @@ def _test_relu(test_case, device):
             print("==>inputs ", inputs)
             with flow.mock_torch.enable(lazy=True):
                 import torch
+
                 outs = gm.forward(inputs)
-                #outs = torch.relu(inputs)
+                # outs = torch.relu(inputs)
             return outs
 
         oneflow_fn.debug(1)
-        
+
         def from_to_torch(inputs):
             flow_inputs = flow.utils.tensor.from_torch(inputs)
             flow_outs = oneflow_fn(flow_inputs)
             outs = flow.utils.tensor.to_torch(flow_outs)
-            return (outs, )
+            return (outs,)
 
         return from_to_torch
 
-    @torch.compile(backend='oneflowc')
+    @torch.compile(backend="oneflowc")
     def fn(x):
         y = torch.relu(x)
-        return y 
+        return y
 
     compile_out = fn(x)
-    test_case.assertTrue(np.allclose(compile_out.cpu().detach().numpy(), eager_out.cpu().detach().numpy(), 1e-05, 1e-05))
+    test_case.assertTrue(
+        np.allclose(
+            compile_out.cpu().detach().numpy(),
+            eager_out.cpu().detach().numpy(),
+            1e-05,
+            1e-05,
+        )
+    )
     compile_out = fn(x)
-    test_case.assertTrue(np.allclose(compile_out.cpu().detach().numpy(), eager_out.cpu().detach().numpy(), 1e-05, 1e-05))
+    test_case.assertTrue(
+        np.allclose(
+            compile_out.cpu().detach().numpy(),
+            eager_out.cpu().detach().numpy(),
+            1e-05,
+            1e-05,
+        )
+    )
+
 
 def _test_linear(test_case, device):
     from typing import List
@@ -107,6 +124,7 @@ def _test_linear(test_case, device):
     def get_of():
         # TODO(): transform torch fx code to oneflow code
         import oneflow as flow
+
         linear = flow.nn.Linear(3, 8, False)
         linear = linear.to(device)
         flow.nn.init.constant_(linear.weight, 2.3)
@@ -122,18 +140,18 @@ def _test_linear(test_case, device):
         linear_g = LinearGraph()
         linear_g.debug(1)
         return linear_g
-    
+
     g = None
 
     def torch_interplay(x):
         import oneflow as flow
+
         x = flow.utils.tensor.from_torch(x)
         nonlocal g
         if g is None:
             g = get_of()
         # TODO(): This is a special pack trick, try to make it general.
         return (flow.utils.tensor.to_torch(g(x)),)
-
 
     @register_backend
     @fake_tensor_unsupported
@@ -143,15 +161,29 @@ def _test_linear(test_case, device):
         gm.forward = torch_interplay
         return gm.forward  # return a python callable
 
-    @torch.compile(backend='oneflowc')
+    @torch.compile(backend="oneflowc")
     def fn(x):
         y = linear(x)
-        return y 
+        return y
 
     compile_out = fn(x)
-    test_case.assertTrue(np.allclose(compile_out.cpu().detach().numpy(), eager_out.cpu().detach().numpy(), 1e-05, 1e-05))
+    test_case.assertTrue(
+        np.allclose(
+            compile_out.cpu().detach().numpy(),
+            eager_out.cpu().detach().numpy(),
+            1e-05,
+            1e-05,
+        )
+    )
     compile_out = fn(x)
-    test_case.assertTrue(np.allclose(compile_out.cpu().detach().numpy(), eager_out.cpu().detach().numpy(), 1e-05, 1e-05))
+    test_case.assertTrue(
+        np.allclose(
+            compile_out.cpu().detach().numpy(),
+            eager_out.cpu().detach().numpy(),
+            1e-05,
+            1e-05,
+        )
+    )
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -162,6 +194,7 @@ class TestAsTorchBackend(oneflow.unittest.TestCase):
 
     def test_linear(test_case):
         _test_linear(test_case, "cuda")
+
 
 if __name__ == "__main__":
     unittest.main()
