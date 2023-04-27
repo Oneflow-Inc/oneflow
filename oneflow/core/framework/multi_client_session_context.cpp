@@ -95,9 +95,7 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
     }
     Singleton<ResourceDesc, ForSession>::New(resource, GlobalProcessCtx::NumOfProcessPerNode());
     Singleton<IDMgr>::New();
-    if (!id_state_mgr_) {
-      id_state_mgr_ = std::make_unique<IdStateMgr>();
-    }
+    if (!id_state_mgr_) { id_state_mgr_ = std::make_unique<IdStateMgr>(); }
     Singleton<TaskStreamIndexManager>::New();
     // TODO(chengcheng): refactor JobBuildAndInferCtxMgr
     Singleton<LazyJobBuildAndInferCtxMgr>::New();

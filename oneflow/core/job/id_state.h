@@ -74,7 +74,6 @@ class IdStateMgr final {
   }
 
  private:
-
   IdState id_state_{};
 };
 
