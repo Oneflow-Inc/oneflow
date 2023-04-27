@@ -3,6 +3,7 @@
 
 include "OneFlow/OneFlowOps.td"
 
+#ifdef WITH_MLIR_CUDA_CODEGEN
 def NVVMToCubinPass : InterfacePass<"nvvm-to-cubin", "SymbolOpInterface"> {
   let summary = "convert nvvm ir to cubin";
   let constructor = "mlir::createNVVMToCubinPass()";
@@ -12,6 +13,7 @@ def NVVMToCubinPass : InterfacePass<"nvvm-to-cubin", "SymbolOpInterface"> {
     Option<"features", "features", "StringRef", "\"+ptx60\"", "Target features">,
   ];
 }
+#endif
 
 def LowerOneFlowToTosaPass : Pass<"lower-oneflow-to-tosa", "ModuleOp"> {
   let summary = "lower oneflow dialect to tosa dialect";

@@ -259,14 +259,4 @@ void InitializeLLVMNVPTXBackend() {
 
 }  // namespace mlir
 
-#else
-
-#include <string>
-
-namespace mlir {
-
-const std::string& getArchVersion() { return "[unsupported]" }
-
-}  // namespace mlir
-
 #endif  // WITH_MLIR_CUDA_CODEGEN
