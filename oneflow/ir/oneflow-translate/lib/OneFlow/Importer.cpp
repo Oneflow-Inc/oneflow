@@ -342,7 +342,7 @@ LogicalResult ParseNdSbpFromAttr(::llvm::ArrayRef<Attribute> nd_sbp_attr,
     } else if (sbp_strref == "P") {
       nd_sbp->add_sbp_parallel()->mutable_partial_sum_parallel();
     } else {
-      llvm::errs() << "unspported nd_sbp string value: " << sbp_strref;
+      llvm::errs() << "unsupported nd_sbp string value: " << sbp_strref;
       return failure();
     }
   }
