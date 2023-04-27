@@ -37,7 +37,11 @@ def register_ofrt():
 
         of_gm = to_of_transform(gm)
 
-        enable_graph = os.getenv("ofrt_enable_graph", 'False').lower() in ('true', '1', 't')
+        enable_graph = os.getenv("ofrt_enable_graph", "False").lower() in (
+            "true",
+            "1",
+            "t",
+        )
 
         if not enable_graph:
             oneflow_fn = of_gm.forward
