@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
-#include "OneFlow/Transform/OneFlowStream.h"
+#include "OneFlow/Transform/OneFlowMemPool.h"
 #include "OneFlow/Transform/EliminateAllocOps.h"
 #include "OneFlow/Transform/OneFlowStream.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
@@ -1025,12 +1025,13 @@ void AddLowerToLinalgMemRefPasses(PassManager& pm) {
   pm.addPass(createCSEPass());                                 // cse
   pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());  // tosa-to-linalg-on-tensors
   pm.addNestedPass<func::FuncOp>(
-      createLinalgElementwiseOpFusionPass());                       // linalg-fuse-elementwise-ops
-  pm.addNestedPass<func::FuncOp>(createLinalgBufferizePass());      // linalg-bufferize
+      createLinalgElementwiseOpFusionPass());                   //     linalg-fuse-elementwise-ops
+  pm.addNestedPass<func::FuncOp>(createLinalgBufferizePass());  // linalg-bufferize
   pm.addPass(bufferization::createEmptyTensorToAllocTensorPass());  // empty-tensor-to-alloc-tensor
   pm.addNestedPass<func::FuncOp>(createTensorBufferizePass());      // tensor-bufferize
   pm.addPass(func::createFuncBufferizePass());                      // func-bufferize
   pm.addPass(bufferization::createBufferResultsToOutParamsPass());  // buffer-results-to-out-params
+  pm.addPass(createCanonicalizerPass());                            // canonicalize
   pm.addPass(mlir::oneflow::createEliminateAllocOpsPass());         // eliminate-alloc-ops
   pm.addPass(createCanonicalizerPass());                            // canonicalize
   pm.addNestedPass<func::FuncOp>(
@@ -1039,10 +1040,13 @@ void AddLowerToLinalgMemRefPasses(PassManager& pm) {
 
 LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
   mlir::PassManager pm(context);
+  mlir::oneflow::CheckEnableIRPrinting(pm);
   AddLowerToLinalgMemRefPasses(pm);
   pm.addNestedPass<func::FuncOp>(createConvertLinalgToLoopsPass());  // convert-linalg-to-loops
   pm.addNestedPass<func::FuncOp>(createConvertSCFToCFPass());        // convert-scf-to-cf
   pm.addPass(createConvertLinalgToLLVMPass());                       // convert-linalg-to-llvm
+  pm.addPass(createFoldAllocToSubviewPass());                        // fold-alloc-to-subview
+  pm.addPass(createInsertOneFlowMemPoolPass());                      // insert-ofmempool
   pm.addPass(createAppendOneFlowStreamPass());                       // append-ofstream
   pm.addPass(createMemRefToLLVMConversionPass());                    // convert-memref-to-llvm
   pm.addPass(createConvertFuncToLLVMPass());                         // convert-func-to-llvm
@@ -1064,9 +1068,10 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   pm.addNestedPass<func::FuncOp>(createGpuMapParallelLoopsPass());  // gpu-map-parallel-loops
   pm.addPass(createParallelLoopToGpuPass());                        // convert-parallel-loops-to-gpu
   pm.addPass(createGpuLauchSinkIndexComputationsPass());
-  pm.addPass(createGpuKernelOutliningPass());                      // gpu-kernel-outlining
-  pm.addNestedPass<func::FuncOp>(createBufferHostRegisterPass());  // buffer-host-register
-  pm.addPass(createCanonicalizerPass());                           // canonicalize
+  pm.addPass(createGpuKernelOutliningPass());    // gpu-kernel-outlining
+  pm.addPass(createCanonicalizerPass());         // canonicalize
+  pm.addPass(createFoldAllocToSubviewPass());    // fold-alloc-to-subview
+  pm.addPass(createInsertOneFlowMemPoolPass());  // insert-ofmempool
   // -pass-pipeline='gpu.module([PASS1][PASS2]...)'
   pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());        // strip-debuginfo
   pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());           // lower-affine
