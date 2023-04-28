@@ -324,6 +324,7 @@ def _test_linear_multi_graph_load(
     test_case1 = np.array_equal(of_lazy_out1.numpy(), of_eager_out1.numpy())
     return_dict["load1"] = test_case1
 
+    # The following section is for testing the new input shape after completing the load.
     input_arr2 = np.array(
         [
             [-0.94630778, -0.83378579, -0.87060891],

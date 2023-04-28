@@ -26,12 +26,6 @@ constexpr size_t kRankShift = kDeviceTypeShift + DeviceId::kDeviceTypeBits;
 
 static_assert(kRankShift + DeviceId::kRankBits < kInt32Bits, "");
 
-constexpr int64_t kDeviceIndexInt64Mask = ((int64_t{1} << DeviceId::kDeviceIndexBits) - 1)
-                                          << kDeviceIndexShift;
-constexpr int64_t kDeviceTypeInt64Mask = ((int64_t{1} << DeviceId::kDeviceTypeBits) - 1)
-                                         << kDeviceTypeShift;
-constexpr int64_t kRankInt64Mask = ((int64_t{1} << DeviceId::kRankBits) - 1) << kRankShift;
-
 }  // namespace
 
 int64_t EncodeDeviceIdToInt64(const DeviceId& device_id) {
@@ -39,14 +33,6 @@ int64_t EncodeDeviceIdToInt64(const DeviceId& device_id) {
   id |= static_cast<int64_t>(device_id.device_type()) << kDeviceTypeShift;
   id |= static_cast<int64_t>(device_id.rank()) << kRankShift;
   return id;
-}
-
-DeviceId DecodeDeviceIdFromInt64(int64_t device_id_val) {
-  int64_t rank = (device_id_val & kRankInt64Mask) >> kRankShift;
-  int64_t device_type = (device_id_val & kDeviceTypeInt64Mask) >> kDeviceTypeShift;
-  int64_t device_index = (device_id_val & kDeviceIndexInt64Mask) >> kDeviceIndexShift;
-  return DeviceId{static_cast<DeviceId::rank_t>(rank), static_cast<DeviceType>(device_type),
-                  static_cast<DeviceId::device_index_t>(device_index)};
 }
 
 }  // namespace oneflow

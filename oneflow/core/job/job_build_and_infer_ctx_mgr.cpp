@@ -91,7 +91,6 @@ Maybe<void> LazyJobBuildAndInferCtxMgr::VirtualCloseJob() {
   const JobDesc* job_desc = Singleton<JobDesc>::Get();
   if (job_desc == nullptr) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(job_desc->job_name(), *JUST(GetCurrentJobName()));
-  // CHECK_EQ_OR_RETURN(job_desc->job_id(), mut_job_set()->job_size() - 1);
   Singleton<JobDesc>::Delete();
   return Maybe<void>::Ok();
 }
