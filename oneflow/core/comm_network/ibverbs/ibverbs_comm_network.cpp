@@ -213,7 +213,10 @@ void IBVerbsCommNet::PollCQ() {
           qp->RecvDone(wr_id);
           break;
         }
-        default: UNIMPLEMENTED();
+        default: {
+          // Ignore operations not used
+          break;
+        }
       }
     }
   }
