@@ -19,8 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 
 #define VLOG_REMAT(verbose_level) \
-  if (Singleton<remat::Env>::Get()->log_enabled()) \
-    VLOG(verbose_level)
+  if (Singleton<remat::Env>::Get()->log_enabled()) VLOG(verbose_level)
 
 namespace oneflow {
 
@@ -64,8 +63,8 @@ class Env {
 
   std::set<vm::RematableTensorStorage*> need_eager_eviction_storages;
 
-  void set_budget_in_bytes(int64_t budget_in_bytes) { budget_in_bytes_ = budget_in_bytes; }
-  int64_t budget_in_bytes() const { return budget_in_bytes_; }
+  void set_budget_in_bytes(size_t budget_in_bytes) { budget_in_bytes_ = budget_in_bytes; }
+  size_t budget_in_bytes() const { return budget_in_bytes_; }
 
   void set_small_pieces_optimization(bool enabled) { small_pieces_optimization_ = enabled; }
   bool is_small_pieces_optimization_enabled() const { return small_pieces_optimization_; }

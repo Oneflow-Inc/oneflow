@@ -24,8 +24,10 @@ import oneflow.unittest
 class COCODataLoader(flow.nn.Module):
     def __init__(
         self,
-        anno_file="/dataset/mscoco_2017/annotations/instances_val2017.json",
-        image_dir="/dataset/mscoco_2017/val2017",
+        anno_file=flow.unittest.dataset_dir(
+            "mscoco_2017/annotations/instances_val2017.json"
+        ),
+        image_dir=flow.unittest.dataset_dir("mscoco_2017/val2017"),
         batch_size=2,
         device=None,
         placement=None,

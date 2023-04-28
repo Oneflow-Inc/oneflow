@@ -132,17 +132,107 @@ Maybe<double> GetDatasetComputeTime(const json& j, const vm::OpCallInstructionPo
   return j[key].get<double>();
 }
 
-static Maybe<double> GetEstimatedComputeTime(const vm::OpCallInstructionPolicy& operand) {
+static Maybe<double> GetComputeComplexityEstimatedBySize(
+    const vm::OpCallInstructionPolicy& operand) {
   const auto& inputs = operand.inputs();
   const auto& outputs = operand.outputs();
   size_t estimated_compute_time = 0;
-  for (const auto& input : inputs) {
-    estimated_compute_time += input->shape().elem_cnt();
-  }
-  for (const auto& output : outputs) {
-    estimated_compute_time += output->shape().elem_cnt();
-  }
+  for (const auto& input : inputs) { estimated_compute_time += input->shape().elem_cnt(); }
+  for (const auto& output : outputs) { estimated_compute_time += output->shape().elem_cnt(); }
   return estimated_compute_time;
+}
+
+int32_t TryGetTensorTupleIndex(const std::unordered_map<std::string, std::vector<int32_t>>&
+                                   arg_name2bn_index2tensor_tuple_index,
+                               const std::string& arg_name, const int32_t arg_index) {
+  auto it = arg_name2bn_index2tensor_tuple_index.find(arg_name);
+  if (it != arg_name2bn_index2tensor_tuple_index.end()) { return it->second.at(arg_index); }
+  return -1;
+}
+
+class SingleDeviceOpComputeComplexityFnContext : public user_op::ComputeComplexityFnContext {
+ public:
+  using ArgVec = std::vector<std::pair<std::string, int32_t>>;
+
+  SingleDeviceOpComputeComplexityFnContext(const OperatorConf& op_conf,
+                                           const vm::EagerBlobObjectList& inputs,
+                                           const vm::EagerBlobObjectList& outputs,
+                                           const ArgTuple* input_arg_tuple,
+                                           const ArgTuple* output_arg_tuple)
+      : user_op::ComputeComplexityFnContext(user_op::UserOpConfWrapper(op_conf)),
+        input_tensors_(inputs),
+        output_tensors_(outputs),
+        input_arg_tuple_(input_arg_tuple),
+        output_arg_tuple_(output_arg_tuple) {}
+  ~SingleDeviceOpComputeComplexityFnContext() override = default;
+
+#define RETURN_IF_FOUND(inputs, outputs, post_action)                                             \
+  int32_t i = TryGetTensorTupleIndex(input_arg_tuple_->arg_name2bn_index2tensor_tuple_index(),    \
+                                     arg_name, index);                                            \
+  if (i >= 0) { return (inputs).at(i) post_action; }                                              \
+  i = TryGetTensorTupleIndex(output_arg_tuple_->arg_name2bn_index2tensor_tuple_index(), arg_name, \
+                             index);                                                              \
+  if (i >= 0) { return (outputs).at(i) post_action; }
+
+  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                        int32_t index) override {
+    RETURN_IF_FOUND(input_tensors_, output_tensors_, ->tensor_meta().shared_from_symbol().get());
+    return nullptr;
+  }
+  const Shape& Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+    RETURN_IF_FOUND(input_tensors_, output_tensors_, ->shape())
+    UNIMPLEMENTED_THEN_THROW();
+  }
+  DataType Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+    RETURN_IF_FOUND(input_tensors_, output_tensors_, ->data_type())
+    UNIMPLEMENTED_THEN_THROW();
+  }
+  bool IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+    return false;
+  }
+
+  const NdSbp NdSbp4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+    static NdSbp nd_sbp = []() {
+      NdSbp nd_sbp;
+      nd_sbp.add_sbp_parallel()->broadcast_parallel();
+      return nd_sbp;
+    }();
+    return nd_sbp;
+  }
+
+  const ArgVec& inputs() const override { UNIMPLEMENTED_THEN_THROW(); }
+  const ArgVec& outputs() const override { UNIMPLEMENTED_THEN_THROW(); }
+  const ParallelDesc& parallel_desc() const override {
+    static ParallelDesc parallel_desc = []() {
+      ParallelConf parallel_conf;
+      parallel_conf.set_device_tag("cpu");
+      parallel_conf.add_device_name("0:0-0");
+      return ParallelDesc(parallel_conf);
+    }();
+    return parallel_desc;
+  }
+  const NdSbpSignature* GetNdSbpSignature() const override { UNIMPLEMENTED_THEN_THROW(); }
+
+ private:
+  const vm::EagerBlobObjectList& input_tensors_;
+  const vm::EagerBlobObjectList& output_tensors_;
+  const ArgTuple* input_arg_tuple_;
+  const ArgTuple* output_arg_tuple_;
+};
+
+Maybe<double> GetComputeComplexity(const vm::OpCallInstructionPolicy& operand) {
+  const auto& op_conf = operand.opkernel().op_conf();
+  auto registry =
+      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf.user_conf().op_type_name());
+
+  if (registry->compute_complexity_fn) {
+    SingleDeviceOpComputeComplexityFnContext ctx(op_conf, operand.inputs(), operand.outputs(),
+                                                 operand.opkernel().input_arg_tuple(),
+                                                 operand.opkernel().output_arg_tuple());
+    return registry->compute_complexity_fn(&ctx);
+  } else {
+    return GetComputeComplexityEstimatedBySize(operand);
+  }
 }
 
 int32_t TryGetTensorTupleIndex(const std::unordered_map<std::string, std::vector<int32_t>>&
@@ -242,7 +332,7 @@ Maybe<double> GetFLOPs(const vm::OpCallInstructionPolicy& operand) {
 Maybe<double> GetComputeTime(const vm::OpCallInstructionPolicy& operand) {
   const static json time_dataset = LoadTimeDataset();
   if (!time_dataset.empty()) { return GetDatasetComputeTime(time_dataset, operand); }
-  return GetFLOPs(operand);
+  return GetComputeComplexity(operand);
 }
 
 }  // namespace remat
@@ -325,7 +415,7 @@ Maybe<void> RematHelper::RematInputs(
     auto& storage = input_storages_[i];
     if (!storage->is_in_memory()) {
       VLOG_REMAT(1) << "recompute No." << i << " input by " << storage->compute_op_type_name()
-              << ". Storage id: " << storage->id();
+                    << ". Storage id: " << storage->id();
       OpCallInstructionPolicy tmp_op = storage->compute_op();
       JUST(compute_fn(&tmp_op, vm_stream));
     }
@@ -364,7 +454,7 @@ Maybe<void> RematHelper::UpdateRematInfo(bool first, bool recompute, bool includ
         if (storage->is_eviction_disabled()) { continue; }
         if (storage_is_initialized_[i] && !recompute) {
           VLOG_REMAT(1) << "storage->is_initialized(), op is " << storage->compute_op_type_name()
-                  << std::endl;
+                        << std::endl;
           compute_op = std::make_unique<OpCallInstructionPolicy>(
               Singleton<remat::Env>::Get()->update_tensor_with_storage(
                   storage.get(), op_call_instruction_policy_));
@@ -395,11 +485,11 @@ Maybe<void> RematHelper::UpdateRematInfo(bool first, bool recompute, bool includ
 
   if (recompute) { Singleton<remat::Env>::Get()->add_recomputation_num(); }
   Singleton<remat::Env>::Get()->add_time(JUST(remat::GetComputeTime(op_call_instruction_policy_)));
-  VLOG_REMAT(1) << "end compute " << op_call_instruction_policy_.opkernel().op_type_name() << std::endl;
+  VLOG_REMAT(1) << "end compute " << op_call_instruction_policy_.opkernel().op_type_name()
+                << std::endl;
   return Maybe<void>::Ok();
 }
 
-namespace {}
 }  // namespace vm
 
 }  // namespace oneflow
