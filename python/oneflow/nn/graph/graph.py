@@ -1151,6 +1151,13 @@ class Graph(object):
                 tensor_list.append(tensor_of_item.to(device_of_item))
             return (name_list, convert_to_tensor_tuple(tensor_list))
 
+        def _load_input_from_state_dict(state_dict):
+            tensor_list = []
+            for _, item in state_dict.items():
+                tensor_of_item, device_of_item = item
+                tensor_list.append(tensor_of_item.to(device_of_item))
+            return tuple(tensor_list)
+
         self._input_op_names, self._inputs_tensor_tuple = _load_list_from_state_dict(
             state_dict["inputs"]
         )
@@ -1229,6 +1236,7 @@ class Graph(object):
         self._c_nn_graph.align_states_after_logical_graph_compile()
         self._c_nn_graph.init_runtime()
         self._is_compiled = True
+        self.__run(_load_input_from_state_dict(state_dict["inputs"]))  
         build_graph_end = time.perf_counter()
         self.__print(
             0,
