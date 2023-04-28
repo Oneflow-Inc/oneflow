@@ -22,6 +22,27 @@ namespace oneflow {
 namespace auto_parallel {
 
 namespace {
+class NoCleaningMarker {
+ public:
+  static int32_t max_marker;
+  static int32_t marker;
+  int32_t status = 0;
+
+  bool IfMarked() const { return status == marker; }
+  bool IfNotMarked() const { return status != marker; }
+  void Mark() { status = marker; }
+  void UnMark() { status = 0; }
+};
+
+void ResetNoCleaningMarker() {
+    ++NoCleaningMarker::marker;
+    if (NoCleaningMarker::marker == NoCleaningMarker::max_marker) { NoCleaningMarker::marker = 1; }
+  }
+
+ void InitNoCleaningMarker() {
+  NoCleaningMarker::max_marker = 10000;
+  NoCleaningMarker::marker = 1;
+}
 
 class TopoStruct {
  public:
@@ -30,6 +51,15 @@ class TopoStruct {
   int64_t memory_increment = -1;
   bool is_reusable = false;
   int32_t blob_id = -1;
+  // blocking means that it contains a release topological structure with degree = 1 in the current
+  // unexecuted graph
+  TopoStruct* blocking_topo_struct = nullptr;
+  // executed means that it has been executed
+  bool executed = false;
+  // Accumulate memory increment of all the necessary topological structures
+  int64_t accumulate_memory_increment = 0;
+  // Whether visited during memory accumulating
+  NoCleaningMarker visited;
 
   std::vector<TopoStruct*> in_topo_structs;
   std::vector<TopoStruct*> out_topo_structs;
@@ -38,11 +68,33 @@ class TopoStruct {
   explicit TopoStruct(int32_t blob_id_) : blob_id(blob_id_){};
 
   void ComputeIsReusable();
+
+  void SetAccumulateMemoryIncrement();
+
+ private:
+  int64_t AccumulateMemoryIncrement();
 };
 
 TopoStruct::TopoStruct(const OpNode* op_node_) : op_node(op_node_) { ComputeIsReusable(); }
 
 void TopoStruct::ComputeIsReusable() { is_reusable = IsProducedRegisterReusable(op_node->op()); }
+
+int64_t TopoStruct::AccumulateMemoryIncrement() {
+  int64_t total_memory_increment = memory_increment;
+  visited.Mark();
+  for (const auto& in_topo_struct : in_topo_structs) {
+    // Accumulate the non-executed topological structures only once
+    if ((!in_topo_struct->executed) && in_topo_struct->visited.IfNotMarked()) {
+      total_memory_increment += in_topo_struct->AccumulateMemoryIncrement();
+    }
+  }
+  return total_memory_increment;
+}
+
+void TopoStruct::SetAccumulateMemoryIncrement() {
+  ResetNoCleaningMarker();
+  accumulate_memory_increment = AccumulateMemoryIncrement();
+}
 
 void InitInOutTopoStructs(std::vector<TopoStruct*>* topo_structs) {
   // Generate the map from operator names to topological structure
@@ -140,6 +192,9 @@ void InitAllParameters(std::vector<TopoStruct*>* topo_structs,
                        HashMap<LogicalBlobId, int32_t>* lbi2id,
                        std::vector<std::vector<TopoStruct*>>* id2consumer_topo_structs,
                        std::vector<int64_t>* id2blob_size) {
+  // Initialize the no cleaning marker
+  InitNoCleaningMarker();
+
   // Construct the map from a lbi to its id, consumers, blob size
   std::vector<TopoStruct*> id2producer_topo_struct;
 
@@ -201,6 +256,8 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
                              std::vector<std::vector<TopoStruct*>>* id2consumer_topo_structs,
                              std::vector<int64_t>* id2blob_size,
                              std::vector<TopoStruct*>* ordered_topo_structs) {
+  // The number of executing topographical structures
+  int32_t executing_topo_struct_num = topo_structs->size();
   // Extra release topological structures
   std::vector<TopoStruct> release_topo_structs;
   InitAllParameters(topo_structs, &release_topo_structs, lbi2id, id2consumer_topo_structs,
@@ -211,8 +268,11 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
     int64_t total_memory = 0;
     int32_t total_in_size = 0, total_out_size = 0;
     for (const auto& topo_struct : *topo_structs) {
+      topo_struct->SetAccumulateMemoryIncrement();
       std::cout << "In size: " << topo_struct->in_topo_structs.size()
-                << ", out size: " << topo_struct->out_topo_structs.size() << ", ";
+                << ", out size: " << topo_struct->out_topo_structs.size() << ", "
+                << ", accumulate memory increment: " << topo_struct->accumulate_memory_increment
+                << ", ";
       total_in_size += topo_struct->in_topo_structs.size();
       total_out_size += topo_struct->out_topo_structs.size();
       if (topo_struct->blob_id != -1) {
@@ -226,6 +286,20 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
     }
     std::cout << "Total memory: " << total_memory << ", total in size: " << total_in_size
               << ", total out size: " << total_out_size << std::endl;
+  }
+
+  // Initialize source topological structures
+  std::vector<TopoStruct*> source_topo_structs;
+  for (int32_t i = 0; i < executing_topo_struct_num; i++) {
+    if (topo_structs->at(i)->in_topo_structs.empty()) {
+      source_topo_structs.push_back(topo_structs->at(i));
+    }
+  }
+  // Initialize blocking topological structures
+  for (auto& release_topo_struct : release_topo_structs) {
+    if (release_topo_struct.in_topo_structs.size() == 1) {
+      release_topo_struct.in_topo_structs[0]->blocking_topo_struct = &release_topo_struct;
+    }
   }
 }
 }  // namespace
