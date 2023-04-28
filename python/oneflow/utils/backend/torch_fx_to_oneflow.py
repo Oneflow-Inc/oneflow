@@ -59,7 +59,10 @@ def to_of_transform(
         # Checks if we're calling a function (i.e:
         # torch.add)
         if node.op == "call_function":
-            node.target = mapping_dict[node.target]
+            if node.target in mapping_dict:
+                node.target = mapping_dict[node.target]
+            else:
+                raise NotImplementedError
         elif node.op == "call_method": 
             if hasattr(torch.Tensor, node.target):
                 pass
