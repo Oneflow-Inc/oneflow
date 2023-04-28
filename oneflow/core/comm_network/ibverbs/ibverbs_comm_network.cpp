@@ -214,7 +214,7 @@ void IBVerbsCommNet::PollCQ() {
           break;
         }
         default: {
-          // Ignore operations not used
+          // Ignore unused operations.
           break;
         }
       }
