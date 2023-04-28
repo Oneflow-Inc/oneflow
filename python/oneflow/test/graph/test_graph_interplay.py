@@ -39,13 +39,13 @@ def _test_relu(test_case, device):
         dtype=np.float32,
     )
     x = torch.tensor(input_arr, device=device)
-    eager_out = torch.relu(x)
+    eager_out = torch.relu(x) + x.relu() + torch.nn.functional.relu(x)
 
     os.environ["ofrt_enable_graph"] = "1"
 
     @torch.compile(backend="ofrt")
     def fn(x):
-        y = torch.relu(x)
+        y = torch.relu(x) + x.relu() + torch.nn.functional.relu(x)
         return y
 
     compile_out = fn(x)
