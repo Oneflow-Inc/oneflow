@@ -507,8 +507,9 @@ __global__ void Dequantize3D(Index packed_elem_cnt, Index group_size, Index pack
       group_zero = zero[scale_offset];
     }
     AlignedArray<T, d_pack_size> values;
-    const AlignedArray<U, q_pack_size> q = quantized[i];
-    Cast<U, T, q_pack_size>()(q, &values);
+    typename LoadCast<U, T, d_pack_size, bits>::LoadType qs;
+    LoadCast<U, T, d_pack_size, bits>().Load(quantized + i, &qs);
+    LoadCast<U, T, d_pack_size, bits>().Cast(qs, &values);
     InplaceFma<T, d_pack_size>()(&values, group_scale, group_zero);
     out[i] = values;
   }
@@ -603,8 +604,9 @@ __global__ void DequantizeInnerSize1(Index packed_elem_cnt, Index packed_group_s
       group_zero = zero[group_id];
     }
     AlignedArray<T, d_pack_size> values;
-    AlignedArray<U, q_pack_size> q = quantized[i];
-    Cast<U, T, q_pack_size>()(q, &values);
+    typename LoadCast<U, T, d_pack_size, bits>::LoadType qs;
+    LoadCast<U, T, d_pack_size, bits>().Load(quantized + i, &qs);
+    LoadCast<U, T, d_pack_size, bits>().Cast(qs, &values);
     InplaceFmaScalar<T, d_pack_size>()(&values, group_scale, group_zero);
     out[i] = values;
   }
@@ -792,7 +794,6 @@ __global__ void QuantizedMatmulBiasGroupN(int32_t M, int32_t N, int32_t K, int32
       const auto* zero_n = symmetric ? nullptr : zero + group_id * K;
       for (int32_t k = threadIdx.x; k < K; k += block_size) {
         auto xs = x_m[k];
-        auto ws = w_n[k];
         auto scale_k = scale_n[k];
         AlignedArray<T, d_pack_size> zero_k;
         if (symmetric) {
@@ -806,7 +807,9 @@ __global__ void QuantizedMatmulBiasGroupN(int32_t M, int32_t N, int32_t K, int32
           zero_k = zero_n[k];
         }
         AlignedArray<T, d_pack_size> weights;
-        Cast<U, T, q_pack_size>()(ws, &weights);
+        typename LoadCast<U, T, d_pack_size, bits>::LoadType ws;
+        LoadCast<U, T, d_pack_size, bits>().Load(w_n + k, &ws);
+        LoadCast<U, T, d_pack_size, bits>().Cast(ws, &weights);
         InplaceFma<T, d_pack_size>()(&weights, scale_k, zero_k);
         MultiplyAccumulate<T, C, d_pack_size>()(xs, weights, &t_sum);
       }
