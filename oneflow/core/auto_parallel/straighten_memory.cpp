@@ -98,21 +98,21 @@ void ComputeAllMemoryIncrement(std::vector<TopoStruct*>& topo_structs,
       auto& consumer_topo_structs = id2consumer_topo_structs[id];
       auto& first_consumer_outs = consumer_topo_structs[0]->out_topo_structs;
       bool not_merged = true;
-      for (int32_t i = first_consumer_outs.size() - 1; i >= 0; i--) {
-        int32_t curr_release_blob_id = first_consumer_outs[i]->blob_id;
+      for (int32_t out_id = first_consumer_outs.size() - 1; out_id >= 0; out_id--) {
+        int32_t curr_release_blob_id = first_consumer_outs[out_id]->blob_id;
         if (curr_release_blob_id == -1) { break; }
         // Compare whether the consumer_topo_structs are the same
         const auto& curr_topo_structs = id2consumer_topo_structs[curr_release_blob_id];
         bool is_same = curr_topo_structs.size() == consumer_topo_structs.size();
-        for (int32_t j = 0; j < consumer_topo_structs.size(); j++) {
-          if (consumer_topo_structs[j] != curr_topo_structs[j]) {
+        for (int32_t consumer_id = 0; consumer_id < consumer_topo_structs.size(); consumer_id++) {
+          if (consumer_topo_structs[consumer_id] != curr_topo_structs[consumer_id]) {
             is_same = false;
             break;
           }
         }
         // If they have the same consumer_topo_structs, merge them
         if (is_same) {
-          first_consumer_outs[i]->memory_increment -= id2blob_size[id];
+          first_consumer_outs[out_id]->memory_increment -= id2blob_size[id];
           not_merged = false;
           break;
         }
@@ -123,9 +123,13 @@ void ComputeAllMemoryIncrement(std::vector<TopoStruct*>& topo_structs,
         auto& release_topo_struct = release_topo_structs.back();
         topo_structs.push_back(&release_topo_struct);
         release_topo_struct.memory_increment = -id2blob_size[id];
+        // We need to execute all the consumers before releasing the blob
         release_topo_struct.in_topo_structs.insert(release_topo_struct.in_topo_structs.end(),
                                                    consumer_topo_structs.begin(),
                                                    consumer_topo_structs.end());
+        for (auto& consumer_topo_struct : consumer_topo_structs) {
+          consumer_topo_struct->out_topo_structs.push_back(&release_topo_struct);
+        }
       }
     }
   }
@@ -157,8 +161,13 @@ void InitAllParameters(std::vector<TopoStruct*>* topo_structs,
     }
   }
 
-  // Find all the blobs consumed by this operator
+  // Reserve the space for release topological structures
+  // We do not define a copy method for TopoStruct. During each size expansion, the data might be
+  // screwed up if we do not reserve the space.
+  release_topo_structs->reserve(id2blob_size->size());
+  // initialize the id2consumer_topo_structs
   id2consumer_topo_structs->resize(id2blob_size->size());
+  // Find all the blobs consumed by this operator
   for (auto& topo_struct : *topo_structs) {
     const auto& consumer = topo_struct->op_node->op();
     for (const auto& ibn : consumer.input_bns()) {
@@ -200,7 +209,12 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
   if (GlobalProcessCtx::Rank() == 0) {
     std::cout << "Print all the topological structures:" << std::endl;
     int64_t total_memory = 0;
+    int32_t total_in_size = 0, total_out_size = 0;
     for (const auto& topo_struct : *topo_structs) {
+      std::cout << "In size: " << topo_struct->in_topo_structs.size()
+                << ", out size: " << topo_struct->out_topo_structs.size() << ", ";
+      total_in_size += topo_struct->in_topo_structs.size();
+      total_out_size += topo_struct->out_topo_structs.size();
       if (topo_struct->blob_id != -1) {
         std::cout << "Blob id: " << topo_struct->blob_id
                   << " Memory increment: " << topo_struct->memory_increment << std::endl;
@@ -210,7 +224,8 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
       }
       total_memory += topo_struct->memory_increment;
     }
-    std::cout << "Total memory: " << total_memory << std::endl;
+    std::cout << "Total memory: " << total_memory << ", total in size: " << total_in_size
+              << ", total out size: " << total_out_size << std::endl;
   }
 }
 }  // namespace
