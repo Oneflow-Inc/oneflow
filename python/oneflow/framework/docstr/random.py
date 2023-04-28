@@ -220,7 +220,7 @@ add_docstr(
         generator (Generator, optional): Random number generator. Defaults to `oneflow::DefaultGenerator` if not provided.
         out (Tensor, optional): Output tensor, will be resized and filled with the result. If not provided, a new tensor is created.  
 
-    Example::
+    Example:
 
     .. code-block:: python
         
