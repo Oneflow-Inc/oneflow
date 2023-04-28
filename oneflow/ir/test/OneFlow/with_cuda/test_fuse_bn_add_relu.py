@@ -21,9 +21,6 @@ import numpy as np
 
 import os
 
-os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-os.environ["ONEFLOW_MLIR_FUSE_NORMALIZATION_OPS"] = "1"
-os.environ["ONEFLOW_MLIR_PRINT_STATS"] = "1"
 
 import oneflow as flow
 import oneflow.unittest
@@ -73,7 +70,12 @@ def do_normalization_add_relu_graph(test_case, with_cuda):
 
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipUnless(oneflow.sysconfig.with_cuda(), "needs -DBUILD_CUDA=ON")
-class TestNormalizationAddRelu(oneflow.unittest.TestCase):
+class TestNormalizationAddRelu(oneflow.unittest.MLIRTestCase):
+    def setUp(self):
+        os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+        os.environ["ONEFLOW_MLIR_FUSE_NORMALIZATION_OPS"] = "1"
+        os.environ["ONEFLOW_MLIR_PRINT_STATS"] = "1"
+
     def test_normalization_add_relu_graph(test_case):
         do_normalization_add_relu_graph(test_case, True)
 

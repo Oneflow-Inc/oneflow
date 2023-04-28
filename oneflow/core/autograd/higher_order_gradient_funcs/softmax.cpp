@@ -61,12 +61,12 @@ Maybe<void> SoftmaxGradGrad::Apply(const SoftmaxGradGradCaptureState* ctx,
     const std::vector<int32_t> reduce_axis{static_cast<int32_t>(y->ndim() - 1)};
     const auto& a = JUST(functional::sequence_function(functional::Mul)
                              .then(std::bind(functional::ReduceSum, std::placeholders::_1,
-                                             reduce_axis, /*keepdim=*/true))
+                                             reduce_axis, /*keepdim=*/true, NullOpt))
                              .then(std::bind(functional::Mul, std::placeholders::_1, dy))
                              .call(y, out_grads[0]));
     const auto& b = JUST(functional::sequence_function(functional::Mul)
                              .then(std::bind(functional::ReduceSum, std::placeholders::_1,
-                                             reduce_axis, /*keepdim=*/true))
+                                             reduce_axis, /*keepdim=*/true, NullOpt))
                              .then(std::bind(functional::Mul, std::placeholders::_1, out_grads[0]))
                              .call(y, dy));
     in_grads->at(0) = JUST(functional::sequence_function(functional::Mul)

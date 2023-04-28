@@ -28,7 +28,7 @@ class OFRecordDataLoader(flow.nn.Module):
         shuffle = False
 
         self.ofrecord_reader = flow.nn.OFRecordReader(
-            "/dataset/imagenet_227/train/32",
+            flow.unittest.dataset_dir("imagenet_227/train/32"),
             batch_size=batch_size,
             data_part_num=2,
             random_shuffle=shuffle,
@@ -66,7 +66,7 @@ class DataLoaderGraph(flow.nn.Graph):
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-@unittest.skipUnless(os.path.exists("/dataset/imagenet_227"), "")
+@unittest.skipUnless(os.path.exists(flow.unittest.dataset_dir("imagenet_227")), "")
 @flow.unittest.skip_unless_1n2d()
 class DistributedOFRecordReaderTestCase(oneflow.unittest.TestCase):
     def test(test_case):

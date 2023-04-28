@@ -15,6 +15,6 @@ jobs:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
-      - uses: Oneflow-Inc/get-oneflow/update-benchmark-history@nv-wheels
+      - uses: Oneflow-Inc/get-oneflow/update-benchmark-history@add-nightly-date
         name: Update benchmark history
         timeout-minutes: 10

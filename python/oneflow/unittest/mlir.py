@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,22 +12,13 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_CONVERSION_PTXTOCUBIN_H_
-#define ONEFLOW_IR_INCLUDE_ONEFLOW_CONVERSION_PTXTOCUBIN_H_
+"""
+import os
+import unittest
 
-#include "mlir/Pass/Pass.h"
 
-namespace mlir {
-
-namespace oneflow {
-
-std::unique_ptr<mlir::Pass> createSerializeToCubinPass();
-void InitializeLLVMNVPTXBackend();
-void registerGpuSerializeToCubinPass();
-
-}  // namespace oneflow
-
-}  // namespace mlir
-
-#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_CONVERSION_PTXTOCUBIN_H_
+class MLIRTestCase(unittest.TestCase):
+    def tearDown(self):
+        for key in os.environ.keys():
+            if key.startswith("ONEFLOW_MLIR"):
+                os.environ.pop(key)

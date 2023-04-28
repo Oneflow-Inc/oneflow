@@ -19,7 +19,7 @@ limitations under the License.
 #include <array>
 #include <tuple>
 #include <random>
-#include <glog/logging.h>
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/intrusive/struct_traits.h"
 #include "oneflow/core/intrusive/list_hook.h"
 
