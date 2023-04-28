@@ -96,7 +96,7 @@ jobs:
           retry-failed-build: true
           clean-ccache: true
           nightly: ${{ github.event_name == 'schedule' || github.ref == 'refs/heads/release/add_nightly_date_index'}}
-          nightly-date: ${{ needs.generate_id.outputs.formatted_date }}
+          nightly-date: ${{ needs.generate-build-matrix.outputs.formatted_date }}
           use-nvidia-wheels: ${{ matrix.entry !='cu112' }}
           python-versions: |
             3.7
@@ -121,7 +121,7 @@ jobs:
           retry-failed-build: true
           clean-ccache: false
           nightly: ${{ github.event_name == 'schedule' || github.ref == 'refs/heads/release/add_nightly_date_index'}}
-          nightly-date: ${{ needs.generate_id.outputs.formatted_date }}
+          nightly-date: ${{ needs.generate-build-matrix.outputs.formatted_date }}
           python-versions: |
             3.7
             3.8
@@ -143,7 +143,7 @@ jobs:
           python3 -m pip install oss2 beautifulsoup4 --user
           python3 tools/create_pip_index.py --dir_key ${{ env.OSS_DIR }} -b oneflow-staging \
             --index_key=branch/${{ github.ref_name }}/${{ matrix.entry }}/index.html \
-            --index_key=branch/${{ github.ref_name }}/date/${{ needs.generate_id.outputs.formatted_date }}/${{ matrix.entry }}/index.html \
+            --index_key=branch/${{ github.ref_name }}/date/${{ needs.generate-build-matrix.outputs.formatted_date }}/${{ matrix.entry }}/index.html \
             --index_key=${{ env.OSS_DIR }}/index.html \
             --index_key=commit/${{ github.sha }}/${{ matrix.entry }}/index.html
       - name: Update API docs
