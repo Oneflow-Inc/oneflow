@@ -248,6 +248,22 @@ class DummyModule(ModuleType):
             )
         return False
 
+    def __enter__(self):
+        raise RuntimeError(
+            f'"{self.__name__}" is a dummy object, and does not support "with" statement.'
+        )
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        raise RuntimeError(
+            f'"{self.__name__}" is a dummy object, and does not support "with" statement.'
+        )
+
+    def __subclasscheck__(self, subclass):
+        return False
+
+    def __instancecheck__(self, instance):
+        return False
+
 
 class enable:
     def __init__(
