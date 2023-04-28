@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/user/kernels/stateful_opkernel.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
+#include "oneflow/core/framework/compute_complexity_fn_context.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/eager/eager_blob_object.h"

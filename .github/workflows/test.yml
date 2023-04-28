@@ -176,7 +176,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@new-ci-deployments
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@add-nightly-date
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -219,7 +219,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@new-ci-deployments
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-nightly-date
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -233,7 +233,7 @@ jobs:
         run: |
           echo "::error file=test.yml,line=204,col=10::steps.save-cache.outputs.cache-hit != matrix.cache-hit"
           exit 1
-      - uses: Oneflow-Inc/get-oneflow@new-ci-deployments
+      - uses: Oneflow-Inc/get-oneflow@add-nightly-date
         name: Build manylinux ${{ matrix.entry }}
         id: build-cpu
         if: ${{ matrix.entry =='cpu' && !matrix.cache-hit }}
@@ -255,7 +255,7 @@ jobs:
           python-versions: |
             3.7
             3.8
-      - uses: Oneflow-Inc/get-oneflow@new-ci-deployments
+      - uses: Oneflow-Inc/get-oneflow@add-nightly-date
         name: Build manylinux ${{ matrix.entry }}
         id: build-cpu-sanitizers
         if: ${{ (matrix.entry == 'cpu-asan-ubsan' || matrix.entry == 'cpu-tsan') && !matrix.cache-hit && false }}
@@ -276,7 +276,7 @@ jobs:
           clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
             3.8
-      - uses: Oneflow-Inc/get-oneflow@new-ci-deployments
+      - uses: Oneflow-Inc/get-oneflow@add-nightly-date
         name: Build manylinux ${{ matrix.entry }}
         id: build-cuda
         if: ${{ matrix.entry =='cu116' && !matrix.cache-hit }}
@@ -296,7 +296,7 @@ jobs:
           clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
             3.7
-      - uses: Oneflow-Inc/get-oneflow@new-ci-deployments
+      - uses: Oneflow-Inc/get-oneflow@add-nightly-date
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry == 'llvm15' && !matrix.cache-hit }}
         with:
@@ -335,7 +335,7 @@ jobs:
             })
       - name: Upload packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm15' && matrix.entry != 'cpu-asan-ubsan' && matrix.entry != 'cpu-tsan' }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@new-ci-deployments
+        uses: Oneflow-Inc/get-oneflow/digest/upload@add-nightly-date
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -346,7 +346,7 @@ jobs:
           dst-dir: cpack
       - name: Upload whl
         if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm15' && matrix.entry != 'cpu-asan-ubsan' && matrix.entry != 'cpu-tsan' }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@new-ci-deployments
+        uses: Oneflow-Inc/get-oneflow/digest/upload@add-nightly-date
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -371,7 +371,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@new-ci-deployments
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@add-nightly-date
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -402,7 +402,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@new-ci-deployments
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@add-nightly-date
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -484,7 +484,7 @@ jobs:
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@new-ci-deployments
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-nightly-date
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -500,7 +500,7 @@ jobs:
           exit 1
       - name: Download wheel and packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@new-ci-deployments
+        uses: Oneflow-Inc/get-oneflow/digest/download@add-nightly-date
         id: download-digest
         timeout-minutes: 10
         with:
@@ -510,7 +510,7 @@ jobs:
           ssh-tank-path: ${{ env.SSH_TANK_PATH }}
       - name: Get primary node
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: Oneflow-Inc/get-oneflow/master-address@new-ci-deployments
+        uses: Oneflow-Inc/get-oneflow/master-address@add-nightly-date
         id: get-primary-node
         with:
           rank: ${{ matrix.rank }}
@@ -709,7 +709,7 @@ jobs:
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_MANYLINUX_CONTAINER_NAME }} || true
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@new-ci-deployments
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-nightly-date
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -725,7 +725,7 @@ jobs:
           exit 1
       - name: Download wheel and packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@new-ci-deployments
+        uses: Oneflow-Inc/get-oneflow/digest/download@add-nightly-date
         id: download-digest
         timeout-minutes: 10
         with:
@@ -735,7 +735,7 @@ jobs:
           ssh-tank-path: ${{ env.SSH_TANK_PATH }}
       - name: Download ASAN and UBSAN wheel and packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && matrix.device == 'cpu' && false }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@new-ci-deployments
+        uses: Oneflow-Inc/get-oneflow/digest/download@add-nightly-date
         id: asan-ubsan-download-digest
         timeout-minutes: 10
         with:
@@ -745,7 +745,7 @@ jobs:
           ssh-tank-path: ${{ env.SSH_TANK_PATH }}
       - name: Download TSAN wheel and packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && matrix.device == 'cpu' && false }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@new-ci-deployments
+        uses: Oneflow-Inc/get-oneflow/digest/download@add-nightly-date
         id: tsan-download-digest
         timeout-minutes: 10
         with:
@@ -1070,7 +1070,7 @@ jobs:
       - name: Benchmark Test
         timeout-minutes: 100
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'benchmark' && matrix.device == 'cuda' }}
-        uses: Oneflow-Inc/get-oneflow/pytest-benchmark@new-ci-deployments
+        uses: Oneflow-Inc/get-oneflow/pytest-benchmark@add-nightly-date
         with:
           collect-path: ${{ env.FLOW_VISION_SRC }}/benchmark
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -1131,7 +1131,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
           fetch-depth: 0
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@new-ci-deployments
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-nightly-date
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5

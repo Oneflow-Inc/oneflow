@@ -601,8 +601,8 @@ class UserOpComputeComplexityFnContext : public user_op::ComputeComplexityFnCont
   }
   ~UserOpComputeComplexityFnContext() override = default;
 
-  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
-                                                  int32_t index) override {
+  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                        int32_t index) override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
     if (it == arg2tensor_desc_.end()) { return nullptr; };
     return &(it->second);

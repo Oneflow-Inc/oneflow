@@ -53,7 +53,7 @@ oneflow_add_mlir_dialect_library(
   OneFlowOpFolders.cpp
   Conversion/OneFlowToTosa.cpp
   Conversion/OneFlowToLinalg.cpp
-  Conversion/PTXToCubin.cpp
+  Conversion/NVVMToCubin.cpp
   Transform/BufferHostRegister.cpp
   Transform/OutlineAndFuse.cpp
   Transform/JITPasses.cpp
@@ -65,6 +65,7 @@ oneflow_add_mlir_dialect_library(
   Transform/CSEWithAttributesIgnored.cpp
   Transform/GroupMatMulOps.cpp
   Transform/AutoNHWCOps.cpp
+  Transform/OneFlowMemPool.cpp
   Transform/OneFlowStream.cpp
   TransposeHelpers.cpp
   Passes.cpp
@@ -86,6 +87,7 @@ oneflow_add_mlir_dialect_library(
   MLIRReconcileUnrealizedCasts
   ${MLIR_GPU_LIBS}
   MLIRIR
+  MLIRBytecodeWriter
   MLIROneFlowPDLLPatterns
   MLIRExecutionEngine
   oneflow)
