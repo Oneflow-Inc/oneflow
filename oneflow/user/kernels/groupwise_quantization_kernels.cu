@@ -134,7 +134,8 @@ struct LoadCast<uint8_t, half, pack_size, 8,
 };
 
 template<typename Dst, size_t pack_size>
-struct LoadCast<uint8_t, Dst, pack_size, 4,
+struct LoadCast<
+    uint8_t, Dst, pack_size, 4,
     typename std::enable_if<pack_size % 8 != 0 || !std::is_same<Dst, half>::value, void>::type> {
   using LoadType = AlignedArray<uint8_t, pack_size / 2>;
   __device__ void Load(const void* src, LoadType* dst) {
@@ -153,15 +154,16 @@ struct LoadCast<uint8_t, Dst, pack_size, 4,
 };
 
 template<size_t pack_size>
-struct LoadCast<uint8_t, half, pack_size, 4, typename std::enable_if<pack_size % 8 == 0, void>::type> {
+struct LoadCast<uint8_t, half, pack_size, 4,
+                typename std::enable_if<pack_size % 8 == 0, void>::type> {
   using LoadType = AlignedArray<uint32_t, pack_size / 8>;
   __device__ void Load(const void* src, LoadType* dst) {
     *dst = *reinterpret_cast<const LoadType*>(src);
   }
   __device__ void Cast(const LoadType& src, AlignedArray<half, pack_size>* dst) {
-    static constexpr uint32_t immLut                = (0xf0 & 0xcc) | 0xaa;
-    static constexpr uint32_t BOTTOM_MASK           = 0x000f000f;
-    static constexpr uint32_t TOP_MASK              = 0x00f000f0;
+    static constexpr uint32_t immLut = (0xf0 & 0xcc) | 0xaa;
+    static constexpr uint32_t BOTTOM_MASK = 0x000f000f;
+    static constexpr uint32_t TOP_MASK = 0x00f000f0;
     static constexpr uint32_t I4s_TO_F16s_MAGIC_NUM = 0x64006400;
 
     AlignedArray<half2, pack_size / 2>* dst_h2 =
@@ -173,25 +175,25 @@ struct LoadCast<uint8_t, half, pack_size, 4, typename std::enable_if<pack_size %
         half2 h2;
       } u32_h2[4];
 
-      const uint32_t lsb0_4   = src.elem[i];
-      const uint32_t lsb8_12  = src.elem[i] >> 8;
+      const uint32_t lsb0_4 = src.elem[i];
+      const uint32_t lsb8_12 = src.elem[i] >> 8;
 
       // Extract elt_04 (lsb0_4 & 0x000f000f) | 0x64006400
       asm volatile("lop3.b32 %0, %1, %2, %3, %4;\n"
-                    : "=r"(u32_h2[0].u32)
-                    : "r"(lsb0_4), "n"(BOTTOM_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
+                   : "=r"(u32_h2[0].u32)
+                   : "r"(lsb0_4), "n"(BOTTOM_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
       // Extract elt_15 (lsb0_4 & 0x00f000f0) | 0x64006400
       asm volatile("lop3.b32 %0, %1, %2, %3, %4;\n"
-                    : "=r"(u32_h2[1].u32)
-                    : "r"(lsb0_4), "n"(TOP_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
+                   : "=r"(u32_h2[1].u32)
+                   : "r"(lsb0_4), "n"(TOP_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
       // Extract elt_26 (lsb8_12 & 0x000f000f) | 0x64006400
       asm volatile("lop3.b32 %0, %1, %2, %3, %4;\n"
-                    : "=r"(u32_h2[2].u32)
-                    : "r"(lsb8_12), "n"(BOTTOM_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
+                   : "=r"(u32_h2[2].u32)
+                   : "r"(lsb8_12), "n"(BOTTOM_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
       // Extract elt_37 (lsb8_12 & 0x00f000f0) | 0x64006400
       asm volatile("lop3.b32 %0, %1, %2, %3, %4;\n"
-                    : "=r"(u32_h2[3].u32)
-                    : "r"(lsb8_12), "n"(TOP_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
+                   : "=r"(u32_h2[3].u32)
+                   : "r"(lsb8_12), "n"(TOP_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
 
       // This is the half2 {1024, 1024} represented as an integer.
       static constexpr uint32_t FP16_BOTTOM_MAGIC_NUM = 0x64006400;
@@ -201,13 +203,21 @@ struct LoadCast<uint8_t, half, pack_size, 4, typename std::enable_if<pack_size %
       static constexpr uint32_t NEG_64 = 0xd400d400;
 
       // Convert elt_04
-      asm volatile("sub.f16x2 %0, %1, %2;\n" : "=r"(u32_h2[0].u32) : "r"(u32_h2[0].u32), "r"(FP16_BOTTOM_MAGIC_NUM));
+      asm volatile("sub.f16x2 %0, %1, %2;\n"
+                   : "=r"(u32_h2[0].u32)
+                   : "r"(u32_h2[0].u32), "r"(FP16_BOTTOM_MAGIC_NUM));
       // Convert elt_15
-      asm volatile("fma.rn.f16x2 %0, %1, %2, %3;\n" : "=r"(u32_h2[1].u32) : "r"(u32_h2[1].u32), "r"(ONE_SIXTEENTH), "r"(NEG_64));
+      asm volatile("fma.rn.f16x2 %0, %1, %2, %3;\n"
+                   : "=r"(u32_h2[1].u32)
+                   : "r"(u32_h2[1].u32), "r"(ONE_SIXTEENTH), "r"(NEG_64));
       // Convert elt_26
-      asm volatile("sub.f16x2 %0, %1, %2;\n" : "=r"(u32_h2[2].u32) : "r"(u32_h2[2].u32), "r"(FP16_BOTTOM_MAGIC_NUM));
+      asm volatile("sub.f16x2 %0, %1, %2;\n"
+                   : "=r"(u32_h2[2].u32)
+                   : "r"(u32_h2[2].u32), "r"(FP16_BOTTOM_MAGIC_NUM));
       // Convert elt_37
-      asm volatile("fma.rn.f16x2 %0, %1, %2, %3;\n" : "=r"(u32_h2[3].u32) : "r"(u32_h2[3].u32), "r"(ONE_SIXTEENTH), "r"(NEG_64));
+      asm volatile("fma.rn.f16x2 %0, %1, %2, %3;\n"
+                   : "=r"(u32_h2[3].u32)
+                   : "r"(u32_h2[3].u32), "r"(ONE_SIXTEENTH), "r"(NEG_64));
 
       union {
         uint32_t u32;
@@ -239,7 +249,8 @@ struct LoadCast<uint8_t, half, pack_size, 4, typename std::enable_if<pack_size %
 };
 
 template<typename Dst, size_t pack_size>
-struct LoadCast<int8_t, Dst, pack_size, 8,
+struct LoadCast<
+    int8_t, Dst, pack_size, 8,
     typename std::enable_if<pack_size % 4 != 0 || !std::is_same<Dst, half>::value, void>::type> {
   using LoadType = AlignedArray<int8_t, pack_size>;
   __device__ void Load(const void* src, LoadType* dst) {
@@ -253,7 +264,7 @@ struct LoadCast<int8_t, Dst, pack_size, 8,
 
 template<size_t pack_size>
 struct LoadCast<int8_t, half, pack_size, 8,
-    typename std::enable_if<pack_size % 4 == 0, void>::type> {
+                typename std::enable_if<pack_size % 4 == 0, void>::type> {
   using LoadType = AlignedArray<uint32_t, pack_size / 4>;
   __device__ void Load(const void* src, LoadType* dst) {
     *dst = *reinterpret_cast<const LoadType*>(src);
@@ -271,9 +282,7 @@ struct LoadCast<int8_t, half, pack_size, 8,
 
       uint32_t elem = src.elem[i];
 
-      asm volatile("xor.b32 %0,%1,%2;\n"
-                   : "=r"(elem)
-                   : "r"(elem), "n"(0x80808080));
+      asm volatile("xor.b32 %0,%1,%2;\n" : "=r"(elem) : "r"(elem), "n"(0x80808080));
       asm volatile("prmt.b32 %0,%1,%2,%3;\n"
                    : "=r"(u32_h2[0].u32)
                    : "r"(elem), "n"(0x64), "n"(0x4140));
@@ -290,7 +299,8 @@ struct LoadCast<int8_t, half, pack_size, 8,
 };
 
 template<typename Dst, size_t pack_size>
-struct LoadCast<int8_t, Dst, pack_size, 4,
+struct LoadCast<
+    int8_t, Dst, pack_size, 4,
     typename std::enable_if<pack_size % 8 != 0 || !std::is_same<Dst, half>::value, void>::type> {
   using LoadType = AlignedArray<int8_t, pack_size / 2>;
   __device__ void Load(const void* src, LoadType* dst) {
@@ -310,15 +320,16 @@ struct LoadCast<int8_t, Dst, pack_size, 4,
 };
 
 template<typename Dst, size_t pack_size>
-struct LoadCast<int8_t, Dst, pack_size, 4, typename std::enable_if<pack_size % 8 == 0, void>::type> {
+struct LoadCast<int8_t, Dst, pack_size, 4,
+                typename std::enable_if<pack_size % 8 == 0, void>::type> {
   using LoadType = AlignedArray<uint32_t, pack_size / 8>;
   __device__ void Load(const void* src, LoadType* dst) {
     *dst = *reinterpret_cast<const LoadType*>(src);
   }
   __device__ void Cast(const LoadType& src, AlignedArray<Dst, pack_size>* dst) {
-    static constexpr uint32_t immLut                = (0xf0 & 0xcc) | 0xaa;
-    static constexpr uint32_t BOTTOM_MASK           = 0x000f000f;
-    static constexpr uint32_t TOP_MASK              = 0x00f000f0;
+    static constexpr uint32_t immLut = (0xf0 & 0xcc) | 0xaa;
+    static constexpr uint32_t BOTTOM_MASK = 0x000f000f;
+    static constexpr uint32_t TOP_MASK = 0x00f000f0;
     static constexpr uint32_t I4s_TO_F16s_MAGIC_NUM = 0x64006400;
     static constexpr uint32_t FLIP_TO_UNSIGNED_MASK = 0x88888888;
 
@@ -333,29 +344,27 @@ struct LoadCast<int8_t, Dst, pack_size, 4, typename std::enable_if<pack_size % 8
 
       uint32_t elem = src.elem[i];
 
-      asm volatile("xor.b32 %0,%1,%2;\n"
-                   : "=r"(elem)
-                   : "r"(elem), "n"(FLIP_TO_UNSIGNED_MASK));
+      asm volatile("xor.b32 %0,%1,%2;\n" : "=r"(elem) : "r"(elem), "n"(FLIP_TO_UNSIGNED_MASK));
 
-      const uint32_t lsb0_4   = elem;
-      const uint32_t lsb8_12  = elem >> 8;
+      const uint32_t lsb0_4 = elem;
+      const uint32_t lsb8_12 = elem >> 8;
 
       // Extract elt_04 (lsb0_4 & 0x000f000f) | 0x64006400
       asm volatile("lop3.b32 %0, %1, %2, %3, %4;\n"
-                    : "=r"(u32_h2[0].u32)
-                    : "r"(lsb0_4), "n"(BOTTOM_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
+                   : "=r"(u32_h2[0].u32)
+                   : "r"(lsb0_4), "n"(BOTTOM_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
       // Extract elt_15 (lsb4_8 & 0x000f000f) | 0x64006400
       asm volatile("lop3.b32 %0, %1, %2, %3, %4;\n"
-                    : "=r"(u32_h2[1].u32)
-                    : "r"(lsb0_4), "n"(TOP_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
+                   : "=r"(u32_h2[1].u32)
+                   : "r"(lsb0_4), "n"(TOP_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
       // Extract elt_26 (lsb8_12 & 0x000f000f) | 0x64006400
       asm volatile("lop3.b32 %0, %1, %2, %3, %4;\n"
-                    : "=r"(u32_h2[2].u32)
-                    : "r"(lsb8_12), "n"(BOTTOM_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
+                   : "=r"(u32_h2[2].u32)
+                   : "r"(lsb8_12), "n"(BOTTOM_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
       // Extract elt_37 (lsb12_16 & 0x000f000f) | 0x64006400
       asm volatile("lop3.b32 %0, %1, %2, %3, %4;\n"
-                    : "=r"(u32_h2[3].u32)
-                    : "r"(lsb8_12), "n"(TOP_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
+                   : "=r"(u32_h2[3].u32)
+                   : "r"(lsb8_12), "n"(TOP_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
 
       // This is the half2 {1032, 1032} represented as an integer.
       static constexpr uint32_t FP16_BOTTOM_MAGIC_NUM = 0x64086408;
@@ -364,10 +373,18 @@ struct LoadCast<int8_t, Dst, pack_size, 4, typename std::enable_if<pack_size % 8
       // This is the half2 {-72, -72} represented as an integer.
       static constexpr uint32_t NEG_72 = 0xd480d480;
 
-      asm volatile("sub.f16x2 %0, %1, %2;\n" : "=r"(u32_h2[0].u32) : "r"(u32_h2[0].u32), "r"(FP16_BOTTOM_MAGIC_NUM));
-      asm volatile("fma.rn.f16x2 %0, %1, %2, %3;\n" : "=r"(u32_h2[1].u32) : "r"(u32_h2[1].u32), "r"(ONE_SIXTEENTH), "r"(NEG_72));
-      asm volatile("sub.f16x2 %0, %1, %2;\n" : "=r"(u32_h2[2].u32) : "r"(u32_h2[2].u32), "r"(FP16_BOTTOM_MAGIC_NUM));
-      asm volatile("fma.rn.f16x2 %0, %1, %2, %3;\n" : "=r"(u32_h2[3].u32) : "r"(u32_h2[3].u32), "r"(ONE_SIXTEENTH), "r"(NEG_72));
+      asm volatile("sub.f16x2 %0, %1, %2;\n"
+                   : "=r"(u32_h2[0].u32)
+                   : "r"(u32_h2[0].u32), "r"(FP16_BOTTOM_MAGIC_NUM));
+      asm volatile("fma.rn.f16x2 %0, %1, %2, %3;\n"
+                   : "=r"(u32_h2[1].u32)
+                   : "r"(u32_h2[1].u32), "r"(ONE_SIXTEENTH), "r"(NEG_72));
+      asm volatile("sub.f16x2 %0, %1, %2;\n"
+                   : "=r"(u32_h2[2].u32)
+                   : "r"(u32_h2[2].u32), "r"(FP16_BOTTOM_MAGIC_NUM));
+      asm volatile("fma.rn.f16x2 %0, %1, %2, %3;\n"
+                   : "=r"(u32_h2[3].u32)
+                   : "r"(u32_h2[3].u32), "r"(ONE_SIXTEENTH), "r"(NEG_72));
 
       union {
         uint32_t u32;
