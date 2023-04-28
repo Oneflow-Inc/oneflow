@@ -143,6 +143,7 @@ jobs:
           python3 -m pip install oss2 beautifulsoup4 --user
           python3 tools/create_pip_index.py --dir_key ${{ env.OSS_DIR }} -b oneflow-staging \
             --index_key=branch/${{ github.ref_name }}/${{ matrix.entry }}/index.html \
+            --index_key=branch/${{ github.ref_name }}/date/${{ needs.generate_id.outputs.formatted_date }}/${{ matrix.entry }}/index.html \
             --index_key=${{ env.OSS_DIR }}/index.html \
             --index_key=commit/${{ github.sha }}/${{ matrix.entry }}/index.html
       - name: Update API docs
