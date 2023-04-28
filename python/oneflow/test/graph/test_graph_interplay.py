@@ -71,6 +71,7 @@ def _test_linear(test_case, device):
     import torch
     from torch._dynamo.backends.registry import register_backend
     from torch._dynamo.backends.common import fake_tensor_unsupported
+    from oneflow.utils.backend.torch_compile import register_oneflowc
 
     linear = torch.nn.Linear(3, 8, False)
     linear = linear.to(device)
@@ -122,14 +123,6 @@ def _test_linear(test_case, device):
             g = get_of()
         # TODO(): This is a special pack trick, try to make it general.
         return (flow.utils.tensor.to_torch(g(x)),)
-
-    @register_backend
-    @fake_tensor_unsupported
-    def oneflowc(gm: torch.fx.GraphModule, example_inputs: List[torch.Tensor]):
-        print("my_compiler() called with FX graph:")
-        gm.graph.print_tabular()
-        gm.forward = torch_interplay
-        return gm.forward  # return a python callable
 
     @torch.compile(backend="oneflowc")
     def fn(x):
