@@ -1236,7 +1236,7 @@ class Graph(object):
         self._c_nn_graph.align_states_after_logical_graph_compile()
         self._c_nn_graph.init_runtime()
         self._is_compiled = True
-        self.__run(_load_input_from_state_dict(state_dict["inputs"]))  
+        self.__run(_load_input_from_state_dict(state_dict["inputs"]))
         build_graph_end = time.perf_counter()
         self.__print(
             0,
