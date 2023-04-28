@@ -112,7 +112,7 @@ Maybe<void> Where::Apply(const WhereCaptureState* ctx, const TensorTuple& out_gr
     if (!ctx->x_reduce_dims.empty()) {
       x_grad = JUST(functional::ReduceSum(
           x_grad, std::vector<int32_t>{ctx->x_reduce_dims.begin(), ctx->x_reduce_dims.end()},
-          /*keepdims=*/true));
+          /*keepdims=*/true, NullOpt));
     }
     if (!ctx->x_squeeze_dims.empty()) {
       x_grad = JUST(functional::Squeeze(
@@ -125,7 +125,7 @@ Maybe<void> Where::Apply(const WhereCaptureState* ctx, const TensorTuple& out_gr
     if (!ctx->y_reduce_dims.empty()) {
       y_grad = JUST(functional::ReduceSum(
           y_grad, std::vector<int32_t>{ctx->y_reduce_dims.begin(), ctx->y_reduce_dims.end()},
-          /*keepdims=*/true));
+          /*keepdims=*/true, NullOpt));
     }
     if (!ctx->y_squeeze_dims.empty()) {
       y_grad = JUST(functional::Squeeze(

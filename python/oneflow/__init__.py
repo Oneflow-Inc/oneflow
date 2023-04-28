@@ -381,6 +381,7 @@ from oneflow.framework.generator import (
 # from oneflow.framework.model import Model
 import oneflow.utils.tensor
 import oneflow.utils.global_view
+import oneflow.utils.model_zoo
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import is_nonzero
 from oneflow._oneflow_internal import to_dlpack
@@ -501,8 +502,4 @@ import oneflow.remat
 
 if oneflow._oneflow_internal.flags.with_mlir():
     oneflow_internal_path = oneflow._oneflow_internal.__file__
-    if os.getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS") or os.getenv(
-        "ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH"
-    ):
-        print("MLIR JIT engine will load:", oneflow_internal_path, file=sys.stderr)
-        oneflow._oneflow_internal.ir.load_jit_shared_lib(oneflow_internal_path)
+    oneflow._oneflow_internal.ir.load_jit_shared_lib(oneflow_internal_path)

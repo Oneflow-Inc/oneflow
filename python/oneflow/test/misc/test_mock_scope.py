@@ -180,6 +180,24 @@ class TestMock(flow.unittest.TestCase):
         test_case.assertTrue("safetensors._safetensors_rust" in sys.modules)
         import safetensors
 
+    def test_isinstance(test_case):
+        with mock.enable(lazy=True):
+            import torch
+
+            test_case.assertFalse(isinstance(int, torch._six.string_class))
+
+    def test_with_statement(test_case):
+        with mock.enable(lazy=True):
+            with test_case.assertRaises(RuntimeError) as context:
+                import torch.noexist
+
+                with torch.noexist:
+                    pass
+            test_case.assertTrue(
+                '"oneflow.noexist" is a dummy object, and does not support "with" statement.'
+                in str(context.exception)
+            )
+
 
 # MUST use pytest to run this test
 def test_verbose(capsys):

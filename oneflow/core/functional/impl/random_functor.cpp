@@ -874,7 +874,7 @@ class MultinomialFunctor {
     if (input_device == DeviceType::kCPU) {
       return OpInterpUtil::Dispatch<Tensor>(*op_cpu_, {x}, ctx);
     } else {
-      std::shared_ptr<Tensor> sum_last_dim = JUST(functional::ReduceSum(x, {-1}, true));
+      std::shared_ptr<Tensor> sum_last_dim = JUST(functional::ReduceSum(x, {-1}, true, NullOpt));
       std::shared_ptr<Tensor> norm_dist = JUST(functional::Div(x, sum_last_dim));
       std::shared_ptr<Tensor> prefix_sum = JUST(functional::Cumsum(norm_dist, -1, x->dtype()));
       return OpInterpUtil::Dispatch<Tensor>(*op_gpu_, {norm_dist, prefix_sum}, ctx);

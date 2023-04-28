@@ -191,8 +191,8 @@ Maybe<void> CheckInplaceShapeCanExpandTo(const Shape& shape, const Shape& expand
       int dim_a = expand_shape.At(i);
       int dim_b = shape.At(index);
       // NOTE(lixiang): When a dimension of tensor a and tensor b are not equal in size, dim_a needs
-      // to be greater than 0, and dim_b should be equal to 1.
-      CHECK_OR_RETURN(!(dim_a != dim_b && (dim_a <= 0 || dim_b != 1)))
+      // to be greater than or equal 0, and dim_b should be equal to 1.
+      CHECK_OR_RETURN(!(dim_a != dim_b && (dim_a < 0 || dim_b != 1)))
           << Error::RuntimeError() << "Tensor with shape " << expand_shape.ToString()
           << " doesn't match the broadcast shape in an inplace operation";
     } else {
