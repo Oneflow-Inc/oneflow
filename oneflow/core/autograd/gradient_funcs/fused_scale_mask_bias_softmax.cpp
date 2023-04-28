@@ -82,7 +82,7 @@ Maybe<void> FusedScaleMaskBiasSoftmax::Apply(const FusedScaleMaskBiasSoftmaxCapt
   if (ctx->bias_requires_grad) {
     int batch_dim = (y->shape()->NumAxes() == 5) ? 1 : 0;
     in_grads->at(2) = JUST(functional::ScalarMul(
-        1 / ctx->scale, JUST(functional::ReduceSum(input_grad, {batch_dim}, true))));
+        1 / ctx->scale, JUST(functional::ReduceSum(input_grad, {batch_dim}, true, NullOpt))));
   }
 
   return Maybe<void>::Ok();

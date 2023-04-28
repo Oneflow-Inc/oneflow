@@ -79,7 +79,7 @@ Maybe<void> FusedMatmulBias::Apply(const FusedMatmulBiasCaptureState* ctx,
     reduce_axes_vec.reserve(num_axes - 1);
     for (int i = 0; i < num_axes - 1; i++) { reduce_axes_vec.push_back(i); }
     in_grads->at(2) =
-        JUST(functional::ReduceSum(JUST(VectorAt(out_grads, 0)), reduce_axes_vec, false));
+        JUST(functional::ReduceSum(JUST(VectorAt(out_grads, 0)), reduce_axes_vec, false, NullOpt));
   }
 
   return Maybe<void>::Ok();
