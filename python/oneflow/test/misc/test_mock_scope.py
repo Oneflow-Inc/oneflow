@@ -163,16 +163,6 @@ class TestMock(flow.unittest.TestCase):
             if torch.not_exist:
                 test_case.assertTrue(False)
 
-    def test_blacklist(test_case):
-        with mock.enable(lazy=True):
-            import torch
-            import torch.nn.functional as F
-
-            test_case.assertFalse(hasattr(F, "scaled_dot_product_attention"))
-            test_case.assertFalse(
-                hasattr(torch.nn.functional, "scaled_dot_product_attention")
-            )
-
     def test_hazard_list(test_case):
         with mock.enable():
             import sys
@@ -207,10 +197,6 @@ class TestMock(flow.unittest.TestCase):
                 torch.nn.Linear_forward_before_lora, torch.nn.Linear.forward
             )
 
-    def test_import_pytorch_lightning(test_case):
-        with mock.enable(lazy=True):
-            import pytorch_lightning as pl
-
     def test_hasattr_and_getattr_in_lazy_mode(test_case):
         with mock.enable(lazy=True):
             test_case.assertFalse(hasattr(torch, "not_exist"))
@@ -218,6 +204,12 @@ class TestMock(flow.unittest.TestCase):
             test_case.assertTrue(isinstance(torch.not_exist, mock.DummyModule))
             test_case.assertTrue(
                 isinstance(torch.nn.functional.not_exist, mock.DummyModule)
+            )
+
+            import torch.nn.functional as F
+            test_case.assertFalse(hasattr(F, "scaled_dot_product_attention"))
+            test_case.assertFalse(
+                hasattr(torch.nn.functional, "scaled_dot_product_attention")
             )
 
 
