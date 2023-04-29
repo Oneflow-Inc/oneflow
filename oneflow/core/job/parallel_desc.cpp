@@ -123,6 +123,7 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
     }
   }
   containing_current_rank_ = machine_id2sorted_dev_phy_ids_->count(GlobalProcessCtx::Rank()) > 0;
+  rematable_ = parallel_conf_.rematable();
   ClearUp();
   JUST(SanityCheck());
   return Maybe<void>::Ok();
@@ -160,15 +161,15 @@ Maybe<int64_t> ParallelDesc::ParallelId4MachineDeviceId(int64_t machine_id,
 
 Maybe<Symbol<Device>> ParallelDesc::GetTensorDevice4CurrentProcessCtx(
     Optional<int64_t>* parallel_id) const {
-  int64_t machine_id = 0;
-  int64_t device_id = 0;
-  GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
-  const auto& device = JUST(Device::New(device_tag(), device_id));
+  auto [machine_id, device_id] = GlobalProcessCtx::GetCurrentMachineIdAndDeviceId();
+  const auto& device = JUST(Device::New(device_tag(), device_id, rematable_));
   int64_t parallel_id_val = -1;
-  if (TryGetParallelId(machine_id, device_id, &parallel_id_val)) {
-    *parallel_id = parallel_id_val;
-  } else {
-    *parallel_id = Optional<int64_t>();
+  if (parallel_id != nullptr) {
+    if (TryGetParallelId(machine_id, device_id, &parallel_id_val)) {
+      *parallel_id = parallel_id_val;
+    } else {
+      *parallel_id = Optional<int64_t>();
+    }
   }
   return device;
 }
@@ -212,18 +213,19 @@ Maybe<void> ParallelDesc::GetParallelContext(ParallelContext* parallel_ctx, int6
 bool ParallelDesc::Equals(const ParallelDesc& rhs) const {
   return (this == &rhs)
          || (device_type_ == rhs.device_type_ && sorted_machine_ids_ == rhs.sorted_machine_ids_
-             && EqualsMachineId2SortedDevPhyIds(rhs) && *hierarchy_ == *rhs.hierarchy_);
+             && EqualsMachineId2SortedDevPhyIds(rhs) && *hierarchy_ == *rhs.hierarchy_
+             && rematable_ == rhs.rematable_);
 }
 
 bool ParallelDesc::EqualsIgnoringDeviceType(const ParallelDesc& rhs) const {
   return sorted_machine_ids_ == rhs.sorted_machine_ids_ && EqualsMachineId2SortedDevPhyIds(rhs)
-         && *hierarchy_ == *rhs.hierarchy_;
+         && *hierarchy_ == *rhs.hierarchy_ && rematable_ == rhs.rematable_;
 }
 
 bool ParallelDesc::EqualsIgnoringHierarchy(const ParallelDesc& rhs) const {
   return (this == &rhs)
          || (device_type_ == rhs.device_type_ && sorted_machine_ids_ == rhs.sorted_machine_ids_
-             && EqualsMachineId2SortedDevPhyIds(rhs));
+             && EqualsMachineId2SortedDevPhyIds(rhs) && rematable_ == rhs.rematable_);
 }
 
 bool ParallelDesc::EqualsOnlyForMachineAndDeviceIds(const ParallelDesc& rhs) const {
@@ -368,6 +370,8 @@ bool ParallelDesc::Bigger(const ParallelDesc& rhs) const {
                                    rhs.machine_id2sorted_dev_phy_ids());
 }
 
+bool ParallelDesc::rematable() const { return rematable_; }
+
 std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(
     const ParallelContext* parallel_ctx) {
   return std::make_tuple(parallel_ctx->parallel_id(), parallel_ctx->parallel_num());
@@ -403,9 +407,7 @@ ParallelConf GenParallelConfOfCpuOnAllRanks() {
 namespace {
 
 Maybe<Optional<int64_t>> CalcParallelId4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc) {
-  int64_t machine_id = 0;
-  int64_t device_id = 0;
-  GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
+  auto [machine_id, device_id] = GlobalProcessCtx::GetCurrentMachineIdAndDeviceId();
   int64_t parallel_id = -1;
   if (parallel_desc->TryGetParallelId(machine_id, device_id, &parallel_id)) {
     return Optional<int64_t>(parallel_id);
@@ -416,9 +418,7 @@ Maybe<Optional<int64_t>> CalcParallelId4CurrentProcessCtx(Symbol<ParallelDesc> p
 
 Maybe<const ParallelContext> CalcParallelContext4CurrentProcessCtx(
     Symbol<ParallelDesc> parallel_desc) {
-  int64_t machine_id = 0;
-  int64_t device_id = 0;
-  GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
+  auto [machine_id, device_id] = GlobalProcessCtx::GetCurrentMachineIdAndDeviceId();
   int64_t parallel_id_val = -1;
   CHECK_OR_RETURN(parallel_desc->TryGetParallelId(machine_id, device_id, &parallel_id_val));
   std::shared_ptr<ParallelContext> parallel_ctx = std::make_shared<ParallelContext>();
@@ -470,15 +470,16 @@ Maybe<std::string> RawPlacementToString(Symbol<ParallelDesc> placement) {
   CHECK_EQ_OR_RETURN(ranks.size(), placement->hierarchy()->elem_cnt())
       << "rank size is " << ranks.size() << ", but shape is " << placement->hierarchy()->ToString();
   const auto& ranks_str = JUST(RanksToString(0, ranks.data(), *placement->hierarchy()));
-  return "oneflow.placement(type=\"" + device_type + "\", ranks=" + *ranks_str + ")";
+  const std::string rematable_str = placement->rematable() ? ", rematable=True" : "";
+  return "oneflow.placement(type=\"" + device_type + "\", ranks=" + *ranks_str + rematable_str
+         + ")";
 }
 
 Maybe<Symbol<Device>> RawGetTensorDevice(Symbol<ParallelDesc> parallel_desc) {
-  int64_t machine_id = 0;
-  int64_t device_id = 0;
-  GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
+  auto [machine_id, device_id] = GlobalProcessCtx::GetCurrentMachineIdAndDeviceId();
   const auto& type = parallel_desc->device_tag();
-  return JUST(Device::New(type, device_id));
+  const auto rematable = parallel_desc->rematable();
+  return JUST(Device::New(type, device_id, rematable));
 }
 
 Maybe<Symbol<ParallelDesc>> RawTxtStringToPlacement(const std::string& parallel_conf_str) {

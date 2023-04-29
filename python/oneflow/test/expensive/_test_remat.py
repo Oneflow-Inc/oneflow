@@ -340,22 +340,26 @@ class TestRemat(flow.unittest.TestCase):
             optimizer.step()
             optimizer.zero_grad()
 
-    def _test_resnet18(self, optimizer_fn, ddp, expected_loss):
+    def _test_resnet18(self, optimizer_fn, mode, expected_loss):
         flow.manual_seed(flow.env.get_rank())
-        device = "cpu+remat"
+        def to_remat(x):
+            if mode == 'global':
+                return x.to_global(flow.placement.all("cpu+remat"), flow.sbp.broadcast)
+            else:
+                return x.to('cpu+remat')
 
-        model = flowvision.models.resnet18().to(device)
-        if ddp:
+        model = to_remat(flowvision.models.resnet18())
+        if mode == 'ddp':
             model = flow.nn.parallel.DistributedDataParallel(model, use_bucket=False)
-        criterion = nn.CrossEntropyLoss().to(device)
+        criterion = to_remat(nn.CrossEntropyLoss())
 
         for x in model.parameters():
-            x.grad = flow.zeros_like(x).to(device)
+            x.grad = to_remat(flow.zeros_like(x))
         # optimizer = flow.optim.SGD(model.parameters(), lr=0.1, momentum=0)
         optimizer = optimizer_fn(model.parameters())
-        x = flow.rand(10, 3, 224, 224).to(device)
+        x = to_remat(flow.rand(10, 3, 224, 224))
         target = (
-            flow.randint(low=0, high=1000, size=(x.shape[0],)).to(device).to(flow.int32)
+            to_remat(flow.randint(low=0, high=1000, size=(x.shape[0],)).to(flow.int32))
         )
         # NOTE: there is a bug in current implementation about random ops:
         # x1 = flow.rand(5)
@@ -363,6 +367,8 @@ class TestRemat(flow.unittest.TestCase):
         # del x1   <--- we cannot block the eviction of x1 here because it is controlled by the user
         # evict(x2)
         # recompute(x2) <-- recomputing x2 triggers the recomputation of x1 and causes inconsistentness
+        print(x.placement)
+        print(x.to_local().device)
         flow._oneflow_internal.remat.disable_eviction(x)
         flow._oneflow_internal.remat.disable_eviction(target)
         ITER_NUM = 5
@@ -400,7 +406,7 @@ class TestRemat(flow.unittest.TestCase):
         # NOTE: this loss is only correct in my environment on 21
         self._test_resnet18(
             lambda params: flow.optim.SGD(params, lr=0.1, momentum=0),
-            False,
+            'naive',
             [0.6304041147232056],
         )
 
@@ -413,7 +419,7 @@ class TestRemat(flow.unittest.TestCase):
         # NOTE: these losses are only correct in my environment on 21
         self._test_resnet18(
             lambda params: flow.optim.SGD(params, lr=0.1, momentum=0),
-            True,
+            'ddp',
             [1.8890058994293213, 1.8992782831192017],
         )
 
@@ -424,7 +430,7 @@ class TestRemat(flow.unittest.TestCase):
     def test_resnet18_momentum_sgd(self, _):
         # NOTE: this loss is only correct in my environment on 21
         self._test_resnet18(
-            lambda params: flow.optim.SGD(params, lr=0.1, momentum=0.9), False, None
+            lambda params: flow.optim.SGD(params, lr=0.1, momentum=0.9), 'naive', None
         )
 
     @flow.unittest.skip_unless_1n1d()
@@ -433,7 +439,15 @@ class TestRemat(flow.unittest.TestCase):
     @loss_test()
     def test_resnet18_adam(self, _):
         # NOTE: this loss is only correct in my environment on 21
-        self._test_resnet18(lambda params: flow.optim.Adam(params, lr=0.1), False, None)
+        self._test_resnet18(lambda params: flow.optim.Adam(params, lr=0.1), 'naive', None)
+
+    @flow.unittest.skip_unless_1n1d()
+    @only_fbip()
+    @memory_budget(410, "cpu")
+    @loss_test()
+    def test_resnet18_global_adam(self, _):
+        # NOTE: this loss is only correct in my environment on 21
+        self._test_resnet18(lambda params: flow.optim.Adam(params, lr=0.1), 'global', None)
 
     @flow.unittest.skip_unless_1n1d()
     @only_copy_on_write()

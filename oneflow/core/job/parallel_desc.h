@@ -108,6 +108,8 @@ class ParallelDesc final {
   bool TryGetParallelId(int64_t machine_id, int64_t device_id, int64_t* parallel_id) const;
   Maybe<void> CheckDeviceIdsIsValid() const;
 
+  bool rematable() const;
+
  private:
   friend Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf);
   ParallelDesc() : symbol_id_(NullOpt) {}
@@ -133,6 +135,7 @@ class ParallelDesc final {
   HashMap<int64_t, HashMap<int64_t, int64_t>> machine_id2device_id2parallel_id_;
   // cached result of ContainingMachineId(GlobalProcessCtx::Rank()) for performace optimization.
   bool containing_current_rank_;
+  bool rematable_ = false;
 };
 
 Maybe<Symbol<Device>> GetTensorDevice4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc,
@@ -191,6 +194,7 @@ struct hash<oneflow::ParallelDesc> {
       AddHash(&ret, pr.sorted_dev_phy_ids(machine_id).size() << shift);
     }
     AddHash(&ret, *pr.hierarchy());
+    AddHash(&ret, pr.rematable());
     return hash<size_t>()(ret);
   }
 };

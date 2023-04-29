@@ -60,6 +60,7 @@ Maybe<ParallelConf> MakeParallelConf(const std::string& device_tag,
       parallel_conf->mutable_hierarchy()->CopyFrom(proto);
     }
   }
+  parallel_conf->set_rematable(rematable);
   return parallel_conf;
 }
 

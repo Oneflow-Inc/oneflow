@@ -423,11 +423,11 @@ Maybe<Tensor> LocalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDes
   CHECK_OR_RETURN(x->is_local()) << Error::RuntimeError() << "local tensors supported only";
   std::shared_ptr<one::Tensor> input = x->contiguous();
   // copy to right device first if input's device type is wrong
-  if (JUST(input->device())->type() != parallel_desc->device_tag()) {
+  if (auto device_of_placement = JUST(parallel_desc->GetTensorDevice4CurrentProcessCtx(nullptr));
+      JUST(input->device()) != device_of_placement) {
     VLOG(2) << "The device_type of the input tensor is different from placement, now copy it to "
             << parallel_desc->device_tag();
-    input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank(),
-                                  /*pin_memory=*/false));
+    input = JUST(functional::Copy(x, device_of_placement, /*pin_memory=*/false));
   }
   // copy to default device of the current rank if input's device type is right but not on default
   // device
@@ -437,8 +437,9 @@ Maybe<Tensor> LocalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDes
       VLOG(2) << "The tensor isn't on default device of the current rank, now copy it to "
               << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
     }
-    input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank(),
-                                  /*pin_memory=*/false));
+    input =
+        JUST(functional::Copy(x, JUST(parallel_desc->GetTensorDevice4CurrentProcessCtx(nullptr)),
+                              /*pin_memory=*/false));
   }
   const auto& device = JUST(input->device());
   CHECK_EQ_OR_RETURN(device->type(), parallel_desc->device_tag())
@@ -485,6 +486,7 @@ class LocalToGlobalFunctor {
     DisableCheckGlobalTensorMetaScope scope{};
     std::shared_ptr<Tensor> tensor;
     DeviceType device_type = parallel_desc->device_type();
+
     if (ccl::IsBroadcastRegistered(device_type) || !sync_data || device_type == DeviceType::kMeta) {
       tensor = JUST(LocalToGlobal(x, parallel_desc, sbp_parallels, shape, dtype->data_type(), op_,
                                   /* check_meta */ false, sync_data, copy));

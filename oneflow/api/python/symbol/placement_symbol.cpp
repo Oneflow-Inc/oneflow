@@ -178,7 +178,7 @@ struct PlacementSymbolExportUtil {
       }
       Symbol<ParallelDesc> placement =
           SymbolOf(*JUST(CreateParallelDesc(type, machine_device_ids, std::shared_ptr<Shape>(), rematable)));
-      it = device_str2placement.emplace(type, placement).first;
+      it = device_str2placement.emplace(device_str, placement).first;
     }
     return it->second;
   }
