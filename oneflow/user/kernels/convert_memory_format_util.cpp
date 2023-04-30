@@ -38,7 +38,6 @@ void ComputeIdentity(ep::Stream* stream, int ndim, const int64_t* shape, DataTyp
   size_t count = 1;
   for (int i = 0; i < ndim; ++i) { count *= shape[i]; }
   auto memcpy_primitive = NewMemcpyPrimitive(stream->device_type());
-  CHECK_NOTNULL_OR_THROW(memcpy_primitive);
   CHECK(memcpy_primitive) << "Can not create Memcpy primitive for device type "
                           << stream->device_type();
   memcpy_primitive->Launch(stream, out, in, count * GetSizeOfDataType(data_type));
@@ -74,9 +73,8 @@ using ConvertMemoryFormatFunc =
     std::function<void(ep::Stream*, int, const int64_t*, DataType, const void*, void*)>;
 
 ConvertMemoryFormatFunc convert_funcs[MemoryFormat_Max][MemoryFormat_Max] = {
-    /*kContiguous->other*/ {ComputeIdentity, ComputeContiguousToChannelsLast, ComputeIdentity},
-    /*kChannelsLast->other*/ {ComputeChannelsLastToContiguous, ComputeIdentity, ComputeIdentity},
-    /*kPreserve->other*/ {ComputeIdentity, ComputeIdentity, ComputeIdentity},
+    /*kContiguous->other*/ {ComputeIdentity, ComputeContiguousToChannelsLast},
+    /*kChannelsLast->other*/ {ComputeChannelsLastToContiguous, ComputeIdentity},
 };
 
 void ConvertMemoryFormat(ep::Stream* stream, const user_op::Tensor* in, user_op::Tensor* out,

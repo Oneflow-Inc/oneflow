@@ -13,32 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
-
-static Shape ComputeShapeIdentity(const Shape& shape) { return shape; }
-
-static Shape ComputeShapeNchwToNhwc(const Shape& shape) {
-  int ndim = shape.size();
-  if (ndim <= 2) { return ComputeShapeIdentity(shape); }
-  Shape target_shape(ndim);
-  target_shape[0] = shape[0];
-  target_shape[ndim - 1] = shape[1];
-  for (int i = 0; i < ndim - 2; ++i) { target_shape[i + 1] = shape[i + 2]; }
-  return target_shape;
-}
-
-static Shape ComputeShapeNhwcToNchw(const Shape& shape) {
-  int ndim = shape.size();
-  if (ndim <= 2) { return ComputeShapeIdentity(shape); }
-  Shape target_shape(ndim);
-  target_shape[0] = shape[0];
-  target_shape[1] = shape[ndim - 1];
-  for (int i = 0; i < ndim - 2; ++i) { target_shape[i + 2] = shape[i + 1]; }
-  return target_shape;
-}
 
 static Maybe<void> GetSbpIdentity(user_op::SbpContext* ctx, const Shape& shape) {
   for (int32_t i = 0; i < shape.size(); ++i) {
@@ -47,7 +26,7 @@ static Maybe<void> GetSbpIdentity(user_op::SbpContext* ctx, const Shape& shape) 
   return Maybe<void>::Ok();
 }
 
-static Maybe<void> GetSbpNchwToNhwc(user_op::SbpContext* ctx, const Shape& shape) {
+static Maybe<void> GetSbpContiguousToChannelsLast2d(user_op::SbpContext* ctx, const Shape& shape) {
   int ndim = shape.size();
   if (ndim <= 2) { return GetSbpIdentity(ctx, shape); }
   ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
@@ -58,7 +37,7 @@ static Maybe<void> GetSbpNchwToNhwc(user_op::SbpContext* ctx, const Shape& shape
   return Maybe<void>::Ok();
 }
 
-static Maybe<void> GetSbpNhwcToNchw(user_op::SbpContext* ctx, const Shape& shape) {
+static Maybe<void> GetSbpChannelsLast2dToContiguous(user_op::SbpContext* ctx, const Shape& shape) {
   int ndim = shape.size();
   if (ndim <= 2) { return GetSbpIdentity(ctx, shape); }
   ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
@@ -69,32 +48,37 @@ static Maybe<void> GetSbpNhwcToNchw(user_op::SbpContext* ctx, const Shape& shape
   return Maybe<void>::Ok();
 }
 
-using ComputeShapeFunc = std::function<Shape(const Shape&)>;
 using GetSbpFunc = std::function<Maybe<void>(user_op::SbpContext* ctx, const Shape& shape)>;
 
-static ComputeShapeFunc compute_shape_funcs[MemoryFormat_Max][MemoryFormat_Max] = {
-    /*kDefaukt->other*/ {ComputeShapeIdentity, ComputeShapeIdentity, ComputeShapeNchwToNhwc},
-    /*kContiguous->other*/ {ComputeShapeIdentity, ComputeShapeIdentity, ComputeShapeNchwToNhwc},
-    /*kChannelsLast->other*/ {ComputeShapeNhwcToNchw, ComputeShapeNhwcToNchw, ComputeShapeIdentity},
-};
-
 static GetSbpFunc get_sbp_funcs[MemoryFormat_Max][MemoryFormat_Max] = {
-    /*kDefaukt->other*/ {GetSbpIdentity, GetSbpIdentity, GetSbpNchwToNhwc},
-    /*kContiguous->other*/ {GetSbpIdentity, GetSbpIdentity, GetSbpNchwToNhwc},
-    /*kChannelsLast->other*/ {GetSbpNhwcToNchw, GetSbpNhwcToNchw, GetSbpIdentity},
+    /*kContiguous->other*/ {GetSbpIdentity, GetSbpContiguousToChannelsLast2d},
+    /*kChannelsLast->other*/ {GetSbpChannelsLast2dToContiguous, GetSbpIdentity},
 };
-
-static Shape ComputeConvertMemoryFormatShape(const Shape& shape, MemoryFormat memory_format,
-                                             MemoryFormat target_memory_format) {
-  auto shape_func = compute_shape_funcs[memory_format][target_memory_format];
-  return shape_func(shape);
-}
 
 static Maybe<void> GetConvertMemoryFormatSbp(user_op::SbpContext* ctx, const Shape& shape,
                                              MemoryFormat memory_format,
                                              MemoryFormat target_memory_format) {
   auto sbp_func = get_sbp_funcs[memory_format][target_memory_format];
   return sbp_func(ctx, shape);
+}
+
+static Stride ComputeChannelsLast2dStride(const Shape& shape) {
+  DimVector stride(shape.size());
+  switch (shape.size()) {
+    case 4:
+      stride[1] = 1;
+      stride[3] = shape[1];
+      stride[2] = stride[3] * shape[3];
+      stride[0] = stride[2] * shape[2];
+      return stride;
+    case 3:
+      stride[0] = 1;
+      stride[2] = shape[0];
+      stride[1] = stride[2] * shape[2];
+      return stride;
+    default: CHECK_OR_THROW(false) << "ChannelsLast2d doesn't support size " << shape.size();
+  }
+  return stride;
 }
 
 /*static*/ Maybe<void> ConvertMemoryFormatOp::GetSbp(user_op::SbpContext* ctx) {
@@ -114,9 +98,9 @@ static Maybe<void> GetConvertMemoryFormatSbp(user_op::SbpContext* ctx, const Sha
   const auto& memory_format = ctx->Attr<MemoryFormat>("memory_format");
 
   out_tensor_desc->set_is_dynamic(in_tensor_desc.is_dynamic());
-  out_tensor_desc->set_shape(
-      ComputeConvertMemoryFormatShape(in_shape, in_tensor_desc.memory_format(), memory_format));
+  out_tensor_desc->set_shape(in_shape);
   out_tensor_desc->set_memory_format(memory_format);
+  out_tensor_desc->set_stride(ComputeChannelsLast2dStride(in_tensor_desc.shape()));
   return Maybe<void>::Ok();
 }
 
