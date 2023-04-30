@@ -16,7 +16,9 @@ limitations under the License.
 #include "oneflow/core/graph/exec_graph.h"
 #include <sstream>
 #include "oneflow/core/common/just.h"
+#include "oneflow/core/common/memory_format.pb.h"
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/register/blob_desc.h"
 
 namespace oneflow {
 
