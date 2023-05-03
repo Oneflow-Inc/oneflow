@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import builtins
+import types
 from inspect import ismodule, currentframe
 from types import ModuleType
 from typing import Any, Optional
@@ -40,10 +42,35 @@ hazard_list = [
     "safetensors._safetensors_rust",
 ]
 
+# patch hasattr so that
+# 1. torch.not_exist returns DummyModule object, but
+# 2. hasattr(torch, "not_exist") still returns False
+_builtin_hasattr = builtins.hasattr
+if not isinstance(_builtin_hasattr, types.BuiltinFunctionType):
+    raise Exception("hasattr already patched by someone else!")
+
+
+def hasattr(obj, name):
+    return _builtin_hasattr(obj, name)
+
+
+builtins.hasattr = hasattr
+
+
+def probably_called_from_hasattr():
+    frame = currentframe().f_back.f_back
+    return frame.f_code is hasattr.__code__
+
+
 # module wrapper with checks for existence of methods
 class ModuleWrapper(ModuleType):
     def __init__(self, module):
         self.module = module
+
+    def __setattr__(self, name, value):
+        super().__setattr__(name, value)
+        if name != "module":
+            setattr(self.module, name, value)
 
     def __getattr__(self, name: str) -> Any:
         if not hasattr(self.module, name):
@@ -52,19 +79,15 @@ class ModuleWrapper(ModuleType):
             if name == "__all__":
                 return [attr for attr in dir(self.module) if not attr.startswith("_")]
             new_name = self.module.__name__ + "." + name
-            if _importer.lazy:
-                blacklist = ["scaled_dot_product_attention"]
-                if name in blacklist:
-                    if _importer.verbose:
-                        print(f'"{new_name}" is in blacklist, raise AttributeError')
-                    raise AttributeError(new_name + error_msg)
-                else:
-                    if _importer.verbose:
-                        print(
-                            f'"{new_name}" is not found in oneflow, use dummy object as fallback.'
-                        )
-                    return DummyModule(new_name)
+            if _importer.lazy and not probably_called_from_hasattr():
+                if _importer.verbose:
+                    print(
+                        f'"{new_name}" is not found in oneflow, use dummy object as fallback.'
+                    )
+                return DummyModule(new_name)
             else:
+                if _importer.lazy and _importer.verbose:
+                    print(f"hasattr({self.module.__name__}, {name}) returns False")
                 raise AttributeError(new_name + error_msg)
         attr = getattr(self.module, name)
         if ismodule(attr):
