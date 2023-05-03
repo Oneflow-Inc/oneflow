@@ -720,8 +720,9 @@ static PyObject* PyTensorObject_local_to_global(PyObject* self, PyObject* args, 
         << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(sbp_obj)));
     sbp = functional::PyUnpackSbpParallelSequence(sbp_obj);
   }
+  auto parallel_desc = functional::PyUnpackParallelDesc(placement_obj);
   return PyTensor_New(ASSERT_PTR(functional::ToGlobal(
-      tensor, functional::PyUnpackParallelDesc(placement_obj), sbp, {}, check_meta, copy)));
+      tensor, parallel_desc, sbp, {}, check_meta, copy)));
   END_HANDLE_ERRORS
 }
 

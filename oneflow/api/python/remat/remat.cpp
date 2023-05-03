@@ -28,8 +28,9 @@ namespace oneflow {
 
 namespace {
 Maybe<vm::RematableTensorStorage> rematable_storage(const std::shared_ptr<one::Tensor>& tensor) {
+  const auto& local_tensor = tensor->is_local() ? tensor : JUST(tensor->cur_rank_phy_tensor());
   auto ret = std::dynamic_pointer_cast<vm::RematableTensorStorage>(
-      JUST(tensor->eager_blob_object())->tensor_storage());
+      JUST(local_tensor->eager_blob_object())->tensor_storage());
   CHECK_NOTNULL_OR_RETURN(ret);
   return ret;
 }

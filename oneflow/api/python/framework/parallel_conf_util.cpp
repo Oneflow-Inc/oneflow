@@ -23,8 +23,6 @@ limitations under the License.
 namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("GetDeviceTagAndMachineDeviceIdsAndHierarchy",
-        &GetDeviceTagAndMachineDeviceIdsAndHierarchy);
   m.def("MakeParallelConf", &MakeParallelConf);
 }
 

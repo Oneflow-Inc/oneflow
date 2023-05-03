@@ -19,8 +19,8 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<std::tuple<std::string, std::vector<std::string>, std::shared_ptr<ShapeProto>>>
-GetDeviceTagAndMachineDeviceIdsAndHierarchy(const ParallelConf& parallel_conf) {
+std::tuple<std::string, std::vector<std::string>, std::shared_ptr<ShapeProto>, bool>
+ParseParallelConf(const ParallelConf& parallel_conf) {
   std::vector<std::string> machine_device_ids;
   machine_device_ids.reserve(parallel_conf.device_name().size());
   for (const std::string& device_name : parallel_conf.device_name()) {
@@ -28,12 +28,12 @@ GetDeviceTagAndMachineDeviceIdsAndHierarchy(const ParallelConf& parallel_conf) {
   }
   std::shared_ptr<ShapeProto> hierarchy;
   if (parallel_conf.has_hierarchy()) { hierarchy.reset(new ShapeProto(parallel_conf.hierarchy())); }
-  return std::make_tuple(parallel_conf.device_tag(), machine_device_ids, hierarchy);
+  return std::make_tuple(parallel_conf.device_tag(), machine_device_ids, hierarchy, parallel_conf.rematable());
 }
 
 Maybe<ParallelConf> MakeParallelConf(const std::string& device_tag,
                                      const std::vector<std::string>& machine_device_ids,
-                                     const std::shared_ptr<Shape>& hierarchy) {
+                                     const std::shared_ptr<Shape>& hierarchy, bool rematable) {
   std::shared_ptr<ParallelConf> parallel_conf = std::make_shared<ParallelConf>();
   parallel_conf->set_device_tag(device_tag);
   for (const std::string& machine_device_id : machine_device_ids) {
@@ -60,6 +60,7 @@ Maybe<ParallelConf> MakeParallelConf(const std::string& device_tag,
       parallel_conf->mutable_hierarchy()->CopyFrom(proto);
     }
   }
+  parallel_conf->set_rematable(rematable);
   return parallel_conf;
 }
 

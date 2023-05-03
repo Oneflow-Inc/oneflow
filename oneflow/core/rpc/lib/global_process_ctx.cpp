@@ -20,9 +20,8 @@ limitations under the License.
 
 namespace oneflow {
 
-void GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(int64_t* machine_id, int64_t* device_id) {
-  *machine_id = Rank();
-  *device_id = LocalRank();
+std::pair<int64_t, int64_t> GlobalProcessCtx::GetCurrentMachineIdAndDeviceId() {
+  return {Rank(), LocalRank()};
 }
 
 int64_t GlobalProcessCtx::Rank() {
