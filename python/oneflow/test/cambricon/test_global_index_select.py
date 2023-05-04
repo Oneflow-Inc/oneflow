@@ -49,6 +49,7 @@ def _test_index_select(test_case, mlu_placement, cpu_placement, x_sbp, index_sbp
     test_case.assertTrue(np.allclose(cpu_out.numpy(), mlu_out.numpy(), 1e-4, 1e-4))
 
 
+@flow.unittest.skip_unless_1n2d()
 class TestIndexSelectModule(flow.unittest.TestCase):
     def test_index_select(test_case):
         mlu_placement = flow.placement("mlu", [0, 1])

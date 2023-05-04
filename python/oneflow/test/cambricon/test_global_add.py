@@ -49,6 +49,7 @@ def _test_add(test_case, mlu_placement, cpu_placement, shape, x_sbp, y_sbp):
     test_case.assertTrue(np.allclose(z.numpy(), cpu_z.numpy(), 0.0001, 0.0001))
 
 
+@flow.unittest.skip_unless_1n2d()
 class TestAddModule(flow.unittest.TestCase):
     def test_add(test_case):
         mlu_placement = flow.placement("mlu", [0, 1])
