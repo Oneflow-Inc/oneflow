@@ -261,6 +261,8 @@ if("${LLVM_MONO_REPO_URL}" STREQUAL
       "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-15.0.6.zip"
    OR "${LLVM_MONO_REPO_URL}" STREQUAL
       "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-16.0.0.zip"
+   OR "${LLVM_MONO_REPO_URL}" STREQUAL
+      "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-16.0.3.zip"
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "f2f17229cf21049663b8ef4f2b6b8062"
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "6b7c6506d5922de9632c8ff012b2f945"
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "e0ea669a9f0872d35bffda5ec6c5ac6f"
@@ -270,14 +272,15 @@ if("${LLVM_MONO_REPO_URL}" STREQUAL
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "1ccc00accc87a1a5d42a275d6e31cd8c"
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "b64481eaca658a2ff4e3e193440d0f68"
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "78172b0f67282e28956cd310612091fd"
+   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "0c2a3196e656aaab7ca1c2ef21b6091c"
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "334997b4879aba15d9323a732356cf2a")
   unset(LLVM_MONO_REPO_URL CACHE)
   unset(LLVM_MONO_REPO_MD5 CACHE)
 endif()
-set(LLVM_MONO_REPO_URL "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-16.0.3.zip"
+set(LLVM_MONO_REPO_URL "https://github.com/llvm/llvm-project/archive/5c9a84960de2260f149ee15313998593255a78df.zip"
     CACHE STRING "")
 use_mirror(VARIABLE LLVM_MONO_REPO_URL URL ${LLVM_MONO_REPO_URL})
-set(LLVM_MONO_REPO_MD5 "0c2a3196e656aaab7ca1c2ef21b6091c" CACHE STRING "")
+set(LLVM_MONO_REPO_MD5 "2702b822b71c196a0cc9c8d821c069d7" CACHE STRING "")
 set(ONEFLOW_BUILD_ROOT_DIR "${PROJECT_BINARY_DIR}")
 add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/ir)
 if(WITH_MLIR)
