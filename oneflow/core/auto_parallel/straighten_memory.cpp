@@ -22,7 +22,7 @@ namespace oneflow {
 namespace auto_parallel {
 
 namespace {
-class NoCleaningMarker {
+class NoCleaningMarkerAccMemory {
  public:
   static int32_t marker;
   int32_t status = 0;
@@ -33,11 +33,28 @@ class NoCleaningMarker {
   void UnMark() { status = 0; }
 };
 
-int32_t NoCleaningMarker::marker = 1;
+int32_t NoCleaningMarkerAccMemory::marker = 1;
 
-void ResetNoCleaningMarker() { ++NoCleaningMarker::marker; }
+void ResetNoCleaningMarkerAccMemory() { ++NoCleaningMarkerAccMemory::marker; }
 
-void InitNoCleaningMarker() { NoCleaningMarker::marker = 1; }
+void InitNoCleaningMarkerAccMemory() { NoCleaningMarkerAccMemory::marker = 1; }
+
+class NoCleaningMarkerDescendant {
+ public:
+  static int32_t marker;
+  int32_t status = 0;
+
+  bool IfMarked() const { return status == marker; }
+  bool IfNotMarked() const { return status != marker; }
+  void Mark() { status = marker; }
+  void UnMark() { status = 0; }
+};
+
+int32_t NoCleaningMarkerDescendant::marker = 1;
+
+void ResetNoCleaningMarkerDescendant() { ++NoCleaningMarkerDescendant::marker; }
+
+void InitNoCleaningMarkerDescendant() { NoCleaningMarkerDescendant::marker = 1; }
 
 class TopoStruct {
  public:
@@ -54,7 +71,11 @@ class TopoStruct {
   // Accumulate memory increment of all the necessary topological structures
   int64_t accumulate_memory_increment = 0;
   // Whether visited during memory accumulating
-  NoCleaningMarker visited;
+  NoCleaningMarkerAccMemory visited_acc_memory;
+  // Whether visited while finding descendants
+  NoCleaningMarkerDescendant visited_descendant;
+  // waiting in the map before execution
+  bool waiting = false;
 
   std::vector<TopoStruct*> in_topo_structs;
   std::vector<TopoStruct*> out_topo_structs;
@@ -76,10 +97,10 @@ void TopoStruct::ComputeIsReusable() { is_reusable = IsProducedRegisterReusable(
 
 int64_t TopoStruct::AccumulateMemoryIncrement() {
   int64_t total_memory_increment = memory_increment;
-  visited.Mark();
+  visited_acc_memory.Mark();
   for (const auto& in_topo_struct : in_topo_structs) {
     // Accumulate the non-executed topological structures only once
-    if ((!in_topo_struct->executed) && in_topo_struct->visited.IfNotMarked()) {
+    if ((!in_topo_struct->executed) && in_topo_struct->visited_acc_memory.IfNotMarked()) {
       total_memory_increment += in_topo_struct->AccumulateMemoryIncrement();
     }
   }
@@ -87,7 +108,7 @@ int64_t TopoStruct::AccumulateMemoryIncrement() {
 }
 
 void TopoStruct::SetAccumulateMemoryIncrement() {
-  ResetNoCleaningMarker();
+  ResetNoCleaningMarkerAccMemory();
   accumulate_memory_increment = AccumulateMemoryIncrement();
 }
 
@@ -188,7 +209,8 @@ void InitAllParameters(std::vector<TopoStruct*>* topo_structs,
                        std::vector<std::vector<TopoStruct*>>* id2consumer_topo_structs,
                        std::vector<int64_t>* id2blob_size) {
   // Initialize the no cleaning marker
-  InitNoCleaningMarker();
+  InitNoCleaningMarkerAccMemory();
+  InitNoCleaningMarkerDescendant();
 
   // Construct the map from a lbi to its id, consumers, blob size
   std::vector<TopoStruct*> id2producer_topo_struct;
@@ -283,18 +305,97 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
               << ", total out size: " << total_out_size << std::endl;
   }
 
-  // Initialize source topological structures
-  std::vector<TopoStruct*> source_topo_structs;
-  for (int32_t i = 0; i < executing_topo_struct_num; i++) {
-    if (topo_structs->at(i)->in_topo_structs.empty()) {
-      source_topo_structs.push_back(topo_structs->at(i));
-    }
-  }
+  // Those nodes that we need to visit their descendants
+  // At the beginning, them would be the source nodes.
+  // After each execution, them would be those executed nodes.
+  std::vector<TopoStruct*> prepare_topo_structs;
   // Initialize blocking topological structures
   for (auto& release_topo_struct : release_topo_structs) {
     if (release_topo_struct.in_topo_structs.size() == 1) {
       release_topo_struct.in_topo_structs[0]->blocking_topo_struct = &release_topo_struct;
     }
+  }
+  // wait in the map
+  std::map<int64_t, std::vector<TopoStruct*>> waiting_map;
+  // Erase a node from the waiting map
+  auto StopWaiting = [&](TopoStruct* node) {
+    if (node->waiting) {
+      node->waiting = false;
+      auto& waiting_list = waiting_map[node->accumulate_memory_increment];
+      if (waiting_list.size() == 1) {
+        waiting_map.erase(node->accumulate_memory_increment);
+      } else {
+        // Erase node from the waiting list
+        for (int32_t i = waiting_list.size() - 1; i >= 0; i--) {
+          if (waiting_list[i] == node) {
+            waiting_list[i] = waiting_list[waiting_list.size() - 1];
+            waiting_list.pop_back();
+            break;
+          }
+        }
+      }
+    }
+  };
+  // Wait in the map
+  auto Wait = [&](TopoStruct* node) {
+    if (node->executed) { return; }
+    StopWaiting(node);
+    node->SetAccumulateMemoryIncrement();
+    waiting_map[node->accumulate_memory_increment].push_back(node);
+    node->waiting = true;
+  };
+  // Visit one node
+  std::function<void(TopoStruct*)> Visit = [&](TopoStruct* node) {
+    if (node->visited_descendant.IfMarked()) { return; }
+    node->visited_descendant.Mark();
+    if (node->blocking_topo_struct == nullptr) {
+      for (auto* out_node : node->out_topo_structs) { Visit(out_node); }
+    } else {
+      Wait(node->blocking_topo_struct);
+    }
+    if (node->blob_id >= 0) { Wait(node); }
+  };
+  // Prepare all the release nodes before picking one for the next round
+  auto Prepare = [&]() {
+    ResetNoCleaningMarkerDescendant();
+    for (auto* node : prepare_topo_structs) { Visit(node); }
+  };
+  // Execute one node and its ancestors
+  std::function<void(TopoStruct*)> Execute = [&](TopoStruct* node) {
+    // Post-order traversal
+    for (auto* in_node : node->in_topo_structs) {
+      if (!in_node->executed) { Execute(in_node); }
+    }
+    // Execute the current node
+    if (node->op_node) { ordered_topo_structs->push_back(node); }
+    node->executed = true;
+    StopWaiting(node);
+    prepare_topo_structs.push_back(node);
+    if (GlobalProcessCtx::Rank() == 0) {
+      std::cout << "Executing ";
+      if (node->op_node) {
+        std::cout << node->op_node->op().op_name();
+      } else {
+        std::cout << "blob id: " << node->blob_id;
+      }
+      std::cout << ", memory increment: " << node->memory_increment << std::endl;
+    }
+  };
+
+  // Initialize source topological structures
+  for (int32_t i = 0; i < executing_topo_struct_num; i++) {
+    if (topo_structs->at(i)->in_topo_structs.empty()) {
+      prepare_topo_structs.push_back(topo_structs->at(i));
+    }
+  }
+  // Straighten memory
+  while (ordered_topo_structs->size() < executing_topo_struct_num) {
+    // Prepare the release node for this round
+    Prepare();
+    // Clean up the prepare_topo_structs before executing any node
+    prepare_topo_structs.clear();
+    // Pick the one with the smallest accumulate memory increment and then execute it
+    Execute(waiting_map.begin()->second.back());
   }
 }
 }  // namespace
