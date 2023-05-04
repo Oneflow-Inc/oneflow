@@ -240,40 +240,37 @@ target_compile_definitions(oneflow PRIVATE GOOGLE_LOGGING)
 set(ONEFLOW_TOOLS_DIR "${PROJECT_BINARY_DIR}/tools"
     CACHE STRING "dir to put binary for debugging and development")
 
-# clean cache for last LLVM version
-if("${LLVM_MONO_REPO_URL}" STREQUAL
+set(CACHE_LLVM_MONO_REPO_URL_LIST
    "https://github.com/llvm/llvm-project/archive/c63522e6ba7782c335043893ae7cbd37eca24fe5.zip"
-   OR "${LLVM_MONO_REPO_URL}" STREQUAL
-      "https://github.com/llvm/llvm-project/archive/a0595f8c99a253c65f30a151337e7aadc19ee3a1.zip"
-   OR "${LLVM_MONO_REPO_URL}" STREQUAL
-      "https://github.com/llvm/llvm-project/archive/7eaa84eac3ba935d13f4267d3d533a6c3e1283ed.zip"
-   OR "${LLVM_MONO_REPO_URL}" STREQUAL
-      "https://github.com/llvm/llvm-project/archive/35e60f5de180aea55ed478298f4b40f04dcc57d1.zip"
-   OR "${LLVM_MONO_REPO_URL}" STREQUAL
-      "https://github.com/llvm/llvm-project/archive/6a9bbd9f20dcd700e28738788bb63a160c6c088c.zip"
-   OR "${LLVM_MONO_REPO_URL}" STREQUAL
-      "https://github.com/llvm/llvm-project/archive/32805e60c9de1f82887cd2af30d247dcabd2e1d3.zip"
-   OR "${LLVM_MONO_REPO_URL}" STREQUAL
-      "https://github.com/llvm/llvm-project/archive/6d6268dcbf0f48e43f6f9fe46b3a28c29ba63c7d.zip"
-   OR "${LLVM_MONO_REPO_URL}" STREQUAL
-      "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-16.0.0-rc4.zip"
-   OR "${LLVM_MONO_REPO_URL}" STREQUAL
-      "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-15.0.6.zip"
-   OR "${LLVM_MONO_REPO_URL}" STREQUAL
-      "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-16.0.0.zip"
-   OR "${LLVM_MONO_REPO_URL}" STREQUAL
-      "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-16.0.3.zip"
-   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "f2f17229cf21049663b8ef4f2b6b8062"
-   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "6b7c6506d5922de9632c8ff012b2f945"
-   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "e0ea669a9f0872d35bffda5ec6c5ac6f"
-   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "241a333828bba1efa35aff4c4fc2ce87"
-   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "075fbfdf06cb3f02373ea44971af7b03"
-   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "e412dc61159b5e929b0c94e44b11feb2"
-   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "1ccc00accc87a1a5d42a275d6e31cd8c"
-   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "b64481eaca658a2ff4e3e193440d0f68"
-   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "78172b0f67282e28956cd310612091fd"
-   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "0c2a3196e656aaab7ca1c2ef21b6091c"
-   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "334997b4879aba15d9323a732356cf2a")
+    "https://github.com/llvm/llvm-project/archive/a0595f8c99a253c65f30a151337e7aadc19ee3a1.zip"
+    "https://github.com/llvm/llvm-project/archive/7eaa84eac3ba935d13f4267d3d533a6c3e1283ed.zip"
+    "https://github.com/llvm/llvm-project/archive/35e60f5de180aea55ed478298f4b40f04dcc57d1.zip"
+    "https://github.com/llvm/llvm-project/archive/6a9bbd9f20dcd700e28738788bb63a160c6c088c.zip"
+    "https://github.com/llvm/llvm-project/archive/32805e60c9de1f82887cd2af30d247dcabd2e1d3.zip"
+    "https://github.com/llvm/llvm-project/archive/6d6268dcbf0f48e43f6f9fe46b3a28c29ba63c7d.zip"
+    "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-16.0.0-rc4.zip"
+    "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-15.0.6.zip"
+    "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-16.0.0.zip"
+    "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-16.0.3.zip"
+)
+
+set(CACHE_LLVM_MONO_REPO_MD5_LIST
+    "f2f17229cf21049663b8ef4f2b6b8062"
+    "6b7c6506d5922de9632c8ff012b2f945"
+    "e0ea669a9f0872d35bffda5ec6c5ac6f"
+    "241a333828bba1efa35aff4c4fc2ce87"
+    "075fbfdf06cb3f02373ea44971af7b03"
+    "e412dc61159b5e929b0c94e44b11feb2"
+    "1ccc00accc87a1a5d42a275d6e31cd8c"
+    "b64481eaca658a2ff4e3e193440d0f68"
+    "78172b0f67282e28956cd310612091fd"
+    "0c2a3196e656aaab7ca1c2ef21b6091c"
+    "334997b4879aba15d9323a732356cf2a"
+  )
+
+# clean cache for last LLVM version
+if("${LLVM_MONO_REPO_URL}" IN_LIST CACHE_LLVM_MONO_REPO_URL_LIST
+OR "${LLVM_MONO_REPO_MD5}" IN_LIST CACHE_LLVM_MONO_REPO_MD5_LIST)
   unset(LLVM_MONO_REPO_URL CACHE)
   unset(LLVM_MONO_REPO_MD5 CACHE)
 endif()
