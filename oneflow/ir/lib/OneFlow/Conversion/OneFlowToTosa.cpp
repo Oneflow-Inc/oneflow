@@ -389,7 +389,8 @@ struct MaxPool2DOpLowering final : public OpConversionPattern<MaxPool2DOp> {
     }
 
     auto indice_output = convertToSignless(op->getContext(), op.getIndice().getType());
-    auto value = DenseElementsAttr::get(indice_output.cast<ShapedType>(), rewriter.getZeroAttr(rewriter.getI64Type()));
+    auto value = DenseElementsAttr::get(indice_output.cast<ShapedType>(),
+                                        rewriter.getZeroAttr(rewriter.getI64Type()));
     tosa::ConstOp indice = rewriter.create<tosa::ConstOp>(loc, indice_output, value);
     rewriter.replaceOp(op, {y, indice});
     return success();
