@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
@@ -3900,6 +3901,48 @@ class InplaceAddCDivFunctor {
   }
 };
 
+class AmpUpdateScaleFunctor {
+ public:
+  AmpUpdateScaleFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("amp_update_scale")
+                         .Input("current_scale")
+                         .Input("growth_tracker")
+                         .Input("found_inf")
+                         .Build());
+  }
+  Maybe<void> operator()(const std::shared_ptr<one::Tensor>& current_scale,
+                         const std::shared_ptr<one::Tensor>& growth_tracker,
+                         const std::shared_ptr<one::Tensor>& found_inf, double growth_factor,
+                         double backoff_factor, int64_t growth_interval) const {
+    CHECK_EQ_OR_RETURN(JUST(current_scale->device())->type(), "cuda")
+        << "current_scale must be a CUDA tensor.";
+    CHECK_EQ_OR_RETURN(JUST(growth_tracker->device())->type(), "cuda")
+        << "growth_tracker must be a CUDA tensor.";
+    CHECK_EQ_OR_RETURN(JUST(found_inf->device())->type(), "cuda")
+        << "found_inf must be a CUDA tensor.";
+    CHECK_EQ_OR_RETURN(current_scale->nelement(), 1) << "current_scale must be a 1-element tensor.";
+    CHECK_EQ_OR_RETURN(growth_tracker->nelement(), 1)
+        << "growth_tracker must be a 1-element tensor.";
+    CHECK_EQ_OR_RETURN(found_inf->nelement(), 1) << "found_inf must be a 1-element tensor.";
+    CHECK_EQ_OR_RETURN(current_scale->dtype()->is_floating_point(), true)
+        << "current_scale must be a float tensor.";
+    CHECK_EQ_OR_RETURN(growth_tracker->dtype()->is_integer(), true)
+        << "growth_tracker must be a float tensor.";
+    CHECK_EQ_OR_RETURN(found_inf->dtype()->is_floating_point(), true)
+        << "found_inf must be a float tensor.";
+
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("growth_factor", "backoff_factor", "growth_interval");
+    attrs.SetAllAttrs(growth_factor, backoff_factor, growth_interval);
+    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {current_scale, growth_tracker, found_inf},
+                                             attrs));
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class StftFunctor {
  public:
   StftFunctor() {
@@ -4061,6 +4104,66 @@ class FusedCenterFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class AmpForEachNonFiniteCheckAndUnscaleFunctor {
+ public:
+  AmpForEachNonFiniteCheckAndUnscaleFunctor() {
+    ops_.resize(kMaxInputCount + 2);
+    for (int n = 0; n < ops_.size(); ++n) {
+      ops_[n] = CHECK_JUST(one::OpBuilder("amp_non_finite_check_and_unscale")
+                               .Input("scaled_grads_found_inf_inv_scale", n + 2)
+                               .Build());
+    }
+  }
+  Maybe<void> operator()(const TensorTuple& scaled_grads,
+                         const std::shared_ptr<one::Tensor>& found_inf,
+                         const std::shared_ptr<one::Tensor>& inv_scale) const {
+    const int64_t ninput = scaled_grads.size();
+    for (int i = 0; i < ninput; i += kMaxInputCount) {
+      size_t size = (i + kMaxInputCount) < ninput ? kMaxInputCount : ninput - i;
+      TensorTuple partial_inputs(size + 2);
+      for (int j = 0; j < size; ++j) { partial_inputs[j] = scaled_grads[i + j]; }
+      partial_inputs[size] = found_inf;
+      partial_inputs[size + 1] = inv_scale;
+      JUST(OpInterpUtil::Dispatch<TensorTuple>(*ops_[size], {partial_inputs}, AttrMap{}));
+    }
+
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> ops_;
+};
+
+class MultiTensorAmpForEachNonFiniteCheckAndUnscaleFunctor {
+ public:
+  MultiTensorAmpForEachNonFiniteCheckAndUnscaleFunctor() {
+    ops_.resize(kMaxInputCount + 2);
+    for (int n = 0; n < ops_.size(); ++n) {
+      ops_[n] = CHECK_JUST(one::OpBuilder("multi_tensor_amp_non_finite_check_and_unscale")
+                               .Input("scaled_grads_found_inf_inv_scale", n + 2)
+                               .Build());
+    }
+  }
+  Maybe<void> operator()(const TensorTuple& scaled_grads,
+                         const std::shared_ptr<one::Tensor>& found_inf,
+                         const std::shared_ptr<one::Tensor>& inv_scale) const {
+    const int64_t ninput = scaled_grads.size();
+    for (int i = 0; i < ninput; i += kMaxInputCount) {
+      size_t size = (i + kMaxInputCount) < ninput ? kMaxInputCount : ninput - i;
+      TensorTuple partial_inputs(size + 2);
+      for (int j = 0; j < size; ++j) { partial_inputs[j] = scaled_grads[i + j]; }
+      partial_inputs[size] = found_inf;
+      partial_inputs[size + 1] = inv_scale;
+      JUST(OpInterpUtil::Dispatch<TensorTuple>(*ops_[size], {partial_inputs}, AttrMap{}));
+    }
+
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> ops_;
 };
 
 class FusedCenterGradFunctor {
@@ -4689,6 +4792,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<DetFunctor>("Det");
   m.add_functor<GeluWithApproximateFunctor>("GeluWithApproximate");
   m.add_functor<impl::TruncFunctor>("Trunc");
+  m.add_functor<AmpUpdateScaleFunctor>("AmpUpdateScale");
+  m.add_functor<AmpForEachNonFiniteCheckAndUnscaleFunctor>("AmpForEachNonFiniteCheckAndUnscale");
+  m.add_functor<MultiTensorAmpForEachNonFiniteCheckAndUnscaleFunctor>(
+      "MultiTensorAmpForEachNonFiniteCheckAndUnscale");
   m.add_functor<StftFunctor>("Stft");
   m.add_functor<impl::FusedWeightedSumFunctor>("FusedWeightedSum");
   m.add_functor<impl::FusedCenterFunctor>("FusedCenter");

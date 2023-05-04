@@ -38,47 +38,34 @@ class autocast(object):
     Note:
       The following doc was origined by pytorch, see
       https://github.com/pytorch/pytorch/blob/master/torch/amp/autocast_mode.py#L19-L179
-
     Instances of :class:`autocast` serve as context managers or decorators that
     allow regions of your script to run in mixed precision.
-
     In these regions, ops run in an op-specific dtype chosen by autocast
     to improve performance while maintaining accuracy.
-
     When entering an autocast-enabled region, Tensors may be any type.
     You should not call ``half()`` or ``bfloat16()`` on your model(s) or inputs when using autocasting.
-
     :class:`autocast` should wrap only the forward pass(es) of your network, including the loss
     computation(s).  Backward passes under autocast are not recommended.
     Backward ops run in the same type that autocast used for corresponding forward ops.
-
     Example for CUDA Devices::
-
         # Creates model and optimizer in default precision
         model = Net().cuda()
         optimizer = optim.SGD(model.parameters(), ...)
-
         for input, target in data:
             optimizer.zero_grad()
-
             # Enables autocasting for the forward pass (model + loss)
             with oneflow.autocast(device_type="cuda"):
                 output = model(input)
                 loss = loss_fn(output, target)
-
             # Exits the context manager before backward()
             loss.backward()
             optimizer.step()
-
-
     :class:`autocast` can also be used as a decorator, e.g., on the ``forward`` method of your model::
-
         class AutocastModel(nn.Module):
             ...
             @oneflow.autocast(device_type="cuda")
             def forward(self, input):
                 ...
-
     Floating-point Tensors produced in an autocast-enabled region may be ``float16``.
     After returning to an autocast-disabled region, using them with floating-point
     Tensors of different dtypes may cause type mismatch errors.  If so, cast the Tensor(s)
@@ -86,13 +73,11 @@ class autocast(object):
     If a Tensor from the autocast region is already ``float32``, the cast is a no-op,
     and incurs no additional overhead.
     CUDA Example::
-
         # Creates some tensors in default dtype (here assumed to be float32)
         a_float32 = oneflow.rand((8, 8), device="cuda")
         b_float32 = oneflow.rand((8, 8), device="cuda")
         c_float32 = oneflow.rand((8, 8), device="cuda")
         d_float32 = oneflow.rand((8, 8), device="cuda")
-
         with oneflow.autocast(device_type="cuda"):
             # oneflow.mm is on autocast's list of ops that should run in float16.
             # Inputs are float32, but the op runs in float16 and produces float16 output.
@@ -100,42 +85,30 @@ class autocast(object):
             e_float16 = oneflow.mm(a_float32, b_float32)
             # Also handles mixed input types
             f_float16 = oneflow.mm(d_float32, e_float16)
-
         # After exiting autocast, calls f_float16.float() to use with d_float32
         g_float32 = oneflow.mm(d_float32, f_float16.float())
-
     CPU Training Example::
-
         # Creates model and optimizer in default precision
         model = Net()
         optimizer = optim.SGD(model.parameters(), ...)
-
         for epoch in epochs:
             for input, target in data:
                 optimizer.zero_grad()
-
                 # Runs the forward pass with autocasting.
                 with oneflow.autocast(device_type="cpu", dtype=oneflow.bfloat16):
                     output = model(input)
                     loss = loss_fn(output, target)
-
                 loss.backward()
                 optimizer.step()
-
-
     CPU Inference Example::
-
         # Creates model in default precision
         model = Net().eval()
-
         with oneflow.autocast(device_type="cpu", dtype=oneflow.bfloat16):
             for input in data:
                 # Runs the forward pass with autocasting.
                 output = model(input)
-
     The autocast state is thread-local.  If you want it enabled in a new thread, the context manager or decorator
     must be invoked in that thread.
-
     Args:
         device_type(str, required):  Whether to use 'cuda' or 'cpu' device
         enabled(bool, optional):  Whether autocasting should be enabled in the region.

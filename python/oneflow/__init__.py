@@ -264,6 +264,8 @@ from oneflow._C import iinfo, finfo
 from oneflow._C import multinomial
 from oneflow._C import linalg_cross as cross
 from oneflow._C import bincount
+from oneflow._C import amp_foreach_non_finite_check_and_unscale_
+from oneflow._C import amp_update_scale_
 from oneflow._C import isclose
 from oneflow._C import allclose
 from oneflow._C import lerp, lerp_

@@ -11950,3 +11950,53 @@ def OneFlow_MlirJitOp : OneFlow_JITLikeOp<"mlir_jit"> {}
 def OneFlow_KernelLaunchOp : OneFlow_JITLikeOp<"kernel_launch"> {}
 
 #endif // GET_ONEFLOW_MLIR_JIT_OP_DEFINITIONS
+
+
+// Group: EagerAMP
+// amp_update_scale, amp_non_finite_check_and_unscale
+// Total: 2
+
+#ifdef GET_ONEFLOW_EAGER_AMP_OP_DEFINITIONS
+
+def OneFlow_AMPUpdateScaleOp : OneFlow_BaseOp<"amp_update_scale", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$current_scale,
+    OneFlow_Tensor:$growth_tracker,
+    OneFlow_Tensor:$found_inf
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F64Attr, "0.">:$growth_factor,
+    DefaultValuedAttr<F64Attr, "0.">:$backoff_factor,
+    DefaultValuedAttr<SI64Attr, "0">:$growth_interval
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_input_arg_modify_fn = 1;
+}
+
+def OneFlow_AMPForEachNonFiniteCheckAndUnscaleOp : OneFlow_BaseOp<"amp_non_finite_check_and_unscale", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    Variadic<OneFlow_Tensor>:$scaled_grads_found_inf_inv_scale
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_input_arg_modify_fn = 1;
+}
+
+def OneFlow_MultiTensorAMPForEachNonFiniteCheckAndUnscaleOp : OneFlow_BaseOp<"multi_tensor_amp_non_finite_check_and_unscale", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    Variadic<OneFlow_Tensor>:$scaled_grads_found_inf_inv_scale
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_input_arg_modify_fn = 1;
+}
+
+
+#endif // GET_ONEFLOW_EAGER_AMP_OP_DEFINITIONS

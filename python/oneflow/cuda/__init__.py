@@ -15,6 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 
+from oneflow.cuda.amp import *
 from oneflow.cuda.type_tensor import *
 from oneflow.cuda._utils import _get_device_index
 

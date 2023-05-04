@@ -360,6 +360,44 @@ REGISTER_NO_CAST_REGISTRY("layer_norm_grad", "inv_variance", 0)
 REGISTER_NO_CAST_REGISTRY("layer_norm_param_grad", "mean", 0)
 REGISTER_NO_CAST_REGISTRY("layer_norm_param_grad", "inv_variance", 0)
 
+REGISTER_NO_CAST_REGISTRY("reduce_sum", "input_tensor", 0);
+REGISTER_NO_CAST_REGISTRY("broadcast_like", "x", 0);
+REGISTER_NO_CAST_REGISTRY("broadcast_like", "like", 0);
+
+REGISTER_NO_CAST_REGISTRY("nll", "input", 0);
+REGISTER_NO_CAST_REGISTRY("nll", "target", 0);
+REGISTER_NO_CAST_REGISTRY("nll", "weight", 0);
+REGISTER_NO_CAST_REGISTRY("nll_grad", "out_grad", 0);
+REGISTER_NO_CAST_REGISTRY("nll_grad", "input", 0);
+REGISTER_NO_CAST_REGISTRY("nll_grad", "target", 0);
+REGISTER_NO_CAST_REGISTRY("nll_grad", "weight", 0);
+
+REGISTER_NO_CAST_REGISTRY("broadcast_div", "x", 0);
+REGISTER_NO_CAST_REGISTRY("broadcast_div", "y", 0);
+REGISTER_NO_CAST_REGISTRY("broadcast_div_grad", "dz", 0);
+REGISTER_NO_CAST_REGISTRY("broadcast_div_grad", "z", 0);
+REGISTER_NO_CAST_REGISTRY("broadcast_div_grad", "y", 0);
+
+REGISTER_NO_CAST_REGISTRY("broadcast_add", "x", 0);
+REGISTER_NO_CAST_REGISTRY("broadcast_add", "y", 0);
+
+REGISTER_NO_CAST_REGISTRY("broadcast_mul", "x", 0);
+REGISTER_NO_CAST_REGISTRY("broadcast_mul", "y", 0);
+
+REGISTER_NO_CAST_REGISTRY("max_pool_2d", "x", 0);
+REGISTER_NO_CAST_REGISTRY("max_pool_2d_grad", "x", 0);
+REGISTER_NO_CAST_REGISTRY("max_pool_2d_grad", "indice", 0);
+REGISTER_NO_CAST_REGISTRY("max_pool_2d_grad", "dy", 0);
+
+REGISTER_NO_CAST_REGISTRY("tf_max_pool_2d", "x", 0);
+REGISTER_NO_CAST_REGISTRY("tf_max_pool_2d_grad", "x", 0);
+REGISTER_NO_CAST_REGISTRY("tf_max_pool_2d_grad", "y", 0);
+REGISTER_NO_CAST_REGISTRY("tf_max_pool_2d_grad", "dy", 0);
+
+REGISTER_NO_CAST_REGISTRY("sigmoid", "x", 0);
+REGISTER_NO_CAST_REGISTRY("sigmoid_grad", "y", 0);
+REGISTER_NO_CAST_REGISTRY("sigmoid_grad", "dy", 0);
+
 }  // namespace
 
 namespace amp {
