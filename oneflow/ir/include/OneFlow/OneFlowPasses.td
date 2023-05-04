@@ -13,6 +13,15 @@ def NVVMToCubinPass : InterfacePass<"nvvm-to-cubin", "SymbolOpInterface"> {
     Option<"features", "features", "StringRef", "\"+ptx60\"", "Target features">,
   ];
 }
+
+def UseArgsInHostPass : Pass<"use-args-in-host", "func::FuncOp"> {
+  let description = [{
+    we wish all compute work will work in kernel. but before finishing the related optimized work,
+    we need this pass to enable the seamless delivery between host and device.
+  }];
+  let summary = "convert memref ops to gpu ops";
+  let constructor = "mlir::oneflow::createUseArgsInHostPass()";
+}
 #endif // WITH_MLIR_CUDA_CODEGEN
 
 def LowerOneFlowToTosaPass : Pass<"lower-oneflow-to-tosa", "ModuleOp"> {
