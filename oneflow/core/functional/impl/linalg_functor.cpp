@@ -124,12 +124,169 @@ class CrossFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class MultiDotFunctor {
+ public:
+  Maybe<Tensor> operator()(const TensorTuple& tensors) const {
+    const size_t n = tensors.size();
+    CHECK_GE_OR_RETURN(n, 2) << Error::RuntimeError()
+                             << "multi_dot(): expected at least 2 tensors but got " << n;
+    CHECK_LT_OR_RETURN(n, kMaxInputCount);
+
+    std::vector<int64_t> out_shape;
+    TensorTuple tensors_for_calculate = tensors;
+
+    // If the first tensor is 1D of size n view it as a row vector (1, n)
+    if (tensors[0]->ndim() == 1) {
+      tensors_for_calculate[0] = JUST(functional::Unsqueeze(tensors[0], 0));
+    } else if (tensors[0]->ndim() == 2) {
+      tensors_for_calculate[0] = tensors[0];
+      out_shape.emplace_back(tensors_for_calculate[0]->shape()->At(0));
+    } else {
+      CHECK_LE_OR_RETURN(tensors[0]->ndim(), 2)
+          << Error::RuntimeError() << "multi_dot(): the first tensor must be 1D or 2D but got "
+          << tensors[0]->ndim();
+    }
+
+    // If the last tensor is 1D of size n view it as a column vector (n, 1)
+    if (tensors[n - 1]->ndim() == 1) {
+      tensors_for_calculate[n - 1] =
+          JUST(functional::Unsqueeze(tensors[n - 1], tensors[n - 1]->ndim()));
+    } else if (tensors[n - 1]->ndim() == 2) {
+      tensors_for_calculate[n - 1] = tensors[n - 1];
+      out_shape.emplace_back(tensors_for_calculate[n - 1]->shape()->At(1));
+    } else {
+      CHECK_LE_OR_RETURN(tensors[n - 1]->ndim(), 2)
+          << Error::RuntimeError() << "multi_dot(): the last tensor must be 1D or 2D but got "
+          << tensors[n - 1]->ndim();
+    }
+
+    // Ensure middle tensors are 2D
+    const auto dtype = tensors_for_calculate[0]->dtype();
+    const auto device = JUST(tensors_for_calculate[0]->device());
+    CHECK_LE_OR_RETURN(tensors_for_calculate[0]->ndim(), 2)
+        << Error::RuntimeError() << "multi_dot(): tensors' dim should be lower equal than 2.";
+    for (int64_t i = 1; i < tensors_for_calculate.size(); ++i) {
+      CHECK_LE_OR_RETURN(tensors_for_calculate[i]->ndim(), 2)
+          << Error::RuntimeError()
+          << "multi_dot(): tensors' dim size should be lower equal than 2.";
+      CHECK_OR_RETURN(tensors_for_calculate[i]->dtype() == dtype)
+          << Error::RuntimeError()
+          << "multi_dot(): all tensors must have be the same dtype but tensor 0 is "
+          << dtype->name() << "and tensor" << i << " is "
+          << tensors_for_calculate[i]->dtype()->name();
+      CHECK_OR_RETURN(JUST(tensors_for_calculate[i]->device()) == device)
+          << Error::RuntimeError()
+          << "multi_dot(): all tensors must have be the same device but tensor 0 is "
+          << device->ToString() << "and tensor" << i << " is "
+          << JUST(tensors_for_calculate[i]->device())->ToString();
+    }
+
+    // for 2 matrices
+    if (tensors_for_calculate.size() == 2) {
+      std::shared_ptr<Tensor> result =
+          JUST(functional::MatMul(tensors_for_calculate[0], tensors_for_calculate[1],
+                                  /*transpose_a=*/false, /*transpose_b=*/false, /*alpha=*/1));
+      return view::Reshape(result, Shape(out_shape));
+    }
+
+    // for 3 matrices
+    if (tensors_for_calculate.size() == 3) {
+      const int64_t a = tensors_for_calculate[0]->shape()->At(0);
+      const int64_t b = tensors_for_calculate[1]->shape()->At(0);
+      const int64_t c = tensors_for_calculate[2]->shape()->At(0);
+      const int64_t d = tensors_for_calculate[2]->shape()->At(1);
+
+      // The matrices are of size (a x b), (b x c), (c x d)
+      // cost_1 is the cost of parenthesizing (a x b) and (b x c) and then
+      // combining (c x d) cost_2 is the cost of parenthesizing (b x c) and (c x
+      // d) and then combining (a x b)
+      const int64_t cost_1 = (a * c) * (b + d);
+      const int64_t cost_2 = (b * d) * (a + c);
+
+      if (cost_1 > cost_2) {
+        std::shared_ptr<Tensor> result =
+            JUST(functional::MatMul(tensors_for_calculate[1], tensors_for_calculate[2],
+                                    /*transpose_a=*/false, /*transpose_b=*/false, /*alpha=*/1));
+        result = JUST(functional::MatMul(tensors_for_calculate[0], result, /*transpose_a=*/false,
+                                         /*transpose_b=*/false, /*alpha=*/1));
+        return view::Reshape(result, Shape(out_shape));
+      } else {
+        std::shared_ptr<Tensor> result =
+            JUST(functional::MatMul(tensors_for_calculate[0], tensors_for_calculate[1],
+                                    /*transpose_a=*/false, /*transpose_b=*/false, /*alpha=*/1));
+        result = JUST(functional::MatMul(result, tensors_for_calculate[2], /*transpose_a=*/false,
+                                         /*transpose_b=*/false, /*alpha=*/1));
+        return view::Reshape(result, Shape(out_shape));
+      }
+    }
+
+    // for 4 or more matrices
+    auto matrix_chain_multiplication = [](TensorTuple tensors,
+                                          const std::vector<std::vector<int64_t>>& order, int64_t i,
+                                          int64_t j) -> Maybe<Tensor> {
+      if (i == j) { return tensors[i]; }
+      std::function<Maybe<Tensor>(TensorTuple, const std::vector<std::vector<int64_t>>&, int64_t,
+                                  int64_t)>
+          wrap_matrix_chain_multiplication;
+      return functional::MatMul(
+          JUST(wrap_matrix_chain_multiplication(tensors, order, i, order[i][j])),
+          JUST(wrap_matrix_chain_multiplication(tensors, order, order[i][j] + 1, j)),
+          /*transpose_a=*/false, /*transpose_b=*/false, /*alpha=*/1);
+    };
+
+    const auto order = matrix_chain_order(tensors_for_calculate);
+    const int64_t i = 0;
+    const int64_t j = n - 1;
+    std::shared_ptr<Tensor> result =
+        JUST(matrix_chain_multiplication(tensors_for_calculate, order, i, j));
+    return view::Reshape(result, Shape(out_shape));
+  }
+
+ private:
+  std::vector<std::vector<int64_t>> matrix_chain_order(TensorTuple tensors) const {
+    const size_t n = tensors.size();
+
+    // Tensor i has dimensions p[i] x p[i + 1]
+    std::vector<int64_t> p(n + 1);
+    for (int64_t i = 0; i < n; i++) { p[i] = tensors[i]->shape()->At(0); }
+    p[n] = tensors[n - 1]->shape()->At(1);
+
+    // m[i, j] = k where k is the minimum cost for multiplying tensors i...j
+    std::vector<std::vector<int64_t>> m(n, std::vector<int64_t>(n, 0));
+
+    // s[i, j] = k where k is the index at which to split the list such that
+    // optimally multiplying matrices i...k and k...j first and then the resulting
+    // matrices is the optimal order for multiplying matrices i...j.
+    std::vector<std::vector<int64_t>> s(n, std::vector<int64_t>(n));
+
+    // Compute the optimal multiplication order
+    for (int64_t l = 1; l < n; l++) {
+      for (int64_t i = 0; i < n - l; i++) {
+        const auto j = i + l;
+        m[i][j] = std::numeric_limits<int64_t>::max();
+        for (int64_t k = i; k < j; k++) {
+          const auto q = m[i][k] + m[k + 1][j] + p[i] * p[k + 1] * p[j + 1];
+          if (q < m[i][j]) {
+            m[i][j] = q;
+            s[i][j] = k;
+          }
+        }
+      }
+    }
+
+    return s;
+  }
+};
+
 }  // namespace linalg
 }  // namespace impl
 
 using namespace impl::linalg;
 
-ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<CrossFunctor>("LinalgCross"); }
+ONEFLOW_FUNCTION_LIBRARY(m) {
+  m.add_functor<CrossFunctor>("LinalgCross");
+  m.add_functor<MultiDotFunctor>("MultiDot");
+}
 
 }  // namespace functional
 }  // namespace one

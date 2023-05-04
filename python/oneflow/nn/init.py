@@ -203,6 +203,9 @@ def kaiming_uniform_(
     """
     if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
         data_format = "NHWC"
+    if 0 in tensor.shape:
+        warnings.warn("Initializing zero-element tensors is a no-op")
+        return tensor
     fan = calc_fan(tensor.shape, mode, get_data_format(data_format))
     gain = calculate_gain(nonlinearity, a)
     std = gain / math.sqrt(fan)
@@ -246,6 +249,9 @@ def kaiming_normal_(
     if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
         data_format = "NHWC"
     assert mode in ["fan_in", "fan_out"]
+    if 0 in tensor.shape:
+        warnings.warn("Initializing zero-element tensors is a no-op")
+        return tensor
     fan = calc_fan(tensor.shape, mode, get_data_format(data_format))
     gain = calculate_gain(nonlinearity, a)
     std = gain / math.sqrt(fan)

@@ -1777,6 +1777,7 @@ class ClipInplaceFunctor {
     return ClampInplace(x, min, max);
   }
 };
+
 class SqrtSquareSumFunctor {
  public:
   SqrtSquareSumFunctor() {
@@ -2996,7 +2997,26 @@ class DotFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& other) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, other});
+    DeviceType device_type{};
+    if (input->is_global()) {
+      device_type = JUST(input->parallel_desc())->device_type();
+    } else {
+      device_type = JUST(input->device())->enum_type();
+    }
+    std::shared_ptr<one::Tensor> cast_input = input;
+    std::shared_ptr<one::Tensor> cast_other = other;
+    if ((input->dtype()->is_integer()) && (device_type == DeviceType::kCPU)) {
+      cast_input =
+          JUST(functional::Cast(input, JUST(DType::Get(DataType::kFloat)), /*pin_memory=*/false));
+      cast_other =
+          JUST(functional::Cast(other, JUST(DType::Get(DataType::kFloat)), /*pin_memory=*/false));
+    }
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {cast_input, cast_other}));
+    if ((input->dtype()->is_integer()) && (device_type == DeviceType::kCPU)) {
+      return JUST(functional::Cast(result, input->dtype(), /*pin_memory=*/false));
+    } else {
+      return result;
+    }
   }
 
  private:
@@ -4012,6 +4032,7 @@ class StftFunctor {
  private:
   std::shared_ptr<OpExpr> op_;
 };
+
 class FusedWeightedSumFunctor {
  public:
   FusedWeightedSumFunctor() {
