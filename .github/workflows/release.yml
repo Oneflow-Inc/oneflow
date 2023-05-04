@@ -33,7 +33,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@mlu
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@nv-wheels
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -45,7 +45,7 @@ jobs:
             release
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           entries: |
-            mlu
+            cu116
 
   staging_release:
     env:
@@ -71,11 +71,11 @@ jobs:
           python3 -m pip install -U setuptools wheel --user
           python3 -m pip install oss2  --user
       - uses: actions/checkout@v2
-      - uses: Oneflow-Inc/get-oneflow@mlu
+      - uses: Oneflow-Inc/get-oneflow@nv-wheels
         name: Build ${{ matrix.entry }}
-        if: ${{ matrix.entry =='mlu' }}
+        if: ${{ matrix.entry =='cu116' }}
         with:
-          cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/release/mlu.cmake
+          cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/release/opencl.cmake
           build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build.sh
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           oneflow-build-env: manylinux
