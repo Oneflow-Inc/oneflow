@@ -63,7 +63,7 @@ def grad(
         retain_graph,
         create_graph,
     )
-    return tuple([Tensor(x) for x in in_grads])
+    return tuple([x.clone() if isinstance(x, Tensor) else Tensor(x) for x in in_grads])
 
 
 def backward(

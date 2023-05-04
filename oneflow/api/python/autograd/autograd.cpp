@@ -82,7 +82,6 @@ Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
       }
     }
   }
-  if (LazyMode::is_enabled()) { JUST(MarkOutputGradients(outputs, *gradients)); }
   return gradients;
 }
 
@@ -94,6 +93,7 @@ Maybe<one::TensorTuple> Backward(const one::TensorTuple& outputs, const one::Ten
   BackwardPassScopeGuard backward_guard;
   if (create_graph) { retain_graph = true; }
   std::shared_ptr<one::TensorTuple> gradients = JUST(CheckAndInitOutGrads(outputs, out_grads));
+  if (LazyMode::is_enabled()) { JUST(MarkOutputGradients(outputs, *gradients)); }
   JUST(one::GetThreadLocalAutogradEngine()->RunBackwardAndSaveGrads4LeafTensorIf(
       outputs, *gradients, retain_graph, create_graph));
   return std::make_shared<one::TensorTuple>(0);
