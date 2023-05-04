@@ -28,10 +28,6 @@ limitations under the License.
 namespace oneflow {
 namespace ep {
 
-namespace {
-constexpr size_t kDefaultWorkspaceSizeMb = 4;  // 4M
-}  // namespace
-
 MluStream::MluStream(MluDevice* device) : device_index_(device->device_index()), device_(device) {
   MluCurrentDeviceGuard guard(device_index_);
   OF_MLU_CHECK(cnrtQueueCreate(&mlu_stream_));
