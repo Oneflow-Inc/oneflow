@@ -17,7 +17,7 @@ import builtins
 import types
 from inspect import ismodule, currentframe
 from types import ModuleType
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 from importlib.abc import MetaPathFinder, Loader
 from importlib.machinery import ModuleSpec
 from importlib.util import find_spec, module_from_spec
@@ -62,6 +62,37 @@ def probably_called_from_hasattr():
     return frame.f_code is hasattr.__code__
 
 
+class MockModuleDict:
+    def __init__(self, mapping=None):
+        self.forward = {}
+        self.inverse = {}
+        if mapping is not None:
+            for key, value in mapping.items():
+                self.add(key, value)
+
+    def add(self, key, value):
+        if key in self.forward or value in self.inverse:
+            raise ValueError("Key or value already exists.")
+        self.forward[key] = value
+        self.inverse[value] = key
+
+    def remove(self, key=None, value=None):
+        if key is not None:
+            value = self.forward.pop(key)
+            self.inverse.pop(value)
+        elif value is not None:
+            key = self.inverse.pop(value)
+            self.forward.pop(key)
+        else:
+            raise ValueError("Must provide a key or value to remove.")
+
+    def _in_forward_dict(self, s):
+        return s.split(".")[0] in self.forward.keys()
+
+    def _in_inverse_dict(self, s):
+        return s.split(".")[0] in self.inverse.keys()
+
+
 # module wrapper with checks for existence of methods
 class ModuleWrapper(ModuleType):
     def __init__(self, module):
@@ -96,10 +127,6 @@ class ModuleWrapper(ModuleType):
             return attr
 
 
-def _is_torch(s: str):
-    return s == "torch" or s.startswith("torch.")
-
-
 class OneflowImporter(MetaPathFinder, Loader):
     def __init__(self):
         # module_from_spec will try to call the loader's create_module, resulting in infinite recursion
@@ -111,7 +138,9 @@ class OneflowImporter(MetaPathFinder, Loader):
         self.delete_list = []
 
     def find_spec(self, fullname, path, target=None):
-        if _is_torch(fullname):  # don't touch modules other than torch
+        if module_dict_global._in_forward_dict(
+            fullname
+        ):  # don't touch modules other than torch or extra libs module
             # for first import of real torch, we use default meta path finders, not our own
             if not self.enable and self.disable_mod_cache.get(fullname) is None:
                 return None
@@ -128,7 +157,11 @@ class OneflowImporter(MetaPathFinder, Loader):
             return None
         self.in_create_module = True
         if self.enable:
-            oneflow_mod_fullname = "oneflow" + spec.name[len("torch") :]
+            if module_dict_global._in_forward_dict(spec.name):
+                oneflow_mod_fullname = (
+                    module_dict_global.forward[spec.name.split(".")[0]]
+                    + spec.name[len(spec.name.split(".")[0]) :]
+                )
             if (
                 sys.modules.get(oneflow_mod_fullname) is None
                 and self.enable_mod_cache.get(spec.name) is None
@@ -164,7 +197,11 @@ class OneflowImporter(MetaPathFinder, Loader):
             return real_mod
 
     def exec_module(self, module):
-        fullname = "torch" + module.__name__[len("oneflow") :]
+        if module_dict_global._in_inverse_dict(module.__name__):
+            fullname = (
+                module_dict_global.inverse[module.__name__.split(".")[0]]
+                + module.__name__[len(module.__name__.split(".")[0]) :]
+            )
         if self.enable:
             if not isinstance(module, DummyModule):
                 module = ModuleWrapper(module)
@@ -185,7 +222,9 @@ class OneflowImporter(MetaPathFinder, Loader):
         if self.enable:  # already enabled
             return
         for k, v in sys.modules.copy().items():
-            if (not (from_cli and k == "torch")) and _is_torch(k):
+            if (
+                not (from_cli and k == "torch")
+            ) and module_dict_global._in_forward_dict(k):
                 aliases = list(filter(lambda alias: globals[alias] is v, globals))
                 self.disable_mod_cache.update({k: (v, aliases)})
                 del sys.modules[k]
@@ -201,7 +240,7 @@ class OneflowImporter(MetaPathFinder, Loader):
         if not self.enable:  # already disabled
             return
         for k, v in sys.modules.copy().items():
-            if _is_torch(k):
+            if module_dict_global._in_forward_dict(k):
                 aliases = list(filter(lambda alias: globals[alias] is v, globals))
                 self.enable_mod_cache.update({k: (v, aliases)})
                 del sys.modules[k]
@@ -293,9 +332,13 @@ class enable:
         self,
         lazy: Optional[bool] = None,
         verbose: Optional[bool] = None,
+        extra_libs: Optional[Dict[str, str]] = None,
         *,
         _from_cli: bool = False,
     ):
+        global module_dict_global
+        module_dict_global = MockModuleDict(extra_libs)
+        module_dict_global.add("torch", "oneflow")
         self.enable = _importer.enable
         forcedly_disabled_by_env_var = env_var_util.parse_boolean_from_env(
             "ONEFLOW_DISABLE_MOCK_TORCH", False

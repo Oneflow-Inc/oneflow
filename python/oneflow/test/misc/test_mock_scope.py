@@ -142,7 +142,7 @@ class TestMock(flow.unittest.TestCase):
             test_case.assertEqual(x.__name__, "oneflow.not_exist.x")
 
     def test_mock_torchvision(test_case):
-        with mock.enable(lazy=True):
+        with mock.enable(lazy=True, extra_libs={"torchvision": "flowvision"}):
             import torchvision
 
             model = torchvision.models.resnet18(pretrained=False)
