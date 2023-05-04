@@ -1123,7 +1123,8 @@ class StackTraceImpl<system_tag::current_tag> : public StackTraceImplHolder {
 
     if (context()) {
       ucontext_t* uctx = reinterpret_cast<ucontext_t*>(context());
-#ifdef REG_RIP          // x86_64
+// x86_64
+#ifdef REG_RIP
       if (uctx->uc_mcontext.gregs[REG_RIP] == reinterpret_cast<greg_t>(error_addr())) {
         uctx->uc_mcontext.gregs[REG_RIP] =
             *reinterpret_cast<size_t*>(uctx->uc_mcontext.gregs[REG_RSP]);
@@ -1131,7 +1132,8 @@ class StackTraceImpl<system_tag::current_tag> : public StackTraceImplHolder {
       _stacktrace[index] = reinterpret_cast<void*>(uctx->uc_mcontext.gregs[REG_RIP]);
       ++index;
       ctx = *reinterpret_cast<unw_context_t*>(uctx);
-#elif defined(REG_EIP)  // x86_32
+// x86_32
+#elif defined(REG_EIP)
       if (uctx->uc_mcontext.gregs[REG_EIP] == reinterpret_cast<greg_t>(error_addr())) {
         uctx->uc_mcontext.gregs[REG_EIP] =
             *reinterpret_cast<size_t*>(uctx->uc_mcontext.gregs[REG_ESP]);
