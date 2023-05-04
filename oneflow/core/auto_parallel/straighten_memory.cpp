@@ -22,6 +22,7 @@ namespace oneflow {
 namespace auto_parallel {
 
 namespace {
+
 class NoCleaningMarkerAccMemory {
  public:
   static int32_t marker;
@@ -111,6 +112,10 @@ void TopoStruct::SetAccumulateMemoryIncrement() {
   ResetNoCleaningMarkerAccMemory();
   accumulate_memory_increment = AccumulateMemoryIncrement();
 }
+
+// .back() return a reference. But if the original map is destroyed in the same piece of code,
+// the reference would point to [0xfffffffffffffff8], giving out an error.
+TopoStruct* TakeBackFromVector(const std::vector<TopoStruct*>& v) { return v.back(); }
 
 void InitInOutTopoStructs(std::vector<TopoStruct*>* topo_structs) {
   // Generate the map from operator names to topological structure
@@ -395,7 +400,7 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
     // Clean up the prepare_topo_structs before executing any node
     prepare_topo_structs.clear();
     // Pick the one with the smallest accumulate memory increment and then execute it
-    Execute(waiting_map.begin()->second.back());
+    Execute(TakeBackFromVector(waiting_map.begin()->second));
   }
 }
 }  // namespace
