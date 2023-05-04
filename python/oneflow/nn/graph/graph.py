@@ -954,6 +954,7 @@ class Graph(object):
         inputs_tensor_tuple = convert_to_tensor_tuple(
             self.__flatten_io("input", *args, **kwargs)
         )
+        self.inputs_original = (args, kwargs)
         input_op_names = self._shared_graph._input_op_names
         self._c_nn_graph.build_with_new_input_from_shared_graph(
             input_op_names,
@@ -1054,20 +1055,29 @@ class Graph(object):
                 tensor_item = tensor_tuple[name_idx]
                 dest_dict[name_list[name_idx]] = (tensor_item, tensor_item.device.type)
 
-        inputs_sub_destination = OrderedDict()
-        _fill_sub_destination(
-            inputs_sub_destination, self._input_op_names, self._inputs_tensor_tuple
-        )
-        destination["inputs"] = inputs_sub_destination
-
         # This is original outputs is needed to build output buffer.
         tuple_idx = -1
 
         def gen_index_in_tuple(eager_out):
             nonlocal tuple_idx
             tuple_idx += 1
-            return "_OFTPI" + str(tuple_idx)
+            return "_OFTPI" + str(tuple_idx)  # oneflow tuple index
 
+        inputs_sub_destination = OrderedDict()
+        _fill_sub_destination(
+            inputs_sub_destination, self._input_op_names, self._inputs_tensor_tuple
+        )
+
+        _eager_inputs_args, _eager_inputs_kwargs = self.__map_io(
+            "input",
+            gen_index_in_tuple,
+            *self.inputs_original[0],
+            **self.inputs_original[1],
+        )
+        destination["inputs"] = inputs_sub_destination
+        destination["inputs_original"] = (_eager_inputs_args, _eager_inputs_kwargs)
+
+        tuple_idx = -1
         _eager_outputs, _ = self.__map_io(
             "output", gen_index_in_tuple, *self._eager_outputs
         )
@@ -1151,30 +1161,38 @@ class Graph(object):
                 tensor_list.append(tensor_of_item.to(device_of_item))
             return (name_list, convert_to_tensor_tuple(tensor_list))
 
-        def __load_input_from_runtime_state_dict(state_dict):
-            tensor_list = []
-            for _, item in state_dict.items():
-                tensor_of_item, device_of_item = item
-                tensor_list.append(tensor_of_item.to(device_of_item))
-            return tuple(tensor_list)
-
         self._input_op_names, self._inputs_tensor_tuple = _load_list_from_state_dict(
             state_dict["inputs"]
         )
         self._output_op_names, self._outputs_tensor_tuple = _load_list_from_state_dict(
             state_dict["outputs"]
         )
+        _eager_inputs_args_index, _eager_inputs_kwargs_index = state_dict[
+            "inputs_original"
+        ]
         _eager_outputs_index = state_dict["outputs_original"]
 
-        def get_tensor_in_tuple(map_item):
+        def get_input_tensor_in_tuple(map_item):
+            if isinstance(map_item, str) and map_item.startswith("_OFTPI"):
+                of_idx = int(map_item[6:])
+                return self._inputs_tensor_tuple[of_idx]
+            else:
+                return map_item
+
+        def get_output_tensor_in_tuple(map_item):
             if isinstance(map_item, str) and map_item.startswith("_OFTPI"):
                 of_idx = int(map_item[6:])
                 return self._outputs_tensor_tuple[of_idx]
             else:
                 return map_item
 
+        _eager_inputs_args, _eager_inputs_kwargs = self.__map_io_lite(
+            get_input_tensor_in_tuple,
+            *_eager_inputs_args_index,
+            **_eager_inputs_kwargs_index,
+        )
         _eager_outputs, _ = self.__map_io_lite(
-            get_tensor_in_tuple, *_eager_outputs_index
+            get_output_tensor_in_tuple, *_eager_outputs_index
         )
         self._eager_outputs = _eager_outputs
 
@@ -1236,7 +1254,7 @@ class Graph(object):
         self._c_nn_graph.align_states_after_logical_graph_compile()
         self._c_nn_graph.init_runtime()
         self._is_compiled = True
-        self.__run(__load_input_from_runtime_state_dict(state_dict["inputs"]))  
+        self.__run(*_eager_inputs_args, **_eager_inputs_kwargs)     # pre-run to warm up
         build_graph_end = time.perf_counter()
         self.__print(
             0,
@@ -1480,6 +1498,7 @@ class Graph(object):
             inputs_tensor_tuple = convert_to_tensor_tuple(
                 self.__flatten_io("input", *args, **kwargs)
             )
+            self.inputs_original = (args, kwargs)
             self._c_nn_graph.register_input_op_names_and_tensors(
                 input_op_names, inputs_tensor_tuple
             )
