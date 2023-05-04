@@ -353,7 +353,7 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
   std::function<void(TopoStruct*)> Visit = [&](TopoStruct* node) {
     if (node->visited_descendant.IfMarked()) { return; }
     node->visited_descendant.Mark();
-    if (node->blocking_topo_struct == nullptr) {
+    if (node->blocking_topo_struct == nullptr || node->executed) {
       for (auto* out_node : node->out_topo_structs) { Visit(out_node); }
     } else {
       Wait(node->blocking_topo_struct);
@@ -400,7 +400,13 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
     // Clean up the prepare_topo_structs before executing any node
     prepare_topo_structs.clear();
     // Pick the one with the smallest accumulate memory increment and then execute it
+    if (waiting_map.empty()) { break; }
     Execute(TakeBackFromVector(waiting_map.begin()->second));
+  }
+
+  // Execute the rest of the nodes
+  for (auto& node : *topo_structs) {
+    if (!node->executed) { Execute(node); }
   }
 }
 }  // namespace
