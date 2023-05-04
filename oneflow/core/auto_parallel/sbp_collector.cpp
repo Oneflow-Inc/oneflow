@@ -128,7 +128,8 @@ void SbpCollector::CollectUniverse(const SbpGraph& sbp_graph) {
 
 // Initialize copy cost from producer to proxy of producer
 void SbpCollector::InitializeCopyCostFromNode2Proxy(const SbpNode* sbp_proxy,
-                                                    const LogicalBlobId& lbi) const {
+                                                    const LogicalBlobId& lbi, 
+                                                    bool nccl_use_compute_stream) const {
   // the only edge from producer  to proxy of producer
   SbpEdge* sbp_edge = sbp_proxy->edges_in_[0];
   SbpNode* sbp_node_producer = sbp_edge->start_node_;
@@ -176,7 +177,8 @@ void SbpCollector::InitializeCopyCostFromNode2Proxy(const SbpNode* sbp_proxy,
         sbp_edge->cost_[sbp_id_producer][sbp_id_consumer] +=
             CHECK_JUST(ComputeCopyCostWithMiddleNodes(sbp_producer, sbp_consumer, logical_blob_desc,
                                                       producer_parallel_desc,
-                                                      producer_parallel_desc, /*is_same=*/false));
+                                                      producer_parallel_desc, /*is_same=*/false,
+                                                      nccl_use_compute_stream));
       }
     }
   }
@@ -231,7 +233,7 @@ void SbpCollector::InitializeCopyCostFromProxy2Consumer(
 // Export list of possible combination of Sbp Parallels
 void SbpCollector::ProxySbpCandidate(const OpGraph& op_graph,
                                      const HashMap<std::string, SbpNode*>& op_name2sbp_node,
-                                     SbpGraph& sbp_graph) {
+                                     SbpGraph& sbp_graph, bool nccl_use_compute_stream) {
   // If needed, we can output the mapping from operator name to its proxy.
   // HashMap<std::string, HashMap<LogicalBlobId, SbpNode*>>&
   //     op_name2lbi2sbp_proxy;
@@ -339,7 +341,7 @@ void SbpCollector::ProxySbpCandidate(const OpGraph& op_graph,
     sbp_node_producer->PointTo(sbp_proxy);
 
     // Compute copy cost between producer and proxy
-    InitializeCopyCostFromNode2Proxy(sbp_proxy, lbi);
+    InitializeCopyCostFromNode2Proxy(sbp_proxy, lbi, nccl_use_compute_stream);
 
     // Build connection and compute copy cost between proxy and consumers
     InitializeCopyCostFromProxy2Consumer(sbp_proxy, index2consumer_bn2sbp_set[index],

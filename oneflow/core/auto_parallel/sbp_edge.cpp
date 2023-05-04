@@ -396,7 +396,7 @@ void SbpEdge::InitCopyAndMemoryCost(const std::string& ibn, bool use_sbp_collect
         // compute copy cost for a specific logical blob
         double curr_edge_cost = CHECK_JUST(ComputeCopyCostWithMiddleNodes(
             sbp_producer, sbp_consumer, logical_blob_desc, producer_parallel_desc,
-            consumer_parallel_desc, require_same_sbp));
+            consumer_parallel_desc, require_same_sbp, !nccl_not_use_compute_stream));
         if (curr_edge_cost < GetValidMaxCopyCost()) {
           cost4sbp_id_producer[sbp_id_consumer] +=
               CHECK_JUST(producer->op().GetOpTimeShape())->elem_cnt() * curr_edge_cost;

@@ -364,7 +364,7 @@ Maybe<double> ComputeEagerCopyCostBetweenNdSbp(const NdSbp& producer_sbp_paralle
 }
 
 using CopyCostFunc = Maybe<double>(const NdSbp&, const NdSbp&, const BlobDesc&, const ParallelDesc&,
-                                   const ParallelDesc&, bool);
+                                   const ParallelDesc&, bool, bool);
 Maybe<CopyCostFunc*> GetComputeCopyCostFunc() {
   if (LazyMode::is_enabled()) {
     return &ComputeCopyCostWithMiddleNodes;
@@ -650,7 +650,8 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel
                                               const BlobDesc& logical_blob_desc,
                                               const ParallelDesc& producer_parallel_desc,
                                               const ParallelDesc& consumer_parallel_desc,
-                                              bool requires_same_sbp) {
+                                              bool requires_same_sbp,
+                                          bool nccl_use_compute_stream) {
   if (!(CheckNdSbp(producer_sbp_parallel) && CheckNdSbp(consumer_sbp_parallel))) {
     return Error::RuntimeError() << "Illegal sbp parallel has been found.";
   }
@@ -693,7 +694,7 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel
   static const bool enable_general_basic_communication =
       ParseBooleanFromEnv("ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION", false);
   // Use a general basic communication if no P in the consumer
-  if ((((Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
+  if ((((nccl_use_compute_stream
          && producer_parallel_desc == consumer_parallel_desc)
         || enable_general_basic_communication)
        && !NdSbpHasPartialParallel(consumer_sbp_parallel))
@@ -889,10 +890,12 @@ Maybe<double> ComputeCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel,
                                           const BlobDesc& logical_blob_desc,
                                           const ParallelDesc& producer_parallel_desc,
                                           const ParallelDesc& consumer_parallel_desc,
-                                          bool requires_same_sbp) {
+                                          bool requires_same_sbp,
+                                          bool nccl_use_compute_stream) {
   return JUST(GetComputeCopyCostFunc())(producer_sbp_parallel, consumer_sbp_parallel,
                                         logical_blob_desc, producer_parallel_desc,
-                                        consumer_parallel_desc, requires_same_sbp);
+                                        consumer_parallel_desc, requires_same_sbp,
+                                          nccl_use_compute_stream);
 }
 
 Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
@@ -900,7 +903,8 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
                                              const BlobDesc& logical_blob_desc,
                                              const ParallelDesc& producer_parallel_desc,
                                              const ParallelDesc& consumer_parallel_desc,
-                                             bool requires_same_sbp) {
+                                             bool requires_same_sbp,
+                                          bool nccl_use_compute_stream) {
   // In 90% of the transfer, we would have the same parallel description for producer and consumer
   // We need to speed it up and give an approximation of the cost
   if (producer_parallel_desc.EqualsIgnoringHierarchy(consumer_parallel_desc)) {
@@ -929,7 +933,7 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
   static const bool enable_general_basic_communication =
       ParseBooleanFromEnv("ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION", false);
   // Use a general basic communication if no P in the consumer
-  if ((((Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
+  if ((((nccl_use_compute_stream
          && producer_parallel_desc == consumer_parallel_desc)
         || enable_general_basic_communication)
        && !NdSbpHasPartialParallel(consumer_sbp_parallel))
@@ -944,7 +948,7 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
 
   // Initialize boxing collector
   constexpr int32_t kRegularMaxSplitAxes = 6;
-  static thread_local BoxingCollector boxing_collector(kRegularMaxSplitAxes);
+  static thread_local BoxingCollector boxing_collector(nccl_use_compute_stream, kRegularMaxSplitAxes);
   std::vector<NdSbp> middle_sbps;
   // Ask for middle nodes
   int32_t diag_node = 0;
@@ -971,7 +975,8 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
     // TODO: Needs more effort if dealing with different placement
     total_cost += JUST(ComputeLazyCopyCostBetweenNdSbp(*pre_nd_sbp, middle_sbp, logical_blob_desc,
                                                        *pre_parallel_desc, *middle_parallel_desc,
-                                                       requires_same_sbp));
+                                                       requires_same_sbp,
+                                          nccl_use_compute_stream));
     // Set up the information of the first node in the next connection
     pre_nd_sbp = &middle_sbp;
     pre_parallel_desc = middle_parallel_desc;
@@ -979,7 +984,8 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
   // Connection between the last middle node and consumer
   total_cost += JUST(ComputeLazyCopyCostBetweenNdSbp(*pre_nd_sbp, consumer_sbp_parallel,
                                                      logical_blob_desc, *pre_parallel_desc,
-                                                     consumer_parallel_desc, requires_same_sbp));
+                                                     consumer_parallel_desc, requires_same_sbp,
+                                          nccl_use_compute_stream));
 
   return total_cost;
 }

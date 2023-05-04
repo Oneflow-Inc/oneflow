@@ -26,12 +26,12 @@ namespace oneflow {
 
 class BoxingCollector final {
  public:
-  BoxingCollector() = default;
+  BoxingCollector(bool nccl_use_compute_stream) : nccl_use_compute_stream_(nccl_use_compute_stream) {};
 
   ~BoxingCollector() = default;
 
   // A constructor with init, designed for non-customized boxing collector
-  BoxingCollector(int32_t max_axis);
+  BoxingCollector(bool nccl_use_compute_stream, int32_t max_axis);
 
   // Set default Sbp list
   void CollectUniverse(int32_t max_axis);
@@ -165,6 +165,7 @@ class BoxingCollector final {
   int32_t hierarchy_num_;
   // How the boxing collector is initialized
   int32_t init_type_ = -1;
+  bool nccl_use_compute_stream_;
   // Enable general basic communication or not
   const bool enable_general_basic_communication =
       ParseBooleanFromEnv("ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION", false);

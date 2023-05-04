@@ -31,7 +31,7 @@ Maybe<void> BoxingWithMiddleNodes(const OpGraph& op_graph, JobBuilder* job_build
     return Maybe<void>::Ok();
   }
   // Initialize boxing collector
-  BoxingCollector boxing_collector;
+  BoxingCollector boxing_collector(EnableNcclUseComputeStream(job_builder->job().job_conf()));
   std::vector<NdSbp> middle_sbps;
   HashMap<const OpNode*, OperatorConf> op_node2op_conf;
   // Fill other unsupported combinations

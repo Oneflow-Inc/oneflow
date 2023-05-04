@@ -93,7 +93,8 @@ Maybe<double> ComputeCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel,
                                           const BlobDesc& logical_blob_desc,
                                           const ParallelDesc& producer_parallel_desc,
                                           const ParallelDesc& consumer_parallel_desc,
-                                          bool requires_same_sbp);
+                                          bool requires_same_sbp,
+                                          bool nccl_use_compute_stream);
 
 // Cost for boxing in lazy
 Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel,
@@ -101,7 +102,8 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel
                                               const BlobDesc& logical_blob_desc,
                                               const ParallelDesc& producer_parallel_desc,
                                               const ParallelDesc& consumer_parallel_desc,
-                                              bool requires_same_sbp);
+                                              bool requires_same_sbp,
+                                          bool nccl_use_compute_stream);
 
 // The public interface for computing cost
 // It uses the middle nodes algorithm.
@@ -110,7 +112,8 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
                                              const BlobDesc& logical_blob_desc,
                                              const ParallelDesc& producer_parallel_desc,
                                              const ParallelDesc& consumer_parallel_desc,
-                                             bool requires_same_sbp);
+                                             bool requires_same_sbp,
+                                          bool nccl_use_compute_stream);
 
 // Decide the priority to infer sbp
 // 0: highest priority

@@ -40,8 +40,7 @@ limitations under the License.
 
 namespace oneflow {
 
-// TODO(Chengcheng): default false.
-DEFINE_ENV_BOOL(ONEFLOW_ENABLE_OUTDATED_OPT_FW_CHAIN_MERGE, true);
+DEFINE_ENV_BOOL(ONEFLOW_ENABLE_OUTDATED_OPT_FW_CHAIN_MERGE, false);
 
 namespace {
 
@@ -111,9 +110,7 @@ bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
       return true;
     }
   }
-  // NOTE(chengcheng): ONLY nccl_use_compute_stream = false will exclude optimizer pass ops
-  if (!Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
-      && IsOptimizerPassOp(op) && EnvBool<ONEFLOW_ENABLE_OUTDATED_OPT_FW_CHAIN_MERGE>()) {
+  if (IsOptimizerPassOp(op) && EnvBool<ONEFLOW_ENABLE_OUTDATED_OPT_FW_CHAIN_MERGE>()) {
     return true;
   }
   return false;
@@ -984,7 +981,7 @@ void TaskGraph::BuildTaskPath(TaskNode* src_node, TaskNode* dst_node, const Logi
   ConnectWithLbi(proxy_node, dst_node, lbi);
 }
 
-void TaskGraph::DecideExecutionOrder() {
+void TaskGraph::DecideExecutionOrder(bool nccl_use_compute_stream) {
   // For one machine with no transfer available, the straighten algorithm for overlaps consume a lot
   // of memory
   StraightenAlgorithmTag straighten_algorithm_tag =
@@ -994,8 +991,7 @@ void TaskGraph::DecideExecutionOrder() {
           && GlobalProcessCtx::WorldSize() == 1)) {
     InitOrderedTaskNodes();
   } else {
-    StraightenNodes(this, &ordered_task_nodes_,
-                    Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream());
+    StraightenNodes(this, &ordered_task_nodes_, nccl_use_compute_stream);
   }
 }
 

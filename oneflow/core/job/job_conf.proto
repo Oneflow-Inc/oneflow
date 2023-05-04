@@ -252,6 +252,8 @@ message JobConfigProto {
 
   optional QatConfig qat_config = 109;
 
+  // NOTE(chengcheng) to reuse nccl memory and speed up
+  optional bool nccl_use_compute_stream = 120 [default = false];
   optional bool enable_cudnn = 200 [default = true];
   optional int64 cudnn_buf_limit_mbyte = 201 [default = 1024];  // 1GByte
   optional int32 cudnn_conv_force_fwd_algo = 202;

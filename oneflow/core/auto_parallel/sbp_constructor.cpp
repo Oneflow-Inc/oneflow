@@ -73,7 +73,7 @@ Maybe<void> SbpConstructor::Init(const OpGraph& op_graph, Job* job /*Maybe not u
 
 Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job) {
   // Update nccl_use_compute_stream
-  nccl_use_compute_stream_ = Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream();
+  nccl_use_compute_stream_ = EnableNcclUseComputeStream(job.job_conf());
   ams = job.job_conf().enable_auto_memory();
   kMemoryRatio = UpdateMemoryRatio();
   // TODO: process local node
@@ -92,7 +92,7 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
     SbpCollector sbp_collector;
     sbp_collector.CollectUniverse(sbp_graph_);
     // TODO: Init memory cost for proxy
-    sbp_collector.ProxySbpCandidate(op_graph, op_name2sbp_node_, sbp_graph_);
+    sbp_collector.ProxySbpCandidate(op_graph, op_name2sbp_node_, sbp_graph_, nccl_use_compute_stream_);
   }
 
   JUST(InitCopyAndMemoryCost(op_graph));

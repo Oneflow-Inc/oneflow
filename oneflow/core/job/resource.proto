@@ -49,7 +49,7 @@ message Resource {
   
   optional CollectiveBoxingConf collective_boxing_conf = 19;
 
-  // NOTE(chengcheng) to reuse nccl memory and speed up
+  // NOTE(chengcheng): Deprecated. Should set in job_conf.
   optional bool nccl_use_compute_stream = 30 [default = false];
   optional bool disable_group_boxing_by_dst_parallel = 31 [default = false];
 

@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/job/compiler.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/intra_job_mem_sharing_util.h"
+#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/graph/op_graph.h"
@@ -66,7 +67,7 @@ void Compiler::Compile(Job* job, Plan* plan) const {
   task_gph->TopoForEachNode(&TaskNode::Build);
   task_gph->RemoveEmptyRegsts();
   task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
-  task_gph->DecideExecutionOrder();
+  task_gph->DecideExecutionOrder(EnableNcclUseComputeStream(job->job_conf()));
   task_gph->MergeChainAndAddOrderingCtrlEdgeInSameChain();
   auto IsReachable = Singleton<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
   if (job_desc.enable_inplace()) { task_gph->EnableInplaceMemSharing(IsReachable); }

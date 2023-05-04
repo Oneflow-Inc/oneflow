@@ -135,29 +135,18 @@ class GraphConfig(object):
                 shard_restore_level
             )
         if stage >= 2:
-            nccl_config.enable_use_compute_stream(True)
+            self.enable_nccl_use_compute_stream(True)
         if stage >= 3:
             nccl_config.disable_group_boxing_by_dst_parallel(True)
 
-    def allow_fuse_model_update_ops(self, mode: bool = True):
-        r"""If set to true, try to fuse cast + scale + l1_l2_regularize_gradient + model_update to one op to improve performance.
 
-        For example:
+    def enable_nccl_use_compute_stream(self, mode: bool = True):
+        """If true, nccl will use compute stream to reuse nccl memory and speedup.
 
-        .. code-block:: python
-
-            import oneflow as flow
-
-            class Graph(flow.nn.Graph):
-                def __init__(self):
-                    super().__init__()
-                    self.linear = flow.nn.Linear(3, 8, False)
-                    self.config.allow_fuse_model_update_ops(True)
-                def build(self, x):
-                    return self.linear(x)
-
-            graph = Graph()
-
+        Args:
+            mode (bool, optional): [description]. Default is True.
+        """
+        self.proto.nccl_use_compute_stream = mode
         Args:
             mode (bool, optional): The default value is True.
         """
@@ -244,7 +233,7 @@ class GraphConfig(object):
             # NOTE(chengcheng): when use gradient accumulation, optimizer nccl allreduce can NOT
             #  overlap with backward, so nccl use compute stream is optimization without negative
             #  effects.
-            nccl_config.enable_use_compute_stream(True)
+            self.enable_nccl_use_compute_stream(True)
 
     def set_outputs_buffer_size(self, value: int = 2):
         r"""Set the outputs buffer size of ``nn.Graph``.

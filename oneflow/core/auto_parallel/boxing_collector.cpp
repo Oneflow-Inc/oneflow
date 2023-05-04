@@ -133,7 +133,10 @@ Maybe<void> AskSbpCombinationFor1DSbp(const NdSbp& sbp_producer, const NdSbp& sb
 }  // namespace
 
 // A constructor with init, designed for pre-stored boxing collector
-BoxingCollector::BoxingCollector(int32_t max_axis) { CHECK_JUST(Init(max_axis)); }
+BoxingCollector::BoxingCollector(bool nccl_use_compute_stream, int32_t max_axis) { 
+  nccl_use_compute_stream_ = nccl_use_compute_stream;
+  CHECK_JUST(Init(max_axis)); 
+}
 
 // Construct a boxing collector with given maximum number of axis
 Maybe<void> BoxingCollector::Init(int32_t max_axis) {
@@ -151,8 +154,7 @@ Maybe<void> BoxingCollector::Init(int32_t max_axis) {
   JUST(GenerateCombination4SamePlacement(3));
   JUST(GenerateCombination4DiffHierarchy(this, this));
   JUST(GenerateCombination4DiffPlacement(this, this));
-  init_type_ = int32_t(enable_general_basic_communication
-                       || Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream());
+  init_type_ = int32_t(enable_general_basic_communication || nccl_use_compute_stream_);
   return Maybe<void>::Ok();
 }
 
@@ -167,8 +169,7 @@ Maybe<void> BoxingCollector::Init(const BlobDesc& logical_blob_desc,
   // Get copy cost in lazy mode
   LazyMode::Guard enable_lazy_mode(true);
   JUST(GenerateCombination4SamePlacement(5, logical_blob_desc, parallel_desc));
-  init_type_ = int32_t(enable_general_basic_communication
-                       || Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream());
+  init_type_ = int32_t(enable_general_basic_communication || nccl_use_compute_stream_);
   return Maybe<void>::Ok();
 }
 
@@ -281,7 +282,7 @@ Maybe<void> BoxingCollector::GenerateCombination4SamePlacement(int32_t max_middl
     for (int32_t j = 0; j < n; j++) {
       minimum_copy_cost_[i][j] = JUST(ComputeLazyCopyCostBetweenNdSbp(
           nd_sbp_lists_[i], nd_sbp_lists_[j], blob_desc, parallel_desc, parallel_desc,
-          /*requires_same_sbp=*/false));
+          /*requires_same_sbp=*/false, nccl_use_compute_stream_));
     }
   }
 
@@ -419,7 +420,7 @@ Maybe<void> BoxingCollector::ComputeCostFor1DSbpDiffPlacement(
       if (diag_consumer < 0) { continue; }
       cost_4_diff_placement[id_1d_producer][id_1d_consumer] = JUST(ComputeLazyCopyCostBetweenNdSbp(
           nd_sbp_lists_[diag_producer], nd_sbp_lists_[diag_consumer], blob_desc, in_parallel_desc,
-          out_parallel_desc, false));
+          out_parallel_desc, false, nccl_use_compute_stream_));
     }
   }
   return Maybe<void>::Ok();
@@ -583,7 +584,7 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
 
 #ifdef WITH_CUDA
   // Use a general basic communication if no P in the consumer
-  if (((Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
+  if (((nccl_use_compute_stream_
         && producer_parallel_desc == consumer_parallel_desc)
        || enable_general_basic_communication)
       && (!NdSbpHasPartialParallel(sbp_consumer))
@@ -604,13 +605,13 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
 
   if (JUST(ComputeLazyCopyCostBetweenNdSbp(sbp_producer, sbp_consumer, logical_blob_desc,
                                            producer_parallel_desc, consumer_parallel_desc,
-                                           /*requires_same_sbp=*/false))
+                                           /*requires_same_sbp=*/false, nccl_use_compute_stream_))
       < GetValidMaxCopyCost()) {
     return Maybe<void>::Ok();
   } else {
     int32_t require_init_type =
         int32_t(enable_general_basic_communication
-                || Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream());
+                || nccl_use_compute_stream_);
     if (init_type_ != require_init_type) {
       // We assemble the boxing table from S(0) to S(5).
       // Those splitting in higher axes are considered in the customized boxing.

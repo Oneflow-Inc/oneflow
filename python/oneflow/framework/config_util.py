@@ -36,7 +36,7 @@ def _set_resource_attr(attrs_chain: Union[List[str], str], attr_value, type_):
 
     if we want to do:
         `config_proto.resource.collective_boxing_conf.nccl_num_streams = 1`
-    
+
     we can call `_set_resource_attr(["collective_boxing_conf", "nccl_num_streams"], 1)`
 `
     """
@@ -144,6 +144,12 @@ def api_nccl_use_compute_stream(val: bool = False) -> None:
     Args:
         val (bool, optional): True or False. Defaults to False.
     """
+    print(
+        """
+        'enable_use_compute_stream' has been deprecated, and will be removed in the future. \n
+        Please use : 'graph.config.enable_nccl_use_compute_stream' instead of.
+        """
+    )
 
     attrs, type_ = api_attrs_and_type[api_nccl_use_compute_stream]
     _set_resource_attr(attrs, val, type_)

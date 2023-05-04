@@ -98,6 +98,8 @@ const JobDesc& GlobalJobDesc();
 bool IsPullJob(const std::string& job_name, const InterUserJobInfo& inter_user_job_info);
 bool IsPushJob(const std::string& job_name, const InterUserJobInfo& inter_user_job_info);
 
+bool EnableNcclUseComputeStream(const JobConfigProto& job_conf);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_JOB_JOB_DESC_H_

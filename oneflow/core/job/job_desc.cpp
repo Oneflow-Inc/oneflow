@@ -80,4 +80,13 @@ GlobalJobDescScope::~GlobalJobDescScope() { Singleton<JobDesc>::Delete(); }
 
 const JobDesc& GlobalJobDesc() { return *Singleton<JobDesc>::Get(); }
 
+bool EnableNcclUseComputeStream(const JobConfigProto& job_conf) {
+  if (job_conf.has_nccl_use_compute_stream()) {
+    LOG(WARING) << "ccdebuglog: Graph: " << job_conf.job_name << " has_nccl_use_compute_stream = "
+      << job_conf.nccl_use_compute_stream();
+    return job_conf.nccl_use_compute_stream();
+  } 
+  return Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream();
+}
+
 }  // namespace oneflow

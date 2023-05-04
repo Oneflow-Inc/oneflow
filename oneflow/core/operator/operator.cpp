@@ -805,7 +805,8 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
             producer_infer_hint4ibn->nd_sbp(),
             JUST(VectorAt(nd_sbp_sig_list, i)).bn_in_op2nd_sbp().at(ibn),
             producer_infer_hint4ibn->logical_blob_desc(), producer_infer_hint4ibn->parallel_desc(),
-            *JUST(GetParallelDesc4BnInOp(ibn)), requires_same_sbp[ibn_id]));
+            *JUST(GetParallelDesc4BnInOp(ibn)), requires_same_sbp[ibn_id],
+            nccl_use_compute_stream_));
         // Reduce inquiries when the current cost is larger than the minimum cost
         // For SBP_INFER_RULE_TAG = 1, do not prune it since the all-matched case
         // might have larger cost.
