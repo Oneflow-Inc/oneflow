@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/functional/tensor_index.h"
-#include <cstdint>
 
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
