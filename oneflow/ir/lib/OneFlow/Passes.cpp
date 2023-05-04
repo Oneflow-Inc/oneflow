@@ -1022,10 +1022,10 @@ void AddLowerToLinalgMemRefPasses(PassManager& pm) {
   pm.addPass(createConvertToSignlessForTosaPass());  // convert-to-signless-for-tosa
   pm.addPass(createLowerOneFlowToTosaPass());        // lower-oneflow-to-tosa
   pm.addNestedPass<func::FuncOp>(
-      tosa::createTosaMakeBroadcastablePass());                 // tosa-make-broadcastable
-  pm.addPass(createCSEPass());                                  // cse
-  pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());   // tosa-to-linalg-on-tensors
-  pm.addNestedPass<func::FuncOp>(tosa::createTosaToTensor());   // tosa-to-tensor
+      tosa::createTosaMakeBroadcastablePass());                // tosa-make-broadcastable
+  pm.addPass(createCSEPass());                                 // cse
+  pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());  // tosa-to-linalg-on-tensors
+  pm.addNestedPass<func::FuncOp>(tosa::createTosaToTensor());  // tosa-to-tensor
   pm.addNestedPass<func::FuncOp>(
       createLinalgElementwiseOpFusionPass());                   //     linalg-fuse-elementwise-ops
   pm.addNestedPass<func::FuncOp>(createLinalgBufferizePass());  // linalg-bufferize
