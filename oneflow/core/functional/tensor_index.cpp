@@ -323,19 +323,19 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
       const auto& tensor = index_item.tensor();
       if (IsValidScalarTensorIndex(tensor) && !LazyMode::is_enabled()) {
         if (tensor->dtype()->is_integer() && tensor->dtype()->data_type() != DataType::kUInt8) {
-          int8_t int8_integer = 0;
-          int16_t int16_integer = 0;
-          int32_t int32_integer = 0;
           int64_t integer = 0;
           if (tensor->dtype()->data_type() == DataType::kInt8) {
+            int8_t int8_integer = 0;
             int8_integer = JUST(GetItemInScalarTensor<int8_t>(tensor));
             integer = static_cast<int64_t>(int8_integer);
           } else if (tensor->dtype()->data_type() == DataType::kInt16
                      || tensor->dtype()->data_type() == kUInt16) {
+            int16_t int16_integer = 0;
             int16_integer = JUST(GetItemInScalarTensor<int16_t>(tensor));
             integer = static_cast<int64_t>(int16_integer);
           } else if (tensor->dtype()->data_type() == DataType::kInt32
                      || tensor->dtype()->data_type() == kUInt32) {
+            int32_t int32_integer = 0;
             int32_integer = JUST(GetItemInScalarTensor<int32_t>(tensor));
             integer = static_cast<int64_t>(int32_integer);
           } else if (tensor->dtype()->data_type() == DataType::kInt64
