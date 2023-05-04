@@ -241,7 +241,7 @@ set(ONEFLOW_TOOLS_DIR "${PROJECT_BINARY_DIR}/tools"
     CACHE STRING "dir to put binary for debugging and development")
 
 set(CACHE_LLVM_MONO_REPO_URL_LIST
-   "https://github.com/llvm/llvm-project/archive/c63522e6ba7782c335043893ae7cbd37eca24fe5.zip"
+    "https://github.com/llvm/llvm-project/archive/c63522e6ba7782c335043893ae7cbd37eca24fe5.zip"
     "https://github.com/llvm/llvm-project/archive/a0595f8c99a253c65f30a151337e7aadc19ee3a1.zip"
     "https://github.com/llvm/llvm-project/archive/7eaa84eac3ba935d13f4267d3d533a6c3e1283ed.zip"
     "https://github.com/llvm/llvm-project/archive/35e60f5de180aea55ed478298f4b40f04dcc57d1.zip"
@@ -251,8 +251,7 @@ set(CACHE_LLVM_MONO_REPO_URL_LIST
     "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-16.0.0-rc4.zip"
     "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-15.0.6.zip"
     "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-16.0.0.zip"
-    "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-16.0.3.zip"
-)
+    "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-16.0.3.zip")
 
 set(CACHE_LLVM_MONO_REPO_MD5_LIST
     "f2f17229cf21049663b8ef4f2b6b8062"
@@ -265,12 +264,11 @@ set(CACHE_LLVM_MONO_REPO_MD5_LIST
     "b64481eaca658a2ff4e3e193440d0f68"
     "78172b0f67282e28956cd310612091fd"
     "0c2a3196e656aaab7ca1c2ef21b6091c"
-    "334997b4879aba15d9323a732356cf2a"
-  )
+    "334997b4879aba15d9323a732356cf2a")
 
 # clean cache for last LLVM version
-if("${LLVM_MONO_REPO_URL}" IN_LIST CACHE_LLVM_MONO_REPO_URL_LIST
-OR "${LLVM_MONO_REPO_MD5}" IN_LIST CACHE_LLVM_MONO_REPO_MD5_LIST)
+if("${LLVM_MONO_REPO_URL}" IN_LIST CACHE_LLVM_MONO_REPO_URL_LIST OR "${LLVM_MONO_REPO_MD5}" IN_LIST
+                                                                    CACHE_LLVM_MONO_REPO_MD5_LIST)
   unset(LLVM_MONO_REPO_URL CACHE)
   unset(LLVM_MONO_REPO_MD5 CACHE)
 endif()
