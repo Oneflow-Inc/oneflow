@@ -277,7 +277,8 @@ if("${LLVM_MONO_REPO_URL}" STREQUAL
   unset(LLVM_MONO_REPO_URL CACHE)
   unset(LLVM_MONO_REPO_MD5 CACHE)
 endif()
-set(LLVM_MONO_REPO_URL "https://github.com/llvm/llvm-project/archive/5c9a84960de2260f149ee15313998593255a78df.zip"
+set(LLVM_MONO_REPO_URL
+    "https://github.com/llvm/llvm-project/archive/5c9a84960de2260f149ee15313998593255a78df.zip"
     CACHE STRING "")
 use_mirror(VARIABLE LLVM_MONO_REPO_URL URL ${LLVM_MONO_REPO_URL})
 set(LLVM_MONO_REPO_MD5 "2702b822b71c196a0cc9c8d821c069d7" CACHE STRING "")
