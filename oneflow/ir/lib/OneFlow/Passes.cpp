@@ -17,6 +17,7 @@ limitations under the License.
 #include "OneFlow/Transform/OneFlowMemPool.h"
 #include "OneFlow/Transform/EliminateAllocOps.h"
 #include "OneFlow/Transform/OneFlowStream.h"
+#include "mlir/Conversion/TosaToTensor/TosaToTensor.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/common/data_type.pb.h"
@@ -1024,6 +1025,7 @@ void AddLowerToLinalgMemRefPasses(PassManager& pm) {
       tosa::createTosaMakeBroadcastablePass());                 // tosa-make-broadcastable
   pm.addPass(createCSEPass());                                  // cse
   pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());   // tosa-to-linalg-on-tensors
+  pm.addNestedPass<func::FuncOp>(tosa::createTosaToTensor());   // tosa-to-tensor
   pm.addNestedPass<func::FuncOp>(
       createLinalgElementwiseOpFusionPass());                   //     linalg-fuse-elementwise-ops
   pm.addNestedPass<func::FuncOp>(createLinalgBufferizePass());  // linalg-bufferize

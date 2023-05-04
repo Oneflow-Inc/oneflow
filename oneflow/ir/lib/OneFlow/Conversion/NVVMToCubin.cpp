@@ -22,6 +22,7 @@ limitations under the License.
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -157,6 +158,8 @@ class NVVMToCubinPass : public NVVMToCubinPassBase<NVVMToCubinPass> {
   void getDependentDialects(::mlir::DialectRegistry& registry) const override {
     registerLLVMDialectTranslation(registry);
     registerNVVMDialectTranslation(registry);
+    registerGPUDialectTranslation(registry);
+    registerLLVMDialectTranslation(registry);
   }
 };
 
