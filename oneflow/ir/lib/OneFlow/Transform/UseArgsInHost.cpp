@@ -78,19 +78,30 @@ void UseArgsInHostPass::runOnOperation() {
       }
     };
 
+    auto asyncType = gpu::AsyncTokenType::get(ctx);
     for (auto* owner : list) {
       if (currentVal == arg && !owner->getDialect()->getNamespace().equals("gpu")
           && succeeded(setInsertionPoint(owner, builder))) {
-        currentVal = builder.create<memref::CastOp>(arg.getLoc(), arg_type, arg);
-        builder.create<gpu::WaitOp>(arg.getLoc(), Type{}, ValueRange{});
-        builder.create<gpu::MemcpyOp>(arg.getLoc(), Type{}, ValueRange{}, currentVal, arg);
+        currentVal = builder.create<memref::AllocOp>(arg.getLoc(), arg_type);
+        auto token =
+            builder.create<gpu::WaitOp>(arg.getLoc(), asyncType, ValueRange{})->getResult(0);
+        token =
+            builder
+                .create<gpu::MemcpyOp>(arg.getLoc(), asyncType, ValueRange{token}, currentVal, arg)
+                ->getResult(0);
+        builder.create<gpu::WaitOp>(arg.getLoc(), asyncType, ValueRange{});
         owner->replaceUsesOfWith(arg, currentVal);
       }
 
       if (currentVal != arg && owner->getDialect()->getNamespace().equals("gpu")
           && succeeded(setInsertionPoint(owner, builder))) {
-        builder.create<gpu::WaitOp>(arg.getLoc(), Type{}, ValueRange{});
-        builder.create<gpu::MemcpyOp>(arg.getLoc(), Type{}, ValueRange{}, arg, currentVal);
+        auto token =
+            builder.create<gpu::WaitOp>(arg.getLoc(), asyncType, ValueRange{})->getResult(0);
+        token =
+            builder
+                .create<gpu::MemcpyOp>(arg.getLoc(), asyncType, ValueRange{token}, arg, currentVal)
+                ->getResult(0);
+        builder.create<gpu::WaitOp>(arg.getLoc(), asyncType, ValueRange{});
         currentVal = arg;
       }
     }

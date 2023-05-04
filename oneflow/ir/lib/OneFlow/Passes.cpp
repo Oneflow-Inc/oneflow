@@ -1070,8 +1070,8 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   pm.addPass(createParallelLoopToGpuPass());                        // convert-parallel-loops-to-gpu
   pm.addPass(createGpuLauchSinkIndexComputationsPass());
   pm.addPass(createGpuKernelOutliningPass());                       // gpu-kernel-outlining
-  pm.addNestedPass<func::FuncOp>(createUseArgsInHostPass());        // use-args-in-host
   pm.addPass(createCanonicalizerPass());                            // canonicalize
+  pm.addNestedPass<func::FuncOp>(createUseArgsInHostPass());        // use-args-in-host
   // -pass-pipeline='gpu.module([PASS1][PASS2]...)'
   pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());        // strip-debuginfo
   pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());           // lower-affine
