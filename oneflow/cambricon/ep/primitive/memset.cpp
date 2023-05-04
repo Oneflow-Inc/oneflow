@@ -13,8 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/ep/include/primitive/memset.h"
+#include "oneflow/cambricon/bang/bang_kernels.h"
 #include "oneflow/cambricon/ep/mlu_stream.h"
+#include "oneflow/core/ep/include/primitive/memset.h"
 
 namespace oneflow {
 namespace ep {
@@ -30,7 +31,11 @@ class MemsetImpl : public Memset {
 
   void Launch(Stream* stream, void* ptr, int value, size_t count) override {
     auto* mlu_stream = stream->As<MluStream>();
-    OF_MLU_CHECK(cnrtMemsetAsync(ptr, value, count, mlu_stream->mlu_stream()));
+    // cnrtMemsetAsync's performance is too low
+    // OF_MLU_CHECK(cnrtMemsetAsync(ptr, value, count, mlu_stream->mlu_stream()));
+    BangHandle handle(mlu_stream->mlu_stream(), mlu_stream->device()->nclusters(),
+                      mlu_stream->device()->ncores_per_cluster());
+    bang_memset_kernel(handle, ptr, value, count);
   }
 };
 

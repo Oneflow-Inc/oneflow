@@ -222,18 +222,11 @@ void EagerCnclCommMgr::CreateCommFromPlan(const Plan& plan) {
   }
 }
 
-REGISTER_CCL_MGR_CREATE_AND_DESTORY_FN(
-    []() -> Maybe<void> {
-      // setenv() function return zero on success, or -1 on error
-      CHECK(setenv("CNCL_LOG_LEVEL", "ERROR", 0) == 0);
-      CHECK(setenv("CNCL_MEM_POOL_MULTI_CLIQUE_ENABLE", "6", 0) == 0);
+COMMAND({
+  CHECK(setenv("CNCL_LOG_LEVEL", "ERROR", 0) == 0);
+  CHECK(setenv("CNCL_MEM_POOL_MULTI_CLIQUE_ENABLE", "6", 0) == 0);
+});
 
-      Singleton<EagerCnclCommMgr>::New();
-      return Maybe<void>::Ok();
-    },
-    []() -> Maybe<void> {
-      Singleton<EagerCnclCommMgr>::Delete();
-      return Maybe<void>::Ok();
-    });
+REGISTER_CCL_COMM_MGR(DeviceType::kMLU, EagerCnclCommMgr);
 
 }  // namespace oneflow

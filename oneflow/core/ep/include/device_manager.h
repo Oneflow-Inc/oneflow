@@ -43,6 +43,7 @@ class DeviceManager {
   virtual void SetActiveDeviceByIndex(size_t device_index) = 0;
 
   virtual bool IsDeviceStreamWaitEventSupported() const { return false; }
+  virtual bool IsSplitMemBlockSupported() const { return true; }
 
   virtual std::shared_ptr<RandomGenerator> CreateRandomGenerator(uint64_t seed,
                                                                  size_t device_index) = 0;

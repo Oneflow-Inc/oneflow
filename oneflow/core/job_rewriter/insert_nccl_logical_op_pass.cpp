@@ -1092,8 +1092,8 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
                       "launch upper limit."
                    << " So the nccl logical kernel will from async to sync exec, which may affect "
                       "performance.";
-      EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get());
-      comm_mgr->SetAsyncLaunchNcclLogicalKernel(false);
+      EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
+      comm_mgr->SetAsyncLaunchCclLogicalKernel(false);
     }
 
     // NOTE(chengcheng): insert acc for all subgraph with same placement group

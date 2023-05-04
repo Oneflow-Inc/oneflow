@@ -106,7 +106,7 @@ void bang_multi_count_not_finite_kernel(BangHandle& handle, int64_t n, const T**
                                         const int64_t* sizes, int64_t* output, void* workspace,
                                         int64_t workspace_size) {
   if (n == 0) {
-    cnrtMemsetAsync(output, 0, sizeof(int64_t), handle.queue);
+    bang_memset_kernel(handle, output, 0, sizeof(int64_t));
     return;
   }
   uint32_t ncores = handle.ncores_per_cluster * handle.nclusters;

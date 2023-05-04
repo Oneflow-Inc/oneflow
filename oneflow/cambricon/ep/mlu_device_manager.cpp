@@ -47,8 +47,7 @@ size_t MluDeviceManager::GetDeviceCount(size_t primary_device_index) {
 
 size_t MluDeviceManager::GetDeviceCount() {
   uint32_t count = 0;
-  cnrtRet_t err = cnrtGetDeviceCount(&count);
-  OF_MLU_CHECK(err);
+  OF_MLU_CHECK(cnrtGetDeviceCount(&count));
   return count;
 }
 

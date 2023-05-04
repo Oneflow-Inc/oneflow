@@ -41,11 +41,13 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
   cnnlDataType_t cnnl_data_type = ConvertToCnnlDataType(data_type);
   int32_t is_trans_a = transpose_a == BlasTransposeType::T;
   int32_t is_trans_b = transpose_b == BlasTransposeType::T;
+  int32_t use_beta = 1;
 
   CnnlMatmulDescriptor matmul_desc;
   matmul_desc.set_attr(CNNL_MATMUL_DESC_COMPUTE_TYPE, &cnnl_data_type, sizeof(cnnlDataType_t));
   matmul_desc.set_attr(CNNL_MATMUL_DESC_TRANSA, &is_trans_a, sizeof(int32_t));
   matmul_desc.set_attr(CNNL_MATMUL_DESC_TRANSB, &is_trans_b, sizeof(int32_t));
+  matmul_desc.set_attr(CNNL_MATMUL_USE_BETA, &use_beta, sizeof(int32_t));
 
   float cnnl_alpha = alpha.Value<float>();
   float cnnl_beta = beta.Value<float>();

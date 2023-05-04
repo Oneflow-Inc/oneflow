@@ -30,7 +30,9 @@ void CudaCommunicationContext::Init(Symbol<ParallelDesc> parallel_desc) {
     device_set.emplace(std::make_pair(machine_id, device_id));
     rank2nccl_index_.emplace(machine_id, parallel_id);
   }
-  nccl_comm_ = CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set);
+  nccl_comm_ = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get())
+                   ->As<EagerNcclCommMgr>()
+                   ->GetCommForDevice(device_set);
 }
 
 REGISTER_COLLECTIVE_COMMUNICATION_COMMUNICATOR(DeviceType::kCUDA, CudaCommunicationContext);

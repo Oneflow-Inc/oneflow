@@ -28,14 +28,15 @@ namespace vm {
 
 namespace {
 
-std::unique_ptr<BinAllocator<ThreadSafeLock>> CreateEpBackendDeviceAllocator(
-    Symbol<Device> device) {
+std::unique_ptr<Allocator> CreateEpBackendDeviceAllocator(Symbol<Device> device) {
   DeviceType device_type = device->enum_type();
   size_t device_index = device->device_id();
-  auto ep_device =
-      Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
+  ep::DeviceManager* device_mgr =
+      Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceManager(device_type);
+  auto ep_device = device_mgr->GetDevice(device_index);
   auto ep_backend_allocator =
       std::make_unique<EpBackendAllocator>(ep_device, ep::AllocationOptions{});
+  if (!device_mgr->IsSplitMemBlockSupported()) { return ep_backend_allocator; }
   return std::make_unique<BinAllocator<ThreadSafeLock>>(ep::kMaxAlignmentRequirement,
                                                         std::move(ep_backend_allocator));
 }

@@ -139,10 +139,10 @@ void bang_multi_reduce_sum_pow_abs_kernel(BangHandle& handle, int64_t n, const T
                                           const int64_t* sizes, T* output, float p, void* workspace,
                                           int64_t workspace_size) {
   if (n == 0) {
-    cnrtMemsetAsync(output, 0, sizeof(T), handle.queue);
+    bang_memset_kernel(handle, output, 0, sizeof(T));
     return;
   }
-  cnrtMemsetAsync(workspace, 0, workspace_size, handle.queue);
+  bang_memset_kernel(handle, workspace, 0, workspace_size);
 
   // TODO(): check workspace_size == n * sizeof(T)
   T* workspace_ptr = static_cast<T*>(workspace);
