@@ -142,7 +142,7 @@ class TestMock(flow.unittest.TestCase):
             test_case.assertEqual(x.__name__, "oneflow.not_exist.x")
 
     def test_mock_torchvision(test_case):
-        with mock.enable(lazy=True, extra_libs={"torchvision": "flowvision"}):
+        with mock.enable(lazy=True):
             import torchvision
 
             model = torchvision.models.resnet18(pretrained=False)
@@ -212,6 +212,12 @@ class TestMock(flow.unittest.TestCase):
             test_case.assertFalse(
                 hasattr(torch.nn.functional, "scaled_dot_product_attention")
             )
+
+    def test_mock_extra_dict(test_case):
+        with mock.enable(lazy=True, extra_dict={"torchvision": "flowvision"}):
+            import torchvision
+
+            test_case.assertEqual(torchvision.models.__package__, "flowvision.models")
 
 
 # MUST use pytest to run this test
