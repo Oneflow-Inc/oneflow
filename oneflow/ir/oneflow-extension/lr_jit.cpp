@@ -88,10 +88,10 @@ static mlir::LogicalResult lowerToLLVMDialect(mlir::ModuleOp module) {
   pm.addNestedPass<mlir::func::FuncOp>(mlir::LLVM::createRequestCWrappersPass());
   pm.addPass(mlir::createCSEPass());
   pm.addPass(mlir::createCanonicalizerPass());
-  pm.addPass(mlir::createMemRefToLLVMConversionPass());
+  pm.addPass(mlir::createFinalizeMemRefToLLVMConversionPass());
   pm.addPass(mlir::createConvertFuncToLLVMPass());
   pm.addPass(mlir::createConvertSCFToCFPass());
-  pm.addPass(mlir::cf::createConvertControlFlowToLLVMPass());
+  pm.addPass(mlir::createConvertControlFlowToLLVMPass());
   pm.addPass(mlir::createConvertMathToLLVMPass());
   pm.addPass(mlir::arith::createArithExpandOpsPass());
   pm.addPass(mlir::createArithToLLVMConversionPass());
@@ -134,7 +134,7 @@ static LRJITRegistry_Store_ GenFunc(pyast::FunctionDef& ast, bool is_dump) {
   context.loadDialect<mlir::math::MathDialect>();
   context.loadDialect<mlir::scf::SCFDialect>();
   context.loadDialect<mlir::cf::ControlFlowDialect>();
-  context.loadDialect<mlir::AffineDialect>();
+  context.loadDialect<mlir::affine::AffineDialect>();
 
   auto module = GenModule(context, ast);
   if (is_dump) { module->dump(); }
