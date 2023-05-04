@@ -24,7 +24,6 @@ namespace auto_parallel {
 namespace {
 class NoCleaningMarker {
  public:
-  static int32_t max_marker;
   static int32_t marker;
   int32_t status = 0;
 
@@ -34,15 +33,11 @@ class NoCleaningMarker {
   void UnMark() { status = 0; }
 };
 
-void ResetNoCleaningMarker() {
-    ++NoCleaningMarker::marker;
-    if (NoCleaningMarker::marker == NoCleaningMarker::max_marker) { NoCleaningMarker::marker = 1; }
-  }
+int32_t NoCleaningMarker::marker = 1;
 
- void InitNoCleaningMarker() {
-  NoCleaningMarker::max_marker = 10000;
-  NoCleaningMarker::marker = 1;
-}
+void ResetNoCleaningMarker() { ++NoCleaningMarker::marker; }
+
+void InitNoCleaningMarker() { NoCleaningMarker::marker = 1; }
 
 class TopoStruct {
  public:
