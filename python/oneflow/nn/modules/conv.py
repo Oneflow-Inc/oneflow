@@ -217,12 +217,20 @@ class Conv1d(Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.weight = flow.nn.Parameter(
-            flow.empty(out_channels, in_channels // groups, *self.kernel_size, dtype=dtype, device=device)
+            flow.empty(
+                out_channels,
+                in_channels // groups,
+                *self.kernel_size,
+                dtype=dtype,
+                device=device
+            )
         )
         self.out_channel_groups = out_channels // groups
         self.bias = None
         if bias:
-            self.bias = flow.nn.Parameter(flow.empty(out_channels, dtype=dtype, device=device))
+            self.bias = flow.nn.Parameter(
+                flow.empty(out_channels, dtype=dtype, device=device)
+            )
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
@@ -418,11 +426,23 @@ class Conv2d(Module):
         self.out_channels = out_channels
         if self.channel_pos == "channels_first":
             self.weight = flow.nn.Parameter(
-                flow.empty(out_channels, in_channels // groups, *self.kernel_size, device=device, dtype=dtype)
+                flow.empty(
+                    out_channels,
+                    in_channels // groups,
+                    *self.kernel_size,
+                    device=device,
+                    dtype=dtype
+                )
             )
         else:
             self.weight = flow.nn.Parameter(
-                flow.empty(out_channels, *self.kernel_size, in_channels // groups, device=device, dtype=dtype)
+                flow.empty(
+                    out_channels,
+                    *self.kernel_size,
+                    in_channels // groups,
+                    device=device,
+                    dtype=dtype
+                )
             )
 
         self.out_channel_groups = out_channels // groups
@@ -596,12 +616,20 @@ class Conv3d(Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.weight = flow.nn.Parameter(
-            flow.empty(out_channels, in_channels // groups, *self.kernel_size, device=device, dtype=dtype)
+            flow.empty(
+                out_channels,
+                in_channels // groups,
+                *self.kernel_size,
+                device=device,
+                dtype=dtype
+            )
         )
         self.out_channel_groups = out_channels // groups
         self.bias = None
         if bias:
-            self.bias = flow.nn.Parameter(flow.empty(out_channels, device=device, dtype=dtype))
+            self.bias = flow.nn.Parameter(
+                flow.empty(out_channels, device=device, dtype=dtype)
+            )
         self.reset_parameters()
 
     def reset_parameters(self) -> None:

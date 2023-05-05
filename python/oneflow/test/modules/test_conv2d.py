@@ -1598,7 +1598,9 @@ class TestConv2d(flow.unittest.TestCase):
                     conv.bias.numpy(), np.zeros((1,)), rtol=1e-9, atol=1e-10
                 )
             )
-            conv = flow.nn.Conv2d(1, 1, (3, 3), bias=True, device=device, dtype=flow.float32)
+            conv = flow.nn.Conv2d(
+                1, 1, (3, 3), bias=True, device=device, dtype=flow.float32
+            )
             test_case.assertTrue(
                 not np.allclose(
                     conv.weight.numpy(), np.zeros((1, 1, 3, 3)), rtol=1e-9, atol=1e-10
@@ -1609,7 +1611,9 @@ class TestConv2d(flow.unittest.TestCase):
                     conv.bias.numpy(), np.zeros((1,)), rtol=1e-9, atol=1e-10
                 )
             )
-            conv = flow.nn.Conv2d(1, 1, (3, 3), bias=True, device=device, dtype=flow.float16)
+            conv = flow.nn.Conv2d(
+                1, 1, (3, 3), bias=True, device=device, dtype=flow.float16
+            )
             test_case.assertTrue(
                 not np.allclose(
                     conv.weight.numpy(), np.zeros((1, 1, 3, 3)), rtol=1e-9, atol=1e-10
