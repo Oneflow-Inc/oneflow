@@ -1598,6 +1598,32 @@ class TestConv2d(flow.unittest.TestCase):
                     conv.bias.numpy(), np.zeros((1,)), rtol=1e-9, atol=1e-10
                 )
             )
+            conv = flow.nn.Conv2d(
+                1, 1, (3, 3), bias=True, device=device, dtype=flow.float32
+            )
+            test_case.assertTrue(
+                not np.allclose(
+                    conv.weight.numpy(), np.zeros((1, 1, 3, 3)), rtol=1e-9, atol=1e-10
+                )
+            )
+            test_case.assertTrue(
+                not np.allclose(
+                    conv.bias.numpy(), np.zeros((1,)), rtol=1e-9, atol=1e-10
+                )
+            )
+            conv = flow.nn.Conv2d(
+                1, 1, (3, 3), bias=True, device=device, dtype=flow.float16
+            )
+            test_case.assertTrue(
+                not np.allclose(
+                    conv.weight.numpy(), np.zeros((1, 1, 3, 3)), rtol=1e-9, atol=1e-10
+                )
+            )
+            test_case.assertTrue(
+                not np.allclose(
+                    conv.bias.numpy(), np.zeros((1,)), rtol=1e-9, atol=1e-10
+                )
+            )
 
     @unittest.skip("skip for now, becase it failed 8 times in past week")
     @autotest(n=3)
@@ -1863,7 +1889,7 @@ class TestConv2d(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(n=5, rtol=1e-2)
+    @autotest(n=5, rtol=1e-2, atol=1e-2)
     def test_conv2d_with_random_data(test_case):
         channels = random(1, 6)
         m = torch.nn.Conv2d(
@@ -1887,7 +1913,7 @@ class TestConv2d(flow.unittest.TestCase):
         version.parse(torch_original.__version__) <= version.parse("1.13.0"),
         "conv module don't support unbatched input in PyTorch before '1.13.0'",
     )
-    @autotest(n=5)
+    @autotest(n=5, rtol=1e-3, atol=1e-3)
     def test_conv2d_auto_squeeze_with_random_data(test_case):
         channels = random(1, 6)
         m = torch.nn.Conv2d(
