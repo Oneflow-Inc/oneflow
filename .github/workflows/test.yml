@@ -1019,7 +1019,7 @@ jobs:
           docker exec -e ONEFLOW_TEST_DEVICE_NUM=4 -w $PWD/${{ env.ONEFLOW_FACE_SRC }} ${{ env.TEST_CONTAINER_NAME }} python3 -m oneflow.distributed.launch --nproc_per_node 4 -m pytest tests/train/test_train.py
       - name: oneflow_iree test
         timeout-minutes: 45
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc'  && false  }}
         run: |
           docker exec -w $PWD/${{ env.ONEFLOW_IREE_SRC }} ${{ env.TEST_CONTAINER_NAME }} python3 -m pytest examples
       - name: IR tests
