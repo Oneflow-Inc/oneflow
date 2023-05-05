@@ -108,15 +108,12 @@ add_docstr(
     Computes the Hurwitz zeta function, elementwise.
     
     .. math::
-    \zeta(x, q) = \sum_{k=0}^{\infty} \frac{1}{(k + q)^x}
+        \zeta(x, q) = \sum_{k=0}^{\infty} \frac{1}{(k + q)^x}
     
     Args:
-    input (Tensor): the input tensor corresponding to `x`.
-    other (Tensor): the input tensor corresponding to `q`.
+        input (Tensor): the input tensor corresponding to `x`.
+        other (Tensor): the input tensor corresponding to `q`.
 
-    .. note::
-    The Riemann zeta function corresponds to the case when `q = 1`
-    
     For example:
 
     .. code-block:: python
