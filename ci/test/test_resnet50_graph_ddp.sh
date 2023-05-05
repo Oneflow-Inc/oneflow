@@ -3,11 +3,12 @@
 set -ex
 
 cd $ONEFLOW_MODELS_DIR
+ONEFLOW_TEST_DATASET_DIR=${ONEFLOW_TEST_DATASET_DIR:-"/dataset"}
+OFRECORD_PATH=${ONEFLOW_TEST_DATASET_DIR}/imagenette/ofrecord
 
-OFRECORD_PATH=/dataset/imagenette/ofrecord
-if [ ! -d "/dataset/imagenette/ofrecord/train" ];then
+if [ ! -d "${ONEFLOW_TEST_DATASET_DIR}/imagenette/ofrecord/train" ];then
     mkdir -p ./dataset/ofrecord
-    ln -s /dataset/imagenette/ofrecord ./dataset/ofrecord/train
+    ln -s ${ONEFLOW_TEST_DATASET_DIR}/imagenette/ofrecord ./dataset/ofrecord/train
     OFRECORD_PATH=./dataset/ofrecord
 fi
 
