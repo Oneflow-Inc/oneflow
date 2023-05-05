@@ -27,6 +27,14 @@ namespace one {
 
 namespace {
 
+bool NcclUseComputeStream() {
+#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+  return ParseBooleanFromEnv("ONEFLOW_EAGER_NCCL_USE_COMPUTE_STREAM", false);
+#else
+  return false;
+#endif
+}
+
 Maybe<void> CheckIsDeviceSupportedByOp(const Device& device, const std::string& op_type_name) {
   if (IsCpuOnly(op_type_name)) { CHECK_EQ_OR_RETURN(device.type(), "cpu"); }  // NOLINT
   return Maybe<void>::Ok();
@@ -105,7 +113,8 @@ Maybe<Symbol<Stream>> InferDeviceAndStream(const UserOpExpr& user_op_expr,
                                            const LocalTensorMetaInferArgs& infer_args,
                                            OpArgsVector<MutLocalTensorMeta>* output_tensor_metas) {
   Symbol<Stream> stream;
-  if (!user_op_expr.has_device_and_stream_infer_fn()) {
+  if ((NcclUseComputeStream() || !user_op_expr.has_device_and_stream_infer_fn())
+      && user_op_expr.op_type_name() != "copy") {
     stream = JUST(GetDefaultStreamByDevice(default_device));
     for (int i = 0; i < user_op_expr.output_size(); i++) {
       auto& tensor_meta = output_tensor_metas->at(i);
