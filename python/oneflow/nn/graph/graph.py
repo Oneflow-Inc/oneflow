@@ -1125,11 +1125,12 @@ class Graph(object):
             Dict[str, Union[Dict[str, Tensor], str]],
             Dict[str, Dict[str, Union[Dict[str, Tensor], str]]],
         ],
+        *,
         warmup_with_run: bool = False,
     ) -> None:
         if self._run_with_cache == True:
             return self._dynamic_input_graph_cache.load_runtime_state_dict(
-                state_dict, warmup_with_run
+                state_dict, warmup_with_run=warmup_with_run
             )
 
         build_graph_start = time.perf_counter()
@@ -1176,23 +1177,21 @@ class Graph(object):
         ]
         _eager_outputs_index = state_dict["outputs_original"]
 
-        def get_tensor_in_tuple(io_type, map_item):
+        def get_tensor_in_tuple(tensor_tuple, map_item):
             if isinstance(map_item, str) and map_item.startswith("_OFTPI"):
                 of_idx = int(map_item[6:])
-                if io_type == "input":
-                    return self._inputs_tensor_tuple[of_idx]
-                if io_type == "output":
-                    return self._outputs_tensor_tuple[of_idx]
+                return tensor_tuple[of_idx]
             else:
                 return map_item
 
         _eager_inputs_args, _eager_inputs_kwargs = self.__map_io_lite(
-            partial(get_tensor_in_tuple, "input"),
+            partial(get_tensor_in_tuple, self._inputs_tensor_tuple),
             *_eager_inputs_args_index,
             **_eager_inputs_kwargs_index,
         )
         _eager_outputs, _ = self.__map_io_lite(
-            partial(get_tensor_in_tuple, "output"), *_eager_outputs_index
+            partial(get_tensor_in_tuple, self._outputs_tensor_tuple),
+            *_eager_outputs_index,
         )
         self._eager_outputs = _eager_outputs
 
