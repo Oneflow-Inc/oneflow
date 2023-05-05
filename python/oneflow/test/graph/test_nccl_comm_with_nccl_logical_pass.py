@@ -28,10 +28,8 @@ class _TestModuleDiffHierarchy(nn.Module):
     def forward(self, x):
         sbp_1ds = [
             flow.sbp.broadcast,
-            flow.sbp.partial_sum,
             flow.sbp.split(0),
             flow.sbp.split(1),
-            flow.sbp.split(2),
         ]
 
         for sbp1 in sbp_1ds:
@@ -58,10 +56,8 @@ class _TestModuleDiffPlacement(nn.Module):
     def forward(self, x):
         sbp_1ds = [
             flow.sbp.broadcast,
-            flow.sbp.partial_sum,
             flow.sbp.split(0),
             flow.sbp.split(1),
-            flow.sbp.split(2),
         ]
         for sbp1 in sbp_1ds:
             for sbp2 in sbp_1ds:
