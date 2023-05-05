@@ -27,14 +27,6 @@ namespace one {
 
 namespace {
 
-bool NcclUseComputeStream() {
-#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
-  return ParseBooleanFromEnv("ONEFLOW_EAGER_NCCL_USE_COMPUTE_STREAM", false);
-#else
-  return false;
-#endif
-}
-
 Maybe<void> CheckIsDeviceSupportedByOp(const Device& device, const std::string& op_type_name) {
   if (IsCpuOnly(op_type_name)) { CHECK_EQ_OR_RETURN(device.type(), "cpu"); }  // NOLINT
   return Maybe<void>::Ok();

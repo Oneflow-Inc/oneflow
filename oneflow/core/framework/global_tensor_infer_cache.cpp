@@ -28,14 +28,6 @@ namespace one {
 
 namespace {
 
-bool NcclUseComputeStream() {
-#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
-  return ParseBooleanFromEnv("ONEFLOW_EAGER_NCCL_USE_COMPUTE_STREAM", false);
-#else
-  return false;
-#endif
-}
-
 bool OptionalEqual(const Optional<Symbol<NdSbp>>& lhs, const Optional<Symbol<NdSbp>>& rhs) {
   if (lhs.has_value() != rhs.has_value()) { return false; }
   if (!lhs.has_value()) { return true; }

@@ -31,7 +31,7 @@ namespace oneflow {
 class ParallelDesc;
 class MemoryCase;
 
-inline size_t GetInstructionHighWaterMark() { return 400000; }
+inline size_t GetInstructionHighWaterMark() { return 40000; }
 inline size_t GetInstructionLowWaterMark() { return 20000; }
 
 class Device final {
