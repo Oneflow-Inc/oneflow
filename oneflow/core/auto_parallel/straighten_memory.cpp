@@ -167,8 +167,13 @@ void ComputeAllMemoryIncrement(std::vector<TopoStruct*>& topo_structs,
   // Subtract the consumed memory
   for (int32_t id = 0; id < id2consumer_topo_structs.size(); id++) {
     if (id2producer_topo_struct[id]->is_reusable) {
-      // Check whether two blobs have the same consumer_topo_structs
       auto& consumer_topo_structs = id2consumer_topo_structs[id];
+      // Release the blob in the blocking node
+      if(consumer_topo_structs.size() == 1 && id2producer_topo_struct[id]->memory_increment >= id2blob_size[id]){
+        id2producer_topo_struct[id]->memory_increment -= id2blob_size[id];
+        continue;
+      }
+      // Check whether two blobs have the same consumer_topo_structs
       auto& first_consumer_outs = consumer_topo_structs[0]->out_topo_structs;
       bool not_merged = true;
       for (int32_t out_id = first_consumer_outs.size() - 1; out_id >= 0; out_id--) {
@@ -365,6 +370,8 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
     ResetNoCleaningMarkerDescendant();
     for (auto* node : prepare_topo_structs) { Visit(node); }
   };
+  int64_t peak_memory = 0;
+  int64_t total_memory = 0;
   // Execute one node and its ancestors
   std::function<void(TopoStruct*)> Execute = [&](TopoStruct* node) {
     // Post-order traversal
@@ -374,6 +381,10 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
     // Execute the current node
     if (node->op_node) { ordered_topo_structs->push_back(node); }
     node->executed = true;
+    total_memory += node->memory_increment;
+    if(total_memory > peak_memory){
+      peak_memory = total_memory;
+    }
     StopWaiting(node);
     prepare_topo_structs.push_back(node);
     if (GlobalProcessCtx::Rank() == 0) {
@@ -383,7 +394,9 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
       } else {
         std::cout << "blob id: " << node->blob_id;
       }
-      std::cout << ", memory increment: " << node->memory_increment << std::endl;
+      std::cout << ", memory increment: " << node->memory_increment 
+      << ", current total: " << total_memory
+      << std::endl;
     }
   };
 
