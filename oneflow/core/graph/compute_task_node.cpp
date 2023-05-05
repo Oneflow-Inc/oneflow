@@ -82,6 +82,7 @@ void CompTaskNode::ConsumeFakeRegstsIf() {
   for (const auto& pair : consumed_regsts()) {
     for (const auto& regst_desc : pair.second) {
       if (regst_desc->regst_desc_type().has_data_regst_desc()) {
+        // Only one fake data regst is creatd for each CompTaskNode with ConsumeFakeRegsts().
         CHECK(data_regst_desc == nullptr);
         data_regst_desc = CHECK_NOTNULL(regst_desc.get());
       } else if (regst_desc->regst_desc_type().has_ctrl_regst_desc()) {
@@ -93,6 +94,7 @@ void CompTaskNode::ConsumeFakeRegstsIf() {
   }
   if (data_regst_desc != nullptr) {
     for (const auto& ibn : op_node()->op().input_bns()) {
+      // Only one fake data regst is creatd and just use it for all input_bns as a placeholder.
       data_regst_desc->AddLbi(op_node()->op().BnInOp2Lbi(ibn));
     }
   }
