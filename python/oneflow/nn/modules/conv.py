@@ -448,7 +448,7 @@ class Conv2d(Module):
         self.out_channel_groups = out_channels // groups
         self.bias = None
         if bias:
-            self.bias = flow.nn.Parameter(flow.Tensor(out_channels))
+            self.bias = flow.nn.Parameter(flow.empty(out_channels, device=device, dtype=dtype))
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
