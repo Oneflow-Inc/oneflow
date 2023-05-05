@@ -30,6 +30,7 @@ class CpuDevice : public Device {
   ~CpuDevice() override = default;
 
   void SetAsActiveDevice() override;
+  void Reset() override {}
   void SetNumThreads(size_t num_threads) { num_threads_ = num_threads; }
   size_t GetNumThreads() { return num_threads_; }
 
