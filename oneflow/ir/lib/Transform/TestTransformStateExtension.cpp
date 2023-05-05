@@ -25,8 +25,8 @@ limitations under the License.
 
 using namespace mlir;
 
-LogicalResult test::TestTransformStateExtension::updateMapping(Operation* previous,
-                                                               Operation* updated) {
+LogicalResult transform::TestTransformStateExtension::updateMapping(Operation* previous,
+                                                                    Operation* updated) {
   // Update value handles. The new ops should have at least as many results as
   // the replacement op. Fewer results are acceptable, if those results are not
   // mapped to any handle.

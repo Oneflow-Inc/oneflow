@@ -32,7 +32,7 @@ limitations under the License.
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 
 namespace mlir {
-namespace test {
+namespace transform {
 class TestTransformStateExtension : public transform::TransformState::Extension {
  public:
   TestTransformStateExtension(transform::TransformState& state, StringAttr message)
@@ -45,7 +45,7 @@ class TestTransformStateExtension : public transform::TransformState::Extension 
  private:
   StringAttr message;
 };
-}  // namespace test
+}  // namespace transform
 }  // namespace mlir
 
 #endif  // MLIR_TEST_LIB_DIALECT_TRANSFORM_TESTTRANSFORMSTATEEXTENSION_H

@@ -216,7 +216,7 @@ struct TestTransformDialectEraseSchedulePass
 }  // namespace
 
 namespace mlir {
-namespace test {
+namespace transform {
 /// Registers the test pass for erasing transform dialect ops.
 void registerTestTransformDialectEraseSchedulePass() {
   PassRegistration<TestTransformDialectEraseSchedulePass> reg;
@@ -225,5 +225,5 @@ void registerTestTransformDialectEraseSchedulePass() {
 void registerTestTransformDialectInterpreterPass() {
   PassRegistration<TestTransformDialectInterpreterPass> reg;
 }
-}  // namespace test
+}  // namespace transform
 }  // namespace mlir

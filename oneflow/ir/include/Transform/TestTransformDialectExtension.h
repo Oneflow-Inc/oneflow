@@ -38,12 +38,12 @@ limitations under the License.
 namespace mlir {
 class DialectRegistry;
 
-namespace test {
+namespace transform {
 /// Registers the test extension to the Transform dialect.
 void registerTestTransformDialectExtension(::mlir::DialectRegistry& registry);
 void registerTestTransformDialectEraseSchedulePass();
 void registerTestTransformDialectInterpreterPass();
-}  // namespace test
+}  // namespace transform
 
 }  // namespace mlir
 
