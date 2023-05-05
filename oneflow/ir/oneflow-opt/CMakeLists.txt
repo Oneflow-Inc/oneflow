@@ -11,6 +11,6 @@ set_target_properties(
                          INSTALL_RPATH "${_origin_prefix}")
 llvm_update_compile_flags(oneflow-opt)
 target_link_libraries(oneflow-opt PRIVATE MLIROneFlow ${dialect_libs} ${conversion_libs} MLIROptLib
-                                          $<TARGET_OBJECTS:of_op_schema> MLIROneFlowExtension)
+                                          $<TARGET_OBJECTS:of_op_schema> MLIROneFlowExtension MLIRTestTransformDialect)
 
 mlir_check_all_link_libraries(oneflow-opt)
