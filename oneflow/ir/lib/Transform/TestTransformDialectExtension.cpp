@@ -156,7 +156,8 @@ void mlir::transform::TestProduceValueHandleToResult::getEffects(
   transform::onlyReadsPayload(effects);
 }
 
-DiagnosedSilenceableFailure mlir::transform::TestProduceValueHandleToArgumentOfParentBlock::applyToOne(
+DiagnosedSilenceableFailure
+mlir::transform::TestProduceValueHandleToArgumentOfParentBlock::applyToOne(
     Operation* target, transform::ApplyToEachResultList& results,
     transform::TransformState& state) {
   if (!target->getBlock()) return emitSilenceableError() << "payload has no parent block";
@@ -547,7 +548,8 @@ void mlir::transform::TestProduceTransformParamOrForwardOperandOp::getEffects(
   transform::producesHandle(getParam(), effects);
 }
 
-DiagnosedSilenceableFailure mlir::transform::TestProduceTransformParamOrForwardOperandOp::applyToOne(
+DiagnosedSilenceableFailure
+mlir::transform::TestProduceTransformParamOrForwardOperandOp::applyToOne(
     Operation* target, ::transform::ApplyToEachResultList& results,
     ::transform::TransformState& state) {
   Builder builder(getContext());
