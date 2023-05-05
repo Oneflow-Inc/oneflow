@@ -583,8 +583,7 @@ class TestCoshModule(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestLgammaModule(flow.unittest.TestCase):
-    # TODO: Add lgamma backward.
-    @autotest(n=5, auto_backward=False)
+    @autotest(n=5)
     def test_lgamma_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)

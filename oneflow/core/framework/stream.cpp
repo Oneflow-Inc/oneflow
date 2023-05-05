@@ -22,11 +22,22 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/framework/stream_mgr.h"
 #include "oneflow/core/vm/stream_get_allocator_stream_type.h"
+#include "oneflow/core/ep/include/device_manager.h"
+#include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace oneflow {
 
 Stream::Stream(Symbol<Device> device, StreamType stream_type, size_t thread_uid)
-    : device_(device), stream_type_(stream_type), thread_uid_(thread_uid), unique_stream_id_(-1) {}
+    : device_(device),
+      stream_type_(stream_type),
+      thread_uid_(thread_uid),
+      unique_stream_id_(-1),
+      support_wait_event_(false) {
+  ep::DeviceManager* device_mgr =
+      Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceManagerOrNull(device->enum_type());
+  if (!device_mgr) { return; }
+  support_wait_event_ = device_mgr->IsStreamWaitEventSupported();
+}
 
 Maybe<void> Stream::Init(size_t unique_stream_id) {
   unique_stream_id_ = unique_stream_id;

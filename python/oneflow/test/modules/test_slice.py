@@ -132,6 +132,15 @@ def _test_slice_backward(test_case, device):
     test_case.assertTrue(np.array_equal(x.grad.numpy(), np_grad))
 
 
+def _test_slice_scalar(test_case, device):
+    dtype = [flow.int8, flow.int16, flow.int32, flow.int64]
+    x = flow.randn(50, 534, 800, device=device)
+    for d in dtype:
+        scalar = flow.tensor(3, dtype=d, device=device)
+        y = x[scalar]
+        test_case.assertTrue(y.shape, (534, 800))
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestSlice(flow.unittest.TestCase):
     def test_slice(test_case):
@@ -146,6 +155,7 @@ class TestSlice(flow.unittest.TestCase):
             _test_slice_negative_index,
             _test_slice_ellipsis_type,
             _test_slice_backward,
+            _test_slice_scalar,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
