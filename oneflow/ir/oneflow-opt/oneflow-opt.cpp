@@ -99,7 +99,7 @@ int32_t main(int32_t argc, char** argv) {
   registry.insert<mlir::memref::MemRefDialect>();
   registry.insert<mlir::LLVM::LLVMDialect>();
   registry.insert<mlir::gpu::GPUDialect>();
-  registry.insert<mlir::AffineDialect>();
+  registry.insert<mlir::affine::AffineDialect>();
   registry.insert<mlir::tensor::TensorDialect>();
   registry.insert<mlir::NVVM::NVVMDialect>();
   registry.insert<mlir::bufferization::BufferizationDialect>();
