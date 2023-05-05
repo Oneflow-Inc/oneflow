@@ -332,7 +332,21 @@ bool IsConnectedLbisAllSameNdSbp(const OpEdge* op_edge) {
   return *predicators.begin();
 }
 
-BldSubTskGphMthd GetMthdForBldSubTskGph(const OpEdge* op_edge) {
+bool IsEdgeIdentitySbp(const OpEdge* op_edge, const LogicalBlobId& lbi) {
+  const OpNode* src_node = op_edge->src_node();
+  const OpNode* dst_node = op_edge->dst_node();
+  CHECK_GT(op_edge->lbis().size(), 0);
+  for (const LogicalBlobId& lbi_ : op_edge->lbis()) {
+    if (lbi_ == lbi) {
+      const NdSbp& src_nd_sbp = src_node->NdSbp4Lbi(lbi);
+      const NdSbp& dst_nd_sbp = dst_node->NdSbp4Lbi(lbi);
+      if (src_nd_sbp == dst_nd_sbp) { return true; }
+    }
+  }
+  return false;
+}
+
+BldSubTskGphMthd GetMthdForBldSubTskGph(const OpEdge* op_edge, const LogicalBlobId& lbi) {
   const OpNode* src_node = op_edge->src_node();
   const OpNode* dst_node = op_edge->dst_node();
   const ParallelDesc& src_pd = src_node->parallel_desc();
@@ -401,7 +415,7 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const OpEdge* op_edge) {
 
   // one to one
   if (src_pd.parallel_num() == dst_pd.parallel_num() && *src_pd.hierarchy() == *dst_pd.hierarchy()
-      && IsConnectedLbisAllSameNdSbp(op_edge)) {
+      && IsEdgeIdentitySbp(op_edge, lbi)) {
     return &TaskGraph::BldSubTskGphByOneToOne;
   }
 
@@ -490,10 +504,19 @@ TaskGraph::TaskGraph() {
     for (CompTaskNode* comp_task : *sorted_comp_tasks) { AddAllocatedNode(comp_task); }
   });
 
+  auto GetSortedCompTaskNodes =
+      [&op_node2sorted_comp_tasks](const OpNode* op_node) -> const std::vector<CompTaskNode*>& {
+    auto it = op_node2sorted_comp_tasks.find(op_node);
+    CHECK(it != op_node2sorted_comp_tasks.end())
+        << "can't get mapping CompTaskNode from OpNode: " << op_node->op().op_name();
+    return it->second;
+  };
+
   op_graph->ForEachEdge([&](const OpEdge* op_edge) {
-    BldSubTskGphMthd method = GetMthdForBldSubTskGph(op_edge);
-    (this->*method)(op_edge, op_node2sorted_comp_tasks.at(op_edge->src_node()),
-                    op_node2sorted_comp_tasks.at(op_edge->dst_node()));
+    for (const auto& lbi : op_edge->lbis()) {
+      BldSubTskGphMthd method = GetMthdForBldSubTskGph(op_edge, lbi);
+      (this->*method)(op_edge, lbi, GetSortedCompTaskNodes);
+    }
   });
 
   ForEachOpGraphNecessaryCtrlEdge(op_graph, [&](const OpNode* src, const OpNode* dst) {
@@ -801,51 +824,49 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
   const OpNode* dst_op_node = op_edge->dst_node();
   std::vector<LogicalBlobId> host_mem_input_lbis;
   GetHostInputLbis4OpNode(dst_op_node, &host_mem_input_lbis);
-  for (const LogicalBlobId& lbi : op_edge->lbis()) {
-    std::vector<TaskNode*> in_nodes(sorted_src_comp_tasks.begin(), sorted_src_comp_tasks.end());
-    std::vector<TaskNode*> out_nodes;
-    out_nodes.reserve(sorted_dst_comp_tasks.size());
-    std::vector<std::vector<TaskNode*>> sorted_ctrl_tasks;
-    const NdSbp& src_nd_sbp = src_op_node->NdSbp4Lbi(lbi);
-    const NdSbp& dst_nd_sbp = dst_op_node->NdSbp4Lbi(lbi);
-    const ParallelDesc& src_parallel_desc = src_op_node->parallel_desc();
-    const ParallelDesc& dst_parallel_desc = [&]() {
-      if (std::find(host_mem_input_lbis.begin(), host_mem_input_lbis.end(), lbi)
-          != host_mem_input_lbis.end()) {
-        return *CHECK_JUST(
-            ReplaceDeviceType(SymbolOf(dst_op_node->parallel_desc()), DeviceType::kCPU));
-      } else {
-        return dst_op_node->parallel_desc();
-      }
-    }();
-    const BlobDesc& blob_desc = src_op_node->LogicalBlobDesc4Lbi(lbi);
-    VLOG(3) << "src op: " << src_op_node->op().op_name()
-            << " dst op: " << dst_op_node->op().op_name()
-            << " src_parallel_conf: " << src_parallel_desc.parallel_conf().DebugString()
-            << " dst parallel conf: " << dst_parallel_desc.parallel_conf().DebugString()
-            << " src_nd_sbp " << src_nd_sbp.DebugString() << " dst nd_sbp "
-            << dst_nd_sbp.DebugString();
-    auto status = CHECK_JUST(hierarchical_sub_tsk_gph_builder_->Build(
-        sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes, &sorted_ctrl_tasks, src_parallel_desc,
-        dst_parallel_desc, lbi, blob_desc, src_nd_sbp, dst_nd_sbp,
-        *(CHECK_JUST(src_op_node->op().GetOpTimeShape()).get())));
-    boxing_logger_->Log(*status, src_op_node->op().op_name(), dst_op_node->op().op_name(),
-                        src_parallel_desc, dst_parallel_desc, src_nd_sbp, dst_nd_sbp, lbi,
-                        blob_desc);
-    CHECK_EQ(out_nodes.size(), sorted_dst_comp_tasks.size());
-    FOR_RANGE(size_t, i, 0, out_nodes.size()) {
-      ConnectWithLbi(out_nodes.at(i), sorted_dst_comp_tasks.at(i), lbi);
+  const auto& sorted_src_comp_tasks = GetSortedCompTaskNodesFn(src_op_node);
+  const auto& sorted_dst_comp_tasks = GetSortedCompTaskNodesFn(dst_op_node);
+  std::vector<TaskNode*> in_nodes(sorted_src_comp_tasks.begin(), sorted_src_comp_tasks.end());
+  std::vector<TaskNode*> out_nodes;
+  out_nodes.reserve(sorted_dst_comp_tasks.size());
+  std::vector<std::vector<TaskNode*>> sorted_ctrl_tasks;
+  const NdSbp& src_nd_sbp = src_op_node->NdSbp4Lbi(lbi);
+  const NdSbp& dst_nd_sbp = dst_op_node->NdSbp4Lbi(lbi);
+  const ParallelDesc& src_parallel_desc = src_op_node->parallel_desc();
+  const ParallelDesc& dst_parallel_desc = [&]() {
+    if (std::find(host_mem_input_lbis.begin(), host_mem_input_lbis.end(), lbi)
+        != host_mem_input_lbis.end()) {
+      return *CHECK_JUST(
+          ReplaceDeviceType(SymbolOf(dst_op_node->parallel_desc()), DeviceType::kCPU));
+    } else {
+      return dst_op_node->parallel_desc();
     }
-    if (!sorted_ctrl_tasks.empty()) {
-      CHECK_EQ(sorted_ctrl_tasks.size(), sorted_dst_comp_tasks.size());
-      FOR_RANGE(size_t, i, 0, sorted_dst_comp_tasks.size()) {
-        for (TaskNode* ctrl_node : sorted_ctrl_tasks.at(i)) {
-          std::string regst_desc_name;
-          ctrl_node->BuildCtrlRegstDesc(sorted_dst_comp_tasks.at(i), &regst_desc_name);
-          TaskEdge* edge = NewEdge();
-          Connect<TaskNode>(ctrl_node, edge, sorted_dst_comp_tasks.at(i));
-          ctrl_node->BindEdgeWithProducedRegst(edge, regst_desc_name);
-        }
+  }();
+  const BlobDesc& blob_desc = src_op_node->LogicalBlobDesc4Lbi(lbi);
+  VLOG(3) << "src op: " << src_op_node->op().op_name() << " dst op: " << dst_op_node->op().op_name()
+          << " src_parallel_conf: " << src_parallel_desc.parallel_conf().DebugString()
+          << " dst parallel conf: " << dst_parallel_desc.parallel_conf().DebugString()
+          << " src_nd_sbp " << src_nd_sbp.DebugString() << " dst nd_sbp "
+          << dst_nd_sbp.DebugString();
+  auto status = CHECK_JUST(hierarchical_sub_tsk_gph_builder_->Build(
+      sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes, &sorted_ctrl_tasks, src_parallel_desc,
+      dst_parallel_desc, lbi, blob_desc, src_nd_sbp, dst_nd_sbp,
+      *(CHECK_JUST(src_op_node->op().GetOpTimeShape()).get())));
+  boxing_logger_->Log(*status, src_op_node->op().op_name(), dst_op_node->op().op_name(),
+                      src_parallel_desc, dst_parallel_desc, src_nd_sbp, dst_nd_sbp, lbi, blob_desc);
+  CHECK_EQ(out_nodes.size(), sorted_dst_comp_tasks.size());
+  FOR_RANGE(size_t, i, 0, out_nodes.size()) {
+    ConnectWithLbi(out_nodes.at(i), sorted_dst_comp_tasks.at(i), lbi);
+  }
+  if (!sorted_ctrl_tasks.empty()) {
+    CHECK_EQ(sorted_ctrl_tasks.size(), sorted_dst_comp_tasks.size());
+    FOR_RANGE(size_t, i, 0, sorted_dst_comp_tasks.size()) {
+      for (TaskNode* ctrl_node : sorted_ctrl_tasks.at(i)) {
+        std::string regst_desc_name;
+        ctrl_node->BuildCtrlRegstDesc(sorted_dst_comp_tasks.at(i), &regst_desc_name);
+        TaskEdge* edge = NewEdge();
+        Connect<TaskNode>(ctrl_node, edge, sorted_dst_comp_tasks.at(i));
+        ctrl_node->BindEdgeWithProducedRegst(edge, regst_desc_name);
       }
     }
   }
@@ -854,37 +875,36 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne) {
   std::vector<LogicalBlobId> host_mem_input_lbis;
   GetHostInputLbis4OpNode(op_edge->dst_node(), &host_mem_input_lbis);
+  const auto& sorted_src_comp_tasks = GetSortedCompTaskNodesFn(op_edge->src_node());
+  const auto& sorted_dst_comp_tasks = GetSortedCompTaskNodesFn(op_edge->dst_node());
   CHECK_EQ(sorted_src_comp_tasks.size(), sorted_dst_comp_tasks.size());
   FOR_RANGE(size_t, i, 0, sorted_src_comp_tasks.size()) {
-    for (const LogicalBlobId& lbi : op_edge->lbis()) {
-      bool is_host_mem_input =
-          std::find(host_mem_input_lbis.begin(), host_mem_input_lbis.end(), lbi)
-          != host_mem_input_lbis.end();
-      BuildTaskPath(sorted_src_comp_tasks.at(i), sorted_dst_comp_tasks.at(i), lbi,
-                    is_host_mem_input);
-    }
+    bool is_host_mem_input = std::find(host_mem_input_lbis.begin(), host_mem_input_lbis.end(), lbi)
+                             != host_mem_input_lbis.end();
+    BuildTaskPath(sorted_src_comp_tasks.at(i), sorted_dst_comp_tasks.at(i), lbi, is_host_mem_input);
   }
 }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBroadcastToBroadcast) {
   std::vector<LogicalBlobId> host_mem_input_lbis;
   GetHostInputLbis4OpNode(op_edge->dst_node(), &host_mem_input_lbis);
+  const auto& sorted_src_comp_tasks = GetSortedCompTaskNodesFn(op_edge->src_node());
+  const auto& sorted_dst_comp_tasks = GetSortedCompTaskNodesFn(op_edge->dst_node());
   for (CompTaskNode* dst_node : sorted_dst_comp_tasks) {
     CompTaskNode* nearest_src_node =
         SubTskGphBuilderUtil::FindNearestNode(sorted_src_comp_tasks, dst_node);
     CHECK_NOTNULL(nearest_src_node);
-    for (const LogicalBlobId& lbi : op_edge->lbis()) {
-      bool is_host_mem_input =
-          std::find(host_mem_input_lbis.begin(), host_mem_input_lbis.end(), lbi)
-          != host_mem_input_lbis.end();
-      BuildTaskPath(nearest_src_node, dst_node, lbi, is_host_mem_input);
-    }
+    bool is_host_mem_input = std::find(host_mem_input_lbis.begin(), host_mem_input_lbis.end(), lbi)
+                             != host_mem_input_lbis.end();
+    BuildTaskPath(nearest_src_node, dst_node, lbi, is_host_mem_input);
   }
 }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialInLbiConnect) {
   const Operator& src_op = op_edge->src_node()->op();
   const Operator& dst_op = op_edge->dst_node()->op();
+  const auto& sorted_src_comp_tasks = GetSortedCompTaskNodesFn(op_edge->src_node());
+  const auto& sorted_dst_comp_tasks = GetSortedCompTaskNodesFn(op_edge->dst_node());
   HashSet<LogicalBlobId> lbis;
   std::vector<LogicalBlobId> host_mem_input_lbis;
   GetHostInputLbis4OpNode(op_edge->dst_node(), &host_mem_input_lbis);
@@ -892,12 +912,12 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialInLbiConnect) {
   CHECK_EQ(sorted_src_comp_tasks.size(), 1);
   CHECK_EQ(dst_op.input_bns().size(), sorted_dst_comp_tasks.size());
   FOR_RANGE(int, i, 0, sorted_dst_comp_tasks.size()) {
-    const auto& lbi = dst_op.BnInOp2Lbi(dst_op.input_bns().Get(i));
-    if (lbis.find(lbi) != lbis.end()) {
+    const auto& input_lbi = dst_op.BnInOp2Lbi(dst_op.input_bns().Get(i));
+    if (lbis.find(input_lbi) != lbis.end()) {
       bool is_host_mem_input =
-          std::find(host_mem_input_lbis.begin(), host_mem_input_lbis.end(), lbi)
+          std::find(host_mem_input_lbis.begin(), host_mem_input_lbis.end(), input_lbi)
           != host_mem_input_lbis.end();
-      BuildTaskPath(sorted_src_comp_tasks.at(0), sorted_dst_comp_tasks.at(i), lbi,
+      BuildTaskPath(sorted_src_comp_tasks.at(0), sorted_dst_comp_tasks.at(i), input_lbi,
                     is_host_mem_input);
     }
   }
@@ -906,6 +926,8 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialInLbiConnect) {
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialOutLbiConnect) {
   const Operator& src_op = op_edge->src_node()->op();
   const Operator& dst_op = op_edge->dst_node()->op();
+  const auto& sorted_src_comp_tasks = GetSortedCompTaskNodesFn(op_edge->src_node());
+  const auto& sorted_dst_comp_tasks = GetSortedCompTaskNodesFn(op_edge->dst_node());
   HashSet<LogicalBlobId> lbis;
   std::vector<LogicalBlobId> host_mem_input_lbis;
   GetHostInputLbis4OpNode(op_edge->dst_node(), &host_mem_input_lbis);
@@ -913,45 +935,51 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialOutLbiConnect) {
   CHECK_EQ(sorted_dst_comp_tasks.size(), 1);
   CHECK_EQ(src_op.output_bns().size(), sorted_src_comp_tasks.size());
   FOR_RANGE(int, i, 0, sorted_src_comp_tasks.size()) {
-    const auto& lbi = src_op.BnInOp2Lbi(src_op.output_bns().Get(i));
-    if (lbis.find(lbi) != lbis.end()) {
+    const auto& input_lbi = src_op.BnInOp2Lbi(src_op.output_bns().Get(i));
+    if (lbis.find(input_lbi) != lbis.end()) {
       bool is_host_mem_input =
-          std::find(host_mem_input_lbis.begin(), host_mem_input_lbis.end(), lbi)
+          std::find(host_mem_input_lbis.begin(), host_mem_input_lbis.end(), input_lbi)
           != host_mem_input_lbis.end();
-      BuildTaskPath(sorted_src_comp_tasks.at(i), sorted_dst_comp_tasks.at(0), lbi,
+      BuildTaskPath(sorted_src_comp_tasks.at(i), sorted_dst_comp_tasks.at(0), input_lbi,
                     is_host_mem_input);
     }
   }
 }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySrcSubsetConnect) {
+  const auto& sorted_src_comp_tasks = GetSortedCompTaskNodesFn(op_edge->src_node());
+  const auto& sorted_dst_comp_tasks = GetSortedCompTaskNodesFn(op_edge->dst_node());
   std::function<Maybe<CompTaskNode*>(int64_t mchn_id, int64_t thrd_id)> TaskNode4MachineId7ThrdId;
   CHECK_JUST(
       MakeGetterTaskNode4MachineId7ThrdId(sorted_src_comp_tasks, &TaskNode4MachineId7ThrdId));
   for (CompTaskNode* dst_task_node : sorted_dst_comp_tasks) {
     CompTaskNode* src_task_node = CHECK_JUST(
         TaskNode4MachineId7ThrdId(dst_task_node->machine_id(), dst_task_node->thrd_id()));
-    Connect<TaskNode>(src_task_node, NewTaskEdgeWithLbis(op_edge->lbis()), dst_task_node);
+    Connect<TaskNode>(src_task_node, NewTaskEdgeWithLbi(lbi), dst_task_node);
   }
 }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByDstSubsetConnect) {
+  const auto& sorted_src_comp_tasks = GetSortedCompTaskNodesFn(op_edge->src_node());
+  const auto& sorted_dst_comp_tasks = GetSortedCompTaskNodesFn(op_edge->dst_node());
   std::function<Maybe<CompTaskNode*>(int64_t mchn_id, int64_t thrd_id)> TaskNode4MachineId7ThrdId;
   CHECK_JUST(
       MakeGetterTaskNode4MachineId7ThrdId(sorted_dst_comp_tasks, &TaskNode4MachineId7ThrdId));
   for (CompTaskNode* src_task_node : sorted_src_comp_tasks) {
     CompTaskNode* dst_task_node = CHECK_JUST(
         TaskNode4MachineId7ThrdId(src_task_node->machine_id(), src_task_node->thrd_id()));
-    Connect<TaskNode>(src_task_node, NewTaskEdgeWithLbis(op_edge->lbis()), dst_task_node);
+    Connect<TaskNode>(src_task_node, NewTaskEdgeWithLbi(lbi), dst_task_node);
   }
 }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphNormalForwardToDecodeH2D) {
+  const auto& sorted_src_comp_tasks = GetSortedCompTaskNodesFn(op_edge->src_node());
+  const auto& sorted_dst_comp_tasks = GetSortedCompTaskNodesFn(op_edge->dst_node());
   CHECK_EQ(sorted_src_comp_tasks.size(), sorted_dst_comp_tasks.size());
   FOR_RANGE(size_t, i, 0, sorted_src_comp_tasks.size()) {
     CompTaskNode* src = sorted_src_comp_tasks.at(i);
     CompTaskNode* dst = sorted_dst_comp_tasks.at(i);
-    for (const LogicalBlobId& lbi : op_edge->lbis()) { ConnectWithLbi(src, dst, lbi); }
+    ConnectWithLbi(src, dst, lbi);
   }
 }
 

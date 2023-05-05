@@ -31,9 +31,10 @@ namespace oneflow {
 class SubTskGphBuilderCtx;
 class HierarchicalSubTskGphBuilder;
 
-#define BLD_SUB_TSK_GPH_MTHD_ARGS()                                                \
-  (const OpEdge* op_edge, const std::vector<CompTaskNode*>& sorted_src_comp_tasks, \
-   const std::vector<CompTaskNode*>& sorted_dst_comp_tasks)
+#define BLD_SUB_TSK_GPH_MTHD_ARGS()                                       \
+  (const OpEdge* op_edge, const LogicalBlobId& lbi,                       \
+   const std::function<const std::vector<CompTaskNode*>&(const OpNode*)>& \
+       GetSortedCompTaskNodesFn)
 
 class TaskGraph;
 using BldSubTskGphMthd = void(TaskGraph::*) BLD_SUB_TSK_GPH_MTHD_ARGS();
