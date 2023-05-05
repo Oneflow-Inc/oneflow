@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_TENSOR_UTIL_H_
 #define ONEFLOW_CORE_FRAMEWORK_TENSOR_UTIL_H_
 
-#include <cstdint>
 #include <functional>
 #include <string>
 
