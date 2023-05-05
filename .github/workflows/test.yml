@@ -472,7 +472,7 @@ jobs:
           ref: ${{ env.LIBAI_COMMIT}}
           path: ${{ env.LIBAI_SRC}}
       - name: Checkout Oneflow-Inc/oneflow_iree
-        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && false }}
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         uses: actions/checkout@v2
         with:
           repository: Oneflow-Inc/oneflow_iree
@@ -684,7 +684,7 @@ jobs:
           ref: ${{ env.ONEFLOW_FACE_COMMIT}}
           path: ${{ env.ONEFLOW_FACE_SRC}}
       - name: Checkout Oneflow-Inc/oneflow_iree
-        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && false }}
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         uses: actions/checkout@v2
         with:
           repository: Oneflow-Inc/oneflow_iree
