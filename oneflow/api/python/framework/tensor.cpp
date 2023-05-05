@@ -18,6 +18,7 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include <Python.h>
 #include "oneflow/api/python/exception/exception.h"
+#include "oneflow/api/python/framework/memory_format.h"
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/framework/tensortype.h"
 #include "oneflow/api/python/functional/common.h"
@@ -210,9 +211,26 @@ static PyObject* PyTensorObject_stride(PyObject* self, PyObject* unused) {
   END_HANDLE_ERRORS
 }
 
-static PyObject* PyTensorObject_is_contiguous(PyObject* self, PyObject* unused) {
+static PyObject* PyTensorObject_is_contiguous(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  return functional::CastToPyObject(PyTensor_Unpack(self)->is_contiguous());
+  PyObject* memory_format_obj = nullptr;
+  static const char* keywords[2] = {"memory_format", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|$O:is_contiguous", const_cast<char**>(keywords),
+                                   &memory_format_obj)) {
+    return NULL;
+  }
+  MemoryFormat memory_format = kContiguous;
+  if (memory_format_obj != nullptr) {
+    CHECK_OR_THROW(PyMemoryFormat_Check(memory_format_obj))
+        << Error::TypeError() << "memory_format must be oneflow.memory_format, got "
+        << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(memory_format_obj)));
+    memory_format = PyMemoryFormat_Unpack(memory_format_obj);
+  }
+  if (PyTensor_Unpack(self)->is_contiguous(memory_format)) {
+    Py_RETURN_TRUE;
+  } else {
+    Py_RETURN_FALSE;
+  }
   END_HANDLE_ERRORS
 }
 
@@ -548,7 +566,8 @@ static std::vector<PyMethodDef> concat_method_def(PyMethodDef methods[],
 static PyMethodDef PyTensorObject_methods[] = {
     {"storage_offset", PyTensorObject_storage_offset, METH_NOARGS, NULL},
     {"stride", PyTensorObject_stride, METH_NOARGS, NULL},
-    {"is_contiguous", PyTensorObject_is_contiguous, METH_NOARGS, NULL},
+    {"is_contiguous", (PyCFunction)PyTensorObject_is_contiguous, METH_VARARGS | METH_KEYWORDS,
+     NULL},
     {"is_view", PyTensorObject_is_view, METH_NOARGS, NULL},
     {"contiguous", PyTensorObject_contiguous, METH_NOARGS, NULL},
     {"contiguous_", PyTensorObject_contiguous_, METH_NOARGS, NULL},
@@ -605,6 +624,22 @@ static PyObject* PyTensorObject_is_cuda(PyObject* self, void* unused) {
 static PyObject* PyTensorObject_grad(PyObject* self, void* unused) {
   HANDLE_ERRORS
   return PyTensor_New(ASSERT_PTR(PyTensor_Unpack(self)->acc_grad()));
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_memory_format(PyObject* self, void* unused) {
+  HANDLE_ERRORS
+  auto memory_format = PyTensor_Unpack(self)->memory_format();
+  if (memory_format == MemoryFormat::kContiguous) {
+    return PyUnicode_FromString("oneflow.contiguous_format");
+  } else if (memory_format == MemoryFormat::kChannelsLast) {
+    return PyUnicode_FromString("oneflow.channels_last");
+  } else if (memory_format == MemoryFormat::kPreserve) {
+    return PyUnicode_FromString("oneflow.preserve_format");
+  } else {
+    THROW(TypeError) << "invalid memory format";
+    return nullptr;
+  }
   END_HANDLE_ERRORS
 }
 
@@ -707,6 +742,7 @@ static PyGetSetDef PyTensorObject_properties[] = {
     {PYGETSET_NAME("dtype"), (getter)PyTensorObject_dtype, NULL, NULL, NULL},
     {PYGETSET_NAME("is_cpu"), (getter)PyTensorObject_is_cpu, NULL, NULL, NULL},
     {PYGETSET_NAME("is_cuda"), (getter)PyTensorObject_is_cuda, NULL, NULL, NULL},
+    {PYGETSET_NAME("memory_format"), (getter)PyTensorObject_memory_format, NULL, NULL, NULL},
     {PYGETSET_NAME("grad"), (getter)PyTensorObject_grad, (setter)PyTensorObject_set_grad, NULL,
      NULL},
     {PYGETSET_NAME("data"), (getter)PyTensorObject_data, (setter)PyTensorObject_set_data, NULL,
