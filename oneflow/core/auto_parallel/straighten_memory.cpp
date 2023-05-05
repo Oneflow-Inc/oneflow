@@ -169,7 +169,8 @@ void ComputeAllMemoryIncrement(std::vector<TopoStruct*>& topo_structs,
     if (id2producer_topo_struct[id]->is_reusable) {
       auto& consumer_topo_structs = id2consumer_topo_structs[id];
       // Release the blob in the blocking node
-      if(consumer_topo_structs.size() == 1 && id2producer_topo_struct[id]->memory_increment >= id2blob_size[id]){
+      if (consumer_topo_structs.size() == 1
+          && id2producer_topo_struct[id]->memory_increment >= id2blob_size[id]) {
         id2producer_topo_struct[id]->memory_increment -= id2blob_size[id];
         continue;
       }
@@ -382,9 +383,7 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
     if (node->op_node) { ordered_topo_structs->push_back(node); }
     node->executed = true;
     total_memory += node->memory_increment;
-    if(total_memory > peak_memory){
-      peak_memory = total_memory;
-    }
+    if (total_memory > peak_memory) { peak_memory = total_memory; }
     StopWaiting(node);
     prepare_topo_structs.push_back(node);
     if (GlobalProcessCtx::Rank() == 0) {
@@ -394,9 +393,8 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
       } else {
         std::cout << "blob id: " << node->blob_id;
       }
-      std::cout << ", memory increment: " << node->memory_increment 
-      << ", current total: " << total_memory
-      << std::endl;
+      std::cout << ", memory increment: " << node->memory_increment
+                << ", current total: " << total_memory << std::endl;
     }
   };
 
