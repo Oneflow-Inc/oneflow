@@ -213,6 +213,12 @@ class TestMock(flow.unittest.TestCase):
                 hasattr(torch.nn.functional, "scaled_dot_product_attention")
             )
 
+    def test_mock_extra_dict(test_case):
+        with mock.enable(lazy=True, extra_dict={"torchvision": "flowvision"}):
+            import torchvision
+
+            test_case.assertEqual(torchvision.models.__package__, "flowvision.models")
+
 
 # MUST use pytest to run this test
 def test_verbose(capsys):
