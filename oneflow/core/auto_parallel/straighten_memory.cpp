@@ -406,7 +406,11 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
 
   // Execute the rest of the nodes
   for (auto& node : *topo_structs) {
-    if (!node->executed) { Execute(node); }
+    if (!node->executed) {
+      CHECK(node->op_node != nullptr)
+          << "All the blobs should be release during straighten memory!";
+      Execute(node);
+    }
   }
 }
 }  // namespace
