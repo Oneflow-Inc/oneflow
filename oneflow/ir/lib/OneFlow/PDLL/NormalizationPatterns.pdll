@@ -5,7 +5,7 @@ Pattern {
   let device_tag: Attr;
   let axis: Attr;
   let epsilon: Attr;
-  let training = attr<"true : bool">;
+  let training = attr<"true">;
   let momentum: Attr;
   let x: Value;
   let moving_mean: Value;
@@ -30,7 +30,7 @@ Pattern {
   let device_tag: Attr;
   let axis: Attr;
   let epsilon: Attr;
-  let training = attr<"true : bool">;
+  let training = attr<"true">;
   let momentum: Attr;
   let x: Value;
   let moving_mean: Value;
