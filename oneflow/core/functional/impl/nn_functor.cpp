@@ -1391,8 +1391,8 @@ class AvgPoolNDFunctor {
       CHECK_EQ_OR_THROW(divisor_override, 0)
           << "AvgPool2d with channels_last data format don't support divisor_override for now.";
 
-      std::vector<int32_t> padding_before{padding.at(0), padding.at(1)};
-      std::vector<int32_t> padding_after{padding.at(0), padding.at(1)};
+      std::vector<int32_t> padding_before{JUST(VectorAt(padding, 0)), JUST(VectorAt(padding, 1))};
+      std::vector<int32_t> padding_after{JUST(VectorAt(padding, 0)), JUST(VectorAt(padding, 1))};
 
       auto& attrs =
           THREAD_CACHED_MUTABLE_ATTR_MAP("pool_size", "strides", "padding", "padding_before",

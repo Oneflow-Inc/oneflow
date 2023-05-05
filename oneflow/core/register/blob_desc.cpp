@@ -52,13 +52,12 @@ BlobDesc::BlobDesc(Symbol<Shape> shape, Symbol<Stride> stride, DataType dtype,
 BlobDesc::BlobDesc(DataType dtype, MemoryFormat memory_format)
     : BlobDesc(Shape(), Stride(), dtype, memory_format, false) {}
 
-BlobDesc::BlobDesc(const BlobDescProto& proto) {
-  shape_ = SymbolOf(Shape(proto.shape()));
-  stride_ = SymbolOf(Stride(proto.stride()));
-  data_type_ = proto.data_type();
-  memory_format_ = proto.memory_format();
-  is_dynamic_ = proto.is_dynamic();
-}
+BlobDesc::BlobDesc(const BlobDescProto& proto)
+    : shape_(SymbolOf(Shape(proto.shape()))),
+      stride_(SymbolOf(Stride(proto.stride()))),
+      data_type_(proto.data_type()),
+      memory_format_(proto.memory_format()),
+      is_dynamic_(proto.is_dynamic()) {}
 
 BlobDesc::BlobDesc(const BlobDesc& other)
     : shape_(other.shape_),
