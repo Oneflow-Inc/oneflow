@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <string>
+#include "oneflow/core/common/memory_format.pb.h"
 #include "oneflow/core/common/throw.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
@@ -95,7 +97,15 @@ static Stride ComputeChannelsLast2dStride(const Shape& shape) {
   const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out_tensor_desc = ctx->MutOutputTensorDesc("out", 0);
   const Shape& in_shape = in_tensor_desc.shape();
-  const auto& memory_format = ctx->Attr<MemoryFormat>("memory_format");
+  const auto& memory_format_str = ctx->Attr<std::string>("memory_format");
+  MemoryFormat memory_format = MemoryFormat::kContiguous;
+  if (memory_format_str == "contiguous") {
+    memory_format = MemoryFormat::kContiguous;
+  } else if (memory_format_str == "channels_last") {
+    memory_format = MemoryFormat::kChannelsLast;
+  } else {
+    CHECK_OR_THROW(false) << "unsupported memory format";
+  }
 
   out_tensor_desc->set_is_dynamic(in_tensor_desc.is_dynamic());
   out_tensor_desc->set_shape(in_shape);
