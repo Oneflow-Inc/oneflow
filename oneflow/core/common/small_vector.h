@@ -16,9 +16,9 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_SMALL_VECTOR_H_
 #define ONEFLOW_CORE_COMMON_SMALL_VECTOR_H_
 
-#include <glog/logging.h>
 #include "llvm/ADT/SmallVector.h"
 #include "oneflow/core/common/op_args_reserved_size.h"
+#include "oneflow/core/common/check.h"
 
 namespace oneflow {
 
@@ -32,11 +32,11 @@ class small_vector : public llvm::SmallVector<T, N> {
   using Base::Base;
 
   typename Base::reference at(typename Base::size_type idx) {
-    CHECK_LT(idx, Base::size());
+    GLOGCHECK(idx < Base::size());
     return (*this)[idx];
   }
   typename Base::const_reference at(typename Base::size_type idx) const {
-    CHECK_LT(idx, Base::size());
+    GLOGCHECK(idx < Base::size());
     return (*this)[idx];
   }
   typename Base::reference operator[](typename Base::size_type idx) { return this->data()[idx]; }

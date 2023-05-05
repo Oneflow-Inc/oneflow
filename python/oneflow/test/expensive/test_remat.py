@@ -22,7 +22,6 @@ import oneflow.unittest
 
 
 class TestRemat(flow.unittest.TestCase):
-    @unittest.skip("skip for now, becase it failed 4 times in past week")
     def test_remat_in_single_threaded_vm(test_case):
         env = os.environ.copy()
         env["ONEFLOW_VM_MULTI_THREAD"] = "0"

@@ -74,7 +74,7 @@ enum class BinaryOp {
   kSoftsignBackwardWithDyX,
   kSoftplusBackwardWithDyX,
   kSoftshrinkBackwardWithDyY,
-  kTanhBackwardWithDyX,
+  kTanhBackwardWithDyY,
   kThresholdBackwardWithDyX,
   kSigmoidBackwardWithDyY,
   kSigmoidBackwardWithDyX,

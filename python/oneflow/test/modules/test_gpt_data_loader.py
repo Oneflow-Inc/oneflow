@@ -24,7 +24,9 @@ import oneflow.unittest
 class GPTDataLoader(flow.nn.Module):
     def __init__(
         self,
-        data_file_prefix="/dataset/Megatron-LM/dummy/gpt_sample_dataset_text_document",
+        data_file_prefix=flow.unittest.dataset_dir(
+            "Megatron-LM/dummy/gpt_sample_dataset_text_document"
+        ),
         seq_length=1024,
         num_samples=648,
         batch_size=8,

@@ -516,8 +516,10 @@ Maybe<void> AddAccumulateFunctionNode(const std::shared_ptr<Tensor>& tensor) {
   backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
                           bool create_graph) -> Maybe<void> { return Maybe<void>::Ok(); };
   backward_fn->status = []() { return false; };
-  tensor->set_grad_fn_node(GraphFunctionNode::New(
-      "accumulategrad", backward_fn, /*inputs=*/TensorTuple{}, /*outputs*/ TensorTuple{tensor}));
+  tensor->set_grad_fn_node(GraphFunctionNode::New("accumulategrad", backward_fn,
+                                                  /*inputs=*/TensorTuple{},
+                                                  /*outputs*/ TensorTuple{tensor}));
+  tensor->mut_grad_fn_node()->set_variable(tensor);
   tensor->set_grad_fn_output_index(0);
   if (LazyMode::is_enabled()) {
     tensor->mut_grad_fn_node()->set_scope(JUST(GetTensorScope(tensor)));

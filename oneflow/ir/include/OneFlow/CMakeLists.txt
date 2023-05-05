@@ -16,6 +16,9 @@ mlir_tablegen(OneFlowPatterns.cpp.inc -gen-rewriters)
 add_public_tablegen_target(MLIROneFlowPatternsIncGen)
 
 # NOTE: seperate conversion and opt with --name
+if(WITH_MLIR_CUDA_CODEGEN)
+  list(APPEND LLVM_TABLEGEN_FLAGS "-DWITH_MLIR_CUDA_CODEGEN")
+endif()
 set(LLVM_TARGET_DEFINITIONS OneFlowPasses.td)
 mlir_tablegen(OneFlowPasses.h.inc -gen-pass-decls)
 add_public_tablegen_target(MLIROneFlowPassIncGen)
