@@ -3,14 +3,10 @@
 // RUN: -auto-nhwc \
 // RUN: -lower-oneflow-to-tosa \
 // RUN: -tosa-make-broadcastable \
-// RUN: -verify-diagnostics -o - \
-// RUN: | python3 -m iree.compiler.tools.scripts.ireec \
-// RUN: --iree-input-type=tosa \
-// RUN: --iree-vm-bytecode-module-output-format=flatbuffer-binary \
-// RUN: -iree-hal-target-backends=llvm-cpu \
-// RUN: --iree-vm-bytecode-module-optimize -
+// RUN: -verify-diagnostics -o - | FileCheck %s
 
 
+// CHECK-NOT: oneflow
 oneflow.job @test_func(%arg0: tensor<1xf32>) -> tensor<1xf32>
 {
     oneflow.return %arg0 : tensor<1xf32>

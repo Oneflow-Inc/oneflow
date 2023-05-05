@@ -74,7 +74,7 @@ Maybe<void> Expand::Apply(const ExpandCaptureState* ctx, const TensorTuple& out_
   in_grads->at(0) = out_grads[0];
   if (ctx->reduce_dims.size() > 0) {
     in_grads->at(0) =
-        JUST(functional::ReduceSum(in_grads->at(0), ctx->reduce_dims, ctx->keep_dims));
+        JUST(functional::ReduceSum(in_grads->at(0), ctx->reduce_dims, ctx->keep_dims, NullOpt));
   }
   if (ctx->lpad > 0 && ctx->keep_dims) {
     in_grads->at(0) = JUST(functional::Flatten(in_grads->at(0), 0, ctx->lpad));

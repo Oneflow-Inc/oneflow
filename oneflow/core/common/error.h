@@ -185,7 +185,7 @@ class Error final {
   MsgCollectingMode msg_collecting_mode_;
 };
 
-void ThrowError(const std::shared_ptr<StackedError>& error);
+[[noreturn]] void ThrowError(const std::shared_ptr<StackedError>& error);
 const std::shared_ptr<StackedError>& ThreadLocalError();
 
 inline Error& operator<<(Error& error, Error::MsgCollectingMode mode) {
