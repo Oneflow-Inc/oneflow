@@ -36,6 +36,12 @@ inline Stride GetChannelsLastStrides2d(const ShapeView& shape, Stride& stride) {
   }
 }
 
+inline Stride GetChannelsLastStrides2d(const ShapeView& shape) {
+  Stride stride(shape.size());
+  GetChannelsLastStrides2d(shape, stride);
+  return stride;
+}
+
 inline bool IsContiguousInChannalsLast2d(const ShapeView& shape_view, const Stride& stride) {
   if (shape_view.size() < 4) { return false; }
   int64_t total_size = 1;

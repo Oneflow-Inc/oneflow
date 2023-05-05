@@ -183,10 +183,8 @@ Maybe<void> LocalTensorMetaInferArgs::InitInputLocalTensorMetas(const TensorTupl
   auto* mut_output_tensor_metas = result->mut_output_tensor_metas();
   for (int32_t i = 0; i < user_op_expr.output_size(); ++i) {
     if (!JUST(user_op_expr.SupportNonContiguous())) {
-      // if (!output_mut_metas.at(i).is_contiguous()) {
       Stride stride(output_mut_metas.at(i).shape(), output_mut_metas.at(i).memory_format());
       output_mut_metas.at(i).set_stride(stride);
-      // }
     }
     CHECK_OR_RETURN(static_cast<bool>(output_mut_metas.at(i).device()))
         << Error::RuntimeError() << "device not infered";

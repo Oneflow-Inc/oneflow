@@ -13,9 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <string>
-#include "oneflow/core/common/memory_format.pb.h"
-#include "oneflow/core/common/throw.h"
+#include "oneflow/core/common/memory_format_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
 
@@ -64,25 +62,6 @@ static Maybe<void> GetConvertMemoryFormatSbp(user_op::SbpContext* ctx, const Sha
   return sbp_func(ctx, shape);
 }
 
-static Stride ComputeChannelsLast2dStride(const Shape& shape) {
-  DimVector stride(shape.size());
-  switch (shape.size()) {
-    case 4:
-      stride[1] = 1;
-      stride[3] = shape[1];
-      stride[2] = stride[3] * shape[3];
-      stride[0] = stride[2] * shape[2];
-      return stride;
-    case 3:
-      stride[0] = 1;
-      stride[2] = shape[0];
-      stride[1] = stride[2] * shape[2];
-      return stride;
-    default: CHECK_OR_THROW(false) << "ChannelsLast2d doesn't support size " << shape.size();
-  }
-  return stride;
-}
-
 /*static*/ Maybe<void> ConvertMemoryFormatOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& input_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
   const auto& memory_format = ctx->Attr<MemoryFormat>("memory_format");
@@ -110,7 +89,7 @@ static Stride ComputeChannelsLast2dStride(const Shape& shape) {
   out_tensor_desc->set_is_dynamic(in_tensor_desc.is_dynamic());
   out_tensor_desc->set_shape(in_shape);
   out_tensor_desc->set_memory_format(memory_format);
-  out_tensor_desc->set_stride(ComputeChannelsLast2dStride(in_tensor_desc.shape()));
+  out_tensor_desc->set_stride(GetChannelsLastStrides2d(in_tensor_desc.shape()));
   return Maybe<void>::Ok();
 }
 
