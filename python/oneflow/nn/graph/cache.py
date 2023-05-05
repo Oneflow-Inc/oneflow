@@ -178,7 +178,7 @@ class GraphCache(object):
         self,
         state_dict: Dict[str, Dict[str, Union[Dict[str, Tensor], str]]],
         *,
-        warmup_with_run: bool,
+        warmup_with_run: bool = False,
     ) -> None:
         graph_dict = dict()
         for _, sub_state_dict in state_dict.items():
