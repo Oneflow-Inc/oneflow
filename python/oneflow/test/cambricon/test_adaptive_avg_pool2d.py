@@ -25,14 +25,14 @@ import oneflow.unittest
 
 
 def _test_adaptive_avg_pool2d_forward_backward(
-    test_case, shape, out_shape, device, dtype
+    test_case, shape, out_shape, device, dtype, pooling_module
 ):
     arry = np.random.randn(*shape)
     x = flow.tensor(arry, device=flow.device(device), dtype=dtype, requires_grad=True,)
     x_cpu = flow.tensor(
         arry, device=flow.device("cpu"), dtype=dtype, requires_grad=True,
     )
-    pool = flow.nn.AdaptiveAvgPool2d((out_shape[2], out_shape[3]))
+    pool = pooling_module((out_shape[2], out_shape[3]))
     y = pool(x)
     y_cpu = pool(x_cpu)
     test_case.assertTrue(np.allclose(y.numpy(), y_cpu.numpy(), 0.0001, 0.0001))
@@ -47,7 +47,7 @@ def _test_adaptive_avg_pool2d_forward_backward(
 
 
 def _test_adaptive_avg_pool2d_forward_backward_channels_last(
-    test_case, shape, out_shape, device, dtype
+    test_case, shape, out_shape, device, dtype, pooling_module
 ):
     """compare cpu channels_first with mlu channels_last"""
     arry = np.random.randn(*shape)
@@ -59,8 +59,8 @@ def _test_adaptive_avg_pool2d_forward_backward_channels_last(
     x_cpu = flow.tensor(
         arry, device=flow.device("cpu"), dtype=dtype, requires_grad=True
     )
-    pool = flow.nn.AdaptiveAvgPool2d((out_shape[2], out_shape[3]))
-    pool_channels_last = flow.nn.AdaptiveAvgPool2d(
+    pool = pooling_module((out_shape[2], out_shape[3]))
+    pool_channels_last = pooling_module(
         (out_shape[2], out_shape[3]), data_format="channels_last"
     )
     y = pool_channels_last(x)
@@ -98,6 +98,10 @@ class TestAdaptiveAvgPool2dCambriconModule(flow.unittest.TestCase):
         arg_dict["device"] = ["mlu"]
         arg_dict["dtype"] = [
             flow.float32,
+        ]
+        arg_dict["pooling_module"] = [
+            flow.nn.AdaptiveAvgPool2d,
+            flow.nn.AdaptiveMaxPool2d,
         ]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])

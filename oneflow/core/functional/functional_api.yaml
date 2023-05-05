@@ -3018,19 +3018,19 @@
   bind_python: True
 
 - name: "adaptive_max_pool1d"
-  signature: "TensorTuple (Tensor input, Int64List[1] output_size) => AdaptiveMaxPool1D"
+  signature: 'TensorTuple (Tensor input, Int64List[1] output_size, String data_format="channels_first") => AdaptiveMaxPool1D'
   bind_python: True
 
 - name: "adaptive_max_pool2d"
-  signature: "TensorTuple (Tensor input, Int64List[2] output_size) => AdaptiveMaxPool2D"
+  signature: 'TensorTuple (Tensor input, Int64List[2] output_size, String data_format="channels_first") => AdaptiveMaxPool2D'
   bind_python: True
 
 - name: "adaptive_max_pool3d"
-  signature: "TensorTuple (Tensor input, Int64List[3] output_size) => AdaptiveMaxPool3D"
+  signature: 'TensorTuple (Tensor input, Int64List[3] output_size, String data_format="channels_first") => AdaptiveMaxPool3D'
   bind_python: True
 
 - name: "adaptive_max_pool_grad"
-  signature: "Tensor (Tensor x, Tensor index, Tensor dy, Int32 ndims) => AdaptiveMaxPoolNdGrad"
+  signature: 'Tensor (Tensor x, Tensor index, Tensor dy, Int32 ndims, String data_format="channels_first") => AdaptiveMaxPoolNdGrad'
   bind_python: False
 
 - name: "tan_grad_grad"
