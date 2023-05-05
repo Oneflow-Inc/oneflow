@@ -70,8 +70,8 @@ class NaiveTensorDesc final : public TensorDesc {
   bool is_dynamic() const override { return is_dynamic_; }
   void set_is_dynamic(bool is_dynamic) override { is_dynamic_ = is_dynamic; }
 
-  MemoryFormat memory_format() const { return memory_format_; }
-  void set_memory_format(MemoryFormat memory_format) { memory_format_ = memory_format; }
+  MemoryFormat memory_format() const override { return memory_format_; }
+  void set_memory_format(MemoryFormat memory_format) override { memory_format_ = memory_format; }
 
  private:
   Shape shape_;
