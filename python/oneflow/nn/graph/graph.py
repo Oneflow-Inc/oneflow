@@ -1185,12 +1185,12 @@ class Graph(object):
                 return map_item
 
         _eager_inputs_args, _eager_inputs_kwargs = self.__map_io_lite(
-            partial(get_tensor_in_tuple, self._inputs_tensor_tuple),
+            lambda map_item: get_tensor_in_tuple(self._inputs_tensor_tuple, map_item),
             *_eager_inputs_args_index,
             **_eager_inputs_kwargs_index,
         )
         _eager_outputs, _ = self.__map_io_lite(
-            partial(get_tensor_in_tuple, self._outputs_tensor_tuple),
+            lambda map_item: get_tensor_in_tuple(self._outputs_tensor_tuple, map_item),
             *_eager_outputs_index,
         )
         self._eager_outputs = _eager_outputs
