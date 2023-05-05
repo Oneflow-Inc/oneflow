@@ -22,54 +22,37 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename T, int NDIM>
+template<typename T>
 static void _conj_symmetry_cpu(T* data_out, const Shape& shape, const std::vector<int64_t>& strides,
                            const int64_t last_dim, int64_t elem_count) {
-  const oneflow::NdIndexStrideOffsetHelper<int64_t, NDIM> helper(strides.data(), NDIM);
+  const oneflow::NdIndexStrideOffsetHelper<int64_t, SHAPE_MAX_AXIS_SIZE> helper(strides.data(), shape.size());
   // NOTE: dims must be sorted
   int64_t last_dim_size = shape[last_dim];
   int64_t last_dim_half = last_dim_size / 2;
 
-  std::vector<int64_t> indices(shape.size());
+  int64_t ndim = shape.size();
+  std::vector<int64_t> indices(ndim);
   for (int offset = 0; offset < elem_count; offset++) {
-    helper.OffsetToNdIndex(offset, indices.data(), indices.size());
+    helper.OffsetToNdIndex(offset, indices.data(), ndim);
     if (indices[last_dim] <= last_dim_half) { continue; }
 
     int64_t cur_last_dim_index = indices[last_dim];
     // get symmetric
     indices[last_dim] = last_dim_size - cur_last_dim_index;
-    int64_t symmetric_offset = helper.NdIndexToOffset(indices.data(), indices.size());
+    int64_t symmetric_offset = helper.NdIndexToOffset(indices.data(), ndim);
 
     // conj
     data_out[offset] = std::conj(data_out[symmetric_offset]);
   }
 }
 
-
 template<typename T>
 struct FillConjSymmetryUtil<DeviceType::kCPU, T>{
   static void FillConjSymmetryForward(ep::Stream* stream, T* data_out, const Shape& shape, const Stride& strides,
                                       const int64_t last_dim, int64_t elem_count){
-    void (*func)(T* /*data_out*/, const Shape& /*shape*/, const std::vector<int64_t>& /*strides*/,
-                const int64_t /*last_dim*/, int64_t /*elem_count*/) = nullptr;
-
-    switch (shape.size()) {
-      case 1: func = _conj_symmetry_cpu<T, 1>; break;
-      case 2: func = _conj_symmetry_cpu<T, 2>; break;
-      case 3: func = _conj_symmetry_cpu<T, 3>; break;
-      case 4: func = _conj_symmetry_cpu<T, 4>; break;
-      case 5: func = _conj_symmetry_cpu<T, 5>; break;
-      case 6: func = _conj_symmetry_cpu<T, 6>; break;
-      case 7: func = _conj_symmetry_cpu<T, 7>; break;
-      case 8: func = _conj_symmetry_cpu<T, 8>; break;
-      case 9: func = _conj_symmetry_cpu<T, 9>; break;
-      case 10: func = _conj_symmetry_cpu<T, 10>; break;
-      case 11: func = _conj_symmetry_cpu<T, 11>; break;
-      case 12: func = _conj_symmetry_cpu<T, 12>; break;
-      default: UNIMPLEMENTED(); break;
-    }
     std::vector<int64_t> strides_vec(strides.begin(), strides.end());
-    func(data_out, shape, strides_vec, last_dim, elem_count);
+    _conj_symmetry_cpu(/*data_out*/data_out, /*shape*/shape, /*strides*/strides_vec,
+                /*last_dim*/last_dim, /*elem_count*/elem_count);
   }
 };
 

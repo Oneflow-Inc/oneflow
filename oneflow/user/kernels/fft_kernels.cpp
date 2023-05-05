@@ -22,39 +22,6 @@ limitations under the License.
 using namespace pocketfft;
 namespace oneflow {
 
-namespace {
-
-template<typename T>
-void convert_to_doublesized(const std::complex<T>* in, std::complex<T>* dst, size_t len, size_t n) {
-  size_t fact_len = 2 * len - 2;  // input_shape.back()
-  for (int i = 0; i < n; i++) {
-    int index_x = i / fact_len;
-    int index_y = i % fact_len;
-    if (index_y == 0) {
-      dst[i] = in[index_x * len];
-    } else if (index_y == len - 1) {
-      dst[i] = in[(index_x + 1) * len - 1];
-    } else if (index_y < len - 1 && index_y > 0) {
-      dst[i] = in[index_x * len + index_y];
-    } else {
-      auto index = (index_x + 2) * len - index_y - 2;
-      auto realvalue = in[index].real();
-      dst[i].real(realvalue);
-      auto imagvalue = -in[index].imag();
-      dst[i].imag(imagvalue);
-    }
-  }
-}
-
-template<typename T>
-void comvert_to_real(const std::complex<T>* in, T* out, size_t n) {
-  for (int i = 0; i < n; i++) {
-    out[2 * i] = in[i].real();
-    out[2 * i + 1] = in[i].imag();
-  }
-}
-
-}  // namespace
 
 template<DeviceType device_type, typename T, typename FCT_TYPE>
 class FftC2CKernel final : public user_op::OpKernel {
@@ -187,7 +154,7 @@ class StftCpuKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const auto normalized = ctx->Attr<bool>("normalized");
     const auto return_complex = ctx->Attr<bool>("return_complex");
-    const bool onesized = ctx->Attr<bool>("onesided");
+    const bool onesided = ctx->Attr<bool>("onesided");
 
     const ShapeView& input_shape = input->shape_view();
     const ShapeView& output_shape = output->shape_view();
@@ -196,7 +163,6 @@ class StftCpuKernel final : public user_op::OpKernel {
     int64_t dims = input_shape.At(0);
     int64_t batch = input_shape.At(1);
     int64_t len = input_shape.back();
-    // const IN* data_in = input->dptr<IN>();
     const dtype_in* data_in = input->dptr<dtype_in>();
     dtype_in* data_out = output->mut_dptr<dtype_in>();
 
@@ -211,17 +177,17 @@ class StftCpuKernel final : public user_op::OpKernel {
         out_tmp_stride, true, /*axes=*/axes, /*norm_fct=*/norm_fct,
         /*len=*/len, /*dims=*/dims, /*batch=*/batch);
 
-    if (!onesized) {
+    if (!onesided) {
       dtype_out* doublesided_tmp_buffer =
           reinterpret_cast<dtype_out*>(tmp_buffer->mut_dptr<char>()) + output_elem_cnt;
       size_t last_dim_length = len / 2 + 1;
       size_t elem_conut = output_elem_cnt;
-      convert_to_doublesized<dtype_in>(out_tmp_buffer, doublesided_tmp_buffer, last_dim_length,
+      ComplexConvertUtil<DeviceType::kCPU, dtype_in, dtype_out>::ConvertToDoubleSized(ctx->stream(), out_tmp_buffer, doublesided_tmp_buffer, last_dim_length,
                                        elem_conut);
       out_tmp_buffer = doublesided_tmp_buffer;
     }
 
-    if (!return_complex) { comvert_to_real<dtype_in>(out_tmp_buffer, data_out, output_elem_cnt); }
+    if (!return_complex) { ComplexConvertUtil<DeviceType::kCPU, dtype_in, dtype_out>::ConvertComplexToReal(ctx->stream(), out_tmp_buffer, data_out, output_elem_cnt); }
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
