@@ -267,6 +267,8 @@ template<typename Src, typename Dst>
 struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kZeta, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
   OF_DEVICE_FUNC Dst operator()(Src x, Src q) const {
+    // ref
+    // https://github.com/pytorch/pytorch/blob/release/1.13/aten/src/ATen/native/cuda/Math.cuh#L302-L384
     const Src MACHEP{1.11022302462515654042E-16};
     constexpr Src zero{0};
     constexpr Src half{0.5};

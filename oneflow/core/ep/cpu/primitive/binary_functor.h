@@ -389,6 +389,8 @@ template<typename Src, typename Dst>
 struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kZeta, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
   OF_DEVICE_FUNC Dst operator()(Src x, Src q) const {
+    // ref 
+    // https://github.com/pytorch/pytorch/blob/release/1.13/aten/src/ATen/native/Math.h#L235-L309
     const Src MACHEP = Src{1.11022302462515654042E-16};
     constexpr Src zero = Src{0.0};
     constexpr Src half = Src{0.5};
