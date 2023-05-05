@@ -34,9 +34,9 @@ void EpBackendAllocator::DeviceReset() {
     ep_device_->SetAsActiveDevice();
     // NOTE(chengcheng): In some corner case on ubuntu, cuda memory not released even if OOM.
     //   So there need release all cuda memory allocated by this process before core dump.
-    LOG(WARNING) << "OOM error is detected, process will exit. And it will start to reset CUDA "
+    LOG(WARNING) << "OOM error is detected, process will exit. And it will start to reset "
                  << "device for releasing device memory.";
-    OF_CUDA_CHECK(cudaDeviceReset());
+    ep_device_->Reset();
   }
 #endif
 }
