@@ -408,7 +408,7 @@ def _numpy(self, dtype=None):
     assert self.is_local
     if self.device != flow.device("cpu"):
         self = self.cpu()
-    result = self.to_numpy()    
+    result = self.to_numpy()
     if dtype is None:
         return result
     return result.astype(dtype)
