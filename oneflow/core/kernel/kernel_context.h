@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_KERNEL_KERNEL_CONTEXT_H_
 #define ONEFLOW_CORE_KERNEL_KERNEL_CONTEXT_H_
 
-#include "oneflow/core/device/device_context.h"
 #include "oneflow/core/kernel/kernel_observer.h"
 #include "oneflow/core/ep/include/stream.h"
 

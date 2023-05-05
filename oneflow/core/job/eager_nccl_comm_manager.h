@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/plan.pb.h"
+#include "oneflow/core/job/eager_ccl_comm_manager.h"
 
 #ifdef WITH_CUDA
 
@@ -25,25 +26,27 @@ limitations under the License.
 
 namespace oneflow {
 
-class EagerNcclCommMgr final {
+class EagerNcclCommMgr final : public EagerCclCommMgr {
  public:
   static const std::string kDefaultStreamName;
 
   OF_DISALLOW_COPY_AND_MOVE(EagerNcclCommMgr);
-  ~EagerNcclCommMgr();
+  ~EagerNcclCommMgr() override;
 
   ncclComm_t GetCommForDevice(const std::set<std::pair<int64_t, int64_t>>& device_set);
   ncclComm_t GetCommForDeviceAndStreamName(const std::set<std::pair<int64_t, int64_t>>& device_set,
                                            const std::string& stream_name);
 
-  void CreateCommFromPlan(const Plan& plan);
-  bool IsAsyncLaunchNcclLogicalKernel() const { return async_launch_nccl_logical_kernel_; }
-  void SetAsyncLaunchNcclLogicalKernel(bool val) { async_launch_nccl_logical_kernel_ = val; }
+  void CreateCommFromPlan(const Plan& plan) override;
+  bool IsAsyncLaunchCclLogicalKernel() const override { return async_launch_nccl_logical_kernel_; }
+  void SetAsyncLaunchCclLogicalKernel(bool val) override {
+    async_launch_nccl_logical_kernel_ = val;
+  }
 
  private:
-  friend class Singleton<EagerNcclCommMgr>;
+  friend class EagerCclCommMgrBuilder;
   // NOTE(chengcheng): default async launch nccl logical kernel is true for better performence.
-  EagerNcclCommMgr() : async_launch_nccl_logical_kernel_(true) {}
+  EagerNcclCommMgr() : EagerCclCommMgr(), async_launch_nccl_logical_kernel_(true) {}
 
   std::map<std::set<std::pair<int64_t, int64_t>>, HashMap<int64_t, ncclComm_t>>
       device_set2device_id2comm_;
