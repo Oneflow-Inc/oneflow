@@ -356,8 +356,8 @@
   signature:
     [
       "Tensor (Tensor input) => Max",
-      "TensorTuple[values, indices] (Tensor input, Int32 dim, Bool keepdim=False) => Max",
       "Tensor (Tensor input, Tensor other) => Max",
+      "TensorTuple[values, indices] (Tensor input, Int32 dim, Bool keepdim=False) => Max",
     ]
   bind_python: True
 
@@ -389,8 +389,8 @@
 - name: "reduce_sum"
   signature:
     [
-      "Tensor (Tensor x, Int32List[1] dim, Bool keepdim=False) => ReduceSum",
-      "Tensor (Tensor x) => ReduceSumWhole",
+      "Tensor (Tensor x, Int32List[1] dim, Bool keepdim=False, *, DataType dtype=None) => ReduceSum",
+      "Tensor (Tensor x, *, DataType dtype=None) => ReduceSumWhole",
     ]
   bind_python: True
 
@@ -704,7 +704,7 @@
   bind_python: True
 
 - name: "tanh_grad"
-  signature: "Tensor (Tensor x, Tensor dy) => TanhGrad"
+  signature: "Tensor (Tensor y, Tensor dy) => TanhGrad"
   bind_python: True
 
 - name: "threshold"
@@ -1255,6 +1255,10 @@
 
 - name: "fused_matmul_bias_add_relu_dropout"
   signature: "Tensor (Tensor x, TensorTuple weights, TensorTuple biases, Bool skip_final_activation, FloatList dropout_rate_list, Generator generator=None) => FusedMatmulBiasAddReluDropout"
+  bind_python: True
+
+- name: "fused_apply_rotary_emb"
+  signature: 'Tensor (Tensor x, *, Tensor cos=None, Tensor sin=None, Tensor position_ids=None, String x_layout="BHMK", String output_layout=None, String mode="plane", Int64 tensor_index=None, Int64 k_size=None, Float base=1e4, Int64 rotary_size=None) => FusedApplyRotaryEmb'
   bind_python: True
 
 - name: "fused_relu_dropout_grad"
@@ -3303,6 +3307,30 @@
   signature: "Tensor (Tensor input) => Clone"
   bind_python: True
 
+- name: "real"
+  signature: "Tensor (Tensor x) => Real"
+  bind_python: True
+
+- name: "real_grad"
+  signature: "Tensor (Tensor dout) => RealGrad"
+  bind_python: False
+
+- name: "imag"
+  signature: "Tensor (Tensor x) => Imag"
+  bind_python: True
+
+- name: "imag_grad"
+  signature: "Tensor (Tensor dout) => ImagGrad"
+  bind_python: False
+
+- name: "conj"
+  signature: "Tensor (Tensor x) => Conj"
+  bind_python: True
+
+- name: "conj_physical"
+  signature: "Tensor (Tensor x) => ConjPhysical"
+  bind_python: True
+
 - name: "frac"
   signature: "Tensor (Tensor x) => Frac"
   bind_python: True
@@ -3310,3 +3338,16 @@
 - name: "frac_"
   signature: "Tensor (Tensor x) => FracInplace"
   bind_python: True
+
+- name: "digamma"
+  signature: "Tensor (Tensor x) => Digamma"
+  bind_python: True
+
+- name: "digamma_grad"
+  signature: "Tensor (Tensor x, Tensor dy) => DigammaGrad"
+  bind_python: False
+
+- name: "trigamma"
+  signature: "Tensor (Tensor x) => Trigamma"
+  bind_python: False
+  

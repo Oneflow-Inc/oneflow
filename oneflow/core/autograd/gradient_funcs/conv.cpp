@@ -117,7 +117,7 @@ Maybe<void> ConvolutionNd::Apply(const ConvolutionNdCaptureState* ctx, const Ten
       }
       dim.push_back(i);
     }
-    in_grads->at(2) = JUST(functional::ReduceSum(out_grads.at(0), dim, false));
+    in_grads->at(2) = JUST(functional::ReduceSum(out_grads.at(0), dim, false, NullOpt));
   }
   return Maybe<void>::Ok();
 }

@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <type_traits>
 #include "oneflow/core/common/blocking_then_busy.h"
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/stream_type.h"
 #include "oneflow/core/common/tensor_meta.h"
 #include "oneflow/core/vm/virtual_machine.h"
@@ -41,8 +42,8 @@ namespace one {
 Maybe<void> TensorImpl::set_requires_grad(bool requires_grad) {
   if (requires_grad) {
     const DataType tensor_dtype = dtype();
-    CHECK_OR_RETURN(IsFloatingDataType(tensor_dtype))
-        << "RuntimeError: only Tensors of floating point can require gradients";
+    CHECK_OR_RETURN(IsSupportRequireGradDataType(tensor_dtype))
+        << "RuntimeError: only Tensors of floating point or complex can require gradients";
   }
   autograd_meta_->set_requires_grad(requires_grad);
   return Maybe<void>::Ok();
@@ -141,6 +142,7 @@ Maybe<void> EagerLocalTensorImpl::InitEagerBlobObject(
 }
 
 Maybe<bool> EagerLocalTensorImpl::is_pinned() const {
+  if (this->device() == JUST(Device::New("meta"))) { return false; }
   if (!eager_blob_object_) { return false; }
   return IsStreamAllocatorPinned::Visit(JUST(eager_blob_object_->producer_stream())->stream_type());
 }

@@ -104,11 +104,6 @@ class LazyInterpreter : public OpExprInterpreter {
   virtual ~LazyInterpreter() = default;
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
-                    const AttrMap& attrs) const {
-    return Apply(op_expr, inputs, outputs, OpExprInterpContext(attrs));
-  }
-
-  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
                     const OpExprInterpContext& ctx) const override;
 
  private:
@@ -125,11 +120,6 @@ class EagerInterpreter : public OpExprInterpreter {
  public:
   EagerInterpreter(bool is_local) : OpExprInterpreter(), is_local_(is_local) {}
   virtual ~EagerInterpreter() = default;
-
-  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
-                    const AttrMap& attrs) const {
-    return Apply(op_expr, inputs, outputs, OpExprInterpContext(attrs));
-  }
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
                     const OpExprInterpContext& ctx) const override;

@@ -99,7 +99,7 @@ LogicalResult doConvertUserOpAttributes(llvm::StringRef op_type_name, Dictionary
       } else if (attr_type == ::oneflow::kAtDataType) {
         const auto dt = support::FromMLIRAttrToOFDataType(attr);
         if (succeeded(dt)) {
-          user_attr.set_at_data_type(dt.getValue());
+          user_attr.set_at_data_type(dt.value());
         } else {
           LOG(FATAL) << "fail to convert op attr to data type, key: " + id.str();
           return failure();
@@ -127,7 +127,7 @@ LogicalResult doConvertUserOpAttributes(llvm::StringRef op_type_name, Dictionary
         for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
           const auto dt = support::FromMLIRAttrToOFDataType(attr);
           if (succeeded(dt)) {
-            user_attr.mutable_at_list_data_type()->add_val(dt.getValue());
+            user_attr.mutable_at_list_data_type()->add_val(dt.value());
           } else {
             LOG(FATAL) << "fail to convert op attr to data type, key: " + id.str();
             return failure();
@@ -279,7 +279,7 @@ LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op
       } else if (attr_type == ::oneflow::kAtDataType) {
         const auto dt = support::FromMLIRAttrToOFDataType(attr);
         if (succeeded(dt)) {
-          user_attr.set_at_data_type(dt.getValue());
+          user_attr.set_at_data_type(dt.value());
         } else {
           op->emitError() << "fail to convert op attr to data type, key: " + id.str();
           return failure();
@@ -307,7 +307,7 @@ LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op
         for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
           const auto dt = support::FromMLIRAttrToOFDataType(attr);
           if (succeeded(dt)) {
-            user_attr.mutable_at_list_data_type()->add_val(dt.getValue());
+            user_attr.mutable_at_list_data_type()->add_val(dt.value());
           } else {
             op->emitError() << "fail to convert op attr to data type, key: " + id.str();
             return failure();
@@ -401,7 +401,7 @@ LogicalResult ConvertUserOpInputs(llvm::StringRef op_type_name, ValueRange opera
     for (int32_t i = 0; i < input_size; i++) {
       auto input_s_ptr = (*user_conf->mutable_input())[input_key].mutable_s()->Add();
       if (auto result = operands[input_idx].dyn_cast<mlir::OpResult>()) {
-        *(input_s_ptr) = GetOutputLbn(result).getValue();
+        *(input_s_ptr) = GetOutputLbn(result).value();
       } else if (auto argument = operands[input_idx].dyn_cast<mlir::BlockArgument>()) {
         *(input_s_ptr) = "BlockArgument/" + std::to_string(argument.getArgNumber());
       } else {

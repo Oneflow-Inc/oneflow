@@ -48,8 +48,8 @@ PyObject* concat_self(PyObject* self, PyObject* args) {
 PyObject* ndarray_judgment_and_compatibility(PyObject* self, PyObject* other) {
   if (PyArray_Check(other)) {
     const auto& tensor = PyTensor_Unpack(self);
-    CHECK_OR_THROW(!tensor->is_cuda())
-        << Error::RuntimeError() << "Can't convert cuda device type tensor to numpy";
+    CHECK_OR_THROW(tensor->is_cpu())
+        << Error::RuntimeError() << "Can't convert non-cpu device tensor to numpy";
     if (tensor->is_global()) {
       Symbol<ParallelDesc> placement = ASSERT(tensor->parallel_desc());
       auto ndsbp = ASSERT(tensor->nd_sbp());
@@ -200,6 +200,7 @@ PyNumberMethods PyTensorObject_as_number = {
   }
 
 UNARY_METHOD(PyTensorObject_abs, functional::Abs);
+UNARY_METHOD(PyTensorObject_digamma, functional::Digamma);
 UNARY_METHOD(PyTensorObject_exp, functional::Exp);
 UNARY_METHOD(PyTensorObject_exp2, functional::Exp2);
 UNARY_METHOD(PyTensorObject_floor, functional::Floor);
@@ -328,6 +329,7 @@ DIRECT_PASS_FUNC(PyTensorObject_masked_fill, functional::masked_fill)
 DIRECT_PASS_FUNC(PyTensorObject_masked_fill_, functional::masked_fill_)
 DIRECT_PASS_FUNC(PyTensorObject_dot, functional::dot)
 DIRECT_PASS_FUNC(PyTensorObject_nansum, functional::reduce_nansum)
+DIRECT_PASS_FUNC(PyTensorObject_sum, functional::reduce_sum)
 DIRECT_PASS_FUNC(PyTensorObject_bernoulli, functional::bernoulli)
 DIRECT_PASS_FUNC(PyTensorObject_bernoulli_, functional::bernoulli_)
 DIRECT_PASS_FUNC(PyTensorObject_bincount, functional::bincount)
@@ -619,7 +621,6 @@ static PyObject* PyTensorObject_relu_(PyObject* self, PyObject* unused) {
 
 REDUCE_FUNC(PyTensorObject_any, functional::reduce_any, functional::ReduceAnyWhole)
 REDUCE_FUNC(PyTensorObject_all, functional::reduce_all, functional::ReduceAllWhole)
-REDUCE_FUNC(PyTensorObject_sum, functional::reduce_sum, functional::ReduceSumWhole)
 REDUCE_FUNC(PyTensorObject_mean, functional::reduce_mean, functional::ReduceMeanWhole)
 
 #define DATATYPE_FUNC(func_name, dtype)                                    \
@@ -1077,6 +1078,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"masked_fill_", (PyCFunction)PyTensorObject_masked_fill_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"dot", (PyCFunction)PyTensorObject_dot, METH_VARARGS | METH_KEYWORDS, NULL},
     {"nansum", (PyCFunction)PyTensorObject_nansum, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"sum", (PyCFunction)PyTensorObject_sum, METH_VARARGS | METH_KEYWORDS, NULL},
     {"bernoulli", (PyCFunction)PyTensorObject_bernoulli, METH_VARARGS | METH_KEYWORDS, NULL},
     {"bernoulli_", (PyCFunction)PyTensorObject_bernoulli_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"bincount", (PyCFunction)PyTensorObject_bincount, METH_VARARGS | METH_KEYWORDS, NULL},
@@ -1102,6 +1104,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
 
     // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},
+    {"digamma", PyTensorObject_digamma, METH_NOARGS, NULL},
     {"exp", PyTensorObject_exp, METH_NOARGS, NULL},
     {"exp2", PyTensorObject_exp2, METH_NOARGS, NULL},
     {"floor", PyTensorObject_floor, METH_NOARGS, NULL},
