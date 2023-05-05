@@ -37,7 +37,7 @@ struct MgpuToOneFlowStreamPattern final : public OpRewritePattern<LLVM::CallOp> 
       : OpRewritePattern<LLVM::CallOp>(context, /*benefit=*/0) {}
   mlir::LogicalResult matchAndRewrite(LLVM::CallOp op,
                                       mlir::PatternRewriter& rewriter) const override {
-    auto ptr_type = LLVM::LLVMPointerType::get(IntegerType::get(rewriter.getContext(), 8));
+    auto ptr_type = LLVM::LLVMPointerType::get(rewriter.getContext());
     auto func = op->getParentOfType<LLVM::LLVMFuncOp>();
     auto callee = op.getCallee();
     if (!func || !callee) return failure();
@@ -92,7 +92,7 @@ struct AppendOneFlowStreamPattern final : public OpRewritePattern<func::FuncOp> 
       : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
   mlir::LogicalResult matchAndRewrite(func::FuncOp op,
                                       mlir::PatternRewriter& rewriter) const override {
-    auto ptr_type = LLVM::LLVMPointerType::get(IntegerType::get(rewriter.getContext(), 8));
+    auto ptr_type = LLVM::LLVMPointerType::get(rewriter.getContext());
     if (llvm::dyn_cast<LLVM::LLVMPointerType>(op.getFunctionType().getInputs().back()))
       return success();
 
