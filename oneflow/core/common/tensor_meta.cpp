@@ -14,10 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/tensor_meta.h"
+#include "oneflow/core/common/memory_format.pb.h"
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/common/shape_view.h"
+#include "oneflow/core/common/switch_func.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/common/shape_view.h"
+#include "oneflow/core/common/memory_format_util.h"
 
 namespace oneflow {
 namespace one {
@@ -161,9 +165,14 @@ size_t GlobalTensorMeta::CalcHashValue() const {
   return Hash(*shape_ptr(), dtype(), memory_format(), nd_sbp(), parallel_desc());
 }
 
-bool IsContiguous(const Shape& shape, const Stride& stride) {
+bool IsContiguous(const Shape& shape, const Stride& stride, MemoryFormat memory_format) {
   if (!shape.is_initialized()) { return true; }
-  return IsContiguous(ShapeView(shape), stride);
+  if (memory_format == MemoryFormat::kContiguous) {
+    return IsContiguous(ShapeView(shape), stride);
+  } else if (memory_format == MemoryFormat::kChannelsLast) {
+    return IsContiguousInChannalsLast2d(shape, stride);
+  }
+  CHECK_OR_THROW(false) << "Unimplemented memory_format: " << memory_format;
 }
 
 bool IsContiguous(const ShapeView& shape_view, const Stride& stride) {

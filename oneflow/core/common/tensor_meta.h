@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_COMMON_TENSOR_META_H_
 
 #include <memory>
+#include "oneflow/core/common/memory_format.pb.h"
 #include "oneflow/core/common/tensor_desc.h"
 #include "oneflow/core/common/symbol.h"
 
@@ -30,7 +31,7 @@ class ParallelDesc;
 
 namespace one {
 
-bool IsContiguous(const Shape& shape, const Stride& stride);
+bool IsContiguous(const Shape& shape, const Stride& stride, MemoryFormat);
 bool IsContiguous(const ShapeView& shape_view, const Stride& stride);
 
 class TensorMeta : public user_op::TensorDesc {
@@ -44,6 +45,7 @@ class TensorMeta : public user_op::TensorDesc {
   virtual const std::shared_ptr<const Shape>& shape_ptr() const = 0;
   virtual const std::shared_ptr<const Stride>& stride_ptr() const = 0;
   virtual bool is_contiguous() const = 0;
+  virtual bool is_contiguous(MemoryFormat) const = 0;
 
   DataType dtype() const { return data_type_; }
   DataType data_type() const override { return data_type_; }
@@ -86,7 +88,10 @@ class MutTensorMeta : public TensorMeta {
   const std::shared_ptr<const Stride>& stride_ptr() const override { return stride_; }
   const Shape& shape() const override { return *shape_; }
   const Stride& stride() const override { return *stride_; }
-  bool is_contiguous() const override { return IsContiguous(*shape_, *stride_); }
+  bool is_contiguous() const override { return IsContiguous(*shape_, *stride_, memory_format_); }
+  bool is_contiguous(MemoryFormat memory_format) const override {
+    return IsContiguous(*shape_, *stride_, memory_format);
+  }
 
   void set_shape(const Shape& shape) override { *const_cast<Shape*>(shape_.get()) = shape; }
   void set_stride(const Stride& stride) override { *const_cast<Stride*>(stride_.get()) = stride; }
@@ -135,7 +140,10 @@ class ConstTensorMeta : public TensorMeta {
   }
   const Shape& shape() const override { return *shape_; }
   const Stride& stride() const override { return *stride_; }
-  bool is_contiguous() const override { return IsContiguous(*shape_, *stride_); }
+  bool is_contiguous() const override { return IsContiguous(*shape_, *stride_, memory_format_); }
+  bool is_contiguous(MemoryFormat memory_format) const override {
+    return IsContiguous(*shape_, *stride_, memory_format);
+  }
 
   bool operator==(const ConstTensorMeta& other) const;
   size_t CalcHashValue() const;

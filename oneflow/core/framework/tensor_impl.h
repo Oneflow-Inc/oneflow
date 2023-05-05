@@ -17,6 +17,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_TENSOR_IMPL_H_
 #define ONEFLOW_CORE_FRAMEWORK_TENSOR_IMPL_H_
 
+#include "oneflow/core/common/memory_format.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/optional.h"
@@ -65,6 +66,7 @@ class TensorImpl {
   virtual Maybe<bool> has_eager_blob_object() const = 0;
   virtual Maybe<int64_t> storage_offset() const { OF_UNIMPLEMENTED(); }
   virtual bool is_contiguous() const = 0;
+  virtual bool is_contiguous(MemoryFormat memory_format) const = 0;
   virtual bool is_view() const = 0;
   virtual Maybe<bool> is_pinned() const { OF_UNIMPLEMENTED(); }
 
@@ -110,6 +112,9 @@ class LocalTensorImpl : public TensorImpl {
   DataType dtype() const override { return tensor_meta()->dtype(); }
   const Symbol<Device>& device() const { return tensor_meta()->device(); }
   bool is_contiguous() const override { return tensor_meta()->is_contiguous(); }
+  bool is_contiguous(MemoryFormat memory_format) const override {
+    return tensor_meta()->is_contiguous(memory_format);
+  }
   bool is_view() const override { return tensor_meta()->is_view(); }
 
   virtual const Symbol<LocalTensorMeta>& tensor_meta() const = 0;
@@ -205,6 +210,11 @@ class LazyLocalTensorImpl final : public LocalTensorImpl {
     // but should return real status while stride/view mechanism is ready in lazy-local mode
     return true;
   }
+  bool is_contiguous(MemoryFormat) const override {
+    // TODO:(zhaoluyang) default return true for now,
+    // but should return real status while stride/view mechanism is ready in lazy-local mode
+    return true;
+  }
   bool is_view() const override { return false; }
   Maybe<bool> is_pinned() const override { return false; }
 
@@ -250,6 +260,9 @@ class EagerLocalTensorImpl final : public LocalTensorImpl {
   Maybe<LocalTensorImpl> detach() const override;
   bool is_lazy() const override { return false; }
   bool is_contiguous() const override { return tensor_meta()->is_contiguous(); }
+  bool is_contiguous(MemoryFormat memory_format) const override {
+    return tensor_meta()->is_contiguous(memory_format);
+  }
   bool is_view() const override { return tensor_meta()->is_view(); }
   Maybe<bool> is_pinned() const override;
 
@@ -309,6 +322,11 @@ class LazyGlobalTensorImpl final : public GlobalTensorImpl {
     // but should return real status while stride/view mechanism is ready in lazy-global mode
     return true;
   }
+  bool is_contiguous(MemoryFormat) const override {
+    // TODO:(zhaoluyang) default return true for now,
+    // but should return real status while stride/view mechanism is ready in lazy-global mode
+    return true;
+  }
 
   bool is_view() const override { return false; }
 
@@ -327,6 +345,11 @@ class EagerGlobalTensorImpl final : public GlobalTensorImpl {
   bool is_lazy() const override { return false; }
 
   bool is_contiguous() const override {
+    // TODO:(zhaoluyang) default return true for now,
+    // but should return real status while stride/view mechanism is ready in eager-global mode
+    return true;
+  }
+  bool is_contiguous(MemoryFormat) const override {
     // TODO:(zhaoluyang) default return true for now,
     // but should return real status while stride/view mechanism is ready in eager-global mode
     return true;

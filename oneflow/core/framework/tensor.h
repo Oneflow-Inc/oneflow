@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <memory>
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/memory_format.pb.h"
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/stride.h"
@@ -63,6 +64,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual bool is_lazy() const = 0;
   virtual bool is_eager() const { return !is_lazy(); }
   virtual bool is_contiguous() const = 0;
+  virtual bool is_contiguous(MemoryFormat) const = 0;
   virtual bool is_view() const = 0;
   virtual Maybe<bool> is_pinned() const = 0;
   virtual const TensorMeta& tensor_meta() const = 0;
@@ -235,6 +237,10 @@ class StaticZerosTensor final : public Tensor {
     PRINT_BUG_PROMPT_AND_ABORT();
     return true;
   }
+  bool is_contiguous(MemoryFormat) const override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+    return true;
+  };
   bool is_view() const override {
     PRINT_BUG_PROMPT_AND_ABORT();
     return false;
@@ -415,6 +421,9 @@ class ProxyTensor : public TensorIf<DerivedT> {
   virtual bool is_leaf() const override { return tensor_->is_leaf(); }
   virtual bool retain_grad() const override { return tensor_->retain_grad(); }
   virtual bool is_contiguous() const override { return tensor_->is_contiguous(); }
+  virtual bool is_contiguous(MemoryFormat memory_format) const override {
+    return tensor_->is_contiguous(memory_format);
+  }
   virtual bool is_view() const override { return tensor_->is_view(); }
   virtual Maybe<bool> is_pinned() const override { return tensor_->is_pinned(); }
   virtual Maybe<Tensor> acc_grad() const override { return tensor_->acc_grad(); }
@@ -554,6 +563,11 @@ class LocalTensor final : public TensorIf<LocalTensor> {
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
   bool is_contiguous() const override { return impl_->is_contiguous(); }
+  bool is_contiguous(MemoryFormat memory_format) const override {
+    return impl_->is_contiguous(memory_format);
+  }
+  // bool is_contiguous(MemoryFormat memory_format) const override { return
+  // impl_->is_contiguous(memory_format); }
   bool is_view() const override { return impl_->is_view(); }
   Maybe<bool> is_pinned() const override { return impl_->is_pinned(); };
 
@@ -689,6 +703,9 @@ class GlobalTensor final : public TensorIf<GlobalTensor> {
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
   bool is_contiguous() const override { return impl_->is_contiguous(); }
+  bool is_contiguous(MemoryFormat memory_format) const override {
+    return impl_->is_contiguous(memory_format);
+  }
   bool is_view() const override { return impl_->is_view(); }
   Maybe<bool> is_pinned() const override {
     OF_RUNTIME_ERROR() << "Global tensor has no is_pinned method";
