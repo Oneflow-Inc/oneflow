@@ -36,7 +36,6 @@ inline std::shared_ptr<CommunicationContext> NewCommunicationContext(
   CHECK_EQ(device_type, parallel_desc->device_type())
       << "device_type not match placement (" << DeviceType_Name(device_type) << " vs. "
       << DeviceType_Name(parallel_desc->device_type()) << ". " << kOfBugIssueUploadPrompt;
-  ;
   std::shared_ptr<CommunicationContext> communication_ctx =
       std::shared_ptr<CommunicationContext>(NewObj<DeviceType, CommunicationContext>(device_type));
   communication_ctx->Init(parallel_desc);

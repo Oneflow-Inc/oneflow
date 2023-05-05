@@ -232,6 +232,11 @@ void CudaStream::RecordEvent(Event* event) {
   OF_CUDA_CHECK(cudaEventRecord(cuda_event->cuda_event(), cuda_stream_));
 }
 
+void CudaStream::WaitEvent(Event* event) {
+  auto* cuda_event = static_cast<CudaEvent*>(event);  // NOLINT
+  OF_CUDA_CHECK(cudaStreamWaitEvent(cuda_stream_, cuda_event->cuda_event(), 0));
+}
+
 Maybe<void> CudaStream::GetAsyncError() {
   cudaError_t err = cudaGetLastError();
   if (err == cudaSuccess) {

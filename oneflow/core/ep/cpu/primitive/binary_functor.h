@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/ep/common/primitive/binary_functor.h"
-
+#include "oneflow/core/ep/cpu/primitive/unary_functor.h"
 namespace oneflow {
 
 namespace ep {
@@ -294,12 +294,11 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kQuickGeluBackwardWithDyX, Src,
 };
 
 template<typename Src, typename Dst>
-struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kTanhBackwardWithDyX, Src, Dst> {
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kTanhBackwardWithDyY, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-    Src tanh_val = std::tanh(x);
-    return static_cast<Dst>(dy * (static_cast<Src>(1.0) - tanh_val * tanh_val));
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src y) const {
+    return static_cast<Dst>(dy * (static_cast<Src>(1.0) - y * y));
   }
 };
 
@@ -353,13 +352,36 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kErfcBackwardWithDyX, Src, Dst>
   }
 };
 
+template<>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kDigammaBackwardWithDyX, float, float> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC float operator()(float dy, float x) const {
+    ep::primitive::UnaryFunctor<DeviceType::kCPU, UnaryOp::kTrigamma, float, float>
+        trigamma_functor(0, 0);
+    float trigamma_result = trigamma_functor(x);
+    return trigamma_result * dy;
+  }
+};
+
+template<>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kDigammaBackwardWithDyX, double, double> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC double operator()(double dy, double x) const {
+    ep::primitive::UnaryFunctor<DeviceType::kCPU, UnaryOp::kTrigamma, double, double>
+        trigamma_functor(0, 0);
+    double trigamma_result = trigamma_functor(x);
+    return trigamma_result * dy;
+  }
+};
+
 template<typename Src, typename Dst>
-struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kDigammaBackwardWithDyX, Src, Dst> {
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kLgammaBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-    // TODO:shijiaxing： This function is named trigamma, it will be implemented soon.
-    UNIMPLEMENTED();
-    return 0;
+    ep::primitive::UnaryFunctor<DeviceType::kCPU, UnaryOp::kDigamma, Src, Dst> digamma_functor(0,
+                                                                                               0);
+    Dst digamma_result = digamma_functor(x);
+    return digamma_result * dy;
   }
 };
 

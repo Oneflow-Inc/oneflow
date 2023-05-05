@@ -538,15 +538,15 @@ REGISTER_USER_KERNEL("tanh")
 REGISTER_USER_KERNEL("tanh_grad")
     .SetCreateFn([]() {
       return user_op::NewOpKernel<BinaryPrimitiveKernel>(
-          "dx", "dy", "x", [](user_op::KernelComputeContext* ctx) {
+          "dx", "dy", "y", [](user_op::KernelComputeContext* ctx) {
             const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
             const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
             return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
-                ctx->device_type(), ep::primitive::BinaryOp::kTanhBackwardWithDyX, src->data_type(),
+                ctx->device_type(), ep::primitive::BinaryOp::kTanhBackwardWithDyY, src->data_type(),
                 dst->data_type(), 1 /*max_num_dims*/);
           });
     })
-    .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kTanhBackwardWithDyX, "dx",
+    .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kTanhBackwardWithDyY, "dx",
                                            "dy"));
 
 REGISTER_USER_KERNEL("threshold")

@@ -23,8 +23,10 @@ import PIL
 import oneflow as flow
 
 global_coco_dict = dict()
-default_coco_anno_file = "/dataset/mscoco_2017/annotations/instances_val2017.json"
-default_coco_image_dir = "/dataset/mscoco_2017/val2017"
+default_coco_anno_file = flow.unittest.dataset_dir(
+    "mscoco_2017/annotations/instances_val2017.json"
+)
+default_coco_image_dir = flow.unittest.dataset_dir("mscoco_2017/val2017")
 
 
 def get_coco(anno_file):

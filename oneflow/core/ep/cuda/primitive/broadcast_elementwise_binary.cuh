@@ -334,6 +334,18 @@ half GetValue<half>(Scalar value) {
   return static_cast<half>(GetValue<float>(value));
 }
 
+template<>
+cuComplex GetValue<cuComplex>(Scalar value) {
+  const std::complex<float> cpp_value = GetValue<std::complex<float>>(value);
+  return cuFloatComplex{cpp_value.real(), cpp_value.imag()};
+}
+
+template<>
+cuDoubleComplex GetValue<cuDoubleComplex>(Scalar value) {
+  const std::complex<double> cpp_value = GetValue<std::complex<double>>(value);
+  return cuDoubleComplex{cpp_value.real(), cpp_value.imag()};
+}
+
 #if CUDA_VERSION >= 11000
 
 template<>
