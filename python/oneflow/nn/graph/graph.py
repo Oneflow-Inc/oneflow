@@ -1254,10 +1254,14 @@ class Graph(object):
         self._c_nn_graph.align_states_after_logical_graph_compile()
         self._c_nn_graph.init_runtime()
         self._is_compiled = True
+<<<<<<< HEAD
         if warmup_with_run:
             self.__run(
                 *_eager_inputs_args, **_eager_inputs_kwargs
             )  # pre-run to warm up
+=======
+        self.__run(*_eager_inputs_args, **_eager_inputs_kwargs)  # pre-run to warm up
+>>>>>>> 543bdd9dc46c32dd1bd3dbe1a0d57036d34e2e4a
         build_graph_end = time.perf_counter()
         self.__print(
             0,
