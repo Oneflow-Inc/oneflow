@@ -182,6 +182,46 @@ class StftCpuKernel final : public user_op::OpKernel {
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* input = ctx->Tensor4ArgNameAndIndex("input", 0);
+    user_op::Tensor* output = ctx->Tensor4ArgNameAndIndex("output", 0);
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    const auto normalized = ctx->Attr<bool>("normalized");
+    const auto return_complex = ctx->Attr<bool>("return_complex");
+    const bool onesized = ctx->Attr<bool>("onesided");
+
+    const ShapeView& input_shape = input->shape_view();
+    const ShapeView& output_shape = output->shape_view();
+    const auto output_elem_cnt = output_shape.elem_cnt() / 2;
+
+    int64_t dims = input_shape.At(0);
+    int64_t batch = input_shape.At(1);
+    int64_t len = input_shape.back();
+    // const IN* data_in = input->dptr<IN>();
+    const dtype_in* data_in = input->dptr<dtype_in>();
+    dtype_in* data_out = output->mut_dptr<dtype_in>();
+
+    dtype_out* out_tmp_buffer = reinterpret_cast<dtype_out*>(tmp_buffer->mut_dptr<char>());
+    Shape out_tmp_shape = Shape{len};
+    Stride out_tmp_stride = Stride(out_tmp_shape);
+    std::vector<int64_t> axes(out_tmp_shape.size());
+    std::iota(axes.begin(), axes.end(), 0);
+    auto norm_fct = _fft_normalization_scale<dtype_in>(len, normalized);
+    FftStftKernelUtil<device_type, dtype_in, dtype_out>::FftStftForward(
+        ctx->stream(), data_in, out_tmp_buffer, out_tmp_shape, out_tmp_shape, out_tmp_stride,
+        out_tmp_stride, true, /*axes=*/axes, /*norm_fct=*/norm_fct,
+        /*len=*/len, /*dims=*/dims, /*batch=*/batch);
+
+    if (!onesized) {
+      dtype_out* doublesided_tmp_buffer =
+          reinterpret_cast<dtype_out*>(tmp_buffer->mut_dptr<char>()) + output_elem_cnt;
+      size_t last_dim_length = len / 2 + 1;
+      size_t elem_conut = output_elem_cnt;
+      convert_to_doublesized<dtype_in>(out_tmp_buffer, doublesided_tmp_buffer, last_dim_length,
+                                       elem_conut);
+      out_tmp_buffer = doublesided_tmp_buffer;
+    }
+
+    if (!return_complex) { comvert_to_real<dtype_in>(out_tmp_buffer, data_out, output_elem_cnt); }
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

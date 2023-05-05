@@ -73,6 +73,39 @@ struct FillConjSymmetryUtil<DeviceType::kCPU, T>{
   }
 };
 
+
+template <typename real_type, typename complex_type>
+struct ComplexConvertUtil<DeviceType::kCPU, real_type, complex_type>{
+  static void ConvertToDoubleSized(ep::Stream* stream, const complex_type* in, complex_type* dst, size_t len, size_t n)
+  {
+    size_t fact_len = 2 * len - 2;  // input_shape.back()
+    for (int i = 0; i < n; i++) {
+      int index_x = i / fact_len;
+      int index_y = i % fact_len;
+      if (index_y == 0) {
+        dst[i] = in[index_x * len];
+      } else if (index_y == len - 1) {
+        dst[i] = in[(index_x + 1) * len - 1];
+      } else if (index_y < len - 1 && index_y > 0) {
+        dst[i] = in[index_x * len + index_y];
+      } else {
+        auto index = (index_x + 2) * len - index_y - 2;
+        auto realvalue = in[index].real();
+        dst[i].real(realvalue);
+        auto imagvalue = -in[index].imag();
+        dst[i].imag(imagvalue);
+      }
+    }
+  }
+  static void ConvertComplexToReal(ep::Stream* stream, const complex_type* in, real_type* out, size_t n)
+  {
+    for (int i = 0; i < n; i++) {
+      out[2 * i] = in[i].real();
+      out[2 * i + 1] = in[i].imag();
+    }
+  }
+};
+
 template<typename T, typename FCT_TYPE>
 struct FftC2CKernelUtil<DeviceType::kCPU, T, FCT_TYPE> {
   static void FftC2CForward(ep::Stream* stream, 
@@ -117,9 +150,32 @@ struct FftC2RKernelUtil<DeviceType::kCPU, IN, OUT> {
   }
 };
 
+template<typename IN, typename OUT>
+struct FftStftKernelUtil<DeviceType::kCPU, IN, OUT> {
+  static void FftStftForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
+                             const Shape& input_shape, const Shape& output_shape,
+                             const Stride& input_stride, const Stride& output_stride, bool forward,
+                             const std::vector<int64_t>& axes, IN norm_fct,
+                             int64_t len, int64_t dims, int64_t batch) {
+    PocketFFtParams<IN> params(input_shape, output_shape, input_stride, output_stride, axes, forward,
+                              norm_fct /*1.f*/, FFT_EXCUTETYPE::R2C);
+    PocketFFtConfig<IN> config(params);
+    int64_t in_offset = len;
+    int64_t out_offset = len / 2 + 1;
+    for (int j = 0; j < dims; j++) {
+      for (int i = 0; i < batch; i++) {
+        const IN* in = data_in + j * batch * in_offset + i * in_offset;
+        OUT* out = data_out + j * batch * out_offset + i * out_offset;
+        config.excute(in, out);
+      }
+    }
+  }
+};
 template struct FillConjSymmetryUtil<DeviceType::kCPU, std::complex<float>>;
 template struct FillConjSymmetryUtil<DeviceType::kCPU, std::complex<double>>;
 
+template struct ComplexConvertUtil<DeviceType::kCPU, float, std::complex<float>>;
+template struct ComplexConvertUtil<DeviceType::kCPU, double, std::complex<double>>;
 
 template struct FftC2CKernelUtil<DeviceType::kCPU, std::complex<float>, float>;
 template struct FftC2CKernelUtil<DeviceType::kCPU, std::complex<double>, double>;
@@ -130,4 +186,6 @@ template struct FftR2CKernelUtil<DeviceType::kCPU, double, std::complex<double>>
 template struct FftC2RKernelUtil<DeviceType::kCPU, std::complex<float>, float>;
 template struct FftC2RKernelUtil<DeviceType::kCPU, std::complex<double>, double>;
 
+template struct FftStftKernelUtil<DeviceType::kCPU, float, std::complex<float>>;
+template struct FftStftKernelUtil<DeviceType::kCPU, double, std::complex<double>>;
 }  // namespace oneflow
