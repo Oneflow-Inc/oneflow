@@ -105,7 +105,7 @@ Maybe<Symbol<Stream>> InferDeviceAndStream(const UserOpExpr& user_op_expr,
                                            const LocalTensorMetaInferArgs& infer_args,
                                            OpArgsVector<MutLocalTensorMeta>* output_tensor_metas) {
   Symbol<Stream> stream;
-  if ((NcclUseComputeStream() || !user_op_expr.has_device_and_stream_infer_fn())
+  if ((EagerNcclUseComputeStream() || !user_op_expr.has_device_and_stream_infer_fn())
       && user_op_expr.op_type_name() != "copy") {
     stream = JUST(GetDefaultStreamByDevice(default_device));
     for (int i = 0; i < user_op_expr.output_size(); i++) {

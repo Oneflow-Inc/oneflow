@@ -30,9 +30,9 @@ DEFINE_THREAD_LOCAL_ENV_INTEGER(ONEFLOW_EAGER_TENSOR_INFER_CACHE_SIZE, 128 * 102
 
 DEFINE_THREAD_LOCAL_ENV_BOOL(ONEFLOW_EAGER_NCCL_USE_COMPUTE_STREAM, false);
 
-inline bool NcclUseComputeStream() {
+inline bool EagerNcclUseComputeStream() {
 #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
-  return ThreadLocalEnvBool<ONEFLOW_EAGER_TENSOR_INFER_CACHE_SIZE>();
+  return ThreadLocalEnvBool<ONEFLOW_EAGER_NCCL_USE_COMPUTE_STREAM>();
 #else
   return false;
 #endif
