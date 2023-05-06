@@ -53,6 +53,7 @@ Maybe<Symbol<Stream>> MakeCopyStream(const Symbol<Device>& in_device,
   ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
   ctx->SetOutputStride("out", 0, ctx->InputStride("in", 0));
   ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
+  ctx->SetOutputMemoryFormat("out", 0, ctx->InputMemoryFormat("in", 0));
   return Maybe<void>::Ok();
 }
 
