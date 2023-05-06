@@ -1,6 +1,6 @@
 // RUN: oneflow-opt %s -append-ofstream | FileCheck %s
 
-// CHECK: func.func @JITOpGenerated0(%arg0: memref<1xf32>, %arg1: memref<5xi64>, %arg2: memref<5xf32>, %arg3: !llvm.ptr<i8>) attributes {llvm.emit_c_interface}
+// CHECK: func.func @JITOpGenerated0(%arg0: memref<1xf32>, %arg1: memref<5xi64>, %arg2: memref<5xf32>, %arg3: !llvm.ptr) attributes {llvm.emit_c_interface}
 
 module attributes {gpu.container_module} {
   func.func @JITOpGenerated0(%arg0: memref<1xf32>, %arg1: memref<5xi64>, %arg2: memref<5xf32>) attributes {llvm.emit_c_interface} {

@@ -26,6 +26,7 @@ class DistributeSplitCompTaskNode final : public CompTaskNode {
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
+  void ConsumeFakeRegsts() override;
 
   TaskType GetTaskType() const override { return TaskType::kDistributeSplit; }
 
@@ -43,6 +44,8 @@ void DistributeSplitCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void DistributeSplitCompTaskNode::ConsumeAllRegsts() {
   ForEachInDataEdge([&](TaskEdge* edge) { ConsumeRegst("in", edge->GetSoleRegst()); });
 }
+
+void DistributeSplitCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
 
 void DistributeSplitCompTaskNode::BuildExecGphAndRegst() {
   BuildExecGphStructAndBindInRegst();

@@ -297,7 +297,7 @@ class EmptyFunctor {
       if (dtype->is_floating_point()) { JUST(empty->set_requires_grad(requires_grad)); }
       return empty;
     }
-    Symbol<Device> device_symbol = device.value_or(JUST(Device::New("cpu", 0)));
+    Symbol<Device> device_symbol = device.value_or(JUST(Device::New("cpu")));
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "pin_memory", "device_type", "device_id");
     attrs.SetAllAttrs(shape, dtype->data_type(), pin_memory, device_symbol->type(),
