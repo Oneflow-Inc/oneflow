@@ -297,7 +297,7 @@ class EmptyFunctor {
       if (dtype->is_floating_point()) { JUST(empty->set_requires_grad(requires_grad)); }
       return empty;
     }
-    Symbol<Device> device_symbol = device.value_or(JUST(Device::New("cpu", 0)));
+    Symbol<Device> device_symbol = device.value_or(JUST(Device::New("cpu")));
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "pin_memory", "device_type", "device_id");
     attrs.SetAllAttrs(shape, dtype->data_type(), pin_memory, device_symbol->type(),
@@ -1795,13 +1795,19 @@ class CopyToDeviceFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("device", "pin_memory");
     attrs.SetAllAttrs(device, pin_memory);
 
-#ifdef WITH_CUDA
-    if (device->enum_type() == DeviceType::kCUDA) { InitCudaContextOnce(device->device_id()); }
-#endif
+    // Trigger the construction of device context in advance
+    if (device->enum_type() != DeviceType::kCPU) { TouchEpDevice(device); }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
+  void TouchEpDevice(Symbol<Device> device) const {
+    ep::DeviceManager* device_mgr =
+        Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceManagerOrNull(device->enum_type());
+    if (!device_mgr) { return; }
+    device_mgr->GetDevice(device->device_id());
+  }
+
   std::shared_ptr<OpExpr> op_;
 };
 
