@@ -133,7 +133,7 @@ class TestTensor(flow.unittest.TestCase):
         beta = random_or_nothing(-1, 1).to(float)
         return x.baddbmm(batch1, batch2, alpha=alpha, beta=beta)
 
-    @autotest(n=3)
+    @autotest(n=10)
     def test_to_memory_format(test_case):
         def check_equal(a, b):
             test_case.assertEqual(list(a.shape), list(b.shape))
@@ -146,13 +146,18 @@ class TestTensor(flow.unittest.TestCase):
             )
 
         device = random_device()
-        x = random_tensor(
-            ndim=4,
-            dim0=random(1, 6).to(int),
-            dim1=random(1, 6).to(int),
-            dim2=random(1, 6).to(int),
-            dim3=random(1, 6).to(int),
-        ).to(device)
+        dtype = random_dtype(["pod", "half"])
+        x = (
+            random_tensor(
+                ndim=4,
+                dim0=random(1, 6).to(int),
+                dim1=random(1, 6).to(int),
+                dim2=random(1, 6).to(int),
+                dim3=random(1, 6).to(int),
+            )
+            .to(device)
+            .to(dtype)
+        )
 
         oneflow_x = x.oneflow
         pytorch_x = x.pytorch
