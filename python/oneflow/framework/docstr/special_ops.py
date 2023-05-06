@@ -102,7 +102,7 @@ add_docstr(
 
 add_docstr(
     oneflow.special.zeta,
-    """
+    r"""
     zeta(input, other) -> Tensor
     
     Computes the Hurwitz zeta function, elementwise.
