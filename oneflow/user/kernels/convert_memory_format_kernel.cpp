@@ -13,8 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/memory_format.pb.h"
-#include "oneflow/core/common/throw.h"
+#include "oneflow/core/common/memory_format_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/convert_memory_format_util.h"
 
@@ -31,9 +30,11 @@ class ConvertMemoryFormatKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache*) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    ConvertMemoryFormat(ctx->stream(), in->shape_view().NumAxes(), in->shape_view().data(),
-                        in->data_type(), in->dptr(), out->mut_dptr(), in->memory_format(),
-                        out->memory_format());
+    const auto& in_shape_under_memory_format =
+        GetShapeFromMemoryFormat(in->shape_view(), in->memory_format());
+    ConvertMemoryFormat(ctx->stream(), in->shape_view().NumAxes(),
+                        in_shape_under_memory_format.data(), in->data_type(), in->dptr(),
+                        out->mut_dptr(), in->memory_format(), out->memory_format());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

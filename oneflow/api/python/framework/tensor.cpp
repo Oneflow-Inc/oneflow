@@ -629,17 +629,8 @@ static PyObject* PyTensorObject_grad(PyObject* self, void* unused) {
 
 static PyObject* PyTensorObject_memory_format(PyObject* self, void* unused) {
   HANDLE_ERRORS
-  auto memory_format = PyTensor_Unpack(self)->memory_format();
-  if (memory_format == MemoryFormat::kContiguous) {
-    return PyUnicode_FromString("oneflow.contiguous_format");
-  } else if (memory_format == MemoryFormat::kChannelsLast) {
-    return PyUnicode_FromString("oneflow.channels_last");
-  } else if (memory_format == MemoryFormat::kPreserve) {
-    return PyUnicode_FromString("oneflow.preserve_format");
-  } else {
-    THROW(TypeError) << "invalid memory format";
-    return nullptr;
-  }
+  MemoryFormat memory_format = PyTensor_Unpack(self)->memory_format();
+  return functional::CastToPyObject(std::move(memory_format));
   END_HANDLE_ERRORS
 }
 

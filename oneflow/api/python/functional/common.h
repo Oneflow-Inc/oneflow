@@ -21,19 +21,11 @@ limitations under the License.
 #include <complex>
 #include <pybind11/pybind11.h>
 
+#include "oneflow/api/python/framework/memory_format.h"
 #include "oneflow/api/python/framework/tensor.h"
-#include "oneflow/api/python/caster/maybe.h"
-#include "oneflow/api/python/caster/optional.h"
-#include "oneflow/core/common/throw.h"
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/scalar.h"
-#include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/layout.h"
-#include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/functional/tensor_index.h"
 #include "oneflow/core/common/foreign_lock_helper.h"
@@ -223,6 +215,11 @@ template<>
 inline PyObject* CastToPyObject<Maybe<void>>(Maybe<void>&& t) {
   t.GetOrThrow();
   Py_RETURN_NONE;
+}
+
+template<>
+inline PyObject* CastToPyObject<MemoryFormat>(MemoryFormat&& t) {
+  return PyMemoryFormat_New(t);
 }
 
 // int64_t

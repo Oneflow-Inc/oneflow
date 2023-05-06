@@ -77,19 +77,12 @@ static Maybe<void> GetConvertMemoryFormatSbp(user_op::SbpContext* ctx, const Sha
   user_op::TensorDesc* out_tensor_desc = ctx->MutOutputTensorDesc("out", 0);
   const Shape& in_shape = in_tensor_desc.shape();
   const auto& memory_format_str = ctx->Attr<std::string>("memory_format");
-  MemoryFormat memory_format = MemoryFormat::kContiguous;
-  if (memory_format_str == "contiguous") {
-    memory_format = MemoryFormat::kContiguous;
-  } else if (memory_format_str == "channels_last") {
-    memory_format = MemoryFormat::kChannelsLast;
-  } else {
-    CHECK_OR_THROW(false) << "unsupported memory format";
-  }
+  MemoryFormat memory_format = GetMemoryFormatFromString(memory_format_str);
 
   out_tensor_desc->set_is_dynamic(in_tensor_desc.is_dynamic());
   out_tensor_desc->set_shape(in_shape);
   out_tensor_desc->set_memory_format(memory_format);
-  out_tensor_desc->set_stride(GetChannelsLastStrides2d(in_tensor_desc.shape()));
+  out_tensor_desc->set_stride(Stride(in_shape, memory_format));
   return Maybe<void>::Ok();
 }
 
