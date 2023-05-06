@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
+import random as random_util
+import torch as torch_original
 
 import oneflow as flow
 import oneflow.unittest
@@ -130,6 +132,42 @@ class TestTensor(flow.unittest.TestCase):
         alpha = random_or_nothing(-1, 1).to(float)
         beta = random_or_nothing(-1, 1).to(float)
         return x.baddbmm(batch1, batch2, alpha=alpha, beta=beta)
+
+    @autotest(n=3)
+    def test_to_memory_format(test_case):
+        def check_equal(a, b):
+            test_case.assertEqual(list(a.shape), list(b.shape))
+            test_case.assertEqual(list(a.stride()), list(b.stride()))
+            test_case.assertEqual(a.is_contiguous(), b.is_contiguous())
+            test_case.assertTrue(
+                np.allclose(
+                    a.detach().cpu().numpy(), b.detach().cpu().numpy(), 1e-06, 1e-06
+                )
+            )
+
+        device = random_device()
+        x = random_tensor(
+            ndim=4,
+            dim0=random(1, 6).to(int),
+            dim1=random(1, 6).to(int),
+            dim2=random(1, 6).to(int),
+            dim3=random(1, 6).to(int),
+        ).to(device)
+
+        oneflow_x = x.oneflow
+        pytorch_x = x.pytorch
+
+        oneflow_x = oneflow_x.to(memory_format=flow.contiguous_format)
+        pytorch_x = pytorch_x.to(memory_format=torch_original.contiguous_format)
+        check_equal(oneflow_x, pytorch_x)
+
+        oneflow_x = oneflow_x.to(memory_format=flow.channels_last)
+        pytorch_x = pytorch_x.to(memory_format=torch_original.channels_last)
+        check_equal(oneflow_x, pytorch_x)
+
+        oneflow_x = oneflow_x.to(memory_format=flow.contiguous_format)
+        pytorch_x = pytorch_x.to(memory_format=torch_original.contiguous_format)
+        check_equal(oneflow_x, pytorch_x)
 
 
 if __name__ == "__main__":
