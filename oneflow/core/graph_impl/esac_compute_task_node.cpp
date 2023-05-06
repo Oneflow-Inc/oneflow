@@ -26,6 +26,7 @@ class EsacCompTaskNode final : public CompTaskNode {
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
+  void ConsumeFakeRegsts() override { UNIMPLEMENTED() << "EsacCompTaskNode is deprecated"; }
 
   TaskType GetTaskType() const override { return TaskType::kEsac; }
 

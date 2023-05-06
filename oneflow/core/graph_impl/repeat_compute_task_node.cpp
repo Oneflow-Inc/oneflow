@@ -26,6 +26,7 @@ class RepeatCompTaskNode final : public CompTaskNode {
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
+  void ConsumeFakeRegsts() override;
 
   TaskType GetTaskType() const override { return TaskType::kRepeat; }
 
@@ -36,6 +37,8 @@ class RepeatCompTaskNode final : public CompTaskNode {
 void RepeatCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst());
 }
+
+void RepeatCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
 
 void RepeatCompTaskNode::ProduceAllRegstsAndBindEdges() {
   std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", false, 1, 1);
