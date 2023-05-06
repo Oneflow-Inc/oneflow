@@ -160,18 +160,26 @@ Maybe<Operator> MakeOp(const UserOpExpr& user_op_expr, const AttrMap& attrs,
   return JUST(ConstructOp(op_conf, device_type));
 }
 
-Maybe<void> CheckInputParallelDescIdentical(const GlobalTensorMetaInferArgs& infer_args) {
+Maybe<void> CheckInputParallelDescIdentical(const GlobalTensorMetaInferArgs& infer_args,
+                                            const UserOpExpr& user_op_expr) {
   if (infer_args.input_global_tensor_metas().empty()) { return Maybe<void>::Ok(); }
-  const auto& first_parallel_desc =
-      infer_args.input_global_tensor_metas().begin()->tensor_meta()->parallel_desc();
+  Symbol<ParallelDesc> default_parallel_desc;
   for (int i = 0; i < infer_args.input_global_tensor_metas().size(); ++i) {
+    if (user_op_expr.IsHostMemoryInput(i)) { continue; }
+    default_parallel_desc =
+        JUST(VectorAt(infer_args.input_global_tensor_metas(), i)).tensor_meta()->parallel_desc();
+    break;
+  }
+
+  for (int i = 0; i < infer_args.input_global_tensor_metas().size(); ++i) {
+    if (user_op_expr.IsHostMemoryInput(i)) { continue; }
     CHECK_OR_RETURN(
-        first_parallel_desc
+        default_parallel_desc
         == JUST(VectorAt(infer_args.input_global_tensor_metas(), i)).tensor_meta()->parallel_desc())
         << Error::RuntimeError()
         << "Expected all tensors to be on the same placement, but found "
            "at least two placements, "
-        << *JUST(PlacementToString(first_parallel_desc)) << " (positional 0) and "
+        << *JUST(PlacementToString(default_parallel_desc)) << " (positional 0) and "
         << *JUST(PlacementToString(JUST(VectorAt(infer_args.input_global_tensor_metas(), i))
                                        .tensor_meta()
                                        ->parallel_desc()))
@@ -257,7 +265,7 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
   CHECK_GT_OR_RETURN(infer_args.input_global_tensor_metas().size(), 0);  // NOLINT
   Symbol<ParallelDesc> parallel_desc =
       infer_args.input_global_tensor_metas()[0].tensor_meta()->parallel_desc();
-  JUST(CheckInputParallelDescIdentical(infer_args));
+  JUST(CheckInputParallelDescIdentical(infer_args, user_op_expr));
   JUST(CheckIsDeviceSupportedByOp(*parallel_desc, user_op_expr.op_type_name()));
   std::vector<OpArgMutGlobalTensorMeta> output_mut_metas(user_op_expr.output_size());
   {

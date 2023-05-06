@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/ops/comm_net_device_infer_util.h"
+#include "oneflow/core/common/decorator.h"
 
 namespace oneflow {
 

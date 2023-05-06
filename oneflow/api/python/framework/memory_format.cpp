@@ -25,12 +25,12 @@ namespace oneflow {
 
 static PyObject* PyMemoryFormat_repr(PyMemoryFormatObject* self) {
   auto memory_format = PyMemoryFormat_Unpack((PyObject*)self);
-  if (memory_format == MemoryFormat::kUnused) {
-    return PyUnicode_FromString("oneflow.memory_format_unused");
-  } else if (memory_format == MemoryFormat::kNCHW) {
-    return PyUnicode_FromString("oneflow.channels_first");
-  } else if (memory_format == MemoryFormat::kNHWC) {
+  if (memory_format == MemoryFormat::kContiguous) {
+    return PyUnicode_FromString("oneflow.contiguous_format");
+  } else if (memory_format == MemoryFormat::kChannelsLast) {
     return PyUnicode_FromString("oneflow.channels_last");
+  } else if (memory_format == MemoryFormat::kPreserve) {
+    return PyUnicode_FromString("oneflow.preserve_format");
   } else {
     THROW(TypeError) << "invalid memory format";
     return nullptr;
@@ -67,18 +67,21 @@ PyObject* PyMemoryFormat_New(MemoryFormat memory_format) {
   return (PyObject*)self;
 }
 
-static PyObject* PyMemoryFormat_channels_first = nullptr;
+static PyObject* PyMemoryFormat_contiguous = nullptr;
 static PyObject* PyMemoryFormat_channels_last = nullptr;
+static PyObject* PyMemoryFormat_preserve = nullptr;
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   if (PyType_Ready(&PyMemoryFormat_Type) < 0) { return; }
   Py_INCREF(&PyMemoryFormat_Type);
   if (PyModule_AddObject(m.ptr(), "memory_format", (PyObject*)&PyMemoryFormat_Type) < 0) { return; }
 
-  PyMemoryFormat_channels_first = PyMemoryFormat_New(MemoryFormat::kNCHW);
-  PyMemoryFormat_channels_last = PyMemoryFormat_New(MemoryFormat::kNHWC);
-  if (PyModule_AddObject(m.ptr(), "channels_first", PyMemoryFormat_channels_first) < 0) { return; }
+  PyMemoryFormat_contiguous = PyMemoryFormat_New(MemoryFormat::kContiguous);
+  PyMemoryFormat_channels_last = PyMemoryFormat_New(MemoryFormat::kChannelsLast);
+  PyMemoryFormat_preserve = PyMemoryFormat_New(MemoryFormat::kPreserve);
+  if (PyModule_AddObject(m.ptr(), "contiguous_format", PyMemoryFormat_contiguous) < 0) { return; }
   if (PyModule_AddObject(m.ptr(), "channels_last", PyMemoryFormat_channels_last) < 0) { return; }
+  if (PyModule_AddObject(m.ptr(), "preserve_format", PyMemoryFormat_preserve) < 0) { return; }
 }
 
 }  // namespace oneflow

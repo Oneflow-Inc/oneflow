@@ -13,6 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/InitAllDialects.h"
@@ -35,6 +39,7 @@ limitations under the License.
 #include "OneFlow/OKL/OKLOps.h"
 #include "OneFlow/OKL/passes.h"
 #include "OneFlow/OKM/OKMDialect.h"
+#include "Transform/TestTransformDialectExtension.h"
 
 namespace mlir {
 struct TestOneFlowTraitFolder
@@ -59,34 +64,40 @@ int32_t main(int32_t argc, char** argv) {
   mlir::registerTestOneFlowTraitsPass();
   mlir::registerConvertToSignlessForTosaPassPass();
   mlir::registerLowerOneFlowToTosaPassPass();
+  mlir::registerLowerOneFlowToLinalgPassPass();
   mlir::registerGpuMapParallelLoopsPassPass();
   mlir::registerBufferHostRegisterPassPass();
   mlir::registerGpuCopyArgPassPass();
+  mlir::registerAppendOneFlowStreamPassPass();
+  mlir::registerInsertOneFlowMemPoolPass();
+  mlir::registerFoldAllocToSubviewPass();
+  mlir::registerMgpuToOneFlowStreamPassPass();
+  mlir::registerOneFlowJobToFuncPassPass();
+  mlir::registerCastOneFlowOpsToSignlessPassPass();
+  mlir::registerFuncToOneFlowJobPassPass();
+  mlir::registerAutoNhwcPass();
 #ifdef WITH_MLIR_CUDA_CODEGEN
-  mlir::oneflow::registerGpuSerializeToCubinPass();
+  mlir::registerNVVMToCubinPass();
 #endif  // WITH_MLIR_CUDA_CODEGEN
   mlir::okl::registerOneFlowPasses();
   mlir::okm::registerAllPasses();
   mlir::registerOutlineJitFunctionPassPass();
   mlir::oneflow::registerCSEPasses(global_cse_state);
   mlir::registerFuseForwardOpsPass();
+  mlir::registerEliminateAllocOpsPassPass();
   mlir::registerFuseIntoExistingOpPassPass();
   mlir::registerFuseNormalizationOpsPass();
   mlir::registerFuseOpsWithBackwardImplPass();
   mlir::registerConvertInferenceOpPassPass();
   mlir::registerGroupMatMulPass();
+  mlir::transform::registerTestTransformDialectEraseSchedulePass();
+  mlir::transform::registerTestTransformDialectInterpreterPass();
   mlir::DialectRegistry registry;
+  // Note: register all mlir dialect and their extension.
+  mlir::registerAllDialects(registry);
   registry.insert<mlir::okl::OKLDialect>();
   registry.insert<mlir::okm::OKMDialect>();
   registry.insert<mlir::sbp::SBPDialect>();
   registry.insert<mlir::oneflow::OneFlowDialect>();
-  registry.insert<mlir::func::FuncDialect>();
-  registry.insert<mlir::tosa::TosaDialect>();
-  registry.insert<mlir::linalg::LinalgDialect>();
-  registry.insert<mlir::memref::MemRefDialect>();
-  registry.insert<mlir::LLVM::LLVMDialect>();
-  registry.insert<mlir::gpu::GPUDialect>();
-  registry.insert<mlir::AffineDialect>();
-  registry.insert<mlir::bufferization::BufferizationDialect>();
   return failed(mlir::MlirOptMain(argc, argv, "OneFlow optimizer driver\n", registry));
 }

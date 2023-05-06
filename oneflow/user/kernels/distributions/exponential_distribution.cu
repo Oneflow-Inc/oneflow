@@ -63,6 +63,15 @@ struct ExponentialTransformFunctor<double, double> {
 };
 
 template<>
+struct ExponentialTransformFunctor<half, float> {
+  ExponentialTransformFunctor(float epsilon, float lambd) : float_functor(epsilon, lambd) {}
+  __device__ half operator()(float random_val) const {
+    return static_cast<half>(float_functor(random_val));
+  }
+  ExponentialTransformFunctor<float, float> float_functor;
+};
+
+template<>
 void ExponentialDistribution<DeviceType::kCUDA, double>::operator()(
     ep::Stream* stream, const int64_t elem_cnt, double* dptr,
     const std::shared_ptr<one::Generator>& generator) const {
@@ -111,6 +120,33 @@ void ExponentialDistribution<DeviceType::kCUDA, float>::operator()(
   DistributionFunctor<DistributionOp::kUniform4> dist_functor;
 
   DistributionElementwiseGridStrideKernel<float, float, 4, decltype(dist_functor),
+                                          decltype(transform_functor)>
+      <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+          elem_cnt, seed, offset, dptr, dist_functor, transform_functor);
+}
+
+template<>
+void ExponentialDistribution<DeviceType::kCUDA, half>::operator()(
+    ep::Stream* stream, const int64_t elem_cnt, half* dptr,
+    const std::shared_ptr<one::Generator>& generator) const {
+  CHECK_GT(elem_cnt, 0);
+  const auto device_index = stream->device()->device_index();
+  auto gen = CHECK_JUST(generator->Get<ep::CUDAGenerator>(device_index));
+  ep::CudaStream* cuda_stream = stream->As<ep::CudaStream>();
+  auto execution_policy = gen->CalcExecutionPolicy(elem_cnt, cuda_stream);
+
+  auto counter_offset = std::get<0>(execution_policy);
+  auto grid = std::get<1>(execution_policy);
+  auto block = std::get<2>(execution_policy);
+
+  uint64_t seed = gen->current_seed();
+  uint64_t offset = gen->get_philox_offset(counter_offset);
+
+  ExponentialTransformFunctor<half, float> transform_functor(std::numeric_limits<float>::epsilon(),
+                                                             static_cast<float>(lambd_));
+  DistributionFunctor<DistributionOp::kUniform4> dist_functor;
+
+  DistributionElementwiseGridStrideKernel<half, float, 4, decltype(dist_functor),
                                           decltype(transform_functor)>
       <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
           elem_cnt, seed, offset, dptr, dist_functor, transform_functor);

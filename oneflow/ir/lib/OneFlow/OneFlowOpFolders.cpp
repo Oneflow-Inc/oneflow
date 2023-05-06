@@ -116,31 +116,33 @@ OpFoldResult BinaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
 
 }  // namespace
 
-OpFoldResult FrozenVariableOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult FrozenVariableOp::fold(FoldAdaptor adaptor) {
   NamedAttrList attrs;
-  attrs.set(valueAttrName(), valueAttr());
-  attrs.set(op_nameAttrName(), op_nameAttr());
-  attrs.set(data_typeAttrName(), data_typeAttr());
-  attrs.set(device_tagAttrName(), device_tagAttr());
-  attrs.set(device_nameAttrName(), device_nameAttr());
-  attrs.set(scope_symbol_idAttrName(), scope_symbol_idAttr());
-  attrs.set(hierarchyAttrName(), hierarchyAttr());
-  attrs.set(nd_sbpAttrName(), nd_sbpAttr());
+  attrs.set(getValueAttrName(), getValueAttr());
+  attrs.set(getOpNameAttrName(), getOpNameAttr());
+  attrs.set(getDataTypeAttrName(), getDataTypeAttr());
+  attrs.set(getDeviceTagAttrName(), getDeviceTagAttr());
+  attrs.set(getDeviceNameAttrName(), getDeviceNameAttr());
+  attrs.set(getScopeSymbolIdAttrName(), getScopeSymbolIdAttr());
+  attrs.set(getHierarchyAttrName(), getHierarchyAttr());
+  attrs.set(getNdSbpAttrName(), getNdSbpAttr());
   return DictionaryAttr::get(getContext(), attrs);
 }
 
-OpFoldResult TransposeOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult TransposeOp::fold(FoldAdaptor adaptor) {
+  auto operands = adaptor.getOperands();
   return UnaryFold(getContext(), operands, [this](const auto& tensor) {
     std::vector<int32_t> perm_;
-    for (auto& x : perm().getValue()) { perm_.emplace_back(x.cast<IntegerAttr>().getSInt()); }
+    for (auto& x : getPerm().getValue()) { perm_.emplace_back(x.cast<IntegerAttr>().getSInt()); }
     return functional::Transpose(tensor, perm_);
   });
 }
 
-OpFoldResult ReshapeOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
+  auto operands = adaptor.getOperands();
   return UnaryFold(getContext(), operands, [this](const auto& tensor) {
     std::vector<int64_t> shape_vec;
-    for (auto& x : shape().getValue()) {
+    for (auto& x : getShape().getValue()) {
       shape_vec.emplace_back(x.cast<mlir::IntegerAttr>().getValue().getSExtValue());
     }
     return functional::Reshape(
@@ -148,30 +150,35 @@ OpFoldResult ReshapeOp::fold(ArrayRef<Attribute> operands) {
   });
 }
 
-OpFoldResult ScalarAddOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult ScalarAddOp::fold(FoldAdaptor adaptor) {
+  auto operands = adaptor.getOperands();
   return UnaryFold(getContext(), operands, [this](const auto& tensor) -> MaybeTensor {
-    if (has_int_operand()) { return functional::ScalarAdd(tensor, int_operand(), 1, false); }
-    if (has_float_operand()) {
-      return functional::ScalarAdd(tensor, float_operand().convertToDouble(), 1, false);
+    if (getHasIntOperand()) { return functional::ScalarAdd(tensor, getIntOperand(), 1, false); }
+    if (getHasFloatOperand()) {
+      return functional::ScalarAdd(tensor, getFloatOperand().convertToDouble(), 1, false);
     }
     emitError("Scalar op must has a int operand or a float operand.");
     return TensorPtr();
   });
 }
 
-OpFoldResult SqrtOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult SqrtOp::fold(FoldAdaptor adaptor) {
+  auto operands = adaptor.getOperands();
   return UnaryFold(getContext(), operands, functional::Sqrt);
 }
 
-OpFoldResult BroadcastMulOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult BroadcastMulOp::fold(FoldAdaptor adaptor) {
+  auto operands = adaptor.getOperands();
   return BinaryFold(getContext(), operands, functional::Mul);
 }
 
-OpFoldResult BroadcastDivOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult BroadcastDivOp::fold(FoldAdaptor adaptor) {
+  auto operands = adaptor.getOperands();
   return BinaryFold(getContext(), operands, functional::Div);
 }
 
-OpFoldResult BroadcastSubOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult BroadcastSubOp::fold(FoldAdaptor adaptor) {
+  auto operands = adaptor.getOperands();
   return BinaryFold(getContext(), operands, [](const auto& lhs, const auto& rhs) -> MaybeTensor {
     return functional::Sub(lhs, rhs, /*alpha=*/1.0, false);
   });

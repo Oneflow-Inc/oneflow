@@ -34,8 +34,6 @@ namespace oneflow {
 std::string PrintAvailableDevices();
 std::string PrintGeneratorAvailableDevices();
 
-#define DEVICE_TYPE_SEQ_CPU_ONLY OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU)
-
 #if defined(WITH_CUDA)
 #define DEVICE_TYPE_SEQ_CUDA OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA)
 #else

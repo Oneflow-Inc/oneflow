@@ -25,7 +25,8 @@ enum AttrType {
   kAtStride = 15;
   kAtListStride = 16;
   kAtDevice = 17;
-  kAtMemoryFormat = 18;
+  kAtComplexDouble = 18;
+  kAtMemoryFormat = 19;
 }
 
 message AttrValue {
@@ -51,6 +52,10 @@ message AttrValue {
   message ListString {
     repeated string val = 1;
   }
+  message ComplexDouble {
+    required double real = 1;
+    required double imag = 2;
+  }
   oneof value {
     int32 at_int32 = 1;
     int64 at_int64 = 2;
@@ -69,7 +74,8 @@ message AttrValue {
     Int64ListProto at_stride = 15;
     ListStride at_list_stride = 16;
     DeviceProto at_device = 17;
-    MemoryFormat at_memory_format = 18;
+    ComplexDouble at_complex_double = 18;
+    MemoryFormat at_memory_format = 19;
   }
 }
 

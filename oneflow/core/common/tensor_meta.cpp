@@ -23,7 +23,7 @@ namespace oneflow {
 namespace one {
 
 MutTensorMeta::MutTensorMeta()
-    : TensorMeta(kInvalidDataType, MemoryFormat::kUnused),
+    : TensorMeta(kInvalidDataType, MemoryFormat::kContiguous),
       shape_(std::make_shared<const Shape>()),
       stride_(std::make_shared<const Stride>()) {}
 
@@ -63,7 +63,7 @@ size_t MutTensorMeta::CalcHashValue() const {
 }
 
 ConstTensorMeta::ConstTensorMeta()
-    : TensorMeta(kInvalidDataType, MemoryFormat::kUnused),
+    : TensorMeta(kInvalidDataType, MemoryFormat::kContiguous),
       shape_(SymbolOf(Shape())),
       stride_(SymbolOf(Stride())) {}
 
@@ -87,7 +87,7 @@ size_t ConstTensorMeta::CalcHashValue() const {
 
 LocalTensorMeta::LocalTensorMeta()
     : ConstTensorMeta(SymbolOf(Shape()), SymbolOf(Stride()), DataType::kInvalidDataType,
-                      MemoryFormat::kUnused),
+                      MemoryFormat::kContiguous),
       device_(Symbol<Device>()) {}
 
 LocalTensorMeta::LocalTensorMeta(Symbol<Shape> shape, DataType dtype, MemoryFormat memory_format,
@@ -97,6 +97,11 @@ LocalTensorMeta::LocalTensorMeta(Symbol<Shape> shape, DataType dtype, MemoryForm
 LocalTensorMeta::LocalTensorMeta(Symbol<Shape> shape, Symbol<Stride> stride, DataType dtype,
                                  MemoryFormat memory_format, Symbol<Device> device)
     : ConstTensorMeta(shape, stride, dtype, memory_format), device_(device) {}
+
+LocalTensorMeta::LocalTensorMeta(Symbol<Shape> shape, Symbol<Stride> stride, DataType dtype,
+                                 MemoryFormat memory_format, Symbol<Device> device,
+                                 const bool is_view)
+    : ConstTensorMeta(shape, stride, dtype, memory_format), device_(device), is_view_(is_view) {}
 
 bool LocalTensorMeta::operator==(const LocalTensorMeta& other) const {
   // It's correct to ignore is_dynamic_ field.
@@ -112,7 +117,7 @@ size_t LocalTensorMeta::CalcHashValue() const {
 
 MutLocalTensorMeta::MutLocalTensorMeta()
     : MutTensorMeta(std::make_shared<const Shape>(), std::make_shared<const Stride>(),
-                    kInvalidDataType, MemoryFormat::kUnused),
+                    kInvalidDataType, MemoryFormat::kContiguous),
       device_(Symbol<Device>()) {}
 
 MutLocalTensorMeta::MutLocalTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,

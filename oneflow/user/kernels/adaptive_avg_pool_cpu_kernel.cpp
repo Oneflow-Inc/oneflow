@@ -13,13 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/user/kernels/adaptive_pool_kernel_util.h"
 
 namespace oneflow {
 
 namespace {
 
-template<typename T>
+template<typename T, typename accT>
 void AvgForwardCompute(user_op::KernelComputeContext* ctx, const int32_t& dim) {
   user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
   user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -59,15 +60,16 @@ void AvgForwardCompute(user_op::KernelComputeContext* ctx, const int32_t& dim) {
             int64_t kw = iw1 - iw0;
 
             // Compute local average
-            T sum = static_cast<T>(0);
+            accT sum = static_cast<accT>(0);
             FOR_RANGE(int64_t, id, id0, id1) {
               FOR_RANGE(int64_t, ih, ih0, ih1) {
                 FOR_RANGE(int64_t, iw, iw0, iw1) {
-                  sum += in_ptr[id * input_image_size + ih * input_width + iw];
+                  sum += static_cast<accT>(in_ptr[id * input_image_size + ih * input_width + iw]);
                 }
               }
             }
-            out_ptr[od * output_image_size + oh * output_width + ow] = sum / kd / kh / kw;
+            out_ptr[od * output_image_size + oh * output_width + ow] =
+                static_cast<T>(sum / kd / kh / kw);
           }
         }
       }
@@ -117,8 +119,8 @@ void AvgBackwardCompute(user_op::KernelComputeContext* ctx, const int32_t& dim) 
             int64_t iw0 = start_index(ow, out.At(4), in.At(4));
             int64_t iw1 = end_index(ow, out.At(4), in.At(4));
             int64_t kw = iw1 - iw0;
-
-            T grad_delta = out_ptr[od * output_image_size + oh * output_width + ow] / kd / kh / kw;
+            T grad_delta = static_cast<T>(out_ptr[od * output_image_size + oh * output_width + ow]
+                                          / kd / kh / kw);
             FOR_RANGE(int64_t, id, id0, id1) {
               FOR_RANGE(int64_t, ih, ih0, ih1) {
                 FOR_RANGE(int64_t, iw, iw0, iw1) {
@@ -143,7 +145,13 @@ class AdaptivePool1DCpuKernel final : public user_op::OpKernel {
   ~AdaptivePool1DCpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override { AvgForwardCompute<T>(ctx, 1); }
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    if (GetDataType<T>::value == kFloat16) {
+      AvgForwardCompute<T, float>(ctx, 1);
+    } else {
+      AvgForwardCompute<T, T>(ctx, 1);
+    }
+  }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -155,7 +163,13 @@ class AdaptivePool2DCpuKernel final : public user_op::OpKernel {
   ~AdaptivePool2DCpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override { AvgForwardCompute<T>(ctx, 2); }
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    if (GetDataType<T>::value == kFloat16) {
+      AvgForwardCompute<T, float>(ctx, 2);
+    } else {
+      AvgForwardCompute<T, T>(ctx, 2);
+    }
+  }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -167,7 +181,13 @@ class AdaptivePool3DCpuKernel final : public user_op::OpKernel {
   ~AdaptivePool3DCpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override { AvgForwardCompute<T>(ctx, 3); }
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    if (GetDataType<T>::value == kFloat16) {
+      AvgForwardCompute<T, float>(ctx, 3);
+    } else {
+      AvgForwardCompute<T, T>(ctx, 3);
+    }
+  }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -218,6 +238,7 @@ class AdaptivePool3DCpuGradKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_ADAPTIVE_POOL_KERNEL_WITH_DEVICE(device) \
+  REGISTER_ADAPTIVE_POOL_KERNEL(device, float16)          \
   REGISTER_ADAPTIVE_POOL_KERNEL(device, float)            \
   REGISTER_ADAPTIVE_POOL_KERNEL(device, double)           \
   REGISTER_ADAPTIVE_POOL_KERNEL(device, int)
@@ -239,6 +260,7 @@ REGISTER_ADAPTIVE_POOL_KERNEL_WITH_DEVICE(DeviceType::kCPU)
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_ADAPTIVE_POOL_BACKWARD_KERNEL_WITH_DEVICE(device) \
+  REGISTER_ADAPTIVE_POOL_BACKWARD_KERNEL(device, float16)          \
   REGISTER_ADAPTIVE_POOL_BACKWARD_KERNEL(device, float)            \
   REGISTER_ADAPTIVE_POOL_BACKWARD_KERNEL(device, double)           \
   REGISTER_ADAPTIVE_POOL_BACKWARD_KERNEL(device, int)

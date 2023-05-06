@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/vm/ep_event.h"
 
 namespace oneflow {
-
 namespace vm {
 
 class EpOptionalEventRecordStatusQuerier {

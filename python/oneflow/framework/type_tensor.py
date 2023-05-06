@@ -25,6 +25,8 @@ from oneflow._C import (
     CharTensor,
     IntTensor,
     LongTensor,
+    ComplexFloatTensor,
+    ComplexDoubleTensor,
 )
 
 __all__ = [
@@ -36,5 +38,7 @@ __all__ = [
     "CharTensor",
     "IntTensor",
     "LongTensor",
-    # TODO: Add support for BFloat16Tensor
+    "ComplexFloatTensor",
+    "ComplexDoubleTensor",
+    # TODO: Add support for BFloat16Tensor, ComplexHalfTensor
 ]

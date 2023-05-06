@@ -71,8 +71,8 @@ Maybe<Tensor> Generator::GetState() const {
   std::vector<uint8_t> state_data(state_size);
   internal_->GetState(state_size, state_data.data());
   const auto& device = JUST(Device::New("cpu"));
-  const auto& state =
-      JUST(functional::Empty(Shape{state_size}, DType::UInt8(), device, /*pin_memory=*/false));
+  const auto& state = JUST(functional::Empty(Shape{state_size}, DType::UInt8(), device,
+                                             /*requires_grad=*/false, /*pin_memory=*/false));
   const auto& callback = [&](ep::Stream*,
                              const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
     memcpy(eager_blob_object->mut_dptr(), state_data.data(), state_size);
@@ -171,8 +171,12 @@ Maybe<Generator> MakeGenerator(const std::string& device, int device_index) {
   if (device == "auto") {
     return std::make_shared<Generator>(std::make_shared<AutoGenerator>(default_rng_seed_val));
   }
-  auto device_mgr = Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceManager(
-      ep::DeviceManagerRegistry::GetDeviceTypeByDeviceTypeName(device));
+  auto device_type = ep::DeviceManagerRegistry::GetDeviceTypeByDeviceTypeName(device);
+  if (device_type == DeviceType::kInvalidDevice) {
+    return Error::RuntimeError() << "Expected one of " << PrintGeneratorAvailableDevices()
+                                 << " device type at start of device string: " << device;
+  }
+  auto device_mgr = Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceManager(device_type);
   if (device_index == -1) { device_index = (device == "cpu" ? 0 : GlobalProcessCtx::LocalRank()); }
   return std::make_shared<Generator>(
       device_mgr->CreateRandomGenerator(default_rng_seed_val, device_index));

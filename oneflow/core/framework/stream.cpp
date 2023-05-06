@@ -36,7 +36,7 @@ Stream::Stream(Symbol<Device> device, StreamType stream_type, size_t thread_uid)
   ep::DeviceManager* device_mgr =
       Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceManagerOrNull(device->enum_type());
   if (!device_mgr) { return; }
-  support_wait_event_ = device_mgr->IsDeviceStreamWaitEventSupported();
+  support_wait_event_ = device_mgr->IsStreamWaitEventSupported();
 }
 
 Maybe<void> Stream::Init(size_t unique_stream_id) {

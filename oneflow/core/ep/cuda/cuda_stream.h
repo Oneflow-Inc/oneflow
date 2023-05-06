@@ -80,7 +80,6 @@ class CudaStream : public Stream {
   Maybe<void> Sync() override;
   void RecordEvent(Event* event) override;
   void WaitEvent(Event* event) override;
-
   Maybe<void> GetAsyncError() override;
 
   Maybe<void> AllocAsync(void** ptr, size_t size) override;

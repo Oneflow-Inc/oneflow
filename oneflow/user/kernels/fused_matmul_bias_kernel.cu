@@ -52,8 +52,8 @@ class FusedMatmulBiasKernel final : public user_op::OpKernel, public user_op::Cu
     size_t cublas_m = 0, cublas_n = 0, cublas_k = 0;
     int64_t cublas_lda = 0, cublas_ldb = 0, cublas_ldc = 0;
 
-    const double alpha = 1.0;
-    const double beta = (ctx->has_input("_add_to_output", 0)) ? 1.0 : 0.0;
+    const double alpha = ctx->Attr<double>("alpha");
+    const double beta = (ctx->has_input("_add_to_output", 0)) ? ctx->Attr<double>("beta") : 0.0;
 
     const auto sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_dtype);
     const auto sp_beta = GetCublasScalarParameter(beta, cublas_compute_dtype);

@@ -17,6 +17,8 @@ limitations under the License.
 #define ONEFLOW_CORE_GRAPH_NCCL_SEND_RECV_BOXING_TASK_NODE_H_
 
 #include "oneflow/core/graph/transport_task_node.h"
+#include "oneflow/core/graph/boxing_task_graph.pb.h"
+#include "oneflow/core/job/placement.pb.h"
 
 namespace oneflow {
 
@@ -34,6 +36,10 @@ class NcclSendRecvBoxingTaskNode : public TransportTaskNode {
             const std::string& stream_name);
   TaskType GetTaskType() const override { return TaskType::kNcclSendRecvBoxing; }
   const ParallelContext* parallel_ctx() const override { return &parallel_ctx_; }
+
+  Maybe<void> InitTransportTaskFromProto(const TransportTaskProto& transport_task_proto,
+                                         const TaskGraphRebuildCtx& ctx) override;
+  void ToTransportTaskProto(TransportTaskProto*) const override;
 
  private:
   void BuildExecGphAndRegst() override;

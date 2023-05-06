@@ -23,6 +23,7 @@ limitations under the License.
 #include <vector>
 
 #include "oneflow/core/autograd/autograd_meta.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/job/lazy_mode.h"
@@ -54,13 +55,18 @@ class FunctionNode {
   // `Apply` in second time
   virtual void ReleaseData() = 0;
 
-  const std::vector<std::shared_ptr<FunctionNode>>& next_functions() const {
+  const std::vector<std::tuple<std::shared_ptr<FunctionNode>, int>>& next_functions() const {
     return next_functions_;
   }
   const std::string& name() const { return name_; }
 
   const std::shared_ptr<Scope>& scope() const { return scope_; }
   void set_scope(const std::shared_ptr<Scope>& scope) { scope_ = scope; }
+  void set_variable(const std::weak_ptr<Tensor>& variable) { variable_ = variable; }
+  const Maybe<Tensor> Variable() const {
+    if (!variable_.lock()) { THROW(RuntimeError) << "The tensor has already been deleted!"; }
+    return variable_.lock();
+  }
 
   using Hook = std::function<Optional<std::vector<std::shared_ptr<Tensor>>>(const TensorTuple&,
                                                                             const TensorTuple&)>;
@@ -73,7 +79,7 @@ class FunctionNode {
       : name_(name), backward_fn_(backward_fn), scope_(nullptr) {}
 
   const std::string name_;
-  std::vector<std::shared_ptr<FunctionNode>> next_functions_;
+  std::vector<std::tuple<std::shared_ptr<FunctionNode>, int>> next_functions_;
 
   std::vector<std::shared_ptr<AutogradMeta>> input_meta_data_;
   std::vector<std::shared_ptr<AutogradMeta>> output_meta_data_;
@@ -81,6 +87,7 @@ class FunctionNode {
 
   // Actual backward function builds in `AutogradInterpreter` to calculate one backward op
   std::shared_ptr<BackwardFunction> backward_fn_;
+  std::weak_ptr<Tensor> variable_;
 
   // The execution scope
   std::shared_ptr<Scope> scope_;

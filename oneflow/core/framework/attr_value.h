@@ -16,10 +16,12 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_ATTR_VALUE_H_
 #define ONEFLOW_CORE_FRAMEWORK_ATTR_VALUE_H_
 
+#include <complex>
 #include "fmt/core.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/hash.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/common/data_type.h"
@@ -66,6 +68,9 @@ namespace user_op {
 
 #define DEVICE_ATTR_SEQ OF_PP_MAKE_TUPLE_SEQ(at_device, Symbol<Device>, AttrType::kAtDevice)
 
+#define COMPLEX_DOUBLE_ATTR_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ(at_complex_double, std::complex<double>, AttrType::kAtComplexDouble)
+
 #define ATTR_SEQ        \
   BASIC_ATTR_SEQ        \
   ENUM_ATTR_SEQ         \
@@ -74,7 +79,8 @@ namespace user_op {
   LIST_ENUM_ATTR_SEQ    \
   LIST_MESSAGE_ATTR_SEQ \
   LIST_STRING_ATTR_SEQ  \
-  DEVICE_ATTR_SEQ
+  DEVICE_ATTR_SEQ       \
+  COMPLEX_DOUBLE_ATTR_SEQ
 
 // Type Trait: GetAttrType, GetCppType
 

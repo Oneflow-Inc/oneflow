@@ -13,15 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/kernels/op_kernel_wrapper.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/cuda/atomic.cuh"
-#include "oneflow/user/kernels/dropout_kernel.h"
-#include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/device/cuda_pseudo_bfloat16.h"
 #include "oneflow/core/ep/include/device.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
-#include "oneflow/core/device/cuda_pseudo_bfloat16.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/user/kernels/op_kernel_wrapper.h"
+#include "oneflow/user/kernels/dropout_kernel.h"
+#include "oneflow/user/kernels/random_seed_util.h"
+
 namespace oneflow {
 
 namespace {
@@ -388,6 +390,8 @@ class DropoutKernelGPU final : public user_op::OpKernel {
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     const auto& generator = CHECK_JUST(one::MakeGenerator(DeviceType::kCUDA));
+    generator->set_current_seed(
+        CHECK_JUST(GetOpKernelRandomSeedInCurrentRank(ctx, ctx->Attr<int64_t>("seed"))));
     return std::make_shared<FusedDropoutKernelState>(generator);
   }
 
@@ -479,6 +483,7 @@ REGISTER_DROPOUT_GRAD_KERNEL_GPU(double, DataType::kDouble);
 #if CUDA_VERSION >= 11000
 REGISTER_DROPOUT_GRAD_KERNEL_GPU(nv_bfloat16, DataType::kBFloat16);
 #endif
+
 }  // namespace
 
 }  // namespace oneflow

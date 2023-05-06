@@ -38,7 +38,7 @@ std::string PrintAvailableDevices() {
 
 std::string PrintGeneratorAvailableDevices() {
   auto device_type_names = GetAllAvailableDeviceTypeNames();
-  device_type_names.push_back("auto");  // "auto" is a fake device type for random generator.
+  device_type_names.emplace_back("auto");  // "auto" is a fake device type for random generator.
   return fmt::format("{}", fmt::join(device_type_names, ", "));
 }
 

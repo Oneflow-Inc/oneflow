@@ -93,14 +93,14 @@ class CoshGradGradFunctor {
 
 class TanhGradGradFunctor {
  public:
-  // dx = sech^2(x), ddx = -2*sech^2(x)*tanh(x) = tan_grad(x)*tanh(x)*(-2)
+  // dx = sech^2(x), ddx = -2*sech^2(x)*tanh(x) = dydx*tanh(x)*(-2)
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
                            const std::shared_ptr<Tensor>& dydx) const {
     auto r = sequence_function(functional::Mul)
                  .then([](const std::shared_ptr<Tensor>& input) {
                    return functional::ScalarMul(Scalar(-2), input);
                  })
-                 .call(JUST(functional::Tanh(x)), JUST(functional::TanhGrad(x, dydx)));
+                 .call(dydx, x);
     return r;
   }
 };
@@ -243,6 +243,14 @@ class ExpGradGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
                            const std::shared_ptr<Tensor>& dydx) const {
     return functional::ExpGrad(x, dydx);
+  }
+};
+
+class Exp2GradGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    return functional::ScalarMul(Scalar(std::log(2)), JUST(functional::Exp2Grad(x, dydx)));
   }
 };
 
@@ -504,7 +512,8 @@ class MishGradGradFunctor {
                            const std::shared_ptr<Tensor>& dydx) const {
     const auto sig = JUST(functional::Sigmoid(x));
     const auto sp = JUST(functional::Log1p(JUST(functional::Exp(x))));
-    const auto grad_tsp = JUST(functional::TanhGrad(sp, dydx));
+    const auto tanh_sp = JUST(functional::Tanh(sp));
+    const auto grad_tsp = JUST(functional::TanhGrad(tanh_sp, dydx));
 
     auto r = functional::sequence_function(functional::Tanh)
                  .then([](const std::shared_ptr<Tensor>& input) {
@@ -564,6 +573,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ErfGradGradFunctor>("ErfGradGrad");
   m.add_functor<impl::ErfcGradGradFunctor>("ErfcGradGrad");
   m.add_functor<impl::ExpGradGradFunctor>("ExpGradGrad");
+  m.add_functor<impl::Exp2GradGradFunctor>("Exp2GradGrad");
   m.add_functor<impl::Expm1GradGradFunctor>("Expm1GradGrad");
   m.add_functor<impl::LogGradGradFunctor>("LogGradGrad");
   m.add_functor<impl::Log2GradGradFunctor>("Log2GradGrad");

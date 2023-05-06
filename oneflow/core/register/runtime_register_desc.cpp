@@ -45,7 +45,7 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto)
     data_regst_time_shape_.reset(new Shape(data_regst_desc.time_shape()));
   } else {
     sorted_blob_desc_vec_.emplace_back(
-        std::make_unique<const BlobDesc>(BlobDesc(DataType::kChar, MemoryFormat::kUnused)));
+        std::make_unique<const BlobDesc>(BlobDesc(DataType::kChar, MemoryFormat::kContiguous)));
   }
   for (const auto& blob_desc_ : sorted_blob_desc_vec_) {
     one_regst_header_size_ += blob_desc_->AlignedByteSizeOfBlobHeader();

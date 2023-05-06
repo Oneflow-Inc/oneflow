@@ -17,6 +17,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FUNCTIONAL_VALUE_TYPES_H_
 #define ONEFLOW_CORE_FUNCTIONAL_VALUE_TYPES_H_
 
+#include <complex>
 #include <memory>
 #include <Python.h>
 
@@ -25,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/common/memory_format.pb.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/dtype.h"
+#include "oneflow/core/framework/layout.h"
 
 namespace oneflow {
 class Scalar;
@@ -95,6 +97,7 @@ enum ValueType : int {
   kATTR_REF,
   kDTYPE,
   kSHAPE,
+  kLAYOUT,
   kSHAPE_MAYBE,
   kGENERATOR,
   kGENERATOR_REF,
@@ -112,6 +115,12 @@ enum ValueType : int {
   kOPEXPR = 390,
   kOPEXPR_REF,
   kPY_OBJECT = 400,
+
+  // Complex
+  kCOMPLEX_FLOAT,
+  kCOMPLEX_DOUBLE,
+  kCHAR,
+  kINT16
 };
 
 #define VALUE_TYPE_OF_IMPL(cpp_type, value_type)                                                 \
@@ -127,6 +136,8 @@ enum ValueType : int {
 
 VALUE_TYPE_OF_IMPL(void, kVOID);
 VALUE_TYPE_OF_IMPL(int32_t, kINT32);
+VALUE_TYPE_OF_IMPL(int16_t, kINT16);
+VALUE_TYPE_OF_IMPL(char, kCHAR);
 VALUE_TYPE_OF_IMPL(uint32_t, kUINT32);
 VALUE_TYPE_OF_IMPL(int64_t, kINT64);
 VALUE_TYPE_OF_IMPL(uint64_t, kUINT64);
@@ -154,6 +165,7 @@ VALUE_TYPE_OF_IMPL(one::TensorTuple, kTENSOR_TUPLE);
 VALUE_TYPE_OF_IMPL(std::shared_ptr<one::TensorTuple>, kTENSOR_TUPLE_REF);
 VALUE_TYPE_OF_IMPL(Maybe<one::TensorTuple>, kTENSOR_TUPLE_MAYBE);
 VALUE_TYPE_OF_IMPL(Symbol<DType>, kDTYPE);
+VALUE_TYPE_OF_IMPL(Symbol<Layout>, kLAYOUT);
 VALUE_TYPE_OF_IMPL(std::vector<Symbol<DType>>, kDTYPE_LIST);
 VALUE_TYPE_OF_IMPL(Shape, kSHAPE);
 VALUE_TYPE_OF_IMPL(Maybe<Shape>, kSHAPE_MAYBE);
@@ -174,6 +186,9 @@ VALUE_TYPE_OF_IMPL(std::shared_ptr<one::OpExpr>, kOPEXPR_REF);
 
 VALUE_TYPE_OF_IMPL(PyObject*, kPY_OBJECT);
 VALUE_TYPE_OF_IMPL(const PyObject*, kPY_OBJECT);
+
+VALUE_TYPE_OF_IMPL(std::complex<float>, kCOMPLEX_FLOAT);
+VALUE_TYPE_OF_IMPL(std::complex<double>, kCOMPLEX_DOUBLE);
 
 #undef VALUE_TYPE_OF_IMPL
 

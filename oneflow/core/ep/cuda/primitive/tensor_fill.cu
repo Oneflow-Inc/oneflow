@@ -112,7 +112,7 @@ class TensorFillFactoryImpl : public TensorFillFactory {
 #define MAKE_NEW_TENSOR_FILL_ENTRY(type_cpp, type_proto) {type_proto, NewTensorFill<type_cpp>},
 
     static const std::map<DataType, std::function<std::unique_ptr<TensorFill>()>> new_fill_handle{
-        OF_PP_FOR_EACH_TUPLE(MAKE_NEW_TENSOR_FILL_ENTRY, CUDA_PRIMITIVE_ALL_TYPE_SEQ)};
+        OF_PP_FOR_EACH_TUPLE(MAKE_NEW_TENSOR_FILL_ENTRY, CUDA_PRIMITIVE_REAL_TYPE_SEQ)};
 
 #undef MAKE_NEW_TENSOR_FILL_ENTRY
 

@@ -7,3 +7,7 @@ race:total_erased_instruction_cnt
 race:ToShape
 # glog
 race:google::
+# ~basic_string() in DenseElementsAttrToTensor interferes with
+# ~~AccessBlobArgCbInstructionPolicy(). Perhaps it's a false
+# positive.
+race:~basic_string

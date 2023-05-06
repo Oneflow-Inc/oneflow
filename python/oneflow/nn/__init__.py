@@ -97,7 +97,6 @@ from oneflow.nn.modules.dataset import (
     OFRecordReader as OfrecordReader,
     OFRecordBytesDecoder,
     GPTIndexedBinDataReader,
-    OneRecReader,
     RawReader,
 )
 

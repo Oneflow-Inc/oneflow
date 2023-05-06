@@ -20,7 +20,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, auto_backward=True, check_graph=False, atol=1e-5, rtol=1e-5)
+@autotest(n=1, auto_backward=True, check_graph=True, atol=1e-5, rtol=1e-5)
 def _test_dropout_p01(test_case, placement, sbp, ndim, p):
     dims = [random(1, 5) * 8 for i in range(ndim)]
     x = random_tensor(ndim, *dims)
@@ -29,7 +29,7 @@ def _test_dropout_p01(test_case, placement, sbp, ndim, p):
     return m(x)
 
 
-@autotest(n=1, auto_backward=True, check_graph=False, atol=1e-5, rtol=1e-5)
+@autotest(n=1, auto_backward=True, check_graph=True, atol=1e-5, rtol=1e-5)
 def _test_dropout_eval_p01(test_case, placement, sbp, ndim, p):
     dims = [random(1, 5) * 8 for i in range(ndim)]
     x = random_tensor(ndim, *dims)

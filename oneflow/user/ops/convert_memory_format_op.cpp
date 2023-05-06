@@ -74,14 +74,14 @@ using GetSbpFunc = std::function<Maybe<void>(user_op::SbpContext* ctx, const Sha
 
 static ComputeShapeFunc compute_shape_funcs[MemoryFormat_Max][MemoryFormat_Max] = {
     /*kDefaukt->other*/ {ComputeShapeIdentity, ComputeShapeIdentity, ComputeShapeNchwToNhwc},
-    /*kNCHW->other*/ {ComputeShapeIdentity, ComputeShapeIdentity, ComputeShapeNchwToNhwc},
-    /*kNHWC->other*/ {ComputeShapeNhwcToNchw, ComputeShapeNhwcToNchw, ComputeShapeIdentity},
+    /*kContiguous->other*/ {ComputeShapeIdentity, ComputeShapeIdentity, ComputeShapeNchwToNhwc},
+    /*kChannelsLast->other*/ {ComputeShapeNhwcToNchw, ComputeShapeNhwcToNchw, ComputeShapeIdentity},
 };
 
 static GetSbpFunc get_sbp_funcs[MemoryFormat_Max][MemoryFormat_Max] = {
     /*kDefaukt->other*/ {GetSbpIdentity, GetSbpIdentity, GetSbpNchwToNhwc},
-    /*kNCHW->other*/ {GetSbpIdentity, GetSbpIdentity, GetSbpNchwToNhwc},
-    /*kNHWC->other*/ {GetSbpNhwcToNchw, GetSbpNhwcToNchw, GetSbpIdentity},
+    /*kContiguous->other*/ {GetSbpIdentity, GetSbpIdentity, GetSbpNchwToNhwc},
+    /*kChannelsLast->other*/ {GetSbpNhwcToNchw, GetSbpNhwcToNchw, GetSbpIdentity},
 };
 
 static Shape ComputeConvertMemoryFormatShape(const Shape& shape, MemoryFormat memory_format,

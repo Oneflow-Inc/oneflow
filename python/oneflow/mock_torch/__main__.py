@@ -37,11 +37,13 @@ def main():
         print(
             f"export ONEFLOW_MOCK_TORCH_LAZY={args.lazy}; export ONEFLOW_MOCK_TORCH_VERBOSE={args.verbose}; export PYTHONPATH={str(torch_env)}:$PYTHONPATH"
         )
-    elif args.mock == "disable":
+    elif args.mock == "disable" and "PYTHONPATH" in os.environ:
         paths = os.environ["PYTHONPATH"].rstrip(":").split(":")
         paths = [x for x in paths if x != str(torch_env)]
         path = ":".join(paths)
-        print("export PYTHONPATH=" + path)
+        print(
+            f"export PYTHONPATH={path}; unset ONEFLOW_MOCK_TORCH_LAZY; unset ONEFLOW_MOCK_TORCH_VERBOSE"
+        )
 
 
 if __name__ == "__main__":

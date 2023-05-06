@@ -397,7 +397,8 @@ Maybe<Tensor> GlobalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDe
     op = JUST(GetGlobalToGlobalOpExpr(grad_sbp_parallels));
   }
   if (!LazyMode::is_enabled() && JUST(x->nd_sbp()) == nd_sbp
-      && JUST(x->parallel_desc()) == parallel_desc && grad_sbp_parallels.size() == 0) {
+      && JUST(x->parallel_desc()) == parallel_desc
+      && (grad_sbp_parallels.size() == 0 || !autograd::GradMode::is_enabled())) {
     if (copy) { return functional::Identity(x); }
     return x;
   }
@@ -484,7 +485,7 @@ class LocalToGlobalFunctor {
     DisableCheckGlobalTensorMetaScope scope{};
     std::shared_ptr<Tensor> tensor;
     DeviceType device_type = parallel_desc->device_type();
-    if (ccl::IsBroadcastRegistered(device_type) || !sync_data) {
+    if (ccl::IsBroadcastRegistered(device_type) || !sync_data || device_type == DeviceType::kMeta) {
       tensor = JUST(LocalToGlobal(x, parallel_desc, sbp_parallels, shape, dtype->data_type(), op_,
                                   /* check_meta */ false, sync_data, copy));
     } else {

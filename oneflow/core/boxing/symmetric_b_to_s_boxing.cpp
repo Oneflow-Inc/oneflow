@@ -82,8 +82,10 @@ Maybe<void> RawCheckSymmetricB2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out
   CHECK_OR_RETURN(IsBroadcastSbp(SymbolOf(in->nd_sbp()->sbp_parallel(0))));
   CHECK_OR_RETURN(IsSplitSbp(SymbolOf(out->nd_sbp()->sbp_parallel(0))));
 
-  CHECK_OR_RETURN(in->placement() == out->placement());
-  CHECK_OR_RETURN(JUST(CheckSliceKernelRegistered(in->placement()->device_type())));
+  CHECK_OR_RETURN(in->placement() == out->placement());                           // NOLINT
+  CHECK_OR_RETURN(in->placement()->device_type() != DeviceType::kInvalidDevice    // NOLINT
+                  && in->placement()->device_type() != kMeta                      // NOLINT
+                  && in->placement()->device_type() != DeviceType::kMockDevice);  // NOLINT
   return Maybe<void>::Ok();
 }
 // NOLINTEND(maybe-need-error-msg)

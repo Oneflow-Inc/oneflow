@@ -18,7 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/common/decorator.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stream.h"
 

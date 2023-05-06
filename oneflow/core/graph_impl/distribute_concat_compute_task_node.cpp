@@ -26,6 +26,7 @@ class DistributeConcatCompTaskNode final : public CompTaskNode {
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
+  void ConsumeFakeRegsts() override;
 
   TaskType GetTaskType() const override { return TaskType::kDistributeConcat; }
 
@@ -49,10 +50,13 @@ void DistributeConcatCompTaskNode::ConsumeAllRegsts() {
   CHECK_EQ(cnt, 1);
 }
 
+void DistributeConcatCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
+
 void DistributeConcatCompTaskNode::BuildExecGphAndRegst() {
   BuildExecGphStructAndBindInRegst();
   BuildOutRegst();
-  mut_exec_gph().TopoForEachNode([this](ExecNode* node) { node->InferBlobDescs(parallel_ctx()); });
+  mut_exec_gph().TopoForEachNode(
+      [this](ExecNode* node) { (node->*GetInferBlobDescsMethod())(parallel_ctx()); });
 }
 
 void DistributeConcatCompTaskNode::BuildExecGphStructAndBindInRegst() {

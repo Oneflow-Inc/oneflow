@@ -46,11 +46,20 @@ static PyTypeObject PyTensorTypeTemplate{
 static std::vector<PyTensorType*> tensor_types;
 
 static const std::unordered_map<Symbol<DType>, std::string> all_data_types = {
-    {DType::Float(), "FloatTensor"},  {DType::Double(), "DoubleTensor"},
-    {DType::Int8(), "CharTensor"},    {DType::Int32(), "IntTensor"},
-    {DType::Int64(), "LongTensor"},   {DType::UInt8(), "ByteTensor"},
-    {DType::Float16(), "HalfTensor"}, {DType::BFloat16(), "BFloat16Tensor"},
+    {DType::Float(), "FloatTensor"},
+    {DType::Double(), "DoubleTensor"},
+    {DType::Int8(), "CharTensor"},
+    {DType::Int32(), "IntTensor"},
+    {DType::Int64(), "LongTensor"},
+    {DType::UInt8(), "ByteTensor"},
+    {DType::Float16(), "HalfTensor"},
+    {DType::BFloat16(), "BFloat16Tensor"},
     {DType::Bool(), "BoolTensor"},
+    {DType::Complex32(), "ComplexHalfTensor"},
+    {DType::Complex64(), "ComplexFloatTensor"},
+    {DType::Complex128(), "ComplexDoubleTensor"},
+    {DType::Char(), "CharTensor"},
+    {DType::Int16(), "ShortTensor"},
 };
 
 static const std::string get_dtype_string(PyTensorType* tensortype) {

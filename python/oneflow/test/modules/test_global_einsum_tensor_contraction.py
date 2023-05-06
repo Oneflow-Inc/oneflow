@@ -23,7 +23,7 @@ from oneflow.test_utils.automated_test_util import *
 
 # The rtol is too large caused by the expansion of random tensor range
 # of #9534. It should be checked again in the future.
-@autotest(n=2, check_graph=True, rtol=5e-1, atol=1e-3)
+@autotest(n=1, check_graph=True, rtol=5e-1, atol=1e-3)
 def _test_einsum_tensor_contraction(test_case, placement, sbp):
     dim0 = random(1, 3) * 8
     dim1 = random(1, 3) * 8

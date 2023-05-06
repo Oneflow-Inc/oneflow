@@ -63,6 +63,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual bool is_lazy() const = 0;
   virtual bool is_eager() const { return !is_lazy(); }
   virtual bool is_contiguous() const = 0;
+  virtual bool is_view() const = 0;
   virtual Maybe<bool> is_pinned() const = 0;
   virtual const TensorMeta& tensor_meta() const = 0;
   virtual Maybe<Tensor> data() = 0;
@@ -233,6 +234,10 @@ class StaticZerosTensor final : public Tensor {
   bool is_contiguous() const override {
     PRINT_BUG_PROMPT_AND_ABORT();
     return true;
+  }
+  bool is_view() const override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+    return false;
   }
   Maybe<bool> is_pinned() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   std::shared_ptr<const FunctionNode> grad_fn_node() const override {
@@ -410,6 +415,7 @@ class ProxyTensor : public TensorIf<DerivedT> {
   virtual bool is_leaf() const override { return tensor_->is_leaf(); }
   virtual bool retain_grad() const override { return tensor_->retain_grad(); }
   virtual bool is_contiguous() const override { return tensor_->is_contiguous(); }
+  virtual bool is_view() const override { return tensor_->is_view(); }
   virtual Maybe<bool> is_pinned() const override { return tensor_->is_pinned(); }
   virtual Maybe<Tensor> acc_grad() const override { return tensor_->acc_grad(); }
   virtual Maybe<TensorArg> current_grad() const override { return tensor_->current_grad(); }
@@ -482,12 +488,10 @@ class Parameter final : public ProxyTensor<Parameter> {
   bool is_leaf() const override { return true; }
   std::shared_ptr<Tensor> contiguous() const override;
   std::shared_ptr<Tensor> pin_memory() const override;
+  Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override;
 
  private:
-  Parameter(const std::shared_ptr<Tensor>& tensor, bool requires_grad)
-      : ProxyTensor<Parameter>(tensor) {
-    this->tensor_->set_requires_grad(requires_grad);
-  }
+  Parameter(const std::shared_ptr<Tensor>& tensor, bool requires_grad);
 };
 
 class LocalTensor final : public TensorIf<LocalTensor> {
@@ -550,6 +554,7 @@ class LocalTensor final : public TensorIf<LocalTensor> {
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
   bool is_contiguous() const override { return impl_->is_contiguous(); }
+  bool is_view() const override { return impl_->is_view(); }
   Maybe<bool> is_pinned() const override { return impl_->is_pinned(); };
 
   Maybe<Symbol<LocalTensorMeta>> local_tensor_meta() const override { return impl_->tensor_meta(); }
@@ -636,6 +641,7 @@ class GlobalTensor final : public TensorIf<GlobalTensor> {
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override { return impl_->parallel_desc(); }
   Maybe<Symbol<Device>> device() const override {
     if (GlobalMode::is_enabled()) {
+      auto global_mode_gurad = GlobalMode::Guard(false);
       const auto& device_tag = JUST(parallel_desc())->device_tag();
       return JUST(Device::New(device_tag));
     }
@@ -683,6 +689,7 @@ class GlobalTensor final : public TensorIf<GlobalTensor> {
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
   bool is_contiguous() const override { return impl_->is_contiguous(); }
+  bool is_view() const override { return impl_->is_view(); }
   Maybe<bool> is_pinned() const override {
     OF_RUNTIME_ERROR() << "Global tensor has no is_pinned method";
   }

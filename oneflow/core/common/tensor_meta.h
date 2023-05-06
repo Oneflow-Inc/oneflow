@@ -163,15 +163,21 @@ class LocalTensorMeta : public ConstTensorMeta {
                   Symbol<Device> device);
   LocalTensorMeta(Symbol<Shape> shape, Symbol<Stride> stride, DataType dtype,
                   MemoryFormat memory_format, Symbol<Device> device);
+  LocalTensorMeta(Symbol<Shape> shape, Symbol<Stride> stride, DataType dtype,
+                  MemoryFormat memory_format, Symbol<Device> device, bool is_view);
   LocalTensorMeta(const Shape& shape, DataType dtype, MemoryFormat memory_format,
                   Symbol<Device> device)
       : LocalTensorMeta(SymbolOf(shape), dtype, memory_format, device) {}
   LocalTensorMeta(const Shape& shape, const Stride& stride, DataType dtype,
                   MemoryFormat memory_format, Symbol<Device> device)
       : LocalTensorMeta(SymbolOf(shape), SymbolOf(stride), dtype, memory_format, device) {}
+  LocalTensorMeta(const Shape& shape, const Stride& stride, DataType dtype,
+                  MemoryFormat memory_format, Symbol<Device> device, const bool is_view)
+      : LocalTensorMeta(SymbolOf(shape), SymbolOf(stride), dtype, memory_format, device, is_view) {}
   virtual ~LocalTensorMeta() = default;
 
   const Symbol<Device>& device() const { return device_; }
+  bool is_view() const { return is_view_; }
 
   bool operator==(const LocalTensorMeta& other) const;
   size_t CalcHashValue() const;
@@ -180,6 +186,7 @@ class LocalTensorMeta : public ConstTensorMeta {
 
  private:
   Symbol<Device> device_;
+  bool is_view_ = false;
 };
 
 class MutLocalTensorMeta : public MutTensorMeta {

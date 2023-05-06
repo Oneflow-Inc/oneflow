@@ -33,7 +33,7 @@ void EpBackendAllocator::DeviceReset() {
     //   So there need release all cuda memory allocated by this process before core dump.
     LOG(WARNING) << "OOM error is detected, process will exit. And it will start to reset "
                  << "device for releasing device memory.";
-    ep_device_->TryReset();
+    ep_device_->Reset();
   }
 }
 

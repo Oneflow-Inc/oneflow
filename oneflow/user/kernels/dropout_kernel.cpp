@@ -14,9 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/op_kernel_wrapper.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/user/kernels/op_kernel_wrapper.h"
 #include "oneflow/user/kernels/dropout_kernel.h"
+#include "oneflow/user/kernels/random_seed_util.h"
 #include "oneflow/core/ep/include/primitive/add.h"
 
 namespace oneflow {
@@ -53,7 +54,9 @@ class DropoutKernelCPU final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    const auto& generator = CHECK_JUST(one::MakeGenerator(DeviceType::kCPU));
+    const auto& generator = CHECK_JUST(one::MakeGenerator(kCPU));
+    generator->set_current_seed(
+        CHECK_JUST(GetOpKernelRandomSeedInCurrentRank(ctx, ctx->Attr<int64_t>("seed"))));
     return std::make_shared<FusedDropoutKernelState>(generator);
   }
 

@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/ep/common/primitive/binary_functor.h"
+#include "oneflow/core/ep/cuda/primitive/unary_functor.cuh"
 
 namespace oneflow {
 namespace ep {
@@ -149,12 +150,11 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kQuickGeluBackwardWithDyX, Src
 };
 
 template<typename Src, typename Dst>
-struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kTanhBackwardWithDyX, Src, Dst> {
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kTanhBackwardWithDyY, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-    Src tanh_val = tanh(x);
-    return static_cast<Dst>(dy * (static_cast<Src>(1.0) - tanh_val * tanh_val));
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src y) const {
+    return static_cast<Dst>(dy * (static_cast<Src>(1.0) - y * y));
   }
 };
 
@@ -240,6 +240,29 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kIsClose, Src, Dst> {
   float atol, rtol;
 };
 
+template<typename Src, typename Dst>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kDigammaBackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    ep::primitive::UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTrigamma, Src, Dst> trigamma_functor(
+        0, 0);
+    Src trigamma_result = trigamma_functor(x);
+    return trigamma_result * dy;
+  }
+};
+
+template<typename Src, typename Dst>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kLgammaBackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    ep::primitive::UnaryFunctor<DeviceType::kCUDA, UnaryOp::kDigamma, Src, Dst> digamma_functor(0,
+                                                                                                0);
+    Dst digamma_result = digamma_functor(x);
+    return digamma_result * dy;
+  }
+};
+
 #define SPECIALIZATION_INTEGRAL_CLOSENESS_BINARY_FUNCTOR(op, type)                            \
   template<typename Dst>                                                                      \
   struct BinaryFunctor<DeviceType::kCUDA, op, type, Dst> {                                    \
@@ -299,7 +322,7 @@ SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kSiluBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kSoftsignBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kSoftplusBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kSoftshrinkBackwardWithDyY);
-SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kTanhBackwardWithDyX);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kTanhBackwardWithDyY);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kThresholdBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kFastGeluBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kQuickGeluBackwardWithDyX);
@@ -313,6 +336,7 @@ SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kCoshBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kErfBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kErfcBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kExpBackwardWithDyX);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kExp2BackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kExpm1BackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kLog2BackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kLog10BackwardWithDyX);
@@ -326,6 +350,7 @@ SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kTanBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kSigmoidBackwardWithDyY);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kSigmoidBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kAtanhBackwardWithDyX);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kLgammaBackwardWithDyX);
 
 #define SPECIALIZATION_BFLOAT16_COMPARISON_BINARY_FUNCTOR(op)                                 \
   template<typename Dst>                                                                      \
@@ -371,7 +396,7 @@ SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kSoftplusBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kSoftsignBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kSoftshrinkBackwardWithDyY);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kThresholdBackwardWithDyX);
-SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kTanhBackwardWithDyX);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kTanhBackwardWithDyY);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kFastGeluBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kQuickGeluBackwardWithDyX);
 
@@ -384,6 +409,7 @@ SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kCoshBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kErfBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kErfcBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kExpBackwardWithDyX);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kExp2BackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kExpm1BackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kLog2BackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kLog10BackwardWithDyX);
@@ -397,6 +423,7 @@ SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kTanBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kSigmoidBackwardWithDyY);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kSigmoidBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kAtanhBackwardWithDyX);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kLgammaBackwardWithDyX);
 
 #define SPECIALIZATION_HALF_COMPARISON_BINARY_FUNCTOR(op)                                     \
   template<typename Dst>                                                                      \
@@ -410,6 +437,63 @@ SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kAtanhBackwardWithDyX);
 
 SPECIALIZATION_HALF_COMPARISON_BINARY_FUNCTOR(BinaryOp::kIsCloseEqualNan)
 SPECIALIZATION_HALF_COMPARISON_BINARY_FUNCTOR(BinaryOp::kIsClose)
+
+template<>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kMul, cuComplex, cuComplex> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC cuComplex operator()(cuComplex src0, cuComplex src1) const {
+    return cuCmulf(src0, src1);
+  }
+};
+
+template<>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kMul, cuDoubleComplex, cuDoubleComplex> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC cuDoubleComplex operator()(cuDoubleComplex src0, cuDoubleComplex src1) const {
+    return cuCmul(src0, src1);
+  }
+};
+
+#define SPECIALIZATION_COMPLEX_ARITHMETIC_BINARY_FUNCTOR(op, complex_type, real_type)        \
+  template<>                                                                                 \
+  struct BinaryFunctor<DeviceType::kCUDA, op, complex_type, complex_type> {                  \
+    OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : real_functor(attr0, attr1) {} \
+    BinaryFunctor<DeviceType::kCUDA, op, real_type, real_type> real_functor;                 \
+    OF_DEVICE_FUNC complex_type operator()(complex_type src0, complex_type src1) const {     \
+      return complex_type{real_functor(src0.x, src1.x), real_functor(src0.y, src1.y)};       \
+    }                                                                                        \
+  };
+
+SPECIALIZATION_COMPLEX_ARITHMETIC_BINARY_FUNCTOR(BinaryOp::kAdd, cuComplex, float);
+SPECIALIZATION_COMPLEX_ARITHMETIC_BINARY_FUNCTOR(BinaryOp::kSub, cuComplex, float);
+SPECIALIZATION_COMPLEX_ARITHMETIC_BINARY_FUNCTOR(BinaryOp::kAdd, cuDoubleComplex, double);
+SPECIALIZATION_COMPLEX_ARITHMETIC_BINARY_FUNCTOR(BinaryOp::kSub, cuDoubleComplex, double);
+
+#define SPECIALIZATION_COMPLEX_EQAUL_BINARY_FUNCTOR(complex_type, real_type)                 \
+  template<typename Dst>                                                                     \
+  struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kEqual, complex_type, Dst> {             \
+    OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : real_functor(attr0, attr1) {} \
+    BinaryFunctor<DeviceType::kCUDA, BinaryOp::kEqual, real_type, Dst> real_functor;         \
+    OF_DEVICE_FUNC Dst operator()(complex_type src0, complex_type src1) const {              \
+      return static_cast<Dst>(real_functor(src0.x, src1.x) && real_functor(src0.y, src1.y)); \
+    }                                                                                        \
+  };
+SPECIALIZATION_COMPLEX_EQAUL_BINARY_FUNCTOR(cuComplex, float);
+SPECIALIZATION_COMPLEX_EQAUL_BINARY_FUNCTOR(cuDoubleComplex, double);
+
+#define SPECIALIZATION_COMPLEX_NOT_EQAUL_BINARY_FUNCTOR(complex_type, real_type)             \
+  template<typename Dst>                                                                     \
+  struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kNotEqual, complex_type, Dst> {          \
+    OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : real_functor(attr0, attr1) {} \
+    BinaryFunctor<DeviceType::kCUDA, BinaryOp::kNotEqual, real_type, Dst> real_functor;      \
+    OF_DEVICE_FUNC Dst operator()(complex_type src0, complex_type src1) const {              \
+      return static_cast<Dst>(real_functor(src0.x, src1.x) || real_functor(src0.y, src1.y)); \
+    }                                                                                        \
+  };
+SPECIALIZATION_COMPLEX_NOT_EQAUL_BINARY_FUNCTOR(cuComplex, float);
+SPECIALIZATION_COMPLEX_NOT_EQAUL_BINARY_FUNCTOR(cuDoubleComplex, double);
 
 #define SPECIALIZATION_GPU_BINARY_FUNCTOR(op, type)                                          \
   template<>                                                                                 \

@@ -126,10 +126,6 @@ def _iadd(self, other):
     return self.add_(other)
 
 
-def _sub(self, other):
-    return flow._C.sub(self, other)
-
-
 def _sub_inplace(self, other):
     return flow._C.sub(self, other, inplace=True)
 
@@ -212,14 +208,6 @@ def _new_full(
     )
 
 
-def _mm(self, mat2):
-    return flow._C.mm(self, mat2)
-
-
-def _mv(self, vec):
-    return flow._C.matrix_vector_product(self, vec)
-
-
 def _argsort(self, dim=-1, descending=None):
     return flow.argsort(self, dim=dim, descending=descending)
 
@@ -285,10 +273,6 @@ def _normal(self, mean=0, std=1):
     return flow.nn.init.normal_(self, mean=mean, std=std)
 
 
-def _fill(self, value):
-    return flow._C.fill_(self, value)
-
-
 def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
     assert np_arr.dtype == flow.convert_oneflow_dtype_to_numpy_dtype(
         eager_local_tensor.dtype
@@ -348,10 +332,6 @@ def _tolist(self):
     return self.numpy().tolist()
 
 
-def _gather(self, dim, index):
-    return flow._C.dim_gather(self, dim, index, False)
-
-
 def _repeat(self, *sizes):
     if len(sizes) == 1:
         new_sizes = sizes[0]
@@ -360,10 +340,6 @@ def _repeat(self, *sizes):
     else:
         new_sizes = sizes
     return flow._C.repeat(self, new_sizes)
-
-
-def _repeat_interleave(self, *args, **kwargs):
-    return flow._C.repeat_interleave(self, *args, **kwargs)
 
 
 def _tile(self, *dims):
@@ -404,10 +380,17 @@ def _where(self, x=None, y=None):
     return flow.where(self, x, y)
 
 
-def _numpy(self):
+def _numpy(self, dtype=None):
     assert (
         not self.is_lazy
     ), "tensor.numpy() is not allowed to be called in nn.Graph.build(*args) or be called by lazy tensor."
+    if self.is_global:
+        if self.placement.type == "meta":
+            raise TypeError("can't convert meta device type global tensor to numpy.")
+    else:
+        if self.device.type == "meta":
+            raise TypeError("can't convert meta device type local tensor to numpy.")
+
     if self.dtype == flow.tensor_buffer:
         shapes, dtypes = self._tensor_buffer_shapes_and_dtypes
         tensors = flow.tensor_buffer_to_list_of_tensors(self, shapes, dtypes)
@@ -425,7 +408,10 @@ def _numpy(self):
     assert self.is_local
     if self.device != flow.device("cpu"):
         self = self.cpu()
-    return self.to_numpy()
+    result = self.to_numpy()
+    if dtype is None:
+        return result
+    return result.astype(dtype)
 
 
 def zero_(self):
@@ -474,32 +460,16 @@ def _cumprod(self, dim, dtype=None):
     return flow._C.cumprod(self, dim, dtype=dtype)
 
 
-def _inv(self):
-    return flow._C.inv(self)
-
-
-def _trunc(self):
-    """trunc() -> Tensor
-
-    See :func:`oneflow.trunc`
-    """
-    return flow._C.trunc(self)
-
-
 def _cross(self, other, dim=None):
     return flow._C.cross(self, other, dim)
 
 
-def _scatter(self, dim, index, src, *, reduce=""):
+def _scatter(self, dim, index, src, *, reduce=None):
     return flow._C.scatter(self, dim, index, src, reduce=reduce, inplace=False)
 
 
 def _scatter_inplace(self, dim, index, src, *, reduce=None):
     return flow._C.scatter(self, dim, index, src, reduce=reduce, inplace=True)
-
-
-def _scatter_add(self, dim, index, src):
-    return flow._C.scatter_add(self, dim, index, src, inplace=False)
 
 
 def _scatter_add_inplace(self, dim, index, src):
@@ -547,12 +517,32 @@ def _logaddexp(self, other):
     return flow._C.logaddexp(self, other)
 
 
+def _real(self):
+    return flow._C.real(self)
+
+
+def _imag(self):
+    return flow._C.imag(self)
+
+
+def _conj(self):
+    return flow._C.conj(self)
+
+
+def _conj_physical(self):
+    return flow._C.conj_physical(self)
+
+
+@property
+def _layout(self):
+    return flow.strided
+
+
 def RegisterMethods():
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _numpy
     Tensor.add = _add
     Tensor.add_ = _add_inplace
-    Tensor.sub = _sub
     Tensor.sub_ = _sub_inplace
     Tensor.backward = _backward
     Tensor.__str__ = _str
@@ -575,7 +565,6 @@ def RegisterMethods():
     Tensor.xavier_uniform_ = _xavier_uniform
     Tensor.orthogonal_ = _orthogonal
     Tensor.normal_ = _normal
-    Tensor.fill_ = _fill
     Tensor.copy_ = _copy
     Tensor._meta_repr = _meta_repr
     Tensor.argsort = _argsort
@@ -589,13 +578,10 @@ def RegisterMethods():
     Tensor.squeeze_ = _squeeze_inplace
     Tensor.unsqueeze_ = _unsqueeze_inplace
     Tensor.where = _where
-    Tensor.mm = _mm
     Tensor.norm = _norm
     Tensor.repeat = _repeat
-    Tensor.repeat_interleave = _repeat_interleave
     Tensor.tile = _tile
     Tensor.to = _to
-    Tensor.gather = _gather
     Tensor.T = property(_T)
     Tensor.masked_select = _masked_select
     Tensor.eq = _eq
@@ -609,13 +595,9 @@ def RegisterMethods():
     Tensor.new_tensor = _new_tensor
     Tensor.cumsum = _cumsum
     Tensor.cumprod = _cumprod
-    Tensor.mv = _mv
-    Tensor.inverse = _inv
-    Tensor.trunc = _trunc
     Tensor.cross = _cross
     Tensor.scatter = _scatter
     Tensor.scatter_ = _scatter_inplace
-    Tensor.scatter_add = _scatter_add
     Tensor.scatter_add_ = _scatter_add_inplace
     Tensor.allclose = _allclose
     Tensor.index_add = _index_add
@@ -623,6 +605,11 @@ def RegisterMethods():
     Tensor.as_strided = _as_strided
     Tensor.as_strided_ = _as_strided_inplace
     Tensor.logaddexp = _logaddexp
+    Tensor.real = _real
+    Tensor.imag = _imag
+    Tensor.conj = _conj
+    Tensor.conj_physical = _conj_physical
+    Tensor.layout = _layout
 
 
 def register_tensor_op(op_name):
