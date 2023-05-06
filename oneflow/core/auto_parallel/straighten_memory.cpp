@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/auto_parallel/straighten_memory.h"
+#include "oneflow/core/auto_parallel/algorithm_util.h"
 #include "oneflow/core/auto_parallel/auto_memory.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 
@@ -81,6 +82,17 @@ class TopoStruct {
 
   std::vector<TopoStruct*> in_topo_structs;
   std::vector<TopoStruct*> out_topo_structs;
+
+  // The topo structs to be executed in a reverse order right before this topo struct
+  // For example:
+  // This topo struct: A, Pre topo structs: {B, C, D}
+  // This topo struct: B, Pre topo structs: {E}
+  // This topo struct: D, Pre topo structs: {F, G}
+  // And the graph is: H -> A -> I
+  // Then the execution order is H, G, F, D, C, E, B, A, I
+  std::vector<TopoStruct*> pre_topo_structs;
+  // The topo structs to be executed immediately after this topo struct
+  std::vector<TopoStruct*> post_topo_structs;
 
   explicit TopoStruct(const OpNode* op_node_);
   explicit TopoStruct(int32_t blob_id_) : blob_id(blob_id_){};
@@ -189,7 +201,8 @@ void ComputeAllMemoryIncrement(std::vector<TopoStruct*>& topo_structs,
     if (id2producer_topo_struct[id]->is_reusable) {
       auto& consumer_topo_structs = id2consumer_topo_structs[id];
       // Release the blob in the blocking node
-      if(consumer_topo_structs.size() == 1 && id2producer_topo_struct[id]->memory_increment >= id2blob_size[id]){
+      if (consumer_topo_structs.size() == 1
+          && id2producer_topo_struct[id]->memory_increment >= id2blob_size[id]) {
         id2producer_topo_struct[id]->memory_increment -= id2blob_size[id];
         continue;
       }
@@ -297,6 +310,55 @@ void InitAllParameters(std::vector<TopoStruct*>* topo_structs,
                             *id2consumer_topo_structs, *id2blob_size);
 }
 
+void EatNodes(std::vector<TopoStruct*>& topo_structs) {
+  for (int32_t id = topo_structs.size(); id >= 0; id--) {
+    auto* node = topo_structs[id];
+    if (node->memory_increment >= 0) {
+      // A positive node with only one output would be executed at the last moment before the
+      // execution of its output
+      if (node->out_topo_structs.size() == 1) {
+        auto* out_node = node->out_topo_structs[0];
+        out_node->pre_topo_structs.push_back(node);
+        out_node->memory_increment += node->memory_increment;
+        CheckAndRemoveFrom(out_node->in_topo_structs, node);
+        out_node->in_topo_structs.insert(out_node->in_topo_structs.end(),
+                                         node->in_topo_structs.begin(),
+                                         node->in_topo_structs.end());
+        node->in_topo_structs.clear();
+        RemoveFrom(topo_structs, id);
+      }
+    } else {
+      // A negative node with only one input would be executed immediately after the execution of
+      // its input
+      if (node->in_topo_structs.size() == 1) {
+        auto* in_node = node->in_topo_structs[0];
+        int64_t total_memory_increment = in_node->memory_increment + node->memory_increment;
+        if (total_memory_increment >= 0) {
+          in_node->post_topo_structs.push_back(node);
+          in_node->memory_increment = total_memory_increment;
+          CheckAndRemoveFrom(in_node->out_topo_structs, node);
+          RemoveFrom(topo_structs, id);
+        }
+      }
+    }
+  }
+}
+
+void GraphSimplification(std::vector<TopoStruct*>& topo_structs) {
+  if (GlobalProcessCtx::Rank() == 0) {
+    std::cout << "Topo size: " << topo_structs.size() << std::endl;
+  }
+  EatNodes(topo_structs);
+  if (GlobalProcessCtx::Rank() == 0) {
+    std::cout << "Topo size: " << topo_structs.size() << std::endl;
+  }
+  EatNodes(topo_structs);
+  if (GlobalProcessCtx::Rank() == 0) {
+    std::cout << "Topo size: " << topo_structs.size() << std::endl;
+  }
+  // TODO: Clip edges
+}
+
 void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_struct,
                              std::vector<TopoStruct*>* topo_structs,
                              HashMap<LogicalBlobId, int32_t>* lbi2id,
@@ -392,6 +454,13 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
   };
   int64_t peak_memory = 0;
   int64_t total_memory = 0;
+  std::function<void(TopoStruct*)> ExecuteOpNode = [&](TopoStruct* node) {
+    for (int32_t i = node->pre_topo_structs.size() - 1; i >= 0; i--) {
+      ExecuteOpNode(node->pre_topo_structs[i]);
+    }
+    if (node->op_node) { ordered_topo_structs->push_back(node); }
+    for (auto* post_node : node->post_topo_structs) { ExecuteOpNode(post_node); }
+  };
   // Execute one node and its ancestors
   std::function<void(TopoStruct*)> Execute = [&](TopoStruct* node) {
     // Post-order traversal
@@ -399,12 +468,10 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
       if (!in_node->executed) { Execute(in_node); }
     }
     // Execute the current node
-    if (node->op_node) { ordered_topo_structs->push_back(node); }
+    ExecuteOpNode(node);
     node->executed = true;
     total_memory += node->memory_increment;
-    if(total_memory > peak_memory){
-      peak_memory = total_memory;
-    }
+    if (total_memory > peak_memory) { peak_memory = total_memory; }
     StopWaiting(node);
     prepare_topo_structs.push_back(node);
     if (GlobalProcessCtx::Rank() == 0) {
@@ -414,14 +481,14 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
       } else {
         std::cout << "blob id: " << node->blob_id;
       }
-      std::cout << ", memory increment: " << node->memory_increment 
-      << ", current total: " << total_memory
-      << std::endl;
+      std::cout << ", memory increment: " << node->memory_increment
+                << ", current total: " << total_memory << std::endl;
     }
   };
 
+  // TODO: expand to all the topo structures
   // Initialize source topological structures
-  for (int32_t i = 0; i < executing_topo_struct_num; i++) {
+  for (int32_t i = 0; i < topo_structs->size(); i++) {
     if (topo_structs->at(i)->in_topo_structs.empty()) {
       prepare_topo_structs.push_back(topo_structs->at(i));
     }
@@ -440,7 +507,7 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
   // Execute the rest of the nodes
   for (auto& node : *topo_structs) {
     if (!node->executed) {
-      CHECK(node->op_node != nullptr)
+      CHECK(node->memory_increment >= 0)
           << "All the blobs should be release during straighten memory!";
       Execute(node);
     }
