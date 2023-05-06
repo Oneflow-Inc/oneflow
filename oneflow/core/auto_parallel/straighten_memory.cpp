@@ -62,6 +62,7 @@ class TopoStruct {
   const OpNode* op_node = nullptr;
   // Memory increment = (memory of out registers) - (memory of in registers)
   int64_t memory_increment = -1;
+  int32_t min_layer = -1;
   bool is_reusable = false;
   int32_t blob_id = -1;
   // blocking means that it contains a release topological structure with degree = 1 in the current
@@ -84,6 +85,9 @@ class TopoStruct {
   explicit TopoStruct(const OpNode* op_node_);
   explicit TopoStruct(int32_t blob_id_) : blob_id(blob_id_){};
 
+  // Compute the minimum layer of this node
+  int32_t ComputeMinLayer();
+
   void ComputeIsReusable();
 
   void SetAccumulateMemoryIncrement();
@@ -93,6 +97,15 @@ class TopoStruct {
 };
 
 TopoStruct::TopoStruct(const OpNode* op_node_) : op_node(op_node_) { ComputeIsReusable(); }
+
+// Compute the minimum layer of this node
+int32_t TopoStruct::ComputeMinLayer() {
+  if (min_layer >= 0) { return min_layer; }
+  for (auto& in_topo_struct : in_topo_structs) {
+    min_layer = std::max(min_layer, in_topo_struct->ComputeMinLayer());
+  }
+  return ++min_layer;
+}
 
 void TopoStruct::ComputeIsReusable() { is_reusable = IsProducedRegisterReusable(op_node->op()); }
 
@@ -116,6 +129,13 @@ void TopoStruct::SetAccumulateMemoryIncrement() {
 // .back() return a reference. But if the original map is destroyed in the same piece of code,
 // the reference would point to [0xfffffffffffffff8], giving out an error.
 TopoStruct* TakeBackFromVector(const std::vector<TopoStruct*>& v) { return v.back(); }
+
+void ComputeLayer(std::vector<TopoStruct*>* topo_structs) {
+  // Initial all the layer to -1
+  for (auto& topo_struct : *topo_structs) { topo_struct->min_layer = -1; }
+  // Compute the minimum layer for the whole graph
+  for (auto& topo_struct : *topo_structs) { topo_struct->ComputeMinLayer(); }
+}
 
 void InitInOutTopoStructs(std::vector<TopoStruct*>* topo_structs) {
   // Generate the map from operator names to topological structure
