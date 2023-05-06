@@ -97,14 +97,35 @@ llvm_config.with_environment("ONEFLOW_MLIR_FUSE_FORWARD_OPS", "1")
 llvm_config.with_environment(
     "PYTHONPATH", os.path.join(config.oneflow_src_root, "python"), append_path=True,
 )
+# Searches for a runtime library with the given name and returns a tool
+# substitution of the same name and the found path.
+# Correctly handles the platforms shared library directory and naming conventions.
+def add_runtime(name):
+    path = ''
+    for prefix in ['', 'lib']:
+        path = os.path.join(config.llvm_shlib_dir, f'{prefix}{name}{config.llvm_shlib_ext}')
+        if os.path.isfile(path):
+            break
+    return ToolSubst(f'%{name}', path)
 
 tool_dirs = [config.oneflow_tools_dir, config.llvm_tools_dir]
-tools = ["oneflow-opt", "oneflow-translate", "oneflow-runner"]
+tools = [
+    "oneflow-opt", 
+    "oneflow-translate", 
+    "oneflow-runner",
+    add_runtime("mlir_runner_utils"),
+]
+
+if config.WITH_MLIR_CUDA_CODEGEN:
+    tools.extend([add_runtime('mlir_cuda_runtime')])
+
 tools.extend(
     [
         ToolSubst("%with_cuda", config.BUILD_CUDA, unresolved="ignore"),
-        ToolSubst("%linalg_test_lib_dir", config.llvm_lib_dir, unresolved="ignore"),
-        ToolSubst("%test_exec_root", config.test_exec_root, unresolved="ignore"),
+        ToolSubst("%linalg_test_lib_dir",
+                  config.llvm_lib_dir, unresolved="ignore"),
+        ToolSubst("%test_exec_root", config.test_exec_root,
+                  unresolved="ignore"),
     ]
 )
 llvm_config.add_tool_substitutions(tools, tool_dirs)
