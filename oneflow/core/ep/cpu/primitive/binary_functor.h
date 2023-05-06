@@ -294,12 +294,11 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kQuickGeluBackwardWithDyX, Src,
 };
 
 template<typename Src, typename Dst>
-struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kTanhBackwardWithDyX, Src, Dst> {
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kTanhBackwardWithDyY, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-    Src tanh_val = std::tanh(x);
-    return static_cast<Dst>(dy * (static_cast<Src>(1.0) - tanh_val * tanh_val));
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src y) const {
+    return static_cast<Dst>(dy * (static_cast<Src>(1.0) - y * y));
   }
 };
 
@@ -372,6 +371,17 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kDigammaBackwardWithDyX, double
         trigamma_functor(0, 0);
     double trigamma_result = trigamma_functor(x);
     return trigamma_result * dy;
+  }
+};
+
+template<typename Src, typename Dst>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kLgammaBackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    ep::primitive::UnaryFunctor<DeviceType::kCPU, UnaryOp::kDigamma, Src, Dst> digamma_functor(0,
+                                                                                               0);
+    Dst digamma_result = digamma_functor(x);
+    return digamma_result * dy;
   }
 };
 

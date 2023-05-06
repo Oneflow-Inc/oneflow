@@ -84,7 +84,7 @@ Maybe<void> FusedBiasAddDropout::Apply(const FusedBiasAddDropoutInterpState* ctx
     for (int i = 0; i < num_axes; ++i) {
       if (i != ctx->axis) { reduce_axes_vec.emplace_back(i); }
     }
-    in_grads->at(1) = JUST(functional::ReduceSum(dropout_grad, reduce_axes_vec, false));
+    in_grads->at(1) = JUST(functional::ReduceSum(dropout_grad, reduce_axes_vec, false, NullOpt));
   }
   return Maybe<void>::Ok();
 }
