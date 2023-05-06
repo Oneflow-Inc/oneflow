@@ -201,8 +201,7 @@ void ComputeAllMemoryIncrement(std::vector<TopoStruct*>& topo_structs,
     if (id2producer_topo_struct[id]->is_reusable) {
       auto& consumer_topo_structs = id2consumer_topo_structs[id];
       // Release the blob in the blocking node
-      if (consumer_topo_structs.size() == 1
-          && id2producer_topo_struct[id]->memory_increment >= id2blob_size[id]) {
+      if (consumer_topo_structs.size() == 1) {
         id2producer_topo_struct[id]->memory_increment -= id2blob_size[id];
         continue;
       }
@@ -311,7 +310,7 @@ void InitAllParameters(std::vector<TopoStruct*>* topo_structs,
 }
 
 void EatNodes(std::vector<TopoStruct*>& topo_structs) {
-  for (int32_t id = topo_structs.size(); id >= 0; id--) {
+  for (int32_t id = topo_structs.size() - 1; id >= 0; id--) {
     auto* node = topo_structs[id];
     if (node->memory_increment >= 0) {
       // A positive node with only one output would be executed at the last moment before the
@@ -324,6 +323,9 @@ void EatNodes(std::vector<TopoStruct*>& topo_structs) {
         out_node->in_topo_structs.insert(out_node->in_topo_structs.end(),
                                          node->in_topo_structs.begin(),
                                          node->in_topo_structs.end());
+        for (auto* in_node : node->in_topo_structs) {
+          CheckAndReplaceWith(in_node->out_topo_structs, node, out_node);
+        }
         node->in_topo_structs.clear();
         RemoveFrom(topo_structs, id);
       }
@@ -333,12 +335,10 @@ void EatNodes(std::vector<TopoStruct*>& topo_structs) {
       if (node->in_topo_structs.size() == 1) {
         auto* in_node = node->in_topo_structs[0];
         int64_t total_memory_increment = in_node->memory_increment + node->memory_increment;
-        if (total_memory_increment >= 0) {
-          in_node->post_topo_structs.push_back(node);
-          in_node->memory_increment = total_memory_increment;
-          CheckAndRemoveFrom(in_node->out_topo_structs, node);
-          RemoveFrom(topo_structs, id);
-        }
+        in_node->post_topo_structs.push_back(node);
+        in_node->memory_increment = total_memory_increment;
+        CheckAndRemoveFrom(in_node->out_topo_structs, node);
+        RemoveFrom(topo_structs, id);
       }
     }
   }
@@ -401,12 +401,6 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
   // At the beginning, them would be the source nodes.
   // After each execution, them would be those executed nodes.
   std::vector<TopoStruct*> prepare_topo_structs;
-  // Initialize blocking topological structures
-  for (auto& release_topo_struct : release_topo_structs) {
-    if (release_topo_struct.in_topo_structs.size() == 1) {
-      release_topo_struct.in_topo_structs[0]->blocking_topo_struct = &release_topo_struct;
-    }
-  }
   // wait in the map
   std::map<int64_t, std::vector<TopoStruct*>> waiting_map;
   // Erase a node from the waiting map
@@ -440,12 +434,11 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
   std::function<void(TopoStruct*)> Visit = [&](TopoStruct* node) {
     if (node->visited_descendant.IfMarked()) { return; }
     node->visited_descendant.Mark();
-    if (node->blocking_topo_struct == nullptr || node->executed) {
+    if (node->memory_increment >= 0 || node->executed) {
       for (auto* out_node : node->out_topo_structs) { Visit(out_node); }
     } else {
-      Wait(node->blocking_topo_struct);
+      Wait(node);
     }
-    if (node->blob_id >= 0) { Wait(node); }
   };
   // Prepare all the release nodes before picking one for the next round
   auto Prepare = [&]() {

@@ -44,6 +44,16 @@ void CheckAndRemoveFrom(std::vector<T>& v, T& t) {
   }
 }
 
+template<class T>
+void CheckAndReplaceWith(std::vector<T>& v, T& origin, T& substitution) {
+  for (auto element : v) {
+    if (element == origin) {
+      element = substitution;
+      break;
+    }
+  }
+}
+
 // Inverse function, which transfer a vector to an unordered_map.
 template<class T>
 void InverseFunction(const std::vector<T>& v, std::unordered_map<T, int32_t>& inverse_map) {
