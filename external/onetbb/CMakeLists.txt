@@ -11,13 +11,13 @@ set(TBB_ENABLE_IPO OFF CACHE BOOL "")
 set(BUILD_SHARED_LIBS ON)
 set(CMAKE_POLICY_DEFAULT_CMP0079 NEW)
 
+FetchContent_MakeAvailable(tbb)
+
 # workaround compile error in GCC 12 or later
 # refer to https://github.com/Oneflow-Inc/oneflow/pull/10236
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 12)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=stringop-overflow")
+  target_compile_options(tbb PRIVATE "-Wno-error=stringop-overflow")
 endif()
-
-FetchContent_MakeAvailable(tbb)
 
 set(TBBBIND_LIBRARY_NAME)
 if(HWLOC_VERSION)
