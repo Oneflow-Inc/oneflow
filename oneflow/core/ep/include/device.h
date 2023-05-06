@@ -37,6 +37,7 @@ class Device {
   virtual ~Device() = default;
 
   virtual void SetAsActiveDevice() = 0;
+  virtual void Reset() = 0;
 
   virtual DeviceType device_type() const = 0;
   virtual size_t device_index() const = 0;

@@ -704,7 +704,7 @@
   bind_python: True
 
 - name: "tanh_grad"
-  signature: "Tensor (Tensor x, Tensor dy) => TanhGrad"
+  signature: "Tensor (Tensor y, Tensor dy) => TanhGrad"
   bind_python: True
 
 - name: "threshold"

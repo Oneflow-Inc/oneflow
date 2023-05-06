@@ -17,6 +17,7 @@ limitations under the License.
 #include "OneFlow/Transform/OneFlowMemPool.h"
 #include "OneFlow/Transform/EliminateAllocOps.h"
 #include "OneFlow/Transform/OneFlowStream.h"
+#include "mlir/Conversion/TosaToTensor/TosaToTensor.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/common/data_type.pb.h"
@@ -1024,12 +1025,13 @@ void AddLowerToLinalgMemRefPasses(PassManager& pm) {
       tosa::createTosaMakeBroadcastablePass());                // tosa-make-broadcastable
   pm.addPass(createCSEPass());                                 // cse
   pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());  // tosa-to-linalg-on-tensors
+  pm.addNestedPass<func::FuncOp>(tosa::createTosaToTensor());  // tosa-to-tensor
   pm.addNestedPass<func::FuncOp>(
       createLinalgElementwiseOpFusionPass());                   //     linalg-fuse-elementwise-ops
   pm.addNestedPass<func::FuncOp>(createLinalgBufferizePass());  // linalg-bufferize
   pm.addPass(bufferization::createEmptyTensorToAllocTensorPass());  // empty-tensor-to-alloc-tensor
-  pm.addNestedPass<func::FuncOp>(createTensorBufferizePass());      // tensor-bufferize
-  pm.addPass(func::createFuncBufferizePass());                      // func-bufferize
+  pm.addNestedPass<func::FuncOp>(tensor::createTensorBufferizePass());  // tensor-bufferize
+  pm.addPass(func::createFuncBufferizePass());                          // func-bufferize
   pm.addPass(bufferization::createBufferResultsToOutParamsPass());  // buffer-results-to-out-params
   pm.addPass(createCanonicalizerPass());                            // canonicalize
   pm.addPass(mlir::oneflow::createEliminateAllocOpsPass());         // eliminate-alloc-ops
@@ -1048,10 +1050,10 @@ LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
   pm.addPass(createFoldAllocToSubviewPass());                        // fold-alloc-to-subview
   pm.addPass(createInsertOneFlowMemPoolPass());                      // insert-ofmempool
   pm.addPass(createAppendOneFlowStreamPass());                       // append-ofstream
-  pm.addPass(createMemRefToLLVMConversionPass());                    // convert-memref-to-llvm
+  pm.addPass(createFinalizeMemRefToLLVMConversionPass());            // convert-memref-to-llvm
   pm.addPass(createConvertFuncToLLVMPass());                         // convert-func-to-llvm
   pm.addPass(memref::createExpandStridedMetadataPass());             // expand-strided-metadata
-  pm.addPass(createMemRefToLLVMConversionPass());                    // convert-memref-to-llvm
+  pm.addPass(createFinalizeMemRefToLLVMConversionPass());            // convert-memref-to-llvm
   pm.addPass(createReconcileUnrealizedCastsPass());                  // reconcile-unrealized-casts
   return pm.run(module);
 }
@@ -1082,7 +1084,7 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   pm.addPass(createGpuToLLVMConversionPass());                           // gpu-to-llvm
   pm.addPass(createMgpuToOneFlowStreamPass());                           // gpu-to-llvm
   pm.addPass(memref::createExpandStridedMetadataPass());                 // expand-strided-metadata
-  pm.addPass(createMemRefToLLVMConversionPass());                        // convert-memref-to-llvm
+  pm.addPass(createFinalizeMemRefToLLVMConversionPass());                // convert-memref-to-llvm
   pm.addPass(createReconcileUnrealizedCastsPass());  // reconcile-unrealized-casts
   return pm.run(module);
 }

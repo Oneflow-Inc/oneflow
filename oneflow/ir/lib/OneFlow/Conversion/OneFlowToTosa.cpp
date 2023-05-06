@@ -34,6 +34,7 @@ limitations under the License.
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/OpImplementation.h"
@@ -236,13 +237,13 @@ struct VariableOpToConstLowering final : public OpConversionPattern<VariableOp> 
     // TODO: more control about this scope with flag
     if (type.isa<FloatType>()) {
       const auto float_attr = rewriter.getFloatAttr(type, const_val_);
-      auto value = DenseElementsAttr::get(output, float_attr);
+      auto value = DenseElementsAttr::get(output.cast<ShapedType>(), float_attr);
 
       rewriter.replaceOpWithNewOp<tosa::ConstOp>(op, output, value);
     } else if (auto integerType = type.dyn_cast<IntegerType>()) {
       const auto int_attr =
           rewriter.getIntegerAttr(type, APInt(type.cast<IntegerType>().getWidth(), const_val_));
-      auto value = DenseElementsAttr::get(output, int_attr);
+      auto value = DenseElementsAttr::get(output.cast<ShapedType>(), int_attr);
 
       rewriter.replaceOpWithNewOp<tosa::ConstOp>(op, output, value);
     } else {
@@ -278,9 +279,10 @@ struct ReluOpLowering final : public OpConversionPattern<ReluOp> {
     auto input = op.getX();
 
     auto ranked_output = llvm::dyn_cast_or_null<RankedTensorType>(output);
-    auto value = DenseElementsAttr::get(
-        output, rewriter.getZeroAttr(ranked_output ? ranked_output.getElementType()
-                                                   : rewriter.getI64Type()));
+    auto value =
+        DenseElementsAttr::get(output.cast<ShapedType>(),
+                               rewriter.getZeroAttr(ranked_output ? ranked_output.getElementType()
+                                                                  : rewriter.getI64Type()));
     tosa::ConstOp zeros = rewriter.create<tosa::ConstOp>(op.getLoc(), output, value);
     rewriter.replaceOpWithNewOp<tosa::MaximumOp>(op, output, input, zeros);
     return success();
@@ -387,7 +389,8 @@ struct MaxPool2DOpLowering final : public OpConversionPattern<MaxPool2DOp> {
     }
 
     auto indice_output = convertToSignless(op->getContext(), op.getIndice().getType());
-    auto value = DenseElementsAttr::get(indice_output, rewriter.getZeroAttr(rewriter.getI64Type()));
+    auto value = DenseElementsAttr::get(indice_output.cast<ShapedType>(),
+                                        rewriter.getZeroAttr(rewriter.getI64Type()));
     tosa::ConstOp indice = rewriter.create<tosa::ConstOp>(loc, indice_output, value);
     rewriter.replaceOp(op, {y, indice});
     return success();
@@ -491,7 +494,7 @@ struct NormalizationInferenceOpLowering final
     auto gamma = op.getGamma();
     auto beta = op.getBeta();
     auto output_type = op.getY().getType();
-    auto x = op.getX();
+    Value x = op.getX();
 
     if (op.IsNCHW()) {
       const auto perms = {0, 2, 3, 1};
@@ -526,7 +529,7 @@ struct NormalizationOpLowering final : public OpConversionPattern<NormalizationO
     auto gamma = op.getGamma();
     auto beta = op.getBeta();
     auto output_type = op.getY().getType();
-    auto x = op.getX();
+    Value x = op.getX();
 
     if (op.IsNCHW()) {
       const auto perms = {0, 2, 3, 1};
@@ -581,8 +584,8 @@ struct Conv2DOpLowering final : public OpConversionPattern<Conv2DOp> {
           op.getLoc(), type, DenseElementsAttr::get(type, rewriter.getZeroAttr(bias_elem_type)));
     }
 
-    auto in = op.getIn();
-    auto weight = op.getWeight();
+    Value in = op.getIn();
+    Value weight = op.getWeight();
     auto out_type = op.getOut().getType().cast<ShapedType>();
     if (out_type.getRank() != 4) {
       LOG(FATAL) << "Failed to lowering oneflow op";
