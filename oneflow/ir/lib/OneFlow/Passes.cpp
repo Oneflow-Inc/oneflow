@@ -1021,10 +1021,10 @@ void AddLowerToLinalgMemRefPasses(PassManager& pm) {
   pm.addNestedPass<func::FuncOp>(LLVM::createRequestCWrappersPass());  // llvm-request-c-wrappers
   pm.addPass(createLowerOneFlowToTosaPass());                          // lower-oneflow-to-tosa
   pm.addNestedPass<func::FuncOp>(
-      tosa::createTosaMakeBroadcastablePass());                        // tosa-make-broadcastable
-  pm.addPass(createCSEPass());                                         // cse
-  pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());          // tosa-to-linalg-on-tensors
-  pm.addNestedPass<func::FuncOp>(tosa::createTosaToTensor());          // tosa-to-tensor
+      tosa::createTosaMakeBroadcastablePass());                // tosa-make-broadcastable
+  pm.addPass(createCSEPass());                                 // cse
+  pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());  // tosa-to-linalg-on-tensors
+  pm.addNestedPass<func::FuncOp>(tosa::createTosaToTensor());  // tosa-to-tensor
   pm.addNestedPass<func::FuncOp>(
       createLinalgElementwiseOpFusionPass());  //     linalg-fuse-elementwise-ops
   // TODO: more optimization pass
@@ -1073,10 +1073,10 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   pm.addNestedPass<func::FuncOp>(createGpuMapParallelLoopsPass());  // gpu-map-parallel-loops
   pm.addPass(createParallelLoopToGpuPass());                        // convert-parallel-loops-to-gpu
   pm.addPass(createGpuLauchSinkIndexComputationsPass());
-  pm.addPass(createGpuKernelOutliningPass());                       // gpu-kernel-outlining
-  pm.addPass(createCanonicalizerPass());                            // canonicalize
-  pm.addPass(createFoldAllocToSubviewPass());                       // fold-alloc-to-subview
-  pm.addPass(createInsertOneFlowMemPoolPass());                     // insert-ofmempool
+  pm.addPass(createGpuKernelOutliningPass());    // gpu-kernel-outlining
+  pm.addPass(createCanonicalizerPass());         // canonicalize
+  pm.addPass(createFoldAllocToSubviewPass());    // fold-alloc-to-subview
+  pm.addPass(createInsertOneFlowMemPoolPass());  // insert-ofmempool
   // -pass-pipeline='gpu.module([PASS1][PASS2]...)'
   pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());        // strip-debuginfo
   pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());           // lower-affine
