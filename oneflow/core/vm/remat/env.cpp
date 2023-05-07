@@ -127,7 +127,7 @@ Env::~Env() {
   LOG(INFO) << "eager eviction num: " << eager_eviction_num_;
   LOG(INFO) << "recomputation num: " << recomputation_num_;
   LOG(INFO) << "duration: " << time_now_;
-
+  
   const char* prefix = std::getenv("ONEFLOW_REMAT_SUMMARY_FILE_PREFIX");
   if (prefix != nullptr && GlobalProcessCtx::LocalRank() == 0) {
     using json = nlohmann::json;
@@ -140,7 +140,11 @@ Env::~Env() {
     // std::fstream has strange default append semantic
     {
       std::ifstream fs(std::string(prefix) + ".json");
-      if (fs.is_open()) { fs >> full_json; }
+      // if (fs.is_open()) { fs >> full_json; }
+      if(fs.is_open()) {
+        fs.close();
+        return;
+      }
     }
     full_json.merge_patch(cpp_summary);
     {
