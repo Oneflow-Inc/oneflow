@@ -27,11 +27,6 @@ struct NormalizeVal {
   float val[3];
 };
 
-enum TensorLayout {
-  kContiguous = 0,
-  kChannelsLast = 1,
-};
-
 class NormalizeAttr final : public user_op::OpKernelState {
  public:
   NormalizeAttr(user_op::KernelInitContext* ctx) {

@@ -28,11 +28,6 @@ namespace oneflow {
 
 namespace {
 
-enum TensorLayout {
-  kContiguous = 0,
-  kChannelsLast = 1,
-};
-
 template<MemoryFormat layout>
 inline int64_t GetOffset(int64_t h, int64_t w, int64_t c, int64_t H, int64_t W, int64_t C);
 
