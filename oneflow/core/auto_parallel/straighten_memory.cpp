@@ -104,8 +104,12 @@ class TopoStruct {
 
   void SetAccumulateMemoryIncrement();
 
+  void MarkDescendantFromThis2Layer(int32_t max_layer);
+
  private:
   int64_t AccumulateMemoryIncrement();
+  // Mark all its descendant with min_layer <= max_layer
+  void MarkDescendantUp2Layer(int32_t max_layer);
 };
 
 TopoStruct::TopoStruct(const OpNode* op_node_) : op_node(op_node_) { ComputeIsReusable(); }
@@ -133,9 +137,22 @@ int64_t TopoStruct::AccumulateMemoryIncrement() {
   return total_memory_increment;
 }
 
+void TopoStruct::MarkDescendantUp2Layer(int32_t max_layer) {
+  if (visited_descendant.IfMarked()) { return; }
+  visited_descendant.Mark();
+  if (min_layer < max_layer) {
+    for (auto* out_node : out_topo_structs) { out_node->MarkDescendantUp2Layer(max_layer); }
+  }
+}
+
 void TopoStruct::SetAccumulateMemoryIncrement() {
   ResetNoCleaningMarkerAccMemory();
   accumulate_memory_increment = AccumulateMemoryIncrement();
+}
+
+void TopoStruct::MarkDescendantFromThis2Layer(int32_t max_layer) {
+  ResetNoCleaningMarkerDescendant();
+  MarkDescendantUp2Layer(max_layer);
 }
 
 // .back() return a reference. But if the original map is destroyed in the same piece of code,
@@ -345,17 +362,55 @@ void EatNodes(std::vector<TopoStruct*>& topo_structs) {
   }
 }
 
+// Clip those useless edges
+// For example: a -> b -> c -> d, a -> c, a -> d.
+// Then we could clip the two edges a -> c and a -> d.
+void ClipEdges(std::vector<TopoStruct*>& topo_structs) {
+  // In the implementation, we only focus on a node with multiple inputs,
+  // since max(in_nodes->min_layer) == this_node->min_layer - 1.
+  for (auto* node : topo_structs) {
+    // Suppose we have multiple input nodes
+    // a -> d, b -> d, c -> d
+    if (node->in_topo_structs.size() >= 2) {
+      int32_t max_layer = node->min_layer - 1;
+      for (int32_t in_id = node->in_topo_structs.size() - 1; in_id >= 0; in_id--) {
+        auto* in_node = node->in_topo_structs[in_id];
+        // Find all the descendants of node a
+        in_node->MarkDescendantFromThis2Layer(max_layer);
+        for (auto* brother : node->in_topo_structs) {
+          // If we found a -> ... -> b (or a -> ... -> c)
+          // This first judgement is to make sure we are comparing a different node, 
+          // i.e., brother != in_node
+          if (brother->min_layer > in_node->min_layer && brother->visited_descendant.IfMarked()) {
+            // Remove a -> d
+            CheckAndRemoveFrom(node->in_topo_structs, in_node);
+            break;
+          }
+        }
+      }
+    }
+  }
+}
+
 void GraphSimplification(std::vector<TopoStruct*>& topo_structs) {
   if (GlobalProcessCtx::Rank() == 0) {
-    std::cout << "Topo size: " << topo_structs.size() << std::endl;
+    std::cout << "Origin, Topo size: " << topo_structs.size() << std::endl;
   }
   EatNodes(topo_structs);
   if (GlobalProcessCtx::Rank() == 0) {
-    std::cout << "Topo size: " << topo_structs.size() << std::endl;
+    std::cout << "After 1st Eats, Topo size: " << topo_structs.size() << std::endl;
   }
+  ComputeLayer(&topo_structs);
+  ClipEdges(topo_structs);
   EatNodes(topo_structs);
   if (GlobalProcessCtx::Rank() == 0) {
-    std::cout << "Topo size: " << topo_structs.size() << std::endl;
+    std::cout << "2nd, clip and eat, Topo size: " << topo_structs.size() << std::endl;
+  }
+  ComputeLayer(&topo_structs);
+  ClipEdges(topo_structs);
+  EatNodes(topo_structs);
+  if (GlobalProcessCtx::Rank() == 0) {
+    std::cout << "3rd, clip and eat, Topo size: " << topo_structs.size() << std::endl;
   }
   // TODO: Clip edges
 }
