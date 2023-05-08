@@ -22,6 +22,11 @@ limitations under the License.
 #include "oneflow/core/ccl/ccl.h"
 #include "oneflow/core/job/rank_group.h"
 #include "oneflow/core/common/small_vector.h"
+#include "oneflow/core/common/throw.h"
+#include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/framework/tensor_util.h"
+#include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/memory/memory_case_util.h"
 
 namespace oneflow {
 namespace one {
@@ -354,6 +359,35 @@ Maybe<std::tuple<std::shared_ptr<Tensor>, bool>> batchify(const std::shared_ptr<
       "Expected `{}`D (unbatched) or `{}`D (batched) input to `{}`, but got input of size: `{}`",
       dim_count_no_batch, dim_count_batch, func_name, input->shape()->DebugStr());
   return std::make_tuple(is_batched ? input : JUST(functional::Unsqueeze(input, 0)), is_batched);
+}
+
+template<typename T>
+T GetTensorItemValue(const std::shared_ptr<one::Tensor>& input) {
+  CHECK_EQ_OR_THROW(input->nelement(), 1) << "Input tensor must have exactly one element";
+  T value;
+  const auto& callback = [&](ep::Stream* stream,
+                             const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+    SyncAutoMemcpy(stream, &value, eager_blob_object->dptr(), sizeof(T), memory::MakeHostMemCase(),
+                   eager_blob_object->mem_case());
+  };
+  SyncAccessTensorWithTimeOut(input, callback, "const").GetOrThrow();
+  return value;
+}
+
+Maybe<void> CheckNormalTensorStd(const std::shared_ptr<one::Tensor>& std) {
+  CHECK_OR_RETURN(!std->dtype()->is_complex())
+      << "normal expects standard deviation to be non-complex";
+  if (std->nelement() > 0) {
+    auto std_check = CHECK_JUST(ScalarLogicalGreaterEqual(CHECK_JUST(Min(std)), Scalar(0.0)));
+    CHECK_OR_THROW(GetTensorItemValue<bool>(std_check))
+        << "normal expects all elements of std >= 0.0";
+  }
+  return Maybe<void>::Ok();
+}
+Maybe<void> CheckNormalTensorStd(const float std) {
+  CHECK_GE_OR_RETURN(std, 0.0) << "normal expects std >= 0.0, but found std " << (std)
+                               << ". This may cause an error.";
+  return Maybe<void>::Ok();
 }
 
 }  // namespace functional
