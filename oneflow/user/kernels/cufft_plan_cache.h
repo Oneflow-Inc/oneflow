@@ -39,45 +39,33 @@ namespace {
 
 constexpr int max_rank = 3;
 
-enum class CUFFT_EXCUTETYPE{ R2C, C2C, C2R };
+enum class CUFFT_EXCUTETYPE { R2C, C2C, C2R };
 
-struct CuFFTDataTypeDesc{
+struct CuFFTDataTypeDesc {
   cudaDataType inputtype;
   cudaDataType outputtype;
   cudaDataType executiontype;
 };
 
-}
+}  // namespace
 
-
-class CuFFTHandle{
+class CuFFTHandle {
   cufftHandle handle;
-public:
-  CuFFTHandle(){
-    OF_CUFFT_CHECK(cufftCreate(&handle));
-  }
 
-  cufftHandle& get(){
-    return handle;
-  }
-  const cufftHandle& get() const{
-    return handle;
-  }
+ public:
+  CuFFTHandle() { OF_CUFFT_CHECK(cufftCreate(&handle)); }
 
-  ~CuFFTHandle(){
-    cufftDestroy(handle);
-  }
+  cufftHandle& get() { return handle; }
+  const cufftHandle& get() const { return handle; }
+
+  ~CuFFTHandle() { cufftDestroy(handle); }
 };
 
-// NOTE: The implementation of `CuFFTDataLayout`, `cufft_simple_embed` and `as_cufft_embed` are mostly taken from
-// pytorch.
-//       For more details pls refer to:
-//       https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/cuda/CuFFTPlanCache.h#L136
-//       https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/cuda/CuFFTPlanCache.h#L145
-//       https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/cuda/CuFFTPlanCache.h#L164
+// NOTE: The implementation of `CuFFTDataLayout`, `cufft_simple_embed` and `as_cufft_embed` are
+// mostly taken from pytorch. For more details pls refer to `CuFFTPlanCache.h` in PyTorch.
 typedef long long cufft_size_type;
 typedef small_vector<cufft_size_type, max_rank + 1> cufft_dim_vector;
-struct CuFFTDataLayout{
+struct CuFFTDataLayout {
   small_vector<cufft_size_type, 5> embed;
   cufft_size_type stride, dist;
   bool must_clone, simple;
@@ -90,30 +78,27 @@ inline CuFFTDataLayout cufft_simple_embed(const cufft_dim_vector& sizes, bool on
   layout.simple = true;
   layout.must_clone = false;
   layout.embed.assign(sizes.cbegin() + 1, sizes.cend());
-  if (onesided) {
-    layout.embed.back() = sizes.back() / 2 + 1;
-  }
+  if (onesided) { layout.embed.back() = sizes.back() / 2 + 1; }
   layout.stride = 1;
   layout.dist = 1;
-  for (const auto& len : layout.embed) {
-    layout.dist *= len;
-  }
+  for (const auto& len : layout.embed) { layout.dist *= len; }
   return layout;
 }
 
 // Convert strides to a CuFFT embedded representation.
 // If strides cannot be embedded, returns a simple layout and sets must_clone flag
-inline CuFFTDataLayout as_cufft_embed(const cufft_dim_vector& strides, const cufft_dim_vector& sizes, bool onesided) {
-
+inline CuFFTDataLayout as_cufft_embed(const cufft_dim_vector& strides,
+                                      const cufft_dim_vector& sizes, bool onesided) {
   const auto signal_ndim = strides.size() - 1;
   CuFFTDataLayout layout;
   auto last_stride = strides[signal_ndim];
   layout.must_clone = (last_stride <= 0);
 
-  const auto last_dim_size = onesided ?
-      sizes[signal_ndim] / 2 + 1 : sizes[signal_ndim];
+  const auto last_dim_size = onesided ? sizes[signal_ndim] / 2 + 1 : sizes[signal_ndim];
 
-  const auto signal_numel = std::accumulate(sizes.begin() + 1, sizes.end() - 1, (cufft_size_type) 1, std::multiplies<cufft_size_type>()) * last_dim_size;
+  const auto signal_numel = std::accumulate(sizes.begin() + 1, sizes.end() - 1, (cufft_size_type)1,
+                                            std::multiplies<cufft_size_type>())
+                            * last_dim_size;
 
   // Zero stides are not allowed, even if the batch size is one.
   // If that happens just set a dummy case
@@ -144,19 +129,16 @@ inline CuFFTDataLayout as_cufft_embed(const cufft_dim_vector& strides, const cuf
     layout = cufft_simple_embed(sizes, onesided);
     layout.must_clone = true;
   } else {
-    
     layout.embed[0] = sizes[1];
     layout.stride = strides[signal_ndim];
 
     // Determine if layout represents a simple embedding (contiguous data)
     layout.simple = [&] {
-      FOR_RANGE(int, i, 1, signal_ndim - 1){
-        if (layout.embed[i] != sizes[i + 1]) {
-          return false;
-        }
+      FOR_RANGE(int, i, 1, signal_ndim - 1) {
+        if (layout.embed[i] != sizes[i + 1]) { return false; }
       }
-      return (layout.stride == 1 && layout.dist == signal_numel &&
-          layout.embed.back() == last_dim_size);
+      return (layout.stride == 1 && layout.dist == signal_numel
+              && layout.embed.back() == last_dim_size);
     }();
   }
   return layout;
@@ -174,34 +156,32 @@ struct CuFFTParams {
 
   CuFFTParams() = default;
   CuFFTParams(const Shape& in_shape, const Shape& out_shape, const Stride& in_strides,
-              const Stride& out_strides, int64_t dims,
-              CUFFT_EXCUTETYPE type, DataType real) : ndim(dims), excute_type(type), real_data_type(real)
-              {
-        assert(ndim >= 1 && ndim <= max_rank);
-        assert(in_shape.size() == ndim + 1);
-        assert(out_shape.size() == ndim + 1);
-        assert(in_shape.size() == in_strides.size());
-        assert(out_shape.size() == out_strides.size());
-        data_shape.resize(ndim + 1);
-        input_shape.resize(in_shape.size());
-        input_strides.resize(in_strides.size());
-        output_shape.resize(out_shape.size());
-        output_strides.resize(out_strides.size());
+              const Stride& out_strides, int64_t dims, CUFFT_EXCUTETYPE type, DataType real)
+      : ndim(dims), excute_type(type), real_data_type(real) {
+    CHECK_OR_THROW(ndim >= 1 && ndim <= max_rank);
+    CHECK_OR_THROW(in_shape.size() == ndim + 1);
+    CHECK_OR_THROW(out_shape.size() == ndim + 1);
+    CHECK_OR_THROW(in_shape.size() == in_strides.size());
+    CHECK_OR_THROW(out_shape.size() == out_strides.size());
+    data_shape.resize(ndim + 1);
+    input_shape.resize(in_shape.size());
+    input_strides.resize(in_strides.size());
+    output_shape.resize(out_shape.size());
+    output_strides.resize(out_strides.size());
 
-        std::copy(in_strides.begin(), in_strides.end(), input_strides.begin());
-        std::copy(out_strides.begin(), out_strides.end(), output_strides.begin());
-        std::copy(in_shape.begin(), in_shape.end(), input_shape.begin());
-        std::copy(out_shape.begin(), out_shape.end(), output_shape.begin());
-        data_shape[0] = input_shape[0]; // batch size
-        FOR_RANGE(int64_t, i, 0, ndim) {
-          auto in_size = input_shape[i+1];
-          auto out_size = output_shape[i+1];
-          data_shape[i + 1] = std::max(in_size, out_size);
-          CHECK_OR_THROW(in_size == data_shape[i + 1] ||
-                                in_size == (data_shape[i + 1] / 2) + 1);
-          CHECK_OR_THROW(out_size == data_shape[i + 1] ||
-                                out_size == (data_shape[i + 1] / 2) + 1);
-        }
+    std::copy(in_strides.begin(), in_strides.end(), input_strides.begin());
+    std::copy(out_strides.begin(), out_strides.end(), output_strides.begin());
+    std::copy(in_shape.begin(), in_shape.end(), input_shape.begin());
+    std::copy(out_shape.begin(), out_shape.end(), output_shape.begin());
+
+    data_shape[0] = input_shape[0];  // batch size
+    FOR_RANGE(int64_t, i, 0, ndim) {
+      auto in_size = input_shape[i + 1];
+      auto out_size = output_shape[i + 1];
+      data_shape[i + 1] = std::max(in_size, out_size);
+      CHECK_OR_THROW(in_size == data_shape[i + 1] || in_size == (data_shape[i + 1] / 2) + 1);
+      CHECK_OR_THROW(out_size == data_shape[i + 1] || out_size == (data_shape[i + 1] / 2) + 1);
+    }
   }
 };
 
@@ -213,16 +193,19 @@ class CuFFTConfig {
 
   explicit CuFFTConfig(CuFFTParams& params) {  // NOLINT
 
-    if (params.real_data_type == kBFloat16 || params.real_data_type == kFloat16){
+    if (params.real_data_type == kBFloat16 || params.real_data_type == kFloat16) {
       // CuFFT support half data type, but there are some limits:
       //  https://docs.nvidia.com/cuda/cufft/#half-precision-cufft-transforms
-      // TO-DO : do some check
+      CHECK_OR_THROW(false) << "Unsupported datatype kBFloat16 and kFloat16.";
     }
 
-    CuFFTDataLayout input_layout = as_cufft_embed(params.input_strides, params.data_shape, params.excute_type == CUFFT_EXCUTETYPE::C2R);
-    CuFFTDataLayout output_layout = as_cufft_embed(params.output_strides, params.data_shape, params.excute_type == CUFFT_EXCUTETYPE::R2C);
+    CuFFTDataLayout input_layout = as_cufft_embed(params.input_strides, params.data_shape,
+                                                  params.excute_type == CUFFT_EXCUTETYPE::C2R);
+    CuFFTDataLayout output_layout = as_cufft_embed(params.output_strides, params.data_shape,
+                                                   params.excute_type == CUFFT_EXCUTETYPE::R2C);
 
-    bool clone_input = input_layout.must_clone; // that means: input should be contiguous because original input can't be embeded
+    bool clone_input = input_layout.must_clone;  // that means: input should be contiguous because
+                                                 // original input can't be embeded
     const bool is_layout_simple = input_layout.simple && output_layout.simple;
 
     // disable cuFFT the default behavior of allocating work area at plan generating time
@@ -232,53 +215,45 @@ class CuFFTConfig {
     // exclude input_shape[0] whtich is batch dim
     cufft_dim_vector fft_shape(params.data_shape.begin() + 1, params.data_shape.end());
     cufft_size_type batch = params.data_shape[0];
-    if (is_layout_simple){
-      OF_CUFFT_CHECK(cufftXtMakePlanMany(plan_handle_.get(), params.ndim, fft_shape.data(), 
-                /*inembed=*/nullptr, /*istride=*/1, /*idist=*/1, /*inputtype=*/data_type_desc_.inputtype, 
-                /*onembed=*/nullptr, /*ostride=*/1, /*odist=*/1, /*outputtype=*/data_type_desc_.outputtype, 
-                /*batch=*/batch, /*workSize=*/&work_size_, /*executiontype=*/data_type_desc_.executiontype));
-    }
-    else{
-      OF_CUFFT_CHECK(cufftXtMakePlanMany(plan_handle_.get(), params.ndim, fft_shape.data(), 
-                /*inembed=*/input_layout.embed.data(), /*istride=*/input_layout.stride, /*idist=*/input_layout.dist, /*inputtype=*/data_type_desc_.inputtype, 
-                /*onembed=*/output_layout.embed.data(), /*ostride=*/output_layout.stride, /*odist=*/output_layout.dist, /*outputtype=*/data_type_desc_.outputtype, 
-                /*batch=*/batch, /*workSize=*/&work_size_, /*executiontype=*/data_type_desc_.executiontype));
+    if (is_layout_simple) {
+      OF_CUFFT_CHECK(cufftXtMakePlanMany(plan_handle_.get(), params.ndim, fft_shape.data(),
+                                         /*inembed=*/nullptr, /*istride=*/1, /*idist=*/1,
+                                         /*inputtype=*/data_type_desc_.inputtype,
+                                         /*onembed=*/nullptr, /*ostride=*/1, /*odist=*/1,
+                                         /*outputtype=*/data_type_desc_.outputtype,
+                                         /*batch=*/batch, /*workSize=*/&work_size_,
+                                         /*executiontype=*/data_type_desc_.executiontype));
+    } else {
+      OF_CUFFT_CHECK(cufftXtMakePlanMany(
+          plan_handle_.get(), params.ndim, fft_shape.data(),
+          /*inembed=*/input_layout.embed.data(), /*istride=*/input_layout.stride,
+          /*idist=*/input_layout.dist, /*inputtype=*/data_type_desc_.inputtype,
+          /*onembed=*/output_layout.embed.data(), /*ostride=*/output_layout.stride,
+          /*odist=*/output_layout.dist, /*outputtype=*/data_type_desc_.outputtype,
+          /*batch=*/batch, /*workSize=*/&work_size_,
+          /*executiontype=*/data_type_desc_.executiontype));
     }
   }
 
   size_t workspace_size() const { return work_size_; }
-  const cufftHandle& plan() const {
-    return plan_handle_.get();
-  }
+  const cufftHandle& plan() const { return plan_handle_.get(); }
 
-  void excute(void* input, void* output, bool forward){
-    OF_CUFFT_CHECK(cufftXtExec(plan_handle_.get(), input, output,
-                        forward ? CUFFT_FORWARD : CUFFT_INVERSE));
+  void excute(void* input, void* output, bool forward) {
+    OF_CUFFT_CHECK(
+        cufftXtExec(plan_handle_.get(), input, output, forward ? CUFFT_FORWARD : CUFFT_INVERSE));
   }
 
  private:
   void infer_cufft_type_(CUFFT_EXCUTETYPE excute_type, DataType real_data_type) {
-    if (real_data_type == kFloat16){
-      data_type_desc_.executiontype = CUDA_C_16F;
-      data_type_desc_.inputtype = excute_type == CUFFT_EXCUTETYPE::R2C ? CUDA_R_16F : CUDA_C_16F;
-      data_type_desc_.outputtype = excute_type == CUFFT_EXCUTETYPE::C2R ? CUDA_R_16F : CUDA_C_16F;
-    }
-    else if (real_data_type == kBFloat16){
-      data_type_desc_.executiontype = CUDA_C_16BF;
-      data_type_desc_.inputtype = excute_type == CUFFT_EXCUTETYPE::R2C ? CUDA_R_16BF : CUDA_C_16BF;
-      data_type_desc_.outputtype = excute_type == CUFFT_EXCUTETYPE::C2R ? CUDA_R_16BF : CUDA_C_16BF;
-    }
-    else if (real_data_type == kFloat){
+    if (real_data_type == kFloat) {
       data_type_desc_.executiontype = CUDA_C_32F;
       data_type_desc_.inputtype = excute_type == CUFFT_EXCUTETYPE::R2C ? CUDA_R_32F : CUDA_C_32F;
       data_type_desc_.outputtype = excute_type == CUFFT_EXCUTETYPE::C2R ? CUDA_R_32F : CUDA_C_32F;
-    }
-    else if (real_data_type == kDouble){
+    } else if (real_data_type == kDouble) {
       data_type_desc_.executiontype = CUDA_C_64F;
       data_type_desc_.inputtype = excute_type == CUFFT_EXCUTETYPE::R2C ? CUDA_R_64F : CUDA_C_64F;
       data_type_desc_.outputtype = excute_type == CUFFT_EXCUTETYPE::C2R ? CUDA_R_64F : CUDA_C_64F;
-    }
-    else{
+    } else {
       CHECK_OR_THROW(false) << "cuFFT doesn't support type " << real_data_type;
     }
   }

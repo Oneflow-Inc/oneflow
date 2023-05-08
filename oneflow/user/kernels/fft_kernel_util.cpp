@@ -15,17 +15,18 @@ limitations under the License.
 */
 #include "oneflow/user/kernels/fft_kernel_util.h"
 #include <type_traits>
+#include "pocketfftplan.h"
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/framework/user_op_tensor.h"
-#include "pocketfftplan.h"
 
 namespace oneflow {
 
 template<typename T>
 static void _conj_symmetry_cpu(T* data_out, const Shape& shape, const std::vector<int64_t>& strides,
-                           const int64_t last_dim, int64_t elem_count) {
-  const oneflow::NdIndexStrideOffsetHelper<int64_t, SHAPE_MAX_AXIS_SIZE> helper(strides.data(), shape.size());
+                               const int64_t last_dim, int64_t elem_count) {
+  const oneflow::NdIndexStrideOffsetHelper<int64_t, SHAPE_MAX_AXIS_SIZE> helper(strides.data(),
+                                                                                shape.size());
   // NOTE: dims must be sorted
   int64_t last_dim_size = shape[last_dim];
   int64_t last_dim_half = last_dim_size / 2;
@@ -47,20 +48,20 @@ static void _conj_symmetry_cpu(T* data_out, const Shape& shape, const std::vecto
 }
 
 template<typename T>
-struct FillConjSymmetryUtil<DeviceType::kCPU, T>{
-  static void FillConjSymmetryForward(ep::Stream* stream, T* data_out, const Shape& shape, const Stride& strides,
-                                      const int64_t last_dim, int64_t elem_count){
+struct FillConjSymmetryUtil<DeviceType::kCPU, T> {
+  static void FillConjSymmetryForward(ep::Stream* stream, T* data_out, const Shape& shape,
+                                      const Stride& strides, const int64_t last_dim,
+                                      int64_t elem_count) {
     std::vector<int64_t> strides_vec(strides.begin(), strides.end());
-    _conj_symmetry_cpu(/*data_out*/data_out, /*shape*/shape, /*strides*/strides_vec,
-                /*last_dim*/last_dim, /*elem_count*/elem_count);
+    _conj_symmetry_cpu(/*data_out*/ data_out, /*shape*/ shape, /*strides*/ strides_vec,
+                       /*last_dim*/ last_dim, /*elem_count*/ elem_count);
   }
 };
 
-
-template <typename real_type, typename complex_type>
-struct ComplexConvertUtil<DeviceType::kCPU, real_type, complex_type>{
-  static void ConvertToDoubleSized(ep::Stream* stream, const complex_type* in, complex_type* dst, size_t len, size_t n)
-  {
+template<typename real_type, typename complex_type>
+struct ComplexConvertUtil<DeviceType::kCPU, real_type, complex_type> {
+  static void ConvertToDoubleSized(ep::Stream* stream, const complex_type* in, complex_type* dst,
+                                   size_t len, size_t n) {
     size_t fact_len = 2 * len - 2;  // input_shape.back()
     for (int i = 0; i < n; i++) {
       int index_x = i / fact_len;
@@ -80,8 +81,8 @@ struct ComplexConvertUtil<DeviceType::kCPU, real_type, complex_type>{
       }
     }
   }
-  static void ConvertComplexToReal(ep::Stream* stream, const complex_type* in, real_type* out, size_t n)
-  {
+  static void ConvertComplexToReal(ep::Stream* stream, const complex_type* in, real_type* out,
+                                   size_t n) {
     for (int i = 0; i < n; i++) {
       out[2 * i] = in[i].real();
       out[2 * i + 1] = in[i].imag();
@@ -91,14 +92,13 @@ struct ComplexConvertUtil<DeviceType::kCPU, real_type, complex_type>{
 
 template<typename T, typename FCT_TYPE>
 struct FftC2CKernelUtil<DeviceType::kCPU, T, FCT_TYPE> {
-  static void FftC2CForward(ep::Stream* stream, 
-                            const T* data_in, T* data_out,
+  static void FftC2CForward(ep::Stream* stream, const T* data_in, T* data_out,
                             const Shape& input_shape, const Shape& output_shape,
-                            const Stride& input_stride, const Stride& output_stride,
-                            bool forward, const std::vector<int64_t>& dims, FCT_TYPE norm_fct, DataType real_type) {
-    PocketFFtParams<FCT_TYPE> params(
-        input_shape, output_shape, input_stride, output_stride, dims, forward,
-        norm_fct /*1.f*/, FFT_EXCUTETYPE::C2C);
+                            const Stride& input_stride, const Stride& output_stride, bool forward,
+                            const std::vector<int64_t>& dims, FCT_TYPE norm_fct,
+                            DataType real_type) {
+    PocketFFtParams<FCT_TYPE> params(input_shape, output_shape, input_stride, output_stride, dims,
+                                     forward, norm_fct /*1.f*/, FFT_EXCUTETYPE::C2C);
     PocketFFtConfig<FCT_TYPE> config(params);
     config.excute(data_in, data_out);
   }
@@ -108,11 +108,10 @@ template<typename IN, typename OUT>
 struct FftR2CKernelUtil<DeviceType::kCPU, IN, OUT> {
   static void FftR2CForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
                             const Shape& input_shape, const Shape& output_shape,
-                            const Stride& input_stride, const Stride& output_stride,
-                            bool forward, const std::vector<int64_t>& dims, IN norm_fct,
-                            DataType real_type) {
-    PocketFFtParams<IN> params(input_shape, output_shape, input_stride, output_stride, dims, forward,
-                              norm_fct /*1.f*/, FFT_EXCUTETYPE::R2C);
+                            const Stride& input_stride, const Stride& output_stride, bool forward,
+                            const std::vector<int64_t>& dims, IN norm_fct, DataType real_type) {
+    PocketFFtParams<IN> params(input_shape, output_shape, input_stride, output_stride, dims,
+                               forward, norm_fct /*1.f*/, FFT_EXCUTETYPE::R2C);
     PocketFFtConfig<IN> config(params);
     config.excute(data_in, data_out);
   }
@@ -123,11 +122,10 @@ struct FftC2RKernelUtil<DeviceType::kCPU, IN, OUT> {
   static void FftC2RForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
                             const Shape& input_shape, const Shape& output_shape,
                             const Stride& input_stride, const Stride& output_stride, bool forward,
-                            int64_t last_dim_size, const std::vector<int64_t>& dims,
-                            OUT norm_fct, DataType real_type) {
-    PocketFFtParams<OUT> params(
-        input_shape, output_shape, input_stride, output_stride, dims, /*is_forward=*/false,
-        norm_fct /*1.f*/, FFT_EXCUTETYPE::C2R);
+                            int64_t last_dim_size, const std::vector<int64_t>& dims, OUT norm_fct,
+                            DataType real_type) {
+    PocketFFtParams<OUT> params(input_shape, output_shape, input_stride, output_stride, dims,
+                                /*is_forward=*/false, norm_fct /*1.f*/, FFT_EXCUTETYPE::C2R);
     PocketFFtConfig<OUT> config(params);
     config.excute(data_in, data_out);
   }
@@ -138,10 +136,10 @@ struct FftStftKernelUtil<DeviceType::kCPU, IN, OUT> {
   static void FftStftForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
                              const Shape& input_shape, const Shape& output_shape,
                              const Stride& input_stride, const Stride& output_stride, bool forward,
-                             const std::vector<int64_t>& axes, IN norm_fct,
-                             int64_t len, int64_t dims, int64_t batch) {
-    PocketFFtParams<IN> params(input_shape, output_shape, input_stride, output_stride, axes, forward,
-                              norm_fct /*1.f*/, FFT_EXCUTETYPE::R2C);
+                             const std::vector<int64_t>& axes, IN norm_fct, int64_t len,
+                             int64_t dims, int64_t batch) {
+    PocketFFtParams<IN> params(input_shape, output_shape, input_stride, output_stride, axes,
+                               forward, norm_fct /*1.f*/, FFT_EXCUTETYPE::R2C);
     PocketFFtConfig<IN> config(params);
     int64_t in_offset = len;
     int64_t out_offset = len / 2 + 1;

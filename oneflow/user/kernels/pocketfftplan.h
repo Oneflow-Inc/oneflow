@@ -14,11 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "pocketfft_hdronly.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/core/ep/cuda/cuda_stream.h"
-#include "pocketfft_hdronly.h"
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 namespace {
@@ -82,8 +82,6 @@ class PocketFFtConfig {
   }
 
   void excute(const std::complex<dtype>* in, dtype* out) {
-    // pocketfft::c2r(fftparams.input_shape, fftparams.in_stridef, fftparams.out_stridef,
-    //                fftparams.axes, fftparams.IsForward, in, out, fftparams.fct);
     pocketfft::c2r(fftparams.output_shape, fftparams.in_stridef, fftparams.out_stridef,
                    fftparams.axes, fftparams.IsForward, in, out, fftparams.fct);
   }

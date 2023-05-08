@@ -29,48 +29,49 @@ namespace oneflow {
 
 template<typename T>
 inline T _fft_normalization_scale(const int32_t frame_length, bool normalized) {
-  if (!normalized) {
-    return static_cast<T>(1.0);
-  }
+  if (!normalized) { return static_cast<T>(1.0); }
   return static_cast<T>(1.0 / std::sqrt(frame_length));
 }
 
-
-
 template<DeviceType device_type, typename T>
-struct FillConjSymmetryUtil{
-  static void FillConjSymmetryForward(ep::Stream* stream, T* data_out, const Shape& shape, const Stride& strides,
-                                      const int64_t last_dim, int64_t elem_count);
+struct FillConjSymmetryUtil {
+  static void FillConjSymmetryForward(ep::Stream* stream, T* data_out, const Shape& shape,
+                                      const Stride& strides, const int64_t last_dim,
+                                      int64_t elem_count);
 };
 
-template <DeviceType device_type, typename real_type, typename complex_type>
-struct ComplexConvertUtil{
-  static void ConvertToDoubleSized(ep::Stream* stream, const complex_type* in, complex_type* dst, size_t len, size_t n);
-  static void ConvertComplexToReal(ep::Stream* stream, const complex_type* in, real_type* out, size_t n);
+template<DeviceType device_type, typename real_type, typename complex_type>
+struct ComplexConvertUtil {
+  static void ConvertToDoubleSized(ep::Stream* stream, const complex_type* in, complex_type* dst,
+                                   size_t len, size_t n);
+  static void ConvertComplexToReal(ep::Stream* stream, const complex_type* in, real_type* out,
+                                   size_t n);
 };
+
 template<DeviceType device_type, typename T, typename FCT_TYPE>
 struct FftC2CKernelUtil {
-  static void FftC2CForward(ep::Stream* stream, const T* data_in, T* data_out, 
+  static void FftC2CForward(ep::Stream* stream, const T* data_in, T* data_out,
                             const Shape& input_shape, const Shape& output_shape,
-                            const Stride& input_stride, const Stride& output_stride,
-                            bool forward, const std::vector<int64_t>& dims, FCT_TYPE norm_fct, DataType real_type);
+                            const Stride& input_stride, const Stride& output_stride, bool forward,
+                            const std::vector<int64_t>& dims, FCT_TYPE norm_fct,
+                            DataType real_type);
 };
 
 template<DeviceType device_type, typename IN, typename OUT>
 struct FftR2CKernelUtil {
   static void FftR2CForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
                             const Shape& input_shape, const Shape& output_shape,
-                            const Stride& input_stride, const Stride& output_stride, 
-                            bool forward, const std::vector<int64_t>& dims, IN norm_fct, DataType real_type);
+                            const Stride& input_stride, const Stride& output_stride, bool forward,
+                            const std::vector<int64_t>& dims, IN norm_fct, DataType real_type);
 };
 
 template<DeviceType device_type, typename IN, typename OUT>
 struct FftC2RKernelUtil {
-  static void FftC2RForward(ep::Stream* stream, const IN* data_in, OUT* data_out, 
-                            const Shape& input_shape, const Shape& output_shape, 
+  static void FftC2RForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
+                            const Shape& input_shape, const Shape& output_shape,
                             const Stride& input_stride, const Stride& output_stride, bool forward,
-                            int64_t last_dim_size, const std::vector<int64_t>& dims,
-                            OUT norm_fct, DataType real_type);
+                            int64_t last_dim_size, const std::vector<int64_t>& dims, OUT norm_fct,
+                            DataType real_type);
 };
 
 template<DeviceType device_type, typename IN, typename OUT>
@@ -78,8 +79,8 @@ struct FftStftKernelUtil {
   static void FftStftForward(ep::Stream* stream, const IN* data_in, OUT* data_out,
                              const Shape& input_shape, const Shape& output_shape,
                              const Stride& input_stride, const Stride& output_stride, bool forward,
-                             const std::vector<int64_t>& axes, IN norm_fct,
-                             int64_t len, int64_t dims, int64_t batch);
+                             const std::vector<int64_t>& axes, IN norm_fct, int64_t len,
+                             int64_t dims, int64_t batch);
 };
 
 }  // namespace oneflow
