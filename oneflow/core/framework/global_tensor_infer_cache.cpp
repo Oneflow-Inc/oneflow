@@ -249,7 +249,7 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
 
 /* static */ Maybe<Symbol<Stream>> GlobalTensorInferCache::InferDeviceAndStream(
     const UserOpExpr& user_op_expr, const GlobalTensorMetaInferArgs& infer_args) {
-  if (!user_op_expr.device_and_stream_infer_fn()) {
+  if (!user_op_expr.device_and_stream_infer_fn() || EagerNcclUseComputeStream()) {
     Symbol<ParallelDesc> parallel_desc =
         infer_args.input_global_tensor_metas()[0].tensor_meta()->parallel_desc();
     return GetDefaultStreamByPlacement(parallel_desc);
