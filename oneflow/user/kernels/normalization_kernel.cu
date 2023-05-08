@@ -174,75 +174,6 @@ size_t InferGradTmpSize(user_op::InferContext* ctx) {
   return tmp_size;
 }
 
-class NormalizationInferenceKernel final : public user_op::OpKernel,
-                                           public user_op::CudaGraphSupport {
- public:
-  NormalizationInferenceKernel() = default;
-  ~NormalizationInferenceKernel() override = default;
-
- private:
-  using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const bool training = ctx->Attr<bool>("training");
-    CHECK(!training);
-    const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
-    auto* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const auto* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
-    const auto* beta = ctx->Tensor4ArgNameAndIndex("beta", 0);
-    auto* moving_mean = ctx->Tensor4ArgNameAndIndex("moving_mean", 0);
-    auto* moving_variance = ctx->Tensor4ArgNameAndIndex("moving_variance", 0);
-    const auto axis = ctx->Attr<int32_t>("axis");
-    const auto epsilon = ctx->Attr<float>("epsilon");
-
-    const DataType data_type = x->data_type();
-    CHECK_EQ(x->shape_view(), y->shape_view());
-    CHECK_EQ(y->data_type(), data_type);
-    CHECK_GE(axis, 0);
-    CHECK_LT(axis, x->shape_view().NumAxes());
-
-    cudnnBatchNormMode_t mode = getCudnnBatchNormMode(x->shape_view().NumAxes());
-    const CudnnTensorDescHelper desc_helper(x->shape_view(), data_type, axis, mode);
-    desc_helper.CheckParamTensor(gamma);
-    desc_helper.CheckParamTensor(beta);
-    desc_helper.CheckParamTensor(moving_mean);
-    desc_helper.CheckParamTensor(moving_variance);
-
-    const void* sp_alpha = CudnnSPOnePtr(data_type);
-    const void* sp_beta;
-    if (ctx->has_input("_add_to_output", 0)) {
-      const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
-      CHECK_EQ(add_to_output->data_type(), y->data_type());
-      CHECK_EQ(add_to_output->shape_view(), y->shape_view());
-      Memcpy<DeviceType::kCUDA>(
-          ctx->stream(), y->mut_dptr<void>(), add_to_output->dptr<void>(),
-          add_to_output->shape_view().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
-      sp_beta = CudnnSPOnePtr(data_type);
-    } else {
-      sp_beta = CudnnSPZeroPtr(data_type);
-    }
-
-    OF_CUDNN_CHECK(cudnnBatchNormalizationForwardInference(
-        ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), mode, sp_alpha, sp_beta,
-        desc_helper.xy_desc(), x->dptr(), desc_helper.xy_desc(), y->mut_dptr(),
-        desc_helper.param_desc(), gamma->dptr(), beta->dptr(), moving_mean->dptr(),
-        moving_variance->dptr(), epsilon));
-  }
-
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-REGISTER_USER_KERNEL("normalization")
-    .SetCreateFn<NormalizationInferenceKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
-                     && (user_op::HobAttr<bool>("training") == false))
-    .SetInplaceProposalFn([](const user_op::InferContext& ctx,
-                             user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
-      if (ctx.has_input("_add_to_output", 0)) {
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "_add_to_output", 0, true));
-      }
-      return Maybe<void>::Ok();
-    });
-
 constexpr int64_t kCudaWarpSize = 32;
 
 template<typename T>
@@ -379,6 +310,94 @@ void ReluBackward(ep::Stream* stream, int64_t n, const DataType data_type, const
   }
 }
 
+class NormalizationInferenceKernel final : public user_op::OpKernel,
+                                           public user_op::CudaGraphSupport {
+ public:
+  NormalizationInferenceKernel() = default;
+  ~NormalizationInferenceKernel() override = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const bool training = ctx->Attr<bool>("training");
+    CHECK(!training);
+    const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    auto* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    const auto* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
+    const auto* beta = ctx->Tensor4ArgNameAndIndex("beta", 0);
+    auto* moving_mean = ctx->Tensor4ArgNameAndIndex("moving_mean", 0);
+    auto* moving_variance = ctx->Tensor4ArgNameAndIndex("moving_variance", 0);
+    const auto axis = ctx->Attr<int32_t>("axis");
+    const auto epsilon = ctx->Attr<float>("epsilon");
+
+    const DataType data_type = x->data_type();
+    CHECK_EQ(x->shape_view(), y->shape_view());
+    CHECK_EQ(y->data_type(), data_type);
+    CHECK_GE(axis, 0);
+    CHECK_LT(axis, x->shape_view().NumAxes());
+
+    cudnnBatchNormMode_t mode = getCudnnBatchNormMode(x->shape_view().NumAxes());
+    const CudnnTensorDescHelper desc_helper(x->shape_view(), data_type, axis, mode);
+    desc_helper.CheckParamTensor(gamma);
+    desc_helper.CheckParamTensor(beta);
+    desc_helper.CheckParamTensor(moving_mean);
+    desc_helper.CheckParamTensor(moving_variance);
+
+    const void* sp_alpha = CudnnSPOnePtr(data_type);
+    const void* sp_beta;
+    if (ctx->has_input("_add_to_output", 0)) {
+      const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
+      CHECK_EQ(add_to_output->data_type(), y->data_type());
+      CHECK_EQ(add_to_output->shape_view(), y->shape_view());
+      Memcpy<DeviceType::kCUDA>(
+          ctx->stream(), y->mut_dptr<void>(), add_to_output->dptr<void>(),
+          add_to_output->shape_view().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
+      sp_beta = CudnnSPOnePtr(data_type);
+    } else {
+      sp_beta = CudnnSPZeroPtr(data_type);
+    }
+
+    OF_CUDNN_CHECK(cudnnBatchNormalizationForwardInference(
+        ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), mode, sp_alpha, sp_beta,
+        desc_helper.xy_desc(), x->dptr(), desc_helper.xy_desc(), y->mut_dptr(),
+        desc_helper.param_desc(), gamma->dptr(), beta->dptr(), moving_mean->dptr(),
+        moving_variance->dptr(), epsilon));
+
+    if (ctx->op_type_name() == "normalization_add_relu") {
+      CHECK(!ctx->has_input("_add_to_output", 0));
+      const int64_t elem_cnt = x->shape_view().elem_cnt();
+      auto* mask = ctx->Tensor4ArgNameAndIndex("reserve_space", 0);
+      if (ctx->has_input("addend", 0)) {
+        const auto* addend = ctx->Tensor4ArgNameAndIndex("addend", 0);
+        AddRelu(ctx->stream(), elem_cnt, data_type, y->dptr(), addend->dptr(), y->mut_dptr(),
+                mask->mut_dptr<int32_t>());
+      } else {
+        Relu(ctx->stream(), elem_cnt, data_type, y->dptr(), y->mut_dptr(),
+             mask->mut_dptr<int32_t>());
+      }
+    }
+  }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+REGISTER_USER_KERNEL("normalization")
+    .SetCreateFn<NormalizationInferenceKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
+                     && (user_op::HobAttr<bool>("training") == false))
+    .SetInplaceProposalFn([](const user_op::InferContext& ctx,
+                             user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
+      if (ctx.has_input("_add_to_output", 0)) {
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "_add_to_output", 0, true));
+      }
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_KERNEL("normalization_add_relu")
+    .SetCreateFn<NormalizationInferenceKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
+                     && (user_op::HobAttr<bool>("training") == false));
+
 class NormalizationTrainKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   NormalizationTrainKernel() = default;
@@ -508,7 +527,8 @@ REGISTER_USER_KERNEL("normalization")
 
 REGISTER_USER_KERNEL("normalization_add_relu")
     .SetCreateFn<NormalizationTrainKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA))
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
+                     && (user_op::HobAttr<bool>("training") == true))
     .SetInferTmpSizeFn(InferTrainTmpSize);
 
 class NormalizationGradUserKernel final : public user_op::OpKernel,
