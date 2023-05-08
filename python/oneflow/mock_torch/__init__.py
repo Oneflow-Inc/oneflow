@@ -25,6 +25,7 @@ import sys
 import os
 from pathlib import Path
 from contextlib import contextmanager
+from zipimport import zipimporter
 
 import oneflow.support.env_var_util as env_var_util
 
@@ -185,7 +186,11 @@ class OneflowImporter(MetaPathFinder, Loader):
                         raise ModuleNotFoundError(oneflow_mod_fullname + error_msg)
 
                 real_mod = module_from_spec(real_spec)
-                real_spec.loader.exec_module(real_mod)
+                loader = real_spec.loader
+                if isinstance(loader, zipimporter):
+                    pass
+                else:
+                    loader.exec_module(real_mod)
             else:
                 real_mod = sys.modules.get(oneflow_mod_fullname)
                 if real_mod is None:
