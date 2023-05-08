@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/op_args_reserved_size.h"
 #include "oneflow/core/eager/local_dep_object.h"
-#include "oneflow/core/device/device_context.h"
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stream.h"
@@ -41,6 +40,8 @@ class MutLocalTensorMeta;
 }  // namespace one
 
 namespace vm {
+
+class Allocator;
 
 class EagerBlobObject final : public user_op::Tensor,
                               public user_op::TensorDesc,

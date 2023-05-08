@@ -380,7 +380,7 @@ def _where(self, x=None, y=None):
     return flow.where(self, x, y)
 
 
-def _numpy(self):
+def _numpy(self, dtype=None):
     assert (
         not self.is_lazy
     ), "tensor.numpy() is not allowed to be called in nn.Graph.build(*args) or be called by lazy tensor."
@@ -408,7 +408,10 @@ def _numpy(self):
     assert self.is_local
     if self.device != flow.device("cpu"):
         self = self.cpu()
-    return self.to_numpy()
+    result = self.to_numpy()
+    if dtype is None:
+        return result
+    return result.astype(dtype)
 
 
 def zero_(self):
