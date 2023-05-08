@@ -320,9 +320,10 @@ void EatNodes(std::vector<TopoStruct*>& topo_structs) {
         out_node->pre_topo_structs.push_back(node);
         out_node->memory_increment += node->memory_increment;
         CheckAndRemoveFrom(out_node->in_topo_structs, node);
-        out_node->in_topo_structs.insert(out_node->in_topo_structs.end(),
-                                         node->in_topo_structs.begin(),
-                                         node->in_topo_structs.end());
+        // Be careful, we must make sure no duplicate edges
+        for (auto* in_node : node->in_topo_structs) {
+          CheckAndInsert(out_node->in_topo_structs, in_node);
+        }
         for (auto* in_node : node->in_topo_structs) {
           CheckAndReplaceWith(in_node->out_topo_structs, node, out_node);
         }
@@ -396,6 +397,8 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
     std::cout << "Total memory: " << total_memory << ", total in size: " << total_in_size
               << ", total out size: " << total_out_size << std::endl;
   }
+
+  GraphSimplification(*topo_structs);
 
   // Those nodes that we need to visit their descendants
   // At the beginning, them would be the source nodes.
