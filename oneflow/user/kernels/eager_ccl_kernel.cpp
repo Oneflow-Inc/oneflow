@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/user/kernels/collective_communication/include/broadcast.h"
 #include "oneflow/core/ep/include/primitive/permute.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/kernel/new_kernel_util.h"
 
 namespace oneflow {
 
@@ -72,6 +73,14 @@ auto BroadcastCollectiveCommunicationExists() {
                                    && ccl::IsBroadcastRegistered(device_type);
                           });
 }
+
+namespace {
+
+bool UseMemSetReplaceNccl() {
+  return ParseBooleanFromEnv("ONEFLOW_EAGER_USE_MEM_SET_REPLACE_NCCL", false);
+}
+
+}  // namespace
 
 class EagerCclOpKernelCache final : public user_op::OpKernelCache {
  public:
@@ -124,6 +133,19 @@ class EagerCclAllReduceKernel final : public user_op::OpKernel {
     CHECK_EQ(in->shape_view(), out->shape_view()) << kOfBugIssueUploadPrompt;
     CHECK_EQ(in->data_type(), out->data_type()) << kOfBugIssueUploadPrompt;
 
+    if (UseMemSetReplaceNccl()) {
+      if (ctx->device_type() == DeviceType::kCUDA) {
+        Memcpy<DeviceType::kCUDA>(
+            ctx->stream(), out->mut_dptr(), in->dptr(),
+            out->shape_view().elem_cnt() * GetSizeOfDataType(out->data_type()));
+      } else {
+        Memcpy<DeviceType::kCPU>(
+            ctx->stream(), out->mut_dptr(), in->dptr(),
+            out->shape_view().elem_cnt() * GetSizeOfDataType(out->data_type()));
+      }
+      return;
+    }
+
     ccl::ReduceType reduce_type = ccl::kSum;
     if (in->data_type() == kBool) { reduce_type = ccl::kMax; }
 
@@ -159,6 +181,18 @@ class EagerCclReduceScatterKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->data_type(), out->data_type()) << kOfBugIssueUploadPrompt;
+    if (UseMemSetReplaceNccl() && out->mut_dptr() != nullptr) {
+      if (ctx->device_type() == DeviceType::kCUDA) {
+        Memcpy<DeviceType::kCUDA>(
+            ctx->stream(), out->mut_dptr(), in->dptr(),
+            out->shape_view().elem_cnt() * GetSizeOfDataType(out->data_type()));
+      } else {
+        Memcpy<DeviceType::kCPU>(
+            ctx->stream(), out->mut_dptr(), in->dptr(),
+            out->shape_view().elem_cnt() * GetSizeOfDataType(out->data_type()));
+      }
+      return;
+    }
     const auto& op_type = ctx->Attr<std::string>("op_type");
     CHECK_EQ(op_type, "sum") << kOfBugIssueUploadPrompt;
     ccl::ReduceType reduce_type = ccl::kSum;
@@ -196,6 +230,18 @@ class EagerCclAllGatherKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->data_type(), out->data_type()) << kOfBugIssueUploadPrompt;
+    if (UseMemSetReplaceNccl() && out->mut_dptr() != nullptr) {
+      if (ctx->device_type() == DeviceType::kCUDA) {
+        Memset<DeviceType::kCUDA>(
+            ctx->stream(), out->mut_dptr(), 0,
+            out->shape_view().elem_cnt() * GetSizeOfDataType(out->data_type()));
+      } else {
+        Memset<DeviceType::kCPU>(
+            ctx->stream(), out->mut_dptr(), 0,
+            out->shape_view().elem_cnt() * GetSizeOfDataType(out->data_type()));
+      }
+      return;
+    }
     std::unique_ptr<ccl::AllGather> all_gather =
         ccl::NewCollectiveCommunication<ccl::AllGather>(ctx->device_type(), in->data_type());
     all_gather->Launch(ctx->stream(), in->dptr(), out->mut_dptr(), in->shape_view().elem_cnt(),
@@ -228,14 +274,23 @@ class EagerCclReduceKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t root = ctx->Attr<int64_t>("root");
-    void* out_ptr = out->mut_dptr();
+    if (UseMemSetReplaceNccl() && out->mut_dptr() != nullptr) {
+      if (ctx->device_type() == DeviceType::kCUDA) {
+        Memcpy<DeviceType::kCUDA>(
+            ctx->stream(), out->mut_dptr(), in->dptr(),
+            out->shape_view().elem_cnt() * GetSizeOfDataType(out->data_type()));
+      } else {
+        Memcpy<DeviceType::kCPU>(
+            ctx->stream(), out->mut_dptr(), in->dptr(),
+            out->shape_view().elem_cnt() * GetSizeOfDataType(out->data_type()));
+      }
+      return;
+    }
+    void* out_ptr = nullptr;
     if (GlobalProcessCtx::Rank() == root) {
       CHECK_EQ(in->shape_view(), out->shape_view());
       CHECK_EQ(in->data_type(), out->data_type());
-    }
-    if (out_ptr != nullptr) {
-      CHECK_EQ(in->shape_view(), out->shape_view());
-      CHECK_EQ(in->data_type(), out->data_type());
+      out_ptr = out->mut_dptr();
     }
 
     ccl::ReduceType reduce_type = ccl::kSum;
@@ -277,17 +332,25 @@ class EagerCclBroadcastKernel final : public user_op::OpKernel {
     CHECK(kernel_cache != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", index);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", index);
+    if (UseMemSetReplaceNccl() && out->mut_dptr() != nullptr) {
+      if (ctx->device_type() == DeviceType::kCUDA) {
+        Memset<DeviceType::kCUDA>(
+            ctx->stream(), out->mut_dptr(), 0,
+            out->shape_view().elem_cnt() * GetSizeOfDataType(out->data_type()));
+      } else {
+        Memset<DeviceType::kCPU>(
+            ctx->stream(), out->mut_dptr(), 0,
+            out->shape_view().elem_cnt() * GetSizeOfDataType(out->data_type()));
+      }
+      return;
+    }
     int64_t root = ctx->Attr<int64_t>("root");
-    const void* in_ptr = in->dptr();
+    const void* in_ptr = nullptr;
     if (GlobalProcessCtx::Rank() == root) {
       CHECK_EQ(in->shape_view(), out->shape_view());
       CHECK_EQ(in->data_type(), out->data_type());
+      in_ptr = in->dptr();
     }
-    if (in_ptr != nullptr) {
-      CHECK_EQ(in->shape_view(), out->shape_view());
-      CHECK_EQ(in->data_type(), out->data_type());
-    }
-
     std::unique_ptr<ccl::Broadcast> broadcast =
         ccl::NewCollectiveCommunication<ccl::Broadcast>(ctx->device_type(), out->data_type());
     broadcast->Launch(ctx->stream(), in_ptr, out->mut_dptr(), out->shape_view().elem_cnt(), root,
@@ -386,6 +449,18 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
     // NOTE(hanbinbin): Compute logic copy from _nccl_logical_s2s
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    if (UseMemSetReplaceNccl() && out->mut_dptr() != nullptr) {
+      if (ctx->device_type() == DeviceType::kCUDA) {
+        Memcpy<DeviceType::kCUDA>(
+            ctx->stream(), out->mut_dptr(), in->dptr(),
+            out->shape_view().elem_cnt() * GetSizeOfDataType(out->data_type()));
+      } else {
+        Memcpy<DeviceType::kCPU>(
+            ctx->stream(), out->mut_dptr(), in->dptr(),
+            out->shape_view().elem_cnt() * GetSizeOfDataType(out->data_type()));
+      }
+      return;
+    }
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int64_t dtype_size = GetSizeOfDataType(in->data_type());
     int64_t data_size = in->shape_view().elem_cnt() * dtype_size;
