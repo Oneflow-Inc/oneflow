@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <memory>
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/memory_format.pb.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/common/symbol.h"

@@ -329,8 +329,8 @@ Maybe<void> RawLocalToGlobal(const LocalToGlobalOpExpr& op_expr, const TensorTup
     const auto& parallel_desc = JUST(ctx.parallel_desc);
     const auto& logical_shape = JUST(ctx.attrs.GetAttr<Shape>("shape"));
     DataType dtype = JUST(ctx.attrs.GetAttr<DataType>("dtype"));
-    MemoryFormat memory_format = JUST(ctx.attrs.GetAttr<MemoryFormat>("memory_format"));
-    GlobalTensorMeta tensor_meta(logical_shape, dtype, memory_format, nd_sbp, parallel_desc);
+    // MemoryFormat memory_format = JUST(ctx.attrs.GetAttr<MemoryFormat>("memory_format"));
+    GlobalTensorMeta tensor_meta(logical_shape, dtype, MemoryFormat::kContiguous, nd_sbp, parallel_desc);
     Optional<int64_t> parallel_id{};
     const auto& device = JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
     const auto& global_tensor_impl = JUST(EagerGlobalTensorImpl::New(
