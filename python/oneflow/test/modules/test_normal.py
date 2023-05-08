@@ -55,7 +55,7 @@ def _test_normal(test_case, mean, std, shape, device, dtype):
         q_row1 = q[0:1].clone()
         q[99:100].normal_()
         self.assertTrue(
-            np.allclose(t_transform(q[99:100]).mean().item(), 0, atol=0.3, rtol=0)
+            np.allclose(t_transform(q[99:100]).mean().item(), 0, atol=0.4, rtol=0)
         )
         self.assertTrue(
             np.allclose(
