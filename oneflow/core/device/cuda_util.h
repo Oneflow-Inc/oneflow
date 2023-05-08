@@ -81,9 +81,9 @@ const char* NvjpegGetErrorString(nvjpegStatus_t error);
   LOG(FATAL) << "Check failed: " #condition " : " << CublasGetErrorString(_of_cublas_check_status) \
              << " (" << _of_cublas_check_status << ") "
 
-#define OF_CUFFT_CHECK(condition)                                                                 \
+#define OF_CUFFT_CHECK(condition)                                                                \
   for (cufftResult_t _of_cufft_check_status = (condition);                                       \
-       _of_cufft_check_status != CUFFT_SUCCESS;)                                          \
+       _of_cufft_check_status != CUFFT_SUCCESS;)                                                 \
   LOG(FATAL) << "Check failed: " #condition " : " << CuFFTGetErrorString(_of_cufft_check_status) \
              << " (" << _of_cufft_check_status << ") "
 
