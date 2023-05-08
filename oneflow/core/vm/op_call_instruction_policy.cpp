@@ -269,17 +269,9 @@ Maybe<void> OpCallInstructionPolicy::Prepare(vm::Instruction* instruction) {
 }
 
 void OpCallInstructionPolicy::Compute(vm::Instruction* instruction) {
-  /*
-  ## add this in oneflow/oneflow/core/vm/op_call_instruction_policy.cpp
-  ## void OpCallInstructionPolicy::Compute(vm::Instruction* instruction) {
-  ##  CHECK_JUST_MSG(OpCallInstructionUtil::Compute(this, instruction), instruction->DebugName());
-  ##  // lml debug, finish each cuda kernel before execute next host code
-  ##  CHECK_JUST(instruction->mut_stream()->mut_stream_policy()->stream()->Sync());
-  ## }
-  */
+
 CHECK_JUST_MSG(OpCallInstructionUtil::Compute(this, instruction->mut_stream(), true, false),
                  instruction->DebugName());
-CHECK_JUST(instruction->mut_stream()->mut_stream_policy()->stream()->Sync());
 }
 
 std::string OpCallInstructionPolicy::DebugName(const vm::Instruction& instruction) const {
