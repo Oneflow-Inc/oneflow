@@ -166,6 +166,15 @@ void ComputeLayer(std::vector<TopoStruct*>* topo_structs) {
   for (auto& topo_struct : *topo_structs) { topo_struct->ComputeMinLayer(); }
 }
 
+void ConnectTwoNodes(TopoStruct* producer, TopoStruct* consumer) {
+  // Check if the edge exists
+  int32_t in_id = CheckIndex(consumer->in_topo_structs, producer);
+  if (in_id < 0) {
+    consumer->in_topo_structs.push_back(producer);
+    producer->out_topo_structs.push_back(consumer);
+  }
+}
+
 void InitInOutTopoStructs(std::vector<TopoStruct*>* topo_structs) {
   // Generate the map from operator names to topological structure
   HashMap<std::string, TopoStruct*> op_name2topo_structs;
@@ -181,20 +190,12 @@ void InitInOutTopoStructs(std::vector<TopoStruct*>* topo_structs) {
       // Since we might be looking at a sub-graph of the operator graph.
       // We need to check if the op_node exists in the sub-graph.
       auto it = op_name2topo_structs.find(in->op().op_name());
-      if (it != op_name2topo_structs.end()) {
-        this_topo_struct->in_topo_structs.push_back(it->second);
-        it->second->out_topo_structs.push_back(this_topo_struct);
-      }
+      if (it != op_name2topo_structs.end()) { ConnectTwoNodes(it->second, this_topo_struct); }
     });
     // Initialize input nodes for control edges
     for (const auto& ctrl_in_op_name : node->op().op_conf().ctrl_in_op_name()) {
       auto it = op_name2topo_structs.find(ctrl_in_op_name);
-      if (it != op_name2topo_structs.end()) {
-        auto& ctrl_in_topo_struct = it->second;
-        this_topo_struct->in_topo_structs.push_back(ctrl_in_topo_struct);
-        // Initialize output nodes for this control edge simultaneously
-        ctrl_in_topo_struct->out_topo_structs.push_back(this_topo_struct);
-      }
+      if (it != op_name2topo_structs.end()) { ConnectTwoNodes(it->second, this_topo_struct); }
     }
   }
 }
@@ -251,11 +252,8 @@ void ComputeAllMemoryIncrement(std::vector<TopoStruct*>& topo_structs,
         topo_structs.push_back(&release_topo_struct);
         release_topo_struct.memory_increment = -id2blob_size[id];
         // We need to execute all the consumers before releasing the blob
-        release_topo_struct.in_topo_structs.insert(release_topo_struct.in_topo_structs.end(),
-                                                   consumer_topo_structs.begin(),
-                                                   consumer_topo_structs.end());
         for (auto& consumer_topo_struct : consumer_topo_structs) {
-          consumer_topo_struct->out_topo_structs.push_back(&release_topo_struct);
+          ConnectTwoNodes(consumer_topo_struct, &release_topo_struct);
         }
       }
     }
@@ -331,14 +329,6 @@ void ClipOneEdge(TopoStruct* producer, TopoStruct* consumer) {
   CheckAndRemoveFrom(consumer->in_topo_structs, producer);
 }
 
-void ConnectTwoNodes(TopoStruct* producer, TopoStruct* consumer) {
-  // Check if the edge exists
-  int32_t in_id = CheckIndex(consumer->in_topo_structs, producer);
-  if (in_id < 0) {
-    consumer->in_topo_structs.push_back(producer);
-    producer->out_topo_structs.push_back(consumer);
-  }
-}
 
 void EatNodes(std::vector<TopoStruct*>& topo_structs) {
   for (int32_t id = topo_structs.size() - 1; id >= 0; id--) {
@@ -367,7 +357,6 @@ void EatNodes(std::vector<TopoStruct*>& topo_structs) {
           // Clip a -> d, b -> d, c -> d
           ClipOneEdge(in_node, node);
         }
-        node->in_topo_structs.clear();
         // Eliminate d
         RemoveFrom(topo_structs, id);
       }
