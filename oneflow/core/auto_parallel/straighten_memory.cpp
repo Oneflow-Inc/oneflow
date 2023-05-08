@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/auto_parallel/straighten_memory.h"
 #include "oneflow/core/auto_parallel/algorithm_util.h"
 #include "oneflow/core/auto_parallel/auto_memory.h"
+#include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
@@ -80,8 +81,8 @@ class TopoStruct {
   // waiting in the map before execution
   bool waiting = false;
 
-  std::vector<TopoStruct*> in_topo_structs;
-  std::vector<TopoStruct*> out_topo_structs;
+  HashSet<TopoStruct*> in_topo_structs;
+  HashSet<TopoStruct*> out_topo_structs;
 
   // The topo structs to be executed in a reverse order right before this topo struct
   // For example:
@@ -168,10 +169,9 @@ void ComputeLayer(std::vector<TopoStruct*>* topo_structs) {
 
 void ConnectTwoNodes(TopoStruct* producer, TopoStruct* consumer) {
   // Check if the edge exists
-  int32_t in_id = CheckIndex(consumer->in_topo_structs, producer);
-  if (in_id < 0) {
-    consumer->in_topo_structs.push_back(producer);
-    producer->out_topo_structs.push_back(consumer);
+  if (consumer->in_topo_structs.find(producer) == consumer->in_topo_structs.end()) {
+    consumer->in_topo_structs.insert(producer);
+    producer->out_topo_structs.insert(consumer);
   }
 }
 
@@ -226,9 +226,9 @@ void ComputeAllMemoryIncrement(std::vector<TopoStruct*>& topo_structs,
       // Check whether two blobs have the same consumer_topo_structs
       auto& first_consumer_outs = consumer_topo_structs[0]->out_topo_structs;
       bool not_merged = true;
-      for (int32_t out_id = first_consumer_outs.size() - 1; out_id >= 0; out_id--) {
-        int32_t curr_release_blob_id = first_consumer_outs[out_id]->blob_id;
-        if (curr_release_blob_id == -1) { break; }
+      for (auto* first_consumer_out_node : first_consumer_outs) {
+        int32_t curr_release_blob_id = first_consumer_out_node->blob_id;
+        if (curr_release_blob_id == -1) { continue; }
         // Compare whether the consumer_topo_structs are the same
         const auto& curr_topo_structs = id2consumer_topo_structs[curr_release_blob_id];
         bool is_same = curr_topo_structs.size() == consumer_topo_structs.size();
@@ -240,7 +240,7 @@ void ComputeAllMemoryIncrement(std::vector<TopoStruct*>& topo_structs,
         }
         // If they have the same consumer_topo_structs, merge them
         if (is_same) {
-          first_consumer_outs[out_id]->memory_increment -= id2blob_size[id];
+          first_consumer_out_node->memory_increment -= id2blob_size[id];
           not_merged = false;
           break;
         }
@@ -325,8 +325,8 @@ void InitAllParameters(std::vector<TopoStruct*>* topo_structs,
 }
 
 void ClipOneEdge(TopoStruct* producer, TopoStruct* consumer) {
-  CheckAndRemoveFrom(producer->out_topo_structs, consumer);
-  CheckAndRemoveFrom(consumer->in_topo_structs, producer);
+  producer->out_topo_structs.erase(consumer);
+  consumer->in_topo_structs.erase(producer);
 }
 
 
@@ -341,7 +341,7 @@ void EatNodes(std::vector<TopoStruct*>& topo_structs) {
         // g: b, d, e, f -> g -> ...
         // d has non-negative memory increment (>=0), d only have one out edge: d -> g.
         // But g might have multiple inputs.
-        auto* out_node = node->out_topo_structs[0];
+        auto* out_node = *node->out_topo_structs.begin();
         // Merge d into g: (d)g
         out_node->pre_topo_structs.push_back(node);
         out_node->memory_increment += node->memory_increment;
@@ -355,8 +355,9 @@ void EatNodes(std::vector<TopoStruct*>& topo_structs) {
           // Insert a -> g, b -> g, c -> g
           ConnectTwoNodes(in_node, out_node);
           // Clip a -> d, b -> d, c -> d
-          ClipOneEdge(in_node, node);
+          in_node->out_topo_structs.erase(node);
         }
+        node->in_topo_structs.clear();
         // Eliminate d
         RemoveFrom(topo_structs, id);
       }
@@ -368,7 +369,7 @@ void EatNodes(std::vector<TopoStruct*>& topo_structs) {
         // a: ... -> a -> b, d, f, g
         // b has negative memory increment (<0), b only have one in edge: a -> b.
         // But a might have multiple outputs
-        auto* in_node = node->in_topo_structs[0];
+        auto* in_node = *node->in_topo_structs.begin();
         // Merge b into a: a(b)
         in_node->post_topo_structs.push_back(node);
         in_node->memory_increment += node->memory_increment;  // Clip a -> b
@@ -381,8 +382,9 @@ void EatNodes(std::vector<TopoStruct*>& topo_structs) {
           // Insert a -> c, a -> d, a -> e
           ConnectTwoNodes(in_node, out_node);
           // Clip b -> c, b -> d, b -> e
-          ClipOneEdge(node, out_node);
+          out_node->in_topo_structs.erase(node);
         }
+        node->out_topo_structs.clear();
         // Eliminate b
         RemoveFrom(topo_structs, id);
       }
@@ -397,25 +399,30 @@ void ClipEdges(std::vector<TopoStruct*>& topo_structs) {
   // In the implementation, we only focus on a node with multiple inputs,
   // since max(in_nodes->min_layer) == this_node->min_layer - 1.
   for (auto* node : topo_structs) {
+    auto& node_in_topo_structs = node->in_topo_structs;
     // Suppose we have multiple input nodes
     // a, b, c -> d
-    if (node->in_topo_structs.size() >= 2) {
+    if (node_in_topo_structs.size() >= 2) {
       int32_t max_layer = node->min_layer - 1;
-      for (int32_t in_id = node->in_topo_structs.size() - 1; in_id >= 0; in_id--) {
-        auto* in_node = node->in_topo_structs[in_id];
+      for (auto it = node_in_topo_structs.begin(); it != node_in_topo_structs.end();) {
+        auto* in_node = *it;
+        bool not_removed = true;
         // Find all the descendants of node a
         in_node->MarkDescendantFromThis2Layer(max_layer);
-        for (auto* brother : node->in_topo_structs) {
+        for (auto* brother : node_in_topo_structs) {
           // If we found a -> ... -> b (or a -> ... -> c)
           // The first judgement is to make sure we are comparing a different node,
           // i.e., brother != in_node
           if (brother->min_layer > in_node->min_layer && brother->visited_descendant.IfMarked()) {
             // Remove a -> d
             // Be careful that we need to remove the edge from two sides.
-            ClipOneEdge(in_node, node);
+            it = node_in_topo_structs.erase(it);
+            in_node->out_topo_structs.erase(node);
+            not_removed = false;
             break;
           }
         }
+        if (not_removed) { ++it; }
       }
     }
   }
