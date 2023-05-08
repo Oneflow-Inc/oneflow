@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 inline MemoryFormat GetMemoryFormatFromString(const std::string& memory_format_str) {
-  if (memory_format_str == "contiguous") {
+  if (memory_format_str == "contiguous" || memory_format_str == "channels_first") {
     return kContiguous;
   } else if (memory_format_str == "channels_last") {
     return kChannelsLast;
