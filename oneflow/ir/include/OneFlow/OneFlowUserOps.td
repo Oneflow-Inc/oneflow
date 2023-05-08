@@ -5084,8 +5084,8 @@ def OneFlow_FftC2COp : OneFlow_BaseOp<"fft_c2c", [SupportNonContiguous, NoMemory
   let attrs = (ins
     SI64ArrayAttr:$dims,
     BoolAttr:$forward,
-    DefaultValuedAttr<SI32Attr, "0">:$norm_mode,
-    DefaultValuedAttr<F64Attr, "1.">:$norm_fct    
+    SI32Attr:$norm_mode,
+    F64Attr:$norm_fct,
   );
 
   let has_logical_tensor_desc_infer_fn = 1;
@@ -5094,7 +5094,7 @@ def OneFlow_FftC2COp : OneFlow_BaseOp<"fft_c2c", [SupportNonContiguous, NoMemory
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FftR2COp : OneFlow_BaseOp<"fft_r2c", [SupportNonContiguous, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FftR2COp : OneFlow_BaseOp<"fft_r2c", [SupportNonContiguous, NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$input
   );
@@ -5104,9 +5104,9 @@ def OneFlow_FftR2COp : OneFlow_BaseOp<"fft_r2c", [SupportNonContiguous, DeclareO
 
   let attrs = (ins
     SI64ArrayAttr:$dims,
-    DefaultValuedAttr<SI32Attr, "0">:$norm_mode,
-    DefaultValuedAttr<F64Attr, "1.">:$norm_fct,
-    BoolAttr:$onesided
+    SI32Attr:$norm_mode,
+    F64Attr:$norm_fct,
+    BoolAttr:$onesided,
   );
 
   let has_logical_tensor_desc_infer_fn = 1;
@@ -5115,7 +5115,7 @@ def OneFlow_FftR2COp : OneFlow_BaseOp<"fft_r2c", [SupportNonContiguous, DeclareO
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FftC2ROp : OneFlow_BaseOp<"fft_c2r", [SupportNonContiguous, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FftC2ROp : OneFlow_BaseOp<"fft_c2r", [SupportNonContiguous, NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$input
   );
@@ -5125,10 +5125,9 @@ def OneFlow_FftC2ROp : OneFlow_BaseOp<"fft_c2r", [SupportNonContiguous, DeclareO
 
   let attrs = (ins
     SI64ArrayAttr:$dims,
-    DefaultValuedAttr<SI32Attr, "0">:$norm_mode,
-    DefaultValuedAttr<F64Attr, "1.">:$norm_fct,
+    SI32Attr:$norm_mode,
+    F64Attr:$norm_fct,
     SI64Attr:$last_dim_size,
-    BoolAttr:$forward
   );
 
   let has_logical_tensor_desc_infer_fn = 1;
