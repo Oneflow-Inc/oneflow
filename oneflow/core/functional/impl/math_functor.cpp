@@ -3918,7 +3918,7 @@ static fft_norm_mode fft_norm_from_string(const Optional<std::string>& norm_op, 
   } else if (norm_str == "ortho") {
     return fft_norm_mode::by_root_n;
   }
-  
+
   return fft_norm_mode::none;
 }
 
@@ -3935,7 +3935,7 @@ static T fft_compute_fct(int64_t size, fft_norm_mode normalization) {
 
 template<typename T>
 static T fft_compute_fct(const Shape& in_shape, const std::vector<int64_t>& dims,
-                     fft_norm_mode normalization) {
+                         fft_norm_mode normalization) {
   if (normalization == fft_norm_mode::none) { return static_cast<T>(1); }
   int64_t n = 1;
   for (int64_t idx : dims) { n *= in_shape.At(idx); }
@@ -4287,7 +4287,7 @@ class FftC2CFunctor : public FftBaseFunctor {
       CHECK_OR_RETURN(false) << "RuntimeError: FFTC2C Only support cpu and cuda device.";
       UNIMPLEMENTED_THEN_RETURN();
     }
-    }
+  }
 };
 
 class FftR2CFunctor : public FftBaseFunctor {
@@ -4312,7 +4312,7 @@ class FftR2CFunctor : public FftBaseFunctor {
     if (n.has_value() && dims.has_value()) {
       CHECK_OR_RETURN((*JUST(n)).size() == (*JUST(dims)).size())
           << "RuntimeError: When dim and shape were both given, they must have the same length";
-  }
+    }
 
     std::vector<int64_t> fft_len(input_tensor->ndim(), 0);
     std::vector<int64_t> wrapped_dims(input_tensor->ndim(), 0);
@@ -4366,9 +4366,7 @@ class FftR2CFunctor : public FftBaseFunctor {
           std::vector<int64_t> out_strides;
           auto input = JUST(
               permute_and_reshape(/*self=*/working_tensor, /*out_sizes=*/onesided_sizes,
-                                                    /*fft_dims=*/{wrapped_dims.back()}, /*out_strides=*/out_strides));
-
-
+                                  /*fft_dims=*/{wrapped_dims.back()}, /*out_strides=*/out_strides));
           auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm_mode", "norm_fct", "onesided");
           int64_t last_dim = input->shape()->size() - 1;
           std::vector<int64_t> fft_last_dim_vec = {last_dim};
@@ -4384,7 +4382,7 @@ class FftR2CFunctor : public FftBaseFunctor {
           output = JUST(functional::FftC2C(output, NullOpt, sorted_dims, norm_mode,
                                            /*forward=*/true, /*normalize=*/false));
         }
-    }
+      }
 
       if (normalized) { JUST(functional::ScalarMul(output, Scalar(norm_fct), true)); }
 
@@ -4460,7 +4458,7 @@ class FftC2RFunctor : public FftBaseFunctor {
         std::vector<int64_t> out_sizes(out_shape.dim_vec().begin(), out_shape.dim_vec().end());
         std::vector<int64_t> out_strides;
         input = JUST(permute_and_reshape(input, out_sizes, wrapped_dims, out_strides));
-        
+
         std::vector<int64_t> fft_dims(input->ndim() - 1);  // must >= 1
         std::iota(fft_dims.begin(), fft_dims.end(), int64_t(1));
 
@@ -4485,7 +4483,7 @@ class FftC2RFunctor : public FftBaseFunctor {
         // Finally, do the 1D C2R transforms on the last dim
         std::vector<int64_t> out_strides;
         std::vector<int64_t> out_sizes(out_shape.dim_vec().begin(), out_shape.dim_vec().end());
-        auto input = JUST(permute_and_reshape(/*self=*/temp, /*out_sizes=*/out_sizes, 
+        auto input = JUST(permute_and_reshape(/*self=*/temp, /*out_sizes=*/out_sizes,
                                               /*fft_dims=*/{wrapped_dims.back()},
                                               /*out_strides=*/out_strides));
 
@@ -4521,7 +4519,7 @@ class FftFunctor {
     norm_mode = fft_norm_from_string(norm_str, forward);
 
     std::vector<int64_t> len{n};
-      return input->dtype()->is_complex()
+    return input->dtype()->is_complex()
                ? functional::FftC2C(input, len, fft_dim, static_cast<int32_t>(norm_mode),
                                     /*forward=*/forward, /*normalized=*/true)
                : functional::FftR2C(input, len, fft_dim, static_cast<int32_t>(norm_mode),
@@ -4540,7 +4538,7 @@ class IFftFunctor {
     fft_norm_mode norm_mode = fft_norm_mode::none;
     norm_mode = fft_norm_from_string(norm_str, forward);
     std::vector<int64_t> len{n};
-      return input->dtype()->is_complex()
+    return input->dtype()->is_complex()
                ? functional::FftC2C(input, len, fft_dim, static_cast<int32_t>(norm_mode),
                                     /*forward=*/forward, /*normalized=*/true)
                : functional::FftR2C(input, len, fft_dim, static_cast<int32_t>(norm_mode),
@@ -4643,7 +4641,7 @@ class RFftFunctor {
     bool forward = true;
     fft_norm_mode norm_mode = fft_norm_mode::none;
     norm_mode = fft_norm_from_string(norm_str, forward);
-    
+
     std::vector<int64_t> len{n};
     return functional::FftR2C(input, len, fft_dim, static_cast<int32_t>(norm_mode),
                               /*onesided=*/true, /*forward=*/forward, /*normalized=*/true);
@@ -4866,7 +4864,7 @@ class IHFftNFunctor : FftBaseFunctor {
     auto resized_tensor = s.has_value() == true
                               ? JUST(resize_fft_input(input_tensor, wrapped_dims, fft_len))
                               : input_tensor;
-    
+
     // First do 1D R2C Transform on the last dim
     const auto last_dim_len = fft_len.back();
     const auto last_dim = wrapped_dims.back();
