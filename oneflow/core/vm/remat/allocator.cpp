@@ -654,7 +654,7 @@ Maybe<void> RematEpAllocator::Allocate(char** mem_ptr, std::size_t size) {
     }
     const size_t evict_num2 = Singleton<remat::Env>::Get()->forced_eviction_num();
     const auto duration = profiler::GetTimeNow() - started_at;
-    search_free_mem_cost_.emplace_back(size, evict_num2 - evict_num1, duration);
+    Singleton<remat::Env>::Get()->search_free_mem_cost.emplace_back(size, evict_num2 - evict_num1, duration);
     if (EnvBool<ONEFLOW_REMAT_RECORD_MEM_FRAG_RATE>()) {
       size_t free_mem = 0;
       for (const auto& pair : ptr2piece_) {
@@ -736,10 +736,6 @@ size_t RematEpAllocator::allocated_memory() {
 void RematEpAllocator::DeviceReset() {
   ReentrantThreadSafeLock::RAIIGuard guard(thread_lock_);
   backend_->DeviceReset();
-}
-
-nlohmann::json RematEpAllocator::DumpSearchFreeMemCost() {
-  return {{"overhead", search_free_mem_cost_}};
 }
 
 }  // namespace vm

@@ -71,6 +71,7 @@ class Env {
 
   bool log_enabled() const { return EnvBool<ONEFLOW_REMAT_LOG>(); }
 
+  std::vector<std::tuple<size_t, int, int64_t>> search_free_mem_cost;
  private:
   double time_now_ = 0;
 

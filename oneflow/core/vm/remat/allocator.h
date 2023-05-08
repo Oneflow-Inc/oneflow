@@ -43,7 +43,6 @@ class RematEpAllocator final : public Allocator {
   void LinkStorageAndPtr(RematableTensorStorage* storage, const char* mem_ptr);
   void CheckPieces();
   void DisplayAllPieces();
-  nlohmann::json DumpSearchFreeMemCost();
   size_t allocated_memory();
   void set_left(bool is_left) { left = is_left; }
   bool left = true;
@@ -124,7 +123,6 @@ class RematEpAllocator final : public Allocator {
   std::vector<std::set<Piece*, PieceCmp>> free_pieces_overlapping_with_group_;
   // std::map is sorted by key, so we can find contiguous memory by it
   std::map<const char*, Piece*> ptr2piece_;
-  std::vector<std::tuple<size_t, int, int64_t>> search_free_mem_cost_;
   Piece* recycle_piece_list_;
   size_t total_allocate_bytes_ = 0;
   size_t total_deallocate_bytes_ = 0;

@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/eager/tensor_storage.h"
 #include "oneflow/core/vm/op_call_instruction_policy.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/vm/remat/util.h"
 
 namespace oneflow {
 
@@ -134,7 +135,9 @@ Env::~Env() {
     json cpp_summary{{"forced eviction", forced_eviction_num_},
                      {"eager eviction", eager_eviction_num_},
                      {"recomputation", recomputation_num_},
-                     {"dataset time", time_now_}};
+                     {"dataset time", time_now_},
+                     {"mem frag rate", append_memory_frag_info_and_get(0, 0)},
+    };
 
     json full_json;
     // std::fstream has strange default append semantic
@@ -146,6 +149,10 @@ Env::~Env() {
     {
       std::ofstream fs(std::string(prefix) + ".json");
       fs << full_json;
+    }
+    {
+      std::ofstream fs("overhead-" + std::string(prefix) + ".json");
+      fs << nlohmann::json{{"overhead", search_free_mem_cost}};
     }
   }
 }
