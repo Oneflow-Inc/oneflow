@@ -82,7 +82,7 @@ class EagerBlobObject final : public user_op::Tensor,
   void set_stride(const Stride& stride) override;
   void set_data_type(DataType data_type) override { data_type_ = data_type; }
   void set_is_dynamic(bool is_dynamic) override { is_dynamic_ = is_dynamic; }
-  void set_memory_format(MemoryFormat memory_format) { memory_format_ = memory_format; }
+  void set_memory_format(MemoryFormat memory_format) override { memory_format_ = memory_format; }
 
   // user_op::Tensor overrides
   ShapeView shape_view() const override { return shape(); }
