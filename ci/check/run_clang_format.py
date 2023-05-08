@@ -126,7 +126,7 @@ if __name__ == "__main__":
         help="If specified, only print errors",
     )
     args = parser.parse_args()
-    exts = [".h", ".cc", ".cpp", ".cu", ".cuh", ".mlu"]
+    exts = [".h", ".cc", ".cpp", ".cu", ".cuh"]
     files = filter(
         lambda p: p.suffix in exts, pathlib.Path(args.source_dir).rglob("*"),
     )

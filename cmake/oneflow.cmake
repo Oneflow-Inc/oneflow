@@ -313,11 +313,6 @@ endif()
 
 include(op_schema)
 
-if(BUILD_MLU)
-  add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/cambricon)
-endif()
-get_property(ONEFLOW_BACKEND_LIBS GLOBAL PROPERTY ONEFLOW_BACKEND_LIBS)
-
 get_property(EXTERNAL_TARGETS GLOBAL PROPERTY EXTERNAL_TARGETS)
 
 if(APPLE)
@@ -407,16 +402,8 @@ if(BUILD_PYTHON)
   set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY
                                                     "${ONEFLOW_PYTHON_DIR}/oneflow")
   target_link_libraries(
-    oneflow_internal
-    PRIVATE ${of_libs}
-            of_functional_tensor_obj
-            of_api_common
-            ${oneflow_third_party_libs}
-            of_pyext_obj
-            glog::glog
-            -Wl,--no-as-needed
-            ${ONEFLOW_BACKEND_LIBS}
-            -Wl,--as-needed)
+    oneflow_internal PRIVATE ${of_libs} of_functional_tensor_obj of_api_common
+                             ${oneflow_third_party_libs} of_pyext_obj glog::glog)
   target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS}
                                                       ${Python_NumPy_INCLUDE_DIRS})
 
@@ -641,8 +628,7 @@ if(BUILD_CPP_API)
     glog
     ${MLIR_RELATED_TARGETS}
     ${LLVM_RELATED_TARGETS}
-    ${EXTERNAL_TARGETS}
-    ${ONEFLOW_BACKEND_LIBS})
+    ${EXTERNAL_TARGETS})
 
   if(BUILD_TESTING AND BUILD_SHARED_LIBS)
     list(APPEND LIBONEFLOW_TARGETS gtest_main gtest)
