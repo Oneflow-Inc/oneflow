@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_JOB_COLLECTIVE_BOXING_EXECUTOR_BACKEND_MANAGER_H_
 
 #include "oneflow/core/job/collective_boxing/executor_backend.h"
+#include "oneflow/core/common/device_type.h"
 
 namespace oneflow {
 

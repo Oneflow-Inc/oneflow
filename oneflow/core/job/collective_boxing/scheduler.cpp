@@ -121,7 +121,7 @@ void ExecutorImpl::Init(std::shared_ptr<RequestStore> request_store) {
   request_store_ = request_store;
   backends_.resize(DeviceType_ARRAYSIZE);
   const auto& vaild_executor_device_types = ExecutorBackendMgr::Get().vaild_executor_device_types();
-  CHECK_EQ(vaild_executor_device_types.size(), 1)
+  CHECK_LE(vaild_executor_device_types.size(), 1)
       << "Currently only one backend is supported at the same time";
 
   for (DeviceType device_type : vaild_executor_device_types) {

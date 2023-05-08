@@ -101,8 +101,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
       const std::function<void(const HashSet<TaskNode*>& dev_nodes)>& Handler) const;
 
   std::vector<TaskNode*> ordered_task_nodes_;
-  std::vector<std::unique_ptr<HierarchicalSubTskGphBuilder>>
-      sub_tsk_gph_builders_for_specific_device_;
+  HashMap<DeviceType, std::unique_ptr<HierarchicalSubTskGphBuilder>>
+      device_type2sub_tsk_gph_builder_;
   std::unique_ptr<HierarchicalSubTskGphBuilder> hierarchical_sub_tsk_gph_builder_;
   std::unique_ptr<SubTskGphBuilderCtx> sub_tsk_gph_builder_ctx_;
   std::unique_ptr<BoxingLogger> boxing_logger_;
@@ -132,7 +132,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
 using CreateSubTskGphBuilderFn = std::function<std::unique_ptr<HierarchicalSubTskGphBuilder>()>;
 
-Maybe<void> RegisterCreateSubTskGphBuilderFn(const CreateSubTskGphBuilderFn& fn);
+Maybe<void> RegisterCreateSubTskGphBuilderFn(DeviceType device_type,
+                                             const CreateSubTskGphBuilderFn& fn);
 
 #define REGISTER_CREATE_SUB_TASK_GRAPH_BUILDER_FN(fn) \
   COMMAND(CHECK_JUST(RegisterCreateSubTskGphBuilderFn(fn)))
