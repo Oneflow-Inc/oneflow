@@ -20,10 +20,10 @@ limitations under the License.
 #include "oneflow/core/job/collective_boxing/static_group_coordinator.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/job/collective_boxing/nccl_executor_backend.h"
+#include "oneflow/core/job/collective_boxing/executor_backend_manager.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/resource_desc.h"
-#include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace oneflow {
 
@@ -40,7 +40,8 @@ bool CanMergeIntoCurGroup(RequestStore* request_store, const RequestEntry* reque
   const auto* group_entry = request_store->MutRequestEntry(group_entry_id);
   return (request_id.job_id == group_entry_id.job_id
           && request_entry->desc().dependency_depth() == group_entry->desc().dependency_depth()
-          && request_entry->desc().op_desc().backend() == group_entry->desc().op_desc().backend()
+          && request_entry->desc().op_desc().device_type()
+                 == group_entry->desc().op_desc().device_type()
           && request_entry->device_set_symbol() == group_entry->device_set_symbol());
 }
 
@@ -80,16 +81,16 @@ class RequestHandle final {
 class GroupToken final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GroupToken);
-  GroupToken(Backend backend, void* backend_group_token)
-      : backend_(backend), backend_group_token_(backend_group_token) {}
+  GroupToken(DeviceType device_type, void* backend_group_token)
+      : device_type_(device_type), backend_group_token_(backend_group_token) {}
   ~GroupToken() = default;
 
-  Backend backend() { return backend_; }
+  DeviceType device_type() { return device_type_; }
 
   void* backend_group_token() { return backend_group_token_; }
 
  private:
-  Backend backend_;
+  DeviceType device_type_;
   void* backend_group_token_;
 };
 
@@ -108,7 +109,7 @@ class ExecutorImpl : public Executor {
   void DestroyGroupToken(GroupToken* group_token) override;
 
  private:
-  Backend GetUniqueBackend(const std::vector<RequestId>& group);
+  DeviceType GetUniqueDeviceType(const std::vector<RequestId>& group);
   GroupToken* CreateGroupToken(const std::vector<RequestId>& group, void* backend_group_token);
 
   std::vector<std::unique_ptr<ExecutorBackend>> backends_;
@@ -118,40 +119,50 @@ class ExecutorImpl : public Executor {
 
 void ExecutorImpl::Init(std::shared_ptr<RequestStore> request_store) {
   request_store_ = request_store;
-  backends_.resize(Backend_ARRAYSIZE);
-#ifdef WITH_CUDA
-  int cuda_dev_count = 0;
-  cudaError_t err = cudaGetDeviceCount(&cuda_dev_count);
-  if (err != cudaErrorNoDevice && err != cudaErrorInsufficientDriver) { OF_CUDA_CHECK(err); }
-  if (cuda_dev_count > 0) {
-    std::unique_ptr<ExecutorBackend> nccl_backend = std::make_unique<NcclExecutorBackend>();
-    nccl_backend->Init(request_store_);
-    backends_.at(Backend::kBackendNCCL) = std::move(nccl_backend);
+  backends_.resize(DeviceType_ARRAYSIZE);
+  const auto& vaild_executor_device_types = ExecutorBackendMgr::Get().vaild_executor_device_types();
+  CHECK_LE(vaild_executor_device_types.size(), 1)
+      << "Currently only one backend is supported at the same time";
+
+  for (DeviceType device_type : vaild_executor_device_types) {
+    size_t dev_count = Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceCount(device_type);
+    if (dev_count > 0) {
+      std::unique_ptr<ExecutorBackend> backend =
+          ExecutorBackendMgr::Get().NewExecutorBackend(device_type);
+      CHECK(backend);
+      backend->Init(request_store_);
+      backends_.at(device_type) = std::move(backend);
+    }
   }
-#endif
 }
 
 void ExecutorImpl::InitJob(int64_t job_id) {
-#ifdef WITH_CUDA
-  if (backends_.at(Backend::kBackendNCCL)) { backends_.at(Backend::kBackendNCCL)->InitJob(job_id); }
-#endif
+  const auto& vaild_executor_device_types = ExecutorBackendMgr::Get().vaild_executor_device_types();
+  for (DeviceType device_type : vaild_executor_device_types) {
+    CHECK(backends_.at(device_type));
+    backends_.at(device_type)->InitJob(job_id);
+  }
 }
 
 void ExecutorImpl::DeinitJob(int64_t job_id) {
-#ifdef WITH_CUDA
-  if (backends_.at(Backend::kBackendNCCL)) {
-    backends_.at(Backend::kBackendNCCL)->DeinitJob(job_id);
+  const auto& vaild_executor_device_types = ExecutorBackendMgr::Get().vaild_executor_device_types();
+  for (DeviceType device_type : vaild_executor_device_types) {
+    CHECK(backends_.at(device_type));
+    backends_.at(device_type)->DeinitJob(job_id);
   }
-#endif
 }
 
 GroupToken* ExecutorImpl::CreateGroupToken(const std::vector<RequestId>& group,
                                            void* backend_group_token) {
-  return new GroupToken(GetUniqueBackend(group), backend_group_token);
+  return new GroupToken(GetUniqueDeviceType(group), backend_group_token);
 }
 
 void ExecutorImpl::DestroyGroupToken(GroupToken* group_token) {
-  backends_.at(Backend::kBackendNCCL)->DestroyGroupToken(group_token->backend_group_token());
+  const auto& vaild_executor_device_types = ExecutorBackendMgr::Get().vaild_executor_device_types();
+  for (DeviceType device_type : vaild_executor_device_types) {
+    CHECK(backends_.at(device_type));
+    backends_.at(device_type)->DestroyGroupToken(group_token->backend_group_token());
+  }
   delete group_token;
 }
 
@@ -167,9 +178,9 @@ void ExecutorImpl::GroupRequests(
   };
   auto HandleGroup = [&]() {
     if (group_buffer_.empty()) { return; }
-    const auto backend =
-        request_store_->MutRequestEntry(group_buffer_.front())->desc().op_desc().backend();
-    backends_.at(backend)->GroupRequests(group_buffer_, BackendHandler);
+    const auto device_type =
+        request_store_->MutRequestEntry(group_buffer_.front())->desc().op_desc().device_type();
+    backends_.at(device_type)->GroupRequests(group_buffer_, BackendHandler);
     group_buffer_.clear();
   };
   request_store_->ForEachMutRequestEntryForIdsInJob(
@@ -194,18 +205,18 @@ void ExecutorImpl::GroupRequests(
 }
 
 void ExecutorImpl::ExecuteGroup(GroupToken* group_token) {
-  const Backend backend = group_token->backend();
-  backends_.at(backend)->ExecuteGroup(group_token->backend_group_token());
+  const DeviceType device_type = group_token->device_type();
+  backends_.at(device_type)->ExecuteGroup(group_token->backend_group_token());
 }
 
-Backend ExecutorImpl::GetUniqueBackend(const std::vector<RequestId>& group) {
-  const Backend backend =
-      request_store_->MutRequestEntry(group.front())->desc().op_desc().backend();
+DeviceType ExecutorImpl::GetUniqueDeviceType(const std::vector<RequestId>& group) {
+  const DeviceType device_type =
+      request_store_->MutRequestEntry(group.front())->desc().op_desc().device_type();
   request_store_->ForEachMutRequestEntryForIdsInJob(
       group, [&](RequestEntry* request_entry, int32_t i, const RequestId& request_id) {
-        CHECK_EQ(request_entry->desc().op_desc().backend(), backend);
+        CHECK_EQ(request_entry->desc().op_desc().device_type(), device_type);
       });
-  return backend;
+  return device_type;
 }
 
 struct Scheduler::Impl {
