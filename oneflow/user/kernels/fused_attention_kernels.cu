@@ -26,6 +26,8 @@ limitations under the License.
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "trt_flash_attention/fmha.h"
 #include "trt_flash_attention/fmha_flash_attention.h"
+#include "oneflow/core/ep/include/primitive/batch_matmul.h"
+#include "oneflow/user/kernels/rms_norm_gpu_kernel.cu"
 
 namespace oneflow {
 
@@ -1429,6 +1431,241 @@ REGISTER_FUSED_APPLY_ROTARY_EMB_GPU_DTYPE(half);
 REGISTER_FUSED_APPLY_ROTARY_EMB_GPU_DTYPE(nv_bfloat16);
 #endif  // CUDA_VERSION >= 11000
 
+template<typename T>
+class LlamaAttentionLayerForwardKernel final : public user_op::OpKernel {
+ public:
+  LlamaAttentionLayerForwardKernel() = default;
+  ~LlamaAttentionLayerForwardKernel() override = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    //  input tensors
+    const user_op::Tensor* hidden_states = ctx->Tensor4ArgNameAndIndex("hidden_states", 0);
+    const user_op::Tensor* input_norm_weight = ctx->Tensor4ArgNameAndIndex("input_norm_weight", 0);
+    const user_op::Tensor* query_weight = ctx->Tensor4ArgNameAndIndex("query_weight", 0);
+    const user_op::Tensor* key_weight = ctx->Tensor4ArgNameAndIndex("key_weight", 0);
+    const user_op::Tensor* value_weight = ctx->Tensor4ArgNameAndIndex("value_weight", 0);
+    const user_op::Tensor* position_ids = ctx->Tensor4ArgNameAndIndex("position_ids", 0);
+    user_op::Tensor* past_key = nullptr;
+    user_op::Tensor* past_value = nullptr;
+    user_op::Tensor* concat_key = ctx->Tensor4ArgNameAndIndex("concat_key", 0);
+    user_op::Tensor* concat_value = ctx->Tensor4ArgNameAndIndex("concat_value", 0);
+    if (ctx->has_input("past_key", 0)) {
+      past_key = ctx->Tensor4ArgNameAndIndex("past_key", 0);
+      past_value = ctx->Tensor4ArgNameAndIndex("past_value", 0);
+    }
+
+    // output tensors
+    user_op::Tensor* inv_rms = ctx->Tensor4ArgNameAndIndex("inv_rms", 0);
+    user_op::Tensor* rms_norm_out = ctx->Tensor4ArgNameAndIndex("rms_norm_out", 0);
+    user_op::Tensor* query = ctx->Tensor4ArgNameAndIndex("query", 0);
+    user_op::Tensor* key = ctx->Tensor4ArgNameAndIndex("key", 0);
+    user_op::Tensor* value = ctx->Tensor4ArgNameAndIndex("value", 0);
+    user_op::Tensor* rotary_query = ctx->Tensor4ArgNameAndIndex("rotary_query", 0);
+    user_op::Tensor* rotary_key = ctx->Tensor4ArgNameAndIndex("rotary_key", 0);
+    user_op::Tensor* attn_out = ctx->Tensor4ArgNameAndIndex("attn_out", 0);
+
+    // attrs
+    const int64_t head_size = ctx->Attr<int64_t>("head_size");
+    auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
+    constexpr uint32_t block_size = 256;
+
+    // step1: input rms norm
+    const int64_t ncol = input_norm_weight->shape_view().elem_cnt();
+    const int64_t nrow = inv_rms->shape_view().elem_cnt();
+    using RmsNormComputeType = float;
+    cuda::rms_norm::RmsNormForward(cuda_stream, nrow, ncol, 1e-6, hidden_states->dptr<T>(),
+                                   input_norm_weight->dptr<T>(), rms_norm_out->mut_dptr<T>(),
+                                   inv_rms->mut_dptr<RmsNormComputeType>());
+    // step2: to_q, to_k, to_v
+    auto batch_matmul = ep::primitive::NewPrimitive<ep::primitive::BatchMatmulFactory>(
+        ctx->device_type(), /*data_type */ query->data_type(),
+        /*trans_a*/ ep::primitive::BlasTransposeType::N,
+        /*trans_b*/ ep::primitive::BlasTransposeType::T);
+    CHECK(batch_matmul);
+    auto rms_out_shape = rms_norm_out->shape_view();
+    auto query_weight_shape = query_weight->shape_view();
+    auto batch_size = rms_out_shape.At(0), matmul_m = rms_out_shape.At(1),
+         matmul_k = rms_out_shape.At(2), matmul_n = query_weight_shape.At(0);
+    const double alpha = 1.0, beta = 0.0;
+    batch_matmul->Launch(cuda_stream, batch_size, matmul_m, matmul_n, matmul_k, alpha,
+                         rms_norm_out->dptr(), query_weight->dptr(), beta, query->mut_dptr());
+    batch_matmul->Launch(cuda_stream, batch_size, matmul_m, matmul_n, matmul_k, alpha,
+                         rms_norm_out->dptr(), key_weight->dptr(), beta, key->mut_dptr());
+    batch_matmul->Launch(cuda_stream, batch_size, matmul_m, matmul_n, matmul_k, alpha,
+                         rms_norm_out->dptr(), value_weight->dptr(), beta, value->mut_dptr());
+
+    // step3: rotary_embedding  BM(HK) -> BMHK, PlaneKernel use pack_size=1
+    const int64_t num_elements = rotary_query->shape_view().elem_cnt() / /*pack_size*/ 1;
+    constexpr size_t num_dims = 4;
+
+    using IndexType = int64_t;
+    int64_t b = 0;
+    int64_t m = 0;
+    int64_t h = 0;
+    int64_t k = 0;
+    int64_t out_b_stride = 0, out_m_stride = 0, out_h_stride = 0, out_offset = 0;
+    int64_t x_b_stride = 0, x_m_stride = 0, x_h_stride = 0, x_offset = 0;
+    ParseDims(rotary_query->shape_view(), "BMHK", Optional<int64_t>(), /*k_size*/ head_size, 0, &b,
+              &m, &h, &k, &out_b_stride, &out_m_stride, &out_h_stride, &out_offset);
+    ParseDims(query->shape_view(), "BM(HK)", Optional<int64_t>(), /*k_size*/ head_size,
+              /*tensor_index*/ 0, &b, &m, &h, &k, &x_b_stride, &x_m_stride, &x_h_stride, &x_offset);
+
+    FusedApplyRotaryEmbParam<T, IndexType, IndexType, num_dims, 1> q_param(
+        query->dptr<T>(), nullptr, nullptr, position_ids->dptr<IndexType>(),
+        rotary_query->mut_dptr<T>(), 1.0f / 10000, 1.0f / k, k, k, k / 2, num_elements, k, k, k, 0);
+
+    q_param.sinuous_m_stride = k;
+    const IndexType position_m = static_cast<IndexType>(position_ids->shape_view()[2]);
+    q_param.position_rotate_stride = position_m;
+    q_param.position_b_stride = position_m * /*rotary_emb_dim*/ 1;
+    const IndexType ref_strides[num_dims] = {m * h * k, h * k, k, 1};
+    const IndexType out_strides[num_dims] = {out_b_stride, out_m_stride, out_h_stride, 1};
+    const IndexType x_strides[num_dims] = {x_b_stride, x_m_stride, x_h_stride, 1};
+#pragma unroll
+    for (int i = 0; i < num_dims; i++) {
+      q_param.ref_stride[i] = ref_strides[i];
+      q_param.out_stride[i] = out_strides[i];
+      q_param.x_stride[i] = x_strides[i];
+    }
+
+    PlaneKernel<<<(num_elements + block_size - 1) / block_size, block_size, 0,
+                  cuda_stream->cuda_stream()>>>(q_param);
+
+    FusedApplyRotaryEmbParam<T, IndexType, IndexType, num_dims, 1> k_param(
+        key->dptr<T>(), nullptr, nullptr, position_ids->dptr<IndexType>(),
+        rotary_key->mut_dptr<T>(), 1.0f / 10000, 1.0f / k, k, k, k / 2, num_elements, k, k, k, 0);
+    k_param.sinuous_m_stride = k;
+    k_param.position_rotate_stride = position_m;
+    k_param.position_b_stride = position_m * /*rotary_emb_dim*/ 1;
+#pragma unroll
+    for (int i = 0; i < num_dims; i++) {
+      k_param.ref_stride[i] = ref_strides[i];
+      k_param.out_stride[i] = out_strides[i];
+      k_param.x_stride[i] = x_strides[i];
+    }
+
+    PlaneKernel<<<(num_elements + block_size - 1) / block_size, block_size, 0,
+                  cuda_stream->cuda_stream()>>>(k_param);
+
+    // step4: concat_past_kv, past_key:bhmk, key:bmhk, out: bhmk
+    IndexType past_m = 0;
+    auto pack_size = 8;  // pack under the K dim.
+    k /= pack_size;
+    if (ctx->has_input("past_key", 0)) past_m = past_key->shape_view().At(2);  // BHMK, b,h,k同上
+    BatchConcatParam<IndexType> kv;
+    const auto count = b * (past_m + m) * h * k;
+    kv.params[0].past_ptr = past_key == nullptr ? nullptr : past_key->dptr();
+    kv.params[0].ptr = rotary_key->dptr();
+    kv.params[0].output_ptr = concat_key->mut_dptr();
+    kv.params[0].past_offset = 0;
+    kv.params[0].offset = 0;
+    kv.params[0].output_offset = 0;
+    kv.params[0].past_m = past_m;
+    kv.params[0].past_stride_b = past_m * h * k;
+    kv.params[0].past_stride_m = k;
+    kv.params[0].past_stride_h = past_m * k;
+    kv.params[0].stride_b = m * h * k;
+    kv.params[0].stride_m = h * k;
+    kv.params[0].stride_h = k;
+    kv.params[0].output_stride_b = (past_m + m) * h * k;
+    kv.params[0].output_stride_m = k;
+    kv.params[0].output_stride_h = (past_m + m) * k;
+    kv.params[0].count = count;
+    kv.params[0].output_khm = k * h * (past_m + m);
+    kv.params[0].output_kh = h * k;
+    kv.params[0].output_k = k;
+    // past_value: bhmk, value: bm(hk), output:bhmk
+    kv.params[1].past_ptr = past_value == nullptr ? nullptr : past_value->dptr();
+    kv.params[1].ptr = value->dptr();
+    kv.params[1].output_ptr = concat_value->mut_dptr();
+    kv.params[1].past_offset = 0;
+    kv.params[1].offset = 0;
+    kv.params[1].output_offset = 0;
+    kv.params[1].past_m = past_m;  // same to k
+    kv.params[1].past_stride_b = past_m * h * k;
+    kv.params[1].past_stride_m = k;
+    kv.params[1].past_stride_h = past_m * k;
+    kv.params[1].stride_b = m * h * k;
+    kv.params[1].stride_m = h * k;
+    kv.params[1].stride_h = k;
+    kv.params[1].output_stride_b = (past_m + m) * h * k;
+    kv.params[1].output_stride_m = k;
+    kv.params[1].output_stride_h = (past_m + m) * k;
+    kv.params[1].count = count;
+    kv.params[1].output_khm = k * h * (past_m + m);
+    kv.params[1].output_kh = h * k;
+    kv.params[1].output_k = k;
+    const dim3 grid_size((count - 1 + block_size) / block_size, 2);
+
+    BatchConcatPastKeyValue<16, IndexType>
+        <<<grid_size, block_size, 0, cuda_stream->cuda_stream()>>>(kv);
+
+    // step5: fmha, query: bmhk, key_value: bhmk, out: bm(hk)
+    k *= pack_size;  // recover k without pack
+    Params params{};
+    params.data_type = query->data_type();
+    params.num_batches = b;
+    params.num_heads = h;
+    params.query_seq_len = m;
+    params.kv_seq_len = (past_m + m);
+    params.head_size = k;
+    params.value_head_size = k;
+    params.scale = 1 / std::sqrt(static_cast<float>(k));
+    params.q_stride_b = m * h * k;
+    params.q_stride_m = h * k;
+    params.q_stride_h = k;
+    params.k_stride_b = (past_m + m) * h * k;
+    params.k_stride_m = k;
+    params.k_stride_h = (past_m + m) * k;
+    params.v_stride_b = (past_m + m) * h * k;
+    params.v_stride_m = k;
+    params.v_stride_h = (past_m + m) * k;
+    params.query_ptr = rotary_query->dptr<char>() /* + q_offset * GetSizeOfDataType(data_type)*/;
+    params.key_ptr = concat_key->dptr<char>() /* + k_offset * GetSizeOfDataType(data_type)*/;
+    params.value_ptr = concat_value->dptr<char>() /* + v_offset * GetSizeOfDataType(data_type)*/;
+    params.query_seq_start_ptr = nullptr;
+    params.key_seq_start_ptr = nullptr;
+    params.key_seq_len_ptr = nullptr;
+    params.out_ptr = attn_out->mut_dptr();
+    Tensor* tmp = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    const int64_t tmp_buffer_size = tmp->shape_view().elem_cnt();
+    params.workspace = tmp->mut_dptr();
+    params.workspace_size = tmp_buffer_size;
+    params.attn_mask_type = "causal_from_bottom_right";
+    params.causal_diagonal_offset = 0;
+
+    params.attn_bias_ptr = nullptr;
+    params.attn_bias_stride_m = 0;
+    params.attn_bias_stride_h = 0;
+    params.attn_bias_stride_b = 0;
+
+    DispatchCutlassFmha(params, cuda_stream);
+  }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_LLAMA_ATTENTION_LAYER_FORWARD_KERNEL(dtype)                                       \
+  REGISTER_USER_KERNEL("llama_attention_layer_forward")                                            \
+      .SetCreateFn<LlamaAttentionLayerForwardKernel<dtype>>()                                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                             \
+                       && (user_op::HobDataType("hidden_states", 0) == GetDataType<dtype>::value)) \
+      .SetInferTmpSizeFn([](InferContext* ctx) -> size_t {                                         \
+        const auto& out_desc = ctx->OutputTensorDesc("attn_out", 0);                               \
+        size_t buffer_size = 0;                                                                    \
+        buffer_size +=                                                                             \
+            GetCudaAlignedSize(out_desc.shape().elem_cnt() * GetSizeOfDataType(DataType::kFloat)); \
+        buffer_size += GetCudaAlignedSize(out_desc.shape().elem_cnt()                              \
+                                          * GetSizeOfDataType(out_desc.data_type()))               \
+                       * 3;                                                                        \
+        buffer_size += GetCudaAlignedSize((out_desc.shape().At(0) + 1)                             \
+                                          * GetSizeOfDataType(DataType::kInt32));                  \
+        return buffer_size;                                                                        \
+      });
+
+REGISTER_LLAMA_ATTENTION_LAYER_FORWARD_KERNEL(half);
 }  // namespace
 
 }  // namespace user_op

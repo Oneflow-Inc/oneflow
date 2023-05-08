@@ -733,9 +733,81 @@ class FusedApplyRotaryEmbFunctor {
   std::shared_ptr<OpExpr> op_without_position_sinuous_;
 };
 
+class LlamaAttentionLayerForwardFunctor {
+ public:
+  LlamaAttentionLayerForwardFunctor() {
+    op_with_past_key_value_ = CHECK_JUST(one::OpBuilder("llama_attention_layer_forward")
+                                             .Input("hidden_states")
+                                             .Input("input_norm_weight")
+                                             .Input("query_weight")
+                                             .Input("key_weight")
+                                             .Input("value_weight")
+                                             .Input("position_ids")
+                                             .Input("past_key")
+                                             .Input("past_value")
+                                             .Output("rms_norm_out")
+                                             .Output("inv_rms")
+                                             .Output("query")
+                                             .Output("key")
+                                             .Output("value")
+                                             .Output("rotary_query")
+                                             .Output("rotary_key")
+                                             .Output("concat_key")
+                                             .Output("concat_value")
+                                             .Output("attn_out")
+                                             .Build());
+    op_ = CHECK_JUST(one::OpBuilder("llama_attention_layer_forward")
+                         .Input("hidden_states")
+                         .Input("input_norm_weight")
+                         .Input("query_weight")
+                         .Input("key_weight")
+                         .Input("value_weight")
+                         .Input("position_ids")
+                         .Output("rms_norm_out")
+                         .Output("inv_rms")
+                         .Output("query")
+                         .Output("key")
+                         .Output("value")
+                         .Output("rotary_query")
+                         .Output("rotary_key")
+                         .Output("concat_key")
+                         .Output("concat_value")
+                         .Output("attn_out")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& hidden_states,
+                                const std::shared_ptr<one::Tensor>& input_norm_weight,
+                                const std::shared_ptr<one::Tensor>& query_weight,
+                                const std::shared_ptr<one::Tensor>& key_weight,
+                                const std::shared_ptr<one::Tensor>& value_weight,
+                                const std::shared_ptr<one::Tensor>& position_ids,
+                                const Optional<one::Tensor>& past_key,
+                                const Optional<one::Tensor>& past_value,
+                                const int64_t head_size) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("head_size");
+    attrs.SetAllAttrs(head_size);
+    if (past_key)
+      return OpInterpUtil::Dispatch<TensorTuple>(
+          *op_with_past_key_value_,
+          {hidden_states, input_norm_weight, query_weight, key_weight, value_weight, position_ids,
+           JUST(past_key), JUST(past_value)},
+          attrs);
+    else
+      return OpInterpUtil::Dispatch<TensorTuple>(
+          *op_,
+          {hidden_states, input_norm_weight, query_weight, key_weight, value_weight, position_ids},
+          attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_with_past_key_value_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
+  m.add_functor<impl::LlamaAttentionLayerForwardFunctor>("LlamaAttentionLayerForwardOp");
   m.add_functor<impl::FusedMultiHeadAttentionInferenceFunctor>("FusedMultiHeadAttentionInference");
   m.add_functor<impl::FusedMultiHeadAttentionInferenceV2Functor>(
       "FusedMultiHeadAttentionInferenceV2");
