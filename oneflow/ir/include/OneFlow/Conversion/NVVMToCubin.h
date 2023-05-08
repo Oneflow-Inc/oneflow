@@ -22,7 +22,6 @@ limitations under the License.
 
 namespace mlir {
 
-
 namespace gpu {
 
 inline std::string getCubinAnnotation() { return "gpu.binary"; }
@@ -37,7 +36,7 @@ std::unique_ptr<mlir::Pass> createNVVMToCubinPass();
 
 void InitializeLLVMNVPTXBackend();
 
-}
+}  // namespace oneflow
 
 }  // namespace mlir
 

@@ -51,7 +51,6 @@ void OKLDialect::initialize() {
       >();
 }
 
-
 }  // namespace okl
 
 }  // namespace mlir
