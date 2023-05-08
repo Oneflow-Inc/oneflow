@@ -193,8 +193,91 @@ add_docstr(
 add_docstr(
     oneflow._C.normal,
     r"""
-    normal(mean, std, size, *, out=None, placement=None, sbp=None, generator=None, dtype=None, device=None, requires_grad=False) -> Tensor
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.normal.html
+    normal(mean, std, *, generator=None, out=None) -> Tensor
 
+    Returns a tensor of random numbers drawn from separate normal distributions
+    whose mean and standard deviation are given.
+
+    The :attr:`mean` is a tensor with the mean of
+    each output element's normal distribution
+
+    The :attr:`std` is a tensor with the standard deviation of
+    each output element's normal distribution
+
+    The shapes of :attr:`mean` and :attr:`std` don't need to match, but the
+    total number of elements in each tensor need to be the same.
+
+    .. note:: 
+        Infers the output shape from input arrays :attr:`mean` and :attr:`std`.
+        The output shape will have a dimensionality equal to the max of :attr:`mean` and :attr:`std`.
+        Dimensions with size 1 in either :attr:`mean` or :attr:`std` are expanded to match the other.
+
+    Args:
+        mean (Tensor): the tensor of per-element means
+        std (Tensor): the tensor of per-element standard deviations
+
+    Keyword args:
+        generator (Generator, optional): Random number generator. Defaults to `oneflow::DefaultGenerator` if not provided.
+        out (Tensor, optional): Output tensor, will be resized and filled with the result. If not provided, a new tensor is created.  
+
+    Example:
+
+    .. code-block:: python
+        
+        >>> import oneflow as flow
+        >>> generator = flow.Generator()
+        >>> generator.manual_seed(0) #doctest: +ELLIPSIS
+        <oneflow._oneflow_internal.Generator object at ...>
+        >>> z = flow.normal(mean=flow.arange(1., 11.), std=flow.arange(1, 0, -0.1), generator=generator)
+        >>> z[:5]
+        tensor([3.2122, 3.0468, 3.6192, 4.3387, 5.6261], dtype=oneflow.float32)
+
+
+    normal(mean=0.0, std, `*`, generator=None, out=None) -> Tensor.
+    
+    Similar to the function above, but the means are shared among all drawn elements.
+
+    Args:  
+        mean (float, optional) : the mean for all distributions
+        std (Tensor) : the tensor of per-element standard deviations
+
+    Keyword args:  
+        generator (Generator, optional): Random number generator. Defaults to `oneflow::DefaultGenerator` if not provided.
+        out (Tensor, optional): Output tensor, will be resized and filled with the result. If not provided, a new tensor is created.  
+
+    Example:
+    
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> flow.normal(mean=0.5, std=flow.arange(1., 6.)).shape
+        oneflow.Size([5])
+       
+    
+    normal(mean, std=1.0, `*`, generator=None, out=None) -> Tensor
+    Similar to the function above, but the standard deviations are shared among all drawn elements.
+
+    Args:  
+        mean (Tensor): the tensor of per-element means  
+        std (float, optional): the standard deviation  
+
+    Keyword args:  
+        generator (Generator, optional): Random number generator. Defaults to `oneflow::DefaultGenerator` if not provided.  
+        out (Tensor): The output tensor
+
+    Returns:
+        Tensor: The output tensor, with random normal values.
+
+    Example:
+    
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> flow.normal(mean=flow.arange(1., 6.)).shape
+        oneflow.Size([5])
+
+    normal(mean, std, size, `*`, out=None, placement=None, sbp=None, generator=None, dtype=None, device=None, requires_grad=False) -> Tensor
     Returns a tensor of random numbers drawn from separate normal distributions whose mean and standard deviation are given.
 
     Args:
