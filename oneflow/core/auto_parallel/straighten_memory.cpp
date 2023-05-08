@@ -379,11 +379,13 @@ void ClipEdges(std::vector<TopoStruct*>& topo_structs) {
         in_node->MarkDescendantFromThis2Layer(max_layer);
         for (auto* brother : node->in_topo_structs) {
           // If we found a -> ... -> b (or a -> ... -> c)
-          // This first judgement is to make sure we are comparing a different node, 
+          // The first judgement is to make sure we are comparing a different node,
           // i.e., brother != in_node
           if (brother->min_layer > in_node->min_layer && brother->visited_descendant.IfMarked()) {
             // Remove a -> d
+            // Be careful that we need to remove the edge from two sides.
             CheckAndRemoveFrom(node->in_topo_structs, in_node);
+            CheckAndRemoveFrom(in_node->out_topo_structs, node);
             break;
           }
         }
