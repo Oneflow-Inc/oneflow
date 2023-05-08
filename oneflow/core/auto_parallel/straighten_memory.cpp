@@ -326,6 +326,11 @@ void InitAllParameters(std::vector<TopoStruct*>* topo_structs,
                             *id2consumer_topo_structs, *id2blob_size);
 }
 
+void ClipOneEdge(TopoStruct* producer, TopoStruct* consumer) {
+  CheckAndRemoveFrom(producer->out_topo_structs, consumer);
+  CheckAndRemoveFrom(consumer->in_topo_structs, producer);
+}
+
 void EatNodes(std::vector<TopoStruct*>& topo_structs) {
   for (int32_t id = topo_structs.size() - 1; id >= 0; id--) {
     auto* node = topo_structs[id];
@@ -333,29 +338,53 @@ void EatNodes(std::vector<TopoStruct*>& topo_structs) {
       // A positive node with only one output would be executed at the last moment before the
       // execution of its output
       if (node->out_topo_structs.size() == 1) {
+        // d: a, b, c -> d(+) -> g
+        // g: b, d, e, f -> g -> ...
+        // d has non-negative memory increment (>=0), d only have one out edge: d -> g.
+        // But g might have multiple inputs.
         auto* out_node = node->out_topo_structs[0];
+        // Merge d into g: (d)g
         out_node->pre_topo_structs.push_back(node);
         out_node->memory_increment += node->memory_increment;
-        CheckAndRemoveFrom(out_node->in_topo_structs, node);
-        // Be careful, we must make sure no duplicate edges
+        // Clip d -> g
+        ClipOneEdge(node, out_node);
+        // g takes all the inputs from d
+        // g: a, b, c, e, f -> (d)g -> ...
+        // Note that b is also an input of the origin g
+        // and we need to make sure that b does not occur twice.
         for (auto* in_node : node->in_topo_structs) {
+          // Insert a -> g, b -> g, c -> g
           CheckAndInsert(out_node->in_topo_structs, in_node);
-        }
-        for (auto* in_node : node->in_topo_structs) {
           CheckAndReplaceWith(in_node->out_topo_structs, node, out_node);
         }
         node->in_topo_structs.clear();
+        // Eliminate d
         RemoveFrom(topo_structs, id);
       }
     } else {
       // A negative node with only one input would be executed immediately after the execution of
       // its input
       if (node->in_topo_structs.size() == 1) {
+        // b: a -> b(-) -> c, d, e
+        // a: ... -> a -> b, d, f, g
+        // b has negative memory increment (<0), b only have one in edge: a -> b.
+        // But a might have multiple outputs
         auto* in_node = node->in_topo_structs[0];
-        int64_t total_memory_increment = in_node->memory_increment + node->memory_increment;
+        // Merge b into a: a(b)
         in_node->post_topo_structs.push_back(node);
-        in_node->memory_increment = total_memory_increment;
-        CheckAndRemoveFrom(in_node->out_topo_structs, node);
+        in_node->memory_increment += node->memory_increment;  // Clip a -> b
+        ClipOneEdge(in_node, node);
+        // a takes all the outputs from b
+        // a: ... -> a(b) -> c, d, e, f, g
+        // Note tht d is also an output of the origin a
+        // and we need to make sure that d does not occur twice
+        for (auto* out_node : node->out_topo_structs) {
+          // Insert a -> c, a -> d, a -> e
+          CheckAndInsert(in_node->out_topo_structs, out_node);
+          CheckAndReplaceWith(out_node->in_topo_structs, node, in_node);
+        }
+        node->out_topo_structs.clear();
+        // Eliminate b
         RemoveFrom(topo_structs, id);
       }
     }
@@ -384,8 +413,7 @@ void ClipEdges(std::vector<TopoStruct*>& topo_structs) {
           if (brother->min_layer > in_node->min_layer && brother->visited_descendant.IfMarked()) {
             // Remove a -> d
             // Be careful that we need to remove the edge from two sides.
-            CheckAndRemoveFrom(node->in_topo_structs, in_node);
-            CheckAndRemoveFrom(in_node->out_topo_structs, node);
+            ClipOneEdge(in_node, node);
             break;
           }
         }
