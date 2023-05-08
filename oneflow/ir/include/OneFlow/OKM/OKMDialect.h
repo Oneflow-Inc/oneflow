@@ -22,12 +22,4 @@ limitations under the License.
 #include "OneFlow/OKMDialect.h.inc"
 #include "OneFlow/OKM/OKMOps.h"
 
-namespace mlir {
-namespace okm {
-
-void registerAllPasses();
-
-}  // namespace okm
-}  // namespace mlir
-
 #endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_OKM_OKMDIALECT_H_

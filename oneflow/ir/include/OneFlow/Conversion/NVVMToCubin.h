@@ -22,7 +22,6 @@ limitations under the License.
 
 namespace mlir {
 
-const char* getArchVersion();
 
 namespace gpu {
 
@@ -30,8 +29,15 @@ inline std::string getCubinAnnotation() { return "gpu.binary"; }
 
 }  // namespace gpu
 
-void InitializeLLVMNVPTXBackend();
+namespace oneflow {
+
+const char* getArchVersion();
+
 std::unique_ptr<mlir::Pass> createNVVMToCubinPass();
+
+void InitializeLLVMNVPTXBackend();
+
+}
 
 }  // namespace mlir
 
