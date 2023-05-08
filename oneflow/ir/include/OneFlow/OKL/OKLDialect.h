@@ -23,5 +23,4 @@ limitations under the License.
 #include "OneFlow/OKLDialect.h.inc"
 #include "OneFlow/OKL/OKLOps.h"
 
-
 #endif  // ONEFLOW_IR_INCLUDE_OKL_OKLDIALECT_H_
