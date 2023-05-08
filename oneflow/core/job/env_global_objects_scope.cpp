@@ -37,7 +37,6 @@ limitations under the License.
 #include "oneflow/core/device/cudnn_conv_util.h"
 #include "oneflow/core/rpc/include/manager.h"
 #include "oneflow/core/transport/transport.h"
-#include "oneflow/core/job/eager_ccl_comm_manager.h"
 #include "oneflow/core/hardware/node_device_descriptor_manager.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
@@ -135,13 +134,6 @@ bool CommNetIBEnabled() {
 
 #endif  // WITH_RDMA && OF_PLATFORM_POSIX
 
-std::vector<std::pair<CclMgrCreateOrDestroyFn, CclMgrCreateOrDestroyFn>>*
-GlobalCclMgrCreatorDestroyers() {
-  static std::vector<std::pair<CclMgrCreateOrDestroyFn, CclMgrCreateOrDestroyFn>>
-      ccl_mgr_creator_destroyer_list;
-  return &ccl_mgr_creator_destroyer_list;
-}
-
 }  // namespace
 
 EnvGlobalObjectsScope::EnvGlobalObjectsScope(const std::string& env_proto_str) {
@@ -214,6 +206,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
     Singleton<EagerCclCommMgr>::SetAllocated(
         EagerCclCommMgrBuilder::Get().NewCclCommMgr(vaild_ccl_comm_mgr_device_types.front()));
   }
+
   Singleton<vm::VirtualMachineScope>::New(Singleton<ResourceDesc, ForSession>::Get()->resource());
 #ifdef __linux__
   Singleton<EpollCommNet>::New();
@@ -328,12 +321,6 @@ Maybe<void> DestoryRDMA() {
     }
   }
 #endif  // WITH_RDMA && OF_PLATFORM_POSIX
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> RegisterCclMgrCreatorDestroyer(CclMgrCreateOrDestroyFn creator,
-                                           CclMgrCreateOrDestroyFn destroyer) {
-  GlobalCclMgrCreatorDestroyers()->emplace_back(std::make_pair(creator, destroyer));
   return Maybe<void>::Ok();
 }
 

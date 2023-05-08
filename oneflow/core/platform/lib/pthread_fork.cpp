@@ -42,9 +42,8 @@ void CurrentRankVmSync() {
 void RegisterForkCallback() { pthread_atfork(&CurrentRankVmSync, nullptr, &SetIsForkedSubProcess); }
 COMMAND(RegisterForkCallback());
 
-const char* kOfDeviceNotSupportInForkedSubProcess =
-    "Cannot re-initialize Non-Host device in forked subprocess. To use Non-Host device with "
-    "multiprocessing, you "
+const char* kOfCudaNotSupportInForkedSubProcess =
+    "Cannot re-initialize CUDA in forked subprocess. To use CUDA with multiprocessing, you "
     "must add 'multiprocessing.set_start_method(\"spawn\")' in '__main__' if you are using "
     "Python's multiprocessing";
 

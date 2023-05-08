@@ -25,7 +25,6 @@ limitations under the License.
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/to_string.h"
-#include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace oneflow {
 
@@ -170,13 +169,6 @@ Maybe<std::tuple<std::string, int, bool>> ParseDeviceString(std::string device_s
         << Error::InvalidValueError() << "Invalid device tag " << device_str;
     return std::make_tuple(device_str.substr(0, pos), std::stoi(index_str), rematable);
   }
-}
-
-void TryCreateEpDevice(Symbol<Device> device) {
-  ep::DeviceManager* device_mgr =
-      Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceManagerOrNull(device->enum_type());
-  if (!device_mgr) { return; }
-  device_mgr->GetDevice(device->device_id());
 }
 
 }  // namespace oneflow

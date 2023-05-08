@@ -27,43 +27,6 @@ namespace oneflow {
 
 namespace {
 
-class SliceKernelRegContext final : public user_op::KernelRegContext {
- public:
-  explicit SliceKernelRegContext(DeviceType device_type) : device_type_(device_type) {}
-  ~SliceKernelRegContext() = default;
-
-  DeviceType device_type() const override { return device_type_; }
-  const ParallelContext& parallel_ctx() const override { PRINT_BUG_PROMPT_AND_ABORT(); }
-  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
-                                                        int32_t index) const override {
-    PRINT_BUG_PROMPT_AND_ABORT();
-  }
-  const std::vector<std::pair<std::string, int32_t>>& inputs() const override {
-    PRINT_BUG_PROMPT_AND_ABORT();
-  }
-  const std::vector<std::pair<std::string, int32_t>>& outputs() const override {
-    PRINT_BUG_PROMPT_AND_ABORT();
-  }
-
-  const user_op::UserOpConfWrapper& user_op_conf() const override { PRINT_BUG_PROMPT_AND_ABORT(); }
-
-  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
-      const std::string& attr_name) const override {
-    PRINT_BUG_PROMPT_AND_ABORT();
-  }
-
- private:
-  DeviceType device_type_;
-};
-
-Maybe<bool> RawCheckSlicelKernelRegistered(DeviceType device_type) {
-  SliceKernelRegContext reg_ctx(device_type);
-  return user_op::UserOpRegistryMgr::Get().IsOpKernelRegistered("slice", reg_ctx);
-}
-
-static constexpr auto* CheckSliceKernelRegistered =
-    DECORATE(&RawCheckSlicelKernelRegistered, ThreadLocalCachedCopiable);
-
 bool RawIsBroadcastSbp(Symbol<SbpParallel> sbp_parallel) {
   return sbp_parallel->has_broadcast_parallel();
 }
