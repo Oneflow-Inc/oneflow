@@ -80,10 +80,6 @@ inline bool IsDimsEquals(size_t num_src0_dims, const int64_t* src0_dims, size_t 
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kIsCloseEqualNan) \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kIsClose)
 
-#define BINARY_COMPLEX_COMPARISION_OP_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kEqual)  \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kNotEqual)
-
 #define BINARY_COMPARISION_OP_SEQ \
   BINARY_COMPARISION_OP_SEQ_0     \
   BINARY_COMPARISION_OP_SEQ_1

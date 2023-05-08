@@ -105,15 +105,15 @@ struct SliceKernelUtil {
 
 #define INSTANTIATE_SLICE_KERNEL_UTIL(device, dtype) template struct SliceKernelUtil<device, dtype>;
 
-#define INSTANTIATE_SLICE_KERNEL_UTIL_WITH_DEVICE(device)    \
-  INSTANTIATE_SLICE_KERNEL_UTIL(device, bool)                \
-  INSTANTIATE_SLICE_KERNEL_UTIL(device, float16)             \
-  INSTANTIATE_SLICE_KERNEL_UTIL(device, float)               \
-  INSTANTIATE_SLICE_KERNEL_UTIL(device, double)              \
-  INSTANTIATE_SLICE_KERNEL_UTIL(device, int32_t)             \
-  INSTANTIATE_SLICE_KERNEL_UTIL(device, int64_t)             \
-  INSTANTIATE_SLICE_KERNEL_UTIL(device, int8_t)              \
-  INSTANTIATE_SLICE_KERNEL_UTIL(device, uint8_t)             
+#define INSTANTIATE_SLICE_KERNEL_UTIL_WITH_DEVICE(device) \
+  INSTANTIATE_SLICE_KERNEL_UTIL(device, bool)             \
+  INSTANTIATE_SLICE_KERNEL_UTIL(device, float16)          \
+  INSTANTIATE_SLICE_KERNEL_UTIL(device, float)            \
+  INSTANTIATE_SLICE_KERNEL_UTIL(device, double)           \
+  INSTANTIATE_SLICE_KERNEL_UTIL(device, int32_t)          \
+  INSTANTIATE_SLICE_KERNEL_UTIL(device, int64_t)          \
+  INSTANTIATE_SLICE_KERNEL_UTIL(device, int8_t)           \
+  INSTANTIATE_SLICE_KERNEL_UTIL(device, uint8_t)
 
 }  // namespace oneflow
 

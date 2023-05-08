@@ -31,10 +31,7 @@ struct CastFunctor {
 };
 
 template<typename To>
-struct CastFunctor<
-    To, half,
-    typename std::enable_if<!(std::is_same<To, half>::value || std::is_same<To, cuComplex>::value
-                              || std::is_same<To, cuDoubleComplex>::value)>::type> {
+struct CastFunctor<To, half, typename std::enable_if<!std::is_same<To, half>::value>::type> {
   __device__ To operator()(half from) const { return static_cast<To>(static_cast<float>(from)); }
 
   __device__ void Apply2(To* to, const half* from) const {
@@ -61,11 +58,9 @@ struct CastFunctor<half, From, typename std::enable_if<!std::is_same<From, half>
 #if CUDA_VERSION >= 11000
 
 template<typename To>
-struct CastFunctor<
-    To, nv_bfloat16,
-    typename std::enable_if<!(std::is_same<To, nv_bfloat16>::value || std::is_same<To, half>::value
-                              || std::is_same<To, cuComplex>::value
-                              || std::is_same<To, cuDoubleComplex>::value)>::type> {
+struct CastFunctor<To, nv_bfloat16,
+                   typename std::enable_if<!(std::is_same<To, nv_bfloat16>::value
+                                             || std::is_same<To, half>::value)>::type> {
   __device__ To operator()(nv_bfloat16 from) const {
     return static_cast<To>(static_cast<float>(from));
   }

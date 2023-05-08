@@ -101,14 +101,14 @@ struct ToContiguousUtil : ToContiguousUtilBase {
 
 #ifdef WITH_CUDA
 #if CUDA_VERSION >= 11000
-#define TO_CONTIGUOUS_CUDA_SPECIAL_TYPE          \
-  OF_PP_MAKE_TUPLE_SEQ(half, DataType::kFloat16) \
+#define TO_CONTIGUOUS_CUDA_SPECIAL_TYPE                  \
+  OF_PP_MAKE_TUPLE_SEQ(half, DataType::kFloat16)         \
   OF_PP_MAKE_TUPLE_SEQ(nv_bfloat16, DataType::kBFloat16) \
-  OF_PP_MAKE_TUPLE_SEQ(cuComplex, DataType::kComplex64) \
+  OF_PP_MAKE_TUPLE_SEQ(cuComplex, DataType::kComplex64)  \
   OF_PP_MAKE_TUPLE_SEQ(cuDoubleComplex, DataType::kComplex128)
 #else
-#define TO_CONTIGUOUS_CUDA_SPECIAL_TYPE   \
-  OF_PP_MAKE_TUPLE_SEQ(half, DataType::kFloat16)  \
+#define TO_CONTIGUOUS_CUDA_SPECIAL_TYPE                 \
+  OF_PP_MAKE_TUPLE_SEQ(half, DataType::kFloat16)        \
   OF_PP_MAKE_TUPLE_SEQ(cuComplex, DataType::kComplex64) \
   OF_PP_MAKE_TUPLE_SEQ(cuDoubleComplex, DataType::kComplex128)
 #endif  // CUDA_VERSION >= 11000
