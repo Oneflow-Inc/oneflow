@@ -48,18 +48,6 @@ void CheckAndRemoveFrom(std::vector<T>& v, T& t) {
   if (id >= 0) { RemoveFrom(v, id); }
 }
 
-template<class T>
-void CheckAndReplaceWith(std::vector<T>& v, T& origin, T& substitution) {
-  int32_t id = CheckIndex(v, origin);
-  if (id >= 0) { v[id] = substitution; }
-}
-
-template<class T>
-void CheckAndInsert(std::vector<T>& v, T& t) {
-  int32_t id = CheckIndex(v, t);
-  if (id < 0) { v.push_back(t); }
-}
-
 // Inverse function, which transfer a vector to an unordered_map.
 template<class T>
 void InverseFunction(const std::vector<T>& v, std::unordered_map<T, int32_t>& inverse_map) {

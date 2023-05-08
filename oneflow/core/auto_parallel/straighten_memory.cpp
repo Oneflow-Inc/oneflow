@@ -331,6 +331,15 @@ void ClipOneEdge(TopoStruct* producer, TopoStruct* consumer) {
   CheckAndRemoveFrom(consumer->in_topo_structs, producer);
 }
 
+void ConnectTwoNodes(TopoStruct* producer, TopoStruct* consumer) {
+  // Check if the edge exists
+  int32_t in_id = CheckIndex(consumer->in_topo_structs, producer);
+  if (in_id < 0) {
+    consumer->in_topo_structs.push_back(producer);
+    producer->out_topo_structs.push_back(consumer);
+  }
+}
+
 void EatNodes(std::vector<TopoStruct*>& topo_structs) {
   for (int32_t id = topo_structs.size() - 1; id >= 0; id--) {
     auto* node = topo_structs[id];
@@ -354,8 +363,9 @@ void EatNodes(std::vector<TopoStruct*>& topo_structs) {
         // and we need to make sure that b does not occur twice.
         for (auto* in_node : node->in_topo_structs) {
           // Insert a -> g, b -> g, c -> g
-          CheckAndInsert(out_node->in_topo_structs, in_node);
-          CheckAndReplaceWith(in_node->out_topo_structs, node, out_node);
+          ConnectTwoNodes(in_node, out_node);
+          // Clip a -> d, b -> d, c -> d
+          ClipOneEdge(in_node, node);
         }
         node->in_topo_structs.clear();
         // Eliminate d
@@ -380,10 +390,10 @@ void EatNodes(std::vector<TopoStruct*>& topo_structs) {
         // and we need to make sure that d does not occur twice
         for (auto* out_node : node->out_topo_structs) {
           // Insert a -> c, a -> d, a -> e
-          CheckAndInsert(in_node->out_topo_structs, out_node);
-          CheckAndReplaceWith(out_node->in_topo_structs, node, in_node);
+          ConnectTwoNodes(in_node, out_node);
+          // Clip b -> c, b -> d, b -> e
+          ClipOneEdge(node, out_node);
         }
-        node->out_topo_structs.clear();
         // Eliminate b
         RemoveFrom(topo_structs, id);
       }
@@ -399,7 +409,7 @@ void ClipEdges(std::vector<TopoStruct*>& topo_structs) {
   // since max(in_nodes->min_layer) == this_node->min_layer - 1.
   for (auto* node : topo_structs) {
     // Suppose we have multiple input nodes
-    // a -> d, b -> d, c -> d
+    // a, b, c -> d
     if (node->in_topo_structs.size() >= 2) {
       int32_t max_layer = node->min_layer - 1;
       for (int32_t in_id = node->in_topo_structs.size() - 1; in_id >= 0; in_id--) {
