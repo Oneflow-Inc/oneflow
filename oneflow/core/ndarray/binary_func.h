@@ -614,11 +614,12 @@ SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncAll, GetOneVal);
 #undef SPECIALIZE_UNIT_OF_BINARY_FUNC
 
 /*
-These placeholder specializations are used for `GetBinaryBroadcastSbpSignature` in oneflow/user/ops/math_binary_broadcast_ops.cpp
+These placeholder specializations are used for `GetBinaryBroadcastSbpSignature` in
+oneflow/user/ops/math_binary_broadcast_ops.cpp
 */
-#define SPECIALIZE_FOR_SBP(binary_func)\
-template<typename T>\
-struct binary_func final {};
+#define SPECIALIZE_FOR_SBP(binary_func) \
+  template<typename T>                  \
+  struct binary_func final {};
 
 SPECIALIZE_FOR_SBP(BinaryFuncIEN);
 SPECIALIZE_FOR_SBP(BinaryFuncINN);
