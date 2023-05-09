@@ -2,13 +2,8 @@
 #define ONEFLOW_ONEFLOW_DEVICE_H_
 
 #include "oneflow/core/common/util.h"
-#include "OneFlow/SBP/SBPDialect.h"
-#include "OneFlow/OneFlowOpsDialect.h.inc"
-#include "mlir/IR/Dialect.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "llvm/ADT/StringRef.h"
+#include "OneFlow/OneFlowDialect.h"
 
-#include <functional>
 #include <memory>
 #include <utility>
 #include <glog/logging.h>
