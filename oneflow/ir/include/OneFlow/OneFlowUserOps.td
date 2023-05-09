@@ -5113,6 +5113,24 @@ def OneFlow_StftOp : OneFlow_BaseOp<"stft", [SupportNonContiguous,NoMemoryEffect
   let has_data_type_infer_fn = 1;
   let has_compute_complexity_fn = 1;
 }
+
+def OneFlow_Polygamma : OneFlow_BaseOp<"polygamma", [NoMemoryEffect,DeclareOpInterfaceMethods<UserOpCompatibleInterface>]>{
+  let input =(ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+
+  let attrs = (ins
+    SI32Attr:$n
+  );
+
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+};
 #endif // GET_ONEFLOW_MATH_OP_DEFINITIONS
 
 
