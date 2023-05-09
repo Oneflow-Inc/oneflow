@@ -35,21 +35,15 @@ Maybe<one::Generator> CreateGenerator(const std::string& device_str) {
 py::tuple GetDefaultGenerators() {
 #ifdef WITH_CUDA
   static int device_count = GetCudaDeviceCount();
+#else
+  static int device_count = 0;
+#endif
   py::tuple default_cuda_generators(device_count);
   FOR_RANGE(int, device_id, 0, device_count) {
     const auto& cuda_gen = one::DefaultCUDAGenerator(device_id);
     default_cuda_generators[device_id] = py::cast(cuda_gen);
   }
   return default_cuda_generators;
-#else
-  static int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
-  py::tuple default_cpu_generators(num_cores);
-  FOR_RANGE(int, device_id, 0, num_cores) {
-    const auto& cpu_gen = one::DefaultCPUGenerator();
-    default_cpu_generators[device_id] = py::cast(cpu_gen);
-  }
-  return default_cpu_generators;
-#endif  // WITH_CUDA
 }
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
