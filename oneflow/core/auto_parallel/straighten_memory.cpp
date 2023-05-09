@@ -355,7 +355,6 @@ void ClipOneEdge(TopoStruct* producer, TopoStruct* consumer) {
   consumer->in_topo_structs.erase(producer);
 }
 
-
 void EatNodes(std::vector<TopoStruct*>& topo_structs) {
   for (int32_t id = topo_structs.size() - 1; id >= 0; id--) {
     auto* node = topo_structs[id];
