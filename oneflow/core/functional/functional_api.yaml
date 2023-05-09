@@ -704,7 +704,7 @@
   bind_python: True
 
 - name: "tanh_grad"
-  signature: "Tensor (Tensor x, Tensor dy) => TanhGrad"
+  signature: "Tensor (Tensor y, Tensor dy) => TanhGrad"
   bind_python: True
 
 - name: "threshold"
@@ -839,8 +839,18 @@
   signature: "Tensor (Tensor x, Float lower=0.125, Float upper=0.3333333333333333, Bool training=False) => RReluInplace"
   bind_python: True
 
+- name: "normal_"
+  signature: "Tensor (Tensor x, Float mean=0.0, Float std=1.0, Generator generator=None) => Normal_"
+  bind_python: True
+  
 - name: "normal"
   signature: [
+      "Tensor (Tensor mean, Tensor std, *, Tensor out=None, 
+      Generator generator=None, Bool requires_grad=False) => TensorTensorNormal",
+      "Tensor (Tensor mean, Float std=1.0, *, Tensor out=None, 
+      Generator generator=None, Bool requires_grad=False) => TensorScalarNormal",
+      "Tensor (Float mean, Tensor std, *, Tensor out=None, 
+      Generator generator=None, Bool requires_grad=False) => ScalarTensorNormal",
       "Tensor (Float mean, Float std, Shape size, *, Tensor out=None, DataType dtype=None, Device device=None,
       Generator generator=None, Bool requires_grad=False) => Normal",
       "Tensor (Float mean, Float std, Int32 size, *, Tensor out=None, DataType dtype=None, Device device=None,

@@ -522,7 +522,7 @@ class AvgPool2d(Module):
         self.ceil_mode = ceil_mode
         self.channel_pos = "channels_first"
         if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
-            self.channel_pos = "channels_flast"
+            self.channel_pos = "channels_last"
         self.padding = _pair(padding)
         self.count_include_pad = count_include_pad
         self.divisor_override = int(divisor_override)

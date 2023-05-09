@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/op_args_reserved_size.h"
 #include "oneflow/core/eager/local_dep_object.h"
-#include "oneflow/core/device/device_context.h"
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stream.h"
@@ -41,6 +40,8 @@ class MutLocalTensorMeta;
 }  // namespace one
 
 namespace vm {
+
+class Allocator;
 
 class EagerBlobObject final : public user_op::Tensor,
                               public user_op::TensorDesc,
@@ -81,7 +82,7 @@ class EagerBlobObject final : public user_op::Tensor,
   void set_stride(const Stride& stride) override;
   void set_data_type(DataType data_type) override { data_type_ = data_type; }
   void set_is_dynamic(bool is_dynamic) override { is_dynamic_ = is_dynamic; }
-  void set_memory_format(MemoryFormat memory_format) { memory_format_ = memory_format; }
+  void set_memory_format(MemoryFormat memory_format) override { memory_format_ = memory_format; }
 
   // user_op::Tensor overrides
   ShapeView shape_view() const override { return shape(); }
