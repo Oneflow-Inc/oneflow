@@ -13,6 +13,12 @@ set(CMAKE_POLICY_DEFAULT_CMP0079 NEW)
 
 FetchContent_MakeAvailable(tbb)
 
+# workaround compile error in GCC 12 or later
+# refer to https://github.com/Oneflow-Inc/oneflow/pull/10236
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 12)
+  target_compile_options(tbb PRIVATE "-Wno-error=stringop-overflow")
+endif()
+
 set(TBBBIND_LIBRARY_NAME)
 if(HWLOC_VERSION)
   if(HWLOC_VERSION VERSION_LESS 2)
