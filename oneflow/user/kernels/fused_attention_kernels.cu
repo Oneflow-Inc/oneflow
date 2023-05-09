@@ -27,10 +27,15 @@ limitations under the License.
 #include "trt_flash_attention/fmha.h"
 #include "trt_flash_attention/fmha_flash_attention.h"
 #include "oneflow/core/ep/include/primitive/batch_matmul.h"
-#include "oneflow/user/kernels/rms_norm_gpu_kernel.cu"
 
 namespace oneflow {
-
+namespace cuda {
+namespace rms_norm {
+template<typename T, typename ComputeType>
+void RmsNormForward(ep::Stream* stream, const int64_t nrow, const int64_t ncol, const double eps,
+                    const T* x_dptr, const T* w_dptr, T* y_dptr, ComputeType* inv_rms);
+}
+}  // namespace cuda
 namespace user_op {
 
 namespace {

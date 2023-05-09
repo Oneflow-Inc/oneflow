@@ -27,6 +27,7 @@ class AccCtrlTickCompTaskNode final : public CompTaskNode {
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
+  void ConsumeFakeRegsts() override;
 };
 
 void AccCtrlTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
@@ -37,6 +38,8 @@ void AccCtrlTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void AccCtrlTickCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst());
 }
+
+void AccCtrlTickCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
 
 void AccCtrlTickCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");
