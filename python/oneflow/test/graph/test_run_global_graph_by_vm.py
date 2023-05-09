@@ -25,10 +25,13 @@ from test_run_graph_by_vm import RunGraphByVmEnv, Graph
 class TestGlobalInterpreter(flow.unittest.TestCase):
     def test_data_parallel_run_by_vm(test_case):
         with RunGraphByVmEnv():
+
             class DataParallelMul(flow.nn.Module):
                 def __init__(self, placement) -> None:
                     super().__init__()
-                    self.w = flow.randn(5, 8, placement=placement, sbp=flow.sbp.broadcast)
+                    self.w = flow.randn(
+                        5, 8, placement=placement, sbp=flow.sbp.broadcast
+                    )
 
                 def forward(self, x):
                     return flow.matmul(x, self.w)
@@ -49,10 +52,13 @@ class TestGlobalInterpreter(flow.unittest.TestCase):
 
     def test_module_parallel_run_by_vm(test_case):
         with RunGraphByVmEnv():
+
             class ModuleParallelMul(flow.nn.Module):
                 def __init__(self, placement) -> None:
                     super().__init__()
-                    self.w = flow.randn(5, 8, placement=placement, sbp=flow.sbp.split(1))
+                    self.w = flow.randn(
+                        5, 8, placement=placement, sbp=flow.sbp.split(1)
+                    )
 
                 def forward(self, x):
                     return flow.matmul(x, self.w)
@@ -72,11 +78,16 @@ class TestGlobalInterpreter(flow.unittest.TestCase):
 
     def test_boxing_data_parallel_run_by_vm(test_case):
         with RunGraphByVmEnv():
+
             class BoxingModuleParallelMul(flow.nn.Module):
                 def __init__(self, placement) -> None:
                     super().__init__()
-                    self.w1 = flow.randn(5, 8, placement=placement, sbp=flow.sbp.split(1))
-                    self.w2 = flow.randn(8, 6, placement=placement, sbp=flow.sbp.split(1))
+                    self.w1 = flow.randn(
+                        5, 8, placement=placement, sbp=flow.sbp.split(1)
+                    )
+                    self.w2 = flow.randn(
+                        8, 6, placement=placement, sbp=flow.sbp.split(1)
+                    )
 
                 def forward(self, x):
                     x = flow.matmul(x, self.w1)

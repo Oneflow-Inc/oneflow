@@ -22,24 +22,24 @@ from test_graph_ofrecord_reader import OFRecordDataLoader
 class EnvVar(object):
     def __init__(self, env_list: dict):
         self.env_list = env_list
-     
+
     def __enter__(self):
-        self.old_env = {
-            key : os.environ.get(key, '0') for key in self.env_list.keys()
-        }
+        self.old_env = {key: os.environ.get(key, "0") for key in self.env_list.keys()}
         os.environ.update(self.env_list)
- 
+
     def __exit__(self, *args):
         os.environ.update(self.old_env)
 
 
 class RunGraphByVmEnv(EnvVar):
     def __init__(self):
-        super().__init__({
-            "ONEFLOW_RUN_GRAPH_BY_VM" : "1",
-            "ONEFLOW_MLIR_ENABLE_ROUND_TRIP" : "1",
-            "ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION" : "1",
-        })
+        super().__init__(
+            {
+                "ONEFLOW_RUN_GRAPH_BY_VM": "1",
+                "ONEFLOW_MLIR_ENABLE_ROUND_TRIP": "1",
+                "ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION": "1",
+            }
+        )
 
 
 class Graph(flow.nn.Graph):
@@ -91,6 +91,7 @@ def test_run_graph_by_vm(capsys):
 
 def test_empty_inputs(capsys):
     with RunGraphByVmEnv():
+
         class GraphReader(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
