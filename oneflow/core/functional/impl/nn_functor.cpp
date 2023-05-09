@@ -2765,76 +2765,33 @@ class NormalizationFunctor {
 class NormalizationAddReluFunctor {
  public:
   NormalizationAddReluFunctor() {
-    norm_eval_op_ = CHECK_JUST(one::OpBuilder("normalization")
-                                   .Input("x")
-                                   .Input("moving_mean")
-                                   .Input("moving_variance")
-                                   .Input("gamma")
-                                   .Input("beta")
-                                   .Output("y")
-                                   .Attr("training", false)
-                                   .Build());
-    relu_op_ = CHECK_JUST(one::OpBuilder("relu").Input("x").Output("y").Build());
-    add_op_ = CHECK_JUST(one::OpBuilder("add_n").Input("in", 2).Output("out").Build());
-    fused_norm_relu_op_ = CHECK_JUST(one::OpBuilder("normalization_relu")
-                                         .Input("x")
-                                         .Input("moving_mean")
-                                         .Input("moving_variance")
-                                         .Input("gamma")
-                                         .Input("beta")
-                                         .Output("y")
-                                         .Output("reserve_space")
-                                         .Output("mean")
-                                         .Output("inv_variance")
-                                         .Attr("training", false)
-                                         .Build());
-    fused_norm_training_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
-                                                   .Input("x")
-                                                   .Input("moving_mean")
-                                                   .Input("moving_variance")
-                                                   .Input("gamma")
-                                                   .Input("beta")
-                                                   .Output("y")
-                                                   .Output("reserve_space")
-                                                   .Output("mean")
-                                                   .Output("inv_variance")
-                                                   .Attr("training", true)
-                                                   .Build());
-    fused_addend_norm_training_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
-                                                          .Input("x")
-                                                          .Input("addend")
-                                                          .Input("moving_mean")
-                                                          .Input("moving_variance")
-                                                          .Input("gamma")
-                                                          .Input("beta")
-                                                          .Output("y")
-                                                          .Output("reserve_space")
-                                                          .Output("mean")
-                                                          .Output("inv_variance")
-                                                          .Attr("training", true)
-                                                          .Build());
-    fused_norm_training_no_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
-                                                      .Input("x")
-                                                      .Input("gamma")
-                                                      .Input("beta")
-                                                      .Output("y")
-                                                      .Output("reserve_space")
-                                                      .Output("mean")
-                                                      .Output("inv_variance")
-                                                      .Attr("training", true)
-                                                      .Build());
-    fused_addend_norm_training_no_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
-                                                             .Input("x")
-                                                             .Input("addend")
-                                                             .Input("gamma")
-                                                             .Input("beta")
-                                                             .Output("y")
-                                                             .Output("reserve_space")
-                                                             .Output("mean")
-                                                             .Output("inv_variance")
-                                                             .Attr("training", true)
-                                                             .Build());
+    fused_norm_training_stats_op_ =
+        CHECK_JUST(BuildFusedNormalizationOp(/*stats=*/true, /*addend=*/false, /*training=*/true));
+    fused_addend_norm_training_stats_op_ =
+        CHECK_JUST(BuildFusedNormalizationOp(/*stats=*/true, /*addend=*/true, /*training=*/true));
+    fused_norm_training_no_stats_op_ =
+        CHECK_JUST(BuildFusedNormalizationOp(/*stats=*/false, /*addend=*/false, /*training=*/true));
+    fused_addend_norm_training_no_stats_op_ =
+        CHECK_JUST(BuildFusedNormalizationOp(/*stats=*/false, /*addend=*/true, /*training=*/true));
+    fused_norm_eval_stats_op_ =
+        CHECK_JUST(BuildFusedNormalizationOp(/*stats=*/true, /*addend=*/false, /*training=*/false));
+    fused_addend_norm_eval_stats_op_ =
+        CHECK_JUST(BuildFusedNormalizationOp(/*stats=*/true, /*addend=*/true, /*training=*/false));
   }
+
+  Maybe<one::UserOpExpr> BuildFusedNormalizationOp(bool stats, bool addend, bool training) {
+    auto op_builder = one::OpBuilder("normalization_add_relu")
+                          .Input("x")
+                          .Output("y")
+                          .Output("reserve_space")
+                          .Attr("training", training);
+    if (addend) { op_builder.Input("addend"); }
+    if (stats) { op_builder.Input("moving_mean").Input("moving_variance"); }
+    op_builder.Input("gamma").Input("beta");
+    if (training) { op_builder.Output("mean").Output("inv_variance"); }
+    return op_builder.Build();
+  }
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const Optional<one::Tensor>& addend,
                            const Optional<one::Tensor>& moving_mean,
@@ -2853,30 +2810,14 @@ class NormalizationAddReluFunctor {
     if (!is_training) {
       CHECK_OR_RETURN(moving_mean && moving_variance)
           << Error::RuntimeError() << "Must have moving_mean and moving_variance in eval mode.";
-      DeviceType device_type = JUST(x->device())->enum_type();
-      if (device_type == kMLU) {
-        if (addend) {
-          auto& new_attrs =
-              THREAD_CACHED_MUTABLE_ATTR_MAP("axis", "epsilon", "momentum", "training");
-          new_attrs.SetAllAttrs(axis, epsilon, static_cast<float>(1.0 - momentum), false);
-          return OpInterpUtil::Dispatch<one::Tensor>(
-              *fused_addend_norm_training_stats_op_,
-              {x, JUST(addend), JUST(moving_mean), JUST(moving_variance), gamma, beta}, new_attrs);
-        } else {
-          return OpInterpUtil::Dispatch<one::Tensor>(
-              *fused_norm_relu_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta},
-              attrs);
-        }
+      if (addend) {
+        return OpInterpUtil::Dispatch<one::Tensor>(
+            *fused_addend_norm_eval_stats_op_,
+            {x, JUST(addend), JUST(moving_mean), JUST(moving_variance), gamma, beta}, attrs);
       } else {
-        const auto& normalize_result = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-            *norm_eval_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta}, attrs));
-        if (addend) {
-          const auto& add_result =
-              JUST(OpInterpUtil::Dispatch<one::Tensor>(*add_op_, {normalize_result, JUST(addend)}));
-          return OpInterpUtil::Dispatch<one::Tensor>(*relu_op_, {add_result});
-        } else {
-          return OpInterpUtil::Dispatch<one::Tensor>(*relu_op_, {normalize_result});
-        }
+        return OpInterpUtil::Dispatch<one::Tensor>(
+            *fused_norm_eval_stats_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta},
+            attrs);
       }
 
     } else if (moving_mean) {
@@ -2901,14 +2842,13 @@ class NormalizationAddReluFunctor {
   }
 
  private:
-  std::shared_ptr<OpExpr> norm_eval_op_;
-  std::shared_ptr<OpExpr> relu_op_;
-  std::shared_ptr<OpExpr> add_op_;
   std::shared_ptr<OpExpr> fused_norm_training_stats_op_;
   std::shared_ptr<OpExpr> fused_norm_relu_op_;
   std::shared_ptr<OpExpr> fused_addend_norm_training_stats_op_;
   std::shared_ptr<OpExpr> fused_norm_training_no_stats_op_;
   std::shared_ptr<OpExpr> fused_addend_norm_training_no_stats_op_;
+  std::shared_ptr<OpExpr> fused_norm_eval_stats_op_;
+  std::shared_ptr<OpExpr> fused_addend_norm_eval_stats_op_;
 };
 
 class ConstantPadFunctor {
