@@ -4609,6 +4609,7 @@ def OneFlow_LgammaGradOp : OneFlow_BaseOp<"lgamma_grad", [NoMemoryEffect, Declar
   let has_data_type_infer_fn = 1;
 }
 
+
 def OneFlow_DigammaOp : OneFlow_BaseOp<"digamma", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x
@@ -6543,9 +6544,10 @@ def OneFlow__ncclLogicalFusionOp : OneFlow_BaseOp<"_nccl_logical_fusion", [NoMem
 
 #ifdef GET_ONEFLOW_NORMALIZATION_OP_DEFINITIONS
 
-def OneFlow_NormalizationReluOp : OneFlow_BaseOp<"normalization_relu", [NoMemoryEffect, NoGrad, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<InferTypeOpInterface, ["refineReturnTypes"]>]> {
+def OneFlow_NormalizationAddReluOp : OneFlow_BaseOp<"normalization_add_relu", [NoMemoryEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<InferTypeOpInterface, ["refineReturnTypes"]>]> {
   let input = (ins
     OneFlow_Tensor:$x,
+    Optional<OneFlow_Tensor>:$addend,
     Optional<OneFlow_Tensor>:$moving_mean,
     Optional<OneFlow_Tensor>:$moving_variance,
     OneFlow_Tensor:$gamma,
@@ -6564,8 +6566,8 @@ def OneFlow_NormalizationReluOp : OneFlow_BaseOp<"normalization_relu", [NoMemory
     DefaultValuedAttr<F32Attr, "0.">:$momentum
   );
   let trait_attrs = (ins
-    I32ElementsAttr:$operand_segment_sizes,
-    I32ElementsAttr:$result_segment_sizes
+    DenseI32ArrayAttr:$operand_segment_sizes,
+    DenseI32ArrayAttr:$result_segment_sizes
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
