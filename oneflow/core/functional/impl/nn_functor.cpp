@@ -2721,7 +2721,7 @@ class NormalizationAddReluFunctor {
     if (stats) { op_builder.Input("moving_mean").Input("moving_variance"); }
     op_builder.Input("gamma").Input("beta");
     if (training) { op_builder.Output("mean").Output("inv_variance"); }
-    return JUST(op_builder.Build());
+    return op_builder.Build();
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
