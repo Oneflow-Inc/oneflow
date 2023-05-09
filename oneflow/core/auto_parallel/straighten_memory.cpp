@@ -451,6 +451,8 @@ void SortReleaseTopoStructs(std::vector<TopoStruct*>& topo_structs) {
   for (auto* node_c : release_nodes) {
     // Mark all the ancestors
     node_c->SetAccumulateMemoryIncrement();
+    // Un-mark itself to prevent circle
+    node_c->visited_acc_memory.UnMark();
     for (auto* node_d : release_nodes) {
       if (node_c != node_d && node_d->visited_acc_memory.IfNotMarked()) {
         bool should_add_edge_d2c = true;
