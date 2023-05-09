@@ -98,6 +98,8 @@ inline bool IsDimsEquals(size_t num_src0_dims, const int64_t* src0_dims, size_t 
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kBitwiseOr)  \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kBitwiseXor)
 
+#define BINARY_MATH_FLOATING_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kZeta)
+
 #define BINARY_ACTIVATION_BACKWARD_OP_SEQ_0                   \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kIdentityBackwardWithDyX)    \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kEluBackwardWithDyX)         \
@@ -174,8 +176,6 @@ inline bool IsDimsEquals(size_t num_src0_dims, const int64_t* src0_dims, size_t 
   BINARY_MATH_BACKWARD_OP_SEQ_1     \
   BINARY_MATH_BACKWARD_OP_SEQ_2     \
   BINARY_MATH_BACKWARD_OP_SEQ_3
-
-#define BINARY_MATH_FLOATING_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kZeta)
 
 }  // namespace broadcast_elementwise_binary
 }  // namespace primitive
