@@ -61,6 +61,15 @@ void TaskStreamIndexManager::SaveTaskStreamIndex() {
   }
 }
 
+void TaskStreamIndexManager::TryUpdateTaskStreamIndex() {
+  for (auto& pair : generators_) {
+    auto initial_stream_index =
+        Singleton<MultiClientSessionContext>::Get()->GetIdStateMgr()->GetStreamIndexState(
+            pair.first);
+    pair.second->TryUpdateNextStreamIndex(initial_stream_index);
+  }
+}
+
 void TaskStreamIndexGetterRegistry::Register(const key_t& key, const stream_index_getter& getter) {
   bool insert_success = stream_index_getter_map_.emplace(key, getter).second;
   if (!insert_success) {

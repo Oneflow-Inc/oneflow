@@ -1106,6 +1106,8 @@ class Graph(object):
             destination["forward_graph"] = self._forward_job_proto
             destination["compile_graph"] = self._compiled_job_proto
 
+        destination["id_state"] = oneflow._oneflow_internal.get_id_state()
+
         return destination
 
     def load_runtime_state_dict(
@@ -1119,6 +1121,9 @@ class Graph(object):
             return self._dynamic_input_graph_cache.load_runtime_state_dict(state_dict)
 
         build_graph_start = time.perf_counter()
+
+        # init id state
+        oneflow._oneflow_internal.set_id_state(state_dict["id_state"])
 
         self._is_from_runtime_state_dict = True
         self._name = state_dict["graph_name"]

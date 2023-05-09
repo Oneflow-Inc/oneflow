@@ -37,7 +37,7 @@ class IDMgr final {
   TaskIdGenerator* GetTaskIdGenerator() { return &task_id_gen_; }
 
   void SaveId();
-  void LoadId(int64_t regst_desc_id_count, int64_t mem_block_id_count, int64_t chunk_id_count);
+  void TryUpdateId(int64_t regst_desc_id_count, int64_t mem_block_id_count, int64_t chunk_id_count);
 
  private:
   friend class Singleton<IDMgr>;

@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-void TaskIdGenerator::SaveId() {
+void TaskIdGenerator::SaveTaskIndex() {
   for (const auto& pair : stream_id2task_index_counter_) {
     Singleton<MultiClientSessionContext>::Get()->GetIdStateMgr()->SetTaskIndexState(pair.first,
                                                                                     pair.second);
@@ -26,9 +26,13 @@ void TaskIdGenerator::SaveId() {
 }
 
 TaskId TaskIdGenerator::Generate(const StreamId& stream_id) {
+  auto initial_task_index =
+      Singleton<MultiClientSessionContext>::Get()->GetIdStateMgr()->GetTaskIndexState(stream_id);
   if (stream_id2task_index_counter_.count(stream_id) == 0) {
+    stream_id2task_index_counter_[stream_id] = initial_task_index;
+  } else {
     stream_id2task_index_counter_[stream_id] =
-        Singleton<MultiClientSessionContext>::Get()->GetIdStateMgr()->GetTaskIndexState(stream_id);
+        std::max(stream_id2task_index_counter_[stream_id], initial_task_index);
   }
   task_index_t task_index = stream_id2task_index_counter_[stream_id]++;
   return TaskId{stream_id, task_index};

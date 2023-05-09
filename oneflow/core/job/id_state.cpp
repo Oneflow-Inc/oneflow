@@ -34,10 +34,12 @@ IdState IdStateMgr::GetIdState() {
 void IdStateMgr::SetIdState(const IdState& id_state) {
   id_state_ = id_state;
   CHECK(Singleton<IDMgr>::Get() != nullptr);
+  CHECK(Singleton<TaskStreamIndexManager>::Get() != nullptr);
   CHECK(Singleton<LazyJobBuildAndInferCtxMgr>::Get() != nullptr);
-  Singleton<IDMgr>::Get()->LoadId(id_state_.regst_desc_id_state_, id_state.mem_block_id_state_,
-                                  id_state.chunk_id_state_);
-  Singleton<LazyJobBuildAndInferCtxMgr>::Get()->LoadJobIdCount(id_state_.job_id_state_);
+  Singleton<IDMgr>::Get()->TryUpdateId(id_state_.regst_desc_id_state_, id_state.mem_block_id_state_,
+                                       id_state.chunk_id_state_);
+  Singleton<TaskStreamIndexManager>::Get()->TryUpdateTaskStreamIndex();
+  Singleton<LazyJobBuildAndInferCtxMgr>::Get()->TryUpdateJobIdCount(id_state_.job_id_state_);
 }
 
 }  // namespace oneflow

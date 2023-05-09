@@ -81,7 +81,9 @@ std::string JobBuildAndInferCtxMgr::structure_graph() const {
   return json_array.dump();
 }
 
-void JobBuildAndInferCtxMgr::LoadJobIdCount(int64_t id_count) { job_id_count_ = id_count; }
+void JobBuildAndInferCtxMgr::TryUpdateJobIdCount(int64_t id_count) {
+  job_id_count_ = std::max(id_count, job_id_count_);
+}
 
 void JobBuildAndInferCtxMgr::SaveJobIdCount() {
   Singleton<MultiClientSessionContext>::Get()->GetIdStateMgr()->SetJobIdState(job_id_count_);

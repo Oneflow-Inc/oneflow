@@ -57,4 +57,9 @@ StreamIndexGenerator::stream_index_t StreamIndexGenerator::GetCurrStreamIndex() 
   return next_stream_index_;
 }
 
+void StreamIndexGenerator::TryUpdateNextStreamIndex(stream_index_t next_stream_index) {
+  std::unique_lock<std::mutex> lck(mtx_);
+  next_stream_index_ = std::max(next_stream_index_, next_stream_index);
+}
+
 }  // namespace oneflow

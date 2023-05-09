@@ -31,7 +31,7 @@ class TaskIdGenerator final {
 
   TaskId Generate(const StreamId& stream_id);
 
-  void SaveId();
+  void SaveTaskIndex();
 
  private:
   HashMap<StreamId, task_index_t> stream_id2task_index_counter_;

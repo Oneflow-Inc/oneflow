@@ -33,6 +33,7 @@ class StreamIndexGenerator final {
   stream_index_t GenerateNamed(const std::string& name);
   stream_index_t GenerateNamedRoundRobin(const std::string& name, size_t size);
   stream_index_t GetCurrStreamIndex();
+  void TryUpdateNextStreamIndex(stream_index_t next_stream_index);
 
  private:
   struct RoundRobinRange {
