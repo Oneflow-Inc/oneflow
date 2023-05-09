@@ -37,6 +37,7 @@ limitations under the License.
 #include "OneFlow/Transform/CSEWithAttributesIgnored.h"
 #include "OneFlow/Transform/OneFlowStream.h"
 #include "OneFlow/Transform/EliminateAllocOps.h"
+#include "OneFlow/Transform/RequestDeviceWrappers.h"
 
 #ifdef WITH_MLIR_CUDA_CODEGEN
 #include "OneFlow/Conversion/NVVMToCubin.h"

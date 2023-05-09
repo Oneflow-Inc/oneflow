@@ -29,6 +29,19 @@ def LowerOneFlowToTosaPass : Pass<"lower-oneflow-to-tosa", "ModuleOp"> {
   ];
 }
 
+def OneFlowRequestDeviceWrappers
+    : Pass<"oneflow-request-device-wrappers", "::mlir::func::FuncOp"> {
+  let summary = "Request Device running on wrapper for all functions";
+  let description = [{
+    This pass will tag the device which the function will running on, it will work in transform schedule
+    and checks before lowering to llvm. this tag may be expand to a special dialect for device in the future.
+  }];
+  let constructor = "::mlir::oneflow::createOneFlowRequestDeviceWrappers()";
+  let options = [
+    Option<"deviceType", "device-type", "std::string", "\"gpu\"", "device type">,
+  ];
+}
+
 def LowerOneFlowToLinalgPass : Pass<"lower-oneflow-to-linalg", "ModuleOp"> {
   let summary = "lower oneflow dialect to Linalg dialect";
   let constructor = "mlir::oneflow::createLowerOneFlowToLinalgPass()";

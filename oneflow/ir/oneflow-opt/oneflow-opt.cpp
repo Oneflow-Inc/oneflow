@@ -90,6 +90,7 @@ int32_t main(int32_t argc, char** argv) {
   mlir::registerFuseOpsWithBackwardImplPass();
   mlir::registerConvertInferenceOpPassPass();
   mlir::registerGroupMatMulPass();
+  mlir::registerPasses();
   mlir::transform::registerTestTransformDialectEraseSchedulePass();
   mlir::transform::registerTestTransformDialectInterpreterPass();
   mlir::DialectRegistry registry;

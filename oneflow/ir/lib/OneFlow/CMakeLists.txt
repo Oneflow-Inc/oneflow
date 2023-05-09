@@ -67,6 +67,7 @@ oneflow_add_mlir_dialect_library(
   Transform/AutoNHWCOps.cpp
   Transform/OneFlowMemPool.cpp
   Transform/OneFlowStream.cpp
+  Transform/RequestDeviceWrappers.cpp
   TransposeHelpers.cpp
   Passes.cpp
   OneFlowCanonicalizers.cpp
