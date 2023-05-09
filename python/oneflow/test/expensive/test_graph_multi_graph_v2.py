@@ -151,9 +151,7 @@ def _get_state_dict_tensor_size(sd):
 
 
 @_with_new_session
-def _test_linear_multi_graph_save(
-    return_dict, device, with_reshape, with_eager
-):
+def _test_linear_multi_graph_save(return_dict, device, with_reshape, with_eager):
     linear = flow.nn.Linear(3, 8, False)
     linear = linear.to(device)
     np_weight = np.ones((3, 8)).astype(np.float32)
@@ -366,8 +364,7 @@ def _test_linear_multi_graph_save_load_gpu(test_case, with_eager):
         manager = multiprocessing.Manager()
         return_dict = manager.dict()
         save_p = multiprocessing.get_context("spawn").Process(
-            target=_graph_save,
-            args=(return_dict, f.name, with_eager),
+            target=_graph_save, args=(return_dict, f.name, with_eager),
         )
         save_p.start()
         save_p.join()
