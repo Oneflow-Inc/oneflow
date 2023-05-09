@@ -175,7 +175,10 @@ class GraphCache(object):
         return graph
 
     def load_runtime_state_dict(
-        self, state_dict: Dict[str, Dict[str, Union[Dict[str, Tensor], str]]]
+        self,
+        state_dict: Dict[str, Dict[str, Union[Dict[str, Tensor], str]]],
+        *,
+        warmup_with_run: bool = False,
     ) -> None:
         graph_dict = dict()
         for _, sub_state_dict in state_dict.items():
@@ -190,7 +193,9 @@ class GraphCache(object):
             assert graph is None
             graph = self._init_and_get_a_graph_in_cache(cache_key)
             with AvoidRecursiveCacheCall(graph):
-                graph.load_runtime_state_dict(sub_state_dict)
+                graph.load_runtime_state_dict(
+                    sub_state_dict, warmup_with_run=warmup_with_run
+                )
 
     def gen_key(self, *args, **kwargs):
         flattened_shapes = []
