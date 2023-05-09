@@ -13,6 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/control/ctrl_bootstrap.pb.h"
+#include "OneFlow/SBP/SBPDialect.h"
+#include "OneFlow/OneFlowDialect.h"
+#include "OneFlow/OneFlowOps.h"
+#include "OneFlow/Passes.h"
+#include "OneFlow/OKL/OKLDialect.h"
+#include "OneFlow/OKL/OKLOps.h"
+#include "OneFlow/OKL/passes.h"
+#include "OneFlow/OKM/OKMDialect.h"
+#include "Transform/TestTransformDialectExtension.h"
+
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -28,18 +40,6 @@ limitations under the License.
 #include "mlir/IR/Dialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-
-#include "OneFlow/SBP/SBPDialect.h"
-#include "OneFlow/OneFlowDialect.h"
-#include "OneFlow/OneFlowOps.h"
-#include "OneFlow/Passes.h"
-#include "oneflow/core/framework/op_generated.h"
-#include "oneflow/core/control/ctrl_bootstrap.pb.h"
-#include "OneFlow/OKL/OKLDialect.h"
-#include "OneFlow/OKL/OKLOps.h"
-#include "OneFlow/OKL/passes.h"
-#include "OneFlow/OKM/OKMDialect.h"
-#include "Transform/TestTransformDialectExtension.h"
 
 namespace mlir {
 struct TestOneFlowTraitFolder
