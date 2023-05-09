@@ -13,21 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_CONVERSION_PTXTOCUBIN_H_
-#define ONEFLOW_IR_INCLUDE_ONEFLOW_CONVERSION_PTXTOCUBIN_H_
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_ONEFLOW_MEMPOOL_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_ONEFLOW_MEMPOOL_H_
 
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
-
 namespace oneflow {
 
-std::unique_ptr<mlir::Pass> createSerializeToCubinPass();
-void InitializeLLVMNVPTXBackend();
-void registerGpuSerializeToCubinPass();
+namespace codegen {
+namespace mempool {
+
+inline const std::string MEMPOOL_ATTR_NAME = "oneflow.mempool";
+
+}  // namespace mempool
+}  // namespace codegen
+
+std::unique_ptr<mlir::Pass> createFoldAllocToSubviewPass();
+std::unique_ptr<mlir::Pass> createInsertOneFlowMemPoolPass();
 
 }  // namespace oneflow
-
 }  // namespace mlir
 
-#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_CONVERSION_PTXTOCUBIN_H_
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_ONEFLOW_MEMPOOL_H_

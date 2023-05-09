@@ -19,6 +19,10 @@ limitations under the License.
 #include "OneFlow/OneFlowUtils.h"
 #include "OneFlow/Passes.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Parser/Parser.h"
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Bytecode/BytecodeWriter.h"
 
 namespace mlir {
 
@@ -67,7 +71,7 @@ class Outliner {
   void cloneOpsToNewBody(Operation* op, bool defer = false) {
     if (visitedOps.contains(op)) { return; }
     for (auto operand : op->getOperands()) {
-      if (!mapping.lookup(operand)) {
+      if (!mapping.lookupOrNull(operand)) {
         if (auto defOp = operand.getDefiningOp()) {
           if (isOneFlowOp(defOp)) {
             entries.insert(operand);
@@ -122,6 +126,57 @@ int64_t getCountJITFunction() {
   return countJITFunction.fetch_add(1);
 }
 
+namespace {
+
+std::function<void(mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module)> getLowerFunction(
+    const StringAttr& device_tag) {
+  auto device_tag_str = device_tag.str();
+#ifdef WITH_MLIR_CUDA_CODEGEN
+  if (device_tag_str == "cuda") {
+    return [](mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module) {
+      CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToCUDALLVM(mlir_ctx, module)))
+          << "fail to lower OneFlow to CUDA LLVM";
+    };
+  }
+#endif  // WITH_MLIR_CUDA_CODEGEN
+  if (device_tag_str == "cpu") {
+    return [](mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module) {
+      CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToLLVM(mlir_ctx, module)))
+          << "fail to lower OneFlow to LLVM";
+    };
+  }
+  LOG(FATAL) << "Fail to match lowering function with device tag name: " << device_tag_str;
+}
+std::string convertFuncToByte(func::FuncOp& func) {
+  std::string byte;
+  llvm::raw_string_ostream os_byte(byte);
+  mlir::writeBytecodeToFile(func, os_byte);
+  return byte;
+}
+
+std::string lowerFuncToLLVMByte(const std::string& raw_byte, const StringAttr& device_tag) {
+  mlir::DialectRegistry registry;
+  registry
+      .insert<mlir::oneflow::OneFlowDialect, mlir::func::FuncDialect, mlir::memref::MemRefDialect,
+              mlir::tosa::TosaDialect, mlir::linalg::LinalgDialect, mlir::tensor::TensorDialect>();
+  mlir::MLIRContext mlir_ctx(registry);
+
+  mlir::OwningOpRef<mlir::ModuleOp> module =
+      ::mlir::parseSourceString<mlir::ModuleOp>(raw_byte, &mlir_ctx);
+  mlir::registerLLVMDialectTranslation(registry);
+  if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module->print(llvm::outs()); }
+  getLowerFunction(device_tag)(&mlir_ctx, *module);
+  if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module->print(llvm::outs()); }
+  (*module)->setAttr(jit::RAW_GRAPH, StringAttr::get(&mlir_ctx, raw_byte));
+
+  std::string byte;
+  llvm::raw_string_ostream os_byte(byte);
+  mlir::writeBytecodeToFile(*module, os_byte);
+  return byte;
+}
+
+}  // namespace
+
 class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunctionPass> {
   void runOnOperation() override {
     llvm::DenseSet<Operation*> entryOps, visitedOps;
@@ -158,7 +213,7 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
       builder.create<func::ReturnOp>(entryOp->getLoc(), mappedExits);
 
       for (auto argument : block->getArguments()) {
-        if (auto found = outliner.mappingReversed.lookup(argument.cast<::mlir::Value>())) {
+        if (auto found = outliner.mappingReversed.lookupOrNull(argument)) {
           entries.push_back(found);
           argumentTypes.push_back(argument.getType());
         } else {
@@ -182,11 +237,14 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
           NamedAttrList attributes =
               GetJitOpAttributes(builder, name, argumentTypes.size(), resultTypes.size(),
                                  entryOp->getOperand(0).getDefiningOp());
-          std::string mlir;
-          llvm::raw_string_ostream os_mlir(mlir);
-          function->print(os_mlir);
+          std::string byte =
+              compileToLLVM.getValue() ? lowerFuncToLLVMByte(
+                  convertFuncToByte(function),
+                  attributes.get(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr())
+                      .cast<StringAttr>())
+                                       : convertFuncToByte(function);
           auto jitOp = builder.create<MlirJitOp>(entryOp->getLoc(), function, attributes, entries);
-          jitOp->setAttr("mlir_assembly", builder.getStringAttr(mlir));
+          jitOp->setAttr("mlir_assembly", builder.getStringAttr(byte));
           for (const auto& old : llvm::enumerate(exits)) {
             old.value().replaceAllUsesWith(jitOp->getResult(old.index()));
           }

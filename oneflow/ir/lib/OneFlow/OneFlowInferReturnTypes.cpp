@@ -127,14 +127,16 @@ size_t getResultSize(DictionaryAttr attributes) {
 
 ::mlir::LogicalResult NormalizationAddReluOp::refineReturnTypes(
     ::mlir::MLIRContext* context, ::llvm::Optional<::mlir::Location> location,
-    ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes, ::mlir::RegionRange regions,
+    ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
+    ::mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
     ::llvm::SmallVectorImpl<::mlir::Type>& inferredReturnTypes) {
   return success();
 }
 
 ::mlir::LogicalResult NormalizationAddReluOp::inferReturnTypes(
     ::mlir::MLIRContext* context, ::llvm::Optional<::mlir::Location> location,
-    ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes, ::mlir::RegionRange regions,
+    ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
+    ::mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
     ::llvm::SmallVectorImpl<::mlir::Type>& inferredReturnTypes) {
   return inferReturnTypesWithOpTypeName("normalization_add_relu", context, operands, attributes,
                                         regions, inferredReturnTypes);

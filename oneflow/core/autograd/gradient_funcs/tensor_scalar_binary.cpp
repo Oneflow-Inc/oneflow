@@ -58,7 +58,7 @@ class TensorScalarAdd : public TensorScalarAddOrSub {
       int32_t num_axes = out_grads.at(0)->shape()->NumAxes();
       std::vector<int32_t> axes_vec(num_axes);
       std::iota(axes_vec.begin(), axes_vec.end(), 0);
-      in_grads->at(1) = JUST(functional::ReduceSum(out_grads.at(0), axes_vec, false));
+      in_grads->at(1) = JUST(functional::ReduceSum(out_grads.at(0), axes_vec, false, NullOpt));
     }
     return Maybe<void>::Ok();
   }
@@ -75,7 +75,7 @@ class TensorScalarSub : public TensorScalarAddOrSub {
       std::vector<int32_t> axes_vec(num_axes);
       std::iota(axes_vec.begin(), axes_vec.end(), 0);
       const auto& reduce_sum =
-          JUST(functional::ReduceSum(out_grads.at(0), axes_vec, /*keepdims=*/false));
+          JUST(functional::ReduceSum(out_grads.at(0), axes_vec, /*keepdims=*/false, NullOpt));
       in_grads->at(1) = JUST(functional::ScalarMul(reduce_sum, /*other=*/1.0, false));
     }
     return Maybe<void>::Ok();
@@ -122,7 +122,7 @@ Maybe<void> TensorScalarMul::Apply(const TensorScalarCaptureState* ctx,
     int32_t num_axes = out_grads.at(0)->shape()->NumAxes();
     std::vector<int32_t> axes_vec(num_axes);
     std::iota(axes_vec.begin(), axes_vec.end(), 0);
-    in_grads->at(1) = JUST(functional::ReduceSum(y, axes_vec, /*keepdims=*/false));
+    in_grads->at(1) = JUST(functional::ReduceSum(y, axes_vec, /*keepdims=*/false, NullOpt));
   }
   return Maybe<void>::Ok();
 }

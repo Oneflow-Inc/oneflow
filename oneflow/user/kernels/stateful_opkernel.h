@@ -85,6 +85,9 @@ class StatefulOpKernel final {
 
   const OperatorConf& op_conf() const { return *op_conf_; }
 
+  const ArgTuple* input_arg_tuple() const { return input_arg_tuple_.get(); }
+  const ArgTuple* output_arg_tuple() const { return output_arg_tuple_.get(); }
+
  private:
   friend struct vm::OpCallInstructionUtil;
   StatefulOpKernel() = default;

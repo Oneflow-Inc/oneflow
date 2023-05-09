@@ -329,6 +329,7 @@ DIRECT_PASS_FUNC(PyTensorObject_masked_fill, functional::masked_fill)
 DIRECT_PASS_FUNC(PyTensorObject_masked_fill_, functional::masked_fill_)
 DIRECT_PASS_FUNC(PyTensorObject_dot, functional::dot)
 DIRECT_PASS_FUNC(PyTensorObject_nansum, functional::reduce_nansum)
+DIRECT_PASS_FUNC(PyTensorObject_sum, functional::reduce_sum)
 DIRECT_PASS_FUNC(PyTensorObject_bernoulli, functional::bernoulli)
 DIRECT_PASS_FUNC(PyTensorObject_bernoulli_, functional::bernoulli_)
 DIRECT_PASS_FUNC(PyTensorObject_bincount, functional::bincount)
@@ -620,7 +621,6 @@ static PyObject* PyTensorObject_relu_(PyObject* self, PyObject* unused) {
 
 REDUCE_FUNC(PyTensorObject_any, functional::reduce_any, functional::ReduceAnyWhole)
 REDUCE_FUNC(PyTensorObject_all, functional::reduce_all, functional::ReduceAllWhole)
-REDUCE_FUNC(PyTensorObject_sum, functional::reduce_sum, functional::ReduceSumWhole)
 REDUCE_FUNC(PyTensorObject_mean, functional::reduce_mean, functional::ReduceMeanWhole)
 
 #define DATATYPE_FUNC(func_name, dtype)                                    \
@@ -1078,6 +1078,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"masked_fill_", (PyCFunction)PyTensorObject_masked_fill_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"dot", (PyCFunction)PyTensorObject_dot, METH_VARARGS | METH_KEYWORDS, NULL},
     {"nansum", (PyCFunction)PyTensorObject_nansum, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"sum", (PyCFunction)PyTensorObject_sum, METH_VARARGS | METH_KEYWORDS, NULL},
     {"bernoulli", (PyCFunction)PyTensorObject_bernoulli, METH_VARARGS | METH_KEYWORDS, NULL},
     {"bernoulli_", (PyCFunction)PyTensorObject_bernoulli_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"bincount", (PyCFunction)PyTensorObject_bincount, METH_VARARGS | METH_KEYWORDS, NULL},

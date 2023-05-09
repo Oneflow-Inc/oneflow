@@ -322,7 +322,7 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
     } else if (index_item.IsTensor()) {
       const auto& tensor = index_item.tensor();
       if (IsValidScalarTensorIndex(tensor) && !LazyMode::is_enabled()) {
-        if (tensor->dtype()->is_integer() && tensor->dtype()->data_type() != DataType::kUInt8) {
+        if (tensor->dtype()->is_integer() && tensor->dtype()->data_type() != DataType::kBool) {
           int64_t integer = JUST(GetItemInScalarTensor<int64_t>(tensor));
           if (integer < 0) { integer += shape.At(dim); }
           if (integer < 0 || integer >= shape.At(dim)) {
