@@ -13,13 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <queue>
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowUtils.h"
 #include "OneFlow/Passes.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/InitAllDialects.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Bytecode/BytecodeWriter.h"
@@ -156,9 +156,8 @@ std::string convertFuncToByte(func::FuncOp& func) {
 
 std::string lowerFuncToLLVMByte(const std::string& raw_byte, const StringAttr& device_tag) {
   mlir::DialectRegistry registry;
-  registry
-      .insert<mlir::oneflow::OneFlowDialect, mlir::func::FuncDialect, mlir::memref::MemRefDialect,
-              mlir::tosa::TosaDialect, mlir::linalg::LinalgDialect, mlir::tensor::TensorDialect>();
+  mlir::registerAllDialects(registry);
+  registry.insert<mlir::oneflow::OneFlowDialect>();
   mlir::MLIRContext mlir_ctx(registry);
 
   mlir::OwningOpRef<mlir::ModuleOp> module =
