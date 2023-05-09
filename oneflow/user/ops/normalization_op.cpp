@@ -301,59 +301,6 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn() {
   })(ctx);
 }
 
-/* static */ Maybe<void> NormalizationReluOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  return MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
-                                    user_op::TensorDesc* reserve_space) -> Maybe<void> {
-    const auto& x_desc = ctx->InputTensorDesc("x", 0);
-    size_t reserve_space_bits = x_desc.shape().elem_cnt();
-    int64_t parallel_num = ctx->parallel_num();
-    if (parallel_num != 1) {
-      // There no need to call NdSbp4ArgNameAndIndex when parallel_num = 1 in local.
-      const NdSbp& x_nd_sbp = ctx->NdSbp4ArgNameAndIndex("x", 0);
-      const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
-      int64_t split_num = 1;
-      for (int32_t i = 0; i < x_nd_sbp.sbp_parallel_size(); ++i) {
-        if (x_nd_sbp.sbp_parallel(i).has_split_parallel()) {
-          CHECK_EQ_OR_RETURN(x_nd_sbp.sbp_parallel(i).split_parallel().axis(), 0)
-              << "blob x in NormalizationReluOp only support B or S(0)";
-          split_num *= hierarchy.At(i);
-        }
-      }
-      CHECK_EQ_OR_RETURN(reserve_space_bits % split_num, 0);
-      reserve_space_bits = reserve_space_bits / split_num;
-    }
-    reserve_space->set_shape(Shape({static_cast<int64_t>(RoundUp(reserve_space_bits, 32) / 32)}));
-    return Maybe<void>::Ok();
-  })(ctx);
-}
-
-/* static */ Maybe<void> NormalizationReluOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
-                                    user_op::TensorDesc* reserve_space) -> Maybe<void> {
-    const auto& x_desc = ctx->InputTensorDesc("x", 0);
-    reserve_space->set_shape(
-        Shape({static_cast<int64_t>(RoundUp(x_desc.shape().elem_cnt(), 32) / 32)}));
-    return Maybe<void>::Ok();
-  })(ctx);
-}
-
-/* static */ Maybe<void> NormalizationReluOp::GetSbp(user_op::SbpContext* ctx) {
-  return FwGetSbpFn(ctx);
-}
-
-/* static */ Maybe<void> NormalizationReluOp::ModifyInputArg(
-    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
-  return FwInputArgModifyFn(GetInputArgModifierFn, conf);
-}
-
-/* static */ Maybe<void> NormalizationReluOp::InferDataType(user_op::InferContext* ctx) {
-  return MakeFwDataTypeInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
-                                  user_op::TensorDesc* reserve_space) -> Maybe<void> {
-    reserve_space->set_data_type(DataType::kInt32);
-    return Maybe<void>::Ok();
-  })(ctx);
-}
-
 #if defined(WITH_CUDA) && (CUDNN_VERSION >= 7401)
 
 namespace {

@@ -6543,38 +6543,6 @@ def OneFlow__ncclLogicalFusionOp : OneFlow_BaseOp<"_nccl_logical_fusion", [NoMem
 
 #ifdef GET_ONEFLOW_NORMALIZATION_OP_DEFINITIONS
 
-def OneFlow_NormalizationAddReluOp : OneFlow_BaseOp<"normalization_add_relu", [NoMemoryEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<InferTypeOpInterface, ["refineReturnTypes"]>]> {
-  let input = (ins
-    OneFlow_Tensor:$x,
-    Optional<OneFlow_Tensor>:$addend,
-    Optional<OneFlow_Tensor>:$moving_mean,
-    Optional<OneFlow_Tensor>:$moving_variance,
-    OneFlow_Tensor:$gamma,
-    OneFlow_Tensor:$beta
-  );
-  let output = (outs
-    OneFlow_Tensor:$y,
-    OneFlow_Tensor:$reserve_space,
-    Optional<OneFlow_Tensor>:$mean,
-    Optional<OneFlow_Tensor>:$inv_variance
-  );
-  let attrs = (ins
-    DefaultValuedAttr<SI32Attr, "0">:$axis,
-    DefaultValuedAttr<F32Attr, "0.">:$epsilon,
-    DefaultValuedAttr<BoolAttr, "false">:$training,
-    DefaultValuedAttr<F32Attr, "0.">:$momentum
-  );
-  let trait_attrs = (ins
-    DenseI32ArrayAttr:$operand_segment_sizes,
-    DenseI32ArrayAttr:$result_segment_sizes
-  );
-  let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
-  let has_get_sbp_fn = 1;
-  let has_data_type_infer_fn = 1;
-  let has_input_arg_modify_fn = 1;
-}
-
 def OneFlow_NormalizationReluOp : OneFlow_BaseOp<"normalization_relu", [NoMemoryEffect, NoGrad, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<InferTypeOpInterface, ["refineReturnTypes"]>]> {
   let input = (ins
     OneFlow_Tensor:$x,

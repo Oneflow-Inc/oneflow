@@ -186,7 +186,6 @@ def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-05):
         return normalized
     else:
         if elementwise_affine:
-
             res = flow._C.layer_norm_affine(
                 input,
                 weight,

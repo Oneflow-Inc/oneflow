@@ -2819,7 +2819,6 @@ class NormalizationAddReluFunctor {
             *fused_norm_eval_stats_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta},
             attrs);
       }
-
     } else if (moving_mean) {
       if (addend) {
         return OpInterpUtil::Dispatch<one::Tensor>(
@@ -2843,7 +2842,6 @@ class NormalizationAddReluFunctor {
 
  private:
   std::shared_ptr<OpExpr> fused_norm_training_stats_op_;
-  std::shared_ptr<OpExpr> fused_norm_relu_op_;
   std::shared_ptr<OpExpr> fused_addend_norm_training_stats_op_;
   std::shared_ptr<OpExpr> fused_norm_training_no_stats_op_;
   std::shared_ptr<OpExpr> fused_addend_norm_training_no_stats_op_;
