@@ -177,7 +177,8 @@ Maybe<void> RawRunGlobalNormalOp(const std::shared_ptr<UserOpExpr>& op, TensorTu
                                  const NdSbpSignature& ndsbp_signature,
                                  const Symbol<ParallelDesc>& op_parallel_desc) {
   Optional<int64_t> parallel_id;
-  const auto& tensor_device = JUST(GetTensorDevice4CurrentProcessCtx(op_parallel_desc, &parallel_id));
+  const auto& tensor_device =
+      JUST(GetTensorDevice4CurrentProcessCtx(op_parallel_desc, &parallel_id));
   const auto* mgr = Singleton<EagerBoxingInterpreterManager>::Get();
   CHECK_EQ_OR_RETURN(inputs.size(), ibns.size());
   for (int i = 0; i < inputs.size(); ++i) {
@@ -202,8 +203,9 @@ Maybe<void> RawRunGlobalNormalOp(const std::shared_ptr<UserOpExpr>& op, TensorTu
     }
   }
   static EagerGlobalInterpreter it;
-  static OpExprInterpContext ctx = OpExprInterpContext(AttrMap {}, op_parallel_desc, 
-      SymbolOf(JUST(MapAt(ndsbp_signature.bn_in_op2nd_sbp(), "out_0"))));
+  static OpExprInterpContext ctx =
+      OpExprInterpContext(AttrMap{}, op_parallel_desc,
+                          SymbolOf(JUST(MapAt(ndsbp_signature.bn_in_op2nd_sbp(), "out_0"))));
   JUST(it.Apply(*op, inputs, outputs, ctx));
   for (size_t i = 0; i < output_names.size(); ++i) {
     env.emplace(output_names[i], JUST(VectorAt(*outputs, i)));
