@@ -67,9 +67,9 @@ class TopoStruct {
   int32_t min_layer = -1;
   bool is_reusable = false;
   int32_t blob_id = -1;
-  // blocking means that it contains a release topological structure with degree = 1 in the current
-  // unexecuted graph
-  TopoStruct* blocking_topo_struct = nullptr;
+  // Blocking means you must execute this node before executing any other nodes in the set
+  HashSet<TopoStruct*> blocking_topo_structs;
+  int32_t blocking_count = -1;
   // executed means that it has been executed
   bool executed = false;
   // Accumulate memory increment of all the necessary topological structures
@@ -100,6 +100,8 @@ class TopoStruct {
 
   // Compute the minimum layer of this node
   int32_t ComputeMinLayer();
+  // Block the descendants with negative memory increment
+  void BlockDescendants();
 
   void ComputeIsReusable();
 
@@ -111,6 +113,8 @@ class TopoStruct {
   int64_t AccumulateMemoryIncrement();
   // Mark all its descendant with min_layer <= max_layer
   void MarkDescendantUp2Layer(int32_t max_layer);
+  // Block descendants and store the blocking nodes in the given hash set
+  void BlockDescendants(HashSet<TopoStruct*>* blocking_nodes);
 };
 
 TopoStruct::TopoStruct(const OpNode* op_node_) : op_node(op_node_) { ComputeIsReusable(); }
@@ -159,6 +163,28 @@ void TopoStruct::MarkDescendantFromThis2Layer(int32_t max_layer) {
 // .back() return a reference. But if the original map is destroyed in the same piece of code,
 // the reference would point to [0xfffffffffffffff8], giving out an error.
 TopoStruct* TakeBackFromVector(const std::vector<TopoStruct*>& v) { return v.back(); }
+
+// Block the descendants with negative memory increment
+void TopoStruct::BlockDescendants(HashSet<TopoStruct*>* blocking_nodes) {
+  if (blocking_topo_structs.empty()) {
+    for (auto* out_node : out_topo_structs) {
+      if (out_node->memory_increment < 0) {
+        out_node->BlockDescendants();
+        blocking_nodes->insert(out_node->blocking_topo_structs.begin(),
+                               out_node->blocking_topo_structs.end());
+        blocking_nodes->insert(out_node);
+      } else {
+        out_node->BlockDescendants(blocking_nodes);
+      }
+    }
+  }
+}
+
+void TopoStruct::BlockDescendants() {
+  if (memory_increment < 0 && blocking_topo_structs.empty()) {
+    BlockDescendants(&blocking_topo_structs);
+  }
+}
 
 void ComputeLayer(std::vector<TopoStruct*>* topo_structs) {
   // Initial all the layer to -1
@@ -496,16 +522,34 @@ void GraphSimplification(std::vector<TopoStruct*>& topo_structs) {
   if (GlobalProcessCtx::Rank() == 0) {
     std::cout << "3rd, clip and eat, Topo size: " << topo_structs.size() << std::endl;
   }
-  SortReleaseTopoStructs(topo_structs);
-  CheckRemovedNodes(topo_structs);
-  ClipEdges(topo_structs);
-  CheckRemovedNodes(topo_structs);
-  EatNodes(topo_structs);
-  CheckRemovedNodes(topo_structs);
-  if (GlobalProcessCtx::Rank() == 0) {
-    std::cout << "4th, sort, clip and eat, Topo size: " << topo_structs.size() << std::endl;
+  for (int32_t i = 4; i < 20; i++) {
+    SortReleaseTopoStructs(topo_structs);
+    CheckRemovedNodes(topo_structs);
+    ClipEdges(topo_structs);
+    CheckRemovedNodes(topo_structs);
+    EatNodes(topo_structs);
+    CheckRemovedNodes(topo_structs);
+    if (GlobalProcessCtx::Rank() == 0) {
+      std::cout << i << "th, sort, clip and eat, Topo size: " << topo_structs.size() << std::endl;
+    }
   }
   // TODO: Clip edges
+}
+
+void InitBlockingNodes(std::vector<TopoStruct*>& topo_structs) {
+  for (auto* node : topo_structs) {
+    if (node->memory_increment < 0) {
+      node->BlockDescendants();
+      node->blocking_count = 0;
+    }
+  }
+  for (auto* node : topo_structs) {
+    if (node->memory_increment < 0) {
+      for (auto* out_release_node : node->blocking_topo_structs) {
+        out_release_node->blocking_count++;
+      }
+    }
+  }
 }
 
 void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_struct,
@@ -575,7 +619,7 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
   };
   // Wait in the map
   auto Wait = [&](TopoStruct* node) {
-    if (node->executed) { return; }
+    if (node->executed || node->blocking_count > 0) { return; }
     StopWaiting(node);
     node->SetAccumulateMemoryIncrement();
     waiting_map[node->accumulate_memory_increment].push_back(node);
@@ -585,10 +629,10 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
   std::function<void(TopoStruct*)> Visit = [&](TopoStruct* node) {
     if (node->visited_descendant.IfMarked()) { return; }
     node->visited_descendant.Mark();
-    if (node->memory_increment >= 0 || node->executed) {
-      for (auto* out_node : node->out_topo_structs) { Visit(out_node); }
-    } else {
+    if (node->memory_increment < 0 && !node->executed) {
       Wait(node);
+    } else {
+      for (auto* out_node : node->out_topo_structs) { Visit(out_node); }
     }
   };
   // Prepare all the release nodes before picking one for the next round
@@ -628,6 +672,12 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
       std::cout << ", memory increment: " << node->memory_increment
                 << ", current total: " << total_memory << std::endl;
     }
+    if (node->memory_increment < 0) {
+      for (auto* out_release_node : node->blocking_topo_structs) {
+        // TODO: Remove prepare and use blocking count instead
+        out_release_node->blocking_count--;
+      }
+    }
   };
 
   // TODO: expand to all the topo structures
@@ -637,6 +687,8 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
       prepare_topo_structs.push_back(topo_structs->at(i));
     }
   }
+  // Init blocking release nodes
+  InitBlockingNodes(*topo_structs);
   // Straighten memory
   while (ordered_topo_structs->size() < executing_topo_struct_num) {
     // Prepare the release node for this round
