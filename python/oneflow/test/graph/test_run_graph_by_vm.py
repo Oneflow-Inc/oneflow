@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import os
-
 import oneflow as flow
 import numpy as np
+from test_graph_ofrecord_reader import OFRecordDataLoader
 
 
 class Graph(flow.nn.Graph):
@@ -68,6 +68,29 @@ def test_run_graph_by_vm(capsys):
     assert "broadcast_sub" not in capsys.readouterr().out
     assert "cast" not in capsys.readouterr().out
     assert "broadcast_mul" not in capsys.readouterr().out
+
+    os.environ["ONEFLOW_RUN_GRAPH_BY_VM"] = "0"
+    os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "0"
+    os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "0"
+
+
+def test_empty_inputs(capsys):
+    os.environ["ONEFLOW_RUN_GRAPH_BY_VM"] = "1"
+    os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+    os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "1"
+
+    cc_reader = OFRecordDataLoader()
+
+    class GraphReader(flow.nn.Graph):
+        def __init__(self):
+            super().__init__()
+            self.my_reader = cc_reader
+
+        def build(self):
+            return self.my_reader()
+
+    reader_g = GraphReader()
+    image, label = reader_g()
 
     os.environ["ONEFLOW_RUN_GRAPH_BY_VM"] = "0"
     os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "0"

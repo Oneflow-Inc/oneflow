@@ -110,7 +110,8 @@ Maybe<bool> GetEagerInterpreterType(const TensorTuple& inputs,
                                     const std::shared_ptr<UserOpExpr>& op_expr) {
   bool is_local = true;
   if (inputs.empty()) {
-    CHECK_OR_RETURN(0) << "input empty";
+    // Use global interpreter for empty inputs
+    is_local = false;
   } else {
     if (inputs[0]->is_global()) {
       if (inputs.size() == 1) {
@@ -175,10 +176,8 @@ Maybe<void> RawRunGlobalNormalOp(const std::shared_ptr<UserOpExpr>& op, TensorTu
                                  const OpArgsVector<std::string>& output_names,
                                  const NdSbpSignature& ndsbp_signature,
                                  const Symbol<ParallelDesc>& op_parallel_desc) {
-  CHECK_OR_RETURN(!inputs.empty());
-  const auto& parallel_desc = JUST(inputs.at(0)->parallel_desc());
   Optional<int64_t> parallel_id;
-  const auto& tensor_device = JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
+  const auto& tensor_device = JUST(GetTensorDevice4CurrentProcessCtx(op_parallel_desc, &parallel_id));
   const auto* mgr = Singleton<EagerBoxingInterpreterManager>::Get();
   CHECK_EQ_OR_RETURN(inputs.size(), ibns.size());
   for (int i = 0; i < inputs.size(); ++i) {
@@ -202,9 +201,10 @@ Maybe<void> RawRunGlobalNormalOp(const std::shared_ptr<UserOpExpr>& op, TensorTu
       }
     }
   }
-  static AttrMap empty_attr_map;
   static EagerGlobalInterpreter it;
-  JUST(it.Apply(*op, inputs, outputs, empty_attr_map));
+  static OpExprInterpContext ctx = OpExprInterpContext(AttrMap {}, op_parallel_desc, 
+      SymbolOf(JUST(MapAt(ndsbp_signature.bn_in_op2nd_sbp(), "out_0"))));
+  JUST(it.Apply(*op, inputs, outputs, ctx));
   for (size_t i = 0; i < output_names.size(); ++i) {
     env.emplace(output_names[i], JUST(VectorAt(*outputs, i)));
   }
