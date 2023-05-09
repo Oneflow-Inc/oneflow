@@ -13,89 +13,38 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 #include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"
-#include "OneFlow/SBP/SBPDialect.h"
 #include "OneFlow/OneFlowDialect.h"
-#include "OneFlow/OneFlowOps.h"
 #include "OneFlow/Passes.h"
+#include "OneFlow/SBP/SBPDialect.h"
 #include "OneFlow/OKL/OKLDialect.h"
-#include "OneFlow/OKL/OKLOps.h"
-#include "OneFlow/OKL/passes.h"
 #include "OneFlow/OKM/OKMDialect.h"
+#include "OneFlow/OKL/passes.h"
+#include "OneFlow/OKM/passes.h"
 #include "Transform/TestTransformDialectExtension.h"
 
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
-#include "mlir/Dialect/Math/IR/Math.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/IR/Dialect.h"
-#include "mlir/IR/MLIRContext.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/InitAllPasses.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassManager.h"
-#include "mlir/Support/FileUtilities.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
-#include "mlir/IR/Dialect.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-
-namespace mlir {
-struct TestOneFlowTraitFolder
-    : public PassWrapper<TestOneFlowTraitFolder, OperationPass<func::FuncOp>> {
-  void runOnOperation() override {
-    if (failed(applyPatternsAndFoldGreedily(getOperation(), RewritePatternSet(&getContext())))) {
-      exit(1);
-    }
-  }
-  StringRef getArgument() const final { return "test-oneflow-trait-folder"; }
-};
-void registerTestOneFlowTraitsPass() { PassRegistration<TestOneFlowTraitFolder>(); }
-
-}  // namespace mlir
 
 const auto global_cse_state = std::make_shared<mlir::oneflow::CSEState>();
 
 int32_t main(int32_t argc, char** argv) {
   ::oneflow::Singleton<::oneflow::ProcessCtx>::New();
-  mlir::okl::registerPasses();
   mlir::registerAllPasses();
-  mlir::registerTestOneFlowTraitsPass();
-  mlir::registerConvertToSignlessForTosaPassPass();
-  mlir::registerLowerOneFlowToTosaPassPass();
-  mlir::registerLowerOneFlowToLinalgPassPass();
-  mlir::registerGpuMapParallelLoopsPassPass();
-  mlir::registerBufferHostRegisterPassPass();
-  mlir::registerGpuCopyArgPassPass();
-  mlir::registerAppendOneFlowStreamPassPass();
-  mlir::registerInsertOneFlowMemPoolPass();
-  mlir::registerFoldAllocToSubviewPass();
-  mlir::registerMgpuToOneFlowStreamPassPass();
-  mlir::registerOneFlowJobToFuncPassPass();
-  mlir::registerCastOneFlowOpsToSignlessPassPass();
-  mlir::registerFuncToOneFlowJobPassPass();
-  mlir::registerAutoNhwcPass();
-#ifdef WITH_MLIR_CUDA_CODEGEN
-  mlir::registerNVVMToCubinPass();
-#endif  // WITH_MLIR_CUDA_CODEGEN
-  mlir::okl::registerOneFlowPasses();
-  mlir::okm::registerAllPasses();
-  mlir::registerOutlineJitFunctionPassPass();
   mlir::oneflow::registerCSEPasses(global_cse_state);
-  mlir::registerFuseForwardOpsPass();
-  mlir::registerEliminateAllocOpsPassPass();
-  mlir::registerFuseIntoExistingOpPassPass();
-  mlir::registerFuseNormalizationOpsPass();
-  mlir::registerFuseOpsWithBackwardImplPass();
-  mlir::registerConvertInferenceOpPassPass();
-  mlir::registerGroupMatMulPass();
-  mlir::registerPasses();
+  mlir::oneflow::registerPasses();
+  mlir::okm::registerPasses();
+  mlir::okl::registerPasses();
   mlir::transform::registerTestTransformDialectEraseSchedulePass();
   mlir::transform::registerTestTransformDialectInterpreterPass();
+
   mlir::DialectRegistry registry;
   // Note: register all mlir dialect and their extension.
   mlir::registerAllDialects(registry);
+  mlir::transform::registerTestTransformDialectExtension(registry);
   registry.insert<mlir::okl::OKLDialect>();
   registry.insert<mlir::okm::OKMDialect>();
   registry.insert<mlir::sbp::SBPDialect>();
