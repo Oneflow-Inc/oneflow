@@ -396,6 +396,7 @@ void EatNodes(std::vector<TopoStruct*>& topo_structs) {
 // For example: a -> b -> c -> d, a -> c, a -> d.
 // Then we could clip the two edges a -> c and a -> d.
 void ClipEdges(std::vector<TopoStruct*>& topo_structs) {
+  ComputeLayer(&topo_structs);
   // In the implementation, we only focus on a node with multiple inputs,
   // since max(in_nodes->min_layer) == this_node->min_layer - 1.
   for (auto* node : topo_structs) {
@@ -428,25 +429,79 @@ void ClipEdges(std::vector<TopoStruct*>& topo_structs) {
   }
 }
 
+// Adjust the order between two topo structs with negative memory increment by adding edges
+void SortReleaseTopoStructs(std::vector<TopoStruct*>& topo_structs) {
+  // First, we define a release node as a node with negative memory increment.
+  // If all the producers of a release node is executed, this node should be executed immediately.
+  // Therefore, a release node "a" should be executed before the execution of another release node
+  // "b" if the ancestors of "b" contains all the producers of "a". As a result, the edge "a -> b"
+  // would be added.
+
+  // Collect all the release nodes
+  std::vector<TopoStruct*> release_nodes;
+  release_nodes.reserve(topo_structs.size());
+  for (auto* node : topo_structs) {
+    if (node->memory_increment < 0) { release_nodes.push_back(node); }
+  }
+  // Suppose two release nodes c(-) and d(-)
+  // a -> ... -> c(-)
+  // b -> ... -> c(-)
+  // d(-): a, b -> d(-) -> ...
+  // Then we add the edge d(-) -> c(-)
+  for (auto* node_c : release_nodes) {
+    // Mark all the ancestors
+    node_c->SetAccumulateMemoryIncrement();
+    for (auto* node_d : release_nodes) {
+      if (node_c != node_d && node_d->visited_acc_memory.IfNotMarked()) {
+        bool should_add_edge_d2c = true;
+        // Check a, b for d(-): a, b -> d(-) -> ...
+        for (auto* producer_of_d : node_d->in_topo_structs) {
+          // Try to find a -> ... -> c(-) and b -> ... -> c(-)
+          if (producer_of_d->visited_acc_memory.IfNotMarked()) {
+            should_add_edge_d2c = false;
+            break;
+          }
+        }
+        if (should_add_edge_d2c) {
+          // Add the edge d(-) -> c(-)
+          ConnectTwoNodes(node_d, node_c);
+        }
+      }
+    }
+  }
+}
+
 void GraphSimplification(std::vector<TopoStruct*>& topo_structs) {
   if (GlobalProcessCtx::Rank() == 0) {
     std::cout << "Origin, Topo size: " << topo_structs.size() << std::endl;
   }
   EatNodes(topo_structs);
+  CheckRemovedNodes(topo_structs);
   if (GlobalProcessCtx::Rank() == 0) {
     std::cout << "After 1st Eats, Topo size: " << topo_structs.size() << std::endl;
   }
-  ComputeLayer(&topo_structs);
   ClipEdges(topo_structs);
+  CheckRemovedNodes(topo_structs);
   EatNodes(topo_structs);
+  CheckRemovedNodes(topo_structs);
   if (GlobalProcessCtx::Rank() == 0) {
     std::cout << "2nd, clip and eat, Topo size: " << topo_structs.size() << std::endl;
   }
-  ComputeLayer(&topo_structs);
   ClipEdges(topo_structs);
+  CheckRemovedNodes(topo_structs);
   EatNodes(topo_structs);
+  CheckRemovedNodes(topo_structs);
   if (GlobalProcessCtx::Rank() == 0) {
     std::cout << "3rd, clip and eat, Topo size: " << topo_structs.size() << std::endl;
+  }
+  SortReleaseTopoStructs(topo_structs);
+  CheckRemovedNodes(topo_structs);
+  ClipEdges(topo_structs);
+  CheckRemovedNodes(topo_structs);
+  EatNodes(topo_structs);
+  CheckRemovedNodes(topo_structs);
+  if (GlobalProcessCtx::Rank() == 0) {
+    std::cout << "4th, sort, clip and eat, Topo size: " << topo_structs.size() << std::endl;
   }
   // TODO: Clip edges
 }
