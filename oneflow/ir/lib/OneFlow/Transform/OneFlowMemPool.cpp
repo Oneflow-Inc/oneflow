@@ -88,7 +88,6 @@ struct FoldAllocToSubviewPattern final : public OpRewritePattern<func::FuncOp> {
 
   void replaceAllocwithSubview(func::FuncOp func, mlir::PatternRewriter& rewriter,
                                const ::oneflow::MemBlockResultInfo<Operation*>& ret) const {
-    func->dump();
     // create the uni memref.alloc op
     rewriter.setInsertionPointToStart(&func.getBody().front());
     auto output_type = MemRefType::get({static_cast<long>(ret.mem_block_size)},

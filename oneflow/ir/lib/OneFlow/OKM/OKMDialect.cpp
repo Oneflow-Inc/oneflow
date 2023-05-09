@@ -52,13 +52,6 @@ void OKMDialect::initialize() {
       >();
 }
 
-void registerAllPasses() {
-  registerExtractOKMTensorPassPass();
-  registerWrapOKMKernelPassPass();
-  registerOptOKMMemrefPassPass();
-  registerConvertOKMToOKLPassPass();
-}
-
 }  // namespace okm
 
 }  // namespace mlir

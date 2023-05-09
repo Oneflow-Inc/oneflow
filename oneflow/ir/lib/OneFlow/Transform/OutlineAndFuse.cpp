@@ -31,8 +31,6 @@ limitations under the License.
 #include <iostream>
 #include <string>
 
-using namespace mlir;
-
 namespace mlir {
 namespace oneflow {
 
