@@ -29,6 +29,7 @@ namespace broadcast_elementwise_unary {
 namespace {
 
 #define CUDA_PRIMITIVE_CAST_REAL_TYPE_SEQ \
+  CUDA_PRIMITIVE_INT16_TYPE_SEQ           \
   CUDA_PRIMITIVE_UINT32_TYPE_SEQ          \
   CUDA_PRIMITIVE_REAL_TYPE_SEQ
 
