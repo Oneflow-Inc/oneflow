@@ -64,6 +64,62 @@ def _test_math_op_grad_grad_impl(test_case, op_name):
     )
 
 
+def _test_tanh_grad_grad_grad_impl(test_case, op_name):
+    x = random_tensor(ndim=2, low=-2, high=2).requires_grad_(True)
+    y = eval(f"torch.{op_name}")(x)
+    np_arr = np.random.rand(*x.oneflow.shape)
+    init_grad = torch.tensor(np_arr).requires_grad_()
+
+    x_grad = torch.autograd.grad(y, x, init_grad, retain_graph=True, create_graph=True)[
+        0
+    ]
+    test_case.assertTrue(
+        np.allclose(
+            x_grad.pytorch.detach().cpu().numpy(),
+            x_grad.oneflow.detach().numpy(),
+            atol=1e-4,
+            rtol=1e-4,
+            equal_nan=True,
+        )
+    )
+
+    x_grad_grad = torch.autograd.grad(x_grad, x, init_grad, create_graph=True)[0]
+    test_case.assertTrue(
+        np.allclose(
+            x_grad_grad.pytorch.detach().cpu().numpy(),
+            x_grad_grad.oneflow.detach().numpy(),
+            atol=1e-4,
+            rtol=1e-4,
+            equal_nan=True,
+        )
+    )
+
+    x_grad_grad_grad = torch.autograd.grad(
+        x_grad_grad, x, init_grad, retain_graph=True
+    )[0]
+    test_case.assertTrue(
+        np.allclose(
+            x_grad_grad_grad.pytorch.detach().cpu().numpy(),
+            x_grad_grad_grad.oneflow.detach().numpy(),
+            atol=1e-4,
+            rtol=1e-4,
+            equal_nan=True,
+        )
+    )
+
+    init_grad_grad = torch.tensor(np_arr).requires_grad_()
+    dgrad = torch.autograd.grad(x_grad, init_grad, init_grad_grad, retain_graph=True)[0]
+    test_case.assertTrue(
+        np.allclose(
+            dgrad.pytorch.detach().cpu().numpy(),
+            dgrad.oneflow.detach().numpy(),
+            atol=1e-4,
+            rtol=1e-4,
+            equal_nan=True,
+        )
+    )
+
+
 class TestMathOpHigherDerivative(flow.unittest.TestCase):
     def test_sin_grad_grad(test_case):
         _test_math_op_grad_grad_impl(test_case, "sin")
@@ -81,7 +137,7 @@ class TestMathOpHigherDerivative(flow.unittest.TestCase):
         _test_math_op_grad_grad_impl(test_case, "cosh")
 
     def test_tanh_grad_grad(test_case):
-        _test_math_op_grad_grad_impl(test_case, "tanh")
+        _test_tanh_grad_grad_grad_impl(test_case, "tanh")
 
     def test_asin_grad_grad(test_case):
         _test_math_op_grad_grad_impl(test_case, "asin")

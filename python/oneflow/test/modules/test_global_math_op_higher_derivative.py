@@ -65,6 +65,63 @@ def _global_math_op_grad_grad_impl(test_case, op_name, placement, sbp):
     )
 
 
+def _global_tanh_grad_grad_grad_impl(test_case, op_name, placement, sbp):
+    x = (
+        random_tensor(2, dim0=8, dim1=8, low=-2, high=2)
+        .to_global(placement=placement, sbp=sbp)
+        .requires_grad_(True)
+    )
+    y = eval(f"torch.{op_name}")(x)
+    init_grad = random_tensor(2, 8, 8).to_global(placement, sbp).requires_grad_()
+
+    x_grad = torch.autograd.grad(y, x, init_grad, create_graph=True)[0]
+    test_case.assertTrue(
+        np.allclose(
+            x_grad.pytorch.detach().cpu().numpy(),
+            x_grad.oneflow.detach().numpy(),
+            atol=1e-4,
+            rtol=1e-4,
+            equal_nan=True,
+        )
+    )
+
+    x_grad_grad = torch.autograd.grad(x_grad, x, init_grad, create_graph=True)[0]
+    test_case.assertTrue(
+        np.allclose(
+            x_grad_grad.pytorch.detach().cpu().numpy(),
+            x_grad_grad.oneflow.detach().numpy(),
+            atol=1e-4,
+            rtol=1e-4,
+            equal_nan=True,
+        )
+    )
+
+    x_grad_grad_grad = torch.autograd.grad(
+        x_grad_grad, x, init_grad, retain_graph=True
+    )[0]
+    test_case.assertTrue(
+        np.allclose(
+            x_grad_grad_grad.pytorch.detach().cpu().numpy(),
+            x_grad_grad_grad.oneflow.detach().numpy(),
+            atol=1e-4,
+            rtol=1e-4,
+            equal_nan=True,
+        )
+    )
+
+    init_grad_grad = random_tensor(2, 8, 8).to_global(placement, sbp).requires_grad_()
+    dgrad = torch.autograd.grad(x_grad, init_grad, init_grad_grad, retain_graph=True)[0]
+    test_case.assertTrue(
+        np.allclose(
+            dgrad.pytorch.detach().cpu().numpy(),
+            dgrad.oneflow.detach().numpy(),
+            atol=1e-4,
+            rtol=1e-4,
+            equal_nan=True,
+        )
+    )
+
+
 class TestGlobalMathOpHigherDerivative(flow.unittest.TestCase):
     @globaltest
     def test_global_sin_grad_grad(test_case):
@@ -100,7 +157,7 @@ class TestGlobalMathOpHigherDerivative(flow.unittest.TestCase):
     def test_global_tanh_grad_grad(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
-                _global_math_op_grad_grad_impl(test_case, "tanh", placement, sbp)
+                _global_tanh_grad_grad_grad_impl(test_case, "tanh", placement, sbp)
 
     @globaltest
     def test_global_asin_grad_grad(test_case):
