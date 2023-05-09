@@ -1608,6 +1608,10 @@ class Graph(object):
                 eager_outputs = oneflow._oneflow_internal.nn.graph.RunLazyNNGraphByVM(
                     convert_to_tensor_tuple(flattened_eager_args), self._c_nn_graph,
                 )
+                if len(eager_outputs) == 1:
+                    return eager_outputs[0]
+                else:
+                    return eager_outputs
             else:
                 outputs_tensor_tuple = self._outputs_tensor_tuple_buffer[
                     self._cur_index_of_ouputs_buffer
