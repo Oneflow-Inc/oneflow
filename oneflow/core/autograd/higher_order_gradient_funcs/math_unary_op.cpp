@@ -80,35 +80,6 @@ class UnaryMathGradGradWithZeroDDX : public OpExprGradFunction<UnaryMathGradGrad
   }
 };
 
-class TanhGradGradCls : public OpExprGradFunction<UnaryMathGradGradState> {
-  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
-  Maybe<void> Capture(UnaryMathGradGradState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 2);   // NOLINT(maybe-need-error-msg)
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
-    ctx->input_requires_grad = inputs[0]->requires_grad();
-    ctx->grad_requires_grad = inputs[1]->requires_grad();
-    ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 0)));
-    if (ctx->input_requires_grad) { ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 1))); }
-    return Maybe<void>::Ok();
-  }
-  Maybe<void> Apply(const UnaryMathGradGradState* ctx, const TensorTuple& out_grads,
-                    TensorTuple* in_grads) const override {
-    in_grads->resize(2);
-    const auto& input = JUST(VectorAt(ctx->SavedTensors(), 0));
-    const auto& out_grad = JUST(VectorAt(out_grads, 0));
-
-    if (ctx->input_requires_grad) {
-      const auto& dydx = JUST(VectorAt(ctx->SavedTensors(), 1));
-      (*in_grads)[0] = JUST(functional::Mul(out_grad, JUST(functional::TanhGradGrad(input, dydx))));
-    }
-    if (ctx->grad_requires_grad) { (*in_grads)[1] = JUST(functional::TanhGrad(input, out_grad)); }
-    return Maybe<void>::Ok();
-  }
-};
-
-REGISTER_OP_EXPR_GRAD_FUNCTION("tanh_grad", TanhGradGradCls);
-
 // TODO: Lgamma, first order backward unimplemented
 #define MATH_UNARY_ELEMENTWISE_GRAD_GRAD_DY_X_FUNC_SEQ            \
   OF_PP_MAKE_TUPLE_SEQ("sin_grad", Sin)                           \
@@ -137,7 +108,9 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("tanh_grad", TanhGradGradCls);
   OF_PP_MAKE_TUPLE_SEQ("sqrt_grad", Sqrt)                         \
   OF_PP_MAKE_TUPLE_SEQ("square_grad", Square)
 
-#define MATH_UNARY_ELEMENTWISE_GRAD_GRAD_DY_Y_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("sigmoid_grad", Sigmoid)
+#define MATH_UNARY_ELEMENTWISE_GRAD_GRAD_DY_Y_FUNC_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ("sigmoid_grad", Sigmoid)        \
+  OF_PP_MAKE_TUPLE_SEQ("tanh_grad", Tanh)
 
 #define MATH_UNARY_ELEMENTWISE_GRAD_GRAD_ZERO_DDX_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("abs_grad", Abs)
 
