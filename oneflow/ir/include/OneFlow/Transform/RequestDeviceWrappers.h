@@ -23,7 +23,7 @@ class Pass;
 
 namespace oneflow {
 
-std::unique_ptr<Pass> createOneFlowRequestDeviceWrappers();
+std::unique_ptr<Pass> createOneFlowRequestDeviceWrappersPass();
 
 }  // namespace oneflow
 }  // namespace mlir

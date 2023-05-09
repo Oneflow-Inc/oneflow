@@ -32,7 +32,7 @@ class OneFlowRequestDeviceWrappersPass
 };
 }  // namespace
 
-std::unique_ptr<Pass> createOneFlowRequestDeviceWrappers() {
+std::unique_ptr<Pass> createOneFlowRequestDeviceWrappersPass() {
   return std::make_unique<OneFlowRequestDeviceWrappersPass>();
 }
 

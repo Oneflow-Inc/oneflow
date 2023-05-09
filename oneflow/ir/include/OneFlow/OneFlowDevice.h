@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_ONEFLOW_DEVICE_H_
 #define ONEFLOW_ONEFLOW_DEVICE_H_
 
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "oneflow/core/common/util.h"
 #include "OneFlow/OneFlowDialect.h"
 
@@ -31,12 +32,11 @@ namespace oneflow {
 namespace device {
 
 class DeviceProto {
-  std::string getNamespaceStr() const { return OneFlowDialect::getDialectNamespace().str(); }
-
  protected:
   std::string version_;
 
  public:
+  static std::string getNamespaceStr() { return OneFlowDialect::getDialectNamespace().str(); }
   virtual ~DeviceProto() = default;
 
   virtual std::string getName() const = 0;
@@ -59,10 +59,10 @@ class CPUDevice final : public DeviceProto {
   void setVersion(const std::string& version) override { version_ = "sm_" + version; }
 };
 
-class DeviceBuilder final {
-  static DeviceBuilder instance_;
+class DeviceBuilder {
   std::unique_ptr<DeviceProto> proto_;
 
+ protected:
   static std::unique_ptr<DeviceProto> fromName(const std::string& name) {
     if (name == GPUDevice::TAG) return std::make_unique<GPUDevice>();
     if (name == CPUDevice::TAG) return std::make_unique<CPUDevice>();
@@ -88,6 +88,21 @@ class DeviceBuilder final {
   }
 };
 
+class FuncOp2DeviceBuilder final : private DeviceBuilder {
+  func::FuncOp func_;
+
+ public:
+  explicit FuncOp2DeviceBuilder(func::FuncOp func) : func_(func) {
+    DeviceBuilder::device(isGPU() ? "gpu" : "cpu");
+  }
+
+  bool isGPU() {
+    return func_->getAttr(DeviceProto::getNamespaceStr() + "." + GPUDevice::TAG) != nullptr;
+  }
+  bool isCPU() {
+    return func_->getAttr(DeviceProto::getNamespaceStr() + "." + CPUDevice::TAG) != nullptr;
+  }
+};
 }  // namespace device
 
 }  // namespace oneflow

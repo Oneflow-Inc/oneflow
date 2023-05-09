@@ -1019,13 +1019,13 @@ struct KernelLaunchWithCudaGraphPattern : public KernelLaunchSimplePattern {
 void AddLowerToLinalgMemRefPasses(PassManager& pm) {
   pm.addPass(createConvertToSignlessForTosaPass());  // convert-to-signless-for-tosa
   pm.addNestedPass<func::FuncOp>(LLVM::createRequestCWrappersPass());  // llvm-request-c-wrappers
-  pm.addPass(createConvertToSignlessForTosaPass());  // convert-to-signless-for-tosa
-  pm.addPass(createLowerOneFlowToTosaPass());        // lower-oneflow-to-tosa
+  pm.addPass(createConvertToSignlessForTosaPass());             // convert-to-signless-for-tosa
+  pm.addPass(createLowerOneFlowToTosaPass());                   // lower-oneflow-to-tosa
   pm.addNestedPass<func::FuncOp>(
-      tosa::createTosaMakeBroadcastablePass());                // tosa-make-broadcastable
-  pm.addPass(createCSEPass());                                 // cse
-  pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());  // tosa-to-linalg-on-tensors
-  pm.addNestedPass<func::FuncOp>(tosa::createTosaToTensor());  // tosa-to-tensor
+      tosa::createTosaMakeBroadcastablePass());                 // tosa-make-broadcastable
+  pm.addPass(createCSEPass());                                  // cse
+  pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());   // tosa-to-linalg-on-tensors
+  pm.addNestedPass<func::FuncOp>(tosa::createTosaToTensor());   // tosa-to-tensor
   pm.addNestedPass<func::FuncOp>(
       createLinalgElementwiseOpFusionPass());                   //     linalg-fuse-elementwise-ops
   pm.addNestedPass<func::FuncOp>(createLinalgBufferizePass());  // linalg-bufferize
@@ -1037,7 +1037,7 @@ void AddLowerToLinalgMemRefPasses(PassManager& pm) {
   pm.addPass(mlir::oneflow::createEliminateAllocOpsPass());         // eliminate-alloc-ops
   pm.addPass(createCanonicalizerPass());                            // canonicalize
   pm.addNestedPass<func::FuncOp>(
-      mlir::bufferization::createFinalizingBufferizePass());  // finalizing-bufferize
+      mlir::bufferization::createFinalizingBufferizePass());        // finalizing-bufferize
 }
 
 LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
@@ -1066,14 +1066,16 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   mlir::oneflow::CheckEnableIRPrinting(pm);
   AddLowerToLinalgMemRefPasses(pm);
   pm.addNestedPass<func::FuncOp>(
+      createOneFlowRequestDeviceWrappersPass());      // oneflow-request-device-wrappers
+  pm.addNestedPass<func::FuncOp>(
       createConvertLinalgToParallelLoopsPass());  // convert-linalg-to-parallel-loops
   pm.addNestedPass<func::FuncOp>(createGpuMapParallelLoopsPass());  // gpu-map-parallel-loops
   pm.addPass(createParallelLoopToGpuPass());                        // convert-parallel-loops-to-gpu
   pm.addPass(createGpuLauchSinkIndexComputationsPass());
-  pm.addPass(createGpuKernelOutliningPass());    // gpu-kernel-outlining
-  pm.addPass(createCanonicalizerPass());         // canonicalize
-  pm.addPass(createFoldAllocToSubviewPass());    // fold-alloc-to-subview
-  pm.addPass(createInsertOneFlowMemPoolPass());  // insert-ofmempool
+  pm.addPass(createGpuKernelOutliningPass());                       // gpu-kernel-outlining
+  pm.addPass(createCanonicalizerPass());                            // canonicalize
+  pm.addPass(createFoldAllocToSubviewPass());                       // fold-alloc-to-subview
+  pm.addPass(createInsertOneFlowMemPoolPass());                     // insert-ofmempool
   // -pass-pipeline='gpu.module([PASS1][PASS2]...)'
   pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());        // strip-debuginfo
   pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());           // lower-affine
