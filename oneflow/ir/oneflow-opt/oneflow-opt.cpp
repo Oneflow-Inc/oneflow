@@ -42,7 +42,6 @@ limitations under the License.
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
-
 const auto global_cse_state = std::make_shared<mlir::oneflow::CSEState>();
 
 int32_t main(int32_t argc, char** argv) {
