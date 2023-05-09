@@ -64,7 +64,7 @@ def _test_math_op_grad_grad_impl(test_case, op_name):
     )
 
 
-def _test_tanh_grad_grad_grad_impl(test_case, op_name):
+def _test_math_grad_grad_grad_impl(test_case, op_name):
     x = random_tensor(ndim=2, low=-2, high=2).requires_grad_(True)
     y = eval(f"torch.{op_name}")(x)
     np_arr = np.random.rand(*x.oneflow.shape)
@@ -136,8 +136,8 @@ class TestMathOpHigherDerivative(flow.unittest.TestCase):
     def test_cosh_grad_grad(test_case):
         _test_math_op_grad_grad_impl(test_case, "cosh")
 
-    def test_tanh_grad_grad(test_case):
-        _test_tanh_grad_grad_grad_impl(test_case, "tanh")
+    def test_tanh_grad_grad_grad(test_case):
+        _test_math_grad_grad_grad_impl(test_case, "tanh")
 
     def test_asin_grad_grad(test_case):
         _test_math_op_grad_grad_impl(test_case, "asin")

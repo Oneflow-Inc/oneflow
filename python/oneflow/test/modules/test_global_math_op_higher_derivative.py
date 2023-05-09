@@ -65,7 +65,7 @@ def _global_math_op_grad_grad_impl(test_case, op_name, placement, sbp):
     )
 
 
-def _global_tanh_grad_grad_grad_impl(test_case, op_name, placement, sbp):
+def _global_math_grad_grad_grad_impl(test_case, op_name, placement, sbp):
     x = (
         random_tensor(2, dim0=8, dim1=8, low=-2, high=2)
         .to_global(placement=placement, sbp=sbp)
@@ -154,10 +154,10 @@ class TestGlobalMathOpHigherDerivative(flow.unittest.TestCase):
                 _global_math_op_grad_grad_impl(test_case, "cosh", placement, sbp)
 
     @globaltest
-    def test_global_tanh_grad_grad(test_case):
+    def test_global_tanh_grad_grad_grad(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
-                _global_tanh_grad_grad_grad_impl(test_case, "tanh", placement, sbp)
+                _global_math_grad_grad_grad_impl(test_case, "tanh", placement, sbp)
 
     @globaltest
     def test_global_asin_grad_grad(test_case):
