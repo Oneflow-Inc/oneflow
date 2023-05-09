@@ -67,15 +67,6 @@ def only_copy_on_write():
         return unittest.skip("")
 
 
-def loss_test():
-    if os.getenv("ONEFLOW_REMAT_RUN_LOSS_TEST") is not None:
-        return lambda f: f
-    else:
-        return unittest.skip(
-            "Environment variable 'ONEFLOW_REMAT_RUN_LOSS_TEST' need to be set to run this test."
-        )
-
-
 @contextmanager
 def generate_placeholder(size_mb, device):
     global placeholder_size
@@ -340,12 +331,37 @@ class TestRemat(flow.unittest.TestCase):
             optimizer.step()
             optimizer.zero_grad()
 
-    def _test_resnet18(self, optimizer_fn, ddp, expected_loss):
+    def _get_resnet18_expected_loss(self, optimizer_fn, mode, iter_num):
+        flow.manual_seed(flow.env.get_rank())
+        model = flowvision.models.resnet18()
+        if mode == 'ddp':
+            model = flow.nn.parallel.DistributedDataParallel(model, use_bucket=False)
+        criterion = nn.CrossEntropyLoss()
+        optimizer = optimizer_fn(model.parameters())
+        x = flow.rand(10, 3, 224, 224)
+        target = (
+            flow.randint(low=0, high=1000, size=(x.shape[0],)).to(flow.int32)
+        )
+        assert iter_num > 0
+        for _ in range(iter_num):
+            output = model(x)
+            loss = criterion(output, target)
+            loss.backward()
+            optimizer.step()
+            optimizer.zero_grad()
+        return loss
+
+    def _test_resnet18(self, optimizer_fn, mode):
+        assert mode in ['naive', 'ddp']
+        ITER_NUM = 5
+        expected_loss = self._get_resnet18_expected_loss(optimizer_fn, mode, ITER_NUM)
+        print(f'expected_loss: {expected_loss}')
+
         flow.manual_seed(flow.env.get_rank())
         device = "cpu+remat"
 
         model = flowvision.models.resnet18().to(device)
-        if ddp:
+        if mode == 'ddp':
             model = flow.nn.parallel.DistributedDataParallel(model, use_bucket=False)
         criterion = nn.CrossEntropyLoss().to(device)
 
@@ -365,7 +381,6 @@ class TestRemat(flow.unittest.TestCase):
         # recompute(x2) <-- recomputing x2 triggers the recomputation of x1 and causes inconsistentness
         flow._oneflow_internal.remat.disable_eviction(x)
         flow._oneflow_internal.remat.disable_eviction(target)
-        ITER_NUM = 5
         for i in range(ITER_NUM):
             print("start allocated_memory(cpu):", allocated_memory("cpu"))
             print(
@@ -375,8 +390,8 @@ class TestRemat(flow.unittest.TestCase):
             loss = criterion(output, target)
             del output
             print(loss.numpy().item())
-            if i == 4 and expected_loss is not None:
-                self.assertTrue(loss.numpy().item() in expected_loss)
+            if i == ITER_NUM - 1:
+                self.assertEqual(loss.numpy().item(), expected_loss)
             loss.backward()
             del loss
             optimizer.step()
@@ -395,45 +410,34 @@ class TestRemat(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     @only_fbip()
     @memory_budget(220, "cpu")
-    @loss_test()
     def test_resnet18_naive_sgd(self, _):
-        # NOTE: this loss is only correct in my environment on 21
         self._test_resnet18(
             lambda params: flow.optim.SGD(params, lr=0.1, momentum=0),
-            False,
-            [0.6304041147232056],
+            'naive',
         )
 
     @flow.unittest.skip_unless_1n2d()
     @only_fbip()
     @memory_budget(220, "cpu")
-    @loss_test()
     def test_resnet18_naive_sgd_ddp_1n2d(self, _):
-        # 2 devices, 2 losses
-        # NOTE: these losses are only correct in my environment on 21
         self._test_resnet18(
             lambda params: flow.optim.SGD(params, lr=0.1, momentum=0),
-            True,
-            [1.8890058994293213, 1.8992782831192017],
+            'ddp',
         )
 
     @flow.unittest.skip_unless_1n1d()
     @only_fbip()
     @memory_budget(270, "cpu")
-    @loss_test()
     def test_resnet18_momentum_sgd(self, _):
-        # NOTE: this loss is only correct in my environment on 21
         self._test_resnet18(
-            lambda params: flow.optim.SGD(params, lr=0.1, momentum=0.9), False, None
+            lambda params: flow.optim.SGD(params, lr=0.1, momentum=0.9), 'naive'
         )
 
     @flow.unittest.skip_unless_1n1d()
     @only_fbip()
     @memory_budget(310, "cpu")
-    @loss_test()
     def test_resnet18_adam(self, _):
-        # NOTE: this loss is only correct in my environment on 21
-        self._test_resnet18(lambda params: flow.optim.Adam(params, lr=0.1), False, None)
+        self._test_resnet18(lambda params: flow.optim.Adam(params, lr=0.1), 'naive')
 
     @flow.unittest.skip_unless_1n1d()
     @only_copy_on_write()
