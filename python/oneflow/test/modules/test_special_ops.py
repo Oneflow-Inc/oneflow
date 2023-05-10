@@ -132,6 +132,7 @@ class TestSpecialOps(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestZeta(flow.unittest.TestCase):
+    # the grad func of zeta is not supported
     @autotest(n=5, auto_backward=False)
     def test_flow_zeta_with_random_data(test_case):
         device = random_device()
