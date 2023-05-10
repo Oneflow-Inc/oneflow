@@ -4254,7 +4254,6 @@ class FftC2CFunctor : public FftBaseFunctor {
     double norm_fct = fft_compute_fct<double>(*(resized_tensor->shape()), wrapped_dims,
                                               static_cast<fft_norm_mode>(norm_mode));
 
-    
     if (input_device == DeviceType::kCPU) {
       auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "forward", "norm_mode", "norm_fct");
       attrs.SetAllAttrs(wrapped_dims, forward, norm_mode, norm_fct);
@@ -4341,7 +4340,6 @@ class FftR2CFunctor : public FftBaseFunctor {
     double norm_fct = fft_compute_fct<double>(*(resized_tensor->shape()), wrapped_dims,
                                               static_cast<fft_norm_mode>(norm_mode));
 
-
     std::shared_ptr<Tensor> output;
     if (input_device == DeviceType::kCPU) {
       auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims", "norm_mode", "norm_fct", "onesided");
@@ -4357,7 +4355,6 @@ class FftR2CFunctor : public FftBaseFunctor {
       std::vector<int64_t> out_sizes = onesided ? onesided_sizes : input_sizes;
 
       if (use_optimized_cufft_path(wrapped_dims)) {
-
         std::vector<int64_t> out_strides;
         auto input =
             JUST(permute_and_reshape(resized_tensor, out_sizes, wrapped_dims, out_strides));
@@ -4439,7 +4436,6 @@ class FftC2RFunctor : public FftBaseFunctor {
     auto resized_tensor =
         n.has_value() == true ? JUST(resize_fft_input(x, wrapped_dims, fft_len)) : x;
 
-
     Shape out_shape = *(resized_tensor->shape());
     out_shape[wrapped_dims.back()] = last_dim_size;
     double norm_fct =
@@ -4462,8 +4458,6 @@ class FftC2RFunctor : public FftBaseFunctor {
     } else if (input_device == DeviceType::kCUDA) {
       std::shared_ptr<Tensor> output;
       if (use_optimized_cufft_path(wrapped_dims)) {
-
-
         auto input = JUST(functional::ToContiguous(resized_tensor));
         std::vector<int64_t> out_sizes(out_shape.dim_vec().begin(), out_shape.dim_vec().end());
         std::vector<int64_t> out_strides;

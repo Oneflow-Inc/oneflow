@@ -5106,7 +5106,7 @@ def OneFlow_FftR2COp : OneFlow_BaseOp<"fft_r2c", [SupportNonContiguous, NoMemory
     SI64ArrayAttr:$dims,
     SI32Attr:$norm_mode,
     F64Attr:$norm_fct,
-    BoolAttr:$onesided,
+    BoolAttr:$onesided
   );
 
   let has_logical_tensor_desc_infer_fn = 1;
@@ -5127,7 +5127,7 @@ def OneFlow_FftC2ROp : OneFlow_BaseOp<"fft_c2r", [SupportNonContiguous, NoMemory
     SI64ArrayAttr:$dims,
     SI32Attr:$norm_mode,
     F64Attr:$norm_fct,
-    SI64Attr:$last_dim_size,
+    SI64Attr:$last_dim_size
   );
 
   let has_logical_tensor_desc_infer_fn = 1;
