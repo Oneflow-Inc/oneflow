@@ -121,6 +121,11 @@ CudaDevice::~CudaDevice() {
 
 void CudaDevice::SetAsActiveDevice() { OF_CUDA_CHECK(cudaSetDevice(device_index_)); }
 
+void CudaDevice::Reset() {
+  SetAsActiveDevice();
+  OF_CUDA_CHECK(cudaDeviceReset());
+}
+
 Stream* CudaDevice::CreateStream() {
   CudaCurrentDeviceGuard guard(device_index_);
   return new CudaStream(this);

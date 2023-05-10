@@ -23,8 +23,6 @@ import numpy as np
 
 import oneflow.unittest
 
-flow.boxing.nccl.enable_use_compute_stream(False)
-
 
 class _TestModule(nn.Module):
     def forward(self, x):
@@ -71,6 +69,8 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
 
         model = _TestModule()
         graph = _TestGraph(model)
+
+        flow.boxing.nccl.enable_use_compute_stream(False)
 
         x = flow.ones(
             4,

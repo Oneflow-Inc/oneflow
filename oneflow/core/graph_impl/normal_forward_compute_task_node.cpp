@@ -95,6 +95,8 @@ void NormalForwardCompTaskNode::ConsumeAllRegsts() {
   });
 }
 
+void NormalForwardCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
+
 void NormalForwardCompTaskNode::BuildExecGphAndRegst() {
   BuildExecGphStructAndBindInRegst();
   BuildOutRegst();
