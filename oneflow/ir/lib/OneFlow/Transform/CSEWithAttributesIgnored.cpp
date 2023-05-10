@@ -20,8 +20,6 @@ limitations under the License.
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
-using namespace mlir;
-
 namespace mlir {
 
 namespace oneflow {

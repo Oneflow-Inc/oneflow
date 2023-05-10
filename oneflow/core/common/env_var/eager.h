@@ -17,6 +17,9 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_ENV_VAR_EAGER_H_
 
 #include "oneflow/core/common/env_var/env_var.h"
+#ifdef WITH_CUDA
+#include <nccl.h>
+#endif
 
 namespace oneflow {
 
@@ -32,7 +35,9 @@ DEFINE_THREAD_LOCAL_ENV_BOOL(ONEFLOW_EAGER_NCCL_USE_COMPUTE_STREAM, false);
 
 inline bool EagerNcclUseComputeStream() {
 #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
-  return ThreadLocalEnvBool<ONEFLOW_EAGER_NCCL_USE_COMPUTE_STREAM>();
+  static bool eager_nccl_use_compute_stream =
+      ThreadLocalEnvBool<ONEFLOW_EAGER_NCCL_USE_COMPUTE_STREAM>();
+  return eager_nccl_use_compute_stream;
 #else
   return false;
 #endif

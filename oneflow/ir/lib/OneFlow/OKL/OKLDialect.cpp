@@ -51,11 +51,6 @@ void OKLDialect::initialize() {
       >();
 }
 
-void registerOneFlowPasses() {
-  mlir::registerAggregateComputeOpsPassPass();
-  mlir::registerWrapOpsToKernelLaunchPassPass();
-}
-
 }  // namespace okl
 
 }  // namespace mlir
