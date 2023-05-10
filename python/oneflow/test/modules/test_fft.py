@@ -102,7 +102,7 @@ class Test1DFft(flow.unittest.TestCase):
             device = cpu_device()
 
         params = test_case.gen_params()
-        print(params)
+        
         num_dims = params["num_dims"]
         shape = params["shape"]
         n = params["n"]
@@ -139,7 +139,7 @@ class Test1DFft(flow.unittest.TestCase):
             device = cpu_device()
 
         params = test_case.gen_params()
-        print(params)
+        
         num_dims = params["num_dims"]
         shape = params["shape"]
         n = params["n"]
@@ -177,7 +177,7 @@ class Test1DFft(flow.unittest.TestCase):
             device = cpu_device()
 
         params = test_case.gen_params()
-        print(params)
+        
         num_dims = params["num_dims"]
         shape = params["shape"]
         n = params["n"]
@@ -206,7 +206,7 @@ class Test1DFft(flow.unittest.TestCase):
             device = cpu_device()
 
         params = test_case.gen_params()
-        print(params)
+        
         num_dims = params["num_dims"]
         shape = params["shape"]
         n = params["n"]
@@ -235,7 +235,7 @@ class Test1DFft(flow.unittest.TestCase):
             device = cpu_device()
 
         params = test_case.gen_params()
-        print(params)
+        
         num_dims = params["num_dims"]
         shape = params["shape"]
         n = params["n"]
@@ -264,7 +264,7 @@ class Test1DFft(flow.unittest.TestCase):
             device = cpu_device()
 
         params = test_case.gen_params()
-        print(params)
+        
         num_dims = params["num_dims"]
         shape = params["shape"]
         n = params["n"]
@@ -343,7 +343,7 @@ class Test2DFft(flow.unittest.TestCase):
             device = cpu_device()
 
         params = test_case.gen_params()
-        print(params)
+        
         num_dims = params["num_dims"]
         shape = params["shape"]
         n = params["n"]
@@ -380,7 +380,7 @@ class Test2DFft(flow.unittest.TestCase):
             device = cpu_device()
 
         params = test_case.gen_params()
-        print(params)
+        
         num_dims = params["num_dims"]
         shape = params["shape"]
         n = params["n"]
@@ -417,7 +417,7 @@ class Test2DFft(flow.unittest.TestCase):
             device = cpu_device()
 
         params = test_case.gen_params()
-        print(params)
+        
         num_dims = params["num_dims"]
         shape = params["shape"]
         n = params["n"]
@@ -446,7 +446,7 @@ class Test2DFft(flow.unittest.TestCase):
             device = cpu_device()
 
         params = test_case.gen_params()
-        print(params)
+        
         num_dims = params["num_dims"]
         shape = params["shape"]
         n = params["n"]
@@ -475,7 +475,7 @@ class Test2DFft(flow.unittest.TestCase):
             device = cpu_device()
 
         params = test_case.gen_params()
-        print(params)
+        
         num_dims = params["num_dims"]
         shape = params["shape"]
         n = params["n"]
@@ -504,7 +504,7 @@ class Test2DFft(flow.unittest.TestCase):
             device = cpu_device()
 
         params = test_case.gen_params()
-        print(params)
+        
         num_dims = params["num_dims"]
         shape = params["shape"]
         n = params["n"]
@@ -588,7 +588,7 @@ class TestNDFft(flow.unittest.TestCase):
             device = cpu_device()
 
         params = test_case.gen_params()
-        print(params)
+        
         num_dims = params["num_dims"]
         shape = params["shape"]
         n = params["n"]
@@ -626,7 +626,7 @@ class TestNDFft(flow.unittest.TestCase):
             device = cpu_device()
 
         params = test_case.gen_params()
-        print(params)
+        
         num_dims = params["num_dims"]
         shape = params["shape"]
         n = params["n"]
@@ -664,7 +664,7 @@ class TestNDFft(flow.unittest.TestCase):
             device = cpu_device()
 
         params = test_case.gen_params()
-        print(params)
+        
         num_dims = params["num_dims"]
         shape = params["shape"]
         n = params["n"]
@@ -693,7 +693,7 @@ class TestNDFft(flow.unittest.TestCase):
             device = cpu_device()
 
         params = test_case.gen_params()
-        print(params)
+        
         num_dims = params["num_dims"]
         shape = params["shape"]
         n = params["n"]
@@ -722,7 +722,7 @@ class TestNDFft(flow.unittest.TestCase):
             device = cpu_device()
 
         params = test_case.gen_params()
-        print(params)
+        
         num_dims = params["num_dims"]
         shape = params["shape"]
         n = params["n"]
@@ -751,7 +751,7 @@ class TestNDFft(flow.unittest.TestCase):
             device = cpu_device()
 
         params = test_case.gen_params()
-        print(params)
+        
         num_dims = params["num_dims"]
         shape = params["shape"]
         n = params["n"]
