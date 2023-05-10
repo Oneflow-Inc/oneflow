@@ -225,68 +225,13 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   Optional<int64_t> parallel_id;
   const auto& tensor_device = JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
   const size_t output_size = outputs->size();
-  switch (output_size) {
-    case 1: {
-      if (!outputs->at(0)) {
-        const auto& tensor_impl = JUST(EagerGlobalTensorImpl::New(
-            output_tensor_metas[0], tensor_device, parallel_id, false, false));
-        (*outputs)[0] = std::make_shared<GlobalTensor>(tensor_impl);
-      } else {
-        JUST((*outputs)[0]->set_consumer_nd_sbp_constraint(NullOpt));
-      }
-      break;
-    }
-    case 2: {
-      if (!outputs->at(0)) {
-        const auto& tensor_impl = JUST(EagerGlobalTensorImpl::New(
-            output_tensor_metas[0], tensor_device, parallel_id, false, false));
-        (*outputs)[0] = std::make_shared<GlobalTensor>(tensor_impl);
-      } else {
-        JUST((*outputs)[0]->set_consumer_nd_sbp_constraint(NullOpt));
-      }
-      if (!outputs->at(1)) {
-        const auto& tensor_impl = JUST(EagerGlobalTensorImpl::New(
-            output_tensor_metas[1], tensor_device, parallel_id, false, false));
-        (*outputs)[1] = std::make_shared<GlobalTensor>(tensor_impl);
-      } else {
-        JUST((*outputs)[1]->set_consumer_nd_sbp_constraint(NullOpt));
-      }
-      break;
-    }
-    case 3: {
-      if (!outputs->at(0)) {
-        const auto& tensor_impl = JUST(EagerGlobalTensorImpl::New(
-            output_tensor_metas[0], tensor_device, parallel_id, false, false));
-        (*outputs)[0] = std::make_shared<GlobalTensor>(tensor_impl);
-      } else {
-        JUST((*outputs)[0]->set_consumer_nd_sbp_constraint(NullOpt));
-      }
-      if (!outputs->at(1)) {
-        const auto& tensor_impl = JUST(EagerGlobalTensorImpl::New(
-            output_tensor_metas[1], tensor_device, parallel_id, false, false));
-        (*outputs)[1] = std::make_shared<GlobalTensor>(tensor_impl);
-      } else {
-        JUST((*outputs)[0]->set_consumer_nd_sbp_constraint(NullOpt));
-      }
-      if (!outputs->at(2)) {
-        const auto& tensor_impl = JUST(EagerGlobalTensorImpl::New(
-            output_tensor_metas[2], tensor_device, parallel_id, false, false));
-        (*outputs)[2] = std::make_shared<GlobalTensor>(tensor_impl);
-      } else {
-        JUST((*outputs)[2]->set_consumer_nd_sbp_constraint(NullOpt));
-      }
-      break;
-    }
-    default: {
-      for (int i = 0; i < outputs->size(); ++i) {
-        if (!outputs->at(i)) {
-          const auto& tensor_impl = JUST(EagerGlobalTensorImpl::New(
-              output_tensor_metas[i], tensor_device, parallel_id, false, false));
-          (*outputs)[i] = std::make_shared<GlobalTensor>(tensor_impl);
-        } else {
-          JUST((*outputs)[i]->set_consumer_nd_sbp_constraint(NullOpt));
-        }
-      }
+  for (int i = 0; i < output_size; ++i) {
+    if (!outputs->at(i)) {
+      const auto& tensor_impl = JUST(EagerGlobalTensorImpl::New(
+          output_tensor_metas[i], tensor_device, parallel_id, false, false));
+      (*outputs)[i].reset(new GlobalTensor(tensor_impl));
+    } else {
+      JUST((*outputs)[i]->set_consumer_nd_sbp_constraint(NullOpt));
     }
   }
 
