@@ -27,8 +27,29 @@ limitations under the License.
 #include "trt_flash_attention/fmha.h"
 #include "trt_flash_attention/fmha_flash_attention.h"
 #include "oneflow/core/ep/include/primitive/batch_matmul.h"
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
+namespace {
+union CublasScalarParameter {
+  double d;
+  float s;
+  half h;
+};
+template<typename T>
+__global__ void InitQKVPtr(const T* x, const T* wq, const T* wk, const T* wv, T* q, T* k, T* v,
+                           void** ptr_arr) {
+  ptr_arr[0] = const_cast<T*>(x);
+  ptr_arr[1] = const_cast<T*>(x);
+  ptr_arr[2] = const_cast<T*>(x);
+  ptr_arr[3] = const_cast<T*>(wq);
+  ptr_arr[4] = const_cast<T*>(wk);
+  ptr_arr[5] = const_cast<T*>(wv);
+  ptr_arr[6] = q;
+  ptr_arr[7] = k;
+  ptr_arr[8] = v;
+}
+}  // namespace
 namespace cuda {
 namespace rms_norm {
 template<typename T, typename ComputeType>
@@ -1484,22 +1505,27 @@ class LlamaAttentionLayerForwardKernel final : public user_op::OpKernel {
                                    input_norm_weight->dptr<T>(), rms_norm_out->mut_dptr<T>(),
                                    inv_rms->mut_dptr<RmsNormComputeType>());
     // step2: to_q, to_k, to_v
-    auto batch_matmul = ep::primitive::NewPrimitive<ep::primitive::BatchMatmulFactory>(
-        ctx->device_type(), /*data_type */ query->data_type(),
-        /*trans_a*/ ep::primitive::BlasTransposeType::N,
-        /*trans_b*/ ep::primitive::BlasTransposeType::T);
-    CHECK(batch_matmul);
     auto rms_out_shape = rms_norm_out->shape_view();
     auto query_weight_shape = query_weight->shape_view();
     auto batch_size = rms_out_shape.At(0), matmul_m = rms_out_shape.At(1),
          matmul_k = rms_out_shape.At(2), matmul_n = query_weight_shape.At(0);
-    const double alpha = 1.0, beta = 0.0;
-    batch_matmul->Launch(cuda_stream, batch_size, matmul_m, matmul_n, matmul_k, alpha,
-                         rms_norm_out->dptr(), query_weight->dptr(), beta, query->mut_dptr());
-    batch_matmul->Launch(cuda_stream, batch_size, matmul_m, matmul_n, matmul_k, alpha,
-                         rms_norm_out->dptr(), key_weight->dptr(), beta, key->mut_dptr());
-    batch_matmul->Launch(cuda_stream, batch_size, matmul_m, matmul_n, matmul_k, alpha,
-                         rms_norm_out->dptr(), value_weight->dptr(), beta, value->mut_dptr());
+    // use grouped_matmul
+    cudaDataType_t data_type = CUDA_R_16F;
+    cudaDataType_t compute_type = CUDA_R_32F;
+    const int64_t kMaxProblemBatch = 3;  // q,k,v
+    void* workspace = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->mut_dptr();
+    void** ptr_arr = reinterpret_cast<void**>(workspace);
+    RUN_CUDA_KERNEL((InitQKVPtr<T>), ctx->stream(), 1, rms_norm_out->dptr<T>(),
+                    query_weight->dptr<T>(), key_weight->dptr<T>(), value_weight->dptr<T>(),
+                    query->mut_dptr<T>(), key->mut_dptr<T>(), value->mut_dptr<T>(), ptr_arr);
+    CublasScalarParameter sp_alpha, sp_beta;
+    sp_alpha.s = 1.0;
+    sp_beta.s = 0.0;
+    OF_CUBLAS_CHECK(cublasGemmBatchedEx(
+        cuda_stream->cublas_handle(), CUBLAS_OP_T, CUBLAS_OP_N, matmul_n, matmul_m, matmul_k,
+        &sp_alpha, ptr_arr + kMaxProblemBatch, data_type, matmul_k, ptr_arr, data_type, matmul_k,
+        &sp_beta, ptr_arr + 2 * kMaxProblemBatch, data_type, matmul_n, 3, compute_type,
+        CUBLAS_GEMM_DEFAULT));
 
     // step3: rotary_embedding  BM(HK) -> BMHK, PlaneKernel use pack_size=1
     const int64_t num_elements = rotary_query->shape_view().elem_cnt() / /*pack_size*/ 1;
