@@ -22,6 +22,7 @@ import numpy as np
 
 from oneflow.test_utils.automated_test_util import *
 
+
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestTensor(flow.unittest.TestCase):
@@ -61,6 +62,7 @@ class TestTensor(flow.unittest.TestCase):
             #       permute it that only change the tensor shape and won't relayout its storage.
             # TODO(): align with pytorch
             check_equal(oneflow_y, pytorch_y.permute(0, 2, 3, 1))
+
 
 if __name__ == "__main__":
     unittest.main()
