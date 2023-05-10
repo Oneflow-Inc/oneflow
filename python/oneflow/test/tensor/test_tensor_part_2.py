@@ -1120,6 +1120,14 @@ class TestTensorNumpy(flow.unittest.TestCase):
         y = x.nansum()
         return y
 
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(n=5)
+    def test_tensor_polygamma(test_case):
+        device = random_device()
+        x = random_tensor(4, random(0, 5), 2).to(device)
+        y = x.polygamma(random(1, 10).to(int))
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()
