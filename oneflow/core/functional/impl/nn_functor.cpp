@@ -1318,7 +1318,7 @@ class MaxPoolNDFunctor {
                                 const std::vector<int32_t>& dilation, const bool& return_indices,
                                 const bool& ceil_mode, const std::string& data_format) const {
     // channels_last case
-    if (x->is_cuda() && num_spatial_dims_ == 2 && data_format == "channels_last") {
+    if (input->is_cuda() && num_spatial_dims_ == 2 && data_format == "channels_last") {
       if (!return_indices && dilation.at(0) == 1 && dilation.at(1) == 1) {
         // legacy tf style maxpool2d , use cudnn implementation
         // with high performance but do not support dilation/return_indices
