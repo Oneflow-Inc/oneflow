@@ -252,7 +252,6 @@ class Optimizer(object):
             "_contiguous_parameters",
             "_parameters",
             "params_dict",
-            "contiguous_params",
         ]
 
     def add_param_group(self, param_group) -> None:
@@ -358,7 +357,7 @@ class Optimizer(object):
             # so contiguous_params of state_dict and current optimizer should match.
             if "contiguous_params" in param and param[
                 "contiguous_params"
-            ] != saved_param["_options"].get("contiguous_params", False):
+            ] != saved_param.get("contiguous_params", False):
                 raise ValueError(
                     "loaded contiguous_params state doesn't match the optimizer"
                 )
@@ -425,9 +424,9 @@ class Optimizer(object):
 
         # Update parameter groups, setting their 'params' value
         def update_group(group, new_group):
-            group._options = deepcopy(new_group["_options"])
-            group._enable_clip_grad = new_group["_enable_clip_grad"]
-            return group
+            new_group.pop("params")
+            parameter = dict(params=group["params"])
+            return ParamGroup(parameter, new_group)
 
         param_groups = [update_group(g, ng) for g, ng in zip(groups, saved_groups)]
         self.param_groups = param_groups
