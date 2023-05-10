@@ -26,6 +26,7 @@ class WaitAndSendIdsCompTaskNode final : public CompTaskNode {
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override {}
+  void ConsumeFakeRegsts() override {}
   void BuildExecGphAndRegst() override;
   bool IsMeaningLess() override { return false; }
 
@@ -49,7 +50,7 @@ void WaitAndSendIdsCompTaskNode::BuildExecGphAndRegst() {
     out_regst->AddLbi(lbi);
     node->BindBnWithRegst(obn, out_regst);
   }
-  node->InferBlobDescs(parallel_ctx());
+  (node->*GetInferBlobDescsMethod())(parallel_ctx());
 }
 
 void WaitAndSendIdsCompTaskNode::InferProducedDataRegstTimeShape() {

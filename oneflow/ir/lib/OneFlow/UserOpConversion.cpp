@@ -480,6 +480,8 @@ LogicalResult ConvertUserOpInputs(llvm::StringRef op_type_name, ValueRange opera
     return ::oneflow::DeviceType::kCPU;
   } else if (device_tag.str() == "cuda") {
     return ::oneflow::DeviceType::kCUDA;
+  } else if (device_tag.str() == "mlu") {
+    return ::oneflow::DeviceType::kMLU;
   } else {
     LOG(FATAL) << "unsupported device tag: " << device_tag.str();
     return ::oneflow::DeviceType::kInvalidDevice;

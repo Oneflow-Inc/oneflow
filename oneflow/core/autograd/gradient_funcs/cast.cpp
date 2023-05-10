@@ -26,7 +26,8 @@ namespace oneflow {
 namespace one {
 
 struct CastCaptureState : public AutoGradCaptureState {
-  Symbol<DType> dtype;
+  Symbol<DType> in_dtype;
+  Symbol<DType> out_dtype;
 };
 
 class Cast : public OpExprGradFunction<CastCaptureState> {
@@ -39,14 +40,20 @@ class Cast : public OpExprGradFunction<CastCaptureState> {
 
   Maybe<void> Capture(CastCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
                       const AttrMap& attrs) const override {
-    ctx->dtype = inputs.at(0)->dtype();
+    ctx->in_dtype = inputs.at(0)->dtype();
+    ctx->out_dtype = outputs.at(0)->dtype();
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const CastCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     in_grads->resize(1);
-    (*in_grads)[0] = JUST(functional::Cast(out_grads[0], ctx->dtype, /*pin_memory=*/false));
+    if (!IsComplexDataType(ctx->in_dtype->data_type())
+        && IsComplexDataType(ctx->out_dtype->data_type())) {
+      (*in_grads)[0] = JUST(functional::Real(out_grads[0]));
+    } else {
+      (*in_grads)[0] = JUST(functional::Cast(out_grads[0], ctx->in_dtype, /*pin_memory=*/false));
+    }
     return Maybe<void>::Ok();
   }
 };

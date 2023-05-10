@@ -71,8 +71,8 @@ class TestImageFlip(flow.unittest.TestCase):
         _compare_image_flip_with_cv(
             test_case,
             [
-                "/dataset/mscoco_2017/val2017/000000000139.jpg",
-                "/dataset/mscoco_2017/val2017/000000000632.jpg",
+                flow.unittest.dataset_dir("mscoco_2017/val2017/000000000139.jpg"),
+                flow.unittest.dataset_dir("mscoco_2017/val2017/000000000632.jpg"),
             ],
         )
 

@@ -56,6 +56,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual Maybe<Symbol<ParallelDesc>> parallel_desc() const = 0;
   virtual Maybe<Symbol<Device>> device() const = 0;
   virtual Maybe<Symbol<Device>*> mut_device() = 0;
+  virtual bool is_cpu() const = 0;
   virtual bool is_cuda() const = 0;
   virtual bool is_global() const = 0;
   virtual bool is_local() const { return !is_global(); }
@@ -161,6 +162,10 @@ class StaticZerosTensor final : public Tensor {
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<Symbol<Device>> device() const override { return device_; }
   Maybe<Symbol<Device>*> mut_device() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  bool is_cpu() const override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+    return false;
+  }
   bool is_cuda() const override {
     PRINT_BUG_PROMPT_AND_ABORT();
     return false;
@@ -344,6 +349,7 @@ class ProxyTensor : public TensorIf<DerivedT> {
   }
   virtual Maybe<Symbol<Device>> device() const override { return tensor_->device(); }
   virtual Maybe<Symbol<Device>*> mut_device() override { return tensor_->mut_device(); }
+  virtual bool is_cpu() const override { return tensor_->is_cpu(); }
   virtual bool is_cuda() const override { return tensor_->is_cuda(); }
   virtual bool is_global() const override { return tensor_->is_global(); }
   virtual bool is_local() const override { return tensor_->is_local(); }
@@ -515,6 +521,7 @@ class LocalTensor final : public TensorIf<LocalTensor> {
   Maybe<Symbol<Device>*> mut_device() override { return impl_->mut_device(); }
   bool is_lazy() const override { return impl_->is_lazy(); }
   bool is_global() const override { return false; }
+  bool is_cpu() const override;
   bool is_cuda() const override;
   std::shared_ptr<Tensor> contiguous() const override;
 
@@ -644,6 +651,7 @@ class GlobalTensor final : public TensorIf<GlobalTensor> {
     return impl_->consumer_nd_sbp_constraint();
   }
   Maybe<LocalTensor> cur_rank_phy_tensor() const override { return impl_->cur_rank_phy_tensor(); }
+  bool is_cpu() const override;
   bool is_cuda() const override;
   std::shared_ptr<Tensor> contiguous() const override;
   Maybe<Tensor> data() override { return this->detach(); }

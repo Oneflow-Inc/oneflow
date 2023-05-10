@@ -74,11 +74,9 @@ std::function<Maybe<void>(const std::string&)> MakeSetParamDataTypeFn(user_op::I
 
 Maybe<void> FwInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                                const user_op::UserOpConfWrapper& conf) {
-  bool training;
-  if (conf.op_type_name() == "normalization") {
+  bool training = true;
+  if (conf.op_type_name() == "normalization" || conf.op_type_name() == "normalization_add_relu") {
     training = conf.attr<bool>("training");
-  } else {
-    training = true;
   }
   if (conf.has_input("moving_mean", 0)) {
     CHECK_OR_RETURN(conf.has_input("moving_variance", 0));

@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_THREAD_LOCAL_GUARD_H_
 
 #include <memory>
-#include <glog/logging.h>
 #include "oneflow/core/common/optional.h"
 
 namespace oneflow {

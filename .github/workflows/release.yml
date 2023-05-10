@@ -27,13 +27,14 @@ jobs:
       ONEFLOW_SRC: .
     outputs:
       matrix: ${{ steps.find-cache.outputs.matrix }}
+      formatted_date: ${{ steps.date.outputs.formatted_date }}
     steps:
       - name: Checkout Oneflow-Inc/oneflow
         uses: actions/checkout@v2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@nv-wheels
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@add-nightly-date
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -49,6 +50,9 @@ jobs:
             cu117
             cu116
             cpu
+      - name: Get current date
+        id: date
+        run: echo "formatted_date=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
 
   staging_release:
     env:
@@ -74,7 +78,7 @@ jobs:
           python3 -m pip install -U setuptools wheel --user
           python3 -m pip install oss2  --user
       - uses: actions/checkout@v2
-      - uses: Oneflow-Inc/get-oneflow@nv-wheels
+      - uses: Oneflow-Inc/get-oneflow@add-nightly-date
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry !='cpu' }}
         with:
@@ -91,14 +95,15 @@ jobs:
           docker-run-use-lld: false
           retry-failed-build: true
           clean-ccache: true
-          nightly: ${{ github.event_name == 'schedule' }}
+          nightly: ${{ github.event_name == 'schedule' || github.ref == 'refs/heads/release/add_nightly_date_index'}}
+          nightly-date: ${{ needs.generate-build-matrix.outputs.formatted_date }}
           use-nvidia-wheels: ${{ matrix.entry !='cu112' }}
           python-versions: |
             3.7
             3.8
             3.9
             3.10
-      - uses: Oneflow-Inc/get-oneflow@nv-wheels
+      - uses: Oneflow-Inc/get-oneflow@add-nightly-date
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry =='cpu' }}
         with:
@@ -115,7 +120,8 @@ jobs:
           docker-run-use-lld: false
           retry-failed-build: true
           clean-ccache: false
-          nightly: ${{ github.event_name == 'schedule' || github.ref == 'refs/heads/master'}}
+          nightly: ${{ github.event_name == 'schedule' || github.ref == 'refs/heads/release/add_nightly_date_index'}}
+          nightly-date: ${{ needs.generate-build-matrix.outputs.formatted_date }}
           python-versions: |
             3.7
             3.8
@@ -137,6 +143,7 @@ jobs:
           python3 -m pip install oss2 beautifulsoup4 --user
           python3 tools/create_pip_index.py --dir_key ${{ env.OSS_DIR }} -b oneflow-staging \
             --index_key=branch/${{ github.ref_name }}/${{ matrix.entry }}/index.html \
+            --index_key=branch/${{ github.ref_name }}/date/${{ needs.generate-build-matrix.outputs.formatted_date }}/${{ matrix.entry }}/index.html \
             --index_key=${{ env.OSS_DIR }}/index.html \
             --index_key=commit/${{ github.sha }}/${{ matrix.entry }}/index.html
       - name: Update API docs

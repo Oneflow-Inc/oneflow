@@ -27,6 +27,7 @@ class AccCtrlTickCompTaskNode final : public CompTaskNode {
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
+  void ConsumeFakeRegsts() override;
 };
 
 void AccCtrlTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
@@ -38,6 +39,8 @@ void AccCtrlTickCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst());
 }
 
+void AccCtrlTickCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
+
 void AccCtrlTickCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
@@ -47,7 +50,7 @@ void AccCtrlTickCompTaskNode::BuildExecGphAndRegst() {
   exec_node->BindBnWithRegst(op->SoleIbn(), in_regst);
   out_regst->AddLbi(op->BnInOp2Lbi(op->SoleObn()));
   exec_node->BindBnWithRegst(op->SoleObn(), out_regst);
-  exec_node->InferBlobDescs(parallel_ctx());
+  (exec_node->*GetInferBlobDescsMethod())(parallel_ctx());
 }
 
 REGISTER_COMP_TASK_STREAM_INDEX_GETTER(TaskType::kAccCtrlTick);

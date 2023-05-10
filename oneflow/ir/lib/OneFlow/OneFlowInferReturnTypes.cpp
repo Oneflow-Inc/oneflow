@@ -111,7 +111,7 @@ size_t getResultSize(DictionaryAttr attributes) {
   };
   ::oneflow::ParallelConf parallel_conf = user_op::getParallelConfFromAttrDictionary(attributes);
   ::oneflow::ParallelDesc parallel_desc{parallel_conf};
-  op->FillOpParallelDesc(parallel_desc);
+  CHECK_JUST(op->FillOpParallelDesc(parallel_desc));
   CHECK_JUST(op->InferLogicalOutBlobDescs(GetLogicalBlobDesc4BnInOp, parallel_desc));
   for (const auto& result_id : result_ids) {
     const auto& arg_name = result_id.first;
@@ -127,14 +127,16 @@ size_t getResultSize(DictionaryAttr attributes) {
 
 ::mlir::LogicalResult NormalizationAddReluOp::refineReturnTypes(
     ::mlir::MLIRContext* context, ::llvm::Optional<::mlir::Location> location,
-    ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes, ::mlir::RegionRange regions,
+    ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
+    ::mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
     ::llvm::SmallVectorImpl<::mlir::Type>& inferredReturnTypes) {
   return success();
 }
 
 ::mlir::LogicalResult NormalizationAddReluOp::inferReturnTypes(
     ::mlir::MLIRContext* context, ::llvm::Optional<::mlir::Location> location,
-    ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes, ::mlir::RegionRange regions,
+    ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
+    ::mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
     ::llvm::SmallVectorImpl<::mlir::Type>& inferredReturnTypes) {
   return inferReturnTypesWithOpTypeName("normalization_add_relu", context, operands, attributes,
                                         regions, inferredReturnTypes);
