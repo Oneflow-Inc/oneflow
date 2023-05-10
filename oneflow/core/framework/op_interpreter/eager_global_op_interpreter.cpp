@@ -263,7 +263,6 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
         || input_parallel_desc->device_type() != dst_parallel_desc->device_type()) {
       input = JUST(GetBoxingOutput(input, infered_input_meta->nd_sbp(), dst_parallel_desc,
                                    parallel_id.has_value()));
-      LOG(ERROR) << "op_type: " << user_op_expr.op_type_name();
       boxing_outputs.emplace_back(input);
     }
     const auto& local_tensor = JUST(input->cur_rank_phy_tensor());

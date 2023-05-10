@@ -255,7 +255,8 @@ static constexpr auto* CachedLocalTensorMeta = DECORATE(&RawLocalTensorMeta, Thr
     JUST(cur_rank_phy_tensor->set_requires_grad(requires_grad));
     cur_rank_phy_tensor->set_is_leaf(is_leaf);
   }
-  return std::make_shared<EagerGlobalTensorImpl>(global_tensor_meta, cur_rank_phy_tensor);
+  auto* tensor_impl = new EagerGlobalTensorImpl(global_tensor_meta, cur_rank_phy_tensor);
+  return std::shared_ptr<EagerGlobalTensorImpl>(tensor_impl);
 }
 
 Maybe<GlobalTensorImpl> EagerGlobalTensorImpl::detach() const {
