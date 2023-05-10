@@ -85,21 +85,22 @@ Maybe<void> EagerLocalTensorImpl::UpdateTensorStorage() {
   tensor_storage_ = std::make_shared<TensorStorage>(eager_blob_object->tensor_storage());
   tensor_storage_->set_releaser_hook([eager_blob_object](
                                          const std::shared_ptr<vm::TensorStorage>&) {
-    auto ret = PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      if (eager_blob_object->producer_stream().has_value()) {
+    if (eager_blob_object->producer_stream().has_value()) {
+      auto ret = PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
         JUST(builder->ReleaseTensor(eager_blob_object));
+        return Maybe<void>::Ok();
+      });
+
+      // We should not use CHECK_JUST here because it will throw an exception
+      // in destructor.
+      if (!ret.IsOk()) {
+        LOG(WARNING)
+            << "Release hook gets an error. Release hooks are executed in destructor, so the error "
+               "is possibly only a secondary error caused by another unrelated exception.";
+        LOG(WARNING) << "======= Error message begin =======";
+        LOG(WARNING) << ret.GetSerializedError();
+        LOG(WARNING) << "======= Error message end =======";
       }
-      return Maybe<void>::Ok();
-    });
-    // We should not use CHECK_JUST here because it will throw an exception
-    // in destructor.
-    if (!ret.IsOk()) {
-      LOG(WARNING)
-          << "Release hook gets an error. Release hooks are executed in destructor, so the error "
-             "is possibly only a secondary error caused by another unrelated exception.";
-      LOG(WARNING) << "======= Error message begin =======";
-      LOG(WARNING) << ret.GetSerializedError();
-      LOG(WARNING) << "======= Error message end =======";
     }
   });
   return Maybe<void>::Ok();
@@ -203,39 +204,49 @@ EagerGlobalTensorImpl::EagerGlobalTensorImpl(
 
 namespace {
 
-Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
-                              const ParallelDesc& parallel_desc,
-                              const Optional<int64_t>& parallel_id) {
-  if (parallel_id.has_value()) {
-    return GetPhysicalShape(logical_shape, nd_sbp, parallel_desc, JUST(parallel_id));
-  } else {
-    return std::make_shared<Shape>(DimVector(logical_shape.NumAxes(), 0));
-  }
+Maybe<Shape> RawGetInvalidPhysicalShape(int64_t num_axis) {
+  return std::make_shared<Shape>(DimVector(num_axis, 0));
 }
+
+static constexpr auto* CachedGetInValidPhysicalShape =
+    DECORATE(&RawGetInvalidPhysicalShape, ThreadLocal);
+
+Maybe<Shape> RawGetPhysicalShape(Symbol<GlobalTensorMeta> global_tensor_meta, int64_t parallel_id) {
+  return GetPhysicalShape(global_tensor_meta->shape(), *global_tensor_meta->nd_sbp(),
+                          *global_tensor_meta->parallel_desc(), parallel_id);
+}
+
+static constexpr auto* CachedGetValidPhysicalShape = DECORATE(&RawGetPhysicalShape, ThreadLocal);
+
+Symbol<LocalTensorMeta> RawLocalTensorMeta(const Shape& shape, DataType dtype,
+                                           Symbol<Device> device) {
+  return SymbolOf(LocalTensorMeta(shape, dtype, device));
+}
+
+static constexpr auto* CachedLocalTensorMeta = DECORATE(&RawLocalTensorMeta, ThreadLocalCopiable);
 
 }  // namespace
 
 /* static */ Maybe<EagerGlobalTensorImpl> EagerGlobalTensorImpl::New(
     Symbol<GlobalTensorMeta> global_tensor_meta, Symbol<Device> device,
     const Optional<int64_t>& parallel_id, bool requires_grad, bool is_leaf) {
-  const auto& shape = global_tensor_meta->shape_ptr();
+  const auto& shape = global_tensor_meta->shape();
   const auto& dtype = global_tensor_meta->dtype();
-  const auto& nd_sbp = global_tensor_meta->nd_sbp();
-  const auto& parallel_desc = global_tensor_meta->parallel_desc();
-  const auto& cur_rank_phy_shape =
-      JUST(GetPhysicalShape(*shape, *nd_sbp, *parallel_desc, parallel_id));
   std::shared_ptr<LocalTensor> cur_rank_phy_tensor;
   // If the `'parallel_desc` doesn't cover current ProcessCtx or the tensor has 0-size shape, there
   // is no need to compute through the corresponding opkernel, and can be obtained directly through
   // empty op.
-  if (parallel_id.has_value() && shape->elem_cnt() != 0) {
+  if (parallel_id.has_value() && shape.elem_cnt() != 0) {
+    const auto& cur_rank_phy_shape =
+        JUST(CachedGetValidPhysicalShape(global_tensor_meta, JUST(parallel_id)));
     const auto& cur_rank_phy_tensor_meta =
-        SymbolOf(LocalTensorMeta(*cur_rank_phy_shape, dtype, device));
+        CachedLocalTensorMeta(*cur_rank_phy_shape, dtype, device);
     auto cur_rank_phy_tensor_impl = std::make_shared<EagerLocalTensorImpl>(requires_grad, is_leaf);
     const auto& dep_object = NewLocalDepObject();
     JUST(cur_rank_phy_tensor_impl->InitEagerBlobObject(cur_rank_phy_tensor_meta, dep_object));
     cur_rank_phy_tensor = std::make_shared<LocalTensor>(cur_rank_phy_tensor_impl);
   } else {
+    const auto& cur_rank_phy_shape = JUST(CachedGetInValidPhysicalShape(shape.NumAxes()));
     const auto& dtype_symbol = JUST(DType::Get(dtype));
     const auto& empty =
         JUST(functional::Empty(*cur_rank_phy_shape, dtype_symbol, device,

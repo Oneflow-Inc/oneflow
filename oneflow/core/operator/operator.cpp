@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/vm/symbol_storage.h"
-#include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/job/local_sig_infer_hint.h"
@@ -1426,13 +1425,9 @@ Maybe<void> Operator::ToOpAttribute(OpAttribute* op_attribute) const {
         } else {
           ParallelConf parallel_conf = pair.second->parallel_conf();
           const auto MakeParallelDescSymbol = [&parallel_conf]() -> Maybe<int64_t> {
-            int64_t symbol_id = 0;
-            const auto BuildInstruction =
-                [&symbol_id, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
-              symbol_id = JUST(JUST(builder->GetParallelDescSymbol(parallel_conf))->symbol_id());
-              return Maybe<void>::Ok();
-            };
-            JUST(PhysicalRun(BuildInstruction));
+            int64_t symbol_id = JUST(
+                JUST(Singleton<symbol::Storage<ParallelDesc>>::Get()->FindOrCreate(parallel_conf))
+                    ->symbol_id());
             return symbol_id;
           };
           (*symbol_map)[pair.first] = JUST(MakeParallelDescSymbol());
@@ -1678,10 +1673,8 @@ Maybe<Shape> GetNdHierarchyPhysicalShape(const Shape& logical_shape, const NdSbp
   return physical;
 }
 
-}  // namespace
-
-Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
-                              const ParallelDesc& parallel_desc, int64_t parallel_id) {
+Maybe<Shape> RawGetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
+                                 const ParallelDesc& parallel_desc, int64_t parallel_id) {
   CHECK_GE_OR_RETURN(parallel_id, 0);
   CHECK_LT_OR_RETURN(parallel_id, parallel_desc.hierarchy()->elem_cnt());
   CHECK_EQ_OR_RETURN(parallel_desc.hierarchy()->NumAxes(), nd_sbp.sbp_parallel_size());
@@ -1693,10 +1686,19 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
   }
 }
 
+static constexpr auto* CachedGetPhysicalShape = DECORATE(&RawGetPhysicalShape, ThreadLocalCopiable);
+
+}  // namespace
+
+Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
+                              const ParallelDesc& parallel_desc, int64_t parallel_id) {
+  return CachedGetPhysicalShape(logical_shape, nd_sbp, parallel_desc, parallel_id);
+}
+
 Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
                               const ParallelDesc& parallel_desc,
                               const ParallelContext& parallel_ctx) {
-  return GetPhysicalShape(logical_shape, nd_sbp, parallel_desc, parallel_ctx.parallel_id());
+  return CachedGetPhysicalShape(logical_shape, nd_sbp, parallel_desc, parallel_ctx.parallel_id());
 }
 
 Maybe<Shape> GetLogicalShape(const Shape& physical_shape, const NdSbp& nd_sbp,

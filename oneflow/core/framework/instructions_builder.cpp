@@ -204,54 +204,30 @@ Maybe<void> InstructionsBuilder::SoftSyncNNGraphBuffers(
   return Maybe<void>::Ok();
 }
 
-namespace {
-
-int64_t NewSymbolId() {
-  static std::atomic<int64_t> cnt(0);
-  return cnt.fetch_add(1, std::memory_order_relaxed);
-}
-
-}  // namespace
-
-Maybe<JobDesc> InstructionsBuilder::GetJobConfSymbol(const JobConfigProto& job_conf) {
-  return Singleton<symbol::Storage<JobDesc>>::Get()->FindOrCreate(job_conf, &NewSymbolId);
-}
-
-Maybe<ParallelDesc> InstructionsBuilder::GetParallelDescSymbol(const ParallelConf& parallel_conf) {
-  return Singleton<symbol::Storage<ParallelDesc>>::Get()->FindOrCreate(parallel_conf, &NewSymbolId);
-}
-
-Maybe<Scope> InstructionsBuilder::GetScopeSymbol(const ScopeProto& scope_proto) {
-  return Singleton<symbol::Storage<Scope>>::Get()->FindOrCreate(scope_proto, &NewSymbolId);
-}
-
-Maybe<OperatorConfSymbol> InstructionsBuilder::GetOpConfSymbol(const OperatorConf& op_conf) {
-  return Singleton<symbol::Storage<OperatorConfSymbol>>::Get()->FindOrCreate(op_conf, &NewSymbolId);
-}
-
 Maybe<Scope> InstructionsBuilder::BuildInitialScope(
     int64_t session_id, const JobConfigProto& job_conf, const std::string& device_tag,
     const std::vector<std::string>& machine_device_ids, const std::shared_ptr<Shape>& hierarchy,
     bool is_local) {
   ScopeProto scope_proto;
   scope_proto.set_session_id(session_id);
-  std::shared_ptr<JobDesc> job_conf_sym = JUST(GetJobConfSymbol(job_conf));
+  std::shared_ptr<JobDesc> job_conf_sym =
+      JUST(Singleton<symbol::Storage<JobDesc>>::Get()->FindOrCreate(job_conf));
   scope_proto.set_job_desc_symbol_id(JUST(job_conf_sym->symbol_id()));
   std::shared_ptr<ParallelConf> parallel_conf =
       JUST(MakeParallelConf(device_tag, machine_device_ids, hierarchy));
   std::shared_ptr<ParallelDesc> device_parallel_desc_sym =
-      JUST(GetParallelDescSymbol(*parallel_conf));
+      JUST(Singleton<symbol::Storage<ParallelDesc>>::Get()->FindOrCreate(*parallel_conf));
   scope_proto.set_device_parallel_desc_symbol_id(JUST(device_parallel_desc_sym->symbol_id()));
   parallel_conf = JUST(MakeParallelConf("cpu", machine_device_ids, hierarchy));
   std::shared_ptr<ParallelDesc> host_parallel_desc_sym =
-      JUST(GetParallelDescSymbol(*parallel_conf));
+      JUST(Singleton<symbol::Storage<ParallelDesc>>::Get()->FindOrCreate(*parallel_conf));
   scope_proto.set_host_parallel_desc_symbol_id(JUST(host_parallel_desc_sym->symbol_id()));
   if (is_local) {
     scope_proto.mutable_opt_local_parallel_conf()->mutable_local_parallel();
   } else {
     scope_proto.mutable_opt_local_parallel_conf()->clear_local_parallel();
   }
-  return GetScopeSymbol(scope_proto);
+  return Singleton<symbol::Storage<Scope>>::Get()->FindOrCreate(scope_proto);
 }
 
 Maybe<Scope> InstructionsBuilder::BuildInitialScopeWithPlacement(int64_t session_id,
@@ -260,23 +236,25 @@ Maybe<Scope> InstructionsBuilder::BuildInitialScopeWithPlacement(int64_t session
                                                                  bool is_local) {
   ScopeProto scope_proto;
   scope_proto.set_session_id(session_id);
-  std::shared_ptr<JobDesc> job_conf_sym = JUST(GetJobConfSymbol(job_conf));
+  std::shared_ptr<JobDesc> job_conf_sym =
+      JUST(Singleton<symbol::Storage<JobDesc>>::Get()->FindOrCreate(job_conf));
   scope_proto.set_job_desc_symbol_id(JUST(job_conf_sym->symbol_id()));
 
-  std::shared_ptr<ParallelDesc> device_parallel_desc_sym =
-      JUST(GetParallelDescSymbol(placement->parallel_conf()));
+  std::shared_ptr<ParallelDesc> device_parallel_desc_sym = JUST(
+      Singleton<symbol::Storage<ParallelDesc>>::Get()->FindOrCreate(placement->parallel_conf()));
   scope_proto.set_device_parallel_desc_symbol_id(JUST(device_parallel_desc_sym->symbol_id()));
 
   Symbol<ParallelDesc> new_placement = JUST(ReplaceDeviceType(placement, DeviceType::kCPU));
   std::shared_ptr<ParallelDesc> host_parallel_desc_sym =
-      JUST(GetParallelDescSymbol(new_placement->parallel_conf()));
+      JUST(Singleton<symbol::Storage<ParallelDesc>>::Get()->FindOrCreate(
+          new_placement->parallel_conf()));
   scope_proto.set_host_parallel_desc_symbol_id(JUST(host_parallel_desc_sym->symbol_id()));
   if (is_local) {
     scope_proto.mutable_opt_local_parallel_conf()->mutable_local_parallel();
   } else {
     scope_proto.mutable_opt_local_parallel_conf()->clear_local_parallel();
   }
-  return GetScopeSymbol(scope_proto);
+  return Singleton<symbol::Storage<Scope>>::Get()->FindOrCreate(scope_proto);
 }
 
 Maybe<Scope> InstructionsBuilder::BuildScopeWithNewParallelDesc(
@@ -287,10 +265,10 @@ Maybe<Scope> InstructionsBuilder::BuildScopeWithNewParallelDesc(
     std::shared_ptr<ParallelConf> parallel_conf =
         CHECK_JUST(MakeParallelConf(device_tag, machine_device_ids, hierarchy));
     std::shared_ptr<ParallelDesc> device_parallel_desc_sym =
-        CHECK_JUST(GetParallelDescSymbol(*parallel_conf));
+        CHECK_JUST(Singleton<symbol::Storage<ParallelDesc>>::Get()->FindOrCreate(*parallel_conf));
     parallel_conf = CHECK_JUST(MakeParallelConf("cpu", machine_device_ids, hierarchy));
     std::shared_ptr<ParallelDesc> host_parallel_desc_sym =
-        CHECK_JUST(GetParallelDescSymbol(*parallel_conf));
+        CHECK_JUST(Singleton<symbol::Storage<ParallelDesc>>::Get()->FindOrCreate(*parallel_conf));
     scope_proto->set_device_parallel_desc_symbol_id(
         CHECK_JUST(device_parallel_desc_sym->symbol_id()));
     scope_proto->set_host_parallel_desc_symbol_id(CHECK_JUST(host_parallel_desc_sym->symbol_id()));
@@ -339,7 +317,7 @@ Maybe<Scope> InstructionsBuilder::BuildScopeByProtoSetter(
     const std::function<void(const std::shared_ptr<ScopeProto>&)>& Setter) {
   std::shared_ptr<ScopeProto> scope_proto = JUST(scope->MakeChildScopeProto());
   Setter(scope_proto);
-  return GetScopeSymbol(*scope_proto);
+  return Singleton<symbol::Storage<Scope>>::Get()->FindOrCreate(*scope_proto);
 }
 
 Maybe<Scope> InstructionsBuilder::BuildScopeByProtoStrSetter(
@@ -350,7 +328,7 @@ Maybe<Scope> InstructionsBuilder::BuildScopeByProtoStrSetter(
   std::string new_serialized_scope_proto = StrSetter(serialized_scope_proto);
   CHECK_OR_RETURN(TxtString2PbMessage(new_serialized_scope_proto, scope_proto.get()))
       << Error::RuntimeError() << "scope_proto parse failed";
-  return GetScopeSymbol(*scope_proto);
+  return Singleton<symbol::Storage<Scope>>::Get()->FindOrCreate(*scope_proto);
 }
 
 Maybe<void> InstructionsBuilder::Call(const std::shared_ptr<one::StatefulOpKernel>& opkernel,

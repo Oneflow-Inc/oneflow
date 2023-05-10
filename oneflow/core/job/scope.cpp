@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/job/scope.pb.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/vm/symbol_storage.h"
-#include "oneflow/core/framework/instructions_builder.h"
 
 namespace oneflow {
 
@@ -98,11 +97,8 @@ Maybe<int64_t> NewScopeSymbolId(
   const Scope& old_scope = Singleton<symbol::Storage<Scope>>::Get()->Get(old_scope_symbol_id);
   std::shared_ptr<ScopeProto> new_scope = JUST(old_scope.MakeChildScopeProto());
   InitNewScopeProto(new_scope);
-  std::shared_ptr<Scope> new_scope_symbol;
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    new_scope_symbol = JUST(builder->GetScopeSymbol(*new_scope));
-    return Maybe<void>::Ok();
-  }));
+  std::shared_ptr<Scope> new_scope_symbol =
+      JUST(Singleton<symbol::Storage<Scope>>::Get()->FindOrCreate(*new_scope));
   return JUST(new_scope_symbol->symbol_id());
 }
 
