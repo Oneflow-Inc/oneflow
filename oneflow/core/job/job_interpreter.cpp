@@ -88,69 +88,6 @@ bool IsViewOp(const std::shared_ptr<UserOpExpr>& op) {
   return op->op_type_name() == "reshape" || op->op_type_name() == "expand_dims";
 }
 
-std::string ErrorString4Inputs(const TensorTuple& inputs,
-                               const std::shared_ptr<UserOpExpr>& op_expr) {
-  std::stringstream error_str;
-  error_str << "Got input tensors with inconsistent attributes!\n"
-            << "op_type_name: " << op_expr->op_type_name() << "\n"
-            << "attributes of inputs is:\n";
-  int32_t idx = 0;
-  for (const auto& tensor : inputs) {
-    if (tensor->is_local()) {
-      error_str << "local";
-    } else {
-      error_str << "global";
-    }
-    if (++idx != inputs.size()) { error_str << ", "; }
-  }
-  return error_str.str();
-}
-
-Maybe<bool> GetEagerInterpreterType(const TensorTuple& inputs,
-                                    const std::shared_ptr<UserOpExpr>& op_expr) {
-  bool is_local = true;
-  if (inputs.empty()) {
-    // Use global interpreter for empty inputs
-    is_local = false;
-  } else {
-    if (inputs[0]->is_global()) {
-      if (inputs.size() == 1) {
-        // do nothing
-      } else if (inputs.size() == 2) {
-        CHECK_OR_RETURN(inputs[1]->is_global())      // NOLINT
-            << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
-      } else if (inputs.size() == 3) {
-        CHECK_OR_RETURN(inputs[1]->is_global())
-            << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
-        CHECK_OR_RETURN(inputs[2]->is_global())
-            << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
-      } else {
-        for (const auto& tensor : inputs) {
-          CHECK_OR_RETURN(tensor->is_global()) << ErrorString4Inputs(inputs, op_expr);
-        }
-      }
-      is_local = false;
-    } else {
-      if (inputs.size() == 1) {
-        // do nothing
-      } else if (inputs.size() == 2) {
-        CHECK_OR_RETURN(inputs.at(1)->is_local())
-            << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
-      } else if (inputs.size() == 3) {
-        CHECK_OR_RETURN(inputs.at(1)->is_local())
-            << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
-        CHECK_OR_RETURN(inputs.at(2)->is_local())
-            << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
-      } else {
-        for (const auto& tensor : inputs) {
-          CHECK_OR_RETURN(tensor->is_local()) << ErrorString4Inputs(inputs, op_expr);
-        }
-      }
-    }
-  }
-  return is_local;
-}
-
 Maybe<void> RunViewOp(const std::shared_ptr<UserOpExpr>& op, Env& env, const TensorTuple& inputs,
                       const OpArgsVector<std::string>& output_names) {
   // eliminate the memcpy of view ops
@@ -317,7 +254,7 @@ Maybe<one::TensorTuple> InterpretJob(const one::TensorTuple& graph_inputs,
             return CHECK_JUST(functional::To(tensor, op_conf.device_tag()));
           }));
       OpArgsVector<std::string> output_names = GetOutputNamesOfOp(user_conf);
-      if (JUST(GetEagerInterpreterType(inputs, op))) {
+      if (!inputs.empty() && inputs[0]->is_local()) { // All tensors maintain the same properties of is_local
         if (IsViewOp(op)) {
           JUST(RunViewOp(op, env, inputs, output_names));
         } else {
