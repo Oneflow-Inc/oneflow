@@ -254,7 +254,8 @@ Maybe<one::TensorTuple> InterpretJob(const one::TensorTuple& graph_inputs,
             return CHECK_JUST(functional::To(tensor, op_conf.device_tag()));
           }));
       OpArgsVector<std::string> output_names = GetOutputNamesOfOp(user_conf);
-      if (!inputs.empty() && inputs[0]->is_local()) { // All tensors maintain the same properties of is_local
+      if (!inputs.empty()
+          && inputs[0]->is_local()) {  // All tensors maintain the same properties of is_local
         if (IsViewOp(op)) {
           JUST(RunViewOp(op, env, inputs, output_names));
         } else {
