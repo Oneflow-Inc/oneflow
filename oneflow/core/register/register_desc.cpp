@@ -80,7 +80,7 @@ void RegstDesc::CopyBlobDescWithoutAddLbi(const RegstDesc* rhs) {
 
 BlobDesc* RegstDesc::AddLbi(const LogicalBlobId& lbi) {
   CHECK(lbi2blob_desc_.find(lbi) == lbi2blob_desc_.end());
-  BlobDesc* blob_desc = new BlobDesc(GlobalJobDesc().DefaultDataType());
+  BlobDesc* blob_desc = new BlobDesc(GlobalJobDesc().DefaultDataType(), MemoryFormat::kContiguous);
   lbi2blob_desc_[lbi].reset(blob_desc);
   return blob_desc;
 }
