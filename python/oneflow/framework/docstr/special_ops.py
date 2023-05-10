@@ -129,3 +129,38 @@ add_docstr(
 
     """,
 )
+
+add_docstr(
+    oneflow.special.polygamma,
+    r"""
+    polygamma(n, input) -> Tensor
+    
+    Computes the :math:`n^{th}` derivative of the digamma function on :attr:`input`.
+    :math:`n \geq 0` is called the order of the polygamma function.
+    
+    .. math::
+        \psi^{(n)}(x) = \frac{d^{(n)}}{dx^{(n)}} \psi(x)
+    
+    Note:
+        This function is implemented only for nonnegative integers :math:`n \geq 0`.
+    
+    Args:
+        n (int): the order of the polygamma function
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([2., 4.])
+        >>> flow.special.polygamma(1, x)
+        tensor([0.6449, 0.2838], dtype=oneflow.float32)
+        >>> flow.special.polygamma(2, x)
+        tensor([-0.4041, -0.0800], dtype=oneflow.float32)
+        >>> flow.special.polygamma(3, x)
+        tensor([0.4939, 0.0449], dtype=oneflow.float32)
+        >>> flow.special.polygamma(4, x)
+        tensor([-0.8863, -0.0375], dtype=oneflow.float32)
+
+    """,
+)

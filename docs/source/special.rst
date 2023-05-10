@@ -20,3 +20,4 @@ The oneflow.special module, modeled after SciPy's special module.
     round
     softmax
     zeta
+    polygamma

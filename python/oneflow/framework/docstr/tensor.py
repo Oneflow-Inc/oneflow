@@ -2777,3 +2777,10 @@ add_docstr(
     See :func:`oneflow.digamma`
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.polygamma,
+    r"""
+    See :func:`oneflow.special.polygamma`
+    """,
+)

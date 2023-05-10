@@ -311,6 +311,7 @@ Pointwise Ops
     lerp
     lerp_
     quantile
+    polygamma
 
 Reduction Ops
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
