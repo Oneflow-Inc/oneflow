@@ -28,6 +28,8 @@ limitations under the License.
 #include "trt_flash_attention/fmha_flash_attention.h"
 #include "oneflow/core/ep/include/primitive/batch_matmul.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/user/kernels/collective_communication/include/collective_communication.h"
+#include "oneflow/user/kernels/collective_communication/include/all_reduce.h"
 
 namespace oneflow {
 namespace {
@@ -1457,21 +1459,57 @@ REGISTER_FUSED_APPLY_ROTARY_EMB_GPU_DTYPE(half);
 REGISTER_FUSED_APPLY_ROTARY_EMB_GPU_DTYPE(nv_bfloat16);
 #endif  // CUDA_VERSION >= 11000
 
+class EagerCclOpKernelCache final : public user_op::OpKernelCache {
+ public:
+  explicit EagerCclOpKernelCache(user_op::KernelCacheContext* ctx) { Init(ctx); }
+  ~EagerCclOpKernelCache() override = default;
+
+  const std::shared_ptr<ccl::CommunicationContext>& communication_ctx() const {
+    return communication_ctx_;
+  }
+
+ private:
+  void Init(user_op::KernelCacheContext* ctx) {
+    const std::string& parallel_conf_txt = ctx->Attr<std::string>("parallel_conf");
+    ParallelConf parallel_conf;
+    CHECK(TxtString2PbMessage(parallel_conf_txt, &parallel_conf));
+    Symbol<ParallelDesc> parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
+    communication_ctx_ = ccl::NewCommunicationContext(parallel_desc->device_type(), parallel_desc);
+  }
+
+  std::shared_ptr<ccl::CommunicationContext> communication_ctx_;
+};
+
+void InitEagerCclOpKernelCache(user_op::KernelCacheContext* ctx,
+                               std::shared_ptr<user_op::OpKernelCache>* cache_ptr) {
+  if (*cache_ptr == nullptr) { *cache_ptr = std::make_shared<EagerCclOpKernelCache>(ctx); }
+}
+
 template<typename T>
 class LlamaAttentionLayerForwardKernel final : public user_op::OpKernel {
  public:
   LlamaAttentionLayerForwardKernel() = default;
   ~LlamaAttentionLayerForwardKernel() override = default;
 
+  void InitOpKernelCacheWithFlags(
+      user_op::KernelCacheContext* ctx, int8_t flag,
+      std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
+    InitEagerCclOpKernelCache(ctx, cache_ptr);
+  }
+
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    auto* kernel_cache = dynamic_cast<const EagerCclOpKernelCache*>(cache);
+    CHECK(kernel_cache != nullptr);
     //  input tensors
     const user_op::Tensor* hidden_states = ctx->Tensor4ArgNameAndIndex("hidden_states", 0);
     const user_op::Tensor* input_norm_weight = ctx->Tensor4ArgNameAndIndex("input_norm_weight", 0);
     const user_op::Tensor* query_weight = ctx->Tensor4ArgNameAndIndex("query_weight", 0);
     const user_op::Tensor* key_weight = ctx->Tensor4ArgNameAndIndex("key_weight", 0);
     const user_op::Tensor* value_weight = ctx->Tensor4ArgNameAndIndex("value_weight", 0);
+    const user_op::Tensor* attn_out_weight = ctx->Tensor4ArgNameAndIndex("attn_out_weight", 0);
     const user_op::Tensor* position_ids = ctx->Tensor4ArgNameAndIndex("position_ids", 0);
     user_op::Tensor* past_key = nullptr;
     user_op::Tensor* past_value = nullptr;
@@ -1491,6 +1529,7 @@ class LlamaAttentionLayerForwardKernel final : public user_op::OpKernel {
     user_op::Tensor* rotary_query = ctx->Tensor4ArgNameAndIndex("rotary_query", 0);
     user_op::Tensor* rotary_key = ctx->Tensor4ArgNameAndIndex("rotary_key", 0);
     user_op::Tensor* attn_out = ctx->Tensor4ArgNameAndIndex("attn_out", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
     // attrs
     const int64_t head_size = ctx->Attr<int64_t>("head_size");
@@ -1673,6 +1712,23 @@ class LlamaAttentionLayerForwardKernel final : public user_op::OpKernel {
     params.attn_bias_stride_b = 0;
 
     DispatchCutlassFmha(params, cuda_stream);
+
+    // step 6, attn_out linear, attn_out: BM(hK), attn_out_weight: (HK)(hK)
+    auto batch_matmul = ep::primitive::NewPrimitive<ep::primitive::BatchMatmulFactory>(
+        ctx->device_type(), /*data_type */ query->data_type(),
+        /*trans_a*/ ep::primitive::BlasTransposeType::N,
+        /*trans_b*/ ep::primitive::BlasTransposeType::T);
+    CHECK(batch_matmul);
+    auto out_weight_shape = attn_out_weight->shape_view();
+    batch_matmul->Launch(cuda_stream, b, m, out_weight_shape.At(0), out_weight_shape.At(1),
+                         /*alpha*/ 1.0, attn_out->dptr(), attn_out_weight->dptr(), /*beta*/ 0.0,
+                         out->mut_dptr());
+
+    // step 7, AllReduceSum
+    std::unique_ptr<ccl::AllReduce> all_reduce = ccl::NewCollectiveCommunication<ccl::AllReduce>(
+        ctx->device_type(), out->data_type(), ccl::kSum);
+    all_reduce->Launch(ctx->stream(), out->dptr(), out->mut_dptr(), out->shape_view().elem_cnt(),
+                       kernel_cache->communication_ctx());
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

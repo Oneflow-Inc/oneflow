@@ -2856,6 +2856,7 @@ def OneFlow_LlamaAttentionLayerForwardOp : OneFlow_BaseOp<"llama_attention_layer
     OneFlow_Tensor:$query_weight,
     OneFlow_Tensor:$key_weight,
     OneFlow_Tensor:$value_weight,
+    OneFlow_Tensor:$attn_out_weight,
     OneFlow_Tensor:$position_ids,
     Optional<OneFlow_Tensor>:$past_key,
     Optional<OneFlow_Tensor>:$past_value
@@ -2870,10 +2871,12 @@ def OneFlow_LlamaAttentionLayerForwardOp : OneFlow_BaseOp<"llama_attention_layer
     OneFlow_Tensor:$rotary_key,
     OneFlow_Tensor:$concat_key,
     OneFlow_Tensor:$concat_value,
-    OneFlow_Tensor:$attn_out
+    OneFlow_Tensor:$attn_out,
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
-    SI64Attr:$head_size
+    SI64Attr:$head_size,
+    StrAttr:$parallel_conf
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

@@ -831,6 +831,7 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
     ctx->SetOutputShape("concat_value", 0, Shape({b, h, m, head_size}));
   }
   ctx->SetOutputShape("attn_out", 0, hidden_states_shape);
+  ctx->SetOutputShape("out", 0, hidden_states_shape);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> LlamaAttentionLayerForwardOp::InferPhysicalTensorDesc(
@@ -846,6 +847,7 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
                      .Split(user_op::OpArg("query_weight", 0), 0)
                      .Split(user_op::OpArg("key_weight", 0), 0)
                      .Split(user_op::OpArg("value_weight", 0), 0)
+                     .Split(user_op::OpArg("attn_out_weight", 0), 1)
                      .Split(user_op::OpArg("query", 0), 2)
                      .Split(user_op::OpArg("key", 0), 2)
                      .Split(user_op::OpArg("value", 0), 2)
@@ -854,7 +856,8 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
                      .Split(user_op::OpArg("rotary_key", 0), 2)
                      .Split(user_op::OpArg("concat_key", 0), 1)
                      .Split(user_op::OpArg("concat_value", 0), 1)
-                     .Split(user_op::OpArg("attn_out", 0), 2);
+                     .Split(user_op::OpArg("attn_out", 0), 2)
+                     .Broadcast(user_op::OpArg("out", 0));  // P->B
   if (ctx->user_op_conf().has_input("past_key", 0)) {
     builder =
         builder.Split(user_op::OpArg("past_key", 0), 1).Split(user_op::OpArg("past_value", 0), 1);
@@ -874,6 +877,7 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   ctx->SetOutputDType("concat_key", 0, data_type);
   ctx->SetOutputDType("concat_value", 0, data_type);
   ctx->SetOutputDType("attn_out", 0, data_type);
+  ctx->SetOutputDType("out", 0, data_type);
   return Maybe<void>::Ok();
 }
 

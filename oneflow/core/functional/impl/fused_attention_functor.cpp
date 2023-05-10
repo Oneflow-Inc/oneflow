@@ -742,6 +742,7 @@ class LlamaAttentionLayerForwardFunctor {
                                              .Input("query_weight")
                                              .Input("key_weight")
                                              .Input("value_weight")
+                                             .Input("attn_out_weight")
                                              .Input("position_ids")
                                              .Input("past_key")
                                              .Input("past_value")
@@ -755,6 +756,7 @@ class LlamaAttentionLayerForwardFunctor {
                                              .Output("concat_key")
                                              .Output("concat_value")
                                              .Output("attn_out")
+                                             .Output("out")
                                              .Build());
     op_ = CHECK_JUST(one::OpBuilder("llama_attention_layer_forward")
                          .Input("hidden_states")
@@ -762,6 +764,7 @@ class LlamaAttentionLayerForwardFunctor {
                          .Input("query_weight")
                          .Input("key_weight")
                          .Input("value_weight")
+                         .Input("attn_out_weight")
                          .Input("position_ids")
                          .Output("rms_norm_out")
                          .Output("inv_rms")
@@ -773,6 +776,7 @@ class LlamaAttentionLayerForwardFunctor {
                          .Output("concat_key")
                          .Output("concat_value")
                          .Output("attn_out")
+                         .Output("out")
                          .Build());
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& hidden_states,
@@ -780,22 +784,25 @@ class LlamaAttentionLayerForwardFunctor {
                                 const std::shared_ptr<one::Tensor>& query_weight,
                                 const std::shared_ptr<one::Tensor>& key_weight,
                                 const std::shared_ptr<one::Tensor>& value_weight,
+                                const std::shared_ptr<one::Tensor>& attn_out_weight,
                                 const std::shared_ptr<one::Tensor>& position_ids,
                                 const Optional<one::Tensor>& past_key,
                                 const Optional<one::Tensor>& past_value,
                                 const int64_t head_size) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("head_size");
-    attrs.SetAllAttrs(head_size);
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("head_size", "parallel_conf");
+    auto conf = PbMessage2TxtString(JUST(hidden_states->parallel_desc())->parallel_conf());
+    attrs.SetAllAttrs(head_size, conf);
     if (past_key)
       return OpInterpUtil::Dispatch<TensorTuple>(
           *op_with_past_key_value_,
-          {hidden_states, input_norm_weight, query_weight, key_weight, value_weight, position_ids,
-           JUST(past_key), JUST(past_value)},
+          {hidden_states, input_norm_weight, query_weight, key_weight, value_weight,
+           attn_out_weight, position_ids, JUST(past_key), JUST(past_value)},
           attrs);
     else
       return OpInterpUtil::Dispatch<TensorTuple>(
           *op_,
-          {hidden_states, input_norm_weight, query_weight, key_weight, value_weight, position_ids},
+          {hidden_states, input_norm_weight, query_weight, key_weight, value_weight,
+           attn_out_weight, position_ids},
           attrs);
   }
 

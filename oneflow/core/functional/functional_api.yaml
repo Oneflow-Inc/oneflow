@@ -2676,7 +2676,7 @@
   bind_python: True
 
 - name: "llama_attention_layer_forward"
-  signature: "TensorTuple (Tensor hidden_states, Tensor input_norm_weight, Tensor query_weight, Tensor key_weight, Tensor value_weight, Tensor position_ids, Tensor past_key=None, Tensor past_value=None, Int64 head_size=128) => LlamaAttentionLayerForwardOp"
+  signature: "TensorTuple (Tensor hidden_states, Tensor input_norm_weight, Tensor query_weight, Tensor key_weight, Tensor value_weight, Tensor attn_out_weight, Tensor position_ids, Tensor past_key=None, Tensor past_value=None, Int64 head_size=128) => LlamaAttentionLayerForwardOp"
   bind_python: True
 
 - name: "fused_multi_head_attention_inference"
