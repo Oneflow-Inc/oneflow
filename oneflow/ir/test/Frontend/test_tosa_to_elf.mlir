@@ -4,7 +4,7 @@
 // RUN: --linalg-fuse-elementwise-ops -empty-tensor-to-alloc-tensor -linalg-bufferize \
 // RUN: -tensor-bufferize -func-bufferize -buffer-results-to-out-params \
 // RUN: -convert-linalg-to-loops -convert-math-to-libm -convert-math-to-llvm -convert-scf-to-cf -convert-linalg-to-llvm \
-// RUN: -convert-func-to-llvm -convert-memref-to-llvm -reconcile-unrealized-casts --print-after-all \
+// RUN: -convert-func-to-llvm -finalize-memref-to-llvm -reconcile-unrealized-casts --print-after-all \
 // RUN: | oneflow-translate -mlir-to-llvmir
 
 builtin.module {

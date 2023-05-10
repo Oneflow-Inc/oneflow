@@ -25,8 +25,8 @@ namespace oneflow {
 namespace remat {
 
 void DisjointSet::merge(std::shared_ptr<DisjNode>& x, std::shared_ptr<DisjNode>& y) {
-  auto&& parent_x = find_father(x);
-  auto&& parent_y = find_father(y);
+  auto parent_x = find_father(x);
+  auto parent_y = find_father(y);
   if (parent_x.get() == parent_y.get()) { return; }
 
   parent_y->set_compute_time(parent_y->compute_time() + parent_x->compute_time());
@@ -45,7 +45,7 @@ std::shared_ptr<DisjNode> DisjointSet::find_father(std::shared_ptr<DisjNode>& x)
 }
 
 void DisjointSet::update_after_compute(vm::RematableTensorStorage* obj) {
-  auto&& fa = find_father(obj->node);
+  auto fa = find_father(obj->node);
   fa->set_compute_time(fa->compute_time() - obj->node->compute_time());
   obj->node->reset(obj->compute_time());
 }

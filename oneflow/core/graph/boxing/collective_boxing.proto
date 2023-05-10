@@ -20,11 +20,6 @@ enum ReduceMethod {
     kReduceMethodSum = 1;
 }
 
-enum Backend {
-    kBackendInvalid = 0;
-    kBackendNCCL = 1;
-}
-
 message DeviceDesc {
     required int64 machine_id = 1;
     required DeviceType device_type = 2;
@@ -43,7 +38,7 @@ message OpDesc {
     required DataType data_type = 5;
     required ShapeProto shape = 6;
     required int64 num_ranks = 7;
-    required Backend backend = 8;
+    required DeviceType device_type = 8;
 }
 
 message RequestDesc {

@@ -22,30 +22,6 @@ limitations under the License.
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
-namespace oneflow {
-struct JobConversionToFunc final : public OpConversionPattern<Job> {
- public:
-  using OpConversionPattern<Job>::OpConversionPattern;
-  LogicalResult matchAndRewrite(Job op, OpAdaptor adaptor,
-                                ConversionPatternRewriter& rewriter) const override {
-    auto func = rewriter.create<func::FuncOp>(op.getLoc(), op.getName(), op.getFunctionType());
-    rewriter.inlineRegionBefore(op.getRegion(), func.getBody(), func.end());
-    rewriter.eraseOp(op);
-    return success();
-  }
-};
-
-struct ReturnConversionToFunc final : public OpConversionPattern<ReturnOp> {
- public:
-  using OpConversionPattern<ReturnOp>::OpConversionPattern;
-  LogicalResult matchAndRewrite(ReturnOp op, OpAdaptor adaptor,
-                                ConversionPatternRewriter& rewriter) const override {
-    rewriter.replaceOpWithNewOp<func::ReturnOp>(op,
-                                                /* operands */ op.getOperands());
-    return success();
-  }
-};
-}  // namespace oneflow
 
 namespace func {
 struct FuncConversionToOneFlow final : public OpConversionPattern<FuncOp> {
@@ -71,6 +47,30 @@ struct ReturnConversionToOneFlow final : public OpConversionPattern<ReturnOp> {
   }
 };
 }  // namespace func
+
+namespace oneflow {
+struct JobConversionToFunc final : public OpConversionPattern<Job> {
+ public:
+  using OpConversionPattern<Job>::OpConversionPattern;
+  LogicalResult matchAndRewrite(Job op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    auto func = rewriter.create<func::FuncOp>(op.getLoc(), op.getName(), op.getFunctionType());
+    rewriter.inlineRegionBefore(op.getRegion(), func.getBody(), func.end());
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
+struct ReturnConversionToFunc final : public OpConversionPattern<ReturnOp> {
+ public:
+  using OpConversionPattern<ReturnOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(ReturnOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    rewriter.replaceOpWithNewOp<func::ReturnOp>(op,
+                                                /* operands */ op.getOperands());
+    return success();
+  }
+};
 
 namespace {
 
@@ -108,8 +108,6 @@ class FuncToOneFlowJobPass : public FuncToOneFlowJobPassBase<FuncToOneFlowJobPas
 };
 
 }  // namespace
-
-namespace oneflow {
 
 std::unique_ptr<Pass> createOneFlowJobToFuncPass() {
   return std::make_unique<OneFlowJobToFuncPass>();
