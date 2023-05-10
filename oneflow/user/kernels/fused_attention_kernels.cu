@@ -51,6 +51,17 @@ __global__ void InitQKVPtr(const T* x, const T* wq, const T* wk, const T* wv, T*
   ptr_arr[7] = k;
   ptr_arr[8] = v;
 }
+
+template<typename T1>
+struct Add {
+  __device__ __forceinline__ T1 operator()(const T1 a, const T1 b) const { return a + b; }
+};
+template<>
+struct Add<half> {
+  __device__ __forceinline__ half operator()(const half& a, const half& b) const {
+    return __float2half(__half2float(a) + __half2float(b));
+  }
+};
 }  // namespace
 namespace cuda {
 namespace rms_norm {
@@ -1729,6 +1740,10 @@ class LlamaAttentionLayerForwardKernel final : public user_op::OpKernel {
         ctx->device_type(), out->data_type(), ccl::kSum);
     all_reduce->Launch(ctx->stream(), out->dptr(), out->mut_dptr(), out->shape_view().elem_cnt(),
                        kernel_cache->communication_ctx());
+
+    // step 8, residual add: out = out + hidden_states
+    cuda::elementwise::Binary(Add<T>(), out->shape_view().elem_cnt(), out->mut_dptr<T>(),
+                              out->dptr<T>(), hidden_states->dptr<T>(), cuda_stream->cuda_stream());
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
