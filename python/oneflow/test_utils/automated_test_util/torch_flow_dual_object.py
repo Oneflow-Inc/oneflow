@@ -1275,7 +1275,7 @@ def autotest(
                         if not isinstance(res_complex, collections.abc.Sequence):
                             res_complex = [res_complex]
                         res += res_complex
-                        
+
                     testing = False
                     testing_graph = False
                     testing_complex = False
@@ -1413,7 +1413,7 @@ def random_tensor(
     global testing_complex
     if dtype == float and testing_complex:
         dtype = complex
-        
+
     pytorch_tensor = (
         random_pytorch_tensor(
             ndim, dim0, dim1, dim2, dim3, dim4, low, high, dtype, pin_memory
