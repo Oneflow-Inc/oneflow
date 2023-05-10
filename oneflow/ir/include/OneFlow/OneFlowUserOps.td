@@ -10894,6 +10894,9 @@ def OneFlow_ConvertMemoryFormatOp : OneFlow_BaseOp<"convert_memory_format", [NoM
   let output = (outs
     OneFlow_Tensor:$out
   );
+  let attrs = (ins
+    OneFlow_MemoryFormat:$memory_format
+  );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
