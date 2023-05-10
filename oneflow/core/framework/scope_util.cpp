@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/vm/symbol_storage.h"
 
 namespace oneflow {
 
@@ -141,11 +142,8 @@ Maybe<Scope> FindOrCreateBackwardPassScope(const std::shared_ptr<Scope>& scope) 
   if (it != scopes.end()) { return it->second; }
   auto scope_proto = JUST((scope->MakeChildScopeProto()));
   scope_proto->set_calculation_pass_name(kBackwardPass);
-  std::shared_ptr<Scope> backward_pass_scope;
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    backward_pass_scope = JUST(builder->GetScopeSymbol(*scope_proto));
-    return Maybe<void>::Ok();
-  }));
+  std::shared_ptr<Scope> backward_pass_scope =
+      JUST(Singleton<symbol::Storage<Scope>>::Get()->FindOrCreate(*scope_proto));
   scopes.emplace(JUST(scope->symbol_id()), backward_pass_scope);
   return backward_pass_scope;
 }

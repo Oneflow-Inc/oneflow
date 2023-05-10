@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/vm/symbol_storage.h"
-#include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/job/local_sig_infer_hint.h"
@@ -1426,7 +1425,9 @@ Maybe<void> Operator::ToOpAttribute(OpAttribute* op_attribute) const {
         } else {
           ParallelConf parallel_conf = pair.second->parallel_conf();
           const auto MakeParallelDescSymbol = [&parallel_conf]() -> Maybe<int64_t> {
-            int64_t symbol_id = JUST(JUST(InstructionsBuilder::GetParallelDescSymbol(parallel_conf))->symbol_id());
+            int64_t symbol_id = JUST(
+                JUST(Singleton<symbol::Storage<ParallelDesc>>::Get()->FindOrCreate(parallel_conf))
+                    ->symbol_id());
             return symbol_id;
           };
           (*symbol_map)[pair.first] = JUST(MakeParallelDescSymbol());

@@ -84,7 +84,8 @@ Maybe<void> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor, 
     auto tensor = scalar_tensor;
     if (tensor->is_global()) {
       const ParallelConf parallel_conf = GenParallelConfOfCpuOnAllRanks();
-      Symbol<ParallelDesc> parallel_desc = SymbolOf(*JUST(InstructionsBuilder::GetParallelDescSymbol(parallel_conf)));
+      Symbol<ParallelDesc> parallel_desc = SymbolOf(
+          *JUST(Singleton<symbol::Storage<ParallelDesc>>::Get()->FindOrCreate(parallel_conf)));
       const auto& broadcast_sbp = JUST(MakeBroadcastSbpParallel());
       tensor = JUST(functional::ToGlobal(tensor, parallel_desc, {broadcast_sbp}, /*grad_sbp=*/{},
                                          /*check_meta=*/false, /*copy=*/false));

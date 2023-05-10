@@ -16,9 +16,9 @@ limitations under the License.
 #include "oneflow/core/boxing/boxing_dividor_util.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/placed_nd_sbp.h"
-#include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/vm/symbol_storage.h"
 
 namespace oneflow {
 
@@ -246,7 +246,8 @@ Maybe<Symbol<ParallelDesc>> GetFisrtDeviceOfPlacement(Symbol<ParallelDesc> place
   for (int64_t i = 0; i < placement->hierarchy()->NumAxes(); ++i) {
     parallel_conf.mutable_hierarchy()->add_dim(1);
   }
-  std::shared_ptr<ParallelDesc> parallel_desc = JUST(InstructionsBuilder::GetParallelDescSymbol(parallel_conf));
+  std::shared_ptr<ParallelDesc> parallel_desc =
+      JUST(Singleton<symbol::Storage<ParallelDesc>>::Get()->FindOrCreate(parallel_conf));
   return SymbolOf(*parallel_desc);
 }
 

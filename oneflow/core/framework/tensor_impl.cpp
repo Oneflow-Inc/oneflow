@@ -87,16 +87,16 @@ Maybe<void> EagerLocalTensorImpl::UpdateTensorStorage() {
                                          const std::shared_ptr<vm::TensorStorage>&) {
     if (eager_blob_object->producer_stream().has_value()) {
       auto ret = PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-          JUST(builder->ReleaseTensor(eager_blob_object));
+        JUST(builder->ReleaseTensor(eager_blob_object));
         return Maybe<void>::Ok();
       });
-      
+
       // We should not use CHECK_JUST here because it will throw an exception
       // in destructor.
       if (!ret.IsOk()) {
         LOG(WARNING)
             << "Release hook gets an error. Release hooks are executed in destructor, so the error "
-              "is possibly only a secondary error caused by another unrelated exception.";
+               "is possibly only a secondary error caused by another unrelated exception.";
         LOG(WARNING) << "======= Error message begin =======";
         LOG(WARNING) << ret.GetSerializedError();
         LOG(WARNING) << "======= Error message end =======";

@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/job/scope.pb.h"
 #include "oneflow/core/vm/symbol_storage.h"
-#include "oneflow/core/framework/instructions_builder.h"
 
 namespace oneflow {
 
@@ -71,11 +70,8 @@ Maybe<JobBuilder> WithCalculationPassScope(const std::string& pass_name, Job* jo
     std::shared_ptr<ScopeProto> new_scope = std::make_shared<ScopeProto>(old_scope.scope_proto());
     new_scope->set_parent_scope_symbol_id(old_scope_symbol_id);
     new_scope->set_calculation_pass_name(pass_name);
-    std::shared_ptr<Scope> new_scope_symbol;
-    JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      new_scope_symbol = JUST(builder->GetScopeSymbol(*new_scope));
-      return Maybe<void>::Ok();
-    }));
+    std::shared_ptr<Scope> new_scope_symbol =
+        JUST(Singleton<symbol::Storage<Scope>>::Get()->FindOrCreate(*new_scope));
     return JUST(new_scope_symbol->symbol_id());
   };
   for (const auto& pair : scope_id2op_names) {

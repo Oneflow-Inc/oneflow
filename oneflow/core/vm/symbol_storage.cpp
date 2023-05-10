@@ -25,6 +25,11 @@ namespace symbol {
 
 namespace detail {
 
+int64_t NewSymbolId() {
+  static std::atomic<int64_t> cnt(0);
+  return cnt.fetch_add(1, std::memory_order_relaxed);
+}
+
 template<>
 Maybe<ParallelDesc> NewSymbol<ParallelDesc>(
     int64_t symbol_id, const typename ConstructArgType4Symbol<ParallelDesc>::type& data) {

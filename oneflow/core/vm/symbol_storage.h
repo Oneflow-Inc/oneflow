@@ -64,6 +64,8 @@ struct ConstructArgType4Symbol<Scope> final {
 
 namespace detail {
 
+int64_t NewSymbolId();
+
 template<typename T>
 Maybe<T> NewSymbol(int64_t symbol_id, const typename ConstructArgType4Symbol<T>::type& data) {
   return std::make_shared<T>(data);
@@ -170,13 +172,12 @@ class Storage final {
     return Maybe<void>::Ok();
   }
 
-  Maybe<T> FindOrCreate(const typename ConstructArgType4Symbol<T>::type& symbol_data,
-                        const std::function<Maybe<int64_t>()>& Create) {
-    int64_t symbol_id = JUST(Create());
-    const auto& ptr = JUST(detail::NewSymbol<T>(symbol_id, symbol_data));
+  Maybe<T> FindOrCreate(const typename ConstructArgType4Symbol<T>::type& symbol_data) {
     std::unique_lock<std::mutex> lock(mutex_);
     const auto& iter = data2symbol_id_.find(symbol_data);
     if (iter != data2symbol_id_.end()) { return JUST(MapAt(symbol_id2symbol_, iter->second)); }
+    int64_t symbol_id = detail::NewSymbolId();
+    const auto& ptr = JUST(detail::NewSymbol<T>(symbol_id, symbol_data));
     CHECK_OR_RETURN(symbol_id2symbol_.emplace(symbol_id, ptr).second);
     data2symbol_id_[symbol_data] = symbol_id;
     return JUST(MapAt(symbol_id2symbol_, symbol_id));

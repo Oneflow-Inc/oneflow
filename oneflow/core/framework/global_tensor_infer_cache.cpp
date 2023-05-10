@@ -158,14 +158,8 @@ Maybe<void> GlobalTensorMetaInferArgs::InitInputGlobalTensorMetas(
   OF_PROFILER_RANGE_GUARD("InitInputGlobalTensorMetas");
   for (int i = 0; i < input_tensors.size(); ++i) {
     const auto& tensor = *input_tensors.at(i);
-    // const auto& tensor_meta = JUST(tensor.global_tensor_meta());
-    // const auto& constraint = JUST(tensor.consumer_nd_sbp_constraint());
-    // OF_PROFILER_RANGE_PUSH("AssignGlobalTensorMeta");
     input_global_tensor_metas_.at(i).assign(JUST(tensor.global_tensor_meta()),
                                             JUST(tensor.consumer_nd_sbp_constraint()));
-    // input_global_tensor_metas_.at(i) = JUST(tensor.global_tensor_meta());
-    // consumer_nd_sbp_constraints_.at(i) = JUST(tensor.consumer_nd_sbp_constraint());
-    // OF_PROFILER_RANGE_POP();
   }
   return Maybe<void>::Ok();
 }
