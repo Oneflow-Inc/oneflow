@@ -4285,7 +4285,6 @@ class FftC2CFunctor : public FftBaseFunctor {
       return output;
     } else {
       CHECK_OR_RETURN(false) << "RuntimeError: FFTC2C Only support cpu and cuda device.";
-      UNIMPLEMENTED_THEN_RETURN();
     }
   }
 };
@@ -4388,7 +4387,6 @@ class FftR2CFunctor : public FftBaseFunctor {
 
     } else {
       CHECK_OR_RETURN(false) << "RuntimeError: FFTR2C Only support cpu and cuda device.";
-      UNIMPLEMENTED_THEN_RETURN();
     }
 
     if (!forward) {
@@ -4502,7 +4500,6 @@ class FftC2RFunctor : public FftBaseFunctor {
       return output;
     } else {
       CHECK_OR_RETURN(false) << "RuntimeError: FFTC2R Only support cpu and cuda device.";
-      UNIMPLEMENTED_THEN_RETURN();
     }
   }
 };
