@@ -55,6 +55,7 @@ postulate = [".rand", ".Tensor"]
 
 testing = False
 testing_graph = False
+testing_complex = False
 global_check_allclose = True
 global_atol = 1e-5
 global_rtol = 1e-5
@@ -1137,7 +1138,11 @@ def check_tensor_equality(
         assert (
             flow_tensor.grad is not None
         ), f"OneFlow tensor doesn't have grad while PyTorch tensor has one, PyTorch tensor is\n {torch_tensor}\n, OneFlow tensor is\n{flow_tensor} "
-        torch_grad = torch_tensor.grad.detach().cpu().numpy() if not torch_original.is_conj(torch_tensor.grad) else torch_original.resolve_conj(torch_tensor.grad.detach()).cpu().numpy()
+        torch_grad = (
+            torch_tensor.grad.detach().cpu().numpy()
+            if not torch_original.is_conj(torch_tensor.grad)
+            else torch_original.resolve_conj(torch_tensor.grad.detach()).cpu().numpy()
+        )
         flow_grad = flow_tensor.grad.numpy()
         if not np.allclose(
             torch_grad, flow_grad, rtol=rtol, atol=atol, equal_nan=True,
@@ -1223,6 +1228,7 @@ def autotest(
     check_allclose=True,
     check_dtype=False,
     check_grad_use_random_data=True,
+    include_complex=False,
 ):
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
 
@@ -1258,8 +1264,21 @@ def autotest(
                     if check_graph:
                         testing_graph = True
                     res = f(test_case, *args, **kwargs)
+                    global testing_complex
+                    if include_complex:
+                        # for generate complex input tensor
+                        testing_complex = True
+                        # rerun the function with complex
+                        res_complex = f(test_case, *args, **kwargs)
+                        if not isinstance(res, collections.abc.Sequence):
+                            res = [res]
+                        if not isinstance(res_complex, collections.abc.Sequence):
+                            res_complex = [res_complex]
+                        res += res_complex
+                        
                     testing = False
                     testing_graph = False
+                    testing_complex = False
                 except (PyTorchDoesNotSupportError, BothDoNotSupportError) as e:
                     if verbose:
                         print(f"{f.__name__}")
@@ -1391,6 +1410,10 @@ def random_tensor(
 ):
     if isinstance(requires_grad, generator):
         requires_grad = requires_grad.value()
+    global testing_complex
+    if dtype == float and testing_complex:
+        dtype = complex
+        
     pytorch_tensor = (
         random_pytorch_tensor(
             ndim, dim0, dim1, dim2, dim3, dim4, low, high, dtype, pin_memory
