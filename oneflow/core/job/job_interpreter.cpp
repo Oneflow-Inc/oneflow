@@ -31,7 +31,7 @@ namespace oneflow {
 namespace one {
 
 using Env = std::map<std::string, std::shared_ptr<Tensor>>;
-using NameToParallelDescType = std::map<std::string, Symbol<ParallelDesc>>;
+using NameToParallelDescMap = std::map<std::string, Symbol<ParallelDesc>>;
 
 Maybe<Env> InitEnv(const one::TensorTuple& graph_inputs, const std::shared_ptr<NNGraph>& graph) {
   Env env;
