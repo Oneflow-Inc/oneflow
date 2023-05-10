@@ -37,6 +37,7 @@ limitations under the License.
 #include "OneFlow/Transform/CSEWithAttributesIgnored.h"
 #include "OneFlow/Transform/OneFlowStream.h"
 #include "OneFlow/Transform/EliminateAllocOps.h"
+#include "OneFlow/Transform/TraitFolder.h"
 
 #ifdef WITH_MLIR_CUDA_CODEGEN
 #include "OneFlow/Conversion/NVVMToCubin.h"
@@ -44,11 +45,11 @@ limitations under the License.
 
 namespace mlir {
 
+namespace oneflow {
+
 #define GEN_PASS_CLASSES
 #define GEN_PASS_REGISTRATION
 #include "OneFlow/OneFlowPasses.h.inc"
-
-namespace oneflow {
 
 LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module);
 #ifdef WITH_MLIR_CUDA_CODEGEN
