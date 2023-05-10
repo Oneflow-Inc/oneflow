@@ -246,7 +246,7 @@ class MaxPool2d(Module):
         else:
             self.channel_pos = "channels_first"
 
-    def apply_memory_format(self, memory_format) -> None:
+    def to_memory_format(self, memory_format) -> None:
         if memory_format is flow.channels_last:
             self.channel_pos = "channels_last"
         elif memory_format is flow.contiguous_format:
@@ -527,7 +527,7 @@ class AvgPool2d(Module):
         self.count_include_pad = count_include_pad
         self.divisor_override = int(divisor_override)
 
-    def apply_memory_format(self, memory_format) -> None:
+    def to_memory_format(self, memory_format) -> None:
         if memory_format is flow.channels_last:
             self.channel_pos = "channels_last"
         elif memory_format is flow.contiguous_format:

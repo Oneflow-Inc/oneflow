@@ -306,7 +306,7 @@ class BatchNorm2d(_BatchNorm):
         if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
             self.channel_axis = 3
 
-    def apply_memory_format(self, memory_format) -> None:
+    def to_memory_format(self, memory_format) -> None:
         if memory_format is flow.channels_last:
             self.channel_axis = 3
         elif memory_format is flow.contiguous_format:
