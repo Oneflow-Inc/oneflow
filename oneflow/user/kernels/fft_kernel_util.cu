@@ -13,15 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
-#if CUDA_VERSION >= 11000
-
-#include "oneflow/user/kernels/fft_kernel_util.h"
 #include <cuda.h>
-#include "cufft_plan_cache.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/user_op_tensor.h"
 #include "oneflow/user/kernels/to_contiguous_kernel.h"
+
+#if CUDA_VERSION >= 11000
+#include "oneflow/user/kernels/fft_kernel_util.h"
+#include "cufft_plan_cache.h"
 
 namespace oneflow {
 

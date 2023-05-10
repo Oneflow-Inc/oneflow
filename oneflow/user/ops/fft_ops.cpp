@@ -76,7 +76,7 @@ namespace oneflow {
   switch (input_type) {
     case (kFloat): ctx->SetOutputDType("out", 0, kComplex64); break;
     case (kDouble): ctx->SetOutputDType("out", 0, kComplex128); break;
-    default: CHECK_OR_RETURN(false)  << "RuntimeError: dtype can't be handled";
+    default: CHECK_OR_RETURN(false) << "RuntimeError: dtype can't be handled";
   }
 
   return Maybe<void>::Ok();

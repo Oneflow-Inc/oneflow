@@ -38,7 +38,7 @@ class FftR2C : public OpExprGradFunction<FftR2CCaptureState> {
 
   Maybe<void> Capture(FftR2CCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1) << Error::RuntimeError();
+    CHECK_EQ_OR_RETURN(inputs.size(), 1) << "RuntimeError: assert `inputs.size() == 1`";
     ctx->requires_grad = JUST(oneflow::VectorAt(inputs, 0))->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
@@ -52,7 +52,7 @@ class FftR2C : public OpExprGradFunction<FftR2CCaptureState> {
 
   Maybe<void> Apply(const FftR2CCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1) << Error::RuntimeError();
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1) << "RuntimeError: assert `out_grads.size() == 1`";
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
     in_grads->resize(1);
@@ -106,7 +106,7 @@ class FftC2C : public OpExprGradFunction<FftC2CCaptureState> {
 
   Maybe<void> Capture(FftC2CCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1) << Error::RuntimeError();
+    CHECK_EQ_OR_RETURN(inputs.size(), 1) << "RuntimeError: assert `inputs.size() == 1`";
 
     ctx->requires_grad = JUST(oneflow::VectorAt(inputs, 0))->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
@@ -120,7 +120,7 @@ class FftC2C : public OpExprGradFunction<FftC2CCaptureState> {
 
   Maybe<void> Apply(const FftC2CCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1) << Error::RuntimeError();
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1) << "RuntimeError: assert `out_grads.size() == 1`";
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
     in_grads->resize(1);
@@ -145,7 +145,7 @@ class FftC2R : public OpExprGradFunction<FftC2RCaptureState> {
 
   Maybe<void> Capture(FftC2RCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1) << Error::RuntimeError();
+    CHECK_EQ_OR_RETURN(inputs.size(), 1) << "RuntimeError: assert `inputs.size() == 1`";
     ctx->requires_grad = JUST(oneflow::VectorAt(inputs, 0))->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
@@ -159,7 +159,7 @@ class FftC2R : public OpExprGradFunction<FftC2RCaptureState> {
 
   Maybe<void> Apply(const FftC2RCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1) << Error::RuntimeError();
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1) << "RuntimeError: out_grads.size() == 1";
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
     in_grads->resize(1);

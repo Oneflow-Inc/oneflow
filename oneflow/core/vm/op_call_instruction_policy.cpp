@@ -269,8 +269,7 @@ Maybe<void> OpCallInstructionPolicy::Prepare(vm::Instruction* instruction) {
 }
 
 void OpCallInstructionPolicy::Compute(vm::Instruction* instruction) {
-
-CHECK_JUST_MSG(OpCallInstructionUtil::Compute(this, instruction->mut_stream(), true, false),
+  CHECK_JUST_MSG(OpCallInstructionUtil::Compute(this, instruction->mut_stream(), true, false),
                  instruction->DebugName());
 }
 

@@ -40,7 +40,12 @@ def is_complex_dtype(dtype):
         # is DualObject
         return dtype.pytorch.is_complex
     else:
-        return dtype in [flow.complex64, flow.complex128, torch.pytorch.complex64, torch.pytorch.complex128]
+        return dtype in [
+            flow.complex64,
+            flow.complex128,
+            torch.pytorch.complex64,
+            torch.pytorch.complex128,
+        ]
 
 
 class Test1DFft(flow.unittest.TestCase):
@@ -88,7 +93,7 @@ class Test1DFft(flow.unittest.TestCase):
         atol=1e-5,
         check_graph=False,
         check_grad_use_random_data=True,
-        include_complex=True
+        include_complex=True,
     )
     def test_fft(test_case):
         if is_cufft_available():
@@ -125,7 +130,7 @@ class Test1DFft(flow.unittest.TestCase):
         atol=1e-5,
         check_graph=False,
         check_grad_use_random_data=True,
-        include_complex=True
+        include_complex=True,
     )
     def test_ifft(test_case):
         if is_cufft_available():
@@ -163,7 +168,7 @@ class Test1DFft(flow.unittest.TestCase):
         atol=1e-5,
         check_graph=False,
         check_grad_use_random_data=True,
-        include_complex=False
+        include_complex=False,
     )
     def test_rfft(test_case):
         if is_cufft_available():
@@ -180,9 +185,7 @@ class Test1DFft(flow.unittest.TestCase):
         norm = params["norm"]
         dtype = test_case.dtype_list[np.random.randint(0, 2)]
 
-            x = random_tensor(num_dims, dtype=float, *shape).to(
-                device=device, dtype=dtype
-            )
+        x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
         y = torch.fft.rfft(x, n, dim, norm)
 
         return y
@@ -194,7 +197,7 @@ class Test1DFft(flow.unittest.TestCase):
         atol=1e-5,
         check_graph=False,
         check_grad_use_random_data=True,
-        include_complex=True
+        include_complex=True,
     )
     def test_irfft(test_case):
         if is_cufft_available():
@@ -211,9 +214,7 @@ class Test1DFft(flow.unittest.TestCase):
         norm = params["norm"]
         dtype = test_case.dtype_list[np.random.randint(2, 4)]
 
-            x = random_tensor(num_dims, dtype=float, *shape).to(
-                device=device, dtype=dtype
-            )
+        x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
         y = torch.fft.irfft(x, n, dim, norm)
 
         return y
@@ -225,7 +226,7 @@ class Test1DFft(flow.unittest.TestCase):
         atol=1e-3,
         check_graph=False,
         check_grad_use_random_data=True,
-        include_complex=True
+        include_complex=True,
     )
     def test_hfft(test_case):
         if is_cufft_available():
@@ -242,9 +243,7 @@ class Test1DFft(flow.unittest.TestCase):
         norm = params["norm"]
         dtype = test_case.dtype_list[np.random.randint(2, 4)]
 
-            x = random_tensor(num_dims, dtype=float, *shape).to(
-                device=device, dtype=dtype
-            )
+        x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
         y = torch.fft.hfft(x, n, dim, norm)
 
         return y
@@ -256,7 +255,7 @@ class Test1DFft(flow.unittest.TestCase):
         atol=1e-5,
         check_graph=False,
         check_grad_use_random_data=True,
-        include_complex=False
+        include_complex=False,
     )
     def test_ihfft(test_case):
         if is_cufft_available():
@@ -273,9 +272,7 @@ class Test1DFft(flow.unittest.TestCase):
         norm = params["norm"]
         dtype = test_case.dtype_list[np.random.randint(0, 2)]
 
-            x = random_tensor(num_dims, dtype=float, *shape).to(
-                device=device, dtype=dtype
-            )
+        x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
         y = torch.fft.ihfft(x, n, dim, norm)
 
         return y
@@ -337,7 +334,7 @@ class Test2DFft(flow.unittest.TestCase):
         atol=1e-3,
         check_graph=False,
         check_grad_use_random_data=True,
-        include_complex=True
+        include_complex=True,
     )
     def test_fft2(test_case):
         if is_cufft_available():
@@ -362,7 +359,7 @@ class Test2DFft(flow.unittest.TestCase):
             # test fft_r2c
             dtype = test_case.dtype_list[np.random.randint(0, 2)]
             x = x.to(device=device, dtype=dtype)
-        
+
         y = torch.fft.fft2(x, n, dim, norm)
 
         return y
@@ -374,7 +371,7 @@ class Test2DFft(flow.unittest.TestCase):
         atol=1e-3,
         check_graph=False,
         check_grad_use_random_data=True,
-        include_complex=True
+        include_complex=True,
     )
     def test_ifft2(test_case):
         if is_cufft_available():
@@ -411,7 +408,7 @@ class Test2DFft(flow.unittest.TestCase):
         atol=1e-3,
         check_graph=False,
         check_grad_use_random_data=True,
-        include_complex=False
+        include_complex=False,
     )
     def test_rfft2(test_case):
         if is_cufft_available():
@@ -428,9 +425,7 @@ class Test2DFft(flow.unittest.TestCase):
         norm = params["norm"]
         dtype = test_case.dtype_list[np.random.randint(0, 2)]
 
-            x = random_tensor(num_dims, dtype=float, *shape).to(
-                device=device, dtype=dtype
-            )
+        x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
         y = torch.fft.rfft2(x, n, dim, norm)
 
         return y
@@ -442,7 +437,7 @@ class Test2DFft(flow.unittest.TestCase):
         atol=1e-3,
         check_graph=False,
         check_grad_use_random_data=True,
-        include_complex=True
+        include_complex=True,
     )
     def test_irfft2(test_case):
         if is_cufft_available():
@@ -459,9 +454,7 @@ class Test2DFft(flow.unittest.TestCase):
         norm = params["norm"]
         dtype = test_case.dtype_list[np.random.randint(2, 4)]
 
-            x = random_tensor(num_dims, dtype=float, *shape).to(
-                device=device, dtype=dtype
-            )
+        x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
         y = torch.fft.irfft2(x, n, dim, norm)
 
         return y
@@ -473,7 +466,7 @@ class Test2DFft(flow.unittest.TestCase):
         atol=1e-3,
         check_graph=False,
         check_grad_use_random_data=True,
-        include_complex=True
+        include_complex=True,
     )
     def test_hfft2(test_case):
         if is_cufft_available():
@@ -490,9 +483,7 @@ class Test2DFft(flow.unittest.TestCase):
         norm = params["norm"]
         dtype = test_case.dtype_list[np.random.randint(2, 4)]
 
-            x = random_tensor(num_dims, dtype=float, *shape).to(
-                device=device, dtype=dtype
-            )
+        x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
         y = torch.fft.hfft2(x, n, dim, norm)
 
         return y
@@ -504,7 +495,7 @@ class Test2DFft(flow.unittest.TestCase):
         atol=1e-3,
         check_graph=False,
         check_grad_use_random_data=True,
-        include_complex=False
+        include_complex=False,
     )
     def test_ihfft2(test_case):
         if is_cufft_available():
@@ -521,9 +512,7 @@ class Test2DFft(flow.unittest.TestCase):
         norm = params["norm"]
         dtype = test_case.dtype_list[np.random.randint(0, 2)]
 
-            x = random_tensor(num_dims, dtype=float, *shape).to(
-                device=device, dtype=dtype
-            )
+        x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
         y = torch.fft.ihfft2(x, n, dim, norm)
 
         return y
@@ -590,7 +579,7 @@ class TestNDFft(flow.unittest.TestCase):
         atol=1e-3,
         check_graph=False,
         check_grad_use_random_data=True,
-        include_complex=True
+        include_complex=True,
     )
     def test_fftn(test_case):
         if is_cufft_available():
@@ -628,7 +617,7 @@ class TestNDFft(flow.unittest.TestCase):
         atol=1e-3,
         check_graph=False,
         check_grad_use_random_data=True,
-        include_complex=True
+        include_complex=True,
     )
     def test_ifftn(test_case):
         if is_cufft_available():
@@ -654,7 +643,7 @@ class TestNDFft(flow.unittest.TestCase):
             # test fft_r2c
             dtype = test_case.dtype_list[np.random.randint(0, 2)]
             x = x.to(device=device, dtype=dtype)
-        
+
         y = torch.fft.ifftn(x, n, dim, norm)
 
         return y
@@ -666,7 +655,7 @@ class TestNDFft(flow.unittest.TestCase):
         atol=1e-3,
         check_graph=False,
         check_grad_use_random_data=True,
-        include_complex=False
+        include_complex=False,
     )
     def test_rfftn(test_case):
         if is_cufft_available():
@@ -683,9 +672,7 @@ class TestNDFft(flow.unittest.TestCase):
         norm = params["norm"]
         dtype = test_case.dtype_list[np.random.randint(0, 2)]
 
-            x = random_tensor(num_dims, dtype=float, *shape).to(
-                device=device, dtype=dtype
-            )
+        x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
         y = torch.fft.rfftn(x, n, dim, norm)
 
         return y
@@ -697,7 +684,7 @@ class TestNDFft(flow.unittest.TestCase):
         atol=1e-3,
         check_graph=False,
         check_grad_use_random_data=True,
-        include_complex=True
+        include_complex=True,
     )
     def test_irfftn(test_case):
         if is_cufft_available():
@@ -714,9 +701,7 @@ class TestNDFft(flow.unittest.TestCase):
         norm = params["norm"]
         dtype = test_case.dtype_list[np.random.randint(2, 4)]
 
-            x = random_tensor(num_dims, dtype=float, *shape).to(
-                device=device, dtype=dtype
-            )
+        x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
         y = torch.fft.irfftn(x, n, dim, norm)
 
         return y
@@ -728,7 +713,7 @@ class TestNDFft(flow.unittest.TestCase):
         atol=1e-3,
         check_graph=False,
         check_grad_use_random_data=True,
-        include_complex=True
+        include_complex=True,
     )
     def test_hfftn(test_case):
         if is_cufft_available():
@@ -745,9 +730,7 @@ class TestNDFft(flow.unittest.TestCase):
         norm = params["norm"]
         dtype = test_case.dtype_list[np.random.randint(2, 4)]
 
-            x = random_tensor(num_dims, dtype=float, *shape).to(
-                device=device, dtype=dtype
-            )
+        x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
         y = torch.fft.hfftn(x, n, dim, norm)
 
         return y
@@ -759,7 +742,7 @@ class TestNDFft(flow.unittest.TestCase):
         atol=1e-3,
         check_graph=False,
         check_grad_use_random_data=True,
-        include_complex=False
+        include_complex=False,
     )
     def test_ihfftn(test_case):
         if is_cufft_available():
@@ -776,9 +759,7 @@ class TestNDFft(flow.unittest.TestCase):
         norm = params["norm"]
         dtype = test_case.dtype_list[np.random.randint(0, 2)]
 
-            x = random_tensor(num_dims, dtype=float, *shape).to(
-                device=device, dtype=dtype
-            )
+        x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
         y = torch.fft.ihfftn(x, n, dim, norm)
 
         return y

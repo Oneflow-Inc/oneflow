@@ -897,7 +897,6 @@ Maybe<void> StatefulOpKernel::ChooseOpKernel(eager::CallContext* call_ctx,
   OF_PROFILER_RANGE_GUARD("fallback");
 
   const auto& op_type_name = user_op_conf_->op_type_name();
-  // std::cout << "[ChooseOpKernel] op_type_name = " << op_type_name << std::endl;
   const auto* kernel_reg_val =
       JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(op_type_name, reg_ctx));
   CHECK_NOTNULL(kernel_reg_val);
