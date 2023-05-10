@@ -13,31 +13,35 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <iostream>
-#include <string>
 #include "OneFlow/Passes.h"
-#include "mlir/Pass/Pass.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Casting.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Support/LLVM.h"
+#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
+#include <glog/logging.h>
+#include <functional>
+
 namespace mlir {
-
 namespace oneflow {
-
 namespace {
-
-class AutoNhwcPass : public AutoNhwcPassBase<AutoNhwcPass> {
+class TestOneFlowTraitFolderPass
+    : public TestOneFlowTraitFolderPassBase<TestOneFlowTraitFolderPass> {
   void runOnOperation() override {
-    Operation* op = getOperation();
-    RewritePatternSet patterns(op->getContext());
-    oneflow::populateAutoNhwcPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+    if (failed(applyPatternsAndFoldGreedily(getOperation(), RewritePatternSet(&getContext())))) {
+      exit(1);
+    }
   }
 };
 
 }  // namespace
 
-std::unique_ptr<Pass> createAutoNhwcPass() { return std::make_unique<AutoNhwcPass>(); }
+std::unique_ptr<Pass> createTestOneFlowTraitFolderPass() {
+  return std::make_unique<TestOneFlowTraitFolderPass>();
+}
 
 }  // namespace oneflow
-
 }  // namespace mlir
