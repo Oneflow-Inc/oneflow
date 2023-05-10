@@ -33,10 +33,13 @@ Maybe<one::Generator> CreateGenerator(const std::string& device_str) {
 
 py::tuple GetDefaultGenerators() {
 #ifdef WITH_CUDA
+std::cout << "enter here" << std::endl;
   static int device_count = GetCudaDeviceCount();
+std::cout << "leave here" << std::endl;
 #else
   static int device_count = 0;
 #endif
+  std::cout << device_count << std::endl;
   py::tuple default_cuda_generators(device_count);
   FOR_RANGE(int, device_id, 0, device_count) {
     const auto& cuda_gen = one::DefaultCUDAGenerator(device_id);
