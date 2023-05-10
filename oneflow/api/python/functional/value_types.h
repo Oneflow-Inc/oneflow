@@ -23,10 +23,10 @@ limitations under the License.
 
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/memory_format.pb.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/layout.h"
-#include "oneflow/core/framework/memory_format.h"
 
 namespace oneflow {
 class Scalar;
@@ -98,7 +98,6 @@ enum ValueType : int {
   kDTYPE,
   kSHAPE,
   kLAYOUT,
-  kMEMORYFORMAT,
   kSHAPE_MAYBE,
   kGENERATOR,
   kGENERATOR_REF,
@@ -110,6 +109,8 @@ enum ValueType : int {
   kSBP_PARALLEL_LIST,
   kSHAPE_LIST,
   kDTYPE_LIST,
+
+  kMEMORY_FORMAT,
 
   kOPEXPR = 390,
   kOPEXPR_REF,
@@ -165,7 +166,6 @@ VALUE_TYPE_OF_IMPL(std::shared_ptr<one::TensorTuple>, kTENSOR_TUPLE_REF);
 VALUE_TYPE_OF_IMPL(Maybe<one::TensorTuple>, kTENSOR_TUPLE_MAYBE);
 VALUE_TYPE_OF_IMPL(Symbol<DType>, kDTYPE);
 VALUE_TYPE_OF_IMPL(Symbol<Layout>, kLAYOUT);
-VALUE_TYPE_OF_IMPL(Symbol<MemoryFormat>, kMEMORYFORMAT);
 VALUE_TYPE_OF_IMPL(std::vector<Symbol<DType>>, kDTYPE_LIST);
 VALUE_TYPE_OF_IMPL(Shape, kSHAPE);
 VALUE_TYPE_OF_IMPL(Maybe<Shape>, kSHAPE_MAYBE);
@@ -178,6 +178,8 @@ VALUE_TYPE_OF_IMPL(Symbol<Device>, kDEVICE);
 VALUE_TYPE_OF_IMPL(Symbol<ParallelDesc>, kPARALLEL_DESC);
 VALUE_TYPE_OF_IMPL(Symbol<SbpParallel>, kSBP_PARALLEL);
 VALUE_TYPE_OF_IMPL(std::vector<Symbol<SbpParallel>>, kSBP_PARALLEL_LIST);
+
+VALUE_TYPE_OF_IMPL(MemoryFormat, kMEMORY_FORMAT);
 
 VALUE_TYPE_OF_IMPL(one::OpExpr, kOPEXPR);
 VALUE_TYPE_OF_IMPL(std::shared_ptr<one::OpExpr>, kOPEXPR_REF);

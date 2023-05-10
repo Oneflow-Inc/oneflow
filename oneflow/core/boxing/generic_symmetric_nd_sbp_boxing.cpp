@@ -230,8 +230,8 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
       sub_logical_shape = physical_shape;
     }
   } else {
-    one::GlobalTensorMeta tensor_meta(*input->shape(), input->dtype()->data_type(), out_nd_sbp,
-                                      out_parallel_desc);
+    one::GlobalTensorMeta tensor_meta(*input->shape(), input->dtype()->data_type(),
+                                      input->memory_format(), out_nd_sbp, out_parallel_desc);
     const auto& tensor_impl =
         JUST(one::EagerGlobalTensorImpl::New(SymbolOf(tensor_meta), input->requires_grad(), false));
     output = std::make_shared<one::GlobalTensor>(tensor_impl);
