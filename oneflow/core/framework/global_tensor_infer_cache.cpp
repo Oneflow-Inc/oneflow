@@ -29,10 +29,6 @@ namespace one {
 
 namespace {
 
-bool NcclUseComputeStream() {
-  return ParseBooleanFromEnv("ONEFLOW_EAGER_NCCL_USE_COMPUTE_STREAM", false);
-}
-
 bool OptionalEqual(const Optional<Symbol<NdSbp>>& lhs, const Optional<Symbol<NdSbp>>& rhs) {
   if (lhs.has_value() != rhs.has_value()) { return false; }
   if (!lhs.has_value()) { return true; }
@@ -264,7 +260,7 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
 
 /* static */ Maybe<Symbol<Stream>> GlobalTensorInferCache::InferDeviceAndStream(
     const UserOpExpr& user_op_expr, const GlobalTensorMetaInferArgs& infer_args) {
-  if (NcclUseComputeStream() || !user_op_expr.device_and_stream_infer_fn()) {
+  if (!user_op_expr.device_and_stream_infer_fn()) {
     Symbol<ParallelDesc> parallel_desc =
         infer_args.input_global_tensor_metas()[0].tensor_meta()->parallel_desc();
     return GetDefaultStreamByPlacement(parallel_desc);

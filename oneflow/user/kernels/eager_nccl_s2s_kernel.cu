@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/ep/include/primitive/permute.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
-#include "oneflow/core/kernel/new_kernel_util.h"
 
 #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
 
@@ -73,9 +72,6 @@ void InitEagerNcclOpKernelCache(user_op::KernelCacheContext* ctx,
   // once parallel_conf is determined, so only init the cache at the first time.
   if (*cache_ptr == nullptr) { *cache_ptr = std::make_shared<EagerNcclOpKernelCache>(ctx); }
 }
-bool UseMemSetReplaceNccl() {
-  return ParseBooleanFromEnv("ONEFLOW_EAGER_USE_MEM_SET_REPLACE_NCCL", false);
-}
 }  // namespace
 
 template<typename T>
@@ -99,11 +95,6 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
     // NOTE(hanbinbin): Compute logic copy from _nccl_logical_s2s
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    if (UseMemSetReplaceNccl() && out->mut_dptr() != nullptr) {
-      Memcpy<DeviceType::kCUDA>(ctx->stream(), out->mut_dptr(), in->dptr(),
-                                out->shape_view().elem_cnt() * GetSizeOfDataType(out->data_type()));
-      return;
-    }
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     int64_t tmp_size = 0;
     const int64_t dtype_size = GetSizeOfDataType(in->data_type());
