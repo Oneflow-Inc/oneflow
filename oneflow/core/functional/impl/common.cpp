@@ -22,6 +22,11 @@ limitations under the License.
 #include "oneflow/core/ccl/ccl.h"
 #include "oneflow/core/job/rank_group.h"
 #include "oneflow/core/common/small_vector.h"
+#include "oneflow/core/common/throw.h"
+#include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/framework/tensor_util.h"
+#include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/memory/memory_case_util.h"
 
 namespace oneflow {
 namespace one {
@@ -186,8 +191,8 @@ Maybe<void> CheckInplaceShapeCanExpandTo(const Shape& shape, const Shape& expand
       int dim_a = expand_shape.At(i);
       int dim_b = shape.At(index);
       // NOTE(lixiang): When a dimension of tensor a and tensor b are not equal in size, dim_a needs
-      // to be greater than 0, and dim_b should be equal to 1.
-      CHECK_OR_RETURN(!(dim_a != dim_b && (dim_a <= 0 || dim_b != 1)))
+      // to be greater than or equal 0, and dim_b should be equal to 1.
+      CHECK_OR_RETURN(!(dim_a != dim_b && (dim_a < 0 || dim_b != 1)))
           << Error::RuntimeError() << "Tensor with shape " << expand_shape.ToString()
           << " doesn't match the broadcast shape in an inplace operation";
     } else {
@@ -356,17 +361,33 @@ Maybe<std::tuple<std::shared_ptr<Tensor>, bool>> batchify(const std::shared_ptr<
   return std::make_tuple(is_batched ? input : JUST(functional::Unsqueeze(input, 0)), is_batched);
 }
 
-Maybe<std::tuple<std::shared_ptr<Tensor>, bool>> pooling_batchify(
-    const std::shared_ptr<Tensor>& input, const int64_t num_spatial_dims,
-    const std::string& func_name) {
-  const int64_t dim_count_no_batch = num_spatial_dims + 1;
-  const int64_t dim_count_batch = dim_count_no_batch + 1;
-  const bool is_batched = (input->ndim() == dim_count_batch);
-  CHECK_EQ_OR_RETURN(input->ndim() == dim_count_no_batch || is_batched, true)
-      << fmt::format("non-empty {}D (unbatched) or {}D (batche mode) tensor expected for input of "
-                     "{}, but got {}D input.",
-                     dim_count_no_batch, dim_count_batch, func_name, input->ndim());
-  return std::make_tuple(is_batched ? input : JUST(functional::Unsqueeze(input, 0)), is_batched);
+template<typename T>
+T GetTensorItemValue(const std::shared_ptr<one::Tensor>& input) {
+  CHECK_EQ_OR_THROW(input->nelement(), 1) << "Input tensor must have exactly one element";
+  T value;
+  const auto& callback = [&](ep::Stream* stream,
+                             const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+    SyncAutoMemcpy(stream, &value, eager_blob_object->dptr(), sizeof(T), memory::MakeHostMemCase(),
+                   eager_blob_object->mem_case());
+  };
+  SyncAccessTensorWithTimeOut(input, callback, "const").GetOrThrow();
+  return value;
+}
+
+Maybe<void> CheckNormalTensorStd(const std::shared_ptr<one::Tensor>& std) {
+  CHECK_OR_RETURN(!std->dtype()->is_complex())
+      << "normal expects standard deviation to be non-complex";
+  if (std->nelement() > 0) {
+    auto std_check = CHECK_JUST(ScalarLogicalGreaterEqual(CHECK_JUST(Min(std)), Scalar(0.0)));
+    CHECK_OR_THROW(GetTensorItemValue<bool>(std_check))
+        << "normal expects all elements of std >= 0.0";
+  }
+  return Maybe<void>::Ok();
+}
+Maybe<void> CheckNormalTensorStd(const float std) {
+  CHECK_GE_OR_RETURN(std, 0.0) << "normal expects std >= 0.0, but found std " << (std)
+                               << ". This may cause an error.";
+  return Maybe<void>::Ok();
 }
 
 }  // namespace functional

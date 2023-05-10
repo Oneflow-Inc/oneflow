@@ -469,8 +469,13 @@ class ReduceSumWholeFunctor {
     op_ = CHECK_JUST(
         one::OpBuilder("reduce_sum").Input("input_tensor").Output("output_tensor").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
-    const int32_t naxis = x->ndim();
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<Symbol<DType>>& dtype) const {
+    std::shared_ptr<one::Tensor> tensor = x;
+    if (dtype.has_value() && (dtype != x->dtype())) {
+      tensor = JUST(Cast(x, JUST(dtype), /*pin_memory=*/false));
+    }
+    const int32_t naxis = tensor->ndim();
     if (naxis == 0) { return x; }  // for 0-dim Tensor
     std::vector<int32_t> axis(naxis);
     std::iota(axis.begin(), axis.end(), 0);
@@ -478,7 +483,7 @@ class ReduceSumWholeFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis", "keepdims");
     attrs.SetAllAttrs(axis, false);
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.AddInputs({x}, /*lowest_dtype=*/DType::Int64()).Apply());
+    JUST(tensor_processor.AddInputs({tensor}, /*lowest_dtype=*/DType::Int64()).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
   }
@@ -494,14 +499,18 @@ class ReduceSumFunctor {
         one::OpBuilder("reduce_sum").Input("input_tensor").Output("output_tensor").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
-                           const bool& keepdims) const {
+                           const bool keepdims, const Optional<Symbol<DType>>& dtype) const {
+    std::shared_ptr<one::Tensor> tensor = x;
+    if (dtype.has_value() && (dtype != x->dtype())) {
+      tensor = JUST(Cast(x, JUST(dtype), /*pin_memory=*/false));
+    }
     std::vector<int32_t> reduce_axis = *JUST(CheckAxis(axis, x->ndim()));
-    if (reduce_axis.size() == 0) { return x; }
+    if (reduce_axis.size() == 0) { return tensor; }
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis", "keepdims");
     attrs.SetAllAttrs(reduce_axis, keepdims);
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.AddInputs({x}, /*lowest_dtype=*/DType::Int64()).Apply());
+    JUST(tensor_processor.AddInputs({tensor}, /*lowest_dtype=*/DType::Int64()).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
   }
@@ -792,7 +801,7 @@ class ReduceMeanWholeFunctor {
         << "RuntimeError: Can only calculate the mean of floating types.";
     size_t reduce_count = 1;
     reduce_count = x->shape()->Count(0);
-    const auto& sum = JUST(functional::ReduceSumWhole(x));
+    const auto& sum = JUST(functional::ReduceSumWhole(x, NullOpt));
     if (reduce_count == 1 || reduce_count == 0) { return sum; }
     return functional::ScalarMul(sum, 1.0 / reduce_count, false);
   }
@@ -809,7 +818,7 @@ class ReduceMeanFunctor {
     CHECK_OR_RETURN(IsFloatingDataType(x->dtype()->data_type()))
         << "RuntimeError: Can only calculate the mean of floating types.";
 
-    const auto& sum = JUST(functional::ReduceSum(x, axis, keepdims));
+    const auto& sum = JUST(functional::ReduceSum(x, axis, keepdims, NullOpt));
     size_t reduce_count = 1;
     if (axis.empty()) {
       reduce_count = x->shape()->Count(0);
@@ -992,7 +1001,7 @@ class LogSumExpFunctor {
     } else if (x->nelement() == 0) {
       // can't take amax of empty tensor
       std::shared_ptr<one::Tensor> exp_out = JUST(Exp(x));
-      return Log(JUST(ReduceSum(exp_out, axis, keepdims)));
+      return Log(JUST(ReduceSum(exp_out, axis, keepdims, NullOpt)));
     } else {
       const std::shared_ptr<one::Tensor>& maxes = JUST(Amax(x, axis, true));
       const std::shared_ptr<one::Tensor>& maxes_squeezed =
@@ -1000,7 +1009,8 @@ class LogSumExpFunctor {
       JUST(MaskedFillInplace(maxes_squeezed,
                              JUST(ScalarLogicalEqual(JUST(Abs(maxes_squeezed)), INFINITY)), 0));
       std::shared_ptr<one::Tensor> exp_out = JUST(Exp(JUST(Sub(x, maxes, 1, false))));
-      return Add(JUST(Log(JUST(ReduceSum(exp_out, axis, keepdims)))), maxes_squeezed, 1, false);
+      return Add(JUST(Log(JUST(ReduceSum(exp_out, axis, keepdims, NullOpt)))), maxes_squeezed, 1,
+                 false);
     }
   }
 
@@ -1104,7 +1114,7 @@ class QuantileFunctor {
                               JUST(functional::ReduceSum(
                                   JUST(functional::LogicalNot(JUST(functional::IsNan(sorted)))),
                                   std::vector<int32_t>({static_cast<int32_t>(sorted->ndim() - 1)}),
-                                  /*keepdim=*/true)),
+                                  /*keepdim=*/true, NullOpt)),
                               Scalar(1), Scalar(1), /*inplace=*/false)),
                           q));
       ranks = JUST(functional::MaskedFill(
@@ -1241,7 +1251,7 @@ class ScalarQuantileFunctor {
               JUST(functional::ReduceSum(
                   JUST(functional::LogicalNot(JUST(functional::IsNan(sorted)))),
                   std::vector<int32_t>({static_cast<int32_t>(sorted->ndim() - 1)}),
-                  /*keepdim=*/true)),
+                  /*keepdim=*/true, NullOpt)),
               Scalar(1), Scalar(1), /*inplace=*/false)),
           q, /*inplace=*/false));
       ranks = JUST(functional::MaskedFill(
@@ -1826,7 +1836,7 @@ class VectorNormFunctor {
     if (ord.IsIntegral() || ord.IsFloatingPoint()) {
       double ord_val = ord.As<double>();
       if (ord_val == 0) {
-        res = JUST(ReduceSum(JUST(functional::NotEqualZero(x)), dim, keepdim));
+        res = JUST(ReduceSum(JUST(functional::NotEqualZero(x)), dim, keepdim, NullOpt));
       } else if (ord_val == INFINITY) {
         res = JUST(ReduceMax(JUST(Abs(x)), dim, keepdim));
       } else if (ord_val == -INFINITY) {
@@ -1835,9 +1845,9 @@ class VectorNormFunctor {
                  && x->requires_grad() == false) {
         res = JUST(SqrtSquareSum(x));
       } else {
-        res =
-            JUST(ScalarPow(JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), ord, false)), dim, keepdim)),
-                           Scalar(1.0) / ord, false));
+        res = JUST(ScalarPow(
+            JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), ord, false)), dim, keepdim, NullOpt)),
+            Scalar(1.0) / ord, false));
       }
       res = JUST(Cast(res, dtype_val, /*pin_memory=*/false));
       return res;
@@ -1935,7 +1945,7 @@ class ScalarMatrixNormFunctor {
     if (dim[1] > dim[0] && keepdim == false) { dim[1] -= 1; }
     std::vector<int32_t> dim_tmp0_vec(1, dim[0]);
     std::vector<int32_t> dim_tmp1_vec(1, dim[1]);
-    res = JUST(ReduceSum(JUST(Abs(x)), dim_tmp0_vec, keepdim));
+    res = JUST(ReduceSum(JUST(Abs(x)), dim_tmp0_vec, keepdim, NullOpt));
 
     if (ord_tmp == INFINITY || ord_tmp == 1) {
       res = JUST(ReduceMax(res, dim_tmp1_vec, keepdim));
@@ -1984,7 +1994,7 @@ class MatrixNormFunctor {
     if (ord == "nuc") {
       UNIMPLEMENTED_THEN_RETURN() << "linalg.matrix_norm(): Not support ord is nuc.";
     } else if (ord == "fro") {
-      res = JUST(Sqrt(JUST(ReduceSum(JUST(Square(x)), dim_tmp, keepdim))));
+      res = JUST(Sqrt(JUST(ReduceSum(JUST(Square(x)), dim_tmp, keepdim, NullOpt))));
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "linalg.matrix_norm(): could not convert string to float:"
                                   << ord;
@@ -2057,7 +2067,7 @@ class NormFunctor {
             std::vector<int32_t> axes_vec(num_axes);
             std::iota(axes_vec.begin(), axes_vec.end(), 0);
             return ScalarPow(JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), ord_sca, false)), axes_vec,
-                                            /*keepdims=*/false)),
+                                            /*keepdims=*/false, NullOpt)),
                              1 / ord_double, false);
           }
         }
@@ -2209,7 +2219,7 @@ class DetFunctor {
                                              JUST(pivot->parallel_desc()), nd_sbp));
     }
     return sequence_function(functional::BroadcastNotEqual)
-        .then([](const auto& x) { return functional::ReduceSum(x, {-1}, false); })
+        .then([](const auto& x) { return functional::ReduceSum(x, {-1}, false, NullOpt); })
         .then([](const auto& x) { return functional::ScalarFMod(x, Scalar(2), true); })
         .then([](const auto& x) { return functional::ScalarMul(x, Scalar(-2), true); })
         .then([](const auto& x) { return functional::ScalarAdd(x, Scalar(1), Scalar(1), true); })
@@ -2869,10 +2879,11 @@ class StandardDeviationFunctor {
     bool is_double = input->dtype()->data_type() == DataType::kDouble;
     if (is_double) {
       const auto& sum = JUST(functional::ScalarDiv(
-          JUST(functional::ReduceSum(JUST(functional::Square(input)), axis, keepdims)),
+          JUST(functional::ReduceSum(JUST(functional::Square(input)), axis, keepdims, NullOpt)),
           Scalar((double)reduce_count)));
-      const auto& square = JUST(functional::Square(JUST(functional::ScalarDiv(
-          JUST(functional::ReduceSum(input, axis, keepdims)), Scalar((double)reduce_count)))));
+      const auto& square = JUST(functional::Square(
+          JUST(functional::ScalarDiv(JUST(functional::ReduceSum(input, axis, keepdims, NullOpt)),
+                                     Scalar((double)reduce_count)))));
       const auto& sub = JUST(functional::Sub(sum, square, /*alpha=*/1.0, /*inplace=*/false));
       if (unbias) {
         return functional::Sqrt(JUST(functional::ScalarMul(
@@ -2901,12 +2912,13 @@ class StandardDeviationFunctor {
       //  https://github.com/Oneflow-Inc/oneflow/issues/6526
       const auto& double_input =
           JUST(functional::Cast(input, DType::Double(), /*pin_memory=*/false));
-      const auto& sum = JUST(functional::ScalarDiv(
-          JUST(functional::ReduceSum(JUST(functional::Square(double_input)), axis, keepdims)),
-          Scalar((double)reduce_count)));
-      const auto& square = JUST(functional::Square(
-          JUST(functional::ScalarDiv(JUST(functional::ReduceSum(double_input, axis, keepdims)),
-                                     Scalar((double)reduce_count)))));
+      const auto& sum = JUST(
+          functional::ScalarDiv(JUST(functional::ReduceSum(JUST(functional::Square(double_input)),
+                                                           axis, keepdims, NullOpt)),
+                                Scalar((double)reduce_count)));
+      const auto& square = JUST(functional::Square(JUST(
+          functional::ScalarDiv(JUST(functional::ReduceSum(double_input, axis, keepdims, NullOpt)),
+                                Scalar((double)reduce_count)))));
       const auto& sub = JUST(functional::Sub(sum, square, /*alpha=*/1.0, /*inplace=*/false));
       if (unbias) {
         return functional::Cast(
@@ -3326,9 +3338,9 @@ static Maybe<one::Tensor> sumproduct_pair(const std::shared_ptr<one::Tensor>& le
             << "non-broadcast dimensions must match";
         sum_size *= left->shape()->At(i);
       } else if (sl) {  // if it is only in one of left and right, we can sum right away
-        left = JUST(functional::ReduceSum(left, {i}, true));
+        left = JUST(functional::ReduceSum(left, {i}, true, NullOpt));
       } else if (sr) {
-        right = JUST(functional::ReduceSum(right, {i}, true));
+        right = JUST(functional::ReduceSum(right, {i}, true, NullOpt));
       }
     } else if (sl && sr) {  // now deal with dimensions  dimensions that will be in the output
       // dimensions nontrivially in both left and right must be of the same size
@@ -3784,7 +3796,7 @@ class EinSumFunctor {
           std::vector<int32_t> dims = {dim--};
           result = JUST(functional::Squeeze(result, dims));
         } else {
-          result = JUST(functional::ReduceSum(result, {dim--}, false));
+          result = JUST(functional::ReduceSum(result, {dim--}, false, NullOpt));
         }
       }
     }
@@ -3801,7 +3813,7 @@ class EinSumFunctor {
           operand = JUST(functional::Squeeze(operand, dims));
         } else if (dim_last_op[j] == i) {
           if (result->dim(dim) == 1) {
-            operand = JUST(functional::ReduceSum(operand, {dim}, false));
+            operand = JUST(functional::ReduceSum(operand, {dim}, false, NullOpt));
             std::vector<int32_t> dims = {dim--};
             result = JUST(functional::Squeeze(result, dims));
           } else {

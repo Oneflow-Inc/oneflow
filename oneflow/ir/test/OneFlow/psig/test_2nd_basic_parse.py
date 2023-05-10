@@ -23,8 +23,6 @@ import oneflow.unittest
 import os
 from google.protobuf import text_format
 
-os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-
 
 def _test_nd_basic_parse(test_case):
     class ModuleToRun(flow.nn.Module):
@@ -59,7 +57,10 @@ def _test_nd_basic_parse(test_case):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestBasicParse(flow.unittest.TestCase):
+class TestBasicParse(flow.unittest.MLIRTestCase):
+    def setUp(self):
+        os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+
     def test_nd_basic_parse(test_case):
         _test_nd_basic_parse(test_case)
 
