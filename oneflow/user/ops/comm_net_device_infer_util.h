@@ -20,6 +20,8 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stream.h"
+#include "oneflow/core/common/env_var/eager.h"
+#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 
@@ -33,6 +35,9 @@ Maybe<Symbol<Stream>> DeviceAndStreamInferFn(user_op::DeviceAndStreamInferContex
   Symbol<Device> output_device = JUST(GetOutputDeivce(ctx));
   for (const auto& pair : ctx->outputs()) {
     *ctx->OutputTensorDevice4ArgNameAndIndex(pair.first, pair.second) = output_device;
+  }
+  if (EagerNcclUseComputeStream() && !LazyMode::is_enabled()) {
+    return GetDefaultStreamByDevice(output_device);
   }
   return GetTransportDevice(output_device);
 }
