@@ -246,7 +246,7 @@ class MaxPool2d(Module):
         else:
             self.channel_pos = "channels_first"
 
-    def apply_memory_format(self, memory_format) -> None:
+    def to_memory_format(self, memory_format) -> None:
         if memory_format is flow.channels_last:
             self.channel_pos = "channels_last"
         elif memory_format is flow.contiguous_format:
@@ -522,12 +522,12 @@ class AvgPool2d(Module):
         self.ceil_mode = ceil_mode
         self.channel_pos = "channels_first"
         if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
-            self.channel_pos = "channels_flast"
+            self.channel_pos = "channels_last"
         self.padding = _pair(padding)
         self.count_include_pad = count_include_pad
         self.divisor_override = int(divisor_override)
 
-    def apply_memory_format(self, memory_format) -> None:
+    def to_memory_format(self, memory_format) -> None:
         if memory_format is flow.channels_last:
             self.channel_pos = "channels_last"
         elif memory_format is flow.contiguous_format:
@@ -752,7 +752,7 @@ class AdaptiveAvgPool2d(Module):
         else:
             self.channel_pos = "channels_first"
 
-    def apply_memory_format(self, memory_format) -> None:
+    def to_memory_format(self, memory_format) -> None:
         if memory_format is flow.channels_last:
             self.channel_pos = "channels_last"
         elif memory_format is flow.channels_first:
@@ -953,7 +953,7 @@ class AdaptiveMaxPool2d(_AdaptiveMaxPoolNd):
         else:
             self.channel_pos = "channels_first"
 
-    def apply_memory_format(self, memory_format) -> None:
+    def to_memory_format(self, memory_format) -> None:
         if memory_format is flow.channels_last:
             self.channel_pos = "channels_last"
         elif memory_format is flow.channels_first:

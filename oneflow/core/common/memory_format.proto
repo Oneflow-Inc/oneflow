@@ -6,5 +6,5 @@ enum MemoryFormat {
   kChannelsLast = 1;
   kPreserve = 2;
 
-  MemoryFormat_Max = 3;
+  kMemoryFormatCount = 3;
 };

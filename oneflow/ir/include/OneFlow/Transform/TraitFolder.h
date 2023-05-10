@@ -13,31 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <iostream>
-#include <string>
-#include "OneFlow/Passes.h"
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_TRAIT_FOLDER_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_TRAIT_FOLDER_H_
+
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
-
 namespace oneflow {
 
-namespace {
-
-class AutoNhwcPass : public AutoNhwcPassBase<AutoNhwcPass> {
-  void runOnOperation() override {
-    Operation* op = getOperation();
-    RewritePatternSet patterns(op->getContext());
-    oneflow::populateAutoNhwcPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
-  }
-};
-
-}  // namespace
-
-std::unique_ptr<Pass> createAutoNhwcPass() { return std::make_unique<AutoNhwcPass>(); }
+std::unique_ptr<mlir::Pass> createTestOneFlowTraitFolderPass();
 
 }  // namespace oneflow
-
 }  // namespace mlir
+
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_TRAIT_FOLDER_H_

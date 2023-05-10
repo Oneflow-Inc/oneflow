@@ -460,7 +460,7 @@ class Conv2d(Module):
             bound = 1 / math.sqrt(fan_in)
             init.uniform_(self.bias, -bound, bound)
 
-    def apply_memory_format(self, memory_format) -> None:
+    def to_memory_format(self, memory_format) -> None:
         if self.channel_pos == "channels_first" and memory_format is flow.channels_last:
             self.channel_pos = "channels_last"
             with flow.no_grad():
@@ -654,7 +654,7 @@ class Conv3d(Module):
             bound = 1 / math.sqrt(fan_in)
             init.uniform_(self.bias, -bound, bound)
 
-    def apply_memory_format(self, memory_format) -> None:
+    def to_memory_format(self, memory_format) -> None:
         if self.channel_pos == "channels_first" and memory_format is flow.channels_last:
             self.channel_pos = "channels_last"
             with flow.no_grad():

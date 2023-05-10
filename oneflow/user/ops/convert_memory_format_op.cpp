@@ -20,7 +20,7 @@ namespace oneflow {
 
 static Shape ComputeShapeIdentity(const Shape& shape) { return shape; }
 
-static Shape ComputeShapeNchwToNhwc(const Shape& shape) {
+static Shape ComputeShapeContiguousToChannelsLast(const Shape& shape) {
   int ndim = shape.size();
   if (ndim <= 2) { return ComputeShapeIdentity(shape); }
   Shape target_shape(ndim);
@@ -30,7 +30,7 @@ static Shape ComputeShapeNchwToNhwc(const Shape& shape) {
   return target_shape;
 }
 
-static Shape ComputeShapeNhwcToNchw(const Shape& shape) {
+static Shape ComputeShapeChannelsLastToContiguous(const Shape& shape) {
   int ndim = shape.size();
   if (ndim <= 2) { return ComputeShapeIdentity(shape); }
   Shape target_shape(ndim);
@@ -47,7 +47,7 @@ static Maybe<void> GetSbpIdentity(user_op::SbpContext* ctx, const Shape& shape) 
   return Maybe<void>::Ok();
 }
 
-static Maybe<void> GetSbpNchwToNhwc(user_op::SbpContext* ctx, const Shape& shape) {
+static Maybe<void> GetSbpContiguousToChannelsLast(user_op::SbpContext* ctx, const Shape& shape) {
   int ndim = shape.size();
   if (ndim <= 2) { return GetSbpIdentity(ctx, shape); }
   ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
@@ -58,7 +58,7 @@ static Maybe<void> GetSbpNchwToNhwc(user_op::SbpContext* ctx, const Shape& shape
   return Maybe<void>::Ok();
 }
 
-static Maybe<void> GetSbpNhwcToNchw(user_op::SbpContext* ctx, const Shape& shape) {
+static Maybe<void> GetSbpChannelsLastToContiguous(user_op::SbpContext* ctx, const Shape& shape) {
   int ndim = shape.size();
   if (ndim <= 2) { return GetSbpIdentity(ctx, shape); }
   ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
@@ -72,16 +72,14 @@ static Maybe<void> GetSbpNhwcToNchw(user_op::SbpContext* ctx, const Shape& shape
 using ComputeShapeFunc = std::function<Shape(const Shape&)>;
 using GetSbpFunc = std::function<Maybe<void>(user_op::SbpContext* ctx, const Shape& shape)>;
 
-static ComputeShapeFunc compute_shape_funcs[MemoryFormat_Max][MemoryFormat_Max] = {
-    /*kDefaukt->other*/ {ComputeShapeIdentity, ComputeShapeIdentity, ComputeShapeNchwToNhwc},
-    /*kContiguous->other*/ {ComputeShapeIdentity, ComputeShapeIdentity, ComputeShapeNchwToNhwc},
-    /*kChannelsLast->other*/ {ComputeShapeNhwcToNchw, ComputeShapeNhwcToNchw, ComputeShapeIdentity},
+static ComputeShapeFunc compute_shape_funcs[kMemoryFormatCount][kMemoryFormatCount] = {
+    /*kContiguous->other*/ {ComputeShapeIdentity, ComputeShapeContiguousToChannelsLast},
+    /*kChannelsLast->other*/ {ComputeShapeChannelsLastToContiguous, ComputeShapeIdentity},
 };
 
-static GetSbpFunc get_sbp_funcs[MemoryFormat_Max][MemoryFormat_Max] = {
-    /*kDefaukt->other*/ {GetSbpIdentity, GetSbpIdentity, GetSbpNchwToNhwc},
-    /*kContiguous->other*/ {GetSbpIdentity, GetSbpIdentity, GetSbpNchwToNhwc},
-    /*kChannelsLast->other*/ {GetSbpNhwcToNchw, GetSbpNhwcToNchw, GetSbpIdentity},
+static GetSbpFunc get_sbp_funcs[kMemoryFormatCount][kMemoryFormatCount] = {
+    /*kContiguous->other*/ {GetSbpIdentity, GetSbpContiguousToChannelsLast},
+    /*kChannelsLast->other*/ {GetSbpChannelsLastToContiguous, GetSbpIdentity},
 };
 
 static Shape ComputeConvertMemoryFormatShape(const Shape& shape, MemoryFormat memory_format,
