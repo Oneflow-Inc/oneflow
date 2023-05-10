@@ -18,8 +18,19 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+template<typename Context>
+std::unique_ptr<ep::primitive::BroadcastElementwiseBinary> NewPrimitive(
+    Context* ctx, ep::primitive::BinaryOp binary_op) {
+  auto x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
+      ctx->device_type(), binary_op, x_desc->data_type(), x_desc->data_type(),
+      x_desc->shape().NumAxes());
+}
+
 template<typename T>
-class PolygammaKernel final : public user_op : OpKernel {
+class PolygammaKernel final : public user_op ::OpKernel {
  public:
   PolygammaKernel() = default;
   ~PolygammaKernel() = default;
@@ -31,36 +42,33 @@ class PolygammaKernel final : public user_op : OpKernel {
     const auto n = ctx->Attr<int32_t>("n");
 
     const auto one = T{1};
-    T temp = ((n % 2) ? one : -one) * exp(lgamma(static_assert<T>(n) + one));
+    T temp = ((n % 2) ? one : -one) * exp(lgamma(static_cast<T>(n + one)));
 
-    std::unique_ptr<ep::primitive::BinaryOp> zeta =
-        ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
-            ctx->device_type(), ep::primitive::UnaryOp::kZeta, x->data_type(), x->data_type());
+    auto zeta = NewPrimitive(ctx, ep::primitive::BinaryOp::kZeta);
+
     CHECK(zeta);
-    zeta->Launch(ctx->stream(), static_assert<T>(n) + one, x->shape_view().NumAxes(),
-                 x->shape_view(), x->dptr(), out->mut_dptr());
+    zeta->Launch(ctx->stream(), static_cast<T>(n) + one, x->shape_view().NumAxes(),
+                 x->shape_view().ptr(), x->dptr(), out->mut_dptr());
 
-    std::unique_ptr<ep::primitive::BinaryOp> mul =
-        ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
-            ctx->device_type(), ep::primitive::UnaryOp::kMul, x->data_type(), x->data_type());
+    auto mul = NewPrimitive(ctx, ep::primitive::BinaryOp::kMul);
     CHECK(mul);
-    mul->Launch(ctx->stream(), temp, out->shape_view().NumAxes(), out->shape_view(), out->dptr(),
-                out->mut_dptr());
+    mul->Launch(ctx->stream(), temp, out->shape_view().NumAxes(), out->shape_view().ptr(),
+                out->dptr(), out->mut_dptr());
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
+template<ep::primitive::BinaryOp binary_op>
 auto PrimitiveExists() {
-  return hob::make_custom("MathBinaryBroadcastPrimitiveExists",
-                          [](const user_op::KernelRegContext& ctx) -> bool {
-                            return NewPrimitive(&ctx).operator bool();
-                          });
+  return hob::make_custom("PrimitiveExists", [](const user_op::KernelRegContext& ctx) -> bool {
+    return NewPrimitive(&ctx, binary_op).operator bool();
+  });
 }
-
-#define REGISTER_POLYGAMMA_KERNEL(dtype)     \
-  REGISTER_USER_KERNEL("polygamma")          \
-      .SetCreateFn<PolygammaKernel<dtype>>() \
-      .SetIsMatchedHob(PrimitiveExists()     \
+#define REGISTER_POLYGAMMA_KERNEL(dtype)                                   \
+  REGISTER_USER_KERNEL("polygamma")                                        \
+      .SetCreateFn<PolygammaKernel<dtype>>()                               \
+      .SetIsMatchedHob(PrimitiveExists<ep::primitive::BinaryOp::kZeta>()   \
+                       && PrimitiveExists<ep::primitive::BinaryOp::kMul>() \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
 REGISTER_POLYGAMMA_KERNEL(float);

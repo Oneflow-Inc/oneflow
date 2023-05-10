@@ -4577,7 +4577,7 @@ class PolygammaFunctor {
     } else {
       auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("n");
       attrs.SetAllAttrs(n);
-      return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
     }
   }
 
@@ -4736,7 +4736,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ImagGradFunctor>("ImagGrad");
   m.add_functor<impl::ConjFunctor>("Conj");
   m.add_functor<impl::ConjPhysicalFunctor>("ConjPhysical");
-  m.add_functor(impl::PolygammaFunctor>("Polygamma"));
+  m.add_functor<impl::PolygammaFunctor>("Polygamma");
 };
 
 }  // namespace functional

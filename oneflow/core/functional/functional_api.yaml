@@ -1,4 +1,4 @@
-t stgi# Copyright 2020 The OneFlow Authors. All rights reserved.
+# Copyright 2020 The OneFlow Authors. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -3359,7 +3359,6 @@ t stgi# Copyright 2020 The OneFlow Authors. All rights reserved.
   ]
   bind_python: True
 
--name: "polygamma"
-  signature: "Tensor (Int n, Tensor input) => Polygamma"
+- name: "polygamma"
+  signature: "Tensor (Int32 n, Tensor input) => Polygamma"
   bind_python: True
-  

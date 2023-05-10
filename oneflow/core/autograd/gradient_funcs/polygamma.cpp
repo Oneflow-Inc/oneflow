@@ -28,14 +28,14 @@ struct PolygammaCaptureState : public AutoGradCaptureState {
 class Polygamma : public OpExprGradFunction<PolygammaCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(RReluCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+  Maybe<void> Capture(PolygammaCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
                       const AttrMap& attrs) const override;
-  Maybe<void> Apply(const RReluCaptureState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const PolygammaCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
   AttrMap base_attrs_;
-}
+};
 
 Maybe<void>
 Polygamma::Init(const OpExpr& op) {
@@ -52,7 +52,7 @@ Maybe<void> Polygamma::Capture(PolygammaCaptureState* ctx, const TensorTuple& in
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Polygamma::Apply(const RReluCaptureState* ctx, const TensorTuple& out_grads,
+Maybe<void> Polygamma::Apply(const PolygammaCaptureState* ctx, const TensorTuple& out_grads,
                              TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   const auto& saved_tensors = ctx->SavedTensors();

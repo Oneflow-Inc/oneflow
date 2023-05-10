@@ -23,16 +23,16 @@ Maybe<void> PolygammaOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> VarOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+Maybe<void> PolygammaOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-Maybe<void> VarOp::InferDataType(user_op::InferContext* ctx) {
-  ctx->SetOutputDType("output", 0, ctx->InputDType("x", 0));
+Maybe<void> PolygammaOp::InferDataType(user_op::InferContext* ctx) {
+  ctx->SetOutputDType("out", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> VarOp::GetSbp(user_op::SbpContext* ctx) {
+Maybe<void> PolygammaOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
     ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).Split(user_op::OpArg("out", 0), i).Build();

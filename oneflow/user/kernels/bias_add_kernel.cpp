@@ -23,7 +23,7 @@ namespace {
 
 template<typename Context>
 std::unique_ptr<ep::primitive::BroadcastElementwiseBinary> NewPrimitive(Context* ctx) {
-  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("a", 0)->data_type();
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("", 0)->data_type();
   return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
       ctx->device_type(), ep::primitive::BinaryOp::kAdd, data_type, data_type, 3);
 }
