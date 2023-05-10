@@ -352,6 +352,7 @@ DIRECT_PASS_FUNC(PyTensorObject_gather, functional::dim_gather)
 DIRECT_PASS_FUNC(PyTensorObject_repeat_interleave, functional::repeat_interleave)
 DIRECT_PASS_FUNC(PyTensorObject_scatter_add, functional::scatter_add)
 DIRECT_PASS_FUNC(PyTensorObject_logaddexp, functional::logaddexp)
+DIRECT_PASS_FUNC(PyTensorObject_polygamma, functional::polygamma)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
@@ -1171,6 +1172,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"transpose", (PyCFunction)PyTensorObject_transpose, METH_VARARGS | METH_KEYWORDS, NULL},
     {"logsumexp", (PyCFunction)PyTensorObject_logsumexp, METH_VARARGS | METH_KEYWORDS, NULL},
     {"quantile", (PyCFunction)PyTensorObject_quantile, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"polygamma", (PyCFunction)PyTensorObject_polygamma, METH_VARARGS | METH_KEYWORDS, NULL},
     {NULL},
 };
 

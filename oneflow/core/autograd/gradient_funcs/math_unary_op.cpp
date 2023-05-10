@@ -145,5 +145,25 @@ class NegativeOp : public OpExprGradFunction<UnaryMathCaptureState> {
 };
 REGISTER_OP_EXPR_GRAD_FUNCTION("negative", NegativeOp);
 
+class TrigammaOp : public OpExprGradFunction<UnaryMathCaptureState> {
+  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
+
+  Maybe<void> Capture(UnaryMathCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    ctx->x_requires_grad = inputs.at(0)->requires_grad();
+    ctx->SaveTensorForBackward(inputs.at(0));
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const UnaryMathCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    if (!ctx->x_requires_grad) { return Maybe<void>::Ok(); }
+    const auto& x = ctx->SavedTensors().at(0);
+    in_grads->at(0) = JUST(functional::Mul(out_grads[0], JUST(functional::Polygamma(2, x))));
+    return Maybe<void>::Ok();
+  }
+};
+REGISTER_OP_EXPR_GRAD_FUNCTION("trigamma", TrigammaOp);
+
 }  // namespace one
 }  // namespace oneflow
