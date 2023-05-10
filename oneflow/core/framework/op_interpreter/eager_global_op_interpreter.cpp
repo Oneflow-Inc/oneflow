@@ -192,7 +192,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
         JUST(SrcOpGlobalTensorMetaInferArgs::New(ctx.attrs, parallel_desc, JUST(ctx.nd_sbp)));
     result = JUST(user_op_expr.mut_global_tensor_infer_cache()->GetOrInfer(*infer_args));
   } else {
-    // OF_PROFILER_RANGE_GUARD("GlobalInferCacheUserOp");
+    OF_PROFILER_RANGE_GUARD("GlobalInferCacheUserOp");
     // OF_PROFILER_RANGE_PUSH("set_consumer_nd_sbp_constraint");
     for (int i = 0; i < outputs->size(); ++i) {
       if ((*outputs)[i]) {
@@ -209,7 +209,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     // if is_identical is false and env 'ONEFLOW_ENABLE_PIPELINE_PARALLELISM_AUTO_TO_GLOBAL' set to
     // true then traverse all input tensor use function GetBoxingOutput(), during this process,
     // each tensor will to_global with target parallel_desc
-    // OF_PROFILER_RANGE_PUSH("GetOrInferResult");
+    OF_PROFILER_RANGE_PUSH("GetOrInferResult");
     if (IsEnvEnableGlobalInputsWithInConsistentPlacement()
         && !JUST(IsAllInputsParallelDescIdentical(infer_args))) {
       parallel_desc = JUST(GetMaxRankTensorPlacement(infer_args));
@@ -228,26 +228,87 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
       infer_args = JUST(GlobalTensorMetaInferArgs::New(ctx.attrs, boxing_inputs));
     }
     result = JUST(user_op_expr.mut_global_tensor_infer_cache()->GetOrInfer(*infer_args));
-    // OF_PROFILER_RANGE_POP();
+    OF_PROFILER_RANGE_POP();
   }
   OF_PROFILER_RANGE_POP();
 
-  OF_PROFILER_RANGE_PUSH("GetDeviceAndParallelId");
+  // OF_PROFILER_RANGE_PUSH("GetDeviceAndParallelId");
 
   const auto& output_tensor_metas = result->output_tensor_metas();
   Optional<int64_t> parallel_id;
   const auto& tensor_device = JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
-  OF_PROFILER_RANGE_POP();
+  // OF_PROFILER_RANGE_POP();
   OF_PROFILER_RANGE_PUSH("NewOutputs");
-  for (int i = 0; i < outputs->size(); ++i) {
-    if (!outputs->at(i)) {
-      const auto& tensor_impl = JUST(EagerGlobalTensorImpl::New(
-          output_tensor_metas[i], tensor_device, parallel_id, false, false));
-      (*outputs)[i] = std::make_shared<GlobalTensor>(tensor_impl);
-    } else {
-      JUST((*outputs)[i]->set_consumer_nd_sbp_constraint(NullOpt));
-    }
+  const size_t output_size = outputs->size();
+  switch (output_size) {
+    case 1:
+      {
+        if (!outputs->at(0)) {
+          const auto& tensor_impl = JUST(EagerGlobalTensorImpl::New(
+              output_tensor_metas[0], tensor_device, parallel_id, false, false));
+          (*outputs)[0] = std::make_shared<GlobalTensor>(tensor_impl);
+        } else {
+          JUST((*outputs)[0]->set_consumer_nd_sbp_constraint(NullOpt));
+        }
+        break;
+      }
+    case 2:
+      {
+        if (!outputs->at(0)) {
+          const auto& tensor_impl = JUST(EagerGlobalTensorImpl::New(
+              output_tensor_metas[0], tensor_device, parallel_id, false, false));
+          (*outputs)[0] = std::make_shared<GlobalTensor>(tensor_impl);
+        } else {
+          JUST((*outputs)[0]->set_consumer_nd_sbp_constraint(NullOpt));
+        }
+        if (!outputs->at(1)) {
+          const auto& tensor_impl = JUST(EagerGlobalTensorImpl::New(
+              output_tensor_metas[1], tensor_device, parallel_id, false, false));
+          (*outputs)[1] = std::make_shared<GlobalTensor>(tensor_impl);
+        } else {
+          JUST((*outputs)[1]->set_consumer_nd_sbp_constraint(NullOpt));
+        }
+        break;
+      }
+    case 3:
+      {
+        if (!outputs->at(0)) {
+          const auto& tensor_impl = JUST(EagerGlobalTensorImpl::New(
+              output_tensor_metas[0], tensor_device, parallel_id, false, false));
+          (*outputs)[0] = std::make_shared<GlobalTensor>(tensor_impl);
+        } else {
+          JUST((*outputs)[0]->set_consumer_nd_sbp_constraint(NullOpt));
+        }
+        if (!outputs->at(1)) {
+          const auto& tensor_impl = JUST(EagerGlobalTensorImpl::New(
+              output_tensor_metas[1], tensor_device, parallel_id, false, false));
+          (*outputs)[1] = std::make_shared<GlobalTensor>(tensor_impl);
+        } else {
+          JUST((*outputs)[0]->set_consumer_nd_sbp_constraint(NullOpt));
+        }
+        if (!outputs->at(2)) {
+          const auto& tensor_impl = JUST(EagerGlobalTensorImpl::New(
+              output_tensor_metas[2], tensor_device, parallel_id, false, false));
+          (*outputs)[2] = std::make_shared<GlobalTensor>(tensor_impl);
+        } else {
+          JUST((*outputs)[2]->set_consumer_nd_sbp_constraint(NullOpt));
+        }
+        break;
+      }
+    default:
+      {
+        for (int i = 0; i < outputs->size(); ++i) {
+          if (!outputs->at(i)) {
+            const auto& tensor_impl = JUST(EagerGlobalTensorImpl::New(
+                output_tensor_metas[i], tensor_device, parallel_id, false, false));
+            (*outputs)[i] = std::make_shared<GlobalTensor>(tensor_impl);
+          } else {
+            JUST((*outputs)[i]->set_consumer_nd_sbp_constraint(NullOpt));
+          }
+        }
+      }
   }
+  
   OF_PROFILER_RANGE_POP();
   OF_PROFILER_RANGE_PUSH("GetKernel");
   // Do nothing if output_tensors has 0-size shape. Since the input of some ops is 0-size but the
@@ -281,13 +342,14 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
         || input_parallel_desc->device_type() != dst_parallel_desc->device_type()) {
       input = JUST(GetBoxingOutput(input, infered_input_meta->nd_sbp(), dst_parallel_desc,
                                    parallel_id.has_value()));
+      LOG(ERROR) << "op_type: " << user_op_expr.op_type_name();
       boxing_outputs.emplace_back(input);
     }
     const auto& local_tensor = JUST(input->cur_rank_phy_tensor());
     input_eager_blob_objects.at(i) = JUST(local_tensor->eager_blob_object());
   }
   OF_PROFILER_RANGE_POP();
-  OF_PROFILER_RANGE_PUSH("PrepareOutBlobObject");
+  // OF_PROFILER_RANGE_PUSH("PrepareOutBlobObject");
   // Do nothing if the `parallel_desc` doesn't cover current ProcessCtx.
   if (!parallel_id.has_value()) { return Maybe<void>::Ok(); }
   vm::EagerBlobObjectList output_eager_blob_objects(outputs->size());
@@ -295,7 +357,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     const auto& local_tensor = JUST(outputs->at(i)->cur_rank_phy_tensor());
     output_eager_blob_objects.at(i) = JUST(local_tensor->eager_blob_object());
   }
-  OF_PROFILER_RANGE_POP();
+  // OF_PROFILER_RANGE_POP();
   if (tensor_device->enum_type() == DeviceType::kMeta) { return Maybe<void>::Ok(); }
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->Call(kernel, std::move(input_eager_blob_objects),

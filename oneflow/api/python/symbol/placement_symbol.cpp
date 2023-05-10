@@ -30,6 +30,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
+#include "oneflow/core/common/decorator.h"
 
 namespace py = pybind11;
 
@@ -41,42 +42,40 @@ int64_t GetDeviceCount(const std::string& device_name) {
   return Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceCount(device_name);
 }
 
+Maybe<void> CheckDeviceTag(const std::string& type) {
+  if (!TRY(DeviceType4DeviceTag(type)).IsOk()) {
+    return Error::RuntimeError() << "Expected one of " << PrintAvailableDevices()
+                                  << " device type at start of device string: " << type;
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<ParallelDesc> CreateParallelDescTypeAndDeviceIds(
+    const std::string& type, const std::vector<std::string>& formated_machine_device_ids,
+    const Shape& hierarchy_shape) {
+  JUST(CheckDeviceTag(type));
+  auto parallel_conf = JUST(MakeParallelConf(type, formated_machine_device_ids, std::make_shared<Shape>(hierarchy_shape)));
+  std::shared_ptr<ParallelDesc> parallel_desc = JUST(InstructionsBuilder::GetParallelDescSymbol(*parallel_conf));
+
+  return parallel_desc;
+}
+
+constexpr auto* CachedCreateParallelDescFromTypeAndDeviceIds =
+    DECORATE(&CreateParallelDescTypeAndDeviceIds, ThreadLocalCopiable);
+
+Maybe<ParallelDesc> CreateParallelDescFromProto(const std::string& proto_str) {
+  ParallelConf parallel_conf;
+  CHECK_OR_RETURN(TxtString2PbMessage(proto_str, &parallel_conf))
+      << " Get ParallelConf Pb from string failed.";
+  std::shared_ptr<ParallelDesc> parallel_desc = JUST(InstructionsBuilder::GetParallelDescSymbol(parallel_conf));
+
+    return parallel_desc;
+}
+
+constexpr auto* CachedCreateParallelDescFromProto =
+    DECORATE(&CreateParallelDescFromProto, ThreadLocalCopiable);
+
 struct PlacementSymbolExportUtil {
-  static Maybe<void> CheckDeviceTag(const std::string& type) {
-    if (!TRY(DeviceType4DeviceTag(type)).IsOk()) {
-      return Error::RuntimeError() << "Expected one of " << PrintAvailableDevices()
-                                   << " device type at start of device string: " << type;
-    }
-    return Maybe<void>::Ok();
-  }
-
-  static Maybe<ParallelDesc> CreateParallelDesc(
-      const std::string& type, const std::vector<std::string>& formated_machine_device_ids,
-      const std::shared_ptr<Shape>& hierarchy_shape) {
-    JUST(CheckDeviceTag(type));
-    auto parallel_conf = JUST(MakeParallelConf(type, formated_machine_device_ids, hierarchy_shape));
-    std::shared_ptr<ParallelDesc> parallel_desc;
-    JUST(PhysicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
-      parallel_desc = JUST(builder->GetParallelDescSymbol(*parallel_conf));
-      return Maybe<void>::Ok();
-    }));
-
-    return parallel_desc;
-  }
-
-  static Maybe<ParallelDesc> CreateParallelDesc(const std::string& proto_str) {
-    ParallelConf parallel_conf;
-    CHECK_OR_RETURN(TxtString2PbMessage(proto_str, &parallel_conf))
-        << " Get ParallelConf Pb from string failed.";
-    std::shared_ptr<ParallelDesc> parallel_desc;
-    JUST(PhysicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
-      parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
-      return Maybe<void>::Ok();
-    }));
-
-    return parallel_desc;
-  }
-
   static Maybe<std::vector<std::string>> ParseAndFormatRanks(const py::dict& device_ids) {
     std::vector<std::pair<int64_t, int64_t>> machine_device_id_vec;
     for (const auto& pair : device_ids) {
@@ -136,7 +135,7 @@ struct PlacementSymbolExportUtil {
       const std::string& type, const py::dict& device_ids,
       const std::shared_ptr<Shape>& hierarchy) {
     const auto& formated_machine_device_ids = JUST(ParseAndFormatRanks(device_ids));
-    return SymbolOf(*JUST(CreateParallelDesc(type, *formated_machine_device_ids, hierarchy)));
+    return SymbolOf(*JUST(CachedCreateParallelDescFromTypeAndDeviceIds(type, *formated_machine_device_ids, *hierarchy)));
   }
 
   // create Symbol<ParallelDesc> object through given device_type and ranks parameters
@@ -148,11 +147,11 @@ struct PlacementSymbolExportUtil {
 
     const auto& shape = JUST(GetRanksShape(obj));
     const auto& formated_machine_device_ids = JUST(ParseAndFormatRanks(obj));
-    return SymbolOf(*JUST(CreateParallelDesc(type, *formated_machine_device_ids, shape)));
+    return SymbolOf(*JUST(CachedCreateParallelDescFromTypeAndDeviceIds(type, *formated_machine_device_ids, *shape)));
   }
 
   static Maybe<Symbol<ParallelDesc>> CreateParallelDescSymbol(const std::string& proto_str) {
-    return SymbolOf(*JUST(CreateParallelDesc(proto_str)));
+    return SymbolOf(*JUST(CachedCreateParallelDescFromProto(proto_str)));
   }
 
   static Maybe<Symbol<ParallelDesc>> AllDevicePlacement(const std::string& type) {
@@ -176,7 +175,7 @@ struct PlacementSymbolExportUtil {
         machine_device_ids.emplace_back(device_name);
       }
       Symbol<ParallelDesc> placement =
-          SymbolOf(*JUST(CreateParallelDesc(type, machine_device_ids, std::shared_ptr<Shape>())));
+          SymbolOf(*JUST(CachedCreateParallelDescFromTypeAndDeviceIds(type, machine_device_ids, Shape())));
       it = device_tag2placement.emplace(type, placement).first;
     }
     return it->second;

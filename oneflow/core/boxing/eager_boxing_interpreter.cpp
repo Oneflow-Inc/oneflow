@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 
@@ -37,6 +38,7 @@ Maybe<one::Tensor> EagerBoxingInterpreter::Interpret(const std::shared_ptr<one::
                                                      Symbol<NdSbp> out_nd_sbp,
                                                      Symbol<ParallelDesc> in_parallel_desc,
                                                      Symbol<ParallelDesc> out_parallel_desc) const {
+  OF_PROFILER_RANGE_GUARD("EagerBoxingInterpreter");
   JUST(CheckEagerBoxingDataType(input->dtype()->data_type()));
   DisableCheckGlobalTensorMetaScope disable_meta_check;
   const auto& tensor =

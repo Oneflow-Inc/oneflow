@@ -68,7 +68,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
   Maybe<JobDesc> GetJobConfSymbol(const JobConfigProto& job_conf);
 
-  Maybe<ParallelDesc> GetParallelDescSymbol(const ParallelConf& parallel_conf);
+  static Maybe<ParallelDesc> GetParallelDescSymbol(const ParallelConf& parallel_conf);
 
   Maybe<Scope> GetScopeSymbol(const ScopeProto& scope_proto);
 

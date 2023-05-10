@@ -214,18 +214,31 @@ int64_t NewSymbolId() {
 }  // namespace
 
 Maybe<JobDesc> InstructionsBuilder::GetJobConfSymbol(const JobConfigProto& job_conf) {
+  OF_PROFILER_RANGE_GUARD("GetJobConfSymbol");
+  LOG(ERROR) << "GetJobConfSymbol";
   return Singleton<symbol::Storage<JobDesc>>::Get()->FindOrCreate(job_conf, &NewSymbolId);
 }
 
 Maybe<ParallelDesc> InstructionsBuilder::GetParallelDescSymbol(const ParallelConf& parallel_conf) {
+//   OF_PROFILER_RANGE_GUARD("GetParallelDescSymbol");
+//   LOG(ERROR) << "GetParallelDescSymbol";
+//   static int count = 0;
+//  count+=1;
+//  if (count == 9) {
+//   return Error::RuntimeError() << "GetParallelDescSymbol";
+//  }
   return Singleton<symbol::Storage<ParallelDesc>>::Get()->FindOrCreate(parallel_conf, &NewSymbolId);
 }
 
 Maybe<Scope> InstructionsBuilder::GetScopeSymbol(const ScopeProto& scope_proto) {
+  OF_PROFILER_RANGE_GUARD("GetScopeSymbol");
+  LOG(ERROR) << "GetScopeSymbol";
   return Singleton<symbol::Storage<Scope>>::Get()->FindOrCreate(scope_proto, &NewSymbolId);
 }
 
 Maybe<OperatorConfSymbol> InstructionsBuilder::GetOpConfSymbol(const OperatorConf& op_conf) {
+  OF_PROFILER_RANGE_GUARD("GetOpConfSymbol");
+  LOG(ERROR) << "GetOpConfSymbol";
   return Singleton<symbol::Storage<OperatorConfSymbol>>::Get()->FindOrCreate(op_conf, &NewSymbolId);
 }
 

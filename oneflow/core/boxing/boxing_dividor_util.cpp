@@ -246,11 +246,7 @@ Maybe<Symbol<ParallelDesc>> GetFisrtDeviceOfPlacement(Symbol<ParallelDesc> place
   for (int64_t i = 0; i < placement->hierarchy()->NumAxes(); ++i) {
     parallel_conf.mutable_hierarchy()->add_dim(1);
   }
-  std::shared_ptr<ParallelDesc> parallel_desc;
-  JUST(PhysicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
-    parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
-    return Maybe<void>::Ok();
-  }));
+  std::shared_ptr<ParallelDesc> parallel_desc = JUST(InstructionsBuilder::GetParallelDescSymbol(parallel_conf));
   return SymbolOf(*parallel_desc);
 }
 
