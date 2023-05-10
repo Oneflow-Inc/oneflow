@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/common/tensor_meta.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/nd_sbp_infer_hint.h"
+#include "oneflow/core/common/op_args_vector.h"
 
 namespace oneflow {
 
@@ -49,6 +50,17 @@ class InputGlobalTensorMeta final {
 
   size_t hash_value() const;
   bool operator==(const InputGlobalTensorMeta& other) const;
+  InputGlobalTensorMeta& operator=(const InputGlobalTensorMeta& other) {
+    tensor_meta_ = other.tensor_meta_;
+    consumer_nd_sbp_constraint_ = other.consumer_nd_sbp_constraint_;
+    return *this;
+  }
+
+  InputGlobalTensorMeta& operator=(const InputGlobalTensorMeta&& other) {
+    tensor_meta_ = std::move(other.tensor_meta_);
+    consumer_nd_sbp_constraint_ = std::move(other.consumer_nd_sbp_constraint_);
+    return *this;
+  }
   Symbol<GlobalTensorMeta> tensor_meta() const { return tensor_meta_; }
   const Optional<Symbol<NdSbp>>& consumer_nd_sbp_constraint() const {
     return consumer_nd_sbp_constraint_;
@@ -70,7 +82,7 @@ class GlobalTensorMetaInferArgs final {
   GlobalTensorMetaInferArgs(GlobalTensorMetaInferArgs&&) = default;
   ~GlobalTensorMetaInferArgs() = default;
 
-  const std::vector<InputGlobalTensorMeta>& input_global_tensor_metas() const {
+  const OpArgsVector<InputGlobalTensorMeta>& input_global_tensor_metas() const {
     return input_global_tensor_metas_;
   }
   const AttrMap& attrs() const { return attrs_; }
@@ -97,7 +109,7 @@ class GlobalTensorMetaInferArgs final {
   Maybe<void> InitInputGlobalTensorMetas(const TensorTuple& input_tensors);
 
   AttrMap attrs_;
-  std::vector<InputGlobalTensorMeta> input_global_tensor_metas_;
+  OpArgsVector<InputGlobalTensorMeta> input_global_tensor_metas_;
 };
 
 class SrcOpGlobalTensorMetaInferArgs final {
@@ -166,6 +178,18 @@ template<>
 struct hash<oneflow::one::SrcOpGlobalTensorMetaInferArgs> final {
   size_t operator()(const oneflow::one::SrcOpGlobalTensorMetaInferArgs& val) const {
     return val.hash_value();
+  }
+};
+
+template<>
+struct hash<oneflow::OpArgsVector<oneflow::one::InputGlobalTensorMeta>> {
+  std::size_t operator()(
+      const oneflow::OpArgsVector<oneflow::one::InputGlobalTensorMeta>& vec) const {
+    std::size_t hash_value = vec.size();
+    for (const auto& elem : vec) {
+      oneflow::AddHash<oneflow::one::InputGlobalTensorMeta>(&hash_value, elem);
+    }
+    return hash_value;
   }
 };
 
