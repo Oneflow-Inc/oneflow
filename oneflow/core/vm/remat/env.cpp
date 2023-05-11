@@ -128,15 +128,16 @@ Env::~Env() {
   LOG(INFO) << "eager eviction num: " << eager_eviction_num_;
   LOG(INFO) << "recomputation num: " << recomputation_num_;
   LOG(INFO) << "duration: " << time_now_;
-  
+
   const char* prefix = std::getenv("ONEFLOW_REMAT_SUMMARY_FILE_PREFIX");
   if (prefix != nullptr && GlobalProcessCtx::LocalRank() == 0) {
     using json = nlohmann::json;
-    json cpp_summary{{"forced eviction", forced_eviction_num_},
-                     {"eager eviction", eager_eviction_num_},
-                     {"recomputation", recomputation_num_},
-                     {"dataset time", time_now_},
-                     {"mem frag rate", append_memory_frag_info_and_get(0, 0)},
+    json cpp_summary{
+        {"forced eviction", forced_eviction_num_},
+        {"eager eviction", eager_eviction_num_},
+        {"recomputation", recomputation_num_},
+        {"dataset time", time_now_},
+        {"mem frag rate", append_memory_frag_info_and_get(0, 0)},
     };
 
     json full_json;
@@ -144,7 +145,7 @@ Env::~Env() {
     {
       std::ifstream fs(std::string(prefix) + ".json");
       // if (fs.is_open()) { fs >> full_json; }
-      if(fs.is_open()) {
+      if (fs.is_open()) {
         fs.close();
         return;
       }
@@ -155,7 +156,7 @@ Env::~Env() {
       fs << full_json;
     }
     {
-      std::ofstream fs("overhead-" + std::string(prefix) + ".json");
+      std::ofstream fs(std::string(prefix) + "-overhead.json");
       fs << nlohmann::json{{"overhead", search_free_mem_cost}};
     }
   }
