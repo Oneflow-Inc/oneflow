@@ -146,6 +146,7 @@ void TopoStruct::ComputeIsReusable() { is_reusable = IsProducedRegisterReusable(
 
 // Make sure max_difference = peak_memory - memory_increment
 int64_t Priority(int64_t memory_increment, int64_t peak_memory, int64_t max_difference) {
+  CHECK_EQ(peak_memory, memory_increment + max_difference);
   if (memory_increment < 0) { return peak_memory - kPriorityOffset; }
   if (memory_increment > 0) { return kPriorityBound - max_difference; }
   // memory_increment == 0
@@ -199,24 +200,34 @@ void TopoStruct::SetAccumulateMemoryIncrement() {
   auto Add2Map = [&](TopoStruct* node) {
     max_difference2topo_structs[node->SingleNodePriority()].push_back(node);
   };
+  // Take itself out and only add its ancestors
   visited_ancestors.Mark();
   VisitAncestorsAndItself(Add2Map);
 
+  // Reset the status, no cleaning up would cause bug
   ResetNoCleaningMarkerAncestor();
   accumulate_memory_increment = 0;
   peak_memory_during_accumulation = 0;
+  ordered_ancestors.clear();
+
   auto Execute = [&](TopoStruct* node) {
     ordered_ancestors.push_back(node);
     accumulate_memory_increment += node->memory_increment;
     peak_memory_during_accumulation = std::max(peak_memory_during_accumulation,
                                                accumulate_memory_increment + node->max_difference);
     // Remove from the map
+    // At the end, we would remove itself from an empty map. Therefore, the return status might be
+    // false.
     CheckAndRemoveFromMap(max_difference2topo_structs, node->SingleNodePriority(), node);
   };
   while (!max_difference2topo_structs.empty()) {
     TakeBackFromVector(max_difference2topo_structs.begin()->second)
         ->VisitAncestorsAndItself(Execute);
   }
+  // Do not forget to execute itself at the end.
+  accumulate_memory_increment += memory_increment;
+  peak_memory_during_accumulation =
+      std::max(peak_memory_during_accumulation, accumulate_memory_increment + max_difference);
   max_difference_during_accumulation =
       peak_memory_during_accumulation - accumulate_memory_increment;
 }
@@ -673,7 +684,7 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
   auto StopWaiting = [&](TopoStruct* node) {
     if (node->waiting) {
       node->waiting = false;
-      CheckAndRemoveFromMap(waiting_map, node->AccumulationPriority(), node);
+      CHECK(CheckAndRemoveFromMap(waiting_map, node->AccumulationPriority(), node));
     }
   };
   // Wait in the map
@@ -714,6 +725,7 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
     for (auto* ancestor : node->ordered_ancestors) {
       if (!ancestor->executed) {
         ExecuteOpNode(ancestor);
+        ancestor->executed = true;
         StopWaiting(ancestor);
         prepare_topo_structs.push_back(node);
       }
