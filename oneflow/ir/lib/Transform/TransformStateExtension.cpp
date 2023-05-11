@@ -25,7 +25,7 @@ limitations under the License.
 
 using namespace mlir;
 
-LogicalResult mlir::oneflow::transform_dialect::TestTransformStateExtension::updateMapping(
+LogicalResult mlir::oneflow::transform_dialect::TransformStateExtension::updateMapping(
     Operation* previous, Operation* updated) {
   // Update value handles. The new ops should have at least as many results as
   // the replacement op. Fewer results are acceptable, if those results are not

@@ -23,9 +23,9 @@ namespace mlir {
 namespace oneflow {
 
 namespace transform_dialect {
-class TestTransformStateExtension : public ::mlir::transform::TransformState::Extension {
+class TransformStateExtension : public ::mlir::transform::TransformState::Extension {
  public:
-  TestTransformStateExtension(::mlir::transform::TransformState& state, StringAttr message)
+  TransformStateExtension(::mlir::transform::TransformState& state, StringAttr message)
       : Extension(state), message(message) {}
 
   StringRef getMessage() const { return message.getValue(); }
