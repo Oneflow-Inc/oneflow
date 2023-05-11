@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_THROW_H_
 #define ONEFLOW_CORE_COMMON_THROW_H_
 
-#include <filesystem>
 #include <glog/logging.h>
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/preprocessor.h"
