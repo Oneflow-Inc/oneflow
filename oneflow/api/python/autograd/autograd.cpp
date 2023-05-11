@@ -101,7 +101,7 @@ Maybe<one::TensorTuple> Backward(const one::TensorTuple& outputs, const one::Ten
 
 Maybe<one::TensorTuple> Grad(const one::TensorTuple& outputs, const one::TensorTuple& inputs,
                              const one::TensorTuple& out_grads, bool retain_graph,
-                             bool create_graph) {
+                             bool create_graph, bool allow_unused) {
   PythonFrameGuard pf;
   BackwardPassScopeGuard backward_guard;
   if (create_graph) { retain_graph = true; }
@@ -112,7 +112,7 @@ Maybe<one::TensorTuple> Grad(const one::TensorTuple& outputs, const one::TensorT
       << "All input tensors `.requires_grad` should be true";
   std::shared_ptr<one::TensorTuple> gradients = JUST(CheckAndInitOutGrads(outputs, out_grads));
   return one::GetThreadLocalAutogradEngine()->RunBackwardAndReturnInputsTensorGradIf(
-      outputs, inputs, *gradients, retain_graph, create_graph);
+      outputs, inputs, *gradients, retain_graph, create_graph, allow_unused);
 }
 
 namespace py = pybind11;
