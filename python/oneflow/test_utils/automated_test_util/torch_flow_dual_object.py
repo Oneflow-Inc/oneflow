@@ -1263,18 +1263,12 @@ def autotest(
                     testing = True
                     if check_graph:
                         testing_graph = True
-                    res = f(test_case, *args, **kwargs)
+
                     global testing_complex
                     if include_complex:
-                        # for generate complex input tensor
                         testing_complex = True
-                        # rerun the function with complex
-                        res_complex = f(test_case, *args, **kwargs)
-                        if not isinstance(res, collections.abc.Sequence):
-                            res = [res]
-                        if not isinstance(res_complex, collections.abc.Sequence):
-                            res_complex = [res_complex]
-                        res += res_complex
+
+                    res = f(test_case, *args, **kwargs)
 
                     testing = False
                     testing_graph = False
@@ -1410,9 +1404,9 @@ def random_tensor(
 ):
     if isinstance(requires_grad, generator):
         requires_grad = requires_grad.value()
-    global testing_complex
     if dtype == float and testing_complex:
-        dtype = complex
+        # Generate complex with the probability of 0.5
+        dtype = complex if rng.integers(0, 2) == 1 else float
 
     pytorch_tensor = (
         random_pytorch_tensor(
