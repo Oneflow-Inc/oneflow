@@ -806,4 +806,79 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   return Maybe<void>::Ok();
 }
 
+/*static*/ Maybe<void> LlamaAttentionLayerForwardOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  const user_op::TensorDesc& hidden_states_desc = ctx->InputTensorDesc("hidden_states", 0);
+  const int64_t head_size = ctx->Attr<int64_t>("head_size");
+  const Shape& hidden_states_shape = hidden_states_desc.shape();
+  auto b = hidden_states_shape.at(0), m = hidden_states_shape.at(1);
+  ctx->SetOutputShape("rms_norm_out", 0, hidden_states_shape);
+  ctx->SetOutputShape("inv_rms", 0, Shape({b, m}));
+  const Shape& query_weight_shape = ctx->InputTensorDesc("query_weight", 0).shape();
+  const int64_t h = query_weight_shape.at(0) / head_size;
+  ctx->SetOutputShape("query", 0, Shape({b, m, query_weight_shape.at(0)}));
+  ctx->SetOutputShape("key", 0, Shape({b, m, query_weight_shape.at(0)}));
+  ctx->SetOutputShape("value", 0, Shape({b, m, query_weight_shape.at(0)}));
+  ctx->SetOutputShape("rotary_query", 0, Shape({b, m, h, head_size}));
+  ctx->SetOutputShape("rotary_key", 0, Shape({b, m, h, head_size}));
+  if (ctx->has_input("past_key", 0)) {  // past_key: BHMK
+    const Shape& past_key_shape = ctx->InputTensorDesc("past_key", 0).shape();
+    auto past_m = past_key_shape.at(2);
+    ctx->SetOutputShape("concat_key", 0, Shape({b, h, past_m + m, head_size}));
+    ctx->SetOutputShape("concat_value", 0, Shape({b, h, past_m + m, head_size}));
+  } else {
+    ctx->SetOutputShape("concat_key", 0, Shape({b, h, m, head_size}));
+    ctx->SetOutputShape("concat_value", 0, Shape({b, h, m, head_size}));
+  }
+  ctx->SetOutputShape("attn_out", 0, hidden_states_shape);
+  ctx->SetOutputShape("out", 0, hidden_states_shape);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> LlamaAttentionLayerForwardOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return LlamaAttentionLayerForwardOp::InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> LlamaAttentionLayerForwardOp::GetSbp(user_op::SbpContext* ctx) {
+  auto builder = ctx->NewBuilder()
+                     .Broadcast(user_op::OpArg("hidden_states", 0))
+                     .Broadcast(user_op::OpArg("input_norm_weight", 0))
+                     .Broadcast(user_op::OpArg("rms_norm_out", 0))
+                     .Broadcast(user_op::OpArg("inv_rms", 0))
+                     .Split(user_op::OpArg("query_weight", 0), 0)
+                     .Split(user_op::OpArg("key_weight", 0), 0)
+                     .Split(user_op::OpArg("value_weight", 0), 0)
+                     .Split(user_op::OpArg("attn_out_weight", 0), 1)
+                     .Split(user_op::OpArg("query", 0), 2)
+                     .Split(user_op::OpArg("key", 0), 2)
+                     .Split(user_op::OpArg("value", 0), 2)
+                     .Broadcast(user_op::OpArg("position_ids", 0))
+                     .Split(user_op::OpArg("rotary_query", 0), 2)
+                     .Split(user_op::OpArg("rotary_key", 0), 2)
+                     .Split(user_op::OpArg("concat_key", 0), 1)
+                     .Split(user_op::OpArg("concat_value", 0), 1)
+                     .Split(user_op::OpArg("attn_out", 0), 2)
+                     .Broadcast(user_op::OpArg("out", 0));  // P->B
+  if (ctx->user_op_conf().has_input("past_key", 0)) {
+    builder =
+        builder.Split(user_op::OpArg("past_key", 0), 1).Split(user_op::OpArg("past_value", 0), 1);
+  }
+  builder.Build();
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> LlamaAttentionLayerForwardOp::InferDataType(user_op::InferContext* ctx) {
+  auto data_type = ctx->InputDType("hidden_states", 0);
+  ctx->SetOutputDType("rms_norm_out", 0, data_type);
+  ctx->SetOutputDType("inv_rms", 0, DataType::kFloat);
+  ctx->SetOutputDType("query", 0, data_type);
+  ctx->SetOutputDType("key", 0, data_type);
+  ctx->SetOutputDType("value", 0, data_type);
+  ctx->SetOutputDType("rotary_query", 0, data_type);
+  ctx->SetOutputDType("rotary_key", 0, data_type);
+  ctx->SetOutputDType("concat_key", 0, data_type);
+  ctx->SetOutputDType("concat_value", 0, data_type);
+  ctx->SetOutputDType("attn_out", 0, data_type);
+  ctx->SetOutputDType("out", 0, data_type);
+  return Maybe<void>::Ok();
+}
+
 }  // namespace oneflow

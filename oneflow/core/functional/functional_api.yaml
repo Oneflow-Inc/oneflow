@@ -2675,6 +2675,10 @@
   signature: "TensorTuple (Tensor x, Tensor bias, Tensor mask, *, Float fill_value=0.0, Float scale=1.0, Float p=0.5, Bool training=True, Generator generator=None) => FusedBiasAddScaleMaskSoftmaxDropout"
   bind_python: True
 
+- name: "llama_attention_layer_forward"
+  signature: "TensorTuple (Tensor hidden_states, Tensor input_norm_weight, Tensor query_weight, Tensor key_weight, Tensor value_weight, Tensor attn_out_weight, Tensor position_ids, Tensor past_key=None, Tensor past_value=None, Int64 head_size=128) => LlamaAttentionLayerForwardOp"
+  bind_python: True
+
 - name: "fused_multi_head_attention_inference"
   signature: "Tensor (Tensor query, Tensor key, Tensor value, Int64 num_heads, Bool causal=False, Int64 query_hidden_slice_start=0, Int64 query_hidden_slice_end=-1, Int64 key_hidden_slice_start=0, Int64 key_hidden_slice_end=-1, Int64 value_hidden_slice_start=0, Int64 value_hidden_slice_end=-1, Tensor attn_bias=None, Int64 causal_diagonal_offset=0) => FusedMultiHeadAttentionInference"
   bind_python: True
