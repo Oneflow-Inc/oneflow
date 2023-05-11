@@ -246,6 +246,12 @@ class MaxPool2d(Module):
         else:
             self.channel_pos = "channels_first"
 
+    def to_memory_format(self, memory_format) -> None:
+        if memory_format is flow.channels_last:
+            self.channel_pos = "channels_last"
+        elif memory_format is flow.contiguous_format:
+            self.channel_pos = "channels_first"
+
     def forward(self, x):
         if not self.return_indices:
             return flow._C.max_pool2d(
@@ -514,69 +520,30 @@ class AvgPool2d(Module):
         self.kernel_size = _pair(kernel_size)
         self.stride = _pair(stride) if (stride is not None) else _pair(kernel_size)
         self.ceil_mode = ceil_mode
-
+        self.channel_pos = "channels_first"
         if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
-            self.data_format = "NHWC"
             self.channel_pos = "channels_last"
-            assert isinstance(padding, int) or isinstance(
-                padding, tuple
-            ), "padding can only int int or tuple of 2 ints."
-            padding = _pair(padding)
-            if len(padding) == 2:
-                if self.data_format == "NCHW":
-                    padding = (0, 0, padding[0], padding[1])
-                elif self.data_format == "NHWC":
-                    padding = (0, padding[0], padding[1], 0)
-                else:
-                    raise ValueError("error padding param!")
-            self.padding = padding
+        self.padding = _pair(padding)
+        self.count_include_pad = count_include_pad
+        self.divisor_override = int(divisor_override)
 
-            if not count_include_pad:
-                raise ValueError(
-                    "AvgPool2d with NHWC data format don't support count_include_pad for now."
-                )
-            if divisor_override != 0:
-                raise ValueError(
-                    "AvgPool2d with NHWC data format don't support divisor_override for now."
-                )
-
-            # TODO(yaochi): align with pytorch when padding is asymmetric
-            self._padding_type, _pads_list = calc_pool_padding(
-                padding, get_dhw_offset(self.channel_pos), 2
-            )
-            self._padding_before = [pad[0] for pad in _pads_list]
-            self._padding_after = [pad[1] for pad in _pads_list]
-
-        else:
-            self.data_format = "NCHW"
+    def to_memory_format(self, memory_format) -> None:
+        if memory_format is flow.channels_last:
+            self.channel_pos = "channels_last"
+        elif memory_format is flow.contiguous_format:
             self.channel_pos = "channels_first"
-            self.padding = _pair(padding)
-            self.count_include_pad = count_include_pad
-            self.divisor_override = int(divisor_override)
 
     def forward(self, x):
-        if self.data_format == "NCHW":
-            return flow._C.avg_pool2d(
-                x,
-                kernel_size=self.kernel_size,
-                stride=self.stride,
-                padding=self.padding,
-                ceil_mode=self.ceil_mode,
-                count_include_pad=self.count_include_pad,
-                divisor_override=self.divisor_override,
-                data_format=self.channel_pos,
-            )
-        else:
-            return flow._C.avg_pool2d_nhwc(
-                x,
-                kernel_size=self.kernel_size,
-                stride=self.stride,
-                padding=self._padding_type,
-                padding_before=self._padding_before,
-                padding_after=self._padding_after,
-                ceil_mode=self.ceil_mode,
-                data_format=self.channel_pos,
-            )
+        return flow._C.avg_pool2d(
+            x,
+            kernel_size=self.kernel_size,
+            stride=self.stride,
+            padding=self.padding,
+            ceil_mode=self.ceil_mode,
+            count_include_pad=self.count_include_pad,
+            divisor_override=self.divisor_override,
+            data_format=self.channel_pos,
+        )
 
     def extra_repr(self) -> str:
         return (
@@ -770,20 +737,38 @@ class AdaptiveAvgPool2d(Module):
 
     """
 
-    def __init__(self, output_size) -> None:
+    def __init__(self, output_size, data_format=None) -> None:
         super().__init__()
         assert output_size is not None, "'output_size' cannot be NoneType"
         self.output_size = _pair(output_size)
+        if data_format:
+            if not data_format in ["channels_first", "channels_last"]:
+                raise ValueError(
+                    f"data_format must be one of ['channels_first', 'channels_last'], but got {data_format}"
+                )
+            self.channel_pos = data_format
+        elif os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
+            self.channel_pos = "channels_last"
+        else:
+            self.channel_pos = "channels_first"
+
+    def to_memory_format(self, memory_format) -> None:
+        if memory_format is flow.channels_last:
+            self.channel_pos = "channels_last"
+        elif memory_format is flow.channels_first:
+            self.channel_pos = "channels_first"
 
     def forward(self, x):
         assert (
             len(x.shape) == 4
         ), f"expected 4-dimensional tensor, but got {len(x.shape)}-dimensional tensor"
         new_output_size = _generate_output_size(x.shape, self.output_size)
-        return flow._C.adaptive_avg_pool2d(x, output_size=new_output_size)
+        return flow._C.adaptive_avg_pool2d(
+            x, output_size=new_output_size, data_format=self.channel_pos
+        )
 
 
-def adaptive_avg_pool2d(input, output_size):
+def adaptive_avg_pool2d(input, output_size, data_format=None):
     """Applies a 2D adaptive average pooling over an input signal composed of several input planes.
 
     See :mod:`oneflow.nn.AdaptiveAvgPool2d`
@@ -792,7 +777,7 @@ def adaptive_avg_pool2d(input, output_size):
         input: input tensor
         output_size: the target output size (single integer or double-integer tuple)
     """
-    return AdaptiveAvgPool2d(output_size)(input)
+    return AdaptiveAvgPool2d(output_size, data_format)(input)
 
 
 class AdaptiveAvgPool3d(Module):
@@ -955,6 +940,25 @@ class AdaptiveMaxPool2d(_AdaptiveMaxPoolNd):
         oneflow.Size([1, 64, 7, 7])
     """
 
+    def __init__(self, output_size, return_indices=False, data_format=None) -> None:
+        super().__init__(output_size, return_indices=return_indices)
+        if data_format:
+            if not data_format in ["channels_first", "channels_last"]:
+                raise ValueError(
+                    f"data_format must be one of ['channels_first', 'channels_last'], but got {data_format}"
+                )
+            self.channel_pos = data_format
+        elif os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
+            self.channel_pos = "channels_last"
+        else:
+            self.channel_pos = "channels_first"
+
+    def to_memory_format(self, memory_format) -> None:
+        if memory_format is flow.channels_last:
+            self.channel_pos = "channels_last"
+        elif memory_format is flow.channels_first:
+            self.channel_pos = "channels_first"
+
     def forward(self, input):
         self.output_size = _pair(self.output_size)
         assert (
@@ -962,7 +966,7 @@ class AdaptiveMaxPool2d(_AdaptiveMaxPoolNd):
         ), f"expected 4-dimensional tensor, but got {len(input.shape)}-dimensional tensor"
         new_output_size = _generate_output_size(input.shape, self.output_size)
         return flow.nn.functional.adaptive_max_pool2d(
-            input, self.output_size, self.return_indices
+            input, self.output_size, self.return_indices, self.channel_pos
         )
 
 

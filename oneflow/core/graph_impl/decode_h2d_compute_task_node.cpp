@@ -27,6 +27,7 @@ class DecodeH2DCompTaskNode final : public CompTaskNode {
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
+  void ConsumeFakeRegsts() override;
 
   TaskType GetTaskType() const override { return TaskType::kDecodeH2D; }
 
@@ -37,6 +38,8 @@ class DecodeH2DCompTaskNode final : public CompTaskNode {
 void DecodeH2DCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst());
 }
+
+void DecodeH2DCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
 
 void DecodeH2DCompTaskNode::ProduceAllRegstsAndBindEdges() {
   auto regst_num = ParseIntegerFromEnv("ONEFLOW_DECODE_H2D_REGST_NUM", 2);

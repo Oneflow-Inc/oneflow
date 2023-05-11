@@ -16,8 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_CPP_ATTRIBUTE_H_
 #define ONEFLOW_CORE_COMMON_CPP_ATTRIBUTE_H_
 
-#include <glog/logging.h>
-
 #define likely GOOGLE_PREDICT_TRUE
 #define unlikely GOOGLE_PREDICT_FALSE
 

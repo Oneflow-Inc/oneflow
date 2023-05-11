@@ -37,7 +37,7 @@ vm::OpCallInstructionPolicy Env::update_tensor_with_storage(
       auto local_tensor_meta = old->tensor_meta();
       const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
           std::make_shared<MemoryCase>(old->mem_case()), local_tensor_meta, old->mut_tensor_meta(),
-          local_tensor_meta->dtype(), new_storage);
+          local_tensor_meta->dtype(), local_tensor_meta->memory_format(), new_storage);
       eager_blob_object->set_storage_offset(old->storage_offset());
       old2new.emplace(old.get(), eager_blob_object);
       old = eager_blob_object;
@@ -52,7 +52,8 @@ vm::OpCallInstructionPolicy Env::update_tensor_with_storage(
       auto local_tensor_meta = old_locked->tensor_meta();
       const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
           std::make_shared<MemoryCase>(old_locked->mem_case()), local_tensor_meta,
-          old_locked->mut_tensor_meta(), local_tensor_meta->dtype(), new_storage);
+          old_locked->mut_tensor_meta(), local_tensor_meta->dtype(),
+          local_tensor_meta->memory_format(), new_storage);
       eager_blob_object->set_storage_offset(old_locked->storage_offset());
       old2new.emplace(old_locked.get(), eager_blob_object);
       old = eager_blob_object;

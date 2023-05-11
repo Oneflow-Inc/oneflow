@@ -116,7 +116,7 @@ OpFoldResult BinaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
 
 }  // namespace
 
-OpFoldResult FrozenVariableOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult FrozenVariableOp::fold(FoldAdaptor adaptor) {
   NamedAttrList attrs;
   attrs.set(getValueAttrName(), getValueAttr());
   attrs.set(getOpNameAttrName(), getOpNameAttr());
@@ -129,7 +129,8 @@ OpFoldResult FrozenVariableOp::fold(ArrayRef<Attribute> operands) {
   return DictionaryAttr::get(getContext(), attrs);
 }
 
-OpFoldResult TransposeOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult TransposeOp::fold(FoldAdaptor adaptor) {
+  auto operands = adaptor.getOperands();
   return UnaryFold(getContext(), operands, [this](const auto& tensor) {
     std::vector<int32_t> perm_;
     for (auto& x : getPerm().getValue()) { perm_.emplace_back(x.cast<IntegerAttr>().getSInt()); }
@@ -137,7 +138,8 @@ OpFoldResult TransposeOp::fold(ArrayRef<Attribute> operands) {
   });
 }
 
-OpFoldResult ReshapeOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
+  auto operands = adaptor.getOperands();
   return UnaryFold(getContext(), operands, [this](const auto& tensor) {
     std::vector<int64_t> shape_vec;
     for (auto& x : getShape().getValue()) {
@@ -148,7 +150,8 @@ OpFoldResult ReshapeOp::fold(ArrayRef<Attribute> operands) {
   });
 }
 
-OpFoldResult ScalarAddOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult ScalarAddOp::fold(FoldAdaptor adaptor) {
+  auto operands = adaptor.getOperands();
   return UnaryFold(getContext(), operands, [this](const auto& tensor) -> MaybeTensor {
     if (getHasIntOperand()) { return functional::ScalarAdd(tensor, getIntOperand(), 1, false); }
     if (getHasFloatOperand()) {
@@ -159,19 +162,23 @@ OpFoldResult ScalarAddOp::fold(ArrayRef<Attribute> operands) {
   });
 }
 
-OpFoldResult SqrtOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult SqrtOp::fold(FoldAdaptor adaptor) {
+  auto operands = adaptor.getOperands();
   return UnaryFold(getContext(), operands, functional::Sqrt);
 }
 
-OpFoldResult BroadcastMulOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult BroadcastMulOp::fold(FoldAdaptor adaptor) {
+  auto operands = adaptor.getOperands();
   return BinaryFold(getContext(), operands, functional::Mul);
 }
 
-OpFoldResult BroadcastDivOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult BroadcastDivOp::fold(FoldAdaptor adaptor) {
+  auto operands = adaptor.getOperands();
   return BinaryFold(getContext(), operands, functional::Div);
 }
 
-OpFoldResult BroadcastSubOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult BroadcastSubOp::fold(FoldAdaptor adaptor) {
+  auto operands = adaptor.getOperands();
   return BinaryFold(getContext(), operands, [](const auto& lhs, const auto& rhs) -> MaybeTensor {
     return functional::Sub(lhs, rhs, /*alpha=*/1.0, false);
   });

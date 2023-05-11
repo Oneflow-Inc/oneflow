@@ -92,9 +92,10 @@ Maybe<one::Tensor> fromDLPack(const DLManagedTensor* src) {
   Symbol<LocalTensorMeta> tensor_meta;
   if (dl_tensor.strides) {
     const auto stride = Stride(dl_tensor.strides, dl_tensor.strides + dl_tensor.ndim);
-    tensor_meta = SymbolOf(LocalTensorMeta(shape, stride, dtype, device));
+    tensor_meta =
+        SymbolOf(LocalTensorMeta(shape, stride, dtype, MemoryFormat::kContiguous, device));
   } else {
-    tensor_meta = SymbolOf(LocalTensorMeta(shape, dtype, device));
+    tensor_meta = SymbolOf(LocalTensorMeta(shape, dtype, MemoryFormat::kContiguous, device));
   }
 
   // Build TensorBuffer
