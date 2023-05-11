@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-//===- TestTransformDialectInterpreter.cpp --------------------------------===//
+//===- TransformDialectInterpreter.cpp --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -41,17 +41,17 @@ namespace {
 template<typename Derived>
 class OpPassWrapper : public PassWrapper<Derived, OperationPass<>> {};
 
-class TestTransformDialectInterpreterPass
-    : public transform::TransformInterpreterPassBase<TestTransformDialectInterpreterPass,
+class TransformDialectInterpreterPass
+    : public transform::TransformInterpreterPassBase<TransformDialectInterpreterPass,
                                                      OpPassWrapper> {
  public:
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestTransformDialectInterpreterPass)
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TransformDialectInterpreterPass)
 
-  TestTransformDialectInterpreterPass() = default;
-  TestTransformDialectInterpreterPass(const TestTransformDialectInterpreterPass& pass)
+  TransformDialectInterpreterPass() = default;
+  TransformDialectInterpreterPass(const TransformDialectInterpreterPass& pass)
       : TransformInterpreterPassBase(pass) {}
 
-  StringRef getArgument() const override { return "test-transform-dialect-interpreter"; }
+  StringRef getArgument() const override { return "oneflow-transform-dialect-interpreter"; }
 
   StringRef getDescription() const override {
     return "apply transform dialect operations one by one";
@@ -195,11 +195,11 @@ class TestTransformDialectInterpreterPass
                      "definitions to be injected into the transform module.")};
 };
 
-struct TestTransformDialectEraseSchedulePass
-    : public PassWrapper<TestTransformDialectEraseSchedulePass, OperationPass<ModuleOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestTransformDialectEraseSchedulePass)
+struct TransformDialectEraseSchedulePass
+    : public PassWrapper<TransformDialectEraseSchedulePass, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TransformDialectEraseSchedulePass)
 
-  StringRef getArgument() const final { return "test-transform-dialect-erase-schedule"; }
+  StringRef getArgument() const final { return "oneflow-transform-dialect-erase-schedule"; }
 
   StringRef getDescription() const final { return "erase transform dialect schedule from the IR"; }
 
@@ -216,14 +216,14 @@ struct TestTransformDialectEraseSchedulePass
 }  // namespace
 
 namespace mlir {
-namespace transform {
+namespace transform_dialect {
 /// Registers the test pass for erasing transform dialect ops.
-void registerTestTransformDialectEraseSchedulePass() {
-  PassRegistration<TestTransformDialectEraseSchedulePass> reg;
+void registerTransformDialectEraseSchedulePass() {
+  PassRegistration<TransformDialectEraseSchedulePass> reg;
 }
 /// Registers the test pass for applying transform dialect ops.
-void registerTestTransformDialectInterpreterPass() {
-  PassRegistration<TestTransformDialectInterpreterPass> reg;
+void registerTransformDialectInterpreterPass() {
+  PassRegistration<TransformDialectInterpreterPass> reg;
 }
-}  // namespace transform
+}  // namespace transform_dialect
 }  // namespace mlir

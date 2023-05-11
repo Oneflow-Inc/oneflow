@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-//===- TestTransformDialectExtension.h --------------------------*- C++ -*-===//
+//===- TransformDialectExtension.h --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,8 +26,8 @@ limitations under the License.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TESTTRANSFORMDIALECTEXTENSION_H
-#define MLIR_TESTTRANSFORMDIALECTEXTENSION_H
+#ifndef ONEFLOW_IR_INCLUDE_TRANSOFRM_TRANSFORM_DIALECT_EXTENSION_H_
+#define ONEFLOW_IR_INCLUDE_TRANSOFRM_TRANSFORM_DIALECT_EXTENSION_H_
 
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/Dialect/Transform/IR/MatchInterfaces.h"
@@ -38,19 +38,26 @@ limitations under the License.
 namespace mlir {
 class DialectRegistry;
 
-namespace transform {
+namespace oneflow {
+namespace transform_dialect {
 /// Registers the test extension to the Transform dialect.
-void registerTestTransformDialectExtension(::mlir::DialectRegistry& registry);
-void registerTestTransformDialectEraseSchedulePass();
-void registerTestTransformDialectInterpreterPass();
-}  // namespace transform
+void registerTransformDialectExtension(::mlir::DialectRegistry& registry);
+void registerTransformDialectEraseSchedulePass();
+void registerTransformDialectInterpreterPass();
 
+struct ApplyPatternsOpPatterns {
+  bool canonicalization = false;
+};
+
+}  // namespace transform_dialect
+
+}  // namespace oneflow
 }  // namespace mlir
 
 #define GET_TYPEDEF_CLASSES
-#include "Transform/TestTransformDialectExtensionTypes.h.inc"
+#include "Transform/TransformDialectExtensionTypes.h.inc"
 
 #define GET_OP_CLASSES
-#include "Transform/TestTransformDialectExtension.h.inc"
+#include "Transform/TransformDialectExtension.h.inc"
 
-#endif  // MLIR_TESTTRANSFORMDIALECTEXTENSION_H
+#endif  // ONEFLOW_IR_INCLUDE_TRANSOFRM_TRANSFORM_DIALECT_EXTENSION_H_
