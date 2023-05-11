@@ -112,7 +112,6 @@ class TestGlobalInterpreter(flow.unittest.TestCase):
 @flow.unittest.skip_unless_1n1d()
 class TestEmptyInputs(oneflow.unittest.TestCase):
     def test_empty_inputs(test_case):
-
         class GraphReader(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
