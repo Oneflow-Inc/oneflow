@@ -37,7 +37,7 @@ class JobBuildAndInferCtxMgr {
   const JobSet& job_set() const { return job_set_; }
   std::string structure_graph() const;
   void TryUpdateJobIdCount(int64_t id_count);
-  void SaveJobIdCount();
+  int64_t GetJobIdCount() const;
 
  protected:
   virtual JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const = 0;

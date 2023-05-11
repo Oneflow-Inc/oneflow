@@ -25,12 +25,8 @@ IDMgr::IDMgr() {
   chunk_id_count_ = 0;
 }
 
-void IDMgr::SaveId() {
-  auto* id_state_mgr = Singleton<MultiClientSessionContext>::Get()->GetIdStateMgr();
-  id_state_mgr->SetMemBlockIdState(mem_block_id_count_);
-  id_state_mgr->SetRegstDescIdState(regst_desc_id_count_);
-  id_state_mgr->SetChunkIdState(chunk_id_count_);
-  task_id_gen_.SaveTaskIndex();
+std::vector<int64_t> IDMgr::GetId() const {
+  return {regst_desc_id_count_, mem_block_id_count_, chunk_id_count_};
 }
 
 void IDMgr::TryUpdateId(int64_t regst_desc_id_count, int64_t mem_block_id_count,
@@ -38,6 +34,14 @@ void IDMgr::TryUpdateId(int64_t regst_desc_id_count, int64_t mem_block_id_count,
   regst_desc_id_count_ = std::max(regst_desc_id_count, regst_desc_id_count_);
   mem_block_id_count_ = std::max(mem_block_id_count, mem_block_id_count_);
   chunk_id_count_ = std::max(chunk_id_count, chunk_id_count_);
+}
+
+void IDMgr::GetTaskIndex(HashMap<int64_t, uint32_t>* task_index_state) {
+  task_id_gen_.GetTaskIndex(task_index_state);
+}
+
+void IDMgr::TryUpdateTaskIndex(const HashMap<int64_t, uint32_t>& task_index_state) {
+  task_id_gen_.TryUpdateTaskIndex(task_index_state);
 }
 
 }  // namespace oneflow

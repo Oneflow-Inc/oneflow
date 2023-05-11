@@ -14,25 +14,34 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/multi_client_session_context.h"
+#include "oneflow/core/graph/stream_id.h"
+#include "oneflow/core/graph/task_id.h"
 #include "oneflow/core/graph/task_id_generator.h"
 
 namespace oneflow {
 
-void TaskIdGenerator::SaveTaskIndex() {
+void TaskIdGenerator::GetTaskIndex(HashMap<int64_t, uint32_t>* task_index_state) {
   for (const auto& pair : stream_id2task_index_counter_) {
-    Singleton<MultiClientSessionContext>::Get()->GetIdStateMgr()->SetTaskIndexState(pair.first,
-                                                                                    pair.second);
+    const int64_t i64_stream_id = EncodeStreamIdToInt64(pair.first);
+    (*task_index_state)[i64_stream_id] = pair.second;
+  }
+}
+
+void TaskIdGenerator::TryUpdateTaskIndex(const HashMap<int64_t, uint32_t>& task_index_state) {
+  for (auto& pair : stream_id2task_index_counter_) {
+    const int64_t i64_stream_id = EncodeStreamIdToInt64(pair.first);
+    uint32_t initial_task_index = 0;
+    if (task_index_state.count(i64_stream_id) != 0) {
+      initial_task_index = task_index_state.at(i64_stream_id);
+    }
+    pair.second = std::max(pair.second, initial_task_index);
   }
 }
 
 TaskId TaskIdGenerator::Generate(const StreamId& stream_id) {
-  auto initial_task_index =
-      Singleton<MultiClientSessionContext>::Get()->GetIdStateMgr()->GetTaskIndexState(stream_id);
   if (stream_id2task_index_counter_.count(stream_id) == 0) {
-    stream_id2task_index_counter_[stream_id] = initial_task_index;
-  } else {
     stream_id2task_index_counter_[stream_id] =
-        std::max(stream_id2task_index_counter_[stream_id], initial_task_index);
+        Singleton<MultiClientSessionContext>::Get()->GetIdStateMgr()->GetTaskIndexState(stream_id);
   }
   task_index_t task_index = stream_id2task_index_counter_[stream_id]++;
   return TaskId{stream_id, task_index};

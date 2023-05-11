@@ -25,9 +25,15 @@ IdState IdStateMgr::GetIdState() {
   CHECK(Singleton<IDMgr>::Get() != nullptr);
   CHECK(Singleton<TaskStreamIndexManager>::Get() != nullptr);
   CHECK(Singleton<LazyJobBuildAndInferCtxMgr>::Get() != nullptr);
-  Singleton<IDMgr>::Get()->SaveId();
-  Singleton<TaskStreamIndexManager>::Get()->SaveTaskStreamIndex();
-  Singleton<LazyJobBuildAndInferCtxMgr>::Get()->SaveJobIdCount();
+
+  auto id_vec = Singleton<IDMgr>::Get()->GetId();
+  id_state_.regst_desc_id_state_ = id_vec[0];
+  id_state_.mem_block_id_state_ = id_vec[1];
+  id_state_.chunk_id_state_ = id_vec[2];
+  id_state_.job_id_state_ = Singleton<LazyJobBuildAndInferCtxMgr>::Get()->GetJobIdCount();
+
+  Singleton<IDMgr>::Get()->GetTaskIndex(&id_state_.task_index_state_);
+  Singleton<TaskStreamIndexManager>::Get()->GetTaskStreamIndex(&id_state_.stream_index_state_);
   return id_state_;
 }
 
@@ -38,7 +44,8 @@ void IdStateMgr::SetIdState(const IdState& id_state) {
   CHECK(Singleton<LazyJobBuildAndInferCtxMgr>::Get() != nullptr);
   Singleton<IDMgr>::Get()->TryUpdateId(id_state_.regst_desc_id_state_, id_state.mem_block_id_state_,
                                        id_state.chunk_id_state_);
-  Singleton<TaskStreamIndexManager>::Get()->TryUpdateTaskStreamIndex();
+  Singleton<IDMgr>::Get()->TryUpdateTaskIndex(id_state_.task_index_state_);
+  Singleton<TaskStreamIndexManager>::Get()->TryUpdateTaskStreamIndex(id_state_.stream_index_state_);
   Singleton<LazyJobBuildAndInferCtxMgr>::Get()->TryUpdateJobIdCount(id_state_.job_id_state_);
 }
 

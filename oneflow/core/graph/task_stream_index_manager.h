@@ -33,8 +33,8 @@ class TaskStreamIndexManager final {
   stream_index_t GetTaskStreamIndex(TaskType task_type, const DeviceId& device_id);
   stream_index_t GetComputeTaskStreamIndex(const DeviceId& device_id);
   stream_index_t GetNamedTaskStreamIndex(const DeviceId& device_id, const std::string& name);
-  void SaveTaskStreamIndex();
-  void TryUpdateTaskStreamIndex();
+  void GetTaskStreamIndex(HashMap<int64_t, uint32_t> *stream_index_state);
+  void TryUpdateTaskStreamIndex(const HashMap<int64_t, uint32_t> &stream_index_state);
 
  private:
   HashMap<DeviceId, std::unique_ptr<StreamIndexGenerator>> generators_;

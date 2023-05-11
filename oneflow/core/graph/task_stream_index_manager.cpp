@@ -54,18 +54,21 @@ TaskStreamIndexManager::stream_index_t TaskStreamIndexManager::GetNamedTaskStrea
   return generator->GenerateNamed(name);
 }
 
-void TaskStreamIndexManager::SaveTaskStreamIndex() {
+void TaskStreamIndexManager::GetTaskStreamIndex(HashMap<int64_t, uint32_t>* stream_index_state) {
   for (auto& pair : generators_) {
-    Singleton<MultiClientSessionContext>::Get()->GetIdStateMgr()->SetStreamIndexState(
-        pair.first, pair.second->GetCurrStreamIndex());
+    const int64_t i64_device_id = EncodeDeviceIdToInt64(pair.first);
+    (*stream_index_state)[i64_device_id] = pair.second->GetCurrStreamIndex();
   }
 }
 
-void TaskStreamIndexManager::TryUpdateTaskStreamIndex() {
+void TaskStreamIndexManager::TryUpdateTaskStreamIndex(
+    const HashMap<int64_t, uint32_t>& stream_index_state) {
   for (auto& pair : generators_) {
-    auto initial_stream_index =
-        Singleton<MultiClientSessionContext>::Get()->GetIdStateMgr()->GetStreamIndexState(
-            pair.first);
+    const int64_t i64_device_id = EncodeDeviceIdToInt64(pair.first);
+    uint32_t initial_stream_index = 0;
+    if (stream_index_state.count(i64_device_id) != 0) {
+      initial_stream_index = stream_index_state.at(i64_device_id);
+    }
     pair.second->TryUpdateNextStreamIndex(initial_stream_index);
   }
 }

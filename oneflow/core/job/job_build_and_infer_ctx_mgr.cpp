@@ -85,9 +85,7 @@ void JobBuildAndInferCtxMgr::TryUpdateJobIdCount(int64_t id_count) {
   job_id_count_ = std::max(id_count, job_id_count_);
 }
 
-void JobBuildAndInferCtxMgr::SaveJobIdCount() {
-  Singleton<MultiClientSessionContext>::Get()->GetIdStateMgr()->SetJobIdState(job_id_count_);
-}
+int64_t JobBuildAndInferCtxMgr::GetJobIdCount() const { return job_id_count_; }
 
 Maybe<void> LazyJobBuildAndInferCtxMgr::VirtualCloseJob() {
   const JobDesc* job_desc = Singleton<JobDesc>::Get();
