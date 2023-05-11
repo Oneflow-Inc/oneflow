@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job/collective_boxing/nccl_executor_backend.h"
+#include "oneflow/core/job/collective_boxing/executor_backend_manager.h"
 #include "oneflow/core/job/collective_boxing/request_store.h"
 #include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
@@ -421,6 +421,26 @@ void AddCallbackAndResetRuntimeRequest(
 
 }  // namespace
 
+class NcclExecutorBackend : public ExecutorBackend {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(NcclExecutorBackend);
+  NcclExecutorBackend();
+  ~NcclExecutorBackend() override;
+
+ private:
+  void Init(std::shared_ptr<RequestStore> request_store) override;
+  void InitJob(int64_t job_id) override;
+  void DeinitJob(int64_t job_id) override;
+  void GroupRequests(const std::vector<RequestId>& request_ids,
+                     const std::function<void(std::vector<RequestId>&&, void*)>& Handler) override;
+  void ExecuteGroup(void* group_token) override;
+  void* CreateGroupToken(const std::vector<RequestId>& group) override;
+  void DestroyGroupToken(void* group_token) override;
+
+  struct Impl;
+  std::unique_ptr<Impl> impl_;
+};
+
 struct NcclExecutorBackend::Impl {
   Impl(const CollectiveBoxingConf& conf, std::shared_ptr<RequestStore> request_store)
       : conf(conf), request_store(std::move(request_store)) {
@@ -452,7 +472,7 @@ struct NcclExecutorBackend::Impl {
     request_store->ForEachMutRequestEntryInJob(
         job_id, [&](RequestEntry* request_entry, int32_t i, const RequestId& request_id) {
           const auto& request = request_entry->desc();
-          if (request.op_desc().backend() != Backend::kBackendNCCL) { return; }
+          if (request.op_desc().device_type() != DeviceType::kCUDA) { return; }
           if (!request_entry->HasRankOnThisNode()) { return; }
           const DeviceSet& device_set = request.device_set();
           if (device_set2stream_id2comm_group.count(device_set) > 0) { return; }
@@ -656,6 +676,8 @@ void NcclExecutorBackend::DestroyGroupToken(void* group_token) {
 }
 
 void NcclExecutorBackend::ExecuteGroup(void* group_token) { impl_->ExecuteGroup(group_token); }
+
+REGISTER_EXECUTOR_BACKEND(DeviceType::kCUDA, NcclExecutorBackend);
 
 }  // namespace collective
 

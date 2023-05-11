@@ -22,6 +22,8 @@ limitations under the License.
 
 namespace mlir {
 
+namespace oneflow {
+
 namespace {
 
 class BufferHostRegisterPass : public BufferHostRegisterPassBase<BufferHostRegisterPass> {
@@ -48,8 +50,6 @@ class GpuCopyArgPass : public GpuCopyArgPassBase<GpuCopyArgPass> {
 };
 
 }  // namespace
-
-namespace oneflow {
 std::unique_ptr<Pass> createBufferHostRegisterPass() {
   return std::make_unique<BufferHostRegisterPass>();
 }

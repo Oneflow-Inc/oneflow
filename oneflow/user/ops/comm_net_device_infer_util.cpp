@@ -14,24 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/ops/comm_net_device_infer_util.h"
+#include "oneflow/core/common/decorator.h"
 
 namespace oneflow {
 
 namespace {
 
-Maybe<Symbol<Stream>> RawGetNcclDevice() {
-  return Stream::New(JUST(Device::New("cuda")), StreamType::kCcl);
-}
-
-Maybe<Symbol<Stream>> RawGetCpuTransportDevice() {
-  return Stream::New(JUST(Device::New("cpu")), StreamType::kCcl);
+Maybe<Symbol<Stream>> RawGetTransportDevice(Symbol<Device> device) {
+  return Stream::New(JUST(Device::New(device->type())), StreamType::kCcl);
 }
 
 }  // namespace
 
-decltype(GetNcclDevice) GetNcclDevice = DECORATE(&RawGetNcclDevice, ThreadLocal);
-decltype(GetCpuTransportDevice) GetCpuTransportDevice =
-    DECORATE(&RawGetCpuTransportDevice, ThreadLocal);
+decltype(GetTransportDevice) GetTransportDevice = DECORATE(&RawGetTransportDevice, ThreadLocal);
 
 Maybe<Symbol<Device>> DefaultGetOutputDeivce(user_op::DeviceAndStreamInferContext* ctx) {
   CHECK_GT_OR_RETURN(ctx->inputs().size(), 0);

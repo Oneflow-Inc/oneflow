@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/ep/include/device.h"
+#include "oneflow/core/ep/include/random_generator.h"
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/common/device_type.h"
 
@@ -40,6 +41,10 @@ class DeviceManager {
   virtual size_t GetDeviceCount() = 0;
   virtual size_t GetActiveDeviceIndex() = 0;
   virtual void SetActiveDeviceByIndex(size_t device_index) = 0;
+  virtual bool IsStreamWaitEventSupported() const { return false; }
+
+  virtual std::shared_ptr<RandomGenerator> CreateRandomGenerator(uint64_t seed,
+                                                                 size_t device_index) = 0;
 };
 
 }  // namespace ep

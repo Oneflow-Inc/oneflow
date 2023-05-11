@@ -76,8 +76,8 @@ class TestImageNormalize(flow.unittest.TestCase):
         _compare_image_normalize(
             test_case,
             [
-                "/dataset/mscoco_2017/val2017/000000000139.jpg",
-                "/dataset/mscoco_2017/val2017/000000000632.jpg",
+                flow.unittest.dataset_dir("mscoco_2017/val2017/000000000139.jpg"),
+                flow.unittest.dataset_dir("mscoco_2017/val2017/000000000632.jpg"),
             ],
             (102.9801, 115.9465, 122.7717),
             (1.0, 1.0, 1.0),

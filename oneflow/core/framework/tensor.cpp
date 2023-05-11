@@ -90,10 +90,10 @@ std::shared_ptr<Tensor> Parameter::pin_memory() const {
 
 /* static */ Maybe<LocalTensor> LocalTensor::MakeTensor(const std::shared_ptr<const Shape>& shape,
                                                         const std::shared_ptr<const Stride>& stride,
-                                                        DataType dtype,
+                                                        DataType dtype, MemoryFormat memory_format,
                                                         const Symbol<Device>& device, bool is_lazy,
                                                         bool requires_grad, bool is_leaf) {
-  const auto& tensor_meta = SymbolOf(LocalTensorMeta(*shape, dtype, device));
+  const auto& tensor_meta = SymbolOf(LocalTensorMeta(*shape, dtype, memory_format, device));
   if (is_lazy) {
     const auto& impl = std::make_shared<LazyLocalTensorImpl>(tensor_meta, requires_grad, is_leaf);
     return std::make_shared<LocalTensor>(impl);
@@ -105,6 +105,7 @@ std::shared_ptr<Tensor> Parameter::pin_memory() const {
   }
 }
 
+bool LocalTensor::is_cpu() const { return CHECK_JUST(device())->type() == "cpu"; }
 bool LocalTensor::is_cuda() const { return CHECK_JUST(device())->type() == "cuda"; }
 
 Maybe<Tensor> LocalTensor::detach() const {
@@ -144,8 +145,8 @@ Maybe<void> LocalTensor::set_data(const std::shared_ptr<Tensor>& other) {
 }
 
 #define TENSOR_OFFLOAD_CHECK(is_offloaded, msg)                  \
-  if (!is_cuda()) {                                              \
-    LOG(WARNING) << "Only cuda tensor can be offloaded.";        \
+  if (is_cpu()) {                                                \
+    LOG(WARNING) << "Only non-cpu tensor can be offloaded.";     \
     return Maybe<void>::Ok();                                    \
   }                                                              \
   if (is_offloaded_ != is_offloaded) {                           \
@@ -219,12 +220,13 @@ Maybe<Tensor> GlobalTensor::clone() const {
 }
 
 Maybe<GlobalTensor> GlobalTensor::MakeTensor(const std::shared_ptr<const Shape>& shape,
-                                             DataType dtype, Symbol<NdSbp> nd_sbp,
+                                             DataType dtype, MemoryFormat memory_format,
+                                             Symbol<NdSbp> nd_sbp,
                                              Symbol<ParallelDesc> parallel_desc, bool is_lazy,
                                              bool requires_grad, bool is_leaf) {
   std::shared_ptr<GlobalTensorImpl> impl;
   Symbol<GlobalTensorMeta> global_tensor_meta(
-      GlobalTensorMeta(*shape, dtype, nd_sbp, parallel_desc));
+      GlobalTensorMeta(*shape, dtype, memory_format, nd_sbp, parallel_desc));
   if (is_lazy) {
     impl = std::make_shared<LazyGlobalTensorImpl>(global_tensor_meta, requires_grad, is_leaf);
   } else {
@@ -233,6 +235,9 @@ Maybe<GlobalTensor> GlobalTensor::MakeTensor(const std::shared_ptr<const Shape>&
   return std::make_shared<GlobalTensor>(impl);
 }
 
+bool GlobalTensor::is_cpu() const {
+  return CHECK_JUST(parallel_desc())->device_type() == DeviceType::kCPU;
+}
 bool GlobalTensor::is_cuda() const {
   return CHECK_JUST(parallel_desc())->device_type() == DeviceType::kCUDA;
 }

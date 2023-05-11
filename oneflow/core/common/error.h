@@ -19,8 +19,8 @@ limitations under the License.
 #include <sstream>
 #include <vector>
 #include <functional>
-#include <glog/logging.h>
 #include "oneflow/core/common/error.pb.h"
+#include "oneflow/core/common/check.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/small_vector.h"
 #include "oneflow/core/common/hash.h"
@@ -120,6 +120,7 @@ class Error final {
   void Merge(const Error& other);
 
   Error&& AddStackFrame(Symbol<ErrorStackFrame> error_stack_frame);
+  Error&& GetStackTrace(int64_t depth = 32, int64_t skip_n_firsts = 2);
 
   static Error Ok();
   static Error ProtoParseFailedError();
@@ -184,7 +185,7 @@ class Error final {
   MsgCollectingMode msg_collecting_mode_;
 };
 
-void ThrowError(const std::shared_ptr<StackedError>& error);
+[[noreturn]] void ThrowError(const std::shared_ptr<StackedError>& error);
 const std::shared_ptr<StackedError>& ThreadLocalError();
 
 inline Error& operator<<(Error& error, Error::MsgCollectingMode mode) {
@@ -202,7 +203,7 @@ Error& operator<<(Error& error, const T& x) {
     error->set_msg(ss.str());
     error.set_msg_collecting_mode(Error::kMergeMessage);
   } else {
-    LOG(FATAL) << "UNIMPLEMENTED";
+    GLOGLOGFATAL("UNIMPLEMENTED");
   }
   return error;
 }
@@ -232,10 +233,14 @@ inline Error&& operator<<(Error&& error, const Error& other) {
   return std::move(error);
 }
 
+// handle CHECK_OR_THROW(expr) << ... << std::endl;
+inline Error&& operator<<(Error&& error, std::ostream& (*os)(std::ostream&)) {
+  error << os;
+  return std::move(error);
+}
+
 extern const char* kOfBugIssueUploadPrompt;
 
 }  // namespace oneflow
-
-#define PRINT_BUG_PROMPT_AND_ABORT() LOG(FATAL) << kOfBugIssueUploadPrompt
 
 #endif  // ONEFLOW_CORE_COMMON_ERROR_H_

@@ -21,9 +21,6 @@ import numpy as np
 
 import os
 
-os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-os.environ["ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"] = "1"
-os.environ["ONEFLOW_MLIR_FUSE_FORWARD_OPS"] = "1"
 
 import oneflow as flow
 import oneflow.unittest
@@ -61,7 +58,12 @@ def do_relu_graph(test_case, data, with_cuda):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestFuseCastScale(oneflow.unittest.TestCase):
+class TestFuseCastScale(oneflow.unittest.MLIRTestCase):
+    def setUp(self):
+        os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+        os.environ["ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"] = "1"
+        os.environ["ONEFLOW_MLIR_FUSE_FORWARD_OPS"] = "1"
+
     def test_relu_graph(test_case):
         import oneflow.sysconfig
 

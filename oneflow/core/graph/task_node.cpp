@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/graph/task_graph_rebuild_ctx.h"
@@ -226,7 +227,7 @@ void TaskNode::InitFromProtoExceptConsumedRegsts(const TaskProto& task_proto) {
 Maybe<void> TaskNode::InitConsumedRegstsFromProto(
     const TaskProto& task_proto,
     const std::function<Maybe<RegstDesc>(int64_t regst_desc_id)>& RegstDesc4Id) {
-  // Step3: init consumed_regst.
+  // init consumed_regst.
   for (const auto& pair : task_proto.consumed_regst_desc_id()) {
     for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
       ConsumeRegst(pair.first, JUST(RegstDesc4Id(regst_desc_id)));
@@ -301,9 +302,10 @@ void TaskNode::BindEdgeWithProducedRegst(TaskEdge* edge, const std::string& name
   edge->AddRegst(name, GetProducedRegst(name));
 }
 
-std::shared_ptr<RegstDesc> TaskNode::GetOrCheckRegst(const std::string& name, bool enable_reuse_mem,
-                                                     int32_t min_register_num,
-                                                     int32_t max_register_num) const {
+std::shared_ptr<RegstDesc> TaskNode::GetAndCheckRegst(const std::string& name,
+                                                      bool enable_reuse_mem,
+                                                      int32_t min_register_num,
+                                                      int32_t max_register_num) const {
   auto iter = produced_regsts_.find(name);
   if (iter == produced_regsts_.end()) { return nullptr; }
   const auto& regst = (iter->second);
@@ -322,7 +324,7 @@ std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, bool 
                                                   int32_t max_register_num) {
   // Because the Regst of separate compilation is not created in order, some Regst may have been
   // built. This implementation can avoid ProduceRegst being called multiple times.
-  const auto& regst = GetOrCheckRegst(name, enable_reuse_mem, min_register_num, max_register_num);
+  const auto& regst = GetAndCheckRegst(name, enable_reuse_mem, min_register_num, max_register_num);
   if (regst) { return regst; }
   RegstDescTypeProto regst_desc_type;
   regst_desc_type.mutable_data_regst_desc();
@@ -415,7 +417,8 @@ bool TaskEdge::HasRegst(const std::string& name_in_producer) const {
 
 std::shared_ptr<RegstDesc> TaskEdge::GetSoleRegst() const {
   CHECK_EQ(name_in_producer2regst_.size(), 1)
-      << "edge: " << this << ", src: " << src_node()->task_id();
+      << "edge: " << this << ", src: " << src_node()->task_id()
+      << ", dst: " << dst_node()->task_id();
   return name_in_producer2regst_.begin()->second;
 }
 
@@ -428,7 +431,11 @@ std::vector<std::shared_ptr<RegstDesc>> TaskEdge::GetRegsts() const {
 
 void TaskEdge::AddRegst(const std::string& name_in_producer,
                         const std::shared_ptr<RegstDesc>& regst) {
-  if (HasRegst(name_in_producer)) { return; }
+  if (HasRegst(name_in_producer)) {
+    CHECK(CHECK_JUST(MapAt(name_in_producer2regst_, name_in_producer))->regst_desc_id()
+          == regst->regst_desc_id());
+    return;
+  }
   CHECK(name_in_producer2regst_.emplace(name_in_producer, regst).second);
 }
 

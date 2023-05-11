@@ -141,7 +141,7 @@ Maybe<void> InferDataType4MatmulBias(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(w_desc.shape().NumAxes(), 2);
   const int64_t k = x_desc.shape().At(x_desc.shape().NumAxes() - 1);
   const int64_t n = w_desc.shape().At(0);
-  const int64_t group_dim_size = group_dim == 0 ? k : n;
+  const int64_t group_dim_size = group_dim == 0 ? n : k;
   CHECK_EQ_OR_RETURN(group_dim_size % group_size, 0);
   const int64_t num_groups = group_dim_size / group_size;
 

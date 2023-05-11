@@ -40,4 +40,22 @@ def OneFlow_DataType: I32EnumAttr<"DataType", "OneFlow Data Type enum",
   let symbolToStringFnName = "ConvertToString";
 }
 
+def OneFlow_Contiguous : I32EnumAttrCase<"MF_Contiguous", 0>;
+def OneFlow_ChannelsLast : I32EnumAttrCase<"MF_ChannelsLast", 1>;
+def OneFlow_Preserve : I32EnumAttrCase<"MF_Preserve", 2>;
+def OneFlow_MemoryFormatCount : I32EnumAttrCase<"MF_MemoryFormatCount", 3>;
+
+def OneFlow_MemoryFormat: I32EnumAttr<"MemoryFormat", "OneFlow Memory Format enum",
+  [
+    OneFlow_Contiguous,
+    OneFlow_ChannelsLast,
+    OneFlow_Preserve,
+    OneFlow_MemoryFormatCount
+  ]
+> {
+  let cppNamespace = "::mlir::oneflow";
+  let stringToSymbolFnName = "ConvertToMemoryFormat";
+  let symbolToStringFnName = "ConvertMemoryFormatToString";
+}
+
 #endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWENUMS_H_

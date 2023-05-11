@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
-#include "oneflow/core/device/device_context.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/vm/vm_util.h"
 
@@ -189,7 +188,6 @@ int GetCudaDeviceIndex() { return GlobalProcessCtx::LocalRank(); }
 
 int GetCudaDeviceCount() {
   /* static */ int cuda_device_count = 0;
-  CudaCurrentDeviceGuard dev_guard(GetCudaDeviceIndex());
   OF_CUDA_CHECK(cudaGetDeviceCount(&cuda_device_count));
   return cuda_device_count;
 }

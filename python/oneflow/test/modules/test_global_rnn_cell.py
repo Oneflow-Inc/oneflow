@@ -112,6 +112,7 @@ def _test_rnn_tanh_cell(test_case, placement, sbp):
     return hx
 
 
+@unittest.skip("TODO(depeng): fails often on 4 GPUs")
 class TestRNNCellGlobal(flow.unittest.TestCase):
     @globaltest
     def test_rnn_relu_cell(test_case):

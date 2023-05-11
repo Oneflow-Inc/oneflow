@@ -108,6 +108,8 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
   void SetTaskRegstInplaceInfo(const InplaceObasInfo& obas_info,
                                const HashSet<TaskNode*>& dev_nodes) const;
   std::vector<TaskNode*> ordered_task_nodes_;
+  HashMap<DeviceType, std::unique_ptr<HierarchicalSubTskGphBuilder>>
+      device_type2sub_tsk_gph_builder_;
   std::unique_ptr<HierarchicalSubTskGphBuilder> hierarchical_sub_tsk_gph_builder_;
   std::unique_ptr<SubTskGphBuilderCtx> sub_tsk_gph_builder_ctx_;
   std::unique_ptr<BoxingLogger> boxing_logger_;
@@ -224,6 +226,14 @@ class RankTaskGraph final : public TaskGraph {
   std::unique_ptr<TaskGraphRebuildCtx> task_graph_rebuild_ctx_;
   HashMap<const OpNode*, CompTaskNode*> op_node2comp_task_node_;
 };
+
+using CreateSubTskGphBuilderFn = std::function<std::unique_ptr<HierarchicalSubTskGphBuilder>()>;
+
+Maybe<void> RegisterCreateSubTskGphBuilderFn(DeviceType device_type,
+                                             const CreateSubTskGphBuilderFn& fn);
+
+#define REGISTER_CREATE_SUB_TASK_GRAPH_BUILDER_FN(fn) \
+  COMMAND(CHECK_JUST(RegisterCreateSubTskGphBuilderFn(fn)))
 
 }  // namespace oneflow
 

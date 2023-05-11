@@ -23,12 +23,4 @@ limitations under the License.
 #include "OneFlow/OKLDialect.h.inc"
 #include "OneFlow/OKL/OKLOps.h"
 
-namespace mlir {
-namespace okl {
-
-void registerOneFlowPasses();
-
-}  // namespace okl
-}  // namespace mlir
-
 #endif  // ONEFLOW_IR_INCLUDE_OKL_OKLDIALECT_H_

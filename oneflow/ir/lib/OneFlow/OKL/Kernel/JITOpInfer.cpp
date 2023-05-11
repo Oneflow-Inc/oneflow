@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "OneFlow/OneFlowDialect.h"
+#include "OneFlow/Passes.h"
 #include "OneFlow/OneFlowSupport.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/device_type.pb.h"
@@ -91,6 +92,10 @@ Maybe<void> SetTensorDataType(user_op::InferContext* ctx) {
     exit(1);
   }
 
+  auto raw_graph = (*module)->getAttr(mlir::oneflow::jit::RAW_GRAPH).cast<mlir::StringAttr>();
+  if (raw_graph)
+    module = mlir::parseSourceString<mlir::ModuleOp>(raw_graph.strref(), module->getContext());
+
   auto funcType = *JUST(GetFunctionType(ctx, module));
   int32_t res_i = 0;
   for (mlir::Type res_type : funcType.getResults()) {
@@ -124,6 +129,11 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
     LOG(ERROR) << "Fail to load mlir assembly";
     exit(1);
   }
+
+  auto raw_graph = (*module)->getAttr(mlir::oneflow::jit::RAW_GRAPH).cast<mlir::StringAttr>();
+  if (raw_graph)
+    module = mlir::parseSourceString<mlir::ModuleOp>(raw_graph.strref(), module->getContext());
+
   auto funcType = *JUST(GetFunctionType(ctx, module));
   int32_t res_i = 0;
   for (mlir::Type res_type : funcType.getResults()) {

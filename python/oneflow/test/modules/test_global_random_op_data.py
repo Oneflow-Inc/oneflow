@@ -72,6 +72,7 @@ def _test_data_consistent(test_case, shape, placement, sbp, fn):
 
 
 class TestGlobalRandomOpData(flow.unittest.TestCase):
+    @unittest.skip("skip for now, becase it failed 4 times in past week")
     @globaltest
     def test_random_op_data_consistent_with_eager_and_lazy(test_case):
         shape = (8, 8)

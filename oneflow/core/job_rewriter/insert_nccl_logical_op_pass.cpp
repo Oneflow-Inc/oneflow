@@ -34,6 +34,8 @@ limitations under the License.
 
 namespace oneflow {
 
+DEFINE_ENV_INTEGER(ONEFLOW_GRAPH_MAX_NCCL_COMPUTE_STREAM, 8);
+
 namespace {
 
 class InsertNcclLogicalOpPass final : public JobPass {
@@ -639,14 +641,12 @@ void InitInsertNcclSubGraphInfoFromSet(
   CHECK_LT(nccl_subgraph_info->begin_op_global_order, nccl_subgraph_info->end_op_global_order);
 }
 
-constexpr uint32_t kMaxNcclComputeStreamCount = 8;
-
 std::string GetStreamIndexName(uint32_t id) { return "NCCL_COMPUTE_" + std::to_string(id); }
 
-void InsertNcclLogicalOpsInSubGraph(const OpGraph& op_graph, JobBuilder* job_builder,
-                                    const std::vector<const OpNode*>& subgraph_ordered_nodes,
-                                    const int64_t nccl_compute_stream_id,
-                                    const int64_t logical_chain_id) {
+int64_t InsertNcclLogicalOpsInSubGraph(const OpGraph& op_graph, JobBuilder* job_builder,
+                                       const std::vector<const OpNode*>& subgraph_ordered_nodes,
+                                       int64_t* nccl_compute_stream_id,
+                                       const int64_t logical_chain_id) {
   HashMap<const OpNode*, int64_t> node2subgraph_order;
   node2subgraph_order.reserve(subgraph_ordered_nodes.size());
   for (int64_t i = 0; i < subgraph_ordered_nodes.size(); ++i) {
@@ -677,24 +677,25 @@ void InsertNcclLogicalOpsInSubGraph(const OpGraph& op_graph, JobBuilder* job_bui
           << " , logical_chain: " << logical_chain_id << ". End.\n";
 
   // NOTE(chengcheng): For NCCL logical correct exec order in pipeline multi-subgraph.
-  do {
-    if (nccl_op_confs.empty()) { break; }
-    if (nccl_compute_stream_id >= kMaxNcclComputeStreamCount) {
-      break;  // NOTE(chengcheng): ONLY support kMaxNcclComputeStreamCount insert nccl subgraphs.
-    }
-    std::string stream_index_name = GetStreamIndexName(nccl_compute_stream_id);
+  if (nccl_op_confs.empty()) { return 0; }
+  const int64_t max_nccl_stream_count = EnvInteger<ONEFLOW_GRAPH_MAX_NCCL_COMPUTE_STREAM>();
+  if ((*nccl_compute_stream_id) >= max_nccl_stream_count) {
+    return 0;  // NOTE(chengcheng): ONLY support kMaxNcclComputeStreamCount insert nccl subgraphs.
+  }
+  std::string stream_index_name = GetStreamIndexName(*nccl_compute_stream_id);
+  // NOTE(chengcheng): ONLY valid subgraph will increase nccl stream id.
+  (*nccl_compute_stream_id)++;
 
-    // NOTE(chengcheng): set ALL subgraph op and ALL nccl op stream index and logical chain id.
-    for (auto& pair : subgraph_op_name2conf) {
-      mut_op_names.insert(pair.first);
-      pair.second.set_stream_name_hint(stream_index_name);
-      pair.second.set_logical_chain_id(logical_chain_id);
-    }
-    for (auto& nccl_op : nccl_op_confs) {
-      nccl_op.set_stream_name_hint(stream_index_name);
-      nccl_op.set_logical_chain_id(logical_chain_id);
-    }
-  } while (false);
+  // NOTE(chengcheng): set ALL subgraph op and ALL nccl op stream index and logical chain id.
+  for (auto& pair : subgraph_op_name2conf) {
+    mut_op_names.insert(pair.first);
+    pair.second.set_stream_name_hint(stream_index_name);
+    pair.second.set_logical_chain_id(logical_chain_id);
+  }
+  for (auto& nccl_op : nccl_op_confs) {
+    nccl_op.set_stream_name_hint(stream_index_name);
+    nccl_op.set_logical_chain_id(logical_chain_id);
+  }
 
   std::vector<OperatorConf> mut_op_confs;
   mut_op_confs.reserve(mut_op_names.size());
@@ -707,6 +708,10 @@ void InsertNcclLogicalOpsInSubGraph(const OpGraph& op_graph, JobBuilder* job_bui
   for (int64_t i = 0; i < nccl_op_confs.size(); ++i) {
     CHECK_JUST(job_builder->AddOp(nccl_op_parallel_confs.at(i), nccl_op_confs.at(i)));
   }
+  VLOG(3) << " In logical chain id: " << logical_chain_id
+          << " insert nccl op num = " << nccl_op_confs.size()
+          << " and origin chain op num = " << subgraph_ordered_nodes.size();
+  return nccl_op_confs.size() + subgraph_ordered_nodes.size();
 }
 
 void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph, JobBuilder* job_builder,
@@ -845,9 +850,9 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
     int64_t total_op_num = 0;
     for (int i = 0; i < info.ordered_subgraph.size(); i++) {
       auto& ordered_op_nodes = info.ordered_subgraph.at(i)->ordered_op_nodes;
-      InsertNcclLogicalOpsInSubGraph(op_graph, job_builder, ordered_op_nodes, stream_offset++,
-                                     global_logical_chain_id++);
-      total_op_num += ordered_op_nodes.size();
+      int64_t this_op_num = InsertNcclLogicalOpsInSubGraph(
+          op_graph, job_builder, ordered_op_nodes, &stream_offset, global_logical_chain_id++);
+      total_op_num += this_op_num;
     }
     if (stream_offset >= 2 && total_op_num >= 1000) {
       LOG(WARNING) << " In Graph: " << job_builder->job().job_conf().job_name()
@@ -857,8 +862,8 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
                       "launch upper limit."
                    << " So the nccl logical kernel will from async to sync exec, which may affect "
                       "performance.";
-      EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get());
-      comm_mgr->SetAsyncLaunchNcclLogicalKernel(false);
+      EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
+      comm_mgr->SetAsyncLaunchCclLogicalKernel(false);
     }
 
     // NOTE(chengcheng): insert acc for all subgraph with same placement group

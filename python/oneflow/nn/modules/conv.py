@@ -196,6 +196,8 @@ class Conv1d(Module):
         groups: int = 1,
         bias: bool = True,
         padding_mode: str = "zeros",
+        device=None,
+        dtype=None,
     ):
         super().__init__()
         assert padding_mode == "zeros"
@@ -215,12 +217,20 @@ class Conv1d(Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.weight = flow.nn.Parameter(
-            flow.Tensor(out_channels, in_channels // groups, *self.kernel_size)
+            flow.empty(
+                out_channels,
+                in_channels // groups,
+                *self.kernel_size,
+                dtype=dtype,
+                device=device
+            )
         )
         self.out_channel_groups = out_channels // groups
         self.bias = None
         if bias:
-            self.bias = flow.nn.Parameter(flow.Tensor(out_channels))
+            self.bias = flow.nn.Parameter(
+                flow.empty(out_channels, dtype=dtype, device=device)
+            )
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
@@ -387,6 +397,8 @@ class Conv2d(Module):
         groups: int = 1,
         bias: bool = True,
         padding_mode: str = "zeros",
+        device=None,
+        dtype=None,
     ):
         super().__init__()
         assert padding_mode == "zeros"
@@ -400,9 +412,11 @@ class Conv2d(Module):
             else _pair(padding)
         )
         self.groups = groups
+        self.transposed = False
 
         if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
             self.channel_pos = "channels_last"
+            self.transposed = True
         else:
             self.channel_pos = "channels_first"
 
@@ -412,17 +426,31 @@ class Conv2d(Module):
         self.out_channels = out_channels
         if self.channel_pos == "channels_first":
             self.weight = flow.nn.Parameter(
-                flow.Tensor(out_channels, in_channels // groups, *self.kernel_size)
+                flow.empty(
+                    out_channels,
+                    in_channels // groups,
+                    *self.kernel_size,
+                    device=device,
+                    dtype=dtype
+                )
             )
         else:
             self.weight = flow.nn.Parameter(
-                flow.Tensor(out_channels, *self.kernel_size, in_channels // groups)
+                flow.empty(
+                    out_channels,
+                    *self.kernel_size,
+                    in_channels // groups,
+                    device=device,
+                    dtype=dtype
+                )
             )
 
         self.out_channel_groups = out_channels // groups
         self.bias = None
         if bias:
-            self.bias = flow.nn.Parameter(flow.Tensor(out_channels))
+            self.bias = flow.nn.Parameter(
+                flow.empty(out_channels, device=device, dtype=dtype)
+            )
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
@@ -431,6 +459,19 @@ class Conv2d(Module):
             (fan_in, _) = init._calculate_fan_in_and_fan_out(self.weight)
             bound = 1 / math.sqrt(fan_in)
             init.uniform_(self.bias, -bound, bound)
+
+    def to_memory_format(self, memory_format) -> None:
+        if self.channel_pos == "channels_first" and memory_format is flow.channels_last:
+            self.channel_pos = "channels_last"
+            with flow.no_grad():
+                self.weight.data = self.weight.to(memory_format=flow.channels_last)
+        elif (
+            self.channel_pos == "channels_last"
+            and memory_format is flow.contiguous_format
+        ):
+            self.channel_pos = "channels_first"
+            with flow.no_grad():
+                self.weight.data = self.weight.to(memory_format=flow.contiguous_format)
 
     def _conv_forward(self, x, weight, bias):
         return flow._C.conv2d(
@@ -568,6 +609,8 @@ class Conv3d(Module):
         groups: int = 1,
         bias: bool = True,
         padding_mode: str = "zeros",  # TODO: refine this type
+        device=None,
+        dtype=None,
     ):
         super().__init__()
 
@@ -588,12 +631,20 @@ class Conv3d(Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.weight = flow.nn.Parameter(
-            flow.Tensor(out_channels, in_channels // groups, *self.kernel_size)
+            flow.empty(
+                out_channels,
+                in_channels // groups,
+                *self.kernel_size,
+                device=device,
+                dtype=dtype
+            )
         )
         self.out_channel_groups = out_channels // groups
         self.bias = None
         if bias:
-            self.bias = flow.nn.Parameter(flow.Tensor(out_channels))
+            self.bias = flow.nn.Parameter(
+                flow.empty(out_channels, device=device, dtype=dtype)
+            )
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
@@ -602,6 +653,19 @@ class Conv3d(Module):
             fan_in, _ = init._calculate_fan_in_and_fan_out(self.weight)
             bound = 1 / math.sqrt(fan_in)
             init.uniform_(self.bias, -bound, bound)
+
+    def to_memory_format(self, memory_format) -> None:
+        if self.channel_pos == "channels_first" and memory_format is flow.channels_last:
+            self.channel_pos = "channels_last"
+            with flow.no_grad():
+                self.weight.data = self.weight.to(memory_format=flow.channels_last)
+        elif (
+            self.channel_pos == "channels_last"
+            and memory_format is flow.contiguous_format
+        ):
+            self.channel_pos = "channels_first"
+            with flow.no_grad():
+                self.weight.data = self.weight.to(memory_format=flow.contiguous_format)
 
     def _conv_forward(self, x, weight, bias):
         return flow._C.conv3d(
@@ -741,6 +805,8 @@ class ConvTranspose1d(Module):
         self.groups = groups
         assert in_channels % groups == 0
         assert out_channels % groups == 0
+        self.in_channels = in_channels
+        self.out_channels = out_channels
         self.weight = flow.nn.Parameter(
             flow.Tensor(in_channels, out_channels // groups, *self.kernel_size)
         )
@@ -864,6 +930,8 @@ class ConvTranspose2d(Module):
         self.groups = groups
         assert in_channels % groups == 0
         assert out_channels % groups == 0
+        self.in_channels = in_channels
+        self.out_channels = out_channels
         self.weight = flow.nn.Parameter(
             flow.Tensor(in_channels, out_channels // groups, *self.kernel_size)
         )
@@ -1025,6 +1093,8 @@ class ConvTranspose3d(Module):
         self.dilation = _triple(dilation)
         self.output_padding = _triple(output_padding)
         self.groups = groups
+        self.in_channels = in_channels
+        self.out_channels = out_channels
         assert in_channels % groups == 0
         assert out_channels % groups == 0
         self.weight = flow.nn.Parameter(

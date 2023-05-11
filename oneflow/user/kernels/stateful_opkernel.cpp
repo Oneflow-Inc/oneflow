@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/user/kernels/stateful_opkernel.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
+#include "oneflow/core/framework/compute_complexity_fn_context.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/eager/eager_blob_object.h"
@@ -424,6 +425,24 @@ class UserOpInferContext : public user_op::InferContext {
   void SetDtype4ArgNameAndIndex(const std::string& arg_name, int32_t index,
                                 DataType data_type) override {
     return helper_->SetDtype4ArgNameAndIndex(call_ctx_, arg_name, index, data_type);
+  }
+  MemoryFormat InputMemoryFormat(const std::string& arg_name, int32_t index) const override {
+    return MemoryFormat4ArgNameAndIndex(arg_name, index);
+  }
+  MemoryFormat OutputMemoryFormat(const std::string& arg_name, int32_t index) const override {
+    return MemoryFormat4ArgNameAndIndex(arg_name, index);
+  }
+  void SetOutputMemoryFormat(const std::string& arg_name, int32_t index,
+                             MemoryFormat memory_format) override {
+    return SetMemoryFormat4ArgNameAndIndex(arg_name, index, memory_format);
+  }
+  MemoryFormat MemoryFormat4ArgNameAndIndex(const std::string& arg_name,
+                                            int32_t index) const override {
+    return TensorDesc4ArgNameAndIndex(arg_name, index)->memory_format();
+  }
+  void SetMemoryFormat4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                       MemoryFormat memory_format) override {
+    MutTensorDesc4ArgNameAndIndex(arg_name, index)->set_memory_format(memory_format);
   }
   bool InputIsDynamic(const std::string& arg_name, int32_t index) const override {
     return helper_->InputIsDynamic(call_ctx_, arg_name, index);
