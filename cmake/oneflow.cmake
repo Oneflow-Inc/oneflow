@@ -311,6 +311,7 @@ if(Unwind_FOUND)
   list(APPEND oneflow_third_party_libs unwind::unwind)
 endif()
 add_definitions( -DPROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}" )
+add_definitions( -DPROJECT_BINARY_DIR="${PROJECT_BINARY_DIR}" )
 
 include(op_schema)
 

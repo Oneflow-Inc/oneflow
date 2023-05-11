@@ -28,9 +28,9 @@ limitations under the License.
 
 namespace {
 std::string RemoveProjectPathPrefix(const std::string& filename) {
-#ifdef PROJECT_SOURCE_DIR
+#if defined(PROJECT_SOURCE_DIR) && defined(PROJECT_BINARY_DIR)
   std::string project_path = PROJECT_SOURCE_DIR;
-  std::string project_build_path = project_path + "/build";
+  std::string project_build_path = PROJECT_BINARY_DIR;
   if (filename.rfind(project_build_path) == 0) {
     return std::filesystem::relative(filename, project_build_path);
   } else if (filename.rfind(project_path) == 0) {
