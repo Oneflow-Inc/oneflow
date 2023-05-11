@@ -4273,7 +4273,9 @@ class FftC2CFunctor : public FftBaseFunctor {
                   [&](int64_t a, int64_t b) { return strides[a] > strides[b]; });
 
         const auto max_dims = std::min(static_cast<size_t>(cufft_max_ndim), sorted_dims.size());
-        std::vector<int64_t> first_dims(sorted_dims.end() - max_dims, sorted_dims.end());
+        auto first_dims_end = sorted_dims.end();
+        auto first_dims_begin = first_dims_end - max_dims;
+        std::vector<int64_t> first_dims(first_dims_begin, first_dims_end);
 
         auto input = JUST(permute_and_reshape(working_tensor, out_sizes, first_dims, out_strides));
 
@@ -4369,7 +4371,7 @@ class FftR2CFunctor : public FftBaseFunctor {
             functional::AsStrided(output, out_sizes, out_strides, JUST(output->storage_offset())));
       } else {
         // First do the **one-sided** R2C transform on the last dimension
-        std::shared_ptr<Tensor> working_tensor = resized_tensor;
+        const std::shared_ptr<Tensor>& working_tensor = resized_tensor;
         {
           std::vector<int64_t> out_strides;
           auto input = JUST(

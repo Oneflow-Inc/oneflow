@@ -25,11 +25,11 @@ namespace oneflow {
 namespace one {
 
 struct FftR2CCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
-  bool onesided;
+  bool requires_grad = false;
+  bool onesided = false;
   std::vector<int64_t> dims;
   DimVector input_shape_vec;
-  int32_t norm_mode;
+  int32_t norm_mode = 0;
 };
 
 class FftR2C : public OpExprGradFunction<FftR2CCaptureState> {
@@ -94,10 +94,10 @@ class FftR2C : public OpExprGradFunction<FftR2CCaptureState> {
 };
 
 struct FftC2CCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
-  bool forward;
+  bool requires_grad = false;
+  bool forward = false;
   std::vector<int64_t> dims;
-  int32_t norm_mode;
+  int32_t norm_mode = 0;
 };
 
 class FftC2C : public OpExprGradFunction<FftC2CCaptureState> {
@@ -132,10 +132,10 @@ class FftC2C : public OpExprGradFunction<FftC2CCaptureState> {
 };
 
 struct FftC2RCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
+  bool requires_grad = false;
   std::vector<int64_t> dims;
-  int32_t norm_mode;
-  int64_t last_dim_size;
+  int32_t norm_mode = 0;
+  int64_t last_dim_size = 1;
   DimVector input_shape_vec;
 };
 
