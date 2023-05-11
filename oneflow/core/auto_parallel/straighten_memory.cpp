@@ -64,6 +64,9 @@ class TopoStruct {
   const OpNode* op_node = nullptr;
   // Memory increment = (memory of out registers) - (memory of in registers)
   int64_t memory_increment = -1;
+  int64_t peak_memory = -1;
+  // max difference = peak memory - final memory increment
+  int64_t max_difference = 0;
   int32_t min_layer = -1;
   bool is_reusable = false;
   int32_t blob_id = -1;
@@ -234,19 +237,27 @@ void ComputeAllMemoryIncrement(std::vector<TopoStruct*>& topo_structs,
                                std::vector<std::vector<TopoStruct*>>& id2consumer_topo_structs,
                                std::vector<int64_t>& id2blob_size) {
   // Compute the memory increment for produced blobs
-  for (auto& topo_struct : topo_structs) { topo_struct->memory_increment = 0; }
+  for (auto& topo_struct : topo_structs) {
+    topo_struct->memory_increment = 0;
+    topo_struct->peak_memory = 0;
+  }
 
   for (int32_t id = 0; id < id2producer_topo_struct.size(); id++) {
     const auto& topo_struct = id2producer_topo_struct[id];
-    if (topo_struct->is_reusable) { topo_struct->memory_increment += id2blob_size[id]; }
+    if (topo_struct->is_reusable) {
+      topo_struct->memory_increment += id2blob_size[id];
+      topo_struct->peak_memory += id2blob_size[id];
+    }
   }
   // Subtract the consumed memory
   for (int32_t id = 0; id < id2consumer_topo_structs.size(); id++) {
-    if (id2producer_topo_struct[id]->is_reusable) {
+    auto* producer_topo_struct = id2producer_topo_struct[id];
+    if (producer_topo_struct->is_reusable) {
       auto& consumer_topo_structs = id2consumer_topo_structs[id];
       // Release the blob in the blocking node
       if (consumer_topo_structs.size() == 1) {
-        id2producer_topo_struct[id]->memory_increment -= id2blob_size[id];
+        producer_topo_struct->memory_increment -= id2blob_size[id];
+        producer_topo_struct->max_difference += id2blob_size[id];
         continue;
       }
       // Check whether two blobs have the same consumer_topo_structs
@@ -267,6 +278,7 @@ void ComputeAllMemoryIncrement(std::vector<TopoStruct*>& topo_structs,
         // If they have the same consumer_topo_structs, merge them
         if (is_same) {
           first_consumer_out_node->memory_increment -= id2blob_size[id];
+          first_consumer_out_node->max_difference += id2blob_size[id];
           not_merged = false;
           break;
         }
@@ -277,6 +289,7 @@ void ComputeAllMemoryIncrement(std::vector<TopoStruct*>& topo_structs,
         auto& release_topo_struct = release_topo_structs.back();
         topo_structs.push_back(&release_topo_struct);
         release_topo_struct.memory_increment = -id2blob_size[id];
+        release_topo_struct.peak_memory = -id2blob_size[id];
         // We need to execute all the consumers before releasing the blob
         for (auto& consumer_topo_struct : consumer_topo_structs) {
           ConnectTwoNodes(consumer_topo_struct, &release_topo_struct);
@@ -658,7 +671,9 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
     ExecuteOpNode(node);
     node->executed = true;
     total_memory += node->memory_increment;
-    if (total_memory > peak_memory) { peak_memory = total_memory; }
+    if (total_memory + node->max_difference > peak_memory) {
+      peak_memory = total_memory + node->max_difference;
+    }
     StopWaiting(node);
     prepare_topo_structs.push_back(node);
     if (GlobalProcessCtx::Rank() == 0) {
