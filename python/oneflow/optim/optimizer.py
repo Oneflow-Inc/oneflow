@@ -92,6 +92,7 @@ class ParamGroup(dict):
 
         super().__init__(**self._options, params=self._parameters)
         super().setdefault("contiguous_params", False)
+        super().setdefault("_enable_clip_grad", self._enable_clip_grad)
 
     def _make_contiguous_params(self, parameters):
         assert not any(
@@ -169,10 +170,6 @@ class ParamGroup(dict):
                 "do not set contiguous_params and fused at the same time, "
                 "now only contiguous_params is set."
             )
-
-    @property
-    def options(self):
-        return self._options
 
     @property
     def parameters(self):
@@ -424,9 +421,11 @@ class Optimizer(object):
 
         # Update parameter groups, setting their 'params' value
         def update_group(group, new_group):
-            new_group.pop("params")
-            parameter = dict(params=group["params"])
-            return ParamGroup(parameter, new_group)
+            for k in new_group:
+                if k != "params":
+                    group[k] = new_group[k]
+            group._enable_clip_grad = new_group["_enable_clip_grad"]
+            return group
 
         param_groups = [update_group(g, ng) for g, ng in zip(groups, saved_groups)]
         self.param_groups = param_groups
