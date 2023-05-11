@@ -47,7 +47,10 @@ def get_rng_state_all() -> List[Tensor]:
         results.append(get_rng_state(i))
     return results
 
-def set_rng_state(new_state: Tensor, device: Union[int, str, flow.device] = 'cuda') -> None:
+
+def set_rng_state(
+    new_state: Tensor, device: Union[int, str, flow.device] = "cuda"
+) -> None:
     r"""Sets the random number generator state of the specified GPU.
 
     Args:
@@ -59,13 +62,14 @@ def set_rng_state(new_state: Tensor, device: Union[int, str, flow.device] = 'cud
     if isinstance(device, str):
         device = flow.device(device)
     elif isinstance(device, int):
-        device = flow.device('cuda', device)
+        device = flow.device("cuda", device)
 
     idx = cast(flow.device, device).index
     if idx is None:
         idx = current_device()
     default_generator = flow.cuda.default_generators[idx]
     default_generator.set_state(new_state_copy)
+
 
 def set_rng_state_all(new_states: Iterable[Tensor]) -> None:
     r"""Sets the random number generator state of all devices.
