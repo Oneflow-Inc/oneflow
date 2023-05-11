@@ -44,8 +44,8 @@ class LBFGS(Optimizer):
         options["line_search_fn"] = line_search_fn
         super().__init__(params, options)
         assert (
-                len(self.param_groups) == 1
-            ), "LBFGS not support parameter groups (there can be only one)"
+            len(self.param_groups) == 1
+        ), "LBFGS not support parameter groups (there can be only one)"
         param_group = self.param_groups[0]
         if param_group["contiguous_params"]:
             param_list = param_group.contiguous_parameters
@@ -70,9 +70,7 @@ class LBFGS(Optimizer):
         # get parameters total numel
         if self._numel_cache is None:
             self._numel_cache = reduce(
-                lambda totnumel, p: totnumel + p.numel(),
-                self._params,
-                0,
+                lambda totnumel, p: totnumel + p.numel(), self._params, 0,
             )
         return self._numel_cache
 
@@ -87,7 +85,7 @@ class LBFGS(Optimizer):
 
     def step(self, closure: Callable = None):
         with flow.no_grad():
-            
+
             assert closure != None, "closure must not be None"
             param_group = self.param_groups[0]
             lr = param_group["lr"]
@@ -147,7 +145,7 @@ class LBFGS(Optimizer):
                             ro.pop(0)
                         old_diffs.append(y)
                         old_step_size.append(s)
-                        ro.append(1. / ys)
+                        ro.append(1.0 / ys)
                         H_diag = ys / y.dot(y)
 
                     num_old = len(old_diffs)
@@ -178,7 +176,7 @@ class LBFGS(Optimizer):
                 if state["n_iter"] == 1:
                     t = min(1.0, 1.0 / flat_grad.abs().sum()) * lr
                 else:
-                    t  = lr
+                    t = lr
 
                 gtd = flat_grad.dot(d)
                 if gtd > -tolerance_change:
