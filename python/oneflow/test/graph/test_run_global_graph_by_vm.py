@@ -19,6 +19,7 @@ import oneflow as flow
 import oneflow.unittest
 import numpy as np
 from test_run_graph_by_vm import RunGraphByVmEnv, Graph
+from test_graph_ofrecord_reader import OFRecordDataLoader
 
 
 @flow.unittest.skip_unless_1n2d()
@@ -106,6 +107,22 @@ class TestGlobalInterpreter(flow.unittest.TestCase):
             test_case.assertTrue(graph_output.shape == eager_output.shape)
             test_case.assertTrue(graph_output.placement == eager_output.placement)
             test_case.assertTrue(np.allclose(graph_output, eager_output))
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestEmptyInputs(oneflow.unittest.TestCase):
+    def test_empty_inputs(test_case):
+
+        class GraphReader(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.my_reader = OFRecordDataLoader()
+
+            def build(self):
+                return self.my_reader()
+
+        reader_g = GraphReader()
+        image, label = reader_g()
 
 
 if __name__ == "__main__":

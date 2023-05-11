@@ -16,7 +16,6 @@ limitations under the License.
 import os
 import oneflow as flow
 import numpy as np
-from test_graph_ofrecord_reader import OFRecordDataLoader
 
 
 class EnvVar(object):
@@ -87,18 +86,3 @@ def test_run_graph_by_vm(capsys):
         assert "broadcast_sub" not in capsys.readouterr().out
         assert "cast" not in capsys.readouterr().out
         assert "broadcast_mul" not in capsys.readouterr().out
-
-
-def test_empty_inputs(capsys):
-    with RunGraphByVmEnv():
-
-        class GraphReader(flow.nn.Graph):
-            def __init__(self):
-                super().__init__()
-                self.my_reader = OFRecordDataLoader()
-
-            def build(self):
-                return self.my_reader()
-
-        reader_g = GraphReader()
-        image, label = reader_g()
