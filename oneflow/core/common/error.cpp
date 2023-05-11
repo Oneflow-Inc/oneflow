@@ -64,8 +64,8 @@ Error&& Error::GetStackTrace(int64_t depth, int64_t skip_n_firsts) {
 
     //  without debug info
     if (!trace.source.filename.size()) {
-      stacked_error_->add_stack_frame(SymbolOf(ErrorStackFrame(
-          remove_project_path_prefix(trace.object_filename), -1, trace.object_function)));
+      stacked_error_->add_stack_frame(
+          SymbolOf(ErrorStackFrame(trace.object_filename, -1, trace.object_function)));
     }
 
     //  with debug info
@@ -76,9 +76,8 @@ Error&& Error::GetStackTrace(int64_t depth, int64_t skip_n_firsts) {
       std::string code_text = lines[0].second;
       const auto pos = code_text.find_first_not_of(" \t");
       code_text = code_text.substr(pos, code_text.size() - pos);
-      stacked_error_->add_stack_frame(
-          SymbolOf(ErrorStackFrame(remove_project_path_prefix(source_loc.filename), source_loc.line,
-                                   source_loc.function, code_text)));
+      stacked_error_->add_stack_frame(SymbolOf(
+          ErrorStackFrame(source_loc.filename, source_loc.line, source_loc.function, code_text)));
     }
 
     for (size_t inliner_idx = 0; inliner_idx < trace.inliners.size(); ++inliner_idx) {
@@ -88,9 +87,8 @@ Error&& Error::GetStackTrace(int64_t depth, int64_t skip_n_firsts) {
       std::string code_text = lines[0].second;
       const auto pos = code_text.find_first_not_of(" \t");
       code_text = code_text.substr(pos, code_text.size() - pos);
-      stacked_error_->add_stack_frame(
-          SymbolOf(ErrorStackFrame(remove_project_path_prefix(source_loc.filename), source_loc.line,
-                                   source_loc.function, code_text)));
+      stacked_error_->add_stack_frame(SymbolOf(
+          ErrorStackFrame(source_loc.filename, source_loc.line, source_loc.function, code_text)));
     }
   }
   return std::move(*this);

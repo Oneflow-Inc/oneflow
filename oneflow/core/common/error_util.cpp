@@ -149,20 +149,4 @@ Maybe<std::string> FormatErrorStr(const std::shared_ptr<StackedError>& error) {
   return ss.str();
 }
 
-std::string remove_project_path_prefix(const std::string& filename) {
-#ifdef PROJECT_SOURCE_DIR
-  std::string project_path = PROJECT_SOURCE_DIR;
-  std::string project_build_path = project_path + "/build";
-  if (filename.rfind(project_build_path) == 0) {
-    return std::filesystem::relative(filename, project_build_path);
-  } else if (filename.rfind(project_path) == 0) {
-    return std::filesystem::relative(filename, project_path);
-  } else {
-    return filename;
-  }
-#else
-  return filename;
-#endif
-}
-
 }  // namespace oneflow

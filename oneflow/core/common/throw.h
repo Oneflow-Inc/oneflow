@@ -34,22 +34,6 @@ struct Throw final {
 
 }  // namespace oneflow
 
-// namespace {
-// std::string remove_project_path_prefix(const std::string& filename) {
-// #ifdef PROJECT_SOURCE_DIR
-//   std::string project_path = PROJECT_SOURCE_DIR;
-//   std::string project_build_path = project_path + "/build";
-//   if (filename.rfind(project_build_path) == 0) {
-//     return std::filesystem::relative(filename, project_build_path);
-//   } else {
-//     return std::filesystem::relative(filename, project_path);
-//   }
-// #else
-//   return filename;
-// #endif
-// }
-// }  // namespace
-
 #define PRINT_BUG_PROMPT_AND_ABORT() LOG(FATAL) << kOfBugIssueUploadPrompt
 
 // use CHECK_XX_OR_THROW instead of glog CHECK to get more information of stack when check failed
@@ -69,8 +53,6 @@ struct Throw final {
 #define CHECK_GT CHECK_GT_OR_THROW
 #define CHECK_GE CHECK_GE_OR_THROW
 
-extern std::string remove_project_path_prefix(const std::string& filename);
-
 #define THROW(err_type)                                                                    \
   ::oneflow::details::Throw() =                                                            \
       ::oneflow::Error::err_type().AddStackFrame([](const char* function) {                \
@@ -81,15 +63,15 @@ extern std::string remove_project_path_prefix(const std::string& filename);
 
 // use __FILE__ __LINE__ etc. macros to get last frame, so this macro can show
 // the file name and line where CHECK_OR_THROW located even if these is no debug info
-#define CHECK_OR_THROW_INTERNAL(expr, error_msg)                                             \
-  if (!(expr))                                                                               \
-  ::oneflow::details::Throw() =                                                              \
-      ::oneflow::Error::CheckFailedError()                                                   \
-          .AddStackFrame([](const char* function) {                                          \
-            thread_local static auto frame = ::oneflow::SymbolOf(::oneflow::ErrorStackFrame( \
-                remove_project_path_prefix(__FILE__), __LINE__, function, error_msg));       \
-            return frame;                                                                    \
-          }(__FUNCTION__))                                                                   \
+#define CHECK_OR_THROW_INTERNAL(expr, error_msg)                                      \
+  if (!(expr))                                                                        \
+  ::oneflow::details::Throw() =                                                       \
+      ::oneflow::Error::CheckFailedError()                                            \
+          .AddStackFrame([](const char* function) {                                   \
+            thread_local static auto frame = ::oneflow::SymbolOf(                     \
+                ::oneflow::ErrorStackFrame(__FILE__, __LINE__, function, error_msg)); \
+            return frame;                                                             \
+          }(__FUNCTION__))                                                            \
           .GetStackTrace()
 
 #define CHECK_OR_THROW(expr)                                           \
