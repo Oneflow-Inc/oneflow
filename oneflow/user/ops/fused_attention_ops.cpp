@@ -868,8 +868,8 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
                      .Split(user_op::OpArg("attn_out", 0), 2)
                      .Broadcast(user_op::OpArg("out", 0))
                      .Broadcast(user_op::OpArg("post_norm_out", 0))
-                     .Split(user_op::OpArg("gate_out", 0), 1)
-                     .Split(user_op::OpArg("glu_out", 0), 1)
+                     .Split(user_op::OpArg("gate_out", 0), 2)
+                     .Split(user_op::OpArg("glu_out", 0), 2)
                      .Broadcast(user_op::OpArg("decoder_out", 0));
   if (ctx->user_op_conf().has_input("past_key", 0)) {
     builder =
