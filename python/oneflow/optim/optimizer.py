@@ -421,10 +421,11 @@ class Optimizer(object):
 
         # Update parameter groups, setting their 'params' value
         def update_group(group, new_group):
-            for k in new_group:
-                if k != "params":
-                    group[k] = new_group[k]
-            group._enable_clip_grad = new_group["_enable_clip_grad"]
+            new_group.pop("params")
+            g = deepcopy(new_group)
+            group.update(g)
+            group._enable_clip_grad = g["_enable_clip_grad"]
+            group._options = g
             return group
 
         param_groups = [update_group(g, ng) for g, ng in zip(groups, saved_groups)]
