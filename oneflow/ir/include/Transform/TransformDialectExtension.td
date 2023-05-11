@@ -29,8 +29,8 @@ def ApplyPatternsOp : Op<Transform_Dialect, "oneflow.apply_patterns",
 
     The following additive attributes can be set, they add patterns in an
     unspecified order:
-      - tiling_canonicalization: adds specific tiling-related canonicalization
-      patterns.
+      - canonicalization: adds all the canonicalization patterns of all
+      registered dialects and ops.
 
 
     #### Return modes:

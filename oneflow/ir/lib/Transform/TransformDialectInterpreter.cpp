@@ -216,6 +216,7 @@ struct TransformDialectEraseSchedulePass
 }  // namespace
 
 namespace mlir {
+namespace oneflow {
 namespace transform_dialect {
 /// Registers the test pass for erasing transform dialect ops.
 void registerTransformDialectEraseSchedulePass() {
@@ -226,4 +227,5 @@ void registerTransformDialectInterpreterPass() {
   PassRegistration<TransformDialectInterpreterPass> reg;
 }
 }  // namespace transform_dialect
+}  // namespace oneflow
 }  // namespace mlir
