@@ -452,6 +452,7 @@ class TestMinimum(flow.unittest.TestCase):
         return torch.minimum(x, y)
 
 
+# TODO(): check fp16
 @flow.unittest.skip_unless_1n1d()
 class TestMaximum(flow.unittest.TestCase):
     @autotest(n=5)
@@ -461,6 +462,15 @@ class TestMaximum(flow.unittest.TestCase):
         k2 = random(2, 6)
         x = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
         y = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        return torch.maximum(x, y)
+
+    @autotest(n=5)
+    def test_flow_elementwise_mximum_with_random_fp16_data(test_case):
+        device = random_device()
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        x = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device).to(torch.float16)
+        y = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device).to(torch.float16)
         return torch.maximum(x, y)
 
     @autotest(n=5)
