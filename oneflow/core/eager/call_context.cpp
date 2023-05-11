@@ -37,7 +37,7 @@ DtrCallContext::DtrCallContext(const CallContext& call_ctx)
       tmp_tensor_(call_ctx.tmp_tensor()) {
   for (const auto& x : call_ctx.outputs()) {
     ebo_infos_.push_back(EBOInfo{std::make_shared<MemoryCase>(x->mem_case()), x->tensor_meta(),
-                                 x->mut_tensor_meta(), x->data_type()});
+                                 x->mut_tensor_meta(), x->data_type(), x->memory_format()});
   }
 }
 
@@ -54,7 +54,7 @@ CallContext::CallContext(const DtrCallContext& dtr_call_ctx)
       outputs_.push_back(std::make_shared<vm::EagerBlobObject>(
           dtr_call_ctx.ebo_infos_[i].mem_case, dtr_call_ctx.ebo_infos_[i].local_tensor_meta,
           dtr_call_ctx.ebo_infos_[i].dynamic_local_tensor_meta,
-          dtr_call_ctx.ebo_infos_[i].data_type,
+          dtr_call_ctx.ebo_infos_[i].data_type, dtr_call_ctx.ebo_infos_[i].memory_format,
           std::make_shared<vm::TensorStorage>(
               true, dtr_call_ctx.ebo_infos_[i].local_tensor_meta->device())));
     } else {

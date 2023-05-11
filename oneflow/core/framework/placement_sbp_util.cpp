@@ -337,7 +337,8 @@ Maybe<std::pair<Symbol<one::GlobalTensorMeta>, Symbol<NdSbp>>> CalcDecomposableE
   std::tie(shape, src_nd_sbp, dst_nd_sbp) = *JUST(
       CalcDecomposableEquivalentShapeAndNdSbpPair(*shape, *hierarchy, src_nd_sbp, dst_nd_sbp));
 
-  one::GlobalTensorMeta decomposible_tensor_meta(*shape, tensor_meta->dtype(), src_nd_sbp,
+  one::GlobalTensorMeta decomposible_tensor_meta(*shape, tensor_meta->dtype(),
+                                                 tensor_meta->memory_format(), src_nd_sbp,
                                                  tensor_meta->parallel_desc());
   return std::make_pair(SymbolOf(decomposible_tensor_meta), dst_nd_sbp);
 }
@@ -528,7 +529,8 @@ Maybe<Symbol<one::GlobalTensorMeta>> CalcSubGlobalTensorMeta(
     Symbol<NdSbp> sub_nd_sbp) {
   CHECK_EQ_OR_RETURN(sub_nd_sbp->sbp_parallel_size(), 1);  // NOLINT(maybe-need-error-msg)
   const auto& logical_shape = JUST(GetSubLogicalShape(tensor_meta, sub_parallel_desc, sub_nd_sbp));
-  one::GlobalTensorMeta sub_global_tensor_meta(*logical_shape, tensor_meta->dtype(), sub_nd_sbp,
+  one::GlobalTensorMeta sub_global_tensor_meta(*logical_shape, tensor_meta->dtype(),
+                                               tensor_meta->memory_format(), sub_nd_sbp,
                                                sub_parallel_desc);
   return SymbolOf(sub_global_tensor_meta);
 }
@@ -547,7 +549,8 @@ Maybe<Symbol<NdSbp>> ReplaceNdSbpComponent(Symbol<NdSbp> nd_sbp, int64_t axis,
 
 Maybe<Symbol<one::GlobalTensorMeta>> ReplaceNdSbp(Symbol<one::GlobalTensorMeta> tensor_meta,
                                                   Symbol<NdSbp> nd_sbp) {
-  one::GlobalTensorMeta new_tensor_meta(tensor_meta->shape(), tensor_meta->dtype(), nd_sbp,
+  one::GlobalTensorMeta new_tensor_meta(tensor_meta->shape(), tensor_meta->dtype(),
+                                        tensor_meta->memory_format(), nd_sbp,
                                         tensor_meta->parallel_desc());
   return SymbolOf(new_tensor_meta);
 }
