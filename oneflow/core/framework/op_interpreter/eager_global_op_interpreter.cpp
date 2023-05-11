@@ -224,8 +224,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   const auto& output_tensor_metas = result->output_tensor_metas();
   Optional<int64_t> parallel_id;
   const auto& tensor_device = JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
-  const size_t output_size = outputs->size();
-  for (int i = 0; i < output_size; ++i) {
+  for (int i = 0; i < outputs->size(); ++i) {
     if (!outputs->at(i)) {
       const auto& tensor_impl = JUST(EagerGlobalTensorImpl::New(
           output_tensor_metas[i], tensor_device, parallel_id, false, false));
