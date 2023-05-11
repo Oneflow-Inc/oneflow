@@ -24,6 +24,8 @@ namespace oneflow {
 
 Maybe<std::string> FormatErrorStr(const std::shared_ptr<StackedError>& error);
 
+std::string remove_project_path_prefix(const std::string& filename);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_ERROR_UTIL_H

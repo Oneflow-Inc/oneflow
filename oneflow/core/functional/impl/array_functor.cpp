@@ -3811,6 +3811,7 @@ class BinCountFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, const Optional<Tensor>& weight,
                            const Optional<int64_t>& minlength) const {
+    CHECK_OR_THROW(false) << "false test";
     CHECK_OR_RETURN(!input->dtype()->is_floating_point()) << "bincount can only support int tensor";
     TensorProcessor tensor_processor;
     JUST(tensor_processor.AddInputs({input}, DType::Int64()).Apply());

@@ -3927,6 +3927,16 @@ class Printer {
            != std::string::npos;
   }
 
+  static inline std::string remove_project_path_prefix(const std::string& filename) {
+#ifdef PROJECT_SOURCE_DIR
+    std::string project_path = PROJECT_SOURCE_DIR;
+    std::cout << "project source dir: --- " << PROJECT_SOURCE_DIR << std::endl;
+    return std::filesystem::relative(filename, project_path);
+#else
+    return filename;
+#endif
+  }
+
   TraceResolver const& resolver() const { return _resolver; }
 
  private:
@@ -3970,8 +3980,8 @@ class Printer {
     // bool already_indented = true;
 
     if (!trace.source.filename.size() || object) {
-      os << "   Object \"" << trace.object_filename << "\", at " << trace.addr << ", in "
-         << trace.object_function << "\n";
+      os << "   Object \"" << remove_project_path_prefix(trace.object_filename) << "\", at "
+         << trace.addr << ", in " << trace.object_function << "\n";
       // Modify: Extra indent is not necessary
       // already_indented = false;
     }
@@ -4041,8 +4051,8 @@ class Printer {
     // Modify: Remove indent and replace 'Source' to 'File'
     // os << indent << "Source \"" << source_loc.filename << "\", line " << source_loc.line << ", in
     // "
-    os << "  File \"" << source_loc.filename << "\", line " << source_loc.line << ", in "
-       << source_loc.function;
+    os << "  File \"" << remove_project_path_prefix(source_loc.filename) << "\", line "
+       << source_loc.line << ", in " << source_loc.function;
 
     if (address && addr != nullptr) { os << " [" << addr << "]"; }
     os << "\n";
