@@ -16,5 +16,3 @@ transform.with_pdl_patterns {
     transform.oneflow.apply_patterns %0 { canonicalization } : (!pdl.operation) -> ()
   }
 }
-
-// -----
