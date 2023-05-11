@@ -51,9 +51,9 @@ def set_rng_state(new_state: Tensor, device: Union[int, str, flow.device] = 'cud
     r"""Sets the random number generator state of the specified GPU.
 
     Args:
-        new_state (torch.ByteTensor): The desired state
-        device (torch.device or int, optional): The device to set the RNG state.
-            Default: ``'cuda'`` (i.e., ``torch.device('cuda')``, the current CUDA device).
+        new_state (flow.ByteTensor): The desired state
+        device (flow.device or int, optional): The device to set the RNG state.
+            Default: ``'cuda'`` (i.e., ``flow.device('cuda')``, the current CUDA device).
     """
     new_state_copy = new_state.clone()
     if isinstance(device, str):
@@ -71,6 +71,6 @@ def set_rng_state_all(new_states: Iterable[Tensor]) -> None:
     r"""Sets the random number generator state of all devices.
 
     Args:
-        new_states (Iterable of torch.ByteTensor): The desired state for each device"""
+        new_states (Iterable of flow.ByteTensor): The desired state for each device"""
     for i, state in enumerate(new_states):
         set_rng_state(state, i)
