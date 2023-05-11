@@ -32,6 +32,17 @@ class TestAutograd(flow.unittest.TestCase):
             )
         )
 
+    def test_allow_unused(test_case):
+        with test_case.assertRaises(Exception) as context:
+            x = flow.ones(4, 4).requires_grad_()
+            y = flow.ones(4, 4).requires_grad_()
+            z = x * x
+            dx, dy = flow.autograd.grad(z, [x, y], flow.ones_like(z))
+        test_case.assertTrue(
+            "allow_unused=True if this is the desired behavior"
+            in str(context.exception)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
