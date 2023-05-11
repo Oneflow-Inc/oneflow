@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/user/ops/convert_memory_format_op.h"
+
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
 
@@ -20,7 +22,7 @@ namespace oneflow {
 
 static Shape ComputeShapeIdentity(const Shape& shape) { return shape; }
 
-static Shape ComputeShapeContiguousToChannelsLast(const Shape& shape) {
+Shape ComputeShapeContiguousToChannelsLast(const Shape& shape) {
   int ndim = shape.size();
   if (ndim <= 2) { return ComputeShapeIdentity(shape); }
   Shape target_shape(ndim);
@@ -30,7 +32,7 @@ static Shape ComputeShapeContiguousToChannelsLast(const Shape& shape) {
   return target_shape;
 }
 
-static Shape ComputeShapeChannelsLastToContiguous(const Shape& shape) {
+Shape ComputeShapeChannelsLastToContiguous(const Shape& shape) {
   int ndim = shape.size();
   if (ndim <= 2) { return ComputeShapeIdentity(shape); }
   Shape target_shape(ndim);
@@ -82,8 +84,8 @@ static GetSbpFunc get_sbp_funcs[kMemoryFormatCount][kMemoryFormatCount] = {
     /*kChannelsLast->other*/ {GetSbpChannelsLastToContiguous, GetSbpIdentity},
 };
 
-static Shape ComputeConvertMemoryFormatShape(const Shape& shape, MemoryFormat memory_format,
-                                             MemoryFormat target_memory_format) {
+Shape ComputeConvertMemoryFormatShape(const Shape& shape, MemoryFormat memory_format,
+                                      MemoryFormat target_memory_format) {
   auto shape_func = compute_shape_funcs[memory_format][target_memory_format];
   return shape_func(shape);
 }
