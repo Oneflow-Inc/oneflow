@@ -593,6 +593,18 @@
   signature: "Tensor (Tensor x, Tensor dy) => CoshGrad"
   bind_python: True
 
+- name: "sinc"
+  signature: "Tensor (Tensor x) => Sinc"
+  bind_python: True
+
+- name: "sinc_grad"
+  signature: "Tensor (Tensor x, Tensor dy) => SincGrad"
+  bind_python: True
+
+- name: "sinc_"
+  signature: "Tensor (Tensor x) => Sinc_"
+  bind_python: True
+
 - name: "fmod"
   signature:
     [
