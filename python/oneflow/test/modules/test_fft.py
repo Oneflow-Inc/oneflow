@@ -26,6 +26,7 @@ from oneflow.test_utils.test_util import GenArgList
 
 from oneflow.test_utils.automated_test_util import *
 
+
 def is_cufft_available():
     if flow.cuda.is_available():
         (major, _minor) = flow.cuda.get_device_capability()
@@ -47,6 +48,7 @@ def is_complex_dtype(dtype):
             torch.pytorch.complex64,
             torch.pytorch.complex128,
         ]
+
 
 def gen_params_1d_fft(lower_n_dims=1, upper_n_dims=5):
     num_dims = np.random.randint(lower_n_dims, upper_n_dims)
@@ -72,6 +74,7 @@ def gen_params_1d_fft(lower_n_dims=1, upper_n_dims=5):
         "norm": norm,
     }
     return params
+
 
 def gen_params_2d_fft(lower_n_dims=2, upper_n_dims=5):
     num_dims = np.random.randint(lower_n_dims, upper_n_dims)
@@ -108,6 +111,7 @@ def gen_params_2d_fft(lower_n_dims=2, upper_n_dims=5):
         "norm": norm,
     }
     return params
+
 
 def gen_params_nd_fft(lower_n_dims=2, upper_n_dims=5):
     num_dims = np.random.randint(lower_n_dims, upper_n_dims)
@@ -152,14 +156,14 @@ def gen_params_nd_fft(lower_n_dims=2, upper_n_dims=5):
 
 
 def _test_fft(test_case):
-    
+
     if is_cufft_available():
         device = random_device()
     else:
         device = cpu_device()
 
-    lower_n_dims = test_case.ndims_dict['1d']["lower_n_dims"]
-    upper_n_dims = test_case.ndims_dict['1d']["upper_n_dims"]
+    lower_n_dims = test_case.ndims_dict["1d"]["lower_n_dims"]
+    upper_n_dims = test_case.ndims_dict["1d"]["upper_n_dims"]
     params = gen_params_1d_fft(lower_n_dims, upper_n_dims)
 
     num_dims = params["num_dims"]
@@ -180,14 +184,15 @@ def _test_fft(test_case):
     y = torch.fft.fft(x, n, dim, norm)
     return y
 
+
 def _test_ifft(test_case):
     if is_cufft_available():
         device = random_device()
     else:
         device = cpu_device()
 
-    lower_n_dims = test_case.ndims_dict['1d']["lower_n_dims"]
-    upper_n_dims = test_case.ndims_dict['1d']["upper_n_dims"]
+    lower_n_dims = test_case.ndims_dict["1d"]["lower_n_dims"]
+    upper_n_dims = test_case.ndims_dict["1d"]["upper_n_dims"]
     params = gen_params_1d_fft(lower_n_dims, upper_n_dims)
 
     num_dims = params["num_dims"]
@@ -210,14 +215,15 @@ def _test_ifft(test_case):
 
     return y
 
+
 def _test_rfft(test_case):
     if is_cufft_available():
         device = random_device()
     else:
         device = cpu_device()
 
-    lower_n_dims = test_case.ndims_dict['1d']["lower_n_dims"]
-    upper_n_dims = test_case.ndims_dict['1d']["upper_n_dims"]
+    lower_n_dims = test_case.ndims_dict["1d"]["lower_n_dims"]
+    upper_n_dims = test_case.ndims_dict["1d"]["upper_n_dims"]
     params = gen_params_1d_fft(lower_n_dims, upper_n_dims)
 
     num_dims = params["num_dims"]
@@ -225,7 +231,7 @@ def _test_rfft(test_case):
     n = params["n"]
     dim = params["dim"]
     norm = params["norm"]
-    
+
     dtype = test_case.dtype_dict["real"]
 
     x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
@@ -233,14 +239,15 @@ def _test_rfft(test_case):
 
     return y
 
+
 def _test_irfft(test_case):
     if is_cufft_available():
         device = random_device()
     else:
         device = cpu_device()
 
-    lower_n_dims = test_case.ndims_dict['1d']["lower_n_dims"]
-    upper_n_dims = test_case.ndims_dict['1d']["upper_n_dims"]
+    lower_n_dims = test_case.ndims_dict["1d"]["lower_n_dims"]
+    upper_n_dims = test_case.ndims_dict["1d"]["upper_n_dims"]
     params = gen_params_1d_fft(lower_n_dims, upper_n_dims)
 
     num_dims = params["num_dims"]
@@ -255,14 +262,15 @@ def _test_irfft(test_case):
 
     return y
 
+
 def _test_hfft(test_case):
     if is_cufft_available():
         device = random_device()
     else:
         device = cpu_device()
 
-    lower_n_dims = test_case.ndims_dict['1d']["lower_n_dims"]
-    upper_n_dims = test_case.ndims_dict['1d']["upper_n_dims"]
+    lower_n_dims = test_case.ndims_dict["1d"]["lower_n_dims"]
+    upper_n_dims = test_case.ndims_dict["1d"]["upper_n_dims"]
     params = gen_params_1d_fft(lower_n_dims, upper_n_dims)
 
     num_dims = params["num_dims"]
@@ -277,14 +285,15 @@ def _test_hfft(test_case):
 
     return y
 
+
 def _test_ihfft(test_case):
     if is_cufft_available():
         device = random_device()
     else:
         device = cpu_device()
 
-    lower_n_dims = test_case.ndims_dict['1d']["lower_n_dims"]
-    upper_n_dims = test_case.ndims_dict['1d']["upper_n_dims"]
+    lower_n_dims = test_case.ndims_dict["1d"]["lower_n_dims"]
+    upper_n_dims = test_case.ndims_dict["1d"]["upper_n_dims"]
     params = gen_params_1d_fft(lower_n_dims, upper_n_dims)
 
     num_dims = params["num_dims"]
@@ -299,15 +308,16 @@ def _test_ihfft(test_case):
 
     return y
 
+
 def _test_fft2(test_case):
-    
+
     if is_cufft_available():
         device = random_device()
     else:
         device = cpu_device()
 
-    lower_n_dims = test_case.ndims_dict['2d']["lower_n_dims"]
-    upper_n_dims = test_case.ndims_dict['2d']["upper_n_dims"]
+    lower_n_dims = test_case.ndims_dict["2d"]["lower_n_dims"]
+    upper_n_dims = test_case.ndims_dict["2d"]["upper_n_dims"]
     params = gen_params_2d_fft(lower_n_dims, upper_n_dims)
 
     num_dims = params["num_dims"]
@@ -329,14 +339,15 @@ def _test_fft2(test_case):
 
     return y
 
+
 def _test_ifft2(test_case):
     if is_cufft_available():
         device = random_device()
     else:
         device = cpu_device()
 
-    lower_n_dims = test_case.ndims_dict['2d']["lower_n_dims"]
-    upper_n_dims = test_case.ndims_dict['2d']["upper_n_dims"]
+    lower_n_dims = test_case.ndims_dict["2d"]["lower_n_dims"]
+    upper_n_dims = test_case.ndims_dict["2d"]["upper_n_dims"]
     params = gen_params_2d_fft(lower_n_dims, upper_n_dims)
 
     num_dims = params["num_dims"]
@@ -366,8 +377,8 @@ def _test_rfft2(test_case):
     else:
         device = cpu_device()
 
-    lower_n_dims = test_case.ndims_dict['2d']["lower_n_dims"]
-    upper_n_dims = test_case.ndims_dict['2d']["upper_n_dims"]
+    lower_n_dims = test_case.ndims_dict["2d"]["lower_n_dims"]
+    upper_n_dims = test_case.ndims_dict["2d"]["upper_n_dims"]
     params = gen_params_2d_fft(lower_n_dims, upper_n_dims)
 
     num_dims = params["num_dims"]
@@ -375,7 +386,7 @@ def _test_rfft2(test_case):
     n = params["n"]
     dim = params["dim"]
     norm = params["norm"]
-    
+
     dtype = test_case.dtype_dict["real"]
 
     x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
@@ -383,14 +394,15 @@ def _test_rfft2(test_case):
 
     return y
 
+
 def _test_irfft2(test_case):
     if is_cufft_available():
         device = random_device()
     else:
         device = cpu_device()
 
-    lower_n_dims = test_case.ndims_dict['2d']["lower_n_dims"]
-    upper_n_dims = test_case.ndims_dict['2d']["upper_n_dims"]
+    lower_n_dims = test_case.ndims_dict["2d"]["lower_n_dims"]
+    upper_n_dims = test_case.ndims_dict["2d"]["upper_n_dims"]
     params = gen_params_2d_fft(lower_n_dims, upper_n_dims)
 
     num_dims = params["num_dims"]
@@ -405,14 +417,15 @@ def _test_irfft2(test_case):
 
     return y
 
+
 def _test_hfft2(test_case):
     if is_cufft_available():
         device = random_device()
     else:
         device = cpu_device()
 
-    lower_n_dims = test_case.ndims_dict['2d']["lower_n_dims"]
-    upper_n_dims = test_case.ndims_dict['2d']["upper_n_dims"]
+    lower_n_dims = test_case.ndims_dict["2d"]["lower_n_dims"]
+    upper_n_dims = test_case.ndims_dict["2d"]["upper_n_dims"]
     params = gen_params_2d_fft(lower_n_dims, upper_n_dims)
 
     num_dims = params["num_dims"]
@@ -427,14 +440,15 @@ def _test_hfft2(test_case):
 
     return y
 
+
 def _test_ihfft2(test_case):
     if is_cufft_available():
         device = random_device()
     else:
         device = cpu_device()
 
-    lower_n_dims = test_case.ndims_dict['2d']["lower_n_dims"]
-    upper_n_dims = test_case.ndims_dict['2d']["upper_n_dims"]
+    lower_n_dims = test_case.ndims_dict["2d"]["lower_n_dims"]
+    upper_n_dims = test_case.ndims_dict["2d"]["upper_n_dims"]
     params = gen_params_2d_fft(lower_n_dims, upper_n_dims)
 
     num_dims = params["num_dims"]
@@ -449,14 +463,15 @@ def _test_ihfft2(test_case):
 
     return y
 
+
 def _test_fftn(test_case):
     if is_cufft_available():
         device = random_device()
     else:
         device = cpu_device()
 
-    lower_n_dims = test_case.ndims_dict['nd']["lower_n_dims"]
-    upper_n_dims = test_case.ndims_dict['nd']["upper_n_dims"]
+    lower_n_dims = test_case.ndims_dict["nd"]["lower_n_dims"]
+    upper_n_dims = test_case.ndims_dict["nd"]["upper_n_dims"]
     params = gen_params_nd_fft(lower_n_dims, upper_n_dims)
 
     num_dims = params["num_dims"]
@@ -478,14 +493,15 @@ def _test_fftn(test_case):
 
     return y
 
+
 def _test_ifftn(test_case):
     if is_cufft_available():
         device = random_device()
     else:
         device = cpu_device()
 
-    lower_n_dims = test_case.ndims_dict['nd']["lower_n_dims"]
-    upper_n_dims = test_case.ndims_dict['nd']["upper_n_dims"]
+    lower_n_dims = test_case.ndims_dict["nd"]["lower_n_dims"]
+    upper_n_dims = test_case.ndims_dict["nd"]["upper_n_dims"]
     params = gen_params_nd_fft(lower_n_dims, upper_n_dims)
 
     num_dims = params["num_dims"]
@@ -515,8 +531,8 @@ def _test_rfftn(test_case):
     else:
         device = cpu_device()
 
-    lower_n_dims = test_case.ndims_dict['nd']["lower_n_dims"]
-    upper_n_dims = test_case.ndims_dict['nd']["upper_n_dims"]
+    lower_n_dims = test_case.ndims_dict["nd"]["lower_n_dims"]
+    upper_n_dims = test_case.ndims_dict["nd"]["upper_n_dims"]
     params = gen_params_nd_fft(lower_n_dims, upper_n_dims)
 
     num_dims = params["num_dims"]
@@ -524,7 +540,7 @@ def _test_rfftn(test_case):
     n = params["n"]
     dim = params["dim"]
     norm = params["norm"]
-    
+
     dtype = test_case.dtype_dict["real"]
 
     x = random_tensor(num_dims, dtype=float, *shape).to(device=device, dtype=dtype)
@@ -532,14 +548,15 @@ def _test_rfftn(test_case):
 
     return y
 
+
 def _test_irfftn(test_case):
     if is_cufft_available():
         device = random_device()
     else:
         device = cpu_device()
 
-    lower_n_dims = test_case.ndims_dict['nd']["lower_n_dims"]
-    upper_n_dims = test_case.ndims_dict['nd']["upper_n_dims"]
+    lower_n_dims = test_case.ndims_dict["nd"]["lower_n_dims"]
+    upper_n_dims = test_case.ndims_dict["nd"]["upper_n_dims"]
     params = gen_params_nd_fft(lower_n_dims, upper_n_dims)
 
     num_dims = params["num_dims"]
@@ -554,14 +571,15 @@ def _test_irfftn(test_case):
 
     return y
 
+
 def _test_hfftn(test_case):
     if is_cufft_available():
         device = random_device()
     else:
         device = cpu_device()
 
-    lower_n_dims = test_case.ndims_dict['nd']["lower_n_dims"]
-    upper_n_dims = test_case.ndims_dict['nd']["upper_n_dims"]
+    lower_n_dims = test_case.ndims_dict["nd"]["lower_n_dims"]
+    upper_n_dims = test_case.ndims_dict["nd"]["upper_n_dims"]
     params = gen_params_nd_fft(lower_n_dims, upper_n_dims)
 
     num_dims = params["num_dims"]
@@ -576,14 +594,15 @@ def _test_hfftn(test_case):
 
     return y
 
+
 def _test_ihfftn(test_case):
     if is_cufft_available():
         device = random_device()
     else:
         device = cpu_device()
 
-    lower_n_dims = test_case.ndims_dict['nd']["lower_n_dims"]
-    upper_n_dims = test_case.ndims_dict['nd']["upper_n_dims"]
+    lower_n_dims = test_case.ndims_dict["nd"]["lower_n_dims"]
+    upper_n_dims = test_case.ndims_dict["nd"]["upper_n_dims"]
     params = gen_params_nd_fft(lower_n_dims, upper_n_dims)
 
     num_dims = params["num_dims"]
@@ -599,8 +618,6 @@ def _test_ihfftn(test_case):
     return y
 
 
-
-
 class TestComplex64Fft(flow.unittest.TestCase):
     def setUp(test_case):
         # should override by other data type of complex
@@ -610,161 +627,197 @@ class TestComplex64Fft(flow.unittest.TestCase):
             "nd": {"lower_n_dims": 1, "upper_n_dims": 5},
         }
 
-        test_case.dtype_dict = {
-            "real": torch.float32,
-            "complex": torch.complex64
-        }
-        
+        test_case.dtype_dict = {"real": torch.float32, "complex": torch.complex64}
+
         test_case.rtol = 1e-5
         test_case.atol = 1e-5
         test_case.initTestFft()
-        
-    
+
     def initTestFft(test_case):
-        test_case.test_fft = autotest(n=5,
-                                    auto_backward=True,
-                                    rtol=test_case.rtol,
-                                    atol=test_case.atol,
-                                    check_graph=False,
-                                    check_grad_use_random_data=True,
-                                    include_complex=True)(_test_fft)
-        
-        test_case.test_ifft = autotest(n=5,
-                                    auto_backward=True,
-                                    rtol=test_case.rtol,
-                                    atol=test_case.atol,
-                                    check_graph=False,
-                                    check_grad_use_random_data=True,
-                                    include_complex=True)(_test_ifft)
+        test_case.test_fft = autotest(
+            n=5,
+            auto_backward=True,
+            rtol=test_case.rtol,
+            atol=test_case.atol,
+            check_graph=False,
+            check_grad_use_random_data=True,
+            include_complex=True,
+        )(_test_fft)
 
-        test_case.test_rfft = autotest(n=5,
-                                    auto_backward=True,
-                                    rtol=test_case.rtol,
-                                    atol=test_case.atol,
-                                    check_graph=False,
-                                    check_grad_use_random_data=True,
-                                    include_complex=False)(_test_rfft)
-        
-        test_case.test_irfft = autotest(n=5,
-                                    auto_backward=True,
-                                    rtol=test_case.rtol,
-                                    atol=test_case.atol,
-                                    check_graph=False,
-                                    check_grad_use_random_data=True,
-                                    include_complex=True)(_test_irfft)
-        
-        test_case.test_hfft = autotest(n=5,
-                                    auto_backward=True,
-                                    rtol=test_case.rtol,
-                                    atol=test_case.atol,
-                                    check_graph=False,
-                                    check_grad_use_random_data=True,
-                                    include_complex=True)(_test_hfft)
-        
-        test_case.test_ihfft = autotest(n=5,
-                                    auto_backward=True,
-                                    rtol=test_case.rtol,
-                                    atol=test_case.atol,
-                                    check_graph=False,
-                                    check_grad_use_random_data=True,
-                                    include_complex=False)(_test_ihfft)
-        
-        test_case.test_fft2 = autotest(n=5,
-                                auto_backward=True,
-                                rtol=test_case.rtol,
-                                atol=test_case.atol,
-                                check_graph=False,
-                                check_grad_use_random_data=True,
-                                include_complex=True)(_test_fft2)
-        
-        test_case.test_ifft2 = autotest(n=5,
-                                    auto_backward=True,
-                                    rtol=test_case.rtol,
-                                    atol=test_case.atol,
-                                    check_graph=False,
-                                    check_grad_use_random_data=True,
-                                    include_complex=True)(_test_ifft2)
+        test_case.test_ifft = autotest(
+            n=5,
+            auto_backward=True,
+            rtol=test_case.rtol,
+            atol=test_case.atol,
+            check_graph=False,
+            check_grad_use_random_data=True,
+            include_complex=True,
+        )(_test_ifft)
 
-        test_case.test_rfft2 = autotest(n=5,
-                                    auto_backward=True,
-                                    rtol=test_case.rtol,
-                                    atol=test_case.atol,
-                                    check_graph=False,
-                                    check_grad_use_random_data=True,
-                                    include_complex=False)(_test_rfft2)
-        
-        test_case.test_irfft2 = autotest(n=5,
-                                    auto_backward=True,
-                                    rtol=test_case.rtol,
-                                    atol=test_case.atol*100,    # NOTE: ND-dimension of fft_c2r expands the numerical accuracy error
-                                    check_graph=False,
-                                    check_grad_use_random_data=True,
-                                    include_complex=True)(_test_irfft2)
-        
-        test_case.test_hfft2 = autotest(n=5,
-                                    auto_backward=True,
-                                    rtol=test_case.rtol,
-                                    atol=test_case.atol*100,    # NOTE: ND-dimension of fft_c2r expands the numerical accuracy error
-                                    check_graph=False,
-                                    check_grad_use_random_data=True,
-                                    include_complex=True)(_test_hfft2)
-        
-        test_case.test_ihfft2 = autotest(n=5,
-                                    auto_backward=True,
-                                    rtol=test_case.rtol,
-                                    atol=test_case.atol,
-                                    check_graph=False,
-                                    check_grad_use_random_data=True,
-                                    include_complex=False)(_test_ihfft2)
-    
-        test_case.test_fftn = autotest(n=5,
-                                auto_backward=True,
-                                rtol=test_case.rtol,
-                                atol=test_case.atol*1e2,    # NOTE:
-                                check_graph=False,
-                                check_grad_use_random_data=True,
-                                include_complex=True)(_test_fftn)
-        
-        test_case.test_ifftn = autotest(n=5,
-                                    auto_backward=True,
-                                    rtol=test_case.rtol,
-                                    atol=test_case.atol*1e2,
-                                    check_graph=False,
-                                    check_grad_use_random_data=True,
-                                    include_complex=True)(_test_ifftn)
+        test_case.test_rfft = autotest(
+            n=5,
+            auto_backward=True,
+            rtol=test_case.rtol,
+            atol=test_case.atol,
+            check_graph=False,
+            check_grad_use_random_data=True,
+            include_complex=False,
+        )(_test_rfft)
 
-        test_case.test_rfftn = autotest(n=5,
-                                    auto_backward=True,
-                                    rtol=test_case.rtol,
-                                    atol=test_case.atol*1e2,
-                                    check_graph=False,
-                                    check_grad_use_random_data=True,
-                                    include_complex=False)(_test_rfftn)
-        
-        test_case.test_irfftn = autotest(n=5,
-                                    auto_backward=True,
-                                    rtol=test_case.rtol,
-                                    atol=test_case.atol*1e2,    # NOTE: ND-dimension of fft_c2r expands the numerical accuracy error
-                                    check_graph=False,
-                                    check_grad_use_random_data=True,
-                                    include_complex=True)(_test_irfftn)
-        
-        test_case.test_hfftn = autotest(n=5,
-                                    auto_backward=True,
-                                    rtol=test_case.rtol,
-                                    atol=test_case.atol*1e2,    # NOTE: ND-dimension of fft_c2r expands the numerical accuracy error
-                                    check_graph=False,
-                                    check_grad_use_random_data=True,
-                                    include_complex=True)(_test_hfftn)
-        
-        test_case.test_ihfftn = autotest(n=5,
-                                    auto_backward=True,
-                                    rtol=test_case.rtol,
-                                    atol=test_case.atol*1e2,
-                                    check_graph=False,
-                                    check_grad_use_random_data=True,
-                                    include_complex=False)(_test_ihfftn)
-    
+        test_case.test_irfft = autotest(
+            n=5,
+            auto_backward=True,
+            rtol=test_case.rtol,
+            atol=test_case.atol,
+            check_graph=False,
+            check_grad_use_random_data=True,
+            include_complex=True,
+        )(_test_irfft)
+
+        test_case.test_hfft = autotest(
+            n=5,
+            auto_backward=True,
+            rtol=test_case.rtol,
+            atol=test_case.atol,
+            check_graph=False,
+            check_grad_use_random_data=True,
+            include_complex=True,
+        )(_test_hfft)
+
+        test_case.test_ihfft = autotest(
+            n=5,
+            auto_backward=True,
+            rtol=test_case.rtol,
+            atol=test_case.atol,
+            check_graph=False,
+            check_grad_use_random_data=True,
+            include_complex=False,
+        )(_test_ihfft)
+
+        test_case.test_fft2 = autotest(
+            n=5,
+            auto_backward=True,
+            rtol=test_case.rtol,
+            atol=test_case.atol,
+            check_graph=False,
+            check_grad_use_random_data=True,
+            include_complex=True,
+        )(_test_fft2)
+
+        test_case.test_ifft2 = autotest(
+            n=5,
+            auto_backward=True,
+            rtol=test_case.rtol,
+            atol=test_case.atol,
+            check_graph=False,
+            check_grad_use_random_data=True,
+            include_complex=True,
+        )(_test_ifft2)
+
+        test_case.test_rfft2 = autotest(
+            n=5,
+            auto_backward=True,
+            rtol=test_case.rtol,
+            atol=test_case.atol,
+            check_graph=False,
+            check_grad_use_random_data=True,
+            include_complex=False,
+        )(_test_rfft2)
+
+        test_case.test_irfft2 = autotest(
+            n=5,
+            auto_backward=True,
+            rtol=test_case.rtol,
+            atol=test_case.atol
+            * 100,  # NOTE: ND-dimension of fft_c2r expands the numerical accuracy error
+            check_graph=False,
+            check_grad_use_random_data=True,
+            include_complex=True,
+        )(_test_irfft2)
+
+        test_case.test_hfft2 = autotest(
+            n=5,
+            auto_backward=True,
+            rtol=test_case.rtol,
+            atol=test_case.atol
+            * 100,  # NOTE: ND-dimension of fft_c2r expands the numerical accuracy error
+            check_graph=False,
+            check_grad_use_random_data=True,
+            include_complex=True,
+        )(_test_hfft2)
+
+        test_case.test_ihfft2 = autotest(
+            n=5,
+            auto_backward=True,
+            rtol=test_case.rtol,
+            atol=test_case.atol,
+            check_graph=False,
+            check_grad_use_random_data=True,
+            include_complex=False,
+        )(_test_ihfft2)
+
+        test_case.test_fftn = autotest(
+            n=5,
+            auto_backward=True,
+            rtol=test_case.rtol,
+            atol=test_case.atol * 1e2,  # NOTE:
+            check_graph=False,
+            check_grad_use_random_data=True,
+            include_complex=True,
+        )(_test_fftn)
+
+        test_case.test_ifftn = autotest(
+            n=5,
+            auto_backward=True,
+            rtol=test_case.rtol,
+            atol=test_case.atol * 1e2,
+            check_graph=False,
+            check_grad_use_random_data=True,
+            include_complex=True,
+        )(_test_ifftn)
+
+        test_case.test_rfftn = autotest(
+            n=5,
+            auto_backward=True,
+            rtol=test_case.rtol,
+            atol=test_case.atol * 1e2,
+            check_graph=False,
+            check_grad_use_random_data=True,
+            include_complex=False,
+        )(_test_rfftn)
+
+        test_case.test_irfftn = autotest(
+            n=5,
+            auto_backward=True,
+            rtol=test_case.rtol,
+            atol=test_case.atol
+            * 1e2,  # NOTE: ND-dimension of fft_c2r expands the numerical accuracy error
+            check_graph=False,
+            check_grad_use_random_data=True,
+            include_complex=True,
+        )(_test_irfftn)
+
+        test_case.test_hfftn = autotest(
+            n=5,
+            auto_backward=True,
+            rtol=test_case.rtol,
+            atol=test_case.atol
+            * 1e2,  # NOTE: ND-dimension of fft_c2r expands the numerical accuracy error
+            check_graph=False,
+            check_grad_use_random_data=True,
+            include_complex=True,
+        )(_test_hfftn)
+
+        test_case.test_ihfftn = autotest(
+            n=5,
+            auto_backward=True,
+            rtol=test_case.rtol,
+            atol=test_case.atol * 1e2,
+            check_graph=False,
+            check_grad_use_random_data=True,
+            include_complex=False,
+        )(_test_ihfftn)
+
     def test_1d_fft(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
@@ -773,63 +826,54 @@ class TestComplex64Fft(flow.unittest.TestCase):
             test_case.test_rfft,
             test_case.test_irfft,
             test_case.test_hfft,
-            test_case.test_ihfft
+            test_case.test_ihfft,
         ]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-        
-    
+
     def test_2d_fft_except_hfft2(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             test_case.test_fft2,
             test_case.test_ifft2,
             test_case.test_rfft2,
-            test_case.test_irfft2
+            test_case.test_irfft2,
         ]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-
 
     @unittest.skipIf(
         version.parse(torch_original.__version__) < version.parse("1.11.0"),
-        "module 'torch.fft' has no attribute 'hfft2' or 'ihfft2' before '1.11.0'"
+        "module 'torch.fft' has no attribute 'hfft2' or 'ihfft2' before '1.11.0'",
     )
     def test_2d_fft_hfft2(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            test_case.test_hfft2,
-            test_case.test_ihfft2
-        ]
+        arg_dict["test_fun"] = [test_case.test_hfft2, test_case.test_ihfft2]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-        
+
     def test_nd_fft_except_hfftn(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             test_case.test_fftn,
             test_case.test_ifftn,
             test_case.test_rfftn,
-            test_case.test_irfftn
+            test_case.test_irfftn,
         ]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-
 
     @unittest.skipIf(
         version.parse(torch_original.__version__) < version.parse("1.11.0"),
-        "module 'torch.fft' has no attribute 'hfftn' or 'ihfftn' before '1.11.0'"
+        "module 'torch.fft' has no attribute 'hfftn' or 'ihfftn' before '1.11.0'",
     )
     def test_nd_fft_hfftn(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            test_case.test_hfftn,
-            test_case.test_ihfftn
-        ]
+        arg_dict["test_fun"] = [test_case.test_hfftn, test_case.test_ihfftn]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    
+
 class TestComplex128Fft(TestComplex64Fft):
     def setUp(test_case):
         # should override by other data type of complex
@@ -838,15 +882,13 @@ class TestComplex128Fft(TestComplex64Fft):
             "2d": {"lower_n_dims": 2, "upper_n_dims": 5},
             "nd": {"lower_n_dims": 1, "upper_n_dims": 5},
         }
-        
-        test_case.dtype_dict = {
-            "real": torch.float64,
-            "complex": torch.complex128
-        }
-        
+
+        test_case.dtype_dict = {"real": torch.float64, "complex": torch.complex128}
+
         test_case.rtol = 1e-7
         test_case.atol = 1e-7
         test_case.initTestFft()
-    
+
+
 if __name__ == "__main__":
     unittest.main()
