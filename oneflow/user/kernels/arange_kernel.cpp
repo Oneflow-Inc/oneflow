@@ -102,7 +102,8 @@ class ArangeKernel final : public OpKernel, public CudaGraphSupport {
     } else {
       const auto* arange_cache = dynamic_cast<const ArangeOpKernelCache*>(cache);
       auto arange_len = arange_cache->upper() - arange_cache->lower();
-      ArangeFunctor<device_type, T>()(ctx->stream(), start + delta * arange_cache->lower(), delta,
+      ArangeFunctor<device_type, T>()(ctx->stream(),
+                                      static_cast<T>(start + delta * arange_cache->lower()), delta,
                                       arange_len, output);
     }
   }
@@ -126,7 +127,7 @@ class ArangeKernel final : public OpKernel, public CudaGraphSupport {
 
 // Register CPU version
 REGISTER_ARANGE_KERNELS_WITH_DEVICE(DeviceType::kCPU);
-
+REGISTER_ARANGE_KERNEL(DeviceType::kCPU, float16);
 // Register GPU version
 #ifdef WITH_CUDA
 REGISTER_ARANGE_KERNELS_WITH_DEVICE(DeviceType::kCUDA);

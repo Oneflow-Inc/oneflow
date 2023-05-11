@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/extension/stack/foreign_stack_getter.h"
 #include "oneflow/extension/stack/python/stack_getter.h"
+#include "oneflow/extension/stack/stacktrace.h"
 
 namespace py = pybind11;
 
@@ -32,6 +33,11 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("GetCurrentStack", []() {
     auto* stack_getter = Singleton<ForeignStackGetter>::Get();
     return stack_getter->GetFormattedStack(stack_getter->GetCurrentFrame());
+  });
+  m.def("RegisterSignalHandler", []() {
+    if (ParseBooleanFromEnv("ONEFLOW_ENABLE_SIGNAL_HANDLER", true)) {
+      Singleton<backward::SignalHandling>::New();
+    }
   });
 }
 

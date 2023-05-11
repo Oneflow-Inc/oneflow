@@ -30,7 +30,8 @@ std::unique_ptr<::oneflow::BlobDesc> getBlobDescFromTensorType(TensorType tensor
   if (mlir::succeeded(data_type)) {
     auto shape_from_mlir = new ::oneflow::Shape(llvm::SmallVector<int64_t, 4>(
         {tensor_type.getShape().begin(), tensor_type.getShape().end()}));
-    return std::make_unique<::oneflow::BlobDesc>(*shape_from_mlir, data_type.getValue());
+    return std::make_unique<::oneflow::BlobDesc>(*shape_from_mlir, data_type.value(),
+                                                 ::oneflow::MemoryFormat::kContiguous);
   }
   tensor_type.dump();
   LOG(FATAL) << "fail to get BlobDesc from TensorType";
@@ -63,11 +64,11 @@ LogicalResult ConvertUserOp(llvm::StringRef op_type_name, ::oneflow::OperatorCon
 
 size_t getResultSize(DictionaryAttr attributes) {
   const StringRef attr_name = OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr();
-  const DenseIntElementsAttr& size_attr =
-      attributes.get(attr_name).dyn_cast_or_null<DenseIntElementsAttr>();
-  CHECK(size_attr) << "Attr " << attr_name.str() << " is not found or not DenseIntElementsAttr";
+  const DenseI32ArrayAttr& size_attr =
+      attributes.get(attr_name).dyn_cast_or_null<DenseI32ArrayAttr>();
+  CHECK(size_attr) << "Attr " << attr_name.str() << " is not found or not DenseI32ArrayAttr";
   auto size = 0;
-  for (auto s : size_attr.getValues<int32_t>()) { size += s; }
+  for (auto s : size_attr.asArrayRef()) { size += s; }
   return size;
 }
 
@@ -96,7 +97,8 @@ size_t getResultSize(DictionaryAttr attributes) {
     const auto& arg_name = result_id.first;
     const auto& arg_id = result_id.second;
     const auto bn = ::oneflow::GenRepeatedBn(arg_name, arg_id);
-    auto blob_desc = std::make_unique<::oneflow::BlobDesc>(::oneflow::kInvalidDataType);
+    auto blob_desc = std::make_unique<::oneflow::BlobDesc>(::oneflow::kInvalidDataType,
+                                                           ::oneflow::MemoryFormat::kContiguous);
     lbi2logical_blob_desc_.emplace(bn, std::move(blob_desc));
     (*op_conf.mutable_user_conf()->mutable_output())[arg_name].add_s(
         ::oneflow::GenLogicalBlobName(op_conf.name(), bn));
@@ -111,7 +113,7 @@ size_t getResultSize(DictionaryAttr attributes) {
   };
   ::oneflow::ParallelConf parallel_conf = user_op::getParallelConfFromAttrDictionary(attributes);
   ::oneflow::ParallelDesc parallel_desc{parallel_conf};
-  op->FillOpParallelDesc(parallel_desc);
+  CHECK_JUST(op->FillOpParallelDesc(parallel_desc));
   CHECK_JUST(op->InferLogicalOutBlobDescs(GetLogicalBlobDesc4BnInOp, parallel_desc));
   for (const auto& result_id : result_ids) {
     const auto& arg_name = result_id.first;
@@ -127,14 +129,16 @@ size_t getResultSize(DictionaryAttr attributes) {
 
 ::mlir::LogicalResult NormalizationAddReluOp::refineReturnTypes(
     ::mlir::MLIRContext* context, ::llvm::Optional<::mlir::Location> location,
-    ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes, ::mlir::RegionRange regions,
+    ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
+    ::mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
     ::llvm::SmallVectorImpl<::mlir::Type>& inferredReturnTypes) {
   return success();
 }
 
 ::mlir::LogicalResult NormalizationAddReluOp::inferReturnTypes(
     ::mlir::MLIRContext* context, ::llvm::Optional<::mlir::Location> location,
-    ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes, ::mlir::RegionRange regions,
+    ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
+    ::mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
     ::llvm::SmallVectorImpl<::mlir::Type>& inferredReturnTypes) {
   return inferReturnTypesWithOpTypeName("normalization_add_relu", context, operands, attributes,
                                         regions, inferredReturnTypes);

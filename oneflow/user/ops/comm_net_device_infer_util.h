@@ -18,14 +18,14 @@ limitations under the License.
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/common/decorator.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stream.h"
+#include "oneflow/core/common/env_var/eager.h"
+#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 
-extern Maybe<Symbol<Stream>> (*GetNcclDevice)();
-extern Maybe<Symbol<Stream>> (*GetCpuTransportDevice)();
+extern Maybe<Symbol<Stream>> (*GetTransportDevice)(Symbol<Device>);
 
 Maybe<Symbol<Device>> DefaultGetOutputDeivce(user_op::DeviceAndStreamInferContext* ctx);
 
@@ -36,14 +36,10 @@ Maybe<Symbol<Stream>> DeviceAndStreamInferFn(user_op::DeviceAndStreamInferContex
   for (const auto& pair : ctx->outputs()) {
     *ctx->OutputTensorDevice4ArgNameAndIndex(pair.first, pair.second) = output_device;
   }
-  if (output_device->type() == "cuda") {
-    const auto& cuda_device = JUST(GetNcclDevice());
-    return cuda_device;
-  } else if (output_device->type() == "cpu") {
-    return JUST(GetCpuTransportDevice());
-  } else {
-    UNIMPLEMENTED_THEN_RETURN();
+  if (EagerNcclUseComputeStream() && !LazyMode::is_enabled()) {
+    return GetDefaultStreamByDevice(output_device);
   }
+  return GetTransportDevice(output_device);
 }
 
 }  // namespace oneflow

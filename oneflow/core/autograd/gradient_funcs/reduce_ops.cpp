@@ -167,8 +167,9 @@ Maybe<void> ReduceMaxOrMin::Apply(const ReduceMaxOrMinCaptureState* ctx,
                .call());
 
   const auto& bcast_like_div =
-      JUST(functional::SequenceFunction<Maybe<Tensor>()>(
-               [&]() { return functional::ReduceSum(cast_like, ctx->axis, ctx->keepdims); })
+      JUST(functional::SequenceFunction<Maybe<Tensor>()>([&]() {
+             return functional::ReduceSum(cast_like, ctx->axis, ctx->keepdims, NullOpt);
+           })
                .then(std::bind(functional::Div, dy, std::placeholders::_1))
                .then(std::bind(functional::BroadcastLike, std::placeholders::_1, input, ctx->axis))
                .call());

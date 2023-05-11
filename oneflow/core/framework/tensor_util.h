@@ -20,6 +20,7 @@ limitations under the License.
 #include <string>
 
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/common/data_type.h"
 
@@ -51,7 +52,31 @@ Maybe<void> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor, 
 template<typename T>
 Maybe<T> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor) {
   T scalar{0};
-  JUST(GetItemInScalarTensor(scalar_tensor, &scalar, sizeof(T)));
+  if constexpr (GetDataType<T>() == kInt64) {
+    if (scalar_tensor->dtype()->data_type() == DataType::kInt8
+        || scalar_tensor->dtype()->data_type() == kUInt8) {
+      int8_t int8_integer = 0;
+      JUST(GetItemInScalarTensor(scalar_tensor, &int8_integer, sizeof(int8_t)));
+      scalar = static_cast<T>(int8_integer);
+    } else if (scalar_tensor->dtype()->data_type() == DataType::kInt16
+               || scalar_tensor->dtype()->data_type() == kUInt16) {
+      int16_t int16_integer = 0;
+      JUST(GetItemInScalarTensor(scalar_tensor, &int16_integer, sizeof(int16_t)));
+      scalar = static_cast<T>(int16_integer);
+    } else if (scalar_tensor->dtype()->data_type() == DataType::kInt32
+               || scalar_tensor->dtype()->data_type() == kUInt32) {
+      int32_t int32_integer = 0;
+      JUST(GetItemInScalarTensor(scalar_tensor, &int32_integer, sizeof(int32_t)));
+      scalar = static_cast<T>(int32_integer);
+    } else if (scalar_tensor->dtype()->data_type() == DataType::kInt64
+               || scalar_tensor->dtype()->data_type() == kUInt64) {
+      int64_t int64_integer = 0;
+      JUST(GetItemInScalarTensor(scalar_tensor, &int64_integer, sizeof(int64_t)));
+      scalar = static_cast<T>(int64_integer);
+    }
+  } else {
+    JUST(GetItemInScalarTensor(scalar_tensor, &scalar, sizeof(T)));
+  }
   return scalar;
 }
 

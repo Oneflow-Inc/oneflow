@@ -54,6 +54,7 @@ class TensorImpl {
   // Getters
   virtual std::shared_ptr<const Shape> shape() const = 0;
   virtual std::shared_ptr<const Stride> stride() const = 0;
+  virtual MemoryFormat memory_format() const = 0;
   virtual DataType dtype() const = 0;
   virtual bool is_lazy() const = 0;
 
@@ -64,6 +65,7 @@ class TensorImpl {
   virtual Maybe<bool> has_eager_blob_object() const = 0;
   virtual Maybe<int64_t> storage_offset() const { OF_UNIMPLEMENTED(); }
   virtual bool is_contiguous() const = 0;
+  virtual bool is_view() const = 0;
   virtual Maybe<bool> is_pinned() const { OF_UNIMPLEMENTED(); }
 
   // Getters for autograd
@@ -108,6 +110,7 @@ class LocalTensorImpl : public TensorImpl {
   DataType dtype() const override { return tensor_meta()->dtype(); }
   const Symbol<Device>& device() const { return tensor_meta()->device(); }
   bool is_contiguous() const override { return tensor_meta()->is_contiguous(); }
+  bool is_view() const override { return tensor_meta()->is_view(); }
 
   virtual const Symbol<LocalTensorMeta>& tensor_meta() const = 0;
   // Setters
@@ -134,7 +137,9 @@ class GlobalTensorImpl : public TensorImpl {
   // Getters
   std::shared_ptr<const Shape> shape() const override { return tensor_meta_->shape_ptr(); }
   std::shared_ptr<const Stride> stride() const override { return tensor_meta_->stride_ptr(); }
+  MemoryFormat memory_format() const override { return tensor_meta_->memory_format(); }
   DataType dtype() const override { return tensor_meta_->dtype(); }
+
   Symbol<NdSbp> nd_sbp() const { return tensor_meta_->nd_sbp(); }
   Symbol<ParallelDesc> parallel_desc() const { return tensor_meta_->parallel_desc(); }
   const Optional<Symbol<NdSbp>>& consumer_nd_sbp_constraint() const {
@@ -192,12 +197,15 @@ class LazyLocalTensorImpl final : public LocalTensorImpl {
   const Symbol<LocalTensorMeta>& tensor_meta() const override { return tensor_meta_; }
   std::shared_ptr<const Shape> shape() const override { return tensor_meta()->shape_ptr(); }
   std::shared_ptr<const Stride> stride() const override { return tensor_meta()->stride_ptr(); }
+  MemoryFormat memory_format() const override { return tensor_meta()->memory_format(); }
+
   bool is_lazy() const override { return true; }
   bool is_contiguous() const override {
     // TODO:(zhaoluyang) default return true for now,
     // but should return real status while stride/view mechanism is ready in lazy-local mode
     return true;
   }
+  bool is_view() const override { return false; }
   Maybe<bool> is_pinned() const override { return false; }
 
   const std::shared_ptr<const MutLocalTensorMeta>& mut_tensor_meta() override {
@@ -237,9 +245,12 @@ class EagerLocalTensorImpl final : public LocalTensorImpl {
   const Symbol<LocalTensorMeta>& tensor_meta() const override;
   std::shared_ptr<const Shape> shape() const override;
   std::shared_ptr<const Stride> stride() const override;
+  MemoryFormat memory_format() const override;
+
   Maybe<LocalTensorImpl> detach() const override;
   bool is_lazy() const override { return false; }
   bool is_contiguous() const override { return tensor_meta()->is_contiguous(); }
+  bool is_view() const override { return tensor_meta()->is_view(); }
   Maybe<bool> is_pinned() const override;
 
   // Getters valid only for EagerLocalTensorImpl
@@ -299,6 +310,8 @@ class LazyGlobalTensorImpl final : public GlobalTensorImpl {
     return true;
   }
 
+  bool is_view() const override { return false; }
+
   Maybe<GlobalTensorImpl> detach() const override;
 };
 
@@ -309,6 +322,8 @@ class EagerGlobalTensorImpl final : public GlobalTensorImpl {
 
   // Getters
   std::shared_ptr<const Stride> stride() const override;
+  MemoryFormat memory_format() const override;
+
   bool is_lazy() const override { return false; }
 
   bool is_contiguous() const override {
@@ -316,6 +331,7 @@ class EagerGlobalTensorImpl final : public GlobalTensorImpl {
     // but should return real status while stride/view mechanism is ready in eager-global mode
     return true;
   }
+  bool is_view() const override { return false; }
 
   Maybe<LocalTensor> cur_rank_phy_tensor() const override { return cur_rank_phy_tensor_; }
   void reset_cur_rank_phy_tensor(const std::shared_ptr<LocalTensor>& val) {

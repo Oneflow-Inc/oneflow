@@ -220,7 +220,8 @@ Maybe<void> TensorAutoCastProcessor::Apply() {
     for (int i = 0; i < inputs_.size(); ++i) {
       if (args_eligible[i] && JUST(IsDeviceType(inputs_[i], autocast_device_type))
           && inputs_[i]->dtype()->is_floating_point() && inputs_[i]->dtype() != autocast_dtype) {
-        autocast_inputs_[i] = JUST(functional::To(inputs_[i], autocast_dtype, /*copy*/ false));
+        autocast_inputs_[i] = JUST(autocast::cached_cast(inputs_[i], autocast_dtype,
+                                                         JUST(inputs_[i]->device())->enum_type()));
       } else {
         autocast_inputs_[i] = inputs_[i];
       }

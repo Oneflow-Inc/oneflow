@@ -45,6 +45,25 @@ class ThreadSafeLock final {
   std::mutex mutex4guard;
 };
 
+class ReentrantThreadSafeLock final {
+ public:
+  ReentrantThreadSafeLock() = default;
+  ~ReentrantThreadSafeLock() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ReentrantThreadSafeLock);
+
+  class RAIIGuard final {
+   public:
+    explicit RAIIGuard(ReentrantThreadSafeLock& lock) : guard_(lock.mutex4guard) {}
+    ~RAIIGuard() = default;
+    OF_DISALLOW_COPY_AND_MOVE(RAIIGuard);
+
+   private:
+    std::unique_lock<std::recursive_mutex> guard_;
+  };
+
+ private:
+  std::recursive_mutex mutex4guard;
+};
 }  // namespace vm
 
 }  // namespace oneflow

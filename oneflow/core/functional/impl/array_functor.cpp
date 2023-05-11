@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/job/nd_sbp_util.h"
+#include "oneflow/core/eager/tensor_storage.h"
 #include <complex>
 
 namespace oneflow {
@@ -168,6 +169,7 @@ class TensorConstantFunctor {
     // NOTE: this op is an source op, so the value(scalar tensor) should not have autograd status.
     autograd::AutoGradMode mode(false);
     if (GlobalMode::is_enabled()) {
+      auto global_mode_gurad = GlobalMode::Guard(false);
       return JUST(functional::GlobalTensorConstant(shape, value, dtype,
                                                    GetGlobalParallelDescFromDevice(device),
                                                    *JUST(GetSbpList(GlobalMode::nd_sbp()))));
@@ -251,6 +253,7 @@ class ConstantFunctor {
   Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     if (GlobalMode::is_enabled()) {
+      auto global_mode_gurad = GlobalMode::Guard(false);
       return JUST(functional::GlobalConstant(shape, value, dtype,
                                              GetGlobalParallelDescFromDevice(device),
                                              *JUST(GetSbpList(GlobalMode::nd_sbp()))));
@@ -288,12 +291,13 @@ class EmptyFunctor {
                            const bool pin_memory) const {
     std::shared_ptr<Tensor> empty;
     if (GlobalMode::is_enabled()) {
+      auto global_mode_gurad = GlobalMode::Guard(false);
       empty = JUST(functional::GlobalEmpty(shape, dtype, GetGlobalParallelDescFromDevice(device),
                                            *JUST(GetSbpList(GlobalMode::nd_sbp()))));
       if (dtype->is_floating_point()) { JUST(empty->set_requires_grad(requires_grad)); }
       return empty;
     }
-    Symbol<Device> device_symbol = device.value_or(JUST(Device::New("cpu", 0)));
+    Symbol<Device> device_symbol = device.value_or(JUST(Device::New("cpu")));
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "pin_memory", "device_type", "device_id");
     attrs.SetAllAttrs(shape, dtype->data_type(), pin_memory, device_symbol->type(),
@@ -688,7 +692,7 @@ class ConcatFunctor {
   ConcatFunctor() {
     ops_.resize(kMaxInputCount);
     for (int n = 0; n < ops_.size(); ++n) {
-      ops_[n] = CHECK_JUST(one::OpBuilder("concat").Input("in", n + 1).Output("out").Build());
+      ops_[n] = CHECK_JUST(one::OpBuilder("cat").Input("in", n + 1).Output("out").Build());
     }
   }
   Maybe<Tensor> operator()(const TensorTuple& inputs, const int64_t& dim) const {
@@ -1616,8 +1620,9 @@ class InplaceToContiguousFunctor {
     const auto& blob_object = JUST(input->eager_blob_object());
     Symbol<LocalTensorMeta> old_tensor_meta = JUST(input->local_tensor_meta());
 
-    Symbol<LocalTensorMeta> new_tensor_meta = SymbolOf(LocalTensorMeta(
-        old_tensor_meta->shape(), stride, old_tensor_meta->dtype(), old_tensor_meta->device()));
+    Symbol<LocalTensorMeta> new_tensor_meta =
+        SymbolOf(LocalTensorMeta(old_tensor_meta->shape(), stride, old_tensor_meta->dtype(),
+                                 old_tensor_meta->memory_format(), old_tensor_meta->device()));
 
     std::shared_ptr<EagerLocalTensorImpl> final_tensor_impl =
         std::make_shared<EagerLocalTensorImpl>(JUST(input->tensor_storage()),
@@ -1781,16 +1786,29 @@ class CopyToDeviceFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, Symbol<Device> device,
                            const bool pin_memory) const {
+    if (x->is_local()) {
+      if (auto x_device = JUST(x->device()); x_device != device && x_device->rematable()) {
+        std::dynamic_pointer_cast<vm::RematableTensorStorage>(
+            JUST(x->eager_blob_object())->tensor_storage())
+            ->Remat();
+      }
+    }
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("device", "pin_memory");
     attrs.SetAllAttrs(device, pin_memory);
 
-#ifdef WITH_CUDA
-    if (device->enum_type() == DeviceType::kCUDA) { InitCudaContextOnce(device->device_id()); }
-#endif
+    // Trigger the construction of device context in advance
+    if (device->enum_type() != DeviceType::kCPU) { TouchEpDevice(device); }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
+  void TouchEpDevice(Symbol<Device> device) const {
+    ep::DeviceManager* device_mgr =
+        Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceManagerOrNull(device->enum_type());
+    if (!device_mgr) { return; }
+    device_mgr->GetDevice(device->device_id());
+  }
+
   std::shared_ptr<OpExpr> op_;
 };
 
@@ -3217,6 +3235,23 @@ class ToDeviceFunctor {
   }
 };
 
+class ToMemoryFormatFunctor {
+ public:
+  ToMemoryFormatFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("convert_memory_format").Input("in").Output("out").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, MemoryFormat memory_format) const {
+    if (input->memory_format() == memory_format) { return input; }
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("memory_format");
+    attrs.SetAllAttrs(memory_format);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class TopKFunctor {
  public:
   TopKFunctor() { op_ = CHECK_JUST(one::OpBuilder("top_k").Input("in").Output("out").Build()); }
@@ -4145,7 +4180,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MeshgridFunctor>("Meshgrid");
   m.add_functor<impl::IndexSelectFunctor>("IndexSelect");
   m.add_functor<impl::ToFunctor, impl::To2Functor, impl::To3Functor, impl::To4Functor,
-                impl::ToDeviceFunctor>("To");
+                impl::ToDeviceFunctor, impl::ToMemoryFormatFunctor>("To");
   m.add_functor<impl::TopKFunctor>("TopK");
   m.add_functor<impl::InTopKFunctor>("InTopK");
   m.add_functor<impl::TensorToTensorBufferFunctor>("TensorToTensorBuffer");

@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_INTRUSIVE_LIST_HOOK_H_
 
 #include "oneflow/core/intrusive/struct_traits.h"
-#include <glog/logging.h>
+#include "oneflow/core/common/throw.h"
 
 namespace oneflow {
 

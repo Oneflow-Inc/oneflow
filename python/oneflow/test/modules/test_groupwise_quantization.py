@@ -28,8 +28,8 @@ def _pack_int8_to_int4(x):
     l = np_x[..., 0::2]
     r = np_x[..., 1::2]
     l = np.left_shift(l, 4)
-    if x.dtype is np.int8:
-        even = np.bitwise_and(r, np.int8(0xF))
+    if x.dtype is flow.int8:
+        r = np.bitwise_and(r, np.int8(0xF))
     packed = flow.tensor(np.bitwise_or(l, r), device=x.device)
     return packed
 
