@@ -736,6 +736,57 @@ class FusedApplyRotaryEmbFunctor {
 class LlamaAttentionLayerForwardFunctor {
  public:
   LlamaAttentionLayerForwardFunctor() {
+    // Llama num_layers: 7B-32, 13B-40, 30B-60, 65B-80
+    // for(int num_layers: {32, 40, 60, 80}){
+    //   ops_with_past_key_value_.insert(num_layers,
+    //   CHECK_JUST(one::OpBuilder("llama_attention_layer_forward")
+    //                                          .Input("hidden_states")
+    //                                          .Input("input_norm_weight", num_layers)
+    //                                          .Input("query_weight", num_layers)
+    //                                          .Input("key_weight", num_layers)
+    //                                          .Input("value_weight", num_layers)
+    //                                          .Input("attn_out_weight", num_layers)
+    //                                          .Input("position_ids")
+    //                                          .Input("past_key", num_layers)
+    //                                          .Input("past_value", num_layers)
+    //                                          .Output("rms_norm_out") //todo: inference do not
+    //                                          need so many outputs, merge outputs in tmp_buffer
+    //                                          .Output("inv_rms")
+    //                                          .Output("query")
+    //                                          .Output("key")
+    //                                          .Output("value")
+    //                                          .Output("rotary_query")
+    //                                          .Output("rotary_key")
+    //                                          .Output("concat_key")
+    //                                          .Output("concat_value")
+    //                                          .Output("attn_out")
+    //                                          .Output("out")
+    //                                          .Build()));
+    //   ops_.insert(num_layers, CHECK_JUST(one::OpBuilder("llama_attention_layer_forward")
+    //                                          .Input("hidden_states")
+    //                                          .Input("input_norm_weight", num_layers)
+    //                                          .Input("query_weight", num_layers)
+    //                                          .Input("key_weight", num_layers)
+    //                                          .Input("value_weight", num_layers)
+    //                                          .Input("attn_out_weight", num_layers)
+    //                                          .Input("position_ids")
+    //                                          .Input("position_ids")
+    //                                          .Input("past_key")
+    //                                          .Input("past_value")
+    //                                          .Output("rms_norm_out")
+    //                                          .Output("inv_rms")
+    //                                          .Output("query")
+    //                                          .Output("key")
+    //                                          .Output("value")
+    //                                          .Output("rotary_query")
+    //                                          .Output("rotary_key")
+    //                                          .Output("concat_key")
+    //                                          .Output("concat_value")
+    //                                          .Output("attn_out")
+    //                                          .Output("out")
+    //                                          .Build()));
+    // }
+
     op_with_past_key_value_ = CHECK_JUST(one::OpBuilder("llama_attention_layer_forward")
                                              .Input("hidden_states")
                                              .Input("input_norm_weight")
@@ -744,6 +795,10 @@ class LlamaAttentionLayerForwardFunctor {
                                              .Input("value_weight")
                                              .Input("attn_out_weight")
                                              .Input("position_ids")
+                                             .Input("post_norm_weight")
+                                             .Input("mlp_gate_weight")
+                                             .Input("mlp_up_weight")
+                                             .Input("mlp_down_weight")
                                              .Input("past_key")
                                              .Input("past_value")
                                              .Output("rms_norm_out")
@@ -757,6 +812,10 @@ class LlamaAttentionLayerForwardFunctor {
                                              .Output("concat_value")
                                              .Output("attn_out")
                                              .Output("out")
+                                             .Output("post_norm_out")
+                                             .Output("gate_out")
+                                             .Output("glu_out")
+                                             .Output("decoder_out")
                                              .Build());
     op_ = CHECK_JUST(one::OpBuilder("llama_attention_layer_forward")
                          .Input("hidden_states")
@@ -766,6 +825,10 @@ class LlamaAttentionLayerForwardFunctor {
                          .Input("value_weight")
                          .Input("attn_out_weight")
                          .Input("position_ids")
+                         .Input("post_norm_weight")
+                         .Input("mlp_gate_weight")
+                         .Input("mlp_up_weight")
+                         .Input("mlp_down_weight")
                          .Output("rms_norm_out")
                          .Output("inv_rms")
                          .Output("query")
@@ -777,6 +840,10 @@ class LlamaAttentionLayerForwardFunctor {
                          .Output("concat_value")
                          .Output("attn_out")
                          .Output("out")
+                         .Output("post_norm_out")
+                         .Output("gate_out")
+                         .Output("glu_out")
+                         .Output("decoder_out")
                          .Build());
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& hidden_states,
@@ -786,6 +853,10 @@ class LlamaAttentionLayerForwardFunctor {
                                 const std::shared_ptr<one::Tensor>& value_weight,
                                 const std::shared_ptr<one::Tensor>& attn_out_weight,
                                 const std::shared_ptr<one::Tensor>& position_ids,
+                                const std::shared_ptr<one::Tensor>& post_norm_weight,
+                                const std::shared_ptr<one::Tensor>& mlp_gate_weight,
+                                const std::shared_ptr<one::Tensor>& mlp_up_weight,
+                                const std::shared_ptr<one::Tensor>& mlp_down_weight,
                                 const Optional<one::Tensor>& past_key,
                                 const Optional<one::Tensor>& past_value,
                                 const int64_t head_size) const {
@@ -796,19 +867,32 @@ class LlamaAttentionLayerForwardFunctor {
       return OpInterpUtil::Dispatch<TensorTuple>(
           *op_with_past_key_value_,
           {hidden_states, input_norm_weight, query_weight, key_weight, value_weight,
-           attn_out_weight, position_ids, JUST(past_key), JUST(past_value)},
+           attn_out_weight, position_ids, post_norm_weight, mlp_gate_weight, mlp_up_weight,
+           mlp_down_weight, JUST(past_key), JUST(past_value)},
           attrs);
     else
-      return OpInterpUtil::Dispatch<TensorTuple>(
-          *op_,
-          {hidden_states, input_norm_weight, query_weight, key_weight, value_weight,
-           attn_out_weight, position_ids},
-          attrs);
+      return OpInterpUtil::Dispatch<TensorTuple>(*op_,
+                                                 {
+                                                     hidden_states,
+                                                     input_norm_weight,
+                                                     query_weight,
+                                                     key_weight,
+                                                     value_weight,
+                                                     attn_out_weight,
+                                                     position_ids,
+                                                     post_norm_weight,
+                                                     mlp_gate_weight,
+                                                     mlp_up_weight,
+                                                     mlp_down_weight,
+                                                 },
+                                                 attrs);
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
   std::shared_ptr<OpExpr> op_with_past_key_value_;
+  // std::map<int, std::shared_ptr<OpExpr>> ops_;
+  // std::map<int, std::shared_ptr<OpExpr>> ops_with_past_key_value_;
 };
 
 }  // namespace impl

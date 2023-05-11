@@ -2858,6 +2858,10 @@ def OneFlow_LlamaAttentionLayerForwardOp : OneFlow_BaseOp<"llama_attention_layer
     OneFlow_Tensor:$value_weight,
     OneFlow_Tensor:$attn_out_weight,
     OneFlow_Tensor:$position_ids,
+    OneFlow_Tensor:$post_norm_weight,
+    OneFlow_Tensor:$mlp_gate_weight,
+    OneFlow_Tensor:$mlp_up_weight,
+    OneFlow_Tensor:$mlp_down_weight,
     Optional<OneFlow_Tensor>:$past_key,
     Optional<OneFlow_Tensor>:$past_value
   );
@@ -2872,7 +2876,11 @@ def OneFlow_LlamaAttentionLayerForwardOp : OneFlow_BaseOp<"llama_attention_layer
     OneFlow_Tensor:$concat_key,
     OneFlow_Tensor:$concat_value,
     OneFlow_Tensor:$attn_out,
-    OneFlow_Tensor:$out
+    OneFlow_Tensor:$out,
+    OneFlow_Tensor:$post_norm_out,
+    OneFlow_Tensor:$gate_out,
+    OneFlow_Tensor:$glu_out,
+    OneFlow_Tensor:$decoder_out
   );
   let attrs = (ins
     SI64Attr:$head_size,

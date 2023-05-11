@@ -810,6 +810,7 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
     user_op::InferContext* ctx) {
   const user_op::TensorDesc& hidden_states_desc = ctx->InputTensorDesc("hidden_states", 0);
   const int64_t head_size = ctx->Attr<int64_t>("head_size");
+  const int64_t intermediate_size = ctx->InputTensorDesc("mlp_gate_weight", 0).shape().At(0);
   const Shape& hidden_states_shape = hidden_states_desc.shape();
   auto b = hidden_states_shape.at(0), m = hidden_states_shape.at(1);
   ctx->SetOutputShape("rms_norm_out", 0, hidden_states_shape);
@@ -832,6 +833,10 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   }
   ctx->SetOutputShape("attn_out", 0, hidden_states_shape);
   ctx->SetOutputShape("out", 0, hidden_states_shape);
+  ctx->SetOutputShape("post_norm_out", 0, hidden_states_shape);
+  ctx->SetOutputShape("gate_out", 0, Shape({b, m, intermediate_size}));
+  ctx->SetOutputShape("glu_out", 0, Shape({b, m, intermediate_size}));
+  ctx->SetOutputShape("decoder_out", 0, hidden_states_shape);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> LlamaAttentionLayerForwardOp::InferPhysicalTensorDesc(
@@ -848,6 +853,10 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
                      .Split(user_op::OpArg("key_weight", 0), 0)
                      .Split(user_op::OpArg("value_weight", 0), 0)
                      .Split(user_op::OpArg("attn_out_weight", 0), 1)
+                     .Broadcast(user_op::OpArg("post_norm_weight", 0))
+                     .Split(user_op::OpArg("mlp_gate_weight", 0), 0)
+                     .Split(user_op::OpArg("mlp_up_weight", 0), 0)
+                     .Split(user_op::OpArg("mlp_down_weight", 0), 1)
                      .Split(user_op::OpArg("query", 0), 2)
                      .Split(user_op::OpArg("key", 0), 2)
                      .Split(user_op::OpArg("value", 0), 2)
@@ -857,7 +866,11 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
                      .Split(user_op::OpArg("concat_key", 0), 1)
                      .Split(user_op::OpArg("concat_value", 0), 1)
                      .Split(user_op::OpArg("attn_out", 0), 2)
-                     .Broadcast(user_op::OpArg("out", 0));  // P->B
+                     .Broadcast(user_op::OpArg("out", 0))
+                     .Broadcast(user_op::OpArg("post_norm_out", 0))
+                     .Split(user_op::OpArg("gate_out", 0), 1)
+                     .Split(user_op::OpArg("glu_out", 0), 1)
+                     .Broadcast(user_op::OpArg("decoder_out", 0));
   if (ctx->user_op_conf().has_input("past_key", 0)) {
     builder =
         builder.Split(user_op::OpArg("past_key", 0), 1).Split(user_op::OpArg("past_value", 0), 1);
@@ -878,6 +891,10 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   ctx->SetOutputDType("concat_value", 0, data_type);
   ctx->SetOutputDType("attn_out", 0, data_type);
   ctx->SetOutputDType("out", 0, data_type);
+  ctx->SetOutputDType("post_norm_out", 0, data_type);
+  ctx->SetOutputDType("gate_out", 0, data_type);
+  ctx->SetOutputDType("glu_out", 0, data_type);
+  ctx->SetOutputDType("decoder_out", 0, data_type);
   return Maybe<void>::Ok();
 }
 

@@ -30,6 +30,8 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/user/kernels/collective_communication/include/collective_communication.h"
 #include "oneflow/user/kernels/collective_communication/include/all_reduce.h"
+#include "oneflow/core/ep/include/primitive/unary_op.h"
+#include "oneflow/core/ep/cuda/primitive/unary_functor.cuh"
 
 namespace oneflow {
 namespace {
@@ -51,16 +53,34 @@ __global__ void InitQKVPtr(const T* x, const T* wq, const T* wk, const T* wv, T*
   ptr_arr[7] = k;
   ptr_arr[8] = v;
 }
-
-template<typename T1>
+template<typename T>
+__global__ void InitGluPtr(const T* post_norm_out, const T* gate_weight, const T* up_weight,
+                           T* gate_out, T* glu_out, void** ptr_arr) {
+  ptr_arr[0] = const_cast<T*>(post_norm_out);
+  ptr_arr[1] = const_cast<T*>(post_norm_out);
+  ptr_arr[2] = const_cast<T*>(gate_weight);
+  ptr_arr[3] = const_cast<T*>(up_weight);
+  ptr_arr[4] = gate_out;
+  ptr_arr[5] = glu_out;
+}
+template<typename T>
 struct Add {
-  __device__ __forceinline__ T1 operator()(const T1 a, const T1 b) const { return a + b; }
+  __device__ __forceinline__ T operator()(const T a, const T b) const { return a + b; }
 };
 template<>
 struct Add<half> {
   __device__ __forceinline__ half operator()(const half& a, const half& b) const {
     return __float2half(__half2float(a) + __half2float(b));
   }
+};
+
+template<typename Act, typename T>
+struct GluActFunctor {
+  GluActFunctor(Act act) : act_(act){};
+  __device__ __forceinline__ T operator()(const T& a, const T& b) const { return act_(a) * b; }
+
+ private:
+  Act act_;
 };
 }  // namespace
 namespace cuda {
@@ -1521,6 +1541,10 @@ class LlamaAttentionLayerForwardKernel final : public user_op::OpKernel {
     const user_op::Tensor* key_weight = ctx->Tensor4ArgNameAndIndex("key_weight", 0);
     const user_op::Tensor* value_weight = ctx->Tensor4ArgNameAndIndex("value_weight", 0);
     const user_op::Tensor* attn_out_weight = ctx->Tensor4ArgNameAndIndex("attn_out_weight", 0);
+    const user_op::Tensor* post_norm_weight = ctx->Tensor4ArgNameAndIndex("post_norm_weight", 0);
+    const user_op::Tensor* mlp_gate_weight = ctx->Tensor4ArgNameAndIndex("mlp_gate_weight", 0);
+    const user_op::Tensor* mlp_up_weight = ctx->Tensor4ArgNameAndIndex("mlp_up_weight", 0);
+    const user_op::Tensor* mlp_down_weight = ctx->Tensor4ArgNameAndIndex("mlp_down_weight", 0);
     const user_op::Tensor* position_ids = ctx->Tensor4ArgNameAndIndex("position_ids", 0);
     user_op::Tensor* past_key = nullptr;
     user_op::Tensor* past_value = nullptr;
@@ -1541,6 +1565,10 @@ class LlamaAttentionLayerForwardKernel final : public user_op::OpKernel {
     user_op::Tensor* rotary_key = ctx->Tensor4ArgNameAndIndex("rotary_key", 0);
     user_op::Tensor* attn_out = ctx->Tensor4ArgNameAndIndex("attn_out", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    user_op::Tensor* post_norm_out = ctx->Tensor4ArgNameAndIndex("post_norm_out", 0);
+    user_op::Tensor* gate_out = ctx->Tensor4ArgNameAndIndex("gate_out", 0);
+    user_op::Tensor* glu_out = ctx->Tensor4ArgNameAndIndex("glu_out", 0);
+    user_op::Tensor* decoder_out = ctx->Tensor4ArgNameAndIndex("decoder_out", 0);
 
     // attrs
     const int64_t head_size = ctx->Attr<int64_t>("head_size");
@@ -1557,8 +1585,8 @@ class LlamaAttentionLayerForwardKernel final : public user_op::OpKernel {
     // step2: to_q, to_k, to_v
     auto rms_out_shape = rms_norm_out->shape_view();
     auto query_weight_shape = query_weight->shape_view();
-    auto batch_size = rms_out_shape.At(0), matmul_m = rms_out_shape.At(1),
-         matmul_k = rms_out_shape.At(2), matmul_n = query_weight_shape.At(0);
+    auto matmul_m = rms_out_shape.At(1) * rms_out_shape.At(0), matmul_k = rms_out_shape.At(2),
+         matmul_n = query_weight_shape.At(0);
     // use grouped_matmul
     cudaDataType_t data_type = CUDA_R_16F;
     cudaDataType_t compute_type = CUDA_R_32F;
@@ -1740,10 +1768,59 @@ class LlamaAttentionLayerForwardKernel final : public user_op::OpKernel {
         ctx->device_type(), out->data_type(), ccl::kSum);
     all_reduce->Launch(ctx->stream(), out->dptr(), out->mut_dptr(), out->shape_view().elem_cnt(),
                        kernel_cache->communication_ctx());
-
+    LOG(ERROR) << "all reduce";
     // step 8, residual add: out = out + hidden_states
     cuda::elementwise::Binary(Add<T>(), out->shape_view().elem_cnt(), out->mut_dptr<T>(),
                               out->dptr<T>(), hidden_states->dptr<T>(), cuda_stream->cuda_stream());
+
+    LOG(ERROR) << "post rms";
+    // step 9, post rms-norm
+    cuda::rms_norm::RmsNormForward(cuda_stream, nrow, ncol, 1e-6, out->dptr<T>(),
+                                   post_norm_weight->dptr<T>(), post_norm_out->mut_dptr<T>(),
+                                   inv_rms->mut_dptr<RmsNormComputeType>());
+
+    LOG(ERROR) << "fused glu";
+    // step 10, fused_glu, + silu
+    auto mlp_gate_weight_shape = mlp_gate_weight->shape_view();
+    // batch_matmul->Launch(cuda_stream, b, m, mlp_gate_weight_shape.At(0),
+    //                      mlp_gate_weight_shape.At(1),
+    //                      /*alpha*/ 1.0, post_norm_out->dptr(), mlp_gate_weight->dptr(),
+    //                      /*beta*/ 0.0, gate_out->mut_dptr());
+    // batch_matmul->Launch(cuda_stream, b, m, mlp_gate_weight_shape.At(0),
+    //                      mlp_gate_weight_shape.At(1),
+    //                      /*alpha*/ 1.0, post_norm_out->dptr(), mlp_up_weight->dptr(), /*beta*/
+    //                      0.0, glu_out->mut_dptr());
+    auto glu_matmul_n = mlp_gate_weight_shape.At(0);
+    RUN_CUDA_KERNEL((InitGluPtr<T>), ctx->stream(), 1, post_norm_out->dptr<T>(),
+                    mlp_gate_weight->dptr<T>(), mlp_up_weight->dptr<T>(), gate_out->mut_dptr<T>(),
+                    glu_out->mut_dptr<T>(), ptr_arr);
+    OF_CUBLAS_CHECK(cublasGemmBatchedEx(
+        cuda_stream->cublas_handle(), CUBLAS_OP_T, CUBLAS_OP_N, glu_matmul_n, matmul_m, matmul_k,
+        &sp_alpha, ptr_arr + /*kMaxProblemBatch*/ 2, data_type, matmul_k, ptr_arr, data_type,
+        matmul_k, &sp_beta, ptr_arr + 2 * /*kMaxProblemBatch*/ 2, data_type, matmul_k, 2,
+        compute_type, CUBLAS_GEMM_DEFAULT));
+
+    LOG(ERROR) << "silu";
+    // glu_out shape: (b, m, hk)
+    auto pack_n = glu_out->shape_view().At(2) / pack_size /*pack_size=8*/;
+    auto pack_num = b * m * pack_n;
+    ep::primitive::UnaryFunctor<DeviceType::kCUDA, ep::primitive::UnaryOp::kSilu, T, T> act(0, 0);
+    cuda::elementwise::Binary(GluActFunctor<decltype(act), T>(act),
+                              glu_out->shape_view().elem_cnt(), glu_out->mut_dptr<T>(),
+                              gate_out->dptr<T>(), glu_out->dptr<T>(), cuda_stream->cuda_stream());
+
+    LOG(ERROR) << "all reduce2";
+    // step 11, mlp_down_proj && all_reduce_sum && add_residual
+    auto mlp_down_weight_shape = mlp_down_weight->shape_view();
+    batch_matmul->Launch(cuda_stream, b, m, mlp_down_weight_shape.At(0),
+                         mlp_down_weight_shape.At(1),
+                         /*alpha*/ 1.0, glu_out->dptr(), mlp_down_weight->dptr(), /*beta*/ 0.0,
+                         decoder_out->mut_dptr());
+    all_reduce->Launch(ctx->stream(), decoder_out->dptr(), decoder_out->mut_dptr(),
+                       decoder_out->shape_view().elem_cnt(), kernel_cache->communication_ctx());
+    cuda::elementwise::Binary(Add<T>(), decoder_out->shape_view().elem_cnt(),
+                              decoder_out->mut_dptr<T>(), decoder_out->dptr<T>(), out->dptr<T>(),
+                              cuda_stream->cuda_stream());
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
