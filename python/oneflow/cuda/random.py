@@ -64,6 +64,10 @@ def set_rng_state(
     elif isinstance(device, int):
         device = flow.device("cuda", device)
 
+    if device.type == "cpu":
+        raise ValueError(
+            "Cannot set RNG state for CPU device in flow.cuda.set_rng_state func!"
+        )
     idx = cast(flow.device, device).index
     if idx is None:
         idx = current_device()
