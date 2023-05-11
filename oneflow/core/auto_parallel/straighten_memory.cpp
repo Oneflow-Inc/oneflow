@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/auto_parallel/straighten_memory.h"
 #include "oneflow/core/auto_parallel/algorithm_util.h"
 #include "oneflow/core/auto_parallel/auto_memory.h"
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 
@@ -25,7 +26,10 @@ namespace auto_parallel {
 
 namespace {
 
-class NoCleaningMarkerAccMemory {
+const int64_t kPriorityOffset = GetMaxVal<int64_t>() / 4;
+const int64_t kPriorityBound = 2 * kPriorityOffset;
+
+class NoCleaningMarkerAncestor {
  public:
   static int32_t marker;
   int32_t status = 0;
@@ -36,11 +40,11 @@ class NoCleaningMarkerAccMemory {
   void UnMark() { status = 0; }
 };
 
-int32_t NoCleaningMarkerAccMemory::marker = 1;
+int32_t NoCleaningMarkerAncestor::marker = 1;
 
-void ResetNoCleaningMarkerAccMemory() { ++NoCleaningMarkerAccMemory::marker; }
+void ResetNoCleaningMarkerAncestor() { ++NoCleaningMarkerAncestor::marker; }
 
-void InitNoCleaningMarkerAccMemory() { NoCleaningMarkerAccMemory::marker = 1; }
+void InitNoCleaningMarkerAncestor() { NoCleaningMarkerAncestor::marker = 1; }
 
 class NoCleaningMarkerDescendant {
  public:
@@ -77,8 +81,10 @@ class TopoStruct {
   bool executed = false;
   // Accumulate memory increment of all the necessary topological structures
   int64_t accumulate_memory_increment = 0;
+  int64_t peak_memory_during_accumulation = 0;
+  int64_t max_difference_during_accumulation = 0;
   // Whether visited during memory accumulating
-  NoCleaningMarkerAccMemory visited_acc_memory;
+  NoCleaningMarkerAncestor visited_ancestors;
   // Whether visited while finding descendants
   NoCleaningMarkerDescendant visited_descendant;
   // waiting in the map before execution
@@ -98,6 +104,9 @@ class TopoStruct {
   // The topo structs to be executed immediately after this topo struct
   std::vector<TopoStruct*> post_topo_structs;
 
+  // Execute the positive ancestors in order with the smallest peak memory
+  std::vector<TopoStruct*> ordered_ancestors;
+
   explicit TopoStruct(const OpNode* op_node_);
   explicit TopoStruct(int32_t blob_id_) : blob_id(blob_id_){};
 
@@ -109,11 +118,13 @@ class TopoStruct {
   void ComputeIsReusable();
 
   void SetAccumulateMemoryIncrement();
+  int64_t SingleNodePriority();
+  int64_t AccumulationPriority();
 
   void MarkDescendantFromThis2Layer(int32_t max_layer);
 
  private:
-  int64_t AccumulateMemoryIncrement();
+  void VisitAncestorsAndItself(const std::function<void(TopoStruct*)>& Handle);
   // Mark all its descendant with min_layer <= max_layer
   void MarkDescendantUp2Layer(int32_t max_layer);
   // Block descendants and store the blocking nodes in the given hash set
@@ -133,16 +144,32 @@ int32_t TopoStruct::ComputeMinLayer() {
 
 void TopoStruct::ComputeIsReusable() { is_reusable = IsProducedRegisterReusable(op_node->op()); }
 
-int64_t TopoStruct::AccumulateMemoryIncrement() {
-  int64_t total_memory_increment = memory_increment;
-  visited_acc_memory.Mark();
+// Make sure max_difference = peak_memory - memory_increment
+int64_t Priority(int64_t memory_increment, int64_t peak_memory, int64_t max_difference) {
+  if (memory_increment < 0) { return peak_memory - kPriorityOffset; }
+  if (memory_increment > 0) { return kPriorityBound - max_difference; }
+  // memory_increment == 0
+  return kPriorityOffset - max_difference;
+}
+
+int64_t TopoStruct::SingleNodePriority() {
+  return Priority(memory_increment, peak_memory, max_difference);
+}
+
+int64_t TopoStruct::AccumulationPriority() {
+  return Priority(accumulate_memory_increment, peak_memory_during_accumulation,
+                  max_difference_during_accumulation);
+}
+
+void TopoStruct::VisitAncestorsAndItself(const std::function<void(TopoStruct*)>& Handle) {
+  if (visited_ancestors.IfNotMarked()) { Handle(this); }
+  visited_ancestors.Mark();
   for (const auto& in_topo_struct : in_topo_structs) {
     // Accumulate the non-executed topological structures only once
-    if ((!in_topo_struct->executed) && in_topo_struct->visited_acc_memory.IfNotMarked()) {
-      total_memory_increment += in_topo_struct->AccumulateMemoryIncrement();
+    if ((!in_topo_struct->executed) && in_topo_struct->visited_ancestors.IfNotMarked()) {
+      in_topo_struct->VisitAncestorsAndItself(Handle);
     }
   }
-  return total_memory_increment;
 }
 
 void TopoStruct::MarkDescendantUp2Layer(int32_t max_layer) {
@@ -153,19 +180,51 @@ void TopoStruct::MarkDescendantUp2Layer(int32_t max_layer) {
   }
 }
 
+// .back() return a reference. But if the original map is destroyed in the same piece of code,
+// the reference would point to [0xfffffffffffffff8], giving out an error.
+TopoStruct* TakeBackFromVector(const std::vector<TopoStruct*>& v) { return v.back(); }
+
 void TopoStruct::SetAccumulateMemoryIncrement() {
-  ResetNoCleaningMarkerAccMemory();
-  accumulate_memory_increment = AccumulateMemoryIncrement();
+  ResetNoCleaningMarkerAncestor();
+  // There are several lemma and propositions for this part. (Some of them omitted here)
+  // Proposition 1:
+  //    In the sub-graph of all the nodes with positive memory increment, picking the node with
+  //    maximum difference would be picking the node with maximum accumulate memory increment.
+  // Proposition 2:
+  //    In the sub-graph of all the nodes with positive memory increment, picking the node with
+  //    maximum difference in descending order would give us the lowest peak memory for this
+  //    sub-graph.
+  // We would prove this in the paper "Auto Memory" in the future.
+  std::map<int64_t, std::vector<TopoStruct*>> max_difference2topo_structs;
+  auto Add2Map = [&](TopoStruct* node) {
+    max_difference2topo_structs[node->SingleNodePriority()].push_back(node);
+  };
+  visited_ancestors.Mark();
+  VisitAncestorsAndItself(Add2Map);
+
+  ResetNoCleaningMarkerAncestor();
+  accumulate_memory_increment = 0;
+  peak_memory_during_accumulation = 0;
+  auto Execute = [&](TopoStruct* node) {
+    ordered_ancestors.push_back(node);
+    accumulate_memory_increment += node->memory_increment;
+    peak_memory_during_accumulation = std::max(peak_memory_during_accumulation,
+                                               accumulate_memory_increment + node->max_difference);
+    // Remove from the map
+    CheckAndRemoveFromMap(max_difference2topo_structs, node->SingleNodePriority(), node);
+  };
+  while (!max_difference2topo_structs.empty()) {
+    TakeBackFromVector(max_difference2topo_structs.begin()->second)
+        ->VisitAncestorsAndItself(Execute);
+  }
+  max_difference_during_accumulation =
+      peak_memory_during_accumulation - accumulate_memory_increment;
 }
 
 void TopoStruct::MarkDescendantFromThis2Layer(int32_t max_layer) {
   ResetNoCleaningMarkerDescendant();
   MarkDescendantUp2Layer(max_layer);
 }
-
-// .back() return a reference. But if the original map is destroyed in the same piece of code,
-// the reference would point to [0xfffffffffffffff8], giving out an error.
-TopoStruct* TakeBackFromVector(const std::vector<TopoStruct*>& v) { return v.back(); }
 
 // Block the descendants with negative memory increment
 void TopoStruct::BlockDescendants(HashSet<TopoStruct*>* blocking_nodes) {
@@ -305,7 +364,7 @@ void InitAllParameters(std::vector<TopoStruct*>* topo_structs,
                        std::vector<std::vector<TopoStruct*>>* id2consumer_topo_structs,
                        std::vector<int64_t>* id2blob_size) {
   // Initialize the no cleaning marker
-  InitNoCleaningMarkerAccMemory();
+  InitNoCleaningMarkerAncestor();
   InitNoCleaningMarkerDescendant();
 
   // Construct the map from a lbi to its id, consumers, blob size
@@ -490,14 +549,14 @@ void SortReleaseTopoStructs(std::vector<TopoStruct*>& topo_structs) {
     // Mark all the ancestors
     node_c->SetAccumulateMemoryIncrement();
     // Un-mark itself to prevent circle
-    node_c->visited_acc_memory.UnMark();
+    node_c->visited_ancestors.UnMark();
     for (auto* node_d : release_nodes) {
-      if (node_c != node_d && node_d->visited_acc_memory.IfNotMarked()) {
+      if (node_c != node_d && node_d->visited_ancestors.IfNotMarked()) {
         bool should_add_edge_d2c = true;
         // Check a, b for d(-): a, b -> d(-) -> ...
         for (auto* producer_of_d : node_d->in_topo_structs) {
           // Try to find a -> ... -> c(-) and b -> ... -> c(-)
-          if (producer_of_d->visited_acc_memory.IfNotMarked()) {
+          if (producer_of_d->visited_ancestors.IfNotMarked()) {
             should_add_edge_d2c = false;
             break;
           }
@@ -614,19 +673,7 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
   auto StopWaiting = [&](TopoStruct* node) {
     if (node->waiting) {
       node->waiting = false;
-      auto& waiting_list = waiting_map[node->accumulate_memory_increment];
-      if (waiting_list.size() == 1) {
-        waiting_map.erase(node->accumulate_memory_increment);
-      } else {
-        // Erase node from the waiting list
-        for (int32_t i = waiting_list.size() - 1; i >= 0; i--) {
-          if (waiting_list[i] == node) {
-            waiting_list[i] = waiting_list[waiting_list.size() - 1];
-            waiting_list.pop_back();
-            break;
-          }
-        }
-      }
+      CheckAndRemoveFromMap(waiting_map, node->AccumulationPriority(), node);
     }
   };
   // Wait in the map
@@ -634,7 +681,7 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
     if (node->executed || node->blocking_count > 0) { return; }
     StopWaiting(node);
     node->SetAccumulateMemoryIncrement();
-    waiting_map[node->accumulate_memory_increment].push_back(node);
+    waiting_map[node->AccumulationPriority()].push_back(node);
     node->waiting = true;
   };
   // Visit one node
@@ -664,16 +711,18 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
   // Execute one node and its ancestors
   std::function<void(TopoStruct*)> Execute = [&](TopoStruct* node) {
     // Post-order traversal
-    for (auto* in_node : node->in_topo_structs) {
-      if (!in_node->executed) { Execute(in_node); }
+    for (auto* ancestor : node->ordered_ancestors) {
+      if (!ancestor->executed) {
+        ExecuteOpNode(ancestor);
+        StopWaiting(ancestor);
+        prepare_topo_structs.push_back(node);
+      }
     }
     // Execute the current node
     ExecuteOpNode(node);
     node->executed = true;
-    total_memory += node->memory_increment;
-    if (total_memory + node->max_difference > peak_memory) {
-      peak_memory = total_memory + node->max_difference;
-    }
+    total_memory += node->accumulate_memory_increment;
+    peak_memory = std::max(peak_memory, total_memory + node->max_difference_during_accumulation);
     StopWaiting(node);
     prepare_topo_structs.push_back(node);
     if (GlobalProcessCtx::Rank() == 0) {

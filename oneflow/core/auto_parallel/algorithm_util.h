@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_AUTO_PARALLEL_ALGORITHM_UTIL_H_
 #define ONEFLOW_CORE_AUTO_PARALLEL_ALGORITHM_UTIL_H_
 
+#include <map>
 #include <vector>
 #include <cstdlib>
 #include <algorithm>
@@ -46,6 +47,18 @@ template<class T>
 void CheckAndRemoveFrom(std::vector<T>& v, T& t) {
   int32_t id = CheckIndex(v, t);
   if (id >= 0) { RemoveFrom(v, id); }
+}
+
+template<class K, class T>
+bool CheckAndRemoveFromMap(std::map<K, std::vector<T>>& m, K key, T& t) {
+  auto it = m.find(key);
+  if (it == m.end()) { return false; }
+  auto& v = it->second;
+  int32_t id = CheckIndex(v, t);
+  if (id == -1) { return false; }
+  RemoveFrom(v, id);
+  if (v.empty()) { m.erase(it); }
+  return true;
 }
 
 // Inverse function, which transfer a vector to an unordered_map.
