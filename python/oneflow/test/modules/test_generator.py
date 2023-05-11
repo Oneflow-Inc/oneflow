@@ -146,7 +146,6 @@ class TestDefaultGenerator(flow.unittest.TestCase):
         rng_state = flow.get_rng_state()
         test_case.assertTrue(np.allclose(state.numpy(), rng_state.numpy()))
 
-    @unittest.skip("skip for now, becase it failed 2 times in past week")
     def test_set_rng_state(test_case):
         flow.randn(100, 100)
         state = flow.get_rng_state()
@@ -165,6 +164,19 @@ class TestDefaultGenerator(flow.unittest.TestCase):
             flow.randn(100, 100).to("cuda")
             new_state = flow.cuda.get_rng_state()
             test_case.assertTrue(np.allclose(new_state.numpy(), state.numpy()))
+
+            states = flow.cuda.get_rng_state_all()
+            before0 = flow.cuda.FloatTensor(100, device=0).normal_()
+            before1 = flow.cuda.FloatTensor(100, device=1).normal_()
+            flow.cuda.set_rng_state_all(states)
+            after0 = flow.cuda.FloatTensor(100, device=0).normal_()
+            after1 = flow.cuda.FloatTensor(100, device=1).normal_()
+            test_case.assertTrue(
+                np.allclose(before0.numpy(), after0.numpy())
+            )
+            test_case.assertTrue(
+                np.allclose(before1.numpy(), after1.numpy())
+            )
 
     # NOTE: according to https://github.com/Oneflow-Inc/oneflow/pull/9102#discussion_r973811389
     # tensor init function fallback to `flow.default_generator.seed()`, and this test will be normal while tensor init functions reconstructed.(using op/kernel)
