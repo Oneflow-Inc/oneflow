@@ -17,9 +17,6 @@ limitations under the License.
 #include "oneflow/core/vm/ep_event.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/stream.h"
-#include "oneflow/core/ep/cuda/cuda_event.h"
-#include "oneflow/core/ep/cuda/cuda_stream.h"
-#include "oneflow/core/ep/cuda/cuda_device.h"
 #include "oneflow/core/vm/ep_stream_policy_base.h"
 #include "oneflow/core/vm/ep_optional_event_record_status_querier.h"
 
