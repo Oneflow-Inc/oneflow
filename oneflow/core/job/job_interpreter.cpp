@@ -36,14 +36,7 @@ using NameToParallelDescMap = std::map<std::string, Symbol<ParallelDesc>>;
 Maybe<Env> InitEnv(const one::TensorTuple& graph_inputs, const std::shared_ptr<NNGraph>& graph) {
   Env env;
   for (const auto& [name, tensor] : graph->variable_op_name2tensor()) {
-    if (tensor->is_global()) {
-      // FIXME(daquexian):
-      // It is a temporary hack to support global tensor in nn.Graph (mainly the learning rate).
-      // We should remove this hack after PR #10048 is merged.
-      env.emplace(name + "/out", JUST(tensor->cur_rank_phy_tensor()));
-    } else {
-      env.emplace(name + "/out", tensor);
-    }
+    env.emplace(name + "/out", tensor);
   }
   for (size_t i = 0; i < graph->inputs_op_names().size(); ++i) {
     const auto& name = graph->inputs_op_names()[i];
@@ -258,17 +251,7 @@ Maybe<one::TensorTuple> InterpretJob(const one::TensorTuple& graph_inputs,
       OF_PROFILER_RANGE_GUARD(user_conf.op_type_name());
       auto [inputs, ibns] =
           *JUST(GetInputTensors(user_conf, env, [&op_conf](const std::shared_ptr<Tensor>& tensor) {
-            // FIXME(daquexian):
-            // It is a temporary hack to support global tensor in nn.Graph (mainly the learning
-            // rate). We should remove this hack after PR #10048 is merged.
-            if (op_conf.device_tag() != "invalid_device") {
-              auto device = CHECK_JUST(tensor->device());
-              auto new_device = CHECK_JUST(
-                  Device::New(op_conf.device_tag(), device->device_id(), device->rematable()));
-              return CHECK_JUST(
-                  functional::To(tensor, Optional<Symbol<Device>>(new_device), NullOpt, false));
-            }
-            return tensor;
+            return CHECK_JUST(functional::To(tensor, op_conf.device_tag()));
           }));
       OpArgsVector<std::string> output_names = GetOutputNamesOfOp(user_conf);
       if (!inputs.empty()
