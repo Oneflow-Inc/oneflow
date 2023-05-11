@@ -1768,28 +1768,16 @@ class LlamaAttentionLayerForwardKernel final : public user_op::OpKernel {
         ctx->device_type(), out->data_type(), ccl::kSum);
     all_reduce->Launch(ctx->stream(), out->dptr(), out->mut_dptr(), out->shape_view().elem_cnt(),
                        kernel_cache->communication_ctx());
-    LOG(ERROR) << "all reduce";
     // step 8, residual add: out = out + hidden_states
     cuda::elementwise::Binary(Add<T>(), out->shape_view().elem_cnt(), out->mut_dptr<T>(),
                               out->dptr<T>(), hidden_states->dptr<T>(), cuda_stream->cuda_stream());
 
-    LOG(ERROR) << "post rms";
     // step 9, post rms-norm
     cuda::rms_norm::RmsNormForward(cuda_stream, nrow, ncol, 1e-6, out->dptr<T>(),
                                    post_norm_weight->dptr<T>(), post_norm_out->mut_dptr<T>(),
                                    inv_rms->mut_dptr<RmsNormComputeType>());
-
-    LOG(ERROR) << "fused glu";
     // step 10, fused_glu, + silu
     auto mlp_gate_weight_shape = mlp_gate_weight->shape_view();
-    // batch_matmul->Launch(cuda_stream, b, m, mlp_gate_weight_shape.At(0),
-    //                      mlp_gate_weight_shape.At(1),
-    //                      /*alpha*/ 1.0, post_norm_out->dptr(), mlp_gate_weight->dptr(),
-    //                      /*beta*/ 0.0, gate_out->mut_dptr());
-    // batch_matmul->Launch(cuda_stream, b, m, mlp_gate_weight_shape.At(0),
-    //                      mlp_gate_weight_shape.At(1),
-    //                      /*alpha*/ 1.0, post_norm_out->dptr(), mlp_up_weight->dptr(), /*beta*/
-    //                      0.0, glu_out->mut_dptr());
     auto glu_matmul_n = mlp_gate_weight_shape.At(0);
     RUN_CUDA_KERNEL((InitGluPtr<T>), ctx->stream(), 1, post_norm_out->dptr<T>(),
                     mlp_gate_weight->dptr<T>(), mlp_up_weight->dptr<T>(), gate_out->mut_dptr<T>(),
@@ -1797,10 +1785,9 @@ class LlamaAttentionLayerForwardKernel final : public user_op::OpKernel {
     OF_CUBLAS_CHECK(cublasGemmBatchedEx(
         cuda_stream->cublas_handle(), CUBLAS_OP_T, CUBLAS_OP_N, glu_matmul_n, matmul_m, matmul_k,
         &sp_alpha, ptr_arr + /*kMaxProblemBatch*/ 2, data_type, matmul_k, ptr_arr, data_type,
-        matmul_k, &sp_beta, ptr_arr + 2 * /*kMaxProblemBatch*/ 2, data_type, matmul_k, 2,
+        matmul_k, &sp_beta, ptr_arr + 2 * /*kMaxProblemBatch*/ 2, data_type, glu_matmul_n, 2,
         compute_type, CUBLAS_GEMM_DEFAULT));
 
-    LOG(ERROR) << "silu";
     // glu_out shape: (b, m, hk)
     auto pack_n = glu_out->shape_view().At(2) / pack_size /*pack_size=8*/;
     auto pack_num = b * m * pack_n;
@@ -1809,7 +1796,6 @@ class LlamaAttentionLayerForwardKernel final : public user_op::OpKernel {
                               glu_out->shape_view().elem_cnt(), glu_out->mut_dptr<T>(),
                               gate_out->dptr<T>(), glu_out->dptr<T>(), cuda_stream->cuda_stream());
 
-    LOG(ERROR) << "all reduce2";
     // step 11, mlp_down_proj && all_reduce_sum && add_residual
     auto mlp_down_weight_shape = mlp_down_weight->shape_view();
     batch_matmul->Launch(cuda_stream, b, m, mlp_down_weight_shape.At(0),
