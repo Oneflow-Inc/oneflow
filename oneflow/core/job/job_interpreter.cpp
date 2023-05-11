@@ -231,7 +231,7 @@ Maybe<one::TensorTuple> InterpretJob(const one::TensorTuple& graph_inputs,
 
   CHECK_OR_RETURN(job.has_placement()) << "no job placement";
   const auto& job_placement = job.placement();
-  NameToParallelDescType op2paralleldesc;
+  NameToParallelDescMap op2paralleldesc;
   for (const auto& blob_placement_group : job_placement.blob_placement_group()) {
     const auto parallel_desc = SymbolOf(ParallelDesc(blob_placement_group.parallel_conf()));
     for (const auto& logical_blob_id : blob_placement_group.lbi()) {
