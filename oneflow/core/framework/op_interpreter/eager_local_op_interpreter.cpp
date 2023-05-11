@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
@@ -53,15 +54,18 @@ Maybe<Symbol<Device>> RawGetDefaultCpuDevice() { return Device::New("cpu"); }
 
 constexpr auto* GetDefaultCpuDevice = DECORATE(&RawGetDefaultCpuDevice, ThreadLocal);
 
-Maybe<Symbol<Device>> GetDefaultDevice(const TensorTuple& inputs, const OpExprInterpContext& ctx) {
-  if (inputs.empty()) {
-    if (ctx.device.has_value()) {
-      return JUST(ctx.device);
-    } else {
-      return GetDefaultCpuDevice();
+Maybe<Symbol<Device>> GetDefaultDevice(const TensorTuple& inputs, const OpExprInterpContext& ctx,
+                                       const UserOpExpr& user_op_expr) {
+  if (!inputs.empty()) {
+    for (int32_t i = 0; i < inputs.size(); ++i) {
+      if (!user_op_expr.IsHostMemoryInput(i)) { return JUST(inputs.at(i)->device()); }
     }
   }
-  return JUST(inputs.at(0)->device());
+  if (ctx.device.has_value()) {
+    return JUST(ctx.device);
+  } else {
+    return GetDefaultCpuDevice();
+  }
 }
 
 Maybe<EagerLocalTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>& tensor) {
@@ -75,7 +79,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
                            TensorTuple* outputs, const OpExprInterpContext& ctx) {
   OF_PROFILER_RANGE_GUARD("NaiveInterpret");
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());  // NOLINT
-  Symbol<Device> default_device = JUST(GetDefaultDevice(inputs, ctx));
+  Symbol<Device> default_device = JUST(GetDefaultDevice(inputs, ctx, user_op_expr));
   const std::shared_ptr<const LocalTensorInferResult> result =
       JUST([&]() -> Maybe<const LocalTensorInferResult> {
         LocalTensorMetaInferArgs infer_args;
@@ -84,8 +88,17 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       }());
 
   vm::EagerBlobObjectList input_eager_blob_objects(inputs.size());
+  // expand lifetime of host_inputs to the end of this function
+  TensorTuple host_inputs;
   for (int i = 0; i < inputs.size(); i++) {
-    input_eager_blob_objects.at(i) = JUST(inputs.at(i)->eager_blob_object());
+    if (user_op_expr.IsHostMemoryInput(i)) {
+      const auto& host_input = JUST(functional::To(
+          inputs.at(i), Optional<Symbol<Device>>(JUST(GetDefaultCpuDevice())), NullOpt, false));
+      input_eager_blob_objects.at(i) = JUST(host_input->eager_blob_object());
+      host_inputs.emplace_back(host_input);
+    } else {
+      input_eager_blob_objects.at(i) = JUST(inputs.at(i)->eager_blob_object());
+    }
   }
 
   const auto& output_tensor_metas = result->output_tensor_metas();
@@ -103,7 +116,8 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
         if (kernel->output_is_mut2_type(i)) {
           mut_tensor_meta = std::make_shared<MutLocalTensorMeta>(
               output_tensor_metas.at(i)->shape(), output_tensor_metas.at(i)->stride(),
-              output_tensor_metas.at(i)->dtype(), output_tensor_metas.at(i)->device());
+              output_tensor_metas.at(i)->dtype(), output_tensor_metas.at(i)->memory_format(),
+              output_tensor_metas.at(i)->device());
         }
       }
       std::shared_ptr<EagerLocalTensorImpl> tensor_impl =
@@ -136,6 +150,8 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     }
   }
 
+  if (default_device->enum_type() == DeviceType::kMeta) { return Maybe<void>::Ok(); }
+
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->Call(kernel, std::move(input_eager_blob_objects),
                          std::move(output_eager_blob_objects), ctx, result->stream());
@@ -150,9 +166,9 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     }));
     JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
     const auto& mut_tensor_meta = const_cast<EagerLocalTensorImpl*>(tensor_impl)->mut_tensor_meta();
-    Symbol<LocalTensorMeta> new_tensor_meta =
-        SymbolOf(LocalTensorMeta(mut_tensor_meta->shape(), mut_tensor_meta->stride(),
-                                 mut_tensor_meta->dtype(), mut_tensor_meta->device()));
+    Symbol<LocalTensorMeta> new_tensor_meta = SymbolOf(LocalTensorMeta(
+        mut_tensor_meta->shape(), mut_tensor_meta->stride(), mut_tensor_meta->dtype(),
+        mut_tensor_meta->memory_format(), mut_tensor_meta->device()));
     std::shared_ptr<EagerLocalTensorImpl> final_tensor_impl =
         std::make_shared<EagerLocalTensorImpl>(JUST(tensor_impl->tensor_storage()),
                                                JUST(tensor_impl->storage_offset()), false, false);
@@ -313,7 +329,9 @@ Maybe<void> RawLocalToGlobal(const LocalToGlobalOpExpr& op_expr, const TensorTup
     const auto& parallel_desc = JUST(ctx.parallel_desc);
     const auto& logical_shape = JUST(ctx.attrs.GetAttr<Shape>("shape"));
     DataType dtype = JUST(ctx.attrs.GetAttr<DataType>("dtype"));
-    GlobalTensorMeta tensor_meta(logical_shape, dtype, nd_sbp, parallel_desc);
+    // MemoryFormat memory_format = JUST(ctx.attrs.GetAttr<MemoryFormat>("memory_format"));
+    GlobalTensorMeta tensor_meta(logical_shape, dtype, MemoryFormat::kContiguous, nd_sbp,
+                                 parallel_desc);
     Optional<int64_t> parallel_id{};
     const auto& device = JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
     const auto& global_tensor_impl = JUST(EagerGlobalTensorImpl::New(

@@ -51,10 +51,10 @@ def _roundup(x, n):
 class TestImageBatchAlign(flow.unittest.TestCase):
     def test_image_batch_align(test_case):
         image_files = [
-            "/dataset/mscoco_2017/val2017/000000000139.jpg",
-            "/dataset/mscoco_2017/val2017/000000000632.jpg",
-            "/dataset/mscoco_2017/val2017/000000000785.jpg",
-            "/dataset/mscoco_2017/val2017/000000001000.jpg",
+            flow.unittest.dataset_dir("mscoco_2017/val2017/000000000139.jpg"),
+            flow.unittest.dataset_dir("mscoco_2017/val2017/000000000632.jpg"),
+            flow.unittest.dataset_dir("mscoco_2017/val2017/000000000785.jpg"),
+            flow.unittest.dataset_dir("mscoco_2017/val2017/000000001000.jpg"),
         ]
         alignment = 16
         images = _read_images_by_cv(image_files)

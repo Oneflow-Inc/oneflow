@@ -13,7 +13,7 @@ Pattern {
 
   rewrite dropout with {
     let random_mask_like = CopyUserOpAttrs(dropout, op<oneflow.random_mask_like>(a){rate = rate} -> (mask));
-    let fused_bias_add_mask_scale = BuildFusedBiasAddMaskScaleOpWithRate(a, b, random_mask_like.0, axis, rate, dropout);
+    let fused_bias_add_mask_scale = CopyUserOpAttrs(dropout, BuildFusedBiasAddMaskScaleOpWithRate(a, b, random_mask_like.0, axis, rate, dropout));
     replace dropout with (fused_bias_add_mask_scale.0, random_mask_like.0);
   };
 }
@@ -48,10 +48,10 @@ Pattern {
   let query_transpose = op<oneflow.transpose>(query_reshape.0) {device_name = device_name, device_tag = device_tag, perm = attr<"[0 : si32, 2 : si32, 1 : si32, 3 : si32]">};
   let key_transpose = op<oneflow.transpose>(key_reshape.0) {device_name = device_name, device_tag = device_tag, perm = attr<"[0 : si32, 2 : si32, 3 : si32, 1 : si32]">};
   let value_transpose = op<oneflow.transpose>(value_reshape.0) {device_name = device_name, device_tag = device_tag, perm = attr<"[0 : si32, 2 : si32, 1 : si32, 3 : si32]">};
-  let scores = op<oneflow.batch_matmul>(query_transpose.0, key_transpose.0) {alpha = attr<"1.000000e+00 : f64">, device_name = device_name, device_tag = device_tag, transpose_a = attr<"false : bool">, transpose_b = attr<"false : bool">};
-  let scores_scaled = op<oneflow.scalar_div>(scores.0) {device_name = device_name, device_tag = device_tag, float_operand = scalar_div_operand, has_float_operand = attr<"true : bool">};
+  let scores = op<oneflow.batch_matmul>(query_transpose.0, key_transpose.0) {alpha = attr<"1.000000e+00 : f64">, device_name = device_name, device_tag = device_tag, transpose_a = attr<"false">, transpose_b = attr<"false">};
+  let scores_scaled = op<oneflow.scalar_div>(scores.0) {device_name = device_name, device_tag = device_tag, float_operand = scalar_div_operand, has_float_operand = attr<"true">};
   let attn = op<oneflow.softmax>(scores_scaled.0) {device_name = device_name, device_tag = device_tag};
-  let out = op<oneflow.batch_matmul>(attn.0, value_transpose.0) {alpha = attr<"1.000000e+00 : f64">, device_name = device_name, device_tag = device_tag, transpose_a = attr<"false : bool">, transpose_b = attr<"false : bool">};
+  let out = op<oneflow.batch_matmul>(attn.0, value_transpose.0) {alpha = attr<"1.000000e+00 : f64">, device_name = device_name, device_tag = device_tag, transpose_a = attr<"false">, transpose_b = attr<"false">};
   let out_transpose = op<oneflow.transpose>(out.0) {device_name = device_name, device_tag = device_tag, perm = attr<"[0 : si32, 2 : si32, 1 : si32, 3 : si32]">};
   let out_reshape = op<oneflow.reshape>(out_transpose.0) {device_name = device_name, device_tag = device_tag, shape = out_shape} -> (out_t: Type);
 
@@ -68,7 +68,7 @@ Pattern {
       key_layout = attr<"\"BM(HK)\"">,
       value_layout = attr<"\"BM(HK)\"">,
       output_layout = attr<"\"BM(HK)\"">,
-      operand_segment_sizes = attr<"dense<[1, 1, 1, 0, 0, 0, 0]> : vector<7xi32>">,
+      operand_segment_sizes = attr<"array<i32: 1, 1, 1, 0, 0, 0, 0>">,
       scale = GetReciprocal(scalar_div_operand)
     } -> (out_t));
   };
@@ -94,9 +94,9 @@ Pattern {
   let key_reshape_to_batch = op<oneflow.reshape>(key_permute.0) {device_name = device_name, device_tag = device_tag};
   let query_reshape_to_batch = op<oneflow.reshape>(query_permute.0) {device_name = device_name, device_tag = device_tag};
   let key_transpose = op<oneflow.transpose>(key_reshape_to_batch.0) {device_name = device_name, device_tag = device_tag, perm = attr<"[0 : si32, 2 : si32, 1 : si32]">};
-  let scores_scaled = op<oneflow.batch_matmul>(query_reshape_to_batch.0, key_transpose.0) {alpha = batch_matmul_alpha, device_name = device_name, device_tag = device_tag, transpose_a = attr<"false : bool">, transpose_b = attr<"false : bool">};
+  let scores_scaled = op<oneflow.batch_matmul>(query_reshape_to_batch.0, key_transpose.0) {alpha = batch_matmul_alpha, device_name = device_name, device_tag = device_tag, transpose_a = attr<"false">, transpose_b = attr<"false">};
   let attn = op<oneflow.softmax>(scores_scaled.0) {device_name = device_name, device_tag = device_tag};
-  let out = op<oneflow.batch_matmul>(attn.0, value_reshape_to_batch.0) {alpha = attr<"1.000000e+00  : f64">, device_name = device_name, device_tag = device_tag, transpose_a = attr<"false : bool">, transpose_b = attr<"false : bool">};
+  let out = op<oneflow.batch_matmul>(attn.0, value_reshape_to_batch.0) {alpha = attr<"1.000000e+00  : f64">, device_name = device_name, device_tag = device_tag, transpose_a = attr<"false">, transpose_b = attr<"false">};
   let out_reshape_before = op<oneflow.reshape>(out.0) {device_name = device_name, device_tag = device_tag};
   let out_transpose = op<oneflow.transpose>(out_reshape_before.0) {device_name = device_name, device_tag = device_tag, perm = attr<"[0 : si32, 2 : si32, 1 : si32, 3 : si32]">};
   let out_reshape = op<oneflow.reshape>(out_transpose.0) {device_name = device_name, device_tag = device_tag, shape = out_shape} -> (out_t: Type);
@@ -114,7 +114,7 @@ Pattern {
       key_layout = attr<"\"BM(HK)\"">,
       value_layout = attr<"\"BM(HK)\"">,
       output_layout = attr<"\"BM(HK)\"">,
-      operand_segment_sizes = attr<"dense<[1, 1, 1, 0, 0, 0, 0]> : vector<7xi32>">,
+      operand_segment_sizes = attr<"array<i32: 1, 1, 1, 0, 0, 0, 0>">,
       scale = batch_matmul_alpha
     } -> (out_t));
   };

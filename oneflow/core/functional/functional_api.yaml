@@ -30,6 +30,11 @@
     ]
   bind_python: true
 
+# this api just for test host memory input
+- name: "host_scalar_add_by_tensor"
+  signature: "Tensor (Tensor x, Tensor scalar) => HostScalarAddByTensor"
+  bind_python: true
+
 - name: "amin"
   signature: "Tensor (Tensor input, Int32List[1] dim=None, Bool keepdim=False) => Amin"
   bind_python: True
@@ -351,8 +356,8 @@
   signature:
     [
       "Tensor (Tensor input) => Max",
-      "TensorTuple[values, indices] (Tensor input, Int32 dim, Bool keepdim=False) => Max",
       "Tensor (Tensor input, Tensor other) => Max",
+      "TensorTuple[values, indices] (Tensor input, Int32 dim, Bool keepdim=False) => Max",
     ]
   bind_python: True
 
@@ -384,8 +389,8 @@
 - name: "reduce_sum"
   signature:
     [
-      "Tensor (Tensor x, Int32List[1] dim, Bool keepdim=False) => ReduceSum",
-      "Tensor (Tensor x) => ReduceSumWhole",
+      "Tensor (Tensor x, Int32List[1] dim, Bool keepdim=False, *, DataType dtype=None) => ReduceSum",
+      "Tensor (Tensor x, *, DataType dtype=None) => ReduceSumWhole",
     ]
   bind_python: True
 
@@ -699,7 +704,7 @@
   bind_python: True
 
 - name: "tanh_grad"
-  signature: "Tensor (Tensor x, Tensor dy) => TanhGrad"
+  signature: "Tensor (Tensor y, Tensor dy) => TanhGrad"
   bind_python: True
 
 - name: "threshold"
@@ -834,8 +839,18 @@
   signature: "Tensor (Tensor x, Float lower=0.125, Float upper=0.3333333333333333, Bool training=False) => RReluInplace"
   bind_python: True
 
+- name: "normal_"
+  signature: "Tensor (Tensor x, Float mean=0.0, Float std=1.0, Generator generator=None) => Normal_"
+  bind_python: True
+  
 - name: "normal"
   signature: [
+      "Tensor (Tensor mean, Tensor std, *, Tensor out=None, 
+      Generator generator=None, Bool requires_grad=False) => TensorTensorNormal",
+      "Tensor (Tensor mean, Float std=1.0, *, Tensor out=None, 
+      Generator generator=None, Bool requires_grad=False) => TensorScalarNormal",
+      "Tensor (Float mean, Tensor std, *, Tensor out=None, 
+      Generator generator=None, Bool requires_grad=False) => ScalarTensorNormal",
       "Tensor (Float mean, Float std, Shape size, *, Tensor out=None, DataType dtype=None, Device device=None,
       Generator generator=None, Bool requires_grad=False) => Normal",
       "Tensor (Float mean, Float std, Int32 size, *, Tensor out=None, DataType dtype=None, Device device=None,
@@ -1252,6 +1267,10 @@
   signature: "Tensor (Tensor x, TensorTuple weights, TensorTuple biases, Bool skip_final_activation, FloatList dropout_rate_list, Generator generator=None) => FusedMatmulBiasAddReluDropout"
   bind_python: True
 
+- name: "fused_apply_rotary_emb"
+  signature: 'Tensor (Tensor x, *, Tensor cos=None, Tensor sin=None, Tensor position_ids=None, String x_layout="BHMK", String output_layout=None, String mode="plane", Int64 tensor_index=None, Int64 k_size=None, Float base=1e4, Int64 rotary_size=None) => FusedApplyRotaryEmb'
+  bind_python: True
+
 - name: "fused_relu_dropout_grad"
   signature: "Tensor (Tensor dy, Tensor mask, Float scale) => FusedReluDropoutGrad"
   bind_python: False
@@ -1543,6 +1562,10 @@
   signature: "Tensor (Tensor dy, Tensor x, Tensor inv_rms, Tensor weight=None, Bool param_grad) => RMSNormGrad"
   bind_python: False
 
+- name: "skip_rms_norm"
+  signature: "Tensor (Tensor x, *, Tensor weight=None, Tensor bias=None, Tensor skip=None, Double epsilon=1e-5, Double alpha=1e1) => SkipRMSNorm"
+  bind_python: True
+
 - name: "group_norm"
   signature:
     'Tensor (Tensor x, Tensor gamma=None, Tensor beta=None, Bool affine, Int32 num_groups, Double epsilon, String data_format="channels_first", String activation="none") => GroupNorm'
@@ -1569,19 +1592,19 @@
   bind_python: False
 
 - name: "adaptive_avg_pool1d"
-  signature: "Tensor (Tensor x, Int64List[1] output_size) => AdaptiveAvgPool1D"
+  signature: 'Tensor (Tensor x, Int64List[1] output_size, String data_format="channels_first") => AdaptiveAvgPool1D'
   bind_python: True
 
 - name: "adaptive_avg_pool2d"
-  signature: "Tensor (Tensor x, Int64List[2] output_size) => AdaptiveAvgPool2D"
+  signature: 'Tensor (Tensor x, Int64List[2] output_size, String data_format="channels_first") => AdaptiveAvgPool2D'
   bind_python: True
 
 - name: "adaptive_avg_pool3d"
-  signature: "Tensor (Tensor x, Int64List[3] output_size) => AdaptiveAvgPool3D"
+  signature: 'Tensor (Tensor x, Int64List[3] output_size, String data_format="channels_first") => AdaptiveAvgPool3D'
   bind_python: True
 
 - name: "adaptive_pool_grad"
-  signature: "Tensor (Tensor x, Tensor dy, String mode, Int32 ndims) => AdaptivePoolNdGrad"
+  signature: 'Tensor (Tensor x, Tensor dy, String mode, Int32 ndims, String data_format="channels_first") => AdaptivePoolNdGrad'
 
 - name: "tf_pool_grad"
   signature:
@@ -1713,6 +1736,7 @@
       "Tensor (Tensor x, DataType dtype=None, Bool copy=False) => To",
       "Tensor (Tensor x, Tensor other, Bool copy=False) => To",
       "Tensor (Tensor x, String device=None) => To",
+      "Tensor (Tensor x, *, MemoryFormat memory_format) => To",
     ]
   bind_python: True
 
@@ -2042,7 +2066,7 @@
 
 - name: "unsorted_segment_sum_like"
   signature: "Tensor (Tensor x, Tensor segment_ids, Tensor like, Int64 axis) => UnsortedSegmentSumLike"
-  bind_python: False
+  bind_python: True
 
 - name: "unsorted_segment_sum"
   signature: "Tensor (Tensor x, Tensor segment_ids, Int64 axis, Int64 num_segments) => UnsortedSegmentSum"
@@ -3077,19 +3101,19 @@
   bind_python: True
 
 - name: "adaptive_max_pool1d"
-  signature: "TensorTuple (Tensor input, Int64List[1] output_size) => AdaptiveMaxPool1D"
+  signature: 'TensorTuple (Tensor input, Int64List[1] output_size, String data_format="channels_first") => AdaptiveMaxPool1D'
   bind_python: True
 
 - name: "adaptive_max_pool2d"
-  signature: "TensorTuple (Tensor input, Int64List[2] output_size) => AdaptiveMaxPool2D"
+  signature: 'TensorTuple (Tensor input, Int64List[2] output_size, String data_format="channels_first") => AdaptiveMaxPool2D'
   bind_python: True
 
 - name: "adaptive_max_pool3d"
-  signature: "TensorTuple (Tensor input, Int64List[3] output_size) => AdaptiveMaxPool3D"
+  signature: 'TensorTuple (Tensor input, Int64List[3] output_size, String data_format="channels_first") => AdaptiveMaxPool3D'
   bind_python: True
 
 - name: "adaptive_max_pool_grad"
-  signature: "Tensor (Tensor x, Tensor index, Tensor dy, Int32 ndims) => AdaptiveMaxPoolNdGrad"
+  signature: 'Tensor (Tensor x, Tensor index, Tensor dy, Int32 ndims, String data_format="channels_first") => AdaptiveMaxPoolNdGrad'
   bind_python: False
 
 - name: "tan_grad_grad"
@@ -3293,3 +3317,48 @@
 - name: "clone"
   signature: "Tensor (Tensor input) => Clone"
   bind_python: True
+
+- name: "real"
+  signature: "Tensor (Tensor x) => Real"
+  bind_python: True
+
+- name: "real_grad"
+  signature: "Tensor (Tensor dout) => RealGrad"
+  bind_python: False
+
+- name: "imag"
+  signature: "Tensor (Tensor x) => Imag"
+  bind_python: True
+
+- name: "imag_grad"
+  signature: "Tensor (Tensor dout) => ImagGrad"
+  bind_python: False
+
+- name: "conj"
+  signature: "Tensor (Tensor x) => Conj"
+  bind_python: True
+
+- name: "conj_physical"
+  signature: "Tensor (Tensor x) => ConjPhysical"
+  bind_python: True
+
+- name: "frac"
+  signature: "Tensor (Tensor x) => Frac"
+  bind_python: True
+
+- name: "frac_"
+  signature: "Tensor (Tensor x) => FracInplace"
+  bind_python: True
+
+- name: "digamma"
+  signature: "Tensor (Tensor x) => Digamma"
+  bind_python: True
+
+- name: "digamma_grad"
+  signature: "Tensor (Tensor x, Tensor dy) => DigammaGrad"
+  bind_python: False
+
+- name: "trigamma"
+  signature: "Tensor (Tensor x) => Trigamma"
+  bind_python: False
+  

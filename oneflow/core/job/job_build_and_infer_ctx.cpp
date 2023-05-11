@@ -276,7 +276,8 @@ Maybe<void> JobBuildAndInferCtx::GenOpProducedEmptyLogicalBlobDesc(Operator* op)
         << Error::LogicalBlobNameExistError()
         << "duplicate logical blob name found. op_name: " << lbi.op_name()
         << " blob_name: " << lbi.blob_name();
-    lbi2logical_blob_desc_.emplace(lbi, std::make_unique<BlobDesc>(DataType::kInvalidDataType));
+    lbi2logical_blob_desc_.emplace(
+        lbi, std::make_unique<BlobDesc>(DataType::kInvalidDataType, MemoryFormat::kContiguous));
   }
   return Maybe<void>::Ok();
 }
@@ -983,9 +984,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     // the autograd engine for those tensors that have no gradients
     JUST(DoPass("EliminateDeadNodesPass"));
     JUST(DoPass("NormalizationExponentialAverageAutoTickPass"));
-#ifdef WITH_CUDA
     JUST(DoPass("AutoMixedPrecision"));
-#endif
     // prune depend OP and and add ctrl_in_op to op_conf accordingly
     // to express the same semantics and avoid performance loss
     JUST(DoPass("PruneDependOpPass"));

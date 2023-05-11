@@ -19,14 +19,7 @@ limitations under the License.
 
 import unittest
 import numpy as np
-
 import os
-
-os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-os.environ["ONEFLOW_MLIR_GROUP_MATMUL"] = "1"
-os.environ["ONEFLOW_MLIR_STDOUT"] = "1"
-os.environ["ONEFLOW_MLIR_CSE"] = "0"
-
 import oneflow as flow
 import oneflow.unittest
 import oneflow.sysconfig
@@ -71,7 +64,13 @@ def do_fused_matmul_bias_graph(test_case, dev):
 
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipUnless(oneflow.sysconfig.with_cuda(), "needs -DBUILD_CUDA=ON")
-class TestGroupMatMulBias(oneflow.unittest.TestCase):
+class TestGroupMatMulBias(oneflow.unittest.MLIRTestCase):
+    def setUp(self):
+        os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+        os.environ["ONEFLOW_MLIR_GROUP_MATMUL"] = "1"
+        os.environ["ONEFLOW_MLIR_STDOUT"] = "1"
+        os.environ["ONEFLOW_MLIR_CSE"] = "0"
+
     def test_fused_matmul_bias_graph(test_case):
         do_fused_matmul_bias_graph(test_case, "cuda")
 

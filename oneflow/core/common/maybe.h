@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_MAYBE_H_
 #define ONEFLOW_CORE_COMMON_MAYBE_H_
 
-#include <glog/logging.h>
+#include "oneflow/core/common/throw.h"
 #include <google/protobuf/text_format.h>
 #include "oneflow/core/common/type_traits.h"
 #include "oneflow/core/common/either_ptr.h"

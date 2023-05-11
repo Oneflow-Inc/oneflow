@@ -21,6 +21,9 @@ limitations under the License.
 
 namespace oneflow {
 
+class TransportTaskProto;
+class TaskGraphRebuildCtx;
+
 class TransportTaskNode : public TaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TransportTaskNode);
@@ -30,7 +33,21 @@ class TransportTaskNode : public TaskNode {
   void set_lbi(const LogicalBlobId& lbi) { lbi_ = lbi; }
   LogicalBlobId lbi() const { return lbi_; }
 
+  Maybe<void> InitTransportTaskFromProtoIf(const TransportTaskProto& transport_task_proto,
+                                           const TaskGraphRebuildCtx& ctx);
+  void ToTransportTaskProtoIf(TransportTaskProto*) const;
+
+  ExecNode::InferBlobDescsMethod GetInferBlobDescsMethod() const override {
+    // TransportTaskNode infers output BlobDesc based on input BlobDesc, because it can't infers
+    // output BlobDesc with SBP.
+    return &ExecNode::InferBlobDescsByInputs;
+  }
+
  private:
+  virtual Maybe<void> InitTransportTaskFromProto(const TransportTaskProto&,
+                                                 const TaskGraphRebuildCtx& ctx) = 0;
+
+  virtual void ToTransportTaskProto(TransportTaskProto*) const = 0;
   LogicalBlobId lbi_;
 };
 

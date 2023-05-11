@@ -35,7 +35,7 @@ class TestResNet50(flow.unittest.TestCase):
         rgb_mean = [123.68, 116.779, 103.939]
         rgb_std = [58.393, 57.12, 57.375]
         record_reader = flow.nn.OFRecordReader(
-            "/dataset/imagenette/ofrecord",
+            flow.unittest.dataset_dir("imagenette/ofrecord"),
             batch_size=batch_size,
             data_part_num=1,
             part_name_suffix_length=5,
@@ -66,7 +66,9 @@ class TestResNet50(flow.unittest.TestCase):
             norm_layer=flow.nn.BatchNorm2d,
         )
         res50_module.train()
-        res50_module.load_state_dict(flow.load("/dataset/imagenette/resnet50_models"))
+        res50_module.load_state_dict(
+            flow.load(flow.unittest.dataset_dir("imagenette/resnet50_models"))
+        )
         of_corss_entropy = flow.nn.CrossEntropyLoss()
         res50_module.to("cuda")
         of_corss_entropy.to("cuda")

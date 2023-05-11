@@ -1141,8 +1141,8 @@ class Ftrl(Optimizer):
         for param_group in self.param_groups:
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
-                self._state[param] = dict()
-                self._state[param]["accumulator_value"] = flow.zeros_like(param).fill_(
+                self.state[param] = dict()
+                self.state[param]["accumulator_value"] = flow.zeros_like(param).fill_(
                     param_group["initial_accumulator_value"]
                 )
 
@@ -1179,11 +1179,11 @@ class Ftrl(Optimizer):
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
-                    if "z" not in self._state[param]:
-                        self._state[param]["z"] = flow.zeros_like(param)
+                    if "z" not in self.state[param]:
+                        self.state[param]["z"] = flow.zeros_like(param)
 
-                    accumulate_tensor = self._state[param]["accumulator_value"]
-                    z_tensor = self._state[param]["z"]
+                    accumulate_tensor = self.state[param]["accumulator_value"]
+                    z_tensor = self.state[param]["z"]
 
                     flow._C.dispatch_ftrl_update(
                         self._op,
@@ -1305,8 +1305,10 @@ class Optimizer(Optimizer):
         self.optimizer = optimizer
         self.embeddings = embeddings
         self.param_groups = optimizer.param_groups
-        self._default_options = optimizer._default_options
-        self._state = optimizer._state
+        # self._default_options = optimizer._default_options
+        # self._state = optimizer._state
+        self.defaults = optimizer.defaults
+        self.state = optimizer.state
         self.embedding_param_group_dict = {}
         for embedding in self.embeddings:
             for group in self.param_groups:
@@ -1319,7 +1321,7 @@ class Optimizer(Optimizer):
                 raise ValueError("embedding must in optimizers param_group")
 
     def step(self, closure: Callable = None):
-        step = self.optimizer._state["step"]
+        step = self.optimizer.state["step"]
         for embedding in self.embeddings:
             param_group = self.embedding_param_group_dict[embedding.embedding_name]
             if type(self.optimizer) is flow.nn.optimizer.sgd.SGD:

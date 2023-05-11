@@ -20,12 +20,7 @@ import os
 import unittest
 import numpy as np
 
-os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-os.environ["ONEFLOW_MLIR_FUSE_FORWARD_OPS"] = "1"
-os.environ["ONEFLOW_MLIR_STDOUT"] = "1"
-os.environ["ONEFLOW_MLIR_ENABLE_TIMING"] = "1"
-os.environ["ONEFLOW_MLIR_PRINT_STATS"] = "1"
-os.environ["ONEFLOW_MLIR_ENABLE_IR_PRINTING"] = "1"
+
 import oneflow as flow
 import oneflow.unittest
 
@@ -47,7 +42,15 @@ def _cast_optimal_pass(test_case, dtype):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestCastOpOptimalPass(flow.unittest.TestCase):
+class TestCastOpOptimalPass(flow.unittest.MLIRTestCase):
+    def setUp(self):
+        os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+        os.environ["ONEFLOW_MLIR_FUSE_FORWARD_OPS"] = "1"
+        os.environ["ONEFLOW_MLIR_STDOUT"] = "1"
+        os.environ["ONEFLOW_MLIR_ENABLE_TIMING"] = "1"
+        os.environ["ONEFLOW_MLIR_PRINT_STATS"] = "1"
+        os.environ["ONEFLOW_MLIR_ENABLE_IR_PRINTING"] = "1"
+
     def test_case_optimal_pass(test_case):
         for dtype in [flow.float32, flow.float64, flow.int32, flow.int64]:
             _cast_optimal_pass(test_case, dtype)
