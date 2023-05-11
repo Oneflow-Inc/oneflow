@@ -5,6 +5,6 @@ enum MemoryFormat {
   kContiguous = 0;
   kChannelsLast = 1;
   kPreserve = 2;
-  MemoryFormat_Count = 3;
 
+  kMemoryFormatCount = 3;
 };

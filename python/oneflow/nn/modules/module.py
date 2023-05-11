@@ -1400,13 +1400,29 @@ class Module(object):
         """
         return self._apply(lambda t: flow.empty_like(t, device=device))
 
-    def _apply_memory_format(self, memory_format):
+    def _to_memory_format(self, memory_format):
+        r"""Casts the parameters and buffers in this module to another memory format.
+
+        The data_format attribute should also be modified. 
+        
+        Note:
+            This interface is unstable and may be removed in the future once the data_format
+            attribute has been removed from the module.
+
+        Args:
+            memory_format (:class:`oneflow.memory_format`): the desired memory
+                format for 4D parameters and buffers in this module (keyword
+                only argument)
+
+        Returns:
+            Module: self
+        """
         for module in self.children():
-            module._apply_memory_format(memory_format)
-        self.apply_memory_format(memory_format)
+            module._to_memory_format(memory_format)
+        self.to_memory_format(memory_format)
         return self
 
-    def apply_memory_format(self, memory_format) -> None:
+    def to_memory_format(self, memory_format) -> None:
         pass
 
     @overload
@@ -1538,7 +1554,7 @@ class Module(object):
                 )
 
         if memory_format is not None:
-            self._apply_memory_format(memory_format)
+            self._to_memory_format(memory_format)
 
         def convert(t):
             return t.to(device, dtype if t.is_floating_point() else None)

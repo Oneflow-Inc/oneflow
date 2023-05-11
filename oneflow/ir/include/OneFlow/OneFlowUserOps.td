@@ -10895,7 +10895,7 @@ def OneFlow_ConvertMemoryFormatOp : OneFlow_BaseOp<"convert_memory_format", [NoM
     OneFlow_Tensor:$out
   );
   let attrs = (ins
-    StrAttr:$data_format
+    OneFlow_MemoryFormat:$memory_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

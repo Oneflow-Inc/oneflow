@@ -72,7 +72,7 @@ void ComputeChannelsLastToContiguous(ep::Stream* stream, int ndim, const int64_t
 using ConvertMemoryFormatFunc =
     std::function<void(ep::Stream*, int, const int64_t*, DataType, const void*, void*)>;
 
-ConvertMemoryFormatFunc convert_funcs[MemoryFormat_Max][MemoryFormat_Max] = {
+ConvertMemoryFormatFunc convert_funcs[kMemoryFormatCount][kMemoryFormatCount] = {
     /*kContiguous->other*/ {ComputeIdentity, ComputeContiguousToChannelsLast},
     /*kChannelsLast->other*/ {ComputeChannelsLastToContiguous, ComputeIdentity},
 };

@@ -3245,7 +3245,7 @@ class ToMemoryFormatFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, MemoryFormat memory_format) const {
     if (input->memory_format() == memory_format) { return input; }
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("memory_format");
-    attrs.SetAllAttrs(GetStringFromMemoryFormat(memory_format));
+    attrs.SetAllAttrs(memory_format);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 

@@ -19,7 +19,6 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename T>
 class ConvertMemoryFormatKernel final : public user_op::OpKernel {
  public:
   ConvertMemoryFormatKernel() = default;
@@ -30,20 +29,14 @@ class ConvertMemoryFormatKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache*) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const auto& in_shape_under_memory_format =
-        GetShapeFromMemoryFormat(in->shape_view(), in->memory_format());
-    ConvertMemoryFormat(ctx->stream(), in->shape_view().NumAxes(),
-                        in_shape_under_memory_format.data(), in->data_type(), in->dptr(),
-                        out->mut_dptr(), in->memory_format(), out->memory_format());
+    ConvertMemoryFormat(ctx->stream(), in->shape_view().NumAxes(), in->shape_view().data(),
+                        in->data_type(), in->dptr(), out->mut_dptr(), in->memory_format(),
+                        out->memory_format());
   }
+
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CONVERT_MEMORY_FORMAT_KERNEL(dtype, other) \
-  REGISTER_USER_KERNEL("convert_memory_format")             \
-      .SetCreateFn<ConvertMemoryFormatKernel<dtype>>()      \
-      .SetIsMatchedHob((user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
-
-OF_PP_FOR_EACH_TUPLE(REGISTER_CONVERT_MEMORY_FORMAT_KERNEL, TRIVIALLY_COPY_DATA_TYPE_SEQ)
+REGISTER_USER_KERNEL("convert_memory_format").SetCreateFn<ConvertMemoryFormatKernel>();
 
 }  // namespace oneflow

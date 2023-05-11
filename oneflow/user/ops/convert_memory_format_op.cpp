@@ -19,6 +19,28 @@ limitations under the License.
 
 namespace oneflow {
 
+static Shape ComputeShapeIdentity(const Shape& shape) { return shape; }
+
+static Shape ComputeShapeContiguousToChannelsLast(const Shape& shape) {
+  int ndim = shape.size();
+  if (ndim <= 2) { return ComputeShapeIdentity(shape); }
+  Shape target_shape(ndim);
+  target_shape[0] = shape[0];
+  target_shape[ndim - 1] = shape[1];
+  for (int i = 0; i < ndim - 2; ++i) { target_shape[i + 1] = shape[i + 2]; }
+  return target_shape;
+}
+
+static Shape ComputeShapeChannelsLastToContiguous(const Shape& shape) {
+  int ndim = shape.size();
+  if (ndim <= 2) { return ComputeShapeIdentity(shape); }
+  Shape target_shape(ndim);
+  target_shape[0] = shape[0];
+  target_shape[1] = shape[ndim - 1];
+  for (int i = 0; i < ndim - 2; ++i) { target_shape[i + 2] = shape[i + 1]; }
+  return target_shape;
+}
+
 static Maybe<void> GetSbpIdentity(user_op::SbpContext* ctx, const Shape& shape) {
   for (int32_t i = 0; i < shape.size(); ++i) {
     ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
@@ -26,7 +48,7 @@ static Maybe<void> GetSbpIdentity(user_op::SbpContext* ctx, const Shape& shape) 
   return Maybe<void>::Ok();
 }
 
-static Maybe<void> GetSbpContiguousToChannelsLast2d(user_op::SbpContext* ctx, const Shape& shape) {
+static Maybe<void> GetSbpContiguousToChannelsLast(user_op::SbpContext* ctx, const Shape& shape) {
   int ndim = shape.size();
   if (ndim <= 2) { return GetSbpIdentity(ctx, shape); }
   ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
@@ -37,7 +59,7 @@ static Maybe<void> GetSbpContiguousToChannelsLast2d(user_op::SbpContext* ctx, co
   return Maybe<void>::Ok();
 }
 
-static Maybe<void> GetSbpChannelsLast2dToContiguous(user_op::SbpContext* ctx, const Shape& shape) {
+static Maybe<void> GetSbpChannelsLastToContiguous(user_op::SbpContext* ctx, const Shape& shape) {
   int ndim = shape.size();
   if (ndim <= 2) { return GetSbpIdentity(ctx, shape); }
   ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
@@ -48,12 +70,24 @@ static Maybe<void> GetSbpChannelsLast2dToContiguous(user_op::SbpContext* ctx, co
   return Maybe<void>::Ok();
 }
 
+using ComputeShapeFunc = std::function<Shape(const Shape&)>;
 using GetSbpFunc = std::function<Maybe<void>(user_op::SbpContext* ctx, const Shape& shape)>;
 
-static GetSbpFunc get_sbp_funcs[MemoryFormat_Max][MemoryFormat_Max] = {
-    /*kContiguous->other*/ {GetSbpIdentity, GetSbpContiguousToChannelsLast2d},
-    /*kChannelsLast->other*/ {GetSbpChannelsLast2dToContiguous, GetSbpIdentity},
+static ComputeShapeFunc compute_shape_funcs[kMemoryFormatCount][kMemoryFormatCount] = {
+    /*kContiguous->other*/ {ComputeShapeIdentity, ComputeShapeContiguousToChannelsLast},
+    /*kChannelsLast->other*/ {ComputeShapeChannelsLastToContiguous, ComputeShapeIdentity},
 };
+
+static GetSbpFunc get_sbp_funcs[kMemoryFormatCount][kMemoryFormatCount] = {
+    /*kContiguous->other*/ {GetSbpIdentity, GetSbpContiguousToChannelsLast},
+    /*kChannelsLast->other*/ {GetSbpChannelsLastToContiguous, GetSbpIdentity},
+};
+
+static Shape ComputeConvertMemoryFormatShape(const Shape& shape, MemoryFormat memory_format,
+                                             MemoryFormat target_memory_format) {
+  auto shape_func = compute_shape_funcs[memory_format][target_memory_format];
+  return shape_func(shape);
+}
 
 static Maybe<void> GetConvertMemoryFormatSbp(user_op::SbpContext* ctx, const Shape& shape,
                                              MemoryFormat memory_format,
@@ -76,13 +110,12 @@ static Maybe<void> GetConvertMemoryFormatSbp(user_op::SbpContext* ctx, const Sha
   const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out_tensor_desc = ctx->MutOutputTensorDesc("out", 0);
   const Shape& in_shape = in_tensor_desc.shape();
-  const auto& memory_format_str = ctx->Attr<std::string>("memory_format");
-  MemoryFormat memory_format = GetMemoryFormatFromString(memory_format_str);
+  const auto& memory_format = ctx->Attr<MemoryFormat>("memory_format");
 
   out_tensor_desc->set_is_dynamic(in_tensor_desc.is_dynamic());
-  out_tensor_desc->set_shape(in_shape);
+  out_tensor_desc->set_shape(
+      ComputeConvertMemoryFormatShape(in_shape, in_tensor_desc.memory_format(), memory_format));
   out_tensor_desc->set_memory_format(memory_format);
-  out_tensor_desc->set_stride(Stride(in_shape, memory_format));
   return Maybe<void>::Ok();
 }
 

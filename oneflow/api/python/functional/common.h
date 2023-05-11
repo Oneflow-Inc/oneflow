@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/api/python/framework/tensor.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/layout.h"
+#include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/functional/tensor_index.h"

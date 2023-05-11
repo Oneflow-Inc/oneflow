@@ -17,26 +17,6 @@ limitations under the License.
 
 namespace oneflow {
 
-inline Shape ComputeShapeNchwToNhwc(const Shape& shape) {
-  int ndim = shape.size();
-  if (ndim <= 2) { return shape; }
-  Shape target_shape(ndim);
-  target_shape[0] = shape[0];
-  target_shape[ndim - 1] = shape[1];
-  for (int i = 0; i < ndim - 2; ++i) { target_shape[i + 1] = shape[i + 2]; }
-  return target_shape;
-}
-
-inline Shape ComputeShapeNhwcToNchw(const Shape& shape) {
-  int ndim = shape.size();
-  if (ndim <= 2) { return shape; }
-  Shape target_shape(ndim);
-  target_shape[0] = shape[0];
-  target_shape[1] = shape[ndim - 1];
-  for (int i = 0; i < ndim - 2; ++i) { target_shape[i + 2] = shape[i + 1]; }
-  return target_shape;
-}
-
 void ConvertMemoryFormat(ep::Stream* stream, const user_op::Tensor* in, user_op::Tensor* out,
                          MemoryFormat in_memory_format, MemoryFormat out_memory_format);
 
