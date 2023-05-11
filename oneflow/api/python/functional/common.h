@@ -217,11 +217,6 @@ inline PyObject* CastToPyObject<Maybe<void>>(Maybe<void>&& t) {
   Py_RETURN_NONE;
 }
 
-template<>
-inline PyObject* CastToPyObject<MemoryFormat>(MemoryFormat&& t) {
-  return PyMemoryFormat_New(t);
-}
-
 // int64_t
 Maybe<int64_t> PyUnpackLong(PyObject* py_obj);
 

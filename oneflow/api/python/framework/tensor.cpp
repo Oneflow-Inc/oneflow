@@ -630,7 +630,7 @@ static PyObject* PyTensorObject_grad(PyObject* self, void* unused) {
 static PyObject* PyTensorObject_memory_format(PyObject* self, void* unused) {
   HANDLE_ERRORS
   MemoryFormat memory_format = PyTensor_Unpack(self)->memory_format();
-  return functional::CastToPyObject(std::move(memory_format));
+  return PyMemoryFormat_New(memory_format);
   END_HANDLE_ERRORS
 }
 

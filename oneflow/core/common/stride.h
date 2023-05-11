@@ -17,7 +17,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_STRIDE_H_
 #define ONEFLOW_CORE_FRAMEWORK_STRIDE_H_
 
-#include "oneflow/core/common/memory_format.pb.h"
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/sequential.pb.h"
 #include "oneflow/core/common/util.h"
@@ -34,8 +33,6 @@ class Stride final : public DimVector {
   explicit Stride(const Shape& shape);
   explicit Stride(const std::shared_ptr<Shape>& shape);
   explicit Stride(const Int64ListProto& stride_proto);
-  Stride(const ShapeView& shape, MemoryFormat memory_format);
-  Stride(const Shape& shape, MemoryFormat memory_format);
   Stride& CheckNumAxesIdenticalAndAssign(const Stride& stride);
   ~Stride() = default;
 

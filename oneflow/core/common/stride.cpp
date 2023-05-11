@@ -16,11 +16,9 @@ limitations under the License.
 
 #include <numeric>
 
-#include "oneflow/core/common/memory_format.pb.h"
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/common/constant.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/common/memory_format_util.h"
 #include "oneflow/core/common/throw.h"
 
 namespace oneflow {
@@ -39,29 +37,10 @@ Stride::Stride(const ShapeView& shape) {
   }
 }
 
-Stride::Stride(const ShapeView& shape, MemoryFormat memory_format) {
-  const int64_t ndim = shape.NumAxes();
-  resize(ndim);
-  if (memory_format == kContiguous) {
-    new (this) Stride(shape);
-  } else if (memory_format == kChannelsLast) {
-    GetChannelsLastStrides2d(shape, *this);
-  } else {
-    CHECK_OR_THROW(false) << "invalid memory_format";
-  }
-}
-
 Stride::Stride(const Shape& shape) {
   if (shape.is_initialized()) {
     ShapeView shape_view(shape);
     new (this) Stride(shape_view);
-  }
-}
-
-Stride::Stride(const Shape& shape, MemoryFormat memory_format) {
-  if (shape.is_initialized()) {
-    ShapeView shape_view(shape);
-    new (this) Stride(shape_view, memory_format);
   }
 }
 

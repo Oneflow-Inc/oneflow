@@ -4,7 +4,7 @@ package oneflow;
 enum MemoryFormat {
   kContiguous = 0;
   kChannelsLast = 1;
-  MemoryFormat_Max = 2;
-  kPreserve = 3;
+  kPreserve = 2;
+  MemoryFormat_Count = 3;
 
 };
