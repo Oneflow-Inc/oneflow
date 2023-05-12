@@ -163,14 +163,14 @@ int64_t TopoStruct::AccumulationPriority() {
 }
 
 void TopoStruct::VisitAncestorsAndItself(const std::function<void(TopoStruct*)>& Handle) {
-  if (visited_ancestors.IfNotMarked()) { Handle(this); }
-  visited_ancestors.Mark();
   for (const auto& in_topo_struct : in_topo_structs) {
     // Accumulate the non-executed topological structures only once
     if ((!in_topo_struct->executed) && in_topo_struct->visited_ancestors.IfNotMarked()) {
       in_topo_struct->VisitAncestorsAndItself(Handle);
     }
   }
+  if (visited_ancestors.IfNotMarked()) { Handle(this); }
+  visited_ancestors.Mark();
 }
 
 void TopoStruct::MarkDescendantUp2Layer(int32_t max_layer) {
@@ -727,7 +727,7 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
         ExecuteOpNode(ancestor);
         ancestor->executed = true;
         StopWaiting(ancestor);
-        prepare_topo_structs.push_back(node);
+        prepare_topo_structs.push_back(ancestor);
       }
     }
     // Execute the current node
