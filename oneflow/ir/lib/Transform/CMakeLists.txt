@@ -1,11 +1,11 @@
 add_mlir_library(
-  MLIRTestTransformDialect
-  TestTransformDialectExtension.cpp
-  TestTransformDialectInterpreter.cpp
-  TestTransformStateExtension.cpp
+  MLIROneFlowTransformDialect
+  TransformDialectExtension.cpp
+  TransformDialectInterpreter.cpp
+  TransformStateExtension.cpp
   EXCLUDE_FROM_LIBMLIR
   DEPENDS
-  MLIRTestTransformDialectExtensionIncGen
+  MLIROneFlowTransformDialectExtensionIncGen
   LINK_LIBS
   PUBLIC
   MLIRIR
