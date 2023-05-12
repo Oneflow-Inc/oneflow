@@ -19,7 +19,9 @@ limitations under the License.
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
-using namespace mlir;
+namespace mlir {
+
+namespace oneflow {
 
 namespace {
 
@@ -33,10 +35,6 @@ class AutoNhwcPass : public AutoNhwcPassBase<AutoNhwcPass> {
 };
 
 }  // namespace
-
-namespace mlir {
-
-namespace oneflow {
 
 std::unique_ptr<Pass> createAutoNhwcPass() { return std::make_unique<AutoNhwcPass>(); }
 

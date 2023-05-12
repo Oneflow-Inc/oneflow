@@ -172,6 +172,14 @@ def _test_atan2(test_case, placement, sbp, ndim):
     return z
 
 
+@autotest(n=1)
+def _test_digamma(test_case, placement, sbp, ndim):
+    dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
+    x = random_tensor(ndim, *dim_list, low=0, high=10).to_global(placement, sbp)
+    y = torch.digamma(x)
+    return y
+
+
 class TestMathOps(flow.unittest.TestCase):
     @globaltest
     def test_math_ops(test_case):
@@ -194,6 +202,7 @@ class TestMathOps(flow.unittest.TestCase):
                 _test_acos(test_case, placement, sbp, ndim)
                 _test_arccosh(test_case, placement, sbp, ndim)
                 _test_acosh(test_case, placement, sbp, ndim)
+                _test_digamma(test_case, placement, sbp, ndim)
 
                 _test_floordiv(test_case, placement, sbp, ndim)
                 _test_atan2(test_case, placement, sbp, ndim)

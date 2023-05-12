@@ -104,11 +104,6 @@ class LazyInterpreter : public OpExprInterpreter {
   virtual ~LazyInterpreter() = default;
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
-                    const AttrMap& attrs) const {
-    return Apply(op_expr, inputs, outputs, OpExprInterpContext(attrs));
-  }
-
-  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
                     const OpExprInterpContext& ctx) const override;
 
  private:
@@ -123,16 +118,17 @@ class LazyInterpreter : public OpExprInterpreter {
 
 class EagerInterpreter : public OpExprInterpreter {
  public:
-  EagerInterpreter() : OpExprInterpreter() {}
+  EagerInterpreter(bool is_local) : OpExprInterpreter(), is_local_(is_local) {}
   virtual ~EagerInterpreter() = default;
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
-                    const AttrMap& attrs) const {
-    return Apply(op_expr, inputs, outputs, OpExprInterpContext(attrs));
-  }
-
-  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
                     const OpExprInterpContext& ctx) const override;
+
+ protected:
+  // NOTE(lixiang): To ensure the correctness of GlobalMode, check whether it is a local operation
+  // and initialize it as true when using EagerLocalInterpreter.
+  //   Used by Maybe<void> EagerInterpreter::Apply.
+  bool is_local_;
 
  private:
   FOR_EACH_BUILTIN_OPS(DECLARE_PURE_VIRTUAL_APPLY_FUNC);
@@ -141,7 +137,7 @@ class EagerInterpreter : public OpExprInterpreter {
 
 class EagerGlobalInterpreter : public EagerInterpreter {
  public:
-  EagerGlobalInterpreter() : EagerInterpreter() {}
+  EagerGlobalInterpreter() : EagerInterpreter(false) {}
   virtual ~EagerGlobalInterpreter() = default;
 
  private:
@@ -150,7 +146,7 @@ class EagerGlobalInterpreter : public EagerInterpreter {
 
 class EagerLocalInterpreter : public EagerInterpreter {
  public:
-  EagerLocalInterpreter() : EagerInterpreter() {}
+  EagerLocalInterpreter() : EagerInterpreter(true) {}
   virtual ~EagerLocalInterpreter() = default;
 
  private:

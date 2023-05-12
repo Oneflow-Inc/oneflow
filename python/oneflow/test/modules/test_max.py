@@ -22,8 +22,20 @@ import oneflow as flow
 import oneflow.unittest
 
 
+def _test_scalar_max(test_case, device):
+    y = flow.max(flow.tensor(1.0, device=device), flow.tensor([2], device=device))
+    test_case.assertTrue(np.allclose(y.numpy(), [2], 1e-05, 1e-05))
+    y = flow.max(flow.tensor(1.0, device=device), flow.tensor(2, device=device))
+    test_case.assertTrue(np.allclose(y.numpy(), [2], 1e-05, 1e-05))
+    y = flow.max(flow.tensor([1.0], device=device), flow.tensor(2, device=device))
+    test_case.assertTrue(np.allclose(y.numpy(), [2], 1e-05, 1e-05))
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestMaxModule(flow.unittest.TestCase):
+    def test_scalar_max(test_case):
+        _test_scalar_max(test_case, "cpu")
+
     @autotest(n=5, check_allclose=False, check_graph=True)
     def test_max_reduce_random_dim(test_case):
         device = random_device()

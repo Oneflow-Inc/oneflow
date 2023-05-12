@@ -67,6 +67,8 @@ class SspVariableProxyCompTaskNode final : public CompTaskNode {
     ForEachInDataEdge([&](TaskEdge* edge) { ConsumeRegst("var", edge->GetSoleRegst()); });
   }
 
+  void ConsumeFakeRegsts() override { ConsumeFakeRegst("var"); }
+
   TaskType GetTaskType() const override { return TaskType::kSspVariableProxy; }
 
  private:
@@ -74,7 +76,7 @@ class SspVariableProxyCompTaskNode final : public CompTaskNode {
     BuildExecGphStructAndBindInRegst();
     BuildOutRegst();
     mut_exec_gph().TopoForEachNode(
-        [this](ExecNode* node) { node->InferBlobDescs(parallel_ctx()); });
+        [this](ExecNode* node) { (node->*GetInferBlobDescsMethod())(parallel_ctx()); });
   }
 
   void BuildExecGphStructAndBindInRegst() {

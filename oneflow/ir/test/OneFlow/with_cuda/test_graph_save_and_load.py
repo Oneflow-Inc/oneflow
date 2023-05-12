@@ -21,8 +21,6 @@ import sys
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 sys.path.append(os.path.abspath(os.path.dirname(__file__)) + "/..")
 
-os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-os.environ["ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"] = "1"
 
 import unittest
 import oneflow as flow
@@ -51,7 +49,10 @@ class InferGraph(flow.nn.Graph):
 
 @unittest.skipIf(not flow.sysconfig.with_mlir(), "only test with mlir")
 @flow.unittest.skip_unless_1n1d()
-class GraphSaveTestCase(flow.unittest.TestCase):
+class GraphSaveTestCase(flow.unittest.MLIRTestCase):
+    def setUp(self):
+        os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+
     def test_save_and_load(self):
         placement_arg = {
             "placement": flow.placement("cuda", ranks=[0]),

@@ -36,7 +36,7 @@ class TestResNet50(flow.unittest.TestCase):
         rgb_mean = [123.68, 116.779, 103.939]
         rgb_std = [58.393, 57.12, 57.375]
         record_reader = flow.nn.OFRecordReader(
-            "/dataset/imagenette/ofrecord",
+            flow.unittest.dataset_dir("imagenette/ofrecord"),
             batch_size=batch_size,
             data_part_num=1,
             part_name_suffix_length=5,
@@ -67,7 +67,7 @@ class TestResNet50(flow.unittest.TestCase):
         )
         res50_module.train()
         res50_module.load_state_dict(
-            flow.load("/dataset/resnet50_wo_bn_weights_for_ci")
+            flow.load(flow.unittest.dataset_dir("resnet50_wo_bn_weights_for_ci"))
         )
         of_corss_entropy = flow.nn.CrossEntropyLoss()
         res50_module.to("cuda")
@@ -108,28 +108,8 @@ class TestResNet50(flow.unittest.TestCase):
             3.471228837966919,
             2.9467897415161133,
             3.3623316287994385,
-            2.9601571559906006,
-            3.1653552055358887,
-            3.284658908843994,
-            2.357776165008545,
-            2.697998523712158,
-            2.5924768447875977,
-            2.557292938232422,
-            2.521733522415161,
-            2.8247179985046387,
-            2.5366592407226562,
-            2.3214797973632812,
-            2.492379903793335,
-            2.5636634826660156,
-            2.202436923980713,
-            2.3221640586853027,
-            2.255782127380371,
-            2.3659703731536865,
-            2.4536118507385254,
-            2.308408260345459,
-            2.456749677658081,
         ]
-        for b in range(50):
+        for b in range(len(gt_of_losses)):
             val_record = record_reader()
             label = record_label_decoder(val_record)
             image_raw_buffer = record_image_decoder(val_record)

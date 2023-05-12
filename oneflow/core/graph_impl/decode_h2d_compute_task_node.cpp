@@ -27,6 +27,7 @@ class DecodeH2DCompTaskNode final : public CompTaskNode {
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
+  void ConsumeFakeRegsts() override;
 
   TaskType GetTaskType() const override { return TaskType::kDecodeH2D; }
 
@@ -37,6 +38,8 @@ class DecodeH2DCompTaskNode final : public CompTaskNode {
 void DecodeH2DCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst());
 }
+
+void DecodeH2DCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
 
 void DecodeH2DCompTaskNode::ProduceAllRegstsAndBindEdges() {
   auto regst_num = ParseIntegerFromEnv("ONEFLOW_DECODE_H2D_REGST_NUM", 2);
@@ -54,7 +57,7 @@ void DecodeH2DCompTaskNode::BuildExecGphAndRegst() {
   out_regst->AddLbi(sole_op->BnInOp2Lbi(sole_op->SoleObn()));
   node->BindBnWithRegst(sole_op->SoleObn(), out_regst);
   node->AddBnToRegstAndBindIt(&Operator::tmp_bns, GetProducedRegst("tmp"));
-  node->InferBlobDescs(parallel_ctx());
+  (node->*GetInferBlobDescsMethod())(parallel_ctx());
 }
 
 REGISTER_NAMED_TASK_STREAM_INDEX_GETTER(DeviceType::kCUDA, TaskType::kDecodeH2D, "DECODE_H2D")

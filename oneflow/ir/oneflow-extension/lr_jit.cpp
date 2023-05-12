@@ -17,18 +17,19 @@ limitations under the License.
 #include "PyAst/AstMlirGen.h"
 
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
-#include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
+#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
-#include "mlir/Dialect/Arithmetic/Transforms/Passes.h"
+#include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/Func/Transforms/Passes.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/Transforms/RequestCWrappers.h"
@@ -88,13 +89,13 @@ static mlir::LogicalResult lowerToLLVMDialect(mlir::ModuleOp module) {
   pm.addNestedPass<mlir::func::FuncOp>(mlir::LLVM::createRequestCWrappersPass());
   pm.addPass(mlir::createCSEPass());
   pm.addPass(mlir::createCanonicalizerPass());
-  pm.addPass(mlir::createMemRefToLLVMPass());
+  pm.addPass(mlir::createFinalizeMemRefToLLVMConversionPass());
   pm.addPass(mlir::createConvertFuncToLLVMPass());
   pm.addPass(mlir::createConvertSCFToCFPass());
-  pm.addPass(mlir::cf::createConvertControlFlowToLLVMPass());
+  pm.addPass(mlir::createConvertControlFlowToLLVMPass());
   pm.addPass(mlir::createConvertMathToLLVMPass());
-  pm.addPass(mlir::arith::createArithmeticExpandOpsPass());
-  pm.addPass(mlir::arith::createConvertArithmeticToLLVMPass());
+  pm.addPass(mlir::arith::createArithExpandOpsPass());
+  pm.addPass(mlir::createArithToLLVMConversionPass());
   pm.addPass(mlir::createReconcileUnrealizedCastsPass());
   return pm.run(module);
 }
@@ -127,14 +128,15 @@ static LRJITRegistry_Store_ GenFunc(pyast::FunctionDef& ast, bool is_dump) {
   mlir::DialectRegistry registry;
   mlir::registerAllDialects(registry);
   mlir::registerLLVMDialectTranslation(registry);
+  mlir::registerBuiltinDialectTranslation(registry);
   mlir::MLIRContext context(registry);
   context.loadDialect<mlir::memref::MemRefDialect>();
   context.loadDialect<mlir::func::FuncDialect>();
-  context.loadDialect<mlir::arith::ArithmeticDialect>();
+  context.loadDialect<mlir::arith::ArithDialect>();
   context.loadDialect<mlir::math::MathDialect>();
   context.loadDialect<mlir::scf::SCFDialect>();
   context.loadDialect<mlir::cf::ControlFlowDialect>();
-  context.loadDialect<mlir::AffineDialect>();
+  context.loadDialect<mlir::affine::AffineDialect>();
 
   auto module = GenModule(context, ast);
   if (is_dump) { module->dump(); }
