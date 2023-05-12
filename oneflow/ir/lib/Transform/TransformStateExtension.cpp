@@ -13,20 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-//===- TestTransformStateExtension.cpp ------------------------------------===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-
-#include "Transform/TestTransformStateExtension.h"
+#include "Transform/TransformStateExtension.h"
 
 using namespace mlir;
 
-LogicalResult transform::TestTransformStateExtension::updateMapping(Operation* previous,
-                                                                    Operation* updated) {
+LogicalResult mlir::oneflow::transform_dialect::TransformStateExtension::updateMapping(
+    Operation* previous, Operation* updated) {
   // Update value handles. The new ops should have at least as many results as
   // the replacement op. Fewer results are acceptable, if those results are not
   // mapped to any handle.

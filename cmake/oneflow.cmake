@@ -513,40 +513,85 @@ if(BUILD_PYTHON)
     REGEX "oneflow/core/kernel/util/.+(h|hpp)$"
     REGEX "oneflow/core/persistence/.+(h|hpp)$"
     REGEX "oneflow/core/ep/include/.+(h|hpp)$"
+    REGEX "oneflow/core/ep/common/.+(h|hpp)$"
+    REGEX "oneflow/core/ep/cpu/.+(h|hpp)$"
     REGEX "oneflow/core/ep/cuda/.+(h|hpp)$"
     REGEX "oneflow/core/job/.+(h|hpp)$"
+    REGEX "oneflow/core/intrusive/.+(h|hpp)$"
+    REGEX "oneflow/core/graph/boxing/.+(h|hpp)$"
+    REGEX "oneflow/core/vm/.+(h|hpp)$"
     REGEX "oneflow/core/.+(proto)$"
+    REGEX "oneflow/user/.+(h|hpp)$"
+    PATTERN "oneflow/core/kernel/chain_kernel_observer.h"
+    PATTERN "oneflow/core/kernel/cuda_graph_support.h"
     PATTERN "oneflow/core/kernel/new_kernel_util.h"
+    PATTERN "oneflow/core/kernel/kernel.h"
     PATTERN "oneflow/core/kernel/kernel_context.h"
     PATTERN "oneflow/core/kernel/kernel_observer.h"
+    PATTERN "oneflow/core/kernel/kernel_util.h"
     PATTERN "oneflow/core/kernel/kernel_util.cuh"
+    PATTERN "oneflow/core/kernel/kernel_registration.h"
     PATTERN "oneflow/core/common/symbol.h"
+    PATTERN "oneflow/core/register/blob.h"
+    PATTERN "oneflow/core/register/op_blob_arg_info.h"
+    PATTERN "oneflow/core/register/register.h"
+    PATTERN "oneflow/core/register/register_desc.h"
+    PATTERN "oneflow/core/register/register_manager.h"
+    PATTERN "oneflow/core/register/runtime_register_desc.h"
+    PATTERN "oneflow/core/register/tensor_slice_view.h"
+    PATTERN "oneflow/core/ndarray/xpu_util.h"
+    PATTERN "oneflow/core/rpc/include/base.h"
+    PATTERN "oneflow/core/rpc/include/ctrl.h"
+    PATTERN "oneflow/core/rpc/include/global_process_ctx.h"
+    PATTERN "oneflow/core/control/ctrl_client.h"
+    PATTERN "oneflow/core/control/global_process_ctx.h"
     PATTERN "oneflow/core/autograd/autograd_meta.h"
     PATTERN "oneflow/core/register/blob_desc.h"
     PATTERN "oneflow/core/operator/operator.h"
+    PATTERN "oneflow/core/operator/operator_util.h"
     PATTERN "oneflow/core/operator/op_conf_util.h"
+    PATTERN "oneflow/core/graph/compute_task_node.h"
+    PATTERN "oneflow/core/graph/copy_task_node.h"
+    PATTERN "oneflow/core/graph/exec_graph.h"
     PATTERN "oneflow/core/graph/graph.h"
     PATTERN "oneflow/core/graph/node.h"
     PATTERN "oneflow/core/graph/op_graph.h"
+    PATTERN "oneflow/core/graph/task_graph.h"
     PATTERN "oneflow/core/graph/task_id.h"
     PATTERN "oneflow/core/graph/task_id_generator.h"
+    PATTERN "oneflow/core/graph/task_node.h"
+    PATTERN "oneflow/core/graph/task_stream_index_manager.h"
     PATTERN "oneflow/core/graph/stream_id.h"
-    PATTERN "oneflow/core/vm/vm_sync.h"
+    PATTERN "oneflow/core/graph/stream_index_generator.h"
+    PATTERN "oneflow/core/graph/fake_consumed_regst_provider.h"
+    PATTERN "oneflow/core/graph/transport_task_node.h"
+    PATTERN "oneflow/core/thread/thread.h"
+    PATTERN "oneflow/core/thread/thread_manager.h"
+    PATTERN "oneflow/core/thread/thread_pool.h"
+    PATTERN "oneflow/core/thread/thread_runtime.h"
+    PATTERN "oneflow/core/thread/thread_runtime_factory.h"
+    PATTERN "oneflow/core/profiler/profiler.h"
+    PATTERN "oneflow/extension/stack/foreign_stack_getter.h"
+    PATTERN "oneflow/core/platform/include/pthread_fork.h"
+    PATTERN "oneflow/core/lazy/actor/actor.h"
+    PATTERN "oneflow/core/lazy/actor/actor_base.h"
+    PATTERN "oneflow/core/lazy/actor/actor_context.h"
+    PATTERN "oneflow/core/lazy/actor/actor_message.h"
+    PATTERN "oneflow/core/lazy/actor/actor_message_bus.h"
+    PATTERN "oneflow/core/lazy/actor/register_slot.h"
+    PATTERN "oneflow/core/lazy/stream_context/include/stream_context.h"
+    PATTERN "oneflow/core/memory/memory_allocator.h"
+    PATTERN "oneflow/core/memory/memory_case_util.h"
+    PATTERN "oneflow/core/memory/memory_zone.h"
+    PATTERN "oneflow/user/ops/convert_memory_format.h"
     PATTERN "oneflow/api" EXCLUDE
-    PATTERN "oneflow/user" EXCLUDE
-    PATTERN "oneflow/extension" EXCLUDE
     PATTERN "oneflow/maybe" EXCLUDE
-    PATTERN "oneflow/core/lazy" EXCLUDE
     PATTERN "oneflow/core/graph_impl" EXCLUDE
     PATTERN "oneflow/core/job_rewriter" EXCLUDE
     PATTERN "oneflow/core/hardware" EXCLUDE
-    PATTERN "oneflow/core/intrusive" EXCLUDE
     PATTERN "oneflow/core/stream" EXCLUDE
     PATTERN "oneflow/core/functional" EXCLUDE
-    PATTERN "oneflow/core/platform" EXCLUDE
     PATTERN "oneflow/core/boxing" EXCLUDE
-    PATTERN "oneflow/core/rpc" EXCLUDE
-    PATTERN "oneflow/core/profiler" EXCLUDE
     PATTERN "oneflow/core/transport" EXCLUDE
     PATTERN "oneflow/core/comm_network" EXCLUDE
     PATTERN "oneflow/ir" EXCLUDE)
