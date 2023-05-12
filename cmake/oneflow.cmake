@@ -310,8 +310,8 @@ if(Unwind_FOUND)
   add_definitions(-DBACKWARD_HAS_LIBUNWIND=1)
   list(APPEND oneflow_third_party_libs unwind::unwind)
 endif()
-add_definitions( -DONEFLOW_SOURCE_DIR="${PROJECT_SOURCE_DIR}" )
-add_definitions( -DONEFLOW_BINARY_DIR="${PROJECT_BINARY_DIR}" )
+add_definitions(-DONEFLOW_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+add_definitions(-DONEFLOW_BINARY_DIR="${PROJECT_BINARY_DIR}")
 
 include(op_schema)
 
