@@ -135,8 +135,8 @@ using CreateSubTskGphBuilderFn = std::function<std::unique_ptr<HierarchicalSubTs
 Maybe<void> RegisterCreateSubTskGphBuilderFn(DeviceType device_type,
                                              const CreateSubTskGphBuilderFn& fn);
 
-#define REGISTER_CREATE_SUB_TASK_GRAPH_BUILDER_FN(fn) \
-  COMMAND(CHECK_JUST(RegisterCreateSubTskGphBuilderFn(fn)))
+#define REGISTER_CREATE_SUB_TASK_GRAPH_BUILDER_FN(device_type, fn) \
+  COMMAND(CHECK_JUST(RegisterCreateSubTskGphBuilderFn(device_type, fn)))
 
 }  // namespace oneflow
 

@@ -28,6 +28,7 @@ def grad(
     grad_outputs: Union[Tensor, Sequence[Tensor], None] = None,
     retain_graph: bool = False,
     create_graph: bool = False,
+    allow_unused: bool = False,
 ) -> Tuple[Tensor]:
     r"""
     Computes and returns the sum of gradients of outputs with respect to the inputs.
@@ -52,6 +53,9 @@ def grad(
             more efficient way. Defaults to the value of ``create_graph``.
         create_graph (bool, optional): If ``True``, graph of the derivative will be constructed,
             allowing to compute higher order derivative products. Defaults to ``False``.
+        allow_unused (bool, optional): If ``False``, specifying inputs that were not
+            used when computing outputs (and therefore their grad is always zero)
+            is an error. Defaults to ``False``.
 
     Returns:
         Tuple(Tensor): A tuple of tensors containing the gradients for each ``inputs``.
@@ -62,8 +66,9 @@ def grad(
         convert_to_tensor_tuple(grad_outputs),
         retain_graph,
         create_graph,
+        allow_unused,
     )
-    return tuple([Tensor(x) for x in in_grads])
+    return tuple([x for x in in_grads])
 
 
 def backward(

@@ -64,6 +64,15 @@ class InferContext {
   virtual void SetOutputDType(const std::string&, int32_t, DataType) = 0;
   virtual DataType Dtype4ArgNameAndIndex(const std::string&, int32_t) const = 0;
   virtual void SetDtype4ArgNameAndIndex(const std::string&, int32_t, DataType) = 0;
+  virtual MemoryFormat InputMemoryFormat(const std::string& arg_name, int32_t index) const = 0;
+  virtual MemoryFormat OutputMemoryFormat(const std::string& arg_name, int32_t index) const = 0;
+  virtual void SetOutputMemoryFormat(const std::string& arg_name, int32_t index,
+                                     MemoryFormat memory_format) = 0;
+  virtual MemoryFormat MemoryFormat4ArgNameAndIndex(const std::string& arg_name,
+                                                    int32_t index) const = 0;
+  virtual void SetMemoryFormat4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                               MemoryFormat memory_format) = 0;
+
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
   virtual const std::string& input(const std::string& arg_name, int32_t index) const = 0;
