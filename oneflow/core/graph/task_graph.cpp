@@ -1471,8 +1471,8 @@ Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names) {
 
   ForEachNode([&](TaskNode* task_node) { task_node->ProduceAllRegstsAndBindEdges(); });
   ForEachEdge([&](TaskEdge* edge) {
-    CHECK(edge->OutHasBindRegst())
-        << "Found edge which has not bound a regst, src task " << edge->src_node()->VisualStr();
+    CHECK(edge->HasRegst()) << "Found edge which has not bound a regst, src task "
+                            << edge->src_node()->VisualStr();
   });
   return Maybe<void>::Ok();
 }
