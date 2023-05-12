@@ -118,6 +118,7 @@ class TopoStruct {
   void ComputeIsReusable();
 
   void SetAccumulateMemoryIncrement();
+  void MarkAncestors();
   int64_t SingleNodePriority();
   int64_t AccumulationPriority();
 
@@ -235,6 +236,12 @@ void TopoStruct::SetAccumulateMemoryIncrement() {
       std::max(peak_memory_during_accumulation, accumulate_memory_increment + max_difference);
   max_difference_during_accumulation =
       peak_memory_during_accumulation - accumulate_memory_increment;
+}
+
+void TopoStruct::MarkAncestors() {
+  ResetNoCleaningMarkerAncestor();
+  auto DoNothing = [](TopoStruct* node) {};
+  VisitAncestorsAndItself(DoNothing);
 }
 
 void TopoStruct::MarkDescendantFromThis2Layer(int32_t max_layer) {
@@ -446,18 +453,24 @@ void ClipOneEdge(TopoStruct* producer, TopoStruct* consumer) {
 void EatNodes(std::vector<TopoStruct*>& topo_structs) {
   for (int32_t id = topo_structs.size() - 1; id >= 0; id--) {
     auto* node = topo_structs[id];
-    if (node->memory_increment >= 0) {
-      // A positive node with only one output would be executed at the last moment before the
-      // execution of its output
-      if (node->out_topo_structs.size() == 1) {
-        // d: a, b, c -> d(+) -> g
-        // g: b, d, e, f -> g -> ...
-        // d has non-negative memory increment (>=0), d only have one out edge: d -> g.
-        // But g might have multiple inputs.
-        auto* out_node = *node->out_topo_structs.begin();
+    bool not_merged = true;
+    // If a node only has one output with higher priority, then it would be executed at the last
+    // moment before the execution of its output
+    if (node->out_topo_structs.size() == 1) {
+      // d: a, b, c -> d(+) -> g
+      // g: b, d, e, f -> g -> ...
+      // d has non-negative memory increment (>=0), d only have one out edge: d -> g.
+      // But g might have multiple inputs.
+      auto* out_node = *node->out_topo_structs.begin();
+      // Only merge if the out node have higher priority
+      // (higher priority means smaller value in SingleNodePriority())
+      if (node->SingleNodePriority() >= out_node->SingleNodePriority()) {
         // Merge d into g: (d)g
         out_node->pre_topo_structs.push_back(node);
         out_node->memory_increment += node->memory_increment;
+        out_node->peak_memory =
+            std::max(node->peak_memory, node->memory_increment + out_node->peak_memory);
+        out_node->max_difference = out_node->peak_memory - out_node->memory_increment;
         // Clip d -> g
         ClipOneEdge(node, out_node);
         // g takes all the inputs from d
@@ -473,34 +486,40 @@ void EatNodes(std::vector<TopoStruct*>& topo_structs) {
         node->in_topo_structs.clear();
         // Eliminate d
         RemoveFrom(topo_structs, id);
+        not_merged = false;
+        node->removed = true;
       }
-    } else {
-      // A negative node with only one input would be executed immediately after the execution of
-      // its input
-      if (node->in_topo_structs.size() == 1) {
-        // b: a -> b(-) -> c, d, e
-        // a: ... -> a -> b, d, f, g
-        // b has negative memory increment (<0), b only have one in edge: a -> b.
-        // But a might have multiple outputs
-        auto* in_node = *node->in_topo_structs.begin();
-        // Merge b into a: a(b)
-        in_node->post_topo_structs.push_back(node);
-        in_node->memory_increment += node->memory_increment;  // Clip a -> b
-        ClipOneEdge(in_node, node);
-        // a takes all the outputs from b
-        // a: ... -> a(b) -> c, d, e, f, g
-        // Note tht d is also an output of the origin a
-        // and we need to make sure that d does not occur twice
-        for (auto* out_node : node->out_topo_structs) {
-          // Insert a -> c, a -> d, a -> e
-          ConnectTwoNodes(in_node, out_node);
-          // Clip b -> c, b -> d, b -> e
-          out_node->in_topo_structs.erase(node);
-        }
-        node->out_topo_structs.clear();
-        // Eliminate b
-        RemoveFrom(topo_structs, id);
+    }
+    // A negative node with only one input and the highest priority (non-positive peak memory)
+    // would be executed immediately after the execution of its input
+    if (not_merged && node->in_topo_structs.size() == 1 && node->peak_memory <= 0) {
+      // b: a -> b(-) -> c, d, e
+      // a: ... -> a -> b, d, f, g
+      // b has negative memory increment (<0), b only have one in edge: a -> b.
+      // But a might have multiple outputs
+      auto* in_node = *node->in_topo_structs.begin();
+      // Merge b into a: a(b)
+      in_node->post_topo_structs.push_back(node);
+      in_node->memory_increment += node->memory_increment;
+      in_node->peak_memory =
+          std::max(in_node->peak_memory, in_node->memory_increment + node->peak_memory);
+      in_node->max_difference = in_node->peak_memory - in_node->memory_increment;
+      // Clip a -> b
+      ClipOneEdge(in_node, node);
+      // a takes all the outputs from b
+      // a: ... -> a(b) -> c, d, e, f, g
+      // Note tht d is also an output of the origin a
+      // and we need to make sure that d does not occur twice
+      for (auto* out_node : node->out_topo_structs) {
+        // Insert a -> c, a -> d, a -> e
+        ConnectTwoNodes(in_node, out_node);
+        // Clip b -> c, b -> d, b -> e
+        out_node->in_topo_structs.erase(node);
       }
+      node->out_topo_structs.clear();
+      // Eliminate b
+      RemoveFrom(topo_structs, id);
+      node->removed = true;
     }
   }
 }
@@ -563,11 +582,13 @@ void SortReleaseTopoStructs(std::vector<TopoStruct*>& topo_structs) {
   // Then we add the edge d(-) -> c(-)
   for (auto* node_c : release_nodes) {
     // Mark all the ancestors
-    node_c->SetAccumulateMemoryIncrement();
+    node_c->MarkAncestors();
     // Un-mark itself to prevent circle
     node_c->visited_ancestors.UnMark();
     for (auto* node_d : release_nodes) {
-      if (node_c != node_d && node_d->visited_ancestors.IfNotMarked()) {
+      // Current condition is that d has higher priority
+      // Another stricter condition is the node_d->peak_memory <= 0
+      if (node_c != node_d && node_d->peak_memory <= 0 && node_d->visited_ancestors.IfNotMarked()) {
         bool should_add_edge_d2c = true;
         // Check a, b for d(-): a, b -> d(-) -> ...
         for (auto* producer_of_d : node_d->in_topo_structs) {
