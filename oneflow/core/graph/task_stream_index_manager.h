@@ -38,7 +38,8 @@ class TaskStreamIndexManager final {
 
  private:
   HashMap<DeviceId, std::unique_ptr<StreamIndexGenerator>> generators_;
-  HashMap<int64_t, uint32_t> stream_index_state_{};
+  // The stream_index_init_state is used to initialize the generator.
+  HashMap<int64_t, uint32_t> stream_index_init_state_{};
   std::mutex mtx_;
 };
 

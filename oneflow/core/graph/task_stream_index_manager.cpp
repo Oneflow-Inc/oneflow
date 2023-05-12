@@ -27,8 +27,8 @@ StreamIndexGenerator* TaskStreamIndexManager::GetGenerator(const DeviceId& devic
   if (iter == generators_.end()) {
     uint32_t init_stream_index = 0;
     const int64_t i64_device_id = EncodeDeviceIdToInt64(device_id);
-    if (stream_index_state_.count(i64_device_id) != 0) {
-      init_stream_index = stream_index_state_.at(i64_device_id);
+    if (stream_index_init_state_.count(i64_device_id) != 0) {
+      init_stream_index = stream_index_init_state_.at(i64_device_id);
     }
     iter = generators_.emplace(device_id, std::make_unique<StreamIndexGenerator>(init_stream_index))
                .first;
@@ -65,6 +65,7 @@ void TaskStreamIndexManager::GetTaskStreamIndex(HashMap<int64_t, uint32_t>* stre
 
 void TaskStreamIndexManager::TryUpdateTaskStreamIndex(
     const HashMap<int64_t, uint32_t>& stream_index_state) {
+  // Try Update generator's new_stream_index
   for (auto& pair : generators_) {
     const int64_t i64_device_id = EncodeDeviceIdToInt64(pair.first);
     uint32_t initial_stream_index = 0;
@@ -73,7 +74,17 @@ void TaskStreamIndexManager::TryUpdateTaskStreamIndex(
     }
     pair.second->TryUpdateNextStreamIndex(initial_stream_index);
   }
-  stream_index_state_ = stream_index_state;
+
+  // try update stream_index_init_state
+  for (const auto& pair : stream_index_state) {
+    const auto& key = pair.first;
+    const auto& val = pair.second;
+    if (stream_index_init_state_.count(key) != 0) {
+      stream_index_init_state_[key] = std::max(stream_index_init_state_.at(key), val);
+    } else {
+      stream_index_init_state_[key] = val;
+    }
+  }
 }
 
 void TaskStreamIndexGetterRegistry::Register(const key_t& key, const stream_index_getter& getter) {

@@ -36,7 +36,8 @@ class TaskIdGenerator final {
 
  private:
   HashMap<StreamId, task_index_t> stream_id2task_index_counter_;
-  HashMap<int64_t, uint32_t> task_index_state_{};
+  // The task_index_init_state is used to initialize the `stream_id2task_index_counter_` hashmap.
+  HashMap<int64_t, uint32_t> task_index_init_state_{};
 };
 
 }  // namespace oneflow
