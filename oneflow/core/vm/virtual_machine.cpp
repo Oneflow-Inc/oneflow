@@ -26,7 +26,6 @@ limitations under the License.
 #include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/cpp_attribute.h"
-#include "oneflow/core/common/singleton_ptr.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/foreign_lock_helper.h"
