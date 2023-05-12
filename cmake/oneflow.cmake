@@ -248,6 +248,7 @@ set(CACHE_LLVM_MONO_REPO_URL_LIST
     "https://github.com/llvm/llvm-project/archive/6a9bbd9f20dcd700e28738788bb63a160c6c088c.zip"
     "https://github.com/llvm/llvm-project/archive/32805e60c9de1f82887cd2af30d247dcabd2e1d3.zip"
     "https://github.com/llvm/llvm-project/archive/6d6268dcbf0f48e43f6f9fe46b3a28c29ba63c7d.zip"
+    "https://github.com/llvm/llvm-project/archive/5c9a84960de2260f149ee15313998593255a78df.zip"
     "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-16.0.0-rc4.zip"
     "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-15.0.6.zip"
     "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-16.0.0.zip"
@@ -264,6 +265,7 @@ set(CACHE_LLVM_MONO_REPO_MD5_LIST
     "b64481eaca658a2ff4e3e193440d0f68"
     "78172b0f67282e28956cd310612091fd"
     "0c2a3196e656aaab7ca1c2ef21b6091c"
+    "2702b822b71c196a0cc9c8d821c069d7"
     "334997b4879aba15d9323a732356cf2a")
 
 # clean cache for last LLVM version
@@ -273,10 +275,10 @@ if("${LLVM_MONO_REPO_URL}" IN_LIST CACHE_LLVM_MONO_REPO_URL_LIST OR "${LLVM_MONO
   unset(LLVM_MONO_REPO_MD5 CACHE)
 endif()
 set(LLVM_MONO_REPO_URL
-    "https://github.com/llvm/llvm-project/archive/5c9a84960de2260f149ee15313998593255a78df.zip"
+    "https://github.com/llvm/llvm-project/archive/c2ce2a509f74a85a3c0ef4b9d6d79fbacc7e8bdf.zip"
     CACHE STRING "")
 use_mirror(VARIABLE LLVM_MONO_REPO_URL URL ${LLVM_MONO_REPO_URL})
-set(LLVM_MONO_REPO_MD5 "2702b822b71c196a0cc9c8d821c069d7" CACHE STRING "")
+set(LLVM_MONO_REPO_MD5 "25489a23c6fa971fcd0d1167a560bf0a" CACHE STRING "")
 set(ONEFLOW_BUILD_ROOT_DIR "${PROJECT_BINARY_DIR}")
 add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/ir)
 if(WITH_MLIR)
