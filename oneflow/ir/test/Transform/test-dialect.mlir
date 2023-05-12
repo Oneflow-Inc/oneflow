@@ -1,4 +1,4 @@
-// RUN: oneflow-opt --test-transform-dialect-interpreter %s -split-input-file -verify-diagnostics | FileCheck %s
+// RUN: oneflow-opt --oneflow-transform-dialect-interpreter %s -split-input-file -verify-diagnostics | FileCheck %s
 
 // Test One-Shot Bufferize.
 
