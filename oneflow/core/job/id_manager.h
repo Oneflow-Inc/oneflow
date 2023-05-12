@@ -37,7 +37,7 @@ class IDMgr final {
   TaskIdGenerator* GetTaskIdGenerator() { return &task_id_gen_; }
 
   void SaveIdAndTaskIndex(IdState* id_state);
-  void TryUpdateIdAndTaskIndex(IdState* id_state);
+  void TryUpdateIdAndTaskIndex(const IdState* id_state);
 
  private:
   friend class Singleton<IDMgr>;

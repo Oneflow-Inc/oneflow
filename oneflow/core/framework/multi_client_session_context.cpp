@@ -210,21 +210,21 @@ IdState MultiClientSessionContext::GetIdState() {
   CHECK(Singleton<IDMgr>::Get() != nullptr);
   CHECK(Singleton<TaskStreamIndexManager>::Get() != nullptr);
   CHECK(Singleton<LazyJobBuildAndInferCtxMgr>::Get() != nullptr);
+  IdState id_state;
 
-  id_state_.job_id_state_ = Singleton<LazyJobBuildAndInferCtxMgr>::Get()->GetJobIdCount();
-  Singleton<IDMgr>::Get()->SaveIdAndTaskIndex(&id_state_);
-  Singleton<TaskStreamIndexManager>::Get()->GetTaskStreamIndex(&id_state_.stream_index_state_);
-  return id_state_;
+  id_state.job_id_state_ = Singleton<LazyJobBuildAndInferCtxMgr>::Get()->GetJobIdCount();
+  Singleton<IDMgr>::Get()->SaveIdAndTaskIndex(&id_state);
+  Singleton<TaskStreamIndexManager>::Get()->GetTaskStreamIndex(&id_state.stream_index_state_);
+  return id_state;
 }
 
 void MultiClientSessionContext::SetIdState(const IdState& id_state) {
-  id_state_ = id_state;
   CHECK(Singleton<IDMgr>::Get() != nullptr);
   CHECK(Singleton<TaskStreamIndexManager>::Get() != nullptr);
   CHECK(Singleton<LazyJobBuildAndInferCtxMgr>::Get() != nullptr);
-  Singleton<IDMgr>::Get()->TryUpdateIdAndTaskIndex(&id_state_);
-  Singleton<TaskStreamIndexManager>::Get()->TryUpdateTaskStreamIndex(id_state_.stream_index_state_);
-  Singleton<LazyJobBuildAndInferCtxMgr>::Get()->TryUpdateJobIdCount(id_state_.job_id_state_);
+  Singleton<IDMgr>::Get()->TryUpdateIdAndTaskIndex(&id_state);
+  Singleton<TaskStreamIndexManager>::Get()->TryUpdateTaskStreamIndex(id_state.stream_index_state_);
+  Singleton<LazyJobBuildAndInferCtxMgr>::Get()->TryUpdateJobIdCount(id_state.job_id_state_);
 }
 
 }  // namespace oneflow

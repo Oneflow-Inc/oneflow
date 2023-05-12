@@ -32,7 +32,7 @@ void IDMgr::SaveIdAndTaskIndex(IdState* id_state) {
   task_id_gen_.GetTaskIndex(&id_state->task_index_state_);
 }
 
-void IDMgr::TryUpdateIdAndTaskIndex(IdState* id_state) {
+void IDMgr::TryUpdateIdAndTaskIndex(const IdState* id_state) {
   regst_desc_id_count_ = std::max(regst_desc_id_count_, id_state->regst_desc_id_state_);
   mem_block_id_count_ = std::max(mem_block_id_count_, id_state->mem_block_id_state_);
   chunk_id_count_ = std::max(chunk_id_count_, id_state->chunk_id_state_);

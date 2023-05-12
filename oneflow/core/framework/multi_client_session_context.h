@@ -50,15 +50,12 @@ class MultiClientSessionContext {
   GetFreeEagerTensorNamePairByGraphName(const std::string& graph_name);
   void RemoveGraphFreeEagerTensors(const std::string& graph_name);
 
-  // This method is read-only and is used to call `GetXXIndexState for `XX Mgr`
-  const IdState* GetIdStatePointer() { return &id_state_; }
   IdState GetIdState();
   void SetIdState(const IdState& id_state);
 
  private:
   bool is_inited_ = false;
   std::shared_ptr<EnvGlobalObjectsScope> env_ctx_;
-  IdState id_state_;
   HashMap<std::string, std::vector<std::pair<std::string, std::shared_ptr<one::Tensor>>>>
       graph_name2free_eager_tensors_;
 };

@@ -25,18 +25,6 @@ namespace oneflow {
 
 class IdState {
  public:
-  uint32_t GetTaskIndexState(const StreamId& stream_id) const {
-    auto encode_stream_id = EncodeStreamIdToInt64(stream_id);
-    if (task_index_state_.count(encode_stream_id) == 0) { return 0; }
-    return task_index_state_.at(encode_stream_id);
-  }
-
-  uint32_t GetStreamIndexState(const DeviceId& device_id) const {
-    auto encode_device_id = EncodeDeviceIdToInt64(device_id);
-    if (stream_index_state_.count(encode_device_id) == 0) { return 0; }
-    return stream_index_state_.at(encode_device_id);
-  }
-
   int64_t regst_desc_id_state_{};
   int64_t mem_block_id_state_{};
   int64_t chunk_id_state_{};

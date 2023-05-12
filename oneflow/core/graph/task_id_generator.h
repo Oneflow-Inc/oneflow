@@ -36,6 +36,7 @@ class TaskIdGenerator final {
 
  private:
   HashMap<StreamId, task_index_t> stream_id2task_index_counter_;
+  HashMap<int64_t, uint32_t> task_index_state_{};
 };
 
 }  // namespace oneflow

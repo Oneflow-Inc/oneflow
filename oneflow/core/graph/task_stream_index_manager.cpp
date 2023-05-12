@@ -25,9 +25,11 @@ StreamIndexGenerator* TaskStreamIndexManager::GetGenerator(const DeviceId& devic
   std::unique_lock<std::mutex> lck(mtx_);
   auto iter = generators_.find(device_id);
   if (iter == generators_.end()) {
-    auto init_stream_index =
-        Singleton<MultiClientSessionContext>::Get()->GetIdStatePointer()->GetStreamIndexState(
-            device_id);
+    uint32_t init_stream_index = 0;
+    const int64_t i64_device_id = EncodeDeviceIdToInt64(device_id);
+    if (stream_index_state_.count(i64_device_id) != 0) {
+      init_stream_index = stream_index_state_.at(i64_device_id);
+    }
     iter = generators_.emplace(device_id, std::make_unique<StreamIndexGenerator>(init_stream_index))
                .first;
   }
@@ -71,6 +73,7 @@ void TaskStreamIndexManager::TryUpdateTaskStreamIndex(
     }
     pair.second->TryUpdateNextStreamIndex(initial_stream_index);
   }
+  stream_index_state_ = stream_index_state;
 }
 
 void TaskStreamIndexGetterRegistry::Register(const key_t& key, const stream_index_getter& getter) {
