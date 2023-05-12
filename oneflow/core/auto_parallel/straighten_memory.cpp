@@ -160,6 +160,11 @@ int64_t TopoStruct::SingleNodePriority() {
 int64_t TopoStruct::AccumulationPriority() {
   return Priority(accumulate_memory_increment, peak_memory_during_accumulation,
                   max_difference_during_accumulation);
+  // if (accumulate_memory_increment < 0) { return peak_memory_during_accumulation -
+  // kPriorityOffset; } if (accumulate_memory_increment > 0) { return kPriorityOffset +
+  // accumulate_memory_increment; }
+  // // accumulate_memory_increment == 0
+  // return kPriorityOffset - peak_memory_during_accumulation;
 }
 
 void TopoStruct::VisitAncestorsAndItself(const std::function<void(TopoStruct*)>& Handle) {
@@ -780,6 +785,7 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
     if (!node->executed) {
       CHECK(node->memory_increment >= 0)
           << "All the blobs should be release during straighten memory!";
+      node->SetAccumulateMemoryIncrement();
       Execute(node);
     }
   }
