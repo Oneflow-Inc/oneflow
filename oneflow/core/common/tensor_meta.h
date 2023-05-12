@@ -31,8 +31,8 @@ class ParallelDesc;
 
 namespace one {
 
-bool IsContiguous(const Shape& shape, const Stride& stride, MemoryFormat);
-bool IsContiguous(const ShapeView& shape_view, const Stride& stride);
+// bool IsContiguous(const Shape& shape, const Stride& stride, MemoryFormat);
+// bool IsContiguous(const ShapeView& shape_view, const Stride& stride);
 
 class TensorMeta : public user_op::TensorDesc {
  public:
@@ -54,6 +54,9 @@ class TensorMeta : public user_op::TensorDesc {
 
   virtual void set_shape(const Shape& shape) override { PRINT_BUG_PROMPT_AND_ABORT(); }
   virtual void set_stride(const Stride& stride) override { PRINT_BUG_PROMPT_AND_ABORT(); }
+  virtual void set_stride(const Stride& stride, MemoryFormat) override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+  }
   virtual void set_data_type(DataType data_type) override { PRINT_BUG_PROMPT_AND_ABORT(); }
   virtual void set_is_dynamic(bool is_dynamic) override { PRINT_BUG_PROMPT_AND_ABORT(); }
   virtual void set_memory_format(MemoryFormat memory_format) override {
@@ -88,13 +91,16 @@ class MutTensorMeta : public TensorMeta {
   const std::shared_ptr<const Stride>& stride_ptr() const override { return stride_; }
   const Shape& shape() const override { return *shape_; }
   const Stride& stride() const override { return *stride_; }
-  bool is_contiguous() const override { return IsContiguous(*shape_, *stride_, memory_format_); }
-  bool is_contiguous(MemoryFormat memory_format) const override {
-    return IsContiguous(*shape_, *stride_, memory_format);
-  }
+  bool is_contiguous()
+      const override;  // { return IsContiguous(*shape_, *stride_, memory_format_); }
+  bool is_contiguous(MemoryFormat memory_format) const override;
+  //  {
+  //   return IsContiguous(*shape_, *stride_, memory_format);
+  // }
 
   void set_shape(const Shape& shape) override { *const_cast<Shape*>(shape_.get()) = shape; }
   void set_stride(const Stride& stride) override { *const_cast<Stride*>(stride_.get()) = stride; }
+  void set_stride(const Stride& stride, MemoryFormat) override;
   void set_data_type(DataType data_type) override { data_type_ = data_type; }
   void set_is_dynamic(bool is_dynamic) override { is_dynamic_ = is_dynamic; }
   void set_memory_format(MemoryFormat memory_format) override { memory_format_ = memory_format; }
@@ -140,10 +146,12 @@ class ConstTensorMeta : public TensorMeta {
   }
   const Shape& shape() const override { return *shape_; }
   const Stride& stride() const override { return *stride_; }
-  bool is_contiguous() const override { return IsContiguous(*shape_, *stride_, memory_format_); }
-  bool is_contiguous(MemoryFormat memory_format) const override {
-    return IsContiguous(*shape_, *stride_, memory_format);
-  }
+  bool is_contiguous()
+      const override;  // { return IsContiguous(*shape_, *stride_, memory_format_); }
+  bool is_contiguous(MemoryFormat memory_format) const override;
+  //  {
+  //   return IsContiguous(*shape_, *stride_, memory_format);
+  // }
 
   bool operator==(const ConstTensorMeta& other) const;
   size_t CalcHashValue() const;

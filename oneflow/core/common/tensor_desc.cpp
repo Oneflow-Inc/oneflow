@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/tensor_desc.h"
+#include "oneflow/core/common/memory_format.pb.h"
+#include "oneflow/core/common/memory_format_util.h"
 #include "oneflow/core/register/blob_desc.pb.h"
 
 namespace oneflow {
@@ -38,6 +40,17 @@ bool TensorDesc::operator==(const TensorDesc& rhs) const {
 NaiveTensorDesc::NaiveTensorDesc(const NaiveTensorDesc& rhs) { *this = rhs; }
 
 NaiveTensorDesc::NaiveTensorDesc(const BlobDescProto& proto) { *this = proto; }
+
+void NaiveTensorDesc::set_stride(const Stride& stride, MemoryFormat memory_format) {
+  stride_ = GetStrideFromMemoryFormat(stride, memory_format);
+  // if (memory_format == kContiguous) {
+  //   return set_stride(stride);
+  // } else if (memory_format == kChannelsLast) {
+  //   stride_ = GetChannelsLastStrides2d(stride);
+  // } else {
+  //   CHECK_OR_THROW(false) << "set_stride: invalid memory_format";
+  // }
+}
 
 NaiveTensorDesc& NaiveTensorDesc::operator=(const BlobDescProto& proto) {
   data_type_ = proto.data_type();

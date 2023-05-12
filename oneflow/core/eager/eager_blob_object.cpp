@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/common/memory_format.pb.h"
 #include "oneflow/core/eager/tensor_storage.h"
 #include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/framework/to_string.h"
@@ -67,6 +68,12 @@ void EagerBlobObject::set_shape(const Shape& shape) {
 void EagerBlobObject::set_stride(const Stride& stride) {
   CHECK(dynamic_local_tensor_meta_);
   std::const_pointer_cast<one::MutLocalTensorMeta>(dynamic_local_tensor_meta_)->set_stride(stride);
+}
+
+void EagerBlobObject::set_stride(const Stride& stride, MemoryFormat memory_format) {
+  CHECK(dynamic_local_tensor_meta_);
+  std::const_pointer_cast<one::MutLocalTensorMeta>(dynamic_local_tensor_meta_)
+      ->set_stride(stride, memory_format);
 }
 
 MutShapeView EagerBlobObject::mut_shape_view() {

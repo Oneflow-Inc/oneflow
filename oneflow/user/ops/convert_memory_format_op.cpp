@@ -73,10 +73,23 @@ static Maybe<void> GetSbpChannelsLastToContiguous(user_op::SbpContext* ctx, cons
 using ComputeShapeFunc = std::function<Shape(const Shape&)>;
 using GetSbpFunc = std::function<Maybe<void>(user_op::SbpContext* ctx, const Shape& shape)>;
 
+Maybe<void> InvalidGetSbpFunc(user_op::SbpContext*, const Shape&) {
+  CHECK_OR_RETURN(false) << "GetConvertMemoryFormatSbp: Invalid memory format, please check the "
+                            "memory_format of input and output.";
+}
+
 static ComputeShapeFunc compute_shape_funcs[kMemoryFormatCount][kMemoryFormatCount] = {
     /*kContiguous->other*/ {ComputeShapeIdentity, ComputeShapeContiguousToChannelsLast},
     /*kChannelsLast->other*/ {ComputeShapeChannelsLastToContiguous, ComputeShapeIdentity},
 };
+
+// static GetSbpFunc get_sbp_funcs[MemoryFormatCount][MemoryFormatCount] = {
+//     /* kContiguous   -> others */
+//     {GetSbpIdentity, GetSbpContiguousToChannelsLast, InvalidGetSbpFunc},
+//     /* kChannelsLast -> others */
+//     {GetSbpChannelsLastToContiguous, GetSbpIdentity, InvalidGetSbpFunc},
+//     /* kPreserve     -> others */ {InvalidGetSbpFunc, InvalidGetSbpFunc, InvalidGetSbpFunc},
+// };
 
 static GetSbpFunc get_sbp_funcs[kMemoryFormatCount][kMemoryFormatCount] = {
     /*kContiguous->other*/ {GetSbpIdentity, GetSbpContiguousToChannelsLast},
@@ -116,6 +129,8 @@ static Maybe<void> GetConvertMemoryFormatSbp(user_op::SbpContext* ctx, const Sha
   out_tensor_desc->set_shape(
       ComputeConvertMemoryFormatShape(in_shape, in_tensor_desc.memory_format(), memory_format));
   out_tensor_desc->set_memory_format(memory_format);
+  // bug here
+  out_tensor_desc->set_stride(in_tensor_desc.stride(), memory_format);
   return Maybe<void>::Ok();
 }
 

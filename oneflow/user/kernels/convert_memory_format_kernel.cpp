@@ -16,6 +16,8 @@ limitations under the License.
 #include "oneflow/core/common/memory_format_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/convert_memory_format_util.h"
+#include "oneflow/core/ep/include/primitive/permute.h"
+#include "oneflow/core/ep/common/primitive/permute.h"
 
 namespace oneflow {
 
@@ -29,14 +31,27 @@ class ConvertMemoryFormatKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache*) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    ConvertMemoryFormat(ctx->stream(), in->shape_view().NumAxes(), in->shape_view().data(),
-                        in->data_type(), in->dptr(), out->mut_dptr(), in->memory_format(),
-                        out->memory_format());
+    ConvertMemoryFormat(ctx->stream(), in->shape_view(), in->data_type(), in->dptr(),
+                        out->mut_dptr(), in->memory_format(), out->memory_format());
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("convert_memory_format").SetCreateFn<ConvertMemoryFormatKernel>();
+template<typename Context>
+std::unique_ptr<ep::primitive::Permute> NewPermutePrimitive(Context* ctx) {
+  const int64_t num_dims = ctx->TensorDesc4ArgNameAndIndex("output", 0)->shape().NumAxes();
+  return ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(ctx->device_type(), num_dims);
+}
+
+auto PermutePrimitiveExists() {
+  return hob::make_custom("PermutePrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewPermutePrimitive(&ctx).operator bool();
+  });
+}
+
+REGISTER_USER_KERNEL("convert_memory_format")
+    .SetCreateFn<ConvertMemoryFormatKernel>()
+    .SetIsMatchedHob(PermutePrimitiveExists() == true);
 
 }  // namespace oneflow

@@ -19,6 +19,7 @@ limitations under the License.
 #include <utility>
 
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/memory_format.pb.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/op_args_reserved_size.h"
 #include "oneflow/core/eager/local_dep_object.h"
@@ -80,6 +81,7 @@ class EagerBlobObject final : public user_op::Tensor,
 
   void set_shape(const Shape& shape) override;
   void set_stride(const Stride& stride) override;
+  void set_stride(const Stride& stride, MemoryFormat) override;
   void set_data_type(DataType data_type) override { data_type_ = data_type; }
   void set_is_dynamic(bool is_dynamic) override { is_dynamic_ = is_dynamic; }
   void set_memory_format(MemoryFormat memory_format) override { memory_format_ = memory_format; }

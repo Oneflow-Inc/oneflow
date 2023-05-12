@@ -64,6 +64,7 @@ class BlobDesc final {
 
   void set_shape(const Shape& shape) { this->shape_ = SymbolOf(shape); }
   void set_stride(const Stride& stride) { this->stride_ = SymbolOf(stride); }
+  void set_stride(const Stride& stride, MemoryFormat);  // { this->stride_ = SymbolOf(stride); }
 
   DataType data_type() const { return data_type_; }
   void set_data_type(DataType data_type) { data_type_ = data_type; }

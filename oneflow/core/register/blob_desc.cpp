@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/register/blob_desc.h"
+#include "oneflow/core/common/memory_format_util.h"
+#include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
 
@@ -88,6 +90,10 @@ void BlobDesc::CopyFrom(const BlobDesc& other) {
 }
 
 void BlobDesc::set_is_dynamic(bool is_dynamic) { is_dynamic_ = is_dynamic; }
+
+void BlobDesc::set_stride(const Stride& stride, MemoryFormat memory_format) {
+  stride_ = SymbolOf(GetStrideFromMemoryFormat(stride, memory_format));
+}
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
   return (shape() == rhs.shape()) && (stride() == rhs.stride()) && (data_type() == rhs.data_type())

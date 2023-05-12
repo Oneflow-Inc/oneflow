@@ -135,13 +135,24 @@ class TestTensor(flow.unittest.TestCase):
 
     @autotest(n=10)
     def test_to_memory_format(test_case):
-        def check_equal(a, b):
-            test_case.assertEqual(list(a.shape), list(b.shape))
-            test_case.assertEqual(list(a.stride()), list(b.stride()))
-            test_case.assertEqual(a.is_contiguous(), b.is_contiguous())
+        def check_equal(flow_result, torch_result):
+            test_case.assertEqual(list(flow_result.shape), list(torch_result.shape))
+            test_case.assertEqual(
+                list(flow_result.stride()), list(torch_result.stride())
+            )
+            test_case.assertEqual(
+                flow_result.is_contiguous(), torch_result.is_contiguous()
+            )
+            test_case.assertEqual(
+                flow_result.is_contiguous(memory_format=flow.channels_last),
+                torch_result.is_contiguous(memory_format=torch.channels_last),
+            )
             test_case.assertTrue(
                 np.allclose(
-                    a.detach().cpu().numpy(), b.detach().cpu().numpy(), 1e-06, 1e-06
+                    flow_result.detach().cpu().numpy(),
+                    torch_result.detach().cpu().numpy(),
+                    1e-06,
+                    1e-06,
                 )
             )
 

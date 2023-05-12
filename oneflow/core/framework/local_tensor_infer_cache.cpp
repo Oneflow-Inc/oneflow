@@ -184,6 +184,7 @@ Maybe<void> LocalTensorMetaInferArgs::InitInputLocalTensorMetas(const TensorTupl
   for (int32_t i = 0; i < user_op_expr.output_size(); ++i) {
     if (!JUST(user_op_expr.SupportNonContiguous())) {
       Stride stride(output_mut_metas.at(i).shape());
+      // bug here
       output_mut_metas.at(i).set_stride(stride);
     }
     CHECK_OR_RETURN(static_cast<bool>(output_mut_metas.at(i).device()))
