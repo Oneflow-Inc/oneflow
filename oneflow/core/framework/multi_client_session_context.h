@@ -38,8 +38,6 @@ class MultiClientSessionContext {
 
   Maybe<void> TryClose();
 
-  IdStateMgr* GetIdStateMgr() const { return id_state_mgr_.get(); }
-
   // NOTE(chengcheng): for nn.Graph catch free EagerTensor in Graph.build().
   //   NNGraph should NOT hold ANY shared_ptr<Tensor> because NNGraph will send to VM stream in
   //   RunLazyNNGraphInstruction, the tensor in NNGraph will Never be released for hold in VM
@@ -52,10 +50,15 @@ class MultiClientSessionContext {
   GetFreeEagerTensorNamePairByGraphName(const std::string& graph_name);
   void RemoveGraphFreeEagerTensors(const std::string& graph_name);
 
+  // This method is read-only and is used to call `GetXXIndexState for `XX Mgr`
+  const IdState* GetIdStatePointer() { return &id_state_; }
+  IdState GetIdState();
+  void SetIdState(const IdState& id_state);
+
  private:
   bool is_inited_ = false;
   std::shared_ptr<EnvGlobalObjectsScope> env_ctx_;
-  std::unique_ptr<IdStateMgr> id_state_mgr_{nullptr};
+  IdState id_state_;
   HashMap<std::string, std::vector<std::pair<std::string, std::shared_ptr<one::Tensor>>>>
       graph_name2free_eager_tensors_;
 };
