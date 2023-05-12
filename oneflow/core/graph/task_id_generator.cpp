@@ -41,7 +41,8 @@ void TaskIdGenerator::TryUpdateTaskIndex(const HashMap<int64_t, uint32_t>& task_
 TaskId TaskIdGenerator::Generate(const StreamId& stream_id) {
   if (stream_id2task_index_counter_.count(stream_id) == 0) {
     stream_id2task_index_counter_[stream_id] =
-        Singleton<MultiClientSessionContext>::Get()->GetIdStateMgr()->GetTaskIndexState(stream_id);
+        Singleton<MultiClientSessionContext>::Get()->GetIdStatePointer()->GetTaskIndexState(
+            stream_id);
   }
   task_index_t task_index = stream_id2task_index_counter_[stream_id]++;
   return TaskId{stream_id, task_index};

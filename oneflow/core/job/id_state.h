@@ -25,37 +25,24 @@ namespace oneflow {
 
 class IdState {
  public:
+  uint32_t GetTaskIndexState(const StreamId& stream_id) const {
+    auto encode_stream_id = EncodeStreamIdToInt64(stream_id);
+    if (task_index_state_.count(encode_stream_id) == 0) { return 0; }
+    return task_index_state_.at(encode_stream_id);
+  }
+
+  uint32_t GetStreamIndexState(const DeviceId& device_id) const {
+    auto encode_device_id = EncodeDeviceIdToInt64(device_id);
+    if (stream_index_state_.count(encode_device_id) == 0) { return 0; }
+    return stream_index_state_.at(encode_device_id);
+  }
+
   int64_t regst_desc_id_state_{};
   int64_t mem_block_id_state_{};
   int64_t chunk_id_state_{};
   int64_t job_id_state_{};
   HashMap<int64_t, uint32_t> task_index_state_{};
   HashMap<int64_t, uint32_t> stream_index_state_{};
-};
-
-class IdStateMgr final {
- public:
-  IdStateMgr() = default;
-  OF_DISALLOW_COPY_AND_MOVE(IdStateMgr);
-  ~IdStateMgr() = default;
-
-  IdState GetIdState();
-  void SetIdState(const IdState& id_state);
-
-  uint32_t GetTaskIndexState(const StreamId& stream_id) {
-    auto encode_stream_id = EncodeStreamIdToInt64(stream_id);
-    if (id_state_.task_index_state_.count(encode_stream_id) == 0) { return 0; }
-    return id_state_.task_index_state_[encode_stream_id];
-  }
-
-  uint32_t GetStreamIndexState(const DeviceId& device_id) {
-    auto encode_device_id = EncodeDeviceIdToInt64(device_id);
-    if (id_state_.stream_index_state_.count(encode_device_id) == 0) { return 0; }
-    return id_state_.stream_index_state_[encode_device_id];
-  }
-
- private:
-  IdState id_state_{};
 };
 
 }  // namespace oneflow

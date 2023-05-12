@@ -36,11 +36,8 @@ class IDMgr final {
 
   TaskIdGenerator* GetTaskIdGenerator() { return &task_id_gen_; }
 
-  std::vector<int64_t> GetId() const;
-  void TryUpdateId(int64_t regst_desc_id_count, int64_t mem_block_id_count, int64_t chunk_id_count);
-
-  void GetTaskIndex(HashMap<int64_t, uint32_t> *task_index_state);
-  void TryUpdateTaskIndex(const HashMap<int64_t, uint32_t> &task_index_state);
+  void SaveIdAndTaskIndex(IdState* id_state);
+  void TryUpdateIdAndTaskIndex(IdState* id_state);
 
  private:
   friend class Singleton<IDMgr>;
