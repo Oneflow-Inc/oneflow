@@ -27,7 +27,6 @@ limitations under the License.
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/common/singleton.h"
-#include "oneflow/core/common/singleton_ptr.h"
 #include "oneflow/core/common/foreign_lock_helper.h"
 #include "oneflow/extension/stack/foreign_stack_getter.h"
 
