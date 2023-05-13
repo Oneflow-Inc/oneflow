@@ -57,8 +57,8 @@ transform.sequence failures(propagate) {
       {create_deallocs = false, bufferize_function_boundaries = true,  allow_return_allocs = true} : (!pdl.operation) -> !pdl.operation
 
   // Note: step 4, mapping scf to gpu
-  // %gpu_launch_op = transform.gpu.map_forall_to_blocks %bufferized_func_op { generate_gpu_launch }
-  // transform.gpu.map_nested_forall_to_threads %gpu_launch_op block_dims = [32, 4, 1]
+  %gpu_launch_op = transform.gpu.map_forall_to_blocks %bufferized_func_op { generate_gpu_launch }
+  transform.gpu.map_nested_forall_to_threads %gpu_launch_op block_dims = [32, 4, 1]
 
 
 }
