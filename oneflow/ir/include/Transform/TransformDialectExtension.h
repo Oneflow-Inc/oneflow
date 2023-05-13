@@ -21,6 +21,16 @@ limitations under the License.
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/PatternMatch.h"
+
+namespace mlir {
+class DominanceInfo;
+class Operation;
+
+LogicalResult eliminateCommonSubexpressions(Operation *op,
+                                            DominanceInfo *domInfo,
+                                            RewriterBase::Listener *listener);
+} // namespace mlir
 
 namespace mlir {
 class DialectRegistry;
@@ -34,6 +44,7 @@ void registerTransformDialectInterpreterPass();
 
 struct ApplyPatternsOpPatterns {
   bool canonicalization = false;
+  bool cse = false;
 };
 
 }  // namespace transform_dialect

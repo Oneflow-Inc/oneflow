@@ -3,6 +3,7 @@ add_mlir_library(
   TransformDialectExtension.cpp
   TransformDialectInterpreter.cpp
   TransformStateExtension.cpp
+  CSE.cpp
   EXCLUDE_FROM_LIBMLIR
   DEPENDS
   MLIROneFlowTransformDialectExtensionIncGen
