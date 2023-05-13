@@ -1,5 +1,4 @@
-// RUN: oneflow-opt %s --pass-pipeline="builtin.module(oneflow-transform-dialect-interpreter{transform-file-name=%p/softmax_codegen_spec.mlir})" | \
-// RUN: oneflow-opt -cse
+// RUN: oneflow-opt %s --pass-pipeline="builtin.module(oneflow-transform-dialect-interpreter{transform-file-name=%p/softmax_codegen_spec.mlir})"
 
 
 !tmp_tensor_t = tensor<16x128xf32>

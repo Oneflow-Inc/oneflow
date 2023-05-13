@@ -24,15 +24,6 @@ limitations under the License.
 #include "mlir/IR/PatternMatch.h"
 
 namespace mlir {
-class DominanceInfo;
-class Operation;
-
-LogicalResult eliminateCommonSubexpressions(Operation *op,
-                                            DominanceInfo *domInfo,
-                                            RewriterBase::Listener *listener);
-} // namespace mlir
-
-namespace mlir {
 class DialectRegistry;
 
 namespace oneflow {
@@ -41,6 +32,8 @@ namespace transform_dialect {
 void registerTransformDialectExtension(::mlir::DialectRegistry& registry);
 void registerTransformDialectEraseSchedulePass();
 void registerTransformDialectInterpreterPass();
+
+void eliminateCommonSubexpressions(Operation* op);
 
 struct ApplyPatternsOpPatterns {
   bool canonicalization = false;

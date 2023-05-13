@@ -77,7 +77,7 @@ DiagnosedSilenceableFailure transform_dialect::ApplyPatternsOp::applyToOne(
     func::FuncOp lastFuncVisited;
     auto walkResult = target->walk([&](func::FuncOp funcOp) -> WalkResult {
       lastFuncVisited = funcOp;
-      eliminateCommonSubexpressions(funcOp, nullptr, nullptr);
+      eliminateCommonSubexpressions(funcOp);
       if (failed(result)) return WalkResult::interrupt();
       return WalkResult::advance();
     });
