@@ -23,7 +23,7 @@ limitations under the License.
 #include "OneFlow/OKM/OKMDialect.h"
 #include "OneFlow/OKL/passes.h"
 #include "OneFlow/OKM/passes.h"
-#include "Transform/TestTransformDialectExtension.h"
+#include "Transform/TransformDialectExtension.h"
 
 #include "mlir/InitAllDialects.h"
 #include "mlir/InitAllPasses.h"
@@ -38,13 +38,13 @@ int32_t main(int32_t argc, char** argv) {
   mlir::oneflow::registerPasses();
   mlir::okm::registerPasses();
   mlir::okl::registerPasses();
-  mlir::transform::registerTestTransformDialectEraseSchedulePass();
-  mlir::transform::registerTestTransformDialectInterpreterPass();
+  mlir::oneflow::transform_dialect::registerTransformDialectEraseSchedulePass();
+  mlir::oneflow::transform_dialect::registerTransformDialectInterpreterPass();
 
   mlir::DialectRegistry registry;
   // Note: register all mlir dialect and their extension.
   mlir::registerAllDialects(registry);
-  mlir::transform::registerTestTransformDialectExtension(registry);
+  mlir::oneflow::transform_dialect::registerTransformDialectExtension(registry);
   registry.insert<mlir::okl::OKLDialect>();
   registry.insert<mlir::okm::OKMDialect>();
   registry.insert<mlir::sbp::SBPDialect>();
