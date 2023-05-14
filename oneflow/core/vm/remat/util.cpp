@@ -337,7 +337,7 @@ Maybe<void> RematHelper::EagerlyEvictRemattedTensors(bool first) {
     storage->Unpin();
     if (storage->num_pinned() == 0 && need_eager_eviction_storages.count(storage.get()) > 0) {
       need_eager_eviction_storages.erase(storage.get());
-      storage->Evict(true);
+      if (storage->is_evictable()) { storage->Evict(true); }
     }
   }
   if (first) {
