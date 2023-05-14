@@ -22,8 +22,9 @@ from test_run_graph_by_vm import RunGraphByVmEnv, Graph
 from test_graph_ofrecord_reader import OFRecordDataLoader
 
 
-@flow.unittest.skip_unless_1n2d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestGlobalInterpreter(flow.unittest.TestCase):
+    @flow.unittest.skip_unless_1n2d()
     def test_data_parallel_run_by_vm(test_case):
         with RunGraphByVmEnv():
 
@@ -51,6 +52,7 @@ class TestGlobalInterpreter(flow.unittest.TestCase):
             test_case.assertTrue(graph_output.placement == eager_output.placement)
             test_case.assertTrue(np.allclose(graph_output, eager_output))
 
+    @flow.unittest.skip_unless_1n2d()
     def test_module_parallel_run_by_vm(test_case):
         with RunGraphByVmEnv():
 
@@ -77,6 +79,7 @@ class TestGlobalInterpreter(flow.unittest.TestCase):
             test_case.assertTrue(graph_output.placement == eager_output.placement)
             test_case.assertTrue(np.allclose(graph_output, eager_output))
 
+    @flow.unittest.skip_unless_1n2d()
     def test_boxing_data_parallel_run_by_vm(test_case):
         with RunGraphByVmEnv():
 
@@ -108,9 +111,7 @@ class TestGlobalInterpreter(flow.unittest.TestCase):
             test_case.assertTrue(graph_output.placement == eager_output.placement)
             test_case.assertTrue(np.allclose(graph_output, eager_output))
 
-
-@flow.unittest.skip_unless_1n1d()
-class TestEmptyInputs(oneflow.unittest.TestCase):
+    @flow.unittest.skip_unless_1n1d()
     def test_empty_inputs(test_case):
         with RunGraphByVmEnv():
 
