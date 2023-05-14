@@ -24,11 +24,7 @@ transform.sequence failures(propagate) {
   // Note: step 2, tiling and fusing linalg ops in thread level.
   %ops_1 = transform.structured.match ops{["linalg.fill", "linalg.generic"]}
     in %func_op : (!pdl.operation) -> !pdl.operation
-  %match_0_0,
-  %match_0_1,
-  %match_0_2,
-  %match_0_3,
-  %match_0_end = transform.split_handle %ops_1
+  %match_0_0, %match_0_1, %match_0_2, %match_0_3, %match_0_end = transform.split_handle %ops_1
     : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation,
                            !pdl.operation, !pdl.operation)
 
@@ -52,9 +48,12 @@ transform.sequence failures(propagate) {
   %empty = transform.structured.match ops{["tensor.empty"]} in %func_op : (!pdl.operation) -> !pdl.operation
   %empty_id = transform.cast %empty : !pdl.operation to !transform.op<"tensor.empty">
   transform.bufferization.empty_tensor_to_alloc_tensor %empty_id : (!transform.op<"tensor.empty">) -> !transform.op<"bufferization.alloc_tensor">
+  transform.structured.hoist_redundant_tensor_subsets %func_op : (!pdl.operation) -> ()
 
-  %bufferized_func_op = transform.bufferization.one_shot_bufferize %func_op
-      {create_deallocs = false, bufferize_function_boundaries = true,  allow_return_allocs = true} : (!pdl.operation) -> !pdl.operation
+  %bufferized_func_op = transform.oneflow.one_shot_bufferize  %func_op 
+      {bufferize_function_boundaries = true,  allow_return_allocs = true, support_gpu = true } : (!pdl.operation) -> !pdl.operation
+
+  transform.oneflow.apply_patterns %bufferized_func_op { canonicalization, cse } : (!pdl.operation) -> ()
 
   // Note: step 4, mapping scf to gpu
   %gpu_launch_op = transform.gpu.map_forall_to_blocks %bufferized_func_op { generate_gpu_launch }

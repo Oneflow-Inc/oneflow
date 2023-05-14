@@ -26,9 +26,109 @@ limitations under the License.
 #include "llvm/Support/raw_ostream.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Dialect/Bufferization/TransformOps/BufferizationTransformOps.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
+#include "mlir/Dialect/Bufferization/Transforms/OneShotModuleBufferize.h"
+#include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/PDL/IR/PDL.h"
+#include "mlir/Dialect/PDL/IR/PDLTypes.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Transform/IR/TransformDialect.h"
+#include "mlir/IR/FunctionInterfaces.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/Transforms/ParallelLoopMapper.h"
 
 using namespace mlir;
 using namespace mlir::oneflow;
+using namespace mlir::bufferization;
+using namespace mlir::transform;
+
+//===----------------------------------------------------------------------===//
+// OneShotBufferizeOp
+//===----------------------------------------------------------------------===//
+
+namespace {
+FailureOr<Value> gpuComprehensiveBufferizeAllocationFn(OpBuilder& builder, Location loc,
+                                                       MemRefType memRefType,
+                                                       ValueRange dynamicSizes,
+                                                       unsigned alignment) {
+  auto addressSpaceAttr =
+      gpu::AddressSpaceAttr::get(builder.getContext(), gpu::GPUDialect::getWorkgroupAddressSpace());
+  MemRefType allocType = MemRefType::get(memRefType.getShape(), memRefType.getElementType(),
+                                         AffineMap(), addressSpaceAttr);
+  Operation* parentOp = builder.getInsertionBlock()->getParentOp();
+  do {
+    // Note: alloc in device
+    if (parentOp->hasAttr(gpu::getMappingAttrName())) {
+      return builder
+          .create<memref::AllocOp>(loc, allocType, dynamicSizes,
+                                   builder.getI64IntegerAttr(alignment))
+          .getResult();
+    }
+
+    // Note: alloc in host
+    if (llvm::dyn_cast<func::FuncOp>(parentOp)) {
+      auto alloc = builder.create<memref::AllocOp>(loc, memRefType, dynamicSizes,
+                                                   builder.getI64IntegerAttr(alignment));
+      auto casted = builder.create<memref::MemorySpaceCastOp>(loc, allocType, alloc);
+      auto rankedType = casted.getType();
+      Type unrankedType =
+          UnrankedMemRefType::get(rankedType.getElementType(), rankedType.getMemorySpace());
+      auto unrankCasted = builder.create<memref::CastOp>(loc, unrankedType, casted);
+      builder.create<gpu::HostRegisterOp>(loc, unrankCasted);
+      return casted.getResult();
+    }
+  } while ((parentOp = parentOp->getParentOp()));
+  return failure();
+}
+
+LogicalResult gpuComprehensiveBufferizeDeallocationFn(OpBuilder& builder, Location loc,
+                                                      Value allocation) {
+  builder.create<memref::DeallocOp>(loc, allocation);
+  return success();
+}
+
+}  // namespace
+
+DiagnosedSilenceableFailure transform_dialect::OneShotBufferizeOp::apply(
+    TransformResults& transformResults, TransformState& state) {
+  OneShotBufferizationOptions options;
+  options.allowReturnAllocs = getAllowReturnAllocs();
+  options.allowUnknownOps = getAllowUnknownOps();
+  options.bufferizeFunctionBoundaries = getBufferizeFunctionBoundaries();
+  options.createDeallocs = getCreateDeallocs();
+  options.testAnalysisOnly = getTestAnalysisOnly();
+  options.printConflicts = getPrintConflicts();
+
+  if (getSupportGpu()) {
+    options.allocationFn = gpuComprehensiveBufferizeAllocationFn;
+    options.deallocationFn = gpuComprehensiveBufferizeDeallocationFn;
+  }
+  if (getFunctionBoundaryTypeConversion().has_value())
+    options.setFunctionBoundaryTypeConversion(*getFunctionBoundaryTypeConversion());
+
+  ArrayRef<Operation*> payloadOps = state.getPayloadOps(getTarget());
+  for (Operation* target : payloadOps) {
+    if (!isa<ModuleOp, FunctionOpInterface>(target))
+      return emitSilenceableError() << "expected module or function target";
+    auto moduleOp = dyn_cast<ModuleOp>(target);
+    if (options.bufferizeFunctionBoundaries) {
+      if (!moduleOp) return emitSilenceableError() << "expected module target";
+      if (failed(bufferization::runOneShotModuleBufferize(moduleOp, options)))
+        return emitSilenceableError() << "bufferization failed";
+    } else {
+      if (failed(bufferization::runOneShotBufferize(target, options)))
+        return emitSilenceableError() << "bufferization failed";
+    }
+  }
+
+  // This transform op is currently restricted to ModuleOps and function ops.
+  // Such ops are modified in-place.
+  transformResults.set(getTransformed().cast<OpResult>(), payloadOps);
+  return DiagnosedSilenceableFailure::success();
+}
 
 //===---------------------------------------------------------------------===//
 // ApplyPatternsOp
