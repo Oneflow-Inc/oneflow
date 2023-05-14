@@ -2852,18 +2852,18 @@ def OneFlow_FusedCrossFeatureInteractionV2GradOp : OneFlow_BaseOp<"fused_cross_f
 def OneFlow_LlamaAttentionLayerForwardOp : OneFlow_BaseOp<"llama_attention_layer_forward", [NoMemoryEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$hidden_states,
-    OneFlow_Tensor:$input_norm_weight,
-    OneFlow_Tensor:$query_weight,
-    OneFlow_Tensor:$key_weight,
-    OneFlow_Tensor:$value_weight,
-    OneFlow_Tensor:$attn_out_weight,
+    Variadic<OneFlow_Tensor>:$input_norm_weights,
+    Variadic<OneFlow_Tensor>:$query_weights,
+    Variadic<OneFlow_Tensor>:$key_weights,
+    Variadic<OneFlow_Tensor>:$value_weights,
+    Variadic<OneFlow_Tensor>:$attn_out_weights,
     OneFlow_Tensor:$position_ids,
-    OneFlow_Tensor:$post_norm_weight,
-    OneFlow_Tensor:$mlp_gate_weight,
-    OneFlow_Tensor:$mlp_up_weight,
-    OneFlow_Tensor:$mlp_down_weight,
-    Optional<OneFlow_Tensor>:$past_key,
-    Optional<OneFlow_Tensor>:$past_value
+    Variadic<OneFlow_Tensor>:$post_norm_weights,
+    Variadic<OneFlow_Tensor>:$mlp_gate_weights,
+    Variadic<OneFlow_Tensor>:$mlp_up_weights,
+    Variadic<OneFlow_Tensor>:$mlp_down_weights,
+    Variadic<OneFlow_Tensor>:$past_keys,
+    Variadic<OneFlow_Tensor>:$past_values
   );
   let output = (outs
     OneFlow_Tensor:$rms_norm_out,
@@ -2873,8 +2873,8 @@ def OneFlow_LlamaAttentionLayerForwardOp : OneFlow_BaseOp<"llama_attention_layer
     OneFlow_Tensor:$value,
     OneFlow_Tensor:$rotary_query,
     OneFlow_Tensor:$rotary_key,
-    OneFlow_Tensor:$concat_key,
-    OneFlow_Tensor:$concat_value,
+    Variadic<OneFlow_Tensor>:$concat_keys,
+    Variadic<OneFlow_Tensor>:$concat_values,
     OneFlow_Tensor:$attn_out,
     OneFlow_Tensor:$out,
     OneFlow_Tensor:$post_norm_out,
@@ -2884,6 +2884,7 @@ def OneFlow_LlamaAttentionLayerForwardOp : OneFlow_BaseOp<"llama_attention_layer
   );
   let attrs = (ins
     SI64Attr:$head_size,
+    SI64Attr:$num_layers,
     StrAttr:$parallel_conf
   );
   let has_logical_tensor_desc_infer_fn = 1;
