@@ -112,17 +112,18 @@ class TestGlobalInterpreter(flow.unittest.TestCase):
 @flow.unittest.skip_unless_1n1d()
 class TestEmptyInputs(oneflow.unittest.TestCase):
     def test_empty_inputs(test_case):
+        with RunGraphByVmEnv():
 
-        class GraphReader(flow.nn.Graph):
-            def __init__(self):
-                super().__init__()
-                self.my_reader = OFRecordDataLoader()
+            class GraphReader(flow.nn.Graph):
+                def __init__(self):
+                    super().__init__()
+                    self.my_reader = OFRecordDataLoader()
 
-            def build(self):
-                return self.my_reader()
+                def build(self):
+                    return self.my_reader()
 
-        reader_g = GraphReader()
-        image, label = reader_g()
+            reader_g = GraphReader()
+            image, label = reader_g()
 
 
 if __name__ == "__main__":
