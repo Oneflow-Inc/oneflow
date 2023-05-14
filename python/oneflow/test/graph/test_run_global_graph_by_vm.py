@@ -119,7 +119,7 @@ class TestGlobalInterpreter(flow.unittest.TestCase):
                 def __init__(self):
                     super().__init__()
                     self.my_reader = OFRecordDataLoader()
-
+                
                 def build(self):
                     return self.my_reader()
 

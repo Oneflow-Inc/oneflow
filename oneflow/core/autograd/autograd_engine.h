@@ -105,7 +105,8 @@ class AutogradEngine {
   Maybe<TensorTuple> RunBackwardAndReturnInputsTensorGradIf(const TensorTuple& outputs,
                                                             const TensorTuple& inputs,
                                                             const TensorTuple& out_grads,
-                                                            bool retain_graph, bool create_graph);
+                                                            bool retain_graph, bool create_graph,
+                                                            bool allow_unused);
   virtual void ClearEngine() = 0;
   // Builds FunctionNode, binding to all `outputs_` tensors and saving in AutogradEngine
   virtual Maybe<FunctionNode> AddNode(const std::string& name,
@@ -119,11 +120,9 @@ class AutogradEngine {
   virtual Maybe<void> RunBackwardAndSaveGrads4LeafTensor(const TensorTuple& outputs,
                                                          const TensorTuple& out_grads,
                                                          bool retain_graph, bool create_graph) = 0;
-  virtual Maybe<TensorTuple> RunBackwardAndReturnInputsTensorGrad(const TensorTuple& outputs,
-                                                                  const TensorTuple& inputs,
-                                                                  const TensorTuple& out_grads,
-                                                                  bool retain_graph,
-                                                                  bool create_graph) = 0;
+  virtual Maybe<TensorTuple> RunBackwardAndReturnInputsTensorGrad(
+      const TensorTuple& outputs, const TensorTuple& inputs, const TensorTuple& out_grads,
+      bool retain_graph, bool create_graph, bool allow_unused) = 0;
 };
 
 // Graph Autograd Node and Engine
@@ -151,7 +150,7 @@ class GraphTask final {
   GraphTask(const TensorTuple& outputs, bool retain_graph, bool create_graph);
 
   Maybe<void> ComputeDependencies();
-  Maybe<void> ComputeDependenciesAndPruneNode(const TensorTuple& inputs);
+  Maybe<void> ComputeDependenciesAndPruneNode(const TensorTuple& inputs, bool allow_unused);
   Maybe<void> Apply(bool save_grad_for_leaf);
   std::shared_ptr<TensorTuple> GetCapturedGrads() const { return captured_grads_; }
   Maybe<void> WriteGraphToDotFile(const std::string& file_name) const;
@@ -193,8 +192,8 @@ class GraphAutogradEngine final : public AutogradEngine {
   Maybe<TensorTuple> RunBackwardAndReturnInputsTensorGrad(const TensorTuple& outputs,
                                                           const TensorTuple& inputs,
                                                           const TensorTuple& out_grads,
-                                                          bool retain_graph,
-                                                          bool create_graph) override;
+                                                          bool retain_graph, bool create_graph,
+                                                          bool allow_unused) override;
 };
 
 AutogradEngine* GetThreadLocalAutogradEngine();
