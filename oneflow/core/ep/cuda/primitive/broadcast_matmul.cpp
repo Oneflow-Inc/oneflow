@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include <cuda.h>
+#include <cuComplex.h>
 
 namespace oneflow {
 
@@ -41,6 +42,8 @@ Optional<cudaDataType_t> OptCudaDataType(DataType data_type) {
     case kFloat: return CUDA_R_32F;
     case kDouble: return CUDA_R_64F;
     case kFloat16: return CUDA_R_16F;
+    case kComplex64: return CUDA_C_32F;
+    case kComplex128: return CUDA_C_64F;
 #if CUDA_VERSION >= 11000
     case kBFloat16: return CUDA_R_16BF;
 #endif  // CUDA_VERSION >= 11000
@@ -58,6 +61,8 @@ union CublasScalarParameter {
   double d;
   float s;
   half h;
+  cuComplex c;
+  cuDoubleComplex z;
 };
 
 CublasScalarParameter GetCublasScalarParameter(Scalar scalar, cudaDataType_t compute_type) {
@@ -68,6 +73,12 @@ CublasScalarParameter GetCublasScalarParameter(Scalar scalar, cudaDataType_t com
     sp.s = scalar.Value<float>();
   } else if (compute_type == CUDA_R_16F) {
     sp.h = static_cast<half>(scalar.Value<float>());
+  } else if (compute_type == CUDA_C_32F) {
+    const std::complex<float> cpp_value = scalar.Value<std::complex<float>>();
+    sp.c = cuComplex{cpp_value.real(), cpp_value.imag()};
+  } else if (compute_type == CUDA_C_64F) {
+    const std::complex<double> cpp_value = scalar.Value<std::complex<double>>();
+    sp.z = cuDoubleComplex{cpp_value.real(), cpp_value.imag()};
   } else {
     UNIMPLEMENTED();
   }
@@ -78,6 +89,8 @@ cudaDataType_t GetComputeType(DataType data_type) {
   switch (data_type) {
     case kFloat: return CUDA_R_32F;
     case kDouble: return CUDA_R_64F;
+    case kComplex64: return CUDA_C_32F;
+    case kComplex128: return CUDA_C_64F;
     case kFloat16: {
       const bool allow_half_accumulation =
           ParseBooleanFromEnv("ONEFLOW_MATMUL_ALLOW_HALF_PRECISION_ACCUMULATION", false);

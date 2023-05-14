@@ -42,7 +42,9 @@ CBLAS_TRANSPOSE GetCblasTranspose(BlasTransposeType transpose_type) {
   }
 }
 
-template<typename T>
+template<typename T, typename std::enable_if<
+                         !(std::is_same<T, std::complex<float>>::value
+                           || std::is_same<T, std::complex<double>>::value)>::type* = nullptr>
 void CblasMatmul(CBLAS_TRANSPOSE trans_a, CBLAS_TRANSPOSE trans_b, int m, int n, int k, T alpha,
                  const T* a, const T* b, T beta, T* c) {
   int lda = 0;
@@ -63,6 +65,33 @@ void CblasMatmul(CBLAS_TRANSPOSE trans_a, CBLAS_TRANSPOSE trans_b, int m, int n,
   }
   const int ldc = n;
   cblas_gemm<T>(CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
+}
+
+template<typename T,
+         typename std::enable_if<std::is_same<T, std::complex<float>>::value
+                                 || std::is_same<T, std::complex<double>>::value>::type* = nullptr>
+void CblasMatmul(CBLAS_TRANSPOSE trans_a, CBLAS_TRANSPOSE trans_b, int m, int n, int k, T alpha,
+                 const T* a, const T* b, T beta, T* c) {
+  int lda = 0;
+  if (trans_a == CblasNoTrans) {
+    lda = k;
+  } else if (trans_a == CblasTrans) {
+    lda = m;
+  } else {
+    UNIMPLEMENTED();
+  }
+  int ldb = 0;
+  if (trans_b == CblasNoTrans) {
+    ldb = n;
+  } else if (trans_b == CblasTrans) {
+    ldb = k;
+  } else {
+    UNIMPLEMENTED();
+  }
+  const int ldc = n;
+  cblas_gemm<T>(CblasRowMajor, trans_a, trans_b, m, n, k, reinterpret_cast<const void*>(&alpha),
+                reinterpret_cast<const void*>(a), lda, reinterpret_cast<const void*>(b), ldb,
+                reinterpret_cast<const void*>(&beta), reinterpret_cast<void*>(c), ldc);
 }
 
 template<typename T>
@@ -99,6 +128,14 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
     LaunchCblasBroadcastMatmul<double>(stream, data_type, transpose_a, transpose_b, num_batch_dims,
                                        broadcast_batch_dims, a_batch_dims, b_batch_dims,
                                        c_batch_dims, m, n, k, alpha, a, b, beta, c);
+  } else if (data_type == DataType::kComplex64) {
+    LaunchCblasBroadcastMatmul<std::complex<float>>(
+        stream, data_type, transpose_a, transpose_b, num_batch_dims, broadcast_batch_dims,
+        a_batch_dims, b_batch_dims, c_batch_dims, m, n, k, alpha, a, b, beta, c);
+  } else if (data_type == DataType::kComplex128) {
+    LaunchCblasBroadcastMatmul<std::complex<double>>(
+        stream, data_type, transpose_a, transpose_b, num_batch_dims, broadcast_batch_dims,
+        a_batch_dims, b_batch_dims, c_batch_dims, m, n, k, alpha, a, b, beta, c);
   } else {
     UNIMPLEMENTED();
   }

@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <type_traits>
 #include <utility>
+#include <complex>
 #include "oneflow/core/common/cblas.h"
 #include "oneflow/core/common/preprocessor.h"
 
@@ -48,6 +49,18 @@ namespace oneflow {
       ->typename std::enable_if<std::is_same<T, double>::value,                                 \
                                 decltype(cblas_##d##name(std::forward<Args>(args)...))>::type { \
     return cblas_##d##name(std::forward<Args>(args)...);                                        \
+  }                                                                                             \
+  template<typename T, typename... Args>                                                        \
+  auto cblas_##name(Args&&... args)                                                             \
+      ->typename std::enable_if<std::is_same<T, std::complex<float>>::value,                    \
+                                decltype(cblas_##c##name(std::forward<Args>(args)...))>::type { \
+    return cblas_##c##name(std::forward<Args>(args)...);                                        \
+  }                                                                                             \
+  template<typename T, typename... Args>                                                        \
+  auto cblas_##name(Args&&... args)                                                             \
+      ->typename std::enable_if<std::is_same<T, std::complex<double>>::value,                   \
+                                decltype(cblas_##z##name(std::forward<Args>(args)...))>::type { \
+    return cblas_##z##name(std::forward<Args>(args)...);                                        \
   }
 
 OF_PP_FOR_EACH_TUPLE(CBLAS_TEMPLATE, BLAS_NAME_SEQ);
