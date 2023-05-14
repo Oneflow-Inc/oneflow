@@ -150,12 +150,12 @@ class ContiguousParamsGroup(object):
         physical_params_buffer = {}
         params_buffer_index = {}
 
-        for params in self.params_group_list:
+        for idx, params in enumerate(self.params_group_list):
             for p in params:
                 if self.is_global:
-                    tensor_key = (p.dtype, p.placement, p.sbp)
+                    tensor_key = (p.dtype, p.placement, p.sbp, idx)
                 else:
-                    tensor_key = (p.dtype, p.device)
+                    tensor_key = (p.dtype, p.device, idx)
 
                 params_buffer_size[tensor_key] = params_buffer_size.get(
                     tensor_key, 0
@@ -185,12 +185,12 @@ class ContiguousParamsGroup(object):
             physical_params_buffer[tensor_key] = physical_param_buf
             params_buffer_index[tensor_key] = 0
 
-        for params in self.params_group_list:
+        for idx, params in enumerate(self.params_group_list):
             for p in params:
                 if self.is_global:
-                    tensor_key = (p.dtype, p.placement, p.sbp)
+                    tensor_key = (p.dtype, p.placement, p.sbp, idx)
                 else:
-                    tensor_key = (p.dtype, p.device)
+                    tensor_key = (p.dtype, p.device, idx)
 
                 param_buf = physical_params_buffer[tensor_key]
                 index = params_buffer_index[tensor_key]
