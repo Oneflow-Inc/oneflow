@@ -480,6 +480,8 @@ class LocalToGlobalFunctor {
                            const std::vector<Symbol<SbpParallel>>& sbp_parallels,
                            const Shape& shape, const Symbol<DType>& dtype, bool sync_data,
                            bool copy) const {
+    auto device = JUST(Device::New(parallel_desc->device_tag(), GlobalProcessCtx::LocalRank(), parallel_desc->rematable()));
+    return To(x, Optional<Symbol<Device>>(device), dtype, copy);
     JUST(CheckDeviceIdsIsValid(parallel_desc));
     NonRecursiveMetaInfoConsistencyCheckScope no_recursive_meta_info_conisitency_check_scope;
     JUST(MetaInfoConsistencyCheck(parallel_desc, sbp_parallels, 1, /* force_check */ false));
@@ -523,6 +525,8 @@ class ToGlobalFunctor {
                            const std::vector<Symbol<SbpParallel>>& sbp_parallels,
                            const std::vector<Symbol<SbpParallel>>& grad_sbp_parallels,
                            bool check_meta, bool copy) const {
+    auto device = JUST(Device::New(parallel_desc->device_tag(), GlobalProcessCtx::LocalRank(), parallel_desc->rematable()));
+    return To(x, Optional<Symbol<Device>>(device), x->dtype(), copy);
     JUST(CheckDeviceIdsIsValid(parallel_desc));
     NonRecursiveMetaInfoConsistencyCheckScope scope;
     JUST(MetaInfoConsistencyCheck(parallel_desc, sbp_parallels, grad_sbp_parallels, 1,
