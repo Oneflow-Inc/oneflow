@@ -129,14 +129,14 @@ Maybe<void> EagerLocalTensorImpl::InitEagerBlobObject(
     auto tensor_storage = tensor_storage_->storage();
     eager_blob_object_ = std::make_shared<vm::EagerBlobObject>(
         mem_case, local_tensor_meta, mut_local_tensor_meta, local_tensor_meta->dtype(),
-        tensor_storage, dep_object);
+        local_tensor_meta->memory_format(), tensor_storage, dep_object);
   } else {
     auto device = local_tensor_meta->device();
     auto storage = device->rematable() ? std::make_shared<vm::RematableTensorStorage>(device)
                                        : std::make_shared<vm::TensorStorage>(true, device);
-    const auto& eager_blob_object =
-        std::make_shared<vm::EagerBlobObject>(mem_case, local_tensor_meta, mut_local_tensor_meta,
-                                              local_tensor_meta->dtype(), storage, dep_object);
+    const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
+        mem_case, local_tensor_meta, mut_local_tensor_meta, local_tensor_meta->dtype(),
+        local_tensor_meta->memory_format(), storage, dep_object);
     JUST(set_eager_blob_object(eager_blob_object));
   }
   return Maybe<void>::Ok();
@@ -166,7 +166,11 @@ std::shared_ptr<const Shape> EagerLocalTensorImpl::shape() const {
 std::shared_ptr<const Stride> EagerLocalTensorImpl::stride() const {
   if (!eager_blob_object_) { return tensor_meta()->stride_ptr(); }
   return eager_blob_object_->stride_ptr();
-  ;
+}
+
+MemoryFormat EagerLocalTensorImpl::memory_format() const {
+  if (!eager_blob_object_) { return tensor_meta()->memory_format(); }
+  return eager_blob_object_->memory_format();
 }
 
 Maybe<LocalTensorImpl> EagerLocalTensorImpl::detach() const {
@@ -221,6 +225,7 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
     const Optional<int64_t>& parallel_id, bool requires_grad, bool is_leaf) {
   const auto& shape = global_tensor_meta->shape_ptr();
   const auto& dtype = global_tensor_meta->dtype();
+  const auto& memory_format = global_tensor_meta->memory_format();
   const auto& nd_sbp = global_tensor_meta->nd_sbp();
   const auto& parallel_desc = global_tensor_meta->parallel_desc();
   const auto& cur_rank_phy_shape =
@@ -231,7 +236,7 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
   // empty op.
   if (parallel_id.has_value() && shape->elem_cnt() != 0) {
     const auto& cur_rank_phy_tensor_meta =
-        SymbolOf(LocalTensorMeta(*cur_rank_phy_shape, dtype, device));
+        SymbolOf(LocalTensorMeta(*cur_rank_phy_shape, dtype, memory_format, device));
     auto cur_rank_phy_tensor_impl = std::make_shared<EagerLocalTensorImpl>(requires_grad, is_leaf);
     const auto& dep_object = NewLocalDepObject();
     JUST(cur_rank_phy_tensor_impl->InitEagerBlobObject(cur_rank_phy_tensor_meta, dep_object));
@@ -259,8 +264,12 @@ Maybe<GlobalTensorImpl> EagerGlobalTensorImpl::detach() const {
 
 std::shared_ptr<const Stride> EagerGlobalTensorImpl::stride() const {
   if (!cur_rank_phy_tensor_) { return tensor_meta()->stride_ptr(); }
-  const auto& stride_ptr = cur_rank_phy_tensor_->tensor_meta().stride_ptr();
-  return stride_ptr;
+  return cur_rank_phy_tensor_->tensor_meta().stride_ptr();
+}
+
+MemoryFormat EagerGlobalTensorImpl::memory_format() const {
+  if (!cur_rank_phy_tensor_) { return tensor_meta()->memory_format(); }
+  return cur_rank_phy_tensor_->tensor_meta().memory_format();
 }
 
 }  // namespace one

@@ -19,11 +19,30 @@ limitations under the License.
 #include <sstream>
 #include <vector>
 #include <functional>
+#include <filesystem>
 #include "oneflow/core/common/error.pb.h"
 #include "oneflow/core/common/check.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/small_vector.h"
 #include "oneflow/core/common/hash.h"
+
+namespace {
+std::string RemoveProjectPathPrefix(const std::string& filename) {
+#if defined(ONEFLOW_SOURCE_DIR) && defined(ONEFLOW_BINARY_DIR)
+  std::string project_path = ONEFLOW_SOURCE_DIR;
+  std::string project_build_path = ONEFLOW_BINARY_DIR;
+  if (filename.rfind(project_build_path, 0) == 0) {
+    return std::filesystem::relative(filename, project_build_path);
+  } else if (filename.rfind(project_path, 0) == 0) {
+    return std::filesystem::relative(filename, project_path);
+  } else {
+    return filename;
+  }
+#else
+  return filename;
+#endif
+}
+}  // namespace
 
 namespace oneflow {
 
@@ -31,10 +50,13 @@ class ErrorStackFrame final {
  public:
   ErrorStackFrame(const ErrorStackFrame&) = default;
   ErrorStackFrame(const std::string& file, int64_t line, const std::string& function)
-      : file_(file), line_(line), function_(function), code_text_() {}
+      : file_(RemoveProjectPathPrefix(file)), line_(line), function_(function), code_text_() {}
   ErrorStackFrame(const std::string& file, int64_t line, const std::string& function,
                   const std::string& code_text)
-      : file_(file), line_(line), function_(function), code_text_(code_text) {}
+      : file_(RemoveProjectPathPrefix(file)),
+        line_(line),
+        function_(function),
+        code_text_(code_text) {}
 
   bool operator==(const ErrorStackFrame& other) const {
     return this->file_ == other.file_ && this->line_ == other.line_

@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/memory_format.pb.h"
 
 namespace oneflow {
 
@@ -42,6 +43,9 @@ class TensorDesc {
 
   virtual bool is_dynamic() const = 0;
   virtual void set_is_dynamic(bool is_dynamic) = 0;
+
+  virtual MemoryFormat memory_format() const = 0;
+  virtual void set_memory_format(MemoryFormat memory_format) = 0;
 
  protected:
   TensorDesc() = default;
@@ -66,11 +70,15 @@ class NaiveTensorDesc final : public TensorDesc {
   bool is_dynamic() const override { return is_dynamic_; }
   void set_is_dynamic(bool is_dynamic) override { is_dynamic_ = is_dynamic; }
 
+  MemoryFormat memory_format() const override { return memory_format_; }
+  void set_memory_format(MemoryFormat memory_format) override { memory_format_ = memory_format; }
+
  private:
   Shape shape_;
   Stride stride_;
   DataType data_type_;
   bool is_dynamic_;
+  MemoryFormat memory_format_;
 };
 
 }  // namespace user_op

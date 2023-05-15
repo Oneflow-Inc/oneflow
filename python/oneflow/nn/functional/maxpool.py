@@ -186,7 +186,9 @@ def adaptive_max_pool1d(input, output_size, return_indices: bool = False):
         return _out[0]
 
 
-def adaptive_max_pool2d(input, output_size, return_indices: bool = False):
+def adaptive_max_pool2d(
+    input, output_size, return_indices: bool = False, data_format="channels_first"
+):
     r"""Applies a 2D adaptive max pooling over an input signal composed of
     several input planes.
 
@@ -201,7 +203,7 @@ def adaptive_max_pool2d(input, output_size, return_indices: bool = False):
         return_indices: whether to return pooling indices. Default: ``False``
 
     """
-    _out = oneflow._C.adaptive_max_pool2d(input, output_size)
+    _out = oneflow._C.adaptive_max_pool2d(input, output_size, data_format=data_format)
     if return_indices:
         return _out
     else:

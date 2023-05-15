@@ -56,6 +56,13 @@ class InferContext final : public user_op::InferContext {
   void SetOutputDType(const std::string&, int32_t, DataType) override { TODO(); }
   DataType Dtype4ArgNameAndIndex(const std::string&, int32_t) const override { TODO(); }
   void SetDtype4ArgNameAndIndex(const std::string&, int32_t, DataType) override { TODO(); }
+  MemoryFormat InputMemoryFormat(const std::string&, int32_t) const override { TODO(); }
+  MemoryFormat OutputMemoryFormat(const std::string&, int32_t) const override { TODO(); }
+  void SetOutputMemoryFormat(const std::string&, int32_t, MemoryFormat) override { TODO(); }
+  MemoryFormat MemoryFormat4ArgNameAndIndex(const std::string&, int32_t) const override { TODO(); }
+  void SetMemoryFormat4ArgNameAndIndex(const std::string&, int32_t, MemoryFormat) override {
+    TODO();
+  }
 
   const std::vector<std::pair<std::string, int32_t>>& inputs() const override {
     return reg_ctx_->inputs();
