@@ -175,7 +175,7 @@ class TestCPG(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cuda", "cpu"]
         for arg in GenArgDict(arg_dict):
-            device = arg['device']
+            device = arg["device"]
             module_grouping(test_case, device)
             direct_grouping(test_case, device)
             global_grouping(test_case, device)
