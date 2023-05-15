@@ -44,23 +44,10 @@ class InputGlobalTensorMeta final {
                         const Optional<Symbol<NdSbp>>& consumer_nd_sbp_constraint)
       : tensor_meta_(tensor_meta), consumer_nd_sbp_constraint_(consumer_nd_sbp_constraint) {}
 
-  InputGlobalTensorMeta(const InputGlobalTensorMeta&) = default;
-  InputGlobalTensorMeta(InputGlobalTensorMeta&&) = default;
   ~InputGlobalTensorMeta() = default;
 
   size_t hash_value() const;
   bool operator==(const InputGlobalTensorMeta& other) const;
-  InputGlobalTensorMeta& operator=(const InputGlobalTensorMeta& other) {
-    tensor_meta_ = other.tensor_meta_;
-    consumer_nd_sbp_constraint_ = other.consumer_nd_sbp_constraint_;
-    return *this;
-  }
-
-  InputGlobalTensorMeta& operator=(const InputGlobalTensorMeta&& other) {
-    tensor_meta_ = std::move(other.tensor_meta_);
-    consumer_nd_sbp_constraint_ = std::move(other.consumer_nd_sbp_constraint_);
-    return *this;
-  }
   Symbol<GlobalTensorMeta> tensor_meta() const { return tensor_meta_; }
   const Optional<Symbol<NdSbp>>& consumer_nd_sbp_constraint() const {
     return consumer_nd_sbp_constraint_;
@@ -178,18 +165,6 @@ template<>
 struct hash<oneflow::one::SrcOpGlobalTensorMetaInferArgs> final {
   size_t operator()(const oneflow::one::SrcOpGlobalTensorMetaInferArgs& val) const {
     return val.hash_value();
-  }
-};
-
-template<>
-struct hash<oneflow::OpArgsVector<oneflow::one::InputGlobalTensorMeta>> {
-  std::size_t operator()(
-      const oneflow::OpArgsVector<oneflow::one::InputGlobalTensorMeta>& vec) const {
-    std::size_t hash_value = vec.size();
-    for (const auto& elem : vec) {
-      oneflow::AddHash<oneflow::one::InputGlobalTensorMeta>(&hash_value, elem);
-    }
-    return hash_value;
   }
 };
 
