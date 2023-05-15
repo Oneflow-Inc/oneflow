@@ -36,6 +36,8 @@ class JobBuildAndInferCtxMgr {
 
   const JobSet& job_set() const { return job_set_; }
   std::string structure_graph() const;
+  void TryUpdateJobIdCount(int64_t id_count);
+  int64_t GetJobIdCount() const;
 
  protected:
   virtual JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const = 0;
@@ -47,6 +49,7 @@ class JobBuildAndInferCtxMgr {
 
  private:
   JobSet job_set_;
+  int64_t job_id_count_{0};
   bool has_cur_job_;
   std::string cur_job_name_;
   HashMap<std::string, std::unique_ptr<JobBuildAndInferCtx>> job_name2infer_ctx_;
