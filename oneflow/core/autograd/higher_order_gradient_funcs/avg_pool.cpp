@@ -26,13 +26,19 @@ struct AdaptiveAvgPoolNDGradGradCaptureState : public AutoGradCaptureState {
   bool input_requires_grad = false;
   bool grad_requires_grad = false;
   std::vector<int64_t> pool_output_size;
+  std::string data_format;
 };
 
 template<int ndims>
 class AdaptiveAvgPoolNdNdGradGrad
     : public OpExprGradFunction<AdaptiveAvgPoolNDGradGradCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
+  Maybe<void> Init(const OpExpr& op) override {
+    const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
+    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+    return Maybe<void>::Ok();
+  }
 
   Maybe<void> Capture(AdaptiveAvgPoolNDGradGradCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
@@ -40,6 +46,8 @@ class AdaptiveAvgPoolNdNdGradGrad
     CHECK_EQ_OR_RETURN(inputs.size(), 2);   // NOLINT(maybe-need-error-msg)
     CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
 
+    ComposedAttrMap composed_attrs(attrs, base_attrs_);
+    ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
     ctx->grad_requires_grad = inputs[0]->requires_grad();
     ctx->input_requires_grad = inputs[1]->requires_grad();
     if (ctx->grad_requires_grad) {
@@ -67,11 +75,14 @@ class AdaptiveAvgPoolNdNdGradGrad
 
     if (ctx->grad_requires_grad) {
       if (ndims == 1) {
-        (*in_grads)[0] = JUST(functional::AdaptiveAvgPool1D(out_grads[0], ctx->pool_output_size));
+        (*in_grads)[0] = JUST(
+            functional::AdaptiveAvgPool1D(out_grads[0], ctx->pool_output_size, ctx->data_format));
       } else if (ndims == 2) {
-        (*in_grads)[0] = JUST(functional::AdaptiveAvgPool2D(out_grads[0], ctx->pool_output_size));
+        (*in_grads)[0] = JUST(
+            functional::AdaptiveAvgPool2D(out_grads[0], ctx->pool_output_size, ctx->data_format));
       } else if (ndims == 3) {
-        (*in_grads)[0] = JUST(functional::AdaptiveAvgPool3D(out_grads[0], ctx->pool_output_size));
+        (*in_grads)[0] = JUST(
+            functional::AdaptiveAvgPool3D(out_grads[0], ctx->pool_output_size, ctx->data_format));
       } else {
         UNIMPLEMENTED_THEN_RETURN();
       }
@@ -79,6 +90,9 @@ class AdaptiveAvgPoolNdNdGradGrad
     if (ctx->input_requires_grad) { (*in_grads)[1] = JUST(functional::ZerosLike(out_grads[0])); }
     return Maybe<void>::Ok();
   }
+
+ private:
+  AttrMap base_attrs_;
 };
 
 struct AvgPoolGradGradCaptureState : public AutoGradCaptureState {
