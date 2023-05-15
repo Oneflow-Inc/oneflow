@@ -326,7 +326,7 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(a._ref_tensor.shape == (4, 5))
         test_case.assertTrue(a._ref_tensor.device == flow.device("cuda"))
         test_case.assertTrue(a._ref_tensor.requires_grad)
-        test_case.assertTrue(a.ref_index, 200)
+        test_case.assertTrue(a._ref_index, 200)
 
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_unsupported_property(test_case):
