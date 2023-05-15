@@ -163,7 +163,6 @@ class Optimizer(object):
         self._state_not_saved = [
             "params_group",
             "_parameters",
-            "contiguous_params",
         ]
 
     def add_param_group(self, param_group) -> None:
