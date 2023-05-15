@@ -14,10 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/stream_index_generator.h"
+#include <mutex>
+#include "oneflow/core/job/id_state.h"
 
 namespace oneflow {
 
-StreamIndexGenerator::StreamIndexGenerator() : next_stream_index_(0) {}
+StreamIndexGenerator::StreamIndexGenerator(stream_index_t stream_index)
+    : next_stream_index_(stream_index) {}
 
 StreamIndexGenerator::stream_index_t StreamIndexGenerator::GenerateAnonymous() {
   std::unique_lock<std::mutex> lck(mtx_);
@@ -47,6 +50,16 @@ StreamIndexGenerator::stream_index_t StreamIndexGenerator::GenerateNamedRoundRob
     if (offset >= size) { offset = 0; }
   }
   return cur_stream_index;
+}
+
+StreamIndexGenerator::stream_index_t StreamIndexGenerator::GetCurrStreamIndex() {
+  std::unique_lock<std::mutex> lck(mtx_);
+  return next_stream_index_;
+}
+
+void StreamIndexGenerator::TryUpdateNextStreamIndex(stream_index_t next_stream_index) {
+  std::unique_lock<std::mutex> lck(mtx_);
+  next_stream_index_ = std::max(next_stream_index_, next_stream_index);
 }
 
 }  // namespace oneflow
