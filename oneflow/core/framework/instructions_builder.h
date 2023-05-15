@@ -44,6 +44,14 @@ class NNGraphIf;
 
 class SharedEventRecord;
 
+Maybe<JobDesc> GetJobConfSymbol(const JobConfigProto& job_conf);
+
+Maybe<ParallelDesc> GetParallelDescSymbol(const ParallelConf& parallel_conf);
+
+Maybe<Scope> GetScopeSymbol(const ScopeProto& scope_proto);
+
+Maybe<OperatorConfSymbol> GetOpConfSymbol(const OperatorConf& op_conf);
+
 class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuilder> {
  public:
   InstructionsBuilder(const InstructionsBuilder&) = delete;

@@ -30,7 +30,7 @@ limitations under the License.
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/common/decorator.h"
-#include "oneflow/core/vm/symbol_storage.h"
+#include "oneflow/core/framework/instructions_builder.h"
 
 namespace py = pybind11;
 
@@ -62,8 +62,7 @@ Maybe<Symbol<ParallelDesc>> CreateParallelDescTypeAndDeviceIds(
     }
   }();
   auto parallel_conf = JUST(MakeParallelConf(type, formated_machine_device_ids, hierarchy));
-  const std::shared_ptr<ParallelDesc>& parallel_desc =
-      JUST(Singleton<symbol::Storage<ParallelDesc>>::Get()->FindOrCreate(*parallel_conf));
+  const std::shared_ptr<ParallelDesc>& parallel_desc = JUST(GetParallelDescSymbol(*parallel_conf));
 
   return SymbolOf(*parallel_desc);
 }
@@ -75,8 +74,7 @@ Maybe<Symbol<ParallelDesc>> CreateParallelDescFromProto(const std::string& proto
   ParallelConf parallel_conf;
   CHECK_OR_RETURN(TxtString2PbMessage(proto_str, &parallel_conf))
       << " Get ParallelConf Pb from string failed.";
-  const std::shared_ptr<ParallelDesc>& parallel_desc =
-      JUST(Singleton<symbol::Storage<ParallelDesc>>::Get()->FindOrCreate(parallel_conf));
+  const std::shared_ptr<ParallelDesc>& parallel_desc = JUST(GetParallelDescSymbol(parallel_conf));
 
   return SymbolOf(*parallel_desc);
 }

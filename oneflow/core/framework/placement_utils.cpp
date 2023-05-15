@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/placement_utils.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
 #include "oneflow/core/common/decorator.h"
-#include "oneflow/core/vm/symbol_storage.h"
+#include "oneflow/core/framework/instructions_builder.h"
 
 namespace oneflow {
 
@@ -26,8 +26,7 @@ Maybe<Symbol<ParallelDesc>> RawReplacePlacementDeviceTag(Symbol<ParallelDesc> pa
                                                          const std::string& device_type) {
   ParallelConf parallel_conf = parallel_desc->parallel_conf();
   parallel_conf.set_device_tag(device_type);
-  std::shared_ptr<ParallelDesc> out_parallel_desc =
-      JUST(Singleton<symbol::Storage<ParallelDesc>>::Get()->FindOrCreate(parallel_conf));
+  std::shared_ptr<ParallelDesc> out_parallel_desc = JUST(GetParallelDescSymbol(parallel_conf));
   ;
   return SymbolOf(*out_parallel_desc);
 }
