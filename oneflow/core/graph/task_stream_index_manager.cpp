@@ -14,7 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/task_stream_index_manager.h"
+#include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/id_state.h"
 #include "oneflow/core/job/resource_desc.h"
 
 namespace oneflow {
@@ -23,7 +25,13 @@ StreamIndexGenerator* TaskStreamIndexManager::GetGenerator(const DeviceId& devic
   std::unique_lock<std::mutex> lck(mtx_);
   auto iter = generators_.find(device_id);
   if (iter == generators_.end()) {
-    iter = generators_.emplace(device_id, std::make_unique<StreamIndexGenerator>()).first;
+    uint32_t init_stream_index = 0;
+    const int64_t i64_device_id = EncodeDeviceIdToInt64(device_id);
+    if (stream_index_init_state_.count(i64_device_id) != 0) {
+      init_stream_index = stream_index_init_state_.at(i64_device_id);
+    }
+    iter = generators_.emplace(device_id, std::make_unique<StreamIndexGenerator>(init_stream_index))
+               .first;
   }
   return iter->second.get();
 }
@@ -46,6 +54,37 @@ TaskStreamIndexManager::stream_index_t TaskStreamIndexManager::GetNamedTaskStrea
     const DeviceId& device_id, const std::string& name) {
   auto* generator = GetGenerator(device_id);
   return generator->GenerateNamed(name);
+}
+
+void TaskStreamIndexManager::GetTaskStreamIndex(HashMap<int64_t, uint32_t>* stream_index_state) {
+  for (auto& pair : generators_) {
+    const int64_t i64_device_id = EncodeDeviceIdToInt64(pair.first);
+    (*stream_index_state)[i64_device_id] = pair.second->GetCurrStreamIndex();
+  }
+}
+
+void TaskStreamIndexManager::TryUpdateTaskStreamIndex(
+    const HashMap<int64_t, uint32_t>& stream_index_state) {
+  // Try Update generator's new_stream_index
+  for (auto& pair : generators_) {
+    const int64_t i64_device_id = EncodeDeviceIdToInt64(pair.first);
+    uint32_t initial_stream_index = 0;
+    if (stream_index_state.count(i64_device_id) != 0) {
+      initial_stream_index = stream_index_state.at(i64_device_id);
+    }
+    pair.second->TryUpdateNextStreamIndex(initial_stream_index);
+  }
+
+  // try update stream_index_init_state
+  for (const auto& pair : stream_index_state) {
+    const auto& key = pair.first;
+    const auto& val = pair.second;
+    if (stream_index_init_state_.count(key) != 0) {
+      stream_index_init_state_[key] = std::max(stream_index_init_state_.at(key), val);
+    } else {
+      stream_index_init_state_[key] = val;
+    }
+  }
 }
 
 void TaskStreamIndexGetterRegistry::Register(const key_t& key, const stream_index_getter& getter) {

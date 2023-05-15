@@ -308,7 +308,7 @@ Maybe<void> Operator::InferLogicalOutBlobDescsIf() {
   std::vector<std::shared_ptr<BlobDesc>> output_logical_blob_desc_vec;
   output_logical_blob_desc_vec.resize(output_bns().size());
   for (auto& blob_desc : output_logical_blob_desc_vec) {
-    blob_desc.reset(new BlobDesc(DataType::kInvalidDataType));
+    blob_desc.reset(new BlobDesc(DataType::kInvalidDataType, MemoryFormat::kContiguous));
   }
   std::vector<std::shared_ptr<BlobDesc>> in_logical_blob_desc_vec;
   in_logical_blob_desc_vec.resize(input_bns().size());

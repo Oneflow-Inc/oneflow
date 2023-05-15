@@ -128,14 +128,14 @@ Maybe<void> EagerLocalTensorImpl::InitEagerBlobObject(
     auto tensor_storage = tensor_storage_->storage();
     eager_blob_object_ = std::make_shared<vm::EagerBlobObject>(
         mem_case, local_tensor_meta, mut_local_tensor_meta, local_tensor_meta->dtype(),
-        tensor_storage, dep_object);
+        local_tensor_meta->memory_format(), tensor_storage, dep_object);
   } else {
     auto device = local_tensor_meta->device();
     auto storage = device->rematable() ? std::make_shared<vm::RematableTensorStorage>(device)
                                        : std::make_shared<vm::TensorStorage>(true, device);
-    const auto& eager_blob_object =
-        std::make_shared<vm::EagerBlobObject>(mem_case, local_tensor_meta, mut_local_tensor_meta,
-                                              local_tensor_meta->dtype(), storage, dep_object);
+    const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
+        mem_case, local_tensor_meta, mut_local_tensor_meta, local_tensor_meta->dtype(),
+        local_tensor_meta->memory_format(), storage, dep_object);
     JUST(set_eager_blob_object(eager_blob_object));
   }
   return Maybe<void>::Ok();
@@ -165,7 +165,11 @@ std::shared_ptr<const Shape> EagerLocalTensorImpl::shape() const {
 std::shared_ptr<const Stride> EagerLocalTensorImpl::stride() const {
   if (!eager_blob_object_) { return tensor_meta()->stride_ptr(); }
   return eager_blob_object_->stride_ptr();
-  ;
+}
+
+MemoryFormat EagerLocalTensorImpl::memory_format() const {
+  if (!eager_blob_object_) { return tensor_meta()->memory_format(); }
+  return eager_blob_object_->memory_format();
 }
 
 Maybe<LocalTensorImpl> EagerLocalTensorImpl::detach() const {
@@ -218,8 +222,8 @@ Maybe<Shape> RawGetPhysicalShape(Symbol<GlobalTensorMeta> global_tensor_meta, in
 static constexpr auto* CachedGetValidPhysicalShape = DECORATE(&RawGetPhysicalShape, ThreadLocal);
 
 Symbol<LocalTensorMeta> RawLocalTensorMeta(const Shape& shape, DataType dtype,
-                                           Symbol<Device> device) {
-  return SymbolOf(LocalTensorMeta(shape, dtype, device));
+                                           MemoryFormat memory_format, Symbol<Device> device) {
+  return SymbolOf(LocalTensorMeta(shape, dtype, memory_format, device));
 }
 
 static constexpr auto* CachedLocalTensorMeta = DECORATE(&RawLocalTensorMeta, ThreadLocalCopiable);
@@ -229,6 +233,7 @@ static constexpr auto* CachedLocalTensorMeta = DECORATE(&RawLocalTensorMeta, Thr
 /* static */ Maybe<EagerGlobalTensorImpl> EagerGlobalTensorImpl::New(
     Symbol<GlobalTensorMeta> global_tensor_meta, Symbol<Device> device,
     const Optional<int64_t>& parallel_id, bool requires_grad, bool is_leaf) {
+  const auto& memory_format = global_tensor_meta->memory_format();
   const auto& shape = global_tensor_meta->shape();
   const auto& dtype = global_tensor_meta->dtype();
   std::shared_ptr<LocalTensor> cur_rank_phy_tensor;
@@ -239,7 +244,7 @@ static constexpr auto* CachedLocalTensorMeta = DECORATE(&RawLocalTensorMeta, Thr
     const auto& cur_rank_phy_shape =
         JUST(CachedGetValidPhysicalShape(global_tensor_meta, JUST(parallel_id)));
     const auto& cur_rank_phy_tensor_meta =
-        CachedLocalTensorMeta(*cur_rank_phy_shape, dtype, device);
+        CachedLocalTensorMeta(*cur_rank_phy_shape, dtype, memory_format, device);
     auto cur_rank_phy_tensor_impl = std::make_shared<EagerLocalTensorImpl>(requires_grad, is_leaf);
     const auto& dep_object = NewLocalDepObject();
     JUST(cur_rank_phy_tensor_impl->InitEagerBlobObject(cur_rank_phy_tensor_meta, dep_object));
@@ -268,8 +273,12 @@ Maybe<GlobalTensorImpl> EagerGlobalTensorImpl::detach() const {
 
 std::shared_ptr<const Stride> EagerGlobalTensorImpl::stride() const {
   if (!cur_rank_phy_tensor_) { return tensor_meta()->stride_ptr(); }
-  const auto& stride_ptr = cur_rank_phy_tensor_->tensor_meta().stride_ptr();
-  return stride_ptr;
+  return cur_rank_phy_tensor_->tensor_meta().stride_ptr();
+}
+
+MemoryFormat EagerGlobalTensorImpl::memory_format() const {
+  if (!cur_rank_phy_tensor_) { return tensor_meta()->memory_format(); }
+  return cur_rank_phy_tensor_->tensor_meta().memory_format();
 }
 
 }  // namespace one

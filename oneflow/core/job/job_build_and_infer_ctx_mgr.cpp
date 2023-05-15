@@ -15,8 +15,11 @@ limitations under the License.
 */
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/id_state.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "nlohmann/json.hpp"
 
@@ -28,7 +31,7 @@ Maybe<void> JobBuildAndInferCtxMgr::OpenJobBuildAndInferCtx(const std::string& j
   CHECK_OR_RETURN(!job_name.empty()) << Error::JobNameEmptyError();
   CHECK_OR_RETURN(job_name2infer_ctx_.find(job_name) == job_name2infer_ctx_.end())
       << Error::JobNameExistError() << "job name: " << job_name << " already exist";
-  int64_t job_id = job_set_.job_size();
+  int64_t job_id = job_id_count_++;
   Job* job = job_set_.add_job();
   job->mutable_job_conf()->set_job_name(job_name);
   std::unique_ptr<JobBuildAndInferCtx> ctx(NewJobBuildAndInferCtx(job, job_id));
@@ -76,11 +79,16 @@ std::string JobBuildAndInferCtxMgr::structure_graph() const {
   return json_array.dump();
 }
 
+void JobBuildAndInferCtxMgr::TryUpdateJobIdCount(int64_t id_count) {
+  job_id_count_ = std::max(id_count, job_id_count_);
+}
+
+int64_t JobBuildAndInferCtxMgr::GetJobIdCount() const { return job_id_count_; }
+
 Maybe<void> LazyJobBuildAndInferCtxMgr::VirtualCloseJob() {
   const JobDesc* job_desc = Singleton<JobDesc>::Get();
   if (job_desc == nullptr) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(job_desc->job_name(), *JUST(GetCurrentJobName()));
-  CHECK_EQ_OR_RETURN(job_desc->job_id(), mut_job_set()->job_size() - 1);
   Singleton<JobDesc>::Delete();
   return Maybe<void>::Ok();
 }
