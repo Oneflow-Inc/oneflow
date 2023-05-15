@@ -56,8 +56,15 @@ RegContext::RegContext(mlir::Operation* op) : op_(op), conf_wrapper_(GetConfWrap
             const auto data_type =
                 mlir::oneflow::support::FromMLIRTypeToOFDataType(rankedTensorType.getElementType());
             if (mlir::failed(data_type)) { exit(1); }
-            tensor_desc.set_data_type(data_type.getValue());
-            // TODO: set stride
+            tensor_desc.set_data_type(data_type.value());
+            llvm::SmallVector<int64_t> strides;
+            int64_t _;
+            auto mem_type = mlir::MemRefType::get(rankedTensorType.getShape(),
+                                                  rankedTensorType.getElementType());
+            if (failed(mlir::getStridesAndOffset(mem_type, strides, _))) {
+              LOG(FATAL) << "Fail to get stride from memory type";
+            }
+            tensor_desc.set_stride(Stride(strides.begin(), strides.end()));
             // TODO: set is_dynamic
           } else {
             LOG(FATAL) << "Unranked tensor type not supported";

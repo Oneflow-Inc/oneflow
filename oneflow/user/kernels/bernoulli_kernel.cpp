@@ -29,8 +29,9 @@ class BernoulliKerenl final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    const auto& generator = CHECK_JUST(one::MakeGenerator(kCPU));
-    generator->set_current_seed(ctx->Attr<int64_t>("seed"));
+    const auto& generator = CHECK_JUST(one::MakeGenerator(DeviceType::kCPU));
+    generator->set_current_seed(
+        CHECK_JUST(GetOpKernelRandomSeedInCurrentRank(ctx, ctx->Attr<int64_t>("seed"))));
     return std::make_shared<DistributionKernelState>(generator);
   }
 
@@ -49,7 +50,7 @@ class BernoulliKerenl final : public user_op::OpKernel {
     CHECK_NOTNULL(kernel_state);
     const auto& generator = kernel_state->generator();
     CHECK_NOTNULL(generator);
-    const auto& cpu_generator = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
+    const auto& cpu_generator = CHECK_JUST(generator->Get<ep::CPUGenerator>());
 
     double p = ctx->Attr<double>("p");
     // prob != -1 means use prob instead of tensor to generate random number

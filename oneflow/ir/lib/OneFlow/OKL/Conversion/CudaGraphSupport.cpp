@@ -22,12 +22,13 @@ limitations under the License.
 #include "OneFlow/OKL/OKLOps.h"
 #include "OneFlow/OKL/OKLTypes.h"
 #include "OneFlow/OKL/passes.h"
+#include "OneFlow/OKM/passes.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -86,7 +87,7 @@ struct TagCudaGraphSupportPattern final : public mlir::OpRewritePattern<func::Fu
                                       mlir::PatternRewriter& rewriter) const override {
     const auto tag_name = mlir::okl::cuda_graph_support::TAG_NAME;
     // check whether this op is okl init context function  op
-    if (op.getSymName().str() != oneflow::okl_func::OKL_FUNC) { return failure(); }
+    if (!op.getSymName().startswith(mlir::okm::func_name::OKL_GRAPH_NAME)) { return failure(); }
     // check whether this op has been taged before
     if (op->getAttr(tag_name).dyn_cast_or_null<BoolAttr>() != nullptr) { return success(); }
     // check whether its childern is all cuda graph supported

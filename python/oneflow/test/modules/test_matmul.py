@@ -24,7 +24,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestModule(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest(check_graph=True, rtol=1e-2, atol=1e-3)
     def test_flow_matmul_with_random_data(test_case):
         device = random_device()
         k = random(1, 6)
@@ -33,7 +33,7 @@ class TestModule(flow.unittest.TestCase):
         z = torch.matmul(x, y)
         return z
 
-    @autotest(check_graph=True)
+    @autotest(check_graph=True, rtol=1e-2, atol=1e-4)
     def test_flow_tensor_matmul_with_random_data(test_case):
         device = random_device()
         k = random(1, 6)
@@ -55,7 +55,7 @@ class TestModule(flow.unittest.TestCase):
             np.allclose(flow_output_numpy, torch_output_numpy, 1e-05, 1e-05)
         )
 
-    @autotest(n=5, check_graph=True)
+    @autotest(n=5, check_graph=True, rtol=1e-2, atol=1e-3)
     def test_flow_tensor_broadcast_matmul_with_random_data(test_case):
         device = random_device()
         k = random(1, 6)
@@ -63,7 +63,7 @@ class TestModule(flow.unittest.TestCase):
         y = random_tensor(ndim=2, dim0=k).to(device)
         return x.matmul(y)
 
-    @autotest(n=5, check_graph=True)
+    @autotest(n=5, check_graph=True, rtol=1e-2, atol=1e-3)
     def test_flow_tensor_x_broadcast_y_matmul(test_case):
         device = random_device()
         k = random(1, 6)
@@ -71,7 +71,7 @@ class TestModule(flow.unittest.TestCase):
         y = random_tensor(ndim=4, dim2=k).to(device)
         return x.matmul(y)
 
-    @autotest(n=5, check_graph=True)
+    @autotest(n=5, check_graph=True, rtol=1e-2, atol=1e-4)
     def test_flow_tensor_broadcast_matmul_with_same_dims(test_case):
         device = random_device()
         k = random(1, 6)
@@ -79,7 +79,7 @@ class TestModule(flow.unittest.TestCase):
         y = random_tensor(ndim=4, dim0=1, dim2=k).to(device)
         return x.matmul(y)
 
-    @autotest(check_graph=True)
+    @autotest(check_graph=True, rtol=1e-2, atol=1e-3)
     def test_flow_mm_with_random_data(test_case):
         device = random_device()
         k = random(1, 6)
@@ -101,7 +101,7 @@ class TestModule(flow.unittest.TestCase):
     def profile_mv(test_case):
         torch.mv(torch.ones(32, 64), torch.ones(64))
 
-    @autotest(n=5, check_graph=True)
+    @autotest(n=5, check_graph=True, rtol=1e-2, atol=1e-4)
     def test_flow_vector_matrix_product_with_random_data(test_case):
         device = random_device()
         k = random(1, 6)

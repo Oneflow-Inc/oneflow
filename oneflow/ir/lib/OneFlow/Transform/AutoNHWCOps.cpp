@@ -20,17 +20,17 @@ namespace mlir {
 
 namespace oneflow {
 
-bool Conv2DOp::IsNCHW() { return this->data_format().str() == "channels_first"; }
+bool Conv2DOp::IsNCHW() { return this->getDataFormat().str() == "channels_first"; }
 
 llvm::DenseSet<Value> Conv2DOp::OperandsToTranspose() {
-  if (this->_add_to_output()) {
-    return {this->in(), this->weight(), this->_add_to_output()};
+  if (this->get_addToOutput()) {
+    return {this->getIn(), this->getWeight(), this->get_addToOutput()};
   } else {
-    return {this->in(), this->weight()};
+    return {this->getIn(), this->getWeight()};
   }
 }
 
-llvm::DenseSet<Value> Conv2DOp::ResultsToTranspose() { return {this->out()}; }
+llvm::DenseSet<Value> Conv2DOp::ResultsToTranspose() { return {this->getOut()}; }
 
 llvm::SmallVector<Value, 4> Conv2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
                                                  PatternRewriter& rewriter) {
@@ -38,10 +38,10 @@ llvm::SmallVector<Value, 4> Conv2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> val
   SmallVector<Value, 4> operands;
   operands.push_back(value[0]);
   operands.push_back(value[1]);
-  if (conv_op.bias()) operands.push_back(conv_op.bias());
-  if (this->_add_to_output()) { operands.push_back(value[2]); }
+  if (conv_op.getBias()) operands.push_back(conv_op.getBias());
+  if (this->get_addToOutput()) { operands.push_back(value[2]); }
   NamedAttrList attributes = conv_op->getAttrs();
-  attributes.set(conv_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
+  attributes.set(conv_op.getDataFormatAttrName(), rewriter.getStringAttr("channels_last"));
   auto res = rewriter
                  .create<oneflow::Conv2DOp>(conv_op.getLoc(), getNHWCResultTypes(conv_op), operands,
                                             attributes)
@@ -51,20 +51,20 @@ llvm::SmallVector<Value, 4> Conv2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> val
   return results;
 }
 
-bool BiasAddOp::IsNCHW() { return this->axisAttr().getValue().getSExtValue() == 1; }
+bool BiasAddOp::IsNCHW() { return this->getAxisAttr().getValue().getSExtValue() == 1; }
 
-llvm::DenseSet<Value> BiasAddOp::OperandsToTranspose() { return {this->a()}; }
+llvm::DenseSet<Value> BiasAddOp::OperandsToTranspose() { return {this->getA()}; }
 
-llvm::DenseSet<Value> BiasAddOp::ResultsToTranspose() { return {this->out()}; }
+llvm::DenseSet<Value> BiasAddOp::ResultsToTranspose() { return {this->getOut()}; }
 
 llvm::SmallVector<Value, 4> BiasAddOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
                                                   PatternRewriter& rewriter) {
   auto bias_add_op = *this;
   SmallVector<Value, 4> operands;
   operands.push_back(value[0]);
-  operands.push_back(bias_add_op.b());
+  operands.push_back(bias_add_op.getB());
   NamedAttrList attributes = bias_add_op->getAttrs();
-  attributes.set(bias_add_op.axisAttrName(), rewriter.getSI32IntegerAttr(3));
+  attributes.set(bias_add_op.getAxisAttrName(), rewriter.getSI32IntegerAttr(3));
   auto res = rewriter
                  .create<oneflow::BiasAddOp>(bias_add_op.getLoc(), getNHWCResultTypes(bias_add_op),
                                              operands, attributes)
@@ -76,9 +76,9 @@ llvm::SmallVector<Value, 4> BiasAddOp::NchwToNhwc(llvm::SmallVector<Value, 4> va
 
 bool BroadcastAddOp::IsNCHW() { return false; }
 
-llvm::DenseSet<Value> BroadcastAddOp::OperandsToTranspose() { return {this->x(), this->y()}; }
+llvm::DenseSet<Value> BroadcastAddOp::OperandsToTranspose() { return {this->getX(), this->getY()}; }
 
-llvm::DenseSet<Value> BroadcastAddOp::ResultsToTranspose() { return {this->z()}; }
+llvm::DenseSet<Value> BroadcastAddOp::ResultsToTranspose() { return {this->getZ()}; }
 
 llvm::SmallVector<Value, 4> BroadcastAddOp::NchwToNhwc(llvm::SmallVector<Value, 4> values,
                                                        PatternRewriter& rewriter) {
@@ -87,30 +87,39 @@ llvm::SmallVector<Value, 4> BroadcastAddOp::NchwToNhwc(llvm::SmallVector<Value, 
   auto res = rewriter
                  .create<oneflow::BroadcastAddOp>(
                      broadcast_op.getLoc(), getNHWCResultTypes(broadcast_op), values, attributes)
-                 .z();
+                 .getZ();
   llvm::SmallVector<Value, 4> results;
   results.push_back(res);
   return results;
 }
 
-bool NormalizationOp::IsNCHW() { return this->axisAttr().getValue().getSExtValue() == 1; }
+bool NormalizationOp::IsNCHW() { return this->getAxisAttr().getValue().getSExtValue() == 1; }
 
-llvm::DenseSet<Value> NormalizationOp::OperandsToTranspose() { return {this->x()}; }
+bool NormalizationInferenceOp::IsNCHW() {
+  return this->getAxisAttr().getValue().getSExtValue() == 1;
+}
 
-llvm::DenseSet<Value> NormalizationOp::ResultsToTranspose() { return {this->y()}; }
+llvm::DenseSet<Value> NormalizationOp::OperandsToTranspose() { return {this->getX()}; }
+
+llvm::DenseSet<Value> NormalizationInferenceOp::OperandsToTranspose() { return {this->getX()}; }
+
+llvm::DenseSet<Value> NormalizationOp::ResultsToTranspose() { return {this->getY()}; }
+
+llvm::DenseSet<Value> NormalizationInferenceOp::ResultsToTranspose() { return {this->getY()}; }
 
 llvm::SmallVector<Value, 4> NormalizationOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
                                                         PatternRewriter& rewriter) {
   auto normalization_op = *this;
   SmallVector<Value, 4> operands;
   operands.push_back(value[0]);
-  if (normalization_op.moving_mean()) operands.push_back(normalization_op.moving_mean());
-  if (normalization_op.moving_variance()) operands.push_back(normalization_op.moving_variance());
-  operands.push_back(normalization_op.gamma());
-  operands.push_back(normalization_op.beta());
-  if (normalization_op._add_to_output()) operands.push_back(normalization_op._add_to_output());
+  if (normalization_op.getMovingMean()) operands.push_back(normalization_op.getMovingMean());
+  if (normalization_op.getMovingVariance())
+    operands.push_back(normalization_op.getMovingVariance());
+  operands.push_back(normalization_op.getGamma());
+  operands.push_back(normalization_op.getBeta());
+  if (normalization_op.get_addToOutput()) operands.push_back(normalization_op.get_addToOutput());
   NamedAttrList attributes = normalization_op->getAttrs();
-  attributes.set(normalization_op.axisAttrName(), rewriter.getSI32IntegerAttr(3));
+  attributes.set(normalization_op.getAxisAttrName(), rewriter.getSI32IntegerAttr(3));
   auto res =
       rewriter
           .create<oneflow::NormalizationOp>(
@@ -121,11 +130,36 @@ llvm::SmallVector<Value, 4> NormalizationOp::NchwToNhwc(llvm::SmallVector<Value,
   return results;
 }
 
-bool MaxPool2DOp::IsNCHW() { return this->data_format().str() == "channels_first"; }
+llvm::SmallVector<Value, 4> NormalizationInferenceOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
+                                                                 PatternRewriter& rewriter) {
+  auto normalization_op = *this;
+  SmallVector<Value, 4> operands;
+  operands.push_back(value[0]);
+  if (normalization_op.getMovingMean()) operands.push_back(normalization_op.getMovingMean());
+  if (normalization_op.getMovingVariance())
+    operands.push_back(normalization_op.getMovingVariance());
+  operands.push_back(normalization_op.getGamma());
+  operands.push_back(normalization_op.getBeta());
+  if (normalization_op.get_addToOutput()) operands.push_back(normalization_op.get_addToOutput());
+  NamedAttrList attributes = normalization_op->getAttrs();
+  attributes.set(normalization_op.getAxisAttrName(), rewriter.getSI32IntegerAttr(3));
+  auto res =
+      rewriter
+          .create<oneflow::NormalizationInferenceOp>(
+              normalization_op.getLoc(), getNHWCResultTypes(normalization_op), operands, attributes)
+          ->getResults();
+  llvm::SmallVector<Value, 4> results;
+  results.push_back(res[0]);
+  return results;
+}
 
-llvm::DenseSet<Value> MaxPool2DOp::OperandsToTranspose() { return {this->x()}; }
+bool MaxPool2DOp::IsNCHW() { return this->getDataFormat().str() == "channels_first"; }
 
-llvm::DenseSet<Value> MaxPool2DOp::ResultsToTranspose() { return {this->y(), this->indice()}; }
+llvm::DenseSet<Value> MaxPool2DOp::OperandsToTranspose() { return {this->getX()}; }
+
+llvm::DenseSet<Value> MaxPool2DOp::ResultsToTranspose() {
+  return {this->getY(), this->getIndice()};
+}
 
 llvm::SmallVector<Value, 4> MaxPool2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
                                                     PatternRewriter& rewriter) {
@@ -133,7 +167,7 @@ llvm::SmallVector<Value, 4> MaxPool2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> 
   SmallVector<Value, 4> operands;
   operands.push_back(value[0]);
   NamedAttrList attributes = max_pool_2d_op->getAttrs();
-  attributes.set(max_pool_2d_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
+  attributes.set(max_pool_2d_op.getDataFormatAttrName(), rewriter.getStringAttr("channels_last"));
   auto res =
       rewriter
           .create<oneflow::MaxPool2DOp>(max_pool_2d_op.getLoc(), getNHWCResultTypes(max_pool_2d_op),
@@ -147,9 +181,9 @@ llvm::SmallVector<Value, 4> MaxPool2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> 
 
 bool ReluOp::IsNCHW() { return false; }
 
-llvm::DenseSet<Value> ReluOp::OperandsToTranspose() { return {this->x()}; }
+llvm::DenseSet<Value> ReluOp::OperandsToTranspose() { return {this->getX()}; }
 
-llvm::DenseSet<Value> ReluOp::ResultsToTranspose() { return {this->y()}; }
+llvm::DenseSet<Value> ReluOp::ResultsToTranspose() { return {this->getY()}; }
 
 llvm::SmallVector<Value, 4> ReluOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
                                                PatternRewriter& rewriter) {
@@ -164,9 +198,9 @@ llvm::SmallVector<Value, 4> ReluOp::NchwToNhwc(llvm::SmallVector<Value, 4> value
 
 bool ScalarDivOp::IsNCHW() { return false; }
 
-llvm::DenseSet<Value> ScalarDivOp::OperandsToTranspose() { return {this->in()}; }
+llvm::DenseSet<Value> ScalarDivOp::OperandsToTranspose() { return {this->getIn()}; }
 
-llvm::DenseSet<Value> ScalarDivOp::ResultsToTranspose() { return {this->out()}; }
+llvm::DenseSet<Value> ScalarDivOp::ResultsToTranspose() { return {this->getOut()}; }
 
 llvm::SmallVector<Value, 4> ScalarDivOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
                                                     PatternRewriter& rewriter) {
@@ -182,9 +216,9 @@ llvm::SmallVector<Value, 4> ScalarDivOp::NchwToNhwc(llvm::SmallVector<Value, 4> 
 
 bool SiluOp::IsNCHW() { return false; }
 
-llvm::DenseSet<Value> SiluOp::OperandsToTranspose() { return {this->in()}; }
+llvm::DenseSet<Value> SiluOp::OperandsToTranspose() { return {this->getIn()}; }
 
-llvm::DenseSet<Value> SiluOp::ResultsToTranspose() { return {this->out()}; }
+llvm::DenseSet<Value> SiluOp::ResultsToTranspose() { return {this->getOut()}; }
 
 llvm::SmallVector<Value, 4> SiluOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
                                                PatternRewriter& rewriter) {
@@ -200,9 +234,9 @@ llvm::SmallVector<Value, 4> SiluOp::NchwToNhwc(llvm::SmallVector<Value, 4> value
 
 bool CastOp::IsNCHW() { return false; }
 
-llvm::DenseSet<Value> CastOp::OperandsToTranspose() { return {this->in()}; }
+llvm::DenseSet<Value> CastOp::OperandsToTranspose() { return {this->getIn()}; }
 
-llvm::DenseSet<Value> CastOp::ResultsToTranspose() { return {this->out()}; }
+llvm::DenseSet<Value> CastOp::ResultsToTranspose() { return {this->getOut()}; }
 
 llvm::SmallVector<Value, 4> CastOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
                                                PatternRewriter& rewriter) {
@@ -218,9 +252,9 @@ llvm::SmallVector<Value, 4> CastOp::NchwToNhwc(llvm::SmallVector<Value, 4> value
 
 bool Add2Op::IsNCHW() { return false; }
 
-llvm::DenseSet<Value> Add2Op::OperandsToTranspose() { return {this->in0(), this->in1()}; }
+llvm::DenseSet<Value> Add2Op::OperandsToTranspose() { return {this->getIn0(), this->getIn1()}; }
 
-llvm::DenseSet<Value> Add2Op::ResultsToTranspose() { return {this->out()}; }
+llvm::DenseSet<Value> Add2Op::ResultsToTranspose() { return {this->getOut()}; }
 
 llvm::SmallVector<Value, 4> Add2Op::NchwToNhwc(llvm::SmallVector<Value, 4> value,
                                                PatternRewriter& rewriter) {
@@ -233,47 +267,47 @@ llvm::SmallVector<Value, 4> Add2Op::NchwToNhwc(llvm::SmallVector<Value, 4> value
   return {res[0]};
 }
 
-bool ConcatOp::IsNCHW() { return this->axisAttr().getValue().getSExtValue() == 1; }
+bool ConcatOp::IsNCHW() { return this->getAxisAttr().getValue().getSExtValue() == 1; }
 
 llvm::DenseSet<Value> ConcatOp::OperandsToTranspose() {
   llvm::DenseSet<Value> operands;
-  for (auto operand : this->in()) { operands.insert(operand); }
+  for (auto operand : this->getIn()) { operands.insert(operand); }
   return operands;
 }
 
-llvm::DenseSet<Value> ConcatOp::ResultsToTranspose() { return {this->out()}; }
+llvm::DenseSet<Value> ConcatOp::ResultsToTranspose() { return {this->getOut()}; }
 
 llvm::SmallVector<Value, 4> ConcatOp::NchwToNhwc(llvm::SmallVector<Value, 4> values,
                                                  PatternRewriter& rewriter) {
   auto elementwise_op = *this;
   NamedAttrList attributes = elementwise_op->getAttrs();
-  attributes.set(elementwise_op.axisAttrName(),
+  attributes.set(elementwise_op.getAxisAttrName(),
                  IntegerAttr::get(rewriter.getIntegerType(64, /*isSigned=*/true),
                                   APInt(64, 3, /*isSigned=*/true)));
   auto out = rewriter
                  .create<oneflow::ConcatOp>(elementwise_op.getLoc(),
                                             getNHWCResultTypes(elementwise_op), values, attributes)
-                 .out();
+                 .getOut();
   return {out};
 }
 
-bool GroupNormOp::IsNCHW() { return this->data_format().str() == "channels_first"; }
+bool GroupNormOp::IsNCHW() { return this->getDataFormat().str() == "channels_first"; }
 
-llvm::DenseSet<Value> GroupNormOp::OperandsToTranspose() { return {this->x()}; }
+llvm::DenseSet<Value> GroupNormOp::OperandsToTranspose() { return {this->getX()}; }
 
-llvm::DenseSet<Value> GroupNormOp::ResultsToTranspose() { return {this->y()}; }
+llvm::DenseSet<Value> GroupNormOp::ResultsToTranspose() { return {this->getY()}; }
 
 llvm::SmallVector<Value, 4> GroupNormOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
                                                     PatternRewriter& rewriter) {
   auto group_norm_op = *this;
   SmallVector<Value, 4> operands;
   operands.push_back(value[0]);
-  if (this->affine()) {
-    operands.push_back(this->beta());
-    operands.push_back(this->gamma());
+  if (this->getAffine()) {
+    operands.push_back(this->getBeta());
+    operands.push_back(this->getGamma());
   }
   NamedAttrList attributes = group_norm_op->getAttrs();
-  attributes.set(group_norm_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
+  attributes.set(group_norm_op.getDataFormatAttrName(), rewriter.getStringAttr("channels_last"));
   auto res =
       rewriter
           .create<oneflow::GroupNormOp>(group_norm_op.getLoc(), getNHWCResultTypes(group_norm_op),

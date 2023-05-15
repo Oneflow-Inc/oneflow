@@ -15,6 +15,7 @@ limitations under the License.
 """
 
 import os
+import math
 import warnings
 import tempfile
 import unittest
@@ -28,10 +29,145 @@ import torch
 import oneflow as flow
 import oneflow.nn as nn
 import oneflow.unittest
+from oneflow._oneflow_internal import TensorTuple
+from oneflow.test_utils.test_util import GenArgList
 
 
 def np_relu(np_arr):
     return np.where(np_arr > 0, np_arr, 0)
+
+
+def _test_hooks(test_case, backward_register_fn):
+    module = nn.Sigmoid()
+    input = flow.ones(5, 5, requires_grad=True)
+
+    counter = {"forwards": 0, "backwards": 0}
+
+    def fw_hook(inc, h_module, input, output):
+        test_case.assertTrue(isinstance(input, tuple))
+        test_case.assertTrue(isinstance(output, flow.Tensor))
+        test_case.assertTrue(h_module is module)
+        test_case.assertTrue(flow.equal(input[0], flow.ones(5, 5)))
+        test_case.assertTrue(
+            flow.equal(output, flow.empty(5, 5).fill_(1 / (1 + 1 / math.e)))
+        )
+        counter["forwards"] += inc
+
+    def bw_hook(inc, h_module, grad_input, grad_output):
+        test_case.assertTrue(isinstance(grad_input, TensorTuple))
+        test_case.assertTrue(isinstance(grad_output, TensorTuple))
+        test_case.assertTrue(h_module is module)
+        test_case.assertTrue(flow.equal(grad_output[0], flow.ones(5, 5) * 2))
+        counter["backwards"] += inc
+
+    test_fwd = module.register_forward_hook(lambda *args: fw_hook(1, *args))
+
+    module(input)
+    module(input)
+    test_case.assertEqual(counter["forwards"], 2)
+    test_case.assertEqual(counter["backwards"], 0)
+
+    test_bwd = getattr(module, backward_register_fn)(lambda *args: bw_hook(1, *args))
+
+    output = module(input)
+    test_case.assertEqual(counter["forwards"], 3)
+    test_case.assertEqual(counter["backwards"], 0)
+
+    output.backward(flow.ones(5, 5) * 2, retain_graph=True)
+    test_case.assertEqual(counter["forwards"], 3)
+    test_case.assertEqual(counter["backwards"], 1)
+
+    output.backward(flow.ones(5, 5) * 2, retain_graph=True)
+    test_case.assertEqual(counter["forwards"], 3)
+    test_case.assertEqual(counter["backwards"], 2)
+
+    test2_fwd = module.register_forward_hook(lambda *args: fw_hook(2, *args))
+
+    output = module(input)
+    test_case.assertEqual(counter["forwards"], 6)
+    test_case.assertEqual(counter["backwards"], 2)
+
+    test2_bwd = getattr(module, backward_register_fn)(lambda *args: bw_hook(2, *args))
+    module(input).backward(flow.ones(5, 5) * 2)
+    test_case.assertEqual(counter["forwards"], 9)
+    test_case.assertEqual(counter["backwards"], 5)
+
+    test2_bwd.remove()
+
+    module(input).backward(flow.ones(5, 5) * 2)
+    test_case.assertEqual(counter["forwards"], 12)
+    test_case.assertEqual(counter["backwards"], 6)
+
+    test2_fwd.remove()
+
+    module(input).backward(flow.ones(5, 5) * 2)
+    test_case.assertEqual(counter["forwards"], 13)
+    test_case.assertEqual(counter["backwards"], 7)
+
+    test_fwd.remove()
+    test_bwd.remove()
+
+
+def _test_module_forward_preforward_hook_removable(test_case):
+    module = nn.Sigmoid()
+
+    def removable_hook(m, input):
+        nonlocal handle
+        handle.remove()
+        return input
+
+    def removable_hook_2(m, input):
+        nonlocal handle_2
+        handle_2.remove()
+        return input
+
+    handle = module.register_forward_pre_hook(removable_hook)
+    handle_2 = module.register_forward_pre_hook(removable_hook_2)
+
+    # make sure hook register is successful
+    test_case.assertEqual(len(handle.hooks_dict_ref()), 2)
+    test_case.assertEqual(len(handle_2.hooks_dict_ref()), 2)
+
+    input = flow.randn(2, 2)
+    output = module(input)
+    test_case.assertTrue(flow.equal(flow.sigmoid(input), output))
+
+    # make sure hook removal is successful
+    test_case.assertFalse(handle.id in handle.hooks_dict_ref())
+    test_case.assertFalse(handle_2.id in handle.hooks_dict_ref())
+    test_case.assertEqual(len(handle.hooks_dict_ref()), 0)
+    test_case.assertEqual(len(handle_2.hooks_dict_ref()), 0)
+
+
+def _test_module_forward_forward_hook_removable(test_case):
+    module = nn.Sigmoid()
+
+    def removable_hook(m, input, output):
+        nonlocal handle
+        handle.remove()
+        return output
+
+    def removable_hook_2(m, input, output):
+        nonlocal handle_2
+        handle_2.remove()
+        return output
+
+    handle = module.register_forward_hook(removable_hook)
+    handle_2 = module.register_forward_hook(removable_hook_2)
+
+    # make sure hook register is successful
+    test_case.assertEqual(len(handle.hooks_dict_ref()), 2)
+    test_case.assertEqual(len(handle_2.hooks_dict_ref()), 2)
+
+    input = flow.randn(2, 2)
+    output = module(input)
+    test_case.assertTrue(flow.equal(flow.sigmoid(input), output))
+
+    # make sure hook removal is successful
+    test_case.assertFalse(handle.id in handle.hooks_dict_ref())
+    test_case.assertFalse(handle_2.id in handle.hooks_dict_ref())
+    test_case.assertEqual(len(handle.hooks_dict_ref()), 0)
+    test_case.assertEqual(len(handle_2.hooks_dict_ref()), 0)
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -243,6 +379,36 @@ class TestModule(flow.unittest.TestCase):
         test_case.assertEqual(output.shape, flow.Size([4, 10, 30, 30]))
 
     @flow.unittest.skip_unless_1n1d()
+    def test_module_submodule(test_case):
+        class CustomSubModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.param = flow.nn.Linear(2, 3)
+
+        class CustomModule(flow.nn.Module):
+            def __init__(self) -> None:
+                super().__init__()
+                self.linear = CustomSubModule()
+
+        m = CustomModule()
+        test_case.assertTrue(
+            isinstance(m.get_submodule("linear.param"), flow.nn.Linear)
+        )
+
+    @flow.unittest.skip_unless_1n1d()
+    def test_module_get_parameter(test_case):
+        class CustomModule(flow.nn.Module):
+            def __init__(self, param1, param2):
+                super().__init__()
+                self.param1 = param1
+                self.param2 = param2
+
+        tensor0 = flow.nn.Parameter(flow.Tensor(2, 3).to(dtype=flow.float32))
+        tensor1 = flow.nn.Parameter(flow.Tensor(2, 3).to(dtype=flow.float32))
+        m = CustomModule(tensor0, tensor1)
+        test_case.assertTrue(m.get_parameter("param1") is tensor0)
+        test_case.assertTrue(m.get_parameter("param2") is tensor1)
+
     def test_module_delattr(test_case):
         class ConvBNModule(nn.Module):
             def __init__(self):
@@ -255,6 +421,42 @@ class TestModule(flow.unittest.TestCase):
 
         m = ConvBNModule()
         delattr(m, "bn")
+
+    @flow.unittest.skip_unless_1n1d()
+    def test_hooks_register(test_case):
+        for hook in ["register_backward_hook", "register_full_backward_hook"]:
+            _test_hooks(test_case, hook)
+        _test_module_forward_preforward_hook_removable(test_case)
+        _test_module_forward_forward_hook_removable(test_case)
+
+    @flow.unittest.skip_unless_1n1d()
+    def test_register_state_dict_hook_hook(test_case):
+        destination_check = None
+
+        def state_dict_hook(module, destination, prefix, local_metadata):
+            for submodule_name, submodule in module.named_modules():
+                for attr_name, attr in submodule.__dict__.items():
+                    if isinstance(attr, torch.Tensor):
+                        mod_prefix = prefix + submodule_name
+                        key = mod_prefix + ("." if mod_prefix else "") + attr_name
+                        destination[key] = attr
+            nonlocal destination_check
+            destination_check = destination
+
+        class CustomModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.linear = nn.Linear(10, 5)
+                self._register_state_dict_hook(state_dict_hook)
+
+            def forward(self, x):
+                x = self.linear(x)
+                return x
+
+        m = CustomModule()
+        test_case.assertEqual(destination_check, None)
+        state_dict = m.state_dict()
+        test_case.assertEqual(destination_check, state_dict)
 
     @flow.unittest.skip_unless_1n1d()
     def test_full_backward_hook(test_case):

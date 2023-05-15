@@ -23,7 +23,9 @@ namespace oneflow {
 namespace ep {
 namespace primitive {
 
-#define UNARY_MATH_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRelu)
+#define UNARY_MATH_OP_SEQ              \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRelu) \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kIdentity)
 
 #define UNARY_FLOATING_MATH_OP_SEQ                \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kElu)             \
@@ -52,9 +54,12 @@ namespace primitive {
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kCeil)            \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kCos)             \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kCosh)            \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kDigamma)         \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kTrigamma)        \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kErf)             \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kErfc)            \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kExp)             \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kExp2)            \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kExpm1)           \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kFloor)           \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLgamma)          \

@@ -787,6 +787,67 @@ void DfsGetNdSbpSignature(NdSbpSignature& nd_sbp_sig, int32_t depth, int32_t dim
   }
 }
 
+namespace {
+
+// give a mesure value for NdSbp for sorting
+size_t MesureNdSbp(const NdSbp& nd_sbp) {
+  // start from 1, B + P + max split axis (8)
+  constexpr size_t kMaxSplitAxis = 8;
+  constexpr size_t kCarryDigit = kMaxSplitAxis + 3;
+  size_t value = 0;
+  for (int i = 0; i < nd_sbp.sbp_parallel_size(); ++i) {
+    size_t cur_dim_value = 0;
+    const auto& sbp = nd_sbp.sbp_parallel(i);
+    if (sbp.has_broadcast_parallel()) {
+      cur_dim_value = 1;
+    } else if (sbp.has_partial_sum_parallel()) {
+      cur_dim_value = 2;
+    } else if (sbp.has_split_parallel()) {
+      CHECK_LT(sbp.split_parallel().axis(), kMaxSplitAxis);
+      // from 3 to 10
+      cur_dim_value = 3 + sbp.split_parallel().axis();
+    } else {
+      UNIMPLEMENTED();
+    }
+    value = value * kCarryDigit + cur_dim_value;
+  }
+  return value;
+}
+
+size_t MesureNdSbpSignature(const NdSbpSignature& nd_sbp_sig, const std::vector<std::string>& bns) {
+  // big enough for 2d-sbp signatrue set
+  // if want to extend to 3d-sbp, consider increase to 170
+  constexpr size_t kCarryDigit = 97;
+  size_t value = 0;
+  for (size_t i = 0; i < bns.size(); ++i) {
+    auto nd_sbp_it = nd_sbp_sig.bn_in_op2nd_sbp().find(bns[i]);
+    CHECK(nd_sbp_it != nd_sbp_sig.bn_in_op2nd_sbp().end())
+        << "can't find bn (" << bns[i] << ") in " << PbMessage2TxtString(nd_sbp_sig);
+    size_t cur_arg_value = MesureNdSbp(nd_sbp_it->second);
+    CHECK_LE(value + cur_arg_value / kCarryDigit, std::numeric_limits<size_t>::max() / kCarryDigit);
+    value = value * kCarryDigit + cur_arg_value;
+  }
+  return value;
+}
+
+}  // namespace
+
+void DeduplicateNdSbpSignatureList(std::vector<NdSbpSignature>* nd_sbp_sig_list,
+                                   const std::vector<std::string>& bns) {
+  if (bns.size() > 8) { return; }
+  std::map<size_t, NdSbpSignature> value2nd_sbp_sig;
+  for (auto& nd_sbp_sig : *nd_sbp_sig_list) {
+    size_t order_value = MesureNdSbpSignature(nd_sbp_sig, bns);
+    if (value2nd_sbp_sig.find(order_value) == value2nd_sbp_sig.end()) {
+      value2nd_sbp_sig.emplace(order_value, std::move(nd_sbp_sig));
+    }
+  }
+  nd_sbp_sig_list->clear();
+  for (auto& nd_sbp_pair : value2nd_sbp_sig) {
+    nd_sbp_sig_list->emplace_back(std::move(nd_sbp_pair.second));
+  }
+}
+
 // Compute storage per device for given NdSbp
 double Storage4NdSbp(const NdSbp& nd_sbp, Shape& logical_shape, const Shape& parallel_hierarchy) {
   if (nd_sbp.sbp_parallel_size() == 1) {

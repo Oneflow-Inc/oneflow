@@ -216,6 +216,16 @@ static PyObject* PyTensorObject_is_contiguous(PyObject* self, PyObject* unused) 
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_is_view(PyObject* self, PyObject* unused) {
+  HANDLE_ERRORS
+  if (PyTensor_Unpack(self)->is_view()) {
+    Py_RETURN_TRUE;
+  } else {
+    Py_RETURN_FALSE;
+  }
+  END_HANDLE_ERRORS
+}
+
 static PyObject* PyTensorObject_contiguous(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   return PyTensor_New(PyTensor_Unpack(self)->contiguous());
@@ -387,6 +397,16 @@ static PyObject* PyTensorObject_check_meta_consistency(PyObject* self, PyObject*
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_data_ptr(PyObject* self, PyObject* unused) {
+  HANDLE_ERRORS
+  const auto& t = PyTensor_Unpack(self);
+  const std::shared_ptr<LocalTensor> local_tensor =
+      t->is_local() ? ASSERT_PTR(t->AsLocalTensor()) : ASSERT_PTR(t->cur_rank_phy_tensor());
+  return functional::CastToPyObject(
+      reinterpret_cast<int64_t>(ASSERT(GetTensorDataPtr(local_tensor))));
+  END_HANDLE_ERRORS
+}
+
 static PyObject* PyTensorObject_to_numpy(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   const auto& t = PyTensor_Unpack(self);
@@ -394,7 +414,8 @@ static PyObject* PyTensorObject_to_numpy(PyObject* self, PyObject* unused) {
   switch (data_type) {
 #define SWITCH_EAGER_TENSOR_TO_NUMPY(cpp_type, of_type) \
   case of_type: return ASSERT(EagerLocalTensorToNumpy<cpp_type>(self));
-    OF_PP_FOR_EACH_TUPLE(SWITCH_EAGER_TENSOR_TO_NUMPY, POD_DATA_TYPE_SEQ)
+    OF_PP_FOR_EACH_TUPLE(SWITCH_EAGER_TENSOR_TO_NUMPY,
+                         POD_DATA_TYPE_SEQ INT16_DATA_TYPE_SEQ COMPLEX_DATA_TYPE_SEQ)
     case DataType::kFloat16: return ASSERT(EagerLocalTensorToNumpy<float16>(self));
     default: {
       return PyErr_Format(PyExc_RuntimeError,
@@ -412,7 +433,8 @@ static PyObject* PyTensorObject_item(PyObject* self, PyObject* unused) {
   switch (data_type) {
 #define CASE_SCALAR_TENSOR_TO_SCALAR(cpp_type, of_type) \
   case of_type: return ASSERT(EagerLocalTensorItem<cpp_type>(t));
-    OF_PP_FOR_EACH_TUPLE(CASE_SCALAR_TENSOR_TO_SCALAR, POD_AND_HALF_DATA_TYPE_SEQ);
+    OF_PP_FOR_EACH_TUPLE(CASE_SCALAR_TENSOR_TO_SCALAR,
+                         POD_AND_HALF_DATA_TYPE_SEQ COMPLEX_DATA_TYPE_SEQ);
     default: {
       return PyErr_Format(PyExc_RuntimeError,
                           ("Invalid datatype " + DataType_Name(data_type)).data());
@@ -527,6 +549,7 @@ static PyMethodDef PyTensorObject_methods[] = {
     {"storage_offset", PyTensorObject_storage_offset, METH_NOARGS, NULL},
     {"stride", PyTensorObject_stride, METH_NOARGS, NULL},
     {"is_contiguous", PyTensorObject_is_contiguous, METH_NOARGS, NULL},
+    {"is_view", PyTensorObject_is_view, METH_NOARGS, NULL},
     {"contiguous", PyTensorObject_contiguous, METH_NOARGS, NULL},
     {"contiguous_", PyTensorObject_contiguous_, METH_NOARGS, NULL},
     {"pin_memory", PyTensorObject_pin_memory, METH_NOARGS, NULL},
@@ -548,6 +571,7 @@ static PyMethodDef PyTensorObject_methods[] = {
     {"global_id", PyTensorObject_global_id, METH_NOARGS, NULL},
     {"check_meta_consistency", PyTensorObject_check_meta_consistency, METH_NOARGS, NULL},
     {"to_numpy", PyTensorObject_to_numpy, METH_NOARGS, NULL},
+    {"data_ptr", PyTensorObject_data_ptr, METH_NOARGS, NULL},
     {"item", PyTensorObject_item, METH_NOARGS, NULL},
     {"type", (PyCFunction)PyTensorObject_type, METH_VARARGS | METH_KEYWORDS, NULL},
     {"_copy_to_numpy", PyTensorObject__copy_to_numpy, METH_O, NULL},
@@ -568,6 +592,10 @@ static PyObject* PyTensorObject_dtype(PyObject* self, void* unused) {
   const Symbol<DType>* dtype = &ASSERT(DType::Get(PyTensor_Unpack(self)->dtype()->data_type()));
   return functional::CastToPyObject(dtype);
   END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_is_cpu(PyObject* self, void* unused) {
+  return functional::CastToPyObject(PyTensor_Unpack(self)->is_cpu());
 }
 
 static PyObject* PyTensorObject_is_cuda(PyObject* self, void* unused) {
@@ -709,6 +737,7 @@ static PyGetSetDef PyTensorObject_properties[] = {
     {PYGETSET_NAME("ndim"), (getter)PyTensorObject_ndim, NULL, NULL, NULL},
     {PYGETSET_NAME("shape"), (getter)PyTensorObject_shape, NULL, NULL, NULL},
     {PYGETSET_NAME("dtype"), (getter)PyTensorObject_dtype, NULL, NULL, NULL},
+    {PYGETSET_NAME("is_cpu"), (getter)PyTensorObject_is_cpu, NULL, NULL, NULL},
     {PYGETSET_NAME("is_cuda"), (getter)PyTensorObject_is_cuda, NULL, NULL, NULL},
     {PYGETSET_NAME("grad"), (getter)PyTensorObject_grad, (setter)PyTensorObject_set_grad, NULL,
      NULL},

@@ -16,11 +16,12 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EAGER_EAGER_BLOB_OBJECT_H_
 #define ONEFLOW_CORE_EAGER_EAGER_BLOB_OBJECT_H_
 
+#include <utility>
+
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/op_args_reserved_size.h"
 #include "oneflow/core/eager/local_dep_object.h"
-#include "oneflow/core/device/device_context.h"
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stream.h"
@@ -40,6 +41,8 @@ class MutLocalTensorMeta;
 
 namespace vm {
 
+class Allocator;
+
 class EagerBlobObject final : public user_op::Tensor,
                               public user_op::TensorDesc,
                               public std::enable_shared_from_this<EagerBlobObject> {
@@ -49,13 +52,15 @@ class EagerBlobObject final : public user_op::Tensor,
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
                   const Symbol<one::LocalTensorMeta>& static_local_tensor_meta,
                   const std::shared_ptr<const one::MutLocalTensorMeta>& dynamic_local_tensor_meta,
-                  DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage)
+                  DataType data_type, MemoryFormat memory_format,
+                  const std::shared_ptr<TensorStorage>& tensor_storage)
       : EagerBlobObject(mem_case, static_local_tensor_meta, dynamic_local_tensor_meta, data_type,
-                        tensor_storage, intrusive::shared_ptr<LocalDepObject>()) {}
+                        memory_format, tensor_storage, intrusive::shared_ptr<LocalDepObject>()) {}
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
                   const Symbol<one::LocalTensorMeta>& static_local_tensor_meta,
                   const std::shared_ptr<const one::MutLocalTensorMeta>& dynamic_local_tensor_meta,
-                  DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage,
+                  DataType data_type, MemoryFormat memory_format,
+                  const std::shared_ptr<TensorStorage>& tensor_storage,
                   const intrusive::shared_ptr<LocalDepObject>& dep_object);
 
   ~EagerBlobObject() { tensor_storage_.reset(); }
@@ -71,11 +76,13 @@ class EagerBlobObject final : public user_op::Tensor,
   const Stride& stride() const override;
   DataType data_type() const override { return data_type_; }
   bool is_dynamic() const override { return is_dynamic_; }
+  MemoryFormat memory_format() const override { return memory_format_; }
 
   void set_shape(const Shape& shape) override;
   void set_stride(const Stride& stride) override;
   void set_data_type(DataType data_type) override { data_type_ = data_type; }
   void set_is_dynamic(bool is_dynamic) override { is_dynamic_ = is_dynamic; }
+  void set_memory_format(MemoryFormat memory_format) override { memory_format_ = memory_format; }
 
   // user_op::Tensor overrides
   ShapeView shape_view() const override { return shape(); }
@@ -84,6 +91,7 @@ class EagerBlobObject final : public user_op::Tensor,
   const void* raw_dptr() const override;
   void* mut_raw_dptr() override { return const_cast<void*>(raw_dptr()); }
 
+  int64_t storage_offset() const;
   void set_storage_offset(const int64_t offset);
 
   // Returns true if allocate successfully.
@@ -132,19 +140,27 @@ class EagerBlobObject final : public user_op::Tensor,
     return reinterpret_cast<char*>(const_cast<int64_t*>(shape().dim_vec().data()));
   }
 
+  void set_input_of_view_op(std::shared_ptr<EagerBlobObject> input) {
+    input_of_view_op_ = std::move(input);
+  }
+
  private:
   bool is_dynamic_;
   std::shared_ptr<MemoryCase> mem_case_;
   DataType data_type_;
+  MemoryFormat memory_format_;
   int64_t storage_offset_;
   std::shared_ptr<TensorStorage> tensor_storage_;
   intrusive::shared_ptr<LocalDepObject> compute_local_dep_object_;
 
   Symbol<one::LocalTensorMeta> static_local_tensor_meta_;
   std::shared_ptr<const one::MutLocalTensorMeta> dynamic_local_tensor_meta_;
+  // for rematerialization (i.e. Coop/DTR)
+  std::shared_ptr<EagerBlobObject> input_of_view_op_;
 };
 
 using EagerBlobObjectList = small_vector<std::shared_ptr<vm::EagerBlobObject>, kOpArgsReservedSize>;
+using WeakEagerBlobObjectList = small_vector<std::weak_ptr<vm::EagerBlobObject>>;
 using EagerBlobObjectListPtr = std::shared_ptr<const EagerBlobObjectList>;
 
 }  // namespace vm

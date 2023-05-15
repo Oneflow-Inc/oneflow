@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/user/kernels/cutlass_conv_tuner.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/framework/user_op_conf.h"
+#include <nlohmann/json.hpp>
 
 namespace oneflow {
 
@@ -58,6 +59,7 @@ Maybe<void> CutlassConvTuningWarmupPass::Apply(Job* job, JobPassCtx* ctx) const 
   char* buffer = nullptr;
   size_t buffer_size = 0;
   OF_CUDA_CHECK(cudaMalloc(&workspace, kMaxWorkspaceSize));
+  std::vector<OperatorConf> op_confs;
   op_graph.ForEachNode([&](const OpNode* node) {
     const OperatorConf& op_conf = node->op().op_conf();
     if (!op_conf.has_user_conf()) { return; }
@@ -174,8 +176,17 @@ Maybe<void> CutlassConvTuningWarmupPass::Apply(Job* job, JobPassCtx* ctx) const 
 
     const cutlass::library::Operation* operation = CutlassConvTuner::Get().FindConv2dOperation(
         stream->As<ep::CudaStream>(), key, configuraion, arguments, workspace, kMaxWorkspaceSize);
-    if (operation != nullptr) { VLOG(3) << "Fastest operation: " << operation->description().name; }
+    if (operation != nullptr) {
+      VLOG(3) << "Fastest operation: " << operation->description().name;
+      nlohmann::json tuning_cache;
+      tuning_cache["cutlass"] = operation->description().name;
+      OperatorConf new_op_conf = op_conf;
+      (*(*new_op_conf.mutable_user_conf()->mutable_attr())["tuning_cache"].mutable_at_string()) =
+          tuning_cache.dump();
+      op_confs.push_back(new_op_conf);
+    }
   });
+  job_builder.MutOpsOnlyOnce(op_confs);
   OF_CUDA_CHECK(cudaFree(workspace));
   OF_CUDA_CHECK(cudaFree(buffer));
   device->DestroyStream(stream);

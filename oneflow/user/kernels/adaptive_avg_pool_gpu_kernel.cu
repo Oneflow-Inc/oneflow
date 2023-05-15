@@ -82,7 +82,7 @@ __global__ void AdaptiveAvgPoolCudaKernel(const T* input, T* output, int num_ele
       in_ptr += in_h * in_w;  // next input depth
     }
     // Update output
-    output[idx] = sum / k_d / k_h / k_w;
+    output[idx] = sum / static_cast<T>(k_d) / static_cast<T>(k_h) / static_cast<T>(k_w);
   }
 }
 
@@ -111,7 +111,8 @@ __global__ void AdaptiveAvgPoolGradCudaKernel(T* input, const T* output, int num
     int in_end_w = END_IND(out_w_idx, out_w, in_w);
     int k_w = in_end_w - in_start_w;
 
-    const T grad_delta = output[idx] / k_d / k_h / k_w;
+    const T grad_delta =
+        output[idx] / static_cast<T>(k_d) / static_cast<T>(k_h) / static_cast<T>(k_w);
     T* input_ptr =
         input + bc_idx * in_panel_size + in_start_d * in_h * in_w + in_start_h * in_w + in_start_w;
     for (int id = 0; id < k_d; ++id) {
@@ -137,7 +138,9 @@ void AvgForwardCompute(KernelComputeContext* ctx, const int32_t& dim) {
   const Shape& y_shape = ctx->TensorDesc4ArgNameAndIndex("y", 0)->shape();
 
   // TODO (Tianyu): Support 'channels_last'
-  std::string data_format = "channels_first";
+  const std::string& data_format = ctx->Attr<std::string>("data_format");
+  CHECK_OR_THROW(data_format == "channels_first")
+      << "adaptive_avg_pool on cuda only supports NCHW data format";
   const Shape& in = GetShape5D(x_shape, data_format, dim);
   const Shape& out = GetShape5D(y_shape, data_format, dim);
 
@@ -158,7 +161,9 @@ void AvgBackwardCompute(KernelComputeContext* ctx, const int32_t& dim) {
   const Shape& dy_shape = ctx->TensorDesc4ArgNameAndIndex("dy", 0)->shape();
 
   // TODO (Tianyu): Support 'channels_last'
-  std::string data_format = "channels_first";
+  const std::string& data_format = ctx->Attr<std::string>("data_format");
+  CHECK_OR_THROW(data_format == "channels_first")
+      << "adaptive_avg_pool backward on cuda only supports NCHW data format";
   const Shape& in = GetShape5D(dx_shape, data_format, dim);
   const Shape& out = GetShape5D(dy_shape, data_format, dim);
 
@@ -259,6 +264,7 @@ class GpuAdaptiveAvgPool3dGradKernel final : public OpKernel {
       .SetIsMatchedHob((HobDeviceType() == device)                             \
                        && (HobDataType("y", 0) == GetDataType<dtype>::value));
 
+REGISTER_CUDA_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kCUDA, half);
 REGISTER_CUDA_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kCUDA, float);
 REGISTER_CUDA_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kCUDA, double);
 REGISTER_CUDA_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kCUDA, int);
@@ -277,6 +283,7 @@ REGISTER_CUDA_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kCUDA, int);
       .SetIsMatchedHob((HobDeviceType() == device)                              \
                        && (HobDataType("dx", 0) == GetDataType<dtype>::value));
 
+REGISTER_CUDA_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kCUDA, half);
 REGISTER_CUDA_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kCUDA, float);
 REGISTER_CUDA_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kCUDA, double);
 REGISTER_CUDA_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kCUDA, int);

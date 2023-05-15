@@ -22,10 +22,10 @@ namespace oneflow {
 
 namespace {
 
-Shape CreatePreluLeftExtendedShape(const ShapeView& shape) {
+Shape CreatePreluLeftExtendedShape(const ShapeView& shape, const int32_t alpha_size) {
   DimVector dim_vec(shape.NumAxes());
   dim_vec.at(0) = 1LL;
-  dim_vec.at(1) = shape.At(1);
+  dim_vec.at(1) = alpha_size;
   for (int i = 2; i < shape.NumAxes(); i++) { dim_vec.at(i) = 1LL; }
   return Shape(std::move(dim_vec));
 }
@@ -459,12 +459,13 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
     T* reduce_sum_tmp_buf = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>()
                                                  + GetCudaAlignedSize(elem_cnt * sizeof(T)));
 
-    const Shape& left_extended_shape = CreatePreluLeftExtendedShape(ShapeView(x->shape_view()));
-
     const int32_t batch = x->shape_view().At(0);
     const int32_t channels = (x->shape_view().NumAxes() == 1) ? 1 : x->shape_view().At(1);
     const int32_t alpha_size = alpha->shape_view().elem_cnt();
     const int32_t inner_size = elem_cnt / batch / channels;
+
+    const Shape& left_extended_shape =
+        CreatePreluLeftExtendedShape(ShapeView(x->shape_view()), alpha_size);
     if (alpha_size == 1) {
       DispatchPreluBackwardSingleAlphaIndex<T>(ctx->stream(), elem_cnt, x->dptr<T>(),
                                                alpha->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>(),

@@ -134,6 +134,17 @@ class TestExp(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n1d()
+class TestExp2(flow.unittest.TestCase):
+    @autotest(n=5, auto_backward="auto")
+    def test_flow_exp2_with_random_data(test_case):
+        device = random_device()
+        x_dtype = random_dtype(["arithmetic"])
+        x = random_tensor().to(device).to(x_dtype)
+        y = torch.exp2(x)
+        return y
+
+
+@flow.unittest.skip_unless_1n1d()
 class TestRsqrt(flow.unittest.TestCase):
     @autotest(n=5)
     def test_rsqrt_flow_with_random_data(test_case):
@@ -468,15 +479,25 @@ class TestFloorDiv(flow.unittest.TestCase):
     @autotest(auto_backward=False)
     def test_elementwise_floordiv_random_data(test_case):
         device = random_device()
-        x = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
-        y = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+        # The random value is narrowed to positive number because of the error from pytorch 1.10.0
+        # Please remove the value range striction after updating the pytorch version of ci to 1.13.
+        x = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3, low=0, high=10).to(
+            device
+        )
+        y = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3, low=1, high=10).to(
+            device
+        )
 
         return torch.floor_divide(x, y)
 
     @autotest(auto_backward=False)
     def test_tensor_floordiv_scalar_random_data(test_case):
         device = random_device()
-        x = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+        # The random value is narrowed to positive number because of the error from pytorch 1.10.0
+        # Please remove the value range striction after updating the pytorch version of ci to 1.13.
+        x = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3, low=0, high=10).to(
+            device
+        )
         y = random().to(int)
         return torch.floor_divide(x, y)
 
@@ -562,8 +583,7 @@ class TestCoshModule(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestLgammaModule(flow.unittest.TestCase):
-    # TODO: Add lgamma backward.
-    @autotest(n=5, auto_backward=False)
+    @autotest(n=5)
     def test_lgamma_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
@@ -586,6 +606,15 @@ class TestLog10Module(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor().to(device)
         return torch.log10(x)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestDigammaModule(flow.unittest.TestCase):
+    @autotest(n=5)
+    def test_digamma_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        return torch.digamma(x)
 
 
 if __name__ == "__main__":

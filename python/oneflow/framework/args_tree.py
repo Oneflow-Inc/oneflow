@@ -143,29 +143,34 @@ class ArgsTree(object):
         else:
             args_to_iter = self._io_args
 
-        stack = []
-        stack.append(args_to_iter)
+        # NOTE(lixiang): Generator expression and iterator are used.
+        #   This avoids generating the full list in memory and only processes the nodes that need to be processed,
+        #   reducing time and space consumption.
+        stack = [iter([args_to_iter])]
         while len(stack) > 0:
-            curr = stack.pop()
-            if _is_raw_type(curr, NamedArg):
-                curr_value = curr.value()
-            else:
-                curr_value = curr
+            try:
+                curr = next(stack[-1])
+                if _is_raw_type(curr, NamedArg):
+                    curr_value = curr.value()
+                else:
+                    curr_value = curr
 
-            if _is_raw_type(curr_value, list) or _is_raw_type(curr_value, tuple):
-                children = curr_value
-            elif _is_raw_type(curr_value, dict) or _is_raw_type(
-                curr_value, OrderedDict
-            ):
-                children = list(curr_value.values())
-            else:
-                children = None
+                if _is_raw_type(curr_value, list) or _is_raw_type(curr_value, tuple):
+                    children = curr_value
+                elif _is_raw_type(curr_value, dict) or _is_raw_type(
+                    curr_value, OrderedDict
+                ):
+                    children = curr_value.values()
+                else:
+                    children = None
 
-            if children:
-                for child in reversed(children):
-                    stack.append(child)
+                if children:
+                    stack.append(iter(children))
 
-            yield curr
+                yield curr
+
+            except StopIteration:
+                stack.pop()
 
     def iter_named_nodes(self):
         assert self._gen_name, "Only use this if gen_name is set!"
@@ -201,6 +206,48 @@ class ArgsTree(object):
             arg.set_value(value)
 
         return arg
+
+    def map_tuple_leaf(self, map_function: Callable):
+        r"""
+        When the type of io args is tuple or list, map the leaf of the arguments into map_function(leaf).
+        """
+        assert map_function != None, "map function cannot be None"
+        assert isinstance(
+            self._io_args, (tuple, list)
+        ), "only used when io args is a tuple or list of tensors"
+
+        stack = []
+
+        # Cases handled: tuple(tensor, ...), such as input args.
+        if len(self._io_args) > 0 and isinstance(self._io_args[0], Tensor):
+            for i in self._io_args:
+                mapped_value = map_function(i)
+                stack.append(mapped_value)
+
+            if isinstance(self._io_args, tuple):
+                return tuple(stack)
+            elif isinstance(self._io_args, list):
+                return stack
+
+        # Cases handled: tuple(tuple(tensor, ...), ), such as the output args of return.
+        elif (
+            len(self._io_args) > 0
+            and isinstance(self._io_args[0], (tuple, list))
+            and all(isinstance(arg, Tensor) for arg in self._io_args[0])
+        ):
+            for i in self._io_args[0]:
+                mapped_value = map_function(i)
+                stack.append(mapped_value)
+
+            if isinstance(self._io_args[0], tuple):
+                return (tuple(stack),)
+            elif isinstance(self._io_args[0], list):
+                return (stack,)
+
+        # Other cases.
+        # Do not loop optimize, and continue to execute the recursive code (`_execute_mapping`).
+        else:
+            return self._execute_mapping(self._io_args, map_function)
 
     def map_leaf(self, map_function: Callable):
         r"""

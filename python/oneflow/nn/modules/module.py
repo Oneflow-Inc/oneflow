@@ -16,6 +16,7 @@ limitations under the License.
 import itertools
 from collections import OrderedDict, namedtuple
 from typing import (
+    Any,
     Callable,
     Dict,
     Iterator,
@@ -28,6 +29,8 @@ from typing import (
     overload,
 )
 import traceback
+import functools
+import weakref
 import warnings
 
 import numpy as np
@@ -35,6 +38,44 @@ import oneflow as flow
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.parameter import Parameter
 from contextlib import contextmanager
+
+
+class _WrappedHook(object):
+    def __init__(self, hook: Callable, module: Optional["Module"] = None):
+        self.hook: Callable = hook
+        functools.update_wrapper(self, hook)
+
+        self.with_module: bool = False
+
+        if module is not None:
+            self.module: weakref.ReferenceType["Module"] = weakref.ref(module)
+            self.with_module = True
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        if self.with_module:
+            module = self.module()
+            if module is None:
+                raise RuntimeError("You are trying to call the hook of a dead Module!")
+            return self.hook(module, *args, **kwargs)
+        return self.hook(*args, **kwargs)
+
+    def __getstate__(self) -> Dict:
+        result = {"hook": self.hook, "with_module": self.with_module}
+        if self.with_module:
+            result["module"] = self.module()
+
+        return result
+
+    def __setstate__(self, state: Dict):
+        self.hook = state["hook"]
+        self.with_module = state["with_module"]
+
+        if self.with_module:
+            if state["module"] is None:
+                raise RuntimeError(
+                    "You are trying to revive the hook of a dead Module!"
+                )
+            self.module = weakref.ref(state["module"])
 
 
 class _IncompatibleKeys(
@@ -100,20 +141,26 @@ class Module(object):
     """
 
     def __init__(self):
-        self.training = True
-        self._parameters = OrderedDict()
-        self._buffers = OrderedDict()
-        self._non_persistent_buffers_set = set()
-        self._backward_hooks = OrderedDict()
-        self._is_full_backward_hook = None
-        self._forward_hooks = OrderedDict()
-        self._forward_pre_hooks = OrderedDict()
-        self._state_dict_hooks = OrderedDict()
-        self._load_state_dict_pre_hooks = OrderedDict()
-        self._modules = OrderedDict()
-        self._is_ddp_module = False
-        self._oneflow_internal_module_tensor_applied_dict__ = None
-        self.cpg = None
+        """
+        Calls super().__setattr__('a', a) instead of the typical self.a = a
+        to avoid Module.__setattr__ overhead. Module's __setattr__ has special
+        handling for parameters, submodules, and buffers but simply calls into
+        super().__setattr__ for all other attributes.
+        """
+        super().__setattr__("training", True)
+        super().__setattr__("_parameters", OrderedDict())
+        super().__setattr__("_buffers", OrderedDict())
+        super().__setattr__("_non_persistent_buffers_set", set())
+        super().__setattr__("_backward_hooks", OrderedDict())
+        super().__setattr__("_is_full_backward_hook", None)
+        super().__setattr__("_forward_hooks", OrderedDict())
+        super().__setattr__("_forward_pre_hooks", OrderedDict())
+        super().__setattr__("_state_dict_hooks", OrderedDict())
+        super().__setattr__("_load_state_dict_pre_hooks", OrderedDict())
+        super().__setattr__("_modules", OrderedDict())
+        super().__setattr__("_is_ddp_module", False)
+        super().__setattr__("_oneflow_internal_module_tensor_applied_dict__", None)
+        super().__setattr__("cpg", None)
 
     def __getstate__(self):
         if not self._is_ddp_module:
@@ -132,6 +179,8 @@ class Module(object):
         del state["_forward_pre_hooks"]
         del state["_state_dict_hooks"]
         del state["_load_state_dict_pre_hooks"]
+        del state["_is_full_backward_hook"]
+        del state["_non_persistent_buffers_set"]
         return state
 
     def __setstate__(self, state):
@@ -141,6 +190,8 @@ class Module(object):
         self._forward_pre_hooks = OrderedDict()
         self._state_dict_hooks = OrderedDict()
         self._load_state_dict_pre_hooks = OrderedDict()
+        self._is_full_backward_hook = None
+        self._non_persistent_buffers_set = set()
         if hasattr(self, "_is_ddp_module") and self._is_ddp_module:
             # flow.nn.parallel.DistributedDataParallel updates the module inplace
             flow.nn.parallel.DistributedDataParallel(self, broadcast_parameters=False)
@@ -154,7 +205,12 @@ class Module(object):
                 self._shallow_repr()
                 + " is called in a nn.Graph, but not registered into a nn.Graph."
             )
-        for hook in itertools.chain(self._forward_pre_hooks.values()):
+
+        full_backward_hooks, non_full_backward_hooks = [], []
+        if self._backward_hooks:
+            full_backward_hooks, non_full_backward_hooks = self._get_backward_hooks()
+
+        for hook in list(self._forward_pre_hooks.values()):
             result = hook(self, args)
             if result is not None:
                 if not isinstance(result, tuple):
@@ -162,20 +218,34 @@ class Module(object):
                 args = result
 
         bw_hook = None
-        if len(self._backward_hooks) > 0:
-            bw_hook = flow.utils.hooks.BackwardHook(
-                self, self._backward_hooks.values(), []
-            )
+        if full_backward_hooks:
+            bw_hook = flow.utils.hooks.BackwardHook(self, full_backward_hooks, [])
             args = bw_hook.setup_input_hook(args)
+
         res = self.forward(*args, **kwargs)
-
-        if bw_hook:
-            res = bw_hook.setup_output_hook(res)
-
-        for hook in itertools.chain(self._forward_hooks.values()):
+        for hook in list(self._forward_hooks.values()):
             result = hook(self, args, res)
             if result is not None:
                 res = result
+
+        if bw_hook is not None:
+            res = bw_hook.setup_output_hook(res)
+
+        if non_full_backward_hooks:
+            var = res
+            while not isinstance(var, Tensor):
+                if isinstance(var, dict):
+                    var = next((v for v in var.values() if isinstance(v, Tensor)))
+                else:
+                    var = var[0]
+            grad_fn = var.grad_fn
+
+            if grad_fn is not None:
+                self._maybe_warn_non_full_backward_hook(args, res, grad_fn)
+                for hook in non_full_backward_hooks:
+                    wrapper = functools.partial(hook, self)
+                    functools.update_wrapper(wrapper, hook)
+                    grad_fn.register_hook(wrapper)
 
         return res
 
@@ -299,6 +369,53 @@ class Module(object):
             )
         else:
             self._parameters[name] = param
+
+    def _register_state_dict_hook(self, hook):
+        r"""These hooks will be called with arguments: `self`, `state_dict`,
+        `prefix`, `local_metadata`, after the `state_dict` of `self` is set.
+        Note that only parameters and buffers of `self` or its children are
+        guaranteed to exist in `state_dict`. The hooks may modify `state_dict`
+        inplace or return a new one.
+
+        .. note:
+            Do not use `module.state_dict()` in _register_state_dict_hook function
+        """
+        handle = flow.utils.hooks.RemovableHandle(self._state_dict_hooks)
+        self._state_dict_hooks[handle.id] = hook
+        return handle
+
+    def _register_load_state_dict_pre_hook(
+        self, hook: Callable[..., None], with_module=False
+    ):
+        r"""These hooks will be called with arguments: `state_dict`, `prefix`,
+        `local_metadata`, `strict`, `missing_keys`, `unexpected_keys`,
+        `error_msgs`, before loading `state_dict` into `self`. These arguments
+        are exactly the same as those of `_load_from_state_dict`.
+
+        If ``with_module`` is ``True``, then the first argument to the hook is
+        an instance of the module.
+
+        Arguments:
+            hook (Callable): Callable hook that will be invoked before
+                loading the state dict.
+            with_module (bool, optional): Whether or not to pass the module
+                instance to the hook as the first parameter.
+        """
+        handle = flow.utils.hooks.RemovableHandle(self._load_state_dict_pre_hooks)
+        self._load_state_dict_pre_hooks[handle.id] = _WrappedHook(
+            hook, self if with_module else None
+        )
+        return handle
+
+    def register_state_dict_pre_hook(self, hook):
+        r"""These hooks will be called with arguments: ``self``, ``prefix``,
+        and ``keep_vars`` before calling ``state_dict`` on ``self``. The registered
+        hooks can be used to perform pre-processing before the ``state_dict``
+        call is made.
+        """
+        handle = flow.utils.hooks.RemovableHandle(self._state_dict_pre_hooks)
+        self._state_dict_pre_hooks[handle.id] = hook
+        return handle
 
     def __getattr__(self, name: str) -> Union[Tensor, "Module"]:
         if "_parameters" in self.__dict__:
@@ -781,7 +898,7 @@ class Module(object):
                     )
                     continue
                 if (
-                    isinstance(input_param, flow.Tensor)
+                    isinstance(input_param, Tensor)
                     and input_param.is_global != param.is_global
                 ):
                     if param.is_global:
@@ -945,17 +1062,168 @@ class Module(object):
         if destination is None:
             destination = OrderedDict()
             destination._metadata = OrderedDict()
+
+        # TODO(hujiakui): add _version for nn.Module
+        local_metadata = dict(version=1)
+        if hasattr(destination, "_metadata"):
+            destination._metadata[prefix[:-1]] = local_metadata
         self._save_to_state_dict(destination, prefix, keep_vars)
         for (name, module) in self._modules.items():
             if module is not None:
                 module.state_dict(destination, prefix + name + ".", keep_vars=keep_vars)
         for hook in self._state_dict_hooks.values():
-            hook_result = hook(self, destination, prefix)
+            hook_result = hook(self, destination, prefix, local_metadata)
             if hook_result is not None:
                 destination = hook_result
         return destination
 
-    def register_forward_pre_hook(self, hook: Callable[..., None]) -> None:
+    _grad_t = Union[Tuple[Tensor, ...], Tensor]
+
+    def register_backward_hook(
+        self, hook: Callable[["Module", _grad_t, _grad_t], Union[None, Tensor]]
+    ):
+        r"""Registers a backward hook on the module.
+
+        This function is deprecated in favor of :meth:`~oneflow.nn.Module.register_full_backward_hook` and
+        the behavior of this function will change in future versions.
+
+        Returns:
+            :class:`oneflow.utils.hooks.RemovableHandle`:
+                a handle that can be used to remove the added hook by calling
+                ``handle.remove()``
+
+        """
+        if self._is_full_backward_hook is True:
+            raise RuntimeError(
+                "Cannot use both regular backward hooks and full backward hooks on a "
+                "single Module. Please use only one of them."
+            )
+
+        self._is_full_backward_hook = False
+
+        handle = flow.utils.hooks.RemovableHandle(self._backward_hooks)
+        self._backward_hooks[handle.id] = hook
+        return handle
+
+    def register_full_backward_hook(
+        self, hook: Callable[["Module", _grad_t, _grad_t], Union[None, Tensor]],
+    ):
+        r"""Registers a backward hook on the module.
+
+        The hook will be called every time the gradients with respect to module
+        inputs are computed. The hook should have the following signature::
+
+            hook(module, grad_input, grad_output) -> TensorTuple or None
+
+        The :attr:`grad_input` and :attr:`grad_output` are :class:`oneflow.TensorTuple` that contain the gradients
+        with respect to the inputs and outputs respectively. The hook should
+        not modify its arguments, but it can optionally return a new gradient with
+        respect to the input that will be used in place of :attr:`grad_input` in
+        subsequent computations. :attr:`grad_input` will only correspond to the inputs given
+        as positional arguments and all kwarg arguments are ignored. Entries
+        in :attr:`grad_input` and :attr:`grad_output` will be ``None`` for all non-Tensor
+        arguments.
+
+        For technical reasons, when this hook is applied to a Module, its forward function will
+        receive a view of each Tensor passed to the Module. Similarly the caller will receive a view
+        of each Tensor returned by the Module's forward function.
+
+        .. warning ::
+            Modifying inputs or outputs inplace is not allowed when using backward hooks and
+            will raise an error.
+
+        Returns:
+            :class:`oneflow.utils.hooks.RemovableHandle`:
+                a handle that can be used to remove the added hook by calling
+                ``handle.remove()``
+
+        """
+        if self._is_full_backward_hook is False:
+            raise RuntimeError(
+                "Cannot use both regular backward hooks and full backward hooks on a "
+                "single Module. Please use only one of them."
+            )
+        self._is_full_backward_hook = True
+
+        handle = flow.utils.hooks.RemovableHandle(self._backward_hooks)
+        self._backward_hooks[handle.id] = hook
+        return handle
+
+    def _get_backward_hooks(self):
+        r"""Returns the backward hooks for use in the call function.
+        It returns two lists, one with the full backward hooks and one with the non-full
+        backward hooks.
+        """
+        full_backward_hooks: List[Callable] = []
+        if self._is_full_backward_hook is True:
+            full_backward_hooks += self._backward_hooks.values()
+
+        non_full_backward_hooks: List[Callable] = []
+        if self._is_full_backward_hook is False:
+            non_full_backward_hooks += self._backward_hooks.values()
+
+        return full_backward_hooks, non_full_backward_hooks
+
+    def _maybe_warn_non_full_backward_hook(self, args, res, grad_fn):
+        if not isinstance(res, Tensor):
+            if not (
+                isinstance(res, tuple) and all([isinstance(r, Tensor) for r in result])
+            ):
+                warnings.warn(
+                    "Using non-full backward hooks on a Module that does not return a "
+                    "single Tensor or a tuple of Tensors is deprecated and will be removed "
+                    "in future versions. This hook will be missing some of the grad_output. "
+                    "Please use register_full_backward_hook to get the documented behavior."
+                )
+                return
+        else:
+            res = (res,)
+
+        if not isinstance(args, Tensor):
+            if not (
+                isinstance(args, tuple) and all([isinstance(i, Tensor) for i in args])
+            ):
+                warnings.warn(
+                    "Using non-full backward hooks on a Module that does not take as input a "
+                    "single Tensor or a tuple of Tensors is deprecated and will be removed "
+                    "in future versions. This hook will be missing some of the grad_input. "
+                    "Please use register_full_backward_hook to get the documented behavior."
+                )
+                return
+        else:
+            args = (args,)
+
+        # At this point we are sure that inputs and result are tuple of Tensors
+        out_grad_fn = {r.grad_fn for r in res if r.grad_fn is not None}
+        if len(out_grad_fn) == 0 or (
+            len(out_grad_fn) == 1 and grad_fn not in out_grad_fn
+        ):
+            warnings.warn(
+                "Using a non-full backward hook when outputs are nested in python data structure "
+                "is deprecated and will be removed in future versions. This hook will be missing "
+                "some grad_output."
+            )
+        elif len(out_grad_fn) > 1:
+            warnings.warn(
+                "Using a non-full backward hook when outputs are generated by different autograd Nodes "
+                "is deprecated and will be removed in future versions. This hook will be missing "
+                "some grad_output. Please use register_full_backward_hook to get the documented behavior."
+            )
+        else:
+            # At this point the grad_output part of the hook will most likely be correct
+            inputs_grad_fn = {i.grad_fn for i in args if i.grad_fn is not None}
+
+            next_functions = {grad_fn.next_functions[0][0]}
+
+            if inputs_grad_fn != next_functions:
+                warnings.warn(
+                    "Using a non-full backward hook when the forward contains multiple autograd Nodes "
+                    "is deprecated and will be removed in future versions. This hook will be missing "
+                    "some grad_input. Please use register_full_backward_hook to get the documented "
+                    "behavior."
+                )
+
+    def register_forward_pre_hook(self, hook: Callable[..., None]):
         r"""
         register_forward_pre_hook(hook)
         
@@ -973,12 +1241,14 @@ class Module(object):
         if a single value is returned(unless that value is already a tuple).
 
         """
-        self._forward_pre_hooks[len(self._forward_pre_hooks)] = hook
+        handle = flow.utils.hooks.RemovableHandle(self._forward_pre_hooks)
+        self._forward_pre_hooks[handle.id] = hook
+        return handle
 
-    def register_forward_hook(self, hook: Callable[..., None]) -> None:
+    def register_forward_hook(self, hook: Callable[..., None]):
         r"""
         register_forward_hook(hook)
-        
+
         Registers a forward hook on the module.
 
         The hook will be called every time after :func:`forward` has computed an output.
@@ -993,17 +1263,9 @@ class Module(object):
         :func:`forward` is called.
 
         """
-        self._forward_hooks[len(self._forward_hooks)] = hook
-
-    _grad_t = Union[Tuple[Tensor, ...], Tensor]
-
-    def register_full_backward_hook(
-        self,
-        hook: Callable[["Module", _grad_t, _grad_t], Union[None, _grad_t]],
-        prepend: bool = False,
-    ) -> None:
-        assert prepend is False, "prepend is not supported in oneflow"
-        self._backward_hooks[len(self._backward_hooks)] = hook
+        handle = flow.utils.hooks.RemovableHandle(self._forward_hooks)
+        self._forward_hooks[handle.id] = hook
+        return handle
 
     def _apply(self, fn):
         if self.cpg is not None:
@@ -1141,6 +1403,43 @@ class Module(object):
         fn(self)
         return self
 
+    def to_empty(self: T, *, device: Union[str, flow.device]) -> T:
+        r"""Moves the parameters and buffers to the specified device without copying storage.
+
+        Args:
+            device (:class:`oneflow.device`): the desired device of the parameters
+                and buffers in this module
+        
+        Returns:
+            Module: self
+        """
+        return self._apply(lambda t: flow.empty_like(t, device=device))
+
+    def _to_memory_format(self, memory_format):
+        r"""Casts the parameters and buffers in this module to another memory format.
+
+        The data_format attribute should also be modified. 
+        
+        Note:
+            This interface is unstable and may be removed in the future once the data_format
+            attribute has been removed from the module.
+
+        Args:
+            memory_format (:class:`oneflow.memory_format`): the desired memory
+                format for 4D parameters and buffers in this module (keyword
+                only argument)
+
+        Returns:
+            Module: self
+        """
+        for module in self.children():
+            module._to_memory_format(memory_format)
+        self.to_memory_format(memory_format)
+        return self
+
+    def to_memory_format(self, memory_format) -> None:
+        pass
+
     @overload
     def to(
         self: T,
@@ -1168,6 +1467,9 @@ class Module(object):
         .. function:: to(dtype)
            :noindex:
 
+        .. function:: to(memory_format=None)
+           :noindex:
+
         .. function:: to(tensor)
            :noindex:
 
@@ -1187,6 +1489,9 @@ class Module(object):
                 and buffers in this module
             dtype (:class:`oneflow.dtype`): the desired floating point dtype of
                 the parameters and buffers in this module
+            memory_format (:class:`oneflow.memory_format`): the desired memory
+                format for 4D parameters and buffers in this module (keyword
+                only argument)
             tensor (oneflow.Tensor): Tensor whose dtype and device are the desired
                 dtype and device for all parameters and buffers in this module
 
@@ -1223,6 +1528,7 @@ class Module(object):
 
         device = None
         dtype = None
+        memory_format = None
         if len(args) + len(kwargs) == 2:
             device = kwargs.pop("device", None) or args[0]
             dtype = kwargs.pop("dtype", None) or args[1]
@@ -1238,11 +1544,14 @@ class Module(object):
                 elif isinstance(arg, (flow.device, str, int)):
                     dtype = None
                     device = arg
+                elif isinstance(arg, flow.memory_format):
+                    memory_format = arg
                 else:
                     raise ValueError(f"Unsupported parameters in module.to: {arg}")
             else:
                 device = kwargs.pop("device", None)
                 dtype = kwargs.pop("dtype", None)
+                memory_format = kwargs.pop("memory_format", None)
                 tensor = kwargs.pop("tensor", None)
                 if tensor is not None:
                     device = tensor.device
@@ -1258,6 +1567,9 @@ class Module(object):
                     "nn.Module.to only accepts floating point "
                     "dtypes, but got desired dtype={}".format(dtype)
                 )
+
+        if memory_format is not None:
+            self._to_memory_format(memory_format)
 
         def convert(t):
             return t.to(device, dtype if t.is_floating_point() else None)
@@ -1361,6 +1673,122 @@ class Module(object):
 
     def _get_name(self):
         return self.__class__.__name__
+
+    def get_submodule(self, target: str):
+        r"""Get submodule accroding to the name of submodule.
+
+        Args:
+            target (str): The name of submodule to find.
+
+        .. code-block:: python
+
+            >>> from oneflow import nn
+            >>> class Net3(nn.Module):
+            >>>     def __init__(self):
+            >>>         super().__init__()
+            >>>         self.linear = nn.Linear(3, 2)
+            >>>
+            >>> class Net2(nn.Module):
+            >>>     def __init__(self):
+            >>>         super().__init__()
+            >>>         self.net3 = Net3()
+            >>>
+            >>> class Net1(nn.Module):
+            >>>     def __init__(self):
+            >>>         super().__init__()
+            >>>         self.net2 = Net2()
+            >>>
+            >>> net = Net1()
+            >>> print(net.get_submodule("net2.net3"))
+            Net3(
+            (linear): Linear(in_features=3, out_features=2, bias=True)
+            )
+            >>> print(net.get_submodule("net2"))
+            Net2(
+            (net3): Net3(
+                (linear): Linear(in_features=3, out_features=2, bias=True)
+                )
+            )
+
+        Returns:
+            oneflow.nn.Module: The submodule referenced by ``target``
+
+        Raises:
+            AttributeError: If the module can't reference the submodule accroding to ``target``
+            TypeError: If the result referenced by ``target`` is not an ``nn.Module``
+
+        """
+        if target == "":
+            return self
+        curr_module_name = [self._get_name()]
+        submodule_names = target.split(".")
+        mod = self
+        for submodule_name in submodule_names:
+            if not hasattr(mod, submodule_name):
+                raise AttributeError(
+                    f"`{'.'.join(curr_module_name)}` doesn't have submodule `{submodule_name}`"
+                )
+            mod = getattr(mod, submodule_name)
+            curr_module_name.append(submodule_name)
+            if not isinstance(mod, flow.nn.Module):
+                raise TypeError(
+                    f"`{'.'.join(curr_module_name)}` isn't an oneflow.Module, but a {type(mod)}"
+                )
+        return mod
+
+    def get_parameter(self, target: str):
+        r"""Return the parameter refenreced by ``target``.
+
+        Args:
+            target (str): The name of parameter to find.
+
+        .. code-block:: python
+
+            >>> from oneflow import nn
+            >>> class Net3(nn.Module):
+            >>>     def __init__(self):
+            >>>         super().__init__()
+            >>>         self.linear = nn.Linear(3, 3)
+            >>>
+            >>> class Net2(nn.Module):
+            >>>     def __init__(self):
+            >>>         super().__init__()
+            >>>         self.net3 = Net3()
+            >>>         self.linear = nn.Linear(2, 2)
+            >>>
+            >>> class Net1(nn.Module):
+            >>>     def __init__(self):
+            >>>         super().__init__()
+            >>>         self.net2 = Net2()
+            >>>         self.linear = nn.Linear(1, 1)
+            >>>
+            >>> net = Net1()
+            >>> print(net.get_parameter("linear.weight").shape)
+            oneflow.Size([1, 1])
+            >>> print(net.get_parameter("net2.linear.weight").shape)
+            oneflow.Size([2, 2])
+
+        Returns:
+            oneflow.nn.Parameter: The parameter referenced by ``target``
+
+        Raises:
+            AttributeError: If the module can't reference the parameter according to ``target``
+            TypeError: If the result refererenced by ``target`` is not an ``nn.Parameter``
+
+        """
+        sub_module_name, _, parameter_name = target.rpartition(".")
+        sub_module = self.get_submodule(sub_module_name)
+        if hasattr(sub_module, parameter_name):
+            parameter = getattr(sub_module, parameter_name)
+        else:
+            raise AttributeError(
+                f"`{sub_module_name}` doesn't have attribute `{parameter_name}`"
+            )
+        if not isinstance(parameter, flow.Tensor):
+            raise TypeError(
+                f"`{target}` is not an oneflow.Tensor, but {type(parameter)}"
+            )
+        return parameter
 
     def extra_repr(self) -> str:
         """Set the extra representation of the module

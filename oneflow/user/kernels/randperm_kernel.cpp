@@ -14,15 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/op_kernel_wrapper.h"
-#include "oneflow/core/common/data_type.h"
-#include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/framework/random_generator.h"
+#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/container_util.h"
+#include "oneflow/user/kernels/op_kernel_wrapper.h"
 #include "oneflow/user/kernels/arange_kernel_util.h"
 #include "oneflow/user/kernels/distributions/common.h"
+#include "oneflow/user/kernels/random_seed_util.h"
 #include "oneflow/core/job/nd_sbp_util.h"
-#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/register/tensor_slice_view.h"
+#include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
 class CpuRandPermKernelCache final : public user_op::OpKernelCache {
@@ -63,7 +64,8 @@ class CpuRandPermKernel final : public user_op::OpKernel {
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     const auto& generator = CHECK_JUST(one::MakeGenerator(kCPU));
-    generator->set_current_seed(ctx->Attr<int64_t>("seed"));
+    generator->set_current_seed(
+        CHECK_JUST(GetOpKernelRandomSeedInCurrentRank(ctx, ctx->Attr<int64_t>("seed"))));
     return std::make_shared<DistributionKernelState>(generator);
   }
 
@@ -79,7 +81,7 @@ class CpuRandPermKernel final : public user_op::OpKernel {
     auto* distribution_state = dynamic_cast<DistributionKernelState*>(state);
     CHECK_NOTNULL(distribution_state);
     const auto& generator = distribution_state->generator();
-    const auto& cpu_generator = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
+    const auto& cpu_generator = CHECK_JUST(generator->Get<ep::CPUGenerator>());
     CHECK_NOTNULL(generator);
     if (cache == nullptr) {
       user_op::ArangeFunctor<DeviceType::kCPU, int32_t>()(ctx->stream(), 0, 1, n, output);

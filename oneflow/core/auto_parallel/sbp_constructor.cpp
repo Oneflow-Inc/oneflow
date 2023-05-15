@@ -86,7 +86,7 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   // InitMemory() should be run before the sbp collector and after the ApplyTrunkAlgo() and
   // LoadLbi2SbpEdge(op_graph).
   InitAvailableMemory();
-  InitMemory(&sbp_graph_, nccl_use_compute_stream_);
+  InitMemory(op_graph, &sbp_graph_, nccl_use_compute_stream_);
   if (use_sbp_collector_) {
     // Use sbp collector to create sbp proxy for nodes with multiple downstream operators.
     SbpCollector sbp_collector;
@@ -345,6 +345,7 @@ Maybe<void> SbpConstructor::InitCopyAndMemoryCost(const OpGraph& op_graph) {
 }
 
 Maybe<void> SbpConstructor::ApplyTrunkAlgo() {
+  // TODO: Remove this
   auto OpNode2MutableOpCtrlDeps = JUST(GetMutableOpCtrlDeps(*op_graph_));
   // Compute layer number for each node
   int32_t max_min_layer = sbp_graph_.ComputeLayer(op_name2sbp_node_, *OpNode2MutableOpCtrlDeps);
@@ -406,6 +407,7 @@ Maybe<void> SbpConstructor::CheckSbpAgreement(const Job& job) {
   return Maybe<void>::Ok();
 }
 
+// TODO: delete this, this is for variable op only
 Maybe<HashMap<const OpNode*, HashSet<std::string>>> SbpConstructor::GetMutableOpCtrlDeps(
     const OpGraph& op_graph) {
   auto IsMutableConsumedLbi = [](const Operator& op, const LogicalBlobId& lbi) -> bool {
@@ -551,8 +553,7 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
       const auto& this_sbp_parallel = sbp_signature.bn_in_op2nd_sbp().at(ibn);
       std::cout << ", " << NdSbpToString(this_sbp_parallel);
       if (RequireSameSbp(op_node, ibn)) { std::cout << ", require same SBP"; }
-      std::cout << ", "
-                << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn)).shape().elem_cnt();
+      std::cout << ", " << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn)).shape();
       std::cout << std::endl;
     }
     // Sort before printing
@@ -564,8 +565,7 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
       std::cout << "Out Op:" << obn;
       const auto& this_sbp_parallel = sbp_signature.bn_in_op2nd_sbp().at(obn);
       std::cout << ", " << NdSbpToString(this_sbp_parallel);
-      std::cout << ", "
-                << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(obn)).shape().elem_cnt();
+      std::cout << ", " << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(obn)).shape();
       std::cout << std::endl;
     }
     std::cout << std::endl;

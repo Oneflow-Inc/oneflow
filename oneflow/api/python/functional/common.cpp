@@ -16,7 +16,9 @@ limitations under the License.
 #include "oneflow/api/python/functional/common.h"
 #include <object.h>
 #include <string>
+#include <complex>
 
+#include "oneflow/api/python/framework/memory_format.h"
 #include "oneflow/api/python/functional/indexing.h"
 #include "oneflow/extension/python/numpy.h"
 #include "oneflow/core/common/just.h"
@@ -33,6 +35,7 @@ limitations under the License.
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/framework/tensor_util.h"
+
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -141,7 +144,9 @@ std::shared_ptr<TensorTuple> PyUnpackTensorTuple(PyObject* obj) {
 }
 
 // Scalar
-bool PyScalarCheck(PyObject* obj) { return PyLong_Check(obj) || PyFloat_Check(obj); }
+bool PyScalarCheck(PyObject* obj) {
+  return PyLong_Check(obj) || PyFloat_Check(obj) || PyComplex_Check(obj);
+}
 
 Scalar PyUnpackScalar(PyObject* obj) {
   if (PyBool_Check(obj)) {
@@ -150,10 +155,16 @@ Scalar PyUnpackScalar(PyObject* obj) {
     return static_cast<int64_t>(PyLong_AsLongLong(obj));
   } else if (PyFloat_Check(obj)) {
     return PyFloat_AsDouble(obj);
+  } else if (PyComplex_Check(obj)) {
+    Py_complex value = PyComplex_AsCComplex(obj);
+    return std::complex<double>{value.real, value.imag};
   } else if (PyArray_IsScalar(obj, Bool)) {
     return obj == Py_True;
   } else if (PyArray_IsScalar(obj, Floating)) {
     return PyFloat_AsDouble(obj);
+  } else if (PyArray_IsScalar(obj, Complex64) || PyArray_IsScalar(obj, Complex128)) {
+    Py_complex value = PyComplex_AsCComplex(obj);
+    return std::complex<double>{value.real, value.imag};
   }
   THROW(RuntimeError) << "The object is not scalar, but is " << Py_TYPE(obj)->tp_name;
   return 0;
@@ -176,6 +187,8 @@ Scalar PyUnpackScalarTensor(PyObject* obj) {
     return PyUnpackIntegerScalarTensor_AsLongLong(obj);
   } else if (PyFloatScalarTensorCheck(obj)) {
     return PyUnpackFloatScalarTensor_AsDouble(obj);
+  } else if (PyComplexScalarTensorCheck(obj)) {
+    return PyUnpackComplexScalarTensor_AsCComplex(obj);
   }
   THROW(RuntimeError) << "The object is not scalar tensor, but is " << Py_TYPE(obj)->tp_name
                       << "with data type: "
@@ -207,12 +220,23 @@ SCALAR_TENSOR_UNPACK_FUNC_IMPL(PyUnpackIntegerScalarTensor_AsLongLong, long long
                                    CHAR_DATA_TYPE_SEQ);
 SCALAR_TENSOR_UNPACK_FUNC_IMPL(PyUnpackFloatScalarTensor_AsDouble, double,
                                FLOATING_DATA_TYPE_SEQ INT_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ);
+SCALAR_TENSOR_UNPACK_FUNC_IMPL(PyUnpackComplexScalarTensor_AsCComplex, std::complex<double>,
+                               COMPLEX_DATA_TYPE_SEQ FLOATING_DATA_TYPE_SEQ INT_DATA_TYPE_SEQ
+                                   UNSIGNED_INT_DATA_TYPE_SEQ);
 #undef SWITCH_SCALAR_TENSOR_TO_SCALAR
 #undef SCALAR_TENSOR_UNPACK_FUNC_IMPL
 
 // DType
 bool PyDTypeCheck(PyObject* obj) { return detail::isinstance_fast<Symbol<DType>>(obj); }
 Symbol<DType> PyUnpackDType(PyObject* obj) { return *detail::cast_fast<Symbol<DType>*>(obj); }
+
+// Layout
+bool PyLayoutCheck(PyObject* obj) { return detail::isinstance_fast<Symbol<Layout>>(obj); }
+Symbol<Layout> PyUnpackLayout(PyObject* obj) { return *detail::cast_fast<Symbol<Layout>*>(obj); }
+
+// Memory Format
+bool PyMemoryFormatCheck(PyObject* obj) { return PyMemoryFormat_Check(obj); }
+MemoryFormat PyUnpackMemoryFormat(PyObject* obj) { return PyMemoryFormat_Unpack(obj); }
 
 // DType list
 bool PyDTypeSequenceCheck(PyObject* obj) {

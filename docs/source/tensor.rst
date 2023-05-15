@@ -198,6 +198,7 @@ Tensor class reference
     Tensor.byte
     Tensor.cast
     Tensor.ceil
+    Tensor.ceil_
     Tensor.chunk
     Tensor.clamp
     Tensor.clamp_
@@ -224,6 +225,7 @@ Tensor class reference
     Tensor.div_
     Tensor.double
     Tensor.dtype 
+    Tensor.digamma
     Tensor.element_size
     Tensor.eq
     Tensor.equal
@@ -232,6 +234,7 @@ Tensor class reference
     Tensor.erfinv
     Tensor.erfinv_
     Tensor.exp
+    Tensor.exp2
     Tensor.expand
     Tensor.expand_as
     Tensor.expm1
@@ -263,6 +266,8 @@ Tensor class reference
     Tensor.isnan
     Tensor.item
     Tensor.le
+    Tensor.lerp
+    Tensor.lerp_
     Tensor.log
     Tensor.log1p
     Tensor.log2
@@ -289,6 +294,8 @@ Tensor class reference
     Tensor.mode
     Tensor.mul
     Tensor.mul_
+    Tensor.frac
+    Tensor.frac_
     Tensor.nansum
     Tensor.narrow
     Tensor.ndimension
@@ -301,9 +308,13 @@ Tensor class reference
     Tensor.normal_
     Tensor.numel
     Tensor.numpy
+    Tensor.offload
+    Tensor.load
+    Tensor.is_offloaded
     Tensor.permute
     Tensor.pow
     Tensor.prod
+    Tensor.quantile
     Tensor.reciprocal
     Tensor.register_hook
     Tensor.relu
@@ -316,6 +327,7 @@ Tensor class reference
     Tensor.retain_grad
     Tensor.roll
     Tensor.round
+    Tensor.round_
     Tensor.rsqrt
     Tensor.selu
     Tensor.shape
@@ -378,6 +390,7 @@ Tensor class reference
     Tensor.nms
     Tensor.pin_memory
     Tensor.is_pinned
+    Tensor.inverse
     Tensor.cross
     Tensor.scatter
     Tensor.scatter_
@@ -393,3 +406,4 @@ Tensor class reference
     Tensor.bitwise_and
     Tensor.bitwise_or
     Tensor.bitwise_xor
+    Tensor.baddbmm

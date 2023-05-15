@@ -37,6 +37,7 @@ class Device {
   virtual ~Device() = default;
 
   virtual void SetAsActiveDevice() = 0;
+  virtual void Reset() = 0;
 
   virtual DeviceType device_type() const = 0;
   virtual size_t device_index() const = 0;
@@ -54,6 +55,7 @@ class Device {
   virtual void Free(const AllocationOptions& options, void* ptr) = 0;
   virtual Maybe<void> AllocPinned(const AllocationOptions& options, void** ptr, size_t size) = 0;
   virtual void FreePinned(const AllocationOptions& options, void* ptr) = 0;
+  virtual bool IsStreamOrderedMemoryAllocationSupported() const;
 };
 
 }  // namespace ep

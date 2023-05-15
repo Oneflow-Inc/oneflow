@@ -30,9 +30,12 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("ceil", ep::primitive::UnaryOp::kCeil)                         \
   OF_PP_MAKE_TUPLE_SEQ("cos", ep::primitive::UnaryOp::kCos)                           \
   OF_PP_MAKE_TUPLE_SEQ("cosh", ep::primitive::UnaryOp::kCosh)                         \
+  OF_PP_MAKE_TUPLE_SEQ("digamma", ep::primitive::UnaryOp::kDigamma)                   \
+  OF_PP_MAKE_TUPLE_SEQ("trigamma", ep::primitive::UnaryOp::kTrigamma)                 \
   OF_PP_MAKE_TUPLE_SEQ("erf", ep::primitive::UnaryOp::kErf)                           \
   OF_PP_MAKE_TUPLE_SEQ("erfc", ep::primitive::UnaryOp::kErfc)                         \
   OF_PP_MAKE_TUPLE_SEQ("exp", ep::primitive::UnaryOp::kExp)                           \
+  OF_PP_MAKE_TUPLE_SEQ("exp2", ep::primitive::UnaryOp::kExp2)                         \
   OF_PP_MAKE_TUPLE_SEQ("expm1", ep::primitive::UnaryOp::kExpm1)                       \
   OF_PP_MAKE_TUPLE_SEQ("floor", ep::primitive::UnaryOp::kFloor)                       \
   OF_PP_MAKE_TUPLE_SEQ("lgamma", ep::primitive::UnaryOp::kLgamma)                     \
@@ -67,9 +70,11 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("atanh_grad", ep::primitive::BinaryOp::kAtanhBackwardWithDyX)            \
   OF_PP_MAKE_TUPLE_SEQ("cos_grad", ep::primitive::BinaryOp::kCosBackwardWithDyX)                \
   OF_PP_MAKE_TUPLE_SEQ("cosh_grad", ep::primitive::BinaryOp::kCoshBackwardWithDyX)              \
+  OF_PP_MAKE_TUPLE_SEQ("digamma_grad", ep::primitive::BinaryOp::kDigammaBackwardWithDyX)        \
   OF_PP_MAKE_TUPLE_SEQ("erf_grad", ep::primitive::BinaryOp::kErfBackwardWithDyX)                \
   OF_PP_MAKE_TUPLE_SEQ("erfc_grad", ep::primitive::BinaryOp::kErfcBackwardWithDyX)              \
   OF_PP_MAKE_TUPLE_SEQ("exp_grad", ep::primitive::BinaryOp::kExpBackwardWithDyX)                \
+  OF_PP_MAKE_TUPLE_SEQ("exp2_grad", ep::primitive::BinaryOp::kExp2BackwardWithDyX)              \
   OF_PP_MAKE_TUPLE_SEQ("expm1_grad", ep::primitive::BinaryOp::kExpm1BackwardWithDyX)            \
   OF_PP_MAKE_TUPLE_SEQ("log_grad", ep::primitive::BinaryOp::kLogBackwardWithDyX)                \
   OF_PP_MAKE_TUPLE_SEQ("lgamma_grad", ep::primitive::BinaryOp::kLgammaBackwardWithDyX)          \

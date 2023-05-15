@@ -26,12 +26,12 @@ from oneflow._C import deconv3d as conv_transpose3d
 from oneflow._C import avg_pool1d
 from oneflow._C import avg_pool2d
 from oneflow._C import avg_pool3d
-from .functional_maxpool import max_pool1d
-from .functional_maxpool import max_pool2d
-from .functional_maxpool import max_pool3d
-from .functional_maxpool import adaptive_max_pool1d
-from .functional_maxpool import adaptive_max_pool2d
-from .functional_maxpool import adaptive_max_pool3d
+from .maxpool import max_pool1d
+from .maxpool import max_pool2d
+from .maxpool import max_pool3d
+from .maxpool import adaptive_max_pool1d
+from .maxpool import adaptive_max_pool2d
+from .maxpool import adaptive_max_pool3d
 from oneflow._C import adaptive_avg_pool1d
 from oneflow._C import adaptive_avg_pool2d
 from oneflow._C import adaptive_avg_pool3d
@@ -58,7 +58,7 @@ from oneflow._C import glu
 from oneflow._C import logsigmoid
 from oneflow._C import log_softmax
 from oneflow._C import softsign
-from oneflow._C import softmax
+from .softmax import softmax
 from oneflow._C import softplus
 from oneflow._C import tanh
 from oneflow._C import threshold
@@ -67,10 +67,11 @@ from oneflow._C import mish
 from oneflow.nn.modules.normalization import layer_norm
 from oneflow._C import dropout, dropout1d, dropout2d, dropout3d
 from oneflow._C import smooth_l1_loss
-from .functional_pad import pad
-from .functional_batch_norm import batch_norm
+from .pad import pad
+from .batch_norm import batch_norm
 from oneflow._C import triplet_margin_loss
 from oneflow._C import ctc_greedy_decoder
+from .ctc_loss import ctc_loss
 from oneflow._C import one_hot
 from oneflow._C import normalize
 from oneflow._C import mse_loss
@@ -86,7 +87,7 @@ from oneflow.nn.modules.activation import relu6
 from oneflow.nn.modules.upsampling import Upsample as upsample
 from oneflow._C import unfold
 from oneflow._C import fold
-from .functional_deform_conv import deform_conv2d
+from .deform_conv import deform_conv2d
 from oneflow._C import kl_div_loss as kl_div
 from oneflow._C import gumbel_softmax
-from .functional_depend import depend
+from .depend import depend

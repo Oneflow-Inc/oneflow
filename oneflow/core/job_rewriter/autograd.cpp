@@ -703,7 +703,8 @@ Maybe<void> ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder*
         CHECK_EQ(blob_desc->data_type(), loss_data_type);
         CHECK_EQ(blob_desc->shape().elem_cnt(), loss_elem_cnt);
       } else {
-        blob_desc.reset(new BlobDesc(Shape({loss_elem_cnt}), loss_data_type));
+        blob_desc.reset(
+            new BlobDesc(Shape({loss_elem_cnt}), loss_data_type, cur_blob_desc->memory_format()));
       }
     }
     ScaleModelDiffByConstantLossInstanceNum(op_graph, job_builder, lbi2diff_lbi,

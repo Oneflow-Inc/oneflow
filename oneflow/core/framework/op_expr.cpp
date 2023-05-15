@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/framework/global_tensor_infer_cache.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/user/kernels/stateful_opkernel.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 namespace one {
@@ -317,6 +318,26 @@ class UserOpExprInferContext : public user_op::InferContext {
                                 DataType data_type) override {
     return MutTensorDesc4ArgNameAndIndex(arg_name, index)->set_data_type(data_type);
   }
+
+  MemoryFormat InputMemoryFormat(const std::string& arg_name, int32_t index) const override {
+    return MemoryFormat4ArgNameAndIndex(arg_name, index);
+  }
+  MemoryFormat OutputMemoryFormat(const std::string& arg_name, int32_t index) const override {
+    return MemoryFormat4ArgNameAndIndex(arg_name, index);
+  }
+  void SetOutputMemoryFormat(const std::string& arg_name, int32_t index,
+                             MemoryFormat memory_format) override {
+    return SetMemoryFormat4ArgNameAndIndex(arg_name, index, memory_format);
+  }
+  MemoryFormat MemoryFormat4ArgNameAndIndex(const std::string& arg_name,
+                                            int32_t index) const override {
+    return TensorDesc4ArgNameAndIndex(arg_name, index)->memory_format();
+  }
+  void SetMemoryFormat4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                       MemoryFormat memory_format) override {
+    MutTensorDesc4ArgNameAndIndex(arg_name, index)->set_memory_format(memory_format);
+  }
+
   bool InputIsDynamic(const std::string& arg_name, int32_t index) const override {
     return IsDynamic4ArgNameAndIndex(arg_name, index);
   }
@@ -531,8 +552,8 @@ UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto, const Att
       base_attrs_(base_attrs) {}
 
 Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
-  const auto* registry =
-      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_proto_.op_type_name());
+  const auto& op_type_name = op_proto_.op_type_name();
+  const auto* registry = user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
   CHECK_NOTNULL_OR_RETURN(registry);
   logical_tensor_desc_infer_fn_ = registry->logical_tensor_desc_infer_fn;
   CHECK_OR_RETURN(static_cast<bool>(logical_tensor_desc_infer_fn_))
@@ -548,6 +569,14 @@ Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
   }
   local_tensor_infer_cache_.reset(new LocalTensorInferCache(self));
   global_tensor_infer_cache_.reset(new GlobalTensorInferCache(self));
+  const auto& indexed_input_pairs = this->indexed_input_pairs();
+  for (int32_t i = 0; i < indexed_input_pairs.size(); ++i) {
+    const auto& input_pair = JUST(VectorAt(indexed_input_pairs, i));
+    if (user_op::UserOpHostMemoryInputRegistry::Get().IsHostMemoryInput4Op(
+            op_type_name, input_pair.first, input_pair.second)) {
+      host_memory_input_ids_.emplace_back(i);
+    }
+  }
   return Maybe<void>::Ok();
 }
 

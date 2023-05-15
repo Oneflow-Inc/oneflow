@@ -22,7 +22,7 @@ from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.modules.module import Module
 
 
-class Interpolate(Module):
+class Interpolate:
     def __init__(
         self,
         size: Optional[Union[int, Tuple[int, ...]]] = None,
@@ -31,7 +31,6 @@ class Interpolate(Module):
         align_corners: Optional[bool] = None,
         recompute_scale_factor: Optional[bool] = None,
     ):
-        super().__init__()
         self.size = size
         if isinstance(scale_factor, tuple):
             self.scale_factor = tuple((float(factor) for factor in scale_factor))
@@ -308,7 +307,7 @@ def interpolate(
         mode=mode,
         align_corners=align_corners,
         recompute_scale_factor=recompute_scale_factor,
-    )(input)
+    ).forward(input)
 
 
 if __name__ == "__main__":

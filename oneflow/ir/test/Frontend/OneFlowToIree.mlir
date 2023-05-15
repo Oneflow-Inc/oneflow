@@ -1,15 +1,12 @@
 // RUN: oneflow-opt %s \
 // RUN: -split-input-file \
+// RUN: -auto-nhwc \
 // RUN: -lower-oneflow-to-tosa \
 // RUN: -tosa-make-broadcastable \
-// RUN: -verify-diagnostics -o - \
-// RUN: | python3 -m iree.compiler.tools.scripts.ireec \
-// RUN: --iree-input-type=tosa \
-// RUN: --iree-vm-bytecode-module-output-format=flatbuffer-binary \
-// RUN: -iree-hal-target-backends=dylib-llvm-aot \
-// RUN: -iree-mlir-to-vm-bytecode-module -
+// RUN: -verify-diagnostics -o - | FileCheck %s
 
 
+// CHECK-NOT: oneflow
 oneflow.job @test_func(%arg0: tensor<1xf32>) -> tensor<1xf32>
 {
     oneflow.return %arg0 : tensor<1xf32>
@@ -158,7 +155,7 @@ oneflow.job @test_conv2d(%arg0: tensor<1x3x224x224xf32>, %arg1: tensor<5x3x1x1xf
         hierarchy = [1],
         kernel_size = [1 : si32, 1 : si32],
         op_name = "",
-        operand_segment_sizes = dense<[1, 1, 0, 0]> : vector<4xi32>,
+        operand_segment_sizes = array<i32: 1, 1, 0, 0>,
         output_lbns = [""],
         padding_before = [0 : si32, 0 : si32],
         scope_symbol_id = 4611686018431012863 : i64,
@@ -215,9 +212,9 @@ oneflow.job @test_bn(
         hierarchy = [1],
         momentum = 0.899999976 : f32,
         op_name = "",
-        operand_segment_sizes = dense<[1, 1, 1, 1, 1, 0]> : vector<6xi32>,
+        operand_segment_sizes = array<i32: 1, 1, 1, 1, 1, 0>,
         output_lbns = ["", "", ""],
-        result_segment_sizes = dense<1> : vector<3xi32>,
+        result_segment_sizes = array<i32: 1, 1, 1>,
         scope_symbol_id = 4611686018427453439 : i64,
         training = true
     } : (tensor<1x64x112x112xf32>, tensor<64xf32>, tensor<64xf32>, tensor<64xf32>, tensor<64xf32>) -> (tensor<1x64x112x112xf32>, tensor<64xf32>, tensor<64xf32>)
@@ -240,9 +237,9 @@ oneflow.job @test_bn_infer(
         hierarchy = [1],
         momentum = 0.899999976 : f32,
         op_name = "",
-        operand_segment_sizes = dense<[1, 1, 1, 1, 1, 0]> : vector<6xi32>,
+        operand_segment_sizes = array<i32: 1, 1, 1, 1, 1, 0>,
         output_lbns = ["", "", ""],
-        result_segment_sizes = dense<1> : vector<3xi32>,
+        result_segment_sizes = array<i32: 1, 1, 1>,
         scope_symbol_id = 4611686018427453439 : i64,
         training = true
     } : (tensor<1x64x112x112xf32>, tensor<64xf32>, tensor<64xf32>, tensor<64xf32>, tensor<64xf32>) -> tensor<1x64x112x112xf32>

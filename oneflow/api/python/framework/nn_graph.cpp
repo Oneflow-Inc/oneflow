@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/job_ir.h"
+#include "oneflow/core/job/job_interpreter.h"
 
 namespace py = pybind11;
 
@@ -114,6 +115,7 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
       .def("get_current_job_str", &APINNGraphGetCurrentSerializedJob);
 
   m.def("RunLazyNNGraph", &RunLazyNNGraph);
+  m.def("RunLazyNNGraphByVM", &one::InterpretJob);
   m.def("SoftSyncNNGraphBuffers", &SoftSyncNNGraphBuffers);
   m.def("AddTensorAsGraphLoss", &AddTensorAsGraphLoss);
   m.def("MarkVariableGradients", [](const std::vector<std::shared_ptr<one::Tensor>>& variables,

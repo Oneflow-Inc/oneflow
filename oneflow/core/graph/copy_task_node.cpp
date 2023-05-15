@@ -77,6 +77,13 @@ void CopyHdTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
   }
 }
 
+void CopyHdTaskNode::ProduceAllRegstsAndBindEdges() {
+  const bool enable_mem_reuse = ParseBooleanFromEnv("ONEFLOW_GRAPH_BOXING_ENABLE_MEM_REUSE", false)
+                                && (copy_type_ == CopyHdType::H2D);
+  std::shared_ptr<RegstDesc> out_regst = ProduceRegst("copy_out", enable_mem_reuse);
+  ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst("copy_out", out_regst); });
+}
+
 OperatorConf CopyHdTaskNode::NewCopyOpConf() {
   OperatorConf conf;
   conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(device_type())));
@@ -113,6 +120,32 @@ OperatorConf CopyCommNetTaskNode::NewCopyOpConf() {
   conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(this->device_type())));
   *(conf.mutable_copy_comm_net_conf()->mutable_lbi()) = lbi();
   return conf;
+}
+
+Maybe<void> CopyHdTaskNode::InitTransportTaskFromProto(
+    const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) {
+  CHECK_OR_RETURN(transport_task_proto.has_copy_hd_task())
+      << "not a serialized CopyHdTaskNode. debug string: " << transport_task_proto.DebugString();
+  copy_type_ = transport_task_proto.copy_hd_task().copy_type();
+  return Maybe<void>::Ok();
+}
+
+void CopyHdTaskNode::ToTransportTaskProto(TransportTaskProto* transport_task_proto) const {
+  ToProto(transport_task_proto->mutable_task_proto(), /*check=*/false);
+  transport_task_proto->mutable_copy_hd_task()->set_copy_type(copy_type_);
+}
+
+Maybe<void> CopyCommNetTaskNode::InitTransportTaskFromProto(
+    const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) {
+  CHECK_OR_RETURN(transport_task_proto.has_copy_comm_net_task())
+      << "not a serialized CopyCommNetTaskNode. debug string: "
+      << transport_task_proto.DebugString();
+  return Maybe<void>::Ok();
+}
+
+void CopyCommNetTaskNode::ToTransportTaskProto(TransportTaskProto* transport_task_proto) const {
+  ToProto(transport_task_proto->mutable_task_proto(), /*check=*/false);
+  transport_task_proto->mutable_copy_comm_net_task();
 }
 
 }  // namespace oneflow

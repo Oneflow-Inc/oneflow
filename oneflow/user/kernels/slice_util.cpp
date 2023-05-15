@@ -145,5 +145,7 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
 
 INSTANTIATE_SLICE_KERNEL_UTIL_WITH_DEVICE(DeviceType::kCPU)
 INSTANTIATE_SLICE_KERNEL_UTIL(DeviceType::kCPU, bfloat16)
+INSTANTIATE_SLICE_KERNEL_UTIL(DeviceType::kCPU, std::complex<float>)
+INSTANTIATE_SLICE_KERNEL_UTIL(DeviceType::kCPU, std::complex<double>)
 
 }  // namespace oneflow

@@ -324,6 +324,26 @@ class UserKernelOpInferContext : public user_op::InferContext {
                                 DataType data_type) override {
     return MutTensorDesc4ArgNameAndIndex(arg_name, index)->set_data_type(data_type);
   }
+
+  MemoryFormat InputMemoryFormat(const std::string& arg_name, int32_t index) const override {
+    return MemoryFormat4ArgNameAndIndex(arg_name, index);
+  }
+  MemoryFormat OutputMemoryFormat(const std::string& arg_name, int32_t index) const override {
+    return MemoryFormat4ArgNameAndIndex(arg_name, index);
+  }
+  void SetOutputMemoryFormat(const std::string& arg_name, int32_t index,
+                             MemoryFormat memory_format) override {
+    return SetMemoryFormat4ArgNameAndIndex(arg_name, index, memory_format);
+  }
+  MemoryFormat MemoryFormat4ArgNameAndIndex(const std::string& arg_name,
+                                            int32_t index) const override {
+    return TensorDesc4ArgNameAndIndex(arg_name, index)->memory_format();
+  }
+  void SetMemoryFormat4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                       MemoryFormat memory_format) override {
+    MutTensorDesc4ArgNameAndIndex(arg_name, index)->set_memory_format(memory_format);
+  }
+
   bool InputIsDynamic(const std::string& arg_name, int32_t index) const override {
     return IsDynamic4ArgNameAndIndex(arg_name, index);
   }
@@ -738,7 +758,8 @@ void UserKernel::VirtualKernelInit(KernelContext* ctx) {
   kernel_->InitOpKernelCacheWithFlags(cache_ctx_.get(), user_op::OpKernelCache::kAllMayChanged,
                                       &opkernel_cache_);
 #ifdef WITH_CUDA_GRAPHS
-  if (ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH", false)) {
+  if (ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH", false)
+      && (!ParseBooleanFromEnv("ONEFLOW_GRAPH_ENABLE_STREAM_ORDERED_MEMORY_ALLOCATION", false))) {
     UserKernelInitContext init_ctx(ctx->stream(), kernel_conf());
     auto* cuda_stream = dynamic_cast<ep::CudaStream*>(ctx->stream());
     const auto* cuda_graph_support = dynamic_cast<const user_op::CudaGraphSupport*>(kernel_.get());

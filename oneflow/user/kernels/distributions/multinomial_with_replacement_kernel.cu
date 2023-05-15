@@ -97,7 +97,7 @@ class MultinomialWithReplacementGpuKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    const auto& generator = CHECK_JUST(one::MakeGenerator(DeviceType::kCPU));
+    const auto& generator = CHECK_JUST(one::MakeGenerator(DeviceType::kCUDA));
     // When SBP is Split, each rank uses a different seeds, otherwise, ranks use the same seed
     generator->set_current_seed(
         CHECK_JUST(GetOpKernelRandomSeedInCurrentRank(ctx, ctx->Attr<int64_t>("seed"))));
@@ -112,7 +112,7 @@ class MultinomialWithReplacementGpuKernel final : public user_op::OpKernel {
     CHECK_NOTNULL(distribution_state);
     const auto& generator = distribution_state->generator();
     CHECK_NOTNULL(generator);
-    auto gpu_gen = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>());
+    auto gpu_gen = CHECK_JUST(generator->Get<ep::CUDAGenerator>());
 
     const user_op::Tensor* norm_dist = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* prefix_sum = ctx->Tensor4ArgNameAndIndex("prefix_sum", 0);

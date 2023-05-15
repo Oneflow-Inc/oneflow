@@ -72,4 +72,58 @@ if(BUILD_CUDA)
   message(STATUS "CMAKE_CUDA_COMPILER: ${CMAKE_CUDA_COMPILER}")
   set(CMAKE_CUDA_STANDARD 17)
   find_package(CUDNN REQUIRED)
+
+  # NOTE: if you want to use source PTX with a version different from produced PTX/binary, you should add flags
+  if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+    # Tesla P40/P4, Quadro Pxxx/Pxxxx, GeForce GTX 10xx, TITAN X/Xp
+    list(APPEND CMAKE_CUDA_ARCHITECTURES 60-real)
+
+    # V100, TITAN V
+    list(APPEND CMAKE_CUDA_ARCHITECTURES 70-real)
+
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
+      # T4, Quadro RTX xxxx, Txxxx, Geforce RTX 20xx, TITAN RTX
+      list(APPEND CMAKE_CUDA_ARCHITECTURES 75-real)
+    endif()
+
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
+      # A100
+      list(APPEND CMAKE_CUDA_ARCHITECTURES 80-real)
+    endif()
+
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.1")
+      # GeForce RTX 30xx
+      list(APPEND CMAKE_CUDA_ARCHITECTURES 86-real)
+    endif()
+
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.8")
+      # GeForce RTX 40xx
+      list(APPEND CMAKE_CUDA_ARCHITECTURES 89-real)
+      # NVIDIA H100
+      list(APPEND CMAKE_CUDA_ARCHITECTURES 90-real)
+    endif()
+  endif()
+
+  foreach(CUDA_ARCH ${CMAKE_CUDA_ARCHITECTURES})
+    if(CUDA_ARCH MATCHES "^([0-9]+)\\-real$")
+      list(APPEND CUDA_REAL_ARCHS_LIST ${CMAKE_MATCH_1})
+    elseif(CUDA_ARCH MATCHES "^([0-9]+)$")
+      list(APPEND CUDA_REAL_ARCHS_LIST ${CMAKE_MATCH_1})
+    endif()
+  endforeach()
+
+  enable_language(CUDA)
+  include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
+  message(STATUS "CMAKE_CUDA_ARCHITECTURES: ${CMAKE_CUDA_ARCHITECTURES}")
+  set(CUDA_SEPARABLE_COMPILATION OFF)
+
+  if("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA")
+    if(CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL "11.2")
+      set(CUDA_NVCC_THREADS_NUMBER "4" CACHE STRING "")
+      list(APPEND CUDA_NVCC_FLAGS -t ${CUDA_NVCC_THREADS_NUMBER})
+    endif()
+    list(APPEND CUDA_NVCC_FLAGS "-Xcompiler=-fno-strict-aliasing")
+    message(STATUS "CUDA_NVCC_FLAGS: " ${CUDA_NVCC_FLAGS})
+    list(JOIN CUDA_NVCC_FLAGS " " CMAKE_CUDA_FLAGS)
+  endif()
 endif()

@@ -18,9 +18,11 @@ limitations under the License.
 #include "oneflow/api/python/framework/tensor.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/indexing.h"
+#include "oneflow/api/python/framework/memory_format.h"
 #include "oneflow/extension/python/numpy.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/dtype.h"
+#include "oneflow/core/framework/layout.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/tensor.h"
@@ -120,6 +122,16 @@ Symbol<DType> PythonArg::ObjectAs<Symbol<DType>>() const {
 }
 
 template<>
+Symbol<Layout> PythonArg::ObjectAs<Symbol<Layout>>() const {
+  return PyUnpackLayout(object_);
+}
+
+template<>
+Symbol<MemoryFormat> PythonArg::ObjectAs<Symbol<MemoryFormat>>() const {
+  return PyUnpackMemoryFormat(object_);
+}
+
+template<>
 std::vector<Symbol<DType>> PythonArg::ObjectAs<std::vector<Symbol<DType>>>() const {
   return PyUnpackDTypeSequence(object_);
 }
@@ -194,12 +206,19 @@ std::vector<std::string> PythonArg::ObjectAs<std::vector<std::string>>() const {
 
 INSTANCE_OBJECT_AS_SHARED_PTR(std::vector<std::string>)
 
+template<>
+MemoryFormat PythonArg::ObjectAs<MemoryFormat>() const {
+  return PyMemoryFormat_Unpack(object_);
+}
+
 #undef INSTANCE_OBJECT_AS_SHARED_PTR
 
 bool PythonArg::TypeCheck(ValueType type) const {
   if (tag_ == HAS_DEFAULT) { return default_val_->value_type() == type; }
   switch (type) {
     case kINT32:
+    case kINT16:
+    case kCHAR:
     case kUINT32:
     case kINT64:
     case kUINT64:
@@ -229,6 +248,8 @@ bool PythonArg::TypeCheck(ValueType type) const {
     case kTENSOR_REF: return PyTensor_Check(object_);
     case kTENSOR_TUPLE: return PyTensorTupleCheck(object_) || PyTensorSequenceCheck(object_);
     case kDTYPE: return PyDTypeCheck(object_);
+    case kLAYOUT: return PyLayoutCheck(object_);
+    case kMEMORY_FORMAT: return PyMemoryFormat_Check(object_);
     case kSHAPE: return PyLongSequenceCheck(object_);
     case kGENERATOR:
     case kGENERATOR_REF: return PyGeneratorCheck(object_);
@@ -242,6 +263,12 @@ bool PythonArg::TypeCheck(ValueType type) const {
     case kPY_OBJECT: return nullptr != object_;
     case kDTYPE_LIST: return PyDTypeSequenceCheck(object_);
     case kSHAPE_LIST: return PyShapeSequenceCheck(object_);
+    case kCOMPLEX_FLOAT:
+    case kCOMPLEX_DOUBLE:
+      return PyComplex_Check(object_) || PyFloat_Check(object_) || PyLong_Check(object_)
+             || numpy::PyArrayCheckComplexScalar(object_) || numpy::PyArrayCheckFloatScalar(object_)
+             || numpy::PyArrayCheckLongScalar(object_) || PyComplexScalarTensorCheck(object_)
+             || PyFloatScalarTensorCheck(object_) || PyIntegerScalarTensorCheck(object_);
     default: {
       THROW(RuntimeError) << "Can not check type " << ValueTypeName(type);
     }

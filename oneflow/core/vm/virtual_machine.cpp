@@ -26,7 +26,6 @@ limitations under the License.
 #include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/cpp_attribute.h"
-#include "oneflow/core/common/singleton_ptr.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/foreign_lock_helper.h"
@@ -208,6 +207,7 @@ Maybe<void> VirtualMachine::ShrinkAllMem() {
 
 VirtualMachine::~VirtualMachine() {
   if (!threads_closed_) { CHECK_JUST(CloseVMThreads()); }
+  RunMainThreadPendingTasks();
   CHECK(engine_->SchedulerEmpty());
   engine_.Reset();
 }
@@ -238,8 +238,17 @@ std::string VirtualMachine::GetBlockingDebugString() {
   return engine_->GetLivelyInstructionListDebugString(limit);
 }
 
+void VirtualMachine::RunMainThreadPendingTasks() {
+  std::unique_lock lock(main_thread_pending_tasks_mutex_);
+  for (const auto& main_thread_pending_task : main_thread_pending_tasks_) {
+    main_thread_pending_task();
+  }
+  main_thread_pending_tasks_.clear();
+}
+
 Maybe<void> VirtualMachine::Receive(vm::InstructionList* instruction_list) {
   SyncVmModeGuard guard(SyncVmMode::kEnable);
+  RunMainThreadPendingTasks();
   if (unlikely(pthread_fork::IsForkedSubProcess())) {
     INTRUSIVE_FOR_EACH_PTR(instruction, instruction_list) {
       const auto& device = instruction->stream().device();

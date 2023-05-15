@@ -17,9 +17,6 @@ limitations under the License.
 #include "oneflow/core/vm/ep_event.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/stream.h"
-#include "oneflow/core/ep/cuda/cuda_event.h"
-#include "oneflow/core/ep/cuda/cuda_stream.h"
-#include "oneflow/core/ep/cuda/cuda_device.h"
 #include "oneflow/core/vm/ep_stream_policy_base.h"
 #include "oneflow/core/vm/ep_optional_event_record_status_querier.h"
 
@@ -27,7 +24,7 @@ namespace oneflow {
 namespace vm {
 
 StreamWaitEventInstructionPolicy::StreamWaitEventInstructionPolicy(
-    const small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>& dependences,
+    const small_vector<intrusive::shared_ptr<LocalDepObject>>& dependences,
     const std::shared_ptr<StreamRecordEventInstructionPolicy>&
         stream_record_event_instruction_policy)
     : dependences_(dependences),
@@ -53,15 +50,7 @@ void StreamWaitEventInstructionPolicy::Compute(vm::Instruction* instruction) {
   CHECK_EQ(ep_event->mut_device(), ep_stream->device())
       << "only support waiting events from same device";
   ep_event->mut_device()->SetAsActiveDevice();
-#ifdef WITH_CUDA
-
-  auto* ep_cuda_event = CHECK_NOTNULL(dynamic_cast<ep::CudaEvent*>(ep_event->mut_event()));
-  auto* ep_cuda_stream = CHECK_NOTNULL(dynamic_cast<ep::CudaStream*>(ep_stream));
-
-  OF_CUDA_CHECK(cudaStreamWaitEvent(ep_cuda_stream->cuda_stream(), ep_cuda_event->cuda_event(), 0));
-#else
-  UNIMPLEMENTED();
-#endif  // WITH_CUDA
+  ep_stream->WaitEvent(ep_event->mut_event());
 }
 
 }  // namespace vm

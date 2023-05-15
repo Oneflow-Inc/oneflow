@@ -43,8 +43,6 @@ class Dropout(_DropoutNd):
     def __init__(self, p: float = 0.5, inplace: bool = False, generator=None):
         _DropoutNd.__init__(self, p, inplace)
         self.p = p
-        if generator is None:
-            generator = flow.Generator()
         self.generator = generator
 
     def forward(self, x, addend=None):

@@ -25,11 +25,8 @@ if(RPC_BACKEND MATCHES "GRPC")
   include(grpc)
 endif()
 include(flatbuffers)
-include(lz4)
-include(string_view)
 
 include(hwloc)
-include(liburing)
 if(WITH_ONEDNN)
   include(oneDNN)
 endif()
@@ -68,9 +65,7 @@ set(oneflow_third_party_libs
     ${OPENSSL_STATIC_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
     ${FLATBUFFERS_STATIC_LIBRARIES}
-    ${LZ4_STATIC_LIBRARIES}
-    nlohmann_json::nlohmann_json
-    string-view-lite)
+    nlohmann_json::nlohmann_json)
 if(WITH_ONEDNN)
   set(oneflow_third_party_libs ${oneflow_third_party_libs} ${ONEDNN_STATIC_LIBRARIES})
 endif()
@@ -94,9 +89,7 @@ set(oneflow_third_party_dependencies
     re2
     opencv
     install_libpng_headers
-    flatbuffers
-    lz4_copy_libs_to_destination
-    lz4_copy_headers_to_destination)
+    flatbuffers)
 if(WITH_ONEDNN)
   list(APPEND oneflow_third_party_dependencies onednn)
 endif()
@@ -128,8 +121,7 @@ list(
   ${HALF_INCLUDE_DIR}
   ${ABSL_INCLUDE_DIR}
   ${OPENSSL_INCLUDE_DIR}
-  ${FLATBUFFERS_INCLUDE_DIR}
-  ${LZ4_INCLUDE_DIR})
+  ${FLATBUFFERS_INCLUDE_DIR})
 if(WITH_ONEDNN)
   list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${ONEDNN_INCLUDE_DIR})
 endif()
@@ -195,13 +187,6 @@ if(BUILD_HWLOC)
   list(APPEND oneflow_third_party_libs ${PCIACCESS_STATIC_LIBRARIES})
   list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${HWLOC_INCLUDE_DIR})
   add_definitions(-DWITH_HWLOC)
-endif()
-
-if(WITH_LIBURING)
-  list(APPEND oneflow_third_party_dependencies liburing)
-  list(APPEND oneflow_third_party_libs ${LIBURING_STATIC_LIBRARIES})
-  list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${LIBURING_INCLUDE_DIR})
-  add_definitions(-DWITH_LIBURING)
 endif()
 
 include_directories(SYSTEM ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})

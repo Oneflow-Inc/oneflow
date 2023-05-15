@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/user/kernels/stateful_opkernel.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
+#include "oneflow/core/framework/compute_complexity_fn_context.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/eager/eager_blob_object.h"
@@ -425,6 +426,24 @@ class UserOpInferContext : public user_op::InferContext {
                                 DataType data_type) override {
     return helper_->SetDtype4ArgNameAndIndex(call_ctx_, arg_name, index, data_type);
   }
+  MemoryFormat InputMemoryFormat(const std::string& arg_name, int32_t index) const override {
+    return MemoryFormat4ArgNameAndIndex(arg_name, index);
+  }
+  MemoryFormat OutputMemoryFormat(const std::string& arg_name, int32_t index) const override {
+    return MemoryFormat4ArgNameAndIndex(arg_name, index);
+  }
+  void SetOutputMemoryFormat(const std::string& arg_name, int32_t index,
+                             MemoryFormat memory_format) override {
+    return SetMemoryFormat4ArgNameAndIndex(arg_name, index, memory_format);
+  }
+  MemoryFormat MemoryFormat4ArgNameAndIndex(const std::string& arg_name,
+                                            int32_t index) const override {
+    return TensorDesc4ArgNameAndIndex(arg_name, index)->memory_format();
+  }
+  void SetMemoryFormat4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                       MemoryFormat memory_format) override {
+    MutTensorDesc4ArgNameAndIndex(arg_name, index)->set_memory_format(memory_format);
+  }
   bool InputIsDynamic(const std::string& arg_name, int32_t index) const override {
     return helper_->InputIsDynamic(call_ctx_, arg_name, index);
   }
@@ -747,13 +766,14 @@ class UserKernelInitAndCacheContext final : public user_op::KernelInitContext,
 
 namespace {
 
-Maybe<void> InitTensorTupleIndexes4Bns(
-    const std::shared_ptr<const OperatorConf>& op_conf, const ArgVec& indexed_input_pairs,
-    const ArgVec& indexed_output_pairs, OpArgsVector<int64_t>* input_tuple_indexes4const_ibns,
-    OpArgsVector<int64_t>* input_tuple_indexes4mut_ibns,
-    OpArgsVector<int64_t>* output_tuple_indexes4mut_obns,
-    OpArgsVector<int64_t>* output_tuple_indexes4mut2_obns,
-    small_vector<bool, kOpArgsReservedSize>* output_tuple_indexes2is_mut2_type) {
+Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>& op_conf,
+                                       const ArgVec& indexed_input_pairs,
+                                       const ArgVec& indexed_output_pairs,
+                                       OpArgsVector<int64_t>* input_tuple_indexes4const_ibns,
+                                       OpArgsVector<int64_t>* input_tuple_indexes4mut_ibns,
+                                       OpArgsVector<int64_t>* output_tuple_indexes4mut_obns,
+                                       OpArgsVector<int64_t>* output_tuple_indexes4mut2_obns,
+                                       small_vector<bool>* output_tuple_indexes2is_mut2_type) {
   const auto* op_reg_val =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf->user_conf().op_type_name());
   CHECK_NOTNULL_OR_RETURN(op_reg_val);

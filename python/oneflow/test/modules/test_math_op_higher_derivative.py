@@ -110,6 +110,9 @@ class TestMathOpHigherDerivative(flow.unittest.TestCase):
     def test_exp_grad_grad(test_case):
         _test_math_op_grad_grad_impl(test_case, "exp")
 
+    def test_exp2_grad_grad(test_case):
+        _test_math_op_grad_grad_impl(test_case, "exp2")
+
     def test_expm1_grad_grad(test_case):
         _test_math_op_grad_grad_impl(test_case, "expm1")
 

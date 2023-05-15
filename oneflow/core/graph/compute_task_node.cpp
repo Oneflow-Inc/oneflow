@@ -63,12 +63,59 @@ std::vector<CompTaskNode*> GetCompTaskNodesOnEdge(
   return comp_task_nodes;
 }
 
+std::shared_ptr<RegstDesc> NewFakeDataRegstDesc() {
+  auto regst_desc = std::make_shared<RegstDesc>();
+  regst_desc->mut_regst_desc_type()->mutable_data_regst_desc();
+  return regst_desc;
+}
+
 }  // namespace
+
+void CompTaskNode::ConsumeFakeRegst(const std::string& regst_name) {
+  ConsumeRegst(regst_name, NewFakeDataRegstDesc());
+  fake_consumed_regst_names_.insert(regst_name);
+}
+
+void CompTaskNode::ConsumeFakeRegstsIf() {
+  ConsumeFakeRegsts();
+  RegstDesc* data_regst_desc = nullptr;
+  for (const auto& pair : consumed_regsts()) {
+    for (const auto& regst_desc : pair.second) {
+      if (regst_desc->regst_desc_type().has_data_regst_desc()) {
+        // Only one fake data regst is creatd for each CompTaskNode with ConsumeFakeRegsts().
+        CHECK(data_regst_desc == nullptr);
+        data_regst_desc = CHECK_NOTNULL(regst_desc.get());
+      } else if (regst_desc->regst_desc_type().has_ctrl_regst_desc()) {
+        // do nothing.
+      } else {
+        UNIMPLEMENTED();
+      }
+    }
+  }
+  if (data_regst_desc != nullptr) {
+    for (const auto& ibn : op_node()->op().input_bns()) {
+      // Only one fake data regst is creatd and just use it for all input_bns as a placeholder.
+      data_regst_desc->AddLbi(op_node()->op().BnInOp2Lbi(ibn));
+    }
+  }
+}
+
+void CompTaskNode::EraseFakeRegstsIf() {
+  for (const auto& fake_consumed_regst_name : fake_consumed_regst_names_) {
+    EraseConsumedRegstsByName(fake_consumed_regst_name);
+  }
+  fake_consumed_regst_names_.clear();
+}
 
 std::string CompTaskNode::VisualStr() const { return op_node_->op().op_name(); }
 
-void CompTaskNode::ToProto(TaskProto* task_proto) const {
-  TaskNode::ToProto(task_proto);
+void CompTaskNode::InitFromProtoExceptConsumedRegsts(const TaskProto& proto) {
+  TaskNode::InitFromProtoExceptConsumedRegsts(proto);
+  parallel_ctx_ = proto.parallel_ctx();
+}
+
+void CompTaskNode::ToProto(TaskProto* task_proto, bool check) const {
+  TaskNode::ToProto(task_proto, check);
   *(task_proto->mutable_parallel_ctx()) = parallel_ctx_;
 }
 

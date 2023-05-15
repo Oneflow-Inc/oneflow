@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/mem_util.h"
 #include "oneflow/core/ep/cuda/cuda_device.h"
 #include "oneflow/core/ep/cuda/cuda_event.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
@@ -76,8 +77,34 @@ CudaDevice::CudaDevice(int device_index, DeviceManager* device_manager)
 #if CUDA_VERSION >= 11000
     CreateConstBuffer<nv_bfloat16>(&const_ones_buffer_bf16_, static_cast<nv_bfloat16>(1.0),
                                    const_buf_elem_cnt_);
-#endif
+#endif  // CUDA_VERSION >= 11000
   }
+#if CUDA_VERSION >= 11020
+  if (ParseBooleanFromEnv("ONEFLOW_EP_CUDA_ENABLE_STREAM_ORDERED_MEMORY_ALLOCATOR", false)) {
+    int memory_pools_supported = 0;
+    cudaError_t err = cudaDeviceGetAttribute(&memory_pools_supported,
+                                             cudaDevAttrMemoryPoolsSupported, device_index_);
+    if (err == cudaSuccess && memory_pools_supported) {
+      cudaMemPoolProps mem_pool_props = {};
+      mem_pool_props.allocType = cudaMemAllocationTypePinned;
+      mem_pool_props.handleTypes = cudaMemHandleTypePosixFileDescriptor;
+      mem_pool_props.location.type = cudaMemLocationTypeDevice;
+      mem_pool_props.location.id = device_index_;
+      OF_CUDA_CHECK(cudaMemPoolCreate(&mem_pool_, &mem_pool_props));
+      uint64_t threshold = UINT64_MAX;
+      OF_CUDA_CHECK(
+          cudaMemPoolSetAttribute(mem_pool_, cudaMemPoolAttrReleaseThreshold, &threshold));
+      int disabled = 0;
+      OF_CUDA_CHECK(
+          cudaMemPoolSetAttribute(mem_pool_, cudaMemPoolReuseFollowEventDependencies, &disabled));
+      OF_CUDA_CHECK(
+          cudaMemPoolSetAttribute(mem_pool_, cudaMemPoolReuseAllowOpportunistic, &disabled));
+      OF_CUDA_CHECK(
+          cudaMemPoolSetAttribute(mem_pool_, cudaMemPoolReuseAllowInternalDependencies, &disabled));
+    }
+    if (err != cudaSuccess) { (void)cudaGetLastError(); }
+  }
+#endif  // CUDA_VERSION >= 11020
 }
 
 CudaDevice::~CudaDevice() {
@@ -87,9 +114,17 @@ CudaDevice::~CudaDevice() {
   OF_CUDA_CHECK(cudaFree(const_ones_buffer_fp32_));
   OF_CUDA_CHECK(cudaFree(const_ones_buffer_fp16_));
   OF_CUDA_CHECK(cudaFree(const_ones_buffer_bf16_));
+#if CUDA_VERSION >= 11020
+  if (mem_pool_) { OF_CUDA_CHECK(cudaMemPoolDestroy(mem_pool_)); }
+#endif  // CUDA_VERSION >= 11020
 }
 
 void CudaDevice::SetAsActiveDevice() { OF_CUDA_CHECK(cudaSetDevice(device_index_)); }
+
+void CudaDevice::Reset() {
+  SetAsActiveDevice();
+  OF_CUDA_CHECK(cudaDeviceReset());
+}
 
 Stream* CudaDevice::CreateStream() {
   CudaCurrentDeviceGuard guard(device_index_);
@@ -128,7 +163,8 @@ Maybe<void> CudaDevice::Alloc(const AllocationOptions& options, void** ptr, size
   if (err != cudaSuccess) {
     if (err == cudaErrorMemoryAllocation) {
       // NOTE:return out of memory error, so vm will try to shrink memory and rerun
-      return Error::OutOfMemoryError() << cudaGetErrorString(err);
+      return Error::OutOfMemoryError()
+             << "CUDA " << cudaGetErrorString(err) << ". Tried to allocate " << FormatMemSize(size);
     }
     return Error::RuntimeError() << cudaGetErrorString(err);
   } else {
@@ -155,6 +191,18 @@ void CudaDevice::FreePinned(const AllocationOptions& options, void* ptr) {
   CudaCurrentDeviceGuard guard(device_index_);
   OF_CUDA_CHECK(cudaFreeHost(ptr));
 }
+
+bool CudaDevice::IsStreamOrderedMemoryAllocationSupported() const {
+#if CUDA_VERSION >= 11020
+  return mem_pool_ != nullptr;
+#else
+  return false;
+#endif  // CUDA_VERSION >= 11020
+}
+
+#if CUDA_VERSION >= 11020
+cudaMemPool_t CudaDevice::mem_pool() { return mem_pool_; }
+#endif  // CUDA_VERSION >= 11020
 
 const cudaDeviceProp& CudaDevice::properties() const { return properties_; }
 

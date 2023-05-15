@@ -232,6 +232,11 @@ void CudaStream::RecordEvent(Event* event) {
   OF_CUDA_CHECK(cudaEventRecord(cuda_event->cuda_event(), cuda_stream_));
 }
 
+void CudaStream::WaitEvent(Event* event) {
+  auto* cuda_event = static_cast<CudaEvent*>(event);  // NOLINT
+  OF_CUDA_CHECK(cudaStreamWaitEvent(cuda_stream_, cuda_event->cuda_event(), 0));
+}
+
 Maybe<void> CudaStream::GetAsyncError() {
   cudaError_t err = cudaGetLastError();
   if (err == cudaSuccess) {
@@ -239,6 +244,34 @@ Maybe<void> CudaStream::GetAsyncError() {
   } else {
     return Error::RuntimeError() << cudaGetErrorString(err) << " (" << err << ") ";
   }
+}
+
+Maybe<void> CudaStream::AllocAsync(void** ptr, size_t size) {
+#if CUDA_VERSION >= 11020
+  if (!device_->IsStreamOrderedMemoryAllocationSupported()) { UNIMPLEMENTED_THEN_RETURN(); }
+  cudaError_t err = cudaMallocFromPoolAsync(ptr, size, device_->mem_pool(), cuda_stream_);
+  if (err == cudaSuccess) {
+    return Maybe<void>::Ok();
+  } else {
+    return Error::RuntimeError() << cudaGetErrorString(err) << " (" << err << ") ";
+  }
+#else
+  UNIMPLEMENTED_THEN_RETURN();
+#endif  // CUDA_VERSION >= 11020
+}
+
+Maybe<void> CudaStream::FreeAsync(void* ptr) {
+#if CUDA_VERSION >= 11020
+  if (!device_->IsStreamOrderedMemoryAllocationSupported()) { UNIMPLEMENTED_THEN_RETURN(); }
+  cudaError_t err = cudaFreeAsync(ptr, cuda_stream_);
+  if (err == cudaSuccess) {
+    return Maybe<void>::Ok();
+  } else {
+    return Error::RuntimeError() << cudaGetErrorString(err) << " (" << err << ") ";
+  }
+#else
+  UNIMPLEMENTED_THEN_RETURN();
+#endif  // CUDA_VERSION >= 11020
 }
 
 cudaStream_t CudaStream::cuda_stream() const { return cuda_stream_; }

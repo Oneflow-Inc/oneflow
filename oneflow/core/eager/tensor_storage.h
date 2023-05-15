@@ -22,15 +22,21 @@ limitations under the License.
 #include "oneflow/core/framework/stream.h"
 
 namespace oneflow {
+namespace remat {
+class DisjNode;
+}
 
 namespace vm {
 
+class OpCallInstructionPolicy;
+class DtrOpCallInstructionPolicy;
+
 class TensorStorage {
  public:
-  explicit TensorStorage(bool is_allocated_in_vm);
+  explicit TensorStorage(bool is_allocated_in_vm, Symbol<Device> device);
   OF_DISALLOW_COPY_AND_MOVE(TensorStorage);
 
-  virtual ~TensorStorage() = default;
+  virtual ~TensorStorage();
 
   bool is_allocated_in_vm() const { return is_allocated_in_vm_; }
 
@@ -43,6 +49,7 @@ class TensorStorage {
   void set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>&& blob_dptr, size_t bytes) {
     blob_dptr_ = std::move(blob_dptr);
     blob_bytes_ = bytes;
+    is_initialized_ = true;
   }
 
   const Optional<Symbol<::oneflow::Stream>>& producer_stream() const { return producer_stream_; }
@@ -64,6 +71,8 @@ class TensorStorage {
  protected:
   std::unique_ptr<char, std::function<void(char*)>> blob_dptr_;
   size_t blob_bytes_;
+  bool is_initialized_ = false;
+  Symbol<Device> device_;
 
  private:
   std::unique_ptr<MemoryAllocator> non_pod_allocator_;
@@ -71,6 +80,52 @@ class TensorStorage {
   Optional<Symbol<::oneflow::Stream>> last_used_stream_;
   std::vector<std::function<void()>> storage_delete_hooks_;
   bool is_allocated_in_vm_;
+};
+
+class RematableTensorStorage final : public TensorStorage {
+ public:
+  explicit RematableTensorStorage(Symbol<Device> device);
+  OF_DISALLOW_COPY_AND_MOVE(RematableTensorStorage);
+  ~RematableTensorStorage() override;
+
+  void set_compute_op(const std::shared_ptr<DtrOpCallInstructionPolicy>& compute_op,
+                      double compute_time);
+  void clear_compute_op();
+  OpCallInstructionPolicy compute_op() const;
+  std::shared_ptr<DtrOpCallInstructionPolicy> dtr_compute_op() const;
+  void Release() override;
+  void Remat();
+  void Evict(bool eager_eviction);
+  void Pin();
+  void Unpin();
+  void Access();
+  bool is_in_memory() const { return blob_bytes_ == 0 || blob_dptr_ != nullptr; }
+  bool is_pinned() const { return num_pinned() > 0; }
+  int32_t num_pinned() const { return num_pinned_; }
+  bool is_evictable() const;
+  void set_eviction_disabled(bool disabled) { eviction_disabled_ = disabled; }
+  bool is_eviction_disabled() const { return eviction_disabled_; }
+  int64_t id() const { return id_; }
+  Maybe<double> cost(size_t override_size) const;
+  double approx_neighbor_cost() const;
+  std::string compute_op_type_name() const;
+  bool is_initialized() const { return is_initialized_; }
+  void set_initialized() { is_initialized_ = true; }
+  bool is_needed_by_backward() const { return is_needed_by_backward_; }
+  void set_needed_by_backward() { is_needed_by_backward_ = true; }
+  double compute_time() const { return compute_time_; }
+  std::shared_ptr<remat::DisjNode> node;
+
+ private:
+  int64_t id_{};
+  size_t num_pinned_{};
+  bool eviction_disabled_ = false;
+  double last_access_time_{};
+  double compute_time_{};
+  std::shared_ptr<DtrOpCallInstructionPolicy> compute_op_;
+  bool is_needed_by_backward_ = false;
+
+  void LogEviction(bool eager_eviction) const;
 };
 
 }  // namespace vm

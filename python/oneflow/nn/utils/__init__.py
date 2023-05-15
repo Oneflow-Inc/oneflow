@@ -21,3 +21,4 @@ from oneflow.nn.utils.convert_parameters import (
     parameters_to_vector,
     vector_to_parameters,
 )
+from oneflow.nn.utils.skip_init import skip_init
