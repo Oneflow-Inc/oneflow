@@ -65,7 +65,8 @@ CublasScalarParameter GetCublasScalarParameter(Scalar scalar, cublasComputeType_
   if (compute_type == CUBLAS_COMPUTE_64F) {
     sp.d = scalar.Value<double>();
   } else if (compute_type == CUBLAS_COMPUTE_32F_PEDANTIC
-             || compute_type == CUBLAS_COMPUTE_32F_FAST_TF32) {
+             || compute_type == CUBLAS_COMPUTE_32F_FAST_TF32
+             || compute_type == CUBLAS_COMPUTE_32F) {
     sp.s = scalar.Value<float>();
   } else if (compute_type == CUBLAS_COMPUTE_16F) {
     sp.h = static_cast<half>(scalar.Value<float>());
