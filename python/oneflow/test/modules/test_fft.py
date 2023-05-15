@@ -617,6 +617,7 @@ def _test_ihfftn(test_case):
 
     return y
 
+
 # NOTE: skip for multi-nodes and multi-devices now, because it failed in ci randomly
 @flow.unittest.skip_unless_1n1d()
 class TestComplex64Fft(flow.unittest.TestCase):
@@ -873,6 +874,7 @@ class TestComplex64Fft(flow.unittest.TestCase):
         arg_dict["test_fun"] = [test_case.test_hfftn, test_case.test_ihfftn]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
 
 # NOTE: skip for multi-nodes and multi-devices now, because it failed in ci randomly
 @flow.unittest.skip_unless_1n1d()
