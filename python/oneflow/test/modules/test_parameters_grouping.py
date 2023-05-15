@@ -84,15 +84,15 @@ def direct_grouping(test_case, device):
     test_case.assertTrue(len(cpg.grouped_grads) == 2)
 
 
-def global_grouping(test_case):
+def global_grouping(test_case, device):
     x = flow.nn.Parameter(
         flow.zeros((10,), dtype=flow.float32, requires_grad=True).to_global(
-            sbp=flow.sbp.broadcast, placement=flow.placement("cuda", [0])
+            sbp=flow.sbp.broadcast, placement=flow.placement(device, [0])
         )
     )
     y = flow.nn.Parameter(
         flow.zeros((10,), dtype=flow.float32, requires_grad=True).to_global(
-            sbp=flow.sbp.split(0), placement=flow.placement("cuda", [0])
+            sbp=flow.sbp.split(0), placement=flow.placement(device, [0])
         )
     )
     cpg = CPG([x, y], group_on_current_buffer=False)
@@ -100,7 +100,7 @@ def global_grouping(test_case):
     test_case.assertTrue(len(cpg.grouped_grads) == 2)
 
 
-def multi_module_grad(test_case):
+def multi_module_grad(test_case, device):
     class Module1(flow.nn.Module):
         def __init__(self):
             super().__init__()
@@ -119,14 +119,14 @@ def multi_module_grad(test_case):
         def forward(self, x):
             return x * self.w1 * self.w2
 
-    m1 = Module1()
+    m1 = Module1().to(device)
     m1.make_contiguous_params_group()
-    m2 = Module2()
+    m2 = Module2().to(device)
     m2.make_contiguous_params_group()
     optim1 = flow.optim.SGD(m1.parameters(), lr=1e-2, contiguous_params=True)
     optim2 = flow.optim.SGD(m2.parameters(), lr=1e-2, contiguous_params=True)
-    x1 = flow.ones([1, 1])
-    x2 = flow.ones([2, 2])
+    x1 = flow.ones([1, 1]).to(device)
+    x2 = flow.ones([2, 2]).to(device)
     flow.sum(m1(x1)).backward()
     flow.sum(m2(x2)).backward()
 
@@ -141,7 +141,7 @@ def multi_module_grad(test_case):
         )
 
 
-def multi_module_lifecycle(test_case):
+def multi_module_lifecycle(test_case, device):
     class Module1(flow.nn.Module):
         def __init__(self):
             super().__init__()
@@ -160,9 +160,9 @@ def multi_module_lifecycle(test_case):
         def forward(self, x):
             return x * self.w1 * self.w2
 
-    m1 = Module1()
+    m1 = Module1().to(device)
     m1.make_contiguous_params_group()
-    m2 = Module2()
+    m2 = Module2().to(device)
     m2.make_contiguous_params_group()
     del m1
     cpg = CPG(list(m2.parameters()))
@@ -175,12 +175,12 @@ class TestCPG(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cuda", "cpu"]
         for arg in GenArgDict(arg_dict):
-            module_grouping(test_case, **arg)
-            direct_grouping(test_case, **arg)
-
-        global_grouping(test_case)
-        multi_module_grad(test_case)
-        multi_module_lifecycle(test_case)
+            device = arg['device']
+            module_grouping(test_case, device)
+            direct_grouping(test_case, device)
+            global_grouping(test_case, device)
+            multi_module_lifecycle(test_case, device)
+            multi_module_grad(test_case, device)
 
 
 if __name__ == "__main__":
