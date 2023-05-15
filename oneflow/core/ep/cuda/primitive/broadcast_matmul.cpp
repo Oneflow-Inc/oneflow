@@ -60,13 +60,14 @@ union CublasScalarParameter {
   half h;
 };
 
-CublasScalarParameter GetCublasScalarParameter(Scalar scalar, cudaDataType_t compute_type) {
+CublasScalarParameter GetCublasScalarParameter(Scalar scalar, cublasComputeType_t compute_type) {
   CublasScalarParameter sp{};
-  if (compute_type == CUDA_R_64F) {
+  if (compute_type == CUBLAS_COMPUTE_64F) {
     sp.d = scalar.Value<double>();
-  } else if (compute_type == CUDA_R_32F) {
+  } else if (compute_type == CUBLAS_COMPUTE_32F_PEDANTIC
+             || compute_type == CUBLAS_COMPUTE_32F_FAST_TF32) {
     sp.s = scalar.Value<float>();
-  } else if (compute_type == CUDA_R_16F) {
+  } else if (compute_type == CUBLAS_COMPUTE_16F) {
     sp.h = static_cast<half>(scalar.Value<float>());
   } else {
     UNIMPLEMENTED();
@@ -74,23 +75,33 @@ CublasScalarParameter GetCublasScalarParameter(Scalar scalar, cudaDataType_t com
   return sp;
 }
 
-cudaDataType_t GetComputeType(DataType data_type) {
+cublasComputeType_t GetComputeType(DataType data_type) {
   switch (data_type) {
-    case kFloat: return CUDA_R_32F;
-    case kDouble: return CUDA_R_64F;
+    case kFloat: {
+      const bool allow_tf32 = ParseBooleanFromEnv("ONEFLOW_ALLOW_TF32", false);
+      if (allow_tf32) {
+        return CUBLAS_COMPUTE_32F_FAST_TF32;
+      } else {
+        // Starting with cuBLAS version 11.0.0, the library will automatically make use of Tensor
+        // Core capabilities wherever possible, unless they are explicitly disabled by selecting
+        // pedantic compute modes in cuBLAS
+        return CUBLAS_COMPUTE_32F_PEDANTIC;
+      }
+    }
+    case kDouble: return CUBLAS_COMPUTE_64F;
     case kFloat16: {
       const bool allow_half_accumulation =
           ParseBooleanFromEnv("ONEFLOW_MATMUL_ALLOW_HALF_PRECISION_ACCUMULATION", false);
       if (allow_half_accumulation) {
-        return CUDA_R_16F;
+        return CUBLAS_COMPUTE_16F;
       } else {
-        return CUDA_R_32F;
+        return CUBLAS_COMPUTE_32F;
       }
     }
 #if CUDA_VERSION >= 11000
-    case kBFloat16: return CUDA_R_32F;
+    case kBFloat16: return CUBLAS_COMPUTE_32F;
 #endif  // CUDA_VERSION >= 11000
-    default: UNIMPLEMENTED(); return CUDA_R_32F;
+    default: UNIMPLEMENTED(); return CUBLAS_COMPUTE_32F;
   }
 }
 
