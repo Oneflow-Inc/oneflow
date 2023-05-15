@@ -146,6 +146,9 @@ class ContiguousParamsGroup(object):
         return buffer_params_mapping
 
     def _parameters_grouping_on_new_buffer(self):
+        # Use the group in params_group_list to create default buffer.
+        # A buffer that is too large will affect the parallelism of different parameters.
+
         params_buffer_size = {}
         physical_params_buffer = {}
         params_buffer_index = {}
