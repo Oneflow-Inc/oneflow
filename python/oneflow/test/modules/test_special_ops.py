@@ -183,9 +183,7 @@ class TestZeta(flow.unittest.TestCase):
         input = random_tensor(ndim=2, dim0=2, dim1=20).to(device).to(x_dtype)
         out = torch.special.zeta(input, 0.5)
         return out
-
-
-<<<<<<< HEAD
+    
 @flow.unittest.skip_unless_1n1d()
 class TestPolygamma(flow.unittest.TestCase):
     @autotest(n=5, auto_backward="auto")
@@ -224,8 +222,5 @@ class TestPolygamma(flow.unittest.TestCase):
         out = torch.special.polygamma(random(2, 6).to(int), input)
         return out
 
-
-=======
->>>>>>> 737c448ea09611bc320a2a5d7cdcb11f6353d654
 if __name__ == "__main__":
     unittest.main()

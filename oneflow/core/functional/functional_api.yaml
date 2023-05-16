@@ -3369,7 +3369,6 @@
     "Tensor (Tensor x, Scalar other) => ZetaTensorScalar",
   ]
   bind_python: True
-<<<<<<< HEAD
 
 - name: "polygamma"
   signature: [
@@ -3377,5 +3376,3 @@
     "Tensor (Tensor input, Int32 n) => Polygamma"
   ]
   bind_python: True
-=======
->>>>>>> 737c448ea09611bc320a2a5d7cdcb11f6353d654

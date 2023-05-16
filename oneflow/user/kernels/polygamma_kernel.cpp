@@ -74,5 +74,4 @@ auto PrimitiveExists() {
 REGISTER_POLYGAMMA_KERNEL(float);
 REGISTER_POLYGAMMA_KERNEL(double)
 }  // namespace
-
 }  // namespace oneflow

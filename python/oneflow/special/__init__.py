@@ -28,7 +28,4 @@ from .special_ops import softmax
 from .special_ops import digamma
 from .special_ops import psi
 from .special_ops import zeta
-<<<<<<< HEAD
 from .special_ops import polygamma
-=======
->>>>>>> 737c448ea09611bc320a2a5d7cdcb11f6353d654
