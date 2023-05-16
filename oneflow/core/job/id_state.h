@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,19 +12,27 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
+*/
+#ifndef ONEFLOW_CORE_JOB_ID_STATE_H_
+#define ONEFLOW_CORE_JOB_ID_STATE_H_
 
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/device/device_id.h"
+#include "oneflow/core/graph/stream_id.h"
+#include "oneflow/core/graph/task_id.h"
 
-from .special_ops import erf
-from .special_ops import erfc
-from .special_ops import erfinv
-from .special_ops import exp2
-from .special_ops import expm1
-from .special_ops import log1p
-from .special_ops import log_softmax
-from .special_ops import logsumexp
-from .special_ops import round
-from .special_ops import softmax
-from .special_ops import digamma
-from .special_ops import psi
-from .special_ops import zeta
+namespace oneflow {
+
+class IdState {
+ public:
+  int64_t regst_desc_id_state_{};
+  int64_t mem_block_id_state_{};
+  int64_t chunk_id_state_{};
+  int64_t job_id_state_{};
+  HashMap<int64_t, uint32_t> task_index_state_{};
+  HashMap<int64_t, uint32_t> stream_index_state_{};
+};
+
+}  // namespace oneflow
+
+#endif

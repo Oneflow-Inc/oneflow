@@ -75,6 +75,8 @@ class DeviceId {
   device_index_t device_index_;
 };
 
+int64_t EncodeDeviceIdToInt64(const DeviceId& device_id);
+
 }  // namespace oneflow
 
 namespace std {

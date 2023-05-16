@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_JOB_ID_MANAGER_H_
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/job/id_state.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
@@ -34,6 +35,9 @@ class IDMgr final {
   int64_t NewChunkId() { return chunk_id_count_++; }
 
   TaskIdGenerator* GetTaskIdGenerator() { return &task_id_gen_; }
+
+  void SaveIdAndTaskIndex(IdState* id_state);
+  void TryUpdateIdAndTaskIndex(const IdState* id_state);
 
  private:
   friend class Singleton<IDMgr>;

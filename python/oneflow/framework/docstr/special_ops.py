@@ -99,3 +99,33 @@ add_docstr(
     Alias for :func:`oneflow.special.digamma`. 
     """,
 )
+
+add_docstr(
+    oneflow.special.zeta,
+    r"""
+    zeta(input, other) -> Tensor
+    
+    Computes the Hurwitz zeta function, elementwise.
+    
+    .. math::
+        \zeta(x, q) = \sum_{k=0}^{\infty} \frac{1}{(k + q)^x}
+    
+    Args:
+        input (Tensor): the input tensor corresponding to `x`.
+        other (Tensor): the input tensor corresponding to `q`.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([2., 4.])
+        >>> flow.special.zeta(x, 1)
+        tensor([1.6449, 1.0823], dtype=oneflow.float32)
+        >>> flow.special.zeta(x, flow.tensor([1., 2.]))
+        tensor([1.6449, 0.0823], dtype=oneflow.float32)
+        >>> flow.special.zeta(2,flow.tensor([1., 2.]))
+        tensor([1.6449, 0.6449], dtype=oneflow.float32)
+
+    """,
+)

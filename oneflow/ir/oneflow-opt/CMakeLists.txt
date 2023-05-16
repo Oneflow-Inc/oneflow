@@ -18,6 +18,6 @@ target_link_libraries(
           MLIROptLib
           $<TARGET_OBJECTS:of_op_schema>
           MLIROneFlowExtension
-          MLIRTestTransformDialect)
+          MLIROneFlowTransformDialect)
 
 mlir_check_all_link_libraries(oneflow-opt)

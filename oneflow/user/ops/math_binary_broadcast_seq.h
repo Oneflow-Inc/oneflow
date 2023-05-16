@@ -32,7 +32,8 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("broadcast_bitwise_xor", BitwiseXor) \
   OF_PP_MAKE_TUPLE_SEQ("broadcast_floor_mod", FloorMod)     \
   OF_PP_MAKE_TUPLE_SEQ("broadcast_fmod", FMod)              \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_pow", Pow)
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_pow", Pow)                \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_zeta", Zeta)
 
 #define MATH_BINARY_BROADCAST_LOGICAL_FUNC_SEQ          \
   OF_PP_MAKE_TUPLE_SEQ("broadcast_equal", EQ)           \
@@ -59,7 +60,8 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ(BroadcastBitwiseXorOp, BitwiseXor) \
   OF_PP_MAKE_TUPLE_SEQ(BroadcastFloorModOp, FloorMod)     \
   OF_PP_MAKE_TUPLE_SEQ(BroadcastFmodOp, FMod)             \
-  OF_PP_MAKE_TUPLE_SEQ(BroadcastPowOp, Pow)
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastPowOp, Pow)               \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastZetaOp, Zeta)
 
 #define MATH_BINARY_BROADCAST_LOGICAL_FUNC_SEQ_ODS      \
   OF_PP_MAKE_TUPLE_SEQ(BroadcastEqualOp, EQ)            \

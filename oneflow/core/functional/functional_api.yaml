@@ -3374,3 +3374,10 @@
   signature: "Tensor (Tensor x) => Trigamma"
   bind_python: False
   
+- name: "zeta"
+  signature: [
+    "Tensor (Tensor x, Tensor other) => BroadcastZeta",
+    "Tensor (Scalar x, Tensor other) => ZetaScalarTensor",
+    "Tensor (Tensor x, Scalar other) => ZetaTensorScalar",
+  ]
+  bind_python: True
