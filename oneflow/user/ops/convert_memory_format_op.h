@@ -13,29 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_SINGLETON_PTR_H_
-#define ONEFLOW_CORE_COMMON_SINGLETON_PTR_H_
-
-#include <memory>
+#include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
 
-namespace private_detail {
+Shape ComputeShapeContiguousToChannelsLast(const Shape& shape);
+Shape ComputeShapeChannelsLastToContiguous(const Shape& shape);
 
-template<typename T>
-const T* GlobalSingletonPtr() {
-  static std::unique_ptr<const T> value(new T());
-  return value.get();
-}
-
-}  // namespace private_detail
-
-template<typename T>
-const T* SingletonPtr() {
-  thread_local const T* value = private_detail::GlobalSingletonPtr<T>();
-  return value;
-}
+Shape ComputeConvertMemoryFormatShape(const Shape& shape, MemoryFormat memory_format,
+                                      MemoryFormat target_memory_format);
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_COMMON_SINGLETON_PTR_H_

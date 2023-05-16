@@ -18,6 +18,9 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/framework/tensor.h"
+#ifdef WITH_CUDA
+#include "oneflow/core/device/cuda_util.h"
+#endif  // WITH_CUDA
 
 namespace py = pybind11;
 
@@ -26,6 +29,20 @@ namespace oneflow {
 Maybe<one::Generator> CreateGenerator(const std::string& device_str) {
   auto [device_name, device_index, rematable] = *JUST(ParseDeviceString(device_str));
   return one::MakeGenerator(device_name, device_index);
+}
+
+py::tuple GetCudaDefaultGenerators() {
+#ifdef WITH_CUDA
+  static int device_count = GetCudaDeviceCount();
+#else
+  static int device_count = 0;
+#endif
+  py::tuple default_cuda_generators(device_count);
+  FOR_RANGE(int, device_id, 0, device_count) {
+    const auto& cuda_gen = one::DefaultCUDAGenerator(device_id);
+    default_cuda_generators[device_id] = py::cast(cuda_gen);
+  }
+  return default_cuda_generators;
 }
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
@@ -64,6 +81,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
     int64_t seed_val = JUST(one::functional::PyUnpackLong(seed.ptr()));
     return one::ManualSeedAllCudaGenerator(seed_val);
   });
+  m.def("default_generators", &GetCudaDefaultGenerators);
 }
 
 }  // namespace oneflow

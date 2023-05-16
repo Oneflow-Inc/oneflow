@@ -783,6 +783,29 @@ class ScalarDivByTensorFunctor : public BinaryFunctor {
   }
 };
 
+class BroadcastZetaFunctor : public BinaryFloatFunctor {
+ public:
+  BroadcastZetaFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("broadcast_zeta").Input("x").Input("y").Output("z").Build());
+  }
+};
+
+class ZetaScalarTensorFunctor {
+ public:
+  Maybe<Tensor> operator()(const Scalar x, const std::shared_ptr<one::Tensor>& y) const {
+    auto scalar_tensor = JUST(functional::FullLike(y, x));  // wrap scalar to tensor
+    return functional::BroadcastZeta(scalar_tensor, y);
+  }
+};
+
+class ZetaTensorScalarFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar y) const {
+    auto scalar_tensor = JUST(functional::FullLike(x, y));  // wrap scalar to tensor
+    return functional::BroadcastZeta(x, scalar_tensor);
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -824,6 +847,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::LerpFunctor>("Lerp");
   m.add_functor<impl::InplaceLerpFunctor>("InplaceLerp");
   m.add_functor<impl::LerpGradFunctor>("LerpGrad");
+  m.add_functor<impl::BroadcastZetaFunctor>("BroadcastZeta");
+  m.add_functor<impl::ZetaScalarTensorFunctor>("ZetaScalarTensor");
+  m.add_functor<impl::ZetaTensorScalarFunctor>("ZetaTensorScalar");
 };
 
 }  // namespace functional

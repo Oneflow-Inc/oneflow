@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_GRAPH_STREAM_INDEX_GENERATOR_H_
 
 #include "oneflow/core/graph/stream_id.h"
+#include "oneflow/core/job/id_state.h"
 
 namespace oneflow {
 
@@ -24,13 +25,15 @@ class StreamIndexGenerator final {
  public:
   using stream_index_t = StreamId::stream_index_t;
 
-  StreamIndexGenerator();
+  explicit StreamIndexGenerator(stream_index_t stream_index);
   OF_DISALLOW_COPY_AND_MOVE(StreamIndexGenerator);
   ~StreamIndexGenerator() = default;
 
   stream_index_t GenerateAnonymous();
   stream_index_t GenerateNamed(const std::string& name);
   stream_index_t GenerateNamedRoundRobin(const std::string& name, size_t size);
+  stream_index_t GetCurrStreamIndex();
+  void TryUpdateNextStreamIndex(stream_index_t next_stream_index);
 
  private:
   struct RoundRobinRange {
