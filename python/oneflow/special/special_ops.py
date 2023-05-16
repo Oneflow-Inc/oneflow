@@ -71,3 +71,7 @@ def psi(x: Tensor):
 
 def zeta(input, other):
     return oneflow._C.zeta(input, other)
+
+
+def sinc(input):
+    return oneflow._C.sinc(input)

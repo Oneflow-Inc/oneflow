@@ -112,7 +112,7 @@ from oneflow._C import chunk
 from oneflow._C import digamma
 from oneflow._C import split
 from oneflow._C import sign
-from oneflow._C import sinh
+from oneflow._C import sinh,sinc
 from oneflow._C import tan
 from oneflow._C import greater
 from oneflow._C import greater as gt
