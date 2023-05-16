@@ -81,6 +81,22 @@ static constexpr auto* GetLazyJobLauncherStream =
 
 }  // namespace
 
+Maybe<JobDesc> GetJobConfSymbol(const JobConfigProto& job_conf) {
+  return Singleton<symbol::Storage<JobDesc>>::Get()->FindOrCreate(job_conf, &NewSymbolId);
+}
+
+Maybe<ParallelDesc> GetParallelDescSymbol(const ParallelConf& parallel_conf) {
+  return Singleton<symbol::Storage<ParallelDesc>>::Get()->FindOrCreate(parallel_conf, &NewSymbolId);
+}
+
+Maybe<Scope> GetScopeSymbol(const ScopeProto& scope_proto) {
+  return Singleton<symbol::Storage<Scope>>::Get()->FindOrCreate(scope_proto, &NewSymbolId);
+}
+
+Maybe<OperatorConfSymbol> GetOpConfSymbol(const OperatorConf& op_conf) {
+  return Singleton<symbol::Storage<OperatorConfSymbol>>::Get()->FindOrCreate(op_conf, &NewSymbolId);
+}
+
 // clang-format off
 // Job e.g.:
 //                                    [wait_and_send_ids]
