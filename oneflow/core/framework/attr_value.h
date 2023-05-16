@@ -43,7 +43,9 @@ namespace user_op {
   OF_PP_MAKE_TUPLE_SEQ(at_double, double, AttrType::kAtDouble) \
   OF_PP_MAKE_TUPLE_SEQ(at_string, std::string, AttrType::kAtString)
 
-#define ENUM_ATTR_SEQ OF_PP_MAKE_TUPLE_SEQ(at_data_type, DataType, AttrType::kAtDataType)
+#define ENUM_ATTR_SEQ                                                 \
+  OF_PP_MAKE_TUPLE_SEQ(at_data_type, DataType, AttrType::kAtDataType) \
+  OF_PP_MAKE_TUPLE_SEQ(at_memory_format, MemoryFormat, AttrType::kAtMemoryFormat)
 
 #define MESSAGE_ATTR_SEQ                                    \
   OF_PP_MAKE_TUPLE_SEQ(at_shape, Shape, AttrType::kAtShape) \

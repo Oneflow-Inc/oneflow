@@ -52,13 +52,15 @@ class EagerBlobObject final : public user_op::Tensor,
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
                   const Symbol<one::LocalTensorMeta>& static_local_tensor_meta,
                   const std::shared_ptr<const one::MutLocalTensorMeta>& dynamic_local_tensor_meta,
-                  DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage)
+                  DataType data_type, MemoryFormat memory_format,
+                  const std::shared_ptr<TensorStorage>& tensor_storage)
       : EagerBlobObject(mem_case, static_local_tensor_meta, dynamic_local_tensor_meta, data_type,
-                        tensor_storage, intrusive::shared_ptr<LocalDepObject>()) {}
+                        memory_format, tensor_storage, intrusive::shared_ptr<LocalDepObject>()) {}
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
                   const Symbol<one::LocalTensorMeta>& static_local_tensor_meta,
                   const std::shared_ptr<const one::MutLocalTensorMeta>& dynamic_local_tensor_meta,
-                  DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage,
+                  DataType data_type, MemoryFormat memory_format,
+                  const std::shared_ptr<TensorStorage>& tensor_storage,
                   const intrusive::shared_ptr<LocalDepObject>& dep_object);
 
   ~EagerBlobObject() { tensor_storage_.reset(); }
@@ -74,11 +76,13 @@ class EagerBlobObject final : public user_op::Tensor,
   const Stride& stride() const override;
   DataType data_type() const override { return data_type_; }
   bool is_dynamic() const override { return is_dynamic_; }
+  MemoryFormat memory_format() const override { return memory_format_; }
 
   void set_shape(const Shape& shape) override;
   void set_stride(const Stride& stride) override;
   void set_data_type(DataType data_type) override { data_type_ = data_type; }
   void set_is_dynamic(bool is_dynamic) override { is_dynamic_ = is_dynamic; }
+  void set_memory_format(MemoryFormat memory_format) override { memory_format_ = memory_format; }
 
   // user_op::Tensor overrides
   ShapeView shape_view() const override { return shape(); }
@@ -144,6 +148,7 @@ class EagerBlobObject final : public user_op::Tensor,
   bool is_dynamic_;
   std::shared_ptr<MemoryCase> mem_case_;
   DataType data_type_;
+  MemoryFormat memory_format_;
   int64_t storage_offset_;
   std::shared_ptr<TensorStorage> tensor_storage_;
   intrusive::shared_ptr<LocalDepObject> compute_local_dep_object_;

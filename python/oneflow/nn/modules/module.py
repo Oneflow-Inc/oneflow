@@ -160,6 +160,7 @@ class Module(object):
         super().__setattr__("_modules", OrderedDict())
         super().__setattr__("_is_ddp_module", False)
         super().__setattr__("_oneflow_internal_module_tensor_applied_dict__", None)
+        super().__setattr__("cpg", None)
 
     def __getstate__(self):
         if not self._is_ddp_module:
@@ -1267,6 +1268,13 @@ class Module(object):
         return handle
 
     def _apply(self, fn):
+        if self.cpg is not None:
+            self.cpg = None
+            warnings.warn(
+                "deleted ContiguousParamsGroup since creating it before "
+                "apply operations like to(), to_global() will cause error."
+            )
+
         # A dict to store tensors that has already been applied.
         # There is no need to apply multiple times on a same tensor.
         if self._oneflow_internal_module_tensor_applied_dict__ is None:
@@ -1383,6 +1391,13 @@ class Module(object):
               (1): Linear(in_features=2, out_features=2, bias=True)
             )
         """
+        if self.cpg is not None:
+            self.cpg = None
+            warnings.warn(
+                "deleted ContiguousParamsGroup since creating it before "
+                "apply operations like to(), to_global() will cause error."
+            )
+
         for module in self.children():
             module.apply(fn)
         fn(self)
@@ -1399,6 +1414,31 @@ class Module(object):
             Module: self
         """
         return self._apply(lambda t: flow.empty_like(t, device=device))
+
+    def _to_memory_format(self, memory_format):
+        r"""Casts the parameters and buffers in this module to another memory format.
+
+        The data_format attribute should also be modified. 
+        
+        Note:
+            This interface is unstable and may be removed in the future once the data_format
+            attribute has been removed from the module.
+
+        Args:
+            memory_format (:class:`oneflow.memory_format`): the desired memory
+                format for 4D parameters and buffers in this module (keyword
+                only argument)
+
+        Returns:
+            Module: self
+        """
+        for module in self.children():
+            module._to_memory_format(memory_format)
+        self.to_memory_format(memory_format)
+        return self
+
+    def to_memory_format(self, memory_format) -> None:
+        pass
 
     @overload
     def to(
@@ -1427,6 +1467,9 @@ class Module(object):
         .. function:: to(dtype)
            :noindex:
 
+        .. function:: to(memory_format=None)
+           :noindex:
+
         .. function:: to(tensor)
            :noindex:
 
@@ -1446,6 +1489,9 @@ class Module(object):
                 and buffers in this module
             dtype (:class:`oneflow.dtype`): the desired floating point dtype of
                 the parameters and buffers in this module
+            memory_format (:class:`oneflow.memory_format`): the desired memory
+                format for 4D parameters and buffers in this module (keyword
+                only argument)
             tensor (oneflow.Tensor): Tensor whose dtype and device are the desired
                 dtype and device for all parameters and buffers in this module
 
@@ -1482,6 +1528,7 @@ class Module(object):
 
         device = None
         dtype = None
+        memory_format = None
         if len(args) + len(kwargs) == 2:
             device = kwargs.pop("device", None) or args[0]
             dtype = kwargs.pop("dtype", None) or args[1]
@@ -1497,11 +1544,14 @@ class Module(object):
                 elif isinstance(arg, (flow.device, str, int)):
                     dtype = None
                     device = arg
+                elif isinstance(arg, flow.memory_format):
+                    memory_format = arg
                 else:
                     raise ValueError(f"Unsupported parameters in module.to: {arg}")
             else:
                 device = kwargs.pop("device", None)
                 dtype = kwargs.pop("dtype", None)
+                memory_format = kwargs.pop("memory_format", None)
                 tensor = kwargs.pop("tensor", None)
                 if tensor is not None:
                     device = tensor.device
@@ -1517,6 +1567,9 @@ class Module(object):
                     "nn.Module.to only accepts floating point "
                     "dtypes, but got desired dtype={}".format(dtype)
                 )
+
+        if memory_format is not None:
+            self._to_memory_format(memory_format)
 
         def convert(t):
             return t.to(device, dtype if t.is_floating_point() else None)
@@ -1745,6 +1798,27 @@ class Module(object):
         strings are acceptable.
         """
         return ""
+
+    def make_contiguous_params_group(self):
+        r"""Get contiguous parameters group after creating the whole module.
+
+        Rearrange the parameters of the model in the same dtype and device 
+        (or placement and sbp for global tensor) to form a single tensor for
+        accelerating the element-wise operations of parameters' data or gradient.
+
+        .. note::
+            This method should be used strictly after all parameters have finished
+            doing apply operations, otherwise it will cause an error.
+
+        Example::
+
+        >>> net = Network().to(device)
+        >>> net.make_contiguous_params_group()
+        
+        """
+        self.cpg = flow.nn.utils.parameters_grouping.ContiguousParamsGroup(
+            list(self.parameters()), group_on_current_buffer=False
+        )
 
     def __repr__(self):
         extra_lines = []

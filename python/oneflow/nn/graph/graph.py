@@ -176,6 +176,7 @@ class Graph(object):
 
         # For load graph from runtime states.
         self.enable_save_runtime_state_dict(enable_get_runtime_state_dict)
+        self._is_from_runtime_state_dict = False
 
         # For run graph with dynamic shape cache
         self._run_with_cache = False
@@ -896,6 +897,11 @@ class Graph(object):
         # Filter to get unique states in graph
         state_op_names = self._filter_states()
         # Generate new config.
+        if self._shared_graph._is_from_runtime_state_dict == True:
+            # To avoid same graph name with the loaded graphs.
+            self._name = (
+                self._name + "_of_shared_from_loaded_" + self._shared_graph.name
+            )
         self._generate_config_proto()
         # Deal with parameter and buffer
         self._create_states_builder()
@@ -1116,6 +1122,11 @@ class Graph(object):
             destination["states"] = states_sub_destination
 
         destination["exe_plan"] = self._c_nn_graph.plan
+        if self._enable_shared_from_this == True:
+            destination["forward_graph"] = self._forward_job_proto
+            destination["compile_graph"] = self._compiled_job_proto
+
+        destination["id_state"] = oneflow._oneflow_internal.get_id_state()
 
         return destination
 
@@ -1135,6 +1146,10 @@ class Graph(object):
 
         build_graph_start = time.perf_counter()
 
+        # init id state
+        oneflow._oneflow_internal.set_id_state(state_dict["id_state"])
+
+        self._is_from_runtime_state_dict = True
         self._name = state_dict["graph_name"]
         if "oneflow_version" not in state_dict:
             state_dict["oneflow_version"] = "none"
@@ -1148,6 +1163,7 @@ class Graph(object):
         self._generate_config_proto()
         self.__print(0, 0, self._shallow_repr() + " start loading a graph and plan.")
         self._job_id = state_dict["job_id"]
+
         # Create a c nn graph to run with lazy runtime.
         self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(
             self._name,
@@ -1194,6 +1210,17 @@ class Graph(object):
             *_eager_outputs_index,
         )
         self._eager_outputs = _eager_outputs
+
+        # The base graph need extra info to create new shared graph
+        if self._enable_shared_from_this == True:
+            self._forward_job_proto = state_dict["forward_graph"]
+            self._compiled_job_proto = state_dict["compile_graph"]
+            self._build_eager_outputs = self._eager_outputs
+            self._out2name = dict()
+            for output_idx in range(len(self._output_op_names)):
+                self._out2name[
+                    self._outputs_tensor_tuple[output_idx]
+                ] = self._output_op_names[output_idx]
 
         # Load state tensor of modules
         if "oneflow_with_eager_tensor" in state_dict:

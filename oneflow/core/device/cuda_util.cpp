@@ -210,7 +210,6 @@ int GetCudaDeviceIndex() { return GlobalProcessCtx::LocalRank(); }
 
 int GetCudaDeviceCount() {
   /* static */ int cuda_device_count = 0;
-  CudaCurrentDeviceGuard dev_guard(GetCudaDeviceIndex());
   OF_CUDA_CHECK(cudaGetDeviceCount(&cuda_device_count));
   return cuda_device_count;
 }

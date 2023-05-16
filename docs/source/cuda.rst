@@ -32,6 +32,8 @@ Random Number Generator
     manual_seed
     get_rng_state
     get_rng_state_all
+    set_rng_state
+    set_rng_state_all
 
 
 GPU tensor
