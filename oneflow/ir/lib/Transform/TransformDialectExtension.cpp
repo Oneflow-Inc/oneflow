@@ -39,6 +39,8 @@ limitations under the License.
 #include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/ParallelLoopMapper.h"
+#include "mlir/Pass/PassManager.h"
+#include "mlir/Transforms/Passes.h"
 
 using namespace mlir;
 using namespace mlir::oneflow;
@@ -58,30 +60,9 @@ FailureOr<Value> gpuComprehensiveBufferizeAllocationFn(OpBuilder& builder, Locat
       gpu::AddressSpaceAttr::get(builder.getContext(), gpu::GPUDialect::getWorkgroupAddressSpace());
   MemRefType allocType = MemRefType::get(memRefType.getShape(), memRefType.getElementType(),
                                          AffineMap(), addressSpaceAttr);
-  Operation* parentOp = builder.getInsertionBlock()->getParentOp();
-  do {
-    // Note: alloc in device
-    if (parentOp->hasAttr(gpu::getMappingAttrName())) {
-      return builder
-          .create<memref::AllocOp>(loc, allocType, dynamicSizes,
-                                   builder.getI64IntegerAttr(alignment))
-          .getResult();
-    }
-
-    // Note: alloc in host
-    if (llvm::dyn_cast<func::FuncOp>(parentOp)) {
-      auto alloc = builder.create<memref::AllocOp>(loc, memRefType, dynamicSizes,
-                                                   builder.getI64IntegerAttr(alignment));
-      auto casted = builder.create<memref::MemorySpaceCastOp>(loc, allocType, alloc);
-      auto rankedType = casted.getType();
-      Type unrankedType =
-          UnrankedMemRefType::get(rankedType.getElementType(), rankedType.getMemorySpace());
-      auto unrankCasted = builder.create<memref::CastOp>(loc, unrankedType, casted);
-      builder.create<gpu::HostRegisterOp>(loc, unrankCasted);
-      return casted.getResult();
-    }
-  } while ((parentOp = parentOp->getParentOp()));
-  return failure();
+  return builder
+      .create<memref::AllocOp>(loc, allocType, dynamicSizes, builder.getI64IntegerAttr(alignment))
+      .getResult();
 }
 
 LogicalResult gpuComprehensiveBufferizeDeallocationFn(OpBuilder& builder, Location loc,
@@ -196,8 +177,10 @@ DiagnosedSilenceableFailure transform_dialect::ApplyPatternsOp::applyToOne(
     func::FuncOp lastFuncVisited;
     auto walkResult = target->walk([&](func::FuncOp funcOp) -> WalkResult {
       lastFuncVisited = funcOp;
-      eliminateCommonSubexpressions(funcOp);
-      if (failed(result)) return WalkResult::interrupt();
+      auto context = funcOp->getContext();
+      mlir::PassManager pm(context);
+      pm.addPass(createCSEPass());
+      if (failed(pm.run(funcOp))) return WalkResult::interrupt();
       return WalkResult::advance();
     });
     if (walkResult.wasInterrupted()) {

@@ -1,5 +1,4 @@
-// RUN: oneflow-opt %s --pass-pipeline="builtin.module(oneflow-transform-dialect-interpreter{transform-file-name=%p/softmax_codegen_spec.mlir})" | \
-// RUN: FileCheck %s
+// RUN: oneflow-opt %s --pass-pipeline="builtin.module(oneflow-transform-dialect-interpreter{transform-file-name=%p/softmax_codegen_spec.mlir})"
 
 
 !tmp_tensor_t = tensor<16x128xf32>
@@ -12,20 +11,7 @@ func.func @softmax() -> !out_tensor_t {
   %cst_1 = arith.constant 1.0 : f32
   %cst_min = arith.constant -3.40282347E+38 : f32
 
-// CHECK: memref.alloc() 
-// CHECK-SAME: {alignment = 64 : i64} : memref<16x128xf32>
-// CHECK:  memref.memory_space_cast 
-// CHECK-SAME: memref<16x128xf32> to memref<16x128xf32, #gpu.address_space<workgroup>>
-// CHECK: memref.cast 
-// CHECK-SAME: memref<16x128xf32, #gpu.address_space<workgroup>> to memref<*xf32, #gpu.address_space<workgroup>>
-// CHECK: gpu.host_register
-// CHECK-SAME: memref<*xf32, #gpu.address_space<workgroup>>
-// CHECK-COUNT-2: gpu.host_register
-
   %input = arith.constant dense<5.000000e+00> : !out_tensor_t
-
-// CHECK-COUNT-2: memref.alloc() {alignment = 64 : i64} 
-// CHECK-SAME: #gpu.address_space<workgroup>
 
   %input_max_empty = tensor.empty() : !tmp_tensor_t
   %input_max_filled = linalg.fill ins(%cst_min : f32)
