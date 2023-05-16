@@ -67,3 +67,7 @@ def digamma(x: Tensor):
 
 def psi(x: Tensor):
     return oneflow._C.digamma(x)
+
+
+def zeta(input, other):
+    return oneflow._C.zeta(input, other)
