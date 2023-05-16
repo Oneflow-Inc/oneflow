@@ -103,6 +103,7 @@ enum class BinaryOp {
   kRsqrtBackwardWithDyX,
   kSinBackwardWithDyX,
   kSinhBackwardWithDyX,
+  kSincBackwardWithDyX,
   kSqrtBackwardWithDyX,
   kSquareBackwardWithDyX,
   kTanBackwardWithDyX,

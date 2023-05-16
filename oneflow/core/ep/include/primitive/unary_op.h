@@ -78,6 +78,7 @@ enum class UnaryOp {
   kSign,
   kSin,
   kSinh,
+  kSinc,
   kSqrt,
   kSquare,
   kTan,

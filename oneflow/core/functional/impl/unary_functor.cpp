@@ -31,7 +31,8 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("sin", InplaceSin)     \
   OF_PP_MAKE_TUPLE_SEQ("floor", InplaceFloor) \
   OF_PP_MAKE_TUPLE_SEQ("ceil", InplaceCeil)   \
-  OF_PP_MAKE_TUPLE_SEQ("round", InplaceRound)
+  OF_PP_MAKE_TUPLE_SEQ("round", InplaceRound)  \
+  OF_PP_MAKE_TUPLE_SEQ("sinc", InplaceSinc)  
 
 #define UNARY_PRIMITIVE_FUNC_BWD_WITH_DY_X_SEQ    \
   OF_PP_MAKE_TUPLE_SEQ("abs", Abs)                \
@@ -61,6 +62,7 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("reciprocal", Reciprocal)     \
   OF_PP_MAKE_TUPLE_SEQ("rsqrt", Rsqrt)               \
   OF_PP_MAKE_TUPLE_SEQ("sinh", Sinh)                 \
+  OF_PP_MAKE_TUPLE_SEQ("sinc", Sinc)                 \
   OF_PP_MAKE_TUPLE_SEQ("sqrt", Sqrt)                 \
   OF_PP_MAKE_TUPLE_SEQ("square", Square)             \
   OF_PP_MAKE_TUPLE_SEQ("tan", Tan)                   \
@@ -205,6 +207,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   ADD_UNARY_FUNCTOR_WITH_DY_Y(Sigmoid, "Sigmoid");
   m.add_functor<SignFunctor>("Sign");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Sin, "Sin");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Sinc, "Sinc");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Sinh, "Sinh");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Sqrt, "Sqrt");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Square, "Square");
@@ -213,6 +216,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<NotEqualZeroFunctor>("NotEqualZero");
   m.add_functor<LogicalNotFunctor>("LogicalNot");
   m.add_functor<InplaceSinFunctor>("Sin_");
+  m.add_functor<InplaceSincFunctor>("Sinc_");
   m.add_functor<InplaceFloorFunctor>("Floor_");
   m.add_functor<InplaceCeilFunctor>("Ceil_");
   m.add_functor<InplaceRoundFunctor>("Round_");
