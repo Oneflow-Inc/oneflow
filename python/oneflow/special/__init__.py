@@ -27,3 +27,4 @@ from .special_ops import round
 from .special_ops import softmax
 from .special_ops import digamma
 from .special_ops import psi
+from .special_ops import zeta
