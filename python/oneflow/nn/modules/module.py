@@ -160,6 +160,7 @@ class Module(object):
         super().__setattr__("_modules", OrderedDict())
         super().__setattr__("_is_ddp_module", False)
         super().__setattr__("_oneflow_internal_module_tensor_applied_dict__", None)
+        super().__setattr__("cpg", None)
 
     def __getstate__(self):
         if not self._is_ddp_module:
@@ -1267,6 +1268,13 @@ class Module(object):
         return handle
 
     def _apply(self, fn):
+        if self.cpg is not None:
+            self.cpg = None
+            warnings.warn(
+                "deleted ContiguousParamsGroup since creating it before "
+                "apply operations like to(), to_global() will cause error."
+            )
+
         # A dict to store tensors that has already been applied.
         # There is no need to apply multiple times on a same tensor.
         if self._oneflow_internal_module_tensor_applied_dict__ is None:
@@ -1383,6 +1391,13 @@ class Module(object):
               (1): Linear(in_features=2, out_features=2, bias=True)
             )
         """
+        if self.cpg is not None:
+            self.cpg = None
+            warnings.warn(
+                "deleted ContiguousParamsGroup since creating it before "
+                "apply operations like to(), to_global() will cause error."
+            )
+
         for module in self.children():
             module.apply(fn)
         fn(self)
@@ -1783,6 +1798,27 @@ class Module(object):
         strings are acceptable.
         """
         return ""
+
+    def make_contiguous_params_group(self):
+        r"""Get contiguous parameters group after creating the whole module.
+
+        Rearrange the parameters of the model in the same dtype and device 
+        (or placement and sbp for global tensor) to form a single tensor for
+        accelerating the element-wise operations of parameters' data or gradient.
+
+        .. note::
+            This method should be used strictly after all parameters have finished
+            doing apply operations, otherwise it will cause an error.
+
+        Example::
+
+        >>> net = Network().to(device)
+        >>> net.make_contiguous_params_group()
+        
+        """
+        self.cpg = flow.nn.utils.parameters_grouping.ContiguousParamsGroup(
+            list(self.parameters()), group_on_current_buffer=False
+        )
 
     def __repr__(self):
         extra_lines = []
