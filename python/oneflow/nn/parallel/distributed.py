@@ -19,21 +19,8 @@ from collections import OrderedDict
 import oneflow as flow
 from oneflow.support.env_var_util import parse_boolean_from_env
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
+from oneflow.nn.utils.parameters_grouping import ContiguousParamsGroup
 from oneflow.framework.args_tree import ArgsTree
-
-
-def grad_setting_fn(module, param):
-    def grad_setting(grad):
-        if param.grad is None:
-            start = module._param_grad_offset_in_bucket[param]
-            bucket_index = module._bucket_index[param]
-            bucket_tensor = module._bucket_tensors[bucket_index]
-            param.grad = flow._C.slice_view_1d_contiguous(
-                bucket_tensor, start, start + param.numel()
-            ).view(param.shape)
-        return grad
-
-    return grad_setting
 
 
 def allreduce_fn(module, param, use_bucket):
@@ -114,26 +101,6 @@ def DistributedDataParallel(
                 list([param for param in module.parameters() if param.requires_grad])
             )
         )
-        module._param_grad_offset_in_bucket = {}
-
-        def numel_in_bucket(tensor: flow.Tensor):
-            def align(x: int, unit_size: int):
-                return (x + (unit_size - 1)) // unit_size * unit_size
-
-            # tensor memory should be align to 512 bytes for cuda operations,
-            # 4 is the bytes of a float number
-            return align(
-                tensor.numel(), flow._oneflow_internal.max_alignment_size() // 4
-            )
-
-        offset_in_bucket = 0
-        with flow.no_grad():
-            for i, param in enumerate(reversed_param_list):
-                assert param.is_leaf
-                if i % bucket_size == 0:
-                    offset_in_bucket = 0
-                module._param_grad_offset_in_bucket[param] = offset_in_bucket
-                offset_in_bucket += numel_in_bucket(param)
 
         module._bucket_index = {
             x: i // bucket_size for i, x in enumerate(reversed_param_list)
@@ -143,13 +110,8 @@ def DistributedDataParallel(
             for i in range(0, len(reversed_param_list), bucket_size)
         ]
 
-        bucket_elems = 0
-        module._bucket_tensors = []
-        for b in module._buckets:
-            bucket_elems = sum([numel_in_bucket(x) for x in b])
-            module._bucket_tensors.append(
-                flow.zeros(bucket_elems, dtype=flow.float32, device=device)
-            )
+        module._params_group = ContiguousParamsGroup(module._buckets)
+        module._bucket_tensors = module._params_group.grouped_parameters_grad
 
     ddp_state_for_reversed_params = OrderedDict(
         reversed([(x, [False, False]) for x in module.parameters() if x.requires_grad])
@@ -169,8 +131,6 @@ def DistributedDataParallel(
 
     for param in module.parameters():
         if param.requires_grad:
-            if use_bucket:
-                param.register_hook(grad_setting_fn(module, param))
             param._register_post_grad_accumulation_hook(inplace_mul_and_return_none)
             param._register_post_grad_accumulation_hook(
                 allreduce_fn(module, param, use_bucket)
