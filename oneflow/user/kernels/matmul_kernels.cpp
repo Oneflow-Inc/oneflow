@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <iostream>
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/framework/config_def.h"
@@ -289,6 +290,8 @@ class BroadcastMatmulKernel final : public user_op::OpKernel, public user_op::Cu
     const int64_t out_num_axes = out->shape_view().NumAxes();
     auto broadcast_matmul = NewBroadcastMatmulPrimitive(ctx);
     CHECK(broadcast_matmul);
+    // std::cout << "a_num_axes: " << a_num_axes << " b_num_axes: " << b_num_axes
+    //           << " out_num_axes: " << out_num_axes << std::endl;
     broadcast_matmul->Launch(ctx->stream(), alpha, a_num_axes, a->shape_view().ptr(), a->dptr(),
                              b_num_axes, b->shape_view().ptr(), b->dptr(), beta, out_num_axes,
                              out->shape_view().ptr(), out->mut_dptr());

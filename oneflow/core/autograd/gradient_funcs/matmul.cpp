@@ -222,6 +222,8 @@ Maybe<void> BroadcastMatmul::Apply(const BroadcastMatmulCaptureState* ctx,
     };
   };
   auto GetOutBatchDim = MakeGetBatchDim(out_num_axes, *out_shape);
+  // std::cout << "requires_grad_a: " << ctx->requires_grad_a
+  //           << " requires_grad_b: " << ctx->requires_grad_b << std::endl;
   if (ctx->requires_grad_a) {
     std::shared_ptr<Tensor> broadcast_grad_a;
     const auto& input_b = ctx->SavedTensors().at(ctx->b_index);
