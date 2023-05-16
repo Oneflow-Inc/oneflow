@@ -26,6 +26,8 @@ limitations under the License.
 #include "llvm/Support/raw_ostream.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Pass/PassManager.h"
+#include "mlir/Transforms/Passes.h"
 
 using namespace mlir;
 using namespace mlir::oneflow;
@@ -77,8 +79,10 @@ DiagnosedSilenceableFailure transform_dialect::ApplyPatternsOp::applyToOne(
     func::FuncOp lastFuncVisited;
     auto walkResult = target->walk([&](func::FuncOp funcOp) -> WalkResult {
       lastFuncVisited = funcOp;
-      eliminateCommonSubexpressions(funcOp);
-      if (failed(result)) return WalkResult::interrupt();
+      auto context = funcOp->getContext();
+      mlir::PassManager pm(context);
+      pm.addPass(createCSEPass());
+      if (failed(pm.run(funcOp))) return WalkResult::interrupt();
       return WalkResult::advance();
     });
     if (walkResult.wasInterrupted()) {

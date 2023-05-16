@@ -33,8 +33,6 @@ void registerTransformDialectExtension(::mlir::DialectRegistry& registry);
 void registerTransformDialectEraseSchedulePass();
 void registerTransformDialectInterpreterPass();
 
-void eliminateCommonSubexpressions(Operation* op);
-
 struct ApplyPatternsOpPatterns {
   bool canonicalization = false;
   bool cse = false;
