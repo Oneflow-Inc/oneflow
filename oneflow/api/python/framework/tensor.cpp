@@ -638,6 +638,38 @@ static int PyTensorObject_set_data(PyObject* self, PyObject* data, void* unused)
   END_HANDLE_ERRORS_RET(-1)
 }
 
+static PyObject* PyTensorObject_ref_tensor(PyObject* self, void* unused) {
+  HANDLE_ERRORS
+  return PyTensor_New(ASSERT_PTR(PyTensor_Unpack(self)->ref_tensor()));
+  END_HANDLE_ERRORS
+}
+
+static int PyTensorObject_set_ref_tensor(PyObject* self, PyObject* ref, void* unused) {
+  HANDLE_ERRORS
+  const auto& t = PyTensor_Unpack(self);
+  if (self == ref) { PyErr_Format(PyExc_RuntimeError, "can't assign Tensor as its own reference"); }
+  if (ref && ref != Py_None) {
+    ASSERT(t->set_ref_tensor(PyTensor_Unpack(ref)));
+  } else {
+    ASSERT(t->set_ref_tensor(NULL));
+  }
+  return 0;
+  END_HANDLE_ERRORS_RET(-1)
+}
+
+static PyObject* PyTensorObject_ref_index(PyObject* self, void* unused) {
+  return functional::CastToPyObject(PyTensor_Unpack(self)->ref_index());
+}
+
+static int PyTensorObject_set_ref_index(PyObject* self, PyObject* index, void* unused) {
+  HANDLE_ERRORS
+  const auto& t = PyTensor_Unpack(self);
+  CHECK_OR_THROW(PyLong_Check(index)) << Error::RuntimeError() << "Index must be Integer type.";
+  ASSERT(t->set_ref_index(PyLong_AsLong(index)));
+  return 0;
+  END_HANDLE_ERRORS_RET(-1)
+}
+
 static PyObject* PyTensorObject_grad_fn(PyObject* self, void* unused) {
   return functional::CastToPyObject(PyTensor_Unpack(self)->grad_fn_node());
 }
@@ -711,6 +743,10 @@ static PyGetSetDef PyTensorObject_properties[] = {
      NULL},
     {PYGETSET_NAME("data"), (getter)PyTensorObject_data, (setter)PyTensorObject_set_data, NULL,
      NULL},
+    {PYGETSET_NAME("_ref_tensor"), (getter)PyTensorObject_ref_tensor,
+     (setter)PyTensorObject_set_ref_tensor, NULL, NULL},
+    {PYGETSET_NAME("_ref_index"), (getter)PyTensorObject_ref_index,
+     (setter)PyTensorObject_set_ref_index, NULL, NULL},
     {PYGETSET_NAME("grad_fn"), (getter)PyTensorObject_grad_fn, NULL, NULL, NULL},
     {PYGETSET_NAME("is_leaf"), (getter)PyTensorObject_is_leaf, NULL, NULL, NULL},
     {PYGETSET_NAME("requires_grad"), (getter)PyTensorObject_requires_grad,

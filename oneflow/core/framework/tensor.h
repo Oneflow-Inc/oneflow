@@ -48,6 +48,8 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   int64_t dim(int64_t index) const { return shape()->At(index); }
   int64_t nelement() const { return shape()->elem_cnt(); }
   int64_t ndim() const { return shape()->NumAxes(); }
+  Maybe<Tensor> ref_tensor() const { return ref_tensor_.lock(); }
+  int64_t ref_index() const { return ref_index_; }
 
   virtual std::shared_ptr<const Shape> shape() const = 0;
   virtual Symbol<DType> dtype() const = 0;
@@ -130,6 +132,8 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual Maybe<GlobalTensor> AsGlobalTensor() = 0;
 
   Maybe<void> BorrowTensorName(const Tensor* other) const;
+  Maybe<void> set_ref_tensor(const std::shared_ptr<Tensor>& ref);
+  Maybe<void> set_ref_index(const int64_t index);
 
   // The same tensor instance should share the python object to ensure that
   // their id are consistent in Python. That is if x and y are hold the same tensor,
@@ -142,11 +146,17 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   void set_owns_pyobj(bool owns_pyobj) { owns_pyobj_ = owns_pyobj; }
 
  protected:
-  Tensor() : pyobj_ptr_(nullptr, [](void*) {}), owns_pyobj_(false) {}
+  Tensor()
+      : pyobj_ptr_(nullptr, [](void*) {}),
+        owns_pyobj_(false),
+        ref_tensor_(std::weak_ptr<Tensor>()),
+        ref_index_(0) {}
 
  private:
   std::unique_ptr<void, void (*)(void*)> pyobj_ptr_;
   bool owns_pyobj_;
+  std::weak_ptr<Tensor> ref_tensor_;
+  int64_t ref_index_;
 };
 
 class StaticZerosTensor final : public Tensor {
