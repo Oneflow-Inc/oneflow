@@ -99,7 +99,9 @@ class RegstDesc final {
 
   // util
   void EraseUninitializedShapeBlob();
-  void ToProto(RegstDescProto*) const;
+  void InitFromProtoExceptConsumers(const RegstDescProto& proto);
+  void ToProto(RegstDescProto* proto) const { ToProto(proto, /*check*/ true); }
+  void ToProto(RegstDescProto*, bool check) const;
   bool HasSameBlobDescs(const RegstDesc*);
 
  private:
@@ -116,8 +118,8 @@ class RegstDesc final {
   bool enable_reuse_mem_;
   int32_t mem_block_id_;
   int64_t mem_block_offset_;
-  int32_t hint_inplace_consumed_regst_desc_id_;
-  int32_t force_inplace_consumed_regst_desc_id_;
+  int64_t hint_inplace_consumed_regst_desc_id_;
+  int64_t force_inplace_consumed_regst_desc_id_;
 
   std::shared_ptr<Shape> data_regst_time_shape_;
 };

@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,30 +12,13 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#ifndef ONEFLOW_CORE_COMMON_SINGLETON_PTR_H_
-#define ONEFLOW_CORE_COMMON_SINGLETON_PTR_H_
+"""
+import os
+import unittest
 
-#include <memory>
 
-namespace oneflow {
-
-namespace private_detail {
-
-template<typename T>
-const T* GlobalSingletonPtr() {
-  static std::unique_ptr<const T> value(new T());
-  return value.get();
-}
-
-}  // namespace private_detail
-
-template<typename T>
-const T* SingletonPtr() {
-  thread_local const T* value = private_detail::GlobalSingletonPtr<T>();
-  return value;
-}
-
-}  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_COMMON_SINGLETON_PTR_H_
+class MLIRTestCase(unittest.TestCase):
+    def tearDown(self):
+        for key in os.environ.keys():
+            if key.startswith("ONEFLOW_MLIR"):
+                os.environ.pop(key)

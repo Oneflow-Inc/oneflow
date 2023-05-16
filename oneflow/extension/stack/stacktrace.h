@@ -108,6 +108,7 @@ limitations under the License.
 #include <vector>
 #include <exception>
 #include <iterator>
+#include <regex>
 
 #if defined(BACKWARD_SYSTEM_LINUX)
 
@@ -558,7 +559,7 @@ struct default_delete {
   void operator()(T& ptr) const { delete ptr; }
 };
 
-template<typename T, typename Deleter = deleter<void, void*, &::free> >
+template<typename T, typename Deleter = deleter<void, void*, &::free>>
 class handle {
   struct dummy;
   T _val;
@@ -639,6 +640,177 @@ class handle {
   }
 };
 
+namespace {
+// how many args to keep in template params
+// e.g. {std::vector, 1} means std::vector<T0, T1, T2, ..., Tn> -> std::vector<T0>
+static std::unordered_map<std::string, size_t> class2keepsize{
+    {"std::vector", 1},
+    {"Maybe", 1},
+};
+
+class SignatureType {
+ public:
+  SignatureType(const std::string& name, const std::vector<SignatureType>& args,
+                const std::string& specifier)
+      : name(name), args(args), specifier(specifier){};
+  std::string name;
+  std::vector<SignatureType> args;
+  std::string specifier;
+  using pss = std::pair<std::string, std::string>;
+
+  size_t get_keep_size(const std::string& name) {
+    auto it = class2keepsize.find(name);
+    if (it == class2keepsize.end()) {
+      return 0;
+    } else {
+      return it->second;
+    }
+  }
+
+  std::string to_string() {
+    std::string str_args, str_specifer;
+
+    if (args.empty()) {
+      str_args = "";
+    } else {
+      str_args = "<";
+      size_t keep_size = get_keep_size(name);
+      if (keep_size == 0) { keep_size = args.size(); }
+      for (int i = 0; i < keep_size; i++) {
+        SignatureType type = args[i];
+        str_args += type.to_string() + ((i != (keep_size - 1)) ? ", " : "");
+      };
+      str_args += "> ";
+    }
+
+    return name + str_args + specifier;
+  }
+
+  static std::pair<std::vector<SignatureType>, std::string> parse_args(std::string s) {
+    std::vector<SignatureType> args;
+    while (s[0] != '>') {
+      s = s.substr(1, s.size() - 1);
+      auto type_and_rest = parse_type(s);
+      s = type_and_rest.second;
+      args.push_back(type_and_rest.first);
+    }
+    return {args, s.substr(1, s.size() - 1)};
+  }
+
+  static pss parse_spaces(const std::string& inp) {
+    size_t pos = inp.find_first_not_of(" ");
+    if (pos == 0) {
+      return {"", inp};
+    } else {
+      return {inp.substr(0, pos), inp.substr(pos, inp.size() - pos)};
+    }
+  }
+
+  static pss parse_type_specifier(const std::string& inp) {
+    static std::vector<std::string> specifier_list{
+        "const&",
+        "const",
+        "volatile",
+    };
+    for (const auto& specifier : specifier_list) {
+      if (inp.rfind(specifier, 0) == 0) {
+        return {specifier, inp.substr(specifier.size(), inp.size() - specifier.size())};
+      }
+    }
+    return {"", inp};
+  }
+
+  static pss parse_simple_type_id(const std::string& inp) {
+    auto rest = parse_spaces(inp).second;
+    std::smatch found;
+    std::regex_search(rest, found, std::regex("^((\\w|:|\\*|&)+)"));
+    std::string name = found[0];
+    return {name, rest.substr(name.size(), rest.size() - name.size())};
+  }
+
+  static std::pair<SignatureType, std::string> parse_type_id(const std::string& inp) {
+    auto rest = parse_spaces(inp).second;
+    std::smatch found;
+    std::regex_search(rest, found, std::regex("^((\\w|:|\\*|&)+)"));
+    std::string name = found[0];
+    rest = rest.substr(name.size(), rest.size() - name.size());
+    rest = parse_spaces(rest).second;
+    auto spec_and_rest = parse_type_specifier(rest);
+    auto type_spec = spec_and_rest.first;
+    rest = spec_and_rest.second;
+    return {SignatureType(name, {}, type_spec), rest};
+  }
+
+  static std::pair<SignatureType, std::string> parse_type(const std::string& inp) {
+    auto name_and_rest = parse_simple_type_id(inp);
+    auto type_name = name_and_rest.first;
+    auto rest = name_and_rest.second;
+    std::vector<SignatureType> args;
+    if (rest[0] == '<') {
+      auto args_and_rest = parse_args(rest);
+      args = args_and_rest.first;
+      rest = args_and_rest.second;
+    }
+    rest = parse_spaces(rest).second;
+    auto specifier_and_rest = parse_type_specifier(rest);
+    auto type_spec = specifier_and_rest.first;
+    rest = specifier_and_rest.second;
+    return {SignatureType(type_name, args, type_spec), rest};
+  }
+};
+
+std::string replace_each(const std::string& signature, const std::string& src,
+                         const std::string& dst) {
+  std::string result;
+  std::string::size_type substr_begin = 0;
+  for (std::string::size_type pos = 0;
+       signature.npos != (pos = signature.find(src.data(), pos, src.length()));) {
+    result.insert(result.end(), signature.begin() + substr_begin, signature.begin() + pos);
+    result += dst;
+    substr_begin = pos + src.length();
+    pos = substr_begin;
+  }
+  result.insert(result.end(), signature.begin() + substr_begin, signature.end());
+  return result;
+}
+
+std::string replace(const std::string& signature) {
+  static std::vector<std::pair<std::string, std::string>> replace_pairs = {
+      {"oneflow::one::", ""},
+      {"oneflow::", ""},
+      {"std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >",
+       "std::string"},
+  };
+  std::string result = signature;
+  for (const auto& p : replace_pairs) { result = replace_each(result, p.first, p.second); }
+  return result;
+}
+
+std::string simplify_type(const std::string& inp, const std::string& type_name) {
+  std::string result;
+  std::string::size_type begin = 0;
+  std::string::size_type pos = 0;
+  for (; inp.npos != (pos = inp.find(type_name.data(), pos, type_name.length()));) {
+    result.insert(result.end(), inp.begin() + begin, inp.begin() + pos);
+    auto type_and_rest = SignatureType::parse_type(inp.substr(pos, inp.size() - pos));
+    result += type_and_rest.first.to_string();
+    begin = inp.size() - type_and_rest.second.size();
+    pos = begin;
+  }
+  result.insert(result.end(), inp.begin() + begin, inp.end());
+  return result;
+}
+
+std::string simplify(const std::string& inp) {
+  std::string result = replace(inp);
+  for (const auto& type_pair : class2keepsize) {
+    auto type_name = type_pair.first;
+    result = simplify_type(result, type_name);
+  }
+  return result;
+}
+}  // namespace
+
 // Default demangler implementation (do nothing).
 template<typename TAG>
 struct demangler_impl {
@@ -657,7 +829,9 @@ struct demangler_impl<system_tag::current_tag> {
         abi::__cxa_demangle(funcname, _demangle_buffer.get(), &_demangle_buffer_length, nullptr);
     if (result) {
       _demangle_buffer.update(result);
-      return result;
+      // Modify: simplify func signature
+      return simplify(result);
+      // return result;
     }
     return funcname;
   }
@@ -949,7 +1123,8 @@ class StackTraceImpl<system_tag::current_tag> : public StackTraceImplHolder {
 
     if (context()) {
       ucontext_t* uctx = reinterpret_cast<ucontext_t*>(context());
-#ifdef REG_RIP          // x86_64
+// x86_64
+#ifdef REG_RIP
       if (uctx->uc_mcontext.gregs[REG_RIP] == reinterpret_cast<greg_t>(error_addr())) {
         uctx->uc_mcontext.gregs[REG_RIP] =
             *reinterpret_cast<size_t*>(uctx->uc_mcontext.gregs[REG_RSP]);
@@ -957,7 +1132,8 @@ class StackTraceImpl<system_tag::current_tag> : public StackTraceImplHolder {
       _stacktrace[index] = reinterpret_cast<void*>(uctx->uc_mcontext.gregs[REG_RIP]);
       ++index;
       ctx = *reinterpret_cast<unw_context_t*>(uctx);
-#elif defined(REG_EIP)  // x86_32
+// x86_32
+#elif defined(REG_EIP)
       if (uctx->uc_mcontext.gregs[REG_EIP] == reinterpret_cast<greg_t>(error_addr())) {
         uctx->uc_mcontext.gregs[REG_EIP] =
             *reinterpret_cast<size_t*>(uctx->uc_mcontext.gregs[REG_ESP]);
@@ -1531,7 +1707,7 @@ class TraceResolverLinuxImpl<trace_resolver_tag::libbfd> : public TraceResolverL
  private:
   bool _bfd_loaded;
 
-  typedef details::handle<bfd*, details::deleter<bfd_boolean, bfd*, &bfd_close> > bfd_handle_t;
+  typedef details::handle<bfd*, details::deleter<bfd_boolean, bfd*, &bfd_close>> bfd_handle_t;
 
   typedef details::handle<asymbol**> bfd_symtab_t;
 
@@ -1865,8 +2041,8 @@ class TraceResolverLinuxImpl<trace_resolver_tag::libdw> : public TraceResolverLi
   }
 
  private:
-  typedef details::handle<Dwfl*, details::deleter<void, Dwfl*, &dwfl_end> > dwfl_handle_t;
-  details::handle<Dwfl_Callbacks*, details::default_delete<Dwfl_Callbacks*> > _dwfl_cb;
+  typedef details::handle<Dwfl*, details::deleter<void, Dwfl*, &dwfl_end>> dwfl_handle_t;
+  details::handle<Dwfl_Callbacks*, details::default_delete<Dwfl_Callbacks*>> _dwfl_cb;
   dwfl_handle_t _dwfl_handle;
   bool _dwfl_handle_initialized;
 
@@ -2144,11 +2320,11 @@ class TraceResolverLinuxImpl<trace_resolver_tag::libdwarf> : public TraceResolve
  private:
   bool _dwarf_loaded;
 
-  typedef details::handle<int, details::deleter<int, int, &::close> > dwarf_file_t;
+  typedef details::handle<int, details::deleter<int, int, &::close>> dwarf_file_t;
 
-  typedef details::handle<Elf*, details::deleter<int, Elf*, &elf_end> > dwarf_elf_t;
+  typedef details::handle<Elf*, details::deleter<int, Elf*, &elf_end>> dwarf_elf_t;
 
-  typedef details::handle<Dwarf_Debug, details::deleter<int, Dwarf_Debug, &close_dwarf> >
+  typedef details::handle<Dwarf_Debug, details::deleter<int, Dwarf_Debug, &close_dwarf>>
       dwarf_handle_t;
 
   typedef std::map<Dwarf_Addr, int> die_linemap_t;
@@ -3416,7 +3592,7 @@ class TraceResolver : public TraceResolverImpl<system_tag::current_tag> {};
 
 class SourceFile {
  public:
-  typedef std::vector<std::pair<unsigned, std::string> > lines_t;
+  typedef std::vector<std::pair<unsigned, std::string>> lines_t;
 
   SourceFile() {}
   SourceFile(const std::string& path) {
@@ -3524,7 +3700,7 @@ class SourceFile {
   }
 
  private:
-  details::handle<std::ifstream*, details::default_delete<std::ifstream*> > _file;
+  details::handle<std::ifstream*, details::default_delete<std::ifstream*>> _file;
 
   static std::vector<std::string> get_paths_from_env_variable_impl() {
     std::vector<std::string> paths;

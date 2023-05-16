@@ -31,6 +31,7 @@ def _test_einsum_matrix_column_sum(test_case, placement, sbp):
 
 
 class TestEinsumGlobal(flow.unittest.TestCase):
+    @unittest.skip("skip for now, becase it failed 8 times in past week")
     @globaltest
     def test_einsum_matrix_column_sum(test_case):
         for placement in all_placement():

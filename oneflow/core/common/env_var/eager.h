@@ -17,6 +17,9 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_ENV_VAR_EAGER_H_
 
 #include "oneflow/core/common/env_var/env_var.h"
+#ifdef WITH_CUDA
+#include <nccl.h>
+#endif
 
 namespace oneflow {
 
@@ -27,6 +30,18 @@ DEFINE_THREAD_LOCAL_ENV_BOOL(ONEFLOW_EAGER_ENABLE_LOCAL_INFER_CACHE, true);
 // NOTE: use env variable 'ONEFLOW_EAGER_TENSOR_INFER_CACHE_SIZE' indicate the size of
 // infer cache in op interpret.
 DEFINE_THREAD_LOCAL_ENV_INTEGER(ONEFLOW_EAGER_TENSOR_INFER_CACHE_SIZE, 128 * 1024);
+
+DEFINE_THREAD_LOCAL_ENV_BOOL(ONEFLOW_EAGER_NCCL_USE_COMPUTE_STREAM, false);
+
+inline bool EagerNcclUseComputeStream() {
+#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+  static bool eager_nccl_use_compute_stream =
+      ThreadLocalEnvBool<ONEFLOW_EAGER_NCCL_USE_COMPUTE_STREAM>();
+  return eager_nccl_use_compute_stream;
+#else
+  return false;
+#endif
+}
 
 }  // namespace oneflow
 #endif  // ONEFLOW_CORE_COMMON_ENV_VAR_EAGER_H_

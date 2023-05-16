@@ -68,6 +68,7 @@ locals()["strided"] = oneflow._oneflow_internal.strided
 
 locals()["memory_format"] = oneflow._oneflow_internal.memory_format
 locals()["contiguous_format"] = oneflow._oneflow_internal.contiguous_format
+locals()["channels_last"] = oneflow._oneflow_internal.channels_last
 locals()["preserve_format"] = oneflow._oneflow_internal.preserve_format
 from oneflow.version import __version__
 from oneflow.version import __git_commit__
@@ -363,6 +364,7 @@ import oneflow.nn.image
 
 from oneflow.framework.check_point_v2 import load
 from oneflow.framework.check_point_v2 import save
+from oneflow.framework.check_point_v2 import frombuffer
 from oneflow.framework.dtype import convert_oneflow_dtype_to_numpy_dtype, dtypes
 from oneflow.framework.function_util import FunctionConfig
 from oneflow.framework.function_util import FunctionConfig as function_config
@@ -380,6 +382,7 @@ from oneflow.framework.generator import (
 # from oneflow.framework.model import Model
 import oneflow.utils.tensor
 import oneflow.utils.global_view
+import oneflow.utils.model_zoo
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import is_nonzero
 from oneflow._oneflow_internal import to_dlpack
@@ -427,6 +430,7 @@ from oneflow.nn.modules.numel import numel_op as numel
 from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
 from oneflow.nn.modules.unique import unique_op as unique
 from oneflow._C import normal
+from oneflow._C import normal_
 from oneflow._C import rand
 from oneflow._C import randn
 from oneflow._C import randn_like
@@ -499,8 +503,4 @@ import oneflow.remat
 
 if oneflow._oneflow_internal.flags.with_mlir():
     oneflow_internal_path = oneflow._oneflow_internal.__file__
-    if os.getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS") or os.getenv(
-        "ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH"
-    ):
-        print("MLIR JIT engine will load:", oneflow_internal_path, file=sys.stderr)
-        oneflow._oneflow_internal.ir.load_jit_shared_lib(oneflow_internal_path)
+    oneflow._oneflow_internal.ir.load_jit_shared_lib(oneflow_internal_path)

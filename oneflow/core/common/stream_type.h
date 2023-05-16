@@ -19,7 +19,7 @@ limitations under the License.
 #include <functional>
 #include <array>
 #include "oneflow/core/common/preprocessor.h"
-#include "glog/logging.h"
+#include "oneflow/core/common/throw.h"
 
 namespace oneflow {
 

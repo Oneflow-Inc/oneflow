@@ -15,6 +15,8 @@ limitations under the License.
 */
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/graph/nccl_send_recv_boxing_task_node.h"
+#include "oneflow/core/graph/boxing_task_graph.pb.h"
+#include "oneflow/core/job/placement.pb.h"
 
 namespace oneflow {
 
@@ -83,7 +85,7 @@ void NcclSendRecvBoxingTaskNode::BuildExecGphAndRegst() {
     node->BindBnWithRegst(sole_op->SoleObn(), out_regst);
   }
   node->AddBnToRegstAndBindIt(&Operator::tmp_bns, GetProducedRegst("tmp"));
-  node->InferBlobDescs(parallel_ctx());
+  (node->*GetInferBlobDescsMethod())(parallel_ctx());
 }
 
 void NcclSendRecvBoxingTaskNode::InferProducedDataRegstTimeShape() {
@@ -91,6 +93,43 @@ void NcclSendRecvBoxingTaskNode::InferProducedDataRegstTimeShape() {
   if (out_regst != nullptr) { out_regst->mut_data_regst_time_shape()->reset(new Shape({1, 1})); }
   auto tmp_regst = GetProducedRegst("tmp");
   tmp_regst->mut_data_regst_time_shape()->reset(new Shape({1, 1}));
+}
+
+Maybe<void> NcclSendRecvBoxingTaskNode::InitTransportTaskFromProto(
+    const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) {
+  CHECK_OR_RETURN(transport_task_proto.has_nccl_send_recv_boxing_task())
+      << "not a serialized NcclSendRecvBoxingTaskNode. debug string: "
+      << transport_task_proto.DebugString();
+  const auto& proto = transport_task_proto.nccl_send_recv_boxing_task();
+  logical_shape_ = Shape(proto.logical_shape());
+  data_type_ = proto.data_type();
+  src_nd_sbp_ = proto.src_nd_sbp();
+  dst_nd_sbp_ = proto.dst_nd_sbp();
+  src_parallel_conf_ = proto.src_parallel_conf();
+  dst_parallel_conf_ = proto.dst_parallel_conf();
+  parallel_conf_ = proto.parallel_conf();
+  parallel_ctx_ = proto.parallel_ctx();
+  has_input_ = proto.has_input();
+  has_output_ = proto.has_output();
+  stream_name_ = proto.stream_name();
+  return Maybe<void>::Ok();
+}
+
+void NcclSendRecvBoxingTaskNode::ToTransportTaskProto(
+    TransportTaskProto* transport_task_proto) const {
+  ToProto(transport_task_proto->mutable_task_proto(), /*check=*/false);
+  auto* proto = transport_task_proto->mutable_nccl_send_recv_boxing_task();
+  logical_shape_.ToProto(proto->mutable_logical_shape());
+  proto->set_data_type(data_type_);
+  *proto->mutable_src_nd_sbp() = src_nd_sbp_;
+  *proto->mutable_dst_nd_sbp() = dst_nd_sbp_;
+  *proto->mutable_src_parallel_conf() = src_parallel_conf_;
+  *proto->mutable_dst_parallel_conf() = dst_parallel_conf_;
+  *proto->mutable_parallel_conf() = parallel_conf_;
+  *proto->mutable_parallel_ctx() = parallel_ctx_;
+  proto->set_has_input(has_input_);
+  proto->set_has_output(has_output_);
+  proto->set_stream_name(stream_name_);
 }
 
 }  // namespace oneflow

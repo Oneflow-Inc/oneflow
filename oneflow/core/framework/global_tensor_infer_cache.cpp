@@ -99,7 +99,8 @@ Maybe<void> GlobalTensorMetaInferArgs::MakeInputBlobDescs(const UserOpExpr& user
   blob_descs->reserve(input_arg_tuple.size());
   for (int i = 0; i < input_arg_tuple.size(); ++i) {
     const auto& tensor_meta = *input_global_tensor_metas_[i].tensor_meta();
-    blob_descs->emplace_back(tensor_meta.shape(), tensor_meta.stride(), tensor_meta.data_type());
+    blob_descs->emplace_back(tensor_meta.shape(), tensor_meta.stride(), tensor_meta.data_type(),
+                             tensor_meta.memory_format());
   }
   return Maybe<void>::Ok();
 }
@@ -303,9 +304,9 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
     const auto& old_global_tensor_meta = infer_args.input_global_tensor_metas()[i].tensor_meta();
     const auto& ibn = user_op_expr.input_arg_tuple()->indexed_bns().at(i);
     const auto& nd_sbp = SymbolOf(*JUST(op->NdSbp4BnInOp(ibn)));
-    GlobalTensorMeta global_tensor_meta(old_global_tensor_meta->shape(),
-                                        old_global_tensor_meta->dtype(), nd_sbp,
-                                        old_global_tensor_meta->parallel_desc());
+    GlobalTensorMeta global_tensor_meta(
+        old_global_tensor_meta->shape(), old_global_tensor_meta->dtype(),
+        old_global_tensor_meta->memory_format(), nd_sbp, old_global_tensor_meta->parallel_desc());
     (*input_metas)[i] = SymbolOf(global_tensor_meta);
   }
   auto* output_metas = result->mut_output_tensor_metas();
@@ -313,9 +314,10 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
     const auto& output_mut_meta = output_mut_metas.at(i);
     const auto& shape = output_mut_meta.tensor_meta().shape();
     DataType data_type = output_mut_meta.tensor_meta().data_type();
+    MemoryFormat memory_format = output_mut_meta.tensor_meta().memory_format();
     const auto& obn = user_op_expr.output_arg_tuple()->indexed_bns().at(i);
     const auto& nd_sbp = SymbolOf(*JUST(op->NdSbp4BnInOp(obn)));
-    GlobalTensorMeta tensor_meta(shape, data_type, nd_sbp, parallel_desc);
+    GlobalTensorMeta tensor_meta(shape, data_type, memory_format, nd_sbp, parallel_desc);
     output_metas->at(i) = SymbolOf(tensor_meta);
   }
   result->set_stream(JUST(InferDeviceAndStream(user_op_expr, infer_args)));
@@ -344,8 +346,9 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
     const auto& output_mut_meta = output_mut_metas.at(i);
     const auto& shape = output_mut_meta.tensor_meta().shape();
     DataType data_type = output_mut_meta.tensor_meta().data_type();
+    MemoryFormat memory_format = output_mut_meta.tensor_meta().memory_format();
     const auto& nd_sbp = infer_args.nd_sbp();
-    GlobalTensorMeta tensor_meta(shape, data_type, nd_sbp, parallel_desc);
+    GlobalTensorMeta tensor_meta(shape, data_type, memory_format, nd_sbp, parallel_desc);
     output_metas->at(i) = SymbolOf(tensor_meta);
   }
   result->set_stream(JUST(GetDefaultStreamByPlacement(parallel_desc)));

@@ -380,10 +380,17 @@ def _where(self, x=None, y=None):
     return flow.where(self, x, y)
 
 
-def _numpy(self):
+def _numpy(self, dtype=None):
     assert (
         not self.is_lazy
     ), "tensor.numpy() is not allowed to be called in nn.Graph.build(*args) or be called by lazy tensor."
+    if self.is_global:
+        if self.placement.type == "meta":
+            raise TypeError("can't convert meta device type global tensor to numpy.")
+    else:
+        if self.device.type == "meta":
+            raise TypeError("can't convert meta device type local tensor to numpy.")
+
     if self.dtype == flow.tensor_buffer:
         shapes, dtypes = self._tensor_buffer_shapes_and_dtypes
         tensors = flow.tensor_buffer_to_list_of_tensors(self, shapes, dtypes)
@@ -401,7 +408,10 @@ def _numpy(self):
     assert self.is_local
     if self.device != flow.device("cpu"):
         self = self.cpu()
-    return self.to_numpy()
+    result = self.to_numpy()
+    if dtype is None:
+        return result
+    return result.astype(dtype)
 
 
 def zero_(self):
@@ -523,6 +533,11 @@ def _conj_physical(self):
     return flow._C.conj_physical(self)
 
 
+@property
+def _layout(self):
+    return flow.strided
+
+
 def RegisterMethods():
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _numpy
@@ -594,6 +609,7 @@ def RegisterMethods():
     Tensor.imag = _imag
     Tensor.conj = _conj
     Tensor.conj_physical = _conj_physical
+    Tensor.layout = _layout
 
 
 def register_tensor_op(op_name):

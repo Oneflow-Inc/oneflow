@@ -61,7 +61,7 @@ ONEFLOW_MAGIC_KEY = "__oneflow__"
 MAP_LOCATION: TypeAlias = Optional[
     Union[Callable[[Tensor, str], Tensor], flow.device, str, flow.placement]
 ]
-FILE_LIKE: TypeAlias = Union[str, os.PathLike, BinaryIO, IO[bytes], Path]
+FILE_LIKE: TypeAlias = Union[os.PathLike, BinaryIO, IO[bytes], Path]
 
 
 class _opener(object):
@@ -107,7 +107,7 @@ def _open_file_like(path_or_buffer, mode):
 
 
 def _is_path(path_or_buffer):
-    return isinstance(path_or_buffer, str) or isinstance(path_or_buffer, Path)
+    return isinstance(path_or_buffer, Path)
 
 
 def _check_seekable(f) -> bool:
@@ -475,9 +475,8 @@ def tensor_pickling_context(
 
 
 def is_oneflow_pickle_file(path: FILE_LIKE, support_pytorch_format: bool) -> bool:
-    if _is_path(path):
-        if not path.is_file():
-            return False
+    if _is_path(path) and not path.is_file():
+        return False
     try:
         with _open_file_like(path, "rb") as f:
             content = pickle.load(f)
@@ -517,20 +516,27 @@ def load_from_oneflow_single_file(
 def is_file_and_support_pytorch_format(
     path: FILE_LIKE, support_pytorch_format: bool
 ) -> bool:
-    if _is_path(path):
-        return path.is_file() and support_pytorch_format
-    return support_pytorch_format
+    if not support_pytorch_format:
+        return False
+    if _is_path(path) and not path.is_file():
+        return False
+    try:
+        with flow.mock_torch.disable():
+            import torch
+
+            content = torch.load(path, map_location="cpu")
+            return True, (content,)
+    except:
+        return False
 
 
 @load_if(is_file_and_support_pytorch_format)
 def load_from_pytorch_file(
-    path: FILE_LIKE, global_src_rank, map_location: MAP_LOCATION,
+    path: FILE_LIKE, global_src_rank, map_location: MAP_LOCATION, torch_obj: Any = None
 ):
-    with flow.mock_torch.disable():
-        import torch
-
-        if global_src_rank is None or global_src_rank == flow.env.get_rank():
-            torch_obj = torch.load(path, map_location="cpu")
+    if torch_obj is not None:
+        with flow.mock_torch.disable():
+            import torch
 
             def torch_tensor_to_flow(x):
                 if isinstance(x, torch.Tensor):
@@ -539,17 +545,17 @@ def load_from_pytorch_file(
                     return x
 
             flow_obj = ArgsTree(torch_obj).map_leaf(torch_tensor_to_flow)
-        else:
-            flow_obj = None
-        if global_src_rank is not None:
-            flow_obj = flow.utils.global_view.to_global(
-                flow_obj,
-                placement=flow.placement("cpu", [global_src_rank]),
-                sbp=flow.sbp.broadcast,
-                warn_on_non_tensor_leaf=False,
-            )
-        flow_obj = _map_location(flow_obj, map_location)
-        return flow_obj
+    else:
+        flow_obj = None
+    if global_src_rank is not None:
+        flow_obj = flow.utils.global_view.to_global(
+            flow_obj,
+            placement=flow.placement("cpu", [global_src_rank]),
+            sbp=flow.sbp.broadcast,
+            warn_on_non_tensor_leaf=False,
+        )
+    flow_obj = _map_location(flow_obj, map_location)
+    return flow_obj
 
 
 def is_dir_and_has_pickle_file(path: FILE_LIKE, support_pytorch_format: bool) -> bool:
@@ -585,7 +591,7 @@ def load_from_oneflow_pickle_dir(
 
 
 def load(
-    path: FILE_LIKE,
+    path: Union[FILE_LIKE, str],
     global_src_rank: Optional[int] = None,
     map_location: MAP_LOCATION = None,
     *,
@@ -611,7 +617,7 @@ def load(
         The loaded object
     """
     if isinstance(path, str):
-        path: Path = Path(path)
+        path = Path(path)
     rank = flow.env.get_rank()
     if global_src_rank is None or global_src_rank == rank:
         for i, (condition, load) in enumerate(load_methods):
@@ -621,7 +627,11 @@ def load(
                     _broadcast_py_object(i, global_src_rank)
                 break
         else:
-            raise NotImplementedError("No valid load method found for {}".format(path))
+            if _is_path(path):
+                err_msg = f'Cannot load file "{path}"'
+            else:
+                err_msg = "Cannot load the data"
+            raise ValueError(err_msg)
     else:
         i = _broadcast_py_object(None, global_src_rank)
         load = load_methods[i][1]
@@ -687,6 +697,9 @@ def save(
         save_as_external_data (bool): useful only if path_or_buffer is a string or
            os.PathLike object containing a file name
     """
+    if isinstance(path_or_buffer, str):
+        path_or_buffer = Path(path_or_buffer)
+
     if isinstance(obj, graph_util.Graph):
         if not _is_path(path_or_buffer):
             raise ValueError(
@@ -703,7 +716,6 @@ def save(
         pickled_bytes = pickle.dumps(obj)
 
     if _is_path(path_or_buffer) and save_as_external_data:
-        path_or_buffer: Path = Path(path_or_buffer)
         path_or_buffer.mkdir(exist_ok=True)
         path_or_buffer = path_or_buffer / PICKLE_FILENAME
 
@@ -743,6 +755,25 @@ def _save_graph(obj: graph_util.Graph, path: Union[str, Path]):
         )
 
     save_one_embedding_info(obj.state_dict(), path)
+
+
+def frombuffer(
+    buffer: object,
+    dtype: oneflow.dtype,
+    count: int = -1,
+    offset: int = 0,
+    requires_grad: bool = False,
+):
+    return oneflow.tensor(
+        np.frombuffer(
+            buffer,
+            dtype_util.convert_oneflow_dtype_to_numpy_dtype(dtype),
+            count,
+            offset,
+        ),
+        dtype=dtype,
+        requires_grad=requires_grad,
+    )
 
 
 class ContextData:

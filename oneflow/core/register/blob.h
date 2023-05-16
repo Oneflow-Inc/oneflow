@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_REGISTER_BLOB_H_
 #define ONEFLOW_CORE_REGISTER_BLOB_H_
 
-#include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/register/blob_desc.h"
@@ -55,6 +54,7 @@ class Blob final {
   virtual ~Blob() = default;
 
   DataType data_type() const { return blob_desc_->data_type(); }
+  MemoryFormat memory_format() const { return blob_desc_->memory_format(); }
   const char* header_ptr() const { return header_ptr_; }
   [[deprecated(
       "\"mut_header_ptr\" will be removed in Bolb. Please avoid to use this method whenever "
