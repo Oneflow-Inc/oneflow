@@ -22,6 +22,7 @@ limitations under the License.
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -67,6 +68,7 @@ static void emitCudaError(const llvm::Twine& expr, const char* buffer, CUresult 
   } while (false)
 
 namespace mlir {
+namespace oneflow {
 
 const char* getArchVersion() {
   static std::string version;
@@ -157,6 +159,8 @@ class NVVMToCubinPass : public NVVMToCubinPassBase<NVVMToCubinPass> {
   void getDependentDialects(::mlir::DialectRegistry& registry) const override {
     registerLLVMDialectTranslation(registry);
     registerNVVMDialectTranslation(registry);
+    registerGPUDialectTranslation(registry);
+    registerLLVMDialectTranslation(registry);
   }
 };
 
@@ -257,6 +261,7 @@ void InitializeLLVMNVPTXBackend() {
   LLVMInitializeNVPTXAsmPrinter();
 }
 
+}  // namespace oneflow
 }  // namespace mlir
 
 #endif  // WITH_MLIR_CUDA_CODEGEN

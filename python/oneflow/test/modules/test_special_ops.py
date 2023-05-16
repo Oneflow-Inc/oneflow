@@ -185,6 +185,7 @@ class TestZeta(flow.unittest.TestCase):
         return out
 
 
+<<<<<<< HEAD
 @flow.unittest.skip_unless_1n1d()
 class TestPolygamma(flow.unittest.TestCase):
     @autotest(n=5, auto_backward="auto")
@@ -224,5 +225,7 @@ class TestPolygamma(flow.unittest.TestCase):
         return out
 
 
+=======
+>>>>>>> 737c448ea09611bc320a2a5d7cdcb11f6353d654
 if __name__ == "__main__":
     unittest.main()

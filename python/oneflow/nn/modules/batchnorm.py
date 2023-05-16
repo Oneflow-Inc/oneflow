@@ -306,6 +306,12 @@ class BatchNorm2d(_BatchNorm):
         if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
             self.channel_axis = 3
 
+    def to_memory_format(self, memory_format) -> None:
+        if memory_format is flow.channels_last:
+            self.channel_axis = 3
+        elif memory_format is flow.contiguous_format:
+            self.channel_axis = 1
+
     def _check_input_dim(self, input):
         if input.ndim != 4:
             raise ValueError("expected 4D input (got {}D input)".format(input.ndim))

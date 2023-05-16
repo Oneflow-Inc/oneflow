@@ -129,6 +129,7 @@ add_docstr(
 
     """,
 )
+<<<<<<< HEAD
 
 add_docstr(
     oneflow.special.polygamma,
@@ -164,3 +165,5 @@ add_docstr(
 
     """,
 )
+=======
+>>>>>>> 737c448ea09611bc320a2a5d7cdcb11f6353d654
