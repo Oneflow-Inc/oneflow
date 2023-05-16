@@ -68,6 +68,7 @@ static void emitCudaError(const llvm::Twine& expr, const char* buffer, CUresult 
   } while (false)
 
 namespace mlir {
+namespace oneflow {
 
 const char* getArchVersion() {
   static std::string version;
@@ -260,6 +261,7 @@ void InitializeLLVMNVPTXBackend() {
   LLVMInitializeNVPTXAsmPrinter();
 }
 
+}  // namespace oneflow
 }  // namespace mlir
 
 #endif  // WITH_MLIR_CUDA_CODEGEN

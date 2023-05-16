@@ -1,4 +1,4 @@
-// RUN: oneflow-opt %s --pass-pipeline="builtin.module(test-transform-dialect-interpreter{transform-file-name=%p/softmax-trait.mlir})"
+// RUN: oneflow-opt %s --pass-pipeline="builtin.module(oneflow-transform-dialect-interpreter{transform-file-name=%p/softmax-trait.mlir})"
 !tmp_tensor_t = tensor<16x128xf32>
 !in_tensor_t = tensor<16x128x128xf32>
 !out_tensor_t = tensor<16x128x128xf32>

@@ -25,12 +25,14 @@ TensorDesc& TensorDesc::operator=(const TensorDesc& rhs) {
   this->set_stride(rhs.stride());
   this->set_data_type(rhs.data_type());
   this->set_is_dynamic(rhs.is_dynamic());
+  this->set_memory_format(rhs.memory_format());
   return *this;
 }
 
 bool TensorDesc::operator==(const TensorDesc& rhs) const {
   return (this->shape() == rhs.shape()) && (this->stride() == rhs.stride())
-         && (this->data_type() == rhs.data_type()) && (this->is_dynamic() == rhs.is_dynamic());
+         && (this->data_type() == rhs.data_type()) && (this->is_dynamic() == rhs.is_dynamic())
+         && (this->memory_format() == rhs.memory_format());
 }
 
 NaiveTensorDesc::NaiveTensorDesc(const NaiveTensorDesc& rhs) { *this = rhs; }
@@ -42,6 +44,7 @@ NaiveTensorDesc& NaiveTensorDesc::operator=(const BlobDescProto& proto) {
   shape_ = Shape(proto.shape());
   stride_ = Stride(proto.stride());
   is_dynamic_ = proto.is_dynamic();
+  memory_format_ = proto.memory_format();
   return *this;
 }
 

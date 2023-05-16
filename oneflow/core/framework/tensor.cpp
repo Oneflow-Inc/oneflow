@@ -46,6 +46,16 @@ Maybe<void> Tensor::BorrowTensorName(const Tensor* other) const {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> Tensor::set_ref_tensor(const std::shared_ptr<Tensor>& ref) {
+  ref_tensor_ = ref;
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> Tensor::set_ref_index(const int64_t index) {
+  ref_index_ = index;
+  return Maybe<void>::Ok();
+}
+
 Maybe<LocalTensor> StaticZerosTensor::AsLocalTensor() {
   CHECK_OR_RETURN(is_local());  // NOLINT
   return std::dynamic_pointer_cast<LocalTensor>(
@@ -90,10 +100,10 @@ std::shared_ptr<Tensor> Parameter::pin_memory() const {
 
 /* static */ Maybe<LocalTensor> LocalTensor::MakeTensor(const std::shared_ptr<const Shape>& shape,
                                                         const std::shared_ptr<const Stride>& stride,
-                                                        DataType dtype,
+                                                        DataType dtype, MemoryFormat memory_format,
                                                         const Symbol<Device>& device, bool is_lazy,
                                                         bool requires_grad, bool is_leaf) {
-  const auto& tensor_meta = SymbolOf(LocalTensorMeta(*shape, dtype, device));
+  const auto& tensor_meta = SymbolOf(LocalTensorMeta(*shape, dtype, memory_format, device));
   if (is_lazy) {
     const auto& impl = std::make_shared<LazyLocalTensorImpl>(tensor_meta, requires_grad, is_leaf);
     return std::make_shared<LocalTensor>(impl);
@@ -220,12 +230,13 @@ Maybe<Tensor> GlobalTensor::clone() const {
 }
 
 Maybe<GlobalTensor> GlobalTensor::MakeTensor(const std::shared_ptr<const Shape>& shape,
-                                             DataType dtype, Symbol<NdSbp> nd_sbp,
+                                             DataType dtype, MemoryFormat memory_format,
+                                             Symbol<NdSbp> nd_sbp,
                                              Symbol<ParallelDesc> parallel_desc, bool is_lazy,
                                              bool requires_grad, bool is_leaf) {
   std::shared_ptr<GlobalTensorImpl> impl;
   Symbol<GlobalTensorMeta> global_tensor_meta(
-      GlobalTensorMeta(*shape, dtype, nd_sbp, parallel_desc));
+      GlobalTensorMeta(*shape, dtype, memory_format, nd_sbp, parallel_desc));
   if (is_lazy) {
     impl = std::make_shared<LazyGlobalTensorImpl>(global_tensor_meta, requires_grad, is_leaf);
   } else {

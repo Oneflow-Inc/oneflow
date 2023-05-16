@@ -28,7 +28,9 @@ void AvgForwardCompute(user_op::KernelComputeContext* ctx, const int32_t& dim) {
   const Shape& y_shape = ctx->TensorDesc4ArgNameAndIndex("y", 0)->shape();
 
   // TODO (Tianyu): Support 'channels_last'
-  std::string data_format = "channels_first";
+  const std::string& data_format = ctx->Attr<std::string>("data_format");
+  CHECK_OR_THROW(data_format == "channels_first")
+      << "adaptive_avg_pool on cpu only supports NCHW data format";
   const Shape& in = GetShape5D(x_shape, data_format, dim);
   const Shape& out = GetShape5D(y_shape, data_format, dim);
 
@@ -85,7 +87,9 @@ void AvgBackwardCompute(user_op::KernelComputeContext* ctx, const int32_t& dim) 
   const Shape& dy_shape = ctx->TensorDesc4ArgNameAndIndex("dy", 0)->shape();
 
   // TODO (Tianyu): Support 'channels_last'
-  std::string data_format = "channels_first";
+  const std::string& data_format = ctx->Attr<std::string>("data_format");
+  CHECK_OR_THROW(data_format == "channels_first")
+      << "adaptive_avg_pool backward on cpu only supports NCHW data format";
   const Shape& in = GetShape5D(dx_shape, data_format, dim);
   const Shape& out = GetShape5D(dy_shape, data_format, dim);
 

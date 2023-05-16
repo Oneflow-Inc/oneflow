@@ -53,8 +53,9 @@ class SelectTopN : public OpExprGradFunction<SelectTopNCaptureState> {
     for (int i = ctx->top_n; i < ctx->inputs.size(); ++i) {
       if (!ctx->requires_grad.at(i)) { continue; }
       const auto& tensor = ctx->inputs.at(i);
-      in_grads->at(i) = JUST(StaticZerosTensor::MakeTensor(
-          tensor->shape(), tensor->dtype()->data_type(), JUST(tensor->device())));
+      in_grads->at(i) =
+          JUST(StaticZerosTensor::MakeTensor(tensor->shape(), tensor->dtype()->data_type(),
+                                             tensor->memory_format(), JUST(tensor->device())));
     }
     return Maybe<void>::Ok();
   }
