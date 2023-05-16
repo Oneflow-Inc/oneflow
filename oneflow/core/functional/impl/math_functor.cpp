@@ -4569,7 +4569,8 @@ class PolygammaFunctor {
     op_ = CHECK_JUST(one::OpBuilder("polygamma").Input("x").Output("out").Build());
   }
   Maybe<Tensor> operator()(const int n, const std::shared_ptr<one::Tensor>& x) const {
-    CHECK_GE_OR_RETURN(n, 0);
+    CHECK_GE_OR_RETURN(n, 0) << Error::RuntimeError() << "n must not be negative, but got " << n
+                             << "!";
     if (n == 0) {
       return CHECK_JUST(functional::Digamma(x));
     } else if (n == 1) {
