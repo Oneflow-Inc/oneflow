@@ -217,7 +217,7 @@ auto LaunchBroadcastMatmulEx(CudaStream* cuda_stream, DataType data_type,
   };
 
   return std::bind(ex_matmul_func, cuda_stream->cublas_handle(), cublas_trans_a, cublas_trans_b,
-                   cublas_m, cublas_n, cublas_k, &sp_alpha, std::placeholders::_1, cuda_data_type,
+                   cublas_m, cublas_n, cublas_k, sp_alpha, std::placeholders::_1, cuda_data_type,
                    cublas_lda, std::placeholders::_2, cuda_data_type, cublas_ldb,
                    std::placeholders::_3, std::placeholders::_4, cuda_data_type, cublas_ldc,
                    compute_type, algo);
