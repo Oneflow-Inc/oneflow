@@ -91,8 +91,11 @@ struct LoadCast;
 
 template<typename Dst, size_t pack_size>
 struct LoadCast<
-    uint8_t, Dst, pack_size, 8,
-    typename std::enable_if<pack_size % 4 != 0 || !std::is_same<Dst, half>::value, void>::type> {
+    uint8_t, Dst, pack_size, 8
+#if __CUDA_ARCH__ >= 530
+    , typename std::enable_if<pack_size % 4 != 0 || !std::is_same<Dst, half>::value, void>::type
+#endif
+    > {
   using LoadType = AlignedArray<uint8_t, pack_size>;
   __device__ void Load(const void* src, LoadType* dst) {
     *dst = *reinterpret_cast<const LoadType*>(src);
@@ -103,6 +106,7 @@ struct LoadCast<
   }
 };
 
+#if __CUDA_ARCH__ >= 530
 template<size_t pack_size>
 struct LoadCast<uint8_t, half, pack_size, 8,
                 typename std::enable_if<pack_size % 4 == 0, void>::type> {
@@ -132,11 +136,15 @@ struct LoadCast<uint8_t, half, pack_size, 8,
     }
   }
 };
+#endif
 
 template<typename Dst, size_t pack_size>
 struct LoadCast<
-    uint8_t, Dst, pack_size, 4,
-    typename std::enable_if<pack_size % 8 != 0 || !std::is_same<Dst, half>::value, void>::type> {
+    uint8_t, Dst, pack_size, 4
+#if __CUDA_ARCH__ >= 530
+    , typename std::enable_if<pack_size % 8 != 0 || !std::is_same<Dst, half>::value, void>::type
+#endif
+    > {
   using LoadType = AlignedArray<uint8_t, pack_size / 2>;
   __device__ void Load(const void* src, LoadType* dst) {
     *dst = *reinterpret_cast<const LoadType*>(src);
@@ -153,6 +161,7 @@ struct LoadCast<
   }
 };
 
+#if __CUDA_ARCH__ >= 530
 template<size_t pack_size>
 struct LoadCast<uint8_t, half, pack_size, 4,
                 typename std::enable_if<pack_size % 8 == 0, void>::type> {
@@ -247,11 +256,15 @@ struct LoadCast<uint8_t, half, pack_size, 4,
     }
   }
 };
+#endif
 
 template<typename Dst, size_t pack_size>
 struct LoadCast<
-    int8_t, Dst, pack_size, 8,
-    typename std::enable_if<pack_size % 4 != 0 || !std::is_same<Dst, half>::value, void>::type> {
+    int8_t, Dst, pack_size, 8
+#if __CUDA_ARCH__ >= 530
+    , typename std::enable_if<pack_size % 4 != 0 || !std::is_same<Dst, half>::value, void>::type
+#endif
+    > {
   using LoadType = AlignedArray<int8_t, pack_size>;
   __device__ void Load(const void* src, LoadType* dst) {
     *dst = *reinterpret_cast<const LoadType*>(src);
@@ -262,6 +275,7 @@ struct LoadCast<
   }
 };
 
+#if __CUDA_ARCH__ >= 530
 template<size_t pack_size>
 struct LoadCast<int8_t, half, pack_size, 8,
                 typename std::enable_if<pack_size % 4 == 0, void>::type> {
@@ -297,11 +311,15 @@ struct LoadCast<int8_t, half, pack_size, 8,
     }
   }
 };
+#endif
 
 template<typename Dst, size_t pack_size>
 struct LoadCast<
-    int8_t, Dst, pack_size, 4,
-    typename std::enable_if<pack_size % 8 != 0 || !std::is_same<Dst, half>::value, void>::type> {
+    int8_t, Dst, pack_size, 4
+#if __CUDA_ARCH__ >= 530
+    , typename std::enable_if<pack_size % 8 != 0 || !std::is_same<Dst, half>::value, void>::type
+#endif
+    > {
   using LoadType = AlignedArray<int8_t, pack_size / 2>;
   __device__ void Load(const void* src, LoadType* dst) {
     *dst = *reinterpret_cast<const LoadType*>(src);
@@ -319,6 +337,7 @@ struct LoadCast<
   }
 };
 
+#if __CUDA_ARCH__ >= 530
 template<typename Dst, size_t pack_size>
 struct LoadCast<int8_t, Dst, pack_size, 4,
                 typename std::enable_if<pack_size % 8 == 0, void>::type> {
@@ -414,6 +433,7 @@ struct LoadCast<int8_t, Dst, pack_size, 4,
     }
   }
 };
+#endif
 
 template<typename C, size_t pack_size>
 struct InplaceAddScalar {
