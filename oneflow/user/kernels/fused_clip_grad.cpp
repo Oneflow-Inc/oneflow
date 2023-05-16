@@ -79,22 +79,32 @@ class FusedClipGradKernel final : public user_op::OpKernel, public user_op::Cuda
 
     bool not_special = false;
     if (norm_type == 0) {
+      std::cout << "type:0\n";
       PowByZero<T> func{};
       MultiReduce<device_type, T, decltype(func), BinaryAdd<T>> reduce_add{};
       reduce_add(ctx->stream(), func, params, GetZeroVal<T>(), out_ptr, temp);
     } else if (norm_type == INFINITY) {
+      std::cout << "type:inf\n";
       Abs<T> func{};
       MultiReduce<device_type, T, decltype(func), BinaryMax<T>> reduce_max{};
       reduce_max(ctx->stream(), func, params, GetZeroVal<T>(), out_ptr, temp);
     } else if (norm_type == -INFINITY) {
+      std::cout << "type:-inf\n";
       Abs<T> func{};
       MultiReduce<device_type, T, decltype(func), BinaryMin<T>> reduce_min{};
       reduce_min(ctx->stream(), func, params, std::numeric_limits<T>::max(), out_ptr, temp);
     } else if (norm_type == 1) {
+      std::cout << "type:abs\n";
       Abs<T> func{};
       MultiReduce<device_type, T, decltype(func), BinaryAdd<T>> reduce_sum{};
       reduce_sum(ctx->stream(), func, params, GetZeroVal<T>(), out_ptr, temp);
+    } else if (norm_type == 2) {
+      std::cout << "type:sqrt\n";
+      Square<T> func{};
+      MultiReduce<device_type, T, decltype(func), BinaryAdd<T>> reduce_sum{};
+      reduce_sum(ctx->stream(), func, params, GetZeroVal<T>(), out_ptr, temp);
     } else {
+      std::cout << "type:other\n";
       not_special = true;
       AbsPow<T> func{norm_type};
       MultiReduce<device_type, T, decltype(func), BinaryAdd<T>> reduce_sum{};

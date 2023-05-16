@@ -58,6 +58,7 @@ def _test_clip_grad_norm_impl(test_case, shape, device, max_norm, norm_type, fus
     of_out.backward()
     of_total_norm = flow.nn.utils.clip_grad_norm_(of_input, max_norm, norm_type, fused)
     np_total_norm, np_grad = _clip_grad_norm_np(np_input, max_norm, norm_type)
+    print(of_total_norm, np_total_norm)
     test_case.assertTrue(
         np.allclose(of_total_norm.numpy(), np_total_norm, 1e-4, 1e-4, equal_nan=True)
     )
