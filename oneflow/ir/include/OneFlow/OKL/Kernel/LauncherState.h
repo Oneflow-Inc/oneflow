@@ -24,6 +24,7 @@ limitations under the License.
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 
 namespace oneflow {
 namespace okl {
@@ -32,6 +33,7 @@ inline mlir::DialectRegistry GetRegistry() {
   mlir::DialectRegistry registry;
   registry.insert<mlir::oneflow::OneFlowDialect, mlir::okl::OKLDialect, mlir::func::FuncDialect,
                   mlir::arith::ArithDialect, mlir::LLVM::LLVMDialect>();
+  mlir::registerBuiltinDialectTranslation(registry);
   mlir::registerLLVMDialectTranslation(registry);
   return registry;
 }

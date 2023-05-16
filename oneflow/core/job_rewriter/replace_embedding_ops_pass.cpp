@@ -338,7 +338,8 @@ double GetLossInstanceNumScaleFactor(const OpGraph& op_graph, JobBuilder* job_bu
         CHECK_EQ(blob_desc->data_type(), loss_data_type);
         CHECK_EQ(blob_desc->shape().elem_cnt(), loss_elem_cnt);
       } else {
-        blob_desc.reset(new BlobDesc(Shape({loss_elem_cnt}), loss_data_type));
+        blob_desc.reset(
+            new BlobDesc(Shape({loss_elem_cnt}), loss_data_type, cur_blob_desc->memory_format()));
       }
     }
     scale_factor = 1.0f / static_cast<float>(blob_desc->shape().elem_cnt());

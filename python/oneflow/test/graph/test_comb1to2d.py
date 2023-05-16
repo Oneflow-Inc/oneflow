@@ -63,9 +63,7 @@ class _TestModuleDiffPlacement(nn.Module):
             flow.sbp.split(1),
             flow.sbp.split(2),
         ]
-
         for sbp1 in sbp_1ds:
-
             for sbp2 in sbp_1ds:
                 for sbp3 in sbp_1ds:
                     # (2, 2) -> 3

@@ -276,7 +276,8 @@ Maybe<void> JobBuildAndInferCtx::GenOpProducedEmptyLogicalBlobDesc(Operator* op)
         << Error::LogicalBlobNameExistError()
         << "duplicate logical blob name found. op_name: " << lbi.op_name()
         << " blob_name: " << lbi.blob_name();
-    lbi2logical_blob_desc_.emplace(lbi, std::make_unique<BlobDesc>(DataType::kInvalidDataType));
+    lbi2logical_blob_desc_.emplace(
+        lbi, std::make_unique<BlobDesc>(DataType::kInvalidDataType, MemoryFormat::kContiguous));
   }
   return Maybe<void>::Ok();
 }

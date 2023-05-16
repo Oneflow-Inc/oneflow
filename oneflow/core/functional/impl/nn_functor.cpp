@@ -1318,7 +1318,7 @@ class MaxPoolNDFunctor {
                                 const std::vector<int32_t>& dilation, const bool& return_indices,
                                 const bool& ceil_mode, const std::string& data_format) const {
     // channels_last case
-    if (num_spatial_dims_ == 2 && data_format == "channels_last") {
+    if (input->is_cuda() && num_spatial_dims_ == 2 && data_format == "channels_last") {
       if (!return_indices && dilation.at(0) == 1 && dilation.at(1) == 1) {
         // legacy tf style maxpool2d , use cudnn implementation
         // with high performance but do not support dilation/return_indices
@@ -1373,6 +1373,50 @@ class MaxPoolNDFunctor {
   std::shared_ptr<OpExpr> tf_maxpool_op_;
 };
 
+class AvgPoolNDFunctor {
+ public:
+  AvgPoolNDFunctor() = default;
+  virtual ~AvgPoolNDFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::vector<int32_t>& kernel_size,
+                           const Optional<std::vector<int32_t>>& stride,
+                           const std::vector<int32_t>& padding, const bool& ceil_mode,
+                           const bool& count_include_pad, const int32_t& divisor_override,
+                           const std::string& data_format) const {
+    // legacy tf style avgpool2d , use cudnn implementation with high performance but not support
+    // count_include_pad and divisor_override.
+    if (x->is_cuda() && x->ndim() == 4 && data_format == "channels_last") {
+      CHECK_OR_THROW(count_include_pad)
+          << "AvgPool2d with channels_last data format don't support count_include_pad for now.";
+      CHECK_EQ_OR_THROW(divisor_override, 0)
+          << "AvgPool2d with channels_last data format don't support divisor_override for now.";
+
+      std::vector<int32_t> padding_before{JUST(VectorAt(padding, 0)), JUST(VectorAt(padding, 1))};
+      std::vector<int32_t> padding_after{JUST(VectorAt(padding, 0)), JUST(VectorAt(padding, 1))};
+
+      auto& attrs =
+          THREAD_CACHED_MUTABLE_ATTR_MAP("pool_size", "strides", "padding", "padding_before",
+                                         "padding_after", "data_format", "ceil_mode");
+      attrs.SetAllAttrs(kernel_size, stride ? *JUST(stride) : kernel_size,
+                        std::string("customized"), padding_before, padding_after, data_format,
+                        ceil_mode);
+      return JUST(OpInterpUtil::Dispatch<Tensor>(*tf_avgpool_op_, {x}, attrs));
+    }
+
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("kernel_size", "padding", "stride", "data_format",
+                                       "ceil_mode", "count_include_pad", "divisor_override");
+    // If stride is None, we set it as kernel_size to align Pytorch.
+    attrs.SetAllAttrs(kernel_size, padding, stride ? *JUST(stride) : kernel_size, data_format,
+                      ceil_mode, count_include_pad, divisor_override);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> tf_avgpool_op_;
+};
+
 class TFAvgPool2DFunctor : public TFPoolNDFunctor {
  public:
   TFAvgPool2DFunctor() {
@@ -1399,6 +1443,28 @@ class MaxPool3DFunctor : public MaxPoolNDFunctor {
  public:
   MaxPool3DFunctor() : MaxPoolNDFunctor(/*num_spatial_dims_=*/3) {
     op_ = CHECK_JUST(one::OpBuilder("max_pool_3d").Input("x").Output("y").Output("indice").Build());
+  }
+};
+
+class AvgPool1DFunctor : public AvgPoolNDFunctor {
+ public:
+  AvgPool1DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("avg_pool_1d").Input("x").Output("y").Build());
+  }
+};
+
+class AvgPool2DFunctor : public AvgPoolNDFunctor {
+ public:
+  AvgPool2DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("avg_pool_2d").Input("x").Output("y").Build());
+    tf_avgpool_op_ = CHECK_JUST(one::OpBuilder("tf_avg_pool_2d").Input("x").Output("y").Build());
+  }
+};
+
+class AvgPool3DFunctor : public AvgPoolNDFunctor {
+ public:
+  AvgPool3DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("avg_pool_3d").Input("x").Output("y").Build());
   }
 };
 
@@ -1457,9 +1523,10 @@ class AdaptivePoolNDFunctor {
   AdaptivePoolNDFunctor() = default;
   virtual ~AdaptivePoolNDFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::vector<int64_t>& output_size) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("output_size");
-    attrs.SetAllAttrs(output_size);
+                           const std::vector<int64_t>& output_size,
+                           const std::string& data_format) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("output_size", "data_format");
+    attrs.SetAllAttrs(output_size, data_format);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -1493,9 +1560,10 @@ class AdaptiveMaxPoolBaseFunctor {
   AdaptiveMaxPoolBaseFunctor() = default;
   virtual ~AdaptiveMaxPoolBaseFunctor() = default;
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
-                                const std::vector<int64_t>& output_size) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("output_size");
-    attrs.SetAllAttrs(output_size);
+                                const std::vector<int64_t>& output_size,
+                                const std::string& data_format) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("output_size", "data_format");
+    attrs.SetAllAttrs(output_size, data_format);
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs);
   }
 
@@ -2697,64 +2765,33 @@ class NormalizationFunctor {
 class NormalizationAddReluFunctor {
  public:
   NormalizationAddReluFunctor() {
-    norm_eval_op_ = CHECK_JUST(one::OpBuilder("normalization")
-                                   .Input("x")
-                                   .Input("moving_mean")
-                                   .Input("moving_variance")
-                                   .Input("gamma")
-                                   .Input("beta")
-                                   .Output("y")
-                                   .Attr("training", false)
-                                   .Build());
-    relu_op_ = CHECK_JUST(one::OpBuilder("relu").Input("x").Output("y").Build());
-    add_op_ = CHECK_JUST(one::OpBuilder("add_n").Input("in", 2).Output("out").Build());
-    fused_norm_training_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
-                                                   .Input("x")
-                                                   .Input("moving_mean")
-                                                   .Input("moving_variance")
-                                                   .Input("gamma")
-                                                   .Input("beta")
-                                                   .Output("y")
-                                                   .Output("reserve_space")
-                                                   .Output("mean")
-                                                   .Output("inv_variance")
-                                                   .Attr("training", true)
-                                                   .Build());
-    fused_addend_norm_training_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
-                                                          .Input("x")
-                                                          .Input("addend")
-                                                          .Input("moving_mean")
-                                                          .Input("moving_variance")
-                                                          .Input("gamma")
-                                                          .Input("beta")
-                                                          .Output("y")
-                                                          .Output("reserve_space")
-                                                          .Output("mean")
-                                                          .Output("inv_variance")
-                                                          .Attr("training", true)
-                                                          .Build());
-    fused_norm_training_no_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
-                                                      .Input("x")
-                                                      .Input("gamma")
-                                                      .Input("beta")
-                                                      .Output("y")
-                                                      .Output("reserve_space")
-                                                      .Output("mean")
-                                                      .Output("inv_variance")
-                                                      .Attr("training", true)
-                                                      .Build());
-    fused_addend_norm_training_no_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
-                                                             .Input("x")
-                                                             .Input("addend")
-                                                             .Input("gamma")
-                                                             .Input("beta")
-                                                             .Output("y")
-                                                             .Output("reserve_space")
-                                                             .Output("mean")
-                                                             .Output("inv_variance")
-                                                             .Attr("training", true)
-                                                             .Build());
+    fused_norm_training_stats_op_ =
+        CHECK_JUST(BuildFusedNormalizationOp(/*stats=*/true, /*addend=*/false, /*training=*/true));
+    fused_addend_norm_training_stats_op_ =
+        CHECK_JUST(BuildFusedNormalizationOp(/*stats=*/true, /*addend=*/true, /*training=*/true));
+    fused_norm_training_no_stats_op_ =
+        CHECK_JUST(BuildFusedNormalizationOp(/*stats=*/false, /*addend=*/false, /*training=*/true));
+    fused_addend_norm_training_no_stats_op_ =
+        CHECK_JUST(BuildFusedNormalizationOp(/*stats=*/false, /*addend=*/true, /*training=*/true));
+    fused_norm_eval_stats_op_ =
+        CHECK_JUST(BuildFusedNormalizationOp(/*stats=*/true, /*addend=*/false, /*training=*/false));
+    fused_addend_norm_eval_stats_op_ =
+        CHECK_JUST(BuildFusedNormalizationOp(/*stats=*/true, /*addend=*/true, /*training=*/false));
   }
+
+  Maybe<one::UserOpExpr> BuildFusedNormalizationOp(bool stats, bool addend, bool training) {
+    auto op_builder = one::OpBuilder("normalization_add_relu")
+                          .Input("x")
+                          .Output("y")
+                          .Output("reserve_space")
+                          .Attr("training", training);
+    if (addend) { op_builder.Input("addend"); }
+    if (stats) { op_builder.Input("moving_mean").Input("moving_variance"); }
+    op_builder.Input("gamma").Input("beta");
+    if (training) { op_builder.Output("mean").Output("inv_variance"); }
+    return op_builder.Build();
+  }
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const Optional<one::Tensor>& addend,
                            const Optional<one::Tensor>& moving_mean,
@@ -2773,14 +2810,14 @@ class NormalizationAddReluFunctor {
     if (!is_training) {
       CHECK_OR_RETURN(moving_mean && moving_variance)
           << Error::RuntimeError() << "Must have moving_mean and moving_variance in eval mode.";
-      const auto& normalize_result = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-          *norm_eval_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta}, attrs));
       if (addend) {
-        const auto& add_result =
-            JUST(OpInterpUtil::Dispatch<one::Tensor>(*add_op_, {normalize_result, JUST(addend)}));
-        return OpInterpUtil::Dispatch<one::Tensor>(*relu_op_, {add_result});
+        return OpInterpUtil::Dispatch<one::Tensor>(
+            *fused_addend_norm_eval_stats_op_,
+            {x, JUST(addend), JUST(moving_mean), JUST(moving_variance), gamma, beta}, attrs);
       } else {
-        return OpInterpUtil::Dispatch<one::Tensor>(*relu_op_, {normalize_result});
+        return OpInterpUtil::Dispatch<one::Tensor>(
+            *fused_norm_eval_stats_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta},
+            attrs);
       }
     } else if (moving_mean) {
       if (addend) {
@@ -2804,13 +2841,12 @@ class NormalizationAddReluFunctor {
   }
 
  private:
-  std::shared_ptr<OpExpr> norm_eval_op_;
-  std::shared_ptr<OpExpr> relu_op_;
-  std::shared_ptr<OpExpr> add_op_;
   std::shared_ptr<OpExpr> fused_norm_training_stats_op_;
   std::shared_ptr<OpExpr> fused_addend_norm_training_stats_op_;
   std::shared_ptr<OpExpr> fused_norm_training_no_stats_op_;
   std::shared_ptr<OpExpr> fused_addend_norm_training_no_stats_op_;
+  std::shared_ptr<OpExpr> fused_norm_eval_stats_op_;
+  std::shared_ptr<OpExpr> fused_addend_norm_eval_stats_op_;
 };
 
 class ConstantPadFunctor {
@@ -3240,50 +3276,6 @@ class DropoutGradFunctor {
 
  private:
   std::shared_ptr<OpExpr> dropout_grad_op_;
-};
-
-class AvgPoolNDFunctor {
- public:
-  AvgPoolNDFunctor() = default;
-  virtual ~AvgPoolNDFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::vector<int32_t>& kernel_size,
-                           const Optional<std::vector<int32_t>>& stride,
-                           const std::vector<int32_t>& padding, const bool& ceil_mode,
-                           const bool& count_include_pad, const int32_t& divisor_override,
-                           const std::string& data_format) const {
-    auto& attrs =
-        THREAD_CACHED_MUTABLE_ATTR_MAP("kernel_size", "padding", "stride", "data_format",
-                                       "ceil_mode", "count_include_pad", "divisor_override");
-    // If stride is None, we set it as kernel_size to align Pytorch.
-    attrs.SetAllAttrs(kernel_size, padding, stride ? *JUST(stride) : kernel_size, data_format,
-                      ceil_mode, count_include_pad, divisor_override);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-  }
-
- protected:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class AvgPool1DFunctor : public AvgPoolNDFunctor {
- public:
-  AvgPool1DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("avg_pool_1d").Input("x").Output("y").Build());
-  }
-};
-
-class AvgPool2DFunctor : public AvgPoolNDFunctor {
- public:
-  AvgPool2DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("avg_pool_2d").Input("x").Output("y").Build());
-  }
-};
-
-class AvgPool3DFunctor : public AvgPoolNDFunctor {
- public:
-  AvgPool3DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("avg_pool_3d").Input("x").Output("y").Build());
-  }
 };
 
 class UnfoldFunctor {
