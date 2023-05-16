@@ -41,6 +41,7 @@ void registerTransformDialectInterpreterPass();
 void eliminateCommonSubexpressions(Operation* op);
 
 struct ApplyPatternsOpPatterns {
+  bool memrefCanonicalization = false;
   bool canonicalization = false;
   bool cse = false;
 };

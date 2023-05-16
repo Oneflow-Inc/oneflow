@@ -145,15 +145,33 @@ void transform_dialect::ApplyPatternsOp::build(
 
   ADD_PATTERN(canonicalization, getCanonicalizationAttrName)
   ADD_PATTERN(cse, getCseAttrName)
+  ADD_PATTERN(memrefCanonicalization, getMemrefCanonicalizationAttrName)
 #undef ADD_PATTERN
 }
 
-static void addAllRegisteredCanonicalizationPatterns(RewritePatternSet& patterns) {
+namespace {
+
+void addAllRegisteredCanonicalizationPatterns(RewritePatternSet& patterns) {
   MLIRContext* ctx = patterns.getContext();
   for (Dialect* dialect : ctx->getLoadedDialects()) dialect->getCanonicalizationPatterns(patterns);
   for (RegisteredOperationName op : ctx->getRegisteredOperations())
     op.getCanonicalizationPatterns(patterns, ctx);
 }
+
+struct MemrefCopyOpFoldPatterns final : public OpRewritePattern<memref::CopyOp> {
+ public:
+  using OpRewritePattern<memref::CopyOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(memref::CopyOp op, PatternRewriter& rewriter) const override {
+    if (op.getSource() == op.getTarget()) rewriter.eraseOp(op);
+    return success();
+  }
+};
+
+void addMemrefCanonicalizationPatterns(RewritePatternSet& patterns) {
+  patterns.add<MemrefCopyOpFoldPatterns>(patterns.getContext());
+}
+
+}  // namespace
 
 DiagnosedSilenceableFailure transform_dialect::ApplyPatternsOp::applyToOne(
     Operation* target, transform::ApplyToEachResultList& results,
@@ -166,6 +184,7 @@ DiagnosedSilenceableFailure transform_dialect::ApplyPatternsOp::applyToOne(
   MLIRContext* ctx = target->getContext();
   RewritePatternSet patterns(ctx);
   if (getCanonicalization()) addAllRegisteredCanonicalizationPatterns(patterns);
+  if (getMemrefCanonicalization()) addMemrefCanonicalizationPatterns(patterns);
   SmallVector<Operation*> ops;
   GreedyRewriteConfig config;
   target->walk([&](Operation* nestedOp) {

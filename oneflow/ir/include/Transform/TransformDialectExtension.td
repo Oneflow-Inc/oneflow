@@ -45,6 +45,7 @@ def ApplyPatternsOp : Op<Transform_Dialect, "oneflow.apply_patterns",
 
   let arguments = (ins TransformHandleTypeInterface:$target,
                        UnitAttr:$cse,
+                       UnitAttr:$memref_canonicalization,
                        UnitAttr:$canonicalization);
   let results = (outs);
 

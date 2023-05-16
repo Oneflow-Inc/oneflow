@@ -41,8 +41,11 @@ transform.sequence failures(propagate) {
   transform.structured.tile_to_forall_op %parallel_linalg_ops num_threads [1, 4, 32]
     ( mapping = [#gpu.thread<z>, #gpu.thread<y>, #gpu.thread<x>] )
 
-  // Note: step 3, bufferize
+  // Note: step 3, vectorize + bufferize
   transform.oneflow.apply_patterns %func_op { canonicalization, cse } : (!pdl.operation) -> ()
+  %func = transform.structured.match ops{["func.func"]} in %func_op : (!pdl.operation) -> !pdl.operation
+  transform.structured.vectorize %func
+
   transform.bufferization.eliminate_empty_tensors %func_op
 
   %empty = transform.structured.match ops{["tensor.empty"]} in %func_op : (!pdl.operation) -> !pdl.operation
@@ -53,11 +56,15 @@ transform.sequence failures(propagate) {
   %bufferized_func_op = transform.oneflow.one_shot_bufferize  %func_op 
       {bufferize_function_boundaries = true,  allow_return_allocs = true, support_gpu = true } : (!pdl.operation) -> !pdl.operation
 
+  // %bufferized_func_op = transform.bufferization.one_shot_bufferize %func_op
+  //     {create_deallocs = false, bufferize_function_boundaries = true,  allow_return_allocs = true} : (!pdl.operation) -> !pdl.operation
+  // transform.oneflow.apply_patterns %bufferized_func_op { cse } : (!pdl.operation) -> ()
+  // transform.oneflow.apply_patterns %bufferized_func_op { memref_canonicalization } : (!pdl.operation) -> ()
   transform.oneflow.apply_patterns %bufferized_func_op { canonicalization, cse } : (!pdl.operation) -> ()
 
-  // Note: step 4, mapping scf to gpu
-  %gpu_launch_op = transform.gpu.map_forall_to_blocks %bufferized_func_op { generate_gpu_launch }
-  transform.gpu.map_nested_forall_to_threads %gpu_launch_op block_dims = [32, 4, 1]
+  // // // Note: step 4, mapping scf to gpu
+  // %gpu_launch_op = transform.gpu.map_forall_to_blocks %bufferized_func_op { generate_gpu_launch }
+  // transform.gpu.map_nested_forall_to_threads %gpu_launch_op block_dims = [32, 4, 1]
 
 
 }
