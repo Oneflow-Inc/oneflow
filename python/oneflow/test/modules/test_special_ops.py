@@ -128,6 +128,14 @@ class TestSpecialOps(flow.unittest.TestCase):
         x = random_tensor().to(device).to(x_dtype)
         y = torch.special.psi(x)
         return y
+    
+    @autotest(n=5, auto_backward="auto")
+    def test_flow_sinc_with_random_data(test_case):
+        device = random_device()
+        x_dtype = random_dtype(["arithmetic", "half"])
+        x = random_tensor().to(device).to(x_dtype)
+        y = torch.special.sinc(x)
+        return y
 
 
 @flow.unittest.skip_unless_1n1d()

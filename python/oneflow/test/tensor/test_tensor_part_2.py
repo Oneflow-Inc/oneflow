@@ -1120,6 +1120,21 @@ class TestTensorNumpy(flow.unittest.TestCase):
         y = x.nansum()
         return y
 
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(n=5)
+    def test_tensor_sinc(test_case):
+        x = random_tensor(ndim=3, dim0=2, dim1=2, dim2=3)
+        z = x.sinc()
+        return z
+    
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(n=5)
+    def test_tensor_sinc_(test_case):
+        device = random_device()
+        x_dtype = random_dtype(["arithmetic"])
+        x = random_tensor().to(device).to(x_dtype)
+        x.sinc_()
+        return x
 
 if __name__ == "__main__":
     unittest.main()

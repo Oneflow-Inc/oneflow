@@ -615,6 +615,14 @@ class TestDigammaModule(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor().to(device)
         return torch.digamma(x)
+    
+@flow.unittest.skip_unless_1n1d()
+class TestSincModule(flow.unittest.TestCase):
+    @autotest(n=5)
+    def test_sinc_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        return torch.sinc(x)
 
 
 if __name__ == "__main__":

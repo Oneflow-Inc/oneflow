@@ -712,7 +712,7 @@ struct BinaryFunctor<device, BinaryOp::kSincBackwardWithDyX, Src, Dst> {
     if (x == static_cast<Src>(0)) { return static_cast<Dst>(0); }
     ep::primitive::UnaryFunctor<device, UnaryOp::kCos, Dst, Src> cos_functor(0, 0);
     ep::primitive::UnaryFunctor<device, UnaryOp::kSin, Dst, Src> sin_functor(0, 0);
-    return static_cast<Dst>(dy * (self_pi * cos_functor(self_pi) - sin_functor(self_pi) / self_squared_pi));
+    return static_cast<Dst>(dy * ((self_pi * cos_functor(self_pi) - sin_functor(self_pi)) / self_squared_pi));
   }
 };
 
