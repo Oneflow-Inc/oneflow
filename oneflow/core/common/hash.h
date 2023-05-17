@@ -28,7 +28,7 @@ inline void HashCombine(size_t* seed, size_t hash) { *seed = HashCombine(*seed, 
 
 template<typename... T>
 inline void AddHash(size_t* seed, const T&... v) {
-  __attribute__((__unused__)) int dummy[] = {(HashCombine(seed, std::hash<T>()(v)), 0)...};
+  (HashCombine(seed, std::hash<T>()(v)), ...);
 }
 
 template<typename T, typename... Ts>
