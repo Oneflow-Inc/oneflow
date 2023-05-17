@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/ep/common/primitive/broadcast_matmul.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/ep/cuda/cuda_matmul_mode.h"
 #include <functional>
 #include <cuda.h>
 
@@ -87,8 +88,7 @@ cudaDataType_t GetCublasScalarType(DataType data_type) {
 cublasComputeType_t GetComputeType(DataType data_type, bool use_lt_interface) {
   switch (data_type) {
     case kFloat: {
-      const bool allow_tf32 = ParseBooleanFromEnv("ONEFLOW_ALLOW_TF32", false);
-      if (allow_tf32) {
+      if (CudaMatmulMode::is_matmul_allow_tf32()) {
         return CUBLAS_COMPUTE_32F_FAST_TF32;
       } else {
         // Starting with cuBLAS version 11.0.0, the library will automatically make use of Tensor
@@ -99,9 +99,7 @@ cublasComputeType_t GetComputeType(DataType data_type, bool use_lt_interface) {
     }
     case kDouble: return CUBLAS_COMPUTE_64F;
     case kFloat16: {
-      const bool allow_half_accumulation =
-          ParseBooleanFromEnv("ONEFLOW_MATMUL_ALLOW_HALF_PRECISION_ACCUMULATION", false);
-      if (allow_half_accumulation) {
+      if (CudaMatmulMode::is_matmul_allow_half_precision_accumulation()) {
         return CUBLAS_COMPUTE_16F;
       } else {
         return CUBLAS_COMPUTE_32F;
@@ -376,6 +374,7 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
       const void* cublas_a = batch_b;
       const void* cublas_b = batch_a;
       void* cublas_c = batch_c;
+      std::cout << "sp_beta: " << batch_beta.Value<double>() << std::endl;
       matmul_func(cublas_a, cublas_b, &sp_beta, cublas_c);
     };
     ForEachMatmul<kMaxNumDims>(data_type, m, n, k, beta, num_batch_dims, broadcast_batch_dims,
