@@ -83,10 +83,9 @@ class PythonArgParser {
  private:
   template<size_t... I>
   void Init(std::index_sequence<I...>) {
-    __attribute__((__unused__)) int dummy[] = {
-        ((void)(schema_[I] = FunctionSchema(schema_t<I>::signature, &schema_t<I>::function_def,
-                                            schema_t<I>::max_pos_args)),
-         0)...};
+    ((schema_[I] = FunctionSchema(schema_t<I>::signature, &schema_t<I>::function_def,
+                                  schema_t<I>::max_pos_args)),
+     ...);
   }
 
   void ReportInvalidArgsError(PyObject* args, PyObject* kwargs) const {
