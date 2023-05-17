@@ -733,9 +733,124 @@ class FusedApplyRotaryEmbFunctor {
   std::shared_ptr<OpExpr> op_without_position_sinuous_;
 };
 
+class LlamaAttentionLayerForwardFunctor {
+ public:
+  LlamaAttentionLayerForwardFunctor() {
+    // Llama num_layers: 7B-32, 13B-40, 30B-60, 65B-80
+    for (int num_layers : {1, 32, 40, 60, 80}) {
+      std::shared_ptr<OpExpr> op_with_past_key_value =
+          CHECK_JUST(one::OpBuilder("llama_attention_layer_forward")
+                         .Input("hidden_states")
+                         .Input("input_norm_weights", num_layers)
+                         .Input("query_weights", num_layers)
+                         .Input("key_weights", num_layers)
+                         .Input("value_weights", num_layers)
+                         .Input("attn_out_weights", num_layers)
+                         .Input("position_ids")
+                         .Input("post_norm_weights", num_layers)
+                         .Input("mlp_gate_weights", num_layers)
+                         .Input("mlp_up_weights", num_layers)
+                         .Input("mlp_down_weights", num_layers)
+                         .Input("past_keys", num_layers)
+                         .Input("past_values", num_layers)
+                         .Output("rms_norm_out")
+                         .Output("inv_rms")
+                         .Output("query")
+                         .Output("key")
+                         .Output("value")
+                         .Output("rotary_query")
+                         .Output("rotary_key")
+                         .Output("concat_keys", num_layers)
+                         .Output("concat_values", num_layers)
+                         .Output("attn_out")
+                         .Output("out")
+                         .Output("post_norm_out")
+                         .Output("gate_out")
+                         .Output("glu_out")
+                         .Output("decoder_out")
+                         .Build());
+      ops_with_past_key_value_.insert(std::make_pair(num_layers, op_with_past_key_value));
+      std::shared_ptr<OpExpr> op = CHECK_JUST(one::OpBuilder("llama_attention_layer_forward")
+                                                  .Input("hidden_states")
+                                                  .Input("input_norm_weights", num_layers)
+                                                  .Input("query_weights", num_layers)
+                                                  .Input("key_weights", num_layers)
+                                                  .Input("value_weights", num_layers)
+                                                  .Input("attn_out_weights", num_layers)
+                                                  .Input("position_ids")
+                                                  .Input("post_norm_weights", num_layers)
+                                                  .Input("mlp_gate_weights", num_layers)
+                                                  .Input("mlp_up_weights", num_layers)
+                                                  .Input("mlp_down_weights", num_layers)
+                                                  .Output("rms_norm_out")
+                                                  .Output("inv_rms")
+                                                  .Output("query")
+                                                  .Output("key")
+                                                  .Output("value")
+                                                  .Output("rotary_query")
+                                                  .Output("rotary_key")
+                                                  .Output("concat_keys", num_layers)
+                                                  .Output("concat_values", num_layers)
+                                                  .Output("attn_out")
+                                                  .Output("out")
+                                                  .Output("post_norm_out")
+                                                  .Output("gate_out")
+                                                  .Output("glu_out")
+                                                  .Output("decoder_out")
+                                                  .Build());
+      ops_.insert(std::make_pair(num_layers, op));
+    }
+  }
+  Maybe<TensorTuple> operator()(
+      const std::shared_ptr<one::Tensor>& hidden_states, const TensorTuple& input_norm_weights,
+      const TensorTuple& query_weights, const TensorTuple& key_weights,
+      const TensorTuple& value_weights, const TensorTuple& attn_out_weights,
+      const std::shared_ptr<one::Tensor>& position_ids, const TensorTuple& post_norm_weights,
+      const TensorTuple& mlp_gate_weights, const TensorTuple& mlp_up_weights,
+      const TensorTuple& mlp_down_weights, const TensorTuple& past_keys,
+      const TensorTuple& past_values, const int64_t head_size) const {
+    int64_t num_layers = input_norm_weights.size();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("head_size", "num_layers", "parallel_conf");
+    auto conf = PbMessage2TxtString(JUST(hidden_states->parallel_desc())->parallel_conf());
+    attrs.SetAllAttrs(head_size, num_layers, conf);
+    TensorTuple inputs{hidden_states};
+    inputs.insert(inputs.end(), input_norm_weights.begin(), input_norm_weights.end());
+    inputs.insert(inputs.end(), query_weights.begin(), query_weights.end());
+    inputs.insert(inputs.end(), key_weights.begin(), key_weights.end());
+    inputs.insert(inputs.end(), value_weights.begin(), value_weights.end());
+    inputs.insert(inputs.end(), attn_out_weights.begin(), attn_out_weights.end());
+    inputs.push_back(position_ids);
+    inputs.insert(inputs.end(), post_norm_weights.begin(), post_norm_weights.end());
+    inputs.insert(inputs.end(), mlp_gate_weights.begin(), mlp_gate_weights.end());
+    inputs.insert(inputs.end(), mlp_up_weights.begin(), mlp_up_weights.end());
+    inputs.insert(inputs.end(), mlp_down_weights.begin(), mlp_down_weights.end());
+
+    CHECK(past_keys.size() == 0 || past_keys.size() == num_layers);
+    if (past_keys.size() > 0) {
+      inputs.insert(inputs.end(), past_keys.begin(), past_keys.end());
+      inputs.insert(inputs.end(), past_values.begin(), past_values.end());
+      auto it = ops_with_past_key_value_.find(num_layers);
+      CHECK_OR_RETURN(it != ops_with_past_key_value_.end())
+          << "num_layers is unavailable: LLAMA 7B-32, 13B-40, 30B-60, 65B-80 or 1 layer is "
+             "supported.";
+      return OpInterpUtil::Dispatch<TensorTuple>(*it->second, inputs, attrs);
+    } else {
+      auto it = ops_.find(num_layers);
+      CHECK_OR_RETURN(it != ops_.end()) << "num_layers is unavailable: LLAMA 7B-32, 13B-40, "
+                                           "30B-60, 65B-80 or 1 layer is supported.";
+      return OpInterpUtil::Dispatch<TensorTuple>(*it->second, inputs, attrs);
+    }
+  }
+
+ private:
+  std::map<int, std::shared_ptr<OpExpr>> ops_;
+  std::map<int, std::shared_ptr<OpExpr>> ops_with_past_key_value_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
+  m.add_functor<impl::LlamaAttentionLayerForwardFunctor>("LlamaAttentionLayerForwardOp");
   m.add_functor<impl::FusedMultiHeadAttentionInferenceFunctor>("FusedMultiHeadAttentionInference");
   m.add_functor<impl::FusedMultiHeadAttentionInferenceV2Functor>(
       "FusedMultiHeadAttentionInferenceV2");

@@ -806,4 +806,113 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   return Maybe<void>::Ok();
 }
 
+/*static*/ Maybe<void> LlamaAttentionLayerForwardOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  int64_t n = ctx->Attr<int64_t>("num_layers");
+  const user_op::TensorDesc& hidden_states_desc = ctx->InputTensorDesc("hidden_states", 0);
+  const int64_t head_size = ctx->Attr<int64_t>("head_size");
+  const int64_t intermediate_size = ctx->InputTensorDesc("mlp_gate_weights", 0).shape().At(0);
+  const Shape& hidden_states_shape = hidden_states_desc.shape();
+  auto b = hidden_states_shape.at(0), m = hidden_states_shape.at(1);
+  ctx->SetOutputShape("rms_norm_out", 0, hidden_states_shape);
+  ctx->SetOutputShape("inv_rms", 0, Shape({b, m}));
+  const Shape& query_weight_shape = ctx->InputTensorDesc("query_weights", 0).shape();
+  const int64_t h = query_weight_shape.at(0) / head_size;
+  ctx->SetOutputShape("query", 0, Shape({b, m, query_weight_shape.at(0)}));
+  ctx->SetOutputShape("key", 0, Shape({b, m, query_weight_shape.at(0)}));
+  ctx->SetOutputShape("value", 0, Shape({b, m, query_weight_shape.at(0)}));
+  ctx->SetOutputShape("rotary_query", 0, Shape({b, m, h, head_size}));
+  ctx->SetOutputShape("rotary_key", 0, Shape({b, m, h, head_size}));
+  if (ctx->has_input("past_keys", 0)) {  // past_key: BHMK
+    for (int i = 0; i < n; ++i) {
+      const Shape& past_key_shape = ctx->InputTensorDesc("past_keys", i).shape();
+      auto past_m = past_key_shape.at(2);
+      ctx->SetOutputShape("concat_keys", i, Shape({b, h, past_m + m, head_size}));
+      ctx->SetOutputShape("concat_values", i, Shape({b, h, past_m + m, head_size}));
+    }
+  } else {
+    for (int i = 0; i < n; ++i) {
+      ctx->SetOutputShape("concat_keys", i, Shape({b, h, m, head_size}));
+      ctx->SetOutputShape("concat_values", i, Shape({b, h, m, head_size}));
+    }
+  }
+  ctx->SetOutputShape("attn_out", 0, hidden_states_shape);
+  ctx->SetOutputShape("out", 0, hidden_states_shape);
+  ctx->SetOutputShape("post_norm_out", 0, hidden_states_shape);
+  ctx->SetOutputShape("gate_out", 0, Shape({b, m, intermediate_size}));
+  ctx->SetOutputShape("glu_out", 0, Shape({b, m, intermediate_size}));
+  ctx->SetOutputShape("decoder_out", 0, hidden_states_shape);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> LlamaAttentionLayerForwardOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return LlamaAttentionLayerForwardOp::InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> LlamaAttentionLayerForwardOp::GetSbp(user_op::SbpContext* ctx) {
+  int n = ctx->Attr<int64_t>("head_size");
+  bool has_past_kv = ctx->user_op_conf().has_input("past_keys", 0);
+  std::vector<user_op::OpArg> s0_args, s1_args, broadcast_args;
+  for (int i = 0; i < n; ++i) {
+    broadcast_args.emplace_back("input_norm_weights", i);
+    s0_args.emplace_back("query_weights", i);
+    s0_args.emplace_back("key_weights", i);
+    s0_args.emplace_back("value_weights", i);
+    s1_args.emplace_back("attn_out_weights", i);
+    s1_args.emplace_back("concat_keys", i);
+    s1_args.emplace_back("concat_values", i);
+    broadcast_args.emplace_back("post_norm_weights", i);
+    s0_args.emplace_back("mlp_gate_weights", i);
+    s0_args.emplace_back("mlp_up_weights", i);
+    s1_args.emplace_back("mlp_down_weights", i);
+    if (has_past_kv) {
+      s1_args.emplace_back("past_keys", i);
+      s1_args.emplace_back("past_values", i);
+    }
+  }
+  ctx->NewBuilder()
+      .Broadcast(user_op::OpArg("hidden_states", 0))
+      .Broadcast(broadcast_args)
+      .Split(s0_args, 0)
+      .Split(s1_args, 1)
+      .Broadcast(user_op::OpArg("position_ids", 0))
+      .Broadcast(user_op::OpArg("rms_norm_out", 0))
+      .Broadcast(user_op::OpArg("inv_rms", 0))
+      .Split(user_op::OpArg("query", 0), 2)
+      .Split(user_op::OpArg("key", 0), 2)
+      .Split(user_op::OpArg("value", 0), 2)
+      .Split(user_op::OpArg("rotary_query", 0), 2)
+      .Split(user_op::OpArg("rotary_key", 0), 2)
+      .Split(user_op::OpArg("attn_out", 0), 2)
+      .Broadcast(user_op::OpArg("out", 0))
+      .Broadcast(user_op::OpArg("post_norm_out", 0))
+      .Split(user_op::OpArg("gate_out", 0), 2)
+      .Split(user_op::OpArg("glu_out", 0), 2)
+      .Broadcast(user_op::OpArg("decoder_out", 0))
+      .Build();
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> LlamaAttentionLayerForwardOp::InferDataType(user_op::InferContext* ctx) {
+  auto data_type = ctx->InputDType("hidden_states", 0);
+  int64_t n = ctx->Attr<int64_t>("num_layers");
+  for (int i = 0; i < n; ++i) {
+    ctx->SetOutputDType("concat_keys", i, data_type);
+    ctx->SetOutputDType("concat_values", i, data_type);
+  }
+  ctx->SetOutputDType("rms_norm_out", 0, data_type);
+  ctx->SetOutputDType("inv_rms", 0, DataType::kFloat);
+  ctx->SetOutputDType("query", 0, data_type);
+  ctx->SetOutputDType("key", 0, data_type);
+  ctx->SetOutputDType("value", 0, data_type);
+  ctx->SetOutputDType("rotary_query", 0, data_type);
+  ctx->SetOutputDType("rotary_key", 0, data_type);
+  ctx->SetOutputDType("attn_out", 0, data_type);
+  ctx->SetOutputDType("out", 0, data_type);
+  ctx->SetOutputDType("post_norm_out", 0, data_type);
+  ctx->SetOutputDType("gate_out", 0, data_type);
+  ctx->SetOutputDType("glu_out", 0, data_type);
+  ctx->SetOutputDType("decoder_out", 0, data_type);
+  return Maybe<void>::Ok();
+}
+
 }  // namespace oneflow
