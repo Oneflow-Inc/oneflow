@@ -145,43 +145,42 @@ auto LaunchBroadcastMatmulLt(CudaStream* cuda_stream, DataType data_type,
 
   // See https://github.com/pytorch/pytorch/issues/73328 for reasoning behind
   // setting this to 1M.
-  size_t workspace_size = 1024 * 1024;
+  size_t workspace_size = 0;
   OF_CUBLAS_CHECK(cublasLtMatmulPreferenceSetAttribute(preference.descriptor(),
                                                        CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES,
                                                        &workspace_size, sizeof(workspace_size)));
   // std::cout << "device index: " << stream->device()->device_index() << std::endl;
-  cublasLtMatmulHeuristicResult_t heuristic_result = {};
-  int ret = 0;
   cublasLtHandle_t lt_handle = cuda_stream->cublas_lt_handle();
-  OF_CUBLAS_CHECK(
-      cublasLtMatmulAlgoGetHeuristic(lt_handle, compute_desc.descriptor(), a_desc.descriptor(),
-                                     b_desc.descriptor(), c_desc.descriptor(), c_desc.descriptor(),
-                                     preference.descriptor(), 1, &heuristic_result, &ret));
-  if (ret == 0) { OF_CUBLAS_CHECK(CUBLAS_STATUS_NOT_SUPPORTED); }
 
   void* workspace = nullptr;
-  CHECK_JUST(cuda_stream->AllocAsync(&workspace, workspace_size));
+  // CHECK_JUST(cuda_stream->AllocAsync(&workspace, workspace_size));
 
-  auto lt_matmul_func =
-      [](cublasLtHandle_t lt_handle, cublasLtMatmulDesc_t compute_desc, const void* sp_alpha,
-         const void* cublas_a, cublasLtMatrixLayout_t a_desc, const void* cublas_b,
-         cublasLtMatrixLayout_t cublas_b_desc, const void* sp_beta, /* host or device pointer */
-         const void* cublas_c, cublasLtMatrixLayout_t c_desc, void* cublas_d,
-         cublasLtMatrixLayout_t d_desc, const cublasLtMatmulAlgo_t* algo, void* workspace,
-         size_t workspace_size, CudaStream* cuda_stream) -> void {
-    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(compute_desc, CUBLASLT_MATMUL_DESC_BIAS_POINTER,
-                                                   &cublas_c, sizeof(void*)));
-    OF_CUBLAS_CHECK(cublasLtMatmul(lt_handle, compute_desc, sp_alpha, cublas_a, a_desc, cublas_b,
-                                   cublas_b_desc, sp_beta, cublas_c, c_desc, cublas_d, d_desc, algo,
-                                   workspace, workspace_size, cuda_stream->cuda_stream()));
-    CHECK_JUST(cuda_stream->FreeAsync(&workspace));
+  auto lt_matmul_func = [preference](cublasLtHandle_t lt_handle, CuBlasLtMatmulDescriptor compute_desc,
+                            const void* sp_alpha, const void* cublas_a, CuBlasLtMatrixLayout a_desc,
+                            const void* cublas_b, CuBlasLtMatrixLayout b_desc, const void* sp_beta,
+                            void* cublas_c, CuBlasLtMatrixLayout c_desc, void* workspace,
+                            size_t workspace_size, CudaStream* cuda_stream) -> void {
+    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
+        compute_desc.descriptor(), CUBLASLT_MATMUL_DESC_BIAS_POINTER, &cublas_c, sizeof(void*)));
+
+    cublasLtMatmulHeuristicResult_t heuristic_result = {};
+    int ret = 0;
+    OF_CUBLAS_CHECK(cublasLtMatmulAlgoGetHeuristic(
+        lt_handle, compute_desc.descriptor(), a_desc.descriptor(), b_desc.descriptor(),
+        c_desc.descriptor(), c_desc.descriptor(), preference.descriptor(), 1, &heuristic_result,
+        &ret));
+    if (ret == 0) { OF_CUBLAS_CHECK(CUBLAS_STATUS_NOT_SUPPORTED); }
+
+    OF_CUBLAS_CHECK(cublasLtMatmul(lt_handle, compute_desc.descriptor(), sp_alpha, cublas_a,
+                                   a_desc.descriptor(), cublas_b, b_desc.descriptor(), sp_beta,
+                                   cublas_c, c_desc.descriptor(), cublas_c, c_desc.descriptor(),
+                                   &heuristic_result.algo, nullptr, 0, cuda_stream->cuda_stream()));
+    // CHECK_JUST(cuda_stream->FreeAsync(&workspace));
   };
 
-  return std::bind(lt_matmul_func, lt_handle, compute_desc.descriptor(), sp_alpha,
-                   std::placeholders::_1, a_desc.descriptor(), std::placeholders::_2,
-                   b_desc.descriptor(), std::placeholders::_3, std::placeholders::_4,
-                   c_desc.descriptor(), std::placeholders::_5, c_desc.descriptor(),
-                   &heuristic_result.algo, workspace, workspace_size, cuda_stream);
+  return std::bind(lt_matmul_func, lt_handle, compute_desc, sp_alpha, std::placeholders::_1, a_desc,
+                   std::placeholders::_2, b_desc, std::placeholders::_3, std::placeholders::_4,
+                   c_desc, workspace, workspace_size, cuda_stream);
 }
 
 auto LaunchBroadcastMatmulEx(CudaStream* cuda_stream, DataType data_type,
@@ -236,7 +235,7 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
   //              std::numeric_limits<double>::epsilon());
   // };
 
-  bool use_lt_interface = false;
+  bool use_lt_interface = true;
 #if CUDA_VERSION >= 11040 && !defined(_MSC_VER)
   // use_lt_interface = scalar_equal_one(beta);
 #endif
@@ -279,7 +278,7 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
   const int cublas_ldc = n;
 
   std::function<void(const void* cublas_a, const void* cublas_b, const void* sp_beta,
-                     const void* cublas_c, void* cublas_d)>
+                    void* cublas_c)>
       lt_func;
 
   std::function<void(const void* cublas_a, const void* cublas_b, const void* sp_beta,
@@ -305,7 +304,6 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
   //           << std::endl;
 
   if (num_batch_dims == 1 && c_batch_dims[0] != 1) {
-
     CublasMathModeGuard guard(cuda_stream->cublas_handle());
     if (data_type == DataType::kFloat16) {
 #if CUDA_VERSION < 11000
@@ -347,7 +345,7 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
       void* cublas_c = batch_c;
 
       if (use_lt_interface) {
-        lt_func(cublas_a, cublas_b, &sp_beta, cublas_c, cublas_c);
+        lt_func(cublas_a, cublas_b, &sp_beta, cublas_c);
       } else {
         ex_func(cublas_a, cublas_b, &sp_beta, cublas_c);
       }
