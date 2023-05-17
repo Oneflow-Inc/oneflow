@@ -46,6 +46,7 @@ struct MemrefCopyOpFoldPatterns final : public OpRewritePattern<memref::CopyOp> 
 
 }  // namespace
 
+
 DiagnosedSilenceableFailure transform_dialect::EliminateCopyOp::applyToOne(
     Operation* target, transform::ApplyToEachResultList& results,
     transform::TransformState& state) {
@@ -93,6 +94,22 @@ DiagnosedSilenceableFailure transform_dialect::CanonicalizationOp::applyToOne(
   });
   LogicalResult result = applyOpPatternsAndFold(ops, std::move(patterns), config);
   if (failed(result)) { return DiagnosedSilenceableFailure::definiteFailure(); }
+  if (getCse()) {
+    func::FuncOp lastFuncVisited;
+    auto walkResult = target->walk([&](func::FuncOp funcOp) -> WalkResult {
+      lastFuncVisited = funcOp;
+      auto context = funcOp->getContext();
+      mlir::PassManager pm(context);
+      pm.addPass(createCSEPass());
+      if (failed(pm.run(funcOp))) return WalkResult::interrupt();
+      return WalkResult::advance();
+    });
+    if (walkResult.wasInterrupted()) {
+      if (failed(result)) {
+        return mlir::emitDefiniteFailure(lastFuncVisited, "greedy patterns failed");
+      }
+    }
+  }
   return DiagnosedSilenceableFailure::success();
 }
 

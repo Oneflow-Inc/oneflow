@@ -22,6 +22,7 @@ transform.sequence failures(propagate) {
   transform.oneflow.canonicalization %func_op : (!pdl.operation) -> ()
   transform.oneflow.cse %func_op : (!pdl.operation) -> ()
 
+
   // Note: step 2, tiling and fusing linalg ops in thread level.
   %ops_1 = transform.structured.match ops{["linalg.fill", "linalg.generic"]}
     in %func_op : (!pdl.operation) -> !pdl.operation
@@ -46,10 +47,11 @@ transform.sequence failures(propagate) {
   transform.structured.tile_to_forall_op %parallel_linalg_ops num_threads [1, 4, 32]
     ( mapping = [#gpu.thread<z>, #gpu.thread<y>, #gpu.thread<x>] )
 
-  // // Note: step 3, bufferize
+  // Note: step 3, bufferize
   transform.oneflow.canonicalization %func_op : (!pdl.operation) -> ()
   transform.oneflow.cse %func_op : (!pdl.operation) -> ()
   transform.oneflow.explicit_linalg_outcome %func_op : (!pdl.operation) -> ()
+
   transform.bufferization.eliminate_empty_tensors %func_op
 
   %empty = transform.structured.match ops{["tensor.empty"]} in %func_op : (!pdl.operation) -> !pdl.operation
@@ -58,7 +60,7 @@ transform.sequence failures(propagate) {
 
   %bufferized_func_op = transform.bufferization.one_shot_bufferize %func_op
       {create_deallocs = false, bufferize_function_boundaries = true,  allow_return_allocs = true} : (!pdl.operation) -> !pdl.operation
-
+      
   transform.oneflow.canonicalization %bufferized_func_op : (!pdl.operation) -> ()
   transform.oneflow.cse %bufferized_func_op : (!pdl.operation) -> ()
   transform.oneflow.eliminate_copy %bufferized_func_op : (!pdl.operation) -> ()
@@ -69,8 +71,9 @@ transform.sequence failures(propagate) {
   // transform.oneflow.fold_alloc %func : (!pdl.operation) -> ()
 
   // Note: step 4, mapping scf to gpu
-  // %gpu_launch_op = transform.gpu.map_forall_to_blocks %bufferized_func_op { generate_gpu_launch }
-  // transform.gpu.map_nested_forall_to_threads %gpu_launch_op block_dims = [32, 4, 1]
+  %gpu_launch_op = transform.gpu.map_forall_to_blocks %bufferized_func_op { generate_gpu_launch }
+  transform.gpu.map_nested_forall_to_threads %gpu_launch_op block_dims = [32, 4, 1]
+
 
 
 }
