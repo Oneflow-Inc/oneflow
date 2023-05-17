@@ -158,7 +158,7 @@ struct MessageFormatTrait<std::string> {
       std::stringstream res;
 
       res << code << ": ";
-      [[maybe_unused]] int dummy[] = {(res << args, 0)...};
+      ((res << args), ...);
 
       return res.str();
     } else {

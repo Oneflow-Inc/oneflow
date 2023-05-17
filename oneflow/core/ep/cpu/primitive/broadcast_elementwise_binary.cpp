@@ -576,7 +576,7 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
 
                         OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
                             MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
-                            BINARY_COMPLEX_MATH_OP_SEQ, CPU_PRIMITIVE_COMPLEX_TYPE_SEQ)
+                            BINARY_MATH_FLOATING_OP_SEQ, CPU_PRIMITIVE_FLOATING_TYPE_SEQ)
 
                             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
                                 MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY,
