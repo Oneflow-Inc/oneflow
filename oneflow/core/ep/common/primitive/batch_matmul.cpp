@@ -61,11 +61,6 @@ class BatchMatmulImpl : public BatchMatmul {
     }
     c_dims[1] = m;
     c_dims[2] = n;
-    // std::cout << "batch matmul a_dims: " << a_dims[0] << " " << a_dims[1] << " " << a_dims[2]
-    //           << " batch matmul b_dims: " << b_dims[0] << " " << b_dims[1] << " " << b_dims[2]
-    //           << " batch matmul c_dims: " << c_dims[0] << " " << c_dims[1] << " " << c_dims[2]
-    //           << std::endl;
-
     broadcast_matmul_->Launch(stream, alpha, 3, a_dims, a, 3, b_dims, b, beta, 3, c_dims, c);
   }
 

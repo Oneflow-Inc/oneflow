@@ -155,7 +155,8 @@ auto LaunchBroadcastMatmulLt(CudaStream* cuda_stream, DataType data_type,
   void* workspace = nullptr;
   // CHECK_JUST(cuda_stream->AllocAsync(&workspace, workspace_size));
 
-  auto lt_matmul_func = [preference](cublasLtHandle_t lt_handle, CuBlasLtMatmulDescriptor compute_desc,
+  auto lt_matmul_func = [preference](
+                            cublasLtHandle_t lt_handle, CuBlasLtMatmulDescriptor compute_desc,
                             const void* sp_alpha, const void* cublas_a, CuBlasLtMatrixLayout a_desc,
                             const void* cublas_b, CuBlasLtMatrixLayout b_desc, const void* sp_beta,
                             void* cublas_c, CuBlasLtMatrixLayout c_desc, void* workspace,
@@ -228,16 +229,15 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
                            const int64_t* b_batch_dims, const int64_t* c_batch_dims, int64_t m,
                            int64_t n, int64_t k, Scalar alpha, const void* a, const void* b,
                            Scalar beta, void* c) {
-  // auto scalar_equal_one = [](Scalar alpha) -> bool {
-  //   return (alpha.IsIntegral() && alpha.Value<int64_t>() == 1)
-  //          || (alpha.IsFloatingPoint()
-  //              && std::fabs(alpha.Value<double>() - 1.0) <
-  //              std::numeric_limits<double>::epsilon());
-  // };
+  auto scalar_equal_one = [](Scalar alpha) -> bool {
+    return (alpha.IsIntegral() && alpha.Value<int64_t>() == 1)
+           || (alpha.IsFloatingPoint()
+               && std::fabs(alpha.Value<double>() - 1.0) < std::numeric_limits<double>::epsilon());
+  };
 
-  bool use_lt_interface = true;
+  bool use_lt_interface = false;
 #if CUDA_VERSION >= 11040 && !defined(_MSC_VER)
-  // use_lt_interface = scalar_equal_one(beta);
+  use_lt_interface = scalar_equal_one(beta);
 #endif
 
   auto* cuda_stream = stream->As<CudaStream>();
@@ -278,7 +278,7 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
   const int cublas_ldc = n;
 
   std::function<void(const void* cublas_a, const void* cublas_b, const void* sp_beta,
-                    void* cublas_c)>
+                     void* cublas_c)>
       lt_func;
 
   std::function<void(const void* cublas_a, const void* cublas_b, const void* sp_beta,
@@ -294,14 +294,6 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
                                       cublas_trans_a, cublas_trans_b, cublas_m, cublas_n, cublas_k,
                                       cublas_lda, cublas_ldb, cublas_ldc, &sp_alpha);
   }
-
-  // std::cout << "beta: " << alpha.Value<int64_t>() << std::endl;
-  // std::cout << "transpose_a: " << transpose_b << " transpose_b: " << transpose_a << std::endl;
-  // std::cout << "original setting: " << m << " " << n << " " << k << std::endl;
-  // std::cout << "cublas setting: " << cublas_m << " " << cublas_n << " " << cublas_k << " "
-  //           << cublas_lda << " " << cublas_ldb << " " << cublas_ldc << std::endl;
-  // std::cout << "num_batch_dims: " << num_batch_dims << "c_batch_dims[0]: " << c_batch_dims[0]
-  //           << std::endl;
 
   if (num_batch_dims == 1 && c_batch_dims[0] != 1) {
     CublasMathModeGuard guard(cuda_stream->cublas_handle());
