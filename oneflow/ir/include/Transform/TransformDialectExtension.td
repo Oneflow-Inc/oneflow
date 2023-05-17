@@ -27,12 +27,6 @@ def ApplyPatternsOp : Op<Transform_Dialect, "oneflow.apply_patterns",
     Returns the IsolatedFromAbove op whose content it has modified for better
     chaining APIs.
 
-    The following additive attributes can be set, they add patterns in an
-    unspecified order:
-      - canonicalization: adds all the canonicalization patterns of all
-      registered dialects and ops.
-
-
     #### Return modes:
 
     This operation applies a set of patterns specified by attributes. To apply
@@ -49,6 +43,7 @@ def ApplyPatternsOp : Op<Transform_Dialect, "oneflow.apply_patterns",
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,
+                       UnitAttr:$cse,
                        UnitAttr:$canonicalization);
   let results = (outs);
 
