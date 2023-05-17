@@ -301,6 +301,7 @@ Pointwise Ops
     sin 
     sinh 
     sin_ 
+    sinc
     sqrt 
     square 
     sub 

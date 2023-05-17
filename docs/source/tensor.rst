@@ -337,6 +337,8 @@ Tensor class reference
     Tensor.sin
     Tensor.sin_
     Tensor.sinh
+    Tensor.sinc
+    Tensor.sinc_
     Tensor.size
     Tensor.softmax
     Tensor.softplus

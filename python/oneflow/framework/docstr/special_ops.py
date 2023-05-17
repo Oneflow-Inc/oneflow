@@ -152,9 +152,9 @@ add_docstr(
         >>> import oneflow as flow
         >>> x = flow.randn(4)
         >>> x
-        
+        tensor([ 0.2284,  0.9089, -0.6296,  0.9167], dtype=oneflow.float32)
         >>> flow.special.sinc(x)
-        tensor([1.6449, 1.0823], dtype=oneflow.float32)
+        tensor([0.9164, 0.0988, 0.4643, 0.0899], dtype=oneflow.float32)
 
     """,
 )
