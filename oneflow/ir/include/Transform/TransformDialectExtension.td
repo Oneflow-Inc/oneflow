@@ -9,57 +9,59 @@ include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
 include "mlir/Dialect/PDL/IR/PDLTypes.td"
 
-def ApplyPatternsOp : Op<Transform_Dialect, "oneflow.apply_patterns",
-    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
-     TransformEachOpTrait,
-     TransformOpInterface]> {
-  let description = [{
-    Modified from iree project: https://github.com/openxla/iree
-    Greedily applies patterns as specified by its attributes.
-
-    Must be applied to an op with trait IsolatedFromAbove since the
-    GreedyPatternRewriter asserts those. Internally, uses the tracking rewriter
-    to preserve handles to payload operations nested within operations
-    associated with `target`. Fails if tracking cannot find replacement for a
-    payload operation. This may become controllable with an attribute in the
-    future.
-
-    Returns the IsolatedFromAbove op whose content it has modified for better
-    chaining APIs.
-
-    #### Return modes:
-
-    This operation applies a set of patterns specified by attributes. To apply
-    these patterns, this operation must target an operation that is isolated
-    from above, otherwise the transform definitely fails.
-
-    If the pattern application fails, or if the underlying listener fails to
-    capture op handles, the transformation definitely fails.
-
-    Otherwise the transformation is successful.
-
-    This operation does not consume the target handle and does not produce any
-    handle.
-  }];
-
-  let arguments = (ins TransformHandleTypeInterface:$target,
-                       UnitAttr:$cse,
-                       UnitAttr:$canonicalization);
+class NestedTransformOp<string mnemonic, list<Trait> traits = []> : 
+  Op<Transform_Dialect, mnemonic,
+    traits # [FunctionalStyleTransformOpTrait,
+     MemoryEffectsOpInterface,
+     TransformOpInterface,
+     TransformEachOpTrait]> {
+  let arguments = (ins TransformHandleTypeInterface:$target);
   let results = (outs);
 
   let assemblyFormat = "$target attr-dict `:` functional-type($target, results)";
   let cppNamespace = "mlir::oneflow::transform_dialect";
-
-  let builders = [
-    OpBuilder<(ins "Value":$target,
-                   "const ApplyPatternsOpPatterns &":$patterns)>
-  ];
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::Operation *target,
         ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
+
+    void getEffects(
+        SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+      ::mlir::transform::onlyReadsHandle(getTarget(), effects);
+      ::mlir::transform::modifiesPayload(effects);
+    }
+  }];
+}
+
+def CSEOp : NestedTransformOp<"oneflow.cse"> {
+  let description = [{
+    cse in transform dialect.
+  }];
+}
+
+def CanonicalizationOp : NestedTransformOp<"oneflow.canonicalization"> {
+  let description = [{
+    canonicalization in transform dialect.
+  }];
+}
+
+def ExplicitLinalgOutcomeOp : NestedTransformOp<"oneflow.explicit_linalg_outcome"> {
+  let description = [{
+    fold unit-extent dimensions in operands/results of linalg ops on tensors via rank-reducing slice in transform dialect.
+  }];
+}
+
+def EliminateCopyOp : NestedTransformOp<"oneflow.eliminate_copy"> {
+  let description = [{
+    eliminate memref.copy if its target equals to source.
+  }];
+}
+
+def FoldAllocOp : NestedTransformOp<"oneflow.fold_alloc"> {
+  let description = [{
+    fold memref.alloc to a single one and subview on it.
   }];
 }
 
