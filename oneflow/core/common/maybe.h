@@ -53,6 +53,7 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
   ~Maybe() = default;
 
   bool IsOk() const { return data_or_error_.template Has<T>(); }
+  explicit operator bool() const { return IsOk(); }
   std::shared_ptr<T> Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {
     return data_or_error_.template Get<T>();
   }
@@ -126,6 +127,7 @@ class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> fina
   static Maybe Ok() { return Maybe(); }
 
   bool IsOk() const { return error_or_scalar_.IsScalar(); }
+  explicit operator bool() const { return IsOk(); }
   void Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {}
   std::shared_ptr<StackedError> stacked_error() const { return error_or_scalar_.shared_ptr(); }
   std::shared_ptr<const ErrorProto> error() const { return stacked_error()->error_proto(); }
@@ -185,6 +187,7 @@ class Maybe<T, typename std::enable_if<IsScalarType<T>::value>::type> final {
   void operator=(const Maybe& rhs) { error_or_scalar_ = rhs.error_or_scalar_; }
 
   bool IsOk() const { return error_or_scalar_.IsScalar(); }
+  explicit operator bool() const { return IsOk(); }
   T Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {
     return error_or_scalar_.scalar_value();
   }
@@ -245,6 +248,7 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
   ~Maybe() = default;
 
   bool IsOk() const { return maybe_ptr_.IsOk(); }
+  explicit operator bool() const { return IsOk(); }
   T Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {
     return *maybe_ptr_.Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
   }
@@ -279,14 +283,13 @@ std::string GetFormatedSerializedError(const std::shared_ptr<StackedError>& stac
 }  // namespace
 }  // namespace oneflow
 
-#define CHECK_OK(...)                                         \
-  for (auto&& maybe = __JustStackCheckWrapper__(__VA_ARGS__); \
-       GOOGLE_PREDICT_BRANCH_NOT_TAKEN(!maybe.IsOk());)       \
+#define CHECK_OK(...)                                   \
+  for (auto&& maybe = JUST_STACK_CHECK_I(__VA_ARGS__);  \
+       GOOGLE_PREDICT_BRANCH_NOT_TAKEN(!maybe.IsOk());) \
   LOG(FATAL) << OF_PP_STRINGIZE(__VA_ARGS__) << " is not OK:\n" << maybe.GetSerializedError()
 
 #define OF_RETURN_IF_ERROR(...)                                                               \
-  for (auto&& maybe_##__LINE__ = __JustStackCheckWrapper__(__VA_ARGS__);                      \
-       !maybe_##__LINE__.IsOk();)                                                             \
+  for (auto&& maybe_##__LINE__ = JUST_STACK_CHECK_I(__VA_ARGS__); !maybe_##__LINE__.IsOk();)  \
   return Error(maybe_##__LINE__.stacked_error()).AddStackFrame([](const char* function) {     \
     thread_local static auto frame = SymbolOf(ErrorStackFrame(__FILE__, __LINE__, function)); \
     return frame;                                                                             \
