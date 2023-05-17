@@ -1120,5 +1120,6 @@ class TestTensorNumpy(flow.unittest.TestCase):
         y = x.nansum()
         return y
 
+
 if __name__ == "__main__":
     unittest.main()
