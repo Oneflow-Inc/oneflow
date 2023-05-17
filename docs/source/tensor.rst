@@ -407,4 +407,3 @@ Tensor class reference
     Tensor.bitwise_or
     Tensor.bitwise_xor
     Tensor.baddbmm
-    Tensor.polygamma

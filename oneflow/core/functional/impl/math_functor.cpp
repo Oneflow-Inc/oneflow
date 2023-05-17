@@ -4586,12 +4586,6 @@ class PolygammaFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class Polygamma2Functor {
- public:
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int n) const {
-    return Polygamma(n, x);
-  }
-};
 }  // namespace impl
 
 using namespace impl;
@@ -4744,7 +4738,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ImagGradFunctor>("ImagGrad");
   m.add_functor<impl::ConjFunctor>("Conj");
   m.add_functor<impl::ConjPhysicalFunctor>("ConjPhysical");
-  m.add_functor<impl::PolygammaFunctor, impl::Polygamma2Functor>("Polygamma");
+  m.add_functor<impl::PolygammaFunctor>("Polygamma");
 };
 
 }  // namespace functional

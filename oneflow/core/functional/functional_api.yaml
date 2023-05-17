@@ -3371,8 +3371,5 @@
   bind_python: True
 
 - name: "polygamma"
-  signature: [
-    "Tensor (Int32 n, Tensor input) => Polygamma",
-    "Tensor (Tensor input, Int32 n) => Polygamma"
-  ]
+  signature: "Tensor (Int32 n, Tensor input) => Polygamma"
   bind_python: True
