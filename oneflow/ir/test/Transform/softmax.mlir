@@ -1,5 +1,5 @@
 // RUN: oneflow-opt %s --pass-pipeline="builtin.module(oneflow-transform-dialect-interpreter{transform-file-name=%p/softmax_codegen_spec.mlir})" \
-// RUN: | oneflow-opt --convert-vector-to-gpu=use-nvgpu=1 --convert-vector-to-scf --vector-bufferize --convert-scf-to-cf --insert-ofmempool --gpu-kernel-outlining \
+// RUN: | oneflow-opt --convert-vector-to-gpu=use-nvgpu=1 --convert-vector-to-scf --convert-scf-to-cf --insert-ofmempool --gpu-kernel-outlining \
 // RUN: | oneflow-opt --pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm))'
 
 
