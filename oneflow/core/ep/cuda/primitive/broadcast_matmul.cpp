@@ -197,7 +197,6 @@ auto LaunchBroadcastMatmulLt(CudaStream* cuda_stream, DataType data_type,
   OF_CUBLAS_CHECK(cublasLtMatmulPreferenceSetAttribute(preference.descriptor(),
                                                        CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES,
                                                        &workspace_size, sizeof(workspace_size)));
-  // std::cout << "device index: " << stream->device()->device_index() << std::endl;
   cublasLtHandle_t lt_handle = cuda_stream->cublas_lt_handle();
 
   void* workspace = nullptr;
