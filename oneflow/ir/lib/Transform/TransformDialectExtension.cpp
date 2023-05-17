@@ -16,6 +16,7 @@ limitations under the License.
 #include "Transform/TransformDialectExtension.h"
 #include "Transform/TransformStateExtension.h"
 #include "mlir/Dialect/PDL/IR/PDL.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/IR/OpImplementation.h"
@@ -25,6 +26,8 @@ limitations under the License.
 #include "llvm/Support/raw_ostream.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Pass/PassManager.h"
+#include "mlir/Transforms/Passes.h"
 
 using namespace mlir;
 using namespace mlir::oneflow;
@@ -43,6 +46,7 @@ void transform_dialect::ApplyPatternsOp::build(
   if (patterns.NAME) result.addAttribute(ApplyPatternsOp::ATTR(result.name), unitAttr);
 
   ADD_PATTERN(canonicalization, getCanonicalizationAttrName)
+  ADD_PATTERN(cse, getCseAttrName)
 #undef ADD_PATTERN
 }
 
@@ -71,6 +75,22 @@ DiagnosedSilenceableFailure transform_dialect::ApplyPatternsOp::applyToOne(
   });
   LogicalResult result = applyOpPatternsAndFold(ops, std::move(patterns), config);
   if (failed(result)) { return DiagnosedSilenceableFailure::definiteFailure(); }
+  if (getCse()) {
+    func::FuncOp lastFuncVisited;
+    auto walkResult = target->walk([&](func::FuncOp funcOp) -> WalkResult {
+      lastFuncVisited = funcOp;
+      auto context = funcOp->getContext();
+      mlir::PassManager pm(context);
+      pm.addPass(createCSEPass());
+      if (failed(pm.run(funcOp))) return WalkResult::interrupt();
+      return WalkResult::advance();
+    });
+    if (walkResult.wasInterrupted()) {
+      if (failed(result)) {
+        return mlir::emitDefiniteFailure(lastFuncVisited, "greedy patterns failed");
+      }
+    }
+  }
   return DiagnosedSilenceableFailure::success();
 }
 
