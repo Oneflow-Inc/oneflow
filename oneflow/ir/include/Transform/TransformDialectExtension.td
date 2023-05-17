@@ -55,13 +55,19 @@ def ExplicitLinalgOutcomeOp : NestedTransformOp<"oneflow.explicit_linalg_outcome
 
 def EliminateCopyOp : NestedTransformOp<"oneflow.eliminate_copy"> {
   let description = [{
-    eliminate memref.copy if its target equals to source.
+    eliminate memref.copy if its target equals to source or comes from block arguments.
   }];
 }
 
 def FoldAllocOp : NestedTransformOp<"oneflow.fold_alloc"> {
   let description = [{
     fold memref.alloc to a single one and subview on it.
+  }];
+}
+
+def ResultsToOutParamsOp : NestedTransformOp<"oneflow.results_to_out_params"> {
+  let description = [{
+    move results to out params.
   }];
 }
 

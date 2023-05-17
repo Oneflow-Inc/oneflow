@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "OneFlow/Transform/OneFlowMemPool.h"
+#include "OneFlow/OneFlowPDLLPatterns.h"
 #include "Transform/TransformDialectExtension.h"
 #include "Transform/TransformStateExtension.h"
 #include "mlir/Dialect/PDL/IR/PDL.h"
@@ -26,6 +27,7 @@ limitations under the License.
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
@@ -46,13 +48,13 @@ struct MemrefCopyOpFoldPatterns final : public OpRewritePattern<memref::CopyOp> 
 
 }  // namespace
 
-
 DiagnosedSilenceableFailure transform_dialect::EliminateCopyOp::applyToOne(
     Operation* target, transform::ApplyToEachResultList& results,
     transform::TransformState& state) {
   MLIRContext* ctx = target->getContext();
   RewritePatternSet patterns(ctx);
   patterns.add<MemrefCopyOpFoldPatterns>(patterns.getContext());
+  mlir::oneflow::populateAllocEliminationPatterns(patterns);
   SmallVector<Operation*> ops;
   GreedyRewriteConfig config;
   target->walk([&](Operation* nestedOp) {
@@ -94,22 +96,6 @@ DiagnosedSilenceableFailure transform_dialect::CanonicalizationOp::applyToOne(
   });
   LogicalResult result = applyOpPatternsAndFold(ops, std::move(patterns), config);
   if (failed(result)) { return DiagnosedSilenceableFailure::definiteFailure(); }
-  if (getCse()) {
-    func::FuncOp lastFuncVisited;
-    auto walkResult = target->walk([&](func::FuncOp funcOp) -> WalkResult {
-      lastFuncVisited = funcOp;
-      auto context = funcOp->getContext();
-      mlir::PassManager pm(context);
-      pm.addPass(createCSEPass());
-      if (failed(pm.run(funcOp))) return WalkResult::interrupt();
-      return WalkResult::advance();
-    });
-    if (walkResult.wasInterrupted()) {
-      if (failed(result)) {
-        return mlir::emitDefiniteFailure(lastFuncVisited, "greedy patterns failed");
-      }
-    }
-  }
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -117,8 +103,16 @@ DiagnosedSilenceableFailure transform_dialect::FoldAllocOp::applyToOne(
     Operation* target, transform::ApplyToEachResultList& results,
     transform::TransformState& state) {
   if (auto func = llvm::dyn_cast<func::FuncOp>(target)) { applyFoldAlloc(func); }
-  else {
-  llvm::errs() << "==========\n";
+  return DiagnosedSilenceableFailure::success();
+}
+
+DiagnosedSilenceableFailure transform_dialect::ResultsToOutParamsOp::applyToOne(
+    Operation* target, transform::ApplyToEachResultList& results,
+    transform::TransformState& state) {
+  if (auto module = llvm::dyn_cast<ModuleOp>(target)) {
+    if (failed(bufferization::promoteBufferResultsToOutParams(module, {}))) {
+      return DiagnosedSilenceableFailure::definiteFailure();
+    }
   }
   return DiagnosedSilenceableFailure::success();
 }

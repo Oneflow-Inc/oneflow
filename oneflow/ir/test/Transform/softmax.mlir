@@ -1,4 +1,6 @@
-// RUN: oneflow-opt %s --pass-pipeline="builtin.module(oneflow-transform-dialect-interpreter{transform-file-name=%p/softmax_codegen_spec.mlir})"
+// RUN: oneflow-opt %s --pass-pipeline="builtin.module(oneflow-transform-dialect-interpreter{transform-file-name=%p/softmax_codegen_spec.mlir})" | \
+// RUN: oneflow-opt --insert-ofmempool --gpu-kernel-outlining 
+// UN: oneflow-opt --pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm,nvvm-to-cubin))'
 
 
 !tmp_tensor_t = tensor<16x128xf32>
