@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/ep/common/primitive/broadcast_matmul.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
-#include "oneflow/core/ep/cuda/primitive/broadcast_matmul.h"
 #include <functional>
 #include <cuda.h>
 
@@ -115,6 +114,55 @@ cublasComputeType_t GetComputeType(DataType data_type, bool use_lt_interface) {
   }
 }
 
+template<typename T, cublasStatus_t (*destructor)(T*)>
+struct CuBlasLtDeleter {
+  void operator()(T* x) {
+    if (x != nullptr) { OF_CUBLAS_CHECK(destructor(x)); }
+  }
+};
+
+template<typename T>
+class CuBlasLtDescriptor {
+ public:
+  T* descriptor() const { return descriptor_.get(); }
+  T* descriptor() { return descriptor_.get(); }
+
+ protected:
+  std::shared_ptr<T> descriptor_;
+};
+
+class CuBlasLtMatmulDescriptor : public CuBlasLtDescriptor<cublasLtMatmulDescOpaque_t> {
+ public:
+  CuBlasLtMatmulDescriptor(cublasComputeType_t compute_type, cudaDataType_t scale_type) {
+    cublasLtMatmulDesc_t raw_descriptor = nullptr;
+    OF_CUBLAS_CHECK(cublasLtMatmulDescCreate(&raw_descriptor, compute_type, scale_type));
+    descriptor_ = std::shared_ptr<cublasLtMatmulDescOpaque_t>(
+        raw_descriptor, CuBlasLtDeleter<cublasLtMatmulDescOpaque_t, &cublasLtMatmulDescDestroy>{});
+  }
+};
+
+class CuBlasLtMatrixLayout : public CuBlasLtDescriptor<cublasLtMatrixLayoutOpaque_t> {
+ public:
+  CuBlasLtMatrixLayout(cudaDataType_t type, uint64_t rows, uint64_t cols, int64_t ld) {
+    cublasLtMatrixLayout_t raw_descriptor = nullptr;
+    OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&raw_descriptor, type, rows, cols, ld));
+    descriptor_ = std::shared_ptr<cublasLtMatrixLayoutOpaque_t>(
+        raw_descriptor,
+        CuBlasLtDeleter<cublasLtMatrixLayoutOpaque_t, &cublasLtMatrixLayoutDestroy>{});
+  }
+};
+
+class CuBlasLtMatmulPreference : public CuBlasLtDescriptor<cublasLtMatmulPreferenceOpaque_t> {
+ public:
+  CuBlasLtMatmulPreference() {
+    cublasLtMatmulPreference_t raw_descriptor = nullptr;
+    OF_CUBLAS_CHECK(cublasLtMatmulPreferenceCreate(&raw_descriptor));
+    descriptor_ = std::shared_ptr<cublasLtMatmulPreferenceOpaque_t>(
+        raw_descriptor,
+        CuBlasLtDeleter<cublasLtMatmulPreferenceOpaque_t, &cublasLtMatmulPreferenceDestroy>{});
+  }
+};
+
 auto LaunchBroadcastMatmulLt(CudaStream* cuda_stream, DataType data_type,
                              const cudaDataType_t cuda_data_type,
                              const cublasComputeType_t compute_type,
@@ -163,7 +211,6 @@ auto LaunchBroadcastMatmulLt(CudaStream* cuda_stream, DataType data_type,
                             size_t workspace_size, CudaStream* cuda_stream) -> void {
     OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
         compute_desc.descriptor(), CUBLASLT_MATMUL_DESC_BIAS_POINTER, &cublas_c, sizeof(void*)));
-
     cublasLtMatmulHeuristicResult_t heuristic_result = {};
     int ret = 0;
     OF_CUBLAS_CHECK(cublasLtMatmulAlgoGetHeuristic(
@@ -279,20 +326,15 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
 
   std::function<void(const void* cublas_a, const void* cublas_b, const void* sp_beta,
                      void* cublas_c)>
-      lt_func;
-
-  std::function<void(const void* cublas_a, const void* cublas_b, const void* sp_beta,
-                     void* cublas_c)>
-      ex_func;
-
+      matmul_func;
   if (use_lt_interface) {
-    lt_func = LaunchBroadcastMatmulLt(cuda_stream, data_type, cuda_data_type, compute_type,
-                                      cublas_trans_a, cublas_trans_b, cublas_m, cublas_n, cublas_k,
-                                      cublas_lda, cublas_ldb, cublas_ldc, &sp_alpha);
+    matmul_func = LaunchBroadcastMatmulLt(cuda_stream, data_type, cuda_data_type, compute_type,
+                                          cublas_trans_a, cublas_trans_b, cublas_m, cublas_n,
+                                          cublas_k, cublas_lda, cublas_ldb, cublas_ldc, &sp_alpha);
   } else {
-    ex_func = LaunchBroadcastMatmulEx(cuda_stream, data_type, cuda_data_type, compute_type,
-                                      cublas_trans_a, cublas_trans_b, cublas_m, cublas_n, cublas_k,
-                                      cublas_lda, cublas_ldb, cublas_ldc, &sp_alpha);
+    matmul_func = LaunchBroadcastMatmulEx(cuda_stream, data_type, cuda_data_type, compute_type,
+                                          cublas_trans_a, cublas_trans_b, cublas_m, cublas_n,
+                                          cublas_k, cublas_lda, cublas_ldb, cublas_ldc, &sp_alpha);
   }
 
   if (num_batch_dims == 1 && c_batch_dims[0] != 1) {
@@ -335,12 +377,7 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
       const void* cublas_a = batch_b;
       const void* cublas_b = batch_a;
       void* cublas_c = batch_c;
-
-      if (use_lt_interface) {
-        lt_func(cublas_a, cublas_b, &sp_beta, cublas_c);
-      } else {
-        ex_func(cublas_a, cublas_b, &sp_beta, cublas_c);
-      }
+      matmul_func(cublas_a, cublas_b, &sp_beta, cublas_c);
     };
     ForEachMatmul<kMaxNumDims>(data_type, m, n, k, beta, num_batch_dims, broadcast_batch_dims,
                                a_batch_dims, b_batch_dims, c_batch_dims, a, b, c, func);
