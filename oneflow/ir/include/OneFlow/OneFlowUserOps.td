@@ -2880,21 +2880,9 @@ def OneFlow_LlamaAttentionLayerForwardOp : OneFlow_BaseOp<"llama_attention_layer
     Variadic<OneFlow_Tensor>:$past_values
   );
   let output = (outs
-    OneFlow_Tensor:$rms_norm_out,
-    OneFlow_Tensor:$inv_rms,
-    OneFlow_Tensor:$query,
-    OneFlow_Tensor:$key,
-    OneFlow_Tensor:$value,
-    OneFlow_Tensor:$rotary_query,
-    OneFlow_Tensor:$rotary_key,
+    OneFlow_Tensor:$output,
     Variadic<OneFlow_Tensor>:$concat_keys,
-    Variadic<OneFlow_Tensor>:$concat_values,
-    OneFlow_Tensor:$attn_out,
-    OneFlow_Tensor:$out,
-    OneFlow_Tensor:$post_norm_out,
-    OneFlow_Tensor:$gate_out,
-    OneFlow_Tensor:$glu_out,
-    OneFlow_Tensor:$decoder_out
+    Variadic<OneFlow_Tensor>:$concat_values
   );
   let attrs = (ins
     SI64Attr:$head_size,
@@ -2906,7 +2894,6 @@ def OneFlow_LlamaAttentionLayerForwardOp : OneFlow_BaseOp<"llama_attention_layer
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
-
 
 def OneFlow_FusedMultiHeadAttentionInferenceOp : OneFlow_BaseOp<"fused_multi_head_attention_inference", [NoMemoryEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
