@@ -1517,10 +1517,10 @@ void InitEagerCclOpKernelCache(user_op::KernelCacheContext* ctx,
 }
 
 template<typename T>
-class LlamaAttentionLayerForwardKernel final : public user_op::OpKernel {
+class LlamaDecoderLayerForwardKernel final : public user_op::OpKernel {
  public:
-  LlamaAttentionLayerForwardKernel() = default;
-  ~LlamaAttentionLayerForwardKernel() override = default;
+  LlamaDecoderLayerForwardKernel() = default;
+  ~LlamaDecoderLayerForwardKernel() override = default;
 
   void InitOpKernelCacheWithFlags(
       user_op::KernelCacheContext* ctx, int8_t flag,
@@ -1543,26 +1543,29 @@ class LlamaAttentionLayerForwardKernel final : public user_op::OpKernel {
     user_op::Tensor* past_value = nullptr;
 
     // output tensors
-    user_op::Tensor* inv_rms = ctx->Tensor4ArgNameAndIndex("inv_rms", 0);
-    user_op::Tensor* rms_norm_out = ctx->Tensor4ArgNameAndIndex("rms_norm_out", 0);
-    user_op::Tensor* query = ctx->Tensor4ArgNameAndIndex("query", 0);
-    user_op::Tensor* key = ctx->Tensor4ArgNameAndIndex("key", 0);
-    user_op::Tensor* value = ctx->Tensor4ArgNameAndIndex("value", 0);
-    user_op::Tensor* rotary_query = ctx->Tensor4ArgNameAndIndex("rotary_query", 0);
-    user_op::Tensor* rotary_key = ctx->Tensor4ArgNameAndIndex("rotary_key", 0);
-    user_op::Tensor* attn_out = ctx->Tensor4ArgNameAndIndex("attn_out", 0);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    user_op::Tensor* post_norm_out = ctx->Tensor4ArgNameAndIndex("post_norm_out", 0);
-    user_op::Tensor* gate_out = ctx->Tensor4ArgNameAndIndex("gate_out", 0);
-    user_op::Tensor* glu_out = ctx->Tensor4ArgNameAndIndex("glu_out", 0);
-    user_op::Tensor* decoder_out = ctx->Tensor4ArgNameAndIndex("decoder_out", 0);
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    user_op::Tensor* output = ctx->Tensor4ArgNameAndIndex("output", 0);
 
-    // attrs
+    // attrs && constants
     const int64_t head_size = ctx->Attr<int64_t>("head_size");
     const int64_t num_layers = ctx->Attr<int64_t>("num_layers");
     auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
     constexpr uint32_t block_size = 256;
+    constexpr int pack_size = 8;  // pack under the K dim.
+    // b, m, h, k
+    using IndexType = int64_t;
+    auto input_shape = hidden_states->shape_view();
+    const IndexType b = input_shape.At(0);
+    const IndexType m = input_shape.At(1);
+    IndexType h = input_shape.At(2) / head_size;
+    IndexType k = head_size;
+    IndexType past_m = 0;
+    if (has_past_kv) past_m = ctx->Tensor4ArgNameAndIndex("past_keys", 0)->shape_view().At(2);
+    const IndexType bm = b * m;
+    const IndexType input_num_elements = bm * h * k;
+    const IndexType activation_size = GetCudaAlignedSize(sizeof(T) * input_num_elements);
 
+    // main loop
     for (int i = 0; i < num_layers; i++) {
       const user_op::Tensor* input_norm_weight =
           ctx->Tensor4ArgNameAndIndex("input_norm_weights", i);
@@ -1581,26 +1584,28 @@ class LlamaAttentionLayerForwardKernel final : public user_op::OpKernel {
         past_value = ctx->Tensor4ArgNameAndIndex("past_values", i);
       }
       // step1: input rms norm
-      const int64_t ncol = input_norm_weight->shape_view().elem_cnt();
-      const int64_t nrow = inv_rms->shape_view().elem_cnt();
       using RmsNormComputeType = float;
-      cuda::rms_norm::RmsNormForward(cuda_stream, nrow, ncol, 1e-6, hidden_states->dptr<T>(),
-                                     input_norm_weight->dptr<T>(), rms_norm_out->mut_dptr<T>(),
-                                     inv_rms->mut_dptr<RmsNormComputeType>());
-      // step2: to_q, to_k, to_v
-      auto rms_out_shape = rms_norm_out->shape_view();
+      cuda::rms_norm::RmsNormForward(
+          cuda_stream, bm, h * k, 1e-6, hidden_states->dptr<T>(), input_norm_weight->dptr<T>(),
+          tmp_buffer->mut_dptr<T>(),
+          reinterpret_cast<RmsNormComputeType*>(tmp_buffer->mut_dptr<char>() + activation_size));
+      // step2: q, k, v
       auto query_weight_shape = query_weight->shape_view();
-      auto matmul_m = rms_out_shape.At(1) * rms_out_shape.At(0), matmul_k = rms_out_shape.At(2),
-           matmul_n = query_weight_shape.At(0);
+      auto matmul_m = bm, matmul_k = h * k, matmul_n = query_weight_shape.At(0);
+      IndexType num_elements = matmul_m * matmul_n;
+      h = matmul_n / k;  // split h for parallel
       // use grouped_matmul
       cudaDataType_t data_type = CUDA_R_16F;
       cudaDataType_t compute_type = CUDA_R_32F;
       const int64_t kMaxProblemBatch = 3;  // q,k,v
-      void* workspace = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->mut_dptr();
+      T* tmp_qkv_ptr = tmp_buffer->mut_dptr<T>() + input_num_elements;
+      void* workspace = reinterpret_cast<void*>(tmp_qkv_ptr + num_elements * 3);
       void** ptr_arr = reinterpret_cast<void**>(workspace);
-      RUN_CUDA_KERNEL((InitQKVPtr<T>), ctx->stream(), 1, rms_norm_out->dptr<T>(),
+      RUN_CUDA_KERNEL((InitQKVPtr<T>), ctx->stream(), 1, tmp_buffer->dptr<T>(),
                       query_weight->dptr<T>(), key_weight->dptr<T>(), value_weight->dptr<T>(),
-                      query->mut_dptr<T>(), key->mut_dptr<T>(), value->mut_dptr<T>(), ptr_arr);
+                      /*query*/ tmp_qkv_ptr,
+                      /* key */ tmp_qkv_ptr + num_elements,
+                      /*value*/ tmp_qkv_ptr + num_elements * 2, ptr_arr);
       CublasScalarParameter sp_alpha, sp_beta;
       sp_alpha.s = 1.0;
       sp_beta.s = 0.0;
@@ -1611,32 +1616,21 @@ class LlamaAttentionLayerForwardKernel final : public user_op::OpKernel {
           CUBLAS_GEMM_DEFAULT));
 
       // step3: rotary_embedding  BM(HK) -> BMHK, PlaneKernel use pack_size=1
-      const int64_t num_elements = rotary_query->shape_view().elem_cnt() / /*pack_size*/ 1;
       constexpr size_t num_dims = 4;
-
-      using IndexType = int64_t;
-      int64_t b = 0;
-      int64_t m = 0;
-      int64_t h = 0;
-      int64_t k = 0;
-      int64_t out_b_stride = 0, out_m_stride = 0, out_h_stride = 0, out_offset = 0;
-      int64_t x_b_stride = 0, x_m_stride = 0, x_h_stride = 0, x_offset = 0;
-      ParseDims(rotary_query->shape_view(), "BMHK", Optional<int64_t>(), /*k_size*/ head_size, 0,
-                &b, &m, &h, &k, &out_b_stride, &out_m_stride, &out_h_stride, &out_offset);
-      ParseDims(query->shape_view(), "BM(HK)", Optional<int64_t>(), /*k_size*/ head_size,
-                /*tensor_index*/ 0, &b, &m, &h, &k, &x_b_stride, &x_m_stride, &x_h_stride,
-                &x_offset);
+      // out:BMHK,  x: BM(HK), tmp_buffer: rms_out, q, k, v
+      int64_t out_b_stride = m * h * k, out_m_stride = h * k, out_h_stride = k, out_offset = 0;
+      int64_t x_b_stride = out_b_stride, x_m_stride = out_m_stride, x_h_stride = k, x_offset = 0;
 
       FusedApplyRotaryEmbParam<T, IndexType, IndexType, num_dims, 1> q_param(
-          query->dptr<T>(), nullptr, nullptr, position_ids->dptr<IndexType>(),
-          rotary_query->mut_dptr<T>(), 1.0f / 10000, 1.0f / k, k, k, k / 2, num_elements, k, k, k,
-          0);
+          tmp_qkv_ptr, nullptr, nullptr, position_ids->dptr<IndexType>(), tmp_buffer->mut_dptr<T>(),
+          1.0f / 10000, 1.0f / k, k, k, k / 2, num_elements, k, k, k,
+          0);  // rotary_q, q, k, v
 
       q_param.sinuous_m_stride = k;
       const IndexType position_m = static_cast<IndexType>(position_ids->shape_view()[2]);
       q_param.position_rotate_stride = position_m;
       q_param.position_b_stride = position_m * /*rotary_emb_dim*/ 1;
-      const IndexType ref_strides[num_dims] = {m * h * k, h * k, k, 1};
+      const IndexType ref_strides[num_dims] = {out_b_stride, out_m_stride, out_h_stride, 1};
       const IndexType out_strides[num_dims] = {out_b_stride, out_m_stride, out_h_stride, 1};
       const IndexType x_strides[num_dims] = {x_b_stride, x_m_stride, x_h_stride, 1};
 #pragma unroll
@@ -1648,10 +1642,10 @@ class LlamaAttentionLayerForwardKernel final : public user_op::OpKernel {
 
       PlaneKernel<<<(num_elements + block_size - 1) / block_size, block_size, 0,
                     cuda_stream->cuda_stream()>>>(q_param);
-
+      // rotary_q, q, k, v -> rotary_q, rotary_k, k, v,
       FusedApplyRotaryEmbParam<T, IndexType, IndexType, num_dims, 1> k_param(
-          key->dptr<T>(), nullptr, nullptr, position_ids->dptr<IndexType>(),
-          rotary_key->mut_dptr<T>(), 1.0f / 10000, 1.0f / k, k, k, k / 2, num_elements, k, k, k, 0);
+          tmp_qkv_ptr + num_elements, nullptr, nullptr, position_ids->dptr<IndexType>(),
+          tmp_qkv_ptr, 1.0f / 10000, 1.0f / k, k, k, k / 2, num_elements, k, k, k, 0);
       k_param.sinuous_m_stride = k;
       k_param.position_rotate_stride = position_m;
       k_param.position_b_stride = position_m * /*rotary_emb_dim*/ 1;
@@ -1666,14 +1660,11 @@ class LlamaAttentionLayerForwardKernel final : public user_op::OpKernel {
                     cuda_stream->cuda_stream()>>>(k_param);
 
       // step4: concat_past_kv, past_key:bhmk, key:bmhk, out: bhmk
-      IndexType past_m = 0;
-      auto pack_size = 8;  // pack under the K dim.
       k /= pack_size;
-      if (has_past_kv) past_m = past_key->shape_view().At(2);  // BHMK, b,h,k同上
       BatchConcatParam<IndexType> kv;
       const auto count = b * (past_m + m) * h * k;
       kv.params[0].past_ptr = past_key == nullptr ? nullptr : past_key->dptr();
-      kv.params[0].ptr = rotary_key->dptr();
+      kv.params[0].ptr = /* rotary_key */ reinterpret_cast<const void*>(tmp_qkv_ptr);
       kv.params[0].output_ptr = concat_key->mut_dptr();
       kv.params[0].past_offset = 0;
       kv.params[0].offset = 0;
@@ -1694,7 +1685,7 @@ class LlamaAttentionLayerForwardKernel final : public user_op::OpKernel {
       kv.params[0].output_k = k;
       // past_value: bhmk, value: bm(hk), output:bhmk
       kv.params[1].past_ptr = past_value == nullptr ? nullptr : past_value->dptr();
-      kv.params[1].ptr = value->dptr();
+      kv.params[1].ptr = reinterpret_cast<const void*>(tmp_qkv_ptr + num_elements * 2);
       kv.params[1].output_ptr = concat_value->mut_dptr();
       kv.params[1].past_offset = 0;
       kv.params[1].offset = 0;
@@ -1721,7 +1712,7 @@ class LlamaAttentionLayerForwardKernel final : public user_op::OpKernel {
       // step5: fmha, query: bmhk, key_value: bhmk, out: bm(hk)
       k *= pack_size;  // recover k without pack
       Params params{};
-      params.data_type = query->data_type();
+      params.data_type = hidden_states->data_type();
       params.num_batches = b;
       params.num_heads = h;
       params.query_seq_len = m;
@@ -1738,17 +1729,17 @@ class LlamaAttentionLayerForwardKernel final : public user_op::OpKernel {
       params.v_stride_b = (past_m + m) * h * k;
       params.v_stride_m = k;
       params.v_stride_h = (past_m + m) * k;
-      params.query_ptr = rotary_query->dptr<char>() /* + q_offset * GetSizeOfDataType(data_type)*/;
+      params.query_ptr = tmp_buffer->dptr<char>() /* + q_offset * GetSizeOfDataType(data_type)*/;
       params.key_ptr = concat_key->dptr<char>() /* + k_offset * GetSizeOfDataType(data_type)*/;
       params.value_ptr = concat_value->dptr<char>() /* + v_offset * GetSizeOfDataType(data_type)*/;
       params.query_seq_start_ptr = nullptr;
       params.key_seq_start_ptr = nullptr;
       params.key_seq_len_ptr = nullptr;
-      params.out_ptr = attn_out->mut_dptr();
-      Tensor* tmp = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-      const int64_t tmp_buffer_size = tmp->shape_view().elem_cnt();
-      params.workspace = tmp->mut_dptr();
-      params.workspace_size = tmp_buffer_size;
+      params.out_ptr = tmp_buffer->mut_dptr<char>() + activation_size;
+      const int64_t tmp_buffer_size = tmp_buffer->shape_view().elem_cnt();
+      params.workspace =
+          reinterpret_cast<void*>(tmp_buffer->mut_dptr<char>() + activation_size * 2);
+      params.workspace_size = tmp_buffer_size - activation_size * 2;
       params.attn_mask_type = "causal_from_bottom_right";
       params.causal_diagonal_offset = 0;
 
@@ -1761,35 +1752,40 @@ class LlamaAttentionLayerForwardKernel final : public user_op::OpKernel {
 
       // step 6, attn_out linear, attn_out: BM(hK), attn_out_weight: (HK)(hK)
       auto batch_matmul = ep::primitive::NewPrimitive<ep::primitive::BatchMatmulFactory>(
-          ctx->device_type(), /*data_type */ query->data_type(),
+          ctx->device_type(), /*data_type */ hidden_states->data_type(),
           /*trans_a*/ ep::primitive::BlasTransposeType::N,
           /*trans_b*/ ep::primitive::BlasTransposeType::T);
       CHECK(batch_matmul);
       auto out_weight_shape = attn_out_weight->shape_view();
-      batch_matmul->Launch(cuda_stream, b, m, out_weight_shape.At(0), out_weight_shape.At(1),
-                           /*alpha*/ 1.0, attn_out->dptr(), attn_out_weight->dptr(), /*beta*/ 0.0,
-                           out->mut_dptr());
+      batch_matmul->Launch(
+          cuda_stream, b, m, out_weight_shape.At(0), out_weight_shape.At(1),
+          /*alpha*/ 1.0, reinterpret_cast<const void*>(tmp_buffer->dptr<char>() + activation_size),
+          attn_out_weight->dptr(), /*beta*/ 0.0, tmp_buffer->mut_dptr<char>());
 
       // step 7, AllReduceSum
       std::unique_ptr<ccl::AllReduce> all_reduce = ccl::NewCollectiveCommunication<ccl::AllReduce>(
-          ctx->device_type(), out->data_type(), ccl::kSum);
-      all_reduce->Launch(ctx->stream(), out->dptr(), out->mut_dptr(), out->shape_view().elem_cnt(),
-                         kernel_cache->communication_ctx());
+          ctx->device_type(), output->data_type(), ccl::kSum);
+      all_reduce->Launch(ctx->stream(), tmp_buffer->dptr(), tmp_buffer->mut_dptr(),
+                         input_num_elements, kernel_cache->communication_ctx());
       // step 8, residual add: out = out + hidden_states
-      cuda::elementwise::Binary(Add<T>(), out->shape_view().elem_cnt(), out->mut_dptr<T>(),
-                                out->dptr<T>(), hidden_states->dptr<T>(),
+      cuda::elementwise::Binary(Add<T>(), input_num_elements, output->mut_dptr<T>(),
+                                tmp_buffer->dptr<T>(), hidden_states->dptr<T>(),
                                 cuda_stream->cuda_stream());
 
       // step 9, post rms-norm
-      cuda::rms_norm::RmsNormForward(cuda_stream, nrow, ncol, 1e-6, out->dptr<T>(),
-                                     post_norm_weight->dptr<T>(), post_norm_out->mut_dptr<T>(),
-                                     inv_rms->mut_dptr<RmsNormComputeType>());
+      h = output->shape_view().At(2) / k;
+      cuda::rms_norm::RmsNormForward(
+          cuda_stream, bm, h * k, 1e-6, output->dptr<T>(), post_norm_weight->dptr<T>(),
+          tmp_buffer->mut_dptr<T>(),
+          reinterpret_cast<RmsNormComputeType*>(tmp_buffer->mut_dptr<char>() + activation_size));
       // step 10, fused_glu, + silu
-      auto mlp_gate_weight_shape = mlp_gate_weight->shape_view();
-      auto glu_matmul_n = mlp_gate_weight_shape.At(0);
-      RUN_CUDA_KERNEL((InitGluPtr<T>), ctx->stream(), 1, post_norm_out->dptr<T>(),
-                      mlp_gate_weight->dptr<T>(), mlp_up_weight->dptr<T>(), gate_out->mut_dptr<T>(),
-                      glu_out->mut_dptr<T>(), ptr_arr);
+      auto glu_matmul_n = mlp_gate_weight->shape_view().At(0);
+      T* gate_ptr = tmp_buffer->mut_dptr<T>() + input_num_elements;
+      num_elements = bm * glu_matmul_n;
+      T* up_ptr = gate_ptr + sizeof(T) * num_elements;
+      RUN_CUDA_KERNEL((InitGluPtr<T>), ctx->stream(), 1, tmp_buffer->dptr<T>(),
+                      mlp_gate_weight->dptr<T>(), mlp_up_weight->dptr<T>(), gate_ptr, up_ptr,
+                      ptr_arr);
       OF_CUBLAS_CHECK(cublasGemmBatchedEx(
           cuda_stream->cublas_handle(), CUBLAS_OP_T, CUBLAS_OP_N, glu_matmul_n, matmul_m, matmul_k,
           &sp_alpha, ptr_arr + /*kMaxProblemBatch*/ 2, data_type, matmul_k, ptr_arr, data_type,
@@ -1797,52 +1793,49 @@ class LlamaAttentionLayerForwardKernel final : public user_op::OpKernel {
           compute_type, CUBLAS_GEMM_DEFAULT));
 
       // glu_out shape: (b, m, hk)
-      auto pack_n = glu_out->shape_view().At(2) / pack_size /*pack_size=8*/;
-      auto pack_num = b * m * pack_n;
       ep::primitive::UnaryFunctor<DeviceType::kCUDA, ep::primitive::UnaryOp::kSilu, T, T> act(0, 0);
-      cuda::elementwise::Binary(GluActFunctor<decltype(act), T>(act),
-                                glu_out->shape_view().elem_cnt(), glu_out->mut_dptr<T>(),
-                                gate_out->dptr<T>(), glu_out->dptr<T>(),
-                                cuda_stream->cuda_stream());
+      cuda::elementwise::Binary(GluActFunctor<decltype(act), T>(act), num_elements, gate_ptr,
+                                gate_ptr, up_ptr, cuda_stream->cuda_stream());
 
       // step 11, mlp_down_proj && all_reduce_sum && add_residual
       auto mlp_down_weight_shape = mlp_down_weight->shape_view();
       batch_matmul->Launch(cuda_stream, b, m, mlp_down_weight_shape.At(0),
                            mlp_down_weight_shape.At(1),
-                           /*alpha*/ 1.0, glu_out->dptr(), mlp_down_weight->dptr(), /*beta*/ 0.0,
-                           decoder_out->mut_dptr());
-      all_reduce->Launch(ctx->stream(), decoder_out->dptr(), decoder_out->mut_dptr(),
-                         decoder_out->shape_view().elem_cnt(), kernel_cache->communication_ctx());
-      cuda::elementwise::Binary(Add<T>(), decoder_out->shape_view().elem_cnt(),
-                                decoder_out->mut_dptr<T>(), decoder_out->dptr<T>(), out->dptr<T>(),
+                           /*alpha*/ 1.0, reinterpret_cast<const void*>(gate_ptr),
+                           mlp_down_weight->dptr(), /*beta*/ 0.0, tmp_buffer->mut_dptr());
+
+      all_reduce->Launch(ctx->stream(), tmp_buffer->dptr(), tmp_buffer->mut_dptr(),
+                         input_num_elements, kernel_cache->communication_ctx());
+      cuda::elementwise::Binary(Add<T>(), input_num_elements, output->mut_dptr<T>(),
+                                output->dptr<T>(), tmp_buffer->dptr<T>(),
                                 cuda_stream->cuda_stream());
       // set up next input
-      hidden_states = decoder_out;
+      hidden_states = output;
     }
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_LLAMA_ATTENTION_LAYER_FORWARD_KERNEL(dtype)                                       \
-  REGISTER_USER_KERNEL("llama_attention_layer_forward")                                            \
-      .SetCreateFn<LlamaAttentionLayerForwardKernel<dtype>>()                                      \
+#define REGISTER_LLAMA_DECODER_LAYER_FORWARD_KERNEL(dtype)                                         \
+  REGISTER_USER_KERNEL("llama_decoder_layer_forward")                                              \
+      .SetCreateFn<LlamaDecoderLayerForwardKernel<dtype>>()                                        \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                             \
                        && (user_op::HobDataType("hidden_states", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](InferContext* ctx) -> size_t {                                         \
-        const auto& out_desc = ctx->OutputTensorDesc("attn_out", 0);                               \
+        const auto& out_desc = ctx->OutputTensorDesc("output", 0);                                 \
         size_t buffer_size = 0;                                                                    \
         buffer_size +=                                                                             \
             GetCudaAlignedSize(out_desc.shape().elem_cnt() * GetSizeOfDataType(DataType::kFloat)); \
         buffer_size += GetCudaAlignedSize(out_desc.shape().elem_cnt()                              \
                                           * GetSizeOfDataType(out_desc.data_type()))               \
-                       * 3;                                                                        \
+                       * 7;                                                                        \
         buffer_size += GetCudaAlignedSize((out_desc.shape().At(0) + 1)                             \
                                           * GetSizeOfDataType(DataType::kInt32));                  \
         return buffer_size;                                                                        \
       });
 
-REGISTER_LLAMA_ATTENTION_LAYER_FORWARD_KERNEL(half);
+REGISTER_LLAMA_DECODER_LAYER_FORWARD_KERNEL(half);
 }  // namespace
 
 }  // namespace user_op

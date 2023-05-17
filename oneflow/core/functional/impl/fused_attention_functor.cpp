@@ -733,13 +733,13 @@ class FusedApplyRotaryEmbFunctor {
   std::shared_ptr<OpExpr> op_without_position_sinuous_;
 };
 
-class LlamaAttentionLayerForwardFunctor {
+class LlamaDecoderLayerForwardFunctor {
  public:
-  LlamaAttentionLayerForwardFunctor() {
+  LlamaDecoderLayerForwardFunctor() {
     // Llama num_layers: 7B-32, 13B-40, 30B-60, 65B-80
     for (int num_layers : {1, 32, 40, 60, 80}) {
       std::shared_ptr<OpExpr> op_with_past_key_value =
-          CHECK_JUST(one::OpBuilder("llama_attention_layer_forward")
+          CHECK_JUST(one::OpBuilder("llama_decoder_layer_forward")
                          .Input("hidden_states")
                          .Input("input_norm_weights", num_layers)
                          .Input("query_weights", num_layers)
@@ -753,24 +753,12 @@ class LlamaAttentionLayerForwardFunctor {
                          .Input("mlp_down_weights", num_layers)
                          .Input("past_keys", num_layers)
                          .Input("past_values", num_layers)
-                         .Output("rms_norm_out")
-                         .Output("inv_rms")
-                         .Output("query")
-                         .Output("key")
-                         .Output("value")
-                         .Output("rotary_query")
-                         .Output("rotary_key")
+                         .Output("output")
                          .Output("concat_keys", num_layers)
                          .Output("concat_values", num_layers)
-                         .Output("attn_out")
-                         .Output("out")
-                         .Output("post_norm_out")
-                         .Output("gate_out")
-                         .Output("glu_out")
-                         .Output("decoder_out")
                          .Build());
-      ops_with_past_key_value_.insert(std::make_pair(num_layers, op_with_past_key_value));
-      std::shared_ptr<OpExpr> op = CHECK_JUST(one::OpBuilder("llama_attention_layer_forward")
+      ops_with_past_key_value_.emplace(num_layers, op_with_past_key_value);
+      std::shared_ptr<OpExpr> op = CHECK_JUST(one::OpBuilder("llama_decoder_layer_forward")
                                                   .Input("hidden_states")
                                                   .Input("input_norm_weights", num_layers)
                                                   .Input("query_weights", num_layers)
@@ -782,23 +770,11 @@ class LlamaAttentionLayerForwardFunctor {
                                                   .Input("mlp_gate_weights", num_layers)
                                                   .Input("mlp_up_weights", num_layers)
                                                   .Input("mlp_down_weights", num_layers)
-                                                  .Output("rms_norm_out")
-                                                  .Output("inv_rms")
-                                                  .Output("query")
-                                                  .Output("key")
-                                                  .Output("value")
-                                                  .Output("rotary_query")
-                                                  .Output("rotary_key")
+                                                  .Output("output")
                                                   .Output("concat_keys", num_layers)
                                                   .Output("concat_values", num_layers)
-                                                  .Output("attn_out")
-                                                  .Output("out")
-                                                  .Output("post_norm_out")
-                                                  .Output("gate_out")
-                                                  .Output("glu_out")
-                                                  .Output("decoder_out")
                                                   .Build());
-      ops_.insert(std::make_pair(num_layers, op));
+      ops_.emplace(num_layers, op);
     }
   }
   Maybe<TensorTuple> operator()(
@@ -811,8 +787,16 @@ class LlamaAttentionLayerForwardFunctor {
       const TensorTuple& past_values, const int64_t head_size) const {
     int64_t num_layers = input_norm_weights.size();
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("head_size", "num_layers", "parallel_conf");
-    auto conf = PbMessage2TxtString(JUST(hidden_states->parallel_desc())->parallel_conf());
-    attrs.SetAllAttrs(head_size, num_layers, conf);
+    auto parallel_desc = JUST(hidden_states->parallel_desc());
+    auto it = parallel_desc2str_.find(parallel_desc);
+    if (it == parallel_desc2str_.end()) {
+      std::string conf = PbMessage2TxtString(parallel_desc->parallel_conf());
+      parallel_desc2str_.emplace(parallel_desc, conf);
+      attrs.SetAllAttrs(head_size, num_layers, conf);
+    } else {
+      attrs.SetAllAttrs(head_size, num_layers, it->second);
+    }
+
     TensorTuple inputs{hidden_states};
     inputs.insert(inputs.end(), input_norm_weights.begin(), input_norm_weights.end());
     inputs.insert(inputs.end(), query_weights.begin(), query_weights.end());
@@ -843,14 +827,15 @@ class LlamaAttentionLayerForwardFunctor {
   }
 
  private:
-  std::map<int, std::shared_ptr<OpExpr>> ops_;
-  std::map<int, std::shared_ptr<OpExpr>> ops_with_past_key_value_;
+  mutable std::unordered_map<Symbol<ParallelDesc>, std::string> parallel_desc2str_;
+  std::unordered_map<int, std::shared_ptr<OpExpr>> ops_;
+  std::unordered_map<int, std::shared_ptr<OpExpr>> ops_with_past_key_value_;
 };
 
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
-  m.add_functor<impl::LlamaAttentionLayerForwardFunctor>("LlamaAttentionLayerForwardOp");
+  m.add_functor<impl::LlamaDecoderLayerForwardFunctor>("LlamaDecoderLayerForwardOp");
   m.add_functor<impl::FusedMultiHeadAttentionInferenceFunctor>("FusedMultiHeadAttentionInference");
   m.add_functor<impl::FusedMultiHeadAttentionInferenceV2Functor>(
       "FusedMultiHeadAttentionInferenceV2");
