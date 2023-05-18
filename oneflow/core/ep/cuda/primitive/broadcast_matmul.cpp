@@ -117,18 +117,18 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
   const auto cuda_data_type = GetCudaDataType(data_type);
   const auto compute_type = GetComputeType(data_type);
   const auto sp_alpha = GetCublasScalarParameter(alpha, compute_type);
-  const auto GetCublasOperation = [](BlasTransposeType transpose_type) {
+  const auto GetCublasOperation = [](BlasTransposeType transpose_type, DataType data_type) {
     if (transpose_type == BlasTransposeType::N) {
       return CUBLAS_OP_N;
     } else if (transpose_type == BlasTransposeType::T) {
-      return CUBLAS_OP_T;
+      return DType(data_type).is_complex() ? CUBLAS_OP_C : CUBLAS_OP_T;
     } else {
       UNIMPLEMENTED();
       return CUBLAS_OP_N;
     }
   };
-  const cublasOperation_t cublas_trans_a = GetCublasOperation(transpose_b);
-  const cublasOperation_t cublas_trans_b = GetCublasOperation(transpose_a);
+  const cublasOperation_t cublas_trans_a = GetCublasOperation(transpose_b, data_type);
+  const cublasOperation_t cublas_trans_b = GetCublasOperation(transpose_a, data_type);
   const int cublas_m = n;
   const int cublas_n = m;
   const int cublas_k = k;

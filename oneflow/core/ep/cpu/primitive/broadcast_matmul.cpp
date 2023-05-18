@@ -31,12 +31,12 @@ namespace {
 
 constexpr size_t kMaxNumDims = 8;
 
-CBLAS_TRANSPOSE GetCblasTranspose(BlasTransposeType transpose_type) {
+CBLAS_TRANSPOSE GetCblasTranspose(BlasTransposeType transpose_type, DataType data_type) {
   if (transpose_type == BlasTransposeType::N) {
     return CblasNoTrans;
   } else if (transpose_type == BlasTransposeType::T) {
-    return CblasTrans;
-  } else {
+    return DType(data_type).is_complex() ? CblasConjTrans : CblasTrans;
+  }  else {
     UNIMPLEMENTED();
     return CblasNoTrans;
   }
@@ -50,7 +50,7 @@ void CblasMatmul(CBLAS_TRANSPOSE trans_a, CBLAS_TRANSPOSE trans_b, int m, int n,
   int lda = 0;
   if (trans_a == CblasNoTrans) {
     lda = k;
-  } else if (trans_a == CblasTrans) {
+  } else if (trans_a == CblasTrans || trans_a == CblasConjTrans) {
     lda = m;
   } else {
     UNIMPLEMENTED();
@@ -58,7 +58,7 @@ void CblasMatmul(CBLAS_TRANSPOSE trans_a, CBLAS_TRANSPOSE trans_b, int m, int n,
   int ldb = 0;
   if (trans_b == CblasNoTrans) {
     ldb = n;
-  } else if (trans_b == CblasTrans) {
+  } else if (trans_b == CblasTrans || trans_b == CblasConjTrans) {
     ldb = k;
   } else {
     UNIMPLEMENTED();
@@ -75,7 +75,7 @@ void CblasMatmul(CBLAS_TRANSPOSE trans_a, CBLAS_TRANSPOSE trans_b, int m, int n,
   int lda = 0;
   if (trans_a == CblasNoTrans) {
     lda = k;
-  } else if (trans_a == CblasTrans) {
+  } else if (trans_a == CblasTrans || trans_a == CblasConjTrans) {
     lda = m;
   } else {
     UNIMPLEMENTED();
@@ -83,7 +83,7 @@ void CblasMatmul(CBLAS_TRANSPOSE trans_a, CBLAS_TRANSPOSE trans_b, int m, int n,
   int ldb = 0;
   if (trans_b == CblasNoTrans) {
     ldb = n;
-  } else if (trans_b == CblasTrans) {
+  } else if (trans_b == CblasTrans || trans_b == CblasConjTrans) {
     ldb = k;
   } else {
     UNIMPLEMENTED();
@@ -101,8 +101,8 @@ void LaunchCblasBroadcastMatmul(Stream* /*stream*/, DataType data_type,
                                 const int64_t* a_batch_dims, const int64_t* b_batch_dims,
                                 const int64_t* c_batch_dims, int64_t m, int64_t n, int64_t k,
                                 Scalar alpha, const void* a, const void* b, Scalar beta, void* c) {
-  const CBLAS_TRANSPOSE cblas_trans_a = GetCblasTranspose(transpose_a);
-  const CBLAS_TRANSPOSE cblas_trans_b = GetCblasTranspose(transpose_b);
+  const CBLAS_TRANSPOSE cblas_trans_a = GetCblasTranspose(transpose_a, data_type);
+  const CBLAS_TRANSPOSE cblas_trans_b = GetCblasTranspose(transpose_b, data_type);
   const T alpha_value = alpha.Value<T>();
   auto func = [&](const void* batch_a, const void* batch_b, void* batch_c, Scalar batch_beta) {
     const T beta_value = batch_beta.Value<T>();
@@ -151,7 +151,7 @@ class BroadcastMatmulFactoryImpl : public BroadcastMatmulFactory {
                                        BlasTransposeType transpose_b,
                                        size_t max_num_dims) override {
     if (max_num_dims > kMaxNumDims) { return nullptr; }
-    if (data_type == DataType::kFloat || data_type == DataType::kDouble) {
+    if (data_type == DataType::kFloat || data_type == DataType::kDouble || data_type == DataType::kComplex64 || data_type == DataType::kComplex128) {
       return std::make_unique<BroadcastMatmulImpl<kMaxNumDims>>(data_type, transpose_a,
                                                                 transpose_b);
     } else {
