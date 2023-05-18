@@ -143,8 +143,9 @@ void WithMlirContext(
 size_t inferOneFlowMemPoolSize(user_op::InferContext* ctx) {
   using namespace user_op;
   mlir::MLIRContext mlir_ctx(oneflow::okl::GetRegistry());
-  auto mlir =
-      mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx);
+  auto mlir_assembly = ctx->Attr<std::vector<char>>("mlir_assembly");
+  auto mlir = mlir::parseSourceString<mlir::ModuleOp>(
+      llvm::StringRef(mlir_assembly.data(), mlir_assembly.size() - 1), &mlir_ctx);
 
   auto module = mlir.get();
   if (auto mempool = module->getAttr(mlir::oneflow::codegen::mempool::MEMPOOL_ATTR_NAME)
@@ -169,8 +170,9 @@ class MlirJitCpuKernel final : public user_op::OpKernel {
     WithMlirContext(
         ctx, ext_libs,
         [&ctx](mlir::MLIRContext* mlir_ctx) {
-          return mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
-                                                         mlir_ctx);
+          auto mlir_assembly = ctx->Attr<std::vector<char>>("mlir_assembly");
+          return mlir::parseSourceString<mlir::ModuleOp>(
+              llvm::StringRef(mlir_assembly.data(), mlir_assembly.size() - 1), mlir_ctx);
         },
         nullptr);
   }
@@ -210,8 +212,9 @@ class MlirJitGpuKernel final : public user_op::OpKernel {
     WithMlirContext(
         ctx, ext_libs,
         [&ctx](mlir::MLIRContext* mlir_ctx) {
-          return mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
-                                                         mlir_ctx);
+          auto mlir_assembly = ctx->Attr<std::vector<char>>("mlir_assembly");
+          return mlir::parseSourceString<mlir::ModuleOp>(
+              llvm::StringRef(mlir_assembly.data(), mlir_assembly.size() - 1), mlir_ctx);
         },
 #ifdef WITH_CUDA
         ctx->stream()->As<ep::CudaStream>()->cuda_stream());

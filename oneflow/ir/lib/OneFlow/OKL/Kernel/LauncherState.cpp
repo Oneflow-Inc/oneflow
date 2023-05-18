@@ -40,8 +40,9 @@ namespace {
 
 mlir::OwningOpRef<mlir::ModuleOp> GetModule(user_op::KernelInitContext* ctx,
                                             mlir::MLIRContext* mlir_ctx) {
-  auto module =
-      mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), mlir_ctx);
+  auto mlir_assembly = ctx->Attr<std::vector<char>>("mlir_assembly");
+  auto module = mlir::parseSourceString<mlir::ModuleOp>(
+      llvm::StringRef(mlir_assembly.data(), mlir_assembly.size() - 1), mlir_ctx);
   if (!module) { LOG(FATAL) << "Fail to load mlir assembly"; }
   // lower oneflow wrap ops into okl dialect
   if (failed(mlir::okm::LowerWrapOpsToOKL(*module))) {

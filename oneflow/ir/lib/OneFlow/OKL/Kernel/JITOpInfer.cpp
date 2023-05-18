@@ -37,6 +37,7 @@ limitations under the License.
 #include "mlir/Parser/Parser.h"
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace oneflow {
@@ -78,15 +79,15 @@ static Maybe<mlir::FunctionType> GetFunctionType(user_op::InferContext* ctx,
 }
 
 Maybe<void> SetTensorDataType(user_op::InferContext* ctx) {
-  auto mlir_assembly_str = ctx->Attr<std::string>("mlir_assembly");
+  auto mlir_assembly = ctx->Attr<std::vector<char>>("mlir_assembly");
   mlir::DialectRegistry registry;
   mlir::registerAllDialects(registry);
   mlir::MLIRContext context(registry);
   context.loadDialect<mlir::func::FuncDialect>();
   context.loadDialect<mlir::oneflow::OneFlowDialect>();
 
-  mlir::OwningOpRef<mlir::ModuleOp> module =
-      mlir::parseSourceString<mlir::ModuleOp>(mlir_assembly_str, &context);
+  mlir::OwningOpRef<mlir::ModuleOp> module = mlir::parseSourceString<mlir::ModuleOp>(
+      llvm::StringRef(mlir_assembly.data(), mlir_assembly.size() - 1), &context);
   if (!module) {
     LOG(ERROR) << "Fail to load mlir assembly";
     exit(1);
@@ -116,15 +117,15 @@ Maybe<void> SetTensorDataType(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
-  auto mlir_assembly_str = ctx->Attr<std::string>("mlir_assembly");
+  auto mlir_assembly = ctx->Attr<std::vector<char>>("mlir_assembly");
   mlir::DialectRegistry registry;
   mlir::registerAllDialects(registry);
   mlir::MLIRContext context(registry);
   context.loadDialect<mlir::func::FuncDialect>();
   context.loadDialect<mlir::oneflow::OneFlowDialect>();
 
-  mlir::OwningOpRef<mlir::ModuleOp> module =
-      mlir::parseSourceString<mlir::ModuleOp>(mlir_assembly_str, &context);
+  mlir::OwningOpRef<mlir::ModuleOp> module = mlir::parseSourceString<mlir::ModuleOp>(
+      llvm::StringRef(mlir_assembly.data(), mlir_assembly.size() - 1), &context);
   if (!module) {
     LOG(ERROR) << "Fail to load mlir assembly";
     exit(1);

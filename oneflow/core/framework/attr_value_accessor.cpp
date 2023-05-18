@@ -83,6 +83,17 @@ void AttrValueAccessor<Symbol<Device>>::Attr(const Symbol<Device>& cpp_val, Attr
   attr_val->mutable_at_device()->set_rematable(cpp_val->rematable());
 }
 
+template<>
+std::vector<char> AttrValueAccessor<std::vector<char>>::Attr(const AttrValue& val) {
+  return std::vector<char>(val.at_bytes().begin(), val.at_bytes().end());
+}
+
+template<>
+void AttrValueAccessor<std::vector<char>>::Attr(const std::vector<char>& cpp_val,
+                                                AttrValue* attr_val) {
+  attr_val->mutable_at_bytes()->assign(cpp_val.data(), cpp_val.size());
+}
+
 // List of Basic Attr
 #define LIST_BASIC_ATTR_SEQ_ENTRY(field, cpp_type, attr_type)                                   \
   template<>                                                                                    \
