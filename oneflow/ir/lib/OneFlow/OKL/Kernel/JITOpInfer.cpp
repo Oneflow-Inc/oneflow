@@ -38,6 +38,7 @@ limitations under the License.
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace oneflow {
@@ -86,8 +87,13 @@ Maybe<void> SetTensorDataType(user_op::InferContext* ctx) {
   context.loadDialect<mlir::func::FuncDialect>();
   context.loadDialect<mlir::oneflow::OneFlowDialect>();
 
-  mlir::OwningOpRef<mlir::ModuleOp> module = mlir::parseSourceString<mlir::ModuleOp>(
-      llvm::StringRef(mlir_assembly.data(), mlir_assembly.size() - 1), &context);
+  auto memBuffer =
+      llvm::MemoryBuffer::getMemBuffer(llvm::StringRef(mlir_assembly.data(), mlir_assembly.size()),
+                                       "", /*RequiresNullTerminator=*/false);
+  llvm::SourceMgr sourceMgr;
+  sourceMgr.AddNewSourceBuffer(std::move(memBuffer), llvm::SMLoc());
+  mlir::OwningOpRef<mlir::ModuleOp> module =
+      mlir::parseSourceFile<mlir::ModuleOp>(sourceMgr, &context);
   if (!module) {
     LOG(ERROR) << "Fail to load mlir assembly";
     exit(1);
@@ -124,8 +130,13 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   context.loadDialect<mlir::func::FuncDialect>();
   context.loadDialect<mlir::oneflow::OneFlowDialect>();
 
-  mlir::OwningOpRef<mlir::ModuleOp> module = mlir::parseSourceString<mlir::ModuleOp>(
-      llvm::StringRef(mlir_assembly.data(), mlir_assembly.size() - 1), &context);
+  auto memBuffer =
+      llvm::MemoryBuffer::getMemBuffer(llvm::StringRef(mlir_assembly.data(), mlir_assembly.size()),
+                                       "", /*RequiresNullTerminator=*/false);
+  llvm::SourceMgr sourceMgr;
+  sourceMgr.AddNewSourceBuffer(std::move(memBuffer), llvm::SMLoc());
+  mlir::OwningOpRef<mlir::ModuleOp> module =
+      mlir::parseSourceFile<mlir::ModuleOp>(sourceMgr, &context);
   if (!module) {
     LOG(ERROR) << "Fail to load mlir assembly";
     exit(1);
