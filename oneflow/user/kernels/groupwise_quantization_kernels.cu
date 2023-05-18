@@ -290,7 +290,6 @@ struct LoadCast<int8_t, half, pack_size, 8,
     AlignedArray<half2, pack_size / 2>* dst_h2 =
         reinterpret_cast<AlignedArray<half2, pack_size / 2>*>(dst);
 
-    //翻转int8的符号位，等价于把有符号数+128来转化为无符号数
     for (int i = 0; i < pack_size / 4; ++i) {
       union {
         uint32_t u32;
@@ -299,6 +298,7 @@ struct LoadCast<int8_t, half, pack_size, 8,
 
       uint32_t elem = src.elem[i];
 
+      //把有符号数转化为无符号数，等价于翻转符号位
       asm volatile("xor.b32 %0,%1,%2;\n" : "=r"(elem) : "r"(elem), "n"(0x80808080));
       asm volatile("prmt.b32 %0,%1,%2,%3;\n"
                    : "=r"(u32_h2[0].u32)
@@ -367,6 +367,7 @@ struct LoadCast<int8_t, Dst, pack_size, 4,
 
       uint32_t elem = src.elem[i];
 
+      //把有符号数转化为无符号数，等价于翻转符号位
       asm volatile("xor.b32 %0,%1,%2;\n" : "=r"(elem) : "r"(elem), "n"(FLIP_TO_UNSIGNED_MASK));
 
       const uint32_t lsb0_4 = elem;
