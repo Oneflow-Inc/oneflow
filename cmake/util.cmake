@@ -301,7 +301,7 @@ endfunction()
 
 if(APPLE)
   set(ALL_ARCHIVE_BEGIN -Wl,-force_load)
-  set(ALL_ARCHIVE_END )
+  set(ALL_ARCHIVE_END)
 elseif(UNIX)
   set(ALL_ARCHIVE_BEGIN -Wl,--whole-archive)
   set(ALL_ARCHIVE_END -Wl,--no-whole-archive)
