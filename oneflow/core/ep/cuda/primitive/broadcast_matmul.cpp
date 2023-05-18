@@ -374,7 +374,6 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
       const void* cublas_a = batch_b;
       const void* cublas_b = batch_a;
       void* cublas_c = batch_c;
-      std::cout << "sp_beta: " << batch_beta.Value<double>() << std::endl;
       matmul_func(cublas_a, cublas_b, &sp_beta, cublas_c);
     };
     ForEachMatmul<kMaxNumDims>(data_type, m, n, k, beta, num_batch_dims, broadcast_batch_dims,
