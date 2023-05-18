@@ -39,7 +39,7 @@ rng = np.random.default_rng()
 annotation2default_generator = {}
 annotation2torch_to_flow_converter = {}
 NoneType = type(None)
-random_value_default_range = {int: (-10, 11), float: (-1, 1)}
+random_value_default_range = {int: (-10, 11), float: (-1, 1), complex: (-10, 10)}
 
 
 def data_generator(annotation):
@@ -371,6 +371,14 @@ class random_pytorch_tensor(generator):
         elif dtype == int:
             np_arr = rng.integers(low=low, high=high, size=shape)
             res = torch.tensor(np_arr, dtype=torch.int64)
+            if pin_memory:
+                res = res.pin_memory()
+            return res
+        elif dtype == complex:
+            np_arr = rng.uniform(low=low, high=high, size=shape) + 1.0j * rng.uniform(
+                low=low, high=high, size=shape
+            )
+            res = torch.tensor(np_arr, dtype=torch.complex64)
             if pin_memory:
                 res = res.pin_memory()
             return res

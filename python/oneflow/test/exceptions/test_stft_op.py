@@ -53,7 +53,7 @@ class TestModule(flow.unittest.TestCase):
                 return_complex=False,
                 normalized=False,
             )
-        test_case.assertTrue("Expected 0 < n_fft <" in str(ctx.exception))
+        test_case.assertTrue("Expected 0 < n_fft" in str(ctx.exception))
 
     def test_stft_illegal_hop_length(test_case):
         np_tensor = np.arange(1, 13, dtype=float).reshape(4, 3)

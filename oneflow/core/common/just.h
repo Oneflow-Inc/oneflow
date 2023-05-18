@@ -67,8 +67,7 @@ inline Error&& AddFrameMessage(Error&& error, const std::ostream& x) {
 
 template<typename... T>
 Error&& JustErrorAddFrameMessage(Error&& err, T&&... msg) {
-  __attribute__((unused)) int dummy[] = {
-      ((void)(AddFrameMessage(std::move(err), std::forward<T>(msg))), 0)...};
+  (AddFrameMessage(std::move(err), std::forward<T>(msg)), ...);
   return std::move(err);
 }
 

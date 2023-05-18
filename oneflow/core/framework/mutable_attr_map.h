@@ -102,7 +102,7 @@ class MutableAttrMap {
 
   template<typename... Args, size_t... I>
   inline void SetAttrNoThrow(Args&&... args, std::index_sequence<I...>) {
-    __attribute__((__unused__)) int dummy[] = {(SetAttrNoThrow(I, std::forward<Args>(args)), 0)...};
+    (SetAttrNoThrow(I, std::forward<Args>(args)), ...);
   }
 
   // The actually count of all attributes
