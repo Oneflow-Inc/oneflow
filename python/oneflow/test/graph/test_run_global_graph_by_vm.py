@@ -82,7 +82,7 @@ class TestGlobalInterpreter(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
     def test_boxing_data_parallel_run_by_vm(test_case):
         flow.boxing.nccl.enable_use_compute_stream(False)
-        
+
         with RunGraphByVmEnv():
 
             class BoxingModuleParallelMul(flow.nn.Module):
