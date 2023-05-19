@@ -55,7 +55,7 @@ Maybe<Symbol<ParallelDesc>> CreateParallelDescTypeAndDeviceIds(
     const Shape& hierarchy_shape) {
   JUST(CheckDeviceTag(type));
   const std::shared_ptr<Shape> hierarchy = [&]() -> std::shared_ptr<Shape> {
-    if (hierarchy_shape.is_initialized()) {
+    if (!hierarchy_shape.is_initialized()) {
       return std::shared_ptr<Shape>();
     } else {
       return std::make_shared<Shape>(hierarchy_shape);
