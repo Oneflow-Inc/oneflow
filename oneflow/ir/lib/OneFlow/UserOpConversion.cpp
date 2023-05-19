@@ -337,6 +337,9 @@ LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op
             ref.getValue()[0].dyn_cast<FloatAttr>().getValue().convertToDouble());
         user_attr.mutable_at_complex_double()->set_imag(
             ref.getValue()[1].dyn_cast<FloatAttr>().getValue().convertToDouble());
+      } else if (attr_type == ::oneflow::kAtBytes) {
+        auto value = attr.dyn_cast<StringAttr>().getValue().str();
+        user_attr.mutable_at_bytes()->assign(value.data(), value.size());
       } else {
         op->emitError() << "fail to convert op attr of name: " + attr_name;
         return failure();
