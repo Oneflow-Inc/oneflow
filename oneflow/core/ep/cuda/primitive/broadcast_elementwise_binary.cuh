@@ -401,6 +401,14 @@ std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary(Scalar
       new BroadcastElementwiseBinaryImpl<binary_op, Src, Dst>(attr0, attr1));
 }
 
+#define INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY(binary_op, data_type_pair) \
+  template std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary<      \
+      binary_op, OF_PP_PAIR_FIRST(data_type_pair), OF_PP_PAIR_FIRST(data_type_pair)>(      \
+      Scalar attr0, Scalar attr1);
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
+                                 BINARY_MATH_FLOATING_OP_SEQ, CUDA_PRIMITIVE_FLOATING_TYPE_SEQ);
+
 }  // namespace broadcast_elementwise_binary
 }  // namespace primitive
 }  // namespace ep

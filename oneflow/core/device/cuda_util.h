@@ -31,6 +31,7 @@ limitations under the License.
 #include <cuda_runtime.h>
 #include <cudnn.h>
 #include <curand.h>
+#include <cufft.h>
 #include <nccl.h>
 #include <cuda_fp16.h>
 #if CUDA_VERSION >= 11000
@@ -50,6 +51,8 @@ namespace oneflow {
 const char* CublasGetErrorString(cublasStatus_t error);
 
 const char* CurandGetErrorString(curandStatus_t error);
+
+const char* CuFFTGetErrorString(cufftResult_t error);
 
 #if CUDA_VERSION >= 11000
 const char* CusovlerGetErrorString(cusolverStatus_t error);
@@ -77,6 +80,12 @@ const char* NvjpegGetErrorString(nvjpegStatus_t error);
        _of_cublas_check_status != CUBLAS_STATUS_SUCCESS;)                                          \
   LOG(FATAL) << "Check failed: " #condition " : " << CublasGetErrorString(_of_cublas_check_status) \
              << " (" << _of_cublas_check_status << ") "
+
+#define OF_CUFFT_CHECK(condition)                                                                \
+  for (cufftResult_t _of_cufft_check_status = (condition);                                       \
+       _of_cufft_check_status != CUFFT_SUCCESS;)                                                 \
+  LOG(FATAL) << "Check failed: " #condition " : " << CuFFTGetErrorString(_of_cufft_check_status) \
+             << " (" << _of_cufft_check_status << ") "
 
 #if CUDA_VERSION >= 11000
 #define OF_CUSOLVER_CHECK(condition)                                        \
