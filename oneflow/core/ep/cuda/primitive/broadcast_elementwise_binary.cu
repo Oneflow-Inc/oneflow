@@ -106,6 +106,11 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
                                         BINARY_MATH_BACKWARD_OP_SEQ,
                                         CUDA_PRIMITIVE_FLOATING_TYPE_SEQ)
 
+                                    OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+                                        MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
+                                        BINARY_MATH_BACKWARD_OP_SEQ_COMPLEX,
+                                        CUDA_PRIMITIVE_COMPLEX_TYPE_SEQ)
+
                                         OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
                                             MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
                                             BINARY_BITWISE_OP_SEQ,
