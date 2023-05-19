@@ -28,6 +28,7 @@ namespace {
 
 const int64_t kPriorityOffset = GetMaxVal<int64_t>() / 4;
 const int64_t kPriorityBound = 2 * kPriorityOffset;
+const int32_t kOriginNode = -123;
 
 class NoCleaningMarkerAncestor {
  public:
@@ -107,7 +108,6 @@ class TopoStruct {
   // Execute the positive ancestors in order with the smallest peak memory
   std::vector<TopoStruct*> ordered_ancestors;
 
-  explicit TopoStruct(const OpNode* op_node_);
   explicit TopoStruct(int32_t blob_id_) : blob_id(blob_id_){};
 
   // Compute the minimum layer of this node
@@ -128,11 +128,7 @@ class TopoStruct {
   void VisitAncestorsAndItself(const std::function<void(TopoStruct*)>& Handle);
   // Mark all its descendant with min_layer <= max_layer
   void MarkDescendantUp2Layer(int32_t max_layer);
-  // Block descendants and store the blocking nodes in the given hash set
-  void BlockDescendants(HashSet<TopoStruct*>* blocking_nodes);
 };
-
-TopoStruct::TopoStruct(const OpNode* op_node_) : op_node(op_node_) { ComputeIsReusable(); }
 
 // Compute the minimum layer of this node
 int32_t TopoStruct::ComputeMinLayer() {
@@ -142,8 +138,6 @@ int32_t TopoStruct::ComputeMinLayer() {
   }
   return ++min_layer;
 }
-
-void TopoStruct::ComputeIsReusable() { is_reusable = IsProducedRegisterReusable(op_node->op()); }
 
 // Make sure max_difference = peak_memory - memory_increment
 int64_t Priority(int64_t memory_increment, int64_t peak_memory, int64_t max_difference) {
@@ -283,16 +277,17 @@ void ConnectTwoNodes(TopoStruct* producer, TopoStruct* consumer) {
   }
 }
 
-void InitInOutTopoStructs(std::vector<TopoStruct*>* topo_structs) {
+void InitInOutTopoStructs(HashMap<const OpNode*, TopoStruct>& op_node2topo_struct) {
   // Generate the map from operator names to topological structure
   HashMap<std::string, TopoStruct*> op_name2topo_structs;
-  for (auto& topo_struct : *topo_structs) {
-    op_name2topo_structs[topo_struct->op_node->op().op_name()] = topo_struct;
+  for (auto& pair : op_node2topo_struct) {
+    op_name2topo_structs[pair.first->op().op_name()] = &pair.second;
   }
 
   // Traverse the topological structures
-  for (auto& this_topo_struct : *topo_structs) {
-    auto& node = this_topo_struct->op_node;
+  for (auto& pair : op_node2topo_struct) {
+    auto& node = pair.first;
+    auto* this_topo_struct = &pair.second;
     // Initialize input nodes for edges with data
     node->ForEachNodeOnInEdge([&](OpNode* in) {
       // Since we might be looking at a sub-graph of the operator graph.
@@ -311,10 +306,21 @@ void InitInOutTopoStructs(std::vector<TopoStruct*>* topo_structs) {
 // Compute the memory increment for all the topological structures
 void ComputeAllMemoryIncrement(std::vector<TopoStruct*>& topo_structs,
                                std::vector<TopoStruct>& release_topo_structs,
-                               HashMap<LogicalBlobId, int32_t>& lbi2id,
                                std::vector<TopoStruct*>& id2producer_topo_struct,
                                std::vector<std::vector<TopoStruct*>>& id2consumer_topo_structs,
                                std::vector<int64_t>& id2blob_size) {
+  // Prepare to insert the release blob
+  for (int32_t id = 0; id < id2consumer_topo_structs.size(); id++) {
+    if (id2consumer_topo_structs.at(id).empty()) {
+      // If a blob does not have a consumer, then the blob is consumed by its producer itself
+      id2consumer_topo_structs.at(id).push_back(id2producer_topo_struct[id]);
+    } else {
+      // Sort the consumer topological structure for later matching
+      std::sort(id2consumer_topo_structs.at(id).begin(), id2consumer_topo_structs.at(id).end(),
+                [](const TopoStruct* a, const TopoStruct* b) { return a < b; });
+    }
+  }
+
   // Compute the memory increment for produced blobs
   for (auto& topo_struct : topo_structs) {
     topo_struct->memory_increment = 0;
@@ -344,7 +350,7 @@ void ComputeAllMemoryIncrement(std::vector<TopoStruct*>& topo_structs,
       bool not_merged = true;
       for (auto* first_consumer_out_node : first_consumer_outs) {
         int32_t curr_release_blob_id = first_consumer_out_node->blob_id;
-        if (curr_release_blob_id == -1) { continue; }
+        if (curr_release_blob_id < 0) { continue; }
         // Compare whether the consumer_topo_structs are the same
         const auto& curr_topo_structs = id2consumer_topo_structs[curr_release_blob_id];
         bool is_same = curr_topo_structs.size() == consumer_topo_structs.size();
@@ -378,20 +384,14 @@ void ComputeAllMemoryIncrement(std::vector<TopoStruct*>& topo_structs,
   }
 }
 
-void InitAllParameters(std::vector<TopoStruct*>* topo_structs,
-                       std::vector<TopoStruct>* release_topo_structs,
+void InitAllParameters(HashMap<const OpNode*, TopoStruct>& op_node2topo_struct,
                        HashMap<LogicalBlobId, int32_t>* lbi2id,
+                       std::vector<TopoStruct*>* id2producer_topo_struct,
                        std::vector<std::vector<TopoStruct*>>* id2consumer_topo_structs,
                        std::vector<int64_t>* id2blob_size) {
-  // Initialize the no cleaning marker
-  InitNoCleaningMarkerAncestor();
-  InitNoCleaningMarkerDescendant();
-
-  // Construct the map from a lbi to its id, consumers, blob size
-  std::vector<TopoStruct*> id2producer_topo_struct;
-
-  for (auto& topo_struct : *topo_structs) {
-    const auto& producer = topo_struct->op_node->op();
+  for (auto& pair : op_node2topo_struct) {
+    const auto& producer = pair.first->op();
+    auto* topo_struct = &pair.second;
 
     // Find all the blobs produced by this operator
     for (const auto& obn : producer.output_bns()) {
@@ -401,45 +401,26 @@ void InitAllParameters(std::vector<TopoStruct*>* topo_structs,
       // same blob
       if (it == lbi2id->end()) {
         (*lbi2id)[lbi] = id2blob_size->size();
-        const BlobDesc& logical_blob_desc = topo_struct->op_node->LogicalBlobDesc4Lbi(lbi);
+        const BlobDesc& logical_blob_desc = pair.first->LogicalBlobDesc4Lbi(lbi);
         id2blob_size->push_back(TotalByteSize4BlobDesc(logical_blob_desc));
-        id2producer_topo_struct.push_back(topo_struct);
+        id2producer_topo_struct->push_back(topo_struct);
       }
     }
   }
 
-  // Reserve the space for release topological structures
-  // We do not define a copy method for TopoStruct. During each size expansion, the data might be
-  // screwed up if we do not reserve the space.
-  release_topo_structs->reserve(id2blob_size->size());
   // initialize the id2consumer_topo_structs
   id2consumer_topo_structs->resize(id2blob_size->size());
   // Find all the blobs consumed by this operator
-  for (auto& topo_struct : *topo_structs) {
-    const auto& consumer = topo_struct->op_node->op();
+  for (auto& pair : op_node2topo_struct) {
+    const auto& consumer = pair.first->op();
     for (const auto& ibn : consumer.input_bns()) {
       const LogicalBlobId& lbi = consumer.BnInOp2Lbi(ibn);
-      id2consumer_topo_structs->at(lbi2id->find(lbi)->second).push_back(topo_struct);
-    }
-  }
-
-  for (int32_t id = 0; id < id2consumer_topo_structs->size(); id++) {
-    if (id2consumer_topo_structs->at(id).empty()) {
-      // If a blob does not have a consumer, then the blob is consumed by its producer itself
-      id2consumer_topo_structs->at(id).push_back(id2producer_topo_struct[id]);
-    } else {
-      // Sort the consumer topological structure for later matching
-      std::sort(id2consumer_topo_structs->at(id).begin(), id2consumer_topo_structs->at(id).end(),
-                [](const TopoStruct* a, const TopoStruct* b) { return a < b; });
+      id2consumer_topo_structs->at(lbi2id->find(lbi)->second).push_back(&pair.second);
     }
   }
 
   // Construct all the data edges and control edges
-  InitInOutTopoStructs(topo_structs);
-
-  // Compute the memory increment for all the topological structures
-  ComputeAllMemoryIncrement(*topo_structs, *release_topo_structs, *lbi2id, id2producer_topo_struct,
-                            *id2consumer_topo_structs, *id2blob_size);
+  InitInOutTopoStructs(op_node2topo_struct);
 }
 
 void ClipOneEdge(TopoStruct* producer, TopoStruct* consumer) {
@@ -657,9 +638,9 @@ void InitBlockingNodes(std::vector<TopoStruct*>& topo_structs) {
   }
 }
 
-void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_struct,
-                             std::vector<TopoStruct*>* topo_structs,
+void StraightenMemoryOpNodes(std::vector<TopoStruct*>* topo_structs,
                              HashMap<LogicalBlobId, int32_t>* lbi2id,
+                             std::vector<TopoStruct*>* id2producer_topo_struct,
                              std::vector<std::vector<TopoStruct*>>* id2consumer_topo_structs,
                              std::vector<int64_t>* id2blob_size,
                              std::vector<TopoStruct*>* ordered_topo_structs) {
@@ -667,8 +648,17 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
   int32_t executing_topo_struct_num = topo_structs->size();
   // Extra release topological structures
   std::vector<TopoStruct> release_topo_structs;
-  InitAllParameters(topo_structs, &release_topo_structs, lbi2id, id2consumer_topo_structs,
-                    id2blob_size);
+  // Reserve the space for release topological structures
+  // We do not define a copy method for TopoStruct. During each size expansion, the data might be
+  // screwed up if we do not reserve the space.
+  release_topo_structs.reserve(id2blob_size->size());
+  // Initialize the no cleaning marker
+  InitNoCleaningMarkerAncestor();
+  InitNoCleaningMarkerDescendant();
+
+  // Compute the memory increment for all the topological structures
+  ComputeAllMemoryIncrement(*topo_structs, release_topo_structs, *id2producer_topo_struct,
+                            *id2consumer_topo_structs, *id2blob_size);
 
   if (GlobalProcessCtx::Rank() == 0) {
     std::cout << "Print all the topological structures:" << std::endl;
@@ -739,7 +729,7 @@ void StraightenMemoryOpNodes(HashMap<const OpNode*, TopoStruct>& op_node2topo_st
     for (int32_t i = node->pre_topo_structs.size() - 1; i >= 0; i--) {
       ExecuteOpNode(node->pre_topo_structs[i]);
     }
-    if (node->op_node) { ordered_topo_structs->push_back(node); }
+    if (node->blob_id == kOriginNode) { ordered_topo_structs->push_back(node); }
     for (auto* post_node : node->post_topo_structs) { ExecuteOpNode(post_node); }
   };
   // Execute one node and its ancestors
@@ -817,23 +807,32 @@ void StraightenMemorySubGraph(const std::vector<const OpNode*>& sub_graph,
   HashMap<const OpNode*, TopoStruct> op_node2topo_struct;
   std::vector<TopoStruct*> topo_structs;
   std::vector<TopoStruct*> ordered_topo_structs;
+  HashMap<TopoStruct*, const OpNode*> topo_struct2op_node;
 
   // Traverse all the nodes in the sub graph
-  for (const auto& node : sub_graph) {
-    op_node2topo_struct.insert({node, TopoStruct(node)});
-    topo_structs.push_back(&op_node2topo_struct.at(node));
+  for (const auto* node : sub_graph) {
+    op_node2topo_struct.insert({node, TopoStruct(kOriginNode)});
+    auto& topo_struct = op_node2topo_struct.at(node);
+    topo_struct.op_node = node;
+    topo_struct.is_reusable = IsProducedRegisterReusable(node->op());
+    topo_structs.push_back(&topo_struct);
+    topo_struct2op_node[&topo_struct] = node;
   }
 
-  // Construct the map from a lbi to its id, consumers, blob size
+  // Construct the map from a lbi to its id, producer, consumers, blob size
   HashMap<LogicalBlobId, int32_t> lbi2id;
+  std::vector<TopoStruct*> id2producer_topo_struct;
   std::vector<std::vector<TopoStruct*>> id2consumer_topo_structs;
   std::vector<int64_t> id2blob_size;
 
-  StraightenMemoryOpNodes(op_node2topo_struct, &topo_structs, &lbi2id, &id2consumer_topo_structs,
-                          &id2blob_size, &ordered_topo_structs);
+  InitAllParameters(op_node2topo_struct, &lbi2id, &id2producer_topo_struct,
+                    &id2consumer_topo_structs, &id2blob_size);
+
+  StraightenMemoryOpNodes(&topo_structs, &lbi2id, &id2producer_topo_struct,
+                          &id2consumer_topo_structs, &id2blob_size, &ordered_topo_structs);
 
   for (auto& ordered_topo_struct : ordered_topo_structs) {
-    ordered_op_nodes->push_back(ordered_topo_struct->op_node);
+    ordered_op_nodes->push_back(topo_struct2op_node[ordered_topo_struct]);
   }
 }
 
