@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_MULTI_CLIENT_SESSION_CONTEXT_H_
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/job/id_state.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/tensor.h"
@@ -48,6 +49,9 @@ class MultiClientSessionContext {
   const std::vector<std::pair<std::string, std::shared_ptr<one::Tensor>>>&
   GetFreeEagerTensorNamePairByGraphName(const std::string& graph_name);
   void RemoveGraphFreeEagerTensors(const std::string& graph_name);
+
+  IdState GetIdState();
+  void SetIdState(const IdState& id_state);
 
  private:
   bool is_inited_ = false;
