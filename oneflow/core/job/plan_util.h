@@ -55,6 +55,7 @@ struct PlanUtil {
       const PbMap<int64_t, ::oneflow::OpAttributeRefTable>& job_id2op_attribute_ref_table);
   static StreamId GetStreamId(const TaskProto& task);
   static int64_t GetDeviceIndex(const TaskProto& task);
+  static void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto);
 };
 
 }  // namespace oneflow
