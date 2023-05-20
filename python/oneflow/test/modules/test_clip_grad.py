@@ -58,7 +58,6 @@ def _test_clip_grad_norm_impl(test_case, shape, device, max_norm, norm_type, fus
     of_out.backward()
     of_total_norm = flow.nn.utils.clip_grad_norm_(of_input, max_norm, norm_type, fused)
     np_total_norm, np_grad = _clip_grad_norm_np(np_input, max_norm, norm_type)
-    print(of_total_norm, np_total_norm)
     test_case.assertTrue(
         np.allclose(of_total_norm.numpy(), np_total_norm, 1e-4, 1e-4, equal_nan=True)
     )
@@ -158,7 +157,6 @@ class TestClipGrad(flow.unittest.TestCase):
         arg_dict["norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
         arg_dict["fused"] = [False, True]
         for arg in GenArgList(arg_dict):
-            print(arg)
             _test_clip_grad_norm_impl(test_case, *arg)
 
     def test_clip_value(test_case):

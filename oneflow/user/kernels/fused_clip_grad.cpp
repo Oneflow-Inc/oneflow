@@ -79,51 +79,44 @@ class FusedClipGradKernel final : public user_op::OpKernel, public user_op::Cuda
 
     bool not_special = false;
     if (norm_type == 0) {
-      std::cout << "type:0\n";
       PowByZero<T> func{};
       MultiReduce<device_type, T, decltype(func), BinaryAdd<T>> reduce_add{};
       reduce_add(ctx->stream(), func, params, GetZeroVal<T>(), out_ptr, temp);
     } else if (norm_type == INFINITY) {
-      std::cout << "type:inf\n";
       Abs<T> func{};
       MultiReduce<device_type, T, decltype(func), BinaryMax<T>> reduce_max{};
       reduce_max(ctx->stream(), func, params, GetZeroVal<T>(), out_ptr, temp);
     } else if (norm_type == -INFINITY) {
-      std::cout << "type:-inf\n";
       Abs<T> func{};
       MultiReduce<device_type, T, decltype(func), BinaryMin<T>> reduce_min{};
       reduce_min(ctx->stream(), func, params, std::numeric_limits<T>::max(), out_ptr, temp);
     } else if (norm_type == 1) {
-      std::cout << "type:abs\n";
       Abs<T> func{};
       MultiReduce<device_type, T, decltype(func), BinaryAdd<T>> reduce_sum{};
       reduce_sum(ctx->stream(), func, params, GetZeroVal<T>(), out_ptr, temp);
     } else if (norm_type == 2) {
-      std::cout << "type:sqrt\n";
+      not_special = true;
       Square<T> func{};
       MultiReduce<device_type, T, decltype(func), BinaryAdd<T>> reduce_sum{};
       reduce_sum(ctx->stream(), func, params, GetZeroVal<T>(), out_ptr, temp);
     } else {
-      std::cout << "type:other\n";
       not_special = true;
       AbsPow<T> func{norm_type};
       MultiReduce<device_type, T, decltype(func), BinaryAdd<T>> reduce_sum{};
       reduce_sum(ctx->stream(), func, params, GetZeroVal<T>(), out_ptr, temp);
     }
 
-    T *h_total_norm = nullptr;
-    OF_CUDA_CHECK(cudaMallocHost(&h_total_norm, sizeof(T)));
-    OF_CUDA_CHECK(cudaMemcpy(h_total_norm, out_ptr, sizeof(T), cudaMemcpyDeviceToHost));
+    T h_total_norm, res;
+    OF_CUDA_CHECK(cudaMemcpy(&res, out_ptr, sizeof(T), cudaMemcpyDeviceToHost));
     OF_CUDA_CHECK(cudaDeviceSynchronize());
 
-    if (not_special) {
-      h_total_norm[0] = std::pow(h_total_norm[0], 1. / norm_type);
-    }
-    h_total_norm[0] = max_norm / (h_total_norm[0] + 1e-6);
-    OF_CUDA_CHECK(cudaMemcpy(out_ptr, h_total_norm, sizeof(T), cudaMemcpyHostToDevice));
+    if (norm_type == 0) { res = static_cast<T>(res > 0); }
+    if (not_special) { res = std::pow(res, 1. / norm_type); }
+    h_total_norm = max_norm / (res + 1e-6);
+    OF_CUDA_CHECK(cudaMemcpy(out_ptr, &h_total_norm, sizeof(T), cudaMemcpyHostToDevice));
     OF_CUDA_CHECK(cudaDeviceSynchronize());
 
-    if (h_total_norm[0] < 1.) {
+    if (h_total_norm < 1.) {
       std::vector<MultiScaleMulParam<T>> mut_params;
       mut_params.resize(input_size);
       for (size_t i = 0; i < input_size; ++i) {
@@ -135,7 +128,9 @@ class FusedClipGradKernel final : public user_op::OpKernel, public user_op::Cuda
       scale_mul(ctx->stream(), mut_params, out_ptr);
     }
 
-    OF_CUDA_CHECK(cudaFreeHost(h_total_norm));
+    OF_CUDA_CHECK(cudaMemcpy(out_ptr, &res, sizeof(T), cudaMemcpyHostToDevice));
+    OF_CUDA_CHECK(cudaDeviceSynchronize());
+
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

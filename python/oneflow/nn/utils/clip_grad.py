@@ -148,7 +148,6 @@ def clip_grad_norm_(
         param_grad_list = []
         for param in parameters:
             param_grad_list.append(param.grad)
-        print(param_grad_list)
         total_norm = flow._C.fused_clip_grad(
             param_grad_list,
             max_norm,
