@@ -742,6 +742,23 @@ class ScalarAddByTensorFunctor : public InplaceableBinaryFunctor {
   }
 };
 
+// this functor just for test host memory input
+class HostScalarAddByTensorFunctor {
+ public:
+  HostScalarAddByTensorFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("host_scalar_add_by_tensor").Input("x").Input("scalar").Output("y").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& scalar) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, scalar});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ScalarSubByTensorFunctor : public BinaryFunctor {
  public:
   ScalarSubByTensorFunctor() {
@@ -763,6 +780,29 @@ class ScalarDivByTensorFunctor : public BinaryFunctor {
   ScalarDivByTensorFunctor() {
     op_ = CHECK_JUST(
         one::OpBuilder("scalar_div_by_tensor").Input("x").Input("scalar").Output("y").Build());
+  }
+};
+
+class BroadcastZetaFunctor : public BinaryFloatFunctor {
+ public:
+  BroadcastZetaFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("broadcast_zeta").Input("x").Input("y").Output("z").Build());
+  }
+};
+
+class ZetaScalarTensorFunctor {
+ public:
+  Maybe<Tensor> operator()(const Scalar x, const std::shared_ptr<one::Tensor>& y) const {
+    auto scalar_tensor = JUST(functional::FullLike(y, x));  // wrap scalar to tensor
+    return functional::BroadcastZeta(scalar_tensor, y);
+  }
+};
+
+class ZetaTensorScalarFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar y) const {
+    auto scalar_tensor = JUST(functional::FullLike(x, y));  // wrap scalar to tensor
+    return functional::BroadcastZeta(x, scalar_tensor);
   }
 };
 
@@ -796,6 +836,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BroadcastLessFunctor>("BroadcastLess");
   m.add_functor<impl::BroadcastLessEqualFunctor>("BroadcastLessEqual");
   m.add_functor<impl::ScalarAddByTensorFunctor>("ScalarAddByTensor");
+  m.add_functor<impl::HostScalarAddByTensorFunctor>("HostScalarAddByTensor");
   m.add_functor<impl::ScalarSubByTensorFunctor>("ScalarSubByTensor");
   m.add_functor<impl::ScalarMulByTensorFunctor>("ScalarMulByTensor");
   m.add_functor<impl::ScalarDivByTensorFunctor>("ScalarDivByTensor");
@@ -806,6 +847,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::LerpFunctor>("Lerp");
   m.add_functor<impl::InplaceLerpFunctor>("InplaceLerp");
   m.add_functor<impl::LerpGradFunctor>("LerpGrad");
+  m.add_functor<impl::BroadcastZetaFunctor>("BroadcastZeta");
+  m.add_functor<impl::ZetaScalarTensorFunctor>("ZetaScalarTensor");
+  m.add_functor<impl::ZetaTensorScalarFunctor>("ZetaTensorScalar");
 };
 
 }  // namespace functional

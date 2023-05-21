@@ -29,7 +29,6 @@ limitations under the License.
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/blocking_counter.h"
-#include "oneflow/core/common/singleton_ptr.h"
 #include "oneflow/core/common/env_var/vm.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/access_blob_arg_cb_instruction_policy.h"
@@ -562,7 +561,8 @@ bool SupportingStreamWait(Symbol<Stream> from_stream, Symbol<Stream> to_stream) 
   if (unlikely(!ThreadLocalEnvBool<ONEFLOW_VM_ENABLE_STREAM_WAIT>())) { return false; }
   DeviceType from_device_type = from_stream->device()->enum_type();
   DeviceType to_device_type = from_stream->device()->enum_type();
-  return from_stream->device() == to_stream->device() && from_device_type == DeviceType::kCUDA
+  return from_stream->device() == to_stream->device() && from_stream->support_wait_event()
+         && to_stream->support_wait_event()
          && StreamSupportStreamWait::Visit(from_stream->stream_type(), from_device_type)
          && StreamSupportStreamWait::Visit(to_stream->stream_type(), to_device_type)
          && !StreamOnIndependentThread::Visit(from_stream->stream_type())

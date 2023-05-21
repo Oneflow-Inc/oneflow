@@ -42,6 +42,7 @@ namespace oneflow {
 #define LOGICAL_REDUCE_BINARY_FUNC_NAME_SEQ (Any)(All)
 #define REDUCE_BINARY_FUNC_SEQ \
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, REDUCE_BINARY_FUNC_NAME_SEQ)
+#define REDUCE_COMPLEX_BINARY_FUNC_SEQ OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, (Sum))
 #define ARITHMETIC_REDUCE_BINARY_FUNC_SEQ \
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, ARITHMETIC_REDUCE_BINARY_FUNC_NAME_SEQ)
 #define LOGICAL_REDUCE_BINARY_FUNC_SEQ \
@@ -274,16 +275,6 @@ struct BinaryFuncLE final {
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncLE);
 
 template<typename T>
-struct BinaryFuncIEN final {
-  // placeholder, no definition required, the type is only used to generate Op
-};
-
-template<typename T>
-struct BinaryFuncINN final {
-  // placeholder, no definition required, the type is only used to generate Op
-};
-
-template<typename T>
 struct BinaryFuncAND final {
   static OF_DEVICE_FUNC bool Invoke(const T x, const T y) { return x && y; }
 };
@@ -393,6 +384,51 @@ struct BinaryFuncMin<half> final {
 #else
     NO_HALF_UTIL_FOUND;
 #endif
+  }
+};
+
+template<>
+struct BinaryFuncAdd<cuComplex> final {
+  static __device__ __forceinline__ cuComplex Invoke(const cuComplex x, const cuComplex y) {
+    return cuComplex{x.x + y.x, x.y + y.y};
+  }
+};
+
+template<>
+struct BinaryFuncSub<cuComplex> final {
+  static __device__ __forceinline__ cuComplex Invoke(const cuComplex x, const cuComplex y) {
+    return cuComplex{x.x - y.x, x.y - y.y};
+  }
+};
+
+template<>
+struct BinaryFuncMul<cuComplex> final {
+  static __device__ __forceinline__ cuComplex Invoke(const cuComplex x, const cuComplex y) {
+    return cuCmulf(x, y);
+  }
+};
+
+template<>
+struct BinaryFuncAdd<cuDoubleComplex> final {
+  static __device__ __forceinline__ cuDoubleComplex Invoke(const cuDoubleComplex x,
+                                                           const cuDoubleComplex y) {
+    return cuDoubleComplex{x.x + y.x, x.y + y.y};
+  }
+};
+
+template<>
+struct BinaryFuncSub<cuDoubleComplex> final {
+  static __device__ __forceinline__ cuDoubleComplex Invoke(const cuDoubleComplex x,
+                                                           const cuDoubleComplex y) {
+    return cuDoubleComplex{x.x - y.x, x.y - y.y};
+  }
+};
+
+template<>
+struct BinaryFuncMul<cuDoubleComplex> final {
+  static __device__ __forceinline__ cuDoubleComplex Invoke(const cuDoubleComplex x,
+                                                           const cuDoubleComplex y) {
+    return cuCmul(x, y);
   }
 };
 
@@ -577,6 +613,18 @@ SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncAny, GetZeroVal);
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncAll, GetOneVal);
 #undef SPECIALIZE_UNIT_OF_BINARY_FUNC
 
+/*
+These placeholder specializations are used for `GetBinaryBroadcastSbpSignature` in
+oneflow/user/ops/math_binary_broadcast_ops.cpp
+*/
+#define SPECIALIZE_FOR_SBP(binary_func) \
+  template<typename T>                  \
+  struct binary_func final {};
+
+SPECIALIZE_FOR_SBP(BinaryFuncIEN);
+SPECIALIZE_FOR_SBP(BinaryFuncINN);
+SPECIALIZE_FOR_SBP(BinaryFuncZeta);
+#undef SPECIALIZE_FOR_SBP
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_NDARRAY_BINARY_FUNC_H_

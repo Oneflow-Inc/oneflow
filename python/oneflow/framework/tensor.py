@@ -380,10 +380,17 @@ def _where(self, x=None, y=None):
     return flow.where(self, x, y)
 
 
-def _numpy(self):
+def _numpy(self, dtype=None):
     assert (
         not self.is_lazy
     ), "tensor.numpy() is not allowed to be called in nn.Graph.build(*args) or be called by lazy tensor."
+    if self.is_global:
+        if self.placement.type == "meta":
+            raise TypeError("can't convert meta device type global tensor to numpy.")
+    else:
+        if self.device.type == "meta":
+            raise TypeError("can't convert meta device type local tensor to numpy.")
+
     if self.dtype == flow.tensor_buffer:
         shapes, dtypes = self._tensor_buffer_shapes_and_dtypes
         tensors = flow.tensor_buffer_to_list_of_tensors(self, shapes, dtypes)
@@ -401,7 +408,10 @@ def _numpy(self):
     assert self.is_local
     if self.device != flow.device("cpu"):
         self = self.cpu()
-    return self.to_numpy()
+    result = self.to_numpy()
+    if dtype is None:
+        return result
+    return result.astype(dtype)
 
 
 def zero_(self):
@@ -454,16 +464,12 @@ def _cross(self, other, dim=None):
     return flow._C.cross(self, other, dim)
 
 
-def _scatter(self, dim, index, src, *, reduce=""):
+def _scatter(self, dim, index, src, *, reduce=None):
     return flow._C.scatter(self, dim, index, src, reduce=reduce, inplace=False)
 
 
 def _scatter_inplace(self, dim, index, src, *, reduce=None):
     return flow._C.scatter(self, dim, index, src, reduce=reduce, inplace=True)
-
-
-def _scatter_add(self, dim, index, src):
-    return flow._C.scatter_add(self, dim, index, src, inplace=False)
 
 
 def _scatter_add_inplace(self, dim, index, src):
@@ -509,6 +515,27 @@ def _as_strided_inplace(self, size, stride, storage_offset=0):
 
 def _logaddexp(self, other):
     return flow._C.logaddexp(self, other)
+
+
+def _real(self):
+    return flow._C.real(self)
+
+
+def _imag(self):
+    return flow._C.imag(self)
+
+
+def _conj(self):
+    return flow._C.conj(self)
+
+
+def _conj_physical(self):
+    return flow._C.conj_physical(self)
+
+
+@property
+def _layout(self):
+    return flow.strided
 
 
 def RegisterMethods():
@@ -571,7 +598,6 @@ def RegisterMethods():
     Tensor.cross = _cross
     Tensor.scatter = _scatter
     Tensor.scatter_ = _scatter_inplace
-    Tensor.scatter_add = _scatter_add
     Tensor.scatter_add_ = _scatter_add_inplace
     Tensor.allclose = _allclose
     Tensor.index_add = _index_add
@@ -579,6 +605,11 @@ def RegisterMethods():
     Tensor.as_strided = _as_strided
     Tensor.as_strided_ = _as_strided_inplace
     Tensor.logaddexp = _logaddexp
+    Tensor.real = _real
+    Tensor.imag = _imag
+    Tensor.conj = _conj
+    Tensor.conj_physical = _conj_physical
+    Tensor.layout = _layout
 
 
 def register_tensor_op(op_name):

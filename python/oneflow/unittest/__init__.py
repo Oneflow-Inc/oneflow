@@ -26,3 +26,5 @@ from oneflow.framework.unittest import (
 )
 
 from . import env
+from .mlir import MLIRTestCase
+from .dataset import dataset_dir

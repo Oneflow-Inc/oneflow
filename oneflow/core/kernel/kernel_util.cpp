@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
@@ -28,7 +29,7 @@ void AutoMemcpy(ep::Stream* stream, void* dst, const void* src, size_t sz,
   ep::primitive::MemcpyKind kind{};
   if (stream->device_type() == DeviceType::kCPU) {
     CHECK(memory::IsHostMem(src_mem_case));
-    CHECK(memory::IsHostMem(dst_mem_case));
+    if (dst_mem_case.device_type() != DeviceType::kMeta) { CHECK(memory::IsHostMem(dst_mem_case)); }
     kind = ep::primitive::MemcpyKind::kDtoD;
   } else {
     if (memory::IsHostMem(src_mem_case)) {

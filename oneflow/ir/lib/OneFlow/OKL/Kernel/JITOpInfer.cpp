@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "OneFlow/OneFlowDialect.h"
+#include "OneFlow/Passes.h"
 #include "OneFlow/OneFlowSupport.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/device_type.pb.h"
@@ -64,7 +65,7 @@ static Maybe<mlir::FunctionType> GetFunctionType(user_op::InferContext* ctx,
       const auto data_type =
           mlir::oneflow::support::FromMLIRTypeToOFDataType(rankedTensorType.getElementType());
       if (mlir::failed(data_type)) { exit(1); }
-      CHECK_EQ_OR_RETURN(data_type.getValue(), ctx->InputDType("in", arg_i)) << "arg #" << arg_i;
+      CHECK_EQ_OR_RETURN(data_type.value(), ctx->InputDType("in", arg_i)) << "arg #" << arg_i;
       arg_i += 1;
     } else {
       std::string arg_type_str = "";
@@ -91,6 +92,10 @@ Maybe<void> SetTensorDataType(user_op::InferContext* ctx) {
     exit(1);
   }
 
+  auto raw_graph = (*module)->getAttr(mlir::oneflow::jit::RAW_GRAPH).cast<mlir::StringAttr>();
+  if (raw_graph)
+    module = mlir::parseSourceString<mlir::ModuleOp>(raw_graph.strref(), module->getContext());
+
   auto funcType = *JUST(GetFunctionType(ctx, module));
   int32_t res_i = 0;
   for (mlir::Type res_type : funcType.getResults()) {
@@ -98,7 +103,7 @@ Maybe<void> SetTensorDataType(user_op::InferContext* ctx) {
       const auto data_type =
           mlir::oneflow::support::FromMLIRTypeToOFDataType(rankedTensorType.getElementType());
       if (mlir::failed(data_type)) { exit(1); }
-      ctx->SetDtype4ArgNameAndIndex("out", res_i, data_type.getValue());
+      ctx->SetDtype4ArgNameAndIndex("out", res_i, data_type.value());
       res_i += 1;
     } else {
       std::string res_type_str = "";
@@ -124,6 +129,11 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
     LOG(ERROR) << "Fail to load mlir assembly";
     exit(1);
   }
+
+  auto raw_graph = (*module)->getAttr(mlir::oneflow::jit::RAW_GRAPH).cast<mlir::StringAttr>();
+  if (raw_graph)
+    module = mlir::parseSourceString<mlir::ModuleOp>(raw_graph.strref(), module->getContext());
+
   auto funcType = *JUST(GetFunctionType(ctx, module));
   int32_t res_i = 0;
   for (mlir::Type res_type : funcType.getResults()) {
@@ -135,7 +145,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
       const auto data_type =
           mlir::oneflow::support::FromMLIRTypeToOFDataType(rankedTensorType.getElementType());
       if (mlir::failed(data_type)) { exit(1); }
-      ctx->SetOutputDType("out", res_i, data_type.getValue());
+      ctx->SetOutputDType("out", res_i, data_type.value());
       llvm::SmallVector<int64_t> strides;
       int64_t _;
       auto mem_type =

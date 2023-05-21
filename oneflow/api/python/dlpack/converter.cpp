@@ -92,9 +92,10 @@ Maybe<one::Tensor> fromDLPack(const DLManagedTensor* src) {
   Symbol<LocalTensorMeta> tensor_meta;
   if (dl_tensor.strides) {
     const auto stride = Stride(dl_tensor.strides, dl_tensor.strides + dl_tensor.ndim);
-    tensor_meta = SymbolOf(LocalTensorMeta(shape, stride, dtype, device));
+    tensor_meta =
+        SymbolOf(LocalTensorMeta(shape, stride, dtype, MemoryFormat::kContiguous, device));
   } else {
-    tensor_meta = SymbolOf(LocalTensorMeta(shape, dtype, device));
+    tensor_meta = SymbolOf(LocalTensorMeta(shape, dtype, MemoryFormat::kContiguous, device));
   }
 
   // Build TensorBuffer
@@ -106,7 +107,7 @@ Maybe<one::Tensor> fromDLPack(const DLManagedTensor* src) {
   };
 
   size_t array_size_in_bytes = shape.elem_cnt() * GetSizeOfDataType(dtype);
-  auto tensor_data = std::make_shared<vm::TensorStorage>(false);
+  auto tensor_data = std::make_shared<vm::TensorStorage>(false, device);
   tensor_data->set_blob_dptr(
       std::unique_ptr<char, std::function<void(char*)>>(static_cast<char*>(dl_tensor.data), Free),
       array_size_in_bytes);

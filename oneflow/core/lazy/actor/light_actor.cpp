@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
 #include "oneflow/core/kernel/user_kernel.h"
 #include "oneflow/core/lazy/stream_context/include/stream_context.h"
 
@@ -70,6 +71,13 @@ struct KernelInfo {
   std::unique_ptr<const Kernel> kernel;
   HashMap<std::string, Blob*> bn_in_op2blob;
   std::shared_ptr<KernelState> state;
+};
+
+struct DebugInfo {
+  int64_t actor_id;
+  std::string op_name;
+  int64_t act_cnt;
+  DebugInfo() : actor_id(-1), op_name(""), act_cnt(-1) {}
 };
 
 template<typename IndexType, int max_size>
@@ -225,7 +233,7 @@ bool IsCUDAGraphSupported(const Kernel* kernel) {
 #endif  // WITH_CUDA_GRAPHS
 
 template<int exec_kernel, int inplace, typename IndexType, typename RegstIndex,
-         typename StateContainer, bool dynamic_allocation>
+         typename StateContainer, bool dynamic_allocation, int debug>
 class LightActor : public ActorBase, public KernelContext, public ActorContextProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LightActor);
@@ -249,6 +257,13 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
   void Init(const JobDesc* job_desc, ActorContext* actor_ctx) override {
     const TaskProto& task_proto = actor_ctx->task_proto();
     CHECK_EQ(task_proto.exec_sequence().exec_node_size(), 1);
+    if (debug) {
+      debug_info_[0].reset(new DebugInfo());
+      debug_info_[0]->op_name =
+          task_proto.exec_sequence().exec_node(0).kernel_conf().op_attribute().op_conf().name();
+      debug_info_[0]->actor_id = task_proto.task_id();
+      debug_info_[0]->act_cnt = 0;
+    }
     if (exec_kernel) {
       kernel_info_[0].reset(new KernelInfo());
       const KernelConf& kernel_conf = task_proto.exec_sequence().exec_node(0).kernel_conf();
@@ -330,6 +345,16 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
 
   int ProcessMsg(const ActorMsg& msg) override {
     HandleActorMsg(msg);
+    if (debug) {
+      LOG(INFO) << " Actor: " << debug_info_[0]->actor_id << " op: " << debug_info_[0]->op_name
+                << " in act_cnt: [ " << debug_info_[0]->act_cnt
+                << " ]  IsWriteReady: " << (total_reading_cnt_ == 0)
+                << " IsReadReady: " << (ready_consumed_ == max_ready_consumed_)
+                << " \n details: { total_reading_cnt = " << static_cast<int64_t>(total_reading_cnt_)
+                << " (expect: 0) , ready_consumed_ = " << static_cast<int64_t>(ready_consumed_)
+                << " (except: " << static_cast<int64_t>(max_ready_consumed_) << ") }";
+    }
+
     if (total_reading_cnt_ != 0) { return 0; }
     if (ready_consumed_ == max_ready_consumed_) {
       ActOnce();
@@ -480,6 +505,14 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
   inline void HandleRegstMsg(const ActorMsg& msg) {
     int64_t regst_desc_id = msg.regst_desc_id();
     if (regst_desc_id == -1) { regst_desc_id = msg.regst()->regst_desc_id(); }
+
+    if (debug) {
+      LOG(INFO) << " Actor: " << debug_info_[0]->actor_id << " op: " << debug_info_[0]->op_name
+                << " in act_cnt: [ " << debug_info_[0]->act_cnt
+                << " ] , Recv ActorMsg from: " << msg.src_actor_id()
+                << " to: " << msg.dst_actor_id() << " with regst: " << regst_desc_id;
+    }
+
     const IndexType index = regst_desc_id_index_.Lookup(regst_desc_id);
     auto& state = index2state_.Get(index);
     if (state.regst_type == RegstType::kProduced) {
@@ -549,7 +582,14 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
       }
     }
 
+    if (debug) {
+      LOG(INFO) << " Actor: " << debug_info_[0]->actor_id << " op: " << debug_info_[0]->op_name
+                << " Try to act act_cnt: [ " << debug_info_[0]->act_cnt
+                << " ] before launch kernel.";
+    }
+
     if (exec_kernel) { LaunchKernel(); }
+
     ResetState();
     thread_->EnqueueActorMsg(sync_post_act_msgs_.cbegin(), sync_post_act_msgs_.cend());
     if (!async_post_act_msgs_.empty()) {
@@ -558,6 +598,23 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
           Singleton<ActorMsgBus>::Get()->SendMsg(msg);
         }
       });
+    }
+
+    if (debug) {
+      for (const auto& msg : sync_post_act_msgs_) {
+        LOG(INFO) << " Actor: " << debug_info_[0]->actor_id << " op: " << debug_info_[0]->op_name
+                  << " in act_cnt: [ " << debug_info_[0]->act_cnt
+                  << " ] Sync post ActorMsg from: " << msg.src_actor_id()
+                  << " to: " << msg.dst_actor_id() << " with regst: " << msg.regst_desc_id();
+      }
+      for (const auto& msg : async_post_act_msgs_) {
+        LOG(INFO) << " Actor: " << debug_info_[0]->actor_id << " op: " << debug_info_[0]->op_name
+                  << " in act_cnt: [ " << debug_info_[0]->act_cnt
+                  << " ] Async post ActorMsg from: " << msg.src_actor_id()
+                  << " to: " << msg.dst_actor_id() << " with regst: " << msg.regst_desc_id();
+      }
+      LOG(INFO) << " Actor: " << debug_info_[0]->actor_id << " op: " << debug_info_[0]->op_name
+                << " Finish act act_cnt: [ " << debug_info_[0]->act_cnt++ << " ].";
     }
   }
 
@@ -696,19 +753,35 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
   std::vector<ActorMsg> sync_post_act_msgs_;
   std::vector<ActorMsg> async_post_act_msgs_;
   KernelObserver* stream_kernel_observer_;
+
+  // for debug
+  std::unique_ptr<DebugInfo> debug_info_[debug];
 };
 
 template<int kernel_exec, int inplace, typename IndexType, typename RegstIndex,
+         typename StateContainer, bool dynamic_allocation>
+ActorBase* DispatchNewLightActorDebug(ActorContext* actor_ctx) {
+  const bool debug = EnableActorDebugLog();
+  if (debug) {
+    return new LightActor<kernel_exec, inplace, IndexType, RegstIndex, StateContainer,
+                          dynamic_allocation, 1>(actor_ctx);
+  } else {
+    return new LightActor<kernel_exec, inplace, IndexType, RegstIndex, StateContainer,
+                          dynamic_allocation, 0>(actor_ctx);
+  }
+}
+
+template<int kernel_exec, int inplace, typename IndexType, typename RegstIndex,
          typename StateContainer>
-ActorBase* NewLightActor(ActorContext* actor_ctx) {
+ActorBase* DispatchNewLightActorDynamicAlloc(ActorContext* actor_ctx) {
   const bool dynamic_allocation =
       ParseBooleanFromEnv("ONEFLOW_GRAPH_ENABLE_STREAM_ORDERED_MEMORY_ALLOCATION", false);
   if (dynamic_allocation) {
-    return new LightActor<kernel_exec, inplace, IndexType, RegstIndex, StateContainer, true>(
-        actor_ctx);
+    return DispatchNewLightActorDebug<kernel_exec, inplace, IndexType, RegstIndex, StateContainer,
+                                      true>(actor_ctx);
   } else {
-    return new LightActor<kernel_exec, inplace, IndexType, RegstIndex, StateContainer, false>(
-        actor_ctx);
+    return DispatchNewLightActorDebug<kernel_exec, inplace, IndexType, RegstIndex, StateContainer,
+                                      false>(actor_ctx);
   }
 }
 
@@ -716,17 +789,21 @@ template<int kernel_exec, int inplace, typename IndexType>
 ActorBase* DispatchNewLightActorMaxSize(ActorContext* actor_ctx) {
   const size_t regst_desc_count = GetRegstDescCount(actor_ctx->task_proto());
   if (regst_desc_count <= 2) {
-    return NewLightActor<kernel_exec, inplace, IndexType, ArrayBaseIndex<IndexType, 2>,
-                         ArrayBaseStateContainer<IndexType, 2>>(actor_ctx);
+    return DispatchNewLightActorDynamicAlloc<kernel_exec, inplace, IndexType,
+                                             ArrayBaseIndex<IndexType, 2>,
+                                             ArrayBaseStateContainer<IndexType, 2>>(actor_ctx);
   } else if (regst_desc_count <= 4) {
-    return NewLightActor<kernel_exec, inplace, IndexType, ArrayBaseIndex<IndexType, 4>,
-                         ArrayBaseStateContainer<IndexType, 4>>(actor_ctx);
+    return DispatchNewLightActorDynamicAlloc<kernel_exec, inplace, IndexType,
+                                             ArrayBaseIndex<IndexType, 4>,
+                                             ArrayBaseStateContainer<IndexType, 4>>(actor_ctx);
   } else if (regst_desc_count <= 8) {
-    return NewLightActor<kernel_exec, inplace, IndexType, ArrayBaseIndex<IndexType, 8>,
-                         ArrayBaseStateContainer<IndexType, 8>>(actor_ctx);
+    return DispatchNewLightActorDynamicAlloc<kernel_exec, inplace, IndexType,
+                                             ArrayBaseIndex<IndexType, 8>,
+                                             ArrayBaseStateContainer<IndexType, 8>>(actor_ctx);
   } else {
-    return NewLightActor<kernel_exec, inplace, IndexType, MapBaseIndex<IndexType>,
-                         VectorBaseStateContainer<IndexType>>(actor_ctx);
+    return DispatchNewLightActorDynamicAlloc<kernel_exec, inplace, IndexType,
+                                             MapBaseIndex<IndexType>,
+                                             VectorBaseStateContainer<IndexType>>(actor_ctx);
   }
 }
 

@@ -120,7 +120,7 @@ Maybe<void> FusedGluGrad::Apply(const FusedGluGradCaptureState* ctx, const Tenso
         reduce_axes_vec.reserve(num_axes - 1);
         for (int i = 0; i < num_axes - 1; i++) { reduce_axes_vec.push_back(i); }
 
-        (*in_grads)[2] = JUST(functional::ReduceSum(d_matmul_wx, reduce_axes_vec, false));
+        (*in_grads)[2] = JUST(functional::ReduceSum(d_matmul_wx, reduce_axes_vec, false, NullOpt));
       }
 
       // calculate the final gradient result of v (if necessary)
@@ -139,7 +139,7 @@ Maybe<void> FusedGluGrad::Apply(const FusedGluGradCaptureState* ctx, const Tenso
         reduce_axes_vec.reserve(num_axes - 1);
         for (int i = 0; i < num_axes - 1; i++) { reduce_axes_vec.push_back(i); }
 
-        (*in_grads)[4] = JUST(functional::ReduceSum(d_matmul_vx, reduce_axes_vec, false));
+        (*in_grads)[4] = JUST(functional::ReduceSum(d_matmul_vx, reduce_axes_vec, false, NullOpt));
       }
     }
   } else {
@@ -161,7 +161,7 @@ Maybe<void> FusedGluGrad::Apply(const FusedGluGradCaptureState* ctx, const Tenso
         reduce_axes_vec.reserve(num_axes - 1);
         for (int i = 0; i < num_axes - 1; i++) { reduce_axes_vec.push_back(i); }
 
-        (*in_grads)[2] = JUST(functional::ReduceSum(d_matmul_wx, reduce_axes_vec, false));
+        (*in_grads)[2] = JUST(functional::ReduceSum(d_matmul_wx, reduce_axes_vec, false, NullOpt));
       }
     }
   }

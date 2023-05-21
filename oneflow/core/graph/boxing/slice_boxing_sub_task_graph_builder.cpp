@@ -233,7 +233,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
                          logical_blob_desc, sorted_in_tasks, sorted_out_tasks);
       comment = "BuildSubTaskGphP2B";
     } else {
-      BlobDesc flat_blob_desc(logical_blob_desc.data_type());
+      BlobDesc flat_blob_desc(logical_blob_desc.data_type(), logical_blob_desc.memory_format());
       flat_blob_desc.set_shape(Shape({logical_blob_desc.shape().elem_cnt()}));
       std::vector<TaskNode*> middle_nodes;
       SbpParallel middle_sbp;

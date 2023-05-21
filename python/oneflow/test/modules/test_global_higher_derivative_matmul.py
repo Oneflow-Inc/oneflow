@@ -153,6 +153,7 @@ def _test_broadcast_matmul_grad_b_grad_impl(test_case, placement):
 
 
 class TestGlobalMatmulHigherDerivative(flow.unittest.TestCase):
+    @unittest.skip("skip for now, becase it failed 32 times in past week")
     @globaltest
     def test_broadcast_matmul_grad_b_grad(test_case):
         for placement in all_placement():

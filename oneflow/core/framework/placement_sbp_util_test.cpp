@@ -154,7 +154,8 @@ Symbol<NdSbp> GetNdSbp(Args... sbps) {
 Symbol<one::GlobalTensorMeta> MakeGlobalTensorMeta(Symbol<ParallelDesc> parallel_desc,
                                                    Symbol<NdSbp> nd_sbp) {
   auto shape = Shape(DimVector{256, 256});
-  one::GlobalTensorMeta tensor_meta(shape, DataType::kInt32, nd_sbp, parallel_desc);
+  one::GlobalTensorMeta tensor_meta(shape, DataType::kInt32, MemoryFormat::kContiguous, nd_sbp,
+                                    parallel_desc);
   return SymbolOf(tensor_meta);
 }
 

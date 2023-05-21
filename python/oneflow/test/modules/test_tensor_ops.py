@@ -263,7 +263,7 @@ class TestTensorOps(flow.unittest.TestCase):
         y = torch.tensor(x.item())
         return y
 
-    # Not check graph because of 2 reason.
+    # Not check graph because of 2 reasons
     # Reason 1, nn.Graph.build()'s input/output item only support types: Tensor/None.
     # Reason 2, This op needs to convert the EagerTensor to a numpy array，so this op only supports eager mode.
     # Please refer to File "oneflow/api/python/utils/tensor_utils.h", line 49, in EagerTensorToNumpy.
@@ -276,7 +276,7 @@ class TestTensorOps(flow.unittest.TestCase):
         y = torch.tensor(x.tolist())
         return y
 
-    # Not check graph because of 2 reason.
+    # Not check graph because of 2 reasons
     # Reason 1, nn.Graph.build()'s input/output item only support types: Tensor/None.
     # Reason 2, This op needs to convert the EagerTensor to a numpy array，so this op only supports eager mode.
     # Please refer to File "oneflow/api/python/utils/tensor_utils.h", line 49, in EagerTensorToNumpy.
@@ -347,7 +347,7 @@ class TestTensorOps(flow.unittest.TestCase):
             flow.float64,
         ]
         tensortype_dict = {
-            "oneflow.CharTensor": [flow.int8, flow.device("cpu")],
+            "oneflow.CharTensor": [flow.char, flow.device("cpu")],
             "oneflow.ByteTensor": [flow.uint8, flow.device("cpu")],
             "oneflow.IntTensor": [flow.int32, flow.device("cpu")],
             "oneflow.LongTensor": [flow.int64, flow.device("cpu")],
@@ -367,7 +367,7 @@ class TestTensorOps(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["src_dtype"] = [
             flow.uint8,
-            flow.int8,
+            flow.char,
             flow.int64,
             flow.int32,
             flow.float16,
@@ -375,14 +375,14 @@ class TestTensorOps(flow.unittest.TestCase):
             flow.float64,
         ]
         tensortype_dict = {
-            "oneflow.CharTensor": [flow.int8, flow.device("cpu")],
+            "oneflow.CharTensor": [flow.char, flow.device("cpu")],
             "oneflow.ByteTensor": [flow.uint8, flow.device("cpu")],
             "oneflow.IntTensor": [flow.int32, flow.device("cpu")],
             "oneflow.LongTensor": [flow.int64, flow.device("cpu")],
             "oneflow.HalfTensor": [flow.float16, flow.device("cpu")],
             "oneflow.FloatTensor": [flow.float32, flow.device("cpu")],
             "oneflow.DoubleTensor": [flow.float64, flow.device("cpu")],
-            "oneflow.cuda.CharTensor": [flow.int8, flow.device("cuda")],
+            "oneflow.cuda.CharTensor": [flow.char, flow.device("cuda")],
             "oneflow.cuda.ByteTensor": [flow.uint8, flow.device("cuda")],
             "oneflow.cuda.IntTensor": [flow.int32, flow.device("cuda")],
             "oneflow.cuda.LongTensor": [flow.int64, flow.device("cuda")],

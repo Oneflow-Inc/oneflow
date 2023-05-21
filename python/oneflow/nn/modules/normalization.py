@@ -156,7 +156,7 @@ def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-05):
                 f"Given normalized_shape={normalized_shape}, expected input with shape [*, {str(normalized_shape)[1:-1]}], but got input of size {input.shape}"
             )
 
-    if not input.is_cuda:
+    if input.is_cpu:
         reduce_axis = []
         for dim in range(len(input.shape)):
             if dim >= begin_norm_axis:
