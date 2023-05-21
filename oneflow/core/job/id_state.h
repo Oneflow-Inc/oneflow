@@ -13,29 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_SINGLETON_PTR_H_
-#define ONEFLOW_CORE_COMMON_SINGLETON_PTR_H_
+#ifndef ONEFLOW_CORE_JOB_ID_STATE_H_
+#define ONEFLOW_CORE_JOB_ID_STATE_H_
 
-#include <memory>
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/device/device_id.h"
+#include "oneflow/core/graph/stream_id.h"
+#include "oneflow/core/graph/task_id.h"
 
 namespace oneflow {
 
-namespace private_detail {
-
-template<typename T>
-const T* GlobalSingletonPtr() {
-  static std::unique_ptr<const T> value(new T());
-  return value.get();
-}
-
-}  // namespace private_detail
-
-template<typename T>
-const T* SingletonPtr() {
-  thread_local const T* value = private_detail::GlobalSingletonPtr<T>();
-  return value;
-}
+class IdState {
+ public:
+  int64_t regst_desc_id_state_{};
+  int64_t mem_block_id_state_{};
+  int64_t chunk_id_state_{};
+  int64_t job_id_state_{};
+  HashMap<int64_t, uint32_t> task_index_state_{};
+  HashMap<int64_t, uint32_t> stream_index_state_{};
+};
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_SINGLETON_PTR_H_
+#endif
