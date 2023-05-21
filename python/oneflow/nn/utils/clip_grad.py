@@ -143,8 +143,7 @@ def clip_grad_norm_(
         clip_coef_clamped = clip_coef.clamp(max=1.0)
         for p in parameters:
             p.grad.detach().mul_(clip_coef_clamped.to_global(placement=p.placement))
-    elif fused and all([p.grad.is_cuda for p in parameters]):
-        assert not error_if_nonfinite
+    elif fused and not error_if_nonfinite and all([p.grad.is_cuda for p in parameters]):
         param_grad_list = []
         for param in parameters:
             param_grad_list.append(param.grad)
