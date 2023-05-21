@@ -153,10 +153,6 @@ def clip_grad_norm_(
             max_norm,
             norm_type,
         )
-        if norm_type == 0.:
-            total_norm = (total_norm > 0.).type(flow.float32)
-        elif norm_type not in [1, float("inf"), float("-inf")]:
-            total_norm = flow.pow(total_norm, 1. / norm_type)
     else:
         device = parameters[0].grad.device
         if norm_type == float("inf"):
