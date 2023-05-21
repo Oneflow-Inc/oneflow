@@ -24,6 +24,7 @@ limitations under the License.
 namespace oneflow {
 
 /*static*/ Maybe<void> NonContiguousBinaryOp::GetSbp(user_op::SbpContext* ctx) {
+  // only support broadcast 
   const bool inplace = ctx->Attr<bool>("inplace");
   ctx->NewBuilder()
       .Broadcast(user_op::OpArg("lhs", 0))
@@ -40,10 +41,11 @@ namespace oneflow {
   for (int i = 0; i < lhs.NumAxes(); i++) CHECK_EQ_OR_RETURN(lhs.At(i), rhs.At(i));
   ctx->SetOutputShape("y", 0, lhs);
   const bool inplace = ctx->Attr<bool>("inplace");
-  if (inplace)
-    ctx->SetOutputStride("y", 0, ctx->InputStride("lhs", 0));
-  else  // set contiguous for y if not inplace
+  if (inplace){
+    ctx->SetOutputStride("y", 0, ctx->InputStride("lhs", 0));}
+  else{  // set contiguous for y if not inplace
     ctx->SetOutputStride("y", 0, Stride(lhs));
+  }
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> NonContiguousBinaryOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
