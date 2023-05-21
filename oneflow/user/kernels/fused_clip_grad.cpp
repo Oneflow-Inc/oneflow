@@ -62,7 +62,7 @@ class FusedClipGradKernel final : public user_op::OpKernel, public user_op::Cuda
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     T* out_ptr = out->mut_dptr<T>();
-
+    T* temp = (ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0))->mut_dptr<T>();
     const int32_t input_size = ctx->input_size("model_diff");
     const float max_norm = ctx->Attr<float>("max_norm");
     const float norm_type = ctx->Attr<float>("norm_type");
@@ -74,10 +74,6 @@ class FusedClipGradKernel final : public user_op::OpKernel, public user_op::Cuda
       params[i].size = x->shape_view().elem_cnt();
       params[i].data = x->dptr<T>();
     }
-
-    T* temp = (ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0))->mut_dptr<T>();
-
-    bool not_special = false;
     if (norm_type == 0) {
       PowByZero<T> func{};
       MultiReduce<device_type, T, decltype(func), BinaryAdd<T>> reduce_add{};
@@ -95,42 +91,30 @@ class FusedClipGradKernel final : public user_op::OpKernel, public user_op::Cuda
       MultiReduce<device_type, T, decltype(func), BinaryAdd<T>> reduce_sum{};
       reduce_sum(ctx->stream(), func, params, GetZeroVal<T>(), out_ptr, temp);
     } else if (norm_type == 2) {
-      not_special = true;
       Square<T> func{};
       MultiReduce<device_type, T, decltype(func), BinaryAdd<T>> reduce_sum{};
       reduce_sum(ctx->stream(), func, params, GetZeroVal<T>(), out_ptr, temp);
     } else {
-      not_special = true;
       AbsPow<T> func{norm_type};
       MultiReduce<device_type, T, decltype(func), BinaryAdd<T>> reduce_sum{};
       reduce_sum(ctx->stream(), func, params, GetZeroVal<T>(), out_ptr, temp);
     }
 
-    T h_total_norm, res;
-    OF_CUDA_CHECK(cudaMemcpy(&res, out_ptr, sizeof(T), cudaMemcpyDeviceToHost));
-    OF_CUDA_CHECK(cudaDeviceSynchronize());
-
-    if (norm_type == 0) { res = static_cast<T>(res > 0); }
-    if (not_special) { res = std::pow(res, 1. / norm_type); }
-    h_total_norm = max_norm / (res + 1e-6);
-    OF_CUDA_CHECK(cudaMemcpy(out_ptr, &h_total_norm, sizeof(T), cudaMemcpyHostToDevice));
-    OF_CUDA_CHECK(cudaDeviceSynchronize());
-
-    if (h_total_norm < 1.) {
-      std::vector<MultiScaleMulParam<T>> mut_params;
-      mut_params.resize(input_size);
-      for (size_t i = 0; i < input_size; ++i) {
-        auto x = ctx->Tensor4ArgNameAndIndex("model_diff", i);
-        mut_params[i].size = x->shape_view().elem_cnt();
-        mut_params[i].data = x->mut_dptr<T>();
-      }
-      MultiScaleMul<device_type, T> scale_mul{};
-      scale_mul(ctx->stream(), mut_params, out_ptr);
+    std::vector<MultiClipGradParam<T>> mut_params;
+    mut_params.resize(input_size);
+    for (size_t i = 0; i < input_size; ++i) {
+      user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("model_diff", i);
+      mut_params[i].size = x->shape_view().elem_cnt();
+      mut_params[i].data = x->mut_dptr<T>();
     }
-
-    OF_CUDA_CHECK(cudaMemcpy(out_ptr, &res, sizeof(T), cudaMemcpyHostToDevice));
-    OF_CUDA_CHECK(cudaDeviceSynchronize());
-
+    MultiClipGrad<device_type, T> multi_clip_grad{};
+    if (norm_type == 0) {
+      multi_clip_grad(ctx->stream(), mut_params, out_ptr, norm_type, max_norm, ClipGradType::ZeroType);
+    } else if (std::abs(norm_type) == INFINITY || norm_type == 1) {
+      multi_clip_grad(ctx->stream(), mut_params, out_ptr, norm_type, max_norm, ClipGradType::OtherType);
+    } else {
+      multi_clip_grad(ctx->stream(), mut_params, out_ptr, norm_type, max_norm, ClipGradType::PowerType);
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

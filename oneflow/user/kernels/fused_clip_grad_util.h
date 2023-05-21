@@ -24,7 +24,7 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-struct MultiScaleMulParam {
+struct MultiClipGradParam {
   T* data;
   size_t size;
 };
@@ -32,14 +32,21 @@ struct MultiScaleMulParam {
 constexpr int64_t kMultiReduceScaleMulPackSize = 64;
 
 template<typename T>
-struct MultiScaleMulParamsPack {
-  MultiScaleMulParam<T> params[kMultiReduceScaleMulPackSize];
+struct MultiClipGradParamPack {
+  MultiClipGradParam<T> params[kMultiReduceScaleMulPackSize];
   size_t size;
 };
 
+enum ClipGradType : int {
+  ZeroType,
+  PowerType,
+  OtherType,
+};
+
 template<DeviceType device_type, typename T>
-struct MultiScaleMul {
-  void operator()(ep::Stream* stream, std::vector<MultiScaleMulParam<T>>& params, T* scale);
+struct MultiClipGrad {
+  void operator()(ep::Stream* stream, std::vector<MultiClipGradParam<T>>& params, T* scale,
+                  const float norm_type, const float max_norm, const ClipGradType clip_grad_type);
 };
 
 }  // namespace oneflow

@@ -22,8 +22,17 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void MultiBlockScaleMulGpu(MultiScaleMulParamsPack<T> pack_params, T* scale) {
+__global__ void MultiBlockClipGradGpu(MultiClipGradParamPack<T> pack_params, T* scale, 
+                                      const float norm_type, const float max_norm,
+                                      const ClipGradType clip_grad_type) {
   T t = *scale;
+  if (clip_grad_type == ClipGradType::ZeroType) { 
+    t = static_cast<T>(t > 0); 
+  } else if (clip_grad_type == ClipGradType::PowerType) {
+    t = std::pow(t, 1. / norm_type);
+  }
+  t = max_norm / (t + 1e-6);
+  t = t < 1. ? t : 1.;
   for (int i = 0; i < pack_params.size; ++i) {
     auto& param = pack_params.params[i];
     CUDA_1D_KERNEL_LOOP(j, param.size) {
@@ -35,11 +44,12 @@ __global__ void MultiBlockScaleMulGpu(MultiScaleMulParamsPack<T> pack_params, T*
 }  // namespace
 
 template<typename T>
-struct MultiScaleMul<DeviceType::kCUDA, T> {
-  void operator()(ep::Stream* stream, std::vector<MultiScaleMulParam<T>>& params, T* scale) {
+struct MultiClipGrad<DeviceType::kCUDA, T> {
+  void operator()(ep::Stream* stream, std::vector<MultiClipGradParam<T>>& params, T* scale,
+                  const float norm_type, const float max_norm, const ClipGradType clip_grad_type) {
     int32_t total_num_blocks = 0;
     for (size_t i = 0; i < params.size(); i += kMultiReduceScaleMulPackSize) {
-      MultiScaleMulParamsPack<T> pack_params{};
+      MultiClipGradParamPack<T> pack_params{};
       size_t max_elem_cnt = 0;
       pack_params.size = std::min<size_t>(kMultiReduceScaleMulPackSize, params.size() - i);
       for (size_t j = 0; j < pack_params.size; ++j) {
@@ -47,13 +57,13 @@ struct MultiScaleMul<DeviceType::kCUDA, T> {
         max_elem_cnt = std::max<size_t>(max_elem_cnt, pack_params.params[j].size);
       }
       int32_t num_blocks = BlocksNum4ThreadsNum(max_elem_cnt);
-      MultiBlockScaleMulGpu<T><<<num_blocks, kCudaThreadsNumPerBlock, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-          pack_params, scale);
+      MultiBlockClipGradGpu<T><<<num_blocks, kCudaThreadsNumPerBlock, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+          pack_params, scale, norm_type, max_norm, clip_grad_type);
       total_num_blocks += num_blocks;
     }
   }
 };
 
-template struct MultiScaleMul<DeviceType::kCUDA, float>;
+template struct MultiClipGrad<DeviceType::kCUDA, float>;
 
 }  // namespace oneflow
