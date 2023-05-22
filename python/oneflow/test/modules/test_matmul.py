@@ -32,16 +32,15 @@ class TestModule(flow.unittest.TestCase):
         y = random_tensor(ndim=2, dim0=k).to(device)
         z = torch.matmul(x, y)
         return z
-    
+
     @profile(torch.matmul)
     def profile_matmul(test_case):
         z = torch.matmul(torch.ones(10, 1000), torch.ones(1000, 10))
-        z = torch.matmul(torch.ones(10000, 10), torch.ones(10, 1000))
-        z = torch.matmul(torch.ones(100, 1000), torch.ones(1000, 100))
+        z = torch.matmul(torch.ones(1000, 10), torch.ones(10, 1000))
         z = torch.matmul(torch.ones(10, 10), torch.ones(10, 10))
         z = torch.matmul(torch.ones(10, 1), torch.ones(1, 10))
         z = torch.matmul(torch.ones(1, 10), torch.ones(10, 1))
-        
+
     @autotest(check_graph=True, rtol=1e-2, atol=1e-4)
     def test_flow_tensor_matmul_with_random_data(test_case):
         device = random_device()
