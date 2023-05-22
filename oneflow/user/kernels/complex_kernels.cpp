@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/elementwise_unary.h"
 #include "oneflow/core/ep/include/primitive/primitive.h"
 #include "oneflow/core/ep/include/primitive/unary_op.h"
-#include "oneflow/user/kernels/complex_kernels_util.h"
 #include "oneflow/user/kernels/elementwise_primitive_kernel.h"
 #include <complex>
 #ifdef WITH_CUDA
