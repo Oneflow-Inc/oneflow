@@ -631,7 +631,7 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kImagGrad, Dst, Src> {
   OF_DEVICE_FUNC Dst operator()(Src src) const { return Dst{0.0, src}; }
 };
 
-// avoid narrowing conversion
+// avoid warning: narrowing conversion
 template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kRealGrad, cuComplex, double> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
