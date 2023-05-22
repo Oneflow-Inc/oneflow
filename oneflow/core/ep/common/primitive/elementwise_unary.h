@@ -88,7 +88,9 @@ namespace primitive {
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kFastGelu)        \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kQuickGelu)
 
-#define UNARY_COMPLEX_MATH_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSqrt)
+#define UNARY_COMPLEX_MATH_OP_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSqrt)  \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kNegative)
 
 #define UNARY_INT_MATH_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAbs)
 

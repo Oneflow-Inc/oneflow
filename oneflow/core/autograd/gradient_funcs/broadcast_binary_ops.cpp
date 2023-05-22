@@ -191,7 +191,8 @@ class BroadcastDiv : public BroadcastBinaryGrad {
     in_grads->resize(2);
     if (ctx->x_requires_grad) {
       const auto& y = ctx->SavedTensors().at(ctx->y_index);
-      const auto& x_grad = JUST(functional::Div(out_grads.at(0), y));
+      // const auto& x_grad = JUST(functional::Div(out_grads.at(0), y));
+      const auto& x_grad = JUST(functional::Div(out_grads.at(0), JUST(functional::Conj(y))));
       if (ctx->broadcast_x) {
         const auto& x = ctx->SavedTensors().at(ctx->x_index);
         in_grads->at(0) = JUST(functional::BroadcastReduceSumLike(x_grad, x));

@@ -35,7 +35,7 @@ Symbol<DType> ComputeCommonDType(const TensorTuple& tensor_tuple) {
       [](const std::shared_ptr<Tensor>& tensor) { return tensor->shape()->NumAxes() == 0; });
   for (auto& tensor_ptr : tensor_tuple) {
     // skip scalar tensor
-    if (!all_scalar_tensors && tensor_ptr->shape()->NumAxes() == 0) { continue; }
+    if (!all_scalar_tensors && tensor_ptr->shape()->NumAxes() == 0 && !(tensor_ptr->dtype()->is_complex())) { continue; }
     common_dtype = promoteTypes(tensor_ptr->dtype(), common_dtype);
   }
   return common_dtype;

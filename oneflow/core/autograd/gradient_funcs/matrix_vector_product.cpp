@@ -84,7 +84,7 @@ Maybe<void> MatrixVectorProduct::Apply(const MatrixVectorProductCaptureState* ct
     JUST(VectorAt(*in_grads, 1)) = 
           JUST(functional::MatrixVectorProductGradB(JUST(VectorAt(out_grads, 0)), input_a));
     if (input_a->dtype()->is_complex()){
-      JUST(VectorAt(*in_grads, 1)) = JUST(functional::ConjPhysical(JUST(VectorAt(*in_grads, 1))));
+      JUST(VectorAt(*in_grads, 1)) = JUST(functional::Conj(JUST(VectorAt(*in_grads, 1))));
     }
   }
 

@@ -806,6 +806,20 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kSqrt, cuDoubleComplex, cuDouble
   }
 };
 
+#define SPECIALIZATION_COMPLEX_ARITHMETIC_UNARY_FUNCTOR(op, complex_type, real_type)        \
+  template<>                                                                                 \
+  struct UnaryFunctor<DeviceType::kCUDA, op, complex_type, complex_type> {                  \
+    OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) : real_functor(attr0, attr1) {} \
+    UnaryFunctor<DeviceType::kCUDA, op, real_type, real_type> real_functor;                 \
+    OF_DEVICE_FUNC complex_type operator()(complex_type src) const {                        \
+      return complex_type{real_functor(src.x), real_functor(src.y)};                        \
+    }                                                                                        \
+  };
+
+SPECIALIZATION_COMPLEX_ARITHMETIC_UNARY_FUNCTOR(UnaryOp::kNegative, cuComplex, float);
+SPECIALIZATION_COMPLEX_ARITHMETIC_UNARY_FUNCTOR(UnaryOp::kNegative, cuDoubleComplex, double);
+
+
 }  // namespace primitive
 }  // namespace ep
 }  // namespace oneflow
