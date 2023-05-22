@@ -99,7 +99,11 @@ enum class UnaryOp {
   kBitwiseNot,
 
   // complex op
-  kConj
+  kConj,
+  kReal,
+  kImag,
+  kRealGrad,
+  kImagGrad
 };
 
 }

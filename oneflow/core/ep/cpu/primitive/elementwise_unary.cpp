@@ -94,8 +94,16 @@ class ElementwiseUnaryFactoryImpl : public ElementwiseUnaryFactory {
 
             // For Complex Type OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_ELEMENTWISE_UNARY_ENTRY,
-                                             UNARY_COMPLEX_MATH_OP_SEQ,
+                                             UNARY_COMPLEX_C2C_OP_SEQ,
                                              CPU_PRIMITIVE_COMPLEX_TYPE_SEQ)
+
+                OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+                    MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY, UNARY_COMPLEX_C2R_OP_SEQ,
+                    CPU_PRIMITIVE_COMPLEX_TYPE_SEQ, CPU_PRIMITIVE_FLOATING_TYPE_SEQ)
+
+                    OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+                        MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY, UNARY_COMPLEX_R2C_OP_SEQ,
+                        CPU_PRIMITIVE_FLOATING_TYPE_SEQ, CPU_PRIMITIVE_COMPLEX_TYPE_SEQ)
 
             // For Int Type OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_ELEMENTWISE_UNARY_ENTRY,
