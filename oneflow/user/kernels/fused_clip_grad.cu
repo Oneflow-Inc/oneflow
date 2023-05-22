@@ -29,7 +29,7 @@ __global__ void MultiBlockClipGradGpu(MultiClipGradParamPack<T> pack_params, T* 
   if (clip_grad_type == ClipGradType::ZeroType) { 
     t = static_cast<T>(t > 0); 
   } else if (clip_grad_type == ClipGradType::PowerType) {
-    t = std::pow(t, 1. / norm_type);
+    t = std::pow(t, 1.f / norm_type);
   }
   if (scale_writable && blockDim.x * blockIdx.x + threadIdx.x == 0) { *scale = t; }
   t = max_norm / (t + 1e-6);
