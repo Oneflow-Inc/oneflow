@@ -679,6 +679,20 @@ def OneFlow_XlogyOp : OneFlow_BaseOp<"xlogy", [NoMemoryEffect, DeclareOpInterfac
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_BroadcastZetaOp : OneFlow_BaseOp<"broadcast_zeta", [NoGrad,NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
+  );
+  let output = (outs
+    OneFlow_Tensor:$z
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 #endif // GET_ONEFLOW_BINARY_OP_DEFINITIONS
 
 
@@ -2849,33 +2863,30 @@ def OneFlow_FusedCrossFeatureInteractionV2GradOp : OneFlow_BaseOp<"fused_cross_f
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_LlamaAttentionLayerForwardOp : OneFlow_BaseOp<"llama_attention_layer_forward", [NoMemoryEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_LlamaDecoderLayerForwardOp : OneFlow_BaseOp<"llama_decoder_layer_forward", [NoMemoryEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$hidden_states,
-    OneFlow_Tensor:$input_norm_weight,
-    OneFlow_Tensor:$query_weight,
-    OneFlow_Tensor:$key_weight,
-    OneFlow_Tensor:$value_weight,
-    OneFlow_Tensor:$attn_out_weight,
+    Variadic<OneFlow_Tensor>:$input_norm_weights,
+    Variadic<OneFlow_Tensor>:$query_weights,
+    Variadic<OneFlow_Tensor>:$key_weights,
+    Variadic<OneFlow_Tensor>:$value_weights,
+    Variadic<OneFlow_Tensor>:$attn_out_weights,
     OneFlow_Tensor:$position_ids,
-    Optional<OneFlow_Tensor>:$past_key,
-    Optional<OneFlow_Tensor>:$past_value
+    Variadic<OneFlow_Tensor>:$post_norm_weights,
+    Variadic<OneFlow_Tensor>:$mlp_gate_weights,
+    Variadic<OneFlow_Tensor>:$mlp_up_weights,
+    Variadic<OneFlow_Tensor>:$mlp_down_weights,
+    Variadic<OneFlow_Tensor>:$past_keys,
+    Variadic<OneFlow_Tensor>:$past_values
   );
   let output = (outs
-    OneFlow_Tensor:$rms_norm_out,
-    OneFlow_Tensor:$inv_rms,
-    OneFlow_Tensor:$query,
-    OneFlow_Tensor:$key,
-    OneFlow_Tensor:$value,
-    OneFlow_Tensor:$rotary_query,
-    OneFlow_Tensor:$rotary_key,
-    OneFlow_Tensor:$concat_key,
-    OneFlow_Tensor:$concat_value,
-    OneFlow_Tensor:$attn_out,
-    OneFlow_Tensor:$out
+    OneFlow_Tensor:$output,
+    Variadic<OneFlow_Tensor>:$concat_keys,
+    Variadic<OneFlow_Tensor>:$concat_values
   );
   let attrs = (ins
     SI64Attr:$head_size,
+    SI64Attr:$num_layers,
     StrAttr:$parallel_conf
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -2883,7 +2894,6 @@ def OneFlow_LlamaAttentionLayerForwardOp : OneFlow_BaseOp<"llama_attention_layer
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
-
 
 def OneFlow_FusedMultiHeadAttentionInferenceOp : OneFlow_BaseOp<"fused_multi_head_attention_inference", [NoMemoryEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
@@ -5109,7 +5119,70 @@ def OneFlow_ErfInvOp : OneFlow_BaseOp<"erfinv", [NoMemoryEffect, DeclareOpInterf
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_StftOp : OneFlow_BaseOp<"stft", [SupportNonContiguous,NoMemoryEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FftC2COp : OneFlow_BaseOp<"fft_c2c", [SupportNonContiguous, NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$input
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+
+  let attrs = (ins
+    SI64ArrayAttr:$dims,
+    BoolAttr:$forward,
+    SI32Attr:$norm_mode,
+    F64Attr:$norm_fct
+  );
+
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_FftR2COp : OneFlow_BaseOp<"fft_r2c", [SupportNonContiguous, NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$input
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+
+  let attrs = (ins
+    SI64ArrayAttr:$dims,
+    SI32Attr:$norm_mode,
+    F64Attr:$norm_fct,
+    BoolAttr:$onesided
+  );
+
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_FftC2ROp : OneFlow_BaseOp<"fft_c2r", [SupportNonContiguous, NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$input
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+
+  let attrs = (ins
+    SI64ArrayAttr:$dims,
+    SI32Attr:$norm_mode,
+    F64Attr:$norm_fct,
+    SI64Attr:$last_dim_size
+  );
+
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_StftOp : OneFlow_BaseOp<"stft", [SupportNonContiguous, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$input,
     Optional<OneFlow_Tensor>:$window
@@ -10923,6 +10996,22 @@ def OneFlow_ToContiguousOp : OneFlow_BaseOp<"to_contiguous", [NoMemoryEffect, Su
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_ConvertMemoryFormatOp : OneFlow_BaseOp<"convert_memory_format", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$in
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    OneFlow_MemoryFormat:$memory_format
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_IsNanOp : OneFlow_BaseOp<"isnan", [NoMemoryEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in
@@ -11967,6 +12056,10 @@ class OneFlow_JITLikeOp <string mnemonic> : OneFlow_BaseOp<mnemonic, [CallOpInte
     operand_iterator arg_operand_end() { return operand_end(); }
     CallInterfaceCallable getCallableForCallee() {
       return (*this)->getAttrOfType<SymbolRefAttr>("callee");
+    }
+    
+    void setCalleeFromCallable(CallInterfaceCallable callee) {
+      (*this)->setAttr("callee", callee.get<SymbolRefAttr>());
     }
   }];
   let assemblyFormat = [{

@@ -18,6 +18,7 @@ limitations under the License.
 #include <string>
 #include <complex>
 
+#include "oneflow/api/python/framework/memory_format.h"
 #include "oneflow/api/python/functional/indexing.h"
 #include "oneflow/extension/python/numpy.h"
 #include "oneflow/core/common/just.h"
@@ -34,6 +35,7 @@ limitations under the License.
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/framework/tensor_util.h"
+
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -233,12 +235,8 @@ bool PyLayoutCheck(PyObject* obj) { return detail::isinstance_fast<Symbol<Layout
 Symbol<Layout> PyUnpackLayout(PyObject* obj) { return *detail::cast_fast<Symbol<Layout>*>(obj); }
 
 // Memory Format
-bool PyMemoryFormatCheck(PyObject* obj) {
-  return detail::isinstance_fast<Symbol<MemoryFormat>>(obj);
-}
-Symbol<MemoryFormat> PyUnpackMemoryFormat(PyObject* obj) {
-  return *detail::cast_fast<Symbol<MemoryFormat>*>(obj);
-}
+bool PyMemoryFormatCheck(PyObject* obj) { return PyMemoryFormat_Check(obj); }
+MemoryFormat PyUnpackMemoryFormat(PyObject* obj) { return PyMemoryFormat_Unpack(obj); }
 
 // DType list
 bool PyDTypeSequenceCheck(PyObject* obj) {

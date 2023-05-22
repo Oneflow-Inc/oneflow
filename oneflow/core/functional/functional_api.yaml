@@ -1592,19 +1592,19 @@
   bind_python: False
 
 - name: "adaptive_avg_pool1d"
-  signature: "Tensor (Tensor x, Int64List[1] output_size) => AdaptiveAvgPool1D"
+  signature: 'Tensor (Tensor x, Int64List[1] output_size, String data_format="channels_first") => AdaptiveAvgPool1D'
   bind_python: True
 
 - name: "adaptive_avg_pool2d"
-  signature: "Tensor (Tensor x, Int64List[2] output_size) => AdaptiveAvgPool2D"
+  signature: 'Tensor (Tensor x, Int64List[2] output_size, String data_format="channels_first") => AdaptiveAvgPool2D'
   bind_python: True
 
 - name: "adaptive_avg_pool3d"
-  signature: "Tensor (Tensor x, Int64List[3] output_size) => AdaptiveAvgPool3D"
+  signature: 'Tensor (Tensor x, Int64List[3] output_size, String data_format="channels_first") => AdaptiveAvgPool3D'
   bind_python: True
 
 - name: "adaptive_pool_grad"
-  signature: "Tensor (Tensor x, Tensor dy, String mode, Int32 ndims) => AdaptivePoolNdGrad"
+  signature: 'Tensor (Tensor x, Tensor dy, String mode, Int32 ndims, String data_format="channels_first") => AdaptivePoolNdGrad'
 
 - name: "tf_pool_grad"
   signature:
@@ -1736,6 +1736,7 @@
       "Tensor (Tensor x, DataType dtype=None, Bool copy=False) => To",
       "Tensor (Tensor x, Tensor other, Bool copy=False) => To",
       "Tensor (Tensor x, String device=None) => To",
+      "Tensor (Tensor x, *, MemoryFormat memory_format) => To",
     ]
   bind_python: True
 
@@ -2065,7 +2066,7 @@
 
 - name: "unsorted_segment_sum_like"
   signature: "Tensor (Tensor x, Tensor segment_ids, Tensor like, Int64 axis) => UnsortedSegmentSumLike"
-  bind_python: False
+  bind_python: True
 
 - name: "unsorted_segment_sum"
   signature: "Tensor (Tensor x, Tensor segment_ids, Int64 axis, Int64 num_segments) => UnsortedSegmentSum"
@@ -2675,8 +2676,8 @@
   signature: "TensorTuple (Tensor x, Tensor bias, Tensor mask, *, Float fill_value=0.0, Float scale=1.0, Float p=0.5, Bool training=True, Generator generator=None) => FusedBiasAddScaleMaskSoftmaxDropout"
   bind_python: True
 
-- name: "llama_attention_layer_forward"
-  signature: "TensorTuple (Tensor hidden_states, Tensor input_norm_weight, Tensor query_weight, Tensor key_weight, Tensor value_weight, Tensor attn_out_weight, Tensor position_ids, Tensor past_key=None, Tensor past_value=None, Int64 head_size=128) => LlamaAttentionLayerForwardOp"
+- name: "llama_decoder_layer_forward"
+  signature: "TensorTuple (Tensor hidden_states, TensorTuple input_norm_weight, TensorTuple query_weight, TensorTuple key_weight, TensorTuple value_weight, TensorTuple attn_out_weight, Tensor position_ids, TensorTuple post_norm_weight, TensorTuple mlp_gate_weight, TensorTuple mlp_up_weight, TensorTuple mlp_down_weight, TensorTuple past_key, TensorTuple past_value, Int64 head_size=128) => LlamaDecoderLayerForwardOp"
   bind_python: True
 
 - name: "fused_multi_head_attention_inference"
@@ -3104,19 +3105,19 @@
   bind_python: True
 
 - name: "adaptive_max_pool1d"
-  signature: "TensorTuple (Tensor input, Int64List[1] output_size) => AdaptiveMaxPool1D"
+  signature: 'TensorTuple (Tensor input, Int64List[1] output_size, String data_format="channels_first") => AdaptiveMaxPool1D'
   bind_python: True
 
 - name: "adaptive_max_pool2d"
-  signature: "TensorTuple (Tensor input, Int64List[2] output_size) => AdaptiveMaxPool2D"
+  signature: 'TensorTuple (Tensor input, Int64List[2] output_size, String data_format="channels_first") => AdaptiveMaxPool2D'
   bind_python: True
 
 - name: "adaptive_max_pool3d"
-  signature: "TensorTuple (Tensor input, Int64List[3] output_size) => AdaptiveMaxPool3D"
+  signature: 'TensorTuple (Tensor input, Int64List[3] output_size, String data_format="channels_first") => AdaptiveMaxPool3D'
   bind_python: True
 
 - name: "adaptive_max_pool_grad"
-  signature: "Tensor (Tensor x, Tensor index, Tensor dy, Int32 ndims) => AdaptiveMaxPoolNdGrad"
+  signature: 'Tensor (Tensor x, Tensor index, Tensor dy, Int32 ndims, String data_format="channels_first") => AdaptiveMaxPoolNdGrad'
   bind_python: False
 
 - name: "tan_grad_grad"
@@ -3278,6 +3279,111 @@
     'Tensor (Tensor input, Int64 n_fft,Int64 hop_length=None, Int64 win_length=None, Tensor window=None,Bool center=True,String pad_mode="reflect",Bool normalized=False,Bool onesided=True,Bool return_complex=False) =>Stft'
   bind_python: True
 
+- name: "fft_c2c"
+  signature:
+    'Tensor (Tensor input, Int64List n=None, Int64List dims=None, Int32 norm_mode=0, Bool forward=True, Bool normalized=False) => FftC2C'
+  bind_python: False
+
+- name: "fft_r2c"
+  signature:
+    'Tensor (Tensor input, Int64List n=None, Int64List dims=None, Int32 norm_mode=0, Bool onesided=False, Bool forward=True, Bool normalized=False) => FftR2C'
+  bind_python: False
+
+- name: "fft_c2r"
+  signature:
+    'Tensor (Tensor input, Int64List n=None, Int64List dims=None, Int32 norm_mode=0, Bool forward=True, Bool normalized=False) =>FftC2R'
+  bind_python: False
+
+- name: "fft"
+  signature: 
+    'Tensor (Tensor input, Int64 n=-1, Int64 dim=-1, String norm=None) => Fft'
+  bind_python: True
+
+- name: "ifft"
+  signature: 
+    'Tensor (Tensor input, Int64 n=-1, Int64 dim=-1, String norm=None) => IFft'
+  bind_python: True
+
+- name: "fft2"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim, String norm=None) => Fft2'
+  bind_python: True
+
+- name: "ifft2"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim, String norm=None) => IFft2'
+  bind_python: True
+
+- name: "fftn"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim=None, String norm=None) => FftN'
+  bind_python: True
+
+- name: "ifftn"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim=None, String norm=None) => IFftN'
+  bind_python: True
+
+- name: "rfft"
+  signature: 
+    'Tensor (Tensor input, Int64 n=-1, Int64 dim=-1, String norm=None) => RFft'
+  bind_python: True
+
+- name: "irfft"
+  signature: 
+    'Tensor (Tensor input, Int64 n=-1, Int64 dim=-1, String norm=None) => IRFft'
+  bind_python: True
+
+- name: "rfft2"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim, String norm=None) => RFft2'
+  bind_python: True
+
+- name: "irfft2"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim, String norm=None) => IRFft2'
+  bind_python: True
+
+- name: "rfftn"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim=None, String norm=None) => RFftN'
+  bind_python: True
+
+- name: "irfftn"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim=None, String norm=None) => IRFftN'
+  bind_python: True
+
+- name: "hfft"
+  signature: 
+    'Tensor (Tensor input, Int64 n=-1, Int64 dim=-1, String norm=None) => HFft'
+  bind_python: True
+
+- name: "ihfft"
+  signature: 
+    'Tensor (Tensor input, Int64 n=-1, Int64 dim=-1, String norm=None) => IHFft'
+  bind_python: True
+
+- name: "hfft2"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim, String norm=None) => HFft2'
+  bind_python: True
+
+- name: "ihfft2"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim, String norm=None) => IHFft2'
+  bind_python: True
+
+- name: "hfftn"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim=None, String norm=None) => HFftN'
+  bind_python: True
+
+- name: "ihfftn"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim=None, String norm=None) => IHFftN'
+  bind_python: True
+
 - name: "isclose"
   signature: "Tensor (Tensor input, Tensor other, Float atol=1e-08, Float rtol=1e-05, Bool equal_nan=False) => IsClose"
   bind_python: True
@@ -3365,3 +3471,10 @@
   signature: "Tensor (Tensor x) => Trigamma"
   bind_python: False
   
+- name: "zeta"
+  signature: [
+    "Tensor (Tensor x, Tensor other) => BroadcastZeta",
+    "Tensor (Scalar x, Tensor other) => ZetaScalarTensor",
+    "Tensor (Tensor x, Scalar other) => ZetaTensorScalar",
+  ]
+  bind_python: True

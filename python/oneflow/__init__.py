@@ -68,6 +68,7 @@ locals()["strided"] = oneflow._oneflow_internal.strided
 
 locals()["memory_format"] = oneflow._oneflow_internal.memory_format
 locals()["contiguous_format"] = oneflow._oneflow_internal.contiguous_format
+locals()["channels_last"] = oneflow._oneflow_internal.channels_last
 locals()["preserve_format"] = oneflow._oneflow_internal.preserve_format
 from oneflow.version import __version__
 from oneflow.version import __git_commit__
@@ -214,6 +215,7 @@ from oneflow._C import log_softmax
 from oneflow._C import argmax
 from oneflow._C import argmin
 from oneflow._C import std
+
 from oneflow._C import stft
 from oneflow._C import var
 from oneflow._C import stack, hstack, vstack, dstack, column_stack, row_stack
@@ -488,6 +490,7 @@ from . import (
     amp,
     hub,
     fx,
+    fft,
     special,
 )
 import oneflow.utils.data
