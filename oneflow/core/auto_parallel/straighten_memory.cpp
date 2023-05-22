@@ -42,83 +42,6 @@ void InitNoCleaningMarkerDescendant() { NoCleaningMarkerDescendant::marker = 1; 
 
 namespace {
 
-class MemoryTopoStruct {
- public:
-  const OpNode* op_node = nullptr;
-  // Memory increment = (memory of out registers) - (memory of in registers)
-  int64_t memory_increment = -1;
-  int64_t peak_memory = -1;
-  // max difference = peak memory - final memory increment
-  int64_t max_difference = 0;
-  int32_t min_layer = -1;
-  bool is_reusable = false;
-  int32_t blob_id = -1;
-  // Blocking means you must execute this node before executing any other nodes in the set
-  HashSet<MemoryTopoStruct*> blocking_topo_structs;
-  int32_t blocking_count = -1;
-  // executed means that it has been executed
-  bool executed = false;
-  // Accumulate memory increment of all the necessary topological structures
-  int64_t accumulate_memory_increment = 0;
-  int64_t peak_memory_during_accumulation = 0;
-  int64_t max_difference_during_accumulation = 0;
-  // Whether visited during memory accumulating
-  NoCleaningMarkerAncestor visited_ancestors;
-  // Whether visited while finding descendants
-  NoCleaningMarkerDescendant visited_descendant;
-  // waiting in the map before execution
-  bool waiting = false;
-
-  HashSet<MemoryTopoStruct*> in_topo_structs;
-  HashSet<MemoryTopoStruct*> out_topo_structs;
-
-  // The topo structs to be executed in a reverse order right before this topo struct
-  // For example:
-  // This topo struct: A, Pre topo structs: {B, C, D}
-  // This topo struct: B, Pre topo structs: {E}
-  // This topo struct: D, Pre topo structs: {F, G}
-  // And the graph is: H -> A -> I
-  // Then the execution order is H, G, F, D, C, E, B, A, I
-  std::vector<MemoryTopoStruct*> pre_topo_structs;
-  // The topo structs to be executed immediately after this topo struct
-  std::vector<MemoryTopoStruct*> post_topo_structs;
-
-  // Execute the positive ancestors in order with the smallest peak memory
-  std::vector<MemoryTopoStruct*> ordered_ancestors;
-
-  explicit MemoryTopoStruct(int32_t blob_id_) : blob_id(blob_id_){};
-
-  // Compute the minimum layer of this node
-  int32_t ComputeMinLayer();
-  // Block the descendants with negative memory increment
-  void BlockDescendants();
-
-  void ComputeIsReusable();
-
-  void SetAccumulateMemoryIncrement();
-  void MarkAncestors();
-  int64_t SingleNodePriority();
-  int64_t AccumulationPriority();
-
-  void MarkDescendantFromThis2Layer(int32_t max_layer);
-
- private:
-  void VisitAncestorsAndItself(const std::function<void(MemoryTopoStruct*)>& Handle);
-  // Mark all its descendant with min_layer <= max_layer
-  void MarkDescendantUp2Layer(int32_t max_layer);
-  // Block descendants and store the blocking nodes in the given hash set
-  void BlockDescendants(HashSet<MemoryTopoStruct*>* blocking_nodes);
-};
-
-// Compute the minimum layer of this node
-int32_t MemoryTopoStruct::ComputeMinLayer() {
-  if (min_layer >= 0) { return min_layer; }
-  for (auto& in_topo_struct : in_topo_structs) {
-    min_layer = std::max(min_layer, in_topo_struct->ComputeMinLayer());
-  }
-  return ++min_layer;
-}
-
 // Make sure max_difference = peak_memory - memory_increment
 int64_t Priority(int64_t memory_increment, int64_t peak_memory, int64_t max_difference) {
   CHECK_EQ(peak_memory, memory_increment + max_difference);
@@ -128,160 +51,15 @@ int64_t Priority(int64_t memory_increment, int64_t peak_memory, int64_t max_diff
   return kPriorityOffset - max_difference;
 }
 
-int64_t MemoryTopoStruct::SingleNodePriority() {
-  return Priority(memory_increment, peak_memory, max_difference);
-}
-
-int64_t MemoryTopoStruct::AccumulationPriority() {
-  if (accumulate_memory_increment < 0) { return peak_memory_during_accumulation - kPriorityOffset; }
-  if (accumulate_memory_increment > 0) { return kPriorityOffset + accumulate_memory_increment; }
-  // accumulate_memory_increment == 0
-  return kPriorityOffset - peak_memory_during_accumulation;
-}
-
-void MemoryTopoStruct::VisitAncestorsAndItself(
-    const std::function<void(MemoryTopoStruct*)>& Handle) {
-  for (const auto& in_topo_struct : in_topo_structs) {
-    // Accumulate the non-executed topological structures only once
-    if ((!in_topo_struct->executed) && in_topo_struct->visited_ancestors.IfNotMarked()) {
-      in_topo_struct->VisitAncestorsAndItself(Handle);
-    }
-  }
-  if (visited_ancestors.IfNotMarked()) { Handle(this); }
-  visited_ancestors.Mark();
-}
-
-void MemoryTopoStruct::MarkDescendantUp2Layer(int32_t max_layer) {
-  if (visited_descendant.IfMarked()) { return; }
-  visited_descendant.Mark();
-  if (min_layer < max_layer) {
-    for (auto* out_node : out_topo_structs) { out_node->MarkDescendantUp2Layer(max_layer); }
-  }
-}
-
 // .back() return a reference. But if the original map is destroyed in the same piece of code,
 // the reference would point to [0xfffffffffffffff8], giving out an error.
 MemoryTopoStruct* TakeBackFromVector(const std::vector<MemoryTopoStruct*>& v) { return v.back(); }
-
-void MemoryTopoStruct::SetAccumulateMemoryIncrement() {
-  ResetNoCleaningMarkerAncestor();
-  // There are several lemma and propositions for this part. (Some of them omitted here)
-  // Proposition 1:
-  //    In the sub-graph of all the nodes with positive memory increment, picking the node with
-  //    maximum difference would be picking the node with maximum accumulate memory increment.
-  // Proposition 2:
-  //    In the sub-graph of all the nodes with positive memory increment, picking the node with
-  //    maximum difference in descending order would give us the lowest peak memory for this
-  //    sub-graph.
-  // We would prove this in the paper "Auto Memory" in the future.
-  std::map<int64_t, std::vector<MemoryTopoStruct*>> max_difference2topo_structs;
-  auto Add2Map = [&](MemoryTopoStruct* node) {
-    max_difference2topo_structs[node->SingleNodePriority()].push_back(node);
-  };
-  // Take itself out and only add its ancestors
-  visited_ancestors.Mark();
-  VisitAncestorsAndItself(Add2Map);
-
-  // Reset the status, no cleaning up would cause bug
-  ResetNoCleaningMarkerAncestor();
-  accumulate_memory_increment = 0;
-  peak_memory_during_accumulation = 0;
-  ordered_ancestors.clear();
-
-  auto Execute = [&](MemoryTopoStruct* node) {
-    ordered_ancestors.push_back(node);
-    accumulate_memory_increment += node->memory_increment;
-    peak_memory_during_accumulation = std::max(peak_memory_during_accumulation,
-                                               accumulate_memory_increment + node->max_difference);
-    // Remove from the map
-    // At the end, we would remove itself from an empty map. Therefore, the return status might be
-    // false.
-    CheckAndRemoveFromMap(max_difference2topo_structs, node->SingleNodePriority(), node);
-  };
-  while (!max_difference2topo_structs.empty()) {
-    TakeBackFromVector(max_difference2topo_structs.begin()->second)
-        ->VisitAncestorsAndItself(Execute);
-  }
-  // Do not forget to execute itself at the end.
-  accumulate_memory_increment += memory_increment;
-  peak_memory_during_accumulation =
-      std::max(peak_memory_during_accumulation, accumulate_memory_increment + max_difference);
-  max_difference_during_accumulation =
-      peak_memory_during_accumulation - accumulate_memory_increment;
-}
-
-void MemoryTopoStruct::MarkAncestors() {
-  ResetNoCleaningMarkerAncestor();
-  auto DoNothing = [](MemoryTopoStruct* node) {};
-  VisitAncestorsAndItself(DoNothing);
-}
-
-void MemoryTopoStruct::MarkDescendantFromThis2Layer(int32_t max_layer) {
-  ResetNoCleaningMarkerDescendant();
-  MarkDescendantUp2Layer(max_layer);
-}
-
-// Block the descendants with negative memory increment
-void MemoryTopoStruct::BlockDescendants(HashSet<MemoryTopoStruct*>* blocking_nodes) {
-  if (blocking_topo_structs.empty()) {
-    for (auto* out_node : out_topo_structs) {
-      if (out_node->memory_increment < 0) {
-        out_node->BlockDescendants();
-        blocking_nodes->insert(out_node->blocking_topo_structs.begin(),
-                               out_node->blocking_topo_structs.end());
-        blocking_nodes->insert(out_node);
-      } else {
-        out_node->BlockDescendants(blocking_nodes);
-      }
-    }
-  }
-}
-
-void MemoryTopoStruct::BlockDescendants() {
-  if (memory_increment < 0 && blocking_topo_structs.empty()) {
-    BlockDescendants(&blocking_topo_structs);
-  }
-}
 
 void ComputeLayer(std::vector<MemoryTopoStruct*>* topo_structs) {
   // Initial all the layer to -1
   for (auto& topo_struct : *topo_structs) { topo_struct->min_layer = -1; }
   // Compute the minimum layer for the whole graph
   for (auto& topo_struct : *topo_structs) { topo_struct->ComputeMinLayer(); }
-}
-
-void ConnectTwoNodes(MemoryTopoStruct* producer, MemoryTopoStruct* consumer) {
-  // Check if the edge exists
-  if (consumer->in_topo_structs.find(producer) == consumer->in_topo_structs.end()) {
-    consumer->in_topo_structs.insert(producer);
-    producer->out_topo_structs.insert(consumer);
-  }
-}
-
-void InitInOutTopoStructs(HashMap<const OpNode*, MemoryTopoStruct>& op_node2topo_struct) {
-  // Generate the map from operator names to topological structure
-  HashMap<std::string, MemoryTopoStruct*> op_name2topo_structs;
-  for (auto& pair : op_node2topo_struct) {
-    op_name2topo_structs[pair.first->op().op_name()] = &pair.second;
-  }
-
-  // Traverse the topological structures
-  for (auto& pair : op_node2topo_struct) {
-    auto& node = pair.first;
-    auto* this_topo_struct = &pair.second;
-    // Initialize input nodes for edges with data
-    node->ForEachNodeOnInEdge([&](OpNode* in) {
-      // Since we might be looking at a sub-graph of the operator graph.
-      // We need to check if the op_node exists in the sub-graph.
-      auto it = op_name2topo_structs.find(in->op().op_name());
-      if (it != op_name2topo_structs.end()) { ConnectTwoNodes(it->second, this_topo_struct); }
-    });
-    // Initialize input nodes for control edges
-    for (const auto& ctrl_in_op_name : node->op().op_conf().ctrl_in_op_name()) {
-      auto it = op_name2topo_structs.find(ctrl_in_op_name);
-      if (it != op_name2topo_structs.end()) { ConnectTwoNodes(it->second, this_topo_struct); }
-    }
-  }
 }
 
 // Compute the memory increment for all the topological structures
@@ -364,45 +142,6 @@ void ComputeAllMemoryIncrement(
       }
     }
   }
-}
-
-void InitAllParameters(HashMap<const OpNode*, MemoryTopoStruct>& op_node2topo_struct,
-                       HashMap<LogicalBlobId, int32_t>* lbi2id,
-                       std::vector<MemoryTopoStruct*>* id2producer_topo_struct,
-                       std::vector<std::vector<MemoryTopoStruct*>>* id2consumer_topo_structs,
-                       std::vector<int64_t>* id2blob_size) {
-  for (auto& pair : op_node2topo_struct) {
-    const auto& producer = pair.first->op();
-    auto* topo_struct = &pair.second;
-
-    // Find all the blobs produced by this operator
-    for (const auto& obn : producer.output_bns()) {
-      const LogicalBlobId& lbi = producer.BnInOp2Lbi(obn);
-      auto it = lbi2id->find(lbi);
-      // We check existence in case of inplace operators, whose producer and consumer produce the
-      // same blob
-      if (it == lbi2id->end()) {
-        (*lbi2id)[lbi] = id2blob_size->size();
-        const BlobDesc& logical_blob_desc = pair.first->LogicalBlobDesc4Lbi(lbi);
-        id2blob_size->push_back(TotalByteSize4BlobDesc(logical_blob_desc));
-        id2producer_topo_struct->push_back(topo_struct);
-      }
-    }
-  }
-
-  // initialize the id2consumer_topo_structs
-  id2consumer_topo_structs->resize(id2blob_size->size());
-  // Find all the blobs consumed by this operator
-  for (auto& pair : op_node2topo_struct) {
-    const auto& consumer = pair.first->op();
-    for (const auto& ibn : consumer.input_bns()) {
-      const LogicalBlobId& lbi = consumer.BnInOp2Lbi(ibn);
-      id2consumer_topo_structs->at(lbi2id->find(lbi)->second).push_back(&pair.second);
-    }
-  }
-
-  // Construct all the data edges and control edges
-  InitInOutTopoStructs(op_node2topo_struct);
 }
 
 void ClipOneEdge(MemoryTopoStruct* producer, MemoryTopoStruct* consumer) {
@@ -610,12 +349,211 @@ void InitBlockingNodes(std::vector<MemoryTopoStruct*>& topo_structs) {
   }
 }
 
-void StraightenMemoryOpNodes(std::vector<MemoryTopoStruct*>* topo_structs,
-                             HashMap<LogicalBlobId, int32_t>* lbi2id,
-                             std::vector<MemoryTopoStruct*>* id2producer_topo_struct,
-                             std::vector<std::vector<MemoryTopoStruct*>>* id2consumer_topo_structs,
-                             std::vector<int64_t>* id2blob_size,
-                             std::vector<MemoryTopoStruct*>* ordered_topo_structs) {
+}  // anonymous namespace
+
+// Compute the minimum layer of this node
+int32_t MemoryTopoStruct::ComputeMinLayer() {
+  if (min_layer >= 0) { return min_layer; }
+  for (auto& in_topo_struct : in_topo_structs) {
+    min_layer = std::max(min_layer, in_topo_struct->ComputeMinLayer());
+  }
+  return ++min_layer;
+}
+
+int64_t MemoryTopoStruct::SingleNodePriority() {
+  return Priority(memory_increment, peak_memory, max_difference);
+}
+
+int64_t MemoryTopoStruct::AccumulationPriority() {
+  if (accumulate_memory_increment < 0) { return peak_memory_during_accumulation - kPriorityOffset; }
+  if (accumulate_memory_increment > 0) { return kPriorityOffset + accumulate_memory_increment; }
+  // accumulate_memory_increment == 0
+  return kPriorityOffset - peak_memory_during_accumulation;
+}
+
+void MemoryTopoStruct::VisitAncestorsAndItself(
+    const std::function<void(MemoryTopoStruct*)>& Handle) {
+  for (const auto& in_topo_struct : in_topo_structs) {
+    // Accumulate the non-executed topological structures only once
+    if ((!in_topo_struct->executed) && in_topo_struct->visited_ancestors.IfNotMarked()) {
+      in_topo_struct->VisitAncestorsAndItself(Handle);
+    }
+  }
+  if (visited_ancestors.IfNotMarked()) { Handle(this); }
+  visited_ancestors.Mark();
+}
+
+void MemoryTopoStruct::MarkDescendantUp2Layer(int32_t max_layer) {
+  if (visited_descendant.IfMarked()) { return; }
+  visited_descendant.Mark();
+  if (min_layer < max_layer) {
+    for (auto* out_node : out_topo_structs) { out_node->MarkDescendantUp2Layer(max_layer); }
+  }
+}
+
+void MemoryTopoStruct::SetAccumulateMemoryIncrement() {
+  ResetNoCleaningMarkerAncestor();
+  // There are several lemma and propositions for this part. (Some of them omitted here)
+  // Proposition 1:
+  //    In the sub-graph of all the nodes with positive memory increment, picking the node with
+  //    maximum difference would be picking the node with maximum accumulate memory increment.
+  // Proposition 2:
+  //    In the sub-graph of all the nodes with positive memory increment, picking the node with
+  //    maximum difference in descending order would give us the lowest peak memory for this
+  //    sub-graph.
+  // We would prove this in the paper "Auto Memory" in the future.
+  std::map<int64_t, std::vector<MemoryTopoStruct*>> max_difference2topo_structs;
+  auto Add2Map = [&](MemoryTopoStruct* node) {
+    max_difference2topo_structs[node->SingleNodePriority()].push_back(node);
+  };
+  // Take itself out and only add its ancestors
+  visited_ancestors.Mark();
+  VisitAncestorsAndItself(Add2Map);
+
+  // Reset the status, no cleaning up would cause bug
+  ResetNoCleaningMarkerAncestor();
+  accumulate_memory_increment = 0;
+  peak_memory_during_accumulation = 0;
+  ordered_ancestors.clear();
+
+  auto Execute = [&](MemoryTopoStruct* node) {
+    ordered_ancestors.push_back(node);
+    accumulate_memory_increment += node->memory_increment;
+    peak_memory_during_accumulation = std::max(peak_memory_during_accumulation,
+                                               accumulate_memory_increment + node->max_difference);
+    // Remove from the map
+    // At the end, we would remove itself from an empty map. Therefore, the return status might be
+    // false.
+    CheckAndRemoveFromMap(max_difference2topo_structs, node->SingleNodePriority(), node);
+  };
+  while (!max_difference2topo_structs.empty()) {
+    TakeBackFromVector(max_difference2topo_structs.begin()->second)
+        ->VisitAncestorsAndItself(Execute);
+  }
+  // Do not forget to execute itself at the end.
+  accumulate_memory_increment += memory_increment;
+  peak_memory_during_accumulation =
+      std::max(peak_memory_during_accumulation, accumulate_memory_increment + max_difference);
+  max_difference_during_accumulation =
+      peak_memory_during_accumulation - accumulate_memory_increment;
+}
+
+void MemoryTopoStruct::MarkAncestors() {
+  ResetNoCleaningMarkerAncestor();
+  auto DoNothing = [](MemoryTopoStruct* node) {};
+  VisitAncestorsAndItself(DoNothing);
+}
+
+void MemoryTopoStruct::MarkDescendantFromThis2Layer(int32_t max_layer) {
+  ResetNoCleaningMarkerDescendant();
+  MarkDescendantUp2Layer(max_layer);
+}
+
+// Block the descendants with negative memory increment
+void MemoryTopoStruct::BlockDescendants(HashSet<MemoryTopoStruct*>* blocking_nodes) {
+  if (blocking_topo_structs.empty()) {
+    for (auto* out_node : out_topo_structs) {
+      if (out_node->memory_increment < 0) {
+        out_node->BlockDescendants();
+        blocking_nodes->insert(out_node->blocking_topo_structs.begin(),
+                               out_node->blocking_topo_structs.end());
+        blocking_nodes->insert(out_node);
+      } else {
+        out_node->BlockDescendants(blocking_nodes);
+      }
+    }
+  }
+}
+
+void MemoryTopoStruct::BlockDescendants() {
+  if (memory_increment < 0 && blocking_topo_structs.empty()) {
+    BlockDescendants(&blocking_topo_structs);
+  }
+}
+
+void ConnectTwoNodes(MemoryTopoStruct* producer, MemoryTopoStruct* consumer) {
+  // Check if the edge exists
+  if (consumer->in_topo_structs.find(producer) == consumer->in_topo_structs.end()) {
+    consumer->in_topo_structs.insert(producer);
+    producer->out_topo_structs.insert(consumer);
+  }
+}
+
+namespace {
+
+void InitInOutTopoStructs(HashMap<const OpNode*, MemoryTopoStruct>& op_node2topo_struct) {
+  // Generate the map from operator names to topological structure
+  HashMap<std::string, MemoryTopoStruct*> op_name2topo_structs;
+  for (auto& pair : op_node2topo_struct) {
+    op_name2topo_structs[pair.first->op().op_name()] = &pair.second;
+  }
+
+  // Traverse the topological structures
+  for (auto& pair : op_node2topo_struct) {
+    auto& node = pair.first;
+    auto* this_topo_struct = &pair.second;
+    // Initialize input nodes for edges with data
+    node->ForEachNodeOnInEdge([&](OpNode* in) {
+      // Since we might be looking at a sub-graph of the operator graph.
+      // We need to check if the op_node exists in the sub-graph.
+      auto it = op_name2topo_structs.find(in->op().op_name());
+      if (it != op_name2topo_structs.end()) { ConnectTwoNodes(it->second, this_topo_struct); }
+    });
+    // Initialize input nodes for control edges
+    for (const auto& ctrl_in_op_name : node->op().op_conf().ctrl_in_op_name()) {
+      auto it = op_name2topo_structs.find(ctrl_in_op_name);
+      if (it != op_name2topo_structs.end()) { ConnectTwoNodes(it->second, this_topo_struct); }
+    }
+  }
+}
+
+void InitAllParameters(HashMap<const OpNode*, MemoryTopoStruct>& op_node2topo_struct,
+                       HashMap<LogicalBlobId, int32_t>* lbi2id,
+                       std::vector<MemoryTopoStruct*>* id2producer_topo_struct,
+                       std::vector<std::vector<MemoryTopoStruct*>>* id2consumer_topo_structs,
+                       std::vector<int64_t>* id2blob_size) {
+  for (auto& pair : op_node2topo_struct) {
+    const auto& producer = pair.first->op();
+    auto* topo_struct = &pair.second;
+
+    // Find all the blobs produced by this operator
+    for (const auto& obn : producer.output_bns()) {
+      const LogicalBlobId& lbi = producer.BnInOp2Lbi(obn);
+      auto it = lbi2id->find(lbi);
+      // We check existence in case of inplace operators, whose producer and consumer produce the
+      // same blob
+      if (it == lbi2id->end()) {
+        (*lbi2id)[lbi] = id2blob_size->size();
+        const BlobDesc& logical_blob_desc = pair.first->LogicalBlobDesc4Lbi(lbi);
+        id2blob_size->push_back(TotalByteSize4BlobDesc(logical_blob_desc));
+        id2producer_topo_struct->push_back(topo_struct);
+      }
+    }
+  }
+
+  // initialize the id2consumer_topo_structs
+  id2consumer_topo_structs->resize(id2blob_size->size());
+  // Find all the blobs consumed by this operator
+  for (auto& pair : op_node2topo_struct) {
+    const auto& consumer = pair.first->op();
+    for (const auto& ibn : consumer.input_bns()) {
+      const LogicalBlobId& lbi = consumer.BnInOp2Lbi(ibn);
+      id2consumer_topo_structs->at(lbi2id->find(lbi)->second).push_back(&pair.second);
+    }
+  }
+
+  // Construct all the data edges and control edges
+  InitInOutTopoStructs(op_node2topo_struct);
+}
+
+}  // namespace
+
+void StraightenMemory(std::vector<MemoryTopoStruct*>* topo_structs,
+                      HashMap<LogicalBlobId, int32_t>* lbi2id,
+                      std::vector<MemoryTopoStruct*>* id2producer_topo_struct,
+                      std::vector<std::vector<MemoryTopoStruct*>>* id2consumer_topo_structs,
+                      std::vector<int64_t>* id2blob_size,
+                      std::vector<MemoryTopoStruct*>* ordered_topo_structs) {
   // The number of executing topographical structures
   int32_t executing_topo_struct_num = topo_structs->size();
   // Extra release topological structures
@@ -770,7 +708,6 @@ void StraightenMemoryOpNodes(std::vector<MemoryTopoStruct*>* topo_structs,
     }
   }
 }
-}  // namespace
 
 // Straighten a subset of the op graph
 void StraightenMemorySubGraph(const std::vector<const OpNode*>& sub_graph,
@@ -800,8 +737,8 @@ void StraightenMemorySubGraph(const std::vector<const OpNode*>& sub_graph,
   InitAllParameters(op_node2topo_struct, &lbi2id, &id2producer_topo_struct,
                     &id2consumer_topo_structs, &id2blob_size);
 
-  StraightenMemoryOpNodes(&topo_structs, &lbi2id, &id2producer_topo_struct,
-                          &id2consumer_topo_structs, &id2blob_size, &ordered_topo_structs);
+  StraightenMemory(&topo_structs, &lbi2id, &id2producer_topo_struct, &id2consumer_topo_structs,
+                   &id2blob_size, &ordered_topo_structs);
 
   for (auto& ordered_topo_struct : ordered_topo_structs) {
     ordered_op_nodes->push_back(topo_struct2op_node[ordered_topo_struct]);

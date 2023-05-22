@@ -50,6 +50,84 @@ class NoCleaningMarkerDescendant {
 void ResetNoCleaningMarkerDescendant();
 void InitNoCleaningMarkerDescendant();
 
+class MemoryTopoStruct {
+ public:
+  const OpNode* op_node = nullptr;
+  // Memory increment = (memory of out registers) - (memory of in registers)
+  int64_t memory_increment = -1;
+  int64_t peak_memory = -1;
+  // max difference = peak memory - final memory increment
+  int64_t max_difference = 0;
+  int32_t min_layer = -1;
+  bool is_reusable = false;
+  int32_t blob_id = -1;
+  // Blocking means you must execute this node before executing any other nodes in the set
+  HashSet<MemoryTopoStruct*> blocking_topo_structs;
+  int32_t blocking_count = -1;
+  // executed means that it has been executed
+  bool executed = false;
+  // Accumulate memory increment of all the necessary topological structures
+  int64_t accumulate_memory_increment = 0;
+  int64_t peak_memory_during_accumulation = 0;
+  int64_t max_difference_during_accumulation = 0;
+  // Whether visited during memory accumulating
+  NoCleaningMarkerAncestor visited_ancestors;
+  // Whether visited while finding descendants
+  NoCleaningMarkerDescendant visited_descendant;
+  // waiting in the map before execution
+  bool waiting = false;
+
+  HashSet<MemoryTopoStruct*> in_topo_structs;
+  HashSet<MemoryTopoStruct*> out_topo_structs;
+
+  // The topo structs to be executed in a reverse order right before this topo struct
+  // For example:
+  // This topo struct: A, Pre topo structs: {B, C, D}
+  // This topo struct: B, Pre topo structs: {E}
+  // This topo struct: D, Pre topo structs: {F, G}
+  // And the graph is: H -> A -> I
+  // Then the execution order is H, G, F, D, C, E, B, A, I
+  std::vector<MemoryTopoStruct*> pre_topo_structs;
+  // The topo structs to be executed immediately after this topo struct
+  std::vector<MemoryTopoStruct*> post_topo_structs;
+
+  // Execute the positive ancestors in order with the smallest peak memory
+  std::vector<MemoryTopoStruct*> ordered_ancestors;
+
+  explicit MemoryTopoStruct(int32_t blob_id_) : blob_id(blob_id_){};
+
+  // Compute the minimum layer of this node
+  int32_t ComputeMinLayer();
+  // Block the descendants with negative memory increment
+  void BlockDescendants();
+
+  void ComputeIsReusable();
+
+  void SetAccumulateMemoryIncrement();
+  void MarkAncestors();
+  int64_t SingleNodePriority();
+  int64_t AccumulationPriority();
+
+  void MarkDescendantFromThis2Layer(int32_t max_layer);
+
+ private:
+  void VisitAncestorsAndItself(const std::function<void(MemoryTopoStruct*)>& Handle);
+  // Mark all its descendant with min_layer <= max_layer
+  void MarkDescendantUp2Layer(int32_t max_layer);
+  // Block descendants and store the blocking nodes in the given hash set
+  void BlockDescendants(HashSet<MemoryTopoStruct*>* blocking_nodes);
+};
+
+void ConnectTwoNodes(MemoryTopoStruct* producer, MemoryTopoStruct* consumer);
+
+// The memory straighten algorithm
+void StraightenMemory(std::vector<MemoryTopoStruct*>* topo_structs,
+                      HashMap<LogicalBlobId, int32_t>* lbi2id,
+                      std::vector<MemoryTopoStruct*>* id2producer_topo_struct,
+                      std::vector<std::vector<MemoryTopoStruct*>>* id2consumer_topo_structs,
+                      std::vector<int64_t>* id2blob_size,
+                      std::vector<MemoryTopoStruct*>* ordered_topo_structs);
+
 // Straighten a subset of the op graph
 void StraightenMemorySubGraph(const std::vector<const OpNode*>& sub_graph,
                               std::vector<const OpNode*>* ordered_op_nodes);
