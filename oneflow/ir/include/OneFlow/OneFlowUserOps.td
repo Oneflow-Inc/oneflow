@@ -12003,7 +12003,7 @@ class OneFlow_JITLikeOp <string mnemonic> : OneFlow_BaseOp<mnemonic, [CallOpInte
   let output = (outs Variadic<AnyType>:$out);
   let attrs = (ins
     FlatSymbolRefAttr:$callee,
-    StrAttr:$mlir_assembly
+    BytesAttr:$mlir_assembly
   );
   let builders = [
     OpBuilder<(ins "func::FuncOp":$callee,
