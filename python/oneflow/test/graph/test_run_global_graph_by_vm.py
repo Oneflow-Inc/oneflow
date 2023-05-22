@@ -81,9 +81,8 @@ class TestGlobalInterpreter(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n2d()
     def test_boxing_data_parallel_run_by_vm(test_case):
-        flow.boxing.nccl.enable_use_compute_stream(False)
-        
         with RunGraphByVmEnv():
+            flow.boxing.nccl.enable_use_compute_stream(False)
 
             class BoxingModuleParallelMul(flow.nn.Module):
                 def __init__(self, placement) -> None:
@@ -103,7 +102,7 @@ class TestGlobalInterpreter(flow.unittest.TestCase):
             placement = flow.placement("cuda", [0, 1])
             m = BoxingModuleParallelMul(placement).eval()
             g = Graph(m)
-
+        
             input = flow.randn(4, 5, placement=placement, sbp=flow.sbp.broadcast)
             graph_output = g(input)
             eager_output = m(input)
