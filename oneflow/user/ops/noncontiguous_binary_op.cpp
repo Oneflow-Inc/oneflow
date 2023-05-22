@@ -25,7 +25,6 @@ namespace oneflow {
 
 /*static*/ Maybe<void> NonContiguousBinaryOp::GetSbp(user_op::SbpContext* ctx) {
   // only support broadcast
-  const bool inplace = ctx->Attr<bool>("inplace");
   ctx->NewBuilder()
       .Broadcast(user_op::OpArg("lhs", 0))
       .Broadcast(user_op::OpArg("rhs", 0))
