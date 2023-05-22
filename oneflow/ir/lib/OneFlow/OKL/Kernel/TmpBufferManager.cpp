@@ -23,7 +23,6 @@ limitations under the License.
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Parser/Parser.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/SourceMgr.h"
 
 namespace oneflow {
 namespace okl {
@@ -33,13 +32,8 @@ size_t TmpBufferManager::InferTmpSize(user_op::InferContext* ctx) {
   mlir::MLIRContext mlir_ctx(GetRegistry());
 
   auto mlir_assembly = ctx->Attr<std::vector<char>>("mlir_assembly");
-  auto memBuffer =
-      llvm::MemoryBuffer::getMemBuffer(llvm::StringRef(mlir_assembly.data(), mlir_assembly.size()),
-                                       "", /*RequiresNullTerminator=*/false);
-  llvm::SourceMgr sourceMgr;
-  sourceMgr.AddNewSourceBuffer(std::move(memBuffer), llvm::SMLoc());
-  mlir::OwningOpRef<mlir::ModuleOp> module =
-      mlir::parseSourceFile<mlir::ModuleOp>(sourceMgr, &mlir_ctx);
+  mlir::OwningOpRef<mlir::ModuleOp> module = mlir::parseSourceString<mlir::ModuleOp>(
+      llvm::StringRef(mlir_assembly.data(), mlir_assembly.size() - 1), &mlir_ctx);
   if (!module) { LOG(FATAL) << "Fail to load mlir assembly"; }
   if (failed(mlir::okm::LowerWrapOpsToOKL(*module))) {
     LOG(ERROR) << "Fail lowering kernel launch Module to okl ir";
