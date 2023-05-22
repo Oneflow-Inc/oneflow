@@ -51,14 +51,6 @@ struct ImagGradFunctor final {
 #define INSTANTIATE_IMAG_GRAD_FUNCTOR(device, dtype_dout, dtype_dx) \
   template struct ImagGradFunctor<device, dtype_dout, dtype_dx>;
 
-template<DeviceType device, typename dtype>
-struct ConjPhysicalFunctor final {
-  void operator()(ep::Stream* stream, const dtype* x, dtype* out, int64_t cnt);
-};
-
-#define INSTANTIATE_CONJ_PHYSICAL_FUNCTOR(device, dtype) \
-  template struct ConjPhysicalFunctor<device, dtype>;
-
 }  // namespace user_op
 }  // namespace oneflow
 

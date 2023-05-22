@@ -88,16 +88,6 @@ struct ImagGradFunctor<DeviceType::kCUDA, dtype_dout, dtype_dx> final {
 INSTANTIATE_IMAG_GRAD_FUNCTOR(DeviceType::kCUDA, float, cuComplex)
 INSTANTIATE_IMAG_GRAD_FUNCTOR(DeviceType::kCUDA, double, cuDoubleComplex)
 
-template<typename dtype>
-struct ConjPhysicalFunctor<DeviceType::kCUDA, dtype> final {
-  void operator()(ep::Stream* stream, const dtype* x, dtype* out, int64_t cnt) {
-    RUN_CUDA_KERNEL((ConjPhysicalCUDA<dtype>), stream, cnt, x, out, cnt);
-  }
-};
-
-INSTANTIATE_CONJ_PHYSICAL_FUNCTOR(DeviceType::kCUDA, cuComplex)
-INSTANTIATE_CONJ_PHYSICAL_FUNCTOR(DeviceType::kCUDA, cuDoubleComplex)
-
 }  // namespace user_op
 }  // namespace oneflow
 
