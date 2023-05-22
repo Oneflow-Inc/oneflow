@@ -147,11 +147,7 @@ def clip_grad_norm_(
         param_grad_list = []
         for param in parameters:
             param_grad_list.append(param.grad)
-        total_norm = flow._C.fused_clip_grad(
-            param_grad_list,
-            max_norm,
-            norm_type,
-        )
+        total_norm = flow._C.fused_clip_grad(param_grad_list, max_norm, norm_type,)
     else:
         device = parameters[0].grad.device
         if norm_type == float("inf"):
