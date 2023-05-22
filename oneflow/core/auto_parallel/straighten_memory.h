@@ -21,6 +21,35 @@ limitations under the License.
 namespace oneflow {
 
 namespace auto_parallel {
+
+class NoCleaningMarkerAncestor {
+ public:
+  static int32_t marker;
+  int32_t status = 0;
+
+  bool IfMarked() const { return status == marker; }
+  bool IfNotMarked() const { return status != marker; }
+  void Mark() { status = marker; }
+  void UnMark() { status = 0; }
+};
+
+void ResetNoCleaningMarkerAncestor();
+void InitNoCleaningMarkerAncestor();
+
+class NoCleaningMarkerDescendant {
+ public:
+  static int32_t marker;
+  int32_t status = 0;
+
+  bool IfMarked() const { return status == marker; }
+  bool IfNotMarked() const { return status != marker; }
+  void Mark() { status = marker; }
+  void UnMark() { status = 0; }
+};
+
+void ResetNoCleaningMarkerDescendant();
+void InitNoCleaningMarkerDescendant();
+
 // Straighten a subset of the op graph
 void StraightenMemorySubGraph(const std::vector<const OpNode*>& sub_graph,
                               std::vector<const OpNode*>* ordered_op_nodes);
