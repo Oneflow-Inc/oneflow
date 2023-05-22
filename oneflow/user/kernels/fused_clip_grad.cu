@@ -24,14 +24,14 @@ namespace {
 template<typename T>
 __global__ void MultiBlockClipGradGpu(MultiClipGradParamPack<T> pack_params, T* scale, 
                                       const float norm_type, const float max_norm,
-                                      const ClipGradType clip_grad_type) {
+                                      const ClipGradType clip_grad_type, const bool scale_writable) {
   T t = *scale;
   if (clip_grad_type == ClipGradType::ZeroType) { 
     t = static_cast<T>(t > 0); 
   } else if (clip_grad_type == ClipGradType::PowerType) {
     t = std::pow(t, 1. / norm_type);
   }
-  if (blockDim.x * blockIdx.x + threadIdx.x == 0) { *scale = t; }
+  if (scale_writable && blockDim.x * blockIdx.x + threadIdx.x == 0) { *scale = t; }
   t = max_norm / (t + 1e-6);
   t = t < 1. ? t : 1.;
   for (int i = 0; i < pack_params.size; ++i) {
@@ -58,8 +58,9 @@ struct MultiClipGrad<DeviceType::kCUDA, T> {
         max_elem_cnt = std::max<size_t>(max_elem_cnt, pack_params.params[j].size);
       }
       int32_t num_blocks = BlocksNum4ThreadsNum(max_elem_cnt);
+      bool scale_writable = static_cast<bool>(i + kMultiReduceScaleMulPackSize >= params.size());
       MultiBlockClipGradGpu<T><<<num_blocks, kCudaThreadsNumPerBlock, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-          pack_params, scale, norm_type, max_norm, clip_grad_type);
+          pack_params, scale, norm_type, max_norm, clip_grad_type, scale_writable);
       total_num_blocks += num_blocks;
     }
   }
