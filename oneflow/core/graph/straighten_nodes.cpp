@@ -749,4 +749,41 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   }
 }
 
+namespace {
+
+std::string GenerateKey4TaskNode(TaskNode* node, HashMap<TaskNode*, std::string>& task_node2keys) {
+  auto it = task_node2keys.find(node);
+  if (it == task_node2keys.end()) {
+    // Generate the key to determine the same task nodes
+    if (dynamic_cast<TransportTaskNode*>(node)) {
+      // Deal with the communication
+      std::string key =
+          dynamic_cast<TransportTaskNode*>(node)->lbi().ShortDebugString() + ", producer: ";
+      node->ForEachNodeOnInEdge(
+          [&](TaskNode* in) { key += GenerateKey4TaskNode(in, task_node2keys); });
+      task_node2keys[node] = key;
+    } else if (node->GetTaskType() == TaskType::kNormalForward) {
+      // Deal with the normal computation nodes
+      task_node2keys[node] = dynamic_cast<CompTaskNode*>(node)->op()->op_name();
+    } else {
+      // Tick and some other nodes
+      task_node2keys[node] = node->VisualStr();
+    }
+    it = task_node2keys.find(node);
+  }
+  // Return the stored key
+  return it->second;
+}
+
+}  // namespace
+
+// Straighten the task graph to reduce memory
+void StraightenMemoryTaskGraph(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task_nodes) {
+  // Generate topological data structure for each task node
+  HashMap<TaskNode*, std::string> task_node2keys;
+  HashMap<std::string, std::vector<TaskNode*>> key2task_nodes;
+  task_graph->ForEachNode([&](TaskNode* node) {
+    key2task_nodes[GenerateKey4TaskNode(node, task_node2keys)].push_back(node);
+  });
+}
 }  // namespace oneflow

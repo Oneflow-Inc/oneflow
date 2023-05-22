@@ -88,6 +88,9 @@ void UpdateSat(const HashMapType& node2topo_struct, StraightenAlgorithmTag* sat)
 void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task_nodes,
                      bool nccl_use_compute_stream);
 
+// Straighten the task graph to reduce memory
+void StraightenMemoryTaskGraph(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task_nodes);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_GRAPH_STRAIGHTEN_NODES_H_
