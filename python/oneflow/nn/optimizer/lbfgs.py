@@ -20,6 +20,125 @@ from oneflow.nn.parameter import Parameter
 import oneflow as flow
 
 
+def _cubic_interpolate(x1, f1, g1, x2, f2, g2, bounds=None):
+
+    if bounds is not None:
+        xmin_bound, xmax_bound = bounds
+    else:
+        xmin_bound, xmax_bound = (x1, x2) if x1 < x2 else (x2, x1)
+    d1 = g1 + g2 - 3 * ((f1 - f2) / (x1 - x2))
+    d2_square = d1 ** 2 - g1 * g2
+    if d2_square < 0:
+        return (xmin_bound + xmax_bound) / 2.0
+    else:
+        if x1 <= x2:
+            d2 = d2_square.sqrt()
+        else:
+            d2 = -d2_square.sqrt()
+        t_new = x2 - (x2 - x1) * ((g2 + d2 - d1) / (g2 - g1 + 2 * d2))
+        return min(xmax_bound, max(xmin_bound, t_new))
+
+
+def _strong_wolfe(
+    eval_closure, x, t, d, f, g, gtd, c1=1e-4, c2=0.9, tolerance_change=1e-9, max_ls=25
+):
+    d_norm = d.abs().max()
+    g = g.clone()
+    f_new, g_new = eval_closure(x, t, d)
+    ls_func_evals = 1
+    gtd_new = g_new.dot(d)
+
+    t_prev, f_prev, g_prev, gtd_prev = 0, f, g, gtd
+    done = False
+    ls_iter = 0
+    while ls_iter < max_ls:
+        if f_new > (f + c1 * t * gtd) or (ls_iter > 1 and f_new > f_prev):
+            search_area = [t_prev, t]
+            search_area_f = [f_prev, f_new]
+            search_area_g = [g_prev, g_new.clone()]
+            search_area_gtd = [gtd_prev, gtd_new]
+            break
+
+        if abs(gtd_new) <= -c2 * gtd:
+            search_area = [t]
+            search_area_f = [f_new]
+            search_area_g = [g_new]
+            done = True
+            break
+
+        if gtd_new >= 0:
+            search_area = [t_prev, t]
+            search_area_f = [f_prev, f_new]
+            search_area_g = [g_prev, g_new.clone()]
+            search_area_gtd = [gtd_prev, gtd_new]
+
+        min_step = t + 0.01 * (t - t_prev)
+        max_step = t * 10
+        tmp = t
+        t = _cubic_interpolate(
+            t_prev, f_prev, gtd_prev, t, f_new, gtd_new, bounds=(min_step, max_step)
+        )
+        t_prev = tmp
+        f_prev = f_new
+        g_prev = g_new.clone()
+        gtd_prev = gtd_new
+        f_new, g_new = eval_closure(x, t, d)
+        ls_func_evals += 1
+        gtd_new = g_new.dot(d)
+        ls_iter += 1
+    if ls_iter == max_ls:
+        search_area = [0, t]
+        search_area_f = [f, f_new]
+        search_area_g = [g, g_new]
+
+    # zoom
+    low_pos, high_pos = (0, 1) if search_area_f[0] <= search_area_f[-1] else (1, 0)
+    while not done and ls_iter < max_ls:
+
+        if abs(search_area[1] - search_area[0]) * d_norm < tolerance_change:
+            break
+
+        t = _cubic_interpolate(
+            search_area[0],
+            search_area_f[0],
+            search_area_gtd[0],
+            search_area[1],
+            search_area_f[1],
+            search_area_gtd[1],
+        )
+
+        f_new, g_new = eval_closure(x, t, d)
+        ls_func_evals += 1
+        gtd_new = g_new.dot(d)
+        ls_iter += 1
+
+        if f_new > (f + c1 * t * gtd) or f_new >= search_area_f[low_pos]:
+            search_area[high_pos] = t
+            search_area_f[high_pos] = f_new
+            search_area_g[high_pos] = g_new.clone()
+            search_area_gtd[high_pos] = gtd_new
+            low_pos, high_pos = (
+                (0, 1) if search_area_f[0] <= search_area_f[1] else (1, 0)
+            )
+        if abs(gtd_new) <= -c2 * gtd:
+            done = True
+        elif gtd_new * (search_area[high_pos] - search_area[low_pos]) >= 0:
+            search_area[high_pos] = search_area[low_pos]
+            search_area_f[high_pos] = search_area_f[low_pos]
+            search_area_g[high_pos] = search_area_g[low_pos]
+            search_area_gtd[high_pos] = search_area_gtd[low_pos]
+
+        search_area[low_pos] = t
+        search_area_f[low_pos] = f_new
+        search_area_g[low_pos] = g_new.clone()
+        search_area_gtd[low_pos] = gtd_new
+
+    t = search_area[low_pos]
+    f_new = search_area_f[low_pos]
+    g_new = search_area_g[low_pos]
+    return f_new, g_new, t, ls_func_evals
+
+
 class LBFGS(Optimizer):
     def __init__(
         self,
@@ -83,6 +202,15 @@ class LBFGS(Optimizer):
             offset += numel
         assert offset == self._numel()
 
+    def _try_direction(self, closure, x, t, d):
+        self._update(t, d)
+        with flow.enable_grad():
+            loss = float(closure())
+        flag_grad = self._gather_flat_grad()
+        for p, data in zip(self._params, x):
+            p.copy_(data)
+        return loss, flag_grad
+
     def step(self, closure: Callable = None):
         with flow.no_grad():
 
@@ -106,7 +234,6 @@ class LBFGS(Optimizer):
             state["func_evals"] += 1
 
             flat_grad = self._gather_flat_grad()
-
             if flat_grad.abs().max() <= tolerance_grad:
                 return origin_loss
 
@@ -155,7 +282,6 @@ class LBFGS(Optimizer):
                     alpha = state["alpha"]
 
                     q = flat_grad.neg()
-                    # import pdb; pdb.set_trace()
                     for i in range(num_old - 1, -1, -1):
                         alpha[i] = old_step_size[i].dot(q) * ro[i]
                         q.add_(old_diffs[i], alpha=-alpha[i])
@@ -189,7 +315,20 @@ class LBFGS(Optimizer):
                         with flow.enable_grad():
                             loss = float(closure())
                         flat_grad = self._gather_flat_grad()
-                        ls_func_evals += 1
+                        ls_func_evals = 1
+                else:
+                    assert (
+                        line_search_fn == "strong_wolfe"
+                    ), "only strong_wolfe is expected"
+                    init_param = [p.clone() for p in self._params]
+
+                    def eval_func(x, t, d):
+                        return self._try_direction(closure, x, t, d)
+
+                    loss, flat_grad, t, ls_func_evals = _strong_wolfe(
+                        eval_func, init_param, t, d, loss, flat_grad, gtd
+                    )
+                    self._update(t, d)
 
                 current_evals += ls_func_evals
                 state["func_evals"] += ls_func_evals
