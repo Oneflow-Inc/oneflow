@@ -39,6 +39,7 @@ rng = np.random.default_rng()
 annotation2default_generator = {}
 annotation2torch_to_flow_converter = {}
 NoneType = type(None)
+random_value_default_range = {int: (-10, 11), float: (-1, 1), complex: (-10, 10)}
 
 
 def data_generator(annotation):
@@ -288,8 +289,8 @@ class random_pytorch_tensor(generator):
         dim2=None,
         dim3=None,
         dim4=None,
-        low=0,
-        high=1,
+        low=None,
+        high=None,
         dtype=float,
         pin_memory=False,
     ):
@@ -337,9 +338,13 @@ class random_pytorch_tensor(generator):
         dim2 = self.dim2.value()
         dim3 = self.dim3.value()
         dim4 = self.dim4.value()
+        dtype = self.dtype.value()
         low = self.low.value()
         high = self.high.value()
-        dtype = self.dtype.value()
+        if low is None:
+            low = random_value_default_range[dtype][0]
+        if high is None:
+            high = random_value_default_range[dtype][1]
         pin_memory = self.pin_memory
 
         shape = rng.integers(low=1, high=8, size=ndim)
@@ -366,6 +371,14 @@ class random_pytorch_tensor(generator):
         elif dtype == int:
             np_arr = rng.integers(low=low, high=high, size=shape)
             res = torch.tensor(np_arr, dtype=torch.int64)
+            if pin_memory:
+                res = res.pin_memory()
+            return res
+        elif dtype == complex:
+            np_arr = rng.uniform(low=low, high=high, size=shape) + 1.0j * rng.uniform(
+                low=low, high=high, size=shape
+            )
+            res = torch.tensor(np_arr, dtype=torch.complex64)
             if pin_memory:
                 res = res.pin_memory()
             return res
@@ -405,6 +418,49 @@ class gpu_device(generator):
         return random_util.choice(["cuda"])
 
 
+@data_generator(torch.dtype)
+class random_pytorch_dtype(generator):
+    none_dtype_seq = [None]
+    bool_dtype_seq = [torch.bool]
+    floating_dtype_seq = [torch.float, torch.double]
+    half_dtype_seq = [torch.half]
+    bfloat16_dtype_seq = [torch.bfloat16]
+    signed_int_dtype_seq = [torch.int8, torch.int32, torch.int64]
+    unsigned_int_dtype_seq = [torch.uint8]
+    int_dtype_seq = [torch.int8, torch.int32, torch.int64]
+    image_dtype_seq = [torch.uint8, torch.float]
+    index_dtype_seq = [torch.int32, torch.int64]
+    arithmetic_dtype_seq = [*floating_dtype_seq, *int_dtype_seq]
+    pod_dtype_seq = [*arithmetic_dtype_seq, *unsigned_int_dtype_seq, *bool_dtype_seq]
+    all_dtype_seq = [*arithmetic_dtype_seq, torch.half, torch.bfloat16]
+
+    seq_name_to_seq = {
+        "None": none_dtype_seq,
+        "bool": bool_dtype_seq,
+        "float": floating_dtype_seq,
+        "half": half_dtype_seq,
+        "bfloat16": bfloat16_dtype_seq,
+        "signed": signed_int_dtype_seq,
+        "unsigned": unsigned_int_dtype_seq,
+        "int": int_dtype_seq,
+        "image": image_dtype_seq,
+        "index": index_dtype_seq,
+        "arithmetic": arithmetic_dtype_seq,
+        "pod": pod_dtype_seq,
+        "all": all_dtype_seq,
+    }
+
+    def __init__(self, seq_names):
+        super().__init__([])
+        # concat related dtype_seq for name in seq_names
+        self.data_type_seq = [
+            dtype for name in seq_names for dtype in self.seq_name_to_seq[name]
+        ]
+
+    def _calc_value(self):
+        return random_util.choice(self.data_type_seq)
+
+
 class all_placement(generator):
     def __init__(self):
         super().__init__([])
@@ -441,6 +497,22 @@ class all_placement(generator):
         return self._calc_all_placement()
 
 
+class all_cpu_placement(all_placement):
+    def __init__(self):
+        super().__init__()
+
+    def _calc_device(self):
+        return ["cpu"]
+
+
+class all_cuda_placement(all_placement):
+    def __init__(self):
+        super().__init__()
+
+    def _calc_device(self):
+        return ["cuda"]
+
+
 class random_placement(all_placement):
     def __init__(self):
         super().__init__()
@@ -454,7 +526,7 @@ class random_cpu_placement(random_placement):
         super().__init__()
 
     def _calc_device(self):
-        return "cpu"
+        return ["cpu"]
 
 
 class random_gpu_placement(random_placement):
@@ -462,7 +534,7 @@ class random_gpu_placement(random_placement):
         super().__init__()
 
     def _calc_device(self):
-        return "cuda"
+        return ["cuda"]
 
 
 class all_sbp(generator):
@@ -577,12 +649,15 @@ __all__ = [
     "random_pytorch_tensor",
     "random_bool",
     "random_device",
+    "random_pytorch_dtype",
     "cpu_device",
     "gpu_device",
     "random_placement",
     "random_cpu_placement",
     "random_gpu_placement",
     "all_placement",
+    "all_cpu_placement",
+    "all_cuda_placement",
     "random_sbp",
     "all_sbp",
     "random",

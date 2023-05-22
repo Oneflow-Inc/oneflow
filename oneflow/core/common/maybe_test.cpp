@@ -17,6 +17,7 @@ limitations under the License.
 #include "gtest/gtest.h"
 #include <gtest/gtest-death-test.h>
 #include <memory>
+#include "oneflow/core/common/exception.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -50,8 +51,28 @@ TEST(Maybe, JUST_MSG) {
   ASSERT_EQ(err->stack_frame().at(0)->code_text(), "f(y)");
   ASSERT_EQ(err->stack_frame().at(1)->code_text(), "h(y)");
 
-  // NOLINTNEXTLINE(cppcoreguidelines-avoid-goto)
-  ASSERT_EXIT(CHECK_JUST(i(10.234)), testing::KilledBySignal(SIGABRT), R"(input value 53)");
+  try {
+    CHECK_JUST(i(10.234));
+  } catch (const RuntimeException& e) {
+    EXPECT_TRUE(std::string(e.what()).find(R"(input value 53)") != std::string::npos);
+  }
+}
+
+TEST(Maybe, CHECK_OR_RETURN) {
+  auto f = [](int x) -> Maybe<int> {
+    CHECK_OR_RETURN(x > 10);
+    return 233;
+  };
+
+  auto i = [&](float x) -> Maybe<int> { return JUST(f(x)); };
+
+  auto data = CHECK_JUST(i(20));
+  ASSERT_EQ(data, 233);
+
+  auto err = i(1).stacked_error();
+  ASSERT_GE(err->stack_frame().size(), 2);
+  ASSERT_EQ(err->stack_frame().at(0)->code_text(), "CHECK_OR_RETURN(x > 10)");
+  ASSERT_EQ(err->stack_frame().at(1)->code_text(), "f(x)");
 }
 
 TEST(Maybe, CHECK_OK) {

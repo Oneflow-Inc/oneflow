@@ -20,10 +20,12 @@ import copy
 import os
 import warnings
 import gc
+from typing import Union
 
 import numpy as np
 import oneflow as flow
 from oneflow.test_utils.automated_test_util import profiler as auto_profiler
+from oneflow.test_utils.test_util import type_name_to_flow_type
 
 flow.backends.cudnn.deterministic = True
 
@@ -44,6 +46,7 @@ from .generators import (
     Nothing,
     generator,
     random_pytorch_tensor,
+    random_pytorch_dtype,
     choice_pytorch_tensor,
     rng,
 )
@@ -52,6 +55,7 @@ postulate = [".rand", ".Tensor"]
 
 testing = False
 testing_graph = False
+testing_complex = False
 global_check_allclose = True
 global_atol = 1e-5
 global_rtol = 1e-5
@@ -293,12 +297,22 @@ def get_fake_program_more_detail(oneflow, mode, func, args=None, kwargs=None):
 
 
 # NOTE(lixiang): When the graph global test is executed, the func is used to get the device type.
-#   There is no oneflow_kwargs["device"] case for graph global test.
-def get_global_test_device(oneflow_args):
-    if isinstance(oneflow_args[0], flow.Tensor):
+def get_global_test_device(oneflow_args, oneflow_kwargs=None):
+    # The case when the parameter input of Op only has kwargs.
+    if not oneflow_args:
+        return oneflow_kwargs["placement"].type
+    # The case when the parameter input of Op is tensors.
+    elif isinstance(oneflow_args[0], flow.Tensor):
         return oneflow_args[0].placement.type
-    else:
+    # The case when the parameter input of Op is tensor.
+    elif isinstance(oneflow_args[0], flow.placement):
+        return oneflow_args[0].type
+    # The case when the parameter input of Op is tuple. For example: test_0_dim_tensor.
+    elif isinstance(oneflow_args[0], tuple):
         return oneflow_args[0][0].placement.type
+    # When oneflow_args[0] is int or float, etc.
+    else:
+        return oneflow_args[1].placement.type
 
 
 # NOTE(lixiang): When oneflow is of type nn.Module, build the following Graph for testing.
@@ -347,6 +361,15 @@ def get_module_graph_test(graph_train_oneflow, oneflow, verbose, oneflow_args, *
     return test_g_res
 
 
+def check_oneflow_args_first_element_is_int(args):
+    if isinstance(args, (tuple, list)) and len(args) > 0:
+        if isinstance(args[0], (int, float)):
+            return True
+        elif isinstance(args[0], (tuple, list)):
+            return check_oneflow_args_first_element_is_int(args[0])
+    return False
+
+
 # NOTE(lixiang): When oneflow is of functional type, build the following Graph for testing, and return the test results in Graph mode.
 #   graph_functional_oneflow: is a deepcopy of oneflow.
 def get_functional_graph_res(
@@ -378,21 +401,53 @@ def get_functional_graph_res(
             return graph_functional_oneflow(*graph_args, **graph_kwargs)
 
     try:
-        # When the tensor on the cpu executes to to the cpu in nn.Graph, a check error will be reported.
+        is_global_flag = is_global()
+
+        # In graph mode, when the tensor on the cpu executes the to("cpu") method, a check error will be reported.
         if oneflow.__name__ == "to" or oneflow.__name__ == "_to":
             if isinstance(oneflow_res, flow.Tensor):
-                if (oneflow_args and oneflow_res.device.type == oneflow_args[0]) or (
-                    oneflow_kwargs
-                    and oneflow_res.device.type == oneflow_kwargs["device"]
-                ):
-                    test_g_res = oneflow_res
+                # The global tensor needs to obtain the device type through placement.type.
+                if is_global_flag:
+                    if (
+                        oneflow_args and oneflow_res.placement.type == oneflow_args[0]
+                    ) or (
+                        oneflow_kwargs
+                        and oneflow_res.placement.type == oneflow_kwargs["device"]
+                    ):
+                        test_g_res = oneflow_res
+                # The tensor needs to obtain the device type through device.type.
+                else:
+                    if (
+                        oneflow_args and oneflow_res.device.type == oneflow_args[0]
+                    ) or (
+                        oneflow_kwargs
+                        and oneflow_res.device.type == oneflow_kwargs["device"]
+                    ):
+                        test_g_res = oneflow_res
             else:
                 pass
+        # nn.Graph donot deal with Module type. EX: m.to_global(placement, sbp).
+        elif oneflow.__name__ == "to_global":
+            test_g_res = oneflow_res
         elif oneflow.__name__ == "Parameter":
             # nn.Graph donot deal with Parameter creation.
             test_g_res = oneflow_res
+        # oneflow_args may be empty, such as dropout.
+        elif is_global_flag and len(oneflow_args) == 0:
+            test_g_res = oneflow_res
+        # For some ops whose input parameters is int, 'int' object has no attribute 'placement'.
+        elif (
+            is_global_flag
+            and len(oneflow_args) != 0
+            and (check_oneflow_args_first_element_is_int(oneflow_args))
+        ):
+            test_g_res = oneflow_res
         # When doing the global op test, get_global_test_device() will be executed, and temporarily skipping the graph autotest on cpu device.
-        elif is_global() and (get_global_test_device(oneflow_args) == "cpu"):
+        elif (
+            is_global_flag
+            and oneflow.__name__ != "weight_norm"
+            and (get_global_test_device(oneflow_args, oneflow_kwargs) == "cpu")
+        ):
             test_g_res = oneflow_res
         else:
             test_g = TestGraphOfFunctional()
@@ -496,7 +551,9 @@ def oneflow_eager_run_with_graph_check(
                 graph_train_oneflow, oneflow, verbose, oneflow_args, *args
             )
             # When doing the global op test, get_global_test_device() will be executed, and temporarily skipping the graph autotest on cpu device.
-            if is_global() and (get_global_test_device(oneflow_args) == "cpu"):
+            if is_global() and (
+                get_global_test_device(oneflow_args, oneflow_kwargs) == "cpu"
+            ):
                 test_g_res = oneflow_res
             else:
                 # When testing module methods, kwargs are not considered.
@@ -948,6 +1005,16 @@ class DualObject:
                 k: v.detach() for (k, v) in oneflow_state_dict.items()
             }
             already_global = any([v.is_global for v in oneflow_state_dict.values()])
+            if is_global() and already_global:
+                for k, v in state_dict.items():
+                    if k not in oneflow_state_dict:
+                        continue
+                    of_state = oneflow_state_dict[k]
+                    if of_state.is_global:
+                        state_dict[k] = flow.tensor(
+                            v, sbp=of_state.sbp, placement=of_state.placement
+                        )
+
             oneflow.load_state_dict(state_dict, strict=False)
 
             if is_global():
@@ -1071,7 +1138,11 @@ def check_tensor_equality(
         assert (
             flow_tensor.grad is not None
         ), f"OneFlow tensor doesn't have grad while PyTorch tensor has one, PyTorch tensor is\n {torch_tensor}\n, OneFlow tensor is\n{flow_tensor} "
-        torch_grad = torch_tensor.grad.detach().cpu().numpy()
+        torch_grad = (
+            torch_tensor.grad.detach().cpu().numpy()
+            if not torch_original.is_conj(torch_tensor.grad)
+            else torch_original.resolve_conj(torch_tensor.grad.detach()).cpu().numpy()
+        )
         flow_grad = flow_tensor.grad.numpy()
         if not np.allclose(
             torch_grad, flow_grad, rtol=rtol, atol=atol, equal_nan=True,
@@ -1084,7 +1155,11 @@ def check_tensor_equality(
                 f"Grads are not equal. PyTorch grad: \n{torch_grad}\n, OneFlow grad: \n{flow_grad}"
             )
             return False
-    torch_numpy = torch_tensor.detach().cpu().numpy()
+    torch_numpy = (
+        torch_tensor.detach().cpu().numpy()
+        if not torch_original.is_conj(torch_tensor)
+        else torch_original.resolve_conj(torch_tensor.detach()).cpu().numpy()
+    )
     oneflow_numpy = flow_tensor.numpy()
     equality_res = np.allclose(
         torch_numpy, oneflow_numpy, rtol=rtol, atol=atol, equal_nan=True,
@@ -1146,13 +1221,14 @@ def check_nonetype_equality(a, b, ignored1, ignored2, check_dtype=False):
 
 def autotest(
     n=20,
-    auto_backward=True,
+    auto_backward: Union[bool, str] = True,
     rtol=0.0001,
     atol=1e-05,
     check_graph=True,
     check_allclose=True,
     check_dtype=False,
     check_grad_use_random_data=True,
+    include_complex=False,
 ):
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
 
@@ -1187,9 +1263,16 @@ def autotest(
                     testing = True
                     if check_graph:
                         testing_graph = True
+
+                    global testing_complex
+                    if include_complex:
+                        testing_complex = True
+
                     res = f(test_case, *args, **kwargs)
+
                     testing = False
                     testing_graph = False
+                    testing_complex = False
                 except (PyTorchDoesNotSupportError, BothDoNotSupportError) as e:
                     if verbose:
                         print(f"{f.__name__}")
@@ -1204,6 +1287,11 @@ def autotest(
                             continue
                         if auto_backward:
                             if isinstance(x.pytorch, torch_original.Tensor):
+                                if auto_backward == "auto" and (
+                                    not x.pytorch.requires_grad
+                                    or not x.oneflow.requires_grad
+                                ):
+                                    continue
                                 call_tensor_id.append(id(x.pytorch))
                                 if check_grad_use_random_data:
                                     np_arr = rng.uniform(
@@ -1273,7 +1361,7 @@ def autotest(
                     if check_allclose:
                         test_case.assertTrue(
                             check_equality(
-                                x, rtol=rtol, atol=atol, check_dtype=check_dtype
+                                x, rtol=rtol, atol=atol, check_dtype=check_dtype,
                             ),
                             x,
                         )
@@ -1308,14 +1396,18 @@ def random_tensor(
     dim2=None,
     dim3=None,
     dim4=None,
-    low=0,
-    high=1,
+    low=None,
+    high=None,
     dtype=float,
     requires_grad=True,
     pin_memory=False,
 ):
     if isinstance(requires_grad, generator):
         requires_grad = requires_grad.value()
+    if dtype == float and testing_complex:
+        # Generate complex with the probability of 0.5
+        dtype = complex if rng.integers(0, 2) == 1 else float
+
     pytorch_tensor = (
         random_pytorch_tensor(
             ndim, dim0, dim1, dim2, dim3, dim4, low, high, dtype, pin_memory
@@ -1323,6 +1415,7 @@ def random_tensor(
         .value()
         .requires_grad_(requires_grad and dtype != int)
     )
+    extra_input_tensor.append(pytorch_tensor)
     if is_global():
         flow_tensor = flow.tensor(
             pytorch_tensor.detach().cpu().numpy(),
@@ -1338,6 +1431,15 @@ def random_tensor(
         )
 
     return GetDualObject("unused", pytorch_tensor, flow_tensor)
+
+
+def random_dtype(seq_names):
+    pytorch_dtype = random_pytorch_dtype(seq_names).value()
+    if pytorch_dtype is None:
+        flow_dtype = None
+    else:
+        flow_dtype = type_name_to_flow_type[pytorch_dtype.__str__().split(".")[-1]]
+    return GetDualObject("DualDType", pytorch_dtype, flow_dtype)
 
 
 def choice_tensor(
@@ -1371,4 +1473,4 @@ def choice_tensor(
 
 
 torch = GetDualObject("", torch_original, flow)
-__all__ = ["autotest", "globaltest", "random_tensor", "choice_tensor"]
+__all__ = ["autotest", "globaltest", "random_tensor", "random_dtype", "choice_tensor"]

@@ -19,13 +19,13 @@ from typing import Callable, Dict, Iterator, List, Union
 import oneflow as flow
 from oneflow.nn.parameter import Parameter
 
-from .optimizer import Optimizer, ParamGroup
+from ...optim.optimizer import Optimizer, ParamGroup
 
 
 class SGD(Optimizer):
     """Implements SGD algorithm.
 
-    This algorithm takes a random sample’s gradient as an approximate estimate of
+    This algorithm takes a random sample's gradient as an approximate estimate of
     the overall gradient in small batch gradient descent.
 
     When the momentum = 0, the equation of parameters updating is:
@@ -48,6 +48,9 @@ class SGD(Optimizer):
         lr (float, optional): learning rate (default: 1e-3)
         momentum (float, optional): Momentum factor (default: 0.0)
         weight_decay (float, optional): weight decay (L2 penalty) (default: 0.0)
+        contiguous_params (bool, optional): whether to use contiguous ParamGroup 
+            which puts all parameters of the same type, device and group into the
+            same tensor and update them together. (default: False)
         fused (bool, optional): whether to divide all the parameters into several groups, then
             update each group of parameters with the fused kernel. (default: False)
 
@@ -106,6 +109,7 @@ class SGD(Optimizer):
         weight_decay: float = 0.0,
         nesterov: bool = False,
         maximize: bool = False,
+        contiguous_params: bool = False,
         fused: bool = False,
     ):
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
@@ -122,13 +126,19 @@ class SGD(Optimizer):
         options["weight_decay"] = weight_decay
         options["nesterov"] = nesterov
         options["maximize"] = maximize
+        options["contiguous_params"] = contiguous_params
         options["fused"] = fused
         super().__init__(params, options)
 
         for param_group in self.param_groups:
-            for param in param_group.parameters:
+            if param_group["contiguous_params"]:
+                param_list = param_group.contiguous_parameters
+            else:
+                param_list = param_group.parameters
+
+            for param in param_list:
                 assert param.is_leaf, "parameters must be leaf tensor"
-                self._state[param] = dict()
+                self.state[param] = dict()
 
                 if param_group["fused"] and not param.is_cuda:
                     warnings.warn("Fused SGD only support cuda parameters.")
@@ -148,7 +158,13 @@ class SGD(Optimizer):
     def _single_tensor_update(self, param_group):
         lr = param_group["lr"]
         l2 = param_group["weight_decay"]
-        for param in param_group.parameters:
+
+        if param_group["contiguous_params"]:
+            param_list = param_group.contiguous_parameters
+        else:
+            param_list = param_group.parameters
+
+        for param in param_list:
             if param.grad is None:
                 continue
             if param_group["momentum"] == 0.0:
@@ -157,9 +173,9 @@ class SGD(Optimizer):
                     self._sgd, (param, param.grad), learning_rate=lr, l2=l2
                 )
             else:
-                if "momentum_buf" not in self._state[param]:
-                    self._state[param]["momentum_buf"] = flow.zeros_like(param)
-                momentum_buf = self._state[param]["momentum_buf"]
+                if "momentum_buf" not in self.state[param]:
+                    self.state[param]["momentum_buf"] = flow.zeros_like(param)
+                momentum_buf = self.state[param]["momentum_buf"]
                 beta = param_group["momentum"]
                 dampening = param_group["dampening"]
                 nesterov = param_group["nesterov"]
@@ -189,9 +205,9 @@ class SGD(Optimizer):
             param_grad_list.append(param.grad)
 
             if use_momentum:
-                if "momentum_buf" not in self._state[param]:
-                    self._state[param]["momentum_buf"] = flow.zeros_like(param)
-                momentum_buf_list.append(self._state[param]["momentum_buf"])
+                if "momentum_buf" not in self.state[param]:
+                    self.state[param]["momentum_buf"] = flow.zeros_like(param)
+                momentum_buf_list.append(self.state[param]["momentum_buf"])
 
         if not use_momentum:
             flow._C.multi_tensor_sgd_update(
@@ -224,7 +240,8 @@ class SGD(Optimizer):
         with flow.no_grad():
             loss = None
             if closure is not None:
-                loss = closure()
+                with flow.enable_grad():
+                    loss = closure()
 
             for param_group in self.param_groups:
                 if param_group["fused"]:
@@ -232,12 +249,16 @@ class SGD(Optimizer):
                 else:
                     self._single_tensor_update(param_group)
 
-        self._state["step"] = self._state["step"] + 1
+        self.state["step"] = self.state["step"] + 1
         return loss
 
     def _generate_conf_for_graph(self, train_conf, vars_conf):
         new_opt_confs = []
         for param_group in self.param_groups:
+            assert (
+                param_group["contiguous_params"] != True
+            ), "contiguous_params cannot be used in graph"
+
             optimizer_conf = train_conf.optimizer_conf.add()
             lr = (
                 param_group["initial_lr"]

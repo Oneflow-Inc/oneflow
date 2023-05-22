@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-# RUN: python3 %s | FileCheck %s
+# RUN: python3 -m oneflow.test_utils.throttle --with-cuda=%with_cuda python3 %s | FileCheck %s
 # CHECK-NOT: oneflow.normalization
 
 import os
@@ -23,9 +23,6 @@ import oneflow as flow
 import oneflow.unittest
 import oneflow.nn as nn
 from flowvision.models.resnet import resnet50
-
-os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "1"
 
 
 def _test_fuse_conv_bn(test_case):
@@ -52,7 +49,11 @@ def _test_fuse_conv_bn(test_case):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestFuseConvBn(oneflow.unittest.TestCase):
+class TestFuseConvBn(oneflow.unittest.MLIRTestCase):
+    def setUp(self):
+        os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+        os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "1"
+
     def test_fuse_conv_bn(test_case):
         _test_fuse_conv_bn(test_case)
 

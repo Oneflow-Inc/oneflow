@@ -14,12 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/vm/instruction.h"
+#include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/framework/stream_get_stream_type_name.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/cpp_attribute.h"
+#include "oneflow/extension/stack/foreign_stack_getter.h"
 #include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
@@ -33,13 +35,24 @@ std::string Instruction::DebugName() const {
 void Instruction::__Init__(Stream* stream,
                            std::shared_ptr<InstructionPolicy>&& instruction_policy) {
   stream_ = stream;
-  instruction_policy_ = instruction_policy;
+  instruction_policy_ = std::move(instruction_policy);
+  if (IsMainThread()) {
+    if (auto* stack_getter = Singleton<ForeignStackGetter>::Get()) {
+      foreign_frame_ = stack_getter->GetCurrentFrame();
+    }
+  }
 }
 
 void Instruction::InitStatus() { instruction_policy_->InitInstructionStatusIf(this); }
 
-Maybe<void> Instruction::Prepare() { return instruction_policy_->PrepareIf(this); }
-void Instruction::Compute() { return instruction_policy_->ComputeIf(this); }
+Maybe<void> Instruction::Prepare() {
+  ForeignFrameThreadLocalGuard guard(foreign_frame_);
+  return instruction_policy_->PrepareIf(this);
+}
+void Instruction::Compute() {
+  ForeignFrameThreadLocalGuard guard(foreign_frame_);
+  instruction_policy_->ComputeIf(this);
+}
 
 void Instruction::DeleteStatusAndCheckEdges() {
   OF_PROFILER_RANGE_GUARD("Instruction::DeleteStatusAndCheckEdges");

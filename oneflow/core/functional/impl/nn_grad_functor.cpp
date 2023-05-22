@@ -191,14 +191,17 @@ class AdaptiveMaxPoolNdGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& dy,
-                           const std::shared_ptr<one::Tensor>& index, const int32_t& ndims) const {
+                           const std::shared_ptr<one::Tensor>& index, const int32_t& ndims,
+                           const std::string& data_format) const {
     const auto& op_type_name = GetOpTypeName(ndims);
     const auto& it = op_expr_map_.find(op_type_name);
     CHECK_OR_RETURN(it != op_expr_map_.end())
         << Error::RuntimeError() << "Encounter unsupported op " << op_type_name
         << " in AdaptiveMaxPoolNdGradFunctor.";
     CHECK_NOTNULL_OR_RETURN(it->second);  // NOLINT(maybe-need-error-msg)
-    return OpInterpUtil::Dispatch<Tensor>(*it->second, {dy, x, index});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("data_format");
+    attrs.SetAllAttrs(data_format);
+    return OpInterpUtil::Dispatch<Tensor>(*it->second, {dy, x, index}, attrs);
   }
 
  protected:
@@ -261,14 +264,16 @@ class AdaptivePoolNdGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& dy, const std::string& mode,
-                           const int32_t& ndims) const {
+                           const int32_t& ndims, const std::string& data_format) const {
     const auto& op_type_name = GetOpTypeName(mode, ndims);
     const auto& it = op_expr_map_.find(op_type_name);
     CHECK_OR_RETURN(it != op_expr_map_.end())
         << Error::RuntimeError() << "Encounter unsupported op " << op_type_name
         << " in AdaptivePoolNdGradFunctor.";
     CHECK_NOTNULL_OR_RETURN(it->second);  // NOLINT(maybe-need-error-msg)
-    return OpInterpUtil::Dispatch<Tensor>(*it->second, {dy, x});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("data_format");
+    attrs.SetAllAttrs(data_format);
+    return OpInterpUtil::Dispatch<Tensor>(*it->second, {dy, x}, attrs);
   }
 
  protected:
@@ -1516,6 +1521,108 @@ class DeformConv2dParamGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedGluWithoutLinearGradFunctor {
+ public:
+  FusedGluWithoutLinearGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_glu_without_linear_grad")
+                         .Input("dy")
+                         .Input("matmul_wx")
+                         .Output("d_matmul_wx")
+                         .Build());
+    split_op_ = CHECK_JUST(one::OpBuilder("fused_glu_without_linear_grad")
+                               .Input("dy")
+                               .Input("matmul_wx")
+                               .Input("matmul_vx")
+                               .Output("d_matmul_wx")
+                               .Output("d_matmul_vx")
+                               .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
+                                const std::shared_ptr<one::Tensor>& matmul_wx,
+                                const Optional<one::Tensor>& matmul_vx,
+                                const std::string& activation) const {
+    // check whether the user provide splited tensors
+    bool is_split_mode = false;
+    if (matmul_vx) { is_split_mode = true; }
+
+    // obtain input shape
+    const auto& dy_shape = *(dy->shape());
+    const auto& matmul_wx_shape = *(matmul_wx->shape());
+
+    // check number of axes of dy and matmul_wx
+    size_t dy_num_axes = dy_shape.NumAxes();
+    size_t matmul_wx_num_axes = matmul_wx_shape.NumAxes();
+    CHECK_GT_OR_RETURN(dy_num_axes, 1)
+        << "number of axes of \'dy\' should have be greater than 1, yet get " << dy_num_axes;
+    CHECK_GE_OR_RETURN(matmul_wx_num_axes, 2)
+        << "number of axes of \'matmul_wx\' should have be greater than 1, yet get "
+        << matmul_wx_num_axes;
+    CHECK_EQ_OR_RETURN(dy_num_axes, matmul_wx_num_axes)
+        << "number of axes of \'matmul_wx\' (" << matmul_wx_num_axes
+        << ") should equal to the one of \'dy\' (" << dy_num_axes << ")";
+
+    // check input shapes of dy and matmul_wx
+    for (uint64_t i = 0; i < dy_num_axes - 1; i++) {
+      size_t dy_size = dy_shape.At(i);
+      size_t matmul_wx_size = matmul_wx_shape.At(i);
+      CHECK_EQ_OR_RETURN(dy_size, matmul_wx_size)
+          << "dimension " << i << "of \'dy\'(" << dy_size << ") and \'matmul_wx\'("
+          << matmul_wx_size << ") is not consistent";
+    }
+    if (is_split_mode) {
+      CHECK_EQ_OR_RETURN(dy_shape.At(dy_num_axes - 1), matmul_wx_shape.At(matmul_wx_num_axes - 1))
+          << "last dimension of \'dy\'(" << dy_shape.At(dy_num_axes - 1) << ") and \'matmul_wx\'("
+          << matmul_wx_shape.At(matmul_wx_num_axes - 1) << ") is not consistent";
+    } else {
+      CHECK_EQ_OR_RETURN(2 * dy_shape.At(dy_num_axes - 1),
+                         matmul_wx_shape.At(matmul_wx_num_axes - 1))
+          << "two times of the last dimension of \'dy\'(" << 2 * (dy_shape.At(dy_num_axes - 1))
+          << ") and \'matmul_wx\'(" << matmul_wx_shape.At(matmul_wx_num_axes - 1)
+          << ") is not consistent";
+    }
+
+    if (is_split_mode) {
+      // obtain input shape
+      const auto& matmul_vx_shape = *(JUST(matmul_vx)->shape());
+
+      // check number of axes of dy and matmul_vx
+      size_t matmul_vx_num_axes = matmul_vx_shape.NumAxes();
+      CHECK_EQ_OR_RETURN(dy_num_axes, matmul_vx_num_axes)
+          << "number of axes of \'matmul_vx\' (" << matmul_vx_num_axes
+          << ") should equal to the one of \'dy\' (" << dy_num_axes << ")";
+
+      // check input shapes of dy and matmul_vx
+      for (uint64_t i = 0; i < dy_num_axes - 1; i++) {
+        size_t dy_size = dy_shape.At(i);
+        size_t matmul_vx_size = matmul_vx_shape.At(i);
+        CHECK_EQ_OR_RETURN(dy_size, matmul_vx_size)
+            << "dimension " << i << "of \'dy\'(" << dy_size << ") and \'matmul_vx\'("
+            << matmul_vx_size << ") is not consistent";
+      }
+      CHECK_EQ_OR_RETURN(dy_shape.At(dy_num_axes - 1), matmul_vx_shape.At(matmul_vx_num_axes - 1))
+          << "last dimension of \'dy\'(" << dy_shape.At(dy_num_axes - 1) << ") and \'matmul_vx\'("
+          << matmul_vx_shape.At(matmul_vx_num_axes - 1) << ") is not consistent";
+    }
+
+    // set activation attribute
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("activation");
+    attrs.SetAllAttrs(activation);
+
+    // dispatch corresponding operator
+    if (is_split_mode) {
+      return OpInterpUtil::Dispatch<TensorTuple>(*split_op_, {dy, matmul_wx, JUST(matmul_vx)},
+                                                 attrs);
+    } else {
+      return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, matmul_wx}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> split_op_;
+};
+
 class FusedMLPGradFunctor {
  public:
   FusedMLPGradFunctor() {
@@ -1616,6 +1723,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       "FusedCrossFeatureInteractionV1Grad");
   m.add_functor<impl::FusedCrossFeatureInteractionV2GradFunctor>(
       "FusedCrossFeatureInteractionV2Grad");
+  m.add_functor<impl::FusedGluWithoutLinearGradFunctor>("FusedGluWithoutLinearGrad");
   m.add_functor<impl::FusedMLPGradFunctor>("FusedMLPGrad");
   m.add_functor<impl::BinaryCrossEntropyWithLogitsReduceMeanLossGradFunctor>(
       "BinaryCrossEntropyWithLogitsReduceMeanLossGrad");

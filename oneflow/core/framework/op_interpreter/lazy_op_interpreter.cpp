@@ -61,10 +61,11 @@ Maybe<Tensor> BuildTensor(const OpAttribute& op_attribute, const std::string& bn
   auto shape = std::make_shared<Shape>(blob_desc_it->second.shape());
   auto stride = std::make_shared<Stride>(shape);
   auto dtype = blob_desc_it->second.data_type();
+  auto memory_format = blob_desc_it->second.memory_format();
   if (is_local) {
     const auto& device = JUST(Device::MakeDeviceByParallelDesc(*parallel_desc));
     const auto& tensor =
-        JUST(LocalTensor::MakeTensor(shape, stride, dtype, device, is_lazy,
+        JUST(LocalTensor::MakeTensor(shape, stride, dtype, memory_format, device, is_lazy,
                                      /* requires_grad= */ false, /* is_leaf= */ true));
     return static_cast<std::shared_ptr<Tensor>>(tensor);
   } else {
@@ -73,9 +74,9 @@ Maybe<Tensor> BuildTensor(const OpAttribute& op_attribute, const std::string& bn
     CHECK_OR_RETURN(nd_sbp_it != nd_sbp_sign_map.end())
         << "nd_sbp of " << bn_in_op << " not found in op " << op_attribute.op_conf().name();
     NdSbp nd_sbp(nd_sbp_it->second);
-    const auto& tensor = JUST(GlobalTensor::MakeTensor(shape, dtype, SymbolOf(nd_sbp),
-                                                       SymbolOf(*parallel_desc), is_lazy,
-                                                       /*requires_grad=*/false, /*is_leaf=*/true));
+    const auto& tensor = JUST(GlobalTensor::MakeTensor(
+        shape, dtype, memory_format, SymbolOf(nd_sbp), SymbolOf(*parallel_desc), is_lazy,
+        /*requires_grad=*/false, /*is_leaf=*/true));
     return static_cast<std::shared_ptr<Tensor>>(tensor);
   }
 }
@@ -654,6 +655,7 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
   auto infer_ctx = JUST(GetCurInferCtx());
   // NOTE(chengcheng): MUST reset unique op name before InferCtx::AddOp
   const std::string new_op_name = *JUST(infer_ctx->NewUniqueOpNameByFunctionalOpConf(*op_conf));
+  const std::string graph_name = infer_ctx->job().job_conf().job_name();
 
   // NOTE(chengcheng): for UserOp, NOT only reset op_name, but also the output values.
   op_conf->set_name(new_op_name);
@@ -685,10 +687,16 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
   // Check outputs num and setup output tensor properties.
   CHECK_EQ_OR_RETURN(outputs->size(), op_expr.output_size());  // NOLINT(maybe-need-error-msg)
   for (int i = 0; i < op_expr.output_size(); ++i) {
-    CHECK_OR_RETURN(!(*outputs)[i]);  // NOLINT(maybe-need-error-msg)
     const std::string& obn = op_expr.indexed_obns().at(i);
-    (*outputs)[i] =
-        JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true, is_local));
+    if (!(*outputs)[i]) {
+      (*outputs)[i] =
+          JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true, is_local));
+    } else {
+      VLOG(2) << "Lazy nn.Graph name " << graph_name << " source op name " << new_op_name
+              << " run with inplace.";
+      const std::shared_ptr<Tensor>& inplace_out = (*outputs)[i];
+      JUST(CheckTensorMatchAttr(inplace_out, op_attr, obn, blob_parallel_desc, is_local));
+    }
     TensorNameScope::Global()->Record((*outputs)[i], GenLogicalBlobName(new_op_name, obn));
   }
   return Maybe<void>::Ok();
@@ -708,26 +716,25 @@ Maybe<void> LazyInterpreterApplyImplForCopyUserOpExpr(const UserOpExpr& op_expr,
     input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   }
   CHECK_OR_RETURN(!input_lbn.empty());  // NOLINT(maybe-need-error-msg)
-  std::string device_type = JUST(ctx.attrs.GetAttr<std::string>("device_type"));
-  int64_t device_id = JUST(ctx.attrs.GetAttr<int64_t>("device_id"));
+  auto device = JUST(ctx.attrs.GetAttr<Symbol<Device>>("device"));
 
   CHECK_EQ_OR_RETURN(outputs->size(), 1);        // NOLINT(maybe-need-error-msg)
   CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);  // NOLINT(maybe-need-error-msg)
   if (input_tensor->is_local()) {
     (*outputs)[0] = JUST(LocalTensor::MakeTensor(
         input_tensor->shape(), JUST(input_tensor->stride()), input_tensor->dtype()->data_type(),
-        JUST(Device::New(device_type, device_id)),
+        input_tensor->memory_format(), device,
         /* is_lazy= */ true,
         /*requires_grad=*/false, /*is_leaf=*/true));
   } else {
     ParallelConf parallel_conf = JUST(input_tensor->parallel_desc())->parallel_conf();
-    parallel_conf.set_device_tag(device_type);
+    parallel_conf.set_device_tag(device->type());
     ParallelDesc parallel_desc(parallel_conf);
-    (*outputs)[0] =
-        JUST(GlobalTensor::MakeTensor(input_tensor->shape(), input_tensor->dtype()->data_type(),
-                                      JUST(input_tensor->nd_sbp()), SymbolOf(parallel_desc),
-                                      /* is_lazy= */ true,
-                                      /*requires_grad=*/false, /*is_leaf=*/true));
+    (*outputs)[0] = JUST(GlobalTensor::MakeTensor(
+        input_tensor->shape(), input_tensor->dtype()->data_type(), input_tensor->memory_format(),
+        JUST(input_tensor->nd_sbp()), SymbolOf(parallel_desc),
+        /* is_lazy= */ true,
+        /*requires_grad=*/false, /*is_leaf=*/true));
   }
   // NOTE(chengcheng): output tensor lbn is SAME with input tensor.
   TensorNameScope::Global()->Record(outputs->at(0), input_lbn);
@@ -782,27 +789,29 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
   for (int i = 0; i < inputs.size(); ++i) {
     const auto& input_tensor = inputs.at(i);
     CHECK_EQ_OR_RETURN(is_local, input_tensor->is_local());  // NOLINT(maybe-need-error-msg)
-    if (is_local) {
-      CHECK_OR_RETURN(device_tag == JUST(GetDeviceTagOfTensor(input_tensor)))
-          << Error::RuntimeError() << "Lazy nn.Graph name: " << graph_name
-          << " encountered ERROR in module/op_name: " << new_op_name
-          << ". Expected all tensors to be on the same device, but found at least two devices, "
-          << JUST(JUST(VectorAt(inputs, 0))->device())->ToString() << " (positional 0) and "
-          << JUST(JUST(VectorAt(inputs, i))->device())->ToString() << " (positional " << i
-          << ")! Please use tensor.to() to synchronize all the input with the same device.";
-    } else {
-      // TODO: Print out all the placement
-      CHECK_OR_RETURN(parallel_desc->Equals(*JUST(GetParallelDescOfTensor(input_tensor))))
-          << Error::RuntimeError() << "Lazy nn.Graph name: " << graph_name
-          << " encountered ERROR in module/op_name: " << new_op_name
-          << ". Expected all tensors to be on the same placement, but found at least two "
-             "placements, "
-          << *JUST(PlacementToString(JUST(JUST(VectorAt(inputs, 0))->parallel_desc())))
-          << " (positional 0) and "
-          << *JUST(PlacementToString(JUST(JUST(VectorAt(inputs, i))->parallel_desc())))
-          << " (positional " << i
-          << ")! Please use tensor.to_global() to synchronize all the input with the same "
-             "placement.";
+    if (!op_expr.IsHostMemoryInput(i)) {
+      if (is_local) {
+        CHECK_OR_RETURN(device_tag == JUST(GetDeviceTagOfTensor(input_tensor)))
+            << Error::RuntimeError() << "Lazy nn.Graph name: " << graph_name
+            << " encountered ERROR in module/op_name: " << new_op_name
+            << ". Expected all tensors to be on the same device, but found at least two devices, "
+            << JUST(JUST(VectorAt(inputs, 0))->device())->ToString() << " (positional 0) and "
+            << JUST(JUST(VectorAt(inputs, i))->device())->ToString() << " (positional " << i
+            << ")! Please use tensor.to() to synchronize all the input with the same device.";
+      } else {
+        // TODO: Print out all the placement
+        CHECK_OR_RETURN(parallel_desc->Equals(*JUST(GetParallelDescOfTensor(input_tensor))))
+            << Error::RuntimeError() << "Lazy nn.Graph name: " << graph_name
+            << " encountered ERROR in module/op_name: " << new_op_name
+            << ". Expected all tensors to be on the same placement, but found at least two "
+               "placements, "
+            << *JUST(PlacementToString(JUST(JUST(VectorAt(inputs, 0))->parallel_desc())))
+            << " (positional 0) and "
+            << *JUST(PlacementToString(JUST(JUST(VectorAt(inputs, i))->parallel_desc())))
+            << " (positional " << i
+            << ")! Please use tensor.to_global() to synchronize all the input with the same "
+               "placement.";
+      }
     }
     const std::string& ibn = op_expr.indexed_ibns().at(i);
     std::string lbn = TensorNameScope::Global()->Lookup(input_tensor);
@@ -901,11 +910,11 @@ Maybe<void> LazyInterpreter::ApplyImpl(const GlobalToGlobalOpExpr& op_expr,
            ->Equals(*parallel_desc_sym.shared_from_symbol())) {
     // NOTE(zwx): The input tensor's parallel_desc is not equal to that of op's,
     // create a proxy input with the parallel_desc that is the same as op's
-    input_proxy =
-        JUST(GlobalTensor::MakeTensor(input_tensor->shape(), input_tensor->dtype()->data_type(),
-                                      JUST(input_tensor->nd_sbp()), parallel_desc_sym,
-                                      /* is_lazy= */ true,
-                                      /*requires_grad=*/false, /*is_leaf=*/true));
+    input_proxy = JUST(GlobalTensor::MakeTensor(
+        input_tensor->shape(), input_tensor->dtype()->data_type(), input_tensor->memory_format(),
+        JUST(input_tensor->nd_sbp()), parallel_desc_sym,
+        /* is_lazy= */ true,
+        /*requires_grad=*/false, /*is_leaf=*/true));
     TensorNameScope::Global()->Record(input_proxy, input_lbn);
   }
 

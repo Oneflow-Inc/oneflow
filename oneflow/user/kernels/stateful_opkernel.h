@@ -85,6 +85,9 @@ class StatefulOpKernel final {
 
   const OperatorConf& op_conf() const { return *op_conf_; }
 
+  const ArgTuple* input_arg_tuple() const { return input_arg_tuple_.get(); }
+  const ArgTuple* output_arg_tuple() const { return output_arg_tuple_.get(); }
+
  private:
   friend struct vm::OpCallInstructionUtil;
   StatefulOpKernel() = default;
@@ -122,7 +125,7 @@ class StatefulOpKernel final {
   // so only group kernels by dtype
   std::array<std::vector<std::pair<const user_op::OpKernelRegistryResult*,
                                    std::shared_ptr<const user_op::OpKernel>>>,
-             DataType_MAX>
+             DataType_ARRAYSIZE>
       dtype2cached_kernels_;
   HashMap<const user_op::OpKernel*, std::shared_ptr<user_op::OpKernelState>> op_kernel_state_map_;
   HashMap<const user_op::OpKernel*, std::shared_ptr<user_op::OpKernelCache>> op_kernel_cache_map_;

@@ -17,7 +17,7 @@ from typing import Union
 import os
 
 import oneflow as flow
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 from oneflow.autograd import Function
 
 
@@ -123,9 +123,12 @@ class _BatchNorm(_NormBase):
 
     def forward(self, x):
         self._check_input_dim(x)
+        exponential_average_factor = self.momentum
         if self.training and self.track_running_stats:
             if self.num_batches_tracked is not None:
                 self.num_batches_tracked.add_(1)
+                if self.momentum is None:
+                    exponential_average_factor = 1.0 / float(self.num_batches_tracked)
         if self.training:
             is_training = True
         else:
@@ -139,7 +142,7 @@ class _BatchNorm(_NormBase):
             self.bias,
             axis=self.channel_axis,
             epsilon=self.eps,
-            momentum=self.momentum,
+            momentum=exponential_average_factor,
             is_training=is_training,
         )
 
@@ -303,6 +306,12 @@ class BatchNorm2d(_BatchNorm):
         if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
             self.channel_axis = 3
 
+    def to_memory_format(self, memory_format) -> None:
+        if memory_format is flow.channels_last:
+            self.channel_axis = 3
+        elif memory_format is flow.contiguous_format:
+            self.channel_axis = 1
+
     def _check_input_dim(self, input):
         if input.ndim != 4:
             raise ValueError("expected 4D input (got {}D input)".format(input.ndim))
@@ -437,16 +446,16 @@ class SyncBatchNormFunction(flow.autograd.Function):
         # batch_norm_gather_stats_with_counts calculates global mean & invstd based on
         # all gathered mean, invstd and count.
         # world_size * (2C + 1)
-        combined_list = [
-            flow.zeros(combined.shape, dtype=combined.dtype, device=combined.device)
-            for _ in range(global_world_size)
-        ]
-        flow.comm.all_gather(combined_list, combined)
-        combined = flow.stack(combined_list, dim=0).reshape(
-            (global_world_size, combined.numel())
+        combined_size = combined.numel()
+        combined_flat = flow.empty(
+            global_world_size,
+            combined_size,
+            dtype=combined.dtype,
+            device=combined.device,
         )
+        flow.comm.all_gather_into_tensor(combined_flat, combined)
         # world_size * (2C + 1) -> world_size * C, world_size * C, world_size * 1
-        mean_all, invstd_all, count_all = flow.split(combined, num_channels, dim=1)
+        mean_all, invstd_all, count_all = flow.split(combined_flat, num_channels, dim=1)
 
         # remove stats from empty inputs
         mask = count_all.squeeze(-1) >= 1

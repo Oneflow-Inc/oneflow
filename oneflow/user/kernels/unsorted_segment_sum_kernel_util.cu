@@ -34,11 +34,11 @@ __device__ __forceinline__ bool IsZero<half>(half v) {
   return v == static_cast<half>(0);
 }
 
-#if CUDA_VERSION >= 11000 && __CUDA_ARCH__ >= 800
+#if CUDA_VERSION >= 11000
 
 template<>
 __device__ __forceinline__ bool IsZero<nv_bfloat16>(nv_bfloat16 v) {
-  return v == static_cast<nv_bfloat16>(0);
+  return v == __float2bfloat16(0);
 }
 
 #endif

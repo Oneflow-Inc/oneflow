@@ -15,7 +15,13 @@ limitations under the License.
 """
 
 import oneflow._oneflow_internal
-from oneflow.profiler.profiler import profile, record_function, ProfilerActivity
+from oneflow.profiler.profiler import (
+    profile,
+    record_function,
+    ProfilerActivity,
+    ProfilerAction,
+    tensorboard_trace_handler,
+)
 
 __all__ = [
     "range_push",
@@ -25,6 +31,9 @@ __all__ = [
     "profile",
     "record_function",
     "ProfilerActivity",
+    "kineto_available",
+    "tensorboard_trace_handler",
+    "ProfilerAction",
 ]
 
 
@@ -42,3 +51,7 @@ def profiler_start():
 
 def profiler_stop():
     oneflow._oneflow_internal.profiler.ProfilerStop()
+
+
+def kineto_available():
+    return True

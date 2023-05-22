@@ -38,6 +38,7 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
                                "fused_matmul_bias",
                                "cublas_bias_add_relu_matmul_grad",
                                "fused_glu",
+                               "fused_glu_without_linear_grad",
                                "fused_matmul_bias_add_relu_dropout",
                                "fused_relu_dropout_grad",
                                "fused_dot_feature_interaction",
@@ -94,6 +95,7 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "layer_norm",
                               "layer_norm_param_grad",
                               "layer_norm_grad",
+                              "skip_layer_norm",
                               "rms_norm",
                               "rms_norm_grad",
                               "rms_norm_param_grad",
@@ -165,7 +167,7 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "relu_grad",
                                "transpose",
                                "random_mask_like",
-                               "concat",
+                               "cat",
                                "split_like",
                                "pad",
                                "same_padding",
@@ -195,7 +197,9 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "pinned_identity",
                                "to_contiguous",
                                "copy",
-                               "upsample_nearest_2d"};
+                               "where",
+                               "upsample_nearest_2d",
+                               "fill_"};
 
   return clear_list;
 }

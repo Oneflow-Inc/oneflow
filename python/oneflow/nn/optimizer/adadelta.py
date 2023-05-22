@@ -18,7 +18,7 @@ import math
 from typing import Callable, Dict, Iterator, List, Tuple, Union
 
 import oneflow as flow
-from oneflow.nn.optimizer.optimizer import Optimizer, ParamGroup
+from oneflow.optim.optimizer import Optimizer, ParamGroup
 from oneflow.nn.parameter import Parameter
 
 
@@ -44,6 +44,9 @@ class Adadelta(Optimizer):
             eps (float, optional): A small constant terms added to the denominator to improve numerical stability. Defaults to 1e-10.
             weight_decay (float, optional): The weight decay. Defaults to 0.
             maximize (bool, optional): maximize the params based on the objective, instead of minimizing. Defaults False.
+            contiguous_params (bool, optional): whether to use contiguous ParamGroup 
+                which puts all parameters of the same type, device and group into the
+                same tensor and update them together. (default: False)
         
         For example: 
 
@@ -99,6 +102,7 @@ class Adadelta(Optimizer):
         eps: float = 1e-6,
         weight_decay: float = 0,
         maximize: bool = False,
+        contiguous_params: bool = False,
     ):
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
@@ -113,14 +117,20 @@ class Adadelta(Optimizer):
         options["eps"] = eps
         options["maximize"] = maximize
         options["weight_decay"] = weight_decay
+        options["contiguous_params"] = contiguous_params
         super().__init__(params, options)
 
         for param_group in self.param_groups:
-            for param in param_group.parameters:
+            if param_group["contiguous_params"]:
+                param_list = param_group.contiguous_parameters
+            else:
+                param_list = param_group.parameters
+
+            for param in param_list:
                 assert param.is_leaf, "parameters must be leaf tensor"
-                self._state[param] = dict()
-                self._state[param]["square_avgs"] = flow.zeros_like(param)
-                self._state[param]["acc_deltas"] = flow.zeros_like(param)
+                self.state[param] = dict()
+                self.state[param]["square_avgs"] = flow.zeros_like(param)
+                self.state[param]["acc_deltas"] = flow.zeros_like(param)
 
         self._op = (
             flow.stateful_op("adadelta_update")
@@ -141,7 +151,9 @@ class Adadelta(Optimizer):
         with flow.no_grad():
             loss = None
             if closure is not None:
-                loss = closure()
+                with flow.enable_grad():
+                    loss = closure()
+
             for param_group in self.param_groups:
                 kwargs = {
                     "learning_rate": param_group["lr"],
@@ -150,23 +162,33 @@ class Adadelta(Optimizer):
                     "epsilon": param_group["eps"],
                     "maximize": param_group["maximize"],
                 }
-                for param in param_group.parameters:
+
+                if param_group["contiguous_params"]:
+                    param_list = param_group.contiguous_parameters
+                else:
+                    param_list = param_group.parameters
+
+                for param in param_list:
                     if param.grad is None:
                         continue
-                    square_avgs_tensor = self._state[param]["square_avgs"]
-                    acc_deltas_tensor = self._state[param]["acc_deltas"]
+                    square_avgs_tensor = self.state[param]["square_avgs"]
+                    acc_deltas_tensor = self.state[param]["acc_deltas"]
                     flow._C.dispatch_adadelta_update(
                         self._op,
                         (param, param.grad, square_avgs_tensor, acc_deltas_tensor),
                         **kwargs,
                     )
 
-            self._state["step"] = self._state["step"] + 1
+            self.state["step"] = self.state["step"] + 1
             return loss
 
     def _generate_conf_for_graph(self, train_conf, vars_conf):
         new_opt_confs = []
         for param_group in self.param_groups:
+            assert (
+                param_group["contiguous_params"] != True
+            ), "contiguous_params cannot be used in graph"
+
             optimizer_conf = train_conf.optimizer_conf.add()
 
             lr = (

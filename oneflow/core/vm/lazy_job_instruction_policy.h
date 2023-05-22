@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/vm/lazy_job_stream_policy.h"
 #include "oneflow/core/vm/virtual_machine.h"
+#include <robin_hood.h>
 
 namespace oneflow {
 
@@ -60,9 +61,19 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
         param_blob_objects_(param_blob_objects),
         input_dependences_(),
         output_dependences_() {
-    ForEachConstDependence(InstructionPolicyUtil::SetInserter(&input_dependences_));
-    ForEachMutDependence(InstructionPolicyUtil::SetInserter(&output_dependences_));
-    ForEachMut2Dependence(InstructionPolicyUtil::SetInserter(&output_dependences_));
+    robin_hood::unordered_flat_map<Dependence*, bool> unique_map;
+    ForEachConstDependence([&](Dependence* compute) {
+      if (unique_map.emplace(compute, true).second) { input_dependences_.emplace_back(compute); }
+    });
+    unique_map.clear();
+    output_dependences_.reserve(param_blob_objects_->size());
+    unique_map.reserve(param_blob_objects_->size());
+    ForEachMutDependence([&](Dependence* compute) {
+      if (unique_map.emplace(compute, true).second) { output_dependences_.emplace_back(compute); }
+    });
+    ForEachMut2Dependence([&](Dependence* compute) {
+      if (unique_map.emplace(compute, true).second) { output_dependences_.emplace_back(compute); }
+    });
   }
 
   const DependenceVector& input_dependences() const override { return input_dependences_; }
@@ -84,12 +95,15 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
   std::string DebugName(const Instruction&) const override { return "LaunchLazyJob"; }
   Maybe<void> Prepare(Instruction* instruction) override { return Maybe<void>::Ok(); }
   void Compute(Instruction* instruction) override {
+    VLOG(3) << " VM try launch Graph: " << nn_graph_->job_name()
+            << " in run_cnt: " << nn_graph_->run_cnt() << " START.";
     auto* lazy_job_stream_policy = GetLazyJobStreamPolicy(instruction);
-
-    static thread_local int64_t run_id = 0;
     {
       OF_PROFILER_RANGE_GUARD("WaitUntilQueueEmptyIfFrontNNGraphNotEquals");
       lazy_job_stream_policy->WaitUntilQueueEmptyIfFrontNNGraphNotEquals(nn_graph_);
+      VLOG(3) << " VM launch Graph: " << nn_graph_->job_name()
+              << " in run_cnt: " << nn_graph_->run_cnt()
+              << " WaitUntilQueueEmptyIfFrontNNGraphNotEquals.";
     }
     {
       OF_PROFILER_RANGE_GUARD("Send all buffers to BufferMgr");
@@ -97,11 +111,17 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
       const auto& job_name = job_instance->job_name();
       auto* buffer_mgr = Singleton<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
       buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Push(job_instance);
+      VLOG(3) << " VM Push CallbackNotifier to Graph: " << nn_graph_->job_name()
+              << " in run_cnt: " << nn_graph_->run_cnt();
       buffer_mgr->Get(GetSourceTickBufferName(job_name))->Push(job_instance);
+      VLOG(3) << " VM Push SourceTick to Graph: " << nn_graph_->job_name()
+              << " in run_cnt: " << nn_graph_->run_cnt();
     }
-    OF_UNUSED(run_id);  // disable compiler warning.
     OF_PROFILER_RANGE_GUARD("EnqueueNNGraph");
     lazy_job_stream_policy->EnqueueNNGraph(nn_graph_);
+    VLOG(3) << " VM Enqueue Graph: " << nn_graph_->job_name()
+            << " run_cnt: " << nn_graph_->run_cnt() << " END.";
+    nn_graph_->NextRunCnt();
   }
 
  private:

@@ -18,9 +18,9 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_JUST_H_
 
 #include <sstream>
-#include <glog/logging.h>
 #include <type_traits>
 #include "oneflow/core/common/error.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/preprocessor.h"
 
@@ -67,8 +67,7 @@ inline Error&& AddFrameMessage(Error&& error, const std::ostream& x) {
 
 template<typename... T>
 Error&& JustErrorAddFrameMessage(Error&& err, T&&... msg) {
-  __attribute__((unused)) int dummy[] = {
-      ((void)(AddFrameMessage(std::move(err), std::forward<T>(msg))), 0)...};
+  (AddFrameMessage(std::move(err), std::forward<T>(msg)), ...);
   return std::move(err);
 }
 
@@ -128,7 +127,7 @@ typename std::remove_const<typename std::remove_reference<T>::type>::type&& Remo
     if (!::oneflow::private_details::JustIsOk(_just_value_to_check_)) {                            \
       thread_local static auto frame = ::oneflow::SymbolOf(                                        \
           ::oneflow::ErrorStackFrame(__FILE__, __LINE__, _just_closure_func_name_, #__VA_ARGS__)); \
-      LOG(FATAL) << ::oneflow::GetFormatedSerializedError(                                         \
+      THROW(RuntimeError) << ::oneflow::GetErrorString(                                            \
           ::oneflow::private_details::JustErrorAddStackFrame(                                      \
               ::oneflow::private_details::JustGetError(_just_value_to_check_), frame));            \
     }                                                                                              \
@@ -159,7 +158,7 @@ typename std::remove_const<typename std::remove_reference<T>::type>::type&& Remo
     if (!::oneflow::private_details::JustIsOk(_just_value_to_check_)) {                           \
       thread_local static auto frame = ::oneflow::SymbolOf(                                       \
           ::oneflow::ErrorStackFrame(__FILE__, __LINE__, _just_closure_func_name_, #value));      \
-      LOG(FATAL) << ::oneflow::GetFormatedSerializedError(                                        \
+      THROW(RuntimeError) << ::oneflow::GetErrorString(                                           \
           ::oneflow::private_details::JustErrorAddFrameMessage(                                   \
               ::oneflow::Error(::oneflow::private_details::JustGetError(_just_value_to_check_))   \
                   .AddStackFrame(frame),                                                          \

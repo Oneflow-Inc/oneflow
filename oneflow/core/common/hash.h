@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_HASH_H_
 #define ONEFLOW_CORE_COMMON_HASH_H_
 #include <functional>
+#include <complex>
 
 namespace oneflow {
 
@@ -27,7 +28,7 @@ inline void HashCombine(size_t* seed, size_t hash) { *seed = HashCombine(*seed, 
 
 template<typename... T>
 inline void AddHash(size_t* seed, const T&... v) {
-  __attribute__((__unused__)) int dummy[] = {(HashCombine(seed, std::hash<T>()(v)), 0)...};
+  (HashCombine(seed, std::hash<T>()(v)), ...);
 }
 
 template<typename T, typename... Ts>
@@ -57,6 +58,11 @@ struct hash<std::vector<T>> {
     for (const auto& elem : vec) { oneflow::AddHash<T>(&hash_value, elem); }
     return hash_value;
   }
+};
+
+template<typename T>
+struct hash<std::complex<T>> {
+  size_t operator()(const std::complex<T>& c) const { return oneflow::Hash(c.real(), c.imag()); }
 };
 
 }  // namespace std

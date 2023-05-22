@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_GRAPH_TASK_ID_GENERATOR_H_
 
 #include "oneflow/core/graph/task_id.h"
+#include "oneflow/core/job/id_state.h"
 
 namespace oneflow {
 
@@ -30,14 +31,14 @@ class TaskIdGenerator final {
 
   TaskId Generate(const StreamId& stream_id);
 
+  void GetTaskIndex(HashMap<int64_t, uint32_t>* task_index_state);
+  void TryUpdateTaskIndex(const HashMap<int64_t, uint32_t>& task_index_state);
+
  private:
   HashMap<StreamId, task_index_t> stream_id2task_index_counter_;
+  // The task_index_init_state is used to initialize the `stream_id2task_index_counter_` hashmap.
+  HashMap<int64_t, uint32_t> task_index_init_state_{};
 };
-
-inline TaskId TaskIdGenerator::Generate(const StreamId& stream_id) {
-  task_index_t task_index = stream_id2task_index_counter_[stream_id]++;
-  return TaskId{stream_id, task_index};
-}
 
 }  // namespace oneflow
 

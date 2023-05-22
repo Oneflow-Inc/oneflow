@@ -23,12 +23,20 @@ namespace {
 
 Maybe<void> InferFWTensorDesc(user_op::InferContext* ctx) {
   std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
+  const std::string& data_format = ctx->Attr<std::string>("data_format");
   const Shape& x_shape = ctx->InputShape("x", 0);
   DimVector out_shape(x_shape.NumAxes());
   out_shape[0] = x_shape.dim_vec()[0];
-  out_shape[1] = x_shape.dim_vec()[1];
-  for (int i = 2; i < out_shape.size(); ++i) {
-    out_shape[i] = output_size.size() > i - 2 ? output_size[i - 2] : output_size[0];
+  if (data_format == "channels_first") {
+    out_shape[1] = x_shape.dim_vec()[1];
+    for (int i = 2; i < out_shape.size(); ++i) {
+      out_shape[i] = output_size.size() > i - 2 ? output_size[i - 2] : output_size[0];
+    }
+  } else {
+    out_shape[3] = x_shape.dim_vec()[3];
+    for (int i = 1; i < out_shape.size() - 1; ++i) {
+      out_shape[i] = output_size.size() > i - 1 ? output_size[i - 1] : output_size[0];
+    }
   }
 
   ctx->SetOutputShape("y", 0, Shape(out_shape));

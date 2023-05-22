@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_INTRUSIVE_FLAT_MSG_VIEW_H_
 
 #include <vector>
-#include <glog/logging.h>
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/intrusive/dss.h"
 #include "oneflow/core/intrusive/flat_msg.h"
 #include "oneflow/core/intrusive/struct_traits.h"

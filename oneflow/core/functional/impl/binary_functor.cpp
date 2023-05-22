@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
@@ -273,6 +274,30 @@ class DivFunctor : public BinaryFloatFunctor {
   }
 };
 
+class DivFunctorMode {
+ public:
+  DivFunctorMode() {}
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y,
+                           const Optional<std::string>& rounding_mode) const {
+    std::string rmode = rounding_mode.value_or("");
+    if (rmode == "floor") {
+      return JUST(functional::FloorDiv(x, y));
+
+    } else if (rmode == "trunc") {
+      return JUST(functional::TruncDiv(x, y));
+    }
+    CHECK_OR_RETURN(rmode == "") << "div expected rounding_mode to be one of None,"
+                                    " 'trunc', or 'floor' but found "
+                                 << rmode;
+    return JUST(functional::Div(x, y));
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class InplaceDivFunctor {
  public:
   InplaceDivFunctor() {
@@ -281,14 +306,29 @@ class InplaceDivFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
+    auto tensor_x = x;
+    auto tensor_y = y;
+    JUST(CastDeviceForCPUScalarTensor(tensor_x, tensor_y, /*inplace=*/true));
+
+    // NOTE: div operator will cast inputs to float when dtype is integral
     TensorProcessor tensor_processor;
-    if (y->requires_grad()) {
-      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
-               .AddInputs({JUST(Identity(x)), y})
-               .Apply());
-    } else {
-      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    TensorTuple tensor_processor_inputs;
+    {
+      if (tensor_y->requires_grad()) {
+        tensor_processor_inputs.assign({JUST(Identity(tensor_x)), tensor_y});
+      } else {
+        tensor_processor_inputs.assign({tensor_x, tensor_y});
+      }
     }
+    if (promoteTypes(tensor_x->dtype(), tensor_y->dtype())->is_integer()) {
+      tensor_processor.AddInputs(tensor_processor_inputs, DType::Float());
+    } else {
+      tensor_processor.AddInputs(tensor_processor_inputs)
+          .PromoteInputsToCommonDtype(true)
+          .PromoteIntegerInputsToFloatDtype(true);
+    }
+    JUST(tensor_processor.Apply());
+
     const TensorTuple& input_vec = JUST(tensor_processor.GetInputs());
     const std::shared_ptr<one::Tensor>& x_cast = input_vec.at(0);
     const std::shared_ptr<one::Tensor>& y_cast = input_vec.at(1);
@@ -376,6 +416,152 @@ class TruncDivFunctor : public BinaryFunctor {
   }
 };
 
+class LerpFunctor {
+ public:
+  LerpFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("lerp").Input("start").Input("end").Input("weight").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& start,
+                           const std::shared_ptr<one::Tensor>& end,
+                           const std::shared_ptr<one::Tensor>& weight) const {
+    const int64_t weight_elem_cnt = weight->nelement();
+    CHECK_EQ_OR_RETURN(start->shape()->NumAxes(), end->shape()->NumAxes())
+        << Error::RuntimeError() << "expected dim" << start->shape()->NumAxes()
+        << "for `end` but got dim" << end->shape()->NumAxes();
+    CHECK_EQ_OR_RETURN(start->dtype()->data_type(), weight->dtype()->data_type())
+        << Error::RuntimeError() << "expected dtype " << start->dtype()->name()
+        << " for `weights` but got dtype " << weight->dtype()->name();
+
+    auto broadcast_shape = *start->shape();
+    if (*start->shape() != *end->shape() || *start->shape() != *weight->shape()) {
+      broadcast_shape = *JUST(
+          InferUnifiedShapeForBroadcasting({*start->shape(), *end->shape(), *weight->shape()}));
+    }
+
+    if (weight_elem_cnt == 1 && weight->is_eager() && !weight->requires_grad()) {
+      std::shared_ptr<Tensor> cast_double_weight =
+          JUST(functional::Cast(weight, DType::Double(), /*pin_memory=*/false));
+      double weight_scalar = JUST(GetItemInScalarTensor<double>(cast_double_weight));
+      return functional::ScalarLerp(start, end, weight_scalar);
+    }
+
+    std::shared_ptr<Tensor> broadcast_start = start;
+    std::shared_ptr<Tensor> broadcast_end = end;
+    std::shared_ptr<Tensor> broadcast_weight = weight;
+    if (*start->shape() != broadcast_shape) {
+      broadcast_start = JUST(functional::Expand(start, broadcast_shape));
+    }
+    if (*end->shape() != broadcast_shape) {
+      broadcast_end = JUST(functional::Expand(end, broadcast_shape));
+    }
+    if (*weight->shape() != broadcast_shape) {
+      broadcast_weight = JUST(functional::Expand(weight, broadcast_shape));
+    }
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {broadcast_start, broadcast_end, broadcast_weight});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class InplaceLerpFunctor {
+ public:
+  InplaceLerpFunctor() {
+    lerp_op_ = CHECK_JUST(
+        one::OpBuilder("lerp").Input("start").Input("end").Input("weight").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& start,
+                           const std::shared_ptr<one::Tensor>& end,
+                           const std::shared_ptr<one::Tensor>& weight) const {
+    const int64_t weight_elem_cnt = weight->nelement();
+    CHECK_EQ_OR_RETURN(start->shape()->NumAxes(), end->shape()->NumAxes())
+        << Error::RuntimeError() << "expected dim" << start->shape()->NumAxes()
+        << "for `end` but got dim" << end->shape()->NumAxes();
+    CHECK_EQ_OR_RETURN(start->dtype()->data_type(), weight->dtype()->data_type())
+        << Error::RuntimeError() << "expected dtype " << start->dtype()->name()
+        << " for `weights` but got dtype " << weight->dtype()->name();
+
+    if (weight_elem_cnt == 1 && weight->is_eager() && !weight->requires_grad()) {
+      std::shared_ptr<Tensor> cast_double_weight =
+          JUST(functional::Cast(weight, DType::Double(), /*pin_memory=*/false));
+      double weight_scalar = JUST(GetItemInScalarTensor<double>(cast_double_weight));
+      JUST(functional::ScalarInplaceLerp(start, end, weight_scalar));
+      return start;
+    }
+
+    auto broadcast_shape = *start->shape();
+    if (*start->shape() != *end->shape() || *start->shape() != *weight->shape()) {
+      broadcast_shape = *JUST(
+          InferUnifiedShapeForBroadcasting({*start->shape(), *end->shape(), *weight->shape()}));
+    }
+
+    std::shared_ptr<one::Tensor> broadcast_start = JUST(Identity(start));
+    std::shared_ptr<one::Tensor> broadcast_end = JUST(Identity(end));
+    std::shared_ptr<one::Tensor> broadcast_weight = JUST(Identity(weight));
+    if (*start->shape() != broadcast_shape) {
+      broadcast_start = JUST(view::Expand(start, broadcast_shape));
+    }
+    if (*end->shape() != broadcast_shape) {
+      broadcast_end = JUST(view::Expand(end, broadcast_shape));
+    }
+    if (*weight->shape() != broadcast_shape) {
+      broadcast_weight = JUST(view::Expand(weight, broadcast_shape));
+    }
+
+    TensorProcessor tensor_processor;
+    if (broadcast_end->requires_grad() || broadcast_weight->requires_grad()) {
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+               .AddInputs({JUST(Identity(broadcast_start)), broadcast_end, broadcast_weight})
+               .Apply());
+    } else {
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+               .AddInputs({broadcast_start, broadcast_end, broadcast_weight})
+               .Apply());
+    }
+
+    const TensorTuple& input_vec = JUST(tensor_processor.GetInputs());
+    const std::shared_ptr<one::Tensor>& start_cast = input_vec.at(0);
+    const std::shared_ptr<one::Tensor>& end_cast = input_vec.at(1);
+    JUST(CheckInplaceValid(broadcast_start));
+    JUST(CheckInplaceCastValid(broadcast_start, start_cast));
+    JUST(CheckInplaceShapeCanExpandTo(*start_cast->shape(), *end_cast->shape()));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = start;
+    JUST(OpInterpUtil::Dispatch(*lerp_op_, input_vec, outputs.get()));
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> lerp_op_;
+};
+
+class LerpGradFunctor {
+ public:
+  LerpGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("lerp_grad")
+                         .Input("start")
+                         .Input("end")
+                         .Input("weight")
+                         .Input("out_diff")
+                         .Output("start_diff")
+                         .Output("end_diff")
+                         .Output("weight_diff")
+                         .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& start,
+                                const std::shared_ptr<one::Tensor>& end,
+                                const std::shared_ptr<one::Tensor>& weight,
+                                const std::shared_ptr<one::Tensor>& out_diff) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {start, end, weight, out_diff}, {});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class BroadcastFModFunctor : public BinaryFunctor {
  public:
   BroadcastFModFunctor() {
@@ -388,6 +574,27 @@ class BroadcastEqualFunctor : public BinaryFunctor {
   BroadcastEqualFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("broadcast_equal").Input("x").Input("y").Output("z").Build());
   }
+};
+
+class EqualFunctor {
+ public:
+  EqualFunctor() {
+    broadcast_equal_op_ =
+        CHECK_JUST(one::OpBuilder("broadcast_equal").Input("x").Input("y").Output("z").Build());
+  }
+  Maybe<bool> operator()(const std::shared_ptr<one::Tensor>& x,
+                         const std::shared_ptr<one::Tensor>& y) const {
+    if (*x->shape() != *y->shape()) { return false; }
+    if (x->nelement() == 0) { return true; }
+
+    std::shared_ptr<Tensor> output = JUST(
+        ReduceAllWhole(JUST(OpInterpUtil::Dispatch<Tensor>(*broadcast_equal_op_, {x, y}, {}))));
+    bool status = JUST(GetItemInScalarTensor<bool>(output));
+    return status;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> broadcast_equal_op_;
 };
 
 class BroadcastNotEqualFunctor : public BinaryFunctor {
@@ -403,6 +610,32 @@ class BroadcastGreaterFunctor : public BinaryFunctor {
   BroadcastGreaterFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("broadcast_greater").Input("x").Input("y").Output("z").Build());
   }
+};
+
+class InplaceBroadcastGreaterFunctor {
+ public:
+  InplaceBroadcastGreaterFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("broadcast_inplace_greater").Input("x").Input("y").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    const TensorTuple& input_vec = JUST(tensor_processor.GetInputs());
+    const std::shared_ptr<one::Tensor>& x_cast = input_vec.at(0);
+    const std::shared_ptr<one::Tensor>& y_cast = input_vec.at(1);
+    JUST(CheckInplaceValid(x));
+    JUST(CheckInplaceCastValid(x, x_cast));
+    JUST(CheckInplaceShapeCanExpandTo(*y_cast->shape(), *x_cast->shape()));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = x;
+    JUST(OpInterpUtil::Dispatch(*op_, input_vec, outputs.get()));
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class BroadcastGreaterEqualFunctor : public BinaryFunctor {
@@ -434,6 +667,30 @@ class BroadcastLogicalXorFunctor : public BinaryFunctor {
   BroadcastLogicalXorFunctor() {
     op_ = CHECK_JUST(
         one::OpBuilder("broadcast_logical_xor").Input("x").Input("y").Output("z").Build());
+  }
+};
+
+class BroadcastBitwiseAndFunctor : public BinaryFunctor {
+ public:
+  BroadcastBitwiseAndFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("broadcast_bitwise_and").Input("x").Input("y").Output("z").Build());
+  }
+};
+
+class BroadcastBitwiseOrFunctor : public BinaryFunctor {
+ public:
+  BroadcastBitwiseOrFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("broadcast_bitwise_or").Input("x").Input("y").Output("z").Build());
+  }
+};
+
+class BroadcastBitwiseXorFunctor : public BinaryFunctor {
+ public:
+  BroadcastBitwiseXorFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("broadcast_bitwise_xor").Input("x").Input("y").Output("z").Build());
   }
 };
 
@@ -485,6 +742,23 @@ class ScalarAddByTensorFunctor : public InplaceableBinaryFunctor {
   }
 };
 
+// this functor just for test host memory input
+class HostScalarAddByTensorFunctor {
+ public:
+  HostScalarAddByTensorFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("host_scalar_add_by_tensor").Input("x").Input("scalar").Output("y").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& scalar) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, scalar});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ScalarSubByTensorFunctor : public BinaryFunctor {
  public:
   ScalarSubByTensorFunctor() {
@@ -509,6 +783,29 @@ class ScalarDivByTensorFunctor : public BinaryFunctor {
   }
 };
 
+class BroadcastZetaFunctor : public BinaryFloatFunctor {
+ public:
+  BroadcastZetaFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("broadcast_zeta").Input("x").Input("y").Output("z").Build());
+  }
+};
+
+class ZetaScalarTensorFunctor {
+ public:
+  Maybe<Tensor> operator()(const Scalar x, const std::shared_ptr<one::Tensor>& y) const {
+    auto scalar_tensor = JUST(functional::FullLike(y, x));  // wrap scalar to tensor
+    return functional::BroadcastZeta(scalar_tensor, y);
+  }
+};
+
+class ZetaTensorScalarFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar y) const {
+    auto scalar_tensor = JUST(functional::FullLike(x, y));  // wrap scalar to tensor
+    return functional::BroadcastZeta(x, scalar_tensor);
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -521,18 +818,25 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::InplaceMulFunctor>("InplaceMul");
   m.add_functor<impl::InplaceDivFunctor>("InplaceDiv");
   m.add_functor<impl::DivFunctor>("Div");
+  m.add_functor<impl::DivFunctorMode>("DivMode");
   m.add_functor<impl::PowFunctor>("Pow");
   m.add_functor<impl::BroadcastPowFunctor>("BroadcastPow");
   m.add_functor<impl::BroadcastEqualFunctor>("BroadcastEqual");
+  m.add_functor<impl::EqualFunctor>("Equal");
   m.add_functor<impl::BroadcastNotEqualFunctor>("BroadcastNotEqual");
   m.add_functor<impl::BroadcastGreaterFunctor>("BroadcastGreater");
+  m.add_functor<impl::InplaceBroadcastGreaterFunctor>("InplaceBroadcastGreater");
   m.add_functor<impl::BroadcastGreaterEqualFunctor>("BroadcastGreaterEqual");
   m.add_functor<impl::BroadcastLogicalAndFunctor>("BroadcastLogicalAnd");
   m.add_functor<impl::BroadcastLogicalOrFunctor>("BroadcastLogicalOr");
   m.add_functor<impl::BroadcastLogicalXorFunctor>("BroadcastLogicalXor");
+  m.add_functor<impl::BroadcastBitwiseAndFunctor>("BroadcastBitwiseAnd");
+  m.add_functor<impl::BroadcastBitwiseOrFunctor>("BroadcastBitwiseOr");
+  m.add_functor<impl::BroadcastBitwiseXorFunctor>("BroadcastBitwiseXor");
   m.add_functor<impl::BroadcastLessFunctor>("BroadcastLess");
   m.add_functor<impl::BroadcastLessEqualFunctor>("BroadcastLessEqual");
   m.add_functor<impl::ScalarAddByTensorFunctor>("ScalarAddByTensor");
+  m.add_functor<impl::HostScalarAddByTensorFunctor>("HostScalarAddByTensor");
   m.add_functor<impl::ScalarSubByTensorFunctor>("ScalarSubByTensor");
   m.add_functor<impl::ScalarMulByTensorFunctor>("ScalarMulByTensor");
   m.add_functor<impl::ScalarDivByTensorFunctor>("ScalarDivByTensor");
@@ -540,6 +844,12 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FloorDivFunctor>("FloorDiv");
   m.add_functor<impl::TruncDivFunctor>("TruncDiv");
   m.add_functor<impl::BroadcastIsCloseFunctor>("IsClose");
+  m.add_functor<impl::LerpFunctor>("Lerp");
+  m.add_functor<impl::InplaceLerpFunctor>("InplaceLerp");
+  m.add_functor<impl::LerpGradFunctor>("LerpGrad");
+  m.add_functor<impl::BroadcastZetaFunctor>("BroadcastZeta");
+  m.add_functor<impl::ZetaScalarTensorFunctor>("ZetaScalarTensor");
+  m.add_functor<impl::ZetaTensorScalarFunctor>("ZetaTensorScalar");
 };
 
 }  // namespace functional

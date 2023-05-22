@@ -16,7 +16,6 @@ limitations under the License.
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowSupport.h"
-#include "OneFlow/Passes.h"
 #include "OneFlow/SBP/SBPAttributes.h"
 #include "OneFlow/Transform/TransposeHelpers.h"
 #include "llvm/ADT/StringRef.h"
@@ -58,30 +57,30 @@ namespace mlir {
 
 namespace oneflow {
 
-OperandRange UserOp::dataInputOperands() { return data_input(); }
-OperandRange UserOp::ctrlInputOperands() { return ctrl_inputs(); }
-ResultRange UserOp::dataOutputResults() { return data_output(); }
-Value UserOp::ctrlOutputResult() { return ctrl_output(); }
+OperandRange UserOp::dataInputOperands() { return getDataInput(); }
+OperandRange UserOp::ctrlInputOperands() { return getCtrlInputs(); }
+ResultRange UserOp::dataOutputResults() { return getDataOutput(); }
+Value UserOp::ctrlOutputResult() { return getCtrlOutput(); }
 
-OperandRange SystemOp::dataInputOperands() { return data_input(); }
-OperandRange SystemOp::ctrlInputOperands() { return ctrl_inputs(); }
-ResultRange SystemOp::dataOutputResults() { return data_output(); }
-Value SystemOp::ctrlOutputResult() { return ctrl_output(); }
+OperandRange SystemOp::dataInputOperands() { return getDataInput(); }
+OperandRange SystemOp::ctrlInputOperands() { return getCtrlInputs(); }
+ResultRange SystemOp::dataOutputResults() { return getDataOutput(); }
+Value SystemOp::ctrlOutputResult() { return getCtrlOutput(); }
 
 OperandRange VariableOp::dataInputOperands() { return {operand_begin(), operand_begin()}; }
-OperandRange VariableOp::ctrlInputOperands() { return ctrl_inputs(); }
-ResultRange VariableOp::dataOutputResults() { return output().dyn_cast<OpResult>(); }
-Value VariableOp::ctrlOutputResult() { return ctrl_output(); }
+OperandRange VariableOp::ctrlInputOperands() { return getCtrlInputs(); }
+ResultRange VariableOp::dataOutputResults() { return getOutput().dyn_cast<OpResult>(); }
+Value VariableOp::ctrlOutputResult() { return getCtrlOutput(); }
 
 OperandRange InputOp::dataInputOperands() { return getODSOperands(0); }
-OperandRange InputOp::ctrlInputOperands() { return ctrl_inputs(); }
-ResultRange InputOp::dataOutputResults() { return output().dyn_cast<OpResult>(); }
-Value InputOp::ctrlOutputResult() { return ctrl_output(); }
+OperandRange InputOp::ctrlInputOperands() { return getCtrlInputs(); }
+ResultRange InputOp::dataOutputResults() { return getOutput().dyn_cast<OpResult>(); }
+Value InputOp::ctrlOutputResult() { return getCtrlOutput(); }
 
 OperandRange OutputOp::dataInputOperands() { return getODSOperands(0); }
-OperandRange OutputOp::ctrlInputOperands() { return ctrl_inputs(); }
-ResultRange OutputOp::dataOutputResults() { return output().dyn_cast<OpResult>(); }
-Value OutputOp::ctrlOutputResult() { return ctrl_output(); }
+OperandRange OutputOp::ctrlInputOperands() { return getCtrlInputs(); }
+ResultRange OutputOp::dataOutputResults() { return getOutput().dyn_cast<OpResult>(); }
+Value OutputOp::ctrlOutputResult() { return getCtrlOutput(); }
 
 static ParseResult parseConstantOp(OpAsmParser& parser, OperationState& result) {
   mlir::DenseElementsAttr value;
@@ -104,14 +103,14 @@ namespace {
 LogicalResult TrimRedundantCtrl(Operation* op, PatternRewriter& rewriter) {
   auto ctrl_out = GetCtrlOutputResult(op);
   auto data_outputs = GetDataOutputResults(op);
-  if (ctrl_out && ctrl_out.getValue().use_empty()) {
+  if (ctrl_out && ctrl_out.value().use_empty()) {
     const int32_t num_data_outputs = data_outputs.size();
     NamedAttrList attributes(op->getAttrs());
     if (op->hasTrait<OpTrait::AttrSizedResultSegments>()) {
       attributes.erase(OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr());
       attributes.push_back(
           rewriter.getNamedAttr(OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr(),
-                                rewriter.getI32VectorAttr({num_data_outputs, 0})));
+                                rewriter.getDenseI32ArrayAttr({num_data_outputs, 0})));
     }
     OperationState state(op->getLoc(), op->getName(), op->getOperands(), data_outputs.getTypes(),
                          attributes);
@@ -125,13 +124,13 @@ LogicalResult TrimRedundantCtrl(Operation* op, PatternRewriter& rewriter) {
   return failure();
 }
 
-bool IsCtrlOutTrimmed(UserOp& op) { return !op.ctrl_output(); }
+bool IsCtrlOutTrimmed(UserOp& op) { return !op.getCtrlOutput(); }
 
 bool IsCtrlInAbsent(UserOp& op) {
-  if (!op->hasAttrOfType<DenseIntElementsAttr>(
+  if (!op->hasAttrOfType<DenseI32ArrayAttr>(
           OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr()))
     op.dump();
-  return op.ctrl_inputs().empty();
+  return op.getCtrlInputs().empty();
 }
 
 }  // namespace
@@ -154,26 +153,26 @@ struct ConcreteUserOps : public OpRewritePattern<UserOp> {
     // 3. enable the reuse of established MLIR infra like built-in traits
     if (IsCtrlOutTrimmed(op) && IsCtrlInAbsent(op)) {
       NamedAttrList attributes(op->getAttrDictionary());
-      attributes.erase(op.input_sizesAttrName());
-      attributes.erase(op.output_sizesAttrName());
-      attributes.erase(op.output_lbnsAttrName());
+      attributes.erase(op.getInputSizesAttrName());
+      attributes.erase(op.getOutputSizesAttrName());
+      attributes.erase(op.getOutputLbnsAttrName());
       attributes.erase(OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr());
       attributes.erase(OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr());
       llvm::SmallVector<int32_t> input_sizes, output_sizes;
-      getValuesFromIntArrayAttribute(op.input_sizes(), input_sizes);
-      getValuesFromIntArrayAttribute(op.output_sizes(), output_sizes);
+      getValuesFromIntArrayAttribute(op.getInputSizes(), input_sizes);
+      getValuesFromIntArrayAttribute(op.getOutputSizes(), output_sizes);
       if (!input_sizes.empty()) {
         attributes.push_back(rewriter.getNamedAttr(
             OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr(),
-            rewriter.getI32VectorAttr(input_sizes)));
+            rewriter.getDenseI32ArrayAttr(input_sizes)));
       }
       if (!output_sizes.empty()) {
         attributes.push_back(rewriter.getNamedAttr(
             OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr(),
-            rewriter.getI32VectorAttr(output_sizes)));
+            rewriter.getDenseI32ArrayAttr(output_sizes)));
       }
       OperationState state(op->getLoc(), OneFlowDialect::getDialectNamespace().str() + "."
-                                             + op.op_type_name().str());
+                                             + op.getOpTypeName().str());
       state.addAttributes(attributes);
       state.addOperands(op.getODSOperands(0) /* data in */);
       state.addTypes(op.getODSResults(0 /* data out */).getTypes());
@@ -190,7 +189,7 @@ struct ConcreteUserOps : public OpRewritePattern<UserOp> {
         rewriter.replaceOp(op, created->getResults());
       } else {
         op->emitError("Fail to convert opaque user op to concrete op when creating: "
-                      + op.op_type_name());
+                      + op.getOpTypeName());
         op->dump();
         return failure();
       }
@@ -219,7 +218,7 @@ struct ConvertAddOpWithArity : public OpRewritePattern<AddNOp> {
   explicit ConvertAddOpWithArity(MLIRContext* context)
       : OpRewritePattern<AddNOp>(context, /*benefit=*/1) {}
   LogicalResult matchAndRewrite(AddNOp op, PatternRewriter& rewriter) const override {
-    const auto arity = op.in().size();
+    const auto arity = op.getIn().size();
     if (arity == 2) {
       NamedAttrList attributes = op->getAttrs();
       attributes.set(OpTrait::IsAlternative<void>::getOpTypeNameAttr(),
@@ -246,12 +245,12 @@ struct ConcreteSystemOpPattern : public OpRewritePattern<OpType> {
   explicit ConcreteSystemOpPattern(MLIRContext* context)
       : OpRewritePattern<OpType>(context, /*benefit=*/1) {}
   LogicalResult matchAndRewrite(OpType op, PatternRewriter& rewriter) const override {
-    if (op.ctrl_output() && op.ctrl_output().use_empty()) {
+    if (op.getCtrlOutput() && op.getCtrlOutput().use_empty()) {
       NamedAttrList attributes(op->getAttrDictionary());
-      if (auto created = rewriter.create<OpType>(op->getLoc(), op.output().getType(),
+      if (auto created = rewriter.create<OpType>(op->getLoc(), op.getOutput().getType(),
                                                  op->getOperands(), attributes)) {
-        op.output().replaceAllUsesWith(
-            created->getResult(op.output().template cast<OpResult>().getResultNumber()));
+        op.getOutput().replaceAllUsesWith(
+            created->getResult(op.getOutput().template cast<OpResult>().getResultNumber()));
         op->erase();
         return success();
       }
@@ -272,51 +271,15 @@ void OutputOp::getCanonicalizationPatterns(RewritePatternSet& results, MLIRConte
   results.insert<ConcreteSystemOpPattern<OutputOp>>(context);
 }
 
-void NormalizationAddReluOp::build(::mlir::OpBuilder& odsBuilder, ::mlir::OperationState& odsState,
-                                   Value x, Value addend, Value moving_mean, Value moving_variance,
-                                   Value gamma, Value beta, StringRef op_name, StringRef device_tag,
-                                   ArrayAttr device_name, IntegerAttr scope_symbol_id,
-                                   ArrayAttr hierarchy, DenseElementsAttr operand_segment_sizes,
-                                   DenseElementsAttr result_segment_sizes, IntegerAttr axis,
-                                   FloatAttr epsilon, BoolAttr training, FloatAttr momentum) {
-  odsState.addOperands(x);
-  if (addend) odsState.addOperands(addend);
-  if (moving_mean) odsState.addOperands(moving_mean);
-  if (moving_variance) odsState.addOperands(moving_variance);
-  odsState.addOperands(gamma);
-  odsState.addOperands(beta);
-  odsState.addAttribute(operand_segment_sizesAttrName(odsState.name),
-                        odsBuilder.getI32VectorAttr({1, (addend ? 1 : 0), (moving_mean ? 1 : 0),
-                                                     (moving_variance ? 1 : 0), 1, 1}));
-
-  odsState.addAttribute(op_nameAttrName(odsState.name), odsBuilder.getStringAttr(op_name));
-  odsState.addAttribute(device_tagAttrName(odsState.name), odsBuilder.getStringAttr(device_tag));
-  odsState.addAttribute(device_nameAttrName(odsState.name), device_name);
-  if (scope_symbol_id) {
-    odsState.addAttribute(scope_symbol_idAttrName(odsState.name), scope_symbol_id);
-  }
-  if (hierarchy) { odsState.addAttribute(hierarchyAttrName(odsState.name), hierarchy); }
-  // TODO: remove the workaround if normalization_add_relu supports infererence mode
-  odsState.addAttribute(result_segment_sizesAttrName(odsState.name),
-                        odsBuilder.getI32VectorAttr({1, 1, 1, 1}));
-  odsState.addAttribute(axisAttrName(odsState.name), axis);
-  odsState.addAttribute(epsilonAttrName(odsState.name), epsilon);
-  odsState.addAttribute(trainingAttrName(odsState.name), training);
-  odsState.addAttribute(momentumAttrName(odsState.name), momentum);
-  auto y = x.getType();
-  odsState.addTypes(y);
-  // TODO: add real type infer, or get types from user of x and moving_mean, if it is a bn
-  /*reserve_space */ odsState.addTypes(x.getType());
-  /*mean */ odsState.addTypes(x.getType());
-  /*inv_variance */ odsState.addTypes(x.getType());
-}
-
 std::string Add2Op::getOriginalOpTypeName() { return "add_n"; }
 std::string NormalizationInferenceOp::getOriginalOpTypeName() { return "normalization"; }
 
-void Job::build(OpBuilder& builder, OperationState& state, StringRef name, FunctionType type) {
+void Job::build(OpBuilder& builder, OperationState& state, StringRef name, FunctionType type,
+                llvm::ArrayRef<mlir::NamedAttribute> attrs) {
   state.addAttribute(SymbolTable::getSymbolAttrName(), builder.getStringAttr(name));
-  state.addAttribute(getTypeAttrName(), TypeAttr::get(type));
+  state.addAttribute(Job::getFunctionTypeAttrName(state.name), TypeAttr::get(type));
+  state.attributes.append(attrs.begin(), attrs.end());
+
   state.addRegion();
 }
 
@@ -324,13 +287,15 @@ ParseResult Job::parse(OpAsmParser& parser, OperationState& result) {
   auto buildFuncType = [](Builder& builder, ArrayRef<Type> argTypes, ArrayRef<Type> results,
                           function_interface_impl::VariadicFlag,
                           std::string&) { return builder.getFunctionType(argTypes, results); };
-
-  return function_interface_impl::parseFunctionOp(parser, result, /*allowVariadic=*/false,
-                                                  buildFuncType);
+  return mlir::function_interface_impl::parseFunctionOp(
+      parser, result, /*allowVariadic=*/false, getFunctionTypeAttrName(result.name), buildFuncType,
+      getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
 }
 
 void Job::print(OpAsmPrinter& p) {
-  function_interface_impl::printFunctionOp(p, *this, /*isVariadic=*/false);
+  function_interface_impl::printFunctionOp(p, *this, /*isVariadic=*/false,
+                                           getFunctionTypeAttrName(), getArgAttrsAttrName(),
+                                           getResAttrsAttrName());
 }
 
 LogicalResult Job::verify() {
@@ -375,7 +340,7 @@ struct NormalizationInferencePattern : public OpRewritePattern<NormalizationOp> 
       : OpRewritePattern<NormalizationOp>(context, /*benefit=*/1) {}
   LogicalResult matchAndRewrite(oneflow::NormalizationOp op,
                                 PatternRewriter& rewriter) const override {
-    if (op.mean() || op.inv_variance()) return failure();
+    if (op.getMean() || op.getInvVariance()) return failure();
     if (auto created_op = rewriter.replaceOpWithNewOp<NormalizationInferenceOp>(
             op, op->getResultTypes(), op.getOperands(), op->getAttrs())) {
       return success();

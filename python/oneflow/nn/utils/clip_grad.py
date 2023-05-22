@@ -22,7 +22,7 @@ import oneflow as flow
 
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 
 
 _tensor_or_tensors = Union[Tensor, Iterable[Tensor]]

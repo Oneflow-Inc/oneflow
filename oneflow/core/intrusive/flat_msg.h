@@ -18,7 +18,7 @@ limitations under the License.
 
 #include <array>
 #include <cstring>
-#include <glog/logging.h>
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/intrusive/dss.h"
 #include "oneflow/core/intrusive/static_counter.h"
@@ -37,16 +37,16 @@ namespace oneflow {
     FLAT_MSG_DEFINE_BASIC_METHODS(struct_name);            \
     FLAT_MSG_DEFINE_DEFAULT(struct_name);
 
-#define FLAT_MSG_END(struct_name)                                               \
-  static_assert(__is_flat_message_type__, "this struct is not a flat message"); \
-                                                                                \
- public:                                                                        \
-  static const int __NumberOfFields__ = STATIC_COUNTER(field_counter);          \
-                                                                                \
- public:                                                                        \
-  INCREASE_STATIC_COUNTER(field_counter);                                       \
-  DSS_END(STATIC_COUNTER(field_counter), "flat message", struct_name);          \
-  }                                                                             \
+#define FLAT_MSG_END(struct_name)                                                       \
+  static_assert(__is_flat_message_type__, "this struct is not a flat message");         \
+                                                                                        \
+ public:                                                                                \
+  [[maybe_unused]] static const int __NumberOfFields__ = STATIC_COUNTER(field_counter); \
+                                                                                        \
+ public:                                                                                \
+  INCREASE_STATIC_COUNTER(field_counter);                                               \
+  DSS_END(STATIC_COUNTER(field_counter), "flat message", struct_name);                  \
+  }                                                                                     \
   ;
 
 #define FLAT_MSG_DEFINE_OPTIONAL(field_type, field_name)                        \

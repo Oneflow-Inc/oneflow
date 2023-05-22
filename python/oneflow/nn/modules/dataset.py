@@ -25,7 +25,7 @@ import oneflow._oneflow_internal._C as _C
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.scope_util import current_scope
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _size_any_t
-from oneflow.nn.module import Module
+from oneflow.nn.modules.module import Module
 from oneflow.nn.modules.utils import _pair, _reverse_repeat_tuple, _single, _triple
 import oneflow.framework.id_util as id_util
 
@@ -1018,112 +1018,6 @@ class OFRecordBytesDecoder(Module):
 
     def forward(self, input):
         return _C.dispatch_ofrecord_bytes_decoder(self._op, input, name=self.blob_name)
-
-
-class OneRecReader(Module):
-    r"""
-    nn.OneRecReader read from OneRec format files into a Tensor carrying TensorBuffer which can be decoded by decode_onerec API afterwards.
-
-    Parameters:
-        files (List[str]): The file list to be read from filesystem
-        batch_size (int): batch size
-        shuffle (bool): shuffle or not
-        shuffle_mode (str): can be "batch" or "instance"
-        shuffle_buffer_size (int): shuffle buffer size, default to 1024
-        shuffle_after_epoch (bool): if shuffle after each epoch
-        verify_example (bool): if verify example, defaults to True
-        placement (Optional[oneflow._oneflow_internal.placement]): The placement attribute allows you to specify which physical device the output tensor is stored on.
-        sbp (Optional[Union[oneflow._oneflow_internal.sbp.sbp, List[oneflow._oneflow_internal.sbp.sbp]]]): When creating a global tensor, specify the SBP of the output tensor.
-
-    For example:
-
-    .. code-block:: python
-
-        import oneflow as flow
-        files = ['file01.onerec', 'file02.onerec']
-        onerec_reader = flow.nn.OneRecReader(files, 10, True, "batch")
-        readdata_1 = onerec_reader()
-
-        # then decode readdata_1 ...
-
-    .. code-block:: python
-
-        import oneflow as flow
-        files = ['file01.onerec', 'file02.onerec']
-        onerec_reader2 = flow.nn.OneRecReader(
-            files,
-            batch_size=10,
-            shuffle=True,
-            shuffle_mode="batch",
-            placement=flow.placement.all("cpu") ,
-            sbp=[flow.sbp.split(0)],
-        )
-        readdata_2 = onerec_reader2()
-
-        # then decode readdata_2 ...
-
-    """
-
-    def __init__(
-        self,
-        files: List[str],
-        batch_size: int,
-        shuffle: bool,
-        shuffle_mode: str,
-        random_seed: Optional[int] = None,
-        shuffle_buffer_size: int = 1024,
-        shuffle_after_epoch: bool = False,
-        verify_example: bool = True,
-        placement: flow.placement = None,
-        sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
-    ):
-
-        super().__init__()
-
-        _handle_shuffle_args(self, shuffle, random_seed)
-        _handle_distributed_args(self, None, placement, sbp)
-
-        if shuffle_mode not in ["batch", "instance"]:
-            raise ValueError("shuffle_mode should be 'batch' or 'instance'")
-
-        self.files = files
-        self.batch_size = batch_size
-        self.shuffle_mode = shuffle_mode
-        self.shuffle_buffer_size = shuffle_buffer_size
-        self.shuffle_after_epoch = shuffle_after_epoch
-        self.verify_example = verify_example
-
-        self.op = flow.stateful_op("OneRecReader").Output("out").Build()
-
-    def forward(self):
-        if self.placement is None:
-            output = _C.dispatch_onerec_reader(
-                self.op,
-                files=self.files,
-                batch_size=self.batch_size,
-                random_shuffle=self.shuffle,
-                shuffle_mode=self.shuffle_mode,
-                shuffle_buffer_size=self.shuffle_buffer_size,
-                shuffle_after_epoch=self.shuffle_after_epoch,
-                random_seed=self.random_seed,
-                verify_example=self.verify_example,
-                device=self.device,
-            )
-        else:
-            output = _C.dispatch_onerec_reader(
-                self.op,
-                files=self.files,
-                batch_size=self.batch_size,
-                random_shuffle=self.shuffle,
-                shuffle_mode=self.shuffle_mode,
-                shuffle_buffer_size=self.shuffle_buffer_size,
-                shuffle_after_epoch=self.shuffle_after_epoch,
-                random_seed=self.random_seed,
-                verify_example=self.verify_example,
-                placement=self.placement,
-                sbp=self.sbp,
-            )
-        return output
 
 
 class GPTIndexedBinDataReader(Module):

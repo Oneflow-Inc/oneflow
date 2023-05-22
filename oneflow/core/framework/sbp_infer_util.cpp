@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/framework/sbp_infer_util.h"
+#include "oneflow/core/auto_parallel/algorithm_util.h"
 #include "oneflow/core/auto_parallel/boxing_collector.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
 #include "oneflow/core/common/device_type.pb.h"
@@ -26,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/sbp_parallel.pb.h"
+#include "oneflow/core/register/blob_desc.h"
 
 namespace oneflow {
 
@@ -89,12 +91,11 @@ Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sb
   }
 
   // NOTE: A tensor placed on cpu with a consumer operator that accepts cuda inputs would be
-  // transfered to cuda later. We might not have correct parallel description at this moment.
+  // transferred to cuda later. We might not have correct parallel description at this moment.
   if (on_same_devices && producer_parallel_num == consumer_parallel_num) {
     // Same sbp, no cost: S->S, B->B, P->P
     if (producer_sbp_parallel == consumer_sbp_parallel) { return 0.0; }
-    double logical_blob_size =
-        logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
+    double logical_blob_size = TotalByteSize4BlobDesc(logical_blob_desc);
     // S->P for eager. It should be 0 as well.
     // NOTE: Similar to B->P, we just make the other part to be 0. You can consider P as S(i) for an
     // arbitrary i.
@@ -128,8 +129,7 @@ Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sb
       }
     }
 
-    double logical_blob_size =
-        logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
+    double logical_blob_size = TotalByteSize4BlobDesc(logical_blob_desc);
     double overall_cost = logical_blob_size;
     // ? -> B
     if (consumer_sbp_parallel.has_broadcast_parallel()) {
@@ -312,9 +312,9 @@ Maybe<double> ComputeEagerCopyCostBetweenNdSbp(const NdSbp& producer_sbp_paralle
           reduced_out_hierarchy.elem_cnt()));
       // Add the penalty for P in the consumer
       if (out_sbp.has_partial_sum_parallel() && (in_sbp != out_sbp)) {
-        total_cost += Penalty4PartialInConsumer(
-            logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type()),
-            producer_parallel_desc.parallel_num(), consumer_parallel_desc.parallel_num());
+        total_cost += Penalty4PartialInConsumer(TotalByteSize4BlobDesc(logical_blob_desc),
+                                                producer_parallel_desc.parallel_num(),
+                                                consumer_parallel_desc.parallel_num());
       }
       // detect the cases that splits the same dimension before this splitting
       if (normal_case && in_sbp.has_split_parallel() && in_sbp == out_sbp) {
@@ -330,13 +330,9 @@ Maybe<double> ComputeEagerCopyCostBetweenNdSbp(const NdSbp& producer_sbp_paralle
       }
     }
     // Add the cost for the special case
-    if (!normal_case) {
-      total_cost +=
-          logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
-    }
+    if (!normal_case) { total_cost += TotalByteSize4BlobDesc(logical_blob_desc); }
   } else {
-    double logical_blob_size =
-        logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
+    double logical_blob_size = TotalByteSize4BlobDesc(logical_blob_desc);
     {
       double in_cost = 1.0;
       for (int32_t i = 0; i < in_dim; ++i) {
@@ -632,6 +628,23 @@ void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
   }
 }
 
+int64_t TotalByteSize4BlobDesc(const BlobDesc& logical_blob_desc) {
+  return logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
+}
+
+int64_t MaxByteSize4BlobDescSbp(const BlobDesc& logical_blob_desc, const NdSbp& nd_sbp,
+                                const Shape& hierarchy) {
+  Shape blob_shape = logical_blob_desc.shape();
+  for (int32_t sbp_id = 0; sbp_id < nd_sbp.sbp_parallel_size(); sbp_id++) {
+    const auto& sbp = nd_sbp.sbp_parallel(sbp_id);
+    if (sbp.has_split_parallel()) {
+      int32_t split_axis = sbp.split_parallel().axis();
+      blob_shape.Set(split_axis, CeilQuotient(blob_shape.At(split_axis), hierarchy.At(sbp_id)));
+    }
+  }
+  return blob_shape.elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
+}
+
 Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel,
                                               const NdSbp& consumer_sbp_parallel,
                                               const BlobDesc& logical_blob_desc,
@@ -698,8 +711,7 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel
     return kUnsupportedBoxing;
   }
 
-  double logical_blob_size =
-      logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
+  double logical_blob_size = TotalByteSize4BlobDesc(logical_blob_desc);
 
   if (in_dim == 2 && out_dim == 2) {
     // Not supporting different hierarchy
@@ -772,6 +784,67 @@ void DfsGetNdSbpSignature(NdSbpSignature& nd_sbp_sig, int32_t depth, int32_t dim
       DfsGetNdSbpSignature(nd_sbp_sig, depth + 1, dims, hierarchy, hierarchy_value2sbp_sig_list,
                            nd_sbp_sig_list);
     }
+  }
+}
+
+namespace {
+
+// give a mesure value for NdSbp for sorting
+size_t MesureNdSbp(const NdSbp& nd_sbp) {
+  // start from 1, B + P + max split axis (8)
+  constexpr size_t kMaxSplitAxis = 8;
+  constexpr size_t kCarryDigit = kMaxSplitAxis + 3;
+  size_t value = 0;
+  for (int i = 0; i < nd_sbp.sbp_parallel_size(); ++i) {
+    size_t cur_dim_value = 0;
+    const auto& sbp = nd_sbp.sbp_parallel(i);
+    if (sbp.has_broadcast_parallel()) {
+      cur_dim_value = 1;
+    } else if (sbp.has_partial_sum_parallel()) {
+      cur_dim_value = 2;
+    } else if (sbp.has_split_parallel()) {
+      CHECK_LT(sbp.split_parallel().axis(), kMaxSplitAxis);
+      // from 3 to 10
+      cur_dim_value = 3 + sbp.split_parallel().axis();
+    } else {
+      UNIMPLEMENTED();
+    }
+    value = value * kCarryDigit + cur_dim_value;
+  }
+  return value;
+}
+
+size_t MesureNdSbpSignature(const NdSbpSignature& nd_sbp_sig, const std::vector<std::string>& bns) {
+  // big enough for 2d-sbp signatrue set
+  // if want to extend to 3d-sbp, consider increase to 170
+  constexpr size_t kCarryDigit = 97;
+  size_t value = 0;
+  for (size_t i = 0; i < bns.size(); ++i) {
+    auto nd_sbp_it = nd_sbp_sig.bn_in_op2nd_sbp().find(bns[i]);
+    CHECK(nd_sbp_it != nd_sbp_sig.bn_in_op2nd_sbp().end())
+        << "can't find bn (" << bns[i] << ") in " << PbMessage2TxtString(nd_sbp_sig);
+    size_t cur_arg_value = MesureNdSbp(nd_sbp_it->second);
+    CHECK_LE(value + cur_arg_value / kCarryDigit, std::numeric_limits<size_t>::max() / kCarryDigit);
+    value = value * kCarryDigit + cur_arg_value;
+  }
+  return value;
+}
+
+}  // namespace
+
+void DeduplicateNdSbpSignatureList(std::vector<NdSbpSignature>* nd_sbp_sig_list,
+                                   const std::vector<std::string>& bns) {
+  if (bns.size() > 8) { return; }
+  std::map<size_t, NdSbpSignature> value2nd_sbp_sig;
+  for (auto& nd_sbp_sig : *nd_sbp_sig_list) {
+    size_t order_value = MesureNdSbpSignature(nd_sbp_sig, bns);
+    if (value2nd_sbp_sig.find(order_value) == value2nd_sbp_sig.end()) {
+      value2nd_sbp_sig.emplace(order_value, std::move(nd_sbp_sig));
+    }
+  }
+  nd_sbp_sig_list->clear();
+  for (auto& nd_sbp_pair : value2nd_sbp_sig) {
+    nd_sbp_sig_list->emplace_back(std::move(nd_sbp_pair.second));
   }
 }
 
@@ -940,7 +1013,7 @@ double ComputeSbpInferPriority(const NdSbp& producer_nd_sbp, const NdSbp& consum
       // [1, 2]:(P, S0) -> [1, 2]:(S0, S0)
       return 1.0;
     } else {
-      // Penality: this blob have different placements and sbps but it does not support boxing
+      // Penalty: this blob have different placements and sbps but it does not support boxing
       return 2.0;
     }
   } else {
@@ -1057,7 +1130,7 @@ double Cost4GeneralBasicCommunication(const NdSbp& producer_sbp_parallel,
   }
   // Subtract the intersection part
   return (producer_partial_ratio + consumer_broadcast_ratio - intersection_ratio)
-         * logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
+         * TotalByteSize4BlobDesc(logical_blob_desc);
 }
 
 }  // namespace oneflow

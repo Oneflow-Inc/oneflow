@@ -53,11 +53,6 @@ void Compiler::Compile(Job* job, Plan* plan) const {
   // Step1: new Singleton<OpGraph> and set log configs.
   Singleton<OpGraph>::New(*job);
   const JobDesc& job_desc = GlobalJobDesc();
-  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(*job);
-    Singleton<OpGraph>::Get()->ToDotWithFilePath(
-        "optimized_dlnet_" + std::to_string(job_desc.job_id()) + "_op_graph.dot");
-  }
   compile_tc->Count("[GraphCompile]" + job_name + " NewOpGraph", 1);
 
   // Step2: build task_gph.
@@ -112,7 +107,7 @@ void Compiler::Compile(Job* job, Plan* plan) const {
   (*job_id2job_conf)[GlobalJobDesc().job_id()] = GlobalJobDesc().job_conf();
   // NOTE(chengcheng): infer mem blob id & set inplace & add ctrl
   // TODO(chengcheng): set inplace hint for cpu regst
-  IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(plan, IsReachable);
+  IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(plan);
   PlanUtil::MergeMemBlockIdByLogicalChainId(plan, *job);
   PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(plan);
   PlanUtil::SetForceInplaceMemBlock(plan);

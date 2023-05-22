@@ -17,6 +17,7 @@ limitations under the License.
 #include <vector>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/functional.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 
@@ -49,8 +50,10 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
           [](const one::FunctionNode& func_node) { return func_node.next_functions(); })
       .def_property_readonly("metadata", []() { TODO(); })
       .def_property_readonly("requires_grad", []() { TODO(); })
-      .def("register_hook", []() { TODO(); })
-      .def("name", [](const one::FunctionNode& func_node) { return func_node.name(); });
+      .def("register_hook", &one::FunctionNode::add_post_hook)
+      .def("name", [](const one::FunctionNode& func_node) { return func_node.name(); })
+      .def_property_readonly(
+          "variable", [](const one::FunctionNode& func_node) { return func_node.Variable(); });
 }
 
 }  // namespace oneflow

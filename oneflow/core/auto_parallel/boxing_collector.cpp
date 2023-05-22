@@ -36,6 +36,9 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
+
+static bool disable_middle_node = false;
+
 void DfsSetNdSbp(const std::vector<SbpParallel>& id2sbp_parallel, int32_t depth, int32_t max_depth,
                  NdSbp& nd_sbp, std::vector<NdSbp>& nd_sbp_lists,
                  std::unordered_map<NdSbp, int32_t>& nd_sbp_universe) {
@@ -134,10 +137,10 @@ BoxingCollector::BoxingCollector(int32_t max_axis) { CHECK_JUST(Init(max_axis));
 
 // Construct a boxing collector with given maximum number of axis
 Maybe<void> BoxingCollector::Init(int32_t max_axis) {
+  // Update environment parameter
+  disable_middle_node = ParseBooleanFromEnv("ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK", false);
   // Not allowed two-step boxing and disable checking for debugging
-  if (ParseBooleanFromEnv("ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK", false)) {
-    return Maybe<void>::Ok();
-  }
+  if (disable_middle_node) { return Maybe<void>::Ok(); }
   // Set up at least two split for op graph.
   // For a negative example: Resnet50 only have B, P, S(0)
   CollectUniverse(max_axis);
@@ -257,7 +260,7 @@ Maybe<void> BoxingCollector::GenerateCombination4SamePlacement(int32_t max_middl
       "cpu", {"0:0-" + std::to_string(hierarchy44.elem_cnt() - 1)}, virtual_hierarchy));
   BlobDesc blob_desc({virtual_range_size, virtual_range_size, virtual_range_size,
                       virtual_range_size, virtual_range_size, virtual_range_size},
-                     DataType::kInt8, /*is_dynamic=*/false);
+                     DataType::kInt8, MemoryFormat::kContiguous, /*is_dynamic=*/false);
   JUST(GenerateCombination4SamePlacement(max_middle_node_num, blob_desc, *parallel_desc));
   return Maybe<void>::Ok();
 }
@@ -379,7 +382,7 @@ Maybe<void> BoxingCollector::GenerateCombination4DiffPlacement(
   int32_t virtual_range_size = 4 * world_size * (4 * world_size + 1);
   BlobDesc blob_desc({virtual_range_size, virtual_range_size, virtual_range_size,
                       virtual_range_size, virtual_range_size, virtual_range_size},
-                     DataType::kInt8, /*is_dynamic=*/false);
+                     DataType::kInt8, MemoryFormat::kContiguous, /*is_dynamic=*/false);
   // Virtual placements before transfer
   Shape in_hierarchy44({4 * world_size + 1, 4 * world_size});
   std::shared_ptr<Shape> in_hierarchy = std::make_shared<Shape>(in_hierarchy44);
@@ -565,9 +568,7 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
                                                int32_t* diag_node_pos, bool compute_cost) {
   middle_sbps.clear();
   // Not allowed two-step boxing and disable checking for debugging
-  if (ParseBooleanFromEnv("ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK", false)) {
-    return Maybe<void>::Ok();
-  }
+  if (disable_middle_node) { return Maybe<void>::Ok(); }
   if (producer_parallel_desc == consumer_parallel_desc && sbp_producer == sbp_consumer) {
     return Maybe<void>::Ok();
   }

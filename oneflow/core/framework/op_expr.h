@@ -155,6 +155,11 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
     return device_and_stream_infer_fn_;
   }
 
+  bool IsHostMemoryInput(int32_t input_index) const {
+    return std::find(host_memory_input_ids_.begin(), host_memory_input_ids_.end(), input_index)
+           != host_memory_input_ids_.end();
+  }
+
   Maybe<void> InferPhysicalTensorDesc(
       const AttrMap& attrs, const std::string& device_tag,
       const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
@@ -179,12 +184,14 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
              const std::vector<std::string>& indexed_obns);
   Maybe<void> Init(const std::shared_ptr<const UserOpExpr>& self);
   AttrMap base_attrs_;
-  user_op::TensorDescInferFn tensor_desc_infer_fn_;
+  user_op::TensorDescInferFn logical_tensor_desc_infer_fn_;
+  user_op::TensorDescInferFn physical_tensor_desc_infer_fn_;
   user_op::DataTypeInferFn dtype_infer_fn_;
   user_op::DeviceAndStreamInferFn device_and_stream_infer_fn_;
   mutable HashMap<Symbol<Stream>, std::shared_ptr<StatefulOpKernel>> stream2kernel_;
   std::shared_ptr<LocalTensorInferCache> local_tensor_infer_cache_;
   std::shared_ptr<GlobalTensorInferCache> global_tensor_infer_cache_;
+  small_vector<int32_t> host_memory_input_ids_;
 };
 
 class GlobalToGlobalOpExpr : public OpExpr {

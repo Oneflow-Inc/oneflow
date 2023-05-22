@@ -284,8 +284,8 @@ namespace oneflow {
   input_nd_sbp->clear_sbp_parallel();
   output_nd_sbp->clear_sbp_parallel();
 
-  JUST(GetNcclLogicalNdSbpFromAttr(ctx, "src_nd_sbp", input_nd_sbp));
-  JUST(GetNcclLogicalNdSbpFromAttr(ctx, "dst_nd_sbp", output_nd_sbp));
+  JUST(GetNcclLogicalNdSbpFromAttr(ctx, "src_reduced_nd_sbp", input_nd_sbp));
+  JUST(GetNcclLogicalNdSbpFromAttr(ctx, "dst_reduced_nd_sbp", output_nd_sbp));
 
   return Maybe<void>::Ok();
 }

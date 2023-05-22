@@ -24,7 +24,7 @@ from oneflow import nn
 import oneflow.unittest
 from oneflow.test_utils.test_util import GenArgList
 from oneflow import Tensor
-from oneflow.nn.graph.util import ArgsTree
+from oneflow.framework.args_tree import ArgsTree
 
 
 @flow.unittest.skip_unless_1n4d()

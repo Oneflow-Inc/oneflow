@@ -63,7 +63,7 @@ class BinaryFloatFunctor {
     auto tensor_y = y;
     JUST(CastDeviceForCPUScalarTensor(tensor_x, tensor_y, /*inplace=*/false));
     TensorProcessor tensor_processor;
-    if (promoteTypes(tensor_x->dtype(), y->dtype())->is_integer()) {
+    if (promoteTypes(tensor_x->dtype(), tensor_y->dtype())->is_integer()) {
       tensor_processor.AddInputs({tensor_x, tensor_y}, DType::Float());
     } else {
       tensor_processor.AddInputs({tensor_x, tensor_y})

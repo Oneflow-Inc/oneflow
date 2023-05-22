@@ -33,7 +33,7 @@ class DeviceId {
   using device_type_t = uint32_t;
   using device_index_t = uint32_t;
 
-  constexpr static size_t kRankBits = 19;
+  constexpr static size_t kRankBits = 16;
   constexpr static size_t kDeviceTypeBits = 5;
   constexpr static size_t kDeviceIndexBits = 7;
   constexpr static rank_t kMaxRank = (rank_t{1} << kRankBits) - rank_t{1};
@@ -74,6 +74,8 @@ class DeviceId {
   device_type_t device_type_;
   device_index_t device_index_;
 };
+
+int64_t EncodeDeviceIdToInt64(const DeviceId& device_id);
 
 }  // namespace oneflow
 

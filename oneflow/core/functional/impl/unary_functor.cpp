@@ -27,9 +27,11 @@ namespace functional {
 
 namespace impl {
 
-#define INPLACE_UNARY_FLOAT_FUNC_SEQ      \
-  OF_PP_MAKE_TUPLE_SEQ("sin", InplaceSin) \
-  OF_PP_MAKE_TUPLE_SEQ("floor", InplaceFloor)
+#define INPLACE_UNARY_FLOAT_FUNC_SEQ          \
+  OF_PP_MAKE_TUPLE_SEQ("sin", InplaceSin)     \
+  OF_PP_MAKE_TUPLE_SEQ("floor", InplaceFloor) \
+  OF_PP_MAKE_TUPLE_SEQ("ceil", InplaceCeil)   \
+  OF_PP_MAKE_TUPLE_SEQ("round", InplaceRound)
 
 #define UNARY_PRIMITIVE_FUNC_BWD_WITH_DY_X_SEQ    \
   OF_PP_MAKE_TUPLE_SEQ("abs", Abs)                \
@@ -50,6 +52,7 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("erf", Erf)                   \
   OF_PP_MAKE_TUPLE_SEQ("erfc", Erfc)                 \
   OF_PP_MAKE_TUPLE_SEQ("exp", Exp)                   \
+  OF_PP_MAKE_TUPLE_SEQ("exp2", Exp2)                 \
   OF_PP_MAKE_TUPLE_SEQ("expm1", Expm1)               \
   OF_PP_MAKE_TUPLE_SEQ("log", Log)                   \
   OF_PP_MAKE_TUPLE_SEQ("log2", Log2)                 \
@@ -61,9 +64,11 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("sqrt", Sqrt)                 \
   OF_PP_MAKE_TUPLE_SEQ("square", Square)             \
   OF_PP_MAKE_TUPLE_SEQ("tan", Tan)                   \
-  OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)
+  OF_PP_MAKE_TUPLE_SEQ("digamma", Digamma)
 
-#define FLOAT_UNARY_PRIMITIVE_FUNC_BWD_WITH_DY_Y_SEQ OF_PP_MAKE_TUPLE_SEQ("sigmoid", Sigmoid)
+#define FLOAT_UNARY_PRIMITIVE_FUNC_BWD_WITH_DY_Y_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ("sigmoid", Sigmoid)           \
+  OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)
 
 #define UNARY_FUNC_BWD_WITH_FILL_SEQ   \
   OF_PP_MAKE_TUPLE_SEQ("rint", Rint)   \
@@ -152,6 +157,8 @@ OF_PP_FOR_EACH_TUPLE(UNARY_BWD_WITH_FILL_FUNCTORS, UNARY_FUNC_BWD_WITH_FILL_SEQ)
 OF_PP_FOR_EACH_TUPLE(FLOAT_UNARY_BWD_WITH_FILL_FUNCTORS, FLOAT_UNARY_FUNC_BWD_WITH_FILL_SEQ);
 
 UNARY_ELEMENTWISE_FUNCTOR("negative", Negative, FloatUnaryFunctor)
+UNARY_ELEMENTWISE_FUNCTOR("bitwise_not", BitwiseNot, UnaryFunctor)
+UNARY_ELEMENTWISE_FUNCTOR("trigamma", Trigamma, FloatUnaryFunctor)
 
 }  // namespace impl
 
@@ -175,9 +182,11 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<CeilFunctor>("Ceil");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Cos, "Cos");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Cosh, "Cosh");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Digamma, "Digamma");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Erf, "Erf");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Erfc, "Erfc");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Exp, "Exp");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Exp2, "Exp2");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Expm1, "Expm1");
   m.add_functor<FloorFunctor>("Floor");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Lgamma, "Lgamma");
@@ -187,6 +196,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   ADD_UNARY_FUNCTOR_WITH_DY_X(Log1p, "Log1p");
   ADD_UNARY_FUNCTOR_WITH_DY_X(LogSigmoid, "LogSigmoid");
   m.add_functor<NegativeFunctor>("Negative");
+  m.add_functor<BitwiseNotFunctor>("BitwiseNot");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Reciprocal, "Reciprocal");
   ADD_UNARY_FUNCTOR_WITH_DY_X(ReciprocalNoNan, "ReciprocalNoNan");
   m.add_functor<RintFunctor>("Rint");
@@ -199,11 +209,14 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   ADD_UNARY_FUNCTOR_WITH_DY_X(Sqrt, "Sqrt");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Square, "Square");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Tan, "Tan");
-  ADD_UNARY_FUNCTOR_WITH_DY_X(Tanh, "Tanh");
+  ADD_UNARY_FUNCTOR_WITH_DY_Y(Tanh, "Tanh");
   m.add_functor<NotEqualZeroFunctor>("NotEqualZero");
   m.add_functor<LogicalNotFunctor>("LogicalNot");
   m.add_functor<InplaceSinFunctor>("Sin_");
   m.add_functor<InplaceFloorFunctor>("Floor_");
+  m.add_functor<InplaceCeilFunctor>("Ceil_");
+  m.add_functor<InplaceRoundFunctor>("Round_");
+  m.add_functor<TrigammaFunctor>("Trigamma");
 };
 
 #undef ADD_UNARY_FUNCTOR_WITH_DY_X

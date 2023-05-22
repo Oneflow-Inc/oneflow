@@ -17,10 +17,12 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_SMALL_VECTOR_H_
 
 #include "llvm/ADT/SmallVector.h"
+#include "oneflow/core/common/op_args_reserved_size.h"
+#include "oneflow/core/common/check.h"
 
 namespace oneflow {
 
-template<typename T, size_t N>
+template<typename T, size_t N = kOpArgsReservedSize>
 class small_vector : public llvm::SmallVector<T, N> {
   using Base = llvm::SmallVector<T, N>;
 
@@ -30,11 +32,11 @@ class small_vector : public llvm::SmallVector<T, N> {
   using Base::Base;
 
   typename Base::reference at(typename Base::size_type idx) {
-    CHECK_LT(idx, Base::size());
+    GLOGCHECK(idx < Base::size());
     return (*this)[idx];
   }
   typename Base::const_reference at(typename Base::size_type idx) const {
-    CHECK_LT(idx, Base::size());
+    GLOGCHECK(idx < Base::size());
     return (*this)[idx];
   }
   typename Base::reference operator[](typename Base::size_type idx) { return this->data()[idx]; }

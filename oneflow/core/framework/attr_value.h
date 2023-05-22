@@ -16,8 +16,12 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_ATTR_VALUE_H_
 #define ONEFLOW_CORE_FRAMEWORK_ATTR_VALUE_H_
 
+#include <complex>
+#include "fmt/core.h"
+#include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/hash.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/common/data_type.h"
@@ -39,7 +43,9 @@ namespace user_op {
   OF_PP_MAKE_TUPLE_SEQ(at_double, double, AttrType::kAtDouble) \
   OF_PP_MAKE_TUPLE_SEQ(at_string, std::string, AttrType::kAtString)
 
-#define ENUM_ATTR_SEQ OF_PP_MAKE_TUPLE_SEQ(at_data_type, DataType, AttrType::kAtDataType)
+#define ENUM_ATTR_SEQ                                                 \
+  OF_PP_MAKE_TUPLE_SEQ(at_data_type, DataType, AttrType::kAtDataType) \
+  OF_PP_MAKE_TUPLE_SEQ(at_memory_format, MemoryFormat, AttrType::kAtMemoryFormat)
 
 #define MESSAGE_ATTR_SEQ                                    \
   OF_PP_MAKE_TUPLE_SEQ(at_shape, Shape, AttrType::kAtShape) \
@@ -60,6 +66,11 @@ namespace user_op {
 #define LIST_STRING_ATTR_SEQ \
   OF_PP_MAKE_TUPLE_SEQ(at_list_string, std::vector<std::string>, AttrType::kAtListString)
 
+#define DEVICE_ATTR_SEQ OF_PP_MAKE_TUPLE_SEQ(at_device, Symbol<Device>, AttrType::kAtDevice)
+
+#define COMPLEX_DOUBLE_ATTR_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ(at_complex_double, std::complex<double>, AttrType::kAtComplexDouble)
+
 #define ATTR_SEQ        \
   BASIC_ATTR_SEQ        \
   ENUM_ATTR_SEQ         \
@@ -67,7 +78,9 @@ namespace user_op {
   LIST_BASIC_ATTR_SEQ   \
   LIST_ENUM_ATTR_SEQ    \
   LIST_MESSAGE_ATTR_SEQ \
-  LIST_STRING_ATTR_SEQ
+  LIST_STRING_ATTR_SEQ  \
+  DEVICE_ATTR_SEQ       \
+  COMPLEX_DOUBLE_ATTR_SEQ
 
 // Type Trait: GetAttrType, GetCppType
 
@@ -94,6 +107,7 @@ class AttrVal {
 
   virtual AttrType type() const = 0;
   virtual size_t hash_value() const = 0;
+  virtual std::string ToString() const = 0;
 
   virtual const void* Ptr() const = 0;
   virtual bool operator==(const AttrVal& other) const = 0;
@@ -107,6 +121,8 @@ template<typename T>
 class TypedAttrValIf : public AttrVal {
  public:
   virtual const T& val() const = 0;
+  size_t hash_value() const override { return std::hash<T>()(val()); }
+  std::string ToString() const override { return fmt::format("{}", val()); }
 
   AttrType type() const override { return GetAttrType<T>::value; }
 

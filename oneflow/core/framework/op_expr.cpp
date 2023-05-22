@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/framework/global_tensor_infer_cache.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/user/kernels/stateful_opkernel.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 namespace one {
@@ -317,6 +318,26 @@ class UserOpExprInferContext : public user_op::InferContext {
                                 DataType data_type) override {
     return MutTensorDesc4ArgNameAndIndex(arg_name, index)->set_data_type(data_type);
   }
+
+  MemoryFormat InputMemoryFormat(const std::string& arg_name, int32_t index) const override {
+    return MemoryFormat4ArgNameAndIndex(arg_name, index);
+  }
+  MemoryFormat OutputMemoryFormat(const std::string& arg_name, int32_t index) const override {
+    return MemoryFormat4ArgNameAndIndex(arg_name, index);
+  }
+  void SetOutputMemoryFormat(const std::string& arg_name, int32_t index,
+                             MemoryFormat memory_format) override {
+    return SetMemoryFormat4ArgNameAndIndex(arg_name, index, memory_format);
+  }
+  MemoryFormat MemoryFormat4ArgNameAndIndex(const std::string& arg_name,
+                                            int32_t index) const override {
+    return TensorDesc4ArgNameAndIndex(arg_name, index)->memory_format();
+  }
+  void SetMemoryFormat4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                       MemoryFormat memory_format) override {
+    MutTensorDesc4ArgNameAndIndex(arg_name, index)->set_memory_format(memory_format);
+  }
+
   bool InputIsDynamic(const std::string& arg_name, int32_t index) const override {
     return IsDynamic4ArgNameAndIndex(arg_name, index);
   }
@@ -379,9 +400,30 @@ class UserOpExprInferContext : public user_op::InferContext {
   std::string loc_;
 };
 
+namespace {
+
+Symbol<NdSbp> Get1DBroadcastNdSbp() {
+  NdSbp broadcast_nd_sbp;
+  broadcast_nd_sbp.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
+  return SymbolOf(broadcast_nd_sbp);
+}
+
+auto* CachedGet1DBroadcastNdSbp = DECORATE(&Get1DBroadcastNdSbp, ThreadLocalCached);
+
+}  // namespace
+
 class UserOpExprPhysicalInferContext final : public UserOpExprInferContext {
  public:
-  using UserOpExprInferContext::UserOpExprInferContext;
+  UserOpExprPhysicalInferContext(
+      const UserOpExpr* user_op_expr, const AttrMap& attrs, const std::string& device_tag,
+      const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
+      const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex)
+      : UserOpExprInferContext(user_op_expr, attrs, device_tag, TensorMeta4InputIndex,
+                               TensorMeta4OutputIndex),
+        parallel_desc_(CHECK_JUST(GetParallelDescOfThisRank(device_tag))) {
+    parallel_ctx_.set_parallel_id(0);
+    parallel_ctx_.set_parallel_num(1);
+  }
   ~UserOpExprPhysicalInferContext() override = default;
 
   const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& name,
@@ -390,23 +432,23 @@ class UserOpExprPhysicalInferContext final : public UserOpExprInferContext {
     return nullptr;
   }
 
-  const ParallelContext& parallel_ctx() const override {
-    UNIMPLEMENTED();
-    return *(const ParallelContext*)nullptr;
+  const ParallelContext& parallel_ctx() const override { return parallel_ctx_; }
+  const ParallelDesc& parallel_desc() const override { return *parallel_desc_; }
+  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& name,
+                                                 int32_t index) const override {
+    CHECK_NOTNULL(TensorDesc4ArgNameAndIndex(name, index));
+    return CachedGet1DBroadcastNdSbp()->sbp_parallel(0);
   }
-  const ParallelDesc& parallel_desc() const override {
-    UNIMPLEMENTED();
-    return *(const ParallelDesc*)nullptr;
-  }
-  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&, int32_t) const override {
-    UNIMPLEMENTED();
-    return *(const SbpParallel*)nullptr;
-  }
-  const NdSbp& NdSbp4ArgNameAndIndex(const std::string&, int32_t) const override {
-    UNIMPLEMENTED();
-    return *(const NdSbp*)nullptr;
+  const NdSbp& NdSbp4ArgNameAndIndex(const std::string& name, int32_t index) const override {
+    CHECK_NOTNULL(TensorDesc4ArgNameAndIndex(name, index));
+    return *(CachedGet1DBroadcastNdSbp());
   }
   int64_t parallel_num() const override { return 1; }
+
+ private:
+  // these member vars just used for physical infer
+  Symbol<ParallelDesc> parallel_desc_;
+  ParallelContext parallel_ctx_;
 };
 
 class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
@@ -510,11 +552,14 @@ UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto, const Att
       base_attrs_(base_attrs) {}
 
 Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
-  const auto* registry =
-      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_proto_.op_type_name());
+  const auto& op_type_name = op_proto_.op_type_name();
+  const auto* registry = user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
   CHECK_NOTNULL_OR_RETURN(registry);
-  tensor_desc_infer_fn_ = registry->logical_tensor_desc_infer_fn;
-  CHECK_OR_RETURN(static_cast<bool>(tensor_desc_infer_fn_))
+  logical_tensor_desc_infer_fn_ = registry->logical_tensor_desc_infer_fn;
+  CHECK_OR_RETURN(static_cast<bool>(logical_tensor_desc_infer_fn_))
+      << Error::RuntimeError() << "registry->logical_tensor_desc_infer_fn failed.";
+  physical_tensor_desc_infer_fn_ = registry->physical_tensor_desc_infer_fn;
+  CHECK_OR_RETURN(static_cast<bool>(physical_tensor_desc_infer_fn_))
       << Error::RuntimeError() << "registry->logical_tensor_desc_infer_fn failed.";
   dtype_infer_fn_ = registry->data_type_infer_fn;
   CHECK_OR_RETURN(static_cast<bool>(dtype_infer_fn_))
@@ -524,6 +569,14 @@ Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
   }
   local_tensor_infer_cache_.reset(new LocalTensorInferCache(self));
   global_tensor_infer_cache_.reset(new GlobalTensorInferCache(self));
+  const auto& indexed_input_pairs = this->indexed_input_pairs();
+  for (int32_t i = 0; i < indexed_input_pairs.size(); ++i) {
+    const auto& input_pair = JUST(VectorAt(indexed_input_pairs, i));
+    if (user_op::UserOpHostMemoryInputRegistry::Get().IsHostMemoryInput4Op(
+            op_type_name, input_pair.first, input_pair.second)) {
+      host_memory_input_ids_.emplace_back(i);
+    }
+  }
   return Maybe<void>::Ok();
 }
 
@@ -544,7 +597,7 @@ Maybe<void> UserOpExpr::InferPhysicalTensorDesc(
     const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const {
   UserOpExprPhysicalInferContext infer_ctx(this, attrs, device_tag, TensorMeta4InputIndex,
                                            TensorMeta4OutputIndex);
-  JUST(tensor_desc_infer_fn_(&infer_ctx));
+  JUST(physical_tensor_desc_infer_fn_(&infer_ctx));
   JUST(dtype_infer_fn_(&infer_ctx));
   return Maybe<void>::Ok();
 }
@@ -555,7 +608,7 @@ Maybe<void> UserOpExpr::InferLogicalTensorDesc(
     const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const {
   UserOpExprLogicalInferContext infer_ctx(this, attrs, parallel_desc, TensorMeta4InputIndex,
                                           TensorMeta4OutputIndex);
-  JUST(tensor_desc_infer_fn_(&infer_ctx));
+  JUST(logical_tensor_desc_infer_fn_(&infer_ctx));
   JUST(dtype_infer_fn_(&infer_ctx));
   return Maybe<void>::Ok();
 }

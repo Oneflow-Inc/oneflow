@@ -88,11 +88,12 @@ if(WITH_MLIR)
   add_subdirectory(include)
   add_subdirectory(lib)
   add_subdirectory(test)
-  add_subdirectory(oneflow-opt)
   add_subdirectory(oneflow-translate)
   add_subdirectory(oneflow-runtime)
   add_subdirectory(oneflow-extension)
+  add_subdirectory(oneflow-opt)
   add_subdirectory(oneflow-runner)
+  add_subdirectory(oneflow-lite)
 endif(WITH_MLIR)
 
 if(BUILD_PYTHON)
@@ -122,6 +123,7 @@ if(BUILD_PYTHON)
     PATTERN llvm/ADT/STLArrayExtras.h
     PATTERN llvm/ADT/STLForwardCompat.h
     PATTERN llvm/ADT/StringRef.h
+    PATTERN llvm/ADT/bit.h
     PATTERN llvm/Config/abi-breaking.h
     PATTERN llvm/Config/llvm-config.h
     PATTERN llvm/Support/Compiler.h

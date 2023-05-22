@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <type_traits>
 #include "oneflow/core/common/blocking_then_busy.h"
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/stream_type.h"
 #include "oneflow/core/common/tensor_meta.h"
 #include "oneflow/core/vm/virtual_machine.h"
@@ -27,7 +28,9 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/eager/tensor_storage.h"
 #include "oneflow/core/eager/local_dep_object.h"
+#include "oneflow/core/eager/tensor_storage.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -39,9 +42,8 @@ namespace one {
 Maybe<void> TensorImpl::set_requires_grad(bool requires_grad) {
   if (requires_grad) {
     const DataType tensor_dtype = dtype();
-    CHECK_OR_RETURN(IsFloatingDataType(tensor_dtype) || tensor_dtype == DataType::kBFloat16
-                    || tensor_dtype == DataType::kFloat16)
-        << "RuntimeError: only Tensors of floating point can require gradients";
+    CHECK_OR_RETURN(IsSupportRequireGradDataType(tensor_dtype))
+        << "RuntimeError: only Tensors of floating point or complex can require gradients";
   }
   autograd_meta_->set_requires_grad(requires_grad);
   return Maybe<void>::Ok();
@@ -81,15 +83,25 @@ EagerLocalTensorImpl::~EagerLocalTensorImpl() {}
 Maybe<void> EagerLocalTensorImpl::UpdateTensorStorage() {
   const auto& eager_blob_object = eager_blob_object_;
   tensor_storage_ = std::make_shared<TensorStorage>(eager_blob_object->tensor_storage());
-  tensor_storage_->set_releaser_hook(
-      [eager_blob_object](const std::shared_ptr<vm::TensorStorage>&) {
-        CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-          if (eager_blob_object->producer_stream().has_value()) {
-            JUST(builder->ReleaseTensor(eager_blob_object));
-          }
-          return Maybe<void>::Ok();
-        }));
-      });
+  tensor_storage_->set_releaser_hook([eager_blob_object](
+                                         const std::shared_ptr<vm::TensorStorage>&) {
+    auto ret = PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      if (eager_blob_object->producer_stream().has_value()) {
+        JUST(builder->ReleaseTensor(eager_blob_object));
+      }
+      return Maybe<void>::Ok();
+    });
+    // We should not use CHECK_JUST here because it will throw an exception
+    // in destructor.
+    if (!ret.IsOk()) {
+      LOG(WARNING)
+          << "Release hook gets an error. Release hooks are executed in destructor, so the error "
+             "is possibly only a secondary error caused by another unrelated exception.";
+      LOG(WARNING) << "======= Error message begin =======";
+      LOG(WARNING) << ret.GetSerializedError();
+      LOG(WARNING) << "======= Error message end =======";
+    }
+  });
   return Maybe<void>::Ok();
 }
 
@@ -116,17 +128,21 @@ Maybe<void> EagerLocalTensorImpl::InitEagerBlobObject(
     auto tensor_storage = tensor_storage_->storage();
     eager_blob_object_ = std::make_shared<vm::EagerBlobObject>(
         mem_case, local_tensor_meta, mut_local_tensor_meta, local_tensor_meta->dtype(),
-        tensor_storage, dep_object);
+        local_tensor_meta->memory_format(), tensor_storage, dep_object);
   } else {
+    auto device = local_tensor_meta->device();
+    auto storage = device->rematable() ? std::make_shared<vm::RematableTensorStorage>(device)
+                                       : std::make_shared<vm::TensorStorage>(true, device);
     const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
         mem_case, local_tensor_meta, mut_local_tensor_meta, local_tensor_meta->dtype(),
-        std::make_shared<vm::InsideVmTensorStorage>(), dep_object);
+        local_tensor_meta->memory_format(), storage, dep_object);
     JUST(set_eager_blob_object(eager_blob_object));
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<bool> EagerLocalTensorImpl::is_pinned() const {
+  if (this->device() == JUST(Device::New("meta"))) { return false; }
   if (!eager_blob_object_) { return false; }
   return IsStreamAllocatorPinned::Visit(JUST(eager_blob_object_->producer_stream())->stream_type());
 }
@@ -149,7 +165,11 @@ std::shared_ptr<const Shape> EagerLocalTensorImpl::shape() const {
 std::shared_ptr<const Stride> EagerLocalTensorImpl::stride() const {
   if (!eager_blob_object_) { return tensor_meta()->stride_ptr(); }
   return eager_blob_object_->stride_ptr();
-  ;
+}
+
+MemoryFormat EagerLocalTensorImpl::memory_format() const {
+  if (!eager_blob_object_) { return tensor_meta()->memory_format(); }
+  return eager_blob_object_->memory_format();
 }
 
 Maybe<LocalTensorImpl> EagerLocalTensorImpl::detach() const {
@@ -204,6 +224,7 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
     const Optional<int64_t>& parallel_id, bool requires_grad, bool is_leaf) {
   const auto& shape = global_tensor_meta->shape_ptr();
   const auto& dtype = global_tensor_meta->dtype();
+  const auto& memory_format = global_tensor_meta->memory_format();
   const auto& nd_sbp = global_tensor_meta->nd_sbp();
   const auto& parallel_desc = global_tensor_meta->parallel_desc();
   const auto& cur_rank_phy_shape =
@@ -214,7 +235,7 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
   // empty op.
   if (parallel_id.has_value() && shape->elem_cnt() != 0) {
     const auto& cur_rank_phy_tensor_meta =
-        SymbolOf(LocalTensorMeta(*cur_rank_phy_shape, dtype, device));
+        SymbolOf(LocalTensorMeta(*cur_rank_phy_shape, dtype, memory_format, device));
     auto cur_rank_phy_tensor_impl = std::make_shared<EagerLocalTensorImpl>(requires_grad, is_leaf);
     const auto& dep_object = NewLocalDepObject();
     JUST(cur_rank_phy_tensor_impl->InitEagerBlobObject(cur_rank_phy_tensor_meta, dep_object));
@@ -222,7 +243,8 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
   } else {
     const auto& dtype_symbol = JUST(DType::Get(dtype));
     const auto& empty =
-        JUST(functional::Empty(*cur_rank_phy_shape, dtype_symbol, device, /*pin_memory=*/false));
+        JUST(functional::Empty(*cur_rank_phy_shape, dtype_symbol, device,
+                               /*requires_grad=*/requires_grad, /*pin_memory=*/false));
     cur_rank_phy_tensor = JUST(empty->AsLocalTensor());
     JUST(cur_rank_phy_tensor->set_requires_grad(requires_grad));
     cur_rank_phy_tensor->set_is_leaf(is_leaf);
@@ -241,8 +263,12 @@ Maybe<GlobalTensorImpl> EagerGlobalTensorImpl::detach() const {
 
 std::shared_ptr<const Stride> EagerGlobalTensorImpl::stride() const {
   if (!cur_rank_phy_tensor_) { return tensor_meta()->stride_ptr(); }
-  const auto& stride_ptr = cur_rank_phy_tensor_->tensor_meta().stride_ptr();
-  return stride_ptr;
+  return cur_rank_phy_tensor_->tensor_meta().stride_ptr();
+}
+
+MemoryFormat EagerGlobalTensorImpl::memory_format() const {
+  if (!cur_rank_phy_tensor_) { return tensor_meta()->memory_format(); }
+  return cur_rank_phy_tensor_->tensor_meta().memory_format();
 }
 
 }  // namespace one

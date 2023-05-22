@@ -16,7 +16,10 @@ mlir_tablegen(OneFlowPatterns.cpp.inc -gen-rewriters)
 add_public_tablegen_target(MLIROneFlowPatternsIncGen)
 
 # NOTE: seperate conversion and opt with --name
-set(LLVM_TARGET_DEFINITIONS OneFlowOps.td)
+if(WITH_MLIR_CUDA_CODEGEN)
+  list(APPEND LLVM_TABLEGEN_FLAGS "-DWITH_MLIR_CUDA_CODEGEN")
+endif()
+set(LLVM_TARGET_DEFINITIONS OneFlowPasses.td)
 mlir_tablegen(OneFlowPasses.h.inc -gen-pass-decls)
 add_public_tablegen_target(MLIROneFlowPassIncGen)
 
@@ -62,9 +65,19 @@ mlir_tablegen(OKLTypes.cpp.inc -gen-typedef-defs)
 mlir_tablegen(OKLPasses.h.inc -gen-pass-decls)
 mlir_tablegen(OKLEnums.h.inc -gen-enum-decls)
 mlir_tablegen(OKLEnums.cpp.inc -gen-enum-defs)
-mlir_tablegen(OKLAttributes.h.inc -gen-attrdef-decls)
-mlir_tablegen(OKLAttributes.cpp.inc -gen-attrdef-defs)
+mlir_tablegen(OKLAttributes.h.inc -gen-attrdef-decls -attrdefs-dialect=okl)
+mlir_tablegen(OKLAttributes.cpp.inc -gen-attrdef-defs -attrdefs-dialect=okl)
 add_public_tablegen_target(MLIROKLIncGen)
+
+set(LLVM_TARGET_DEFINITIONS OKM/OKMOps.td)
+mlir_tablegen(OKMDialect.h.inc -gen-dialect-decls -dialect=okm)
+mlir_tablegen(OKMDialect.cpp.inc -gen-dialect-defs -dialect=okm)
+mlir_tablegen(OKMOps.h.inc -gen-op-decls)
+mlir_tablegen(OKMOps.cpp.inc -gen-op-defs)
+mlir_tablegen(OKMPasses.h.inc -gen-pass-decls)
+mlir_tablegen(OKMAttributes.h.inc -gen-attrdef-decls)
+mlir_tablegen(OKMAttributes.cpp.inc -gen-attrdef-defs)
+add_public_tablegen_target(MLIROKMIncGen)
 
 set(LLVM_TABLEGEN_FLAGS "")
 add_mlir_dialect(

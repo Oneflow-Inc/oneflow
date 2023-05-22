@@ -76,6 +76,7 @@ from .amin import *
 from .deconv import *
 from .inv import *
 from .logical_ops import *
+from .bitwise_ops import *
 from .distance import *
 from .addcdiv import *
 from .hann_window import *
@@ -83,3 +84,7 @@ from .convolution import *
 from .linalg import *
 from .index_add import *
 from .baddbmm import *
+from .lerp import *
+from .quantile import *
+from .depend import *
+from .special_ops import *

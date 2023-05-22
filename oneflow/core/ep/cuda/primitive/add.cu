@@ -41,6 +41,22 @@ struct AddFunctor<T, U, Args...> {
   }
 };
 
+template<typename U, typename... Args>
+struct AddFunctor<cuComplex, U, Args...> {
+  __device__ cuComplex operator()(cuComplex x0, U x1, Args... xs) const {
+    cuComplex xn = AddFunctor<U, Args...>()(x1, xs...);
+    return cuComplex{x0.x + xn.x, x0.y + xn.y};
+  }
+};
+
+template<typename U, typename... Args>
+struct AddFunctor<cuDoubleComplex, U, Args...> {
+  __device__ cuDoubleComplex operator()(cuDoubleComplex x0, U x1, Args... xs) const {
+    cuDoubleComplex xn = AddFunctor<U, Args...>()(x1, xs...);
+    return cuDoubleComplex{x0.x + xn.x, x0.y + xn.y};
+  }
+};
+
 template<typename T, typename... Args>
 __global__ void AddGpu(const Args*... srcs, T* dst, size_t count) {
   CUDA_1D_KERNEL_LOOP_T(size_t, i, count) { dst[i] = AddFunctor<Args...>()(srcs[i]...); }
@@ -115,7 +131,8 @@ class AddFactoryImpl : public AddFactory {
 #define MAKE_NEW_ADD_ENTRY(type_cpp, type_proto) {type_proto, NewAdd<type_cpp>},
 
     static const std::map<DataType, std::function<std::unique_ptr<Add>()>> new_add_handle{
-        OF_PP_FOR_EACH_TUPLE(MAKE_NEW_ADD_ENTRY, CUDA_PRIMITIVE_ALL_TYPE_SEQ)};
+        OF_PP_FOR_EACH_TUPLE(MAKE_NEW_ADD_ENTRY,
+                             CUDA_PRIMITIVE_REAL_TYPE_SEQ CUDA_PRIMITIVE_COMPLEX_TYPE_SEQ)};
 
 #undef MAKE_NEW_ADD_ENTRY
 

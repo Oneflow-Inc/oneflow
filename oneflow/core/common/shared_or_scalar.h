@@ -18,7 +18,7 @@ limitations under the License.
 
 #include <memory>
 
-#include <glog/logging.h>
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/common/type_traits.h"
 #include "oneflow/core/common/preprocessor.h"
 

@@ -33,7 +33,6 @@ from oneflow.framework.multi_client_session import MultiClientSession
 @flow.unittest.skip_unless_1n1d()
 class TestFeedInputTensor(unittest.TestCase):
     def test_feed_input_tensor(test_case):
-        test_case.assertTrue(oneflow.framework.env_util.HasAllMultiClientEnvVars())
         x = flow.Tensor(1, 1, 10, 10)
         flow.nn.init.uniform_(x, a=-1.0, b=1.0)
         session = session_ctx.GetDefaultSession()

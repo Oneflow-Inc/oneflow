@@ -24,7 +24,8 @@ limitations under the License.
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "OneFlow/Passes.h"
+#include "mlir/Interfaces/InferTypeOpInterface.h"
+#include "mlir/IR/PatternMatch.h"
 #include "OneFlow/OneFlowSupport.h"
 #include "OneFlow/OneFlowInterfaces.h.inc"
 #include "OneFlow/OneFlowOpTraits.h"
@@ -58,7 +59,9 @@ inline std::string GetOpTypeName(T op) {
   if (auto alternative_name = dyn_cast<oneflow::HasAlternativeOpTypeName>(op)) {
     op_type_name = alternative_name.getOriginalOpTypeName();
   }
-  if (auto user_op = dyn_cast<oneflow::UserOp>(op)) { op_type_name = user_op.op_type_name().str(); }
+  if (auto user_op = dyn_cast<oneflow::UserOp>(op)) {
+    op_type_name = user_op.getOpTypeName().str();
+  }
   return op_type_name;
 }
 ResultRange GetDataOutputResults(Operation* op);

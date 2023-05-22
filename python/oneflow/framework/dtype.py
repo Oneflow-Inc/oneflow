@@ -31,12 +31,17 @@ _dtypes = [
     oneflow.float64,
     oneflow.float16,
     oneflow.int8,
+    oneflow.int16,
     oneflow.int32,
     oneflow.int64,
     oneflow.uint8,
     oneflow.record,
     oneflow.tensor_buffer,
     oneflow.bfloat16,
+    oneflow.complex64,
+    oneflow.cfloat,
+    oneflow.complex128,
+    oneflow.cdouble,
 ]
 
 
@@ -49,16 +54,25 @@ def convert_proto_dtype_to_oneflow_dtype(proto_dtype):
 
 
 _ONEFLOW_DTYPE_TO_NUMPY_DTYPE = {
-    oneflow.bool: np.bool,
+    # >> np_bool = np.array([1,2], dtype=bool).dtype
+    # >> np_bool == bool
+    # True
+    oneflow.bool: bool,
     oneflow.float: np.float32,
     oneflow.float16: np.float16,
     oneflow.float32: np.float32,
     oneflow.float64: np.double,
     oneflow.double: np.double,
     oneflow.int8: np.int8,
+    oneflow.char: np.int8,
+    oneflow.int16: np.int16,
     oneflow.int32: np.int32,
     oneflow.int64: np.int64,
     oneflow.uint8: np.uint8,
+    oneflow.complex64: np.complex64,
+    oneflow.cfloat: np.complex64,
+    oneflow.complex128: np.complex128,
+    oneflow.cdouble: np.complex128,
 }
 
 

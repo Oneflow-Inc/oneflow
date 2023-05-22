@@ -36,6 +36,7 @@ limitations under the License.
 #include "oneflow/core/graph/straighten_nodes.h"
 #include "oneflow/core/register/runtime_register_desc.h"
 #include "oneflow/core/common/env_var/env_var.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
 
 namespace oneflow {
 
@@ -118,7 +119,7 @@ bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
   return false;
 }
 
-bool IsTaskNodeProducedResgtHasMultiRegstNum(const TaskNode* node) {
+bool IsTaskNodeProducedRegstHasMultiRegstNum(const TaskNode* node) {
   for (const auto& pair : node->produced_regsts()) {
     if (pair.second->min_register_num() > 1) { return true; }
   }
@@ -127,10 +128,10 @@ bool IsTaskNodeProducedResgtHasMultiRegstNum(const TaskNode* node) {
 
 bool CanBeMergedInChain(const TaskNode* node) {
   // ONLY the node which is NormalForward and in GPU and NOT variable can be merged.
-  if (IsTaskNodeProducedResgtHasMultiRegstNum(node)) { return false; }
+  if (IsTaskNodeProducedRegstHasMultiRegstNum(node)) { return false; }
   const auto* fw_comp_node = dynamic_cast<const NormalForwardCompTaskNode*>(node);
   if (fw_comp_node == nullptr) { return false; }
-  if (fw_comp_node->device_type() != DeviceType::kCUDA) { return false; }
+  if (fw_comp_node->device_type() == DeviceType::kCPU) { return false; }
   const Operator* op = fw_comp_node->op().get();
   if (IsSpecialOpNotConsiderMergeInChain(op)) { return false; }
   return true;
@@ -206,7 +207,7 @@ MakePredicatorIsLbiAllConsumersReachable(
                                                              const TaskNode* dst_node) -> bool {
     if (IsValidChainId(src_node->chain_id()) && IsValidChainId(dst_node->chain_id())
         && src_node->chain_id() == dst_node->chain_id()
-        && src_node->order_in_graph() <= dst_node->order_in_graph()) {
+        && src_node->order_in_chain() <= dst_node->order_in_chain()) {
       return true;
     }
     const CompTaskNode* comp_src_node = dynamic_cast<const CompTaskNode*>(src_node);
@@ -375,7 +376,7 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const OpEdge* op_edge) {
   std::shared_ptr<CompTaskNode> src_comp_task(NewCompTaskNode4OpNode(src_node));
   std::shared_ptr<CompTaskNode> dst_comp_task(NewCompTaskNode4OpNode(dst_node));
   // NOTE(chengcheng): MUST use TaskType instead of OpTypeCase because may
-  //   Multi-op correspoding to SAME TaskType such as:
+  //   Multi-op corresponding to SAME TaskType such as:
   //     DistributeConcatOpConf and DistributeAddOpConf -> TaskType::kDistributeConcat
   //     DistributeSplitOpConf  and DistributeCloneOpConf -> TaskType::kDistributeSplit
   // * -> DistributeConcat
@@ -432,18 +433,73 @@ void ForEachOpGraphNecessaryCtrlEdge(
         } else {
           CHECK_EQ(src_time_shape->elem_cnt(), dst_time_shape->elem_cnt());
         }
+        if (!src->parallel_desc().EqualsIgnoringHierarchy(dst->parallel_desc())) {
+          LOG(WARNING) << " Warning, there is a ctrl edge connected across placement from: "
+                       << src->op().op_name() << " ["
+                       << src->parallel_desc().parallel_conf().DebugString()
+                       << "] to: " << dst->op().op_name() << " ["
+                       << dst->parallel_desc().parallel_conf().DebugString() << "]";
+        }
         Handler(src, dst);
       }
     }
   });
 }
 
+void GetHostInputLbis4OpNode(const OpNode* op_node,
+                             std::vector<LogicalBlobId>* host_mem_input_lbis) {
+  host_mem_input_lbis->clear();
+  if (op_node->op().op_conf().has_user_conf()) {
+    const auto& user_conf = op_node->op().op_conf().user_conf();
+    const auto& op_type_name = user_conf.op_type_name();
+    if (user_op::UserOpHostMemoryInputRegistry::Get().HasHostMemoryInput(op_type_name)) {
+      const auto& inputs = [&]() -> std::vector<std::pair<std::string, int32_t>> {
+        const auto& arg_map = op_node->op().op_conf().user_conf().input();
+        std::vector<std::pair<std::string, int32_t>> arg_vec;
+        for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
+          for (int32_t i = 0; i < it->second.s_size(); ++i) {
+            arg_vec.emplace_back(std::make_pair(it->first, i));
+          }
+        }
+        return arg_vec;
+      }();
+      for (const auto& pair : inputs) {
+        if (user_op::UserOpHostMemoryInputRegistry::Get().IsHostMemoryInput4Op(
+                op_type_name, pair.first, pair.second)) {
+          const LogicalBlobId& host_input_lbi =
+              GenLogicalBlobId(user_conf.input().at(pair.first).s(pair.second));
+          host_mem_input_lbis->emplace_back(host_input_lbi);
+        }
+      }
+    }
+  }
+}
+
+HashMap<DeviceType, CreateSubTskGphBuilderFn>* GlobalDeviceType2CreateSubTskGphBuilderFn() {
+  static HashMap<DeviceType, CreateSubTskGphBuilderFn>
+      global_device_type_create_sub_tsk_gph_builder_fn;
+  return &global_device_type_create_sub_tsk_gph_builder_fn;
+}
+
 }  // namespace
+
+Maybe<void> RegisterCreateSubTskGphBuilderFn(DeviceType device_type,
+                                             const CreateSubTskGphBuilderFn& fn) {
+  auto* global_device_type_create_sub_tsk_gph_builder_fn =
+      GlobalDeviceType2CreateSubTskGphBuilderFn();
+  global_device_type_create_sub_tsk_gph_builder_fn->emplace(device_type, fn);
+  return Maybe<void>::Ok();
+}
 
 TaskGraph::TaskGraph() {
   OpGraph* op_graph = Singleton<OpGraph>::Get();
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
   boxing_logger_ = CreateBoxingLogger();
+  const auto* global_device_type_create_sub_tsk_gph_builder_fn =
+      GlobalDeviceType2CreateSubTskGphBuilderFn();
+  for (const auto& pair : *global_device_type_create_sub_tsk_gph_builder_fn) {
+    device_type2sub_tsk_gph_builder_.emplace(pair.first, pair.second());
+  }
   hierarchical_sub_tsk_gph_builder_.reset(new DispatchHierarchicalSubTskGphBuilder());
   HashMap<const OpNode*, std::vector<CompTaskNode*>> op_node2sorted_comp_tasks;
 
@@ -577,14 +633,10 @@ void TaskGraph::MergeChainAndAddOrderingCtrlEdgeInSameChain() {
   BuildCtrlRegstDescInSameChain();
 }
 
-void TaskGraph::SetOrderInGraphForEachNode() {
-  int64_t order_in_graph = 0;
-  auto SetOrderInGraph = [&](TaskNode* task_node) {
-    task_node->set_order_in_graph(order_in_graph);
-    ordered_task_nodes_.emplace_back(task_node);
-    ++order_in_graph;
-  };
-  TopoForEachNode(SetOrderInGraph);
+void TaskGraph::InitOrderedTaskNodes() {
+  // NOTE(chengcheng): Warning, ordered_task_nodes_ by topo is NOT valid in process
+  //  parallel compile, because the current rank task graph is Incomplete.
+  TopoForEachNode([&](TaskNode* task_node) { ordered_task_nodes_.emplace_back(task_node); });
 }
 
 void TaskGraph::MergeChainByPhysicalTaskGraph() {
@@ -601,15 +653,31 @@ void TaskGraph::MergeChainByPhysicalTaskGraph() {
 
     ++chain_id;
   }
-  for (auto* node : ordered_task_nodes_) { CHECK(IsValidChainId(node->chain_id())); }
+
+  // set order_in_chain by ordered_task_nodes_
+  HashMap<int64_t, int64_t> chain_id2order;
+  for (auto* node : ordered_task_nodes_) {
+    CHECK(IsValidChainId(node->chain_id()));
+    int64_t this_chain_id = node->chain_id();
+    if (chain_id2order.find(this_chain_id) == chain_id2order.end()) {
+      chain_id2order.emplace(this_chain_id, 0);
+    }
+    node->set_order_in_chain(chain_id2order.at(this_chain_id)++);
+  }
 }
 
 void TaskGraph::MergeChainByLogicalChainId() {
   for (TaskNode* this_node : ordered_task_nodes_) {
     CompTaskNode* comp_node = dynamic_cast<CompTaskNode*>(this_node);
     if (!comp_node) { continue; }
-    const int64_t logical_chain_id = comp_node->op()->op_conf().logical_chain_id();
-    if (IsValidChainId(logical_chain_id)) { this_node->set_chain_id(logical_chain_id); }
+    const OperatorConf& conf = comp_node->op()->op_conf();
+    if (conf.has_logical_chain_id()) {
+      const int64_t logical_chain_id = conf.logical_chain_id();
+      CHECK(IsValidChainId(logical_chain_id));
+      this_node->set_chain_id(logical_chain_id);
+      CHECK(conf.has_order_in_logical_chain());
+      this_node->set_order_in_chain(conf.order_in_logical_chain());
+    }
   }
 }
 
@@ -727,7 +795,7 @@ void TaskGraph::ForEachGpuDeviceNodes(
     const std::function<void(const HashSet<TaskNode*>& dev_nodes)>& Handler) const {
   HashMap<std::pair<int64_t, int64_t>, HashSet<TaskNode*>> global_dev_phy_id2nodes;
   ForEachNode([&](TaskNode* task_node) {
-    if (task_node->device_type() != DeviceType::kCUDA) { return; }
+    if (task_node->device_type() == DeviceType::kCPU) { return; }
     int64_t dev_phy_id = task_node->stream_id().device_id().device_index();
     global_dev_phy_id2nodes[{task_node->machine_id(), dev_phy_id}].emplace(task_node);
   });
@@ -750,6 +818,8 @@ void TaskGraph::EnableInplaceMemSharing(
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
   const OpNode* src_op_node = op_edge->src_node();
   const OpNode* dst_op_node = op_edge->dst_node();
+  std::vector<LogicalBlobId> host_mem_input_lbis;
+  GetHostInputLbis4OpNode(dst_op_node, &host_mem_input_lbis);
   for (const LogicalBlobId& lbi : op_edge->lbis()) {
     std::vector<TaskNode*> in_nodes(sorted_src_comp_tasks.begin(), sorted_src_comp_tasks.end());
     std::vector<TaskNode*> out_nodes;
@@ -758,7 +828,15 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
     const NdSbp& src_nd_sbp = src_op_node->NdSbp4Lbi(lbi);
     const NdSbp& dst_nd_sbp = dst_op_node->NdSbp4Lbi(lbi);
     const ParallelDesc& src_parallel_desc = src_op_node->parallel_desc();
-    const ParallelDesc& dst_parallel_desc = dst_op_node->parallel_desc();
+    const ParallelDesc& dst_parallel_desc = [&]() {
+      if (std::find(host_mem_input_lbis.begin(), host_mem_input_lbis.end(), lbi)
+          != host_mem_input_lbis.end()) {
+        return *CHECK_JUST(
+            ReplaceDeviceType(SymbolOf(dst_op_node->parallel_desc()), DeviceType::kCPU));
+      } else {
+        return dst_op_node->parallel_desc();
+      }
+    }();
     const BlobDesc& blob_desc = src_op_node->LogicalBlobDesc4Lbi(lbi);
     VLOG(3) << "src op: " << src_op_node->op().op_name()
             << " dst op: " << dst_op_node->op().op_name()
@@ -766,10 +844,29 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
             << " dst parallel conf: " << dst_parallel_desc.parallel_conf().DebugString()
             << " src_nd_sbp " << src_nd_sbp.DebugString() << " dst nd_sbp "
             << dst_nd_sbp.DebugString();
-    auto status = CHECK_JUST(hierarchical_sub_tsk_gph_builder_->Build(
-        sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes, &sorted_ctrl_tasks, src_parallel_desc,
-        dst_parallel_desc, lbi, blob_desc, src_nd_sbp, dst_nd_sbp,
-        *(CHECK_JUST(src_op_node->op().GetOpTimeShape()).get())));
+    std::shared_ptr<SubTskGphBuilderStatus> status;
+    const DeviceType device_type = [&src_parallel_desc, &dst_parallel_desc]() {
+      return src_parallel_desc.device_type() != DeviceType::kCPU ? src_parallel_desc.device_type()
+                                                                 : dst_parallel_desc.device_type();
+    }();
+    if (device_type != DeviceType::kCPU
+        && device_type2sub_tsk_gph_builder_.find(device_type)
+               != device_type2sub_tsk_gph_builder_.end()) {
+      auto maybe_status = TRY(                                                        // NOLINT
+          device_type2sub_tsk_gph_builder_                                            // NOLINT
+              .at(device_type)                                                        // NOLINT
+              ->Build(sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes,           // NOLINT
+                      &sorted_ctrl_tasks, src_parallel_desc, dst_parallel_desc, lbi,  // NOLINT
+                      blob_desc, src_nd_sbp, dst_nd_sbp,                              // NOLINT
+                      *(CHECK_JUST(src_op_node->op().GetOpTimeShape()).get())));      // NOLINT
+      if (maybe_status.IsOk()) { status = CHECK_JUST(maybe_status); }
+    }
+    if (!status) {
+      status = CHECK_JUST(hierarchical_sub_tsk_gph_builder_->Build(
+          sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes, &sorted_ctrl_tasks,
+          src_parallel_desc, dst_parallel_desc, lbi, blob_desc, src_nd_sbp, dst_nd_sbp,
+          *(CHECK_JUST(src_op_node->op().GetOpTimeShape()).get())));
+    }
     boxing_logger_->Log(*status, src_op_node->op().op_name(), dst_op_node->op().op_name(),
                         src_parallel_desc, dst_parallel_desc, src_nd_sbp, dst_nd_sbp, lbi,
                         blob_desc);
@@ -793,21 +890,32 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
 }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne) {
+  std::vector<LogicalBlobId> host_mem_input_lbis;
+  GetHostInputLbis4OpNode(op_edge->dst_node(), &host_mem_input_lbis);
   CHECK_EQ(sorted_src_comp_tasks.size(), sorted_dst_comp_tasks.size());
   FOR_RANGE(size_t, i, 0, sorted_src_comp_tasks.size()) {
     for (const LogicalBlobId& lbi : op_edge->lbis()) {
-      BuildTaskPath(sorted_src_comp_tasks.at(i), sorted_dst_comp_tasks.at(i), lbi);
+      bool is_host_mem_input =
+          std::find(host_mem_input_lbis.begin(), host_mem_input_lbis.end(), lbi)
+          != host_mem_input_lbis.end();
+      BuildTaskPath(sorted_src_comp_tasks.at(i), sorted_dst_comp_tasks.at(i), lbi,
+                    is_host_mem_input);
     }
   }
 }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBroadcastToBroadcast) {
+  std::vector<LogicalBlobId> host_mem_input_lbis;
+  GetHostInputLbis4OpNode(op_edge->dst_node(), &host_mem_input_lbis);
   for (CompTaskNode* dst_node : sorted_dst_comp_tasks) {
     CompTaskNode* nearest_src_node =
         SubTskGphBuilderUtil::FindNearestNode(sorted_src_comp_tasks, dst_node);
     CHECK_NOTNULL(nearest_src_node);
     for (const LogicalBlobId& lbi : op_edge->lbis()) {
-      BuildTaskPath(nearest_src_node, dst_node, lbi);
+      bool is_host_mem_input =
+          std::find(host_mem_input_lbis.begin(), host_mem_input_lbis.end(), lbi)
+          != host_mem_input_lbis.end();
+      BuildTaskPath(nearest_src_node, dst_node, lbi, is_host_mem_input);
     }
   }
 }
@@ -816,13 +924,19 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialInLbiConnect) {
   const Operator& src_op = op_edge->src_node()->op();
   const Operator& dst_op = op_edge->dst_node()->op();
   HashSet<LogicalBlobId> lbis;
+  std::vector<LogicalBlobId> host_mem_input_lbis;
+  GetHostInputLbis4OpNode(op_edge->dst_node(), &host_mem_input_lbis);
   for (const auto& obn : src_op.output_bns()) { lbis.insert(src_op.BnInOp2Lbi(obn)); }
   CHECK_EQ(sorted_src_comp_tasks.size(), 1);
   CHECK_EQ(dst_op.input_bns().size(), sorted_dst_comp_tasks.size());
   FOR_RANGE(int, i, 0, sorted_dst_comp_tasks.size()) {
     const auto& lbi = dst_op.BnInOp2Lbi(dst_op.input_bns().Get(i));
     if (lbis.find(lbi) != lbis.end()) {
-      BuildTaskPath(sorted_src_comp_tasks.at(0), sorted_dst_comp_tasks.at(i), lbi);
+      bool is_host_mem_input =
+          std::find(host_mem_input_lbis.begin(), host_mem_input_lbis.end(), lbi)
+          != host_mem_input_lbis.end();
+      BuildTaskPath(sorted_src_comp_tasks.at(0), sorted_dst_comp_tasks.at(i), lbi,
+                    is_host_mem_input);
     }
   }
 }
@@ -831,13 +945,19 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialOutLbiConnect) {
   const Operator& src_op = op_edge->src_node()->op();
   const Operator& dst_op = op_edge->dst_node()->op();
   HashSet<LogicalBlobId> lbis;
+  std::vector<LogicalBlobId> host_mem_input_lbis;
+  GetHostInputLbis4OpNode(op_edge->dst_node(), &host_mem_input_lbis);
   for (const auto& ibn : dst_op.input_bns()) { lbis.insert(dst_op.BnInOp2Lbi(ibn)); }
   CHECK_EQ(sorted_dst_comp_tasks.size(), 1);
   CHECK_EQ(src_op.output_bns().size(), sorted_src_comp_tasks.size());
   FOR_RANGE(int, i, 0, sorted_src_comp_tasks.size()) {
     const auto& lbi = src_op.BnInOp2Lbi(src_op.output_bns().Get(i));
     if (lbis.find(lbi) != lbis.end()) {
-      BuildTaskPath(sorted_src_comp_tasks.at(i), sorted_dst_comp_tasks.at(0), lbi);
+      bool is_host_mem_input =
+          std::find(host_mem_input_lbis.begin(), host_mem_input_lbis.end(), lbi)
+          != host_mem_input_lbis.end();
+      BuildTaskPath(sorted_src_comp_tasks.at(i), sorted_dst_comp_tasks.at(0), lbi,
+                    is_host_mem_input);
     }
   }
 }
@@ -888,8 +1008,17 @@ void TaskGraph::ConnectWithLbi(TaskNode* src_node, TaskNode* dst_node, const Log
   Connect<TaskNode>(src_node, connected_edge, dst_node);
 }
 
-void TaskGraph::BuildTaskPath(TaskNode* src_node, TaskNode* dst_node, const LogicalBlobId& lbi) {
-  TaskNode* proxy_node = GetProxyNode(src_node, lbi, dst_node->MemZoneId121());
+void TaskGraph::BuildTaskPath(TaskNode* src_node, TaskNode* dst_node, const LogicalBlobId& lbi,
+                              bool is_host_mem_input) {
+  const MemZoneId dst_mem_zone_id = [&]() {
+    if (is_host_mem_input) {
+      MemZoneId mem_zone_id = dst_node->MemZoneId121();
+      return MemZoneId(mem_zone_id.rank(), DeviceType::kCPU, 0);
+    } else {
+      return dst_node->MemZoneId121();
+    }
+  }();
+  TaskNode* proxy_node = GetProxyNode(src_node, lbi, dst_mem_zone_id);
   ConnectWithLbi(proxy_node, dst_node, lbi);
 }
 
@@ -898,12 +1027,13 @@ void TaskGraph::DecideExecutionOrder() {
   // of memory
   StraightenAlgorithmTag straighten_algorithm_tag =
       GlobalJobDesc().job_conf().straighten_algorithm_tag_in_task_graph();
-  if (straighten_algorithm_tag == StraightenAlgorithmTag::kDisable
+  if (straighten_algorithm_tag == StraightenAlgorithmTag::kDisableStraighten
       || (straighten_algorithm_tag == StraightenAlgorithmTag::kOverlap4Transfer
           && GlobalProcessCtx::WorldSize() == 1)) {
-    SetOrderInGraphForEachNode();
+    InitOrderedTaskNodes();
   } else {
-    StraightenNodes(this, &ordered_task_nodes_);
+    StraightenNodes(this, &ordered_task_nodes_,
+                    Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream());
   }
 }
 

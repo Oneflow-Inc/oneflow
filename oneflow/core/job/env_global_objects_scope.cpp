@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/vm/remat/allocator.h"
 #ifdef WITH_CUDA
 #include <cuda.h>
 #endif  // WITH_CUDA
@@ -30,8 +31,9 @@ limitations under the License.
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/vm/virtual_machine_scope.h"
+#include "oneflow/core/vm/remat/util.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
-#include "oneflow/core/job/eager_nccl_comm_manager.h"
+#include "oneflow/core/job/eager_ccl_comm_manager.h"
 #include "oneflow/core/device/cudnn_conv_util.h"
 #include "oneflow/core/rpc/include/manager.h"
 #include "oneflow/core/transport/transport.h"
@@ -48,12 +50,14 @@ limitations under the License.
 #include "oneflow/core/kernel/blob_access_checker_kernel_observer.h"
 #include "oneflow/core/kernel/profiler_kernel_observer.h"
 #include "oneflow/core/embedding/embedding_manager.h"
+#include "oneflow/core/vm/remat/env.h"
 #ifdef WITH_RDMA
 #include "oneflow/core/platform/include/ibv.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 #endif  // WITH_RDMA
 #include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/ep/cpu/cpu_device_manager.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
 
 namespace oneflow {
 
@@ -70,9 +74,15 @@ void InitLogging(const CppLoggingConf& logging_conf) {
   FLAGS_log_dir = LogDir(logging_conf.log_dir());
   FLAGS_logtostderr = logging_conf.logtostderr();
   FLAGS_logbuflevel = logging_conf.logbuflevel();
+  FLAGS_minloglevel = logging_conf.minloglevel();
   FLAGS_stderrthreshold = 1;  // 1=WARNING
   google::InitGoogleLogging("oneflow");
-  LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir);
+  if (IsInDebugMode()) {
+    // record all level logs to file in debug mode
+    FLAGS_logtostderr = 0;
+    FLAGS_minloglevel = 0;  // 0=INFO
+  }
+  if (!FLAGS_logtostderr) { LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir); }
 }
 
 int32_t GetDefaultCpuDeviceNum() { return std::thread::hardware_concurrency(); }
@@ -142,6 +152,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Singleton<EnvGlobalObjectsScope>::SetAllocated(this);
 
   InitLogging(env_proto.cpp_logging_conf());
+  Singleton<remat::Env>::New();
   Singleton<EnvDesc>::New(env_proto);
   Singleton<ProcessCtx>::New();
   // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
@@ -178,14 +189,24 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
     Singleton<hardware::NodeDeviceDescriptorManager>::Get()->DumpSummary("devices");
   }
   Singleton<ep::DeviceManagerRegistry>::New();
+  Singleton<remat::AllocatorManager>::New();
   Singleton<ThreadPool>::New(Singleton<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
   SetCpuDeviceManagerNumThreads();
 #ifdef WITH_CUDA
-  Singleton<EagerNcclCommMgr>::New();
   Singleton<CudnnConvAlgoCache>::New();
   Singleton<CudnnHandlePool>::New();
   Singleton<embedding::EmbeddingManager>::New();
 #endif
+  const auto& vaild_ccl_comm_mgr_device_types =
+      EagerCclCommMgrBuilder::Get().vaild_ccl_comm_mgr_device_types();
+  CHECK_LE_OR_RETURN(vaild_ccl_comm_mgr_device_types.size(), 1)
+      << "Only one kind collective communication manager is supported at most at the same time for "
+         "now!";
+  if (!vaild_ccl_comm_mgr_device_types.empty() && !Singleton<EagerCclCommMgr>::Get()) {
+    Singleton<EagerCclCommMgr>::SetAllocated(
+        EagerCclCommMgrBuilder::Get().NewCclCommMgr(vaild_ccl_comm_mgr_device_types.front()));
+  }
+
   Singleton<vm::VirtualMachineScope>::New(Singleton<ResourceDesc, ForSession>::Get()->resource());
 #ifdef __linux__
   Singleton<EpollCommNet>::New();
@@ -232,9 +253,10 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Singleton<embedding::EmbeddingManager>::Delete();
   Singleton<CudnnConvAlgoCache>::Delete();
   Singleton<CudnnHandlePool>::Delete();
-  Singleton<EagerNcclCommMgr>::Delete();
 #endif
+  if (Singleton<EagerCclCommMgr>::Get() != nullptr) { Singleton<EagerCclCommMgr>::Delete(); }
   Singleton<ThreadPool>::Delete();
+  Singleton<remat::AllocatorManager>::Delete();
   Singleton<ep::DeviceManagerRegistry>::Delete();
   if (Singleton<ResourceDesc, ForSession>::Get() != nullptr) {
     Singleton<ResourceDesc, ForSession>::Delete();
@@ -246,6 +268,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Singleton<RpcManager>::Delete();
   Singleton<ProcessCtx>::Delete();
   Singleton<EnvDesc>::Delete();
+  Singleton<remat::Env>::Delete();
   ClearAllSymbol();
   ClearAllBackwardPassScope();
   if (Singleton<EnvGlobalObjectsScope>::Get() != nullptr) {
@@ -264,7 +287,7 @@ Maybe<void> InitRDMA() {
         Singleton<IBVerbsCommNet>::New();
         Singleton<CommNet>::SetAllocated(Singleton<IBVerbsCommNet>::Get());
       } else {
-        LOG(WARNING) << "Skip init RDMA because RDMA is already initialized!";
+        LOG(INFO) << "Skip init RDMA because RDMA is already initialized!";
       }
     } else {
       LOG(WARNING) << "Skip init RDMA because RDMA is unavailable!";
@@ -273,7 +296,7 @@ Maybe<void> InitRDMA() {
     LOG(WARNING) << "Skip init RDMA because RDMA is not compiled!";
 #endif  // WITH_RDMA && OF_PLATFORM_POSIX
   } else {
-    LOG(WARNING) << "Skip init RDMA because only one process in this group!";
+    LOG(INFO) << "Skip init RDMA because only one process in this group!";
   }
 #endif  // __linux__
   return Maybe<void>::Ok();

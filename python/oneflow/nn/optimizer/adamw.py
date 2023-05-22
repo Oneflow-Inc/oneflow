@@ -18,7 +18,7 @@ import math
 from typing import Callable, Dict, Iterator, List, Tuple, Union
 
 import oneflow as flow
-from oneflow.nn.optimizer.optimizer import Optimizer, ParamGroup
+from oneflow.optim.optimizer import Optimizer, ParamGroup
 from oneflow.nn.parameter import Parameter
 
 
@@ -57,6 +57,9 @@ class AdamW(Optimizer):
         weight_decay (float, optional): weight decay (L2 penalty) (In the equation is λ, default: 0)
         amsgrad (bool, optional): whether to use the AMSGrad variant of this algorithm. (default: False) 
         do_bias_correction (bool, optional): whether to do bias correction (default: True)
+        contiguous_params (bool, optional): whether to use contiguous ParamGroup 
+            which puts all parameters of the same type, device and group into the
+            same tensor and update them together. (default: False)
         fused (bool, optional): whether to divide all the parameters into several groups, then
             update each group of parameters with the fused kernel. (default: False)
 
@@ -121,6 +124,7 @@ class AdamW(Optimizer):
         weight_decay: float = 0,
         amsgrad: bool = False,
         do_bias_correction: bool = True,
+        contiguous_params: bool = False,
         fused: bool = False,
     ):
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
@@ -141,13 +145,19 @@ class AdamW(Optimizer):
         options["bias_correction2"] = 1.0
         options["do_bias_correction"] = do_bias_correction
         options["amsgrad"] = amsgrad
+        options["contiguous_params"] = contiguous_params
         options["fused"] = fused
         super().__init__(params, options)
 
         for param_group in self.param_groups:
-            for param in param_group.parameters:
+            if param_group["contiguous_params"]:
+                param_list = param_group.contiguous_parameters
+            else:
+                param_list = param_group.parameters
+
+            for param in param_list:
                 assert param.is_leaf, "parameters must be leaf tensor"
-                self._state[param] = dict()
+                self.state[param] = dict()
 
                 if param_group["fused"] and param_group["amsgrad"]:
                     warnings.warn("Fused Adamw is not supported when amsgrad=True.")
@@ -188,22 +198,27 @@ class AdamW(Optimizer):
             "amsgrad": param_group["amsgrad"],
         }
 
-        for param in param_group.parameters:
+        if param_group["contiguous_params"]:
+            param_list = param_group.contiguous_parameters
+        else:
+            param_list = param_group.parameters
+
+        for param in param_list:
             if param.grad is None:
                 continue
 
-            if "exp_avg" not in self._state[param]:
-                self._state[param]["exp_avg"] = flow.zeros_like(param)
-            if "exp_avg_sq" not in self._state[param]:
-                self._state[param]["exp_avg_sq"] = flow.zeros_like(param)
+            if "exp_avg" not in self.state[param]:
+                self.state[param]["exp_avg"] = flow.zeros_like(param)
+            if "exp_avg_sq" not in self.state[param]:
+                self.state[param]["exp_avg_sq"] = flow.zeros_like(param)
             if param_group["amsgrad"]:
-                if "max_exp_avg_sq" not in self._state[param]:
-                    self._state[param]["max_exp_avg_sq"] = flow.zeros_like(param)
-            m_tensor = self._state[param]["exp_avg"]
-            v_tensor = self._state[param]["exp_avg_sq"]
+                if "max_exp_avg_sq" not in self.state[param]:
+                    self.state[param]["max_exp_avg_sq"] = flow.zeros_like(param)
+            m_tensor = self.state[param]["exp_avg"]
+            v_tensor = self.state[param]["exp_avg_sq"]
 
             if param_group["amsgrad"]:
-                max_v_tensor = self._state[param]["max_exp_avg_sq"]
+                max_v_tensor = self.state[param]["max_exp_avg_sq"]
                 flow._C.dispatch_adam_update(
                     self._op_with_amsgrad,
                     (param, param.grad, m_tensor, v_tensor, max_v_tensor),
@@ -226,18 +241,18 @@ class AdamW(Optimizer):
             if param.grad is None:
                 continue
 
-            if "exp_avg" not in self._state[param]:
-                self._state[param]["exp_avg"] = flow.zeros_like(param)
-            if "exp_avg_sq" not in self._state[param]:
-                self._state[param]["exp_avg_sq"] = flow.zeros_like(param)
+            if "exp_avg" not in self.state[param]:
+                self.state[param]["exp_avg"] = flow.zeros_like(param)
+            if "exp_avg_sq" not in self.state[param]:
+                self.state[param]["exp_avg_sq"] = flow.zeros_like(param)
             if param_group["amsgrad"]:
-                if "max_exp_avg_sq" not in self._state[param]:
-                    self._state[param]["max_exp_avg_sq"] = flow.zeros_like(param)
+                if "max_exp_avg_sq" not in self.state[param]:
+                    self.state[param]["max_exp_avg_sq"] = flow.zeros_like(param)
 
             param_list.append(param)
             param_grad_list.append(param.grad)
-            m_tensor_list.append(self._state[param]["exp_avg"])
-            v_tensor_list.append(self._state[param]["exp_avg_sq"])
+            m_tensor_list.append(self.state[param]["exp_avg"])
+            v_tensor_list.append(self.state[param]["exp_avg_sq"])
 
         flow._C.multi_tensor_adam_update(
             model=param_list,
@@ -266,15 +281,16 @@ class AdamW(Optimizer):
         with flow.no_grad():
             loss = None
             if closure is not None:
-                loss = closure()
+                with flow.enable_grad():
+                    loss = closure()
 
             for param_group in self.param_groups:
                 if param_group["do_bias_correction"]:
                     param_group["bias_correction1"] = 1.0 - math.pow(
-                        param_group["betas"][0], self._state["step"] + 1
+                        param_group["betas"][0], self.state["step"] + 1
                     )
                     param_group["bias_correction2"] = 1.0 - math.pow(
-                        param_group["betas"][1], self._state["step"] + 1
+                        param_group["betas"][1], self.state["step"] + 1
                     )
 
                 if param_group["fused"]:
@@ -282,12 +298,16 @@ class AdamW(Optimizer):
                 else:
                     self._single_tensor_update(param_group)
 
-            self._state["step"] += 1
+            self.state["step"] += 1
             return loss
 
     def _generate_conf_for_graph(self, train_conf, vars_conf):
         new_opt_confs = []
         for param_group in self.param_groups:
+            assert (
+                param_group["contiguous_params"] != True
+            ), "contiguous_params cannot be used in graph"
+
             optimizer_conf = train_conf.optimizer_conf.add()
             lr = (
                 param_group["initial_lr"]

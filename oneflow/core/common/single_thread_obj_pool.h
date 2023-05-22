@@ -20,7 +20,7 @@ limitations under the License.
 #include <mutex>
 #include <memory>
 #include <thread>
-#include <glog/logging.h>
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/common/cpp_attribute.h"
 
 namespace oneflow {

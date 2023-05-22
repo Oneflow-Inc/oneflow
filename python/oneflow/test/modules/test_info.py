@@ -19,7 +19,6 @@ import unittest
 import oneflow as flow
 from oneflow.test_utils.automated_test_util import *
 import oneflow.unittest
-from collections import OrderedDict
 
 
 def _test_finfo(test_case, dtype):
@@ -39,26 +38,16 @@ def _test_finfo(test_case, dtype):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestIInfo(flow.unittest.TestCase):
-    @autotest(n=3, check_graph=False)
-    def test_iinfo_max(test_case):
+class TestTypeInfo(flow.unittest.TestCase):
+    def test_iinfo(test_case):
         for dtype in [torch.uint8, torch.int8, torch.int32, torch.int64]:
-            return torch.iinfo(dtype).max
+            iinfo = torch.iinfo(dtype)
+            # checker not implemented for type <class 'torch.iinfo'> and <class 'oneflow.iinfo'>
+            # so return all fields as a tuple
+            return iinfo.max, iinfo.min, iinfo.bits
 
-    @autotest(n=3, check_graph=False)
-    def test_iinfo_min(test_case):
-        for dtype in [torch.uint8, torch.int8, torch.int32, torch.int64]:
-            return torch.iinfo(dtype).min
-
-    @autotest(n=3, check_graph=False)
-    def test_iinfo_bits(test_case):
-        for dtype in [torch.uint8, torch.int8, torch.int32, torch.int64]:
-            return torch.iinfo(dtype).bits
-
-    @autotest(n=3, check_graph=False)
-    def test_finfo_min(test_case):
-        # TODO(WangYi): support bf16
-        for dtype in [None, torch.float16, torch.float32, torch.float64]:
+    def test_finfo(test_case):
+        for dtype in [None, torch.half, torch.bfloat16, torch.float, torch.double]:
             _test_finfo(test_case, dtype)
 
 

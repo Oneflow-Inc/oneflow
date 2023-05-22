@@ -20,6 +20,8 @@ limitations under the License.
 
 namespace oneflow {
 
+size_t RegstNum4Op(const Operator& sole_op);
+
 class NormalForwardCompTaskNode final : public CompTaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NormalForwardCompTaskNode);
@@ -28,6 +30,7 @@ class NormalForwardCompTaskNode final : public CompTaskNode {
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
+  void ConsumeFakeRegsts() override;
 
   TaskType GetTaskType() const override { return TaskType::kNormalForward; }
 

@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/memory/chunk_manager.h"
+#include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace oneflow {
 
@@ -39,7 +40,57 @@ struct PackedChunkInfo {
   }
 };
 
+std::shared_ptr<ep::Device> GetDeviceByMemoryCase(const MemoryCase& mem_case) {
+  return Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(mem_case.device_type(),
+                                                                mem_case.device_id());
+}
+
+void InitDataRegst(Regst* regst, char* main_mem_ptr, char* separated_header_mem_ptr) {
+  auto* rt_regst_desc = regst->regst_desc();
+  size_t separated_header_mem_size = rt_regst_desc->SeparatedHeaderByteSize4OneRegst();
+  char* cur_body_pointer = nullptr;
+  char* cur_header_pointer = nullptr;
+  if (separated_header_mem_size > 0) {
+    MemoryCase host_mem_case = memory::MakeHostMemCase();
+    if (separated_header_mem_ptr == nullptr) {
+      separated_header_mem_ptr =
+          Singleton<MemoryAllocator>::Get()->Allocate(host_mem_case, separated_header_mem_size);
+    }
+    cur_header_pointer = separated_header_mem_ptr;
+    cur_body_pointer = main_mem_ptr;
+  } else {
+    CHECK(separated_header_mem_ptr == nullptr);
+    cur_header_pointer = main_mem_ptr;
+    if (main_mem_ptr == nullptr) {
+      cur_body_pointer = nullptr;
+    } else {
+      cur_body_pointer =
+          main_mem_ptr + rt_regst_desc->GetSoleBlobDesc()->AlignedByteSizeOfBlobHeader();
+    }
+  }
+  if (regst->allocation_type() == RegstAllocationType::kStatic) {
+    CHECK(cur_body_pointer != nullptr || rt_regst_desc->TotalBodyByteSize4AllRegst() == 0);
+  } else if (regst->allocation_type() == RegstAllocationType::kStreamOrdered) {
+    CHECK(cur_body_pointer == nullptr);
+  } else {
+    UNIMPLEMENTED();
+  }
+  regst->Init(cur_header_pointer);
+  regst->ResetBodyMemPtr(cur_body_pointer);
+}
+
 }  // namespace
+
+RegstMgr::RegstMgr() : stream_ordered_memory_allocation_enabled_(false) {
+  stream_ordered_memory_allocation_enabled_ =
+      ParseBooleanFromEnv("ONEFLOW_GRAPH_ENABLE_STREAM_ORDERED_MEMORY_ALLOCATION", false);
+}
+
+bool RegstMgr::IsStreamOrderedMemoryAllocationCase(const MemoryCase& mem_case) const {
+  if (!stream_ordered_memory_allocation_enabled_) { return false; }
+  const auto& device = GetDeviceByMemoryCase(mem_case);
+  return device->IsStreamOrderedMemoryAllocationSupported();
+}
 
 void RegstMgr::AddPlan(
     const Plan& plan,
@@ -50,6 +101,7 @@ void RegstMgr::AddPlan(
   for (const ChunkProto& chunk : plan.block_chunk_list().chunk()) {
     if (chunk.machine_id() != this_machine_id) { continue; }
     if (chunk.mem_size() == 0) { continue; }
+    if (IsStreamOrderedMemoryAllocationCase(chunk.mem_case())) { continue; }
     char* chunk_ptr = Singleton<ChunkMgr>::Get()->FindOrCreateChunk(chunk);
     CHECK(chunk_id2ptr.emplace(chunk.chunk_id(), chunk_ptr).second);
   }
@@ -63,10 +115,16 @@ void RegstMgr::AddPlan(
     CHECK(all_block_ids.insert(mem_block_id).second);
 
     if (mem_block.has_chunk_id()) {
+      if (IsStreamOrderedMemoryAllocationCase(mem_block.mem_case())) {
+        CHECK(mem_block.enable_reuse_mem());
+        CHECK(stream_ordered_allocation_mem_block_ids_.emplace(mem_block_id).second);
+        continue;
+      }
       CHECK(mem_block.has_chunk_offset());
       CHECK(chunk_id2ptr.find(mem_block.chunk_id()) != chunk_id2ptr.end());
       char* mem_block_ptr = chunk_id2ptr.at(mem_block.chunk_id()) + mem_block.chunk_offset();
-      CHECK(mem_block_id2ptr_.emplace(mem_block_id, mem_block_ptr).second);
+      CHECK(mem_block_id2ptr_.emplace(mem_block_id, mem_block_ptr).second)
+          << " duplicated mem_block_id " << mem_block_id;
       CHECK(!mem_block.has_variable_op_name());
     } else if (mem_block.has_variable_op_name()) {
       // NOTE(chengcheng): bind mem_block_ptr to variable blob header_ptr and body_ptr
@@ -135,7 +193,13 @@ void RegstMgr::AddPlan(
   }
 
   for (int64_t mem_block_id : all_block_ids) {
-    CHECK(mem_block_id2ptr_.find(mem_block_id) != mem_block_id2ptr_.end());
+    if (mem_block_id2ptr_.find(mem_block_id) != mem_block_id2ptr_.end()) {
+      CHECK(stream_ordered_allocation_mem_block_ids_.find(mem_block_id)
+            == stream_ordered_allocation_mem_block_ids_.end());
+    } else {
+      CHECK(stream_ordered_allocation_mem_block_ids_.find(mem_block_id)
+            != stream_ordered_allocation_mem_block_ids_.end());
+    }
   }
 
   for (const TaskProto& task : plan.task()) {
@@ -146,7 +210,6 @@ void RegstMgr::AddPlan(
       CHECK(regst_desc_id2rt_regst_desc_
                 .emplace(regst_desc_id, std::make_unique<const RtRegstDesc>(regst_desc))
                 .second);
-      CHECK(regst_desc_id2parallel_ctx_.emplace(regst_desc_id, task.parallel_ctx()).second);
     }
   }
   for (const auto& pair : plan.ctrl_regst_desc_info().ctrl_regst_desc_id2producer_task_id()) {
@@ -174,20 +237,14 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
   if (header_block_id != -1 && mem_block_id2ptr_.find(header_block_id) != mem_block_id2ptr_.end()) {
     separated_header_mem_ptr = mem_block_id2ptr_.at(header_block_id);
   }
-  std::vector<LbiBlobDescPair> lbi_pairs;
-  lbi_pairs.reserve(regst_desc_type.data_regst_desc().lbi2blob_desc().size());
-  if (regst_desc_type.has_data_regst_desc()) {
-    for (const LbiBlobDescPair& pair : regst_desc_type.data_regst_desc().lbi2blob_desc()) {
-      lbi_pairs.emplace_back(pair);
-    }
-    std::sort(lbi_pairs.begin(), lbi_pairs.end(), &CompareLbiBlobDescPair);
-    CHECK(!lbi_pairs.empty());
-  }
+  RegstAllocationType allocation_type = stream_ordered_allocation_mem_block_ids_.find(mem_block_id)
+                                                == stream_ordered_allocation_mem_block_ids_.end()
+                                            ? RegstAllocationType::kStatic
+                                            : RegstAllocationType::kStreamOrdered;
   for (int64_t i = 0; i < rt_regst_desc->register_num(); ++i) {
-    Regst* regst = new Regst;
-    regst->set_regst_desc(rt_regst_desc);
+    Regst* regst = new Regst(rt_regst_desc, allocation_type);
     if (regst_desc_type.has_data_regst_desc()) {
-      NewBlobsInOneRegst(lbi_pairs, regst, rt_regst_desc, main_mem_ptr, separated_header_mem_ptr);
+      InitDataRegst(regst, main_mem_ptr, separated_header_mem_ptr);
       if (main_mem_ptr != nullptr) { main_mem_ptr += rt_regst_desc->MainByteSize4OneRegst(); }
       if (separated_header_mem_ptr != nullptr) {
         separated_header_mem_ptr += rt_regst_desc->SeparatedHeaderByteSize4OneRegst();
@@ -199,57 +256,6 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     }
     OneRegstDone(regst);
   }
-}
-
-void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regst* regst,
-                                  const RtRegstDesc* rt_regst_desc, char* main_mem_ptr,
-                                  char* separated_header_mem_ptr) {
-  size_t separated_header_mem_size = rt_regst_desc->SeparatedHeaderByteSize4OneRegst();
-  char* cur_body_pointer = nullptr;
-  char* cur_header_pointer = nullptr;
-  if (separated_header_mem_size > 0) {
-    MemoryCase host_mem_case = memory::MakeHostMemCase();
-    if (separated_header_mem_ptr == nullptr) {
-      separated_header_mem_ptr =
-          Singleton<MemoryAllocator>::Get()->Allocate(host_mem_case, separated_header_mem_size);
-    }
-    cur_header_pointer = separated_header_mem_ptr;
-    cur_body_pointer = main_mem_ptr;
-  } else {
-    CHECK(separated_header_mem_ptr == nullptr);
-    cur_header_pointer = main_mem_ptr;
-    if (main_mem_ptr == nullptr) {
-      cur_body_pointer = nullptr;
-    } else {
-      cur_body_pointer =
-          main_mem_ptr + rt_regst_desc->GetSoleBlobDesc()->AlignedByteSizeOfBlobHeader();
-    }
-  }
-  regst->set_main_mem_ptr(main_mem_ptr);
-  regst->set_separated_header_mem_ptr(separated_header_mem_ptr);
-  rt_regst_desc->ForEachBlobDescOffsetInOnRegst([&](int64_t ordinal, const LogicalBlobId& lbi,
-                                                    const BlobDesc* blob_desc, int64_t body_offset,
-                                                    int64_t header_offset) {
-    std::unique_ptr<Blob> blob_ptr;
-    if (cur_body_pointer == nullptr) {
-      blob_ptr.reset(new Blob(regst->regst_desc()->mem_case(), blob_desc,
-                              cur_header_pointer + header_offset, nullptr));
-    } else {
-      blob_ptr.reset(new Blob(regst->regst_desc()->mem_case(), blob_desc,
-                              cur_header_pointer + header_offset, cur_body_pointer + body_offset));
-      InitNonPODTypeBlobIfNeed(Singleton<MemoryAllocator>::Get(), blob_ptr.get());
-    }
-    regst->SetBlobByOrdinal(ordinal, std::move(blob_ptr));
-    const int64_t regst_desc_id = rt_regst_desc->regst_desc_id();
-    const auto& parallel_ctx = regst_desc_id2parallel_ctx_.at(regst_desc_id);
-    if (parallel_ctx.has_parallel_id()) {
-      const int64_t parallel_id = parallel_ctx.parallel_id();
-      {
-        std::lock_guard<std::mutex> lock(mutex_);
-        lbi2parallel_id2blob_[lbi][parallel_id] = regst->GetBlobByOrdinal(ordinal);
-      }
-    }
-  });
 }
 
 const RtRegstDesc& RegstMgr::RegstDesc4RegstDescId(int64_t regst_desc_id) const {
@@ -271,10 +277,6 @@ int64_t RegstMgr::ProducerTaskId4RegstDescId(int64_t regst_desc_id) const {
 bool RegstMgr::HasProducerTaskId4RegstDescId(int64_t regst_desc_id) const {
   return ctrl_regst_desc_id2producer_task_id_.find(regst_desc_id)
          != ctrl_regst_desc_id2producer_task_id_.end();
-}
-
-Blob* RegstMgr::Blob4LbiAndParallelId(const LogicalBlobId& lbi, const int64_t parallel_id) {
-  return lbi2parallel_id2blob_.at(lbi).at(parallel_id);
 }
 
 }  // namespace oneflow

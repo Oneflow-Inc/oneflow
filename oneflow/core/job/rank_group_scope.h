@@ -21,30 +21,11 @@ limitations under the License.
 
 namespace oneflow {
 
+// NOTE(daquexian): this scope class is not actually used. We only keep
+// it in case we need it in the future.
 class RankGroupScope final {
  public:
-  ~RankGroupScope();
-
-  Symbol<RankGroup> rank_group() const { return rank_group_; }
-  const RankGroupScope& root() const { return *root_; }
-
-  static Maybe<RankGroupScope> MakeNestedRankGroupScope(Symbol<RankGroup> rank_group);
-
-  static Maybe<RankGroupScope> MakeInitialRankGroupScope(Symbol<RankGroup> rank_group);
-
   static Maybe<Symbol<RankGroup>> CurrentRankGroup();
-
-  static Maybe<Symbol<RankGroup>> RootRankGroup();
-
- private:
-  RankGroupScope(Symbol<RankGroup> rank_group, const RankGroupScope* parent,
-                 const RankGroupScope* root);
-
-  Maybe<void> SetRootSelf();
-
-  Symbol<RankGroup> rank_group_;
-  const RankGroupScope* parent_;
-  const RankGroupScope* root_;
 };
 
 }  // namespace oneflow

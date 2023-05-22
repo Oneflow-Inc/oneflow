@@ -61,7 +61,7 @@ def get_loss(
     module_name: str,
     test_pytorch: bool = True,
     device: str = "cuda",
-    tmpdirname: str = "/tmp",
+    tmpfilename: str = "/tmp/oneflow_tmp_file",
 ):
     model_loss = []
     learning_rate = 0.01
@@ -92,7 +92,7 @@ def get_loss(
             if "num_batches_tracked" not in k:
                 new_parameters[k] = flow.tensor(w[k].detach().numpy())
 
-        flow.save(new_parameters, tmpdirname)
+        flow.save(new_parameters, tmpfilename)
 
         pytorch_model.to(device)
         torch_sgd = torch.optim.SGD(
@@ -175,7 +175,7 @@ def get_loss(
         oneflow_model.to(device)
         corss_entropy.to(device)
 
-        params = flow.load(tmpdirname)
+        params = flow.load(tmpfilename)
         oneflow_model.load_state_dict(params)
 
         of_sgd = flow.optim.SGD(
@@ -229,12 +229,12 @@ def do_test_train_loss_oneflow_pytorch(
     oneflow_model_loss = []
     pytorch_model_loss = []
 
-    with tempfile.TemporaryDirectory() as tmpdirname:
+    with tempfile.NamedTemporaryFile() as f:
         pytorch_model_loss = get_loss(
-            image_nd, label_nd, model_path, module_name, True, device, tmpdirname
+            image_nd, label_nd, model_path, module_name, True, device, f.name
         )
         oneflow_model_loss = get_loss(
-            image_nd, label_nd, model_path, module_name, False, device, tmpdirname
+            image_nd, label_nd, model_path, module_name, False, device, f.name
         )
 
     if verbose:

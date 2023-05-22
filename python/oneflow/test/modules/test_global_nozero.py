@@ -18,8 +18,10 @@ import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
-
-@autotest(n=1, auto_backward=False, check_graph=False)
+# Not check graph because of one reason:
+# Reason 1, lazy tensor cannot call numpy(), tensor.numpy() is not allowed to called in nn.Graph.build(*args) or called by lazy tensor.
+# Please refer to File "python/oneflow/nn/modules/nonzero.py", line 29, in nonzero_op.
+@autotest(n=1, auto_backward=False, check_graph="ValidatedFalse")
 def _test_nonzero(test_case, placement, sbp, ndim):
     shape = [8 for _ in range(ndim)]
     x = random_tensor(ndim, *shape).to_global(placement, sbp)

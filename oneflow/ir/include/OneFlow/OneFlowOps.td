@@ -17,29 +17,6 @@ include "mlir/IR/OpBase.td"
 
 include "OneFlow/SBP/SBPOps.td"
 
-def OneFlow_NormalizationAddReluOp : OneFlow_NormalizationAddReluBaseOp {
-  let builders = [
-    OpBuilder<(ins
-      "Value":$x,
-      "Value":$addend,
-      "Value":$moving_mean,
-      "Value":$moving_variance,
-      "Value":$gamma,
-      "Value":$beta,
-      "StringRef":$op_name,
-      "StringRef":$device_tag,
-      "ArrayAttr":$device_name,
-      "IntegerAttr":$scope_symbol_id,
-      "ArrayAttr":$hierarchy,
-      "DenseElementsAttr":$operand_segment_sizes,
-      "DenseElementsAttr":$result_segment_sizes,
-      "IntegerAttr":$axis,
-      "FloatAttr":$epsilon,
-      "BoolAttr":$training,
-      "FloatAttr":$momentum
-    )>
-  ];
-}
 
 #ifndef REMOVE_ONEFLOW_MLIR_ONLY_OP_DEFINITIONS
 
@@ -71,7 +48,7 @@ def OneFlow_SystemOp : OneFlow_Op<"system", [OneFlow_IsImportCompatible]> {
 
 def F32ElementsAttr : FloatElementsAttr<32>;
 
-def OneFlow_FrozenVariableOp : OneFlow_IROp<"variable_ir", [ConstantLike, NoSideEffect]> {
+def OneFlow_FrozenVariableOp : OneFlow_IROp<"variable_ir", [ConstantLike, NoMemoryEffect]> {
   let summary = "Auxiliary variable op for constant folding, only exists in IR.";
   let arguments = (ins
     F32ElementsAttr:$value,
@@ -89,7 +66,7 @@ def OneFlow_FrozenVariableOp : OneFlow_IROp<"variable_ir", [ConstantLike, NoSide
   let hasFolder = 1;
 }
 
-def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<AlternativeOpTypeNameInterface>, DeclareOpInterfaceMethods<NCHWCompatibleInterface>]> {
+def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<AlternativeOpTypeNameInterface>, DeclareOpInterfaceMethods<NCHWCompatibleInterface>]> {
   let summary = "";
   let input = (ins
     AnyType:$in0,
@@ -123,10 +100,10 @@ def OneFlow_VariableOp : OneFlow_ConcreteSystemOp<"variable", [OneFlow_TensorSou
   let custom_attrs = (ins
     ShapeAttr:$shape,
     OptionalAttr<OneFlow_DataType>:$data_type,
-    DefaultValuedAttr<StrAttr, "\"weight\"">:$model_name,
-    DefaultValuedAttr<F32Attr, "0.0f">:$l1_regularization,
-    DefaultValuedAttr<F32Attr, "0.0f">:$l2_regularization,
-    DefaultValuedAttr<BoolAttr, "true">:$trainable,
+    OptionalAttr<StrAttr>:$model_name,
+    OptionalAttr<F32Attr>:$l1_regularization,
+    OptionalAttr<F32Attr>:$l2_regularization,
+    OptionalAttr<BoolAttr>:$trainable,
     OptionalAttr<F32Attr>:$float_initializer,
     OptionalAttr<SI64Attr>:$integer_initializer,
     OptionalAttr<SBP_ParallelSignatureAttr>:$parallel
@@ -170,19 +147,18 @@ def OneFlow_Job : Op<OneFlow_Dialect, "job", [FunctionOpInterface, IsolatedFromA
   let arguments = (ins
     SymbolNameAttr:$sym_name,
     TypeAttrOf<FunctionType>:$function_type,
-    OptionalAttr<StrAttr>:$sym_visibility
+    OptionalAttr<StrAttr>:$sym_visibility,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs
   );
 
   let builders = [OpBuilder<(ins
-    "StringRef":$sys_name, "FunctionType":$function_type)
-  >];
+    "StringRef":$sym_name, "FunctionType":$function_type,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs
+  )>];
 
   let extraClassDeclaration = [{
     bool isDeclaration() { return isExternal(); }
-
-   FunctionType getFunctionType() { return function_type(); }
-
-   TypeAttr getFunctionTypeAttr() { return function_typeAttr(); }
 
     ArrayRef<Type> getArgumentTypes() { return getFunctionType().getInputs(); }
 
@@ -191,7 +167,7 @@ def OneFlow_Job : Op<OneFlow_Dialect, "job", [FunctionOpInterface, IsolatedFromA
     LogicalResult verifyType() {
       auto type = getFunctionTypeAttr().getValue();
       if (!type.isa<FunctionType>())
-        return emitOpError("requires '" + getTypeAttrName() +
+        return emitOpError("requires '" + getFunctionTypeAttrName().str() +
                            "' attribute of function type");
       return success();
     }
@@ -201,7 +177,7 @@ def OneFlow_Job : Op<OneFlow_Dialect, "job", [FunctionOpInterface, IsolatedFromA
   let hasVerifier = 1;
 }
 
-def OneFlow_ReturnOp : Op<OneFlow_Dialect, "return", [NoSideEffect, HasParent<"Job">,
+def OneFlow_ReturnOp : Op<OneFlow_Dialect, "return", [NoMemoryEffect, HasParent<"Job">,
                                 MemRefsNormalizable, ReturnLike, Terminator]> {
   let summary = "return operation";
   let description = [{
@@ -230,7 +206,7 @@ def OneFlow_ReturnOp : Op<OneFlow_Dialect, "return", [NoSideEffect, HasParent<"J
   let hasVerifier = 1;
 }
 
-def OneFlow_NormalizationInferenceOp : OneFlow_NormalizationBaseOp<"normalization_infer", [DeclareOpInterfaceMethods<AlternativeOpTypeNameInterface>]> {
+def OneFlow_NormalizationInferenceOp : OneFlow_NormalizationBaseOp<"normalization_infer", [DeclareOpInterfaceMethods<AlternativeOpTypeNameInterface>, DeclareOpInterfaceMethods<NCHWCompatibleInterface>]> {
   let output = (outs
     OneFlow_Tensor:$y
   );
@@ -240,131 +216,3 @@ def OneFlow_NormalizationInferenceOp : OneFlow_NormalizationBaseOp<"normalizatio
 
 #endif // ONEFLOW_OPS
 
-#ifndef ONEFLOW_PASSES
-#define ONEFLOW_PASSES
-
-def LowerOneFlowToTosaPass : Pass<"lower-oneflow-to-tosa", "ModuleOp"> {
-  let summary = "lower oneflow dialect to tosa dialect";
-  let constructor = "mlir::oneflow::createLowerOneFlowToTosaPass()";
-  let dependentDialects = ["tosa::TosaDialect", "memref::MemRefDialect", "mlir::func::FuncDialect"];
-  let options = [
-    Option<"variableAsConstant", "variable-as-constant", "int", "0",
-           "convert variable op as const op of tosa">,
-  ];
-}
-
-def BufferHostRegisterPass : Pass<"buffer-host-register", "func::FuncOp"> {
-  let summary = "";
-  let constructor = "mlir::oneflow::createBufferHostRegisterPass()";
-  let dependentDialects = ["gpu::GPUDialect"];
-}
-
-def GpuCopyArgPass : Pass<"gpu-copy-arg", "func::FuncOp"> {
-  let summary = "";
-  let constructor = "mlir::oneflow::createGpuCopyArgPass()";
-  let dependentDialects = ["memref::MemRefDialect", "gpu::GPUDialect"];
-}
-
-def OutlineJitFunctionPass : Pass<"outline-jit-function", "ModuleOp"> {
-  let summary = "move ops could be jitted to jit function";
-  let constructor = "mlir::oneflow::createOutlineJitFunctionPass()";
-}
-
-def AggregateComputeOpsPass : Pass<"aggregate-compute-ops", "ModuleOp"> {
-  let summary = "aggregate compute ops together";
-  let constructor = "mlir::oneflow::createAggregateComputeOpsPass()";
-}
-
-def WrapOpsToKernelLaunchPass : Pass<"wrap-ops-to-kernel-launch", "ModuleOp"> {
-  let summary = "wrap user ops with a single kernel launch op in OneFlow Job";
-  let constructor = "mlir::oneflow::createWrapOpsToKernelLaunchPass()";
-}
-
-def ExtractKernelLaunchTensorPass : Pass<"extract-kernel-launch-tensor", "ModuleOp"> {
-  let summary = "extract kernel launch tensor from !okl.launcher_ctx";
-  let constructor = "mlir::oneflow::createExtractKernelLaunchTensorPass()";
-}
-
-def TrimReturnAsVoidPass : Pass<"trim-return-to-void", "ModuleOp"> {
-  let summary = "trim return types to void type";
-  let constructor = "mlir::oneflow::createTrimReturnAsVoidPass()";
-}
-
-def LowerToOKLPass : Pass<"lower-to-okl", "ModuleOp"> {
-  let summary = "lower oneflow dialect ops to okl dialect";
-  let constructor = "mlir::oneflow::createLowerToOKLPass()";
-}
-
-def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "ModuleOp"> {
-  let summary = "";
-  let constructor = "mlir::oneflow::createFuseIntoExistingOpPass()";
-  let dependentDialects = ["pdl_interp::PDLInterpDialect", "pdl::PDLDialect"];
-}
-
-def AutoNhwcPass : Pass<"auto-nhwc", "ModuleOp"> {
-  let summary = "";
-  let constructor = "mlir::oneflow::createAutoNhwcPass()";
-}
-
-def PreConvertInferenceOpPass : Pass<"pre-convert-inference-op", "ModuleOp"> {
-  let summary = "Convert variable op to variable ir op for constant folding.";
-  let constructor = "mlir::oneflow::createPreConvertInferenceOpPass()";
-}
-
-def ConvertInferenceOpPass : Pass<"convert-inference-op", "ModuleOp"> {
-  let summary = "Convert ops to their inference version and rewrite them with a more performant equivalent in inference workflow.";
-  let constructor = "mlir::oneflow::createConvertInferenceOpPass()";
-}
-
-def PostConvertInferenceOpPass : Pass<"post-convert-inference-op", "ModuleOp"> {
-  let summary = "Convert variable ir op to variable op after contant folding.";
-  let constructor = "mlir::oneflow::createPostConvertInferenceOpPass()";
-}
-
-
-def ConvertToSignlessForTosaPass : Pass<"convert-to-signless-for-tosa", "ModuleOp"> {
-  let summary = "convert func type to unsigned before lowering to tosa";
-  let description = [{
-    In oneflow, int typed tensor is explicit signed. Convert them before lowering to TOSA.
-  }];
-  let constructor = "mlir::oneflow::createConvertToSignlessForTosaPass()";
-  let dependentDialects = ["func::FuncDialect"];
-}
-
-def CSEWithAttributesIgnored : Pass<"cse-with-attributes-ignored", "ModuleOp"> {
-  let summary = "ignore oneflow attributes to have cse work";
-  let description = [{
-    cse and ignore oneflow attributes like op name, symbol id, etc.
-  }];
-  let constructor = "mlir::oneflow::createCSEWithAttributesIgnored()";
-  let dependentDialects = [];
-}
-
-def CSEPutAttributes : Pass<"cse-put-attributes", "ModuleOp"> {
-  let summary = "cse and ignore oneflow attributes";
-  let description = [{
-    put back oneflow attributes like op name, symbol id, etc.
-  }];
-  let constructor = "mlir::oneflow::createCSEPutAttributes()";
-  let dependentDialects = [];
-}
-
-def GroupMatMul : Pass<"group-matmul", "ModuleOp"> {
-  let summary = "group matmul together";
-  let description = [{
-    group matmul ops together and use cudnn batched matmul
-  }];
-  let constructor = "mlir::oneflow::createGroupMatMul()";
-  let dependentDialects = [];
-}
-
-def FuseForwardOps : Pass<"fuse-forward-only-ops", "ModuleOp"> {
-  let summary = "fuse forward ops";
-  let description = [{
-    fuse forward ops. Usually they are actions after an op.
-  }];
-  let constructor = "mlir::oneflow::createFuseForwardOps()";
-  let dependentDialects = [];
-}
-
-#endif // ONEFLOW_PASSES

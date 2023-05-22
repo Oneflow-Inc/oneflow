@@ -129,9 +129,9 @@ Maybe<one::UserOpExpr> EagerCclAllGather(Symbol<ParallelDesc> parallel_desc) {
 
 static constexpr auto* CachedEagerCclAllGatherOpExpr = DECORATE(&EagerCclAllGather, ThreadLocal);
 
-Maybe<one::UserOpExpr> EagerNcclS2S(Symbol<ParallelDesc> parallel_desc, Symbol<SbpParallel> src_sbp,
-                                    Symbol<SbpParallel> dst_sbp) {
-  return one::OpBuilder("eager_nccl_s2s", *JUST(UniqueStr("eager_nccl_s2s")))
+Maybe<one::UserOpExpr> EagerCclS2S(Symbol<ParallelDesc> parallel_desc, Symbol<SbpParallel> src_sbp,
+                                   Symbol<SbpParallel> dst_sbp) {
+  return one::OpBuilder("eager_ccl_s2s", *JUST(UniqueStr("eager_ccl_s2s")))
       .Input("in")
       .Output("out")
       .Attr<int64_t>("in_split_axis", src_sbp->split_parallel().axis())
@@ -140,7 +140,7 @@ Maybe<one::UserOpExpr> EagerNcclS2S(Symbol<ParallelDesc> parallel_desc, Symbol<S
       .Build();
 }
 
-auto* CachedEagerNcclS2SOpExpr = DECORATE(&EagerNcclS2S, ThreadLocal);
+auto* CachedEagerCclS2SOpExpr = DECORATE(&EagerCclS2S, ThreadLocal);
 
 Maybe<one::UserOpExpr> EagerCclReduce(Symbol<ParallelDesc> parallel_desc, int64_t root) {
   CHECK_OR_RETURN(JUST(CheckCclKernelRegistered("eager_ccl_reduce", parallel_desc->device_type())))
@@ -170,6 +170,36 @@ Maybe<one::UserOpExpr> RankGroupAndDeviceType2AllReduceOpExpr(Symbol<RankGroup> 
 auto* CachedRankGroupAndDeviceType2AllReduceOpExpr =
     DECORATE(&RankGroupAndDeviceType2AllReduceOpExpr, ThreadLocal);
 
+Maybe<one::UserOpExpr> RankGroupAndDeviceType2AllGatherOpExpr(Symbol<RankGroup> rank_group,
+                                                              DeviceType device_type) {
+  CHECK_OR_RETURN(JUST(CheckCclKernelRegistered("eager_ccl_all_gather", device_type)))
+      << OF_KERNEL_NOT_SUPPORT_ERROR("AllGather", device_type);
+  const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(device_type, rank_group));
+  return one::OpBuilder("eager_ccl_all_gather")
+      .Input("in")
+      .Output("out")
+      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      .Build();
+}
+
+auto* CachedRankGroupAndDeviceType2AllGatherOpExpr =
+    DECORATE(&RankGroupAndDeviceType2AllGatherOpExpr, ThreadLocal);
+
+Maybe<one::UserOpExpr> RankGroupAndDeviceType2ReduceScatterOpExpr(Symbol<RankGroup> rank_group,
+                                                                  DeviceType device_type) {
+  CHECK_OR_RETURN(JUST(CheckCclKernelRegistered("eager_ccl_reduce_scatter", device_type)))
+      << OF_KERNEL_NOT_SUPPORT_ERROR("ReduceScatter", device_type);
+  const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(device_type, rank_group));
+  return one::OpBuilder("eager_ccl_reduce_scatter", *JUST(UniqueStr("eager_ccl_reduce_scatter")))
+      .Input("in")
+      .Output("out")
+      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      .Build();
+}
+
+auto* CachedRankGroupAndDeviceType2ReduceScatterOpExpr =
+    DECORATE(&RankGroupAndDeviceType2ReduceScatterOpExpr, ThreadLocal);
+
 #undef OF_KERNEL_NOT_SUPPORT_ERROR
 
 }  // namespace
@@ -180,9 +210,7 @@ class CommBroadcastFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, int64_t src_rank,
                            bool inplace) const {
     const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
-    std::string device_type_str = JUST(x->device())->type();
-    CHECK_OR_RETURN(device_type_str == "cuda" || device_type_str == "cpu");
-    DeviceType device_type = device_type_str == "cuda" ? DeviceType::kCUDA : DeviceType::kCPU;
+    DeviceType device_type = JUST(x->device())->enum_type();
     const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(device_type, rank_group));
     return one::Broadcast(x, src_rank, parallel_desc, inplace);
   }
@@ -205,7 +233,7 @@ class CommBroadcastTensorsFunctor {
 namespace {
 
 Maybe<one::UserOpExpr> RawStreamTouchFunctorOpExpr(size_t input_size) {
-  return one::OpBuilder("eager_nccl_touch", *JUST(UniqueStr("eager_nccl_touch")))
+  return one::OpBuilder("eager_ccl_touch", *JUST(UniqueStr("eager_ccl_touch")))
       .Input("in", input_size)
       .Build();
 }
@@ -291,6 +319,38 @@ class GlobalReduceScatterFunctor {
   }
 };
 
+class LocalReduceScatterFunctor {
+ public:
+  LocalReduceScatterFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& output,
+                           const std::shared_ptr<one::Tensor>& input) const {
+    DataType dtype_val = input->dtype()->data_type();
+    CHECK_EQ_OR_RETURN(input->shape()->elem_cnt(),
+                       output->nelement() * GlobalProcessCtx::WorldSize())
+        << Error::RuntimeError()
+        << "output tensor size must be equal to world_size times input tensor size";
+    CHECK_EQ_OR_RETURN(dtype_val, output->dtype()->data_type())
+        << Error::RuntimeError() << Error::RuntimeError()
+        << "output tensor must have the same type as input tensor";
+    const Shape& shape = *output->shape();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("output_shape", "output_dtype");
+    attrs.SetAllAttrs(shape, dtype_val);
+    const auto& device = JUST(input->device());
+    CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank());
+    const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
+    DeviceType device_type = device->enum_type();
+    std::shared_ptr<OpExpr> op_expr =
+        JUST(CachedRankGroupAndDeviceType2ReduceScatterOpExpr(rank_group, device_type));
+    auto op_input = input;
+    if (const auto& static_zeros_tensor = std::dynamic_pointer_cast<StaticZerosTensor>(input)) {
+      op_input = std::dynamic_pointer_cast<Tensor>(JUST(static_zeros_tensor->AsLocalTensor()));
+    }
+    TensorTuple outputs{output};
+    JUST(OpInterpUtil::Dispatch(*op_expr, {op_input}, &outputs, attrs));
+    return outputs[0];
+  }
+};
+
 class GlobalAllGatherFunctor {
  public:
   GlobalAllGatherFunctor() = default;
@@ -302,6 +362,38 @@ class GlobalAllGatherFunctor {
     }
     std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerCclAllGatherOpExpr(JUST(x->parallel_desc())));
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
+  }
+};
+
+class LocalAllGatherFunctor {
+ public:
+  LocalAllGatherFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& output,
+                           const std::shared_ptr<one::Tensor>& input) const {
+    DataType dtype_val = input->dtype()->data_type();
+    CHECK_EQ_OR_RETURN(input->shape()->elem_cnt() * GlobalProcessCtx::WorldSize(),
+                       output->nelement())
+        << Error::RuntimeError()
+        << "output tensor size must be equal to world_size times input tensor size";
+    CHECK_EQ_OR_RETURN(dtype_val, output->dtype()->data_type())
+        << Error::RuntimeError() << Error::RuntimeError()
+        << "output tensor must have the same type as input tensor";
+    const Shape& shape = *output->shape();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("output_shape", "output_dtype");
+    attrs.SetAllAttrs(shape, dtype_val);
+    const auto& device = JUST(input->device());
+    CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank());
+    const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
+    DeviceType device_type = device->enum_type();
+    std::shared_ptr<OpExpr> op_expr =
+        JUST(CachedRankGroupAndDeviceType2AllGatherOpExpr(rank_group, device_type));
+    auto op_input = input;
+    if (const auto& static_zeros_tensor = std::dynamic_pointer_cast<StaticZerosTensor>(input)) {
+      op_input = std::dynamic_pointer_cast<Tensor>(JUST(static_zeros_tensor->AsLocalTensor()));
+    }
+    TensorTuple outputs{output};
+    JUST(OpInterpUtil::Dispatch(*op_expr, {op_input}, &outputs, attrs));
+    return outputs[0];
   }
 };
 
@@ -321,9 +413,9 @@ class GlobalS2SFunctor {
       CHECK_NE_OR_RETURN(in_nd_sbp->sbp_parallel(0).split_parallel().axis(),
                          out_nd_sbp->sbp_parallel(0).split_parallel().axis());
     }
-    std::shared_ptr<OpExpr> op_expr = JUST(
-        CachedEagerNcclS2SOpExpr(JUST(x->parallel_desc()), SymbolOf(in_nd_sbp->sbp_parallel(0)),
-                                 SymbolOf(out_nd_sbp->sbp_parallel(0))));
+    std::shared_ptr<OpExpr> op_expr =
+        JUST(CachedEagerCclS2SOpExpr(JUST(x->parallel_desc()), SymbolOf(in_nd_sbp->sbp_parallel(0)),
+                                     SymbolOf(out_nd_sbp->sbp_parallel(0))));
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
   }
 };
@@ -445,6 +537,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::CommBroadcastFunctor>("CommBroadcast");
   m.add_functor<impl::CommBroadcastTensorsFunctor>("CommBroadcastTensors");
   m.add_functor<impl::LocalAllReduceFunctor>("LocalAllReduce");
+  m.add_functor<impl::LocalAllGatherFunctor>("LocalAllGather");
+  m.add_functor<impl::LocalReduceScatterFunctor>("LocalReduceScatter");
   m.add_functor<impl::GlobalAllReduceFunctor>("GlobalAllReduce");
   m.add_functor<impl::GlobalReduceScatterFunctor>("GlobalReduceScatter");
   m.add_functor<impl::GlobalAllGatherFunctor>("GlobalAllGather");

@@ -224,7 +224,7 @@ __global__ void EncodeLookupKernel(uint32_t value_length, const Elem* cache_valu
     }
     for (int i = 0; i < batch_n_key; ++i) {
       const Key key = batch_keys[warp_id][i];
-      const Index row = batch_row_ids[warp_id][i];
+      const int64_t row = batch_row_ids[warp_id][i];
       if (row == 0) { continue; }
       for (int col = lane_id; col < value_length; col += warp_size) {
         values[(batch_start + i) * value_length + col] =
@@ -274,7 +274,7 @@ __global__ void EncodeLookupMaskKernel(uint32_t value_length, const Elem* __rest
     __syncwarp();
     for (int i = 0; i < batch_n_key; ++i) {
       const Key key = batch_keys[warp_id][i];
-      const Index row = batch_row_ids[warp_id][i];
+      const int64_t row = batch_row_ids[warp_id][i];
       if (row == 0) { continue; }
 #pragma unroll 4
       for (int col = lane_id; col < packed_cols; col += warp_size) {

@@ -45,6 +45,31 @@ class TestAllReduce(flow.unittest.TestCase):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestAllGather(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
+    def test_all_gather_into_tensor_1n2d(test_case):
+        device = "cuda"
+        tensor_in = (
+            flow.tensor([[1, 2, 3], [4, 5, 6]], dtype=flow.int64, device=device)
+            + flow.env.get_rank() * 6
+        )
+        tensor_out = flow.zeros(4, 3, dtype=flow.int64, device=device)
+        flow.comm.all_gather_into_tensor(tensor_out, tensor_in)
+        test_case.assertTrue(
+            np.allclose(
+                tensor_out.numpy(),
+                np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]),
+            )
+        )
+
+        tensor_out2 = flow.zeros(2, 3, 2, dtype=flow.int64, device=device)
+        flow.comm.all_gather_into_tensor(tensor_out2, tensor_in)
+        test_case.assertTrue(
+            np.allclose(
+                tensor_out2.numpy(),
+                np.array([[[1, 2], [3, 4], [5, 6]], [[7, 8], [9, 10], [11, 12]]]),
+            )
+        )
+
+    @flow.unittest.skip_unless_1n2d()
     def test_all_gather_1n2d(test_case):
         if flow.env.get_rank() == 0:
             np_arr = np.array([[2, 3], [4, 5]])
@@ -174,6 +199,37 @@ class TestReduceScatter(flow.unittest.TestCase):
         test_case.assertTrue(
             np.allclose(output.numpy(), tensor_list[0].numpy() * 4 + 6)
         )
+
+    @flow.unittest.skip_unless_1n2d()
+    def test_reduce_scatter_tensor_1n2d(test_case):
+        tensor_in = flow.tensor(
+            [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]],
+            dtype=flow.int64,
+            device="cuda",
+        )
+        tensor_out = flow.zeros(2, 3, dtype=flow.int64, device="cuda")
+        flow.comm.reduce_scatter_tensor(tensor_out, tensor_in)
+        if flow.env.get_rank() == 0:
+            test_case.assertTrue(
+                np.allclose(tensor_out.numpy(), np.array([[2, 4, 6], [8, 10, 12]]),)
+            )
+        else:
+            test_case.assertTrue(
+                np.allclose(tensor_out.numpy(), np.array([[14, 16, 18], [20, 22, 24]]),)
+            )
+        tensor_in2 = tensor_in.reshape(2, 3, 2)
+        tensor_out2 = flow.zeros(2, 3, dtype=flow.int64, device="cuda")
+        flow.comm.reduce_scatter_tensor(tensor_out2, tensor_in2)
+        if flow.env.get_rank() == 0:
+            test_case.assertTrue(
+                np.allclose(tensor_out2.numpy(), np.array([[2, 4, 6], [8, 10, 12]]),)
+            )
+        else:
+            test_case.assertTrue(
+                np.allclose(
+                    tensor_out2.numpy(), np.array([[14, 16, 18], [20, 22, 24]]),
+                )
+            )
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")

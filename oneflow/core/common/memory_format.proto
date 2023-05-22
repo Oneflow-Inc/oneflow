@@ -1,0 +1,10 @@
+syntax = "proto2";
+package oneflow;
+
+enum MemoryFormat {
+  kContiguous = 0;
+  kChannelsLast = 1;
+  kPreserve = 2;
+
+  kMemoryFormatCount = 3;
+};

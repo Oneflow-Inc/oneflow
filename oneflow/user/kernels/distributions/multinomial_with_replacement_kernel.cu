@@ -97,7 +97,7 @@ class MultinomialWithReplacementGpuKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    const auto& generator = CHECK_JUST(one::MakeGenerator(DeviceType::kCPU));
+    const auto& generator = CHECK_JUST(one::MakeGenerator(DeviceType::kCUDA));
     // When SBP is Split, each rank uses a different seeds, otherwise, ranks use the same seed
     generator->set_current_seed(
         CHECK_JUST(GetOpKernelRandomSeedInCurrentRank(ctx, ctx->Attr<int64_t>("seed"))));
@@ -112,7 +112,7 @@ class MultinomialWithReplacementGpuKernel final : public user_op::OpKernel {
     CHECK_NOTNULL(distribution_state);
     const auto& generator = distribution_state->generator();
     CHECK_NOTNULL(generator);
-    auto gpu_gen = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>());
+    auto gpu_gen = CHECK_JUST(generator->Get<ep::CUDAGenerator>());
 
     const user_op::Tensor* norm_dist = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* prefix_sum = ctx->Tensor4ArgNameAndIndex("prefix_sum", 0);
@@ -137,14 +137,8 @@ class MultinomialWithReplacementGpuKernel final : public user_op::OpKernel {
     // distribution concurrently.
     int grid_y = std::min<int>(numDist, stream->device_properties().maxGridSize[1]);
     dim3 grid((n_sample - 1) / block.x + 1, grid_y);
-    uint64_t offset = 0;
     uint64_t seed = gpu_gen->current_seed();
-    {
-      std::lock_guard<std::mutex> lock(gpu_gen->mutex_);
-      // each thread generates a single sample for (numdist/numblocks.y) distributions, however,
-      // since we have to use curand_uniform4 offset is 4 times that.
-      offset = gpu_gen->get_philox_offset(((numDist - 1) / grid.y + 1) * 4);
-    }
+    uint64_t offset = gpu_gen->get_philox_offset(((numDist - 1) / grid.y + 1) * 4);
 
     // Sample with replacement
     sampleMultinomialWithReplacement<<<grid, block, 0, stream->cuda_stream()>>>(

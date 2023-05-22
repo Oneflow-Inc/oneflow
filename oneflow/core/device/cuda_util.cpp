@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
-#include "oneflow/core/device/device_context.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/vm/vm_util.h"
 
@@ -74,6 +73,45 @@ const char* CurandGetErrorString(curandStatus_t error) {
     default: return "Unknown curand status";
   }
 }
+
+const char* CuFFTGetErrorString(cufftResult_t error) {
+  switch (error) {
+    case CUFFT_SUCCESS: return "CUFFT_SUCCESS";
+    case CUFFT_INVALID_PLAN: return "CUFFT_INVALID_PLAN";
+    case CUFFT_ALLOC_FAILED: return "CUFFT_ALLOC_FAILED";
+    case CUFFT_INVALID_TYPE: return "CUFFT_INVALID_TYPE";
+    case CUFFT_INVALID_VALUE: return "CUFFT_INVALID_VALUE";
+    case CUFFT_INTERNAL_ERROR: return "CUFFT_INTERNAL_ERROR";
+    case CUFFT_EXEC_FAILED: return "CUFFT_EXEC_FAILED";
+    case CUFFT_SETUP_FAILED: return "CUFFT_SETUP_FAILED";
+    case CUFFT_INVALID_SIZE: return "CUFFT_INVALID_SIZE";
+    case CUFFT_UNALIGNED_DATA: return "CUFFT_UNALIGNED_DATA";
+    case CUFFT_INCOMPLETE_PARAMETER_LIST: return "CUFFT_INCOMPLETE_PARAMETER_LIST";
+    case CUFFT_INVALID_DEVICE: return "CUFFT_INVALID_DEVICE";
+    case CUFFT_PARSE_ERROR: return "CUFFT_PARSE_ERROR";
+    case CUFFT_NO_WORKSPACE: return "CUFFT_NO_WORKSPACE";
+    case CUFFT_NOT_IMPLEMENTED: return "CUFFT_NOT_IMPLEMENTED";
+    case CUFFT_NOT_SUPPORTED: return "CUFFT_NOT_SUPPORTED";
+    default: return "Unknown cufft status";
+  }
+}
+
+#if CUDA_VERSION >= 11000
+const char* CusovlerGetErrorString(cusolverStatus_t error) {
+  switch (error) {
+    case CUSOLVER_STATUS_SUCCESS: return "CUSOLVER_STATUS_SUCCESS";
+    case CUSOLVER_STATUS_NOT_INITIALIZED: return "CUSOLVER_STATUS_NOT_INITIALIZED";
+    case CUSOLVER_STATUS_ALLOC_FAILED: return "CUSOLVER_STATUS_ALLOC_FAILED";
+    case CUSOLVER_STATUS_INVALID_VALUE: return "CUSOLVER_STATUS_INVALID_VALUE";
+    case CUSOLVER_STATUS_ARCH_MISMATCH: return "CUSOLVER_STATUS_ARCH_MISMATCH";
+    case CUSOLVER_STATUS_EXECUTION_FAILED: return "CUSOLVER_STATUS_EXECUTION_FAILED";
+    case CUSOLVER_STATUS_INTERNAL_ERROR: return "CUSOLVER_STATUS_INTERNAL_ERROR";
+    case CUSOLVER_STATUS_MATRIX_TYPE_NOT_SUPPORTED:
+      return "CUSOLVER_STATUS_MATRIX_TYPE_NOT_SUPPORTED";
+    default: return "Unknown cusolver status";
+  }
+}
+#endif
 
 #if CUDA_VERSION >= 10020
 
@@ -172,7 +210,6 @@ int GetCudaDeviceIndex() { return GlobalProcessCtx::LocalRank(); }
 
 int GetCudaDeviceCount() {
   /* static */ int cuda_device_count = 0;
-  CudaCurrentDeviceGuard dev_guard(GetCudaDeviceIndex());
   OF_CUDA_CHECK(cudaGetDeviceCount(&cuda_device_count));
   return cuda_device_count;
 }

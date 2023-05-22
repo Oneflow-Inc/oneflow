@@ -13,7 +13,7 @@ OneFlow provides two ways to accomplish `Distributed Training`:
 
 
 
-Baisc
+Basic
 -------------------------------
 When you start distributed training in OneFlow, the following functions can be used.
 
@@ -203,15 +203,19 @@ Communication collectives
 
         all_reduce
         all_gather
+        all_gather_into_tensor
         all_to_all
         broadcast
         barrier
         gather
         reduce
         reduce_scatter
+        reduce_scatter_tensor
         recv
         scatter
         send
+
+We also provide PyTorch-compatible APIs for communication collectives, for example, `oneflow.distributed.all_reduce(tensor, op=ReduceOp.SUM, group=None, async_op=False)`. For more information, see `PyTorch Distributed Communication <https://pytorch.org/docs/stable/distributed.html>`_. Note that we currently only support op=ReduceOp.SUM, group=None and async_op=False in these operations.
 
 Launching distributed training
 --------------------------------------------------------------

@@ -299,116 +299,137 @@ class TestModule(flow.unittest.TestCase):
             arg[0](test_case)
 
     @autotest(n=5)
-    def autotest_dropout_p0(test_case):
+    def test_dropout_p0(test_case):
         device = random_device()
         x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
-        m = torch.nn.Dropout(p=0, inplace=random_bool())
+        m = torch.nn.Dropout(p=0, inplace=False)
+        return m(x)
+
+    @unittest.skipIf(True, "Pytorch 1.10.0 do not have Dropout1d module")
+    @autotest(n=5)
+    def test_dropout1d_p0(test_case):
+        device = random_device()
+        x = random_tensor(ndim=random(2, 4), dim0=random(1, 8)).to(device)
+        m = torch.nn.Dropout1d(p=0, inplace=False)
         return m(x)
 
     @autotest(n=5)
-    def autotest_dropout1d_p0(test_case):
+    def test_dropout2d_p0(test_case):
         device = random_device()
         x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
-        m = torch.nn.Dropout1d(p=0, inplace=random_bool())
+        m = torch.nn.Dropout2d(p=0, inplace=False)
+        return m(x)
+
+    @unittest.skipIf(
+        True,
+        "this will Pytorch 1.13.0, but failed with Pytorch 1.10.0 because some non-leaf tensors don't have grad",
+    )
+    @autotest(n=5)
+    def test_dropout3d_p0(test_case):
+        device = random_device()
+        x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
+        m = torch.nn.Dropout3d(p=0, inplace=False)
         return m(x)
 
     @autotest(n=5)
-    def autotest_dropout2d_p0(test_case):
+    def test_dropout_p1(test_case):
         device = random_device()
         x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
-        m = torch.nn.Dropout2d(p=0, inplace=random_bool())
+        m = torch.nn.Dropout(p=1.0, inplace=False)
         return m(x)
 
+    @unittest.skipIf(True, "Pytorch 1.10.0 do not have Dropout1d module")
     @autotest(n=5)
-    def autotest_dropout3d_p0(test_case):
+    def test_dropout1d_p1(test_case):
         device = random_device()
-        x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
-        m = torch.nn.Dropout3d(p=0, inplace=random_bool())
+        x = random_tensor(ndim=random(2, 4), dim0=random(1, 8)).to(device)
+        m = torch.nn.Dropout1d(p=1.0, inplace=False)
         return m(x)
 
+    @unittest.skip("skip for now, becase it failed 8 times in past week")
     @autotest(n=5)
-    def autotest_dropout_p1(test_case):
+    def test_dropout2d_p1(test_case):
         device = random_device()
         x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
-        m = torch.nn.Dropout(p=1.0, inplace=random_bool())
+        m = torch.nn.Dropout2d(p=1.0, inplace=False)
         return m(x)
 
+    @unittest.skipIf(
+        True,
+        "this will Pytorch 1.13.0, but failed with Pytorch 1.10.0 because some non-leaf tensors don't have grad",
+    )
     @autotest(n=5)
-    def autotest_dropout1d_p1(test_case):
+    def test_dropout3d_p1(test_case):
         device = random_device()
         x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
-        m = torch.nn.Dropout1d(p=1.0, inplace=random_bool())
+        m = torch.nn.Dropout3d(p=1.0, inplace=False)
         return m(x)
 
+    @unittest.skipIf(True, "Pytorch 1.10.0 do not have Dropout1d module")
     @autotest(n=5)
-    def autotest_dropout2d_p1(test_case):
+    def test_functional_dropout1d_p1(test_case):
         device = random_device()
-        x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
-        m = torch.nn.Dropout2d(p=1.0, inplace=random_bool())
-        return m(x)
-
-    @autotest(n=5)
-    def autotest_dropout3d_p1(test_case):
-        device = random_device()
-        x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
-        m = torch.nn.Dropout3d(p=1.0, inplace=random_bool())
-        return m(x)
-
-    @autotest(n=5)
-    def autotest_functional_dropout1d_p1(test_case):
-        device = random_device()
-        x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
+        x = random_tensor(ndim=random(2, 4), dim0=random(1, 8)).to(device)
         return torch.nn.functional.dropout1d(x, p=1.0)
 
     @autotest(n=5)
-    def autotest_functional_dropout2d_p1(test_case):
+    def test_functional_dropout2d_p1(test_case):
         device = random_device()
         x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
         return torch.nn.functional.dropout2d(x, p=1.0)
 
+    @unittest.skipIf(
+        True,
+        "this will Pytorch 1.13.0, but failed with Pytorch 1.10.0 because some non-leaf tensors don't have grad",
+    )
     @autotest(n=5)
-    def autotest_functional_dropout3d_p1(test_case):
+    def test_functional_dropout3d_p1(test_case):
         device = random_device()
         x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
         return torch.nn.functional.dropout3d(x, p=1.0)
 
-    @autotest(n=5)
-    def autotest_dropout_eval(test_case):
+    @autotest(n=5, check_graph=False)
+    def test_dropout_eval(test_case):
         device = random_device()
         x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
-        m = torch.nn.Dropout(p=1.0, inplace=random_bool())
+        m = torch.nn.Dropout(p=1.0, inplace=False)
         m.eval()
         return m(x)
 
-    @autotest(n=5)
-    def autotest_dropout1d_eval(test_case):
+    @unittest.skipIf(True, "Pytorch 1.10.0 do not have Dropout1d module")
+    @autotest(n=5, check_graph=False)
+    def test_dropout1d_eval(test_case):
         device = random_device()
-        x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
-        m = torch.nn.Dropout1d(p=1.0, inplace=random_bool())
+        x = random_tensor(ndim=random(2, 4), dim0=random(1, 8)).to(device)
+        m = torch.nn.Dropout1d(p=1.0, inplace=False)
         m.eval()
         return m(x)
 
-    @autotest(n=5)
-    def autotest_dropout2d_eval(test_case):
+    @autotest(n=5, check_graph=False)
+    def test_dropout2d_eval(test_case):
         device = random_device()
         x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
-        m = torch.nn.Dropout2d(p=1.0, inplace=random_bool())
+        m = torch.nn.Dropout2d(p=1.0, inplace=False)
         m.eval()
         return m(x)
 
-    @autotest(n=5)
-    def autotest_dropout3d_eval(test_case):
+    @unittest.skipIf(
+        True,
+        "this will Pytorch 1.13.0, but failed with Pytorch 1.10.0 because some non-leaf tensors don't have grad",
+    )
+    @autotest(n=5, check_graph=False)
+    def test_dropout3d_eval(test_case):
         device = random_device()
         x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
-        m = torch.nn.Dropout3d(p=1.0, inplace=random_bool())
+        m = torch.nn.Dropout3d(p=1.0, inplace=False)
         m.eval()
         return m(x)
 
-    @autotest(n=5)
-    def autotest_0dim_dropout_eval(test_case):
+    @autotest(n=5, check_graph=False)
+    def test_0dim_dropout_eval(test_case):
         device = random_device()
         x = random_tensor(ndim=0).to(device)
-        m = torch.nn.Dropout(p=1.0, inplace=random_bool())
+        m = torch.nn.Dropout(p=1.0, inplace=False)
         m.eval()
         return m(x)
 

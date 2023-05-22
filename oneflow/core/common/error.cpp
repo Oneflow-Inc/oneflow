@@ -14,12 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <stdexcept>
+#include "fmt/core.h"
+#include "fmt/color.h"
+#include "fmt/ostream.h"
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/exception.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/error_util.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
+#include "oneflow/extension/stack/foreign_stack_getter.h"
+#include "oneflow/extension/stack/stacktrace.h"
+#include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
 
@@ -41,6 +47,50 @@ std::shared_ptr<StackedError>* MutThreadLocalError() {
 
 Error&& Error::AddStackFrame(Symbol<ErrorStackFrame> error_stack_frame) {
   stacked_error_->add_stack_frame(error_stack_frame);
+  return std::move(*this);
+}
+
+Error&& Error::GetStackTrace(int64_t depth, int64_t skip_n_firsts) {
+  backward::StackTrace st;
+  backward::SnippetFactory snippets;
+  backward::TraceResolver resolver;
+  st.load_here(depth);
+  st.skip_n_firsts(skip_n_firsts);
+  resolver.load_stacktrace(st);
+
+  for (int i = 0; i < st.size(); i++) {
+    const auto& trace = resolver.resolve(st[i]);
+    if (!backward::Printer::is_oneflow_file(trace.object_filename)) { continue; }
+
+    //  without debug info
+    if (!trace.source.filename.size()) {
+      stacked_error_->add_stack_frame(
+          SymbolOf(ErrorStackFrame(trace.object_filename, -1, trace.object_function)));
+    }
+
+    //  with debug info
+    if (trace.source.filename.size()) {
+      const backward::ResolvedTrace::SourceLoc& source_loc = trace.source;
+      backward::SnippetFactory::lines_t lines =
+          snippets.get_snippet(source_loc.filename, source_loc.line, static_cast<unsigned>(1));
+      std::string code_text = lines[0].second;
+      const auto pos = code_text.find_first_not_of(" \t");
+      code_text = code_text.substr(pos, code_text.size() - pos);
+      stacked_error_->add_stack_frame(SymbolOf(
+          ErrorStackFrame(source_loc.filename, source_loc.line, source_loc.function, code_text)));
+    }
+
+    for (size_t inliner_idx = 0; inliner_idx < trace.inliners.size(); ++inliner_idx) {
+      const backward::ResolvedTrace::SourceLoc& source_loc = trace.inliners[inliner_idx];
+      backward::SnippetFactory::lines_t lines =
+          snippets.get_snippet(source_loc.filename, source_loc.line, static_cast<unsigned>(1));
+      std::string code_text = lines[0].second;
+      const auto pos = code_text.find_first_not_of(" \t");
+      code_text = code_text.substr(pos, code_text.size() - pos);
+      stacked_error_->add_stack_frame(SymbolOf(
+          ErrorStackFrame(source_loc.filename, source_loc.line, source_loc.function, code_text)));
+    }
+  }
   return std::move(*this);
 }
 
@@ -313,19 +363,53 @@ std::string GetStackedErrorString(const std::shared_ptr<StackedError>& error) {
 }
 
 std::string GetErrorString(const std::shared_ptr<StackedError>& error) {
+  std::string error_str;
   if (IsInDebugMode()) {
-    return GetStackedErrorString(error);
+    error_str = GetStackedErrorString(error);
   } else {
-    return error->error_proto()->msg();
+    error_str = error->error_proto()->msg();
   }
+  if (error_str.empty()) { error_str = "<No error message>"; }
+  return error_str;
 }
 
 void ThrowError(const std::shared_ptr<StackedError>& error) {
+  std::string error_str;
+  fmt::format_to(std::back_inserter(error_str), "{}: {}\n",
+                 fmt::styled("Error", fmt::emphasis::bold | fmt::fg(fmt::color::red)),
+                 GetErrorString(error));
+  // Append foreign stack trace (e.g. Python stack trace) when it is available.
+  if (ForeignFrameThreadLocalGuard::Current().has_value()) {
+    auto frame = *CHECK_JUST(ForeignFrameThreadLocalGuard::Current());
+    if (!IsMainThread()) {
+      if (auto* stack_getter = Singleton<ForeignStackGetter>::Get()) {
+        fmt::format_to(std::back_inserter(error_str),
+                       fmt::emphasis::bold | fmt::fg(fmt::color::dark_orange),
+                       "Related Python stack trace:");
+        if (IsPythonStackGetterEnabledByDebugBuild()) {
+          fmt::format_to(
+              std::back_inserter(error_str),
+              " (You are seeing this stack trace because you compiled OneFlow with "
+              "CMAKE_BUILD_TYPE=Debug. If you want to see it even with other CMAKE_BUILD_TYPEs, "
+              "you can set ONEFLOW_DEBUG or ONEFLOW_PYTHON_STACK_GETTER to 1)");
+        }
+        fmt::format_to(std::back_inserter(error_str), "\n{}",
+                       stack_getter->GetFormattedStack(frame));
+      } else {
+        fmt::format_to(
+            std::back_inserter(error_str),
+            "You can set {} or {} to 1 to get the Python stack of the error.",
+            fmt::styled("ONEFLOW_DEBUG", fmt::emphasis::bold | fmt::fg(fmt::color::dark_orange)),
+            fmt::styled("ONEFLOW_PYTHON_STACK_GETTER",
+                        fmt::emphasis::bold | fmt::fg(fmt::color::dark_orange)));
+      }
+    }
+  }
   *MutThreadLocalError() = error;
-  if ((*error)->has_runtime_error()) { throw RuntimeException(GetErrorString(error)); }
-  if ((*error)->has_type_error()) { throw TypeException(GetErrorString(error)); }
-  if ((*error)->has_index_error()) { throw IndexException(GetErrorString(error)); }
-  if ((*error)->has_unimplemented_error()) { throw NotImplementedException(GetErrorString(error)); }
+  if ((*error)->has_runtime_error()) { throw RuntimeException(error_str); }
+  if ((*error)->has_type_error()) { throw TypeException(error_str); }
+  if ((*error)->has_index_error()) { throw IndexException(error_str); }
+  if ((*error)->has_unimplemented_error()) { throw NotImplementedException(error_str); }
   throw Exception(GetStackedErrorString(error));
 }
 

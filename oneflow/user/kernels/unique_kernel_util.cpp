@@ -20,16 +20,23 @@ namespace oneflow {
 template<typename KEY, typename IDX>
 struct UniqueKernelUtil<DeviceType::kCPU, KEY, IDX> {
   static void Unique(ep::Stream* stream, int64_t n, const KEY* in, IDX* num_unique, KEY* unique_out,
-                     IDX* idx_out, void* workspace, int64_t workspace_size_in_bytes) {
+                     IDX* idx_out, void* workspace, int64_t workspace_size_in_bytes, bool sorted) {
     UniqueKernelUtil<DeviceType::kCPU, KEY, IDX>::UniqueWithCounts(
-        stream, n, in, num_unique, unique_out, idx_out, nullptr, workspace,
-        workspace_size_in_bytes);
+        stream, n, in, num_unique, unique_out, idx_out, nullptr, workspace, workspace_size_in_bytes,
+        sorted);
   }
   static void UniqueWithCounts(ep::Stream* stream, int64_t n, const KEY* in, IDX* num_unique,
                                KEY* unique_out, IDX* idx_out, IDX* count, void* workspace,
-                               int64_t workspace_size_in_bytes) {
+                               int64_t workspace_size_in_bytes, bool sorted) {
+    std::vector<int64_t> sorted_idx(n);
+    std::iota(sorted_idx.begin(), sorted_idx.end(), 0);
+    if (sorted) {
+      std::sort(sorted_idx.begin(), sorted_idx.end(),
+                [&in](size_t a, size_t b) { return in[a] < in[b]; });
+    }
+
     HashMap<KEY, IDX> map;
-    FOR_RANGE(int64_t, i, 0, n) {
+    for (int64_t i : sorted_idx) {
       KEY in_i = in[i];
       auto it = map.find(in_i);
       if (it == map.end()) {
@@ -46,6 +53,7 @@ struct UniqueKernelUtil<DeviceType::kCPU, KEY, IDX> {
     }
     *num_unique = map.size();
   }
+
   static void GetUniqueWorkspaceSizeInBytes(ep::Stream* stream, int64_t n,
                                             int64_t* workspace_size_in_bytes) {
     *workspace_size_in_bytes = 1;

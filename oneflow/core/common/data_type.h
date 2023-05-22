@@ -21,6 +21,7 @@ limitations under the License.
 #if defined(WITH_CUDA)
 #include <cuda_fp16.h>
 #include <cuda.h>
+#include <cuComplex.h>
 #if CUDA_VERSION >= 11000
 #include <cuda_bf16.h>
 #endif  // CUDA_VERSION >= 11000
@@ -34,67 +35,121 @@ limitations under the License.
 #include "oneflow/core/common/device_type.h"
 #include <half.hpp>
 
-namespace oneflow {
+namespace std {
 
-template<>
-struct IsScalarType<bfloat16> final {
-  static const bool value = true;
-};
-
-typedef half_float::half float16;
-
-template<>
-struct IsScalarType<float16> final {
-  static const bool value = true;
-};
-
-template<typename T>
-struct IsFloat16;
-
-template<>
-struct IsFloat16<float16> : std::true_type {};
-
+// Extend numeric_limits<half> for the C++ standard library.
 #ifdef WITH_CUDA
 
 template<>
-struct IsFloat16<half> : std::true_type {};
+struct numeric_limits<half> {
+  static constexpr int digits = std::numeric_limits<half_float::half>::digits;
+
+  static constexpr half_float::half lowest() {
+    return std::numeric_limits<half_float::half>::lowest();
+  }
+
+  static constexpr half_float::half max() { return std::numeric_limits<half_float::half>::max(); }
+};
 
 #endif  // WITH_CUDA
 
+}  // namespace std
+
+namespace oneflow {
+
+namespace detail {
+
+template<typename>
+struct IsFloat16Helper : std::false_type {};
+
+template<typename>
+struct IsFloatingHelper : std::false_type {};
+
+template<typename>
+struct IsIntegralHelper : std::false_type {};
+
+template<typename>
+struct IsUnsignedIntegralHelper : std::false_type {};
+
+#ifdef WITH_CUDA
+template<typename>
+struct IsCudaComplexHelper : std::false_type {};
+#endif  // WITH_CUDA
+
+}  // namespace detail
+
+using float16 = half_float::half;
+
+#define DEFINE_SPEC(Trait, Type, Value) \
+  template<>                            \
+  struct Trait<Type> : std::integral_constant<bool, Value> {};
+
+// Type Trait: IsFloat16
+
+DEFINE_SPEC(detail::IsFloat16Helper, float16, true)
+#ifdef WITH_CUDA
+DEFINE_SPEC(detail::IsFloat16Helper, half, true)
+#endif  // WITH_CUDA
+
 template<typename T>
-struct IsFloat16 : std::false_type {};
+struct IsFloat16
+    : std::integral_constant<bool,
+                             (detail::IsFloat16Helper<typename std::remove_cv<T>::type>::value)> {};
+
+// Type Trait: IsCudaComplex
+#ifdef WITH_CUDA
+DEFINE_SPEC(detail::IsCudaComplexHelper, cuComplex, true)
+DEFINE_SPEC(detail::IsCudaComplexHelper, cuDoubleComplex, true)
+
+template<typename T>
+struct IsCudaComplex
+    : std::integral_constant<
+          bool, (detail::IsCudaComplexHelper<typename std::remove_cv<T>::type>::value)> {};
+#endif  // WITH_CUDA
 
 // Type Trait: IsFloating
-template<typename T>
-struct IsFloating : std::integral_constant<bool, false> {};
 
 #define SPECIALIZE_TRUE_FLOATING(type_cpp, type_proto) \
-  template<>                                           \
-  struct IsFloating<type_cpp> : std::integral_constant<bool, true> {};
+  DEFINE_SPEC(detail::IsFloatingHelper, type_cpp, true)
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_FLOATING, FLOATING_DATA_TYPE_SEQ);
 #undef SPECIALIZE_TRUE_FLOATING
+DEFINE_SPEC(detail::IsFloatingHelper, float16, true)
+#ifdef WITH_CUDA
+DEFINE_SPEC(detail::IsFloatingHelper, half, true)
+#endif  // WITH_CUDA
+
+template<typename T>
+struct IsFloating
+    : std::integral_constant<bool,
+                             (detail::IsFloatingHelper<typename std::remove_cv<T>::type>::value)> {
+};
 
 // Type Trait: IsIntegral
 
-template<typename T>
-struct IsIntegral : std::integral_constant<bool, false> {};
-
 #define SPECIALIZE_TRUE_INTEGRAL(type_cpp, type_proto) \
-  template<>                                           \
-  struct IsIntegral<type_cpp> : std::integral_constant<bool, true> {};
+  DEFINE_SPEC(detail::IsIntegralHelper, type_cpp, true)
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_INTEGRAL, INT_DATA_TYPE_SEQ);
 #undef SPECIALIZE_TRUE_INTEGRAL
 
+template<typename T>
+struct IsIntegral
+    : std::integral_constant<bool,
+                             (detail::IsIntegralHelper<typename std::remove_cv<T>::type>::value)> {
+};
+
 // Type Trait: IsUnsignedIntegral
 
-template<typename T>
-struct IsUnsignedIntegral : std::integral_constant<bool, false> {};
-
 #define SPECIALIZE_TRUE_INTEGRAL(type_cpp, type_proto) \
-  template<>                                           \
-  struct IsUnsignedIntegral<type_cpp> : std::integral_constant<bool, true> {};
+  DEFINE_SPEC(detail::IsUnsignedIntegralHelper, type_cpp, true)
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_INTEGRAL, UNSIGNED_INT_DATA_TYPE_SEQ);
 #undef SPECIALIZE_TRUE_INTEGRAL
+
+template<typename T>
+struct IsUnsignedIntegral
+    : std::integral_constant<
+          bool, (detail::IsUnsignedIntegralHelper<typename std::remove_cv<T>::type>::value)> {};
+
+#undef DEFINE_SPEC
 
 // Type Trait: GetDataType
 
@@ -109,12 +164,21 @@ struct GetDataType<void> : std::integral_constant<DataType, DataType::kChar> {};
   struct GetDataType<type_cpp> : std::integral_constant<DataType, type_proto> {}; \
   inline type_cpp GetTypeByDataType(std::integral_constant<DataType, type_proto>) { return {}; }
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE,
-                     ALL_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ BFLOAT16_DATA_TYPE_SEQ);
+                     ALL_DATA_TYPE_SEQ UNSIGNED_INT32_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ
+                         BFLOAT16_DATA_TYPE_SEQ COMPLEX_DATA_TYPE_SEQ UNSIGNED_INT64_DATA_TYPE_SEQ
+                             INT16_DATA_TYPE_SEQ);
 #undef SPECIALIZE_GET_DATA_TYPE
 
 template<typename T>
 struct GetDataType<T, typename std::enable_if<IsFloat16<T>::value>::type>
     : std::integral_constant<DataType, DataType::kFloat16> {};
+
+#ifdef WITH_CUDA
+template<>
+struct GetDataType<cuComplex> : std::integral_constant<DataType, DataType::kComplex64> {};
+template<>
+struct GetDataType<cuDoubleComplex> : std::integral_constant<DataType, DataType::kComplex128> {};
+#endif  // WITH_CUDA
 
 #if CUDA_VERSION >= 11000
 template<>
@@ -130,6 +194,19 @@ using DataTypeToType = decltype(GetTypeByDataType(std::integral_constant<DataTyp
 #define OF_DEVICE_FUNC inline
 #endif
 
+#ifdef WITH_CUDA
+template<typename T, typename std::enable_if<!(IsFloat16<T>::value
+                                               || IsCudaComplex<T>::value)>::type* = nullptr>
+OF_DEVICE_FUNC T GetZeroVal() {
+  return static_cast<T>(0);
+}
+
+template<typename T, typename std::enable_if<!(IsFloat16<T>::value
+                                               || IsCudaComplex<T>::value)>::type* = nullptr>
+OF_DEVICE_FUNC T GetOneVal() {
+  return static_cast<T>(1);
+}
+#else
 template<typename T, typename std::enable_if<!IsFloat16<T>::value>::type* = nullptr>
 OF_DEVICE_FUNC T GetZeroVal() {
   return static_cast<T>(0);
@@ -139,6 +216,7 @@ template<typename T, typename std::enable_if<!IsFloat16<T>::value>::type* = null
 OF_DEVICE_FUNC T GetOneVal() {
   return static_cast<T>(1);
 }
+#endif  // WITH_CUDA
 
 template<typename T, typename std::enable_if<!IsFloat16<T>::value>::type* = nullptr>
 OF_DEVICE_FUNC T GetMinVal();
@@ -220,11 +298,36 @@ OF_DEVICE_FUNC T GetZeroVal() {
   return *(T*)&ret;
 }
 
+#ifdef WITH_CUDA
+template<typename T, typename std::enable_if<std::is_same<T, cuComplex>::value>::type* = nullptr>
+OF_DEVICE_FUNC T GetZeroVal() {
+  return make_cuFloatComplex((float)0.0, (float)0.0);
+}
+template<typename T,
+         typename std::enable_if<std::is_same<T, cuDoubleComplex>::value>::type* = nullptr>
+OF_DEVICE_FUNC T GetZeroVal() {
+  return make_cuDoubleComplex((double)0.0, (double)0.0);
+}
+#endif  // WITH_CUDA
+
 template<typename T, typename std::enable_if<IsFloat16<T>::value>::type* = nullptr>
 OF_DEVICE_FUNC T GetOneVal() {
   uint16_t ret = 0x3c00;  // Decimal: 15360; Binary: 0 01111 0000000000
   return *(T*)&ret;
 }
+
+#ifdef WITH_CUDA
+template<typename T, typename std::enable_if<std::is_same<T, cuComplex>::value>::type* = nullptr>
+OF_DEVICE_FUNC T GetOneVal() {
+  return make_cuFloatComplex((float)1.0, (float)1.0);
+}
+
+template<typename T,
+         typename std::enable_if<std::is_same<T, cuDoubleComplex>::value>::type* = nullptr>
+OF_DEVICE_FUNC T GetOneVal() {
+  return make_cuDoubleComplex((double)1.0, (double)1.0);
+}
+#endif  // WITH_CUDA
 
 template<typename T, typename std::enable_if<IsFloat16<T>::value>::type* = nullptr>
 OF_DEVICE_FUNC T GetMaxVal() {
@@ -237,6 +340,14 @@ OF_DEVICE_FUNC T GetMinVal() {
   uint16_t ret = 0xfbff;  // Decimal: 64511; Binary: 1 11110 1111111111
   return *(T*)&ret;
 }
+
+#if CUDA_VERSION >= 11000
+template<>
+OF_DEVICE_FUNC nv_bfloat16 GetMinVal<nv_bfloat16>() {
+  uint16_t ret = 0xff7f;
+  return *(nv_bfloat16*)&ret;
+}
+#endif  // CUDA_VERSION >= 11000
 
 template<DeviceType, typename T>
 struct DevDType {
@@ -263,9 +374,10 @@ struct DevDType<DeviceType::kCUDA, bfloat16> {
 bool IsBoolDataType(DataType data_type);
 bool IsIntegralDataType(DataType data_type);
 bool IsFloatingDataType(DataType data_type);
+bool IsHalfDataType(DataType data_type);
 bool IsSupportRequireGradDataType(DataType data_type);
-bool IsPODDataType(DataType data_type);
-bool IsPODAndHalfDataType(DataType data_type);
+bool IsComplexDataType(DataType data_type);
+bool IsTriviallyCopyableDataType(DataType data_type);
 bool IsIndexDataType(DataType data_type);
 bool NotSupportBoxingDataType(DataType data_type);
 size_t GetSizeOfDataType(DataType data_type);
@@ -281,11 +393,6 @@ void CheckDataType(DataType data_type) {
                  && data_type != DataType::kChar && data_type != GetDataType<T>::value))
       << data_type << " " << GetDataType<T>::value;
 }
-
-int64_t GetIntMaxVal(DataType datatype);
-int64_t GetIntMinVal(DataType datatype);
-double GetFloatMaxVal(DataType datatype);
-double GetFloatMinVal(DataType datatype);
 
 }  // namespace oneflow
 

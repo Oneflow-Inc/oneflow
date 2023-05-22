@@ -57,9 +57,11 @@ header_fmt = (
 #ifndef ONEFLOW_CORE_FUNCTIONAL_GENERATED_FUNCTIONAL_API_H_
 #define ONEFLOW_CORE_FUNCTIONAL_GENERATED_FUNCTIONAL_API_H_
 
+#include "oneflow/core/common/memory_format.pb.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/dtype.h"
+#include "oneflow/core/framework/layout.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
@@ -122,11 +124,11 @@ pybind_source_fmt = (
 #include "oneflow/api/python/functional/function_def.h"
 #include "oneflow/api/python/functional/python_arg.h"
 #include "oneflow/api/python/functional/python_arg_parser.h"
-#include "oneflow/api/python/functional/python_frame.h"
 #include "oneflow/api/python/functional/python_return_types.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/extension/stack/python/stack_getter.h"
 
 namespace {{
 // This return type template code is referenced from:

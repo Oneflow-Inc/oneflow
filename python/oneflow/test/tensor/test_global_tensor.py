@@ -227,13 +227,6 @@ class TestTensor(flow.unittest.TestCase):
         x.copy_(y)
         test_case.assertTrue(np.array_equal(x.numpy(), y.numpy()))
 
-        x = flow.zeros(
-            4, 6, placement=flow.placement("cuda", [0, 1]), sbp=flow.sbp.broadcast
-        )
-        y = np.ones((4, 6), dtype=np.float32)
-        x.copy_(y)
-        test_case.assertTrue(np.array_equal(x.numpy(), y))
-
 
 if __name__ == "__main__":
     unittest.main()

@@ -17,10 +17,12 @@ limitations under the License.
 
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/job/global_mode.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/extension/python/numpy.h"
 #include "oneflow/core/common/decorator.h"
@@ -172,9 +174,12 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
   } else {
     device_ = JUST(Device::New("cpu"));
   }
-  std::shared_ptr<Tensor> tensor = JUST(
-      functional::Empty(shape, JUST(DType::Get(np_data_type)), device_, /*pin_memory=*/pin_memory));
-  JUST(CopyLocalTensorFromUntypedArray(tensor, array));
+  std::shared_ptr<Tensor> tensor =
+      JUST(functional::Empty(shape, JUST(DType::Get(np_data_type)), device_,
+                             /*requires_grad=*/false, /*pin_memory=*/pin_memory));
+  if (device_->enum_type() != DeviceType::kMeta) {
+    JUST(CopyLocalTensorFromUntypedArray(tensor, array));
+  }
 
   Py_DECREF(array);
   if (dtype && JUST(dtype)->data_type() != np_data_type) {
@@ -230,9 +235,16 @@ Maybe<Tensor> MakeGlobalTensorFromData(PyObject* data, const Optional<Symbol<DTy
   }
 
   Symbol<Device> device = JUST(Device::New(placement->device_tag()));
-  std::shared_ptr<Tensor> local_tensor =
-      JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device, /*pin_memory=*/false));
-  JUST(CopyLocalTensorFromUntypedArray(local_tensor, array));
+  std::shared_ptr<Tensor> local_tensor;
+  {
+    GlobalMode::Guard guard(/* disable global mode */ false);
+    local_tensor =
+        JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device, /*requires_grad=*/false,
+                               /*pin_memory=*/false));
+  }
+  if (device->enum_type() != DeviceType::kMeta) {
+    JUST(CopyLocalTensorFromUntypedArray(local_tensor, array));
+  }
 
   Py_DECREF(array);
   // Cast to float if data is double sequence, rather than numpy array.

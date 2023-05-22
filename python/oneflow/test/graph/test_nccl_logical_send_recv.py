@@ -80,6 +80,8 @@ def _test_nccl_logical_send_recv_2d(test_case, src_nd_sbp, dst_nd_sbp):
     #        print("out ", out_np)
     test_case.assertTrue(np.array_equal(out_np, in_np))
 
+    flow.boxing.nccl.enable_use_compute_stream(False)
+
 
 def gen_2d_sbp():
     sbp_list = [

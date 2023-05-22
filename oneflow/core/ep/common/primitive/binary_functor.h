@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_PRIMITIVE_COMMON_BINARY_FUNCTOR_H_
 
 #include "oneflow/core/ep/include/primitive/binary_op.h"
+#include "oneflow/core/ep/common/primitive/unary_functor.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/scalar.h"
 #include <cmath>
@@ -81,6 +82,27 @@ struct BinaryFunctor<device, BinaryOp::kMin, Src, Dst> {
   OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const {
     return static_cast<Dst>(src0 < src1 ? src0 : src1);
   }
+};
+
+template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kBitwiseAnd, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const { return static_cast<Dst>(src0 & src1); }
+};
+
+template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kBitwiseOr, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const { return static_cast<Dst>(src0 | src1); }
+};
+
+template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kBitwiseXor, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const { return static_cast<Dst>(src0 ^ src1); }
 };
 
 template<DeviceType device, typename Src, typename Dst>
@@ -257,6 +279,13 @@ struct BinaryFunctor<device, BinaryOp::kScalarExpPowerGrad, Src, Dst> {
 };
 
 template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kIdentityBackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const { return static_cast<Dst>(dy); }
+};
+
+template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kEluBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : alpha(attr0.Value<double>()) {}
 
@@ -268,13 +297,14 @@ struct BinaryFunctor<device, BinaryOp::kEluBackwardWithDyX, Src, Dst> {
 };
 
 template<DeviceType device, typename Src, typename Dst>
-struct BinaryFunctor<device, BinaryOp::kCeluBackwardWithDyX, Src, Dst> {
+struct BinaryFunctor<device, BinaryOp::kCeluBackwardWithDyY, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1)
       : inv_alpha(1.0f / attr0.Value<double>()) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-    return static_cast<Dst>((x > static_cast<Src>(0)) ? dy
-                                                      : dy * static_cast<Src>(exp(x * inv_alpha)));
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src y) const {
+    return static_cast<Dst>((y > static_cast<Src>(0))
+                                ? dy
+                                : dy * static_cast<Src>(y * inv_alpha + static_cast<Src>(1)));
   }
   const Src inv_alpha;
 };
@@ -356,6 +386,15 @@ struct BinaryFunctor<device, BinaryOp::kReluBackwardWithDyY, Src, Dst> {
 
   OF_DEVICE_FUNC Dst operator()(Src dy, Src y) const {
     return static_cast<Dst>((y <= static_cast<Src>(0.0)) ? static_cast<Src>(0.0) : dy);
+  }
+};
+
+template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kReluBackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    return static_cast<Dst>((x <= static_cast<Src>(0.0)) ? static_cast<Src>(0.0) : dy);
   }
 };
 
@@ -524,19 +563,17 @@ struct BinaryFunctor<device, BinaryOp::kExpBackwardWithDyX, Src, Dst> {
 };
 
 template<DeviceType device, typename Src, typename Dst>
-struct BinaryFunctor<device, BinaryOp::kExpm1BackwardWithDyX, Src, Dst> {
+struct BinaryFunctor<device, BinaryOp::kExp2BackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
-  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const { return dy * exp(x); }
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    return dy * exp2(x) * log(static_cast<Src>(2.0));
+  }
 };
 
 template<DeviceType device, typename Src, typename Dst>
-struct BinaryFunctor<device, BinaryOp::kLgammaBackwardWithDyX, Src, Dst> {
+struct BinaryFunctor<device, BinaryOp::kExpm1BackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
-  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-    // TODO(chengcheng): return: dy * digamma(x)
-    assert(false);
-    return 0.0;
-  }
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const { return dy * exp(x); }
 };
 
 template<DeviceType device, typename Src, typename Dst>
@@ -606,6 +643,18 @@ template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kSigmoidBackwardWithDyY, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
   OF_DEVICE_FUNC Dst operator()(Src dy, Src y) const { return dy * (y * (1.0 - y)); }
+};
+
+template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kSigmoidBackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    using UnaryOp = oneflow::ep::primitive::UnaryOp;
+    using UnaryFunctor = oneflow::ep::primitive::UnaryFunctor<device, UnaryOp::kSigmoid, Dst, Src>;
+    auto uf = UnaryFunctor(0, 0);
+    Src y = uf(x);
+    return dy * (y * (static_cast<Src>(1.0) - y));
+  }
 };
 
 template<DeviceType device, typename Src, typename Dst>

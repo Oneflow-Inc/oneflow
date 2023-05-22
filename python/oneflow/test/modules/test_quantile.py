@@ -39,7 +39,6 @@ class TestQuantile(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["q"] = [0.2, 0.6, 0.8]
         for arg in GenArgList(arg_dict):
-            print(arg)
             _test_quantile(test_case, *arg)
 
 

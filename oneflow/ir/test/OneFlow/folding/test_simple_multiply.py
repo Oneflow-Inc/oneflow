@@ -23,9 +23,6 @@ import oneflow as flow
 import oneflow.unittest
 import oneflow.nn as nn
 
-os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "1"
-
 
 class MultiplyModel(nn.Module):
     def __init__(self, dtype=flow.float32):
@@ -82,7 +79,11 @@ def _test_fold_multiply(test_case, module, with_cuda, *args, dtype=oneflow.float
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestFoldMultiply(oneflow.unittest.TestCase):
+class TestFoldMultiply(oneflow.unittest.MLIRTestCase):
+    def setUp(self):
+        os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+        os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "1"
+
     def test_fold_multiply(test_case):
         _test_fold_multiply(test_case, MultiplyModel, with_cuda=False)
         _test_fold_multiply(

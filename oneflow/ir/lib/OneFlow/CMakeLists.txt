@@ -19,35 +19,55 @@ add_subdirectory(PDLL)
 
 oneflow_add_mlir_dialect_library(
   MLIROneFlow
+  OKM/OKMDialect.cpp
+  OKM/passes.cpp
+  OKM/Conversion/Conversion.cpp
   OKL/OKLDialect.cpp
   OKL/OKLOps.cpp
   OKL/OKLTypes.cpp
   OKL/Conversion/OKLToLLVM.cpp
-  OKL/Conversion/SplitIntoFuncs.cpp
-  OKL/Conversion/FetchFromLauncher.cpp
-  OKL/Conversion/OnlyKeepComputeOps.cpp
+  OKL/Conversion/CudaGraphSupport.cpp
   OKL/Conversion/Conversion.cpp
+  OKL/Kernel/InferContext.cpp
+  OKL/Kernel/KernelLaunchOp.cpp
+  OKL/Kernel/LauncherState.cpp
+  OKL/Kernel/LauncherContext.cpp
+  OKL/Kernel/ComputeContext.cpp
+  OKL/Kernel/RegContext.cpp
+  OKL/Kernel/TmpBufferManager.cpp
+  OKL/Kernel/JITOpInfer.cpp
+  OKL/Kernel/JITEngine.cpp
   SBP/SBPDialect.cpp
   SBP/SBPAttributes.cpp
   SBP/SBPImporter.cpp
   OneFlowDialect.cpp
   OneFlowTypes.cpp
+  OneFlowInferReturnTypes.cpp
   OneFlowOps.cpp
   OneFlowOpTraits.cpp
   OneFlowSupport.cpp
   OneFlowUtils.cpp
+  OneFlowDataTypeConversion.cpp
   UserOpReflection.cpp
+  UserOpConversion.cpp
   OneFlowOpFolders.cpp
   Conversion/OneFlowToTosa.cpp
-  Conversion/PTXToCubin.cpp
+  Conversion/OneFlowToLinalg.cpp
+  Conversion/NVVMToCubin.cpp
   Transform/BufferHostRegister.cpp
   Transform/OutlineAndFuse.cpp
+  Transform/JITPasses.cpp
   Transform/AutoNhwc.cpp
   Transform/ConvertInferenceOp.cpp
-  Transform/AggregateComputeOps.cpp
+  Transform/AggregateOps.cpp
+  Transform/EliminateAllocOps.cpp
+  Transform/FuncOps.cpp
   Transform/CSEWithAttributesIgnored.cpp
   Transform/GroupMatMulOps.cpp
   Transform/AutoNHWCOps.cpp
+  Transform/OneFlowMemPool.cpp
+  Transform/OneFlowStream.cpp
+  Transform/TraitFolder.cpp
   TransposeHelpers.cpp
   Passes.cpp
   OneFlowCanonicalizers.cpp
@@ -62,13 +82,16 @@ oneflow_add_mlir_dialect_library(
   PUBLIC
   ${dialect_libs}
   MLIRTosaToLinalg
+  MLIRTosaToTensor
   MLIRMemRefToLLVM
   MLIRLinalgToLLVM
   MLIRSCFToGPU
   MLIRReconcileUnrealizedCasts
   ${MLIR_GPU_LIBS}
   MLIRIR
+  MLIRBytecodeWriter
   MLIROneFlowPDLLPatterns
+  MLIRExecutionEngine
   oneflow)
 
 if(WITH_MLIR_CUDA_CODEGEN)

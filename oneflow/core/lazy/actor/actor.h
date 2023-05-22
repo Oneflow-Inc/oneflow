@@ -92,6 +92,7 @@ class Actor : public ActorBase {
   // Util For Derived Actor to Send Msg
   void EnqueueAsyncMsg(const ActorMsg&);
   void HandleProducedNaiveDataRegstToConsumer();
+  void PrepareProducedNaiveInplaceDataRegst();
   void HandleProducedInplaceDataRegstToConsumer();
 
   void HandleConsumedNaiveDataRegstToProducer();
@@ -213,8 +214,14 @@ class Actor : public ActorBase {
   HashMap<int64_t, int64_t> inplace_regst_desc_id_out2in_;
 
   std::deque<ActorMsg> async_msg_queue_;
+  std::vector<ActorMsg> sync_msg_queue_;
   bool is_kernel_launch_synchronized_;
   std::vector<int64_t> tmp_regst_desc_id_vec_;
+
+  // for debug
+  std::string op_name_;
+  bool debug_;
+  int64_t act_cnt_;
 };
 
 }  // namespace oneflow

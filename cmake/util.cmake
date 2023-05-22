@@ -223,18 +223,19 @@ function(target_treat_warnings_as_errors target)
 
     # disable visibility warnings related to https://github.com/Oneflow-Inc/oneflow/pull/3676.
     target_try_compile_options(${target} -Wno-error=attributes)
+
+    # disable error about XXX has no out-of-line virtual method definitions; its vtable will be emitted in every translation unit
+    target_try_compile_options(${target} -Wno-error=weak-vtables)
+
   endif()
 endfunction()
 
 function(set_compile_options_to_oneflow_target target)
   target_treat_warnings_as_errors(${target})
   target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Werror=return-type>)
+  target_compile_definitions(${target} PRIVATE ONEFLOW_CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
   # the mangled name between `struct X` and `class X` is different in MSVC ABI, remove it while windows is supported (in MSVC/cl or clang-cl)
   target_try_compile_options(${target} -Wno-covered-switch-default)
-
-  if(OMP_FLAGS)
-    target_try_compile_options(${target} ${OMP_FLAGS})
-  endif()
 
   set_target_properties(${target} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
 

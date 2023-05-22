@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/register/register.h"
 #include "oneflow/core/comm_network/comm_network.h"
+#include "oneflow/core/memory/memory_allocator.h"
 
 namespace oneflow {
 
@@ -22,14 +23,46 @@ const std::vector<int64_t>& Regst::consumers_actor_id() const {
   return regst_desc_->consumers_actor_id();
 }
 
-Regst::Regst()
-    : regst_desc_(nullptr),
-      main_mem_ptr_(nullptr),
-      separated_header_mem_ptr_(nullptr),
-      comm_net_token_(nullptr) {}
+Regst::Regst(const RtRegstDesc* regst_desc, RegstAllocationType allocation_type)
+    : regst_desc_(regst_desc),
+      header_mem_ptr_(nullptr),
+      body_mem_ptr_(nullptr),
+      comm_net_token_(nullptr),
+      allocation_type_(allocation_type) {
+  sorted_blob_vec_.resize(regst_desc->lbi_num());
+}
 
 Regst::~Regst() {
   if (comm_net_token_ != nullptr) { Singleton<CommNet>::Get()->UnRegisterMemory(comm_net_token_); }
+}
+
+void Regst::Init(void* header_mem_ptr) {
+  CHECK(header_mem_ptr_ == nullptr);
+  header_mem_ptr_ = header_mem_ptr;
+  regst_desc_->ForEachBlobDescOffsetInOnRegst([&](int64_t ordinal, const LogicalBlobId& lbi,
+                                                  const BlobDesc* blob_desc, int64_t body_offset,
+                                                  int64_t header_offset) {
+    sorted_blob_vec_.at(ordinal).reset(
+        new Blob(regst_desc_->mem_case(), blob_desc,
+                 reinterpret_cast<char*>(header_mem_ptr_) + header_offset));
+  });
+}
+
+void Regst::ResetBodyMemPtr(void* body_mem_ptr) {
+  if (body_mem_ptr_ == body_mem_ptr) { return; }
+  body_mem_ptr_ = body_mem_ptr;
+  if (body_mem_ptr_ == nullptr) {
+    for (auto& blob : sorted_blob_vec_) { blob->reset_dptr(nullptr); }
+  } else {
+    regst_desc_->ForEachBlobDescOffsetInOnRegst([&](int64_t ordinal, const LogicalBlobId& lbi,
+                                                    const BlobDesc* blob_desc, int64_t body_offset,
+                                                    int64_t header_offset) {
+      sorted_blob_vec_.at(ordinal)->reset_dptr(reinterpret_cast<char*>(body_mem_ptr_)
+                                               + body_offset);
+      InitNonPODTypeBlobIfNeed(Singleton<MemoryAllocator>::Get(),
+                               sorted_blob_vec_.at(ordinal).get());
+    });
+  }
 }
 
 Blob* Regst::GetBlobByOrdinal(int64_t ordinal) { return sorted_blob_vec_.at(ordinal).get(); }
@@ -41,12 +74,6 @@ Blob* Regst::GetBlobByLbi(const LogicalBlobId& lbi) {
   } else {
     return nullptr;
   }
-}
-
-void Regst::set_regst_desc(const RtRegstDesc* regst_desc) {
-  CHECK(regst_desc_ == nullptr);
-  regst_desc_ = regst_desc;
-  sorted_blob_vec_.resize(regst_desc->lbi_num());
 }
 
 void Regst::SetBlobByOrdinal(int64_t ordinal, std::unique_ptr<Blob>&& blob) {
@@ -71,9 +98,11 @@ void* Regst::comm_net_token() {
     std::lock_guard<std::mutex> lock(comm_net_token_mutex_);
     token = comm_net_token_;
     if (token != nullptr) { return token; }
-    CHECK(main_mem_ptr() != nullptr);
-    CHECK(separated_header_mem_ptr() == nullptr);
-    token = Singleton<CommNet>::Get()->RegisterMemory(main_mem_ptr(),
+    CHECK(body_mem_ptr_ != nullptr);
+    CHECK(header_mem_ptr_ != nullptr);
+    CHECK(reinterpret_cast<char*>(header_mem_ptr_) + regst_desc_->HeaderByteSize4OneRegst()
+          == body_mem_ptr_);
+    token = Singleton<CommNet>::Get()->RegisterMemory(header_mem_ptr_,
                                                       this->regst_desc()->MainByteSize4OneRegst());
     comm_net_token_ = token;
     return token;

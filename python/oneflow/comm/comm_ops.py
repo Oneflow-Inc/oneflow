@@ -52,13 +52,7 @@ def all_reduce(tensor):
     assert isinstance(tensor, flow._oneflow_internal.Tensor)
     assert tensor.device.index == flow.env.get_local_rank()
     assert tensor.is_local
-    device_type = tensor.device.type
-    placement = flow.placement.all(device_type)
-    result = tensor.to_global(placement=placement, sbp=flow.sbp.partial_sum).to_global(
-        placement=placement, sbp=flow.sbp.broadcast
-    )
-
-    tensor.data = result.to_local()
+    flow._C.local_all_reduce(tensor, inplace=True)
 
 
 def all_gather(tensor_list, tensor):
@@ -117,6 +111,76 @@ def all_gather(tensor_list, tensor):
     # TODO(): getitem has bug on global tensor with size = [2, 1].
     for i in range(tensor.shape[0]):
         tensor_list[i] = tensor[i]
+
+
+def all_gather_into_tensor(output_tensor, input_tensor):
+    """
+    Gather tensors from all ranks and put them in a single output tensor.
+
+    Args:
+        output_tensor (Tensor): Output tensor to accommodate tensor elements
+            from all ranks. It must be correctly sized to have one of the
+            following forms:
+            (i) a concatenation of all the input tensors along the primary
+            dimension; for definition of "concatenation", see ``oneflow.cat()``;
+            (ii) a stack of all the input tensors along the primary dimension;
+            for definition of "stack", see ``oneflow.stack()``.
+            Examples below may better explain the supported output forms.
+        input_tensor (Tensor): Tensor to be gathered from current rank.
+            The input tensors in this API must have the same size across all ranks.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> # We have 1 process groups, 2 ranks.
+        >>> # All tensors below are of flow.int64 dtype and on CUDA devices.
+        >>> import oneflow as flow
+        >>> tensor_in = flow.tensor([[1, 2, 3], [4, 5, 6]], dtype=flow.int64, device="cuda") + flow.env.get_rank() * 6
+        >>> tensor_in # doctest: +ONLY_CHECK_RANK_0
+        tensor([[1, 2, 3],
+                [4, 5, 6]], device='cuda:0', dtype=oneflow.int64)
+        >>> # Output in concatenation form
+        >>> tensor_out = flow.zeros(4, 3, dtype=flow.int64, device="cuda")
+        >>> flow.comm.all_gather_into_tensor(tensor_out, tensor_in)
+        >>> # result on rank0
+        >>> tensor_out # doctest: +ONLY_CHECK_RANK_0
+        tensor([[ 1,  2,  3],
+                [ 4,  5,  6],
+                [ 7,  8,  9],
+                [10, 11, 12]], device='cuda:0', dtype=oneflow.int64)
+        >>> # result on rank1
+        >>> tensor_out # doctest: +ONLY_CHECK_RANK_1
+        tensor([[ 1,  2,  3],
+                [ 4,  5,  6],
+                [ 7,  8,  9],
+                [10, 11, 12]], device='cuda:1', dtype=oneflow.int64)
+        >>> # Output in stack form
+        >>> tensor_out2 = flow.zeros(2, 3, 2, dtype=flow.int64, device="cuda")
+        >>> flow.comm.all_gather_into_tensor(tensor_out2, tensor_in)
+        >>> # result on rank0
+        >>> tensor_out2 # doctest: +ONLY_CHECK_RANK_0
+        tensor([[[ 1,  2],
+                 [ 3,  4],
+                 [ 5,  6]],
+        <BLANKLINE>
+                [[ 7,  8],
+                 [ 9, 10],
+                 [11, 12]]], device='cuda:0', dtype=oneflow.int64)
+        >>> # result on rank1
+        >>> tensor_out2 # doctest: +ONLY_CHECK_RANK_1
+        tensor([[[ 1,  2],
+                 [ 3,  4],
+                 [ 5,  6]],
+        <BLANKLINE>
+                [[ 7,  8],
+                 [ 9, 10],
+                 [11, 12]]], device='cuda:1', dtype=oneflow.int64)
+
+    """
+    assert output_tensor.is_local
+    assert input_tensor.is_local
+    flow._C.local_all_gather(output_tensor, input_tensor)
 
 
 def broadcast(tensor, src):
@@ -285,6 +349,65 @@ def reduce_scatter(output, input_list):
         ).to_global(placement=placement, sbp=flow.sbp.broadcast)
         reduced_tensor_list.append(tensor.to_local())
     output.data = reduced_tensor_list[flow.env.get_rank()]
+
+
+def reduce_scatter_tensor(output_tensor, input_tensor):
+    """
+    Reduces, then scatters a tensor to all ranks.
+
+    Args:
+        output (Tensor): Output tensor. It should have the same size across all
+            ranks.
+        input (Tensor): Input tensor to be reduced and scattered. Its size
+            should be output tensor size times the world size. The input tensor
+            can have one of the following shapes:
+            (i) a concatenation of the output tensors along the primary
+            dimension, or
+            (ii) a stack of the output tensors along the primary dimension.
+            For definition of "concatenation", see ``oneflow.cat()``.
+            For definition of "stack", see ``oneflow.stack()``.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> # We have 1 process groups, 2 ranks.
+        >>> # All tensors below are of flow.int64 dtype and on CUDA devices.
+        >>> import oneflow as flow
+        >>> tensor_in = flow.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]], dtype=flow.int64, device="cuda")
+        >>> tensor_in # doctest: +ONLY_CHECK_RANK_0
+        tensor([[ 1,  2,  3],
+                [ 4,  5,  6],
+                [ 7,  8,  9],
+                [10, 11, 12]], device='cuda:0', dtype=oneflow.int64)
+        >>> # Output in concatenation form
+        >>> tensor_out = flow.zeros(2, 3, dtype=flow.int64, device="cuda")
+        >>> flow.comm.reduce_scatter_tensor(tensor_out, tensor_in)
+        >>> # result on rank0
+        >>> tensor_out # doctest: +ONLY_CHECK_RANK_0
+        tensor([[ 2,  4,  6],
+                [ 8, 10, 12]], device='cuda:0', dtype=oneflow.int64)
+        >>> # result on rank1
+        >>> tensor_out # doctest: +ONLY_CHECK_RANK_1
+        tensor([[14, 16, 18],
+                [20, 22, 24]], device='cuda:1', dtype=oneflow.int64)
+        >>> # Output in stack form
+        >>> tensor_in2 = tensor_in.reshape(2, 3, 2)
+        >>> tensor_out2 = flow.zeros(2, 3, dtype=flow.int64, device="cuda")
+        >>> flow.comm.reduce_scatter_tensor(tensor_out2, tensor_in2)
+        >>> # result on rank0
+        >>> tensor_out2 # doctest: +ONLY_CHECK_RANK_0
+        tensor([[ 2,  4,  6],
+                [ 8, 10, 12]], device='cuda:0', dtype=oneflow.int64)
+        >>> # result on rank1
+        >>> tensor_out2 # doctest: +ONLY_CHECK_RANK_1
+        tensor([[14, 16, 18],
+                [20, 22, 24]], device='cuda:1', dtype=oneflow.int64)
+
+    """
+    assert output_tensor.is_local
+    assert input_tensor.is_local
+    flow._C.local_reduce_scatter(output_tensor, input_tensor)
 
 
 def gather(tensor, gather_list=None, dst=0):

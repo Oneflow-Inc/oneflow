@@ -25,10 +25,10 @@ limitations under the License.
 #include <type_traits>
 #include <vector>
 #include <iostream>
+#include <string_view>
 
 #include "utility.h"
 #include "type_traits.h"
-#include "string_view.h"
 
 namespace oneflow {
 
@@ -158,7 +158,7 @@ struct MessageFormatTrait<std::string> {
       std::stringstream res;
 
       res << code << ": ";
-      [[maybe_unused]] int dummy[] = {(res << args, 0)...};
+      ((res << args), ...);
 
       return res.str();
     } else {
@@ -168,22 +168,23 @@ struct MessageFormatTrait<std::string> {
 };
 
 template<>
-struct MessageFormatTrait<StringView> {
+struct MessageFormatTrait<std::string_view> {
   template<typename Code>
-  static StringView Format(Code&& code) {
+  static std::string_view Format(Code&& code) {
     return code;
   }
 };
 
 template<typename Message, typename MessageFormatTraits = MessageFormatTrait<Message>>
 struct ErrorStackEntry {
-  StringView filename;
+  std::string_view filename;
   std::size_t lineno;
-  StringView function;
+  std::string_view function;
   Message message;
 
   template<typename... Args>
-  ErrorStackEntry(StringView filename, std::size_t lineno, StringView function, Args&&... args)
+  ErrorStackEntry(std::string_view filename, std::size_t lineno, std::string_view function,
+                  Args&&... args)
       : filename(filename),
         lineno(lineno),
         function(function),

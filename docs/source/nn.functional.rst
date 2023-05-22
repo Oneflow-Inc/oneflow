@@ -78,6 +78,7 @@ Non-linear activation functions
     prelu
     glu
     gelu
+    quick_gelu
     logsigmoid
     hardshrink
     softsign
@@ -145,6 +146,7 @@ Loss functions
 
     sparse_softmax_cross_entropy
     cross_entropy
+    ctc_loss
     l1_loss
     mse_loss
     smooth_l1_loss

@@ -186,7 +186,7 @@ Maybe<void> CompileCurJobOnMaster(Job* job, Plan* plan, bool need_job_complete) 
   const JobDesc& job_desc = GlobalJobDesc();
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     double start = GetCurTime();
-    if (need_job_complete) { JUST(JobCompleter().Complete(job)); }
+    if (need_job_complete) { JUST(JobCompleter::Complete(job)); }
     Compiler().Compile(job, plan);
     PlanUtil::GenMemBlockAndChunk4Plan(plan);
 

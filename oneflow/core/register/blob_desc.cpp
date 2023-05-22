@@ -21,43 +21,56 @@ bool CompareLbiBlobDescPair(const LbiBlobDescPair& lhs, const LbiBlobDescPair& r
   return lhs.lbi() < rhs.lbi();
 }
 
-BlobDesc::BlobDesc(const Shape& shape, DataType dtype, bool is_dynamic)
+BlobDesc::BlobDesc(const Shape& shape, DataType dtype, MemoryFormat memory_format, bool is_dynamic)
     : shape_(SymbolOf(shape)),
       stride_(SymbolOf(Stride(shape))),
       data_type_(dtype),
+      memory_format_(memory_format),
       is_dynamic_(is_dynamic) {}
-BlobDesc::BlobDesc(const Shape& shape, const Stride& stride, DataType dtype, bool is_dynamic)
+BlobDesc::BlobDesc(const Shape& shape, const Stride& stride, DataType dtype,
+                   MemoryFormat memory_format, bool is_dynamic)
     : shape_(SymbolOf(shape)),
       stride_(SymbolOf(stride)),
       data_type_(dtype),
+      memory_format_(memory_format),
       is_dynamic_(is_dynamic) {}
-BlobDesc::BlobDesc(Symbol<Shape> shape, Symbol<Stride> stride, DataType dtype, bool is_dynamic)
-    : shape_(shape), stride_(stride), data_type_(dtype), is_dynamic_(is_dynamic) {}
-BlobDesc::BlobDesc(const Shape& shape, DataType dtype)
-    : BlobDesc(shape, Stride(shape), dtype, false) {}
-BlobDesc::BlobDesc(const Shape& shape, const Stride& stride, DataType dtype)
-    : BlobDesc(shape, stride, dtype, false) {}
-BlobDesc::BlobDesc(Symbol<Shape> shape, Symbol<Stride> stride, DataType dtype)
-    : BlobDesc(shape, stride, dtype, false) {}
-BlobDesc::BlobDesc(DataType dtype) : BlobDesc(Shape(), Stride(), dtype, false) {}
+BlobDesc::BlobDesc(Symbol<Shape> shape, Symbol<Stride> stride, DataType dtype,
+                   MemoryFormat memory_format, bool is_dynamic)
+    : shape_(shape),
+      stride_(stride),
+      data_type_(dtype),
+      memory_format_(memory_format),
+      is_dynamic_(is_dynamic) {}
+BlobDesc::BlobDesc(const Shape& shape, DataType dtype, MemoryFormat memory_format)
+    : BlobDesc(shape, Stride(shape), dtype, memory_format, false) {}
+BlobDesc::BlobDesc(const Shape& shape, const Stride& stride, DataType dtype,
+                   MemoryFormat memory_format)
+    : BlobDesc(shape, stride, dtype, memory_format, false) {}
+BlobDesc::BlobDesc(Symbol<Shape> shape, Symbol<Stride> stride, DataType dtype,
+                   MemoryFormat memory_format)
+    : BlobDesc(shape, stride, dtype, memory_format, false) {}
+BlobDesc::BlobDesc(DataType dtype, MemoryFormat memory_format)
+    : BlobDesc(Shape(), Stride(), dtype, memory_format, false) {}
 
-BlobDesc::BlobDesc(const BlobDescProto& proto) {
-  shape_ = SymbolOf(Shape(proto.shape()));
-  stride_ = SymbolOf(Stride(proto.stride()));
-  data_type_ = proto.data_type();
-  is_dynamic_ = proto.is_dynamic();
-}
+BlobDesc::BlobDesc(const BlobDescProto& proto)
+    : shape_(SymbolOf(Shape(proto.shape()))),
+      stride_(SymbolOf(Stride(proto.stride()))),
+      data_type_(proto.data_type()),
+      memory_format_(proto.memory_format()),
+      is_dynamic_(proto.is_dynamic()) {}
 
 BlobDesc::BlobDesc(const BlobDesc& other)
     : shape_(other.shape_),
       stride_(other.stride_),
       data_type_(other.data_type()),
+      memory_format_(other.memory_format()),
       is_dynamic_(other.is_dynamic()) {}
 
 void BlobDesc::ToProto(BlobDescProto* proto) const {
   shape().ToProto(proto->mutable_shape());
   stride().ToProto(proto->mutable_stride());
   proto->set_data_type(data_type_);
+  proto->set_memory_format(memory_format_);
   proto->set_is_dynamic(is_dynamic_);
 }
 
@@ -70,6 +83,7 @@ void BlobDesc::CopyFrom(const BlobDesc& other) {
   set_shape(other.shape());
   set_stride(other.stride());
   set_data_type(other.data_type());
+  set_memory_format(other.memory_format());
   set_is_dynamic(other.is_dynamic());
 }
 
@@ -77,7 +91,7 @@ void BlobDesc::set_is_dynamic(bool is_dynamic) { is_dynamic_ = is_dynamic; }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
   return (shape() == rhs.shape()) && (stride() == rhs.stride()) && (data_type() == rhs.data_type())
-         && (is_dynamic() == rhs.is_dynamic());
+         && (memory_format() == rhs.memory_format()) && (is_dynamic() == rhs.is_dynamic());
 }
 
 size_t BlobDesc::ByteSizeOfBlobHeader() const {

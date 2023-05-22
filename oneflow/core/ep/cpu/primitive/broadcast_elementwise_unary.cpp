@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/ep/include/primitive/broadcast_elementwise_unary.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/ep/common/primitive/broadcast_elementwise_unary.h"
+#include "oneflow/core/ep/include/primitive/permute.h"
 #include "oneflow/core/ep/cpu/primitive/unary_functor.h"
 #include "oneflow/core/ep/cpu/primitive/type_seq.h"
 #include "oneflow/core/ep/cpu/cpu_stream.h"
@@ -29,6 +29,12 @@ namespace primitive {
 namespace broadcast_elementwise_unary {
 
 namespace {
+
+#define CPU_PRIMITIVE_CAST_REAL_TYPE_SEQ \
+  CPU_PRIMITIVE_INT16_TYPE_SEQ           \
+  CPU_PRIMITIVE_NATIVE_TYPE_SEQ          \
+  CPU_PRIMITIVE_FLOAT16_TYPE_SEQ         \
+  CPU_PRIMITIVE_BFLOAT16_TYPE_SEQ
 
 bool IsContiguous(size_t num_dims, const int64_t* dims, const int64_t* strides) {
   for (int i = num_dims - 1; i >= 0; i--) {
@@ -43,7 +49,7 @@ bool IsContiguous(size_t num_dims, const int64_t* dims, const int64_t* strides) 
 template<UnaryOp unary_op, typename Src, typename Dst>
 void LaunchScalarFill(CpuStream* stream, Dst* dst, const Src* src, size_t count, size_t stride,
                       Scalar attr0, Scalar attr1) {
-  auto functor = UnaryFunctor<DeviceType::kCPU, unary_op, Src, Dst>(attr0, attr1);
+  auto functor = UnaryFunctor<DeviceType::kCPU, unary_op, Dst, Src>(attr0, attr1);
   Dst scalar_value = functor(*src);
   stream->ParallelFor(0, count, [dst, stride, scalar_value](int64_t begin, int64_t end) {
     for (int64_t i = begin; i < end; i++) { dst[i * stride] = scalar_value; }
@@ -53,7 +59,7 @@ void LaunchScalarFill(CpuStream* stream, Dst* dst, const Src* src, size_t count,
 template<UnaryOp unary_op, typename Src, typename Dst>
 void LaunchTensorFill(CpuStream* stream, Dst* dst, const Src* src, size_t count, size_t dst_stride,
                       size_t src_stride, Scalar attr0, Scalar attr1) {
-  auto functor = UnaryFunctor<DeviceType::kCPU, unary_op, Src, Dst>(attr0, attr1);
+  auto functor = UnaryFunctor<DeviceType::kCPU, unary_op, Dst, Src>(attr0, attr1);
   stream->ParallelFor(0, count,
                       [functor, src, dst, src_stride, dst_stride](int64_t begin, int64_t end) {
                         for (int64_t i = begin; i < end; i++) {
@@ -68,7 +74,7 @@ void LaunchGeneral(CpuStream* stream, Dst* dst, const Src* src, size_t num_dims,
                    const int64_t* src_stride, Scalar attr0, Scalar attr1) {
   bool contiguous_output = IsContiguous(num_dims, dst_dims, dst_stride);
   const int64_t elem_cnt = GetElementCount(num_dims, dst_dims);
-  auto functor = UnaryFunctor<DeviceType::kCPU, unary_op, Src, Dst>(attr0, attr1);
+  auto functor = UnaryFunctor<DeviceType::kCPU, unary_op, Dst, Src>(attr0, attr1);
   stream->ParallelFor(
       0, elem_cnt,
       [functor, src, dst, num_dims, src_dims, dst_dims, src_stride, dst_stride, contiguous_output](
@@ -103,7 +109,7 @@ void LaunchGeneral(CpuStream* stream, Dst* dst, const Src* src, size_t num_dims,
       });
 }
 
-template<UnaryOp unary_op, typename Src, typename Dst>
+template<UnaryOp unary_op, typename Src, DataType src_type, typename Dst, DataType dst_type>
 class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BroadcastElementwiseUnaryImpl);
@@ -139,6 +145,8 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
     Dst* dst = reinterpret_cast<Dst*>(dst_ptr);
     const Src* src = reinterpret_cast<const Src*>(src_ptr);
     size_t simplified_num_dims = 0;
+    int permutation_list[kMaxNumDims];
+    int64_t permutation_src_dims[kMaxNumDims];
     int64_t simplified_src_dims[kMaxNumDims];
     int64_t simplified_dst_dims[kMaxNumDims];
     int64_t simplified_src_strides[kMaxNumDims];
@@ -147,6 +155,11 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
                                        dst_strides, &simplified_num_dims, simplified_src_dims,
                                        simplified_src_strides, simplified_dst_dims,
                                        simplified_dst_strides);
+    bool permutable = InferPermutable<kMaxNumDims>(
+        simplified_num_dims, simplified_src_strides, simplified_dst_strides, simplified_src_dims,
+        simplified_dst_dims, permutation_list, permutation_src_dims, unary_op);
+    std::unique_ptr<Permute> permute =
+        NewPrimitive<PermuteFactory>(DeviceType::kCPU, simplified_num_dims);
     CheckInplace(simplified_num_dims, simplified_src_dims, src, simplified_dst_dims, dst);
     CheckInplace(simplified_num_dims, simplified_src_strides, src, simplified_dst_strides, dst);
     if (simplified_num_dims == 1 && simplified_src_dims[0] == 1) {
@@ -160,7 +173,11 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
       const int64_t dst_stride = simplified_dst_strides[0];
       LaunchTensorFill<unary_op, Src, Dst>(cpu_stream, dst, src, elem_cnt, dst_stride, src_stride,
                                            attr0, attr1);
+    } else if (permutable && src_type == dst_type && permute) {
+      permute->Launch(stream, dst_type, simplified_num_dims, permutation_src_dims, src_ptr,
+                      permutation_list, dst_ptr);
     } else {
+      // fall back to normal cases
       LaunchGeneral<unary_op, Src, Dst>(
           cpu_stream, dst, src, simplified_num_dims, simplified_dst_dims, simplified_src_dims,
           simplified_dst_strides, simplified_src_strides, attr0, attr1);
@@ -171,11 +188,11 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
   Scalar attr0, attr1;
 };
 
-template<UnaryOp unary_op, typename Src, typename Dst>
+template<UnaryOp unary_op, typename Src, DataType src_type, typename Dst, DataType dst_type>
 std::unique_ptr<BroadcastElementwiseUnary> NewBroadcastElementwiseUnary(Scalar attr0,
                                                                         Scalar attr1) {
   return std::unique_ptr<BroadcastElementwiseUnary>(
-      new BroadcastElementwiseUnaryImpl<unary_op, Src, Dst>(attr0, attr1));
+      new BroadcastElementwiseUnaryImpl<unary_op, Src, src_type, Dst, dst_type>(attr0, attr1));
 }
 
 class BroadcastElementwiseUnaryFactoryImpl : public BroadcastElementwiseUnaryFactory {
@@ -198,18 +215,39 @@ class BroadcastElementwiseUnaryFactoryImpl : public BroadcastElementwiseUnaryFac
                                                  DataType dst_type, size_t max_num_dims,
                                                  Scalar attr0, Scalar attr1) override {
     if (max_num_dims > kMaxNumDims) { return nullptr; }
-#define MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY(unary_op, dtype_pair)         \
-  {std::make_tuple(unary_op, OF_PP_PAIR_SECOND(dtype_pair), OF_PP_PAIR_SECOND(dtype_pair)), \
-   NewBroadcastElementwiseUnary<unary_op, OF_PP_PAIR_FIRST(dtype_pair),                     \
-                                OF_PP_PAIR_FIRST(dtype_pair)>},
+#define MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY(unary_op, dtype_pair)          \
+  {std::make_tuple(unary_op, OF_PP_PAIR_SECOND(dtype_pair), OF_PP_PAIR_SECOND(dtype_pair)),  \
+   NewBroadcastElementwiseUnary<unary_op, OF_PP_PAIR_FIRST(dtype_pair),                      \
+                                OF_PP_PAIR_SECOND(dtype_pair), OF_PP_PAIR_FIRST(dtype_pair), \
+                                OF_PP_PAIR_SECOND(dtype_pair)>},
+
+#define MAKE_NEW_BROADCAST_ELEMENTWISE_UNARY_ENTRY(unary_op, src_dtype_pair, dst_dtype_pair) \
+  {std::make_tuple(unary_op, OF_PP_PAIR_SECOND(src_dtype_pair),                              \
+                   OF_PP_PAIR_SECOND(dst_dtype_pair)),                                       \
+   NewBroadcastElementwiseUnary<                                                             \
+       unary_op, OF_PP_PAIR_FIRST(src_dtype_pair), OF_PP_PAIR_SECOND(src_dtype_pair),        \
+       OF_PP_PAIR_FIRST(dst_dtype_pair), OF_PP_PAIR_SECOND(dst_dtype_pair)>},
 
     static const std::map<std::tuple<UnaryOp, DataType, DataType>,
                           std::function<std::unique_ptr<BroadcastElementwiseUnary>(Scalar, Scalar)>>
         new_broadcast_elementwise_unary_handle{
             // For All Type OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY,
-                                             UNARY_BROADCAST_OP_SEQ, CPU_PRIMITIVE_ALL_TYPE_SEQ)};
+                                             UNARY_IDENTITY_SEQ, CPU_PRIMITIVE_ALL_TYPE_SEQ)
 
+            // For Cast OP
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+                MAKE_NEW_BROADCAST_ELEMENTWISE_UNARY_ENTRY, BROADCAST_ELEMENTWISE_CAST_OP_SEQ,
+                CPU_PRIMITIVE_CAST_REAL_TYPE_SEQ, CPU_PRIMITIVE_CAST_REAL_TYPE_SEQ)
+                OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+                    MAKE_NEW_BROADCAST_ELEMENTWISE_UNARY_ENTRY, BROADCAST_ELEMENTWISE_CAST_OP_SEQ,
+                    CPU_PRIMITIVE_COMPLEX_TYPE_SEQ, CPU_PRIMITIVE_COMPLEX_TYPE_SEQ)
+                    OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_BROADCAST_ELEMENTWISE_UNARY_ENTRY,
+                                                     BROADCAST_ELEMENTWISE_CAST_OP_SEQ,
+                                                     CPU_PRIMITIVE_CAST_REAL_TYPE_SEQ,
+                                                     CPU_PRIMITIVE_COMPLEX_TYPE_SEQ)};
+
+#undef MAKE_NEW_BROADCAST_ELEMENTWISE_UNARY_ENTRY
 #undef MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY
 
     const auto iter =

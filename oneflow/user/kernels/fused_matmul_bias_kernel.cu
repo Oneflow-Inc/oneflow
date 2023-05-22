@@ -16,7 +16,8 @@ limitations under the License.
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/user/kernels/cublas_fused_mlp_util.cuh"
 
-#if CUDA_VERSION >= 10200
+// same with cublas_fused_mlp_util.cuh
+#if CUDA_VERSION >= 11020
 
 namespace oneflow {
 
@@ -51,8 +52,8 @@ class FusedMatmulBiasKernel final : public user_op::OpKernel, public user_op::Cu
     size_t cublas_m = 0, cublas_n = 0, cublas_k = 0;
     int64_t cublas_lda = 0, cublas_ldb = 0, cublas_ldc = 0;
 
-    const double alpha = 1.0;
-    const double beta = (ctx->has_input("_add_to_output", 0)) ? 1.0 : 0.0;
+    const double alpha = ctx->Attr<double>("alpha");
+    const double beta = (ctx->has_input("_add_to_output", 0)) ? ctx->Attr<double>("beta") : 0.0;
 
     const auto sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_dtype);
     const auto sp_beta = GetCublasScalarParameter(beta, cublas_compute_dtype);
@@ -80,11 +81,25 @@ class FusedMatmulBiasKernel final : public user_op::OpKernel, public user_op::Cu
                   /*transpose_b=*/ep::primitive::BlasTransposeType::T, epilogue, bias->dptr(),
                   nullptr, cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
 
+    cublasLtMatmulPreference_t preference = nullptr;
+    size_t workspace_size = cuda_stream->cublas_workspace_size();
+    OF_CUBLAS_CHECK(cublasLtMatmulPreferenceCreate(&preference));
+    OF_CUBLAS_CHECK(cublasLtMatmulPreferenceSetAttribute(preference,
+                                                         CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES,
+                                                         &workspace_size, sizeof(workspace_size)));
+    int returned_results = 0;
+    cublasLtMatmulHeuristicResult_t heuristic_result;
+    OF_CUBLAS_CHECK(cublasLtMatmulAlgoGetHeuristic(
+        cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc, matmul_cache->cublas_a_desc,
+        matmul_cache->cublas_b_desc, matmul_cache->cublas_c_desc, matmul_cache->cublas_c_desc,
+        preference, 1, &heuristic_result, &returned_results));
+    CHECK_EQ(returned_results, 1);
+    cublasLtMatmulPreferenceDestroy(preference);
     OF_CUBLAS_CHECK(cublasLtMatmul(
         cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc, &sp_alpha, weight->dptr(),
         matmul_cache->cublas_a_desc, x->dptr(), matmul_cache->cublas_b_desc, &sp_beta,
         (_add_to_output == nullptr) ? y_ptr : _add_to_output->dptr(), matmul_cache->cublas_c_desc,
-        y_ptr, matmul_cache->cublas_c_desc, nullptr, cuda_stream->cublas_workspace(),
+        y_ptr, matmul_cache->cublas_c_desc, &heuristic_result.algo, cuda_stream->cublas_workspace(),
         cuda_stream->cublas_workspace_size(), cuda_stream->cuda_stream()));
   }
 
@@ -108,4 +123,4 @@ REGISTER_FUSED_MATMUL_BIAS_KERNEL_GPU(DataType::kBFloat16);
 
 }  // namespace oneflow
 
-#endif  // CUDA_VERSION >= 10200
+#endif  // CUDA_VERSION >= 11020

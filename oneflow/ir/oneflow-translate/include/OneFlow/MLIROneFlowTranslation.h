@@ -46,13 +46,7 @@ LogicalResult ConvertUserOpInputs(Operation* op, StringRef op_name,
                                   ::oneflow::UserOpConf* user_conf);
 LogicalResult ConvertUserOpOutputs(Operation* op, StringRef op_name,
                                    ::oneflow::UserOpConf* user_conf);
-LogicalResult ConvertUserOpAttributes(
-    Operation* op, ::oneflow::OperatorConf& op_conf,
-    bool is_mapping_size /* the input and output size should be mapped after building kernel and
-                            offer information for the next query*/
-    = false);
 LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf);
-llvm::Optional<std::string> GetOutputLbn(OpResult result);
 llvm::Optional<mlir::oneflow::DataTypeAttr> GetDataTypeAttr(MLIRContext* context,
                                                             ::oneflow::DataType oneflow_value);
 LogicalResult ConvertVariableOpConf(VariableOp op, ::oneflow::OperatorConf* op_conf);
@@ -114,7 +108,6 @@ class Importer {
 
   ArrayAttr GetAttrFromShape(const ::oneflow::ShapeProto& shape);
   ArrayAttr GetAttrFromStride(const ::oneflow::Int64ListProto& stride);
-  llvm::Optional<Type> GetTypeFromOneFlowDataType(::oneflow::DataType dt);
   OpBuilder& GetBuilder() { return builder_; }
   MLIRContext* GetMLIRContext() { return context_; }
   ModuleOp& GetModule() { return module_; }

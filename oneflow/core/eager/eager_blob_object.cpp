@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/eager/tensor_storage.h"
 #include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/shut_down_util.h"
@@ -28,14 +29,15 @@ EagerBlobObject::EagerBlobObject(
     const std::shared_ptr<MemoryCase>& mem_case,
     const Symbol<one::LocalTensorMeta>& static_local_tensor_meta,
     const std::shared_ptr<const one::MutLocalTensorMeta>& dynamic_local_tensor_meta,
-    DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage,
+    DataType data_type, MemoryFormat memory_format,
+    const std::shared_ptr<TensorStorage>& tensor_storage,
     const intrusive::shared_ptr<LocalDepObject>& dep_object)
     : is_dynamic_(false),
       mem_case_(mem_case),
       data_type_(data_type),
+      memory_format_(memory_format),
       storage_offset_(0),
       tensor_storage_(tensor_storage),
-      pin_memory_(false),
       compute_local_dep_object_(dep_object),
       static_local_tensor_meta_(static_local_tensor_meta),
       dynamic_local_tensor_meta_(dynamic_local_tensor_meta) {
@@ -87,6 +89,8 @@ std::shared_ptr<const Stride> EagerBlobObject::stride_ptr() const {
   }
 }
 
+int64_t EagerBlobObject::storage_offset() const { return storage_offset_; }
+
 void EagerBlobObject::set_storage_offset(const int64_t offset) { storage_offset_ = offset; }
 
 Maybe<bool> EagerBlobObject::TryAllocateBlobBodyMemory(vm::Allocator* allocator) {
@@ -110,6 +114,37 @@ Maybe<bool> EagerBlobObject::TryAllocateBlobBodyMemory(vm::Allocator* allocator)
     return true;
   }
   return false;
+}
+
+const void* EagerBlobObject::raw_dptr() const {
+  char* ptr = tensor_storage_->blob_dptr();
+  if (tensor_storage_->blob_bytes() > 0) { CHECK_NOTNULL(ptr); }
+  return ptr + storage_offset_ * GetSizeOfDataType(data_type_);
+}
+
+Maybe<void> EagerBlobObject::DeallocateBlobDataPtr() {
+  tensor_storage_->Release();
+  return Maybe<void>::Ok();
+}
+
+void EagerBlobObject::RegisterStorageDeleteHook(const std::function<void()>& hook) {
+  tensor_storage_->RegisterStorageDeleteHook(hook);
+}
+
+const Optional<Symbol<::oneflow::Stream>>& EagerBlobObject::producer_stream() const {
+  return tensor_storage_->producer_stream();
+}
+
+Maybe<void> EagerBlobObject::init_producer_stream(Symbol<::oneflow::Stream> producer_stream) {
+  return tensor_storage_->init_producer_stream(producer_stream);
+}
+
+const Optional<Symbol<::oneflow::Stream>>& EagerBlobObject::last_used_stream() const {
+  return tensor_storage_->last_used_stream();
+}
+
+void EagerBlobObject::set_last_used_stream(Symbol<::oneflow::Stream> last_used_stream) {
+  tensor_storage_->set_last_used_stream(last_used_stream);
 }
 
 }  // namespace vm

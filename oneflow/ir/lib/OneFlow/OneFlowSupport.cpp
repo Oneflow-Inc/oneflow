@@ -40,25 +40,15 @@ namespace oneflow {
 
 namespace support {
 
-using ::oneflow::UserOpDef;
-using ::oneflow::user_op::OpRegistryResult;
-using ::oneflow::user_op::UserOpRegistryMgr;
-
-const UserOpDef& GetUserOpDef(const std::string& op_type_name) {
-  const OpRegistryResult* val = UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
-  CHECK(val) << " Cannot find op_type_name: " << op_type_name;
-  return val->op_def;
-}
-
 std::vector<std::string> GetInputKeys(const std::string& op_type_name) {
   std::vector<std::string> ret{};
-  for (auto& arg : GetUserOpDef(op_type_name).input()) { ret.push_back(arg.name()); }
+  for (auto& arg : getUserOpDef(op_type_name).input()) { ret.push_back(arg.name()); }
   return ret;
 }
 
 std::vector<std::string> GetOutputKeys(const std::string& op_type_name) {
   std::vector<std::string> ret{};
-  for (auto& arg : GetUserOpDef(op_type_name).output()) { ret.push_back(arg.name()); }
+  for (auto& arg : getUserOpDef(op_type_name).output()) { ret.push_back(arg.name()); }
   return ret;
 }
 
@@ -106,7 +96,8 @@ std::shared_ptr<::oneflow::one::Tensor> __DenseElementsAttrToTensor(
   std::shared_ptr<::oneflow::one::Tensor> tensor =
       ::oneflow::one::functional::Empty(
           ::oneflow::Shape(::oneflow::DimVector(shape.begin(), shape.end())),
-          ::oneflow::DType::Get(dtype).GetOrThrow(), device, /*pin_memory=*/false)
+          ::oneflow::DType::Get(dtype).GetOrThrow(), device, /*requires_grad=*/false,
+          /*pin_memory=*/false)
           .GetPtrOrThrow();
 
   std::vector<T> data(dense_attr.getValues<T>().begin(), dense_attr.getValues<T>().end());
@@ -270,6 +261,13 @@ FailureOr<::oneflow::DataType> FromMLIRDataTypeToOFDataType(::mlir::oneflow::Dat
 FailureOr<::oneflow::DataType> FromMLIRAttrToOFDataType(Attribute attr) {
   const auto data_type_attr = attr.dyn_cast<mlir::oneflow::DataTypeAttr>();
   return FromMLIRDataTypeToOFDataType(data_type_attr.getValue());
+}
+
+const ::oneflow::UserOpDef& getUserOpDef(const std::string& op_type_name) {
+  const ::oneflow::user_op::OpRegistryResult* val =
+      ::oneflow::user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
+  CHECK(val) << " Cannot find op_type_name: " << op_type_name;
+  return val->op_def;
 }
 
 }  // namespace support

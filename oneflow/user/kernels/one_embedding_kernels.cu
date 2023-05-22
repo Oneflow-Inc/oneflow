@@ -29,7 +29,7 @@ namespace oneflow {
 
 namespace {
 
-enum class InitializerType { kUniform, kNormal, kConstant };
+enum class InitializerType { kUniform, kNormal, kConstant, kTruncNormal };
 
 struct EmbeddingInitializer {
   InitializerType type;
@@ -45,6 +45,12 @@ struct EmbeddingInitializer {
     struct {
       float value;
     } constant_param;
+    struct {
+      float mean;
+      float std;
+      float a;
+      float b;
+    } trunc_normal_param;
   };
 
   bool operator==(const EmbeddingInitializer& rhs) const {
@@ -57,6 +63,11 @@ struct EmbeddingInitializer {
              && (this->normal_param.std == rhs.normal_param.std);
     } else if (rhs.type == InitializerType::kConstant) {
       return this->constant_param.value == rhs.constant_param.value;
+    } else if (rhs.type == InitializerType::kTruncNormal) {
+      return (this->trunc_normal_param.mean == rhs.trunc_normal_param.mean)
+             && (this->trunc_normal_param.std == rhs.trunc_normal_param.std)
+             && (this->trunc_normal_param.a == rhs.trunc_normal_param.a)
+             && (this->trunc_normal_param.b == rhs.trunc_normal_param.b);
     } else {
       UNIMPLEMENTED();
       return false;
@@ -90,6 +101,20 @@ void ParseInitializerFromJson(const nlohmann::json& initializer,
     CHECK(initializer["value"].is_number());
     embedding_initializer->type = InitializerType::kConstant;
     embedding_initializer->constant_param.value = initializer["value"];
+  } else if (type == "trunc_normal") {
+    CHECK(initializer.contains("mean"));
+    CHECK(initializer.contains("std"));
+    CHECK(initializer.contains("a"));
+    CHECK(initializer.contains("b"));
+    CHECK(initializer["mean"].is_number());
+    CHECK(initializer["std"].is_number());
+    CHECK(initializer["a"].is_number());
+    CHECK(initializer["b"].is_number());
+    embedding_initializer->type = InitializerType::kTruncNormal;
+    embedding_initializer->trunc_normal_param.mean = initializer["mean"];
+    embedding_initializer->trunc_normal_param.std = initializer["std"];
+    embedding_initializer->trunc_normal_param.a = initializer["a"];
+    embedding_initializer->trunc_normal_param.b = initializer["b"];
   } else {
     UNIMPLEMENTED() << "Unsupported initializer type";
   }
@@ -325,6 +350,16 @@ __global__ void InitValueKernel(uint64_t seed, const int32_t line_size,
       value = curand_normal(&state) * std + mean;
     } else if (initializer.type == InitializerType::kConstant) {
       value = initializer.constant_param.value;
+    } else if (initializer.type == InitializerType::kTruncNormal) {
+      const float mean = initializer.trunc_normal_param.mean;
+      const float std = initializer.trunc_normal_param.std;
+      const float a = initializer.trunc_normal_param.a;
+      const float b = initializer.trunc_normal_param.b;
+      while (true) {
+        value = curand_normal(&state) * std + mean;
+        if (value >= a && value <= b) { break; }
+        skipahead(line_size, &state);
+      }
     } else {
       __trap();
     }
@@ -415,6 +450,16 @@ __global__ void FusedInitSliceCast(const int32_t elem_cnt, uint64_t seed, const 
           value = curand_normal(&state) * std + mean;
         } else if (initializer.type == InitializerType::kConstant) {
           value = initializer.constant_param.value;
+        } else if (initializer.type == InitializerType::kTruncNormal) {
+          const float mean = initializer.trunc_normal_param.mean;
+          const float std = initializer.trunc_normal_param.std;
+          const float a = initializer.trunc_normal_param.a;
+          const float b = initializer.trunc_normal_param.b;
+          while (true) {
+            value = curand_normal(&state) * std + mean;
+            if (value >= a && value <= b) { break; }
+            skipahead(line_size, &state);
+          }
         } else {
           __trap();
         }
@@ -1195,9 +1240,10 @@ class OneEmbeddingFusedLookupKernelState final : public user_op::OpKernelState {
       int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
       device_set.emplace(std::make_pair(machine_id, device_id));
     }
-    EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get());
+    EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
     ncclComm_t comm;
-    comm = comm_mgr->GetCommForDeviceAndStreamName(device_set, stream_name_);
+    comm =
+        comm_mgr->As<EagerNcclCommMgr>()->GetCommForDeviceAndStreamName(device_set, stream_name_);
     comm_.reset(new Comm(comm));
   }
 
