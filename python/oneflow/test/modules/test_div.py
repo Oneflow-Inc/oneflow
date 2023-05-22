@@ -135,13 +135,19 @@ class TestDiv(flow.unittest.TestCase):
         z = x / y
         return z
 
-    @autotest(n=6, include_complex=True)
+    @autotest(n=10, auto_backward=True, include_complex=True)
     def test_non_contiguous_inplace_div(test_case):
-        device = random_device()
-        x = random_tensor(2, 2, 4).to(device)
+        # device = random_device()
+        device = cpu_device()
+        x = random_tensor(2, 2, 4, dtype=complex).to(device)
         y = x + 1
         y = y[:, 1:3]
-        y /= random_tensor(2, 2, 2).to(device)
+        temp = random_tensor(2, 2, 2, dtype=complex).to(device)
+        print("y = ")
+        print(y)
+        print("temp = ")
+        print(temp)
+        y /= temp
         return y
 
     @autotest(n=3, check_graph=False)
