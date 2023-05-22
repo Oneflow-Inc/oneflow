@@ -102,7 +102,7 @@ class TestGlobalInterpreter(flow.unittest.TestCase):
             placement = flow.placement("cuda", [0, 1])
             m = BoxingModuleParallelMul(placement).eval()
             g = Graph(m)
-        
+
             input = flow.randn(4, 5, placement=placement, sbp=flow.sbp.broadcast)
             graph_output = g(input)
             eager_output = m(input)
