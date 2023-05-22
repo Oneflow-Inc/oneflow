@@ -117,18 +117,17 @@ Maybe<void> RawRunGlobalNormalOp(const std::shared_ptr<UserOpExpr>& op, TensorTu
   const auto& tensor_device =
       JUST(GetTensorDevice4CurrentProcessCtx(op_parallel_desc, &parallel_id));
   const auto* mgr = Singleton<EagerBoxingInterpreterManager>::Get();
-  CHECK_EQ_OR_RETURN(inputs.size(), ibns.size()) << "input size != ibns size.";
+  CHECK_OR_RETURN(inputs.size() == ibns.size());
   for (int i = 0; i < inputs.size(); ++i) {
     std::shared_ptr<Tensor> input_tensor = inputs[i];
     std::string lbn = JUST(VectorAt(ibns, i));
     const auto& logical_shape = input_tensor->shape();
-    CHECK_GT_OR_RETURN(logical_shape->elem_cnt(), 0) << "logical tensor empty.";
+    CHECK_OR_RETURN(logical_shape->elem_cnt() > 0);
     const auto& in_nd_sbp = JUST(input_tensor->nd_sbp());
     const auto& out_nd_sbp = SymbolOf(JUST(MapAt(ndsbp_signature.bn_in_op2nd_sbp(), lbn)));
     const auto& in_parallel_desc = JUST(input_tensor->parallel_desc());
     const auto& out_parallel_desc = op_parallel_desc;
-    CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc)
-        << "in_parallel_desc != out_parallel_desc";
+    CHECK_OR_RETURN(in_parallel_desc == out_parallel_desc);
     if (in_parallel_desc->parallel_num() != 1 && in_nd_sbp != out_nd_sbp) {
       const auto& boxing_interpreter = JUST(mgr->GetEagerBoxingInterpreter(
           in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc, *logical_shape));
