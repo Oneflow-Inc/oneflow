@@ -37,6 +37,9 @@ def ShapeArrayAttr : TypedArrayAttrBase<ShapeAttr, ""> {}
 
 def ComplexDoubleAttr : TypedArrayAttrBase<F64Attr, ""> {}
 
+def BytesAttr : StringBasedAttr<CPred<"$_self.isa<::mlir::StringAttr>()">,
+                              "bytes attribute">;
+
 def OneFlow_IsOpConfCompatible : NativeOpTrait<"IsOpConfCompatible">;
 def OneFlow_IsImportCompatible : NativeOpTrait<"IsImportCompatible">;
 def OneFlow_AlternativeOp : NativeOpTrait<"IsAlternative">;
