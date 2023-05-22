@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
+#include "oneflow/user/kernels/complex_kernels_util.h"
 #include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
 
 namespace oneflow {
@@ -48,6 +49,11 @@ class BroadcastDivGradKernel final : public user_op::OpKernel {
     bcast_div->Launch(ctx->stream(), z_tensor->shape_view().NumAxes(), z_tensor->shape_view().ptr(),
                       z_tensor->dptr(), y_tensor->shape_view().NumAxes(),
                       y_tensor->shape_view().ptr(), y_tensor->dptr<T>(), tmp_buffer->mut_dptr<T>());
+
+    if (z_tensor->data_type() == DataType::kComplex64 || z_tensor->data_type() == DataType::kComplex128){
+        oneflow::user_op::ConjPhysicalFunctor<device, T>()(ctx->stream(), tmp_buffer->dptr<T>(), tmp_buffer->mut_dptr<T>(), 
+                                        tmp.shape().ElemNum());
+    }
 
     auto bcast_mul = ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
         ctx->device_type(), ep::primitive::BinaryOp::kMul, dz_tensor->data_type(),
@@ -89,9 +95,15 @@ class BroadcastDivGradKernel final : public user_op::OpKernel {
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BROADCAST_DIV_GRAD_KERNEL, DEVICE_TYPE_SEQ,
                                  ARITHMETIC_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BROADCAST_DIV_GRAD_KERNEL, OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU), 
+                                 COMPLEX_DATA_TYPE_SEQ)
 #ifdef WITH_CUDA
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BROADCAST_DIV_GRAD_KERNEL, (DeviceType::kCUDA),
                                  FLOAT16_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BROADCAST_DIV_GRAD_KERNEL, (DeviceType::kCUDA),
+                                 OF_PP_MAKE_TUPLE_SEQ(cuComplex, DataType::kComplex64))
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BROADCAST_DIV_GRAD_KERNEL, (DeviceType::kCUDA),
+                                 OF_PP_MAKE_TUPLE_SEQ(cuDoubleComplex, DataType::kComplex128))
 #endif
 
 }  // namespace oneflow
