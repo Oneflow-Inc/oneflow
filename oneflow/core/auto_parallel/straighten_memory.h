@@ -128,12 +128,7 @@ void StraightenMemory(std::vector<MemoryTopoStruct*>* topo_structs,
                       std::vector<int64_t>* id2blob_size,
                       std::vector<MemoryTopoStruct*>* ordered_topo_structs);
 
-// Straighten a subset of the op graph
-void StraightenMemorySubGraph(const std::vector<const OpNode*>& sub_graph,
-                              std::vector<const OpNode*>* ordered_op_nodes);
-
-// Straighten the whole op graph
-void StraightenMemoryOpGraph(const OpGraph& op_graph, std::vector<const OpNode*>* ordered_op_nodes);
+const int32_t kOriginNode = -123;
 
 }  // namespace auto_parallel
 }  // namespace oneflow

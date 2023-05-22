@@ -16,7 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/auto_parallel/auto_memory.h"
 #include "oneflow/core/auto_parallel/sbp_constructor.h"
-#include "oneflow/core/auto_parallel/straighten_memory.h"
+#include "oneflow/core/auto_parallel/straighten_memory_op_graph.h"
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
@@ -569,9 +569,13 @@ void StraightenOpGraph(const OpGraph& op_graph, std::vector<const OpNode*>* orde
   // Traverse and store all the nodes in the op graph
   op_graph.ForEachNode([&](OpNode* node) { sub_graph.push_back(node); });
 
-  StraightenSubGraph(sub_graph, ordered_op_nodes);
-
-  StraightenMemoryOpGraph(op_graph, ordered_op_nodes);
+  if (GlobalJobDesc().job_conf().straighten_algorithm_tag_in_task_graph()
+      == StraightenAlgorithmTag::kCompressMemory) {
+    // A global memory straighten algorithm
+    StraightenMemorySubGraph(sub_graph, ordered_op_nodes);
+  } else {
+    StraightenSubGraph(sub_graph, ordered_op_nodes);
+  }
 }
 
 bool IsProducedRegisterReusable(const Operator& op) {
