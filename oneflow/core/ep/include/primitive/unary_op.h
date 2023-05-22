@@ -97,6 +97,9 @@ enum class UnaryOp {
 
   // bitwise op
   kBitwiseNot,
+
+  // complex op
+  kConj
 };
 
 }

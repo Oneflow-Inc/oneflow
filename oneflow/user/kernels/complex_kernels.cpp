@@ -15,6 +15,9 @@ limitations under the License.
 */
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/ep/include/primitive/elementwise_unary.h"
+#include "oneflow/core/ep/include/primitive/primitive.h"
+#include "oneflow/core/ep/include/primitive/unary_op.h"
 #include "oneflow/user/kernels/complex_kernels_util.h"
 #include <complex>
 #ifdef WITH_CUDA
@@ -156,7 +159,7 @@ REGISTER_IMAG_GRAD_KERNEL(DeviceType::kCUDA, float, cuComplex)
 REGISTER_IMAG_GRAD_KERNEL(DeviceType::kCUDA, double, cuDoubleComplex)
 #endif  // WITH_CUDA
 
-template<DeviceType device, typename dtype>
+template<DeviceType device, typename T>
 class ConjPhysicalKernel final : public user_op::OpKernel {
  public:
   ConjPhysicalKernel() = default;
@@ -164,15 +167,22 @@ class ConjPhysicalKernel final : public user_op::OpKernel {
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
-    user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    if (out_tensor->shape_view().elem_cnt() == 0) { return; }
-    const dtype* x = x_tensor->dptr<dtype>();
-    dtype* out = out_tensor->mut_dptr<dtype>();
-    ConjPhysicalFunctor<device, dtype>()(ctx->stream(), x, out,
-                                         out_tensor->shape_view().elem_cnt());
+    const user_op::Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const ShapeView input_shape = input_tensor->shape_view();
+    const ShapeView output_shape = output_tensor->shape_view();
+    CHECK_EQ(input_shape, output_shape) << "Input shape should be equal to Output shape.";
+    auto primitive = ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
+        ctx->device_type(), ep::primitive::UnaryOp::kConj, input_tensor->data_type(),
+        output_tensor->data_type());
+    CHECK(primitive);
+    const int64_t elem_cnt = input_shape.elem_cnt();
+
+    if (elem_cnt != 0) {
+      primitive->Launch(ctx->stream(), input_tensor->dptr(), output_tensor->mut_dptr(), elem_cnt);
+    }
   }
 };
 

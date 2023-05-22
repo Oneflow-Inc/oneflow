@@ -61,15 +61,5 @@ struct ImagGradFunctor<DeviceType::kCPU, dtype_dout, dtype_dx> final {
 INSTANTIATE_IMAG_GRAD_FUNCTOR(DeviceType::kCPU, float, std::complex<float>)
 INSTANTIATE_IMAG_GRAD_FUNCTOR(DeviceType::kCPU, double, std::complex<double>)
 
-template<typename dtype>
-struct ConjPhysicalFunctor<DeviceType::kCPU, dtype> final {
-  void operator()(ep::Stream* stream, const dtype* x, dtype* out, int64_t cnt) {
-    FOR_RANGE(int64_t, i, 0, cnt) { out[i] = dtype{x[i].real(), -x[i].imag()}; }
-  }
-};
-
-INSTANTIATE_CONJ_PHYSICAL_FUNCTOR(DeviceType::kCPU, std::complex<float>)
-INSTANTIATE_CONJ_PHYSICAL_FUNCTOR(DeviceType::kCPU, std::complex<double>)
-
 }  // namespace user_op
 }  // namespace oneflow
