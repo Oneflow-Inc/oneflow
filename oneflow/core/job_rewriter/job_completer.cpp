@@ -203,17 +203,48 @@ Maybe<void> JobCompleter::UpdateSharedGraphForNewInput(
     // Some op attributes need to be updated with the new traced graph.
     if (op_conf.has_user_conf()) {
       for (auto& pair : *op_conf.mutable_user_conf()->mutable_attr()) {
-        if (pair.second.has_at_shape()) {
-          const auto* new_op_conf = JUST(NewOp4SharedOpName(op_conf.name()));
-          CHECK_EQ_OR_RETURN(new_op_conf->user_conf().op_type_name(),
-                             op_conf.user_conf().op_type_name())
-              << " new op " << new_op_conf->DebugString() << " is not corresponding with "
-              << op_conf.DebugString();
-          auto attr_iter = new_op_conf->user_conf().attr().find(pair.first);
-          CHECK_OR_RETURN(attr_iter != new_op_conf->user_conf().attr().end())
-              << " There is not attr " << pair.first << " in new op " << new_op_conf->DebugString();
-          *pair.second.mutable_at_shape() = attr_iter->second.at_shape();
-        }
+        const auto* new_op_conf = JUST(NewOp4SharedOpName(op_conf.name()));
+        if (new_op_conf == nullptr) { continue; }
+        CHECK_EQ_OR_RETURN(new_op_conf->user_conf().op_type_name(),
+                           op_conf.user_conf().op_type_name())
+            << " new op " << new_op_conf->DebugString() << " is not corresponding with "
+            << op_conf.DebugString();
+        auto attr_iter = new_op_conf->user_conf().attr().find(pair.first);
+        CHECK_OR_RETURN(attr_iter != new_op_conf->user_conf().attr().end())
+            << " There is not attr " << pair.first << " in new op " << new_op_conf->DebugString();
+
+// the name "UPDATE_ATTR_SET" means this kind of attr call a func like 'set_type' to update attr.
+#define UPDATE_ATTR_SET(type) \
+  if (pair.second.has_##type()) { pair.second.set_##type(attr_iter->second.type()); }
+
+// the name "UPDATE_ATTR_MUTABLE" means this kind of attr call a func like 'mutable_type' to update
+// attr.
+#define UPDATE_ATTR_MUTABLE(type) \
+  if (pair.second.has_##type()) { *pair.second.mutable_##type() = attr_iter->second.type(); }
+
+        // UPDATE_ATTR_SET(at_int32);
+        // UPDATE_ATTR_SET(at_int64);
+        UPDATE_ATTR_SET(at_bool);
+        UPDATE_ATTR_SET(at_float);
+        UPDATE_ATTR_SET(at_double);
+        // UPDATE_ATTR_SET(at_string);
+        UPDATE_ATTR_SET(at_data_type);
+        UPDATE_ATTR_SET(at_memory_format);
+
+        UPDATE_ATTR_MUTABLE(at_shape);
+        UPDATE_ATTR_MUTABLE(at_list_int32);
+        UPDATE_ATTR_MUTABLE(at_list_int64);
+        UPDATE_ATTR_MUTABLE(at_list_float);
+        UPDATE_ATTR_MUTABLE(at_list_data_type);
+        UPDATE_ATTR_MUTABLE(at_list_shape);
+        UPDATE_ATTR_MUTABLE(at_list_string);
+        UPDATE_ATTR_MUTABLE(at_stride);
+        UPDATE_ATTR_MUTABLE(at_list_stride);
+        UPDATE_ATTR_MUTABLE(at_device);
+        UPDATE_ATTR_MUTABLE(at_complex_double);
+
+#undef UPDATE_ATTR_SET
+#undef UPDATE_ATTR_MUTABLE
       }
     }
     return Maybe<void>::Ok();
