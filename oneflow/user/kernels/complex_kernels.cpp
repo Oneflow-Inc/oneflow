@@ -174,12 +174,13 @@ class ConjPhysicalKernel final : public user_op::OpKernel {
     const ShapeView input_shape = input_tensor->shape_view();
     const ShapeView output_shape = output_tensor->shape_view();
     CHECK_EQ(input_shape, output_shape) << "Input shape should be equal to Output shape.";
-      auto primitive = ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
-        ctx->device_type(), ep::primitive::UnaryOp::kConj, input_tensor->data_type(), output_tensor->data_type());
+    auto primitive = ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
+        ctx->device_type(), ep::primitive::UnaryOp::kConj, input_tensor->data_type(),
+        output_tensor->data_type());
     CHECK(primitive);
     const int64_t elem_cnt = input_shape.elem_cnt();
 
-    if (elem_cnt != 0){
+    if (elem_cnt != 0) {
       primitive->Launch(ctx->stream(), input_tensor->dptr(), output_tensor->mut_dptr(), elem_cnt);
     }
   }
