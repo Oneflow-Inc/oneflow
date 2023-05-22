@@ -127,7 +127,8 @@ Maybe<void> RawRunGlobalNormalOp(const std::shared_ptr<UserOpExpr>& op, TensorTu
     const auto& out_nd_sbp = SymbolOf(JUST(MapAt(ndsbp_signature.bn_in_op2nd_sbp(), lbn)));
     const auto& in_parallel_desc = JUST(input_tensor->parallel_desc());
     const auto& out_parallel_desc = op_parallel_desc;
-    CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc) << "in_parallel_desc != out_parallel_desc";
+    CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc)
+        << "in_parallel_desc != out_parallel_desc";
     if (in_parallel_desc->parallel_num() != 1 && in_nd_sbp != out_nd_sbp) {
       const auto& boxing_interpreter = JUST(mgr->GetEagerBoxingInterpreter(
           in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc, *logical_shape));
