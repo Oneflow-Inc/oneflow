@@ -109,24 +109,27 @@ class FusedClipGradKernel final : public user_op::OpKernel, public user_op::Cuda
     }
     MultiClipGrad<device_type, T> multi_clip_grad{};
     if (norm_type == 0) {
-      multi_clip_grad(ctx->stream(), mut_params, out_ptr, norm_type, max_norm, ClipGradType::ZeroType);
+      multi_clip_grad(ctx->stream(), mut_params, out_ptr, norm_type, max_norm,
+                      ClipGradType::ZeroType);
     } else if (std::abs(norm_type) == INFINITY || norm_type == 1) {
-      multi_clip_grad(ctx->stream(), mut_params, out_ptr, norm_type, max_norm, ClipGradType::OtherType);
+      multi_clip_grad(ctx->stream(), mut_params, out_ptr, norm_type, max_norm,
+                      ClipGradType::OtherType);
     } else {
-      multi_clip_grad(ctx->stream(), mut_params, out_ptr, norm_type, max_norm, ClipGradType::PowerType);
+      multi_clip_grad(ctx->stream(), mut_params, out_ptr, norm_type, max_norm,
+                      ClipGradType::PowerType);
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-} // namespace
+}  // namespace
 
-#define REGISTER_FUSED_CLIP_GRAD_KERNEL(device, dtype)                                            \
-  REGISTER_USER_KERNEL("fused_clip_grad")                                                         \
-      .SetCreateFn<FusedClipGradKernel<device, dtype>>()                                          \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                       \
-                       && (user_op::HobDataType("model_diff", 0) == GetDataType<dtype>::value)    \
-                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))          \
+#define REGISTER_FUSED_CLIP_GRAD_KERNEL(device, dtype)                                         \
+  REGISTER_USER_KERNEL("fused_clip_grad")                                                      \
+      .SetCreateFn<FusedClipGradKernel<device, dtype>>()                                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                    \
+                       && (user_op::HobDataType("model_diff", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))       \
       .SetInferTmpSizeFn(InferFusedClipGradTempStorageSize);
 
 REGISTER_FUSED_CLIP_GRAD_KERNEL(DeviceType::kCUDA, float);

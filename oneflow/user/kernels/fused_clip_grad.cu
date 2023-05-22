@@ -22,12 +22,13 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void MultiBlockClipGradGpu(MultiClipGradParamPack<T> pack_params, T* scale, 
+__global__ void MultiBlockClipGradGpu(MultiClipGradParamPack<T> pack_params, T* scale,
                                       const float norm_type, const float max_norm,
-                                      const ClipGradType clip_grad_type, const bool scale_writable) {
+                                      const ClipGradType clip_grad_type,
+                                      const bool scale_writable) {
   T t = *scale;
-  if (clip_grad_type == ClipGradType::ZeroType) { 
-    t = static_cast<T>(t > 0); 
+  if (clip_grad_type == ClipGradType::ZeroType) {
+    t = static_cast<T>(t > 0);
   } else if (clip_grad_type == ClipGradType::PowerType) {
     t = std::pow(t, 1.f / norm_type);
   }
@@ -36,9 +37,7 @@ __global__ void MultiBlockClipGradGpu(MultiClipGradParamPack<T> pack_params, T* 
   if (t >= 1.) { return; }
   for (int i = 0; i < pack_params.size; ++i) {
     auto& param = pack_params.params[i];
-    CUDA_1D_KERNEL_LOOP(j, param.size) {
-      param.data[j] *= t;
-    }
+    CUDA_1D_KERNEL_LOOP(j, param.size) { param.data[j] *= t; }
   }
 }
 
@@ -59,8 +58,9 @@ struct MultiClipGrad<DeviceType::kCUDA, T> {
       }
       int32_t num_blocks = BlocksNum4ThreadsNum(max_elem_cnt);
       bool scale_writable = static_cast<bool>(i + kMultiReduceScaleMulPackSize >= params.size());
-      MultiBlockClipGradGpu<T><<<num_blocks, kCudaThreadsNumPerBlock, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-          pack_params, scale, norm_type, max_norm, clip_grad_type, scale_writable);
+      MultiBlockClipGradGpu<T>
+          <<<num_blocks, kCudaThreadsNumPerBlock, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+              pack_params, scale, norm_type, max_norm, clip_grad_type, scale_writable);
       total_num_blocks += num_blocks;
     }
   }

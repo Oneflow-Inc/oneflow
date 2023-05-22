@@ -32,7 +32,7 @@ Maybe<void> SetInputArgModifierMutable(const user_op::GetInputArgModifier& GetIn
 }
 
 Maybe<void> InputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                                const user_op::UserOpConfWrapper& conf) {
+                             const user_op::UserOpConfWrapper& conf) {
   for (int64_t i = 0; i < conf.input_size("model_diff"); i++) {
     JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model_diff", i));
   }
@@ -41,8 +41,7 @@ Maybe<void> InputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModi
 
 }  // namespace
 
-/* static */ Maybe<void> FusedClipGradOp::InferLogicalTensorDesc(
-    user_op::InferContext* ctx) {
+/* static */ Maybe<void> FusedClipGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const auto& in_0 = ctx->InputTensorDesc("model_diff", 0);
   auto* out = ctx->MutOutputTensorDesc("out", 0);
   for (int64_t i = 1; i < ctx->input_size("model_diff"); ++i) {
@@ -56,13 +55,13 @@ Maybe<void> InputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModi
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> FusedClipGradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
+/*static*/ Maybe<void> FusedClipGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> FusedClipGradOp::GetSbp(user_op::SbpContext* ctx) {
-  const int64_t num_axes = ctx->LogicalTensorDesc4InputArgNameAndIndex("model_diff", 0).shape().NumAxes();
+  const int64_t num_axes =
+      ctx->LogicalTensorDesc4InputArgNameAndIndex("model_diff", 0).shape().NumAxes();
   for (int64_t i = 0; i < num_axes; ++i) {
     ctx->NewBuilder().Split(ctx->inputs(), i).Split(user_op::OpArg("out", 0), i).Build();
   }
