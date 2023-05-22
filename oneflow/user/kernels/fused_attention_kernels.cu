@@ -1545,12 +1545,12 @@ __device__ void rotary_and_concat(RotaryAndConcatParam<T, IndexType> param) {
     IndexType b_idx = i / param.out_b_stride;
     IndexType b_off = i - b_idx * param.out_b_stride;
     IndexType m_idx, h_idx, k_idx;
-    if (MFirst) { //BMHK
+    if (MFirst) {  // BMHK
       m_idx = b_off / param.out_m_stride;
       IndexType m_off = b_off - m_idx * param.out_m_stride;
       h_idx = m_off / param.out_h_stride;
       k_idx = m_off - h_idx * param.out_h_stride;
-    } else { //BHMK
+    } else {  // BHMK
       h_idx = b_off / param.out_h_stride;
       IndexType h_off = b_off - h_idx * param.out_h_stride;
       m_idx = h_off / param.out_m_stride;
