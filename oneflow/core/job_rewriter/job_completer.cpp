@@ -224,24 +224,24 @@ Maybe<void> JobCompleter::UpdateSharedGraphForNewInput(
 
         // UPDATE_ATTR_SET(at_int32);
         // UPDATE_ATTR_SET(at_int64);
-        // UPDATE_ATTR_SET(at_bool);
-        // UPDATE_ATTR_SET(at_float);
+        UPDATE_ATTR_SET(at_bool);
+        UPDATE_ATTR_SET(at_float);
         UPDATE_ATTR_SET(at_double);
         // UPDATE_ATTR_SET(at_string);
-        // UPDATE_ATTR_SET(at_data_type);
-        // UPDATE_ATTR_SET(at_memory_format);
+        UPDATE_ATTR_SET(at_data_type);
+        UPDATE_ATTR_SET(at_memory_format);
 
         UPDATE_ATTR_MUTABLE(at_shape);
-        // UPDATE_ATTR_MUTABLE(at_list_int32);
-        // UPDATE_ATTR_MUTABLE(at_list_int64);
-        // UPDATE_ATTR_MUTABLE(at_list_float);
-        // UPDATE_ATTR_MUTABLE(at_list_data_type);
-        // UPDATE_ATTR_MUTABLE(at_list_shape);
-        // UPDATE_ATTR_MUTABLE(at_list_string);
-        // UPDATE_ATTR_MUTABLE(at_stride);
-        // UPDATE_ATTR_MUTABLE(at_list_stride);
-        // UPDATE_ATTR_MUTABLE(at_device);
-        // UPDATE_ATTR_MUTABLE(at_complex_double);
+        UPDATE_ATTR_MUTABLE(at_list_int32);
+        UPDATE_ATTR_MUTABLE(at_list_int64);
+        UPDATE_ATTR_MUTABLE(at_list_float);
+        UPDATE_ATTR_MUTABLE(at_list_data_type);
+        UPDATE_ATTR_MUTABLE(at_list_shape);
+        UPDATE_ATTR_MUTABLE(at_list_string);
+        UPDATE_ATTR_MUTABLE(at_stride);
+        UPDATE_ATTR_MUTABLE(at_list_stride);
+        UPDATE_ATTR_MUTABLE(at_device);
+        UPDATE_ATTR_MUTABLE(at_complex_double);
 
 #undef UPDATE_ATTR_SET
 #undef UPDATE_ATTR_MUTABLE
