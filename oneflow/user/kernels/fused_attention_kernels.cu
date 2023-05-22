@@ -1605,6 +1605,90 @@ void InitEagerCclOpKernelCache(user_op::KernelCacheContext* ctx,
   if (*cache_ptr == nullptr) { *cache_ptr = std::make_shared<EagerCclOpKernelCache>(ctx); }
 }
 
+template<typename T, typename IndexType>
+struct RotaryAndConcatParam {
+  const T* x;
+  const T* past_x;
+  T* out;
+  IndexType x_b_stride, x_m_stride, x_h_stride, x_k_stride;
+  IndexType past_x_b_stride, past_x_m_stride, past_x_h_stride, past_x_k_stride;
+  IndexType out_b_stride, out_m_stride, out_h_stride, out_k_stride;
+  const IndexType* position_ids;
+  IndexType past_m;
+  IndexType num_elems;
+  IndexType position_b_stride;
+  int rotary_size;
+  int rotate_stride;
+  float inv_rotary_size;
+  float theta;
+};
+
+template<typename T, typename IndexType>
+struct RotaryAndConcatParams {
+  RotaryAndConcatParam<T, IndexType> q_param, k_param, v_param;
+};
+
+template<typename T, typename IndexType, bool DoRotaryEmb, bool MFirst>
+__device__ void rotary_and_concat(RotaryAndConcatParam<T, IndexType> param) {
+  CUDA_1D_KERNEL_LOOP_T(IndexType, i, param.num_elems) {
+    IndexType b_idx = i / param.out_b_stride;
+    IndexType b_off = i - b_idx * param.out_b_stride;
+    IndexType m_idx, h_idx, k_idx;
+    if (MFirst) { //BMHK
+      m_idx = b_off / param.out_m_stride;
+      IndexType m_off = b_off - m_idx * param.out_m_stride;
+      h_idx = m_off / param.out_h_stride;
+      k_idx = m_off - h_idx * param.out_h_stride;
+    } else { //BHMK
+      h_idx = b_off / param.out_h_stride;
+      IndexType h_off = b_off - h_idx * param.out_h_stride;
+      m_idx = h_off / param.out_m_stride;
+      k_idx = h_off - m_idx * param.out_m_stride;
+    }
+    T v;
+    if (m_idx < param.past_m) {
+      v = param.past_x[b_idx * param.past_x_b_stride + m_idx * param.past_x_m_stride
+                       + h_idx * param.past_x_h_stride + k_idx];
+    } else {
+      const int position_m_idx = m_idx - param.past_m;
+      IndexType x_offset = b_idx * param.x_b_stride + position_m_idx * param.x_m_stride
+                           + h_idx * param.x_h_stride + k_idx;
+      if (DoRotaryEmb) {
+        const IndexType position_id_offset = b_idx * param.position_b_stride + position_m_idx;
+        const IndexType position =
+            param.position_ids ? param.position_ids[position_id_offset] : position_m_idx;
+        T val = position
+                * expf(2.0f * static_cast<float>(k_idx % (param.rotary_size >> 1))
+                       * param.inv_rotary_size * logf(param.theta));
+        T cos_val = cosf(val);
+        T sin_val = sinf(val);
+        T x1 = *(param.x + x_offset);
+        T x2 = (k_idx < param.rotate_stride)
+                   ? static_cast<T>(-*(param.x + x_offset + param.rotate_stride))
+                   : *(param.x + x_offset - param.rotate_stride);
+        v = cos_val * x1 + sin_val * x2;
+      } else {
+        v = param.x[x_offset];
+      }
+    }
+    param.out[i] = v;
+  }
+}
+
+// plane kernel here, no pack
+template<typename T, typename IndexType>
+__global__ void fused_rotary_qk_concat_past_kv(RotaryAndConcatParams<T, IndexType> params) {
+  if (blockIdx.y == 0) {
+    rotary_and_concat<T, IndexType, true, true>(params.q_param);
+  } else if (blockIdx.y == 1) {
+    rotary_and_concat<T, IndexType, true, false>(params.k_param);
+  } else if (blockIdx.y == 2) {
+    rotary_and_concat<T, IndexType, false, false>(params.v_param);
+  } else {
+    // do nothing
+  }
+}
+
 template<typename T>
 class LlamaDecoderLayerForwardKernel final : public user_op::OpKernel {
  public:
@@ -1628,9 +1712,6 @@ class LlamaDecoderLayerForwardKernel final : public user_op::OpKernel {
     user_op::Tensor* hidden_states = ctx->Tensor4ArgNameAndIndex("hidden_states", 0);
     const user_op::Tensor* position_ids = ctx->Tensor4ArgNameAndIndex("position_ids", 0);
 
-    user_op::Tensor* past_key = nullptr;
-    user_op::Tensor* past_value = nullptr;
-
     // output tensors
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* output = ctx->Tensor4ArgNameAndIndex("output", 0);
@@ -1640,7 +1721,6 @@ class LlamaDecoderLayerForwardKernel final : public user_op::OpKernel {
     const int64_t num_layers = ctx->Attr<int64_t>("num_layers");
     auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
     constexpr uint32_t block_size = 256;
-    constexpr int pack_size = 8;  // pack under the K dim.
     // b, m, h, k
     using IndexType = int64_t;
     auto input_shape = hidden_states->shape_view();
@@ -1648,8 +1728,11 @@ class LlamaDecoderLayerForwardKernel final : public user_op::OpKernel {
     const IndexType m = input_shape.At(1);
     IndexType h = input_shape.At(2) / head_size;
     IndexType k = head_size;
-    IndexType past_m = 0;
-    if (has_past_kv) past_m = ctx->Tensor4ArgNameAndIndex("past_keys", 0)->shape_view().At(2);
+    IndexType past_m = 0, past_num_elems = 0;
+    if (has_past_kv) {
+      past_m = ctx->Tensor4ArgNameAndIndex("past_keys", 0)->shape_view().At(2);
+      past_num_elems = ctx->Tensor4ArgNameAndIndex("past_keys", 0)->shape_view().elem_cnt();
+    }
     const IndexType bm = b * m;
     const IndexType input_num_elements = bm * h * k;
     const IndexType activation_size = GetCudaAlignedSize(sizeof(T) * input_num_elements);
@@ -1668,6 +1751,8 @@ class LlamaDecoderLayerForwardKernel final : public user_op::OpKernel {
       const user_op::Tensor* mlp_down_weight = ctx->Tensor4ArgNameAndIndex("mlp_down_weights", i);
       user_op::Tensor* concat_key = ctx->Tensor4ArgNameAndIndex("concat_keys", i);
       user_op::Tensor* concat_value = ctx->Tensor4ArgNameAndIndex("concat_values", i);
+      user_op::Tensor* past_key = nullptr;
+      user_op::Tensor* past_value = nullptr;
       if (has_past_kv) {
         past_key = ctx->Tensor4ArgNameAndIndex("past_keys", i);
         past_value = ctx->Tensor4ArgNameAndIndex("past_values", i);
@@ -1704,102 +1789,94 @@ class LlamaDecoderLayerForwardKernel final : public user_op::OpKernel {
           &sp_beta, ptr_arr + 2 * kMaxProblemBatch, data_type, matmul_n, 3, compute_type,
           CUBLAS_GEMM_DEFAULT));
 
-      // step3: rotary_embedding  BM(HK) -> BMHK, PlaneKernel use pack_size=1
-      constexpr size_t num_dims = 4;
+      // step3&4 : rotary_embedding + concat_past_kv  BM(HK) -> BMHK, PlaneKernel use pack_size=1
       // out:BMHK,  x: BM(HK), tmp_buffer: rms_out, q, k, v
       int64_t out_b_stride = m * h * k, out_m_stride = h * k, out_h_stride = k, out_offset = 0;
       int64_t x_b_stride = out_b_stride, x_m_stride = out_m_stride, x_h_stride = k, x_offset = 0;
+      auto position_axes = position_ids->shape_view().NumAxes();
+      const IndexType position_m =
+          static_cast<IndexType>(position_ids->shape_view()[position_axes - 1]);
 
-      FusedApplyRotaryEmbParam<T, IndexType, IndexType, num_dims, 1> q_param(
-          tmp_qkv_ptr, nullptr, nullptr, position_ids->dptr<IndexType>(), tmp_buffer->mut_dptr<T>(),
-          1.0f / 10000, 1.0f / k, k, k, k / 2, num_elements, k, k, k,
-          0);  // rotary_q, q, k, v
+      RotaryAndConcatParams<T, IndexType> rotaryAndConcatParams;
 
-      q_param.sinuous_m_stride = k;
-      const IndexType position_m = static_cast<IndexType>(position_ids->shape_view()[2]);
-      q_param.position_rotate_stride = position_m;
-      q_param.position_b_stride = position_m * /*rotary_emb_dim*/ 1;
-      const IndexType ref_strides[num_dims] = {out_b_stride, out_m_stride, out_h_stride, 1};
-      const IndexType out_strides[num_dims] = {out_b_stride, out_m_stride, out_h_stride, 1};
-      const IndexType x_strides[num_dims] = {x_b_stride, x_m_stride, x_h_stride, 1};
-#pragma unroll
-      for (int i = 0; i < num_dims; i++) {
-        q_param.ref_stride[i] = ref_strides[i];
-        q_param.out_stride[i] = out_strides[i];
-        q_param.x_stride[i] = x_strides[i];
-      }
+      rotaryAndConcatParams.q_param.x = tmp_qkv_ptr;
+      rotaryAndConcatParams.q_param.past_x = nullptr;
+      rotaryAndConcatParams.q_param.out = tmp_buffer->mut_dptr<T>();
+      rotaryAndConcatParams.q_param.x_b_stride = x_b_stride;
+      rotaryAndConcatParams.q_param.x_m_stride = x_m_stride;
+      rotaryAndConcatParams.q_param.x_h_stride = x_h_stride;
+      rotaryAndConcatParams.q_param.x_k_stride = 1;
+      rotaryAndConcatParams.q_param.past_x_b_stride = -1;  // no past_q
+      rotaryAndConcatParams.q_param.past_x_m_stride = -1;
+      rotaryAndConcatParams.q_param.past_x_h_stride = -1;
+      rotaryAndConcatParams.q_param.past_x_k_stride = -1;
+      rotaryAndConcatParams.q_param.out_b_stride = out_b_stride;
+      rotaryAndConcatParams.q_param.out_m_stride = out_m_stride;
+      rotaryAndConcatParams.q_param.out_h_stride = out_h_stride;
+      rotaryAndConcatParams.q_param.out_k_stride = 1;
+      rotaryAndConcatParams.q_param.position_ids = position_ids->dptr<IndexType>();
+      rotaryAndConcatParams.q_param.past_m = 0;
+      rotaryAndConcatParams.q_param.num_elems = num_elements;
+      rotaryAndConcatParams.q_param.position_b_stride = position_m;
+      rotaryAndConcatParams.q_param.rotary_size = k;
+      rotaryAndConcatParams.q_param.rotate_stride = k / 2;
+      rotaryAndConcatParams.q_param.inv_rotary_size = 1.0f / k;
+      rotaryAndConcatParams.q_param.theta = 1.0f / 10000;
+      // past_key:bhmk, key:bmhk, out: bhmk
+      rotaryAndConcatParams.k_param.x = tmp_qkv_ptr + num_elements;
+      rotaryAndConcatParams.k_param.past_x = past_key == nullptr ? nullptr : past_key->dptr<T>();
+      rotaryAndConcatParams.k_param.out = concat_key->mut_dptr<T>();
+      rotaryAndConcatParams.k_param.x_b_stride = m * h * k;
+      rotaryAndConcatParams.k_param.x_m_stride = h * k;
+      rotaryAndConcatParams.k_param.x_h_stride = k;
+      rotaryAndConcatParams.k_param.x_k_stride = 1;
+      rotaryAndConcatParams.k_param.past_x_b_stride = past_m * h * k;
+      rotaryAndConcatParams.k_param.past_x_m_stride = k;
+      rotaryAndConcatParams.k_param.past_x_h_stride = past_m * k;
+      rotaryAndConcatParams.k_param.past_x_k_stride = 1;
+      rotaryAndConcatParams.k_param.out_b_stride = (past_m + m) * h * k;
+      rotaryAndConcatParams.k_param.out_m_stride = k;
+      rotaryAndConcatParams.k_param.out_h_stride = (past_m + m) * k;
+      rotaryAndConcatParams.k_param.out_k_stride = 1;
+      rotaryAndConcatParams.k_param.position_ids = position_ids->dptr<IndexType>();
+      rotaryAndConcatParams.k_param.past_m = past_m;
+      rotaryAndConcatParams.k_param.num_elems = num_elements + past_num_elems;
+      rotaryAndConcatParams.k_param.position_b_stride = position_m;
+      rotaryAndConcatParams.k_param.rotary_size = k;
+      rotaryAndConcatParams.k_param.rotate_stride = k / 2;
+      rotaryAndConcatParams.k_param.inv_rotary_size = 1.0f / k;
+      rotaryAndConcatParams.k_param.theta = 1.0f / 10000;
 
-      PlaneKernel<<<(num_elements + block_size - 1) / block_size, block_size, 0,
-                    cuda_stream->cuda_stream()>>>(q_param);
-      // rotary_q, q, k, v -> rotary_q, rotary_k, k, v,
-      FusedApplyRotaryEmbParam<T, IndexType, IndexType, num_dims, 1> k_param(
-          tmp_qkv_ptr + num_elements, nullptr, nullptr, position_ids->dptr<IndexType>(),
-          tmp_qkv_ptr, 1.0f / 10000, 1.0f / k, k, k, k / 2, num_elements, k, k, k, 0);
-      k_param.sinuous_m_stride = k;
-      k_param.position_rotate_stride = position_m;
-      k_param.position_b_stride = position_m * /*rotary_emb_dim*/ 1;
-#pragma unroll
-      for (int i = 0; i < num_dims; i++) {
-        k_param.ref_stride[i] = ref_strides[i];
-        k_param.out_stride[i] = out_strides[i];
-        k_param.x_stride[i] = x_strides[i];
-      }
+      rotaryAndConcatParams.v_param.x = tmp_qkv_ptr + num_elements * 2;
+      rotaryAndConcatParams.v_param.past_x =
+          past_value == nullptr ? nullptr : past_value->dptr<T>();
+      rotaryAndConcatParams.v_param.out = concat_value->mut_dptr<T>();
+      rotaryAndConcatParams.v_param.x_b_stride = m * h * k;
+      rotaryAndConcatParams.v_param.x_m_stride = h * k;
+      rotaryAndConcatParams.v_param.x_h_stride = k;
+      rotaryAndConcatParams.v_param.x_k_stride = 1;
+      rotaryAndConcatParams.v_param.past_x_b_stride = past_m * h * k;
+      rotaryAndConcatParams.v_param.past_x_m_stride = k;
+      rotaryAndConcatParams.v_param.past_x_h_stride = past_m * k;
+      rotaryAndConcatParams.v_param.past_x_k_stride = 1;
+      rotaryAndConcatParams.v_param.out_b_stride = (past_m + m) * h * k;
+      rotaryAndConcatParams.v_param.out_m_stride = k;
+      rotaryAndConcatParams.v_param.out_h_stride = (past_m + m) * k;
+      rotaryAndConcatParams.v_param.out_k_stride = 1;
+      rotaryAndConcatParams.v_param.position_ids = position_ids->dptr<IndexType>();
+      rotaryAndConcatParams.v_param.past_m = past_m;
+      rotaryAndConcatParams.v_param.num_elems = num_elements + past_num_elems;
+      rotaryAndConcatParams.v_param.position_b_stride = position_m;
+      rotaryAndConcatParams.v_param.rotary_size = k;
+      rotaryAndConcatParams.v_param.rotate_stride = k / 2;
+      rotaryAndConcatParams.v_param.inv_rotary_size = 1.0f / k;
+      rotaryAndConcatParams.v_param.theta = 1.0f / 10000;
 
-      PlaneKernel<<<(num_elements + block_size - 1) / block_size, block_size, 0,
-                    cuda_stream->cuda_stream()>>>(k_param);
-
-      // step4: concat_past_kv, past_key:bhmk, key:bmhk, out: bhmk
-      k /= pack_size;
-      BatchConcatParam<IndexType> kv;
-      const auto count = b * (past_m + m) * h * k;
-      kv.params[0].past_ptr = past_key == nullptr ? nullptr : past_key->dptr();
-      kv.params[0].ptr = /* rotary_key */ reinterpret_cast<const void*>(tmp_qkv_ptr);
-      kv.params[0].output_ptr = concat_key->mut_dptr();
-      kv.params[0].past_offset = 0;
-      kv.params[0].offset = 0;
-      kv.params[0].output_offset = 0;
-      kv.params[0].past_m = past_m;
-      kv.params[0].past_stride_b = past_m * h * k;
-      kv.params[0].past_stride_m = k;
-      kv.params[0].past_stride_h = past_m * k;
-      kv.params[0].stride_b = m * h * k;
-      kv.params[0].stride_m = h * k;
-      kv.params[0].stride_h = k;
-      kv.params[0].output_stride_b = (past_m + m) * h * k;
-      kv.params[0].output_stride_m = k;
-      kv.params[0].output_stride_h = (past_m + m) * k;
-      kv.params[0].count = count;
-      kv.params[0].output_khm = k * h * (past_m + m);
-      kv.params[0].output_kh = h * k;
-      kv.params[0].output_k = k;
-      // past_value: bhmk, value: bm(hk), output:bhmk
-      kv.params[1].past_ptr = past_value == nullptr ? nullptr : past_value->dptr();
-      kv.params[1].ptr = reinterpret_cast<const void*>(tmp_qkv_ptr + num_elements * 2);
-      kv.params[1].output_ptr = concat_value->mut_dptr();
-      kv.params[1].past_offset = 0;
-      kv.params[1].offset = 0;
-      kv.params[1].output_offset = 0;
-      kv.params[1].past_m = past_m;  // same to k
-      kv.params[1].past_stride_b = past_m * h * k;
-      kv.params[1].past_stride_m = k;
-      kv.params[1].past_stride_h = past_m * k;
-      kv.params[1].stride_b = m * h * k;
-      kv.params[1].stride_m = h * k;
-      kv.params[1].stride_h = k;
-      kv.params[1].output_stride_b = (past_m + m) * h * k;
-      kv.params[1].output_stride_m = k;
-      kv.params[1].output_stride_h = (past_m + m) * k;
-      kv.params[1].count = count;
-      kv.params[1].output_khm = k * h * (past_m + m);
-      kv.params[1].output_kh = h * k;
-      kv.params[1].output_k = k;
-      const dim3 grid_size((count - 1 + block_size) / block_size, 2);
-
-      BatchConcatPastKeyValue<16, IndexType>
-          <<<grid_size, block_size, 0, cuda_stream->cuda_stream()>>>(kv);
+      const dim3 grid_size((num_elements + past_num_elems - 1 + block_size) / block_size, 3);
+      fused_rotary_qk_concat_past_kv<T, IndexType>
+          <<<grid_size, block_size, 0, cuda_stream->cuda_stream()>>>(rotaryAndConcatParams);
 
       // step5: fmha, query: bmhk, key_value: bhmk, out: bm(hk)
-      k *= pack_size;  // recover k without pack
       Params params{};
       params.data_type = hidden_states->data_type();
       params.num_batches = b;
