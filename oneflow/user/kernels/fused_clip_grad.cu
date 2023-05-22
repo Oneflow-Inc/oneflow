@@ -33,7 +33,7 @@ __global__ void MultiBlockClipGradGpu(MultiClipGradParamPack<T> pack_params, T* 
   }
   if (scale_writable && blockDim.x * blockIdx.x + threadIdx.x == 0) { *scale = t; }
   t = max_norm / (t + 1e-6);
-  t = t < 1. ? t : 1.;
+  if (t >= 1.) { return; }
   for (int i = 0; i < pack_params.size; ++i) {
     auto& param = pack_params.params[i];
     CUDA_1D_KERNEL_LOOP(j, param.size) {
