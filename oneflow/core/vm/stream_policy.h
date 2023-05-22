@@ -18,7 +18,6 @@ limitations under the License.
 
 #include <string>
 #include <typeindex>
-#include <glog/logging.h>
 #include "oneflow/core/framework/nn_graph_if.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/resource.pb.h"

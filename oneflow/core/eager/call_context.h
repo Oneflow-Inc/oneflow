@@ -32,8 +32,6 @@ class GlobalTensorInferResult;
 
 }  // namespace one
 
-class DeviceCtx;
-
 namespace eager {
 
 class TmpTensor final : public user_op::Tensor {
@@ -57,6 +55,7 @@ class TmpTensor final : public user_op::Tensor {
     UNIMPLEMENTED() << "TmpTensor::stride() is not implemented.";
   }
   DataType data_type() const override { return DataType::kChar; }
+  MemoryFormat memory_format() const override { return MemoryFormat::kContiguous; }
   const MemoryCase& mem_case() const override { return *mem_case_; }
   const void* raw_dptr() const override { return tmp_buffer_ptr_; }
   void* mut_raw_dptr() override { return tmp_buffer_ptr_; }
@@ -128,6 +127,7 @@ class DtrCallContext {
     const Symbol<one::LocalTensorMeta> local_tensor_meta;
     const std::shared_ptr<const one::MutLocalTensorMeta> dynamic_local_tensor_meta;
     const DataType data_type;
+    const MemoryFormat memory_format;
   };
   using EBOInfoList = small_vector<EBOInfo, vm::WeakEagerBlobObjectList::kInitialSize>;
 

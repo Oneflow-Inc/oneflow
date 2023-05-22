@@ -260,7 +260,7 @@ Maybe<void> BoxingCollector::GenerateCombination4SamePlacement(int32_t max_middl
       "cpu", {"0:0-" + std::to_string(hierarchy44.elem_cnt() - 1)}, virtual_hierarchy));
   BlobDesc blob_desc({virtual_range_size, virtual_range_size, virtual_range_size,
                       virtual_range_size, virtual_range_size, virtual_range_size},
-                     DataType::kInt8, /*is_dynamic=*/false);
+                     DataType::kInt8, MemoryFormat::kContiguous, /*is_dynamic=*/false);
   JUST(GenerateCombination4SamePlacement(max_middle_node_num, blob_desc, *parallel_desc));
   return Maybe<void>::Ok();
 }
@@ -382,7 +382,7 @@ Maybe<void> BoxingCollector::GenerateCombination4DiffPlacement(
   int32_t virtual_range_size = 4 * world_size * (4 * world_size + 1);
   BlobDesc blob_desc({virtual_range_size, virtual_range_size, virtual_range_size,
                       virtual_range_size, virtual_range_size, virtual_range_size},
-                     DataType::kInt8, /*is_dynamic=*/false);
+                     DataType::kInt8, MemoryFormat::kContiguous, /*is_dynamic=*/false);
   // Virtual placements before transfer
   Shape in_hierarchy44({4 * world_size + 1, 4 * world_size});
   std::shared_ptr<Shape> in_hierarchy = std::make_shared<Shape>(in_hierarchy44);

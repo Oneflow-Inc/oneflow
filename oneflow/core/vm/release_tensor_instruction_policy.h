@@ -18,7 +18,6 @@ limitations under the License.
 
 #include <functional>
 #include <memory>
-#include "oneflow/core/common/singleton_ptr.h"
 #include "oneflow/core/common/throw.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/intrusive/intrusive.h"

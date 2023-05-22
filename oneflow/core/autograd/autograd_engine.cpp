@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_meta.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/error.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_arg.h"
 #include "oneflow/core/framework/tensor_methods.h"
@@ -136,13 +137,13 @@ Maybe<void> AutogradEngine::RunBackwardAndSaveGrads4LeafTensorIf(const TensorTup
 
 Maybe<TensorTuple> AutogradEngine::RunBackwardAndReturnInputsTensorGradIf(
     const TensorTuple& outputs, const TensorTuple& inputs, const TensorTuple& out_grads,
-    bool retain_graph, bool create_graph) {
+    bool retain_graph, bool create_graph, bool allow_unused) {
   JUST(CheckGlobalTensorsMeta(outputs));
   JUST(CheckGlobalTensorsMeta(inputs));
   JUST(CheckGlobalTensorsMeta(out_grads));
   DisableCheckGlobalTensorMetaScope disable_meta_check;
   return RunBackwardAndReturnInputsTensorGrad(outputs, inputs, out_grads, retain_graph,
-                                              create_graph);
+                                              create_graph, allow_unused);
 }
 
 Maybe<void> FunctionNode::AccGrad4RetainGradTensor(bool create_graph) {
@@ -350,7 +351,8 @@ Maybe<void> GraphTask::ComputeDependencies() {
 
 // Computes the number of dependencies for each FunctionNode and prunes useless FunctionNode
 // according to input tensors
-Maybe<void> GraphTask::ComputeDependenciesAndPruneNode(const TensorTuple& inputs) {
+Maybe<void> GraphTask::ComputeDependenciesAndPruneNode(const TensorTuple& inputs,
+                                                       bool allow_unused) {
   struct NodeFrame {
     explicit NodeFrame(FunctionNode* node) : node_(node), next_function_idx_(0) {}
     FunctionNode* node_;
@@ -370,7 +372,11 @@ Maybe<void> GraphTask::ComputeDependenciesAndPruneNode(const TensorTuple& inputs
   captured_grads_ = std::make_shared<TensorTuple>(inputs.size());
   for (int idx = 0; idx < inputs.size(); idx++) {
     const auto& input = inputs[idx];
-    CHECK_NOTNULL_OR_RETURN(input->mut_grad_fn_node().get());  //  NOLINT(maybe-need-error-msg)
+    if (allow_unused && !input->mut_grad_fn_node().get()) { continue; }
+    CHECK_NOTNULL_OR_RETURN(input->mut_grad_fn_node().get())
+        << Error::RuntimeError()
+        << "One of the differentiated Tensors appears to not have been used in the graph. Set "
+           "allow_unused=True if this is the desired behavior.";
     ExecInfo& exec_info = grad_fn2exec_info_[input->mut_grad_fn_node().get()];
     exec_info.need_execute = true;
     if (!exec_info.capture_indices) {
@@ -467,13 +473,13 @@ Maybe<void> GraphAutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const Tensor
 
 Maybe<TensorTuple> GraphAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
     const TensorTuple& outputs, const TensorTuple& inputs, const TensorTuple& out_grads,
-    bool retain_graph, bool create_graph) {
+    bool retain_graph, bool create_graph, bool allow_unused) {
   for (int i = 0; i < outputs.size(); ++i) {
     JUST(JUST(outputs.at(i)->current_grad())->PushPartialTensor(out_grads.at(i)));
   }
 
   GraphTask graph_task(outputs, retain_graph, create_graph);
-  JUST(graph_task.ComputeDependenciesAndPruneNode(inputs));
+  JUST(graph_task.ComputeDependenciesAndPruneNode(inputs, allow_unused));
   if (IsInDebugMode()) {
     JUST(graph_task.WriteGraphToDotFile(GetDebugGraphFileName("grad", std::to_string(clock()))));
   }
@@ -516,8 +522,10 @@ Maybe<void> AddAccumulateFunctionNode(const std::shared_ptr<Tensor>& tensor) {
   backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
                           bool create_graph) -> Maybe<void> { return Maybe<void>::Ok(); };
   backward_fn->status = []() { return false; };
-  tensor->set_grad_fn_node(GraphFunctionNode::New(
-      "accumulategrad", backward_fn, /*inputs=*/TensorTuple{}, /*outputs*/ TensorTuple{tensor}));
+  tensor->set_grad_fn_node(GraphFunctionNode::New("accumulategrad", backward_fn,
+                                                  /*inputs=*/TensorTuple{},
+                                                  /*outputs*/ TensorTuple{tensor}));
+  tensor->mut_grad_fn_node()->set_variable(tensor);
   tensor->set_grad_fn_output_index(0);
   if (LazyMode::is_enabled()) {
     tensor->mut_grad_fn_node()->set_scope(JUST(GetTensorScope(tensor)));

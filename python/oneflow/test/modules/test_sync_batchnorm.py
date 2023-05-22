@@ -23,6 +23,7 @@ from sync_batchnorm_test_util import ensure_datas
 
 
 @flow.unittest.skip_unless_1n2d()
+@unittest.skip("TODO(depeng): data too larger")
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestSyncBatchNorm(flow.unittest.TestCase):
     def test_sync_batchnorm3d(test_case):

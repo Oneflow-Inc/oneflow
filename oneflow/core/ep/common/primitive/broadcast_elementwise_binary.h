@@ -98,6 +98,8 @@ inline bool IsDimsEquals(size_t num_src0_dims, const int64_t* src0_dims, size_t 
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kBitwiseOr)  \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kBitwiseXor)
 
+#define BINARY_MATH_FLOATING_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kZeta)
+
 #define BINARY_ACTIVATION_BACKWARD_OP_SEQ_0                   \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kIdentityBackwardWithDyX)    \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kEluBackwardWithDyX)         \
@@ -120,7 +122,7 @@ inline bool IsDimsEquals(size_t num_src0_dims, const int64_t* src0_dims, size_t 
 
 #define BINARY_ACTIVATION_BACKWARD_OP_SEQ_2                  \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSoftshrinkBackwardWithDyY) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kTanhBackwardWithDyX)       \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kTanhBackwardWithDyY)       \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kThresholdBackwardWithDyX)  \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kFastGeluBackwardWithDyX)   \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kQuickGeluBackwardWithDyX)

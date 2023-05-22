@@ -76,25 +76,41 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
         std::function<std::unique_ptr<BroadcastElementwiseBinary>(Scalar, Scalar)>>
         new_broadcast_elementwise_binary_handle{
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
-                                             BINARY_MATH_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ)
+                                             BINARY_MATH_OP_SEQ, CUDA_PRIMITIVE_REAL_TYPE_SEQ)
 
-                OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-                    MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY,
-                    BINARY_COMPARISION_OP_SEQ BINARY_LOGICAL_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ,
-                    CUDA_PRIMITIVE_BOOL_TYPE_SEQ)
+                OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
+                                                 BINARY_COMPLEX_MATH_OP_SEQ,
+                                                 CUDA_PRIMITIVE_COMPLEX_TYPE_SEQ)
 
                     OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-                        MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_ACTIVATION_GRAD_ENTRY,
-                        BINARY_ACTIVATION_BACKWARD_OP_SEQ, CUDA_PRIMITIVE_FLOATING_TYPE_SEQ)
+                        MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY,
+                        BINARY_COMPARISION_OP_SEQ BINARY_LOGICAL_OP_SEQ,
+                        CUDA_PRIMITIVE_REAL_TYPE_SEQ, CUDA_PRIMITIVE_BOOL_TYPE_SEQ)
 
                         OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-                            MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_ACTIVATION_GRAD_ENTRY,
-                            BINARY_MATH_BACKWARD_OP_SEQ, CUDA_PRIMITIVE_FLOATING_TYPE_SEQ)
+                            MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
+                            BINARY_MATH_FLOATING_OP_SEQ, CUDA_PRIMITIVE_FLOATING_TYPE_SEQ)
 
                             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-                                MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
-                                BINARY_BITWISE_OP_SEQ,
-                                CUDA_PRIMITIVE_INT_TYPE_SEQ CUDA_PRIMITIVE_BOOL_TYPE_SEQ)};
+                                MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY,
+                                BINARY_COMPLEX_COMPARISION_OP_SEQ, CUDA_PRIMITIVE_COMPLEX_TYPE_SEQ,
+                                CUDA_PRIMITIVE_BOOL_TYPE_SEQ)
+
+                                OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+                                    MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_ACTIVATION_GRAD_ENTRY,
+                                    BINARY_ACTIVATION_BACKWARD_OP_SEQ,
+                                    CUDA_PRIMITIVE_FLOATING_TYPE_SEQ)
+
+                                    OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+                                        MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_ACTIVATION_GRAD_ENTRY,
+                                        BINARY_MATH_BACKWARD_OP_SEQ,
+                                        CUDA_PRIMITIVE_FLOATING_TYPE_SEQ)
+
+                                        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+                                            MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
+                                            BINARY_BITWISE_OP_SEQ,
+                                            CUDA_PRIMITIVE_INT_TYPE_SEQ
+                                                CUDA_PRIMITIVE_BOOL_TYPE_SEQ)};
 
 #undef MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY
 #undef MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY

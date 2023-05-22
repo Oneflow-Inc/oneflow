@@ -26,6 +26,7 @@ class CaseCompTaskNode final : public CompTaskNode {
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
+  void ConsumeFakeRegsts() override;
 
   TaskType GetTaskType() const override { return TaskType::kCase; }
 
@@ -35,6 +36,8 @@ class CaseCompTaskNode final : public CompTaskNode {
 };
 
 void CaseCompTaskNode::ConsumeAllRegsts() { ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst()); }
+
+void CaseCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
 
 void CaseCompTaskNode::ProduceAllRegstsAndBindEdges() {
   HashMap<LogicalBlobId, int64_t> lbi2obn_id;
@@ -69,7 +72,7 @@ void CaseCompTaskNode::BuildExecGphAndRegst() {
     out_regst->AddLbi(sole_op->BnInOp2Lbi(name));
     node->BindBnWithRegst(name, out_regst);
   }
-  node->InferBlobDescs(parallel_ctx());
+  (node->*GetInferBlobDescsMethod())(parallel_ctx());
 }
 
 void CaseCompTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }

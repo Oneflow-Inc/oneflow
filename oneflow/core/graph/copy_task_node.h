@@ -17,9 +17,9 @@ limitations under the License.
 #define ONEFLOW_CORE_GRAPH_COPY_TASK_NODE_H_
 
 #include "oneflow/core/graph/transport_task_node.h"
+#include "oneflow/core/graph/boxing_task_graph.pb.h"
 
 namespace oneflow {
-
 class CopyTaskNode : public TransportTaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CopyTaskNode);
@@ -36,8 +36,6 @@ class CopyTaskNode : public TransportTaskNode {
  private:
   void InferProducedDataRegstTimeShape() final;
 };
-
-enum CopyHdType { H2D = 0, D2H = 1 };
 
 class CopyHdTaskNode final : public CopyTaskNode {
  public:
@@ -63,6 +61,10 @@ class CopyHdTaskNode final : public CopyTaskNode {
     return kInvalidMemZoneId;
   }
 
+  Maybe<void> InitTransportTaskFromProto(const TransportTaskProto& transport_task_proto,
+                                         const TaskGraphRebuildCtx& ctx) override;
+  void ToTransportTaskProto(TransportTaskProto*) const override;
+
  private:
   void InitProducedRegstMemCase(MemoryCase*) override;
   OperatorConf NewCopyOpConf() override;
@@ -79,6 +81,10 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
   TaskType GetTaskType() const override { return TaskType::kCopyCommNet; }
 
   void Init(int64_t machine_id, const LogicalBlobId& lbi);
+
+  Maybe<void> InitTransportTaskFromProto(const TransportTaskProto& transport_task_proto,
+                                         const TaskGraphRebuildCtx& ctx) override;
+  void ToTransportTaskProto(TransportTaskProto*) const override;
 
  private:
   OperatorConf NewCopyOpConf() override;
