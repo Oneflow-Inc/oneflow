@@ -50,9 +50,10 @@ class BroadcastDivGradKernel final : public user_op::OpKernel {
                       z_tensor->dptr(), y_tensor->shape_view().NumAxes(),
                       y_tensor->shape_view().ptr(), y_tensor->dptr<T>(), tmp_buffer->mut_dptr<T>());
 
-    if (z_tensor->data_type() == DataType::kComplex64 || z_tensor->data_type() == DataType::kComplex128){
-        oneflow::user_op::ConjPhysicalFunctor<device, T>()(ctx->stream(), tmp_buffer->dptr<T>(), tmp_buffer->mut_dptr<T>(), 
-                                        tmp.shape().ElemNum());
+    auto conj = ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(ctx->device_type(), ep::primitive::UnaryOp::kConj, z_tensor->data_type(), z_tensor->data_type());
+    if (conj){
+        const int64_t elem_cnt = dz_tensor->shape_view().elem_cnt();
+        conj->Launch(ctx->stream(), tmp_buffer->dptr<T>(), tmp_buffer->mut_dptr<T>(), elem_cnt);
     }
 
     auto bcast_mul = ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
