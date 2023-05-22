@@ -128,6 +128,8 @@ class TopoStruct {
   void VisitAncestorsAndItself(const std::function<void(TopoStruct*)>& Handle);
   // Mark all its descendant with min_layer <= max_layer
   void MarkDescendantUp2Layer(int32_t max_layer);
+  // Block descendants and store the blocking nodes in the given hash set
+  void BlockDescendants(HashSet<TopoStruct*>* blocking_nodes);
 };
 
 // Compute the minimum layer of this node
@@ -465,7 +467,6 @@ void EatNodes(std::vector<TopoStruct*>& topo_structs) {
         // Eliminate d
         RemoveFrom(topo_structs, id);
         not_merged = false;
-        node->removed = true;
       }
     }
     // A negative node with only one input and the highest priority (non-positive peak memory)
@@ -497,7 +498,6 @@ void EatNodes(std::vector<TopoStruct*>& topo_structs) {
       node->out_topo_structs.clear();
       // Eliminate b
       RemoveFrom(topo_structs, id);
-      node->removed = true;
     }
   }
 }
@@ -590,31 +590,23 @@ void GraphSimplification(std::vector<TopoStruct*>& topo_structs) {
     std::cout << "Origin, Topo size: " << topo_structs.size() << std::endl;
   }
   EatNodes(topo_structs);
-  CheckRemovedNodes(topo_structs);
   if (GlobalProcessCtx::Rank() == 0) {
     std::cout << "After 1st Eats, Topo size: " << topo_structs.size() << std::endl;
   }
   ClipEdges(topo_structs);
-  CheckRemovedNodes(topo_structs);
   EatNodes(topo_structs);
-  CheckRemovedNodes(topo_structs);
   if (GlobalProcessCtx::Rank() == 0) {
     std::cout << "2nd, clip and eat, Topo size: " << topo_structs.size() << std::endl;
   }
   ClipEdges(topo_structs);
-  CheckRemovedNodes(topo_structs);
   EatNodes(topo_structs);
-  CheckRemovedNodes(topo_structs);
   if (GlobalProcessCtx::Rank() == 0) {
     std::cout << "3rd, clip and eat, Topo size: " << topo_structs.size() << std::endl;
   }
-  for (int32_t i = 4; i < 20; i++) {
+  for (int32_t i = 4; i < 120; i++) {
     SortReleaseTopoStructs(topo_structs);
-    CheckRemovedNodes(topo_structs);
     ClipEdges(topo_structs);
-    CheckRemovedNodes(topo_structs);
     EatNodes(topo_structs);
-    CheckRemovedNodes(topo_structs);
     if (GlobalProcessCtx::Rank() == 0) {
       std::cout << i << "th, sort, clip and eat, Topo size: " << topo_structs.size() << std::endl;
     }
