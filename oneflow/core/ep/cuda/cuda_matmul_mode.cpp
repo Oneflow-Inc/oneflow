@@ -46,8 +46,7 @@ bool CudaMatmulMode::is_matmul_allow_fp16_reduced_precision_reduction() {
 
 void CudaMatmulMode::set_matmul_allow_fp16_reduced_precision_reduction(
     bool matmul_allow_fp16_reduced_precision_reduction) {
-  *GetMatmulAllowFP16ReducedPrecisionReducton() =
-      matmul_allow_fp16_reduced_precision_reduction;
+  *GetMatmulAllowFP16ReducedPrecisionReducton() = matmul_allow_fp16_reduced_precision_reduction;
 }
 
 }  // namespace ep
