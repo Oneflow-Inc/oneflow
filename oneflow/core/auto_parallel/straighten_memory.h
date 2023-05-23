@@ -59,7 +59,6 @@ class MemoryTopoStruct {
   // max difference = peak memory - final memory increment
   int64_t max_difference = 0;
   int32_t min_layer = -1;
-  bool is_reusable = false;
   int32_t blob_id = -1;
   // Blocking means you must execute this node before executing any other nodes in the set
   HashSet<MemoryTopoStruct*> blocking_topo_structs;
@@ -122,10 +121,11 @@ void ConnectTwoNodes(MemoryTopoStruct* producer, MemoryTopoStruct* consumer);
 
 // The memory straighten algorithm
 void StraightenMemory(std::vector<MemoryTopoStruct*>* topo_structs,
-                      HashMap<LogicalBlobId, int32_t>* lbi2id,
-                      std::vector<MemoryTopoStruct*>* id2producer_topo_struct,
+                      const HashMap<LogicalBlobId, int32_t>& lbi2id,
+                      const std::vector<MemoryTopoStruct*>& id2producer_topo_struct,
                       std::vector<std::vector<MemoryTopoStruct*>>* id2consumer_topo_structs,
-                      std::vector<int64_t>* id2blob_size,
+                      const std::vector<int64_t>& id2blob_size,
+                      const std::vector<bool>& id2is_reusable,
                       std::vector<MemoryTopoStruct*>* ordered_topo_structs);
 
 const int32_t kOriginNode = -123;

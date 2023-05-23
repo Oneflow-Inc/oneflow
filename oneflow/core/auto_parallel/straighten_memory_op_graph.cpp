@@ -52,7 +52,7 @@ void InitAllParameters(HashMap<const OpNode*, MemoryTopoStruct>& op_node2topo_st
                        HashMap<LogicalBlobId, int32_t>* lbi2id,
                        std::vector<MemoryTopoStruct*>* id2producer_topo_struct,
                        std::vector<std::vector<MemoryTopoStruct*>>* id2consumer_topo_structs,
-                       std::vector<int64_t>* id2blob_size) {
+                       std::vector<int64_t>* id2blob_size, std::vector<bool>* id2is_reusable) {
   for (auto& pair : op_node2topo_struct) {
     const auto& producer = pair.first->op();
     auto* topo_struct = &pair.second;
@@ -68,6 +68,7 @@ void InitAllParameters(HashMap<const OpNode*, MemoryTopoStruct>& op_node2topo_st
         const BlobDesc& logical_blob_desc = pair.first->LogicalBlobDesc4Lbi(lbi);
         id2blob_size->push_back(TotalByteSize4BlobDesc(logical_blob_desc));
         id2producer_topo_struct->push_back(topo_struct);
+        id2is_reusable->push_back(IsProducedRegisterReusable(producer));
       }
     }
   }
@@ -103,7 +104,6 @@ void StraightenMemorySubGraph(const std::vector<const OpNode*>& sub_graph,
     op_node2topo_struct.insert({node, MemoryTopoStruct(kOriginNode)});
     auto& topo_struct = op_node2topo_struct.at(node);
     topo_struct.op_node = node;
-    topo_struct.is_reusable = IsProducedRegisterReusable(node->op());
     topo_structs.push_back(&topo_struct);
     topo_struct2op_node[&topo_struct] = node;
   }
@@ -113,12 +113,13 @@ void StraightenMemorySubGraph(const std::vector<const OpNode*>& sub_graph,
   std::vector<MemoryTopoStruct*> id2producer_topo_struct;
   std::vector<std::vector<MemoryTopoStruct*>> id2consumer_topo_structs;
   std::vector<int64_t> id2blob_size;
+  std::vector<bool> id2is_reusable;
 
   InitAllParameters(op_node2topo_struct, &lbi2id, &id2producer_topo_struct,
-                    &id2consumer_topo_structs, &id2blob_size);
+                    &id2consumer_topo_structs, &id2blob_size, &id2is_reusable);
 
-  StraightenMemory(&topo_structs, &lbi2id, &id2producer_topo_struct, &id2consumer_topo_structs,
-                   &id2blob_size, &ordered_topo_structs);
+  StraightenMemory(&topo_structs, lbi2id, id2producer_topo_struct, &id2consumer_topo_structs,
+                   id2blob_size, id2is_reusable, &ordered_topo_structs);
 
   for (auto& ordered_topo_struct : ordered_topo_structs) {
     ordered_op_nodes->push_back(topo_struct2op_node[ordered_topo_struct]);

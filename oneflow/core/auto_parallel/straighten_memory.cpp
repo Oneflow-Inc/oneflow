@@ -65,9 +65,9 @@ void ComputeLayer(std::vector<MemoryTopoStruct*>* topo_structs) {
 void ComputeAllMemoryIncrement(
     std::vector<MemoryTopoStruct*>& topo_structs,
     std::vector<MemoryTopoStruct>& release_topo_structs,
-    std::vector<MemoryTopoStruct*>& id2producer_topo_struct,
+    const std::vector<MemoryTopoStruct*>& id2producer_topo_struct,
     std::vector<std::vector<MemoryTopoStruct*>>& id2consumer_topo_structs,
-    std::vector<int64_t>& id2blob_size) {
+    const std::vector<int64_t>& id2blob_size, const std::vector<bool>& id2is_reusable) {
   // Prepare to insert the release blob
   for (int32_t id = 0; id < id2consumer_topo_structs.size(); id++) {
     if (id2consumer_topo_structs.at(id).empty()) {
@@ -87,16 +87,16 @@ void ComputeAllMemoryIncrement(
   }
 
   for (int32_t id = 0; id < id2producer_topo_struct.size(); id++) {
-    const auto& topo_struct = id2producer_topo_struct[id];
-    if (topo_struct->is_reusable) {
+    if (id2is_reusable[id]) {
+      const auto& topo_struct = id2producer_topo_struct[id];
       topo_struct->memory_increment += id2blob_size[id];
       topo_struct->peak_memory += id2blob_size[id];
     }
   }
   // Subtract the consumed memory
   for (int32_t id = 0; id < id2consumer_topo_structs.size(); id++) {
-    auto* producer_topo_struct = id2producer_topo_struct[id];
-    if (producer_topo_struct->is_reusable) {
+    if (id2is_reusable[id]) {
+      auto* producer_topo_struct = id2producer_topo_struct[id];
       auto& consumer_topo_structs = id2consumer_topo_structs[id];
       // Release the blob in the blocking node
       if (consumer_topo_structs.size() == 1) {
@@ -479,10 +479,11 @@ void ConnectTwoNodes(MemoryTopoStruct* producer, MemoryTopoStruct* consumer) {
 }
 
 void StraightenMemory(std::vector<MemoryTopoStruct*>* topo_structs,
-                      HashMap<LogicalBlobId, int32_t>* lbi2id,
-                      std::vector<MemoryTopoStruct*>* id2producer_topo_struct,
+                      const HashMap<LogicalBlobId, int32_t>& lbi2id,
+                      const std::vector<MemoryTopoStruct*>& id2producer_topo_struct,
                       std::vector<std::vector<MemoryTopoStruct*>>* id2consumer_topo_structs,
-                      std::vector<int64_t>* id2blob_size,
+                      const std::vector<int64_t>& id2blob_size,
+                      const std::vector<bool>& id2is_reusable,
                       std::vector<MemoryTopoStruct*>* ordered_topo_structs) {
   // The number of executing topographical structures
   int32_t executing_topo_struct_num = topo_structs->size();
@@ -491,14 +492,14 @@ void StraightenMemory(std::vector<MemoryTopoStruct*>* topo_structs,
   // Reserve the space for release topological structures
   // We do not define a copy method for MemoryTopoStruct. During each size expansion, the data might
   // be screwed up if we do not reserve the space.
-  release_topo_structs.reserve(id2blob_size->size());
+  release_topo_structs.reserve(id2blob_size.size());
   // Initialize the no cleaning marker
   InitNoCleaningMarkerAncestor();
   InitNoCleaningMarkerDescendant();
 
   // Compute the memory increment for all the topological structures
-  ComputeAllMemoryIncrement(*topo_structs, release_topo_structs, *id2producer_topo_struct,
-                            *id2consumer_topo_structs, *id2blob_size);
+  ComputeAllMemoryIncrement(*topo_structs, release_topo_structs, id2producer_topo_struct,
+                            *id2consumer_topo_structs, id2blob_size, id2is_reusable);
 
   if (GlobalProcessCtx::Rank() == 0) {
     std::cout << "Print all the topological structures:" << std::endl;
