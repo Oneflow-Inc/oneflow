@@ -27,7 +27,8 @@ class EnvVar(object):
 
     def __exit__(self, *args):
         for key in self.env_list.keys():
-            os.environ.pop(key)
+            if key in os.environ.keys():
+                os.environ.pop(key)
 
 
 class RunGraphByVmEnv(EnvVar):
