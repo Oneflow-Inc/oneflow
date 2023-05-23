@@ -121,7 +121,6 @@ void ConnectTwoNodes(MemoryTopoStruct* producer, MemoryTopoStruct* consumer);
 
 // The memory straighten algorithm
 void StraightenMemory(std::vector<MemoryTopoStruct*>* topo_structs,
-                      const HashMap<LogicalBlobId, int32_t>& lbi2id,
                       const std::vector<MemoryTopoStruct*>& id2producer_topo_struct,
                       std::vector<std::vector<MemoryTopoStruct*>>* id2consumer_topo_structs,
                       const std::vector<int64_t>& id2blob_size,

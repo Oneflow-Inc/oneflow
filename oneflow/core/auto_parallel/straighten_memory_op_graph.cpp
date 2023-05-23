@@ -118,8 +118,8 @@ void StraightenMemorySubGraph(const std::vector<const OpNode*>& sub_graph,
   InitAllParameters(op_node2topo_struct, &lbi2id, &id2producer_topo_struct,
                     &id2consumer_topo_structs, &id2blob_size, &id2is_reusable);
 
-  StraightenMemory(&topo_structs, lbi2id, id2producer_topo_struct, &id2consumer_topo_structs,
-                   id2blob_size, id2is_reusable, &ordered_topo_structs);
+  StraightenMemory(&topo_structs, id2producer_topo_struct, &id2consumer_topo_structs, id2blob_size,
+                   id2is_reusable, &ordered_topo_structs);
 
   for (auto& ordered_topo_struct : ordered_topo_structs) {
     ordered_op_nodes->push_back(topo_struct2op_node[ordered_topo_struct]);

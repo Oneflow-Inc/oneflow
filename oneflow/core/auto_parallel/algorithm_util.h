@@ -25,6 +25,8 @@ limitations under the License.
 namespace oneflow {
 namespace auto_parallel {
 
+const int32_t kUnavailableIndex = -1;
+
 // this function is to remove the i-th element from a vector in Constant time.
 // the vector should not care about ordering.
 // Be more careful about this function. Make sure that the traveling order of
@@ -40,7 +42,7 @@ int32_t CheckIndex(std::vector<T>& v, T& t) {
   for (int32_t i = v.size() - 1; i >= 0; i--) {
     if (v[i] == t) { return i; }
   }
-  return -1;
+  return kUnavailableIndex;
 }
 
 template<class T>
@@ -49,13 +51,19 @@ void CheckAndRemoveFrom(std::vector<T>& v, T& t) {
   if (id >= 0) { RemoveFrom(v, id); }
 }
 
+template<class T>
+void CheckAndInsert(std::vector<T>& v, T t) {
+  int32_t id = CheckIndex(v, t);
+  if (id == kUnavailableIndex) { v.push_back(t); }
+}
+
 template<class K, class T>
 bool CheckAndRemoveFromMap(std::map<K, std::vector<T>>& m, K key, T& t) {
   auto it = m.find(key);
   if (it == m.end()) { return false; }
   auto& v = it->second;
   int32_t id = CheckIndex(v, t);
-  if (id == -1) { return false; }
+  if (id == kUnavailableIndex) { return false; }
   RemoveFrom(v, id);
   if (v.empty()) { m.erase(it); }
   return true;
