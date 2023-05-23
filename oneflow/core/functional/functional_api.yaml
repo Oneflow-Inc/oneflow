@@ -2676,7 +2676,8 @@
   bind_python: True
 
 - name: "llama_decoder_layer_forward"
-  signature: "TensorTuple (Tensor hidden_states, TensorTuple input_norm_weight, TensorTuple query_weight, TensorTuple key_weight, TensorTuple value_weight, TensorTuple attn_out_weight, Tensor position_ids, TensorTuple post_norm_weight, TensorTuple mlp_gate_weight, TensorTuple mlp_up_weight, TensorTuple mlp_down_weight, TensorTuple past_key, TensorTuple past_value, Int64 head_size=128) => LlamaDecoderLayerForwardOp"
+  # signature: "TensorTuple (Tensor hidden_states, TensorTuple input_norm_weight, TensorTuple query_weight, TensorTuple key_weight, TensorTuple value_weight, TensorTuple attn_out_weight, Tensor position_ids, TensorTuple post_norm_weight, TensorTuple mlp_gate_weight, TensorTuple mlp_up_weight, TensorTuple mlp_down_weight, TensorTuple past_key, TensorTuple past_value, Int64 head_size=128) => LlamaDecoderLayerForwardOp"
+  signature: "TensorTuple (Tensor hidden_states, TensorTuple input_norm_weight, TensorTuple qkv_weight, TensorTuple attn_out_weight, Tensor position_ids, TensorTuple post_norm_weight,  TensorTuple mlp_gate_weight, TensorTuple mlp_up_weight, TensorTuple mlp_down_weight, TensorTuple past_key, TensorTuple past_value, Int64 head_size=128) => LlamaDecoderLayerForwardOp"
   bind_python: True
 
 - name: "fused_multi_head_attention_inference"
