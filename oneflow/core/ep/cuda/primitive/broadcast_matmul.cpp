@@ -85,7 +85,7 @@ cudaDataType_t GetCublasScalarType(DataType data_type) {
   }
 }
 
-cublasComputeType_t GetComputeType(DataType data_type) {
+cublasComputeType_t GetComputeType(DataType data_type, CudaStream* cuda_stream) {
   switch (data_type) {
     case kFloat: {
       if (CudaMatmulMode::is_matmul_allow_tf32()) {
@@ -99,10 +99,10 @@ cublasComputeType_t GetComputeType(DataType data_type) {
     }
     case kDouble: return CUBLAS_COMPUTE_64F;
     case kFloat16: {
-      if (CudaMatmulMode::is_matmul_allow_half_precision_accumulation()) {
-        return CUBLAS_COMPUTE_16F;
-      } else {
+      if (cuda_stream->device_properties().major >= 5) {
         return CUBLAS_COMPUTE_32F;
+      } else {
+        return CUBLAS_COMPUTE_16F;
       }
     }
 #if CUDA_VERSION >= 11000
@@ -110,45 +110,6 @@ cublasComputeType_t GetComputeType(DataType data_type) {
 #endif  // CUDA_VERSION >= 11000
     default: UNIMPLEMENTED(); return CUBLAS_COMPUTE_32F;
   }
-}
-
-auto LaunchBroadcastMatmulEx(CudaStream* cuda_stream, DataType data_type,
-                             const cudaDataType_t cuda_data_type,
-                             const cublasComputeType_t compute_type,
-                             const cublasOperation_t cublas_trans_a,
-                             const cublasOperation_t cublas_trans_b, const int64_t cublas_m,
-                             const int64_t cublas_n, const int64_t cublas_k,
-                             const int64_t cublas_lda, const int64_t cublas_ldb,
-                             const int64_t cublas_ldc, const void* sp_alpha) {
-  CublasMathModeGuard guard(cuda_stream->cublas_handle());
-  if (data_type == DataType::kFloat16) {
-#if CUDA_VERSION < 11000
-    guard.SetMathMode(CUBLAS_TENSOR_OP_MATH);
-#else
-    guard.SetMathMode(CUBLAS_DEFAULT_MATH);
-#endif  // CUDA_VERSION < 11000
-  }
-#if CUDA_VERSION >= 11000
-  cublasGemmAlgo_t algo = CUBLAS_GEMM_DEFAULT;
-#else
-  cublasGemmAlgo_t algo =
-      (data_type == DataType::kFloat16) ? CUBLAS_GEMM_DFALT_TENSOR_OP : CUBLAS_GEMM_DEFAULT;
-#endif
-
-  auto ex_matmul_func =
-      [](cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n,
-         int k, const void* alpha, const void* A, cudaDataType Atype, int lda, const void* B,
-         cudaDataType Btype, int ldb, const void* beta, void* C, cudaDataType Ctype, int ldc,
-         cublasComputeType_t computeType, cublasGemmAlgo_t algo) -> void {
-    OF_CUBLAS_CHECK(cublasGemmEx(handle, transa, transb, m, n, k, alpha, A, Atype, lda, B, Btype,
-                                 ldb, beta, C, Ctype, ldc, computeType, algo));
-  };
-
-  return std::bind(ex_matmul_func, cuda_stream->cublas_handle(), cublas_trans_a, cublas_trans_b,
-                   cublas_m, cublas_n, cublas_k, sp_alpha, std::placeholders::_1, cuda_data_type,
-                   cublas_lda, std::placeholders::_2, cuda_data_type, cublas_ldb,
-                   std::placeholders::_3, std::placeholders::_4, cuda_data_type, cublas_ldc,
-                   compute_type, algo);
 }
 
 void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType transpose_a,
@@ -159,7 +120,7 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
                            Scalar beta, void* c) {
   auto* cuda_stream = stream->As<CudaStream>();
   const auto cuda_data_type = GetCudaDataType(data_type);
-  const auto compute_type = GetComputeType(data_type);
+  const auto compute_type = GetComputeType(data_type, cuda_stream);
   const auto sp_alpha = GetCublasScalarParameter(alpha, compute_type);
   const auto GetCublasOperation = [](BlasTransposeType transpose_type) {
     if (transpose_type == BlasTransposeType::N) {
@@ -194,28 +155,28 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
   }
   const int cublas_ldc = n;
 
-  std::function<void(const void* cublas_a, const void* cublas_b, const void* sp_beta,
-                     void* cublas_c)>
-      matmul_func = LaunchBroadcastMatmulEx(
-          cuda_stream, data_type, cuda_data_type, compute_type, cublas_trans_a, cublas_trans_b,
-          cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc, &sp_alpha);
-
-  if (num_batch_dims == 1 && c_batch_dims[0] != 1) {
-    CublasMathModeGuard guard(cuda_stream->cublas_handle());
-    if (data_type == DataType::kFloat16) {
+  CublasMathModeGuard guard(cuda_stream->cublas_handle());
+  if (data_type == DataType::kFloat16) {
 #if CUDA_VERSION < 11000
-      guard.SetMathMode(CUBLAS_TENSOR_OP_MATH);
+    guard.SetMathMode(CUBLAS_TENSOR_OP_MATH);
 #else
-      guard.SetMathMode(CUBLAS_DEFAULT_MATH);
-#endif  // CUDA_VERSION < 11000
+    cublasMath_t cublas_flags = CUBLAS_DEFAULT_MATH;
+    if (cuda_stream->device_properties().major >= 5
+        && CudaMatmulMode::is_matmul_allow_fp16_reduced_precision_reduction()) {
+      cublas_flags = static_cast<cublasMath_t>(cublas_flags
+                                               | CUBLAS_MATH_DISALLOW_REDUCED_PRECISION_REDUCTION);
     }
+    guard.SetMathMode(cublas_flags);
+#endif  // CUDA_VERSION < 11000
+  }
 #if CUDA_VERSION >= 11000
-    cublasGemmAlgo_t algo = CUBLAS_GEMM_DEFAULT;
+  cublasGemmAlgo_t algo = CUBLAS_GEMM_DEFAULT;
 #else
-    cublasGemmAlgo_t algo =
-        (data_type == DataType::kFloat16) ? CUBLAS_GEMM_DFALT_TENSOR_OP : CUBLAS_GEMM_DEFAULT;
+  cublasGemmAlgo_t algo =
+      (data_type == DataType::kFloat16) ? CUBLAS_GEMM_DFALT_TENSOR_OP : CUBLAS_GEMM_DEFAULT;
 #endif
 
+  if (num_batch_dims == 1 && c_batch_dims[0] != 1) {
     const void* cublas_a = b;
     const void* cublas_b = a;
     void* cublas_c = c;
@@ -240,7 +201,10 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
       const void* cublas_a = batch_b;
       const void* cublas_b = batch_a;
       void* cublas_c = batch_c;
-      matmul_func(cublas_a, cublas_b, &sp_beta, cublas_c);
+      OF_CUBLAS_CHECK(cublasGemmEx(
+          cuda_stream->cublas_handle(), cublas_trans_a, cublas_trans_b, cublas_m, cublas_n,
+          cublas_k, &sp_alpha, cublas_a, cuda_data_type, cublas_lda, cublas_b, cuda_data_type,
+          cublas_ldb, &sp_beta, cublas_c, cuda_data_type, cublas_ldc, compute_type, algo));
     };
     ForEachMatmul<kMaxNumDims>(data_type, m, n, k, beta, num_batch_dims, broadcast_batch_dims,
                                a_batch_dims, b_batch_dims, c_batch_dims, a, b, c, func);

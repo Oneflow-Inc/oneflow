@@ -23,9 +23,9 @@ namespace ep {
 struct CudaMatmulMode {
   static bool is_matmul_allow_tf32();
   static void set_matmul_allow_tf32(bool matmul_allow_tf32);
-  static bool is_matmul_allow_half_precision_accumulation();
-  static void set_matmul_allow_half_precision_accumulation(
-      bool matmul_allow_half_precision_accumulation);
+  static bool is_matmul_allow_fp16_reduced_precision_reduction();
+  static void set_matmul_allow_fp16_reduced_precision_reduction(
+      bool matmul_allow_fp16_reduced_precision_reduction);
 };
 
 }  // namespace ep

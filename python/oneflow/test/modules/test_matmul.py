@@ -63,6 +63,20 @@ class TestModule(flow.unittest.TestCase):
             np.allclose(flow_output_numpy, torch_output_numpy, 1e-05, 1e-05)
         )
 
+    @autotest(n=5, check_graph=False)
+    def test_flow_tensor_matmul_with_random_fp16_data(test_case):
+        x = np.random.randint(10, 21, size=5)
+        y = np.random.randint(1, 14, size=(5, 4))
+        torch_x = torch.from_numpy(x).to(torch.float16)
+        torch_y = torch.from_numpy(y).to(torch.float16)
+        torch_output_numpy = torch_x.matmul(torch_y).numpy()
+        flow_x = flow.tensor(x).to(flow.float16)
+        flow_y = flow.tensor(y).to(flow.float16)
+        flow_output_numpy = flow_x.matmul(flow_y).numpy()
+        test_case.assertTrue(
+            np.allclose(flow_output_numpy, torch_output_numpy, 1e-05, 1e-05)
+        )
+
     @autotest(n=5, check_graph=True, rtol=1e-2, atol=1e-3)
     def test_flow_tensor_broadcast_matmul_with_random_data(test_case):
         device = random_device()

@@ -28,10 +28,10 @@ namespace ep {
 ONEFLOW_API_PYBIND11_MODULE("ep", m) {
   m.def("is_matmul_allow_tf32", &CudaMatmulMode::is_matmul_allow_tf32);
   m.def("set_matmul_allow_tf32", &CudaMatmulMode::set_matmul_allow_tf32);
-  m.def("is_matmul_allow_half_precision_accumulation",
-        &CudaMatmulMode::is_matmul_allow_half_precision_accumulation);
-  m.def("set_matmul_allow_half_precision_accumulation",
-        &CudaMatmulMode::set_matmul_allow_half_precision_accumulation);
+  m.def("is_matmul_allow_fp16_reduced_precision_reduction",
+        &CudaMatmulMode::is_matmul_allow_fp16_reduced_precision_reduction);
+  m.def("set_matmul_allow_fp16_reduced_precision_reduction",
+        &CudaMatmulMode::set_matmul_allow_fp16_reduced_precision_reduction);
 }
 
 }  // namespace ep

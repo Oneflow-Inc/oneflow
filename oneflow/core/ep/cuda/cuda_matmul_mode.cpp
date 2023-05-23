@@ -27,9 +27,9 @@ bool* GetThreadLocalMatmulAllowTF32() {
   return &matmul_allow_tf32;
 }
 
-bool* GetThreadLocalMatmulAllowHalfPrecisionAccumulation() {
-  static thread_local bool matmul_allow_half_precision_accumulation = false;
-  return &matmul_allow_half_precision_accumulation;
+bool* GetThreadLocalMatmulAllowFP16ReducedPrecisionReducton() {
+  static thread_local bool matmul_allow_fp16_reduced_precision_reduction = true;
+  return &matmul_allow_fp16_reduced_precision_reduction;
 }
 
 }  // namespace
@@ -40,13 +40,14 @@ void CudaMatmulMode::set_matmul_allow_tf32(bool matmul_allow_tf32) {
   *GetThreadLocalMatmulAllowTF32() = matmul_allow_tf32;
 }
 
-bool CudaMatmulMode::is_matmul_allow_half_precision_accumulation() {
-  return *GetThreadLocalMatmulAllowHalfPrecisionAccumulation();
+bool CudaMatmulMode::is_matmul_allow_fp16_reduced_precision_reduction() {
+  return *GetThreadLocalMatmulAllowFP16ReducedPrecisionReducton();
 }
 
-void CudaMatmulMode::set_matmul_allow_half_precision_accumulation(
-    bool matmul_allow_half_precision_accumulation) {
-  *GetThreadLocalMatmulAllowHalfPrecisionAccumulation() = matmul_allow_half_precision_accumulation;
+void CudaMatmulMode::set_matmul_allow_fp16_reduced_precision_reduction(
+    bool matmul_allow_fp16_reduced_precision_reduction) {
+  *GetThreadLocalMatmulAllowFP16ReducedPrecisionReducton() =
+      matmul_allow_fp16_reduced_precision_reduction;
 }
 
 }  // namespace ep

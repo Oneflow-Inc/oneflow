@@ -17,24 +17,24 @@ limitations under the License.
 import oneflow._oneflow_internal
 
 
-class cuBLASModule:
+class cuMatmulMode:
     def __getattr__(self, name):
         if name == "allow_tf32":
             return oneflow._oneflow_internal.ep.is_matmul_allow_tf32()
-        elif name == "allow_half_precision_accumulation":
+        elif name == "allow_fp16_reduced_precision_reduction":
             return (
-                oneflow._oneflow_internal.ep.is_matmul_allow_half_precision_accumulation()
+                oneflow._oneflow_internal.ep.is_matmul_allow_fp16_reduced_precision_reduction()
             )
         raise AssertionError("Unknown attribute " + name)
 
     def __setattr__(self, name, value):
         if name == "allow_tf32":
             return oneflow._oneflow_internal.ep.set_matmul_allow_tf32(value)
-        elif name == "allow_half_precision_accumulation":
-            return oneflow._oneflow_internal.ep.set_matmul_allow_half_precision_accumulation(
+        elif name == "allow_fp16_reduced_precision_reduction":
+            return oneflow._oneflow_internal.ep.set_matmul_allow_fp16_reduced_precision_reduction(
                 value
             )
         raise AssertionError("Unknown attribute " + name)
 
 
-matmul = cuBLASModule()
+matmul = cuMatmulMode()
