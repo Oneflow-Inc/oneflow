@@ -18,6 +18,7 @@ import unittest
 import numpy as np
 import oneflow as flow
 import oneflow.unittest
+import torch as torch_original
 
 from oneflow.test_utils.automated_test_util import *
 
@@ -33,13 +34,18 @@ class TestModule(flow.unittest.TestCase):
         z = torch.matmul(x, y)
         return z
 
-    @profile(torch.matmul)
-    def profile_matmul(test_case):
-        z = torch.matmul(torch.ones(10, 1000), torch.ones(1000, 10))
-        z = torch.matmul(torch.ones(1000, 10), torch.ones(10, 1000))
-        z = torch.matmul(torch.ones(10, 10), torch.ones(10, 10))
-        z = torch.matmul(torch.ones(10, 1), torch.ones(1, 10))
-        z = torch.matmul(torch.ones(1, 10), torch.ones(10, 1))
+    @autotest(check_graph=True, rtol=1e-2, atol=1e-4)
+    def test_flow_tensor_matmul_with_random_data_allow_tf32(test_case):
+        flow.backends.cuda.matmul.allow_tf32 = True
+        torch_original.backends.cuda.matmul.allow_tf32 = True
+        device = random_device()
+        k = random(1, 6)
+        x = random_tensor(ndim=2, dim1=k).to(device)
+        y = random_tensor(ndim=2, dim0=k).to(device)
+        ret = x.matmul(y)
+        flow.backends.cuda.matmul.allow_tf32 = False
+        torch_original.backends.cuda.matmul.allow_tf32 = False
+        return ret
 
     @autotest(check_graph=True, rtol=1e-2, atol=1e-4)
     def test_flow_tensor_matmul_with_random_data(test_case):
