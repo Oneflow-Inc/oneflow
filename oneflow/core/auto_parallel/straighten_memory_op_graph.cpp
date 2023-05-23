@@ -103,7 +103,6 @@ void StraightenMemorySubGraph(const std::vector<const OpNode*>& sub_graph,
   for (const auto* node : sub_graph) {
     op_node2topo_struct.insert({node, MemoryTopoStruct(kOriginNode)});
     auto& topo_struct = op_node2topo_struct.at(node);
-    topo_struct.op_node = node;
     topo_structs.push_back(&topo_struct);
     topo_struct2op_node[&topo_struct] = node;
   }

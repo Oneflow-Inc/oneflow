@@ -52,7 +52,6 @@ void InitNoCleaningMarkerDescendant();
 
 class MemoryTopoStruct {
  public:
-  const OpNode* op_node = nullptr;
   // Memory increment = (memory of out registers) - (memory of in registers)
   int64_t memory_increment = -1;
   int64_t peak_memory = -1;
@@ -99,8 +98,6 @@ class MemoryTopoStruct {
   int32_t ComputeMinLayer();
   // Block the descendants with negative memory increment
   void BlockDescendants();
-
-  void ComputeIsReusable();
 
   void SetAccumulateMemoryIncrement();
   void MarkAncestors();
