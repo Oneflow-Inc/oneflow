@@ -81,12 +81,19 @@ void InitAllParameters(
         auto* produced_register = out_blob7produced_register.second.get();
         auto it = register2id->find(produced_register);
         if (it == register2id->end()) {
+          // Give an identity number for each register
           (*register2id)[produced_register] = id2blob_size->size();
+          // Compute the memory of each register
           RegstDescProto temp_proto;
           produced_register->ToProto(&temp_proto);
           id2blob_size->push_back(RtRegstDesc(temp_proto).TotalMainByteSize4AllRegst());
+          // Find the producer of this register
           id2producer_topo_struct->push_back(topo_struct);
+          // Whether the memory of the register is reusable.
+          // If true, then the memory would be recovery after execution.
+          // Otherwise, the memory would be occupied by this register during the whole runtime.
           id2is_reusable->push_back(produced_register->enable_reuse_mem());
+          // Find all the registers consumed by this operator
           id2consumer_topo_structs->emplace_back();
           auto& consumer_topo_structs = id2consumer_topo_structs->back();
           consumer_topo_structs.reserve(produced_register->consumers().size());
@@ -128,20 +135,23 @@ void StraightenMemoryTaskGraph(TaskGraph* task_graph, std::vector<TaskNode*>* or
     topo_struct2key[&topo_struct] = pair.first;
   }
 
-  // Construct the map from a register to its id, producer, consumers, blob size
+  // Construct the map from a register to its id, producer, consumers, register size
   HashMap<RegstDesc*, int32_t> register2id;
   std::vector<auto_parallel::MemoryTopoStruct*> id2producer_topo_struct;
   std::vector<std::vector<auto_parallel::MemoryTopoStruct*>> id2consumer_topo_structs;
   std::vector<int64_t> id2blob_size;
   std::vector<bool> id2is_reusable;
 
+  // Init parameters, including the information for registers, edges
   InitAllParameters(task_node2keys, key2task_nodes, key2topo_struct, &register2id,
                     &id2producer_topo_struct, &id2consumer_topo_structs, &id2blob_size,
                     &id2is_reusable);
 
+  // Global straighten memory algorithm
   auto_parallel::StraightenMemory(&topo_structs, id2producer_topo_struct, &id2consumer_topo_structs,
                                   id2blob_size, id2is_reusable, &ordered_topo_structs);
 
+  // Set up the order for task nodes from the ordered topo structures
   for (auto& ordered_topo_struct : ordered_topo_structs) {
     for (auto* task_node : key2task_nodes.at(topo_struct2key.at(ordered_topo_struct))) {
       ordered_task_nodes->push_back(task_node);

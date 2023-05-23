@@ -64,10 +64,16 @@ void InitAllParameters(HashMap<const OpNode*, MemoryTopoStruct>& op_node2topo_st
       // We check existence in case of inplace operators, whose producer and consumer produce the
       // same blob
       if (it == lbi2id->end()) {
+        // Give an identity number for each blob
         (*lbi2id)[lbi] = id2blob_size->size();
         const BlobDesc& logical_blob_desc = pair.first->LogicalBlobDesc4Lbi(lbi);
+        // Compute the memory of each blob
         id2blob_size->push_back(TotalByteSize4BlobDesc(logical_blob_desc));
+        // Find the producer of this blob
         id2producer_topo_struct->push_back(topo_struct);
+        // Whether the memory of the blob is reusable.
+        // If true, then the memory would be recovery after execution.
+        // Otherwise, the memory would be occupied by this blob during the whole runtime.
         id2is_reusable->push_back(IsProducedRegisterReusable(producer));
       }
     }
@@ -114,12 +120,15 @@ void StraightenMemorySubGraph(const std::vector<const OpNode*>& sub_graph,
   std::vector<int64_t> id2blob_size;
   std::vector<bool> id2is_reusable;
 
+  // Init parameters, including the information for blobs, edges
   InitAllParameters(op_node2topo_struct, &lbi2id, &id2producer_topo_struct,
                     &id2consumer_topo_structs, &id2blob_size, &id2is_reusable);
 
+  // Global straighten memory algorithm
   StraightenMemory(&topo_structs, id2producer_topo_struct, &id2consumer_topo_structs, id2blob_size,
                    id2is_reusable, &ordered_topo_structs);
 
+  // Set up the order for op nodes from the ordered topo structures
   for (auto& ordered_topo_struct : ordered_topo_structs) {
     ordered_op_nodes->push_back(topo_struct2op_node[ordered_topo_struct]);
   }
