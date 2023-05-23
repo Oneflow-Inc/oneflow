@@ -17,220 +17,369 @@ limitations under the License.
 #include "oneflow/user/kernels/radix_sort.cuh"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 
+#include <cub/cub.cuh>
 namespace oneflow {
 
 namespace {
 
-template<typename T>
-T PowOf2Floor(T val, int64_t max_power) {
-  CHECK_GT(val, GetZeroVal<T>());
-  T max_floor = static_cast<T>(std::pow(2, max_power));
-  val = std::min(val, max_floor);
-  T ret = GetOneVal<T>();
-  while (true) {
-    ret *= 2;
-    if (ret >= val) { return ret == val ? ret : ret / 2; }
-  }
-}
+const float HALF_FLT_MAX = 65504.F;
+const int kBlocksPerBatchStage1 = 8;
 
 template<typename T>
-T PowOf2Ceil(T val, int64_t max_power) {
-  CHECK_GT(val, GetZeroVal<T>());
-  T max_ceil = static_cast<T>(std::pow(2, max_power));
-  val = std::min(val, max_ceil);
-  T ret = GetOneVal<T>();
-  while (true) {
-    ret *= 2;
-    if (ret >= val) { return ret; }
-  }
-}
+struct NumericLimit {};
 
-template<typename T, typename Compare>
-__device__ void BitonicSwap(T* data, const int64_t i, const int64_t j, const bool dir,
-                            const Compare& comp) {
-  if (comp(data[i], data[j]) == dir) {
-    T tmp = data[i];
-    data[i] = data[j];
-    data[j] = tmp;
-  }
-}
-
-// https://en.wikipedia.org/wiki/Bitonic_sorter
-template<typename T, typename Compare>
-__device__ void BitonicSort(T* data, const int64_t elem_cnt, const Compare& comp) {
-  // The element count of instance should be pow-of-2
-  assert(elem_cnt > 0 && !(elem_cnt & (elem_cnt - 1)));
-
-  // Generate a bitonic sequence from input
-  for (int64_t size = 2; size <= elem_cnt / 2; size *= 2) {
-    // Merge 2 bitonic sequences of length 'size' into a bitonic sequence of length '2 * size'
-    for (int64_t stride = size / 2; stride > 0; stride /= 2) {
-      for (int64_t swap_id = threadIdx.x; swap_id < elem_cnt / 2; swap_id += blockDim.x) {
-        // Change dir at intervals of 'size / 2' swaps
-        const bool dir = swap_id & (size / 2);
-        // Locate the pair {pos, pos + stride} which is going te be swaped if needed
-        const int pos = 2 * swap_id - (swap_id & (stride - 1));
-
-        BitonicSwap(data, pos, pos + stride, dir, comp);
-
-        __syncthreads();
-      }
-    }
-  }
-
-  // Sort the bitonic sequence
-  for (int64_t stride = elem_cnt / 2; stride > 0; stride /= 2) {
-    for (int64_t swap_id = threadIdx.x; swap_id < elem_cnt / 2; swap_id += blockDim.x) {
-      // Locate the pair {pos, pos + stride} which is going te be swaped if needed
-      const int pos = 2 * swap_id - (swap_id & (stride - 1));
-
-      BitonicSwap(data, pos, pos + stride, false, comp);
-
-      __syncthreads();
-    }
-  }
-}
-
-template<typename T>
-class Entry final {
- public:
-  __device__ __forceinline__ Entry(int64_t index, T value) : index_(index), value_(value) {}
-
-  __device__ __forceinline__ int64_t GetIndex() const { return index_; }
-  __device__ __forceinline__ T GetValue() const { return value_; }
-  __device__ __forceinline__ void SetIndex(int64_t index) { index_ = index; }
-  __device__ __forceinline__ void SetValue(T value) { value_ = value; }
-
-  __device__ __forceinline__ bool operator<(const Entry& entry) const {
-    return (value_ < entry.GetValue()) || (value_ == entry.GetValue() && index_ > entry.GetIndex());
-  }
-  __device__ __forceinline__ bool operator>(const Entry& entry) const {
-    return (value_ > entry.GetValue()) || (value_ == entry.GetValue() && index_ < entry.GetIndex());
-  }
-
- private:
-  int64_t index_;
-  T value_;
+template<>
+struct NumericLimit<half> { 
+  __forceinline__ __device__ static half max(){ return static_cast<half>(HALF_FLT_MAX); } 
+};
+template<>
+struct NumericLimit<float> { 
+  __forceinline__ __device__ static float max(){ return static_cast<float>(FLT_MAX); } 
 };
 
-template<typename T>
-class MinHeap final {
- public:
-  __device__ __forceinline__ MinHeap(Entry<T>* data, const int64_t heap_size,
-                                     const int64_t init_index, const T init_value)
-      : data_(data), heap_size_(heap_size) {
-    for (int64_t i = 0; i < heap_size; ++i) {
-      data_[i].SetIndex(init_index);
-      data_[i].SetValue(init_value);
-    }
-  }
-  __device__ __forceinline__ Entry<T>& Top() { return data_[0]; }
-  __device__ __forceinline__ void Swap(const int64_t i, const int64_t j) {
-    auto tmp = data_[j];
-    data_[j] = data_[i];
-    data_[i] = tmp;
-  }
-  __device__ __forceinline__ void MinHeapify(int64_t index) {
-    while (true) {
-      const int64_t left = 2 * index + 1;
-      const int64_t right = 2 * index + 2;
-      int64_t min = index;
-      if (left < heap_size_ && data_[left] < data_[min]) { min = left; }
-      if (right < heap_size_ && data_[right] < data_[min]) { min = right; }
-      if (min == index) { return; }
-      Swap(min, index);
-      index = min;
-    }
-  }
-
- private:
-  Entry<T>* data_;
-  int64_t heap_size_;
+template<>
+struct NumericLimit<double> { 
+  __forceinline__ __device__ static double max(){ return static_cast<double>(DBL_MAX); } 
 };
 
-template<typename T>
-__global__ void HeapTopKKernel(const T* in_ptr, const int64_t instance_num,
-                               const int64_t instance_size, const int64_t k,
-                               const int64_t heap_size, const int64_t init_index,
-                               const T init_value, int64_t* out_ptr) {
-  extern __shared__ char smem[];
-  auto* shared_entries = reinterpret_cast<Entry<T>*>(smem);
+template<>
+struct NumericLimit<uint8_t> { 
+  __forceinline__ __device__ static uint8_t max(){ return static_cast<uint8_t>(USHRT_MAX); } 
+};
 
-  // Divide elements to be sorted into disjoint sets (# of sets == # of heaps).
-  // Each thread in the thread block manipulates one heap to select top heap_size entries from
-  // corresponding set
-  const T* input = in_ptr + blockIdx.x * instance_size;
-  auto heap =
-      MinHeap<T>(shared_entries + threadIdx.x * heap_size, heap_size, init_index, init_value);
-  for (int64_t i = threadIdx.x; i < instance_size; i += blockDim.x) {
-    auto entry = Entry<T>(i, input[i]);
-    if (entry > heap.Top()) {
-      heap.Top() = entry;
-      heap.MinHeapify(0);
+template<>
+struct NumericLimit<int8_t> { 
+  __forceinline__ __device__ static int8_t max(){ return static_cast<int8_t>(SHRT_MAX); } 
+};
+
+template<>
+struct NumericLimit<int32_t> { 
+  __forceinline__ __device__ static int32_t max(){ return static_cast<int32_t>(INT_MAX); } 
+};
+
+template<>
+struct NumericLimit<int64_t> { 
+  __forceinline__ __device__ static int64_t max(){ return static_cast<int64_t>(LONG_MAX); } 
+};
+
+template<typename T, typename IndexType>
+struct TopKReduceUnit {
+    IndexType index = 0;
+    T value = - NumericLimit<T>::max();
+
+    __device__ __forceinline__ void insert(T elem, IndexType elem_id){
+        if (elem > value) {
+            value = elem;
+            index = elem_id;
+        }
     }
+
+    __device__ __forceinline__ void init(){    
+        value = - NumericLimit<T>::max();
+        index = 0;
+    }
+};
+
+
+template<typename T, typename IndexType>
+__device__ __forceinline__ TopKReduceUnit<T, IndexType> reduce_topk_op(
+  const TopKReduceUnit<T, IndexType>& a, const TopKReduceUnit<T, IndexType>& b){
+    return a.value > b.value ? a : b;
+}
+
+template<typename T, typename IndexType, int kBlockSize, int kBlocksPerBatch>
+__global__ void reduceTopKStage1(
+    const T* input,             // m x n
+    T* temp_input,              // m x n
+    T* out_values,              // m x k
+    T* temp_out_values,         // m x kBlocksPerBatch x k
+    int64_t* out_indices,       // m x k
+    int64_t* temp_out_indices,  // m x kBlocksPerBatch x k
+    IndexType m,                // #batch
+    IndexType n,                // batch size
+    IndexType k                 // k
+) {
+  typedef cub::BlockReduce<TopKReduceUnit<T, IndexType>, kBlockSize> BlockReduce;
+  __shared__ typename BlockReduce::TempStorage temp_storage;
+
+  IndexType elem_id, ite;
+  const IndexType tid = threadIdx.x;
+  const IndexType bid = blockIdx.x;
+  const IndexType batch_id = bid / kBlocksPerBatch;
+  const IndexType block_lane = bid % kBlocksPerBatch; 
+
+  // where the current batch starts
+  const IndexType batch_start_index = batch_id * n;
+
+  // where the current block write out to temp_out_values and temp_out_indices
+  const IndexType temp_out_start_index = batch_id * kBlocksPerBatch * k + block_lane * k;
+
+  TopKReduceUnit<T, IndexType> partial;
+  const T    MAX_T_VAL = NumericLimit<T>::max();
+
+  // copy the origin values to the temp buffer
+  for(elem_id=tid+block_lane*kBlockSize; elem_id<n; elem_id+=kBlockSize*kBlocksPerBatch){
+      IndexType index = elem_id + batch_start_index;
+      temp_input[index] = input[index];
   }
 
-  __syncthreads();
+  // reduce for k times to find out top-ks within current data block
+  for(ite=0; ite<k; ite++) {
+    partial.init();
 
-  // Merge all heaps into a unified, sorted array
-  BitonicSort(shared_entries, blockDim.x * heap_size,
-              [](const Entry<T>& x, const Entry<T>& y) { return x > y; });
+    // thread-wise reduce
+#pragma unroll
+    for(elem_id=tid+block_lane*kBlockSize; elem_id<n; elem_id+=kBlockSize*kBlocksPerBatch){
+        IndexType index = elem_id + batch_start_index;
+        partial.insert(temp_input[index], index);
+    }
 
-  // Write top_k elements in sorted array to output
-  for (int64_t i = threadIdx.x; i < k; i += blockDim.x) {
-    (out_ptr + blockIdx.x * k)[i] = shared_entries[i].GetIndex();
+    // block-wise reduce
+    TopKReduceUnit<T, IndexType> total = BlockReduce(temp_storage).Reduce(
+      partial, reduce_topk_op<T, IndexType>
+    );
+
+    // write out the result, and change the input buffer
+    if(tid == 0){
+        const int index = temp_out_start_index + ite;
+        temp_out_values[index] = total.value;
+        temp_out_indices[index] = total.index;
+        temp_input[total.index] = -MAX_T_VAL;
+    }
+
+    __syncthreads();
   }
 }
 
+template<typename T, typename IndexType, int kBlockSize, int kBlocksPerBatchStage1>
+__global__ void reduceTopKStage2(
+    const T* input,             // m x n
+    T* temp_input,              // m x n
+    T* out_values,              // m x k
+    T* temp_out_values,         // m x kBlocksPerBatchStage1 x k
+    int64_t* out_indices,       // m x k
+    int64_t* temp_out_indices,  // m x kBlocksPerBatchStage1 x k
+    IndexType m,                // #batch
+    IndexType n,                // batch size
+    IndexType k                 // k
+) {
+  typedef cub::BlockReduce<TopKReduceUnit<T, IndexType>, kBlockSize> BlockReduce;
+  __shared__ typename BlockReduce::TempStorage  temp_storage;
+
+  const T    MAX_T_VAL = NumericLimit<T>::max();
+
+  const IndexType tid      = threadIdx.x;
+  const IndexType batch_id = blockIdx.x;
+
+  IndexType elem_id, ite;
+
+  // where the current block read from temp_out_values and temp_out_indices
+  const IndexType batch_temp_start_index = batch_id * kBlocksPerBatchStage1 * k;
+
+  // where the current block write to out_values and out_indices
+  const IndexType batch_out_index = batch_id * k;
+
+  TopKReduceUnit<T, IndexType> partial;
+
+  for(ite=0; ite<k; ite++){
+    partial.init();
+
+    // thread-wise reduce
+#pragma unroll
+    for(elem_id=tid; elem_id<kBlocksPerBatchStage1*k; elem_id+=kBlockSize){
+        const IndexType index = batch_temp_start_index + elem_id;
+        partial.insert(temp_out_values[index], index);
+    }
+
+    // block-wise reduce
+    TopKReduceUnit<T, IndexType> total = BlockReduce(temp_storage).Reduce(
+      partial, reduce_topk_op<T, IndexType>
+    );
+
+    // write out the result, and change the input buffer
+    if(tid == 0){
+        const IndexType index = batch_out_index + ite;
+        out_values[index] = total.value;
+        out_indices[index] = temp_out_indices[total.index] % n;
+        temp_out_values[total.index] = -MAX_T_VAL;
+    }
+
+    __syncthreads();
+  }
+} 
+
+template<typename T, typename IndexType, int kBlockSizeStage1, int kBlockSizeStage2>
+void LaunchKernel(
+  ep::Stream* stream,
+  const T* input,             // m x n
+  T* temp_input,              // m x n
+  T* out_values,              // m x k
+  T* temp_out_values,         // m x kBlocksPerBatch x k
+  int64_t* out_indices,       // m x k
+  int64_t* temp_out_indices,  // m x kBlocksPerBatch x k
+  IndexType m,                // #batch
+  IndexType n,                // batch size
+  IndexType k                 // k
+){
+  /* stage 1 reducing */
+  reduceTopKStage1<T, IndexType, kBlockSizeStage1, kBlocksPerBatchStage1>
+    <<<m * kBlocksPerBatchStage1, kBlockSizeStage1, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      /* input */ input,
+      /* temp_input */ temp_input,
+      /* out_values */ out_values,
+      /* temp_out_values */ temp_out_values,
+      /* out_indices */ out_indices,
+      /* temp_out_indices */ temp_out_indices,
+      /* m */ m,
+      /* n */ n,
+      /* k */ k
+  );
+  CHECK_JUST(stream->Sync());
+
+  /* stage 2 reducing */
+  reduceTopKStage2<T, IndexType, kBlockSizeStage2, kBlocksPerBatchStage1>
+    <<<m, kBlockSizeStage2, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      /* input */ input,
+      /* temp_input */ temp_input,
+      /* out_values */ out_values,
+      /* temp_out_values */ temp_out_values,
+      /* out_indices */ out_indices,
+      /* temp_out_indices */ temp_out_indices,
+      /* m */ m,
+      /* n */ n,
+      /* k */ k
+  );
+  CHECK_JUST(stream->Sync());
+}
+
+template<typename T, typename IndexType>
+void DispatchBlockSize(
+  ep::Stream* stream,
+  const T* input,             // m x n
+  T* temp_input,              // m x n
+  T* out_values,              // m x k
+  T* temp_out_values,         // m x kBlocksPerBatch x k
+  int64_t* out_indices,       // m x k
+  int64_t* temp_out_indices,  // m x kBlocksPerBatch x k
+  IndexType m,                // #batch
+  IndexType n,                // batch size
+  IndexType k                 // k
+){
+
+#define LAUNCH_KERNEL(block_size_s1, block_size_s2)           \
+  LaunchKernel<T, IndexType, block_size_s1, block_size_s2>(   \
+    /* stream */ stream,                                      \
+    /* input */ input,                                        \
+    /* temp_input */ temp_input,                              \
+    /* out_values */ out_values,                              \
+    /* temp_out_values */ temp_out_values,                    \
+    /* out_indices */ out_indices,                            \
+    /* temp_out_indices */ temp_out_indices,                  \
+    /* m */ m,                                                \
+    /* n */ n,                                                \
+    /* k */ k                                                 \
+  );
+
+  if (k >= 1 && k <= 16) {
+    LAUNCH_KERNEL( /* block_size_s1 */128, /* block_size_s2 */128 );
+  } else if (k >= 17 && k <= 32) {
+    LAUNCH_KERNEL( /* block_size_s1 */256, /* block_size_s2 */128 );
+  } else if (k >= 33 && k <= 64) {
+    LAUNCH_KERNEL( /* block_size_s1 */256, /* block_size_s2 */256 );
+  } else if (k >= 65 && k <= 1024) {
+    LAUNCH_KERNEL( /* block_size_s1 */256, /* block_size_s2 */256 );
+  } else {
+    THROW(RuntimeError) << "top-k kernel can't support k that exceed 1024";
+  }
+
+#undef LAUNCH_KERNEL
+
+}
+
 template<typename T>
+void DispatchIndexType(
+  ep::Stream* stream,
+  const T* input,             // m x n
+  T* temp_input,              // m x n
+  T* out_values,              // m x k
+  T* temp_out_values,         // m x kBlocksPerBatch x k
+  int64_t* out_indices,       // m x k
+  int64_t* temp_out_indices,  // m x kBlocksPerBatch x k
+  int64_t m,                  // #batch
+  int64_t n,                  // batch size
+  int64_t k                   // k
+){
+  const int64_t nb_input_elements = m * n;
+  const int64_t nb_output_elements = m * k;
+
+#define DISPATCH_BLOCK_SIZE(index_type)           \
+    DispatchBlockSize<T, index_type>(             \
+      /* stream */ stream,                        \
+      /* input */ input,                          \
+      /* temp_input */ temp_input,                \
+      /* out_values */ out_values,                \
+      /* temp_out_values */ temp_out_values,      \
+      /* out_indices */ out_indices,              \
+      /* temp_out_indices */ temp_out_indices,    \
+      /* m */ static_cast<index_type>(m),         \
+      /* n */ static_cast<index_type>(n),         \
+      /* k */ static_cast<index_type>(k)          \
+    );
+
+  if (nb_input_elements < (1 << 30) && nb_output_elements < (1 << 30)) {
+    DISPATCH_BLOCK_SIZE(int32_t);
+  } else {
+    DISPATCH_BLOCK_SIZE(int64_t);
+  }
+
+  #undef DISPATCH_BLOCK_SIZE
+}
+
+template<typename T, int kBlocksPerBatchStage1>
 class TmpBufferManager final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TmpBufferManager);
-  TmpBufferManager(int64_t capacity, void* ptr, const ShapeView& in_shape)
-      : capacity_{capacity},
-        sorted_in_elem_cnt_{in_shape.elem_cnt()},
-        indices_elem_cnt_{sorted_in_elem_cnt_},
-        sorted_indices_elem_cnt_{sorted_in_elem_cnt_} {
-    const int64_t sorted_in_aligned_bytes = GetCudaAlignedSize(sorted_in_elem_cnt_ * sizeof(T));
-    const int64_t indices_aligned_bytes = GetCudaAlignedSize(indices_elem_cnt_ * sizeof(int64_t));
-    const int64_t sorted_indices_aligned_bytes = indices_aligned_bytes;
-    sorted_in_ptr_ = reinterpret_cast<T*>(ptr);
-    indices_ptr_ = reinterpret_cast<int64_t*>(reinterpret_cast<char*>(sorted_in_ptr_)
-                                              + sorted_in_aligned_bytes);
-    sorted_indices_ptr_ =
-        reinterpret_cast<int64_t*>(reinterpret_cast<char*>(indices_ptr_) + indices_aligned_bytes);
-    temp_storage_ptr_ = reinterpret_cast<void*>(reinterpret_cast<char*>(sorted_indices_ptr_)
-                                                + sorted_indices_aligned_bytes);
-    temp_storage_bytes_ =
-        capacity_ - sorted_in_aligned_bytes - indices_aligned_bytes - sorted_indices_aligned_bytes;
-    CHECK_GE(temp_storage_bytes_, 0);
+  TmpBufferManager(int64_t capacity, void* ptr, const ShapeView& in_shape, const ShapeView& out_shape)
+      : capacity_{capacity}, 
+        temp_input_elem_cnt_{in_shape.elem_cnt()},
+        temp_output_values_elem_cnt_{out_shape.elem_cnt() * kBlocksPerBatchStage1},
+        temp_output_indices_elem_cnt_{temp_output_values_elem_cnt_} {
+    const int64_t temp_input_aligned_bytes 
+      = GetCudaAlignedSize(temp_input_elem_cnt_ * sizeof(T));
+    const int64_t temp_output_values_aligned_bytes 
+      = GetCudaAlignedSize(temp_output_values_elem_cnt_ * sizeof(T));
+    const int64_t temp_output_indices_aligned_bytes 
+      = GetCudaAlignedSize(temp_output_indices_elem_cnt_ * sizeof(int64_t));
+
+    temp_input_ptr = reinterpret_cast<T*>(ptr);
+
+    temp_output_values_ptr 
+      = reinterpret_cast<T*>(reinterpret_cast<char*>(temp_input_ptr) + temp_input_aligned_bytes);
+
+    temp_output_indices_ptr_ 
+      = reinterpret_cast<int64_t*>(reinterpret_cast<char*>(temp_output_values_ptr) 
+        + temp_output_values_aligned_bytes);
+
+    CHECK_GE(capacity,
+      temp_input_aligned_bytes + temp_output_values_aligned_bytes + temp_output_indices_aligned_bytes
+    );
   }
+
   ~TmpBufferManager() = default;
 
-  T* SortedInPtr() const { return sorted_in_ptr_; }
-  int64_t* IndicesPtr() const { return indices_ptr_; }
-  int64_t* SortedIndicesPtr() const { return sorted_indices_ptr_; }
-  void* TempStoragePtr() const { return temp_storage_ptr_; }
-
-  int64_t TempStorageBytes() const { return temp_storage_bytes_; }
+  T* TempInputPtr() const { return temp_input_ptr; }
+  T* TempOutputValuesPtr() const { return temp_output_values_ptr; }
+  int64_t* TempOutputIndicesPtr() const { return temp_output_indices_ptr_; }
 
  private:
   int64_t capacity_;
-
-  T* sorted_in_ptr_;
-  int64_t* indices_ptr_;
-  int64_t* sorted_indices_ptr_;
-  void* temp_storage_ptr_;
-
-  int64_t sorted_in_elem_cnt_;
-  int64_t indices_elem_cnt_;
-  int64_t sorted_indices_elem_cnt_;
-  int64_t temp_storage_bytes_;
+  int64_t temp_input_elem_cnt_;
+  int64_t temp_output_values_elem_cnt_;
+  int64_t temp_output_indices_elem_cnt_;
+  T *temp_input_ptr;
+  T *temp_output_values_ptr;
+  int64_t *temp_output_indices_ptr_;
 };
-
-__global__ void InitializeIndices(int64_t elem_cnt, int64_t* indices_ptr, int64_t instance_size) {
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt) { indices_ptr[i] = i % instance_size; };
-}
 
 }  // namespace
 
@@ -245,71 +394,64 @@ class GpuTopKKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     if (in->shape_view().elem_cnt() == 0) { return; }
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    user_op::Tensor* out_values = ctx->Tensor4ArgNameAndIndex("out", 0);
+    user_op::Tensor* out_indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
 
     const int64_t elem_cnt = in->shape_view().elem_cnt();
     const int64_t instance_size = in->shape_view().At(in->shape_view().NumAxes() - 1);
     const int64_t instance_num = elem_cnt / instance_size;
     const int64_t k = std::min(static_cast<int64_t>(ctx->Attr<int32_t>("k")), instance_size);
+    
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    TmpBufferManager<T, kBlocksPerBatchStage1> buf_manager(
+      /* capacity */ static_cast<int64_t>(tmp_buffer->shape_view().elem_cnt()),
+      /* ptr */ tmp_buffer->mut_dptr<void>(),
+      /* in_shape */ in->shape_view(),
+      /* out_shape */ out_values->shape_view()
+    );
 
-    if (k > 30 || instance_num == 1) {
-      user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-      TmpBufferManager<T> buf_manager(static_cast<int64_t>(tmp_buffer->shape_view().elem_cnt()),
-                                      tmp_buffer->mut_dptr<void>(), in->shape_view());
-
-      InitializeIndices<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                          ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-          elem_cnt, buf_manager.IndicesPtr(), instance_size);
-      SortPairsDescending(in->dptr<T>(), buf_manager.IndicesPtr(), instance_num, instance_size,
-                          buf_manager.TempStoragePtr(), buf_manager.TempStorageBytes(),
-                          buf_manager.SortedInPtr(), buf_manager.SortedIndicesPtr(),
-                          ctx->stream()->As<ep::CudaStream>()->cuda_stream());
-      OF_CUDA_CHECK(cudaMemcpy2DAsync(
-          out->mut_dptr<int64_t>(), k * sizeof(int64_t), buf_manager.SortedIndicesPtr(),
-          instance_size * sizeof(int64_t), k * sizeof(int64_t), instance_num, cudaMemcpyDefault,
-          ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-    } else {
-      // Use as many heaps as possible (# of heaps == # of threads used in thread block).
-      // Limitation 1: size of shared memory
-      // We also need heap_size * num_heap to be pow-of-2 which is necessary for bitonic sort
-      const int64_t heap_size = PowOf2Ceil(k, 16);
-      int32_t num_heap =
-          PowOf2Floor(kCudaMaxSharedMemoryByteSize / (heap_size * sizeof(Entry<T>)), 16);
-      // Limitation 2: # of threads in thread block
-      num_heap = std::min(num_heap, kCudaThreadsNumPerBlock);
-
-      HeapTopKKernel<T><<<instance_num, num_heap, num_heap * heap_size * sizeof(Entry<T>),
-                          ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-          in->dptr<T>(), instance_num, instance_size, k, heap_size, GetMaxVal<int64_t>(),
-          GetMinVal<T>(), out->mut_dptr<int64_t>());
-    }
+    DispatchIndexType<T>(
+      /* stream */ ctx->stream(),
+      /* input */ in->dptr<T>(),
+      /* temp_input */ buf_manager.TempInputPtr(),
+      /* out_values */ out_values->mut_dptr<T>(),
+      /* temp_out_values */ buf_manager.TempOutputValuesPtr(),
+      /* out_indices */ out_indices->mut_dptr<int64_t>(),
+      /* temp_out_indices */ buf_manager.TempOutputIndicesPtr(),
+      /* m */ instance_num,
+      /* n */ instance_size,
+      /* k */ k
+    );
   }
+
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CUDA_TOP_K_KERNEL(dtype)                                                        \
-  REGISTER_USER_KERNEL("top_k")                                                                  \
-      .SetCreateFn<GpuTopKKernel<dtype>>()                                                       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                           \
-                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))          \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
-        const Shape& in_shape = ctx->InputShape("in", 0);                                        \
-        const int64_t elem_cnt = in_shape.elem_cnt();                                            \
-        const int64_t instance_size = in_shape.dim_vec().back();                                 \
-        const int64_t instance_num = elem_cnt / instance_size;                                   \
-                                                                                                 \
-        /* Sorted In*/                                                                           \
-        const int64_t sorted_in_aligned_bytes = GetCudaAlignedSize(elem_cnt * sizeof(dtype));    \
-        /* Indices */                                                                            \
-        const int64_t indices_aligned_bytes = GetCudaAlignedSize(elem_cnt * sizeof(int64_t));    \
-        /* Sorted Indices */                                                                     \
-        const int64_t sorted_indices_aligned_bytes = indices_aligned_bytes;                      \
-        /* CUB Temp Storage */                                                                   \
-        int64_t temp_storage_bytes =                                                             \
-            InferTempStorageForSortPairsDescending<dtype, int64_t>(instance_num, instance_size); \
-                                                                                                 \
-        return sorted_in_aligned_bytes + indices_aligned_bytes + sorted_indices_aligned_bytes    \
-               + temp_storage_bytes;                                                             \
+#define REGISTER_CUDA_TOP_K_KERNEL(dtype)                                                         \
+  REGISTER_USER_KERNEL("top_k")                                                                   \
+      .SetCreateFn<GpuTopKKernel<dtype>>()                                                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                            \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))           \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
+        const Shape& in_shape = ctx->InputShape("in", 0);                                         \
+        const int64_t elem_cnt = in_shape.elem_cnt();                                             \
+        const int64_t instance_size = in_shape.dim_vec().back();                                  \
+        const int64_t k = std::min(static_cast<int64_t>(ctx->Attr<int32_t>("k")), instance_size); \
+        const int64_t instance_num = elem_cnt / instance_size;                                    \
+                                                                                                  \
+        /* Temp Input */                                                                          \
+        const int64_t temp_input_aligned_bytes = GetCudaAlignedSize(elem_cnt * sizeof(dtype));    \
+                                                                                                  \
+        /* Temp Output Values */                                                                  \
+        const int64_t temp_output_values_aligned_bytes                                            \
+            = GetCudaAlignedSize(instance_num * kBlocksPerBatchStage1 * k * sizeof(dtype));       \
+                                                                                                  \
+        /* Temp Output Indices */                                                                 \
+        const int64_t temp_output_indices_aligned_bytes                                           \
+            = GetCudaAlignedSize(instance_num * kBlocksPerBatchStage1 * k * sizeof(int64_t));     \
+                                                                                                  \
+        return temp_input_aligned_bytes + temp_output_values_aligned_bytes                        \
+               + temp_output_indices_aligned_bytes;                                               \
       });
 
 REGISTER_CUDA_TOP_K_KERNEL(float)
