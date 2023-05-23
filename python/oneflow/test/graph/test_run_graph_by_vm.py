@@ -26,7 +26,7 @@ class EnvVar(object):
         os.environ.update(self.env_list)
 
     def __exit__(self, *args):
-        for key, _ in self.env_list:
+        for key in self.env_list.keys():
             os.environ.pop(key)
 
 
