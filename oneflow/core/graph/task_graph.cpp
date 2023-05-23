@@ -990,15 +990,18 @@ void TaskGraph::DecideExecutionOrder() {
   // of memory
   StraightenAlgorithmTag straighten_algorithm_tag =
       GlobalJobDesc().job_conf().straighten_algorithm_tag_in_task_graph();
-  if (straighten_algorithm_tag == StraightenAlgorithmTag::kCompressMemory) {
-    StraightenMemoryTaskGraph(this, &ordered_task_nodes_);
-  } else if (straighten_algorithm_tag == StraightenAlgorithmTag::kDisableStraighten
-             || (straighten_algorithm_tag == StraightenAlgorithmTag::kOverlap4Transfer
-                 && GlobalProcessCtx::WorldSize() == 1)) {
+  if (straighten_algorithm_tag == StraightenAlgorithmTag::kDisableStraighten
+      || (straighten_algorithm_tag == StraightenAlgorithmTag::kOverlap4Transfer
+          && GlobalProcessCtx::WorldSize() == 1)) {
     InitOrderedTaskNodes();
   } else {
-    StraightenNodes(this, &ordered_task_nodes_,
-                    Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream());
+    if (ParseBooleanFromEnv("ENABLE_GLOBAL_STRAIGHTEN_MEMORY", false)
+        && straighten_algorithm_tag == StraightenAlgorithmTag::kCompressMemory) {
+      StraightenMemoryTaskGraph(this, &ordered_task_nodes_);
+    } else {
+      StraightenNodes(this, &ordered_task_nodes_,
+                      Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream());
+    }
   }
 }
 

@@ -569,8 +569,9 @@ void StraightenOpGraph(const OpGraph& op_graph, std::vector<const OpNode*>* orde
   // Traverse and store all the nodes in the op graph
   op_graph.ForEachNode([&](OpNode* node) { sub_graph.push_back(node); });
 
-  if (GlobalJobDesc().job_conf().straighten_algorithm_tag_in_task_graph()
-      == StraightenAlgorithmTag::kCompressMemory) {
+  if (ParseBooleanFromEnv("ENABLE_GLOBAL_STRAIGHTEN_MEMORY", false)
+      && GlobalJobDesc().job_conf().straighten_algorithm_tag_in_task_graph()
+             == StraightenAlgorithmTag::kCompressMemory) {
     // A global memory straighten algorithm
     StraightenMemorySubGraph(sub_graph, ordered_op_nodes);
   } else {
