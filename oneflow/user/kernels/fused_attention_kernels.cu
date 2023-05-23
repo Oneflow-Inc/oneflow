@@ -1741,13 +1741,15 @@ class LlamaDecoderLayerForwardKernel final : public user_op::OpKernel {
     for (int i = 0; i < num_layers; i++) {
       const user_op::Tensor* input_norm_weight =
           ctx->Tensor4ArgNameAndIndex("input_norm_weights", i);
-      const user_op::Tensor* query_weight = ctx->Tensor4ArgNameAndIndex("query_weights", i);
-      const user_op::Tensor* key_weight = ctx->Tensor4ArgNameAndIndex("key_weights", i);
-      const user_op::Tensor* value_weight = ctx->Tensor4ArgNameAndIndex("value_weights", i);
+      // const user_op::Tensor* query_weight = ctx->Tensor4ArgNameAndIndex("query_weights", i);
+      // const user_op::Tensor* key_weight = ctx->Tensor4ArgNameAndIndex("key_weights", i);
+      // const user_op::Tensor* value_weight = ctx->Tensor4ArgNameAndIndex("value_weights", i);
+      const user_op::Tensor* qkv_weight = ctx->Tensor4ArgNameAndIndex("qkv_weights", i);
       const user_op::Tensor* attn_out_weight = ctx->Tensor4ArgNameAndIndex("attn_out_weights", i);
       const user_op::Tensor* post_norm_weight = ctx->Tensor4ArgNameAndIndex("post_norm_weights", i);
       const user_op::Tensor* mlp_gate_weight = ctx->Tensor4ArgNameAndIndex("mlp_gate_weights", i);
       const user_op::Tensor* mlp_up_weight = ctx->Tensor4ArgNameAndIndex("mlp_up_weights", i);
+      // const user_op::Tensor* glu_weight = ctx->Tensor4ArgNameAndIndex("glu_weights", i);
       const user_op::Tensor* mlp_down_weight = ctx->Tensor4ArgNameAndIndex("mlp_down_weights", i);
       user_op::Tensor* concat_key = ctx->Tensor4ArgNameAndIndex("concat_keys", i);
       user_op::Tensor* concat_value = ctx->Tensor4ArgNameAndIndex("concat_values", i);
@@ -1764,35 +1766,52 @@ class LlamaDecoderLayerForwardKernel final : public user_op::OpKernel {
           tmp_buffer->mut_dptr<T>(),
           reinterpret_cast<RmsNormComputeType*>(tmp_buffer->mut_dptr<char>() + activation_size));
       // step2: q, k, v
-      auto query_weight_shape = query_weight->shape_view();
-      auto matmul_m = bm, matmul_k = h * k, matmul_n = query_weight_shape.At(0);
-      IndexType num_elements = matmul_m * matmul_n;
-      h = matmul_n / k;  // split h for parallel
+      // auto query_weight_shape = query_weight->shape_view();
+      // auto matmul_m = bm, matmul_k = h * k, matmul_n = query_weight_shape.At(0);
+      // IndexType num_elements = matmul_m * matmul_n;
+      // h = matmul_n / k;  // split h for parallel
       // use grouped_matmul
-      cudaDataType_t data_type = CUDA_R_16F;
-      cudaDataType_t compute_type = CUDA_R_32F;
-      const int64_t kMaxProblemBatch = 3;  // q,k,v
+      // cudaDataType_t data_type = CUDA_R_16F;
+      // cudaDataType_t compute_type = CUDA_R_32F;
+      // const int64_t kMaxProblemBatch = 3;  // q,k,v
+      // T* tmp_qkv_ptr = tmp_buffer->mut_dptr<T>() + input_num_elements;
+      // void* workspace = reinterpret_cast<void*>(tmp_qkv_ptr + num_elements * 3);
+      // void** ptr_arr = reinterpret_cast<void**>(workspace);
+      // RUN_CUDA_KERNEL((InitQKVPtr<T>), ctx->stream(), 1, tmp_buffer->dptr<T>(),
+      //                 query_weight->dptr<T>(), key_weight->dptr<T>(), value_weight->dptr<T>(),
+      //                 /*query*/ tmp_qkv_ptr,
+      //                 /* key */ tmp_qkv_ptr + num_elements,
+      //                 /*value*/ tmp_qkv_ptr + num_elements * 2, ptr_arr);
+      // CublasScalarParameter sp_alpha, sp_beta;
+      // sp_alpha.s = 1.0;
+      // sp_beta.s = 0.0;
+      // OF_CUBLAS_CHECK(cublasGemmBatchedEx(
+      //     cuda_stream->cublas_handle(), CUBLAS_OP_T, CUBLAS_OP_N, matmul_n, matmul_m, matmul_k,
+      //     &sp_alpha, ptr_arr + kMaxProblemBatch, data_type, matmul_k, ptr_arr, data_type, matmul_k,
+      //     &sp_beta, ptr_arr + 2 * kMaxProblemBatch, data_type, matmul_n, 3, compute_type,
+      //     CUBLAS_GEMM_DEFAULT));
+      
+      auto qkv_weight_shape = qkv_weight->shape_view();
       T* tmp_qkv_ptr = tmp_buffer->mut_dptr<T>() + input_num_elements;
-      void* workspace = reinterpret_cast<void*>(tmp_qkv_ptr + num_elements * 3);
-      void** ptr_arr = reinterpret_cast<void**>(workspace);
-      RUN_CUDA_KERNEL((InitQKVPtr<T>), ctx->stream(), 1, tmp_buffer->dptr<T>(),
-                      query_weight->dptr<T>(), key_weight->dptr<T>(), value_weight->dptr<T>(),
-                      /*query*/ tmp_qkv_ptr,
-                      /* key */ tmp_qkv_ptr + num_elements,
-                      /*value*/ tmp_qkv_ptr + num_elements * 2, ptr_arr);
-      CublasScalarParameter sp_alpha, sp_beta;
-      sp_alpha.s = 1.0;
-      sp_beta.s = 0.0;
-      OF_CUBLAS_CHECK(cublasGemmBatchedEx(
-          cuda_stream->cublas_handle(), CUBLAS_OP_T, CUBLAS_OP_N, matmul_n, matmul_m, matmul_k,
-          &sp_alpha, ptr_arr + kMaxProblemBatch, data_type, matmul_k, ptr_arr, data_type, matmul_k,
-          &sp_beta, ptr_arr + 2 * kMaxProblemBatch, data_type, matmul_n, 3, compute_type,
-          CUBLAS_GEMM_DEFAULT));
+      auto matmul_m = bm, matmul_k = h * k, matmul_n = qkv_weight_shape.At(0);
+      IndexType num_elements = matmul_m * matmul_n / 3;
+      h = matmul_n / k / 3;  // split h for parallel
+
+      auto batch_matmul = ep::primitive::NewPrimitive<ep::primitive::BatchMatmulFactory>(
+          ctx->device_type(), /*data_type */ hidden_states->data_type(),
+          /*trans_a*/ ep::primitive::BlasTransposeType::N,
+          /*trans_b*/ ep::primitive::BlasTransposeType::T);
+      CHECK(batch_matmul);
+      batch_matmul->Launch(
+          cuda_stream, b, m, qkv_weight_shape.At(0), qkv_weight_shape.At(1),
+          /*alpha*/ 1.0, tmp_buffer->dptr(), qkv_weight->dptr(),
+          /*beta*/ 0.0, reinterpret_cast<void*>(tmp_qkv_ptr));
+
 
       // step3&4 : rotary_embedding + concat_past_kv  BM(HK) -> BMHK, PlaneKernel use pack_size=1
       // out:BMHK,  x: BM(HK), tmp_buffer: rms_out, q, k, v
-      int64_t out_b_stride = m * h * k, out_m_stride = h * k, out_h_stride = k, out_offset = 0;
-      int64_t x_b_stride = out_b_stride, x_m_stride = out_m_stride, x_h_stride = k, x_offset = 0;
+      // int64_t out_b_stride = m * h * k, out_m_stride = h * k, out_h_stride = k, out_offset = 0;
+      // int64_t x_b_stride = out_b_stride, x_m_stride = out_m_stride, x_h_stride = k, x_offset = 0;
       auto position_axes = position_ids->shape_view().NumAxes();
       const IndexType position_m =
           static_cast<IndexType>(position_ids->shape_view()[position_axes - 1]);
@@ -1802,17 +1821,17 @@ class LlamaDecoderLayerForwardKernel final : public user_op::OpKernel {
       rotaryAndConcatParams.q_param.x = tmp_qkv_ptr;
       rotaryAndConcatParams.q_param.past_x = nullptr;
       rotaryAndConcatParams.q_param.out = tmp_buffer->mut_dptr<T>();
-      rotaryAndConcatParams.q_param.x_b_stride = x_b_stride;
-      rotaryAndConcatParams.q_param.x_m_stride = x_m_stride;
-      rotaryAndConcatParams.q_param.x_h_stride = x_h_stride;
+      rotaryAndConcatParams.q_param.x_b_stride = m * h * k * 3;
+      rotaryAndConcatParams.q_param.x_m_stride = h * k * 3;
+      rotaryAndConcatParams.q_param.x_h_stride = k;
       rotaryAndConcatParams.q_param.x_k_stride = 1;
       rotaryAndConcatParams.q_param.past_x_b_stride = -1;  // no past_q
       rotaryAndConcatParams.q_param.past_x_m_stride = -1;
       rotaryAndConcatParams.q_param.past_x_h_stride = -1;
       rotaryAndConcatParams.q_param.past_x_k_stride = -1;
-      rotaryAndConcatParams.q_param.out_b_stride = out_b_stride;
-      rotaryAndConcatParams.q_param.out_m_stride = out_m_stride;
-      rotaryAndConcatParams.q_param.out_h_stride = out_h_stride;
+      rotaryAndConcatParams.q_param.out_b_stride = m * h * k;
+      rotaryAndConcatParams.q_param.out_m_stride = h * k;
+      rotaryAndConcatParams.q_param.out_h_stride = k;
       rotaryAndConcatParams.q_param.out_k_stride = 1;
       rotaryAndConcatParams.q_param.position_ids = position_ids->dptr<IndexType>();
       rotaryAndConcatParams.q_param.past_m = 0;
@@ -1823,11 +1842,11 @@ class LlamaDecoderLayerForwardKernel final : public user_op::OpKernel {
       rotaryAndConcatParams.q_param.inv_rotary_size = 1.0f / k;
       rotaryAndConcatParams.q_param.theta = 1.0f / 10000;
       // past_key:bhmk, key:bmhk, out: bhmk
-      rotaryAndConcatParams.k_param.x = tmp_qkv_ptr + num_elements;
+      rotaryAndConcatParams.k_param.x = tmp_qkv_ptr + h * k;
       rotaryAndConcatParams.k_param.past_x = past_key == nullptr ? nullptr : past_key->dptr<T>();
       rotaryAndConcatParams.k_param.out = concat_key->mut_dptr<T>();
-      rotaryAndConcatParams.k_param.x_b_stride = m * h * k;
-      rotaryAndConcatParams.k_param.x_m_stride = h * k;
+      rotaryAndConcatParams.k_param.x_b_stride = m * h * k * 3;
+      rotaryAndConcatParams.k_param.x_m_stride = h * k * 3;
       rotaryAndConcatParams.k_param.x_h_stride = k;
       rotaryAndConcatParams.k_param.x_k_stride = 1;
       rotaryAndConcatParams.k_param.past_x_b_stride = past_m * h * k;
@@ -1847,12 +1866,12 @@ class LlamaDecoderLayerForwardKernel final : public user_op::OpKernel {
       rotaryAndConcatParams.k_param.inv_rotary_size = 1.0f / k;
       rotaryAndConcatParams.k_param.theta = 1.0f / 10000;
 
-      rotaryAndConcatParams.v_param.x = tmp_qkv_ptr + num_elements * 2;
+      rotaryAndConcatParams.v_param.x = tmp_qkv_ptr + h * k * 2;
       rotaryAndConcatParams.v_param.past_x =
           past_value == nullptr ? nullptr : past_value->dptr<T>();
       rotaryAndConcatParams.v_param.out = concat_value->mut_dptr<T>();
-      rotaryAndConcatParams.v_param.x_b_stride = m * h * k;
-      rotaryAndConcatParams.v_param.x_m_stride = h * k;
+      rotaryAndConcatParams.v_param.x_b_stride = m * h * k * 3;
+      rotaryAndConcatParams.v_param.x_m_stride = h * k * 3;
       rotaryAndConcatParams.v_param.x_h_stride = k;
       rotaryAndConcatParams.v_param.x_k_stride = 1;
       rotaryAndConcatParams.v_param.past_x_b_stride = past_m * h * k;
@@ -1917,11 +1936,11 @@ class LlamaDecoderLayerForwardKernel final : public user_op::OpKernel {
       DispatchCutlassFmha(params, cuda_stream);
 
       // step 6, attn_out linear, attn_out: BM(hK), attn_out_weight: (HK)(hK)
-      auto batch_matmul = ep::primitive::NewPrimitive<ep::primitive::BatchMatmulFactory>(
-          ctx->device_type(), /*data_type */ hidden_states->data_type(),
-          /*trans_a*/ ep::primitive::BlasTransposeType::N,
-          /*trans_b*/ ep::primitive::BlasTransposeType::T);
-      CHECK(batch_matmul);
+      // auto batch_matmul = ep::primitive::NewPrimitive<ep::primitive::BatchMatmulFactory>(
+      //     ctx->device_type(), /*data_type */ hidden_states->data_type(),
+      //     /*trans_a*/ ep::primitive::BlasTransposeType::N,
+      //     /*trans_b*/ ep::primitive::BlasTransposeType::T);
+      // CHECK(batch_matmul);
       auto out_weight_shape = attn_out_weight->shape_view();
       batch_matmul->Launch(
           cuda_stream, b, m, out_weight_shape.At(0), out_weight_shape.At(1),
@@ -1945,15 +1964,32 @@ class LlamaDecoderLayerForwardKernel final : public user_op::OpKernel {
       auto glu_matmul_n = mlp_gate_weight->shape_view().At(0);
       T* gate_ptr = tmp_buffer->mut_dptr<T>() + input_num_elements;
       num_elements = bm * glu_matmul_n;
-      T* up_ptr = gate_ptr + sizeof(T) * num_elements;
+      T* up_ptr = gate_ptr + num_elements;
+      void* workspace = reinterpret_cast<void*>(gate_ptr + num_elements * 2);
+      void** ptr_arr = reinterpret_cast<void**>(workspace);
       RUN_CUDA_KERNEL((InitGluPtr<T>), ctx->stream(), 1, tmp_buffer->dptr<T>(),
                       mlp_gate_weight->dptr<T>(), mlp_up_weight->dptr<T>(), gate_ptr, up_ptr,
                       ptr_arr);
+      CublasScalarParameter sp_alpha, sp_beta;
+      sp_alpha.s = 1.0;
+      sp_beta.s = 0.0;
+      cudaDataType_t data_type = CUDA_R_16F;
+      cudaDataType_t compute_type = CUDA_R_32F;
       OF_CUBLAS_CHECK(cublasGemmBatchedEx(
           cuda_stream->cublas_handle(), CUBLAS_OP_T, CUBLAS_OP_N, glu_matmul_n, matmul_m, matmul_k,
           &sp_alpha, ptr_arr + /*kMaxProblemBatch*/ 2, data_type, matmul_k, ptr_arr, data_type,
           matmul_k, &sp_beta, ptr_arr + 2 * /*kMaxProblemBatch*/ 2, data_type, glu_matmul_n, 2,
           compute_type, CUBLAS_GEMM_DEFAULT));
+      
+      // auto glu_matmul_n = glu_weight->shape_view().At(0);
+      // T* gate_ptr = tmp_buffer->mut_dptr<T>() + input_num_elements;
+      // num_elements = bm * glu_matmul_n / 2;
+      // T* up_ptr = gate_ptr + sizeof(T) * num_elements;
+
+      // batch_matmul->Launch(
+      //     cuda_stream, b, m, glu_weight->shape_view().At(0), glu_weight->shape_view().At(1),
+      //     /*alpha*/ 1.0, tmp_buffer->dptr(), glu_weight->dptr(),
+      //     /*beta*/ 0.0, reinterpret_cast<void*>(gate_ptr));
 
       // glu_out shape: (b, m, hk)
       ep::primitive::UnaryFunctor<DeviceType::kCUDA, ep::primitive::UnaryOp::kSilu, T, T> act(0, 0);
