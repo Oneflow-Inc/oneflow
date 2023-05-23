@@ -23,11 +23,11 @@ class EnvVar(object):
         self.env_list = env_list
 
     def __enter__(self):
-        self.old_env = {key: os.environ.get(key, "0") for key in self.env_list.keys()}
         os.environ.update(self.env_list)
 
     def __exit__(self, *args):
-        os.environ.update(self.old_env)
+        for key, _ in self.env_list:
+            os.environ.pop(key)
 
 
 class RunGraphByVmEnv(EnvVar):
