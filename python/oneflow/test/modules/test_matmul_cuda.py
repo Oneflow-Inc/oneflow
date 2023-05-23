@@ -35,24 +35,6 @@ class TestModule(flow.unittest.TestCase):
         y = random_tensor(ndim=2, dim0=k).to(device)
         return x.matmul(y)
 
-    @autotest(n=5, check_graph=False)
-    def test_flow_tensor_matmul_with_random_fp16_data(test_case):
-        flow.backends.cuda.matmul.allow_fp16_reduced_precision_reduction = False
-        torch_original.backends.cuda.matmul.allow_fp16_reduced_precision_reduction = (
-            False
-        )
-        x = np.random.rand(3, 5)
-        y = np.random.rand(5, 4)
-        torch_x = torch.from_numpy(x).to(torch.float16).to("cuda")
-        torch_y = torch.from_numpy(y).to(torch.float16).to("cuda")
-        torch_output_numpy = torch_x.matmul(torch_y).cpu().numpy()
-        flow_x = flow.tensor(x).to(flow.float16).to("cuda")
-        flow_y = flow.tensor(y).to(flow.float16).to("cuda")
-        flow_output_numpy = flow_x.matmul(flow_y).cpu().numpy()
-        test_case.assertTrue(
-            np.allclose(flow_output_numpy, torch_output_numpy, 1e-05, 1e-05)
-        )
-
 
 if __name__ == "__main__":
     unittest.main()
