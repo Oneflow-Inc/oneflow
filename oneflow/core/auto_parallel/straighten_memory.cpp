@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/auto_parallel/auto_memory.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/hash_container.h"
-#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 namespace auto_parallel {
@@ -304,30 +303,15 @@ void SortReleaseTopoStructs(std::vector<MemoryTopoStruct*>& topo_structs) {
 }
 
 void GraphSimplification(std::vector<MemoryTopoStruct*>& topo_structs) {
-  if (GlobalProcessCtx::Rank() == 0) {
-    std::cout << "Origin, Topo size: " << topo_structs.size() << std::endl;
-  }
   EatNodes(topo_structs);
-  if (GlobalProcessCtx::Rank() == 0) {
-    std::cout << "After 1st Eats, Topo size: " << topo_structs.size() << std::endl;
-  }
   ClipEdges(topo_structs);
   EatNodes(topo_structs);
-  if (GlobalProcessCtx::Rank() == 0) {
-    std::cout << "2nd, clip and eat, Topo size: " << topo_structs.size() << std::endl;
-  }
   ClipEdges(topo_structs);
   EatNodes(topo_structs);
-  if (GlobalProcessCtx::Rank() == 0) {
-    std::cout << "3rd, clip and eat, Topo size: " << topo_structs.size() << std::endl;
-  }
   for (int32_t i = 4; i < 120; i++) {
     SortReleaseTopoStructs(topo_structs);
     ClipEdges(topo_structs);
     EatNodes(topo_structs);
-    if (GlobalProcessCtx::Rank() == 0) {
-      std::cout << i << "th, sort, clip and eat, Topo size: " << topo_structs.size() << std::endl;
-    }
   }
   // TODO: Clip edges
 }
@@ -499,32 +483,7 @@ void StraightenMemory(std::vector<MemoryTopoStruct*>* topo_structs,
   // Compute the memory increment for all the topological structures
   ComputeAllMemoryIncrement(*topo_structs, release_topo_structs, id2producer_topo_struct,
                             *id2consumer_topo_structs, id2blob_size, id2is_reusable);
-
-  if (GlobalProcessCtx::Rank() == 0) {
-    std::cout << "Print all the topological structures:" << std::endl;
-    int64_t total_memory = 0;
-    int32_t total_in_size = 0, total_out_size = 0;
-    for (const auto& topo_struct : *topo_structs) {
-      topo_struct->SetAccumulateMemoryIncrement();
-      std::cout << "In size: " << topo_struct->in_topo_structs.size()
-                << ", out size: " << topo_struct->out_topo_structs.size() << ", "
-                << ", accumulate memory increment: " << topo_struct->accumulate_memory_increment
-                << ", ";
-      total_in_size += topo_struct->in_topo_structs.size();
-      total_out_size += topo_struct->out_topo_structs.size();
-      if (topo_struct->blob_id != -1) {
-        std::cout << "Blob id: " << topo_struct->blob_id
-                  << " Memory increment: " << topo_struct->memory_increment << std::endl;
-      } else {
-        std::cout << "Op node: " << topo_struct->op_node->op().op_name()
-                  << " Memory increment: " << topo_struct->memory_increment << std::endl;
-      }
-      total_memory += topo_struct->memory_increment;
-    }
-    std::cout << "Total memory: " << total_memory << ", total in size: " << total_in_size
-              << ", total out size: " << total_out_size << std::endl;
-  }
-
+  // TODO: Test the graph simplification to further reduce the memory
   // GraphSimplification(*topo_structs);
 
   // Those nodes that we need to visit their descendants
@@ -590,16 +549,6 @@ void StraightenMemory(std::vector<MemoryTopoStruct*>* topo_structs,
     peak_memory = std::max(peak_memory, total_memory + node->max_difference_during_accumulation);
     StopWaiting(node);
     prepare_topo_structs.push_back(node);
-    if (GlobalProcessCtx::Rank() == 0) {
-      std::cout << "Executing ";
-      if (node->op_node) {
-        std::cout << node->op_node->op().op_name();
-      } else {
-        std::cout << "blob id: " << node->blob_id;
-      }
-      std::cout << ", memory increment: " << node->memory_increment
-                << ", current total: " << total_memory << std::endl;
-    }
     if (node->memory_increment < 0) {
       for (auto* out_release_node : node->blocking_topo_structs) {
         // TODO: Remove prepare and use blocking count instead
