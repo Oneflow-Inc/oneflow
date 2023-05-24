@@ -24,6 +24,7 @@ namespace {
 
 std::string GenerateKey4TaskNode(TaskNode* node,
                                  HashMap<const TaskNode*, std::string>& task_node2keys) {
+  CHECK(node != nullptr) << "Generating key for a nullptr!";
   auto it = task_node2keys.find(node);
   if (it == task_node2keys.end()) {
     // Generate the key to determine the same task nodes
