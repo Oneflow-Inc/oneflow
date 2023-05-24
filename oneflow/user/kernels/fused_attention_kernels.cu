@@ -167,19 +167,11 @@ struct Add<half> {
 };
 
 template<typename Act, typename T>
-struct GluActFunctor {
-  GluActFunctor(Act act) : act_(act){};
-  __device__ __forceinline__ T operator()(const T& a, const T& b) const { return act_(a) * b; }
-
- private:
-  Act act_;
-};
-
-template<typename Act, typename T>
-__global__ void BinaryWithAct(GluActFunctor<Act, T> act, int64_t m, int64_t n, T* r, const T* a,
-                              const T* b) {
+__global__ void BinaryWithAct(Act act, int64_t m, int64_t n, T* r, const T* a, const T* b) {
   for (int64_t i = 0; i < m; ++i) {
-    CUDA_1D_KERNEL_LOOP_T(int64_t, j, n) { r[n * i + j] = act(a[2 * i * n + j], b[2 * i * n + j]); }
+    CUDA_1D_KERNEL_LOOP_T(int64_t, j, n) {
+      r[n * i + j] = act(a[2 * i * n + j]) * b[2 * i * n + j];
+    }
   }
 }
 
@@ -1952,8 +1944,7 @@ class LlamaDecoderLayerForwardKernel final : public user_op::OpKernel {
       cuda::elementwise::GetNumBlocks(glu_matmul_n / 2, &num_blocks);
       BinaryWithAct<decltype(act), T>
           <<<num_blocks, cuda::elementwise::kBlockSize, 0, cuda_stream->cuda_stream()>>>(
-              GluActFunctor<decltype(act), T>(act), bm, glu_matmul_n / 2, gate_ptr, gate_ptr,
-              up_ptr);
+              act, bm, glu_matmul_n / 2, gate_ptr, gate_ptr, up_ptr);
 
       // step 11, mlp_down_proj && all_reduce_sum && add_residual
       auto mlp_down_weight_shape = mlp_down_weight->shape_view();

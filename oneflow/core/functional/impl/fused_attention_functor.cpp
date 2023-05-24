@@ -771,12 +771,14 @@ class LlamaDecoderLayerForwardFunctor {
       ops_.emplace(num_layers, op);
     }
   }
-  Maybe<TensorTuple> operator()(
-      const std::shared_ptr<one::Tensor>& hidden_states, const TensorTuple& input_norm_weights,
-      const TensorTuple& qkv_weights, const TensorTuple& attn_out_weights,
-      const std::shared_ptr<one::Tensor>& position_ids, const TensorTuple& post_norm_weights,
-      const TensorTuple& glu_weights, const TensorTuple& mlp_down_weights,
-      const TensorTuple& past_keys, const TensorTuple& past_values, const int64_t head_size) const {
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& hidden_states,
+                                const TensorTuple& input_norm_weights,
+                                const TensorTuple& qkv_weights, const TensorTuple& attn_out_weights,
+                                const std::shared_ptr<one::Tensor>& position_ids,
+                                const TensorTuple& post_norm_weights,
+                                const TensorTuple& glu_weights, const TensorTuple& mlp_down_weights,
+                                const TensorTuple& past_keys, const TensorTuple& past_values,
+                                const int64_t head_size) const {
     int64_t num_layers = input_norm_weights.size();
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("head_size", "num_layers", "parallel_conf");
     auto parallel_desc = JUST(hidden_states->parallel_desc());
