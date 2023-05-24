@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/ep/cuda/cuda_matmul_mode.h"
-#include <functional>
 #include <cuda.h>
 
 namespace oneflow {
