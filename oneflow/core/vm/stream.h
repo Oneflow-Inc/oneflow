@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_STREAM_H_
 
 #include "oneflow/core/vm/instruction.h"
-#include "oneflow/core/device/device_context.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/stream_type.h"

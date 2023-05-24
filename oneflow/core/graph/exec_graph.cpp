@@ -162,7 +162,7 @@ void ExecNode::InferBlobDescsByNdSbp(const ParallelContext* parallel_ctx) {
     if (ibns.count(bn_in_op) > 0) {
       auto iter = ibn2blob_desc.find(bn_in_op);
       if (iter == ibn2blob_desc.end()) {
-        iter = ibn2blob_desc.emplace(bn_in_op, kInvalidDataType).first;
+        iter = ibn2blob_desc.emplace(bn_in_op, BlobDesc(kInvalidDataType, kContiguous)).first;
       }
       return &iter->second;
     }

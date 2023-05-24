@@ -14,9 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
-#include "OneFlow/Transform/OneFlowStream.h"
+#include "OneFlow/Transform/OneFlowMemPool.h"
 #include "OneFlow/Transform/EliminateAllocOps.h"
 #include "OneFlow/Transform/OneFlowStream.h"
+#include "mlir/Conversion/TosaToTensor/TosaToTensor.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/common/data_type.pb.h"
@@ -1018,36 +1019,44 @@ struct KernelLaunchWithCudaGraphPattern : public KernelLaunchSimplePattern {
 void AddLowerToLinalgMemRefPasses(PassManager& pm) {
   pm.addPass(createConvertToSignlessForTosaPass());  // convert-to-signless-for-tosa
   pm.addNestedPass<func::FuncOp>(LLVM::createRequestCWrappersPass());  // llvm-request-c-wrappers
-  pm.addPass(createConvertToSignlessForTosaPass());  // convert-to-signless-for-tosa
-  pm.addPass(createLowerOneFlowToTosaPass());        // lower-oneflow-to-tosa
+  pm.addPass(createLowerOneFlowToTosaPass());                          // lower-oneflow-to-tosa
   pm.addNestedPass<func::FuncOp>(
       tosa::createTosaMakeBroadcastablePass());                // tosa-make-broadcastable
   pm.addPass(createCSEPass());                                 // cse
   pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());  // tosa-to-linalg-on-tensors
+  pm.addNestedPass<func::FuncOp>(tosa::createTosaToTensor());  // tosa-to-tensor
   pm.addNestedPass<func::FuncOp>(
-      createLinalgElementwiseOpFusionPass());                       // linalg-fuse-elementwise-ops
-  pm.addNestedPass<func::FuncOp>(createLinalgBufferizePass());      // linalg-bufferize
+      createLinalgElementwiseOpFusionPass());  //     linalg-fuse-elementwise-ops
+  // TODO: more optimization pass
+  // Note: OneShot bufferization with result extract realization.
+  pm.addPass(bufferization::createEmptyTensorEliminationPass());    // eliminate-empty-tensors
   pm.addPass(bufferization::createEmptyTensorToAllocTensorPass());  // empty-tensor-to-alloc-tensor
-  pm.addNestedPass<func::FuncOp>(createTensorBufferizePass());      // tensor-bufferize
-  pm.addPass(func::createFuncBufferizePass());                      // func-bufferize
+
+  auto oneshot_bufferize = bufferization::createOneShotBufferizePass();
+  CHECK(
+      oneshot_bufferize
+          ->initializeOptions("create-deallocs=0 bufferize-function-boundaries allow-return-allocs")
+          .succeeded());
+  pm.addPass(std::move(oneshot_bufferize));
   pm.addPass(bufferization::createBufferResultsToOutParamsPass());  // buffer-results-to-out-params
   pm.addPass(mlir::oneflow::createEliminateAllocOpsPass());         // eliminate-alloc-ops
   pm.addPass(createCanonicalizerPass());                            // canonicalize
-  pm.addNestedPass<func::FuncOp>(
-      mlir::bufferization::createFinalizingBufferizePass());  // finalizing-bufferize
 }
 
 LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
   mlir::PassManager pm(context);
+  mlir::oneflow::CheckEnableIRPrinting(pm);
   AddLowerToLinalgMemRefPasses(pm);
   pm.addNestedPass<func::FuncOp>(createConvertLinalgToLoopsPass());  // convert-linalg-to-loops
   pm.addNestedPass<func::FuncOp>(createConvertSCFToCFPass());        // convert-scf-to-cf
   pm.addPass(createConvertLinalgToLLVMPass());                       // convert-linalg-to-llvm
+  pm.addNestedPass<func::FuncOp>(createFoldAllocToSubviewPass());    // fold-alloc-to-subview
+  pm.addPass(createInsertOneFlowMemPoolPass());                      // insert-ofmempool
   pm.addPass(createAppendOneFlowStreamPass());                       // append-ofstream
-  pm.addPass(createMemRefToLLVMConversionPass());                    // convert-memref-to-llvm
+  pm.addPass(createFinalizeMemRefToLLVMConversionPass());            // convert-memref-to-llvm
   pm.addPass(createConvertFuncToLLVMPass());                         // convert-func-to-llvm
   pm.addPass(memref::createExpandStridedMetadataPass());             // expand-strided-metadata
-  pm.addPass(createMemRefToLLVMConversionPass());                    // convert-memref-to-llvm
+  pm.addPass(createFinalizeMemRefToLLVMConversionPass());            // convert-memref-to-llvm
   pm.addPass(createReconcileUnrealizedCastsPass());                  // reconcile-unrealized-casts
   return pm.run(module);
 }
@@ -1065,19 +1074,20 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   pm.addPass(createParallelLoopToGpuPass());                        // convert-parallel-loops-to-gpu
   pm.addPass(createGpuLauchSinkIndexComputationsPass());
   pm.addPass(createGpuKernelOutliningPass());                      // gpu-kernel-outlining
-  pm.addNestedPass<func::FuncOp>(createBufferHostRegisterPass());  // buffer-host-register
   pm.addPass(createCanonicalizerPass());                           // canonicalize
+  pm.addNestedPass<func::FuncOp>(createFoldAllocToSubviewPass());  // fold-alloc-to-subview
+  pm.addPass(createInsertOneFlowMemPoolPass());                    // insert-ofmempool
   // -pass-pipeline='gpu.module([PASS1][PASS2]...)'
   pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());        // strip-debuginfo
   pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());           // lower-affine
   pm.addNestedPass<gpu::GPUModuleOp>(createLowerGpuOpsToNVVMOpsPass());  // convert-gpu-to-nvvm
-  pm.addNestedPass<gpu::GPUModuleOp>(createSerializeToCubinPass());      // out-of-tree-gpu-to-cubin
+  pm.addNestedPass<gpu::GPUModuleOp>(createNVVMToCubinPass());           // out-of-tree-gpu-to-cubin
   pm.addNestedPass<func::FuncOp>(createGpuCopyArgPass());                // buffer-host-register
   pm.addPass(createAppendOneFlowStreamPass());                           // append-ofstream
   pm.addPass(createGpuToLLVMConversionPass());                           // gpu-to-llvm
   pm.addPass(createMgpuToOneFlowStreamPass());                           // gpu-to-llvm
   pm.addPass(memref::createExpandStridedMetadataPass());                 // expand-strided-metadata
-  pm.addPass(createMemRefToLLVMConversionPass());                        // convert-memref-to-llvm
+  pm.addPass(createFinalizeMemRefToLLVMConversionPass());                // convert-memref-to-llvm
   pm.addPass(createReconcileUnrealizedCastsPass());  // reconcile-unrealized-casts
   return pm.run(module);
 }

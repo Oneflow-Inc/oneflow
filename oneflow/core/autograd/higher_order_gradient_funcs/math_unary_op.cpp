@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/functional/functional.h"
@@ -86,7 +87,6 @@ class UnaryMathGradGradWithZeroDDX : public OpExprGradFunction<UnaryMathGradGrad
   OF_PP_MAKE_TUPLE_SEQ("tan_grad", Tan)                           \
   OF_PP_MAKE_TUPLE_SEQ("sinh_grad", Sinh)                         \
   OF_PP_MAKE_TUPLE_SEQ("cosh_grad", Cosh)                         \
-  OF_PP_MAKE_TUPLE_SEQ("tanh_grad", Tanh)                         \
   OF_PP_MAKE_TUPLE_SEQ("asin_grad", Asin)                         \
   OF_PP_MAKE_TUPLE_SEQ("acos_grad", Acos)                         \
   OF_PP_MAKE_TUPLE_SEQ("atan_grad", Atan)                         \
@@ -108,7 +108,9 @@ class UnaryMathGradGradWithZeroDDX : public OpExprGradFunction<UnaryMathGradGrad
   OF_PP_MAKE_TUPLE_SEQ("sqrt_grad", Sqrt)                         \
   OF_PP_MAKE_TUPLE_SEQ("square_grad", Square)
 
-#define MATH_UNARY_ELEMENTWISE_GRAD_GRAD_DY_Y_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("sigmoid_grad", Sigmoid)
+#define MATH_UNARY_ELEMENTWISE_GRAD_GRAD_DY_Y_FUNC_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ("sigmoid_grad", Sigmoid)        \
+  OF_PP_MAKE_TUPLE_SEQ("tanh_grad", Tanh)
 
 #define MATH_UNARY_ELEMENTWISE_GRAD_GRAD_ZERO_DDX_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("abs_grad", Abs)
 

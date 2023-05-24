@@ -110,8 +110,10 @@ Maybe<Generator> DefaultGenerator(const std::string& device, int device_index) {
 }
 
 Maybe<Generator> DefaultAutoGenerator() {
-  static auto default_auto_generator =
-      std::make_shared<Generator>(std::make_shared<AutoGenerator>(GetNonDeterministicRandom()));
+  // Skip destructing to avoid calling symbols in other dynamic libraries when the global object is
+  // released.
+  static auto default_auto_generator = std::make_shared<Generator>(std::shared_ptr<AutoGenerator>(
+      new AutoGenerator(GetNonDeterministicRandom()), [](AutoGenerator*) {}));
   return default_auto_generator;
 }
 

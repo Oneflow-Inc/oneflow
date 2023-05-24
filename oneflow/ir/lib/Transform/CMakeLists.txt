@@ -1,0 +1,15 @@
+add_mlir_library(
+  MLIROneFlowTransformDialect
+  TransformDialectExtension.cpp
+  TransformDialectInterpreter.cpp
+  TransformStateExtension.cpp
+  EXCLUDE_FROM_LIBMLIR
+  DEPENDS
+  MLIROneFlowTransformDialectExtensionIncGen
+  LINK_LIBS
+  PUBLIC
+  MLIRIR
+  MLIRPass
+  MLIRPDLDialect
+  MLIRTransformDialect
+  MLIRTransformDialectTransforms)

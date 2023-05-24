@@ -150,12 +150,11 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kQuickGeluBackwardWithDyX, Src
 };
 
 template<typename Src, typename Dst>
-struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kTanhBackwardWithDyX, Src, Dst> {
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kTanhBackwardWithDyY, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-    Src tanh_val = tanh(x);
-    return static_cast<Dst>(dy * (static_cast<Src>(1.0) - tanh_val * tanh_val));
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src y) const {
+    return static_cast<Dst>(dy * (static_cast<Src>(1.0) - y * y));
   }
 };
 
@@ -250,7 +249,94 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kDigammaBackwardWithDyX, Src, 
         0, 0);
     Src trigamma_result = trigamma_functor(x);
     return trigamma_result * dy;
-    return 0.0;
+  }
+};
+
+template<typename Src, typename Dst>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kLgammaBackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    ep::primitive::UnaryFunctor<DeviceType::kCUDA, UnaryOp::kDigamma, Src, Dst> digamma_functor(0,
+                                                                                                0);
+    Dst digamma_result = digamma_functor(x);
+    return digamma_result * dy;
+  }
+};
+
+template<typename Src, typename Dst>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kZeta, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC Dst operator()(Src x, Src q) const {
+    // ref
+    // https://github.com/pytorch/pytorch/blob/release/1.13/aten/src/ATen/native/cuda/Math.cuh#L302-L384
+    const Src MACHEP{1.11022302462515654042E-16};
+    constexpr Src zero{0};
+    constexpr Src half{0.5};
+    constexpr Src one{1};
+    static const Src A[] = {
+        12.0,
+        -720.0,
+        30240.0,
+        -1209600.0,
+        47900160.0,
+        -1.8924375803183791606e9, /*1.307674368e12/691*/
+        7.47242496e10,
+        -2.950130727918164224e12,  /*1.067062284288e16/3617*/
+        1.1646782814350067249e14,  /*5.109094217170944e18/43867*/
+        -4.5979787224074726105e15, /*8.028576626982912e20/174611*/
+        1.8152105401943546773e17,  /*1.5511210043330985984e23/854513*/
+        -7.1661652561756670113e18  /*1.6938241367317436694528e27/236364091*/
+    };
+
+    int i = 0;
+    Src a, b, k, s, t, w;
+
+    // Short-circuits x -> +infty
+    if (x == one) { return INFINITY; }
+
+    // Short-circuits x < 1 -> NaN
+    if (x < one) { return NAN; }
+
+    // Short-circuits negative q integers map to +infty,
+    //   negative q non-integers map to NaN
+    if (q <= zero) {
+      if (q == floor(q)) { return INFINITY; }
+      if (x != floor(x)) { return NAN; }
+    }
+
+    s = pow(q, -x);
+    a = q;
+    i = 0;
+    b = zero;
+    while ((i < 9) || (a <= Src{9.0})) {
+      i += 1;
+      a += one;
+      b = pow(a, -x);
+      s += b;
+      if ((-MACHEP * s < b) && (b < MACHEP * s)) { return s; }
+    }
+
+    w = a;
+    s += b * w / (x - one);
+    s -= half * b;
+    a = one;
+    k = zero;
+    for (int i = 0; i < 12; i++) {
+      a *= x + k;
+      b /= w;
+      t = a * b / A[i];
+      s = s + t;
+      t = fabs(t / s);
+
+      if (t < MACHEP) { return s; }
+
+      k += one;
+      a *= x + k;
+      b /= w;
+      k += one;
+    }
+
+    return s;
   }
 };
 
@@ -296,6 +382,7 @@ SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kFmod);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kFloorDiv);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kTruncDiv);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kFloorMod);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kZeta);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kScalarBasePowerGrad);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kScalarExpPowerGrad);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kIdentityBackwardWithDyX);
@@ -313,7 +400,7 @@ SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kSiluBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kSoftsignBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kSoftplusBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kSoftshrinkBackwardWithDyY);
-SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kTanhBackwardWithDyX);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kTanhBackwardWithDyY);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kThresholdBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kFastGeluBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kQuickGeluBackwardWithDyX);
@@ -341,6 +428,7 @@ SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kTanBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kSigmoidBackwardWithDyY);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kSigmoidBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kAtanhBackwardWithDyX);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kLgammaBackwardWithDyX);
 
 #define SPECIALIZATION_BFLOAT16_COMPARISON_BINARY_FUNCTOR(op)                                 \
   template<typename Dst>                                                                      \
@@ -372,6 +460,7 @@ SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kFmod);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kFloorDiv);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kTruncDiv);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kFloorMod);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kZeta);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kScalarBasePowerGrad);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kScalarExpPowerGrad);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kEluBackwardWithDyX);
@@ -386,7 +475,7 @@ SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kSoftplusBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kSoftsignBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kSoftshrinkBackwardWithDyY);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kThresholdBackwardWithDyX);
-SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kTanhBackwardWithDyX);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kTanhBackwardWithDyY);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kFastGeluBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kQuickGeluBackwardWithDyX);
 
@@ -413,6 +502,7 @@ SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kTanBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kSigmoidBackwardWithDyY);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kSigmoidBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kAtanhBackwardWithDyX);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kLgammaBackwardWithDyX);
 
 #define SPECIALIZATION_HALF_COMPARISON_BINARY_FUNCTOR(op)                                     \
   template<typename Dst>                                                                      \

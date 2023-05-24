@@ -80,7 +80,7 @@ void RegstDesc::CopyBlobDescWithoutAddLbi(const RegstDesc* rhs) {
 
 BlobDesc* RegstDesc::AddLbi(const LogicalBlobId& lbi) {
   CHECK(lbi2blob_desc_.find(lbi) == lbi2blob_desc_.end());
-  BlobDesc* blob_desc = new BlobDesc(GlobalJobDesc().DefaultDataType());
+  BlobDesc* blob_desc = new BlobDesc(GlobalJobDesc().DefaultDataType(), MemoryFormat::kContiguous);
   lbi2blob_desc_[lbi].reset(blob_desc);
   return blob_desc;
 }
@@ -118,6 +118,32 @@ void RegstDesc::EraseUninitializedShapeBlob() {
       &lbi2blob_desc_, [](HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>::iterator it) {
         return !it->second->shape().is_initialized();
       });
+}
+
+void RegstDesc::InitFromProtoExceptConsumers(const RegstDescProto& proto) {
+  regst_desc_id_ = proto.regst_desc_id();
+  CHECK_EQ(proto.producer_task_id(), producer_->task_id());
+  regst_desc_type_ = proto.regst_desc_type();
+  if (regst_desc_type_.has_data_regst_desc()) {
+    const DataRegstDesc& data_regst_desc_proto = proto.regst_desc_type().data_regst_desc();
+    for (const auto& pair : data_regst_desc_proto.lbi2blob_desc()) {
+      *AddLbi(pair.lbi()) = BlobDesc(pair.blob_desc());
+    }
+    CHECK(!data_regst_desc_proto.has_time_shape());
+  } else if (regst_desc_type_.has_ctrl_regst_desc()) {
+    // do nothing
+  } else {
+    UNIMPLEMENTED();
+  }
+  min_register_num_ = proto.min_register_num();
+  max_register_num_ = proto.max_register_num();
+  min_register_num_ = proto.register_num();
+  mem_case_ = proto.mem_case();
+  enable_reuse_mem_ = proto.enable_reuse_mem();
+  mem_block_id_ = proto.mem_block_id();
+  mem_block_offset_ = proto.mem_block_offset();
+  hint_inplace_consumed_regst_desc_id_ = proto.hint_inplace_consumed_regst_desc_id();
+  force_inplace_consumed_regst_desc_id_ = proto.force_inplace_consumed_regst_desc_id();
 }
 
 void RegstDesc::ToProto(RegstDescProto* ret, bool check) const {
