@@ -190,7 +190,7 @@ class TestAddModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(n=5)
+    @autotest(n=10, include_complex=True)
     def test_0_size_add(test_case):
         device = random_device()
         x = random_tensor(2, 0, 3).to(device)
