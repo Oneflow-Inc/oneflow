@@ -35,7 +35,8 @@ std::string GenerateKey4TaskNode(TaskNode* node,
       node->ForEachNodeOnInEdge(
           [&](TaskNode* in) { key += GenerateKey4TaskNode(in, task_node2keys); });
       task_node2keys[node] = key;
-    } else if (node->GetTaskType() == TaskType::kNormalForward) {
+    } else if (node->GetTaskType()  // NOLINT(clang-analyzer-core.CallAndMessage)
+               == TaskType::kNormalForward) {
       // Deal with the normal computation nodes
       task_node2keys[node] = dynamic_cast<CompTaskNode*>(node)->op()->op_name();
     } else {
