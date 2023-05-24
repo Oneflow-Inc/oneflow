@@ -150,6 +150,7 @@ class LBFGS(Optimizer):
         tolerance_change: float = 1e-9,
         history_size: int = 100,
         line_search_fn=None,
+        contiguous_params: bool = False,
     ):
         if max_eval is None:
             max_eval = max_iter * 1.25
@@ -161,6 +162,7 @@ class LBFGS(Optimizer):
         options["tolerance_change"] = tolerance_change
         options["history_size"] = history_size
         options["line_search_fn"] = line_search_fn
+        options["contiguous_params"] = contiguous_params
         super().__init__(params, options)
         assert (
             len(self.param_groups) == 1
