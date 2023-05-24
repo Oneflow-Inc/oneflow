@@ -1053,6 +1053,7 @@ LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
   pm.addPass(createAppendOneFlowStreamPass());
   pm.addPass(createFinalizeMemRefToLLVMConversionPass());
   pm.addPass(createConvertFuncToLLVMPass());
+  pm.addPass(memref::createExpandOpsPass());
   pm.addPass(memref::createExpandStridedMetadataPass());
   pm.addPass(createFinalizeMemRefToLLVMConversionPass());
   pm.addPass(createReconcileUnrealizedCastsPass());
@@ -1078,8 +1079,6 @@ void AddLoweringLinalgOnBufferToGpuWithStdPasses(PassManager& pm) {
 }
 
 void AddAdheringCubinToGpuModulePasses(PassManager& pm) {
-  pm.addNestedPass<gpu::GPUModuleOp>(memref::createExpandOpsPass());
-  pm.addNestedPass<gpu::GPUModuleOp>(memref::createExpandStridedMetadataPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());
   pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createLowerGpuOpsToNVVMOpsPass());
@@ -1087,8 +1086,6 @@ void AddAdheringCubinToGpuModulePasses(PassManager& pm) {
 }
 
 void AddLoweringGpuToLLVMPasses(PassManager& pm) {
-  pm.addNestedPass<func::FuncOp>(memref::createExpandOpsPass());
-  pm.addNestedPass<func::FuncOp>(memref::createExpandStridedMetadataPass());
   pm.addPass(createFinalizeMemRefToLLVMConversionPass());
   pm.addPass(createLowerAffinePass());
   pm.addPass(createAppendOneFlowStreamPass());
@@ -1103,6 +1100,8 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   mlir::oneflow::CheckEnableIRPrinting(pm);
   AddLoweringToLinalgMemRefPasses(pm);
   AddLoweringLinalgOnBufferToGpuWithStdPasses(pm);
+  pm.addPass(memref::createExpandOpsPass());
+  pm.addPass(memref::createExpandStridedMetadataPass());
   pm.addPass(createGpuKernelOutliningPass());
   AddAdheringCubinToGpuModulePasses(pm);
   AddLoweringGpuToLLVMPasses(pm);
