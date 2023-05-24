@@ -1047,15 +1047,15 @@ LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
   AddLoweringToLinalgMemRefPasses(pm);
   pm.addNestedPass<func::FuncOp>(createConvertLinalgToLoopsPass());
   pm.addNestedPass<func::FuncOp>(createConvertSCFToCFPass());
-  pm.addPass(createConvertLinalgToLLVMPass());
   pm.addNestedPass<func::FuncOp>(createFoldAllocToSubviewPass());
   pm.addPass(createInsertOneFlowMemPoolPass());
   pm.addPass(createAppendOneFlowStreamPass());
-  pm.addPass(createFinalizeMemRefToLLVMConversionPass());
-  pm.addPass(createConvertFuncToLLVMPass());
   pm.addPass(memref::createExpandOpsPass());
   pm.addPass(memref::createExpandStridedMetadataPass());
   pm.addPass(createFinalizeMemRefToLLVMConversionPass());
+  pm.addPass(createLowerAffinePass());
+  pm.addPass(createConvertLinalgToLLVMPass());
+  pm.addPass(createConvertFuncToLLVMPass());
   pm.addPass(createReconcileUnrealizedCastsPass());
   return pm.run(module);
 }
