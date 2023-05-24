@@ -30,7 +30,8 @@ std::unique_ptr<::oneflow::BlobDesc> getBlobDescFromTensorType(TensorType tensor
   if (mlir::succeeded(data_type)) {
     auto shape_from_mlir = new ::oneflow::Shape(llvm::SmallVector<int64_t, 4>(
         {tensor_type.getShape().begin(), tensor_type.getShape().end()}));
-    return std::make_unique<::oneflow::BlobDesc>(*shape_from_mlir, data_type.value());
+    return std::make_unique<::oneflow::BlobDesc>(*shape_from_mlir, data_type.value(),
+                                                 ::oneflow::MemoryFormat::kContiguous);
   }
   tensor_type.dump();
   LOG(FATAL) << "fail to get BlobDesc from TensorType";
@@ -96,7 +97,8 @@ size_t getResultSize(DictionaryAttr attributes) {
     const auto& arg_name = result_id.first;
     const auto& arg_id = result_id.second;
     const auto bn = ::oneflow::GenRepeatedBn(arg_name, arg_id);
-    auto blob_desc = std::make_unique<::oneflow::BlobDesc>(::oneflow::kInvalidDataType);
+    auto blob_desc = std::make_unique<::oneflow::BlobDesc>(::oneflow::kInvalidDataType,
+                                                           ::oneflow::MemoryFormat::kContiguous);
     lbi2logical_blob_desc_.emplace(bn, std::move(blob_desc));
     (*op_conf.mutable_user_conf()->mutable_output())[arg_name].add_s(
         ::oneflow::GenLogicalBlobName(op_conf.name(), bn));
@@ -127,14 +129,16 @@ size_t getResultSize(DictionaryAttr attributes) {
 
 ::mlir::LogicalResult NormalizationAddReluOp::refineReturnTypes(
     ::mlir::MLIRContext* context, ::llvm::Optional<::mlir::Location> location,
-    ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes, ::mlir::RegionRange regions,
+    ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
+    ::mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
     ::llvm::SmallVectorImpl<::mlir::Type>& inferredReturnTypes) {
   return success();
 }
 
 ::mlir::LogicalResult NormalizationAddReluOp::inferReturnTypes(
     ::mlir::MLIRContext* context, ::llvm::Optional<::mlir::Location> location,
-    ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes, ::mlir::RegionRange regions,
+    ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
+    ::mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
     ::llvm::SmallVectorImpl<::mlir::Type>& inferredReturnTypes) {
   return inferReturnTypesWithOpTypeName("normalization_add_relu", context, operands, attributes,
                                         regions, inferredReturnTypes);

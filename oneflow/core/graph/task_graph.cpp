@@ -132,7 +132,7 @@ bool CanBeMergedInChain(const TaskNode* node) {
   if (IsTaskNodeProducedRegstHasMultiRegstNum(node)) { return false; }
   const auto* fw_comp_node = dynamic_cast<const NormalForwardCompTaskNode*>(node);
   if (fw_comp_node == nullptr) { return false; }
-  if (fw_comp_node->device_type() != DeviceType::kCUDA) { return false; }
+  if (fw_comp_node->device_type() == DeviceType::kCPU) { return false; }
   const Operator* op = fw_comp_node->op().get();
   if (IsSpecialOpNotConsiderMergeInChain(op)) { return false; }
   return true;
@@ -476,12 +476,31 @@ void GetHostInputLbis4OpNode(const OpNode* op_node,
   }
 }
 
+HashMap<DeviceType, CreateSubTskGphBuilderFn>* GlobalDeviceType2CreateSubTskGphBuilderFn() {
+  static HashMap<DeviceType, CreateSubTskGphBuilderFn>
+      global_device_type_create_sub_tsk_gph_builder_fn;
+  return &global_device_type_create_sub_tsk_gph_builder_fn;
+}
+
 }  // namespace
+
+Maybe<void> RegisterCreateSubTskGphBuilderFn(DeviceType device_type,
+                                             const CreateSubTskGphBuilderFn& fn) {
+  auto* global_device_type_create_sub_tsk_gph_builder_fn =
+      GlobalDeviceType2CreateSubTskGphBuilderFn();
+  global_device_type_create_sub_tsk_gph_builder_fn->emplace(device_type, fn);
+  return Maybe<void>::Ok();
+}
 
 TaskGraph::TaskGraph() {
   OpGraph* op_graph = Singleton<OpGraph>::Get();
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
   boxing_logger_ = CreateBoxingLogger();
+  const auto* global_device_type_create_sub_tsk_gph_builder_fn =
+      GlobalDeviceType2CreateSubTskGphBuilderFn();
+  for (const auto& pair : *global_device_type_create_sub_tsk_gph_builder_fn) {
+    device_type2sub_tsk_gph_builder_.emplace(pair.first, pair.second());
+  }
   hierarchical_sub_tsk_gph_builder_.reset(new DispatchHierarchicalSubTskGphBuilder());
   HashMap<const OpNode*, std::vector<CompTaskNode*>> op_node2sorted_comp_tasks;
 
@@ -777,7 +796,7 @@ void TaskGraph::ForEachGpuDeviceNodes(
     const std::function<void(const HashSet<TaskNode*>& dev_nodes)>& Handler) const {
   HashMap<std::pair<int64_t, int64_t>, HashSet<TaskNode*>> global_dev_phy_id2nodes;
   ForEachNode([&](TaskNode* task_node) {
-    if (task_node->device_type() != DeviceType::kCUDA) { return; }
+    if (task_node->device_type() == DeviceType::kCPU) { return; }
     int64_t dev_phy_id = task_node->stream_id().device_id().device_index();
     global_dev_phy_id2nodes[{task_node->machine_id(), dev_phy_id}].emplace(task_node);
   });
@@ -826,10 +845,29 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
             << " dst parallel conf: " << dst_parallel_desc.parallel_conf().DebugString()
             << " src_nd_sbp " << src_nd_sbp.DebugString() << " dst nd_sbp "
             << dst_nd_sbp.DebugString();
-    auto status = CHECK_JUST(hierarchical_sub_tsk_gph_builder_->Build(
-        sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes, &sorted_ctrl_tasks, src_parallel_desc,
-        dst_parallel_desc, lbi, blob_desc, src_nd_sbp, dst_nd_sbp,
-        *(CHECK_JUST(src_op_node->op().GetOpTimeShape()).get())));
+    std::shared_ptr<SubTskGphBuilderStatus> status;
+    const DeviceType device_type = [&src_parallel_desc, &dst_parallel_desc]() {
+      return src_parallel_desc.device_type() != DeviceType::kCPU ? src_parallel_desc.device_type()
+                                                                 : dst_parallel_desc.device_type();
+    }();
+    if (device_type != DeviceType::kCPU
+        && device_type2sub_tsk_gph_builder_.find(device_type)
+               != device_type2sub_tsk_gph_builder_.end()) {
+      auto maybe_status = TRY(                                                        // NOLINT
+          device_type2sub_tsk_gph_builder_                                            // NOLINT
+              .at(device_type)                                                        // NOLINT
+              ->Build(sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes,           // NOLINT
+                      &sorted_ctrl_tasks, src_parallel_desc, dst_parallel_desc, lbi,  // NOLINT
+                      blob_desc, src_nd_sbp, dst_nd_sbp,                              // NOLINT
+                      *(CHECK_JUST(src_op_node->op().GetOpTimeShape()).get())));      // NOLINT
+      if (maybe_status.IsOk()) { status = CHECK_JUST(maybe_status); }
+    }
+    if (!status) {
+      status = CHECK_JUST(hierarchical_sub_tsk_gph_builder_->Build(
+          sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes, &sorted_ctrl_tasks,
+          src_parallel_desc, dst_parallel_desc, lbi, blob_desc, src_nd_sbp, dst_nd_sbp,
+          *(CHECK_JUST(src_op_node->op().GetOpTimeShape()).get())));
+    }
     boxing_logger_->Log(*status, src_op_node->op().op_name(), dst_op_node->op().op_name(),
                         src_parallel_desc, dst_parallel_desc, src_nd_sbp, dst_nd_sbp, lbi,
                         blob_desc);

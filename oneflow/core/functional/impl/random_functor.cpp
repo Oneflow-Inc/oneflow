@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/framework/layout.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/nd_sbp.h"
@@ -21,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/job/global_mode.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/functional/functional.h"
 #include "oneflow/user/kernels/distributions/common.h"
 #include "oneflow/user/kernels/random_seed_util.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
@@ -298,12 +300,12 @@ class GlobalRandNFunctor {
 class NormalFunctor {
  public:
   NormalFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
-  Maybe<Tensor> operator()(const float& mean, const float& std, const Shape& shape,
+  Maybe<Tensor> operator()(const float mean, const float std, const Shape& shape,
                            const Optional<one::Tensor>& out,
                            const Optional<Symbol<DType>>& optional_dtype,
                            const Optional<Symbol<Device>>& optional_device,
                            const Optional<one::Generator>& optional_generator,
-                           const bool& requires_grad) const {
+                           const bool requires_grad) const {
     Symbol<DType> dtype = GetDefaultDType();
     if (optional_dtype.has_value()) {
       if (!JUST(optional_dtype)->is_floating_point()) {
@@ -316,6 +318,11 @@ class NormalFunctor {
 
     if (out.has_value()) {
       auto out_tensor = JUST(out);
+
+      CHECK_OR_RETURN(shape == (*out_tensor->shape()))
+          << "Shape of out_tensor does not match shape. "
+          << "Expected shape: " << shape << ", actual shape: " << *out_tensor->shape();
+
       Symbol<DType> output_tensor_dtype = out_tensor->dtype();
       if (optional_dtype.has_value()) {
         CHECK_OR_RETURN(output_tensor_dtype == dtype)
@@ -359,15 +366,76 @@ class NormalFunctor {
 
 class Normal2Functor {
  public:
-  Maybe<Tensor> operator()(const float& mean, const float& std, const int32_t& shape,
+  Maybe<Tensor> operator()(const float mean, const float std, const int32_t shape,
                            const Optional<one::Tensor>& out,
                            const Optional<Symbol<DType>>& optional_dtype,
                            const Optional<Symbol<Device>>& optional_device,
                            const Optional<one::Generator>& optional_generator,
-                           const bool& requires_grad) const {
+                           const bool requires_grad) const {
     const Shape size = Shape({shape});
     return Normal(mean, std, size, out, optional_dtype, optional_device, optional_generator,
                   requires_grad);
+  }
+};
+
+class InplaceNormalFuctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float mean, const float std,
+                           const Optional<one::Generator>& optional_generator) const {
+    return Normal(mean, std, *x->shape(), x, x->dtype(), JUST(x->device()), optional_generator,
+                  x->requires_grad());
+  }
+};
+
+class TensorTensorNormalFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& mean,
+                           const std::shared_ptr<one::Tensor>& std,
+                           const Optional<one::Tensor>& out,
+                           const Optional<one::Generator>& optional_generator,
+                           const bool requires_grad) const {
+    JUST(CheckNormalTensorStd(std));
+    auto out_shape = *JUST(InferUnifiedShapeForBroadcasting({*mean->shape(), *std->shape()}));
+    auto output = JUST(Normal(0, 1, out_shape, out, Symbol<DType>(mean->dtype()),
+                              JUST(mean->device()), optional_generator, requires_grad));
+    // mean + output * std
+    JUST(InplaceMul(output, std));
+    JUST(Add(output, mean, 1, true));
+    JUST(output->set_requires_grad(requires_grad));
+    return output;
+  }
+};
+
+class TensorScalarNormalFunctor {
+ public:
+  // TODO : performance optimizing Write as a kenerl
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& mean, const float std,
+                           const Optional<one::Tensor>& out,
+                           const Optional<one::Generator>& optional_generator,
+                           const bool requires_grad) const {
+    JUST(CheckNormalTensorStd(std));
+    auto output = JUST(Normal(0, std, *(mean->shape()), out, mean->dtype(), JUST(mean->device()),
+                              optional_generator, requires_grad));
+    JUST(Add(output, mean, 1, true));
+    JUST(output->set_requires_grad(requires_grad));
+    return output;
+  }
+};
+
+class ScalarTensorNormalFunctor {
+ public:
+  // TODO : performance optimizing one multiplication and one addition Write as a kenerl
+  Maybe<Tensor> operator()(const float mean, const std::shared_ptr<one::Tensor>& std,
+                           const Optional<one::Tensor>& out,
+                           const Optional<one::Generator>& optional_generator,
+                           const bool requires_grad) const {
+    JUST(CheckNormalTensorStd(std));
+    auto output = JUST(Normal(0.0, 1.0, *(std->shape()), out, std->dtype(), JUST(std->device()),
+                              optional_generator, requires_grad));
+    JUST(InplaceMul(output, std));
+    JUST(ScalarAdd(output, mean, 1, true));
+    JUST(output->set_requires_grad(requires_grad));
+    return output;
   }
 };
 
@@ -806,7 +874,7 @@ class MultinomialFunctor {
     if (input_device == DeviceType::kCPU) {
       return OpInterpUtil::Dispatch<Tensor>(*op_cpu_, {x}, ctx);
     } else {
-      std::shared_ptr<Tensor> sum_last_dim = JUST(functional::ReduceSum(x, {-1}, true));
+      std::shared_ptr<Tensor> sum_last_dim = JUST(functional::ReduceSum(x, {-1}, true, NullOpt));
       std::shared_ptr<Tensor> norm_dist = JUST(functional::Div(x, sum_last_dim));
       std::shared_ptr<Tensor> prefix_sum = JUST(functional::Cumsum(norm_dist, -1, x->dtype()));
       return OpInterpUtil::Dispatch<Tensor>(*op_gpu_, {norm_dist, prefix_sum}, ctx);
@@ -835,6 +903,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<GlobalRandNFunctor>("GlobalRandN");
   m.add_functor<impl::NormalFunctor>("Normal");
   m.add_functor<impl::Normal2Functor>("Normal2");
+  m.add_functor<impl::TensorTensorNormalFunctor>("TensorTensorNormal");
+  m.add_functor<impl::TensorScalarNormalFunctor>("TensorScalarNormal");
+  m.add_functor<impl::ScalarTensorNormalFunctor>("ScalarTensorNormal");
+  m.add_functor<impl::InplaceNormalFuctor>("Normal_");
   m.add_functor<impl::GlobalNormalFunctor>("GlobalNormal");
   m.add_functor<impl::GlobalNormal2Functor>("GlobalNormal2");
   m.add_functor<RandnLikeFunctor>("RandnLike");

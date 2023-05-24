@@ -23,6 +23,7 @@ namespace oneflow {
 namespace one {
 
 struct AdaptiveMaxPoolCaptureState : public AutoGradCaptureState {
+  std::string data_format;
   bool requires_grad = false;
 };
 
@@ -52,7 +53,7 @@ Maybe<void> AdaptiveMaxPoolNdGrad::Capture(AdaptiveMaxPoolCaptureState* ctx,
                                            const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-
+  ctx->data_format = JUST(attrs.GetAttr<std::string>("data_format"));
   ctx->SaveTensorForBackward(inputs.at(0));
   ctx->SaveTensorForBackward(outputs.at(1));
   return Maybe<void>::Ok();
@@ -66,7 +67,8 @@ Maybe<void> AdaptiveMaxPoolNdGrad::Apply(const AdaptiveMaxPoolCaptureState* ctx,
   const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
   const std::shared_ptr<oneflow::one::Tensor>& index = ctx->SavedTensors().at(1);
   in_grads->resize(1);
-  in_grads->at(0) = JUST(functional::AdaptiveMaxPoolNdGrad(x, out_grads.at(0), index, ndims_));
+  in_grads->at(0) =
+      JUST(functional::AdaptiveMaxPoolNdGrad(x, out_grads.at(0), index, ndims_, ctx->data_format));
   return Maybe<void>::Ok();
 }
 

@@ -30,6 +30,8 @@ const Stride& BlobTensorView::stride() const { return blob_->stride(); }
 
 DataType BlobTensorView::data_type() const { return blob_->data_type(); }
 
+MemoryFormat BlobTensorView::memory_format() const { return blob_->memory_format(); }
+
 const MemoryCase& BlobTensorView::mem_case() const { return blob_->mem_case(); }
 
 const void* BlobTensorView::raw_dptr() const { return blob_->dptr(); }

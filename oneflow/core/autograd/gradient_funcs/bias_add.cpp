@@ -59,7 +59,8 @@ class BiasAdd : public OpExprGradFunction<BiasAddCaptureState> {
         if (i != ctx->axis) { reduce_axes_vec.emplace_back(i); }
       }
       if (ctx->bias_requires_grad) {
-        in_grads->at(1) = JUST(functional::ReduceSum(out_grads.at(0), reduce_axes_vec, false));
+        in_grads->at(1) =
+            JUST(functional::ReduceSum(out_grads.at(0), reduce_axes_vec, false, NullOpt));
       }
     }
     if (ctx->input_requires_grad) { in_grads->at(0) = out_grads.at(0); }

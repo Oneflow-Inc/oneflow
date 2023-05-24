@@ -3,6 +3,22 @@
 
 include "OneFlow/OneFlowOps.td"
 
+#ifdef WITH_MLIR_CUDA_CODEGEN
+def NVVMToCubinPass : InterfacePass<"nvvm-to-cubin", "SymbolOpInterface"> {
+  let summary = "convert nvvm ir to cubin";
+  let constructor = "mlir::oneflow::createNVVMToCubinPass()";
+  let options = [
+    Option<"triple", "triple", "StringRef", "\"nvptx64-nvidia-cuda\"", "Target triple">,
+    Option<"chip", "chip", "StringRef", "mlir::oneflow::getArchVersion()", "Target architecture">,
+    Option<"features", "features", "StringRef", "\"+ptx60\"", "Target features">,
+  ];
+}
+#endif // WITH_MLIR_CUDA_CODEGEN
+
+def TestOneFlowTraitFolderPass : Pass<"test-oneflow-trait-folder", "func::FuncOp"> {
+  let constructor = "mlir::oneflow::createTestOneFlowTraitFolderPass()";
+}
+
 def LowerOneFlowToTosaPass : Pass<"lower-oneflow-to-tosa", "ModuleOp"> {
   let summary = "lower oneflow dialect to tosa dialect";
   let constructor = "mlir::oneflow::createLowerOneFlowToTosaPass()";
@@ -56,7 +72,11 @@ def GpuCopyArgPass : Pass<"gpu-copy-arg", "func::FuncOp"> {
 def OutlineJitFunctionPass : InterfacePass<"outline-jit-function", "FunctionOpInterface"> {
   let summary = "move ops could be jitted to jit function";
   let constructor = "mlir::oneflow::createOutlineJitFunctionPass()";
-  let dependentDialects = ["pdl_interp::PDLInterpDialect", "pdl::PDLDialect"];
+  let dependentDialects = ["pdl_interp::PDLInterpDialect", "pdl::PDLDialect", "LLVM::LLVMDialect"];
+  let options = [
+    Option<"compileToLLVM", "compile-to-llvm", "bool",
+           /*default=*/"true", "Convert to llvm dialect in this pass">,
+  ];
 }
 
 def AggregateComputeOpsPass : Pass<"aggregate-compute-ops", "ModuleOp"> {
@@ -90,6 +110,17 @@ def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "ModuleOp"> {
   let constructor = "mlir::oneflow::createFuseIntoExistingOpPass()";
   let dependentDialects = ["pdl_interp::PDLInterpDialect", "pdl::PDLDialect"];
 }
+
+def InsertOneFlowMemPoolPass : Pass<"insert-ofmempool", "ModuleOp"> {
+  let summary = "insert oneflow tmp buffer as a memory pool in mlir codegen";
+  let constructor = "mlir::oneflow::createInsertOneFlowMemPoolPass()";
+}
+
+def FoldAllocToSubviewPass : Pass<"fold-alloc-to-subview", "func::FuncOp"> {
+  let summary = "fold dispersed memref.alloc ops with memory optimize algo to a single memref.alloc op and memref.subview ops";
+  let constructor = "mlir::oneflow::createFoldAllocToSubviewPass()";
+}
+
 
 def AutoNhwcPass : Pass<"auto-nhwc", "ModuleOp"> {
   let summary = "";

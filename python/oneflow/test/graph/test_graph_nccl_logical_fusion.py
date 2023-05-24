@@ -92,6 +92,7 @@ class TestGraphNcclLogicalFusion(flow.unittest.TestCase):
         test_case.assertTrue(np.array_equal(out_6.numpy(), local_np * 6.0))
         test_case.assertTrue(np.array_equal(out_7.numpy(), local_np * 9.0))
         test_case.assertTrue(np.array_equal(out_8.numpy(), local_np * 8.0))
+        flow.boxing.nccl.enable_use_compute_stream(False)
 
     def test_graph_nccl_fusion_2d(test_case):
         x_list = []
@@ -164,6 +165,7 @@ class TestGraphNcclLogicalFusion(flow.unittest.TestCase):
         test_case.assertTrue(np.array_equal(out_5.numpy(), local_np * 5.0))
         test_case.assertTrue(np.array_equal(out_6.numpy(), local_np * 6.0))
         test_case.assertTrue(np.array_equal(out_7.numpy(), local_np * 7.0))
+        flow.boxing.nccl.enable_use_compute_stream(False)
 
 
 if __name__ == "__main__":

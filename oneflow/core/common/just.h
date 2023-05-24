@@ -18,7 +18,6 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_JUST_H_
 
 #include <sstream>
-#include <glog/logging.h>
 #include <type_traits>
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/throw.h"
@@ -68,8 +67,7 @@ inline Error&& AddFrameMessage(Error&& error, const std::ostream& x) {
 
 template<typename... T>
 Error&& JustErrorAddFrameMessage(Error&& err, T&&... msg) {
-  __attribute__((unused)) int dummy[] = {
-      ((void)(AddFrameMessage(std::move(err), std::forward<T>(msg))), 0)...};
+  (AddFrameMessage(std::move(err), std::forward<T>(msg)), ...);
   return std::move(err);
 }
 

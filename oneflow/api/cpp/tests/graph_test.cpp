@@ -145,19 +145,19 @@ TEST(Api, graph_unload_test) {
 }
 #endif
 
-// TEST(Api, graph_thread_test) {
-//   EnvScope scope;
+TEST(Api, graph_thread_test) {
+  EnvScope scope;
 
-//   Device device("cpu");
-//   std::vector<Graph> graphs;
-//   for (int i = 0; i < 10; i++) { graphs.emplace_back(LoadGraph(device)); }
+  Device device("cpu");
+  std::vector<Graph> graphs;
+  for (int i = 0; i < 10; i++) { graphs.emplace_back(LoadGraph(device)); }
 
-//   std::vector<std::thread> threads;
-//   for (Graph& graph : graphs) {
-//     threads.emplace_back(std::thread(std::bind(Forward, std::move(graph), device, 1)));
-//   }
-//   for (auto& thread : threads) { thread.join(); }
-// }
+  std::vector<std::thread> threads;
+  for (Graph& graph : graphs) {
+    threads.emplace_back(std::thread(std::bind(Forward, std::move(graph), device, 1)));
+  }
+  for (auto& thread : threads) { thread.join(); }
+}
 
 TEST(Api, graph_input_order_test) {
   EnvScope scope;
