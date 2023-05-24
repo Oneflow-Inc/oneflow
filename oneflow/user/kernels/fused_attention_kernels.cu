@@ -127,34 +127,6 @@ void SkipRmsNormOutputNormArgForward(ep::Stream* stream, const int64_t nrow, con
   }
 }
 
-union CublasScalarParameter {
-  double d;
-  float s;
-  half h;
-};
-template<typename T>
-__global__ void InitQKVPtr(const T* x, const T* wq, const T* wk, const T* wv, T* q, T* k, T* v,
-                           void** ptr_arr) {
-  ptr_arr[0] = const_cast<T*>(x);
-  ptr_arr[1] = const_cast<T*>(x);
-  ptr_arr[2] = const_cast<T*>(x);
-  ptr_arr[3] = const_cast<T*>(wq);
-  ptr_arr[4] = const_cast<T*>(wk);
-  ptr_arr[5] = const_cast<T*>(wv);
-  ptr_arr[6] = q;
-  ptr_arr[7] = k;
-  ptr_arr[8] = v;
-}
-template<typename T>
-__global__ void InitGluPtr(const T* post_norm_out, const T* gate_weight, const T* up_weight,
-                           T* gate_out, T* glu_out, void** ptr_arr) {
-  ptr_arr[0] = const_cast<T*>(post_norm_out);
-  ptr_arr[1] = const_cast<T*>(post_norm_out);
-  ptr_arr[2] = const_cast<T*>(gate_weight);
-  ptr_arr[3] = const_cast<T*>(up_weight);
-  ptr_arr[4] = gate_out;
-  ptr_arr[5] = glu_out;
-}
 template<typename T>
 struct Add {
   __device__ __forceinline__ T operator()(const T a, const T b) const { return a + b; }
@@ -1764,8 +1736,8 @@ class LlamaDecoderLayerForwardKernel final : public user_op::OpKernel {
           cuda_stream, bm, h * k, 1e-6, hidden_states->dptr<T>(), input_norm_weight->dptr<T>(),
           tmp_buffer->mut_dptr<T>(),
           reinterpret_cast<RmsNormComputeType*>(tmp_buffer->mut_dptr<char>() + activation_size));
-      // step2: q, k, v
 
+      // step2: q, k, v
       auto qkv_weight_shape = qkv_weight->shape_view();
       T* tmp_qkv_ptr = tmp_buffer->mut_dptr<T>() + input_num_elements;
       auto matmul_m = bm, matmul_k = h * k, matmul_n = qkv_weight_shape.At(0);
@@ -1918,6 +1890,7 @@ class LlamaDecoderLayerForwardKernel final : public user_op::OpKernel {
           ctx->device_type(), output->data_type(), ccl::kSum);
       all_reduce->Launch(ctx->stream(), tmp_buffer->dptr(), tmp_buffer->mut_dptr(),
                          input_num_elements, kernel_cache->communication_ctx());
+
       // step 8, residual add: out = out + hidden_states
       // step 9, post rms-norm
       h = output->shape_view().At(2) / k;
