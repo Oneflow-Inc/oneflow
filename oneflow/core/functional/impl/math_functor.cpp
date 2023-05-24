@@ -5478,6 +5478,7 @@ class RealFunctor {
   RealFunctor() { op_ = CHECK_JUST(one::OpBuilder("real").Input("x").Output("out").Build()); }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    if (!x->dtype()->is_complex()) { return x; }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
   }
 
@@ -5504,6 +5505,9 @@ class ImagFunctor {
   ImagFunctor() { op_ = CHECK_JUST(one::OpBuilder("imag").Input("x").Output("out").Build()); }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    CHECK_OR_RETURN(x->dtype()->is_complex())
+        << "RuntimeError: imag is implemented for tensors with complex dtypes, but gets"
+        << x->dtype()->name();
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
   }
 
@@ -5532,6 +5536,7 @@ class ConjFunctor {
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    if (!x->dtype()->is_complex()) { return x; }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
   }
 
