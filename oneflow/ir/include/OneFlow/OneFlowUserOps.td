@@ -2853,16 +2853,11 @@ def OneFlow_LlamaDecoderLayerForwardOp : OneFlow_BaseOp<"llama_decoder_layer_for
   let input = (ins
     OneFlow_Tensor:$hidden_states,
     Variadic<OneFlow_Tensor>:$input_norm_weights,
-    // Variadic<OneFlow_Tensor>:$query_weights,
-    // Variadic<OneFlow_Tensor>:$key_weights,
-    // Variadic<OneFlow_Tensor>:$value_weights,
     Variadic<OneFlow_Tensor>:$qkv_weights,
     Variadic<OneFlow_Tensor>:$attn_out_weights,
     OneFlow_Tensor:$position_ids,
     Variadic<OneFlow_Tensor>:$post_norm_weights,
-    Variadic<OneFlow_Tensor>:$mlp_gate_weights,
-    Variadic<OneFlow_Tensor>:$mlp_up_weights,
-    // Variadic<OneFlow_Tensor>:$glu_weights,
+    Variadic<OneFlow_Tensor>:$glu_weights,
     Variadic<OneFlow_Tensor>:$mlp_down_weights,
     Variadic<OneFlow_Tensor>:$past_keys,
     Variadic<OneFlow_Tensor>:$past_values

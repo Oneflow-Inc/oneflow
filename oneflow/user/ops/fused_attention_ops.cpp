@@ -813,8 +813,6 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   const int64_t head_size = ctx->Attr<int64_t>("head_size");
   const Shape& hidden_states_shape = hidden_states_desc.shape();
   auto b = hidden_states_shape.at(0), m = hidden_states_shape.at(1);
-  // const Shape& query_weight_shape = ctx->InputTensorDesc("query_weights", 0).shape();
-  // const int64_t h = query_weight_shape.at(0) / head_size;
   const Shape& qkv_weight_shape = ctx->InputTensorDesc("qkv_weights", 0).shape();
   const int64_t h = qkv_weight_shape.at(0) / head_size / 3;
   if (ctx->has_input("past_keys", 0)) {  // past_key: BHMK
@@ -843,17 +841,12 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   std::vector<user_op::OpArg> s0_args, s1_args, broadcast_args;
   for (int i = 0; i < n; ++i) {
     broadcast_args.emplace_back("input_norm_weights", i);
-    // s0_args.emplace_back("query_weights", i);
-    // s0_args.emplace_back("key_weights", i);
-    // s0_args.emplace_back("value_weights", i);
     s0_args.emplace_back("qkv_weights", i);
     s1_args.emplace_back("attn_out_weights", i);
     s1_args.emplace_back("concat_keys", i);
     s1_args.emplace_back("concat_values", i);
     broadcast_args.emplace_back("post_norm_weights", i);
-    s0_args.emplace_back("mlp_gate_weights", i);
-    s0_args.emplace_back("mlp_up_weights", i);
-    // s0_args.emplace_back("glu_weights", i);
+    s0_args.emplace_back("glu_weights", i);
     s1_args.emplace_back("mlp_down_weights", i);
     if (has_past_kv) {
       s1_args.emplace_back("past_keys", i);

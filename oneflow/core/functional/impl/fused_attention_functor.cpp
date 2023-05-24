@@ -742,16 +742,11 @@ class LlamaDecoderLayerForwardFunctor {
           CHECK_JUST(one::OpBuilder("llama_decoder_layer_forward")
                          .Input("hidden_states")
                          .Input("input_norm_weights", num_layers)
-                        //  .Input("query_weights", num_layers)
-                        //  .Input("key_weights", num_layers)
-                        //  .Input("value_weights", num_layers)
                          .Input("qkv_weights", num_layers)
                          .Input("attn_out_weights", num_layers)
                          .Input("position_ids")
                          .Input("post_norm_weights", num_layers)
-                         .Input("mlp_gate_weights", num_layers)
-                         .Input("mlp_up_weights", num_layers)
-                        //  .Input("glu_weights", num_layers)
+                         .Input("glu_weights", num_layers)
                          .Input("mlp_down_weights", num_layers)
                          .Input("past_keys", num_layers)
                          .Input("past_values", num_layers)
@@ -763,16 +758,11 @@ class LlamaDecoderLayerForwardFunctor {
       std::shared_ptr<OpExpr> op = CHECK_JUST(one::OpBuilder("llama_decoder_layer_forward")
                                                   .Input("hidden_states")
                                                   .Input("input_norm_weights", num_layers)
-                                                  // .Input("query_weights", num_layers)
-                                                  // .Input("key_weights", num_layers)
-                                                  // .Input("value_weights", num_layers)
                                                   .Input("qkv_weights", num_layers)
                                                   .Input("attn_out_weights", num_layers)
                                                   .Input("position_ids")
                                                   .Input("post_norm_weights", num_layers)
-                                                  .Input("mlp_gate_weights", num_layers)
-                                                  .Input("mlp_up_weights", num_layers)
-                                                  // .Input("glu_weights", num_layers)
+                                                  .Input("glu_weights", num_layers)
                                                   .Input("mlp_down_weights", num_layers)
                                                   .Output("output")
                                                   .Output("concat_keys", num_layers)
@@ -783,13 +773,10 @@ class LlamaDecoderLayerForwardFunctor {
   }
   Maybe<TensorTuple> operator()(
       const std::shared_ptr<one::Tensor>& hidden_states, const TensorTuple& input_norm_weights,
-      // const TensorTuple& query_weights, const TensorTuple& key_weights, const TensorTuple& value_weights,,
       const TensorTuple& qkv_weights, const TensorTuple& attn_out_weights,
       const std::shared_ptr<one::Tensor>& position_ids, const TensorTuple& post_norm_weights,
-      const TensorTuple& mlp_gate_weights, const TensorTuple& mlp_up_weights,
-      // const TensorTuple& glu_weights,
-      const TensorTuple& mlp_down_weights, const TensorTuple& past_keys,
-      const TensorTuple& past_values, const int64_t head_size) const {
+      const TensorTuple& glu_weights, const TensorTuple& mlp_down_weights,
+      const TensorTuple& past_keys, const TensorTuple& past_values, const int64_t head_size) const {
     int64_t num_layers = input_norm_weights.size();
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("head_size", "num_layers", "parallel_conf");
     auto parallel_desc = JUST(hidden_states->parallel_desc());
@@ -804,16 +791,11 @@ class LlamaDecoderLayerForwardFunctor {
 
     TensorTuple inputs{hidden_states};
     inputs.insert(inputs.end(), input_norm_weights.begin(), input_norm_weights.end());
-    // inputs.insert(inputs.end(), query_weights.begin(), query_weights.end());
-    // inputs.insert(inputs.end(), key_weights.begin(), key_weights.end());
-    // inputs.insert(inputs.end(), value_weights.begin(), value_weights.end());
     inputs.insert(inputs.end(), qkv_weights.begin(), qkv_weights.end());
     inputs.insert(inputs.end(), attn_out_weights.begin(), attn_out_weights.end());
     inputs.push_back(position_ids);
     inputs.insert(inputs.end(), post_norm_weights.begin(), post_norm_weights.end());
-    inputs.insert(inputs.end(), mlp_gate_weights.begin(), mlp_gate_weights.end());
-    inputs.insert(inputs.end(), mlp_up_weights.begin(), mlp_up_weights.end());
-    // inputs.insert(inputs.end(), glu_weights.begin(), glu_weights.end());
+    inputs.insert(inputs.end(), glu_weights.begin(), glu_weights.end());
     inputs.insert(inputs.end(), mlp_down_weights.begin(), mlp_down_weights.end());
 
     CHECK(past_keys.size() == 0 || past_keys.size() == num_layers);
