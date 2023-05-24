@@ -1,6 +1,6 @@
-// RUN: oneflow-opt %s --pass-pipeline="builtin.module(oneflow-transform-dialect-interpreter{transform-file-name=%p/softmax_codegen_spec.mlir})" \
-// RUN: | oneflow-opt --convert-vector-to-gpu=use-nvgpu=1 --convert-vector-to-scf --convert-scf-to-cf --insert-ofmempool --gpu-kernel-outlining \
-// RUN: | oneflow-opt --pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm))'
+// RUN: oneflow-opt %s --pass-pipeline="builtin.module(oneflow-transform-dialect-interpreter{transform-file-name=%p/softmax_codegen_spec_no_vectorize.mlir})" \
+// RUN: | oneflow-opt  --insert-ofmempool  --convert-linalg-to-loops --convert-scf-to-cf --canonicalize --cse --memref-expand  --gpu-kernel-outlining \
+// RUN: | oneflow-opt --pass-pipeline='builtin.module(gpu.module(expand-strided-metadata,lower-affine,strip-debuginfo,convert-gpu-to-nvvm,nvvm-to-cubin))'
 
 
 !tmp_tensor_t = tensor<16x128xf32>
