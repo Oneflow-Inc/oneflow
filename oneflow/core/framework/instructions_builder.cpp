@@ -29,7 +29,6 @@ limitations under the License.
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/blocking_counter.h"
-#include "oneflow/core/common/singleton_ptr.h"
 #include "oneflow/core/common/env_var/vm.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/access_blob_arg_cb_instruction_policy.h"

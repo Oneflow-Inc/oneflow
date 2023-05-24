@@ -116,7 +116,7 @@ def InsertOneFlowMemPoolPass : Pass<"insert-ofmempool", "ModuleOp"> {
   let constructor = "mlir::oneflow::createInsertOneFlowMemPoolPass()";
 }
 
-def FoldAllocToSubviewPass : Pass<"fold-alloc-to-subview", "ModuleOp"> {
+def FoldAllocToSubviewPass : Pass<"fold-alloc-to-subview", "func::FuncOp"> {
   let summary = "fold dispersed memref.alloc ops with memory optimize algo to a single memref.alloc op and memref.subview ops";
   let constructor = "mlir::oneflow::createFoldAllocToSubviewPass()";
 }

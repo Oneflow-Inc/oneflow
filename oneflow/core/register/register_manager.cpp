@@ -123,7 +123,8 @@ void RegstMgr::AddPlan(
       CHECK(mem_block.has_chunk_offset());
       CHECK(chunk_id2ptr.find(mem_block.chunk_id()) != chunk_id2ptr.end());
       char* mem_block_ptr = chunk_id2ptr.at(mem_block.chunk_id()) + mem_block.chunk_offset();
-      CHECK(mem_block_id2ptr_.emplace(mem_block_id, mem_block_ptr).second);
+      CHECK(mem_block_id2ptr_.emplace(mem_block_id, mem_block_ptr).second)
+          << " duplicated mem_block_id " << mem_block_id;
       CHECK(!mem_block.has_variable_op_name());
     } else if (mem_block.has_variable_op_name()) {
       // NOTE(chengcheng): bind mem_block_ptr to variable blob header_ptr and body_ptr

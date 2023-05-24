@@ -202,7 +202,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   CHECK_LE_OR_RETURN(vaild_ccl_comm_mgr_device_types.size(), 1)
       << "Only one kind collective communication manager is supported at most at the same time for "
          "now!";
-  if (!vaild_ccl_comm_mgr_device_types.empty()) {
+  if (!vaild_ccl_comm_mgr_device_types.empty() && !Singleton<EagerCclCommMgr>::Get()) {
     Singleton<EagerCclCommMgr>::SetAllocated(
         EagerCclCommMgrBuilder::Get().NewCclCommMgr(vaild_ccl_comm_mgr_device_types.front()));
   }

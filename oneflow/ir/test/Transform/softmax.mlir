@@ -1,4 +1,8 @@
-// RUN: oneflow-opt %s --pass-pipeline="builtin.module(oneflow-transform-dialect-interpreter{transform-file-name=%p/softmax-trait.mlir})"
+// RUN: oneflow-opt %s --pass-pipeline="builtin.module(oneflow-transform-dialect-interpreter{transform-file-name=%p/softmax_codegen_spec.mlir})" \
+// RUN: | oneflow-opt --convert-vector-to-gpu=use-nvgpu=1 --convert-vector-to-scf --convert-scf-to-cf --insert-ofmempool --gpu-kernel-outlining \
+// RUN: | oneflow-opt --pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm))'
+
+
 !tmp_tensor_t = tensor<16x128xf32>
 !in_tensor_t = tensor<16x128x128xf32>
 !out_tensor_t = tensor<16x128x128xf32>
@@ -29,29 +33,20 @@ func.func @softmax() -> !out_tensor_t {
   %exps_sum_empty = tensor.empty() : !tmp_tensor_t
   %exps_sum_filled = linalg.fill ins(%cst_0 : f32)
     outs(%exps_sum_empty : !tmp_tensor_t) -> !tmp_tensor_t
-  %exps = linalg.generic
+  %exps, %exps_sum = linalg.generic
     {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
                       affine_map<(d0, d1, d2) -> (d0, d1)>,
-                      affine_map<(d0, d1, d2) -> (d0, d1, d2)>],
-                      iterator_types = ["parallel", "parallel", "parallel"]}
-     ins(%input, %input_max : !in_tensor_t, !tmp_tensor_t)
-    outs(%exps_empty : !out_tensor_t) {
-      ^bb0(%arg0: f32, %arg1: f32, %arg2: f32):
-        %sub = arith.subf %arg0, %arg1 : f32
-        %exp = math.exp %sub : f32
-        linalg.yield %exp: f32
-      } -> (!out_tensor_t)
-
-  %exps_sum = linalg.generic
-    {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
+                      affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
                       affine_map<(d0, d1, d2) -> (d0, d1)>],
                       iterator_types = ["parallel", "parallel", "reduction"]}
-     ins(%exps : !out_tensor_t)
-    outs(%exps_sum_filled : !tmp_tensor_t) {
-      ^bb0(%exp: f32, %acc: f32):
-        %add = arith.addf %exp, %acc : f32
-        linalg.yield %add : f32
-      } -> (!tmp_tensor_t)
+     ins(%input, %input_max : !in_tensor_t, !tmp_tensor_t)
+    outs(%exps_empty, %exps_sum_filled : !out_tensor_t, !tmp_tensor_t) {
+      ^bb0(%arg0: f32, %arg1: f32, %arg2: f32, %arg3: f32):
+        %sub = arith.subf %arg0, %arg1 : f32
+        %exp = math.exp %sub : f32
+        %add = arith.addf %exp, %arg3 : f32
+        linalg.yield %exp, %add : f32, f32
+      } -> (!out_tensor_t, !tmp_tensor_t)
 
   %res_empty = tensor.empty() : !out_tensor_t
   %res = linalg.generic
