@@ -33,7 +33,7 @@ class MatMulModule(flow.nn.Module):
         self.b = flow.nn.Parameter(flow.Tensor(10))
 
     def forward(self, x):
-        return flow.matmul(x, self.w)
+        return flow.matmul(x, self.w) + self.b
 
 
 def do_relu_graph(test_case, with_cuda):
