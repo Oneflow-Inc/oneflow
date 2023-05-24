@@ -85,7 +85,7 @@ class ScalarMathBaseFunctor {
                                                  "int_operand", "has_int_operand");
     TensorProcessor tensor_processor;
     Symbol<DType> lowest_dtype;
-    if (scalar.IsFloatingPoint()) {
+    if (scalar.IsFloatingPoint() || scalar.IsComplex()) {
       attrs.SetAllAttrs(scalar.As<double>(), true, NullOpt, false);
       // Only promote type to Float32 when tensor is Int type but scalar is float type.
       if (DType::priority_order[x->dtype()->data_type()]
