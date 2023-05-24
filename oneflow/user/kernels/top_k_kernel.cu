@@ -64,19 +64,19 @@ struct NumericLimit<int64_t> {
 
 template<typename T, typename IndexType>
 struct TopKReduceUnit {
-    IndexType index = 0;
+    int64_t index = -1;
     T value = - NumericLimit<T>::max();
 
     __device__ __forceinline__ void insert(T elem, IndexType elem_id){
         if (elem > value) {
             value = elem;
-            index = elem_id;
+            index = static_cast<int64_t>(elem_id);
         }
     }
 
     __device__ __forceinline__ void init(){    
         value = - NumericLimit<T>::max();
-        index = 0;
+        index = -1;
     }
 };
 
@@ -199,7 +199,8 @@ __global__ void reduceTopKStage2(
     // write out the result, and change the input buffer
     if(tid == 0){
         const IndexType index = batch_out_index + ite;
-        out_values[index] = total.value;
+        // TODO: obtain sorted top-k values from here
+        // out_values[index] = total.value;
         out_indices[index] = temp_out_indices[total.index] % n;
         temp_out_values[total.index] = -MAX_T_VAL;
     }
@@ -289,7 +290,7 @@ void DispatchBlockSize(
   } else if (k >= 65 && k <= 1024) {
     LAUNCH_KERNEL( /* block_size_s1 */256, /* block_size_s2 */256 );
   } else {
-    THROW(RuntimeError) << "top-k kernel can't support k that exceed 1024";
+    UNIMPLEMENTED() << "top-k kernel can't support k that exceed 1024";
   }
 
 #undef LAUNCH_KERNEL
@@ -394,8 +395,7 @@ class GpuTopKKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     if (in->shape_view().elem_cnt() == 0) { return; }
-    user_op::Tensor* out_values = ctx->Tensor4ArgNameAndIndex("out", 0);
-    user_op::Tensor* out_indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
+    user_op::Tensor* out_indices = ctx->Tensor4ArgNameAndIndex("out", 0);
 
     const int64_t elem_cnt = in->shape_view().elem_cnt();
     const int64_t instance_size = in->shape_view().At(in->shape_view().NumAxes() - 1);
@@ -407,14 +407,14 @@ class GpuTopKKernel final : public user_op::OpKernel {
       /* capacity */ static_cast<int64_t>(tmp_buffer->shape_view().elem_cnt()),
       /* ptr */ tmp_buffer->mut_dptr<void>(),
       /* in_shape */ in->shape_view(),
-      /* out_shape */ out_values->shape_view()
+      /* out_shape */ out_indices->shape_view()
     );
 
     DispatchIndexType<T>(
       /* stream */ ctx->stream(),
       /* input */ in->dptr<T>(),
       /* temp_input */ buf_manager.TempInputPtr(),
-      /* out_values */ out_values->mut_dptr<T>(),
+      /* out_values */ nullptr,
       /* temp_out_values */ buf_manager.TempOutputValuesPtr(),
       /* out_indices */ out_indices->mut_dptr<int64_t>(),
       /* temp_out_indices */ buf_manager.TempOutputIndicesPtr(),

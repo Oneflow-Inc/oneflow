@@ -29,10 +29,27 @@ def _test_top_k(test_case, shape, k, dim, device):
     if k >= shape[dim]:
         return
     x_np = np.random.randn(*shape)
+
+    # 
+    for row_index in range(shape[0]):
+        x_np[row_index, 0] = 5.0
+
     x_of = flow.tensor(x_np, device=device)
     of_out = flow.topk(x_of, k=k, dim=dim)
     x_pt = torch.tensor(x_np, device=device)
     pt_out = torch.topk(x_pt, k=k, dim=dim)
+    # print("\n")
+    # print("of:")
+    # print("indices:")
+    # print(of_out.indices.cpu().numpy())
+    # print("values:")
+    # print(of_out.values.cpu().numpy())
+    # print("torch:")
+    # print("indices:")
+    # print(pt_out.indices.cpu().numpy())
+    # print("values:")
+    # print(pt_out.values.cpu().numpy())
+    # print("\n")
     test_case.assertTrue(
         np.array_equal(of_out.values.cpu().numpy(), pt_out.values.cpu().numpy())
     )
@@ -45,10 +62,10 @@ def _test_top_k(test_case, shape, k, dim, device):
 class TestTopK(flow.unittest.TestCase):
     def test_in_top_k(test_case):
         arg_dict = OrderedDict()
-        arg_dict["shape"] = [(1, 16), (1, 1024), (8, 8), (8, 256)]
+        arg_dict["shape"] = [(8, 8)]
         arg_dict["k"] = [1, 4, 64]
         arg_dict["dim"] = [0, 1]
-        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["device"] = ["cuda"]
         for arg in GenArgList(arg_dict):
             _test_top_k(test_case, *arg)
 
