@@ -78,23 +78,25 @@ static Maybe<mlir::FunctionType> GetFunctionType(user_op::InferContext* ctx,
 }
 
 Maybe<void> SetTensorDataType(user_op::InferContext* ctx) {
-  auto mlir_assembly_str = ctx->Attr<std::string>("mlir_assembly");
+  auto mlir_assembly = ctx->Attr<std::vector<char>>("mlir_assembly");
   mlir::DialectRegistry registry;
   mlir::registerAllDialects(registry);
   mlir::MLIRContext context(registry);
   context.loadDialect<mlir::func::FuncDialect>();
   context.loadDialect<mlir::oneflow::OneFlowDialect>();
 
-  mlir::OwningOpRef<mlir::ModuleOp> module =
-      mlir::parseSourceString<mlir::ModuleOp>(mlir_assembly_str, &context);
+  mlir::OwningOpRef<mlir::ModuleOp> module = mlir::parseSourceString<mlir::ModuleOp>(
+      llvm::StringRef(mlir_assembly.data(), mlir_assembly.size() - 1), &context);
   if (!module) {
     LOG(ERROR) << "Fail to load mlir assembly";
     exit(1);
   }
 
-  auto raw_graph = (*module)->getAttr(mlir::oneflow::jit::RAW_GRAPH).cast<mlir::StringAttr>();
-  if (raw_graph)
-    module = mlir::parseSourceString<mlir::ModuleOp>(raw_graph.strref(), module->getContext());
+  if ((*module)->hasAttr(mlir::oneflow::jit::RAW_GRAPH)) {
+    auto raw_graph = (*module)->getAttr(mlir::oneflow::jit::RAW_GRAPH).cast<mlir::StringAttr>();
+    if (raw_graph)
+      module = mlir::parseSourceString<mlir::ModuleOp>(raw_graph.strref(), module->getContext());
+  }
 
   auto funcType = *JUST(GetFunctionType(ctx, module));
   int32_t res_i = 0;
@@ -116,23 +118,25 @@ Maybe<void> SetTensorDataType(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
-  auto mlir_assembly_str = ctx->Attr<std::string>("mlir_assembly");
+  auto mlir_assembly = ctx->Attr<std::vector<char>>("mlir_assembly");
   mlir::DialectRegistry registry;
   mlir::registerAllDialects(registry);
   mlir::MLIRContext context(registry);
   context.loadDialect<mlir::func::FuncDialect>();
   context.loadDialect<mlir::oneflow::OneFlowDialect>();
 
-  mlir::OwningOpRef<mlir::ModuleOp> module =
-      mlir::parseSourceString<mlir::ModuleOp>(mlir_assembly_str, &context);
+  mlir::OwningOpRef<mlir::ModuleOp> module = mlir::parseSourceString<mlir::ModuleOp>(
+      llvm::StringRef(mlir_assembly.data(), mlir_assembly.size() - 1), &context);
   if (!module) {
     LOG(ERROR) << "Fail to load mlir assembly";
     exit(1);
   }
 
-  auto raw_graph = (*module)->getAttr(mlir::oneflow::jit::RAW_GRAPH).cast<mlir::StringAttr>();
-  if (raw_graph)
-    module = mlir::parseSourceString<mlir::ModuleOp>(raw_graph.strref(), module->getContext());
+  if ((*module)->hasAttr(mlir::oneflow::jit::RAW_GRAPH)) {
+    auto raw_graph = (*module)->getAttr(mlir::oneflow::jit::RAW_GRAPH).cast<mlir::StringAttr>();
+    if (raw_graph)
+      module = mlir::parseSourceString<mlir::ModuleOp>(raw_graph.strref(), module->getContext());
+  }
 
   auto funcType = *JUST(GetFunctionType(ctx, module));
   int32_t res_i = 0;
