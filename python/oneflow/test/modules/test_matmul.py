@@ -69,15 +69,16 @@ class TestModule(flow.unittest.TestCase):
             np.allclose(flow_output_numpy, torch_output_numpy, 1e-05, 1e-05)
         )
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @autotest(n=5, check_graph=False)
     def test_flow_tensor_matmul_with_random_fp16_data(test_case):
         x = np.random.rand(3, 5)
         y = np.random.rand(5, 4)
-        torch_x = torch.from_numpy(x).to(torch.float16).to("cuda")
-        torch_y = torch.from_numpy(y).to(torch.float16).to("cuda")
+        torch_x = torch.from_numpy(x).to(device=gpu_device(), dtype=torch.float16)
+        torch_y = torch.from_numpy(y).to(device=gpu_device(), dtype=torch.float16)
         torch_output_numpy = torch_x.matmul(torch_y).cpu().numpy()
-        flow_x = flow.tensor(x).to(flow.float16).to("cuda")
-        flow_y = flow.tensor(y).to(flow.float16).to("cuda")
+        flow_x = flow.tensor(x).to(device="cuda", dtype=flow.float16)
+        flow_y = flow.tensor(y).to(device="cuda", dtype=flow.float16)
         flow_output_numpy = flow_x.matmul(flow_y).cpu().numpy()
         test_case.assertTrue(
             np.allclose(flow_output_numpy, torch_output_numpy, 1e-05, 1e-05)
