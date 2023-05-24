@@ -797,8 +797,8 @@ class ReduceMeanWholeFunctor {
   ReduceMeanWholeFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     // ReduceMean only calculate floating values.
-    CHECK_OR_RETURN(IsFloatingDataType(x->dtype()->data_type()))
-        << "RuntimeError: Can only calculate the mean of floating types.";
+    CHECK_OR_RETURN(IsFloatingDataType(x->dtype()->data_type()) || IsComplexDataType(x->dtype()->data_type()))
+        << "RuntimeError: Can only calculate the mean of floating types or complex types.";
     size_t reduce_count = 1;
     reduce_count = x->shape()->Count(0);
     const auto& sum = JUST(functional::ReduceSumWhole(x, NullOpt));
