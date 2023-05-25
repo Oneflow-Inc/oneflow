@@ -51,6 +51,8 @@ namespace user_op {
   OF_PP_MAKE_TUPLE_SEQ(at_shape, Shape, AttrType::kAtShape) \
   OF_PP_MAKE_TUPLE_SEQ(at_stride, Stride, AttrType::kAtStride)
 
+#define BYTES_ATTR_SEQ OF_PP_MAKE_TUPLE_SEQ(at_bytes, std::vector<char>, AttrType::kAtBytes)
+
 #define LIST_BASIC_ATTR_SEQ                                                         \
   OF_PP_MAKE_TUPLE_SEQ(at_list_int32, std::vector<int32_t>, AttrType::kAtListInt32) \
   OF_PP_MAKE_TUPLE_SEQ(at_list_int64, std::vector<int64_t>, AttrType::kAtListInt64) \
@@ -75,6 +77,7 @@ namespace user_op {
   BASIC_ATTR_SEQ        \
   ENUM_ATTR_SEQ         \
   MESSAGE_ATTR_SEQ      \
+  BYTES_ATTR_SEQ        \
   LIST_BASIC_ATTR_SEQ   \
   LIST_ENUM_ATTR_SEQ    \
   LIST_MESSAGE_ATTR_SEQ \

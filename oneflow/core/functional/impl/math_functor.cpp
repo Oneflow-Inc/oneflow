@@ -797,8 +797,8 @@ class ReduceMeanWholeFunctor {
   ReduceMeanWholeFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     // ReduceMean only calculate floating values.
-    CHECK_OR_RETURN(IsFloatingDataType(x->dtype()->data_type()))
-        << "RuntimeError: Can only calculate the mean of floating types.";
+    CHECK_OR_RETURN(IsFloatingDataType(x->dtype()->data_type()) || IsComplexDataType(x->dtype()->data_type()))
+        << "RuntimeError: Can only calculate the mean of floating types or complex types.";
     size_t reduce_count = 1;
     reduce_count = x->shape()->Count(0);
     const auto& sum = JUST(functional::ReduceSumWhole(x, NullOpt));
@@ -5478,6 +5478,7 @@ class RealFunctor {
   RealFunctor() { op_ = CHECK_JUST(one::OpBuilder("real").Input("x").Output("out").Build()); }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    if (!x->dtype()->is_complex()) { return x; }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
   }
 
@@ -5504,6 +5505,9 @@ class ImagFunctor {
   ImagFunctor() { op_ = CHECK_JUST(one::OpBuilder("imag").Input("x").Output("out").Build()); }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    CHECK_OR_RETURN(x->dtype()->is_complex())
+        << "RuntimeError: imag is implemented for tensors with complex dtypes, but gets"
+        << x->dtype()->name();
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
   }
 
@@ -5532,7 +5536,7 @@ class ConjFunctor {
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
-    if (!IsComplexDataType(x->dtype()->data_type())) { return x; }
+    if (!x->dtype()->is_complex()) { return x; }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
   }
 

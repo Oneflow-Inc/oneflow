@@ -596,6 +596,60 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTrunc, nv_bfloat16, nv_bfloat16
 #endif  // CUDA_VERSION >= 11000
 
 /*********float complex dtype support*********/
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kConj, Dst, Src> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return Dst{src.x, -src.y}; }
+};
+
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kReal, Dst, Src> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return static_cast<Dst>(src.x); }
+};
+
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kImag, Dst, Src> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return static_cast<Dst>(src.y); }
+};
+
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kRealGrad, Dst, Src> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return Dst{src, 0.0}; }
+};
+
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kImagGrad, Dst, Src> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return Dst{0.0, src}; }
+};
+
+// avoid warning: narrowing conversion
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kRealGrad, cuComplex, double> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC cuComplex operator()(double src) const {
+    return cuComplex{static_cast<float>(src), 0.0f};
+  }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kImagGrad, cuComplex, double> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC cuComplex operator()(double src) const {
+    return cuComplex{0.0f, static_cast<float>(src)};
+  }
+};
+
 template<typename Src>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCast, cuComplex, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}

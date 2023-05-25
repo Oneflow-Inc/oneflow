@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/elementwise_unary.h"
 #include "oneflow/core/ep/include/primitive/primitive.h"
 #include "oneflow/core/ep/include/primitive/unary_op.h"
-#include "oneflow/user/kernels/complex_kernels_util.h"
+#include "oneflow/user/kernels/elementwise_primitive_kernel.h"
 #include <complex>
 #ifdef WITH_CUDA
 #include <cuComplex.h>
@@ -27,177 +27,43 @@ limitations under the License.
 namespace oneflow {
 namespace user_op {
 
-template<DeviceType device, typename dtype_x, typename dtype_out>
-class RealKernel final : public user_op::OpKernel {
- public:
-  RealKernel() = default;
-  ~RealKernel() = default;
+#define COMPLEX_UNARY_ELEMENTWISE_PRIMITIVE_SEQ                        \
+  OF_PP_MAKE_TUPLE_SEQ("conj_physical", ep::primitive::UnaryOp::kConj) \
+  OF_PP_MAKE_TUPLE_SEQ("real", ep::primitive::UnaryOp::kReal)          \
+  OF_PP_MAKE_TUPLE_SEQ("imag", ep::primitive::UnaryOp::kImag)
 
- private:
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+#define COMPLEX_UNARY_GRAD_ELEMENTWISE_PRIMITIVE_SEQ                   \
+  OF_PP_MAKE_TUPLE_SEQ("real_grad", ep::primitive::UnaryOp::kRealGrad) \
+  OF_PP_MAKE_TUPLE_SEQ("imag_grad", ep::primitive::UnaryOp::kImagGrad)
 
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
-    user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    if (out_tensor->shape_view().elem_cnt() == 0) { return; }
-    const dtype_x* x = x_tensor->dptr<dtype_x>();
-    dtype_out* out = out_tensor->mut_dptr<dtype_out>();
-    RealFunctor<device, dtype_x, dtype_out>()(ctx->stream(), x, out,
-                                              out_tensor->shape_view().elem_cnt());
-  }
-};
+#define REGISTER_COMPLEX_KERNEL(name, UnaryOp)                                            \
+  REGISTER_USER_KERNEL(name)                                                              \
+      .SetCreateFn([]() {                                                                 \
+        return user_op::NewOpKernel<UnaryPrimitiveKernel>(                                \
+            "out", "x", [](user_op::KernelComputeContext* ctx) {                          \
+              const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0); \
+              const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("x", 0);   \
+              return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>( \
+                  ctx->device_type(), UnaryOp, src->data_type(), dst->data_type());       \
+            });                                                                           \
+      })                                                                                  \
+      .SetIsMatchedHob(UnaryPrimitiveExists(UnaryOp, "out", "x"));
+OF_PP_FOR_EACH_TUPLE(REGISTER_COMPLEX_KERNEL, COMPLEX_UNARY_ELEMENTWISE_PRIMITIVE_SEQ)
 
-#define REGISTER_REAL_KERNEL(device, dtype_x, dtype_out)     \
-  REGISTER_USER_KERNEL("real")                               \
-      .SetCreateFn<RealKernel<device, dtype_x, dtype_out>>() \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)  \
-                       && (user_op::HobDataType("x", 0) == GetDataType<dtype_x>::value));
+#define REGISTER_COMPLEX_GRAD_KERNEL(name, UnaryOp)                                        \
+  REGISTER_USER_KERNEL(name)                                                               \
+      .SetCreateFn([]() {                                                                  \
+        return user_op::NewOpKernel<UnaryPrimitiveKernel>(                                 \
+            "dx", "dout", [](user_op::KernelComputeContext* ctx) {                         \
+              const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);   \
+              const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dout", 0); \
+              return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(  \
+                  ctx->device_type(), UnaryOp, src->data_type(), dst->data_type());        \
+            });                                                                            \
+      })                                                                                   \
+      .SetIsMatchedHob(UnaryPrimitiveExists(UnaryOp, "dx", "dout"));
 
-REGISTER_REAL_KERNEL(DeviceType::kCPU, std::complex<float>, float)
-REGISTER_REAL_KERNEL(DeviceType::kCPU, std::complex<double>, double)
-#ifdef WITH_CUDA
-REGISTER_REAL_KERNEL(DeviceType::kCUDA, cuComplex, float)
-REGISTER_REAL_KERNEL(DeviceType::kCUDA, cuDoubleComplex, double)
-#endif  // WITH_CUDA
-
-template<DeviceType device, typename dtype_dout, typename dtype_dx>
-class RealGradKernel final : public user_op::OpKernel {
- public:
-  RealGradKernel() = default;
-  ~RealGradKernel() = default;
-
- private:
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* dout_tensor = ctx->Tensor4ArgNameAndIndex("dout", 0);
-    user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    if (dx_tensor->shape_view().elem_cnt() == 0) { return; }
-    const dtype_dout* dout = dout_tensor->dptr<dtype_dout>();
-    dtype_dx* dx = dx_tensor->mut_dptr<dtype_dx>();
-    RealGradFunctor<device, dtype_dout, dtype_dx>()(ctx->stream(), dout, dx,
-                                                    dx_tensor->shape_view().elem_cnt());
-  }
-};
-
-#define REGISTER_REAL_GRAD_KERNEL(device, dtype_dout, dtype_dx)    \
-  REGISTER_USER_KERNEL("real_grad")                                \
-      .SetCreateFn<RealGradKernel<device, dtype_dout, dtype_dx>>() \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)        \
-                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype_dx>::value));
-
-REGISTER_REAL_GRAD_KERNEL(DeviceType::kCPU, float, std::complex<float>)
-REGISTER_REAL_GRAD_KERNEL(DeviceType::kCPU, double, std::complex<double>)
-#ifdef WITH_CUDA
-REGISTER_REAL_GRAD_KERNEL(DeviceType::kCUDA, float, cuComplex)
-REGISTER_REAL_GRAD_KERNEL(DeviceType::kCUDA, double, cuDoubleComplex)
-#endif  // WITH_CUDA
-
-template<DeviceType device, typename dtype_x, typename dtype_out>
-class ImagKernel final : public user_op::OpKernel {
- public:
-  ImagKernel() = default;
-  ~ImagKernel() = default;
-
- private:
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
-    user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    if (out_tensor->shape_view().elem_cnt() == 0) { return; }
-    const dtype_x* x = x_tensor->dptr<dtype_x>();
-    dtype_out* out = out_tensor->mut_dptr<dtype_out>();
-    ImagFunctor<device, dtype_x, dtype_out>()(ctx->stream(), x, out,
-                                              out_tensor->shape_view().elem_cnt());
-  }
-};
-
-#define REGISTER_IMAG_KERNEL(device, dtype_x, dtype_out)     \
-  REGISTER_USER_KERNEL("imag")                               \
-      .SetCreateFn<ImagKernel<device, dtype_x, dtype_out>>() \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)  \
-                       && (user_op::HobDataType("x", 0) == GetDataType<dtype_x>::value));
-
-REGISTER_IMAG_KERNEL(DeviceType::kCPU, std::complex<float>, float)
-REGISTER_IMAG_KERNEL(DeviceType::kCPU, std::complex<double>, double)
-#ifdef WITH_CUDA
-REGISTER_IMAG_KERNEL(DeviceType::kCUDA, cuComplex, float)
-REGISTER_IMAG_KERNEL(DeviceType::kCUDA, cuDoubleComplex, double)
-#endif  // WITH_CUDA
-
-template<DeviceType device, typename dtype_dout, typename dtype_dx>
-class ImagGradKernel final : public user_op::OpKernel {
- public:
-  ImagGradKernel() = default;
-  ~ImagGradKernel() = default;
-
- private:
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* dout_tensor = ctx->Tensor4ArgNameAndIndex("dout", 0);
-    user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    if (dx_tensor->shape_view().elem_cnt() == 0) { return; }
-    const dtype_dout* dout = dout_tensor->dptr<dtype_dout>();
-    dtype_dx* dx = dx_tensor->mut_dptr<dtype_dx>();
-    ImagGradFunctor<device, dtype_dout, dtype_dx>()(ctx->stream(), dout, dx,
-                                                    dx_tensor->shape_view().elem_cnt());
-  }
-};
-
-#define REGISTER_IMAG_GRAD_KERNEL(device, dtype_dout, dtype_dx)    \
-  REGISTER_USER_KERNEL("imag_grad")                                \
-      .SetCreateFn<ImagGradKernel<device, dtype_dout, dtype_dx>>() \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)        \
-                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype_dx>::value));
-
-REGISTER_IMAG_GRAD_KERNEL(DeviceType::kCPU, float, std::complex<float>)
-REGISTER_IMAG_GRAD_KERNEL(DeviceType::kCPU, double, std::complex<double>)
-#ifdef WITH_CUDA
-REGISTER_IMAG_GRAD_KERNEL(DeviceType::kCUDA, float, cuComplex)
-REGISTER_IMAG_GRAD_KERNEL(DeviceType::kCUDA, double, cuDoubleComplex)
-#endif  // WITH_CUDA
-
-template<DeviceType device, typename T>
-class ConjPhysicalKernel final : public user_op::OpKernel {
- public:
-  ConjPhysicalKernel() = default;
-  ~ConjPhysicalKernel() = default;
-
- private:
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
-    user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const ShapeView input_shape = input_tensor->shape_view();
-    const ShapeView output_shape = output_tensor->shape_view();
-    CHECK_EQ(input_shape, output_shape) << "Input shape should be equal to Output shape.";
-    auto primitive = ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
-        ctx->device_type(), ep::primitive::UnaryOp::kConj, input_tensor->data_type(),
-        output_tensor->data_type());
-    CHECK(primitive);
-    const int64_t elem_cnt = input_shape.elem_cnt();
-
-    if (elem_cnt != 0) {
-      primitive->Launch(ctx->stream(), input_tensor->dptr(), output_tensor->mut_dptr(), elem_cnt);
-    }
-  }
-};
-
-#define REGISTER_CONJ_PHYSICAL_KERNEL(device, dtype)        \
-  REGISTER_USER_KERNEL("conj_physical")                     \
-      .SetCreateFn<ConjPhysicalKernel<device, dtype>>()     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device) \
-                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
-
-REGISTER_CONJ_PHYSICAL_KERNEL(DeviceType::kCPU, std::complex<float>)
-REGISTER_CONJ_PHYSICAL_KERNEL(DeviceType::kCPU, std::complex<double>)
-#ifdef WITH_CUDA
-REGISTER_CONJ_PHYSICAL_KERNEL(DeviceType::kCUDA, cuComplex)
-REGISTER_CONJ_PHYSICAL_KERNEL(DeviceType::kCUDA, cuDoubleComplex)
-#endif  // WITH_CUDA
+OF_PP_FOR_EACH_TUPLE(REGISTER_COMPLEX_GRAD_KERNEL, COMPLEX_UNARY_GRAD_ELEMENTWISE_PRIMITIVE_SEQ)
 
 }  // namespace user_op
 }  // namespace oneflow
