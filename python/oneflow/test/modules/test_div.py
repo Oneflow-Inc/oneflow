@@ -137,17 +137,11 @@ class TestDiv(flow.unittest.TestCase):
 
     @autotest(n=10, auto_backward=True, include_complex=True)
     def test_non_contiguous_inplace_div(test_case):
-        # device = random_device()
-        device = cpu_device()
+        device = random_device()
         x = random_tensor(2, 2, 4, dtype=complex).to(device)
         y = x + 1
         y = y[:, 1:3]
-        temp = random_tensor(2, 2, 2, dtype=complex).to(device)
-        print("y = ")
-        print(y)
-        print("temp = ")
-        print(temp)
-        y /= temp
+        y /= random_tensor(2, 2, 2, dtype=complex).to(device)
         return y
 
     @autotest(n=3, check_graph=False)
@@ -157,7 +151,7 @@ class TestDiv(flow.unittest.TestCase):
         torch_out = torch.arange(num_elems) / num_elems
         test_case.assertTrue(np.allclose(flow_out.numpy(), torch_out.numpy()))
 
-    @autotest(n=5)
+    @autotest(n=5, include_complex=True)
     def test_scalar_div_with_random_devices(test_case):
         x1_device = random_device()
         x2_device = random_device()

@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
-#include "oneflow/user/kernels/complex_kernels_util.h"
 #include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
 
 namespace oneflow {
@@ -50,8 +49,9 @@ class BroadcastDivGradKernel final : public user_op::OpKernel {
                       z_tensor->dptr(), y_tensor->shape_view().NumAxes(),
                       y_tensor->shape_view().ptr(), y_tensor->dptr<T>(), tmp_buffer->mut_dptr<T>());
 
-    auto conj = ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(ctx->device_type(), ep::primitive::UnaryOp::kConj, z_tensor->data_type(), z_tensor->data_type());
-    if (conj){
+    if (IsComplexDataType(z_tensor->data_type())){
+        auto conj = ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(ctx->device_type(), ep::primitive::UnaryOp::kConj, z_tensor->data_type(), z_tensor->data_type());
+        CHECK(conj);
         const int64_t elem_cnt = dz_tensor->shape_view().elem_cnt();
         conj->Launch(ctx->stream(), tmp_buffer->dptr<T>(), tmp_buffer->mut_dptr<T>(), elem_cnt);
     }
