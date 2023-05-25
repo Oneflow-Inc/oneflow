@@ -320,10 +320,10 @@ include(op_schema)
 get_property(EXTERNAL_TARGETS GLOBAL PROPERTY EXTERNAL_TARGETS)
 
 if(APPLE)
-  set(of_libs -Wl,-force_load oneflow of_op_schema)
+  set(of_libs ${ALL_ARCHIVE_BEGIN} oneflow of_op_schema ${ALL_ARCHIVE_END})
   target_link_libraries(oneflow of_protoobj of_functional_obj ${oneflow_third_party_libs})
 elseif(UNIX)
-  set(of_libs -Wl,--whole-archive oneflow of_op_schema -Wl,--no-whole-archive -ldl -lrt)
+  set(of_libs ${ALL_ARCHIVE_BEGIN} of_op_schema ${ALL_ARCHIVE_END} -ldl -lrt)
   target_link_libraries(
     oneflow
     of_protoobj
@@ -378,7 +378,8 @@ if(BUILD_PYTHON OR BUILD_CPP_API)
   oneflow_add_library(of_api_common OBJECT ${of_api_common_files})
   target_link_libraries(of_api_common oneflow)
   if(WITH_MLIR)
-    target_link_libraries(of_api_common ${ONEFLOW_MLIR_LIBS})
+    target_link_libraries(of_api_common ${ALL_ARCHIVE_BEGIN} ${ONEFLOW_MLIR_LIBS}
+                          ${ALL_ARCHIVE_END})
   endif()
 endif()
 
@@ -471,7 +472,8 @@ if(BUILD_TESTING)
     target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs} glog::glog
                           ${oneflow_test_libs})
     if(WITH_MLIR)
-      target_link_libraries(oneflow_testexe MLIROneFlowExtension)
+      target_link_libraries(oneflow_testexe ${ALL_ARCHIVE_BEGIN} MLIROneFlowExtension
+                            ${ALL_ARCHIVE_END})
     endif()
   endif()
 
