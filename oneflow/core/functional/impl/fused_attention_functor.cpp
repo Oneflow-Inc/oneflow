@@ -781,7 +781,9 @@ class LlamaDecoderLayerForwardFunctor {
                                 const int64_t head_size) const {
     int64_t num_layers = input_norm_weights.size();
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("head_size", "num_layers", "parallel_conf");
-    auto parallel_desc = JUST(hidden_states->parallel_desc());
+    auto parallel_desc = hidden_states->is_global()
+                             ? JUST(hidden_states->parallel_desc())
+                             : JUST(Placement4Device(JUST(hidden_states->device())));
     auto it = parallel_desc2str_.find(parallel_desc);
     if (it == parallel_desc2str_.end()) {
       std::string conf = PbMessage2TxtString(parallel_desc->parallel_conf());

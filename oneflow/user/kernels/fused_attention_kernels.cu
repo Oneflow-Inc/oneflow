@@ -1563,6 +1563,7 @@ class EagerCclOpKernelCache final : public user_op::OpKernelCache {
   const std::shared_ptr<ccl::CommunicationContext>& communication_ctx() const {
     return communication_ctx_;
   }
+  int64_t num_of_rank() const { return num_of_rank_; }
 
  private:
   void Init(user_op::KernelCacheContext* ctx) {
@@ -1570,10 +1571,14 @@ class EagerCclOpKernelCache final : public user_op::OpKernelCache {
     ParallelConf parallel_conf;
     CHECK(TxtString2PbMessage(parallel_conf_txt, &parallel_conf));
     Symbol<ParallelDesc> parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
-    communication_ctx_ = ccl::NewCommunicationContext(parallel_desc->device_type(), parallel_desc);
+    num_of_rank_ = parallel_desc->parallel_num();
+    if (num_of_rank_ > 1) {
+      communication_ctx_ =
+          ccl::NewCommunicationContext(parallel_desc->device_type(), parallel_desc);
+    }
   }
-
   std::shared_ptr<ccl::CommunicationContext> communication_ctx_;
+  int64_t num_of_rank_;
 };
 
 void InitEagerCclOpKernelCache(user_op::KernelCacheContext* ctx,
@@ -1888,9 +1893,10 @@ class LlamaDecoderLayerForwardKernel final : public user_op::OpKernel {
       // step 7, AllReduceSum
       std::unique_ptr<ccl::AllReduce> all_reduce = ccl::NewCollectiveCommunication<ccl::AllReduce>(
           ctx->device_type(), output->data_type(), ccl::kSum);
-      all_reduce->Launch(ctx->stream(), tmp_buffer->dptr(), tmp_buffer->mut_dptr(),
-                         input_num_elements, kernel_cache->communication_ctx());
-
+      if (kernel_cache->num_of_rank() > 1) {
+        all_reduce->Launch(ctx->stream(), tmp_buffer->dptr(), tmp_buffer->mut_dptr(),
+                           input_num_elements, kernel_cache->communication_ctx());
+      }
       // step 8, residual add: out = out + hidden_states
       // step 9, post rms-norm
       h = output->shape_view().At(2) / k;
@@ -1926,8 +1932,11 @@ class LlamaDecoderLayerForwardKernel final : public user_op::OpKernel {
                            /*alpha*/ 1.0, reinterpret_cast<const void*>(gate_ptr),
                            mlp_down_weight->dptr(), /*beta*/ 0.0, tmp_buffer->mut_dptr());
 
-      all_reduce->Launch(ctx->stream(), tmp_buffer->dptr(), tmp_buffer->mut_dptr(),
-                         input_num_elements, kernel_cache->communication_ctx());
+      if (kernel_cache->num_of_rank() > 1) {
+        all_reduce->Launch(ctx->stream(), tmp_buffer->dptr(), tmp_buffer->mut_dptr(),
+                           input_num_elements, kernel_cache->communication_ctx());
+      }
+
       cuda::elementwise::Binary(Add<T>(), input_num_elements, output->mut_dptr<T>(),
                                 output->dptr<T>(), tmp_buffer->dptr<T>(),
                                 cuda_stream->cuda_stream());
