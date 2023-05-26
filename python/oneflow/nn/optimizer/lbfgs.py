@@ -19,7 +19,7 @@ from oneflow.optim.optimizer import Optimizer
 from oneflow.nn.parameter import Parameter
 import oneflow as flow
 
-
+# TODO implement cubic_interpolate op
 def _cubic_interpolate(x1, f1, g1, x2, f2, g2, bounds=None):
 
     if bounds is not None:
@@ -140,6 +140,153 @@ def _strong_wolfe(
 
 
 class LBFGS(Optimizer):
+    """Implements LBFGS algorithm
+    
+    It has been propose in `On the limited memory BFGS method for large scale optimization`_.
+    The implementation of the two-loop recursion proposed in `Updating Quasi-Newton Matrices with Limited Storage`_.
+    
+    The implementation of the strong_wolfe line search  proposed in `Numerical_Optimization_v2`
+    
+    This algorithm uses an estimated inverse Hessian matrix to steer its search through variable space and determine the optimal direction.
+    
+    The line search algorithm terminates with a step length that satisfies the strong Wolfe conditions.
+    
+    This optimizer only support one parameter group and currently must run with flow.float64 data type
+    
+    the equation of direction determination is:
+    
+    .. math::
+
+        & S_t = X_{t+1}-X_t
+
+        & Y_t = g_{t+1}-g_t
+
+        & \\rho = 1/{Y_t * S_t}
+
+        & {YS}_t = Y_t \cdot S_t
+
+        & H_{diag} = {YS}_t / Y_t \cdot  S_t
+
+        & q =g_{t+1}
+
+        & LOOP 
+        
+        & FOR\\ i = (HistroySize)...,1,0:
+
+        & \quad \\alpha_i = \\rho_{i}S_{i}\cdot q\\ (STORE\\ \\alpha_i)
+
+        & \quad q = q -\\alpha_i*y_i
+
+        & ENDLOOP
+
+        & d=H_0\cdot q
+
+        & LOOP
+        
+        & FOR\\ i = 0,1,...(HistroySize):
+
+        & \quad \\beta_i = y_i\cdot d * \\rho_i
+
+        & \quad d=d+S_i(\\alpha_i-\\beta_i)
+
+        & ENDLOOP
+    
+    the equation of strong_wolfe step size choosing is:
+    
+    .. math::
+    
+        & LOOP
+        
+        & Evaluate f(t_i)
+
+        & \quad IF\\ f(t_i) \\gt f(t_0) +c_1t_if^{\\prime}(t_0)\\ or \\ [f(t_i)\\ge f(t_{i-1})\\ and\\ i \\gt 1]
+
+        & \quad \quad t_{ans} \\gets zoom(t_{i-1},t_i), stop;
+        
+
+        & \quad Evaluate f^{\prime}(t_i)
+
+        & \quad IF\\ \\left| f^{\prime}(t_i)\\right| \\le -c_2f^{\\prime}(t_0):
+
+        & \quad \quad t_{ans} \\gets t_i , stop;
+
+        & \quad IF\\ f^{\prime}(t_i) \\ge 0:
+
+        & \quad \quad t_{ans} \\gets zoom(t_i,t_{i-1}) , stop;
+
+        & \quad \quad Choose\\ t_{i+1} \\in (t_i,t_{max}) (using\\ cubic\\ interpolate)
+
+        & ENDLOOP
+        
+        &  
+        
+        & function \\ ZOOM(t_{low},t_{high}):
+        
+        & LOOP :
+        
+        & \quad Choose\\ t_{j} \\in (t_{low},t_{high}) (using\\ cubic\\ interpolate)
+        
+        & \quad Evaluate f(t_j)
+        
+        & \quad IF\\ f(t_j) \gt f(t_0) +c_1t_jf^{\prime}(t_0)\\ or\\  f(t_j)\\ge f(t_{lo}):
+        
+        & \quad \quad t_{hi} \\gets t_j;
+        
+        & \quad ELSE:
+        
+        & \quad \quad Evaluate f^{\\prime}(t_j);
+        
+        & \quad \quad IF\\ \\left| f^{\prime}(t_j)\\right| \\le -c_2f^{\\prime}(t_0):
+        
+        & \quad \quad \quad t_{ans} \\gets t_j\\ , \\ stop;
+        
+        & \quad \quad IF\\ f^{\prime}(t_j)(t_{hi}-t_{lo}) \\ge 0:
+        
+        & \quad \quad \quad t_{hi} \\gets t_{lo};
+        
+        & \quad \quad t_{lo} \\gets t_j
+        
+        & ENDLOOP
+        
+        
+    
+    Args:
+        params (iterable): iterable of parameters to optimize or dicts defining
+            parameter groups
+        lr (float, optional): learning rate (default: 1e-3)
+        max_iter (int,optional): max iteration per step (default: 20)
+        max_eval (int,optional): max func evals per step (default: max_iter * 1.25)
+        tolerance_grad (float, optional): termination tolerance on first order optimality (default 1e-7)
+        tolerance_change (float, optional): termination tolerance on paramter changes (default: 1e-9)
+        history_size (int,optional): paramter update history size (default: 100)
+        line_search_fn (str,optional): line search function `strong_wolfe` or None (default: None)
+        contiguous_params (bool, optional): whether to use contiguous ParamGroup 
+            which puts all parameters of the same type, device and group into the
+            same tensor and update them together. (default: False)
+    .. _On the limited memory BFGS method for large scale optimization:
+        https://dl.acm.org/doi/10.5555/3112655.3112866
+            
+    .. _Updating Quasi-Newton Matrices with Limited Storage:
+        https://www.ams.org/journals/mcom/1980-35-151/S0025-5718-1980-0572855-7/S0025-5718-1980-0572855-7.pdf
+    
+    For example: 
+    
+    .. code-block:: python 
+    
+        # Assume net is a custom model. 
+        lbfgs = flow.optim.LBFGS(net.parameters())
+        
+        for epoch in range (epochs):
+            def closure():
+                lbfgs.zero_grad()
+                # Read data, Compute the loss and so on. 
+                loss.backward()
+                return loss
+            lbfgs.step(closure)
+                
+    
+    """
+
     def __init__(
         self,
         params: Union[Iterator[Parameter], List[Dict]],
@@ -214,6 +361,12 @@ class LBFGS(Optimizer):
         return loss, flag_grad
 
     def step(self, closure: Callable = None):
+        """Performs a single optimization step.
+
+        Args:
+            closure (callable): A closure that reevaluates the model
+                and returns the loss.
+        """
         with flow.no_grad():
 
             assert closure != None, "closure must not be None"
