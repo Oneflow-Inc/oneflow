@@ -160,9 +160,9 @@ class BoxingTaskGraph final : public TaskGraph {
   ~BoxingTaskGraph() = default;
 
   static Maybe<BoxingTaskGraph> New(
-      const std::function<void(size_t, const std::function<void(size_t i)>&)>& Loop) {
+      const std::function<void(size_t, const std::function<void(size_t i)>&)>& ParallelRunLoop) {
     std::shared_ptr<BoxingTaskGraph> graph(new BoxingTaskGraph());
-    JUST(graph->Init(Loop));
+    JUST(graph->Init(ParallelRunLoop));
     return graph;
   }
 
@@ -171,10 +171,11 @@ class BoxingTaskGraph final : public TaskGraph {
 
  private:
   BoxingTaskGraph() = default;
-  Maybe<void> Init(const std::function<void(size_t, const std::function<void(size_t i)>&)>& Loop);
+  Maybe<void> Init(
+      const std::function<void(size_t, const std::function<void(size_t i)>&)>& ParallelRunLoop);
 
   void CreateOpNode2TaskIds(
-      const std::function<void(size_t, const std::function<void(size_t i)>&)>& Loop);
+      const std::function<void(size_t, const std::function<void(size_t i)>&)>& ParallelRunLoop);
 
   HashMap<const OpNode*, std::vector<CompTaskNode*>> boxing_related_op_node2sorted_comp_tasks_;
   HashMap<const OpNode*, std::vector<TaskId>> boxing_unrelated_op_node2sorted_task_ids_;

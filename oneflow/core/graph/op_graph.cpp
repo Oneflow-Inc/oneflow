@@ -594,17 +594,6 @@ std::function<bool(const OpNode* src, const OpNode* dst)> OpGraph::CreatePredica
   return MakePredicatorIsReachable();
 }
 
-void OpGraph::UpdateCachedPredicatorIsReachable() {
-  cached_predicator_is_reachable_ = MakePredicatorIsReachable();
-}
-
-std::function<bool(const OpNode* src, const OpNode* dst)> OpGraph::GetCachedPredicatorIsReachable()
-    const {
-  CHECK(static_cast<bool>(cached_predicator_is_reachable_))
-      << "cached_predicator_is_reachable_ is not initialized";
-  return cached_predicator_is_reachable_;
-}
-
 // Print the graph with SBP in order
 void OpGraph::PrintSBPGraphDebugInfo() const {
   // test debug
