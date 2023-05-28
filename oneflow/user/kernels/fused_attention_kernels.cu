@@ -33,34 +33,35 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/unary_op.h"
 #include "oneflow/core/ep/cuda/primitive/unary_functor.cuh"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
-#include "oneflow/core/cuda/rms_norm_output_norm_arg.cuh"
+#include "oneflow/core/cuda/rms_norm.cuh"
 
 namespace oneflow {
 namespace {
 
 template<typename SRC, typename DST>
-struct SkipLoad {
-  using LoadType = DST;
-  SkipLoad(const SRC* src, const SRC* skip, int64_t row_size)
-      : src(src), skip(skip), row_size(row_size) {}
+struct AddResidualLoad {
+  AddResidualLoad(const SRC* src, const SRC* residual, SRC* residual_add_out, int64_t row_size)
+      : src(src), residual(residual), residual_add_out(residual_add_out), row_size(row_size) {}
   template<int N>
   __device__ void load(DST* dst, int64_t row, int64_t col) const {
-    cuda::layer_norm::Pack<SRC, N> src_pack;
-    cuda::layer_norm::Pack<SRC, N> skip_pack;
+    using PackType = cuda::layer_norm::Pack<SRC, N>;
+    PackType src_pack;
+    PackType residual_pack;
+    PackType residual_add_pack;
     const int64_t offset = (row * row_size + col) / N;
     src_pack.storage = *(reinterpret_cast<const cuda::layer_norm::PackType<SRC, N>*>(src) + offset);
-    if (skip) {
-      skip_pack.storage =
-          *(reinterpret_cast<const cuda::layer_norm::PackType<SRC, N>*>(skip) + offset);
-    } else {
+    residual_pack.storage =
+        *(reinterpret_cast<const cuda::layer_norm::PackType<SRC, N>*>(residual) + offset);
 #pragma unroll
-      for (int i = 0; i < N; ++i) { skip_pack.elem[i] = static_cast<SRC>(0.f); }
+    for (int i = 0; i < N; ++i) {
+      residual_add_pack.elem[i] = src_pack.elem[i] + residual_pack.elem[i];
+      dst[i] = static_cast<DST>(residual_add_pack.elem[i]);
     }
-#pragma unroll
-    for (int i = 0; i < N; ++i) { dst[i] = static_cast<DST>(src_pack.elem[i] + skip_pack.elem[i]); }
+    *(reinterpret_cast<PackType*>(residual_add_out) + offset) = residual_add_pack;
   }
   const SRC* src;
-  const SRC* skip;
+  const SRC* residual;
+  SRC* residual_add_out;
   int64_t row_size;
 };
 
@@ -70,9 +71,10 @@ struct AffineStore {
       : dst(dst), weight(weight), row_size(row_size) {}
 
   template<int N>
-  __device__ void store(const SRC* src, int32_t row, int32_t col) {
-    cuda::layer_norm::Pack<DST, N> dst_pack;
-    cuda::layer_norm::Pack<DST, N> weight_pack;
+  __device__ void store(const SRC* src, int64_t row, int64_t col) {
+    using PackType = cuda::layer_norm::Pack<DST, N>;
+    PackType dst_pack;
+    PackType weight_pack;
     const int32_t offset = (row * row_size + col) / N;
     const int32_t weight_offset = col / N;
     if (affine) {
@@ -95,37 +97,16 @@ struct AffineStore {
   int32_t row_size;
 };
 
-template<typename T, typename ComputeType, bool affine>
-void DispatchSkipRmsNormOutputNormArgForwardAffine(ep::Stream* stream, const int64_t nrow,
-                                                   const int64_t ncol, const double eps,
-                                                   const T* x_dptr, const T* w_dptr,
-                                                   const T* skip_dptr, T* norm_arg_dptr, T* y_dptr,
-                                                   ComputeType* inv_rms) {
-  constexpr int32_t block_size = 128;
-  unsigned int nb_element = nrow * ncol;
-  unsigned int grid_size = (nb_element + block_size - 1) / block_size;
-  SkipLoad<T, ComputeType> load(x_dptr, skip_dptr, ncol);
-  cuda::layer_norm::DirectStore<ComputeType, T> norm_arg_store(norm_arg_dptr, ncol);
-  AffineStore<ComputeType, T, affine> output_store(y_dptr, w_dptr, ncol);
-  OF_CUDA_CHECK((cuda::rms_norm_output_norm_arg::LaunchRmsNormOutputNormArg<
-                 decltype(load), decltype(norm_arg_store), decltype(output_store), ComputeType>(
-      stream->As<ep::CudaStream>()->cuda_stream(), load, norm_arg_store, output_store, nrow, ncol,
-      eps, inv_rms)));
-}
-
 template<typename T, typename ComputeType>
-void SkipRmsNormOutputNormArgForward(ep::Stream* stream, const int64_t nrow, const int64_t ncol,
-                                     const double eps, const T* x_dptr, const T* w_dptr,
-                                     const T* skip_dptr, T* norm_arg_dptr, T* y_dptr,
-                                     ComputeType* inv_rms) {
-  if (w_dptr) {
-    DispatchSkipRmsNormOutputNormArgForwardAffine<T, ComputeType, true>(
-        stream, nrow, ncol, eps, x_dptr, w_dptr, skip_dptr, norm_arg_dptr, y_dptr, inv_rms);
-  } else {
-    DispatchSkipRmsNormOutputNormArgForwardAffine<T, ComputeType, false>(
-        stream, nrow, ncol, eps, x_dptr, w_dptr, skip_dptr, norm_arg_dptr, y_dptr, inv_rms);
-  }
-}
+void DispatchAddResidualRmsNormOutputAffine(ep::Stream* stream, const int64_t nrow,
+                                            const int64_t ncol, const double eps, const T* residual,
+                                            const T* x_dptr, const T* w_dptr, T* residual_out_dptr,
+                                            T* rms_out_dptr, ComputeType* inv_rms) {
+  AddResidualLoad<T, ComputeType> load(x_dptr, residual, residual_out_dptr, ncol);
+  AffineStore<ComputeType, T, /*affine*/ true> store(rms_out_dptr, w_dptr, ncol);
+  OF_CUDA_CHECK((cuda::rms_norm::LaunchRmsNorm<decltype(load), decltype(store), ComputeType>(
+      stream->As<ep::CudaStream>()->cuda_stream(), load, store, nrow, ncol, eps, inv_rms)));
+};
 
 template<typename T>
 struct Add {
@@ -1900,9 +1881,13 @@ class LlamaDecoderLayerForwardKernel final : public user_op::OpKernel {
       // step 8, residual add: out = out + hidden_states
       // step 9, post rms-norm
       h = output->shape_view().At(2) / k;
-      SkipRmsNormOutputNormArgForward<T>(
-          cuda_stream, bm, h * k, 1e-6, hidden_states->dptr<T>(), post_norm_weight->dptr<T>(),
-          tmp_buffer->dptr<T>(), output->mut_dptr<T>(), tmp_buffer->mut_dptr<T>(),
+      /*
+       * output = residual + hidden_states, tmp_buffer stores the result of rms_norm(output)
+       * output is regarded as residual and will be added to the output of MLP
+       */
+      DispatchAddResidualRmsNormOutputAffine<T>(
+          cuda_stream, bm, h * k, 1e-6, hidden_states->dptr<T>(), tmp_buffer->dptr<T>(),
+          post_norm_weight->dptr<T>(), output->mut_dptr<T>(), tmp_buffer->mut_dptr<T>(),
           reinterpret_cast<RmsNormComputeType*>(tmp_buffer->mut_dptr<char>() + activation_size));
 
       // step 10, fused_glu, + silu
