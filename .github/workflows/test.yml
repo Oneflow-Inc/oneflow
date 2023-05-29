@@ -946,6 +946,9 @@ jobs:
           repository: Oneflow-Inc/models
           ref: d6b2b8260e87541726ed87361171438d258e6a4d
           path: oneflow-models
+      - name: sleep
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
+        run: sleep 999999999999999999
       - name: ResNet50 Graph DDP test
         id: models-resnet50
         timeout-minutes: 20
