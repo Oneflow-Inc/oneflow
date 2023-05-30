@@ -80,7 +80,9 @@ class TestEqual(flow.unittest.TestCase):
     def test_flow_equal_complex_with_same_random_data(test_case):
         device = random_device()
         shape = random_tensor().oneflow.shape
-        x = random_tensor(len(shape), *shape, requires_grad=False, dtype=complex).to(device)
+        x = random_tensor(len(shape), *shape, requires_grad=False, dtype=complex).to(
+            device
+        )
         return torch.equal(x, x)
 
     @autotest(n=5, auto_backward=False, check_graph=False)
@@ -99,17 +101,25 @@ class TestEqual(flow.unittest.TestCase):
     def test_flow_equal_complex_with_random_data(test_case):
         device = random_device()
         shape = random_tensor().oneflow.shape
-        x = random_tensor(len(shape), *shape, requires_grad=False, dtype=complex).to(device=device)
-        y = random_tensor(len(shape), *shape, requires_grad=False, dtype=complex).to(device=device)
-        return torch.equal(x,y)
+        x = random_tensor(len(shape), *shape, requires_grad=False, dtype=complex).to(
+            device=device
+        )
+        y = random_tensor(len(shape), *shape, requires_grad=False, dtype=complex).to(
+            device=device
+        )
+        return torch.equal(x, y)
 
     @autotest(n=5, auto_backward=False, check_graph=False, include_complex=True)
     def test_flow_not_equal_complex_with_random_data(test_case):
         device = random_device()
         shape = random_tensor().oneflow.shape
-        x = random_tensor(len(shape), *shape, requires_grad=False, dtype=complex).to(device=device)
-        y = random_tensor(len(shape), *shape, requires_grad=False, dtype=complex).to(device=device)
-        return torch.not_equal(x,y)
+        x = random_tensor(len(shape), *shape, requires_grad=False, dtype=complex).to(
+            device=device
+        )
+        y = random_tensor(len(shape), *shape, requires_grad=False, dtype=complex).to(
+            device=device
+        )
+        return torch.not_equal(x, y)
 
     @autotest(n=5, auto_backward=False, check_graph=False)
     def test_flow_equal_with_same_random_0d_data(test_case):
