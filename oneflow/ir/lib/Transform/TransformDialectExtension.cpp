@@ -17,8 +17,11 @@ limitations under the License.
 #include "OneFlow/OneFlowPDLLPatterns.h"
 #include "Transform/TransformDialectExtension.h"
 #include "Transform/TransformStateExtension.h"
+#include "mlir/Conversion/VectorToGPU/VectorToGPU.h"
 #include "mlir/Dialect/PDL/IR/PDL.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
+#include "mlir/Dialect/NVGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/IR/OpImplementation.h"
@@ -45,6 +48,87 @@ struct MemrefCopyOpFoldPatterns final : public OpRewritePattern<memref::CopyOp> 
     return success();
   }
 };
+
+std::optional<SmallVector<int64_t>> gpuMmaUnrollOrder(vector::ContractionOp contract) {
+  SmallVector<int64_t> order;
+  // First make reduction the outer dimensions.
+  for (auto [index, iter] : llvm::enumerate(contract.getIteratorTypes())) {
+    if (vector::isReductionIterator(iter)) { order.push_back(index); }
+  }
+
+  llvm::SmallDenseSet<int64_t> dims;
+  for (AffineExpr expr : contract.getIndexingMapsArray()[0].getResults()) {
+    dims.insert(expr.cast<AffineDimExpr>().getPosition());
+  }
+  // Then parallel dimensions that are part of Lhs as we want to re-use Lhs.
+  for (auto [index, iter] : llvm::enumerate(contract.getIteratorTypes())) {
+    if (vector::isParallelIterator(iter) && dims.count(index)) { order.push_back(index); }
+  }
+  // Then the remaining parallel loops.
+  for (auto [index, iter] : llvm::enumerate(contract.getIteratorTypes())) {
+    if (vector::isParallelIterator(iter) && !dims.count(index)) { order.push_back(index); }
+  }
+  return order;
+}
+
+std::optional<SmallVector<int64_t>> getWmmaNativeVectorSize(Operation* op) {
+  // Currently hardcode the size of wmma operation. When more cases are
+  // supported this should be picked based on what the backend supports.
+  int64_t m = 16;
+  int64_t n = 16;
+  if (auto contract = dyn_cast<vector::ContractionOp>(op)) {
+    int64_t k = contract.getLhsType().getElementType().isF16() ? 16 : 8;
+    SmallVector<int64_t> nativeSize(contract.getIteratorTypes().size() - 3, 1);
+    nativeSize.append({m, n, k});
+    return nativeSize;
+  }
+  if (auto writeOp = dyn_cast<vector::TransferWriteOp>(op)) {
+    SmallVector<int64_t> nativeSize(writeOp.getVectorType().getRank() - 2, 1);
+    nativeSize.append({m, n});
+    return nativeSize;
+  }
+  if (auto readOp = dyn_cast<vector::TransferReadOp>(op)) {
+    // Transfer read ops may need different shapes based on how they are being
+    // used. For simplicity just match the shape used by the extract strided op.
+    VectorType sliceType;
+    for (Operation* users : op->getUsers()) {
+      auto extract = dyn_cast<vector::ExtractStridedSliceOp>(users);
+      if (!extract) return std::nullopt;
+      auto vecType = extract.getResult().getType().cast<VectorType>();
+      if (sliceType && sliceType != vecType) return std::nullopt;
+      sliceType = vecType;
+    }
+    return llvm::to_vector(sliceType.getShape());
+  }
+  if ((OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1)) {
+    if (auto vecType = op->getResultTypes()[0].dyn_cast<VectorType>()) {
+      // TODO: The condition for unrolling elementwise should be restricted
+      // only to operations that need unrolling (connected to the contract).
+      if (vecType.getRank() < 2) return std::nullopt;
+
+      // First check whether there is a slice to infer the shape from. This is
+      // required for cases where the accumulator type differs from the input
+      // types, in which case we will see an `arith.ext_` between the contract
+      // and transfer_read which needs to be unrolled.
+      VectorType sliceType;
+      for (Operation* users : op->getUsers()) {
+        auto extract = dyn_cast<vector::ExtractStridedSliceOp>(users);
+        if (!extract) return std::nullopt;
+        auto vecType = extract.getResult().getType().cast<VectorType>();
+        if (sliceType && sliceType != vecType) return std::nullopt;
+        sliceType = vecType;
+      }
+      if (sliceType) return llvm::to_vector(sliceType.getShape());
+
+      // Else unroll for trailing elementwise.
+      SmallVector<int64_t> nativeSize(vecType.getRank() - 2, 1);
+      // Map elementwise ops to the output shape.
+      nativeSize.append({m, n});
+      return nativeSize;
+    }
+  }
+  return std::nullopt;
+}
 
 }  // namespace
 
@@ -115,6 +199,80 @@ DiagnosedSilenceableFailure transform_dialect::ResultsToOutParamsOp::applyToOne(
     }
   }
   return DiagnosedSilenceableFailure::success();
+}
+
+DiagnosedSilenceableFailure transform_dialect::VectorToMMAOp::applyToOne(
+    Operation* target, transform::ApplyToEachResultList& results,
+    transform::TransformState& state) {
+  if (!target->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
+    target->emitOpError("applies only to isolated-from-above targets because it "
+                        "needs to apply "
+                        "patterns greedily");
+    return emitDefaultDefiniteFailure(target);
+  }
+
+  auto funcOp = dyn_cast<func::FuncOp>(target);
+  if (!funcOp) {
+    target->emitOpError("Must apply to a func op");
+    return emitDefaultDefiniteFailure(target);
+  }
+
+  if (!(getUseMmaSync() ^ getUseWmma())) {
+    target->emitOpError("Exactly one of use_mma_sync or use_wmma must be specified");
+    return emitDefaultDefiniteFailure(target);
+  }
+
+  MLIRContext* ctx = target->getContext();
+  GreedyRewriteConfig config;
+
+  if (getUseWmma()) {
+    RewritePatternSet patterns(ctx);
+    auto unrollOrder = [](Operation* op) -> std::optional<SmallVector<int64_t>> {
+      auto contract = dyn_cast<vector::ContractionOp>(op);
+      if (!contract) return std::nullopt;
+      return gpuMmaUnrollOrder(contract);
+    };
+    vector::populateVectorUnrollPatterns(patterns, vector::UnrollVectorOptions()
+                                                       .setNativeShapeFn(getWmmaNativeVectorSize)
+                                                       .setUnrollTraversalOrderFn(unrollOrder));
+
+    if (failed(applyPatternsAndFoldGreedily(target, std::move(patterns), config))) {
+      target->emitOpError("unroll vector for wmma failed to apply");
+      return emitDefaultDefiniteFailure(target);
+    }
+  }
+
+  {
+    RewritePatternSet patterns(ctx);
+    mlir::vector::populateCastAwayVectorLeadingOneDimPatterns(patterns);
+    populatePrepareVectorToMMAPatterns(patterns, getUseMmaSync());
+    if (failed(applyPatternsAndFoldGreedily(target, std::move(patterns), config))) {
+      target->emitOpError("vector to mma preparation patterns failed to apply");
+      return emitDefaultDefiniteFailure(target);
+    }
+  }
+
+  IRRewriter rewriter(target->getContext());
+  auto ret = DiagnosedSilenceableFailure::success();
+  if (getUseWmma()) {
+    if (failed(convertVectorToMMAOps(rewriter, target)))
+      ret = emitDefiniteFailure("vector to wmma patterns failed to apply");
+    return ret;
+  }
+
+  if (failed(convertVectorToNVVMCompatibleMMASync(rewriter, funcOp))) {
+    target->emitOpError("vector to mma patterns failed to apply");
+    return emitDefaultDefiniteFailure(target);
+  }
+  // Using TF32 for Float.
+  RewritePatternSet f32ToTF32patterns(funcOp.getContext());
+  nvgpu::populateMmaSyncF32ToTF32Patterns(f32ToTF32patterns, nvgpu::MmaSyncF32Lowering::TF32);
+  if (failed(applyPatternsAndFoldGreedily(funcOp, std::move(f32ToTF32patterns), config))) {
+    target->emitOpError("vector to mma F32ToTF32 patterns failed to apply");
+    return emitDefaultDefiniteFailure(target);
+  }
+
+  return ret;
 }
 
 DiagnosedSilenceableFailure transform_dialect::CSEOp::applyToOne(Operation* target,

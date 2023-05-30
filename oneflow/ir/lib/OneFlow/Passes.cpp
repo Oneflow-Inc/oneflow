@@ -1023,6 +1023,7 @@ void AddLoweringToLinalgMemRefPasses(PassManager& pm) {
   pm.addNestedPass<func::FuncOp>(tosa::createTosaMakeBroadcastablePass());
   pm.addPass(createCSEPass());
   pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());
+  pm.addNestedPass<func::FuncOp>(createLinalgGeneralizationPass());
   pm.addNestedPass<func::FuncOp>(tosa::createTosaToTensor());
   pm.addNestedPass<func::FuncOp>(createLinalgElementwiseOpFusionPass());
   // TODO: more optimization pass

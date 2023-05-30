@@ -70,5 +70,13 @@ def ResultsToOutParamsOp : ProduceNoneProto<"oneflow.results_to_out_params"> {
     move results to out params.
   }];
 }
+def VectorToMMAOp : ProduceNoneProto<"oneflow.vector_to_mma"> {
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                       UnitAttr:$use_mma_sync,
+                       UnitAttr:$use_wmma);
+  let description = [{
+    convert vector to mma.
+  }];
+}
 
 #endif // ONEFLOW_IR_INCLUDE_TRANSOFRM_TRANSFORM_DIALECT_EXTENSION_TD_

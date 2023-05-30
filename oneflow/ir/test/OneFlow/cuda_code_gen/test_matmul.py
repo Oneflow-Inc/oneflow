@@ -36,7 +36,7 @@ class MatMulModule(flow.nn.Module):
         return flow.matmul(x, self.w) + self.b
 
 
-def do_matmul_graph(test_case, with_cuda = False):
+def do_matmul_graph(test_case, with_cuda=False):
     x = flow.randn(2, 5)
     module_to_run = MatMulModule()
     if with_cuda:
@@ -64,7 +64,7 @@ class TestFuseCastScale(oneflow.unittest.MLIRTestCase):
         os.environ["ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"] = "1"
         os.environ["ONEFLOW_MLIR_FUSE_FORWARD_OPS"] = "1"
 
-    def test_relu_graph(test_case):
+    def test_matmul_graph(test_case):
         import oneflow.sysconfig
 
         if oneflow.sysconfig.with_cuda():
