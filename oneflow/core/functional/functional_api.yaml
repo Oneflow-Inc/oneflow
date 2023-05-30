@@ -2696,6 +2696,14 @@
   signature: 'Tensor (Tensor y, Tensor dy, Float scale=0.35355) => FusedScaleMaskBiasSoftmaxGrad'
   bind_python: False
 
+- name: "noncontiguous_binary_op"
+  signature: 'Tensor (Tensor lhs, Tensor rhs, String op="add", Bool inplace=False) => NonContiguousBinaryOp'
+  bind_python: True
+
+- name: "noncontiguous_binary_op_grad"
+  signature: 'TensorTuple (Tensor dy, Tensor lhs, Tensor rhs, String op="add", Bool inplace=False) => NonContiguousBinaryOpGrad'
+  bind_python: False
+
 - name: "fused_get_center_dist"
   signature: "Tensor (Tensor b1_x1, Tensor b1_x2, Tensor b2_x1, Tensor b2_x2, Tensor b1_y1, Tensor b1_y2, Tensor b2_y1, Tensor b2_y2) => FusedCenter"
   bind_python: True
