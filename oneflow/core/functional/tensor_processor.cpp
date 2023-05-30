@@ -119,7 +119,7 @@ Maybe<void> TensorProcessor::Apply() {
     } else {
       if (tensor_tuple_.size() == 1
           && !((tensor_tuple_[0]->dtype()->is_floating_point())
-              || tensor_tuple_[0]->dtype()->is_complex())) {
+               || tensor_tuple_[0]->dtype()->is_complex())) {
         Symbol<DType> cast_dtype = (inputs_lowest_dtype_vec_[0] == DType::InvalidDataType())
                                        ? DType::Float()
                                        : inputs_lowest_dtype_vec_[0];
