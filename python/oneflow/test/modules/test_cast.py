@@ -174,7 +174,7 @@ class TestCast(flow.unittest.TestCase):
         y = x.to(dtype=torch.float64, device=device)
         z = y.to(dtype=torch.int8, device=device)
         return z
-    
+
     @autotest(n=5, auto_backward=True, include_complex=False, atol=1e-5, rtol=1e-5)
     def test_cast_with_complex_float2complex(test_case):
         device = random_device()

@@ -36,7 +36,7 @@ CBLAS_TRANSPOSE GetCblasTranspose(BlasTransposeType transpose_type, DataType dat
     return CblasNoTrans;
   } else if (transpose_type == BlasTransposeType::T) {
     return DType(data_type).is_complex() ? CblasConjTrans : CblasTrans;
-  }  else {
+  } else {
     UNIMPLEMENTED();
     return CblasNoTrans;
   }
@@ -151,7 +151,8 @@ class BroadcastMatmulFactoryImpl : public BroadcastMatmulFactory {
                                        BlasTransposeType transpose_b,
                                        size_t max_num_dims) override {
     if (max_num_dims > kMaxNumDims) { return nullptr; }
-    if (data_type == DataType::kFloat || data_type == DataType::kDouble || data_type == DataType::kComplex64 || data_type == DataType::kComplex128) {
+    if (data_type == DataType::kFloat || data_type == DataType::kDouble
+        || data_type == DataType::kComplex64 || data_type == DataType::kComplex128) {
       return std::make_unique<BroadcastMatmulImpl<kMaxNumDims>>(data_type, transpose_a,
                                                                 transpose_b);
     } else {
