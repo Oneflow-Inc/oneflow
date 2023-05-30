@@ -14,6 +14,7 @@
 func.func @wmma(%a: memref<16x16xf32>, %b: memref<16x16xf32>, %c: memref<16x16xf32>) {
   %c0 = arith.constant 0: index
   %cst = arith.constant 0.0: f32
+// CHECK-COUNT: gpu.subgroup_mma_load_matrix
   %va = vector.transfer_read %a[%c0, %c0], %cst: memref<16x16xf32>, vector<16x16xf32>
   %vb = vector.transfer_read %b[%c0, %c0], %cst: memref<16x16xf32>, vector<16x16xf32>
   %vc = vector.transfer_read %c[%c0, %c0], %cst: memref<16x16xf32>, vector<16x16xf32>
