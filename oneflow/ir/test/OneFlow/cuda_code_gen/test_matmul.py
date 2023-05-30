@@ -36,7 +36,7 @@ class MatMulModule(flow.nn.Module):
         return flow.matmul(x, self.w) + self.b
 
 
-def do_matmul_graph(test_case, with_cuda = False):
+def do_matmul_graph(test_case, with_cuda=False):
     x = flow.randn(2, 5)
     module_to_run = MatMulModule()
     if with_cuda:

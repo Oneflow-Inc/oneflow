@@ -7,7 +7,6 @@
 !in_tensor_t = tensor<16x128x128xf32>
 !out_tensor_t = tensor<16x128x128xf32>
 
-
 func.func @softmax() -> !out_tensor_t {
   %cst_0 = arith.constant 0.0 : f32
   %cst_1 = arith.constant 1.0 : f32
