@@ -3354,6 +3354,44 @@ def OneFlow_FusedClipGradOp : OneFlow_BaseOp<"fused_clip_grad", [NoGrad, AttrSiz
   let has_input_arg_modify_fn = 1;
 }
 
+def OneFlow_NonContiguousBinaryOp : OneFlow_BaseOp<"noncontiguous_binary_op", [NoMemoryEffect, SupportNonContiguous, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$lhs,
+    OneFlow_Tensor:$rhs
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let attrs = (ins
+    DefaultValuedAttr<StrAttr, "\"add\"">:$op,
+    DefaultValuedAttr<BoolAttr, "false">:$inplace
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_NonContiguousBinaryOpGrad : OneFlow_BaseOp<"noncontiguous_binary_op_grad", [NoMemoryEffect, SupportNonContiguous, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$lhs,
+    OneFlow_Tensor:$rhs
+  );
+  let output = (outs
+    OneFlow_Tensor:$dlhs,
+    OneFlow_Tensor:$drhs
+  );
+  let attrs = (ins
+    DefaultValuedAttr<StrAttr, "\"add\"">:$op,
+    DefaultValuedAttr<BoolAttr, "false">:$inplace
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 #endif // GET_ONEFLOW_FUSED_OP_DEFINITIONS
 
 
@@ -12021,7 +12059,7 @@ class OneFlow_JITLikeOp <string mnemonic> : OneFlow_BaseOp<mnemonic, [CallOpInte
   let output = (outs Variadic<AnyType>:$out);
   let attrs = (ins
     FlatSymbolRefAttr:$callee,
-    StrAttr:$mlir_assembly
+    BytesAttr:$mlir_assembly
   );
   let builders = [
     OpBuilder<(ins "func::FuncOp":$callee,
