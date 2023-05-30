@@ -15,6 +15,8 @@ limitations under the License.
 */
 #include <memory>
 #include <string>
+#include "oneflow/core/auto_parallel/straighten_memory.h"
+#include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/compute_task_node.h"

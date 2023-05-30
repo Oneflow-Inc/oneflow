@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
+#include "oneflow/core/graph/straighten_memory_task_graph.h"
 #include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/register/blob_desc.h"
@@ -1032,8 +1033,13 @@ void TaskGraph::DecideExecutionOrder() {
           && GlobalProcessCtx::WorldSize() == 1)) {
     InitOrderedTaskNodes();
   } else {
-    StraightenNodes(this, &ordered_task_nodes_,
-                    Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream());
+    if (ParseBooleanFromEnv("ENABLE_GLOBAL_STRAIGHTEN_MEMORY", false)
+        && straighten_algorithm_tag == StraightenAlgorithmTag::kCompressMemory) {
+      StraightenMemoryTaskGraph(this, &ordered_task_nodes_);
+    } else {
+      StraightenNodes(this, &ordered_task_nodes_,
+                      Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream());
+    }
   }
 }
 

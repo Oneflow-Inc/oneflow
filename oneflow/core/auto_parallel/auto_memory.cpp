@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/auto_parallel/auto_memory.h"
 #include "oneflow/core/auto_parallel/sbp_constructor.h"
+#include "oneflow/core/auto_parallel/straighten_memory_op_graph.h"
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
@@ -43,6 +44,8 @@ class TopoStruct {
   // TODO: remove tributary layer
   // This node should be finished before tributary layer
   int32_t tributary_layer = -1;
+  int32_t min_lifetime = -1;
+  int64_t memory_volume = -1;
 
   HashSet<TopoStruct*> in_topo_structs;
   HashSet<TopoStruct*> out_topo_structs;
@@ -60,6 +63,8 @@ class TopoStruct {
   void ComputeIsReusable();
   // Exceed time = time of cpu - time of gpu
   void ComputeExceedTime();
+  // Memory volume is memory * lifetime, but we might change the formula
+  void ComputeMemoryVolume();
 
   // deciding parameter
   // kTributaryLayerAscend = 0,     // small tributary layers go first
@@ -92,29 +97,6 @@ struct comp {
     return a->op_node->op().op_name() < b->op_node->op().op_name();
   }
 };
-
-bool IsProducedRegisterReusable(const Operator& op) {
-  // The repeat, acc, pack and unpack operators have non-reusable registers
-  // and a -1 register num at this moment.
-  if (op.op_conf().has_user_conf()) {
-    const auto& op_type_name = op.op_conf().user_conf().op_type_name();
-    // We record the frequency in swin-transformer on the right hand side
-    // and adjust the position accordingly.
-    if (op_type_name == "repeat"     // 213
-        || op_type_name == "acc"     // 173
-        || op_type_name == "unpack"  // 2
-        || op_type_name == "pack"    // 1
-    ) {
-      return false;
-    }
-  }
-  // NOTE: Please refer to oneflow/core/graph_impl/normal_forward_compute_task_node.cpp
-  // NormalForwardCompTaskNode::ProduceOutRegstByNameAndBlockNum
-  // for detail.
-  // We can not use <= 0 here since RegstNum4Op returns a number with type size_t.
-  // -1 is actually 18446744073709551615 here.
-  return RegstNum4Op(op) == -1;
-}
 
 TopoStruct::TopoStruct(SbpNode* sbp_node_)
     : sbp_node(sbp_node_), op_node(sbp_node_->GetOperatorNode()) {
@@ -150,6 +132,7 @@ int64_t TopoStruct::GetDecidingParameter(StraightenOrder so) const {
     case StraightenOrder::kLayerAscend: return sign * min_layer;
     case StraightenOrder::kMemoryIncrementAscend: return sign * memory_increment;
     case StraightenOrder::kExceedTimeAscend: return sign * exceed_time;
+    case StraightenOrder::kMemoryVolumeAscend: return sign * memory_volume;
     default: return 0;
   }
 }
@@ -200,6 +183,17 @@ int32_t TopoStruct::ComputeTributaryLayer(int32_t max_min_layer) {
 
 void TopoStruct::ComputeIsReusable() { is_reusable = IsProducedRegisterReusable(op_node->op()); }
 
+// Memory volume is memory * lifetime, but we might change the formula
+void TopoStruct::ComputeMemoryVolume() {
+  static float lifetime_order = ParseFloatFromEnv("LifetimeOrder", 1.0);
+  // We might get a large tensor multiply by a long life time, we need some rescaling
+  memory_volume = static_cast<int64_t>(
+      (memory_increment * pow(static_cast<double>(min_lifetime), lifetime_order)) / 1000.0);
+  // We need to distinguish zero or negative memory increment from slight positive memory increment.
+  // Make sure that we execute -0.1, 0, -0.003 before 0.1, 0.2
+  if (memory_increment > 0) { memory_volume += 1; }
+}
+
 // Compute the memory increment for all the topological structures
 void ComputeAllMemoryIncrement(std::vector<TopoStruct*>& topo_structs,
                                HashMap<LogicalBlobId, int32_t>& lbi2id,
@@ -239,6 +233,34 @@ void ComputeAllMemoryIncrement(std::vector<TopoStruct*>& topo_structs,
   }
   // Add empty vectors for all those blobs without consumers
   id2consumer_topo_structs.resize(id2blob_size.size());
+}
+
+// Find the minimum life time of the task graph,
+// which is the maximum of the minimum layer among all the consumers.
+// The function must be executed after generating min layer
+void FindMinLifetime(std::vector<TopoStruct*>* topo_structs) {
+  // Find the maximum consumer layer
+  for (auto& topo_struct : *topo_structs) {
+    int32_t curr_min_layer = topo_struct->min_layer;
+    for (auto& in : topo_struct->in_topo_structs) {
+      if (in->min_lifetime < curr_min_layer) { in->min_lifetime = curr_min_layer; }
+    }
+  }
+  // Compute the life time
+  for (auto& topo_struct : *topo_structs) {
+    if (topo_struct->min_layer >= topo_struct->min_lifetime) {
+      // No consumer, the register will be killed after the execution of the current operator
+      // The life time is 1 (including the current operator)
+      topo_struct->min_lifetime = 1;
+    } else {
+      // The life time is the distance between two operators + 1
+      // For example, a ---(x)---> b
+      // Register x is created while executing a, and x is killed after the execution of b.
+      // The life time is 2 (including a and b) == b.lifetime - a.lifetime
+      topo_struct->min_lifetime -= topo_struct->min_layer - 1;
+    }
+    topo_struct->ComputeMemoryVolume();
+  }
 }
 
 void UpdateSat(const std::vector<TopoStruct*>& topo_structs, StraightenAlgorithmTag* sat) {
@@ -336,6 +358,9 @@ void InitAllParameters(std::vector<TopoStruct*>* topo_structs,
 
   // Compute the memory increment for all the topological structures
   ComputeAllMemoryIncrement(*topo_structs, *lbi2id, *id2consumer_topo_structs, *id2blob_size);
+
+  // Compute the memory volume
+  FindMinLifetime(topo_structs);
 
   // Update sat, since sat might be changed in previous jobs
   UpdateSat(*topo_structs, &sat);
@@ -544,7 +569,37 @@ void StraightenOpGraph(const OpGraph& op_graph, std::vector<const OpNode*>* orde
   // Traverse and store all the nodes in the op graph
   op_graph.ForEachNode([&](OpNode* node) { sub_graph.push_back(node); });
 
-  StraightenSubGraph(sub_graph, ordered_op_nodes);
+  if (ParseBooleanFromEnv("ENABLE_GLOBAL_STRAIGHTEN_MEMORY", false)
+      && GlobalJobDesc().job_conf().straighten_algorithm_tag_in_task_graph()
+             == StraightenAlgorithmTag::kCompressMemory) {
+    // A global memory straighten algorithm
+    StraightenMemorySubGraph(sub_graph, ordered_op_nodes);
+  } else {
+    StraightenSubGraph(sub_graph, ordered_op_nodes);
+  }
+}
+
+bool IsProducedRegisterReusable(const Operator& op) {
+  // The repeat, acc, pack and unpack operators have non-reusable registers
+  // and a -1 register num at this moment.
+  if (op.op_conf().has_user_conf()) {
+    const auto& op_type_name = op.op_conf().user_conf().op_type_name();
+    // We record the frequency in swin-transformer on the right hand side
+    // and adjust the position accordingly.
+    if (op_type_name == "repeat"     // 213
+        || op_type_name == "acc"     // 173
+        || op_type_name == "unpack"  // 2
+        || op_type_name == "pack"    // 1
+    ) {
+      return false;
+    }
+  }
+  // NOTE: Please refer to oneflow/core/graph_impl/normal_forward_compute_task_node.cpp
+  // NormalForwardCompTaskNode::ProduceOutRegstByNameAndBlockNum
+  // for detail.
+  // We can not use <= 0 here since RegstNum4Op returns a number with type size_t.
+  // -1 is actually 18446744073709551615 here.
+  return RegstNum4Op(op) == -1;
 }
 
 }  // namespace auto_parallel
