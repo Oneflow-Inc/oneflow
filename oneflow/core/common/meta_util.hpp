@@ -23,13 +23,12 @@ namespace oneflow {
 
 template<typename... Args, typename Func, std::size_t... Idx>
 void for_each(const std::tuple<Args...>& t, Func&& f, std::index_sequence<Idx...>) {
-  (void)std::initializer_list<int>{(f(std::get<Idx>(t)), void(), 0)...};
+  (std::forward<Func>(f)(std::get<Idx>(t)), ...);
 }
 
 template<typename... Args, typename Func, std::size_t... Idx>
 void for_each_i(const std::tuple<Args...>& t, Func&& f, std::index_sequence<Idx...>) {
-  (void)std::initializer_list<int>{
-      (f(std::get<Idx>(t), std::integral_constant<size_t, Idx>{}), void(), 0)...};
+  (std::forward<Func>(f)(std::get<Idx>(t), std::integral_constant<size_t, Idx>{}), ...);
 }
 
 template<typename T>

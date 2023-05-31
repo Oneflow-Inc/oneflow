@@ -23,28 +23,9 @@ from oneflow.framework.tensor import Tensor
 from oneflow.nn.graph.proxy import ProxyTensor
 from oneflow.nn.parameter import Parameter
 from oneflow.nn.utils.clip_grad import clip_grad_norm_
+from oneflow.nn.utils.parameters_grouping import ContiguousParamsGroup
 import oneflow as flow
 from collections import defaultdict, abc as container_abcs
-
-
-class ContiguousParamsUnit(object):
-    def __init__(self, bufsize, dtype, device):
-        self.bufsize = bufsize
-        self.index = (
-            0  # record the next buf position will be used while copying parameters
-        )
-        self.param_buf = flow.zeros(bufsize, dtype=dtype, device=device)
-        self.grad_buf = flow.zeros(bufsize, dtype=dtype, device=device)
-
-    def __repr__(self) -> str:
-        return str(
-            {
-                "bufsize": self.bufsize,
-                "index": self.index,
-                "param_buf": self.param_buf,
-                "grad_buf": self.grad_buf,
-            }
-        )
 
 
 class ParamGroup(dict):
@@ -86,77 +67,11 @@ class ParamGroup(dict):
         self._make_options_valid()
         self.contiguous_params = self._options.get("contiguous_params", False)
         if self.contiguous_params:
-            self.params_dict = dict()
-            self._contiguous_parameters = list()
-            self._make_contiguous_params(parameters)
+            self.params_group = ContiguousParamsGroup([parameters["params"]])
 
         super().__init__(**self._options, params=self._parameters)
         super().setdefault("contiguous_params", False)
         super().setdefault("_enable_clip_grad", self._enable_clip_grad)
-
-    def _make_contiguous_params(self, parameters):
-        assert not any(
-            [p.is_global for p in parameters["params"]]
-        ), "All parameters must be local tensor for contiguous params."
-
-        def numel_in_bucket(tensor: flow.Tensor):
-            assert flow.is_floating_point(
-                tensor
-            ), "contiguous params should be float tensor"
-
-            def align(x: int, unit_size: int):
-                return (x + (unit_size - 1)) // unit_size * unit_size
-
-            # tensor memory should be align to 512 bytes for cuda operations,
-            # align size depends on floating type
-            return align(
-                tensor.numel(),
-                flow._oneflow_internal.max_alignment_size()
-                // (flow.finfo(p.dtype).bits // 8),
-            )
-
-        for p in parameters["params"]:
-            buf_type = (p.dtype, p.device)
-            self.params_dict[buf_type] = self.params_dict.get(
-                buf_type, 0
-            ) + numel_in_bucket(p)
-
-        for (dtype, device), bufsize in self.params_dict.items():
-            self.params_dict[(dtype, device)] = ContiguousParamsUnit(
-                bufsize, dtype, device,
-            )
-
-        for p in parameters["params"]:
-            buf_type = (p.dtype, p.device)
-            size = p.numel()
-            shape = p.data.shape
-            index = self.params_dict[buf_type].index
-            assert index + size <= self.params_dict[buf_type].bufsize
-
-            self.params_dict[buf_type].param_buf[index : index + size] = (
-                p.data.detach().clone().view(-1)
-            )
-            p.data = (
-                self.params_dict[buf_type].param_buf[index : index + size].view(shape)
-            )
-            p.grad = (
-                self.params_dict[buf_type].grad_buf[index : index + size].view(shape)
-            )
-
-            self.params_dict[buf_type].index += numel_in_bucket(p)
-
-            """
-            This empty_cache can reduce the memory fragments, but cannot
-            release the origin parameters' memory.
-            Contiguous parameters will use the double memory for parameters.
-            """
-            flow.cuda.empty_cache()
-
-        for buf_type in self.params_dict.keys():
-            self.params_dict[buf_type].param_buf.grad = self.params_dict[
-                buf_type
-            ].grad_buf
-            self._contiguous_parameters.append(self.params_dict[buf_type].param_buf)
 
     def _make_options_valid(self):
         """handle the conflict between optimizer options
@@ -179,7 +94,7 @@ class ParamGroup(dict):
     def contiguous_parameters(self):
         """return contiguous_parameters for fast updating
         """
-        return self._contiguous_parameters
+        return self.params_group.grouped_parameters
 
 
 class _SourceOpOnlyResourceDependenceMode:
@@ -246,9 +161,8 @@ class Optimizer(object):
             # interpreter.
             self.step = _decorate_step(self.step)
         self._state_not_saved = [
-            "_contiguous_parameters",
+            "params_group",
             "_parameters",
-            "params_dict",
         ]
 
     def add_param_group(self, param_group) -> None:
