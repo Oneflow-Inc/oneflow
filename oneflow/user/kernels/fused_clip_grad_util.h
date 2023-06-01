@@ -20,27 +20,12 @@ limitations under the License.
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/ep/include/stream.h"
-#include "oneflow/core/framework/framework.h"
-#include "oneflow/core/common/scalar.h"
-#include "oneflow/core/functional/functional.h"
-#include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/kernel/cuda_graph_support.h"
-#include "oneflow/user/kernels/multi_reduce_kernel_util.h"
-#include <cmath>
 
 namespace oneflow {
 
 template<typename T>
 struct MultiClipGradParam {
   T* data;
-  size_t size;
-};
-
-constexpr int64_t kMultiReduceScaleMulPackSize = 64;
-
-template<typename T>
-struct MultiClipGradParamPack {
-  MultiClipGradParam<T> params[kMultiReduceScaleMulPackSize];
   size_t size;
 };
 
@@ -54,102 +39,6 @@ template<DeviceType device_type, typename T>
 struct MultiClipGrad {
   void operator()(ep::Stream* stream, std::vector<MultiClipGradParam<T>>& params, T* scale,
                   const float norm_type, const float max_norm, const ClipGradType clip_grad_type);
-};
-
-size_t InferFusedClipGradTempStorageSize(user_op::InferContext* ctx) {
-  auto input_size = ctx->input_size("model_diff");
-  if (input_size == 0) { return 0; }
-  int64_t max_elem_cnt = 0;
-  int64_t pack_size = 0;
-  int32_t num_blocks = 0;
-  for (size_t i = 0; i < input_size; ++i) {
-    int64_t elem_cnt = ctx->InputShape("model_diff", i).elem_cnt();
-    max_elem_cnt = std::max(max_elem_cnt, elem_cnt);
-    pack_size++;
-    if (pack_size == kMultiReduceScaleMulPackSize || i == input_size - 1) {
-      CHECK_LT(max_elem_cnt, std::numeric_limits<int32_t>::max());
-      num_blocks += BlocksNum4ThreadsNum(static_cast<int32_t>(max_elem_cnt));
-      max_elem_cnt = 0;
-      pack_size = 0;
-    }
-  }
-  CHECK_LT(num_blocks, kCudaThreadsNumPerBlock * kCudaThreadsNumPerBlock * kCudaThreadsNumPerBlock)
-      << "Too much blocks needed for computing " << ctx->op_name() << ", should be less than "
-      << kCudaThreadsNumPerBlock << "*" << kCudaThreadsNumPerBlock << "*" << kCudaThreadsNumPerBlock
-      << ", but got " << num_blocks;
-  size_t elem_size = GetSizeOfDataType(ctx->InputDType("model_diff", 0));
-  return GetCudaAlignedSize(num_blocks * elem_size * 2);
-}
-
-template<DeviceType device_type, typename T>
-class FusedClipGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
- public:
-  FusedClipGradKernel() = default;
-  ~FusedClipGradKernel() override = default;
-
- private:
-  using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    T* out_ptr = out->mut_dptr<T>();
-    T* temp = (ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0))->mut_dptr<T>();
-    const int32_t input_size = ctx->input_size("model_diff");
-    const float max_norm = ctx->Attr<float>("max_norm");
-    const float norm_type = ctx->Attr<float>("norm_type");
-
-    std::vector<MultiReduceParam<T>> params;
-    params.resize(input_size);
-    for (size_t i = 0; i < input_size; ++i) {
-      const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("model_diff", i);
-      params[i].size = x->shape_view().elem_cnt();
-      params[i].data = x->dptr<T>();
-    }
-    if (norm_type == 0) {
-      PowByZero<T> func{};
-      MultiReduce<device_type, T, decltype(func), BinaryAdd<T>> reduce_add{};
-      reduce_add(ctx->stream(), func, params, GetZeroVal<T>(), out_ptr, temp);
-    } else if (norm_type == INFINITY) {
-      Abs<T> func{};
-      MultiReduce<device_type, T, decltype(func), BinaryMax<T>> reduce_max{};
-      reduce_max(ctx->stream(), func, params, GetZeroVal<T>(), out_ptr, temp);
-    } else if (norm_type == -INFINITY) {
-      Abs<T> func{};
-      MultiReduce<device_type, T, decltype(func), BinaryMin<T>> reduce_min{};
-      reduce_min(ctx->stream(), func, params, std::numeric_limits<T>::max(), out_ptr, temp);
-    } else if (norm_type == 1) {
-      Abs<T> func{};
-      MultiReduce<device_type, T, decltype(func), BinaryAdd<T>> reduce_sum{};
-      reduce_sum(ctx->stream(), func, params, GetZeroVal<T>(), out_ptr, temp);
-    } else if (norm_type == 2) {
-      Square<T> func{};
-      MultiReduce<device_type, T, decltype(func), BinaryAdd<T>> reduce_sum{};
-      reduce_sum(ctx->stream(), func, params, GetZeroVal<T>(), out_ptr, temp);
-    } else {
-      AbsPow<T> func{norm_type};
-      MultiReduce<device_type, T, decltype(func), BinaryAdd<T>> reduce_sum{};
-      reduce_sum(ctx->stream(), func, params, GetZeroVal<T>(), out_ptr, temp);
-    }
-
-    std::vector<MultiClipGradParam<T>> mut_params;
-    mut_params.resize(input_size);
-    for (size_t i = 0; i < input_size; ++i) {
-      user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("model_diff", i);
-      mut_params[i].size = x->shape_view().elem_cnt();
-      mut_params[i].data = x->mut_dptr<T>();
-    }
-    MultiClipGrad<device_type, T> multi_clip_grad{};
-    if (norm_type == 0) {
-      multi_clip_grad(ctx->stream(), mut_params, out_ptr, norm_type, max_norm,
-                      ClipGradType::ZeroType);
-    } else if (std::abs(norm_type) == INFINITY || norm_type == 1) {
-      multi_clip_grad(ctx->stream(), mut_params, out_ptr, norm_type, max_norm,
-                      ClipGradType::OtherType);
-    } else {
-      multi_clip_grad(ctx->stream(), mut_params, out_ptr, norm_type, max_norm,
-                      ClipGradType::PowerType);
-    }
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
 }  // namespace oneflow

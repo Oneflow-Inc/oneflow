@@ -16,11 +16,44 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/user/kernels/fused_clip_grad_util.h"
+#include "oneflow/user/kernels/fused_clip_grad.h"
 
 namespace oneflow {
 
 namespace {
+
+constexpr int64_t kMultiReduceScaleMulPackSize = 64;
+
+template<typename T>
+struct MultiClipGradParamPack {
+  MultiClipGradParam<T> params[kMultiReduceScaleMulPackSize];
+  size_t size;
+};
+
+size_t InferFusedClipGradTempStorageSize(user_op::InferContext* ctx) {
+  auto input_size = ctx->input_size("model_diff");
+  if (input_size == 0) { return 0; }
+  int64_t max_elem_cnt = 0;
+  int64_t pack_size = 0;
+  int32_t num_blocks = 0;
+  for (size_t i = 0; i < input_size; ++i) {
+    int64_t elem_cnt = ctx->InputShape("model_diff", i).elem_cnt();
+    max_elem_cnt = std::max(max_elem_cnt, elem_cnt);
+    pack_size++;
+    if (pack_size == kMultiReduceScaleMulPackSize || i == input_size - 1) {
+      CHECK_LT(max_elem_cnt, std::numeric_limits<int32_t>::max());
+      num_blocks += BlocksNum4ThreadsNum(static_cast<int32_t>(max_elem_cnt));
+      max_elem_cnt = 0;
+      pack_size = 0;
+    }
+  }
+  CHECK_LT(num_blocks, kCudaThreadsNumPerBlock * kCudaThreadsNumPerBlock * kCudaThreadsNumPerBlock)
+      << "Too much blocks needed for computing " << ctx->op_name() << ", should be less than "
+      << kCudaThreadsNumPerBlock << "*" << kCudaThreadsNumPerBlock << "*" << kCudaThreadsNumPerBlock
+      << ", but got " << num_blocks;
+  size_t elem_size = GetSizeOfDataType(ctx->InputDType("model_diff", 0));
+  return GetCudaAlignedSize(num_blocks * elem_size * 2);
+}
 
 template<typename T>
 __global__ void MultiBlockClipGradGpu(MultiClipGradParamPack<T> pack_params, T* scale,
@@ -67,6 +100,15 @@ struct MultiClipGrad<DeviceType::kCUDA, T> {
   }
 };
 
-template struct MultiClipGrad<DeviceType::kCUDA, float>;
+#define REGISTER_FUSED_CLIP_GRAD_KERNEL(device, dtype)                                         \
+  REGISTER_USER_KERNEL("fused_clip_grad")                                                      \
+      .SetCreateFn<FusedClipGradKernel<device, dtype>>()                                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                    \
+                       && (user_op::HobDataType("model_diff", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))       \
+      .SetInferTmpSizeFn(InferFusedClipGradTempStorageSize);
+
+REGISTER_FUSED_CLIP_GRAD_KERNEL(DeviceType::kCUDA, float);
+REGISTER_FUSED_CLIP_GRAD_KERNEL(DeviceType::kCUDA, double);
 
 }  // namespace oneflow
