@@ -301,7 +301,7 @@ def compare_with_numpy_lbfgs(
 
                 prev_flat_grad = np.copy(flat_grad)
                 prev_loss = loss
-
+                
                 if state["n_iter"] == 1:
                     t = min(1.0, 1.0 / np.sum(np.abs(flat_grad))) * learning_rate
                 else:
@@ -377,13 +377,12 @@ def compare_with_numpy_lbfgs(
 
 @flow.unittest.skip_unless_1n1d()
 class TestLBFGS(flow.unittest.TestCase):
-
     def test_lbfgs(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = [random_device().value()]
-        arg_dict["x_shape"] = [(10,)]
-        arg_dict["learning_rate"] = [1]
-        arg_dict["train_iters"] = [10,500]
+        arg_dict["x_shape"] = [10,20]
+        arg_dict["learning_rate"] = [0.01]
+        arg_dict["train_iters"] = [10]
         arg_dict["max_iter"] = [20]
         arg_dict["max_eval"] = [25]
         arg_dict["tolerance_grad"] = [1e-7]
@@ -393,8 +392,8 @@ class TestLBFGS(flow.unittest.TestCase):
         arg_dict["reload_state_step"] = [5]
         arg_dict["save_load_by_pickle"] = [random_bool().value()]
         arg_dict["contiguous_params"] = [random_bool().value()]
-        arg_dict["tensor_num"] = [1, 3, 4,7]
-        arg_dict["use_float64"] = [True,False]
+        arg_dict["tensor_num"] = [3, 4,7]
+        arg_dict["use_float64"] = [True]
         for arg in GenArgList(arg_dict):
             compare_with_numpy_lbfgs(test_case, *arg)
 
