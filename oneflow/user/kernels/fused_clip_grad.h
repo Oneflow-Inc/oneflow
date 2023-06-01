@@ -96,4 +96,4 @@ class FusedClipGradKernel final : public user_op::OpKernel, public user_op::Cuda
 
 }  // namespace oneflow
 
-#endif // ONEFLOW_USER_KERNELS_FUSED_CLIP_GRAD_H_
+#endif  // ONEFLOW_USER_KERNELS_FUSED_CLIP_GRAD_H_
