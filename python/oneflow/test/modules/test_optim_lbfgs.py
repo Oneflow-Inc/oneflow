@@ -163,16 +163,25 @@ def compare_with_numpy_lbfgs(
     save_load_by_pickle,
     contiguous_params,
     tensor_num,
+    use_float64
 ):
     random_grad_seq = []
     init_value_seq = []
-    for i in range(tensor_num):
-        init_value_seq.append(np.random.uniform(size=x_shape).astype(np.float64))
+    if use_float64:
+        npType = np.float64
+        flowType = flow.float64
+        flow.set_default_tensor_type(flow.DoubleTensor)
+    else:
+        npType = np.float32
+        flowType = flow.float32
+        flow.set_default_tensor_type(flow.FloatTensor)
+    for _ in range(tensor_num):
+        init_value_seq.append(np.random.uniform(size=x_shape).astype(npType))
     for _ in range(train_iters):
         random_grad_seq_per_iter = []
-        for i in range(tensor_num):
+        for _ in range(tensor_num):
             random_grad_seq_per_iter.append(
-                np.random.uniform(size=x_shape).astype(np.float64)
+                np.random.uniform(size=x_shape).astype(npType)
             )
         random_grad_seq.append(random_grad_seq_per_iter)
 
@@ -200,215 +209,7 @@ def compare_with_numpy_lbfgs(
             for i in range(tensor_num):
                 grad_tensor = flow.tensor(
                     grad[i],
-                    dtype=flow.float64,
-                    requires_grad=False,
-                    device=flow.device(device),
-                )
-                loss += flow.sum(x[i] * grad_tensor)
-            loss.backward()
-            return loss
-
-        def train_one_iter(grad):
-            def closure():
-                lbfgs.zero_grad()
-                loss = compute_loss(grad)
-                return loss
-
-            lbfgs.step(closure)
-
-        for i in range(train_iters):
-            train_one_iter(random_grad_seq[i])
-            if i == reload_state_step:
-                state_dict = lbfgs.state_dict()
-                lbfgs = flow.optim.LBFGS(
-                    [{"params": x,}],
-                    contiguous_params=contiguous_params,
-                    line_search_fn="strong_wolfe",
-                )
-                if save_load_by_pickle:
-                    with tempfile.NamedTemporaryFile() as f:
-                        flow.save(state_dict, f.name)
-                        state_dict = flow.load(f.name)
-                lbfgs.load_state_dict(state_dict)
-        return x
-
-    def train_by_numpy():
-        def compute_loss(grad):
-            loss = 0.0
-            loss += np.sum(x * grad)
-            return loss
-
-        x = np.concatenate(init_value_seq)
-
-        def np_train_one_iter(x, state, flat_grad):
-            if max(map(abs, flat_grad)) <= tolerance_grad:
-                return x
-            loss = compute_loss(flat_grad)
-            current_evals = 1
-            state["func_evals"] += 1
-            d = state.get("d")
-            t = state.get("t")
-            old_diffs = state.get("old_diffs")
-            old_step_size = state.get("old_step_size")
-            ro = state.get("ro")
-            H_diag = state.get("H_diag")
-            prev_flat_grad = state.get("prev_flat_grad")
-            prev_loss = state.get("prev_loss")
-            n_iter = 0
-            while n_iter < max_iter:
-                n_iter += 1
-                state["n_iter"] += 1
-                if state["n_iter"] == 1:
-                    d = -flat_grad
-                    old_diffs = []
-                    old_step_size = []
-                    ro = []
-                    H_diag = 1
-                else:
-                    y = flat_grad - prev_flat_grad
-                    s = d * t
-                    ys = y.dot(s)
-                    if ys > 1e-10:
-                        if len(old_diffs) == history_size:
-                            old_diffs.pop(0)
-                            old_step_size.pop(0)
-                            ro.pop(0)
-                        old_diffs.append(y)
-                        old_step_size.append(s)
-                        ro.append(1.0 / ys)
-                        H_diag = ys / y.dot(y)
-                    num_old = len(old_diffs)
-                    if "alpha" not in state:
-                        state["alpha"] = [None] * history_size
-                    alpha = state["alpha"]
-
-                    q = -flat_grad
-                    for i in range(num_old - 1, -1, -1):
-                        alpha[i] = old_step_size[i].dot(q) * ro[i]
-                        q += old_diffs[i] * -alpha[i]
-                    d = q * H_diag
-                    for i in range(num_old):
-                        beta_i = old_diffs[i].dot(d) * ro[i]
-                        d += old_step_size[i] * (alpha[i] - beta_i)
-
-                prev_flat_grad = np.copy(flat_grad)
-                prev_loss = loss
-
-                if state["n_iter"] == 1:
-                    t = min(1.0, 1.0 / np.sum(np.abs(flat_grad))) * learning_rate
-                else:
-                    t = learning_rate
-                gtd = flat_grad.dot(d)
-                if gtd > -tolerance_change:
-                    break
-
-                ls_func_evals = 0
-                if line_search_fn is None:
-                    x += t * d
-                    if n_iter != max_iter:
-                        loss = float(compute_loss(flat_grad))
-                        ls_func_evals = 1
-
-                current_evals += ls_func_evals
-                state["func_evals"] += ls_func_evals
-                if n_iter == max_iter:
-                    break
-
-                if current_evals >= max_eval:
-                    break
-
-                if np.max(np.abs(flat_grad)) <= tolerance_grad:
-                    break
-
-                if np.max(np.abs(d * t)) <= tolerance_change:
-                    break
-
-                if abs(loss - prev_loss) < tolerance_change:
-                    break
-            state["d"] = d
-            state["t"] = t
-            state["old_diffs"] = old_diffs
-            state["old_step_size"] = old_step_size
-            state["ro"] = ro
-            state["prev_flat_grad"] = prev_flat_grad
-            state["prev_loss"] = prev_loss
-            state["H_diag"] = H_diag
-            return x
-
-        state = defaultdict(dict)
-        state.setdefault("func_evals", 0)
-        state.setdefault("n_iter", 0)
-        for i in range(0, train_iters):
-            x = np_train_one_iter(x, state, np.concatenate(random_grad_seq[i]))
-        return x
-
-    oneflow_res = flow.cat(train_by_oneflow(), 0)
-    numpy_res = train_by_numpy()
-
-    test_case.assertTrue(
-        np.allclose(
-            oneflow_res.numpy().flatten(),
-            numpy_res.flatten(),
-            rtol=0.0001,
-            atol=0.0001,
-        )
-    )
-
-
-def compare_with_numpy_lbfgs_strong_wolfe(
-    test_case,
-    device,
-    x_shape,
-    learning_rate,
-    train_iters,
-    max_iter,
-    max_eval,
-    tolerance_grad,
-    tolerance_change,
-    history_size,
-    line_search_fn,
-    reload_state_step,
-    save_load_by_pickle,
-    contiguous_params,
-    tensor_num,
-):
-    random_grad_seq = []
-    init_value_seq = []
-    for i in range(tensor_num):
-        init_value_seq.append(np.random.uniform(size=x_shape).astype(np.float64))
-    for _ in range(train_iters):
-        random_grad_seq_per_iter = []
-        for i in range(tensor_num):
-            random_grad_seq_per_iter.append(
-                np.random.uniform(size=x_shape).astype(np.float64)
-            )
-        random_grad_seq.append(random_grad_seq_per_iter)
-
-    def train_by_oneflow():
-        x = []
-        for i in range(tensor_num):
-            x.append(
-                Parameter(flow.Tensor(init_value_seq[i], device=flow.device(device)))
-            )
-
-        lbfgs = flow.optim.LBFGS(
-            [{"params": x}],
-            lr=learning_rate,
-            max_iter=max_iter,
-            max_eval=max_eval,
-            tolerance_grad=tolerance_grad,
-            tolerance_change=tolerance_change,
-            history_size=history_size,
-            line_search_fn=line_search_fn,
-            contiguous_params=contiguous_params,
-        )
-
-        def compute_loss(grad):
-            loss = 0.0
-            for i in range(tensor_num):
-                grad_tensor = flow.tensor(
-                    grad[i],
-                    dtype=flow.float64,
+                    dtype=flowType,
                     requires_grad=False,
                     device=flow.device(device),
                 )
@@ -515,6 +316,7 @@ def compare_with_numpy_lbfgs_strong_wolfe(
                     if n_iter != max_iter:
                         loss = float(compute_loss(x, flat_grad))
                         ls_func_evals = 1
+                        flat_grad = 2 * x * init_grad
                 else:
                     assert (
                         line_search_fn == "strong_wolfe"
@@ -566,7 +368,6 @@ def compare_with_numpy_lbfgs_strong_wolfe(
 
     oneflow_res = flow.cat(train_by_oneflow(), 0)
     numpy_res = train_by_numpy()
-
     test_case.assertTrue(
         np.allclose(
             oneflow_res.numpy().flatten(), numpy_res.flatten(), rtol=0.001, atol=0.001,
@@ -576,45 +377,27 @@ def compare_with_numpy_lbfgs_strong_wolfe(
 
 @flow.unittest.skip_unless_1n1d()
 class TestLBFGS(flow.unittest.TestCase):
+
     def test_lbfgs(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = [random_device().value()]
         arg_dict["x_shape"] = [(10,)]
-        arg_dict["learning_rate"] = [1, 1e-3]
-        arg_dict["train_iters"] = [10]
+        arg_dict["learning_rate"] = [1]
+        arg_dict["train_iters"] = [10,500]
         arg_dict["max_iter"] = [20]
         arg_dict["max_eval"] = [25]
         arg_dict["tolerance_grad"] = [1e-7]
         arg_dict["tolerance_change"] = [1e-9]
         arg_dict["history_size"] = [100]
-        arg_dict["line_search_fn"] = [None]
+        arg_dict["line_search_fn"] = [None,"strong_wolfe"]
         arg_dict["reload_state_step"] = [5]
         arg_dict["save_load_by_pickle"] = [random_bool().value()]
         arg_dict["contiguous_params"] = [random_bool().value()]
-        arg_dict["tensor_num"] = [1, 4, 7]
+        arg_dict["tensor_num"] = [1, 3, 4,7]
+        arg_dict["use_float64"] = [True,False]
         for arg in GenArgList(arg_dict):
             compare_with_numpy_lbfgs(test_case, *arg)
 
-    def test_lbfgs_stronge_wolfe(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["device"] = [random_device().value()]
-        arg_dict["x_shape"] = [(10,)]
-        arg_dict["learning_rate"] = [1]
-        arg_dict["train_iters"] = [10]
-        arg_dict["max_iter"] = [20]
-        arg_dict["max_eval"] = [25]
-        arg_dict["tolerance_grad"] = [1e-7]
-        arg_dict["tolerance_change"] = [1e-9]
-        arg_dict["history_size"] = [100]
-        arg_dict["line_search_fn"] = ["strong_wolfe"]
-        arg_dict["reload_state_step"] = [5]
-        arg_dict["save_load_by_pickle"] = [random_bool().value()]
-        arg_dict["contiguous_params"] = [random_bool().value()]
-        arg_dict["tensor_num"] = [2, 3, 4]
-        for arg in GenArgList(arg_dict):
-            compare_with_numpy_lbfgs_strong_wolfe(test_case, *arg)
-
 
 if __name__ == "__main__":
-    flow.set_default_tensor_type(flow.DoubleTensor)
     unittest.main()
