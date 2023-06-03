@@ -335,82 +335,6 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
   return Maybe<void>::Ok();
 }
 
-// This function is an intermediate state used for debugging purposes and can be ignored when doing
-// code review.
-// MasterRankCompile is used for separate compilation on the master rank, compiling the task graph
-// of each rank separately. Two types of compilation are validated here: sequential compilation
-// (ThreadNumLimit is 0) and parallel compilation (ThreadNumLimit is -1).
-template<int64_t ThreadNumLimit>
-Maybe<void> NNGraph::MasterRankCompile() {
-  // Seperation compile mode only works with nccl use compute stream and logical chain.
-  CHECK_OR_RETURN(EnableLogicalChain());
-  // Note that nccl use compute stream mode has not need to generate CollectiveBoxingPlan.
-  CHECK_OR_RETURN((Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()));
-
-  constexpr int kWorkerStartRank = 1;
-  if (GlobalProcessCtx::IsThisProcessMaster()) {
-    OpGraphSingletonGuard op_graph_guard(job_);
-    Singleton<OpGraph>::Get()->UpdateCachedPredicatorIsReachable();
-    const auto& ParallelLoopForBoxing = [](size_t work_num,
-                                           const std::function<void(size_t)>& Work) {
-      MultiThreadLoop(work_num, Work, -1);
-    };
-    auto boxing_task_graph = JUST(BoxingTaskGraph::New(ParallelLoopForBoxing));
-    // reachable collective boxing task pairs,
-    std::vector<HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>>
-        reachable_cb_pairs{GlobalProcessCtx::WorldSize()};
-    const auto& ParallelLoop4Compute = [](size_t work_num,
-                                          const std::function<void(size_t)>& Work) {
-      MultiThreadLoop(work_num, Work, ThreadNumLimit);
-    };
-    ParallelLoop4Compute(GlobalProcessCtx::WorldSize(), [&](size_t i) {
-      auto boxing_task_graph_proto = std::make_shared<BoxingTaskGraphProto>();
-      auto PickTaskNode = [&]() -> std::function<bool(TaskNode*)> {
-        if (i >= kWorkerStartRank) {
-          return [i](TaskNode* task_node) {
-            return BoxingTaskGraph::SelectTaskNodeByRank(task_node, i);
-          };
-        } else {
-          return [](TaskNode*) { return true; };
-        }
-      }();
-      boxing_task_graph->ToProto(PickTaskNode, boxing_task_graph_proto.get());
-      if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-        TeePersistentLogStream::Create("boxing_task_" + name_ + "_plan" + std::to_string(i))
-            ->Write(*boxing_task_graph_proto);
-      }
-      Plan rank_plan;
-      auto* plan = (i >= kWorkerStartRank) ? &rank_plan : &plan_;
-      // TODO(chengcheng): new memory reused by chunk
-      CHECK_JUST(RankCompiler(boxing_task_graph_proto, i).Compile(variable_op_names_, &job_, plan));
-      PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names_);
-
-      PlanUtil::GenRegisterHint(plan);
-      PlanUtil::DumpCtrlRegstInfoToPlan(plan);
-    });
-    return Maybe<void>::Ok();
-  } else {
-    const std::string rank = std::to_string(GlobalProcessCtx::Rank());
-    {
-      std::string name = "plan:" + job_name() + ":" + rank;
-      Singleton<CtrlClient>::Get()->PullKV(name, &plan_);
-    }
-  }
-  PlanUtil::PlanMemoryLog(&plan_, name_);
-  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    PlanUtil::GenLightPlan(&plan_, name_, GlobalProcessCtx::Rank());
-  }
-  OF_SESSION_BARRIER();
-  if (GlobalProcessCtx::IsThisProcessMaster()) {
-    for (int i = kWorkerStartRank /*skip master*/; i < GlobalProcessCtx::WorldSize(); ++i) {
-      std::string name = "plan:" + job_name() + ":" + std::to_string(i);
-      Singleton<CtrlClient>::Get()->ClearKV(name);
-    }
-  }
-  OF_SESSION_BARRIER();
-  return Maybe<void>::Ok();
-}
-
 namespace {
 
 // A templated function that broadcasts data from the master process to worker processes in a
@@ -621,14 +545,6 @@ Maybe<void> NNGraph::CompilePlanForRuntime() {
     static CompileMethodT VisitNaive() {
       // Master rank compile the full plan.
       return &NNGraph::NaiveCompile;
-    }
-    static CompileMethodT VisitRankPerIter() {
-      // One thread run seperation compile. Just for debug.
-      return &NNGraph::MasterRankCompile<0>;
-    }
-    static CompileMethodT VisitRankPerThread() {
-      // Multi thread run seperation compile. Just for debug.
-      return &NNGraph::MasterRankCompile<-1>;
     }
     static CompileMethodT VisitRankPerProcess() {
       // Multi process(rank) run seperation compile.

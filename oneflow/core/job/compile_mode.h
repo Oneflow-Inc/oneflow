@@ -23,8 +23,6 @@ namespace oneflow {
 enum class CompileMode {
   kInvalid = 0,  // make sure kInvalid is the first CompileMode
   kNaive,
-  kRankPerIter,
-  kRankPerThread,
   kRankPerProcess,
   kEnd,  // make sure kEnd is the last CompileMode
 };
@@ -36,10 +34,6 @@ struct CompileModeVisitor {
     switch (compile_mode) {
       case CompileMode::kInvalid: LOG(FATAL) << "invalid compile mode";
       case CompileMode::kNaive: return DerivedT::VisitNaive(std::forward<Args>(args)...);
-      case CompileMode::kRankPerIter:
-        return DerivedT::VisitRankPerIter(std::forward<Args>(args)...);
-      case CompileMode::kRankPerThread:
-        return DerivedT::VisitRankPerThread(std::forward<Args>(args)...);
       case CompileMode::kRankPerProcess:
         return DerivedT::VisitRankPerProcess(std::forward<Args>(args)...);
       default: LOG(FATAL) << "invalid compile mode";
