@@ -31,8 +31,9 @@ size_t TmpBufferManager::InferTmpSize(user_op::InferContext* ctx) {
   using namespace user_op;
   mlir::MLIRContext mlir_ctx(GetRegistry());
 
-  auto module =
-      mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx);
+  auto mlir_assembly = ctx->Attr<std::vector<char>>("mlir_assembly");
+  mlir::OwningOpRef<mlir::ModuleOp> module = mlir::parseSourceString<mlir::ModuleOp>(
+      llvm::StringRef(mlir_assembly.data(), mlir_assembly.size() - 1), &mlir_ctx);
   if (!module) { LOG(FATAL) << "Fail to load mlir assembly"; }
   if (failed(mlir::okm::LowerWrapOpsToOKL(*module))) {
     LOG(ERROR) << "Fail lowering kernel launch Module to okl ir";
