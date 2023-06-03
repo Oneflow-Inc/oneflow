@@ -182,6 +182,7 @@ class Graph(object):
 
         # For load graph from runtime states.
         self.enable_save_runtime_state_dict(enable_get_runtime_state_dict)
+        self._is_from_runtime_state_dict = False
 
         # For run graph with dynamic shape cache
         self._run_with_cache = False
@@ -902,6 +903,11 @@ class Graph(object):
         # Filter to get unique states in graph
         state_op_names = self._filter_states()
         # Generate new config.
+        if self._shared_graph._is_from_runtime_state_dict == True:
+            # To avoid same graph name with the loaded graphs.
+            self._name = (
+                self._name + "_of_shared_from_loaded_" + self._shared_graph.name
+            )
         self._generate_config_proto()
         # Deal with parameter and buffer
         self._create_states_builder()
@@ -995,6 +1001,8 @@ class Graph(object):
             output_op_names,
             build_eager_outputs,
             out2name,
+            *args,
+            **kwargs,
         )
 
         # Init runtime.
@@ -1060,20 +1068,29 @@ class Graph(object):
                 tensor_item = tensor_tuple[name_idx]
                 dest_dict[name_list[name_idx]] = (tensor_item, tensor_item.device.type)
 
-        inputs_sub_destination = OrderedDict()
-        _fill_sub_destination(
-            inputs_sub_destination, self._input_op_names, self._inputs_tensor_tuple
-        )
-        destination["inputs"] = inputs_sub_destination
-
         # This is original outputs is needed to build output buffer.
         tuple_idx = -1
 
         def gen_index_in_tuple(eager_out):
             nonlocal tuple_idx
             tuple_idx += 1
-            return "_OFTPI" + str(tuple_idx)
+            return "_OFTPI" + str(tuple_idx)  # oneflow tuple index
 
+        inputs_sub_destination = OrderedDict()
+        _fill_sub_destination(
+            inputs_sub_destination, self._input_op_names, self._inputs_tensor_tuple
+        )
+
+        _eager_inputs_args, _eager_inputs_kwargs = self.__map_io(
+            "input",
+            gen_index_in_tuple,
+            *self.inputs_original[0],
+            **self.inputs_original[1],
+        )
+        destination["inputs"] = inputs_sub_destination
+        destination["inputs_original"] = (_eager_inputs_args, _eager_inputs_kwargs)
+
+        tuple_idx = -1
         _eager_outputs, _ = self.__map_io(
             "output", gen_index_in_tuple, *self._eager_outputs
         )
@@ -1111,6 +1128,11 @@ class Graph(object):
             destination["states"] = states_sub_destination
 
         destination["exe_plan"] = self._c_nn_graph.plan
+        if self._enable_shared_from_this == True:
+            destination["forward_graph"] = self._forward_job_proto
+            destination["compile_graph"] = self._compiled_job_proto
+
+        destination["id_state"] = oneflow._oneflow_internal.get_id_state()
 
         return destination
 
@@ -1120,12 +1142,20 @@ class Graph(object):
             Dict[str, Union[Dict[str, Tensor], str]],
             Dict[str, Dict[str, Union[Dict[str, Tensor], str]]],
         ],
+        *,
+        warmup_with_run: bool = False,
     ) -> None:
         if self._run_with_cache == True:
-            return self._dynamic_input_graph_cache.load_runtime_state_dict(state_dict)
+            return self._dynamic_input_graph_cache.load_runtime_state_dict(
+                state_dict, warmup_with_run=warmup_with_run
+            )
 
         build_graph_start = time.perf_counter()
 
+        # init id state
+        oneflow._oneflow_internal.set_id_state(state_dict["id_state"])
+
+        self._is_from_runtime_state_dict = True
         self._name = state_dict["graph_name"]
         if "oneflow_version" not in state_dict:
             state_dict["oneflow_version"] = "none"
@@ -1139,6 +1169,7 @@ class Graph(object):
         self._generate_config_proto()
         self.__print(0, 0, self._shallow_repr() + " start loading a graph and plan.")
         self._job_id = state_dict["job_id"]
+
         # Create a c nn graph to run with lazy runtime.
         self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(
             self._name,
@@ -1163,19 +1194,39 @@ class Graph(object):
         self._output_op_names, self._outputs_tensor_tuple = _load_list_from_state_dict(
             state_dict["outputs"]
         )
+        _eager_inputs_args_index, _eager_inputs_kwargs_index = state_dict[
+            "inputs_original"
+        ]
         _eager_outputs_index = state_dict["outputs_original"]
 
-        def get_tensor_in_tuple(map_item):
+        def get_tensor_in_tuple(tensor_tuple, map_item):
             if isinstance(map_item, str) and map_item.startswith("_OFTPI"):
                 of_idx = int(map_item[6:])
-                return self._outputs_tensor_tuple[of_idx]
+                return tensor_tuple[of_idx]
             else:
                 return map_item
 
+        _eager_inputs_args, _eager_inputs_kwargs = self.__map_io_lite(
+            lambda map_item: get_tensor_in_tuple(self._inputs_tensor_tuple, map_item),
+            *_eager_inputs_args_index,
+            **_eager_inputs_kwargs_index,
+        )
         _eager_outputs, _ = self.__map_io_lite(
-            get_tensor_in_tuple, *_eager_outputs_index
+            lambda map_item: get_tensor_in_tuple(self._outputs_tensor_tuple, map_item),
+            *_eager_outputs_index,
         )
         self._eager_outputs = _eager_outputs
+
+        # The base graph need extra info to create new shared graph
+        if self._enable_shared_from_this == True:
+            self._forward_job_proto = state_dict["forward_graph"]
+            self._compiled_job_proto = state_dict["compile_graph"]
+            self._build_eager_outputs = self._eager_outputs
+            self._out2name = dict()
+            for output_idx in range(len(self._output_op_names)):
+                self._out2name[
+                    self._outputs_tensor_tuple[output_idx]
+                ] = self._output_op_names[output_idx]
 
         # Load state tensor of modules
         if "oneflow_with_eager_tensor" in state_dict:
@@ -1235,6 +1286,10 @@ class Graph(object):
         self._c_nn_graph.align_states_after_logical_graph_compile()
         self._c_nn_graph.init_runtime()
         self._is_compiled = True
+        if warmup_with_run:
+            self.__run(
+                *_eager_inputs_args, **_eager_inputs_kwargs
+            )  # pre-run to warm up
         build_graph_end = time.perf_counter()
         self.__print(
             0,
@@ -1500,6 +1555,8 @@ class Graph(object):
                 output_op_names,
                 build_eager_outputs,
                 out2name,
+                *args,
+                **kwargs,
             )
 
         # Clear useless dict used in graph build.
@@ -1519,6 +1576,8 @@ class Graph(object):
         output_op_names,
         build_eager_outputs,
         out2name,
+        *args,
+        **kwargs,
     ):
         if self._enable_save_runtime_state_dict or self._enable_shared_from_this:
             self._input_op_names = input_op_names
@@ -1530,6 +1589,7 @@ class Graph(object):
 
         if self._enable_save_runtime_state_dict:
             self._inputs_tensor_tuple = inputs_tensor_tuple
+            self.inputs_original = (args, kwargs)
 
     def __rebuild_outputs(
         self, out2name=None, compiled_graph_proto=None, build_eager_outputs=None
@@ -1889,7 +1949,7 @@ class Graph(object):
               (INPUT:_linear_input.0.0_2:tensor(..., is_lazy='True', size=(8, 3), dtype=oneflow.float32))
               (PARAMETER:linear.weight:tensor(..., size=(8, 3), dtype=oneflow.float32, grad_fn=<accumulate_grad>)): ()
               (OUTPUT:_linear_output.0.0_2:tensor(..., is_lazy='True', size=(8, 8), dtype=oneflow.float32,
-                     grad_fn=<matmul_backward>))
+                     grad_fn=<matmulBackward>))
               (GraphModule:linear()): (
                 (OPERATOR: linear.weight() -> (out:sbp=(B), size=(8, 3), dtype=(oneflow.float32)), placement=(oneflow.placement(type="cpu", ranks=[0])))
                 (OPERATOR: linear-matmul-0(_LinearGraph_0_input.0.0_2/out:(sbp=(B), size=(8, 3), dtype=(oneflow.float32)), linear.weight/out:(sbp=(B), size=(8, 3), dtype=(oneflow.float32))) -> (linear-matmul-0/out_0:(sbp=(B), size=(8, 8), dtype=(oneflow.float32))), placement=(oneflow.placement(type="cpu", ranks=[0])))

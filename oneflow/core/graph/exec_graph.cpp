@@ -162,7 +162,7 @@ void ExecNode::InferBlobDescsByNdSbp(const ParallelContext* parallel_ctx) {
     if (ibns.count(bn_in_op) > 0) {
       auto iter = ibn2blob_desc.find(bn_in_op);
       if (iter == ibn2blob_desc.end()) {
-        iter = ibn2blob_desc.emplace(bn_in_op, kInvalidDataType).first;
+        iter = ibn2blob_desc.emplace(bn_in_op, BlobDesc(kInvalidDataType, kContiguous)).first;
       }
       return &iter->second;
     }
@@ -177,7 +177,7 @@ void ExecNode::InferBlobDescsByNdSbp(const ParallelContext* parallel_ctx) {
 
   // TODO(strint): user op can infer output with SBP, so there is no need to infer the input.
   // Reference: https://github.com/Oneflow-Inc/oneflow/pull/8971
-  // Infer input blob desc with SBP, the infer results are set intuo the temp input blob desc.
+  // Infer input blob desc with SBP, the infer results are set into the temp input blob desc.
   CHECK_JUST(InferPhysicalBlobDesc(
       *op(), op()->input_bns(),
       std::bind(&Operator::GetLogicalBlobDesc4Ibn, op().get(), std::placeholders::_1),

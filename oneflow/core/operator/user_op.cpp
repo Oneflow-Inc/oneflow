@@ -49,6 +49,7 @@ user_op::NaiveTensorDesc GenTensorDescFromBlobDesc(const BlobDesc* blob_desc) {
   tensor_desc.set_shape(blob_desc->shape());
   tensor_desc.set_stride(blob_desc->stride());
   tensor_desc.set_data_type(blob_desc->data_type());
+  tensor_desc.set_memory_format(blob_desc->memory_format());
   tensor_desc.set_is_dynamic(blob_desc->is_dynamic());
   return tensor_desc;
 }
@@ -249,6 +250,30 @@ class UserOpInferContext final : public user_op::InferContext {
     if (it == arg2tensor_desc_.end()) { return; };
     return it->second.set_data_type(data_type);
   }
+
+  MemoryFormat InputMemoryFormat(const std::string& arg_name, int32_t index) const override {
+    return MemoryFormat4ArgNameAndIndex(arg_name, index);
+  }
+  MemoryFormat OutputMemoryFormat(const std::string& arg_name, int32_t index) const override {
+    return MemoryFormat4ArgNameAndIndex(arg_name, index);
+  }
+  void SetOutputMemoryFormat(const std::string& arg_name, int32_t index,
+                             MemoryFormat memory_format) override {
+    return SetMemoryFormat4ArgNameAndIndex(arg_name, index, memory_format);
+  }
+  MemoryFormat MemoryFormat4ArgNameAndIndex(const std::string& arg_name,
+                                            int32_t index) const override {
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) { return MemoryFormat::kContiguous; };
+    return it->second.memory_format();
+  }
+  void SetMemoryFormat4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                       MemoryFormat memory_format) override {
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) { return; };
+    return it->second.set_memory_format(memory_format);
+  }
+
   bool InputIsDynamic(const std::string& arg_name, int32_t index) const override {
     return IsDynamic4ArgNameAndIndex(arg_name, index);
   }
@@ -576,8 +601,8 @@ class UserOpComputeComplexityFnContext : public user_op::ComputeComplexityFnCont
   }
   ~UserOpComputeComplexityFnContext() override = default;
 
-  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
-                                                  int32_t index) override {
+  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                        int32_t index) override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
     if (it == arg2tensor_desc_.end()) { return nullptr; };
     return &(it->second);
@@ -719,6 +744,7 @@ Maybe<void> UserOp::InferInternalBlobDescs(
     BlobDesc* tmp_buffer_blob = GetBlobDesc4BnInOp(GenRepeatedBn("tmp_buffer", 0));
     CHECK_NOTNULL_OR_RETURN(tmp_buffer_blob);
     tmp_buffer_blob->set_data_type(DataType::kChar);
+    tmp_buffer_blob->set_memory_format(MemoryFormat::kContiguous);
     tmp_buffer_blob->set_shape(Shape({static_cast<int64_t>(tmp_size)}));
     tmp_buffer_blob->set_stride(Stride({static_cast<int64_t>(tmp_size)}));
   }
@@ -749,6 +775,7 @@ Maybe<void> UserOp::InferLogicalOutBlobDescs(
     BlobDesc* out_blob_desc = BlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));
     const user_op::TensorDesc& tensor_desc = infer_ctx.OutputTensorDesc(pair.first, pair.second);
     out_blob_desc->set_data_type(tensor_desc.data_type());
+    out_blob_desc->set_memory_format(tensor_desc.memory_format());
     out_blob_desc->set_shape(tensor_desc.shape());
     if (val_->non_contiguous_supported) {
       out_blob_desc->set_stride(tensor_desc.stride());
@@ -789,6 +816,7 @@ Maybe<void> UserOp::InferOutBlobDescs(
     for (const auto& pair : infer_ctx.outputs()) {
       BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));
       out_blob_desc->set_data_type(infer_ctx.OutputDType(pair.first, pair.second));
+      out_blob_desc->set_memory_format(infer_ctx.OutputMemoryFormat(pair.first, pair.second));
       out_blob_desc->set_shape(infer_ctx.OutputShape(pair.first, pair.second));
       if (val_->non_contiguous_supported) {
         out_blob_desc->set_stride(infer_ctx.OutputStride(pair.first, pair.second));

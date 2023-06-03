@@ -75,7 +75,7 @@ def _parse_args():
     parser.add_argument(
         "--ofrecord_path",
         type=str,
-        default="/dataset/imagenette/ofrecord",
+        default=flow.unittest.dataset_dir("imagenette/ofrecord"),
         help="dataset path",
     )
     # training hyper-parameters

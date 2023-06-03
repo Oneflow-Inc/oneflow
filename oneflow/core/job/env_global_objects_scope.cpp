@@ -33,7 +33,7 @@ limitations under the License.
 #include "oneflow/core/vm/virtual_machine_scope.h"
 #include "oneflow/core/vm/remat/util.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
-#include "oneflow/core/job/eager_nccl_comm_manager.h"
+#include "oneflow/core/job/eager_ccl_comm_manager.h"
 #include "oneflow/core/device/cudnn_conv_util.h"
 #include "oneflow/core/rpc/include/manager.h"
 #include "oneflow/core/transport/transport.h"
@@ -193,11 +193,20 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Singleton<ThreadPool>::New(Singleton<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
   SetCpuDeviceManagerNumThreads();
 #ifdef WITH_CUDA
-  Singleton<EagerNcclCommMgr>::New();
   Singleton<CudnnConvAlgoCache>::New();
   Singleton<CudnnHandlePool>::New();
   Singleton<embedding::EmbeddingManager>::New();
 #endif
+  const auto& vaild_ccl_comm_mgr_device_types =
+      EagerCclCommMgrBuilder::Get().vaild_ccl_comm_mgr_device_types();
+  CHECK_LE_OR_RETURN(vaild_ccl_comm_mgr_device_types.size(), 1)
+      << "Only one kind collective communication manager is supported at most at the same time for "
+         "now!";
+  if (!vaild_ccl_comm_mgr_device_types.empty() && !Singleton<EagerCclCommMgr>::Get()) {
+    Singleton<EagerCclCommMgr>::SetAllocated(
+        EagerCclCommMgrBuilder::Get().NewCclCommMgr(vaild_ccl_comm_mgr_device_types.front()));
+  }
+
   Singleton<vm::VirtualMachineScope>::New(Singleton<ResourceDesc, ForSession>::Get()->resource());
 #ifdef __linux__
   Singleton<EpollCommNet>::New();
@@ -244,8 +253,8 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Singleton<embedding::EmbeddingManager>::Delete();
   Singleton<CudnnConvAlgoCache>::Delete();
   Singleton<CudnnHandlePool>::Delete();
-  Singleton<EagerNcclCommMgr>::Delete();
 #endif
+  if (Singleton<EagerCclCommMgr>::Get() != nullptr) { Singleton<EagerCclCommMgr>::Delete(); }
   Singleton<ThreadPool>::Delete();
   Singleton<remat::AllocatorManager>::Delete();
   Singleton<ep::DeviceManagerRegistry>::Delete();

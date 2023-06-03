@@ -18,7 +18,7 @@ limitations under the License.
 
 #include <cstddef>
 #include "oneflow/core/common/maybe.h"
-#include "glog/logging.h"
+#include "oneflow/core/common/throw.h"
 
 namespace oneflow {
 namespace vm {

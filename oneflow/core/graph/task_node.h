@@ -100,6 +100,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   std::string VisualStr() const override;
   virtual bool IsMeaningLess();
   void ToProto(TaskProto* task_proto) const { ToProto(task_proto, /*check*/ true); }
+  // Used to create task node from proto in plan separation compilation.
   virtual void InitFromProtoExceptConsumedRegsts(const TaskProto& task_proto);
   Maybe<void> InitConsumedRegstsFromProto(
       const TaskProto& task_proto,
@@ -159,9 +160,9 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
  private:
   void UpdateTaskId();
-  std::shared_ptr<RegstDesc> GetOrCheckRegst(const std::string& name, bool enable_reuse_mem,
-                                             int32_t min_register_num,
-                                             int32_t max_register_num) const;
+  std::shared_ptr<RegstDesc> GetAndCheckRegst(const std::string& name, bool enable_reuse_mem,
+                                              int32_t min_register_num,
+                                              int32_t max_register_num) const;
 
   int64_t machine_id_;
   int64_t thrd_id_;
@@ -194,7 +195,7 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
   void AddLbis(const std::vector<LogicalBlobId>& lbis) { lbis_.insert(lbis.begin(), lbis.end()); }
 
   void CheckRegstLbiValid() const;
-  bool OutHasBindRegst() const { return !name_in_producer2regst_.empty(); }
+  bool HasRegst() const { return !name_in_producer2regst_.empty(); }
 
   Maybe<void> InitFromProto(const TaskEdgeProto& proto,
                             const TaskGraphRebuildCtx& task_graph_rebuild_ctx);

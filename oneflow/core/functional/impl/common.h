@@ -31,6 +31,8 @@ static constexpr size_t kMaxOutputCount = 128;
 bool IsStaticZerosTensor(const std::shared_ptr<Tensor>& x);
 bool IsInplaceValid(const std::shared_ptr<Tensor>& x);
 bool IsScalarTensor(const std::shared_ptr<Tensor>& x);
+Maybe<bool> ComputeNonOverlappingAndDense(const std::shared_ptr<Tensor>& x);
+Maybe<bool> IsNonOverlappingAndDense(const std::shared_ptr<Tensor>& x);
 
 Maybe<std::vector<int32_t>> CheckAxis(const std::vector<int32_t>& axis, const int32_t& ndim);
 Maybe<void> CheckInplaceValid(const std::shared_ptr<Tensor>& x);
@@ -57,6 +59,10 @@ Maybe<std::vector<int32_t>> GetInversedPerm(const std::vector<int32_t>& perm);
 Maybe<std::tuple<std::shared_ptr<Tensor>, bool>> batchify(const std::shared_ptr<Tensor>& input,
                                                           const int64_t num_spatial_dims,
                                                           const std::string& func_name);
+// CheckNormalTensorStd function is referenced from
+// https://github.com/pytorch/pytorch/blob/main/aten/src/ATen/native/DistributionTemplates.h#L171-L182
+Maybe<void> CheckNormalTensorStd(const std::shared_ptr<one::Tensor>& std);
+Maybe<void> CheckNormalTensorStd(const float std);
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow

@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/task_graph.h"
+#include "oneflow/core/common/just.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
@@ -137,7 +139,7 @@ bool CanBeMergedInChain(const TaskNode* node) {
   if (IsTaskNodeProducedRegstHasMultiRegstNum(node)) { return false; }
   const auto* fw_comp_node = dynamic_cast<const NormalForwardCompTaskNode*>(node);
   if (fw_comp_node == nullptr) { return false; }
-  if (fw_comp_node->device_type() != DeviceType::kCUDA) { return false; }
+  if (fw_comp_node->device_type() == DeviceType::kCPU) { return false; }
   const Operator* op = fw_comp_node->op().get();
   if (IsSpecialOpNotConsiderMergeInChain(op)) { return false; }
   return true;
@@ -441,14 +443,9 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const OpEdge* op_edge) {
   return &TaskGraph::BldSubTskGphByBoxing;
 }
 
-// MakeOrGetPredicatorIsReachable is the template variable to use different reachable predictor.
-// And the default value is CreatePredicatorIsReachable.
-template<std::function<bool(const OpNode* src, const OpNode* dst)> (
-             OpGraph::*MakeOrGetPredicatorIsReachable)()
-             const = &OpGraph::CreatePredicatorIsReachable>
 void ForEachOpGraphNecessaryCtrlEdge(
     const OpGraph* op_graph, const std::function<void(const OpNode*, const OpNode*)>& Handler) {
-  auto IsOpGraphDataReachable = (op_graph->*MakeOrGetPredicatorIsReachable)();
+  auto IsOpGraphDataReachable = op_graph->CreatePredicatorIsReachable();
   op_graph->ForEachNode([&](OpNode* dst) {
     for (const auto& ctrl_in_op_name : dst->op().op_conf().ctrl_in_op_name()) {
       const OpNode* src = op_graph->OpNode4OpName(ctrl_in_op_name);
@@ -514,10 +511,24 @@ void GetHostInputLbis4OpNode(const OpNode* op_node,
   }
 }
 
+HashMap<DeviceType, CreateSubTskGphBuilderFn>* GlobalDeviceType2CreateSubTskGphBuilderFn() {
+  static HashMap<DeviceType, CreateSubTskGphBuilderFn>
+      global_device_type_create_sub_tsk_gph_builder_fn;
+  return &global_device_type_create_sub_tsk_gph_builder_fn;
+}
+
 }  // namespace
 
 TaskGraph::TaskGraph() = default;
 TaskGraph::~TaskGraph() = default;
+
+Maybe<void> RegisterCreateSubTskGphBuilderFn(DeviceType device_type,
+                                             const CreateSubTskGphBuilderFn& fn) {
+  auto* global_device_type_create_sub_tsk_gph_builder_fn =
+      GlobalDeviceType2CreateSubTskGphBuilderFn();
+  global_device_type_create_sub_tsk_gph_builder_fn->emplace(device_type, fn);
+  return Maybe<void>::Ok();
+}
 
 TaskEdge* TaskGraph::NewTaskEdgeWithLbi(const LogicalBlobId& lbi) {
   TaskEdge* edge = NewEdge();
@@ -790,7 +801,7 @@ void TaskGraph::ForEachGpuDeviceNodes(
     const std::function<void(const HashSet<TaskNode*>& dev_nodes)>& Handler) const {
   HashMap<std::pair<int64_t, int64_t>, HashSet<TaskNode*>> global_dev_phy_id2nodes;
   ForEachNode([&](TaskNode* task_node) {
-    if (task_node->device_type() != DeviceType::kCUDA) { return; }
+    if (task_node->device_type() == DeviceType::kCPU) { return; }
     int64_t dev_phy_id = task_node->stream_id().device_id().device_index();
     global_dev_phy_id2nodes[{task_node->machine_id(), dev_phy_id}].emplace(task_node);
   });
@@ -861,10 +872,27 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
             << " dst parallel conf: " << dst_parallel_desc.parallel_conf().DebugString()
             << " src_nd_sbp " << src_nd_sbp.DebugString() << " dst nd_sbp "
             << dst_nd_sbp.DebugString();
-    auto status = CHECK_JUST(hierarchical_sub_tsk_gph_builder_->Build(
-        sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes, &sorted_ctrl_tasks, src_parallel_desc,
-        dst_parallel_desc, lbi, blob_desc, src_nd_sbp, dst_nd_sbp,
-        *(CHECK_JUST(src_op_node->op().GetOpTimeShape()).get())));
+    std::shared_ptr<SubTskGphBuilderStatus> status;
+    const DeviceType device_type = [&src_parallel_desc, &dst_parallel_desc]() {
+      return src_parallel_desc.device_type() != DeviceType::kCPU ? src_parallel_desc.device_type()
+                                                                 : dst_parallel_desc.device_type();
+    }();
+    if (device_type != DeviceType::kCPU
+        && device_type2sub_tsk_gph_builder_.find(device_type)
+               != device_type2sub_tsk_gph_builder_.end()) {
+      status = CHECK_JUST(                                                            // NOLINT
+          device_type2sub_tsk_gph_builder_                                            // NOLINT
+              .at(device_type)                                                        // NOLINT
+              ->Build(sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes,           // NOLINT
+                      &sorted_ctrl_tasks, src_parallel_desc, dst_parallel_desc, lbi,  // NOLINT
+                      blob_desc, src_nd_sbp, dst_nd_sbp,                              // NOLINT
+                      *(CHECK_JUST(src_op_node->op().GetOpTimeShape()).get())));      // NOLINT
+    } else {
+      status = CHECK_JUST(hierarchical_sub_tsk_gph_builder_->Build(
+          sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes, &sorted_ctrl_tasks,
+          src_parallel_desc, dst_parallel_desc, lbi, blob_desc, src_nd_sbp, dst_nd_sbp,
+          *(CHECK_JUST(src_op_node->op().GetOpTimeShape()).get())));
+    }
     boxing_logger_->Log(*status, src_op_node->op().op_name(), dst_op_node->op().op_name(),
                         src_parallel_desc, dst_parallel_desc, src_nd_sbp, dst_nd_sbp, lbi,
                         blob_desc);
@@ -1056,7 +1084,7 @@ Maybe<void> GlobalTaskGraph::Init() {
 }
 
 Maybe<void> BoxingTaskGraph::Init(
-    const std::function<void(size_t, const std::function<void(size_t i)>&)>& Loop) {
+    const std::function<void(size_t, const std::function<void(size_t i)>&)>& ParallelRunLoop) {
   OpGraph* op_graph = Singleton<OpGraph>::Get();
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
   boxing_logger_ = CreateBoxingLogger();
@@ -1078,12 +1106,12 @@ Maybe<void> BoxingTaskGraph::Init(
                     boxing_related_op_node2sorted_comp_tasks_.at(op_edge->dst_node()));
   });
   ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, std::placeholders::_1));
-  CreateOpNode2TaskIds(Loop);
+  CreateOpNode2TaskIds(ParallelRunLoop);
   return Maybe<void>::Ok();
 }
 
 void BoxingTaskGraph::CreateOpNode2TaskIds(
-    const std::function<void(size_t, const std::function<void(size_t i)>&)>& Loop) {
+    const std::function<void(size_t, const std::function<void(size_t i)>&)>& ParallelRunLoop) {
   const OpGraph* op_graph = Singleton<OpGraph>::Get();
   std::vector<const OpNode*> op_nodes;
   op_nodes.reserve(op_graph->node_num());
@@ -1094,7 +1122,7 @@ void BoxingTaskGraph::CreateOpNode2TaskIds(
           op_node->parallel_desc().parallel_num());
     }
   });
-  Loop(op_nodes.size(), [&](size_t i) {
+  ParallelRunLoop(op_nodes.size(), [&](size_t i) {
     const OpNode* op_node = op_nodes.at(i);
     TaskType task_type = TaskType4OpNode(op_node);
     const auto& parallel_desc = op_node->parallel_desc();
@@ -1121,6 +1149,11 @@ bool IsComputTaskNodeDutyRank(int64_t current_rank, const ParallelDesc& parallel
   }
 }
 
+// A template function to process task node for different task node type.
+// RetT, function return type
+// HandleTansportTaskNode, if the task node is a transport task node, call this processing function
+// HandleComputeTaskNode, if the task node is a compute task node, call this processing
+// task_node, the input task node
 template<typename RetT, typename HandleTansportTaskNodeT, typename HandleComputeTaskNodeT>
 RetT TaskNodeVisitor(TaskNode* task_node, const HandleTansportTaskNodeT& HandleTansportTaskNode,
                      const HandleComputeTaskNodeT& HandleComputeTaskNode) {
@@ -1231,8 +1264,9 @@ Maybe<CompTaskNode*> RankTaskGraph::CreateOrFindRankCompTaskNodeByParallelId(con
                                                                              int64_t parallel_id) {
   auto* comp_task_node = JUST(TryGetBoxingRelatedComTaskNode(op_node, parallel_id));
   if (comp_task_node != nullptr) { return comp_task_node; }
-  auto** comp_task_node_ptr = &op_node2comp_task_node_[op_node];
-  if (*comp_task_node_ptr != nullptr) { return *comp_task_node_ptr; }
+  auto iter = op_node2comp_task_node_.find(op_node);
+  if (iter != op_node2comp_task_node_.end()) { return iter->second; }
+
   const TaskId task_id = *JUST([&]() -> Maybe<TaskId> {
     const auto& map = boxing_task_graph_proto_->boxing_unrelated_op_name2task_ids();
     const auto& iter = map.find(op_node->op().op_name());
@@ -1243,10 +1277,12 @@ Maybe<CompTaskNode*> RankTaskGraph::CreateOrFindRankCompTaskNodeByParallelId(con
   const auto& GetStreamIdFromMaster = [&](const OpNode* op_node, int64_t parallel_id, TaskType) {
     return task_id.stream_id();
   };
-  *comp_task_node_ptr = GenCompTaskNode(op_node, parallel_id, GetStreamIdFromMaster);
-  (*comp_task_node_ptr)->update_new_task_id(task_id);
-  AddAllocatedNode(*comp_task_node_ptr);
-  return *comp_task_node_ptr;
+  auto comp_task_node_ptr = GenCompTaskNode(op_node, parallel_id, GetStreamIdFromMaster);
+  comp_task_node_ptr->update_new_task_id(task_id);
+  AddAllocatedNode(comp_task_node_ptr);
+  CHECK_OR_RETURN(op_node2comp_task_node_.emplace(op_node, comp_task_node_ptr).second)
+      << "Got dupliacted op_node " << op_node->op().op_name();
+  return comp_task_node_ptr;
 }
 
 Maybe<CompTaskNode*> RankTaskGraph::CreateOrFindRankCompTaskNodeByRank(const OpNode* op_node,
@@ -1266,7 +1302,10 @@ Maybe<CompTaskNode*> RankTaskGraph::TryGetRankCompTaskNode(const OpNode* op_node
       << "parallel_id not found.";
   auto* comp_task_node = JUST(TryGetBoxingRelatedComTaskNode(op_node, parallel_id));
   if (comp_task_node != nullptr) { return comp_task_node; }
-  return op_node2comp_task_node_[op_node];
+  auto iter = op_node2comp_task_node_.find(op_node);
+  CHECK_OR_RETURN(iter != op_node2comp_task_node_.end())
+      << "op_node " << op_node->op().op_name() << " not found.";
+  return iter->second;
 }
 
 Maybe<void> RankTaskGraph::AddBoxingReletedCompTaskNodesFromProto() {
@@ -1425,23 +1464,22 @@ Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names) {
                       [&](int64_t rank) { return ConnectDataEdges(op_edge, rank); });
   }));
 
-  ForEachOpGraphNecessaryCtrlEdge<&OpGraph::GetCachedPredicatorIsReachable>(
-      op_graph, [&](const OpNode* src, const OpNode* dst) {
-        if (!src->parallel_desc_sym()->EqualsIgnoringHierarchy(*dst->parallel_desc_sym())) {
-          LOG(INFO) << " src " << src->parallel_desc_sym()->data().DebugString() << " dst "
-                    << dst->parallel_desc_sym()->data().DebugString();
-          return;
-        }
-        CHECK_JUST(DoRankDuty(src->parallel_desc(),
-                              [&](int64_t rank) { return ConnectCtrlEdges(src, dst, rank); }));
-      });
+  ForEachOpGraphNecessaryCtrlEdge(op_graph, [&](const OpNode* src, const OpNode* dst) {
+    if (!src->parallel_desc_sym()->EqualsIgnoringHierarchy(*dst->parallel_desc_sym())) {
+      LOG(INFO) << " src " << src->parallel_desc_sym()->data().DebugString() << " dst "
+                << dst->parallel_desc_sym()->data().DebugString();
+      return;
+    }
+    CHECK_JUST(DoRankDuty(src->parallel_desc(),
+                          [&](int64_t rank) { return ConnectCtrlEdges(src, dst, rank); }));
+  });
 
   if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
 
   ForEachNode([&](TaskNode* task_node) { task_node->ProduceAllRegstsAndBindEdges(); });
   ForEachEdge([&](TaskEdge* edge) {
-    CHECK(edge->OutHasBindRegst())
-        << "Found edge which has not bound a regst, src task " << edge->src_node()->VisualStr();
+    CHECK(edge->HasRegst()) << "Found edge which has not bound a regst, src task "
+                            << edge->src_node()->VisualStr();
   });
   return Maybe<void>::Ok();
 }

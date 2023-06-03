@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/auto_parallel/algorithm_util.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/framework/sbp_infer_util.h"
 
 namespace oneflow {
 
@@ -28,9 +29,20 @@ bool OpEdge::NeedBoxing() const {
   if (src_node()->parallel_desc_sym() != dst_node()->parallel_desc_sym()) { return true; }
   if (src_node()->parallel_desc().parallel_num() == 1) { return false; }
   for (const auto& lbi : *lbis_) {
-    const auto& obn = CHECK_JUST(MapAt(*lbi2obn_, lbi));
-    for (const auto& ibn : CHECK_JUST(MapAt(*lbi2ibns_, lbi))) {
-      if (src_node()->NdSbp4BnInOp(obn) != dst_node()->NdSbp4BnInOp(ibn)) { return true; }
+    Shape src_reduced_hierarchy;
+    Shape dst_reduced_hierarchy;
+    NdSbp src_reduced_nd_sbp;
+    NdSbp dst_reduced_nd_sbp;
+
+    InOutParallelDimReduce(*src_node()->parallel_desc().hierarchy(),
+                           *dst_node()->parallel_desc().hierarchy(), src_node()->NdSbp4Lbi(lbi),
+                           dst_node()->NdSbp4Lbi(lbi), &src_reduced_hierarchy,
+                           &dst_reduced_hierarchy, &src_reduced_nd_sbp, &dst_reduced_nd_sbp,
+                           src_node()->LogicalBlobDesc4Lbi(lbi).shape());
+    if (src_reduced_hierarchy != dst_reduced_hierarchy
+        || src_reduced_nd_sbp != dst_reduced_nd_sbp) {
+      // Not one to one
+      return true;
     }
   }
   return false;
@@ -580,17 +592,6 @@ Maybe<void> OpGraph::ForEachOpNode(const std::function<Maybe<void>(const OpNode&
 std::function<bool(const OpNode* src, const OpNode* dst)> OpGraph::CreatePredicatorIsReachable()
     const {
   return MakePredicatorIsReachable();
-}
-
-void OpGraph::UpdateCachedPredicatorIsReachable() {
-  cached_predicator_is_reachable_ = MakePredicatorIsReachable();
-}
-
-std::function<bool(const OpNode* src, const OpNode* dst)> OpGraph::GetCachedPredicatorIsReachable()
-    const {
-  CHECK(static_cast<bool>(cached_predicator_is_reachable_))
-      << "cached_predicator_is_reachable_ is not initialized";
-  return cached_predicator_is_reachable_;
 }
 
 // Print the graph with SBP in order

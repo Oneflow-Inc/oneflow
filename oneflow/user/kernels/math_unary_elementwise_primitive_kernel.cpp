@@ -31,6 +31,7 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("cos", ep::primitive::UnaryOp::kCos)                           \
   OF_PP_MAKE_TUPLE_SEQ("cosh", ep::primitive::UnaryOp::kCosh)                         \
   OF_PP_MAKE_TUPLE_SEQ("digamma", ep::primitive::UnaryOp::kDigamma)                   \
+  OF_PP_MAKE_TUPLE_SEQ("trigamma", ep::primitive::UnaryOp::kTrigamma)                 \
   OF_PP_MAKE_TUPLE_SEQ("erf", ep::primitive::UnaryOp::kErf)                           \
   OF_PP_MAKE_TUPLE_SEQ("erfc", ep::primitive::UnaryOp::kErfc)                         \
   OF_PP_MAKE_TUPLE_SEQ("exp", ep::primitive::UnaryOp::kExp)                           \

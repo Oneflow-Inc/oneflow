@@ -145,10 +145,26 @@ struct ScalarOrConstRef<T, typename std::enable_if<!std::is_scalar<T>::value>::t
   using type = const T&;
 };
 
+template<typename T>
+constexpr auto printable(int)
+    -> decltype(std::declval<std::stringstream>() << std::declval<T>(), bool()) {
+  return true;
+}
+
+template<typename T>
+constexpr bool printable(...) {
+  return false;
+}
+
 }  // namespace detail
 
 template<typename T>
 using scalar_or_const_ref_t = typename detail::ScalarOrConstRef<T>::type;
+
+template<typename T>
+constexpr bool printable() {
+  return detail::printable<T>(0);
+}
 
 }  // namespace oneflow
 

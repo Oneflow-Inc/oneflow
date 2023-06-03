@@ -153,7 +153,7 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
     std::vector<int32_t> reduce_axes_vec{0};
     if (JUST(VectorAt(ctx->biases_requires_grad, weight_num - 1))) {
       JUST(VectorAt(*in_grads, 2 * weight_num)) =
-          JUST(functional::ReduceSum(last_bias_dy, reduce_axes_vec, false));
+          JUST(functional::ReduceSum(last_bias_dy, reduce_axes_vec, false, NullOpt));
     }
 
     for (int32_t hidden_layer_idx = weight_num - 1; hidden_layer_idx > 0; hidden_layer_idx--) {

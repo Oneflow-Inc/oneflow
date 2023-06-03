@@ -108,6 +108,8 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
   void SetTaskRegstInplaceInfo(const InplaceObasInfo& obas_info,
                                const HashSet<TaskNode*>& dev_nodes) const;
   std::vector<TaskNode*> ordered_task_nodes_;
+  HashMap<DeviceType, std::unique_ptr<HierarchicalSubTskGphBuilder>>
+      device_type2sub_tsk_gph_builder_;
   std::unique_ptr<HierarchicalSubTskGphBuilder> hierarchical_sub_tsk_gph_builder_;
   std::unique_ptr<SubTskGphBuilderCtx> sub_tsk_gph_builder_ctx_;
   std::unique_ptr<BoxingLogger> boxing_logger_;
@@ -158,9 +160,9 @@ class BoxingTaskGraph final : public TaskGraph {
   ~BoxingTaskGraph() = default;
 
   static Maybe<BoxingTaskGraph> New(
-      const std::function<void(size_t, const std::function<void(size_t i)>&)>& Loop) {
+      const std::function<void(size_t, const std::function<void(size_t i)>&)>& ParallelRunLoop) {
     std::shared_ptr<BoxingTaskGraph> graph(new BoxingTaskGraph());
-    JUST(graph->Init(Loop));
+    JUST(graph->Init(ParallelRunLoop));
     return graph;
   }
 
@@ -169,10 +171,11 @@ class BoxingTaskGraph final : public TaskGraph {
 
  private:
   BoxingTaskGraph() = default;
-  Maybe<void> Init(const std::function<void(size_t, const std::function<void(size_t i)>&)>& Loop);
+  Maybe<void> Init(
+      const std::function<void(size_t, const std::function<void(size_t i)>&)>& ParallelRunLoop);
 
   void CreateOpNode2TaskIds(
-      const std::function<void(size_t, const std::function<void(size_t i)>&)>& Loop);
+      const std::function<void(size_t, const std::function<void(size_t i)>&)>& ParallelRunLoop);
 
   HashMap<const OpNode*, std::vector<CompTaskNode*>> boxing_related_op_node2sorted_comp_tasks_;
   HashMap<const OpNode*, std::vector<TaskId>> boxing_unrelated_op_node2sorted_task_ids_;
@@ -224,6 +227,14 @@ class RankTaskGraph final : public TaskGraph {
   std::unique_ptr<TaskGraphRebuildCtx> task_graph_rebuild_ctx_;
   HashMap<const OpNode*, CompTaskNode*> op_node2comp_task_node_;
 };
+
+using CreateSubTskGphBuilderFn = std::function<std::unique_ptr<HierarchicalSubTskGphBuilder>()>;
+
+Maybe<void> RegisterCreateSubTskGphBuilderFn(DeviceType device_type,
+                                             const CreateSubTskGphBuilderFn& fn);
+
+#define REGISTER_CREATE_SUB_TASK_GRAPH_BUILDER_FN(device_type, fn) \
+  COMMAND(CHECK_JUST(RegisterCreateSubTskGphBuilderFn(device_type, fn)))
 
 }  // namespace oneflow
 

@@ -85,7 +85,11 @@ std::string FormatFileOfStackFrame(const std::string& file) {
 // line info in stack frame
 std::string FormatLineOfStackFrame(const int64_t& line) {
   std::stringstream ss;
-  ss << "line " << line << ",";
+  if (line >= 0) {
+    ss << "line " << line << ",";
+  } else {
+    ss << "line <unknown>,";
+  }
   return ss.str();
 }
 
@@ -104,7 +108,7 @@ Maybe<std::string> FormatMsgOfStackFrame(std::string error_msg, bool is_last_sta
   // error_msg of last stack frame come from "<<"
   if (is_last_stack_frame) { error_msg = StripSpace(error_msg); }
   std::stringstream ss;
-  ss << "\n    " << error_msg;
+  if (!error_msg.empty()) { ss << "\n    " << error_msg; }
   return ss.str();
 }
 
