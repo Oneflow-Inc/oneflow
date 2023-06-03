@@ -1280,7 +1280,8 @@ Maybe<CompTaskNode*> RankTaskGraph::CreateOrFindRankCompTaskNodeByParallelId(con
   auto comp_task_node_ptr = GenCompTaskNode(op_node, parallel_id, GetStreamIdFromMaster);
   comp_task_node_ptr->update_new_task_id(task_id);
   AddAllocatedNode(comp_task_node_ptr);
-  CHECK_OR_RETURN(op_node2comp_task_node_.emplace(op_node, comp_task_node_ptr).second);
+  CHECK_OR_RETURN(op_node2comp_task_node_.emplace(op_node, comp_task_node_ptr).second)
+      << "Got dupliacted op_node " << op_node->op().op_name();
   return comp_task_node_ptr;
 }
 
