@@ -78,14 +78,16 @@ def _get_comb1to2d_test():
                 flow.sbp.split(1),
                 flow.sbp.split(2),
             ]
-    
+
             for sbp1 in sbp_1ds:
-    
+
                 for sbp2 in sbp_1ds:
                     for sbp3 in sbp_1ds:
                         # (2, 2) -> 4
                         x = x.to_global(
-                            placement=flow.placement(type="cuda", ranks=np.array(range(4))),
+                            placement=flow.placement(
+                                type="cuda", ranks=np.array(range(4))
+                            ),
                             sbp=[sbp1],
                         )
                         # 4 -> (2, 2)
@@ -95,10 +97,9 @@ def _get_comb1to2d_test():
                             ),
                             sbp=[sbp2, sbp3],
                         )
-    
+
             return x
-    
-    
+
     class _TestModuleDiffPlacement(nn.Module):
         def forward(self, x):
             sbp_1ds = [
@@ -114,7 +115,9 @@ def _get_comb1to2d_test():
                         # (2, 2) -> 3
                         # 4 is not divisible by 3
                         x = x.to_global(
-                            placement=flow.placement(type="cuda", ranks=np.array(range(3))),
+                            placement=flow.placement(
+                                type="cuda", ranks=np.array(range(3))
+                            ),
                             sbp=[sbp1],
                         )
                         # 3 -> (2, 2)
@@ -124,15 +127,14 @@ def _get_comb1to2d_test():
                             ),
                             sbp=[sbp2, sbp3],
                         )
-    
+
             return x
-    
-    
+
     class _TestGraph(nn.Graph):
         def __init__(self, model):
             super().__init__()
             self.model = model
-    
+
         def build(self, x):
             x = self.model(x)
             return x
@@ -143,7 +145,7 @@ def _get_comb1to2d_test():
         def test_lazy_boxing_2d_all_combination_diff_hierarchy(test_case):
             os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "0"
             os.environ["ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION"] = "0"
-    
+
             x = flow.ones(
                 4,
                 12,
@@ -156,11 +158,11 @@ def _get_comb1to2d_test():
             model_diff_hierarchy = _TestModuleDiffHierarchy()
             graph_diff_hierarchy = _TestGraph(model_diff_hierarchy)
             y = graph_diff_hierarchy(x)
-    
+
         def test_lazy_boxing_2d_all_combination_diff_placement(test_case):
             os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "0"
             os.environ["ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION"] = "0"
-    
+
             x = flow.ones(
                 4,
                 12,
@@ -174,7 +176,9 @@ def _get_comb1to2d_test():
             graph_diff_placement = _TestGraph(model_diff_placement)
             z = graph_diff_placement(x)
             test_case.assertTrue(np.allclose(x.numpy(), z.numpy(), 1e-05, 1e-05))
+
     return TestSepCompileLazyAllSbpCombinationTesting
+
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n4d()
@@ -183,6 +187,7 @@ class TestSeparationCompile(oneflow.unittest.TestCase):
         from oneflow.test.graph.test_alexnet_auto_parallel import (
             TestAlexnetAutoParallel,
         )
+
         run_testcase_with_sep_compile(TestAlexnetAutoParallel)
 
     def test_comb1to2d(test_case):
@@ -190,14 +195,17 @@ class TestSeparationCompile(oneflow.unittest.TestCase):
 
     def test_graph_zero(test_case):
         from oneflow.test.graph.test_graph_zero import TestLinearTrainGraph2DWithZeRO
+
         run_testcase_with_sep_compile(TestLinearTrainGraph2DWithZeRO)
 
     def test_graph_clip_grad_norm(test_case):
         from oneflow.test.graph.test_graph_clip_grad_norm import TestGraphClipGradNorm
+
         run_testcase_with_sep_compile(TestGraphClipGradNorm)
 
     def test_graph_pipeline_grad_acc_and_activatioin_checkpointing(test_case):
         from oneflow.test.graph.test_graph_pipeline import TestGraphPipeline
+
         run_testcase_with_sep_compile(TestGraphPipeline)
 
 

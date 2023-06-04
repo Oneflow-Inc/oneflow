@@ -164,8 +164,13 @@ class Graph(object):
         self._args_repr = []
         self._outs_repr = []
         self._oneflow_internal_graph_ir__ = None
-        enalbe_lazy_separate_compile = os.environ.get("ONEFLOW_ENABLE_LAZY_SEPARATE_COMPILE")
-        if enalbe_lazy_separate_compile != None and enalbe_lazy_separate_compile == True:
+        enalbe_lazy_separate_compile = os.environ.get(
+            "ONEFLOW_ENABLE_LAZY_SEPARATE_COMPILE"
+        )
+        if (
+            enalbe_lazy_separate_compile != None
+            and enalbe_lazy_separate_compile == True
+        ):
             os.environ["ONEFLOW_LAZY_COMPILE_MODE"] = "rank_per_process"
             # Separate compile mode only works with nccl use compute stream and logical chain.
             os.environ["ENABLE_LOGICAL_CHAIN"] = "1"
