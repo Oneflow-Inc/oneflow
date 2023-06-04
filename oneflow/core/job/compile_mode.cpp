@@ -24,6 +24,8 @@ namespace {
 
 struct CompileModeName final : public CompileModeVisitor<CompileModeName> {
   static std::string VisitNaive() { return "naive"; }
+  static std::string VisitRankPerIter() { return "rank_per_iter"; }
+  static std::string VisitRankPerThread() { return "rank_per_thread"; }
   static std::string VisitRankPerProcess() { return "rank_per_process"; }
 };
 
