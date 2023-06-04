@@ -439,7 +439,6 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
   MergeCommKeys(MultiThreadBroadcastFromMasterToWorkers(
       world_size, name_ + std::string(__FUNCTION__) + "_job", job_, &job_));
   OpGraphSingletonGuard op_graph_guard(job_);
-  Singleton<OpGraph>::Get()->UpdateCachedPredicatorIsReachable();
   size_t rank = GlobalProcessCtx::Rank();
 
   // b. Mater compile BoxingTaskGraph and broadcast it to all workers. BoxingTaskGraph needs to be
@@ -478,7 +477,7 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
 
   if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     TeePersistentLogStream::Create("job_" + name_ + "_plan" + std::to_string(rank))->Write(*plan);
-    PlanUtil::ToDotFile(*plan, "job_" + name_ + "_plan" + std::to_string(rank) + ".dot");
+    PlanUtil::ToDotFile(*plan, "job_" + name_ + "_plan_" + std::to_string(rank) + ".dot");
   }
   PlanUtil::GenRegisterHint(plan);
   PlanUtil::DumpCtrlRegstInfoToPlan(plan);
@@ -550,6 +549,7 @@ Maybe<void> NNGraph::CompilePlanForRuntime() {
       // Multi process(rank) run seperation compile.
       return &NNGraph::MasterAndWorkerRanksCompile;
     }
+    static CompileMethodT VisitInValid() { return nullptr; }
   };
   JUST((this->*GetCompileMethod::Visit(JUST(CurrentCompileMode())))());
   compile_tc->Count("[GraphCompile]" + name_ + " CompileAndSyncPlan", 0);

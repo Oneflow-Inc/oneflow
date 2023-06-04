@@ -54,9 +54,12 @@ void IDMgr::SaveIdAndTaskIndex(IdState* id_state) {
 }
 
 void IDMgr::TryUpdateIdAndTaskIndex(const IdState* id_state) {
-  regst_desc_id_count_ = std::max(regst_desc_id_count_, id_state->regst_desc_id_state_);
-  mem_block_id_count_ = std::max(mem_block_id_count_, id_state->mem_block_id_state_);
-  chunk_id_count_ = std::max(chunk_id_count_, id_state->chunk_id_state_);
+  regst_desc_id_count_ = std::max(regst_desc_id_count_.load(std::memory_order_relaxed),
+                                  id_state->regst_desc_id_state_);
+  mem_block_id_count_ =
+      std::max(mem_block_id_count_.load(std::memory_order_relaxed), id_state->mem_block_id_state_);
+  chunk_id_count_ =
+      std::max(chunk_id_count_.load(std::memory_order_relaxed), id_state->chunk_id_state_);
   task_id_gen_.TryUpdateTaskIndex(id_state->task_index_state_);
 }
 

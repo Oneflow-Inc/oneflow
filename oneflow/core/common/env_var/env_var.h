@@ -81,6 +81,7 @@ const std::string& ThreadLocalEnvString();
     return value;                                                                               \
   }
 
+DEFINE_THREAD_LOCAL_ENV_BOOL(ONEFLOW_ENABLE_LAZY_SEPARATE_COMPILE, false);
 // Default compilation mode during graph compilation. There 2 modes to choose:
 // "naive", master rank compile the full plan.
 // "rank_per_process", multi process(rank) run seperation compile.

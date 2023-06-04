@@ -25,6 +25,7 @@ namespace {
 struct CompileModeName final : public CompileModeVisitor<CompileModeName> {
   static std::string VisitNaive() { return "naive"; }
   static std::string VisitRankPerProcess() { return "rank_per_process"; }
+  static std::string VisitInValid() { return "invalid"; }
 };
 
 std::unordered_map<std::string, CompileMode> Name2CompileMode() {

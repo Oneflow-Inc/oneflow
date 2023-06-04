@@ -32,11 +32,13 @@ struct CompileModeVisitor {
   template<typename... Args>
   static auto Visit(CompileMode compile_mode, Args&&... args) {
     switch (compile_mode) {
-      case CompileMode::kInvalid: LOG(FATAL) << "invalid compile mode";
       case CompileMode::kNaive: return DerivedT::VisitNaive(std::forward<Args>(args)...);
       case CompileMode::kRankPerProcess:
         return DerivedT::VisitRankPerProcess(std::forward<Args>(args)...);
-      default: LOG(FATAL) << "invalid compile mode";
+      default: {
+        LOG(FATAL) << "invalid compile mode";
+        return DerivedT::VisitInValid(std::forward<Args>(args)...);
+      }
     }
   }
 };
