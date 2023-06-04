@@ -81,6 +81,21 @@ class TestBfloat16Activatian(flow.unittest.TestCase):
                 rtol=1e-4,
             )
         )
+        
+    def test_sinc_with_random_data(test_case):
+        np_array = np.random.rand(4, 4)
+        x = flow.tensor(np_array, dtype=flow.bfloat16, device="cpu")
+        fp32_x = x.float()
+        y = flow.sinc(x)
+        fp32_y = flow.sinc(fp32_x)
+        test_case.assertTrue(
+            np.allclose(
+                y.float().numpy(),
+                fp32_y.bfloat16().float().numpy(),
+                atol=1e-4,
+                rtol=1e-4,
+            )
+        )
 
     def test_cos_with_random_data(test_case):
         np_array = np.random.rand(4, 4)

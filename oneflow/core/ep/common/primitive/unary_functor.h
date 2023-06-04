@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/unary_op.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/scalar.h"
+#include "oneflow/core/common/math_util.h"
 
 namespace oneflow {
 
@@ -570,6 +571,20 @@ struct UnaryFunctor<device, UnaryOp::kBitwiseNot, Dst, bool> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(bool src) const { return static_cast<Dst>(!src); }
+};
+
+template<DeviceType device, typename Dst, typename Src>
+struct UnaryFunctor<device, UnaryOp::kSinc, Dst, Src> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const { 
+    if(src==static_cast<Src>(0)){
+      return static_cast<Dst>(1);
+    }
+    Src product=pi<Src>*src;
+    ep::primitive::UnaryFunctor<device, UnaryOp::kSin, Dst, Src> sin_functor(0, 0);
+    return static_cast<Dst>(sin_functor(product)/product);
+   }
 };
 
 }  // namespace primitive

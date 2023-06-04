@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/scalar.h"
 #include <cmath>
+#include "oneflow/core/common/math_util.h"
 
 namespace oneflow {
 
@@ -577,6 +578,16 @@ struct BinaryFunctor<device, BinaryOp::kExpm1BackwardWithDyX, Src, Dst> {
 };
 
 template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kLgammaBackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    ep::primitive::UnaryFunctor<device, UnaryOp::kDigamma, Src, Dst> digamma_functor(0, 0);
+    Dst digamma_result = digamma_functor(x);
+    return digamma_result * dy;
+  }
+};
+
+template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kLogBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const { return dy * (static_cast<Src>(1.0) / x); }
@@ -689,6 +700,19 @@ struct BinaryFunctor<device, BinaryOp::kTanBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
     const Src cos_val = cos(x);
     return dy * (static_cast<Src>(1.0) / (cos_val * cos_val));
+  }
+};
+
+template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kSincBackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    Src self_pi = x * pi<Src>;
+    Src self_squared_pi = self_pi * x;
+    if (x == static_cast<Src>(0)) { return static_cast<Dst>(0); }
+    ep::primitive::UnaryFunctor<device, UnaryOp::kCos, Dst, Src> cos_functor(0, 0);
+    ep::primitive::UnaryFunctor<device, UnaryOp::kSin, Dst, Src> sin_functor(0, 0);
+    return static_cast<Dst>(dy * ((self_pi * cos_functor(self_pi) - sin_functor(self_pi)) / self_squared_pi));
   }
 };
 

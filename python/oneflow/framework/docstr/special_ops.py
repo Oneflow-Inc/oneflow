@@ -129,3 +129,33 @@ add_docstr(
 
     """,
 )
+
+add_docstr(
+    oneflow.special.sinc,
+    r"""
+    sinc(input) -> Tensor
+    
+    Computes the normalized sinc of input.
+    
+    .. math::
+        \text{out}_{i} =
+        \begin{cases}
+            1, & \text{if}\ \text{input}_{i}=0 \\
+            \sin(\pi \text{input}_{i}) / (\pi \text{input}_{i}), & \text{otherwise}
+        \end{cases}
+    
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.randn(4)
+        >>> x
+        tensor([ 0.2284,  0.9089, -0.6296,  0.9167], dtype=oneflow.float32)
+        >>> flow.special.sinc(x)
+        tensor([0.9164, 0.0988, 0.4643, 0.0899], dtype=oneflow.float32)
+
+    """,
+)
+

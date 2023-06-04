@@ -54,6 +54,7 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("sign", ep::primitive::UnaryOp::kSign)                         \
   OF_PP_MAKE_TUPLE_SEQ("sin", ep::primitive::UnaryOp::kSin)                           \
   OF_PP_MAKE_TUPLE_SEQ("sinh", ep::primitive::UnaryOp::kSinh)                         \
+  OF_PP_MAKE_TUPLE_SEQ("sinc", ep::primitive::UnaryOp::kSinc)                         \
   OF_PP_MAKE_TUPLE_SEQ("sqrt", ep::primitive::UnaryOp::kSqrt)                         \
   OF_PP_MAKE_TUPLE_SEQ("square", ep::primitive::UnaryOp::kSquare)                     \
   OF_PP_MAKE_TUPLE_SEQ("tan", ep::primitive::UnaryOp::kTan)                           \
@@ -87,6 +88,7 @@ namespace oneflow {
                        ep::primitive::BinaryOp::kReciprocalNoNanBackwardWithDyX)                \
   OF_PP_MAKE_TUPLE_SEQ("rsqrt_grad", ep::primitive::BinaryOp::kRsqrtBackwardWithDyX)            \
   OF_PP_MAKE_TUPLE_SEQ("sin_grad", ep::primitive::BinaryOp::kSinBackwardWithDyX)                \
+  OF_PP_MAKE_TUPLE_SEQ("sinc_grad", ep::primitive::BinaryOp::kSincBackwardWithDyX)                \
   OF_PP_MAKE_TUPLE_SEQ("sinh_grad", ep::primitive::BinaryOp::kSinhBackwardWithDyX)              \
   OF_PP_MAKE_TUPLE_SEQ("sqrt_grad", ep::primitive::BinaryOp::kSqrtBackwardWithDyX)              \
   OF_PP_MAKE_TUPLE_SEQ("square_grad", ep::primitive::BinaryOp::kSquareBackwardWithDyX)          \

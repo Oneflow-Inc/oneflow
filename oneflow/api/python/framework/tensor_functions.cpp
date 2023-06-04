@@ -235,6 +235,8 @@ UNARY_METHOD(PyTensorObject_isnan, functional::IsNan);
 UNARY_METHOD(PyTensorObject_isinf, functional::IsInf);
 UNARY_METHOD(PyTensorObject_sin, functional::Sin);
 UNARY_METHOD(PyTensorObject_sin_, functional::Sin_);
+UNARY_METHOD(PyTensorObject_sinc, functional::Sinc);
+UNARY_METHOD(PyTensorObject_sinc_, functional::Sinc_);
 UNARY_METHOD(PyTensorObject_asin, functional::Asin);
 UNARY_METHOD(PyTensorObject_cos, functional::Cos);
 UNARY_METHOD(PyTensorObject_acos, functional::Acos);
@@ -1155,6 +1157,8 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"t", PyTensorObject_t, METH_NOARGS, NULL},
     {"sin", PyTensorObject_sin, METH_NOARGS, NULL},
     {"sin_", PyTensorObject_sin_, METH_NOARGS, NULL},
+    {"sinc", PyTensorObject_sinc, METH_NOARGS, NULL},
+    {"sinc_", PyTensorObject_sinc_, METH_NOARGS, NULL},
     {"isnan", PyTensorObject_isnan, METH_NOARGS, NULL},
     {"inverse", PyTensorObject_inv, METH_NOARGS, NULL},
     {"trunc", PyTensorObject_trunc, METH_NOARGS, NULL},
