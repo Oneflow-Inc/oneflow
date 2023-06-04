@@ -169,7 +169,7 @@ class Graph(object):
         )
         if (
             enalbe_lazy_separate_compile != None
-            and enalbe_lazy_separate_compile == True
+            and enalbe_lazy_separate_compile == "1"
         ):
             os.environ["ONEFLOW_LAZY_COMPILE_MODE"] = "rank_per_process"
             # Separate compile mode only works with nccl use compute stream and logical chain.
