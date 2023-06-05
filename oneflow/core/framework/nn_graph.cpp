@@ -424,9 +424,13 @@ void DumpCalculationPassName(Job* job) {
 //      BoxingTaskGraph and the job.
 Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
   // Seperation compile mode only works with nccl use compute stream and logical chain.
-  CHECK_OR_RETURN(EnableLogicalChain());
+  CHECK_OR_RETURN(EnableLogicalChain())
+      << Error::RuntimeError()
+      << "nn.Graph separete compilation needs to work with logical chain enabled.";
   // Note that nccl use compute stream mode has not need to generate CollectiveBoxingPlan.
-  CHECK_OR_RETURN((Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()));
+  CHECK_OR_RETURN((Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()))
+      << Error::RuntimeError()
+      << "nn.Graph separete compilation needs to work with nccl using compute stream enabled.";
 
   std::set<std::string> push_pull_keys{};
   const auto& MergeCommKeys = [&](std::set<std::string>&& keys) {
