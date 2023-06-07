@@ -19,8 +19,8 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/broadcast_matmul.h"
 #include "oneflow/core/ep/common/primitive/broadcast_matmul.h"
 #include "oneflow/core/common/optional.h"
-#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/ep/cuda/cuda_matmul_mode.h"
 #include <cuda.h>
 
 namespace oneflow {
@@ -60,13 +60,15 @@ union CublasScalarParameter {
   half h;
 };
 
-CublasScalarParameter GetCublasScalarParameter(Scalar scalar, cudaDataType_t compute_type) {
+CublasScalarParameter GetCublasScalarParameter(Scalar scalar, cublasComputeType_t compute_type) {
   CublasScalarParameter sp{};
-  if (compute_type == CUDA_R_64F) {
+  if (compute_type == CUBLAS_COMPUTE_64F) {
     sp.d = scalar.Value<double>();
-  } else if (compute_type == CUDA_R_32F) {
+  } else if (compute_type == CUBLAS_COMPUTE_32F_PEDANTIC
+             || compute_type == CUBLAS_COMPUTE_32F_FAST_TF32
+             || compute_type == CUBLAS_COMPUTE_32F) {
     sp.s = scalar.Value<float>();
-  } else if (compute_type == CUDA_R_16F) {
+  } else if (compute_type == CUBLAS_COMPUTE_16F) {
     sp.h = static_cast<half>(scalar.Value<float>());
   } else {
     UNIMPLEMENTED();
@@ -74,23 +76,38 @@ CublasScalarParameter GetCublasScalarParameter(Scalar scalar, cudaDataType_t com
   return sp;
 }
 
-cudaDataType_t GetComputeType(DataType data_type) {
+cudaDataType_t GetCublasScalarType(DataType data_type) {
   switch (data_type) {
     case kFloat: return CUDA_R_32F;
     case kDouble: return CUDA_R_64F;
-    case kFloat16: {
-      const bool allow_half_accumulation =
-          ParseBooleanFromEnv("ONEFLOW_MATMUL_ALLOW_HALF_PRECISION_ACCUMULATION", false);
-      if (allow_half_accumulation) {
-        return CUDA_R_16F;
+    default: return CUDA_R_32F;
+  }
+}
+
+cublasComputeType_t GetComputeType(DataType data_type, CudaStream* cuda_stream) {
+  switch (data_type) {
+    case kFloat: {
+      if (CudaMatmulMode::is_matmul_allow_tf32()) {
+        return CUBLAS_COMPUTE_32F_FAST_TF32;
       } else {
-        return CUDA_R_32F;
+        // Starting with cuBLAS version 11.0.0, the library will automatically make use of Tensor
+        // Core capabilities wherever possible, unless they are explicitly disabled by selecting
+        // pedantic compute modes in cuBLAS
+        return CUBLAS_COMPUTE_32F_PEDANTIC;
+      }
+    }
+    case kDouble: return CUBLAS_COMPUTE_64F;
+    case kFloat16: {
+      if (cuda_stream->device_properties().major >= 5) {
+        return CUBLAS_COMPUTE_32F;
+      } else {
+        return CUBLAS_COMPUTE_16F;
       }
     }
 #if CUDA_VERSION >= 11000
-    case kBFloat16: return CUDA_R_32F;
+    case kBFloat16: return CUBLAS_COMPUTE_32F;
 #endif  // CUDA_VERSION >= 11000
-    default: UNIMPLEMENTED(); return CUDA_R_32F;
+    default: UNIMPLEMENTED(); return CUBLAS_COMPUTE_32F;
   }
 }
 
@@ -102,7 +119,7 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
                            Scalar beta, void* c) {
   auto* cuda_stream = stream->As<CudaStream>();
   const auto cuda_data_type = GetCudaDataType(data_type);
-  const auto compute_type = GetComputeType(data_type);
+  const auto compute_type = GetComputeType(data_type, cuda_stream);
   const auto sp_alpha = GetCublasScalarParameter(alpha, compute_type);
   const auto GetCublasOperation = [](BlasTransposeType transpose_type) {
     if (transpose_type == BlasTransposeType::N) {
@@ -136,12 +153,19 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
     UNIMPLEMENTED();
   }
   const int cublas_ldc = n;
+
   CublasMathModeGuard guard(cuda_stream->cublas_handle());
   if (data_type == DataType::kFloat16) {
 #if CUDA_VERSION < 11000
     guard.SetMathMode(CUBLAS_TENSOR_OP_MATH);
 #else
-    guard.SetMathMode(CUBLAS_DEFAULT_MATH);
+    cublasMath_t cublas_flags = CUBLAS_DEFAULT_MATH;
+    if (cuda_stream->device_properties().major >= 5
+        && CudaMatmulMode::is_matmul_allow_fp16_reduced_precision_reduction()) {
+      cublas_flags = static_cast<cublasMath_t>(cublas_flags
+                                               | CUBLAS_MATH_DISALLOW_REDUCED_PRECISION_REDUCTION);
+    }
+    guard.SetMathMode(cublas_flags);
 #endif  // CUDA_VERSION < 11000
   }
 #if CUDA_VERSION >= 11000
@@ -150,6 +174,7 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
   cublasGemmAlgo_t algo =
       (data_type == DataType::kFloat16) ? CUBLAS_GEMM_DFALT_TENSOR_OP : CUBLAS_GEMM_DEFAULT;
 #endif
+
   if (num_batch_dims == 1 && c_batch_dims[0] != 1) {
     const void* cublas_a = b;
     const void* cublas_b = a;

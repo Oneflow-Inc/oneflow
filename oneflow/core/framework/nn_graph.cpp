@@ -391,8 +391,10 @@ Maybe<void> NNGraph::BuildWithNewInputFromSharedGraph(
   const auto& NewOp4SharedOpName =
       [&shared_op_name2_new_op](const std::string& shared_op_name) -> Maybe<const OperatorConf*> {
     auto iter = shared_op_name2_new_op.find(shared_op_name);
-    CHECK_OR_RETURN(iter != shared_op_name2_new_op.end())
-        << "Can't find new operator conf of " << shared_op_name << ".";
+    if (iter == shared_op_name2_new_op.end()) {
+      LOG(WARNING) << "Can't find new operator conf of " << shared_op_name << ".";
+      return nullptr;
+    }
     return iter->second;
   };
 

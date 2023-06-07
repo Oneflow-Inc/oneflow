@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_ONEFLOW_MEMPOOL_H_
 
 #include "mlir/Pass/Pass.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 
 namespace mlir {
 namespace oneflow {
@@ -28,6 +29,8 @@ inline const std::string MEMPOOL_ATTR_NAME = "oneflow.mempool";
 
 }  // namespace mempool
 }  // namespace codegen
+
+void applyFoldAlloc(func::FuncOp op);
 
 std::unique_ptr<mlir::Pass> createFoldAllocToSubviewPass();
 std::unique_ptr<mlir::Pass> createInsertOneFlowMemPoolPass();

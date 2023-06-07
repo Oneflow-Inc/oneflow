@@ -2696,6 +2696,14 @@
   signature: 'Tensor (Tensor y, Tensor dy, Float scale=0.35355) => FusedScaleMaskBiasSoftmaxGrad'
   bind_python: False
 
+- name: "noncontiguous_binary_op"
+  signature: 'Tensor (Tensor lhs, Tensor rhs, String op="add", Bool inplace=False) => NonContiguousBinaryOp'
+  bind_python: True
+
+- name: "noncontiguous_binary_op_grad"
+  signature: 'TensorTuple (Tensor dy, Tensor lhs, Tensor rhs, String op="add", Bool inplace=False) => NonContiguousBinaryOpGrad'
+  bind_python: False
+
 - name: "fused_get_center_dist"
   signature: "Tensor (Tensor b1_x1, Tensor b1_x2, Tensor b2_x1, Tensor b2_x2, Tensor b1_y1, Tensor b1_y2, Tensor b2_y1, Tensor b2_y2) => FusedCenter"
   bind_python: True
@@ -3273,6 +3281,111 @@
 - name: "stft"
   signature: 
     'Tensor (Tensor input, Int64 n_fft,Int64 hop_length=None, Int64 win_length=None, Tensor window=None,Bool center=True,String pad_mode="reflect",Bool normalized=False,Bool onesided=True,Bool return_complex=False) =>Stft'
+  bind_python: True
+
+- name: "fft_c2c"
+  signature:
+    'Tensor (Tensor input, Int64List n=None, Int64List dims=None, Int32 norm_mode=0, Bool forward=True, Bool normalized=False) => FftC2C'
+  bind_python: False
+
+- name: "fft_r2c"
+  signature:
+    'Tensor (Tensor input, Int64List n=None, Int64List dims=None, Int32 norm_mode=0, Bool onesided=False, Bool forward=True, Bool normalized=False) => FftR2C'
+  bind_python: False
+
+- name: "fft_c2r"
+  signature:
+    'Tensor (Tensor input, Int64List n=None, Int64List dims=None, Int32 norm_mode=0, Bool forward=True, Bool normalized=False) =>FftC2R'
+  bind_python: False
+
+- name: "fft"
+  signature: 
+    'Tensor (Tensor input, Int64 n=-1, Int64 dim=-1, String norm=None) => Fft'
+  bind_python: True
+
+- name: "ifft"
+  signature: 
+    'Tensor (Tensor input, Int64 n=-1, Int64 dim=-1, String norm=None) => IFft'
+  bind_python: True
+
+- name: "fft2"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim, String norm=None) => Fft2'
+  bind_python: True
+
+- name: "ifft2"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim, String norm=None) => IFft2'
+  bind_python: True
+
+- name: "fftn"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim=None, String norm=None) => FftN'
+  bind_python: True
+
+- name: "ifftn"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim=None, String norm=None) => IFftN'
+  bind_python: True
+
+- name: "rfft"
+  signature: 
+    'Tensor (Tensor input, Int64 n=-1, Int64 dim=-1, String norm=None) => RFft'
+  bind_python: True
+
+- name: "irfft"
+  signature: 
+    'Tensor (Tensor input, Int64 n=-1, Int64 dim=-1, String norm=None) => IRFft'
+  bind_python: True
+
+- name: "rfft2"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim, String norm=None) => RFft2'
+  bind_python: True
+
+- name: "irfft2"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim, String norm=None) => IRFft2'
+  bind_python: True
+
+- name: "rfftn"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim=None, String norm=None) => RFftN'
+  bind_python: True
+
+- name: "irfftn"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim=None, String norm=None) => IRFftN'
+  bind_python: True
+
+- name: "hfft"
+  signature: 
+    'Tensor (Tensor input, Int64 n=-1, Int64 dim=-1, String norm=None) => HFft'
+  bind_python: True
+
+- name: "ihfft"
+  signature: 
+    'Tensor (Tensor input, Int64 n=-1, Int64 dim=-1, String norm=None) => IHFft'
+  bind_python: True
+
+- name: "hfft2"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim, String norm=None) => HFft2'
+  bind_python: True
+
+- name: "ihfft2"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim, String norm=None) => IHFft2'
+  bind_python: True
+
+- name: "hfftn"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim=None, String norm=None) => HFftN'
+  bind_python: True
+
+- name: "ihfftn"
+  signature: 
+    'Tensor (Tensor input, Int64List s=None, Int64List dim=None, String norm=None) => IHFftN'
   bind_python: True
 
 - name: "isclose"

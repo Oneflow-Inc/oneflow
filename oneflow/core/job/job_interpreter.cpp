@@ -21,23 +21,22 @@ limitations under the License.
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/framework/local_tensor_infer_cache.h"
+#include "oneflow/core/framework/global_tensor_infer_cache.h"
+#include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
+#include "oneflow/core/framework/tensor_global_id.h"
+#include "oneflow/core/common/decorator.h"
+#include "oneflow/core/boxing/eager_boxing_logger.h"
 
 namespace oneflow {
 namespace one {
 
 using Env = std::map<std::string, std::shared_ptr<Tensor>>;
+using NameToParallelDescMap = std::map<std::string, Symbol<ParallelDesc>>;
 
 Maybe<Env> InitEnv(const one::TensorTuple& graph_inputs, const std::shared_ptr<NNGraph>& graph) {
   Env env;
   for (const auto& [name, tensor] : graph->variable_op_name2tensor()) {
-    if (tensor->is_global()) {
-      // FIXME(daquexian):
-      // It is a temporary hack to support global tensor in nn.Graph (mainly the learning rate).
-      // We should remove this hack after PR #10048 is merged.
-      env.emplace(name + "/out", JUST(tensor->cur_rank_phy_tensor()));
-    } else {
-      env.emplace(name + "/out", tensor);
-    }
+    env.emplace(name + "/out", tensor);
   }
   for (size_t i = 0; i < graph->inputs_op_names().size(); ++i) {
     const auto& name = graph->inputs_op_names()[i];
@@ -61,16 +60,19 @@ Maybe<UserOpExpr> OpConfToUserOpExpr(const OperatorConf& op_conf) {
 }
 
 template<typename Func>
-Maybe<TensorTuple> GetInputTensors(const UserOpConf& user_conf, const Env& env,
-                                   const Func& preprocess) {
+Maybe<std::pair<TensorTuple, OpArgsVector<std::string>>> GetInputTensors(
+    const UserOpConf& user_conf, const Env& env, const Func& preprocess) {
   TensorTuple inputs;
-  for (const auto& pair : user_conf.input()) {
-    if (pair.first == "UserSourceOpTickInput") { continue; }
-    for (const auto& name : pair.second.s()) {
-      inputs.emplace_back(preprocess(JUST(MapAt(env, name))));
+  OpArgsVector<std::string> ibns;
+  for (const auto& [ibn, ibs] : user_conf.input()) {
+    if (ibn == "UserSourceOpTickInput") { continue; }
+    const auto& tensor_names = ibs.s();
+    for (int i = 0; i < tensor_names.size(); ++i) {
+      inputs.emplace_back(preprocess(JUST(MapAt(env, tensor_names[i]))));
+      ibns.emplace_back(ibn + '_' + std::to_string(i));
     }
   }
-  return inputs;
+  return std::make_pair(inputs, ibns);
 }
 
 OpArgsVector<std::string> GetOutputNamesOfOp(const UserOpConf& user_conf) {
@@ -101,6 +103,65 @@ Maybe<void> RunViewOp(const std::shared_ptr<UserOpExpr>& op, Env& env, const Ten
       JUST(view::BasicView(inputs[0], output_shape, JUST(inputs[0]->storage_offset())));
   env.emplace(output_names[0], output);
   return Maybe<void>::Ok();
+}
+
+namespace {
+
+Maybe<void> RawRunGlobalNormalOp(const std::shared_ptr<UserOpExpr>& op, TensorTuple& inputs,
+                                 TensorTuple* outputs, Env& env,
+                                 const OpArgsVector<std::string>& ibns,
+                                 const OpArgsVector<std::string>& output_names,
+                                 const NdSbpSignature& ndsbp_signature,
+                                 const Symbol<ParallelDesc>& op_parallel_desc) {
+  Optional<int64_t> parallel_id;
+  const auto& tensor_device =
+      JUST(GetTensorDevice4CurrentProcessCtx(op_parallel_desc, &parallel_id));
+  const auto* mgr = Singleton<EagerBoxingInterpreterManager>::Get();
+  CHECK_OR_RETURN(inputs.size() == ibns.size()) << "inputs size != ibns size";
+  for (int i = 0; i < inputs.size(); ++i) {
+    std::shared_ptr<Tensor> input_tensor = inputs[i];
+    std::string lbn = JUST(VectorAt(ibns, i));
+    const auto& logical_shape = input_tensor->shape();
+    CHECK_OR_RETURN(logical_shape->elem_cnt() > 0) << "tensor logical element empty";
+    const auto& in_nd_sbp = JUST(input_tensor->nd_sbp());
+    const auto& out_nd_sbp = SymbolOf(JUST(MapAt(ndsbp_signature.bn_in_op2nd_sbp(), lbn)));
+    const auto& in_parallel_desc = JUST(input_tensor->parallel_desc());
+    const auto& out_parallel_desc = op_parallel_desc;
+    CHECK_OR_RETURN(in_parallel_desc == out_parallel_desc) << "input placement != output placement";
+    if (in_parallel_desc->parallel_num() != 1 && in_nd_sbp != out_nd_sbp) {
+      const auto& boxing_interpreter = JUST(mgr->GetEagerBoxingInterpreter(
+          in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc, *logical_shape));
+      Singleton<const EagerBoxingLogger>::Get()->Log(
+          *JUST(boxing_interpreter->boxing_interpreter_status()), /* prefix */ "");
+      if (parallel_id.has_value()) {
+        inputs.at(i) = JUST(boxing_interpreter->Interpret(input_tensor, in_nd_sbp, out_nd_sbp,
+                                                          in_parallel_desc, out_parallel_desc));
+      }
+    }
+  }
+  static EagerGlobalInterpreter it;
+  static OpExprInterpContext ctx =
+      OpExprInterpContext(AttrMap{}, op_parallel_desc,
+                          SymbolOf(JUST(MapAt(ndsbp_signature.bn_in_op2nd_sbp(), "out_0"))));
+  JUST(it.Apply(*op, inputs, outputs, ctx));
+  for (size_t i = 0; i < output_names.size(); ++i) {
+    env.emplace(output_names[i], JUST(VectorAt(*outputs, i)));
+  }
+  return Maybe<void>::Ok();
+}
+
+auto* RunGlobalNormalOpThenInitGlobalId = DECORATE(&RawRunGlobalNormalOp, NonRecursiveInitGlobalId);
+
+}  // namespace
+
+Maybe<void> RunGlobalNormalOp(const std::shared_ptr<UserOpExpr>& op, TensorTuple& inputs, Env& env,
+                              const OpArgsVector<std::string>& ibns,
+                              const OpArgsVector<std::string>& output_names,
+                              const NdSbpSignature& ndsbp_signature,
+                              const Symbol<ParallelDesc>& op_parallel_desc) {
+  TensorTuple outputs(output_names.size());
+  return RunGlobalNormalOpThenInitGlobalId(op, inputs, &outputs, env, ibns, output_names,
+                                           ndsbp_signature, op_parallel_desc);
 }
 
 Maybe<void> RunNormalOp(const std::shared_ptr<UserOpExpr>& op, Env& env, const TensorTuple& inputs,
@@ -168,6 +229,19 @@ Maybe<one::TensorTuple> InterpretJob(const one::TensorTuple& graph_inputs,
   // See comments above GetOutdatedTensorsAfterOp's definition for more details
   const auto outdated_tensors_after_op = GetOutdatedTensorsAfterOp(job);
 
+  CHECK_OR_RETURN(job.has_placement()) << "no job placement";
+  const auto& job_placement = job.placement();
+  NameToParallelDescMap op2paralleldesc;
+  for (const auto& blob_placement_group : job_placement.blob_placement_group()) {
+    const auto parallel_desc = SymbolOf(ParallelDesc(blob_placement_group.parallel_conf()));
+    for (const auto& logical_blob_id : blob_placement_group.lbi()) {
+      op2paralleldesc.emplace(logical_blob_id.op_name(), parallel_desc);
+    }
+  }
+  CHECK_OR_RETURN(job.has_job_parallel_view_conf()) << "no job parallel conf";
+  const auto& op_name2nd_sbp_signature_conf =
+      job.job_parallel_view_conf().op_name2nd_sbp_signature_conf();
+
   one::TensorTuple graph_outputs;
   for (int i = 0; i < job.net().op_size(); i++) {
     const auto& op_conf = job.net().op(i);
@@ -175,25 +249,24 @@ Maybe<one::TensorTuple> InterpretJob(const one::TensorTuple& graph_inputs,
       auto op = CHECK_NOTNULL(graph->cached_op_exprs[i]);
       const auto& user_conf = op_conf.user_conf();
       OF_PROFILER_RANGE_GUARD(user_conf.op_type_name());
-      TensorTuple inputs =
+      auto [inputs, ibns] =
           *JUST(GetInputTensors(user_conf, env, [&op_conf](const std::shared_ptr<Tensor>& tensor) {
-            // FIXME(daquexian):
-            // It is a temporary hack to support global tensor in nn.Graph (mainly the learning
-            // rate). We should remove this hack after PR #10048 is merged.
-            if (op_conf.device_tag() != "invalid_device") {
-              auto device = CHECK_JUST(tensor->device());
-              auto new_device = CHECK_JUST(
-                  Device::New(op_conf.device_tag(), device->device_id(), device->rematable()));
-              return CHECK_JUST(
-                  functional::To(tensor, Optional<Symbol<Device>>(new_device), NullOpt, false));
-            }
-            return tensor;
+            return CHECK_JUST(functional::To(tensor, op_conf.device_tag()));
           }));
       OpArgsVector<std::string> output_names = GetOutputNamesOfOp(user_conf);
-      if (IsViewOp(op)) {
-        JUST(RunViewOp(op, env, inputs, output_names));
+      if (!inputs.empty()
+          && inputs[0]->is_local()) {  // All tensors maintain the same properties of is_local
+        if (IsViewOp(op)) {
+          JUST(RunViewOp(op, env, inputs, output_names));
+        } else {
+          JUST(RunNormalOp(op, env, inputs, output_names));
+        }
       } else {
-        JUST(RunNormalOp(op, env, inputs, output_names));
+        const auto& op_parallel_desc = JUST(MapAt(op2paralleldesc, op_conf.name()));
+        const auto& nd_sbp_signature_conf =
+            JUST(MapAt(op_name2nd_sbp_signature_conf, op_conf.name()));
+        JUST(RunGlobalNormalOp(op, inputs, env, ibns, output_names, nd_sbp_signature_conf,
+                               op_parallel_desc));
       }
       for (const auto& name : outdated_tensors_after_op[i]) {
         CHECK_EQ_OR_RETURN(env.erase(name), 1);
