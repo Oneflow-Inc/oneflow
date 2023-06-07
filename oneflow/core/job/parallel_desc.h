@@ -103,6 +103,8 @@ class ParallelDesc final {
   bool ContainingMachineId(int64_t machine_id) const;
 
   bool TryGetParallelId(int64_t machine_id, int64_t device_id, int64_t* parallel_id) const;
+  Maybe<bool> TryGetParallelId(int64_t rank, int64_t* parallel_id) const;
+
   Maybe<void> CheckDeviceIdsIsValid() const;
 
  private:
