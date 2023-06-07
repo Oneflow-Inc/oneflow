@@ -23,7 +23,7 @@ namespace ep {
 namespace {
 
 bool* GetMatmulAllowTF32() {
-  static bool matmul_allow_tf32 = false;
+  static bool matmul_allow_tf32 = true;
   return &matmul_allow_tf32;
 }
 
