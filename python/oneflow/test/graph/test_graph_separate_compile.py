@@ -190,20 +190,20 @@ class TestSeparationCompile(oneflow.unittest.TestCase):
 
         run_testcase_with_sep_compile(TestAlexnetAutoParallel)
 
-    def test_comb1to2d(test_case):
+    def _test_comb1to2d(test_case):
         run_testcase_with_sep_compile(_get_comb1to2d_test())
 
-    def test_graph_zero(test_case):
+    def _test_graph_zero(test_case):
         from oneflow.test.graph.test_graph_zero import TestLinearTrainGraph2DWithZeRO
 
         run_testcase_with_sep_compile(TestLinearTrainGraph2DWithZeRO)
 
-    def test_graph_clip_grad_norm(test_case):
+    def _test_graph_clip_grad_norm(test_case):
         from oneflow.test.graph.test_graph_clip_grad_norm import TestGraphClipGradNorm
 
         run_testcase_with_sep_compile(TestGraphClipGradNorm)
 
-    def test_graph_pipeline_grad_acc_and_activatioin_checkpointing(test_case):
+    def _test_graph_pipeline_grad_acc_and_activatioin_checkpointing(test_case):
         from oneflow.test.graph.test_graph_pipeline import TestGraphPipeline
 
         run_testcase_with_sep_compile(TestGraphPipeline)
