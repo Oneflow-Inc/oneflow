@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,23 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-from . import cuda
-from . import cudnn
-from . import mps
+*/
+
+#ifndef ONEFLOW_CORE_EP_CUDA_MATMUL_MODE_H_
+#define ONEFLOW_CORE_EP_CUDA_MATMUL_MODE_H_
+
+namespace oneflow {
+namespace ep {
+
+struct CudaMatmulMode {
+  static bool is_matmul_allow_tf32();
+  static void set_matmul_allow_tf32(bool matmul_allow_tf32);
+  static bool is_matmul_allow_fp16_reduced_precision_reduction();
+  static void set_matmul_allow_fp16_reduced_precision_reduction(
+      bool matmul_allow_fp16_reduced_precision_reduction);
+};
+
+}  // namespace ep
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_EP_CUDA_MATMUL_MODE_H_

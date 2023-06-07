@@ -24,6 +24,7 @@ from oneflow.test_utils.automated_test_util import *
 class TestConv3DModule(flow.unittest.TestCase):
     @autotest(n=3)
     def test_nn_functional_conv3d(test_case):
+        flow.backends.cuda.matmul.allow_tf32 = True
         device = random_device()
         img = torch.ones((1, 3, 16, 16, 16), requires_grad=True).to(device)
         kernel = torch.ones((6, 3, 3, 3, 3), requires_grad=True).to(device)
@@ -32,6 +33,7 @@ class TestConv3DModule(flow.unittest.TestCase):
 
     @autotest(n=10, rtol=1e-3, atol=1e-4)
     def test_conv3d_with_random_data(test_case):
+        flow.backends.cuda.matmul.allow_tf32 = True
         channels = random(1, 6)
         m = torch.nn.Conv3d(
             in_channels=channels,
@@ -53,6 +55,7 @@ class TestConv3DModule(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @autotest(n=5, check_allclose=False, rtol=1e-3)
     def test_conv3d_group_with_random_data(test_case):
+        flow.backends.cuda.matmul.allow_tf32 = True
         channels = 720  # lcm(1, 2, 3, 4, 5, 6)
         m = torch.nn.Conv3d(
             in_channels=channels,
