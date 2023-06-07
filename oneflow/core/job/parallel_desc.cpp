@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <algorithm>
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/cpp_attribute.h"
@@ -193,6 +194,14 @@ bool ParallelDesc::TryGetParallelId(int64_t machine_id, int64_t device_id,
   if (device_iter == machine_iter->second.end()) { return false; }
   *parallel_id = device_iter->second;
   return true;
+}
+
+Maybe<bool> ParallelDesc::TryGetParallelId(int64_t rank, int64_t* parallel_id) const {
+  if (!HasMachineId(rank)) { return false; }
+  const auto& device_ids = sorted_dev_phy_ids(rank);
+  CHECK_EQ_OR_RETURN(device_ids.size(), 1) << "only sole device_id supported. parallel_conf: \n"
+                                           << parallel_conf().DebugString();
+  return TryGetParallelId(rank, JUST(VectorAt(device_ids, 0)), parallel_id);
 }
 
 Maybe<void> ParallelDesc::GetParallelContext(ParallelContext* parallel_ctx, int64_t machine_id,
