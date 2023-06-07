@@ -185,5 +185,44 @@ class TestZeta(flow.unittest.TestCase):
         return out
 
 
+@flow.unittest.skip_unless_1n1d()
+class TestPolygamma(flow.unittest.TestCase):
+    @autotest(n=5, auto_backward="auto")
+    def test_flow_polygamma_with_n0(test_case):
+        device = random_device()
+        x_dtype = random_dtype(["float"])
+        input = (
+            random_tensor(ndim=2, dim0=20, dim1=20, low=1, high=10)
+            .to(device)
+            .to(x_dtype)
+        )
+        out = torch.special.polygamma(0, input)
+        return out
+
+    @autotest(n=5, auto_backward="auto")
+    def test_flow_polygamma_with_n1(test_case):
+        device = random_device()
+        x_dtype = random_dtype(["float"])
+        input = (
+            random_tensor(ndim=2, dim0=20, dim1=20, low=1, high=10)
+            .to(device)
+            .to(x_dtype)
+        )
+        out = torch.special.polygamma(1, input)
+        return out
+
+    @autotest(n=5, auto_backward="auto")
+    def test_flow_polygamma_with_random_n(test_case):
+        device = random_device()
+        x_dtype = random_dtype(["float"])
+        input = (
+            random_tensor(ndim=2, dim0=20, dim1=20, low=1, high=10)
+            .to(device)
+            .to(x_dtype)
+        )
+        out = torch.special.polygamma(random(2, 6).to(int), input)
+        return out
+
+
 if __name__ == "__main__":
     unittest.main()

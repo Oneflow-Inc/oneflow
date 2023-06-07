@@ -617,5 +617,14 @@ class TestDigammaModule(flow.unittest.TestCase):
         return torch.digamma(x)
 
 
+@flow.unittest.skip_unless_1n1d()
+class TestPolygammaModule(flow.unittest.TestCase):
+    @autotest(n=5)
+    def test_polygamma_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        return torch.polygamma(random(1, 10).to(int), x)
+
+
 if __name__ == "__main__":
     unittest.main()

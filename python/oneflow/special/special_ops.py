@@ -71,3 +71,7 @@ def psi(x: Tensor):
 
 def zeta(input, other):
     return oneflow._C.zeta(input, other)
+
+
+def polygamma(n, input):
+    return oneflow._C.polygamma(n, input)

@@ -1994,3 +1994,10 @@ add_docstr(
         
     """,
 )
+
+add_docstr(
+    oneflow.polygamma,
+    r"""
+    See :func:`oneflow.special.polygamma`
+    """,
+)

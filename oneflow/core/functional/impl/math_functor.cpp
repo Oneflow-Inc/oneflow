@@ -5558,6 +5558,29 @@ class ConjPhysicalFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class PolygammaFunctor {
+ public:
+  PolygammaFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("polygamma").Input("x").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const int n, const std::shared_ptr<one::Tensor>& x) const {
+    CHECK_GE_OR_RETURN(n, 0) << Error::RuntimeError() << "n must not be negative, but got " << n
+                             << "!";
+    if (n == 0) {
+      return CHECK_JUST(functional::Digamma(x));
+    } else if (n == 1) {
+      return CHECK_JUST(functional::Trigamma(x));
+    } else {
+      auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("n");
+      attrs.SetAllAttrs(n);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 using namespace impl;
@@ -5733,6 +5756,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ImagGradFunctor>("ImagGrad");
   m.add_functor<impl::ConjFunctor>("Conj");
   m.add_functor<impl::ConjPhysicalFunctor>("ConjPhysical");
+  m.add_functor<impl::PolygammaFunctor>("Polygamma");
 };
 
 }  // namespace functional
