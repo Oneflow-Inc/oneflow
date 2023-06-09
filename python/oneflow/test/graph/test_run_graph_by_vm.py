@@ -14,9 +14,32 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import os
-
 import oneflow as flow
 import numpy as np
+
+
+class EnvVar(object):
+    def __init__(self, env_list: dict):
+        self.env_list = env_list
+
+    def __enter__(self):
+        os.environ.update(self.env_list)
+
+    def __exit__(self, *args):
+        for key in self.env_list.keys():
+            if key in os.environ.keys():
+                os.environ.pop(key)
+
+
+class RunGraphByVmEnv(EnvVar):
+    def __init__(self):
+        super().__init__(
+            {
+                "ONEFLOW_RUN_GRAPH_BY_VM": "1",
+                "ONEFLOW_MLIR_ENABLE_ROUND_TRIP": "1",
+                "ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION": "1",
+            }
+        )
 
 
 class Graph(flow.nn.Graph):
@@ -42,33 +65,25 @@ class M(flow.nn.Module):
 
 
 def test_run_graph_by_vm(capsys):
-    # TODO: with EnvVar(...):
-    os.environ["ONEFLOW_RUN_GRAPH_BY_VM"] = "1"
-    os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-    os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "1"
+    with RunGraphByVmEnv():
+        m = M().eval()
+        g = Graph(m)
 
-    m = M().eval()
-    g = Graph(m)
+        input = flow.randn(4)
+        graph_output = g(input)
+        eager_output = m(input)
+        assert graph_output.shape == (4,)
+        assert np.allclose(graph_output, eager_output)
 
-    input = flow.randn(4)
-    graph_output = g(input)
-    eager_output = m(input)
-    assert graph_output.shape == (4,)
-    assert np.allclose(graph_output, eager_output)
+        input = flow.randn(3, 4)
+        graph_output = g(input)
+        eager_output = m(input)
+        assert graph_output.shape == (3, 4)
+        assert np.allclose(graph_output, eager_output)
 
-    input = flow.randn(3, 4)
-    graph_output = g(input)
-    eager_output = m(input)
-    assert graph_output.shape == (3, 4)
-    assert np.allclose(graph_output, eager_output)
-
-    # Test the optimization in graph works.
-    # broadcast_sub and cast ops are pruned.
-    print(g)
-    assert "broadcast_sub" not in capsys.readouterr().out
-    assert "cast" not in capsys.readouterr().out
-    assert "broadcast_mul" not in capsys.readouterr().out
-
-    os.environ["ONEFLOW_RUN_GRAPH_BY_VM"] = "0"
-    os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "0"
-    os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "0"
+        # Test the optimization in graph works.
+        # broadcast_sub and cast ops are pruned.
+        print(g)
+        assert "broadcast_sub" not in capsys.readouterr().out
+        assert "cast" not in capsys.readouterr().out
+        assert "broadcast_mul" not in capsys.readouterr().out

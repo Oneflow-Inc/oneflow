@@ -17,10 +17,36 @@ limitations under the License.
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/local_sig_infer_hint.h"
 #include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/common/container_util.h"
+#include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/auto_parallel/algorithm_util.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/framework/sbp_infer_util.h"
 
 namespace oneflow {
+
+bool OpEdge::NeedBoxing() const {
+  if (src_node()->parallel_desc_sym() != dst_node()->parallel_desc_sym()) { return true; }
+  if (src_node()->parallel_desc().parallel_num() == 1) { return false; }
+  for (const auto& lbi : *lbis_) {
+    Shape src_reduced_hierarchy;
+    Shape dst_reduced_hierarchy;
+    NdSbp src_reduced_nd_sbp;
+    NdSbp dst_reduced_nd_sbp;
+
+    InOutParallelDimReduce(*src_node()->parallel_desc().hierarchy(),
+                           *dst_node()->parallel_desc().hierarchy(), src_node()->NdSbp4Lbi(lbi),
+                           dst_node()->NdSbp4Lbi(lbi), &src_reduced_hierarchy,
+                           &dst_reduced_hierarchy, &src_reduced_nd_sbp, &dst_reduced_nd_sbp,
+                           src_node()->LogicalBlobDesc4Lbi(lbi).shape());
+    if (src_reduced_hierarchy != dst_reduced_hierarchy
+        || src_reduced_nd_sbp != dst_reduced_nd_sbp) {
+      // Not one to one
+      return true;
+    }
+  }
+  return false;
+}
 
 std::string OpEdge::VisualStr() const {
   std::string str;
@@ -54,12 +80,11 @@ const NdSbp& OpNode::NdSbp4Lbi(const LogicalBlobId& lbi) const {
   return it->second;
 }
 
-OpNode::OpNode(const std::shared_ptr<const ParallelDesc>& parallel_desc,
-               const OperatorConf& op_conf)
+OpNode::OpNode(Symbol<ParallelDesc> parallel_desc, const OperatorConf& op_conf)
     : parallel_desc_(parallel_desc),
       op_(CHECK_JUST(ConstructOp(op_conf, parallel_desc->device_type()))),
       ibns_(op_->input_bns().begin(), op_->input_bns().end()) {
-  CHECK_JUST(op_->FillOpParallelDesc(parallel_desc));
+  CHECK_JUST(op_->FillOpParallelDesc(parallel_desc.shared_from_symbol()));
 }
 
 std::string OpNode::VisualStr() const {
@@ -194,16 +219,14 @@ void OpGraph::CheckIsDAG() const {
 
 namespace {
 
-std::function<std::shared_ptr<const ParallelDesc>(const std::string&)>
-MakeGetterParallelDesc4OpName(const Job& job) {
+std::function<Symbol<ParallelDesc>(const std::string&)> MakeGetterParallelDesc4OpName(
+    const Job& job) {
   const Placement& placement = job.placement();
-  auto op_name2parallel_desc =
-      std::make_shared<HashMap<std::string, std::shared_ptr<const ParallelDesc>>>();
+  auto op_name2parallel_desc = std::make_shared<HashMap<std::string, Symbol<ParallelDesc>>>();
   op_name2parallel_desc->reserve(job.net().op_size());
   for (const auto& placement_group : placement.placement_group()) {
     const ParallelConf& parallel_conf = placement_group.parallel_conf();
-    std::shared_ptr<const ParallelDesc> parallel_desc =
-        std::make_shared<const ParallelDesc>(parallel_conf);
+    Symbol<ParallelDesc> parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
     for (const std::string& op_name : placement_group.op_set().op_name()) {
       CHECK(op_name2parallel_desc->emplace(op_name, parallel_desc).second)
           << "op_name: " << op_name;
@@ -566,6 +589,11 @@ Maybe<void> OpGraph::ForEachOpNode(const std::function<Maybe<void>(const OpNode&
   return Maybe<void>::Ok();
 }
 
+std::function<bool(const OpNode* src, const OpNode* dst)> OpGraph::CreatePredicatorIsReachable()
+    const {
+  return MakePredicatorIsReachable();
+}
+
 // Print the graph with SBP in order
 void OpGraph::PrintSBPGraphDebugInfo() const {
   // test debug
@@ -621,5 +649,18 @@ void OpGraph::PrintSBPGraphDebugInfo() const {
     std::cout << std::endl;
   }
 }
+
+OpGraphSingletonGuard::OpGraphSingletonGuard(const Job& job) {
+  // new Singleton<OpGraph> and set log configs.
+  Singleton<OpGraph>::New(job);
+  const JobDesc& job_desc = GlobalJobDesc();
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+    TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(job);
+    Singleton<OpGraph>::Get()->ToDotWithFilePath(
+        "optimized_dlnet_" + std::to_string(job_desc.job_id()) + "_op_graph.dot");
+  }
+}
+
+OpGraphSingletonGuard::~OpGraphSingletonGuard() { Singleton<OpGraph>::Delete(); }
 
 }  // namespace oneflow
