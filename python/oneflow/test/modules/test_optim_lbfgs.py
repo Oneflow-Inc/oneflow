@@ -26,23 +26,17 @@ from oneflow.nn.parameter import Parameter
 from collections import defaultdict
 
 
-def _cubic_interpolate(x1, f1, g1, x2, f2, g2, bounds=None):
+def _quadratic_interpolate(x1, f1, g1, x2, f2, g2, bounds=None):
     if bounds is not None:
         xmin_bound, xmax_bound = bounds
     else:
         xmin_bound, xmax_bound = (x1, x2) if x1 < x2 else (x2, x1)
-
-    d1 = g1 + g2 - 3 * ((f1 - f2) / (x1 - x2))
-    d2_square = d1 ** 2 - g1 * g2
-    if d2_square < 0:
-        return (xmin_bound + xmax_bound) / 2.0
+    if x1 == 0:
+        t_new = -(g1 * (x2 ** 2)) / (2 * (f2 - f1 - g1 * x2))
     else:
-        if x1 <= x2:
-            d2 = np.sqrt(d2_square)
-        else:
-            d2 = np.sqrt(-d2_square)
-        t_new = x2 - (x2 - x1) * ((g2 + d2 - d1) / (g2 - g1 + 2 * d2))
-        return min(xmax_bound, max(xmin_bound, t_new))
+        a = -(f1 - f2 - g1 * (x1 - x2)) / ((x1 - x2) ** 2)
+        t_new = x1 - g1 / (2 * a)
+    return min(xmax_bound, max(xmin_bound, t_new))
 
 
 def _strong_wolfe(
@@ -82,7 +76,7 @@ def _strong_wolfe(
         min_step = t + 0.01 * (t - t_prev)
         max_step = t * 10
         tmp = t
-        t = _cubic_interpolate(
+        t = _quadratic_interpolate(
             t_prev, f_prev, gtd_prev, t, f_new, gtd_new, bounds=(min_step, max_step)
         )
         t_prev = tmp
@@ -105,7 +99,7 @@ def _strong_wolfe(
         if abs(search_area[1] - search_area[0]) * d_norm < tolerance_change:
             break
 
-        t = _cubic_interpolate(
+        t = _quadratic_interpolate(
             search_area[0],
             search_area_f[0],
             search_area_gtd[0],

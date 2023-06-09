@@ -19,7 +19,7 @@ from oneflow.optim.optimizer import Optimizer
 from oneflow.nn.parameter import Parameter
 import oneflow as flow
 
-# TODO implement cubic_interpolate op
+# TODO implement quadrati_interpolate op
 def _quadratic_interpolate(x1, f1, g1, x2, f2, g2, bounds=None):
 
     if bounds is not None:
