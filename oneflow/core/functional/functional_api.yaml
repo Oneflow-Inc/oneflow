@@ -3482,3 +3482,7 @@
     "Tensor (Tensor x, Scalar other) => ZetaTensorScalar",
   ]
   bind_python: True
+
+- name: "fused_clip_grad"
+  signature: "Tensor (TensorTuple model_diff, Float max_norm, Float norm_type) => FusedClipGrad"
+  bind_python: True
