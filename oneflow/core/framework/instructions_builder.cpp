@@ -81,6 +81,22 @@ static constexpr auto* GetLazyJobLauncherStream =
 
 }  // namespace
 
+Maybe<JobDesc> GetJobConfSymbol(const JobConfigProto& job_conf) {
+  return Singleton<symbol::Storage<JobDesc>>::Get()->FindOrCreate(job_conf);
+}
+
+Maybe<ParallelDesc> GetParallelDescSymbol(const ParallelConf& parallel_conf) {
+  return Singleton<symbol::Storage<ParallelDesc>>::Get()->FindOrCreate(parallel_conf);
+}
+
+Maybe<Scope> GetScopeSymbol(const ScopeProto& scope_proto) {
+  return Singleton<symbol::Storage<Scope>>::Get()->FindOrCreate(scope_proto);
+}
+
+Maybe<OperatorConfSymbol> GetOpConfSymbol(const OperatorConf& op_conf) {
+  return Singleton<symbol::Storage<OperatorConfSymbol>>::Get()->FindOrCreate(op_conf);
+}
+
 // clang-format off
 // Job e.g.:
 //                                    [wait_and_send_ids]
@@ -201,31 +217,6 @@ Maybe<void> InstructionsBuilder::SoftSyncNNGraphBuffers(
   const auto& stream = JUST(GetCriticalSectionStream());
   JUST(SoftSyncStream(*eager_blob_objects, stream));
   return Maybe<void>::Ok();
-}
-
-namespace {
-
-int64_t NewSymbolId() {
-  static std::atomic<int64_t> cnt(0);
-  return cnt.fetch_add(1, std::memory_order_relaxed);
-}
-
-}  // namespace
-
-Maybe<JobDesc> InstructionsBuilder::GetJobConfSymbol(const JobConfigProto& job_conf) {
-  return Singleton<symbol::Storage<JobDesc>>::Get()->FindOrCreate(job_conf, &NewSymbolId);
-}
-
-Maybe<ParallelDesc> InstructionsBuilder::GetParallelDescSymbol(const ParallelConf& parallel_conf) {
-  return Singleton<symbol::Storage<ParallelDesc>>::Get()->FindOrCreate(parallel_conf, &NewSymbolId);
-}
-
-Maybe<Scope> InstructionsBuilder::GetScopeSymbol(const ScopeProto& scope_proto) {
-  return Singleton<symbol::Storage<Scope>>::Get()->FindOrCreate(scope_proto, &NewSymbolId);
-}
-
-Maybe<OperatorConfSymbol> InstructionsBuilder::GetOpConfSymbol(const OperatorConf& op_conf) {
-  return Singleton<symbol::Storage<OperatorConfSymbol>>::Get()->FindOrCreate(op_conf, &NewSymbolId);
 }
 
 Maybe<Scope> InstructionsBuilder::BuildInitialScope(

@@ -15,23 +15,28 @@ limitations under the License.
 */
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/just.h"
-#include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/placement_utils.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
+#include "oneflow/core/common/decorator.h"
+#include "oneflow/core/framework/instructions_builder.h"
 
 namespace oneflow {
 
-Maybe<Symbol<ParallelDesc>> ReplacePlacementDeviceTag(Symbol<ParallelDesc> parallel_desc,
-                                                      const std::string& device_type) {
+Maybe<Symbol<ParallelDesc>> RawReplacePlacementDeviceTag(Symbol<ParallelDesc> parallel_desc,
+                                                         const std::string& device_type) {
   ParallelConf parallel_conf = parallel_desc->parallel_conf();
   parallel_conf.set_device_tag(device_type);
-  std::shared_ptr<ParallelDesc> out_parallel_desc;
-  JUST(PhysicalRun(
-      [&out_parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
-        out_parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
-        return Maybe<void>::Ok();
-      }));
+  std::shared_ptr<ParallelDesc> out_parallel_desc = JUST(GetParallelDescSymbol(parallel_conf));
+  ;
   return SymbolOf(*out_parallel_desc);
+}
+
+constexpr auto* CachedReplacePlacementDeviceTag =
+    DECORATE(&RawReplacePlacementDeviceTag, ThreadLocalCopiable);
+
+Maybe<Symbol<ParallelDesc>> ReplacePlacementDeviceTag(Symbol<ParallelDesc> parallel_desc,
+                                                      const std::string& device_type) {
+  return CachedReplacePlacementDeviceTag(parallel_desc, device_type);
 }
 
 Maybe<void> TouchGlobalTensor(const std::shared_ptr<one::Tensor>& tensor) {

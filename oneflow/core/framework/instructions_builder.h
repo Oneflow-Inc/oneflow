@@ -44,6 +44,14 @@ class NNGraphIf;
 
 class SharedEventRecord;
 
+Maybe<JobDesc> GetJobConfSymbol(const JobConfigProto& job_conf);
+
+Maybe<ParallelDesc> GetParallelDescSymbol(const ParallelConf& parallel_conf);
+
+Maybe<Scope> GetScopeSymbol(const ScopeProto& scope_proto);
+
+Maybe<OperatorConfSymbol> GetOpConfSymbol(const OperatorConf& op_conf);
+
 class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuilder> {
  public:
   InstructionsBuilder(const InstructionsBuilder&) = delete;
@@ -65,14 +73,6 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   // soft sync for inputs/outputs buffers of NNGraph
   Maybe<void> SoftSyncNNGraphBuffers(const vm::EagerBlobObjectListPtr& eager_blob_objects,
                                      const std::shared_ptr<NNGraphIf>& nn_graph);
-
-  Maybe<JobDesc> GetJobConfSymbol(const JobConfigProto& job_conf);
-
-  Maybe<ParallelDesc> GetParallelDescSymbol(const ParallelConf& parallel_conf);
-
-  Maybe<Scope> GetScopeSymbol(const ScopeProto& scope_proto);
-
-  Maybe<OperatorConfSymbol> GetOpConfSymbol(const OperatorConf& op_conf);
 
   Maybe<void> ReleaseTensor(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object);
 

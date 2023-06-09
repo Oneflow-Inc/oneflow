@@ -23,10 +23,10 @@ limitations under the License.
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
-#include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
+#include "oneflow/core/framework/instructions_builder.h"
 
 namespace oneflow {
 
@@ -91,11 +91,7 @@ Maybe<ParallelDesc> ParallelDesc::New(const std::string& device_tag,
                                       const std::vector<std::string>& machine_device_ids,
                                       const std::shared_ptr<Shape>& hierarchy) {
   const auto parallel_conf = JUST(MakeParallelConf(device_tag, machine_device_ids, hierarchy));
-  std::shared_ptr<ParallelDesc> parallel_desc;
-  JUST(PhysicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
-    parallel_desc = JUST(builder->GetParallelDescSymbol(*parallel_conf));
-    return Maybe<void>::Ok();
-  }));
+  std::shared_ptr<ParallelDesc> parallel_desc = JUST(GetParallelDescSymbol(*parallel_conf));
   return parallel_desc;
 }
 
