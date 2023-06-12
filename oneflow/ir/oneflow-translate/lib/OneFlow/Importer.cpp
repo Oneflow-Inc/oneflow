@@ -157,6 +157,15 @@ llvm::Optional<mlir::oneflow::DataTypeAttr> GetDataTypeAttr(MLIRContext* context
       DEFINE_ONE_ELIF(TensorBuffer)
       DEFINE_ONE_ELIF(BFloat16)
       DEFINE_ONE_ELIF(Bool)
+      DEFINE_ONE_ELIF(UInt16)
+      DEFINE_ONE_ELIF(UInt32)
+      DEFINE_ONE_ELIF(UInt64)
+      DEFINE_ONE_ELIF(UInt128)
+      DEFINE_ONE_ELIF(Int16)
+      DEFINE_ONE_ELIF(Int128)
+      DEFINE_ONE_ELIF(Complex32)
+      DEFINE_ONE_ELIF(Complex64)
+      DEFINE_ONE_ELIF(Complex128)
 #undef DEFINE_ONE_ELIF
     default: llvm::errs() << "unsupported data type: " << oneflow_value << "\n"; return llvm::None;
   }
