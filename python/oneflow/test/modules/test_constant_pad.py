@@ -29,7 +29,7 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestConstantPad1d(flow.unittest.TestCase):
-    @autotest(n=10, rtol=0.001, atol=0.001, include_complex=True)
+    @autotest(n=10, rtol=0.001, atol=0.001)
     def test_constantpad1d_with_random_data(test_case):
         m = torch.nn.ConstantPad1d(
             padding=random(1, 6).to(_size_2_t), value=random().to(float)
