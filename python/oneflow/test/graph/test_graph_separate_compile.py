@@ -184,7 +184,7 @@ def _get_comb1to2d_test():
 @flow.unittest.skip_unless_1n4d()
 class TestSeparationCompile(oneflow.unittest.TestCase):
     def test_test_alexnet_auto_parallel(test_case):
-        from oneflow.test.graph.test_alexnet_auto_parallel import (
+        from test_alexnet_auto_parallel import (
             TestAlexnetAutoParallel,
         )
 
