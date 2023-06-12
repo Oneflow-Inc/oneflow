@@ -146,7 +146,7 @@ class LBFGS(Optimizer):
     
     The line search algorithm terminates with a step length that satisfies the strong Wolfe conditions.
     
-    This optimizer only support one parameter group and currently must run with flow.float64 data type.        
+    This optimizer only support one parameter group.        
     
     Args:
         params (iterable): iterable of parameters to optimize or dicts defining
