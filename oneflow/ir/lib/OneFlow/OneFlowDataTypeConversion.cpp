@@ -55,13 +55,13 @@ Type getTypeFromOneFlowDataType(MLIRContext* context, ::oneflow::DataType dt) {
   if (dt == ::oneflow::DataType::kUInt128) {
     return IntegerType::get(context, 128, IntegerType::Unsigned);
   }
-  if (dt == ::oneflow::DataType::kComplex32){
+  if (dt == ::oneflow::DataType::kComplex32) {
     return ComplexType::get(FloatType::getF16(context));
   }
-  if (dt == ::oneflow::DataType::kComplex64){
+  if (dt == ::oneflow::DataType::kComplex64) {
     return ComplexType::get(FloatType::getF32(context));
   }
-  if (dt == ::oneflow::DataType::kComplex128){
+  if (dt == ::oneflow::DataType::kComplex128) {
     return ComplexType::get(FloatType::getF64(context));
   }
   llvm::errs() << "unsupported oneflow data type: " << dt << "\n";
