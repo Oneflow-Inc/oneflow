@@ -41,15 +41,7 @@ def OneFlow_DataType: I32EnumAttr<"DataType", "OneFlow Data Type enum",
     OneFlow_Float16,
     OneFlow_TensorBuffer,
     OneFlow_BFloat16,
-    OneFlow_Bool,
-    OneFlow_UInt16,
-    OneFlow_UInt32,
-    OneFlow_UInt64,
-    OneFlow_UInt128,
-    OneFlow_Int16,
-    OneFlow_Complex32,
-    OneFlow_Complex64,
-    OneFlow_Complex128
+    OneFlow_Bool
   ]
 > {
   let cppNamespace = "::mlir::oneflow";
