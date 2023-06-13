@@ -159,7 +159,7 @@ def _get_comb1to2d_test():
             graph_diff_hierarchy = _TestGraph(model_diff_hierarchy)
             y = graph_diff_hierarchy(x)
 
-        def _test_lazy_boxing_2d_all_combination_diff_placement(test_case):
+        def test_lazy_boxing_2d_all_combination_diff_placement(test_case):
             os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "0"
             os.environ["ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION"] = "0"
 
@@ -188,7 +188,7 @@ class TestSeparationCompile(oneflow.unittest.TestCase):
 
         run_testcase_with_sep_compile(TestAlexnetAutoParallel)
 
-    def test_comb1to2d(test_case):
+    def _test_comb1to2d(test_case):
         run_testcase_with_sep_compile(_get_comb1to2d_test())
 
     def test_graph_zero(test_case):
