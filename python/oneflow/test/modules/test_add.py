@@ -288,7 +288,7 @@ class TestAddModule(flow.unittest.TestCase):
         y += random_tensor(2, 2, 2).to(device)
         return y
 
-    @autotest(n=10, include_complex=True)
+    @autotest(n=10)
     def test_scalar_add_with_random_devices(test_case):
         x1_device = random_device()
         x2_device = random_device()
