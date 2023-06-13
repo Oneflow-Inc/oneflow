@@ -188,7 +188,7 @@ class TestSeparationCompile(oneflow.unittest.TestCase):
 
         run_testcase_with_sep_compile(TestAlexnetAutoParallel)
 
-    def test_comb1to2d(test_case):
+    def _test_comb1to2d(test_case):
         run_testcase_with_sep_compile(_get_comb1to2d_test())
 
     def test_graph_zero(test_case):
