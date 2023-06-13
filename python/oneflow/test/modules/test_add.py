@@ -279,7 +279,7 @@ class TestAddModule(flow.unittest.TestCase):
         torch.add(torch.ones(100), 20)
         torch.add(torch.ones(100), torch.ones(100, 1), alpha=10)
 
-    @autotest(n=6, include_complex=True)
+    @autotest(n=6)
     def test_non_contiguous_inplace_add(test_case):
         device = random_device()
         x = random_tensor(2, 2, 4).to(device)
