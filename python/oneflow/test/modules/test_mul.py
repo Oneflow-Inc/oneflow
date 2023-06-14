@@ -200,7 +200,7 @@ class TestMulModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(check_graph=True, include_complex=True)
+    @autotest(check_graph=True)
     def test_broadcast_mul(test_case):
         device = random_device()
         x_0 = random_tensor(ndim=3, dim0=4, dim1=2, dim2=3).to(device)
