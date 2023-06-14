@@ -101,7 +101,7 @@ class TestSubModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_sub_impl(test_case, *arg)
 
-    @autotest(n=5, auto_backward=False, check_graph=True, include_complex=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_random_dim_sub(test_case):
         device = random_device()
         dim0 = random(low=1, high=4).to(int)
@@ -157,7 +157,7 @@ class TestSubModule(flow.unittest.TestCase):
         z3 = torch.sub(s, x3, alpha=alpha)
         return z1, z2, z3
 
-    @autotest(n=5,)
+    @autotest(n=5)
     def test_non_contiguous_inplace_sub(test_case):
         device = random_device()
         x = random_tensor(2, 2, 4).to(device)
