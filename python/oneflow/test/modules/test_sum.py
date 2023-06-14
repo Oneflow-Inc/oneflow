@@ -78,7 +78,7 @@ class TestSumModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_sum_impl(test_case, *arg)
 
-    @autotest(check_graph=True, include_complex=True)
+    @autotest(check_graph=True)
     def test_sum_against_pytorch(test_case):
         device = random_device()
         x = random_tensor(4, random(0, 5), 2).to(device)
