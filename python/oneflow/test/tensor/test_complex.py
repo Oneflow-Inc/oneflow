@@ -556,13 +556,13 @@ class TestTensorComplex64(unittest.TestCase):
                 flow_x.grad.cpu().detach().numpy(),
                 flow_y.numpy().conjugate(),
                 self.rtol,
-                self.atol
+                self.atol,
             )
             compare_result(
                 flow_y.grad.cpu().detach().numpy(),
                 flow_x.numpy().conjugate(),
                 self.rtol,
-                self.atol
+                self.atol,
             )
 
     def test_sum_cpu(self):
