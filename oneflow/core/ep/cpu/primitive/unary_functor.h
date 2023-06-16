@@ -388,6 +388,23 @@ struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kIsNan, bool, bfloat16> {
   OF_DEVICE_FUNC bool operator()(bfloat16 src) const { return std::isnan(src); }
 };
 
+// avoid warning: narrowing conversion
+template<>
+struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kRealGrad, std::complex<float>, double> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  std::complex<float> operator()(double src) const {
+    return std::complex<float>{static_cast<float>(src), 0.0f};
+  }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kImagGrad, std::complex<float>, double> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  std::complex<float> operator()(double src) const {
+    return std::complex<float>{0.0f, static_cast<float>(src)};
+  }
+};
+
 }  // namespace primitive
 }  // namespace ep
 }  // namespace oneflow

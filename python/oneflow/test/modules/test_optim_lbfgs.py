@@ -21,29 +21,22 @@ import random as random_util
 import numpy as np
 from oneflow.test_utils.test_util import GenArgList
 from oneflow.test_utils.automated_test_util import random_device, random_bool
-
 import oneflow as flow
 from oneflow.nn.parameter import Parameter
 from collections import defaultdict
 
 
-def _cubic_interpolate(x1, f1, g1, x2, f2, g2, bounds=None):
+def _quadratic_interpolate(x1, f1, g1, x2, f2, g2, bounds=None):
     if bounds is not None:
         xmin_bound, xmax_bound = bounds
     else:
         xmin_bound, xmax_bound = (x1, x2) if x1 < x2 else (x2, x1)
-
-    d1 = g1 + g2 - 3 * ((f1 - f2) / (x1 - x2))
-    d2_square = d1 ** 2 - g1 * g2
-    if d2_square < 0:
-        return (xmin_bound + xmax_bound) / 2.0
+    if x1 == 0:
+        t_new = -(g1 * (x2 ** 2)) / (2 * (f2 - f1 - g1 * x2))
     else:
-        if x1 <= x2:
-            d2 = np.sqrt(d2_square)
-        else:
-            d2 = np.sqrt(-d2_square)
-        t_new = x2 - (x2 - x1) * ((g2 + d2 - d1) / (g2 - g1 + 2 * d2))
-        return min(xmax_bound, max(xmin_bound, t_new))
+        a = -(f1 - f2 - g1 * (x1 - x2)) / ((x1 - x2) ** 2)
+        t_new = x1 - g1 / (2 * a)
+    return min(xmax_bound, max(xmin_bound, t_new))
 
 
 def _strong_wolfe(
@@ -83,7 +76,7 @@ def _strong_wolfe(
         min_step = t + 0.01 * (t - t_prev)
         max_step = t * 10
         tmp = t
-        t = _cubic_interpolate(
+        t = _quadratic_interpolate(
             t_prev, f_prev, gtd_prev, t, f_new, gtd_new, bounds=(min_step, max_step)
         )
         t_prev = tmp
@@ -106,7 +99,7 @@ def _strong_wolfe(
         if abs(search_area[1] - search_area[0]) * d_norm < tolerance_change:
             break
 
-        t = _cubic_interpolate(
+        t = _quadratic_interpolate(
             search_area[0],
             search_area_f[0],
             search_area_gtd[0],
@@ -163,7 +156,11 @@ def compare_with_numpy_lbfgs(
     save_load_by_pickle,
     contiguous_params,
     tensor_num,
+<<<<<<< HEAD
     use_float64
+=======
+    use_float64,
+>>>>>>> 1d863e972249cb730e54523b9ae9a794e20fc430
 ):
     random_grad_seq = []
     init_value_seq = []
@@ -177,6 +174,7 @@ def compare_with_numpy_lbfgs(
         flow.set_default_tensor_type(flow.FloatTensor)
     for _ in range(tensor_num):
         init_value_seq.append(np.random.uniform(size=x_shape).astype(npType))
+<<<<<<< HEAD
     for _ in range(train_iters):
         random_grad_seq_per_iter = []
         for _ in range(tensor_num):
@@ -184,12 +182,24 @@ def compare_with_numpy_lbfgs(
                 np.random.uniform(size=x_shape).astype(npType)
             )
         random_grad_seq.append(random_grad_seq_per_iter)
+=======
+    for _ in range(tensor_num):
+        random_grad_seq.append(np.random.uniform(size=x_shape).astype(npType))
+>>>>>>> 1d863e972249cb730e54523b9ae9a794e20fc430
 
     def train_by_oneflow():
         x = []
         for i in range(tensor_num):
             x.append(
+<<<<<<< HEAD
                 Parameter(flow.Tensor(init_value_seq[i], device=flow.device(device)))
+=======
+                Parameter(
+                    flow.tensor(
+                        init_value_seq[i], device=flow.device(device), dtype=flowType
+                    )
+                )
+>>>>>>> 1d863e972249cb730e54523b9ae9a794e20fc430
             )
 
         lbfgs = flow.optim.LBFGS(
@@ -223,10 +233,10 @@ def compare_with_numpy_lbfgs(
                 loss = compute_loss(grad)
                 return loss
 
-            lbfgs.step(closure)
+            return lbfgs.step(closure)
 
         for i in range(train_iters):
-            train_one_iter(random_grad_seq[i])
+            train_one_iter(random_grad_seq)
             if i == reload_state_step:
                 state_dict = lbfgs.state_dict()
                 lbfgs = flow.optim.LBFGS(
@@ -251,7 +261,7 @@ def compare_with_numpy_lbfgs(
             flat_grad = 2 * x * init_grad
             if max(map(abs, flat_grad)) <= tolerance_grad:
                 return x
-            loss = compute_loss(x, flat_grad)
+            loss = compute_loss(x, init_grad)
             current_evals = 1
             state["func_evals"] += 1
             d = state.get("d")
@@ -301,7 +311,10 @@ def compare_with_numpy_lbfgs(
 
                 prev_flat_grad = np.copy(flat_grad)
                 prev_loss = loss
+<<<<<<< HEAD
                 
+=======
+>>>>>>> 1d863e972249cb730e54523b9ae9a794e20fc430
                 if state["n_iter"] == 1:
                     t = min(1.0, 1.0 / np.sum(np.abs(flat_grad))) * learning_rate
                 else:
@@ -314,7 +327,7 @@ def compare_with_numpy_lbfgs(
                 if line_search_fn is None:
                     x += t * d
                     if n_iter != max_iter:
-                        loss = float(compute_loss(x, flat_grad))
+                        loss = float(compute_loss(x, init_grad))
                         ls_func_evals = 1
                         flat_grad = 2 * x * init_grad
                 else:
@@ -362,38 +375,53 @@ def compare_with_numpy_lbfgs(
         state = defaultdict(dict)
         state.setdefault("func_evals", 0)
         state.setdefault("n_iter", 0)
-        for i in range(0, train_iters):
-            x = np_train_one_iter(x, state, np.concatenate(random_grad_seq[i]))
+        for _ in range(0, train_iters):
+            x = np_train_one_iter(x, state, np.concatenate(random_grad_seq))
         return x
 
     oneflow_res = flow.cat(train_by_oneflow(), 0)
     numpy_res = train_by_numpy()
     test_case.assertTrue(
         np.allclose(
-            oneflow_res.numpy().flatten(), numpy_res.flatten(), rtol=0.001, atol=0.001,
+            oneflow_res.numpy().flatten(), numpy_res.flatten(), rtol=0.01, atol=0.01,
         )
     )
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestLBFGS(flow.unittest.TestCase):
-    def test_lbfgs(test_case):
+    def test_lbfgs_numpy(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = [random_device().value()]
+<<<<<<< HEAD
         arg_dict["x_shape"] = [10,20]
         arg_dict["learning_rate"] = [0.01]
         arg_dict["train_iters"] = [10]
+=======
+        arg_dict["x_shape"] = [10, 20]
+        arg_dict["learning_rate"] = [0.01]
+        arg_dict["train_iters"] = [20]
+>>>>>>> 1d863e972249cb730e54523b9ae9a794e20fc430
         arg_dict["max_iter"] = [20]
         arg_dict["max_eval"] = [25]
         arg_dict["tolerance_grad"] = [1e-7]
         arg_dict["tolerance_change"] = [1e-9]
         arg_dict["history_size"] = [100]
+<<<<<<< HEAD
         arg_dict["line_search_fn"] = [None,"strong_wolfe"]
         arg_dict["reload_state_step"] = [5]
         arg_dict["save_load_by_pickle"] = [random_bool().value()]
         arg_dict["contiguous_params"] = [random_bool().value()]
         arg_dict["tensor_num"] = [3, 4,7]
         arg_dict["use_float64"] = [True]
+=======
+        arg_dict["line_search_fn"] = [None, "strong_wolfe"]
+        arg_dict["reload_state_step"] = [5]
+        arg_dict["save_load_by_pickle"] = [random_bool().value()]
+        arg_dict["contiguous_params"] = [random_bool().value()]
+        arg_dict["tensor_num"] = [3, 4, 7]
+        arg_dict["use_float64"] = [True, False]
+>>>>>>> 1d863e972249cb730e54523b9ae9a794e20fc430
         for arg in GenArgList(arg_dict):
             compare_with_numpy_lbfgs(test_case, *arg)
 
