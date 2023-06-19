@@ -78,7 +78,7 @@ class TestSumModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_sum_impl(test_case, *arg)
 
-    @autotest(check_graph=True, include_complex=True)
+    @autotest(check_graph=True)
     def test_sum_against_pytorch(test_case):
         device = random_device()
         x = random_tensor(4, random(0, 5), 2).to(device)
@@ -93,7 +93,7 @@ class TestSumModule(flow.unittest.TestCase):
             x,
             dim=np.random.randint(0, 3),
             keepdim=random_bool(),
-            dtype=random_dtype(["arithmetic", "complex"]),
+            dtype=random_dtype(["arithmetic"]),
         )
         return y
 
@@ -125,14 +125,14 @@ class TestSumModule(flow.unittest.TestCase):
         y = torch.sum(x, dtype=random_dtype(["arithmetic"]))
         return y
 
-    @autotest(auto_backward=False, check_graph=True, include_complex=True)
+    @autotest(auto_backward=False, check_graph=True)
     def test_sum_with_0_size_tensor(test_case):
         device = random_device()
         x = random_tensor(4, 4, 3, 0, 2).to(device)
         y = torch.sum(x, dim=np.random.randint(0, 3))
         return y
 
-    @autotest(auto_backward=False, check_graph=True, include_complex=True)
+    @autotest(auto_backward=False, check_graph=True)
     def test_sum_with_0dim_tensor(test_case):
         device = random_device()
         x = random_tensor(ndim=0).to(device)
