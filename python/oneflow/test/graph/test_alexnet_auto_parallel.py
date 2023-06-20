@@ -179,6 +179,8 @@ def _test_alexnet_graph(test_case, args, placement, sbp):
                             epoch, i, len(train_iter), l, end_t - start_t
                         )
                     )
+                # Stop after 20 iters to save time
+                break
         if flow.env.get_rank() == 0:
             print("epoch %d train done, start validation" % epoch)
 
