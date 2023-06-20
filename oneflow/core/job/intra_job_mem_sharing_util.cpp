@@ -171,7 +171,6 @@ void GenMemChainTasksAndRegsts(
 
   for (auto& device_chain_pair : device2chain2mem_chain) {
     if (device_chain_pair.second.empty()) { continue; }
-    // sort
     std::vector<MemoryChain*> mem_chains;
     mem_chains.reserve(device_chain_pair.second.size());
     for (auto& pair : device_chain_pair.second) { mem_chains.emplace_back(&pair.second); }

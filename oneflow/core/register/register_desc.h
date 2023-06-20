@@ -64,7 +64,7 @@ class RegstDesc final {
   // mem
   const MemoryCase& mem_case() const { return mem_case_; }
   MemoryCase* mut_mem_case() { return &mem_case_; }
-  bool enable_reuse_mem() { return enable_reuse_mem_; }
+  bool enable_reuse_mem() const { return enable_reuse_mem_; }
   void set_enable_reuse_mem(bool enable_reuse_mem) { enable_reuse_mem_ = enable_reuse_mem; }
   int64_t mem_block_offset() const;
   void set_mem_block_offset(int64_t val) { mem_block_offset_ = val; }

@@ -51,7 +51,7 @@ class ChunkMgr final {
 
   // for runtime
   HashMap<int64_t, ChunkWithPtr> chunk_id2chunk_;
-  std::mutex mutex_;
+  mutable std::mutex mutex_;
 };
 
 }  // namespace oneflow

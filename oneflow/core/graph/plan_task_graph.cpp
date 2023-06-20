@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 
 namespace oneflow {
@@ -35,15 +36,18 @@ void PlanTaskGraph::InitEdges() {
     PlanTaskNode* producer_node = task_id_and_plan_task_node.second;
     for (const auto& pair : producer_node->task_proto()->produced_regst_desc()) {
       for (int64_t consumer_task_id : pair.second.consumer_task_id()) {
-        PlanTaskNode* consumer_node = task_id2plan_task_node_.at(consumer_task_id);
-        Connect(producer_node, NewEdge(), consumer_node);
+        PlanTaskNode* consumer_node = CHECK_JUST(MapAt(task_id2plan_task_node_, consumer_task_id));
+        TryConnect(producer_node, consumer_node);
       }
     }
   }
 }
 
-const TaskProto* PlanTaskGraph::TaskProto4TaskId(int64_t task_id) const {
-  return task_id2plan_task_node_.at(task_id)->task_proto();
+void PlanTaskGraph::TryConnect(PlanTaskNode* src, PlanTaskNode* dst) {
+  if (edges_.insert({src, dst}).second) { Connect(src, NewEdge(), dst); }
 }
 
+const TaskProto* PlanTaskGraph::TaskProto4TaskId(int64_t task_id) const {
+  return CHECK_JUST(MapAt(task_id2plan_task_node_, task_id))->task_proto();
+}
 }  // namespace oneflow
