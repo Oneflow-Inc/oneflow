@@ -1155,7 +1155,7 @@ __global__ void PlaneKernel(
     const PositionType position =
         param.position_ids ? param.position_ids[position_id_offset] : m_index;
     const IndexType actual_k_index = k_index % param.actual_rotary_size;
-    const IndexType sinuous_offset = position * param.k + actual_k_index;
+    const IndexType sinuous_offset = position * param.sinuous_m_stride + actual_k_index;
 
     T cos_val, sin_val, out_val;
 
