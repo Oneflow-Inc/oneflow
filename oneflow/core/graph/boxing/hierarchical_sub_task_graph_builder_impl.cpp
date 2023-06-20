@@ -73,6 +73,8 @@ void MergeParallelConf(const ParallelDesc& parallel_desc_0, const ParallelDesc& 
 }
 
 inline std::string NewUniqueIdGbc() {
+  // The boxing task graph is built on rank 0 and broadcasted to all the ranks,
+  // so the ids here are unique among all the ranks.
   static std::atomic<int64_t> counter(0);
   static std::atomic<int64_t> curr_job_id(0);
   if (curr_job_id != GlobalJobDesc().job_id()) {

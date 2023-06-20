@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/env_var/debug_mode.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/plan_util.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
@@ -808,11 +809,15 @@ std::function<RegstDescProto*(int64_t)> PlanUtil::MakeMutRegstDesc4Id(Plan* plan
     TaskProto* task = plan->mutable_task(i);
     for (auto& pair : *task->mutable_produced_regst_desc()) {
       int64_t regst_desc_id = pair.second.regst_desc_id();
-      regst_desc_id2regst_desc->insert({regst_desc_id, &pair.second});
+      CHECK(regst_desc_id2regst_desc->insert({regst_desc_id, &pair.second}).second)
+          << "regst_desc_id2regst_desc has got duplicated regst_desc_id " << regst_desc_id;
     }
   }
   return [regst_desc_id2regst_desc](int64_t regst_desc_id) -> RegstDescProto* {
-    return regst_desc_id2regst_desc->at(regst_desc_id);
+    auto iter = regst_desc_id2regst_desc->find(regst_desc_id);
+    CHECK(iter != regst_desc_id2regst_desc->end())
+        << "regst_desc_id " << regst_desc_id << " can't be found in plan.";
+    return iter->second;
   };
 }
 
@@ -876,7 +881,7 @@ bool IsCollectiveBoxingTaskType(TaskType task_type) {
 
 bool IsCollectiveBoxingNode(const PlanTaskNode* node) {
   const TaskType task_type = node->task_proto()->task_type();
-  return task_type == TaskType::kCollectiveBoxingGeneric;
+  return IsCollectiveBoxingTaskType(task_type);
 }
 
 const boxing::collective::RankDesc& GetRankDesc(const OperatorConf& conf) {
@@ -1224,7 +1229,7 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
   }
 }
 
-void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name) {
+void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name, int64_t limited_rank) {
   // NOTE(chengcheng): ordered_tasks is NOT exec order, just task id order.
   std::vector<const TaskProto*> ordered_tasks;
   for (const TaskProto& task : plan->task()) { ordered_tasks.push_back(&task); }
@@ -1287,6 +1292,8 @@ void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name) {
     rank2ordered_task.at(task->machine_id()).push_back(task);
   }
   for (int64_t rank = 0; rank < GlobalProcessCtx::WorldSize(); ++rank) {
+    // Filter rank to generate log.
+    if (limited_rank >= 0 && rank != limited_rank) { continue; }
     auto file_stream =
         TeePersistentLogStream::Create(plan_name + "_rank_" + std::to_string(rank) + "_light_plan");
     file_stream << "rank : " << std::to_string(rank) << "\n";

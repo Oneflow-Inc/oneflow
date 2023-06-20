@@ -30,9 +30,9 @@ class IDMgr final {
   OF_DISALLOW_COPY_AND_MOVE(IDMgr);
   ~IDMgr() = default;
 
-  int64_t NewRegstDescId() { return regst_desc_id_count_++; }
-  int64_t NewMemBlockId() { return mem_block_id_count_++; }
-  int64_t NewChunkId() { return chunk_id_count_++; }
+  int64_t NewRegstDescId();
+  int64_t NewMemBlockId();
+  int64_t NewChunkId();
 
   TaskIdGenerator* GetTaskIdGenerator() { return &task_id_gen_; }
 
@@ -43,9 +43,9 @@ class IDMgr final {
   friend class Singleton<IDMgr>;
   IDMgr();
 
-  int64_t regst_desc_id_count_;
-  int64_t mem_block_id_count_;
-  int64_t chunk_id_count_;
+  std::atomic<int64_t> regst_desc_id_count_;
+  std::atomic<int64_t> mem_block_id_count_;
+  std::atomic<int64_t> chunk_id_count_;
   TaskIdGenerator task_id_gen_;
 };
 

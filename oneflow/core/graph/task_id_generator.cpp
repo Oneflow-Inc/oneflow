@@ -50,6 +50,7 @@ void TaskIdGenerator::TryUpdateTaskIndex(const HashMap<int64_t, uint32_t>& task_
 }
 
 TaskId TaskIdGenerator::Generate(const StreamId& stream_id) {
+  std::unique_lock<std::mutex> lock(mutex_);
   if (stream_id2task_index_counter_.count(stream_id) == 0) {
     uint32_t init_task_index = 0;
     const int64_t i64_stream_id = EncodeStreamIdToInt64(stream_id);

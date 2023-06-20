@@ -45,23 +45,24 @@ class PlanTaskNode final : public Node<PlanTaskNode, PlanTaskEdge> {
   const TaskProto* task_proto_;
 };
 
-class PlanTaskGraph final : public Graph<const PlanTaskNode, PlanTaskEdge> {
+class PlanTaskGraph : public Graph<const PlanTaskNode, PlanTaskEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(PlanTaskGraph);
   explicit PlanTaskGraph(const Plan& plan);
-  ~PlanTaskGraph() = default;
+  virtual ~PlanTaskGraph() = default;
 
   const TaskProto* TaskProto4TaskId(int64_t task_id) const;
   const Plan& plan() const { return *plan_; }
 
- private:
+ protected:
   void InitNodes();
   void InitEdges();
+  void TryConnect(PlanTaskNode* src, PlanTaskNode* dst);
 
   const Plan* plan_;
   HashMap<int64_t, PlanTaskNode*> task_id2plan_task_node_;
+  HashSet<std::pair<PlanTaskNode*, PlanTaskNode*>> edges_;
 };
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_GRAPH_PLAN_TASK_GRAPH_H_

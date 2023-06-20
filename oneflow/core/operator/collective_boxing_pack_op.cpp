@@ -60,7 +60,7 @@ Maybe<void> CollectiveBoxingPackOp::InferOutBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  *out_blob_desc = *in_blob_desc;
+  *CHECK_NOTNULL(out_blob_desc) = *CHECK_NOTNULL(in_blob_desc);  // NOLINT
   out_blob_desc->set_shape(Shape({in_blob_desc->shape().elem_cnt()}));
   return Maybe<void>::Ok();
 }
