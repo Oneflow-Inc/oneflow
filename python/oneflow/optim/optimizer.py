@@ -426,6 +426,7 @@ class Optimizer(object):
                     param_group["clip_grad_max_norm"],
                     param_group["clip_grad_norm_type"],
                     error_if_nonfinite,
+                    param_group.get("fused", False),
                 )
             else:
                 warnings.warn(

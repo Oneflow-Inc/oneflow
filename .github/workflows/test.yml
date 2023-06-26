@@ -583,6 +583,7 @@ jobs:
         run: |
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.FLOW_VISION_SRC}}
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install pybind11 --user
+          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install tensorboardX==2.6 --user
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.LIBAI_SRC}}
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.ONEFLOW_IREE_SRC}}
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.ONE_FX_SRC}}
@@ -899,6 +900,7 @@ jobs:
         run: |
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.FLOW_VISION_SRC}}
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install pybind11 --user
+          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install tensorboardX==2.6 --user
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.LIBAI_SRC}}
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.ONEFLOW_FACE_SRC}}
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.ONEFLOW_IREE_SRC}}
