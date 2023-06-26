@@ -156,11 +156,7 @@ def compare_with_numpy_lbfgs(
     save_load_by_pickle,
     contiguous_params,
     tensor_num,
-<<<<<<< HEAD
-    use_float64
-=======
     use_float64,
->>>>>>> 1d863e972249cb730e54523b9ae9a794e20fc430
 ):
     random_grad_seq = []
     init_value_seq = []
@@ -174,32 +170,18 @@ def compare_with_numpy_lbfgs(
         flow.set_default_tensor_type(flow.FloatTensor)
     for _ in range(tensor_num):
         init_value_seq.append(np.random.uniform(size=x_shape).astype(npType))
-<<<<<<< HEAD
-    for _ in range(train_iters):
-        random_grad_seq_per_iter = []
-        for _ in range(tensor_num):
-            random_grad_seq_per_iter.append(
-                np.random.uniform(size=x_shape).astype(npType)
-            )
-        random_grad_seq.append(random_grad_seq_per_iter)
-=======
     for _ in range(tensor_num):
         random_grad_seq.append(np.random.uniform(size=x_shape).astype(npType))
->>>>>>> 1d863e972249cb730e54523b9ae9a794e20fc430
 
     def train_by_oneflow():
         x = []
         for i in range(tensor_num):
             x.append(
-<<<<<<< HEAD
-                Parameter(flow.Tensor(init_value_seq[i], device=flow.device(device)))
-=======
                 Parameter(
                     flow.tensor(
                         init_value_seq[i], device=flow.device(device), dtype=flowType
                     )
                 )
->>>>>>> 1d863e972249cb730e54523b9ae9a794e20fc430
             )
 
         lbfgs = flow.optim.LBFGS(
@@ -311,10 +293,6 @@ def compare_with_numpy_lbfgs(
 
                 prev_flat_grad = np.copy(flat_grad)
                 prev_loss = loss
-<<<<<<< HEAD
-                
-=======
->>>>>>> 1d863e972249cb730e54523b9ae9a794e20fc430
                 if state["n_iter"] == 1:
                     t = min(1.0, 1.0 / np.sum(np.abs(flat_grad))) * learning_rate
                 else:
@@ -393,35 +371,20 @@ class TestLBFGS(flow.unittest.TestCase):
     def test_lbfgs_numpy(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = [random_device().value()]
-<<<<<<< HEAD
-        arg_dict["x_shape"] = [10,20]
-        arg_dict["learning_rate"] = [0.01]
-        arg_dict["train_iters"] = [10]
-=======
         arg_dict["x_shape"] = [10, 20]
         arg_dict["learning_rate"] = [0.01]
         arg_dict["train_iters"] = [20]
->>>>>>> 1d863e972249cb730e54523b9ae9a794e20fc430
         arg_dict["max_iter"] = [20]
         arg_dict["max_eval"] = [25]
         arg_dict["tolerance_grad"] = [1e-7]
         arg_dict["tolerance_change"] = [1e-9]
         arg_dict["history_size"] = [100]
-<<<<<<< HEAD
-        arg_dict["line_search_fn"] = [None,"strong_wolfe"]
-        arg_dict["reload_state_step"] = [5]
-        arg_dict["save_load_by_pickle"] = [random_bool().value()]
-        arg_dict["contiguous_params"] = [random_bool().value()]
-        arg_dict["tensor_num"] = [3, 4,7]
-        arg_dict["use_float64"] = [True]
-=======
         arg_dict["line_search_fn"] = [None, "strong_wolfe"]
         arg_dict["reload_state_step"] = [5]
         arg_dict["save_load_by_pickle"] = [random_bool().value()]
         arg_dict["contiguous_params"] = [random_bool().value()]
         arg_dict["tensor_num"] = [3, 4, 7]
         arg_dict["use_float64"] = [True, False]
->>>>>>> 1d863e972249cb730e54523b9ae9a794e20fc430
         for arg in GenArgList(arg_dict):
             compare_with_numpy_lbfgs(test_case, *arg)
 
