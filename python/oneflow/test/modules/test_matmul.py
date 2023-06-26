@@ -35,7 +35,6 @@ class TestModule(flow.unittest.TestCase):
         z = torch.matmul(x, y)
         return z
 
-
     @autotest(check_graph=True, rtol=1e-2, atol=1e-4)
     def test_flow_tensor_matmul_with_random_data_allow_tf32(test_case):
         flow.backends.cuda.matmul.allow_tf32 = True
@@ -70,7 +69,6 @@ class TestModule(flow.unittest.TestCase):
         test_case.assertTrue(
             np.allclose(flow_output_numpy, torch_output_numpy, 1e-05, 1e-05)
         )
-
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @autotest(n=5, check_graph=False)
