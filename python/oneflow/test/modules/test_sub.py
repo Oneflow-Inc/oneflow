@@ -157,7 +157,6 @@ class TestSubModule(flow.unittest.TestCase):
         z3 = torch.sub(s, x3, alpha=alpha)
         return z1, z2, z3
 
-
     @autotest(n=5)
     def test_non_contiguous_inplace_sub(test_case):
         device = random_device()
