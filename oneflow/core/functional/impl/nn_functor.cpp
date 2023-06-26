@@ -5345,6 +5345,30 @@ class FusedScaleMaskBiasSoftmaxGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedClipGradFunctor {
+ public:
+  FusedClipGradFunctor() {
+    op_.resize(kMaxInputCount /*the maximum number of inputs*/);
+    for (int n = 0; n < op_.size(); ++n) {
+      op_[n] = CHECK_JUST(
+          one::OpBuilder("fused_clip_grad").Input("model_diff", n + 1).Output("out").Build());
+    }
+  }
+
+  Maybe<Tensor> operator()(const TensorTuple& model_diff, const float& max_norm,
+                           const float& norm_type) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("max_norm", "norm_type");
+    attrs.SetAllAttrs(max_norm, norm_type);
+    const int64_t input_size = model_diff.size();
+    CHECK_LE_OR_RETURN(input_size, kMaxInputCount)
+        << Error::RuntimeError() << "model_diff size should not be greater than 128";
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_[input_size - 1], model_diff, attrs));
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> op_;
+};
+
 class NonContiguousBinaryOpFunctor {
  public:
   NonContiguousBinaryOpFunctor() {
@@ -5530,6 +5554,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::NonContiguousBinaryOpFunctor>("NonContiguousBinaryOp");
   m.add_functor<impl::NonContiguousBinaryOpGradFunctor>("NonContiguousBinaryOpGrad");
   m.add_functor<impl::MultiTensorYoloV5WeightUpdateFunctor>("MultiTensorYoloV5WeightUpdate");
+  m.add_functor<impl::FusedClipGradFunctor>("FusedClipGrad");
 }
 
 }  // namespace functional

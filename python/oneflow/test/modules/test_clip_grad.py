@@ -47,7 +47,7 @@ def _clip_grad_norm_np(input, max_norm, norm_type):
     return total_norm, np_grad
 
 
-def _test_clip_grad_norm_impl(test_case, shape, device, max_norm, norm_type):
+def _test_clip_grad_norm_impl(test_case, shape, device, max_norm, norm_type, fused):
     np_input = np.random.rand(*shape)
     of_input = flow.tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
@@ -56,7 +56,7 @@ def _test_clip_grad_norm_impl(test_case, shape, device, max_norm, norm_type):
     of_out = m(of_input)
     of_out = of_out.sum()
     of_out.backward()
-    of_total_norm = flow.nn.utils.clip_grad_norm_(of_input, max_norm, norm_type)
+    of_total_norm = flow.nn.utils.clip_grad_norm_(of_input, max_norm, norm_type, fused)
     np_total_norm, np_grad = _clip_grad_norm_np(np_input, max_norm, norm_type)
     test_case.assertTrue(
         np.allclose(of_total_norm.numpy(), np_total_norm, 1e-4, 1e-4, equal_nan=True)
@@ -155,6 +155,7 @@ class TestClipGrad(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["max_norm"] = [0, 0.5, 1.0]
         arg_dict["norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
+        arg_dict["fused"] = [False, True]
         for arg in GenArgList(arg_dict):
             _test_clip_grad_norm_impl(test_case, *arg)
 

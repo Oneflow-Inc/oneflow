@@ -35,6 +35,7 @@ class TaskIdGenerator final {
   void TryUpdateTaskIndex(const HashMap<int64_t, uint32_t>& task_index_state);
 
  private:
+  std::mutex mutex_;
   HashMap<StreamId, task_index_t> stream_id2task_index_counter_;
   // The task_index_init_state is used to initialize the `stream_id2task_index_counter_` hashmap.
   HashMap<int64_t, uint32_t> task_index_init_state_{};

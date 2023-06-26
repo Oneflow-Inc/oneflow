@@ -153,6 +153,7 @@ class Graph(object):
         self._unique_global_op_dict = dict()
         self._unique_identity_op_dict = dict()
 
+        # Graph compilation related.
         # forward graph job proto
         self._forward_job_proto = None
         # forward, backward and optimized graph job proto
@@ -163,6 +164,14 @@ class Graph(object):
         self._args_repr = []
         self._outs_repr = []
         self._oneflow_internal_graph_ir__ = None
+        enalbe_lazy_separate_compile = os.environ.get(
+            "ONEFLOW_ENABLE_LAZY_SEPARATE_COMPILE"
+        )
+        if enalbe_lazy_separate_compile != None and enalbe_lazy_separate_compile == "1":
+            os.environ["ONEFLOW_LAZY_COMPILE_MODE"] = "rank_per_process"
+            # Separate compile mode only works with nccl use compute stream and logical chain.
+            os.environ["ENABLE_LOGICAL_CHAIN"] = "1"
+            oneflow.boxing.nccl.enable_use_compute_stream(True)
 
         self._session = session_ctx.GetDefaultSession()
         assert type(self._session) is MultiClientSession
@@ -1687,6 +1696,10 @@ class Graph(object):
                 eager_outputs = oneflow._oneflow_internal.nn.graph.RunLazyNNGraphByVM(
                     convert_to_tensor_tuple(flattened_eager_args), self._c_nn_graph,
                 )
+                if len(eager_outputs) == 1:
+                    return eager_outputs[0]
+                else:
+                    return eager_outputs
             else:
                 outputs_tensor_tuple = self._outputs_tensor_tuple_buffer[
                     self._cur_index_of_ouputs_buffer

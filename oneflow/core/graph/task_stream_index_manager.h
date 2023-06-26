@@ -21,13 +21,13 @@ limitations under the License.
 
 namespace oneflow {
 
-class TaskStreamIndexManager final {
+class TaskStreamIndexManager {
  public:
   using stream_index_t = StreamId::stream_index_t;
 
   OF_DISALLOW_COPY_AND_MOVE(TaskStreamIndexManager);
   TaskStreamIndexManager() = default;
-  ~TaskStreamIndexManager() = default;
+  virtual ~TaskStreamIndexManager() = default;
 
   StreamIndexGenerator* GetGenerator(const DeviceId& device_id);
   stream_index_t GetTaskStreamIndex(TaskType task_type, const DeviceId& device_id);

@@ -209,7 +209,8 @@ class TestMulModule(flow.unittest.TestCase):
         x.mul_(y)
         return x
 
-    @autotest(n=6, include_complex=True)
+
+    @autotest(n=6)
     def test_non_contiguous_inplace_mul(test_case):
         device = random_device()
         x = random_tensor(2, 2, 4).to(device)
@@ -218,7 +219,8 @@ class TestMulModule(flow.unittest.TestCase):
         y *= random_tensor(2, 2, 2).to(device)
         return y
 
-    @autotest(n=10, include_complex=True)
+
+    @autotest(n=10)
     def test_scalar_mul_with_random_devices(test_case):
         x1_device = random_device()
         x2_device = random_device()

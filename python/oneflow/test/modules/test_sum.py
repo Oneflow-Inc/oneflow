@@ -118,6 +118,27 @@ class TestSumModule(flow.unittest.TestCase):
         )
         return y
 
+    @autotest(
+        n=10,
+        check_graph=False,
+        auto_backward=True,
+        include_complex=True,
+        atol=1e-2,
+        rtol=1e-5,
+    )
+    def test_sum_complex_dtype(test_case):
+        device = random_device()
+        x = random_tensor(4, dtype=complex, requires_grad=True).to(
+            device=device, dtype=random_dtype(["complex"])
+        )
+        y = torch.sum(
+            x,
+            dim=np.random.randint(0, 3),
+            keepdim=random_bool(),
+            dtype=random_dtype(["complex"]),
+        )
+        return y
+
     @autotest(check_graph=True, auto_backward=False)
     def test_sum_arithmetic_dtype(test_case):
         device = random_device()
