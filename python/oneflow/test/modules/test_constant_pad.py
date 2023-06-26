@@ -112,7 +112,7 @@ class TestConstantPad3d(flow.unittest.TestCase):
         return y
 
     @autotest(n=10, rtol=0.001, atol=0.001, auto_backward=False)
-    def test_constantpad3d_with_random_data(test_case):
+    def test_constantpad3d_with_random_int_data(test_case):
         dtype = choice([bool, int])
         value = random(0, 2).to(bool) if dtype is bool else random().to(int)
         m = torch.nn.ConstantPad3d(padding=random(1, 6).to(_size_6_t), value=value,)

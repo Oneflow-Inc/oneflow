@@ -73,6 +73,8 @@ type_name_to_flow_type = {
     "uint8": flow.uint8,
     "half": flow.half,
     "bfloat16": flow.bfloat16,
+    "complex64": flow.complex64,
+    "complex128": flow.complex128,
 }
 type_name_to_np_type = {
     "float16": np.float16,
@@ -82,6 +84,8 @@ type_name_to_np_type = {
     "int32": np.int32,
     "int64": np.int64,
     "uint8": np.uint8,
+    "complex64": np.complex64,
+    "complex128": np.complex128,
 }
 
 

@@ -18,6 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+import torch as torch_original
 
 from oneflow.test_utils.automated_test_util import *
 from oneflow.test_utils.test_util import GenArgList
@@ -156,7 +157,7 @@ class TestSubModule(flow.unittest.TestCase):
         z3 = torch.sub(s, x3, alpha=alpha)
         return z1, z2, z3
 
-    @autotest(n=3)
+    @autotest(n=5)
     def test_non_contiguous_inplace_sub(test_case):
         device = random_device()
         x = random_tensor(2, 2, 4).to(device)
@@ -166,7 +167,7 @@ class TestSubModule(flow.unittest.TestCase):
         return y
 
     @unittest.skip("skip for now, becase it failed 2 times in past week")
-    @autotest(n=5)
+    @autotest(n=5, include_complex=True)
     def test_scalar_sub_with_random_devices(test_case):
         x1_device = random_device()
         x2_device = random_device()

@@ -261,6 +261,10 @@ class random(generator):
             val = float(rng.random() * (high - low) + low)
         elif annotation == bool:
             val = random_util.choice([True, False])
+        elif annotation == complex:
+            val_real = float(rng.random() * (high - low) + low)
+            val_imag = float(rng.random() * (high - low) + low)
+            val = val_real + 1.0j * val_imag
         elif annotation is None:
             val = None
         elif annotation is NoneType:
@@ -425,6 +429,7 @@ class random_pytorch_dtype(generator):
     floating_dtype_seq = [torch.float, torch.double]
     half_dtype_seq = [torch.half]
     bfloat16_dtype_seq = [torch.bfloat16]
+    complex_dtype_seq = [torch.complex64, torch.complex128]
     signed_int_dtype_seq = [torch.int8, torch.int32, torch.int64]
     unsigned_int_dtype_seq = [torch.uint8]
     int_dtype_seq = [torch.int8, torch.int32, torch.int64]
@@ -440,6 +445,7 @@ class random_pytorch_dtype(generator):
         "float": floating_dtype_seq,
         "half": half_dtype_seq,
         "bfloat16": bfloat16_dtype_seq,
+        "complex": complex_dtype_seq,
         "signed": signed_int_dtype_seq,
         "unsigned": unsigned_int_dtype_seq,
         "int": int_dtype_seq,
