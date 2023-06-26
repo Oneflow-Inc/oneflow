@@ -190,7 +190,6 @@ class TestAddModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-
     @autotest(n=10)
     def test_0_size_add(test_case):
         device = random_device()
@@ -198,7 +197,6 @@ class TestAddModule(flow.unittest.TestCase):
         y = random_tensor(2, 1, 3).to(device)
         out = x + y
         return out
-
 
     @autotest(n=6, auto_backward=False)
     def test_0dim_inplace_add(test_case):
@@ -208,7 +206,6 @@ class TestAddModule(flow.unittest.TestCase):
         x += y.mean()
         return x
 
-
     @autotest(n=10)
     def test_0dim_two_inplace_add(test_case):
         device = random_device()
@@ -216,7 +213,6 @@ class TestAddModule(flow.unittest.TestCase):
         y = random_tensor(2, 2, 3).to(device)
         x += y.mean()
         return x
-
 
     @autotest(n=6)
     def test_add_with_alpha(test_case):
@@ -264,7 +260,6 @@ class TestAddModule(flow.unittest.TestCase):
         return x
         x += y.mean().to(torch.bool)
 
-
     @autotest(n=6)
     def test_add_with_alpha_0dim(test_case):
         device = random_device()
@@ -284,7 +279,6 @@ class TestAddModule(flow.unittest.TestCase):
         torch.add(torch.ones(100), 20)
         torch.add(torch.ones(100), torch.ones(100, 1), alpha=10)
 
-
     @autotest(n=6)
     def test_non_contiguous_inplace_add(test_case):
         device = random_device()
@@ -293,7 +287,6 @@ class TestAddModule(flow.unittest.TestCase):
         y = y[:, 1:3]
         y += random_tensor(2, 2, 2).to(device)
         return y
-
 
     @autotest(n=10)
     def test_scalar_add_with_random_devices(test_case):
