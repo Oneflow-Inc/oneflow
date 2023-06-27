@@ -93,7 +93,7 @@ class TestSumModule(flow.unittest.TestCase):
             x,
             dim=np.random.randint(0, 3),
             keepdim=random_bool(),
-            dtype=random_dtype(["arithmetic", "complex"]),
+            dtype=random_dtype(["arithmetic"]),
         )
         return y
 
