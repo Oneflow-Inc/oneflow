@@ -75,12 +75,6 @@ CublasScalarParameter GetCublasScalarParameter(Scalar scalar, cublasComputeType_
     sp.s = scalar.Value<float>();
   } else if (compute_type == CUBLAS_COMPUTE_16F) {
     sp.h = static_cast<half>(scalar.Value<float>());
-  } else if (compute_type == CUDA_C_32F) {
-    const std::complex<float> cpp_value = scalar.Value<std::complex<float>>();
-    sp.c = cuComplex{cpp_value.real(), cpp_value.imag()};
-  } else if (compute_type == CUDA_C_64F) {
-    const std::complex<double> cpp_value = scalar.Value<std::complex<double>>();
-    sp.z = cuDoubleComplex{cpp_value.real(), cpp_value.imag()};
   } else {
     UNIMPLEMENTED();
   }
