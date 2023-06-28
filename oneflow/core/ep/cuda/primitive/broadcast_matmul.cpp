@@ -111,6 +111,14 @@ cublasComputeType_t GetComputeType(DataType data_type, CudaStream* cuda_stream) 
         return CUBLAS_COMPUTE_16F;
       }
     }
+    case kComplex64: {
+      if (CudaMatmulMode::is_matmul_allow_tf32()) {
+        return CUBLAS_COMPUTE_32F_FAST_TF32;
+      } else {
+        return CUBLAS_COMPUTE_32F_PEDANTIC;
+      }
+    }
+    case kComplex128: return CUBLAS_COMPUTE_64F;
 #if CUDA_VERSION >= 11000
     case kBFloat16: return CUBLAS_COMPUTE_32F;
 #endif  // CUDA_VERSION >= 11000
