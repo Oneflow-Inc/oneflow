@@ -1405,9 +1405,9 @@ def random_tensor(
 ):
     if isinstance(requires_grad, generator):
         requires_grad = requires_grad.value()
-    # if dtype == float and testing_complex:
-    #     # Generate complex with the probability of 0.5
-    #     dtype = complex if rng.integers(0, 2) == 1 else float
+    if dtype == float and testing_complex:
+        # Generate complex with the probability of 0.5
+        dtype = complex if rng.integers(0, 2) == 1 else float
 
     pytorch_tensor = (
         random_pytorch_tensor(
