@@ -15,7 +15,6 @@ limitations under the License.
 """
 import numpy as np
 import torch as torch_original
-import paddle
 
 import os
 import unittest
