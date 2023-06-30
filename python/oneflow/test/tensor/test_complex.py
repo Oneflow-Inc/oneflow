@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import numpy as np
+import torch as torch_original
+
 import os
 import unittest
 import oneflow as flow

@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/broadcast_matmul.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/framework/dtype.h"
 
 namespace oneflow {
 

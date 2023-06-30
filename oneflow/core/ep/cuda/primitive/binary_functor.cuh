@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <cuComplex.h>
 #include "oneflow/core/ep/common/primitive/binary_functor.h"
 #include "oneflow/core/ep/cuda/primitive/unary_functor.cuh"
 
@@ -527,11 +528,52 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kMul, cuComplex, cuComplex> {
 };
 
 template<>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kDiv, cuComplex, cuComplex> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC cuComplex operator()(cuComplex src0, cuComplex src1) const {
+    return cuCdivf(src0, src1);
+  }
+};
+
+template<>
 struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kMul, cuDoubleComplex, cuDoubleComplex> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC cuDoubleComplex operator()(cuDoubleComplex src0, cuDoubleComplex src1) const {
     return cuCmul(src0, src1);
+  }
+};
+
+template<>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kDiv, cuDoubleComplex, cuDoubleComplex> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC cuDoubleComplex operator()(cuDoubleComplex src0, cuDoubleComplex src1) const {
+    return cuCdiv(src0, src1);
+  }
+};
+
+template<>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kSqrtBackwardWithDyX, cuComplex, cuComplex> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : unary_functor(attr0, attr1) {}
+  UnaryFunctor<DeviceType::kCUDA, UnaryOp::kSqrt, cuComplex, cuComplex> unary_functor;
+  OF_DEVICE_FUNC cuComplex operator()(cuComplex dy, cuComplex x) const {
+    // dy / (2 * sqrt(x).conj())
+    cuComplex y = unary_functor(x);
+    return cuCdivf(dy, cuComplex{2.0f * y.x, -2.0f * y.y});
+  }
+};
+
+template<>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kSqrtBackwardWithDyX, cuDoubleComplex,
+                     cuDoubleComplex> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : unary_functor(attr0, attr1) {}
+  UnaryFunctor<DeviceType::kCUDA, UnaryOp::kSqrt, cuDoubleComplex, cuDoubleComplex> unary_functor;
+  OF_DEVICE_FUNC cuDoubleComplex operator()(cuDoubleComplex dy, cuDoubleComplex x) const {
+    // dy / (2 * sqrt(x).conj())
+    cuDoubleComplex y = unary_functor(x);
+    return cuCdiv(dy, cuDoubleComplex{2.0 * y.x, -2.0 * y.y});
   }
 };
 

@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/ep/cuda/cuda_matmul_mode.h"
 #include <cuda.h>
+#include <cuComplex.h>
 
 namespace oneflow {
 
@@ -41,6 +42,8 @@ Optional<cudaDataType_t> OptCudaDataType(DataType data_type) {
     case kFloat: return CUDA_R_32F;
     case kDouble: return CUDA_R_64F;
     case kFloat16: return CUDA_R_16F;
+    case kComplex64: return CUDA_C_32F;
+    case kComplex128: return CUDA_C_64F;
 #if CUDA_VERSION >= 11000
     case kBFloat16: return CUDA_R_16BF;
 #endif  // CUDA_VERSION >= 11000
@@ -58,6 +61,8 @@ union CublasScalarParameter {
   double d;
   float s;
   half h;
+  cuComplex c;
+  cuDoubleComplex z;
 };
 
 CublasScalarParameter GetCublasScalarParameter(Scalar scalar, cublasComputeType_t compute_type) {
@@ -80,6 +85,8 @@ cudaDataType_t GetCublasScalarType(DataType data_type) {
   switch (data_type) {
     case kFloat: return CUDA_R_32F;
     case kDouble: return CUDA_R_64F;
+    case kComplex64: return CUDA_C_32F;
+    case kComplex128: return CUDA_C_64F;
     default: return CUDA_R_32F;
   }
 }
@@ -104,6 +111,14 @@ cublasComputeType_t GetComputeType(DataType data_type, CudaStream* cuda_stream) 
         return CUBLAS_COMPUTE_16F;
       }
     }
+    case kComplex64: {
+      if (CudaMatmulMode::is_matmul_allow_tf32()) {
+        return CUBLAS_COMPUTE_32F_FAST_TF32;
+      } else {
+        return CUBLAS_COMPUTE_32F_PEDANTIC;
+      }
+    }
+    case kComplex128: return CUBLAS_COMPUTE_64F;
 #if CUDA_VERSION >= 11000
     case kBFloat16: return CUBLAS_COMPUTE_32F;
 #endif  // CUDA_VERSION >= 11000
@@ -121,18 +136,18 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
   const auto cuda_data_type = GetCudaDataType(data_type);
   const auto compute_type = GetComputeType(data_type, cuda_stream);
   const auto sp_alpha = GetCublasScalarParameter(alpha, compute_type);
-  const auto GetCublasOperation = [](BlasTransposeType transpose_type) {
+  const auto GetCublasOperation = [](BlasTransposeType transpose_type, DataType data_type) {
     if (transpose_type == BlasTransposeType::N) {
       return CUBLAS_OP_N;
     } else if (transpose_type == BlasTransposeType::T) {
-      return CUBLAS_OP_T;
+      return DType(data_type).is_complex() ? CUBLAS_OP_C : CUBLAS_OP_T;
     } else {
       UNIMPLEMENTED();
       return CUBLAS_OP_N;
     }
   };
-  const cublasOperation_t cublas_trans_a = GetCublasOperation(transpose_b);
-  const cublasOperation_t cublas_trans_b = GetCublasOperation(transpose_a);
+  const cublasOperation_t cublas_trans_a = GetCublasOperation(transpose_b, data_type);
+  const cublasOperation_t cublas_trans_b = GetCublasOperation(transpose_a, data_type);
   const int cublas_m = n;
   const int cublas_n = m;
   const int cublas_k = k;

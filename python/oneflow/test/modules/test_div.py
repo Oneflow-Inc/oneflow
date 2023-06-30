@@ -18,6 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+import torch as torch_original
 
 from oneflow.test_utils.automated_test_util import *
 from oneflow.test_utils.test_util import GenArgList
@@ -98,7 +99,7 @@ class TestDiv(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_div_impl(test_case, *arg)
 
-    @autotest(n=5, auto_backward=False, check_graph=True)
+    @autotest(n=10, auto_backward=False, check_graph=True, include_complex=True)
     def test_random_dim_div(test_case):
         device = random_device()
         dim0 = random(low=1, high=4).to(int)
@@ -108,7 +109,7 @@ class TestDiv(flow.unittest.TestCase):
         z = x / y
         return z
 
-    @autotest(n=5, auto_backward=False, check_graph=True)
+    @autotest(n=10, auto_backward=False, check_graph=True, include_complex=True)
     def test_random_dim_scalar_div(test_case):
         device = random_device()
         dim0 = random(low=1, high=4).to(int)
@@ -118,7 +119,7 @@ class TestDiv(flow.unittest.TestCase):
         z = x / y
         return z
 
-    @autotest(n=5, auto_backward=False, check_graph=True)
+    @autotest(n=10, auto_backward=False, check_graph=True, include_complex=True)
     def test_0_size_div(test_case):
         device = random_device()
         x = random_tensor(4, 2, 1, 0, 3).to(device)
@@ -126,7 +127,7 @@ class TestDiv(flow.unittest.TestCase):
         z = x / y
         return z
 
-    @autotest(n=5, auto_backward=False, check_graph=True)
+    @autotest(n=10, auto_backward=False, check_graph=True, include_complex=True)
     def test_0dim_div(test_case):
         device = random_device()
         x = random_tensor(ndim=0).to(device)
@@ -134,7 +135,7 @@ class TestDiv(flow.unittest.TestCase):
         z = x / y
         return z
 
-    @autotest(n=3)
+    @autotest(n=10, include_complex=True)
     def test_non_contiguous_inplace_div(test_case):
         device = random_device()
         x = random_tensor(2, 2, 4).to(device)
@@ -150,7 +151,7 @@ class TestDiv(flow.unittest.TestCase):
         torch_out = torch.arange(num_elems) / num_elems
         test_case.assertTrue(np.allclose(flow_out.numpy(), torch_out.numpy()))
 
-    @autotest(n=5)
+    @autotest(n=5, include_complex=True)
     def test_scalar_div_with_random_devices(test_case):
         x1_device = random_device()
         x2_device = random_device()

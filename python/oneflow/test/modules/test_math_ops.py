@@ -108,14 +108,14 @@ class TestLogModule(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestSqrt(flow.unittest.TestCase):
-    @autotest(n=5)
+    @autotest(n=10, include_complex=True)
     def test_sqrt_flow_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
         z = torch.sqrt(x)
         return z
 
-    @autotest(n=5)
+    @autotest(n=10, include_complex=True)
     def test_sqrt_tensor_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)

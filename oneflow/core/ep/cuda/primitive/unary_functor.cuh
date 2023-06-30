@@ -691,6 +691,76 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIdentity, cuComplex, cuComplex>
   OF_DEVICE_FUNC cuComplex operator()(cuComplex src) const { return src; }
 };
 
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kConj, cuComplex, cuComplex> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC cuComplex operator()(cuComplex src) const { return cuComplex{src.x, -src.y}; }
+};
+
+// reference : thrust: `thrust/detail/complex/csqrtf.h:csqrtf`
+template<>
+struct UnaryFunctor<kCUDA, UnaryOp::kSqrt, cuComplex, cuComplex> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC cuComplex operator()(cuComplex src) const {
+    float a = src.x, b = src.y;
+    float t = 0.0f;
+    int scale = 1;
+    cuComplex result;
+
+    /* We risk spurious overflow for components >= FLT_MAX / (1 + sqrt(2)). */
+    const float THRESH = 1.40949553037932e+38f;
+
+    /* Handle special cases. */
+    if (src.x == 0.0f && src.y == float()) {
+      // return (complex<float>(0, b));
+      return (cuComplex{0.0f, b});
+    }
+
+    // FLT_MIN*2
+    const float low_thresh = 2.35098870164458e-38f;
+    scale = 0;
+
+    if (fabsf(a) >= THRESH || fabsf(b) >= THRESH) {
+      /* Scale to avoid overflow. */
+      a *= 0.25f;
+      b *= 0.25f;
+      scale = 1;
+    } else if (fabsf(a) <= low_thresh && fabsf(b) <= low_thresh) {
+      /* Scale to avoid underflow. */
+      a *= 4.f;
+      b *= 4.f;
+      scale = 2;
+    }
+
+    /* Algorithm 312, CACM vol 10, Oct 1967. */
+    if (a >= 0.0f) {
+      t = sqrtf((a + hypotf(a, b)) * 0.5f);
+      // result = complex<float>(t, b / (2.0f * t));
+      result.x = t;
+      result.y = b / (2.0f * t);
+    } else {
+      t = sqrtf((-a + hypotf(a, b)) * 0.5f);
+      // result = complex<float>(fabsf(b) / (2.0f * t), copysignf(t, b));
+      result.x = fabsf(b) / (2.0f * t);
+      result.y = copysignf(t, b);
+    }
+
+    /* Rescale. */
+    if (scale == 1) {
+      // return (result * 2.0f);
+      result.x *= 2.0f;
+      result.y *= 2.0f;
+    } else if (scale == 2) {
+      // return (result * 0.5f);
+      result.x *= 0.5f;
+      result.y *= 0.5f;
+    }
+
+    return (result);
+  }
+};
+
 /*********double complex dtype support*********/
 template<typename Src>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCast, cuDoubleComplex, Src> {
@@ -732,6 +802,90 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIdentity, cuDoubleComplex, cuDo
 
   OF_DEVICE_FUNC cuDoubleComplex operator()(cuDoubleComplex src) const { return src; }
 };
+
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kConj, cuDoubleComplex, cuDoubleComplex> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC cuDoubleComplex operator()(cuDoubleComplex src) const {
+    return cuDoubleComplex{src.x, -src.y};
+  }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kSqrt, cuDoubleComplex, cuDoubleComplex> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC cuDoubleComplex operator()(cuDoubleComplex src) const {
+    double a = src.x, b = src.y;
+    double t = 0.0;
+    int scale = 1;
+    cuDoubleComplex result;
+
+    /* We risk spurious overflow for components >= DBL_MAX / (1 + sqrt(2)). */
+    const float THRESH = 7.446288774449766337959726e+307;
+
+    /* Handle special cases. */
+    if (src.x == 0.0 && src.y == double()) {
+      // return (complex<float>(0, b));
+      return (cuDoubleComplex{0.0, b});
+    }
+
+    // DBL_MIN*2
+    const double low_thresh = 4.450147717014402766180465e-308;
+    scale = 0;
+
+    if (fabs(a) >= THRESH || fabs(b) >= THRESH) {
+      /* Scale to avoid overflow. */
+      a *= 0.25;
+      b *= 0.25;
+      scale = 1;
+    } else if (fabs(a) <= low_thresh && fabs(b) <= low_thresh) {
+      /* Scale to avoid underflow. */
+      a *= 4.0;
+      b *= 4.0;
+      scale = 2;
+    }
+
+    /* Algorithm 312, CACM vol 10, Oct 1967. */
+    if (a >= 0.0) {
+      t = sqrt((a + hypot(a, b)) * 0.5);
+      // result = complex<float>(t, b / (2.0f * t));
+      result.x = t;
+      result.y = b / (2 * t);
+    } else {
+      t = sqrt((-a + hypot(a, b)) * 0.5);
+      // result = complex<float>(fabsf(b) / (2.0f * t), copysignf(t, b));
+      result.x = fabs(b) / (2 * t);
+      result.y = copysignf(t, b);
+    }
+
+    /* Rescale. */
+    if (scale == 1) {
+      // return (result * 2.0f);
+      result.x *= 2.0;
+      result.y *= 2.0;
+    } else if (scale == 2) {
+      // return (result * 0.5f);
+      result.x *= 0.5;
+      result.y *= 0.5;
+    }
+
+    return (result);
+  }
+};
+
+#define SPECIALIZATION_COMPLEX_ARITHMETIC_UNARY_FUNCTOR(op, complex_type, real_type)        \
+  template<>                                                                                \
+  struct UnaryFunctor<DeviceType::kCUDA, op, complex_type, complex_type> {                  \
+    OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) : real_functor(attr0, attr1) {} \
+    UnaryFunctor<DeviceType::kCUDA, op, real_type, real_type> real_functor;                 \
+    OF_DEVICE_FUNC complex_type operator()(complex_type src) const {                        \
+      return complex_type{real_functor(src.x), real_functor(src.y)};                        \
+    }                                                                                       \
+  };
+
+SPECIALIZATION_COMPLEX_ARITHMETIC_UNARY_FUNCTOR(UnaryOp::kNegative, cuComplex, float);
+SPECIALIZATION_COMPLEX_ARITHMETIC_UNARY_FUNCTOR(UnaryOp::kNegative, cuDoubleComplex, double);
 
 }  // namespace primitive
 }  // namespace ep

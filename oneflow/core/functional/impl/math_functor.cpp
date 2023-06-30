@@ -5552,6 +5552,7 @@ class ConjPhysicalFunctor {
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    if (!IsComplexDataType(x->dtype()->data_type())) { return x; }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
   }
 
