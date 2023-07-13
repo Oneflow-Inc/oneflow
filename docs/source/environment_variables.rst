@@ -6,7 +6,7 @@ OneFlow has an extensive set of environment variables to tune for specific usage
 `ONEFLOW_COMM_NET_IB_HCA <https://github.com/Oneflow-Inc/oneflow/blob/v0.9.0/oneflow/core/comm_network/ibverbs/ibverbs_comm_network.cpp#L47>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-When there are multiple IB NIC(which can be checked by ``ibstatus`` on the server, the system uses the first IB NIC for comm_net communication by default.
+When there are multiple IB NIC(which can be checked by ``ibstatus`` on the server), the system uses the first IB NIC for comm_net communication by default.
 
 When this environment variable is set, the system will check all IB NIC and find the NIC with the corresponding name. `#5626 <https://github.com/Oneflow-Inc/oneflow/pull/5626>`_
 
@@ -409,7 +409,7 @@ Specify SBP derivation rules
 
 Values accepted
 ^^^^^^^^^^^^^^^
-When the default vaule is ``1`` , select the SBP that satisfies the producer or the SBP with the smallest cost as much as possible.
+When the default value is ``1`` , select the SBP that satisfies the producer or the SBP with the smallest cost as much as possible.
 
 When the default value is ``2``, select the SBP that matches the most.
 
