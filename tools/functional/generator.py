@@ -392,7 +392,7 @@ class FunctionSignature:
         self._max_keyword_args_count = count
 
     @property
-    def num_of_args():
+    def num_of_args(self):
         return len(self._args)
 
     def to_string(self, to_cpp=False, drop_name=False):
