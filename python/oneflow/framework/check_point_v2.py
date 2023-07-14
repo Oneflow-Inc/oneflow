@@ -728,7 +728,7 @@ def save(
             global_dst_rank, int
         ), f"global_dst_rank expected type int, but got {type(global_dst_rank)}."
         assert (
-            global_dst_rank >= 0 and global_dst_rank < flow.env.get_world_size()
+                0 <= global_dst_rank < flow.env.get_world_size()
         ), f"out of range (expected to be in range of [0, {flow.env.get_world_size()}), but got {global_dst_rank})."
         if flow.env.get_rank() == global_dst_rank:
             write_file()
