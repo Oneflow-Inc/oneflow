@@ -55,7 +55,6 @@ __global__ static void BinCountCompute(const IDX* in_ptr, T* out_ptr, int64_t si
   } else {
     __shared__ T shm[kCudaThreadsNumPerBlock];
     T zero = GetZeroVal<T>();
-    // printf("tid: %" PRId64 " , size is %" PRId64 "\n", threadIdx.x, size);
     shm[threadIdx.x] = zero;
     IDX idx = 0;
     CUDA_1D_KERNEL_LOOP(i, size) { idx = *(in_ptr + i); }
@@ -91,7 +90,6 @@ class CUDABinCountKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     size_t out_size = ctx->Attr<int64_t>("size");
-    ;
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const IDX* in_ptr = in->dptr<IDX>();
     T* out_ptr = out->mut_dptr<T>();
