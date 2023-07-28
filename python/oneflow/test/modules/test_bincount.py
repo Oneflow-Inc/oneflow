@@ -56,7 +56,7 @@ class TestBinCount(flow.unittest.TestCase):
     @profile(torch.bincount)
     def profile_bincount(test_case):
         torch.bincount(torch.ones(4096).int())
-        # torch.bincount(torch.ones(65536).int())
+        torch.bincount(torch.ones(65536).int())
 
 
 if __name__ == "__main__":
