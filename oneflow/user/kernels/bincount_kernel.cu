@@ -35,6 +35,7 @@ __global__ static void BinCountCompute(const IDX* in_ptr, const T* weight, T* ou
     __shared__ T shm[kCudaThreadsNumPerBlock];
     T zero = GetZeroVal<T>();
     shm[threadIdx.x] = zero;
+    __syncthreads();
     CUDA_1D_KERNEL_LOOP(i, in_size) {
       IDX idx = *(in_ptr + i);
       cuda::atomic::Add(shm + idx, weight[i]);
