@@ -25,30 +25,31 @@ namespace {
 
 template<typename IDX, typename T, bool UseGlobalMem>
 __global__ static void BinCountCompute(const IDX* in_ptr, const T* weight, T* out_ptr,
-                                       int64_t size) {
+                                       int64_t in_size, int64_t out_size) {
   if constexpr (UseGlobalMem) {
-    CUDA_1D_KERNEL_LOOP(i, size) {
+    CUDA_1D_KERNEL_LOOP(i, in_size) {
       IDX idx = *(in_ptr + i);
       cuda::atomic::Add(out_ptr + idx, weight[i]);
     }
   } else {
     __shared__ T shm[kCudaThreadsNumPerBlock];
     T zero = GetZeroVal<T>();
-    shm[threadIdx.x] = 0;
-    IDX idx = 0;
-    CUDA_1D_KERNEL_LOOP(i, size) { idx = *(in_ptr + i); }
+    shm[threadIdx.x] = zero;
+    CUDA_1D_KERNEL_LOOP(i, in_size) {
+      IDX idx = *(in_ptr + i);
+      cuda::atomic::Add(shm + idx, weight[i]);
+    }
     __syncthreads();
-    CUDA_1D_KERNEL_LOOP(i, size) { cuda::atomic::Add(shm + idx, weight[i]); }
-    __syncthreads();
-    CUDA_1D_KERNEL_LOOP(i, size) { cuda::atomic::Add(out_ptr + threadIdx.x, shm[threadIdx.x]); }
+    if (threadIdx.x < out_size) { cuda::atomic::Add(out_ptr + threadIdx.x, shm[threadIdx.x]); }
   }
 };
 
 template<typename IDX, typename T, bool UseGlobalMem>
-__global__ static void BinCountCompute(const IDX* in_ptr, T* out_ptr, int64_t size) {
+__global__ static void BinCountCompute(const IDX* in_ptr, T* out_ptr, int64_t in_size,
+                                       int64_t out_size) {
   T one = GetOneVal<T>();
   if constexpr (UseGlobalMem) {
-    CUDA_1D_KERNEL_LOOP(i, size) {
+    CUDA_1D_KERNEL_LOOP(i, in_size) {
       IDX idx = *(in_ptr + i);
       cuda::atomic::Add(out_ptr + idx, one);
     }
@@ -56,26 +57,29 @@ __global__ static void BinCountCompute(const IDX* in_ptr, T* out_ptr, int64_t si
     __shared__ T shm[kCudaThreadsNumPerBlock];
     T zero = GetZeroVal<T>();
     shm[threadIdx.x] = zero;
-    IDX idx = 0;
-    CUDA_1D_KERNEL_LOOP(i, size) { idx = *(in_ptr + i); }
     __syncthreads();
-    CUDA_1D_KERNEL_LOOP(i, size) { cuda::atomic::Add(&(shm[idx]), one); }
+    CUDA_1D_KERNEL_LOOP(i, in_size) {
+      IDX idx = *(in_ptr + i);
+      cuda::atomic::Add(shm + idx, one);
+    }
     __syncthreads();
-    cuda::atomic::Add(&(out_ptr[threadIdx.x]), shm[threadIdx.x]);
+    if (threadIdx.x < out_size) { cuda::atomic::Add(out_ptr + threadIdx.x, shm[threadIdx.x]); }
   }
 };
 
 template<typename IDX, typename T, bool UseGlobalMem>
 static void BinCountDispatch(user_op::KernelComputeContext* ctx, const IDX* in_ptr,
-                             const T* weight_ptr, T* out_ptr, int64_t size) {
+                             const T* weight_ptr, T* out_ptr, int64_t in_size, int64_t out_size) {
   if (weight_ptr) {
     BinCountCompute<IDX, T, UseGlobalMem>
-        <<<BlocksNum4ThreadsNum(size), kCudaThreadsNumPerBlock, 0,
-           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(in_ptr, weight_ptr, out_ptr, size);
+        <<<BlocksNum4ThreadsNum(in_size), kCudaThreadsNumPerBlock, 0,
+           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(in_ptr, weight_ptr, out_ptr,
+                                                                 in_size, out_size);
   } else {
     BinCountCompute<IDX, T, UseGlobalMem>
-        <<<BlocksNum4ThreadsNum(size), kCudaThreadsNumPerBlock, 0,
-           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(in_ptr, out_ptr, size);
+        <<<BlocksNum4ThreadsNum(in_size), kCudaThreadsNumPerBlock, 0,
+           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(in_ptr, out_ptr, in_size,
+                                                                 out_size);
   }
 }
 
@@ -108,9 +112,9 @@ class CUDABinCountKernel final : public user_op::OpKernel {
     };
 
     if (out_size > kCudaThreadsNumPerBlock) {
-      BinCountDispatch<IDX, T, true>(ctx, in_ptr, weight_ptr, out_ptr, in_size);
+      BinCountDispatch<IDX, T, true>(ctx, in_ptr, weight_ptr, out_ptr, in_size, out_size);
     } else {
-      BinCountDispatch<IDX, T, false>(ctx, in_ptr, weight_ptr, out_ptr, in_size);
+      BinCountDispatch<IDX, T, false>(ctx, in_ptr, weight_ptr, out_ptr, in_size, out_size);
     }
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
