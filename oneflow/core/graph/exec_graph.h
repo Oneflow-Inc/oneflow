@@ -72,7 +72,9 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   std::string VisualStr() const override { return op_->op_name(); }
   void ToProto(const ParallelContext*, ExecNodeProto*) const;
 
-  void InferBlobDescs(const ParallelContext* parallel_ctx);
+  typedef void (ExecNode::*InferBlobDescsMethod)(const ParallelContext*);
+  void InferBlobDescsByInputs(const ParallelContext* parallel_ctx);
+  void InferBlobDescsByNdSbp(const ParallelContext* parallel_ctx);
 
   const HashMap<std::string, std::string>& mut_inplace_obn2ibn() const {
     return mut_inplace_obn2ibn_;

@@ -87,7 +87,7 @@ mangled_name = {
     "ShapeList": "Shl",
     "DataTypeList": "Dtl",
     "Layout": "Lo",
-    "MemoryFormat": "Mf",
+    "MemoryFormat": "Memf",
 }
 
 generic_type_aliases = {
@@ -125,7 +125,7 @@ argument_type_aliases = {
     "ShapeList": "const std::vector<Shape>&",
     "DataTypeList": "const std::vector<Symbol<DType>>&",
     "Layout": "const Symbol<Layout>&",
-    "MemoryFormat": "const Symbol<MemoryFormat>&",
+    "MemoryFormat": "MemoryFormat",
     **generic_type_aliases,
 }
 
@@ -155,7 +155,7 @@ optional_argument_type_aliases = {
     "ShapeList": "const Optional<std::vector<Shape>>&",
     "DataTypeList": "const Optional<std::vector<Symbol<DType>>>&",
     "Layout": "const Optional<Symbol<Layout>>&",
-    "MemoryFormat": "const Optional<Symbol<MemoryFormat>>&",
+    "MemoryFormat": "const Optional<MemoryFormat>&",
     **{k: "const Optional<{0}>&".format(v) for k, v in generic_type_aliases.items()},
 }
 
@@ -180,8 +180,6 @@ value_aliases = {
     "kDouble": "DType::Double()",
     "kBool": "DType::Bool()",
     "kStrided": "Layout::Strided()",
-    "kPreserve": "MemoryFormat::Preserve()",
-    "kContiguous": "MemoryFormat::Contiguous()",
 }
 
 
@@ -394,7 +392,7 @@ class FunctionSignature:
         self._max_keyword_args_count = count
 
     @property
-    def num_of_args():
+    def num_of_args(self):
         return len(self._args)
 
     def to_string(self, to_cpp=False, drop_name=False):

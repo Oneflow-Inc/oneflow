@@ -31,6 +31,7 @@ class M(flow.nn.Module):
         return x + flow.max(m1) + flow.max(m2)
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestReplaceOps(flow.unittest.TestCase):
     def test_pattern(test_case):
         traced = symbolic_trace(M())

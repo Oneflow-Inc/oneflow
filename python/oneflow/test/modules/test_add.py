@@ -16,7 +16,7 @@ limitations under the License.
 
 import unittest
 from collections import OrderedDict
-
+import torch as torch_original
 import numpy as np
 from oneflow.test_utils.test_util import GenArgList
 
@@ -167,6 +167,13 @@ def _test_inplace_add_with_type_promotion(test_case, shape, device):
     test_case.assertTrue(x.dtype == flow.float16)
 
 
+def _test_inplace_add_0_size_tensor(test_case, shape, device):
+    x = flow.randn(0, 256, device=device)
+    y = flow.randn(1, 256, device=device)
+    x += y
+    test_case.assertEqual(x.size(), (0, 256))
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestAddModule(flow.unittest.TestCase):
     def test_add(test_case):
@@ -176,13 +183,14 @@ class TestAddModule(flow.unittest.TestCase):
             _test_add_backward,
             _test_inplace_add,
             _test_inplace_add_with_type_promotion,
+            _test_inplace_add_0_size_tensor,
         ]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(n=5)
+    @autotest(n=10, include_complex=True)
     def test_0_size_add(test_case):
         device = random_device()
         x = random_tensor(2, 0, 3).to(device)
@@ -190,7 +198,7 @@ class TestAddModule(flow.unittest.TestCase):
         out = x + y
         return out
 
-    @autotest(n=3, auto_backward=False)
+    @autotest(n=6, auto_backward=False, include_complex=True)
     def test_0dim_inplace_add(test_case):
         device = random_device()
         x = random_tensor(2, 2, 3, requires_grad=False).to(device)
@@ -198,7 +206,7 @@ class TestAddModule(flow.unittest.TestCase):
         x += y.mean()
         return x
 
-    @autotest(n=5)
+    @autotest(n=10, include_complex=True)
     def test_0dim_two_inplace_add(test_case):
         device = random_device()
         x = random_tensor(2, 2, 3).to(device).mean()
@@ -206,7 +214,7 @@ class TestAddModule(flow.unittest.TestCase):
         x += y.mean()
         return x
 
-    @autotest(n=3)
+    @autotest(n=6, include_complex=True)
     def test_add_with_alpha(test_case):
         device = random_device()
         x1 = random_tensor(2, 2, 3).to(device).mean()
@@ -252,7 +260,7 @@ class TestAddModule(flow.unittest.TestCase):
         return x
         x += y.mean().to(torch.bool)
 
-    @autotest(n=3)
+    @autotest(n=6, include_complex=True)
     def test_add_with_alpha_0dim(test_case):
         device = random_device()
         x1 = random_tensor(ndim=0).to(device).mean()
@@ -271,7 +279,7 @@ class TestAddModule(flow.unittest.TestCase):
         torch.add(torch.ones(100), 20)
         torch.add(torch.ones(100), torch.ones(100, 1), alpha=10)
 
-    @autotest(n=3)
+    @autotest(n=6, include_complex=True)
     def test_non_contiguous_inplace_add(test_case):
         device = random_device()
         x = random_tensor(2, 2, 4).to(device)
@@ -280,7 +288,7 @@ class TestAddModule(flow.unittest.TestCase):
         y += random_tensor(2, 2, 2).to(device)
         return y
 
-    @autotest(n=5)
+    @autotest(n=10, include_complex=True)
     def test_scalar_add_with_random_devices(test_case):
         x1_device = random_device()
         x2_device = random_device()

@@ -25,3 +25,6 @@ from .special_ops import log_softmax
 from .special_ops import logsumexp
 from .special_ops import round
 from .special_ops import softmax
+from .special_ops import digamma
+from .special_ops import psi
+from .special_ops import zeta

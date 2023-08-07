@@ -8,6 +8,7 @@ The oneflow.special module, modeled after SciPy's special module.
     :toctree: generated
     :nosignatures:
 
+    digamma
     erf
     erfc
     erfinv
@@ -18,3 +19,4 @@ The oneflow.special module, modeled after SciPy's special module.
     logsumexp
     round
     softmax
+    zeta

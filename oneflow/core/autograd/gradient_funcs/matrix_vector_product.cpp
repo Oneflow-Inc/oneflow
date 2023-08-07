@@ -83,6 +83,9 @@ Maybe<void> MatrixVectorProduct::Apply(const MatrixVectorProductCaptureState* ct
     const auto& input_a = JUST(VectorAt(ctx->SavedTensors(), ctx->a_index));
     JUST(VectorAt(*in_grads, 1)) =
         JUST(functional::MatrixVectorProductGradB(JUST(VectorAt(out_grads, 0)), input_a));
+    if (input_a->dtype()->is_complex()) {
+      JUST(VectorAt(*in_grads, 1)) = JUST(functional::Conj(JUST(VectorAt(*in_grads, 1))));
+    }
   }
 
   return Maybe<void>::Ok();

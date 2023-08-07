@@ -91,11 +91,10 @@ void InitMemoryChains(Plan* plan,
     DeviceType device_type = stream_id.device_id().device_type();
     // TODO(zwx): eliminate this special 'is cpu' determine
     if (device_type == DeviceType::kCPU) { continue; }
-    if (!IsValidChainId(task->task_set_info().chain_id())) { continue; }
+    if (!IsValidChainId(task->chain_id())) { continue; }
     int64_t device_id = stream_id.device_id().device_index();
     int64_t device_unique_id = GenDeviceUniqueId(machine_id, device_id);
-    MemoryChain* mem_chain =
-        &((*device2chain2mem_chain)[device_unique_id][task->task_set_info().chain_id()]);
+    MemoryChain* mem_chain = &((*device2chain2mem_chain)[device_unique_id][task->chain_id()]);
     mem_chain->sorted_tasks.emplace_back(task);
     for (auto& pair : *(task->mutable_produced_regst_desc())) {
       RegstDescProto* regst_desc = &pair.second;
@@ -131,10 +130,10 @@ void InitMemoryChains(Plan* plan,
       MemoryChain* mem_chain = &pair.second;
       std::sort(mem_chain->sorted_tasks.begin(), mem_chain->sorted_tasks.end(),
                 [&](const TaskProto* lhs, const TaskProto* rhs) {
-                  int64_t lhs_order_in_graph = lhs->task_set_info().order_in_graph();
-                  int64_t rhs_order_in_graph = rhs->task_set_info().order_in_graph();
-                  CHECK_NE(lhs_order_in_graph, rhs_order_in_graph);
-                  return lhs_order_in_graph < rhs_order_in_graph;
+                  int64_t lhs_order_in_chain = lhs->order_in_chain();
+                  int64_t rhs_order_in_chain = rhs->order_in_chain();
+                  CHECK_NE(lhs_order_in_chain, rhs_order_in_chain);
+                  return lhs_order_in_chain < rhs_order_in_chain;
                 });
     }
   }
@@ -172,7 +171,6 @@ void GenMemChainTasksAndRegsts(
 
   for (auto& device_chain_pair : device2chain2mem_chain) {
     if (device_chain_pair.second.empty()) { continue; }
-    // sort
     std::vector<MemoryChain*> mem_chains;
     mem_chains.reserve(device_chain_pair.second.size());
     for (auto& pair : device_chain_pair.second) { mem_chains.emplace_back(&pair.second); }

@@ -18,6 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+import torch as torch_original
 
 from oneflow.test_utils.automated_test_util import *
 from oneflow.test_utils.test_util import GenArgList
@@ -199,7 +200,7 @@ class TestMulModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(check_graph=True)
+    @autotest(check_graph=True, include_complex=True)
     def test_broadcast_mul(test_case):
         device = random_device()
         x_0 = random_tensor(ndim=3, dim0=4, dim1=2, dim2=3).to(device)
@@ -208,7 +209,7 @@ class TestMulModule(flow.unittest.TestCase):
         x.mul_(y)
         return x
 
-    @autotest(n=3)
+    @autotest(n=6, include_complex=True)
     def test_non_contiguous_inplace_mul(test_case):
         device = random_device()
         x = random_tensor(2, 2, 4).to(device)
@@ -217,7 +218,7 @@ class TestMulModule(flow.unittest.TestCase):
         y *= random_tensor(2, 2, 2).to(device)
         return y
 
-    @autotest(n=5)
+    @autotest(n=10, include_complex=True)
     def test_scalar_mul_with_random_devices(test_case):
         x1_device = random_device()
         x2_device = random_device()

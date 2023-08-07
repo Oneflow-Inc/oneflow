@@ -20,7 +20,9 @@ limitations under the License.
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "OneFlow/OneFlowPatternUtils.h"
 
-using namespace mlir;
+namespace mlir {
+
+namespace oneflow {
 
 namespace {
 
@@ -54,10 +56,6 @@ class PostConvertInferenceOpPass
 };
 
 }  // namespace
-
-namespace mlir {
-
-namespace oneflow {
 
 std::unique_ptr<Pass> createPreConvertInferenceOpPass() {
   return std::make_unique<PreConvertInferenceOpPass>();

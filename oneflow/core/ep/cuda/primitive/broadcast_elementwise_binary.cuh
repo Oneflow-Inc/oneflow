@@ -334,6 +334,18 @@ half GetValue<half>(Scalar value) {
   return static_cast<half>(GetValue<float>(value));
 }
 
+template<>
+cuComplex GetValue<cuComplex>(Scalar value) {
+  const std::complex<float> cpp_value = GetValue<std::complex<float>>(value);
+  return cuFloatComplex{cpp_value.real(), cpp_value.imag()};
+}
+
+template<>
+cuDoubleComplex GetValue<cuDoubleComplex>(Scalar value) {
+  const std::complex<double> cpp_value = GetValue<std::complex<double>>(value);
+  return cuDoubleComplex{cpp_value.real(), cpp_value.imag()};
+}
+
 #if CUDA_VERSION >= 11000
 
 template<>
@@ -388,6 +400,14 @@ std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary(Scalar
   return std::unique_ptr<BroadcastElementwiseBinary>(
       new BroadcastElementwiseBinaryImpl<binary_op, Src, Dst>(attr0, attr1));
 }
+
+#define INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY(binary_op, data_type_pair) \
+  template std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary<      \
+      binary_op, OF_PP_PAIR_FIRST(data_type_pair), OF_PP_PAIR_FIRST(data_type_pair)>(      \
+      Scalar attr0, Scalar attr1);
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
+                                 BINARY_MATH_FLOATING_OP_SEQ, CUDA_PRIMITIVE_FLOATING_TYPE_SEQ);
 
 }  // namespace broadcast_elementwise_binary
 }  // namespace primitive

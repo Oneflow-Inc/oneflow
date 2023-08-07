@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_NN_GRAPH_H_
 #define ONEFLOW_CORE_FRAMEWORK_NN_GRAPH_H_
 
-#include <memory>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/nn_graph_if.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -107,6 +106,10 @@ class NNGraph final : public NNGraphIf {
   std::vector<std::shared_ptr<one::UserOpExpr>> cached_op_exprs;
 
  private:
+  // Compile the full task graph for all ranks and then broadcast to all ranks.
+  Maybe<void> NaiveCompile();
+  // Each rank compile it's task graph.
+  Maybe<void> MasterAndWorkerRanksCompile();
   Maybe<void> RegisterFreeEagerTensorsToVariableOpNames();
   Maybe<void> RegisterNewVariableOpInJobPass();
   Maybe<void> DeleteOutdatedVariableInVariableTensorMgr();

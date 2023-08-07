@@ -26,21 +26,21 @@ class TestBinCount(flow.unittest.TestCase):
     @autotest(n=5, auto_backward=False, check_graph=False)
     def test_bincount(test_case):
         device = random_device()
-        x = random_tensor(1, 100, low=0, dtype=int).to(device)
+        x = random_tensor(1, 100, low=0, high=65536, dtype=int).to(device)
         result = torch.bincount(x)
         return result
 
     @autotest(n=5, auto_backward=False, check_graph=False)
     def test_bincount_weight(test_case):
         device = random_device()
-        x = random_tensor(1, 100, low=0, dtype=int).to(device)
+        x = random_tensor(1, 100, low=0, high=65536, dtype=int).to(device)
         weight = random_tensor(1, 100).to(device)
         return torch.bincount(x, weights=weight)
 
     @autotest(n=5, auto_backward=False, check_graph=False)
     def test_bincount_minlength(test_case):
         device = random_device()
-        x = random_tensor(1, 100, low=0, dtype=int).to(device)
+        x = random_tensor(1, 100, low=0, high=65536, dtype=int).to(device)
         weight = random_tensor(1, 100).to(device)
         minlength = random(1, 200).to(int)
         return torch.bincount(x, weights=weight, minlength=minlength)
@@ -48,10 +48,16 @@ class TestBinCount(flow.unittest.TestCase):
     @autotest(n=5, auto_backward=False, check_graph=False)
     def test_bincount_0element(test_case):
         device = random_device()
-        x = random_tensor(1, 0, low=0, dtype=int).to(device)
+        x = random_tensor(1, 0, low=0, high=65536, dtype=int).to(device)
         weight = random_tensor(1, 0).to(device)
         minlength = random(1, 200).to(int)
         return torch.bincount(x, weights=weight, minlength=minlength)
+
+    @profile(torch.bincount)
+    def profile_bincount(test_case):
+        torch.bincount(torch.ones(4096).int())
+        torch.bincount(torch.ones(65536).int())
+        torch.bincount(torch.arange(4096).int())
 
 
 if __name__ == "__main__":

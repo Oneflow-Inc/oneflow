@@ -18,6 +18,7 @@ limitations under the License.
 #include <vector>
 #include "nlohmann/json.hpp"
 #include "oneflow/core/common/env_var/debug_mode.h"
+#include "oneflow/core/common/thread_local_guard.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/profiler/util.h"
 
@@ -421,8 +422,8 @@ Maybe<RematEpAllocator::Piece*> RematEpAllocator::FindPiece(size_t aligned_size,
   const bool is_high_op = [&]() {
     std::vector<std::string> high_compute_cost_names{"conv2d", "conv_data_grad", "conv_filter_grad",
                                                      "add_n",  "matmul",         "batch_matmul"};
-    const auto& current_op_type_name = Singleton<remat::Env>::Get()->current_op_type_name;
-    CHECK_NE(current_op_type_name, "");
+    const auto current_op_type_name =
+        CHECK_JUST(ThreadLocalGuard<remat::CurrentOpTypeName>::Current())->value;
     PNT3(current_op_type_name);
     if (std::find(high_compute_cost_names.cbegin(), high_compute_cost_names.cend(),
                   current_op_type_name)

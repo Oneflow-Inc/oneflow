@@ -31,6 +31,8 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("ceil", Ceil)                         \
   OF_PP_MAKE_TUPLE_SEQ("cos", Cos)                           \
   OF_PP_MAKE_TUPLE_SEQ("cosh", Cosh)                         \
+  OF_PP_MAKE_TUPLE_SEQ("digamma", Digamma)                   \
+  OF_PP_MAKE_TUPLE_SEQ("trigamma", Trigamma)                 \
   OF_PP_MAKE_TUPLE_SEQ("erf", Erf)                           \
   OF_PP_MAKE_TUPLE_SEQ("erfc", Erfc)                         \
   OF_PP_MAKE_TUPLE_SEQ("exp", Exp)                           \
@@ -75,6 +77,7 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("expm1", Expm1)                          \
   OF_PP_MAKE_TUPLE_SEQ("log", Log)                              \
   OF_PP_MAKE_TUPLE_SEQ("lgamma", Lgamma)                        \
+  OF_PP_MAKE_TUPLE_SEQ("digamma", Digamma)                      \
   OF_PP_MAKE_TUPLE_SEQ("log2", Log2)                            \
   OF_PP_MAKE_TUPLE_SEQ("log10", Log10)                          \
   OF_PP_MAKE_TUPLE_SEQ("log1p", Log1p)                          \

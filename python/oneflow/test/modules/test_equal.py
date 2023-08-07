@@ -18,6 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+import torch as torch_original
 from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
@@ -28,7 +29,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestEqual(flow.unittest.TestCase):
-    @autotest(n=5, auto_backward=False, check_graph=False)
+    @autotest(n=5, auto_backward=False, check_graph=False, include_complex=True)
     def test_eq_with_0_size_data(test_case):
         device = random_device()
         x = random_tensor(3, 2, 0, 3).to(device)
@@ -75,6 +76,15 @@ class TestEqual(flow.unittest.TestCase):
         x = random_tensor(len(shape), *shape, requires_grad=False).to(device)
         return torch.equal(x, x)
 
+    @autotest(n=5, auto_backward=False, check_graph=False, include_complex=True)
+    def test_flow_equal_complex_with_same_random_data(test_case):
+        device = random_device()
+        shape = random_tensor().oneflow.shape
+        x = random_tensor(len(shape), *shape, requires_grad=False, dtype=complex).to(
+            device
+        )
+        return torch.equal(x, x)
+
     @autotest(n=5, auto_backward=False, check_graph=False)
     def test_flow_equal_bool_with_random_data(test_case):
         device = random_device()
@@ -86,6 +96,30 @@ class TestEqual(flow.unittest.TestCase):
             device=device, dtype=torch.bool
         )
         return torch.equal(x, y)
+
+    @autotest(n=5, auto_backward=False, check_graph=False, include_complex=True)
+    def test_flow_equal_complex_with_random_data(test_case):
+        device = random_device()
+        shape = random_tensor().oneflow.shape
+        x = random_tensor(len(shape), *shape, requires_grad=False, dtype=complex).to(
+            device=device
+        )
+        y = random_tensor(len(shape), *shape, requires_grad=False, dtype=complex).to(
+            device=device
+        )
+        return torch.equal(x, y)
+
+    @autotest(n=5, auto_backward=False, check_graph=False, include_complex=True)
+    def test_flow_not_equal_complex_with_random_data(test_case):
+        device = random_device()
+        shape = random_tensor().oneflow.shape
+        x = random_tensor(len(shape), *shape, requires_grad=False, dtype=complex).to(
+            device=device
+        )
+        y = random_tensor(len(shape), *shape, requires_grad=False, dtype=complex).to(
+            device=device
+        )
+        return torch.not_equal(x, y)
 
     @autotest(n=5, auto_backward=False, check_graph=False)
     def test_flow_equal_with_same_random_0d_data(test_case):

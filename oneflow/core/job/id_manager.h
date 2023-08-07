@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_JOB_ID_MANAGER_H_
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/job/id_state.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
@@ -29,19 +30,22 @@ class IDMgr final {
   OF_DISALLOW_COPY_AND_MOVE(IDMgr);
   ~IDMgr() = default;
 
-  int64_t NewRegstDescId() { return regst_desc_id_count_++; }
-  int64_t NewMemBlockId() { return mem_block_id_count_++; }
-  int64_t NewChunkId() { return chunk_id_count_++; }
+  int64_t NewRegstDescId();
+  int64_t NewMemBlockId();
+  int64_t NewChunkId();
 
   TaskIdGenerator* GetTaskIdGenerator() { return &task_id_gen_; }
+
+  void SaveIdAndTaskIndex(IdState* id_state);
+  void TryUpdateIdAndTaskIndex(const IdState* id_state);
 
  private:
   friend class Singleton<IDMgr>;
   IDMgr();
 
-  int64_t regst_desc_id_count_;
-  int64_t mem_block_id_count_;
-  int64_t chunk_id_count_;
+  std::atomic<int64_t> regst_desc_id_count_;
+  std::atomic<int64_t> mem_block_id_count_;
+  std::atomic<int64_t> chunk_id_count_;
   TaskIdGenerator task_id_gen_;
 };
 

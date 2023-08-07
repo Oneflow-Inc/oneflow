@@ -1,0 +1,110 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/register/logical_blob_id.proto";
+import "oneflow/core/common/shape.proto";
+import "oneflow/core/common/data_type.proto";
+import "oneflow/core/job/sbp_parallel.proto";
+import "oneflow/core/job/task.proto";
+import "oneflow/core/job/placement.proto";
+import "oneflow/core/graph/task_edge.proto";
+import "oneflow/core/operator/op_conf.proto";
+import "oneflow/core/register/tensor_slice_view.proto";
+
+message ComputeTasksProto {
+  map<int64, TaskProto> parallel_id2task = 2;
+}
+
+message CollectiveBoxingGenericTaskProto {
+  required OperatorConf op_conf = 1;
+}
+
+message NcclSendRecvBoxingTaskProto {
+  required ShapeProto logical_shape = 1;
+  required DataType data_type = 2;
+  required NdSbp src_nd_sbp = 3;
+  required NdSbp dst_nd_sbp = 4;
+  required ParallelConf src_parallel_conf = 5;
+  required ParallelConf dst_parallel_conf = 6;
+  required ParallelConf parallel_conf = 7;
+  required ParallelContext parallel_ctx = 8;
+  required bool has_input = 9;
+  required bool has_output = 10;
+  required string stream_name = 11;
+}
+
+enum CopyHdType {
+  H2D = 0;
+  D2H = 1;
+}
+
+message CopyHdTaskProto {
+  required CopyHdType copy_type = 1;
+}
+
+message CopyCommNetTaskProto {
+}
+
+message BoxingZerosTaskProto {
+  required ShapeProto shape = 1;
+  required DataType data_type = 2;
+  required ShapeProto time_shape = 3;
+}
+
+enum SliceBoxingTaskMode {
+  kSliceBoxingTaskModeInvalid = 0;
+  kSliceBoxingTaskModeCopy = 1;
+  kSliceBoxingTaskModeAdd = 2;
+}
+
+message SliceBoxingTaskProto {
+  map<int64, TensorSliceViewProto> in_data_edge_uid2slice = 1;
+  repeated int64 ordered_in_data_edge_uid = 2;
+  required TensorSliceViewProto out_slice = 3;
+  required ShapeProto out_shape = 4;
+  required SliceBoxingTaskMode mode = 5;
+}
+
+message CollectiveBoxingPackTaskProto {
+  required ShapeProto logical_shape = 1;
+  required SbpParallel src_sbp_parallel = 2;
+  required SbpParallel dst_sbp_parallel = 3;
+  required int64 parallel_num = 4;
+}
+
+message CollectiveBoxingUnpackTaskProto {
+  required ShapeProto logical_shape = 1;
+  required SbpParallel src_sbp_parallel = 2;
+  required SbpParallel dst_sbp_parallel = 3;
+  required int64 parallel_num = 4;
+}
+
+message BoxingIdentityTaskProto {
+}
+
+message TransportTaskProto {
+  required TaskProto task_proto = 1;
+  required LogicalBlobId lbi = 11;
+  oneof transport_task_type {
+    CollectiveBoxingGenericTaskProto collective_boxing_generic_task = 2;
+    NcclSendRecvBoxingTaskProto nccl_send_recv_boxing_task = 3;
+    CopyHdTaskProto copy_hd_task = 4;
+    CopyCommNetTaskProto copy_comm_net_task = 5;
+    BoxingZerosTaskProto boxing_zeros_task = 6;
+    SliceBoxingTaskProto slice_boxing_task = 7;
+    CollectiveBoxingPackTaskProto collective_boxing_pack_task = 8;
+    CollectiveBoxingUnpackTaskProto collective_boxing_unpack_task = 9;
+    BoxingIdentityTaskProto boxing_identity_task = 10;
+  }
+}
+
+message TaskIdsProto {
+  repeated int64 task_id = 1;
+}
+
+message BoxingTaskGraphProto {
+  map<string, ComputeTasksProto> boxing_related_op_name2compute_tasks = 1;
+  repeated TransportTaskProto transport_task = 2;
+  repeated TaskEdgeProto task_edge = 3;
+  map<string, TaskIdsProto> boxing_unrelated_op_name2task_ids = 4;
+}

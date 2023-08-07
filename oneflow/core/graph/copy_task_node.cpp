@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/graph/task_stream_id.h"
+#include "oneflow/core/graph/boxing_task_graph.pb.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 
 namespace oneflow {
@@ -95,7 +96,8 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
   } else {
     LOG(FATAL) << "unknow copy type: " << copy_type_;
   }
-  conf.set_name(std::string(copy_type_name) + "_" + NewUniqueId());
+  conf.set_name(std::string(copy_type_name) + "_" + lbi().op_name() + "-" + lbi().blob_name() + "_"
+                + std::to_string(task_id()));
   *conf.mutable_user_conf()->mutable_op_type_name() = copy_type_name;
   auto in_regst = GetSoleConsumedRegst("copy_in");
   CHECK_EQ(in_regst->NumOfLbi(), 1);
@@ -120,6 +122,32 @@ OperatorConf CopyCommNetTaskNode::NewCopyOpConf() {
   conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(this->device_type())));
   *(conf.mutable_copy_comm_net_conf()->mutable_lbi()) = lbi();
   return conf;
+}
+
+Maybe<void> CopyHdTaskNode::InitTransportTaskFromProto(
+    const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) {
+  CHECK_OR_RETURN(transport_task_proto.has_copy_hd_task())
+      << "not a serialized CopyHdTaskNode. debug string: " << transport_task_proto.DebugString();
+  copy_type_ = transport_task_proto.copy_hd_task().copy_type();
+  return Maybe<void>::Ok();
+}
+
+void CopyHdTaskNode::ToTransportTaskProto(TransportTaskProto* transport_task_proto) const {
+  ToProto(transport_task_proto->mutable_task_proto(), /*check=*/false);
+  transport_task_proto->mutable_copy_hd_task()->set_copy_type(copy_type_);
+}
+
+Maybe<void> CopyCommNetTaskNode::InitTransportTaskFromProto(
+    const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) {
+  CHECK_OR_RETURN(transport_task_proto.has_copy_comm_net_task())
+      << "not a serialized CopyCommNetTaskNode. debug string: "
+      << transport_task_proto.DebugString();
+  return Maybe<void>::Ok();
+}
+
+void CopyCommNetTaskNode::ToTransportTaskProto(TransportTaskProto* transport_task_proto) const {
+  ToProto(transport_task_proto->mutable_task_proto(), /*check=*/false);
+  transport_task_proto->mutable_copy_comm_net_task();
 }
 
 }  // namespace oneflow

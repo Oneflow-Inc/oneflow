@@ -34,14 +34,26 @@ scalar_or_const_ref_t<typename MapT::mapped_type> MapAt(const MapT& map, const K
 template<typename MapT, typename KeyT>
 Maybe<scalar_or_const_ref_t<typename MapT::mapped_type>> MapAt(const MapT& map, const KeyT& key) {
   const auto& iter = map.find(key);
-  CHECK_OR_RETURN(iter != map.end());
+  if constexpr (printable<KeyT>()) {
+    CHECK_OR_RETURN(iter != map.end()) << "Key \"" << key << "\" not found";
+  } else {
+    CHECK_OR_RETURN(iter != map.end())
+        << "MapAt failed, but the key is not printable. Please implement operator<< if you want to "
+           "see the key in this error message.";
+  }
   return iter->second;
 }
 
 template<typename MapT, typename KeyT>
 Maybe<typename MapT::mapped_type&> MapAt(MapT& map, const KeyT& key) {
   const auto& iter = map.find(key);
-  CHECK_OR_RETURN(iter != map.end());
+  if constexpr (printable<KeyT>()) {
+    CHECK_OR_RETURN(iter != map.end()) << "Key \"" << key << "\" not found";
+  } else {
+    CHECK_OR_RETURN(iter != map.end())
+        << "MapAt failed, but the key is not printable. Please implement operator<< if you want to "
+           "see the key in this error message.";
+  }
   return iter->second;
 }
 

@@ -248,7 +248,9 @@ def _test_linear_multi_graph_save(return_dict, device, with_reshape, with_eager)
 
 
 @_with_new_session
-def _test_linear_multi_graph_load(return_dict, device, with_reshape, state_dict):
+def _test_linear_multi_graph_load(
+    return_dict, device, with_reshape, state_dict,
+):
     linear = flow.nn.Linear(3, 8, False)
     linear = linear.to(device)
     np_weight = np.ones((3, 8)).astype(np.float32)
@@ -271,9 +273,9 @@ def _test_linear_multi_graph_load(return_dict, device, with_reshape, state_dict)
     linear_reshape = LinearReshapeModule()
 
     class LinearGraph(flow.nn.Graph):
-        @flow.nn.Graph.with_dynamic_input_shape(size=2)
+        @flow.nn.Graph.with_dynamic_input_shape(size=20)
         def __init__(self):
-            super().__init__()
+            super().__init__(debug_v_level=0)
             self.my_linear = linear_reshape
 
         def build(self, x):
@@ -318,18 +320,32 @@ def _test_linear_multi_graph_load(return_dict, device, with_reshape, state_dict)
     test_case1 = np.array_equal(of_lazy_out1.numpy(), of_eager_out1.numpy())
     return_dict["load1"] = test_case1
 
-    # TODO(strint): shared from a load graph.
+    # The following section is for testing the new input shape after completing the load.
+    input_arr2 = np.array(
+        [
+            [-0.94630778, -0.83378579, -0.87060891],
+            [2.0289922, -0.28708987, -2.18369248],
+            [0.08086036, -1.81075924, 1.20752494],
+        ],
+        dtype=np.float32,
+    )
+    x2 = flow.tensor(input_arr2, device=device)
+    of_lazy_out2 = linear_g(x2)
+    of_eager_out2 = linear_reshape(x2)
+    test_case2 = np.array_equal(of_lazy_out2.numpy(), of_eager_out2.numpy())
+    return_dict["load2"] = test_case2
 
 
 def _graph_save(return_dict, filename, with_eager):
     state_dict = _test_linear_multi_graph_save(
-        return_dict, flow.device("cuda"), True, with_eager
+        return_dict, flow.device("cuda"), True, with_eager,
     )
     print(
         f"state_dict(with_eager={with_eager}) tensors size ",
         _get_state_dict_tensor_size(state_dict),
     )
     flow.save(state_dict, filename)
+    print("====> save process done")
 
 
 def _graph_load(return_dict, filename):
@@ -338,6 +354,7 @@ def _graph_load(return_dict, filename):
     _test_linear_multi_graph_load(
         return_dict, flow.device("cuda"), True, state_dict_loaded,
     )
+    print("====> load process done")
 
 
 def _test_linear_multi_graph_save_load_gpu(test_case, with_eager):
@@ -347,7 +364,7 @@ def _test_linear_multi_graph_save_load_gpu(test_case, with_eager):
         manager = multiprocessing.Manager()
         return_dict = manager.dict()
         save_p = multiprocessing.get_context("spawn").Process(
-            target=_graph_save, args=(return_dict, f.name, with_eager)
+            target=_graph_save, args=(return_dict, f.name, with_eager),
         )
         save_p.start()
         save_p.join()

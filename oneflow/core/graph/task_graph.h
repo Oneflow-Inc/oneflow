@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_TASK_GRAPH_H_
 #define ONEFLOW_CORE_GRAPH_TASK_GRAPH_H_
 
+#include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/operator/operator.h"
@@ -38,12 +39,10 @@ class HierarchicalSubTskGphBuilder;
 class TaskGraph;
 using BldSubTskGphMthd = void(TaskGraph::*) BLD_SUB_TSK_GPH_MTHD_ARGS();
 
-class TaskGraph final : public Graph<TaskNode, TaskEdge> {
+class TaskGraph : public Graph<TaskNode, TaskEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TaskGraph);
-  ~TaskGraph() override;
-
-  explicit TaskGraph();
+  virtual ~TaskGraph() override;
 
   const char* TypeName() const override { return "TaskGraph"; }
   void RemoveEmptyRegsts();
@@ -51,6 +50,10 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void DecideExecutionOrder();
 
   void EnableInplaceMemSharing(const std::function<bool(const std::string&, const std::string&)>&
+                                   IsOpNameDataOrCtrlReachable);
+
+  void EnableInplaceMemSharing(const HashSet<TaskNode*>& dev_nodes,
+                               const std::function<bool(const std::string&, const std::string&)>&
                                    IsOpNameDataOrCtrlReachable);
 
   TaskNode* GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
@@ -75,14 +78,21 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByDstSubsetConnect);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphNormalForwardToDecodeH2D);
 
- private:
+  void ForEachGpuDeviceNodes(
+      const std::function<void(const HashSet<TaskNode*>& dev_nodes)>& Handler) const;
+
+ protected:
+  explicit TaskGraph();
+
   void BuildTaskPath(TaskNode* src_node, TaskNode* dst_node, const LogicalBlobId& lbi,
                      bool is_host_mem_input);
 
   void ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_nodes,
                         const std::vector<CompTaskNode*>& dst_task_nodes);
 
-  void SetOrderInGraphForEachNode();
+  void ConnectCtrlEdge(CompTaskNode* src_task_node, CompTaskNode* dst_task_node);
+
+  void InitOrderedTaskNodes();
   void MergeChainByPhysicalTaskGraph();
   void MergeChainByLogicalChainId();
   void BuildCtrlRegstDescInSameChain();
@@ -97,10 +107,9 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
           IsOpNameDataOrCtrlReachable) const;
   void SetTaskRegstInplaceInfo(const InplaceObasInfo& obas_info,
                                const HashSet<TaskNode*>& dev_nodes) const;
-  void ForEachGpuDeviceNodes(
-      const std::function<void(const HashSet<TaskNode*>& dev_nodes)>& Handler) const;
-
   std::vector<TaskNode*> ordered_task_nodes_;
+  HashMap<DeviceType, std::unique_ptr<HierarchicalSubTskGphBuilder>>
+      device_type2sub_tsk_gph_builder_;
   std::unique_ptr<HierarchicalSubTskGphBuilder> hierarchical_sub_tsk_gph_builder_;
   std::unique_ptr<SubTskGphBuilderCtx> sub_tsk_gph_builder_ctx_;
   std::unique_ptr<BoxingLogger> boxing_logger_;
@@ -127,6 +136,105 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   HashMap<ProxyKey, TaskNode*, ProxyKey::Hasher> proxy2node;
 };
+
+class GlobalTaskGraph final : public TaskGraph {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(GlobalTaskGraph);
+  ~GlobalTaskGraph() = default;
+  static Maybe<GlobalTaskGraph> New() {
+    std::shared_ptr<GlobalTaskGraph> graph(new GlobalTaskGraph());
+    JUST(graph->Init());
+    return graph;
+  }
+
+ private:
+  GlobalTaskGraph() = default;
+  Maybe<void> Init();
+};
+
+class BoxingTaskGraphProto;
+
+class BoxingTaskGraph final : public TaskGraph {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(BoxingTaskGraph);
+  ~BoxingTaskGraph() = default;
+
+  static Maybe<BoxingTaskGraph> New(
+      const std::function<void(size_t, const std::function<void(size_t i)>&)>& ParallelRunLoop) {
+    std::shared_ptr<BoxingTaskGraph> graph(new BoxingTaskGraph());
+    JUST(graph->Init(ParallelRunLoop));
+    return graph;
+  }
+
+  void ToProto(const std::function<bool(TaskNode*)>& Pick, BoxingTaskGraphProto* proto) const;
+  static bool SelectTaskNodeByRank(TaskNode*, int64_t rank);
+
+ private:
+  BoxingTaskGraph() = default;
+  Maybe<void> Init(
+      const std::function<void(size_t, const std::function<void(size_t i)>&)>& ParallelRunLoop);
+
+  void CreateOpNode2TaskIds(
+      const std::function<void(size_t, const std::function<void(size_t i)>&)>& ParallelRunLoop);
+
+  HashMap<const OpNode*, std::vector<CompTaskNode*>> boxing_related_op_node2sorted_comp_tasks_;
+  HashMap<const OpNode*, std::vector<TaskId>> boxing_unrelated_op_node2sorted_task_ids_;
+};
+
+class TaskGraphRebuildCtx;
+
+class RankTaskGraph final : public TaskGraph {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(RankTaskGraph);
+  ~RankTaskGraph();
+
+  static Maybe<RankTaskGraph> New(
+      const std::shared_ptr<BoxingTaskGraphProto>& boxing_task_graph_proto,
+      const HashSet<std::string>& var_op_names, int64_t current_rank) {
+    std::shared_ptr<RankTaskGraph> graph(new RankTaskGraph(boxing_task_graph_proto, current_rank));
+    JUST(graph->Init(var_op_names));
+    return graph;
+  }
+
+  // Is `rank` my duty.
+  bool IsDutyRank(const ParallelDesc& parallel_desc, int64_t rank) const;
+
+ private:
+  RankTaskGraph(const std::shared_ptr<BoxingTaskGraphProto>& boxing_task_graph_proto, int64_t rank);
+
+  Maybe<void> Init(const HashSet<std::string>& var_op_names);
+  bool ContainRank(const OpNode* op_node, int64_t rank) const;
+  Maybe<void> AddBoxingReletedCompTaskNodesFromProto();
+  Maybe<void> CreateAndPartiallyInitTransportTaskNodesFromProto();
+  Maybe<void> AddTransportTaskEdgesFromProto();
+  Maybe<void> InitTransportTaskNodesFromProto();
+  Maybe<void> InitRegstDescsConsumers();
+  template<typename DoEachRankT>
+  Maybe<void> DoRankDuty(const ParallelDesc& parallel_desc, const DoEachRankT& DoWithRank);
+
+  Maybe<CompTaskNode*> TryGetBoxingRelatedComTaskNode(const OpNode* op_node, int64_t parallel_id);
+  Maybe<CompTaskNode*> CreateOrFindRankCompTaskNodeByParallelId(const OpNode* op_node,
+                                                                int64_t parallel_id);
+  Maybe<CompTaskNode*> CreateOrFindRankCompTaskNodeByRank(const OpNode* op_node, int64_t rank);
+  Maybe<CompTaskNode*> TryGetRankCompTaskNode(const OpNode* op_node, int64_t rank);
+
+  Maybe<void> ConnectDataEdges(const OpEdge* op_edge, int64_t rank);
+  Maybe<void> ConnectCtrlEdges(const OpNode* src, const OpNode* dst, int64_t rank);
+
+  std::shared_ptr<BoxingTaskGraphProto> boxing_task_graph_proto_;
+  HashMap<int64_t, const TaskProto*> task_id2task_proto_;
+  const int64_t current_rank_;
+  std::unique_ptr<TaskGraphRebuildCtx> task_graph_rebuild_ctx_;
+  HashMap<const OpNode*, CompTaskNode*> op_node2comp_task_node_;
+};
+
+using CreateSubTskGphBuilderFn = std::function<std::unique_ptr<HierarchicalSubTskGphBuilder>()>;
+
+Maybe<void> RegisterCreateSubTskGphBuilderFn(DeviceType device_type,
+                                             const CreateSubTskGphBuilderFn& fn);
+
+#define REGISTER_CREATE_SUB_TASK_GRAPH_BUILDER_FN(device_type, fn) \
+  COMMAND(CHECK_JUST(RegisterCreateSubTskGphBuilderFn(device_type, fn)))
 
 }  // namespace oneflow
 

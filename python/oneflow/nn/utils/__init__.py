@@ -16,7 +16,9 @@ limitations under the License.
 from oneflow.nn.utils.clip_grad import clip_grad_norm_, clip_grad_value_
 from oneflow.nn.utils.weight_norm import weight_norm
 from oneflow.nn.utils.weight_norm import remove_weight_norm
+from oneflow.nn.utils.parameters_grouping import ContiguousParamsGroup
 from oneflow.nn.utils.convert_parameters import (
     parameters_to_vector,
     vector_to_parameters,
 )
+from oneflow.nn.utils.skip_init import skip_init
