@@ -50,19 +50,21 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("broadcast_isclose_eq_nan", IEN) \
   OF_PP_MAKE_TUPLE_SEQ("broadcast_isclose_neq_nan", INN)
 
-#define MATH_BINARY_BROADCAST_FUNC_SEQ_ODS                \
-  OF_PP_MAKE_TUPLE_SEQ(BroadcastAddOp, Add)               \
-  OF_PP_MAKE_TUPLE_SEQ(BroadcastSubOp, Sub)               \
-  OF_PP_MAKE_TUPLE_SEQ(BroadcastMulOp, Mul)               \
-  OF_PP_MAKE_TUPLE_SEQ(BroadcastDivOp, Div)               \
-  OF_PP_MAKE_TUPLE_SEQ(BroadcastMinimumOp, Min)           \
-  OF_PP_MAKE_TUPLE_SEQ(BroadcastMaximumOp, Max)           \
-  OF_PP_MAKE_TUPLE_SEQ(BroadcastBitwiseAndOp, BitwiseAnd) \
-  OF_PP_MAKE_TUPLE_SEQ(BroadcastBitwiseOrOp, BitwiseOr)   \
-  OF_PP_MAKE_TUPLE_SEQ(BroadcastBitwiseXorOp, BitwiseXor) \
-  OF_PP_MAKE_TUPLE_SEQ(BroadcastFloorModOp, FloorMod)     \
-  OF_PP_MAKE_TUPLE_SEQ(BroadcastFmodOp, FMod)             \
-  OF_PP_MAKE_TUPLE_SEQ(BroadcastPowOp, Pow)               \
+#define MATH_BINARY_BROADCAST_FUNC_SEQ_ODS                              \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastAddOp, Add)                             \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastSubOp, Sub)                             \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastMulOp, Mul)                             \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastDivOp, Div)                             \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastMinimumOp, Min)                         \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastMaximumOp, Max)                         \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastBitwiseAndOp, BitwiseAnd)               \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastBitwiseOrOp, BitwiseOr)                 \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastBitwiseXorOp, BitwiseXor)               \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastBitwiseLeftShiftOp, BitwiseLeftShift)   \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastBitwiseRightShiftOp, BitwiseRightShift) \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastFloorModOp, FloorMod)                   \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastFmodOp, FMod)                           \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastPowOp, Pow)                             \
   OF_PP_MAKE_TUPLE_SEQ(BroadcastZetaOp, Zeta)
 
 #define MATH_BINARY_BROADCAST_LOGICAL_FUNC_SEQ_ODS      \
