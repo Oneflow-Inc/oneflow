@@ -54,13 +54,14 @@ __global__ void FlipGpuForward(const int32_t element, const int64_t total_dims,
 
 template<typename T>
 __global__ void FlipLastDimGpuForward(const int32_t element, const int64_t last_dim_size,
-                                             const T* in_dptr, T* out_dptr) {
+                                      const T* in_dptr, T* out_dptr) {
   __shared__ T shm[kCudaThreadsNumPerBlock];
   CUDA_1D_KERNEL_LOOP(i, element) {
-    int32_t end_idx = min(blockDim.x, element);
-    shm[end_idx - threadIdx.x - 1] = in_dptr[i];
+    int32_t block_begin_idx = blockDim.x * blockIdx.x;
+    int32_t thread_end_idx = min(block_begin_idx + blockDim.x, element) - block_begin_idx;
+    shm[threadIdx.x] = in_dptr[thread_end_idx - i + 2 * block_begin_idx - 1];
     __syncthreads();
-    int32_t i_ori = i - 2 * threadIdx.x + end_idx - 1;
+    int32_t i_ori = i - 2 * threadIdx.x + thread_end_idx - 1;
     int32_t row = i_ori / last_dim_size;
     int32_t col = last_dim_size - (i_ori - row * last_dim_size) - 1;
     out_dptr[row * last_dim_size + col] = shm[threadIdx.x];
@@ -90,8 +91,9 @@ class FlipGpuKernel final : public user_op::OpKernel {
 
     if (dims.size() == 1 && dims[0] == x_tensor->shape_view().NumAxes() - 1) {
       FlipLastDimGpuForward<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                                        ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-          elem_cnt, x_tensor->shape_view().At(total_dims - 1), x_tensor->dptr<T>(), y_tensor->mut_dptr<T>());
+                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+          elem_cnt, x_tensor->shape_view().At(total_dims - 1), x_tensor->dptr<T>(),
+          y_tensor->mut_dptr<T>());
       return;
     }
 
