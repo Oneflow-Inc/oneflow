@@ -57,7 +57,7 @@ class Median : public OpExprGradFunction<MedianCaptureState> {
 
       const auto bcast_like_div =
           JUST(functional::SequenceFunction<Maybe<Tensor>()>(
-                   [&]() { return functional::ReduceSum(cast_like, axis, false); })
+                   [&]() { return functional::ReduceSum(cast_like, axis, false, NullOpt); })
                    .then(std::bind(functional::Div, dy, std::placeholders::_1))
                    .then(std::bind(functional::BroadcastLike, std::placeholders::_1, input, axis))
                    .call());

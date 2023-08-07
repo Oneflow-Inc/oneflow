@@ -13,14 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "mlir/Parser/Parser.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
-#include "mlir/ExecutionEngine/ExecutionEngine.h"
-#include "mlir/ExecutionEngine/MemRefUtils.h"
-#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
-#include "llvm/Support/TargetSelect.h"
 #include "OneFlow/OneFlowDialect.h"
+#include "OneFlow/OKL/Kernel/LauncherState.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/framework/framework.h"
@@ -28,6 +22,17 @@ limitations under the License.
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/ir/include/OneFlow/Passes.h"
 #include "oneflow/ir/include/OneFlow/Extension.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
+
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Parser/Parser.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/ExecutionEngine/ExecutionEngine.h"
+#include "mlir/ExecutionEngine/MemRefUtils.h"
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
+#include "llvm/Support/TargetSelect.h"
 
 namespace oneflow {
 
@@ -81,6 +86,8 @@ std::string GetMLIRCInterface(const std::string& func_name) {
 llvm::SmallVector<OpaqueMemRefDescriptor> GetMLIRCInterfaceArgs(
     user_op::KernelComputeContext* ctx) {
   llvm::SmallVector<OpaqueMemRefDescriptor> args{};
+  auto tensor = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+  args.push_back(SwitchCreateMemRefDescriptor(SwitchCase(1, kInt8), tensor));
   for (auto& pair : ctx->inputs()) {
     auto tensor = ctx->Tensor4ArgNameAndIndex(pair.first, pair.second);
     auto ref = SwitchCreateMemRefDescriptor(
@@ -96,33 +103,28 @@ llvm::SmallVector<OpaqueMemRefDescriptor> GetMLIRCInterfaceArgs(
   return args;
 }
 
-void WithMlirContext(
-    user_op::KernelComputeContext* ctx, const llvm::SmallVector<llvm::StringRef, 4>& ext_libs,
-    const std::function<mlir::OwningOpRef<mlir::ModuleOp>(mlir::MLIRContext* mlir_ctx)>& parse,
-    const std::function<void(mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module)>& lower) {
+mlir::DialectRegistry getDialectRegistry() {
   mlir::DialectRegistry registry;
   registry
       .insert<mlir::oneflow::OneFlowDialect, mlir::func::FuncDialect, mlir::memref::MemRefDialect,
-              mlir::tosa::TosaDialect, mlir::linalg::LinalgDialect>();
+              mlir::tosa::TosaDialect, mlir::linalg::LinalgDialect, mlir::tensor::TensorDialect>();
   mlir::registerLLVMDialectTranslation(registry);
-  mlir::MLIRContext mlir_ctx(registry);
+  mlir::registerBuiltinDialectTranslation(registry);
+  return registry;
+}
+
+void WithMlirContext(
+    user_op::KernelComputeContext* ctx, const llvm::SmallVector<llvm::StringRef, 4>& ext_libs,
+    const std::function<mlir::OwningOpRef<mlir::ModuleOp>(mlir::MLIRContext* mlir_ctx)>& parse,
+    void* stream) {
+  mlir::MLIRContext mlir_ctx(getDialectRegistry());
   mlir::OwningOpRef<mlir::ModuleOp> module = parse(&mlir_ctx);
-  CHECK(!!module) << "fail to parse MLIR, op: " << ctx->op_name();
+  CHECK(module) << "fail to parse MLIR, op: " << ctx->op_name();
   if (ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module->print(llvm::outs()); }
-  llvm::InitializeNativeTarget();
-  llvm::InitializeNativeTargetAsmPrinter();
-  lower(&mlir_ctx, *module);
-  if (ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module->print(llvm::outs()); }
-  if (ParseBooleanFromEnv("ONEFLOW_MLIR_DUMP_IR", false)) {
-    std::string mlir;
-    llvm::raw_string_ostream os_mlir(mlir);
-    module->print(os_mlir);
-    TeePersistentLogStream::Create(JoinPath("jit", ctx->op_name() + ".mlir"))->Write(mlir);
-  }
 
   mlir::ExecutionEngineOptions jitOptions;
   jitOptions.transformer = {};
-  jitOptions.jitCodeGenOptLevel = llvm::None;
+  jitOptions.jitCodeGenOptLevel = std::nullopt;
   jitOptions.sharedLibPaths = ext_libs;
 
   auto jit_or_error = mlir::ExecutionEngine::create(*module, jitOptions);
@@ -133,8 +135,26 @@ void WithMlirContext(
       GetMLIRCInterfaceArgs(ctx);
   llvm::SmallVector<void*> packed_args{};
   for (auto& arg /* arg must be a reference*/ : args) { packed_args.push_back(&arg); }
+  packed_args.push_back(&stream);
   auto error = jit->invokePacked(GetMLIRCInterface(ctx->op_name()), packed_args);
   CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
+}
+
+size_t inferOneFlowMemPoolSize(user_op::InferContext* ctx) {
+  using namespace user_op;
+  mlir::MLIRContext mlir_ctx(oneflow::okl::GetRegistry());
+  auto mlir_assembly = ctx->Attr<std::vector<char>>("mlir_assembly");
+  auto mlir = mlir::parseSourceString<mlir::ModuleOp>(
+      llvm::StringRef(mlir_assembly.data(), mlir_assembly.size() - 1), &mlir_ctx);
+
+  auto module = mlir.get();
+  if (auto mempool = module->getAttr(mlir::oneflow::codegen::mempool::MEMPOOL_ATTR_NAME)
+                         .cast<mlir::IntegerAttr>()) {
+    return mempool.getInt();
+  }
+  // Note: we should ensure the tmp buffer should be fetched in the mlir jit op in case of null
+  // object error.
+  return 1;
 }
 
 template<typename T>
@@ -150,25 +170,24 @@ class MlirJitCpuKernel final : public user_op::OpKernel {
     WithMlirContext(
         ctx, ext_libs,
         [&ctx](mlir::MLIRContext* mlir_ctx) {
-          return mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
-                                                         mlir_ctx);
+          auto mlir_assembly = ctx->Attr<std::vector<char>>("mlir_assembly");
+          return mlir::parseSourceString<mlir::ModuleOp>(
+              llvm::StringRef(mlir_assembly.data(), mlir_assembly.size() - 1), mlir_ctx);
         },
-        [](mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module) {
-          CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToLLVM(mlir_ctx, module)))
-              << "fail to lower OneFlow to LLVM";
-        });
+        nullptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_MLIR_JIT_CPU_KERNEL(dtype)                                                     \
-  REGISTER_USER_KERNEL("mlir_jit")                                                              \
-      .SetCreateFn<MlirJitCpuKernel<dtype>>()                                                   \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
-                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        return Maybe<void>::Ok();                                                               \
+#define REGISTER_MLIR_JIT_CPU_KERNEL(dtype)                                                       \
+  REGISTER_USER_KERNEL("mlir_jit")                                                                \
+      .SetCreateFn<MlirJitCpuKernel<dtype>>()                                                     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                             \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))          \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) { return inferOneFlowMemPoolSize(ctx); }) \
+      .SetInplaceProposalFn([](const user_op::InferContext&,                                      \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {   \
+        return Maybe<void>::Ok();                                                                 \
       });
 
 REGISTER_MLIR_JIT_CPU_KERNEL(float)
@@ -193,25 +212,28 @@ class MlirJitGpuKernel final : public user_op::OpKernel {
     WithMlirContext(
         ctx, ext_libs,
         [&ctx](mlir::MLIRContext* mlir_ctx) {
-          return mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
-                                                         mlir_ctx);
+          auto mlir_assembly = ctx->Attr<std::vector<char>>("mlir_assembly");
+          return mlir::parseSourceString<mlir::ModuleOp>(
+              llvm::StringRef(mlir_assembly.data(), mlir_assembly.size() - 1), mlir_ctx);
         },
-        [](mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module) {
-          CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToCUDALLVM(mlir_ctx, module)))
-              << "fail to lower OneFlow to CUDA LLVM";
-        });
+#ifdef WITH_CUDA
+        ctx->stream()->As<ep::CudaStream>()->cuda_stream());
+#else
+        nullptr);
+#endif  // WITH_CUDA
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_MLIR_JIT_GPU_KERNEL(dtype)                                                     \
-  REGISTER_USER_KERNEL("mlir_jit")                                                              \
-      .SetCreateFn<MlirJitGpuKernel<dtype>>()                                                   \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
-                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        return Maybe<void>::Ok();                                                               \
+#define REGISTER_MLIR_JIT_GPU_KERNEL(dtype)                                                       \
+  REGISTER_USER_KERNEL("mlir_jit")                                                                \
+      .SetCreateFn<MlirJitGpuKernel<dtype>>()                                                     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                            \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))          \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) { return inferOneFlowMemPoolSize(ctx); }) \
+      .SetInplaceProposalFn([](const user_op::InferContext&,                                      \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {   \
+        return Maybe<void>::Ok();                                                                 \
       });
 
 REGISTER_MLIR_JIT_GPU_KERNEL(float)

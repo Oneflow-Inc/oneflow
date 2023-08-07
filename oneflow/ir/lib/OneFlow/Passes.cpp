@@ -13,6 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "mlir/Dialect/MemRef/Transforms/Passes.h"
+#include "OneFlow/Transform/OneFlowMemPool.h"
+#include "OneFlow/Transform/EliminateAllocOps.h"
+#include "OneFlow/Transform/OneFlowStream.h"
+#include "mlir/Conversion/TosaToTensor/TosaToTensor.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/common/data_type.pb.h"
@@ -76,6 +81,7 @@ limitations under the License.
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
+#include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -89,7 +95,7 @@ limitations under the License.
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -116,7 +122,6 @@ limitations under the License.
 #include <string>
 
 #ifdef WITH_MLIR_CUDA_CODEGEN
-#include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
@@ -150,7 +155,7 @@ LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, T op, StringRef fu
     found->print(os_mlir);
   } else {
     parent_module_op->dump();
-    return op.emitError("symbol of jit function not found: " + op.op_name());
+    return op.emitError("symbol of jit function not found: " + op.getOpName());
   }
   op->setAttr("mlir_assembly", rewriter.getStringAttr(mlir));
   return success();
@@ -205,7 +210,7 @@ func::FuncOp InsertKernelOFFuncOp(::mlir::PatternRewriter& rewriter, Operation* 
     return nullptr;
   }
 
-  BlockAndValueMapping mapping;
+  IRMapping mapping;
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPointToStart(module.getBody());
 
@@ -235,14 +240,14 @@ func::FuncOp InsertKernelOFFuncOp(::mlir::PatternRewriter& rewriter, Operation* 
   // NOTE: to get lowered to LLVM, it has to be async
   ::mlir::ValueRange empty_async_dependencies{};
   auto token = rewriter.getType<gpu::AsyncTokenType>();
-  auto t0 =
-      rewriter.create<gpu::WaitOp>(copyOp->getLoc(), token, empty_async_dependencies).asyncToken();
+  auto t0 = rewriter.create<gpu::WaitOp>(copyOp->getLoc(), token, empty_async_dependencies)
+                .getAsyncToken();
   auto t2 = rewriter
                 .create<gpu::MemcpyOp>(copyOp->getLoc(),
                                        /*optional asyncToken*/ token,
                                        /*asyncDependencies*/ llvm::SmallVector<Value, 1>({t0}),
-                                       /*dst*/ copyOp.target(),
-                                       /*src*/ copyOp.source())
+                                       /*dst*/ copyOp.getTarget(),
+                                       /*src*/ copyOp.getSource())
                 .getResults();
   rewriter.create<gpu::WaitOp>(copyOp->getLoc(), llvm::None, t2);
   return {};
@@ -275,24 +280,24 @@ struct ReplaceVariablePattern : public ::mlir::RewritePattern {
     auto op = ::llvm::dyn_cast<oneflow::VariableOp>(op0);
     if (!op) return failure();
     NamedAttrList attrs;
-    if (op.op_name().str().find("FreeEagerTensor") != std::string::npos) { return failure(); }
+    if (op.getOpName().str().find("FreeEagerTensor") != std::string::npos) { return failure(); }
     attrs.set(StringAttr::get(getContext(), "value"),
               support::TensorToDenseElementsAttr(
                   CHECK_JUST(::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get()->Get(
-                      op.op_name().str(), ::oneflow::DType::Float())),
+                      op.getOpName().str(), ::oneflow::DType::Float())),
                   rewriter.getContext()));
-    attrs.set(op.op_nameAttrName(), op.op_nameAttr());
-    attrs.set(op.data_typeAttrName(), op.data_typeAttr());
-    attrs.set(op.device_tagAttrName(), op.device_tagAttr());
-    attrs.set(op.device_nameAttrName(), op.device_nameAttr());
-    attrs.set(op.scope_symbol_idAttrName(), op.scope_symbol_idAttr());
-    attrs.set(op.hierarchyAttrName(), op.hierarchyAttr());
-    auto name = FrozenVariableOp::nd_sbpAttrName(
+    attrs.set(op.getOpNameAttrName(), op.getOpNameAttr());
+    attrs.set(op.getDataTypeAttrName(), op.getDataTypeAttr());
+    attrs.set(op.getDeviceTagAttrName(), op.getDeviceTagAttr());
+    attrs.set(op.getDeviceNameAttrName(), op.getDeviceNameAttr());
+    attrs.set(op.getScopeSymbolIdAttrName(), op.getScopeSymbolIdAttr());
+    attrs.set(op.getHierarchyAttrName(), op.getHierarchyAttr());
+    auto name = FrozenVariableOp::getNdSbpAttrName(
         OperationName(FrozenVariableOp::getOperationName(), rewriter.getContext()));
 
-    auto parallel_attr = op.parallelAttr();
+    auto parallel_attr = op.getParallelAttr();
     attrs.set(name, SBPTranslation::ConvertSBPToString(rewriter, parallel_attr));
-    auto op_new = rewriter.create<oneflow::FrozenVariableOp>(op->getLoc(), op.output().getType(),
+    auto op_new = rewriter.create<oneflow::FrozenVariableOp>(op->getLoc(), op.getOutput().getType(),
                                                              ValueRange(), attrs);
     rewriter.replaceOp(op0, op_new->getResults());
     return ::mlir::success();
@@ -307,7 +312,7 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
     auto op = ::llvm::dyn_cast<oneflow::FrozenVariableOp>(op0);
     if (!op) return failure();
     NamedAttrList attrs;
-    const auto tensor_attr = op.value();
+    const auto tensor_attr = op.getValue();
     attrs.set(StringAttr::get(getContext(), "shape"),
               rewriter.getArrayAttr(llvm::to_vector<8>(llvm::map_range(
                   tensor_attr.getType().cast<mlir::RankedTensorType>().getShape(),
@@ -317,19 +322,19 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
                   }))));
     attrs.set(StringAttr::get(getContext(), "data_type"),
               oneflow::DataTypeAttr::get(getContext(), oneflow::DataType::DT_Float));
-    auto output_lbns_attr = rewriter.getStrArrayAttr({op.op_name().str() + "/out"});
+    auto output_lbns_attr = rewriter.getStrArrayAttr({op.getOpName().str() + "/out"});
     attrs.set(OpTrait::IsImportCompatible<void>::getOutputLBNsAttr(), output_lbns_attr);
-    attrs.set(op.op_nameAttrName(), op.op_nameAttr());
-    attrs.set(op.data_typeAttrName(), op.data_typeAttr());
-    attrs.set(op.device_tagAttrName(), op.device_tagAttr());
-    attrs.set(op.device_nameAttrName(), op.device_nameAttr());
-    attrs.set(op.scope_symbol_idAttrName(), op.scope_symbol_idAttr());
-    attrs.set(op.hierarchyAttrName(), op.hierarchyAttr());
-    auto name = VariableOp::parallelAttrName(
+    attrs.set(op.getOpNameAttrName(), op.getOpNameAttr());
+    attrs.set(op.getDataTypeAttrName(), op.getDataTypeAttr());
+    attrs.set(op.getDeviceTagAttrName(), op.getDeviceTagAttr());
+    attrs.set(op.getDeviceNameAttrName(), op.getDeviceNameAttr());
+    attrs.set(op.getScopeSymbolIdAttrName(), op.getScopeSymbolIdAttr());
+    attrs.set(op.getHierarchyAttrName(), op.getHierarchyAttr());
+    auto name = VariableOp::getParallelAttrName(
         OperationName(VariableOp::getOperationName(), rewriter.getContext()));
 
-    auto nd_size = op.hierarchy()->size();
-    ArrayAttr nd_sbp = op.nd_sbp();
+    auto nd_size = op.getHierarchy()->size();
+    ArrayAttr nd_sbp = op.getNdSbp();
     std::vector<std::string> nd_sbp_str;
     std::for_each(nd_sbp.begin(), nd_sbp.end(), [&](Attribute elem) {
       if (auto sbp_str_attr = elem.dyn_cast<StringAttr>()) {
@@ -337,19 +342,19 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
       }
     });
     attrs.set(name, SBPTranslation::ConvertNdSbpToPsig(rewriter, nd_sbp_str, nd_size));
-    auto op_new = rewriter.create<oneflow::VariableOp>(op->getLoc(), op.output().getType(),
+    auto op_new = rewriter.create<oneflow::VariableOp>(op->getLoc(), op.getOutput().getType(),
                                                        ValueRange(), attrs);
-    const std::string tensor_name = op.op_nameAttr().str();
-    const auto data_type = support::FromMLIRAttrToOFDataType(op.data_typeAttr());
+    const std::string tensor_name = op.getOpNameAttr().str();
+    const auto data_type = support::FromMLIRAttrToOFDataType(op.getDataTypeAttr());
     if (failed(data_type)) {
       op0->emitError(::llvm::formatv("unsupported data type: {0}",
-                                     ConvertToString(op.data_typeAttr().getValue())));
+                                     ConvertToString(op.getDataTypeAttr().getValue())));
       return ::mlir::failure();
     }
     auto var_tensor = CHECK_JUST(
-        ::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get()->Get(op.op_name().str()));
+        ::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get()->Get(op.getOpName().str()));
     if (var_tensor) {
-      support::DenseElementsAttrToTensor(tensor_attr, op.device_tagAttr(), op.device_nameAttr(),
+      support::DenseElementsAttrToTensor(tensor_attr, op.getDeviceTagAttr(), op.getDeviceNameAttr(),
                                          var_tensor);
     } else {
       CHECK_JUST(::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get()->Set(
@@ -357,9 +362,9 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
                         // compiling with gcc and I has no idea why.
                         // But it works when compiling with clang.
                         // Maybe temporary objects would be released earlier when using gcc.
-          support::DenseElementsAttrToTensor(tensor_attr, op.device_tagAttr(),
-                                             op.device_nameAttr()),
-          CHECK_JUST(::oneflow::DType::Get(data_type.getValue()))));
+          support::DenseElementsAttrToTensor(tensor_attr, op.getDeviceTagAttr(),
+                                             op.getDeviceNameAttr()),
+          CHECK_JUST(::oneflow::DType::Get(data_type.value()))));
     }
     // replaceOp may deallocate `op0` (and also `op`), so we should not use `op` after this call.
     rewriter.replaceOp(op0, op_new->getResults());
@@ -418,7 +423,7 @@ bool IsInsertTransposeOpBefore(NCHWCompatible op, PatternRewriter& rewriter) {
   for (mlir::Value operand : op->getOperands()) {
     TransposeOp transposeInputOp = operand.getDefiningOp<TransposeOp>();
     if (!transposeInputOp) continue;
-    const auto perm = transposeInputOp.permAttr();
+    const auto perm = transposeInputOp.getPermAttr();
     if (perm.size() == 4 && perm[0] == rewriter.getSI32IntegerAttr(0)
         && perm[1] == rewriter.getSI32IntegerAttr(3) && perm[2] == rewriter.getSI32IntegerAttr(1)
         && perm[3] == rewriter.getSI32IntegerAttr(2)) {
@@ -466,11 +471,11 @@ LogicalResult TryFusedConsecutiveAdd(Op op, const SmallVector<mlir::Value, 4>& o
     SmallVector<mlir::Value, 4> inputOpOperands;
     mlir::Value inputOpResult;
     if (AddNOp addInputOp = operand.getDefiningOp<AddNOp>()) {
-      inputOpOperands = addInputOp.in();
-      inputOpResult = addInputOp.out();
+      inputOpOperands = addInputOp.getIn();
+      inputOpResult = addInputOp.getOut();
     } else if (Add2Op addInputOp = operand.getDefiningOp<Add2Op>()) {
-      inputOpOperands = {addInputOp.in0(), addInputOp.in1()};
-      inputOpResult = addInputOp.out();
+      inputOpOperands = {addInputOp.getIn0(), addInputOp.getIn1()};
+      inputOpResult = addInputOp.getOut();
     }
     for (mlir::Value operand : opOperands) {
       if (operand != inputOpResult) {
@@ -481,7 +486,7 @@ LogicalResult TryFusedConsecutiveAdd(Op op, const SmallVector<mlir::Value, 4>& o
     }
     auto new_op =
         rewriter.create<AddNOp>(op->getLoc(), op->getResultTypes(), operands, op->getAttrs());
-    rewriter.replaceOp(op, new_op.out());
+    rewriter.replaceOp(op, new_op.getOut());
     return success();
   }
   return failure();
@@ -490,13 +495,13 @@ LogicalResult TryFusedConsecutiveAdd(Op op, const SmallVector<mlir::Value, 4>& o
 template<>
 LogicalResult FusedConsecutiveAddPattern<AddNOp>::matchAndRewrite(AddNOp op,
                                                                   PatternRewriter& rewriter) const {
-  return TryFusedConsecutiveAdd<AddNOp>(op, op.in(), rewriter);
+  return TryFusedConsecutiveAdd<AddNOp>(op, op.getIn(), rewriter);
 }
 
 template<>
 LogicalResult FusedConsecutiveAddPattern<Add2Op>::matchAndRewrite(Add2Op op,
                                                                   PatternRewriter& rewriter) const {
-  return TryFusedConsecutiveAdd<Add2Op>(op, {op.in0(), op.in1()}, rewriter);
+  return TryFusedConsecutiveAdd<Add2Op>(op, {op.getIn0(), op.getIn1()}, rewriter);
 }
 
 struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
@@ -598,7 +603,7 @@ struct AutoNhwcEliminateRedundantTransposePattern : public mlir::OpRewritePatter
     TransposeOp transposeInputOp = transposeInput.getDefiningOp<TransposeOp>();
 
     if (!transposeInputOp
-        || !IsRedundantTransposeMatch(op.permAttr(), transposeInputOp.permAttr(), rewriter)) {
+        || !IsRedundantTransposeMatch(op.getPermAttr(), transposeInputOp.getPermAttr(), rewriter)) {
       return failure();
     }
     rewriter.replaceOp(op, {transposeInputOp.getOperand()});
@@ -618,10 +623,10 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
     auto loc = op->getLoc();
 
     auto wrap_kernel = rewriter.create<okl::WrapperKernelOp>(loc, index);
-    wrap_kernel.body().emplaceBlock();
-    rewriter.setInsertionPointToEnd(&wrap_kernel.body().back());
+    wrap_kernel.getBody().emplaceBlock();
+    rewriter.setInsertionPointToEnd(&wrap_kernel.getBody().back());
 
-    BlockAndValueMapping mapping;
+    IRMapping mapping;
 
     // map launcher_ctx from wrap func to block
     mapping.map(raw_func.getArgument(0), okl_func.getArgument(0));
@@ -756,7 +761,7 @@ CreateWrapFuncAndReturnWithIns(mlir::Location loc, std::vector<Operation*>& wrap
   function.getBody().emplaceBlock();
   for (auto arg : ins) { function.getBody().addArgument(arg.getType(), loc); }
 
-  BlockAndValueMapping mapping;
+  IRMapping mapping;
   for (auto args_pair : llvm::zip(ins, function.getBody().getArguments())) {
     mapping.map(std::get<0>(args_pair), std::get<1>(args_pair));
   }
@@ -825,6 +830,7 @@ KernelLaunchOp ConsumeOpsToFunc(std::vector<Operation*>& wrap_ops, mlir::Pattern
           }
         }
       }
+      rewriter.eraseOp(op);
     }
   }
   wrap_ops.clear();
@@ -846,7 +852,7 @@ struct ExtractKernelLaunchTensorPattern : public mlir::OpRewritePattern<func::Fu
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointToStart(&body.front());
 
-    BlockAndValueMapping mapping;
+    IRMapping mapping;
     for (const auto& arg : llvm::enumerate(op.getBody().getArguments())) {
       auto tensor = rewriter.create<okl::GetTensorFromArgOp>(func->getLoc(), arg.value().getType(),
                                                              launcher_ctx, arg.index());
@@ -906,7 +912,7 @@ struct TrimReturnAsVoidPattern : public mlir::OpRewritePattern<func::FuncOp> {
     auto func_type = rewriter.getFunctionType(op.getFunctionType().getInputs(), TypeRange{});
     auto func = rewriter.create<func::FuncOp>(op.getLoc(), op.getName(), func_type);
 
-    BlockAndValueMapping bvm;
+    IRMapping bvm;
     op.getRegion().cloneInto(&func.getRegion(), bvm);
 
     auto& old_ret = func.getBody().front().back();
@@ -938,6 +944,7 @@ struct KernelLaunchPattern : public mlir::OpRewritePattern<oneflow::Job> {
 
     int name_index = 0;
     std::vector<Operation*> current_wrap_ops;
+    op->dump();
     for (auto op_it = ops.begin(); op_it != ops.end(); ++op_it) {
       auto current_op = &(*op_it);
       if (!IsPackagable(current_op)) {
@@ -1009,71 +1016,99 @@ struct KernelLaunchWithCudaGraphPattern : public KernelLaunchSimplePattern {
   }
 };
 
-void AddLowerToLinalgMemRefPasses(PassManager& pm) {
-  pm.addPass(createConvertToSignlessForTosaPass());  // convert-to-signless-for-tosa
-  pm.addNestedPass<func::FuncOp>(LLVM::createRequestCWrappersPass());  // llvm-request-c-wrappers
-  pm.addPass(createConvertToSignlessForTosaPass());  // convert-to-signless-for-tosa
-  pm.addPass(createLowerOneFlowToTosaPass());        // lower-oneflow-to-tosa
-  pm.addNestedPass<func::FuncOp>(
-      tosa::createTosaMakeBroadcastablePass());                // tosa-make-broadcastable
-  pm.addPass(createCSEPass());                                 // cse
-  pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());  // tosa-to-linalg-on-tensors
-  pm.addNestedPass<func::FuncOp>(
-      createLinalgElementwiseOpFusionPass());                       // linalg-fuse-elementwise-ops
-  pm.addNestedPass<func::FuncOp>(createLinalgBufferizePass());      // linalg-bufferize
-  pm.addNestedPass<func::FuncOp>(createTensorBufferizePass());      // tensor-bufferize
-  pm.addPass(func::createFuncBufferizePass());                      // func-bufferize
-  pm.addPass(bufferization::createBufferResultsToOutParamsPass());  // buffer-results-to-out-params
-  pm.addPass(createCanonicalizerPass());                            // canonicalize
-  pm.addNestedPass<func::FuncOp>(
-      mlir::bufferization::createFinalizingBufferizePass());  // finalizing-bufferize
+void AddLoweringToLinalgMemRefPasses(PassManager& pm) {
+  pm.addPass(createConvertToSignlessForTosaPass());
+  pm.addNestedPass<func::FuncOp>(LLVM::createRequestCWrappersPass());
+  pm.addPass(createLowerOneFlowToTosaPass());
+  pm.addNestedPass<func::FuncOp>(tosa::createTosaMakeBroadcastablePass());
+  pm.addPass(createCSEPass());
+  pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());
+  pm.addNestedPass<func::FuncOp>(tosa::createTosaToTensor());
+  pm.addNestedPass<func::FuncOp>(createLinalgElementwiseOpFusionPass());
+  // TODO: more optimization pass
+  // Note: OneShot bufferization with result extract realization.
+  pm.addPass(bufferization::createEmptyTensorEliminationPass());
+  pm.addPass(bufferization::createEmptyTensorToAllocTensorPass());
+
+  auto oneshot_bufferize = bufferization::createOneShotBufferizePass();
+  CHECK(
+      oneshot_bufferize
+          ->initializeOptions("create-deallocs=0 bufferize-function-boundaries allow-return-allocs")
+          .succeeded());
+  pm.addPass(std::move(oneshot_bufferize));
+  pm.addPass(bufferization::createBufferResultsToOutParamsPass());
+  pm.addPass(mlir::oneflow::createEliminateAllocOpsPass());
+  pm.addPass(createCanonicalizerPass());
 }
 
 LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
   mlir::PassManager pm(context);
-  AddLowerToLinalgMemRefPasses(pm);
-  pm.addNestedPass<func::FuncOp>(createConvertLinalgToLoopsPass());  // convert-linalg-to-loops
-  pm.addNestedPass<func::FuncOp>(createConvertSCFToCFPass());        // convert-scf-to-cf
-  pm.addPass(createConvertLinalgToLLVMPass());                       // convert-linalg-to-llvm
-  pm.addPass(createMemRefToLLVMPass());                              // convert-memref-to-llvm
-  pm.addPass(createConvertFuncToLLVMPass());                         // convert-func-to-llvm
-  pm.addPass(createReconcileUnrealizedCastsPass());                  // reconcile-unrealized-casts
+  mlir::oneflow::CheckEnableIRPrinting(pm);
+  AddLoweringToLinalgMemRefPasses(pm);
+  pm.addNestedPass<func::FuncOp>(createConvertLinalgToLoopsPass());
+  pm.addNestedPass<func::FuncOp>(createConvertSCFToCFPass());
+  pm.addNestedPass<func::FuncOp>(createFoldAllocToSubviewPass());
+  pm.addPass(createInsertOneFlowMemPoolPass());
+  pm.addPass(createAppendOneFlowStreamPass());
+  pm.addPass(memref::createExpandOpsPass());
+  pm.addPass(memref::createExpandStridedMetadataPass());
+  pm.addPass(createFinalizeMemRefToLLVMConversionPass());
+  pm.addPass(createLowerAffinePass());
+  pm.addPass(createConvertLinalgToLLVMPass());
+  pm.addPass(createConvertFuncToLLVMPass());
+  pm.addPass(createReconcileUnrealizedCastsPass());
   return pm.run(module);
 }
 
 #ifdef WITH_MLIR_CUDA_CODEGEN
 
+void AddLoweringLinalgOnBufferToGpuWithStdPasses(PassManager& pm) {
+  pm.addNestedPass<func::FuncOp>(createConvertLinalgToParallelLoopsPass());
+  pm.addNestedPass<func::FuncOp>(createGpuMapParallelLoopsPass());
+  pm.addNestedPass<func::FuncOp>(createParallelLoopToGpuPass());
+  pm.addNestedPass<func::FuncOp>(createGpuLauchSinkIndexComputationsPass());
+  pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());
+  pm.addNestedPass<func::FuncOp>(createCSEPass());
+  pm.addNestedPass<func::FuncOp>(createFoldAllocToSubviewPass());
+  pm.addPass(createInsertOneFlowMemPoolPass());
+  pm.addNestedPass<func::FuncOp>(createConvertLinalgToLoopsPass());
+  pm.addNestedPass<func::FuncOp>(createConvertSCFToCFPass());
+  pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());
+  pm.addNestedPass<func::FuncOp>(createCSEPass());
+  pm.addNestedPass<func::FuncOp>(createGpuCopyArgPass());
+}
+
+void AddAdheringCubinToGpuModulePasses(PassManager& pm) {
+  pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());
+  pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
+  pm.addNestedPass<gpu::GPUModuleOp>(createLowerGpuOpsToNVVMOpsPass());
+  pm.addNestedPass<gpu::GPUModuleOp>(createNVVMToCubinPass());
+}
+
+void AddLoweringGpuToLLVMPasses(PassManager& pm) {
+  pm.addPass(createFinalizeMemRefToLLVMConversionPass());
+  pm.addPass(createLowerAffinePass());
+  pm.addPass(createAppendOneFlowStreamPass());
+  pm.addPass(createGpuToLLVMConversionPass());
+  pm.addPass(createMgpuToOneFlowStreamPass());
+  pm.addPass(createReconcileUnrealizedCastsPass());
+}
+
 LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module) {
   InitializeLLVMNVPTXBackend();
   mlir::PassManager pm(context);
   mlir::oneflow::CheckEnableIRPrinting(pm);
-  AddLowerToLinalgMemRefPasses(pm);
-  pm.addNestedPass<func::FuncOp>(
-      createConvertLinalgToParallelLoopsPass());  // convert-linalg-to-parallel-loops
-  pm.addNestedPass<func::FuncOp>(createGpuMapParallelLoopsPass());  // gpu-map-parallel-loops
-  pm.addPass(createParallelLoopToGpuPass());                        // convert-parallel-loops-to-gpu
-  pm.addPass(createGpuLauchSinkIndexComputationsPass());
-  pm.addPass(createGpuKernelOutliningPass());                      // gpu-kernel-outlining
-  pm.addNestedPass<func::FuncOp>(createBufferHostRegisterPass());  // buffer-host-register
-  pm.addPass(createCanonicalizerPass());                           // canonicalize
-  // -pass-pipeline='gpu.module([PASS1][PASS2]...)'
-  pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());        // strip-debuginfo
-  pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());           // lower-affine
-  pm.addNestedPass<gpu::GPUModuleOp>(createLowerGpuOpsToNVVMOpsPass());  // convert-gpu-to-nvvm
-  pm.addNestedPass<gpu::GPUModuleOp>(createSerializeToCubinPass());      // out-of-tree-gpu-to-cubin
-  pm.addNestedPass<func::FuncOp>(createGpuCopyArgPass());                // buffer-host-register
-  pm.addPass(createGpuToLLVMConversionPass());
-  pm.addPass(createReconcileUnrealizedCastsPass());  // reconcile-unrealized-casts
+  AddLoweringToLinalgMemRefPasses(pm);
+  AddLoweringLinalgOnBufferToGpuWithStdPasses(pm);
+  pm.addPass(memref::createExpandOpsPass());
+  pm.addPass(memref::createExpandStridedMetadataPass());
+  pm.addPass(createGpuKernelOutliningPass());
+  AddAdheringCubinToGpuModulePasses(pm);
+  AddLoweringGpuToLLVMPasses(pm);
   return pm.run(module);
 }
 
 #endif  // WITH_MLIR_CUDA_CODEGEN
-
-void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
-  rewrites::populateRewrites(patterns);
-  constraints::populateConstraints(patterns);
-  populateElementwiseFusionPatterns(patterns);
-}
 
 void populateWrapOpsToKernelLaunchPatterns(::mlir::RewritePatternSet& patterns,
                                            const std::string& mode) {

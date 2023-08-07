@@ -398,6 +398,8 @@ message OperatorConf {
   optional string pass_tag = 10;
   optional string loc = 11 [default = ""];
   optional int64 logical_chain_id = 12 [default = -1];
+  optional int64 order_in_logical_chain = 13 [default = -1];
+  optional string calculation_pass_name = 14 [default = "forward_pass"];
   oneof op_type {
     // system op
     CopyCommNetOpConf copy_comm_net_conf = 106;

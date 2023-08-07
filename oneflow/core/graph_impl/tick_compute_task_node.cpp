@@ -30,6 +30,7 @@ class TickCompTaskNode final : public CompTaskNode {
  private:
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
+  void ConsumeFakeRegsts() override;
   void BuildExecGphAndRegst() override;
 };
 
@@ -42,6 +43,8 @@ void TickCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in");
   ForEachInDataEdge([&](TaskEdge* edge) { ConsumeRegst("in", edge->GetSoleRegst()); });
 }
+
+void TickCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
 
 void TickCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
@@ -56,7 +59,7 @@ void TickCompTaskNode::BuildExecGphAndRegst() {
     out_regst->AddLbi(lbi);
     node->BindBnWithRegst(obn, out_regst);
   }
-  node->InferBlobDescs(parallel_ctx());
+  (node->*GetInferBlobDescsMethod())(parallel_ctx());
 }
 
 REGISTER_TICK_TASK_STREAM_INDEX_GETTER(TaskType::kTick);

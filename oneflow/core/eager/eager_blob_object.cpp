@@ -29,11 +29,13 @@ EagerBlobObject::EagerBlobObject(
     const std::shared_ptr<MemoryCase>& mem_case,
     const Symbol<one::LocalTensorMeta>& static_local_tensor_meta,
     const std::shared_ptr<const one::MutLocalTensorMeta>& dynamic_local_tensor_meta,
-    DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage,
+    DataType data_type, MemoryFormat memory_format,
+    const std::shared_ptr<TensorStorage>& tensor_storage,
     const intrusive::shared_ptr<LocalDepObject>& dep_object)
     : is_dynamic_(false),
       mem_case_(mem_case),
       data_type_(data_type),
+      memory_format_(memory_format),
       storage_offset_(0),
       tensor_storage_(tensor_storage),
       compute_local_dep_object_(dep_object),
@@ -86,6 +88,8 @@ std::shared_ptr<const Stride> EagerBlobObject::stride_ptr() const {
     return static_local_tensor_meta_->stride_ptr();
   }
 }
+
+int64_t EagerBlobObject::storage_offset() const { return storage_offset_; }
 
 void EagerBlobObject::set_storage_offset(const int64_t offset) { storage_offset_ = offset; }
 

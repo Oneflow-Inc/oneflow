@@ -138,5 +138,6 @@ REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_bitwise_right_shift",
 
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_floor_mod", ep::primitive::BinaryOp::kFloorMod)
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_fmod", ep::primitive::BinaryOp::kFmod)
+REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_zeta", ep::primitive::BinaryOp::kZeta)
 
 }  // namespace oneflow

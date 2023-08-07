@@ -223,6 +223,10 @@ function(target_treat_warnings_as_errors target)
 
     # disable visibility warnings related to https://github.com/Oneflow-Inc/oneflow/pull/3676.
     target_try_compile_options(${target} -Wno-error=attributes)
+
+    # disable error about XXX has no out-of-line virtual method definitions; its vtable will be emitted in every translation unit
+    target_try_compile_options(${target} -Wno-error=weak-vtables)
+
   endif()
 endfunction()
 
@@ -294,3 +298,13 @@ function(mark_targets_as_system)
                                                "${include_dir}")
   endforeach()
 endfunction()
+
+if(NOT BUILD_SHARED_LIBS)
+  if(APPLE)
+    set(ALL_ARCHIVE_BEGIN -Wl,-force_load)
+    set(ALL_ARCHIVE_END)
+  elseif(UNIX)
+    set(ALL_ARCHIVE_BEGIN -Wl,--whole-archive)
+    set(ALL_ARCHIVE_END -Wl,--no-whole-archive)
+  endif()
+endif()

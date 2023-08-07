@@ -188,7 +188,7 @@ target_link_libraries(of_protoobj protobuf_imported)
 include(functional)
 generate_functional_api_and_pybind11_cpp(FUNCTIONAL_GENERATED_SRCS FUNCTIONAL_GENERATED_HRCS
                                          FUNCTIONAL_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
-oneflow_add_library(of_functional_obj STATIC ${FUNCTIONAL_GENERATED_SRCS}
+oneflow_add_library(of_functional_obj OBJECT ${FUNCTIONAL_GENERATED_SRCS}
                     ${FUNCTIONAL_GENERATED_HRCS})
 target_link_libraries(of_functional_obj LLVMSupportWithHeader glog::glog fmt)
 add_dependencies(of_functional_obj prepare_oneflow_third_party)
@@ -204,7 +204,7 @@ if(BUILD_PYTHON)
     ${PROJECT_SOURCE_DIR})
 
   oneflow_add_library(
-    of_functional_tensor_obj STATIC ${FUNCTIONAL_TENSOR_GENERATED_SRCS}
+    of_functional_tensor_obj OBJECT ${FUNCTIONAL_TENSOR_GENERATED_SRCS}
     ${FUNCTIONAL_TENSOR_GENERATED_HRCS} ${FUNCTIONAL_OPS_GENERATED_SRCS}
     ${FUNCTIONAL_OPS_GENERATED_HRCS})
   target_link_libraries(of_functional_tensor_obj LLVMSupportWithHeader glog::glog fmt)
@@ -240,35 +240,45 @@ target_compile_definitions(oneflow PRIVATE GOOGLE_LOGGING)
 set(ONEFLOW_TOOLS_DIR "${PROJECT_BINARY_DIR}/tools"
     CACHE STRING "dir to put binary for debugging and development")
 
+set(CACHE_LLVM_MONO_REPO_URL_LIST
+    "https://github.com/llvm/llvm-project/archive/c63522e6ba7782c335043893ae7cbd37eca24fe5.zip"
+    "https://github.com/llvm/llvm-project/archive/a0595f8c99a253c65f30a151337e7aadc19ee3a1.zip"
+    "https://github.com/llvm/llvm-project/archive/7eaa84eac3ba935d13f4267d3d533a6c3e1283ed.zip"
+    "https://github.com/llvm/llvm-project/archive/35e60f5de180aea55ed478298f4b40f04dcc57d1.zip"
+    "https://github.com/llvm/llvm-project/archive/6a9bbd9f20dcd700e28738788bb63a160c6c088c.zip"
+    "https://github.com/llvm/llvm-project/archive/32805e60c9de1f82887cd2af30d247dcabd2e1d3.zip"
+    "https://github.com/llvm/llvm-project/archive/6d6268dcbf0f48e43f6f9fe46b3a28c29ba63c7d.zip"
+    "https://github.com/llvm/llvm-project/archive/5c9a84960de2260f149ee15313998593255a78df.zip"
+    "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-16.0.0-rc4.zip"
+    "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-15.0.6.zip"
+    "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-16.0.0.zip"
+    "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-16.0.3.zip")
+
+set(CACHE_LLVM_MONO_REPO_MD5_LIST
+    "f2f17229cf21049663b8ef4f2b6b8062"
+    "6b7c6506d5922de9632c8ff012b2f945"
+    "e0ea669a9f0872d35bffda5ec6c5ac6f"
+    "241a333828bba1efa35aff4c4fc2ce87"
+    "075fbfdf06cb3f02373ea44971af7b03"
+    "e412dc61159b5e929b0c94e44b11feb2"
+    "1ccc00accc87a1a5d42a275d6e31cd8c"
+    "b64481eaca658a2ff4e3e193440d0f68"
+    "78172b0f67282e28956cd310612091fd"
+    "0c2a3196e656aaab7ca1c2ef21b6091c"
+    "2702b822b71c196a0cc9c8d821c069d7"
+    "334997b4879aba15d9323a732356cf2a")
+
 # clean cache for last LLVM version
-if("${LLVM_MONO_REPO_URL}" STREQUAL
-   "https://github.com/llvm/llvm-project/archive/c63522e6ba7782c335043893ae7cbd37eca24fe5.zip"
-   OR "${LLVM_MONO_REPO_URL}" STREQUAL
-      "https://github.com/llvm/llvm-project/archive/a0595f8c99a253c65f30a151337e7aadc19ee3a1.zip"
-   OR "${LLVM_MONO_REPO_URL}" STREQUAL
-      "https://github.com/llvm/llvm-project/archive/7eaa84eac3ba935d13f4267d3d533a6c3e1283ed.zip"
-   OR "${LLVM_MONO_REPO_URL}" STREQUAL
-      "https://github.com/llvm/llvm-project/archive/35e60f5de180aea55ed478298f4b40f04dcc57d1.zip"
-   OR "${LLVM_MONO_REPO_URL}" STREQUAL
-      "https://github.com/llvm/llvm-project/archive/6a9bbd9f20dcd700e28738788bb63a160c6c088c.zip"
-   OR "${LLVM_MONO_REPO_URL}" STREQUAL
-      "https://github.com/llvm/llvm-project/archive/32805e60c9de1f82887cd2af30d247dcabd2e1d3.zip"
-   OR "${LLVM_MONO_REPO_URL}" STREQUAL
-      "https://github.com/llvm/llvm-project/archive/6d6268dcbf0f48e43f6f9fe46b3a28c29ba63c7d.zip"
-   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "f2f17229cf21049663b8ef4f2b6b8062"
-   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "6b7c6506d5922de9632c8ff012b2f945"
-   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "e0ea669a9f0872d35bffda5ec6c5ac6f"
-   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "241a333828bba1efa35aff4c4fc2ce87"
-   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "075fbfdf06cb3f02373ea44971af7b03"
-   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "e412dc61159b5e929b0c94e44b11feb2"
-   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "334997b4879aba15d9323a732356cf2a")
+if("${LLVM_MONO_REPO_URL}" IN_LIST CACHE_LLVM_MONO_REPO_URL_LIST OR "${LLVM_MONO_REPO_MD5}" IN_LIST
+                                                                    CACHE_LLVM_MONO_REPO_MD5_LIST)
   unset(LLVM_MONO_REPO_URL CACHE)
   unset(LLVM_MONO_REPO_MD5 CACHE)
 endif()
-set(LLVM_MONO_REPO_URL "https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-15.0.6.zip"
+set(LLVM_MONO_REPO_URL
+    "https://github.com/llvm/llvm-project/archive/c2ce2a509f74a85a3c0ef4b9d6d79fbacc7e8bdf.zip"
     CACHE STRING "")
 use_mirror(VARIABLE LLVM_MONO_REPO_URL URL ${LLVM_MONO_REPO_URL})
-set(LLVM_MONO_REPO_MD5 "1ccc00accc87a1a5d42a275d6e31cd8c" CACHE STRING "")
+set(LLVM_MONO_REPO_MD5 "25489a23c6fa971fcd0d1167a560bf0a" CACHE STRING "")
 set(ONEFLOW_BUILD_ROOT_DIR "${PROJECT_BINARY_DIR}")
 add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/ir)
 if(WITH_MLIR)
@@ -291,15 +301,29 @@ set_property(TARGET LLVMSupportWithHeader PROPERTY INTERFACE_INCLUDE_DIRECTORIES
 
 list(APPEND oneflow_third_party_libs LLVMSupportWithHeader)
 
+# for stack backtrace
+find_package(BFD)
+if(BFD_FOUND)
+  add_definitions(-DBACKWARD_HAS_BFD=1)
+  list(APPEND oneflow_third_party_libs bfd::bfd)
+endif()
+find_package(Unwind)
+if(Unwind_FOUND)
+  add_definitions(-DBACKWARD_HAS_LIBUNWIND=1)
+  list(APPEND oneflow_third_party_libs unwind::unwind)
+endif()
+add_definitions(-DONEFLOW_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+add_definitions(-DONEFLOW_BINARY_DIR="${PROJECT_BINARY_DIR}")
+
 include(op_schema)
 
 get_property(EXTERNAL_TARGETS GLOBAL PROPERTY EXTERNAL_TARGETS)
 
 if(APPLE)
-  set(of_libs -Wl,-force_load oneflow of_op_schema)
+  set(of_libs ${ALL_ARCHIVE_BEGIN} oneflow of_op_schema ${ALL_ARCHIVE_END})
   target_link_libraries(oneflow of_protoobj of_functional_obj ${oneflow_third_party_libs})
 elseif(UNIX)
-  set(of_libs -Wl,--whole-archive oneflow of_op_schema -Wl,--no-whole-archive -ldl -lrt)
+  set(of_libs ${ALL_ARCHIVE_BEGIN} of_op_schema ${ALL_ARCHIVE_END} -ldl -lrt)
   target_link_libraries(
     oneflow
     of_protoobj
@@ -354,7 +378,8 @@ if(BUILD_PYTHON OR BUILD_CPP_API)
   oneflow_add_library(of_api_common OBJECT ${of_api_common_files})
   target_link_libraries(of_api_common oneflow)
   if(WITH_MLIR)
-    target_link_libraries(of_api_common ${ONEFLOW_MLIR_LIBS})
+    target_link_libraries(of_api_common ${ALL_ARCHIVE_BEGIN} ${ONEFLOW_MLIR_LIBS}
+                          ${ALL_ARCHIVE_END})
   endif()
 endif()
 
@@ -447,7 +472,8 @@ if(BUILD_TESTING)
     target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs} glog::glog
                           ${oneflow_test_libs})
     if(WITH_MLIR)
-      target_link_libraries(oneflow_testexe MLIROneFlowExtension)
+      target_link_libraries(oneflow_testexe ${ALL_ARCHIVE_BEGIN} MLIROneFlowExtension
+                            ${ALL_ARCHIVE_END})
     endif()
   endif()
 
@@ -491,40 +517,85 @@ if(BUILD_PYTHON)
     REGEX "oneflow/core/kernel/util/.+(h|hpp)$"
     REGEX "oneflow/core/persistence/.+(h|hpp)$"
     REGEX "oneflow/core/ep/include/.+(h|hpp)$"
+    REGEX "oneflow/core/ep/common/.+(h|hpp)$"
+    REGEX "oneflow/core/ep/cpu/.+(h|hpp)$"
     REGEX "oneflow/core/ep/cuda/.+(h|hpp)$"
     REGEX "oneflow/core/job/.+(h|hpp)$"
+    REGEX "oneflow/core/intrusive/.+(h|hpp)$"
+    REGEX "oneflow/core/graph/boxing/.+(h|hpp)$"
+    REGEX "oneflow/core/vm/.+(h|hpp)$"
     REGEX "oneflow/core/.+(proto)$"
+    REGEX "oneflow/user/.+(h|hpp)$"
+    PATTERN "oneflow/core/kernel/chain_kernel_observer.h"
+    PATTERN "oneflow/core/kernel/cuda_graph_support.h"
     PATTERN "oneflow/core/kernel/new_kernel_util.h"
+    PATTERN "oneflow/core/kernel/kernel.h"
     PATTERN "oneflow/core/kernel/kernel_context.h"
     PATTERN "oneflow/core/kernel/kernel_observer.h"
+    PATTERN "oneflow/core/kernel/kernel_util.h"
     PATTERN "oneflow/core/kernel/kernel_util.cuh"
+    PATTERN "oneflow/core/kernel/kernel_registration.h"
     PATTERN "oneflow/core/common/symbol.h"
+    PATTERN "oneflow/core/register/blob.h"
+    PATTERN "oneflow/core/register/op_blob_arg_info.h"
+    PATTERN "oneflow/core/register/register.h"
+    PATTERN "oneflow/core/register/register_desc.h"
+    PATTERN "oneflow/core/register/register_manager.h"
+    PATTERN "oneflow/core/register/runtime_register_desc.h"
+    PATTERN "oneflow/core/register/tensor_slice_view.h"
+    PATTERN "oneflow/core/ndarray/xpu_util.h"
+    PATTERN "oneflow/core/rpc/include/base.h"
+    PATTERN "oneflow/core/rpc/include/ctrl.h"
+    PATTERN "oneflow/core/rpc/include/global_process_ctx.h"
+    PATTERN "oneflow/core/control/ctrl_client.h"
+    PATTERN "oneflow/core/control/global_process_ctx.h"
     PATTERN "oneflow/core/autograd/autograd_meta.h"
     PATTERN "oneflow/core/register/blob_desc.h"
     PATTERN "oneflow/core/operator/operator.h"
+    PATTERN "oneflow/core/operator/operator_util.h"
     PATTERN "oneflow/core/operator/op_conf_util.h"
+    PATTERN "oneflow/core/graph/compute_task_node.h"
+    PATTERN "oneflow/core/graph/copy_task_node.h"
+    PATTERN "oneflow/core/graph/exec_graph.h"
     PATTERN "oneflow/core/graph/graph.h"
     PATTERN "oneflow/core/graph/node.h"
     PATTERN "oneflow/core/graph/op_graph.h"
+    PATTERN "oneflow/core/graph/task_graph.h"
     PATTERN "oneflow/core/graph/task_id.h"
     PATTERN "oneflow/core/graph/task_id_generator.h"
+    PATTERN "oneflow/core/graph/task_node.h"
+    PATTERN "oneflow/core/graph/task_stream_index_manager.h"
     PATTERN "oneflow/core/graph/stream_id.h"
-    PATTERN "oneflow/core/vm/vm_sync.h"
+    PATTERN "oneflow/core/graph/stream_index_generator.h"
+    PATTERN "oneflow/core/graph/fake_consumed_regst_provider.h"
+    PATTERN "oneflow/core/graph/transport_task_node.h"
+    PATTERN "oneflow/core/thread/thread.h"
+    PATTERN "oneflow/core/thread/thread_manager.h"
+    PATTERN "oneflow/core/thread/thread_pool.h"
+    PATTERN "oneflow/core/thread/thread_runtime.h"
+    PATTERN "oneflow/core/thread/thread_runtime_factory.h"
+    PATTERN "oneflow/core/profiler/profiler.h"
+    PATTERN "oneflow/extension/stack/foreign_stack_getter.h"
+    PATTERN "oneflow/core/platform/include/pthread_fork.h"
+    PATTERN "oneflow/core/lazy/actor/actor.h"
+    PATTERN "oneflow/core/lazy/actor/actor_base.h"
+    PATTERN "oneflow/core/lazy/actor/actor_context.h"
+    PATTERN "oneflow/core/lazy/actor/actor_message.h"
+    PATTERN "oneflow/core/lazy/actor/actor_message_bus.h"
+    PATTERN "oneflow/core/lazy/actor/register_slot.h"
+    PATTERN "oneflow/core/lazy/stream_context/include/stream_context.h"
+    PATTERN "oneflow/core/memory/memory_allocator.h"
+    PATTERN "oneflow/core/memory/memory_case_util.h"
+    PATTERN "oneflow/core/memory/memory_zone.h"
+    PATTERN "oneflow/user/ops/convert_memory_format.h"
     PATTERN "oneflow/api" EXCLUDE
-    PATTERN "oneflow/user" EXCLUDE
-    PATTERN "oneflow/extension" EXCLUDE
     PATTERN "oneflow/maybe" EXCLUDE
-    PATTERN "oneflow/core/lazy" EXCLUDE
     PATTERN "oneflow/core/graph_impl" EXCLUDE
     PATTERN "oneflow/core/job_rewriter" EXCLUDE
     PATTERN "oneflow/core/hardware" EXCLUDE
-    PATTERN "oneflow/core/intrusive" EXCLUDE
     PATTERN "oneflow/core/stream" EXCLUDE
     PATTERN "oneflow/core/functional" EXCLUDE
-    PATTERN "oneflow/core/platform" EXCLUDE
     PATTERN "oneflow/core/boxing" EXCLUDE
-    PATTERN "oneflow/core/rpc" EXCLUDE
-    PATTERN "oneflow/core/profiler" EXCLUDE
     PATTERN "oneflow/core/transport" EXCLUDE
     PATTERN "oneflow/core/comm_network" EXCLUDE
     PATTERN "oneflow/ir" EXCLUDE)

@@ -20,7 +20,7 @@ limitations under the License.
 #include "OneFlow/OKM/passes.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "oneflow/core/framework/op_kernel.h"
@@ -40,8 +40,9 @@ namespace {
 
 mlir::OwningOpRef<mlir::ModuleOp> GetModule(user_op::KernelInitContext* ctx,
                                             mlir::MLIRContext* mlir_ctx) {
-  auto module =
-      mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), mlir_ctx);
+  auto mlir_assembly = ctx->Attr<std::vector<char>>("mlir_assembly");
+  mlir::OwningOpRef<mlir::ModuleOp> module = mlir::parseSourceString<mlir::ModuleOp>(
+      llvm::StringRef(mlir_assembly.data(), mlir_assembly.size() - 1), mlir_ctx);
   if (!module) { LOG(FATAL) << "Fail to load mlir assembly"; }
   // lower oneflow wrap ops into okl dialect
   if (failed(mlir::okm::LowerWrapOpsToOKL(*module))) {

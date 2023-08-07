@@ -58,6 +58,8 @@ static const std::unordered_map<Symbol<DType>, std::string> all_data_types = {
     {DType::Complex32(), "ComplexHalfTensor"},
     {DType::Complex64(), "ComplexFloatTensor"},
     {DType::Complex128(), "ComplexDoubleTensor"},
+    {DType::Char(), "CharTensor"},
+    {DType::Int16(), "ShortTensor"},
 };
 
 static const std::string get_dtype_string(PyTensorType* tensortype) {

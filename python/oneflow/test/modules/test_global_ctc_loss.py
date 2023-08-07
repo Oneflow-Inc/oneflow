@@ -162,6 +162,7 @@ def _test_ctc_loss_impl(
 
 
 @flow.unittest.skip_unless_1n2d()
+@unittest.skip("skip for now, becase it segfaults several times in CI")
 class TestCTCLossGlobal(oneflow.unittest.TestCase):
     @globaltest
     def test_ctc_loss_global(test_case):

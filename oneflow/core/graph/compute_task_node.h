@@ -18,17 +18,26 @@ limitations under the License.
 
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/graph/fake_consumed_regst_provider.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/job/compile_mode.h"
 
 namespace oneflow {
 
-class CompTaskNode : public TaskNode {
+class CompTaskNode : public TaskNode, public FakeConsumedRegstProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CompTaskNode);
   CompTaskNode() = default;
   virtual ~CompTaskNode() = default;
 
-  virtual void ToProto(TaskProto*) const override;
+  virtual void ToProto(TaskProto*, bool check) const override;
+  virtual void InitFromProtoExceptConsumedRegsts(const TaskProto&) override;
+  void ConsumeFakeRegstsIf() override;
+  void EraseFakeRegstsIf() override;
+
+  // ConsumeFakeRegsts is used for initializing CompTaskNode.consumed_regsts_ on the other ranks.
+  virtual void ConsumeFakeRegsts() = 0;
+  void ConsumeFakeRegst(const std::string& regst_name);
 
   // parallel_ctx_
   int64_t parallel_id() const { return parallel_ctx_.parallel_id(); }
@@ -43,6 +52,12 @@ class CompTaskNode : public TaskNode {
   // op
   std::shared_ptr<const Operator> op() const { return op_node_->shared_op(); }
 
+  ExecNode::InferBlobDescsMethod GetInferBlobDescsMethod() const override {
+    // For default compilation mode, compute task node use input blob desc to infer output blob
+    // desc; For separate compilation mode, compute task node use NdSBP to infer output blob desc.
+    return InferBlobDescsMethodGetter::Visit(CHECK_JUST(CurrentCompileMode()));
+  }
+
  protected:
   const OpNode* GetOneSuccOpNodeOnEdge(TaskEdge* edge);
   const OpNode* GetOnePredOpNodeOnEdge(TaskEdge* edge);
@@ -52,8 +67,17 @@ class CompTaskNode : public TaskNode {
   void InferProducedDataRegstTimeShape() override;
 
  private:
+  struct InferBlobDescsMethodGetter final : public CompileModeVisitor<InferBlobDescsMethodGetter> {
+    static ExecNode::InferBlobDescsMethod VisitNaive() { return &ExecNode::InferBlobDescsByInputs; }
+    static ExecNode::InferBlobDescsMethod VisitRankPerProcess() {
+      return &ExecNode::InferBlobDescsByNdSbp;
+    }
+    static ExecNode::InferBlobDescsMethod VisitInValid() { return nullptr; }
+  };
+
   ParallelContext parallel_ctx_;
   const OpNode* op_node_;
+  HashSet<std::string> fake_consumed_regst_names_;
 };
 
 class OpCompTaskNodeCreator {

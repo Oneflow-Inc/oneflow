@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_NN_GRAPH_H_
 #define ONEFLOW_CORE_FRAMEWORK_NN_GRAPH_H_
 
-#include <memory>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/nn_graph_if.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -41,7 +40,8 @@ class NNGraph final : public NNGraphIf {
         job_id_(job_id),
         session_ctx_(session_ctx),
         runtime_inited_(false),
-        is_closed_(false) {}
+        is_closed_(false),
+        run_cnt_(0) {}
   explicit NNGraph(const std::string& name, const Plan& plan, int64_t job_id,
                    const std::shared_ptr<MultiClientSessionContext>& session_ctx)
       : name_(name),
@@ -49,7 +49,8 @@ class NNGraph final : public NNGraphIf {
         session_ctx_(session_ctx),
         plan_(plan),
         runtime_inited_(false),
-        is_closed_(false) {}
+        is_closed_(false),
+        run_cnt_(0) {}
   OF_DISALLOW_COPY_AND_MOVE(NNGraph);
   ~NNGraph();
 
@@ -68,6 +69,8 @@ class NNGraph final : public NNGraphIf {
   const std::vector<std::string>& outputs_tensor_meta_str() const;
   int64_t variable_op_size() const;
   const std::shared_ptr<vm::EagerBlobObjectList>& var_blobs() const;
+  int64_t run_cnt() const override { return run_cnt_; }
+  void NextRunCnt() override { run_cnt_++; }
 
   Maybe<void> RegisterAdditionalVarOpNamesAndTensorsToBeLoaded(
       const std::vector<std::string>& additional_var_names,
@@ -103,6 +106,10 @@ class NNGraph final : public NNGraphIf {
   std::vector<std::shared_ptr<one::UserOpExpr>> cached_op_exprs;
 
  private:
+  // Compile the full task graph for all ranks and then broadcast to all ranks.
+  Maybe<void> NaiveCompile();
+  // Each rank compile it's task graph.
+  Maybe<void> MasterAndWorkerRanksCompile();
   Maybe<void> RegisterFreeEagerTensorsToVariableOpNames();
   Maybe<void> RegisterNewVariableOpInJobPass();
   Maybe<void> DeleteOutdatedVariableInVariableTensorMgr();
@@ -137,6 +144,7 @@ class NNGraph final : public NNGraphIf {
   std::unique_ptr<Runtime> runtime_;
   bool runtime_inited_;
   bool is_closed_;
+  int64_t run_cnt_;
 };
 
 Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTuple& outputs,

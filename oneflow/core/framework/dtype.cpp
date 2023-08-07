@@ -126,25 +126,26 @@ bool DType::is_complex() const { return CHECK_JUST(DTypeMeta4DataType(data_type_
 */
 const int DType::priority_order[DataType_ARRAYSIZE] = {0,  /*kInvalid*/
                                                        3,  /*kChar*/
-                                                       13, /*kFloat32*/
-                                                       14, /*kDouble*/
+                                                       14, /*kFloat32*/
+                                                       15, /*kDouble*/
                                                        4,  /*kInt8*/
-                                                       7,  /*kInt32*/
-                                                       9,  /*kInt64*/
+                                                       8,  /*kInt32*/
+                                                       10, /*kInt64*/
                                                        2,  /*kUInt8*/
-                                                       19, /*kOFRecord*/
-                                                       12, /*kFloat16*/
-                                                       20, /*kTensorBuffer*/
-                                                       18, /*kBFloat16*/
+                                                       20, /*kOFRecord*/
+                                                       13, /*kFloat16*/
+                                                       21, /*kTensorBuffer*/
+                                                       19, /*kBFloat16*/
                                                        1,  /*kBool*/
-                                                       6,  /*kUint32*/
-                                                       8,  /*kUint64*/
-                                                       10, /*kUint128*/
-                                                       5,  /*kInt16*/
-                                                       11, /*kInt128*/
-                                                       15, /*kComplex32*/
-                                                       16, /*kComplex64*/
-                                                       17 /*kComplex128*/};
+                                                       5,  /*kUint16*/
+                                                       7,  /*kUint32*/
+                                                       9,  /*kUint64*/
+                                                       11, /*kUint128*/
+                                                       6,  /*kInt16*/
+                                                       12, /*kInt128*/
+                                                       16, /*kComplex32*/
+                                                       17, /*kComplex64*/
+                                                       18 /*kComplex128*/};
 
 bool DType::is_integer() const { return CHECK_JUST(DTypeMeta4DataType(data_type_)).is_integer(); }
 
@@ -225,24 +226,24 @@ Symbol<DType> promoteTypes(const Symbol<DType> a, const Symbol<DType> b) {
   static const Symbol<DType> _promoteTypesLookup[DataType_ARRAYSIZE][DataType_ARRAYSIZE] = {
       /*          iv   c1   f4   f8   i1   i4   i8   u1   re   f2   bu   bf   b1   u2   u4   u8   u16   i2   i16   cp4   cp8   cp16 */
       /* iv */   {iv,  c1,  f4,  f8,  i1,  i4,  i8,  u1,  re,  f2,  bu,  bf,  b1,  u2,  u4,  u8,  u16,  i2,  i16,  cp4,  cp8,  cp16},
-      /* c1 */   {c1,  c1,  f4,  f8,  i1,  i4,  i8,  c1,  iv,  f2,  iv,  bf,  c1,  u2,  u4,  u8,  u16,  i2,  i16,  iv,   cp4,  cp16},
-      /* f4 */   {f4,  f4,  f4,  f8,  f4,  f4,  f4,  f4,  iv,  f4,  iv,  bf,  f4,  f4,  f4,  f4,  f4,   f4,  f4,   iv,   cp4,  cp16},
-      /* f8 */   {f8,  f8,  f8,  f8,  f8,  f8,  f8,  f8,  iv,  f8,  iv,  bf,  f8,  f8,  f8,  f8,  f8,   f8,  f8,   iv,   cp4,  cp16},
-      /* i1 */   {i1,  i1,  f4,  f8,  i1,  i4,  i8,  i2,  iv,  f2,  iv,  bf,  i1,  i4,  i8,  i16, iv,   i2,  i16,  iv,   cp4,  cp16},
-      /* i4 */   {i4,  i4,  f4,  f8,  i4,  i4,  i8,  i4,  iv,  f2,  iv,  bf,  i4,  i4,  i8,  i16, iv,   i4,  i16,  iv,   cp4,  cp16},
-      /* i8 */   {i8,  i8,  f4,  f8,  i8,  i8,  i8,  i8,  iv,  f2,  iv,  bf,  i8,  i8,  i8,  i16, iv,   i8,  i16,  iv,   cp4,  cp16},
-      /* u1 */   {u1,  c1,  f4,  f8,  i2,  i4,  i8,  u1,  iv,  f2,  iv,  bf,  u1,  u2,  u4,  u8,  u16,  i2,  i16,  iv,   cp4,  cp16},
+      /* c1 */   {c1,  c1,  f4,  f8,  i1,  i4,  i8,  c1,  iv,  f2,  iv,  bf,  c1,  u2,  u4,  u8,  u16,  i2,  i16,  iv,   cp8,  cp16},
+      /* f4 */   {f4,  f4,  f4,  f8,  f4,  f4,  f4,  f4,  iv,  f4,  iv,  bf,  f4,  f4,  f4,  f4,  f4,   f4,  f4,   iv,   cp8,  cp16},
+      /* f8 */   {f8,  f8,  f8,  f8,  f8,  f8,  f8,  f8,  iv,  f8,  iv,  bf,  f8,  f8,  f8,  f8,  f8,   f8,  f8,   iv,   cp8,  cp16},
+      /* i1 */   {i1,  i1,  f4,  f8,  i1,  i4,  i8,  i2,  iv,  f2,  iv,  bf,  i1,  i4,  i8,  i16, iv,   i2,  i16,  iv,   cp8,  cp16},
+      /* i4 */   {i4,  i4,  f4,  f8,  i4,  i4,  i8,  i4,  iv,  f2,  iv,  bf,  i4,  i4,  i8,  i16, iv,   i4,  i16,  iv,   cp8,  cp16},
+      /* i8 */   {i8,  i8,  f4,  f8,  i8,  i8,  i8,  i8,  iv,  f2,  iv,  bf,  i8,  i8,  i8,  i16, iv,   i8,  i16,  iv,   cp8,  cp16},
+      /* u1 */   {u1,  c1,  f4,  f8,  i2,  i4,  i8,  u1,  iv,  f2,  iv,  bf,  u1,  u2,  u4,  u8,  u16,  i2,  i16,  iv,   cp8,  cp16},
       /* re */   {iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,   iv,  iv,   iv,   iv,   iv},
-      /* f2 */   {f2,  f2,  f4,  f8,  f2,  f2,  f2,  f2,  iv,  f2,  iv,  bf,  f2,  f2,  f2,  f2,  iv,   f2,  f2,   iv,   cp4,  cp16},
+      /* f2 */   {f2,  f2,  f4,  f8,  f2,  f2,  f2,  f2,  iv,  f2,  iv,  bf,  f2,  f2,  f2,  f2,  iv,   f2,  f2,   iv,   cp8,  cp16},
       /* bu */   {iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  bu,  iv,  iv,  iv,  iv,  iv,  iv,   iv,  iv,   iv,   iv,   iv},
-      /* bf */   {bf,  bf,  bf,  bf,  bf,  bf,  bf,  bf,  iv,  bf,  iv,  bf,  bf,  bf,  bf,  bf,  iv,   bf,  bf,   iv,   cp4,  cp16},
-      /* b1 */   {b1,  c1,  f4,  f8,  i1,  i4,  i8,  u1,  iv,  f2,  iv,  bf,  b1,  u2,  u4,  u8,  u16,  i2,  i16,  iv,   cp4,  cp16},
-      /* u2 */   {u2,  u2,  f4,  f8,  i4,  i4,  i8,  u2,  iv,  f2,  iv,  bf,  u2,  u2,  u4,  u8,  u16,  i4,  i16,  iv,   cp4,  cp16},
-      /* u4 */   {u4,  u4,  f4,  f8,  i8,  i8,  i8,  u4,  iv,  f2,  iv,  bf,  u4,  u4,  u4,  u8,  u16,  i8,  i16,  iv,   cp4,  cp16},
-      /* u8 */   {u8,  u8,  f4,  f8,  i16, i16, i16, u8,  iv,  f2,  iv,  bf,  u8,  u8,  u8,  u8,  u16,  i16, i16,  iv,   cp4,  cp16},
-      /* u16 */  {u16, u16, f4,  f8,  iv,  iv,  iv,  u16, iv,  f2,  iv,  bf,  u16, u16, u16, u16, u16,  iv,  iv,   iv,   cp4,  cp16},
-      /* i2 */   {i2,  i2,  f4,  f8,  i2,  i4,  i8,  i2,  iv,  f2,  iv,  bf,  i2,  i4,  i8,  i16, iv,   i2,  i16,  iv,   cp4,  cp16},
-      /* i16 */  {i16, i16, f4,  f8,  i16, i16, i16, i16, iv,  f2,  iv,  bf,  i16, i16, i16, i16, iv,   i16, i16,  iv,   cp4,  cp16},
+      /* bf */   {bf,  bf,  bf,  bf,  bf,  bf,  bf,  bf,  iv,  bf,  iv,  bf,  bf,  bf,  bf,  bf,  iv,   bf,  bf,   iv,   cp8,  cp16},
+      /* b1 */   {b1,  c1,  f4,  f8,  i1,  i4,  i8,  u1,  iv,  f2,  iv,  bf,  b1,  u2,  u4,  u8,  u16,  i2,  i16,  iv,   cp8,  cp16},
+      /* u2 */   {u2,  u2,  f4,  f8,  i4,  i4,  i8,  u2,  iv,  f2,  iv,  bf,  u2,  u2,  u4,  u8,  u16,  i4,  i16,  iv,   cp8,  cp16},
+      /* u4 */   {u4,  u4,  f4,  f8,  i8,  i8,  i8,  u4,  iv,  f2,  iv,  bf,  u4,  u4,  u4,  u8,  u16,  i8,  i16,  iv,   cp8,  cp16},
+      /* u8 */   {u8,  u8,  f4,  f8,  i16, i16, i16, u8,  iv,  f2,  iv,  bf,  u8,  u8,  u8,  u8,  u16,  i16, i16,  iv,   cp8,  cp16},
+      /* u16 */  {u16, u16, f4,  f8,  iv,  iv,  iv,  u16, iv,  f2,  iv,  bf,  u16, u16, u16, u16, u16,  iv,  iv,   iv,   cp8,  cp16},
+      /* i2 */   {i2,  i2,  f4,  f8,  i2,  i4,  i8,  i2,  iv,  f2,  iv,  bf,  i2,  i4,  i8,  i16, iv,   i2,  i16,  iv,   cp8,  cp16},
+      /* i16 */  {i16, i16, f4,  f8,  i16, i16, i16, i16, iv,  f2,  iv,  bf,  i16, i16, i16, i16, iv,   i16, i16,  iv,   cp8,  cp16},
       /* cp4 */  {iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,   iv,  iv,   cp4,  cp8,  cp16},
       /* cp8 */  {cp8, cp8, cp8, cp8, cp8, cp8, cp8, cp8, iv,  cp8, iv,  cp8, cp8, cp8, cp8, cp8, cp8,  cp8, cp8,  cp8,  cp8,  cp16},
       /* cp16 */ {cp16,cp16,cp16,cp16,cp16,cp16,cp16,cp16,iv,  cp16,iv,  cp16,cp16,cp16,cp16,cp16,cp16, cp16,cp16, cp16, cp16, cp16}};

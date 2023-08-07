@@ -38,7 +38,7 @@ add_docstr(
         >>> flow.nn.functional.prelu(x, alpha)
         tensor([[[[ 1.0000, -0.5000],
                   [ 3.0000,  4.0000]]]], dtype=oneflow.float32,
-               grad_fn=<prelu_backward>)
+               grad_fn=<preluBackward>)
    
     See
     :class:`~oneflow.nn.PReLU` for more details.

@@ -34,8 +34,7 @@ class OpGraph;
 class OpNode final : public Node<OpNode, OpEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpNode);
-  explicit OpNode(const std::shared_ptr<const ParallelDesc>& parallel_desc,
-                  const OperatorConf& op_conf);
+  explicit OpNode(Symbol<ParallelDesc> parallel_desc, const OperatorConf& op_conf);
   ~OpNode() = default;
 
   // Getters
@@ -43,6 +42,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   const Operator& op() const { return *op_; }
   std::shared_ptr<const Operator> shared_op() const { return op_; }
   const ParallelDesc& parallel_desc() const { return *parallel_desc_; }
+  Symbol<ParallelDesc> parallel_desc_sym() const { return parallel_desc_; }
   const SbpSignature& sbp_signature() const { return *CHECK_JUST(op().sbp_signature()); }
   const NdSbpSignature& nd_sbp_signature() const { return *CHECK_JUST(op().nd_sbp_signature()); }
   const SbpParallel& SbpParallel4Lbi(const LogicalBlobId& lbi) const;
@@ -67,7 +67,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   void InitLbi2SourceNode();
   void InitLbi2NdSbp();
 
-  std::shared_ptr<const ParallelDesc> parallel_desc_;
+  Symbol<ParallelDesc> parallel_desc_;
   std::shared_ptr<Operator> op_;
   HashSet<std::string> ibns_;
   HashMap<LogicalBlobId, OpNode*> lbi2source_node_;
@@ -88,6 +88,8 @@ class OpEdge final : public Edge<OpNode, OpEdge> {
   const std::vector<LogicalBlobId>& lbis() const { return *lbis_; }
   const HashMap<LogicalBlobId, std::string>& lbi2obn() const { return *lbi2obn_; }
   const HashMap<LogicalBlobId, std::vector<std::string>>& lbi2ibns() const { return *lbi2ibns_; }
+
+  bool NeedBoxing() const;
   std::string VisualStr() const override;
 
  private:
@@ -130,6 +132,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
 
   Maybe<void> Init(const Job& job);
 
+  std::function<bool(const OpNode* src, const OpNode* dst)> CreatePredicatorIsReachable() const;
   // Print the graph with SBP in order
   void PrintSBPGraphDebugInfo() const;
 
@@ -153,6 +156,13 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   HashMap<std::string, OpNode*> op_name2op_node_;
   std::list<std::string> op_names_;
   HashMap<std::string, HashSet<std::string>> producer_op_name2ctrl_consumer_op_names_;
+};
+
+class OpGraphSingletonGuard {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(OpGraphSingletonGuard);
+  explicit OpGraphSingletonGuard(const Job& job);
+  ~OpGraphSingletonGuard();
 };
 
 }  // namespace oneflow

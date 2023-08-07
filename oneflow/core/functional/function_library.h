@@ -64,7 +64,7 @@ class FunctionLibrary {
   template<typename... Fs>
   void add_functor(const std::string& func_name) {
     static_assert(sizeof...(Fs) > 0, "at least one functor is expected");
-    __attribute__((__unused__)) int dummy[] = {(add_one_functor<Fs>(func_name), 0)...};
+    (add_one_functor<Fs>(func_name), ...);
   }
 
   template<typename R, typename... Args>

@@ -158,6 +158,13 @@ Maybe<void> JobCompleter::Complete(Job* job) {
     // NOTE(chengcheng): this pass need as last pass for insert correct op with nccl boxing.
     JUST(JobPass4Name("InsertNcclLogicalOpPass")(job, &job_pass_ctx));
     compile_tc->Count("[GraphCompile]" + job_name + " InsertNcclLogicalOpPass", 1, true);
+    // NOTE(chengcheng): must do this pass after InsertNcclLogicalOpPass for nccl op fusion and
+    //    add ctrl stirct order.
+    JUST(JobPass4Name("NcclLogicalOpFusionPass")(job, &job_pass_ctx));
+    compile_tc->Count("[GraphCompile]" + job_name + " NcclLogicalOpFusionPass", 1, true);
+    JUST(JobPass4Name("NcclLogicalChainStrictOrderPass")(job, &job_pass_ctx));
+    compile_tc->Count("[GraphCompile]" + job_name + " NcclLogicalChainStrictOrderPass", 1, true);
+
     // NOTE(chengcheng): Because insert new logical nccl op, MUST dump time shape, sbp again.
     JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
     compile_tc->Count("[GraphCompile]" + job_name + " DumpBlobParallelConfPass", 1, true);
@@ -196,16 +203,19 @@ Maybe<void> JobCompleter::UpdateSharedGraphForNewInput(
     // Some op attributes need to be updated with the new traced graph.
     if (op_conf.has_user_conf()) {
       for (auto& pair : *op_conf.mutable_user_conf()->mutable_attr()) {
+        const auto* new_op_conf = JUST(NewOp4SharedOpName(op_conf.name()));
+        if (new_op_conf == nullptr) { continue; }
+        CHECK_EQ_OR_RETURN(new_op_conf->user_conf().op_type_name(),
+                           op_conf.user_conf().op_type_name())
+            << " new op " << new_op_conf->DebugString() << " is not corresponding with "
+            << op_conf.DebugString();
+        auto attr_iter = new_op_conf->user_conf().attr().find(pair.first);
+        CHECK_OR_RETURN(attr_iter != new_op_conf->user_conf().attr().end())
+            << " There is not attr " << pair.first << " in new op " << new_op_conf->DebugString();
         if (pair.second.has_at_shape()) {
-          const auto* new_op_conf = JUST(NewOp4SharedOpName(op_conf.name()));
-          CHECK_EQ_OR_RETURN(new_op_conf->user_conf().op_type_name(),
-                             op_conf.user_conf().op_type_name())
-              << " new op " << new_op_conf->DebugString() << " is not corresponding with "
-              << op_conf.DebugString();
-          auto attr_iter = new_op_conf->user_conf().attr().find(pair.first);
-          CHECK_OR_RETURN(attr_iter != new_op_conf->user_conf().attr().end())
-              << " There is not attr " << pair.first << " in new op " << new_op_conf->DebugString();
           *pair.second.mutable_at_shape() = attr_iter->second.at_shape();
+        } else if (pair.second.has_at_double()) {
+          pair.second.set_at_double(attr_iter->second.at_double());
         }
       }
     }
