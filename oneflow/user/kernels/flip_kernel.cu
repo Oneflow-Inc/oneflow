@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
@@ -51,6 +52,21 @@ __global__ void FlipGpuForward(const int32_t element, const int64_t total_dims,
   }
 }
 
+template<typename T>
+__global__ void FlipLastDimGpuForward(const int32_t element, const int64_t last_dim_size,
+                                             const T* in_dptr, T* out_dptr) {
+  __shared__ T shm[kCudaThreadsNumPerBlock];
+  CUDA_1D_KERNEL_LOOP(i, element) {
+    int32_t end_idx = min(blockDim.x, element);
+    shm[end_idx - threadIdx.x - 1] = in_dptr[i];
+    __syncthreads();
+    int32_t i_ori = i - 2 * threadIdx.x + end_idx - 1;
+    int32_t row = i_ori / last_dim_size;
+    int32_t col = last_dim_size - (i_ori - row * last_dim_size) - 1;
+    out_dptr[row * last_dim_size + col] = shm[threadIdx.x];
+  }
+}
+
 }  // namespace
 
 template<typename T>
@@ -72,14 +88,19 @@ class FlipGpuKernel final : public user_op::OpKernel {
     VIS vis;
     for (auto x : dims) { vis.val[x] = true; }
 
+    if (dims.size() == 1 && dims[0] == x_tensor->shape_view().NumAxes() - 1) {
+      FlipLastDimGpuForward<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                                        ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+          elem_cnt, x_tensor->shape_view().At(total_dims - 1), x_tensor->dptr<T>(), y_tensor->mut_dptr<T>());
+      return;
+    }
+
     SIZE_V sizes_v;
     for (int32_t i = 0; i < total_dims; i++) { sizes_v.val[i] = y_tensor->shape_view().At(i); }
 
-    // TODO(bbuf) delete strides caluculate, after tensor strides supported
     SIZE_V strides_v;
-    strides_v.val[total_dims - 1] = 1;
-    for (int32_t i = total_dims - 2; i >= 0; i--) {
-      strides_v.val[i] = strides_v.val[i + 1] * y_tensor->shape_view().At(i + 1);
+    for (int32_t i = 0; i < total_dims; i++) {
+      strides_v.val[i] = CHECK_JUST(VectorAt(y_tensor->stride(), i));
     }
     RUN_CUDA_KERNEL((FlipGpuForward<T>), ctx->stream(), elem_cnt, elem_cnt, total_dims, sizes_v,
                     vis, strides_v, x_tensor->dptr<T>(), y_tensor->mut_dptr<T>());
