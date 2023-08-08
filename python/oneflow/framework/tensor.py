@@ -532,8 +532,10 @@ def _conj(self):
 def _conj_physical(self):
     return flow._C.conj_physical(self)
 
+
 def _storage(self):
     return self
+
 
 @property
 def _layout(self):
