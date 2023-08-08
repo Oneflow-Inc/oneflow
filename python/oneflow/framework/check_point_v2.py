@@ -527,6 +527,9 @@ def is_file_and_support_pytorch_format(
             content = torch.load(path, map_location="cpu")
             return True, (content,)
     except:
+        if os.getenv("ONEFLOW_DEBUG_CHECKPOINT") == "1":
+            import traceback
+            traceback.print_exc()
         return False
 
 
