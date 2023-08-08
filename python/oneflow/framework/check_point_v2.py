@@ -529,6 +529,7 @@ def is_file_and_support_pytorch_format(
     except:
         if os.getenv("ONEFLOW_DEBUG_CHECKPOINT") == "1":
             import traceback
+
             traceback.print_exc()
         return False
 
