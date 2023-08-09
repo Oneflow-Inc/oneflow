@@ -11144,10 +11144,10 @@ def OneFlow_IsInfOp : OneFlow_BaseOp<"isinf", [NoMemoryEffect, NoGrad, DeclareOp
 
 def OneFlow_BitwiseNotOp : OneFlow_BaseOp<"bitwise_not", [NoMemoryEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    OneFlow_Tensor:$in
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    OneFlow_Tensor:$out
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
