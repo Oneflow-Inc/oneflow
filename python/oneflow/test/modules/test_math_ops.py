@@ -108,14 +108,14 @@ class TestLogModule(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestSqrt(flow.unittest.TestCase):
-    @autotest(n=5)
+    @autotest(n=10, include_complex=True)
     def test_sqrt_flow_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
         z = torch.sqrt(x)
         return z
 
-    @autotest(n=5)
+    @autotest(n=10, include_complex=True)
     def test_sqrt_tensor_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
@@ -583,8 +583,7 @@ class TestCoshModule(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestLgammaModule(flow.unittest.TestCase):
-    # TODO: Add lgamma backward.
-    @autotest(n=5, auto_backward=False)
+    @autotest(n=5)
     def test_lgamma_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
@@ -611,8 +610,7 @@ class TestLog10Module(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestDigammaModule(flow.unittest.TestCase):
-    # TODO:shijiaxing  When the grad function be implemented, rm "auto_backward=False"
-    @autotest(n=5, auto_backward=False)
+    @autotest(n=5)
     def test_digamma_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)

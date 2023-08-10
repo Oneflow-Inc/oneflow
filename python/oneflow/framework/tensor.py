@@ -380,7 +380,7 @@ def _where(self, x=None, y=None):
     return flow.where(self, x, y)
 
 
-def _numpy(self):
+def _numpy(self, dtype=None):
     assert (
         not self.is_lazy
     ), "tensor.numpy() is not allowed to be called in nn.Graph.build(*args) or be called by lazy tensor."
@@ -408,7 +408,10 @@ def _numpy(self):
     assert self.is_local
     if self.device != flow.device("cpu"):
         self = self.cpu()
-    return self.to_numpy()
+    result = self.to_numpy()
+    if dtype is None:
+        return result
+    return result.astype(dtype)
 
 
 def zero_(self):
@@ -530,6 +533,15 @@ def _conj_physical(self):
     return flow._C.conj_physical(self)
 
 
+def _storage(self):
+    return self
+
+
+@property
+def _layout(self):
+    return flow.strided
+
+
 def RegisterMethods():
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _numpy
@@ -601,6 +613,8 @@ def RegisterMethods():
     Tensor.imag = _imag
     Tensor.conj = _conj
     Tensor.conj_physical = _conj_physical
+    Tensor.layout = _layout
+    Tensor.storage = _storage
 
 
 def register_tensor_op(op_name):

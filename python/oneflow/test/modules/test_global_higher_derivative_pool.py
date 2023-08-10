@@ -117,6 +117,7 @@ def _test_adaptive_pool_grad_grad_impl(test_case, placement, ndim, mode):
     _check_equal(test_case, ddy.pytorch, ddy.oneflow, "ddy")
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestGlobalPoolHigherDerivative(flow.unittest.TestCase):
     @globaltest
     def test_max_pool_1d_grad_grad(test_case):

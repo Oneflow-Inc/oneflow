@@ -14,87 +14,80 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "pocketfft_hdronly.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/core/ep/cuda/cuda_stream.h"
-#include "pocketfft_hdronly.h"
 #include "oneflow/core/kernel/kernel.h"
-using namespace pocketfft;
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 namespace {
 
-enum class FFT_EXCUTETYPE { R2C, C2C };
+enum class FFT_EXCUTETYPE { R2C, C2C, C2R };
 
-template<typename IN, typename OUT>
+template<typename dtype>
 struct PocketFFtParams {
-  shape_t input_shape;
-  shape_t output_shape;
-  stride_t in_stridef;
-  stride_t out_stridef;
-  shape_t axes;
   bool IsForward;
   FFT_EXCUTETYPE excute_type;
-  IN fct;
+  dtype fct;
+  pocketfft::shape_t axes;
+  pocketfft::stride_t in_stridef;
+  pocketfft::stride_t out_stridef;
+  pocketfft::shape_t input_shape;
+  pocketfft::shape_t output_shape;
   PocketFFtParams() = default;
-  PocketFFtParams(const Shape& in_shape, const Shape& out_shape, const bool is_froward, const IN f,
-                  FFT_EXCUTETYPE type)
-      : IsForward(is_froward), excute_type(type), fct(f) {
+  PocketFFtParams(const Shape& in_shape, const Shape& out_shape, const Stride& in_stride,
+                  const Stride& out_stride, const std::vector<int64_t>& dims, const bool is_forward,
+                  const dtype f, FFT_EXCUTETYPE type)
+      : IsForward(is_forward),
+        excute_type(type),
+        fct(f),
+        axes(dims.begin(), dims.end()),
+        in_stridef(in_stride.begin(), in_stride.end()),
+        out_stridef(out_stride.begin(), out_stride.end()) {
     input_shape.resize(in_shape.size());
     output_shape.resize(out_shape.size());
-    in_stridef.resize(input_shape.size());
-    out_stridef.resize(output_shape.size());
-    axes.resize(input_shape.size());
 
     std::copy(in_shape.begin(), in_shape.end(), input_shape.begin());
     std::copy(out_shape.begin(), out_shape.end(), output_shape.begin());
-    std::iota(axes.begin(), axes.end(), 0);
 
-    size_t out_tmpf = sizeof(OUT);
-    size_t in_tmpf = sizeof(IN);
-    for (int i = input_shape.size() - 1; i >= 0; --i) {
-      in_stridef[i] = in_tmpf;
-      in_tmpf *= input_shape[i];
-      out_stridef[i] = out_tmpf;
-      out_tmpf *= output_shape[i];
-    }
+    // calc element size
+    size_t in_elemsize = type == FFT_EXCUTETYPE::C2C || type == FFT_EXCUTETYPE::C2R
+                             ? sizeof(std::complex<dtype>)
+                             : sizeof(dtype);
+    size_t out_elemsize = type == FFT_EXCUTETYPE::R2C || type == FFT_EXCUTETYPE::C2C
+                              ? sizeof(std::complex<dtype>)
+                              : sizeof(dtype);
+    for (auto& s : in_stridef) { s *= in_elemsize; }
+    for (auto& s : out_stridef) { s *= out_elemsize; }
   }
 };
 
-template<typename IN, typename OUT>
+template<typename dtype>
 class PocketFFtConfig {
  public:
   PocketFFtConfig(const PocketFFtConfig&) = delete;
   PocketFFtConfig& operator=(PocketFFtConfig const&) = delete;
 
-  explicit PocketFFtConfig(const PocketFFtParams<IN, OUT>& params) : fftparams(params) {}
+  explicit PocketFFtConfig(const PocketFFtParams<dtype>& params) : fftparams(params) {}
 
-  void excute(const IN* in, OUT* out, int64_t dims, int64_t batch, int64_t len) {
-    int64_t in_offset = len;
-    int64_t out_offset = len / 2 + 1;
-    for (int j = 0; j < dims; j++) {
-      for (int i = 0; i < batch; i++) {
-        const IN* data_in = in + j * batch * in_offset + i * in_offset;
-        OUT* data_out = out + j * batch * out_offset + i * out_offset;
-        switch (fftparams.excute_type) {
-          case FFT_EXCUTETYPE::R2C:
-            r2c(fftparams.input_shape, fftparams.in_stridef, fftparams.out_stridef, fftparams.axes,
-                fftparams.IsForward, data_in, data_out, fftparams.fct);
-            break;
+  void excute(const std::complex<dtype>* in, std::complex<dtype>* out) {
+    pocketfft::c2c(fftparams.input_shape, fftparams.in_stridef, fftparams.out_stridef,
+                   fftparams.axes, fftparams.IsForward, in, out, fftparams.fct);
+  }
 
-          case FFT_EXCUTETYPE::C2C:
-            // c2c(fftparams.input_shape, fftparams.in_stridef, fftparams.out_stridef,
-            // fftparams.axes, fftparams.IsForward, in,
-            //     out, fftparams.fct);
-            break;
-          default: break;
-        }
-      }
-    }
+  void excute(const dtype* in, std::complex<dtype>* out) {
+    pocketfft::r2c(fftparams.input_shape, fftparams.in_stridef, fftparams.out_stridef,
+                   fftparams.axes, fftparams.IsForward, in, out, fftparams.fct);
+  }
+
+  void excute(const std::complex<dtype>* in, dtype* out) {
+    pocketfft::c2r(fftparams.output_shape, fftparams.in_stridef, fftparams.out_stridef,
+                   fftparams.axes, fftparams.IsForward, in, out, fftparams.fct);
   }
 
  private:
-  PocketFFtParams<IN, OUT> fftparams;
+  PocketFFtParams<dtype> fftparams;
 };
 
 }  // namespace

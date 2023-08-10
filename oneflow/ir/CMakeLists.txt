@@ -123,6 +123,7 @@ if(BUILD_PYTHON)
     PATTERN llvm/ADT/STLArrayExtras.h
     PATTERN llvm/ADT/STLForwardCompat.h
     PATTERN llvm/ADT/StringRef.h
+    PATTERN llvm/ADT/bit.h
     PATTERN llvm/Config/abi-breaking.h
     PATTERN llvm/Config/llvm-config.h
     PATTERN llvm/Support/Compiler.h

@@ -35,7 +35,10 @@ Symbol<DType> ComputeCommonDType(const TensorTuple& tensor_tuple) {
       [](const std::shared_ptr<Tensor>& tensor) { return tensor->shape()->NumAxes() == 0; });
   for (auto& tensor_ptr : tensor_tuple) {
     // skip scalar tensor
-    if (!all_scalar_tensors && tensor_ptr->shape()->NumAxes() == 0) { continue; }
+    if (!all_scalar_tensors && tensor_ptr->shape()->NumAxes() == 0
+        && !(tensor_ptr->dtype()->is_complex())) {
+      continue;
+    }
     common_dtype = promoteTypes(tensor_ptr->dtype(), common_dtype);
   }
   return common_dtype;
@@ -114,7 +117,9 @@ Maybe<void> TensorProcessor::Apply() {
       }
       JUST(CastToSameType(tensor_tuple_, common_dtype_));
     } else {
-      if (tensor_tuple_.size() == 1 && !tensor_tuple_[0]->dtype()->is_floating_point()) {
+      if (tensor_tuple_.size() == 1
+          && !((tensor_tuple_[0]->dtype()->is_floating_point())
+               || tensor_tuple_[0]->dtype()->is_complex())) {
         Symbol<DType> cast_dtype = (inputs_lowest_dtype_vec_[0] == DType::InvalidDataType())
                                        ? DType::Float()
                                        : inputs_lowest_dtype_vec_[0];
@@ -220,7 +225,8 @@ Maybe<void> TensorAutoCastProcessor::Apply() {
     for (int i = 0; i < inputs_.size(); ++i) {
       if (args_eligible[i] && JUST(IsDeviceType(inputs_[i], autocast_device_type))
           && inputs_[i]->dtype()->is_floating_point() && inputs_[i]->dtype() != autocast_dtype) {
-        autocast_inputs_[i] = JUST(functional::To(inputs_[i], autocast_dtype, /*copy*/ false));
+        autocast_inputs_[i] = JUST(autocast::cached_cast(inputs_[i], autocast_dtype,
+                                                         JUST(inputs_[i]->device())->enum_type()));
       } else {
         autocast_inputs_[i] = inputs_[i];
       }

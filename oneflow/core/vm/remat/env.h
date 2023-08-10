@@ -15,7 +15,11 @@ limitations under the License.
 */
 #pragma once
 
+#include "oneflow/core/common/env_var/remat.h"
 #include "oneflow/core/common/util.h"
+
+#define VLOG_REMAT(verbose_level) \
+  if (Singleton<remat::Env>::Get()->log_enabled()) VLOG(verbose_level)
 
 namespace oneflow {
 
@@ -59,13 +63,13 @@ class Env {
 
   std::set<vm::RematableTensorStorage*> need_eager_eviction_storages;
 
-  std::string current_op_type_name;
-
-  void set_budget_in_bytes(int64_t budget_in_bytes) { budget_in_bytes_ = budget_in_bytes; }
-  int64_t budget_in_bytes() const { return budget_in_bytes_; }
+  void set_budget_in_bytes(size_t budget_in_bytes) { budget_in_bytes_ = budget_in_bytes; }
+  size_t budget_in_bytes() const { return budget_in_bytes_; }
 
   void set_small_pieces_optimization(bool enabled) { small_pieces_optimization_ = enabled; }
   bool is_small_pieces_optimization_enabled() const { return small_pieces_optimization_; }
+
+  bool log_enabled() const { return EnvBool<ONEFLOW_REMAT_LOG>(); }
 
  private:
   double time_now_ = 0;
@@ -74,8 +78,12 @@ class Env {
   int forced_eviction_num_ = 0;
   int recomputation_num_ = 0;
 
-  int budget_in_bytes_ = 0;
+  size_t budget_in_bytes_ = 0;
   bool small_pieces_optimization_ = true;
+};
+
+struct CurrentOpTypeName {
+  std::string value;
 };
 
 }  // namespace remat

@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/graph/task_stream_id.h"
+#include "oneflow/core/graph/boxing_task_graph.pb.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 
 namespace oneflow {
@@ -95,7 +96,8 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
   } else {
     LOG(FATAL) << "unknow copy type: " << copy_type_;
   }
-  conf.set_name(std::string(copy_type_name) + "_" + NewUniqueId());
+  conf.set_name(std::string(copy_type_name) + "_" + lbi().op_name() + "-" + lbi().blob_name() + "_"
+                + std::to_string(task_id()));
   *conf.mutable_user_conf()->mutable_op_type_name() = copy_type_name;
   auto in_regst = GetSoleConsumedRegst("copy_in");
   CHECK_EQ(in_regst->NumOfLbi(), 1);

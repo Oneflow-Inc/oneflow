@@ -1,0 +1,17 @@
+#include "OneFlow/OneFlowOps.td"
+
+Constraint IsFuncArguments(value: Value) [{
+  return success(llvm::dyn_cast<mlir::BlockArgument>(value));
+}];
+
+Pattern {
+  arg: Value;
+  let alloc = op<memref.alloc>();
+  let copy = op<memref.copy>(alloc.0, arg);
+  IsFuncArguments(arg);
+
+  rewrite alloc with {
+    erase copy;
+    replace alloc with arg;
+  };
+}

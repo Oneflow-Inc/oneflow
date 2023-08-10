@@ -55,6 +55,7 @@ namespace primitive {
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kCos)             \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kCosh)            \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kDigamma)         \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kTrigamma)        \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kErf)             \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kErfc)            \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kExp)             \
@@ -86,6 +87,19 @@ namespace primitive {
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kNanAssign)       \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kFastGelu)        \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kQuickGelu)
+
+#define UNARY_COMPLEX_C2C_OP_SEQ       \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kConj) \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSqrt) \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kNegative)
+
+#define UNARY_COMPLEX_C2R_OP_SEQ       \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kReal) \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kImag)
+
+#define UNARY_COMPLEX_R2C_OP_SEQ           \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRealGrad) \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kImagGrad)
 
 #define UNARY_INT_MATH_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAbs)
 

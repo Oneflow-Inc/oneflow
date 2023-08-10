@@ -36,6 +36,7 @@ class TmpBufferManager {
     ShapeView shape_view() const override { return tensor_desc_->shape(); }
     const Stride& stride() const override { return tensor_desc_->stride(); }
     DataType data_type() const override { return tensor_desc_->data_type(); }
+    MemoryFormat memory_format() const override { return tensor_desc_->memory_format(); }
     MutShapeView mut_shape_view() override { TODO(); }
     const MemoryCase& mem_case() const override { return tensor_->mem_case(); }
 
@@ -58,6 +59,7 @@ class TmpBufferManager {
     ShapeView shape_view() const override { return shape_; }
     const Stride& stride() const override { return tensor_->stride(); }
     DataType data_type() const override { return tensor_->data_type(); }
+    MemoryFormat memory_format() const override { return tensor_->memory_format(); }
     MutShapeView mut_shape_view() override { return shape_; }
     const MemoryCase& mem_case() const override { return tensor_->mem_case(); }
 

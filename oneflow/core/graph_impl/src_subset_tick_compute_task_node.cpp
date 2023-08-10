@@ -30,6 +30,7 @@ class SrcSubsetTickCompTaskNode final : public CompTaskNode {
  private:
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
+  void ConsumeFakeRegsts() override;
   void BuildExecGphAndRegst() override;
 };
 
@@ -42,6 +43,8 @@ void SrcSubsetTickCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in");
   ForEachInDataEdge([&](TaskEdge* edge) { ConsumeRegst("in", edge->GetSoleRegst()); });
 }
+
+void SrcSubsetTickCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
 
 void SrcSubsetTickCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();

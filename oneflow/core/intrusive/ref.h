@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_INTRUSIVE_REF_H_
 
 #include <atomic>
-#include <glog/logging.h>
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/intrusive/cpp_attribute.h"
 
 namespace oneflow {

@@ -49,6 +49,15 @@ class BroadcastDivGradKernel final : public user_op::OpKernel {
                       z_tensor->dptr(), y_tensor->shape_view().NumAxes(),
                       y_tensor->shape_view().ptr(), y_tensor->dptr<T>(), tmp_buffer->mut_dptr<T>());
 
+    if (IsComplexDataType(z_tensor->data_type())) {
+      auto conj = ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
+          ctx->device_type(), ep::primitive::UnaryOp::kConj, z_tensor->data_type(),
+          z_tensor->data_type());
+      CHECK(conj);
+      const int64_t elem_cnt = dz_tensor->shape_view().elem_cnt();
+      conj->Launch(ctx->stream(), tmp_buffer->dptr<T>(), tmp_buffer->mut_dptr<T>(), elem_cnt);
+    }
+
     auto bcast_mul = ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
         ctx->device_type(), ep::primitive::BinaryOp::kMul, dz_tensor->data_type(),
         dz_tensor->data_type(), dz_tensor->shape_view().NumAxes());
@@ -89,9 +98,15 @@ class BroadcastDivGradKernel final : public user_op::OpKernel {
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BROADCAST_DIV_GRAD_KERNEL, DEVICE_TYPE_SEQ,
                                  ARITHMETIC_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BROADCAST_DIV_GRAD_KERNEL,
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU), COMPLEX_DATA_TYPE_SEQ)
 #ifdef WITH_CUDA
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BROADCAST_DIV_GRAD_KERNEL, (DeviceType::kCUDA),
                                  FLOAT16_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BROADCAST_DIV_GRAD_KERNEL, (DeviceType::kCUDA),
+                                 OF_PP_MAKE_TUPLE_SEQ(cuComplex, DataType::kComplex64))
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BROADCAST_DIV_GRAD_KERNEL, (DeviceType::kCUDA),
+                                 OF_PP_MAKE_TUPLE_SEQ(cuDoubleComplex, DataType::kComplex128))
 #endif
 
 }  // namespace oneflow

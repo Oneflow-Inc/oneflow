@@ -39,7 +39,7 @@ rng = np.random.default_rng()
 annotation2default_generator = {}
 annotation2torch_to_flow_converter = {}
 NoneType = type(None)
-random_value_default_range = {int: (-10, 11), float: (-1, 1)}
+random_value_default_range = {int: (-10, 11), float: (-1, 1), complex: (-10, 10)}
 
 
 def data_generator(annotation):
@@ -261,6 +261,10 @@ class random(generator):
             val = float(rng.random() * (high - low) + low)
         elif annotation == bool:
             val = random_util.choice([True, False])
+        elif annotation == complex:
+            val_real = float(rng.random() * (high - low) + low)
+            val_imag = float(rng.random() * (high - low) + low)
+            val = val_real + 1.0j * val_imag
         elif annotation is None:
             val = None
         elif annotation is NoneType:
@@ -374,6 +378,14 @@ class random_pytorch_tensor(generator):
             if pin_memory:
                 res = res.pin_memory()
             return res
+        elif dtype == complex:
+            np_arr = rng.uniform(low=low, high=high, size=shape) + 1.0j * rng.uniform(
+                low=low, high=high, size=shape
+            )
+            res = torch.tensor(np_arr, dtype=torch.complex64)
+            if pin_memory:
+                res = res.pin_memory()
+            return res
         else:
             raise NotImplementedError(f"Not implemented dtype {dtype} in random")
 
@@ -417,6 +429,7 @@ class random_pytorch_dtype(generator):
     floating_dtype_seq = [torch.float, torch.double]
     half_dtype_seq = [torch.half]
     bfloat16_dtype_seq = [torch.bfloat16]
+    complex_dtype_seq = [torch.complex64, torch.complex128]
     signed_int_dtype_seq = [torch.int8, torch.int32, torch.int64]
     unsigned_int_dtype_seq = [torch.uint8]
     int_dtype_seq = [torch.int8, torch.int32, torch.int64]
@@ -432,6 +445,7 @@ class random_pytorch_dtype(generator):
         "float": floating_dtype_seq,
         "half": half_dtype_seq,
         "bfloat16": bfloat16_dtype_seq,
+        "complex": complex_dtype_seq,
         "signed": signed_int_dtype_seq,
         "unsigned": unsigned_int_dtype_seq,
         "int": int_dtype_seq,

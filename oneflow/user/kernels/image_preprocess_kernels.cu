@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/memory_format.pb.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/small_vector.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
@@ -24,11 +25,6 @@ namespace {
 
 struct NormalizeVal {
   float val[3];
-};
-
-enum TensorLayout {
-  kNCHW = 0,
-  kNHWC = 1,
 };
 
 class NormalizeAttr final : public user_op::OpKernelState {
@@ -62,15 +58,14 @@ class NormalizeAttr final : public user_op::OpKernelState {
   NormalizeVal inv_std_;
 };
 
-template<TensorLayout layout>
+template<MemoryFormat layout>
 __device__ __forceinline__ void OutIdx2InIdx(int32_t* out_idx, int32_t* in_idx,
                                              const int8_t* mirror_dptr, int32_t out_W,
                                              int32_t H_offset, int32_t W_offset);
 template<>
-__device__ __forceinline__ void OutIdx2InIdx<TensorLayout::kNCHW>(int32_t* out_idx, int32_t* in_idx,
-                                                                  const int8_t* mirror_dptr,
-                                                                  int32_t out_W, int32_t H_offset,
-                                                                  int32_t W_offset) {
+__device__ __forceinline__ void OutIdx2InIdx<MemoryFormat::kContiguous>(
+    int32_t* out_idx, int32_t* in_idx, const int8_t* mirror_dptr, int32_t out_W, int32_t H_offset,
+    int32_t W_offset) {
   if (mirror_dptr && mirror_dptr[out_idx[0]]) { out_idx[3] = out_W - 1 - out_idx[3]; }
   in_idx[0] = out_idx[0];             // N
   in_idx[1] = out_idx[2] + H_offset;  // H
@@ -79,10 +74,9 @@ __device__ __forceinline__ void OutIdx2InIdx<TensorLayout::kNCHW>(int32_t* out_i
 }
 
 template<>
-__device__ __forceinline__ void OutIdx2InIdx<TensorLayout::kNHWC>(int32_t* out_idx, int32_t* in_idx,
-                                                                  const int8_t* mirror_dptr,
-                                                                  int32_t out_W, int32_t H_offset,
-                                                                  int32_t W_offset) {
+__device__ __forceinline__ void OutIdx2InIdx<MemoryFormat::kChannelsLast>(
+    int32_t* out_idx, int32_t* in_idx, const int8_t* mirror_dptr, int32_t out_W, int32_t H_offset,
+    int32_t W_offset) {
   if (mirror_dptr && mirror_dptr[out_idx[0]]) { out_idx[2] = out_W - 1 - out_idx[2]; }
   in_idx[0] = out_idx[0];             // N
   in_idx[1] = out_idx[1] + H_offset;  // H
@@ -90,7 +84,7 @@ __device__ __forceinline__ void OutIdx2InIdx<TensorLayout::kNHWC>(int32_t* out_i
   in_idx[3] = out_idx[3];             // C
 }
 
-template<TensorLayout layout>
+template<MemoryFormat layout>
 __global__ void CropMirrorNormalizeGpuImpl(int32_t elem_cnt, const uint8_t* in_dptr,
                                            float* out_dptr, const int8_t* mirror_dptr,
                                            int32_t out_W,
@@ -179,7 +173,7 @@ class CropMirrorNormalizeGpuKernel final : public user_op::OpKernel {
       int32_t H_offset = (in_H - out_H) * crop_pos_y;
       int32_t W_offset = (in_W - out_W) * crop_pos_x;
       const NdIndexOffsetHelper<int32_t, 4> out_helper(N, C, out_H, out_W);
-      CropMirrorNormalizeGpuImpl<TensorLayout::kNCHW>
+      CropMirrorNormalizeGpuImpl<MemoryFormat::kContiguous>
           <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
              ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
               elem_cnt, in_dptr, out_dptr, mirror_dptr, out_W, in_helper, out_helper, H_offset,
@@ -194,7 +188,7 @@ class CropMirrorNormalizeGpuKernel final : public user_op::OpKernel {
       int32_t H_offset = (in_H - out_H) * crop_pos_y;
       int32_t W_offset = (in_W - out_W) * crop_pos_x;
       const NdIndexOffsetHelper<int32_t, 4> out_helper(N, out_H, out_W, C);
-      CropMirrorNormalizeGpuImpl<TensorLayout::kNHWC>
+      CropMirrorNormalizeGpuImpl<MemoryFormat::kChannelsLast>
           <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
              ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
               elem_cnt, in_dptr, out_dptr, mirror_dptr, out_W, in_helper, out_helper, H_offset,

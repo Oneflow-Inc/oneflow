@@ -140,7 +140,7 @@ void ExecNode::InferBlobDescsByInputs(const ParallelContext* parallel_ctx) {
         nd_sbp_signature, parallel_ctx, GetBlobDesc4BnInOp));
   }
   CHECK_JUST_MSG(op_->InferBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, &GlobalJobDesc()),
-                 std::stringstream() << " infer blob descs if failed, op name " << op_->op_loc());
+                 std::stringstream() << " infer blob descs is failed, op name " << op_->op_loc());
   if (op_node != nullptr && parallel_ctx->parallel_num() > 1 && nd_sbp_signature != nullptr) {
     CHECK_JUST(CheckPhysicalBlobDesc(
         *op(), op()->output_bns(),
@@ -162,7 +162,7 @@ void ExecNode::InferBlobDescsByNdSbp(const ParallelContext* parallel_ctx) {
     if (ibns.count(bn_in_op) > 0) {
       auto iter = ibn2blob_desc.find(bn_in_op);
       if (iter == ibn2blob_desc.end()) {
-        iter = ibn2blob_desc.emplace(bn_in_op, kInvalidDataType).first;
+        iter = ibn2blob_desc.emplace(bn_in_op, BlobDesc(kInvalidDataType, kContiguous)).first;
       }
       return &iter->second;
     }
