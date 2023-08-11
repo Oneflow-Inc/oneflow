@@ -661,7 +661,8 @@ Maybe<void> NNGraph::BuildWithNewInputFromSharedGraph(
       [&shared_op_name2_new_op](const std::string& shared_op_name) -> Maybe<const OperatorConf*> {
     auto iter = shared_op_name2_new_op.find(shared_op_name);
     if (iter == shared_op_name2_new_op.end()) {
-      LOG(WARNING) << "Can't find new operator conf of " << shared_op_name << ".";
+      VLOG(1) << "Can't find new traced operator conf for op " << shared_op_name
+              << " in the shared graph from the base graph. This op is not shared between graphs.";
       return nullptr;
     }
     return iter->second;
