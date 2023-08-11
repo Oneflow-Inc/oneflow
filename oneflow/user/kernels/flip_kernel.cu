@@ -90,12 +90,11 @@ class FlipGpuKernel final : public user_op::OpKernel {
     for (auto x : dims) { vis.val[x] = true; }
 
     if (dims.size() == 1 && dims[0] == x_tensor->shape_view().NumAxes() - 1) {
-        FlipLastDimGpuForward<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock,
-       0,
-                                  ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-           elem_cnt, x_tensor->shape_view().At(total_dims - 1), x_tensor->dptr<T>(),
-           y_tensor->mut_dptr<T>());
-       return;
+      FlipLastDimGpuForward<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+          elem_cnt, x_tensor->shape_view().At(total_dims - 1), x_tensor->dptr<T>(),
+          y_tensor->mut_dptr<T>());
+      return;
     }
 
     SIZE_V sizes_v;
