@@ -13,8 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
 import oneflow
-from .torch_fx_to_oneflow import fx_tranform
+from .from_torch_script import script_tranform
+from .from_torch_fx import fx_tranform
 
 
 def register_ofrt():
@@ -31,10 +33,18 @@ def register_ofrt():
         print("my_compiler() called with FX graph:")
         gm.graph.print_tabular()
         print("gm ", gm)
+
+        from_script = os.getenv("ofrt_from_script", "True").lower() in (
+            "true",
+            "1",
+            "t",
+        )
+        if from_script:
+            oneflow_fn = script_tranform(gm, example_inputs)
+        else:
+            oneflow_fn = fx_tranform(gm)
+
         import oneflow as flow
-
-        oneflow_fn = fx_tranform(gm)
-
         def from_to_torch(inputs):
             flow_inputs = flow.utils.tensor.from_torch(inputs)
             flow_outs = oneflow_fn(flow_inputs)

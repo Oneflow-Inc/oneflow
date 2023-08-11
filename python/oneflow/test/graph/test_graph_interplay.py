@@ -17,10 +17,13 @@ import os
 import unittest
 import numpy as np
 
+# Must import torch before oneflow, otherwise torch.jit.trace will raise error:
+#  terminate called after throwing an instance of 'pybind11::stop_iteration'
+import torch
 import oneflow.unittest
 
 
-def _test_relu(test_case, device):
+def _test_relu(test_case, device, from_script=False):
     from typing import List
     import torch
     from oneflow.utils.backend.torch_compile import register_ofrt
@@ -41,6 +44,7 @@ def _test_relu(test_case, device):
     x = torch.tensor(input_arr, device=device)
     eager_out = torch.relu(x)
 
+    os.environ["ofrt_from_script"] = str(from_script)
     os.environ["ofrt_enable_graph"] = "1"
 
     @torch.compile(backend="ofrt")
@@ -210,10 +214,13 @@ def __test_linear(test_case, device):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @oneflow.unittest.skip_unless_1n1d()
 class TestAsTorchBackend(oneflow.unittest.TestCase):
-    def test_relu(test_case):
-        _test_relu(test_case, "cuda")
+    def test_relu_with_fx(test_case):
+        _test_relu(test_case, "cuda", False)
 
-    def test_linear(test_case):
+    def test_relu_with_script(test_case):
+        _test_relu(test_case, "cuda", True)
+
+    def _test_linear(test_case):
         _test_linear(test_case, "cuda")
 
 
