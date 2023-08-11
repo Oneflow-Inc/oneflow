@@ -33,6 +33,7 @@ def fx_tranform(gm):
     if not enable_graph:
         oneflow_fn = of_gm.forward
     else:
+
         @flow.nn.Graph.trace
         def oneflow_fn(inputs):
             outs = of_gm.forward(inputs)
@@ -40,6 +41,7 @@ def fx_tranform(gm):
 
         oneflow_fn.debug(1)
     return oneflow_fn
+
 
 def to_of_transform(
     gm: torch.fx.GraphModule, tracer_class: type = fx.Tracer
