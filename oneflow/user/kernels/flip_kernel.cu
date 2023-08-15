@@ -52,7 +52,6 @@ __global__ void FlipGpuForward(const int32_t element, const int64_t total_dims,
   }
 }
 
-
 /*
 Example tensor:
 [[0, 1, 2, 3, 4, 5, 6, 7],
@@ -63,9 +62,10 @@ For each block_i, `block_begin_idx` is calculated as (i - 1) * BlockSize = (i - 
 and `thread_end_idx` is set to 4 for all blocks except the final block.
 In the final block, `thread_end_idx` is 2, representing the border index of the active thread.
 
-`i_ori` is an index referring to the original position of data stored in shm[threadIdx.x] before flipping.
-For instance, consider block 1 and thread 2 (element 6). The element is located at row 0, column 7 in the tensor.
-Its original index `i_ori` is 7, and after flipping, it is mapped to row 0, column 0.
+`i_ori` is an index referring to the original position of data stored in shm[threadIdx.x] before
+flipping. For instance, consider block 1 and thread 2 (element 6). The element is located at row 0,
+column 7 in the tensor. Its original index `i_ori` is 7, and after flipping, it is mapped to row 0,
+column 0.
 
                     ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
 global mem before:  │ 0 │ 1 │ 2 │ 3 │ 4 │ 5 │ 6 │ 7 │ 8 │ 9 │ A │ B │ C │ D │ x │ x │
