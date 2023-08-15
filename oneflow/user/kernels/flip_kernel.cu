@@ -59,9 +59,9 @@ __global__ void FlipLastDimGpuForward(const int32_t element, const int64_t last_
   CUDA_1D_KERNEL_LOOP(i, element) {
     int32_t block_begin_idx = blockDim.x * blockIdx.x;
     int32_t thread_end_idx = min(block_begin_idx + blockDim.x, element) - block_begin_idx;
-    shm[threadIdx.x] = in_dptr[thread_end_idx - i + 2 * block_begin_idx - 1];
+    int32_t i_ori = block_begin_idx + (thread_end_idx - threadIdx.x - 1);
+    shm[threadIdx.x] = in_dptr[i_ori];
     __syncthreads();
-    int32_t i_ori = i - 2 * threadIdx.x + thread_end_idx - 1;
     int32_t row = i_ori / last_dim_size;
     int32_t col = last_dim_size - (i_ori - row * last_dim_size) - 1;
     out_dptr[row * last_dim_size + col] = shm[threadIdx.x];
