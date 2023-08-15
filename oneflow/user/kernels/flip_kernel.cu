@@ -52,6 +52,34 @@ __global__ void FlipGpuForward(const int32_t element, const int64_t total_dims,
   }
 }
 
+
+/*
+Example tensor:
+[[0, 1, 2, 3, 4, 5, 6, 7],
+ [8, 9, 10, 11, 12, 13, 14]]
+
+Given parameters: BlockSize=4, GridSize=4
+For each block_i, `block_begin_idx` is calculated as (i - 1) * BlockSize = (i - 1) * 4,
+and `thread_end_idx` is set to 4 for all blocks except the final block.
+In the final block, `thread_end_idx` is 2, representing the border index of the active thread.
+
+`i_ori` is an index referring to the original position of data stored in shm[threadIdx.x] before flipping.
+For instance, consider block 1 and thread 2 (element 6). The element is located at row 0, column 7 in the tensor.
+Its original index `i_ori` is 7, and after flipping, it is mapped to row 0, column 0.
+
+                    ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+global mem before:  │ 0 │ 1 │ 2 │ 3 │ 4 │ 5 │ 6 │ 7 │ 8 │ 9 │ A │ B │ C │ D │ x │ x │
+                    └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
+
+                         block0     │    block1     │    block2     │    block3
+                    ┌───┬───┬───┬───┼───┬───┬───┬───┼───┬───┬───┬───┼───┬───┬───┬───┐
+shm after loading:  │ 3 │ 2 │ 1 │ 0 │ 7 │ 6 │ 5 │ 4 │ B │ A │ 9 │ 8 │ D │ C │ x │ x │
+                    └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
+
+                    ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+global mem after:   │ 6 │ 5 │ 4 │ 3 │ 2 │ 1 │ 0 │ D │ C │ B │ A │ 9 │ 8 │ 7 │ x │ x │
+                    └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
+*/
 template<typename T>
 __global__ void FlipLastDimGpuForward(const int32_t element, const int64_t last_dim_size,
                                       const T* in_dptr, T* out_dptr) {
