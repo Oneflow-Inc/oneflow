@@ -32,9 +32,11 @@ input_arr = np.array(
 )
 x = torch.tensor(input_arr, device="cuda")
 
+
 def fn(x):
     y = torch.relu(x)
     return y
+
 
 jit_mod = torch.jit.trace(fn, x)
 print(jit_mod)

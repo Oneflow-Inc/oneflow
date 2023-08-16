@@ -16,15 +16,20 @@ limitations under the License.
 import os
 import torch
 
+
 def _get_output_names(node):
     return [output.debugName() for output in node.outputs()]
+
 
 def _get_input_names(node_or_graph):
     return [inp.debugName() for inp in node_or_graph.inputs()]
 
+
 def script_tranform(gm, example_inputs):
     import oneflow as flow
-    import pdb; pdb.set_trace()
+    import pdb
+
+    pdb.set_trace()
     print("transform from torch script")
 
     jit_mod = torch.jit.trace(gm, tuple(example_inputs))
@@ -47,8 +52,6 @@ def script_tranform(gm, example_inputs):
         else:
             print(operator)
 
-
-
     enable_graph = os.getenv("ofrt_enable_graph", "False").lower() in (
         "true",
         "1",
@@ -59,6 +62,7 @@ def script_tranform(gm, example_inputs):
     if not enable_graph:
         oneflow_fn = of_gm.forward
     else:
+
         @flow.nn.Graph.trace
         def oneflow_fn(inputs):
             outs = of_gm.forward(inputs)

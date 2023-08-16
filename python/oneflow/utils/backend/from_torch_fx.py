@@ -33,19 +33,21 @@ def fx_tranform(gm):
     if not enable_graph:
         oneflow_fn = of_gm.forward
     else:
+
         class OfGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
                 self.m = of_gm
-            
+
             def build(self, *args, **kwargs):
                 return self.m(*args, **kwargs)
-        
+
         of_g = OfGraph()
         of_g.debug(0)
         oneflow_fn = lambda *args, **kwargs: of_g(*args, **kwargs)
 
     return oneflow_fn
+
 
 def _parent_name(target: str) -> Tuple[str, str]:
     """
@@ -69,6 +71,7 @@ def _get_module(origin_mod):
     linear = linear.to("cuda")
     flow.nn.init.constant_(linear.weight, 2.3)
     return linear
+
 
 def _to_of_transform(
     gm: torch.fx.GraphModule, tracer_class: type = fx.Tracer
@@ -112,14 +115,16 @@ def to_of_transform(
             if type(modules[node.target] is torch.nn.Linear):
                 linear = modules[node.target]
                 name2obj[node.target] = _get_module(linear)
-                of_node = of_g.create_node('call_module', node.target, args=(name2node[node.args[0].name],))
+                of_node = of_g.create_node(
+                    "call_module", node.target, args=(name2node[node.args[0].name],)
+                )
                 name2node[node.name] = of_node
         elif node.op == "call_method":
             ...
         elif node.op == "get_attr":
             ...
         elif node.op == "placeholder":
-            of_node = of_g.create_node('placeholder', node.target)
+            of_node = of_g.create_node("placeholder", node.target)
             name2node[node.name] = of_node
         elif node.op == "output":
             of_g.output((name2node[node.args[0][0].name],))
@@ -128,7 +133,7 @@ def to_of_transform(
     print("\n new of graph", of_g.print_tabular())
     for of_node in of_g.nodes:
         print(of_node.format_node())
-    
+
     of_gm = flow.fx.GraphModule(name2obj, of_g)
     of_gm.graph.lint()
     of_gm.recompile()

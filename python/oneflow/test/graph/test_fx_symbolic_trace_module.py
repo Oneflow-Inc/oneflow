@@ -68,6 +68,7 @@ class TestAlexNet(flow.unittest.TestCase):
             test_case.assertTrue(
                 np.allclose(gm(input).numpy(), m(input).numpy(), equal_nan=True)
             )
+
         class AlexNetEvalGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
@@ -75,6 +76,7 @@ class TestAlexNet(flow.unittest.TestCase):
 
             def build(self, inp):
                 return self.alexnet(inp)
+
         gm_g = AlexNetEvalGraph()
         gm_g.debug(1)
         for i in range(5):
@@ -82,7 +84,6 @@ class TestAlexNet(flow.unittest.TestCase):
             test_case.assertTrue(
                 np.allclose(gm_g(input).numpy(), m(input).numpy(), equal_nan=True)
             )
-
 
 
 if __name__ == "__main__":

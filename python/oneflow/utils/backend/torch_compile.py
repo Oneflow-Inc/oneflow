@@ -45,6 +45,7 @@ def register_ofrt():
             oneflow_fn = fx_tranform(gm)
 
         import oneflow as flow
+
         def from_to_torch(inputs):
             flow_inputs = flow.utils.tensor.from_torch(inputs)
             flow_outs = oneflow_fn(flow_inputs)
