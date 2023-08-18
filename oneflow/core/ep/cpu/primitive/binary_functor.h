@@ -314,8 +314,8 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kSquareReLUBackwardWithDyX, Src
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-    return static_cast<Dst>((x <= static_cast<Src>(0.0)) ? static_cast<Src>(0.0)
-                                                         : static_cast<Src>(2.0) * x * dy);
+    return static_cast<Dst>((x > static_cast<Src>(0.0)) ? static_cast<Src>(2.0) * x * dy
+                                                        : static_cast<Src>(0.0));
   }
 };
 

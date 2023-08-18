@@ -75,8 +75,7 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kSquareReLU, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {
-    const Src square_relu = static_cast<Dst>((src > static_cast<Src>(0.0)) ? src * src : 0);
-    return square_relu;
+    return static_cast<Dst>((src > static_cast<Src>(0.0)) ? src * src : 0);
   }
 };
 
