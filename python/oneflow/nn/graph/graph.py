@@ -274,7 +274,6 @@ class Graph(object):
             Donot override this function.
         """
         # For cache cache graphs with dynamic input shape.
-        print(self.name, " called.")
         if self._run_with_cache == True:
             return self._dynamic_input_graph_cache(*args, **kwargs)
 
