@@ -137,6 +137,28 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow._C.square_relu,
+    r"""
+    square_relu(x: Tensor) -> Tensor 
+
+    Applies the relu^2 activation introduced in https://arxiv.org/abs/2109.08668v2
+
+    .. math::
+        \\text{ReLU}(x) = (x)^+ = \\max(0, x^2)
+
+    Args:
+        input (oneflow.Tensor): Input Tensor
+
+    Returns:
+        oneflow.Tensor: A Tensor has same shape as the input.
+
+    See    
+    :class:`~oneflow.nn.SquareReLU` for more details.
+ 
+    """,
+)
+
+add_docstr(
     oneflow._C.softmax,
     r"""
     softmax(x: Tensor, dim: int) -> Tensor 
