@@ -435,7 +435,7 @@ class SquareReLU(Module):
 
         >>> out = square_relu(input)
         >>> out
-        tensor([-0.1496,  0.0000,  0.3504], dtype=oneflow.float32)
+        tensor([0.0000, 0.0000, 0.2500], dtype=oneflow.float32)
 
     """
 
