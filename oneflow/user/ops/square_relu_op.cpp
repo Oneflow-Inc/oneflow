@@ -71,11 +71,6 @@ namespace oneflow {
         .Split(user_op::OpArg("dx", 0), i)
         .Build();
   }
-  ctx->NewBuilder()
-      .Broadcast(user_op::OpArg("x", 0))
-      .PartialSum(user_op::OpArg("dy", 0))
-      .PartialSum(user_op::OpArg("dx", 0))
-      .Build();
   return Maybe<void>::Ok();
 }
 
