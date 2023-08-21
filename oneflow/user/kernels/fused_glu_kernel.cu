@@ -173,10 +173,11 @@ void DualGemmGegluHalf(ep::CudaStream* stream, int32_t m, int32_t n, int32_t k, 
   constexpr bool kStoreD1 = true;
   using DualGemm = cutlass::gemm::device::DualGemm<
       ElementOperandA, cutlass::layout::RowMajor, ElementOperandB, cutlass::layout::ColumnMajor,
-      ElementOutput, cutlass::layout::RowMajor, ElementAccumulator, cutlass::arch::OpClassTensorOp,
-      Arch, ThreadblockShape, WarpShape, InstructionShape, EpilogueOutputOp0, EpilogueOutputOp1,
-      EpilogueOutputOp2, cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<1>, kStages,
-      kStoreD0, kStoreD1, kSplitKSerial>;
+      cutlass::layout::ColumnMajor, ElementOutput, cutlass::layout::RowMajor, ElementAccumulator,
+      cutlass::arch::OpClassTensorOp, Arch, ThreadblockShape, WarpShape, InstructionShape,
+      EpilogueOutputOp0, EpilogueOutputOp1, EpilogueOutputOp2,
+      cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<1>, kStages, kStoreD0, kStoreD1,
+      kSplitKSerial>;
 
   int split_k_slices = DualGemm::kSplitKSerial ? 2 : 1;
 
@@ -198,10 +199,20 @@ void DualGemmGegluHalf(ep::CudaStream* stream, int32_t m, int32_t n, int32_t k, 
       reinterpret_cast<cutlass::half_t*>(y), n);
 
   cutlass::gemm::GemmCoord problem_size(m, n, k);
-  typename DualGemm::Arguments arguments{
-      problem_size,    tensor_a0,    tensor_b0,     tensor_bias0, tensor_d0,
-      tensor_b1,       tensor_bias1, tensor_d1,     tensor_out,   {alpha0, beta0},
-      {alpha1, beta1}, {},           split_k_slices};
+  typename DualGemm::Arguments arguments{cutlass::gemm::DualGemmMode::kGemm,
+                                         problem_size,
+                                         tensor_a0,
+                                         tensor_b0,
+                                         tensor_bias0,
+                                         tensor_d0,
+                                         tensor_b1,
+                                         tensor_bias1,
+                                         tensor_d1,
+                                         tensor_out,
+                                         {alpha0, beta0},
+                                         {alpha1, beta1},
+                                         {},
+                                         split_k_slices};
 
   DualGemm dual_gemm_op;
   dual_gemm_op.initialize(arguments, stream->cublas_workspace(), stream->cuda_stream());

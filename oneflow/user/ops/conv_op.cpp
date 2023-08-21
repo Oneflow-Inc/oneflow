@@ -52,6 +52,11 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
     }
     out->set_is_dynamic(in.is_dynamic());
     out->set_shape(Shape(out_shape));
+    if (data_format == "channels_last") {
+      out->set_memory_format(MemoryFormat::kChannelsLast);
+    } else {
+      out->set_memory_format(MemoryFormat::kContiguous);
+    }
   }
 
   {

@@ -60,6 +60,26 @@ if(WITH_CUTLASS)
         -DCUTLASS_LIBRARY_DEBUG_POSTFIX:STRING=
         -DCUTLASS_NVCC_EMBED_PTX:BOOL=OFF)
 
+    add_custom_target(cutlass_copy_extra_library_to_destination DEPENDS cutlass)
+    set(CUTLASS_SOURCE_LIBRARY_DIR ${CUTLASS_SOURCE_DIR}/tools/library)
+    set(CUTLASS_INSTALL_EXTRA_LIBRARY_FILES
+        "src/conv2d_operation.h"
+        "src/conv3d_operation.h"
+        "src/gemm_operation_3x.hpp"
+        "src/gemm_operation.h"
+        "src/library_internal.h"
+        "src/rank_2k_operation.h"
+        "src/rank_k_operation.h"
+        "src/symm_operation.h"
+        "src/trmm_operation.h"
+    )
+    foreach(filename ${CUTLASS_INSTALL_EXTRA_LIBRARY_FILES})
+      add_custom_command(
+        TARGET cutlass_copy_extra_library_to_destination
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CUTLASS_SOURCE_LIBRARY_DIR}/${filename}
+                ${CUTLASS_INSTALL_DIR}/include/cutlass/library/${filename})
+    endforeach()
+
     add_custom_target(cutlass_copy_examples_to_destination DEPENDS cutlass)
     set(CUTLASS_SOURCE_EXAMPLES_DIR ${CUTLASS_SOURCE_DIR}/examples)
 
@@ -67,6 +87,7 @@ if(WITH_CUTLASS)
         "45_dual_gemm/test_run.h"
         "45_dual_gemm/kernel/dual_gemm.h"
         "45_dual_gemm/device/dual_gemm.h"
+        "45_dual_gemm/dual_gemm_common.h"
         "45_dual_gemm/dual_gemm_run.h"
         "45_dual_gemm/thread/left_silu_and_mul.h"
         "45_dual_gemm/threadblock/dual_mma_multistage.h"
