@@ -144,7 +144,7 @@ add_docstr(
     Applies the relu^2 activation introduced in https://arxiv.org/abs/2109.08668v2
 
     .. math::
-        \\text{ReLU}(x) = (x)^+ = \\max(0, x^2)
+        \\text{ReLU}(x) = \\max(0, x) * \\max(0, x)
 
     Args:
         input (oneflow.Tensor): Input Tensor
