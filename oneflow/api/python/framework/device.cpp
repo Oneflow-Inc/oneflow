@@ -31,9 +31,10 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def(py::init([](const std::string& type_or_type_with_device_id) {
         return Device::ParseAndNew(type_or_type_with_device_id).GetOrThrow();
       }))
-      .def(py::init([](const std::string& type, int64_t device_id) {
-        return Device::New(type, device_id).GetOrThrow();
-      }))
+      .def(py::init([](const std::string& type, int64_t index) {
+             return Device::New(type, index).GetOrThrow();
+           }),
+           py::arg("type"), py::arg("index"))
       .def(py::init([](const Symbol<Device>& other_device) { return other_device; }))
       .def_property_readonly("type", [](const Symbol<Device>& d) { return d->type(); })
       .def_property_readonly("index", [](const Symbol<Device>& d) { return d->device_id(); })
