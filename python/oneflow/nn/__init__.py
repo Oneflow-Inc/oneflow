@@ -20,6 +20,7 @@ from oneflow.nn.modules.activation import (
     CELU,
     GELU,
     QuickGELU,
+    SquareReLU,
     GLU,
     Hardsigmoid,
     Hardshrink,
