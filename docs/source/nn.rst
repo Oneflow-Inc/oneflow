@@ -160,6 +160,7 @@ Non-linear Activations (weighted sum, nonlinearity)
     nn.CELU 
     nn.GELU 
     nn.QuickGELU 
+    nn.SquareReLU
     nn.SiLU 
     nn.Sigmoid 
     nn.Mish 

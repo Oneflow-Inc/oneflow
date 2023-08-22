@@ -70,6 +70,15 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kQuickGelu, Dst, Src> {
   static constexpr Src alpha = static_cast<Src>(1.702);
 };
 
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kSquareReLU, Dst, Src> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    return static_cast<Dst>((src > static_cast<Src>(0.0)) ? src * src : 0);
+  }
+};
+
 namespace unary_functor_internal {
 
 namespace {
@@ -491,6 +500,7 @@ SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kReciprocalNoNan);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kNotEqualZero);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kNanAssign);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kQuickGelu);
+SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kSquareReLU);
 
 /*********nv_bfloat16_kernel*******/
 
@@ -558,6 +568,7 @@ SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kNotEqualZero);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kNanAssign);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kFastGelu);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kQuickGelu);
+SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kSquareReLU);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kDigamma);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kTrigamma);
 
