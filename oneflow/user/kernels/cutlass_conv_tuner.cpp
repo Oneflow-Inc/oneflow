@@ -70,14 +70,9 @@ struct Conv2dOperationCacheKey {
       return IsStrideAligned(configuraion.stride_a, n) && IsStrideAligned(configuraion.stride_b, n)
              && IsStrideAligned(configuraion.stride_c, n);
     };
-    if (IsAligned(8)) {
-      alignment = 8;
-    } else if (IsAligned(4)) {
-      alignment = 4;
-    } else if (IsAligned(2)) {
-      alignment = 2;
-    } else {
-      alignment = 1;
+    alignment = 128 / cutlass::library::sizeof_bits(functional_key.element_A);
+    for (; alignment > 1; alignment = alignment >> 1) {
+      if (IsAligned(alignment)) { break; }
     }
   }
 };

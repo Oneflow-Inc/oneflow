@@ -251,7 +251,11 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
 }
 
 /* static */ Maybe<void> Conv2DOp::InferDataType(user_op::InferContext* ctx) {
-  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
+  if (ctx->InputDType("in", 0) == DataType::kInt8) {
+    ctx->SetOutputDType("out", 0, DataType::kInt32);
+  } else {
+    ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
+  }
   return Maybe<void>::Ok();
 }
 

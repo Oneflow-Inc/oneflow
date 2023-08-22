@@ -234,7 +234,7 @@ class Conv2dInt8CutlassKernel final : public user_op::OpKernel, public user_op::
     configuraion.problem_size = problem_size;
     configuraion.stride_a = {c, w * c, h * w * c};
     configuraion.stride_b = {c, s * c, r * s * c};
-    configuraion.stride_c = {0, 0, 0};
+    configuraion.stride_c = {k, q * k, p * q * k};
 
     cutlass::library::ConvArguments arguments;
     arguments.A = in->dptr();
