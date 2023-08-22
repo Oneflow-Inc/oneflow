@@ -162,7 +162,8 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
   REGISTER_REDUCE_ARITHMETIC_KERNELS(device, int8_t)         \
   REGISTER_REDUCE_ARITHMETIC_KERNELS(device, uint8_t)        \
   REGISTER_REDUCE_ARITHMETIC_KERNELS(device, int32_t)        \
-  REGISTER_REDUCE_ARITHMETIC_KERNELS(device, int64_t)
+  REGISTER_REDUCE_ARITHMETIC_KERNELS(device, int64_t)        \
+  REGISTER_REDUCE_ARITHMETIC_KERNELS(device, float16)
 
 #define REGISTER_REDUCE_NANSUM_KERNELS_BY_DEVICE(device) \
   REGISTER_REDUCE_NANSUM_KERNELS(device, float)          \
