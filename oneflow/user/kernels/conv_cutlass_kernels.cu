@@ -223,7 +223,7 @@ class Conv2dInt8CutlassKernel final : public user_op::OpKernel, public user_op::
         cutlass::library::NumericTypeID::kS8, cutlass::library::LayoutTypeID::kTensorNHWC,
         cutlass::library::NumericTypeID::kS8, cutlass::library::LayoutTypeID::kTensorNHWC,
         cutlass::library::NumericTypeID::kS32, cutlass::library::LayoutTypeID::kTensorNHWC,
-        cutlass::library::NumericTypeID::kS32, cutlass::library::NumericTypeID::kF32);
+        cutlass::library::NumericTypeID::kS32, cutlass::library::NumericTypeID::kS32);
 
     cutlass::conv::Conv2dProblemSize problem_size(
         n, h, w, c, k, r, s, p, q, padding_before.at(0), padding_before.at(1), strides.at(0),
@@ -247,8 +247,8 @@ class Conv2dInt8CutlassKernel final : public user_op::OpKernel, public user_op::
     }
     arguments.D = out->mut_dptr();
 
-    float alpha = 1;
-    float beta = 0;
+    int32_t alpha = 1;
+    int32_t beta = 0;
     arguments.alpha = &alpha;
     arguments.beta = &beta;
     arguments.pointer_mode = cutlass::library::ScalarPointerMode::kHost;

@@ -212,9 +212,9 @@ if(BUILD_PYTHON)
 endif(BUILD_PYTHON)
 
 set(CUTLASS_URL
-    https://github.com/Oneflow-Inc/cutlass/archive/6429516476b11a8a2b6aace2e1402c39f914e1b2.zip)
+    https://github.com/Oneflow-Inc/cutlass/archive/d47b8883b5e3661b41cc8a7a6f4c240c5524647f.zip)
 use_mirror(VARIABLE CUTLASS_URL URL ${CUTLASS_URL})
-set(CUTLASS_MD5 8357dec4a45ccb762ff03e3cf99f0a55)
+set(CUTLASS_MD5 7b417720240a443276ce4bb9ef169db1)
 
 include(cuda)
 add_subdirectory(external)

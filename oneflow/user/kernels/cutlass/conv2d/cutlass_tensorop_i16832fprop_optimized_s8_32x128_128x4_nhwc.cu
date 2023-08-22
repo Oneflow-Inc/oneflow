@@ -27,50 +27,52 @@ limitations under the License.
 #include "cutlass/library/src/conv2d_operation.h"
 #include "cutlass/library/src/library_internal.h"
 
+#include "oneflow/user/kernels/cutlass/external_singleton.h"
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Conv2dFprop Optimized kernel instance
-// "cutlass_tensorop_i16832fprop_optimized_s8_128x64_64x6_nhwc"
+// "cutlass_tensorop_i16832fprop_optimized_s8_32x128_128x4_nhwc"
 template<int Alignment, int AlignmentC>
-using cutlass_tensorop_i16832fprop_optimized_s8_128x64_64x6_nhwc_base =
+using cutlass_tensorop_i16832fprop_optimized_s8_32x128_128x4_nhwc_base =
     typename cutlass::conv::kernel::DefaultConv2dFprop<
         int8_t, cutlass::layout::TensorNHWC, int8_t, cutlass::layout::TensorNHWC, int32_t,
         cutlass::layout::TensorNHWC, int32_t, cutlass::arch::OpClassTensorOp, cutlass::arch::Sm80,
-        cutlass::gemm::GemmShape<128, 64, 64>, cutlass::gemm::GemmShape<64, 32, 64>,
+        cutlass::gemm::GemmShape<32, 128, 128>, cutlass::gemm::GemmShape<32, 32, 128>,
         cutlass::gemm::GemmShape<16, 8, 32>,
         cutlass::epilogue::thread::LinearCombination<int32_t, AlignmentC, int32_t, int32_t>,
         cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<
             4>,  // cutlass::gemm::threadblock::GemmSplitKIdentityThreadblockSwizzle<>,
-        6, cutlass::arch::OpMultiplyAddSaturate, cutlass::conv::IteratorAlgorithm::kOptimized,
+        4, cutlass::arch::OpMultiplyAddSaturate, cutlass::conv::IteratorAlgorithm::kOptimized,
         cutlass::conv::StrideSupport::kStrided, Alignment, Alignment>::Kernel;
 
 // Derived class
 template<int Alignment, int AlignmentC>
-struct cutlass_tensorop_i16832fprop_optimized_s8_128x64_64x6_nhwc
-    : public cutlass_tensorop_i16832fprop_optimized_s8_128x64_64x6_nhwc_base<Alignment,
-                                                                             AlignmentC> {};
+struct cutlass_tensorop_i16832fprop_optimized_s8_32x128_128x4_nhwc
+    : public cutlass_tensorop_i16832fprop_optimized_s8_32x128_128x4_nhwc_base<Alignment,
+                                                                              AlignmentC> {};
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 template<int Alignment, int AlignmentC>
-using Operation_cutlass_tensorop_i16832fprop_optimized_s8_128x64_64x6_nhwc =
+using Operation_cutlass_tensorop_i16832fprop_optimized_s8_32x128_128x4_nhwc =
     cutlass::conv::device::ImplicitGemmConvolution<
-        cutlass_tensorop_i16832fprop_optimized_s8_128x64_64x6_nhwc<Alignment, AlignmentC>>;
+        cutlass_tensorop_i16832fprop_optimized_s8_32x128_128x4_nhwc<Alignment, AlignmentC>>;
 
 namespace cutlass {
 namespace library {
 
 // Initialize all instances
-void initialize_cutlass_tensorop_i16832fprop_optimized_s8_128x64_64x6_nhwc(Manifest& manifest) {
+ONEFLOW_CUTLASS_MANIFEST(manifest) {
   manifest.append(new cutlass::library::Conv2dOperation<
-                  Operation_cutlass_tensorop_i16832fprop_optimized_s8_128x64_64x6_nhwc<4, 4>>(
-      "cutlass_tensorop_i16832fprop_optimized_s8_128x64_64x6_nhwc_align4"));
+                  Operation_cutlass_tensorop_i16832fprop_optimized_s8_32x128_128x4_nhwc<4, 4>>(
+      "cutlass_tensorop_i16832fprop_optimized_s8_32x128_128x4_nhwc_align4"));
   manifest.append(new cutlass::library::Conv2dOperation<
-                  Operation_cutlass_tensorop_i16832fprop_optimized_s8_128x64_64x6_nhwc<8, 4>>(
-      "cutlass_tensorop_i16832fprop_optimized_s8_128x64_64x6_nhwc_align8"));
+                  Operation_cutlass_tensorop_i16832fprop_optimized_s8_32x128_128x4_nhwc<8, 4>>(
+      "cutlass_tensorop_i16832fprop_optimized_s8_32x128_128x4_nhwc_align8"));
   manifest.append(new cutlass::library::Conv2dOperation<
-                  Operation_cutlass_tensorop_i16832fprop_optimized_s8_128x64_64x6_nhwc<16, 4>>(
-      "cutlass_tensorop_i16832fprop_optimized_s8_128x64_64x6_nhwc_align16"));
+                  Operation_cutlass_tensorop_i16832fprop_optimized_s8_32x128_128x4_nhwc<16, 4>>(
+      "cutlass_tensorop_i16832fprop_optimized_s8_32x128_128x4_nhwc_align16"));
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

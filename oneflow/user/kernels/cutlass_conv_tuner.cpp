@@ -25,6 +25,8 @@ limitations under the License.
 #include <cutlass/library/library.h>
 #include <cutlass/library/singleton.h>
 
+#include "oneflow/user/kernels/cutlass/external_singleton.h"
+
 namespace oneflow {
 
 namespace {
@@ -232,11 +234,20 @@ const cutlass::library::Operation* CutlassConvTuner::Impl::FindConv2dOperation(
   OF_CUDA_CHECK(cudaEventCreate(&end));
   const cutlass::library::Operation* fastest_operation = nullptr;
   float fastest_time = 0;
-  const auto& operations_map_it =
-      cutlass::library::Singleton::get().operation_table.conv2d_operations.find(functional_key);
-  CHECK(operations_map_it
-        != cutlass::library::Singleton::get().operation_table.conv2d_operations.cend());
-  const cutlass::library::ConvOperationVectorMap& operations_map = operations_map_it->second;
+  const auto& operations_map = [&]() {
+    const auto& external_operations_map_it =
+        cutlass::library::ExternalSingleton::get().operation_table.conv2d_operations.find(
+            functional_key);
+    if (external_operations_map_it
+        != cutlass::library::ExternalSingleton::get().operation_table.conv2d_operations.cend()) {
+      return external_operations_map_it->second;
+    }
+    const auto& operations_map_it =
+        cutlass::library::Singleton::get().operation_table.conv2d_operations.find(functional_key);
+    CHECK(operations_map_it
+          != cutlass::library::Singleton::get().operation_table.conv2d_operations.cend());
+    return operations_map_it->second;
+  }();
 
   for (const auto& pair : operations_map) {
     std::map<std::string, const cutlass::library::Operation*, std::greater<std::string>> operations;

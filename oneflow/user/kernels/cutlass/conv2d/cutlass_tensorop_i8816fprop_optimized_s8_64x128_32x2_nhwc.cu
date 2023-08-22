@@ -27,6 +27,8 @@ limitations under the License.
 #include "cutlass/library/src/conv2d_operation.h"
 #include "cutlass/library/src/library_internal.h"
 
+#include "oneflow/user/kernels/cutlass/external_singleton.h"
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Conv2dFprop Optimized kernel instance "cutlass_tensorop_i8816fprop_optimized_s8_64x128_32x2_nhwc"
@@ -60,7 +62,7 @@ namespace cutlass {
 namespace library {
 
 // Initialize all instances
-void initialize_cutlass_tensorop_i8816fprop_optimized_s8_64x128_32x2_nhwc(Manifest& manifest) {
+ONEFLOW_CUTLASS_MANIFEST(manifest) {
   manifest.append(new cutlass::library::Conv2dOperation<
                   Operation_cutlass_tensorop_i8816fprop_optimized_s8_64x128_32x2_nhwc<1, 1>>(
       "cutlass_tensorop_i8816fprop_optimized_s8_64x128_32x2_nhwc_align1"));
