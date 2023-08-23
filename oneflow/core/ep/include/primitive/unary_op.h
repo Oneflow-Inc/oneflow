@@ -43,6 +43,7 @@ enum class UnaryOp {
   kThreshold,
   kFastGelu,
   kQuickGelu,
+  kSquareReLU,
   // math op
   kAbs,
   kAcos,
