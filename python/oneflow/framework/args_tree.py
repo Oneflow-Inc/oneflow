@@ -41,12 +41,13 @@ class NamedArg(object):
     named_input = NamedArg([NamedArg(1), NamedArg({key: NamedArg("value")})])
     """
 
-    def __init__(self, prefix="", name=None, global_index=0) -> None:
+    def __init__(self, prefix="", name=None, global_index=0, tensor_type=Tensor) -> None:
         self._name = name if name is not None else str(global_index)
         self._prefix = prefix
         self._global_index = global_index
         self._is_value_set = False
         self._value = None
+        self._tensor_type = tensor_type
 
     def prefix(self):
         return self._prefix
@@ -86,13 +87,13 @@ class NamedArg(object):
             repr_str += "LIST"
         elif _is_raw_type(self._value, dict) or _is_raw_type(self._value, OrderedDict):
             repr_str += "DICT"
-        elif isinstance(self._value, Tensor):
+        elif isinstance(self._value, self._tensor_type):
             repr_str += "TENSOR"
         elif self._value is None:
             repr_str += "NONE"
         else:
             repr_str += "OPAQUE"
-        if isinstance(self._value, Tensor):
+        if isinstance(self._value, self._tensor_type):
             repr_str += ", value: " + self._value._meta_repr()
         elif (
             _is_raw_type(self._value, dict)
@@ -114,6 +115,7 @@ class ArgsTree(object):
         gen_name: bool = False,
         root_prefix: str = "",
         root_name: str = None,
+        tensor_type = Tensor
     ) -> None:
 
         self._io_args = io_args
@@ -122,6 +124,7 @@ class ArgsTree(object):
         self._root_name = root_name
         self._named_io_args = None
         self._next_global_index = 0
+        self._tensor_type = tensor_type
 
         if self._gen_name:
             self._named_io_args = self._construct_named_io_args(
@@ -178,7 +181,7 @@ class ArgsTree(object):
             yield (named_node.prefix() + "_" + named_node.name(), named_node)
 
     def _construct_named_io_args(self, value, prefix: str, name: str) -> NamedArg:
-        arg = NamedArg(prefix, name, self._next_global_index)
+        arg = NamedArg(prefix, name, self._next_global_index, self._tensor_type)
         self._next_global_index += 1
 
         if _is_raw_type(value, list) or _is_raw_type(value, tuple):
@@ -219,7 +222,7 @@ class ArgsTree(object):
         stack = []
 
         # Cases handled: tuple(tensor, ...), such as input args.
-        if len(self._io_args) > 0 and isinstance(self._io_args[0], Tensor):
+        if len(self._io_args) > 0 and isinstance(self._io_args[0], self._tensor_type):
             for i in self._io_args:
                 mapped_value = map_function(i)
                 stack.append(mapped_value)
@@ -233,7 +236,7 @@ class ArgsTree(object):
         elif (
             len(self._io_args) > 0
             and isinstance(self._io_args[0], (tuple, list))
-            and all(isinstance(arg, Tensor) for arg in self._io_args[0])
+            and all(isinstance(arg, self._tensor_type) for arg in self._io_args[0])
         ):
             for i in self._io_args[0]:
                 mapped_value = map_function(i)
