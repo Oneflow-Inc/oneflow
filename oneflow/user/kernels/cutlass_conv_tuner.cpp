@@ -33,21 +33,17 @@ namespace {
 
 bool IsWeakerAlginOperation(const cutlass::library::Operation* lhs,
                             const cutlass::library::Operation* rhs) {
-  const char* lhs_name = lhs->description().name;
-  const char* rhs_name = rhs->description().name;
-  const size_t len = std::strlen(lhs_name);
-  const size_t suffix_len = std::strlen("align8");
-  if (std::strlen(rhs_name) != len) { return false; }
-  if (len < suffix_len) { return false; }
-  const size_t prefix_len = len - suffix_len;
-  if (std::strncmp(lhs_name, rhs_name, prefix_len) != 0) { return false; }
-  const auto& HasLegalSuffix = [&](const char* str) {
-    if (std::strncmp(str + prefix_len, "align", std::strlen("align")) != 0) { return false; }
-    const char align = str[len - 1];
-    return align == '8' || align == '4' || align == '2' || align == '1';
-  };
-  if ((!HasLegalSuffix(lhs_name)) || (!HasLegalSuffix(rhs_name))) { return false; }
-  return lhs_name[len - 1] < rhs_name[len - 1];
+  const std::string lhs_name = lhs->description().name;
+  const std::string rhs_name = rhs->description().name;
+  size_t lhs_pos = lhs_name.rfind("align");
+  if (lhs_pos == std::string::npos) { return false; }
+  size_t rhs_pos = rhs_name.rfind("align");
+  if (rhs_pos == std::string::npos) { return false; }
+  if (lhs_name.substr(0, lhs_pos) != rhs_name.substr(0, rhs_pos)) { return false; }
+  size_t align_len = std::strlen("align");
+  int lhs_alignment = std::atoi(lhs_name.substr(lhs_pos + align_len).c_str());
+  int rhs_alignment = std::atoi(rhs_name.substr(rhs_pos + align_len).c_str());
+  return lhs_alignment < rhs_alignment;
 }
 
 struct Conv2dOperationCacheKey {
