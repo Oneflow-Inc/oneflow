@@ -41,7 +41,9 @@ class NamedArg(object):
     named_input = NamedArg([NamedArg(1), NamedArg({key: NamedArg("value")})])
     """
 
-    def __init__(self, prefix="", name=None, global_index=0, tensor_type=Tensor) -> None:
+    def __init__(
+        self, prefix="", name=None, global_index=0, tensor_type=Tensor
+    ) -> None:
         self._name = name if name is not None else str(global_index)
         self._prefix = prefix
         self._global_index = global_index
@@ -115,7 +117,7 @@ class ArgsTree(object):
         gen_name: bool = False,
         root_prefix: str = "",
         root_name: str = None,
-        tensor_type = Tensor
+        tensor_type=Tensor,
     ) -> None:
 
         self._io_args = io_args

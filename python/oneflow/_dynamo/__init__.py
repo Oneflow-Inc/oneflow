@@ -20,6 +20,7 @@ __all__ = [
     "allow_in_graph",
 ]
 
+
 def allow_in_graph(fn):
     """
     """
@@ -30,4 +31,3 @@ def allow_in_graph(fn):
         "The oneflow._dynamo.allow_in_graph interface is just to align the torch._dynamo.allow_in_graph interface and has no practical significance."
     )
     return fn
-
