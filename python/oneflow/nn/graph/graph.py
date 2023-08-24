@@ -1826,27 +1826,21 @@ class Graph(object):
     def __map_io(self, io_type, func, *args, **kwargs):
         assert io_type in ("input", "output")
 
-        def mapping_tensor_or_none(tensor):
-            assert tensor is None or (isinstance(tensor, Tensor))
+        def mapping_tensor_or_any(tensor):
             if isinstance(tensor, Tensor):
                 mapped_arg = func(tensor)
             else:
-                mapped_arg = None
+                mapped_arg = tensor
             return mapped_arg
 
         def leaf_arg_fn(arg):
             arg_value = arg.value()
-            if isinstance(arg_value, Tensor) or arg_value is None:
-                return mapping_tensor_or_none(arg_value)
-            else:
-                self.__io_item_check(
-                    arg_value, None, io_type, arg.prefix() + "_" + arg.name(),
-                )
+            return mapping_tensor_or_any(arg_value)
 
         # NOTE(lixiang): Reduce the overhead of traversal and parsing of io args.
         if self._is_simple_tuple_output or self._is_simple_tuple_input:
             args_tree = ArgsTree(args, False)
-            out = args_tree.map_tuple_leaf(mapping_tensor_or_none)
+            out = args_tree.map_tuple_leaf(mapping_tensor_or_any)
             return out, kwargs
 
         args_tree = ArgsTree(
