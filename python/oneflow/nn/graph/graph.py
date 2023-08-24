@@ -1748,14 +1748,13 @@ class Graph(object):
         args_repr = []
         tensor2op_name = {}
 
-        def build_tensor_or_none(tensor, name, repr_str):
-            assert tensor is None or (isinstance(tensor, Tensor))
+        def build_tensor_or_any(tensor, name, repr_str):
             if isinstance(tensor, Tensor):
                 build_arg = build_func(name, tensor)
                 op_names.append(name)
                 tensor2op_name[build_arg] = name
             else:
-                build_arg = None
+                build_arg = tensor
 
             args_repr.append(repr_str)
             self.__print(0, 1, repr_str)
@@ -1771,18 +1770,13 @@ class Graph(object):
                 arg_repr = self.__io_item_check_and_gen_repr(
                     arg.value(), Tensor, io_type, name
                 )
-                build_arg = build_tensor_or_none(arg.value(), name, arg_repr)
+                build_arg = build_tensor_or_any(arg.value(), name, arg_repr)
                 return build_arg
-            elif arg.value() is None:
-                arg_repr = self.__io_item_check_and_gen_repr(
-                    arg.value(), None, io_type, name
-                )
-                build_arg = build_tensor_or_none(arg.value(), name, arg_repr)
             else:  # Opaque
-                # Error
                 arg_repr = self.__io_item_check_and_gen_repr(
                     arg.value(), None, io_type, name
                 )
+                build_arg = build_tensor_or_any(arg.value(), name, arg_repr)
 
         out = args_tree.map_leaf(leaf_arg_fn)
         build_args = out[0]
@@ -1792,7 +1786,7 @@ class Graph(object):
 
     def __io_item_check_and_gen_repr(self, item, expect_type, io_type, name):
         assert io_type in ("input", "output")
-        if expect_type is None and item is None:
+        if expect_type is None:
             repr_str = (
                 "[WARNING]("
                 + io_type.upper()
@@ -1802,6 +1796,7 @@ class Graph(object):
                 + str(type(item))
                 + ")"
             )
+            self.__print(1, 0, repr_str)
             return repr_str
         elif expect_type is not None and isinstance(item, expect_type):
             if isinstance(item, Tensor):
