@@ -93,15 +93,16 @@ class NamedArg(object):
             repr_str += "NONE"
         else:
             repr_str += "OPAQUE"
+
         if isinstance(self._value, self._tensor_type):
-            repr_str += ", value: " + self._value._meta_repr()
+            repr_str += ", value: tensor(" + str(self._value.shape) + ", " + str(self._value.dtype) + ")"
         elif (
             _is_raw_type(self._value, dict)
             or _is_raw_type(self._value, OrderedDict)
             or _is_raw_type(self._value, list)
             or _is_raw_type(self._value, tuple)
         ):
-            pass
+            repr_str += ", value: " + repr(self._value)
         else:
             repr_str += ", value: " + repr(self._value)
         repr_str += ")"
@@ -286,3 +287,9 @@ class ArgsTree(object):
             mapped_value = map_function(value)
 
         return mapped_value
+
+    def __repr__(self):
+        if self._named_io_args:
+            return self._named_io_args.__repr__()
+        else:
+            return str(self.__class__)
