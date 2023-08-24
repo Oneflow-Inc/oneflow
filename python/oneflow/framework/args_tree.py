@@ -97,7 +97,13 @@ class NamedArg(object):
             repr_str += "OPAQUE"
 
         if isinstance(self._value, self._tensor_type):
-            repr_str += ", value: tensor(" + str(self._value.shape) + ", " + str(self._value.dtype) + ")"
+            repr_str += (
+                ", value: tensor("
+                + str(self._value.shape)
+                + ", "
+                + str(self._value.dtype)
+                + ")"
+            )
         elif (
             _is_raw_type(self._value, dict)
             or _is_raw_type(self._value, OrderedDict)
