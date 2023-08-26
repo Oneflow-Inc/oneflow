@@ -190,7 +190,13 @@ class GroupedMatmulBiasKernel final : public user_op::OpKernel, public user_op::
     }
     void* workspace = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->mut_dptr();
     for (const auto& group : groups) {
-      ApplyGroup<T>(group.first, group.second, has_biases, workspace, ctx->stream());
+      for (size_t i = 0; i < group.second.size(); i += kMaxProblemBatch) {
+        std::vector<Buffer<T>> ptrs(
+            {group.second.begin() + i,
+             group.second.begin() + i
+                 + std::min<size_t>(group.second.size() - i, kMaxProblemBatch)});
+        ApplyGroup<T>(group.first, ptrs, has_biases, workspace, ctx->stream());
+      }
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
