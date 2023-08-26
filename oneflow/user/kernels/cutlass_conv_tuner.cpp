@@ -26,7 +26,7 @@ limitations under the License.
 #include <cutlass/library/singleton.h>
 
 #ifdef WITH_CUTLASS_EXTENSION
-#include <cutlass/library/cutlass_extension_singleton.h">
+#include <cutlass/library/cutlass_extension_singleton.h>
 #endif  // WITH_CUTLASS_EXTENSION
 
 namespace oneflow {
