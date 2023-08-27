@@ -163,6 +163,70 @@ class Conv3dFunctor : public ConvBaseFunctor {
   }
 };
 
+class ConvQuantBaseFunctor {
+ public:
+  explicit ConvQuantBaseFunctor(const int& num_spatial_dims)
+      : num_spatial_dims_(num_spatial_dims) {}
+  virtual ~ConvQuantBaseFunctor() = default;
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& weight,
+                           const std::shared_ptr<one::Tensor>& input_zero_point,
+                           const Optional<one::Tensor>& scale, const Optional<one::Tensor>& bias,
+                           const std::vector<int32_t>& stride, const std::vector<int32_t>& padding,
+                           const std::vector<int32_t>& dilation, const int32_t& groups,
+                           const std::string& channel_pos,
+                           const Optional<Symbol<DType>>& output_dtype) const {
+    if (scale || bias) {
+      CHECK_OR_RETURN(scale && bias) << "scale and bias must both be given or not.";
+    }
+    std::vector<int32_t> kernel_size_vec(num_spatial_dims_);
+    int32_t kernel_idx_offset = 2;
+    if (channel_pos == "channels_last") { kernel_idx_offset = 1; }
+
+    for (int i = 0; i < num_spatial_dims_; i++) {
+      kernel_size_vec.at(i) = ((weight->shape())->At(i + kernel_idx_offset));
+    }
+    auto& conv_attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("filters", "kernel_size", "padding_before", "strides",
+                                       "dilation_rate", "groups", "data_format", "out_dtype");
+    conv_attrs.SetAllAttrs(static_cast<int32_t>(weight->shape()->At(0)), kernel_size_vec, padding,
+                           stride, dilation, groups, channel_pos,
+                           output_dtype.value_or(DType::Float())->data_type());
+    if (scale) {
+      return OpInterpUtil::Dispatch<Tensor>(
+          *conv_scale_bias_op_, {input, weight, input_zero_point, JUST(scale), JUST(bias)},
+          conv_attrs);
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*conv_op_, {input, weight, input_zero_point}, conv_attrs);
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> conv_op_;
+  std::shared_ptr<OpExpr> conv_scale_bias_op_;
+  int32_t num_spatial_dims_;
+};
+
+class Conv2dQuantFunctor : public ConvQuantBaseFunctor {
+ public:
+  Conv2dQuantFunctor() : ConvQuantBaseFunctor(/*num_spatial_dims_=*/2) {
+    conv_op_ = CHECK_JUST(one::OpBuilder("conv2d_quant")
+                              .Input("in")
+                              .Input("weight")
+                              .Input("in_zero_point")
+                              .Output("out")
+                              .Build());
+    conv_scale_bias_op_ = CHECK_JUST(one::OpBuilder("conv2d_quant")
+                                         .Input("in")
+                                         .Input("weight")
+                                         .Input("in_zero_point")
+                                         .Input("scale")
+                                         .Input("bias")
+                                         .Output("out")
+                                         .Build());
+  }
+};
+
 class DeConvBaseFunctor {
  public:
   explicit DeConvBaseFunctor(const int& num_spatial_dims) : num_spatial_dims_(num_spatial_dims) {
@@ -5428,6 +5492,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DeConv1dFunctor>("Deconv1d");
   m.add_functor<impl::DeConv2dFunctor>("Deconv2d");
   m.add_functor<impl::DeConv3dFunctor>("Deconv3d");
+  m.add_functor<impl::Conv2dQuantFunctor>("Conv2dQuant");
   m.add_functor<impl::EmbeddingReNormFunctor>("EmbeddingReNorm");
   m.add_functor<impl::EmbeddingFunctor>("Embedding");
   m.add_functor<impl::MatMulFunctor>("MatMul");

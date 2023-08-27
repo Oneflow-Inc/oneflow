@@ -8299,6 +8299,43 @@ def OneFlow_FusedLinearWithGroupwiseQuantizedWeightOp : OneFlow_BaseOp<"fused_li
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_Conv2DQuantOp : OneFlow_BaseOp<"conv2d_quant", [NoMemoryEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<NCHWCompatibleInterface>]> {
+  let summary = "OneFlow fused convolution quant operation";
+    let description = [{
+    "The convolution operator consumes an input tensor and a filter, and"
+    "computes the output."
+    }];
+    let input = (ins
+      OneFlow_Tensor:$in,
+      OneFlow_Tensor:$weight,
+      OneFlow_Tensor:$in_zero_point,
+      Optional<OneFlow_Tensor>:$scale,
+      Optional<OneFlow_Tensor>:$bias,
+      Optional<OneFlow_Tensor>:$_add_to_output
+    );
+    let output = (outs OneFlow_Tensor:$out);
+    let attrs = (ins
+      DefaultValuedAttr<SI32Attr, "0">:$filters,
+      SI32ArrayAttr:$padding_before,
+      StrAttr:$data_format,
+      SI32ArrayAttr:$kernel_size,
+      SI32ArrayAttr:$strides,
+      SI32ArrayAttr:$dilation_rate,
+      DefaultValuedAttr<SI32Attr, "1">:$groups,
+      OneFlow_DataType:$out_dtype,
+      DefaultValuedAttr<StrAttr, "\"\"">:$tuning_cache
+    );
+    let trait_attrs = (ins
+      DenseI32ArrayAttr:$operand_segment_sizes
+    );
+    let has_check_fn = 1;
+    let has_logical_tensor_desc_infer_fn = 1;
+    let has_physical_tensor_desc_infer_fn = 1;
+    let has_get_sbp_fn = 1;
+    let has_data_type_infer_fn = 1;
+    let has_compute_complexity_fn = 1;
+}
+
 #endif // GET_ONEFLOW_QUANTIZATION_OP_DEFINITIONS
 
 

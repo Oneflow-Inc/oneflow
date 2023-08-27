@@ -51,6 +51,40 @@ llvm::SmallVector<Value, 4> Conv2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> val
   return results;
 }
 
+bool Conv2DQuantOp::IsNCHW() { return this->getDataFormat().str() == "channels_first"; }
+
+llvm::DenseSet<Value> Conv2DQuantOp::OperandsToTranspose() {
+  if (this->get_addToOutput()) {
+    return {this->getIn(), this->getWeight(), this->get_addToOutput()};
+  } else {
+    return {this->getIn(), this->getWeight()};
+  }
+}
+
+llvm::DenseSet<Value> Conv2DQuantOp::ResultsToTranspose() { return {this->getOut()}; }
+
+llvm::SmallVector<Value, 4> Conv2DQuantOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
+                                                      PatternRewriter& rewriter) {
+  auto conv_quant_op = *this;
+  SmallVector<Value, 4> operands;
+  operands.push_back(value[0]);
+  operands.push_back(value[1]);
+  operands.push_back(conv_quant_op.getInZeroPoint());
+  if (conv_quant_op.getScale()) operands.push_back(conv_quant_op.getScale());
+  if (conv_quant_op.getBias()) operands.push_back(conv_quant_op.getBias());
+  if (this->get_addToOutput()) { operands.push_back(value[2]); }
+  NamedAttrList attributes = conv_quant_op->getAttrs();
+  attributes.set(conv_quant_op.getDataFormatAttrName(), rewriter.getStringAttr("channels_last"));
+  auto res =
+      rewriter
+          .create<oneflow::Conv2DQuantOp>(conv_quant_op.getLoc(), getNHWCResultTypes(conv_quant_op),
+                                          operands, attributes)
+          ->getResults();
+  llvm::SmallVector<Value, 4> results;
+  results.push_back(res[0]);
+  return results;
+}
+
 bool BiasAddOp::IsNCHW() { return this->getAxisAttr().getValue().getSExtValue() == 1; }
 
 llvm::DenseSet<Value> BiasAddOp::OperandsToTranspose() { return {this->getA()}; }
