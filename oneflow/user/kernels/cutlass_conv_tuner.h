@@ -13,49 +13,45 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 #ifndef ONEFLOW_USER_KERNELS_CUTLASS_CONV_TUNER_H_
 #define ONEFLOW_USER_KERNELS_CUTLASS_CONV_TUNER_H_
 
 #ifdef WITH_CUTLASS
 
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
-#include "oneflow/core/job/lazy_mode.h"
-#include <cutlass/library/handle.h>
+#include "oneflow/user/kernels/cutlass_conv_tuner_impl.h"
+
 #include <cutlass/library/library.h>
-#include <cutlass/library/singleton.h>
+#include <cutlass/library/operation_table.h>
 
 namespace oneflow {
 
 class CutlassConvTuner {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CutlassConvTuner);
-  ~CutlassConvTuner() = default;
+  CutlassConvTuner() = default;
 
+  template<typename Configuration, typename Arguments>
   const cutlass::library::Operation* FindConv2dOperation(
-      ep::CudaStream* stream, cutlass::library::ConvFunctionalKey functional_key,
-      const cutlass::library::Conv2dConfiguration& configuraion,
-      const cutlass::library::ConvArguments& arguments, void* workspace,
-      size_t workspace_size) const;
+      ep::CudaStream* stream, const cutlass::library::ConvFunctionalKey& functional_key,
+      const Configuration& configuraion, const Arguments& arguments, void* workspace,
+      size_t workspace_size) {
+    return GetCutlassConvTunerImpl<Configuration, Arguments>()->Find(
+        stream, functional_key, configuraion, arguments, workspace, workspace_size);
+  }
 
+  template<typename Configuration, typename Arguments>
   const cutlass::library::Operation* GetConv2dOperation(
       const std::string& name, ep::CudaStream* stream,
-      cutlass::library::ConvFunctionalKey functional_key,
-      const cutlass::library::Conv2dConfiguration& configuraion,
-      const cutlass::library::ConvArguments& arguments, void* workspace,
-      size_t workspace_size) const;
-
-  static const CutlassConvTuner& Get();
-
- private:
-  CutlassConvTuner();
-  struct Impl;
-  std::unique_ptr<Impl> impl_;
+      const cutlass::library::ConvFunctionalKey& functional_key, const Configuration& configuraion,
+      const Arguments& arguments, void* workspace, size_t workspace_size) {
+    return GetCutlassConvTunerImpl<Configuration, Arguments>()->Get(
+        name, stream, functional_key, configuraion, arguments, workspace, workspace_size);
+  }
 };
 
 }  // namespace oneflow
 
 #endif  // WITH_CUTLASS
+
 #endif  // ONEFLOW_USER_KERNELS_CUTLASS_CONV_TUNER_H_

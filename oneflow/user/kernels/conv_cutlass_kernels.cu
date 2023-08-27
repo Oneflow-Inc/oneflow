@@ -142,14 +142,14 @@ class Conv2dCutlassKernel final : public user_op::OpKernel, public user_op::Cuda
       if (it == tuning_cache_object.end()) { return nullptr; }
       if (!it->is_string()) { return nullptr; }
       const std::string name = *it;
-      return CutlassConvTuner::Get().GetConv2dOperation(name, stream, key, configuraion, arguments,
-                                                        tmp_buffer->mut_dptr(),
-                                                        tmp_buffer->shape_view().elem_cnt());
+      return CutlassConvTuner().GetConv2dOperation(name, stream, key, configuraion, arguments,
+                                                   tmp_buffer->mut_dptr(),
+                                                   tmp_buffer->shape_view().elem_cnt());
     }();
     if (!operation) {
-      operation = CutlassConvTuner::Get().FindConv2dOperation(stream, key, configuraion, arguments,
-                                                              tmp_buffer->mut_dptr(),
-                                                              tmp_buffer->shape_view().elem_cnt());
+      operation = CutlassConvTuner().FindConv2dOperation(stream, key, configuraion, arguments,
+                                                         tmp_buffer->mut_dptr(),
+                                                         tmp_buffer->shape_view().elem_cnt());
     }
 
     CHECK(operation != nullptr);
@@ -174,122 +174,6 @@ REGISTER_USER_KERNEL("conv2d")
         // Compatible with typo `KERENL`
         && ((user_op::HobEnvBool("ONEFLOW_KERNEL_CONV_ENABLE_CUTLASS_IMPL", false) == true)
             || (user_op::HobEnvBool("ONEFLOW_KERENL_CONV_ENABLE_CUTLASS_IMPL", false) == true)))
-    .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {
-      // use static workspace size
-      return 128 * 1024 * 1024;
-    })
-    .SetPriority(user_op::kKernelPriorityOptimized);
-
-class Conv2dInt8CutlassKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
- public:
-  Conv2dInt8CutlassKernel() = default;
-  ~Conv2dInt8CutlassKernel() override = default;
-
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-
- private:
-  using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
-               const user_op::OpKernelCache* cache) const override {
-    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
-    const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
-    const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
-    CHECK(add_to_output == nullptr);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-
-    const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
-    const auto& dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
-    const auto& strides = ctx->Attr<std::vector<int32_t>>("strides");
-
-    const int n = in->shape_view().At(0);
-    const int h = in->shape_view().At(1);
-    const int w = in->shape_view().At(2);
-    const int c = in->shape_view().At(3);
-
-    const int k = weight->shape_view().At(0);
-    const int r = weight->shape_view().At(1);
-    const int s = weight->shape_view().At(2);
-    CHECK_EQ(weight->shape_view().At(3), c);
-
-    const int p = out->shape_view().At(1);
-    const int q = out->shape_view().At(2);
-
-    auto* stream = ctx->stream()->As<ep::CudaStream>();
-
-    cutlass::library::ConvFunctionalKey key(
-        cutlass::library::Provider::kCUTLASS, cutlass::library::ConvKind::kFprop,
-        cutlass::library::NumericTypeID::kS8, cutlass::library::LayoutTypeID::kTensorNHWC,
-        cutlass::library::NumericTypeID::kS8, cutlass::library::LayoutTypeID::kTensorNHWC,
-        cutlass::library::NumericTypeID::kS32, cutlass::library::LayoutTypeID::kTensorNHWC,
-        cutlass::library::NumericTypeID::kS32, cutlass::library::NumericTypeID::kS32);
-
-    cutlass::conv::Conv2dProblemSize problem_size(
-        n, h, w, c, k, r, s, p, q, padding_before.at(0), padding_before.at(1), strides.at(0),
-        strides.at(1), dilation_rate.at(0), dilation_rate.at(1),
-        cutlass::conv::Mode::kCrossCorrelation);
-    cutlass::library::Conv2dConfiguration configuraion;
-    configuraion.split_k_mode = cutlass::conv::SplitKMode::kSerial;
-    configuraion.problem_size = problem_size;
-    configuraion.stride_a = {c, w * c, h * w * c};
-    configuraion.stride_b = {c, s * c, r * s * c};
-    configuraion.stride_c = {k, q * k, p * q * k};
-
-    cutlass::library::ConvArguments arguments;
-    arguments.A = in->dptr();
-    arguments.B = weight->dptr();
-    arguments.reordered_B = nullptr;
-    if (bias == nullptr) {
-      arguments.C = nullptr;
-    } else {
-      arguments.C = bias->dptr();
-    }
-    arguments.D = out->mut_dptr();
-
-    int32_t alpha = 1;
-    int32_t beta = 0;
-    arguments.alpha = &alpha;
-    arguments.beta = &beta;
-    arguments.pointer_mode = cutlass::library::ScalarPointerMode::kHost;
-    const cutlass::library::Operation* operation = nullptr;
-    operation = [&]() -> const cutlass::library::Operation* {
-      const std::string& tuning_cache = ctx->Attr<std::string>("tuning_cache");
-      if (tuning_cache.empty()) { return nullptr; }
-      auto tuning_cache_object = nlohmann::json::parse(tuning_cache);
-      if (!tuning_cache_object.is_object()) { return nullptr; }
-      auto it = tuning_cache_object.find("cutlass");
-      if (it == tuning_cache_object.end()) { return nullptr; }
-      if (!it->is_string()) { return nullptr; }
-      const std::string name = *it;
-      return CutlassConvTuner::Get().GetConv2dOperation(name, stream, key, configuraion, arguments,
-                                                        tmp_buffer->mut_dptr(),
-                                                        tmp_buffer->shape_view().elem_cnt());
-    }();
-    if (!operation) {
-      operation = CutlassConvTuner::Get().FindConv2dOperation(stream, key, configuraion, arguments,
-                                                              tmp_buffer->mut_dptr(),
-                                                              tmp_buffer->shape_view().elem_cnt());
-    }
-
-    CHECK(operation != nullptr);
-    const size_t host_workspace_size = operation->get_host_workspace_size(&configuraion);
-    std::vector<uint8_t> host_workspace(host_workspace_size, 0);
-    auto init_status = operation->initialize(&configuraion, host_workspace.data(),
-                                             tmp_buffer->mut_dptr(), stream->cuda_stream());
-    CHECK(init_status == cutlass::Status::kSuccess);
-    auto run_status = operation->run(&arguments, host_workspace.data(), tmp_buffer->mut_dptr(),
-                                     stream->cuda_stream());
-    CHECK(run_status == cutlass::Status::kSuccess);
-  }
-};
-
-REGISTER_USER_KERNEL("conv2d")
-    .SetCreateFn<Conv2dInt8CutlassKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
-                     && (user_op::HobAttr<std::string>("data_format") == "channels_last")
-                     && (user_op::HobAttr<int32_t>("groups") == 1)
-                     && (user_op::HobDataType("in", 0) == DataType::kInt8))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {
       // use static workspace size
       return 128 * 1024 * 1024;
