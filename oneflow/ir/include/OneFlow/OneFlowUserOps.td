@@ -8233,7 +8233,7 @@ def OneFlow_MovingAverageMinMaxObserverOp : OneFlow_BaseOp<"moving_average_min_m
   let has_input_arg_modify_fn = 1;
 }
 
-def OneFlow_QuantizationOp : OneFlow_BaseOp<"quantization", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_QuantizationOp : OneFlow_BaseOp<"quantization", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<NCHWCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in,
     OneFlow_Tensor:$scale,

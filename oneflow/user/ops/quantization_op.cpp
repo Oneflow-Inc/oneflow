@@ -75,7 +75,17 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> QuantizationOp::InferDataType(user_op::InferContext* ctx) {
-  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
+  const std::string& quantization_formula = ctx->Attr<std::string>("quantization_formula");
+  if (quantization_formula == "oneflow") {
+    const int32_t quantization_bit = ctx->Attr<int32_t>("quantization_bit");
+    if (quantization_bit == 8) {
+      ctx->SetOutputDType("out", 0, DataType::kInt8);
+    } else {
+      OF_UNIMPLEMENTED();
+    }
+  } else {
+    ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
+  }
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> QuantizationOp::ModifyInputArg(
@@ -99,7 +109,8 @@ namespace oneflow {
   CHECK_OR_RETURN(quantization_scheme == "symmetric" || quantization_scheme == "affine");
 
   std::string quantization_formula = op_conf.attr<std::string>("quantization_formula");
-  CHECK_OR_RETURN(quantization_formula == "google" || quantization_formula == "cambricon");
+  CHECK_OR_RETURN(quantization_formula == "google" || quantization_formula == "cambricon"
+                  || quantization_formula == "oneflow");
   return Maybe<void>::Ok();
 }
 

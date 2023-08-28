@@ -24,23 +24,24 @@ namespace {
 template<typename T>
 __global__ void QuantizationSymmetric(const T* in_ptr, const T* scale_ptr, const int64_t scale_size,
                                       const int64_t elements, const int64_t panel_size,
-                                      const double quantization_bit, T* out_ptr) {
+                                      const int32_t quantization_bit, T* out_ptr) {
   int64_t gid = (blockDim.x * blockIdx.x) + threadIdx.x;
   int64_t step = gridDim.x * blockDim.x;
 
-  T upper_bound = static_cast<T>(pow(2.0, quantization_bit - 1)) - 1;
-  T lower_bound = -upper_bound - 1;
+  float upper_bound = pow(2.0, quantization_bit - 1) - 1;
+  float lower_bound = -upper_bound - 1;
 
   while (gid < elements) {
     int64_t channel_index = gid / panel_size;
     int64_t scale_idx = min(scale_size - 1, channel_index);
 
-    T scale = scale_ptr[scale_idx];
+    float scale = scale_ptr[scale_idx];
+    float in = in_ptr[gid];
 
-    T out = nearbyint(in_ptr[gid] / scale);
+    float out = nearbyint(in / scale);
     out = out > upper_bound ? upper_bound : out;
     out = out < lower_bound ? lower_bound : out;
-    out_ptr[gid] = out;
+    out_ptr[gid] = static_cast<T>(out);
 
     gid += step;
   }
@@ -49,25 +50,26 @@ __global__ void QuantizationSymmetric(const T* in_ptr, const T* scale_ptr, const
 template<typename T>
 __global__ void QuantizationAffine(const T* in_ptr, const T* scale_ptr, const T* zero_point_ptr,
                                    const int64_t scale_size, const int64_t elements,
-                                   const int64_t panel_size, const double quantization_bit,
+                                   const int64_t panel_size, const int32_t quantization_bit,
                                    T* out_ptr) {
   int64_t gid = (blockDim.x * blockIdx.x) + threadIdx.x;
   int64_t step = gridDim.x * blockDim.x;
 
-  T upper_bound = static_cast<T>(pow(2.0, quantization_bit)) - 1;
-  T lower_bound = 0;
+  float upper_bound = pow(2.0, quantization_bit) - 1;
+  float lower_bound = 0;
 
   while (gid < elements) {
     int64_t channel_index = gid / panel_size;
     int64_t scale_idx = min(scale_size - 1, channel_index);
 
-    T scale = scale_ptr[scale_idx];
-    T zero_point = zero_point_ptr[scale_idx];
+    float scale = scale_ptr[scale_idx];
+    float zero_point = zero_point_ptr[scale_idx];
+    float in = in_ptr[gid];
 
-    T out = nearbyint(in_ptr[gid] / scale + zero_point);
+    float out = nearbyint(in / scale + zero_point);
     out = out > upper_bound ? upper_bound : out;
     out = out < lower_bound ? lower_bound : out;
-    out_ptr[gid] = out;
+    out_ptr[gid] = static_cast<T>(out);
 
     gid += step;
   }
@@ -80,17 +82,128 @@ __global__ void QuantizationCambricon(const T* in_ptr, const T* shift, const int
   int64_t gid = (blockDim.x * blockIdx.x) + threadIdx.x;
   int64_t step = gridDim.x * blockDim.x;
 
-  T upper_bound = static_cast<T>(pow(2.0, quantization_bit - 1)) - 1;
-  T lower_bound = -upper_bound - 1;
+  float upper_bound = pow(2.0, quantization_bit - 1) - 1;
+  float lower_bound = -upper_bound - 1;
 
-  T scale = static_cast<T>(pow(2.0, static_cast<int32_t>(shift[0])));
+  float scale = pow(2.0, static_cast<int32_t>(shift[0]));
 
   while (gid < elements) {
-    T out = nearbyint(in_ptr[gid] / scale);
+    float in = in_ptr[gid];
+    float out = nearbyint(in / scale);
     out = out > upper_bound ? upper_bound : out;
     out = out < lower_bound ? lower_bound : out;
-    out_ptr[gid] = out;
+    out_ptr[gid] = static_cast<T>(out);
     gid += step;
+  }
+}
+
+template<typename T, typename OutT>
+__global__ void OFPerTensorQuantizationSymmetric(const int64_t elements, const T* in_ptr,
+                                                 const T* scale_ptr, const OutT upper_bound,
+                                                 const OutT lower_bound, OutT* out_ptr) {
+  int64_t gid = (blockDim.x * blockIdx.x) + threadIdx.x;
+  int64_t step = gridDim.x * blockDim.x;
+
+  float scale = *scale_ptr;
+
+  while (gid < elements) {
+    float in = in_ptr[gid];
+    float out = nearbyint(in / scale);
+    out = out > upper_bound ? upper_bound : out;
+    out = out < lower_bound ? lower_bound : out;
+    out_ptr[gid] = static_cast<OutT>(out);
+
+    gid += step;
+  }
+}
+
+template<typename T, typename OutT>
+__global__ void OFPerTensorQuantizationAffine(const int64_t elements, const T* in_ptr,
+                                              const T* scale_ptr, const OutT* zero_point_ptr,
+                                              const OutT upper_bound, const OutT lower_bound,
+                                              OutT* out_ptr) {
+  int64_t gid = (blockDim.x * blockIdx.x) + threadIdx.x;
+  int64_t step = gridDim.x * blockDim.x;
+
+  float scale = *scale_ptr;
+  float zero_point = *zero_point_ptr;
+
+  while (gid < elements) {
+    float in = in_ptr[gid];
+    float out = nearbyint(in / scale + zero_point);
+    out = out > upper_bound ? upper_bound : out;
+    out = out < lower_bound ? lower_bound : out;
+    out_ptr[gid] = static_cast<OutT>(out);
+
+    gid += step;
+  }
+}
+
+struct __align__(8) Half4 {
+  half x;
+  half y;
+  half z;
+  half w;
+};
+
+struct __align__(4) Byte4 {
+  int8_t x;
+  int8_t y;
+  int8_t z;
+  int8_t w;
+};
+
+template<>
+__global__ void OFPerTensorQuantizationAffine<half, int8_t>(
+    const int64_t elements, const half* in_ptr, const half* scale_ptr, const int8_t* zero_point_ptr,
+    const int8_t upper_bound, const int8_t lower_bound, int8_t* out_ptr) {
+  int64_t gid = (blockDim.x * blockIdx.x) + threadIdx.x;
+  int64_t step = gridDim.x * blockDim.x;
+
+  float scale = *scale_ptr;
+  float zero_point = *zero_point_ptr;
+
+  int64_t loops = elements >> 2;
+  for (; gid < loops; gid += step) {
+    Half4 in = reinterpret_cast<const Half4*>(in_ptr)[gid];
+    Byte4 out;
+    int x = __float2int_rn(static_cast<float>(in.x) / scale + zero_point);
+    int y = __float2int_rn(static_cast<float>(in.y) / scale + zero_point);
+    int z = __float2int_rn(static_cast<float>(in.z) / scale + zero_point);
+    int w = __float2int_rn(static_cast<float>(in.w) / scale + zero_point);
+    out.x = max(min(x, upper_bound), lower_bound);
+    out.y = max(min(y, upper_bound), lower_bound);
+    out.z = max(min(z, upper_bound), lower_bound);
+    out.w = max(min(w, upper_bound), lower_bound);
+    reinterpret_cast<Byte4*>(out_ptr)[gid] = out;
+  }
+  int64_t offset = loops << 2;
+  if (offset < elements && gid == loops) {
+    for (; offset < elements; offset += 1) {
+      float in = in_ptr[offset];
+      int out = __float2int_rn(in / scale + zero_point);
+      out_ptr[offset] = max(min(out, upper_bound), lower_bound);
+    }
+  }
+}
+
+template<typename T, typename OutT>
+void ApplyOFPerTensorQuantization(user_op::KernelComputeContext* ctx,
+                                  const std::string& quantization_scheme,
+                                  const int32_t quantization_bit, const user_op::Tensor* in,
+                                  const user_op::Tensor* scale, const user_op::Tensor* zero_point,
+                                  user_op::Tensor* out) {
+  const int64_t elements = in->shape_view().elem_cnt();
+  OutT upper_bound = static_cast<OutT>(pow(2.0, quantization_bit - 1)) - 1;
+  OutT lower_bound = -upper_bound - 1;
+  if (quantization_scheme == "symmetric") {
+    RUN_CUDA_KERNEL((OFPerTensorQuantizationSymmetric<T, OutT>), ctx->stream(), elements, elements,
+                    in->dptr<T>(), scale->dptr<T>(), upper_bound, lower_bound,
+                    out->mut_dptr<OutT>());
+  } else {
+    RUN_CUDA_KERNEL((OFPerTensorQuantizationAffine<T, OutT>), ctx->stream(), elements, elements,
+                    in->dptr<T>(), scale->dptr<T>(), zero_point->dptr<OutT>(), upper_bound,
+                    lower_bound, out->mut_dptr<OutT>());
   }
 }
 
@@ -122,7 +235,16 @@ class GpuQuantizationKernel final : public user_op::OpKernel {
     auto origin_round_mode = std::fegetround();
     std::fesetround(FE_TONEAREST);
 
-    if (quantization_formula == "google") {
+    if (quantization_formula == "oneflow") {
+      CHECK_EQ(scale_size, 1)
+          << "only support per-tensor quantization for oneflow quantization formula";
+      if (quantization_bit == 8) {
+        ApplyOFPerTensorQuantization<T, int8_t>(ctx, quantization_scheme, quantization_bit, in,
+                                                scale, zero_point, out);
+      } else {
+        UNIMPLEMENTED();
+      }
+    } else if (quantization_formula == "google") {
       if (quantization_scheme == "symmetric") {
         RUN_CUDA_KERNEL((QuantizationSymmetric<T>), ctx->stream(), elements, in->dptr<T>(),
                         scale->dptr<T>(), scale_size, elements, panel_size, quantization_bit,
@@ -154,5 +276,6 @@ class GpuQuantizationKernel final : public user_op::OpKernel {
 
 REGISTER_QUANTIZATION_KERNEL(float);
 REGISTER_QUANTIZATION_KERNEL(double);
+REGISTER_QUANTIZATION_KERNEL(half);
 
 }  // namespace oneflow
