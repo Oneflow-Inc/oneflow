@@ -61,6 +61,7 @@ struct Conv2dOperationCacheKey {
                           const cutlass::library::ConvScaleBiasFusionArguments& arguments)
       : functional_key(functional_key) {
     configuraion.problem_size = config.problem_size;
+    configuraion.split_k_mode = config.split_k_mode;
     configuraion.stride_a = config.stride_a;
     configuraion.stride_b = config.stride_b;
     configuraion.stride_c = {0, 0, 0};
