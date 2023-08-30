@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
@@ -97,92 +98,109 @@ __global__ void QuantizationCambricon(const T* in_ptr, const T* shift, const int
   }
 }
 
-template<typename T, typename OutT>
+template<int M>
+__host__ __device__ int ModDiv(int64_t N) {
+  return N - (N / M * M);
+}
+
+template<>
+__host__ __device__ int ModDiv<2>(int64_t N) {
+  return N & 0x1;
+}
+
+template<>
+__host__ __device__ int ModDiv<4>(int64_t N) {
+  return N & 0x3;
+}
+
+template<>
+__host__ __device__ int ModDiv<8>(int64_t N) {
+  return N & 0x7;
+}
+
+template<>
+__host__ __device__ int ModDiv<16>(int64_t N) {
+  return N & 0xF;
+}
+
+template<int pack_size, typename T, typename OutT>
 __global__ void OFPerTensorQuantizationSymmetric(const int64_t elements, const T* in_ptr,
                                                  const T* scale_ptr, const OutT upper_bound,
                                                  const OutT lower_bound, OutT* out_ptr) {
-  int64_t gid = (blockDim.x * blockIdx.x) + threadIdx.x;
-  int64_t step = gridDim.x * blockDim.x;
+  using LoadType = cuda::elementwise::PackType<T, pack_size>;
+  using LoadPack = cuda::elementwise::Pack<T, pack_size>;
+  using StoreType = cuda::elementwise::PackType<OutT, pack_size>;
+  using StorePack = cuda::elementwise::Pack<OutT, pack_size>;
+
+  int64_t tid = (blockDim.x * blockIdx.x) + threadIdx.x;
+  int64_t step = gridDim.x * blockDim.x * pack_size;
 
   float scale = *scale_ptr;
 
-  while (gid < elements) {
-    float in = in_ptr[gid];
-    float out = nearbyint(in / scale);
-    out = out > upper_bound ? upper_bound : out;
-    out = out < lower_bound ? lower_bound : out;
-    out_ptr[gid] = static_cast<OutT>(out);
+  for (int64_t idx = tid * pack_size; idx < elements; idx += step) {
+    StorePack out;
+    LoadPack in;
+    in.storage = reinterpret_cast<const LoadType*>(in_ptr + idx)[0];
+#pragma unroll
+    for (int i = 0; i < pack_size; ++i) {
+      out.elem[i] = max(min(__float2int_rn(static_cast<float>(in.elem[i]) / scale), upper_bound),
+                        lower_bound);
+    }
+    reinterpret_cast<StoreType*>(out_ptr + idx)[0] = out.storage;
+  }
 
-    gid += step;
+  int rest = ModDiv<pack_size>(elements);
+
+  if (rest > 0 && tid == (gridDim.x * blockDim.x - 1)) {
+    in_ptr += elements - rest;
+    out_ptr += elements - rest;
+#pragma unroll
+    for (int i = 0; i < rest; ++i) {
+      out_ptr[i] =
+          max(min(__float2int_rn(static_cast<float>(in_ptr[i]) / scale), upper_bound), lower_bound);
+    }
   }
 }
 
-template<typename T, typename OutT>
+template<int pack_size, typename T, typename OutT>
 __global__ void OFPerTensorQuantizationAffine(const int64_t elements, const T* in_ptr,
                                               const T* scale_ptr, const OutT* zero_point_ptr,
                                               const OutT upper_bound, const OutT lower_bound,
                                               OutT* out_ptr) {
-  int64_t gid = (blockDim.x * blockIdx.x) + threadIdx.x;
-  int64_t step = gridDim.x * blockDim.x;
+  using LoadType = cuda::elementwise::PackType<T, pack_size>;
+  using LoadPack = cuda::elementwise::Pack<T, pack_size>;
+  using StoreType = cuda::elementwise::PackType<OutT, pack_size>;
+  using StorePack = cuda::elementwise::Pack<OutT, pack_size>;
+
+  int64_t tid = (blockDim.x * blockIdx.x) + threadIdx.x;
+  int64_t step = gridDim.x * blockDim.x * pack_size;
 
   float scale = *scale_ptr;
   float zero_point = *zero_point_ptr;
 
-  while (gid < elements) {
-    float in = in_ptr[gid];
-    float out = nearbyint(in / scale + zero_point);
-    out = out > upper_bound ? upper_bound : out;
-    out = out < lower_bound ? lower_bound : out;
-    out_ptr[gid] = static_cast<OutT>(out);
-
-    gid += step;
+  for (int64_t idx = tid * pack_size; idx < elements; idx += step) {
+    StorePack out;
+    LoadPack in;
+    in.storage = reinterpret_cast<const LoadType*>(in_ptr + idx)[0];
+#pragma unroll
+    for (int i = 0; i < pack_size; ++i) {
+      out.elem[i] =
+          max(min(__float2int_rn(static_cast<float>(in.elem[i]) / scale + zero_point), upper_bound),
+              lower_bound);
+    }
+    reinterpret_cast<StoreType*>(out_ptr + idx)[0] = out.storage;
   }
-}
 
-struct __align__(8) Half4 {
-  half x;
-  half y;
-  half z;
-  half w;
-};
+  int rest = ModDiv<pack_size>(elements);
 
-struct __align__(4) Byte4 {
-  int8_t x;
-  int8_t y;
-  int8_t z;
-  int8_t w;
-};
-
-template<>
-__global__ void OFPerTensorQuantizationAffine<half, int8_t>(
-    const int64_t elements, const half* in_ptr, const half* scale_ptr, const int8_t* zero_point_ptr,
-    const int8_t upper_bound, const int8_t lower_bound, int8_t* out_ptr) {
-  int64_t gid = (blockDim.x * blockIdx.x) + threadIdx.x;
-  int64_t step = gridDim.x * blockDim.x;
-
-  float scale = *scale_ptr;
-  float zero_point = *zero_point_ptr;
-
-  int64_t loops = elements >> 2;
-  for (; gid < loops; gid += step) {
-    Half4 in = reinterpret_cast<const Half4*>(in_ptr)[gid];
-    Byte4 out;
-    int x = __float2int_rn(static_cast<float>(in.x) / scale + zero_point);
-    int y = __float2int_rn(static_cast<float>(in.y) / scale + zero_point);
-    int z = __float2int_rn(static_cast<float>(in.z) / scale + zero_point);
-    int w = __float2int_rn(static_cast<float>(in.w) / scale + zero_point);
-    out.x = max(min(x, upper_bound), lower_bound);
-    out.y = max(min(y, upper_bound), lower_bound);
-    out.z = max(min(z, upper_bound), lower_bound);
-    out.w = max(min(w, upper_bound), lower_bound);
-    reinterpret_cast<Byte4*>(out_ptr)[gid] = out;
-  }
-  int64_t offset = loops << 2;
-  if (offset < elements && gid == loops) {
-    for (; offset < elements; offset += 1) {
-      float in = in_ptr[offset];
-      int out = __float2int_rn(in / scale + zero_point);
-      out_ptr[offset] = max(min(out, upper_bound), lower_bound);
+  if (rest > 0 && tid == (gridDim.x * blockDim.x - 1)) {
+    in_ptr += elements - rest;
+    out_ptr += elements - rest;
+#pragma unroll
+    for (int i = 0; i < rest; ++i) {
+      out_ptr[i] =
+          max(min(__float2int_rn(static_cast<float>(in_ptr[i]) / scale + zero_point), upper_bound),
+              lower_bound);
     }
   }
 }
@@ -193,17 +211,23 @@ void ApplyOFPerTensorQuantization(user_op::KernelComputeContext* ctx,
                                   const int32_t quantization_bit, const user_op::Tensor* in,
                                   const user_op::Tensor* scale, const user_op::Tensor* zero_point,
                                   user_op::Tensor* out) {
+  constexpr int pack_size = cuda::elementwise::PackSize<T>();
+
   const int64_t elements = in->shape_view().elem_cnt();
+  int64_t pack_num = (elements + pack_size - 1) / pack_size;
+  int grid_size;
+  cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
+
   OutT upper_bound = static_cast<OutT>(pow(2.0, quantization_bit - 1)) - 1;
   OutT lower_bound = -upper_bound - 1;
+  auto stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
   if (quantization_scheme == "symmetric") {
-    RUN_CUDA_KERNEL((OFPerTensorQuantizationSymmetric<T, OutT>), ctx->stream(), elements, elements,
-                    in->dptr<T>(), scale->dptr<T>(), upper_bound, lower_bound,
-                    out->mut_dptr<OutT>());
+    OFPerTensorQuantizationSymmetric<pack_size, T, OutT><<<grid_size, cuda::elementwise::kBlockSize, 0, stream>>>(
+        elements, in->dptr<T>(), scale->dptr<T>(), upper_bound, lower_bound, out->mut_dptr<OutT>());
   } else {
-    RUN_CUDA_KERNEL((OFPerTensorQuantizationAffine<T, OutT>), ctx->stream(), elements, elements,
-                    in->dptr<T>(), scale->dptr<T>(), zero_point->dptr<OutT>(), upper_bound,
-                    lower_bound, out->mut_dptr<OutT>());
+    OFPerTensorQuantizationAffine<pack_size, T, OutT><<<grid_size, cuda::elementwise::kBlockSize, 0, stream>>>(
+        elements, in->dptr<T>(), scale->dptr<T>(), zero_point->dptr<OutT>(), upper_bound,
+        lower_bound, out->mut_dptr<OutT>());
   }
 }
 
