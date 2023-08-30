@@ -204,3 +204,10 @@ Pattern {
     replace broadcast_mul with CopyUserOpAttrs(broadcast_mul, scalar_mul);
   };
 }
+
+Pattern {
+  let root = op<>(input: Value);
+  IsScalarMathOpAndCouldBeEliminate(root);
+
+  replace root with input;
+}

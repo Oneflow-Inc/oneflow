@@ -311,6 +311,32 @@ static Attribute GetReciprocal(PatternRewriter& rewriter, Attribute a) {
   return rewriter.getF64FloatAttr(1 / a.cast<FloatAttr>().getValueAsDouble());
 }
 
+static LogicalResult IsScalarMathOpAndCouldBeEliminate(PatternRewriter& rewriter,
+                                                       Operation* scalar_math_op) {
+  if (auto op = dyn_cast<ScalarAddOp>(scalar_math_op)) {
+    if (op.getHasIntOperand()) {
+      return success(op.getIntOperand() == 0);
+    } else {
+      return success(op.getFloatOperand().convertToDouble() == 0);
+    }
+  } else if (auto op = dyn_cast<ScalarMulOp>(scalar_math_op)) {
+    if (op.getHasIntOperand()) {
+      return success(op.getIntOperand() == 1);
+    } else {
+      return success(op.getFloatOperand().convertToDouble() == 1);
+    }
+  } else if (auto op = dyn_cast<ScalarDivOp>(scalar_math_op)) {
+    if (op.getHasIntOperand()) {
+      return success(op.getIntOperand() == 1);
+    } else {
+      return success(op.getFloatOperand().convertToDouble() == 1);
+    }
+  } else {
+    return failure();
+  }
+  return failure();
+}
+
 }  // namespace
 
 namespace rewrites {
@@ -346,6 +372,7 @@ void populateConstraints(RewritePatternSet& patterns) {
   PDLL_REGISTER(IsScalarTensor);
   PDLL_REGISTER(IsScalarEqualSqrtDim);
   PDLL_REGISTER(IsScalarEqualSqrtDimReciprocal);
+  PDLL_REGISTER(IsScalarMathOpAndCouldBeEliminate);
 
 #undef PDLL_REGISTER
 }
