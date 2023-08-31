@@ -5375,6 +5375,28 @@ def OneFlow_ErfcGradOp : OneFlow_BaseOp<"erfc_grad", [NoMemoryEffect, DeclareOpI
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_MatmulQuantOp : OneFlow_BaseOp<"matmul_quant", [NoMemoryEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$a,
+    OneFlow_Tensor:$b,
+    Optional<OneFlow_Tensor>:$scale,
+    Optional<OneFlow_Tensor>:$bias,
+    Optional<OneFlow_Tensor>:$_add_to_output
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    DefaultValuedAttr<BoolAttr, "true">:$transpose_b,
+    OneFlow_DataType:$out_dtype
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_compute_complexity_fn = 1;
+}
+
 def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<MatMulCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$a,

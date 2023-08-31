@@ -21,6 +21,7 @@ from oneflow._C import conv1d
 from oneflow._C import conv2d
 from oneflow._C import conv3d
 from oneflow._C import conv2d_quant
+from oneflow._C import matmul_quant
 from oneflow._C import deconv1d as conv_transpose1d
 from oneflow._C import deconv2d as conv_transpose2d
 from oneflow._C import deconv3d as conv_transpose3d
