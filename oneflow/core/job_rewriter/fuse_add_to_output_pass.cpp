@@ -30,17 +30,20 @@ class FuseAddToOutputPass final : public JobPass {
   bool IsEnabled(const JobPassCtx& ctx) const {
     return ctx.job_desc().job_conf().enable_fuse_add_to_output();
   }
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
+  Maybe<bool> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
-    const OpGraph op_graph(*job);
-    JobBuilder job_builder(job);
-    return Apply(op_graph, &job_builder);
+    while (true) {
+      const OpGraph op_graph(*job);
+      JobBuilder job_builder(job);
+      if (!JUST(Apply(op_graph, &job_builder))) { break; }
+    }
+    return Maybe<void>::Ok();
   }
 };
 
-Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+Maybe<bool> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   const HashMap<std::string, user_op::OpArg> supported_op_type_name2output_arg(
       {{"normalization", user_op::OpArg("y", 0)},
        {"dropout", user_op::OpArg("out", 0)},
@@ -83,7 +86,6 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
       ctrl_in_op_names.insert(ctrl_in_op_name);
     }
   });
-
   auto IsReachable = op_graph.MakePredicatorIsOpNameDataOrCtrlReachable();
   std::vector<OperatorConf> delete_ops;
   HashSet<std::string> be_fused_op_names;
@@ -160,9 +162,12 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
     delete_ops.emplace_back(op_conf);
     return Maybe<void>::Ok();
   }));
+  if (delete_ops.empty()) {
+    return false;
+  }
   JUST(job_builder->MutOpTransactionCommit());
   job_builder->DelOps(delete_ops);
-  return Maybe<void>::Ok();
+  return true;
 }
 
 }  // namespace
