@@ -1058,6 +1058,11 @@
     String channel_pos="channels_first", DataType output_dtype=None) => Conv2dQuant'
   bind_python: True
 
+- name: "matmul_quant"
+  signature:
+    'Tensor (Tensor a, Tensor b, Tensor scale=None, Tensor bias=None, Bool transpose_b=True, DataType output_dtype=None) => MatmulQuant'
+  bind_python: True
+
 - name: "conv3d"
   signature:
     'Tensor (Tensor input, Tensor weight, Tensor bias=None, Int32List[3] stride=1,

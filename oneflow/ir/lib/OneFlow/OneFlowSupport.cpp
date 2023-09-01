@@ -129,6 +129,7 @@ void __DenseElementsAttrToTensor(const mlir::DenseElementsAttr dense_attr,
 
   std::vector<T> data;
   std::vector<::oneflow::float16> fp16_data;
+  std::vector<int8_t> int8_data;
   void* dptr = nullptr;
   const size_t tensor_size =
       tensor->shape()->elem_cnt() * ::oneflow::GetSizeOfDataType(tensor->dtype()->data_type());
@@ -144,6 +145,12 @@ void __DenseElementsAttrToTensor(const mlir::DenseElementsAttr dense_attr,
     for (const T elem : dense_attr.getValues<T>()) { data.push_back(elem); }
     CHECK_EQ(data.size() * sizeof(T), tensor_size);
     dptr = data.data();
+  } else if (tensor->dtype()->data_type() == ::oneflow::DataType::kInt8){
+    for (const T elem : dense_attr.getValues<T>()) {
+      int8_data.push_back(static_cast<int8_t>(elem));
+    }
+    CHECK_EQ(int8_data.size() * sizeof(int8_t), tensor_size);
+    dptr = int8_data.data();
   } else {
     UNIMPLEMENTED();
   }

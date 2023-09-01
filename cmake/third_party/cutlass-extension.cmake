@@ -29,7 +29,7 @@ if(WITH_CUTLASS_EXTENSION)
       ${CUTLASS_EXTENSION_PROJECT}
       PREFIX cutlass-extension
       GIT_REPOSITORY https://github.com/Oneflow-Inc/oneflow-cutlass-extension.git
-      GIT_TAG master
+      GIT_TAG add_gemm_scale_bias_fusion
       UPDATE_COMMAND ""
       BUILD_BYPRODUCTS ${CUTLASS_EXTENSION_LIBRARIES}
       CMAKE_ARGS -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}

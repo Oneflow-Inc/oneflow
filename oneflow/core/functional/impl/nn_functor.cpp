@@ -378,6 +378,32 @@ class MatMulNoBroadCastFunctor {
   }
 };
 
+class MatMulQuantFunctor {
+ public:
+  MatMulQuantFunctor() {
+    matmul_op_ = CHECK_JUST(one::OpBuilder("matmul_quant").Input("a").Input("b").Output("out").Build());
+    matmul_scale_bias__op_ = 
+        CHECK_JUST(one::OpBuilder("matmul_quant").Input("a").Input("b").Input("scale").Input("bias").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a, const std::shared_ptr<one::Tensor>& b,
+                           const Optional<one::Tensor>& scale, const Optional<one::Tensor>& bias,
+                           const bool& transpose_b, const Optional<Symbol<DType>>& output_dtype) const {
+    if (scale || bias) {
+      CHECK_OR_RETURN(scale && bias) << "scale and bias must both be given or not.";
+    }
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("transpose_b", "out_dtype");
+    attrs.SetAllAttrs(transpose_b, output_dtype.value_or(DType::Float())->data_type());
+    if (scale) {
+      return OpInterpUtil::Dispatch<Tensor>(
+          *matmul_scale_bias__op_, {a, b, JUST(scale), JUST(bias)}, attrs);
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {a, b}, attrs);
+  }
+ private:
+  std::shared_ptr<OpExpr> matmul_op_;
+  std::shared_ptr<OpExpr> matmul_scale_bias__op_;
+};
+
 class MatMulFunctor {
  public:
   MatMulFunctor() {
@@ -5497,6 +5523,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::EmbeddingReNormFunctor>("EmbeddingReNorm");
   m.add_functor<impl::EmbeddingFunctor>("Embedding");
   m.add_functor<impl::MatMulFunctor>("MatMul");
+  m.add_functor<impl::MatMulQuantFunctor>("MatmulQuant");
   m.add_functor<impl::MatMulNoBroadCastFunctor>("MatMulNoBroadCast");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
   m.add_functor<impl::MatrixVectorProductFunctor>("MatrixVectorProduct");
