@@ -48,7 +48,6 @@ jobs:
           entries: |
             cu118
             cu117
-            cu116
             cpu
       - name: Get current date
         id: date
