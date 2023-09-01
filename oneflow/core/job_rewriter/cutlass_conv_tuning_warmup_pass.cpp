@@ -139,10 +139,6 @@ Maybe<void> CutlassConvTuningWarmupPass::Apply(Job* job, JobPassCtx* ctx) const 
     size_t offset = x_size + w_size + y_size;
     void* bias_ptr = nullptr;
     if (bias_size != 0) { bias_ptr = buffer + offset; }
-    void* zero_point_ptr = nullptr;
-    if (zero_point_size) { zero_point_ptr = buffer + offset + bias_size; }
-    void* scale_ptr = nullptr;
-    if (scale_size) { scale_ptr = buffer + offset + bias_size + zero_point_size; }
 
     cutlass::conv::Conv2dProblemSize problem_size(
         n, h, w, c, k, r, s, p, q, padding_before.at(0), padding_before.at(1), strides.at(0),
@@ -210,6 +206,11 @@ Maybe<void> CutlassConvTuningWarmupPass::Apply(Job* job, JobPassCtx* ctx) const 
           stream->As<ep::CudaStream>(), key, configuraion, arguments, workspace, kMaxWorkspaceSize);
     } else {
 #ifdef WITH_CUTLASS_EXTENSION
+      void* zero_point_ptr = nullptr;
+      if (zero_point_size) { zero_point_ptr = buffer + offset + bias_size; }
+      void* scale_ptr = nullptr;
+      if (scale_size) { scale_ptr = buffer + offset + bias_size + zero_point_size; }
+
       cutlass::library::ConvFunctionalKey key(
           cutlass::library::Provider::kCUTLASS, cutlass::library::ConvKind::kFprop,
           cutlass::library::NumericTypeID::kS8, cutlass::library::LayoutTypeID::kTensorNHWC,
