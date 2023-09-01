@@ -80,7 +80,32 @@ jobs:
       - uses: actions/checkout@v2
       - uses: Oneflow-Inc/get-oneflow@add-nightly-date
         name: Build ${{ matrix.entry }}
-        if: ${{ matrix.entry !='cpu' }}
+        if: ${{ matrix.entry =='cu118' }}
+        with:
+          cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/release/cuda-86.cmake
+          build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc9.sh
+          oneflow-src: ${{ env.ONEFLOW_SRC }}
+          oneflow-build-env: manylinux
+          wheelhouse-dir: ${{ env.WHEELHOUSE_DIR }}
+          clear-wheelhouse-dir: true
+          self-hosted: true
+          compute-platform: ${{ matrix.entry }}
+          manylinux-cache-dir: ${{ env.MANYLINUX_CACHE_DIR }}
+          docker-run-use-system-http-proxy: false
+          docker-run-use-lld: false
+          retry-failed-build: true
+          clean-ccache: true
+          nightly: ${{ github.event_name == 'schedule' || github.ref == 'refs/heads/release/add_nightly_date_index'}}
+          nightly-date: ${{ needs.generate-build-matrix.outputs.formatted_date }}
+          use-nvidia-wheels: ${{ matrix.entry !='cu112' }}
+          python-versions: |
+            3.7
+            3.8
+            3.9
+            3.10
+      - uses: Oneflow-Inc/get-oneflow@add-nightly-date
+        name: Build ${{ matrix.entry }}
+        if: ${{ matrix.entry !='cpu' && matrix.entry !='cu118' }}
         with:
           cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/release/cuda.cmake
           build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc9.sh
