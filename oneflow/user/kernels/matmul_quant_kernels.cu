@@ -29,12 +29,13 @@ namespace oneflow {
 
 namespace {
 
-using RowMajor = cutlass::layout::RowMajor; // 行主序存储方式
-using ColMajor = cutlass::layout::ColumnMajor; // 列主序存储方式
+using RowMajor = cutlass::layout::RowMajor;     // 行主序存储方式
+using ColMajor = cutlass::layout::ColumnMajor;  // 列主序存储方式
 
-void cutlass_gemm_scale_bias_s8s8fp16(cudaStream_t stream, void *workspace, int m, int k, int n,
-  const int8_t* a_ptr, const int8_t* b_ptr, const cutlass::half_t* scale, const cutlass::half_t* bias, cutlass::half_t* output) {
-    
+void cutlass_gemm_scale_bias_s8s8fp16(cudaStream_t stream, void* workspace, int m, int k, int n,
+                                      const int8_t* a_ptr, const int8_t* b_ptr,
+                                      const cutlass::half_t* scale, const cutlass::half_t* bias,
+                                      cutlass::half_t* output) {
   using ElementA = int8_t;
   using ElementB = int8_t;
   using ElementC = cutlass::half_t;
@@ -43,36 +44,30 @@ void cutlass_gemm_scale_bias_s8s8fp16(cudaStream_t stream, void *workspace, int 
 
   using CutlassRowAColBRowCGemm = typename cutlass::gemm::device::GemmScaleBiasFusion<
       ElementA,  // A矩阵数据类型
-      RowMajor,   // A矩阵存储方式
+      RowMajor,  // A矩阵存储方式
       ElementB,  // B矩阵数据类型
-      ColMajor,   // B矩阵存储方式
-      ElementC, // C矩阵数据类型
-      RowMajor, ElementAccumulator, cutlass::arch::OpClassTensorOp,
-      cutlass::arch::Sm75, cutlass::gemm::GemmShape<128, 128, 64>,
-      cutlass::gemm::GemmShape<64, 64, 64>, cutlass::gemm::GemmShape<8, 8, 16>, 
+      ColMajor,  // B矩阵存储方式
+      ElementC,  // C矩阵数据类型
+      RowMajor, ElementAccumulator, cutlass::arch::OpClassTensorOp, cutlass::arch::Sm75,
+      cutlass::gemm::GemmShape<128, 128, 64>, cutlass::gemm::GemmShape<64, 64, 64>,
+      cutlass::gemm::GemmShape<8, 8, 16>,
       cutlass::epilogue::thread::LinearCombinationScaleBias<ElementC, 8, ElementAccumulator,
-          ElementCompute>>;
+                                                            ElementCompute>>;
 
   CutlassRowAColBRowCGemm gemm_operator;
-  CutlassRowAColBRowCGemm::Arguments args(
-      {m, n, k},
-      {a_ptr, k},
-      {b_ptr, k},
-      {scale, 0},
-      {bias, 0},
-      {output, n}
-  );
+  CutlassRowAColBRowCGemm::Arguments args({m, n, k}, {a_ptr, k}, {b_ptr, k}, {scale, 0}, {bias, 0},
+                                          {output, n});
 
   cutlass::Status init_status = gemm_operator.initialize(args, workspace, stream);
   CHECK(init_status == cutlass::Status::kSuccess);
-  auto run_status = gemm_operator(stream);     //运行Gemm
+  auto run_status = gemm_operator(stream);  //运行Gemm
   CHECK(run_status == cutlass::Status::kSuccess);
   return;
 }
 
-void cutlass_gemm_scale_bias_s8s8fp32(cudaStream_t stream, void *workspace, int m, int k, int n,
-  const int8_t* a_ptr, const int8_t* b_ptr, const float* scale, const float* bias, float* output) {
-    
+void cutlass_gemm_scale_bias_s8s8fp32(cudaStream_t stream, void* workspace, int m, int k, int n,
+                                      const int8_t* a_ptr, const int8_t* b_ptr, const float* scale,
+                                      const float* bias, float* output) {
   using ElementA = int8_t;
   using ElementB = int8_t;
   using ElementC = float;
@@ -81,29 +76,23 @@ void cutlass_gemm_scale_bias_s8s8fp32(cudaStream_t stream, void *workspace, int 
 
   using CutlassRowAColBRowCGemm = typename cutlass::gemm::device::GemmScaleBiasFusion<
       ElementA,  // A矩阵数据类型
-      RowMajor,   // A矩阵存储方式
+      RowMajor,  // A矩阵存储方式
       ElementB,  // B矩阵数据类型
-      ColMajor,   // B矩阵存储方式
-      ElementC, // C矩阵数据类型
-      RowMajor, ElementAccumulator, cutlass::arch::OpClassTensorOp,
-      cutlass::arch::Sm75, cutlass::gemm::GemmShape<128, 128, 64>,
-      cutlass::gemm::GemmShape<64, 64, 64>, cutlass::gemm::GemmShape<8, 8, 16>, 
+      ColMajor,  // B矩阵存储方式
+      ElementC,  // C矩阵数据类型
+      RowMajor, ElementAccumulator, cutlass::arch::OpClassTensorOp, cutlass::arch::Sm75,
+      cutlass::gemm::GemmShape<128, 128, 64>, cutlass::gemm::GemmShape<64, 64, 64>,
+      cutlass::gemm::GemmShape<8, 8, 16>,
       cutlass::epilogue::thread::LinearCombinationScaleBias<ElementC, 8, ElementAccumulator,
-          ElementCompute>>;
+                                                            ElementCompute>>;
 
   CutlassRowAColBRowCGemm gemm_operator;
-  CutlassRowAColBRowCGemm::Arguments args(
-      {m, n, k},
-      {a_ptr, k},
-      {b_ptr, k},
-      {scale, 0},
-      {bias, 0},
-      {output, n}
-  );
+  CutlassRowAColBRowCGemm::Arguments args({m, n, k}, {a_ptr, k}, {b_ptr, k}, {scale, 0}, {bias, 0},
+                                          {output, n});
 
   cutlass::Status init_status = gemm_operator.initialize(args, workspace, stream);
   CHECK(init_status == cutlass::Status::kSuccess);
-  auto run_status = gemm_operator(stream);     //运行Gemm
+  auto run_status = gemm_operator(stream);  //运行Gemm
   CHECK(run_status == cutlass::Status::kSuccess);
   return;
 }
@@ -137,21 +126,24 @@ class MatmulQuantKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
     if (out->data_type() == DataType::kFloat) {
-      cutlass_gemm_scale_bias_s8s8fp32(
-        ctx->stream()->As<ep::CudaStream>()->cuda_stream(), tmp_buffer->mut_dptr(), m, k, n,
-        a->dptr<int8_t>(), b->dptr<int8_t>(), scale->dptr<float>(), bias->dptr<float>(),
-        out->mut_dptr<float>());
+      cutlass_gemm_scale_bias_s8s8fp32(ctx->stream()->As<ep::CudaStream>()->cuda_stream(),
+                                       tmp_buffer->mut_dptr(), m, k, n, a->dptr<int8_t>(),
+                                       b->dptr<int8_t>(), scale->dptr<float>(), bias->dptr<float>(),
+                                       out->mut_dptr<float>());
     } else if (out->data_type() == DataType::kFloat16) {
-      cutlass_gemm_scale_bias_s8s8fp16(
-        ctx->stream()->As<ep::CudaStream>()->cuda_stream(), tmp_buffer->mut_dptr(), m, k, n,
-        a->dptr<int8_t>(), b->dptr<int8_t>(), reinterpret_cast<const cutlass::half_t*>(scale->dptr()), 
-        reinterpret_cast<const cutlass::half_t*>(bias->dptr()), reinterpret_cast<cutlass::half_t*>(out->mut_dptr()));
+      cutlass_gemm_scale_bias_s8s8fp16(ctx->stream()->As<ep::CudaStream>()->cuda_stream(),
+                                       tmp_buffer->mut_dptr(), m, k, n, a->dptr<int8_t>(),
+                                       b->dptr<int8_t>(),
+                                       reinterpret_cast<const cutlass::half_t*>(scale->dptr()),
+                                       reinterpret_cast<const cutlass::half_t*>(bias->dptr()),
+                                       reinterpret_cast<cutlass::half_t*>(out->mut_dptr()));
     }
   }
 };
 
 REGISTER_USER_KERNEL("matmul_quant")
-    .SetCreateFn<MatmulQuantKernel>().SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
+    .SetCreateFn<MatmulQuantKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
                      && (user_op::HobDataType("a", 0) == DataType::kInt8)
                      && (user_op::HobDataType("b", 0) == DataType::kInt8))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {
@@ -162,4 +154,4 @@ REGISTER_USER_KERNEL("matmul_quant")
 
 }  // namespace oneflow
 
-#endif // WITH_CUTLASS_EXTENSION
+#endif  // WITH_CUTLASS_EXTENSION

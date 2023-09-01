@@ -412,8 +412,9 @@ CutlassConvTunerImpl<cutlass::library::Conv2dScaleBiasFusionConfiguration,
         size_t workspace_size) {
   int dev = 0;
   OF_CUDA_CHECK(cudaGetDevice(&dev));
-  return GetOperation(singleton, name, functional_key, configuraion, arguments, workspace,
-                      workspace_size, stream->cuda_stream(), stream->cuda_arch());
+  return GetOperation((arguments.Residual ? residual_singleton : singleton), name, functional_key,
+                      configuraion, arguments, workspace, workspace_size, stream->cuda_stream(),
+                      stream->cuda_arch());
 }
 #endif  // WITH_CUTLASS_EXTENSION
 

@@ -45,7 +45,7 @@ Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx) {
   return logical_computation_cost;
 }
 
-}
+}  // namespace
 
 // BroadcastMatmul
 
@@ -67,12 +67,10 @@ Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx) {
   m = a.shape().At(num_a_dims - 2);
   k = a.shape().At(num_a_dims - 1);
   if (!transpose_b) {
-    CHECK_EQ_OR_RETURN(k, b.shape().At(0))
-        << "K dim should be equal to b.shape().At(0). ";
+    CHECK_EQ_OR_RETURN(k, b.shape().At(0)) << "K dim should be equal to b.shape().At(0). ";
     n = b.shape().At(1);
   } else {
-    CHECK_EQ_OR_RETURN(k, b.shape().At(1))
-        << "K dim should be equal to b.shape().At(1). ";
+    CHECK_EQ_OR_RETURN(k, b.shape().At(1)) << "K dim should be equal to b.shape().At(1). ";
     n = b.shape().At(0);
   }
 
@@ -129,7 +127,7 @@ Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx) {
   }
   std::vector<user_op::OpArg> out_and_add_to_output_args;
   out_and_add_to_output_args.emplace_back("out", 0);
-  
+
   if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
     out_and_add_to_output_args.emplace_back("_add_to_output", 0);
   }

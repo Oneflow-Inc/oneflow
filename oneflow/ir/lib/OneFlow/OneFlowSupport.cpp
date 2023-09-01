@@ -145,7 +145,7 @@ void __DenseElementsAttrToTensor(const mlir::DenseElementsAttr dense_attr,
     for (const T elem : dense_attr.getValues<T>()) { data.push_back(elem); }
     CHECK_EQ(data.size() * sizeof(T), tensor_size);
     dptr = data.data();
-  } else if (tensor->dtype()->data_type() == ::oneflow::DataType::kInt8){
+  } else if (tensor->dtype()->data_type() == ::oneflow::DataType::kInt8) {
     for (const T elem : dense_attr.getValues<T>()) {
       int8_data.push_back(static_cast<int8_t>(elem));
     }
