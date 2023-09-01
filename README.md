@@ -1,6 +1,7 @@
 # OneFlow
 
 OneFlow is a deep learning framework designed to be **user-friendly, scalable and efficient**. With OneFlow, it is easy to:
+
 - program a model with [**PyTorch-like API**](https://oneflow.readthedocs.io/en/master/)
 - scale a model to n-dimensional-parallel execution with the [**Global Tensor**](https://docs.oneflow.org/en/master/cookies/global_tensor.html)
 - accelerate/deploy a model with the [**Graph Compiler**](https://oneflow.readthedocs.io/en/master/graph.html).
@@ -77,7 +78,6 @@ OneFlow is a deep learning framework designed to be **user-friendly, scalable an
     | Platform |CUDA Driver Version| Supported GPUs |
     |---|---|---|
     | cu117 | >= 450.80.02 | GTX 10xx, RTX 20xx, A100, RTX 30xx |
-    | cu102 | >= 440.33 | GTX 10xx, RTX 20xx |
     | cpu | N/A | N/A |
 
 - If you are in China, you could run this to have pip download packages from domestic mirror of pypi:
