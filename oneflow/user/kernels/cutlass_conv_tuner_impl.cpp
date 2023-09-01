@@ -291,6 +291,8 @@ class CutlassConvTunerImpl<cutlass::library::Conv2dScaleBiasFusionConfiguration,
   CutlassConvTunerImpl() {
     singleton = &cutlass::library::CutlassExtensionSingleton::get(
         cutlass::library::SingletonKind::kConv2dScaleBiasFusionWithZeroPoint);
+    residual_singleton = &cutlass::library::CutlassExtensionSingleton::get(
+        cutlass::library::SingletonKind::kConv2dScaleBiasResidualFusionWithZeroPoint);
   }
 
   const cutlass::library::Operation* Find(
@@ -310,6 +312,7 @@ class CutlassConvTunerImpl<cutlass::library::Conv2dScaleBiasFusionConfiguration,
   std::mutex mutex;
   std::unordered_map<int, CacheMap> cache;
   const cutlass::library::CutlassExtensionSingleton* singleton;
+  const cutlass::library::CutlassExtensionSingleton* residual_singleton;
 };
 
 const cutlass::library::Operation*
@@ -360,19 +363,22 @@ CutlassConvTunerImpl<cutlass::library::Conv2dScaleBiasFusionConfiguration,
           configuraion.problem_size.K * cutlass::library::sizeof_bits(functional_key.element_C) / 8;
       OF_CUDA_CHECK(cudaMalloc(&benchmark_arguments.Bias, bias_size));
     }
-
     const size_t d_size = GetTensorSize(
         functional_key.element_C, functional_key.layout_C,
         configuraion.problem_size.output_extent(),
         {configuraion.problem_size.K, configuraion.problem_size.K * configuraion.problem_size.Q,
          configuraion.problem_size.K * configuraion.problem_size.Q * configuraion.problem_size.P});
+    if (benchmark_arguments.Residual != nullptr) {
+      OF_CUDA_CHECK(cudaMalloc(&benchmark_arguments.Residual, d_size));
+    }
     OF_CUDA_CHECK(cudaMalloc(&benchmark_arguments.D, d_size));
   }
 #endif  // WITH_CUDA_GRAPHS
 
-  const cutlass::library::Operation* fastest_operation = FindFastestOperation(
-      singleton, functional_key, configuraion, benchmark_arguments, benchmark_workspace,
-      workspace_size, benchmark_stream, stream->cuda_arch());
+  const cutlass::library::Operation* fastest_operation =
+      FindFastestOperation((benchmark_arguments.Residual ? residual_singleton : singleton),
+                           functional_key, configuraion, benchmark_arguments, benchmark_workspace,
+                           workspace_size, benchmark_stream, stream->cuda_arch());
 
 #ifdef WITH_CUDA_GRAPHS
   if (stream->IsGraphCapturing()) {
@@ -383,6 +389,7 @@ CutlassConvTunerImpl<cutlass::library::Conv2dScaleBiasFusionConfiguration,
     OF_CUDA_CHECK(cudaFree(const_cast<void*>(benchmark_arguments.P)));
     OF_CUDA_CHECK(cudaFree(const_cast<void*>(benchmark_arguments.Scale)));
     OF_CUDA_CHECK(cudaFree(const_cast<void*>(benchmark_arguments.Bias)));
+    OF_CUDA_CHECK(cudaFree(const_cast<void*>(benchmark_arguments.Residual)));
     OF_CUDA_CHECK(cudaFree(benchmark_arguments.D));
     OF_CUDA_CHECK(cudaFree(benchmark_workspace));
     OF_CUDA_CHECK(cudaThreadExchangeStreamCaptureMode(&mode));

@@ -48,6 +48,7 @@ Maybe<bool> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
       {{"normalization", user_op::OpArg("y", 0)},
        {"dropout", user_op::OpArg("out", 0)},
        {"matmul", user_op::OpArg("out", 0)},
+       {"conv2d_quant", user_op::OpArg("out", 0)},
        {"layer_norm_grad", user_op::OpArg("dx", 0)},
        {"batch_matmul", user_op::OpArg("out", 0)},
        {"fused_bias_add_mask_scale", user_op::OpArg("out", 0)},
@@ -162,9 +163,7 @@ Maybe<bool> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
     delete_ops.emplace_back(op_conf);
     return Maybe<void>::Ok();
   }));
-  if (delete_ops.empty()) {
-    return false;
-  }
+  if (delete_ops.empty()) { return false; }
   JUST(job_builder->MutOpTransactionCommit());
   job_builder->DelOps(delete_ops);
   return true;

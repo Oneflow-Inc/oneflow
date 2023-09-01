@@ -222,12 +222,15 @@ void ApplyOFPerTensorQuantization(user_op::KernelComputeContext* ctx,
   OutT lower_bound = -upper_bound - 1;
   auto stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
   if (quantization_scheme == "symmetric") {
-    OFPerTensorQuantizationSymmetric<pack_size, T, OutT><<<grid_size, cuda::elementwise::kBlockSize, 0, stream>>>(
-        elements, in->dptr<T>(), scale->dptr<T>(), upper_bound, lower_bound, out->mut_dptr<OutT>());
+    OFPerTensorQuantizationSymmetric<pack_size, T, OutT>
+        <<<grid_size, cuda::elementwise::kBlockSize, 0, stream>>>(
+            elements, in->dptr<T>(), scale->dptr<T>(), upper_bound, lower_bound,
+            out->mut_dptr<OutT>());
   } else {
-    OFPerTensorQuantizationAffine<pack_size, T, OutT><<<grid_size, cuda::elementwise::kBlockSize, 0, stream>>>(
-        elements, in->dptr<T>(), scale->dptr<T>(), zero_point->dptr<OutT>(), upper_bound,
-        lower_bound, out->mut_dptr<OutT>());
+    OFPerTensorQuantizationAffine<pack_size, T, OutT>
+        <<<grid_size, cuda::elementwise::kBlockSize, 0, stream>>>(
+            elements, in->dptr<T>(), scale->dptr<T>(), zero_point->dptr<OutT>(), upper_bound,
+            lower_bound, out->mut_dptr<OutT>());
   }
 }
 
