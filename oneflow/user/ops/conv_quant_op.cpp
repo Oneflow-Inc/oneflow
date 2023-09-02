@@ -99,16 +99,8 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
 }
 
 Maybe<void> GetSbpSignatures4Conv(user_op::SbpContext* ctx) {
-  bool has_bias = false;
-  for (const auto& pair : ctx->inputs()) {
-    if (pair.first == "bias") {
-      CHECK_EQ_OR_RETURN(0, pair.second);
-      has_bias = true;
-      break;
-    }
-  }
-
-  if (has_bias) {
+  if (ctx->user_op_conf().has_input("scale", 0)) {
+    CHECK_OR_RETURN(ctx->user_op_conf().has_input("bias", 0));
     ctx->NewBuilder()
         .Split(ctx->inputs(), 0)
         .Split(user_op::OpArg("in", 0), 0)

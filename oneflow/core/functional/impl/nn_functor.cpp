@@ -383,34 +383,40 @@ class MatMulQuantFunctor {
   MatMulQuantFunctor() {
     matmul_op_ =
         CHECK_JUST(one::OpBuilder("matmul_quant").Input("a").Input("b").Output("out").Build());
-    matmul_scale_bias__op_ = CHECK_JUST(one::OpBuilder("matmul_quant")
-                                            .Input("a")
-                                            .Input("b")
-                                            .Input("scale")
-                                            .Input("bias")
-                                            .Output("out")
-                                            .Build());
+    matmul_scale_bias_op_ = CHECK_JUST(one::OpBuilder("matmul_quant")
+                                           .Input("a")
+                                           .Input("b")
+                                           .Input("scale")
+                                           .Input("bias")
+                                           .Output("out")
+                                           .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
                            const std::shared_ptr<one::Tensor>& b,
                            const Optional<one::Tensor>& scale, const Optional<one::Tensor>& bias,
-                           const bool& transpose_b,
+                           const bool& transpose_a, const bool& transpose_b, const double& alpha,
                            const Optional<Symbol<DType>>& output_dtype) const {
+    CHECK_OR_RETURN(!transpose_a)
+        << "the first input should not be transposed for quantized matmul.";
+    CHECK_OR_RETURN(transpose_b) << "the second input should be transposed for quantized matmul.";
+    CHECK_EQ_OR_RETURN(alpha, 1) << "alpha should be 1 for quantized matmul.";
     if (scale || bias) {
       CHECK_OR_RETURN(scale && bias) << "scale and bias must both be given or not.";
     }
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("transpose_b", "out_dtype");
-    attrs.SetAllAttrs(transpose_b, output_dtype.value_or(DType::Float())->data_type());
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("transpose_a", "transpose_b", "alpha", "out_dtype");
+    attrs.SetAllAttrs(transpose_a, transpose_b, alpha,
+                      output_dtype.value_or(DType::Float())->data_type());
     if (scale) {
-      return OpInterpUtil::Dispatch<Tensor>(*matmul_scale_bias__op_,
-                                            {a, b, JUST(scale), JUST(bias)}, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*matmul_scale_bias_op_, {a, b, JUST(scale), JUST(bias)},
+                                            attrs);
     }
     return OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {a, b}, attrs);
   }
 
  private:
   std::shared_ptr<OpExpr> matmul_op_;
-  std::shared_ptr<OpExpr> matmul_scale_bias__op_;
+  std::shared_ptr<OpExpr> matmul_scale_bias_op_;
 };
 
 class MatMulFunctor {

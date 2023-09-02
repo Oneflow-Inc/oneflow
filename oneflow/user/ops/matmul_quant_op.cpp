@@ -18,8 +18,6 @@ limitations under the License.
 
 namespace oneflow {
 
-static const int kAlignment = 16;
-
 namespace {
 
 Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx) {
@@ -50,40 +48,43 @@ Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx) {
 // BroadcastMatmul
 
 /* static */ Maybe<void> MatmulQuantOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  bool transpose_a = ctx->Attr<bool>("transpose_a");
   bool transpose_b = ctx->Attr<bool>("transpose_b");
   CHECK_OR_RETURN(transpose_b);
 
   const user_op::TensorDesc& a = ctx->InputTensorDesc("a", 0);
   const user_op::TensorDesc& b = ctx->InputTensorDesc("b", 0);
+  // CHECK_EQ_OR_RETURN(a.shape().NumAxes(), b.shape().NumAxes());
+  CHECK_GE_OR_RETURN(a.shape().NumAxes(), 2);
+  CHECK_EQ_OR_RETURN(b.shape().NumAxes(), 2);
+  size_t a_num_axes = a.shape().NumAxes();
+  size_t b_num_axes = b.shape().NumAxes();
+
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
 
-  const int64_t num_a_dims = a.shape().NumAxes();
-  const int64_t num_b_dims = b.shape().NumAxes();
-  CHECK_OR_RETURN(num_a_dims == 2 || num_a_dims == 3);
-  CHECK_EQ_OR_RETURN(num_b_dims, 2);
-  int64_t m = 0;
-  int64_t n = 0;
-  int64_t k = 0;  // tensor a (no trans): batch_dims*m*k, tensor b (no trans): batch_dims*k*n
-  m = a.shape().At(num_a_dims - 2);
-  k = a.shape().At(num_a_dims - 1);
-  if (!transpose_b) {
-    CHECK_EQ_OR_RETURN(k, b.shape().At(0)) << "K dim should be equal to b.shape().At(0). ";
-    n = b.shape().At(1);
-  } else {
-    CHECK_EQ_OR_RETURN(k, b.shape().At(1)) << "K dim should be equal to b.shape().At(1). ";
-    n = b.shape().At(0);
-  }
-
-  CHECK_EQ_OR_RETURN(k % kAlignment, 0);
-  CHECK_EQ_OR_RETURN(n % kAlignment, 0);
-
   Shape output = ctx->InputShape("a", 0);
-  output.Set(num_a_dims - 2, m);
-  output.Set(num_a_dims - 1, n);
-  out->set_shape(Shape(output));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("a", 0));
 
+  int64_t m, n, k;  // tensor a (no trans): m*k, tensor b (no trans): k*n
+  if (!transpose_a) {
+    m = a.shape().At(a_num_axes - 2);
+    k = a.shape().At(a_num_axes - 1);
+  } else {
+    m = a.shape().At(a_num_axes - 1);
+    k = a.shape().At(a_num_axes - 2);
+  }
+  if (!transpose_b) {
+    CHECK_EQ_OR_RETURN(k, b.shape().At(b_num_axes - 2));
+    n = b.shape().At(b_num_axes - 1);
+  } else {
+    CHECK_EQ_OR_RETURN(k, b.shape().At(b_num_axes - 1));
+    n = b.shape().At(b_num_axes - 2);
+  }
+  output.Set(a_num_axes - 2, m);
+  output.Set(a_num_axes - 1, n);
+  out->set_shape(output);
   if (ctx->has_input("_add_to_output", 0)) {
-    const user_op::TensorDesc& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
+    const auto& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
     CHECK_EQ_OR_RETURN(add_to_output.shape(), out->shape());
   }
   return Maybe<void>::Ok();
@@ -94,109 +95,93 @@ Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx) {
 }
 
 /* static */ Maybe<void> MatmulQuantOp::GetSbp(user_op::SbpContext* ctx) {
-  // (b, m, k) * (k, n) when transpose_b is false
-  // (b, m, k) * (n, k) when transpose_b is true
-  bool transpose_b = ctx->Attr<bool>("transpose_b");
-
+  // (m, k_a) * (k_b, n) where k_a == k_b
   const auto& a_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("a", 0).shape();
   const auto& b_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("b", 0).shape();
-
   const int64_t a_num_axes = a_shape.NumAxes();
   const int64_t b_num_axes = b_shape.NumAxes();
 
-  int32_t m_a_axis = a_num_axes - 2;
-  int32_t k_a_axis = a_num_axes - 1;
+  int32_t m_axis = -1;
+  int32_t k_a_axis = -1;
   int32_t k_b_axis = -1;
   int32_t n_axis = -1;
-
-  if (transpose_b) {
+  if (ctx->Attr<bool>("transpose_a")) {
+    m_axis = a_num_axes - 1;
+    k_a_axis = a_num_axes - 2;
+  } else {
+    m_axis = a_num_axes - 2;
+    k_a_axis = a_num_axes - 1;
+  }
+  if (ctx->Attr<bool>("transpose_b")) {
     k_b_axis = b_num_axes - 1;
     n_axis = b_num_axes - 2;
   } else {
     k_b_axis = b_num_axes - 2;
     n_axis = b_num_axes - 1;
   }
-
-  bool has_bias = false;
-  for (const auto& pair : ctx->inputs()) {
-    if (pair.first == "bias") {
-      CHECK_EQ_OR_RETURN(0, pair.second);
-      has_bias = true;
-      break;
-    }
-  }
   std::vector<user_op::OpArg> out_and_add_to_output_args;
   out_and_add_to_output_args.emplace_back("out", 0);
-
   if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
     out_and_add_to_output_args.emplace_back("_add_to_output", 0);
   }
-
-  const int64_t max_num_axes = std::max(a_num_axes, b_num_axes);
-
-  if (has_bias) {
-    // S(m axis) x B -> S(m axis)
+  if (ctx->user_op_conf().has_input("scale", 0)) {
+    CHECK_OR_RETURN(ctx->user_op_conf().has_input("bias", 0));
     ctx->NewBuilder()
-        .Split(user_op::OpArg("a", 0), m_a_axis)
+        .Split(user_op::OpArg("a", 0), m_axis)
         .Broadcast(user_op::OpArg("b", 0))
         .Broadcast(user_op::OpArg("scale", 0))
         .Broadcast(user_op::OpArg("bias", 0))
-        .Split(out_and_add_to_output_args, max_num_axes - 2)
+        .Split(out_and_add_to_output_args, 0)
         .Build();
-    // B x S(n_axis) -> S(n_axis)
     ctx->NewBuilder()
         .Broadcast(user_op::OpArg("a", 0))
         .Split(user_op::OpArg("b", 0), n_axis)
         .Split(user_op::OpArg("scale", 0), 0)
         .Split(user_op::OpArg("bias", 0), 0)
-        .Split(out_and_add_to_output_args, max_num_axes - 1)
+        .Split(out_and_add_to_output_args, 1)
         .Build();
-    // S(a_k_axis) x S(b_k_axis) -> P
     ctx->NewBuilder()
         .Split(user_op::OpArg("a", 0), k_a_axis)
         .Split(user_op::OpArg("b", 0), k_b_axis)
         .Broadcast(user_op::OpArg("scale", 0))
-        .PartialSum(user_op::OpArg("bias", 0))
+        .Broadcast(user_op::OpArg("bias", 0))
         .PartialSum(out_and_add_to_output_args)
         .Build();
-    // P x B -> P
     ctx->NewBuilder()
         .PartialSum(user_op::OpArg("a", 0))
         .Broadcast(user_op::OpArg("b", 0))
         .Broadcast(user_op::OpArg("scale", 0))
-        .PartialSum(user_op::OpArg("bias", 0))
+        .Broadcast(user_op::OpArg("bias", 0))
+        .PartialSum(out_and_add_to_output_args)
+        .Build();
+    ctx->NewBuilder()
+        .Broadcast(user_op::OpArg("a", 0))
+        .PartialSum(user_op::OpArg("b", 0))
+        .Broadcast(user_op::OpArg("scale", 0))
+        .Broadcast(user_op::OpArg("bias", 0))
         .PartialSum(out_and_add_to_output_args)
         .Build();
   } else {
-    // S(m axis) x B -> S(m axis)
     ctx->NewBuilder()
-        .Split(user_op::OpArg("a", 0), m_a_axis)
+        .Split(user_op::OpArg("a", 0), m_axis)
         .Broadcast(user_op::OpArg("b", 0))
-        .Split(out_and_add_to_output_args, max_num_axes - 2)
+        .Split(out_and_add_to_output_args, 0)
         .Build();
-
-    // B x S(n_axis) -> S(n_axis)
     ctx->NewBuilder()
         .Broadcast(user_op::OpArg("a", 0))
         .Split(user_op::OpArg("b", 0), n_axis)
-        .Split(out_and_add_to_output_args, max_num_axes - 1)
+        .Split(out_and_add_to_output_args, 1)
         .Build();
-
-    // S(a_k_axis) x S(b_k_axis) -> P
     ctx->NewBuilder()
         .Split(user_op::OpArg("a", 0), k_a_axis)
         .Split(user_op::OpArg("b", 0), k_b_axis)
         .PartialSum(out_and_add_to_output_args)
         .Build();
-
-    // P x B -> P
     ctx->NewBuilder()
         .PartialSum(user_op::OpArg("a", 0))
         .Broadcast(user_op::OpArg("b", 0))
         .PartialSum(out_and_add_to_output_args)
         .Build();
-
-    // B x P -> P
     ctx->NewBuilder()
         .Broadcast(user_op::OpArg("a", 0))
         .PartialSum(user_op::OpArg("b", 0))
