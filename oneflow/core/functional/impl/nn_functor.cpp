@@ -5328,7 +5328,8 @@ class GroupedMatmulFunctor {
   Maybe<TensorTuple> operator()(const TensorTuple& xs, const TensorTuple& weights) const {
     const int64_t input_size = xs.size();
     const int64_t weight_size = weights.size();
-    CHECK_LT_OR_RETURN(input_size, kMaxInputCount);
+    CHECK_LT_OR_RETURN(input_size, kMaxInputCount)
+        << Error::RuntimeError() << "input_size size should not be greater than 128";
     CHECK_GE_OR_RETURN(input_size, 1)
         << Error::RuntimeError() << "The number of xs should be greater equal than 1.";
     CHECK_EQ_OR_RETURN(weight_size, input_size)
