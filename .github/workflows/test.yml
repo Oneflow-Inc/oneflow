@@ -934,7 +934,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: "View latest API docs preview at: https://staging.oneflow.info/${{ env.DOCS_PATH }}/"
+              body: "View latest API docs preview at: https://oneflow-staging.oss-cn-beijing.aliyuncs.com/${{ env.DOCS_PATH }}/"
             })
       - name: Doctest
         timeout-minutes: 45

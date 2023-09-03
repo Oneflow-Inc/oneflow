@@ -72,8 +72,8 @@ jobs:
           clean-ccache: true
           compute-platform: ${{ env.COMPUTE_PLATFORM }}
           python-versions: |
-            3.7
             3.8
+            3.10
       - name: Upload wheelhouse
         uses: ./.github/actions/upload_oss
         with:
