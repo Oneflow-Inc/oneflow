@@ -20,68 +20,77 @@ limitations under the License.
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 
-#include "cutlass/gemm/device/gemm.h"
+#include "oneflow/user/kernels/cutlass_gemm_tuner.h"
 
-#include "cutlass/gemm/device/gemm_scale_bias_fusion.h"
-#include "cutlass/epilogue/thread/linear_combination_scale_bias.h"
-
-#include "cutlass/gemm/device/gemm_scale_bias_residual_fusion.h"
-#include "cutlass/epilogue/thread/linear_combination_scale_bias_residual.h"
+#include <cutlass/library/library.h>
+#include <cutlass/library/operation_table.h>
+#include <cutlass/library/cutlass_extension_library.h>
+#include <nlohmann/json.hpp>
 
 namespace oneflow {
 
 namespace {
 
-using RowMajor = cutlass::layout::RowMajor;
-using ColMajor = cutlass::layout::ColumnMajor;
+void LaunchMatmulQuantScaleBiasFusionOp(user_op::KernelComputeContext* ctx,
+                                        const cutlass::library::GemmFunctionalKey& key,
+                                        const cutlass::gemm::GemmCoord& problem_size,
+                                        const user_op::Tensor* a, const user_op::Tensor* b,
+                                        const user_op::Tensor* scale, const user_op::Tensor* bias,
+                                        const user_op::Tensor* add_to_output,
+                                        user_op::Tensor* out) {
+  cutlass::library::GemmScaleBiasFusionConfiguration configuraion;
+  configuraion.problem_size = problem_size;
+  configuraion.lda = problem_size.k();
+  configuraion.ldb = problem_size.k();
+  configuraion.ld_scale = 0;
+  configuraion.ld_bias = 0;
+  configuraion.ldr = problem_size.n();
+  configuraion.ldd = problem_size.n();
+  configuraion.split_k_slices = 1;
+  // if (problem_size.m() <= 2 && problem_size.k() >= 4096) { configuraion.split_k_slices = 16; }
 
-template<typename T, typename OutT>
-void cutlass_gemm_scale_bias_s8(cudaStream_t stream, void* workspace, int m, int n, int k,
-                                const void* a, const void* b, const void* scale, const void* bias,
-                                const void* residual, void* output) {
-  using ElementA = T;
-  using ElementB = T;
-  using ElementC = OutT;
-  using ElementAccumulator = int32_t;
-  using ElementCompute = float;
-
-  if (!residual) {
-    using CutlassRowAColBRowCGemm = typename cutlass::gemm::device::GemmScaleBiasFusion<
-        ElementA, RowMajor, ElementB, ColMajor, ElementC, RowMajor, ElementAccumulator,
-        cutlass::arch::OpClassTensorOp, cutlass::arch::Sm75, cutlass::gemm::GemmShape<128, 128, 64>,
-        cutlass::gemm::GemmShape<64, 64, 64>, cutlass::gemm::GemmShape<8, 8, 16>,
-        cutlass::epilogue::thread::LinearCombinationScaleBias<ElementC, 8, ElementAccumulator,
-                                                              ElementCompute>>;
-
-    CutlassRowAColBRowCGemm gemm_operator;
-    typename CutlassRowAColBRowCGemm::Arguments args(
-        {m, n, k}, {reinterpret_cast<const T*>(a), k}, {reinterpret_cast<const T*>(b), k},
-        {reinterpret_cast<const OutT*>(scale), 0}, {reinterpret_cast<const OutT*>(bias), 0},
-        {reinterpret_cast<OutT*>(output), n});
-
-    cutlass::Status init_status = gemm_operator.initialize(args, workspace, stream);
-    CHECK(init_status == cutlass::Status::kSuccess);
-    auto run_status = gemm_operator(stream);
-    CHECK(run_status == cutlass::Status::kSuccess);
+  cutlass::library::GemmScaleBiasFusionArguments arguments;
+  arguments.A = a->dptr();
+  arguments.B = b->dptr();
+  arguments.Scale = scale->dptr();
+  arguments.Bias = bias->dptr();
+  if (add_to_output) {
+    arguments.Residual = add_to_output->dptr();
   } else {
-    using CutlassRowAColBRowCGemm = typename cutlass::gemm::device::GemmScaleBiasResidualFusion<
-        ElementA, RowMajor, ElementB, ColMajor, ElementC, RowMajor, ElementAccumulator,
-        cutlass::arch::OpClassTensorOp, cutlass::arch::Sm75, cutlass::gemm::GemmShape<128, 128, 64>,
-        cutlass::gemm::GemmShape<64, 64, 64>, cutlass::gemm::GemmShape<8, 8, 16>,
-        cutlass::epilogue::thread::LinearCombinationScaleBiasResidual<
-            ElementC, 8, ElementAccumulator, ElementCompute, cutlass::plus>>;
-
-    CutlassRowAColBRowCGemm gemm_operator;
-    typename CutlassRowAColBRowCGemm::Arguments args(
-        {m, n, k}, {reinterpret_cast<const T*>(a), k}, {reinterpret_cast<const T*>(b), k},
-        {reinterpret_cast<const OutT*>(scale), 0}, {reinterpret_cast<const OutT*>(bias), 0},
-        {reinterpret_cast<const OutT*>(residual), n}, {reinterpret_cast<OutT*>(output), n});
-
-    cutlass::Status init_status = gemm_operator.initialize(args, workspace, stream);
-    CHECK(init_status == cutlass::Status::kSuccess);
-    auto run_status = gemm_operator(stream);
-    CHECK(run_status == cutlass::Status::kSuccess);
+    arguments.Residual = nullptr;
   }
+  arguments.D = out->mut_dptr();
+
+  user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+  auto* stream = ctx->stream()->As<ep::CudaStream>();
+  const cutlass::library::Operation* operation = nullptr;
+  operation = [&]() -> const cutlass::library::Operation* {
+    const std::string& tuning_cache = ctx->Attr<std::string>("tuning_cache");
+    if (tuning_cache.empty()) { return nullptr; }
+    auto tuning_cache_object = nlohmann::json::parse(tuning_cache);
+    if (!tuning_cache_object.is_object()) { return nullptr; }
+    auto it = tuning_cache_object.find("cutlass");
+    if (it == tuning_cache_object.end()) { return nullptr; }
+    if (!it->is_string()) { return nullptr; }
+    const std::string name = *it;
+    return CutlassGemmTuner().GetOperation(name, stream, key, configuraion, arguments,
+                                           tmp_buffer->mut_dptr(),
+                                           tmp_buffer->shape_view().elem_cnt());
+  }();
+  if (!operation) {
+    operation = CutlassGemmTuner().FindOperation(stream, key, configuraion, arguments,
+                                                 tmp_buffer->mut_dptr(),
+                                                 tmp_buffer->shape_view().elem_cnt());
+  }
+  CHECK(operation != nullptr);
+  const size_t host_workspace_size = operation->get_host_workspace_size(&configuraion);
+  std::vector<uint8_t> host_workspace(host_workspace_size, 0);
+  auto init_status = operation->initialize(&configuraion, host_workspace.data(),
+                                           tmp_buffer->mut_dptr(), stream->cuda_stream());
+  CHECK(init_status == cutlass::Status::kSuccess);
+  auto run_status = operation->run(&arguments, host_workspace.data(), tmp_buffer->mut_dptr(),
+                                   stream->cuda_stream());
+  CHECK(run_status == cutlass::Status::kSuccess);
 }
 
 }  // namespace
@@ -112,18 +121,39 @@ class MatmulQuantKernel final : public user_op::OpKernel {
     const int k = a->shape_view().At(dim_a - 1);
     const int n = b->shape_view().At(0);
 
-    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    cutlass::library::GemmFunctionalKey key(
+        cutlass::library::Provider::kCUTLASS, cutlass::library::GemmKind::kGemm,
+        cutlass::library::NumericTypeID::kS32,         // element_compute
+        cutlass::library::NumericTypeID::kS32,         // element_scalar
+        cutlass::library::NumericTypeID::kS8,          // element_A
+        cutlass::library::LayoutTypeID::kRowMajor,     // layout_A
+        cutlass::library::ComplexTransform::kNone,     // transform_A
+        cutlass::library::NumericTypeID::kS8,          // element_B
+        cutlass::library::LayoutTypeID::kColumnMajor,  // layout_B
+        cutlass::library::ComplexTransform::kNone,     // transform_B
+        cutlass::library::NumericTypeID::kS32,         // element_C
+        cutlass::library::LayoutTypeID::kRowMajor,     // layout_C
+        cutlass::library::NumericTypeID::kS32,         // element_D
+        cutlass::library::LayoutTypeID::kRowMajor      // layout_D
+    );
 
     if (out->data_type() == DataType::kFloat) {
-      cutlass_gemm_scale_bias_s8<int8_t, float>(
-          ctx->stream()->As<ep::CudaStream>()->cuda_stream(), tmp_buffer->mut_dptr(), m, n, k,
-          a->dptr(), b->dptr(), scale->dptr(), bias->dptr(),
-          (add_to_output ? add_to_output->dptr() : nullptr), out->mut_dptr());
+      key.element_scalar = cutlass::library::NumericTypeID::kF32;
+      key.element_C = cutlass::library::NumericTypeID::kF32;
+      key.element_D = cutlass::library::NumericTypeID::kF32;
     } else if (out->data_type() == DataType::kFloat16) {
-      cutlass_gemm_scale_bias_s8<int8_t, cutlass::half_t>(
-          ctx->stream()->As<ep::CudaStream>()->cuda_stream(), tmp_buffer->mut_dptr(), m, n, k,
-          a->dptr(), b->dptr(), scale->dptr(), bias->dptr(),
-          (add_to_output ? add_to_output->dptr() : nullptr), out->mut_dptr());
+      key.element_scalar = cutlass::library::NumericTypeID::kF32;
+      key.element_C = cutlass::library::NumericTypeID::kF16;
+      key.element_D = cutlass::library::NumericTypeID::kF16;
+    }
+
+    cutlass::gemm::GemmCoord problem_size(m, n, k);
+
+    if (scale) {
+      LaunchMatmulQuantScaleBiasFusionOp(ctx, key, problem_size, a, b, scale, bias, add_to_output,
+                                         out);
+    } else {
+      UNIMPLEMENTED();
     }
   }
 };

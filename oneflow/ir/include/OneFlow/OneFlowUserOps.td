@@ -5390,7 +5390,8 @@ def OneFlow_MatmulQuantOp : OneFlow_BaseOp<"matmul_quant", [NoMemoryEffect, Attr
     DefaultValuedAttr<BoolAttr, "false">:$transpose_a,
     DefaultValuedAttr<BoolAttr, "false">:$transpose_b,
     DefaultValuedAttr<F64Attr, "1.">:$alpha,
-    OneFlow_DataType:$out_dtype
+    OneFlow_DataType:$out_dtype,
+    DefaultValuedAttr<StrAttr, "\"\"">:$tuning_cache
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
