@@ -1,5 +1,20 @@
 /*
 Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -18,8 +33,7 @@ namespace oneflow {
 namespace {
 
 bool IsQunatizationOp(const OperatorConf& op_conf) {
-  return op_conf.has_user_conf()
-         && (op_conf.user_conf().op_type_name() == "quantization");
+  return op_conf.has_user_conf() && (op_conf.user_conf().op_type_name() == "quantization");
 }
 
 bool NeedDoPass(const Job& job) {
@@ -44,7 +58,7 @@ class PruneReduntantQuantizationOpsPass final : public JobPass {
 };
 
 Maybe<void> PruneReduntantQuantizationOpsPass::Apply(const OpGraph& op_graph,
-                                            JobBuilder* job_builder) const {
+                                                     JobBuilder* job_builder) const {
   HashMap<std::string, OperatorConf> op_name2op_conf;
   HashSet<std::string> ctrl_in_op_names;
   op_graph.ForEachNode([&](const OpNode* op_node) {
@@ -78,7 +92,8 @@ Maybe<void> PruneReduntantQuantizationOpsPass::Apply(const OpGraph& op_graph,
           for (const std::string& ibn : consumer->op().input_bns()) {
             if (consumer->op().BnInOp2Lbi(ibn) == quantization_lbi) {
               const auto& new_val = GenLogicalBlobName(first_quantization_lbi);
-              const auto& old_val = ReplaceInputLbnInOpCustomizedConf(&consumer_op_conf, ibn, new_val);
+              const auto& old_val =
+                  ReplaceInputLbnInOpCustomizedConf(&consumer_op_conf, ibn, new_val);
               CHECK_EQ(GenLogicalBlobName(quantization_lbi), old_val);
               for (const auto& ctrl_in_op_name : op_conf.ctrl_in_op_name()) {
                 consumer_op_conf.add_ctrl_in_op_name(ctrl_in_op_name);
