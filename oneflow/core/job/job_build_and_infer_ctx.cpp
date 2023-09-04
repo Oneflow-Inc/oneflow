@@ -1027,6 +1027,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("DoParallelCastBeforeWideningTypeCast"));
     JUST(DoPass("FuseCastScalePass"));
     JUST(DoPass("PruneParallelCastOpsPass"));
+    JUST(DoPass("PruneRedundantQuantizationOpsPass"));
     JUST(DoPass("FuseUpdateOpsPass"));
     JUST(DoPass("FuseModelUpdateCastOpsPass"));
     JUST(DoPass("MultiTensorModelUpdatePass"));
