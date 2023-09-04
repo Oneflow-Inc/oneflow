@@ -5668,6 +5668,36 @@ def OneFlow_FusedGluOp : OneFlow_BaseOp<"fused_glu", [NoMemoryEffect, AttrSizedO
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_FusedGluQuantOp : OneFlow_BaseOp<"fused_glu_quant", [NoMemoryEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$w,
+    OneFlow_Tensor:$scale,
+    OneFlow_Tensor:$bias,
+    Optional<OneFlow_Tensor>:$v,
+    Optional<OneFlow_Tensor>:$v_scale,
+    Optional<OneFlow_Tensor>:$v_bias
+  );
+  let attrs = (ins
+    DefaultValuedAttr<StrAttr, "\"none\"">:$activation,
+    DefaultValuedAttr<BoolAttr, "false">:$is_split,
+    OneFlow_DataType:$out_dtype,
+    DefaultValuedAttr<StrAttr, "\"\"">:$tuning_cache
+  );
+  let trait_attrs = (ins
+    DenseI32ArrayAttr:$operand_segment_sizes
+  );
+  let output = (outs
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$matmul_wx,
+    Optional<OneFlow_Tensor>:$matmul_vx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_FusedGluWithoutLinearGradOp : OneFlow_BaseOp<"fused_glu_without_linear_grad", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dy,
