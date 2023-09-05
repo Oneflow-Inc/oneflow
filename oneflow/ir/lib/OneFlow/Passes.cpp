@@ -504,6 +504,31 @@ LogicalResult FusedConsecutiveAddPattern<Add2Op>::matchAndRewrite(Add2Op op,
   return TryFusedConsecutiveAdd<Add2Op>(op, {op.getIn0(), op.getIn1()}, rewriter);
 }
 
+struct PruneReduntantQuantizationOpsPattern : public OpInterfaceRewritePattern<UserOpCompatible> {
+  explicit PruneReduntantQuantizationOpsPattern(mlir::MLIRContext* context)
+      : OpInterfaceRewritePattern<UserOpCompatible>(context, /*benefit=*/1) {}
+
+ public:
+  LogicalResult matchAndRewrite(UserOpCompatible op, PatternRewriter& rewriter) const override {
+    SmallVector<QuantizationOp> quantOps;
+    for (auto u: op->getUsers()) {
+      if (auto q = llvm::dyn_cast<oneflow::QuantizationOp>(u)) {
+        quantOps.push_back(q);
+      }
+    }
+    if (quantOps.size() <= 1) {
+      return failure();
+    }
+    auto q0 = *quantOps.begin();
+    for (oneflow::QuantizationOp q: quantOps) {
+      if (q != q0) {
+        q->replaceAllUsesWith(q0->getResults());
+      }
+    }
+    return success();
+  }
+};
+
 struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
   explicit AutoNhwcPattern(mlir::MLIRContext* context)
       : OpInterfaceRewritePattern<NCHWCompatible>(context, /*benefit=*/1) {}
@@ -1131,6 +1156,7 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   populateNormalizationOpPatterns(patterns);
   patterns.add<FusedConsecutiveAddPattern<Add2Op>>(patterns.getContext());
   patterns.add<FusedConsecutiveAddPattern<AddNOp>>(patterns.getContext());
+  patterns.add<PruneReduntantQuantizationOpsPattern>(patterns.getContext());
 }
 
 void populateAutoNhwcPatterns(::mlir::RewritePatternSet& patterns) {
