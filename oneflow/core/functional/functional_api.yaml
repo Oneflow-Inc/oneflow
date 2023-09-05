@@ -773,6 +773,14 @@
   signature: "Tensor (Tensor dy, Tensor x) => QuickGeluGrad"
   bind_python: False
 
+- name: "square_relu"
+  signature: "Tensor (Tensor x) => SquareReLU"
+  bind_python: True
+
+- name: "square_relu_grad"
+  signature: "Tensor (Tensor dy, Tensor x) => SquareReLUGrad"
+  bind_python: False
+
 - name: "gelu_with_approximate"
   signature: 'Tensor (Tensor x, String approximate="none") => GeluWithApproximate'
   bind_python: True

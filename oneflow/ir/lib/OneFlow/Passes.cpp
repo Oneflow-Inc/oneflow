@@ -944,7 +944,6 @@ struct KernelLaunchPattern : public mlir::OpRewritePattern<oneflow::Job> {
 
     int name_index = 0;
     std::vector<Operation*> current_wrap_ops;
-    op->dump();
     for (auto op_it = ops.begin(); op_it != ops.end(); ++op_it) {
       auto current_op = &(*op_it);
       if (!IsPackagable(current_op)) {

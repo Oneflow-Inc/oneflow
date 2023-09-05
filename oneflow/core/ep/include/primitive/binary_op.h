@@ -112,6 +112,7 @@ enum class BinaryOp {
   kTanBackwardWithDyX,
   kFastGeluBackwardWithDyX,
   kQuickGeluBackwardWithDyX,
+  kSquareReLUBackwardWithDyX,
 };
 
 }
