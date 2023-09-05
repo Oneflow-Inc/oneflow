@@ -90,6 +90,51 @@ class MovingAverageMinMaxObserverFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedActivationMinMaxObserverFunctor {
+ public:
+  FusedActivationMinMaxObserverFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_activation_min_max_observer")
+                         .Input("in")
+                         .Input("weight_scale")
+                         .Input("weight_acc")
+                         .Output("in_scale")
+                         .Output("in_zero_point")
+                         .Output("out_scale")
+                         .Output("out_bias")
+                         .Build());
+    op_with_bias_ = CHECK_JUST(one::OpBuilder("fused_activation_min_max_observer")
+                                   .Input("in")
+                                   .Input("weight_scale")
+                                   .Input("weight_acc")
+                                   .Input("bias")
+                                   .Output("in_scale")
+                                   .Output("in_zero_point")
+                                   .Output("out_scale")
+                                   .Output("out_bias")
+                                   .Build());
+  }
+  Maybe<TensorTuple> operator()(
+      const std::shared_ptr<one::Tensor>& in, const std::shared_ptr<one::Tensor>& weight_scale,
+      const std::shared_ptr<one::Tensor>& weight_acc, const Optional<one::Tensor>& bias,
+      const std::string& quantization_formula, const int32_t& quantization_bit,
+      const std::string& quantization_scheme, const bool& per_layer_quantization) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("quantization_formula", "quantization_bit",
+                                                 "quantization_scheme", "per_layer_quantization");
+    attrs.SetAllAttrs(quantization_formula, quantization_bit, quantization_scheme,
+                      per_layer_quantization);
+    if (bias) {
+      return OpInterpUtil::Dispatch<TensorTuple>(*op_with_bias_,
+                                                 {in, weight_scale, weight_acc, JUST(bias)}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in, weight_scale, weight_acc}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_with_bias_;
+};
+
 class FakeQuantizationFunctor {
  public:
   FakeQuantizationFunctor() {
@@ -390,6 +435,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::GroupwiseDequantizeFunctor>("GroupwiseDequantize");
   m.add_functor<impl::FusedLinearWithGroupwiseQuantizedWeightFunctor>(
       "FusedLinearWithGroupwiseQuantizedWeight");
+  m.add_functor<impl::FusedActivationMinMaxObserverFunctor>("FusedActivationMinMaxObserver");
 };
 
 }  // namespace functional

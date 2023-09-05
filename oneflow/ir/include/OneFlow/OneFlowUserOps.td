@@ -8354,6 +8354,32 @@ def OneFlow_FusedLinearWithGroupwiseQuantizedWeightOp : OneFlow_BaseOp<"fused_li
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_FusedActivationMinMaxObserverOp : OneFlow_BaseOp<"fused_activation_min_max_observer", [NoMemoryEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$weight_scale,
+    OneFlow_Tensor:$weight_acc,
+    Optional<OneFlow_Tensor>:$bias
+  );
+  let output = (outs
+    OneFlow_Tensor:$in_scale,
+    OneFlow_Tensor:$in_zero_point,
+    OneFlow_Tensor:$out_scale,
+    OneFlow_Tensor:$out_bias
+  );
+  let attrs = (ins
+    DefaultValuedAttr<StrAttr, "\"google\"">:$quantization_formula,
+    DefaultValuedAttr<SI32Attr, "8">:$quantization_bit,
+    DefaultValuedAttr<StrAttr, "\"symmetric\"">:$quantization_scheme,
+    DefaultValuedAttr<BoolAttr, "true">:$per_layer_quantization
+  );
+  let has_check_fn = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_Conv2DQuantOp : OneFlow_BaseOp<"conv2d_quant", [NoMemoryEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<NCHWCompatibleInterface>]> {
   let summary = "OneFlow fused convolution quant operation";
     let description = [{
