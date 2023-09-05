@@ -511,19 +511,13 @@ struct PruneReduntantQuantizationOpsPattern : public OpInterfaceRewritePattern<U
  public:
   LogicalResult matchAndRewrite(UserOpCompatible op, PatternRewriter& rewriter) const override {
     SmallVector<QuantizationOp, 4> quantOps;
-    for (auto u: op->getUsers()) {
-      if (auto q = llvm::dyn_cast<oneflow::QuantizationOp>(u)) {
-        quantOps.push_back(q);
-      }
+    for (auto u : op->getUsers()) {
+      if (auto q = llvm::dyn_cast<oneflow::QuantizationOp>(u)) { quantOps.push_back(q); }
     }
-    if (quantOps.size() <= 1) {
-      return failure();
-    }
+    if (quantOps.size() <= 1) { return failure(); }
     auto q0 = *quantOps.begin();
-    for (oneflow::QuantizationOp q: quantOps) {
-      if (q != q0) {
-        q->replaceAllUsesWith(q0->getResults());
-      }
+    for (oneflow::QuantizationOp q : quantOps) {
+      if (q != q0) { q->replaceAllUsesWith(q0->getResults()); }
     }
     return success();
   }
