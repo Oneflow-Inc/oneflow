@@ -561,12 +561,16 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
                   getResultTransposeOp(op, created_results[num_transposed_result],
                                        transpose_attributes, num_transposed_result, rewriter)) {
             result.replaceAllUsesWith(result_transpose_op);
-            num_transposed_result += 1;
           } else {
+            op->emitError("Fail to transpose op result");
             return failure();
           }
+        } else {
+          result.replaceAllUsesWith(created_results[num_transposed_result]);
         }
+        num_transposed_result += 1;
       }
+      op->erase();
     }
     return success();
   }
