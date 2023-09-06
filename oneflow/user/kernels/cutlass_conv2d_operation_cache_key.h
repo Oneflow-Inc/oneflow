@@ -24,6 +24,7 @@ limitations under the License.
 #include <cutlass/library/operation_table.h>
 
 #ifdef WITH_CUTLASS_EXTENSION
+#include <cutlass/library/cutlass_extension_singleton.h>
 #include <cutlass/library/cutlass_extension_library.h>
 #endif  // WITH_CUTLASS_EXTENSION
 
@@ -33,15 +34,12 @@ struct Conv2dOperationCacheKey {
   cutlass::library::ConvFunctionalKey functional_key;
   cutlass::library::Conv2dConfiguration configuraion;
   size_t alignment;
-  bool fuse_scale_bias;
-  bool fuse_residual;
+  size_t kind;
+
   Conv2dOperationCacheKey(cutlass::library::ConvFunctionalKey functional_key,
                           cutlass::library::Conv2dConfiguration configuraion,
                           cutlass::library::ConvArguments arguments)
-      : functional_key(functional_key),
-        configuraion(configuraion),
-        fuse_scale_bias(false),
-        fuse_residual(false) {
+      : functional_key(functional_key), configuraion(configuraion), kind(-1) {
     const auto IsStrideAligned = [&](const std::vector<int64_t>& stride, size_t n) {
       return std::all_of(stride.cbegin(), stride.cend(),
                          [&](const int64_t& s) { return s % n == 0; });
@@ -64,9 +62,22 @@ struct Conv2dOperationCacheKey {
   Conv2dOperationCacheKey(cutlass::library::ConvFunctionalKey functional_key,
                           const cutlass::library::Conv2dScaleBiasFusionConfiguration& config,
                           const cutlass::library::ConvScaleBiasFusionArguments& arguments)
-      : functional_key(functional_key),
-        fuse_scale_bias(true),
-        fuse_residual(arguments.Residual != nullptr) {
+      : functional_key(functional_key) {
+    if (arguments.Scale) {
+      kind = arguments.Residual
+                 ? cutlass::library::SingletonKind::kConv2dScaleBiasResidualFusionWithZeroPoint
+                 : cutlass::library::SingletonKind::kConv2dScaleBiasFusionWithZeroPoint;
+    } else if (arguments.InScale) {
+      if (arguments.Bias) {
+        kind = arguments.Residual
+                   ? cutlass::library::SingletonKind::kConv2dFilterScaleBiasResidualFusion
+                   : cutlass::library::SingletonKind::kConv2dFilterScaleBiasFusion;
+      } else {
+        UNIMPLEMENTED();
+      }
+    } else {
+      UNIMPLEMENTED();
+    }
     configuraion.problem_size = config.problem_size;
     configuraion.split_k_mode = config.split_k_mode;
     configuraion.stride_a = config.stride_a;
@@ -78,7 +89,8 @@ struct Conv2dOperationCacheKey {
     };
     CHECK_EQ(reinterpret_cast<uintptr_t>(arguments.A) % kCudaAlignSize, 0);
     CHECK_EQ(reinterpret_cast<uintptr_t>(arguments.B) % kCudaAlignSize, 0);
-    CHECK_EQ(reinterpret_cast<uintptr_t>(arguments.P) % kCudaAlignSize, 0);
+    CHECK_EQ(reinterpret_cast<uintptr_t>(arguments.FilterScale) % kCudaAlignSize, 0);
+    CHECK_EQ(reinterpret_cast<uintptr_t>(arguments.FilterAcc) % kCudaAlignSize, 0);
     CHECK_EQ(reinterpret_cast<uintptr_t>(arguments.Scale) % kCudaAlignSize, 0);
     CHECK_EQ(reinterpret_cast<uintptr_t>(arguments.Bias) % kCudaAlignSize, 0);
     CHECK_EQ(reinterpret_cast<uintptr_t>(arguments.Residual) % kCudaAlignSize, 0);
@@ -142,8 +154,7 @@ struct Conv2dOperationCacheKeyHasher {
     size_t hash = cutlass::library::ConvFunctionalKeyHasher()(key.functional_key);
     hash = HashCombine(hash, Conv2dConfigurationHasher()(key.configuraion));
     hash = HashCombine(hash, std::hash<size_t>()(key.alignment));
-    hash = HashCombine(hash, std::hash<size_t>()(key.fuse_scale_bias));
-    hash = HashCombine(hash, std::hash<size_t>()(key.fuse_residual));
+    hash = HashCombine(hash, std::hash<size_t>()(key.kind));
     return hash;
   }
 };
@@ -157,8 +168,7 @@ inline bool operator==(const cutlass::library::Conv2dConfiguration& lhs,
 
 inline bool operator==(const Conv2dOperationCacheKey& lhs, const Conv2dOperationCacheKey& rhs) {
   return lhs.functional_key == rhs.functional_key && lhs.configuraion == rhs.configuraion
-         && lhs.alignment == rhs.alignment && lhs.fuse_scale_bias == rhs.fuse_scale_bias
-         && lhs.fuse_residual == rhs.fuse_residual;
+         && lhs.alignment == rhs.alignment && lhs.kind == rhs.kind;
 }
 
 }  // namespace oneflow

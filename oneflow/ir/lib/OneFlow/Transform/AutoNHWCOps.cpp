@@ -339,6 +339,9 @@ llvm::SmallVector<Value, 4> Conv2DQuantOp::NchwToNhwc(llvm::SmallVector<Value, 4
   operands.push_back(value[0]);
   operands.push_back(value[1]);
   operands.push_back(conv_quant_op.getInZeroPoint());
+  if (conv_quant_op.getInScale()) operands.push_back(conv_quant_op.getInScale());
+  if (conv_quant_op.getWeightScale()) operands.push_back(conv_quant_op.getWeightScale());
+  if (conv_quant_op.getWeightAcc()) operands.push_back(conv_quant_op.getWeightAcc());
   if (conv_quant_op.getScale()) operands.push_back(conv_quant_op.getScale());
   if (conv_quant_op.getBias()) operands.push_back(conv_quant_op.getBias());
   if (this->get_addToOutput()) { operands.push_back(value[2]); }

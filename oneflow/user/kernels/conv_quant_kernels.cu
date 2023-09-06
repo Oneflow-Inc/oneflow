@@ -68,14 +68,14 @@ void LaunchConvQuantOpImpl(user_op::KernelComputeContext* ctx,
   CHECK(run_status == cutlass::Status::kSuccess);
 }
 
-void LaunchConv2dQuantScaleBiasFusionOp(user_op::KernelComputeContext* ctx,
-                                        const cutlass::library::ConvFunctionalKey& key,
-                                        const cutlass::conv::Conv2dProblemSize& problem_size,
-                                        const user_op::Tensor* in, const user_op::Tensor* weight,
-                                        const user_op::Tensor* in_zero_point,
-                                        const user_op::Tensor* scale, const user_op::Tensor* bias,
-                                        const user_op::Tensor* add_to_output,
-                                        user_op::Tensor* out) {
+void LaunchConv2dQuantOp(user_op::KernelComputeContext* ctx,
+                         const cutlass::library::ConvFunctionalKey& key,
+                         const cutlass::conv::Conv2dProblemSize& problem_size,
+                         const user_op::Tensor* in, const user_op::Tensor* weight,
+                         const user_op::Tensor* in_zero_point, const user_op::Tensor* in_scale,
+                         const user_op::Tensor* weight_scale, const user_op::Tensor* weight_acc,
+                         const user_op::Tensor* scale, const user_op::Tensor* bias,
+                         const user_op::Tensor* add_to_output, user_op::Tensor* out) {
   cutlass::library::Conv2dScaleBiasFusionConfiguration configuraion;
   configuraion.split_k_mode = cutlass::conv::SplitKMode::kSerial;
   configuraion.problem_size = problem_size;
@@ -83,22 +83,29 @@ void LaunchConv2dQuantScaleBiasFusionOp(user_op::KernelComputeContext* ctx,
                            problem_size.H * problem_size.W * problem_size.C};
   configuraion.stride_b = {problem_size.C, problem_size.S * problem_size.C,
                            problem_size.R * problem_size.S * problem_size.C};
-  configuraion.stride_residual = {problem_size.K, problem_size.Q * problem_size.K,
-                                  problem_size.P * problem_size.Q * problem_size.K};
-
+  if (add_to_output) {
+    configuraion.stride_residual = {problem_size.K, problem_size.Q * problem_size.K,
+                                    problem_size.P * problem_size.Q * problem_size.K};
+  }
   cutlass::library::ConvScaleBiasFusionArguments arguments;
   arguments.A = in->dptr();
   arguments.B = weight->dptr();
-  arguments.reordered_B = nullptr;
   arguments.P = in_zero_point->dptr();
-  arguments.Scale = scale->dptr();
-  arguments.Bias = bias->dptr();
-  if (add_to_output) {
-    arguments.Residual = add_to_output->dptr();
-  } else {
-    arguments.Residual = nullptr;
-  }
   arguments.D = out->mut_dptr();
+
+  arguments.InScale = nullptr;
+  arguments.FilterScale = nullptr;
+  arguments.FilterAcc = nullptr;
+  arguments.Scale = nullptr;
+  arguments.Bias = nullptr;
+  arguments.Residual = nullptr;
+
+  if (in_scale) { arguments.InScale = in_scale->dptr(); }
+  if (weight_scale) { arguments.FilterScale = weight_scale->dptr(); }
+  if (weight_acc) { arguments.FilterAcc = weight_acc->dptr(); }
+  if (scale) { arguments.Scale = scale->dptr(); }
+  if (bias) { arguments.Bias = bias->dptr(); }
+  if (add_to_output) { arguments.Residual = add_to_output->dptr(); }
 
   LaunchConvQuantOpImpl(ctx, key, configuraion, arguments);
 }
@@ -116,11 +123,6 @@ class Conv2dQuantKernel final : public user_op::OpKernel, public user_op::CudaGr
                const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
-    const user_op::Tensor* in_zero_point = ctx->Tensor4ArgNameAndIndex("in_zero_point", 0);
-    const user_op::Tensor* scale = ctx->Tensor4ArgNameAndIndex("scale", 0);
-    const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
-    const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
-
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
     const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
@@ -157,12 +159,17 @@ class Conv2dQuantKernel final : public user_op::OpKernel, public user_op::CudaGr
         n, h, w, c, k, r, s, p, q, padding_before.at(0), padding_before.at(1), strides.at(0),
         strides.at(1), dilation_rate.at(0), dilation_rate.at(1),
         cutlass::conv::Mode::kCrossCorrelation);
-    if (scale) {
-      LaunchConv2dQuantScaleBiasFusionOp(ctx, key, problem_size, in, weight, in_zero_point, scale,
-                                         bias, add_to_output, out);
-    } else {
-      UNIMPLEMENTED();
-    }
+
+    const user_op::Tensor* in_zero_point = ctx->Tensor4ArgNameAndIndex("in_zero_point", 0);
+    const user_op::Tensor* in_scale = ctx->Tensor4ArgNameAndIndex("in_scale", 0);
+    const user_op::Tensor* weight_scale = ctx->Tensor4ArgNameAndIndex("weight_scale", 0);
+    const user_op::Tensor* weight_acc = ctx->Tensor4ArgNameAndIndex("weight_acc", 0);
+    const user_op::Tensor* scale = ctx->Tensor4ArgNameAndIndex("scale", 0);
+    const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
+    const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
+
+    LaunchConv2dQuantOp(ctx, key, problem_size, in, weight, in_zero_point, in_scale, weight_scale,
+                        weight_acc, scale, bias, add_to_output, out);
   }
 };
 

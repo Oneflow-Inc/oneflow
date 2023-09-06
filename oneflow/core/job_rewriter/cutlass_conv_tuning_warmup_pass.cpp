@@ -114,11 +114,29 @@ Maybe<void> CutlassConvTuningWarmupPass::Apply(Job* job, JobPassCtx* ctx) const 
                                  .ByteSizeOfBlobBody());
     }
     size_t zero_point_size = 0;
+    size_t in_scale_size = 0;
+    size_t filter_scale_size = 0;
+    size_t filter_acc_size = 0;
     size_t scale_size = 0;
     size_t add_to_output_size = 0;
     if (conv2d_op.has_input("in_zero_point", 0)) {
       zero_point_size = GetCudaAlignedSize(
           node->LogicalBlobDesc4Lbi(GenLogicalBlobId(conv2d_op.input("in_zero_point", 0)))
+              .ByteSizeOfBlobBody());
+    }
+    if (conv2d_op.has_input("in_scale", 0)) {
+      in_scale_size = GetCudaAlignedSize(
+          node->LogicalBlobDesc4Lbi(GenLogicalBlobId(conv2d_op.input("in_scale", 0)))
+              .ByteSizeOfBlobBody());
+    }
+    if (conv2d_op.has_input("filter_scale", 0)) {
+      filter_scale_size = GetCudaAlignedSize(
+          node->LogicalBlobDesc4Lbi(GenLogicalBlobId(conv2d_op.input("filter_scale", 0)))
+              .ByteSizeOfBlobBody());
+    }
+    if (conv2d_op.has_input("filter_acc", 0)) {
+      filter_acc_size = GetCudaAlignedSize(
+          node->LogicalBlobDesc4Lbi(GenLogicalBlobId(conv2d_op.input("filter_acc", 0)))
               .ByteSizeOfBlobBody());
     }
     if (conv2d_op.has_input("scale", 0)) {
@@ -132,8 +150,9 @@ Maybe<void> CutlassConvTuningWarmupPass::Apply(Job* job, JobPassCtx* ctx) const 
               .ByteSizeOfBlobBody());
     }
 
-    const size_t total_buf_size =
-        x_size + w_size + y_size + bias_size + zero_point_size + scale_size + add_to_output_size;
+    const size_t total_buf_size = x_size + w_size + y_size + bias_size + zero_point_size
+                                  + in_scale_size + filter_scale_size + filter_acc_size + scale_size
+                                  + add_to_output_size;
     if (total_buf_size > buffer_size) {
       size_t malloc_size = RoundUp(total_buf_size, kBufferMallocAlign);
       OF_CUDA_CHECK(cudaFree(buffer));
@@ -179,7 +198,6 @@ Maybe<void> CutlassConvTuningWarmupPass::Apply(Job* job, JobPassCtx* ctx) const 
       cutlass::library::ConvArguments arguments;
       arguments.A = x_ptr;
       arguments.B = w_ptr;
-      arguments.reordered_B = nullptr;
       arguments.C = bias_ptr;
       arguments.D = y_ptr;
       union SP {
@@ -219,6 +237,21 @@ Maybe<void> CutlassConvTuningWarmupPass::Apply(Job* job, JobPassCtx* ctx) const 
         zero_point_ptr = buffer + offset;
         offset += zero_point_size;
       }
+      void* in_scale_ptr = nullptr;
+      if (in_scale_size) {
+        in_scale_ptr = buffer + offset;
+        offset += in_scale_size;
+      }
+      void* filter_scale_ptr = nullptr;
+      if (filter_scale_size) {
+        filter_scale_ptr = buffer + offset;
+        offset += filter_scale_size;
+      }
+      void* filter_acc_ptr = nullptr;
+      if (filter_acc_size) {
+        filter_acc_ptr = buffer + offset;
+        offset += filter_acc_size;
+      }
       void* scale_ptr = nullptr;
       if (scale_size) {
         scale_ptr = buffer + offset;
@@ -252,8 +285,10 @@ Maybe<void> CutlassConvTuningWarmupPass::Apply(Job* job, JobPassCtx* ctx) const 
       cutlass::library::ConvScaleBiasFusionArguments arguments;
       arguments.A = x_ptr;
       arguments.B = w_ptr;
-      arguments.reordered_B = nullptr;
       arguments.P = zero_point_ptr;
+      arguments.InScale = in_scale_ptr;
+      arguments.FilterScale = filter_scale_ptr;
+      arguments.FilterAcc = filter_acc_ptr;
       arguments.Scale = scale_ptr;
       arguments.Bias = bias_ptr;
       arguments.Residual = add_to_output_ptr;

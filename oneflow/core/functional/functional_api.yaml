@@ -1053,9 +1053,15 @@
 
 - name: "conv2d_quant"
   signature:
-    'Tensor (Tensor input, Tensor weight, Tensor input_zero_point, Tensor scale=None, Tensor bias=None, Int32List[2] stride=1,
-    Int32List[2] padding=0, Int32List[2] dilation=1, Int32 groups=1,
-    String channel_pos="channels_first", DataType output_dtype=None) => Conv2dQuant'
+    [
+      'Tensor (Tensor input, Tensor weight, Tensor input_zero_point, Tensor scale=None, Tensor bias=None,
+               Int32List[2] stride=1, Int32List[2] padding=0, Int32List[2] dilation=1, Int32 groups=1,
+               String channel_pos="channels_first", DataType output_dtype=None) => Conv2dQuant',
+      'Tensor (Tensor input, Tensor weight, Tensor input_zero_point, Tensor input_scale, Tensor weight_scale,
+               Tensor weight_acc, Tensor bias=None,
+               Int32List[2] stride=1, Int32List[2] padding=0, Int32List[2] dilation=1, Int32 groups=1,
+               String channel_pos="channels_first", DataType output_dtype=None) => Conv2dQuant',
+    ]
   bind_python: True
 
 - name: "matmul_quant"

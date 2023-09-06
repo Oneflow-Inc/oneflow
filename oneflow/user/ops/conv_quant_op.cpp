@@ -84,41 +84,55 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(weight.shape(), Shape(weight_shape));
   }
 
-  bool has_scale = ctx->has_input("scale", 0);
-  if (has_scale) {
+  const user_op::TensorDesc& in_zero_point = ctx->InputTensorDesc("in_zero_point", 0);
+  CHECK_EQ_OR_RETURN(in_zero_point.shape().Count(0), 1);
+
+  if (ctx->has_input("scale", 0)) {
+    CHECK_OR_RETURN(ctx->has_input("bias", 0));
     const user_op::TensorDesc& scale = ctx->InputTensorDesc("scale", 0);
     CHECK_EQ_OR_RETURN(scale.shape(), Shape({filters}));
-  }
-  bool has_bias = ctx->has_input("bias", 0);
-  if (has_bias) {
     const user_op::TensorDesc& bias = ctx->InputTensorDesc("bias", 0);
     CHECK_EQ_OR_RETURN(bias.shape(), Shape({filters}));
   }
-  if (has_scale || has_bias) { CHECK_OR_RETURN(has_scale && has_bias); }
+  if (ctx->has_input("in_scale", 0)) {
+    CHECK_OR_RETURN(ctx->has_input("weight_scale", 0));
+    CHECK_OR_RETURN(ctx->has_input("weight_acc", 0));
+    const user_op::TensorDesc& in_scale = ctx->InputTensorDesc("in_scale", 0);
+    CHECK_EQ_OR_RETURN(in_scale.shape().Count(0), 1);
+    const user_op::TensorDesc& weight_scale = ctx->InputTensorDesc("weight_scale", 0);
+    CHECK_EQ_OR_RETURN(weight_scale.shape(), Shape({filters}));
+    const user_op::TensorDesc& weight_acc = ctx->InputTensorDesc("weight_acc", 0);
+    CHECK_EQ_OR_RETURN(weight_acc.shape(), Shape({filters}));
+    if (ctx->has_input("bias", 0)) {
+      const user_op::TensorDesc& bias = ctx->InputTensorDesc("bias", 0);
+      CHECK_EQ_OR_RETURN(bias.shape(), Shape({filters}));
+    }
+  }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> GetSbpSignatures4Conv(user_op::SbpContext* ctx) {
+  std::vector<user_op::OpArg> split_args;
+  std::vector<user_op::OpArg> broadcast_args;
+  split_args.emplace_back("in", 0);
+  split_args.emplace_back("out", 0);
+  if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+    split_args.emplace_back("_add_to_output", 0);
+  }
+  broadcast_args.emplace_back("weight", 0);
+  broadcast_args.emplace_back("in_zero_point", 0);
+  if (ctx->user_op_conf().has_input("bias", 0)) { broadcast_args.emplace_back("bias", 0); }
   if (ctx->user_op_conf().has_input("scale", 0)) {
     CHECK_OR_RETURN(ctx->user_op_conf().has_input("bias", 0));
-    ctx->NewBuilder()
-        .Split(ctx->inputs(), 0)
-        .Split(user_op::OpArg("in", 0), 0)
-        .Broadcast(user_op::OpArg("weight", 0))
-        .Broadcast(user_op::OpArg("in_zero_point", 0))
-        .Broadcast(user_op::OpArg("scale", 0))
-        .Broadcast(user_op::OpArg("bias", 0))
-        .Split(user_op::OpArg("out", 0), 0)
-        .Build();
-  } else {
-    ctx->NewBuilder()
-        .Split(ctx->inputs(), 0)
-        .Split(user_op::OpArg("in", 0), 0)
-        .Broadcast(user_op::OpArg("weight", 0))
-        .Broadcast(user_op::OpArg("in_zero_point", 0))
-        .Split(user_op::OpArg("out", 0), 0)
-        .Build();
+    broadcast_args.emplace_back("scale", 0);
+  } else if (ctx->user_op_conf().has_input("in_scale", 0)) {
+    CHECK_OR_RETURN(ctx->user_op_conf().has_input("weight_scale", 0));
+    CHECK_OR_RETURN(ctx->user_op_conf().has_input("weight_acc", 0));
+    broadcast_args.emplace_back("in_scale", 0);
+    broadcast_args.emplace_back("weight_scale", 0);
+    broadcast_args.emplace_back("weight_acc", 0);
   }
+  ctx->NewBuilder().Split(split_args, 0).Broadcast(broadcast_args).Build();
   return Maybe<void>::Ok();
 }
 

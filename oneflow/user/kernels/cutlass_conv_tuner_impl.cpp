@@ -288,12 +288,7 @@ class CutlassConvTunerImpl<cutlass::library::Conv2dScaleBiasFusionConfiguration,
   using CacheMap = std::unordered_map<Conv2dOperationCacheKey, const cutlass::library::Operation*,
                                       Conv2dOperationCacheKeyHasher>;
 
-  CutlassConvTunerImpl() {
-    singleton = &cutlass::library::CutlassExtensionSingleton::get(
-        cutlass::library::SingletonKind::kConv2dScaleBiasFusionWithZeroPoint);
-    residual_singleton = &cutlass::library::CutlassExtensionSingleton::get(
-        cutlass::library::SingletonKind::kConv2dScaleBiasResidualFusionWithZeroPoint);
-  }
+  CutlassConvTunerImpl() {}
 
   const cutlass::library::Operation* Find(
       ep::CudaStream* stream, cutlass::library::ConvFunctionalKey functional_key,
@@ -311,8 +306,6 @@ class CutlassConvTunerImpl<cutlass::library::Conv2dScaleBiasFusionConfiguration,
  private:
   std::mutex mutex;
   std::unordered_map<int, CacheMap> cache;
-  const cutlass::library::CutlassExtensionSingleton* singleton;
-  const cutlass::library::CutlassExtensionSingleton* residual_singleton;
 };
 
 const cutlass::library::Operation*
@@ -375,10 +368,13 @@ CutlassConvTunerImpl<cutlass::library::Conv2dScaleBiasFusionConfiguration,
   }
 #endif  // WITH_CUDA_GRAPHS
 
-  const cutlass::library::Operation* fastest_operation =
-      FindFastestOperation((benchmark_arguments.Residual ? residual_singleton : singleton),
-                           functional_key, configuraion, benchmark_arguments, benchmark_workspace,
-                           workspace_size, benchmark_stream, stream->cuda_arch());
+  const cutlass::library::CutlassExtensionSingleton* singleton =
+      &cutlass::library::CutlassExtensionSingleton::get(
+          static_cast<cutlass::library::SingletonKind>(cache_key.kind));
+
+  const cutlass::library::Operation* fastest_operation = FindFastestOperation(
+      singleton, functional_key, configuraion, benchmark_arguments, benchmark_workspace,
+      workspace_size, benchmark_stream, stream->cuda_arch());
 
 #ifdef WITH_CUDA_GRAPHS
   if (stream->IsGraphCapturing()) {
@@ -412,9 +408,14 @@ CutlassConvTunerImpl<cutlass::library::Conv2dScaleBiasFusionConfiguration,
         size_t workspace_size) {
   int dev = 0;
   OF_CUDA_CHECK(cudaGetDevice(&dev));
-  return GetOperation((arguments.Residual ? residual_singleton : singleton), name, functional_key,
-                      configuraion, arguments, workspace, workspace_size, stream->cuda_stream(),
-                      stream->cuda_arch());
+
+  Conv2dOperationCacheKey cache_key(functional_key, configuraion, arguments);
+  const cutlass::library::CutlassExtensionSingleton* singleton =
+      &cutlass::library::CutlassExtensionSingleton::get(
+          static_cast<cutlass::library::SingletonKind>(cache_key.kind));
+
+  return GetOperation(singleton, name, functional_key, configuraion, arguments, workspace,
+                      workspace_size, stream->cuda_stream(), stream->cuda_arch());
 }
 #endif  // WITH_CUTLASS_EXTENSION
 

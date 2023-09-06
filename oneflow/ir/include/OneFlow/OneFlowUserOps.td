@@ -8386,6 +8386,9 @@ def OneFlow_Conv2DQuantOp : OneFlow_BaseOp<"conv2d_quant", [NoMemoryEffect, Attr
       OneFlow_Tensor:$in,
       OneFlow_Tensor:$weight,
       OneFlow_Tensor:$in_zero_point,
+      Optional<OneFlow_Tensor>:$in_scale,
+      Optional<OneFlow_Tensor>:$weight_scale,
+      Optional<OneFlow_Tensor>:$weight_acc,
       Optional<OneFlow_Tensor>:$scale,
       Optional<OneFlow_Tensor>:$bias,
       Optional<OneFlow_Tensor>:$_add_to_output

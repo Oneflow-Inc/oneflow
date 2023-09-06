@@ -227,6 +227,78 @@ class Conv2dQuantFunctor : public ConvQuantBaseFunctor {
   }
 };
 
+class ConvQuantWithInputScaleBaseFunctor {
+ public:
+  explicit ConvQuantWithInputScaleBaseFunctor(const int& num_spatial_dims)
+      : num_spatial_dims_(num_spatial_dims) {}
+  virtual ~ConvQuantWithInputScaleBaseFunctor() = default;
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& weight,
+                           const std::shared_ptr<one::Tensor>& input_zero_point,
+                           const std::shared_ptr<one::Tensor>& input_scale,
+                           const std::shared_ptr<one::Tensor>& weight_scale,
+                           const std::shared_ptr<one::Tensor>& weight_acc,
+                           const Optional<one::Tensor>& bias, const std::vector<int32_t>& stride,
+                           const std::vector<int32_t>& padding,
+                           const std::vector<int32_t>& dilation, const int32_t& groups,
+                           const std::string& channel_pos,
+                           const Optional<Symbol<DType>>& output_dtype) const {
+    std::vector<int32_t> kernel_size_vec(num_spatial_dims_);
+    int32_t kernel_idx_offset = 2;
+    if (channel_pos == "channels_last") { kernel_idx_offset = 1; }
+
+    for (int i = 0; i < num_spatial_dims_; i++) {
+      kernel_size_vec.at(i) = ((weight->shape())->At(i + kernel_idx_offset));
+    }
+    auto& conv_attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("filters", "kernel_size", "padding_before", "strides",
+                                       "dilation_rate", "groups", "data_format", "out_dtype");
+    conv_attrs.SetAllAttrs(static_cast<int32_t>(weight->shape()->At(0)), kernel_size_vec, padding,
+                           stride, dilation, groups, channel_pos,
+                           output_dtype.value_or(DType::Float())->data_type());
+    if (bias) {
+      return OpInterpUtil::Dispatch<Tensor>(
+          *conv_bias_op_,
+          {input, weight, input_zero_point, input_scale, weight_scale, weight_acc, JUST(bias)},
+          conv_attrs);
+    }
+    return OpInterpUtil::Dispatch<Tensor>(
+        *conv_op_, {input, weight, input_zero_point, input_scale, weight_scale, weight_acc},
+        conv_attrs);
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> conv_op_;
+  std::shared_ptr<OpExpr> conv_bias_op_;
+  int32_t num_spatial_dims_;
+};
+
+class Conv2dQuantWithInputScaleFunctor : public ConvQuantWithInputScaleBaseFunctor {
+ public:
+  Conv2dQuantWithInputScaleFunctor() : ConvQuantWithInputScaleBaseFunctor(/*num_spatial_dims_=*/2) {
+    conv_op_ = CHECK_JUST(one::OpBuilder("conv2d_quant")
+                              .Input("in")
+                              .Input("weight")
+                              .Input("in_zero_point")
+                              .Input("in_scale")
+                              .Input("weight_scale")
+                              .Input("weight_acc")
+                              .Output("out")
+                              .Build());
+    conv_bias_op_ = CHECK_JUST(one::OpBuilder("conv2d_quant")
+                                   .Input("in")
+                                   .Input("weight")
+                                   .Input("in_zero_point")
+                                   .Input("in_scale")
+                                   .Input("weight_scale")
+                                   .Input("weight_acc")
+                                   .Input("bias")
+                                   .Output("out")
+                                   .Build());
+  }
+};
+
 class DeConvBaseFunctor {
  public:
   explicit DeConvBaseFunctor(const int& num_spatial_dims) : num_spatial_dims_(num_spatial_dims) {
@@ -5536,6 +5608,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DeConv2dFunctor>("Deconv2d");
   m.add_functor<impl::DeConv3dFunctor>("Deconv3d");
   m.add_functor<impl::Conv2dQuantFunctor>("Conv2dQuant");
+  m.add_functor<impl::Conv2dQuantWithInputScaleFunctor>("Conv2dQuant");
   m.add_functor<impl::EmbeddingReNormFunctor>("EmbeddingReNorm");
   m.add_functor<impl::EmbeddingFunctor>("Embedding");
   m.add_functor<impl::MatMulFunctor>("MatMul");
