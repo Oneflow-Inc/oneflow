@@ -1106,10 +1106,9 @@
   signature: 'Tensor (Tensor x, Tensor w, Tensor w_scale, *, Tensor w_zero=None, Tensor b=None, Int32 num_bits=8, Bool symmetric=True, Int64 group_dim=-1, Int64 group_size=-1) => FusedLinearWithGroupwiseQuantizedWeight'
   bind_python: True
 
-- name: "fused_activation_min_max_observer"
+- name: "dynamic_quantization"
   signature:
-    "TensorTuple (Tensor in, Tensor weight_scale, Tensor weight_acc, Tensor bias=None, String quantization_formula, Int32 quantization_bit,
-     String quantization_scheme, Bool per_layer_quantization=True) => FusedActivationMinMaxObserver"
+    "TensorTuple (Tensor in, String quantization_formula, Int32 quantization_bit, String quantization_scheme, Bool per_layer_quantization=True) => DynamicQuantization"
   bind_python: True
 
 - name: "conv_data_grad"

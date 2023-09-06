@@ -510,16 +510,38 @@ struct PruneReduntantQuantizationOpsPattern : public OpInterfaceRewritePattern<U
 
  public:
   LogicalResult matchAndRewrite(UserOpCompatible op, PatternRewriter& rewriter) const override {
-    SmallVector<QuantizationOp, 4> quantOps;
-    for (auto u : op->getUsers()) {
-      if (auto q = llvm::dyn_cast<oneflow::QuantizationOp>(u)) { quantOps.push_back(q); }
+    DenseMap<Value, SmallVector<QuantizationOp, 4>> quantOps;
+    DenseMap<Value, SmallVector<DynamicQuantizationOp, 4>> dynamic_quantOps;
+    for (auto result : op->getResults()) {
+      for (auto u : result.getUsers()) {
+        if (auto q = llvm::dyn_cast<QuantizationOp>(u)) { quantOps[result].push_back(q); }
+        if (auto q = llvm::dyn_cast<DynamicQuantizationOp>(u)) {
+          dynamic_quantOps[result].push_back(q);
+        }
+      }
     }
-    if (quantOps.size() <= 1) { return failure(); }
-    auto q0 = *quantOps.begin();
-    for (oneflow::QuantizationOp q : quantOps) {
-      if (q != q0) { q->replaceAllUsesWith(q0->getResults()); }
+    bool pruned = false;
+    for (const auto& it : quantOps) {
+      auto q0 = it.second[0];
+      for (auto q : it.second) {
+        if (q != q0) {
+          q->replaceAllUsesWith(q0->getResults());
+          q->erase();
+          pruned = true;
+        }
+      }
     }
-    return success();
+    for (const auto& it : dynamic_quantOps) {
+      auto q0 = it.second[0];
+      for (auto q : it.second) {
+        if (q != q0) {
+          q->replaceAllUsesWith(q0->getResults());
+          q->erase();
+          pruned = true;
+        }
+      }
+    }
+    return success(pruned);
   }
 };
 
@@ -529,17 +551,38 @@ struct PruneReduntantQuantizationFromInputOpPattern : public OpRewritePattern<In
 
  public:
   LogicalResult matchAndRewrite(InputOp op, PatternRewriter& rewriter) const override {
-    SmallVector<QuantizationOp, 4> quantOps;
-    for (auto u : op->getUsers()) {
-      if (auto q = llvm::dyn_cast<oneflow::QuantizationOp>(u)) { quantOps.push_back(q); }
+    DenseMap<Value, SmallVector<QuantizationOp, 4>> quantOps;
+    DenseMap<Value, SmallVector<DynamicQuantizationOp, 4>> dynamic_quantOps;
+    for (auto result : op->getResults()) {
+      for (auto u : result.getUsers()) {
+        if (auto q = llvm::dyn_cast<QuantizationOp>(u)) { quantOps[result].push_back(q); }
+        if (auto q = llvm::dyn_cast<DynamicQuantizationOp>(u)) {
+          dynamic_quantOps[result].push_back(q);
+        }
+      }
     }
-    if (quantOps.size() <= 1) { return failure(); }
-    auto q0 = *quantOps.begin();
-    for (oneflow::QuantizationOp q : quantOps) {
-      if (q != q0) { 
-        q->replaceAllUsesWith(q0->getResults()); }
+    bool pruned = false;
+    for (const auto& it : quantOps) {
+      auto q0 = it.second[0];
+      for (auto q : it.second) {
+        if (q != q0) {
+          q->replaceAllUsesWith(q0->getResults());
+          q->erase();
+          pruned = true;
+        }
+      }
     }
-    return success();
+    for (const auto& it : dynamic_quantOps) {
+      auto q0 = it.second[0];
+      for (auto q : it.second) {
+        if (q != q0) {
+          q->replaceAllUsesWith(q0->getResults());
+          q->erase();
+          pruned = true;
+        }
+      }
+    }
+    return success(pruned);
   }
 };
 
@@ -600,12 +643,16 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
                   getResultTransposeOp(op, created_results[num_transposed_result],
                                        transpose_attributes, num_transposed_result, rewriter)) {
             result.replaceAllUsesWith(result_transpose_op);
-            num_transposed_result += 1;
           } else {
+            op->emitError("Fail to transpose op result");
             return failure();
           }
+        } else {
+          result.replaceAllUsesWith(created_results[num_transposed_result]);
         }
+        num_transposed_result += 1;
       }
+      op->erase();
     }
     return success();
   }
@@ -1170,8 +1217,6 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   populateNormalizationOpPatterns(patterns);
   patterns.add<FusedConsecutiveAddPattern<Add2Op>>(patterns.getContext());
   patterns.add<FusedConsecutiveAddPattern<AddNOp>>(patterns.getContext());
-  patterns.add<PruneReduntantQuantizationOpsPattern>(patterns.getContext());
-  patterns.add<PruneReduntantQuantizationFromInputOpPattern>(patterns.getContext());
 }
 
 void populateAutoNhwcPatterns(::mlir::RewritePatternSet& patterns) {
@@ -1192,6 +1237,8 @@ void populatePreConvertInferenceOp(::mlir::RewritePatternSet& patterns) {
 
 void populateConvertInferenceOp(::mlir::RewritePatternSet& patterns) {
   populateFuseConv2DBatchNormPattern(patterns);
+  patterns.add<PruneReduntantQuantizationOpsPattern>(patterns.getContext());
+  patterns.add<PruneReduntantQuantizationFromInputOpPattern>(patterns.getContext());
 }
 
 void populatePostConvertInferenceOp(::mlir::RewritePatternSet& patterns) {

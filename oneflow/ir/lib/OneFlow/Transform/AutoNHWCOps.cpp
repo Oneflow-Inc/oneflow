@@ -374,6 +374,28 @@ llvm::SmallVector<Value, 4> QuantizationOp::NchwToNhwc(llvm::SmallVector<Value, 
   return {res[0]};
 }
 
+bool DynamicQuantizationOp::IsNCHW() { return false; }
+
+llvm::DenseSet<Value> DynamicQuantizationOp::OperandsToTranspose() { return {this->getIn()}; }
+
+llvm::DenseSet<Value> DynamicQuantizationOp::ResultsToTranspose() { return {this->getOut()}; }
+
+llvm::SmallVector<Value, 4> DynamicQuantizationOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
+                                                              PatternRewriter& rewriter) {
+  auto dynamic_quant_op = *this;
+  SmallVector<Value, 4> operands{value[0]};
+  auto res = rewriter
+                 .create<oneflow::DynamicQuantizationOp>(dynamic_quant_op.getLoc(),
+                                                         getNHWCResultTypes(dynamic_quant_op),
+                                                         operands, dynamic_quant_op->getAttrs())
+                 ->getResults();
+  llvm::SmallVector<Value, 4> results;
+  results.push_back(res[0]);
+  results.push_back(res[1]);
+  results.push_back(res[2]);
+  return results;
+}
+
 }  // namespace oneflow
 
 }  // namespace mlir

@@ -8354,18 +8354,14 @@ def OneFlow_FusedLinearWithGroupwiseQuantizedWeightOp : OneFlow_BaseOp<"fused_li
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedActivationMinMaxObserverOp : OneFlow_BaseOp<"fused_activation_min_max_observer", [NoMemoryEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_DynamicQuantizationOp : OneFlow_BaseOp<"dynamic_quantization", [NoMemoryEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<NCHWCompatibleInterface>]> {
   let input = (ins
-    OneFlow_Tensor:$in,
-    OneFlow_Tensor:$weight_scale,
-    OneFlow_Tensor:$weight_acc,
-    Optional<OneFlow_Tensor>:$bias
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    OneFlow_Tensor:$in_scale,
-    OneFlow_Tensor:$in_zero_point,
-    OneFlow_Tensor:$out_scale,
-    OneFlow_Tensor:$out_bias
+    OneFlow_Tensor:$out,
+    OneFlow_Tensor:$scale,
+    OneFlow_Tensor:$zero_point
   );
   let attrs = (ins
     DefaultValuedAttr<StrAttr, "\"google\"">:$quantization_formula,
@@ -12226,7 +12222,7 @@ class OneFlow_JITLikeOp <string mnemonic> : OneFlow_BaseOp<mnemonic, [CallOpInte
     CallInterfaceCallable getCallableForCallee() {
       return (*this)->getAttrOfType<SymbolRefAttr>("callee");
     }
-    
+
     void setCalleeFromCallable(CallInterfaceCallable callee) {
       (*this)->setAttr("callee", callee.get<SymbolRefAttr>());
     }
