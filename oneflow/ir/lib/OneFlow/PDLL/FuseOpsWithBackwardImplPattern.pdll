@@ -52,7 +52,29 @@ Pattern {
   let gelu_out = op<oneflow.broadcast_mul>(hidden_states.0,gate_activate.0){device_name = device_name, device_tag = device_tag}-> (out: Type);
 
   rewrite gelu_out with{
-    let fused_gelu_out = op<oneflow.fused_glu_quant>(x, w, scale, bias){activation = attr<"\"gelu\"">, operand_segment_sizes = attr<"array<i32: 1, 1, 1, 1, 0, 0, 0>">, device_name = device_name, device_tag = device_tag, out_dtype = out_dtype}-> (out, matmul_wx_out);
+    let fused_gelu_out = op<oneflow.fused_glu_quant>(x, w, scale, bias){activation = attr<"\"gelu\"">, operand_segment_sizes = attr<"array<i32: 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0>">, device_name = device_name, device_tag = device_tag, out_dtype = out_dtype}-> (out, matmul_wx_out);
+    CopyUserOpAttrs(gelu_out, fused_gelu_out);
+    replace gelu_out with fused_gelu_out.0;
+    replace matmul_wx_add with fused_gelu_out.1;
+  };
+}
+
+Pattern {
+  let device_name: Attr;
+  let device_tag: Attr;
+  let out_dtype: Attr;
+
+  let matmul_wx_add = op<oneflow.matmul_quant>(
+      x: Value, w: Value, in_zero_point: Value, in_scale: Value, weight_scale: Value, weight_acc: Value, bias: Value)
+      {device_name = device_name, device_tag = device_tag, alpha = attr<"1.000000e+00 : f64">, out_dtype = out_dtype} -> (matmul_wx_out: Type);
+
+  let hidden_states = op<oneflow.narrow>(matmul_wx_add.0){device_name = device_name, device_tag = device_tag};
+  let gate = op<oneflow.narrow>(matmul_wx_add.0){device_name = device_name, device_tag = device_tag};
+  let gate_activate = op<oneflow.gelu>(gate.0){device_name = device_name, device_tag = device_tag};
+  let gelu_out = op<oneflow.broadcast_mul>(hidden_states.0,gate_activate.0){device_name = device_name, device_tag = device_tag}-> (out: Type);
+
+  rewrite gelu_out with{
+    let fused_gelu_out = op<oneflow.fused_glu_quant>(x, w, in_zero_point, in_scale, weight_scale, weight_acc, bias){activation = attr<"\"gelu\"">, operand_segment_sizes = attr<"array<i32: 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0>">, device_name = device_name, device_tag = device_tag, out_dtype = out_dtype}-> (out, matmul_wx_out);
     CopyUserOpAttrs(gelu_out, fused_gelu_out);
     replace gelu_out with fused_gelu_out.0;
     replace matmul_wx_add with fused_gelu_out.1;

@@ -28,6 +28,31 @@ namespace oneflow {
     CHECK_OR_RETURN(ctx->user_op_conf().has_input("v_bias", 0)) << "expected v_bias for split mode";
   }
 
+  std::vector<user_op::OpArg> scalar_args;
+  if (ctx->user_op_conf().has_input("in_zero_point", 0)) {
+    scalar_args.emplace_back("in_zero_point", 0);
+  }
+  if (ctx->user_op_conf().has_input("in_scale", 0)) { scalar_args.emplace_back("in_scale", 0); }
+
+  std::vector<user_op::OpArg> vector_args;
+  if (ctx->user_op_conf().has_input("weight_scale", 0)) {
+    vector_args.emplace_back("weight_scale", 0);
+  }
+  if (ctx->user_op_conf().has_input("weight_acc", 0)) { vector_args.emplace_back("weight_acc", 0); }
+  if (ctx->user_op_conf().has_input("scale", 0)) { vector_args.emplace_back("scale", 0); }
+  if (ctx->user_op_conf().has_input("bias", 0)) { vector_args.emplace_back("bias", 0); }
+
+  if (is_split_mode) {
+    if (ctx->user_op_conf().has_input("v_weight_scale", 0)) {
+      vector_args.emplace_back("v_weight_scale", 0);
+    }
+    if (ctx->user_op_conf().has_input("v_weight_acc", 0)) {
+      vector_args.emplace_back("v_weight_acc", 0);
+    }
+    if (ctx->user_op_conf().has_input("v_scale", 0)) { vector_args.emplace_back("v_scale", 0); }
+    if (ctx->user_op_conf().has_input("v_bias", 0)) { vector_args.emplace_back("v_bias", 0); }
+  }
+
   // data parallelism
   for (int64_t i = 0; i < ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape().NumAxes() - 1;
        ++i) {
@@ -35,19 +60,17 @@ namespace oneflow {
       ctx->NewBuilder()
           .Split(user_op::OpArg("x", 0), i)
           .Broadcast(user_op::OpArg("w", 0))
-          .Broadcast(user_op::OpArg("scale", 0))
-          .Broadcast(user_op::OpArg("bias", 0))
           .Broadcast(user_op::OpArg("v", 0))
-          .Broadcast(user_op::OpArg("v_scale", 0))
-          .Broadcast(user_op::OpArg("v_bias", 0))
+          .Broadcast(scalar_args)
+          .Broadcast(vector_args)
           .Split(ctx->outputs(), i)
           .Build();
     } else {
       ctx->NewBuilder()
           .Split(user_op::OpArg("x", 0), i)
           .Broadcast(user_op::OpArg("w", 0))
-          .Broadcast(user_op::OpArg("scale", 0))
-          .Broadcast(user_op::OpArg("bias", 0))
+          .Broadcast(scalar_args)
+          .Broadcast(vector_args)
           .Split(ctx->outputs(), i)
           .Build();
     }
@@ -58,11 +81,9 @@ namespace oneflow {
     ctx->NewBuilder()
         .Broadcast(user_op::OpArg("x", 0))
         .Split(user_op::OpArg("w", 0), 0)
-        .Split(user_op::OpArg("scale", 0), 0)
-        .Split(user_op::OpArg("bias", 0), 0)
         .Split(user_op::OpArg("v", 0), 0)
-        .Split(user_op::OpArg("v_scale", 0), 0)
-        .Split(user_op::OpArg("v_bias", 0), 0)
+        .Broadcast(scalar_args)
+        .Split(vector_args, 0)
         .Split(ctx->outputs(),
                ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape().NumAxes() - 1)
         .Build();
@@ -80,10 +101,6 @@ namespace oneflow {
   // check whether the user provide weight tensor v
   bool is_split_mode = false;
   if (ctx->has_input("v", 0)) { is_split_mode = true; }
-  if (is_split_mode) {
-    CHECK_OR_RETURN(ctx->has_input("v_scale", 0)) << "expected v_scale for split mode";
-    CHECK_OR_RETURN(ctx->has_input("v_bias", 0)) << "expected v_bias for split mode";
-  }
 
   // check dimensions of x, w and b
   CHECK_GT_OR_RETURN(x_shape.NumAxes(), 1)
@@ -98,15 +115,30 @@ namespace oneflow {
       << ") is not consistant with the last dimension of \'x\'(" << x_shape.At(x_num_axes - 1)
       << ")";
 
-  const Shape& scale_shape = ctx->InputShape("scale", 0);
-  CHECK_EQ_OR_RETURN(scale_shape.Count(0), w_shape.At(0))
-      << "the element count of \'scale\'(" << scale_shape.Count(0)
-      << ") is not consistant with dimension 0 of \'w\'(" << w_shape.At(0) << ")";
-
-  const Shape& bias_shape = ctx->InputShape("bias", 0);
-  CHECK_EQ_OR_RETURN(bias_shape.Count(0), w_shape.At(0))
-      << "the element count of \'bias\'(" << bias_shape.Count(0)
-      << ") is not consistant with dimension 0 of \'w\'(" << w_shape.At(0) << ")";
+  if (ctx->has_input("scale", 0)) {
+    CHECK_OR_RETURN(ctx->has_input("bias", 0));
+    const user_op::TensorDesc& scale = ctx->InputTensorDesc("scale", 0);
+    CHECK_EQ_OR_RETURN(scale.shape(), Shape({w_shape.At(0)}));
+    const user_op::TensorDesc& bias = ctx->InputTensorDesc("bias", 0);
+    CHECK_EQ_OR_RETURN(bias.shape(), Shape({w_shape.At(0)}));
+  }
+  if (ctx->has_input("in_scale", 0)) {
+    CHECK_OR_RETURN(ctx->has_input("in_zero_point", 0));
+    CHECK_OR_RETURN(ctx->has_input("weight_scale", 0));
+    CHECK_OR_RETURN(ctx->has_input("weight_acc", 0));
+    const user_op::TensorDesc& in_zero_point = ctx->InputTensorDesc("in_zero_point", 0);
+    CHECK_EQ_OR_RETURN(in_zero_point.shape().Count(0), 1);
+    const user_op::TensorDesc& in_scale = ctx->InputTensorDesc("in_scale", 0);
+    CHECK_EQ_OR_RETURN(in_scale.shape().Count(0), 1);
+    const user_op::TensorDesc& weight_scale = ctx->InputTensorDesc("weight_scale", 0);
+    CHECK_EQ_OR_RETURN(weight_scale.shape(), Shape({w_shape.At(0)}));
+    const user_op::TensorDesc& weight_acc = ctx->InputTensorDesc("weight_acc", 0);
+    CHECK_EQ_OR_RETURN(weight_acc.shape(), Shape({w_shape.At(0)}));
+    if (ctx->has_input("bias", 0)) {
+      const user_op::TensorDesc& bias = ctx->InputTensorDesc("bias", 0);
+      CHECK_EQ_OR_RETURN(bias.shape(), Shape({w_shape.At(0)}));
+    }
+  }
 
   if (!is_split_mode) {
     CHECK_EQ_OR_RETURN(w_shape.At(1) % 2, 0) << "dimension 1 of \'w\' is not divisible by 2";
@@ -120,15 +152,24 @@ namespace oneflow {
         << "number of axes of \'v\' should have be equal to 2, yet get " << v_shape.NumAxes();
     CHECK_OR_RETURN(v_shape == w_shape) << "the shape of \'v\' is not consistant with \'w\'";
 
-    const Shape& v_scale_shape = ctx->InputShape("v_scale", 0);
-    CHECK_EQ_OR_RETURN(v_scale_shape.Count(0), v_shape.At(0))
-        << "the element count of \'v_scale\'(" << v_scale_shape.Count(0)
-        << ") is not consistant with dimension 0 of \'v\'(" << v_shape.At(0) << ")";
-
-    const Shape& v_bias_shape = ctx->InputShape("v_bias", 0);
-    CHECK_EQ_OR_RETURN(v_bias_shape.Count(0), v_shape.At(0))
-        << "the element count of \'v_bias\'(" << v_bias_shape.Count(0)
-        << ") is not consistant with dimension 0 of \'v\'(" << v_shape.At(0) << ")";
+    if (ctx->has_input("v_scale", 0)) {
+      CHECK_OR_RETURN(ctx->has_input("v_bias", 0));
+      const user_op::TensorDesc& v_scale = ctx->InputTensorDesc("v_scale", 0);
+      CHECK_EQ_OR_RETURN(v_scale.shape(), Shape({v_shape.At(0)}));
+      const user_op::TensorDesc& v_bias = ctx->InputTensorDesc("v_bias", 0);
+      CHECK_EQ_OR_RETURN(v_bias.shape(), Shape({v_shape.At(0)}));
+    }
+    if (ctx->has_input("v_weight_scale", 0)) {
+      CHECK_OR_RETURN(ctx->has_input("v_weight_acc", 0));
+      const user_op::TensorDesc& v_weight_scale = ctx->InputTensorDesc("v_weight_scale", 0);
+      CHECK_EQ_OR_RETURN(v_weight_scale.shape(), Shape({v_shape.At(0)}));
+      const user_op::TensorDesc& v_weight_acc = ctx->InputTensorDesc("v_weight_acc", 0);
+      CHECK_EQ_OR_RETURN(v_weight_acc.shape(), Shape({v_shape.At(0)}));
+      if (ctx->has_input("v_bias", 0)) {
+        const user_op::TensorDesc& v_bias = ctx->InputTensorDesc("v_bias", 0);
+        CHECK_EQ_OR_RETURN(v_bias.shape(), Shape({v_shape.At(0)}));
+      }
+    }
   }
 
   // set shape of the output tensor y
@@ -162,29 +203,17 @@ namespace oneflow {
 
 /* static */ auto FusedGluQuantOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
   DataType out_dtype = ctx->Attr<DataType>("out_dtype");
-  // obtain input data types
   DataType x_dtype = ctx->InputDType("x", 0);
 
-  // check whether the user provide weight tensor v
   bool is_split_mode = false;
   if (ctx->has_input("v", 0)) { is_split_mode = true; }
 
-  // check types of x, w and b
   CHECK_EQ_OR_RETURN(ctx->InputDType("w", 0), x_dtype)
       << "data type of \'w\' is not consitant with \'x\'";
-  CHECK_EQ_OR_RETURN(ctx->InputDType("scale", 0), out_dtype)
-      << "data type of \'scale\' is not consitant with out dtype " << out_dtype;
-  CHECK_EQ_OR_RETURN(ctx->InputDType("bias", 0), out_dtype)
-      << "data type of \'bias\' is not consitant with out dtype " << out_dtype;
 
-  // check types of v and c (optional)
   if (is_split_mode) {
     CHECK_EQ_OR_RETURN(ctx->InputDType("v", 0), x_dtype)
         << "data type of \'v\' is not consitant with \'x\'";
-    CHECK_EQ_OR_RETURN(ctx->InputDType("v_scale", 0), out_dtype)
-        << "data type of \'v_scale\' is not consitant with out dtype " << out_dtype;
-    CHECK_EQ_OR_RETURN(ctx->InputDType("v_bias", 0), out_dtype)
-        << "data type of \'v_bias\' is not consitant with out dtype " << out_dtype;
   }
 
   // set output data type

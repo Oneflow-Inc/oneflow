@@ -24,6 +24,7 @@ limitations under the License.
 #include <cutlass/library/operation_table.h>
 
 #ifdef WITH_CUTLASS_EXTENSION
+#include <cutlass/library/cutlass_extension_singleton.h>
 #include <cutlass/library/cutlass_extension_library.h>
 #endif  // WITH_CUTLASS_EXTENSION
 
@@ -33,15 +34,12 @@ struct GemmOperationCacheKey {
   cutlass::library::GemmFunctionalKey functional_key;
   cutlass::library::GemmConfiguration configuraion;
   size_t alignment;
-  bool fuse_scale_bias;
-  bool fuse_residual;
+  size_t kind;
+
   GemmOperationCacheKey(const cutlass::library::GemmFunctionalKey& functional_key,
                         const cutlass::library::GemmConfiguration& configuraion,
                         const cutlass::library::GemmArguments& arguments)
-      : functional_key(functional_key),
-        configuraion(configuraion),
-        fuse_scale_bias(false),
-        fuse_residual(false) {
+      : functional_key(functional_key), configuraion(configuraion), kind(-1) {
     CHECK_EQ(reinterpret_cast<uintptr_t>(arguments.A) % kCudaAlignSize, 0);
     CHECK_EQ(reinterpret_cast<uintptr_t>(arguments.B) % kCudaAlignSize, 0);
     CHECK_EQ(reinterpret_cast<uintptr_t>(arguments.C) % kCudaAlignSize, 0);
@@ -60,9 +58,22 @@ struct GemmOperationCacheKey {
   GemmOperationCacheKey(cutlass::library::GemmFunctionalKey functional_key,
                         const cutlass::library::GemmScaleBiasFusionConfiguration& config,
                         const cutlass::library::GemmScaleBiasFusionArguments& arguments)
-      : functional_key(functional_key),
-        fuse_scale_bias(true),
-        fuse_residual(arguments.Residual != nullptr) {
+      : functional_key(functional_key) {
+    if (arguments.Scale) {
+      kind = arguments.Residual ? cutlass::library::SingletonKind::kGemmScaleBiasResidualFusion
+                                : cutlass::library::SingletonKind::kGemmScaleBiasFusion;
+    } else if (arguments.FilterScale) {
+      if (arguments.Bias) {
+        kind = arguments.Residual
+                   ? cutlass::library::SingletonKind::kGemmFilterScaleBiasResidualFusion
+                   : cutlass::library::SingletonKind::kGemmFilterScaleBiasFusion;
+      } else {
+        kind = arguments.Residual ? cutlass::library::SingletonKind::kGemmFilterScaleResidualFusion
+                                  : cutlass::library::SingletonKind::kGemmFilterScaleFusion;
+      }
+    } else {
+      UNIMPLEMENTED();
+    }
     configuraion.problem_size = config.problem_size;
     configuraion.split_k_slices = config.split_k_slices;
     configuraion.lda = config.lda;
@@ -71,6 +82,8 @@ struct GemmOperationCacheKey {
     configuraion.ldd = config.ldd;
     CHECK_EQ(reinterpret_cast<uintptr_t>(arguments.A) % kCudaAlignSize, 0);
     CHECK_EQ(reinterpret_cast<uintptr_t>(arguments.B) % kCudaAlignSize, 0);
+    CHECK_EQ(reinterpret_cast<uintptr_t>(arguments.FilterScale) % kCudaAlignSize, 0);
+    CHECK_EQ(reinterpret_cast<uintptr_t>(arguments.FilterAcc) % kCudaAlignSize, 0);
     CHECK_EQ(reinterpret_cast<uintptr_t>(arguments.Scale) % kCudaAlignSize, 0);
     CHECK_EQ(reinterpret_cast<uintptr_t>(arguments.Bias) % kCudaAlignSize, 0);
     CHECK_EQ(reinterpret_cast<uintptr_t>(arguments.Residual) % kCudaAlignSize, 0);
@@ -114,8 +127,7 @@ struct GemmOperationCacheKeyHasher {
     size_t hash = cutlass::library::GemmFunctionalKeyHasher()(key.functional_key);
     hash = HashCombine(hash, GemmConfigurationHasher()(key.configuraion));
     hash = HashCombine(hash, std::hash<size_t>()(key.alignment));
-    hash = HashCombine(hash, std::hash<size_t>()(key.fuse_scale_bias));
-    hash = HashCombine(hash, std::hash<size_t>()(key.fuse_residual));
+    hash = HashCombine(hash, std::hash<size_t>()(key.kind));
     return hash;
   }
 };
@@ -128,8 +140,7 @@ inline bool operator==(const cutlass::library::GemmConfiguration& lhs,
 
 inline bool operator==(const GemmOperationCacheKey& lhs, const GemmOperationCacheKey& rhs) {
   return lhs.functional_key == rhs.functional_key && lhs.configuraion == rhs.configuraion
-         && lhs.alignment == rhs.alignment && lhs.fuse_scale_bias == rhs.fuse_scale_bias
-         && lhs.fuse_residual == rhs.fuse_residual;
+         && lhs.alignment == rhs.alignment && lhs.kind == rhs.kind;
 }
 
 }  // namespace oneflow

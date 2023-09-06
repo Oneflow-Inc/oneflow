@@ -274,9 +274,10 @@ class ConvQuantWithInputScaleBaseFunctor {
   int32_t num_spatial_dims_;
 };
 
-class Conv2dQuantWithInputScaleFunctor : public ConvQuantWithInputScaleBaseFunctor {
+class Conv2dQuantWithFilterScaleFunctor : public ConvQuantWithInputScaleBaseFunctor {
  public:
-  Conv2dQuantWithInputScaleFunctor() : ConvQuantWithInputScaleBaseFunctor(/*num_spatial_dims_=*/2) {
+  Conv2dQuantWithFilterScaleFunctor()
+      : ConvQuantWithInputScaleBaseFunctor(/*num_spatial_dims_=*/2) {
     conv_op_ = CHECK_JUST(one::OpBuilder("conv2d_quant")
                               .Input("in")
                               .Input("weight")
@@ -450,47 +451,6 @@ class MatMulNoBroadCastFunctor {
   }
 };
 
-class MatMulQuantFunctor {
- public:
-  MatMulQuantFunctor() {
-    matmul_op_ =
-        CHECK_JUST(one::OpBuilder("matmul_quant").Input("a").Input("b").Output("out").Build());
-    matmul_scale_bias_op_ = CHECK_JUST(one::OpBuilder("matmul_quant")
-                                           .Input("a")
-                                           .Input("b")
-                                           .Input("scale")
-                                           .Input("bias")
-                                           .Output("out")
-                                           .Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
-                           const std::shared_ptr<one::Tensor>& b,
-                           const Optional<one::Tensor>& scale, const Optional<one::Tensor>& bias,
-                           const bool& transpose_a, const bool& transpose_b, const double& alpha,
-                           const Optional<Symbol<DType>>& output_dtype) const {
-    CHECK_OR_RETURN(!transpose_a)
-        << "the first input should not be transposed for quantized matmul.";
-    CHECK_OR_RETURN(transpose_b) << "the second input should be transposed for quantized matmul.";
-    CHECK_EQ_OR_RETURN(alpha, 1) << "alpha should be 1 for quantized matmul.";
-    if (scale || bias) {
-      CHECK_OR_RETURN(scale && bias) << "scale and bias must both be given or not.";
-    }
-    auto& attrs =
-        THREAD_CACHED_MUTABLE_ATTR_MAP("transpose_a", "transpose_b", "alpha", "out_dtype");
-    attrs.SetAllAttrs(transpose_a, transpose_b, alpha,
-                      output_dtype.value_or(DType::Float())->data_type());
-    if (scale) {
-      return OpInterpUtil::Dispatch<Tensor>(*matmul_scale_bias_op_, {a, b, JUST(scale), JUST(bias)},
-                                            attrs);
-    }
-    return OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {a, b}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> matmul_op_;
-  std::shared_ptr<OpExpr> matmul_scale_bias_op_;
-};
-
 class MatMulFunctor {
  public:
   MatMulFunctor() {
@@ -614,6 +574,101 @@ class BatchMatMulFunctor {
 
  private:
   std::shared_ptr<OpExpr> batch_matmul_op_;
+};
+
+class MatMulQuantFunctor {
+ public:
+  MatMulQuantFunctor() {
+    matmul_op_ =
+        CHECK_JUST(one::OpBuilder("matmul_quant").Input("a").Input("b").Output("out").Build());
+    matmul_scale_bias_op_ = CHECK_JUST(one::OpBuilder("matmul_quant")
+                                           .Input("a")
+                                           .Input("b")
+                                           .Input("scale")
+                                           .Input("bias")
+                                           .Output("out")
+                                           .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
+                           const std::shared_ptr<one::Tensor>& b,
+                           const Optional<one::Tensor>& scale, const Optional<one::Tensor>& bias,
+                           const bool& transpose_a, const bool& transpose_b, const double& alpha,
+                           const Optional<Symbol<DType>>& output_dtype) const {
+    CHECK_OR_RETURN(!transpose_a)
+        << "the first input should not be transposed for quantized matmul.";
+    CHECK_OR_RETURN(transpose_b) << "the second input should be transposed for quantized matmul.";
+    CHECK_EQ_OR_RETURN(alpha, 1) << "alpha should be 1 for quantized matmul.";
+    if (scale || bias) {
+      CHECK_OR_RETURN(scale && bias) << "scale and bias must both be given or not.";
+    }
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("transpose_a", "transpose_b", "alpha", "out_dtype");
+    attrs.SetAllAttrs(transpose_a, transpose_b, alpha,
+                      output_dtype.value_or(DType::Float())->data_type());
+    if (scale) {
+      return OpInterpUtil::Dispatch<Tensor>(*matmul_scale_bias_op_, {a, b, JUST(scale), JUST(bias)},
+                                            attrs);
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {a, b}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> matmul_op_;
+  std::shared_ptr<OpExpr> matmul_scale_bias_op_;
+};
+
+class MatMulQuantWithFilterScaleFunctor {
+ public:
+  MatMulQuantWithFilterScaleFunctor() {
+    matmul_scale_op_ = CHECK_JUST(one::OpBuilder("matmul_quant")
+                                      .Input("a")
+                                      .Input("b")
+                                      .Input("in_zero_point")
+                                      .Input("in_scale")
+                                      .Input("weight_scale")
+                                      .Input("weight_acc")
+                                      .Output("out")
+                                      .Build());
+    matmul_scale_bias_op_ = CHECK_JUST(one::OpBuilder("matmul_quant")
+                                           .Input("a")
+                                           .Input("b")
+                                           .Input("in_zero_point")
+                                           .Input("in_scale")
+                                           .Input("weight_scale")
+                                           .Input("weight_acc")
+                                           .Input("bias")
+                                           .Output("out")
+                                           .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
+                           const std::shared_ptr<one::Tensor>& b,
+                           const std::shared_ptr<one::Tensor>& input_zero_point,
+                           const std::shared_ptr<one::Tensor>& input_scale,
+                           const std::shared_ptr<one::Tensor>& weight_scale,
+                           const std::shared_ptr<one::Tensor>& weight_acc,
+                           const Optional<one::Tensor>& bias, const bool& transpose_a,
+                           const bool& transpose_b, const double& alpha,
+                           const Optional<Symbol<DType>>& output_dtype) const {
+    CHECK_OR_RETURN(!transpose_a)
+        << "the first input should not be transposed for quantized matmul.";
+    CHECK_OR_RETURN(transpose_b) << "the second input should be transposed for quantized matmul.";
+    CHECK_EQ_OR_RETURN(alpha, 1) << "alpha should be 1 for quantized matmul.";
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("transpose_a", "transpose_b", "alpha", "out_dtype");
+    attrs.SetAllAttrs(transpose_a, transpose_b, alpha,
+                      output_dtype.value_or(DType::Float())->data_type());
+    if (bias) {
+      return OpInterpUtil::Dispatch<Tensor>(
+          *matmul_scale_bias_op_,
+          {a, b, input_zero_point, input_scale, weight_scale, weight_acc, JUST(bias)}, attrs);
+    }
+    return OpInterpUtil::Dispatch<Tensor>(
+        *matmul_scale_op_, {a, b, input_zero_point, input_scale, weight_scale, weight_acc}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> matmul_scale_op_;
+  std::shared_ptr<OpExpr> matmul_scale_bias_op_;
 };
 
 class VectorMatrixProductFunctor {
@@ -5607,12 +5662,11 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DeConv1dFunctor>("Deconv1d");
   m.add_functor<impl::DeConv2dFunctor>("Deconv2d");
   m.add_functor<impl::DeConv3dFunctor>("Deconv3d");
-  m.add_functor<impl::Conv2dQuantFunctor>("Conv2dQuant");
-  m.add_functor<impl::Conv2dQuantWithInputScaleFunctor>("Conv2dQuant");
+  m.add_functor<impl::Conv2dQuantFunctor, impl::Conv2dQuantWithFilterScaleFunctor>("Conv2dQuant");
   m.add_functor<impl::EmbeddingReNormFunctor>("EmbeddingReNorm");
   m.add_functor<impl::EmbeddingFunctor>("Embedding");
   m.add_functor<impl::MatMulFunctor>("MatMul");
-  m.add_functor<impl::MatMulQuantFunctor>("MatmulQuant");
+  m.add_functor<impl::MatMulQuantFunctor, impl::MatMulQuantWithFilterScaleFunctor>("MatmulQuant");
   m.add_functor<impl::MatMulNoBroadCastFunctor>("MatMulNoBroadCast");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
   m.add_functor<impl::MatrixVectorProductFunctor>("MatrixVectorProduct");

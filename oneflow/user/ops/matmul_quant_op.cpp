@@ -87,6 +87,30 @@ Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx) {
     const auto& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
     CHECK_EQ_OR_RETURN(add_to_output.shape(), out->shape());
   }
+  if (ctx->has_input("scale", 0)) {
+    CHECK_OR_RETURN(ctx->has_input("bias", 0));
+    const user_op::TensorDesc& scale = ctx->InputTensorDesc("scale", 0);
+    CHECK_EQ_OR_RETURN(scale.shape(), Shape({n}));
+    const user_op::TensorDesc& bias = ctx->InputTensorDesc("bias", 0);
+    CHECK_EQ_OR_RETURN(bias.shape(), Shape({n}));
+  }
+  if (ctx->has_input("in_scale", 0)) {
+    CHECK_OR_RETURN(ctx->has_input("in_zero_point", 0));
+    CHECK_OR_RETURN(ctx->has_input("weight_scale", 0));
+    CHECK_OR_RETURN(ctx->has_input("weight_acc", 0));
+    const user_op::TensorDesc& in_zero_point = ctx->InputTensorDesc("in_zero_point", 0);
+    CHECK_EQ_OR_RETURN(in_zero_point.shape().Count(0), 1);
+    const user_op::TensorDesc& in_scale = ctx->InputTensorDesc("in_scale", 0);
+    CHECK_EQ_OR_RETURN(in_scale.shape().Count(0), 1);
+    const user_op::TensorDesc& weight_scale = ctx->InputTensorDesc("weight_scale", 0);
+    CHECK_EQ_OR_RETURN(weight_scale.shape(), Shape({n}));
+    const user_op::TensorDesc& weight_acc = ctx->InputTensorDesc("weight_acc", 0);
+    CHECK_EQ_OR_RETURN(weight_acc.shape(), Shape({n}));
+    if (ctx->has_input("bias", 0)) {
+      const user_op::TensorDesc& bias = ctx->InputTensorDesc("bias", 0);
+      CHECK_EQ_OR_RETURN(bias.shape(), Shape({n}));
+    }
+  }
   return Maybe<void>::Ok();
 }
 
@@ -124,70 +148,56 @@ Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx) {
   if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
     out_and_add_to_output_args.emplace_back("_add_to_output", 0);
   }
-  if (ctx->user_op_conf().has_input("scale", 0)) {
-    CHECK_OR_RETURN(ctx->user_op_conf().has_input("bias", 0));
-    ctx->NewBuilder()
-        .Split(user_op::OpArg("a", 0), m_axis)
-        .Broadcast(user_op::OpArg("b", 0))
-        .Broadcast(user_op::OpArg("scale", 0))
-        .Broadcast(user_op::OpArg("bias", 0))
-        .Split(out_and_add_to_output_args, 0)
-        .Build();
-    ctx->NewBuilder()
-        .Broadcast(user_op::OpArg("a", 0))
-        .Split(user_op::OpArg("b", 0), n_axis)
-        .Split(user_op::OpArg("scale", 0), 0)
-        .Split(user_op::OpArg("bias", 0), 0)
-        .Split(out_and_add_to_output_args, 1)
-        .Build();
-    ctx->NewBuilder()
-        .Split(user_op::OpArg("a", 0), k_a_axis)
-        .Split(user_op::OpArg("b", 0), k_b_axis)
-        .Broadcast(user_op::OpArg("scale", 0))
-        .Broadcast(user_op::OpArg("bias", 0))
-        .PartialSum(out_and_add_to_output_args)
-        .Build();
-    ctx->NewBuilder()
-        .PartialSum(user_op::OpArg("a", 0))
-        .Broadcast(user_op::OpArg("b", 0))
-        .Broadcast(user_op::OpArg("scale", 0))
-        .Broadcast(user_op::OpArg("bias", 0))
-        .PartialSum(out_and_add_to_output_args)
-        .Build();
-    ctx->NewBuilder()
-        .Broadcast(user_op::OpArg("a", 0))
-        .PartialSum(user_op::OpArg("b", 0))
-        .Broadcast(user_op::OpArg("scale", 0))
-        .Broadcast(user_op::OpArg("bias", 0))
-        .PartialSum(out_and_add_to_output_args)
-        .Build();
-  } else {
-    ctx->NewBuilder()
-        .Split(user_op::OpArg("a", 0), m_axis)
-        .Broadcast(user_op::OpArg("b", 0))
-        .Split(out_and_add_to_output_args, 0)
-        .Build();
-    ctx->NewBuilder()
-        .Broadcast(user_op::OpArg("a", 0))
-        .Split(user_op::OpArg("b", 0), n_axis)
-        .Split(out_and_add_to_output_args, 1)
-        .Build();
-    ctx->NewBuilder()
-        .Split(user_op::OpArg("a", 0), k_a_axis)
-        .Split(user_op::OpArg("b", 0), k_b_axis)
-        .PartialSum(out_and_add_to_output_args)
-        .Build();
-    ctx->NewBuilder()
-        .PartialSum(user_op::OpArg("a", 0))
-        .Broadcast(user_op::OpArg("b", 0))
-        .PartialSum(out_and_add_to_output_args)
-        .Build();
-    ctx->NewBuilder()
-        .Broadcast(user_op::OpArg("a", 0))
-        .PartialSum(user_op::OpArg("b", 0))
-        .PartialSum(out_and_add_to_output_args)
-        .Build();
+
+  std::vector<user_op::OpArg> scalar_args;
+  if (ctx->user_op_conf().has_input("in_zero_point", 0)) {
+    scalar_args.emplace_back("in_zero_point", 0);
   }
+  if (ctx->user_op_conf().has_input("in_scale", 0)) { scalar_args.emplace_back("in_scale", 0); }
+
+  std::vector<user_op::OpArg> vector_args;
+  if (ctx->user_op_conf().has_input("weight_scale", 0)) {
+    vector_args.emplace_back("weight_scale", 0);
+  }
+  if (ctx->user_op_conf().has_input("weight_acc", 0)) { vector_args.emplace_back("weight_acc", 0); }
+  if (ctx->user_op_conf().has_input("scale", 0)) { vector_args.emplace_back("scale", 0); }
+  if (ctx->user_op_conf().has_input("bias", 0)) { vector_args.emplace_back("bias", 0); }
+
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("a", 0), m_axis)
+      .Broadcast(user_op::OpArg("b", 0))
+      .Broadcast(scalar_args)
+      .Broadcast(vector_args)
+      .Split(out_and_add_to_output_args, 0)
+      .Build();
+  ctx->NewBuilder()
+      .Broadcast(user_op::OpArg("a", 0))
+      .Split(user_op::OpArg("b", 0), n_axis)
+      .Broadcast(scalar_args)
+      .Split(vector_args, 0)
+      .Split(out_and_add_to_output_args, 1)
+      .Build();
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("a", 0), k_a_axis)
+      .Split(user_op::OpArg("b", 0), k_b_axis)
+      .Broadcast(scalar_args)
+      .Broadcast(vector_args)
+      .PartialSum(out_and_add_to_output_args)
+      .Build();
+  ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("a", 0))
+      .Broadcast(user_op::OpArg("b", 0))
+      .Broadcast(scalar_args)
+      .Broadcast(vector_args)
+      .PartialSum(out_and_add_to_output_args)
+      .Build();
+  ctx->NewBuilder()
+      .Broadcast(user_op::OpArg("a", 0))
+      .PartialSum(user_op::OpArg("b", 0))
+      .Broadcast(scalar_args)
+      .Broadcast(vector_args)
+      .PartialSum(out_and_add_to_output_args)
+      .Build();
   return Maybe<void>::Ok();
 }
 

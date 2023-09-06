@@ -5379,6 +5379,10 @@ def OneFlow_MatmulQuantOp : OneFlow_BaseOp<"matmul_quant", [NoMemoryEffect, Attr
   let input = (ins
     OneFlow_Tensor:$a,
     OneFlow_Tensor:$b,
+    Optional<OneFlow_Tensor>:$in_zero_point,
+    Optional<OneFlow_Tensor>:$in_scale,
+    Optional<OneFlow_Tensor>:$weight_scale,
+    Optional<OneFlow_Tensor>:$weight_acc,
     Optional<OneFlow_Tensor>:$scale,
     Optional<OneFlow_Tensor>:$bias,
     Optional<OneFlow_Tensor>:$_add_to_output
@@ -5672,9 +5676,15 @@ def OneFlow_FusedGluQuantOp : OneFlow_BaseOp<"fused_glu_quant", [NoMemoryEffect,
   let input = (ins
     OneFlow_Tensor:$x,
     OneFlow_Tensor:$w,
-    OneFlow_Tensor:$scale,
-    OneFlow_Tensor:$bias,
+    Optional<OneFlow_Tensor>:$in_zero_point,
+    Optional<OneFlow_Tensor>:$in_scale,
+    Optional<OneFlow_Tensor>:$weight_scale,
+    Optional<OneFlow_Tensor>:$weight_acc,
+    Optional<OneFlow_Tensor>:$scale,
+    Optional<OneFlow_Tensor>:$bias,
     Optional<OneFlow_Tensor>:$v,
+    Optional<OneFlow_Tensor>:$v_weight_scale,
+    Optional<OneFlow_Tensor>:$v_weight_acc,
     Optional<OneFlow_Tensor>:$v_scale,
     Optional<OneFlow_Tensor>:$v_bias
   );

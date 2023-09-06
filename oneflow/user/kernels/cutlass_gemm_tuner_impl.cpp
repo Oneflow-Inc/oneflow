@@ -180,12 +180,7 @@ class CutlassGemmTunerImpl<cutlass::library::GemmScaleBiasFusionConfiguration,
   using CacheMap = std::unordered_map<GemmOperationCacheKey, const cutlass::library::Operation*,
                                       GemmOperationCacheKeyHasher>;
 
-  CutlassGemmTunerImpl() {
-    singleton = &cutlass::library::CutlassExtensionSingleton::get(
-        cutlass::library::SingletonKind::kGemmScaleBiasFusion);
-    residual_singleton = &cutlass::library::CutlassExtensionSingleton::get(
-        cutlass::library::SingletonKind::kGemmScaleBiasResidualFusion);
-  }
+  CutlassGemmTunerImpl() {}
 
   const cutlass::library::Operation* Find(
       ep::CudaStream* stream, cutlass::library::GemmFunctionalKey functional_key,
@@ -203,8 +198,6 @@ class CutlassGemmTunerImpl<cutlass::library::GemmScaleBiasFusionConfiguration,
  private:
   std::mutex mutex;
   std::unordered_map<int, CacheMap> cache;
-  const cutlass::library::CutlassExtensionSingleton* singleton;
-  const cutlass::library::CutlassExtensionSingleton* residual_singleton;
 };
 
 const cutlass::library::Operation*
@@ -241,6 +234,24 @@ CutlassGemmTunerImpl<cutlass::library::GemmScaleBiasFusionConfiguration,
                                         configuraion.problem_size.m(), configuraion.ldb);
     OF_CUDA_CHECK(cudaMalloc(&benchmark_arguments.B, b_size));
 
+    if (benchmark_arguments.P != nullptr) {
+      const size_t size = cutlass::library::sizeof_bits(functional_key.element_A) / 8;
+      OF_CUDA_CHECK(cudaMalloc(&benchmark_arguments.P, size));
+    }
+    if (benchmark_arguments.InScale != nullptr) {
+      const size_t size = cutlass::library::sizeof_bits(functional_key.element_scalar) / 8;
+      OF_CUDA_CHECK(cudaMalloc(&benchmark_arguments.InScale, size));
+    }
+    if (benchmark_arguments.FilterScale != nullptr) {
+      const size_t size = configuraion.problem_size.n()
+                          * cutlass::library::sizeof_bits(functional_key.element_D) / 8;
+      OF_CUDA_CHECK(cudaMalloc(&benchmark_arguments.FilterScale, size));
+    }
+    if (benchmark_arguments.FilterAcc != nullptr) {
+      const size_t size = configuraion.problem_size.n()
+                          * cutlass::library::sizeof_bits(functional_key.element_D) / 8;
+      OF_CUDA_CHECK(cudaMalloc(&benchmark_arguments.FilterAcc, size));
+    }
     if (benchmark_arguments.Scale != nullptr) {
       const size_t scale_size = configuraion.problem_size.n()
                                 * cutlass::library::sizeof_bits(functional_key.element_D) / 8;
@@ -264,10 +275,13 @@ CutlassGemmTunerImpl<cutlass::library::GemmScaleBiasFusionConfiguration,
   }
 #endif  // WITH_CUDA_GRAPHS
 
-  const cutlass::library::Operation* fastest_operation =
-      FindFastestOperation((benchmark_arguments.Residual ? residual_singleton : singleton),
-                           functional_key, configuraion, benchmark_arguments, benchmark_workspace,
-                           workspace_size, benchmark_stream, stream->cuda_arch());
+  const cutlass::library::CutlassExtensionSingleton* singleton =
+      &cutlass::library::CutlassExtensionSingleton::get(
+          static_cast<cutlass::library::SingletonKind>(cache_key.kind));
+
+  const cutlass::library::Operation* fastest_operation = FindFastestOperation(
+      singleton, functional_key, configuraion, benchmark_arguments, benchmark_workspace,
+      workspace_size, benchmark_stream, stream->cuda_arch());
 
 #ifdef WITH_CUDA_GRAPHS
   if (stream->IsGraphCapturing()) {
@@ -275,6 +289,10 @@ CutlassGemmTunerImpl<cutlass::library::GemmScaleBiasFusionConfiguration,
     OF_CUDA_CHECK(cudaStreamDestroy(benchmark_stream));
     OF_CUDA_CHECK(cudaFree(const_cast<void*>(benchmark_arguments.A)));
     OF_CUDA_CHECK(cudaFree(const_cast<void*>(benchmark_arguments.B)));
+    OF_CUDA_CHECK(cudaFree(const_cast<void*>(benchmark_arguments.P)));
+    OF_CUDA_CHECK(cudaFree(const_cast<void*>(benchmark_arguments.InScale)));
+    OF_CUDA_CHECK(cudaFree(const_cast<void*>(benchmark_arguments.FilterScale)));
+    OF_CUDA_CHECK(cudaFree(const_cast<void*>(benchmark_arguments.FilterAcc)));
     OF_CUDA_CHECK(cudaFree(const_cast<void*>(benchmark_arguments.Scale)));
     OF_CUDA_CHECK(cudaFree(const_cast<void*>(benchmark_arguments.Bias)));
     OF_CUDA_CHECK(cudaFree(const_cast<void*>(benchmark_arguments.Residual)));
@@ -300,9 +318,14 @@ CutlassGemmTunerImpl<cutlass::library::GemmScaleBiasFusionConfiguration,
         size_t workspace_size) {
   int dev = 0;
   OF_CUDA_CHECK(cudaGetDevice(&dev));
-  return GetOperation((arguments.Residual ? residual_singleton : singleton), name, functional_key,
-                      configuraion, arguments, workspace, workspace_size, stream->cuda_stream(),
-                      stream->cuda_arch());
+
+  GemmOperationCacheKey cache_key(functional_key, configuraion, arguments);
+  const cutlass::library::CutlassExtensionSingleton* singleton =
+      &cutlass::library::CutlassExtensionSingleton::get(
+          static_cast<cutlass::library::SingletonKind>(cache_key.kind));
+
+  return GetOperation(singleton, name, functional_key, configuraion, arguments, workspace,
+                      workspace_size, stream->cuda_stream(), stream->cuda_arch());
 }
 #endif  // WITH_CUTLASS_EXTENSION
 

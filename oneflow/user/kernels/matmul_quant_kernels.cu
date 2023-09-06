@@ -31,17 +31,20 @@ namespace oneflow {
 
 namespace {
 
-void LaunchMatmulQuantScaleBiasFusionOp(user_op::KernelComputeContext* ctx,
-                                        const cutlass::library::GemmFunctionalKey& key,
-                                        const cutlass::gemm::GemmCoord& problem_size,
-                                        const user_op::Tensor* a, const user_op::Tensor* b,
-                                        const user_op::Tensor* scale, const user_op::Tensor* bias,
-                                        const user_op::Tensor* add_to_output,
-                                        user_op::Tensor* out) {
+void LaunchMatmulQuantOp(user_op::KernelComputeContext* ctx,
+                         const cutlass::library::GemmFunctionalKey& key,
+                         const cutlass::gemm::GemmCoord& problem_size, const user_op::Tensor* a,
+                         const user_op::Tensor* b, const user_op::Tensor* in_zero_point,
+                         const user_op::Tensor* in_scale, const user_op::Tensor* weight_scale,
+                         const user_op::Tensor* weight_acc, const user_op::Tensor* scale,
+                         const user_op::Tensor* bias, const user_op::Tensor* add_to_output,
+                         user_op::Tensor* out) {
   cutlass::library::GemmScaleBiasFusionConfiguration configuraion;
   configuraion.problem_size = problem_size;
   configuraion.lda = problem_size.k();
   configuraion.ldb = problem_size.k();
+  configuraion.ld_filter_scale = 0;
+  configuraion.ld_filter_acc = 0;
   configuraion.ld_scale = 0;
   configuraion.ld_bias = 0;
   configuraion.ldr = problem_size.n();
@@ -52,14 +55,22 @@ void LaunchMatmulQuantScaleBiasFusionOp(user_op::KernelComputeContext* ctx,
   cutlass::library::GemmScaleBiasFusionArguments arguments;
   arguments.A = a->dptr();
   arguments.B = b->dptr();
-  arguments.Scale = scale->dptr();
-  arguments.Bias = bias->dptr();
-  if (add_to_output) {
-    arguments.Residual = add_to_output->dptr();
-  } else {
-    arguments.Residual = nullptr;
-  }
   arguments.D = out->mut_dptr();
+  arguments.P = nullptr;
+  arguments.InScale = nullptr;
+  arguments.FilterScale = nullptr;
+  arguments.FilterAcc = nullptr;
+  arguments.Scale = nullptr;
+  arguments.Bias = nullptr;
+  arguments.Residual = nullptr;
+
+  if (in_zero_point) { arguments.P = in_zero_point->dptr(); }
+  if (in_scale) { arguments.InScale = in_scale->dptr(); }
+  if (weight_scale) { arguments.FilterScale = weight_scale->dptr(); }
+  if (weight_acc) { arguments.FilterAcc = weight_acc->dptr(); }
+  if (scale) { arguments.Scale = scale->dptr(); }
+  if (bias) { arguments.Bias = bias->dptr(); }
+  if (add_to_output) { arguments.Residual = add_to_output->dptr(); }
 
   user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
   auto* stream = ctx->stream()->As<ep::CudaStream>();
@@ -108,9 +119,6 @@ class MatmulQuantKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
     const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
-    const user_op::Tensor* scale = ctx->Tensor4ArgNameAndIndex("scale", 0);
-    const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
-    const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
     CHECK(!ctx->Attr<bool>("transpose_a"));
@@ -149,12 +157,16 @@ class MatmulQuantKernel final : public user_op::OpKernel {
 
     cutlass::gemm::GemmCoord problem_size(m, n, k);
 
-    if (scale) {
-      LaunchMatmulQuantScaleBiasFusionOp(ctx, key, problem_size, a, b, scale, bias, add_to_output,
-                                         out);
-    } else {
-      UNIMPLEMENTED();
-    }
+    const user_op::Tensor* in_zero_point = ctx->Tensor4ArgNameAndIndex("in_zero_point", 0);
+    const user_op::Tensor* in_scale = ctx->Tensor4ArgNameAndIndex("in_scale", 0);
+    const user_op::Tensor* weight_scale = ctx->Tensor4ArgNameAndIndex("weight_scale", 0);
+    const user_op::Tensor* weight_acc = ctx->Tensor4ArgNameAndIndex("weight_acc", 0);
+    const user_op::Tensor* scale = ctx->Tensor4ArgNameAndIndex("scale", 0);
+    const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
+    const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
+
+    LaunchMatmulQuantOp(ctx, key, problem_size, a, b, in_zero_point, in_scale, weight_scale,
+                        weight_acc, scale, bias, add_to_output, out);
   }
 };
 
