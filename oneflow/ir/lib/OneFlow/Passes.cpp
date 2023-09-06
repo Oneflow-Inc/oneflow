@@ -504,44 +504,49 @@ LogicalResult FusedConsecutiveAddPattern<Add2Op>::matchAndRewrite(Add2Op op,
   return TryFusedConsecutiveAdd<Add2Op>(op, {op.getIn0(), op.getIn1()}, rewriter);
 }
 
+template<typename OpType>
+LogicalResult PruneReduntantQuantization(OpType op, PatternRewriter& rewriter) {
+  DenseMap<Value, SmallVector<QuantizationOp, 4>> quantOps;
+  DenseMap<Value, SmallVector<DynamicQuantizationOp, 4>> dynamic_quantOps;
+  for (auto result : op->getResults()) {
+    for (auto u : result.getUsers()) {
+      if (auto q = llvm::dyn_cast<QuantizationOp>(u)) { quantOps[result].push_back(q); }
+      if (auto q = llvm::dyn_cast<DynamicQuantizationOp>(u)) {
+        dynamic_quantOps[result].push_back(q);
+      }
+    }
+  }
+  bool pruned = false;
+  for (const auto& it : quantOps) {
+    auto q0 = it.second[0];
+    for (auto q : it.second) {
+      if (q != q0) {
+        q->replaceAllUsesWith(q0->getResults());
+        q->erase();
+        pruned = true;
+      }
+    }
+  }
+  for (const auto& it : dynamic_quantOps) {
+    auto q0 = it.second[0];
+    for (auto q : it.second) {
+      if (q != q0) {
+        q->replaceAllUsesWith(q0->getResults());
+        q->erase();
+        pruned = true;
+      }
+    }
+  }
+  return success(pruned);
+}
+
 struct PruneReduntantQuantizationOpsPattern : public OpInterfaceRewritePattern<UserOpCompatible> {
   explicit PruneReduntantQuantizationOpsPattern(mlir::MLIRContext* context)
       : OpInterfaceRewritePattern<UserOpCompatible>(context, /*benefit=*/1) {}
 
  public:
   LogicalResult matchAndRewrite(UserOpCompatible op, PatternRewriter& rewriter) const override {
-    DenseMap<Value, SmallVector<QuantizationOp, 4>> quantOps;
-    DenseMap<Value, SmallVector<DynamicQuantizationOp, 4>> dynamic_quantOps;
-    for (auto result : op->getResults()) {
-      for (auto u : result.getUsers()) {
-        if (auto q = llvm::dyn_cast<QuantizationOp>(u)) { quantOps[result].push_back(q); }
-        if (auto q = llvm::dyn_cast<DynamicQuantizationOp>(u)) {
-          dynamic_quantOps[result].push_back(q);
-        }
-      }
-    }
-    bool pruned = false;
-    for (const auto& it : quantOps) {
-      auto q0 = it.second[0];
-      for (auto q : it.second) {
-        if (q != q0) {
-          q->replaceAllUsesWith(q0->getResults());
-          q->erase();
-          pruned = true;
-        }
-      }
-    }
-    for (const auto& it : dynamic_quantOps) {
-      auto q0 = it.second[0];
-      for (auto q : it.second) {
-        if (q != q0) {
-          q->replaceAllUsesWith(q0->getResults());
-          q->erase();
-          pruned = true;
-        }
-      }
-    }
-    return success(pruned);
+    return PruneReduntantQuantization<UserOpCompatible>(op, rewriter);
   }
 };
 
@@ -551,38 +556,7 @@ struct PruneReduntantQuantizationFromInputOpPattern : public OpRewritePattern<In
 
  public:
   LogicalResult matchAndRewrite(InputOp op, PatternRewriter& rewriter) const override {
-    DenseMap<Value, SmallVector<QuantizationOp, 4>> quantOps;
-    DenseMap<Value, SmallVector<DynamicQuantizationOp, 4>> dynamic_quantOps;
-    for (auto result : op->getResults()) {
-      for (auto u : result.getUsers()) {
-        if (auto q = llvm::dyn_cast<QuantizationOp>(u)) { quantOps[result].push_back(q); }
-        if (auto q = llvm::dyn_cast<DynamicQuantizationOp>(u)) {
-          dynamic_quantOps[result].push_back(q);
-        }
-      }
-    }
-    bool pruned = false;
-    for (const auto& it : quantOps) {
-      auto q0 = it.second[0];
-      for (auto q : it.second) {
-        if (q != q0) {
-          q->replaceAllUsesWith(q0->getResults());
-          q->erase();
-          pruned = true;
-        }
-      }
-    }
-    for (const auto& it : dynamic_quantOps) {
-      auto q0 = it.second[0];
-      for (auto q : it.second) {
-        if (q != q0) {
-          q->replaceAllUsesWith(q0->getResults());
-          q->erase();
-          pruned = true;
-        }
-      }
-    }
-    return success(pruned);
+    return PruneReduntantQuantization<InputOp>(op, rewriter);
   }
 };
 
