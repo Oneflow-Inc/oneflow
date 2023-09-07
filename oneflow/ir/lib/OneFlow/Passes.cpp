@@ -522,7 +522,6 @@ LogicalResult PruneReduntantQuantization(OpType op, PatternRewriter& rewriter) {
     for (auto q : it.second) {
       if (q != q0) {
         q->replaceAllUsesWith(q0->getResults());
-        q->erase();
         pruned = true;
       }
     }
@@ -532,7 +531,6 @@ LogicalResult PruneReduntantQuantization(OpType op, PatternRewriter& rewriter) {
     for (auto q : it.second) {
       if (q != q0) {
         q->replaceAllUsesWith(q0->getResults());
-        q->erase();
         pruned = true;
       }
     }
@@ -626,7 +624,6 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
         }
         num_transposed_result += 1;
       }
-      op->erase();
     }
     return success();
   }
