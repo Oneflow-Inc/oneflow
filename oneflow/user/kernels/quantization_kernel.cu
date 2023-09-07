@@ -125,7 +125,7 @@ __host__ __device__ int ModDiv<16>(int64_t N) {
 
 template<int pack_size, typename T, typename OutT>
 __global__ void OFPerTensorQuantizationSymmetric(const int64_t elements, const T* in_ptr,
-                                                 const T* scale_ptr, const OutT upper_bound,
+                                                 const float* scale_ptr, const OutT upper_bound,
                                                  const OutT lower_bound, OutT* out_ptr) {
   using LoadType = cuda::elementwise::PackType<T, pack_size>;
   using LoadPack = cuda::elementwise::Pack<T, pack_size>;
@@ -164,7 +164,7 @@ __global__ void OFPerTensorQuantizationSymmetric(const int64_t elements, const T
 
 template<int pack_size, typename T, typename OutT>
 __global__ void OFPerTensorQuantizationAffine(const int64_t elements, const T* in_ptr,
-                                              const T* scale_ptr, const OutT* zero_point_ptr,
+                                              const float* scale_ptr, const OutT* zero_point_ptr,
                                               const OutT upper_bound, const OutT lower_bound,
                                               OutT* out_ptr) {
   using LoadType = cuda::elementwise::PackType<T, pack_size>;
@@ -224,12 +224,12 @@ void ApplyOFPerTensorQuantization(user_op::KernelComputeContext* ctx,
   if (quantization_scheme == "symmetric") {
     OFPerTensorQuantizationSymmetric<pack_size, T, OutT>
         <<<grid_size, cuda::elementwise::kBlockSize, 0, stream>>>(
-            elements, in->dptr<T>(), scale->dptr<T>(), upper_bound, lower_bound,
+            elements, in->dptr<T>(), scale->dptr<float>(), upper_bound, lower_bound,
             out->mut_dptr<OutT>());
   } else {
     OFPerTensorQuantizationAffine<pack_size, T, OutT>
         <<<grid_size, cuda::elementwise::kBlockSize, 0, stream>>>(
-            elements, in->dptr<T>(), scale->dptr<T>(), zero_point->dptr<OutT>(), upper_bound,
+            elements, in->dptr<T>(), scale->dptr<float>(), zero_point->dptr<OutT>(), upper_bound,
             lower_bound, out->mut_dptr<OutT>());
   }
 }
