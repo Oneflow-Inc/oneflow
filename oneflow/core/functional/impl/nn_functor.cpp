@@ -671,6 +671,143 @@ class MatMulQuantWithFilterScaleFunctor {
   std::shared_ptr<OpExpr> matmul_scale_bias_op_;
 };
 
+class GroupedMatMulQuantFunctor {
+ public:
+  GroupedMatMulQuantFunctor() {
+    grouped_matmul_quant_scale_bias_op_.resize(kMaxInputCount /*the maximum number of inputs*/);
+    for (int n = 1; n < kMaxInputCount; ++n) {
+      grouped_matmul_quant_scale_bias_op_[n] = CHECK_JUST(one::OpBuilder("grouped_matmul_quant")
+                                                              .Input("as", n)
+                                                              .Input("bs")
+                                                              .Input("scales", n)
+                                                              .Input("biases", n)
+                                                              .Output("out", n)
+                                                              .Build());
+    }
+  }
+  Maybe<TensorTuple> operator()(const TensorTuple& as, const TensorTuple& bs,
+                                const TensorTuple& scales, const TensorTuple& biases,
+                                const bool& transpose_a, const bool& transpose_b,
+                                const double& alpha,
+                                const Optional<Symbol<DType>>& output_dtype) const {
+    CHECK_OR_RETURN(!transpose_a)
+        << "the first input should not be transposed for quantized matmul.";
+    CHECK_OR_RETURN(transpose_b) << "the second input should be transposed for quantized matmul.";
+    CHECK_EQ_OR_RETURN(alpha, 1) << "alpha should be 1 for quantized matmul.";
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("transpose_a", "transpose_b", "alpha", "out_dtype");
+    attrs.SetAllAttrs(transpose_a, transpose_b, alpha,
+                      output_dtype.value_or(DType::Float())->data_type());
+    int input_size = as.size();
+    TensorTuple input(4 * input_size);
+    std::copy(as.begin(), as.end(), input.begin() + 0 * input_size);
+    std::copy(bs.begin(), bs.end(), input.begin() + 1 * input_size);
+    std::copy(scales.begin(), scales.end(), input.begin() + 2 * input_size);
+    std::copy(biases.begin(), biases.end(), input.begin() + 3 * input_size);
+    return OpInterpUtil::Dispatch<TensorTuple>(*grouped_matmul_quant_scale_bias_op_[input_size],
+                                               input, attrs);
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> grouped_matmul_quant_scale_bias_op_;
+};
+
+class GroupedMatMulQuantWithFilterScaleFunctor {
+ public:
+  GroupedMatMulQuantWithFilterScaleFunctor() {
+    grouped_matmul_quant_with_filter_bias_op_.resize(kMaxInputCount);
+    for (int n = 1; n < kMaxInputCount; ++n) {
+      grouped_matmul_quant_with_filter_bias_op_[n] =
+          CHECK_JUST(one::OpBuilder("grouped_matmul_quant")
+                         .Input("as", n)
+                         .Input("bs", n)
+                         .Input("in_zero_points", n)
+                         .Input("in_scales", n)
+                         .Input("weight_scales", n)
+                         .Input("weight_accs", n)
+                         .Output("out", n)
+                         .Build());
+    }
+  }
+  Maybe<TensorTuple> operator()(const TensorTuple& as, const TensorTuple& bs,
+                                const TensorTuple& in_zero_points, const TensorTuple& in_scales,
+                                const TensorTuple& weight_scales, const TensorTuple& weight_accs,
+                                const bool& transpose_a, const bool& transpose_b,
+                                const double& alpha,
+                                const Optional<Symbol<DType>>& output_dtype) const {
+    CHECK_OR_RETURN(!transpose_a)
+        << "the first input should not be transposed for quantized matmul.";
+    CHECK_OR_RETURN(transpose_b) << "the second input should be transposed for quantized matmul.";
+    CHECK_EQ_OR_RETURN(alpha, 1) << "alpha should be 1 for quantized matmul.";
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("transpose_a", "transpose_b", "alpha", "out_dtype");
+    attrs.SetAllAttrs(transpose_a, transpose_b, alpha,
+                      output_dtype.value_or(DType::Float())->data_type());
+    int input_size = as.size();
+    TensorTuple input(6 * input_size);
+    std::copy(as.begin(), as.end(), input.begin() + 0 * input_size);
+    std::copy(bs.begin(), bs.end(), input.begin() + 1 * input_size);
+    std::copy(in_zero_points.begin(), in_zero_points.end(), input.begin() + 2 * input_size);
+    std::copy(in_scales.begin(), in_scales.end(), input.begin() + 3 * input_size);
+    std::copy(weight_scales.begin(), weight_scales.end(), input.begin() + 4 * input_size);
+    std::copy(weight_accs.begin(), weight_accs.end(), input.begin() + 5 * input_size);
+    return OpInterpUtil::Dispatch<TensorTuple>(
+        *grouped_matmul_quant_with_filter_bias_op_[input_size], input, attrs);
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> grouped_matmul_quant_with_filter_bias_op_;
+};
+
+class GroupedMatMulBiasQuantWithFilterScaleFunctor {
+ public:
+  GroupedMatMulBiasQuantWithFilterScaleFunctor() {
+    grouped_matmul_bias_quant_with_filter_bias_op_.resize(kMaxInputCount);
+    for (int n = 1; n < kMaxInputCount; ++n) {
+      grouped_matmul_bias_quant_with_filter_bias_op_[n] =
+          CHECK_JUST(one::OpBuilder("grouped_matmul_quant")
+                         .Input("as", n)
+                         .Input("bs", n)
+                         .Input("in_zero_points", n)
+                         .Input("in_scales", n)
+                         .Input("weight_scales", n)
+                         .Input("weight_accs", n)
+                         .Input("biases", n)
+                         .Output("out", n)
+                         .Build());
+    }
+  }
+  Maybe<TensorTuple> operator()(const TensorTuple& as, const TensorTuple& bs,
+                                const TensorTuple& in_zero_points, const TensorTuple& in_scales,
+                                const TensorTuple& weight_scales, const TensorTuple& weight_accs,
+                                const TensorTuple& biases, const bool& transpose_a,
+                                const bool& transpose_b, const double& alpha,
+                                const Optional<Symbol<DType>>& output_dtype) const {
+    CHECK_OR_RETURN(!transpose_a)
+        << "the first input should not be transposed for quantized matmul.";
+    CHECK_OR_RETURN(transpose_b) << "the second input should be transposed for quantized matmul.";
+    CHECK_EQ_OR_RETURN(alpha, 1) << "alpha should be 1 for quantized matmul.";
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("transpose_a", "transpose_b", "alpha", "out_dtype");
+    attrs.SetAllAttrs(transpose_a, transpose_b, alpha,
+                      output_dtype.value_or(DType::Float())->data_type());
+    int input_size = as.size();
+    TensorTuple input(7 * input_size);
+    std::copy(as.begin(), as.end(), input.begin() + 0 * input_size);
+    std::copy(bs.begin(), bs.end(), input.begin() + 1 * input_size);
+    std::copy(in_zero_points.begin(), in_zero_points.end(), input.begin() + 2 * input_size);
+    std::copy(in_scales.begin(), in_scales.end(), input.begin() + 3 * input_size);
+    std::copy(weight_scales.begin(), weight_scales.end(), input.begin() + 4 * input_size);
+    std::copy(weight_accs.begin(), weight_accs.end(), input.begin() + 5 * input_size);
+    std::copy(biases.begin(), biases.end(), input.begin() + 6 * input_size);
+    return OpInterpUtil::Dispatch<TensorTuple>(
+        *grouped_matmul_bias_quant_with_filter_bias_op_[input_size], input, attrs);
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> grouped_matmul_bias_quant_with_filter_bias_op_;
+};
+
 class VectorMatrixProductFunctor {
  public:
   VectorMatrixProductFunctor() {
@@ -5667,6 +5804,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::EmbeddingFunctor>("Embedding");
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::MatMulQuantFunctor, impl::MatMulQuantWithFilterScaleFunctor>("MatmulQuant");
+  m.add_functor<impl::GroupedMatMulQuantFunctor, impl::GroupedMatMulQuantWithFilterScaleFunctor,
+                impl::GroupedMatMulBiasQuantWithFilterScaleFunctor>("GroupedMatmulQuant");
   m.add_functor<impl::MatMulNoBroadCastFunctor>("MatMulNoBroadCast");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
   m.add_functor<impl::MatrixVectorProductFunctor>("MatrixVectorProduct");

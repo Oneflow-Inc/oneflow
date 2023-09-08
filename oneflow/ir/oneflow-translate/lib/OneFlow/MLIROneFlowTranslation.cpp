@@ -842,6 +842,10 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
     pm.addPass(oneflow::createConvertInferenceOpPass());
     pm.addPass(oneflow::createPostConvertInferenceOpPass());
   }
+  if (job_wrapper.IsLastIRPass()
+      && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_GROUP_MATMUL_QUANT", false)) {
+    pm.addPass(oneflow::createGroupMatMulQuant());
+  }
   if (!job_wrapper.IsLastIRPass()
       && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_FUSE_NORMALIZATION_OPS", false)) {
     pm.addPass(oneflow::createFuseNormalizationOps());
