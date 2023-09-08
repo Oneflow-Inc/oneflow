@@ -32,134 +32,74 @@ namespace cuda {
 namespace layer_norm {
 
 template<typename T>
-inline __device__ void WelfordMinMaxCombine(T val, T* mean, T* m2, T* min, T* max, T* count) {
-  // Use Welford Online algorithem to compute mean and variance
-  // For more details you can refer to:
-  // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm
-  *count += 1;
-  T delta1 = val - *mean;
-  *mean += Div(delta1, *count);
-  T delta2 = val - *mean;
-  *m2 += delta1 * delta2;
+inline __device__ void MinMaxCombine(T val, T* min, T* max) {
   *min = BinaryFuncMin<T>::Invoke(val, *min);
   *max = BinaryFuncMax<T>::Invoke(val, *max);
 }
 
 template<typename T>
-inline __device__ void WelfordMinMaxCombine(T b_mean, T b_m2, T b_min, T b_max, T b_count, T* mean,
-                                            T* m2, T* min, T* max, T* count) {
-  if (b_count == 0) { return; }
-  T new_count = *count + b_count;
-  T nb_over_n = Div(b_count, new_count);
-  T delta = b_mean - *mean;
-  *mean += delta * nb_over_n;
-  *m2 += b_m2 + delta * delta * (*count) * nb_over_n;
-  *count = new_count;
+inline __device__ void MinMaxCombine(T b_min, T b_max, T* min, T* max) {
   *min = BinaryFuncMin<T>::Invoke(b_min, *min);
   *max = BinaryFuncMax<T>::Invoke(b_max, *max);
 }
 
 template<typename T, int thread_group_width = kWarpSize>
-__inline__ __device__ void WelfordMinMaxWarpReduce(T thread_mean, T thread_m2, T thread_min,
-                                                   T thread_max, T thread_count, T* mean, T* m2,
-                                                   T* min, T* max, T* count) {
-  *mean = thread_mean;
-  *m2 = thread_m2;
-  *count = thread_count;
+__inline__ __device__ void MinMaxWarpReduce(T thread_min, T thread_max, T* min, T* max) {
   *min = thread_min;
   *max = thread_max;
   for (int mask = thread_group_width / 2; mask > 0; mask /= 2) {
-    T b_mean = __shfl_down_sync(0xffffffff, *mean, mask, thread_group_width);
-    T b_m2 = __shfl_down_sync(0xffffffff, *m2, mask, thread_group_width);
     T b_min = __shfl_down_sync(0xffffffff, *min, mask, thread_group_width);
     T b_max = __shfl_down_sync(0xffffffff, *max, mask, thread_group_width);
-    T b_count = __shfl_down_sync(0xffffffff, *count, mask, thread_group_width);
-    WelfordMinMaxCombine(b_mean, b_m2, b_min, b_max, b_count, mean, m2, min, max, count);
+    MinMaxCombine(b_min, b_max, min, max);
   }
 }
 
 template<typename T, int thread_group_width = kWarpSize>
-__inline__ __device__ void WelfordMinMaxWarpAllReduce(T thread_mean, T thread_m2, T thread_min,
-                                                      T thread_max, T thread_count, T* mean, T* m2,
-                                                      T* min, T* max, T* count) {
-  WelfordMinMaxWarpReduce<T, thread_group_width>(thread_mean, thread_m2, thread_min, thread_max,
-                                                 thread_count, mean, m2, min, max, count);
-  *mean = __shfl_sync(0xffffffff, *mean, 0, thread_group_width);
-  *m2 = __shfl_sync(0xffffffff, *m2, 0, thread_group_width);
+__inline__ __device__ void MinMaxWarpAllReduce(T thread_min, T thread_max, T* min, T* max) {
+  MinMaxWarpReduce<T, thread_group_width>(thread_min, thread_max, min, max);
   *min = __shfl_sync(0xffffffff, *min, 0, thread_group_width);
   *max = __shfl_sync(0xffffffff, *max, 0, thread_group_width);
-  *count = __shfl_sync(0xffffffff, *count, 0, thread_group_width);
 }
 
 template<typename T>
-__inline__ __device__ void WelfordMinMaxBlockAllReduce(T thread_mean, T thread_m2, T thread_min,
-                                                       T thread_max, T thread_count, T* result_mean,
-                                                       T* result_m2, T* result_min, T* result_max,
-                                                       T* result_count) {
-  __shared__ T mean_shared[kWarpSize];
-  __shared__ T m2_shared[kWarpSize];
+__inline__ __device__ void MinMaxBlockAllReduce(T thread_min, T thread_max, T* result_min,
+                                                T* result_max) {
   __shared__ T min_shared[kWarpSize];
   __shared__ T max_shared[kWarpSize];
-  __shared__ T count_shared[kWarpSize];
-  __shared__ T mean_result_broadcast;
-  __shared__ T m2_result_broadcast;
   __shared__ T min_result_broadcast;
   __shared__ T max_result_broadcast;
-  __shared__ T count_result_broadcast;
   const int lid = threadIdx.x % kWarpSize;
   const int wid = threadIdx.x / kWarpSize;
-  T warp_mean = 0;
-  T warp_m2 = 0;
   T warp_min = detail::numeric_limits<T>::max();
   T warp_max = detail::numeric_limits<T>::lowest();
-  T warp_count = 0;
-  WelfordMinMaxWarpReduce(thread_mean, thread_m2, thread_min, thread_max, thread_count, &warp_mean,
-                          &warp_m2, &warp_min, &warp_max, &warp_count);
+  MinMaxWarpReduce(thread_min, thread_max, &warp_min, &warp_max);
+
   __syncthreads();
   if (lid == 0) {
-    mean_shared[wid] = warp_mean;
-    m2_shared[wid] = warp_m2;
     min_shared[wid] = warp_min;
     max_shared[wid] = warp_max;
-    count_shared[wid] = warp_count;
   }
   __syncthreads();
   if (wid == 0) {
     if (threadIdx.x < blockDim.x / kWarpSize) {
-      warp_mean = mean_shared[lid];
-      warp_m2 = m2_shared[lid];
       warp_min = min_shared[lid];
       warp_max = max_shared[lid];
-      warp_count = count_shared[lid];
     } else {
-      warp_mean = static_cast<T>(0);
-      warp_m2 = static_cast<T>(0);
       warp_min = detail::numeric_limits<T>::max();
       warp_max = detail::numeric_limits<T>::lowest();
-      warp_count = static_cast<T>(0);
     }
     __syncwarp();
-    T block_mean = 0;
-    T block_m2 = 0;
     T block_min = detail::numeric_limits<T>::max();
     T block_max = detail::numeric_limits<T>::lowest();
-    T block_count = 0;
-    WelfordMinMaxWarpReduce(warp_mean, warp_m2, warp_min, warp_max, warp_count, &block_mean,
-                            &block_m2, &block_min, &block_max, &block_count);
+    MinMaxWarpReduce(warp_min, warp_max, &block_min, &block_max);
     if (lid == 0) {
-      mean_result_broadcast = block_mean;
-      m2_result_broadcast = block_m2;
       min_result_broadcast = block_min;
       max_result_broadcast = block_max;
-      count_result_broadcast = block_count;
     }
   }
   __syncthreads();
-  *result_mean = mean_result_broadcast;
-  *result_m2 = m2_result_broadcast;
   *result_min = min_result_broadcast;
   *result_max = max_result_broadcast;
-  *result_count = count_result_broadcast;
 }
 
 template<typename LOAD, typename STORE, typename T, typename ComputeType, int pack_size,
@@ -184,15 +124,11 @@ __global__ void LayerNormMinMaxObserverWarpImpl(LOAD load, STORE store, const in
   for (int64_t row = global_thread_group_id * rows_per_access; row < rows; row += step) {
     ComputeType thread_mean[rows_per_access];
     ComputeType thread_m2[rows_per_access];
-    ComputeType thread_min[rows_per_access];
-    ComputeType thread_max[rows_per_access];
     ComputeType thread_count[rows_per_access];
 #pragma unroll
     for (int row_id = 0; row_id < rows_per_access; ++row_id) {
       thread_mean[row_id] = 0;
       thread_m2[row_id] = 0;
-      thread_min[row_id] = detail::numeric_limits<T>::max();
-      thread_max[row_id] = detail::numeric_limits<T>::lowest();
       thread_count[row_id] = 0;
       ComputeType* row_buf = buf[row_id];
 #pragma unroll
@@ -204,8 +140,8 @@ __global__ void LayerNormMinMaxObserverWarpImpl(LOAD load, STORE store, const in
 #pragma unroll
         for (int i = 0; i < pack_size; ++i) {
           row_buf[pack_offset + i] = static_cast<ComputeType>(pack[i]);
-          WelfordMinMaxCombine(row_buf[pack_offset + i], thread_mean + row_id, thread_m2 + row_id,
-                               thread_min + row_id, thread_max + row_id, thread_count + row_id);
+          WelfordCombine(row_buf[pack_offset + i], thread_mean + row_id, thread_m2 + row_id,
+                         thread_count + row_id);
         }
       }
       for (int pack_id = min_num_packs; pack_id < max_num_packs; ++pack_id) {
@@ -217,8 +153,8 @@ __global__ void LayerNormMinMaxObserverWarpImpl(LOAD load, STORE store, const in
 #pragma unroll
           for (int i = 0; i < pack_size; ++i) {
             row_buf[pack_offset + i] = static_cast<ComputeType>(pack[i]);
-            WelfordMinMaxCombine(row_buf[pack_offset + i], thread_mean + row_id, thread_m2 + row_id,
-                                 thread_min + row_id, thread_max + row_id, thread_count + row_id);
+            WelfordCombine(row_buf[pack_offset + i], thread_mean + row_id, thread_m2 + row_id,
+                           thread_count + row_id);
           }
         } else {
 #pragma unroll
@@ -228,25 +164,27 @@ __global__ void LayerNormMinMaxObserverWarpImpl(LOAD load, STORE store, const in
     }
     ComputeType warp_mean[rows_per_access];
     ComputeType warp_m2[rows_per_access];
-    ComputeType warp_min[rows_per_access];
-    ComputeType warp_max[rows_per_access];
     ComputeType warp_count[rows_per_access];
+
+    ComputeType thread_min[rows_per_access];
+    ComputeType thread_max[rows_per_access];
 #pragma unroll
     for (int row_id = 0; row_id < rows_per_access; ++row_id) {
+      thread_min[row_id] = detail::numeric_limits<T>::max();
+      thread_max[row_id] = detail::numeric_limits<T>::lowest();
       int global_row_id = row + row_id;
       ComputeType* row_buf = buf[row_id];
-      WelfordMinMaxWarpAllReduce<ComputeType, thread_group_width>(
-          thread_mean[row_id], thread_m2[row_id], thread_min[row_id], thread_max[row_id],
-          thread_count[row_id], warp_mean + row_id, warp_m2 + row_id, warp_min + row_id,
-          warp_max + row_id, warp_count + row_id);
+      WelfordWarpAllReduce<ComputeType, thread_group_width>(
+          thread_mean[row_id], thread_m2[row_id], thread_count[row_id], warp_mean + row_id,
+          warp_m2 + row_id, warp_count + row_id);
       ComputeType row_mean = warp_mean[row_id];
       ComputeType row_variance =
           max(Div(warp_m2[row_id], warp_count[row_id]), static_cast<ComputeType>(0.0));
       ComputeType row_inv_var = Rsqrt(row_variance + static_cast<ComputeType>(epsilon));
-      if (lane_id == 0) {
-        min_max[global_row_id << 1] = (warp_min[row_id] - row_mean) * row_inv_var;
-        min_max[(global_row_id << 1) + 1] = (warp_max[row_id] - row_mean) * row_inv_var;
-      }
+      // if (lane_id == 0) {
+      //   mean[global_row_id] = row_mean;
+      //   inv_variance[global_row_id] = row_inv_var;
+      // }
 #pragma unroll
       for (int i = 0; i < max_cols_per_thread; ++i) {
         row_buf[i] = (row_buf[i] - row_mean) * row_inv_var;
@@ -254,14 +192,37 @@ __global__ void LayerNormMinMaxObserverWarpImpl(LOAD load, STORE store, const in
 #pragma unroll
       for (int i = 0; i < min_num_packs; ++i) {
         const int col = (i * thread_group_width + lane_id) * pack_size;
-        store.template store<pack_size>(row_buf + i * pack_size, global_row_id, col);
+        size_t pack_offset = i * pack_size;
+        store.template store<pack_size>(row_buf + pack_offset, global_row_id, col,
+                                        row_buf + pack_offset);
+#pragma unroll
+        for (int i = 0; i < pack_size; ++i) {
+          MinMaxCombine(row_buf[pack_offset + i], thread_min + row_id, thread_max + row_id);
+        }
       }
 #pragma unroll
       for (int i = min_num_packs; i < max_num_packs; ++i) {
         const int col = (i * thread_group_width + lane_id) * pack_size;
         if (!padding || col < cols) {
-          store.template store<pack_size>(row_buf + i * pack_size, global_row_id, col);
+          size_t pack_offset = i * pack_size;
+          store.template store<pack_size>(row_buf + pack_offset, global_row_id, col,
+                                          row_buf + pack_offset);
+          for (int i = 0; i < pack_size; ++i) {
+            MinMaxCombine(row_buf[pack_offset + i], thread_min + row_id, thread_max + row_id);
+          }
         }
+      }
+    }
+    ComputeType warp_min[rows_per_access];
+    ComputeType warp_max[rows_per_access];
+#pragma unroll
+    for (int row_id = 0; row_id < rows_per_access; ++row_id) {
+      MinMaxWarpAllReduce<ComputeType, thread_group_width>(thread_min[row_id], thread_max[row_id],
+                                                           warp_min + row_id, warp_max + row_id);
+      int global_row_id = row + row_id;
+      if (lane_id == 0) {
+        min_max[global_row_id << 1] = warp_min[row_id];
+        min_max[(global_row_id << 1) + 1] = warp_max[row_id];
       }
     }
   }
@@ -443,8 +404,6 @@ __global__ void LayerNormMinMaxObserverBlockSMemImpl(LOAD load, STORE store, con
   for (int64_t row = blockIdx.x; row < rows; row += gridDim.x) {
     ComputeType thread_mean = 0;
     ComputeType thread_m2 = 0;
-    ComputeType thread_min = detail::numeric_limits<T>::max();
-    ComputeType thread_max = detail::numeric_limits<T>::lowest();
     ComputeType thread_count = 0;
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
       LoadType pack[pack_size];
@@ -452,31 +411,41 @@ __global__ void LayerNormMinMaxObserverBlockSMemImpl(LOAD load, STORE store, con
 #pragma unroll
       for (int i = 0; i < pack_size; ++i) {
         buf[i * num_packs + pack_id] = pack[i];
-        WelfordMinMaxCombine(static_cast<ComputeType>(pack[i]), &thread_mean, &thread_m2,
-                             &thread_min, &thread_max, &thread_count);
+        WelfordCombine(static_cast<ComputeType>(pack[i]), &thread_mean, &thread_m2, &thread_count);
       }
     }
     ComputeType row_mean = 0;
     ComputeType row_m2 = 0;
-    ComputeType row_min = detail::numeric_limits<T>::max();
-    ComputeType row_max = detail::numeric_limits<T>::lowest();
     ComputeType row_count = 0;
-    WelfordMinMaxBlockAllReduce<ComputeType>(thread_mean, thread_m2, thread_min, thread_max,
-                                             thread_count, &row_mean, &row_m2, &row_min, &row_max,
-                                             &row_count);
+    WelfordBlockAllReduce<ComputeType>(thread_mean, thread_m2, thread_count, &row_mean, &row_m2,
+                                       &row_count);
     ComputeType row_variance = max(Div(row_m2, row_count), static_cast<ComputeType>(0.0));
     ComputeType row_inv_var = Rsqrt(row_variance + static_cast<ComputeType>(epsilon));
-    if (threadIdx.x == 0) {
-      min_max[row << 1] = (row_min - row_mean) * row_inv_var;
-      min_max[(row << 1) + 1] = (row_max - row_mean) * row_inv_var;
-    }
+    // if (threadIdx.x == 0) {
+    //   mean[row] = row_mean;
+    //   inv_variance[row] = row_inv_var;
+    // }
+    ComputeType thread_min = detail::numeric_limits<T>::max();
+    ComputeType thread_max = detail::numeric_limits<T>::lowest();
+
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
       ComputeType pack[pack_size];
 #pragma unroll
       for (int i = 0; i < pack_size; ++i) {
         pack[i] = (static_cast<ComputeType>(buf[i * num_packs + pack_id]) - row_mean) * row_inv_var;
       }
-      store.template store<pack_size>(pack, row, pack_id * pack_size);
+      store.template store<pack_size>(pack, row, pack_id * pack_size, pack);
+#pragma unroll
+      for (int i = 0; i < pack_size; ++i) {
+        MinMaxCombine(static_cast<ComputeType>(pack[i]), &thread_min, &thread_max);
+      }
+    }
+    ComputeType row_min = detail::numeric_limits<T>::max();
+    ComputeType row_max = detail::numeric_limits<T>::lowest();
+    MinMaxBlockAllReduce<ComputeType>(thread_min, thread_max, &row_min, &row_max);
+    if (threadIdx.x == 0) {
+      min_max[row << 1] = row_min;
+      min_max[(row << 1) + 1] = row_max;
     }
   }
 }
@@ -668,32 +637,29 @@ __global__ void __launch_bounds__(1024)
   for (int64_t row = blockIdx.x; row < rows; row += gridDim.x) {
     ComputeType thread_mean = 0;
     ComputeType thread_m2 = 0;
-    ComputeType thread_min = detail::numeric_limits<T>::max();
-    ComputeType thread_max = detail::numeric_limits<T>::lowest();
     ComputeType thread_count = 0;
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
       LoadType pack[pack_size];
       load.template load<pack_size>(pack, row, pack_id * pack_size);
 #pragma unroll
       for (int i = 0; i < pack_size; ++i) {
-        WelfordMinMaxCombine(static_cast<ComputeType>(pack[i]), &thread_mean, &thread_m2,
-                             &thread_min, &thread_max, &thread_count);
+        WelfordCombine(static_cast<ComputeType>(pack[i]), &thread_mean, &thread_m2, &thread_count);
       }
     }
     ComputeType row_mean = 0;
     ComputeType row_m2 = 0;
-    ComputeType row_min = detail::numeric_limits<T>::max();
-    ComputeType row_max = detail::numeric_limits<T>::lowest();
     ComputeType row_count = 0;
-    WelfordMinMaxBlockAllReduce<ComputeType>(thread_mean, thread_m2, thread_min, thread_max,
-                                             thread_count, &row_mean, &row_m2, &row_min, &row_max,
-                                             &row_count);
+    WelfordBlockAllReduce<ComputeType>(thread_mean, thread_m2, thread_count, &row_mean, &row_m2,
+                                       &row_count);
     ComputeType row_variance = max(Div(row_m2, row_count), static_cast<ComputeType>(0.0));
     ComputeType row_inv_var = Rsqrt(row_variance + static_cast<ComputeType>(epsilon));
-    if (threadIdx.x == 0) {
-      min_max[row << 1] = (row_min - row_mean) * row_inv_var;
-      min_max[(row << 1) + 1] = (row_max - row_mean) * row_inv_var;
-    }
+    // if (threadIdx.x == 0) {
+    //   mean[row] = row_mean;
+    //   inv_variance[row] = row_inv_var;
+    // }
+    ComputeType thread_min = detail::numeric_limits<T>::max();
+    ComputeType thread_max = detail::numeric_limits<T>::lowest();
+
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
       LoadType pack[pack_size];
       ComputeType dst_pack[pack_size];
@@ -703,7 +669,15 @@ __global__ void __launch_bounds__(1024)
       for (int i = 0; i < pack_size; ++i) {
         dst_pack[i] = (static_cast<ComputeType>(pack[i]) - row_mean) * row_inv_var;
       }
-      store.template store<pack_size>(dst_pack, row, pack_offset);
+      store.template store<pack_size>(dst_pack, row, pack_offset, dst_pack);
+      for (int i = 0; i < pack_size; ++i) { MinMaxCombine(dst_pack[i], &thread_min, &thread_max); }
+    }
+    ComputeType row_min = detail::numeric_limits<T>::max();
+    ComputeType row_max = detail::numeric_limits<T>::lowest();
+    MinMaxBlockAllReduce<ComputeType>(thread_min, thread_max, &row_min, &row_max);
+    if (threadIdx.x == 0) {
+      min_max[row << 1] = row_min;
+      min_max[(row << 1) + 1] = row_max;
     }
   }
 }

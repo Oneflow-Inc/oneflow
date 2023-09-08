@@ -32,7 +32,7 @@ struct AffineStore {
   AffineStore(DST* y, int64_t row_size, const DST* gamma, const DST* beta)
       : y(y), row_size(row_size), gamma(gamma), beta(beta) {}
   template<int N>
-  __device__ void store(const SRC* src, int64_t row, int64_t col) {
+  __device__ void store(const SRC* src, int64_t row, int64_t col, SRC* dst) {
     cuda::layer_norm::Pack<DST, N> y_pack;
     cuda::layer_norm::Pack<DST, N> gamma_pack;
     cuda::layer_norm::Pack<DST, N> beta_pack;
@@ -60,6 +60,7 @@ struct AffineStore {
       } else {
         y_pack.elem[i] = normalized_i;
       }
+      dst[i] = y_pack.elem[i];
     }
     *(reinterpret_cast<cuda::layer_norm::PackType<DST, N>*>(y) + offset) = y_pack.storage;
   }
