@@ -26,6 +26,8 @@ limitations under the License.
 namespace oneflow {
 namespace quantization {
 
+constexpr int kWarpSize = 32;
+
 template<int M>
 __host__ __device__ __forceinline__ int ModDiv(int64_t N) {
   return N - (N / M * M);
@@ -57,16 +59,17 @@ __global__ void ReduceMinMaxPerTensor(const int64_t elements, const T* in_ptr, T
   using LoadPack = cuda::elementwise::Pack<T, pack_size>;
   using MinMaxPack = cuda::elementwise::Pack<T, 2>;
 
-  extern __shared__ uint8_t buffer[];
+  __shared__ T shared_buffer[kWarpSize << 1];
+  MinMaxPack* shared_min_max = reinterpret_cast<MinMaxPack*>(shared_buffer);
 
   MinMaxPack min_max;
   min_max.elem[0] = detail::numeric_limits<T>::max();
   min_max.elem[1] = detail::numeric_limits<T>::lowest();
 
-  int64_t gid = (blockDim.x * blockIdx.x) + threadIdx.x;
+  int64_t tid = (blockDim.x * blockIdx.x) + threadIdx.x;
   int64_t step = gridDim.x * blockDim.x * pack_size;
 
-  for (int64_t idx = gid * pack_size; idx < elements; idx += step) {
+  for (int64_t idx = tid * pack_size; idx < elements; idx += step) {
     LoadPack in;
     in.storage = reinterpret_cast<const LoadType*>(in_ptr + idx)[0];
 #pragma unroll
@@ -76,7 +79,7 @@ __global__ void ReduceMinMaxPerTensor(const int64_t elements, const T* in_ptr, T
     }
   }
   int rest = ModDiv<pack_size>(elements);
-  if (rest > 0 && gid == (gridDim.x * blockDim.x - 1)) {
+  if (rest > 0 && tid == (gridDim.x * blockDim.x - 1)) {
     in_ptr += elements - rest;
     LoadPack in;
     in.storage = reinterpret_cast<const LoadType*>(in_ptr)[0];
@@ -87,26 +90,41 @@ __global__ void ReduceMinMaxPerTensor(const int64_t elements, const T* in_ptr, T
     }
   }
 
-  int64_t tid = threadIdx.x;
-
-  MinMaxPack* shared_min_max = reinterpret_cast<MinMaxPack*>(buffer);
-  shared_min_max[tid].storage = min_max.storage;
+  for (int mask = kWarpSize >> 1; mask > 0; mask = mask >> 1) {
+    T b_min = __shfl_down_sync(0xffffffff, min_max.elem[0], mask, kWarpSize);
+    T b_max = __shfl_down_sync(0xffffffff, min_max.elem[1], mask, kWarpSize);
+    min_max.elem[0] = BinaryFuncMin<T>::Invoke(b_min, min_max.elem[0]);
+    min_max.elem[1] = BinaryFuncMax<T>::Invoke(b_max, min_max.elem[1]);
+  }
   __syncthreads();
 
-  for (unsigned int s = blockDim.x / 2; s > 0; s >>= 1) {
-    if (tid < s) {
-      MinMaxPack min_max0, min_max1;
-      min_max0.storage = shared_min_max[tid].storage;
-      min_max1.storage = shared_min_max[tid + s].storage;
-      min_max0.elem[0] = BinaryFuncMin<T>::Invoke(min_max0.elem[0], min_max1.elem[0]);
-      min_max0.elem[1] = BinaryFuncMax<T>::Invoke(min_max0.elem[1], min_max1.elem[1]);
-      shared_min_max[tid].storage = min_max0.storage;
-    }
-    __syncthreads();
-  }
+  // const int lid = threadIdx.x % kWarpSize;
+  // const int wid = threadIdx.x / kWarpSize;
+  // kWarpSize is 32
+  const int lid = threadIdx.x & 0x1F;
+  const int wid = threadIdx.x >> 5;
 
-  if (tid == 0) {
-    reinterpret_cast<MinMaxPack*>(min_max_ptr)[blockIdx.x].storage = shared_min_max[0].storage;
+  if (lid == 0) { shared_min_max[wid] = min_max; }
+  __syncthreads();
+
+  if (wid == 0) {
+    if (threadIdx.x < blockDim.x >> 5) {
+      min_max = shared_min_max[lid];
+    } else {
+      min_max.elem[0] = detail::numeric_limits<T>::max();
+      min_max.elem[1] = detail::numeric_limits<T>::lowest();
+    }
+    __syncwarp();
+
+    for (int mask = kWarpSize >> 1; mask > 0; mask = mask >> 1) {
+      T b_min = __shfl_down_sync(0xffffffff, min_max.elem[0], mask, kWarpSize);
+      T b_max = __shfl_down_sync(0xffffffff, min_max.elem[1], mask, kWarpSize);
+      min_max.elem[0] = BinaryFuncMin<T>::Invoke(b_min, min_max.elem[0]);
+      min_max.elem[1] = BinaryFuncMax<T>::Invoke(b_max, min_max.elem[1]);
+    }
+    if (lid == 0) {
+      reinterpret_cast<MinMaxPack*>(min_max_ptr)[blockIdx.x].storage = min_max.storage;
+    }
   }
 }
 
@@ -116,43 +134,59 @@ __global__ void ComputeScaleAndZeroPointBlock(const int min_max_size, const T* m
                                               float* scale_ptr, Q* zero_point_ptr) {
   using MinMaxPack = cuda::elementwise::Pack<T, 2>;
 
-  extern __shared__ uint8_t buffer[];
-  MinMaxPack* shared_min_max = reinterpret_cast<MinMaxPack*>(buffer);
-  int64_t tid = threadIdx.x;
-  {
-    MinMaxPack min_max;
-    min_max.elem[0] = detail::numeric_limits<T>::max();
-    min_max.elem[1] = detail::numeric_limits<T>::lowest();
-#pragma unroll
-    for (int64_t idx = tid; idx < min_max_size; idx += blockDim.x) {
-      MinMaxPack in = reinterpret_cast<const MinMaxPack*>(min_max_ptr)[idx];
-      min_max.elem[0] = BinaryFuncMin<T>::Invoke(min_max.elem[0], in.elem[0]);
-      min_max.elem[1] = BinaryFuncMax<T>::Invoke(min_max.elem[1], in.elem[1]);
-    }
-    shared_min_max[tid].storage = min_max.storage;
-    __syncthreads();
+  __shared__ T shared_buffer[kWarpSize << 1];
+  MinMaxPack* shared_min_max = reinterpret_cast<MinMaxPack*>(shared_buffer);
 
-    for (unsigned int s = blockDim.x / 2; s > 0; s >>= 1) {
-      if (tid < s) {
-        MinMaxPack min_max0, min_max1;
-        min_max0.storage = shared_min_max[tid].storage;
-        min_max1.storage = shared_min_max[tid + s].storage;
-        min_max0.elem[0] = BinaryFuncMin<T>::Invoke(min_max0.elem[0], min_max1.elem[0]);
-        min_max0.elem[1] = BinaryFuncMax<T>::Invoke(min_max0.elem[1], min_max1.elem[1]);
-        shared_min_max[tid].storage = min_max0.storage;
-      }
-      __syncthreads();
-    }
+  MinMaxPack min_max;
+  min_max.elem[0] = detail::numeric_limits<T>::max();
+  min_max.elem[1] = detail::numeric_limits<T>::lowest();
+#pragma unroll
+  for (int64_t idx = threadIdx.x; idx < min_max_size; idx += blockDim.x) {
+    MinMaxPack in = reinterpret_cast<const MinMaxPack*>(min_max_ptr)[idx];
+    min_max.elem[0] = BinaryFuncMin<T>::Invoke(min_max.elem[0], in.elem[0]);
+    min_max.elem[1] = BinaryFuncMax<T>::Invoke(min_max.elem[1], in.elem[1]);
   }
 
-  if (threadIdx.x == 0) {
-    MinMaxPack min_max = shared_min_max[0];
-    float min_value = static_cast<float>(min_max.elem[0]);
-    float max_value = static_cast<float>(min_max.elem[1]);
-    float scale = (max_value - min_value) / (upper_bound - lower_bound);
-    int32_t zero_point = lower_bound - __float2int_rn(min_value / scale);
-    scale_ptr[0] = scale;
-    zero_point_ptr[0] = static_cast<Q>(zero_point);
+  for (int mask = kWarpSize >> 1; mask > 0; mask = mask >> 1) {
+    T b_min = __shfl_down_sync(0xffffffff, min_max.elem[0], mask, kWarpSize);
+    T b_max = __shfl_down_sync(0xffffffff, min_max.elem[1], mask, kWarpSize);
+    min_max.elem[0] = BinaryFuncMin<T>::Invoke(b_min, min_max.elem[0]);
+    min_max.elem[1] = BinaryFuncMax<T>::Invoke(b_max, min_max.elem[1]);
+  }
+  __syncthreads();
+
+  // const int lid = threadIdx.x % kWarpSize;
+  // const int wid = threadIdx.x / kWarpSize;
+  // kWarpSize is 32
+  const int lid = threadIdx.x & 0x1F;
+  const int wid = threadIdx.x >> 5;
+
+  if (lid == 0) { shared_min_max[wid] = min_max; }
+  __syncthreads();
+
+  if (wid == 0) {
+    if (threadIdx.x < blockDim.x >> 5) {
+      min_max = shared_min_max[lid];
+    } else {
+      min_max.elem[0] = detail::numeric_limits<T>::max();
+      min_max.elem[1] = detail::numeric_limits<T>::lowest();
+    }
+    __syncwarp();
+
+    for (int mask = kWarpSize >> 1; mask > 0; mask = mask >> 1) {
+      T b_min = __shfl_down_sync(0xffffffff, min_max.elem[0], mask, kWarpSize);
+      T b_max = __shfl_down_sync(0xffffffff, min_max.elem[1], mask, kWarpSize);
+      min_max.elem[0] = BinaryFuncMin<T>::Invoke(b_min, min_max.elem[0]);
+      min_max.elem[1] = BinaryFuncMax<T>::Invoke(b_max, min_max.elem[1]);
+    }
+    if (lid == 0) {
+      float min_value = static_cast<float>(min_max.elem[0]);
+      float max_value = static_cast<float>(min_max.elem[1]);
+      float scale = (max_value - min_value) / (upper_bound - lower_bound);
+      int32_t zero_point = lower_bound - __float2int_rn(min_value / scale);
+      scale_ptr[0] = scale;
+      zero_point_ptr[0] = static_cast<Q>(zero_point);
+    }
   }
 }
 
@@ -165,16 +199,15 @@ inline __global__ void ComputeScaleAndZeroPointBlock<half, int8_t>(
   using MinMaxPack4 = cuda::elementwise::Pack<T, 8>;
   using MinMaxPack = cuda::elementwise::Pack<T, 2>;
 
-  extern __shared__ uint8_t buffer[];
-  MinMaxPack* shared_min_max = reinterpret_cast<MinMaxPack*>(buffer);
-  int64_t tid = threadIdx.x;
+  __shared__ T shared_buffer[kWarpSize << 1];
+  MinMaxPack* shared_min_max = reinterpret_cast<MinMaxPack*>(shared_buffer);
 
   MinMaxPack min_max;
   min_max.elem[0] = detail::numeric_limits<T>::max();
   min_max.elem[1] = detail::numeric_limits<T>::lowest();
 
 #pragma unroll
-  for (int idx = tid; idx < (min_max_size >> 2); idx += blockDim.x) {
+  for (int idx = threadIdx.x; idx < (min_max_size >> 2); idx += blockDim.x) {
     MinMaxPack4 in = reinterpret_cast<const MinMaxPack4*>(min_max_ptr + (idx << 3))[0];
     min_max.elem[0] = BinaryFuncMin<T>::Invoke(min_max.elem[0], in.elem[0]);
     min_max.elem[1] = BinaryFuncMax<T>::Invoke(min_max.elem[1], in.elem[1]);
@@ -188,7 +221,7 @@ inline __global__ void ComputeScaleAndZeroPointBlock<half, int8_t>(
 
   int rest = ModDiv<4>(min_max_size);
 
-  if (rest > 0 && tid == blockDim.x - 1) {
+  if (rest > 0 && threadIdx.x == blockDim.x - 1) {
     int offset = (min_max_size - rest) << 1;
     MinMaxPack4 in = reinterpret_cast<const MinMaxPack4*>(min_max_ptr + offset)[0];
 #pragma unroll
@@ -197,30 +230,46 @@ inline __global__ void ComputeScaleAndZeroPointBlock<half, int8_t>(
       min_max.elem[1] = BinaryFuncMax<T>::Invoke(min_max.elem[1], in.elem[(i << 1) + 1]);
     }
   }
-
-  shared_min_max[tid].storage = min_max.storage;
+  for (int mask = kWarpSize >> 1; mask > 0; mask = mask >> 1) {
+    T b_min = __shfl_down_sync(0xffffffff, min_max.elem[0], mask, kWarpSize);
+    T b_max = __shfl_down_sync(0xffffffff, min_max.elem[1], mask, kWarpSize);
+    min_max.elem[0] = BinaryFuncMin<T>::Invoke(b_min, min_max.elem[0]);
+    min_max.elem[1] = BinaryFuncMax<T>::Invoke(b_max, min_max.elem[1]);
+  }
   __syncthreads();
 
-  for (unsigned int s = blockDim.x / 2; s > 0; s >>= 1) {
-    if (tid < s) {
-      MinMaxPack min_max0, min_max1;
-      min_max0.storage = shared_min_max[tid].storage;
-      min_max1.storage = shared_min_max[tid + s].storage;
-      min_max0.elem[0] = BinaryFuncMin<T>::Invoke(min_max0.elem[0], min_max1.elem[0]);
-      min_max0.elem[1] = BinaryFuncMax<T>::Invoke(min_max0.elem[1], min_max1.elem[1]);
-      shared_min_max[tid].storage = min_max0.storage;
-    }
-    __syncthreads();
-  }
+  // const int lid = threadIdx.x % kWarpSize;
+  // const int wid = threadIdx.x / kWarpSize;
+  // kWarpSize is 32
+  const int lid = threadIdx.x & 0x1F;
+  const int wid = threadIdx.x >> 5;
 
-  if (threadIdx.x == 0) {
-    MinMaxPack min_max = shared_min_max[0];
-    float min_value = static_cast<float>(min_max.elem[0]);
-    float max_value = static_cast<float>(min_max.elem[1]);
-    float scale = (max_value - min_value) / (upper_bound - lower_bound);
-    int32_t zero_point = lower_bound - __float2int_rn(min_value / scale);
-    scale_ptr[0] = scale;
-    zero_point_ptr[0] = static_cast<Q>(zero_point);
+  if (lid == 0) { shared_min_max[wid] = min_max; }
+  __syncthreads();
+
+  if (wid == 0) {
+    if (threadIdx.x < blockDim.x >> 5) {
+      min_max = shared_min_max[lid];
+    } else {
+      min_max.elem[0] = detail::numeric_limits<T>::max();
+      min_max.elem[1] = detail::numeric_limits<T>::lowest();
+    }
+    __syncwarp();
+
+    for (int mask = kWarpSize >> 1; mask > 0; mask = mask >> 1) {
+      T b_min = __shfl_down_sync(0xffffffff, min_max.elem[0], mask, kWarpSize);
+      T b_max = __shfl_down_sync(0xffffffff, min_max.elem[1], mask, kWarpSize);
+      min_max.elem[0] = BinaryFuncMin<T>::Invoke(b_min, min_max.elem[0]);
+      min_max.elem[1] = BinaryFuncMax<T>::Invoke(b_max, min_max.elem[1]);
+    }
+    if (lid == 0) {
+      float min_value = static_cast<float>(min_max.elem[0]);
+      float max_value = static_cast<float>(min_max.elem[1]);
+      float scale = (max_value - min_value) / (upper_bound - lower_bound);
+      int32_t zero_point = lower_bound - __float2int_rn(min_value / scale);
+      scale_ptr[0] = scale;
+      zero_point_ptr[0] = static_cast<Q>(zero_point);
+    }
   }
 }
 
@@ -277,9 +326,8 @@ inline void ApplyDynamicQuantization(cudaStream_t stream, const int min_max_size
   Q lower_bound = -upper_bound - 1;
   size_t element_bytes = GetSizeOfDataType(GetDataType<T>::value);
 
-  ComputeScaleAndZeroPointBlock<T, Q>
-      <<<1, cuda::elementwise::kBlockSize, cuda::elementwise::kBlockSize * element_bytes * 2,
-         stream>>>(min_max_size, min_max_ptr, upper_bound, lower_bound, scale_ptr, zero_point_ptr);
+  ComputeScaleAndZeroPointBlock<T, Q><<<1, cuda::elementwise::kBlockSize, 0, stream>>>(
+      min_max_size, min_max_ptr, upper_bound, lower_bound, scale_ptr, zero_point_ptr);
 
   constexpr int pack_size = cuda::elementwise::PackSize<T>();
   int64_t pack_num = (elements + pack_size - 1) / pack_size;

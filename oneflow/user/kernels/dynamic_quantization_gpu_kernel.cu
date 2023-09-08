@@ -59,9 +59,8 @@ class GpuDynamicQuantizationKernel final : public user_op::OpKernel {
     auto stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     if (per_layer_quantization) {
       quantization::ReduceMinMaxPerTensor<pack_size, T>
-          <<<grid_size, cuda::elementwise::kBlockSize,
-             cuda::elementwise::kBlockSize * element_bytes * 2, stream>>>(elements, in->dptr<T>(),
-                                                                          min_max);
+          <<<grid_size, cuda::elementwise::kBlockSize, 0, stream>>>(elements, in->dptr<T>(),
+                                                                    min_max);
     } else {
       UNIMPLEMENTED() << "dynamic_quantization does not support per-channel quantization";
     }

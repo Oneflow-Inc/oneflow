@@ -153,9 +153,9 @@ class GpuFusedLayerNormMinMaxObserverKernel final : public user_op::OpKernel {
         int8_t upper_bound = (1 << (quantization_bit - 1)) - 1;
         int8_t lower_bound = -upper_bound - 1;
         quantization::ComputeScaleAndZeroPointBlock<T, int8_t>
-            <<<1, cuda::elementwise::kBlockSize, cuda::elementwise::kBlockSize * element_bytes * 2,
-               stream>>>(num_instances, min_max, upper_bound, lower_bound,
-                         y_scale->mut_dptr<float>(), y_zero_point->mut_dptr<int8_t>());
+            <<<1, cuda::elementwise::kBlockSize, 0, stream>>>(
+                num_instances, min_max, upper_bound, lower_bound, y_scale->mut_dptr<float>(),
+                y_zero_point->mut_dptr<int8_t>());
       } else {
         UNIMPLEMENTED();
       }
