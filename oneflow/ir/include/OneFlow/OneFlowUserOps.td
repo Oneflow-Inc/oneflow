@@ -5404,6 +5404,35 @@ def OneFlow_MatmulQuantOp : OneFlow_BaseOp<"matmul_quant", [NoMemoryEffect, Attr
   let has_compute_complexity_fn = 1;
 }
 
+def OneFlow_GroupedMatmulQuantOp : OneFlow_BaseOp<"grouped_matmul_quant", [NoMemoryEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    Variadic<OneFlow_Tensor>:$as,
+    Variadic<OneFlow_Tensor>:$bs,
+    Variadic<OneFlow_Tensor>:$in_zero_points,
+    Variadic<OneFlow_Tensor>:$in_scales,
+    Variadic<OneFlow_Tensor>:$weight_scales,
+    Variadic<OneFlow_Tensor>:$weight_accs,
+    Variadic<OneFlow_Tensor>:$scales,
+    Variadic<OneFlow_Tensor>:$biases,
+    Variadic<OneFlow_Tensor>:$_add_to_outputs
+  );
+  let output = (outs
+    Variadic<OneFlow_Tensor>:$outputs
+  );
+  let attrs = (ins
+    DefaultValuedAttr<BoolAttr, "false">:$transpose_a,
+    DefaultValuedAttr<BoolAttr, "false">:$transpose_b,
+    DefaultValuedAttr<F64Attr, "1.">:$alpha,
+    OneFlow_DataType:$out_dtype,
+    DefaultValuedAttr<StrAttr, "\"\"">:$tuning_cache
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_compute_complexity_fn = 1;
+}
+
 def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<MatMulCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$a,

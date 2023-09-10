@@ -180,6 +180,15 @@ def GroupMatMul : Pass<"group-matmul", "ModuleOp"> {
   let dependentDialects = [];
 }
 
+def GroupMatMulQuant : Pass<"group-matmul-quant", "ModuleOp"> {
+  let summary = "group matmul quant together";
+  let description = [{
+    group matmul ops together and use cutlass batched matmul
+  }];
+  let constructor = "mlir::oneflow::createGroupMatMulQuant()";
+  let dependentDialects = [];
+}
+
 def FuseForwardOps : Pass<"fuse-forward-only-ops", "ModuleOp"> {
   let summary = "fuse forward ops";
   let description = [{

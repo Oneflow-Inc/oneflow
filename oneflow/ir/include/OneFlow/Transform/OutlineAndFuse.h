@@ -35,6 +35,7 @@ std::unique_ptr<mlir::Pass> createWrapOpsToKernelLaunchPass();
 std::unique_ptr<mlir::Pass> createOutlineJitFunctionPass();
 std::unique_ptr<mlir::Pass> createFuseIntoExistingOpPass();
 std::unique_ptr<mlir::Pass> createGroupMatMul();
+std::unique_ptr<mlir::Pass> createGroupMatMulQuant();
 std::unique_ptr<mlir::Pass> createFuseForwardOps();
 std::unique_ptr<mlir::Pass> createFuseOpsWithBackwardImpl();
 std::unique_ptr<mlir::Pass> createFuseNormalizationOps();

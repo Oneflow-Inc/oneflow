@@ -160,6 +160,126 @@ class GroupMatMulPass : public GroupMatMulBase<GroupMatMulPass> {
   }
 };
 
+namespace {
+
+bool MatmulQuantOpHasInputScale(MatmulQuantOp op) {
+  return op.getODSOperands(3).empty() ? false : true;
+}
+
+bool MatmulQuantOpHasScale(MatmulQuantOp op) { return op.getODSOperands(6).empty() ? false : true; }
+
+bool MatmulQuantOpHasBias(MatmulQuantOp op) { return op.getODSOperands(7).empty() ? false : true; }
+
+bool MatmulQuantOpHasAddToOutput(MatmulQuantOp op) { return !(op.getODSOperands(8).empty()); }
+
+}  // namespace
+
+struct GroupMatMulQuantPattern : public mlir::OpRewritePattern<MatmulQuantOp> {
+  explicit GroupMatMulQuantPattern(mlir::MLIRContext* context)
+      : OpRewritePattern<MatmulQuantOp>(context, /*benefit=*/1) {}
+  mlir::LogicalResult matchAndRewrite(MatmulQuantOp op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    llvm::SmallVector<MatmulQuantOp, 4> all_matmuls{};
+    all_matmuls.push_back(op);
+    bool has_in_scale = MatmulQuantOpHasInputScale(op);
+    bool has_scale = MatmulQuantOpHasScale(op);
+    bool has_bias = MatmulQuantOpHasBias(op);
+    bool has_add_to_output = MatmulQuantOpHasAddToOutput(op);
+    for (auto xUser : op.getA().getUsers()) {
+      if (auto matmul_quant = dyn_cast<MatmulQuantOp>(xUser)) {
+        if (has_in_scale != MatmulQuantOpHasInputScale(matmul_quant)
+            || has_scale != MatmulQuantOpHasScale(matmul_quant)
+            || has_bias != MatmulQuantOpHasBias(matmul_quant)
+            || has_add_to_output != MatmulQuantOpHasBias(matmul_quant)) {
+          continue;
+        }
+        all_matmuls.push_back(matmul_quant);
+      }
+    }
+    // all_matmuls has only self, means no other matmul can be grouped
+    if (all_matmuls.size() == 1) { return failure(); }
+    int a_size = 0;
+    int b_size = 0;
+    int in_zero_size = 0;
+    int in_scale_size = 0;
+    int weaght_scale_size = 0;
+    int weaght_acc_size = 0;
+    int scale_size = 0;
+    int bias_size = 0;
+    int add_to_out_put_size = 0;
+
+    llvm::SmallVector<Value, 4> operands{};
+    for (auto matmul : all_matmuls) { operands.push_back(matmul.getA()); }
+    a_size = all_matmuls.size();
+    for (auto matmul : all_matmuls) { operands.push_back(matmul.getB()); }
+    b_size = all_matmuls.size();
+    if (has_in_scale) {
+      for (auto matmul : all_matmuls) { operands.push_back(matmul.getInZeroPoint()); }
+      for (auto matmul : all_matmuls) { operands.push_back(matmul.getInScale()); }
+      for (auto matmul : all_matmuls) { operands.push_back(matmul.getWeightScale()); }
+      for (auto matmul : all_matmuls) { operands.push_back(matmul.getWeightAcc()); }
+      in_zero_size = all_matmuls.size();
+      in_scale_size = all_matmuls.size();
+      weaght_scale_size = all_matmuls.size();
+      weaght_acc_size = all_matmuls.size();
+    }
+    if (has_scale) {
+      for (auto matmul : all_matmuls) { operands.push_back(matmul.getScale()); }
+      scale_size = all_matmuls.size();
+    }
+    if (has_bias) {
+      for (auto matmul : all_matmuls) { operands.push_back(matmul.getBias()); }
+      bias_size = all_matmuls.size();
+    }
+    if (has_add_to_output) {
+      for (auto matmul : all_matmuls) { operands.push_back(matmul.get_addToOutput()); }
+      add_to_out_put_size = all_matmuls.size();
+    }
+    llvm::SmallVector<Type, 4> results{};
+    for (auto matmul : all_matmuls) { results.push_back(matmul.getOut().getType()); }
+    NamedAttrList attributes{};
+    attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(),
+                   OpTrait::IsOpConfCompatible<void>::getDeviceTag(op));
+    attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
+                   OpTrait::IsOpConfCompatible<void>::getDeviceName(op));
+    attributes.set("transpose_a", op.getTransposeAAttr());
+    attributes.set("transpose_b", op.getTransposeBAttr());
+    attributes.set("alpha", op.getAlphaAttr());
+    attributes.set("out_dtype", op.getOutDtypeAttr());
+    attributes.set("tuning_cache", op.getTuningCacheAttr());
+    if (auto hierarchy = OpTrait::IsOpConfCompatible<void>::getHierarchy(op)) {
+      attributes.set(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(), hierarchy);
+    }
+    if (auto scope_symbol_id = OpTrait::IsOpConfCompatible<void>::getScopeSymbolID(op)) {
+      attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(), scope_symbol_id);
+    }
+    attributes.set(OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr(),
+                   rewriter.getDenseI32ArrayAttr({a_size, b_size, in_zero_size, in_scale_size,
+                                                  weaght_scale_size, weaght_acc_size, scale_size,
+                                                  bias_size, add_to_out_put_size}));
+    attributes.set(
+        OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
+        rewriter.getStringAttr("grouped_matmul_quant_"
+                               + OpTrait::IsOpConfCompatible<void>::getOpName(op).str()));
+    auto grouped_matmul_quant_op =
+        rewriter.create<GroupedMatmulQuantOp>(op->getLoc(), results, operands, attributes);
+    for (const auto& matmul : llvm::enumerate(all_matmuls)) {
+      matmul.value().getOut().replaceAllUsesWith(
+          grouped_matmul_quant_op.getOutputs()[matmul.index()]);
+    }
+    return success();
+  }
+};
+
+class GroupMatMulQuantPass : public GroupMatMulQuantBase<GroupMatMulQuantPass> {
+  void runOnOperation() override {
+    Operation* op = getOperation();
+    RewritePatternSet patterns(op->getContext());
+    patterns.add<GroupMatMulQuantPattern>(op->getContext());
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+  }
+};
+
 struct GroupNormActivationPattern : public OpRewritePattern<GroupNormOp> {
   explicit GroupNormActivationPattern(MLIRContext* context)
       : OpRewritePattern<GroupNormOp>(context, /*benefit=*/1) {}
@@ -228,6 +348,8 @@ std::unique_ptr<Pass> createFuseIntoExistingOpPass() {
 }
 
 std::unique_ptr<Pass> createGroupMatMul() { return std::make_unique<GroupMatMulPass>(); }
+
+std::unique_ptr<Pass> createGroupMatMulQuant() { return std::make_unique<GroupMatMulQuantPass>(); }
 
 std::unique_ptr<Pass> createFuseForwardOps() { return std::make_unique<FuseForwardOpsPass>(); }
 std::unique_ptr<Pass> createFuseOpsWithBackwardImpl() {
