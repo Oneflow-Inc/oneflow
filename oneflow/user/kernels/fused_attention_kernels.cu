@@ -287,13 +287,13 @@ struct Params {
 };
 
 template<typename T, typename ArchTag, bool is_aligned, int queries_per_block, int keys_per_block,
-         int max_k, bool with_attn_bias>
+         bool single_value_iteration, bool with_attn_bias>
 void LaunchCutlassFmha(const Params& params, ep::CudaStream* stream) {
   // The fmha implementation below is based on xformers's fmha
   // implementation at:
   // https://github.com/facebookresearch/xformers/tree/main/xformers/csrc/attention/cuda/fmha
   using Attention = AttentionKernel<T, ArchTag, is_aligned, queries_per_block, keys_per_block,
-                                    max_k, false, with_attn_bias>;
+                                    single_value_iteration, false, with_attn_bias>;
   typename Attention::Params p{};
   p.query_ptr = const_cast<T*>(reinterpret_cast<const T*>(params.query_ptr));
   p.key_ptr = const_cast<T*>(reinterpret_cast<const T*>(params.key_ptr));
@@ -363,36 +363,24 @@ void LaunchCutlassFmha(const Params& params, ep::CudaStream* stream) {
 }
 
 template<typename T, typename ArchTag, bool is_aligned, int queries_per_block, int keys_per_block,
-         int max_k>
+         bool single_value_iteration>
 void DispatchWithAttnBias(const Params& params, ep::CudaStream* stream) {
   if (params.attn_bias_ptr != nullptr) {
-    LaunchCutlassFmha<T, ArchTag, is_aligned, queries_per_block, keys_per_block, max_k, true>(
-        params, stream);
+    LaunchCutlassFmha<T, ArchTag, is_aligned, queries_per_block, keys_per_block,
+                      single_value_iteration, true>(params, stream);
   } else {
-    LaunchCutlassFmha<T, ArchTag, is_aligned, queries_per_block, keys_per_block, max_k, false>(
-        params, stream);
+    LaunchCutlassFmha<T, ArchTag, is_aligned, queries_per_block, keys_per_block,
+                      single_value_iteration, false>(params, stream);
   }
 }
 
 template<typename T, typename ArchTag, bool is_aligned, int queries_per_block, int keys_per_block>
 void DispatchSingleValueIteration(const Params& params, ep::CudaStream* stream) {
-  if (params.value_head_size <= 8) {
-    DispatchWithAttnBias<T, ArchTag, is_aligned, queries_per_block, keys_per_block, 8>(params,
-                                                                                       stream);
-  } else if (params.value_head_size <= 16) {
-    DispatchWithAttnBias<T, ArchTag, is_aligned, queries_per_block, keys_per_block, 16>(params,
-                                                                                        stream);
-  } else if (params.value_head_size <= 32) {
-    DispatchWithAttnBias<T, ArchTag, is_aligned, queries_per_block, keys_per_block, 32>(params,
-                                                                                        stream);
-  } else if (params.value_head_size <= 64) {
-    DispatchWithAttnBias<T, ArchTag, is_aligned, queries_per_block, keys_per_block, 64>(params,
-                                                                                        stream);
-  } else if (params.value_head_size <= 128) {
-    DispatchWithAttnBias<T, ArchTag, is_aligned, queries_per_block, keys_per_block, 128>(params,
-                                                                                         stream);
+  if (params.value_head_size <= keys_per_block) {
+    DispatchWithAttnBias<T, ArchTag, is_aligned, queries_per_block, keys_per_block, true>(params,
+                                                                                          stream);
   } else {
-    DispatchWithAttnBias<T, ArchTag, is_aligned, queries_per_block, keys_per_block, 65536>(params,
+    DispatchWithAttnBias<T, ArchTag, is_aligned, queries_per_block, keys_per_block, false>(params,
                                                                                            stream);
   }
 }
