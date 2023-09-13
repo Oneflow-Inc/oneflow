@@ -285,7 +285,7 @@ __global__ void ApplyQuantization(const int64_t elements, const T* in_ptr, const
   int64_t tid = (blockDim.x * blockIdx.x) + threadIdx.x;
   int64_t step = gridDim.x * blockDim.x * pack_size;
 
-  float scale = *scale_ptr;
+  float scale = 1.f / *scale_ptr;
   float zero_point = *zero_point_ptr;
 
   for (int64_t idx = tid * pack_size; idx < elements; idx += step) {
@@ -295,7 +295,7 @@ __global__ void ApplyQuantization(const int64_t elements, const T* in_ptr, const
 #pragma unroll
     for (int i = 0; i < pack_size; ++i) {
       out.elem[i] =
-          max(min(__float2int_rn(static_cast<float>(in.elem[i]) / scale + zero_point), upper_bound),
+          max(min(__float2int_rn(static_cast<float>(in.elem[i]) * scale + zero_point), upper_bound),
               lower_bound);
     }
     reinterpret_cast<StoreType*>(out_ptr + idx)[0] = out.storage;
@@ -311,7 +311,7 @@ __global__ void ApplyQuantization(const int64_t elements, const T* in_ptr, const
 #pragma unroll
     for (int i = 0; i < rest; ++i) {
       out_ptr[i] =
-          max(min(__float2int_rn(static_cast<float>(in.elem[i]) / scale + zero_point), upper_bound),
+          max(min(__float2int_rn(static_cast<float>(in.elem[i]) * scale + zero_point), upper_bound),
               lower_bound);
     }
   }

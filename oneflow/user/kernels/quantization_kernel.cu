@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
+#include "oneflow/user/kernels/quantization_utils.cuh"
 
 namespace oneflow {
 
@@ -98,31 +99,6 @@ __global__ void QuantizationCambricon(const T* in_ptr, const T* shift, const int
   }
 }
 
-template<int M>
-__host__ __device__ int ModDiv(int64_t N) {
-  return N - (N / M * M);
-}
-
-template<>
-__host__ __device__ int ModDiv<2>(int64_t N) {
-  return N & 0x1;
-}
-
-template<>
-__host__ __device__ int ModDiv<4>(int64_t N) {
-  return N & 0x3;
-}
-
-template<>
-__host__ __device__ int ModDiv<8>(int64_t N) {
-  return N & 0x7;
-}
-
-template<>
-__host__ __device__ int ModDiv<16>(int64_t N) {
-  return N & 0xF;
-}
-
 template<int pack_size, typename T, typename OutT>
 __global__ void OFPerTensorQuantizationSymmetric(const int64_t elements, const T* in_ptr,
                                                  const float* scale_ptr, const OutT upper_bound,
@@ -149,7 +125,7 @@ __global__ void OFPerTensorQuantizationSymmetric(const int64_t elements, const T
     reinterpret_cast<StoreType*>(out_ptr + idx)[0] = out.storage;
   }
 
-  int rest = ModDiv<pack_size>(elements);
+  int rest = quantization::ModDiv<pack_size>(elements);
 
   if (rest > 0 && tid == (gridDim.x * blockDim.x - 1)) {
     in_ptr += elements - rest;
@@ -158,49 +134,6 @@ __global__ void OFPerTensorQuantizationSymmetric(const int64_t elements, const T
     for (int i = 0; i < rest; ++i) {
       out_ptr[i] =
           max(min(__float2int_rn(static_cast<float>(in_ptr[i]) / scale), upper_bound), lower_bound);
-    }
-  }
-}
-
-template<int pack_size, typename T, typename OutT>
-__global__ void OFPerTensorQuantizationAffine(const int64_t elements, const T* in_ptr,
-                                              const float* scale_ptr, const OutT* zero_point_ptr,
-                                              const OutT upper_bound, const OutT lower_bound,
-                                              OutT* out_ptr) {
-  using LoadType = cuda::elementwise::PackType<T, pack_size>;
-  using LoadPack = cuda::elementwise::Pack<T, pack_size>;
-  using StoreType = cuda::elementwise::PackType<OutT, pack_size>;
-  using StorePack = cuda::elementwise::Pack<OutT, pack_size>;
-
-  int64_t tid = (blockDim.x * blockIdx.x) + threadIdx.x;
-  int64_t step = gridDim.x * blockDim.x * pack_size;
-
-  float scale = *scale_ptr;
-  float zero_point = *zero_point_ptr;
-
-  for (int64_t idx = tid * pack_size; idx < elements; idx += step) {
-    StorePack out;
-    LoadPack in;
-    in.storage = reinterpret_cast<const LoadType*>(in_ptr + idx)[0];
-#pragma unroll
-    for (int i = 0; i < pack_size; ++i) {
-      out.elem[i] =
-          max(min(__float2int_rn(static_cast<float>(in.elem[i]) / scale + zero_point), upper_bound),
-              lower_bound);
-    }
-    reinterpret_cast<StoreType*>(out_ptr + idx)[0] = out.storage;
-  }
-
-  int rest = ModDiv<pack_size>(elements);
-
-  if (rest > 0 && tid == (gridDim.x * blockDim.x - 1)) {
-    in_ptr += elements - rest;
-    out_ptr += elements - rest;
-#pragma unroll
-    for (int i = 0; i < rest; ++i) {
-      out_ptr[i] =
-          max(min(__float2int_rn(static_cast<float>(in_ptr[i]) / scale + zero_point), upper_bound),
-              lower_bound);
     }
   }
 }
@@ -227,7 +160,7 @@ void ApplyOFPerTensorQuantization(user_op::KernelComputeContext* ctx,
             elements, in->dptr<T>(), scale->dptr<float>(), upper_bound, lower_bound,
             out->mut_dptr<OutT>());
   } else {
-    OFPerTensorQuantizationAffine<pack_size, T, OutT>
+    quantization::ApplyQuantization<pack_size, T, OutT>
         <<<grid_size, cuda::elementwise::kBlockSize, 0, stream>>>(
             elements, in->dptr<T>(), scale->dptr<float>(), zero_point->dptr<OutT>(), upper_bound,
             lower_bound, out->mut_dptr<OutT>());
