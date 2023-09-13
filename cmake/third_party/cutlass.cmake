@@ -95,6 +95,7 @@ if(WITH_CUTLASS)
         "xformers_fmha/iterators/epilogue_predicated_tile_iterator.h"
         "xformers_fmha/iterators/transpose_warp_iterator.h"
         "xformers_fmha/iterators/warp_iterator_from_smem.h"
+        "xformers_fmha/iterators/default_warp_iterator_from_smem.h"
         "xformers_fmha/iterators/predicated_tile_access_iterator_residual_last.h"
         "xformers_fmha/kernel_backward.h")
 
