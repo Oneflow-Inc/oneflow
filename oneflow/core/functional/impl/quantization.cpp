@@ -404,6 +404,37 @@ class FusedLinearWithGroupwiseQuantizedWeightFunctor {
   std::shared_ptr<OpExpr> asymmetric_without_bias_op_;
 };
 
+class FusedGroupNormMinMaxObserverFunctor {
+ public:
+  FusedGroupNormMinMaxObserverFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_group_norm_min_max_observer")
+                         .Input("x")
+                         .Input("gamma")
+                         .Input("beta")
+                         .Output("y")
+                         .Output("y_scale")
+                         .Output("y_zero_point")
+                         .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& x,
+                                const std::shared_ptr<Tensor>& gamma,
+                                const std::shared_ptr<Tensor>& beta, int32_t num_groups, bool scale,
+                                bool center, double epsilon, const std::string& data_format,
+                                const std::string& quantization_scheme, int32_t quantization_bit,
+                                const std::string& quantization_formula) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
+        "num_groups", "scale", "center", "epsilon", "data_format", "quantization_scheme",
+        "quantization_bit", "quantization_formula", "per_layer_quantization");
+    attrs.SetAllAttrs(num_groups, scale, center, epsilon, data_format, quantization_scheme,
+                      quantization_bit, quantization_formula, true);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x, gamma, beta}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<impl::FakeQuantizationFunctor>("FakeQuantization"); };
@@ -417,6 +448,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedLinearWithGroupwiseQuantizedWeightFunctor>(
       "FusedLinearWithGroupwiseQuantizedWeight");
   m.add_functor<impl::DynamicQuantizationFunctor>("DynamicQuantization");
+  m.add_functor<impl::FusedGroupNormMinMaxObserverFunctor>("FusedGroupNormMinMaxObserver");
 };
 
 }  // namespace functional

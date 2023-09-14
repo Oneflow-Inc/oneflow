@@ -7091,6 +7091,37 @@ def OneFlow_FusedLayerNormMinMaxObserverOp : OneFlow_BaseOp<"fused_layer_norm_mi
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_FusedGroupNormMinMaxObserverOp : OneFlow_BaseOp<"fused_group_norm_min_max_observer", [NoMemoryEffect, NoGrad, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    Optional<OneFlow_Tensor>:$beta,
+    Optional<OneFlow_Tensor>:$gamma
+  );
+  let output = (outs
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$y_scale,
+    OneFlow_Tensor:$y_zero_point
+  );
+  let attrs = (ins
+    DefaultValuedAttr<BoolAttr, "false">:$center,
+    DefaultValuedAttr<BoolAttr, "false">:$scale,
+    DefaultValuedAttr<StrAttr, "\"channels_first\"">:$data_format,
+    DefaultValuedAttr<F64Attr, "0.">:$epsilon,
+    DefaultValuedAttr<StrAttr, "\"google\"">:$quantization_formula,
+    DefaultValuedAttr<SI32Attr, "8">:$quantization_bit,
+    DefaultValuedAttr<StrAttr, "\"symmetric\"">:$quantization_scheme,
+    DefaultValuedAttr<BoolAttr, "true">:$per_layer_quantization
+  );
+  let trait_attrs = (ins
+    DenseI32ArrayAttr:$operand_segment_sizes
+  );
+  let has_check_fn = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_SkipLayerNormOp : OneFlow_BaseOp<"skip_layer_norm", [NoMemoryEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x,
