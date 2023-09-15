@@ -37,16 +37,30 @@ def _cast_fuse_gn_dynamic_quant_pass(test_case):
     #     inp = flow.randn(4, num_channels, 32, 32).cuda()
     gn = flow.nn.GroupNorm(2, num_channels, affine=affine).cuda()
     kwargs = {
-            "quantization_formula": "oneflow",
-            "quantization_bit": 8,
-            "quantization_scheme": "affine",
+        "quantization_formula": "oneflow",
+        "quantization_bit": 8,
+        "quantization_scheme": "affine",
     }
 
     dynamic_quantization = flow._oneflow_internal._C.dynamic_quantization
+
     def fused_gn_dynamic_quant(inp, gamma, beta, affine, num_groups):
-        y, y_scale, y_zero_point = flow._oneflow_internal._C.fused_group_norm_min_max_observer(inp, gamma, beta, affine, num_groups, **kwargs)
-        return ((y / y_scale).round() + y_zero_point).to(flow.int8), y_scale, y_zero_point
-    ref_result = fused_gn_dynamic_quant(inp, gn.weight, gn.bias, gn.affine, gn.num_groups)
+        (
+            y,
+            y_scale,
+            y_zero_point,
+        ) = flow._oneflow_internal._C.fused_group_norm_min_max_observer(
+            inp, gamma, beta, affine, num_groups, **kwargs
+        )
+        return (
+            ((y / y_scale).round() + y_zero_point).to(flow.int8),
+            y_scale,
+            y_zero_point,
+        )
+
+    ref_result = fused_gn_dynamic_quant(
+        inp, gn.weight, gn.bias, gn.affine, gn.num_groups
+    )
 
     class FusedGnDynamicQuantPass(flow.nn.Graph):
         def __init__(self):
@@ -74,7 +88,7 @@ class TestFusedGnDynamicQuantPass(flow.unittest.MLIRTestCase):
         os.environ["ONEFLOW_MLIR_ENABLE_IR_PRINTING"] = "1"
 
     def test_cast_fuse_gn_dynamic_quant_pass(test_case):
-            _cast_fuse_gn_dynamic_quant_pass(test_case)
+        _cast_fuse_gn_dynamic_quant_pass(test_case)
 
 
 if __name__ == "__main__":
