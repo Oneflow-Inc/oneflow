@@ -678,10 +678,10 @@ class GroupedMatMulQuantFunctor {
     for (int n = 1; n < kMaxInputCount; ++n) {
       grouped_matmul_quant_scale_bias_op_[n] = CHECK_JUST(one::OpBuilder("grouped_matmul_quant")
                                                               .Input("as", n)
-                                                              .Input("bs")
+                                                              .Input("bs", n)
                                                               .Input("scales", n)
                                                               .Input("biases", n)
-                                                              .Output("out", n)
+                                                              .Output("outputs", n)
                                                               .Build());
     }
   }
@@ -725,7 +725,7 @@ class GroupedMatMulQuantWithFilterScaleFunctor {
                          .Input("in_scales", n)
                          .Input("weight_scales", n)
                          .Input("weight_accs", n)
-                         .Output("out", n)
+                         .Output("outputs", n)
                          .Build());
     }
   }
@@ -773,7 +773,7 @@ class GroupedMatMulBiasQuantWithFilterScaleFunctor {
                          .Input("weight_scales", n)
                          .Input("weight_accs", n)
                          .Input("biases", n)
-                         .Output("out", n)
+                         .Output("outputs", n)
                          .Build());
     }
   }

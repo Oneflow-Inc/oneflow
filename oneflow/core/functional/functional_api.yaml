@@ -1080,13 +1080,13 @@
 - name: "grouped_matmul_quant"
   signature:
     [
-      'Tensor (TensorTuple as, TensorTuple bs, TensorTuple scales, TensorTuple biases,
+      'TensorTuple (TensorTuple as, TensorTuple bs, TensorTuple scales, TensorTuple biases,
                Bool transpose_a=False, Bool transpose_b=False,
                Double alpha=1.0, DataType output_dtype=None) => GroupedMatmulQuant',
-      'Tensor (TensorTuple as, TensorTuple bs, TensorTuple in_zero_points, TensorTuple in_scales, TensorTuple weight_scales,
+      'TensorTuple (TensorTuple as, TensorTuple bs, TensorTuple in_zero_points, TensorTuple in_scales, TensorTuple weight_scales,
                TensorTuple weight_accs, Bool transpose_a=False, Bool transpose_b=False,
                Double alpha=1.0, DataType output_dtype=None) => GroupedMatmulQuant',
-      'Tensor (TensorTuple as, TensorTuple bs, TensorTuple in_zero_points, TensorTuple in_scales, TensorTuple weight_scales,
+      'TensorTuple (TensorTuple as, TensorTuple bs, TensorTuple in_zero_points, TensorTuple in_scales, TensorTuple weight_scales,
                TensorTuple weight_accs, TensorTuple biases,
                Bool transpose_a=False, Bool transpose_b=False,
                Double alpha=1.0, DataType output_dtype=None) => GroupedMatmulQuant'
