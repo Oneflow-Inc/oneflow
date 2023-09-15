@@ -3543,5 +3543,5 @@
   bind_python: True
 
 - name: "fused_group_norm_min_max_observer"
-  signature: 'TensorTuple[y, y_scale, y_zero_point] (Tensor x, Tensor gamma, Tensor beta, Int32 num_groups, Bool scale, Bool center, Double epsilon=1e-5, String data_format="channels_first", String quantization_scheme="affine", Int32 quantization_bit=8, String quantization_formula="oneflow") => FusedGroupNormMinMaxObserver'
+  signature: 'TensorTuple[y, y_scale, y_zero_point] (Tensor x, Tensor gamma=None, Tensor beta=None, Bool affine, Int32 num_groups, Double epsilon=1e-5, String data_format="channels_first", String activation="none", String quantization_scheme="affine", Int32 quantization_bit=8, String quantization_formula="oneflow") => FusedGroupNormMinMaxObserver'
   bind_python: True

@@ -249,3 +249,41 @@ Pattern {
     replace dynamic_quantization with (quantization.0, fused_layer_norm_min_max_observer.1, fused_layer_norm_min_max_observer.2);
   };
 }
+
+Pattern {
+  let affine: Attr;
+  let num_groups: Attr;
+  let epsilon: Attr;
+  let data_format: Attr;
+  let activation: Attr;
+  let quantization_formula: Attr;
+  let quantization_bit: Attr;
+  let quantization_scheme: Attr;
+  let per_layer_quantization: Attr;
+
+  let group_norm = op<oneflow.group_norm>(x: Value, beta: Value, gamma: Value)
+      {affine = affine, num_groups = num_groups, epsilon = epsilon, data_format = data_format, activation = activation}
+      -> (y: Type, mean: Type, inv_variance: Type);
+  let dynamic_quantization = op<oneflow.dynamic_quantization>(group_norm.0)
+      {quantization_formula = quantization_formula, quantization_bit = quantization_bit, quantization_scheme = quantization_scheme,
+       per_layer_quantization = per_layer_quantization} -> (out: Type, in_scale: Type, in_zero_point: Type);
+
+  rewrite dynamic_quantization with {
+    let fused_group_norm_min_max_observer = op<oneflow.fused_group_norm_min_max_observer>(x, beta, gamma)
+        {affine = affine, num_groups = num_groups, epsilon = epsilon, data_format = data_format, activation = activation,
+         quantization_formula = quantization_formula, quantization_bit = quantization_bit, quantization_scheme = quantization_scheme,
+         per_layer_quantization = per_layer_quantization,
+         operand_segment_sizes = attr<"array<i32: 1, 1, 1>">} -> (y, in_scale, in_zero_point);
+
+    CopyUserOpAttrs(group_norm, fused_group_norm_min_max_observer);
+
+    let quantization = op<oneflow.quantization>(fused_group_norm_min_max_observer.0,
+                                                fused_group_norm_min_max_observer.1,
+                                                fused_group_norm_min_max_observer.2) {
+        quantization_formula = quantization_formula, quantization_bit = quantization_bit, quantization_scheme = quantization_scheme} -> (out);
+
+    CopyUserOpAttrs(dynamic_quantization, quantization);
+
+    replace dynamic_quantization with (quantization.0, fused_group_norm_min_max_observer.1, fused_group_norm_min_max_observer.2);
+  };
+}

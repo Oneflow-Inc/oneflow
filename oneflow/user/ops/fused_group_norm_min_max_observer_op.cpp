@@ -34,8 +34,7 @@ int64_t ShiftNegativeAxisIfNeed(const Shape& shape, int64_t axis) {
 /* static */ Maybe<void> FusedGroupNormMinMaxObserverOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
-  const bool center = ctx->Attr<bool>("center");
-  const bool scale = ctx->Attr<bool>("scale");
+  const bool affine = ctx->Attr<bool>("affine");
 
   const std::string& data_format = ctx->Attr<std::string>("data_format");
   int64_t channel_size = 0;
@@ -57,13 +56,11 @@ int64_t ShiftNegativeAxisIfNeed(const Shape& shape, int64_t axis) {
   CHECK_EQ_OR_RETURN(channel_size % num_groups, 0) << "Channels should be divisble by num_groups. ";
 
   // check gamma and beta size
-  if (scale) {
+  if (affine) {
     const user_op::TensorDesc& gamma = ctx->InputTensorDesc("gamma", 0);
     CHECK_EQ_OR_RETURN(gamma.shape().elem_cnt(), channel_size)
         << "The size of `gamma` must equal to channel_size, expected " << channel_size
         << " but got " << gamma.shape().elem_cnt();
-  }
-  if (center) {
     const user_op::TensorDesc& beta = ctx->InputTensorDesc("beta", 0);
     CHECK_EQ_OR_RETURN(beta.shape().elem_cnt(), channel_size)
         << "The size of `beta` must equal to channel_size, expected " << channel_size << " but got "
@@ -105,16 +102,13 @@ int64_t ShiftNegativeAxisIfNeed(const Shape& shape, int64_t axis) {
 }
 
 /* static */ Maybe<void> FusedGroupNormMinMaxObserverOp::InferDataType(user_op::InferContext* ctx) {
-  const bool center = ctx->Attr<bool>("center");
+  const bool affine = ctx->Attr<bool>("affine");
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
-  if (center) {
+  if (affine) {
     const user_op::TensorDesc& beta = ctx->InputTensorDesc("beta", 0);
     CHECK_EQ_OR_RETURN(beta.data_type(), x.data_type())
         << "InferDataType Failed. Expected " << DataType_Name(x.data_type()) << ", but got "
         << DataType_Name(beta.data_type());
-  }
-  const bool scale = ctx->Attr<bool>("scale");
-  if (scale) {
     const user_op::TensorDesc& gamma = ctx->InputTensorDesc("gamma", 0);
     CHECK_EQ_OR_RETURN(gamma.data_type(), x.data_type())
         << "InferDataType Failed. Expected " << DataType_Name(x.data_type()) << ", but got "

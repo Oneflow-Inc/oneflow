@@ -7103,10 +7103,11 @@ def OneFlow_FusedGroupNormMinMaxObserverOp : OneFlow_BaseOp<"fused_group_norm_mi
     OneFlow_Tensor:$y_zero_point
   );
   let attrs = (ins
-    DefaultValuedAttr<BoolAttr, "false">:$center,
-    DefaultValuedAttr<BoolAttr, "false">:$scale,
-    DefaultValuedAttr<StrAttr, "\"channels_first\"">:$data_format,
+    DefaultValuedAttr<BoolAttr, "false">:$affine,
+    DefaultValuedAttr<SI32Attr, "0">:$num_groups,
     DefaultValuedAttr<F64Attr, "0.">:$epsilon,
+    DefaultValuedAttr<StrAttr, "\"channels_first\"">:$data_format,
+    DefaultValuedAttr<StrAttr, "\"none\"">:$activation,
     DefaultValuedAttr<StrAttr, "\"google\"">:$quantization_formula,
     DefaultValuedAttr<SI32Attr, "8">:$quantization_bit,
     DefaultValuedAttr<StrAttr, "\"symmetric\"">:$quantization_scheme,

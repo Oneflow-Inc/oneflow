@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <optional>
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/functional/impl/binary_functor.h"
 
 #include "oneflow/core/framework/attr_map.h"
@@ -409,30 +411,45 @@ class FusedGroupNormMinMaxObserverFunctor {
   FusedGroupNormMinMaxObserverFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("fused_group_norm_min_max_observer")
                          .Input("x")
-                         .Input("gamma")
-                         .Input("beta")
                          .Output("y")
                          .Output("y_scale")
                          .Output("y_zero_point")
+                         .Attr("affine", false)
                          .Build());
+    affine_op_ = CHECK_JUST(one::OpBuilder("fused_group_norm_min_max_observer")
+                                .Input("x")
+                                .Input("gamma")
+                                .Input("beta")
+                                .Output("y")
+                                .Output("y_scale")
+                                .Output("y_zero_point")
+                                .Attr("affine", true)
+                                .Build());
   }
 
   Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& x,
-                                const std::shared_ptr<Tensor>& gamma,
-                                const std::shared_ptr<Tensor>& beta, int32_t num_groups, bool scale,
-                                bool center, double epsilon, const std::string& data_format,
+                                const Optional<Tensor>& gamma,
+                                const Optional<Tensor>& beta,
+                                bool affine,
+                                int32_t num_groups, double epsilon, const std::string& data_format,
+                                const std::string& activation,
                                 const std::string& quantization_scheme, int32_t quantization_bit,
                                 const std::string& quantization_formula) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
-        "num_groups", "scale", "center", "epsilon", "data_format", "quantization_scheme",
-        "quantization_bit", "quantization_formula", "per_layer_quantization");
-    attrs.SetAllAttrs(num_groups, scale, center, epsilon, data_format, quantization_scheme,
-                      quantization_bit, quantization_formula, true);
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x, gamma, beta}, attrs);
+        "affine", "num_groups", "epsilon", "data_format", "activation", "quantization_formula",
+        "quantization_bit", "quantization_scheme", "per_layer_quantization");
+    attrs.SetAllAttrs(affine, num_groups, epsilon, data_format, activation, quantization_formula,
+                      quantization_bit, quantization_scheme, true);
+    if (affine) {
+      return OpInterpUtil::Dispatch<TensorTuple>(*affine_op_, {x, JUST(gamma), JUST(beta)}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs);
+    }
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> affine_op_;
 };
 
 }  // namespace impl

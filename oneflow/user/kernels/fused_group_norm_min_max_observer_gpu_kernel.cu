@@ -36,7 +36,8 @@ namespace oneflow {
 
 namespace {
 
-template<typename SRC, typename DST, bool do_scale, bool do_center>
+// template<typename SRC, typename DST, bool affine, bool do_center>
+template<typename SRC, typename DST, ep::primitive::UnaryOp activation, bool affine>
 struct AffineStore {
   AffineStore(DST* y, int64_t row_size, int64_t channel_size, int64_t spatial_size,
               const DST* gamma, const DST* beta)
@@ -45,7 +46,8 @@ struct AffineStore {
         channel_size(channel_size),
         spatial_size(spatial_size),
         gamma(gamma),
-        beta(beta) {}
+        beta(beta),
+        act(0, 0) {}
 
   template<int PackSize>
   __device__ void store(const SRC* src, int64_t row, int64_t col, SRC* dst) {
@@ -57,16 +59,18 @@ struct AffineStore {
     const int64_t gamma_beta_offset = (offset / spatial_size) % channel_size;
     DST gamma_val = 1.0;
     DST beta_val = 0.0;
-    if (do_scale) { gamma_val = gamma[gamma_beta_offset]; }
-    if (do_center) { beta_val = beta[gamma_beta_offset]; }
+    if (affine) {
+      gamma_val = gamma[gamma_beta_offset];
+      beta_val = beta[gamma_beta_offset];
+    }
 
 #pragma unroll
     for (int i = 0; i < PackSize; ++i) {
       DST normalized_i = static_cast<DST>(src[i]);
-      if (do_scale || do_center) {
-        y_pack.elem[i] = normalized_i * gamma_val + beta_val;
+      if (affine) {
+        y_pack.elem[i] = act(normalized_i * gamma_val + beta_val);
       } else {
-        y_pack.elem[i] = normalized_i;
+        y_pack.elem[i] = act(normalized_i);
       }
       dst[i] = y_pack.elem[i];
     }
@@ -79,11 +83,12 @@ struct AffineStore {
   int64_t spatial_size;
   const DST* gamma;
   const DST* beta;
+  ep::primitive::UnaryFunctor<DeviceType::kCUDA, activation, DST, DST> act;
 };
 
 #ifdef WITH_CUTLASS
 
-template<typename SRC, typename DST, bool do_scale, bool do_center>
+template<typename SRC, typename DST, ep::primitive::UnaryOp activation, bool affine>
 struct ChannelsLastStore {
   ChannelsLastStore(DST* y, const DST* gamma, const DST* beta, int64_t spatial_size,
                     int64_t channel_size, int64_t num_groups)
@@ -92,7 +97,8 @@ struct ChannelsLastStore {
         beta(beta),
         spatial_size(spatial_size),
         c0(num_groups),
-        c1(channel_size / num_groups) {}
+        c1(channel_size / num_groups),
+        act(0, 0) {}
 
   template<int PackSize>
   __device__ void store(const SRC* src, int32_t row, int32_t col, SRC* dst) {
@@ -110,29 +116,27 @@ struct ChannelsLastStore {
          + c0_idx * c1.divisor + c1_idx)
         / PackSize;
     const int32_t gamma_beta_offset = (c0_idx * c1.divisor + c1_idx) / PackSize;
-    if (do_scale) {
+    if (affine) {
       gamma_pack.storage =
           *(reinterpret_cast<const cuda::layer_norm::PackType<DST, PackSize>*>(gamma)
             + gamma_beta_offset);
-    } else {
-#pragma unroll
-      for (int i = 0; i < PackSize; ++i) { gamma_pack.elem[i] = static_cast<DST>(1.f); }
-    }
-    if (do_center) {
       beta_pack.storage = *(reinterpret_cast<const cuda::layer_norm::PackType<DST, PackSize>*>(beta)
                             + gamma_beta_offset);
     } else {
 #pragma unroll
-      for (int i = 0; i < PackSize; ++i) { beta_pack.elem[i] = static_cast<DST>(0.f); }
+      for (int i = 0; i < PackSize; ++i) {
+        gamma_pack.elem[i] = static_cast<DST>(1.f);
+        beta_pack.elem[i] = static_cast<DST>(0.f);
+      }
     }
 
 #pragma unroll
     for (int i = 0; i < PackSize; ++i) {
       DST normalized_i = static_cast<DST>(src[i]);
-      if (do_scale || do_center) {
-        y_pack.elem[i] = normalized_i * gamma_pack.elem[i] + beta_pack.elem[i];
+      if (affine) {
+        y_pack.elem[i] = act(normalized_i * gamma_pack.elem[i] + beta_pack.elem[i]);
       } else {
-        y_pack.elem[i] = normalized_i;
+        y_pack.elem[i] = act(normalized_i);
       }
       dst[i] = y_pack.elem[i];
     }
@@ -144,6 +148,7 @@ struct ChannelsLastStore {
   int32_t spatial_size;
   cutlass::FastDivmod c0;
   cutlass::FastDivmod c1;
+  ep::primitive::UnaryFunctor<DeviceType::kCUDA, activation, DST, DST> act;
 };
 
 template<typename SRC, typename DST>
@@ -177,7 +182,7 @@ struct ChannelsLastLoad {
 
 #else
 
-template<typename SRC, typename DST, bool do_scale, bool do_center>
+template<typename SRC, typename DST, ep::primitive::UnaryOp activation, bool affine>
 struct ChannelsLastStore {
   ChannelsLastStore(DST* y, const DST* gamma, const DST* beta, int64_t spatial_size,
                     int64_t channel_size, int64_t num_groups)
@@ -186,10 +191,11 @@ struct ChannelsLastStore {
         beta(beta),
         spatial_size(spatial_size),
         c0(num_groups),
-        c1(channel_size / num_groups) {}
+        c1(channel_size / num_groups),
+        act(0, 0) {}
 
   template<int PackSize>
-  __device__ void store(const SRC* src, int32_t row, int32_t col) {
+  __device__ void store(const SRC* src, int32_t row, int32_t col, SRC* dst) {
     cuda::layer_norm::Pack<DST, PackSize> y_pack;
     cuda::layer_norm::Pack<DST, PackSize> gamma_pack;
     cuda::layer_norm::Pack<DST, PackSize> beta_pack;
@@ -201,29 +207,27 @@ struct ChannelsLastStore {
         (batch_idx * c0 * c1 * spatial_size + spatial_idx * c0 * c1 + c0_idx * c1 + c1_idx)
         / PackSize;
     const int32_t gamma_beta_offset = (c0_idx * c1 + c1_idx) / PackSize;
-    if (do_scale) {
+    if (affine) {
       gamma_pack.storage =
           *(reinterpret_cast<const cuda::layer_norm::PackType<DST, PackSize>*>(gamma)
             + gamma_beta_offset);
-    } else {
-#pragma unroll
-      for (int i = 0; i < PackSize; ++i) { gamma_pack.elem[i] = static_cast<DST>(1.f); }
-    }
-    if (do_center) {
       beta_pack.storage = *(reinterpret_cast<const cuda::layer_norm::PackType<DST, PackSize>*>(beta)
                             + gamma_beta_offset);
     } else {
 #pragma unroll
-      for (int i = 0; i < PackSize; ++i) { beta_pack.elem[i] = static_cast<DST>(0.f); }
+      for (int i = 0; i < PackSize; ++i) {
+        gamma_pack.elem[i] = static_cast<DST>(1.f);
+        beta_pack.elem[i] = static_cast<DST>(0.f);
+      }
     }
 
 #pragma unroll
     for (int i = 0; i < PackSize; ++i) {
       DST normalized_i = static_cast<DST>(src[i]);
-      if (do_scale || do_center) {
-        y_pack.elem[i] = normalized_i * gamma_pack.elem[i] + beta_pack.elem[i];
+      if (affine) {
+        y_pack.elem[i] = act(normalized_i * gamma_pack.elem[i] + beta_pack.elem[i]);
       } else {
-        y_pack.elem[i] = normalized_i;
+        y_pack.elem[i] = act(normalized_i);
       }
     }
     *(reinterpret_cast<cuda::layer_norm::PackType<DST, PackSize>*>(y) + y_offset) = y_pack.storage;
@@ -234,6 +238,7 @@ struct ChannelsLastStore {
   int32_t spatial_size;
   int32_t c0;
   int32_t c1;
+  ep::primitive::UnaryFunctor<DeviceType::kCUDA, activation, DST, DST> act;
 };
 
 template<typename SRC, typename DST>
@@ -264,16 +269,17 @@ struct ChannelsLastLoad {
 
 #endif  // WITH_CUTLASS
 
-template<typename T, bool do_scale, bool do_center>
-void GroupNormMinMaxObserverGpu(ep::Stream* stream, int64_t num_instances, int64_t norm_size,
-                                int64_t channel_size, int64_t spatial_size, const double epsilon,
-                                const T* x_ptr, const T* gamma_ptr, const T* beta_ptr, T* y_ptr,
-                                T* min_max_ptr, bool channels_first) {
+template<typename T, ep::primitive::UnaryOp activation, bool affine>
+void GroupNormMinMaxObserverForward(ep::Stream* stream, int64_t num_instances, int64_t norm_size,
+                                    int64_t channel_size, int64_t spatial_size,
+                                    const double epsilon, const T* x_ptr, const T* gamma_ptr,
+                                    const T* beta_ptr, T* y_ptr, bool channels_first,
+                                    T* min_max_ptr) {
   using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
   if (channels_first) {
     cuda::layer_norm::DirectLoad<T, T> load(x_ptr, norm_size);
-    AffineStore<ComputeType, T, do_scale, do_center> store(y_ptr, norm_size, channel_size,
-                                                           spatial_size, gamma_ptr, beta_ptr);
+    AffineStore<ComputeType, T, activation, affine> store(y_ptr, norm_size, channel_size,
+                                                          spatial_size, gamma_ptr, beta_ptr);
     cuda::layer_norm::DispatchLayerNormMinMaxObserver<decltype(load), decltype(store), T,
                                                       ComputeType>(
         stream->As<ep::CudaStream>()->cuda_stream(), load, store, num_instances, norm_size, epsilon,
@@ -281,7 +287,7 @@ void GroupNormMinMaxObserverGpu(ep::Stream* stream, int64_t num_instances, int64
   } else {
     ChannelsLastLoad<T, T> load(x_ptr, spatial_size, channel_size,
                                 channel_size / (norm_size / spatial_size));
-    ChannelsLastStore<ComputeType, T, do_scale, do_center> store(
+    ChannelsLastStore<ComputeType, T, activation, affine> store(
         y_ptr, gamma_ptr, beta_ptr, spatial_size, channel_size,
         channel_size / (norm_size / spatial_size));
     cuda::layer_norm::DispatchLayerNormMinMaxObserver<decltype(load), decltype(store), T,
@@ -291,28 +297,42 @@ void GroupNormMinMaxObserverGpu(ep::Stream* stream, int64_t num_instances, int64
   }
 }
 
-template<typename T>
-void DispatchFusedGroupNormMinMaxObserverGpu(ep::Stream* stream, const int64_t num_instances,
-                                             const int64_t norm_size, int64_t channel_size,
-                                             int64_t spatial_size, const double epsilon,
-                                             const T* x_ptr, const T* gamma_ptr, const T* beta_ptr,
-                                             T* y_ptr, T* min_max_ptr, bool channels_first) {
+template<typename T, ep::primitive::UnaryOp activation>
+void DispatchFusedGroupNormMinMaxObserverAffine(ep::Stream* stream, const int64_t num_instances,
+                                                const int64_t norm_size, int64_t channel_size,
+                                                int64_t spatial_size, const double epsilon,
+                                                const T* x_ptr, const T* gamma_ptr,
+                                                const T* beta_ptr, T* y_ptr, bool channels_first,
+                                                T* min_max_ptr) {
   if (gamma_ptr != nullptr && beta_ptr != nullptr) {
-    GroupNormMinMaxObserverGpu<T, true, true>(stream, num_instances, norm_size, channel_size,
-                                              spatial_size, epsilon, x_ptr, gamma_ptr, beta_ptr,
-                                              y_ptr, min_max_ptr, channels_first);
-  } else if (gamma_ptr != nullptr && beta_ptr == nullptr) {
-    GroupNormMinMaxObserverGpu<T, true, false>(stream, num_instances, norm_size, channel_size,
-                                               spatial_size, epsilon, x_ptr, gamma_ptr, beta_ptr,
-                                               y_ptr, min_max_ptr, channels_first);
-  } else if (gamma_ptr == nullptr && beta_ptr != nullptr) {
-    GroupNormMinMaxObserverGpu<T, false, true>(stream, num_instances, norm_size, channel_size,
-                                               spatial_size, epsilon, x_ptr, gamma_ptr, beta_ptr,
-                                               y_ptr, min_max_ptr, channels_first);
+    GroupNormMinMaxObserverForward<T, activation, true>(
+        stream, num_instances, norm_size, channel_size, spatial_size, epsilon, x_ptr, gamma_ptr,
+        beta_ptr, y_ptr, channels_first, min_max_ptr);
   } else {
-    GroupNormMinMaxObserverGpu<T, false, false>(stream, num_instances, norm_size, channel_size,
-                                                spatial_size, epsilon, x_ptr, gamma_ptr, beta_ptr,
-                                                y_ptr, min_max_ptr, channels_first);
+    GroupNormMinMaxObserverForward<T, activation, false>(
+        stream, num_instances, norm_size, channel_size, spatial_size, epsilon, x_ptr, gamma_ptr,
+        beta_ptr, y_ptr, channels_first, min_max_ptr);
+  }
+}
+
+template<typename T>
+void DispatchFusedGroupNormMinMaxObserverActivation(ep::Stream* stream, const int64_t num_instances,
+                                                    const int64_t norm_size, int64_t channel_size,
+                                                    int64_t spatial_size, const double epsilon,
+                                                    const T* x_ptr, const T* gamma_ptr,
+                                                    const T* beta_ptr, T* y_ptr,
+                                                    bool channels_first,
+                                                    const std::string& activation, T* min_max_ptr) {
+  if (activation == "none") {
+    DispatchFusedGroupNormMinMaxObserverAffine<T, ep::primitive::UnaryOp::kIdentity>(
+        stream, num_instances, norm_size, channel_size, spatial_size, epsilon, x_ptr, gamma_ptr,
+        beta_ptr, y_ptr, channels_first, min_max_ptr);
+  } else if (activation == "silu") {
+    DispatchFusedGroupNormMinMaxObserverAffine<T, ep::primitive::UnaryOp::kSilu>(
+        stream, num_instances, norm_size, channel_size, spatial_size, epsilon, x_ptr, gamma_ptr,
+        beta_ptr, y_ptr, channels_first, min_max_ptr);
+  } else {
+    UNIMPLEMENTED();
   }
 }
 
@@ -327,15 +347,13 @@ class CUDAFusedGroupNormMinMaxObserverKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    // user_op::Tensor* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
-    // user_op::Tensor* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
     const double epsilon = ctx->Attr<double>("epsilon");
     const int32_t num_groups = ctx->Attr<int32_t>("num_groups");
     const std::string& data_format = ctx->Attr<std::string>("data_format");
+    const std::string& activation = ctx->Attr<std::string>("activation");
     CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
 
     const int64_t num_instances = x->shape_view().At(0) * num_groups;
-    // mean->shape_view().elem_cnt();  // N*num_groups
     const int64_t norm_size = x->shape_view().elem_cnt() / num_instances;
     const int64_t batch_size = x->shape_view().At(0);
 
@@ -368,13 +386,9 @@ class CUDAFusedGroupNormMinMaxObserverKernel final : public user_op::OpKernel {
     CHECK_GE(tmp_buffer->shape_view().elem_cnt(), num_instances * 2 * element_bytes);
     T* min_max = reinterpret_cast<T*>(tmp_buffer->mut_dptr());
 
-    std::cout << "run1 -- " << std::endl;
-
-    DispatchFusedGroupNormMinMaxObserverGpu<T>(
+    DispatchFusedGroupNormMinMaxObserverActivation<T>(
         ctx->stream(), num_instances, norm_size, channel_size, spatial_size, epsilon, x->dptr<T>(),
-        gamma_ptr, beta_ptr, y->mut_dptr<T>(), min_max, channels_first);
-
-    std::cout << "run2 -- " << std::endl;
+        gamma_ptr, beta_ptr, y->mut_dptr<T>(), channels_first, activation, min_max);
 
     // quantization part
     const std::string quantization_scheme = ctx->Attr<std::string>("quantization_scheme");
@@ -390,12 +404,10 @@ class CUDAFusedGroupNormMinMaxObserverKernel final : public user_op::OpKernel {
       if (quantization_bit == 8) {
         int8_t upper_bound = (1 << (quantization_bit - 1)) - 1;
         int8_t lower_bound = -upper_bound - 1;
-        std::cout << "run3 -- " << std::endl;
         quantization::ComputeScaleAndZeroPointBlock<T, int8_t>
             <<<1, cuda::elementwise::kBlockSize, 0, stream>>>(
                 num_instances, min_max, upper_bound, lower_bound, y_scale->mut_dptr<float>(),
                 y_zero_point->mut_dptr<int8_t>());
-        std::cout << "run4 -- " << std::endl;
       } else {
         UNIMPLEMENTED();
       }
