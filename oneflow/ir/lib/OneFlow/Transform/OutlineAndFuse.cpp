@@ -180,7 +180,6 @@ struct GroupMatMulQuantPattern : public mlir::OpRewritePattern<MatmulQuantOp> {
   mlir::LogicalResult matchAndRewrite(MatmulQuantOp op,
                                       mlir::PatternRewriter& rewriter) const override {
     llvm::SmallVector<MatmulQuantOp, 4> all_matmuls{};
-    all_matmuls.push_back(op);
     bool has_in_scale = MatmulQuantOpHasInputScale(op);
     bool has_scale = MatmulQuantOpHasScale(op);
     bool has_bias = MatmulQuantOpHasBias(op);
