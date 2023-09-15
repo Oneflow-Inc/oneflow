@@ -20,22 +20,10 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace {
-
-int64_t ShiftNegativeAxisIfNeed(const Shape& shape, int64_t axis) {
-  const int64_t shifted = axis < 0 ? axis + shape.NumAxes() : axis;
-  CHECK_GE(shifted, 0);
-  CHECK_LT(shifted, shape.NumAxes());
-  return shifted;
-}
-
-}  // namespace
-
 /* static */ Maybe<void> FusedGroupNormMinMaxObserverOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
   const bool affine = ctx->Attr<bool>("affine");
-
   const std::string& data_format = ctx->Attr<std::string>("data_format");
   int64_t channel_size = 0;
   if (data_format == "channels_first") {

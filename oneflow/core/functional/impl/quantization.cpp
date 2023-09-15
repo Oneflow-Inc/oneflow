@@ -14,14 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <optional>
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/functional/impl/binary_functor.h"
 
-#include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
@@ -427,11 +424,9 @@ class FusedGroupNormMinMaxObserverFunctor {
                                 .Build());
   }
 
-  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& x,
-                                const Optional<Tensor>& gamma,
-                                const Optional<Tensor>& beta,
-                                bool affine,
-                                int32_t num_groups, double epsilon, const std::string& data_format,
+  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& x, const Optional<Tensor>& gamma,
+                                const Optional<Tensor>& beta, bool affine, int32_t num_groups,
+                                double epsilon, const std::string& data_format,
                                 const std::string& activation,
                                 const std::string& quantization_scheme, int32_t quantization_bit,
                                 const std::string& quantization_formula) const {

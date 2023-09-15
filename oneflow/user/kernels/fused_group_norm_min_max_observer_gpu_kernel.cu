@@ -36,7 +36,6 @@ namespace oneflow {
 
 namespace {
 
-// template<typename SRC, typename DST, bool affine, bool do_center>
 template<typename SRC, typename DST, ep::primitive::UnaryOp activation, bool affine>
 struct AffineStore {
   AffineStore(DST* y, int64_t row_size, int64_t channel_size, int64_t spatial_size,
@@ -375,8 +374,6 @@ class CUDAFusedGroupNormMinMaxObserverKernel final : public user_op::OpKernel {
       const user_op::Tensor* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
       gamma_ptr = gamma->dptr<T>();
       CHECK_EQ(gamma->shape_view().elem_cnt(), channel_size);
-    }
-    if (ctx->has_input("beta", 0)) {
       const user_op::Tensor* beta = ctx->Tensor4ArgNameAndIndex("beta", 0);
       beta_ptr = beta->dptr<T>();
       CHECK_EQ(beta->shape_view().elem_cnt(), channel_size);
