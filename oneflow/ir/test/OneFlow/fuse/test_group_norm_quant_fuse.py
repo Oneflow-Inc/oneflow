@@ -26,11 +26,10 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def _cast_fuse_gn_dynamic_quant_pass(test_case):
-    affine = bool(random.randint(0, 1))
-    # channels_last = bool(random.randint(0, 1))
+def _cast_fuse_gn_dynamic_quant_pass(test_case, affine):
     num_channels = 8
     inp = flow.randn(4, num_channels, 32, 32).cuda()
+    # channels_last = bool(random.randint(0, 1))
     # if channels_last:
     #     inp = flow.randn(4, 32, 32, num_channels).cuda()
     # else:
@@ -74,7 +73,8 @@ class TestFusedGnDynamicQuantPass(flow.unittest.MLIRTestCase):
         os.environ["ONEFLOW_MLIR_ENABLE_IR_PRINTING"] = "1"
 
     def test_cast_fuse_gn_dynamic_quant_pass(test_case):
-            _cast_fuse_gn_dynamic_quant_pass(test_case)
+        for affine in [False, True]:
+            _cast_fuse_gn_dynamic_quant_pass(test_case, affine)
 
 
 if __name__ == "__main__":
