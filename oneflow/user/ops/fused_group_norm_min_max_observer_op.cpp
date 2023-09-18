@@ -41,22 +41,26 @@ namespace oneflow {
 
   // check num_group
   int32_t num_groups = ctx->Attr<int32_t>("num_groups");
-  CHECK_EQ_OR_RETURN(channel_size % num_groups, 0) << "fused_group_norm_min_max_observer: Channels should be divisble by num_groups.";
+  CHECK_EQ_OR_RETURN(channel_size % num_groups, 0)
+      << "fused_group_norm_min_max_observer: Channels should be divisble by num_groups.";
 
   // check gamma and beta size
   if (affine) {
     const user_op::TensorDesc& gamma = ctx->InputTensorDesc("gamma", 0);
     CHECK_EQ_OR_RETURN(gamma.shape().elem_cnt(), channel_size)
-        << "fused_group_norm_min_max_observer: The size of `gamma` must be equal to channel_size, expected " << channel_size
-        << " but got " << gamma.shape().elem_cnt() << ".";
+        << "fused_group_norm_min_max_observer: The size of `gamma` must be equal to channel_size, "
+           "expected "
+        << channel_size << " but got " << gamma.shape().elem_cnt() << ".";
     const user_op::TensorDesc& beta = ctx->InputTensorDesc("beta", 0);
     CHECK_EQ_OR_RETURN(beta.shape().elem_cnt(), channel_size)
-        << "fused_group_norm_min_max_observer: The size of `beta` must be equal to channel_size, expected " << channel_size << " but got "
-        << beta.shape().elem_cnt() << ".";
+        << "fused_group_norm_min_max_observer: The size of `beta` must be equal to channel_size, "
+           "expected "
+        << channel_size << " but got " << beta.shape().elem_cnt() << ".";
   }
 
   CHECK_OR_RETURN(ctx->Attr<bool>("per_layer_quantization"))
-      << "fused_group_norm_min_max_observer: dynamic quantization only supports per-layer quantization.";
+      << "fused_group_norm_min_max_observer: dynamic quantization only supports per-layer "
+         "quantization.";
   ctx->SetOutputShape("y", 0, x.shape());
   ctx->SetOutputShape("y_scale", 0, Shape({1}));
   ctx->SetOutputShape("y_zero_point", 0, Shape({1}));
