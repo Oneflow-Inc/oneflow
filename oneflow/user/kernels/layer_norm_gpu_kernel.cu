@@ -16,9 +16,11 @@ limitations under the License.
 
 #include "oneflow/core/device/cudnn_util.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/user_op_tensor.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/cuda/atomic.cuh"
 #include <cub/cub.cuh>
+#include <ios>
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/include/primitive/fill.h"
 #include "oneflow/core/ep/include/primitive/matmul.h"
@@ -229,6 +231,21 @@ void LayerNormForwardGpu(ep::Stream* stream, const int64_t num_instances, const 
       mean->mut_dptr<ComputeType>(), inv_variance->mut_dptr<ComputeType>());
 }
 
+template<typename T, bool do_scale, bool do_center>
+void LayerNormForwardGpu(ep::Stream* stream, const int64_t num_instances, const int64_t norm_size,
+                         const double epsilon, const T* x_ptr, const T* gamma_ptr,
+                         const T* beta_ptr, T* y_ptr, user_op::Tensor* mean,
+                         user_op::Tensor* inv_variance, user_op::Tensor* tmp_buffer) {
+  CHECK(tmp_buffer->mut_dptr() != nullptr);
+  using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
+  cuda::layer_norm::DirectLoad<T, T> load(x_ptr, norm_size);
+  AffineStore<ComputeType, T, do_scale, do_center> store(y_ptr, norm_size, gamma_ptr, beta_ptr);
+  cuda::layer_norm::DispatchLayerNorm<decltype(load), decltype(store), ComputeType>(
+      stream->As<ep::CudaStream>()->cuda_stream(), load, store, num_instances, norm_size, epsilon,
+      mean->mut_dptr<ComputeType>(), inv_variance->mut_dptr<ComputeType>(),
+      tmp_buffer->mut_dptr<ComputeType>());
+}
+
 template<typename T>
 void DispatchLayerNormForwardGpu(ep::Stream* stream, const int64_t num_instances,
                                  const int64_t norm_size, const double epsilon, const T* x_ptr,
@@ -246,6 +263,28 @@ void DispatchLayerNormForwardGpu(ep::Stream* stream, const int64_t num_instances
   } else {
     LayerNormForwardGpu<T, false, false>(stream, num_instances, norm_size, epsilon, x_ptr,
                                          gamma_ptr, beta_ptr, y_ptr, mean, inv_variance);
+  }
+}
+
+template<typename T>
+void DispatchLayerNormForwardGpu(ep::Stream* stream, const int64_t num_instances,
+                                 const int64_t norm_size, const double epsilon, const T* x_ptr,
+                                 const T* gamma_ptr, const T* beta_ptr, T* y_ptr,
+                                 user_op::Tensor* mean, user_op::Tensor* inv_variance,
+                                 user_op::Tensor* tmp_buffer) {
+  if (gamma_ptr != nullptr && beta_ptr != nullptr) {
+    LayerNormForwardGpu<T, true, true>(stream, num_instances, norm_size, epsilon, x_ptr, gamma_ptr,
+                                       beta_ptr, y_ptr, mean, inv_variance, tmp_buffer);
+  } else if (gamma_ptr != nullptr && beta_ptr == nullptr) {
+    LayerNormForwardGpu<T, true, false>(stream, num_instances, norm_size, epsilon, x_ptr, gamma_ptr,
+                                        beta_ptr, y_ptr, mean, inv_variance, tmp_buffer);
+  } else if (gamma_ptr == nullptr && beta_ptr != nullptr) {
+    LayerNormForwardGpu<T, false, true>(stream, num_instances, norm_size, epsilon, x_ptr, gamma_ptr,
+                                        beta_ptr, y_ptr, mean, inv_variance, tmp_buffer);
+  } else {
+    LayerNormForwardGpu<T, false, false>(stream, num_instances, norm_size, epsilon, x_ptr,
+                                         gamma_ptr, beta_ptr, y_ptr, mean, inv_variance,
+                                         tmp_buffer);
   }
 }
 
@@ -321,16 +360,35 @@ class LayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaG
       CHECK_EQ(gamma->shape_view().elem_cnt(), norm_size);
     }
     if (ctx->has_input("beta", 0)) { beta_ptr = ctx->Tensor4ArgNameAndIndex("beta", 0)->dptr<T>(); }
-    DispatchLayerNormForwardGpu<T>(ctx->stream(), num_instances, norm_size, epsilon, x->dptr<T>(),
-                                   gamma_ptr, beta_ptr, y->mut_dptr<T>(), mean, inv_variance);
+
+    const bool enable_partial = ParseBooleanFromEnv("ONEFLOW_ENABLE_PARTIAL_LAYERNORM_IMPL", false);
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    if (tmp_buffer != nullptr && enable_partial) {
+      DispatchLayerNormForwardGpu<T>(ctx->stream(), num_instances, norm_size, epsilon, x->dptr<T>(),
+                                     gamma_ptr, beta_ptr, y->mut_dptr<T>(), mean, inv_variance,
+                                     tmp_buffer);
+    } else {
+      DispatchLayerNormForwardGpu<T>(ctx->stream(), num_instances, norm_size, epsilon, x->dptr<T>(),
+                                     gamma_ptr, beta_ptr, y->mut_dptr<T>(), mean, inv_variance);
+    }
   };
 };
 
-#define REGISTER_LAYER_NORM_CUDA_KERNEL(dtype)                         \
-  REGISTER_USER_KERNEL("layer_norm")                                   \
-      .SetCreateFn<LayerNormGpuKernel<dtype>>()                        \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
-                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
+#define REGISTER_LAYER_NORM_CUDA_KERNEL(dtype)                                          \
+  REGISTER_USER_KERNEL("layer_norm")                                                    \
+      .SetCreateFn<LayerNormGpuKernel<dtype>>()                                         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value))  \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                     \
+        const int64_t num_instances = ctx->InputShape("mean", 0).elem_cnt();            \
+        const int64_t norm_size = ctx->InputShape("x", 0).elem_cnt() / num_instances;   \
+        using ComputeType = typename cuda::layer_norm::DefaultComputeType<dtype>::type; \
+        if (norm_size <= 4) { /* TODO: refine here */                                   \
+          return 0;                                                                     \
+        } else {                                                                        \
+          return num_instances * 3 * 1024 * sizeof(ComputeType);                        \
+        }                                                                               \
+      });
 
 REGISTER_LAYER_NORM_CUDA_KERNEL(float)
 REGISTER_LAYER_NORM_CUDA_KERNEL(double)
