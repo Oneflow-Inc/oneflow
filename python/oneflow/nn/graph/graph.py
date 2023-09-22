@@ -1074,18 +1074,20 @@ class Graph(object):
         # This is original outputs is needed to build output buffer.
         tuple_idx = -1
 
-        def gen_index_in_tuple(eager_out):
+        def gen_index_in_tuple(item):
             nonlocal tuple_idx
-            tuple_idx += 1
-            return "_OFTPI" + str(tuple_idx)  # oneflow tuple index
+            if isinstance(item, Tensor):
+                tuple_idx += 1
+                return "_OFTPI" + str(tuple_idx)  # oneflow tuple index
+            else:
+                return item
 
         inputs_sub_destination = OrderedDict()
         _fill_sub_destination(
             inputs_sub_destination, self._input_op_names, self._inputs_tensor_tuple
         )
 
-        _eager_inputs_args, _eager_inputs_kwargs = self.__map_io(
-            "input",
+        _eager_inputs_args, _eager_inputs_kwargs = self.__map_io_lite(
             gen_index_in_tuple,
             *self.inputs_original[0],
             **self.inputs_original[1],
@@ -1094,8 +1096,8 @@ class Graph(object):
         destination["inputs_original"] = (_eager_inputs_args, _eager_inputs_kwargs)
 
         tuple_idx = -1
-        _eager_outputs, _ = self.__map_io(
-            "output", gen_index_in_tuple, *self._eager_outputs
+        _eager_outputs, _ = self.__map_io_lite(
+            gen_index_in_tuple, *self._eager_outputs
         )
         destination["outputs_original"] = _eager_outputs
         assert len(self._outputs_tensor_tuple) == tuple_idx + 1
@@ -1146,7 +1148,7 @@ class Graph(object):
             Dict[str, Dict[str, Union[Dict[str, Tensor], str]]],
         ],
         *,
-        warmup_with_run: bool = False,
+        warmup_with_run: bool = True,
     ) -> None:
         if self._run_with_cache == True:
             return self._dynamic_input_graph_cache.load_runtime_state_dict(
@@ -1293,6 +1295,7 @@ class Graph(object):
             self.__run(
                 *_eager_inputs_args, **_eager_inputs_kwargs
             )  # pre-run to warm up
+            oneflow._oneflow_internal.eager.Sync()
         build_graph_end = time.perf_counter()
         self.__print(
             0,
