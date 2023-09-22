@@ -1069,7 +1069,9 @@ class Graph(object):
             assert len(tensor_tuple) == len(name_list)
             for name_idx in range(len(name_list)):
                 tensor_item = tensor_tuple[name_idx]
-                device_str = ':'.join((tensor_item.device.type, str(tensor_item.device.index)))
+                device_str = ":".join(
+                    (tensor_item.device.type, str(tensor_item.device.index))
+                )
                 dest_dict[name_list[name_idx]] = (tensor_item, device_str)
 
         # This is original outputs is needed to build output buffer.
@@ -1089,17 +1091,13 @@ class Graph(object):
         )
 
         _eager_inputs_args, _eager_inputs_kwargs = self.__map_io_lite(
-            gen_index_in_tuple,
-            *self.inputs_original[0],
-            **self.inputs_original[1],
+            gen_index_in_tuple, *self.inputs_original[0], **self.inputs_original[1],
         )
         destination["inputs"] = inputs_sub_destination
         destination["inputs_original"] = (_eager_inputs_args, _eager_inputs_kwargs)
 
         tuple_idx = -1
-        _eager_outputs, _ = self.__map_io_lite(
-            gen_index_in_tuple, *self._eager_outputs
-        )
+        _eager_outputs, _ = self.__map_io_lite(gen_index_in_tuple, *self._eager_outputs)
         destination["outputs_original"] = _eager_outputs
         assert len(self._outputs_tensor_tuple) == tuple_idx + 1
         outputs_sub_destination = OrderedDict()
