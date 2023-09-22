@@ -307,6 +307,7 @@ class GpuFusedGluQuantKernel final : public user_op::OpKernel, public user_op::C
     );
     if (input_x->data_type() == DataType::kFloat16) {
       key.element_A = cutlass::library::NumericTypeID::kF16;
+      return;
     }
     if (data_type == DataType::kFloat) {
       key.element_scalar = cutlass::library::NumericTypeID::kF32;

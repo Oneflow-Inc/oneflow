@@ -216,6 +216,7 @@ class GroupedMatmulQuantKernel final : public user_op::OpKernel, public user_op:
     const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("as", 0);
     if (a->data_type() == DataType::kFloat16) {
       key.element_A = cutlass::library::NumericTypeID::kF16;
+      return;
     }
 
     if (GetDataType<OutType>::value == DataType::kFloat) {

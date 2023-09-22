@@ -147,6 +147,7 @@ class MatmulQuantKernel final : public user_op::OpKernel {
 
     if (a->data_type() == DataType::kFloat16) {
       key.element_A = cutlass::library::NumericTypeID::kF16;
+      return;
     }
 
     if (out->data_type() == DataType::kFloat) {
