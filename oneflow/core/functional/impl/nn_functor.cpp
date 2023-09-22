@@ -576,6 +576,23 @@ class BatchMatMulFunctor {
   std::shared_ptr<OpExpr> batch_matmul_op_;
 };
 
+class RedistributeFunctor {
+ public:
+  RedistributeFunctor() {
+    redistribute_op_ = CHECK_JUST(one::OpBuilder("redistribute").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in) const {
+    const auto& in_size = in->shape();
+    const int n = in_size->At(0);
+    const int k = in_size->At(1);
+    CHECK_EQ_OR_RETURN(k % 16, 0);
+    return OpInterpUtil::Dispatch<Tensor>(*redistribute_op_, {in});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> redistribute_op_;
+};
+
 class MatMulQuantFunctor {
  public:
   MatMulQuantFunctor() {
@@ -800,6 +817,58 @@ class GroupedMatMulBiasQuantWithFilterScaleFunctor {
     std::copy(weight_scales.begin(), weight_scales.end(), input.begin() + 4 * input_size);
     std::copy(weight_accs.begin(), weight_accs.end(), input.begin() + 5 * input_size);
     std::copy(biases.begin(), biases.end(), input.begin() + 6 * input_size);
+    return OpInterpUtil::Dispatch<TensorTuple>(
+        *grouped_matmul_bias_quant_with_filter_bias_op_[input_size], input, attrs);
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> grouped_matmul_bias_quant_with_filter_bias_op_;
+};
+
+class GroupedMatMulBiasQuantWithFilterScaleResidualFunctor {
+ public:
+  GroupedMatMulBiasQuantWithFilterScaleResidualFunctor() {
+    grouped_matmul_bias_quant_with_filter_bias_op_.resize(kMaxInputCount);
+    for (int n = 1; n < kMaxInputCount; ++n) {
+      grouped_matmul_bias_quant_with_filter_bias_op_[n] =
+          CHECK_JUST(one::OpBuilder("grouped_matmul_quant")
+                         .Input("as", n)
+                         .Input("bs", n)
+                         .Input("in_zero_points", n)
+                         .Input("in_scales", n)
+                         .Input("weight_scales", n)
+                         .Input("weight_accs", n)
+                         .Input("biases", n)
+                         .Input("_add_to_outputs", n)
+                         .Output("outputs", n)
+                         .Build());
+    }
+  }
+  Maybe<TensorTuple> operator()(const TensorTuple& as, const TensorTuple& bs,
+                                const TensorTuple& in_zero_points, const TensorTuple& in_scales,
+                                const TensorTuple& weight_scales, const TensorTuple& weight_accs,
+                                const TensorTuple& biases, const TensorTuple& add_to_outputs,
+                                const bool& transpose_a, const bool& transpose_b,
+                                const double& alpha,
+                                const Optional<Symbol<DType>>& output_dtype) const {
+    CHECK_OR_RETURN(!transpose_a)
+        << "the first input should not be transposed for quantized matmul.";
+    CHECK_OR_RETURN(transpose_b) << "the second input should be transposed for quantized matmul.";
+    CHECK_EQ_OR_RETURN(alpha, 1) << "alpha should be 1 for quantized matmul.";
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("transpose_a", "transpose_b", "alpha", "out_dtype");
+    attrs.SetAllAttrs(transpose_a, transpose_b, alpha,
+                      output_dtype.value_or(DType::Float())->data_type());
+    int input_size = as.size();
+    TensorTuple input(8 * input_size);
+    std::copy(as.begin(), as.end(), input.begin() + 0 * input_size);
+    std::copy(bs.begin(), bs.end(), input.begin() + 1 * input_size);
+    std::copy(in_zero_points.begin(), in_zero_points.end(), input.begin() + 2 * input_size);
+    std::copy(in_scales.begin(), in_scales.end(), input.begin() + 3 * input_size);
+    std::copy(weight_scales.begin(), weight_scales.end(), input.begin() + 4 * input_size);
+    std::copy(weight_accs.begin(), weight_accs.end(), input.begin() + 5 * input_size);
+    std::copy(biases.begin(), biases.end(), input.begin() + 6 * input_size);
+    std::copy(add_to_outputs.begin(), add_to_outputs.end(), input.begin() + 7 * input_size);
     return OpInterpUtil::Dispatch<TensorTuple>(
         *grouped_matmul_bias_quant_with_filter_bias_op_[input_size], input, attrs);
   }
@@ -5805,7 +5874,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::MatMulQuantFunctor, impl::MatMulQuantWithFilterScaleFunctor>("MatmulQuant");
   m.add_functor<impl::GroupedMatMulQuantFunctor, impl::GroupedMatMulQuantWithFilterScaleFunctor,
-                impl::GroupedMatMulBiasQuantWithFilterScaleFunctor>("GroupedMatmulQuant");
+                impl::GroupedMatMulBiasQuantWithFilterScaleFunctor,
+                impl::GroupedMatMulBiasQuantWithFilterScaleResidualFunctor>("GroupedMatmulQuant");
+  m.add_functor<impl::RedistributeFunctor>("Redistribute");
   m.add_functor<impl::MatMulNoBroadCastFunctor>("MatMulNoBroadCast");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
   m.add_functor<impl::MatrixVectorProductFunctor>("MatrixVectorProduct");

@@ -148,6 +148,9 @@ class Conv2dQuantKernel final : public user_op::OpKernel, public user_op::CudaGr
         cutlass::library::NumericTypeID::kS8, cutlass::library::LayoutTypeID::kTensorNHWC,
         cutlass::library::NumericTypeID::kS32, cutlass::library::LayoutTypeID::kTensorNHWC,
         cutlass::library::NumericTypeID::kS32, cutlass::library::NumericTypeID::kS32);
+    if (in->data_type() == DataType::kFloat16) {
+      key.element_A = cutlass::library::NumericTypeID::kF16;
+    }
     if (out->data_type() == DataType::kFloat) {
       key.element_C = cutlass::library::NumericTypeID::kF32;
       key.element_compute = cutlass::library::NumericTypeID::kF32;
@@ -173,17 +176,19 @@ class Conv2dQuantKernel final : public user_op::OpKernel, public user_op::CudaGr
   }
 };
 
-REGISTER_USER_KERNEL("conv2d_quant")
-    .SetCreateFn<Conv2dQuantKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
-                     && (user_op::HobAttr<std::string>("data_format") == "channels_last")
-                     && (user_op::HobAttr<int32_t>("groups") == 1)
-                     && (user_op::HobDataType("in", 0) == DataType::kInt8))
-    .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {
-      // use static workspace size
-      return 128 * 1024 * 1024;
-    })
-    .SetPriority(user_op::kKernelPriorityOptimized);
+#define REGISTER_CONV_2D_QUANT_KERNEL(data_type)                                                 \
+  REGISTER_USER_KERNEL("conv2d_quant")                                                           \
+      .SetCreateFn<Conv2dQuantKernel>()                                                          \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                           \
+                       && (user_op::HobAttr<std::string>("data_format") == "channels_last")      \
+                       && (user_op::HobAttr<int32_t>("groups") == 1)                             \
+                       && (user_op::HobDataType("in", 0) == data_type)                           \
+                       && (user_op::HobDataType("weight", 0) == DataType::kInt8))                \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t { return 128 * 1024 * 1024; }) \
+      .SetPriority(user_op::kKernelPriorityOptimized);
+
+REGISTER_CONV_2D_QUANT_KERNEL(DataType::kInt8)
+REGISTER_CONV_2D_QUANT_KERNEL(DataType::kFloat16)
 
 }  // namespace
 

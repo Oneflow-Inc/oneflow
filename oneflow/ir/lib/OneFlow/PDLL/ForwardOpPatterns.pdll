@@ -249,3 +249,34 @@ Pattern {
     replace dynamic_quantization with (quantization.0, fused_layer_norm_min_max_observer.1, fused_layer_norm_min_max_observer.2);
   };
 }
+
+Pattern {
+  let center: Attr;
+  let scale: Attr;
+  let begin_norm_axis: Attr;
+  let begin_params_axis: Attr;
+  let epsilon: Attr;
+  let quantization_formula: Attr;
+  let quantization_bit: Attr;
+  let quantization_scheme: Attr;
+  let per_layer_quantization: Attr;
+
+  let layer_norm = op<oneflow.layer_norm>(x: Value, beta: Value, gamma: Value)
+      {center = center, scale = scale, begin_norm_axis = begin_norm_axis, begin_params_axis = begin_params_axis, epsilon = epsilon}
+      -> (y: Type, mean: Type, inv_variance: Type);
+  let min_max_observer = op<oneflow.min_max_observer>(layer_norm.0)
+      {quantization_formula = quantization_formula, quantization_bit = quantization_bit, quantization_scheme = quantization_scheme,
+       per_layer_quantization = per_layer_quantization} -> (in_scale: Type, in_zero_point: Type);
+
+  rewrite min_max_observer with {
+    let fused_layer_norm_min_max_observer = op<oneflow.fused_layer_norm_min_max_observer>(x, beta, gamma)
+        {center = center, scale = scale, begin_norm_axis = begin_norm_axis, begin_params_axis = begin_params_axis, epsilon = epsilon,
+         quantization_formula = quantization_formula, quantization_bit = quantization_bit, quantization_scheme = quantization_scheme,
+         per_layer_quantization = per_layer_quantization,
+         operand_segment_sizes = attr<"array<i32: 1, 1, 1>">} -> (y, in_scale, in_zero_point);
+
+    CopyUserOpAttrs(layer_norm, fused_layer_norm_min_max_observer);
+
+    replace min_max_observer with (fused_layer_norm_min_max_observer.1, fused_layer_norm_min_max_observer.2);
+  };
+}

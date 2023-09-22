@@ -145,6 +145,10 @@ class MatmulQuantKernel final : public user_op::OpKernel {
         cutlass::library::LayoutTypeID::kRowMajor      // layout_D
     );
 
+    if (a->data_type() == DataType::kFloat16) {
+      key.element_A = cutlass::library::NumericTypeID::kF16;
+    }
+
     if (out->data_type() == DataType::kFloat) {
       key.element_scalar = cutlass::library::NumericTypeID::kF32;
       key.element_C = cutlass::library::NumericTypeID::kF32;
@@ -170,16 +174,17 @@ class MatmulQuantKernel final : public user_op::OpKernel {
   }
 };
 
-REGISTER_USER_KERNEL("matmul_quant")
-    .SetCreateFn<MatmulQuantKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
-                     && (user_op::HobDataType("a", 0) == DataType::kInt8)
-                     && (user_op::HobDataType("b", 0) == DataType::kInt8))
-    .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {
-      // use static workspace size
-      return 128 * 1024 * 1024;
-    })
-    .SetPriority(user_op::kKernelPriorityOptimized);
+#define REGISTER_MATMUL_QUANT_KERNEL(data_type)                                                  \
+  REGISTER_USER_KERNEL("matmul_quant")                                                           \
+      .SetCreateFn<MatmulQuantKernel>()                                                          \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                           \
+                       && (user_op::HobDataType("a", 0) == data_type)                            \
+                       && (user_op::HobDataType("b", 0) == DataType::kInt8))                     \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t { return 128 * 1024 * 1024; }) \
+      .SetPriority(user_op::kKernelPriorityOptimized);
+
+REGISTER_MATMUL_QUANT_KERNEL(DataType::kInt8)
+REGISTER_MATMUL_QUANT_KERNEL(DataType::kFloat16)
 
 }  // namespace oneflow
 

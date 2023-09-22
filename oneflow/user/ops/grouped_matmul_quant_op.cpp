@@ -84,7 +84,9 @@ Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx) {
   const DataType out_data_type = ctx->Attr<DataType>("out_dtype");
   for (int64_t i = 0; i < input_size; ++i) {
     const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("as", i);
-    CHECK_EQ_OR_RETURN(x_desc.data_type(), weight_data_type);
+    if (x_desc.data_type() != weight_data_type) {
+      CHECK_EQ_OR_RETURN(x_desc.data_type(), out_data_type);
+    }
     CHECK_GE_OR_RETURN(x_desc.shape().NumAxes(), 2);
     const int64_t k = x_desc.shape().At(x_desc.shape().NumAxes() - 1);
     const user_op::TensorDesc& weight_desc = ctx->InputTensorDesc("bs", i);

@@ -305,6 +305,9 @@ class GpuFusedGluQuantKernel final : public user_op::OpKernel, public user_op::C
         cutlass::library::NumericTypeID::kS32,         // element_D
         cutlass::library::LayoutTypeID::kRowMajor      // layout_D
     );
+    if (input_x->data_type() == DataType::kFloat16) {
+      key.element_A = cutlass::library::NumericTypeID::kF16;
+    }
     if (data_type == DataType::kFloat) {
       key.element_scalar = cutlass::library::NumericTypeID::kF32;
       key.element_C = cutlass::library::NumericTypeID::kF32;
@@ -353,6 +356,9 @@ class GpuFusedGluQuantKernel final : public user_op::OpKernel, public user_op::C
 
 REGISTER_GPU_FUSED_GLU_QUANT_KERNEL(int8_t, float);
 REGISTER_GPU_FUSED_GLU_QUANT_KERNEL(int8_t, half);
+
+REGISTER_GPU_FUSED_GLU_QUANT_KERNEL(half, float);
+REGISTER_GPU_FUSED_GLU_QUANT_KERNEL(half, half);
 
 }  // namespace oneflow
 

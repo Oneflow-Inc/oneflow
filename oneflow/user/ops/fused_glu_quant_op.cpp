@@ -208,12 +208,16 @@ namespace oneflow {
   bool is_split_mode = false;
   if (ctx->has_input("v", 0)) { is_split_mode = true; }
 
-  CHECK_EQ_OR_RETURN(ctx->InputDType("w", 0), x_dtype)
-      << "data type of \'w\' is not consitant with \'x\'";
-
+  if (ctx->InputDType("w", 0) != x_dtype) {
+    CHECK_EQ_OR_RETURN(x_dtype, out_dtype)
+        << "data type of \'w\' is not consitant with \'out_dtype\'";
+  } else {
+    CHECK_EQ_OR_RETURN(ctx->InputDType("w", 0), x_dtype)
+        << "data type of \'w\' is not consitant with \'x\'";
+  }
   if (is_split_mode) {
-    CHECK_EQ_OR_RETURN(ctx->InputDType("v", 0), x_dtype)
-        << "data type of \'v\' is not consitant with \'x\'";
+    CHECK_EQ_OR_RETURN(ctx->InputDType("v", 0), ctx->InputDType("w", 0))
+        << "data type of \'v\' is not consitant with \'w\'";
   }
 
   // set output data type

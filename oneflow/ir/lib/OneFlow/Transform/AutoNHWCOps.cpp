@@ -399,6 +399,27 @@ llvm::SmallVector<Value, 4> DynamicQuantizationOp::NchwToNhwc(llvm::SmallVector<
   return results;
 }
 
+bool MinMaxObserverOp::IsNCHW() { return false; }
+
+llvm::DenseSet<Value> MinMaxObserverOp::OperandsToTranspose() { return {this->getIn()}; }
+
+llvm::DenseSet<Value> MinMaxObserverOp::ResultsToTranspose() { return {}; }
+
+llvm::SmallVector<Value, 4> MinMaxObserverOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
+                                                         PatternRewriter& rewriter) {
+  auto min_max_observer_op = *this;
+  SmallVector<Value, 4> operands{value[0]};
+  auto res = rewriter
+                 .create<oneflow::MinMaxObserverOp>(min_max_observer_op.getLoc(),
+                                                    getNHWCResultTypes(min_max_observer_op),
+                                                    operands, min_max_observer_op->getAttrs())
+                 ->getResults();
+  llvm::SmallVector<Value, 4> results;
+  results.push_back(res[0]);
+  results.push_back(res[1]);
+  return results;
+}
+
 }  // namespace oneflow
 
 }  // namespace mlir

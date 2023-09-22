@@ -213,6 +213,10 @@ class GroupedMatmulQuantKernel final : public user_op::OpKernel, public user_op:
         cutlass::library::NumericTypeID::kS32,         // element_D
         cutlass::library::LayoutTypeID::kRowMajor      // layout_D
     );
+    const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("as", 0);
+    if (a->data_type() == DataType::kFloat16) {
+      key.element_A = cutlass::library::NumericTypeID::kF16;
+    }
 
     if (GetDataType<OutType>::value == DataType::kFloat) {
       key.element_scalar = cutlass::library::NumericTypeID::kF32;
@@ -279,19 +283,22 @@ class GroupedMatmulQuantKernel final : public user_op::OpKernel, public user_op:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GROUPED_MATMUL_BIAS_KERNEL_GPU(out_cpp_type, out_data_type)     \
-  REGISTER_USER_KERNEL("grouped_matmul_quant")                                   \
-      .SetCreateFn<GroupedMatmulQuantKernel<out_cpp_type>>()                     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)           \
-                       && (user_op::HobDataType("as", 0) == DataType::kInt8)     \
-                       && (user_op::HobDataType("bs", 0) == DataType::kInt8)     \
-                       && (user_op::HobDataType("outputs", 0) == out_data_type)) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {              \
-        return kMaxProblemBatch * 10 * sizeof(void*) + 3 * 1024 * 1024;          \
+#define REGISTER_GROUPED_MATMUL_BIAS_KERNEL_GPU(a_data_type, out_cpp_type, out_data_type) \
+  REGISTER_USER_KERNEL("grouped_matmul_quant")                                            \
+      .SetCreateFn<GroupedMatmulQuantKernel<out_cpp_type>>()                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                    \
+                       && (user_op::HobDataType("as", 0) == a_data_type)                  \
+                       && (user_op::HobDataType("bs", 0) == DataType::kInt8)              \
+                       && (user_op::HobDataType("outputs", 0) == out_data_type))          \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                       \
+        return kMaxProblemBatch * 10 * sizeof(void*) + 3 * 1024 * 1024;                   \
       });
 
-REGISTER_GROUPED_MATMUL_BIAS_KERNEL_GPU(half, DataType::kFloat16)
-REGISTER_GROUPED_MATMUL_BIAS_KERNEL_GPU(float, DataType::kFloat)
+REGISTER_GROUPED_MATMUL_BIAS_KERNEL_GPU(DataType::kInt8, half, DataType::kFloat16)
+REGISTER_GROUPED_MATMUL_BIAS_KERNEL_GPU(DataType::kInt8, float, DataType::kFloat)
+
+REGISTER_GROUPED_MATMUL_BIAS_KERNEL_GPU(DataType::kFloat16, half, DataType::kFloat16)
+REGISTER_GROUPED_MATMUL_BIAS_KERNEL_GPU(DataType::kFloat16, float, DataType::kFloat)
 
 }  // namespace
 

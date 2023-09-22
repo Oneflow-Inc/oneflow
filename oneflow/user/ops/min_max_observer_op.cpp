@@ -30,6 +30,12 @@ namespace oneflow {
       ctx->SetOutputShape("scale", 0, Shape({in_shape.At(0)}));
       ctx->SetOutputShape("zero_point", 0, Shape({in_shape.At(0)}));
     }
+  } else if (ctx->Attr<std::string>("quantization_formula") == "oneflow") {
+    CHECK_OR_RETURN(ctx->Attr<bool>("per_layer_quantization"))
+        << "min max observer with oneflow quantization_formula only supports per-layer "
+           "quantization";
+    ctx->SetOutputShape("scale", 0, Shape({1}));
+    ctx->SetOutputShape("zero_point", 0, Shape({1}));
   } else {  // quantization_formula == "cambricon"
     ctx->SetOutputShape("scale", 0, Shape({1}));
     ctx->SetOutputShape("zero_point", 0, Shape({1}));
@@ -70,8 +76,17 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> MinMaxObserverOp::InferDataType(user_op::InferContext* ctx) {
-  ctx->SetOutputDType("scale", 0, ctx->InputDType("in", 0));
-  ctx->SetOutputDType("zero_point", 0, ctx->InputDType("in", 0));
+  if (ctx->Attr<std::string>("quantization_formula") == "oneflow") {
+    if (ctx->Attr<int32_t>("quantization_bit") == 8) {
+      ctx->SetOutputDType("zero_point", 0, DataType::kInt8);
+      ctx->SetOutputDType("scale", 0, DataType::kFloat);
+    } else {
+      OF_UNIMPLEMENTED();
+    }
+  } else {
+    ctx->SetOutputDType("scale", 0, ctx->InputDType("in", 0));
+    ctx->SetOutputDType("zero_point", 0, ctx->InputDType("in", 0));
+  }
   return Maybe<void>::Ok();
 }
 

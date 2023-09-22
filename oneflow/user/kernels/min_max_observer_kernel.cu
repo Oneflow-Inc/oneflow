@@ -17,12 +17,65 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/cuda/elementwise.cuh"
+#include "oneflow/user/kernels/quantization_utils.cuh"
+#include "oneflow/core/ndarray/binary_func.h"
 
 #include <float.h>
 
 namespace oneflow {
 
 namespace {
+
+template<typename T>
+__device__ __forceinline__ T FAbs(T val) {
+  return fabs(val);
+}
+
+template<>
+__device__ __forceinline__ half FAbs<half>(half val) {
+  return __habs(val);
+}
+
+template<typename T>
+__device__ __forceinline__ T Log2(T val) {
+  return log2(val);
+}
+
+template<>
+__device__ __forceinline__ half Log2<half>(half val) {
+  return hlog2(val);
+}
+
+template<typename T>
+__device__ __forceinline__ T Nearbyint(T val) {
+  return nearbyint(val);
+}
+
+template<>
+__device__ __forceinline__ half Nearbyint<half>(half val) {
+  return __half2int_rn(val);
+}
+
+template<typename T>
+__device__ __forceinline__ T Floor(T val) {
+  return floor(val);
+}
+
+template<>
+__device__ __forceinline__ half Floor<half>(half val) {
+  return __half2int_rd(val);
+}
+
+template<typename T>
+__device__ __forceinline__ T Sub(const T a, const T b) {
+  return a - b;
+}
+
+template<>
+__device__ half Sub<half>(const half a, const half b) {
+  return __hsub_rn(a, b);
+}
 
 // NOTE(Liang Depeng): refer to
 // https://stackoverflow.com/questions/17371275/implementing-max-reduce-in-cuda
@@ -39,23 +92,23 @@ __global__ void ReduceMaxMinPerLayer(const T* input_ptr, const int64_t elements,
   shared_min[tid] = -FLT_MAX;
 
   while (gid < elements) {
-    shared_max[tid] = max(shared_max[tid], input_ptr[gid]);
-    shared_min[tid] = max(shared_min[tid], -input_ptr[gid]);
+    shared_max[tid] = BinaryFuncMax<T>::Invoke(shared_max[tid], input_ptr[gid]);
+    shared_min[tid] = BinaryFuncMax<T>::Invoke(shared_min[tid], -input_ptr[gid]);
     gid += gridDim.x * blockDim.x;
   }
   __syncthreads();
   gid = (blockDim.x * blockIdx.x) + tid;
   for (unsigned int s = blockDim.x / 2; s > 0; s >>= 1) {
     if (tid < s && gid < elements) {
-      shared_max[tid] = max(shared_max[tid], shared_max[tid + s]);
-      shared_min[tid] = max(shared_min[tid], shared_min[tid + s]);
+      shared_max[tid] = BinaryFuncMax<T>::Invoke(shared_max[tid], shared_max[tid + s]);
+      shared_min[tid] = BinaryFuncMax<T>::Invoke(shared_min[tid], shared_min[tid + s]);
     }
     __syncthreads();
   }
 
   if (tid == 0) {
-    cuda::atomic::Max(max_ptr, shared_max[0]);
-    cuda::atomic::Max(min_ptr, shared_min[0]);
+    *max_ptr = BinaryFuncMax<T>::Invoke(*max_ptr, shared_max[0]);
+    *min_ptr = BinaryFuncMax<T>::Invoke(*min_ptr, shared_min[0]);
   }
 }
 
@@ -78,23 +131,23 @@ __global__ void ReduceMaxMinPerChannel(const T* input_ptr, const int64_t element
     int64_t end = panel_size * (cur_channel + 1);
 
     while (index < end && index < elements) {
-      shared_max[tid] = max(shared_max[tid], input_ptr[index]);
-      shared_min[tid] = max(shared_min[tid], -input_ptr[index]);
+      shared_max[tid] = BinaryFuncMax<T>::Invoke(shared_max[tid], input_ptr[index]);
+      shared_min[tid] = BinaryFuncMax<T>::Invoke(shared_min[tid], -input_ptr[index]);
       index += blockDim.x;
     }
     __syncthreads();
 
     for (unsigned int s = blockDim.x / 2; s > 0; s >>= 1) {
       if (tid < s) {
-        shared_max[tid] = max(shared_max[tid], shared_max[tid + s]);
-        shared_min[tid] = max(shared_min[tid], shared_min[tid + s]);
+        shared_max[tid] = BinaryFuncMax<T>::Invoke(shared_max[tid], shared_max[tid + s]);
+        shared_min[tid] = BinaryFuncMax<T>::Invoke(shared_min[tid], shared_min[tid + s]);
       }
       __syncthreads();
     }
 
     if (tid == 0) {
-      cuda::atomic::Max(&max_ptr[cur_channel], shared_max[0]);
-      cuda::atomic::Max(&min_ptr[cur_channel], shared_min[0]);
+      max_ptr[cur_channel] = BinaryFuncMax<T>::Invoke(max_ptr[cur_channel], shared_max[0]);
+      min_ptr[cur_channel] = BinaryFuncMax<T>::Invoke(min_ptr[cur_channel], shared_min[0]);
     }
 
     // __syncthreads();
@@ -122,8 +175,8 @@ __global__ void CalScaleZeroPointSymmetric(const T* max_ptr, const T* min_ptr,
   int64_t gid = (blockDim.x * blockIdx.x) + tid;
 
   while (gid < elements) {
-    T weight_max = max(fabs(max_ptr[gid]), fabs(min_ptr[gid]));
-    T denominator = static_cast<T>(pow(2.0, quantization_bit - 1)) - 1;
+    T weight_max = BinaryFuncMax<T>::Invoke(FAbs(max_ptr[gid]), FAbs(min_ptr[gid]));
+    T denominator = Sub(static_cast<T>(pow(2.0, quantization_bit - 1)), static_cast<T>(1));
     scale[gid] = weight_max / denominator;
     zero_point[gid] = 0;
     gid += gridDim.x * blockDim.x;
@@ -137,11 +190,11 @@ __global__ void CalScaleZeroPointAffine(const T* max_ptr, const T* min_ptr, cons
   int64_t gid = (blockDim.x * blockIdx.x) + tid;
 
   while (gid < elements) {
-    T denominator = static_cast<T>(pow(2.0, quantization_bit)) - 1;
+    T denominator = Sub(static_cast<T>(pow(2.0, quantization_bit)), static_cast<T>(1));
     T min = -min_ptr[gid];
     T s = (max_ptr[gid] - min) / denominator;
     scale[gid] = s;
-    zero_point[gid] = -nearbyint(min / s);
+    zero_point[gid] = -Nearbyint(min / s);
     gid += gridDim.x * blockDim.x;
   }
 }
@@ -154,9 +207,9 @@ __global__ void CalScaleZeroPointCambricon(const T* max_ptr, const T* min_ptr,
   int64_t gid = (blockDim.x * blockIdx.x) + tid;
 
   while (gid < elements) {
-    T weight_max = max(fabs(max_ptr[gid]), fabs(min_ptr[gid]));
+    T weight_max = BinaryFuncMax<T>::Invoke(FAbs(max_ptr[gid]), FAbs(min_ptr[gid]));
     // T denominator = static_cast<T>(pow(2.0, quantization_bit - 1)) - 1;
-    scale[gid] = floor(log2(weight_max)) - (quantization_bit - 2);
+    scale[gid] = static_cast<double>(Floor(Log2(weight_max))) - (quantization_bit - 2);
     zero_point[gid] = 0;
     gid += gridDim.x * blockDim.x;
   }
@@ -231,6 +284,37 @@ class GpuMinMaxObserverKernel final : public user_op::OpKernel {
       LAUNCH_CUDA_KERNEL((CalScaleZeroPointCambricon<T>), cuda_stream, channel, 0, max_ptr, min_ptr,
                          channel, static_cast<double>(quantization_bit), scale->mut_dptr<T>(),
                          zero_point->mut_dptr<T>());
+    } else if (quantization_formula == "oneflow") {
+      if (per_layer_quantization) {
+        constexpr int pack_size = cuda::elementwise::PackSize<T>();
+        int64_t pack_num = (elements + pack_size - 1) / pack_size;
+        int grid_size = 0;
+        cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
+        grid_size = grid_size > 2048 ? 2048 : grid_size;
+
+        size_t element_bytes = GetSizeOfDataType(GetDataType<T>::value);
+        CHECK_GE(tmp_buffer->shape_view().elem_cnt(), grid_size * element_bytes * 2);
+        T* min_max = reinterpret_cast<T*>(tmp_buffer->mut_dptr());
+
+        quantization::ReduceMinMaxPerTensor<pack_size, T>
+            <<<grid_size, cuda::elementwise::kBlockSize, 0, cuda_stream->cuda_stream()>>>(
+                elements, in->dptr<T>(), min_max);
+        if (quantization_bit == 8) {
+          int8_t upper_bound = (1 << (quantization_bit - 1)) - 1;
+          int8_t lower_bound = -upper_bound - 1;
+
+          quantization::ComputeScaleAndZeroPointBlock<T, int8_t>
+              <<<1, cuda::elementwise::kBlockSize, 0, cuda_stream->cuda_stream()>>>(
+                  grid_size, min_max, upper_bound, lower_bound, scale->mut_dptr<float>(),
+                  zero_point->mut_dptr<int8_t>());
+        } else {
+          UNIMPLEMENTED();
+        }
+
+      } else {
+        UNIMPLEMENTED() << "min max observer with oneflow quantization_formula only supports "
+                           "per-layer quantization";
+      }
     } else {
       UNIMPLEMENTED();
     }
@@ -250,10 +334,11 @@ class GpuMinMaxObserverKernel final : public user_op::OpKernel {
           const Shape& in_shape = ctx->InputShape("in", 0);                             \
           tmp_buffer_size = in_shape.At(0);                                             \
         }                                                                               \
-        return 2 * tmp_buffer_size * sizeof(dtype);                                     \
+        return 128 * 1024 * 1024;                                                       \
       })
 
 REGISTER_MIN_MAX_OBSERVER_KERNEL(float);
 REGISTER_MIN_MAX_OBSERVER_KERNEL(double);
+REGISTER_MIN_MAX_OBSERVER_KERNEL(half);
 
 }  // namespace oneflow
