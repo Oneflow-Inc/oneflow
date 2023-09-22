@@ -1069,7 +1069,8 @@ class Graph(object):
             assert len(tensor_tuple) == len(name_list)
             for name_idx in range(len(name_list)):
                 tensor_item = tensor_tuple[name_idx]
-                dest_dict[name_list[name_idx]] = (tensor_item, tensor_item.device.type)
+                device_str = ':'.join((tensor_item.device.type, str(tensor_item.device.index)))
+                dest_dict[name_list[name_idx]] = (tensor_item, device_str)
 
         # This is original outputs is needed to build output buffer.
         tuple_idx = -1
