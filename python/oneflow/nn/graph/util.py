@@ -268,7 +268,7 @@ def _op_signature(
 
 
 def operators_repr(
-    ops: Message
+    ops: Message,
     graph_ir: GraphIR,
     show_op_loc: bool,
 ) -> List[str]:
