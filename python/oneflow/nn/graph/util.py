@@ -267,11 +267,7 @@ def _op_signature(
     return True, op_str
 
 
-def operators_repr(
-    ops: Message,
-    graph_ir: GraphIR,
-    show_op_loc: bool,
-) -> List[str]:
+def operators_repr(ops: Message, graph_ir: GraphIR, show_op_loc: bool,) -> List[str]:
     r"""Generate operators' string representation of this module
     """
     graph_proto = graph_ir._graph_proto
