@@ -1307,6 +1307,53 @@ class Graph(object):
             + "s."
             + "\n",
         )
+    
+    @staticmethod
+    def runtime_state_dict_to(
+        state_dict: Union[
+            Dict[str, Union[Dict[str, Tensor], str]],
+            Dict[str, Dict[str, Union[Dict[str, Tensor], str]]],
+        ],
+        device: str
+    ) -> Union[
+        Dict[str, Union[Dict[str, Tensor], str]],
+        Dict[str, Dict[str, Union[Dict[str, Tensor], str]]],
+    ]:
+        dest_device = flow.device(device)
+        assert dest_device.type == "cuda", "device must be cuda."
+
+        destination = OrderedDict()
+        destination._metadata = OrderedDict()
+        destination["oneflow_version"] = state_dict["oneflow_version"]
+        destination["graph_name"] = state_dict["graph_name"]
+        destination["job_id"] = state_dict["job_id"]
+
+        def _to_sub_destination(origin_dict, dest_device_str):
+            dest_dict = OrderedDict()
+            for k, v in origin_dict.items():
+                tensor_item, device_str = v
+                dest_dict[k] = (tensor_item.to(device=flow.device(dest_device_str), copy=True), dest_device_str)
+            return dest_dict
+        
+        destination["inputs"] = _to_sub_destination(state_dict["inputs"], device)
+        destination["inputs_original"] = state_dict["inputs_original"]
+        destination["outputs"] = _to_sub_destination(state_dict["outputs"], device)
+        destination["outputs_original"] = state_dict["outputs_original"]
+
+        destination["oneflow_with_eager_tensor"] = state_dict["oneflow_with_eager_tensor"]
+        if "states" in state_dict:
+            destination["states"] = _to_sub_destination(state_dict["states"], device)
+        
+        # TODO(strint): plan and job to device
+        destination["exe_plan"] = state_dict["exe_plan"]
+        if "forward_graph" in state_dict:
+            destination["forward_graph"] = state_dict["forward_graph"]
+        if "compile_graph" in state_dict:
+            destination["compile_graph"] = state_dict["compile_graph"]
+
+        destination["id_state"] = state_dict["id_state"]
+
+        return destination
 
     def build_graph(self, *args, **kwargs):
         # Build graph
