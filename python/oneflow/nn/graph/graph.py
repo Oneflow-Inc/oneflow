@@ -1326,28 +1326,44 @@ class Graph(object):
         destination["graph_name"] = state_dict["graph_name"]
         destination["job_id"] = state_dict["job_id"]
 
-        def _to_sub_destination(origin_dict, dest_device_str):
+        def _sub_destination_to(origin_dict, dest_device_str):
             dest_dict = OrderedDict()
             for k, v in origin_dict.items():
                 tensor_item, device_str = v
                 dest_dict[k] = (tensor_item.to(device=flow.device(dest_device_str), copy=True), dest_device_str)
             return dest_dict
         
-        destination["inputs"] = _to_sub_destination(state_dict["inputs"], device)
+        destination["inputs"] = _sub_destination_to(state_dict["inputs"], device)
         destination["inputs_original"] = state_dict["inputs_original"]
-        destination["outputs"] = _to_sub_destination(state_dict["outputs"], device)
+        destination["outputs"] = _sub_destination_to(state_dict["outputs"], device)
         destination["outputs_original"] = state_dict["outputs_original"]
 
         destination["oneflow_with_eager_tensor"] = state_dict["oneflow_with_eager_tensor"]
         if "states" in state_dict:
-            destination["states"] = _to_sub_destination(state_dict["states"], device)
+            destination["states"] = _sub_destination_to(state_dict["states"], device)
         
+        def _job_to(job, dest_device):
+            name1 = job.placement.placement_group.parallel_conf.device_name
+            name2 = job.placement.blob_placement_group.parallel_conf.device_name
+        
+        def _plan_to(plan, dest_device):
+            for task in plan.task:
+                for node in task.exec_sequence.exec_node:
+                    name1 = node.kernel_conf.op_attribute.parallel_conf_signature.op_parallel_conf.device_name
+                for name, regst in task.produced_regst_desc.items():
+                    name2 = regst.mem_case.device_id  or  pinned_device_id# int
+
         # TODO(strint): plan and job to device
-        destination["exe_plan"] = state_dict["exe_plan"]
+        plan = deepcopy(state_dict["exe_plan"])
+        destination["exe_plan"] = plan
         if "forward_graph" in state_dict:
-            destination["forward_graph"] = state_dict["forward_graph"]
+            forward_graph = deepcopy(state_dict["forward_graph"])
+            _job_to(forward_graph, dest_device)
+            destination["forward_graph"] = forward_graph
         if "compile_graph" in state_dict:
-            destination["compile_graph"] = state_dict["compile_graph"]
+            compile_graph = deepcopy(state_dict["compile_graph"])
+            _job_to(compile_graph, dest_device)
+            destination["compile_graph"] = compile_graph
 
         destination["id_state"] = state_dict["id_state"]
 
