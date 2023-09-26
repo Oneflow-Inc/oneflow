@@ -17,8 +17,8 @@ import sys
 from string import Template
 from typing import Callable, Dict, Union, List, Tuple, Optional
 
-import google.protobuf as protobuf
 from google.protobuf import text_format
+from google.protobuf.message import Message
 
 import oneflow
 import oneflow.core.job.job_pb2 as job_pb
@@ -268,7 +268,7 @@ def _op_signature(
 
 
 def operators_repr(
-    ops: protobuf.pyext._message.RepeatedCompositeContainer,
+    ops: Message
     graph_ir: GraphIR,
     show_op_loc: bool,
 ) -> List[str]:
