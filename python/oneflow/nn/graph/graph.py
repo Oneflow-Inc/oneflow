@@ -29,6 +29,8 @@ from copy import deepcopy
 import oneflow
 import oneflow._oneflow_internal
 import oneflow.core.job.job_pb2 as job_pb
+import oneflow.core.job.plan_pb2 as plan_pb
+import oneflow.core.common.device_type_pb2 as device_type
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.framework.session_context as session_ctx
@@ -1317,7 +1319,11 @@ class Graph(object):
         Dict[str, Union[Dict[str, Tensor], str]],
         Dict[str, Dict[str, Union[Dict[str, Tensor], str]]],
     ]:
-        dest_device = flow.device(device)
+        if "job_id" not in state_dict:
+            from oneflow.nn.graph.cache import GraphCache
+            return GraphCache.runtime_state_dict_to(state_dict, device)
+
+        dest_device = oneflow.device(device)
         assert dest_device.type == "cuda", "device must be cuda."
 
         destination = OrderedDict()
@@ -1330,7 +1336,7 @@ class Graph(object):
             dest_dict = OrderedDict()
             for k, v in origin_dict.items():
                 tensor_item, device_str = v
-                dest_dict[k] = (tensor_item.to(device=flow.device(dest_device_str), copy=True), dest_device_str)
+                dest_dict[k] = (tensor_item.to(device=oneflow.device(dest_device_str), copy=True), dest_device_str)
             return dest_dict
         
         destination["inputs"] = _sub_destination_to(state_dict["inputs"], device)
@@ -1342,20 +1348,51 @@ class Graph(object):
         if "states" in state_dict:
             destination["states"] = _sub_destination_to(state_dict["states"], device)
         
-        def _job_to(job, dest_device):
-            name1 = job.placement.placement_group.parallel_conf.device_name
-            name2 = job.placement.blob_placement_group.parallel_conf.device_name
+        def _parallel_conf_to(parallel_conf, dest_device):
+            if parallel_conf.device_tag == "cuda":
+                assert len(parallel_conf.device_name) == 1
+                print("pc device:", parallel_conf.device_name[0])
+                parallel_conf.device_name[0] = '@0:' + str(dest_device.index)
+                print("pc device:", parallel_conf.device_name[0])
         
-        def _plan_to(plan, dest_device):
+        def _mem_case_to(mem_case, dest_device):
+            print("regst: ", mem_case)
+            if mem_case.device_type == device_type.DeviceType.kCUDA:
+                mem_case.device_id = dest_device.index
+            if mem_case.HasField("pinned_device_type") and mem_case.pinned_device_type == device_type.DeviceType.kCUDA:
+                mem_case.pinned_device_id = dest_device.index
+            print("regst: ", mem_case)
+
+        def _job_to(job, dest_device):
+            for pg in job.placement.placement_group:
+                _parallel_conf_to(pg.parallel_conf, dest_device)
+            for bpg in job.placement.blob_placement_group:
+                _parallel_conf_to(bpg.parallel_conf, dest_device)
+        
+        def _plan_to(plan_str, dest_device):
+            plan = plan_pb.Plan()
+            plan.ParseFromString(plan_str)
             for task in plan.task:
                 for node in task.exec_sequence.exec_node:
-                    name1 = node.kernel_conf.op_attribute.parallel_conf_signature.op_parallel_conf.device_name
+                    print("node name", node.kernel_conf.op_attribute)
+                    print("node: ", node.kernel_conf.op_attribute.parallel_conf_signature.op_parallel_conf.device_name)
+                    _parallel_conf_to(node.kernel_conf.op_attribute.parallel_conf_signature.op_parallel_conf, dest_device)
+                    print("node: ", node.kernel_conf.op_attribute.parallel_conf_signature.op_parallel_conf.device_name)
                 for name, regst in task.produced_regst_desc.items():
-                    name2 = regst.mem_case.device_id  or  pinned_device_id# int
+                    _mem_case_to(regst.mem_case, dest_device)
+            for mem_block in plan.block_chunk_list.mem_block:
+                _mem_case_to(mem_block.mem_case, dest_device)
+            for chunk in plan.block_chunk_list.chunk:
+                _mem_case_to(chunk.mem_case, dest_device)
+            
+            for job_id, op_attr_tab in plan.job_id2op_attribute_ref_table.items():
+                for _, op_attr in op_attr_tab.op_name2op_attribute.items():
+                    _parallel_conf_to(op_attr.parallel_conf_signature.op_parallel_conf, dest_device)
 
-        # TODO(strint): plan and job to device
-        plan = deepcopy(state_dict["exe_plan"])
-        destination["exe_plan"] = plan
+            import pdb; pdb.set_trace()
+            return plan.SerializeToString()
+
+        destination["exe_plan"] = _plan_to(state_dict["exe_plan"], dest_device)
         if "forward_graph" in state_dict:
             forward_graph = deepcopy(state_dict["forward_graph"])
             _job_to(forward_graph, dest_device)
