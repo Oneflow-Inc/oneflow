@@ -1307,14 +1307,14 @@ class Graph(object):
             + "s."
             + "\n",
         )
-    
+
     @staticmethod
     def runtime_state_dict_to(
         state_dict: Union[
             Dict[str, Union[Dict[str, Tensor], str]],
             Dict[str, Dict[str, Union[Dict[str, Tensor], str]]],
         ],
-        device: str
+        device: str,
     ) -> Union[
         Dict[str, Union[Dict[str, Tensor], str]],
         Dict[str, Dict[str, Union[Dict[str, Tensor], str]]],
@@ -1344,7 +1344,9 @@ class Graph(object):
         destination["outputs"] = _sub_destination_to(state_dict["outputs"], device)
         destination["outputs_original"] = state_dict["outputs_original"]
 
-        destination["oneflow_with_eager_tensor"] = state_dict["oneflow_with_eager_tensor"]
+        destination["oneflow_with_eager_tensor"] = state_dict[
+            "oneflow_with_eager_tensor"
+        ]
         if "states" in state_dict:
             destination["states"] = _sub_destination_to(state_dict["states"], device)
         
