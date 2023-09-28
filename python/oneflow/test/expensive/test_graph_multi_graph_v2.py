@@ -356,9 +356,12 @@ def _graph_load(return_dict, filename):
     )
     print("====> load process done")
 
+
 def _graph_load_to_another_device(return_dict, filename):
     state_dict_loaded = flow.load(filename)
-    new_state_dict = flow.nn.Graph.runtime_state_dict_to(state_dict_loaded, flow.device("cuda:1"))
+    new_state_dict = flow.nn.Graph.runtime_state_dict_to(
+        state_dict_loaded, flow.device("cuda:1")
+    )
     # load with nn.Graph
     _test_linear_multi_graph_load(
         return_dict, flow.device("cuda:1"), True, new_state_dict,
@@ -389,6 +392,7 @@ def _test_linear_multi_graph_save_load_gpu(test_case, with_eager):
         # Reference: https://stackoverflow.com/questions/52225003/writing-to-multiple-files-using-multiprocessing-error-typeerror-cannot-seria
         for (key, check_value) in return_dict.items():
             test_case.assertTrue(check_value, key + " failed.")
+
 
 def _test_load_to_another_device(test_case, with_eager):
     # A graph runtime state dict
