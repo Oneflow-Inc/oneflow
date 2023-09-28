@@ -356,6 +356,15 @@ def _graph_load(return_dict, filename):
     )
     print("====> load process done")
 
+def _graph_load_to_another_device(return_dict, filename):
+    state_dict_loaded = flow.load(filename)
+    new_state_dict = flow.nn.Graph.runtime_state_dict_to(state_dict_loaded, flow.device("cuda:1"))
+    # load with nn.Graph
+    _test_linear_multi_graph_load(
+        return_dict, flow.device("cuda:1"), True, new_state_dict,
+    )
+    print("====> load process done")
+
 
 def _test_linear_multi_graph_save_load_gpu(test_case, with_eager):
     # A graph runtime state dict
@@ -381,6 +390,32 @@ def _test_linear_multi_graph_save_load_gpu(test_case, with_eager):
         for (key, check_value) in return_dict.items():
             test_case.assertTrue(check_value, key + " failed.")
 
+def _test_load_to_another_device(test_case, with_eager):
+    # A graph runtime state dict
+    with tempfile.NamedTemporaryFile() as f:
+        # Save a graph
+        manager = multiprocessing.Manager()
+        return_dict = manager.dict()
+        save_p = multiprocessing.get_context("spawn").Process(
+            target=_graph_save, args=(return_dict, f.name, with_eager),
+        )
+        save_p.start()
+        save_p.join()
+        print(save_p)
+
+        # Resume a graph from a graph runtime state dict
+        load_p = multiprocessing.get_context("spawn").Process(
+            target=_graph_load_to_another_device, args=(return_dict, f.name)
+        )
+        load_p.start()
+        load_p.join()
+        print(load_p)
+
+        # test_case can't be passed into sub process, so we check with return_dict.
+        # Reference: https://stackoverflow.com/questions/52225003/writing-to-multiple-files-using-multiprocessing-error-typeerror-cannot-seria
+        for (key, check_value) in return_dict.items():
+            test_case.assertTrue(check_value, key + " failed.")
+
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
@@ -396,6 +431,9 @@ class TestLinearMultiGraph(oneflow.unittest.TestCase):
 
     def test_linear_multi_graph_save_load_gpu_with_share_without_eager(test_case):
         _test_linear_multi_graph_save_load_gpu(test_case, False)
+
+    def test_load_to_another_device(test_case):
+        _test_load_to_another_device(test_case, False)
 
 
 if __name__ == "__main__":

@@ -1357,12 +1357,9 @@ class Graph(object):
         def _parallel_conf_to(parallel_conf, dest_device):
             if parallel_conf.device_tag == "cuda":
                 assert len(parallel_conf.device_name) == 1
-                print("pc device:", parallel_conf.device_name[0])
                 parallel_conf.device_name[0] = "@0:" + str(dest_device.index)
-                print("pc device:", parallel_conf.device_name[0])
 
         def _mem_case_to(mem_case, dest_device):
-            print("regst: ", mem_case)
             if mem_case.device_type == device_type.DeviceType.kCUDA:
                 mem_case.device_id = dest_device.index
             if (
@@ -1370,7 +1367,6 @@ class Graph(object):
                 and mem_case.pinned_device_type == device_type.DeviceType.kCUDA
             ):
                 mem_case.pinned_device_id = dest_device.index
-            print("regst: ", mem_case)
 
         def _job_to(job, dest_device):
             for pg in job.placement.placement_group:
@@ -1383,18 +1379,9 @@ class Graph(object):
             plan.ParseFromString(plan_str)
             for task in plan.task:
                 for node in task.exec_sequence.exec_node:
-                    print("node name", node.kernel_conf.op_attribute)
-                    print(
-                        "node: ",
-                        node.kernel_conf.op_attribute.parallel_conf_signature.op_parallel_conf.device_name,
-                    )
                     _parallel_conf_to(
                         node.kernel_conf.op_attribute.parallel_conf_signature.op_parallel_conf,
                         dest_device,
-                    )
-                    print(
-                        "node: ",
-                        node.kernel_conf.op_attribute.parallel_conf_signature.op_parallel_conf.device_name,
                     )
                 for name, regst in task.produced_regst_desc.items():
                     _mem_case_to(regst.mem_case, dest_device)
@@ -1409,9 +1396,6 @@ class Graph(object):
                         op_attr.parallel_conf_signature.op_parallel_conf, dest_device
                     )
 
-            import pdb
-
-            pdb.set_trace()
             return plan.SerializeToString()
 
         destination["exe_plan"] = _plan_to(state_dict["exe_plan"], dest_device)
@@ -1810,6 +1794,7 @@ class Graph(object):
                 )
 
     def __run(self, *args, **kwargs):
+        print(f"graph {self.name} called.")
         try:
             flattened_eager_args = self.__ensure_input_tensors_contiguous_and_flatten(
                 *args, **kwargs
