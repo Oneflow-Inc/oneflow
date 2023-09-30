@@ -1374,7 +1374,6 @@ class Graph(object):
             for bpg in job.placement.blob_placement_group:
                 _parallel_conf_to(bpg.parallel_conf, dest_device)
 
-
         def get_bin(num):
             return bin(num)[2:]
 
@@ -1383,13 +1382,13 @@ class Graph(object):
             # 确保要修改的位范围有效（k <= j）
             if k > j:
                 return original_num
-    
+
             # 构建一个掩码，用于清除要修改的位范围
             mask = ((1 << (j - k + 1)) - 1) << k
-    
+
             # 清除原始数中的位范围
             cleared_num = original_num & ~mask
-    
+
             # 将新的数左移至正确的位置并与清除后的数进行合并
             modified_num = cleared_num | ((new_num & ((1 << (j - k + 1)) - 1)) << k)
 
@@ -1399,33 +1398,41 @@ class Graph(object):
         def get_bits(original_num, k, j):
             # 构建一个掩码，用于清除要修改的位范围
             mask = ((1 << (j - k + 1)) - 1) << k
-    
+
             # 清除原始数中的位范围
             cleared_num = (original_num & mask) >> k
-    
+
             return cleared_num
-        
-        # task id 17729624997898                                                                                                                                          
-        # origin task device 16:16 
-        # origin 100000010000000000000000000000000000000001010                                                                                                            
-        # new    100000000001000000000000000000000000000001010                                                                                                               
+
+        # task id 17729624997898
+        # origin task device 16:16
+        # origin 100000010000000000000000000000000000000001010
+        # new    100000000001000000000000000000000000000001010
         # new task device 16:1
         def _task_id_to(task_id, dest_device):
             if get_bits(task_id, 43, 48) == 2:
-                print(f"origin task device {get_bits(task_id, 43, 48)}:{get_bits(task_id, 36, 43)}")
+                print(
+                    f"origin task device {get_bits(task_id, 43, 48)}:{get_bits(task_id, 36, 43)}"
+                )
                 new_id = modify_bits(task_id, 36, 43, dest_device.index)
-                print(f"new task device {get_bits(task_id, 43, 48)}:{get_bits(new_id, 36, 43)}")
+                print(
+                    f"new task device {get_bits(task_id, 43, 48)}:{get_bits(new_id, 36, 43)}"
+                )
                 return new_id
             else:
                 return task_id
 
-# origin 10 0000010 000000000000000                                                                                                                                 
-# new    100000000001000000000000 
+        # origin 10 0000010 000000000000000
+        # new    100000000001000000000000
         def _thrd_id_to(thrd_id, dest_device):
             if get_bits(thrd_id, 22, 27) == 2:
-                print(f"origin thrd device {get_bits(thrd_id, 22, 27)}:{get_bits(thrd_id, 15, 22)}")
+                print(
+                    f"origin thrd device {get_bits(thrd_id, 22, 27)}:{get_bits(thrd_id, 15, 22)}"
+                )
                 new_id = modify_bits(thrd_id, 15, 22, dest_device.index)
-                print(f"new thrd device {get_bits(thrd_id, 22, 27)}:{get_bits(new_id, 15, 22)}")
+                print(
+                    f"new thrd device {get_bits(thrd_id, 22, 27)}:{get_bits(new_id, 15, 22)}"
+                )
                 return new_id
             else:
                 return thrd_id
@@ -1448,23 +1455,39 @@ class Graph(object):
                         dest_device,
                     )
                 for name, regst in task.produced_regst_desc.items():
-                    regst.producer_task_id = _task_id_to(regst.producer_task_id, dest_device)
+                    regst.producer_task_id = _task_id_to(
+                        regst.producer_task_id, dest_device
+                    )
                     for c_task_id_idx in range(len(regst.consumer_task_id)):
-                        regst.consumer_task_id[c_task_id_idx] =_task_id_to(regst.consumer_task_id[c_task_id_idx], dest_device)
+                        regst.consumer_task_id[c_task_id_idx] = _task_id_to(
+                            regst.consumer_task_id[c_task_id_idx], dest_device
+                        )
                     _mem_case_to(regst.mem_case, dest_device)
                 print("==========")
             for mem_block in plan.block_chunk_list.mem_block:
                 _mem_case_to(mem_block.mem_case, dest_device)
-                mem_block.thrd_id_hint = _thrd_id_to(mem_block.thrd_id_hint, dest_device)
+                mem_block.thrd_id_hint = _thrd_id_to(
+                    mem_block.thrd_id_hint, dest_device
+                )
             for chunk in plan.block_chunk_list.chunk:
                 _mem_case_to(chunk.mem_case, dest_device)
-            
+
             new_ctrl_regst_desc_id2producer_task_id = {}
-            for regst_desc_id, producer_task_id in plan.ctrl_regst_desc_info.ctrl_regst_desc_id2producer_task_id.items():
-                new_ctrl_regst_desc_id2producer_task_id[regst_desc_id] = _task_id_to(producer_task_id, dest_device)
-            for regst_desc_id, producer_task_id in new_ctrl_regst_desc_id2producer_task_id.items():
-                plan.ctrl_regst_desc_info.ctrl_regst_desc_id2producer_task_id[regst_desc_id] = producer_task_id
-            
+            for (
+                regst_desc_id,
+                producer_task_id,
+            ) in plan.ctrl_regst_desc_info.ctrl_regst_desc_id2producer_task_id.items():
+                new_ctrl_regst_desc_id2producer_task_id[regst_desc_id] = _task_id_to(
+                    producer_task_id, dest_device
+                )
+            for (
+                regst_desc_id,
+                producer_task_id,
+            ) in new_ctrl_regst_desc_id2producer_task_id.items():
+                plan.ctrl_regst_desc_info.ctrl_regst_desc_id2producer_task_id[
+                    regst_desc_id
+                ] = producer_task_id
+
             for job_id, op_attr_tab in plan.job_id2op_attribute_ref_table.items():
                 for _, op_attr in op_attr_tab.op_name2op_attribute.items():
                     _parallel_conf_to(
