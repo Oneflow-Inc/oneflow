@@ -338,7 +338,7 @@ def _test_linear_multi_graph_load(
 
 def _graph_save(return_dict, filename, with_eager):
     state_dict = _test_linear_multi_graph_save(
-        return_dict, flow.device("cuda"), True, with_eager,
+        return_dict, flow.device("cuda:0"), True, with_eager,
     )
     print(
         f"state_dict(with_eager={with_eager}) tensors size ",
@@ -438,6 +438,16 @@ class TestLinearMultiGraph(oneflow.unittest.TestCase):
 
     def test_load_to_another_device(test_case):
         _test_load_to_another_device(test_case, False)
+
+    def test_s_to_another_device(test_case):
+        return_dict = {}
+        _graph_save(return_dict, "test_rsd", False)
+
+    def test_l_to_another_device(test_case):
+        import os
+        os.environ["ONEFLOW_DEBUG_MODE"] = "1"
+        return_dict = {}
+        _graph_load_to_another_device(return_dict, "test_rsd")
 
 
 if __name__ == "__main__":
