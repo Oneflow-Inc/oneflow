@@ -1378,61 +1378,30 @@ class Graph(object):
             return bin(num)[2:]
 
         def modify_bits(original_num, k, j, new_num):
-            print(f"origin {get_bin(original_num)}")
-            # 确保要修改的位范围有效（k <= j）
             if k > j:
                 return original_num
-
-            # 构建一个掩码，用于清除要修改的位范围
             mask = ((1 << (j - k + 1)) - 1) << k
-
-            # 清除原始数中的位范围
             cleared_num = original_num & ~mask
-
-            # 将新的数左移至正确的位置并与清除后的数进行合并
             modified_num = cleared_num | ((new_num & ((1 << (j - k + 1)) - 1)) << k)
-
-            print(f"new {get_bin(modified_num)}")
             return modified_num
 
         def get_bits(original_num, k, j):
-            # 构建一个掩码，用于清除要修改的位范围
             mask = ((1 << (j - k + 1)) - 1) << k
-
-            # 清除原始数中的位范围
             cleared_num = (original_num & mask) >> k
 
             return cleared_num
 
-        # task id 17729624997898
-        # origin task device 16:16
-        # origin 100000010000000000000000000000000000000001010
-        # new    100000000001000000000000000000000000000001010
-        # new task device 16:1
         def _task_id_to(task_id, dest_device):
             if get_bits(task_id, 43, 48) == 2:
-                print(
-                    f"origin task device {get_bits(task_id, 43, 48)}:{get_bits(task_id, 36, 43)}"
-                )
                 new_id = modify_bits(task_id, 36, 43, dest_device.index)
-                print(
-                    f"new task device {get_bits(task_id, 43, 48)}:{get_bits(new_id, 36, 43)}"
-                )
+                
                 return new_id
             else:
                 return task_id
 
-        # origin 10 0000010 000000000000000
-        # new    100000000001000000000000
         def _thrd_id_to(thrd_id, dest_device):
             if get_bits(thrd_id, 22, 27) == 2:
-                print(
-                    f"origin thrd device {get_bits(thrd_id, 22, 27)}:{get_bits(thrd_id, 15, 22)}"
-                )
                 new_id = modify_bits(thrd_id, 15, 22, dest_device.index)
-                print(
-                    f"new thrd device {get_bits(thrd_id, 22, 27)}:{get_bits(new_id, 15, 22)}"
-                )
                 return new_id
             else:
                 return thrd_id
@@ -1441,13 +1410,7 @@ class Graph(object):
             plan = plan_pb.Plan()
             plan.ParseFromString(plan_str)
             for task in plan.task:
-                print("==========")
-                # origin 10 0000010 000000000000000 000000000000000110100
-                # origin 10000 0010000 000000000000 000000000000000110100
-                # new    10000 0000001 000000000000 000000000000000110100
-                print(f"task id {task.task_id}")
                 task.task_id = _task_id_to(task.task_id, dest_device)
-                print(f"thrd id {task.thrd_id}")
                 task.thrd_id = _thrd_id_to(task.thrd_id, dest_device)
                 for node in task.exec_sequence.exec_node:
                     _parallel_conf_to(
