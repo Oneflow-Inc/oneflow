@@ -1426,7 +1426,6 @@ class Graph(object):
                             regst.consumer_task_id[c_task_id_idx], dest_device
                         )
                     _mem_case_to(regst.mem_case, dest_device)
-                print("==========")
             for mem_block in plan.block_chunk_list.mem_block:
                 _mem_case_to(mem_block.mem_case, dest_device)
                 mem_block.thrd_id_hint = _thrd_id_to(
@@ -1855,7 +1854,6 @@ class Graph(object):
                 )
 
     def __run(self, *args, **kwargs):
-        print(f"graph {self.name} called.")
         try:
             flattened_eager_args = self.__ensure_input_tensors_contiguous_and_flatten(
                 *args, **kwargs
