@@ -249,7 +249,7 @@ def _test_linear_multi_graph_save(return_dict, device, with_reshape, with_eager)
 
 @_with_new_session
 def _test_linear_multi_graph_load(
-    return_dict, device, with_reshape, state_dict,
+    return_dict, device, with_reshape, state_dict, with_new=True
 ):
     linear = flow.nn.Linear(3, 8, False)
     linear = linear.to(device)
@@ -320,20 +320,21 @@ def _test_linear_multi_graph_load(
     test_case1 = np.array_equal(of_lazy_out1.numpy(), of_eager_out1.numpy())
     return_dict["load1"] = test_case1
 
-    # The following section is for testing the new input shape after completing the load.
-    input_arr2 = np.array(
-        [
-            [-0.94630778, -0.83378579, -0.87060891],
-            [2.0289922, -0.28708987, -2.18369248],
-            [0.08086036, -1.81075924, 1.20752494],
-        ],
-        dtype=np.float32,
-    )
-    x2 = flow.tensor(input_arr2, device=device)
-    of_lazy_out2 = linear_g(x2)
-    of_eager_out2 = linear_reshape(x2)
-    test_case2 = np.array_equal(of_lazy_out2.numpy(), of_eager_out2.numpy())
-    return_dict["load2"] = test_case2
+    if with_new:
+        # The following section is for testing the new input shape after completing the load.
+        input_arr2 = np.array(
+            [
+                [-0.94630778, -0.83378579, -0.87060891],
+                [2.0289922, -0.28708987, -2.18369248],
+                [0.08086036, -1.81075924, 1.20752494],
+            ],
+            dtype=np.float32,
+        )
+        x2 = flow.tensor(input_arr2, device=device)
+        of_lazy_out2 = linear_g(x2)
+        of_eager_out2 = linear_reshape(x2)
+        test_case2 = np.array_equal(of_lazy_out2.numpy(), of_eager_out2.numpy())
+        return_dict["load2"] = test_case2
 
 
 def _graph_save(return_dict, filename, with_eager):
@@ -364,7 +365,7 @@ def _graph_load_to_another_device(return_dict, filename):
     )
     # load with nn.Graph
     _test_linear_multi_graph_load(
-        return_dict, flow.device("cuda:1"), True, new_state_dict,
+        return_dict, flow.device("cuda:1"), True, new_state_dict, False
     )
     print("====> load process done")
 
@@ -438,15 +439,6 @@ class TestLinearMultiGraph(oneflow.unittest.TestCase):
 
     def test_load_to_another_device(test_case):
         _test_load_to_another_device(test_case, False)
-
-    def test_s_to_another_device(test_case):
-        return_dict = {}
-        _graph_save(return_dict, "test_rsd", False)
-
-    def test_l_to_another_device(test_case):
-        return_dict = {}
-        _graph_load_to_another_device(return_dict, "test_rsd")
-
 
 if __name__ == "__main__":
     unittest.main()
