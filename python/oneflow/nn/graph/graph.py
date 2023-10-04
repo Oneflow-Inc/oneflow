@@ -1394,7 +1394,7 @@ class Graph(object):
         def _task_id_to(task_id, dest_device):
             if get_bits(task_id, 43, 48) == 2:
                 new_id = modify_bits(task_id, 36, 43, dest_device.index)
-                
+
                 return new_id
             else:
                 return task_id
