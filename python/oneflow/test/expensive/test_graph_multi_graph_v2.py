@@ -444,9 +444,6 @@ class TestLinearMultiGraph(oneflow.unittest.TestCase):
         _graph_save(return_dict, "test_rsd", False)
 
     def test_l_to_another_device(test_case):
-        import os
-
-        os.environ["ONEFLOW_DEBUG_MODE"] = "1"
         return_dict = {}
         _graph_load_to_another_device(return_dict, "test_rsd")
 
