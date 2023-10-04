@@ -440,5 +440,6 @@ class TestLinearMultiGraph(oneflow.unittest.TestCase):
     def test_load_to_another_device(test_case):
         _test_load_to_another_device(test_case, False)
 
+
 if __name__ == "__main__":
     unittest.main()
