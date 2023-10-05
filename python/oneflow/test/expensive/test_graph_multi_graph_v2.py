@@ -249,7 +249,7 @@ def _test_linear_multi_graph_save(return_dict, device, with_reshape, with_eager)
 
 @_with_new_session
 def _test_linear_multi_graph_load(
-    return_dict, device, with_reshape, state_dict, with_new=True
+    return_dict, device, with_reshape, state_dict, with_new_input
 ):
     linear = flow.nn.Linear(3, 8, False)
     linear = linear.to(device)
@@ -320,7 +320,7 @@ def _test_linear_multi_graph_load(
     test_case1 = np.array_equal(of_lazy_out1.numpy(), of_eager_out1.numpy())
     return_dict["load1"] = test_case1
 
-    if with_new:
+    if with_new_input:
         # The following section is for testing the new input shape after completing the load.
         input_arr2 = np.array(
             [
@@ -353,7 +353,7 @@ def _graph_load(return_dict, filename):
     state_dict_loaded = flow.load(filename)
     # load with nn.Graph
     _test_linear_multi_graph_load(
-        return_dict, flow.device("cuda"), True, state_dict_loaded,
+        return_dict, flow.device("cuda"), True, state_dict_loaded, True
     )
     print("====> load process done")
 
