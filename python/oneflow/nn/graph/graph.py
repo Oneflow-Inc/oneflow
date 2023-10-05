@@ -29,8 +29,6 @@ from copy import deepcopy
 import oneflow
 import oneflow._oneflow_internal
 import oneflow.core.job.job_pb2 as job_pb
-import oneflow.core.job.plan_pb2 as plan_pb
-import oneflow.core.common.device_type_pb2 as device_type
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.framework.session_context as session_ctx
@@ -54,6 +52,9 @@ from oneflow.nn.graph.util import (
     GraphIR,
     seq_to_func_return,
     sys_exc_error_msg,
+    _rsd_sub_destination_to,
+    _job_to,
+    _plan_to,
 )
 from oneflow.framework.args_tree import ArgsTree
 from oneflow.nn.modules.module import Module
@@ -1332,132 +1333,15 @@ class Graph(object):
         destination["oneflow_version"] = state_dict["oneflow_version"]
         destination["graph_name"] = state_dict["graph_name"]
         destination["job_id"] = state_dict["job_id"]
-
-        def _sub_destination_to(origin_dict, dest_device_str):
-            dest_dict = OrderedDict()
-            for k, v in origin_dict.items():
-                tensor_item, device_str = v
-                dest_dict[k] = (
-                    tensor_item.to(device=oneflow.device(dest_device_str), copy=True),
-                    dest_device_str,
-                )
-            return dest_dict
-
-        destination["inputs"] = _sub_destination_to(state_dict["inputs"], device)
+        destination["inputs"] = _rsd_sub_destination_to(state_dict["inputs"], device)
         destination["inputs_original"] = state_dict["inputs_original"]
-        destination["outputs"] = _sub_destination_to(state_dict["outputs"], device)
+        destination["outputs"] = _rsd_sub_destination_to(state_dict["outputs"], device)
         destination["outputs_original"] = state_dict["outputs_original"]
-
         destination["oneflow_with_eager_tensor"] = state_dict[
             "oneflow_with_eager_tensor"
         ]
         if "states" in state_dict:
-            destination["states"] = _sub_destination_to(state_dict["states"], device)
-
-        def _parallel_conf_to(parallel_conf, dest_device):
-            if parallel_conf.device_tag == "cuda":
-                assert len(parallel_conf.device_name) == 1
-                parallel_conf.device_name[0] = "@0:" + str(dest_device.index)
-
-        def _mem_case_to(mem_case, dest_device):
-            if mem_case.device_type == device_type.DeviceType.kCUDA:
-                mem_case.device_id = dest_device.index
-            if (
-                mem_case.HasField("pinned_device_type")
-                and mem_case.pinned_device_type == device_type.DeviceType.kCUDA
-            ):
-                mem_case.pinned_device_id = dest_device.index
-
-        def _job_to(job, dest_device):
-            for pg in job.placement.placement_group:
-                _parallel_conf_to(pg.parallel_conf, dest_device)
-            for bpg in job.placement.blob_placement_group:
-                _parallel_conf_to(bpg.parallel_conf, dest_device)
-
-        def get_bin(num):
-            return bin(num)[2:]
-
-        def modify_bits(original_num, k, j, new_num):
-            if k > j:
-                return original_num
-            mask = ((1 << (j - k + 1)) - 1) << k
-            cleared_num = original_num & ~mask
-            modified_num = cleared_num | ((new_num & ((1 << (j - k + 1)) - 1)) << k)
-            return modified_num
-
-        def get_bits(original_num, k, j):
-            mask = ((1 << (j - k + 1)) - 1) << k
-            cleared_num = (original_num & mask) >> k
-
-            return cleared_num
-
-        def _task_id_to(task_id, dest_device):
-            if get_bits(task_id, 43, 48) == 2:
-                new_id = modify_bits(task_id, 36, 43, dest_device.index)
-
-                return new_id
-            else:
-                return task_id
-
-        def _thrd_id_to(thrd_id, dest_device):
-            if get_bits(thrd_id, 22, 27) == 2:
-                new_id = modify_bits(thrd_id, 15, 22, dest_device.index)
-                return new_id
-            else:
-                return thrd_id
-
-        def _plan_to(plan_str, dest_device):
-            plan = plan_pb.Plan()
-            plan.ParseFromString(plan_str)
-            for task in plan.task:
-                task.task_id = _task_id_to(task.task_id, dest_device)
-                task.thrd_id = _thrd_id_to(task.thrd_id, dest_device)
-                for node in task.exec_sequence.exec_node:
-                    _parallel_conf_to(
-                        node.kernel_conf.op_attribute.parallel_conf_signature.op_parallel_conf,
-                        dest_device,
-                    )
-                for name, regst in task.produced_regst_desc.items():
-                    regst.producer_task_id = _task_id_to(
-                        regst.producer_task_id, dest_device
-                    )
-                    for c_task_id_idx in range(len(regst.consumer_task_id)):
-                        regst.consumer_task_id[c_task_id_idx] = _task_id_to(
-                            regst.consumer_task_id[c_task_id_idx], dest_device
-                        )
-                    _mem_case_to(regst.mem_case, dest_device)
-            for mem_block in plan.block_chunk_list.mem_block:
-                _mem_case_to(mem_block.mem_case, dest_device)
-                mem_block.thrd_id_hint = _thrd_id_to(
-                    mem_block.thrd_id_hint, dest_device
-                )
-            for chunk in plan.block_chunk_list.chunk:
-                _mem_case_to(chunk.mem_case, dest_device)
-
-            new_ctrl_regst_desc_id2producer_task_id = {}
-            for (
-                regst_desc_id,
-                producer_task_id,
-            ) in plan.ctrl_regst_desc_info.ctrl_regst_desc_id2producer_task_id.items():
-                new_ctrl_regst_desc_id2producer_task_id[regst_desc_id] = _task_id_to(
-                    producer_task_id, dest_device
-                )
-            for (
-                regst_desc_id,
-                producer_task_id,
-            ) in new_ctrl_regst_desc_id2producer_task_id.items():
-                plan.ctrl_regst_desc_info.ctrl_regst_desc_id2producer_task_id[
-                    regst_desc_id
-                ] = producer_task_id
-
-            for job_id, op_attr_tab in plan.job_id2op_attribute_ref_table.items():
-                for _, op_attr in op_attr_tab.op_name2op_attribute.items():
-                    _parallel_conf_to(
-                        op_attr.parallel_conf_signature.op_parallel_conf, dest_device
-                    )
-
-            return plan.SerializeToString()
-
+            destination["states"] = _rsd_sub_destination_to(state_dict["states"], device)
         destination["exe_plan"] = _plan_to(state_dict["exe_plan"], dest_device)
         if "forward_graph" in state_dict:
             forward_graph = deepcopy(state_dict["forward_graph"])
@@ -1467,9 +1351,7 @@ class Graph(object):
             compile_graph = deepcopy(state_dict["compile_graph"])
             _job_to(compile_graph, dest_device)
             destination["compile_graph"] = compile_graph
-
         destination["id_state"] = state_dict["id_state"]
-
         return destination
 
     def build_graph(self, *args, **kwargs):
