@@ -1341,7 +1341,9 @@ class Graph(object):
             "oneflow_with_eager_tensor"
         ]
         if "states" in state_dict:
-            destination["states"] = _rsd_sub_destination_to(state_dict["states"], device)
+            destination["states"] = _rsd_sub_destination_to(
+                state_dict["states"], device
+            )
         destination["exe_plan"] = _plan_to(state_dict["exe_plan"], dest_device)
         if "forward_graph" in state_dict:
             forward_graph = deepcopy(state_dict["forward_graph"])

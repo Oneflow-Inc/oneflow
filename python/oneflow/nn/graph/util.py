@@ -327,10 +327,12 @@ def _rsd_sub_destination_to(origin_dict, dest_device_str):
         )
     return dest_dict
 
+
 def _parallel_conf_to(parallel_conf, dest_device):
     if parallel_conf.device_tag == "cuda":
         assert len(parallel_conf.device_name) == 1
         parallel_conf.device_name[0] = "@0:" + str(dest_device.index)
+
 
 def _mem_case_to(mem_case, dest_device):
     if mem_case.device_type == device_type.DeviceType.kCUDA:
@@ -341,11 +343,13 @@ def _mem_case_to(mem_case, dest_device):
     ):
         mem_case.pinned_device_id = dest_device.index
 
+
 def _job_to(job, dest_device):
     for pg in job.placement.placement_group:
         _parallel_conf_to(pg.parallel_conf, dest_device)
     for bpg in job.placement.blob_placement_group:
         _parallel_conf_to(bpg.parallel_conf, dest_device)
+
 
 def _modify_bits(original_num, k, j, new_num):
     if k > j:
@@ -355,11 +359,13 @@ def _modify_bits(original_num, k, j, new_num):
     modified_num = cleared_num | ((new_num & ((1 << (j - k + 1)) - 1)) << k)
     return modified_num
 
+
 def _get_bits(original_num, k, j):
     mask = ((1 << (j - k + 1)) - 1) << k
     cleared_num = (original_num & mask) >> k
 
     return cleared_num
+
 
 def _task_id_to(task_id, dest_device):
     if _get_bits(task_id, 43, 48) == 2:
@@ -369,12 +375,14 @@ def _task_id_to(task_id, dest_device):
     else:
         return task_id
 
+
 def _thrd_id_to(thrd_id, dest_device):
     if _get_bits(thrd_id, 22, 27) == 2:
         new_id = _modify_bits(thrd_id, 15, 22, dest_device.index)
         return new_id
     else:
         return thrd_id
+
 
 def _plan_to(plan_str, dest_device):
     plan = plan_pb.Plan()
@@ -388,9 +396,7 @@ def _plan_to(plan_str, dest_device):
                 dest_device,
             )
         for name, regst in task.produced_regst_desc.items():
-            regst.producer_task_id = _task_id_to(
-                regst.producer_task_id, dest_device
-            )
+            regst.producer_task_id = _task_id_to(regst.producer_task_id, dest_device)
             for c_task_id_idx in range(len(regst.consumer_task_id)):
                 regst.consumer_task_id[c_task_id_idx] = _task_id_to(
                     regst.consumer_task_id[c_task_id_idx], dest_device
@@ -398,9 +404,7 @@ def _plan_to(plan_str, dest_device):
             _mem_case_to(regst.mem_case, dest_device)
     for mem_block in plan.block_chunk_list.mem_block:
         _mem_case_to(mem_block.mem_case, dest_device)
-        mem_block.thrd_id_hint = _thrd_id_to(
-            mem_block.thrd_id_hint, dest_device
-        )
+        mem_block.thrd_id_hint = _thrd_id_to(mem_block.thrd_id_hint, dest_device)
     for chunk in plan.block_chunk_list.chunk:
         _mem_case_to(chunk.mem_case, dest_device)
 
