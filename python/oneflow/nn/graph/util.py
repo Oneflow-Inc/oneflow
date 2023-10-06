@@ -18,8 +18,8 @@ from string import Template
 from typing import Callable, Dict, Union, List, Tuple, Optional
 from collections import OrderedDict
 
-import google.protobuf as protobuf
 from google.protobuf import text_format
+from google.protobuf.message import Message
 
 import oneflow
 import oneflow.core.job.job_pb2 as job_pb
@@ -270,11 +270,7 @@ def _op_signature(
     return True, op_str
 
 
-def operators_repr(
-    ops: protobuf.pyext._message.RepeatedCompositeContainer,
-    graph_ir: GraphIR,
-    show_op_loc: bool,
-) -> List[str]:
+def operators_repr(ops: Message, graph_ir: GraphIR, show_op_loc: bool,) -> List[str]:
     r"""Generate operators' string representation of this module
     """
     graph_proto = graph_ir._graph_proto
