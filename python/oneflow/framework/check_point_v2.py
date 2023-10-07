@@ -704,11 +704,11 @@ def save(
     if isinstance(path_or_buffer, str):
         path_or_buffer = Path(path_or_buffer)
     if os.path.isdir(path_or_buffer) and not save_as_external_data:
-        path_or_buffer = path_or_buffer / "model.pt"
-        warnings.warn(
-            f"The save path cannot be a dir name from oneflow-0.9.1! The system 
-            will automatically complete it into the file name as {path_or_buffer}"
-        )
+        path_or_buffer = path_or_buffer / "model.of"
+    warnings.warn(
+        f"The save path cannot be a dir name from oneflow-0.9.1! The system "
+        f"will automatically complete it into the file name as {path_or_buffer}"
+    )
 
     if isinstance(obj, graph_util.Graph):
         if not _is_path(path_or_buffer):
