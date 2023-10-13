@@ -389,9 +389,70 @@ class OptOKMMemrefPass : public OptOKMMemrefPassBase<OptOKMMemrefPass> {
 
 std::unique_ptr<Pass> createOptOKMMemrefPass() { return std::make_unique<OptOKMMemrefPass>(); }
 
+static mlir::LogicalResult ConvertToViewOp(mlir::Operation& op, func::FuncOp& wrap_func,
+                                           mlir::PatternRewriter& rewriter) {
+  auto parent = op.getParentOfType<WrapperOp>();
+  if (!(parent->hasOneUse() && (llvm::isa<oneflow::ReshapeOp>(op)))) { return failure(); }
+
+  auto input =
+      llvm::TypeSwitch<Operation*, Value>(parent->getOperand(0).getDefiningOp())
+          .Case<ArgToMemrefOp>([&](ArgToMemrefOp op) {
+            return rewriter.create<okl::GetTensorFromArgOp>(
+                rewriter.getUnknownLoc(),
+                memref::getTensorTypeFromMemRefType(op->getResult(0).getType()),
+                wrap_func.getArgument(0), op.getIndex());
+          })
+          .Case<RetToMemrefOp>([&](RetToMemrefOp op) {
+            return rewriter.create<okl::GetTensorFromRetOp>(
+                rewriter.getUnknownLoc(),
+                memref::getTensorTypeFromMemRefType(op->getResult(0).getType()),
+                wrap_func.getArgument(0), op.getIndex());
+          })
+          .Case<memref::ViewOp>([&](memref::ViewOp op) {
+            auto offset = rewriter.getI64IntegerAttr(
+                llvm::dyn_cast<arith::ConstantIndexOp>(op.getByteShift().getDefiningOp()).value());
+            return rewriter.create<okl::PoolToTensorOp>(
+                rewriter.getUnknownLoc(),
+                memref::getTensorTypeFromMemRefType(op->getResult(0).getType()),
+                wrap_func.getArgument(0), offset);
+          })
+          .Default([&](Operation*) { return Value{}; });
+
+  auto view_op = llvm::TypeSwitch<Operation*, Operation*>(&op)
+                     .Case<oneflow::ReshapeOp>([&](oneflow::ReshapeOp op) {
+                       Value shift =
+                           rewriter.create<arith::ConstantIndexOp>(rewriter.getUnknownLoc(), 0);
+                       return rewriter.create<memref::ViewOp>(rewriter.getUnknownLoc(),
+                                                              parent->getResult(0).getType(), input,
+                                                              shift, ValueRange{});
+                     })
+                     .Default([&](Operation*) { return nullptr; });
+
+  llvm::TypeSwitch<Operation*>(parent->getOperand(1).getDefiningOp())
+      .Case<RetToMemrefOp>([&](RetToMemrefOp op) {
+        return rewriter.create<okl::GetTensorAsRetOp>(
+            rewriter.getUnknownLoc(),
+            memref::getTensorTypeFromMemRefType(op->getResult(0).getType()),
+            wrap_func.getArgument(0), view_op->getResult(0), op.getIndex());
+      })
+      .Case<memref::ViewOp>([&](memref::ViewOp op) {
+        auto offset = rewriter.getI64IntegerAttr(
+            llvm::dyn_cast<arith::ConstantIndexOp>(op.getByteShift().getDefiningOp()).value());
+        return rewriter.create<okl::TensorToPoolOp>(
+            rewriter.getUnknownLoc(),
+            memref::getTensorTypeFromMemRefType(op->getResult(0).getType()),
+            wrap_func.getArgument(0), view_op->getResult(0), offset);
+      })
+      .Default([&](Operation*) { return Value{}; });
+
+  // parent->replaceAllUsesWith(view_op->getResults());
+  return success();
+}
+
 struct ConvertOKMToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
   static void ConvertOpToOKL(mlir::Operation& it, func::FuncOp& wrap_func, WrapperOp wrap_mem_op,
                              mlir::PatternRewriter& rewriter, int& index) {
+    if (succeeded(ConvertToViewOp(it, wrap_func, rewriter))) { return; }
     auto wrap_okl_op = rewriter.create<okl::WrapperKernelOp>(rewriter.getUnknownLoc(), index++);
     wrap_okl_op.getBody().emplaceBlock();
     OpBuilder::InsertionGuard insertGuard(rewriter);
