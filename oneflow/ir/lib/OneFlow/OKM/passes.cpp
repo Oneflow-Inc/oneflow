@@ -430,6 +430,9 @@ struct ConvertOKMToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
         .Case<memref::ReshapeOp>([&](memref::ReshapeOp op) {
           return getOffsetValueRecursively(rewriter, tmpBuffer, op.getSource(), type);
         })
+        // .Case<okm::WrapperOp>([&](okm::WrapperOp op) {
+        //   return getOffsetValueRecursively(rewriter, tmpBuffer, op, type);
+        // })
         .Case<memref::ViewOp>([&](memref::ViewOp op) {
           auto offset = rewriter.getI64IntegerAttr(
               llvm::dyn_cast<arith::ConstantIndexOp>(op.getByteShift().getDefiningOp()).value());
@@ -439,23 +442,27 @@ struct ConvertOKMToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
         .Default([&](Operation*) { return Value{}; });
   }
 
-  static void ConvertOpToOKL(mlir::Operation& it, func::FuncOp& wrap_func, WrapperOp wrap_mem_op,
-                             mlir::PatternRewriter& rewriter, int& index) {
+  static void ConvertOpToOKL(mlir::Operation& wrappedOneFlowOp, func::FuncOp& wrap_func,
+                             WrapperOp wrap_mem_op, mlir::PatternRewriter& rewriter, int& index) {
     auto wrap_okl_op = rewriter.create<okl::WrapperKernelOp>(rewriter.getUnknownLoc(), index++);
     wrap_okl_op.getBody().emplaceBlock();
     OpBuilder::InsertionGuard insertGuard(rewriter);
     rewriter.setInsertionPointToStart(&wrap_okl_op.getBody().front());
     IRMapping mapper;
-    auto ins_num = it.getNumOperands();
-    auto outs_num = it.getNumResults() + ins_num;
+    auto ins_num = wrappedOneFlowOp.getNumOperands();
+    auto outs_num = wrappedOneFlowOp.getNumResults() + ins_num;
     for (int idx = 0; idx < ins_num; ++idx) {
       if (auto val = getOffsetValueRecursively(rewriter, wrap_func.getArgument(0),
                                                wrap_mem_op->getOperand(idx))) {
-        mapper.map(it.getOperand(idx), val);
+        mapper.map(wrappedOneFlowOp.getOperand(idx), val);
+      } else {
+        llvm::errs() << "fail to convert wrapper op's operand#" + std::to_string(idx) + " \n";
+        wrap_mem_op->dump();
+        exit(1);
       }
     }
     ImplicitLocOpBuilder new_block(rewriter.getUnknownLoc(), rewriter);
-    auto new_op = new_block.clone(it, mapper);
+    auto new_op = new_block.clone(wrappedOneFlowOp, mapper);
     for (int idx = ins_num; idx < outs_num; ++idx) {
       llvm::TypeSwitch<Operation*>(wrap_mem_op->getOperand(idx).getDefiningOp())
           .Case<RetToMemrefOp>([&](RetToMemrefOp op) {
@@ -512,12 +519,15 @@ struct ConvertOKMToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
       }
       if (auto wrap_mem_op = llvm::dyn_cast_or_null<WrapperOp>(op)) {
         auto& wrap_ops = wrap_mem_op.getBody().front();
+        int32_t cnt_oneflow_ops = 0;
         for (auto& it : wrap_ops) {
           if (oneflow::OneFlowDialect::getDialectNamespace().equals(
                   it.getDialect()->getNamespace())) {
             ConvertOpToOKL(it, wrap_func, wrap_mem_op, rewriter, index);
+            cnt_oneflow_ops += 1;
           }
         }
+        CHECK(cnt_oneflow_ops == 1) << "must wrap one and only oneflow op";
       }
     }
     rewriter.setInsertionPointToEnd(&block);
