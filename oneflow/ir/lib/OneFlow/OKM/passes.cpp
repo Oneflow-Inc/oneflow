@@ -413,30 +413,32 @@ class OptOKMMemrefPass : public OptOKMMemrefPassBase<OptOKMMemrefPass> {
 std::unique_ptr<Pass> createOptOKMMemrefPass() { return std::make_unique<OptOKMMemrefPass>(); }
 
 struct ConvertOKMToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
-  static Value getOffsetValueRecursively(mlir::PatternRewriter& rewriter, Value tmpBuffer,
+  static Value getOffsetValueRecursively(mlir::PatternRewriter& rewriter, Value poolBuffer,
                                          Value wrapperOpOperand, Type fixedType = Type{}) {
     Type type = fixedType ? fixedType
                           : memref::getTensorTypeFromMemRefType(
                               wrapperOpOperand.getDefiningOp()->getResult(0).getType());
     return llvm::TypeSwitch<Operation*, Value>(wrapperOpOperand.getDefiningOp())
         .Case<ArgToMemrefOp>([&](ArgToMemrefOp op) {
-          return rewriter.create<okl::GetTensorFromArgOp>(rewriter.getUnknownLoc(), type, tmpBuffer,
-                                                          op.getIndex());
+          return rewriter.create<okl::GetTensorFromArgOp>(rewriter.getUnknownLoc(), type,
+                                                          poolBuffer, op.getIndex());
         })
         .Case<RetToMemrefOp>([&](RetToMemrefOp op) {
-          return rewriter.create<okl::GetTensorFromRetOp>(rewriter.getUnknownLoc(), type, tmpBuffer,
-                                                          op.getIndex());
+          return rewriter.create<okl::GetTensorFromRetOp>(rewriter.getUnknownLoc(), type,
+                                                          poolBuffer, op.getIndex());
         })
         .Case<memref::ReshapeOp>([&](memref::ReshapeOp op) {
-          return getOffsetValueRecursively(rewriter, tmpBuffer, op.getSource(), type);
+          return getOffsetValueRecursively(rewriter, poolBuffer, op.getSource(), type);
         })
-        // .Case<okm::WrapperOp>([&](okm::WrapperOp op) {
-        //   return getOffsetValueRecursively(rewriter, tmpBuffer, op, type);
-        // })
+        .Case<okm::WrapperOp>([&](okm::WrapperOp op) {
+          auto resultBuffer = op->getOperand(op.getNumOperands() - op->getNumResults()
+                                             + wrapperOpOperand.cast<OpResult>().getResultNumber());
+          return getOffsetValueRecursively(rewriter, poolBuffer, resultBuffer, type);
+        })
         .Case<memref::ViewOp>([&](memref::ViewOp op) {
           auto offset = rewriter.getI64IntegerAttr(
               llvm::dyn_cast<arith::ConstantIndexOp>(op.getByteShift().getDefiningOp()).value());
-          return rewriter.create<okl::PoolToTensorOp>(rewriter.getUnknownLoc(), type, tmpBuffer,
+          return rewriter.create<okl::PoolToTensorOp>(rewriter.getUnknownLoc(), type, poolBuffer,
                                                       offset);
         })
         .Default([&](Operation*) { return Value{}; });
