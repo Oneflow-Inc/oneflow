@@ -241,6 +241,29 @@ struct WrapOKMKernelPattern : public mlir::OpRewritePattern<func::FuncOp> {
     IRMapping mapper;
     for (auto& op : ops) {
       llvm::TypeSwitch<Operation*>(&op)
+          .Case<oneflow::ReshapeOp>([&](oneflow::ReshapeOp reshape) {
+            auto out = reshape.getOut();
+            auto loc = reshape->getLoc();
+            if (auto source = mapper.lookup(reshape.getIn())) {
+              if (auto type = out.getType().dyn_cast<TensorType>()) {
+                MemRefType mem_type = MemRefType::get(type.getShape(), type.getElementType());
+                MemRefType dimsType = MemRefType::get(
+                    {static_cast<int64_t>(out.getType().getRank())}, rewriter.getIndexType());
+                llvm::SmallVector<Attribute, 4> dims{};
+                for (auto i : out.getType().getShape()) {
+                  dims.push_back(rewriter.getIndexAttr(i));
+                }
+                auto denseAttr1D = DenseElementsAttr::get(dimsType, dims);
+                auto shape = rewriter.create<arith::ConstantOp>(loc, denseAttr1D);
+                memref::ReshapeOp memref_reshape =
+                    rewriter.create<memref::ReshapeOp>(loc, mem_type, source, shape);
+                mapper.map(out, memref_reshape.getResult());
+                return;
+              }
+            }
+            llvm::errs() << "Fail to compile reshape op";
+            exit(1);
+          })
           .Case<ArgToTensorOp>([&](ArgToTensorOp op) {
             auto mem_type = MemRefType::get(op.getType().getShape(), op.getType().getElementType());
             auto mem_op = rewriter.create<ArgToMemrefOp>(op->getLoc(), mem_type, op.getIndex());
