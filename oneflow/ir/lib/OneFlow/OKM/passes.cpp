@@ -413,41 +413,46 @@ class OptOKMMemrefPass : public OptOKMMemrefPassBase<OptOKMMemrefPass> {
 std::unique_ptr<Pass> createOptOKMMemrefPass() { return std::make_unique<OptOKMMemrefPass>(); }
 
 struct ConvertOKMToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
+  static Value getOffsetValueRecursively(mlir::PatternRewriter& rewriter, Value tmpBuffer,
+                                         Value wrapperOpOperand, Type fixedType = Type{}) {
+    Type type = fixedType ? fixedType
+                          : memref::getTensorTypeFromMemRefType(
+                              wrapperOpOperand.getDefiningOp()->getResult(0).getType());
+    return llvm::TypeSwitch<Operation*, Value>(wrapperOpOperand.getDefiningOp())
+        .Case<ArgToMemrefOp>([&](ArgToMemrefOp op) {
+          return rewriter.create<okl::GetTensorFromArgOp>(rewriter.getUnknownLoc(), type, tmpBuffer,
+                                                          op.getIndex());
+        })
+        .Case<RetToMemrefOp>([&](RetToMemrefOp op) {
+          return rewriter.create<okl::GetTensorFromRetOp>(rewriter.getUnknownLoc(), type, tmpBuffer,
+                                                          op.getIndex());
+        })
+        .Case<memref::ReshapeOp>([&](memref::ReshapeOp op) {
+          return getOffsetValueRecursively(rewriter, tmpBuffer, op.getSource(), type);
+        })
+        .Case<memref::ViewOp>([&](memref::ViewOp op) {
+          auto offset = rewriter.getI64IntegerAttr(
+              llvm::dyn_cast<arith::ConstantIndexOp>(op.getByteShift().getDefiningOp()).value());
+          return rewriter.create<okl::PoolToTensorOp>(rewriter.getUnknownLoc(), type, tmpBuffer,
+                                                      offset);
+        })
+        .Default([&](Operation*) { return Value{}; });
+  }
+
   static void ConvertOpToOKL(mlir::Operation& it, func::FuncOp& wrap_func, WrapperOp wrap_mem_op,
                              mlir::PatternRewriter& rewriter, int& index) {
     auto wrap_okl_op = rewriter.create<okl::WrapperKernelOp>(rewriter.getUnknownLoc(), index++);
     wrap_okl_op.getBody().emplaceBlock();
     OpBuilder::InsertionGuard insertGuard(rewriter);
     rewriter.setInsertionPointToStart(&wrap_okl_op.getBody().front());
-
     IRMapping mapper;
     auto ins_num = it.getNumOperands();
     auto outs_num = it.getNumResults() + ins_num;
     for (int idx = 0; idx < ins_num; ++idx) {
-      auto val = llvm::TypeSwitch<Operation*, Value>(wrap_mem_op->getOperand(idx).getDefiningOp())
-                     .Case<ArgToMemrefOp>([&](ArgToMemrefOp op) {
-                       return rewriter.create<okl::GetTensorFromArgOp>(
-                           rewriter.getUnknownLoc(),
-                           memref::getTensorTypeFromMemRefType(op->getResult(0).getType()),
-                           wrap_func.getArgument(0), op.getIndex());
-                     })
-                     .Case<RetToMemrefOp>([&](RetToMemrefOp op) {
-                       return rewriter.create<okl::GetTensorFromRetOp>(
-                           rewriter.getUnknownLoc(),
-                           memref::getTensorTypeFromMemRefType(op->getResult(0).getType()),
-                           wrap_func.getArgument(0), op.getIndex());
-                     })
-                     .Case<memref::ViewOp>([&](memref::ViewOp op) {
-                       auto offset = rewriter.getI64IntegerAttr(
-                           llvm::dyn_cast<arith::ConstantIndexOp>(op.getByteShift().getDefiningOp())
-                               .value());
-                       return rewriter.create<okl::PoolToTensorOp>(
-                           rewriter.getUnknownLoc(),
-                           memref::getTensorTypeFromMemRefType(op->getResult(0).getType()),
-                           wrap_func.getArgument(0), offset);
-                     })
-                     .Default([&](Operation*) { return Value{}; });
-      mapper.map(it.getOperand(idx), val);
+      if (auto val = getOffsetValueRecursively(rewriter, wrap_func.getArgument(0),
+                                               wrap_mem_op->getOperand(idx))) {
+        mapper.map(it.getOperand(idx), val);
+      }
     }
     ImplicitLocOpBuilder new_block(rewriter.getUnknownLoc(), rewriter);
     auto new_op = new_block.clone(it, mapper);
