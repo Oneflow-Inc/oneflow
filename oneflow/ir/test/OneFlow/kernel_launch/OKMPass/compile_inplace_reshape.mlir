@@ -5,7 +5,7 @@
 // RUN: -convert-okm-to-okl \
 // RUN: | FileCheck %s
 
-// CHECK-NOT: oneflow.reshape
+// CHECK-NOT: reshape
 
 module {
   func.func @_mlir_oneflow_subgraph0(%arg0: tensor<12xf16>) -> tensor<3x4xf16> {
