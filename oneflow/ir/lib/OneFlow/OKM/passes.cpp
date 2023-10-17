@@ -413,8 +413,8 @@ class OptOKMMemrefPass : public OptOKMMemrefPassBase<OptOKMMemrefPass> {
 std::unique_ptr<Pass> createOptOKMMemrefPass() { return std::make_unique<OptOKMMemrefPass>(); }
 
 struct ConvertOKMToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
-  static Value getOffsetValueRecursively(mlir::PatternRewriter& rewriter, Value poolBuffer,
-                                         Value wrapperOpOperand, Type fixedType = Type{}) {
+  static Value buildMemoryAccessRecursively(mlir::PatternRewriter& rewriter, Value poolBuffer,
+                                            Value wrapperOpOperand, Type fixedType = Type{}) {
     Type type = fixedType ? fixedType
                           : memref::getTensorTypeFromMemRefType(
                               wrapperOpOperand.getDefiningOp()->getResult(0).getType());
@@ -428,12 +428,12 @@ struct ConvertOKMToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
                                                           poolBuffer, op.getIndex());
         })
         .Case<memref::ReshapeOp>([&](memref::ReshapeOp op) {
-          return getOffsetValueRecursively(rewriter, poolBuffer, op.getSource(), type);
+          return buildMemoryAccessRecursively(rewriter, poolBuffer, op.getSource(), type);
         })
         .Case<okm::WrapperOp>([&](okm::WrapperOp op) {
           auto resultBuffer = op->getOperand(op.getNumOperands() - op->getNumResults()
                                              + wrapperOpOperand.cast<OpResult>().getResultNumber());
-          return getOffsetValueRecursively(rewriter, poolBuffer, resultBuffer, type);
+          return buildMemoryAccessRecursively(rewriter, poolBuffer, resultBuffer, type);
         })
         .Case<memref::ViewOp>([&](memref::ViewOp op) {
           auto offset = rewriter.getI64IntegerAttr(
@@ -454,8 +454,8 @@ struct ConvertOKMToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
     auto ins_num = wrappedOneFlowOp.getNumOperands();
     auto outs_num = wrappedOneFlowOp.getNumResults() + ins_num;
     for (int idx = 0; idx < ins_num; ++idx) {
-      if (auto val = getOffsetValueRecursively(rewriter, wrap_func.getArgument(0),
-                                               wrap_mem_op->getOperand(idx))) {
+      if (auto val = buildMemoryAccessRecursively(rewriter, wrap_func.getArgument(0),
+                                                  wrap_mem_op->getOperand(idx))) {
         mapper.map(wrappedOneFlowOp.getOperand(idx), val);
       } else {
         llvm::errs() << "fail to convert wrapper op's operand#" + std::to_string(idx) + " \n";
