@@ -44,31 +44,36 @@ static user_op::UserOpConfWrapper GetConfWrapper(mlir::Operation* op,
   return conf_wrapper_;
 }
 
+user_op::NaiveTensorDesc RegContext::getNaiveTensorDesc(mlir::Value obj) {
+  user_op::NaiveTensorDesc tensor_desc{};
+  if (auto rankedTensorType = obj.getType().template dyn_cast<mlir::RankedTensorType>()) {
+    tensor_desc.set_shape(
+        Shape{rankedTensorType.getShape().begin(), rankedTensorType.getShape().end()});
+    const auto data_type =
+        mlir::oneflow::support::FromMLIRTypeToOFDataType(rankedTensorType.getElementType());
+    if (mlir::failed(data_type)) { exit(1); }
+    tensor_desc.set_data_type(data_type.value());
+    llvm::SmallVector<int64_t> strides;
+    int64_t _;
+    auto mem_type =
+        mlir::MemRefType::get(rankedTensorType.getShape(), rankedTensorType.getElementType());
+    if (failed(mlir::getStridesAndOffset(mem_type, strides, _))) {
+      LOG(FATAL) << "Fail to get stride from memory type";
+    }
+    tensor_desc.set_stride(Stride(strides.begin(), strides.end()));
+    // TODO: set is_dynamic
+  } else {
+    LOG(FATAL) << "Unranked tensor type not supported";
+  }
+  return tensor_desc;
+}
+
 RegContext::RegContext(mlir::Operation* op) : op_(op), conf_wrapper_(GetConfWrapper(op, true)) {
   const auto handle_operands_or_results =
       [&op, this](const auto& arg_ids, const auto& get_operand_or_result, ArgVec& arg_vec) {
         for (const auto& obj_id : ::llvm::enumerate(arg_ids)) {
-          user_op::NaiveTensorDesc tensor_desc{};
           auto obj = get_operand_or_result(op, obj_id.index());
-          if (auto rankedTensorType = obj.getType().template dyn_cast<mlir::RankedTensorType>()) {
-            tensor_desc.set_shape(
-                Shape{rankedTensorType.getShape().begin(), rankedTensorType.getShape().end()});
-            const auto data_type =
-                mlir::oneflow::support::FromMLIRTypeToOFDataType(rankedTensorType.getElementType());
-            if (mlir::failed(data_type)) { exit(1); }
-            tensor_desc.set_data_type(data_type.value());
-            llvm::SmallVector<int64_t> strides;
-            int64_t _;
-            auto mem_type = mlir::MemRefType::get(rankedTensorType.getShape(),
-                                                  rankedTensorType.getElementType());
-            if (failed(mlir::getStridesAndOffset(mem_type, strides, _))) {
-              LOG(FATAL) << "Fail to get stride from memory type";
-            }
-            tensor_desc.set_stride(Stride(strides.begin(), strides.end()));
-            // TODO: set is_dynamic
-          } else {
-            LOG(FATAL) << "Unranked tensor type not supported";
-          }
+          user_op::NaiveTensorDesc tensor_desc = getNaiveTensorDesc(obj);
           CHECK(arg2tensor_desc_.emplace(obj_id.value(), tensor_desc).second) << "duplicate key";
           arg_vec.push_back(obj_id.value());
         }

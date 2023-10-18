@@ -24,8 +24,10 @@ namespace oneflow {
 namespace okl {
 // this context should support querying information about the kernel from representation in MLIR
 using ArgVec = std::vector<std::pair<std::string, int32_t>>;
+
 class RegContext final : public user_op::KernelRegContext {
  public:
+  static user_op::NaiveTensorDesc getNaiveTensorDesc(mlir::Value);
   explicit RegContext(mlir::Operation* op);
   ~RegContext() = default;
 

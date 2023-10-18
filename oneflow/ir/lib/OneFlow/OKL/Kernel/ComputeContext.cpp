@@ -48,7 +48,10 @@ user_op::Tensor* ComputeContext::CreateTensorWithArgNameAndIndex(const std::stri
     auto define_op = val.getDefiningOp();
     return llvm::TypeSwitch<::mlir::Operation*, user_op::Tensor*>(define_op)
         .Case([&](mlir::okl::GetTensorFromArgOp elem) {
-          return comp_ctx_->Tensor4ArgNameAndIndex("in", elem.getIndex());
+          auto t_original = comp_ctx_->Tensor4ArgNameAndIndex("in", elem.getIndex());
+          user_op::NaiveTensorDesc tensor_desc = RegContext::getNaiveTensorDesc(val);
+          alias_tensors.push_back(std::make_shared<AliasTensor>(t_original, tensor_desc, 0));
+          return alias_tensors.back().get();
         })
         .Case([&](mlir::okl::GetTensorFromRetOp elem) {
           return comp_ctx_->Tensor4ArgNameAndIndex("out", elem.getIndex());

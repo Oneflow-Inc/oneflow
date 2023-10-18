@@ -22,6 +22,31 @@ limitations under the License.
 
 namespace oneflow {
 namespace okl {
+
+class AliasTensor final : public oneflow::user_op::Tensor {
+ public:
+  explicit AliasTensor(user_op::Tensor* tensor, const user_op::NaiveTensorDesc& tensor_desc,
+                       int64_t offset)
+      : tensor_(tensor),
+        raw_dptr_(reinterpret_cast<char*>(tensor_->mut_raw_dptr()) + offset),
+        tensor_desc_(tensor_desc) {}
+
+  ShapeView shape_view() const override { return tensor_desc_.shape(); }
+  const Stride& stride() const override { return tensor_desc_.stride(); }
+  DataType data_type() const override { return tensor_desc_.data_type(); }
+  MemoryFormat memory_format() const override { return tensor_desc_.memory_format(); }
+  MutShapeView mut_shape_view() override { TODO(); }
+  const MemoryCase& mem_case() const override { return tensor_->mem_case(); }
+
+  const void* raw_dptr() const override { return raw_dptr_; }
+  void* mut_raw_dptr() override { return raw_dptr_; }
+
+ private:
+  user_op::Tensor* tensor_;
+  void* raw_dptr_;
+  const user_op::NaiveTensorDesc tensor_desc_;
+};
+
 class ComputeContext final : public user_op::KernelComputeContext {
  public:
   ComputeContext(RegContext const* reg_ctx, user_op::KernelComputeContext* comp_ctx)
@@ -55,6 +80,7 @@ class ComputeContext final : public user_op::KernelComputeContext {
   TmpBufferManager tmp_buffer_;
 
   std::unordered_map<mlir::oneflow::user_op::ArgID, user_op::Tensor*> tensor_{};
+  std::vector<std::shared_ptr<AliasTensor>> alias_tensors;
 
   user_op::Tensor* CreateTensorWithArgNameAndIndex(const std::string& arg_name, int32_t index);
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
