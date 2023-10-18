@@ -1,4 +1,4 @@
-// RUN: oneflow-opt %s \
+// RUN: oneflow-opt %s --mlir-print-ir-after-all \
 // RUN: -extract-okm-tensor \
 // RUN: -wrap-okm-kernel \
 // RUN: -opt-okm-memref \
