@@ -42,7 +42,7 @@ class TestInplaceVMRunGraphPass(flow.unittest.MLIRTestCase):
         os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
         # os.environ["ONEFLOW_MLIR_ENABLE_IR_PRINTING"] = "1"
         os.environ["ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH"] = "1"
-        os.environ["ONEFLOW_RUN_GRAPH_BY_VM"] = "1"
+        # os.environ["ONEFLOW_RUN_GRAPH_BY_VM"] = "1"
 
     def test_inplace_reshape(test_case):
         a = flow.randn(12, 1)
