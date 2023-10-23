@@ -1,7 +1,7 @@
 name: Call release workflow
 
 on:
-  pull_request:
+  push:
     branches:
       - priv-release
 
