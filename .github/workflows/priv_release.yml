@@ -1,0 +1,17 @@
+name: Call release workflow
+
+on:
+  pull_request:
+    branches:
+      - priv-release
+
+jobs:
+  call-workflow-passing-data:
+    permissions:
+      contents: read
+      pull-requests: write
+    uses: Oneflow-Inc/oneflow/.github/workflows/release.yml@priv-release
+    with:
+      is_priv: true
+    secrets:
+      token: ${{ secrets.GITHUB_TOKEN }}

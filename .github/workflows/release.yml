@@ -14,11 +14,18 @@ on:
       placeholder:
         description: "update .github/workflows/release.yml to config your build"
         required: false
+  workflow_call:
+    inputs:
+      is_priv:
+        required: true
+        type: boolean
+
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 env:
   ONEFLOW_SRC: .
+  ONEFLOW_PRIV_ORG: ${{ secrets.ONEFLOW_PRIV_ORG }}
 jobs:
   generate-build-matrix:
     name: "Generate build matrix"
@@ -31,9 +38,17 @@ jobs:
     steps:
       - name: Checkout Oneflow-Inc/oneflow
         uses: actions/checkout@v2
+        if: ${{ !inputs.is_priv }}
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
+      - name: Checkout Oneflow-Inc/oneflow
+        uses: actions/checkout@v2
+        if: ${{ inputs.is_priv }}
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          repository: ${{ secrets.ONEFLOW_PRIV_ORG }}/oneflow
+          token: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
       - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@add-nightly-date
         name: find cache
         id: find-cache
@@ -57,12 +72,12 @@ jobs:
     env:
       MANYLINUX_CACHE_DIR: ~/manylinux-cache-dir/release/${{ matrix.entry }}
       WHEELHOUSE_DIR: manylinux_wheelhouse
-      OSS_DIR: branch/${{ github.ref_name }}/${{ matrix.entry }}/${{ github.sha }}
+      OSS_DIR: ${{ secrets.ONEFLOW_PRIV_OSS_PREFIX }}/branch/${{ github.ref_name }}/${{ matrix.entry }}/${{ github.sha }}
     needs: [generate-build-matrix]
     name: Staging Release
     timeout-minutes: 180
     runs-on: [self-hosted, linux, release]
-    if: github.repository == 'Oneflow-Inc/oneflow'
+    if: github.repository == 'Oneflow-Inc/oneflow' || inputs.is_priv
     strategy:
       fail-fast: false
       max-parallel: 5
