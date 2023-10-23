@@ -19,7 +19,17 @@ on:
       is_priv:
         required: true
         type: boolean
-
+    secrets:
+      ONEFLOW_PRIV_ORG:
+        required: true
+      CI_PERSONAL_ACCESS_TOKEN:
+        required: true
+      ONEFLOW_PRIV_OSS_PREFIX:
+        required: true
+      OSS_ACCESS_KEY_ID:
+        required: true
+      OSS_ACCESS_KEY_SECRET:
+        required: true
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
@@ -185,7 +195,7 @@ jobs:
             --index_key=${{ env.OSS_DIR }}/index.html \
             --index_key=commit/${{ github.sha }}/${{ matrix.entry }}/index.html
       - name: Update API docs
-        if: github.ref == 'refs/heads/master' && matrix.entry == 'cpu'
+        if: github.ref == 'refs/heads/master' && matrix.entry == 'cpu' && !inputs.is_priv
         env:
           READTHEDOCS_TOKEN: ${{ secrets.READTHEDOCS_TOKEN }}
         run: |

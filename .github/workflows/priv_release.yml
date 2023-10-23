@@ -17,3 +17,9 @@ jobs:
     uses: Oneflow-Inc/oneflow/.github/workflows/release.yml@priv-release
     with:
       is_priv: true
+    secrets:
+      ONEFLOW_PRIV_ORG: ${{ secrets.ONEFLOW_PRIV_ORG }}
+      CI_PERSONAL_ACCESS_TOKEN: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
+      ONEFLOW_PRIV_OSS_PREFIX: ${{ secrets.ONEFLOW_PRIV_OSS_PREFIX }}
+      OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+      OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
