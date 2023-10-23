@@ -13,5 +13,3 @@ jobs:
     uses: Oneflow-Inc/oneflow/.github/workflows/release.yml@priv-release
     with:
       is_priv: true
-    secrets:
-      token: ${{ secrets.GITHUB_TOKEN }}
