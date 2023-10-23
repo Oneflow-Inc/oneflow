@@ -25,7 +25,6 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 env:
   ONEFLOW_SRC: .
-  ONEFLOW_PRIV_ORG: ${{ secrets.ONEFLOW_PRIV_ORG }}
 jobs:
   generate-build-matrix:
     name: "Generate build matrix"
