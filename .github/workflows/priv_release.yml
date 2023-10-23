@@ -5,6 +5,10 @@ on:
     branches:
       - priv-release
 
+concurrency:
+  group: priv-release-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   call-workflow-passing-data:
     permissions:
