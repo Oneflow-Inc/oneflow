@@ -26,7 +26,7 @@ jobs:
     uses: Oneflow-Inc/oneflow/.github/workflows/release.yml@priv-release
     with:
       is_priv: true
-      branch: ${{ inputs.priv_branch }}
+      branch: ${{ inputs.priv_branch || 'main' }}
     secrets:
       ONEFLOW_PRIV_ORG: ${{ secrets.ONEFLOW_PRIV_ORG }}
       ONEFLOW_PRIV_GH_TOKEN: ${{ secrets.ONEFLOW_PRIV_GH_TOKEN }}
