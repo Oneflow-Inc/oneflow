@@ -5,8 +5,9 @@ on:
     branches:
       - priv-release
   schedule:
-    # utc: 2 am.
-    - cron: "0 2 * * *"
+    # beijing: 12 am.
+    # utc: 4 am.
+    - cron: "0 4 * * *"
   workflow_dispatch:
     inputs:
       priv_branch:
