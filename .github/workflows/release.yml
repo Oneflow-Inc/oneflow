@@ -122,9 +122,10 @@ jobs:
       - name: Set Private env
         if: ${{ inputs.is_priv }}
         run: |
-          echo "OSS_DIR=${{ secrets.ONEFLOW_PRIV_OSS_PREFIX }}/branch/${{ inputs.branch }}/${{ matrix.entry }}/${{ github.sha }}" >> $GITHUB_ENV
+          GITHUB_SHA=$(git rev-parse HEAD)
+          echo "OSS_DIR=${{ secrets.ONEFLOW_PRIV_OSS_PREFIX }}/branch/${{ inputs.branch }}/${{ matrix.entry }}/${GITHUB_SHA}" >> $GITHUB_ENV
           echo "GITHUB_REF_NAME=${{ inputs.branch }}" >> $GITHUB_ENV
-          echo "GITHUB_SHA=$(git rev-parse HEAD)" >> $GITHUB_ENV
+          echo "GITHUB_SHA=${GITHUB_SHA}" >> $GITHUB_ENV
       - name: Print env
         if: ${{ inputs.is_priv }}
         run: |
