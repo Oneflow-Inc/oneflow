@@ -5,7 +5,7 @@ on:
     branches:
       - priv-release
   schedule:
-    # beijing: 12 am.
+    # beijing: 12 pm.
     # utc: 4 am.
     - cron: "0 4 * * *"
   workflow_dispatch:
@@ -24,7 +24,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-    uses: Oneflow-Inc/oneflow/.github/workflows/release.yml@priv-release
+    uses: Oneflow-Inc/oneflow/.github/workflows/release.yml@master
     with:
       is_priv: true
       branch: ${{ inputs.priv_branch || 'main' }}
