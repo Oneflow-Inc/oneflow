@@ -28,7 +28,7 @@ on:
         required: true
       ONEFLOW_PRIV_GH_TOKEN:
         required: true
-      ONEFLOW_PRIV_OSS_PREFIX:
+      ONEFLOW_PRIV_OSS_BUCKET:
         required: true
       OSS_ACCESS_KEY_ID:
         required: true
@@ -88,6 +88,7 @@ jobs:
       OSS_DIR: branch/${{ github.ref_name }}/${{ matrix.entry }}/${{ github.sha }}
       GITHUB_REF_NAME: ${{ github.ref_name }}
       GITHUB_SHA: ${{ github.sha }}
+      ONEFLOW_OSS_BUCKET: oneflow-staging
     needs: [generate-build-matrix]
     name: Staging Release
     timeout-minutes: 180
@@ -123,9 +124,10 @@ jobs:
         if: ${{ inputs.is_priv }}
         run: |
           GITHUB_SHA=$(git rev-parse HEAD)
-          echo "OSS_DIR=${{ secrets.ONEFLOW_PRIV_OSS_PREFIX }}/branch/${{ inputs.branch }}/${{ matrix.entry }}/${GITHUB_SHA}" >> $GITHUB_ENV
+          echo "OSS_DIR=branch/${{ inputs.branch }}/${{ matrix.entry }}/${GITHUB_SHA}" >> $GITHUB_ENV
           echo "GITHUB_REF_NAME=${{ inputs.branch }}" >> $GITHUB_ENV
           echo "GITHUB_SHA=${GITHUB_SHA}" >> $GITHUB_ENV
+          echo "ONEFLOW_OSS_BUCKET=${{ secrets.ONEFLOW_PRIV_OSS_BUCKET }}" >> $GITHUB_ENV
       - name: Print env
         if: ${{ inputs.is_priv }}
         run: |
@@ -208,7 +210,7 @@ jobs:
         uses: ./.github/actions/upload_oss
         with:
           src_path: ${{ env.WHEELHOUSE_DIR }}
-          oss_dst_path: oss://oneflow-staging/${{ env.OSS_DIR }}
+          oss_dst_path: oss://${{ env.ONEFLOW_OSS_BUCKET }}/${{ env.OSS_DIR }}
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Update pip index
@@ -218,7 +220,7 @@ jobs:
         run: |
           python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
           python3 -m pip install oss2 beautifulsoup4 --user
-          python3 tools/create_pip_index.py --dir_key ${{ env.OSS_DIR }} -b oneflow-staging \
+          python3 tools/create_pip_index.py --dir_key ${{ env.OSS_DIR }} -b ${{ env.ONEFLOW_OSS_BUCKET }} \
             --index_key=branch/${{ env.GITHUB_REF_NAME }}/${{ matrix.entry }}/index.html \
             --index_key=branch/${{ env.GITHUB_REF_NAME }}/date/${{ needs.generate-build-matrix.outputs.formatted_date }}/${{ matrix.entry }}/index.html \
             --index_key=${{ env.OSS_DIR }}/index.html \
