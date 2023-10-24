@@ -4,6 +4,14 @@ on:
   push:
     branches:
       - priv-release
+  schedule:
+    # utc: 2 am.
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+    inputs:
+      priv_branch:
+        required: false
+        default: "main"
 
 concurrency:
   group: priv-release-${{ github.ref }}
@@ -18,6 +26,7 @@ jobs:
     uses: Oneflow-Inc/oneflow/.github/workflows/release.yml@priv-release
     with:
       is_priv: true
+      branch: ${{ inputs.priv_branch }}
     secrets:
       ONEFLOW_PRIV_ORG: ${{ secrets.ONEFLOW_PRIV_ORG }}
       ONEFLOW_PRIV_GH_TOKEN: ${{ secrets.ONEFLOW_PRIV_GH_TOKEN }}
