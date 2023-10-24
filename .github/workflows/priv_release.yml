@@ -10,7 +10,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  call-workflow-passing-data:
+  release:
+    name: Release pip
     permissions:
       contents: read
       pull-requests: write
