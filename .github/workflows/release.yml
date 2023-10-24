@@ -22,7 +22,7 @@ on:
     secrets:
       ONEFLOW_PRIV_ORG:
         required: true
-      CI_PERSONAL_ACCESS_TOKEN:
+      PRIV_ONEFLOW_GH_TOKEN:
         required: true
       ONEFLOW_PRIV_OSS_PREFIX:
         required: true
@@ -51,13 +51,13 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - name: Checkout Oneflow-Inc/oneflow
+      - name: Checkout oneflow
         uses: actions/checkout@v2
         if: ${{ inputs.is_priv }}
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{ secrets.ONEFLOW_PRIV_ORG }}/oneflow
-          token: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
+          token: ${{ secrets.PRIV_ONEFLOW_GH_TOKEN }}
       - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@add-nightly-date
         name: find cache
         id: find-cache
@@ -100,7 +100,19 @@ jobs:
           python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
           python3 -m pip install -U setuptools wheel --user
           python3 -m pip install oss2  --user
-      - uses: actions/checkout@v2
+      - name: Checkout Oneflow-Inc/oneflow
+        uses: actions/checkout@v2
+        if: ${{ !inputs.is_priv }}
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          repository: ${{github.event.pull_request.head.repo.full_name}}
+      - name: Checkout oneflow
+        uses: actions/checkout@v2
+        if: ${{ inputs.is_priv }}
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          repository: ${{ secrets.ONEFLOW_PRIV_ORG }}/oneflow
+          token: ${{ secrets.PRIV_ONEFLOW_GH_TOKEN }}
       - uses: Oneflow-Inc/get-oneflow@add-nightly-date
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry =='cu118' }}
