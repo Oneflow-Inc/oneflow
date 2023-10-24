@@ -20,7 +20,7 @@ jobs:
       is_priv: true
     secrets:
       ONEFLOW_PRIV_ORG: ${{ secrets.ONEFLOW_PRIV_ORG }}
-      PRIV_ONEFLOW_GH_TOKEN: ${{ secrets.PRIV_ONEFLOW_GH_TOKEN }}
+      ONEFLOW_PRIV_GH_TOKEN: ${{ secrets.ONEFLOW_PRIV_GH_TOKEN }}
       ONEFLOW_PRIV_OSS_PREFIX: ${{ secrets.ONEFLOW_PRIV_OSS_PREFIX }}
       OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
       OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}

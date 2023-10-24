@@ -22,7 +22,7 @@ on:
     secrets:
       ONEFLOW_PRIV_ORG:
         required: true
-      PRIV_ONEFLOW_GH_TOKEN:
+      ONEFLOW_PRIV_GH_TOKEN:
         required: true
       ONEFLOW_PRIV_OSS_PREFIX:
         required: true
@@ -57,7 +57,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{ secrets.ONEFLOW_PRIV_ORG }}/oneflow
-          token: ${{ secrets.PRIV_ONEFLOW_GH_TOKEN }}
+          token: ${{ secrets.ONEFLOW_PRIV_GH_TOKEN }}
       - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@add-nightly-date
         name: find cache
         id: find-cache
@@ -112,7 +112,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{ secrets.ONEFLOW_PRIV_ORG }}/oneflow
-          token: ${{ secrets.PRIV_ONEFLOW_GH_TOKEN }}
+          token: ${{ secrets.ONEFLOW_PRIV_GH_TOKEN }}
       - uses: Oneflow-Inc/get-oneflow@add-nightly-date
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry =='cu118' }}
