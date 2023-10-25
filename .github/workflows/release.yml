@@ -62,7 +62,7 @@ jobs:
           ref: ${{ inputs.branch }}
           repository: ${{ secrets.ONEFLOW_PRIV_ORG }}/oneflow
           token: ${{ secrets.ONEFLOW_PRIV_GH_TOKEN }}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@add-nightly-date
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@support-cu12
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -132,7 +132,7 @@ jobs:
         if: ${{ inputs.is_priv }}
         run: |
           env
-      - uses: Oneflow-Inc/get-oneflow@add-nightly-date
+      - uses: Oneflow-Inc/get-oneflow@support-cu12
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry =='cu118' }}
         with:
@@ -157,7 +157,7 @@ jobs:
             3.8
             3.9
             3.10
-      - uses: Oneflow-Inc/get-oneflow@add-nightly-date
+      - uses: Oneflow-Inc/get-oneflow@support-cu12
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry !='cpu' && matrix.entry !='cu118' }}
         with:
@@ -182,7 +182,7 @@ jobs:
             3.8
             3.9
             3.10
-      - uses: Oneflow-Inc/get-oneflow@add-nightly-date
+      - uses: Oneflow-Inc/get-oneflow@support-cu12
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry =='cpu' }}
         with:
