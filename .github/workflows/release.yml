@@ -135,7 +135,7 @@ jobs:
           env
       - uses: Oneflow-Inc/get-oneflow@support-cu12
         name: Build ${{ matrix.entry }}
-        if: ${{ matrix.entry =='cu118' }}
+        if: ${{ matrix.entry =='cu118' || startsWith(matrix.entry, 'cu12') }}
         with:
           cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/release/${{ matrix.entry }}.cmake
           build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc9.sh
@@ -160,7 +160,7 @@ jobs:
             3.10
       - uses: Oneflow-Inc/get-oneflow@support-cu12
         name: Build ${{ matrix.entry }}
-        if: ${{ matrix.entry !='cpu' && matrix.entry !='cu118' }}
+        if: ${{ startsWith(matrix.entry, 'cu') && matrix.entry !='cu118' && !startsWith(matrix.entry, 'cu12') }}
         with:
           cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/release/cuda.cmake
           build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc9.sh
