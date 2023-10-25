@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - priv-release
+      - add-cu12-release
   schedule:
     # beijing: 12 pm.
     # utc: 4 am.
