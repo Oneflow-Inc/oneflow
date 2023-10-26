@@ -63,7 +63,7 @@ jobs:
           repository: ${{ secrets.ONEFLOW_PRIV_ORG }}/oneflow
           token: ${{ secrets.ONEFLOW_PRIV_GH_TOKEN }}
       - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@support-cu12
-        name: find cache (priv)
+        name: Find build cache
         id: find-cache
         if: ${{ inputs.is_priv }}
         timeout-minutes: 5
