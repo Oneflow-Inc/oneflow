@@ -25,7 +25,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-    uses: Oneflow-Inc/oneflow/.github/workflows/release.yml@add-cu12-release
+    uses: ./.github/workflows/release.yml
     with:
       is_priv: true
       branch: ${{ inputs.priv_branch || 'main' }}
