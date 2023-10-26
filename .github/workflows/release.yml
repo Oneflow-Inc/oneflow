@@ -63,8 +63,9 @@ jobs:
           repository: ${{ secrets.ONEFLOW_PRIV_ORG }}/oneflow
           token: ${{ secrets.ONEFLOW_PRIV_GH_TOKEN }}
       - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@support-cu12
-        name: find cache
-        id: find-cache
+        name: find cache (priv)
+        id: find-cache-priv
+        if: ${{ inputs.is_priv }}
         timeout-minutes: 5
         with:
           delete-cache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
@@ -76,9 +77,23 @@ jobs:
           entries: |
             cu122
             cu121
-            cu120
             cu118
-            cu117
+            cpu
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@support-cu12
+        name: find cache
+        id: find-cache
+        if: ${{ !inputs.is_priv }}
+        timeout-minutes: 5
+        with:
+          delete-cache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
+          runner-labels: |
+            self-hosted
+            linux
+            release
+          oneflow-src: ${{ env.ONEFLOW_SRC }}
+          entries: |
+            cu121
+            cu118
             cpu
       - name: Get current date
         id: date
