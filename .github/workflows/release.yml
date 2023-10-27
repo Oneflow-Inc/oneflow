@@ -65,7 +65,6 @@ jobs:
       - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@support-cu12
         name: Find build cache
         id: find-cache
-        if: ${{ inputs.is_priv }}
         timeout-minutes: 5
         with:
           delete-cache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
