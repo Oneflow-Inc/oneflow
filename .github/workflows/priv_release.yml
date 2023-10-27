@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - priv-release
+      - add-cu12-release
   schedule:
     # beijing: 12 pm.
     # utc: 4 am.
@@ -24,7 +25,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-    uses: Oneflow-Inc/oneflow/.github/workflows/release.yml@master
+    uses: ./.github/workflows/release.yml
     with:
       is_priv: true
       branch: ${{ inputs.priv_branch || 'main' }}

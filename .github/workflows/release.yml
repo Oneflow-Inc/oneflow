@@ -62,9 +62,10 @@ jobs:
           ref: ${{ inputs.branch }}
           repository: ${{ secrets.ONEFLOW_PRIV_ORG }}/oneflow
           token: ${{ secrets.ONEFLOW_PRIV_GH_TOKEN }}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@add-nightly-date
-        name: find cache
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@support-cu12
+        name: Find build cache
         id: find-cache
+        if: ${{ inputs.is_priv }}
         timeout-minutes: 5
         with:
           delete-cache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
@@ -74,8 +75,9 @@ jobs:
             release
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           entries: |
+            cu122
+            cu121
             cu118
-            cu117
             cpu
       - name: Get current date
         id: date
@@ -96,7 +98,7 @@ jobs:
     if: github.repository == 'Oneflow-Inc/oneflow' || inputs.is_priv
     strategy:
       fail-fast: false
-      max-parallel: 5
+      max-parallel: 6
       matrix: ${{ fromJson(needs.generate-build-matrix.outputs.matrix) }}
     steps:
       - name: Fix permissions
@@ -132,11 +134,11 @@ jobs:
         if: ${{ inputs.is_priv }}
         run: |
           env
-      - uses: Oneflow-Inc/get-oneflow@add-nightly-date
+      - uses: Oneflow-Inc/get-oneflow@support-cu12
         name: Build ${{ matrix.entry }}
-        if: ${{ matrix.entry =='cu118' }}
+        if: ${{ matrix.entry =='cu118' || startsWith(matrix.entry, 'cu12') }}
         with:
-          cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/release/${{ matrix.entry }}.cmake
+          cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/release/cu118.cmake
           build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc9.sh
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           oneflow-build-env: manylinux
@@ -157,9 +159,9 @@ jobs:
             3.8
             3.9
             3.10
-      - uses: Oneflow-Inc/get-oneflow@add-nightly-date
+      - uses: Oneflow-Inc/get-oneflow@support-cu12
         name: Build ${{ matrix.entry }}
-        if: ${{ matrix.entry !='cpu' && matrix.entry !='cu118' }}
+        if: ${{ startsWith(matrix.entry, 'cu') && matrix.entry !='cu118' && !startsWith(matrix.entry, 'cu12') }}
         with:
           cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/release/cuda.cmake
           build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc9.sh
@@ -182,7 +184,7 @@ jobs:
             3.8
             3.9
             3.10
-      - uses: Oneflow-Inc/get-oneflow@add-nightly-date
+      - uses: Oneflow-Inc/get-oneflow@support-cu12
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry =='cpu' }}
         with:
