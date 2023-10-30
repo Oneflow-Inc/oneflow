@@ -125,7 +125,6 @@ jobs:
         uses: actions/checkout@v2
         if: ${{ inputs.is_priv }}
         with:
-          ref: ${{ inputs.branch }}
           repository: ${{ secrets.ONEFLOW_PRIV_ORG }}/cutlass-extension
           token: ${{ secrets.ONEFLOW_PRIV_GH_TOKEN }}
           path: cutlass-extension
