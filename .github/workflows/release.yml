@@ -114,13 +114,21 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - name: Checkout oneflow
+      - name: Checkout private oneflow
         uses: actions/checkout@v2
         if: ${{ inputs.is_priv }}
         with:
           ref: ${{ inputs.branch }}
           repository: ${{ secrets.ONEFLOW_PRIV_ORG }}/oneflow
           token: ${{ secrets.ONEFLOW_PRIV_GH_TOKEN }}
+      - name: Checkout cutlass_extension
+        uses: actions/checkout@v2
+        if: ${{ inputs.is_priv }}
+        with:
+          ref: ${{ inputs.branch }}
+          repository: ${{ secrets.ONEFLOW_PRIV_ORG }}/cutlass-extension
+          token: ${{ secrets.ONEFLOW_PRIV_GH_TOKEN }}
+          path: cutlass-extension
       - name: Set Private env
         if: ${{ inputs.is_priv }}
         run: |
