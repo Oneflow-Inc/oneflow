@@ -35,7 +35,7 @@ on:
       OSS_ACCESS_KEY_SECRET:
         required: true
 concurrency:
-  group: release-${{ github.ref }}${{ inputs.branch }}
+  group: release-${{ github.ref }}-${{ inputs.branch }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 env:
   ONEFLOW_SRC: .
