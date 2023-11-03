@@ -299,6 +299,7 @@ DIRECT_PASS_FUNC(PyTensorObject_clamp_, functional::clamp_)
 DIRECT_PASS_FUNC(PyTensorObject_clamp_min_, functional::clamp_min_)
 DIRECT_PASS_FUNC(PyTensorObject_clamp_max_, functional::clamp_max_)
 DIRECT_PASS_FUNC(PyTensorObject_flatten, functional::flatten)
+DIRECT_PASS_FUNC(PyTensorObject_unflatten, functional::unflatten)
 DIRECT_PASS_FUNC(PyTensorObject_in_top_k, functional::in_top_k)
 DIRECT_PASS_FUNC(PyTensorObject_index_select, functional::index_select)
 DIRECT_PASS_FUNC(PyTensorObject_logsumexp, functional::logsumexp)
@@ -1048,6 +1049,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"clamp_min_", (PyCFunction)PyTensorObject_clamp_min_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"clamp_max_", (PyCFunction)PyTensorObject_clamp_max_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"flatten", (PyCFunction)PyTensorObject_flatten, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"unflatten", (PyCFunction)PyTensorObject_unflatten, METH_VARARGS | METH_KEYWORDS, NULL},
     {"in_top_k", (PyCFunction)PyTensorObject_in_top_k, METH_VARARGS | METH_KEYWORDS, NULL},
     {"index_select", (PyCFunction)PyTensorObject_index_select, METH_VARARGS | METH_KEYWORDS, NULL},
     {"maximum", (PyCFunction)PyTensorObject_maximum, METH_VARARGS | METH_KEYWORDS, NULL},

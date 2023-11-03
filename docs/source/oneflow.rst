@@ -410,6 +410,7 @@ Other Ops
     broadcast_shapes
     broadcast_tensors
     broadcast_to
+    unflatten
     unique
 
 BLAS and LAPACK Operations

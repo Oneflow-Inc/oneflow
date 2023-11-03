@@ -37,3 +37,38 @@ add_docstr(
 
     """,
 )
+
+add_docstr(
+    oneflow.unflatten,
+    """Expands a dimension of the input tensor over multiple dimensions.
+
+    See also :func:`oneflow.flatten` the inverse of this function. It coalesces several dimensions into one.
+
+    Args:
+        input(Tensor): the input tensor.
+        dim (int): Dimension to be unflattened, specified as an index into
+            ``input.shape``.
+        sizes (Tuple[int]): New shape of the unflattened dimension.
+            One of its elements can be `-1` in which case the corresponding output
+            dimension is inferred. Otherwise, the product of ``sizes`` *must*
+            equal ``input.shape[dim]``.
+
+    Returns:
+        A View of input with the specified dimension unflattened.
+
+    For example: 
+
+    .. code-block:: python 
+
+        >>> import oneflow as flow
+        >>> input = flow.randn(5, 12, 3)
+        >>> output = flow.unflatten(input, 1, (2, 2, 3, 1, 1))
+        >>> output.shape
+        oneflow.Size([5, 2, 2, 3, 1, 1, 3])
+        >>> input = flow.randn(3, 4, 1)
+        >>> output = flow.unflatten(input, 1, (2, 2))
+        >>> output.shape
+        oneflow.Size([3, 2, 2, 1])
+
+    """,
+)

@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/infer_size.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -427,6 +428,36 @@ class FlattenFunctor {
     DimVector dim_vec{in_shape.begin(), in_shape.begin() + true_start_dim + 1};
     for (int i = true_start_dim + 1; i <= true_end_dim; ++i) { dim_vec.back() *= in_shape[i]; }
     dim_vec.insert(dim_vec.end(), in_shape.begin() + true_end_dim + 1, in_shape.end());
+    Shape reshape_shape{dim_vec};
+    CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), reshape_shape.elem_cnt())
+        << Error::RuntimeError() << "invalid reshape from " << in_shape.ToString() << " to "
+        << reshape_shape.ToString();
+    return JUST(Reshape(x, reshape_shape));
+  }
+};
+
+class UnflattenFunctor {
+ public:
+  UnflattenFunctor() = default;
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& dim,
+                           const Shape& sizes) const {
+    CHECK_GT_OR_RETURN(sizes.size(), 0) << "unflatten: sizes must be non-empty";
+
+    const Shape& in_shape = *x->shape();
+    int64_t true_dim = JUST(maybe_wrap_dim(dim, in_shape.size()));
+
+    auto status = infer_size_dv(sizes, in_shape[true_dim]);
+    if (!status.IsOk()) {
+      return Error::RuntimeError() << "unflatten: Provided sizes " << sizes.ToString()
+                                   << " don't multiply up to the size of dim " << true_dim << " ("
+                                   << in_shape[true_dim] << ") in the input tensor";
+    }
+    DimVector inferred_size = *JUST(status);
+
+    DimVector dim_vec{in_shape.begin(), in_shape.end()};
+    dim_vec.erase(dim_vec.begin() + true_dim);
+    dim_vec.insert(dim_vec.begin() + true_dim, inferred_size.begin(), inferred_size.end());
     Shape reshape_shape{dim_vec};
     CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), reshape_shape.elem_cnt())
         << Error::RuntimeError() << "invalid reshape from " << in_shape.ToString() << " to "
@@ -4063,6 +4094,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OnesLikeFunctor>("OnesLike");
   m.add_functor<impl::FullLikeFunctor>("FullLike");
   m.add_functor<impl::FlattenFunctor>("Flatten");
+  m.add_functor<impl::UnflattenFunctor>("Unflatten");
   m.add_functor<impl::FillFunctor>("Fill");
   m.add_functor<impl::FillTensorFunctor>("FillTensor");
   m.add_functor<impl::WhereFunctor>("Where");
