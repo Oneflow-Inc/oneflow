@@ -61,14 +61,14 @@ OneFlow is a deep learning framework designed to be **user-friendly, scalable an
 - To install nightly release of OneFlow with CUDA support:
 
   ```bash
-  python3 -m pip install --pre oneflow -f https://oneflow-staging.oss-cn-beijing.aliyuncs.com/branch/master/cu117
+  python3 -m pip install --pre oneflow -f https://oneflow-staging.oss-cn-beijing.aliyuncs.com/branch/master/cu118
   ```
 
 - To install other available builds for different variants:
 
   - Stable
     ```bash
-    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.9.0+cu117
+    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.9.0+cu118
     ```
   - Nightly
     ```
@@ -77,7 +77,7 @@ OneFlow is a deep learning framework designed to be **user-friendly, scalable an
   - All available `[PLATFORM]`:
     | Platform |CUDA Driver Version| Supported GPUs |
     |---|---|---|
-    | cu117 | >= 450.80.02 | GTX 10xx, RTX 20xx, A100, RTX 30xx |
+    | cu118 | >= 450.80.02 | GTX 10xx, RTX 20xx, A100, RTX 30xx |
     | cpu | N/A | N/A |
 
 - If you are in China, you could run this to have pip download packages from domestic mirror of pypi:
