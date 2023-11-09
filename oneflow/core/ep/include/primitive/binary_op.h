@@ -38,6 +38,7 @@ enum class BinaryOp {
   kFloorMod,
   kScalarBasePowerGrad,
   kScalarExpPowerGrad,
+  kZeta,
   // Comparision
   kEqual,
   kNotEqual,
@@ -108,6 +109,7 @@ enum class BinaryOp {
   kTanBackwardWithDyX,
   kFastGeluBackwardWithDyX,
   kQuickGeluBackwardWithDyX,
+  kSquareReLUBackwardWithDyX,
 };
 
 }

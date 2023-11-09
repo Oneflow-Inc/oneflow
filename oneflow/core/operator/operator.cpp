@@ -1412,35 +1412,6 @@ Maybe<void> Operator::ToOpAttribute(OpAttribute* op_attribute) const {
       if (!has_same_parallel_conf_as_op) { (*map)[pair.first] = pair.second->parallel_conf(); }
     }
   }
-  if (op_parallel_desc_ && bn2parallel_desc_) {
-    if (op_conf().scope_symbol_id() != 0) {
-      const auto& scope_storage = *Singleton<symbol::Storage<Scope>>::Get();
-      const auto& scope = JUST(scope_storage.MaybeGet(op_conf().scope_symbol_id()));
-      int64_t parallel_desc_symbol_id = JUST(scope.GetParallelDescSymbolId(op_conf()));
-      auto* parallel_signature = op_attribute->mutable_parallel_signature();
-      parallel_signature->set_op_parallel_desc_symbol_id(parallel_desc_symbol_id);
-      auto* symbol_map = parallel_signature->mutable_bn_in_op2parallel_desc_symbol_id();
-      for (const auto& pair : *bn2parallel_desc_) {
-        if (*pair.second == *op_parallel_desc_) {
-          (*symbol_map)[pair.first] = parallel_desc_symbol_id;
-        } else {
-          ParallelConf parallel_conf = pair.second->parallel_conf();
-          const auto MakeParallelDescSymbol = [&parallel_conf]() -> Maybe<int64_t> {
-            int64_t symbol_id = 0;
-            const auto BuildInstruction =
-                [&symbol_id, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
-              symbol_id = JUST(JUST(builder->GetParallelDescSymbol(parallel_conf))->symbol_id());
-              return Maybe<void>::Ok();
-            };
-            JUST(PhysicalRun(BuildInstruction));
-            return symbol_id;
-          };
-          (*symbol_map)[pair.first] = JUST(MakeParallelDescSymbol());
-        }
-      }
-      for (const auto& tbn : tmp_bns()) { (*symbol_map)[tbn] = parallel_desc_symbol_id; }
-    }
-  }
   return Maybe<void>::Ok();
 }
 

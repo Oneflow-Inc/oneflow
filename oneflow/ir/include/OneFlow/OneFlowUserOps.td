@@ -344,6 +344,20 @@ def OneFlow_QuickGeluGradOp : OneFlow_BaseOp<"quick_gelu_grad", [NoMemoryEffect,
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_SquareReLUGradOp : OneFlow_BaseOp<"square_relu_grad", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_GridSampleOp : OneFlow_BaseOp<"grid_sample", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$input,
@@ -666,6 +680,20 @@ def OneFlow_XdivyOp : OneFlow_BaseOp<"xdivy", [NoMemoryEffect, DeclareOpInterfac
 }
 
 def OneFlow_XlogyOp : OneFlow_BaseOp<"xlogy", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
+  );
+  let output = (outs
+    OneFlow_Tensor:$z
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_BroadcastZetaOp : OneFlow_BaseOp<"broadcast_zeta", [NoGrad,NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x,
     OneFlow_Tensor:$y
@@ -3322,6 +3350,62 @@ def OneFlow_FusedCodegeexQkvReshapeOp : OneFlow_BaseOp<"fused_codegeex_qkv_resha
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_FusedClipGradOp : OneFlow_BaseOp<"fused_clip_grad", [NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    Variadic<OneFlow_Tensor>:$model_diff
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F32Attr, "2.">:$max_norm,
+    DefaultValuedAttr<F32Attr, "1.">:$norm_type
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_input_arg_modify_fn = 1;
+}
+
+def OneFlow_NonContiguousBinaryOp : OneFlow_BaseOp<"noncontiguous_binary_op", [NoMemoryEffect, SupportNonContiguous, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$lhs,
+    OneFlow_Tensor:$rhs
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let attrs = (ins
+    DefaultValuedAttr<StrAttr, "\"add\"">:$op,
+    DefaultValuedAttr<BoolAttr, "false">:$inplace
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_NonContiguousBinaryOpGrad : OneFlow_BaseOp<"noncontiguous_binary_op_grad", [NoMemoryEffect, SupportNonContiguous, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$lhs,
+    OneFlow_Tensor:$rhs
+  );
+  let output = (outs
+    OneFlow_Tensor:$dlhs,
+    OneFlow_Tensor:$drhs
+  );
+  let attrs = (ins
+    DefaultValuedAttr<StrAttr, "\"add\"">:$op,
+    DefaultValuedAttr<BoolAttr, "false">:$inplace
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 #endif // GET_ONEFLOW_FUSED_OP_DEFINITIONS
 
 
@@ -5073,7 +5157,70 @@ def OneFlow_ErfInvOp : OneFlow_BaseOp<"erfinv", [NoMemoryEffect, DeclareOpInterf
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_StftOp : OneFlow_BaseOp<"stft", [SupportNonContiguous,NoMemoryEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FftC2COp : OneFlow_BaseOp<"fft_c2c", [SupportNonContiguous, NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$input
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+
+  let attrs = (ins
+    SI64ArrayAttr:$dims,
+    BoolAttr:$forward,
+    SI32Attr:$norm_mode,
+    F64Attr:$norm_fct
+  );
+
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_FftR2COp : OneFlow_BaseOp<"fft_r2c", [SupportNonContiguous, NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$input
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+
+  let attrs = (ins
+    SI64ArrayAttr:$dims,
+    SI32Attr:$norm_mode,
+    F64Attr:$norm_fct,
+    BoolAttr:$onesided
+  );
+
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_FftC2ROp : OneFlow_BaseOp<"fft_c2r", [SupportNonContiguous, NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$input
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+
+  let attrs = (ins
+    SI64ArrayAttr:$dims,
+    SI32Attr:$norm_mode,
+    F64Attr:$norm_fct,
+    SI64Attr:$last_dim_size
+  );
+
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_StftOp : OneFlow_BaseOp<"stft", [SupportNonContiguous, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$input,
     Optional<OneFlow_Tensor>:$window
@@ -10281,6 +10428,19 @@ def OneFlow_QuickGeluOp : OneFlow_BaseOp<"quick_gelu", [NoMemoryEffect, DeclareO
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_SquareReLUOp : OneFlow_BaseOp<"square_relu", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_HardsigmoidOp : OneFlow_BaseOp<"hardsigmoid", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in
@@ -11926,7 +12086,7 @@ class OneFlow_JITLikeOp <string mnemonic> : OneFlow_BaseOp<mnemonic, [CallOpInte
   let output = (outs Variadic<AnyType>:$out);
   let attrs = (ins
     FlatSymbolRefAttr:$callee,
-    StrAttr:$mlir_assembly
+    BytesAttr:$mlir_assembly
   );
   let builders = [
     OpBuilder<(ins "func::FuncOp":$callee,

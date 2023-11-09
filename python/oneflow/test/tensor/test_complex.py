@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import numpy as np
+import torch as torch_original
+
 import os
 import unittest
 import oneflow as flow
@@ -523,8 +525,12 @@ class TestTensorComplex64(unittest.TestCase):
 
             # backward
             flow_ret.sum().backward()
-            compare_result(flow_x.grad.numpy(), flow_y.numpy(), self.rtol, self.atol)
-            compare_result(flow_y.grad.numpy(), flow_x.numpy(), self.rtol, self.atol)
+            compare_result(
+                flow_x.grad.numpy(), flow_y.numpy().conjugate(), self.rtol, self.atol
+            )
+            compare_result(
+                flow_y.grad.numpy(), flow_x.numpy().conjugate(), self.rtol, self.atol
+            )
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_mul_cuda(self):
@@ -549,10 +555,16 @@ class TestTensorComplex64(unittest.TestCase):
             # backward
             flow_ret.sum().backward()
             compare_result(
-                flow_x.grad.cpu().detach().numpy(), flow_y.numpy(), self.rtol, self.atol
+                flow_x.grad.cpu().detach().numpy(),
+                flow_y.numpy().conjugate(),
+                self.rtol,
+                self.atol,
             )
             compare_result(
-                flow_y.grad.cpu().detach().numpy(), flow_x.numpy(), self.rtol, self.atol
+                flow_y.grad.cpu().detach().numpy(),
+                flow_x.numpy().conjugate(),
+                self.rtol,
+                self.atol,
             )
 
     def test_sum_cpu(self):

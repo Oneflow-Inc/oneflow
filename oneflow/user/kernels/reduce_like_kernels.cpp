@@ -124,6 +124,17 @@ class ReduceSumLikeOpKernel final : public user_op::OpKernel, public user_op::Cu
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_REDUCE_SUM_LIKE_KERNEL, DEVICE_TYPE_SEQ,
                                  ARITHMETIC_DATA_TYPE_SEQ)
 
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_REDUCE_SUM_LIKE_KERNEL,
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU), COMPLEX_DATA_TYPE_SEQ);
+#if defined(WITH_CUDA)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_REDUCE_SUM_LIKE_KERNEL,
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
+                                 OF_PP_MAKE_TUPLE_SEQ(cuComplex, DataType::kComplex64));
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_REDUCE_SUM_LIKE_KERNEL,
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
+                                 OF_PP_MAKE_TUPLE_SEQ(cuDoubleComplex, DataType::kComplex128));
+#endif  // WITH_CUDA
+
 #if defined(WITH_CUDA)
 
 namespace {

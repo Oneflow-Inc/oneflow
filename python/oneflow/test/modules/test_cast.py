@@ -19,6 +19,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+import torch as torch_original
 
 import oneflow as flow
 import oneflow.unittest
@@ -173,6 +174,13 @@ class TestCast(flow.unittest.TestCase):
         y = x.to(dtype=torch.float64, device=device)
         z = y.to(dtype=torch.int8, device=device)
         return z
+
+    @autotest(n=5, auto_backward=True, include_complex=False, atol=1e-5, rtol=1e-5)
+    def test_cast_with_complex_float2complex(test_case):
+        device = random_device()
+        x = random_tensor().to(dtype=torch.float32, device=device)
+        y = x.to(torch.complex64)
+        return y
 
 
 if __name__ == "__main__":

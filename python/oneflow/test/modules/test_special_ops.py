@@ -130,5 +130,60 @@ class TestSpecialOps(flow.unittest.TestCase):
         return y
 
 
+@flow.unittest.skip_unless_1n1d()
+class TestZeta(flow.unittest.TestCase):
+    # the grad func of zeta is not supported
+    @autotest(n=5, auto_backward=False)
+    def test_flow_zeta_with_random_data(test_case):
+        device = random_device()
+        x_dtype = random_dtype(["arithmetic"])
+        input = (
+            random_tensor(ndim=2, dim0=20, dim1=20, low=1, high=10)
+            .to(device)
+            .to(x_dtype)
+        )
+        other = (
+            random_tensor(ndim=2, dim0=20, dim1=20, low=1, high=10)
+            .to(device)
+            .to(x_dtype)
+        )
+        out = torch.special.zeta(input, other)
+        return out
+
+    @autotest(n=5, auto_backward=False)
+    def test_flow_zeta_broadcast_input(test_case):
+        device = random_device()
+        x_dtype = random_dtype(["arithmetic"])
+        input = random_tensor(ndim=2, dim0=1, dim1=20).to(device).to(x_dtype)
+        other = random_tensor(ndim=2, dim0=20, dim1=20).to(device).to(x_dtype)
+        out = torch.special.zeta(input, other)
+        return out
+
+    @autotest(n=5, auto_backward=False)
+    def test_flow_zeta_broadcast_other(test_case):
+        device = random_device()
+        x_dtype = random_dtype(["arithmetic"])
+        input = random_tensor(ndim=2, dim0=20, dim1=20).to(device).to(x_dtype)
+        other = random_tensor(ndim=2, dim0=1, dim1=20).to(device).to(x_dtype)
+        out = torch.special.zeta(input, other)
+        return out
+
+    @autotest(n=5, auto_backward=False)
+    def test_flow_zeta_scalar_other(test_case):
+        device = random_device()
+        x_dtype = random_dtype(["arithmetic"])
+        input = random_tensor(ndim=2, dim0=2, dim1=20).to(device).to(x_dtype)
+        out = torch.special.zeta(0.5, input)
+        return out
+
+    @autotest(n=5, auto_backward=False)
+    def test_flow_zeta_scalar_other(test_case):
+        device = random_device()
+        x_dtype = random_dtype(["arithmetic"])
+        input = random_tensor(ndim=2, dim0=2, dim1=20).to(device).to(x_dtype)
+        out = torch.special.zeta(input, 0.5)
+        return out
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -5223,6 +5223,8 @@ class GroupedMatmulFunctor {
   Maybe<TensorTuple> operator()(const TensorTuple& xs, const TensorTuple& weights) const {
     const int64_t input_size = xs.size();
     const int64_t weight_size = weights.size();
+    CHECK_LT_OR_RETURN(input_size, kMaxInputCount)
+        << Error::RuntimeError() << "input_size size should not be greater than 128";
     CHECK_GE_OR_RETURN(input_size, 1)
         << Error::RuntimeError() << "The number of xs should be greater equal than 1.";
     CHECK_EQ_OR_RETURN(weight_size, input_size)
@@ -5339,6 +5341,79 @@ class FusedScaleMaskBiasSoftmaxGradFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale");
     attrs.SetAllAttrs(scale);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {y, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedClipGradFunctor {
+ public:
+  FusedClipGradFunctor() {
+    op_.resize(kMaxInputCount /*the maximum number of inputs*/);
+    for (int n = 0; n < op_.size(); ++n) {
+      op_[n] = CHECK_JUST(
+          one::OpBuilder("fused_clip_grad").Input("model_diff", n + 1).Output("out").Build());
+    }
+  }
+
+  Maybe<Tensor> operator()(const TensorTuple& model_diff, const float& max_norm,
+                           const float& norm_type) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("max_norm", "norm_type");
+    attrs.SetAllAttrs(max_norm, norm_type);
+    const int64_t input_size = model_diff.size();
+    CHECK_LE_OR_RETURN(input_size, kMaxInputCount)
+        << Error::RuntimeError() << "model_diff size should not be greater than 128";
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_[input_size - 1], model_diff, attrs));
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> op_;
+};
+
+class NonContiguousBinaryOpFunctor {
+ public:
+  NonContiguousBinaryOpFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("noncontiguous_binary_op").Input("lhs").Input("rhs").Output("y").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& lhs, const std::shared_ptr<Tensor>& rhs,
+                           const std::string& op, const bool& inplace = false) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("op", "inplace");
+    attrs.SetAllAttrs(op, inplace);
+    if (inplace) {
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = lhs;
+      JUST(OpInterpUtil::Dispatch(*op_, {lhs, rhs}, outputs.get(), attrs));
+      return outputs->at(0);
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {lhs, rhs}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class NonContiguousBinaryOpGradFunctor {
+ public:
+  NonContiguousBinaryOpGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("noncontiguous_binary_op_grad")
+                         .Input("dy")
+                         .Input("lhs")
+                         .Input("rhs")
+                         .Output("dlhs")
+                         .Output("drhs")
+                         .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& dy,
+                                const std::shared_ptr<Tensor>& lhs,
+                                const std::shared_ptr<Tensor>& rhs, const std::string& op,
+                                const bool& inplace = false) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("op", "inplace");
+    attrs.SetAllAttrs(op, inplace);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, lhs, rhs}, attrs);
   }
 
  private:
@@ -5478,7 +5553,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SkipRMSNormFunctor>("SkipRMSNorm");
   m.add_functor<impl::FusedScaleMaskBiasSoftmaxFunctor>("FusedScaleMaskBiasSoftmax");
   m.add_functor<impl::FusedScaleMaskBiasSoftmaxGradFunctor>("FusedScaleMaskBiasSoftmaxGrad");
+  m.add_functor<impl::NonContiguousBinaryOpFunctor>("NonContiguousBinaryOp");
+  m.add_functor<impl::NonContiguousBinaryOpGradFunctor>("NonContiguousBinaryOpGrad");
   m.add_functor<impl::MultiTensorYoloV5WeightUpdateFunctor>("MultiTensorYoloV5WeightUpdate");
+  m.add_functor<impl::FusedClipGradFunctor>("FusedClipGrad");
 }
 
 }  // namespace functional

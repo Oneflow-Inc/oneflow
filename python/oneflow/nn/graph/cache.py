@@ -20,7 +20,7 @@ from typing import Dict, Union
 
 from oneflow.framework.args_tree import ArgsTree
 from oneflow.framework.tensor import Tensor
-import oneflow as flow
+import oneflow
 
 
 class LRUCache(object):
@@ -132,6 +132,28 @@ class GraphCache(object):
             state_dict["cache_order"] = graph._oneflow_graph_cache_order
             state_dict["cache_key"] = key
             destination[state_dict["graph_name"]] = state_dict
+        return destination
+
+    @staticmethod
+    def runtime_state_dict_to(
+        state_dict: Union[
+            Dict[str, Union[Dict[str, Tensor], str]],
+            Dict[str, Dict[str, Union[Dict[str, Tensor], str]]],
+        ],
+        device: str,
+    ) -> Union[
+        Dict[str, Union[Dict[str, Tensor], str]],
+        Dict[str, Dict[str, Union[Dict[str, Tensor], str]]],
+    ]:
+        destination = OrderedDict()
+        destination._metadata = OrderedDict()
+        for (key, sub_state_dict) in state_dict.items():
+            dest_sub_state_dict = oneflow.nn.Graph.runtime_state_dict_to(
+                sub_state_dict, device
+            )
+            dest_sub_state_dict["cache_order"] = sub_state_dict["cache_order"]
+            dest_sub_state_dict["cache_key"] = sub_state_dict["cache_key"]
+            destination[key] = dest_sub_state_dict
         return destination
 
     def _init_and_get_a_graph_in_cache(self, cache_key):
