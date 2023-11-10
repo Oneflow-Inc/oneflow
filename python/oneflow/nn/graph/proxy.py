@@ -232,7 +232,7 @@ class ProxyModule(Proxy):
             # the underlying function __func__ is called, inserting the class instance __self__ in front of
             # the argument list."
             # Reference: https://docs.python.org/3/reference/datamodel.html
-            unbound_forward_of_module_instance = self.to(Module).forward.__func__
+            unbound_forward_of_module_instance = self.to(Module).__call__.__func__
             result = unbound_forward_of_module_instance(self, *args, **kwargs)
         self.to(GraphModule)._is_executing_forward = False
         return result
