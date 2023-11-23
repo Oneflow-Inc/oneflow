@@ -299,20 +299,18 @@ def vjp(func, inputs, v=None, create_graph=False, strict=False):
 
     Example:
 
-        >>> # xdoctest: +REQUIRES(env:TORCH_DOCTEST_AUTOGRAD)
         >>> def exp_reducer(x):
         ...     return x.exp().sum(dim=1)
-        >>> inputs = torch.rand(4, 4)
-        >>> v = torch.ones(4)
-        >>> # xdoctest: +IGNORE_WANT("non-deterministic")
-        >>> vjp(exp_reducer, inputs, v)
+        >>> inputs = flow.rand(4, 4)
+        >>> v = flow.ones(4)
+        >>> vjp(exp_reducer, inputs, v) # doctest: +ELLIPSIS
         (tensor([5.7817, 7.2458, 5.7830, 6.7782]),
          tensor([[1.4458, 1.3962, 1.3042, 1.6354],
                 [2.1288, 1.0652, 1.5483, 2.5035],
                 [2.2046, 1.1292, 1.1432, 1.3059],
                 [1.3225, 1.6652, 1.7753, 2.0152]]))
 
-        >>> vjp(exp_reducer, inputs, v, create_graph=True)
+        >>> vjp(exp_reducer, inputs, v, create_graph=True) # doctest: +ELLIPSIS
         (tensor([5.7817, 7.2458, 5.7830, 6.7782], grad_fn=<SumBackward1>),
          tensor([[1.4458, 1.3962, 1.3042, 1.6354],
                 [2.1288, 1.0652, 1.5483, 2.5035],
@@ -321,9 +319,9 @@ def vjp(func, inputs, v=None, create_graph=False, strict=False):
 
         >>> def adder(x, y):
         ...     return 2 * x + 3 * y
-        >>> inputs = (torch.rand(2), torch.rand(2))
-        >>> v = torch.ones(2)
-        >>> vjp(adder, inputs, v)
+        >>> inputs = (flow.rand(2), flow.rand(2))
+        >>> v = flow.ones(2)
+        >>> vjp(adder, inputs, v)  # doctest: +ELLIPSIS
         (tensor([2.4225, 2.3340]),
          (tensor([2., 2.]), tensor([3., 3.])))
     """
