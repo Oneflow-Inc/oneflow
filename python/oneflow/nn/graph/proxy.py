@@ -633,6 +633,9 @@ class ProxyTensor(Proxy):
     def _oneflow_internal_graphblock__set_origin(self, origin):
         self._oneflow_internal_origin__ = origin
 
+    def __getattr__(self, name):
+        return getattr(self._oneflow_internal_origin__, name)
+
     @property
     def lazy_origin(self):
         assert (
