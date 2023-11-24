@@ -35,6 +35,7 @@ class TestAutogradFunctional(flow.unittest.TestCase):
 
         def _func_multi_tensor(x, y):
             return (x.exp() + y.pow(2)).sum(dim=1)
+
         inputs = (torch.randn(5, 5), torch.randn(5, 5))
         result_tensors = torch.autograd.functional.vjp(_func_multi_tensor, inputs, v)
 
