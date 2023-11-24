@@ -271,6 +271,8 @@ def _fill_in_zeros(grads, refs, strict, create_graph, stage):
 def vjp(func, inputs, v=None, create_graph=False, strict=False):
     r"""Compute the dot product between a vector ``v`` and the Jacobian of the given function at the point given by the inputs.
 
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.autograd.functional.vjp.html
+
     Args:
         func (function): a Python function that takes Tensor inputs and returns
             a tuple of Tensors or a Tensor.

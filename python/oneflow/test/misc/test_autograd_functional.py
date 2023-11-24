@@ -24,13 +24,22 @@ class TestAutogradFunctional(flow.unittest.TestCase):
     def test_vjp(test_case):
         def _func_tensor(x):
             return x.exp().sum(dim=1)
+
         def _func_scalar(x):
             return x.exp().sum()
+
         inputs = torch.randn(5, 5)
         v = torch.randn(5)
         result_tensor = torch.autograd.functional.vjp(_func_tensor, inputs, v)
         result_scalar = torch.autograd.functional.vjp(_func_scalar, inputs)
-        return [result_tensor, result_scalar]
+
+        def _func_multi_tensor(x, y):
+            return (x.exp() + y.pow(2)).sum(dim=1)
+        inputs = (torch.randn(5, 5), torch.randn(5, 5))
+        result_tensors = torch.autograd.functional.vjp(_func_multi_tensor, inputs, v)
+
+        return [result_tensor, result_scalar, result_tensors]
+
 
 if __name__ == "__main__":
     unittest.main()
