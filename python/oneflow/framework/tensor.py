@@ -533,6 +533,10 @@ def _conj_physical(self):
     return flow._C.conj_physical(self)
 
 
+def _storage(self):
+    return self
+
+
 @property
 def _layout(self):
     return flow.strided
@@ -610,6 +614,7 @@ def RegisterMethods():
     Tensor.conj = _conj
     Tensor.conj_physical = _conj_physical
     Tensor.layout = _layout
+    Tensor.storage = _storage
 
 
 def register_tensor_op(op_name):

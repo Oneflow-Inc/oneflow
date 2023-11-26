@@ -142,7 +142,7 @@ class BroadcastMul : public BroadcastBinaryGrad {
     in_grads->resize(2);
     if (ctx->x_requires_grad) {
       const auto& y = ctx->SavedTensors().at(ctx->y_index);
-      const auto& x_grad = JUST(functional::Mul(out_grads.at(0), y));
+      const auto& x_grad = JUST(functional::Mul(out_grads.at(0), JUST(functional::Conj(y))));
       if (ctx->broadcast_x) {
         const auto& x = ctx->SavedTensors().at(ctx->x_index);
         in_grads->at(0) = JUST(functional::BroadcastReduceSumLike(x_grad, x));
@@ -152,7 +152,7 @@ class BroadcastMul : public BroadcastBinaryGrad {
     }
     if (ctx->y_requires_grad) {
       const auto& x = ctx->SavedTensors().at(ctx->x_index);
-      const auto& y_grad = JUST(functional::Mul(out_grads.at(0), x));
+      const auto& y_grad = JUST(functional::Mul(out_grads.at(0), JUST(functional::Conj(x))));
       if (ctx->broadcast_y) {
         const auto& y = ctx->SavedTensors().at(ctx->y_index);
         in_grads->at(1) = JUST(functional::BroadcastReduceSumLike(y_grad, y));
@@ -191,7 +191,8 @@ class BroadcastDiv : public BroadcastBinaryGrad {
     in_grads->resize(2);
     if (ctx->x_requires_grad) {
       const auto& y = ctx->SavedTensors().at(ctx->y_index);
-      const auto& x_grad = JUST(functional::Div(out_grads.at(0), y));
+      // const auto& x_grad = JUST(functional::Div(out_grads.at(0), y));
+      const auto& x_grad = JUST(functional::Div(out_grads.at(0), JUST(functional::Conj(y))));
       if (ctx->broadcast_x) {
         const auto& x = ctx->SavedTensors().at(ctx->x_index);
         in_grads->at(0) = JUST(functional::BroadcastReduceSumLike(x_grad, x));

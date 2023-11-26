@@ -78,7 +78,7 @@ class TestSumModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_sum_impl(test_case, *arg)
 
-    @autotest(check_graph=True)
+    @autotest(check_graph=True, include_complex=True)
     def test_sum_against_pytorch(test_case):
         device = random_device()
         x = random_tensor(4, random(0, 5), 2).to(device)
@@ -97,21 +97,63 @@ class TestSumModule(flow.unittest.TestCase):
         )
         return y
 
+    @autotest(
+        n=10,
+        check_graph=False,
+        auto_backward=True,
+        include_complex=True,
+        atol=1e-2,
+        rtol=1e-5,
+    )
+    def test_sum_complex_dtype(test_case):
+        device = random_device()
+        x = random_tensor(4, dtype=complex, requires_grad=True).to(
+            device=device, dtype=random_dtype(["complex"])
+        )
+        y = torch.sum(
+            x,
+            dim=np.random.randint(0, 3),
+            keepdim=random_bool(),
+            dtype=random_dtype(["complex"]),
+        )
+        return y
+
+    @autotest(
+        n=10,
+        check_graph=False,
+        auto_backward=True,
+        include_complex=True,
+        atol=1e-2,
+        rtol=1e-5,
+    )
+    def test_sum_complex_dtype(test_case):
+        device = random_device()
+        x = random_tensor(4, dtype=complex, requires_grad=True).to(
+            device=device, dtype=random_dtype(["complex"])
+        )
+        y = torch.sum(
+            x,
+            dim=np.random.randint(0, 3),
+            keepdim=random_bool(),
+            dtype=random_dtype(["complex"]),
+        )
+        return y
+
     @autotest(check_graph=True, auto_backward=False)
-    def test_sum_whole_dtype(test_case):
+    def test_sum_arithmetic_dtype(test_case):
         device = random_device()
         x = random_tensor(4, requires_grad=False).to(device)
         y = torch.sum(x, dtype=random_dtype(["arithmetic"]))
         return y
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(auto_backward=False, check_graph=True, include_complex=True)
     def test_sum_with_0_size_tensor(test_case):
         device = random_device()
         x = random_tensor(4, 4, 3, 0, 2).to(device)
         y = torch.sum(x, dim=np.random.randint(0, 3))
         return y
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(auto_backward=False, check_graph=True, include_complex=True)
     def test_sum_with_0dim_tensor(test_case):
         device = random_device()
         x = random_tensor(ndim=0).to(device)

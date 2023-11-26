@@ -40,6 +40,7 @@ from oneflow._C import max_unpool2d
 from oneflow._C import max_unpool3d
 from oneflow._C import cosine_similarity, pairwise_distance
 from oneflow._C import relu
+from oneflow._C import square_relu
 from oneflow._C import hardtanh
 from oneflow._C import hardsigmoid
 from oneflow._C import hardshrink

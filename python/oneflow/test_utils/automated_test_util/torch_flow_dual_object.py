@@ -1267,6 +1267,7 @@ def autotest(
                     global testing_complex
                     if include_complex:
                         testing_complex = True
+                        testing_graph = False
 
                     res = f(test_case, *args, **kwargs)
 

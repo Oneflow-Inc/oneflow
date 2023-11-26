@@ -43,6 +43,7 @@ enum class UnaryOp {
   kThreshold,
   kFastGelu,
   kQuickGelu,
+  kSquareReLU,
   // math op
   kAbs,
   kAcos,
@@ -97,6 +98,13 @@ enum class UnaryOp {
 
   // bitwise op
   kBitwiseNot,
+
+  // complex op
+  kConj,
+  kReal,
+  kImag,
+  kRealGrad,
+  kImagGrad
 };
 
 }

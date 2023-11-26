@@ -32,6 +32,7 @@ def clip_grad_norm_(
     parameters: _tensor_or_tensors,
     max_norm: float,
     norm_type: float = 2.0,
+    fused: bool = False,
     error_if_nonfinite: bool = False,
 ) -> Tensor:
     r"""Clips gradient norm of an iterable of parameters.
@@ -142,6 +143,11 @@ def clip_grad_norm_(
         clip_coef_clamped = clip_coef.clamp(max=1.0)
         for p in parameters:
             p.grad.detach().mul_(clip_coef_clamped.to_global(placement=p.placement))
+    elif fused and not error_if_nonfinite and all([p.grad.is_cuda for p in parameters]):
+        param_grad_list = []
+        for param in parameters:
+            param_grad_list.append(param.grad)
+        total_norm = flow._C.fused_clip_grad(param_grad_list, max_norm, norm_type,)
     else:
         device = parameters[0].grad.device
         if norm_type == float("inf"):

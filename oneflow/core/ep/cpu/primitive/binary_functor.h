@@ -247,6 +247,22 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kScalarExpPowerGrad, float16, D
   float scalar_operand;
 };
 
+template<typename Dst>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kSqrtBackwardWithDyX, std::complex<float>, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC Dst operator()(std::complex<float> dy, std::complex<float> x) const {
+    return dy * static_cast<std::complex<float>>(0.5) / std::conj(std::sqrt(x));
+  }
+};
+
+template<typename Dst>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kSqrtBackwardWithDyX, std::complex<double>, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC Dst operator()(std::complex<double> dy, std::complex<double> x) const {
+    return dy * static_cast<std::complex<double>>(0.5) / std::conj(std::sqrt(x));
+  }
+};
+
 template<typename Src, typename Dst>
 struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kGeluBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
@@ -291,6 +307,16 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kQuickGeluBackwardWithDyX, Src,
 
  private:
   static constexpr Src alpha = static_cast<Src>(1.702);
+};
+
+template<typename Src, typename Dst>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kSquareReLUBackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    return static_cast<Dst>((x > static_cast<Src>(0.0)) ? static_cast<Src>(2.0) * x * dy
+                                                        : static_cast<Src>(0.0));
+  }
 };
 
 template<typename Src, typename Dst>

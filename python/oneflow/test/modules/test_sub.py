@@ -18,6 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+import torch as torch_original
 
 from oneflow.test_utils.automated_test_util import *
 from oneflow.test_utils.test_util import GenArgList
@@ -100,7 +101,7 @@ class TestSubModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_sub_impl(test_case, *arg)
 
-    @autotest(n=5, auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True, include_complex=True)
     def test_random_dim_sub(test_case):
         device = random_device()
         dim0 = random(low=1, high=4).to(int)
@@ -110,7 +111,7 @@ class TestSubModule(flow.unittest.TestCase):
         z = x - y
         return z
 
-    @autotest(n=5, auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True, include_complex=True)
     def test_random_dim_scalar_sub(test_case):
         device = random_device()
         dim0 = random(low=1, high=4).to(int)
@@ -120,7 +121,7 @@ class TestSubModule(flow.unittest.TestCase):
         z = x - y
         return z
 
-    @autotest(n=5, auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True, include_complex=True)
     def test_sub_with_0_size_data(test_case):
         device = random_device()
         x = random_tensor(2, 0, 3).to(device)
@@ -131,7 +132,7 @@ class TestSubModule(flow.unittest.TestCase):
         out4 = torch.sub(x, y)
         return out1, out2, out3, out4
 
-    @autotest(n=5, auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True, include_complex=True)
     def test_sub_with_0dim_data(test_case):
         device = random_device()
         x = random_tensor(ndim=0).to(device)
@@ -142,7 +143,7 @@ class TestSubModule(flow.unittest.TestCase):
         out4 = torch.sub(x, y)
         return out1, out2, out3, out4
 
-    @autotest(n=5)
+    @autotest(n=5, include_complex=True)
     def test_sub_with_alpha(test_case):
         device = random_device()
         x1 = random_tensor(2, 2, 3).to(device)
@@ -156,7 +157,7 @@ class TestSubModule(flow.unittest.TestCase):
         z3 = torch.sub(s, x3, alpha=alpha)
         return z1, z2, z3
 
-    @autotest(n=3)
+    @autotest(n=5, include_complex=True)
     def test_non_contiguous_inplace_sub(test_case):
         device = random_device()
         x = random_tensor(2, 2, 4).to(device)
@@ -166,7 +167,7 @@ class TestSubModule(flow.unittest.TestCase):
         return y
 
     @unittest.skip("skip for now, becase it failed 2 times in past week")
-    @autotest(n=5)
+    @autotest(n=5, include_complex=True)
     def test_scalar_sub_with_random_devices(test_case):
         x1_device = random_device()
         x2_device = random_device()

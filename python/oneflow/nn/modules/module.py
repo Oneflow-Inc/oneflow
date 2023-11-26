@@ -1268,6 +1268,8 @@ class Module(object):
         return handle
 
     def _apply(self, fn):
+        if not hasattr(self, "cpg"):
+            self.cpg = None
         if self.cpg is not None:
             self.cpg = None
             warnings.warn(

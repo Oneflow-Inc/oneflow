@@ -22,13 +22,17 @@ limitations under the License.
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/graph/stream_id.h"
+#include "oneflow/core/graph/plan_task_graph.h"
 
 namespace oneflow {
 
 struct PlanUtil {
   static RegstDescProto* GetSoleProducedDataRegst(TaskProto* task_proto);
   static std::function<const TaskProto*(int64_t)> MakeGetterTaskProto4TaskId(const Plan& plan);
-  static void MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job);
+  // limited_rank equals -1 means taking care of all ranks.
+  // Otherwise, only take care of rank limited_rank.
+  static void MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job,
+                                              int64_t limited_rank = -1);
   static void SetUniqueMemBlockId4UnreusedMemRegst(Plan* plan);
   static void GenMemBlockAndChunk4Plan(Plan* plan);
   static void GenMemBlockAndChunkWithVariableOpNames4Plan(
@@ -36,11 +40,16 @@ struct PlanUtil {
   static void CleanUselessMemBlockAndCheckValid(Plan* plan);
   static void ToDotFile(const Plan& plan, const std::string& filepath);
   static std::function<RegstDescProto*(int64_t)> MakeMutRegstDesc4Id(Plan* plan);
-  static void SetForceInplaceMemBlock(Plan* plan);
+  // limited_rank equals -1 means taking care of all ranks.
+  // Otherwise, only take care of rank limited_rank.
+  static void SetForceInplaceMemBlock(Plan* plan, int64_t limited_rank = -1);
   static void DumpCtrlRegstInfoToPlan(Plan* plan);
   static void GenCollectiveBoxingPlan(Job* job, Plan* plan);
   static void GenRegisterHint(Plan* plan);
-  static void GenLightPlan(Plan* plan, const std::string& plan_name);
+  // Generate readable plan log from plan proto.
+  // Use filter_rank to choose which rank to generate. When filter_rank is -1, all rank will be
+  // generated. The default value of filter_rank is -1.
+  static void GenLightPlan(Plan* plan, const std::string& plan_name, int64_t limited_rank = -1);
   static void PlanMemoryLog(Plan* plan, const std::string& plan_name);
   static const oneflow::OpAttribute& GetOpAttribute(const Plan* plan, int64_t job_id,
                                                     const oneflow::KernelConf& kernel_conf);
@@ -50,6 +59,7 @@ struct PlanUtil {
       const PbMap<int64_t, ::oneflow::OpAttributeRefTable>& job_id2op_attribute_ref_table);
   static StreamId GetStreamId(const TaskProto& task);
   static int64_t GetDeviceIndex(const TaskProto& task);
+  static void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto);
 };
 
 }  // namespace oneflow

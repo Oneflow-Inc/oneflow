@@ -70,6 +70,25 @@ int64_t ThreadLocalEnvInteger();
 
 DEFINE_THREAD_LOCAL_ENV_INTEGER(ONEFLOW_THRAED_LOCAL_CACHED_SIZE, 128 * 1024);
 
+template<typename env_var>
+const std::string& ThreadLocalEnvString();
+
+#define DEFINE_THREAD_LOCAL_ENV_STRING(env_var, default_value)                                  \
+  struct env_var {};                                                                            \
+  template<>                                                                                    \
+  inline const std::string& ThreadLocalEnvString<env_var>() {                                   \
+    thread_local std::string value = GetStringFromEnv(OF_PP_STRINGIZE(env_var), default_value); \
+    return value;                                                                               \
+  }
+
+DEFINE_THREAD_LOCAL_ENV_BOOL(ONEFLOW_ENABLE_LAZY_SEPARATE_COMPILE, false);
+// Default compilation mode during graph compilation. There 2 modes to choose:
+// "naive", master rank compile the full plan.
+// "rank_per_process", multi process(rank) run seperation compile.
+DEFINE_THREAD_LOCAL_ENV_STRING(ONEFLOW_LAZY_COMPILE_MODE, "naive");
+// Default number of threads during graph compilation.
+DEFINE_THREAD_LOCAL_ENV_INTEGER(ONEFLOW_LAZY_COMPILE_RPC_THREAD_NUM, 16);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_ENV_VAR_ENV_VAR_H_

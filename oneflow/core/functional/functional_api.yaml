@@ -755,6 +755,14 @@
   signature: "Tensor (Tensor dy, Tensor x) => QuickGeluGrad"
   bind_python: False
 
+- name: "square_relu"
+  signature: "Tensor (Tensor x) => SquareReLU"
+  bind_python: True
+
+- name: "square_relu_grad"
+  signature: "Tensor (Tensor dy, Tensor x) => SquareReLUGrad"
+  bind_python: False
+
 - name: "gelu_with_approximate"
   signature: 'Tensor (Tensor x, String approximate="none") => GeluWithApproximate'
   bind_python: True
@@ -3481,4 +3489,8 @@
     "Tensor (Scalar x, Tensor other) => ZetaScalarTensor",
     "Tensor (Tensor x, Scalar other) => ZetaTensorScalar",
   ]
+  bind_python: True
+
+- name: "fused_clip_grad"
+  signature: "Tensor (TensorTuple model_diff, Float max_norm, Float norm_type) => FusedClipGrad"
   bind_python: True

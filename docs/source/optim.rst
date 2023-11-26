@@ -179,6 +179,7 @@ Algorithms
     LAMB
     RMSprop
     SGD
+    LBFGS
 
 Adjust Learning Rate
 --------------------
