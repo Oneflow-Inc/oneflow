@@ -65,6 +65,7 @@ def convmixer_768_32_relu(pretrained: bool = False, progress: bool = True, **kwa
     model = ConvMixer(768, 32, kernel_size=7, patch_size=7, n_classes=1000)
     return model
 
+
 def convmixer_512_24_relu(pretrained: bool = False, progress: bool = True, **kwargs):
     """
     Constructs a smaller ConvMixer model with 24 depth and 512 hidden size.
@@ -72,4 +73,3 @@ def convmixer_512_24_relu(pretrained: bool = False, progress: bool = True, **kwa
     """
     model = ConvMixer(512, 24, kernel_size=7, patch_size=7, n_classes=1000)
     return model
-
