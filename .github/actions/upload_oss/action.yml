@@ -18,7 +18,7 @@ runs:
           exit 0
         fi
         if [ ! -f "$HOME/ossutil64" ]; then
-          curl http://gosspublic.alicdn.com/ossutil/1.6.19/ossutil64 -o $HOME/ossutil64
+          curl http://gosspublic.alicdn.com/ossutil/1.7.15/ossutil64 -o $HOME/ossutil64
         fi
         chmod 755 $HOME/ossutil64
         $HOME/ossutil64 config -e oss-cn-beijing.aliyuncs.com -i ${{ inputs.oss_access_key_id }} -k ${{ inputs.oss_access_key_secret }}  -L EN -c $HOME/.ossutilconfig
@@ -33,7 +33,7 @@ runs:
             upload_core_arg+='--exclude "core*"'
         fi
         set -x
-        $HOME/ossutil64 cp --update ${dir_arg} ${upload_core_arg} ${{ inputs.src_path }} ${{ inputs.oss_dst_path }}
+        $HOME/ossutil64 cp --disable-ignore-error --update ${dir_arg} ${upload_core_arg} ${{ inputs.src_path }} ${{ inputs.oss_dst_path }}
       shell: bash
       env:
         OSS_ACCESS_KEY_ID: ${{ inputs.oss_access_key_id }}

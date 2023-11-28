@@ -253,7 +253,7 @@ jobs:
           git reset --hard
           git clean -f
           git archive --prefix oneflow/ --format zip HEAD > oneflow-src.zip
-          curl http://gosspublic.alicdn.com/ossutil/1.6.19/ossutil64 -o $HOME/ossutil64
+          curl http://gosspublic.alicdn.com/ossutil/1.7.15/ossutil64 -o $HOME/ossutil64
           chmod 755 $HOME/ossutil64
           $HOME/ossutil64 config -e oss-cn-beijing.aliyuncs.com -i ${OSS_ACCESS_KEY_ID} -k ${OSS_ACCESS_KEY_SECRET}  -L EN -c $HOME/.ossutilconfig
-          $HOME/ossutil64 cp --update oneflow-src.zip oss://oneflow-public/oneflow-src.zip
+          $HOME/ossutil64 cp --disable-ignore-error --update oneflow-src.zip oss://oneflow-public/oneflow-src.zip
