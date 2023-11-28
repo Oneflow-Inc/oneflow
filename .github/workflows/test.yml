@@ -188,7 +188,7 @@ jobs:
             builder
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           entries: |
-            cu116
+            cu118
             cpu
             cpu-asan-ubsan
             cpu-tsan
@@ -279,7 +279,7 @@ jobs:
       - uses: Oneflow-Inc/get-oneflow@support-cu12
         name: Build manylinux ${{ matrix.entry }}
         id: build-cuda
-        if: ${{ matrix.entry =='cu116' && !matrix.cache-hit }}
+        if: ${{ matrix.entry =='cu118' && !matrix.cache-hit }}
         with:
           cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/cuda.cmake
           build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc9.sh
