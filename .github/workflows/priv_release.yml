@@ -12,7 +12,7 @@ on:
     inputs:
       priv_branch:
         required: false
-        default: "main"
+        default: "community"
 
 concurrency:
   group: priv-release-${{ github.ref }}
@@ -27,7 +27,7 @@ jobs:
     uses: ./.github/workflows/release.yml
     with:
       is_priv: true
-      branch: ${{ inputs.priv_branch || 'main' }}
+      branch: ${{ inputs.priv_branch || 'community' }}
     secrets:
       ONEFLOW_PRIV_ORG: ${{ secrets.ONEFLOW_PRIV_ORG }}
       ONEFLOW_PRIV_GH_TOKEN: ${{ secrets.ONEFLOW_PRIV_GH_TOKEN }}
