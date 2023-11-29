@@ -1,21 +1,21 @@
-name: Priv Release
+name: Community Release
 
 on:
   push:
     branches:
-      - "pro/*"
+      - "community/*"
   schedule:
-    # beijing: 12 pm.
-    # utc: 4 am.
-    - cron: "0 4 * * *"
+    # beijing: 6 pm.
+    # utc: 10 am.
+    - cron: "0 10 * * *"
   workflow_dispatch:
     inputs:
       priv_branch:
         required: false
-        default: "main"
+        default: "community"
 
 concurrency:
-  group: priv-release-${{ github.ref }}
+  group: community-release-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -27,7 +27,7 @@ jobs:
     uses: ./.github/workflows/release.yml
     with:
       is_priv: true
-      branch: ${{ inputs.priv_branch || 'main' }}
+      branch: ${{ inputs.priv_branch || 'community' }}
     secrets:
       ONEFLOW_PRIV_ORG: ${{ secrets.ONEFLOW_PRIV_ORG }}
       ONEFLOW_PRIV_GH_TOKEN: ${{ secrets.ONEFLOW_PRIV_GH_TOKEN }}
