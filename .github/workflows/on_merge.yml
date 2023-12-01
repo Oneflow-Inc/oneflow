@@ -15,6 +15,6 @@ jobs:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
-      - uses: Oneflow-Inc/get-oneflow/update-benchmark-history@fix-whl-size-cu12
+      - uses: Oneflow-Inc/get-oneflow/update-benchmark-history@fix-so-skip-for-cu12
         name: Update benchmark history
         timeout-minutes: 10
