@@ -140,7 +140,7 @@ def _check_requires_grad(inputs, input_type, strict):
     if not strict:
         return
 
-    if input_type not in ["outputs", "grad_inputs", "jacobian", "hessian"]:
+    if input_type not in ["outputs", "grad_inputs"]:
         raise RuntimeError("Invalid input_type to _check_requires_grad")
     for i, inp in enumerate(inputs):
         if inp is None:
@@ -150,22 +150,7 @@ def _check_requires_grad(inputs, input_type, strict):
                 " This is not allowed in strict mode."
             )
         if not inp.requires_grad:
-            if input_type == "hessian":
-                raise RuntimeError(
-                    f"The hessian of the user-provided function with respect to input {i}"
-                    " is independent of the input. This is not allowed in strict mode."
-                    " You should ensure that your function is thrice differentiable and that"
-                    " the hessian depends on the inputs."
-                )
-            elif input_type == "jacobian":
-                raise RuntimeError(
-                    "While computing the hessian, found that the jacobian of the user-provided"
-                    f" function with respect to input {i} is independent of the input. This is not"
-                    " allowed in strict mode. You should ensure that your function is twice"
-                    " differentiable and that the jacobian depends on the inputs (this would be"
-                    " violated by a linear function for example)."
-                )
-            elif input_type == "grad_inputs":
+            if input_type == "grad_inputs":
                 raise RuntimeError(
                     f"The gradient with respect to input {i} is independent of the inputs of the"
                     " user-provided function. This is not allowed in strict mode."
