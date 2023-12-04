@@ -200,7 +200,7 @@ def _fill_in_zeros(grads, refs, strict, create_graph, stage):
     # with Tensors full of 0s of the appropriate size based on the refs or raise an error.
     # strict and create graph allow us to detect when it is appropriate to raise an error
     # stage gives us information of which backward call we consider to give good error message
-    if stage not in ["back", "back_trick", "double_back", "double_back_trick"]:
+    if stage not in ["back"]:
         raise RuntimeError(f"Invalid stage argument '{stage}' to _fill_in_zeros")
 
     res: Tuple[flow.Tensor, ...] = tuple()
@@ -210,17 +210,6 @@ def _fill_in_zeros(grads, refs, strict, create_graph, stage):
                 if stage == "back":
                     raise RuntimeError(
                         "The output of the user-provided function is independent of "
-                        f"input {i}. This is not allowed in strict mode."
-                    )
-                elif stage == "back_trick":
-                    raise RuntimeError(
-                        f"The gradient with respect to the input is independent of entry {i}"
-                        " in the grad_outputs when using the double backward trick to compute"
-                        " forward mode gradients. This is not allowed in strict mode."
-                    )
-                elif stage == "double_back":
-                    raise RuntimeError(
-                        "The jacobian of the user-provided function is independent of "
                         f"input {i}. This is not allowed in strict mode."
                     )
                 else:
