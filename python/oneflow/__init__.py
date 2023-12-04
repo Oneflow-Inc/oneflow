@@ -86,7 +86,8 @@ def oneflow_deprecate(*api_names, **kwargs):
 
 def is_deprecated(func_or_class):
     return (
-        isinstance(func_or_class, collections.abc.Hashable) and func_or_class in _DEPRECATED
+        isinstance(func_or_class, collections.abc.Hashable)
+        and func_or_class in _DEPRECATED
     )
 
 
