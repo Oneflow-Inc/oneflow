@@ -66,7 +66,9 @@ void TestFill(DeviceManagerRegistry* registry, const std::set<DeviceType>& devic
     fill->Launch(stream.stream(), device_mem.ptr(), Scalar(0), n);
     d2h->Launch(stream.stream(), host_mem.ptr(), device_mem.ptr(), vector_size);
     CHECK_JUST(stream.stream()->Sync());
-    for (size_t i = 0; i < n; ++i) { ASSERT_EQ(*reinterpret_cast<T*>(host_mem.ptr<T>() + i), 0); }
+    for (size_t i = 0; i < n; ++i) {
+      ASSERT_EQ(*reinterpret_cast<T*>(host_mem.ptr<T>() + i), static_cast<T>(0));
+    }
   }
 }
 
