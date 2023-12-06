@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <type_traits>
 #include <gtest/gtest.h>
 #include "oneflow/core/ep/test/primitive/primitive_test.h"
 #include "oneflow/core/ep/include/primitive/memset.h"
@@ -66,8 +67,15 @@ void TestFill(DeviceManagerRegistry* registry, const std::set<DeviceType>& devic
     fill->Launch(stream.stream(), device_mem.ptr(), Scalar(0), n);
     d2h->Launch(stream.stream(), host_mem.ptr(), device_mem.ptr(), vector_size);
     CHECK_JUST(stream.stream()->Sync());
+
     for (size_t i = 0; i < n; ++i) {
-      ASSERT_EQ(*reinterpret_cast<T*>(host_mem.ptr<T>() + i), static_cast<T>(0));
+      if constexpr (std::is_same_v<T, half>) {
+        ASSERT_EQ(*reinterpret_cast<T*>(host_mem.ptr<T>() + i), __float2half(0.0));
+      } else if constexpr (std::is_same_v<T, nv_bfloat16>) {
+        ASSERT_EQ(*reinterpret_cast<T*>(host_mem.ptr<T>() + i), __float2bfloat16(0.0));
+      } else {
+        ASSERT_EQ(*reinterpret_cast<T*>(host_mem.ptr<T>() + i), static_cast<T>(0));
+      }
     }
   }
 }
