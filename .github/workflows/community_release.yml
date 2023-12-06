@@ -15,7 +15,7 @@ on:
         default: "community"
 
 concurrency:
-  group: community-release-${{ github.ref }}
+  group: community-release-${{ github.ref }}-${{ inputs.priv_branch }}
   cancel-in-progress: true
 
 jobs:

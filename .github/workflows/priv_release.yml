@@ -15,7 +15,7 @@ on:
         default: "main"
 
 concurrency:
-  group: priv-release-${{ github.ref }}
+  group: priv-release-${{ github.ref }}-${{ inputs.priv_branch }}
   cancel-in-progress: true
 
 jobs:
