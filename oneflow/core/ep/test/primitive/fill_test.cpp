@@ -69,13 +69,19 @@ void TestFill(DeviceManagerRegistry* registry, const std::set<DeviceType>& devic
     CHECK_JUST(stream.stream()->Sync());
 
     for (size_t i = 0; i < n; ++i) {
+#ifdef WITH_CUDA
       if constexpr (std::is_same_v<T, half>) {
         ASSERT_EQ(*reinterpret_cast<T*>(host_mem.ptr<T>() + i), __float2half(0.0));
+#if CUDA_VERSION >= 11000
       } else if constexpr (std::is_same_v<T, nv_bfloat16>) {
         ASSERT_EQ(*reinterpret_cast<T*>(host_mem.ptr<T>() + i), __float2bfloat16(0.0));
+#endif  // CUDA_VERSION >= 11000
       } else {
         ASSERT_EQ(*reinterpret_cast<T*>(host_mem.ptr<T>() + i), static_cast<T>(0));
       }
+#else
+      ASSERT_EQ(*reinterpret_cast<T*>(host_mem.ptr<T>() + i), static_cast<T>(0));
+#endif  // WITH_CUDA
     }
   }
 }
