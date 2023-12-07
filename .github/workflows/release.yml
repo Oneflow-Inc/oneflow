@@ -161,7 +161,6 @@ jobs:
           nightly-date: ${{ needs.generate-build-matrix.outputs.formatted_date }}
           use-nvidia-wheels: ${{ matrix.entry !='cu112' }}
           python-versions: |
-            3.7
             3.8
             3.9
             3.10
@@ -186,7 +185,6 @@ jobs:
           nightly-date: ${{ needs.generate-build-matrix.outputs.formatted_date }}
           use-nvidia-wheels: ${{ matrix.entry !='cu112' }}
           python-versions: |
-            3.7
             3.8
             3.9
             3.10
@@ -210,7 +208,6 @@ jobs:
           nightly: ${{ github.event_name == 'schedule' || github.ref == 'refs/heads/release/add_nightly_date_index'}}
           nightly-date: ${{ needs.generate-build-matrix.outputs.formatted_date }}
           python-versions: |
-            3.7
             3.8
             3.9
             3.10
