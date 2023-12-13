@@ -161,10 +161,10 @@ jobs:
           nightly-date: ${{ needs.generate-build-matrix.outputs.formatted_date }}
           use-nvidia-wheels: ${{ matrix.entry !='cu112' }}
           python-versions: |
-            3.8
-            3.9
-            3.10
             3.11
+            3.10
+            3.9
+            3.8
       - uses: Oneflow-Inc/get-oneflow@support-py311-py312
         name: Build ${{ matrix.entry }}
         if: ${{ startsWith(matrix.entry, 'cu') && matrix.entry !='cu118' && !startsWith(matrix.entry, 'cu12') }}
@@ -186,10 +186,10 @@ jobs:
           nightly-date: ${{ needs.generate-build-matrix.outputs.formatted_date }}
           use-nvidia-wheels: ${{ matrix.entry !='cu112' }}
           python-versions: |
-            3.8
-            3.9
-            3.10
             3.11
+            3.10
+            3.9
+            3.8
       - uses: Oneflow-Inc/get-oneflow@support-py311-py312
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry =='cpu' }}
@@ -210,10 +210,10 @@ jobs:
           nightly: ${{ github.event_name == 'schedule' || github.ref == 'refs/heads/release/add_nightly_date_index'}}
           nightly-date: ${{ needs.generate-build-matrix.outputs.formatted_date }}
           python-versions: |
-            3.8
-            3.9
-            3.10
             3.11
+            3.10
+            3.9
+            3.8
       - name: Upload wheel
         uses: ./.github/actions/upload_oss
         with:
