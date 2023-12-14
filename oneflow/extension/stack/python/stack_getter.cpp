@@ -23,6 +23,13 @@ limitations under the License.
 #include "fmt/ostream.h"
 #include "pybind11/pybind11.h"
 
+#if PY_VERSION_HEX >= 0x030b0000
+#ifndef Py_BUILD_CORE
+#define Py_BUILD_CORE 1
+#endif
+#include "internal/pycore_frame.h"
+#endif
+
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
 #include "oneflow/core/common/singleton.h"
@@ -48,11 +55,10 @@ class PyFrame final : public Frame {
   // There is no need to increase the reference count of these cpython objects
   // because they must be alive during the lifetime of `PyFrame`.
   PyFrame(PyFrameObject* frame, std::shared_ptr<PyFrame> back)
-      : filename(frame->f_code->co_filename),
-        funcname(frame->f_code->co_name),
-        cpython_frame(frame),
-        lineno(0),
-        back(std::move(back)) {}
+      : cpython_frame(frame), lineno(0), back(std::move(back)) {
+    filename = PyFrame_GetCode(frame)->co_filename;
+    funcname = PyFrame_GetCode(frame)->co_name;
+  }
   ~PyFrame() = default;
   OF_DISALLOW_COPY_AND_MOVE(PyFrame);
 
@@ -123,7 +129,11 @@ class PyStackGetter final : public ForeignStackGetter {
     PushFrame(frame);
 #if PY_VERSION_HEX >= 0x03090000
     if (tstate == NULL) { tstate = PyThreadState_GET(); }
+#if PY_VERSION_HEX >= 0x030b0000
+    PyObject* ret = _PyEval_EvalFrameDefault(tstate, frame->f_frame, throw_flag);
+#else
     PyObject* ret = _PyEval_EvalFrameDefault(tstate, frame, throw_flag);
+#endif
 #else
     PyObject* ret = _PyEval_EvalFrameDefault(frame, throw_flag);
 #endif
@@ -172,7 +182,7 @@ namespace {
 std::string get_python_frame_str_repr(PyFrameObject* frame) {
   if (frame == NULL) return "";
   std::string buffer;
-  PyCodeObject* code = frame->f_code;
+  PyCodeObject* code = PyFrame_GetCode(frame);
   std::string file_name = PyUnicodeToStdString(code->co_filename);
   std::string code_name = PyUnicodeToStdString(code->co_name);
   int line_number = PyFrame_GetLineNumber(frame);
@@ -222,7 +232,7 @@ bool check_if_python_file_should_be_filtered(const std::string& path) {
 }
 
 bool check_if_frame_should_be_filtered(PyFrameObject* frame) {
-  std::string frame_file_name = PyUnicodeToStdString(frame->f_code->co_filename);
+  std::string frame_file_name = PyUnicodeToStdString(PyFrame_GetCode(frame)->co_filename);
   return check_if_python_file_should_be_filtered(frame_file_name);
 }
 
