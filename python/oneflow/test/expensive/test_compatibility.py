@@ -29,10 +29,10 @@ class TestApiCompatibility(flow.unittest.TestCase):
             test_case, "pytorch_resnet.py", "resnet50", "cuda", 16, 224
         )
 
-    # def test_convmixer_compatibility(test_case):
-    #     do_test_train_loss_oneflow_pytorch(
-    #         test_case, "pytorch_convmixer.py", "convmixer_768_32_relu", "cuda", 4, 224
-    #     )
+    def test_convmixer_compatibility(test_case):
+        do_test_train_loss_oneflow_pytorch(
+            test_case, "pytorch_convmixer.py", "convmixer_768_32_relu", "cuda", 4, 224
+        )
 
     def test_densenet_compatibility(test_case):
         do_test_train_loss_oneflow_pytorch(
