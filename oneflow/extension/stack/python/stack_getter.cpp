@@ -48,6 +48,15 @@ namespace {
 std::string PyUnicodeToStdString(const PyObject* py_str) {
   return PyBytes_AsString(PyUnicode_AsEncodedString(const_cast<PyObject*>(py_str), "utf-8", "~E~"));
 }
+#if PY_VERSION_HEX < 0x03090000
+PyCodeObject* PyFrame_GetCode(PyFrameObject* frame) {
+  assert(frame != NULL);
+  PyCodeObject* code = frame->f_code;
+  assert(code != NULL);
+  Py_INCREF(code);
+  return code;
+}
+#endif
 }  // namespace
 
 class PyFrame final : public Frame {
@@ -56,8 +65,10 @@ class PyFrame final : public Frame {
   // because they must be alive during the lifetime of `PyFrame`.
   PyFrame(PyFrameObject* frame, std::shared_ptr<PyFrame> back)
       : cpython_frame(frame), lineno(0), back(std::move(back)) {
-    filename = PyFrame_GetCode(frame)->co_filename;
-    funcname = PyFrame_GetCode(frame)->co_name;
+    PyCodeObject* code = PyFrame_GetCode(frame);
+    filename = code->co_filename;
+    funcname = code->co_name;
+    Py_DECREF(code);
   }
   ~PyFrame() = default;
   OF_DISALLOW_COPY_AND_MOVE(PyFrame);
@@ -185,6 +196,7 @@ std::string get_python_frame_str_repr(PyFrameObject* frame) {
   PyCodeObject* code = PyFrame_GetCode(frame);
   std::string file_name = PyUnicodeToStdString(code->co_filename);
   std::string code_name = PyUnicodeToStdString(code->co_name);
+  Py_DECREF(code);
   int line_number = PyFrame_GetLineNumber(frame);
 
   fmt::format_to(std::back_inserter(buffer), "File \"{}\", line {}, in {}", file_name, line_number,
