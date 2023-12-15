@@ -62,7 +62,7 @@ jobs:
           ref: ${{ inputs.branch }}
           repository: ${{ secrets.ONEFLOW_PRIV_ORG }}/oneflow
           token: ${{ secrets.ONEFLOW_PRIV_GH_TOKEN }}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@fix-so-skip-for-cu12
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@support-py311-py312
         name: Find build cache
         id: find-cache
         timeout-minutes: 5
@@ -92,7 +92,7 @@ jobs:
       ONEFLOW_OSS_BUCKET: oneflow-staging
     needs: [generate-build-matrix]
     name: Staging Release
-    timeout-minutes: 180
+    timeout-minutes: 240
     runs-on: [self-hosted, linux, release]
     if: github.repository == 'Oneflow-Inc/oneflow' || inputs.is_priv
     strategy:
@@ -140,7 +140,7 @@ jobs:
         if: ${{ inputs.is_priv }}
         run: |
           env
-      - uses: Oneflow-Inc/get-oneflow@fix-so-skip-for-cu12
+      - uses: Oneflow-Inc/get-oneflow@support-py311-py312
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry =='cu118' || startsWith(matrix.entry, 'cu12') }}
         with:
@@ -161,10 +161,11 @@ jobs:
           nightly-date: ${{ needs.generate-build-matrix.outputs.formatted_date }}
           use-nvidia-wheels: ${{ matrix.entry !='cu112' }}
           python-versions: |
-            3.8
-            3.9
+            3.11
             3.10
-      - uses: Oneflow-Inc/get-oneflow@fix-so-skip-for-cu12
+            3.9
+            3.8
+      - uses: Oneflow-Inc/get-oneflow@support-py311-py312
         name: Build ${{ matrix.entry }}
         if: ${{ startsWith(matrix.entry, 'cu') && matrix.entry !='cu118' && !startsWith(matrix.entry, 'cu12') }}
         with:
@@ -185,10 +186,11 @@ jobs:
           nightly-date: ${{ needs.generate-build-matrix.outputs.formatted_date }}
           use-nvidia-wheels: ${{ matrix.entry !='cu112' }}
           python-versions: |
-            3.8
-            3.9
+            3.11
             3.10
-      - uses: Oneflow-Inc/get-oneflow@fix-so-skip-for-cu12
+            3.9
+            3.8
+      - uses: Oneflow-Inc/get-oneflow@support-py311-py312
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry =='cpu' }}
         with:
@@ -208,9 +210,10 @@ jobs:
           nightly: ${{ github.event_name == 'schedule' || github.ref == 'refs/heads/release/add_nightly_date_index'}}
           nightly-date: ${{ needs.generate-build-matrix.outputs.formatted_date }}
           python-versions: |
-            3.8
-            3.9
+            3.11
             3.10
+            3.9
+            3.8
       - name: Upload wheel
         uses: ./.github/actions/upload_oss
         with:
