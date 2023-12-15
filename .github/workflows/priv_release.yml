@@ -3,7 +3,8 @@ name: Priv Release
 on:
   push:
     branches:
-      - "pro/*"
+      - priv-release
+      - add-cu12-release
   schedule:
     # beijing: 12 pm.
     # utc: 4 am.
@@ -15,7 +16,7 @@ on:
         default: "main"
 
 concurrency:
-  group: priv-release-${{ github.ref }}-${{ inputs.priv_branch }}
+  group: priv-release-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
