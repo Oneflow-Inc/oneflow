@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <stdio.h>
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/ep/include/primitive/add.h"
@@ -39,6 +40,11 @@ class AccKernel final : public user_op::OpKernel {
                       in->shape_view().elem_cnt());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+  void Foo(user_op::KernelComputeContext* ctx) const {
+    std::cout << ctx->Tensor4ArgNameAndIndex("in", 0)->shape_view().elem_cnt() << std::endl;
+    return;
+  }
 };
 
 REGISTER_USER_KERNEL("acc").SetCreateFn<AccKernel>();
