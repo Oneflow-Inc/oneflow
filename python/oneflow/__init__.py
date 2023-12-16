@@ -130,7 +130,6 @@ from oneflow._C import logaddexp
 from oneflow._C import quantile
 from oneflow._C import gelu_with_approximate as gelu
 from oneflow._C import quick_gelu
-from oneflow._C import square_relu
 from oneflow._C import mish
 from oneflow._C import repeat
 from oneflow._C import repeat_interleave

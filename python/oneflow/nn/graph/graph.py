@@ -52,9 +52,6 @@ from oneflow.nn.graph.util import (
     GraphIR,
     seq_to_func_return,
     sys_exc_error_msg,
-    _rsd_sub_destination_to,
-    _job_to,
-    _plan_to,
 )
 from oneflow.framework.args_tree import ArgsTree
 from oneflow.nn.modules.module import Module
@@ -1072,35 +1069,34 @@ class Graph(object):
             assert len(tensor_tuple) == len(name_list)
             for name_idx in range(len(name_list)):
                 tensor_item = tensor_tuple[name_idx]
-                device_str = ":".join(
-                    (tensor_item.device.type, str(tensor_item.device.index))
-                )
-                dest_dict[name_list[name_idx]] = (tensor_item, device_str)
+                dest_dict[name_list[name_idx]] = (tensor_item, tensor_item.device.type)
 
         # This is original outputs is needed to build output buffer.
         tuple_idx = -1
 
-        def gen_index_in_tuple(item):
+        def gen_index_in_tuple(eager_out):
             nonlocal tuple_idx
-            if isinstance(item, Tensor):
-                tuple_idx += 1
-                return "_OFTPI" + str(tuple_idx)  # oneflow tuple index
-            else:
-                return item
+            tuple_idx += 1
+            return "_OFTPI" + str(tuple_idx)  # oneflow tuple index
 
         inputs_sub_destination = OrderedDict()
         _fill_sub_destination(
             inputs_sub_destination, self._input_op_names, self._inputs_tensor_tuple
         )
 
-        _eager_inputs_args, _eager_inputs_kwargs = self.__map_io_lite(
-            gen_index_in_tuple, *self.inputs_original[0], **self.inputs_original[1],
+        _eager_inputs_args, _eager_inputs_kwargs = self.__map_io(
+            "input",
+            gen_index_in_tuple,
+            *self.inputs_original[0],
+            **self.inputs_original[1],
         )
         destination["inputs"] = inputs_sub_destination
         destination["inputs_original"] = (_eager_inputs_args, _eager_inputs_kwargs)
 
         tuple_idx = -1
-        _eager_outputs, _ = self.__map_io_lite(gen_index_in_tuple, *self._eager_outputs)
+        _eager_outputs, _ = self.__map_io(
+            "output", gen_index_in_tuple, *self._eager_outputs
+        )
         destination["outputs_original"] = _eager_outputs
         assert len(self._outputs_tensor_tuple) == tuple_idx + 1
         outputs_sub_destination = OrderedDict()
@@ -1150,7 +1146,7 @@ class Graph(object):
             Dict[str, Dict[str, Union[Dict[str, Tensor], str]]],
         ],
         *,
-        warmup_with_run: bool = True,
+        warmup_with_run: bool = False,
     ) -> None:
         if self._run_with_cache == True:
             return self._dynamic_input_graph_cache.load_runtime_state_dict(
@@ -1297,7 +1293,6 @@ class Graph(object):
             self.__run(
                 *_eager_inputs_args, **_eager_inputs_kwargs
             )  # pre-run to warm up
-            oneflow._oneflow_internal.eager.Sync()
         build_graph_end = time.perf_counter()
         self.__print(
             0,
@@ -1308,53 +1303,6 @@ class Graph(object):
             + "s."
             + "\n",
         )
-
-    @staticmethod
-    def runtime_state_dict_to(
-        state_dict: Union[
-            Dict[str, Union[Dict[str, Tensor], str]],
-            Dict[str, Dict[str, Union[Dict[str, Tensor], str]]],
-        ],
-        device: str,
-    ) -> Union[
-        Dict[str, Union[Dict[str, Tensor], str]],
-        Dict[str, Dict[str, Union[Dict[str, Tensor], str]]],
-    ]:
-        if "job_id" not in state_dict:
-            from oneflow.nn.graph.cache import GraphCache
-
-            return GraphCache.runtime_state_dict_to(state_dict, device)
-
-        dest_device = oneflow.device(device)
-        assert dest_device.type == "cuda", "device must be cuda."
-
-        destination = OrderedDict()
-        destination._metadata = OrderedDict()
-        destination["oneflow_version"] = state_dict["oneflow_version"]
-        destination["graph_name"] = state_dict["graph_name"]
-        destination["job_id"] = state_dict["job_id"]
-        destination["inputs"] = _rsd_sub_destination_to(state_dict["inputs"], device)
-        destination["inputs_original"] = state_dict["inputs_original"]
-        destination["outputs"] = _rsd_sub_destination_to(state_dict["outputs"], device)
-        destination["outputs_original"] = state_dict["outputs_original"]
-        destination["oneflow_with_eager_tensor"] = state_dict[
-            "oneflow_with_eager_tensor"
-        ]
-        if "states" in state_dict:
-            destination["states"] = _rsd_sub_destination_to(
-                state_dict["states"], device
-            )
-        destination["exe_plan"] = _plan_to(state_dict["exe_plan"], dest_device)
-        if "forward_graph" in state_dict:
-            forward_graph = deepcopy(state_dict["forward_graph"])
-            _job_to(forward_graph, dest_device)
-            destination["forward_graph"] = forward_graph
-        if "compile_graph" in state_dict:
-            compile_graph = deepcopy(state_dict["compile_graph"])
-            _job_to(compile_graph, dest_device)
-            destination["compile_graph"] = compile_graph
-        destination["id_state"] = state_dict["id_state"]
-        return destination
 
     def build_graph(self, *args, **kwargs):
         # Build graph
@@ -1800,13 +1748,14 @@ class Graph(object):
         args_repr = []
         tensor2op_name = {}
 
-        def build_tensor_or_any(tensor, name, repr_str):
+        def build_tensor_or_none(tensor, name, repr_str):
+            assert tensor is None or (isinstance(tensor, Tensor))
             if isinstance(tensor, Tensor):
                 build_arg = build_func(name, tensor)
                 op_names.append(name)
                 tensor2op_name[build_arg] = name
             else:
-                build_arg = tensor
+                build_arg = None
 
             args_repr.append(repr_str)
             self.__print(0, 1, repr_str)
@@ -1822,13 +1771,18 @@ class Graph(object):
                 arg_repr = self.__io_item_check_and_gen_repr(
                     arg.value(), Tensor, io_type, name
                 )
-                build_arg = build_tensor_or_any(arg.value(), name, arg_repr)
+                build_arg = build_tensor_or_none(arg.value(), name, arg_repr)
                 return build_arg
-            else:  # Opaque
+            elif arg.value() is None:
                 arg_repr = self.__io_item_check_and_gen_repr(
                     arg.value(), None, io_type, name
                 )
-                build_arg = build_tensor_or_any(arg.value(), name, arg_repr)
+                build_arg = build_tensor_or_none(arg.value(), name, arg_repr)
+            else:  # Opaque
+                # Error
+                arg_repr = self.__io_item_check_and_gen_repr(
+                    arg.value(), None, io_type, name
+                )
 
         out = args_tree.map_leaf(leaf_arg_fn)
         build_args = out[0]
@@ -1838,7 +1792,7 @@ class Graph(object):
 
     def __io_item_check_and_gen_repr(self, item, expect_type, io_type, name):
         assert io_type in ("input", "output")
-        if expect_type is None:
+        if expect_type is None and item is None:
             repr_str = (
                 "[WARNING]("
                 + io_type.upper()
@@ -1848,7 +1802,6 @@ class Graph(object):
                 + str(type(item))
                 + ")"
             )
-            self.__print(1, 0, repr_str)
             return repr_str
         elif expect_type is not None and isinstance(item, expect_type):
             if isinstance(item, Tensor):
@@ -1878,21 +1831,27 @@ class Graph(object):
     def __map_io(self, io_type, func, *args, **kwargs):
         assert io_type in ("input", "output")
 
-        def mapping_tensor_or_any(tensor):
+        def mapping_tensor_or_none(tensor):
+            assert tensor is None or (isinstance(tensor, Tensor))
             if isinstance(tensor, Tensor):
                 mapped_arg = func(tensor)
             else:
-                mapped_arg = tensor
+                mapped_arg = None
             return mapped_arg
 
         def leaf_arg_fn(arg):
             arg_value = arg.value()
-            return mapping_tensor_or_any(arg_value)
+            if isinstance(arg_value, Tensor) or arg_value is None:
+                return mapping_tensor_or_none(arg_value)
+            else:
+                self.__io_item_check(
+                    arg_value, None, io_type, arg.prefix() + "_" + arg.name(),
+                )
 
         # NOTE(lixiang): Reduce the overhead of traversal and parsing of io args.
         if self._is_simple_tuple_output or self._is_simple_tuple_input:
             args_tree = ArgsTree(args, False)
-            out = args_tree.map_tuple_leaf(mapping_tensor_or_any)
+            out = args_tree.map_tuple_leaf(mapping_tensor_or_none)
             return out, kwargs
 
         args_tree = ArgsTree(

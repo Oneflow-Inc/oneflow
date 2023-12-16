@@ -407,45 +407,6 @@ class QuickGELU(Module):
         return flow._C.quick_gelu(x)
 
 
-class SquareReLU(Module):
-    """
-    SquareReLU() -> Tensor
-
-    Applies the relu^2 activation introduced in https://arxiv.org/abs/2109.08668v2
-
-    .. math::
-        :math:`\\text{SquareReLU}(x) = \\max(0, x) * \\max(0, x)`
-
-    Args:
-        input (oneflow.Tensor): Input Tensor
-
-    Returns:
-        oneflow.Tensor: A Tensor has same shape as the input.
-        
-    For example:
-
-    .. code-block:: python
-
-        >>> import numpy as np
-        >>> import oneflow as flow
-        
-        >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
-        >>> input = flow.Tensor(x)
-        >>> square_relu = flow.nn.SquareReLU()
-
-        >>> out = square_relu(input)
-        >>> out
-        tensor([0.0000, 0.0000, 0.2500], dtype=oneflow.float32)
-
-    """
-
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, x):
-        return flow._C.square_relu(x)
-
-
 class Sigmoid(Module):
     """Applies the element-wise function:
 

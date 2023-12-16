@@ -270,7 +270,6 @@ Pointwise Ops
     fmod 
     gelu
     quick_gelu
-    square_relu
     log 
     log1p 
     log2 

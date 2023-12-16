@@ -75,7 +75,6 @@ Non-linear activation functions
     selu
     celu
     leaky_relu
-    square_relu
     prelu
     glu
     gelu
