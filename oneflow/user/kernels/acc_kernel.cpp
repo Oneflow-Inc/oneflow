@@ -43,6 +43,7 @@ class AccKernel final : public user_op::OpKernel {
 
   void Foo(user_op::KernelComputeContext* ctx) const {
     std::cout << ctx->Tensor4ArgNameAndIndex("in", 0)->shape_view().elem_cnt() << std::endl;
+    std::cout << ctx->Tensor4ArgNameAndIndex("out", 0)->shape_view().elem_cnt() << std::endl;
     return;
   }
 };
