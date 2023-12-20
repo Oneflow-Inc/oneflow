@@ -995,6 +995,14 @@ jobs:
           docker exec -e ONEFLOW_TEST_DIR=diff \
             -e ONEFLOW_TEST_FILES="${{needs.source_info.outputs.changed_python_tests}}" \
             ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
+      - name: Expensive tests (models, cases require exclusive access to GPU)
+        timeout-minutes: 45
+        if: ${{ !fromJson(matrix.cache-hit) && (matrix.test-type == 'speed-test' || (matrix.test-type == 'misc' && matrix.device == 'cuda')) && !fromJson(matrix.is-distributed) }}
+        run: |
+          docker exec \
+            -e ONEFLOW_TEST_TENSOR_SIZE_LIMIT_MB=1024 \
+            -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/expensive \
+            ${{ env.TEST_CONTAINER_NAME }} bash ci/test/expensive_generic_test_multi_client.sh
       - name: Module API test
         timeout-minutes: 60
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) }}
@@ -1031,14 +1039,6 @@ jobs:
           docker exec \
             -e ONEFLOW_TEST_TENSOR_SIZE_LIMIT_MB=1024 \
             ${{ env.TEST_CONTAINER_NAME }} bash ci/test/ir_tests.sh
-      - name: Expensive tests (models, cases require exclusive access to GPU)
-        timeout-minutes: 45
-        if: ${{ !fromJson(matrix.cache-hit) && (matrix.test-type == 'speed-test' || (matrix.test-type == 'misc' && matrix.device == 'cuda')) && !fromJson(matrix.is-distributed) }}
-        run: |
-          docker exec \
-            -e ONEFLOW_TEST_TENSOR_SIZE_LIMIT_MB=1024 \
-            -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/expensive \
-            ${{ env.TEST_CONTAINER_NAME }} bash ci/test/expensive_generic_test_multi_client.sh
       - name: Exception API test
         timeout-minutes: 45
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && false }}
