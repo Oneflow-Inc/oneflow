@@ -108,12 +108,7 @@ class TestApiCompatibility(flow.unittest.TestCase):
 
     def test_levit_compatibility(test_case):
         do_test_train_loss_oneflow_pytorch(
-            test_case,
-            "pytorch_levit.py",
-            "LeViT_128S",
-            "cuda",
-            8,
-            224,
+            test_case, "pytorch_levit.py", "LeViT_128S", "cuda", 8, 224,
         )
 
     # def test_mlp_mixer_compatibility(test_case):
@@ -123,42 +118,22 @@ class TestApiCompatibility(flow.unittest.TestCase):
 
     def test_poolformer_compatibility(test_case):
         do_test_train_loss_oneflow_pytorch(
-            test_case,
-            "pytorch_poolformer.py",
-            "poolformer_s12",
-            "cuda",
-            8,
-            224,
+            test_case, "pytorch_poolformer.py", "poolformer_s12", "cuda", 8, 224,
         )
 
     def test_pvt_compatibility(test_case):
         do_test_train_loss_oneflow_pytorch(
-            test_case,
-            "pytorch_pvt.py",
-            "pvt_tiny",
-            "cuda",
-            8,
-            224,
+            test_case, "pytorch_pvt.py", "pvt_tiny", "cuda", 8, 224,
         )
 
     def test_resmlp_compatibility(test_case):
         do_test_train_loss_oneflow_pytorch(
-            test_case,
-            "pytorch_resmlp.py",
-            "resmlp_12",
-            "cuda",
-            8,
-            224,
+            test_case, "pytorch_resmlp.py", "resmlp_12", "cuda", 8, 224,
         )
 
     def test_uniformer_compatibility(test_case):
         do_test_train_loss_oneflow_pytorch(
-            test_case,
-            "pytorch_uniformer.py",
-            "uniformer_small",
-            "cuda",
-            8,
-            224,
+            test_case, "pytorch_uniformer.py", "uniformer_small", "cuda", 8, 224,
         )
 
     # TODO(): support non-contiguous inplace add
@@ -174,12 +149,7 @@ class TestApiCompatibility(flow.unittest.TestCase):
 
     def test_senet_compatibility(test_case):
         do_test_train_loss_oneflow_pytorch(
-            test_case,
-            "pytorch_senet.py",
-            "senet154",
-            "cuda",
-            2,
-            224,
+            test_case, "pytorch_senet.py", "senet154", "cuda", 2, 224,
         )
 
 
