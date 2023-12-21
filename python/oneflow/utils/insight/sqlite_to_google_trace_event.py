@@ -152,7 +152,6 @@ def sqlite_to_google_trace_event(args, tables):
         if args.info:
             print_db_info(db_manager)
 
-       
         print("Checking if the following table exists:")
         results = are_tables_exist(db_manager, tables)
         for table_name, exists in results.items():
@@ -501,17 +500,18 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     # check if necessary tables exist
-    tables_to_check = ["TARGET_INFO_GPU",
-                        "TARGET_INFO_SESSION_START_TIME",
-                        "TARGET_INFO_CUDA_NULL_STREAM",
-                        "ANALYSIS_DETAILS",
-                        "NVTX_EVENTS",
-                        "TARGET_INFO_CUDA_STREAM",
-                        "OSRT_API",
-                        "StringIds",
-                        "CUPTI_ACTIVITY_KIND_RUNTIME",
-                        "CUPTI_ACTIVITY_KIND_KERNEL",
-                        ]
+    tables_to_check = [
+        "TARGET_INFO_GPU",
+        "TARGET_INFO_SESSION_START_TIME",
+        "TARGET_INFO_CUDA_NULL_STREAM",
+        "ANALYSIS_DETAILS",
+        "NVTX_EVENTS",
+        "TARGET_INFO_CUDA_STREAM",
+        "OSRT_API",
+        "StringIds",
+        "CUPTI_ACTIVITY_KIND_RUNTIME",
+        "CUPTI_ACTIVITY_KIND_KERNEL",
+    ]
 
     # Usage:
     # python3 sqlite_to_google_trace_event.py --input 'your_file.sqlite'
