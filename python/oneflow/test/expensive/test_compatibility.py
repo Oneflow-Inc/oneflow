@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow.test_utils.oneflow_pytorch_compatibility import *
+import os
 
 
 @flow.unittest.skip_unless_1n1d()

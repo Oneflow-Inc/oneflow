@@ -25,6 +25,7 @@ import oneflow.unittest
 from oneflow.test_utils.test_util import GenArgList
 
 from oneflow.test_utils.automated_test_util import *
+import os
 
 
 def is_cufft_available():
