@@ -31,7 +31,7 @@ class DatabaseManager:
 
 def are_tables_exist(db_manager, table_names):
     try:
-        # 查询是否存在特定名称的表
+        # Query for the existence of sqlite database tables with specific names
         results = {}
         for table_name in table_names:
             db_manager.execute_sql(
@@ -114,7 +114,7 @@ def get_device_property(db_manager):
     return property
 
 
-def sqlite_to_google_trace_event(args):
+def sqlite_to_google_trace_event(args, tables):
     try:
         database_path = args.input
         print("Opening sqlite database :", database_path)
@@ -125,20 +125,9 @@ def sqlite_to_google_trace_event(args):
         if args.info:
             print_db_info(db_manager)
 
-        # check if necessary tables exist
-        tables_to_check = ["TARGET_INFO_GPU",
-                           "TARGET_INFO_SESSION_START_TIME",
-                           "TARGET_INFO_CUDA_NULL_STREAM",
-                           "ANALYSIS_DETAILS",
-                           "NVTX_EVENTS",
-                           "TARGET_INFO_CUDA_STREAM",
-                           "OSRT_API",
-                           "StringIds",
-                           "CUPTI_ACTIVITY_KIND_RUNTIME",
-                           "CUPTI_ACTIVITY_KIND_KERNEL",
-                           ]
+       
         print("Checking if the following table exists:")
-        results = are_tables_exist(db_manager, tables_to_check)
+        results = are_tables_exist(db_manager, tables)
         for table_name, exists in results.items():
             if not exists:
                 print(f"'{table_name}' not exists.")
@@ -497,7 +486,19 @@ if __name__ == "__main__":
         default=False)
 
     args = parser.parse_args()
+    # check if necessary tables exist
+    tables_to_check = ["TARGET_INFO_GPU",
+                        "TARGET_INFO_SESSION_START_TIME",
+                        "TARGET_INFO_CUDA_NULL_STREAM",
+                        "ANALYSIS_DETAILS",
+                        "NVTX_EVENTS",
+                        "TARGET_INFO_CUDA_STREAM",
+                        "OSRT_API",
+                        "StringIds",
+                        "CUPTI_ACTIVITY_KIND_RUNTIME",
+                        "CUPTI_ACTIVITY_KIND_KERNEL",
+                        ]
 
     # Usage:
     # python3 sqlite_to_google_trace_event.py --input 'your_file.sqlite'
-    sqlite_to_google_trace_event(args)
+    sqlite_to_google_trace_event(args, tables_to_check)

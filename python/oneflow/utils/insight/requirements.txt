@@ -1,4 +1,3 @@
-json
 sqlite3
 argparse
 traceback
