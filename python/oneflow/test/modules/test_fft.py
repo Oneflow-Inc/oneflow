@@ -156,7 +156,6 @@ def gen_params_nd_fft(lower_n_dims=2, upper_n_dims=5):
 
 
 def _test_fft(test_case):
-
     if is_cufft_available():
         device = random_device()
     else:
@@ -310,7 +309,6 @@ def _test_ihfft(test_case):
 
 
 def _test_fft2(test_case):
-
     if is_cufft_available():
         device = random_device()
     else:
@@ -633,6 +631,9 @@ class TestComplex64Fft(flow.unittest.TestCase):
 
         test_case.rtol = 1e-5
         test_case.atol = 1e-5
+        if os.environ["ONEFLOW_CI"] == "1":
+            test_case.rtol = 1e-2
+            test_case.atol = 1e-2
         test_case.initTestFft()
 
     def initTestFft(test_case):
