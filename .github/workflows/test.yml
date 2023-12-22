@@ -804,7 +804,7 @@ jobs:
         run: |
           docker pull ${{ env.TEST_IMG_TAG }}
       - name: Unzip packed liboneflow
-        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && !fromJson(matrix.is-xla) && !matrix.test-type == 'module' }}
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && !fromJson(matrix.is-xla) }}
         run: |
           unzip ${{ env.ONEFLOW_CPACK_PATH }}/liboneflow-ci-linux.zip
       - name: Unzip packed sanitized liboneflow
