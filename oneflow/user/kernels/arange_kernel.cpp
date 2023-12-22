@@ -84,7 +84,7 @@ class ArangeKernel final : public OpKernel, public CudaGraphSupport {
       start = static_cast<T>(static_cast<double>(ctx->Attr<int64_t>("integer_start")));
       delta = static_cast<T>(static_cast<double>(ctx->Attr<int64_t>("integer_delta")));
       limit = static_cast<T>(static_cast<double>(ctx->Attr<int64_t>("integer_limit")));
-      arange_elem_cnt = std::ceil(static_cast<double>(limit - start) / delta);
+      arange_elem_cnt = std::ceil(static_cast<double>(limit - start) / static_cast<double>(delta));
     } else {
       // If we use static_cast<T>(start, delta, limit) and std::ceil to calculate arange_elem_cnt,
       // it will cause rounding error.
@@ -102,8 +102,8 @@ class ArangeKernel final : public OpKernel, public CudaGraphSupport {
     } else {
       const auto* arange_cache = dynamic_cast<const ArangeOpKernelCache*>(cache);
       auto arange_len = arange_cache->upper() - arange_cache->lower();
-      ArangeFunctor<device_type, T>()(ctx->stream(),
-                                      static_cast<T>(start + delta * arange_cache->lower()), delta,
+      auto lower = static_cast<T>(static_cast<float>(arange_cache->lower()));
+      ArangeFunctor<device_type, T>()(ctx->stream(), static_cast<T>(start + delta * lower), delta,
                                       arange_len, output);
     }
   }
