@@ -24,7 +24,7 @@ limitations under the License.
 #include <cuda_bf16.h>
 #endif
 
-#if CUDA_VERSION >= 11000 && defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 800
+#if CUDA_VERSION >= 11000 && CUDA_VERSION <= 12010 && defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 800
 
 #define DEFINE_CUDA_PSEUDO_BFLOAT16_ARITHMETIC_BINARY_OPERATOR(op)                \
   __device__ __forceinline__ __nv_bfloat16 operator op(const __nv_bfloat16& lh,   \
