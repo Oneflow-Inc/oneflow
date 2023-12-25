@@ -80,7 +80,7 @@ Maybe<one::Generator> GetGeneratorForLazyOrGlobal(const std::shared_ptr<one::Gen
   Symbol<ParallelDesc> placement_val = JUST(placement);
   Symbol<NdSbp> nd_sbp_val = JUST(nd_sbp);
 
-  static HashMap<std::pair<Symbol<ParallelDesc>, Symbol<NdSbp>>, <std::shared_ptr<one::Generator>>>
+  static HashMap<std::pair<Symbol<ParallelDesc>, Symbol<NdSbp>>, std::shared_ptr<one::Generator>>
       cached_generator;
   if (cached_generator.find(std::make_pair(placement_val, nd_sbp_val)) != cached_generator.end()) {
     return cached_generator.at(std::make_pair(placement_val, nd_sbp_val));
