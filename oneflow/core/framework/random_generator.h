@@ -24,6 +24,7 @@ limitations under the License.
 
 #include "oneflow/core/ep/cpu/cpu_random_generator.h"
 #include "oneflow/core/ep/cuda/cuda_random_generator.h"
+#include "oneflow/core/common/hash_container.h"
 
 namespace oneflow {
 
@@ -81,8 +82,9 @@ class Generator final {
   mutable std::mutex mutex_;
   std::shared_ptr<ep::RandomGenerator> internal_;
   // children generator for eager global mode
-  HashMap<std::pair<Symbol<ParallelDesc>, Symbol<NdSbp>>, std::shared_ptr<one::Generator>>
-      children_generators_;
+  HashMap<std::pair<Symbol<ParallelDesc>, Symbol<NdSbp>>,  // NOLINT
+          std::shared_ptr<one::Generator>>                 // NOLINT
+      children_generators_;                                // NOLINT
 };
 
 Maybe<Generator> MakeGenerator(const std::string& device, int device_index = -1);

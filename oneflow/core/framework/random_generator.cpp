@@ -69,9 +69,11 @@ void Generator::set_current_seed(uint64_t seed) {
   for (auto pair : children_generators_) {
     uint64_t rank_seed = seed;
     if (pair.first.first->parallel_num() > 1) {
-      CHECK_JUST(one::functional::BroadcastSeedToAllRanks(&seed, /*root=*/0));
-      rank_seed = CHECK_JUST(GetRandomSeedForRank(*(pair.first.first), *(pair.first.second), seed,
-                                                  GlobalProcessCtx::Rank()));
+      CHECK_JUST(one::functional::BroadcastSeedToAllRanks(&seed, /*root=*/0));  // NOLINT
+      rank_seed =
+          CHECK_JUST(GetRandomSeedForRank(*(pair.first.first), *(pair.first.second),  // NOLINT
+                                          seed,                                       // NOLINT
+                                          GlobalProcessCtx::Rank()));                 // NOLINT
     }
     pair.second->set_current_seed(rank_seed);
   }
