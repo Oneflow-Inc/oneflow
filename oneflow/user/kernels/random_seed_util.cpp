@@ -109,9 +109,7 @@ Maybe<one::Generator> GetGeneratorForLazyOrGlobal(const std::shared_ptr<one::Gen
         GetRandomSeedForRank(*JUST(placement), *JUST(nd_sbp), init_seed, GlobalProcessCtx::Rank()));
   }
   new_gen->set_current_seed(rank_seed);
-  if (!is_lazy) {
-    generator->add_children_generator(JUST(placement), JUST(nd_sbp), new_gen);
-  }
+  if (!is_lazy) { generator->add_children_generator(JUST(placement), JUST(nd_sbp), new_gen); }
   return new_gen;
 }
 

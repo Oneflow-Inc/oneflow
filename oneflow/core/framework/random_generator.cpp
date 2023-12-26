@@ -53,11 +53,13 @@ Generator::Generator(const std::shared_ptr<ep::RandomGenerator>& internal) : int
 
 uint64_t Generator::current_seed() const { return internal_->current_seed(); }
 
-void Generator::add_children_generator(Symbol<ParallelDesc> placement, Symbol<NdSbp> nd_sbp, const std::shared_ptr<Generator>& generator) {
+void Generator::add_children_generator(Symbol<ParallelDesc> placement, Symbol<NdSbp> nd_sbp,
+                                       const std::shared_ptr<Generator>& generator) {
   children_generators_.emplace(std::make_pair(placement, nd_sbp), generator);
 }
 
-const HashMap<std::pair<Symbol<ParallelDesc>, Symbol<NdSbp>>, std::shared_ptr<one::Generator>>& Generator::children_generators() const {
+const HashMap<std::pair<Symbol<ParallelDesc>, Symbol<NdSbp>>, std::shared_ptr<one::Generator>>&
+Generator::children_generators() const {
   return children_generators_;
 }
 
@@ -68,8 +70,8 @@ void Generator::set_current_seed(uint64_t seed) {
     uint64_t rank_seed = seed;
     if (pair.first.first->parallel_num() > 1) {
       CHECK_JUST(one::functional::BroadcastSeedToAllRanks(&seed, /*root=*/0));
-      rank_seed = CHECK_JUST(
-          GetRandomSeedForRank(*(pair.first.first), *(pair.first.second), seed, GlobalProcessCtx::Rank()));
+      rank_seed = CHECK_JUST(GetRandomSeedForRank(*(pair.first.first), *(pair.first.second), seed,
+                                                  GlobalProcessCtx::Rank()));
     }
     pair.second->set_current_seed(rank_seed);
   }

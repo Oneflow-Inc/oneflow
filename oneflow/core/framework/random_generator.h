@@ -47,8 +47,10 @@ class Generator final {
 
   uint64_t current_seed() const;
 
-  void add_children_generator(Symbol<ParallelDesc> placement, Symbol<NdSbp> nd_sbp, const std::shared_ptr<Generator>& generator);
-  const HashMap<std::pair<Symbol<ParallelDesc>, Symbol<NdSbp>>, std::shared_ptr<one::Generator>>& children_generators() const;
+  void add_children_generator(Symbol<ParallelDesc> placement, Symbol<NdSbp> nd_sbp,
+                              const std::shared_ptr<Generator>& generator);
+  const HashMap<std::pair<Symbol<ParallelDesc>, Symbol<NdSbp>>, std::shared_ptr<one::Generator>>&
+  children_generators() const;
 
   // Reset current generator by a non-deterministic random seed, and returns it.
   uint64_t seed();
@@ -79,7 +81,8 @@ class Generator final {
   mutable std::mutex mutex_;
   std::shared_ptr<ep::RandomGenerator> internal_;
   // children generator for eager global mode
-  HashMap<std::pair<Symbol<ParallelDesc>, Symbol<NdSbp>>, std::shared_ptr<one::Generator>> children_generators_;
+  HashMap<std::pair<Symbol<ParallelDesc>, Symbol<NdSbp>>, std::shared_ptr<one::Generator>>
+      children_generators_;
 };
 
 Maybe<Generator> MakeGenerator(const std::string& device, int device_index = -1);
