@@ -77,8 +77,7 @@ Maybe<one::Generator> GetGeneratorForLazyOrGlobal(const std::shared_ptr<one::Gen
   bool is_global = placement.has_value() && nd_sbp.has_value();
   if (!is_lazy && !is_global) { return generator; }
 
-  static HashMap<std::pair<Symbol<ParallelDesc>, Symbol<NdSbp>>, std::shared_ptr<one::Generator>>
-      eager_cached_generator;
+  const auto& eager_cached_generator = generator->children_generators();
 
   if (!is_lazy) {
     Symbol<ParallelDesc> placement_val = JUST(placement);
@@ -89,9 +88,14 @@ Maybe<one::Generator> GetGeneratorForLazyOrGlobal(const std::shared_ptr<one::Gen
     }
   }
 
-  auto cpu_gen = JUST(generator->Get<ep::CPUGenerator>(0));
-  CHECK_OR_RETURN(cpu_gen) << "expect a CPUGenerator";
-  uint64_t init_seed = cpu_gen->engine()();
+  uint64_t init_seed = 0;
+  if (is_lazy) {
+    auto cpu_gen = JUST(generator->Get<ep::CPUGenerator>(0));
+    CHECK_OR_RETURN(cpu_gen) << "expect a CPUGenerator";
+    init_seed = cpu_gen->engine()();
+  } else {
+    init_seed = generator->current_seed();
+  }
   auto new_gen = JUST(one::MakeGenerator(JUST(generator->device())->type()));
   if (is_lazy) {
     new_gen->set_current_seed(init_seed);
@@ -106,7 +110,7 @@ Maybe<one::Generator> GetGeneratorForLazyOrGlobal(const std::shared_ptr<one::Gen
   }
   new_gen->set_current_seed(rank_seed);
   if (!is_lazy) {
-    eager_cached_generator.emplace(std::make_pair(JUST(placement), JUST(nd_sbp)), new_gen);
+    generator->add_children_generator(JUST(placement), JUST(nd_sbp), new_gen);
   }
   return new_gen;
 }
