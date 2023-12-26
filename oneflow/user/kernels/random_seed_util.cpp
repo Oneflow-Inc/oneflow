@@ -77,13 +77,16 @@ Maybe<one::Generator> GetGeneratorForLazyOrGlobal(const std::shared_ptr<one::Gen
   bool is_global = placement.has_value() && nd_sbp.has_value();
   if (!is_lazy && !is_global) { return generator; }
 
-  Symbol<ParallelDesc> placement_val = JUST(placement);
-  Symbol<NdSbp> nd_sbp_val = JUST(nd_sbp);
-
   static HashMap<std::pair<Symbol<ParallelDesc>, Symbol<NdSbp>>, std::shared_ptr<one::Generator>>
-      cached_generator;
-  if (cached_generator.find(std::make_pair(placement_val, nd_sbp_val)) != cached_generator.end()) {
-    return cached_generator.at(std::make_pair(placement_val, nd_sbp_val));
+      eager_cached_generator;
+
+  if (!is_lazy) {
+    Symbol<ParallelDesc> placement_val = JUST(placement);
+    Symbol<NdSbp> nd_sbp_val = JUST(nd_sbp);
+    if (eager_cached_generator.find(std::make_pair(placement_val, nd_sbp_val))
+        != eager_cached_generator.end()) {
+      return JUST(MapAt(eager_cached_generator, std::make_pair(placement_val, nd_sbp_val)));
+    }
   }
 
   auto cpu_gen = JUST(generator->Get<ep::CPUGenerator>(0));
@@ -96,13 +99,15 @@ Maybe<one::Generator> GetGeneratorForLazyOrGlobal(const std::shared_ptr<one::Gen
   }
 
   uint64_t rank_seed = init_seed;
-  if (placement_val->parallel_num() > 1) {
+  if (JUST(placement)->parallel_num() > 1) {
     JUST(one::functional::BroadcastSeedToAllRanks(&init_seed, /*root=*/0));
     rank_seed = JUST(
-        GetRandomSeedForRank(*placement_val, *nd_sbp_val, init_seed, GlobalProcessCtx::Rank()));
+        GetRandomSeedForRank(*JUST(placement), *JUST(nd_sbp), init_seed, GlobalProcessCtx::Rank()));
   }
   new_gen->set_current_seed(rank_seed);
-  cached_generator.emplace(std::make_pair(placement_val, nd_sbp_val), new_gen);
+  if (!is_lazy) {
+    eager_cached_generator.emplace(std::make_pair(JUST(placement), JUST(nd_sbp)), new_gen);
+  }
   return new_gen;
 }
 
