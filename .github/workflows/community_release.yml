@@ -28,6 +28,7 @@ jobs:
     with:
       is_priv: true
       branch: ${{ inputs.priv_branch || 'community' }}
+      cuda_cmake_cache: cmake/caches/ci/release/cuda_community.cmake
     secrets:
       ONEFLOW_PRIV_ORG: ${{ secrets.ONEFLOW_PRIV_ORG }}
       ONEFLOW_PRIV_GH_TOKEN: ${{ secrets.ONEFLOW_PRIV_GH_TOKEN }}
