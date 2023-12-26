@@ -27,7 +27,7 @@ jobs:
     uses: ./.github/workflows/release.yml
     with:
       is_priv: true
-      branch: ${{ inputs.priv_branch || 'community' }}
+      branch: ${{ inputs.priv_branch || 'main' }}
       cuda_cmake_cache: cmake/caches/ci/release/cuda_community.cmake
     secrets:
       ONEFLOW_PRIV_ORG: ${{ secrets.ONEFLOW_PRIV_ORG }}
