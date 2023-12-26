@@ -147,7 +147,7 @@ jobs:
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry =='cu118' || startsWith(matrix.entry, 'cu12') }}
         with:
-          cmake-init-cache: ${{ env.ONEFLOW_SRC }}/${{ inputs.cuda_cmake_cache || 'cmake/caches/ci/release/cu118.cmake' }}}
+          cmake-init-cache: ${{ env.ONEFLOW_SRC }}/${{ inputs.cuda_cmake_cache || 'cmake/caches/ci/release/cu118.cmake' }}
           build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc9.sh
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           oneflow-build-env: manylinux
