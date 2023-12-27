@@ -85,3 +85,12 @@ When creating a new :class:`Function`, the following methods are available to `c
     FunctionCtx.mark_non_differentiable
     FunctionCtx.save_for_backward
     FunctionCtx.saved_tensors
+
+functional
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. currentmodule:: oneflow.autograd.functional
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    vjp    
