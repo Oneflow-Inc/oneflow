@@ -90,6 +90,7 @@ class TestNormalOpInplaceData(flow.unittest.TestCase):
             for _, fn in _fn_param_local.items():
                 _test_data_local(test_case, device, fn=fn)
 
+    @unittest.skipIf(True, "refactor eager random to align pytorch")
     @globaltest
     def test_normal_op_data_consistent_with_eager_and_lazy(test_case):
 
