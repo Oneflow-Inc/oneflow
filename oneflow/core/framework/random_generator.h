@@ -24,8 +24,12 @@ limitations under the License.
 
 #include "oneflow/core/ep/cpu/cpu_random_generator.h"
 #include "oneflow/core/ep/cuda/cuda_random_generator.h"
+#include "oneflow/core/common/hash_container.h"
 
 namespace oneflow {
+
+class NdSbp;
+
 namespace one {
 
 // The default seed is selected to be a large number
@@ -43,6 +47,11 @@ class Generator final {
   void set_current_seed(uint64_t seed);
 
   uint64_t current_seed() const;
+
+  void add_children_generator(Symbol<ParallelDesc> placement, Symbol<NdSbp> nd_sbp,
+                              const std::shared_ptr<Generator>& generator);
+  const HashMap<std::pair<Symbol<ParallelDesc>, Symbol<NdSbp>>, std::shared_ptr<one::Generator>>&
+  children_generators() const;
 
   // Reset current generator by a non-deterministic random seed, and returns it.
   uint64_t seed();
@@ -72,6 +81,10 @@ class Generator final {
  private:
   mutable std::mutex mutex_;
   std::shared_ptr<ep::RandomGenerator> internal_;
+  // children generator for eager global mode
+  HashMap<std::pair<Symbol<ParallelDesc>, Symbol<NdSbp>>,  // NOLINT
+          std::shared_ptr<one::Generator>>                 // NOLINT
+      children_generators_;                                // NOLINT
 };
 
 Maybe<Generator> MakeGenerator(const std::string& device, int device_index = -1);
