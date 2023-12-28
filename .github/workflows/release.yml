@@ -23,6 +23,9 @@ on:
         required: false
         type: string
         default: "main"
+      upload_override_branch:
+        required: false
+        type: string
       cuda_cmake_cache:
         required: false
         type: string
@@ -135,8 +138,8 @@ jobs:
         if: ${{ inputs.is_priv }}
         run: |
           GITHUB_SHA=$(git rev-parse HEAD)
-          echo "OSS_DIR=branch/${{ inputs.branch }}/${{ matrix.entry }}/${GITHUB_SHA}" >> $GITHUB_ENV
-          echo "GITHUB_REF_NAME=${{ inputs.branch }}" >> $GITHUB_ENV
+          echo "OSS_DIR=branch/${{ inputs.upload_override_branch || inputs.branch }}/${{ matrix.entry }}/${GITHUB_SHA}" >> $GITHUB_ENV
+          echo "GITHUB_REF_NAME=${{ inputs.upload_override_branch || inputs.branch }}" >> $GITHUB_ENV
           echo "GITHUB_SHA=${GITHUB_SHA}" >> $GITHUB_ENV
           echo "ONEFLOW_OSS_BUCKET=${{ secrets.ONEFLOW_PRIV_OSS_BUCKET }}" >> $GITHUB_ENV
       - name: Print env
