@@ -12,7 +12,7 @@ In addition to generating profile files, nsys also produces platform-independent
 1. Generate profile files using the following nsys command:
 
     ```bash
-    nsys profile -o profile_data
+    nsys profile --export=sqlite -o profile_data
     ```
 
     This will produce .nsys-rep files along with a .sqlite file.
