@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import torch as torch_original
 import unittest
 import oneflow as flow
 import oneflow.unittest
@@ -33,6 +32,7 @@ class TestAutogradFunctional(flow.unittest.TestCase):
         v = torch.randn(5)
         result_tensor = torch.autograd.functional.vjp(_func_tensor, inputs, v)
         #result_scalar = torch.autograd.functional.vjp(_func_scalar, inputs)
+        # TODO: autograd.grad interface has a bug here, uncomment when issue 10392 is fixed
 
         def _func_multi_tensor(x, y):
             return (x.exp() + y.pow(2)).sum(dim=1)
@@ -53,6 +53,7 @@ class TestAutogradFunctional(flow.unittest.TestCase):
         v = torch.randn(5, 5)
         result_tensor = torch.autograd.functional.jvp(_func_tensor, inputs, v)
         #result_scalar = torch.autograd.functional.jvp(_func_scalar, inputs)
+        # TODO: autograd.grad interface has a bug here, uncomment when issue 10392 is fixed
 
         def _func_multi_tensor(x, y):
             return x.exp() + y.pow(2)
