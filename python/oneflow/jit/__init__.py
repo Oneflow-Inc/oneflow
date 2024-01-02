@@ -15,7 +15,8 @@ limitations under the License.
 """
 import warnings
 from typing import Any, Dict, List, Set, Tuple, Union, Callable
-
+import oneflow
+from oneflow.nn import Module
 
 def script(
     obj,
@@ -71,3 +72,7 @@ def is_scripting():
 
 def is_tracing():
     return False
+
+class Modulescript(Module):
+    def __init__(self, arg=None):
+        super().__init__()
