@@ -23,6 +23,7 @@ from oneflow.autograd.autograd_mode import (
     is_grad_enabled,
     no_grad,
 )
+from oneflow.autograd.functional import vjp, jvp
 from . import graph
 
 __all__ = [
@@ -34,4 +35,6 @@ __all__ = [
     "inference_mode",
     "is_grad_enabled",
     "no_grad",
+    "vjp",
+    "jvp",
 ]
