@@ -42,6 +42,6 @@ inline static void EnableCustomEvalFrame(PyThreadState* tstate, _PyFrameEvalFunc
 #endif
 }
 
-void EnableCustomEvalFrameForCurrentThread(_PyFrameEvalFunction eval_func) {
+void EnableCustomEvalFrameForCurrentThread(PyFrameEvalFunc eval_func) {
   return EnableCustomEvalFrame(PyThreadState_GET(), eval_func);
 }
