@@ -23,7 +23,7 @@ from oneflow.autograd.autograd_mode import (
     is_grad_enabled,
     no_grad,
 )
-from oneflow.autograd.functional import vjp, jvp, jacobian
+from oneflow.autograd.functional import vjp, jvp, jacobian, hessian, hvp, vhp
 from . import graph
 
 __all__ = [
@@ -38,4 +38,7 @@ __all__ = [
     "vjp",
     "jvp",
     "jacobian",
+    "hessian",
+    "hvp",
+    "vhp",
 ]
