@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import torch as torch_original
 import unittest
 import oneflow as flow
 import oneflow.unittest
@@ -65,22 +66,36 @@ class TestAutogradFunctional(flow.unittest.TestCase):
         return [result_tensor, result_tensors]
     
     def test_vhp(test_case):
-        def _func_tensor(x):
-            return x.exp().sum(dim=1)
-
         def _func_scalar(x):
             return x.exp().sum()
 
         inputs = torch.randn(5, 5)
         v = torch.randn(5, 5)
-        result_tensor = torch.autograd.functional.jvp(_func_scalar, inputs, v)
+        result_tensor = torch.autograd.functional.vhp(_func_scalar, inputs, v)
 
         def _func_multi_tensor(x, y):
             return (x.exp() + y.pow(2)).sum()
 
         v = (torch.randn(5, 5), torch.randn(5, 5))
         inputs = (torch.randn(5, 5), torch.randn(5, 5))
-        result_tensors = torch.autograd.functional.jvp(_func_multi_tensor, inputs, v)
+        result_tensors = torch.autograd.functional.vhp(_func_multi_tensor, inputs, v)
+
+        return [result_tensor, result_tensors]
+    
+    def test_hvp(test_case):
+        def _func_scalar(x):
+            return x.exp().sum()
+
+        inputs = torch.randn(5, 5)
+        v = torch.randn(5, 5)
+        result_tensor = torch.autograd.functional.hvp(_func_scalar, inputs, v)
+
+        def _func_multi_tensor(x, y):
+            return (x.exp() + y.pow(2)).sum()
+
+        v = (torch.randn(5, 5), torch.randn(5, 5))
+        inputs = (torch.randn(5, 5), torch.randn(5, 5))
+        result_tensors = torch.autograd.functional.hvp(_func_multi_tensor, inputs, v)
 
         return [result_tensor, result_tensors]
     
