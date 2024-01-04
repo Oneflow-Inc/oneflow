@@ -1170,8 +1170,14 @@ def hvp(func, inputs, v=None, create_graph=False, strict=False):
             raise RuntimeError(
                 "The Tensor returned by the function given to hvp should contain a single element"
             )
+        # The backward is linear so the value of grad_outputs is not important as
+        # it won't appear in the double backward graph. We only need to ensure that
+        # it does not contain inf or nan.
+        grad_outputs = tuple(
+            flow.ones_like(out, requires_grad=True) for out in outputs
+        )
 
-        jac = _autograd_grad(outputs, inputs, create_graph=True)
+        jac = _autograd_grad(outputs, inputs, grad_outputs, create_graph=True)
         _check_requires_grad(jac, "jacobian", strict=strict)
 
         grad_jac = tuple(flow.zeros_like(inp, requires_grad=True) for inp in inputs)
