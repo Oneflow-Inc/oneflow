@@ -13,6 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Tuple, List
 
-BroadcastingList2 = Tuple
+
+class DeQuantStub:
+    def __init__(self, *args, **kwargs):
+        raise NotImplementedError(
+            "The oneflow.ao.DeQuantStub interface is just to align the torch.ao.DeQuantStub interface and has no practical significance."
+        )
+
+
+class QuantStub:
+    def __init__(self, *args, **kwargs):
+        raise NotImplementedError(
+            "The oneflow.ao.QuantStub interface is just to align the torch.ao.QuantStub interface and has no practical significance."
+        )
