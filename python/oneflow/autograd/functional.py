@@ -791,6 +791,7 @@ def jacobian(
                 vj = _autograd_grad(
                     (out.reshape(-1)[j],),
                     inputs,
+                    (flow.ones_like(out.reshape(-1)[j]),),
                     retain_graph=True,
                     create_graph=create_graph,
                 )
