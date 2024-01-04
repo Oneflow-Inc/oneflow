@@ -20,6 +20,7 @@ warnings.warn(
     "The oneflow.jit interface is just to align the torch.jit interface and has no practical significance."
 )
 
+
 def script(
     obj,
     optimize=None,
@@ -75,17 +76,19 @@ def is_scripting():
 def is_tracing():
     return False
 
+
 class _Final:
     """Mixin to prohibit subclassing"""
 
-    __slots__ = ('__weakref__',)
+    __slots__ = ("__weakref__",)
 
     def __init_subclass__(self, *args, **kwds):
-        if '_root' not in kwds:
+        if "_root" not in kwds:
             raise TypeError("Cannot subclass special typing classes")
 
+
 class _SpecialForm(_Final, _root=True):
-    __slots__ = ('_name', '__doc__', '_getitem')
+    __slots__ = ("_name", "__doc__", "_getitem")
 
     def __init__(self, getitem):
         self._getitem = getitem
@@ -93,7 +96,7 @@ class _SpecialForm(_Final, _root=True):
         self.__doc__ = getitem.__doc__
 
     def __getattr__(self, item):
-        if item in {'__name__', '__qualname__'}:
+        if item in {"__name__", "__qualname__"}:
             return self._name
 
         raise AttributeError(item)
@@ -102,7 +105,7 @@ class _SpecialForm(_Final, _root=True):
         raise TypeError(f"Cannot subclass {self!r}")
 
     def __repr__(self):
-        return 'typing.' + self._name
+        return "typing." + self._name
 
     def __reduce__(self):
         return self._name
@@ -125,15 +128,16 @@ class _SpecialForm(_Final, _root=True):
     def __getitem__(self, parameters):
         return self._getitem(self, parameters)
 
+
 @_SpecialForm
 def Final(*args, **kwargs):
     warnings.warn(
         "The oneflow.jit.Final interface is just to align the torch.jit.Final interface and has no practical significance."
     )
 
+
 def interface(fn):
     warnings.warn(
         "The oneflow.jit.interface interface is just to align the torch.jit.interface interface and has no practical significance."
     )
     return fn
-
