@@ -177,9 +177,49 @@ def _check_requires_grad(inputs, input_type, strict):
                     " when running in strict mode."
                 )
 
+def batched_autograd_grad(
+    outputs,
+    inputs,
+    grad_outputs=None,
+    allow_unused=True,
+    create_graph=False,
+    retain_graph=None,
+):
+    grad_res: Tuple[flow.Tensor, ...] = tuple()
+    for output, grad_output in zip(outputs, grad_outputs):
+        one_result: Tuple[flow.tensor, ...] = tuple()
+        for idx in range(len(grad_output)-1):
+            one_result += flow.autograd.grad(
+                    output,
+                    inputs,
+                    grad_output[idx],
+                    allow_unused=allow_unused,
+                    create_graph=create_graph,
+                    retain_graph=True,
+                )
+        one_result += flow.autograd.grad(
+                output,
+                inputs,
+                grad_output[-1],
+                allow_unused=allow_unused,
+                create_graph=create_graph,
+                retain_graph=retain_graph,
+            
+        )
+        res_mask = grad_output.sum(dim=1) == flow.ones(len(grad_output))
+        one_result = flow.stack(one_result, dim=0)
+        one_result = one_result[res_mask,:]
+        grad_res += (one_result,)
+    grad_res = flow.cat(grad_res, dim=0)
+    return (grad_res,)
 
 def _autograd_grad(
-    outputs, inputs, grad_outputs=None, create_graph=False, retain_graph=None,
+    outputs,
+    inputs,
+    grad_outputs=None,
+    create_graph=False,
+    retain_graph=None,
+    is_grads_batched=False,
 ):
     # Version of autograd.grad that accepts `None` in outputs and do not compute gradients for them.
     # This has the extra constraint that inputs has to be a tuple
@@ -200,14 +240,25 @@ def _autograd_grad(
         # No differentiable output, we don't need to call the autograd engine
         return (None,) * len(inputs)
     else:
-        return flow.autograd.grad(
-            new_outputs,
-            inputs,
-            new_grad_outputs,
-            allow_unused=True,
-            create_graph=create_graph,
-            retain_graph=retain_graph,
-        )
+        if(is_grads_batched):
+            # the batched_autograd is not implemented, use flow.autograd.grad when issue 10397 is fixed
+            return batched_autograd_grad(
+                new_outputs,
+                inputs,
+                new_grad_outputs,
+                allow_unused=True,
+                create_graph=create_graph,
+                retain_graph=retain_graph,
+            )
+        else:
+            return flow.autograd.grad(
+                new_outputs,
+                inputs,
+                new_grad_outputs,
+                allow_unused=True,
+                create_graph=create_graph,
+                retain_graph=retain_graph,
+            )
 
 
 def _fill_in_zeros(grads, refs, strict, create_graph, stage):
@@ -744,6 +795,7 @@ def jacobian(
                         inputs,
                         grad_output,
                         create_graph=create_graph,
+                        is_grads_batched=True
                     )
                 )
                 for el_idx, vj_el in enumerate(vj):
