@@ -340,8 +340,8 @@ class enable(BaseMockConfig):
 
         _importer._enable(
             self.globals,
-            lazy,
-            verbose,
+            lazy=self.lazy,
+            verbose=self.verbose,
             main_pkg=main_pkg,
             mock_version=mock_version,
             required_dependencies=required_dependencies,

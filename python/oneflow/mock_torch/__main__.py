@@ -16,6 +16,16 @@ limitations under the License.
 import argparse
 from pathlib import Path
 import os
+import sys
+
+if sys.version_info < (3, 8):
+    try:
+        from importlib_metadata import requires
+    except ImportError:
+        import subprocess
+
+        subprocess.check_call("pip install importlib_metadata", shell=True)
+        subprocess.check_call("pip install packaging", shell=True)
 
 parser = argparse.ArgumentParser()
 parser.add_argument(

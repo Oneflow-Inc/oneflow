@@ -20,11 +20,13 @@ from collections import deque
 from importlib import import_module
 
 if sys.version_info < (3, 8):
-    import subprocess
+    try:
+        from importlib_metadata import requires
+    except ImportError:
+        import subprocess
 
-    subprocess.check_call("pip install importlib_metadata", shell=True)
-    subprocess.check_call("pip install packaging", shell=True)
-    from importlib_metadata import requires
+        subprocess.check_call("pip install importlib_metadata", shell=True)
+        subprocess.check_call("pip install packaging", shell=True)
 else:
     from importlib.metadata import requires
 
