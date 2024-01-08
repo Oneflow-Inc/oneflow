@@ -71,15 +71,15 @@ Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
           << "Grad can be implicitly created only for scalar outputs";
       gradients->at(i) = JUST(one::functional::OnesLike(outputs.at(i)));
     } else {
-      if (i == 0 && is_grads_batched) {
-        CHECK_EQ_OR_RETURN(*(outputs.at(0)->shape()), *JUST(out_grads.at(0)->shape()->Slice(1)))
+      if (is_grads_batched) {
+        CHECK_EQ_OR_RETURN(*(outputs.at(i)->shape()), *JUST(out_grads.at(i)->shape()->Slice(1)))
             << "If `is_grads_batched=True`, we interpret the first "
             << "dimension of each grad_output as the batch dimension. "
             << "The sizes of the remaining dimensions are expected to match "
             << "the shape of corresponding output, but a mismatch "
-            << "was detected: grad_output[0] has a shape of "
-            << out_grads.at(0)->shape()->ToString() << " and output[0] has a shape of "
-            << outputs.at(0)->shape()->ToString() << ". ";
+            << "was detected: grad_output[" << i << "] has a shape of "
+            << out_grads.at(i)->shape()->ToString() << " and output[" << i << "] has a shape of "
+            << outputs.at(i)->shape()->ToString() << ". ";
 
       } else {
         CHECK_EQ_OR_RETURN(*(outputs.at(i)->shape()), *(out_grads.at(i)->shape()))
