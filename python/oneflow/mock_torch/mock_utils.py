@@ -18,12 +18,21 @@ import sysconfig
 import pkgutil
 from collections import deque
 from importlib import import_module
-from importlib.metadata import requires
+
+if sys.version_info < (3, 8):
+    import subprocess
+
+    subprocess.check_call("pip install importlib_metadata", shell=True)
+    subprocess.check_call("pip install packaging", shell=True)
+    from importlib_metadata import requires
+else:
+    from importlib.metadata import requires
+
+from packaging.requirements import Requirement
 from pathlib import Path
 from functools import lru_cache
 from typing import List, Optional
 from types import ModuleType
-from packaging.requirements import Requirement
 
 
 __all__ = ["MockEnableDisableMixin"]
@@ -184,7 +193,7 @@ class PackageDependencyMixin:
             PackageDependencyMixin.pkg_cache.update({main_pkg: deps})
 
         if verbose:
-            print(f"PackageDependencyMixin : {main_pkg=}, {deps=}")
+            print("PackageDependencyMixin : main_pkg=", main_pkg, ", deps=", deps)
 
         if callback:
             return callback(deps)
@@ -279,7 +288,13 @@ class MockEnableDisableMixin(PackageDependencyMixin, VersionMixin):
                 verbose=verbose,
             )
             if verbose:
-                print(f"Existing dependencies of {main_pkg=}: {existing_deps=}")
+                print(
+                    "Existing dependencies of ",
+                    "main_pkg: ",
+                    main_pkg,
+                    "existing_deps: ",
+                    existing_deps,
+                )
 
             self.mock_safety_packages.update(existing_deps)
 
