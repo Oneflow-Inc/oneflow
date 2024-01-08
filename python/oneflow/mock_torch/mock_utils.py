@@ -360,6 +360,7 @@ class MockEnableDisableMixin(PackageDependencyMixin, VersionMixin):
 
         if from_cli:
             torch_env = Path(__file__).parent
-            sys.path.remove(str(torch_env))
+            if str(torch_env) in sys.path:
+                sys.path.remove(str(torch_env))
 
         self.restore_version()
