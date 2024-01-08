@@ -96,6 +96,13 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("CudaSynchronize", &CudaSynchronize);
   m.def("GetCUDAMemoryUsed", &GetCUDAMemoryUsed);
   m.def("GetCPUMemoryUsed", &GetCPUMemoryUsed);
+  m.def("CudaMemGetInfo", [](int device) -> std::pair<size_t, size_t> {
+    CudaCurrentDeviceGuard guard(device);
+    size_t device_free = 0;
+    size_t device_total = 0;
+    OF_CUDA_CHECK(cudaMemGetInfo(&device_free, &device_total));
+    return {device_free, device_total};
+  });
   m.def(
       "_get_device_properties",
       [](int device) -> cudaDeviceProp* { return GetDeviceProperties(device); },
