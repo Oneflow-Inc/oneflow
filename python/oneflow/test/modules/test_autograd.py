@@ -284,54 +284,55 @@ class TestAutograd(flow.unittest.TestCase):
         test_case.assertTrue(dddx.oneflow is None and dddx.pytorch is None)
 
     def test_autograd_is_grads_batched(test_case):
-        device = random_device()
-        x = random_tensor(ndim=2, dim0=2, dim1=2).to(device).requires_grad_()
+        x = flow.randn(2, 2, requires_grad=True)
 
         out = x.clone()  # Size([2, 2])
-        batched_grad = (
-            torch.arange(3).expand(2, 2, 3).transpose(0, 2).to(device)
-        )  # Size([3, 2, 2])
-        grad = torch.autograd.grad(out, (x,), (batched_grad,), is_grads_batched=True)
+        batched_grad = flow.arange(3).expand(2, 2, 3).transpose(0, 2)  # Size([3, 2, 2])
+        (grad,) = flow.autograd.grad(out, (x,), (batched_grad,), is_grads_batched=True)
         test_case.assertTrue(
             np.array_equal(
-                grad[0].oneflow.cpu().detach().numpy(),
-                grad[0].pytorch.cpu().detach().numpy(),
+                grad.cpu().detach().numpy(),
+                flow.arange(3)
+                .expand(2, 2, 3)
+                .transpose(0, 2)
+                .to(dtype=grad.dtype)
+                .numpy(),
             )
         )
 
         # Detect shape mismatch
-        grad_out = torch.ones(2, 2, device=device)
+        grad_out = flow.ones(2, 2)
         with test_case.assertRaisesRegex(
             RuntimeError, "If `is_grads_batched=True`, we interpret the first"
         ):
-            torch.oneflow.autograd.grad(
-                outputs=out.oneflow,
-                grad_outputs=(grad_out.oneflow,),
-                inputs=(x.oneflow,),
+            flow.autograd.grad(
+                outputs=out,
+                grad_outputs=(grad_out,),
+                inputs=(x,),
                 is_grads_batched=True,
             )
 
         # TODO: ReduceSum backward not support broadcast grad with shape (3, ) to (3, 2, 2)
         #  # Scalar outputs
         #  out = x.sum()  # Size([])
-        #  batched_grad = torch.arange(3, device=device)  # Size([3])
-        #  grad = torch.autograd.grad(out, (x,), (batched_grad,), is_grads_batched=True)
+        #  batched_grad = flow.arange(3)  # Size([3])
+        #  (grad,) = flow.autograd.grad(out, (x,), (batched_grad,), is_grads_batched=True)
         #  test_case.assertTrue(
         #      np.array_equal(
-        #          grad[0].oneflow.cpu().detach().numpy(),
-        #          grad[0].pytorch.cpu().detach().numpy(),
+        #          grad.cpu().detach().numpy(),
+        #          flow.arange(3).expand(2, 2, 3).transpose(0, 2).to(dtype=grad.dtype).numpy(),
         #      )
         #  )
 
         # We consider scalar and sized-1 to be a mismatch. This is consistent with current non-batched behavior.
-        grad_out = torch.ones(2).unsqueeze(1).to(device)
+        grad_out = flow.ones(2).unsqueeze(1)
         with test_case.assertRaisesRegex(
             RuntimeError, "If `is_grads_batched=True`, we interpret the first"
         ):
-            torch.autograd.oneflow.grad(
-                outputs=out.oneflow,
-                grad_outputs=(grad_out.oneflow,),
-                inputs=(x.oneflow,),
+            flow.autograd.grad(
+                outputs=out,
+                grad_outputs=(grad_out,),
+                inputs=(x,),
                 is_grads_batched=True,
             )
 
