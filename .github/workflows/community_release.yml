@@ -12,7 +12,7 @@ on:
     inputs:
       priv_branch:
         required: false
-        default: "community"
+        default: "main"
 
 concurrency:
   group: community-release-${{ github.ref }}-${{ inputs.priv_branch }}
