@@ -72,14 +72,15 @@ Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
       gradients->at(i) = JUST(one::functional::OnesLike(outputs.at(i)));
     } else {
       if (is_grads_batched) {
-        CHECK_EQ_OR_RETURN(*(outputs.at(i)->shape()), *JUST(out_grads.at(i)->shape()->Slice(1)))
-            << "If `is_grads_batched=True`, we interpret the first "
-            << "dimension of each grad_output as the batch dimension. "
-            << "The sizes of the remaining dimensions are expected to match "
-            << "the shape of corresponding output, but a mismatch "
-            << "was detected: grad_output[" << i << "] has a shape of "
-            << out_grads.at(i)->shape()->ToString() << " and output[" << i << "] has a shape of "
-            << outputs.at(i)->shape()->ToString() << ". ";
+        if (*(outputs.at(i)->shape()) != *JUST(out_grads.at(i)->shape()->Slice(1))) {
+          THROW(RuntimeError) << "If `is_grads_batched=True`, we interpret the first "
+                              << "dimension of each grad_output as the batch dimension. "
+                              << "The sizes of the remaining dimensions are expected to match "
+                              << "the shape of corresponding output, but a mismatch "
+                              << "was detected: grad_output[" << i << "] has a shape of "
+                              << out_grads.at(i)->shape()->ToString() << " and output[" << i
+                              << "] has a shape of " << outputs.at(i)->shape()->ToString() << ".";
+        }
 
       } else {
         CHECK_EQ_OR_RETURN(*(outputs.at(i)->shape()), *(out_grads.at(i)->shape()))
