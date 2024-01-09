@@ -16,6 +16,16 @@ limitations under the License.
 import argparse
 from pathlib import Path
 import os
+import sys
+
+if sys.version_info < (3, 8):
+    try:
+        from importlib_metadata import requires
+    except ImportError:
+        import subprocess
+
+        subprocess.check_call("pip install importlib_metadata", shell=True)
+        subprocess.check_call("pip install packaging", shell=True)
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -33,13 +43,23 @@ torch_env = Path(__file__).parent
 
 
 def main():
+    def is_torch_env(s):
+        if s.endswith("oneflow/mock_torch"):
+            return True
+        return False
+
     if args.mock == "enable":
         print(
             f"export ONEFLOW_MOCK_TORCH_LAZY={args.lazy}; export ONEFLOW_MOCK_TORCH_VERBOSE={args.verbose}; export PYTHONPATH={str(torch_env)}:$PYTHONPATH"
         )
     elif args.mock == "disable" and "PYTHONPATH" in os.environ:
         paths = os.environ["PYTHONPATH"].rstrip(":").split(":")
-        paths = [x for x in paths if x != str(torch_env)]
+        paths = [p for p in paths if not is_torch_env(p)]
+        if len(paths) == 0:
+            print(
+                "unset PYTHONPATH; unset ONEFLOW_MOCK_TORCH_LAZY; unset ONEFLOW_MOCK_TORCH_VERBOSE"
+            )
+            return
         path = ":".join(paths)
         print(
             f"export PYTHONPATH={path}; unset ONEFLOW_MOCK_TORCH_LAZY; unset ONEFLOW_MOCK_TORCH_VERBOSE"
