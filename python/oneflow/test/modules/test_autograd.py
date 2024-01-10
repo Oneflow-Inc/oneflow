@@ -17,6 +17,7 @@ limitations under the License.
 import unittest
 from collections import OrderedDict
 
+import torch as original_torch
 import numpy as np
 import oneflow as flow
 import oneflow.unittest
@@ -210,7 +211,6 @@ class TestAutograd(flow.unittest.TestCase):
             flow.autograd.backward(y, flow.ones_like(y))
         test_case.assertTrue(np.array_equal(x.grad.numpy(), np.full(random_shape, 2.0)))
 
-    @unittest.skip("skip for now, becase it failed 2 times in past week")
     @autotest(n=1, auto_backward=False, check_graph=False)
     def test_acc_grad_inplace_update(test_case):
         random_shape = [random(1, 5).to(int).value() for _ in range(4)]
@@ -282,6 +282,59 @@ class TestAutograd(flow.unittest.TestCase):
             allow_unused=True,
         )[0]
         test_case.assertTrue(dddx.oneflow is None and dddx.pytorch is None)
+
+    def test_autograd_is_grads_batched(test_case):
+        x = flow.randn(2, 2, requires_grad=True)
+
+        out = x.clone()  # Size([2, 2])
+        batched_grad = flow.arange(3).expand(2, 2, 3).transpose(0, 2)  # Size([3, 2, 2])
+        (grad,) = flow.autograd.grad(out, (x,), (batched_grad,), is_grads_batched=True)
+        test_case.assertTrue(
+            np.array_equal(
+                grad.cpu().detach().numpy(),
+                flow.arange(3)
+                .expand(2, 2, 3)
+                .transpose(0, 2)
+                .to(dtype=grad.dtype)
+                .numpy(),
+            )
+        )
+
+        # Detect shape mismatch
+        grad_out = flow.ones(2, 2)
+        with test_case.assertRaisesRegex(
+            RuntimeError, "If `is_grads_batched=True`, we interpret the first"
+        ):
+            flow.autograd.grad(
+                outputs=out,
+                grad_outputs=(grad_out,),
+                inputs=(x,),
+                is_grads_batched=True,
+            )
+
+        # TODO: ReduceSum backward not support broadcast grad with shape (3, ) to (3, 2, 2)
+        #  # Scalar outputs
+        #  out = x.sum()  # Size([])
+        #  batched_grad = flow.arange(3)  # Size([3])
+        #  (grad,) = flow.autograd.grad(out, (x,), (batched_grad,), is_grads_batched=True)
+        #  test_case.assertTrue(
+        #      np.array_equal(
+        #          grad.cpu().detach().numpy(),
+        #          flow.arange(3).expand(2, 2, 3).transpose(0, 2).to(dtype=grad.dtype).numpy(),
+        #      )
+        #  )
+
+        # We consider scalar and sized-1 to be a mismatch. This is consistent with current non-batched behavior.
+        grad_out = flow.ones(2).unsqueeze(1)
+        with test_case.assertRaisesRegex(
+            RuntimeError, "If `is_grads_batched=True`, we interpret the first"
+        ):
+            flow.autograd.grad(
+                outputs=out,
+                grad_outputs=(grad_out,),
+                inputs=(x,),
+                is_grads_batched=True,
+            )
 
 
 if __name__ == "__main__":

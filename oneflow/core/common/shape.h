@@ -146,6 +146,7 @@ class Shape final : public DimVector, public MutShapeMixIn<Shape> {
   AxisVector Axes4BroadcastTo(ShapeView broadcast_dim_vec) const;
 
   Maybe<Shape> Slice(int64_t start_dim, int64_t end_dim) const;
+  Maybe<Shape> Slice(int64_t start_dim) const;
 
   bool operator==(const Shape& rhs) const;
 

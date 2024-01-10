@@ -216,9 +216,11 @@ Maybe<Shape> Shape::Slice(int64_t start_dim, int64_t end_dim) const {
   if (start_dim > ndims) { start_dim = ndims; }
   if (end_dim > ndims) { end_dim = ndims; }
   std::shared_ptr<Shape> shape = std::make_shared<Shape>();
-  for (int64_t i = start_dim; i < end_dim && i < ndims; ++i) { shape->emplace_back(this->At(i)); }
+  shape->assign(this->begin() + start_dim, this->begin() + end_dim);
   return shape;
 }
+
+Maybe<Shape> Shape::Slice(int64_t start_dim) const { return Slice(start_dim, NumAxes()); }
 
 bool Shape::operator==(const Shape& rhs) const {
   if (is_initialized_ != rhs.is_initialized_) { return false; }
