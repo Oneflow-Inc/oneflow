@@ -19,9 +19,7 @@ from typing import List, Tuple
 
 import oneflow as flow
 
-__all__ = [
-    "vjp", "jvp", "jacobian", "hessian", "hvp", "vhp"
-]
+__all__ = ["vjp", "jvp", "jacobian", "hessian", "hvp", "vhp"]
 
 # Utility functions
 
@@ -88,15 +86,11 @@ def _grad_preprocess(inputs, create_graph, need_graph):
     # Note that we *always* create a new Tensor object to be able to see the difference between
     # inputs given as arguments and the same Tensors automatically captured by the user function.
     res = []
-    for inp in inputs:
-        if create_graph and inp.requires_grad:
+    for inp in inputs:    
+        if create_graph and inp.requires_grad:        
             # Create at least a new Tensor object in a differentiable way
-            if not inp.is_sparse:
-                # Use .view_as() to get a shallow copy
-                res.append(inp.view_as(inp))
-            else:
-                # We cannot use view for sparse Tensors so we clone
-                res.append(inp.clone())
+            # oneflow.torch has no is_sparse attribute. https://github.com/Oneflow-Inc/oneflow/issues/10401
+            res.append(inp.view_as(inp))
         else:
             res.append(inp.detach().requires_grad_(need_graph))
     return tuple(res)
@@ -177,7 +171,8 @@ def _check_requires_grad(inputs, input_type, strict):
                     " when running in strict mode."
                 )
 
-def batched_autograd_grad(
+
+def _batched_autograd_grad(
     outputs,
     inputs,
     grad_outputs=None,
@@ -187,31 +182,25 @@ def batched_autograd_grad(
 ):
     grad_res: Tuple[flow.Tensor, ...] = tuple()
     for output, grad_output in zip(outputs, grad_outputs):
-        one_result: Tuple[flow.tensor, ...] = tuple()
-        for idx in range(len(grad_output)-1):
-            one_result += flow.autograd.grad(
-                    output,
-                    inputs,
-                    grad_output[idx],
-                    allow_unused=allow_unused,
-                    create_graph=create_graph,
-                    retain_graph=True,
-                )
-        one_result += flow.autograd.grad(
+        result: Tuple[flow.tensor, ...] = tuple()
+        for idx in range(len(grad_output)):
+            result += flow.autograd.grad(
                 output,
                 inputs,
-                grad_output[-1],
+                grad_output[idx],
                 allow_unused=allow_unused,
                 create_graph=create_graph,
-                retain_graph=retain_graph,
-            
-        )
-        res_mask = grad_output.sum(dim=1) == flow.ones(len(grad_output))
-        one_result = flow.stack(one_result, dim=0)
-        one_result = one_result[res_mask,:]
-        grad_res += (one_result,)
+                retain_graph=True if idx != (len(grad_output) - 1) else retain_graph,
+            )
+        # Any function
+        #res_mask = grad_output.sum(dim=1) == flow.ones(len(grad_output))
+        res_mask = [True if any(element == 1 for element in row) else False for row in grad_output]
+        result = flow.stack(result, dim=0)
+        result = result[res_mask, :]
+        grad_res += (result,)
     grad_res = flow.cat(grad_res, dim=0)
     return (grad_res,)
+
 
 def _autograd_grad(
     outputs,
@@ -240,9 +229,9 @@ def _autograd_grad(
         # No differentiable output, we don't need to call the autograd engine
         return (None,) * len(inputs)
     else:
-        if(is_grads_batched):
-            # the batched_autograd is not implemented, use flow.autograd.grad when issue 10397 is fixed
-            return batched_autograd_grad(
+        if is_grads_batched:
+            # the batched_autograd is not implemented, use flow.autograd.grad when issue 10397 is fixed. https://github.com/Oneflow-Inc/oneflow/issues/10397
+            return _batched_autograd_grad(
                 new_outputs,
                 inputs,
                 new_grad_outputs,
@@ -409,6 +398,7 @@ def vjp(func, inputs, v=None, create_graph=False, strict=False):
         _tuple_postprocess(vjp, is_inputs_tuple),
     )
 
+
 def jvp(func, inputs, v=None, create_graph=False, strict=False):
     r"""Compute the dot product between the Jacobian of the given function at the point given by the inputs and a vector ``v``.
     
@@ -516,14 +506,13 @@ def jvp(func, inputs, v=None, create_graph=False, strict=False):
     outputs = _grad_postprocess(outputs, create_graph)
     jvp = _grad_postprocess(jvp, create_graph)
 
-    return (_tuple_postprocess(outputs, is_outputs_tuple),
-             _tuple_postprocess(jvp, is_outputs_tuple),
+    return (
+        _tuple_postprocess(outputs, is_outputs_tuple),
+        _tuple_postprocess(jvp, is_outputs_tuple),
     )
 
 
-def _construct_standard_basis_for(
-    tensors, tensor_numels: Tuple[int, ...]
-):
+def _construct_standard_basis_for(tensors, tensor_numels: Tuple[int, ...]):
     # This function:
     # - constructs a N=sum(tensor_numels) standard basis. i.e. an NxN identity matrix.
     # - Splits the identity matrix into chunks with each chunk size determined by `tensor_numels`.
@@ -551,9 +540,9 @@ def _construct_standard_basis_for(
     )
     diag_start_idx = 0
     for chunk, numel in zip(chunks, tensor_numels):
-        #chunk.diagonal(diag_start_idx).fill_(1)
+        # chunk.diagonal(diag_start_idx).fill_(1)
         for i in range(numel):
-            chunk[diag_start_idx+i][i]=1
+            chunk[diag_start_idx + i][i] = 1
         diag_start_idx += numel
     return chunks
 
@@ -570,54 +559,9 @@ def _jacfwd(func, inputs, strict=False, vectorize=False):
     output_info = []
 
     if vectorize:
-        # See NOTE: [Computing jacobian with vmap and grad for multiple outputs]
-        input_numels = tuple(input.numel() for input in inputs)
-
-        # Step 1: Prepare tangents
-        tangents = _construct_standard_basis_for(inputs, input_numels)
-
-        # Step 2: Compute vmap over computation with dual tensors
-        def jvp(tangents):
-            with fwAD.dual_level():
-                dual_inputs = tuple(
-                    fwAD.make_dual(input, tangent.view_as(input))
-                    for input, tangent in zip(inputs, tangents)
-                )
-                _is_outputs_tuple, dual_outputs = _as_tuple(
-                    func(*dual_inputs), "outputs"
-                )
-                output_info.append(_is_outputs_tuple)
-                jv = []
-                primal_outs = []
-                for dual_out in dual_outputs:
-                    primal, tangent = fwAD.unpack_dual(dual_out)
-                    primal_outs.append(primal)
-                    if tangent is not None:
-                        jv.append(tangent)
-                    else:
-                        jv.append(flow.zeros_like(primal))
-                output_info.append(primal_outs)
-                return tuple(jv)
-
-        outputs_before_split = _vmap(jvp)(tangents)
-        is_outputs_tuple, outputs = output_info
-        # Step 3: for each of the output tangents, split along dim 0
-        jacobian_input_output = []
-        for jac_output_i, output_i in zip(outputs_before_split, outputs):
-            jacobian_output_i_output = []
-            for jac, input_j in zip(jac_output_i.split(input_numels, dim=0), inputs):
-                # We need to transpose the Jacobian because in forward AD, the
-                # batch dimension represents that of the inputs
-                jacobian_input_i_output_j = jac.permute(*range(1, jac.ndim), 0).reshape(
-                    (*output_i.shape, *input_j.shape)
-                )  # noqa: C409
-
-                jacobian_output_i_output.append(jacobian_input_i_output_j)
-            jacobian_input_output.append(jacobian_output_i_output)
-
-        # Omit [Step 4] because everything is already transposed w/ forward AD
-        return _tuple_postprocess(
-            jacobian_input_output, (is_outputs_tuple, is_inputs_tuple)
+        # Computing Jacobian does not support vectorize. see issue 10397. https://github.com/Oneflow-Inc/oneflow/issues/10397
+        raise NotImplementedError(
+            "Computing Jacobian does not support vectorize. "
         )
     else:
         raise NotImplementedError(
@@ -636,6 +580,7 @@ def jacobian(
 ):
     r"""Compute the Jacobian of a given function.
 
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.autograd.functional.jacobian.html#torch.autograd.functional.jacobian
     Args:
         func (function): a Python function that takes Tensor inputs and returns
             a tuple of Tensors or a Tensor.
@@ -795,7 +740,7 @@ def jacobian(
                         inputs,
                         grad_output,
                         create_graph=create_graph,
-                        is_grads_batched=True
+                        is_grads_batched=True,
                     )
                 )
                 for el_idx, vj_el in enumerate(vj):
@@ -895,6 +840,7 @@ def hessian(
 ):
     r"""Compute the Hessian of a given scalar function.
 
+        The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.autograd.functional.hessian.html
     Args:
         func (function): a Python function that takes Tensor inputs and returns
             a Tensor with a single element.
@@ -908,7 +854,7 @@ def hessian(
             hessian for said inputs, which is the expected mathematical value.
             Defaults to ``False``.
         vectorize (bool, optional): This feature is experimental.
-            Please consider using :func:`torch.func.hessian`
+            Please consider using :func:`flow.func.hessian`
             instead if you are looking for something less experimental and more performant.
             When computing the hessian, usually we invoke
             ``autograd.grad`` once per row of the hessian. If this flag is
@@ -917,7 +863,7 @@ def hessian(
             instead of once per row. This should lead to performance
             improvements in many use cases, however, due to this feature
             being incomplete, there may be performance cliffs. Please
-            use `torch._C._debug_only_display_vmap_fallback_warnings(True)`
+            use `flow._C._debug_only_display_vmap_fallback_warnings(True)`
             to show any performance warnings and file us issues if
             warnings exist for your use case. Defaults to ``False``.
         outer_jacobian_strategy (str, optional): The Hessian is computed by
@@ -942,7 +888,7 @@ def hessian(
         >>> # xdoctest: +REQUIRES(env:TORCH_DOCTEST_AUTOGRAD)
         >>> def pow_reducer(x):
         ...     return x.pow(3).sum()
-        >>> inputs = torch.rand(2, 2)
+        >>> inputs = flow.rand(2, 2)
         >>> # xdoctest: +IGNORE_WANT("non-deterministic")
         >>> hessian(pow_reducer, inputs)
         tensor([[[[5.2265, 0.0000],
@@ -967,7 +913,7 @@ def hessian(
 
         >>> def pow_adder_reducer(x, y):
         ...     return (2 * x.pow(2) + 3 * y.pow(2)).sum()
-        >>> inputs = (torch.rand(2), torch.rand(2))
+        >>> inputs = (flow.rand(2), flow.rand(2))
         >>> hessian(pow_adder_reducer, inputs)
         ((tensor([[4., 0.],
                   [0., 4.]]),
@@ -1026,6 +972,7 @@ def hessian(
 def vhp(func, inputs, v=None, create_graph=False, strict=False):
     r"""Compute the dot product between vector ``v`` and Hessian of a  given scalar function at a specified point.
 
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.autograd.functional.vhp.html
     Args:
         func (function): a Python function that takes Tensor inputs and returns
             a Tensor with a single element.
@@ -1058,8 +1005,8 @@ def vhp(func, inputs, v=None, create_graph=False, strict=False):
         >>> # xdoctest: +REQUIRES(env:TORCH_DOCTEST_AUTOGRAD)
         >>> def pow_reducer(x):
         ...     return x.pow(3).sum()
-        >>> inputs = torch.rand(2, 2)
-        >>> v = torch.ones(2, 2)
+        >>> inputs = flow.rand(2, 2)
+        >>> v = flow.ones(2, 2)
         >>> # xdoctest: +IGNORE_WANT("non-deterministic")
         >>> vhp(pow_reducer, inputs, v)
         (tensor(0.5591),
@@ -1071,8 +1018,8 @@ def vhp(func, inputs, v=None, create_graph=False, strict=False):
                  [3.0989, 4.4456]], grad_fn=<MulBackward0>))
         >>> def pow_adder_reducer(x, y):
         ...     return (2 * x.pow(2) + 3 * y.pow(2)).sum()
-        >>> inputs = (torch.rand(2), torch.rand(2))
-        >>> v = (torch.zeros(2), torch.ones(2))
+        >>> inputs = (flow.rand(2), flow.rand(2))
+        >>> v = (flow.zeros(2), flow.ones(2))
         >>> vhp(pow_adder_reducer, inputs, v)
         (tensor(4.8053),
          (tensor([0., 0.]),
@@ -1110,9 +1057,7 @@ def vhp(func, inputs, v=None, create_graph=False, strict=False):
         # The backward is linear so the value of grad_outputs is not important as
         # it won't appear in the double backward graph. We only need to ensure that
         # it does not contain inf or nan.
-        grad_outputs = tuple(
-            flow.ones_like(out, requires_grad=True) for out in outputs
-        )
+        grad_outputs = tuple(flow.ones_like(out, requires_grad=True) for out in outputs)
 
         jac = _autograd_grad(outputs, inputs, grad_outputs, create_graph=True)
         _check_requires_grad(jac, "jacobian", strict=strict)
@@ -1125,14 +1070,16 @@ def vhp(func, inputs, v=None, create_graph=False, strict=False):
     outputs = _grad_postprocess(outputs, create_graph)
     vhp = _grad_postprocess(vhp, create_graph)
 
-    return _tuple_postprocess(outputs, is_outputs_tuple), _tuple_postprocess(
-        vhp, is_inputs_tuple
+    return (
+        _tuple_postprocess(outputs, is_outputs_tuple),
+        _tuple_postprocess(vhp, is_inputs_tuple),
     )
 
 
 def hvp(func, inputs, v=None, create_graph=False, strict=False):
     r"""Compute the dot product between the scalar function's Hessian and a vector ``v`` at a specified point.
 
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.autograd.functional.hvp.html
     Args:
         func (function): a Python function that takes Tensor inputs and returns
             a Tensor with a single element.
@@ -1163,8 +1110,8 @@ def hvp(func, inputs, v=None, create_graph=False, strict=False):
         >>> # xdoctest: +REQUIRES(env:TORCH_DOCTEST_AUTOGRAD)
         >>> def pow_reducer(x):
         ...     return x.pow(3).sum()
-        >>> inputs = torch.rand(2, 2)
-        >>> v = torch.ones(2, 2)
+        >>> inputs = flow.rand(2, 2)
+        >>> v = flow.ones(2, 2)
         >>> # xdoctest: +IGNORE_WANT("non-deterministic")
         >>> hvp(pow_reducer, inputs, v)
         (tensor(0.1448),
@@ -1179,8 +1126,8 @@ def hvp(func, inputs, v=None, create_graph=False, strict=False):
 
         >>> def pow_adder_reducer(x, y):
         ...     return (2 * x.pow(2) + 3 * y.pow(2)).sum()
-        >>> inputs = (torch.rand(2), torch.rand(2))
-        >>> v = (torch.zeros(2), torch.ones(2))
+        >>> inputs = (flow.rand(2), flow.rand(2))
+        >>> v = (flow.zeros(2), flow.ones(2))
         >>> hvp(pow_adder_reducer, inputs, v)
         (tensor(2.3030),
          (tensor([0., 0.]),
@@ -1226,9 +1173,7 @@ def hvp(func, inputs, v=None, create_graph=False, strict=False):
         # The backward is linear so the value of grad_outputs is not important as
         # it won't appear in the double backward graph. We only need to ensure that
         # it does not contain inf or nan.
-        grad_outputs = tuple(
-            flow.ones_like(out, requires_grad=True) for out in outputs
-        )
+        grad_outputs = tuple(flow.ones_like(out, requires_grad=True) for out in outputs)
 
         jac = _autograd_grad(outputs, inputs, grad_outputs, create_graph=True)
         _check_requires_grad(jac, "jacobian", strict=strict)
@@ -1248,6 +1193,7 @@ def hvp(func, inputs, v=None, create_graph=False, strict=False):
     outputs = _grad_postprocess(outputs, create_graph)
     hvp = _grad_postprocess(hvp, create_graph)
 
-    return _tuple_postprocess(outputs, is_outputs_tuple), _tuple_postprocess(
-        hvp, is_inputs_tuple
+    return (
+        _tuple_postprocess(outputs, is_outputs_tuple),
+        _tuple_postprocess(hvp, is_inputs_tuple),
     )
