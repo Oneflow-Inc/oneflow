@@ -18,17 +18,22 @@ import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.automated_test_util import torch
 
+
 def _func_tensor(x):
-        return x.exp().sum(dim=1)
+    return x.exp().sum(dim=1)
+
 
 def _func_scalar(x):
     return x.exp().sum()
 
+
 def _func_multi_tensor(x, y):
     return (x.exp() + y.pow(2)).sum(dim=1)
 
+
 def _func_multi_scalar(x, y):
     return (x.exp() + y.pow(2)).sum()
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestAutogradFunctional(flow.unittest.TestCase):
@@ -37,37 +42,37 @@ class TestAutogradFunctional(flow.unittest.TestCase):
         v = torch.randn(5)
         result_tensor = torch.autograd.functional.vjp(_func_tensor, inputs, v)
         # TODO: autograd.grad interface has a bug here, uncomment when issue 10392 is fixed. https://github.com/Oneflow-Inc/oneflow/issues/10392
-        #result_scalar = torch.autograd.functional.vjp(_func_scalar, inputs)
+        # result_scalar = torch.autograd.functional.vjp(_func_scalar, inputs)
 
         inputs = (torch.randn(5, 5), torch.randn(5, 5))
         result_tensors = torch.autograd.functional.vjp(_func_multi_tensor, inputs, v)
 
         return [result_tensor, result_tensors]
-    
+
     def test_jvp(test_case):
         inputs = torch.randn(5, 5)
         v = torch.randn(5, 5)
         result_tensor = torch.autograd.functional.jvp(_func_tensor, inputs, v)
         # TODO: autograd.grad interface has a bug here, uncomment when issue 10392 is fixed. https://github.com/Oneflow-Inc/oneflow/issues/10392
-        #result_scalar = torch.autograd.functional.jvp(_func_scalar, inputs)
+        # result_scalar = torch.autograd.functional.jvp(_func_scalar, inputs)
 
         v = (torch.randn(5, 5), torch.randn(5, 5))
         inputs = (torch.randn(5, 5), torch.randn(5, 5))
         result_tensors = torch.autograd.functional.jvp(_func_multi_tensor, inputs, v)
 
         return [result_tensor, result_tensors]
-    
+
     def test_vhp(test_case):
         inputs = torch.randn(5, 5)
         v = torch.randn(5, 5)
         result_tensor = torch.autograd.functional.vhp(_func_scalar, inputs, v)
-        
+
         v = (torch.randn(5, 5), torch.randn(5, 5))
         inputs = (torch.randn(5, 5), torch.randn(5, 5))
         result_tensors = torch.autograd.functional.vhp(_func_multi_scalar, inputs, v)
 
         return [result_tensor, result_tensors]
-    
+
     def test_hvp(test_case):
         inputs = torch.randn(5, 5)
         v = torch.randn(5, 5)
@@ -81,22 +86,36 @@ class TestAutogradFunctional(flow.unittest.TestCase):
 
     def test_jacobian(test_case):
         inputs = torch.randn(5, 5)
-        result_tensor = torch.autograd.functional.jacobian(_func_tensor, inputs, vectorize=False, strategy="reverse-mode")
+        result_tensor = torch.autograd.functional.jacobian(
+            _func_tensor, inputs, vectorize=False, strategy="reverse-mode"
+        )
 
         inputs = (torch.randn(5, 5), torch.randn(5, 5))
-        result_tensors = torch.autograd.functional.jacobian(_func_multi_scalar, inputs, vectorize=False, strategy="reverse-mode")
+        result_tensors = torch.autograd.functional.jacobian(
+            _func_multi_scalar, inputs, vectorize=False, strategy="reverse-mode"
+        )
 
         return [result_tensor, result_tensors]
-    
+
     def test_hessian(test_case):
         inputs = torch.randn(5, 5)
-        result_tensor = torch.autograd.functional.hessian(_func_scalar, inputs, vectorize=False, outer_jacobian_strategy="reverse-mode")
+        result_tensor = torch.autograd.functional.hessian(
+            _func_scalar,
+            inputs,
+            vectorize=False,
+            outer_jacobian_strategy="reverse-mode",
+        )
 
         inputs = (torch.randn(5, 5), torch.randn(5, 5))
-        result_tensors = torch.autograd.functional.hessian(_func_multi_scalar, inputs, vectorize=False, outer_jacobian_strategy="reverse-mode")
+        result_tensors = torch.autograd.functional.hessian(
+            _func_multi_scalar,
+            inputs,
+            vectorize=False,
+            outer_jacobian_strategy="reverse-mode",
+        )
 
         return [result_tensor, result_tensors]
-    
+
 
 if __name__ == "__main__":
     unittest.main()

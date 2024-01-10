@@ -86,8 +86,8 @@ def _grad_preprocess(inputs, create_graph, need_graph):
     # Note that we *always* create a new Tensor object to be able to see the difference between
     # inputs given as arguments and the same Tensors automatically captured by the user function.
     res = []
-    for inp in inputs:    
-        if create_graph and inp.requires_grad:        
+    for inp in inputs:
+        if create_graph and inp.requires_grad:
             # Create at least a new Tensor object in a differentiable way
             # oneflow.torch has no is_sparse attribute. https://github.com/Oneflow-Inc/oneflow/issues/10401
             res.append(inp.view_as(inp))
@@ -193,8 +193,11 @@ def _batched_autograd_grad(
                 retain_graph=True if idx != (len(grad_output) - 1) else retain_graph,
             )
         # Any function
-        #res_mask = grad_output.sum(dim=1) == flow.ones(len(grad_output))
-        res_mask = [True if any(element == 1 for element in row) else False for row in grad_output]
+        # res_mask = grad_output.sum(dim=1) == flow.ones(len(grad_output))
+        res_mask = [
+            True if any(element == 1 for element in row) else False
+            for row in grad_output
+        ]
         result = flow.stack(result, dim=0)
         result = result[res_mask, :]
         grad_res += (result,)
@@ -560,9 +563,7 @@ def _jacfwd(func, inputs, strict=False, vectorize=False):
 
     if vectorize:
         # Computing Jacobian does not support vectorize. see issue 10397. https://github.com/Oneflow-Inc/oneflow/issues/10397
-        raise NotImplementedError(
-            "Computing Jacobian does not support vectorize. "
-        )
+        raise NotImplementedError("Computing Jacobian does not support vectorize. ")
     else:
         raise NotImplementedError(
             "Computing Jacobian using forward-AD or forward-over-reverse Hessian is"
