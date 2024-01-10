@@ -276,6 +276,11 @@ def _fill_in_zeros(grads, refs, strict, create_graph, stage):
                         " in the grad_outputs when using the double backward trick to compute"
                         " forward mode gradients. This is not allowed in strict mode."
                     )
+                elif stage == "double_back":
+                    raise RuntimeError(
+                        "The jacobian of the user-provided function is independent of "
+                        f"input {i}. This is not allowed in strict mode."
+                    )
                 else:
                     raise RuntimeError(
                         "The hessian of the user-provided function is independent of "
@@ -543,6 +548,7 @@ def _construct_standard_basis_for(tensors, tensor_numels: Tuple[int, ...]):
     )
     diag_start_idx = 0
     for chunk, numel in zip(chunks, tensor_numels):
+        # fill_ does not support NonContiguous.https://github.com/Oneflow-Inc/oneflow/issues/10394
         # chunk.diagonal(diag_start_idx).fill_(1)
         for i in range(numel):
             chunk[diag_start_idx + i][i] = 1
