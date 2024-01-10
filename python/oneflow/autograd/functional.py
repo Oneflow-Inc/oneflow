@@ -406,6 +406,7 @@ def jvp(func, inputs, v=None, create_graph=False, strict=False):
     r"""Compute the dot product between the Jacobian of the given function at the point given by the inputs and a vector ``v``.
     
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.autograd.functional.jvp.html
+
     Args:
         func (function): a Python function that takes Tensor inputs and returns
             a tuple of Tensors or a Tensor.
@@ -581,7 +582,8 @@ def jacobian(
 ):
     r"""Compute the Jacobian of a given function.
 
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.autograd.functional.jacobian.html#torch.autograd.functional.jacobian
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.autograd.functional.jacobian.html
+
     Args:
         func (function): a Python function that takes Tensor inputs and returns
             a tuple of Tensors or a Tensor.
@@ -842,6 +844,7 @@ def hessian(
     r"""Compute the Hessian of a given scalar function.
 
         The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.autograd.functional.hessian.html
+
     Args:
         func (function): a Python function that takes Tensor inputs and returns
             a Tensor with a single element.
@@ -974,6 +977,7 @@ def vhp(func, inputs, v=None, create_graph=False, strict=False):
     r"""Compute the dot product between vector ``v`` and Hessian of a  given scalar function at a specified point.
 
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.autograd.functional.vhp.html
+
     Args:
         func (function): a Python function that takes Tensor inputs and returns
             a Tensor with a single element.
@@ -1081,6 +1085,7 @@ def hvp(func, inputs, v=None, create_graph=False, strict=False):
     r"""Compute the dot product between the scalar function's Hessian and a vector ``v`` at a specified point.
 
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.autograd.functional.hvp.html
+
     Args:
         func (function): a Python function that takes Tensor inputs and returns
             a Tensor with a single element.
