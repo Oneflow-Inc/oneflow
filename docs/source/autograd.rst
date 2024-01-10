@@ -93,4 +93,9 @@ functional
     :toctree: generated
     :nosignatures:
 
-    vjp    
+    vjp
+    jvp
+    jacobian
+    hessian
+    vhp
+    hvp    
