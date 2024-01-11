@@ -1,0 +1,1 @@
+from .with_oneflow_compile import oneflow_compile as compile_from_torch
