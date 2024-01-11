@@ -16,10 +16,6 @@ limitations under the License.
 import warnings
 from typing import Any, Dict, List, Set, Tuple, Union, Callable
 
-warnings.warn(
-    "The oneflow.jit interface is just to align the torch.jit interface and has no practical significance."
-)
-
 
 def script(
     obj,
