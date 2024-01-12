@@ -15,6 +15,7 @@ limitations under the License.
 """
 # TODO: remove this file to diffusers/src/infer_compiler_registry/register_diffusers
 from abc import ABC, abstractmethod
+
 from .log_utils import logger
 
 try:

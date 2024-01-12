@@ -14,21 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 """Convert torch object to oneflow object."""
-import os
 import importlib
+import os
 import types
-from functools import singledispatch, partial
 from collections import OrderedDict
 from collections.abc import Iterable
-from typing import Union, Any
-import torch
+from functools import partial, singledispatch
+from typing import Any, Union
+
 import oneflow as flow
+import torch
+from oneflow.framework.infer_compiler.import_tools.importer import is_need_mock
+from oneflow.framework.infer_compiler.utils.log_utils import logger
+from oneflow.framework.infer_compiler.utils.patch_for_diffusers import \
+    diffusers_checker
 
 from .manager import transform_mgr
-from ..utils.log_utils import logger
-from ..utils.patch_for_diffusers import diffusers_checker
-from ..import_tools.importer import is_need_mock
-from functools import singledispatch
 
 __all__ = [
     "proxy_class",

@@ -13,10 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Union, List
 from collections import defaultdict
+from typing import List, Union
+
 import torch
-from oneflow.framework.infer_compiler.with_oneflow_compile import DeployableModule
+from oneflow.framework.infer_compiler.with_oneflow_compile import \
+    DeployableModule
 
 _nested_counter = defaultdict(lambda: 0)
 

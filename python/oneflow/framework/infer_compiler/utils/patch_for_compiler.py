@@ -14,9 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import math
-import torch
+
 import oneflow as flow
 import oneflow.nn.functional as F
+import torch
 
 
 class FakeCuda:

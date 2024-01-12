@@ -13,10 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from functools import wraps
-import oneflow as flow
-import time
 import inspect
+import time
+from functools import wraps
+
+import oneflow as flow
+
 from .log_utils import logger
 
 

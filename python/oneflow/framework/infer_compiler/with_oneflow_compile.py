@@ -15,19 +15,22 @@ limitations under the License.
 """
 import os
 import types
-import torch
-import oneflow as flow
-from oneflow.utils.tensor import to_torch
-from typing import Any
 from functools import wraps
 from itertools import chain
-from .transform.manager import transform_mgr
+from typing import Any
+
+import oneflow as flow
+import torch
+from oneflow.utils.tensor import to_torch
+
 from .transform.builtin_transform import torch2oflow
-from .utils.oneflow_exec_mode import oneflow_exec_mode, oneflow_exec_mode_enabled
+from .transform.manager import transform_mgr
 from .utils.args_tree_util import input_output_processor
-from .utils.log_utils import logger
 from .utils.cost_util import cost_cnt
-from .utils.param_utils import parse_device, check_device
+from .utils.log_utils import logger
+from .utils.oneflow_exec_mode import (oneflow_exec_mode,
+                                      oneflow_exec_mode_enabled)
+from .utils.param_utils import check_device, parse_device
 
 
 class DualModule(torch.nn.Module):

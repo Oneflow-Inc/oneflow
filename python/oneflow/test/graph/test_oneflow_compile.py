@@ -14,13 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import os
-import numpy as np
-import torch
 import unittest
 
+import numpy as np
 import oneflow as flow
-from oneflow.framework import infer_compiler
 import oneflow.unittest
+import torch
+from oneflow.framework import infer_compiler
 
 
 class TorchModule(torch.nn.Module):
@@ -63,9 +63,7 @@ class TestOneflowCompile(flow.unittest.TestCase):
         )
 
         from oneflow.framework.infer_compiler.with_oneflow_compile import (
-            DualModule,
-            DualModuleList,
-        )
+            DualModule, DualModuleList)
 
         assert isinstance(m.linears, DualModuleList)
 

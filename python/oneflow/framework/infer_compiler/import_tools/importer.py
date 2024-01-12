@@ -13,14 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import importlib
 import os
 import sys
-import importlib
-from typing import Optional, Union
-from types import FunctionType, ModuleType
-from oneflow.mock_torch import DynamicMockModule
-from pathlib import Path
 from importlib.metadata import requires
+from pathlib import Path
+from types import FunctionType, ModuleType
+from typing import Optional, Union
+
+from oneflow.mock_torch import DynamicMockModule
+
 from .format_utils import MockEntityNameFormatter
 
 __all__ = ["import_module_from_path", "LazyMocker", "is_need_mock"]

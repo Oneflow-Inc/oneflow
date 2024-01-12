@@ -14,4 +14,4 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 """ Tools for importing modules and packages"""
-from .importer import import_module_from_path, LazyMocker
+from .importer import LazyMocker, import_module_from_path

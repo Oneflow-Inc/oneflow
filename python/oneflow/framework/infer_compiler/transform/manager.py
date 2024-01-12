@@ -13,14 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import logging
 import os
 import types
 import warnings
-import logging
-from typing import Dict, List, Union
 from pathlib import Path
-from ..utils.log_utils import logger
-from ..import_tools.importer import LazyMocker
+from typing import Dict, List, Union
+
+from oneflow.framework.infer_compiler.import_tools.importer import LazyMocker
+from oneflow.framework.infer_compiler.utils.log_utils import logger
 
 __all__ = ["transform_mgr"]
 
