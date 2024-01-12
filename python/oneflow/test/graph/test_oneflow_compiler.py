@@ -21,6 +21,8 @@ import oneflow as flow
 import oneflow.unittest
 import torch
 from oneflow.framework import infer_compiler
+from oneflow.framework.infer_compiler.with_oneflow_compile import (
+    DualModule, DualModuleList)
 
 
 class TorchModule(torch.nn.Module):
@@ -47,8 +49,8 @@ class OneflowModule(flow.nn.Module):
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
-class TestOneflowCompile(flow.unittest.TestCase):
-    def test_oneflow_compile(test_case):
+class TestOneflowInferCompiler(flow.unittest.TestCase):
+    def test_compile_from_torch(test_case):
         infer_compiler.register(torch2oflow_class_map={TorchModule: OneflowModule})
 
         m = TorchModule().to("cuda")
@@ -58,30 +60,31 @@ class TestOneflowCompile(flow.unittest.TestCase):
         m = infer_compiler.compile_from_torch(m)
         y_oneflow = m(x)
 
-        assert np.allclose(
+        test_case.assertTrue(np.allclose(
             y_torch.detach().cpu(), y_oneflow.detach().cpu(), 1e-03, 1e-03
-        )
+        ))
 
-        from oneflow.framework.infer_compiler.with_oneflow_compile import (
-            DualModule, DualModuleList)
+        test_case.assertTrue(np.allclose(
+            y_torch.detach().cpu(), y_oneflow.detach().cpu(), 1e-03, 1e-03
+        ))
 
-        assert isinstance(m.linears, DualModuleList)
+        test_case.assertIsInstance(m.linears, DualModuleList)
 
         x = getattr(m.linears, "1")
-        assert isinstance(x, DualModule)
+        test_case.assertIsInstance(x, DualModule)
 
         x.bias = None
         setattr(m.linears, "2", x)
 
-        assert m.linears[2].bias is None
-        assert m.linears._torch_modules[2].bias is None
-        assert m.linears._oneflow_modules[2].bias is None
+        test_case.assertIsNone(m.linears[2].bias)
+        test_case.assertIsNone(m.linears._torch_modules[2].bias)
+        test_case.assertIsNone(m.linears._oneflow_modules[2].bias)
 
         m.linears[3] = x
 
-        assert m.linears[3].bias is None
-        assert m.linears._torch_modules[3].bias is None
-        assert m.linears._oneflow_modules[3].bias is None
+        test_case.assertIsNone(m.linears[3].bias)
+        test_case.assertIsNone(m.linears._torch_modules[3].bias)
+        test_case.assertIsNone(m.linears._oneflow_modules[3].bias)
 
 
 if __name__ == "__main__":
