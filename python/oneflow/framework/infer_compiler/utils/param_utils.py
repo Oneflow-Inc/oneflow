@@ -1,16 +1,33 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import torch
 import oneflow as flow
 from typing import List, Dict, Any
 
+
 def parse_device(args: List[Any], kwargs: Dict[str, Any]):
     if "device" in kwargs:
-        return kwargs['device']
+        return kwargs["device"]
     for x in args:
         if isinstance(x, (flow.device, torch.device)):
             return x
         if x in ["cpu", "cuda"]:
             return x
     return None
+
 
 def check_device(current_device, target_device) -> bool:
     def _convert(device):
@@ -21,4 +38,5 @@ def check_device(current_device, target_device) -> bool:
         if isinstance(device, str):
             return flow.device(device)
         return device
+
     return _convert(current_device) == _convert(target_device)

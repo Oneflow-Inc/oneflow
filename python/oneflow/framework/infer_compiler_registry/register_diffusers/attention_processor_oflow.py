@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 # Copyright 2023 The HuggingFace Team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,7 +36,10 @@ import os
 import diffusers
 from diffusers.utils import deprecate, logging
 
-from oneflow.framework.infer_compiler.utils import parse_boolean_from_env, set_boolean_env_var
+from oneflow.framework.infer_compiler.utils import (
+    parse_boolean_from_env,
+    set_boolean_env_var,
+)
 
 
 def is_xformers_available():
@@ -101,7 +119,7 @@ class Attention(nn.Module):
         self._from_deprecated_attn_block = _from_deprecated_attn_block
 
         self.scale_qk = scale_qk
-        self.scale = dim_head**-0.5 if self.scale_qk else 1.0
+        self.scale = dim_head ** -0.5 if self.scale_qk else 1.0
 
         self.heads = heads
         # for slice_size > 0 the attention score computation
@@ -193,8 +211,7 @@ class Attention(nn.Module):
         attention_op: Optional[Callable] = None,
     ):
         is_lora = hasattr(self, "processor") and isinstance(
-            self.processor,
-            LORA_ATTENTION_PROCESSORS,
+            self.processor, LORA_ATTENTION_PROCESSORS,
         )
         is_custom_diffusion = hasattr(self, "processor") and isinstance(
             self.processor,
@@ -413,11 +430,7 @@ class Attention(nn.Module):
             beta = 1
 
         attention_scores = torch.baddbmm(
-            baddbmm_input,
-            query,
-            key.transpose(-1, -2),
-            beta=beta,
-            alpha=self.scale,
+            baddbmm_input, query, key.transpose(-1, -2), beta=beta, alpha=self.scale,
         )
         del baddbmm_input
 
@@ -526,9 +539,9 @@ class AttnProcessor:
 
         if input_ndim == 4:
             batch_size, channel, height, width = hidden_states.shape
-            hidden_states = hidden_states.reshape(
-                batch_size, channel, -1
-            ).transpose(1, 2)
+            hidden_states = hidden_states.reshape(batch_size, channel, -1).transpose(
+                1, 2
+            )
 
         batch_size, sequence_length, _ = (
             hidden_states.shape
@@ -570,9 +583,11 @@ class AttnProcessor:
         hidden_states = attn.to_out[1](hidden_states)
 
         if input_ndim == 4:
-            hidden_states = hidden_states.transpose(-1, -2).reshape(
-                batch_size, channel, -1
-            ).reshape_as(residual)
+            hidden_states = (
+                hidden_states.transpose(-1, -2)
+                .reshape(batch_size, channel, -1)
+                .reshape_as(residual)
+            )
 
         if attn.residual_connection:
             hidden_states = hidden_states + residual
@@ -2083,9 +2098,7 @@ class SpatialNorm(nn.Module):
     """
 
     def __init__(
-        self,
-        f_channels,
-        zq_channels,
+        self, f_channels, zq_channels,
     ):
         super().__init__()
         self.norm_layer = nn.GroupNorm(
