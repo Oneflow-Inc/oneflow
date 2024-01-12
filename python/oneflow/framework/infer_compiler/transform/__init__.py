@@ -14,7 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 """Module to convert PyTorch code to OneFlow."""
-from .builtin_transform import (ProxySubmodule, default_converter, get_attr,
-                                map_args, proxy_class, torch2oflow)
+from .builtin_transform import (
+    ProxySubmodule,
+    default_converter,
+    get_attr,
+    map_args,
+    proxy_class,
+    torch2oflow,
+)
 from .custom_transform import register
 from .manager import transform_mgr

@@ -28,8 +28,7 @@ from .transform.manager import transform_mgr
 from .utils.args_tree_util import input_output_processor
 from .utils.cost_util import cost_cnt
 from .utils.log_utils import logger
-from .utils.oneflow_exec_mode import (oneflow_exec_mode,
-                                      oneflow_exec_mode_enabled)
+from .utils.oneflow_exec_mode import oneflow_exec_mode, oneflow_exec_mode_enabled
 from .utils.param_utils import check_device, parse_device
 
 
@@ -396,11 +395,7 @@ class OneflowGraph(flow.nn.Graph):
         os.environ["ONEFLOW_CONV_ALLOW_HALF_PRECISION_ACCUMULATION"] = "1"
         os.environ["ONEFLOW_MATMUL_ALLOW_HALF_PRECISION_ACCUMULATION"] = "1"
         os.environ["ONEFLOW_LINEAR_EMBEDDING_SKIP_INIT"] = "1"
-        # os.environ["ONEFLOW_KERNEL_GLU_ENABLE_DUAL_GEMM_IMPL"] = "0"
         os.environ["ONEFLOW_MLIR_GROUP_MATMUL_QUANT"] = "1"
-        # TODO: enable this will cause the failure of multi resolution warmup
-        # os.environ["ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH"] = "1"
-        # os.environ["ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH"] = "1"
 
     def build(self, *args, **kwargs):
         return self.model(*args, **kwargs)
@@ -477,6 +472,26 @@ def get_mixed_deployable_module(module_cls):
 def compile_from_torch(
     torch_module: torch.nn.Module, *, use_graph=True, options={},
 ):
+    """
+    Converts torch module to oneflow module.
+
+    Note:
+        Map from torch to oneflow should be registered by `infer_compiler.register(torch2oflow_class_map={TorchModule: OneflowModule})` before `compile_from_torch` be called.
+
+    Args:s
+        torch_module (torch.nn.Module): Torch module to be compiled.
+        use_graph (bool, optional): If `True`, graph of compiled module can be saved and loaded to speedup the compile process.
+            Defaults to `True`.
+        options (dict, optional): 
+            size (int, optional): graph cache size. Defaults to `9`.
+            all_dynamic (bool, optional): If `True`, graph of compiled module can't be shared with other modules.
+                Defaults to `False`.
+            debug (int, optional): debug level. Defaults to `-1`.
+
+    Returns:
+        DeployableModule: Compiled oneflow module.
+    """
+
     def wrap_module(module):
         if isinstance(module, DeployableModule):
             assert not module._is_raw_deployable_module

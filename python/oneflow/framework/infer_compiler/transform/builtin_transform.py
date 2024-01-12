@@ -26,8 +26,7 @@ import oneflow as flow
 import torch
 from oneflow.framework.infer_compiler.import_tools.importer import is_need_mock
 from oneflow.framework.infer_compiler.utils.log_utils import logger
-from oneflow.framework.infer_compiler.utils.patch_for_diffusers import \
-    diffusers_checker
+from oneflow.framework.infer_compiler.utils.patch_for_diffusers import diffusers_checker
 
 from .manager import transform_mgr
 
