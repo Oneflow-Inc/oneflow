@@ -18,11 +18,16 @@ import unittest
 
 import numpy as np
 import oneflow as flow
+from oneflow.framework.infer_compiler.utils.model_inplace_assign import (
+    TensorInplaceAssign,
+)
 import oneflow.unittest
 import torch
-from oneflow.framework import infer_compiler
+from oneflow import infer_compiler
 from oneflow.framework.infer_compiler.with_oneflow_compile import (
-    DualModule, DualModuleList)
+    DualModule,
+    DualModuleList,
+)
 
 
 class TorchModule(torch.nn.Module):
@@ -47,6 +52,16 @@ class OneflowModule(flow.nn.Module):
         return x
 
 
+class EagerModule(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.linear1 = torch.nn.Linear(3, 3)
+        self.linear2 = torch.nn.Linear(3, 3)
+
+    def forward(self, x):
+        return self.linear2(self.linear1(x))
+
+
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestOneflowInferCompiler(flow.unittest.TestCase):
@@ -55,19 +70,13 @@ class TestOneflowInferCompiler(flow.unittest.TestCase):
 
         m = TorchModule().to("cuda")
         x = torch.randn(2, 10).to("cuda")
-        y_torch = m(x)
 
+        y_torch = m(x)
         m = infer_compiler.compile_from_torch(m)
         y_oneflow = m(x)
-
-        test_case.assertTrue(np.allclose(
-            y_torch.detach().cpu(), y_oneflow.detach().cpu(), 1e-03, 1e-03
-        ))
-
-        test_case.assertTrue(np.allclose(
-            y_torch.detach().cpu(), y_oneflow.detach().cpu(), 1e-03, 1e-03
-        ))
-
+        test_case.assertTrue(
+            np.allclose(y_torch.detach().cpu(), y_oneflow.detach().cpu(), 1e-03, 1e-03)
+        )
         test_case.assertIsInstance(m.linears, DualModuleList)
 
         x = getattr(m.linears, "1")
@@ -75,16 +84,44 @@ class TestOneflowInferCompiler(flow.unittest.TestCase):
 
         x.bias = None
         setattr(m.linears, "2", x)
-
         test_case.assertIsNone(m.linears[2].bias)
         test_case.assertIsNone(m.linears._torch_modules[2].bias)
         test_case.assertIsNone(m.linears._oneflow_modules[2].bias)
 
         m.linears[3] = x
-
         test_case.assertIsNone(m.linears[3].bias)
         test_case.assertIsNone(m.linears._torch_modules[3].bias)
         test_case.assertIsNone(m.linears._oneflow_modules[3].bias)
+
+    def test_tensor_inplace_assign(test_case):
+        eager = EagerModule()
+
+        dptr1 = eager.linear1.weight.data.data_ptr()
+        dptr2 = eager.linear2.weight.data.data_ptr()
+        with TensorInplaceAssign(eager):
+            eager.linear1.weight.data = torch.randn(3, 3)
+            eager.linear2.weight.data = torch.randn(3, 3)
+        test_case.assertEqual(dptr1, eager.linear1.weight.data.data_ptr())
+        test_case.assertEqual(dptr2, eager.linear2.weight.data.data_ptr())
+
+        dptr1 = eager.linear1.weight.data.data_ptr()
+        dptr2 = eager.linear2.weight.data.data_ptr()
+        with TensorInplaceAssign(eager.linear1):
+            eager.linear1.weight.data = torch.randn(3, 3)
+            eager.linear2.weight.data = torch.randn(3, 3)
+        test_case.assertEqual(dptr1, eager.linear1.weight.data.data_ptr())
+        test_case.assertNotEqual(dptr2, eager.linear2.weight.data.data_ptr())
+
+        dptr1 = eager.linear1.weight.data.data_ptr()
+        dptr2 = eager.linear2.weight.data.data_ptr()
+        with TensorInplaceAssign(eager.linear1):
+            with TensorInplaceAssign(eager.linear2):
+                with TensorInplaceAssign(eager.linear1):
+                    pass
+                eager.linear1.weight.data = torch.randn(3, 3)
+                eager.linear2.weight.data = torch.randn(3, 3)
+        test_case.assertEqual(dptr1, eager.linear1.weight.data.data_ptr())
+        test_case.assertEqual(dptr2, eager.linear2.weight.data.data_ptr())
 
 
 if __name__ == "__main__":

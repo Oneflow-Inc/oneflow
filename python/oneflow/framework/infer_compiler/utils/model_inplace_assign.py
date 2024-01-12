@@ -17,8 +17,7 @@ from collections import defaultdict
 from typing import List, Union
 
 import torch
-from oneflow.framework.infer_compiler.with_oneflow_compile import \
-    DeployableModule
+from oneflow.framework.infer_compiler.with_oneflow_compile import DeployableModule
 
 _nested_counter = defaultdict(lambda: 0)
 
@@ -143,45 +142,3 @@ def module_unconvert_parameter(module: torch.nn.Module) -> torch.nn.Module:
         if isinstance(buffer, AutoInplaceCopyTensor):
             module._buffers[k] = torch.Tensor(buffer)
     return module
-
-
-if __name__ == "__main__":
-
-    class EagerModule(torch.nn.Module):
-        def __init__(self):
-            super().__init__()
-            self.linear1 = torch.nn.Linear(3, 3)
-            self.linear2 = torch.nn.Linear(3, 3)
-
-        def forward(self, x):
-            return self.linear2(self.linear1(x))
-
-    eager = EagerModule()
-    dptr1 = eager.linear1.weight.data.data_ptr()
-    dptr2 = eager.linear2.weight.data.data_ptr()
-
-    with TensorInplaceAssign(eager):
-        eager.linear1.weight.data = torch.randn(3, 3)
-        eager.linear2.weight.data = torch.randn(3, 3)
-
-    assert dptr1 == eager.linear1.weight.data.data_ptr()
-    assert dptr2 == eager.linear2.weight.data.data_ptr()
-
-    dptr1 = eager.linear1.weight.data.data_ptr()
-    dptr2 = eager.linear2.weight.data.data_ptr()
-    with TensorInplaceAssign(eager.linear1):
-        eager.linear1.weight.data = torch.randn(3, 3)
-        eager.linear2.weight.data = torch.randn(3, 3)
-    assert dptr1 == eager.linear1.weight.data.data_ptr()
-    assert dptr2 != eager.linear2.weight.data.data_ptr()
-
-    dptr1 = eager.linear1.weight.data.data_ptr()
-    dptr2 = eager.linear2.weight.data.data_ptr()
-    with TensorInplaceAssign(eager.linear1):
-        with TensorInplaceAssign(eager.linear2):
-            with TensorInplaceAssign(eager.linear1):
-                pass
-            eager.linear1.weight.data = torch.randn(3, 3)
-            eager.linear2.weight.data = torch.randn(3, 3)
-    assert dptr1 == eager.linear1.weight.data.data_ptr()
-    assert dptr2 == eager.linear2.weight.data.data_ptr()
