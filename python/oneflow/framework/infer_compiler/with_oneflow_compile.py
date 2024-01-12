@@ -22,7 +22,6 @@ from typing import Any
 from functools import wraps
 from itertools import chain
 from .transform.manager import transform_mgr
-from .transform.custom_transform import set_default_registry
 from .transform.builtin_transform import torch2oflow
 from .utils.oneflow_exec_mode import oneflow_exec_mode, oneflow_exec_mode_enabled
 from .utils.args_tree_util import input_output_processor
@@ -472,11 +471,9 @@ def get_mixed_deployable_module(module_cls):
     return MixedDeployableModule
 
 
-def oneflow_compile(
+def compile_from_torch(
     torch_module: torch.nn.Module, *, use_graph=True, options={},
 ):
-    set_default_registry()
-
     def wrap_module(module):
         if isinstance(module, DeployableModule):
             assert not module._is_raw_deployable_module

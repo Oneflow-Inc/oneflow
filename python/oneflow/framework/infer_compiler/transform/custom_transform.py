@@ -49,26 +49,6 @@ def register_torch2oflow_func(func, first_param_type=None, verbose=False):
         logger.warning(f"Cannot register {func=} {first_param_type=}. {e=}")
 
 
-def set_default_registry():
-    mocked_packages = transform_mgr.get_mocked_packages()
-    if len(mocked_packages) > 0:
-        return  # already set
-
-    # compiler_registry_path
-    registry_path = Path(__file__).parents[2] / "infer_compiler_registry"
-
-    try:
-        import_module_from_path(registry_path / "register_diffusers")
-    except Exception as e:
-        logger.error(f"Failed to register_diffusers {e=}")
-        raise
-
-    try:
-        import_module_from_path(registry_path / "register_diffusers_quant")
-    except Exception as e:
-        logger.info(f"Failed to register_diffusers_quant {e=}")
-
-
 def ensure_list(obj):
     if isinstance(obj, list):
         return obj

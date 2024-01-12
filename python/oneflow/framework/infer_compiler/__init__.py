@@ -13,4 +13,5 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from .with_oneflow_compile import oneflow_compile as compile_from_torch
+from .with_oneflow_compile import compile_from_torch
+from .transform import *
