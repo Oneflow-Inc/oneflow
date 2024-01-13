@@ -64,7 +64,7 @@ class TransformManager:
         """
         self._torch_to_oflow_cls_map.update(class_proxy_dict)
 
-        debug_message = f"Updated class proxies: {len(class_proxy_dict)=}"
+        debug_message = f"Updated class proxies: {len(class_proxy_dict)}"
         debug_message += f"\n{class_proxy_dict}\n"
         self.logger.debug(debug_message)
 

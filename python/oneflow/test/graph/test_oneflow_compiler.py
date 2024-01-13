@@ -18,12 +18,12 @@ import unittest
 
 import numpy as np
 import oneflow as flow
+import oneflow.unittest
+import torch
+from oneflow.framework.infer_compiler import compile_from_torch, register
 from oneflow.framework.infer_compiler.utils.model_inplace_assign import (
     TensorInplaceAssign,
 )
-import oneflow.unittest
-import torch
-from oneflow import infer_compiler
 from oneflow.framework.infer_compiler.with_oneflow_compile import (
     DualModule,
     DualModuleList,
@@ -66,13 +66,13 @@ class EagerModule(torch.nn.Module):
 @flow.unittest.skip_unless_1n1d()
 class TestOneflowInferCompiler(flow.unittest.TestCase):
     def test_compile_from_torch(test_case):
-        infer_compiler.register(torch2oflow_class_map={TorchModule: OneflowModule})
+        register(torch2oflow_class_map={TorchModule: OneflowModule})
 
         m = TorchModule().to("cuda")
         x = torch.randn(2, 10).to("cuda")
 
         y_torch = m(x)
-        m = infer_compiler.compile_from_torch(m)
+        m = compile_from_torch(m)
         y_oneflow = m(x)
         test_case.assertTrue(
             np.allclose(y_torch.detach().cpu(), y_oneflow.detach().cpu(), 1e-03, 1e-03)

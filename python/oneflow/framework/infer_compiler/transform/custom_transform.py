@@ -32,7 +32,7 @@ def register_torch2oflow_class(cls: type, replacement: type, verbose=True):
         transform_mgr.update_class_proxies({key: replacement}, verbose=verbose)
 
     except Exception as e:
-        logger.warning(f"Cannot register {cls=} {replacement=}. {e=}")
+        logger.warning(f"Cannot register {cls} {replacement}. {e}")
 
 
 def register_torch2oflow_func(func, first_param_type=None, verbose=False):
@@ -40,14 +40,14 @@ def register_torch2oflow_func(func, first_param_type=None, verbose=False):
         params = inspect.signature(func).parameters
         first_param_type = params[list(params.keys())[0]].annotation
         if first_param_type == inspect._empty:
-            logger.warning(f"Cannot register {func=} {first_param_type=}.")
+            logger.warning(f"Cannot register {func} {first_param_type}.")
     try:
         torch2oflow.register(first_param_type)(func)
-        logger.debug(f"Register {func=} {first_param_type=}")
+        logger.debug(f"Register {func} {first_param_type}")
         if verbose:
-            logger.info(f"Register {func=} {first_param_type=}")
+            logger.info(f"Register {func} {first_param_type}")
     except Exception as e:
-        logger.warning(f"Cannot register {func=} {first_param_type=}. {e=}")
+        logger.warning(f"Cannot register {func} {first_param_type}. {e}")
 
 
 def ensure_list(obj):
