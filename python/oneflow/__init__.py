@@ -497,7 +497,6 @@ from . import (
 )
 import oneflow.utils.data
 import oneflow.framework.docstr as docstr
-import oneflow.framework.infer_compiler as infer_compiler
 import oneflow.cuda
 import oneflow.multiprocessing
 import oneflow.asyncs
