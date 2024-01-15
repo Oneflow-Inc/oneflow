@@ -66,7 +66,7 @@ Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
              "https://github.com/Oneflow-Inc/oneflow/issues";
       JUST(one::AddAccumulateFunctionNode(outputs.at(i)));
     }
-    if (out_grads.empty()) {
+    if (out_grads.empty() || !out_grads.at(i)) {
       CHECK_OR_RETURN(IsScalarTensor(*outputs.at(i)))
           << "Grad can be implicitly created only for scalar outputs";
       gradients->at(i) = JUST(one::functional::OnesLike(outputs.at(i)));
