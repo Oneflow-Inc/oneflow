@@ -13,6 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Tuple, List
+import warnings
 
-BroadcastingList2 = Tuple
+
+def symbolic_opset11():
+    warnings.warn(
+        "The oneflow.onnx.symbolic_opset11 interface is just to align the torch.onnx.symbolic_opset11 interface and has no practical significance."
+    )
+
+
+def register_custom_op_symbolic(*args, **kwargs):
+    warnings.warn(
+        "The oneflow.onnx.register_custom_op_symbolic interface is just to align the torch.onnx.register_custom_op_symbolic interface and has no practical significance."
+    )

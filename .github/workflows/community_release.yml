@@ -12,7 +12,7 @@ on:
     inputs:
       priv_branch:
         required: false
-        default: "community"
+        default: "main"
 
 concurrency:
   group: community-release-${{ github.ref }}-${{ inputs.priv_branch }}
@@ -28,6 +28,7 @@ jobs:
     with:
       is_priv: true
       branch: ${{ inputs.priv_branch || 'main' }}
+      upload_override_branch: "community"
       cuda_cmake_cache: cmake/caches/ci/release/cuda_community.cmake
     secrets:
       ONEFLOW_PRIV_ORG: ${{ secrets.ONEFLOW_PRIV_ORG }}

@@ -13,6 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Tuple, List
 
-BroadcastingList2 = Tuple
+import warnings
+
+
+def parse_args(*args, **kwargs):
+    warnings.warn(
+        "The oneflow.onnx.parse_args interface is just to align the torch.onnx.parse_args interface and has no practical significance."
+    )
+
+    def func(fn):
+        return fn
+
+    return func

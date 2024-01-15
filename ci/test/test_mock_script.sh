@@ -1,5 +1,12 @@
 #!/bin/bash
 set -e
+python_version=$(python3 --version 2>&1 | awk '{print $2}')
+
+if [[ "$python_version" < "3.8" ]]; then
+    echo "Python version is less than 3.8."
+    exit 0
+fi
+
 MOCK_TORCH=$PWD/python/oneflow/test/misc/mock_example.py
 
 same_or_exit() {
