@@ -16,7 +16,6 @@ limitations under the License.
 import importlib
 import os
 import sys
-from importlib.metadata import requires
 from pathlib import Path
 from types import FunctionType, ModuleType
 from typing import Optional, Union
@@ -24,6 +23,18 @@ from typing import Optional, Union
 from oneflow.mock_torch import DynamicMockModule
 
 from .format_utils import MockEntityNameFormatter
+
+if sys.version_info < (3, 8):
+    try:
+        from importlib_metadata import requires
+    except ImportError:
+        import subprocess
+
+        subprocess.check_call("pip install importlib_metadata", shell=True)
+        subprocess.check_call("pip install packaging", shell=True)
+        from importlib_metadata import requires
+else:
+    from importlib.metadata import requires
 
 __all__ = ["import_module_from_path", "LazyMocker", "is_need_mock"]
 
