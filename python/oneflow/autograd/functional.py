@@ -743,11 +743,9 @@ def jacobian(
                 vj = _autograd_grad(
                     (out.reshape(-1)[j],),
                     inputs,
-                    (flow.ones_like(out.reshape(-1)[j]),),
                     retain_graph=True,
                     create_graph=create_graph,
                 )
-                # TODO: _autograd_grad interface has a bug here(run error when v is None), uncomment when issue 10392 is fixed
 
                 for el_idx, (jac_i_el, vj_el, inp_el) in enumerate(
                     zip(jac_i, vj, inputs)
@@ -1011,12 +1009,8 @@ def vhp(func, inputs, v=None, create_graph=False, strict=False):
             raise RuntimeError(
                 "The Tensor returned by the function given to vhp should contain a single element"
             )
-        # The backward is linear so the value of grad_outputs is not important as
-        # it won't appear in the double backward graph. We only need to ensure that
-        # it does not contain inf or nan.
-        grad_outputs = tuple(flow.ones_like(out, requires_grad=True) for out in outputs)
 
-        jac = _autograd_grad(outputs, inputs, grad_outputs, create_graph=True)
+        jac = _autograd_grad(outputs, inputs, create_graph=True)
         _check_requires_grad(jac, "jacobian", strict=strict)
 
     enable_grad = True if create_graph else flow.is_grad_enabled()
@@ -1128,12 +1122,8 @@ def hvp(func, inputs, v=None, create_graph=False, strict=False):
             raise RuntimeError(
                 "The Tensor returned by the function given to hvp should contain a single element"
             )
-        # The backward is linear so the value of grad_outputs is not important as
-        # it won't appear in the double backward graph. We only need to ensure that
-        # it does not contain inf or nan.
-        grad_outputs = tuple(flow.ones_like(out, requires_grad=True) for out in outputs)
 
-        jac = _autograd_grad(outputs, inputs, grad_outputs, create_graph=True)
+        jac = _autograd_grad(outputs, inputs, create_graph=True)
         _check_requires_grad(jac, "jacobian", strict=strict)
 
         grad_jac = tuple(flow.zeros_like(inp, requires_grad=True) for inp in inputs)
