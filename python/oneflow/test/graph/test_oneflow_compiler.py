@@ -30,42 +30,36 @@ from oneflow.framework.infer_compiler.with_oneflow_compile import (
 )
 
 
-class TorchModule(torch.nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.linears = torch.nn.ModuleList([torch.nn.Linear(10, 10) for i in range(10)])
-
-    def forward(self, x):
-        for i, l in enumerate(self.linears):
-            x = self.linears[i // 2](x) + l(x)
-        return x
-
-
-class OneflowModule(flow.nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.linears = flow.nn.ModuleList([flow.nn.Linear(10, 10) for i in range(10)])
-
-    def forward(self, x):
-        for i, l in enumerate(self.linears):
-            x = self.linears[i // 2](x) + l(x)
-        return x
-
-
-class EagerModule(torch.nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.linear1 = torch.nn.Linear(3, 3)
-        self.linear2 = torch.nn.Linear(3, 3)
-
-    def forward(self, x):
-        return self.linear2(self.linear1(x))
-
-
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestOneflowInferCompiler(flow.unittest.TestCase):
+    def setUp(self):
+        os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+
     def test_compile_from_torch(test_case):
+        class TorchModule(torch.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.linears = torch.nn.ModuleList(
+                    [torch.nn.Linear(10, 10) for i in range(10)]
+                )
+
+            def forward(self, x):
+                for i, l in enumerate(self.linears):
+                    x = self.linears[i // 2](x) + l(x)
+                return x
+
+        class OneflowModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.linears = flow.nn.ModuleList(
+                    [flow.nn.Linear(10, 10) for i in range(10)]
+                )
+
+            def forward(self, x):
+                for i, l in enumerate(self.linears):
+                    x = self.linears[i // 2](x) + l(x)
+                return x
+
         register(torch2oflow_class_map={TorchModule: OneflowModule})
 
         m = TorchModule().to("cuda")
@@ -94,6 +88,15 @@ class TestOneflowInferCompiler(flow.unittest.TestCase):
         test_case.assertIsNone(m.linears._oneflow_modules[3].bias)
 
     def test_tensor_inplace_assign(test_case):
+        class EagerModule(torch.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.linear1 = torch.nn.Linear(3, 3)
+                self.linear2 = torch.nn.Linear(3, 3)
+
+            def forward(self, x):
+                return self.linear2(self.linear1(x))
+
         eager = EagerModule()
 
         dptr1 = eager.linear1.weight.data.data_ptr()

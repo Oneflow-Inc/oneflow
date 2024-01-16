@@ -32,7 +32,6 @@ if sys.version_info < (3, 8):
 
         subprocess.check_call("pip install importlib_metadata", shell=True)
         subprocess.check_call("pip install packaging", shell=True)
-        from importlib_metadata import requires
 else:
     from importlib.metadata import requires
 
