@@ -17,6 +17,7 @@ limitations under the License.
 import os
 
 import oneflow as flow
+from oneflow.framework.args_tree import ArgsTree
 
 from .transform.custom_transform import register
 from .utils.patch_for_compiler import *
@@ -33,7 +34,15 @@ def oneflow_backend(gm, example_inputs, *args, **kwargs):
         transformed_fn = fx_node_tranform(gm)
 
     def wrapped_forward(*args, **kwargs):
-        args = [flow.utils.tensor.from_torch(a) for a in args]
+        def input_fn(value):
+            if isinstance(value, torch.Tensor):
+                return flow.utils.tensor.from_torch(value.contiguous())
+            else:
+                return value
+
+        args_tree = ArgsTree((args, kwargs), False, tensor_type=torch.Tensor)
+        out = args_tree.map_leaf(input_fn)
+        args = out[0]
         if with_interp:
             output = OneFlowInterpreter(gm, garbage_collect_values=False).run(
                 *args, **kwargs

@@ -59,12 +59,13 @@ def singledispatch_proxy(func):
         return result
 
     wrapper.register = dispatcher.register
+    wrapper.dispatch = dispatcher.dispatch
     return wrapper
 
 
 def proxy_class(cls: type):
-    if cls.__module__.startswith("torch"):
-        mod_name = cls.__module__.replace("torch", "oneflow")
+    if cls.__module__.startswith("torch."):
+        mod_name = cls.__module__.replace("torch.", "oneflow.")
         mod = importlib.import_module(mod_name)
         return getattr(mod, cls.__name__)
 
@@ -247,6 +248,98 @@ def _(mod: torch.nn.Module, verbose=False):
 
     if verbose:
         logger.info(f"convert {type(mod)} to {type(of_mod)}")
+
+    return of_mod
+
+
+@torch2oflow.register
+def _(mod: torch.nn.BatchNorm1d, verbose=False):
+    of_mod = torch2oflow.dispatch(torch.nn.Module)(mod, verbose)
+    of_mod.channel_axis = 1
+
+    return of_mod
+
+
+@torch2oflow.register
+def _(mod: torch.nn.BatchNorm2d, verbose=False):
+    of_mod = torch2oflow.dispatch(torch.nn.Module)(mod, verbose)
+    if os.getenv("ONEFLOW_ENABLE_NHWC"):
+        of_mod.channel_axis = 3
+    else:
+        of_mod.channel_axis = 1
+
+    return of_mod
+
+
+@torch2oflow.register
+def _(mod: torch.nn.BatchNorm3d, verbose=False):
+    of_mod = torch2oflow.dispatch(torch.nn.Module)(mod, verbose)
+    of_mod.channel_axis = 1
+
+    return of_mod
+
+
+@torch2oflow.register
+def _(mod: torch.nn.MaxPool1d, verbose=False):
+    of_mod = torch2oflow.dispatch(torch.nn.Module)(mod, verbose)
+    of_mod.channel_pos = "channels_first"
+
+    return of_mod
+
+
+@torch2oflow.register
+def _(mod: torch.nn.MaxPool2d, verbose=False):
+    of_mod = torch2oflow.dispatch(torch.nn.Module)(mod, verbose)
+    if os.getenv("ONEFLOW_ENABLE_NHWC"):
+        of_mod.channel_pos = "channels_last"
+    else:
+        of_mod.channel_pos = "channels_first"
+
+    return of_mod
+
+
+@torch2oflow.register
+def _(mod: torch.nn.MaxPool3d, verbose=False):
+    of_mod = torch2oflow.dispatch(torch.nn.Module)(mod, verbose)
+    of_mod.channel_pos = "channels_first"
+
+    return of_mod
+
+
+@torch2oflow.register
+def _(mod: torch.nn.AvgPool1d, verbose=False):
+    of_mod = torch2oflow.dispatch(torch.nn.Module)(mod, verbose)
+    of_mod.channel_pos = "channels_first"
+
+    return of_mod
+
+
+@torch2oflow.register
+def _(mod: torch.nn.AvgPool2d, verbose=False):
+    of_mod = torch2oflow.dispatch(torch.nn.Module)(mod, verbose)
+    if os.getenv("ONEFLOW_ENABLE_NHWC"):
+        of_mod.channel_pos = "channels_last"
+    else:
+        of_mod.channel_pos = "channels_first"
+
+    return of_mod
+
+
+@torch2oflow.register
+def _(mod: torch.nn.AvgPool3d, verbose=False):
+    of_mod = torch2oflow.dispatch(torch.nn.Module)(mod, verbose)
+    of_mod.channel_pos = "channels_first"
+
+    return of_mod
+
+
+@torch2oflow.register
+def _(mod: torch.nn.AdaptiveAvgPool2d, verbose=False):
+    of_mod = torch2oflow.dispatch(torch.nn.Module)(mod, verbose)
+    if os.getenv("ONEFLOW_ENABLE_NHWC"):
+        of_mod.channel_pos = "channels_last"
+    else:
+        of_mod.channel_pos = "channels_first"
 
     return of_mod
 
