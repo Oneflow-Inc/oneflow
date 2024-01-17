@@ -344,6 +344,18 @@ def _(mod: torch.nn.AdaptiveAvgPool2d, verbose=False):
     return of_mod
 
 
+try:
+    from torchvision.ops import Conv2dNormActivation
+
+    @torch2oflow.register
+    def _(mod: Conv2dNormActivation, verbose=False):
+        return flow.nn.Sequential(*[torch2oflow(layer) for layer in mod])
+
+
+except ImportError:
+    logger.warning("Failed to import torchvision")
+
+
 @torch2oflow.register
 def _(mod: torch.nn.ModuleList, verbose=False):
     of_mod_list = flow.nn.ModuleList()
