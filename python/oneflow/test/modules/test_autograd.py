@@ -336,6 +336,22 @@ class TestAutograd(flow.unittest.TestCase):
                 is_grads_batched=True,
             )
 
+    def test_autograd_grad_none_list(test_case):
+        x = flow.randn(10, 10, requires_grad=True)
+        y = flow.randn(10, 10, requires_grad=True)
+        merge = flow.cat([x, y], dim=0)
+        s_x, s_y = flow.split(merge, 10, dim=0)
+        s_x_sum = s_x.sum()
+        s_y_sum = s_y.sum()
+
+        (grad_x, grad_y) = flow.autograd.grad((s_x_sum, s_y_sum), (x, y), (None, None))
+        test_case.assertTrue(
+            np.array_equal(grad_x.numpy(), np.ones(x.shape).astype(np.float32),)
+        )
+        test_case.assertTrue(
+            np.array_equal(grad_y.numpy(), np.ones(y.shape).astype(np.float32),)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
