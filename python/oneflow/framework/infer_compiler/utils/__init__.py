@@ -13,10 +13,4 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from .env_var import parse_boolean_from_env, set_boolean_env_var
 from .oneflow_exec_mode import oneflow_exec_mode, oneflow_exec_mode_enabled
-from .version_util import (
-    get_support_message,
-    is_community_version,
-    is_quantization_enabled,
-)

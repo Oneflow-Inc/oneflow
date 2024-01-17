@@ -17,7 +17,6 @@ import math
 
 import oneflow as flow
 import oneflow.nn.functional as F
-import torch
 
 
 class FakeCuda:

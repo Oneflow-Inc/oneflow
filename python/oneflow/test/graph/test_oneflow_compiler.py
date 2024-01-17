@@ -21,9 +21,6 @@ import oneflow as flow
 import oneflow.unittest
 import torch
 from oneflow.framework.infer_compiler import compile_from_torch, register
-from oneflow.framework.infer_compiler.utils.model_inplace_assign import (
-    TensorInplaceAssign,
-)
 from oneflow.framework.infer_compiler.with_oneflow_compile import (
     DualModule,
     DualModuleList,
@@ -86,45 +83,6 @@ class TestOneflowInferCompiler(flow.unittest.TestCase):
         test_case.assertIsNone(m.linears[3].bias)
         test_case.assertIsNone(m.linears._torch_modules[3].bias)
         test_case.assertIsNone(m.linears._oneflow_modules[3].bias)
-
-    def test_tensor_inplace_assign(test_case):
-        class EagerModule(torch.nn.Module):
-            def __init__(self):
-                super().__init__()
-                self.linear1 = torch.nn.Linear(3, 3)
-                self.linear2 = torch.nn.Linear(3, 3)
-
-            def forward(self, x):
-                return self.linear2(self.linear1(x))
-
-        eager = EagerModule()
-
-        dptr1 = eager.linear1.weight.data.data_ptr()
-        dptr2 = eager.linear2.weight.data.data_ptr()
-        with TensorInplaceAssign(eager):
-            eager.linear1.weight.data = torch.randn(3, 3)
-            eager.linear2.weight.data = torch.randn(3, 3)
-        test_case.assertEqual(dptr1, eager.linear1.weight.data.data_ptr())
-        test_case.assertEqual(dptr2, eager.linear2.weight.data.data_ptr())
-
-        dptr1 = eager.linear1.weight.data.data_ptr()
-        dptr2 = eager.linear2.weight.data.data_ptr()
-        with TensorInplaceAssign(eager.linear1):
-            eager.linear1.weight.data = torch.randn(3, 3)
-            eager.linear2.weight.data = torch.randn(3, 3)
-        test_case.assertEqual(dptr1, eager.linear1.weight.data.data_ptr())
-        test_case.assertNotEqual(dptr2, eager.linear2.weight.data.data_ptr())
-
-        dptr1 = eager.linear1.weight.data.data_ptr()
-        dptr2 = eager.linear2.weight.data.data_ptr()
-        with TensorInplaceAssign(eager.linear1):
-            with TensorInplaceAssign(eager.linear2):
-                with TensorInplaceAssign(eager.linear1):
-                    pass
-                eager.linear1.weight.data = torch.randn(3, 3)
-                eager.linear2.weight.data = torch.randn(3, 3)
-        test_case.assertEqual(dptr1, eager.linear1.weight.data.data_ptr())
-        test_case.assertEqual(dptr2, eager.linear2.weight.data.data_ptr())
 
 
 if __name__ == "__main__":

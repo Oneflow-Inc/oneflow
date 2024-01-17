@@ -16,7 +16,6 @@ limitations under the License.
 import logging
 import os
 import types
-import warnings
 from pathlib import Path
 from typing import Dict, List, Union
 
