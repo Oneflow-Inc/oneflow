@@ -47,7 +47,6 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 env:
   ONEFLOW_SRC: .
-  https_proxy: ${{ secrets.ONEFLOW_CI_HTTP_PROXY }}
 jobs:
   generate-build-matrix:
     name: "Generate build matrix"
@@ -99,6 +98,7 @@ jobs:
       GITHUB_REF_NAME: ${{ github.ref_name }}
       GITHUB_SHA: ${{ github.sha }}
       ONEFLOW_OSS_BUCKET: oneflow-staging
+      https_proxy: ${{ secrets.ONEFLOW_CI_HTTP_PROXY }}
     needs: [generate-build-matrix]
     name: Staging Release
     timeout-minutes: 240
