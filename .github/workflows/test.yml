@@ -209,6 +209,10 @@ jobs:
       MANYLINUX_CACHE_DIR: ~/manylinux-cache-dir/${{ matrix.entry }}
       WHEELHOUSE_DIR: manylinux-wheelhouse
     steps:
+      - name: Set proxy
+        if: ${{ contains(matrix.runs-on, 'self-hosted') }}
+        run: |
+          echo "https_proxy=${{ secrets.ONEFLOW_CI_HTTP_PROXY }}" >> $GITHUB_ENV
       - name: Fix permissions
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
@@ -649,6 +653,10 @@ jobs:
       TEST_MANYLINUX_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/manylinux2014_x86_64_cuda11.6:328e477069c80035adb3cd4db9632997e6284edd
       METRICS_DIR: metrics
     steps:
+      - name: Set proxy
+        if: ${{ contains(matrix.runs-on, 'self-hosted') }}
+        run: |
+          echo "https_proxy=${{ secrets.ONEFLOW_CI_HTTP_PROXY }}" >> $GITHUB_ENV
       - name: Fix permissions
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
