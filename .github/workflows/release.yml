@@ -40,6 +40,8 @@ on:
         required: true
       OSS_ACCESS_KEY_SECRET:
         required: true
+      ONEFLOW_CI_HTTP_PROXY:
+        required: false
 concurrency:
   group: release-${{ github.ref }}-${{ inputs.branch }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
