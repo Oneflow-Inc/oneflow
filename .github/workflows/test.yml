@@ -233,7 +233,7 @@ jobs:
         run: |
           echo "::error file=test.yml,line=204,col=10::steps.save-cache.outputs.cache-hit != matrix.cache-hit"
           exit 1
-      - name: Check digest cache result. If this step failed, usually it is caused by new commits pushed when this CI run is running.
+      - name: Set proxy
         if: ${{ !matrix.cache-hit }}
         run: |
           echo "https_proxy=docs/${{ secrets.ONEFLOW_CI_HTTP_PROXY }}" >> $GITHUB_ENV
