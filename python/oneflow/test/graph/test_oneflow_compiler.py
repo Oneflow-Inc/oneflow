@@ -28,6 +28,7 @@ from oneflow.framework.infer_compiler.with_oneflow_compile import (
 
 
 @flow.unittest.skip_unless_1n1d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestOneflowInferCompiler(flow.unittest.TestCase):
     def setUp(self):
         os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
