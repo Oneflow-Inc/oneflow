@@ -208,7 +208,6 @@ jobs:
       ONEFLOW_SRC: .
       MANYLINUX_CACHE_DIR: ~/manylinux-cache-dir/${{ matrix.entry }}
       WHEELHOUSE_DIR: manylinux-wheelhouse
-      https_proxy: ${{ secrets.ONEFLOW_CI_HTTP_PROXY }}
     steps:
       - name: Fix permissions
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
@@ -234,6 +233,10 @@ jobs:
         run: |
           echo "::error file=test.yml,line=204,col=10::steps.save-cache.outputs.cache-hit != matrix.cache-hit"
           exit 1
+      - name: Check digest cache result. If this step failed, usually it is caused by new commits pushed when this CI run is running.
+        if: ${{ !matrix.cache-hit }}
+        run: |
+          echo "https_proxy=docs/${{ secrets.ONEFLOW_CI_HTTP_PROXY }}" >> $GITHUB_ENV
       - uses: Oneflow-Inc/get-oneflow@support-py311-py312
         name: Build manylinux ${{ matrix.entry }}
         id: build-cpu
@@ -649,7 +652,6 @@ jobs:
       TEST_WITH_TF_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-tf-2.3.0:2f831e9354298a11447578e869d983959feb046f
       TEST_MANYLINUX_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/manylinux2014_x86_64_cuda11.6:328e477069c80035adb3cd4db9632997e6284edd
       METRICS_DIR: metrics'
-      https_proxy: ${{ secrets.ONEFLOW_CI_HTTP_PROXY }}
     steps:
       - name: Fix permissions
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
@@ -780,6 +782,7 @@ jobs:
           echo "ONEFLOW_WHEEL_PATH=${{ steps.download-digest.outputs.entry-dir }}/whl" >> $GITHUB_ENV
           echo "ONEFLOW_CPACK_PATH=${{ steps.download-digest.outputs.entry-dir }}/cpack" >> $GITHUB_ENV
           echo "DOCS_PATH=docs/${{ github.repository }}/pr/${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+          echo "https_proxy=docs/${{ secrets.ONEFLOW_CI_HTTP_PROXY }}" >> $GITHUB_ENV
       - name: Set environment variables (experimental flags)
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && fromJson(matrix.is-experimental) }}
         run: |
