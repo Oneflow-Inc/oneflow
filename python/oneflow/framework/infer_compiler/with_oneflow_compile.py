@@ -108,7 +108,6 @@ class DualModule(torch.nn.Module):
                 [None] * len(torch_attr) if oneflow_attr is None else oneflow_attr
             )
             return DualModuleList(torch_attr, oneflow_attr)
-
         elif isinstance(torch_attr, torch.nn.Module):
             return get_mixed_dual_module(torch_attr.__class__)(torch_attr, oneflow_attr)
         else:
@@ -118,14 +117,16 @@ class DualModule(torch.nn.Module):
         if name in ["_torch_module", "_oneflow_module"]:
             super().__setattr__(name, value)
         else:  # TODO: aviod memory up when set attr
-            if self._oneflow_module is not None:
-                v = torch2oflow(value)
-                if isinstance(v, flow.Tensor):
+            try:
+                setattr(self._torch_module, name, value)
+                value = torch2oflow(value)
+                if isinstance(value, flow.Tensor):
                     obj = getattr(self._oneflow_module, name)
-                    obj.copy_(v)
+                    obj.copy_(value)
                 else:
-                    setattr(self._oneflow_module, name, v)
-            setattr(self._torch_module, name, value)
+                    setattr(self._oneflow_module, name, value)
+            except:
+                super().__setattr__(name, value)
 
 
 class DualModuleList(torch.nn.ModuleList):
@@ -153,17 +154,19 @@ class DualModuleList(torch.nn.ModuleList):
         setattr(self._oneflow_modules, str(idx), module._oneflow_module)
         return setattr(self, str(idx), module)
 
-    def __setattr__(self, key, value):
-        if key in ("_torch_modules", "_oneflow_modules"):
-            return object.__setattr__(self, key, value)
-        if isinstance(value, DualModule):
-            setattr(self._torch_modules, key, value._torch_module)
-            setattr(self._oneflow_modules, key, value._oneflow_module)
-        else:
-            setattr(self._torch_modules, key, value)
-            value = torch2oflow(value)
-            setattr(self._oneflow_modules, key, value)
-        return object.__setattr__(self, key, value)
+    def __setattr__(self, name, value):
+        if name in ("_torch_modules", "_oneflow_modules"):
+            return object.__setattr__(self, name, value)
+        try:
+            if isinstance(value, DualModule):
+                setattr(self._torch_modules, name, value._torch_module)
+                setattr(self._oneflow_modules, name, value._oneflow_module)
+            else:
+                setattr(self._torch_modules, name, value)
+                value = torch2oflow(value)
+                setattr(self._oneflow_modules, name, value)
+        except:
+            super().__setattr__(name, value)
 
 
 def get_mixed_dual_module(module_cls):
