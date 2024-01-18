@@ -45,6 +45,7 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 env:
   ONEFLOW_SRC: .
+  https_proxy: ${{ secrets.SILICON_ONEDIFF_LICENSE_KEY }}
 jobs:
   generate-build-matrix:
     name: "Generate build matrix"
