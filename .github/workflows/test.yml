@@ -212,7 +212,7 @@ jobs:
       - name: Set proxy
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
-          echo "https_proxy=docs/${{ secrets.ONEFLOW_CI_HTTP_PROXY }}" >> $GITHUB_ENV
+          echo "https_proxy=${{ secrets.ONEFLOW_CI_HTTP_PROXY }}" >> $GITHUB_ENV
       - name: Fix permissions
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
@@ -656,7 +656,7 @@ jobs:
       - name: Set proxy
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
-          echo "https_proxy=docs/${{ secrets.ONEFLOW_CI_HTTP_PROXY }}" >> $GITHUB_ENV
+          echo "https_proxy=${{ secrets.ONEFLOW_CI_HTTP_PROXY }}" >> $GITHUB_ENV
       - name: Fix permissions
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
