@@ -27,6 +27,28 @@ from oneflow.framework.infer_compiler.with_oneflow_compile import (
 )
 
 
+class TorchModule(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.linears = torch.nn.ModuleList([torch.nn.Linear(10, 10) for _ in range(10)])
+
+    def forward(self, x):
+        for i, l in enumerate(self.linears):
+            x = self.linears[i // 2](x) + l(x)
+        return x
+
+
+class FlowModule(flow.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.linears = flow.nn.ModuleList([flow.nn.Linear(10, 10) for _ in range(10)])
+
+    def forward(self, x):
+        for i, l in enumerate(self.linears):
+            x = self.linears[i // 2](x) + l(x)
+        return x
+
+
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestOneflowInferCompiler(flow.unittest.TestCase):
@@ -34,40 +56,16 @@ class TestOneflowInferCompiler(flow.unittest.TestCase):
         os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 
     def test_compile_from_torch(test_case):
-        class TorchModule(torch.nn.Module):
-            def __init__(self):
-                super().__init__()
-                self.linears = torch.nn.ModuleList(
-                    [torch.nn.Linear(10, 10) for i in range(10)]
-                )
-
-            def forward(self, x):
-                for i, l in enumerate(self.linears):
-                    x = self.linears[i // 2](x) + l(x)
-                return x
-
-        class OneflowModule(flow.nn.Module):
-            def __init__(self):
-                super().__init__()
-                self.linears = flow.nn.ModuleList(
-                    [flow.nn.Linear(10, 10) for i in range(10)]
-                )
-
-            def forward(self, x):
-                for i, l in enumerate(self.linears):
-                    x = self.linears[i // 2](x) + l(x)
-                return x
-
-        register(torch2oflow_class_map={TorchModule: OneflowModule})
+        register(torch2oflow_class_map={TorchModule: FlowModule})
 
         m = TorchModule().to("cuda")
         x = torch.randn(2, 10).to("cuda")
 
         y_torch = m(x)
         m = compile_from_torch(m)
-        y_oneflow = m(x)
+        y_flow = m(x)
         test_case.assertTrue(
-            np.allclose(y_torch.detach().cpu(), y_oneflow.detach().cpu(), 1e-03, 1e-03)
+            np.allclose(y_torch.detach().cpu(), y_flow.detach().cpu(), 1e-03, 1e-03)
         )
         test_case.assertIsInstance(m.linears, DualModuleList)
 
