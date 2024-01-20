@@ -388,7 +388,8 @@ class OneflowGraph(flow.nn.Graph):
         os.environ.setdefault("ONEFLOW_MLIR_FUSE_FORWARD_OPS", "1")
         os.environ.setdefault("ONEFLOW_MLIR_FUSE_OPS_WITH_BACKWARD_IMPL", "1")
         os.environ.setdefault("ONEFLOW_MLIR_GROUP_MATMUL", "1")
-        os.environ.setdefault("ONEFLOW_MLIR_PREFER_NHWC", "1")
+        # TODO(lml): enable ONEFLOW_MLIR_PREFER_NHWC when related bug fix.
+        os.environ.setdefault("ONEFLOW_MLIR_PREFER_NHWC", "0")
         os.environ.setdefault("ONEFLOW_KERNEL_ENABLE_FUSED_CONV_BIAS", "1")
         os.environ.setdefault("ONEFLOW_KERNEL_ENABLE_FUSED_LINEAR", "1")
         os.environ.setdefault(
