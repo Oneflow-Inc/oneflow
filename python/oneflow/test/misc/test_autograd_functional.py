@@ -16,7 +16,7 @@ limitations under the License.
 import unittest
 import oneflow as flow
 import oneflow.unittest
-import torch
+from oneflow.test_utils.automated_test_util import torch
 
 
 def _func_tensor(x):
