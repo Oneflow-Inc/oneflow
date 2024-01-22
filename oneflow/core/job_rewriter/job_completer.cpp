@@ -216,6 +216,8 @@ Maybe<void> JobCompleter::UpdateSharedGraphForNewInput(
           *pair.second.mutable_at_shape() = attr_iter->second.at_shape();
         } else if (pair.second.has_at_double()) {
           pair.second.set_at_double(attr_iter->second.at_double());
+        } else if (pair.second.has_at_list_int64()) {
+          pair.second.mutable_at_list_int64()->CopyFrom(attr_iter->second.at_list_int64());
         }
       }
     }
