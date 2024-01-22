@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import torch as torch_original
 import unittest
 import oneflow as flow
 import oneflow.unittest
@@ -21,20 +20,26 @@ from oneflow.test_utils.automated_test_util import torch
 from oneflow.test_utils.automated_test_util import random_tensor
 from oneflow.test_utils.automated_test_util import autotest
 
+
 def _func_tensor(x):
     return x.exp().sum(dim=1)
+
 
 def _func_scalar(x):
     return x.exp().sum()
 
+
 def _func_multi_tensor(x, y):
     return (x.exp() + y.pow(2)).sum(dim=1)
+
 
 def _func_multi_scalar(x, y):
     return (x.exp() + y.pow(2)).sum()
 
+
 def _func_scalar2tensor(x):
     return (x, x ** 2, x ** 3)
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestAutogradFunctional(flow.unittest.TestCase):
@@ -45,7 +50,10 @@ class TestAutogradFunctional(flow.unittest.TestCase):
         result_tensor = torch.autograd.functional.vjp(_func_tensor, inputs, v)
         result_scalar = torch.autograd.functional.vjp(_func_scalar, inputs)
 
-        inputs = (random_tensor(ndim=2, dim0=5, dim1=5), random_tensor(ndim=2, dim0=5, dim1=5))
+        inputs = (
+            random_tensor(ndim=2, dim0=5, dim1=5),
+            random_tensor(ndim=2, dim0=5, dim1=5),
+        )
         result_tensors = torch.autograd.functional.vjp(_func_multi_tensor, inputs, v)
         result_scalars = torch.autograd.functional.vjp(_func_multi_scalar, inputs)
 
@@ -55,8 +63,14 @@ class TestAutogradFunctional(flow.unittest.TestCase):
         v = random_tensor(ndim=2, dim0=5, dim1=5)
         result_tensor = torch.autograd.functional.jvp(_func_tensor, inputs, v)
 
-        inputs = (random_tensor(ndim=2, dim0=5, dim1=5), random_tensor(ndim=2, dim0=5, dim1=5))
-        v = (random_tensor(ndim=2, dim0=5, dim1=5),random_tensor(ndim=2, dim0=5, dim1=5))
+        inputs = (
+            random_tensor(ndim=2, dim0=5, dim1=5),
+            random_tensor(ndim=2, dim0=5, dim1=5),
+        )
+        v = (
+            random_tensor(ndim=2, dim0=5, dim1=5),
+            random_tensor(ndim=2, dim0=5, dim1=5),
+        )
         result_tensors = torch.autograd.functional.jvp(_func_multi_tensor, inputs, v)
 
         inputs = random_tensor(1)
@@ -70,8 +84,14 @@ class TestAutogradFunctional(flow.unittest.TestCase):
         v = random_tensor(ndim=2, dim0=5, dim1=5)
         result_tensor = torch.autograd.functional.vhp(_func_scalar, inputs, v)
 
-        inputs = (random_tensor(ndim=2, dim0=5, dim1=5), random_tensor(ndim=2, dim0=5, dim1=5))
-        v = (random_tensor(ndim=2, dim0=5, dim1=5), random_tensor(ndim=2, dim0=5, dim1=5))
+        inputs = (
+            random_tensor(ndim=2, dim0=5, dim1=5),
+            random_tensor(ndim=2, dim0=5, dim1=5),
+        )
+        v = (
+            random_tensor(ndim=2, dim0=5, dim1=5),
+            random_tensor(ndim=2, dim0=5, dim1=5),
+        )
         result_tensors = torch.autograd.functional.vhp(_func_multi_scalar, inputs, v)
 
     @autotest(n=1, check_graph=False)
@@ -80,8 +100,14 @@ class TestAutogradFunctional(flow.unittest.TestCase):
         v = random_tensor(ndim=2, dim0=5, dim1=5)
         result_tensor = torch.autograd.functional.hvp(_func_scalar, inputs, v)
 
-        inputs = (random_tensor(ndim=2, dim0=5, dim1=5), random_tensor(ndim=2, dim0=5, dim1=5))
-        v = (random_tensor(ndim=2, dim0=5, dim1=5), random_tensor(ndim=2, dim0=5, dim1=5))
+        inputs = (
+            random_tensor(ndim=2, dim0=5, dim1=5),
+            random_tensor(ndim=2, dim0=5, dim1=5),
+        )
+        v = (
+            random_tensor(ndim=2, dim0=5, dim1=5),
+            random_tensor(ndim=2, dim0=5, dim1=5),
+        )
         result_tensors = torch.autograd.functional.hvp(_func_multi_scalar, inputs, v)
 
     @autotest(n=1, check_graph=False)
@@ -91,7 +117,10 @@ class TestAutogradFunctional(flow.unittest.TestCase):
             _func_tensor, inputs, vectorize=False, strategy="reverse-mode"
         )
 
-        inputs = (random_tensor(ndim=2, dim0=5, dim1=5), random_tensor(ndim=2, dim0=5, dim1=5))
+        inputs = (
+            random_tensor(ndim=2, dim0=5, dim1=5),
+            random_tensor(ndim=2, dim0=5, dim1=5),
+        )
         result_tensors = torch.autograd.functional.jacobian(
             _func_multi_scalar, inputs, vectorize=False, strategy="reverse-mode"
         )
@@ -106,7 +135,10 @@ class TestAutogradFunctional(flow.unittest.TestCase):
             outer_jacobian_strategy="reverse-mode",
         )
 
-        inputs = (random_tensor(ndim=2, dim0=5, dim1=5), random_tensor(ndim=2, dim0=5, dim1=5))
+        inputs = (
+            random_tensor(ndim=2, dim0=5, dim1=5),
+            random_tensor(ndim=2, dim0=5, dim1=5),
+        )
         result_tensors = torch.autograd.functional.hessian(
             _func_multi_scalar,
             inputs,
