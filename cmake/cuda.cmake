@@ -75,11 +75,12 @@ if(BUILD_CUDA)
 
   # NOTE: if you want to use source PTX with a version different from produced PTX/binary, you should add flags
   if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+    # NOTE: Could not build on too many architectures cause the limitation of the host compiler.
     # Tesla P40/P4, Quadro Pxxx/Pxxxx, GeForce GTX 10xx, TITAN X/Xp
-    list(APPEND CMAKE_CUDA_ARCHITECTURES 60-real)
+    # list(APPEND CMAKE_CUDA_ARCHITECTURES 60-real)
 
     # V100, TITAN V
-    list(APPEND CMAKE_CUDA_ARCHITECTURES 70-real)
+    # list(APPEND CMAKE_CUDA_ARCHITECTURES 70-real)
 
     if(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
       # T4, Quadro RTX xxxx, Txxxx, Geforce RTX 20xx, TITAN RTX
@@ -96,12 +97,12 @@ if(BUILD_CUDA)
       list(APPEND CMAKE_CUDA_ARCHITECTURES 86-real)
     endif()
 
-    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.8")
-      # GeForce RTX 40xx
-      list(APPEND CMAKE_CUDA_ARCHITECTURES 89-real)
-      # NVIDIA H100
-      list(APPEND CMAKE_CUDA_ARCHITECTURES 90-real)
-    endif()
+    # if(CUDA_VERSION VERSION_GREATER_EQUAL "11.8")
+    #   # GeForce RTX 40xx
+    #   list(APPEND CMAKE_CUDA_ARCHITECTURES 89-real)
+    #   # NVIDIA H100
+    #   list(APPEND CMAKE_CUDA_ARCHITECTURES 90-real)
+    # endif()
   endif()
 
   foreach(CUDA_ARCH ${CMAKE_CUDA_ARCHITECTURES})
