@@ -110,6 +110,7 @@ class TestAutogradFunctional(flow.unittest.TestCase):
         )
         result_tensors = torch.autograd.functional.hvp(_func_multi_scalar, inputs, v)
 
+    # TODO: The local test of test_jacobian and test_hessian passed, but the ci test failed
     """
     @autotest(n=1, check_graph=False)
     def test_jacobian(test_case):
@@ -125,9 +126,7 @@ class TestAutogradFunctional(flow.unittest.TestCase):
         result_tensors = torch.autograd.functional.jacobian(
             _func_multi_scalar, inputs, vectorize=False, strategy="reverse-mode"
         )
-    """
 
-    """
     @autotest(n=1, check_graph=False)
     def test_hessian(test_case):
         inputs = random_tensor(ndim=2, dim0=5, dim1=5)
