@@ -20,7 +20,7 @@ import oneflow as flow
 from oneflow.framework.tensor import Tensor
 from oneflow.nn import init
 from oneflow.nn.modules.module import Module
-from oneflow.nn.functional import group_norm
+from oneflow.nn.functional.normalization import group_norm
 
 _shape_t = Union[int, Tuple[int], flow._oneflow_internal.Size]
 
