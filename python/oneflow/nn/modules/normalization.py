@@ -114,7 +114,9 @@ class GroupNorm(Module):
             flow.nn.init.zeros_(self.bias)
 
     def forward(self, input: Tensor) -> Tensor:
-        return group_norm(input, self.num_groups, self.weight, self.bias, self.eps, self.num_channels)
+        return group_norm(
+            input, self.num_groups, self.weight, self.bias, self.eps, self.num_channels
+        )
 
     def extra_repr(self) -> str:
         return "{num_groups}, {num_channels}, eps={eps}, affine={affine}".format(
