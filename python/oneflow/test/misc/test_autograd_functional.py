@@ -125,7 +125,7 @@ class TestAutogradFunctional(flow.unittest.TestCase):
             _func_multi_scalar, inputs, vectorize=False, strategy="reverse-mode"
         )
 
-    '''
+    """
     @autotest(n=1, check_graph=False)
     def test_hessian(test_case):
         inputs = random_tensor(ndim=2, dim0=5, dim1=5)
@@ -146,7 +146,8 @@ class TestAutogradFunctional(flow.unittest.TestCase):
             vectorize=False,
             outer_jacobian_strategy="reverse-mode",
         )
-    '''
+    """
+
 
 if __name__ == "__main__":
     unittest.main()
