@@ -23,6 +23,7 @@ from oneflow.nn.modules.module import Module
 
 _shape_t = Union[int, Tuple[int], flow._oneflow_internal.Size]
 
+
 def group_norm(
     input: Tensor,
     num_groups: int,
@@ -58,6 +59,7 @@ def group_norm(
             normalized = normalized + bias.reshape(1, num_channels, 1)
         res = flow.reshape(normalized, shape=tuple(input.shape))
         return res
+
 
 class GroupNorm(Module):
     """
@@ -148,7 +150,9 @@ class GroupNorm(Module):
             flow.nn.init.zeros_(self.bias)
 
     def forward(self, input: Tensor) -> Tensor:
-        return group_norm(input, self.num_groups, self.weight, self.bias, self.eps, self.num_channels)
+        return group_norm(
+            input, self.num_groups, self.weight, self.bias, self.eps, self.num_channels
+        )
         assert (
             len(input.shape) >= 3
         ), "The dimensions of input tensor must larger than 2"
