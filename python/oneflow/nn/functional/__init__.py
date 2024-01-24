@@ -15,7 +15,7 @@ limitations under the License.
 """
 from .interpolate import interpolate
 from .affine_grid import affine_grid
-from oneflow.nn.modules.grid_sample import grid_sample
+from .grid_sample import grid_sample
 from oneflow.nn.modules.sparse_softmax_cross_entropy import sparse_softmax_cross_entropy
 from oneflow._C import conv1d
 from oneflow._C import conv2d
