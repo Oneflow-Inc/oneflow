@@ -28,7 +28,7 @@ Convolution functions
     unfold
 
 Normalization functions
---------------------
+-----------------------
 
 .. autosummary::
     :toctree: generated
