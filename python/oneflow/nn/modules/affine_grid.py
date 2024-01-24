@@ -24,8 +24,10 @@ class AffineGrid(Module):
         super().__init__()
         self.size = size
         self.align_corners = align_corners
+
     def forward(self, x):
         return F.affine_grid(x, self.size, self.align_corners)
+
 
 if __name__ == "__main__":
     import doctest
