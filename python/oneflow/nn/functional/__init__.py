@@ -65,7 +65,7 @@ from oneflow._C import tanh
 from oneflow._C import threshold
 from oneflow._C import silu
 from oneflow._C import mish
-from oneflow.nn.modules.normalization import layer_norm
+from oneflow.nn.modules.normalization import layer_norm, group_norm
 from oneflow._C import dropout, dropout1d, dropout2d, dropout3d
 from oneflow._C import smooth_l1_loss
 from .pad import pad
@@ -92,4 +92,3 @@ from .deform_conv import deform_conv2d
 from oneflow._C import kl_div_loss as kl_div
 from oneflow._C import gumbel_softmax
 from .depend import depend
-from .normalization import group_norm
