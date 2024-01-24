@@ -178,6 +178,8 @@ from oneflow.nn.modules.rnn import (
     GRU,
 )
 
+from oneflow.nn.modules.interpolate import Interpolate
+
 from oneflow.nn.qat.conv import QatConv1d, QatConv2d, QatConv3d
 
 
