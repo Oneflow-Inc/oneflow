@@ -19,7 +19,7 @@ import oneflow as flow
 
 
 def affine_grid(theta, size: List[int], align_corners: bool = False):
-    """The interface is consistent with PyTorch.    
+    r"""The interface is consistent with PyTorch.    
     The documentation is referenced from: 
     https://pytorch.org/docs/1.10/generated/torch.nn.functional.affine_grid.html.
 
