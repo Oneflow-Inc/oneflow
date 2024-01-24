@@ -181,6 +181,7 @@ from oneflow.nn.modules.rnn import (
 from oneflow.nn.modules.interpolate import Interpolate
 from oneflow.nn.modules.affine_grid import AffineGrid
 from oneflow.nn.modules.grid_sample import GridSample
+from oneflow.nn.modules.sparse_softmax_cross_entropy import SparseSoftmaxCrossEntropy
 
 from oneflow.nn.qat.conv import QatConv1d, QatConv2d, QatConv3d
 
