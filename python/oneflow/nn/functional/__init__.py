@@ -83,7 +83,7 @@ from oneflow._C import (
     binary_cross_entropy_with_logits_loss as binary_cross_entropy_with_logits,
 )
 from .sparse import embedding
-from oneflow.nn.modules.linear import linear
+from .linear import linear
 from oneflow.nn.modules.activation import relu6
 from oneflow.nn.modules.upsampling import Upsample as upsample
 from oneflow._C import unfold

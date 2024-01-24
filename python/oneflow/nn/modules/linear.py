@@ -19,6 +19,7 @@ import oneflow as flow
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.init import _calculate_fan_in_and_fan_out
 from oneflow.nn.modules.module import Module
+import oneflow.nn.functional as F
 import os
 
 
@@ -130,47 +131,12 @@ class Linear(Module):
         if self.use_fused_matmul_bias:
             return flow._C.fused_matmul_bias(x, self.weight, self.bias)
         else:
-            res = flow._C.matmul(x, self.weight, transpose_a=False, transpose_b=True)
-            if self.bias is not None:
-                res += self.bias
-            return res
+            return F.linear(x, self.weight, self.bias)
 
     def extra_repr(self) -> str:
         return "in_features={}, out_features={}, bias={}".format(
             self.in_features, self.out_features, self.bias is not None
         )
-
-
-def linear(input, weight, bias=None):
-    r"""
-    Applies a linear transformation to the incoming data: :math:`y = xA^T + b`.
-
-    Shape:
-
-        - Input: :math:`(N, *, in\_features)` N is the batch size, `*` means any number of
-          additional dimensions
-        - Weight: :math:`(out\_features, in\_features)`
-        - Bias: :math:`(out\_features)`
-        - Output: :math:`(N, *, out\_features)`
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import numpy as np
-        >>> import oneflow as flow
-
-        >>> input = flow.tensor(np.random.randn(128, 20))
-        >>> weight = flow.tensor(np.random.randn(30, 20))
-        >>> output = flow.nn.functional.linear(input, weight)
-        >>> output.size()
-        oneflow.Size([128, 30])
-
-    """
-    res = flow._C.matmul(input, weight, transpose_a=False, transpose_b=True)
-    if bias is not None:
-        res += bias
-    return res
 
 
 if __name__ == "__main__":
