@@ -84,7 +84,7 @@ from oneflow._C import (
 )
 from .sparse import embedding
 from .linear import linear
-from oneflow.nn.modules.activation import relu6
+from .activation import relu6
 from oneflow.nn.modules.upsampling import Upsample as upsample
 from oneflow._C import unfold
 from oneflow._C import fold
