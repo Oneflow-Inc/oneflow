@@ -36,7 +36,7 @@ def linear(input, weight, bias=None):
         >>> import oneflow as flow
 
         >>> input = flow.tensor(np.random.randn(128, 20))
-        >>> weight = flow.tensor(np.random.randn(20, 30))
+        >>> weight = flow.tensor(np.random.randn(30, 20))
         >>> output = flow.nn.functional.linear(input, weight)
         >>> output.size()
         oneflow.Size([128, 30])
