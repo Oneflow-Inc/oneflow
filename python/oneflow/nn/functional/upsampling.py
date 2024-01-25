@@ -25,7 +25,7 @@ def upsample(
     mode: str = "nearest",
     align_corners: Optional[bool] = None,
 ):
-    """    
+    r"""    
     Upsamples a given multi-channel 1D (temporal), 2D (spatial) or 3D (volumetric) data.
 
     See :class:`~oneflow.nn.Upsample`, :class:`~oneflow.nn.UpsamplingNearest2d`,
