@@ -25,6 +25,43 @@ import oneflow.nn.functional as F
 _shape_t = Union[int, Tuple[int], flow._oneflow_internal.Size]
 
 
+def group_norm(
+    input: Tensor,
+    num_groups: int,
+    weight: Tensor = None,
+    bias: Tensor = None,
+    eps: float = 1e-05,
+    num_channels: int = None,
+):
+    r"""Apply Group Normalization for last certain number of dimensions.
+
+    See :class:`~oneflow.nn.GroupNorm` for details.
+    """
+    assert len(input.shape) >= 3, "The dimensions of input tensor must larger than 2"
+    if num_channels is None:
+        num_channels = input.shape[1]
+    assert (
+        input.shape[1] == num_channels
+    ), "The channels of input tensor must equal num_channels"
+
+    affine = weight is not None and bias is not None
+    if input.is_cuda:
+        return flow._C.group_norm(input, weight, bias, affine, num_groups, eps)
+    else:
+        origin_shape = input.shape
+        reshape_to_1d = flow.reshape(input, shape=[origin_shape[0], num_groups, -1])
+        mean = flow.mean(reshape_to_1d, dim=2, keepdim=True)
+        variance = flow.var(reshape_to_1d, dim=2, unbiased=False, keepdim=True)
+        normalized = (reshape_to_1d - mean) / flow.sqrt(variance + eps)
+        normalized = flow.reshape(normalized, shape=[origin_shape[0], num_channels, -1])
+        if weight is not None:
+            normalized = normalized * weight.reshape(1, num_channels, 1)
+        if bias is not None:
+            normalized = normalized + bias.reshape(1, num_channels, 1)
+        res = flow.reshape(normalized, shape=tuple(input.shape))
+        return res
+
+
 class GroupNorm(Module):
     """
     Applies Group Normalization over a mini-batch of inputs as described in
@@ -85,6 +122,8 @@ class GroupNorm(Module):
         num_channels: int,
         eps: float = 1e-05,
         affine: bool = True,
+        device=None,
+        dtype=None,
     ) -> None:
         super().__init__()
         assert num_groups > 0, "The num_groups must larger than zero"
@@ -93,9 +132,14 @@ class GroupNorm(Module):
         self.num_channels = num_channels
         self.eps = eps
         self.affine = affine
+        factory_kwargs = {}
+        if device:
+            factory_kwargs["device"] = device
+        if dtype:
+            factory_kwargs["dtype"] = dtype
         if self.affine:
-            self.weight = flow.nn.Parameter(flow.Tensor(num_channels))
-            self.bias = flow.nn.Parameter(flow.Tensor(num_channels))
+            self.weight = flow.nn.Parameter(flow.Tensor(num_channels, **factory_kwargs))
+            self.bias = flow.nn.Parameter(flow.Tensor(num_channels, **factory_kwargs))
         else:
             self.register_parameter("weight", None)
             self.register_parameter("bias", None)
@@ -107,34 +151,9 @@ class GroupNorm(Module):
             flow.nn.init.zeros_(self.bias)
 
     def forward(self, input: Tensor) -> Tensor:
-        assert (
-            len(input.shape) >= 3
-        ), "The dimensions of input tensor must larger than 2"
-        assert (
-            input.shape[1] == self.num_channels
-        ), "The channels of input tensor must equal num_channels"
-
-        if input.is_cuda:
-            return flow._C.group_norm(
-                input, self.weight, self.bias, self.affine, self.num_groups, self.eps
-            )
-        else:
-            origin_shape = input.shape
-            reshape_to_1d = flow.reshape(
-                input, shape=[origin_shape[0], self.num_groups, -1]
-            )
-            mean = flow.mean(reshape_to_1d, dim=2, keepdim=True)
-            variance = flow.var(reshape_to_1d, dim=2, unbiased=False, keepdim=True)
-            normalized = (reshape_to_1d - mean) / flow.sqrt(variance + self.eps)
-            normalized = flow.reshape(
-                normalized, shape=[origin_shape[0], self.num_channels, -1]
-            )
-            if self.weight is not None:
-                normalized = normalized * self.weight.reshape(1, self.num_channels, 1)
-            if self.bias is not None:
-                normalized = normalized + self.bias.reshape(1, self.num_channels, 1)
-            res = flow.reshape(normalized, shape=tuple(input.shape))
-            return res
+        return group_norm(
+            input, self.num_groups, self.weight, self.bias, self.eps, self.num_channels
+        )
 
     def extra_repr(self) -> str:
         return "{num_groups}, {num_channels}, eps={eps}, affine={affine}".format(

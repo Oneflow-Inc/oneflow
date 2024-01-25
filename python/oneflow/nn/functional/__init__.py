@@ -65,7 +65,11 @@ from oneflow._C import tanh
 from oneflow._C import threshold
 from oneflow._C import silu
 from oneflow._C import mish
+<<<<<<< HEAD
 from .normalization import layer_norm
+=======
+from oneflow.nn.modules.normalization import layer_norm, group_norm
+>>>>>>> master
 from oneflow._C import dropout, dropout1d, dropout2d, dropout3d
 from oneflow._C import smooth_l1_loss
 from .pad import pad
