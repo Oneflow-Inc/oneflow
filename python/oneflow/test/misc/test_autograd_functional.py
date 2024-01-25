@@ -41,26 +41,6 @@ def _func_scalar2tensor(x):
     return (x, x ** 2, x ** 3)
 
 
-def _func_tensor(x):
-    return x.exp().sum(dim=1)
-
-
-def _func_scalar(x):
-    return x.exp().sum()
-
-
-def _func_multi_tensor(x, y):
-    return (x.exp() + y.pow(2)).sum(dim=1)
-
-
-def _func_multi_scalar(x, y):
-    return (x.exp() + y.pow(2)).sum()
-
-
-def _func_scalar2tensor(x):
-    return (x, x ** 2, x ** 3)
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestAutogradFunctional(flow.unittest.TestCase):
     @autotest(n=1, check_graph=False)
