@@ -52,7 +52,7 @@ def group_norm(
             normalized = normalized + bias.reshape(1, num_channels, 1)
         res = flow.reshape(normalized, shape=tuple(input.shape))
         return res
-    
+
 
 def layer_norm(input, normalized_shape: tuple, weight=None, bias=None, eps=1e-05):
     if isinstance(normalized_shape, int):
