@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import math
+from typing import Optional, Tuple, Union
+
 import oneflow as flow
 
 
@@ -273,4 +275,26 @@ def interpolate(
         "Input Error: Only 3D, 4D and 5D input Tensors supported"
         " (got {}D) for the modes: nearest | linear | bilinear | bicubic | trilinear | area"
         " (got {})".format(len(input.shape), mode)
+    )
+
+
+def upsample(
+    input,
+    size: Optional[Union[int, Tuple[int, ...]]] = None,
+    scale_factor: Optional[Union[float, Tuple[float, ...]]] = None,
+    mode: str = "nearest",
+    align_corners: Optional[bool] = None,
+):
+    r"""    
+    Upsamples a given multi-channel 1D (temporal), 2D (spatial) or 3D (volumetric) data.
+
+    See :class:`~oneflow.nn.Upsample`, :class:`~oneflow.nn.UpsamplingNearest2d`,
+    :class:`~oneflow.nn.UpsamplingBilinear2d` for details.
+    """
+    return flow.nn.functional.interpolate(
+        input,
+        size=size,
+        scale_factor=scale_factor,
+        mode=mode,
+        align_corners=align_corners,
     )

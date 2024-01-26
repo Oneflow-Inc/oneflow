@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from .interpolate import interpolate
+from .interpolate import interpolate, upsample
 from .affine_grid import affine_grid
 from .grid_sample import grid_sample
 from .sparse_softmax_cross_entropy import sparse_softmax_cross_entropy
@@ -85,7 +85,6 @@ from oneflow._C import (
 from .sparse import embedding
 from .linear import linear
 from .activation import relu6
-from .upsampling import upsample
 from oneflow._C import unfold
 from oneflow._C import fold
 from .deform_conv import deform_conv2d
