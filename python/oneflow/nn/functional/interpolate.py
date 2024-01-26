@@ -291,7 +291,7 @@ def upsample(
     See :class:`~oneflow.nn.Upsample`, :class:`~oneflow.nn.UpsamplingNearest2d`,
     :class:`~oneflow.nn.UpsamplingBilinear2d` for details.
     """
-    return flow.nn.functional.interpolate(
+    return interpolate(
         input,
         size=size,
         scale_factor=scale_factor,
