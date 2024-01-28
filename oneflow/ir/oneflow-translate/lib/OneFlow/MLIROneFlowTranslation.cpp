@@ -876,7 +876,7 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   if (shouldPrintGraphviz) {
     job_wrapper.DumpLog("RoundTripOneFlowJob.optimized.mlir.dot", graphviz);
   }
-  if (::oneflow::IsInDebugMode()) {
+  if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_DUMPMLIR", false)) {
     DumpMLIR(job_wrapper, module.get(), "RoundTripOneFlowJob.optimized");
   }
   return success();
@@ -906,7 +906,7 @@ void RoundTripOneFlowJob(
   JobImporter imp(job_wrapper, &context, module.get());
   // TODO: Add flag in job desc to decide whether to run mlir optimizer
   if (succeeded(imp.ProcessJob())) {
-    if (::oneflow::IsInDebugMode()) {
+    if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_DUMPMLIR", false)) {
       DumpMLIR(job_wrapper, module.get(), "RoundTripOneFlowJob.imported");
     }
     if (failed(ApplyRoundTripPatterns(job_wrapper, &context, module))) { exit(EXIT_FAILURE); }
