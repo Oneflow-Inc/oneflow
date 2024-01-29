@@ -216,16 +216,27 @@ class LayerNorm(Module):
         normalized_shape: _shape_t,
         eps: float = 1e-05,
         elementwise_affine: bool = True,
+        bias=True,
+        device=None,
+        dtype=None,
     ) -> None:
         super(LayerNorm, self).__init__()
+        factory_kwargs = {"device": device, "dtype": dtype}
         if isinstance(normalized_shape, int):
             normalized_shape = (normalized_shape,)
         self.normalized_shape = tuple(normalized_shape)
         self.eps = eps
         self.elementwise_affine = elementwise_affine
         if self.elementwise_affine:
-            self.weight = flow.nn.Parameter(flow.Tensor(*self.normalized_shape))
-            self.bias = flow.nn.Parameter(flow.Tensor(*self.normalized_shape))
+            self.weight = flow.nn.Parameter(
+                flow.empty(self.normalized_shape, **factory_kwargs)
+            )
+            if bias:
+                self.bias = flow.nn.Parameter(
+                    flow.empty(self.normalized_shape, **factory_kwargs)
+                )
+            else:
+                self.register_parameter("bias", None)
         else:
             self.register_parameter("weight", None)
             self.register_parameter("bias", None)
@@ -234,9 +245,10 @@ class LayerNorm(Module):
     def reset_parameters(self) -> None:
         if self.elementwise_affine:
             init.ones_(self.weight)
-            init.zeros_(self.bias)
+            if self.bias is not None:
+                init.zeros_(self.bias)
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         return F.layer_norm(x, self.normalized_shape, self.weight, self.bias, self.eps)
 
     def extra_repr(self) -> str:
