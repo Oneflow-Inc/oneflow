@@ -277,12 +277,12 @@ class DeployableModule(torch.nn.Module):
             size = self._deployable_module_options["size"]
         else:
             size = 9
-        if "all_dynamic" in self._deployable_module_options:
-            all_dynamic = self._deployable_module_options["all_dynamic"]
+        if "dynamic" in self._deployable_module_options:
+            dynamic = self._deployable_module_options["dynamic"]
         else:
-            all_dynamic = False
+            dynamic = True
         self._deployable_module_dpl_graph = get_oneflow_graph(
-            self._deployable_module_model.oneflow_module, size, all_dynamic
+            self._deployable_module_model.oneflow_module, size, dynamic
         )
         if "debug" in self._deployable_module_options:
             self._deployable_module_dpl_graph.debug(
@@ -421,10 +421,10 @@ class OneflowGraph(flow.nn.Graph):
         flow.save(state_dict, file_path)
 
 
-def get_oneflow_graph(model, size=9, all_dynamic=False):
+def get_oneflow_graph(model, size=9, dynamic=True):
     g = OneflowGraph(model)
     g._dynamic_input_graph_cache.set_cache_size(size)
-    g._dynamic_input_graph_cache.enable_shared(not all_dynamic)
+    g._dynamic_input_graph_cache.enable_shared(dynamic)
     return g
 
 
@@ -486,14 +486,12 @@ def compile_from_torch(
     Note:
         Map from torch to oneflow should be registered by `infer_compiler.register(torch2oflow_class_map={TorchModule: OneflowModule})` before `compile_from_torch` be called.
 
-    Args:s
+    Args:
         torch_module (torch.nn.Module): Torch module to be compiled.
-        use_graph (bool, optional): If `True`, graph of compiled module can be saved and loaded to speedup the compile process.
-            Defaults to `True`.
+        use_graph (bool, optional): If `True`, graph of compiled module can be saved and loaded to speedup the compile process. Defaults to `True`.
         options (dict, optional): 
             size (int, optional): graph cache size. Defaults to `9`.
-            all_dynamic (bool, optional): If `True`, graph of compiled module can't be shared with other modules.
-                Defaults to `False`.
+            dynamic (bool, optional): If `True`, graph of compiled module can be shared with other modules. Defaults to `True`.
             debug (int, optional): debug level. Defaults to `-1`.
 
     Returns:
