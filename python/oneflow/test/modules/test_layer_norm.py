@@ -13,14 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
+import torch as torch_original
 import os
 import numpy as np
+
+ONEFLOW_TEST_TENSOR_SIZE_LIMIT_MB = os.getenv("ONEFLOW_TEST_TENSOR_SIZE_LIMIT_MB")
+os.environ["ONEFLOW_TEST_TENSOR_SIZE_LIMIT_MB"] = "128"
 import unittest
 
 import oneflow as flow
 import oneflow.unittest
+from oneflow.test_utils.automated_test_util import random_tensor
+
 import torch
+from oneflow.test_utils.automated_test_util import torch as torch_wrapper
 
 
 def _layer_norm(x, normalized_shape, weight=None, bias=None, eps=1e-6):
@@ -209,6 +215,98 @@ class TestLayerNorm(flow.unittest.TestCase):
         _test_layer_norm(
             test_case, shape=[8, 1024], normalized_shape=[1024], dtype=flow.double
         )
+
+
+def _test_LayerNormModule(
+    test_case,
+    shape,
+    normalized_shape,
+    affine=True,
+    eps=1e-6,
+    dtype=flow.float32,
+    device="cuda",
+    backward=True,
+):
+    if dtype == flow.float16:
+        dtype = torch_wrapper.float16
+    elif dtype == flow.float32:
+        dtype = torch_wrapper.float32
+    elif dtype == flow.float64:
+        dtype = torch_wrapper.float64
+    else:
+        dtype = torch_wrapper.float32
+
+    x = random_tensor(len(shape), *shape).to(device=device, dtype=dtype)
+    if backward:
+        x = x.detach().requires_grad_(True)
+    m = torch_wrapper.nn.LayerNorm(
+        *normalized_shape, eps, affine, device=device, dtype=dtype
+    )
+    y = m(x)
+    if backward:
+        np_rand_init_grad = np.random.randn(*tuple(y.shape.pytorch)).astype(np.float32)
+        torch_rand_init_grad = torch_wrapper.tensor(np_rand_init_grad).to(
+            device=device, dtype=dtype
+        )
+        (y * torch_rand_init_grad).sum().backward()
+        x_grad = x.grad.detach().cpu().numpy()
+        if affine:
+            weight_grad = m.weight.grad.detach().cpu().numpy()
+            bias_grad = m.bias.grad.detach().cpu().numpy()
+
+    y = y.detach().cpu().numpy()
+    if backward:
+        x_grad = x.grad.detach().cpu().numpy()
+        if affine:
+            return y, x_grad, weight_grad, bias_grad
+        return y, x_grad
+    return y
+
+
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+@flow.unittest.skip_unless_1n1d()
+class TestLayerNormModule(flow.unittest.TestCase):
+    def test_no_affine(test_case):
+        _test_LayerNormModule(
+            test_case, shape=[4, 16], normalized_shape=[16], affine=False,
+        )
+
+    def test_warp_impl(test_case):
+        _test_LayerNormModule(
+            test_case, shape=[32, 1024], normalized_shape=[1024], dtype=flow.float16,
+        )
+        _test_LayerNormModule(test_case, shape=[16, 512], normalized_shape=[512])
+        _test_LayerNormModule(test_case, shape=[15, 512], normalized_shape=[512])
+        _test_LayerNormModule(test_case, shape=[16, 511], normalized_shape=[511])
+        _test_LayerNormModule(test_case, shape=[13, 499], normalized_shape=[499])
+
+    def test_block_smem_impl(test_case):
+        _test_LayerNormModule(
+            test_case, shape=[16, 2048], normalized_shape=[2048], dtype=flow.float16,
+        )
+        _test_LayerNormModule(test_case, shape=[8, 1536], normalized_shape=[1536])
+        _test_LayerNormModule(test_case, shape=[8, 2048], normalized_shape=[2048])
+        _test_LayerNormModule(test_case, shape=[7, 1536], normalized_shape=[1536])
+        _test_LayerNormModule(test_case, shape=[8, 1533], normalized_shape=[1533])
+        _test_LayerNormModule(test_case, shape=[7, 1533], normalized_shape=[1533])
+
+    def test_block_uncached_impl(test_case):
+        # ONEFLOW_TEST_TENSOR_SIZE_LIMIT_MB must be greater than 64
+        _test_LayerNormModule(
+            test_case,
+            shape=[16, 1024 * 1024],
+            normalized_shape=[1024 * 1024],
+            dtype=flow.float16,
+        )
+        _test_LayerNormModule(
+            test_case, shape=[8, 1024], normalized_shape=[1024], dtype=flow.double
+        )
+        if ONEFLOW_TEST_TENSOR_SIZE_LIMIT_MB is None:
+            del os.environ["ONEFLOW_TEST_TENSOR_SIZE_LIMIT_MB"]
+        else:
+            os.environ[
+                "ONEFLOW_TEST_TENSOR_SIZE_LIMIT_MB"
+            ] = ONEFLOW_TEST_TENSOR_SIZE_LIMIT_MB
 
 
 if __name__ == "__main__":
